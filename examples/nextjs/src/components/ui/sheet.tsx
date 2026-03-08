@@ -1,26 +1,26 @@
-"use client";
+"use client"
 
-import * as SheetPrimitive from "@radix-ui/react-dialog";
-import { cva, type VariantProps } from "class-variance-authority";
-import { X } from "lucide-react";
-import type { ComponentProps } from "react";
-import { cn } from "@/lib/utils";
+import * as SheetPrimitive from "@radix-ui/react-dialog"
+import { cva, type VariantProps } from "class-variance-authority"
+import { X } from "lucide-react"
+import type { ComponentProps } from "react"
+import { cn } from "@/lib/utils"
 
-const Sheet = SheetPrimitive.Root;
-const SheetTrigger = SheetPrimitive.Trigger;
-const SheetClose = SheetPrimitive.Close;
-const SheetPortal = SheetPrimitive.Portal;
+const Sheet = SheetPrimitive.Root
+const SheetTrigger = SheetPrimitive.Trigger
+const SheetClose = SheetPrimitive.Close
+const SheetPortal = SheetPrimitive.Portal
 
 function SheetOverlay({ className, ...props }: ComponentProps<typeof SheetPrimitive.Overlay>) {
   return (
     <SheetPrimitive.Overlay
       className={cn(
         "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        className,
+        className
       )}
       {...props}
     />
-  );
+  )
 }
 
 const sheetVariants = cva(
@@ -39,11 +39,11 @@ const sheetVariants = cva(
     defaultVariants: {
       side: "right",
     },
-  },
-);
+  }
+)
 
 type SheetContentProps = ComponentProps<typeof SheetPrimitive.Content> &
-  VariantProps<typeof sheetVariants>;
+  VariantProps<typeof sheetVariants>
 
 function SheetContent({ side = "left", className, children, ...props }: SheetContentProps) {
   return (
@@ -57,13 +57,13 @@ function SheetContent({ side = "left", className, children, ...props }: SheetCon
         {children}
       </SheetPrimitive.Content>
     </SheetPortal>
-  );
+  )
 }
 
 function SheetHeader({ className, ...props }: ComponentProps<"div">) {
   return (
     <div className={cn("flex flex-col space-y-2 text-center sm:text-left", className)} {...props} />
-  );
+  )
 }
 
 function SheetTitle({ className, ...props }: ComponentProps<typeof SheetPrimitive.Title>) {
@@ -72,7 +72,7 @@ function SheetTitle({ className, ...props }: ComponentProps<typeof SheetPrimitiv
       className={cn("text-lg font-semibold text-foreground", className)}
       {...props}
     />
-  );
+  )
 }
 
-export { Sheet, SheetTrigger, SheetClose, SheetContent, SheetHeader, SheetTitle };
+export { Sheet, SheetTrigger, SheetClose, SheetContent, SheetHeader, SheetTitle }

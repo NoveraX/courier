@@ -1,10 +1,10 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { DemoCard } from "@/components/demo-card";
-import { ResponseViewer } from "@/components/response-viewer";
-import { RunButton } from "@/components/run-button";
-import { request, useMutation } from "@/lib/request";
+import { useState } from "react"
+import { DemoCard } from "@/components/demo-card"
+import { ResponseViewer } from "@/components/response-viewer"
+import { RunButton } from "@/components/run-button"
+import { request, useMutation } from "@/lib/request"
 
 const hookConfigCode = `class HookedApi extends Request<typeof groups> {
   constructor() {
@@ -37,7 +37,7 @@ const hookConfigCode = `class HookedApi extends Request<typeof groups> {
       },
     });
   }
-}`;
+}`
 
 const onResponseCode = `// The onResponse hook adds _hooks metadata to every response
 const data = await request("hookedApi")("users:getAll", {});
@@ -50,7 +50,7 @@ const data = await request("hookedApi")("users:getAll", {});
 //     transformedBy: "onResponse",
 //     timestamp: "2025-01-01T00:00:00.000Z"
 //   }
-// }`;
+// }`
 
 const onErrorCode = `// onError fires on the server before the error reaches the client
 // Useful for server-side logging, monitoring, error tracking
@@ -61,7 +61,7 @@ onError: (info, error) => {
 
   // Must return undefined — cannot modify or suppress the error
   return undefined;
-};`;
+};`
 
 const onRequestCode = `// onRequest fires before each request
 // Useful for logging, validation, request metadata
@@ -73,7 +73,7 @@ onRequest: (info) => {
 
   // Return modified info or undefined to keep original
   return info;
-};`;
+};`
 
 export default function HooksPage() {
   return (
@@ -109,11 +109,11 @@ export default function HooksPage() {
         </p>
       </DemoCard>
     </div>
-  );
+  )
 }
 
 function OnResponseDemo() {
-  const { mutate, data, isPending, error } = useMutation("hookedApi", "users:getAll");
+  const { mutate, data, isPending, error } = useMutation("hookedApi", "users:getAll")
 
   return (
     <DemoCard
@@ -121,41 +121,37 @@ function OnResponseDemo() {
       description="The onResponse hook adds _hooks metadata to every successful response. Compare with the Basic page to see the difference."
       code={onResponseCode}
     >
-      <RunButton
-        loading={isPending}
-        label="Fetch Users (hooked)"
-        onClick={() => mutate({})}
-      />
+      <RunButton loading={isPending} label="Fetch Users (hooked)" onClick={() => mutate({})} />
       {error ? <ResponseViewer error={error.message} /> : null}
       {data ? <ResponseViewer data={data} status={200} /> : null}
     </DemoCard>
-  );
+  )
 }
 
 function OnErrorDemo() {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false)
   const [caughtError, setCaughtError] = useState<{
-    status: number;
-    data: unknown;
-    message: string;
-  } | null>(null);
+    status: number
+    data: unknown
+    message: string
+  } | null>(null)
 
   const handleClick = async () => {
-    setLoading(true);
-    setCaughtError(null);
+    setLoading(true)
+    setCaughtError(null)
     try {
-      await request("hookedApi")("misc:error", { code: 500 });
+      await request("hookedApi")("misc:error", { code: 500 })
     } catch (e: unknown) {
-      const err = e as { status?: number; data?: unknown; message?: string };
+      const err = e as { status?: number; data?: unknown; message?: string }
       setCaughtError({
         status: err.status ?? 500,
         data: err.data,
         message: err.message ?? "Unknown error",
-      });
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <DemoCard
@@ -174,5 +170,5 @@ function OnErrorDemo() {
         />
       ) : null}
     </DemoCard>
-  );
+  )
 }

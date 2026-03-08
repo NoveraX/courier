@@ -1,18 +1,18 @@
-"use client";
+"use client"
 
-import { Menu } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
-import { navCategories } from "./nav-items";
+import { Menu } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { cn } from "@/lib/utils"
+import { navCategories } from "./nav-items"
 
 export function MobileNav() {
-  const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  const pathname = usePathname()
+  const [open, setOpen] = useState(false)
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -48,7 +48,7 @@ export function MobileNav() {
                         "flex items-center rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
                         pathname === item.href
                           ? "bg-accent text-accent-foreground font-medium"
-                          : "text-muted-foreground",
+                          : "text-muted-foreground"
                       )}
                     >
                       {item.title}
@@ -61,5 +61,5 @@ export function MobileNav() {
         </ScrollArea>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

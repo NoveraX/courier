@@ -1,11 +1,11 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { isHTTPError } from "@noverax/nexus";
-import { DemoCard } from "@/components/demo-card";
-import { ResponseViewer } from "@/components/response-viewer";
-import { RunButton } from "@/components/run-button";
-import { request } from "@/lib/request";
+import { isHTTPError } from "@noverax/nexus"
+import { useState } from "react"
+import { DemoCard } from "@/components/demo-card"
+import { ResponseViewer } from "@/components/response-viewer"
+import { RunButton } from "@/components/run-button"
+import { request } from "@/lib/request"
 
 const timeoutCode = `// Set timeout in milliseconds (ky option)
 // The /slow endpoint takes 3 seconds — this will timeout
@@ -14,7 +14,7 @@ try {
 } catch (error) {
   // TimeoutError or HTTPError with timeout message
   console.error("Request timed out");
-}`;
+}`
 
 const retryCode = `// retry: number of times to retry on failure (ky option)
 // Retries on network errors and 408, 413, 429, 500, 502, 503, 504
@@ -30,7 +30,7 @@ const data = await request("mockApi", {
     statusCodes: [408, 429, 500, 502, 503],
     backoffLimit: 3000,
   },
-})("users:getAll", {});`;
+})("users:getAll", {});`
 
 const cacheCode = `// Next.js cache option (passed through to fetch)
 const data = await request("mockApi", {
@@ -40,7 +40,7 @@ const data = await request("mockApi", {
 // No caching
 const fresh = await request("mockApi", {
   cache: "no-store",
-})("users:getAll", {});`;
+})("users:getAll", {});`
 
 const revalidateCode = `// Next.js revalidation — ISR-style caching
 const data = await request("mockApi", {
@@ -54,7 +54,7 @@ const data = await request("mockApi", {
 
 // Then in a Server Action:
 import { revalidateTag } from "next/cache";
-revalidateTag("users");`;
+revalidateTag("users");`
 
 const globalDefaultsCode = `import { createClientRequest } from "@noverax/nexus";
 
@@ -72,7 +72,7 @@ const request = createClientRequest({
       window.location.href = "/login";
     }
   },
-});`;
+});`
 
 export default function OptionsPage() {
   return (
@@ -104,10 +104,11 @@ export default function OptionsPage() {
       >
         <p className="text-sm text-muted-foreground">
           The <code className="text-xs bg-muted px-1 py-0.5 rounded">cache</code> option maps
-          directly to the Fetch API&apos;s <code className="text-xs bg-muted px-1 py-0.5 rounded">RequestCache</code>.
-          Use <code className="text-xs bg-muted px-1 py-0.5 rounded">force-cache</code> for
-          aggressive caching or <code className="text-xs bg-muted px-1 py-0.5 rounded">no-store</code> to
-          skip the cache entirely.
+          directly to the Fetch API&apos;s{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">RequestCache</code>. Use{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">force-cache</code> for aggressive
+          caching or <code className="text-xs bg-muted px-1 py-0.5 rounded">no-store</code> to skip
+          the cache entirely.
         </p>
       </DemoCard>
 
@@ -134,47 +135,47 @@ export default function OptionsPage() {
         </p>
       </DemoCard>
     </div>
-  );
+  )
 }
 
 function TimeoutDemo() {
-  const [timeoutMs, setTimeoutMs] = useState(1000);
-  const [loading, setLoading] = useState(false);
+  const [timeoutMs, setTimeoutMs] = useState(1000)
+  const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<{
-    type: "success" | "timeout";
-    data: unknown;
-    elapsed: number;
-  } | null>(null);
+    type: "success" | "timeout"
+    data: unknown
+    elapsed: number
+  } | null>(null)
 
   const handleClick = async () => {
-    setLoading(true);
-    setResult(null);
-    const start = Date.now();
+    setLoading(true)
+    setResult(null)
+    const start = Date.now()
 
     try {
-      const data = await request("mockApi", { timeout: timeoutMs })("misc:slow");
-      setResult({ type: "success", data, elapsed: Date.now() - start });
+      const data = await request("mockApi", { timeout: timeoutMs })("misc:slow")
+      setResult({ type: "success", data, elapsed: Date.now() - start })
     } catch (error: unknown) {
-      const elapsed = Date.now() - start;
+      const elapsed = Date.now() - start
       if (isHTTPError(error)) {
         setResult({
           type: "timeout",
           data: { status: error.status, message: error.message, data: error.data },
           elapsed,
-        });
+        })
       } else if (error instanceof Error) {
         setResult({
           type: "timeout",
           data: { message: error.message, name: error.name },
           elapsed,
-        });
+        })
       } else {
-        setResult({ type: "timeout", data: { message: "Request timed out" }, elapsed });
+        setResult({ type: "timeout", data: { message: "Request timed out" }, elapsed })
       }
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <DemoCard
@@ -196,15 +197,10 @@ function TimeoutDemo() {
       </div>
       {result ? (
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">
-            Elapsed: {result.elapsed}ms
-          </p>
-          <ResponseViewer
-            data={result.data}
-            status={result.type === "success" ? 200 : 408}
-          />
+          <p className="text-sm text-muted-foreground">Elapsed: {result.elapsed}ms</p>
+          <ResponseViewer data={result.data} status={result.type === "success" ? 200 : 408} />
         </div>
       ) : null}
     </DemoCard>
-  );
+  )
 }

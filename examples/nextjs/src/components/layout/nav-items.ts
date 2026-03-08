@@ -1,13 +1,13 @@
 export type NavItem = {
-  title: string;
-  href: string;
-  description: string;
-};
+  title: string
+  href: string
+  description: string
+}
 
 export type NavCategory = {
-  label: string;
-  items: NavItem[];
-};
+  label: string
+  items: NavItem[]
+}
 
 export const navCategories: NavCategory[] = [
   {
@@ -45,4 +45,4 @@ export const navCategories: NavCategory[] = [
       { title: "Singleton", href: "/singleton", description: "Module augmentation" },
     ],
   },
-];
+]

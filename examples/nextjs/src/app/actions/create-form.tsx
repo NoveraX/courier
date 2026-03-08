@@ -1,15 +1,15 @@
-"use client";
+"use client"
 
-import { Loader2, Plus } from "lucide-react";
-import { useActionState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ResponseViewer } from "@/components/response-viewer";
-import { type ActionState, createUser } from "./actions";
+import { Loader2, Plus } from "lucide-react"
+import { useActionState } from "react"
+import { ResponseViewer } from "@/components/response-viewer"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { type ActionState, createUser } from "./actions"
 
 export function CreateUserForm() {
-  const [state, action, isPending] = useActionState<ActionState, FormData>(createUser, {});
+  const [state, action, isPending] = useActionState<ActionState, FormData>(createUser, {})
 
   return (
     <div className="space-y-4">
@@ -50,5 +50,5 @@ export function CreateUserForm() {
       {state.error ? <ResponseViewer error={state.error} /> : null}
       {state.success && state.data ? <ResponseViewer data={state.data} status={201} /> : null}
     </div>
-  );
+  )
 }

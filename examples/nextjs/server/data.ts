@@ -1,22 +1,22 @@
 export type User = {
-  id: number;
-  name: string;
-  email: string;
-  role: "admin" | "user" | "moderator";
-  createdAt: string;
-};
+  id: number
+  name: string
+  email: string
+  role: "admin" | "user" | "moderator"
+  createdAt: string
+}
 
 export type Post = {
-  id: number;
-  userId: number;
-  title: string;
-  body: string;
-  tags: string[];
-  createdAt: string;
-};
+  id: number
+  userId: number
+  title: string
+  body: string
+  tags: string[]
+  createdAt: string
+}
 
-let nextUserId = 4;
-let nextPostId = 5;
+let nextUserId = 4
+let nextPostId = 5
 
 export const users = new Map<number, User>([
   [
@@ -49,7 +49,7 @@ export const users = new Map<number, User>([
       createdAt: "2025-03-10T09:15:00Z",
     },
   ],
-]);
+])
 
 export const posts = new Map<number, Post>([
   [
@@ -96,12 +96,12 @@ export const posts = new Map<number, Post>([
       createdAt: "2025-03-10T11:00:00Z",
     },
   ],
-]);
+])
 
 export function getNextUserId() {
-  return nextUserId++;
+  return nextUserId++
 }
 
 export function getNextPostId() {
-  return nextPostId++;
+  return nextPostId++
 }

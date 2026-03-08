@@ -1,20 +1,34 @@
-import type { Metadata } from "next";
-import type { ReactNode } from "react";
-import { Header } from "@/components/layout/header";
-import { Sidebar } from "@/components/layout/sidebar";
-import { QueryProvider } from "@/components/query-provider";
-import { ThemeProvider } from "@/components/theme-provider";
-import "./globals.css";
+import type { Metadata } from "next"
+import { Geist, Geist_Mono } from "next/font/google"
+import type { ReactNode } from "react"
+
+import { Header } from "@/components/layout/header"
+import { Sidebar } from "@/components/layout/sidebar"
+import { QueryProvider } from "@/components/query-provider"
+import { ThemeProvider } from "@/components/theme-provider"
+
+import "./globals.css"
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+})
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+})
 
 export const metadata: Metadata = {
-  title: "Nexus Examples",
-  description: "Interactive examples for @noverax/nexus HTTP client",
-};
+  title: "Nexus — Type-Safe HTTP for Next.js",
+  description:
+    "Documentation and interactive examples for @noverax/nexus, a type-safe HTTP client with request grouping, path parameters, and Next.js integration.",
+}
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen antialiased">
+      <body className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased`}>
         <ThemeProvider>
           <QueryProvider>
             <div className="flex min-h-screen">
@@ -28,5 +42,5 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </ThemeProvider>
       </body>
     </html>
-  );
+  )
 }

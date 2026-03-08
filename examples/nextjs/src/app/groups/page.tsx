@@ -1,8 +1,8 @@
-"use client";
+"use client"
 
-import { DemoCard } from "@/components/demo-card";
-import { ResponseViewer } from "@/components/response-viewer";
-import { useQuery } from "@/lib/request";
+import { DemoCard } from "@/components/demo-card"
+import { ResponseViewer } from "@/components/response-viewer"
+import { useQuery } from "@/lib/request"
 
 const definitionCode = `import { Request, RequestGroup, type Method } from "@noverax/nexus/RequestClass";
 
@@ -31,7 +31,7 @@ class MockApi extends Request<typeof groups> {
   constructor() {
     super({ baseURL: "http://localhost:4000", groups });
   }
-}`;
+}`
 
 const usageCode = `import { useQuery } from "@/lib/request";
 
@@ -43,14 +43,14 @@ const user  = useQuery("mockApi", "users:getById", { variables: { id: 1 } });
 // The prefix is prepended automatically:
 //   users:getAll  → GET  /users
 //   posts:getAll  → GET  /posts
-//   users:getById → GET  /users/1`;
+//   users:getById → GET  /users/1`
 
 export default function GroupsPage() {
-  const users = useQuery("mockApi", "users:getAll", { variables: {} });
-  const posts = useQuery("mockApi", "posts:getAll", { variables: {} });
-  const singleUser = useQuery("mockApi", "users:getById", { variables: { id: 1 } });
+  const users = useQuery("mockApi", "users:getAll", { variables: {} })
+  const posts = useQuery("mockApi", "posts:getAll", { variables: {} })
+  const singleUser = useQuery("mockApi", "users:getById", { variables: { id: 1 } })
 
-  const isLoading = users.isLoading || posts.isLoading || singleUser.isLoading;
+  const isLoading = users.isLoading || posts.isLoading || singleUser.isLoading
 
   return (
     <div className="space-y-8">
@@ -69,17 +69,25 @@ export default function GroupsPage() {
         <div className="space-y-3 text-sm">
           <div className="rounded-lg border p-3">
             <p className="font-medium">Users group</p>
-            <p className="text-muted-foreground">prefix: <code>"users"</code> → all methods hit <code>/users/*</code></p>
-            <p className="text-muted-foreground mt-1">Methods: getAll, getById, create, update, patch, remove</p>
+            <p className="text-muted-foreground">
+              prefix: <code>"users"</code> → all methods hit <code>/users/*</code>
+            </p>
+            <p className="text-muted-foreground mt-1">
+              Methods: getAll, getById, create, update, patch, remove
+            </p>
           </div>
           <div className="rounded-lg border p-3">
             <p className="font-medium">Posts group</p>
-            <p className="text-muted-foreground">prefix: <code>"posts"</code> → all methods hit <code>/posts/*</code></p>
+            <p className="text-muted-foreground">
+              prefix: <code>"posts"</code> → all methods hit <code>/posts/*</code>
+            </p>
             <p className="text-muted-foreground mt-1">Methods: getAll, getById, create</p>
           </div>
           <div className="rounded-lg border p-3">
             <p className="font-medium">Misc group</p>
-            <p className="text-muted-foreground">prefix: <code>none</code> → methods hit root paths directly</p>
+            <p className="text-muted-foreground">
+              prefix: <code>none</code> → methods hit root paths directly
+            </p>
             <p className="text-muted-foreground mt-1">Methods: stream, slow, error</p>
           </div>
         </div>
@@ -106,5 +114,5 @@ export default function GroupsPage() {
         </div>
       </DemoCard>
     </div>
-  );
+  )
 }

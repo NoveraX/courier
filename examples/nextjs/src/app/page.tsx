@@ -1,16 +1,7 @@
-import {
-  ArrowLeftRight,
-  FileCode2,
-  Layers,
-  Route,
-  Server,
-  Shield,
-  Upload,
-  Zap,
-} from "lucide-react";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeftRight, FileCode2, Layers, Route, Server, Shield, Upload, Zap } from "lucide-react"
+import Link from "next/link"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 const features = [
   {
@@ -69,7 +60,7 @@ const features = [
     icon: Zap,
     badge: "Performance",
   },
-];
+]
 
 export default function HomePage() {
   return (
@@ -109,5 +100,5 @@ export default function HomePage() {
         ))}
       </div>
     </div>
-  );
+  )
 }

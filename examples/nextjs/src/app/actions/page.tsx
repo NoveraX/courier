@@ -1,14 +1,14 @@
-import { DemoCard } from "@/components/demo-card";
-import { directRequest } from "@/lib/direct-request";
-import { CreateUserForm } from "./create-form";
-import { UserList } from "./user-list";
+import { DemoCard } from "@/components/demo-card"
+import { directRequest } from "@/lib/direct-request"
+import { CreateUserForm } from "./create-form"
+import { UserList } from "./user-list"
 
 type UsersResponse = {
-  data: { id: number; name: string; email: string; role: string; createdAt: string }[];
-  total: number;
-  page: number;
-  limit: number;
-};
+  data: { id: number; name: string; email: string; role: string; createdAt: string }[]
+  total: number
+  page: number
+  limit: number
+}
 
 const actionCode = `// app/actions/actions.ts
 "use server";
@@ -24,7 +24,7 @@ export async function createUser(_prev: ActionState, formData: FormData) {
   const user = await directRequest("mockApi")("users:create", { name, email, role });
   revalidatePath("/actions");
   return { success: true, data: user };
-}`;
+}`
 
 const formCode = `// app/actions/create-form.tsx
 "use client";
@@ -43,7 +43,7 @@ export function CreateUserForm() {
       {state.data && <pre>{JSON.stringify(state.data)}</pre>}
     </form>
   );
-}`;
+}`
 
 const deleteCode = `// Server action for delete + revalidation
 export async function deleteUser(_prev: ActionState, formData: FormData) {
@@ -62,18 +62,18 @@ function UserRow({ user }) {
       <button type="submit" disabled={isPending}>Delete</button>
     </form>
   );
-}`;
+}`
 
 export default async function ActionsPage() {
-  const users = (await directRequest("mockApi")("users:getAll", {})) as UsersResponse;
+  const users = (await directRequest("mockApi")("users:getAll", {})) as UsersResponse
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Server Actions</h1>
         <p className="text-muted-foreground mt-1">
-          Mutate data with Server Actions + direct mode. The page revalidates automatically after each
-          action.
+          Mutate data with Server Actions + direct mode. The page revalidates automatically after
+          each action.
         </p>
       </div>
 
@@ -104,5 +104,5 @@ export default async function ActionsPage() {
         <UserList users={users.data} />
       </DemoCard>
     </div>
-  );
+  )
 }

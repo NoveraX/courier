@@ -1,17 +1,17 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { DemoCard } from "@/components/demo-card";
-import { ResponseViewer } from "@/components/response-viewer";
-import { RunButton } from "@/components/run-button";
-import { useMutation } from "@/lib/request";
+import { useState } from "react"
+import { DemoCard } from "@/components/demo-card"
+import { ResponseViewer } from "@/components/response-viewer"
+import { RunButton } from "@/components/run-button"
+import { useMutation } from "@/lib/request"
 
 const simpleCode = `// Method definition with :id placeholder
 getById: Method<User, { id: number }> = ({ get }) => get(":id");
 
 // Usage — :id is replaced with the value from variables
 await request("mockApi")("users:getById", { id: 1 });
-// → GET /users/1`;
+// → GET /users/1`
 
 const nestedCode = `// Multiple path params in one URL
 getUserPost: Method<UserPostResponse, { id: number; postId: number }> =
@@ -19,7 +19,7 @@ getUserPost: Method<UserPostResponse, { id: number; postId: number }> =
 
 // Both :id and :postId are replaced
 await request("mockApi")("users:getUserPost", { id: 1, postId: 2 });
-// → GET /users/1/posts/2`;
+// → GET /users/1/posts/2`
 
 const mixedCode = `// Path params + query params work together
 // Variables matching :placeholders go into the URL path
@@ -30,7 +30,7 @@ getAll: Method<UsersListResponse, { page?: number; limit?: number }> =
 
 // No path params — all variables become ?query params
 await request("mockApi")("users:getAll", { page: 1, limit: 5 });
-// → GET /users?page=1&limit=5`;
+// → GET /users?page=1&limit=5`
 
 export default function PathParamsPage() {
   return (
@@ -46,12 +46,12 @@ export default function PathParamsPage() {
       <NestedParamsDemo />
       <MixedParamsDemo />
     </div>
-  );
+  )
 }
 
 function SimpleParamDemo() {
-  const [userId, setUserId] = useState(1);
-  const { mutate, data, isPending, error } = useMutation("mockApi", "users:getById");
+  const [userId, setUserId] = useState(1)
+  const { mutate, data, isPending, error } = useMutation("mockApi", "users:getById")
 
   return (
     <DemoCard
@@ -72,17 +72,25 @@ function SimpleParamDemo() {
             </option>
           ))}
         </select>
-        <RunButton loading={isPending} label={`GET /users/${userId}`} onClick={() => mutate({ id: userId })} />
+        <RunButton
+          loading={isPending}
+          label={`GET /users/${userId}`}
+          onClick={() => mutate({ id: userId })}
+        />
       </div>
-      {error ? <ResponseViewer error={error.message} /> : data ? <ResponseViewer data={data} status={200} /> : null}
+      {error ? (
+        <ResponseViewer error={error.message} />
+      ) : data ? (
+        <ResponseViewer data={data} status={200} />
+      ) : null}
     </DemoCard>
-  );
+  )
 }
 
 function NestedParamsDemo() {
-  const [userId, setUserId] = useState(1);
-  const [postId, setPostId] = useState(1);
-  const { mutate, data, isPending, error } = useMutation("mockApi", "users:getUserPost");
+  const [userId, setUserId] = useState(1)
+  const [postId, setPostId] = useState(1)
+  const { mutate, data, isPending, error } = useMutation("mockApi", "users:getUserPost")
 
   return (
     <DemoCard
@@ -115,17 +123,25 @@ function NestedParamsDemo() {
             </option>
           ))}
         </select>
-        <RunButton loading={isPending} label={`GET /users/${userId}/posts/${postId}`} onClick={() => mutate({ id: userId, postId })} />
+        <RunButton
+          loading={isPending}
+          label={`GET /users/${userId}/posts/${postId}`}
+          onClick={() => mutate({ id: userId, postId })}
+        />
       </div>
-      {error ? <ResponseViewer error={error.message} /> : data ? <ResponseViewer data={data} status={200} /> : null}
+      {error ? (
+        <ResponseViewer error={error.message} />
+      ) : data ? (
+        <ResponseViewer data={data} status={200} />
+      ) : null}
     </DemoCard>
-  );
+  )
 }
 
 function MixedParamsDemo() {
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(2);
-  const { mutate, data, isPending } = useMutation("mockApi", "users:getAll");
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(2)
+  const { mutate, data, isPending } = useMutation("mockApi", "users:getAll")
 
   return (
     <DemoCard
@@ -158,9 +174,13 @@ function MixedParamsDemo() {
             </option>
           ))}
         </select>
-        <RunButton loading={isPending} label={`GET /users?page=${page}&limit=${limit}`} onClick={() => mutate({ page, limit })} />
+        <RunButton
+          loading={isPending}
+          label={`GET /users?page=${page}&limit=${limit}`}
+          onClick={() => mutate({ page, limit })}
+        />
       </div>
       {data ? <ResponseViewer data={data} status={200} /> : null}
     </DemoCard>
-  );
+  )
 }

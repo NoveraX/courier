@@ -14,12 +14,21 @@
     "indentWidth": 2,
     "lineWidth": 100
   },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "jsxQuoteStyle": "double",
+      "semicolons": "asNeeded",
+      "trailingCommas": "es5"
+    }
+  },
   "linter": {
     "rules": {
       "recommended": true,
       "style": {
         "noDefaultExport": "off",
-        "noParameterAssign": "off"
+        "noParameterAssign": "off",
+        "noNonNullAssertion": "warn"
       },
       "suspicious": {
         "noExplicitAny": "off"

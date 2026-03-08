@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import { DemoCard } from "@/components/demo-card";
+import { DemoCard } from "@/components/demo-card"
 
 const singletonCode = `// lib/request.ts — Single typed instance for the entire app
 import type { MethodsType } from "@/api";
@@ -12,7 +12,7 @@ export const { useQuery, useMutation, request } =
 // MethodsType carries full type information:
 // - Source names (keys)
 // - Group names and method names per source
-// - Response types and variable types per method`;
+// - Response types and variable types per method`
 
 const sourcesCode = `// api/index.ts — Define and export all sources
 import { Request } from "@noverax/nexus/RequestClass";
@@ -30,7 +30,7 @@ class MockApi extends Request<typeof groups> {
 }
 
 export const methods = { mockApi: new MockApi() };
-export type MethodsType = typeof methods;`;
+export type MethodsType = typeof methods;`
 
 const inferenceCode = `// Full type inference at call site — no manual types needed
 
@@ -48,7 +48,7 @@ const users = await request("mockApi")("users:getAll", {});
 
 // Group:method syntax resolves the correct nested type
 const user = await request("mockApi")("users:getById", { id: 1 });
-//    ^? User`;
+//    ^? User`
 
 const multiInstanceCode = `// Multiple instances for different backends
 import { createQueryRequest } from "@noverax/nexus/query";
@@ -67,7 +67,7 @@ export const external = createQueryRequest<ExternalMethods>({
 
 // Usage — each instance is fully typed independently
 const { data } = internal.useQuery("users", "getAll");
-const { mutate } = external.useMutation("payments", "charge");`;
+const { mutate } = external.useMutation("payments", "charge");`
 
 const directCode = `// Direct mode — same type system, no proxy
 import { createDirectRequest } from "@noverax/nexus/direct";
@@ -77,7 +77,7 @@ export const direct = createDirectRequest(methods);
 
 // Server Component or Server Action
 const users = await direct("mockApi")("users:getAll", {});
-//    ^? { data: User[], total: number }`;
+//    ^? { data: User[], total: number }`
 
 const methodTypeCode = `// How Method<Response, Variables> drives the type system
 import { type Method, RequestGroup } from "@noverax/nexus/RequestClass";
@@ -106,7 +106,7 @@ class Users extends RequestGroup {
 
 // These types flow through the entire chain:
 // Method definition → Request class → MethodsType → createQueryRequest
-// → useQuery/useMutation/request → call site`;
+// → useQuery/useMutation/request → call site`
 
 export default function SingletonPage() {
   return (
@@ -125,7 +125,8 @@ export default function SingletonPage() {
         code={singletonCode}
       >
         <p className="text-sm text-muted-foreground">
-          The generic parameter <code className="text-xs bg-muted px-1 py-0.5 rounded">{"<MethodsType>"}</code> carries
+          The generic parameter{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">{"<MethodsType>"}</code> carries
           all source, group, method, response, and variable types. Every call site gets full
           autocompletion and type checking.
         </p>
@@ -186,5 +187,5 @@ export default function SingletonPage() {
         </p>
       </DemoCard>
     </div>
-  );
+  )
 }

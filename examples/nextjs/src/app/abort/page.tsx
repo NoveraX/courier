@@ -1,11 +1,11 @@
-"use client";
+"use client"
 
-import { useRef, useState } from "react";
-import { isHTTPError } from "@noverax/nexus";
-import { DemoCard } from "@/components/demo-card";
-import { ResponseViewer } from "@/components/response-viewer";
-import { RunButton } from "@/components/run-button";
-import { request } from "@/lib/request";
+import { isHTTPError } from "@noverax/nexus"
+import { useRef, useState } from "react"
+import { DemoCard } from "@/components/demo-card"
+import { ResponseViewer } from "@/components/response-viewer"
+import { RunButton } from "@/components/run-button"
+import { request } from "@/lib/request"
 
 const manualAbortCode = `const controller = new AbortController();
 
@@ -15,7 +15,7 @@ const promise = request("mockApi", { signal: controller.signal })(
 );
 
 // Cancel the request
-controller.abort();`;
+controller.abort();`
 
 const dedupCode = `const abortRef = useRef<AbortController | null>(null);
 
@@ -29,7 +29,7 @@ function handleClick() {
   request("mockApi", { signal: controller.signal })(
     "users:getAll", {}
   );
-}`;
+}`
 
 const requestAbortCode = `import { Request } from "@noverax/nexus/RequestClass";
 
@@ -46,7 +46,7 @@ class Api extends Request<typeof groups> {
       requestAbort: true,
     });
   }
-}`;
+}`
 
 export default function AbortPage() {
   return (
@@ -73,41 +73,44 @@ export default function AbortPage() {
         </p>
       </DemoCard>
     </div>
-  );
+  )
 }
 
 function ManualAbortDemo() {
-  const controllerRef = useRef<AbortController | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ type: "success" | "aborted" | "error"; data: unknown } | null>(null);
+  const controllerRef = useRef<AbortController | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<{
+    type: "success" | "aborted" | "error"
+    data: unknown
+  } | null>(null)
 
   const handleStart = async () => {
-    setLoading(true);
-    setResult(null);
+    setLoading(true)
+    setResult(null)
 
-    const controller = new AbortController();
-    controllerRef.current = controller;
+    const controller = new AbortController()
+    controllerRef.current = controller
 
     try {
-      const data = await request("mockApi", { signal: controller.signal })("misc:slow");
-      setResult({ type: "success", data });
+      const data = await request("mockApi", { signal: controller.signal })("misc:slow")
+      setResult({ type: "success", data })
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        setResult({ type: "aborted", data: { message: "Request was aborted by user" } });
+        setResult({ type: "aborted", data: { message: "Request was aborted by user" } })
       } else if (isHTTPError(error)) {
-        setResult({ type: "error", data: { status: error.status, message: error.message } });
+        setResult({ type: "error", data: { status: error.status, message: error.message } })
       } else {
-        setResult({ type: "aborted", data: { message: "Request cancelled" } });
+        setResult({ type: "aborted", data: { message: "Request cancelled" } })
       }
     } finally {
-      setLoading(false);
-      controllerRef.current = null;
+      setLoading(false)
+      controllerRef.current = null
     }
-  };
+  }
 
   const handleCancel = () => {
-    controllerRef.current?.abort();
-  };
+    controllerRef.current?.abort()
+  }
 
   return (
     <DemoCard
@@ -133,51 +136,51 @@ function ManualAbortDemo() {
         />
       ) : null}
     </DemoCard>
-  );
+  )
 }
 
 function DedupDemo() {
-  const abortRef = useRef<AbortController | null>(null);
-  const [clickCount, setClickCount] = useState(0);
-  const [abortedCount, setAbortedCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<unknown>(null);
+  const abortRef = useRef<AbortController | null>(null)
+  const [clickCount, setClickCount] = useState(0)
+  const [abortedCount, setAbortedCount] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<unknown>(null)
 
   const handleClick = async () => {
     // Abort previous request
     if (abortRef.current) {
-      abortRef.current.abort();
-      setAbortedCount((c) => c + 1);
+      abortRef.current.abort()
+      setAbortedCount((c) => c + 1)
     }
 
-    const controller = new AbortController();
-    abortRef.current = controller;
+    const controller = new AbortController()
+    abortRef.current = controller
 
-    setClickCount((c) => c + 1);
-    setLoading(true);
-    setResult(null);
+    setClickCount((c) => c + 1)
+    setLoading(true)
+    setResult(null)
 
     try {
-      const data = await request("mockApi", { signal: controller.signal })("users:getAll", {});
-      setResult(data);
+      const data = await request("mockApi", { signal: controller.signal })("users:getAll", {})
+      setResult(data)
     } catch {
       // Aborted — ignore
     } finally {
       if (abortRef.current === controller) {
-        setLoading(false);
-        abortRef.current = null;
+        setLoading(false)
+        abortRef.current = null
       }
     }
-  };
+  }
 
   const handleReset = () => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setClickCount(0);
-    setAbortedCount(0);
-    setLoading(false);
-    setResult(null);
-  };
+    abortRef.current?.abort()
+    abortRef.current = null
+    setClickCount(0)
+    setAbortedCount(0)
+    setLoading(false)
+    setResult(null)
+  }
 
   return (
     <DemoCard
@@ -201,5 +204,5 @@ function DedupDemo() {
       </div>
       {result ? <ResponseViewer data={result} status={200} /> : null}
     </DemoCard>
-  );
+  )
 }

@@ -1,12 +1,12 @@
-"use client";
+"use client"
 
-import { Moon, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
-import { Button } from "@/components/ui/button";
-import { MobileNav } from "./mobile-nav";
+import { Moon, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
+import { Button } from "@/components/ui/button"
+import { MobileNav } from "./mobile-nav"
 
 export function Header() {
-  const { setTheme, resolvedTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme()
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -22,5 +22,5 @@ export function Header() {
         <span className="sr-only">Toggle theme</span>
       </Button>
     </header>
-  );
+  )
 }

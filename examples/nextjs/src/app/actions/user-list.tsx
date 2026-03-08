@@ -1,22 +1,22 @@
-"use client";
+"use client"
 
-import { Loader2, Trash2 } from "lucide-react";
-import { useActionState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { type ActionState, deleteUser } from "./actions";
+import { Loader2, Trash2 } from "lucide-react"
+import { useActionState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { type ActionState, deleteUser } from "./actions"
 
 type User = {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  createdAt: string;
-};
+  id: number
+  name: string
+  email: string
+  role: string
+  createdAt: string
+}
 
 export function UserList({ users }: { users: User[] }) {
   if (users.length === 0) {
-    return <p className="text-sm text-muted-foreground">No users found.</p>;
+    return <p className="text-sm text-muted-foreground">No users found.</p>
   }
 
   return (
@@ -25,13 +25,13 @@ export function UserList({ users }: { users: User[] }) {
         <UserRow key={user.id} user={user} />
       ))}
     </div>
-  );
+  )
 }
 
 function UserRow({ user }: { user: User }) {
-  const [state, action, isPending] = useActionState<ActionState, FormData>(deleteUser, {});
+  const [state, action, isPending] = useActionState<ActionState, FormData>(deleteUser, {})
 
-  if (state.success) return null;
+  if (state.success) return null
 
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-3">
@@ -55,5 +55,5 @@ function UserRow({ user }: { user: User }) {
         </Button>
       </form>
     </div>
-  );
+  )
 }

@@ -1,9 +1,9 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { DemoCard } from "@/components/demo-card";
-import { RunButton } from "@/components/run-button";
-import { request } from "@/lib/request";
+import { useState } from "react"
+import { DemoCard } from "@/components/demo-card"
+import { RunButton } from "@/components/run-button"
+import { request } from "@/lib/request"
 
 const streamConfigCode = `// Method definition — return type is ReadableStream
 class Misc extends RequestGroup {
@@ -25,7 +25,7 @@ while (true) {
 
   const text = decoder.decode(value, { stream: true });
   // Parse SSE: "data: {...}\\n\\n"
-}`;
+}`
 
 const backendCode = `// Express SSE endpoint
 router.get("/stream", (_req, res) => {
@@ -46,12 +46,12 @@ router.get("/stream", (_req, res) => {
       res.end();
     }
   }, 500);
-});`;
+});`
 
 type StreamChunk = {
-  chunk: string;
-  index: number;
-};
+  chunk: string
+  index: number
+}
 
 export default function StreamingPage() {
   return (
@@ -59,8 +59,9 @@ export default function StreamingPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Streaming</h1>
         <p className="text-muted-foreground mt-1">
-          Stream responses progressively with <code className="text-xs bg-muted px-1 py-0.5 rounded">stream: true</code>.
-          Chunks arrive in real time via SSE.
+          Stream responses progressively with{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">stream: true</code>. Chunks arrive
+          in real time via SSE.
         </p>
       </div>
 
@@ -84,66 +85,67 @@ export default function StreamingPage() {
       >
         <p className="text-sm text-muted-foreground">
           When <code className="text-xs bg-muted px-1 py-0.5 rounded">stream: true</code>, the
-          response is not parsed as JSON. You get the raw Response and can read chunks incrementally.
+          response is not parsed as JSON. You get the raw Response and can read chunks
+          incrementally.
         </p>
       </DemoCard>
     </div>
-  );
+  )
 }
 
 function StreamDemo() {
-  const [chunks, setChunks] = useState<StreamChunk[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
+  const [chunks, setChunks] = useState<StreamChunk[]>([])
+  const [loading, setLoading] = useState(false)
+  const [done, setDone] = useState(false)
 
   const handleStream = async () => {
-    setChunks([]);
-    setDone(false);
-    setLoading(true);
+    setChunks([])
+    setDone(false)
+    setLoading(true)
 
     try {
       const response = (await request("mockApi", { stream: true })(
-        "misc:stream",
-      )) as unknown as Response;
+        "misc:stream"
+      )) as unknown as Response
 
-      const reader = response.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+      const reader = response.body!.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ""
 
       while (true) {
-        const { done: readerDone, value } = await reader.read();
-        if (readerDone) break;
+        const { done: readerDone, value } = await reader.read()
+        if (readerDone) break
 
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop() || "";
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split("\n\n")
+        buffer = parts.pop() || ""
 
         for (const part of parts) {
-          const line = part.trim();
-          if (!line.startsWith("data: ")) continue;
+          const line = part.trim()
+          if (!line.startsWith("data: ")) continue
 
-          const data = line.slice(6);
+          const data = line.slice(6)
           if (data === "[DONE]") {
-            setDone(true);
-            break;
+            setDone(true)
+            break
           }
 
           try {
-            const parsed = JSON.parse(data) as StreamChunk;
-            setChunks((prev) => [...prev, parsed]);
+            const parsed = JSON.parse(data) as StreamChunk
+            setChunks((prev) => [...prev, parsed])
           } catch {
             // skip malformed chunks
           }
         }
       }
 
-      setDone(true);
+      setDone(true)
     } catch (error) {
-      console.error("Stream error:", error);
+      console.error("Stream error:", error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <DemoCard
@@ -174,5 +176,5 @@ function StreamDemo() {
         </div>
       ) : null}
     </DemoCard>
-  );
+  )
 }

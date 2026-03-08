@@ -1,11 +1,11 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { isHTTPError } from "@noverax/nexus";
-import { DemoCard } from "@/components/demo-card";
-import { ResponseViewer } from "@/components/response-viewer";
-import { RunButton } from "@/components/run-button";
-import { request } from "@/lib/request";
+import { isHTTPError } from "@noverax/nexus"
+import { useState } from "react"
+import { DemoCard } from "@/components/demo-card"
+import { ResponseViewer } from "@/components/response-viewer"
+import { RunButton } from "@/components/run-button"
+import { request } from "@/lib/request"
 
 const catchCode = `import { HTTPError } from "@noverax/nexus";
 
@@ -17,7 +17,7 @@ try {
     console.log(error.data);    // { success: false, message: "..." }
     console.log(error.headers); // Headers object
   }
-}`;
+}`
 
 const guardCode = `import { isHTTPError } from "@noverax/nexus";
 
@@ -31,7 +31,7 @@ try {
     // Network error, timeout, etc.
     handleUnknownError(error);
   }
-}`;
+}`
 
 const globalCode = `import { createClientRequest } from "@noverax/nexus";
 
@@ -49,9 +49,9 @@ const request = createClientRequest({
   onSuccess: (data) => {
     console.log("Success:", data);
   },
-});`;
+});`
 
-const ERROR_CODES = [400, 401, 403, 404, 422, 500, 502, 503] as const;
+const ERROR_CODES = [400, 401, 403, 404, 422, 500, 502, 503] as const
 
 export default function ErrorsPage() {
   return (
@@ -77,24 +77,24 @@ export default function ErrorsPage() {
         </p>
       </DemoCard>
     </div>
-  );
+  )
 }
 
 function CatchDemo() {
-  const [selectedCode, setSelectedCode] = useState<number>(404);
-  const [loading, setLoading] = useState(false);
+  const [selectedCode, setSelectedCode] = useState<number>(404)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<{
-    name: string;
-    status: number;
-    message: string;
-    data: unknown;
-  } | null>(null);
+    name: string
+    status: number
+    message: string
+    data: unknown
+  } | null>(null)
 
   const handleClick = async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
     try {
-      await request("mockApi")("misc:error", { code: selectedCode });
+      await request("mockApi")("misc:error", { code: selectedCode })
     } catch (e: unknown) {
       if (isHTTPError(e)) {
         setError({
@@ -102,12 +102,12 @@ function CatchDemo() {
           status: e.status,
           message: e.message,
           data: e.data,
-        });
+        })
       }
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <DemoCard
@@ -127,44 +127,40 @@ function CatchDemo() {
             </option>
           ))}
         </select>
-        <RunButton
-          loading={loading}
-          label={`Trigger ${selectedCode}`}
-          onClick={handleClick}
-        />
+        <RunButton loading={loading} label={`Trigger ${selectedCode}`} onClick={handleClick} />
       </div>
       {error ? <ResponseViewer data={error} status={error.status} /> : null}
     </DemoCard>
-  );
+  )
 }
 
 function GuardDemo() {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<{
-    isHttpError: boolean;
-    status?: number;
-    data?: unknown;
-  } | null>(null);
+    isHttpError: boolean
+    status?: number
+    data?: unknown
+  } | null>(null)
 
   const handleClick = async () => {
-    setLoading(true);
-    setResult(null);
+    setLoading(true)
+    setResult(null)
     try {
-      await request("mockApi")("misc:error", { code: 403 });
+      await request("mockApi")("misc:error", { code: 403 })
     } catch (error: unknown) {
       if (isHTTPError(error)) {
         setResult({
           isHttpError: true,
           status: error.status,
           data: error.data,
-        });
+        })
       } else {
-        setResult({ isHttpError: false });
+        setResult({ isHttpError: false })
       }
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <DemoCard
@@ -175,5 +171,5 @@ function GuardDemo() {
       <RunButton loading={loading} label="Trigger 403" onClick={handleClick} />
       {result ? <ResponseViewer data={result} status={result.status ?? 500} /> : null}
     </DemoCard>
-  );
+  )
 }

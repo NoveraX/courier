@@ -1,13 +1,13 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
-import { navCategories } from "./nav-items";
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { cn } from "@/lib/utils"
+import { navCategories } from "./nav-items"
 
 export function Sidebar() {
-  const pathname = usePathname();
+  const pathname = usePathname()
 
   return (
     <aside className="hidden md:flex w-64 flex-col border-r bg-sidebar-background">
@@ -35,7 +35,7 @@ export function Sidebar() {
                       "flex items-center rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                       pathname === item.href
                         ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                        : "text-sidebar-foreground",
+                        : "text-sidebar-foreground"
                     )}
                   >
                     {item.title}
@@ -47,5 +47,5 @@ export function Sidebar() {
         </nav>
       </ScrollArea>
     </aside>
-  );
+  )
 }

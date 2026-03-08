@@ -1,6 +1,6 @@
-import { Router } from "express";
+import { Router } from "express"
 
-const router = Router();
+const router = Router()
 
 router.all("/", (req, res) => {
   res.json({
@@ -10,7 +10,7 @@ router.all("/", (req, res) => {
     body: req.body ?? null,
     query: req.query,
     rawQuery: req.originalUrl.includes("?") ? req.originalUrl.split("?")[1] : null,
-  });
-});
+  })
+})
 
-export default router;
+export default router

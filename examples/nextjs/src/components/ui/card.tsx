@@ -1,5 +1,5 @@
-import type { ComponentProps } from "react";
-import { cn } from "@/lib/utils";
+import type { ComponentProps } from "react"
+import { cn } from "@/lib/utils"
 
 function Card({ className, ...props }: ComponentProps<"div">) {
   return (
@@ -7,23 +7,23 @@ function Card({ className, ...props }: ComponentProps<"div">) {
       className={cn("rounded-xl border bg-card text-card-foreground shadow", className)}
       {...props}
     />
-  );
+  )
 }
 
 function CardHeader({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("flex flex-col space-y-1.5 p-6", className)} {...props} />;
+  return <div className={cn("flex flex-col space-y-1.5 p-6", className)} {...props} />
 }
 
 function CardTitle({ className, ...props }: ComponentProps<"h3">) {
-  return <h3 className={cn("font-semibold leading-none tracking-tight", className)} {...props} />;
+  return <h3 className={cn("font-semibold leading-none tracking-tight", className)} {...props} />
 }
 
 function CardDescription({ className, ...props }: ComponentProps<"p">) {
-  return <p className={cn("text-sm text-muted-foreground", className)} {...props} />;
+  return <p className={cn("text-sm text-muted-foreground", className)} {...props} />
 }
 
 function CardContent({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("p-6 pt-0", className)} {...props} />;
+  return <div className={cn("p-6 pt-0", className)} {...props} />
 }
 
-export { Card, CardHeader, CardTitle, CardDescription, CardContent };
+export { Card, CardHeader, CardTitle, CardDescription, CardContent }

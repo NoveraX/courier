@@ -1,18 +1,18 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { DemoCard } from "@/components/demo-card";
-import { ResponseViewer } from "@/components/response-viewer";
-import { RunButton } from "@/components/run-button";
-import { useQuery, useMutation } from "@/lib/request";
-import { Button } from "@/components/ui/button";
-import { Trash2, Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { DemoCard } from "@/components/demo-card"
+import { ResponseViewer } from "@/components/response-viewer"
+import { RunButton } from "@/components/run-button"
+import { Button } from "@/components/ui/button"
+import { useMutation, useQuery } from "@/lib/request"
 
 const createCode = `const create = useMutation("mockApi", "users:create", {
   onSuccess: () => refetch(), // refresh the list
 });
 
-create.mutate({ name: "New User", email: "new@example.com" });`;
+create.mutate({ name: "New User", email: "new@example.com" });`
 
 const updateCode = `const update = useMutation("mockApi", "users:update");
 
@@ -21,16 +21,16 @@ update.mutate({
   name: "Updated Name",
   email: "updated@example.com",
   role: "moderator",
-});`;
+});`
 
 const patchCode = `const patch = useMutation("mockApi", "users:patch");
 
 // Only send the fields you want to change
-patch.mutate({ id: 1, name: "Patched Name" });`;
+patch.mutate({ id: 1, name: "Patched Name" });`
 
 const deleteCode = `const remove = useMutation("mockApi", "users:remove");
 
-remove.mutate({ id: 1 });`;
+remove.mutate({ id: 1 });`
 
 const fullCode = `import { useQuery, useMutation } from "@/lib/request";
 
@@ -55,47 +55,47 @@ const patch = useMutation("mockApi", "users:patch", {
 // Delete
 const remove = useMutation("mockApi", "users:remove", {
   onSuccess: () => refetch(),
-});`;
+});`
 
 type User = {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  createdAt: string;
-};
+  id: number
+  name: string
+  email: string
+  role: string
+  createdAt: string
+}
 
 export default function CrudPage() {
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
-  const { data, isLoading, refetch } = useQuery("mockApi", "users:getAll", { variables: {} });
+  const { data, isLoading, refetch } = useQuery("mockApi", "users:getAll", { variables: {} })
 
   const create = useMutation("mockApi", "users:create", {
     onSuccess: () => refetch(),
-  });
+  })
 
   const update = useMutation("mockApi", "users:update", {
     onSuccess: () => {
-      refetch();
-      setSelectedUser(null);
+      refetch()
+      setSelectedUser(null)
     },
-  });
+  })
 
   const patch = useMutation("mockApi", "users:patch", {
     onSuccess: () => {
-      refetch();
-      setSelectedUser(null);
+      refetch()
+      setSelectedUser(null)
     },
-  });
+  })
 
   const remove = useMutation("mockApi", "users:remove", {
     onSuccess: () => {
-      refetch();
-      setSelectedUser(null);
+      refetch()
+      setSelectedUser(null)
     },
-  });
+  })
 
-  const users: User[] = data?.data ?? [];
+  const users: User[] = data?.data ?? []
 
   return (
     <div className="space-y-8">
@@ -106,7 +106,11 @@ export default function CrudPage() {
         </p>
       </div>
 
-      <DemoCard title="Full CRUD" description="Interactive user management with all HTTP methods." code={fullCode}>
+      <DemoCard
+        title="Full CRUD"
+        description="Interactive user management with all HTTP methods."
+        code={fullCode}
+      >
         <div className="space-y-4">
           {/* User list */}
           <div className="rounded-lg border">
@@ -115,7 +119,10 @@ export default function CrudPage() {
             </div>
             <div className="divide-y">
               {users.map((user) => (
-                <div key={user.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between px-4 py-2.5 text-sm"
+                >
                   <div className="flex items-center gap-3">
                     <span className="font-medium">{user.name}</span>
                     <span className="text-muted-foreground">{user.email}</span>
@@ -204,14 +211,26 @@ export default function CrudPage() {
         </div>
       </DemoCard>
 
-      <DemoCard title="Individual Operations" description="Code snippets for each CRUD method." code={`// CREATE\n${createCode}\n\n// UPDATE (PUT)\n${updateCode}\n\n// PATCH\n${patchCode}\n\n// DELETE\n${deleteCode}`}>
+      <DemoCard
+        title="Individual Operations"
+        description="Code snippets for each CRUD method."
+        code={`// CREATE\n${createCode}\n\n// UPDATE (PUT)\n${updateCode}\n\n// PATCH\n${patchCode}\n\n// DELETE\n${deleteCode}`}
+      >
         <div className="space-y-3 text-sm text-muted-foreground">
-          <p><strong>POST</strong> — <code>users:create</code> creates a new user</p>
-          <p><strong>PUT</strong> — <code>users:update</code> fully replaces the user</p>
-          <p><strong>PATCH</strong> — <code>users:patch</code> partially updates fields</p>
-          <p><strong>DELETE</strong> — <code>users:remove</code> deletes the user</p>
+          <p>
+            <strong>POST</strong> — <code>users:create</code> creates a new user
+          </p>
+          <p>
+            <strong>PUT</strong> — <code>users:update</code> fully replaces the user
+          </p>
+          <p>
+            <strong>PATCH</strong> — <code>users:patch</code> partially updates fields
+          </p>
+          <p>
+            <strong>DELETE</strong> — <code>users:remove</code> deletes the user
+          </p>
         </div>
       </DemoCard>
     </div>
-  );
+  )
 }

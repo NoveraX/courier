@@ -1,9 +1,9 @@
-"use client";
+"use client"
 
-import { DemoCard } from "@/components/demo-card";
-import { ResponseViewer } from "@/components/response-viewer";
-import { RunButton } from "@/components/run-button";
-import { useMutation } from "@/lib/request";
+import { DemoCard } from "@/components/demo-card"
+import { ResponseViewer } from "@/components/response-viewer"
+import { RunButton } from "@/components/run-button"
+import { useMutation } from "@/lib/request"
 
 const sourceConfigCode = `import { Request } from "@noverax/nexus/RequestClass";
 
@@ -39,7 +39,7 @@ class EncodedApi extends Request<typeof groups> {
       defaultQueryParams: { format: "json" },
     });
   }
-}`;
+}`
 
 const bodyEncodingCode = `// Default (mockApi): JSON body
 await request("mockApi")("echo:send", { name: "John", role: "admin" });
@@ -49,14 +49,14 @@ await request("mockApi")("echo:send", { name: "John", role: "admin" });
 // Custom (encodedApi): URL-encoded body + defaultData merged
 await request("encodedApi")("echo:send", { name: "John", role: "admin" });
 // Content-Type: application/x-www-form-urlencoded
-// Body: apiVersion=v2&name=John&role=admin`;
+// Body: apiVersion=v2&name=John&role=admin`
 
 const searchParamsCode = `// Custom searchParamsEncoder supports arrays
 await request("encodedApi")("echo:retrieve", {
   tags: ["javascript", "react"],
   page: 1,
 });
-// GET /echo?format=json&apiVersion=v2&tags[]=javascript&tags[]=react&page=1`;
+// GET /echo?format=json&apiVersion=v2&tags[]=javascript&tags[]=react&page=1`
 
 const defaultsCode = `// defaultData auto-merges into POST body
 await request("encodedApi")("echo:send", { name: "John" });
@@ -64,7 +64,7 @@ await request("encodedApi")("echo:send", { name: "John" });
 
 // defaultQueryParams auto-merges into GET query
 await request("encodedApi")("echo:retrieve", { page: 1 });
-// Query includes: format=json&page=1`;
+// Query includes: format=json&page=1`
 
 export default function EncodingPage() {
   return (
@@ -91,13 +91,13 @@ export default function EncodingPage() {
       <SearchParamsDemo />
       <DefaultsDemo />
     </div>
-  );
+  )
 }
 
 function BodyEncodingDemo() {
-  const jsonMutation = useMutation("mockApi", "echo:send");
-  const encodedMutation = useMutation("encodedApi", "echo:send");
-  const variables = { name: "John", role: "admin" };
+  const jsonMutation = useMutation("mockApi", "echo:send")
+  const encodedMutation = useMutation("encodedApi", "echo:send")
+  const variables = { name: "John", role: "admin" }
 
   return (
     <DemoCard
@@ -127,20 +127,18 @@ function BodyEncodingDemo() {
           ) : null}
           {encodedMutation.data ? (
             <div>
-              <p className="text-xs font-medium mb-2 text-muted-foreground">
-                URL-encoded result:
-              </p>
+              <p className="text-xs font-medium mb-2 text-muted-foreground">URL-encoded result:</p>
               <ResponseViewer data={encodedMutation.data} status={200} />
             </div>
           ) : null}
         </div>
       ) : null}
     </DemoCard>
-  );
+  )
 }
 
 function SearchParamsDemo() {
-  const { mutate, data, isPending } = useMutation("encodedApi", "echo:retrieve");
+  const { mutate, data, isPending } = useMutation("encodedApi", "echo:retrieve")
 
   return (
     <DemoCard
@@ -155,12 +153,12 @@ function SearchParamsDemo() {
       />
       {data ? <ResponseViewer data={data} status={200} /> : null}
     </DemoCard>
-  );
+  )
 }
 
 function DefaultsDemo() {
-  const postMutation = useMutation("encodedApi", "echo:send");
-  const getMutation = useMutation("encodedApi", "echo:retrieve");
+  const postMutation = useMutation("encodedApi", "echo:send")
+  const getMutation = useMutation("encodedApi", "echo:retrieve")
 
   return (
     <DemoCard
@@ -201,5 +199,5 @@ function DefaultsDemo() {
         </div>
       ) : null}
     </DemoCard>
-  );
+  )
 }

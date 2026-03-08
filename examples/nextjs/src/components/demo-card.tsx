@@ -1,16 +1,16 @@
-"use client";
+"use client"
 
-import type { ReactNode } from "react";
-import { CodeBlock } from "@/components/code-block";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { ReactNode } from "react"
+import { CodeBlock } from "@/components/code-block"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type DemoCardProps = {
-  title: string;
-  description: string;
-  code: string;
-  children: ReactNode;
-};
+  title: string
+  description: string
+  code: string
+  children: ReactNode
+}
 
 export function DemoCard({ title, description, code, children }: DemoCardProps) {
   return (
@@ -34,5 +34,5 @@ export function DemoCard({ title, description, code, children }: DemoCardProps) 
         </Tabs>
       </CardContent>
     </Card>
-  );
+  )
 }

@@ -1,31 +1,31 @@
-import { type Method, RequestGroup } from "@noverax/nexus/RequestClass";
+import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
 
 type Post = {
-  id: number;
-  userId: number;
-  title: string;
-  body: string;
-  tags: string[];
-  createdAt: string;
-};
+  id: number
+  userId: number
+  title: string
+  body: string
+  tags: string[]
+  createdAt: string
+}
 
 type PostsListResponse = {
-  data: Post[];
-  total: number;
-};
+  data: Post[]
+  total: number
+}
 
 export class Posts extends RequestGroup {
   constructor() {
-    super({ prefix: "posts" });
+    super({ prefix: "posts" })
   }
 
-  getAll: Method<PostsListResponse, { userId?: number }> = ({ get }) => get();
+  getAll: Method<PostsListResponse, { userId?: number }> = ({ get }) => get()
 
-  getById: Method<Post, { id: number }> = ({ get }) => get(":id");
+  getById: Method<Post, { id: number }> = ({ get }) => get(":id")
 
   create: Method<Post, { userId?: number; title: string; body: string; tags?: string[] }> = ({
     post,
-  }) => post();
+  }) => post()
 }
 
-export type { Post, PostsListResponse };
+export type { Post, PostsListResponse }

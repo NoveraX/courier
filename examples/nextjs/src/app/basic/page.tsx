@@ -1,29 +1,29 @@
-"use client";
+"use client"
 
-import { DemoCard } from "@/components/demo-card";
-import { ResponseViewer } from "@/components/response-viewer";
-import { RunButton } from "@/components/run-button";
-import { useQuery, useMutation } from "@/lib/request";
+import { DemoCard } from "@/components/demo-card"
+import { ResponseViewer } from "@/components/response-viewer"
+import { RunButton } from "@/components/run-button"
+import { useMutation, useQuery } from "@/lib/request"
 
 const getCode = `import { useQuery } from "@/lib/request";
 
 // useQuery fetches data automatically on mount
 const { data, isLoading, error } = useQuery("mockApi", "users:getAll", {
   variables: {},
-});`;
+});`
 
 const postCode = `import { useMutation } from "@/lib/request";
 
 const { mutate, data, isPending } = useMutation("mockApi", "users:create");
 
-mutate({ name: "Jane Doe", email: "jane@example.com", role: "user" });`;
+mutate({ name: "Jane Doe", email: "jane@example.com", role: "user" });`
 
 const manualCode = `import { useMutation } from "@/lib/request";
 
 // useMutation for on-demand calls — no need for manual useState
 const { mutate, data, isPending } = useMutation("mockApi", "users:getById");
 
-mutate({ id: 1 });`;
+mutate({ id: 1 });`
 
 export default function BasicPage() {
   return (
@@ -39,11 +39,11 @@ export default function BasicPage() {
       <PostDemo />
       <ManualDemo />
     </div>
-  );
+  )
 }
 
 function GetDemo() {
-  const { data, isLoading, error } = useQuery("mockApi", "users:getAll", { variables: {} });
+  const { data, isLoading, error } = useQuery("mockApi", "users:getAll", { variables: {} })
 
   return (
     <DemoCard
@@ -55,11 +55,11 @@ function GetDemo() {
       {error ? <ResponseViewer error={error.message} /> : null}
       {data ? <ResponseViewer data={data} status={200} /> : null}
     </DemoCard>
-  );
+  )
 }
 
 function PostDemo() {
-  const { mutate, data, isPending, error } = useMutation("mockApi", "users:create");
+  const { mutate, data, isPending, error } = useMutation("mockApi", "users:create")
 
   return (
     <DemoCard
@@ -75,11 +75,11 @@ function PostDemo() {
       {error ? <ResponseViewer error={error.message} /> : null}
       {data ? <ResponseViewer data={data} status={201} /> : null}
     </DemoCard>
-  );
+  )
 }
 
 function ManualDemo() {
-  const { mutate, data, isPending, error } = useMutation("mockApi", "users:getById");
+  const { mutate, data, isPending, error } = useMutation("mockApi", "users:getById")
 
   return (
     <DemoCard
@@ -91,5 +91,5 @@ function ManualDemo() {
       {error ? <ResponseViewer error={error.message} /> : null}
       {data ? <ResponseViewer data={data} status={200} /> : null}
     </DemoCard>
-  );
+  )
 }

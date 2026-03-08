@@ -5,6 +5,7 @@ import {
 } from "@shikijs/transformers"
 import type { BundledLanguage, BundledTheme, HighlighterGeneric, ShikiTransformer } from "shiki"
 import { createHighlighter } from "shiki"
+import { createJavaScriptRegexEngine } from "shiki/engine/javascript"
 
 const THEME = "vitesse-dark" satisfies BundledTheme
 const LANGUAGES: BundledLanguage[] = [
@@ -18,16 +19,32 @@ const LANGUAGES: BundledLanguage[] = [
   "html",
 ]
 
-let highlighter: HighlighterGeneric<BundledLanguage, BundledTheme> | null = null
+// Use globalThis to persist the highlighter across Next.js HMR / workers
+const globalForShiki = globalThis as unknown as {
+  __shikiHighlighter: HighlighterGeneric<BundledLanguage, BundledTheme> | undefined
+  __shikiPromise: Promise<HighlighterGeneric<BundledLanguage, BundledTheme>> | undefined
+}
 
 async function getHighlighter() {
-  if (!highlighter) {
-    highlighter = await createHighlighter({
+  if (globalForShiki.__shikiHighlighter) {
+    return globalForShiki.__shikiHighlighter
+  }
+
+  if (!globalForShiki.__shikiPromise) {
+    globalForShiki.__shikiPromise = createHighlighter({
       themes: [THEME],
       langs: LANGUAGES,
+      // Use pure JS regex engine instead of WASM (oniguruma) to avoid
+      // "memory access out of bounds" crashes in Next.js workers
+      engine: createJavaScriptRegexEngine(),
+    }).then((hl) => {
+      globalForShiki.__shikiHighlighter = hl
+      globalForShiki.__shikiPromise = undefined
+      return hl
     })
   }
-  return highlighter
+
+  return globalForShiki.__shikiPromise
 }
 
 function parseHighlightLines(highlight: (number | string)[]): number[] {
@@ -76,9 +93,23 @@ export async function highlightCode(code: string, options: HighlightOptions = {}
     transformers.push(transformerLineHighlight(highlight))
   }
 
-  return hl.codeToHtml(code.trim(), {
-    lang,
-    theme: THEME,
-    transformers,
-  })
+  try {
+    return hl.codeToHtml(code.trim(), {
+      lang,
+      theme: THEME,
+      transformers,
+    })
+  } catch {
+    // Stale WASM-based highlighter cached in globalThis — discard it
+    // so the next call creates a fresh JS-engine instance
+    globalForShiki.__shikiHighlighter = undefined
+    globalForShiki.__shikiPromise = undefined
+
+    const freshHl = await getHighlighter()
+    return freshHl.codeToHtml(code.trim(), {
+      lang,
+      theme: THEME,
+      transformers,
+    })
+  }
 }

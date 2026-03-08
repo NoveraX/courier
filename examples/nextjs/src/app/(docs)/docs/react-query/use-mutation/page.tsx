@@ -177,7 +177,10 @@ export function CreateUserForm() {
   )
 }`
 
-export const metadata = docsMetadata("useMutation", "Create, update, and delete data with type-safe mutations and automatic variable inference.")
+export const metadata = docsMetadata(
+  "useMutation",
+  "Create, update, and delete data with type-safe mutations and automatic variable inference."
+)
 
 export default async function UseMutationPage() {
   return (

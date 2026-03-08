@@ -48,7 +48,10 @@ const request = createClientRequest({
   },
 })`
 
-export const metadata = docsMetadata("Error Handling", "HTTPError class, isHTTPError type guard, and global error callbacks.")
+export const metadata = docsMetadata(
+  "Error Handling",
+  "HTTPError class, isHTTPError type guard, and global error callbacks."
+)
 
 export default function ErrorsExamplesPage() {
   return (

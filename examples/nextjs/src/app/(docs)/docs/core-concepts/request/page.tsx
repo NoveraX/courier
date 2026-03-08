@@ -90,7 +90,10 @@ export class Products extends RequestGroup {
   getById: Method<Product, { id: number }> = ({ get }) => get(":id")
 }`
 
-export const metadata = docsMetadata("Request & RequestGroup", "Define your API structure with typed classes that serve as the single source of truth for all requests.")
+export const metadata = docsMetadata(
+  "Request & RequestGroup",
+  "Define your API structure with typed classes that serve as the single source of truth for all requests."
+)
 
 export default async function RequestPage() {
   return (

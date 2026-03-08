@@ -118,7 +118,10 @@ export default async function DashboardPage() {
   )
 }`
 
-export const metadata = docsMetadata("Quick Start", "Define your API, set up the transport, and make your first typed request — in 4 steps.")
+export const metadata = docsMetadata(
+  "Quick Start",
+  "Define your API, set up the transport, and make your first typed request — in 4 steps."
+)
 
 export default async function QuickStartPage() {
   return (
@@ -261,7 +264,7 @@ export default async function QuickStartPage() {
             production
           </li>
           <li>
-            <Link href="/basic">Examples</Link> — interactive demos of every feature
+            <Link href="/docs/examples/basic">Examples</Link> — interactive demos of every feature
           </li>
         </ul>
       </Prose>

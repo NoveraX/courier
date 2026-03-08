@@ -52,7 +52,10 @@ patch.mutate({ id: 1, name: "Patched Name" })
 const remove = useMutation("mockApi", "users:remove")
 remove.mutate({ id: 1 })`
 
-export const metadata = docsMetadata("CRUD Operations", "Full create, read, update, and delete cycle with useMutation and useQuery.")
+export const metadata = docsMetadata(
+  "CRUD Operations",
+  "Full create, read, update, and delete cycle with useMutation and useQuery."
+)
 
 export default function CrudExamplesPage() {
   return (

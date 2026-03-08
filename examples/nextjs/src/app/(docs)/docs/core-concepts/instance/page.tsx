@@ -123,7 +123,10 @@ const baseOptionsCode = `class MyApi extends Request<typeof groups> {
   }
 }`
 
-export const metadata = docsMetadata("Instance & Methods", "How Nexus wraps HTTP calls with typed methods, automatic serialization, and path parameter extraction.")
+export const metadata = docsMetadata(
+  "Instance & Methods",
+  "How Nexus wraps HTTP calls with typed methods, automatic serialization, and path parameter extraction."
+)
 
 export default async function InstancePage() {
   return (

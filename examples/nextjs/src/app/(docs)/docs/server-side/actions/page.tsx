@@ -184,7 +184,10 @@ export async function createUser(data: { name: string; email: string }) {
   return user // Return for immediate use before revalidation completes
 }`
 
-export const metadata = docsMetadata("Server Actions", "Use createDirectRequest inside Server Actions for type-safe mutations with automatic revalidation.")
+export const metadata = docsMetadata(
+  "Server Actions",
+  "Use createDirectRequest inside Server Actions for type-safe mutations with automatic revalidation."
+)
 
 export default async function ServerActionsPage() {
   return (

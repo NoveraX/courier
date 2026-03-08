@@ -128,7 +128,10 @@ PAYMENT_API_URL=http://localhost:5000
 # Optional: custom proxy route path
 # NEXT_PUBLIC_REQUEST_PAGE=api/my-proxy`
 
-export const metadata = docsMetadata("Project Setup", "Recommended file structure, patterns, and configuration for production apps.")
+export const metadata = docsMetadata(
+  "Project Setup",
+  "Recommended file structure, patterns, and configuration for production apps."
+)
 
 export default async function ProjectSetupPage() {
   return (
@@ -232,7 +235,7 @@ export default async function ProjectSetupPage() {
 
         <ul>
           <li>
-            <Link href="/basic">Examples</Link> — interactive demos of every feature
+            <Link href="/docs/examples/basic">Examples</Link> — interactive demos of every feature
           </li>
           <li>
             <Link href="/docs/introduction">What is Nexus?</Link> — architecture overview and

@@ -65,7 +65,10 @@ await request("encodedApi")("echo:send", { name: "John" })
 await request("encodedApi")("echo:retrieve", { page: 1 })
 // Query includes: format=json&page=1`
 
-export const metadata = docsMetadata("Encoding", "Custom body and search params encoding with default values.")
+export const metadata = docsMetadata(
+  "Encoding",
+  "Custom body and search params encoding with default values."
+)
 
 export default function EncodingExamplesPage() {
   return (

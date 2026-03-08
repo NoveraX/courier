@@ -71,7 +71,10 @@ const request = createClientRequest({
   },
 })`
 
-export const metadata = docsMetadata("Request Options", "Configure timeout, retry, cache, and Next.js revalidation per request or globally.")
+export const metadata = docsMetadata(
+  "Request Options",
+  "Configure timeout, retry, cache, and Next.js revalidation per request or globally."
+)
 
 export default function OptionsExamplesPage() {
   return (
@@ -112,10 +115,9 @@ export default function OptionsExamplesPage() {
             The <code className="rounded bg-muted px-1 py-0.5 text-xs">cache</code> option maps
             directly to the Fetch API&apos;s{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-xs">RequestCache</code>. Use{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">force-cache</code> for
-            aggressive caching or{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">no-store</code> to skip the
-            cache entirely.
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">force-cache</code> for aggressive
+            caching or <code className="rounded bg-muted px-1 py-0.5 text-xs">no-store</code> to
+            skip the cache entirely.
           </p>
         </ExampleBlock>
 

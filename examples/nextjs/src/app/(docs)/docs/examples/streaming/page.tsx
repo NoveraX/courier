@@ -47,7 +47,10 @@ router.get("/stream", (_req, res) => {
   }, 500)
 })`
 
-export const metadata = docsMetadata("Streaming", "Stream responses progressively with stream: true. Chunks arrive in real time via SSE.")
+export const metadata = docsMetadata(
+  "Streaming",
+  "Stream responses progressively with stream: true. Chunks arrive in real time via SSE."
+)
 
 export default function StreamingExamplesPage() {
   return (

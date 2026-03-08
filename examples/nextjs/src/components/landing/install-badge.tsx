@@ -11,7 +11,7 @@ export function InstallBadge() {
     navigator.clipboard.writeText(command)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }, [command])
+  }, [])
 
   return (
     <button

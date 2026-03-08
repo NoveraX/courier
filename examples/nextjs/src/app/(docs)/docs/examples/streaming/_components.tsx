@@ -25,7 +25,8 @@ export function StreamDemo() {
         "misc:stream"
       )) as unknown as Response
 
-      const reader = response.body!.getReader()
+      const reader = response.body?.getReader()
+      if (!reader) return
       const decoder = new TextDecoder()
       let buffer = ""
 

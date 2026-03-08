@@ -108,7 +108,10 @@ export const direct = createDirectRequest(methods)
 const users = await direct("mockApi")("users:getAll", {})
 //    ^? { data: User[], total: number }`
 
-export const metadata = docsMetadata("Typed Singleton", "Create a single typed request instance with full type inference across your entire application.")
+export const metadata = docsMetadata(
+  "Typed Singleton",
+  "Create a single typed request instance with full type inference across your entire application."
+)
 
 export default function SingletonExamplesPage() {
   return (
@@ -128,9 +131,9 @@ export default function SingletonExamplesPage() {
         >
           <p className="text-sm text-muted-foreground">
             The generic parameter{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">{"<MethodsType>"}</code>{" "}
-            carries all source, group, method, response, and variable types. Every call site gets
-            full autocompletion and type checking.
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">{"<MethodsType>"}</code> carries
+            all source, group, method, response, and variable types. Every call site gets full
+            autocompletion and type checking.
           </p>
         </ExampleBlock>
 
@@ -140,8 +143,8 @@ export default function SingletonExamplesPage() {
           code={sourcesCode}
         >
           <p className="text-sm text-muted-foreground">
-            The <code className="rounded bg-muted px-1 py-0.5 text-xs">MethodsType</code> is
-            derived from the actual instances — no need to manually define or sync types.
+            The <code className="rounded bg-muted px-1 py-0.5 text-xs">MethodsType</code> is derived
+            from the actual instances — no need to manually define or sync types.
           </p>
         </ExampleBlock>
 

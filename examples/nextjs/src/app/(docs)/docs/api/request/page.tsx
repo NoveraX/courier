@@ -7,10 +7,6 @@ import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
-const signatureCode = `import { Request } from "@noverax/nexus/classes"
-
-const source = new Request(options?)`
-
 const classCode = `class Request<T extends RequestGroupType | undefined = undefined> {
   constructor(public options?: RequestOptions<T>)
 }`
@@ -81,25 +77,6 @@ const api = new Request({
     files: new RequestGroup({ prefix: "/files" }),
   },
 })`
-
-const methodsCode = `// Methods are defined as functions on the groups
-const api = new Request({
-  baseURL: process.env.API_URL,
-  groups: {
-    users: new RequestGroup({ prefix: "/users" }),
-  },
-})
-
-// Method definitions live on the source object
-// They receive MethodsInstance and variables
-type UserMethods = {
-  getAll: (methods: Methods) => methods.get()
-  getById: (methods: Methods, vars: { id: string }) => methods.get("/:id", vars)
-  create: (methods: Methods, vars: { name: string }) => methods.post("", vars)
-  update: (methods: Methods, vars: { id: string; name: string }) =>
-    methods.put("/:id", vars)
-  delete: (methods: Methods, vars: { id: string }) => methods.del("/:id", vars)
-}`
 
 const defaultDataCode = `// defaultData is merged into every POST/PUT/PATCH request body
 const api = new Request({
@@ -206,7 +183,10 @@ const api = new Request({
   },
 })`
 
-export const metadata = docsMetadata("Request", "Class that defines a data source with base URL, options, lifecycle hooks, and optional request groups.")
+export const metadata = docsMetadata(
+  "Request",
+  "Class that defines a data source with base URL, options, lifecycle hooks, and optional request groups."
+)
 
 export default async function RequestClassPage() {
   return (
@@ -274,8 +254,7 @@ export default async function RequestClassPage() {
         <h3 id="response-type">responseType</h3>
         <p>
           Controls response parsing. <InlineCode>&quot;json&quot;</InlineCode> (default) calls{" "}
-          <InlineCode>response.json()</InlineCode>,{" "}
-          <InlineCode>&quot;text&quot;</InlineCode> calls{" "}
+          <InlineCode>response.json()</InlineCode>, <InlineCode>&quot;text&quot;</InlineCode> calls{" "}
           <InlineCode>response.text()</InlineCode>. A <InlineCode>204</InlineCode> status always
           returns <InlineCode>null</InlineCode>.
         </p>
@@ -291,9 +270,7 @@ export default async function RequestClassPage() {
 
       <Prose>
         <h3 id="default-query-params">defaultQueryParams</h3>
-        <p>
-          Object merged into every request&apos;s search parameters.
-        </p>
+        <p>Object merged into every request&apos;s search parameters.</p>
       </Prose>
 
       <CodeBlock code={defaultQueryParamsCode} language="typescript" />
@@ -308,9 +285,7 @@ export default async function RequestClassPage() {
 
       <Prose>
         <h2 id="hooks">Lifecycle Hooks</h2>
-        <p>
-          Three hooks give you full control over the request lifecycle at the source level.
-        </p>
+        <p>Three hooks give you full control over the request lifecycle at the source level.</p>
       </Prose>
 
       <CodeBlock code={hooksCode} filename="api/sources.ts" />
@@ -328,9 +303,7 @@ export default async function RequestClassPage() {
 
       <Prose>
         <h2 id="encoders">Custom Encoders</h2>
-        <p>
-          Override the default JSON body encoding and search params serialization.
-        </p>
+        <p>Override the default JSON body encoding and search params serialization.</p>
       </Prose>
 
       <CodeBlock code={encoderCode} language="typescript" />

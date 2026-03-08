@@ -119,7 +119,10 @@ const report = await request("myApi", {
   timeout: 30_000,
 })("reports:generate", { type: "annual" })`
 
-export const metadata = docsMetadata("Options", "Full reference of source-level and per-request configuration options.")
+export const metadata = docsMetadata(
+  "Options",
+  "Full reference of source-level and per-request configuration options."
+)
 
 export default async function OptionsPage() {
   return (

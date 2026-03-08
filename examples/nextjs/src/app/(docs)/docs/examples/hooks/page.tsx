@@ -73,7 +73,10 @@ onRequest: (info) => {
   return info
 }`
 
-export const metadata = docsMetadata("Hooks", "Lifecycle hooks for request interception, response transformation, and error handling.")
+export const metadata = docsMetadata(
+  "Hooks",
+  "Lifecycle hooks for request interception, response transformation, and error handling."
+)
 
 export default function HooksExamplesPage() {
   return (

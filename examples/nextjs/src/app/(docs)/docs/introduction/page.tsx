@@ -35,7 +35,10 @@ const { mutate } = useMutation("myApi", "users:create")
 mutate({ name: "Jane", email: "jane@example.com" })
 //      ^? { name: string; email: string } — auto-inferred`
 
-export const metadata = docsMetadata("What is Nexus?", "A type-safe HTTP client for Next.js with request grouping, two transport modes, and built-in React Query integration.")
+export const metadata = docsMetadata(
+  "What is Nexus?",
+  "A type-safe HTTP client for Next.js with request grouping, two transport modes, and built-in React Query integration."
+)
 
 export default async function IntroductionPage() {
   return (

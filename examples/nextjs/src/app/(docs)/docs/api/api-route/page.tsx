@@ -98,7 +98,10 @@ const errorResponsesCode = `// Error responses returned by apiRoute:
 // 415 — Unsupported Content-Type
 { "success": false, "message": "Unsupported Content-Type" }`
 
-export const metadata = docsMetadata("apiRoute", "Creates a Next.js App Router POST handler that processes proxy-mode requests from createClientRequest.")
+export const metadata = docsMetadata(
+  "apiRoute",
+  "Creates a Next.js App Router POST handler that processes proxy-mode requests from createClientRequest."
+)
 
 export default async function ApiRoutePage() {
   return (
@@ -190,9 +193,7 @@ export default async function ApiRoutePage() {
       <Prose>
         <h2 id="request-body">Request Body Format</h2>
         <h3 id="json-body">JSON Body</h3>
-        <p>
-          Standard requests send a JSON body with source, group, query, variables, and options.
-        </p>
+        <p>Standard requests send a JSON body with source, group, query, variables, and options.</p>
       </Prose>
 
       <CodeBlock code={jsonBodyCode} language="json" />
@@ -234,8 +235,8 @@ export default async function ApiRoutePage() {
         <h2 id="related">Related</h2>
         <ul>
           <li>
-            <Link href="/docs/proxy-mode/overview">Proxy Mode Overview</Link> — understand the
-            proxy architecture
+            <Link href="/docs/proxy-mode/overview">Proxy Mode Overview</Link> — understand the proxy
+            architecture
           </li>
           <li>
             <Link href="/docs/proxy-mode/api-route">API Route Guide</Link> — step-by-step setup

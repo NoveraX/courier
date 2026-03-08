@@ -1,8 +1,8 @@
 "use client"
 
 import { ArrowRight } from "lucide-react"
-import type { ReactNode } from "react"
 import Link from "next/link"
+import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -32,10 +32,7 @@ export function Example({
   return (
     <div
       data-slot="example"
-      className={cn(
-        "overflow-hidden rounded-xl border border-border/60 bg-card",
-        className
-      )}
+      className={cn("overflow-hidden rounded-xl border border-border/60 bg-card", className)}
     >
       <div className="border-b border-border/60 px-5 py-4">
         <div className="flex items-start justify-between gap-4">

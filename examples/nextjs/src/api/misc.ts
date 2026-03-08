@@ -12,10 +12,6 @@ type ErrorResponse = {
 }
 
 export class Misc extends RequestGroup {
-  constructor() {
-    super()
-  }
-
   stream: Method<ReadableStream> = ({ get }) => get("stream")
 
   slow: Method<SlowResponse> = ({ get }) => get("slow")

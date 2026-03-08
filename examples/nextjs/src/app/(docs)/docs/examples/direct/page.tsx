@@ -21,7 +21,10 @@ const user = await directRequest("mockApi")("users:getById", { id: 1 })`
 const fetchPostsCode = `// Access any request group — same API as proxy mode
 const posts = await directRequest("mockApi")("posts:getAll", {})`
 
-export const metadata = docsMetadata("Direct Mode", "Server Components fetch data directly from the backend — no proxy, no API route, no client JS.")
+export const metadata = docsMetadata(
+  "Direct Mode",
+  "Server Components fetch data directly from the backend — no proxy, no API route, no client JS."
+)
 
 export default async function DirectExamplesPage() {
   const users = await directRequest("mockApi")("users:getAll", {})

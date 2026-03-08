@@ -173,7 +173,10 @@ analytics.onEvent(async (event) => {
   await request("myApi")("analytics:track", { event })
 })`
 
-export const metadata = docsMetadata("Advanced React Query Patterns", "Prefetching, hydration, cache strategies, infinite queries, and escape hatches for complex scenarios.")
+export const metadata = docsMetadata(
+  "Advanced React Query Patterns",
+  "Prefetching, hydration, cache strategies, infinite queries, and escape hatches for complex scenarios."
+)
 
 export default async function AdvancedPatternsPage() {
   return (

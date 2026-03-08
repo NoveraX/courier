@@ -114,7 +114,10 @@ declare module "@noverax/nexus" {
 useQuery("mainApi", "users:getAll")       // ← knows mainApi groups
 useQuery("paymentApi", "products:list")   // ← knows paymentApi groups`
 
-export const metadata = docsMetadata("Singleton Pattern", "Use TypeScript module augmentation to eliminate generic parameters from every request call.")
+export const metadata = docsMetadata(
+  "Singleton Pattern",
+  "Use TypeScript module augmentation to eliminate generic parameters from every request call."
+)
 
 export default async function SingletonPage() {
   return (

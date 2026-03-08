@@ -129,7 +129,10 @@ const cachingCode = `// Path compilation functions are cached for performance.
 // This means paths like "/users/:id" are compiled once,
 // no matter how many times they are called with different variables.`
 
-export const metadata = docsMetadata("Path Parameters", "Dynamic URL segments using :param syntax, compiled via path-to-regexp.")
+export const metadata = docsMetadata(
+  "Path Parameters",
+  "Dynamic URL segments using :param syntax, compiled via path-to-regexp."
+)
 
 export default async function PathParamsPage() {
   return (

@@ -37,7 +37,10 @@ class Files extends RequestGroup {
   upload: Method<UploadResponse, FormData> = ({ post }) => post()
 }`
 
-export const metadata = docsMetadata("File Upload", "FormData file upload through the proxy. Nexus auto-detects FormData and handles encoding.")
+export const metadata = docsMetadata(
+  "File Upload",
+  "FormData file upload through the proxy. Nexus auto-detects FormData and handles encoding."
+)
 
 export default function UploadExamplesPage() {
   return (

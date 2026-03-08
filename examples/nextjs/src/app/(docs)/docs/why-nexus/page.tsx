@@ -83,10 +83,10 @@ export default async function WhyNexusPage() {
 
       <Prose>
         <p>
-          Building a Next.js app that talks to a REST API sounds simple — until you need type safety,
-          a proxy layer, cookie forwarding, error handling, upload progress, and React Query
-          integration. Each of these adds boilerplate, and without a unified approach, your API logic
-          scatters across dozens of files.
+          Building a Next.js app that talks to a REST API sounds simple — until you need type
+          safety, a proxy layer, cookie forwarding, error handling, upload progress, and React Query
+          integration. Each of these adds boilerplate, and without a unified approach, your API
+          logic scatters across dozens of files.
         </p>
 
         <p>
@@ -105,9 +105,7 @@ export default async function WhyNexusPage() {
           </li>
           <li>Cast response types manually with no runtime guarantee</li>
           <li>Create a separate API route for every endpoint you want to proxy</li>
-          <li>
-            Duplicate type annotations between your fetch logic and your components
-          </li>
+          <li>Duplicate type annotations between your fetch logic and your components</li>
           <li>Wire up React Query with custom query keys and fetch functions for each endpoint</li>
         </ol>
 
@@ -126,11 +124,11 @@ export default async function WhyNexusPage() {
         <h2 id="define-once">Define Once, Use Everywhere</h2>
 
         <p>
-          The core idea behind Nexus is that you define your API structure <strong>once</strong> using{" "}
-          <InlineCode>Request</InlineCode> and <InlineCode>RequestGroup</InlineCode> classes. Every
-          method declares its response type and variables type through the{" "}
-          <InlineCode>{"Method<R, V>"}</InlineCode> generic. From that single definition, Nexus gives
-          you:
+          The core idea behind Nexus is that you define your API structure <strong>once</strong>{" "}
+          using <InlineCode>Request</InlineCode> and <InlineCode>RequestGroup</InlineCode> classes.
+          Every method declares its response type and variables type through the{" "}
+          <InlineCode>{"Method<R, V>"}</InlineCode> generic. From that single definition, Nexus
+          gives you:
         </p>
 
         <ul>
@@ -143,21 +141,24 @@ export default async function WhyNexusPage() {
             <InlineCode>createDirectRequest</InlineCode>
           </li>
           <li>
-            <strong>React Query</strong> — hooks through{" "}
-            <InlineCode>createQueryRequest</InlineCode>
+            <strong>React Query</strong> — hooks through <InlineCode>createQueryRequest</InlineCode>
           </li>
         </ul>
 
         <p>All three share the same types, autocomplete, and validation:</p>
       </Prose>
 
-      <CodeBlock code={boilerplateCode} language="typescript" filename="One definition, three modes" />
+      <CodeBlock
+        code={boilerplateCode}
+        language="typescript"
+        filename="One definition, three modes"
+      />
 
       <Callout variant="tip" title="No code generation">
         <p>
-          Unlike tRPC or GraphQL codegen, Nexus uses plain TypeScript classes as the source of truth.
-          There are no generated files, no build steps, and no schema syncing. Rename a method, and
-          TypeScript catches every broken call site instantly.
+          Unlike tRPC or GraphQL codegen, Nexus uses plain TypeScript classes as the source of
+          truth. There are no generated files, no build steps, and no schema syncing. Rename a
+          method, and TypeScript catches every broken call site instantly.
         </p>
       </Callout>
 
@@ -260,8 +261,9 @@ export default async function WhyNexusPage() {
 
       <Callout variant="info" title="Works with any REST backend">
         <p>
-          Nexus does not require a specific backend framework. It works with Express, FastAPI, Rails,
-          Go, or any HTTP API that returns JSON. Your backend does not need any Nexus-specific setup.
+          Nexus does not require a specific backend framework. It works with Express, FastAPI,
+          Rails, Go, or any HTTP API that returns JSON. Your backend does not need any
+          Nexus-specific setup.
         </p>
       </Callout>
 

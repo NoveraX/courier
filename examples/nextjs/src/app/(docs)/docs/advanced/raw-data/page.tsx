@@ -89,7 +89,10 @@ export default async function DashboardPage() {
   )
 }`
 
-export const metadata = docsMetadata("Raw Data Mode", "Access response status codes and headers alongside the parsed data.")
+export const metadata = docsMetadata(
+  "Raw Data Mode",
+  "Access response status codes and headers alongside the parsed data."
+)
 
 export default async function RawDataPage() {
   return (

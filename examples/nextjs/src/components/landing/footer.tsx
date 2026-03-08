@@ -1,9 +1,14 @@
 import { BookOpen, Github, Package } from "lucide-react"
 
 const links = [
-  { label: "Documentation", href: "/basic", icon: BookOpen },
+  { label: "Documentation", href: "/docs/introduction", icon: BookOpen },
   { label: "GitHub", href: "https://github.com/NoveraX/nexus", icon: Github, external: true },
-  { label: "npm", href: "https://www.npmjs.com/package/@noverax/nexus", icon: Package, external: true },
+  {
+    label: "npm",
+    href: "https://www.npmjs.com/package/@noverax/nexus",
+    icon: Package,
+    external: true,
+  },
 ]
 
 export function Footer() {

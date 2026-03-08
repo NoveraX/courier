@@ -103,7 +103,10 @@ export function LogoutButton() {
   return <button onClick={handleLogout}>Log out</button>
 }`
 
-export const metadata = docsMetadata("React Query Setup", "Integrate Nexus with @tanstack/react-query for automatic caching, refetching, and type-safe hooks.")
+export const metadata = docsMetadata(
+  "React Query Setup",
+  "Integrate Nexus with @tanstack/react-query for automatic caching, refetching, and type-safe hooks."
+)
 
 export default async function ReactQuerySetupPage() {
   return (

@@ -116,7 +116,10 @@ const internalsCode = `// How deduplication works internally:
 //    - If you also pass a manual signal, both signals are combined
 //    - Uses AbortSignal.any() — request aborts if either signal fires`
 
-export const metadata = docsMetadata("Abort & Deduplication", "Automatically cancel duplicate in-flight requests and manually abort with AbortController.")
+export const metadata = docsMetadata(
+  "Abort & Deduplication",
+  "Automatically cancel duplicate in-flight requests and manually abort with AbortController."
+)
 
 export default async function AbortPage() {
   return (

@@ -45,7 +45,10 @@ class Api extends Request<typeof groups> {
   }
 }`
 
-export const metadata = docsMetadata("Abort & Deduplication", "Cancel in-flight requests with AbortController and deduplicate rapid calls.")
+export const metadata = docsMetadata(
+  "Abort & Deduplication",
+  "Cancel in-flight requests with AbortController and deduplicate rapid calls."
+)
 
 export default function AbortExamplesPage() {
   return (
@@ -80,8 +83,7 @@ export default function AbortExamplesPage() {
           code={requestAbortCode}
         >
           <p className="text-sm text-muted-foreground">
-            When{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">requestAbort: true</code> is
+            When <code className="rounded bg-muted px-1 py-0.5 text-xs">requestAbort: true</code> is
             set, the Instance tracks in-flight requests by path and method. If a duplicate is fired,
             the previous one is aborted with status 499.
           </p>

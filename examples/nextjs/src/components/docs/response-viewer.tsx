@@ -14,7 +14,8 @@ type ResponseViewerProps = {
 }
 
 function statusColor(status: number) {
-  if (status >= 200 && status < 300) return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+  if (status >= 200 && status < 300)
+    return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
   if (status >= 400 && status < 500) return "bg-amber-500/10 text-amber-400 border-amber-500/20"
   return "bg-red-500/10 text-red-400 border-red-500/20"
 }
@@ -35,11 +36,7 @@ function JsonValue({ value, depth = 0 }: { value: unknown; depth?: number }) {
   }
 
   if (typeof value === "string") {
-    return (
-      <span className="text-emerald-400">
-        &quot;{value}&quot;
-      </span>
-    )
+    return <span className="text-emerald-400">&quot;{value}&quot;</span>
   }
 
   if (Array.isArray(value)) {
@@ -49,6 +46,7 @@ function JsonValue({ value, depth = 0 }: { value: unknown; depth?: number }) {
         <span className="text-zinc-500">[</span>
         {"\n"}
         {value.map((item, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: static JSON display, never reorders
           <span key={i}>
             {childIndent}
             <JsonValue value={item} depth={depth + 1} />
@@ -132,10 +130,7 @@ export function ResponseViewer({
   if (data === undefined) {
     return (
       <div
-        className={cn(
-          "rounded-lg border border-border/50 bg-muted/30 p-6 text-center",
-          className
-        )}
+        className={cn("rounded-lg border border-border/50 bg-muted/30 p-6 text-center", className)}
       >
         <p className="text-sm text-muted-foreground">Run the demo to see the response</p>
       </div>

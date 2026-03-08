@@ -2,7 +2,7 @@ import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
-import { GroupsDemo, GroupInfo } from "./_components"
+import { GroupInfo, GroupsDemo } from "./_components"
 
 const definitionCode = `import { Request, RequestGroup, type Method } from "@noverax/nexus/RequestClass"
 
@@ -45,7 +45,10 @@ const user  = useQuery("mockApi", "users:getById", { variables: { id: 1 } })
 //   posts:getAll  → GET  /posts
 //   users:getById → GET  /users/1`
 
-export const metadata = docsMetadata("Request Groups", "Organize methods into groups with prefixes using RequestGroup.")
+export const metadata = docsMetadata(
+  "Request Groups",
+  "Organize methods into groups with prefixes using RequestGroup."
+)
 
 export default function GroupsExamplesPage() {
   return (

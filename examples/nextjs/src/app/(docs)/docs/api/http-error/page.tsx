@@ -142,7 +142,10 @@ if (isHTTPError(error)) { ... }
 // ⚠️ Works, but may fail across different module instances
 if (error instanceof HTTPError) { ... }`
 
-export const metadata = docsMetadata("HTTPError", "Custom error class for HTTP responses with typed data, status code, and headers. Includes the isHTTPError type guard.")
+export const metadata = docsMetadata(
+  "HTTPError",
+  "Custom error class for HTTP responses with typed data, status code, and headers. Includes the isHTTPError type guard."
+)
 
 export default async function HTTPErrorPage() {
   return (
@@ -181,21 +184,20 @@ export default async function HTTPErrorPage() {
             network errors (DNS failure, connection refused, etc.).
           </li>
           <li>
-            <InlineCode>headers</InlineCode> — the response{" "}
-            <InlineCode>Headers</InlineCode> object. Empty <InlineCode>Headers</InlineCode> for
-            network errors.
+            <InlineCode>headers</InlineCode> — the response <InlineCode>Headers</InlineCode> object.
+            Empty <InlineCode>Headers</InlineCode> for network errors.
           </li>
           <li>
             <InlineCode>data</InlineCode> — the parsed response body. Typed as{" "}
             <InlineCode>R</InlineCode> (generic, defaults to <InlineCode>unknown</InlineCode>).
           </li>
           <li>
-            <InlineCode>name</InlineCode> — always{" "}
-            <InlineCode>&quot;HTTPError&quot;</InlineCode>.
+            <InlineCode>name</InlineCode> — always <InlineCode>&quot;HTTPError&quot;</InlineCode>.
           </li>
           <li>
-            <InlineCode>message</InlineCode> — <InlineCode>&quot;HTTP {"{status}"}&quot;</InlineCode>{" "}
-            (e.g., <InlineCode>&quot;HTTP 404&quot;</InlineCode>).
+            <InlineCode>message</InlineCode> —{" "}
+            <InlineCode>&quot;HTTP {"{status}"}&quot;</InlineCode> (e.g.,{" "}
+            <InlineCode>&quot;HTTP 404&quot;</InlineCode>).
           </li>
         </ul>
       </Prose>
@@ -214,6 +216,8 @@ export default async function HTTPErrorPage() {
           module boundaries and different package versions.
         </p>
       </Callout>
+
+      <CodeBlock code={instanceofCode} language="typescript" />
 
       <Prose>
         <h2 id="basic-usage">Basic Usage</h2>
@@ -261,8 +265,7 @@ export default async function HTTPErrorPage() {
         <h2 id="network-errors">Network Errors</h2>
         <p>
           Network-level errors (DNS failures, connection refused, timeouts at the TCP level) are
-          converted to <InlineCode>HTTPError</InlineCode> with{" "}
-          <InlineCode>status: 0</InlineCode>.
+          converted to <InlineCode>HTTPError</InlineCode> with <InlineCode>status: 0</InlineCode>.
         </p>
       </Prose>
 

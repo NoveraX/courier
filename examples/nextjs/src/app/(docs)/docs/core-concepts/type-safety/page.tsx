@@ -135,7 +135,10 @@ type MethodsInstance = {
 // When you write: getAll: Method<User[]> = ({ get }) => get()
 // TypeScript infers T = User[] through the Method generic`
 
-export const metadata = docsMetadata("Type Safety", "How Nexus achieves end-to-end type safety from API definitions to React components — without code generation.")
+export const metadata = docsMetadata(
+  "Type Safety",
+  "How Nexus achieves end-to-end type safety from API definitions to React components — without code generation."
+)
 
 export default async function TypeSafetyPage() {
   return (

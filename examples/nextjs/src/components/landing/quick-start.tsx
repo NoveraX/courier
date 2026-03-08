@@ -34,8 +34,20 @@ const newUser = await request<User>(api.users.create, {
 
 const steps = [
   { number: 1, label: "Install", code: installCode, language: "bash" },
-  { number: 2, label: "Define your API", code: defineCode, language: "typescript", filename: "lib/api.ts" },
-  { number: 3, label: "Use anywhere", code: useCode, language: "typescript", filename: "app/page.tsx" },
+  {
+    number: 2,
+    label: "Define your API",
+    code: defineCode,
+    language: "typescript",
+    filename: "lib/api.ts",
+  },
+  {
+    number: 3,
+    label: "Use anywhere",
+    code: useCode,
+    language: "typescript",
+    filename: "app/page.tsx",
+  },
 ]
 
 export function QuickStart() {
@@ -44,8 +56,7 @@ export function QuickStart() {
       <div className="mx-auto max-w-3xl">
         <AnimatedSection className="text-center">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Up and Running in{" "}
-            <span className="gradient-brand-text">3 Steps</span>
+            Up and Running in <span className="gradient-brand-text">3 Steps</span>
           </h2>
           <p className="mt-3 text-muted-foreground">
             From install to your first typed request in under a minute.
@@ -62,11 +73,7 @@ export function QuickStart() {
                 <h3 className="text-base font-semibold">{step.label}</h3>
               </div>
               <div className="mt-3 pl-11">
-                <CodeBlock
-                  code={step.code}
-                  language={step.language}
-                  filename={step.filename}
-                />
+                <CodeBlock code={step.code} language={step.language} filename={step.filename} />
               </div>
             </AnimatedSection>
           ))}
@@ -74,7 +81,7 @@ export function QuickStart() {
 
         <AnimatedSection delay={0.35} className="mt-12 text-center">
           <Button asChild size="lg" className="gradient-brand glow-brand text-white">
-            <Link href="/basic">
+            <Link href="/docs/quick-start">
               Read Full Guide
               <ArrowRight className="ml-1 h-4 w-4" />
             </Link>

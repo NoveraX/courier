@@ -162,7 +162,10 @@ const variableFlowCode = `// Complete variable flow:
 //    GET/DELETE  → URLSearchParams: /users/5?locale=en&name=Jane&api_key=123
 //    POST/PUT   → JSON body: { locale: "en", name: "Jane" } + query: ?api_key=123`
 
-export const metadata = docsMetadata("Encoding", "Control how request bodies and query parameters are serialized.")
+export const metadata = docsMetadata(
+  "Encoding",
+  "Control how request bodies and query parameters are serialized."
+)
 
 export default async function EncodingPage() {
   return (

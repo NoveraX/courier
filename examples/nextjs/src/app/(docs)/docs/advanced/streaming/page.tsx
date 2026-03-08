@@ -146,7 +146,10 @@ export function SSEConsumer({ channel }: { channel: string }) {
   )
 }`
 
-export const metadata = docsMetadata("Streaming", "Receive responses as ReadableStreams for SSE, large downloads, and progressive rendering.")
+export const metadata = docsMetadata(
+  "Streaming",
+  "Receive responses as ReadableStreams for SSE, large downloads, and progressive rendering."
+)
 
 export default async function StreamingPage() {
   return (

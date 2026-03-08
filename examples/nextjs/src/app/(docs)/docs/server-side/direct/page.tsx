@@ -137,7 +137,10 @@ const request = createDirectRequest(sources)
 await request("myApi")("users:getAll", { page: 1 }, { headers: await headers() })
 //                                      ^ variables    ^ context (optional)`
 
-export const metadata = docsMetadata("createDirectRequest", "Factory function for server-side requests — call your backend directly from RSC, Server Actions, and API routes.")
+export const metadata = docsMetadata(
+  "createDirectRequest",
+  "Factory function for server-side requests — call your backend directly from RSC, Server Actions, and API routes."
+)
 
 export default async function CreateDirectRequestPage() {
   return (

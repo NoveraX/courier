@@ -41,8 +41,7 @@ const features = [
   {
     icon: Radio,
     title: "Streaming",
-    description:
-      "ReadableStream and SSE support with progressive rendering in server and client.",
+    description: "ReadableStream and SSE support with progressive rendering in server and client.",
   },
   {
     icon: Shield,
@@ -74,8 +73,7 @@ export function FeaturesGrid() {
           className="text-center"
         >
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Everything You Need for{" "}
-            <span className="gradient-brand-text">HTTP in Next.js</span>
+            Everything You Need for <span className="gradient-brand-text">HTTP in Next.js</span>
           </h2>
           <p className="mt-3 text-muted-foreground">
             From simple GET requests to file uploads and streaming — one library covers it all.

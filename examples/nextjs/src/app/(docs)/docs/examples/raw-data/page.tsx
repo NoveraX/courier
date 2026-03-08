@@ -33,7 +33,10 @@ const raw = await request("mockApi", { rawData: true })(
 )
 //    ^? { status?: number, headers?: Headers, data?: ... }`
 
-export const metadata = docsMetadata("Raw Data Mode", "Access full response metadata with rawData: true — status code, headers, and data in one object.")
+export const metadata = docsMetadata(
+  "Raw Data Mode",
+  "Access full response metadata with rawData: true — status code, headers, and data in one object."
+)
 
 export default function RawDataExamplesPage() {
   return (

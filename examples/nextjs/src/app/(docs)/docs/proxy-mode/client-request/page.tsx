@@ -111,7 +111,10 @@ const fetchUser = request("myApi", {
 
 const user = await fetchUser("users:getById", { id: 5 })`
 
-export const metadata = docsMetadata("createClientRequest", "The browser-side factory that sends typed requests through your Next.js proxy route.")
+export const metadata = docsMetadata(
+  "createClientRequest",
+  "The browser-side factory that sends typed requests through your Next.js proxy route."
+)
 
 export default async function ClientRequestPage() {
   return (

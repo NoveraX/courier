@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 
 import { Breadcrumbs } from "@/components/layout/breadcrumbs"
+import { ContentWrapper } from "@/components/layout/content-wrapper"
 import { Header } from "@/components/layout/header"
 import { DocsPagination } from "@/components/layout/pagination"
 import { Sidebar } from "@/components/layout/sidebar"
@@ -20,11 +21,11 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
         <Header />
         <div className="flex flex-1">
           <main id="main-content" className="min-w-0 flex-1 px-6 py-8 lg:px-8">
-            <div className="animate-page-in mx-auto max-w-3xl">
+            <ContentWrapper>
               <Breadcrumbs />
               {children}
               <DocsPagination />
-            </div>
+            </ContentWrapper>
           </main>
           <TableOfContents />
         </div>

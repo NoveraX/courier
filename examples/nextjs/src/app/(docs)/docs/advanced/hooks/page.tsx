@@ -107,7 +107,10 @@ const authCode = `class MyApi extends Request<typeof groups> {
   }
 }`
 
-export const metadata = docsMetadata("Hooks (Lifecycle)", "Intercept, transform, and observe every request with onRequest, onResponse, and onError hooks.")
+export const metadata = docsMetadata(
+  "Hooks (Lifecycle)",
+  "Intercept, transform, and observe every request with onRequest, onResponse, and onError hooks."
+)
 
 export default async function HooksPage() {
   return (

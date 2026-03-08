@@ -111,7 +111,10 @@ const contextTypeCode = `type Context = {
   headers?: Headers
 }`
 
-export const metadata = docsMetadata("createDirectRequest", "Factory function that creates a typed request function for server-side direct HTTP calls — no proxy hop needed.")
+export const metadata = docsMetadata(
+  "createDirectRequest",
+  "Factory function that creates a typed request function for server-side direct HTTP calls — no proxy hop needed."
+)
 
 export default async function CreateDirectRequestPage() {
   return (
@@ -194,9 +197,8 @@ export default async function CreateDirectRequestPage() {
       <Callout variant="tip" title="Direct vs Proxy return types">
         <p>
           <InlineCode>createClientRequest</InlineCode> returns just the data (
-          <InlineCode>R</InlineCode>) by default.{" "}
-          <InlineCode>createDirectRequest</InlineCode> always returns{" "}
-          <InlineCode>Partial&lt;MethodKyResponse&lt;R&gt;&gt;</InlineCode> with{" "}
+          <InlineCode>R</InlineCode>) by default. <InlineCode>createDirectRequest</InlineCode>{" "}
+          always returns <InlineCode>Partial&lt;MethodKyResponse&lt;R&gt;&gt;</InlineCode> with{" "}
           <InlineCode>status</InlineCode>, <InlineCode>headers</InlineCode>, and{" "}
           <InlineCode>data</InlineCode>.
         </p>
@@ -212,8 +214,8 @@ export default async function CreateDirectRequestPage() {
         <h2 id="context">Passing Context</h2>
         <p>
           The optional third argument is a <InlineCode>Context</InlineCode> object. Use it to
-          forward cookies and headers from the incoming request to the backend — essential in RSC and
-          Server Actions.
+          forward cookies and headers from the incoming request to the backend — essential in RSC
+          and Server Actions.
         </p>
       </Prose>
 

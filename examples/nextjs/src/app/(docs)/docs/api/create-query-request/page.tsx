@@ -145,7 +145,10 @@ async function prefetchUser(id: string) {
   return request("api")("users:getById", { id })
 }`
 
-export const metadata = docsMetadata("createQueryRequest", "Creates type-safe React Query hooks (useQuery, useMutation) and a request client — all wired to your Nexus sources.")
+export const metadata = docsMetadata(
+  "createQueryRequest",
+  "Creates type-safe React Query hooks (useQuery, useMutation) and a request client — all wired to your Nexus sources."
+)
 
 export default async function CreateQueryRequestPage() {
   return (
@@ -202,8 +205,8 @@ export default async function CreateQueryRequestPage() {
             <InlineCode>mutate()</InlineCode>.
           </li>
           <li>
-            <InlineCode>request</InlineCode> — the underlying{" "}
-            <InlineCode>CommonRequest</InlineCode> for imperative use outside hooks.
+            <InlineCode>request</InlineCode> — the underlying <InlineCode>CommonRequest</InlineCode>{" "}
+            for imperative use outside hooks.
           </li>
         </ul>
       </Prose>
@@ -300,16 +303,15 @@ export default async function CreateQueryRequestPage() {
             QueryClientProvider
           </li>
           <li>
-            <Link href="/docs/react-query/use-query">useQuery Guide</Link> — in-depth usage
-            patterns
+            <Link href="/docs/react-query/use-query">useQuery Guide</Link> — in-depth usage patterns
           </li>
           <li>
             <Link href="/docs/react-query/use-mutation">useMutation Guide</Link> — mutations with
             optimistic updates
           </li>
           <li>
-            <Link href="/docs/api/create-client-request">createClientRequest</Link> — the
-            underlying proxy-mode factory
+            <Link href="/docs/api/create-client-request">createClientRequest</Link> — the underlying
+            proxy-mode factory
           </li>
         </ul>
       </Prose>

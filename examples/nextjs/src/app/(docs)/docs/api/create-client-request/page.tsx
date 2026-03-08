@@ -104,7 +104,10 @@ const xhrNoteCode = `// When onUploadProgress is set, Nexus uses XMLHttpRequest 
 // - onDownloadProgress
 // - next`
 
-export const metadata = docsMetadata("createClientRequest", "Factory function that creates a typed, curried request function for proxy-mode HTTP calls from the browser.")
+export const metadata = docsMetadata(
+  "createClientRequest",
+  "Factory function that creates a typed, curried request function for proxy-mode HTTP calls from the browser."
+)
 
 export default async function CreateClientRequestPage() {
   return (
@@ -119,7 +122,10 @@ export default async function CreateClientRequestPage() {
         <h2 id="import">Import</h2>
       </Prose>
 
-      <CodeBlock code={`import { createClientRequest } from "@noverax/nexus"`} language="typescript" />
+      <CodeBlock
+        code={`import { createClientRequest } from "@noverax/nexus"`}
+        language="typescript"
+      />
 
       <Prose>
         <h2 id="signature">Signature</h2>
@@ -127,8 +133,8 @@ export default async function CreateClientRequestPage() {
           <InlineCode>createClientRequest</InlineCode> accepts an optional{" "}
           <InlineCode>ClientRequestDefaults</InlineCode> object and returns a curried{" "}
           <InlineCode>CommonRequest</InlineCode> function. The generic parameter{" "}
-          <InlineCode>T</InlineCode> is your <InlineCode>Sources</InlineCode> type — it enables
-          full type inference for source names, query names, variables, and response types.
+          <InlineCode>T</InlineCode> is your <InlineCode>Sources</InlineCode> type — it enables full
+          type inference for source names, query names, variables, and response types.
         </p>
       </Prose>
 
@@ -137,9 +143,7 @@ export default async function CreateClientRequestPage() {
       <Prose>
         <h2 id="parameters">Parameters</h2>
         <h3 id="client-request-defaults">ClientRequestDefaults</h3>
-        <p>
-          All fields are optional. When omitted, sensible defaults are used.
-        </p>
+        <p>All fields are optional. When omitted, sensible defaults are used.</p>
       </Prose>
 
       <CodeBlock code={defaultsTypeCode} language="typescript" />
@@ -257,8 +261,8 @@ export default async function CreateClientRequestPage() {
         <h2 id="related">Related</h2>
         <ul>
           <li>
-            <Link href="/docs/proxy-mode/overview">Proxy Mode Overview</Link> — understand the
-            proxy architecture
+            <Link href="/docs/proxy-mode/overview">Proxy Mode Overview</Link> — understand the proxy
+            architecture
           </li>
           <li>
             <Link href="/docs/api/api-route">apiRoute</Link> — the server-side handler that

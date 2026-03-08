@@ -27,7 +27,10 @@ API_URL=http://localhost:4000
 # Optional: custom proxy route path (default: "request")
 # NEXT_PUBLIC_REQUEST_PAGE=api/my-request`
 
-export const metadata = docsMetadata("Installation", "Add @noverax/nexus to your Next.js project in under a minute.")
+export const metadata = docsMetadata(
+  "Installation",
+  "Add @noverax/nexus to your Next.js project in under a minute."
+)
 
 export default async function InstallationPage() {
   return (

@@ -15,11 +15,7 @@ type ExampleBlockProps = {
   className?: string
 }
 
-export async function ExampleBlock({
-  code,
-  language = "typescript",
-  ...props
-}: ExampleBlockProps) {
+export async function ExampleBlock({ code, language = "typescript", ...props }: ExampleBlockProps) {
   const highlightedCode = await highlightCode(code, { lang: language })
   return <Example {...props} code={code} highlightedCode={highlightedCode} />
 }

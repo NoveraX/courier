@@ -76,12 +76,7 @@ export function Architecture() {
               Proxy Mode
             </span>
             <div className="flex items-center justify-center gap-2 overflow-x-auto sm:gap-4">
-              <Node
-                label="Browser"
-                sub="Client Component"
-                className="bg-surface"
-                delay={0.1}
-              />
+              <Node label="Browser" sub="Client Component" className="bg-surface" delay={0.1} />
               <Arrow delay={0.2} label="POST" />
               <Node
                 label="Next.js"

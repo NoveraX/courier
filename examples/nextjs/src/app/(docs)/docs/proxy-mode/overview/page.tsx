@@ -83,7 +83,10 @@ const users = await request("myApi")("users:getAll")
 // Server → GET https://internal-api.company.com/users
 const users = await directRequest("myApi")("users:getAll")`
 
-export const metadata = docsMetadata("Proxy Mode Overview", "How Nexus routes browser requests through your Next.js server to keep secrets hidden and bypass CORS.")
+export const metadata = docsMetadata(
+  "Proxy Mode Overview",
+  "How Nexus routes browser requests through your Next.js server to keep secrets hidden and bypass CORS."
+)
 
 export default async function ProxyModeOverviewPage() {
   return (

@@ -150,7 +150,10 @@ try {
 // Error responses (4xx, 5xx) are parsed and included in error.data
 // 204 No Content → returns null as data`
 
-export const metadata = docsMetadata("Instance", "HTTP client wrapper around ky that generates typed HTTP methods (get, post, put, patch, del, head) with automatic URL parameter resolution.")
+export const metadata = docsMetadata(
+  "Instance",
+  "HTTP client wrapper around ky that generates typed HTTP methods (get, post, put, patch, del, head) with automatic URL parameter resolution."
+)
 
 export default async function InstancePage() {
   return (
@@ -226,8 +229,8 @@ export default async function InstancePage() {
       <Prose>
         <h2 id="defining-methods">Defining Methods</h2>
         <p>
-          Your source methods are functions that receive <InlineCode>MethodsInstance</InlineCode> and
-          optional variables. They call the appropriate HTTP method and return the response.
+          Your source methods are functions that receive <InlineCode>MethodsInstance</InlineCode>{" "}
+          and optional variables. They call the appropriate HTTP method and return the response.
         </p>
       </Prose>
 
@@ -245,9 +248,7 @@ export default async function InstancePage() {
 
       <Prose>
         <h2 id="variable-handling">Variable Handling by Method</h2>
-        <p>
-          How variables are sent depends on the HTTP method:
-        </p>
+        <p>How variables are sent depends on the HTTP method:</p>
         <ul>
           <li>
             <InlineCode>GET</InlineCode> / <InlineCode>DEL</InlineCode> — variables become search

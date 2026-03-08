@@ -3,9 +3,8 @@ import Link from "next/link"
 
 import { CodeBlock } from "@/components/docs/code-block"
 import { Button } from "@/components/ui/button"
-
-import { AnimatedSection } from "./section-animate"
 import { InstallBadge } from "./install-badge"
+import { AnimatedSection } from "./section-animate"
 
 const heroCode = `import { createClientRequest } from "@noverax/nexus"
 import { api } from "@/lib/api"
@@ -41,8 +40,7 @@ export function Hero() {
           <AnimatedSection className="max-w-xl">
             <InstallBadge />
             <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              Type-Safe HTTP{" "}
-              <span className="gradient-brand-text">for Next.js</span>
+              Type-Safe HTTP <span className="gradient-brand-text">for Next.js</span>
             </h1>
             <p className="mt-4 text-lg leading-relaxed text-muted-foreground sm:text-xl">
               Zero boilerplate, full type inference. Proxy & direct modes, React Query integration,
@@ -50,7 +48,7 @@ export function Hero() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" className="gradient-brand glow-brand text-white">
-                <Link href="/basic">
+                <Link href="/docs/quick-start">
                   Get Started
                   <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>

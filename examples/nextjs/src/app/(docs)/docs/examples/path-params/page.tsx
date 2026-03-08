@@ -30,7 +30,10 @@ getAll: Method<UsersListResponse, { page?: number; limit?: number }> =
 await request("mockApi")("users:getAll", { page: 1, limit: 5 })
 // → GET /users?page=1&limit=5`
 
-export const metadata = docsMetadata("Path Parameters", "Dynamic URL segments with :param placeholders, auto-replaced from variables.")
+export const metadata = docsMetadata(
+  "Path Parameters",
+  "Dynamic URL segments with :param placeholders, auto-replaced from variables."
+)
 
 export default function PathParamsExamplesPage() {
   return (

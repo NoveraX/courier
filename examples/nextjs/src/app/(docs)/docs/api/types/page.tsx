@@ -216,7 +216,10 @@ type WithVariables<V> = [V] extends [undefined]
   ? { variables?: undefined }
   : { variables: V }`
 
-export const metadata = docsMetadata("Types", "Complete reference for all TypeScript types exported by @noverax/nexus.")
+export const metadata = docsMetadata(
+  "Types",
+  "Complete reference for all TypeScript types exported by @noverax/nexus."
+)
 
 export default async function TypesPage() {
   return (
@@ -239,8 +242,8 @@ export default async function TypesPage() {
         <h2 id="request-functions">Request Function Types</h2>
         <h3 id="common-request">CommonRequest</h3>
         <p>
-          The curried request function type returned by <InlineCode>createClientRequest</InlineCode>,{" "}
-          <InlineCode>createDirectRequest</InlineCode>, and{" "}
+          The curried request function type returned by <InlineCode>createClientRequest</InlineCode>
+          , <InlineCode>createDirectRequest</InlineCode>, and{" "}
           <InlineCode>createQueryRequest</InlineCode>.
         </p>
       </Prose>
@@ -285,9 +288,7 @@ export default async function TypesPage() {
 
       <Prose>
         <h3 id="methods-instance-type">MethodsInstance</h3>
-        <p>
-          The object your method definitions receive. Contains all six HTTP method functions.
-        </p>
+        <p>The object your method definitions receive. Contains all six HTTP method functions.</p>
       </Prose>
 
       <CodeBlock code={methodsInstanceCode} language="typescript" />
@@ -301,9 +302,7 @@ export default async function TypesPage() {
 
       <Prose>
         <h3 id="success-response">SuccessResponse</h3>
-        <p>
-          Convenience type for standard success response wrappers.
-        </p>
+        <p>Convenience type for standard success response wrappers.</p>
       </Prose>
 
       <CodeBlock code={successResponseCode} language="typescript" />
@@ -311,9 +310,7 @@ export default async function TypesPage() {
       <Prose>
         <h2 id="options-types">Options Types</h2>
         <h3 id="methods-instance-options">MethodsInstanceOptions</h3>
-        <p>
-          Per-request options passed when calling a source method.
-        </p>
+        <p>Per-request options passed when calling a source method.</p>
       </Prose>
 
       <CodeBlock code={methodsInstanceOptionsCode} language="typescript" />

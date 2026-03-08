@@ -117,7 +117,10 @@ export function UserList() {
   return <ul>{data?.data.map((u) => <li key={u.id}>{u.name}</li>)}</ul>
 }`
 
-export const metadata = docsMetadata("useQuery", "Fetch data with automatic caching, refetching, and full type inference from your API definitions.")
+export const metadata = docsMetadata(
+  "useQuery",
+  "Fetch data with automatic caching, refetching, and full type inference from your API definitions."
+)
 
 export default async function UseQueryPage() {
   return (

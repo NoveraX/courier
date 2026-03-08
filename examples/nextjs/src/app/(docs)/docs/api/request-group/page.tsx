@@ -84,29 +84,6 @@ const multiLevelCode = `const api = new Request({
 // Both :version and :tenantId are resolved:
 // "users:getAll" → /v2/users (version from Request pathOptions)`
 
-const withMethodsCode = `// Groups organize methods by resource
-const api = new Request({
-  baseURL: process.env.API_URL,
-  groups: {
-    users: new RequestGroup({ prefix: "/users" }),
-    // Methods are defined on the groups object:
-    // users.getAll = (m) => m.get()
-    // users.getById = (m, { id }) => m.get("/:id", { id })
-    // users.create = (m, data) => m.post("", data)
-
-    files: new RequestGroup({ prefix: "/files" }),
-    // files.upload = (m, data) => m.post("/upload", data)
-  },
-})`
-
-const noGroupCode = `// Methods can also be defined at the root level (no group)
-const api = new Request({
-  baseURL: process.env.API_URL,
-})
-// Root methods: api.health = (m) => m.get("/health")
-
-// Calling: request("api")("health")  — no "group:" prefix`
-
 const queryFormatCode = `// Query format with groups: "group:method"
 await request("api")("users:getAll")
 await request("api")("users:getById", { id: "123" })
@@ -114,7 +91,10 @@ await request("api")("users:getById", { id: "123" })
 // Query format without groups: "method"
 await request("api")("health")`
 
-export const metadata = docsMetadata("RequestGroup", "Class that groups related methods under a namespace with a shared URL prefix and optional dynamic path parameters.")
+export const metadata = docsMetadata(
+  "RequestGroup",
+  "Class that groups related methods under a namespace with a shared URL prefix and optional dynamic path parameters."
+)
 
 export default async function RequestGroupPage() {
   return (

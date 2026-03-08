@@ -207,8 +207,8 @@ export default async function ArchitecturePage() {
             cookies, then calls <InlineCode>createRequest</InlineCode>
           </li>
           <li>
-            <InlineCode>createRequest</InlineCode> resolves the source, group, and method, creates an{" "}
-            <InlineCode>Instance</InlineCode>, and executes the HTTP call
+            <InlineCode>createRequest</InlineCode> resolves the source, group, and method, creates
+            an <InlineCode>Instance</InlineCode>, and executes the HTTP call
           </li>
           <li>The response flows back: backend → API route → browser</li>
         </ol>
@@ -235,9 +235,8 @@ export default async function ArchitecturePage() {
 
       <Prose>
         <p>
-          Direct mode skips the API route entirely.{" "}
-          <InlineCode>createDirectRequest</InlineCode> calls{" "}
-          <InlineCode>createRequest</InlineCode> directly, which creates an{" "}
+          Direct mode skips the API route entirely. <InlineCode>createDirectRequest</InlineCode>{" "}
+          calls <InlineCode>createRequest</InlineCode> directly, which creates an{" "}
           <InlineCode>Instance</InlineCode> and makes the HTTP call. This eliminates the extra
           network hop and keeps the entire operation server-side.
         </p>
@@ -263,8 +262,8 @@ export default async function ArchitecturePage() {
 
         <p>
           The core orchestrator. Both proxy and direct modes converge here.{" "}
-          <InlineCode>createRequest</InlineCode> receives the sources, a body describing which method
-          to call, and an optional context (headers for cookie forwarding):
+          <InlineCode>createRequest</InlineCode> receives the sources, a body describing which
+          method to call, and an optional context (headers for cookie forwarding):
         </p>
       </Prose>
 
@@ -274,9 +273,9 @@ export default async function ArchitecturePage() {
         <h3 id="instance">Instance</h3>
 
         <p>
-          <InlineCode>Instance</InlineCode> wraps <InlineCode>ky</InlineCode> and provides typed HTTP
-          methods. It resolves path parameters from variables, encodes request bodies, and manages
-          abort controllers:
+          <InlineCode>Instance</InlineCode> wraps <InlineCode>ky</InlineCode> and provides typed
+          HTTP methods. It resolves path parameters from variables, encodes request bodies, and
+          manages abort controllers:
         </p>
       </Prose>
 
@@ -285,8 +284,8 @@ export default async function ArchitecturePage() {
       <Callout variant="tip" title="ky under the hood">
         <p>
           Nexus uses <InlineCode>ky</InlineCode> as the HTTP engine — a lightweight, modern{" "}
-          <InlineCode>fetch</InlineCode> wrapper with retry, timeout, hooks, and JSON handling
-          built in. You never interact with <InlineCode>ky</InlineCode> directly; Nexus configures it
+          <InlineCode>fetch</InlineCode> wrapper with retry, timeout, hooks, and JSON handling built
+          in. You never interact with <InlineCode>ky</InlineCode> directly; Nexus configures it
           through <InlineCode>Instance</InlineCode>.
         </p>
       </Callout>
@@ -347,8 +346,8 @@ export default async function ArchitecturePage() {
 
       <Prose>
         <p>
-          All three return the same <InlineCode>{"CommonRequest<Sources>"}</InlineCode> type (or wrap
-          it), meaning you get identical type inference regardless of which factory you use.
+          All three return the same <InlineCode>{"CommonRequest<Sources>"}</InlineCode> type (or
+          wrap it), meaning you get identical type inference regardless of which factory you use.
         </p>
 
         <h2 id="next-steps">Next Steps</h2>

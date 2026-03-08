@@ -164,7 +164,10 @@ await request("myApi", {
 // In development, Nexus logs warnings for each ignored option.
 // In production, they are silently ignored.`
 
-export const metadata = docsMetadata("File Upload", "Upload files through the proxy with real-time progress tracking via XHR.")
+export const metadata = docsMetadata(
+  "File Upload",
+  "Upload files through the proxy with real-time progress tracking via XHR."
+)
 
 export default async function UploadPage() {
   return (

@@ -40,15 +40,11 @@ export function CodeComparison() {
 
         <div className="mt-12 grid gap-6 lg:grid-cols-2">
           <AnimatedSection delay={0.1}>
-            <div className="mb-3 text-sm font-medium text-muted-foreground">
-              Without Nexus
-            </div>
+            <div className="mb-3 text-sm font-medium text-muted-foreground">Without Nexus</div>
             <CodeBlock code={beforeCode} language="typescript" />
           </AnimatedSection>
           <AnimatedSection delay={0.2}>
-            <div className="mb-3 text-sm font-medium text-brand">
-              With Nexus
-            </div>
+            <div className="mb-3 text-sm font-medium text-brand">With Nexus</div>
             <CodeBlock code={afterCode} language="typescript" />
           </AnimatedSection>
         </div>

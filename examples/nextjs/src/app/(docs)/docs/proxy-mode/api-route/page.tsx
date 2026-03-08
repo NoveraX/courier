@@ -135,7 +135,10 @@ import { sources } from "@/api"
 
 export const { POST } = apiRoute(sources)`
 
-export const metadata = docsMetadata("API Route Handler", "The server-side endpoint that receives proxy requests and forwards them to your backend.")
+export const metadata = docsMetadata(
+  "API Route Handler",
+  "The server-side endpoint that receives proxy requests and forwards them to your backend."
+)
 
 export default async function ApiRoutePage() {
   return (

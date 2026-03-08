@@ -67,7 +67,10 @@ function UserRow({ user }) {
   )
 }`
 
-export const metadata = docsMetadata("Server Actions", "Mutate data with Server Actions + direct mode. The page revalidates automatically after each action.")
+export const metadata = docsMetadata(
+  "Server Actions",
+  "Mutate data with Server Actions + direct mode. The page revalidates automatically after each action."
+)
 
 export default async function ActionsExamplesPage() {
   const users = (await directRequest("mockApi")("users:getAll", {})) as UsersResponse

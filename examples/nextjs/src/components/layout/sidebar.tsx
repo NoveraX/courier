@@ -81,9 +81,8 @@ function SidebarSection({
           aria-hidden="true"
         />
       </button>
-      <div
+      <section
         id={`sidebar-${section.label}`}
-        role="region"
         className={cn(
           "grid transition-[grid-template-rows] duration-200 ease-out",
           isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
@@ -96,7 +95,7 @@ function SidebarSection({
             ))}
           </div>
         </div>
-      </div>
+      </section>
     </div>
   )
 }
@@ -106,7 +105,10 @@ export function Sidebar() {
   const [search, setSearch] = useState("")
 
   return (
-    <aside aria-label="Documentation navigation" className="hidden w-64 shrink-0 flex-col border-r bg-sidebar-background md:flex">
+    <aside
+      aria-label="Documentation navigation"
+      className="hidden w-64 shrink-0 flex-col border-r bg-sidebar-background md:flex"
+    >
       <div className="flex h-14 items-center gap-2 border-b px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <span className="text-lg tracking-tight">Nexus</span>

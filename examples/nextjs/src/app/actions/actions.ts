@@ -1,0 +1,44 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { directRequest } from "@/lib/direct-request";
+
+export type ActionState = {
+  success?: boolean;
+  error?: string;
+  data?: unknown;
+};
+
+export async function createUser(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  const role = (formData.get("role") as string) || "user";
+
+  if (!name?.trim() || !email?.trim()) {
+    return { error: "Name and email are required." };
+  }
+
+  try {
+    const user = await directRequest("mockApi")("users:create", { name, email, role });
+    revalidatePath("/actions");
+    return { success: true, data: user };
+  } catch {
+    return { error: "Failed to create user." };
+  }
+}
+
+export async function deleteUser(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const id = Number(formData.get("id"));
+
+  if (!id || Number.isNaN(id)) {
+    return { error: "Invalid user ID." };
+  }
+
+  try {
+    await directRequest("mockApi")("users:remove", { id });
+    revalidatePath("/actions");
+    return { success: true, data: { id } };
+  } catch {
+    return { error: `Failed to delete user #${id}.` };
+  }
+}

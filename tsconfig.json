@@ -1,0 +1,22 @@
+{
+  "include": ["src/**/*"],
+  "exclude": ["lib"],
+  "compilerOptions": {
+    "module": "ESNext",
+    "lib": ["DOM", "ESNext", "DOM.Iterable"],
+    "target": "ESNext",
+    "importHelpers": true,
+    "declaration": true,
+    "rootDir": "src",
+    "strict": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true
+  }
+}

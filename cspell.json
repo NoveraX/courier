@@ -1,0 +1,6 @@
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "import": ["@cspell/dict-ru_ru/cspell-ext.json"],
+  "language": "en,ru",
+  "words": ["datasource", "KYHTTP"]
+}

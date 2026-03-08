@@ -1,0 +1,97 @@
+{
+  "name": "@noverax/nexus",
+  "version": "0.0.0",
+  "description": "Type-safe HTTP client with request grouping, path parameters, and optional Next.js integration",
+  "author": "NoveraX",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    },
+    "./direct": {
+      "types": "./lib/direct/index.d.ts",
+      "import": "./lib/direct/index.js"
+    },
+    "./next/apiRoute": {
+      "types": "./lib/next/apiRoute.d.ts",
+      "import": "./lib/next/apiRoute.js"
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NoveraX/nexus.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NoveraX/nexus/issues"
+  },
+  "homepage": "https://github.com/NoveraX/nexus#readme",
+  "keywords": [
+    "http-client",
+    "api-client",
+    "fetch",
+    "request",
+    "typescript",
+    "type-safe",
+    "nextjs",
+    "ky",
+    "rest-api",
+    "request-group",
+    "path-params"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "next": ">=14"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "ky": "^1.14.3",
+    "path-to-regexp": "^8.3.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.6",
+    "@commitlint/cli": "^20.4.3",
+    "@commitlint/config-conventional": "^20.4.3",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.6",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.3.2",
+    "next": "^16.1.6",
+    "semantic-release": "^25.0.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "start": "tsup --watch",
+    "build": "tsup",
+    "lint": "biome check --write src/ && tsc --noEmit",
+    "format": "biome format --write src/",
+    "check": "biome check src/",
+    "refresh": "rm -rf ./node_modules ./package-lock.json && npm install",
+    "release": "HUSKY=0 semantic-release",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.ts": "biome check --write --no-errors-on-unmatched"
+  }
+}

@@ -70,8 +70,6 @@ type MethodRequestResponse<T extends boolean = false, R = unknown> = Promise<
   T extends true ? Partial<MethodKyResponse<R>> : R
 >;
 
-export type QueryOverrides = {};
-
 export type AnyGroups = {
   [k: string]: RequestGroup;
 };

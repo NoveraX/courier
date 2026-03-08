@@ -2,7 +2,7 @@ import ky, { HTTPError as KYHTTPError } from "ky";
 
 import { HTTPError } from "./error";
 import type { MethodsInstanceOptions } from "./instance/types";
-import type { CommonRequest, QueryOverrides } from "./types";
+import type { CommonRequest } from "./types";
 import {
   type CreateRequestOptions,
   getRequestOptions,
@@ -19,7 +19,7 @@ export type ClientRequestDefaults = {
   onSuccess?: (data: unknown) => void | Promise<void>;
 };
 
-export function createClientRequest<T extends Record<string, unknown> = QueryOverrides>(
+export function createClientRequest<T extends Record<string, unknown> = Record<string, unknown>>(
   defaults: ClientRequestDefaults = {},
 ): CommonRequest<T> {
   const {

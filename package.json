@@ -21,6 +21,10 @@
     "./next/apiRoute": {
       "types": "./lib/next/apiRoute.d.ts",
       "import": "./lib/next/apiRoute.js"
+    },
+    "./RequestClass": {
+      "types": "./lib/RequestClass.d.ts",
+      "import": "./lib/RequestClass.js"
     }
   },
   "files": [

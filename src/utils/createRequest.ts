@@ -17,10 +17,19 @@ function createInstance(baseOption?: BaseOptions, context?: Context) {
   return new Instance(baseOption, context);
 }
 
+const isMethodFn = (value: unknown): value is AnyMethods[string] => typeof value === "function";
+
+const getMethod = (target: object, name: string): AnyMethods[string] | undefined => {
+  if (!(name in target)) return undefined;
+  // object has no index signature; in-narrowing validates property exists
+  const method = (target as Record<string, unknown>)[name];
+  return isMethodFn(method) ? method : undefined;
+};
+
 const formatResponse = (context: Context | undefined, response: InternalResponse) => {
   if (response.stream) {
-    if (context?.res instanceof NextResponse) {
-      return new Response(response.data as ReadableStream, {
+    if (context?.res instanceof NextResponse && response.data instanceof ReadableStream) {
+      return new Response(response.data, {
         status: response.status,
         headers: response.headers,
       });
@@ -43,7 +52,7 @@ const formatResponse = (context: Context | undefined, response: InternalResponse
   if (context?.res instanceof NextResponse) {
     const jsonResponse =
       baseResult.status === 204
-        ? new Response(data as BodyInit, baseResult)
+        ? new Response(null, baseResult)
         : NextResponse.json(data, baseResult);
 
     if (response.headers?.has("set-cookie")) {
@@ -66,11 +75,21 @@ const formatResponse = (context: Context | undefined, response: InternalResponse
   throw new Error("Unknown error");
 };
 
-export const createRequest = async (
+export async function createRequest(
+  sources: Record<string, Request<AnyGroups | undefined>>,
+  requestOptions: CreateRequestOptionsType,
+  context: Context & { res: NextResponse },
+): Promise<Response>;
+export async function createRequest(
   sources: Record<string, Request<AnyGroups | undefined>>,
   requestOptions: CreateRequestOptionsType,
   context?: Context,
-) => {
+): Promise<unknown>;
+export async function createRequest(
+  sources: Record<string, Request<AnyGroups | undefined>>,
+  requestOptions: CreateRequestOptionsType,
+  context?: Context,
+) {
   const { source, group, query, variables, options } = getRequestOptions(requestOptions);
 
   const { req: nextRequest, headers: nextHeaders } = context || {};
@@ -124,7 +143,7 @@ export const createRequest = async (
 
   const method =
     typeof query === "string"
-      ? (groupDataSource as AnyMethods)?.[query] || (dataSource as unknown as AnyMethods)?.[query]
+      ? (groupDataSource && getMethod(groupDataSource, query)) || getMethod(dataSource, query)
       : undefined;
 
   if (typeof method !== "function") {
@@ -149,7 +168,7 @@ export const createRequest = async (
 
   const instance = createInstance(dataSource.options, context);
 
-  const instanceOptions = typeof options === "object" ? options : {};
+  const instanceOptions = options ?? {};
   const {
     rawData = false,
     passVars: passVariables = true,
@@ -193,7 +212,7 @@ export const createRequest = async (
       variables,
     );
 
-    const headers = isHeaders(response.headers) ? (response?.headers as Headers) : new Headers();
+    const headers = isHeaders(response.headers) ? response.headers : new Headers();
 
     const responseData = {
       status: response?.status || 200,
@@ -240,7 +259,7 @@ export const createRequest = async (
       rawData,
     });
   }
-};
+}
 
 type InternalResponse = {
   status: number;

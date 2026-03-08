@@ -48,7 +48,7 @@ export function createDirectRequest<T extends Sources>(
         mergedOptions.headers = options?.headers
           ? {
               ...defaultHeaders,
-              ...Object.fromEntries(new Headers(options.headers as HeadersInit)),
+              ...Object.fromEntries(new Headers(options.headers as HeadersInit)), // ky KyHeadersInit → DOM HeadersInit bridge
             }
           : defaultHeaders;
       }
@@ -61,7 +61,8 @@ export function createDirectRequest<T extends Sources>(
         options: mergedOptions,
       };
 
-      const context = (arguments_.length > 2 ? arguments_[2] : arguments_[1]) as Context;
+      const contextArg = arguments_.length > 2 ? arguments_[2] : arguments_[1];
+      const context = isContext(contextArg) ? contextArg : undefined;
 
       try {
         const result = await createRequest(sources, requestOptions, context);
@@ -73,5 +74,5 @@ export function createDirectRequest<T extends Sources>(
         }
         throw error;
       }
-    }) as CommonRequest<T, true>;
+    }) as CommonRequest<T, true>; // TS cannot infer curried generic closures
 }

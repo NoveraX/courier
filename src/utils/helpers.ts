@@ -35,10 +35,10 @@ export type ResponseType<T extends boolean = false, R = unknown> = T extends tru
 
 export const generateUrl = (
   urlPath_: string,
-  variables?: Record<string, unknown>,
+  variables?: FormData | Record<string, unknown>,
   generatedPathOptions?: Record<string, unknown>,
   searchParametersParse?: (string: string) => Record<string, unknown>,
-): [string, Record<string, unknown>, Record<string, unknown>] => {
+): [string, FormData | Record<string, unknown>, Record<string, unknown>] => {
   const [urlPath, searchParameters] = urlPath_.split("?");
   const objectSearchParameters = searchParametersParse
     ? searchParametersParse(searchParameters || "")
@@ -52,16 +52,17 @@ export const generateUrl = (
   const pathKeys: Record<string, string> = {};
 
   const keysArray = parse(urlPath).tokens.filter(
-    (path) => typeof path === "object" && "name" in path && typeof path.name === "string",
-  ) as Key[];
+    (token): token is Key =>
+      typeof token === "object" && "name" in token && typeof token.name === "string",
+  );
 
   for (const key of keysArray) {
     const pathKey = key.name;
 
-    if (isFormData(variables)) {
-      variables.delete(pathKey.toString());
+    if (isFormData(newVariables)) {
+      newVariables.delete(pathKey.toString());
     } else {
-      delete (newVariables as Record<string, unknown>)[pathKey];
+      delete newVariables[pathKey];
     }
 
     pathKeys[pathKey] = String(pathOptions?.[pathKey]);
@@ -85,11 +86,11 @@ export const generateUrl = (
 };
 
 export const getRequestOptions = (requestOptions: CreateRequestOptionsType) => {
-  let source;
-  let group;
-  let query;
-  let variables;
-  let options;
+  let source: FormDataEntryValue | string | undefined;
+  let group: FormDataEntryValue | string | undefined;
+  let query: FormDataEntryValue | string | undefined;
+  let variables: FormData | Record<string, unknown> | undefined;
+  let options: MethodsInstanceOptions<boolean> | undefined;
 
   if (isFormData(requestOptions)) {
     const { _source, _group, _query, _options, ..._variables } = Object.fromEntries(
@@ -99,7 +100,14 @@ export const getRequestOptions = (requestOptions: CreateRequestOptionsType) => {
     source = _source;
     group = _group;
     query = _query;
-    options = _options;
+
+    if (typeof _options === "string") {
+      try {
+        options = JSON.parse(_options);
+      } catch {
+        // options stays undefined
+      }
+    }
 
     const formData = new FormData();
 
@@ -117,14 +125,6 @@ export const getRequestOptions = (requestOptions: CreateRequestOptionsType) => {
     query = requestOptions?.query;
     options = requestOptions?.options;
     variables = requestOptions?.variables;
-  }
-
-  if (typeof options === "string") {
-    try {
-      options = JSON.parse(options);
-    } catch {
-      options = {};
-    }
   }
 
   return { source, group, query, options, variables };

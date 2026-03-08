@@ -24,7 +24,7 @@ export type MethodsInstance = {
 };
 
 export type GenerateMethodOptions = SimpleOptions & {
-  vars?: Record<string, unknown>;
+  vars?: FormData | Record<string, unknown>;
   stream?: boolean;
 };
 

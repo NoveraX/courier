@@ -104,8 +104,7 @@ export function createClientRequest<T extends Record<string, unknown> = QueryOve
             const response = await error.response.json();
 
             const { options } = getRequestOptions(requestOptions.body || requestOptions.json);
-            const { rawData } =
-              typeof options === "object" ? (options as Record<string, unknown>) : {};
+            const { rawData } = options ?? {};
 
             const responseResult = rawData
               ? {
@@ -128,5 +127,5 @@ export function createClientRequest<T extends Record<string, unknown> = QueryOve
 
         throw error;
       }
-    }) as CommonRequest<T>;
+    }) as CommonRequest<T>; // TS cannot infer curried generic closures
 }

@@ -9,10 +9,19 @@ import { HTTPError } from "../error";
 import { afterResponse, beforeRequestHook, supportsAbortController } from "../hooks/index";
 import { generateUrl, getUrl, isFormData } from "../utils/helpers";
 import { mergeHeaders } from "../utils/merge-headers";
+
+const extractHeaders = (value: unknown): HeadersInit | undefined => {
+  if (value instanceof Headers) return value;
+  if (Array.isArray(value)) return value;
+  if (typeof value === "object" && value !== null) return value as Record<string, string>;
+  return undefined;
+};
+
 import type {
   BaseOptions,
   Context,
   GenerateMethodOptions,
+  MethodKyResponse,
   MethodParameters,
   Methods,
   MethodsInstance,
@@ -20,8 +29,6 @@ import type {
   PathOptions,
   ResponseType,
 } from "./types";
-
-const methods: Methods[] = ["get", "post", "put", "patch", "del", "head"];
 
 export class Instance {
   private responseType!: ResponseType;
@@ -105,7 +112,7 @@ export class Instance {
       return this.searchParamsEncoder(variables);
     }
 
-    return new URLSearchParams(variables as Record<string, string>);
+    return new URLSearchParams(Object.entries(variables).map(([k, v]) => [k, String(v)]));
   }
 
   private clearVariables(variables?: FormData | Record<string, unknown>) {
@@ -162,23 +169,11 @@ export class Instance {
         };
 
         if (isFormData(variables)) {
-          const bodyVariables = [...(variables?.entries() || [])]
-            .map(([key, value]) => {
-              if (
-                typeof value === "object" &&
-                "size" in value &&
-                "type" in value &&
-                "name" in value &&
-                "lastModified" in value &&
-                (value as unknown as Record<string, number>).size === 0
-              ) {
-                return key;
-              }
-              return undefined;
-            })
-            .filter(Boolean) as string[];
+          const emptyFileKeys = [...variables.entries()]
+            .filter(([, value]) => value instanceof File && value.size === 0)
+            .map(([key]) => key);
 
-          for (const key of bodyVariables) {
+          for (const key of emptyFileKeys) {
             variables.delete(key);
           }
         }
@@ -195,44 +190,44 @@ export class Instance {
     }
   }
 
-  private async getResponse<T>(response: KyResponse, message?: string) {
-    const data = await this.getResponseData<T>(response, message);
+  private async getResponse(response: KyResponse, message?: string) {
+    const data = await this.getResponseData(response, message);
 
     const { status, headers } = response;
 
     return { status, headers, data };
   }
 
-  private async getResponseData<T>(response: KyResponse, message?: string) {
+  private async getResponseData(response: KyResponse, message?: string): Promise<unknown> {
     switch (this.responseType) {
       case "json": {
         try {
           if (response.status === 204) {
-            return null as T;
+            return null;
           }
 
-          return await response.json<T>();
+          return await response.json();
         } catch (error) {
           if (error instanceof Error) {
-            return (message || error.message) as T;
+            return message || error.message;
           }
 
-          return (message || "fetch failed") as T;
+          return message || "fetch failed";
         }
       }
       case "text": {
         try {
           if (response.status === 204) {
-            return null as T;
+            return null;
           }
 
-          return (await response.text()) as T;
+          return await response.text();
         } catch (error) {
           if (error instanceof Error) {
-            return (message || error.message) as T;
+            return message || error.message;
           }
 
-          return (message || "fetch failed") as T;
+          return message || "fetch failed";
         }
       }
     }
@@ -246,7 +241,7 @@ export class Instance {
     const { vars, headers: kyHeaders, stream, ...kyOptions } = generateOptions || {};
     const { prefix = "", pathOptions } = datasourceOptions || {};
 
-    const cleanedVars = this.clearVariables(vars) as Record<string, unknown> | undefined;
+    const cleanedVars = this.clearVariables(vars);
 
     return async <T>(...arguments_: MethodParameters<typeof method>) => {
       const commonPathOptions = (await this.pathOptions?.(this.context?.req)) || {};
@@ -267,11 +262,7 @@ export class Instance {
 
       const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[1] || {};
 
-      const headers = mergeHeaders(
-        kyHeaders,
-        optionHeaders as HeadersInit | undefined,
-        this.extraHeaders,
-      );
+      const headers = mergeHeaders(kyHeaders, extractHeaders(optionHeaders), this.extraHeaders);
 
       const prefixUrlOverride = baseUrl ? { prefixUrl: baseUrl } : {};
 
@@ -292,11 +283,7 @@ export class Instance {
 
         const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[2] || {};
 
-        const headers = mergeHeaders(
-          kyHeaders,
-          optionHeaders as HeadersInit | undefined,
-          this.extraHeaders,
-        );
+        const headers = mergeHeaders(kyHeaders, optionHeaders, this.extraHeaders);
 
         options = {
           ...otherArgumentOptions,
@@ -313,18 +300,14 @@ export class Instance {
       try {
         const response = await this.http[method === "del" ? "delete" : method](url, options);
 
-        if (stream) {
-          return {
-            status: response.status,
-            headers: response.headers,
-            data: response.body,
-          } as Awaited<ReturnType<typeof this.getResponse<T>>>;
-        }
+        const result = stream
+          ? { status: response.status, headers: response.headers, data: response.body }
+          : await this.getResponse(response);
 
-        return await this.getResponse<T>(response);
+        return result as MethodKyResponse<T>;
       } catch (error) {
         if (error instanceof KYHTTPError) {
-          const response = await this.getResponse<T>(error.response, error.message);
+          const response = await this.getResponse(error.response, error.message);
           throw new HTTPError(response);
         }
 
@@ -335,7 +318,7 @@ export class Instance {
             data: {
               success: false,
               message: error.cause.message,
-              code: (error.cause as Error & { code: string }).code,
+              code: String(error.cause.code),
             },
           });
         }
@@ -350,13 +333,14 @@ export class Instance {
   methodsInstance(
     options?: GenerateMethodOptions,
     datasourceOptions?: MethodsInstanceDatasourceOptions,
-  ) {
-    const methodsInstance = {} as MethodsInstance;
-
-    for (const method of methods) {
-      methodsInstance[method] = this.generateMethod(method, options, datasourceOptions);
-    }
-
-    return methodsInstance;
+  ): MethodsInstance {
+    return {
+      get: this.generateMethod("get", options, datasourceOptions),
+      post: this.generateMethod("post", options, datasourceOptions),
+      put: this.generateMethod("put", options, datasourceOptions),
+      patch: this.generateMethod("patch", options, datasourceOptions),
+      del: this.generateMethod("del", options, datasourceOptions),
+      head: this.generateMethod("head", options, datasourceOptions),
+    };
   }
 }

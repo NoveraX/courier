@@ -14,7 +14,7 @@ export const apiRoute = (sources: Sources) => {
     return createRequest(sources, body, {
       req: request,
       res: new NextResponse(),
-    }) as Promise<Response>;
+    });
   };
 
   return { POST };

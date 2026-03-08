@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const baseOptionsCode = `type BaseOptions = {
   // URL & encoding
@@ -117,6 +118,8 @@ class MyApi extends Request<typeof groups> {
 const report = await request("myApi", {
   timeout: 30_000,
 })("reports:generate", { type: "annual" })`
+
+export const metadata = docsMetadata("Options", "Full reference of source-level and per-request configuration options.")
 
 export default async function OptionsPage() {
   return (

@@ -1,5 +1,6 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 import { DedupDemo, ManualAbortDemo } from "./_components"
 
@@ -43,6 +44,8 @@ class Api extends Request<typeof groups> {
     })
   }
 }`
+
+export const metadata = docsMetadata("Abort & Deduplication", "Cancel in-flight requests with AbortController and deduplicate rapid calls.")
 
 export default function AbortExamplesPage() {
   return (

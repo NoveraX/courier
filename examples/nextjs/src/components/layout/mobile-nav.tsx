@@ -32,6 +32,7 @@ function MobileLink({
     <Link
       href={item.href}
       onClick={onNavigate}
+      aria-current={isActive ? "page" : undefined}
       className={cn(
         "flex items-center rounded-r-md border-l-2 py-1.5 pl-3 text-sm transition-colors",
         isActive
@@ -75,33 +76,42 @@ function MobileSection({
       <button
         type="button"
         onClick={() => !searchQuery && setOpen(!open)}
+        aria-expanded={isOpen}
         className={cn(
           "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
           "text-foreground/70 hover:bg-accent hover:text-accent-foreground",
           hasActiveItem && "text-foreground"
         )}
       >
-        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <span className="flex-1 text-left">{section.label}</span>
         <ChevronRight
           className={cn(
             "h-3 w-3 shrink-0 text-muted-foreground/50 transition-transform duration-200",
             isOpen && "rotate-90"
           )}
+          aria-hidden="true"
         />
       </button>
-      {isOpen && (
-        <div className="mt-0.5 ml-5 space-y-px">
-          {filteredItems.map((item) => (
-            <MobileLink
-              key={item.href}
-              item={item}
-              isActive={pathname === item.href}
-              onNavigate={onNavigate}
-            />
-          ))}
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-200 ease-out",
+          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="mt-0.5 ml-5 space-y-px">
+            {filteredItems.map((item) => (
+              <MobileLink
+                key={item.href}
+                item={item}
+                isActive={pathname === item.href}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -132,7 +142,8 @@ export function MobileNav() {
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
             <input
-              type="text"
+              type="search"
+              aria-label="Search documentation"
               placeholder="Search docs..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}

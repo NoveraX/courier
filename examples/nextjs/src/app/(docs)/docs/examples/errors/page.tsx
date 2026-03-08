@@ -1,5 +1,6 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 import { CatchDemo, GuardDemo } from "./_components"
 
@@ -46,6 +47,8 @@ const request = createClientRequest({
     console.log("Success:", data)
   },
 })`
+
+export const metadata = docsMetadata("Error Handling", "HTTPError class, isHTTPError type guard, and global error callbacks.")
 
 export default function ErrorsExamplesPage() {
   return (

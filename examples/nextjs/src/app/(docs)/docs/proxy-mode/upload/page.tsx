@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const basicUploadCode = `"use client"
 
@@ -162,6 +163,8 @@ await request("myApi", {
 
 // In development, Nexus logs warnings for each ignored option.
 // In production, they are silently ignored.`
+
+export const metadata = docsMetadata("File Upload", "Upload files through the proxy with real-time progress tracking via XHR.")
 
 export default async function UploadPage() {
   return (

@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const hookTypesCode = `type HookInfo = {
   source: string
@@ -105,6 +106,8 @@ const authCode = `class MyApi extends Request<typeof groups> {
     })
   }
 }`
+
+export const metadata = docsMetadata("Hooks (Lifecycle)", "Intercept, transform, and observe every request with onRequest, onResponse, and onError hooks.")
 
 export default async function HooksPage() {
   return (

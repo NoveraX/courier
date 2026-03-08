@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const classCode = `class Instance {
   constructor(options?: BaseOptions, context?: Context)
@@ -148,6 +149,8 @@ try {
 
 // Error responses (4xx, 5xx) are parsed and included in error.data
 // 204 No Content → returns null as data`
+
+export const metadata = docsMetadata("Instance", "HTTP client wrapper around ky that generates typed HTTP methods (get, post, put, patch, del, head) with automatic URL parameter resolution.")
 
 export default async function InstancePage() {
   return (

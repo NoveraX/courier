@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const fileStructureCode = `src/
 ├── api/
@@ -126,6 +127,8 @@ PAYMENT_API_URL=http://localhost:5000
 
 # Optional: custom proxy route path
 # NEXT_PUBLIC_REQUEST_PAGE=api/my-proxy`
+
+export const metadata = docsMetadata("Project Setup", "Recommended file structure, patterns, and configuration for production apps.")
 
 export default async function ProjectSetupPage() {
   return (

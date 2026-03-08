@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const requestClassCode = `import { Request } from "@noverax/nexus/RequestClass"
 
@@ -88,6 +89,8 @@ export class Products extends RequestGroup {
   list: Method<Product[]> = ({ get }) => get()
   getById: Method<Product, { id: number }> = ({ get }) => get(":id")
 }`
+
+export const metadata = docsMetadata("Request & RequestGroup", "Define your API structure with typed classes that serve as the single source of truth for all requests.")
 
 export default async function RequestPage() {
   return (

@@ -21,6 +21,7 @@ function SidebarLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
   return (
     <Link
       href={item.href}
+      aria-current={isActive ? "page" : undefined}
       className={cn(
         "flex items-center rounded-r-md border-l-2 py-1.5 pl-3 text-sm transition-colors",
         isActive
@@ -62,28 +63,40 @@ function SidebarSection({
       <button
         type="button"
         onClick={() => !searchQuery && setOpen(!open)}
+        aria-expanded={isOpen}
+        aria-controls={`sidebar-${section.label}`}
         className={cn(
           "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
           "text-foreground/70 hover:bg-accent hover:text-accent-foreground",
           hasActiveItem && "text-foreground"
         )}
       >
-        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <span className="flex-1 text-left">{section.label}</span>
         <ChevronRight
           className={cn(
             "h-3 w-3 shrink-0 text-muted-foreground/50 transition-transform duration-200",
             isOpen && "rotate-90"
           )}
+          aria-hidden="true"
         />
       </button>
-      {isOpen && (
-        <div className="mt-0.5 ml-5 space-y-px">
-          {filteredItems.map((item) => (
-            <SidebarLink key={item.href} item={item} isActive={pathname === item.href} />
-          ))}
+      <div
+        id={`sidebar-${section.label}`}
+        role="region"
+        className={cn(
+          "grid transition-[grid-template-rows] duration-200 ease-out",
+          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="mt-0.5 ml-5 space-y-px">
+            {filteredItems.map((item) => (
+              <SidebarLink key={item.href} item={item} isActive={pathname === item.href} />
+            ))}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -93,7 +106,7 @@ export function Sidebar() {
   const [search, setSearch] = useState("")
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r bg-sidebar-background md:flex">
+    <aside aria-label="Documentation navigation" className="hidden w-64 shrink-0 flex-col border-r bg-sidebar-background md:flex">
       <div className="flex h-14 items-center gap-2 border-b px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <span className="text-lg tracking-tight">Nexus</span>
@@ -106,7 +119,8 @@ export function Sidebar() {
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
           <input
-            type="text"
+            type="search"
+            aria-label="Search documentation"
             placeholder="Search docs..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}

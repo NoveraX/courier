@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const signatureCode = `import { apiRoute } from "@noverax/nexus/next"
 
@@ -96,6 +97,8 @@ const errorResponsesCode = `// Error responses returned by apiRoute:
 
 // 415 — Unsupported Content-Type
 { "success": false, "message": "Unsupported Content-Type" }`
+
+export const metadata = docsMetadata("apiRoute", "Creates a Next.js App Router POST handler that processes proxy-mode requests from createClientRequest.")
 
 export default async function ApiRoutePage() {
   return (

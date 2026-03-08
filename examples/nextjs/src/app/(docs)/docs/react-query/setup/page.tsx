@@ -7,6 +7,7 @@ import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { StepList } from "@/components/docs/step-list"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const providerCode = `// app/providers.tsx
 "use client"
@@ -101,6 +102,8 @@ export function LogoutButton() {
 
   return <button onClick={handleLogout}>Log out</button>
 }`
+
+export const metadata = docsMetadata("React Query Setup", "Integrate Nexus with @tanstack/react-query for automatic caching, refetching, and type-safe hooks.")
 
 export default async function ReactQuerySetupPage() {
   return (

@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const signatureCode = `const result = useQuery(source, query, options?)
 
@@ -115,6 +116,8 @@ export function UserList() {
 
   return <ul>{data?.data.map((u) => <li key={u.id}>{u.name}</li>)}</ul>
 }`
+
+export const metadata = docsMetadata("useQuery", "Fetch data with automatic caching, refetching, and full type inference from your API definitions.")
 
 export default async function UseQueryPage() {
   return (

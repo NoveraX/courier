@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const comparisonCode = `// Normal mode (default) — returns just the data
 const users = await request("myApi")("users:getAll")
@@ -87,6 +88,8 @@ export default async function DashboardPage() {
     </div>
   )
 }`
+
+export const metadata = docsMetadata("Raw Data Mode", "Access response status codes and headers alongside the parsed data.")
 
 export default async function RawDataPage() {
   return (

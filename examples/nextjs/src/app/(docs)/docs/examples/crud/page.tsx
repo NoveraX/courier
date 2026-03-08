@@ -1,5 +1,6 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 import { CrudDemo, OperationsInfo } from "./_components"
 
@@ -50,6 +51,8 @@ patch.mutate({ id: 1, name: "Patched Name" })
 // DELETE
 const remove = useMutation("mockApi", "users:remove")
 remove.mutate({ id: 1 })`
+
+export const metadata = docsMetadata("CRUD Operations", "Full create, read, update, and delete cycle with useMutation and useQuery.")
 
 export default function CrudExamplesPage() {
   return (

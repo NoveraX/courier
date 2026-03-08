@@ -6,6 +6,7 @@ import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { StepList } from "@/components/docs/step-list"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const problemCode = `import { createClientRequest } from "@noverax/nexus"
 import { createDirectRequest } from "@noverax/nexus/direct"
@@ -112,6 +113,8 @@ declare module "@noverax/nexus" {
 // Now both sources are available without generics:
 useQuery("mainApi", "users:getAll")       // ← knows mainApi groups
 useQuery("paymentApi", "products:list")   // ← knows paymentApi groups`
+
+export const metadata = docsMetadata("Singleton Pattern", "Use TypeScript module augmentation to eliminate generic parameters from every request call.")
 
 export default async function SingletonPage() {
   return (

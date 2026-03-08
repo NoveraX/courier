@@ -175,6 +175,11 @@
     font-family: var(--font-sans);
   }
 
+  /* Focus visible ring for keyboard navigation */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+
   /* Gradient utilities */
   .gradient-brand {
     background: linear-gradient(135deg, oklch(0.65 0.25 270), oklch(0.55 0.28 300));
@@ -297,4 +302,43 @@
 
 .dark .dot-grid {
   background-image: radial-gradient(oklch(0.5 0.01 270 / 0.2) 1px, transparent 1px);
+}
+
+/* ─── Animations ─── */
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Page content entrance */
+.animate-page-in {
+  animation: fade-in-up 0.3s ease-out both;
+}
+
+/* Code block entrance */
+[data-slot="code-block"] {
+  animation: fade-in-up 0.35s ease-out both;
+}
+
+/* Stagger code blocks within a page */
+[data-slot="code-block"]:nth-child(2) { animation-delay: 50ms; }
+[data-slot="code-block"]:nth-child(3) { animation-delay: 100ms; }
+[data-slot="code-block"]:nth-child(4) { animation-delay: 150ms; }
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -1,5 +1,6 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const singletonCode = `// lib/request.ts — Single typed instance for the entire app
 import type { MethodsType } from "@/api"
@@ -106,6 +107,8 @@ export const direct = createDirectRequest(methods)
 // Server Component or Server Action
 const users = await direct("mockApi")("users:getAll", {})
 //    ^? { data: User[], total: number }`
+
+export const metadata = docsMetadata("Typed Singleton", "Create a single typed request instance with full type inference across your entire application.")
 
 export default function SingletonExamplesPage() {
   return (

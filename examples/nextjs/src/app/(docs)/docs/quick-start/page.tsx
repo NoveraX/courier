@@ -6,6 +6,7 @@ import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { StepList } from "@/components/docs/step-list"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const step1Code = `import { Request, RequestGroup, Method } from "@noverax/nexus/RequestClass"
 
@@ -116,6 +117,8 @@ export default async function DashboardPage() {
     </div>
   )
 }`
+
+export const metadata = docsMetadata("Quick Start", "Define your API, set up the transport, and make your first typed request — in 4 steps.")
 
 export default async function QuickStartPage() {
   return (

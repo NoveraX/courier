@@ -18,9 +18,18 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Nexus — Type-Safe HTTP for Next.js",
+  title: {
+    default: "Nexus — Type-Safe HTTP for Next.js",
+    template: "%s — Nexus Docs",
+  },
   description:
     "Type-safe HTTP client with request grouping, path parameters, and full Next.js integration. Proxy & direct modes, React Query, streaming, uploads.",
+  metadataBase: new URL("https://nexus.noverax.dev"),
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "Nexus Docs",
+  },
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

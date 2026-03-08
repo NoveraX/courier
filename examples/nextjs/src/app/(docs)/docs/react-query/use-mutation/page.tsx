@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const signatureCode = `const result = useMutation(source, query, options?)
 
@@ -175,6 +176,8 @@ export function CreateUserForm() {
     </button>
   )
 }`
+
+export const metadata = docsMetadata("useMutation", "Create, update, and delete data with type-safe mutations and automatic variable inference.")
 
 export default async function UseMutationPage() {
   return (

@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const methodCode = `import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
 
@@ -144,6 +145,8 @@ export function SSEConsumer({ channel }: { channel: string }) {
     </ul>
   )
 }`
+
+export const metadata = docsMetadata("Streaming", "Receive responses as ReadableStreams for SSE, large downloads, and progressive rendering.")
 
 export default async function StreamingPage() {
   return (

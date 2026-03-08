@@ -1,5 +1,6 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 import { ProgressUploadDemo, SimpleUploadDemo } from "./_components"
 
@@ -35,6 +36,8 @@ class Files extends RequestGroup {
   // Empty files are automatically removed before sending
   upload: Method<UploadResponse, FormData> = ({ post }) => post()
 }`
+
+export const metadata = docsMetadata("File Upload", "FormData file upload through the proxy. Nexus auto-detects FormData and handles encoding.")
 
 export default function UploadExamplesPage() {
   return (

@@ -57,12 +57,12 @@ export function TableOfContents() {
   if (headings.length === 0) return null
 
   return (
-    <aside className="hidden w-56 shrink-0 xl:block">
+    <aside aria-label="Table of contents" className="hidden w-56 shrink-0 xl:block">
       <div className="sticky top-20 py-8 pr-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           On this page
         </p>
-        <nav className="space-y-1">
+        <nav aria-label="Page sections" className="space-y-1">
           {headings.map((heading) => (
             <a
               key={heading.id}

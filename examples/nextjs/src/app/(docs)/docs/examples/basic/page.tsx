@@ -1,5 +1,6 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 import { GetDemo, ManualDemo, PostDemo } from "./_components"
 
@@ -22,6 +23,8 @@ const manualCode = `import { useMutation } from "@/lib/request"
 const { mutate, data, isPending } = useMutation("mockApi", "users:getById")
 
 mutate({ id: 1 })`
+
+export const metadata = docsMetadata("Basic Requests", "Simple GET and POST requests using the proxy mode with React Query hooks.")
 
 export default function BasicExamplesPage() {
   return (

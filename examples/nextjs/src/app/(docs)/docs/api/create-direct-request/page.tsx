@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const signatureCode = `import { createDirectRequest } from "@noverax/nexus/direct"
 
@@ -109,6 +110,8 @@ const contextTypeCode = `type Context = {
   res?: NextResponse
   headers?: Headers
 }`
+
+export const metadata = docsMetadata("createDirectRequest", "Factory function that creates a typed request function for server-side direct HTTP calls — no proxy hop needed.")
 
 export default async function CreateDirectRequestPage() {
   return (

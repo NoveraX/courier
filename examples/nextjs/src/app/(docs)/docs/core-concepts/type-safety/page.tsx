@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const methodTypeCode = `import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
 
@@ -133,6 +134,8 @@ type MethodsInstance = {
 // The response type T in MethodKyResponse<T> is inferred from Method<R, V>
 // When you write: getAll: Method<User[]> = ({ get }) => get()
 // TypeScript infers T = User[] through the Method generic`
+
+export const metadata = docsMetadata("Type Safety", "How Nexus achieves end-to-end type safety from API definitions to React components — without code generation.")
 
 export default async function TypeSafetyPage() {
   return (

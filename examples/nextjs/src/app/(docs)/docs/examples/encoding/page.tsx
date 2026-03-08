@@ -1,5 +1,6 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 import { BodyEncodingDemo, DefaultsDemo, SearchParamsDemo } from "./_components"
 
@@ -63,6 +64,8 @@ await request("encodedApi")("echo:send", { name: "John" })
 // defaultQueryParams auto-merges into GET query
 await request("encodedApi")("echo:retrieve", { page: 1 })
 // Query includes: format=json&page=1`
+
+export const metadata = docsMetadata("Encoding", "Custom body and search params encoding with default values.")
 
 export default function EncodingExamplesPage() {
   return (

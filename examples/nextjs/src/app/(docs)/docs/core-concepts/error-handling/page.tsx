@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const httpErrorCode = `import { HTTPError } from "@noverax/nexus/error"
 
@@ -144,6 +145,8 @@ if (isHTTPError(error) && error.status === 499) {
 
 // 4. JSON parse errors — response is not valid JSON
 // Thrown when responseType is "json" but the body cannot be parsed`
+
+export const metadata = docsMetadata("Error Handling", "Handle HTTP errors with typed error data, type guards, and global error hooks.")
 
 export default async function ErrorHandlingPage() {
   return (

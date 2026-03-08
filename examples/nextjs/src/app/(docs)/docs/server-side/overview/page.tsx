@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const setupCode = `// lib/direct-request.ts
 import { createDirectRequest } from "@noverax/nexus/direct"
@@ -59,6 +60,8 @@ export default async function ProfilePage() {
 
   return <h1>Welcome, {profile.name}</h1>
 }`
+
+export const metadata = docsMetadata("Server-Side Overview", "Fetch data directly from your backend in React Server Components and Server Actions — no proxy hop, no client bundle.")
 
 export default async function ServerSideOverviewPage() {
   return (

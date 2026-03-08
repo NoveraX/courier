@@ -1,5 +1,6 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 import { StreamDemo } from "./_components"
 
@@ -45,6 +46,8 @@ router.get("/stream", (_req, res) => {
     }
   }, 500)
 })`
+
+export const metadata = docsMetadata("Streaming", "Stream responses progressively with stream: true. Chunks arrive in real time via SSE.")
 
 export default function StreamingExamplesPage() {
   return (

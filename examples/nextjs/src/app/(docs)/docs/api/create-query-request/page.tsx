@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const signatureCode = `import { createQueryRequest } from "@noverax/nexus/query"
 
@@ -143,6 +144,8 @@ import { request } from "@/lib/query"
 async function prefetchUser(id: string) {
   return request("api")("users:getById", { id })
 }`
+
+export const metadata = docsMetadata("createQueryRequest", "Creates type-safe React Query hooks (useQuery, useMutation) and a request client — all wired to your Nexus sources.")
 
 export default async function CreateQueryRequestPage() {
   return (

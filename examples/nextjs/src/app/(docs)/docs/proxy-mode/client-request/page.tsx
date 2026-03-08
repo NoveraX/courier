@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const signatureCode = `import { createClientRequest } from "@noverax/nexus"
 import type { Sources } from "@/api"
@@ -109,6 +110,8 @@ const fetchUser = request("myApi", {
 })
 
 const user = await fetchUser("users:getById", { id: 5 })`
+
+export const metadata = docsMetadata("createClientRequest", "The browser-side factory that sends typed requests through your Next.js proxy route.")
 
 export default async function ClientRequestPage() {
   return (

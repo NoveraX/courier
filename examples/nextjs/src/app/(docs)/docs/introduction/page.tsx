@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const exampleCode = `import { Request, RequestGroup, Method } from "@noverax/nexus/RequestClass"
 
@@ -33,6 +34,8 @@ const { data, isLoading } = useQuery("myApi", "users:getAll")
 const { mutate } = useMutation("myApi", "users:create")
 mutate({ name: "Jane", email: "jane@example.com" })
 //      ^? { name: string; email: string } — auto-inferred`
+
+export const metadata = docsMetadata("What is Nexus?", "A type-safe HTTP client for Next.js with request grouping, two transport modes, and built-in React Query integration.")
 
 export default async function IntroductionPage() {
   return (

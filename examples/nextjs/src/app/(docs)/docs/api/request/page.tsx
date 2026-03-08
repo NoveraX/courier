@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const signatureCode = `import { Request } from "@noverax/nexus/classes"
 
@@ -204,6 +205,8 @@ const api = new Request({
     afterResponse: [(request, options, response) => { /* ... */ }],
   },
 })`
+
+export const metadata = docsMetadata("Request", "Class that defines a data source with base URL, options, lifecycle hooks, and optional request groups.")
 
 export default async function RequestClassPage() {
   return (

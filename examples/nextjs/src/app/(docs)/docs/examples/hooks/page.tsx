@@ -1,5 +1,6 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 import { OnErrorDemo, OnResponseDemo } from "./_components"
 
@@ -71,6 +72,8 @@ onRequest: (info) => {
   // Return modified info or undefined to keep original
   return info
 }`
+
+export const metadata = docsMetadata("Hooks", "Lifecycle hooks for request interception, response transformation, and error handling.")
 
 export default function HooksExamplesPage() {
   return (

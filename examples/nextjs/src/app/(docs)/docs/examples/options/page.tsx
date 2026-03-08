@@ -1,5 +1,6 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 import { TimeoutDemo } from "./_components"
 
@@ -69,6 +70,8 @@ const request = createClientRequest({
     }
   },
 })`
+
+export const metadata = docsMetadata("Request Options", "Configure timeout, retry, cache, and Next.js revalidation per request or globally.")
 
 export default function OptionsExamplesPage() {
   return (

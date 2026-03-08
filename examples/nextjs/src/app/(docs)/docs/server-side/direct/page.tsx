@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const signatureCode = `import { createDirectRequest } from "@noverax/nexus/direct"
 
@@ -135,6 +136,8 @@ await request("myApi")("users:getAll", { page: 1 })
 const request = createDirectRequest(sources)
 await request("myApi")("users:getAll", { page: 1 }, { headers: await headers() })
 //                                      ^ variables    ^ context (optional)`
+
+export const metadata = docsMetadata("createDirectRequest", "Factory function for server-side requests — call your backend directly from RSC, Server Actions, and API routes.")
 
 export default async function CreateDirectRequestPage() {
   return (

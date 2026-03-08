@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const basicActionCode = `// app/actions/users.ts
 "use server"
@@ -182,6 +183,8 @@ export async function createUser(data: { name: string; email: string }) {
   revalidatePath("/users")
   return user // Return for immediate use before revalidation completes
 }`
+
+export const metadata = docsMetadata("Server Actions", "Use createDirectRequest inside Server Actions for type-safe mutations with automatic revalidation.")
 
 export default async function ServerActionsPage() {
   return (

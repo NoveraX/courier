@@ -6,6 +6,7 @@ import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { StepList } from "@/components/docs/step-list"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const signatureCode = `import { apiRoute } from "@noverax/nexus/next/apiRoute"
 
@@ -133,6 +134,8 @@ import { apiRoute } from "@noverax/nexus/next/apiRoute"
 import { sources } from "@/api"
 
 export const { POST } = apiRoute(sources)`
+
+export const metadata = docsMetadata("API Route Handler", "The server-side endpoint that receives proxy requests and forwards them to your backend.")
 
 export default async function ApiRoutePage() {
   return (

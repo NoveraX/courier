@@ -6,6 +6,7 @@ import { CodeGroup } from "@/components/docs/code-group"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const tsconfigCode = `{
   "compilerOptions": {
@@ -25,6 +26,8 @@ API_URL=http://localhost:4000
 
 # Optional: custom proxy route path (default: "request")
 # NEXT_PUBLIC_REQUEST_PAGE=api/my-request`
+
+export const metadata = docsMetadata("Installation", "Add @noverax/nexus to your Next.js project in under a minute.")
 
 export default async function InstallationPage() {
   return (

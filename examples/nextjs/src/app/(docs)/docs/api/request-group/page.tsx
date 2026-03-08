@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const classCode = `class RequestGroup {
   constructor(public options?: RequestGroupOptions)
@@ -112,6 +113,8 @@ await request("api")("users:getById", { id: "123" })
 
 // Query format without groups: "method"
 await request("api")("health")`
+
+export const metadata = docsMetadata("RequestGroup", "Class that groups related methods under a namespace with a shared URL prefix and optional dynamic path parameters.")
 
 export default async function RequestGroupPage() {
   return (

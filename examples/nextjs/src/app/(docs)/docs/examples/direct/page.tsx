@@ -2,6 +2,7 @@ import { ExampleBlock } from "@/components/docs/example-block"
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { PageHeader } from "@/components/layout/page-header"
 import { directRequest } from "@/lib/direct-request"
+import { docsMetadata } from "@/lib/metadata"
 
 const setupCode = `// lib/direct-request.ts
 import { createDirectRequest } from "@noverax/nexus/direct"
@@ -19,6 +20,8 @@ const user = await directRequest("mockApi")("users:getById", { id: 1 })`
 
 const fetchPostsCode = `// Access any request group — same API as proxy mode
 const posts = await directRequest("mockApi")("posts:getAll", {})`
+
+export const metadata = docsMetadata("Direct Mode", "Server Components fetch data directly from the backend — no proxy, no API route, no client JS.")
 
 export default async function DirectExamplesPage() {
   const users = await directRequest("mockApi")("users:getAll", {})

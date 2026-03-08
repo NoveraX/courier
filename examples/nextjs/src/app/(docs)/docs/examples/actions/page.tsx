@@ -1,6 +1,7 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
 import { directRequest } from "@/lib/direct-request"
+import { docsMetadata } from "@/lib/metadata"
 
 import { CreateUserForm } from "./create-form"
 import { UserList } from "./user-list"
@@ -65,6 +66,8 @@ function UserRow({ user }) {
     </form>
   )
 }`
+
+export const metadata = docsMetadata("Server Actions", "Mutate data with Server Actions + direct mode. The page revalidates automatically after each action.")
 
 export default async function ActionsExamplesPage() {
   const users = (await directRequest("mockApi")("users:getAll", {})) as UsersResponse

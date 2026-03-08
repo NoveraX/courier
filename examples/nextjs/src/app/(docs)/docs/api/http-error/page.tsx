@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const classCode = `class HTTPError<R = unknown> extends Error {
   status: number
@@ -140,6 +141,8 @@ if (isHTTPError(error)) { ... }
 
 // ⚠️ Works, but may fail across different module instances
 if (error instanceof HTTPError) { ... }`
+
+export const metadata = docsMetadata("HTTPError", "Custom error class for HTTP responses with typed data, status code, and headers. Includes the isHTTPError type guard.")
 
 export default async function HTTPErrorPage() {
   return (

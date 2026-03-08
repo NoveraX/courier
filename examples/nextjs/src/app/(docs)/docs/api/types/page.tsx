@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const commonRequestCode = `type CommonRequest<T extends Record<string, any>, D extends boolean = false> = <
   K extends keyof T,
@@ -214,6 +215,8 @@ type NexusMutationOptions<R, V> = Omit<
 type WithVariables<V> = [V] extends [undefined]
   ? { variables?: undefined }
   : { variables: V }`
+
+export const metadata = docsMetadata("Types", "Complete reference for all TypeScript types exported by @noverax/nexus.")
 
 export default async function TypesPage() {
   return (

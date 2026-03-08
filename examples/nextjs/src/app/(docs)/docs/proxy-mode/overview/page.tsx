@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const architectureCode = `┌──────────────────────────────────────────────────────────────┐
 │  Browser (Client Component)                                  │
@@ -81,6 +82,8 @@ const users = await request("myApi")("users:getAll")
 // Direct mode — server calls backend directly, no proxy hop
 // Server → GET https://internal-api.company.com/users
 const users = await directRequest("myApi")("users:getAll")`
+
+export const metadata = docsMetadata("Proxy Mode Overview", "How Nexus routes browser requests through your Next.js server to keep secrets hidden and bypass CORS.")
 
 export default async function ProxyModeOverviewPage() {
   return (

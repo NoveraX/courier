@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const enableCode = `import { Request } from "@noverax/nexus/RequestClass"
 
@@ -114,6 +115,8 @@ const internalsCode = `// How deduplication works internally:
 // 3. Signal merging
 //    - If you also pass a manual signal, both signals are combined
 //    - Uses AbortSignal.any() — request aborts if either signal fires`
+
+export const metadata = docsMetadata("Abort & Deduplication", "Automatically cancel duplicate in-flight requests and manually abort with AbortController.")
 
 export default async function AbortPage() {
   return (

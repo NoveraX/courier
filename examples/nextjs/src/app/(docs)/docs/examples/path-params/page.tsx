@@ -1,5 +1,6 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 import { MixedParamsDemo, NestedParamsDemo, SimpleParamDemo } from "./_components"
 
@@ -28,6 +29,8 @@ getAll: Method<UsersListResponse, { page?: number; limit?: number }> =
 // No path params — all variables become ?query params
 await request("mockApi")("users:getAll", { page: 1, limit: 5 })
 // → GET /users?page=1&limit=5`
+
+export const metadata = docsMetadata("Path Parameters", "Dynamic URL segments with :param placeholders, auto-replaced from variables.")
 
 export default function PathParamsExamplesPage() {
   return (

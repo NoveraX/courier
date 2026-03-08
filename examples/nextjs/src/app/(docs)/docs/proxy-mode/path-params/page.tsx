@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const basicCode = `import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
 
@@ -127,6 +128,8 @@ const cachingCode = `// Path compilation functions are cached for performance.
 
 // This means paths like "/users/:id" are compiled once,
 // no matter how many times they are called with different variables.`
+
+export const metadata = docsMetadata("Path Parameters", "Dynamic URL segments using :param syntax, compiled via path-to-regexp.")
 
 export default async function PathParamsPage() {
   return (

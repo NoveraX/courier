@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const signatureCode = `import { createClientRequest } from "@noverax/nexus"
 
@@ -102,6 +103,8 @@ const xhrNoteCode = `// When onUploadProgress is set, Nexus uses XMLHttpRequest 
 // - cache
 // - onDownloadProgress
 // - next`
+
+export const metadata = docsMetadata("createClientRequest", "Factory function that creates a typed, curried request function for proxy-mode HTTP calls from the browser.")
 
 export default async function CreateClientRequestPage() {
   return (

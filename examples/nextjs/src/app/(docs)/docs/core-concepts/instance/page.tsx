@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const methodsCode = `import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
 
@@ -121,6 +122,8 @@ const baseOptionsCode = `class MyApi extends Request<typeof groups> {
     })
   }
 }`
+
+export const metadata = docsMetadata("Instance & Methods", "How Nexus wraps HTTP calls with typed methods, automatic serialization, and path parameter extraction.")
 
 export default async function InstancePage() {
   return (

@@ -1,5 +1,6 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 import { NormalFetchDemo, RawFetchDemo } from "./_components"
 
@@ -31,6 +32,8 @@ const raw = await request("mockApi", { rawData: true })(
   "users:getAll", {}
 )
 //    ^? { status?: number, headers?: Headers, data?: ... }`
+
+export const metadata = docsMetadata("Raw Data Mode", "Access full response metadata with rawData: true — status code, headers, and data in one object.")
 
 export default function RawDataExamplesPage() {
   return (

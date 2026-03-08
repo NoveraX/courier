@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const prefetchCode = `// app/users/page.tsx — React Server Component
 import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query"
@@ -171,6 +172,8 @@ const handleExport = async () => {
 analytics.onEvent(async (event) => {
   await request("myApi")("analytics:track", { event })
 })`
+
+export const metadata = docsMetadata("Advanced React Query Patterns", "Prefetching, hydration, cache strategies, infinite queries, and escape hatches for complex scenarios.")
 
 export default async function AdvancedPatternsPage() {
   return (

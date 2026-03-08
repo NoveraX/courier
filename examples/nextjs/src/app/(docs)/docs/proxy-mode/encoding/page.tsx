@@ -5,6 +5,7 @@ import { CodeBlock } from "@/components/docs/code-block"
 import { InlineCode } from "@/components/docs/inline-code"
 import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
+import { docsMetadata } from "@/lib/metadata"
 
 const defaultBehaviorCode = `// Default encoding behavior depends on the HTTP method:
 
@@ -160,6 +161,8 @@ const variableFlowCode = `// Complete variable flow:
 // 4. Method determines where merged variables go:
 //    GET/DELETE  → URLSearchParams: /users/5?locale=en&name=Jane&api_key=123
 //    POST/PUT   → JSON body: { locale: "en", name: "Jane" } + query: ?api_key=123`
+
+export const metadata = docsMetadata("Encoding", "Control how request bodies and query parameters are serialized.")
 
 export default async function EncodingPage() {
   return (

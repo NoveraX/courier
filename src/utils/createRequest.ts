@@ -163,7 +163,7 @@ export const createRequest = async (
     ...headersToObject(nextHeaders),
   };
 
-  const newHeaders = mergeHeaders(kyHeaders, mergedNextHeaders);
+  const newHeaders = mergeHeaders(kyHeaders, mergedNextHeaders, dataSource.options?.extraHeaders);
 
   const hookInfo: HookInfo = {
     source: String(source),
@@ -172,11 +172,14 @@ export const createRequest = async (
     variables,
   };
 
-  if (dataSource.options?.onRequest) {
-    await dataSource.options.onRequest(hookInfo);
-  }
-
   try {
+    if (dataSource.options?.onRequest) {
+      const modifiedInfo = await dataSource.options.onRequest(hookInfo);
+      if (modifiedInfo) {
+        Object.assign(hookInfo, modifiedInfo);
+      }
+    }
+
     const response = await method(
       instance.methodsInstance(
         {
@@ -192,60 +195,48 @@ export const createRequest = async (
 
     const headers = isHeaders(response.headers) ? (response?.headers as Headers) : new Headers();
 
+    const responseData = {
+      status: response?.status || 200,
+      data: response.data,
+    };
+
     if (dataSource.options?.onResponse) {
-      await dataSource.options.onResponse(hookInfo, {
-        status: response?.status || 200,
-        data: response.data,
-      });
+      const transformed = await dataSource.options.onResponse(hookInfo, responseData);
+      if (transformed) {
+        responseData.status = transformed.status;
+        responseData.data = transformed.data;
+      }
     }
 
     return formatResponse(context, {
       headers,
-      status: response?.status || 200,
-      data: response.data,
+      status: responseData.status,
+      data: responseData.data,
       rawData,
       stream,
     });
   } catch (error) {
-    if (error instanceof HTTPError) {
-      const responseResult = {
-        status: error.status,
-        headers: error.headers,
-        data: error.data,
-      };
+    const responseResult =
+      error instanceof HTTPError
+        ? { status: error.status, headers: error.headers, data: error.data }
+        : {
+            status: 500,
+            headers: new Headers(),
+            data:
+              error instanceof Error
+                ? { success: false, message: error.message }
+                : { success: false, message: "[SERVER ERROR]" },
+          };
 
-      return formatResponse(context, {
-        ...responseResult,
-        throw: new HTTPError(responseResult),
-        rawData,
-      });
-    }
+    const httpError = new HTTPError(responseResult);
 
-    if (error instanceof Error) {
-      const responseResult = {
-        status: 500,
-        headers: new Headers(),
-        data: {
-          success: false,
-          message: error.message,
-        },
-      };
-
-      return formatResponse(context, {
-        ...responseResult,
-        throw: new HTTPError(responseResult),
-        rawData,
-      });
+    if (dataSource.options?.onError) {
+      await dataSource.options.onError(hookInfo, httpError);
     }
 
     return formatResponse(context, {
-      status: 500,
-      headers: new Headers(),
-      data: {
-        success: false,
-        message: "[SERVER ERROR]",
-      },
-      throw: error,
+      ...responseResult,
+      throw: httpError,
       rawData,
     });
   }

@@ -3,6 +3,7 @@ import type ky from "ky";
 import type { Options, SearchParamsOption } from "ky";
 import type { NextRequest, NextResponse } from "next/server";
 
+import type HTTPError from "../error";
 import type { RequestGroupOptions } from "../RequestClass";
 
 type KyInstance = typeof ky;
@@ -62,16 +63,20 @@ export type BaseOptions = MergeOptions &
     responseType?: ResponseType;
     defaultData?: Record<string, any>;
     defaultQueryParams?: Record<string, any>;
-    validHeaders?: string[];
+    extraHeaders?: string[];
     bodyEncoder?: (object: Record<string, any>) => BodyInit;
     searchParamsEncoder?: (object: Record<string, any>) => SearchParamsOption;
     searchParamsParse?: (string: string) => Record<string, any>;
     requestAbort?: boolean;
-    onRequest?: (info: HookInfo) => void | Promise<void>;
+    onRequest?: (info: HookInfo) => HookInfo | undefined | Promise<HookInfo | undefined>;
     onResponse?: (
       info: HookInfo,
       response: { status: number; data: unknown },
-    ) => void | Promise<void>;
+    ) =>
+      | { status: number; data: unknown }
+      | undefined
+      | Promise<{ status: number; data: unknown } | undefined>;
+    onError?: (info: HookInfo, error: HTTPError) => undefined | Promise<undefined>;
   };
 
 export type HookInfo = {

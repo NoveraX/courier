@@ -28,7 +28,7 @@ export class Instance {
   private responseType!: ResponseType;
   private defaultData!: Record<string, any>;
   private defaultQueryParams!: Record<string, any>;
-  private validHeaders?: string[];
+  private extraHeaders?: string[];
   private pathOptions?: PathOptions;
   private bodyEncoder?: (object: Record<string, any>) => BodyInit;
   private searchParamsEncoder?: (object: Record<string, any>) => SearchParamsOption;
@@ -49,7 +49,7 @@ export class Instance {
       responseType = "json",
       defaultData,
       defaultQueryParams,
-      validHeaders,
+      extraHeaders,
       pathOptions,
       bodyEncoder,
       searchParamsEncoder,
@@ -58,12 +58,13 @@ export class Instance {
       hooks,
       onRequest: _onRequest,
       onResponse: _onResponse,
+      onError: _onError,
       ...kyOptions
     } = options || {};
 
     this.responseType = responseType;
     this.defaultData = { ...defaultData };
-    this.validHeaders = validHeaders;
+    this.extraHeaders = extraHeaders;
     this.pathOptions = pathOptions;
     this.bodyEncoder = bodyEncoder;
     this.searchParamsEncoder = searchParamsEncoder;
@@ -264,7 +265,7 @@ export class Instance {
 
       const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[1] || {};
 
-      const headers = mergeHeaders(kyHeaders, optionHeaders, this.validHeaders);
+      const headers = mergeHeaders(kyHeaders, optionHeaders, this.extraHeaders);
 
       const prefixUrlOverride = baseUrl ? { prefixUrl: baseUrl } : {};
 
@@ -285,7 +286,7 @@ export class Instance {
 
         const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[2] || {};
 
-        const headers = mergeHeaders(kyHeaders, optionHeaders, this.validHeaders);
+        const headers = mergeHeaders(kyHeaders, optionHeaders, this.extraHeaders);
 
         options = {
           ...otherArgumentOptions,

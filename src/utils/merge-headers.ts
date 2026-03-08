@@ -1,70 +1,56 @@
-type KyHeadersInit = NonNullable<RequestInit["headers"]> | Record<string, string | undefined>;
-
-import { isHeaders } from "./helpers";
 import { neededHeaders } from "./needed-headers";
 
+type HeadersInput = HeadersInit | Record<string, string | undefined>;
+
+const toHeaders = (input: HeadersInput): Headers => {
+  if (input instanceof Headers) {
+    return new Headers(input);
+  }
+
+  if (Array.isArray(input)) {
+    return new Headers(input);
+  }
+
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) {
+      headers.set(key, value);
+    }
+  }
+  return headers;
+};
+
 export const getRequestHeaders = (
-  incomingHeaders?: RequestHeaders,
+  incomingHeaders?: HeadersInput,
   validHeaders: string[] = [],
-): Record<(typeof neededHeaders)[number], string> => {
-  const allValidHeaders = new Set([...neededHeaders, ...validHeaders]);
+): Headers => {
+  const allValidHeaders = new Set<string>([...neededHeaders, ...validHeaders]);
+  const source = incomingHeaders ? toHeaders(incomingHeaders) : new Headers();
+  const result = new Headers();
 
-  const objectHeaders =
-    incomingHeaders instanceof Headers
-      ? Object.fromEntries(incomingHeaders.entries())
-      : incomingHeaders;
+  source.forEach((value, key) => {
+    if (allValidHeaders.has(key.toLowerCase())) {
+      result.set(key, value);
+    }
+  });
 
-  return Object.fromEntries(
-    Object.keys(objectHeaders || {})
-      .map((key) => {
-        const value = (objectHeaders as Record<string, string | undefined>)?.[key];
-
-        if (value && allValidHeaders.has(key.toLowerCase() as (typeof neededHeaders)[number])) {
-          return [key, value];
-        }
-
-        return [];
-      })
-      .filter((value) => value.length > 0),
-  );
+  return result;
 };
 
 export const mergeHeaders = (
-  kyHeaders: KyHeadersInit = {},
-  requestHeaders?: RequestHeaders,
+  kyHeaders: HeadersInput = {},
+  requestHeaders?: HeadersInput,
   validHeaders?: string[],
-): KyHeadersInit => {
-  const newHeaders = isHeaders(kyHeaders)
-    ? new Headers(kyHeaders)
-    : Array.isArray(kyHeaders)
-      ? [...kyHeaders]
-      : { ...kyHeaders };
+): Headers => {
+  const merged = toHeaders(kyHeaders);
 
-  if (!requestHeaders) return newHeaders;
+  if (!requestHeaders) return merged;
 
-  const headers = getRequestHeaders(requestHeaders, validHeaders);
+  const filtered = getRequestHeaders(requestHeaders, validHeaders);
 
-  for (const key in headers) {
-    if (Object.hasOwn(headers, key)) {
-      const value = headers[key as keyof typeof headers];
+  filtered.forEach((value, key) => {
+    merged.set(key, value);
+  });
 
-      if (!value) continue;
-
-      if (isHeaders(newHeaders)) {
-        newHeaders.set(key, value);
-        continue;
-      }
-
-      if (Array.isArray(newHeaders)) {
-        newHeaders.push([key, value]);
-        continue;
-      }
-
-      newHeaders[key] = value;
-    }
-  }
-
-  return newHeaders;
+  return merged;
 };
-
-type RequestHeaders = Headers | KyHeadersInit;

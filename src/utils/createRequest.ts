@@ -247,6 +247,6 @@ type InternalResponse = {
   headers: Headers;
   rawData: boolean;
   stream?: boolean;
-  data?: Record<string, any> | unknown;
+  data?: unknown;
   throw?: unknown;
 };

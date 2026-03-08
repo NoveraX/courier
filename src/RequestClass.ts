@@ -1,4 +1,4 @@
-import type Instance from "./instance/index";
+import type { Instance } from "./instance/index";
 import type { BaseOptions, MergeOptions, MethodKyResponse } from "./instance/types";
 
 export type Methods = ReturnType<Instance["methodsInstance"]>;

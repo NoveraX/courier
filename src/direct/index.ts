@@ -1,5 +1,5 @@
 import { HTTPError } from "../error";
-import type { Context } from "../instance/types";
+import type { Context, MethodsInstanceOptions } from "../instance/types";
 import type { CommonRequest } from "../types";
 import { createRequest } from "../utils/createRequest";
 import { parseQueryRequest } from "../utils/helpers";
@@ -31,18 +31,14 @@ export function createDirectRequest<T extends Sources>(
     onSuccess: globalOnSuccess,
   } = defaults;
 
-  return ((source: any, options?: any) =>
-    async (...arguments_: any[]) => {
-      const queryArguments = arguments_ as
-        | [string, Context]
-        | [string, Record<string, any>, Context];
-
-      const [queryRequest] = queryArguments;
+  return ((source: string, options?: MethodsInstanceOptions<boolean>) =>
+    async (...arguments_: [string, Context] | [string, Record<string, unknown>, Context]) => {
+      const [queryRequest] = arguments_;
       const { group, query } = parseQueryRequest(queryRequest);
 
-      const variables = isContext(queryArguments[1]) ? undefined : queryArguments[1];
+      const variables = isContext(arguments_[1]) ? undefined : arguments_[1];
 
-      const mergedOptions = { ...options };
+      const mergedOptions: Record<string, unknown> = { ...options };
 
       if (mergedOptions.timeout === undefined && defaultTimeout !== undefined) {
         mergedOptions.timeout = defaultTimeout;
@@ -58,21 +54,19 @@ export function createDirectRequest<T extends Sources>(
       }
 
       const requestOptions = {
-        source: source as string,
+        source,
         group,
         query,
         variables,
         options: mergedOptions,
       };
 
-      const context = (
-        queryArguments.length > 2 ? queryArguments[2] : queryArguments[1]
-      ) as Context;
+      const context = (arguments_.length > 2 ? arguments_[2] : arguments_[1]) as Context;
 
       try {
         const result = await createRequest(sources, requestOptions, context);
         await globalOnSuccess?.(result);
-        return result as any;
+        return result;
       } catch (error) {
         if (error instanceof HTTPError) {
           await globalOnError?.(error);

@@ -3,7 +3,7 @@ import type ky from "ky";
 import type { Options, SearchParamsOption } from "ky";
 import type { NextRequest, NextResponse } from "next/server";
 
-import type HTTPError from "../error";
+import type { HTTPError } from "../error";
 import type { RequestGroupOptions } from "../RequestClass";
 
 type KyInstance = typeof ky;
@@ -13,7 +13,10 @@ export type Methods = Exclude<KyMethods, "delete"> | "del";
 type KyMethods = keyof Omit<KyInstance, "create" | "extend" | "retry" | "stop">;
 
 export type AnyMethods = Partial<{
-  [k: string]: (methods: MethodsInstance, variables: any) => Promise<any> | any;
+  [k: string]: (
+    methods: MethodsInstance,
+    variables: unknown,
+  ) => Promise<MethodKyResponse<unknown>> | MethodKyResponse<unknown>;
 }>;
 
 export type MethodsInstance = {
@@ -21,7 +24,7 @@ export type MethodsInstance = {
 };
 
 export type GenerateMethodOptions = SimpleOptions & {
-  vars?: Record<string, any>;
+  vars?: Record<string, unknown>;
   stream?: boolean;
 };
 
@@ -43,10 +46,10 @@ export type MethodKyResponse<T = unknown> = {
 
 export type MethodParameters<T extends Methods> = T extends "head"
   ? [url?: string, options?: MethodOptions<T>]
-  : [url?: string, variables?: Record<string, any>, options?: MethodOptions<T>];
+  : [url?: string, variables?: Record<string, unknown>, options?: MethodOptions<T>];
 
 export type OptionsWithSearchParams = Omit<Options, "searchParams"> & {
-  searchParams?: Record<string, any>;
+  searchParams?: Record<string, unknown>;
 };
 
 export type SimpleOptions = Omit<OptionsWithSearchParams, "body" | "json" | "searchParams">;
@@ -61,12 +64,12 @@ export type BaseOptions = MergeOptions &
   Omit<Options, "body" | "json" | "prefixUrl" | "searchParams"> & {
     baseURL?: string;
     responseType?: ResponseType;
-    defaultData?: Record<string, any>;
-    defaultQueryParams?: Record<string, any>;
+    defaultData?: Record<string, unknown>;
+    defaultQueryParams?: Record<string, unknown>;
     extraHeaders?: string[];
-    bodyEncoder?: (object: Record<string, any>) => BodyInit;
-    searchParamsEncoder?: (object: Record<string, any>) => SearchParamsOption;
-    searchParamsParse?: (string: string) => Record<string, any>;
+    bodyEncoder?: (object: Record<string, unknown>) => BodyInit;
+    searchParamsEncoder?: (object: Record<string, unknown>) => SearchParamsOption;
+    searchParamsParse?: (string: string) => Record<string, unknown>;
     requestAbort?: boolean;
     onRequest?: (info: HookInfo) => HookInfo | undefined | Promise<HookInfo | undefined>;
     onResponse?: (

@@ -1,6 +1,7 @@
 import ky, { HTTPError as KYHTTPError } from "ky";
 
 import { HTTPError } from "./error";
+import type { MethodsInstanceOptions } from "./instance/types";
 import type { CommonRequest, QueryOverrides } from "./types";
 import {
   type CreateRequestOptions,
@@ -18,7 +19,7 @@ export type ClientRequestDefaults = {
   onSuccess?: (data: unknown) => void | Promise<void>;
 };
 
-export function createClientRequest<T extends Record<string, any> = QueryOverrides>(
+export function createClientRequest<T extends Record<string, unknown> = QueryOverrides>(
   defaults: ClientRequestDefaults = {},
 ): CommonRequest<T> {
   const {
@@ -30,9 +31,9 @@ export function createClientRequest<T extends Record<string, any> = QueryOverrid
     onSuccess: globalOnSuccess,
   } = defaults;
 
-  return ((source: any, options?: any) =>
-    async (...arguments_: any[]) => {
-      const [queryRequest, variables] = arguments_ as [string, any] | [string];
+  return ((source: string, options?: MethodsInstanceOptions<boolean>) =>
+    async (...arguments_: [string] | [string, FormData | Record<string, unknown>]) => {
+      const [queryRequest, variables] = arguments_;
       const { group, query } = parseQueryRequest(queryRequest);
 
       const { cache, onDownloadProgress, onUploadProgress, next, signal, stream, ...kyOptions } =
@@ -81,14 +82,14 @@ export function createClientRequest<T extends Record<string, any> = QueryOverrid
 
       try {
         if (stream) {
-          const response = (await ky.post(`/api/${requestPage}`, kyPostOptions)) as any;
+          const response = await ky.post(`/api/${requestPage}`, kyPostOptions);
           await globalOnSuccess?.(response);
           return response;
         }
 
         const response = await ky.post(`/api/${requestPage}`, kyPostOptions).json();
         await globalOnSuccess?.(response);
-        return response as any;
+        return response;
       } catch (error) {
         if (error instanceof KYHTTPError) {
           let httpError: HTTPError;
@@ -103,7 +104,8 @@ export function createClientRequest<T extends Record<string, any> = QueryOverrid
             const response = await error.response.json();
 
             const { options } = getRequestOptions(requestOptions.body || requestOptions.json);
-            const { rawData } = typeof options === "object" ? (options as Record<string, any>) : {};
+            const { rawData } =
+              typeof options === "object" ? (options as Record<string, unknown>) : {};
 
             const responseResult = rawData
               ? {

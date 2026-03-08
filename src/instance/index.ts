@@ -24,15 +24,14 @@ import type {
 const methods: Methods[] = ["get", "post", "put", "patch", "del", "head"];
 
 export class Instance {
-  // TODO support different responseType values (json / text) through the rawData generic
   private responseType!: ResponseType;
-  private defaultData!: Record<string, any>;
-  private defaultQueryParams!: Record<string, any>;
+  private defaultData!: Record<string, unknown>;
+  private defaultQueryParams!: Record<string, unknown>;
   private extraHeaders?: string[];
   private pathOptions?: PathOptions;
-  private bodyEncoder?: (object: Record<string, any>) => BodyInit;
-  private searchParamsEncoder?: (object: Record<string, any>) => SearchParamsOption;
-  private searchParamsParse?: (string: string) => Record<string, any>;
+  private bodyEncoder?: (object: Record<string, unknown>) => BodyInit;
+  private searchParamsEncoder?: (object: Record<string, unknown>) => SearchParamsOption;
+  private searchParamsParse?: (string: string) => Record<string, unknown>;
   private options!: Options;
 
   context?: Context;
@@ -99,17 +98,17 @@ export class Instance {
     return this._http;
   }
 
-  private toSearchParams(variables?: Record<string, any>) {
+  private toSearchParams(variables?: Record<string, unknown>) {
     if (!variables || Object.keys(variables).length === 0) return;
 
     if (this.searchParamsEncoder) {
       return this.searchParamsEncoder(variables);
     }
 
-    return new URLSearchParams(variables);
+    return new URLSearchParams(variables as Record<string, string>);
   }
 
-  private clearVariables(variables?: FormData | Record<string, any>) {
+  private clearVariables(variables?: FormData | Record<string, unknown>) {
     if (isFormData(variables)) {
       for (const key of variables.keys()) {
         if (variables.get(key) === undefined) {
@@ -129,8 +128,8 @@ export class Instance {
 
   private generateVariables(
     method: Methods,
-    variables?: FormData | Record<string, any>,
-    searchParameters?: Record<string, any>,
+    variables?: FormData | Record<string, unknown>,
+    searchParameters?: Record<string, unknown>,
   ): Pick<Options, "body" | "json" | "searchParams"> | undefined {
     variables = this.clearVariables(variables);
 
@@ -221,10 +220,13 @@ export class Instance {
           return (message || "fetch failed") as T;
         }
       }
-      default: {
-        // TODO add a text variant
+      case "text": {
         try {
-          return await response.json<T>();
+          if (response.status === 204) {
+            return null as T;
+          }
+
+          return (await response.text()) as T;
         } catch (error) {
           if (error instanceof Error) {
             return (message || error.message) as T;
@@ -244,7 +246,7 @@ export class Instance {
     const { vars, headers: kyHeaders, stream, ...kyOptions } = generateOptions || {};
     const { prefix = "", pathOptions } = datasourceOptions || {};
 
-    const cleanedVars = this.clearVariables(vars) as Record<string, any> | undefined;
+    const cleanedVars = this.clearVariables(vars) as Record<string, unknown> | undefined;
 
     return async <T>(...arguments_: MethodParameters<typeof method>) => {
       const commonPathOptions = (await this.pathOptions?.(this.context?.req)) || {};
@@ -265,7 +267,11 @@ export class Instance {
 
       const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[1] || {};
 
-      const headers = mergeHeaders(kyHeaders, optionHeaders, this.extraHeaders);
+      const headers = mergeHeaders(
+        kyHeaders,
+        optionHeaders as HeadersInit | undefined,
+        this.extraHeaders,
+      );
 
       const prefixUrlOverride = baseUrl ? { prefixUrl: baseUrl } : {};
 
@@ -286,7 +292,11 @@ export class Instance {
 
         const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[2] || {};
 
-        const headers = mergeHeaders(kyHeaders, optionHeaders, this.extraHeaders);
+        const headers = mergeHeaders(
+          kyHeaders,
+          optionHeaders as HeadersInit | undefined,
+          this.extraHeaders,
+        );
 
         options = {
           ...otherArgumentOptions,

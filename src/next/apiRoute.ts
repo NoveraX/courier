@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import type { Sources } from "../direct/types";
 import { createRequest } from "../utils/createRequest";
 
-export const apiRoute = (sources: Record<string, any>) => {
+export const apiRoute = (sources: Sources) => {
   const POST = async (request: NextRequest) => {
     const contentType = request.headers.get("content-type");
 

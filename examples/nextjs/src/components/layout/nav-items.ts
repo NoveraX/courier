@@ -23,8 +23,8 @@ export const docsNav: NavSection[] = [
     defaultOpen: true,
     items: [
       { title: "What is Nexus?", href: "/docs/introduction" },
-      { title: "Why Nexus?", href: "/docs/why-nexus", disabled: true },
-      { title: "Architecture", href: "/docs/architecture", disabled: true },
+      { title: "Why Nexus?", href: "/docs/why-nexus" },
+      { title: "Architecture", href: "/docs/architecture" },
     ],
   },
   {

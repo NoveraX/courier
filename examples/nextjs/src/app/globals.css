@@ -57,9 +57,9 @@
   --color-input: oklch(0.92 0.005 270);
   --color-ring: oklch(0.65 0.25 270);
 
-  /* Code block */
-  --color-code-bg: oklch(0.97 0.005 270);
-  --color-code-border: oklch(0.92 0.01 270);
+  /* Code block — always dark for readability */
+  --color-code-bg: oklch(0.18 0.02 260);
+  --color-code-border: oklch(0.25 0.025 265);
 
   /* Sidebar */
   --color-sidebar-background: oklch(0.98 0.005 270);
@@ -217,4 +217,73 @@
   .dark .glow-brand {
     box-shadow: 0 0 24px oklch(0.7 0.22 270 / 0.3);
   }
+}
+
+/* ─── Shiki Code Block ─── */
+
+.shiki-wrapper pre.shiki {
+  margin: 0;
+  padding: 1rem;
+  background: transparent !important;
+  font-size: var(--text-sm);
+  line-height: 1.75;
+  overflow-x: auto;
+}
+
+.shiki-wrapper pre.shiki code {
+  display: grid;
+  font-family: var(--font-mono);
+  counter-reset: line;
+}
+
+.shiki-wrapper pre.shiki .line {
+  padding: 0 1rem;
+  margin: 0 -1rem;
+}
+
+/* Line numbers */
+
+.shiki-wrapper.show-line-numbers pre.shiki .line::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 2rem;
+  margin-right: 1rem;
+  text-align: right;
+  color: oklch(0.4 0.01 270);
+  user-select: none;
+}
+
+/* Line highlighting */
+
+.shiki-wrapper pre.shiki .line.highlighted {
+  background: oklch(0.65 0.25 270 / 0.1);
+  border-left: 2px solid oklch(0.65 0.25 270);
+  padding-left: calc(1rem - 2px);
+}
+
+/* Diff */
+
+.shiki-wrapper pre.shiki .line.diff.add {
+  background: oklch(0.45 0.15 145 / 0.15);
+  border-left: 2px solid oklch(0.65 0.19 145);
+  padding-left: calc(1rem - 2px);
+}
+
+.shiki-wrapper pre.shiki .line.diff.remove {
+  background: oklch(0.45 0.15 28 / 0.15);
+  border-left: 2px solid oklch(0.58 0.22 28);
+  padding-left: calc(1rem - 2px);
+  opacity: 0.7;
+}
+
+/* Focus mode */
+
+.shiki-wrapper pre.shiki.has-focused .line:not(.focused) {
+  opacity: 0.3;
+  transition: opacity 0.3s;
+}
+
+.shiki-wrapper:hover pre.shiki.has-focused .line:not(.focused) {
+  opacity: 0.8;
 }

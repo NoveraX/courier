@@ -30,6 +30,9 @@
         "noParameterAssign": "off",
         "noNonNullAssertion": "warn"
       },
+      "security": {
+        "noDangerouslySetInnerHtml": "off"
+      },
       "suspicious": {
         "noExplicitAny": "off"
       },

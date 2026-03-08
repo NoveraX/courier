@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import HTTPError from "../error";
 import Instance from "../instance/index";
-import type { AnyMethods, BaseOptions, Context, ServerHookInfo } from "../instance/types";
+import type { AnyMethods, BaseOptions, Context, HookInfo } from "../instance/types";
 import type { Request } from "../RequestClass";
 import type { AnyGroups } from "../types";
 import {
@@ -12,7 +12,6 @@ import {
   isHeaders,
 } from "./helpers";
 import mergeHeaders, { getRequestHeaders } from "./merge-headers";
-import { getCached, setCache } from "./server-cache";
 
 function createInstance(baseOption?: BaseOptions, context?: Context) {
   return new Instance(baseOption, context);
@@ -166,36 +165,15 @@ export const createRequest = async (
 
   const newHeaders = mergeHeaders(kyHeaders, mergedNextHeaders);
 
-  const hookInfo: ServerHookInfo = {
+  const hookInfo: HookInfo = {
     source: String(source),
     group: group ? String(group) : undefined,
     query: String(query),
     variables,
   };
 
-  const cacheConfig = dataSource.options?.serverCache;
-  const cacheKey =
-    cacheConfig && !stream
-      ? typeof cacheConfig.key === "function"
-        ? cacheConfig.key(String(source), String(query), variables)
-        : cacheConfig.key ||
-          `${String(source)}:${group || ""}:${query}:${JSON.stringify(variables)}`
-      : undefined;
-
-  if (cacheKey) {
-    const cached = getCached<{ status: number; headers: Headers; data: unknown }>(cacheKey);
-    if (cached) {
-      return formatResponse(context, {
-        headers: new Headers(cached.headers),
-        status: cached.status,
-        data: cached.data,
-        rawData,
-      });
-    }
-  }
-
-  if (dataSource.options?.onServerRequest) {
-    await dataSource.options.onServerRequest(hookInfo);
+  if (dataSource.options?.onRequest) {
+    await dataSource.options.onRequest(hookInfo);
   }
 
   try {
@@ -214,19 +192,11 @@ export const createRequest = async (
 
     const headers = isHeaders(response.headers) ? (response?.headers as Headers) : new Headers();
 
-    if (dataSource.options?.onServerResponse) {
-      await dataSource.options.onServerResponse(hookInfo, {
+    if (dataSource.options?.onResponse) {
+      await dataSource.options.onResponse(hookInfo, {
         status: response?.status || 200,
         data: response.data,
       });
-    }
-
-    if (cacheKey && cacheConfig) {
-      setCache(
-        cacheKey,
-        { status: response?.status || 200, headers: new Headers(headers), data: response.data },
-        cacheConfig.ttl,
-      );
     }
 
     return formatResponse(context, {

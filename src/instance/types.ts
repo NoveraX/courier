@@ -67,27 +67,14 @@ export type BaseOptions = MergeOptions &
     searchParamsEncoder?: (object: Record<string, any>) => SearchParamsOption;
     searchParamsParse?: (string: string) => Record<string, any>;
     requestAbort?: boolean;
-    serverOnly?: ServerOnlyOptions;
-    serverCache?: ServerCacheOptions;
-    onServerRequest?: (info: ServerHookInfo) => void | Promise<void>;
-    onServerResponse?: (
-      info: ServerHookInfo,
+    onRequest?: (info: HookInfo) => void | Promise<void>;
+    onResponse?: (
+      info: HookInfo,
       response: { status: number; data: unknown },
     ) => void | Promise<void>;
   };
 
-export type ServerOnlyOptions = {
-  headers?: Record<string, string>;
-  baseURL?: string;
-  searchParams?: Record<string, string>;
-};
-
-export type ServerCacheOptions = {
-  ttl: number;
-  key?: string | ((source: string, query: string, variables?: unknown) => string);
-};
-
-export type ServerHookInfo = {
+export type HookInfo = {
   source: string;
   group?: string;
   query: string;

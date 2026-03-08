@@ -19,7 +19,6 @@ import type {
   MethodsInstanceDatasourceOptions,
   PathOptions,
   ResponseType,
-  ServerOnlyOptions,
 } from "./types";
 
 const methods: Methods[] = ["get", "post", "put", "patch", "del", "head"];
@@ -34,7 +33,6 @@ export class Instance {
   private bodyEncoder?: (object: Record<string, any>) => BodyInit;
   private searchParamsEncoder?: (object: Record<string, any>) => SearchParamsOption;
   private searchParamsParse?: (string: string) => Record<string, any>;
-  private serverOnly?: ServerOnlyOptions;
   private options!: Options;
 
   context?: Context;
@@ -58,10 +56,8 @@ export class Instance {
       searchParamsParse,
       requestAbort,
       hooks,
-      serverOnly,
-      serverCache: _serverCache,
-      onServerRequest: _onServerRequest,
-      onServerResponse: _onServerResponse,
+      onRequest: _onRequest,
+      onResponse: _onResponse,
       ...kyOptions
     } = options || {};
 
@@ -72,10 +68,9 @@ export class Instance {
     this.bodyEncoder = bodyEncoder;
     this.searchParamsEncoder = searchParamsEncoder;
     this.searchParamsParse = searchParamsParse;
-    this.serverOnly = serverOnly;
 
-    if (defaultQueryParams || serverOnly?.searchParams) {
-      this.defaultQueryParams = { ...defaultQueryParams, ...serverOnly?.searchParams };
+    if (defaultQueryParams) {
+      this.defaultQueryParams = { ...defaultQueryParams };
     }
 
     const newHooks = {
@@ -91,7 +86,7 @@ export class Instance {
     this.options = {
       ...kyOptions,
       hooks: newHooks,
-      prefixUrl: serverOnly?.baseURL || baseURL,
+      prefixUrl: baseURL,
     };
 
     this._http = ky.create(this.options);
@@ -302,18 +297,6 @@ export class Instance {
             ...newSearchParameters,
           }),
         };
-      }
-
-      if (this.serverOnly?.headers) {
-        const merged = {
-          ...(typeof options.headers === "object" &&
-          !(options.headers instanceof Headers) &&
-          !Array.isArray(options.headers)
-            ? options.headers
-            : {}),
-          ...this.serverOnly.headers,
-        };
-        options = { ...options, headers: merged };
       }
 
       try {

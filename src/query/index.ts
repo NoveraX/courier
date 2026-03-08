@@ -1,5 +1,10 @@
 "use client";
 
+export {
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+
 import {
   type QueryKey,
   type UseMutationOptions,

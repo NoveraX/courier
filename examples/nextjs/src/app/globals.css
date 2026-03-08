@@ -287,3 +287,14 @@
 .shiki-wrapper:hover pre.shiki.has-focused .line:not(.focused) {
   opacity: 0.8;
 }
+
+/* ─── Landing Page ─── */
+
+.dot-grid {
+  background-image: radial-gradient(oklch(0.5 0.01 270 / 0.15) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.dark .dot-grid {
+  background-image: radial-gradient(oklch(0.5 0.01 270 / 0.2) 1px, transparent 1px);
+}

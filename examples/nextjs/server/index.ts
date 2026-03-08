@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import echoRouter from "./routes/echo.js";
 import miscRouter from "./routes/misc.js";
 import postsRouter from "./routes/posts.js";
 import uploadRouter from "./routes/upload.js";
@@ -21,10 +22,12 @@ app.use(
   }),
 );
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use("/users", usersRouter);
 app.use("/posts", postsRouter);
 app.use("/upload", uploadRouter);
+app.use("/echo", echoRouter);
 app.use("/", miscRouter);
 
 app.get("/health", (_req, res) => {

@@ -10,6 +10,98 @@ import {
   parseQueryRequest,
 } from "./utils/helpers";
 
+type UploadProgress = {
+  percent: number;
+  transferredBytes: number;
+  totalBytes: number;
+};
+
+/**
+ * Upload with real network-level progress via XMLHttpRequest.
+ * Works on both HTTP/1.1 and HTTP/2, unlike ReadableStream + duplex which requires HTTP/2.
+ */
+function xhrUpload(
+  url: string,
+  body: FormData | string,
+  options: {
+    headers?: Record<string, string>;
+    credentials?: RequestCredentials;
+    timeout?: number;
+    signal?: AbortSignal;
+    onProgress: (progress: UploadProgress, chunk: Uint8Array) => void;
+  },
+): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+
+    if (options.credentials === "include") {
+      xhr.withCredentials = true;
+    }
+
+    if (options.timeout) {
+      xhr.timeout = options.timeout;
+    }
+
+    if (options.headers) {
+      for (const [key, value] of Object.entries(options.headers)) {
+        // Skip content-type for FormData — browser sets it with multipart boundary
+        if (!(body instanceof FormData && key.toLowerCase() === "content-type")) {
+          xhr.setRequestHeader(key, value);
+        }
+      }
+    }
+
+    if (typeof body === "string") {
+      xhr.setRequestHeader("content-type", "application/json");
+    }
+
+    xhr.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) {
+        options.onProgress(
+          {
+            percent: event.total > 0 ? event.loaded / event.total : 0,
+            transferredBytes: event.loaded,
+            totalBytes: event.total,
+          },
+          new Uint8Array(0),
+        );
+      }
+    });
+
+    xhr.addEventListener("load", () => {
+      const headers = new Headers();
+      for (const line of xhr.getAllResponseHeaders().trim().split("\r\n")) {
+        const idx = line.indexOf(":");
+        if (idx > 0) {
+          headers.append(line.slice(0, idx).trim(), line.slice(idx + 1).trim());
+        }
+      }
+
+      resolve(
+        new Response(xhr.responseText, {
+          status: xhr.status,
+          statusText: xhr.statusText,
+          headers,
+        }),
+      );
+    });
+
+    xhr.addEventListener("error", () => reject(new TypeError("Network request failed")));
+    xhr.addEventListener("timeout", () => reject(new TypeError("Request timed out")));
+
+    if (options.signal) {
+      if (options.signal.aborted) {
+        reject(new DOMException("Aborted", "AbortError"));
+        return;
+      }
+      options.signal.addEventListener("abort", () => xhr.abort());
+    }
+
+    xhr.send(body);
+  });
+}
+
 export type ClientRequestDefaults = {
   requestPage?: string;
   timeout?: number;
@@ -73,12 +165,75 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
         };
       }
 
-      const kyPostOptions = {
+      let kyPostOptions: Record<string, unknown>;
+
+      if (onUploadProgress) {
+        const body = isFormData(variables)
+          ? (requestOptions.body as FormData)
+          : JSON.stringify(requestOptions.json);
+
+        try {
+          const response = await xhrUpload(`/api/${requestPage}`, body, {
+            headers: defaultHeaders,
+            credentials,
+            timeout: kyOptions.timeout || undefined,
+            signal: signal || undefined,
+            onProgress: onUploadProgress,
+          });
+
+          if (!response.ok) {
+            let responseData: unknown;
+            try {
+              responseData = await response.json();
+            } catch {
+              responseData = { success: false, message: `HTTP ${response.status}` };
+            }
+
+            const { options: parsedOptions } = getRequestOptions(
+              requestOptions.body || requestOptions.json,
+            );
+            const { rawData } = parsedOptions ?? {};
+
+            const errorData =
+              rawData &&
+              typeof responseData === "object" &&
+              responseData !== null &&
+              "data" in responseData
+                ? (responseData as { data: unknown }).data
+                : responseData;
+
+            const httpError = new HTTPError({
+              status: response.status,
+              headers: response.headers,
+              data: errorData,
+            });
+
+            await globalOnError?.(httpError);
+            throw httpError;
+          }
+
+          if (stream) {
+            await globalOnSuccess?.(response);
+            return response;
+          }
+
+          const data = await response.json();
+          await globalOnSuccess?.(data);
+          return data;
+        } catch (error) {
+          if (error instanceof HTTPError) {
+            await globalOnError?.(error);
+            throw error;
+          }
+          throw error;
+        }
+      }
+
+      kyPostOptions = {
         ...requestOptions,
         credentials,
         cache,
         onDownloadProgress,
-        onUploadProgress,
         next,
         signal,
         timeout: kyOptions.timeout,

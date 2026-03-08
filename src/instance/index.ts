@@ -19,6 +19,7 @@ import type {
   MethodsInstanceDatasourceOptions,
   PathOptions,
   ResponseType,
+  ServerOnlyOptions,
 } from "./types";
 
 const methods: Methods[] = ["get", "post", "put", "patch", "del", "head"];
@@ -40,16 +41,17 @@ export class Instance {
   ) => SearchParamsOption;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private searchParamsParse?: (string: string) => Record<string, any>;
+  private serverOnly?: ServerOnlyOptions;
   private options!: Options;
 
   context?: Context;
   currentExecutingRequests: { [key: string]: AbortController } = {};
 
   constructor(options?: BaseOptions, context?: Context) {
-    this.update(options, context);
+    this.init(options, context);
   }
 
-  update(options?: BaseOptions, context?: Context) {
+  private init(options?: BaseOptions, context?: Context) {
     this.context = context;
     const {
       baseURL,
@@ -63,6 +65,10 @@ export class Instance {
       searchParamsParse,
       requestAbort,
       hooks,
+      serverOnly,
+      serverCache: _serverCache,
+      onServerRequest: _onServerRequest,
+      onServerResponse: _onServerResponse,
       ...kyOptions
     } = options || {};
 
@@ -73,9 +79,10 @@ export class Instance {
     this.bodyEncoder = bodyEncoder;
     this.searchParamsEncoder = searchParamsEncoder;
     this.searchParamsParse = searchParamsParse;
+    this.serverOnly = serverOnly;
 
-    if (defaultQueryParams) {
-      this.defaultQueryParams = defaultQueryParams;
+    if (defaultQueryParams || serverOnly?.searchParams) {
+      this.defaultQueryParams = { ...defaultQueryParams, ...serverOnly?.searchParams };
     }
 
     const newHooks = {
@@ -91,12 +98,16 @@ export class Instance {
     this.options = {
       ...kyOptions,
       hooks: newHooks,
-      prefixUrl: baseURL,
+      prefixUrl: serverOnly?.baseURL || baseURL,
     };
+
+    this._http = ky.create(this.options);
   }
 
+  private _http!: ReturnType<typeof ky.create>;
+
   private get http() {
-    return ky.create(this.options);
+    return this._http;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -251,7 +262,7 @@ export class Instance {
     generateOptions?: GenerateMethodOptions,
     datasourceOptions?: MethodsInstanceDatasourceOptions,
   ) {
-    const { vars, headers: kyHeaders, ...kyOptions } = generateOptions || {};
+    const { vars, headers: kyHeaders, stream, ...kyOptions } = generateOptions || {};
     const { prefix = "", pathOptions } = datasourceOptions || {};
 
     this.clearVariables(vars);
@@ -310,8 +321,28 @@ export class Instance {
         };
       }
 
+      if (this.serverOnly?.headers) {
+        const merged = {
+          ...(typeof options.headers === "object" &&
+          !(options.headers instanceof Headers) &&
+          !Array.isArray(options.headers)
+            ? options.headers
+            : {}),
+          ...this.serverOnly.headers,
+        };
+        options = { ...options, headers: merged };
+      }
+
       try {
         const response = await this.http[method === "del" ? "delete" : method](url, options);
+
+        if (stream) {
+          return {
+            status: response.status,
+            headers: response.headers,
+            data: response.body,
+          } as Awaited<ReturnType<typeof this.getResponse<T>>>;
+        }
 
         return await this.getResponse<T>(response);
       } catch (error) {

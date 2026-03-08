@@ -13,7 +13,8 @@ export const request: CommonRequest<QueryOverrides> =
     const group = queryMethod ? queryGroup : undefined;
     const query = queryMethod || queryGroup;
 
-    const { cache, onDownloadProgress, next, signal, ...kyOptions } = options || {};
+    const { cache, onDownloadProgress, onUploadProgress, next, signal, stream, ...kyOptions } =
+      options || {};
 
     const requestPage = process.env.NEXT_PUBLIC_REQUEST_PAGE || "request";
 
@@ -21,11 +22,13 @@ export const request: CommonRequest<QueryOverrides> =
       | { body: FormData; json?: undefined }
       | { json: Partial<CreateRequestOptions>; body?: undefined };
 
+    const serverOptions = stream ? { ...kyOptions, stream } : kyOptions;
+
     if (isFormData(variables)) {
       variables.append("_source", source);
       variables.append("_group", group || "");
       variables.append("_query", query);
-      variables.append("_options", JSON.stringify(kyOptions));
+      variables.append("_options", JSON.stringify(serverOptions));
 
       requestOptions = { body: variables };
     } else {
@@ -35,28 +38,42 @@ export const request: CommonRequest<QueryOverrides> =
           group,
           query,
           variables,
-          options: kyOptions,
+          options: serverOptions,
         },
       };
     }
 
+    const kyPostOptions = {
+      ...requestOptions,
+      credentials: "include" as const,
+      cache,
+      onDownloadProgress,
+      onUploadProgress,
+      next,
+      signal,
+      timeout: kyOptions.timeout,
+    };
+
     try {
-      const response = await ky
-        .post(`/api/${requestPage}`, {
-          ...requestOptions,
-          credentials: "include",
-          cache,
-          onDownloadProgress,
-          next,
-          signal,
-          timeout: kyOptions.timeout,
-        })
-        .json();
+      if (stream) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (await ky.post(`/api/${requestPage}`, kyPostOptions)) as any;
+      }
+
+      const response = await ky.post(`/api/${requestPage}`, kyPostOptions).json();
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return response as any;
     } catch (error) {
       if (error instanceof KYHTTPError) {
+        if (stream) {
+          throw new HTTPError({
+            status: error.response.status,
+            headers: error.response.headers,
+            data: { success: false, message: `HTTP ${error.response.status}` },
+          });
+        }
+
         const response = await error.response.json();
         let responseResult = response;
 

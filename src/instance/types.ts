@@ -23,11 +23,13 @@ export type MethodsInstance = {
 export type GenerateMethodOptions = SimpleOptions & {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vars?: Record<string, any>;
+  stream?: boolean;
 };
 
 export type MethodsInstanceOptions<R extends boolean = false> = SimpleOptions & {
   rawData?: R;
   passVars?: boolean;
+  stream?: boolean;
 };
 
 export type MethodsInstanceDatasourceOptions = RequestGroupOptions;
@@ -75,7 +77,32 @@ export type BaseOptions = MergeOptions &
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     searchParamsParse?: (string: string) => Record<string, any>;
     requestAbort?: boolean;
+    serverOnly?: ServerOnlyOptions;
+    serverCache?: ServerCacheOptions;
+    onServerRequest?: (info: ServerHookInfo) => void | Promise<void>;
+    onServerResponse?: (
+      info: ServerHookInfo,
+      response: { status: number; data: unknown },
+    ) => void | Promise<void>;
   };
+
+export type ServerOnlyOptions = {
+  headers?: Record<string, string>;
+  baseURL?: string;
+  searchParams?: Record<string, string>;
+};
+
+export type ServerCacheOptions = {
+  ttl: number;
+  key?: string | ((source: string, query: string, variables?: unknown) => string);
+};
+
+export type ServerHookInfo = {
+  source: string;
+  group?: string;
+  query: string;
+  variables?: unknown;
+};
 
 export type MergeOptions = {
   pathOptions?: PathOptions;

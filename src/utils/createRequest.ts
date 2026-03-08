@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import HTTPError from "../error";
 import Instance from "../instance/index";
-import type { AnyMethods, BaseOptions, Context } from "../instance/types";
+import type { AnyMethods, BaseOptions, Context, ServerHookInfo } from "../instance/types";
 import type { Request } from "../RequestClass";
 import type { AnyGroups } from "../types";
 import {
@@ -12,12 +12,28 @@ import {
   isHeaders,
 } from "./helpers";
 import mergeHeaders, { getRequestHeaders } from "./merge-headers";
+import { getCached, setCache } from "./server-cache";
 
 function createInstance(baseOption?: BaseOptions, context?: Context) {
   return new Instance(baseOption, context);
 }
 
 const formatResponse = (context: Context | undefined, response: InternalResponse) => {
+  if (response.stream) {
+    if (context?.res instanceof NextResponse) {
+      return new Response(response.data as ReadableStream, {
+        status: response.status,
+        headers: response.headers,
+      });
+    }
+
+    if (response.throw) {
+      throw response.throw;
+    }
+
+    return { status: response.status, headers: response.headers, data: response.data };
+  }
+
   const baseResult = {
     status: response.status,
     headers: getRequestHeaders(response.headers),
@@ -139,6 +155,7 @@ export const createRequest = async (
     rawData = false,
     passVars: passVariables = true,
     headers: kyHeaders,
+    stream = false,
     ...kyOptions
   } = instanceOptions;
 
@@ -149,6 +166,38 @@ export const createRequest = async (
 
   const newHeaders = mergeHeaders(kyHeaders, mergedNextHeaders);
 
+  const hookInfo: ServerHookInfo = {
+    source: String(source),
+    group: group ? String(group) : undefined,
+    query: String(query),
+    variables,
+  };
+
+  const cacheConfig = dataSource.options?.serverCache;
+  const cacheKey =
+    cacheConfig && !stream
+      ? typeof cacheConfig.key === "function"
+        ? cacheConfig.key(String(source), String(query), variables)
+        : cacheConfig.key ||
+          `${String(source)}:${group || ""}:${query}:${JSON.stringify(variables)}`
+      : undefined;
+
+  if (cacheKey) {
+    const cached = getCached<{ status: number; headers: Headers; data: unknown }>(cacheKey);
+    if (cached) {
+      return formatResponse(context, {
+        headers: new Headers(cached.headers),
+        status: cached.status,
+        data: cached.data,
+        rawData,
+      });
+    }
+  }
+
+  if (dataSource.options?.onServerRequest) {
+    await dataSource.options.onServerRequest(hookInfo);
+  }
+
   try {
     const response = await method(
       instance.methodsInstance(
@@ -156,6 +205,7 @@ export const createRequest = async (
           ...(passVariables ? { vars: variables } : {}),
           ...kyOptions,
           headers: newHeaders,
+          stream,
         },
         methodOptions,
       ),
@@ -164,11 +214,27 @@ export const createRequest = async (
 
     const headers = isHeaders(response.headers) ? (response?.headers as Headers) : new Headers();
 
+    if (dataSource.options?.onServerResponse) {
+      await dataSource.options.onServerResponse(hookInfo, {
+        status: response?.status || 200,
+        data: response.data,
+      });
+    }
+
+    if (cacheKey && cacheConfig) {
+      setCache(
+        cacheKey,
+        { status: response?.status || 200, headers: new Headers(headers), data: response.data },
+        cacheConfig.ttl,
+      );
+    }
+
     return formatResponse(context, {
       headers,
       status: response?.status || 200,
       data: response.data,
       rawData,
+      stream,
     });
   } catch (error) {
     if (error instanceof HTTPError) {
@@ -221,6 +287,7 @@ type InternalResponse = {
   status: number;
   headers: Headers;
   rawData: boolean;
+  stream?: boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: Record<string, any> | unknown;
   throw?: unknown;

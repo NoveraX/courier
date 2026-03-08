@@ -1,9 +1,17 @@
+import HTTPError from "../error";
 import type { Context } from "../instance/types";
 import type { CommonRequest } from "../types";
 import createRequest from "../utils/createRequest";
+import { parseQueryRequest } from "../utils/helpers";
+
 import type { Sources } from "./types";
 
-type DirectRequest = <T extends Sources>(sources: T) => CommonRequest<T, true>;
+export type DirectRequestDefaults = {
+  timeout?: number;
+  headers?: Record<string, string>;
+  onError?: (error: HTTPError) => void | Promise<void>;
+  onSuccess?: (data: unknown) => void | Promise<void>;
+};
 
 const isContext = (value: unknown): value is Context =>
   typeof value === "object" &&
@@ -12,30 +20,66 @@ const isContext = (value: unknown): value is Context =>
     ("res" in value && value.res instanceof Response) ||
     ("headers" in value && value.headers instanceof Headers));
 
-export const setup: DirectRequest =
-  (sources) =>
-  (source, options) =>
-  async (...arguments_) => {
-    const queryArguments = arguments_ as [string, Context] | [string, Record<string, any>, Context];
+export function createDirectRequest<T extends Sources>(
+  sources: T,
+  defaults: DirectRequestDefaults = {},
+): CommonRequest<T, true> {
+  const {
+    timeout: defaultTimeout,
+    headers: defaultHeaders,
+    onError: globalOnError,
+    onSuccess: globalOnSuccess,
+  } = defaults;
 
-    const [queryRequest] = queryArguments;
-    const [queryGroup, queryMethod] = queryRequest.split(":");
-    const group = queryMethod ? queryGroup : undefined;
-    const query = queryMethod || queryGroup;
+  return ((source: any, options?: any) =>
+    async (...arguments_: any[]) => {
+      const queryArguments = arguments_ as
+        | [string, Context]
+        | [string, Record<string, any>, Context];
 
-    const variables = isContext(queryArguments[1]) ? undefined : queryArguments[1];
+      const [queryRequest] = queryArguments;
+      const { group, query } = parseQueryRequest(queryRequest);
 
-    const requestOptions = {
-      source: source as string,
-      group,
-      query,
-      variables,
-      options,
-    };
+      const variables = isContext(queryArguments[1]) ? undefined : queryArguments[1];
 
-    const context = (queryArguments.length > 2 ? queryArguments[2] : queryArguments[1]) as Context;
+      const mergedOptions = { ...options };
 
-    return createRequest(sources, requestOptions, context) as any;
-  };
+      if (mergedOptions.timeout === undefined && defaultTimeout !== undefined) {
+        mergedOptions.timeout = defaultTimeout;
+      }
 
-export default setup;
+      if (defaultHeaders) {
+        mergedOptions.headers = options?.headers
+          ? {
+              ...defaultHeaders,
+              ...Object.fromEntries(new Headers(options.headers as HeadersInit)),
+            }
+          : defaultHeaders;
+      }
+
+      const requestOptions = {
+        source: source as string,
+        group,
+        query,
+        variables,
+        options: mergedOptions,
+      };
+
+      const context = (
+        queryArguments.length > 2 ? queryArguments[2] : queryArguments[1]
+      ) as Context;
+
+      try {
+        const result = await createRequest(sources, requestOptions, context);
+        await globalOnSuccess?.(result);
+        return result as any;
+      } catch (error) {
+        if (error instanceof HTTPError) {
+          await globalOnError?.(error);
+        }
+        throw error;
+      }
+    }) as CommonRequest<T, true>;
+}
+
+export default createDirectRequest;

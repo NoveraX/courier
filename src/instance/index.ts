@@ -132,7 +132,7 @@ export class Instance {
     variables?: FormData | Record<string, any>,
     searchParameters?: Record<string, any>,
   ): Pick<Options, "body" | "json" | "searchParams"> | undefined {
-    this.clearVariables(variables);
+    variables = this.clearVariables(variables);
 
     switch (method) {
       case "head": {
@@ -244,7 +244,7 @@ export class Instance {
     const { vars, headers: kyHeaders, stream, ...kyOptions } = generateOptions || {};
     const { prefix = "", pathOptions } = datasourceOptions || {};
 
-    this.clearVariables(vars);
+    const cleanedVars = this.clearVariables(vars) as Record<string, any> | undefined;
 
     return async <T>(...arguments_: MethodParameters<typeof method>) => {
       const commonPathOptions = (await this.pathOptions?.(this.context?.req)) || {};
@@ -258,7 +258,7 @@ export class Instance {
 
       const [url, newVariables, newSearchParameters] = generateUrl(
         path,
-        vars,
+        cleanedVars,
         generatedPathOptions,
         this.searchParamsParse,
       );

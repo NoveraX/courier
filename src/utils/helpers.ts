@@ -3,10 +3,17 @@ import { compile, type Key, parse } from "path-to-regexp";
 import HTTPError from "../error";
 import type { MethodKyResponse, MethodsInstanceOptions } from "../instance/types";
 
-export const pathJoin = (parts: string[]) => {
-  const SEPARATOR = "/";
-  const replace = new RegExp(`${SEPARATOR}+`, "g");
-  return parts.join(SEPARATOR).replaceAll(replace, SEPARATOR).replace(/^\//, "");
+const MULTIPLE_SLASHES = /\/+/g;
+
+export const pathJoin = (parts: string[]) =>
+  parts.join("/").replace(MULTIPLE_SLASHES, "/").replace(/^\//, "");
+
+export const parseQueryRequest = (queryRequest: string) => {
+  const [queryGroup, queryMethod] = queryRequest.split(":");
+  return {
+    group: queryMethod ? queryGroup : undefined,
+    query: queryMethod || queryGroup,
+  };
 };
 
 export const getUrl = (prefix: string, basePath?: string) => {

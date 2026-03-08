@@ -82,8 +82,8 @@ export default async function IntroductionPage() {
         <ul>
           <li>
             <strong>Proxy Mode</strong> — browser sends a POST to your Next.js API route, which
-            forwards the request to your backend. Hides secrets, bypasses CORS, and forwards
-            cookies automatically.
+            forwards the request to your backend. Hides secrets, bypasses CORS, and forwards cookies
+            automatically.
           </li>
           <li>
             <strong>Direct Mode</strong> — server-side code (RSC, Server Actions) calls the backend
@@ -94,9 +94,8 @@ export default async function IntroductionPage() {
 
       <Callout variant="tip" title="Same definitions, two modes">
         <p>
-          You write your <InlineCode>Request</InlineCode> and{" "}
-          <InlineCode>RequestGroup</InlineCode> classes once. Both{" "}
-          <InlineCode>createClientRequest</InlineCode> (proxy) and{" "}
+          You write your <InlineCode>Request</InlineCode> and <InlineCode>RequestGroup</InlineCode>{" "}
+          classes once. Both <InlineCode>createClientRequest</InlineCode> (proxy) and{" "}
           <InlineCode>createDirectRequest</InlineCode> (direct) consume them with identical type
           inference.
         </p>

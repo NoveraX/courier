@@ -132,15 +132,15 @@ export default async function QuickStartPage() {
             content: (
               <div className="mt-4 space-y-4">
                 <p>
-                  Create a file with your API definition. Each{" "}
-                  <InlineCode>RequestGroup</InlineCode> organizes related endpoints under a URL
-                  prefix, and each method declares its response and variables types:
+                  Create a file with your API definition. Each <InlineCode>RequestGroup</InlineCode>{" "}
+                  organizes related endpoints under a URL prefix, and each method declares its
+                  response and variables types:
                 </p>
                 <CodeBlock code={step1Code} filename="api/sources.ts" />
                 <Callout variant="info" title="Path parameters">
                   <p>
                     The <InlineCode>{":id"}</InlineCode> syntax in{" "}
-                    <InlineCode>{"get(\":id\")"}</InlineCode> automatically extracts{" "}
+                    <InlineCode>{'get(":id")'}</InlineCode> automatically extracts{" "}
                     <InlineCode>id</InlineCode> from the variables and inserts it into the URL. The
                     remaining variables are sent as query params (GET) or body (POST/PUT/PATCH).
                   </p>
@@ -165,9 +165,7 @@ export default async function QuickStartPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <p className="font-medium text-foreground">
-                    Direct mode (server → backend):
-                  </p>
+                  <p className="font-medium text-foreground">Direct mode (server → backend):</p>
                   <p>For Server Components and Server Actions, create a direct request client:</p>
                   <CodeBlock code={step3aCode} filename="lib/direct-request.ts" />
                 </div>
@@ -193,9 +191,7 @@ export default async function QuickStartPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <p className="font-medium text-foreground">
-                    Server component (direct mode):
-                  </p>
+                  <p className="font-medium text-foreground">Server component (direct mode):</p>
                   <CodeBlock code={step4directCode} filename="app/dashboard/page.tsx" />
                 </div>
               </div>
@@ -212,8 +208,8 @@ export default async function QuickStartPage() {
                 <Callout variant="warning" title="Don't forget your backend">
                   <p>
                     Nexus doesn&apos;t replace your backend — it connects to any REST API. Make sure
-                    your backend is running at the URL specified in{" "}
-                    <InlineCode>API_URL</InlineCode>.
+                    your backend is running at the URL specified in <InlineCode>API_URL</InlineCode>
+                    .
                   </p>
                 </Callout>
               </div>
@@ -236,7 +232,7 @@ export default async function QuickStartPage() {
       <Prose>
         <ol>
           <li>
-            Nexus parses <InlineCode>{"\"users:getById\""}</InlineCode> into group{" "}
+            Nexus parses <InlineCode>{'"users:getById"'}</InlineCode> into group{" "}
             <InlineCode>users</InlineCode> and method <InlineCode>getById</InlineCode>
           </li>
           <li>

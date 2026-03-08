@@ -139,8 +139,8 @@ export default async function ProjectSetupPage() {
         <h2 id="file-structure">Recommended file structure</h2>
 
         <p>
-          Keep your API definitions separate from your UI code. A typical Nexus project follows
-          this structure:
+          Keep your API definitions separate from your UI code. A typical Nexus project follows this
+          structure:
         </p>
       </Prose>
 
@@ -170,8 +170,8 @@ export default async function ProjectSetupPage() {
         <h2 id="client-setup">Client setup files</h2>
 
         <p>
-          Create two files in <InlineCode>lib/</InlineCode> — one for proxy mode (client
-          components) and one for direct mode (server components):
+          Create two files in <InlineCode>lib/</InlineCode> — one for proxy mode (client components)
+          and one for direct mode (server components):
         </p>
       </Prose>
 

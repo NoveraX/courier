@@ -28,8 +28,3 @@ export type RequestGroupOptions = MergeOptions & {
 export class RequestGroup {
   constructor(public options?: RequestGroupOptions) {}
 }
-
-export type Response<D = unknown> = {
-  success: true;
-  data: D;
-};

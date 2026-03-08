@@ -5,7 +5,6 @@
     "module": "ESNext",
     "lib": ["DOM", "ESNext", "DOM.Iterable"],
     "target": "ESNext",
-    "importHelpers": true,
     "declaration": true,
     "rootDir": "src",
     "strict": true,

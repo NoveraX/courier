@@ -1,9 +1,21 @@
 import { compile, type Key, parse } from "path-to-regexp";
 
 import { HTTPError } from "../error";
-import type { MethodKyResponse, MethodsInstanceOptions } from "../instance/types";
+import type { MethodsInstanceOptions } from "../instance/types";
 
 const MULTIPLE_SLASHES = /\/+/g;
+
+type CompiledFn = ReturnType<typeof compile>;
+const compileCache = new Map<string, CompiledFn>();
+
+const cachedCompile = (path: string): CompiledFn => {
+  let fn = compileCache.get(path);
+  if (!fn) {
+    fn = compile(path);
+    compileCache.set(path, fn);
+  }
+  return fn;
+};
 
 export const pathJoin = (parts: string[]) =>
   parts.join("/").replace(MULTIPLE_SLASHES, "/").replace(/^\//, "");
@@ -29,17 +41,13 @@ export const getUrl = (prefix: string, basePath?: string) => {
   return { path: pathJoin([prefix, basePath]) };
 };
 
-export type ResponseType<T extends boolean = false, R = unknown> = T extends true
-  ? MethodKyResponse<R>
-  : R;
-
 export const generateUrl = (
-  urlPath_: string,
+  rawUrlPath: string,
   variables?: FormData | Record<string, unknown>,
   generatedPathOptions?: Record<string, unknown>,
   searchParametersParse?: (string: string) => Record<string, unknown>,
 ): [string, FormData | Record<string, unknown>, Record<string, unknown>] => {
-  const [urlPath, searchParameters] = urlPath_.split("?");
+  const [urlPath, searchParameters] = rawUrlPath.split("?");
   const objectSearchParameters = searchParametersParse
     ? searchParametersParse(searchParameters || "")
     : Object.fromEntries(new URLSearchParams(searchParameters || "").entries());
@@ -69,7 +77,7 @@ export const generateUrl = (
   }
 
   try {
-    const url = compile(urlPath)(pathKeys);
+    const url = cachedCompile(urlPath)(pathKeys);
 
     return [url, newVariables, objectSearchParameters];
   } catch (error) {
@@ -103,7 +111,12 @@ export const getRequestOptions = (requestOptions: CreateRequestOptionsType) => {
 
     if (typeof _options === "string") {
       try {
-        options = JSON.parse(_options);
+        options = JSON.parse(_options, (key, value) => {
+          if (key === "__proto__" || key === "constructor" || key === "prototype") {
+            return undefined;
+          }
+          return value;
+        });
       } catch {
         // options stays undefined
       }

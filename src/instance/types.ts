@@ -36,8 +36,6 @@ export type MethodsInstanceOptions<R extends boolean = false> = SimpleOptions & 
 
 export type MethodsInstanceDatasourceOptions = RequestGroupOptions;
 
-export type MethodResponse<R extends boolean = false> = R extends true ? unknown : MethodKyResponse;
-
 export type MethodKyResponse<T = unknown> = {
   status: number;
   headers: Headers;

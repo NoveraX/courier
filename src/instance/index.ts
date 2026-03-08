@@ -31,15 +31,15 @@ import type {
 } from "./types";
 
 export class Instance {
-  private responseType!: ResponseType;
-  private defaultData!: Record<string, unknown>;
-  private defaultQueryParams!: Record<string, unknown>;
+  private responseType: ResponseType = "json";
+  private defaultData: Record<string, unknown> = {};
+  private defaultQueryParams?: Record<string, unknown>;
   private extraHeaders?: string[];
   private pathOptions?: PathOptions;
   private bodyEncoder?: (object: Record<string, unknown>) => BodyInit;
   private searchParamsEncoder?: (object: Record<string, unknown>) => SearchParamsOption;
   private searchParamsParse?: (string: string) => Record<string, unknown>;
-  private options!: Options;
+  private options: Options = {};
 
   context?: Context;
   currentExecutingRequests: { [key: string]: AbortController } = {};
@@ -99,7 +99,7 @@ export class Instance {
     this._http = ky.create(this.options);
   }
 
-  private _http!: ReturnType<typeof ky.create>;
+  private _http: ReturnType<typeof ky.create> = ky.create({});
 
   private get http() {
     return this._http;
@@ -199,37 +199,19 @@ export class Instance {
   }
 
   private async getResponseData(response: KyResponse, message?: string): Promise<unknown> {
-    switch (this.responseType) {
-      case "json": {
-        try {
-          if (response.status === 204) {
-            return null;
-          }
+    if (response.status === 204) {
+      return null;
+    }
 
-          return await response.json();
-        } catch (error) {
-          if (error instanceof Error) {
-            return message || error.message;
-          }
-
-          return message || "fetch failed";
-        }
-      }
-      case "text": {
-        try {
-          if (response.status === 204) {
-            return null;
-          }
-
-          return await response.text();
-        } catch (error) {
-          if (error instanceof Error) {
-            return message || error.message;
-          }
-
-          return message || "fetch failed";
-        }
-      }
+    try {
+      return this.responseType === "json" ? await response.json() : await response.text();
+    } catch {
+      const fallbackMessage = message || "Failed to parse response body";
+      throw new HTTPError({
+        status: response.status,
+        headers: response.headers,
+        data: { success: false, message: fallbackMessage },
+      });
     }
   }
 
@@ -260,36 +242,34 @@ export class Instance {
         this.searchParamsParse,
       );
 
-      const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[1] || {};
-
-      const headers = mergeHeaders(kyHeaders, extractHeaders(optionHeaders), this.extraHeaders);
-
       const prefixUrlOverride = baseUrl ? { prefixUrl: baseUrl } : {};
 
-      let options: Options = {
-        ...otherArgumentOptions,
-        ...kyOptions,
-        ...prefixUrlOverride,
-        headers,
-        searchParams: this.toSearchParams({
-          ...this.defaultQueryParams,
-          ...newSearchParameters,
-        }),
-      };
+      let options: Options;
 
-      if (method !== "head") {
-        const searchParameters =
-          arguments_[2] && "searchParams" in arguments_[2] ? arguments_[2].searchParams : undefined;
-
-        const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[2] || {};
-
-        const headers = mergeHeaders(kyHeaders, optionHeaders, this.extraHeaders);
+      if (method === "head") {
+        const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[1] || {};
 
         options = {
           ...otherArgumentOptions,
           ...kyOptions,
           ...prefixUrlOverride,
-          headers,
+          headers: mergeHeaders(kyHeaders, extractHeaders(optionHeaders), this.extraHeaders),
+          searchParams: this.toSearchParams({
+            ...this.defaultQueryParams,
+            ...newSearchParameters,
+          }),
+        };
+      } else {
+        const searchParameters =
+          arguments_[2] && "searchParams" in arguments_[2] ? arguments_[2].searchParams : undefined;
+
+        const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[2] || {};
+
+        options = {
+          ...otherArgumentOptions,
+          ...kyOptions,
+          ...prefixUrlOverride,
+          headers: mergeHeaders(kyHeaders, optionHeaders, this.extraHeaders),
           ...this.generateVariables(method, arguments_[1] || newVariables, {
             ...searchParameters,
             ...newSearchParameters,
@@ -324,8 +304,6 @@ export class Instance {
         }
 
         throw error;
-      } finally {
-        this.currentExecutingRequests = {};
       }
     };
   }

@@ -56,7 +56,11 @@ export type MethodGroup<T extends Record<string, any>, K extends Record<string, 
 
 type ClassMethods<T extends Record<string, any>> = NonNullable<
   {
-    [K in keyof T]: T[K] extends Function ? (K extends string ? K : never) : never;
+    [K in keyof T]: T[K] extends (...args: never[]) => unknown
+      ? K extends string
+        ? K
+        : never
+      : never;
   }[keyof T]
 >;
 
@@ -68,10 +72,11 @@ type MethodRequestResponse<T extends boolean = false, R = unknown> = Promise<
 
 export type QueryOverrides = {};
 
-export type MethodsType<T extends Record<string, any>> = {
-  [K in keyof T]: T[K];
-};
-
 export type AnyGroups = {
   [k: string]: RequestGroup;
+};
+
+export type SuccessResponse<D = unknown> = {
+  success: true;
+  data: D;
 };

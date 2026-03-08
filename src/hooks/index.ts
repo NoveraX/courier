@@ -14,15 +14,20 @@ export function makeSignals(
     return AbortSignal.any([newSignal, originalSignal]);
   }
 
-  originalSignal.addEventListener(
-    "abort",
-    () => {
-      const source = this.currentExecutingRequests[url];
+  const handler = () => {
+    const source = this.currentExecutingRequests[url];
+    if (source) {
       delete this.currentExecutingRequests[url];
       source.abort("cancel request");
-    },
-    { once: true },
-  );
+    }
+  };
+
+  originalSignal.addEventListener("abort", handler, { once: true });
+
+  newSignal.addEventListener("abort", () => originalSignal.removeEventListener("abort", handler), {
+    once: true,
+  });
+
   return newSignal;
 }
 
@@ -61,10 +66,9 @@ export function afterResponse(this: Instance, request: Request) {
 }
 
 export function pathAndOrigin(url: string, method: string) {
-  if (url) {
-    const address = new URL(url);
-
-    return `${method}:${address.origin + address.pathname}`;
-  }
-  return "";
+  if (!url) return "";
+  const queryIndex = url.indexOf("?");
+  const hashIndex = url.indexOf("#");
+  const endIndex = queryIndex >= 0 ? queryIndex : hashIndex >= 0 ? hashIndex : url.length;
+  return `${method}:${url.slice(0, endIndex)}`;
 }

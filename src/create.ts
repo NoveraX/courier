@@ -23,7 +23,10 @@ export function createClientRequest<T extends Record<string, unknown> = QueryOve
   defaults: ClientRequestDefaults = {},
 ): CommonRequest<T> {
   const {
-    requestPage = process.env.NEXT_PUBLIC_REQUEST_PAGE || "request",
+    requestPage = (process.env.NEXT_PUBLIC_REQUEST_PAGE || "request").replace(
+      /[^a-zA-Z0-9_\-/]/g,
+      "",
+    ),
     credentials = "include",
     headers: defaultHeaders,
     timeout: defaultTimeout,
@@ -31,8 +34,10 @@ export function createClientRequest<T extends Record<string, unknown> = QueryOve
     onSuccess: globalOnSuccess,
   } = defaults;
 
-  return ((source: string, options?: MethodsInstanceOptions<boolean>) =>
-    async (...arguments_: [string] | [string, FormData | Record<string, unknown>]) => {
+  const selectSource = (source: string, options?: MethodsInstanceOptions<boolean>) => {
+    async function executeQuery(
+      ...arguments_: [string] | [string, FormData | Record<string, unknown>]
+    ) {
       const [queryRequest, variables] = arguments_;
       const { group, query } = parseQueryRequest(queryRequest);
 
@@ -101,22 +106,27 @@ export function createClientRequest<T extends Record<string, unknown> = QueryOve
               data: { success: false, message: `HTTP ${error.response.status}` },
             });
           } else {
-            const response = await error.response.json();
+            let response: unknown;
+
+            try {
+              response = await error.response.json();
+            } catch {
+              response = await error.response.text().catch(() => error.message);
+            }
 
             const { options } = getRequestOptions(requestOptions.body || requestOptions.json);
             const { rawData } = options ?? {};
 
-            const responseResult = rawData
-              ? {
-                  ...response,
-                  status: error.response.status,
-                  headers: error.response.headers,
-                }
-              : {
-                  status: error.response.status,
-                  headers: error.response.headers,
-                  data: response,
-                };
+            const errorData =
+              rawData && typeof response === "object" && response !== null && "data" in response
+                ? (response as { data: unknown }).data
+                : response;
+
+            const responseResult = {
+              status: error.response.status,
+              headers: error.response.headers,
+              data: errorData,
+            };
 
             httpError = new HTTPError(responseResult);
           }
@@ -127,5 +137,8 @@ export function createClientRequest<T extends Record<string, unknown> = QueryOve
 
         throw error;
       }
-    }) as CommonRequest<T>; // TS cannot infer curried generic closures
+    }
+    return executeQuery;
+  };
+  return selectSource as unknown as CommonRequest<T>; // TS cannot infer curried generic closures
 }

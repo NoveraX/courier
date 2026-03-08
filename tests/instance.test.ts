@@ -247,7 +247,7 @@ describe("Instance", () => {
       expect(result.data).toBeNull();
     });
 
-    it("returns error message on json parse failure", async () => {
+    it("throws HTTPError on json parse failure", async () => {
       mockKyInstance.get.mockResolvedValue({
         status: 200,
         headers: new Headers(),
@@ -256,9 +256,8 @@ describe("Instance", () => {
 
       const instance = new Instance();
       const { get } = instance.methodsInstance();
-      const result = await get("broken");
 
-      expect(result.data).toBe("Unexpected token");
+      await expect(get("broken")).rejects.toThrow("HTTP 200");
     });
   });
 

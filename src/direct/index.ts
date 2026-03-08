@@ -16,7 +16,8 @@ export type DirectRequestDefaults = {
 const isContext = (value: unknown): value is Context =>
   typeof value === "object" &&
   value !== null &&
-  (("req" in value && value.req instanceof Request) ||
+  !Array.isArray(value) &&
+  (("req" in value && value.req instanceof Request && "nextUrl" in value.req) ||
     ("res" in value && value.res instanceof Response) ||
     ("headers" in value && value.headers instanceof Headers));
 
@@ -31,8 +32,10 @@ export function createDirectRequest<T extends Sources>(
     onSuccess: globalOnSuccess,
   } = defaults;
 
-  return ((source: string, options?: MethodsInstanceOptions<boolean>) =>
-    async (...arguments_: [string, Context] | [string, Record<string, unknown>, Context]) => {
+  return function selectSource(source: string, options?: MethodsInstanceOptions<boolean>) {
+    return async function executeQuery(
+      ...arguments_: [string, Context] | [string, Record<string, unknown>, Context]
+    ) {
       const [queryRequest] = arguments_;
       const { group, query } = parseQueryRequest(queryRequest);
 
@@ -74,5 +77,6 @@ export function createDirectRequest<T extends Sources>(
         }
         throw error;
       }
-    }) as CommonRequest<T, true>; // TS cannot infer curried generic closures
+    };
+  } as unknown as CommonRequest<T, true>; // TS cannot infer curried generic closures
 }

@@ -4,7 +4,6 @@ export const neededHeaders = [
   "authorization",
   "user-agent",
   "cookie",
-  "set-cookie",
   "forwarded-for",
   "forwarded",
   "x-client-ip",

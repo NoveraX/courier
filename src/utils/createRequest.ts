@@ -26,6 +26,23 @@ const getMethod = (target: object, name: string): AnyMethods[string] | undefined
   return isMethodFn(method) ? method : undefined;
 };
 
+const formatValidationError = (
+  context: Context | undefined,
+  message: string,
+): ReturnType<typeof formatResponse> => {
+  const responseResult = {
+    status: 400,
+    headers: new Headers(),
+    data: { success: false, message },
+  };
+
+  return formatResponse(context, {
+    ...responseResult,
+    throw: new HTTPError(responseResult),
+    rawData: false,
+  });
+};
+
 const formatResponse = (context: Context | undefined, response: InternalResponse) => {
   if (response.stream) {
     if (context?.res instanceof NextResponse && response.data instanceof ReadableStream) {
@@ -94,44 +111,15 @@ export async function createRequest(
 
   const { req: nextRequest, headers: nextHeaders } = context || {};
 
-  const dataSource = typeof source === "string" ? sources?.[source] : undefined;
+  const dataSource =
+    typeof source === "string" && Object.hasOwn(sources, source) ? sources[source] : undefined;
 
   if (!dataSource) {
-    const jsonResponse = {
-      success: false,
-      message: `[${String(source)}]: source not found`,
-    };
-
-    const responseResult = {
-      status: 400,
-      headers: new Headers(),
-      data: jsonResponse,
-    };
-
-    return formatResponse(context, {
-      ...responseResult,
-      throw: new HTTPError(responseResult),
-      rawData: false,
-    });
+    return formatValidationError(context, `[${String(source)}]: source not found`);
   }
 
   if (variables && typeof variables !== "object") {
-    const jsonResponse = {
-      success: false,
-      message: "[variables] must be an object",
-    };
-
-    const responseResult = {
-      status: 400,
-      headers: new Headers(),
-      data: jsonResponse,
-    };
-
-    return formatResponse(context, {
-      ...responseResult,
-      throw: new HTTPError(responseResult),
-      rawData: false,
-    });
+    return formatValidationError(context, "[variables] must be an object");
   }
 
   const groupDataSource =
@@ -148,22 +136,7 @@ export async function createRequest(
 
   if (typeof method !== "function") {
     const queryGroup = group ? `[${group}][${query}]` : `[${query}]`;
-    const jsonResponse = {
-      success: false,
-      message: `[${String(source)}][${queryGroup}]: method not found`,
-    };
-
-    const responseResult = {
-      status: 400,
-      headers: new Headers(),
-      data: jsonResponse,
-    };
-
-    return formatResponse(context, {
-      ...responseResult,
-      throw: new HTTPError(responseResult),
-      rawData: false,
-    });
+    return formatValidationError(context, `[${String(source)}][${queryGroup}]: method not found`);
   }
 
   const instance = createInstance(dataSource.options, context);
@@ -250,7 +223,11 @@ export async function createRequest(
     const httpError = new HTTPError(responseResult);
 
     if (dataSource.options?.onError) {
-      await dataSource.options.onError(hookInfo, httpError);
+      try {
+        await dataSource.options.onError(hookInfo, httpError);
+      } catch {
+        // prevent onError from propagating and masking the original error
+      }
     }
 
     return formatResponse(context, {

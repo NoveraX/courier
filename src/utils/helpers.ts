@@ -101,17 +101,16 @@ export const getRequestOptions = (requestOptions: CreateRequestOptionsType) => {
   let options: MethodsInstanceOptions<boolean> | undefined;
 
   if (isFormData(requestOptions)) {
-    const { _source, _group, _query, _options, ..._variables } = Object.fromEntries(
-      requestOptions.entries(),
-    );
+    const META_KEYS = new Set(["_source", "_group", "_query", "_options"]);
 
-    source = _source;
-    group = _group;
-    query = _query;
+    source = requestOptions.get("_source") ?? undefined;
+    group = requestOptions.get("_group") ?? undefined;
+    query = requestOptions.get("_query") ?? undefined;
 
-    if (typeof _options === "string") {
+    const rawOptions = requestOptions.get("_options");
+    if (typeof rawOptions === "string") {
       try {
-        options = JSON.parse(_options, (key, value) => {
+        options = JSON.parse(rawOptions, (key, value) => {
           if (key === "__proto__" || key === "constructor" || key === "prototype") {
             return undefined;
           }
@@ -124,9 +123,8 @@ export const getRequestOptions = (requestOptions: CreateRequestOptionsType) => {
 
     const formData = new FormData();
 
-    for (const key in _variables) {
-      if (Object.hasOwn(_variables, key)) {
-        const value = _variables[key];
+    for (const [key, value] of requestOptions.entries()) {
+      if (!META_KEYS.has(key)) {
         formData.append(key, value);
       }
     }

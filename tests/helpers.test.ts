@@ -182,6 +182,49 @@ describe("getRequestOptions", () => {
     const result = getRequestOptions(fd);
     expect(result.options).toBeUndefined();
   });
+
+  it("preserves multiple files with the same field name", () => {
+    const fd = new FormData();
+    fd.append("_source", "files");
+    fd.append("_query", "upload");
+    fd.append("files", new File(["a"], "a.txt"));
+    fd.append("files", new File(["b"], "b.txt"));
+    fd.append("files", new File(["c"], "c.txt"));
+
+    const result = getRequestOptions(fd);
+    const vars = result.variables as FormData;
+    expect(vars.getAll("files")).toHaveLength(3);
+  });
+
+  it("does not include meta keys in variables FormData", () => {
+    const fd = new FormData();
+    fd.append("_source", "files");
+    fd.append("_group", "uploads");
+    fd.append("_query", "create");
+    fd.append("_options", JSON.stringify({ timeout: 1000 }));
+    fd.append("name", "test");
+
+    const result = getRequestOptions(fd);
+    const vars = result.variables as FormData;
+    expect(vars.has("_source")).toBe(false);
+    expect(vars.has("_group")).toBe(false);
+    expect(vars.has("_query")).toBe(false);
+    expect(vars.has("_options")).toBe(false);
+    expect(vars.get("name")).toBe("test");
+  });
+
+  it("rejects prototype pollution in _options JSON", () => {
+    const fd = new FormData();
+    fd.append("_source", "users");
+    fd.append("_query", "list");
+    fd.append("_options", JSON.stringify({ __proto__: { admin: true }, timeout: 5000 }));
+
+    const result = getRequestOptions(fd);
+    expect(result.options).toBeDefined();
+    expect(result.options).not.toHaveProperty("__proto__");
+    expect(result.options).toHaveProperty("timeout", 5000);
+    expect(Object.getPrototypeOf(result.options)).toBe(Object.prototype);
+  });
 });
 
 describe("headersToObject", () => {

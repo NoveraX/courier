@@ -28,10 +28,20 @@ export type GenerateMethodOptions = SimpleOptions & {
   stream?: boolean;
 };
 
-export type MethodsInstanceOptions<R extends boolean = false> = SimpleOptions & {
+export type UploadProgress = {
+  percent: number;
+  transferredBytes: number;
+  totalBytes: number;
+};
+
+export type MethodsInstanceOptions<R extends boolean = false> = Omit<
+  SimpleOptions,
+  "onUploadProgress"
+> & {
   rawData?: R;
   passVars?: boolean;
   stream?: boolean;
+  onUploadProgress?: (progress: UploadProgress) => void;
 };
 
 export type MethodsInstanceDatasourceOptions = RequestGroupOptions;

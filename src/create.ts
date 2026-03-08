@@ -1,7 +1,7 @@
 import ky, { HTTPError as KYHTTPError } from "ky";
 
 import { HTTPError } from "./error";
-import type { MethodsInstanceOptions } from "./instance/types";
+import type { MethodsInstanceOptions, UploadProgress } from "./instance/types";
 import type { CommonRequest } from "./types";
 import {
   type CreateRequestOptions,
@@ -9,12 +9,6 @@ import {
   isFormData,
   parseQueryRequest,
 } from "./utils/helpers";
-
-type UploadProgress = {
-  percent: number;
-  transferredBytes: number;
-  totalBytes: number;
-};
 
 /**
  * Upload with real network-level progress via XMLHttpRequest.
@@ -28,16 +22,17 @@ function xhrUpload(
     credentials?: RequestCredentials;
     timeout?: number;
     signal?: AbortSignal;
-    onProgress: (progress: UploadProgress, chunk: Uint8Array) => void;
+    onProgress: (progress: UploadProgress) => void;
   },
 ): Promise<Response> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", url);
 
-    if (options.credentials === "include") {
-      xhr.withCredentials = true;
-    }
+    // "include" → always send cookies cross-origin
+    // "omit" → never send cookies (even same-origin)
+    // "same-origin" (default) → XHR default behavior (withCredentials = false)
+    xhr.withCredentials = options.credentials === "include";
 
     if (options.timeout) {
       xhr.timeout = options.timeout;
@@ -56,20 +51,24 @@ function xhrUpload(
       xhr.setRequestHeader("content-type", "application/json");
     }
 
+    const onAbort = () => xhr.abort();
+    const cleanup = () => {
+      options.signal?.removeEventListener("abort", onAbort);
+    };
+
     xhr.upload.addEventListener("progress", (event) => {
       if (event.lengthComputable) {
-        options.onProgress(
-          {
-            percent: event.total > 0 ? event.loaded / event.total : 0,
-            transferredBytes: event.loaded,
-            totalBytes: event.total,
-          },
-          new Uint8Array(0),
-        );
+        options.onProgress({
+          percent: event.total > 0 ? event.loaded / event.total : 0,
+          transferredBytes: event.loaded,
+          totalBytes: event.total,
+        });
       }
     });
 
     xhr.addEventListener("load", () => {
+      cleanup();
+
       const headers = new Headers();
       for (const line of xhr.getAllResponseHeaders().trim().split("\r\n")) {
         const idx = line.indexOf(":");
@@ -87,15 +86,21 @@ function xhrUpload(
       );
     });
 
-    xhr.addEventListener("error", () => reject(new TypeError("Network request failed")));
-    xhr.addEventListener("timeout", () => reject(new TypeError("Request timed out")));
+    xhr.addEventListener("error", () => {
+      cleanup();
+      reject(new TypeError("Network request failed"));
+    });
+    xhr.addEventListener("timeout", () => {
+      cleanup();
+      reject(new TypeError("Request timed out"));
+    });
 
     if (options.signal) {
       if (options.signal.aborted) {
         reject(new DOMException("Aborted", "AbortError"));
         return;
       }
-      options.signal.addEventListener("abort", () => xhr.abort());
+      options.signal.addEventListener("abort", onAbort);
     }
 
     xhr.send(body);
@@ -147,12 +152,18 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
       const serverOptions = stream ? { ...kyOptions, stream } : kyOptions;
 
       if (isFormData(variables)) {
-        variables.append("_source", source);
-        variables.append("_group", group || "");
-        variables.append("_query", query);
-        variables.append("_options", JSON.stringify(serverOptions));
+        const body = new FormData();
 
-        requestOptions = { body: variables };
+        for (const [key, value] of variables.entries()) {
+          body.append(key, value);
+        }
+
+        body.append("_source", source);
+        body.append("_group", group || "");
+        body.append("_query", query);
+        body.append("_options", JSON.stringify(serverOptions));
+
+        requestOptions = { body };
       } else {
         requestOptions = {
           json: {
@@ -168,6 +179,21 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
       let kyPostOptions: Record<string, unknown>;
 
       if (onUploadProgress) {
+        if (process.env.NODE_ENV !== "production") {
+          if (cache)
+            console.warn(
+              "[nexus] 'cache' option is ignored when 'onUploadProgress' is set (XHR transport)",
+            );
+          if (onDownloadProgress)
+            console.warn(
+              "[nexus] 'onDownloadProgress' option is ignored when 'onUploadProgress' is set (XHR transport)",
+            );
+          if (next)
+            console.warn(
+              "[nexus] 'next' option is ignored when 'onUploadProgress' is set (XHR transport)",
+            );
+        }
+
         const body = isFormData(variables)
           ? (requestOptions.body as FormData)
           : JSON.stringify(requestOptions.json);
@@ -208,7 +234,6 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
               data: errorData,
             });
 
-            await globalOnError?.(httpError);
             throw httpError;
           }
 

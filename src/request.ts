@@ -7,7 +7,6 @@ import { type CreateRequestOptions, getRequestOptions, isFormData } from "./util
 export const request: CommonRequest<QueryOverrides> =
   (source, options) =>
   async (...arguments_) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [queryRequest, variables] = arguments_ as [string, any] | [string];
     const [queryGroup, queryMethod] = queryRequest.split(":");
     const group = queryMethod ? queryGroup : undefined;
@@ -56,13 +55,11 @@ export const request: CommonRequest<QueryOverrides> =
 
     try {
       if (stream) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (await ky.post(`/api/${requestPage}`, kyPostOptions)) as any;
       }
 
       const response = await ky.post(`/api/${requestPage}`, kyPostOptions).json();
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return response as any;
     } catch (error) {
       if (error instanceof KYHTTPError) {

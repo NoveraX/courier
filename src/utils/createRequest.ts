@@ -60,7 +60,7 @@ const formatResponse = (context: Context | undefined, response: InternalResponse
     throw response.throw;
   }
 
-  if (response.data) {
+  if (response.data !== undefined) {
     return data;
   }
 
@@ -288,7 +288,6 @@ type InternalResponse = {
   headers: Headers;
   rawData: boolean;
   stream?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: Record<string, any> | unknown;
   throw?: unknown;
 };

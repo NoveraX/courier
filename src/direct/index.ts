@@ -16,10 +16,7 @@ export const setup: DirectRequest =
   (sources) =>
   (source, options) =>
   async (...arguments_) => {
-    const queryArguments = arguments_ as
-      | [string, Context]
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      | [string, Record<string, any>, Context];
+    const queryArguments = arguments_ as [string, Context] | [string, Record<string, any>, Context];
 
     const [queryRequest] = queryArguments;
     const [queryGroup, queryMethod] = queryRequest.split(":");
@@ -38,7 +35,6 @@ export const setup: DirectRequest =
 
     const context = (queryArguments.length > 2 ? queryArguments[2] : queryArguments[1]) as Context;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return createRequest(sources, requestOptions, context) as any;
   };
 

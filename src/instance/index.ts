@@ -27,19 +27,12 @@ const methods: Methods[] = ["get", "post", "put", "patch", "del", "head"];
 export class Instance {
   // TODO support different responseType values (json / text) through the rawData generic
   private responseType!: ResponseType;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private defaultData!: Record<string, any>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private defaultQueryParams!: Record<string, any>;
   private validHeaders?: string[];
   private pathOptions?: PathOptions;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private bodyEncoder?: (object: Record<string, any>) => BodyInit;
-  private searchParamsEncoder?: (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    object: Record<string, any>,
-  ) => SearchParamsOption;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private searchParamsEncoder?: (object: Record<string, any>) => SearchParamsOption;
   private searchParamsParse?: (string: string) => Record<string, any>;
   private serverOnly?: ServerOnlyOptions;
   private options!: Options;
@@ -110,7 +103,6 @@ export class Instance {
     return this._http;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private toSearchParams(variables?: Record<string, any>) {
     if (!variables || Object.keys(variables).length === 0) return;
 
@@ -121,7 +113,6 @@ export class Instance {
     return new URLSearchParams(variables);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private clearVariables(variables?: FormData | Record<string, any>) {
     if (isFormData(variables)) {
       for (const key of variables.keys()) {
@@ -134,13 +125,7 @@ export class Instance {
     }
 
     if (typeof variables === "object" && variables !== null) {
-      for (const key of Object.keys(variables)) {
-        if (variables[key] === undefined) {
-          delete variables[key];
-        }
-      }
-
-      return variables;
+      return Object.fromEntries(Object.entries(variables).filter(([, v]) => v !== undefined));
     }
 
     return;
@@ -148,9 +133,7 @@ export class Instance {
 
   private generateVariables(
     method: Methods,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     variables?: FormData | Record<string, any>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     searchParameters?: Record<string, any>,
   ): Pick<Options, "body" | "json" | "searchParams"> | undefined {
     this.clearVariables(variables);

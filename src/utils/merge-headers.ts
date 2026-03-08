@@ -34,7 +34,11 @@ const mergeHeaders = (
   requestHeaders?: RequestHeaders,
   validHeaders?: string[],
 ): KyHeadersInit => {
-  const newHeaders = kyHeaders;
+  const newHeaders = isHeaders(kyHeaders)
+    ? new Headers(kyHeaders)
+    : Array.isArray(kyHeaders)
+      ? [...kyHeaders]
+      : { ...kyHeaders };
 
   if (!requestHeaders) return newHeaders;
 

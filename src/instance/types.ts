@@ -12,7 +12,6 @@ export type Methods = Exclude<KyMethods, "delete"> | "del";
 type KyMethods = keyof Omit<KyInstance, "create" | "extend" | "retry" | "stop">;
 
 export type AnyMethods = Partial<{
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [k: string]: (methods: MethodsInstance, variables: any) => Promise<any> | any;
 }>;
 
@@ -21,7 +20,6 @@ export type MethodsInstance = {
 };
 
 export type GenerateMethodOptions = SimpleOptions & {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vars?: Record<string, any>;
   stream?: boolean;
 };
@@ -44,12 +42,9 @@ export type MethodKyResponse<T = unknown> = {
 
 export type MethodParameters<T extends Methods> = T extends "head"
   ? [url?: string, options?: MethodOptions<T>]
-  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [url?: string, variables?: Record<string, any>, options?: MethodOptions<T>];
+  : [url?: string, variables?: Record<string, any>, options?: MethodOptions<T>];
 
-// eslint-disable-next-line unicorn/prevent-abbreviations
 export type OptionsWithSearchParams = Omit<Options, "searchParams"> & {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   searchParams?: Record<string, any>;
 };
 
@@ -65,16 +60,11 @@ export type BaseOptions = MergeOptions &
   Omit<Options, "body" | "json" | "prefixUrl" | "searchParams"> & {
     baseURL?: string;
     responseType?: ResponseType;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     defaultData?: Record<string, any>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     defaultQueryParams?: Record<string, any>;
     validHeaders?: string[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     bodyEncoder?: (object: Record<string, any>) => BodyInit;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     searchParamsEncoder?: (object: Record<string, any>) => SearchParamsOption;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     searchParamsParse?: (string: string) => Record<string, any>;
     requestAbort?: boolean;
     serverOnly?: ServerOnlyOptions;

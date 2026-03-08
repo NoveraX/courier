@@ -1,0 +1,103 @@
+import { describe, expect, it } from "vitest";
+import { getRequestHeaders, mergeHeaders } from "../src/utils/merge-headers";
+
+describe("getRequestHeaders", () => {
+  it("returns empty Headers when no input", () => {
+    const result = getRequestHeaders();
+    expect([...result.entries()]).toEqual([]);
+  });
+
+  it("filters headers by whitelist", () => {
+    const incoming = new Headers({
+      authorization: "Bearer token",
+      "content-type": "application/json",
+      "x-custom": "value",
+    });
+    const result = getRequestHeaders(incoming);
+    expect(result.get("authorization")).toBe("Bearer token");
+    expect(result.has("content-type")).toBe(false);
+    expect(result.has("x-custom")).toBe(false);
+  });
+
+  it("passes all whitelisted headers", () => {
+    const incoming = new Headers({
+      authorization: "Bearer token",
+      cookie: "session=abc",
+      referer: "https://example.com",
+      origin: "https://example.com",
+      "user-agent": "test",
+      "x-forwarded-for": "1.2.3.4",
+      "x-real-ip": "1.2.3.4",
+      "x-request-id": "abc-123",
+    });
+    const result = getRequestHeaders(incoming);
+    expect(result.get("authorization")).toBe("Bearer token");
+    expect(result.get("cookie")).toBe("session=abc");
+    expect(result.get("referer")).toBe("https://example.com");
+    expect(result.get("origin")).toBe("https://example.com");
+    expect(result.get("user-agent")).toBe("test");
+    expect(result.get("x-forwarded-for")).toBe("1.2.3.4");
+    expect(result.get("x-real-ip")).toBe("1.2.3.4");
+    expect(result.get("x-request-id")).toBe("abc-123");
+  });
+
+  it("extends whitelist with validHeaders", () => {
+    const incoming = new Headers({ "x-custom-header": "value" });
+    const result = getRequestHeaders(incoming, ["x-custom-header"]);
+    expect(result.get("x-custom-header")).toBe("value");
+  });
+
+  it("accepts Record input", () => {
+    const result = getRequestHeaders({ authorization: "Bearer token", "x-bad": "drop" });
+    expect(result.get("authorization")).toBe("Bearer token");
+    expect(result.has("x-bad")).toBe(false);
+  });
+
+  it("accepts array tuple input", () => {
+    const result = getRequestHeaders([["authorization", "Bearer token"]]);
+    expect(result.get("authorization")).toBe("Bearer token");
+  });
+
+  it("is case-insensitive", () => {
+    const result = getRequestHeaders({ Authorization: "Bearer token" });
+    expect(result.get("authorization")).toBe("Bearer token");
+  });
+});
+
+describe("mergeHeaders", () => {
+  it("returns ky headers when no request headers", () => {
+    const result = mergeHeaders({ "content-type": "application/json" });
+    expect(result.get("content-type")).toBe("application/json");
+  });
+
+  it("merges ky and filtered request headers", () => {
+    const result = mergeHeaders(
+      { "content-type": "application/json" },
+      { authorization: "Bearer token", "x-bad": "drop" },
+    );
+    expect(result.get("content-type")).toBe("application/json");
+    expect(result.get("authorization")).toBe("Bearer token");
+    expect(result.has("x-bad")).toBe(false);
+  });
+
+  it("request headers override ky headers for same key", () => {
+    const result = mergeHeaders({ authorization: "old" }, { authorization: "new" });
+    expect(result.get("authorization")).toBe("new");
+  });
+
+  it("uses validHeaders to extend whitelist", () => {
+    const result = mergeHeaders({}, { "x-custom": "value" }, ["x-custom"]);
+    expect(result.get("x-custom")).toBe("value");
+  });
+
+  it("handles empty inputs", () => {
+    const result = mergeHeaders();
+    expect([...result.entries()]).toEqual([]);
+  });
+
+  it("does not mutate input Headers", () => {
+    const original = new Headers({ "content-type": "text/plain" });
+    mergeHeaders(original, { authorization: "token" });
+    expect(original.has("authorization")).toBe(false);
+  });
+});

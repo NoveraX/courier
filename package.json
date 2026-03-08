@@ -95,6 +95,6 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.ts": "biome check --write --no-errors-on-unmatched"
+    "src/**/*.ts": "biome check --write --no-errors-on-unmatched"
   }
 }

@@ -2,8 +2,14 @@
 node_modules/
 
 # Build output
-lib/
+/lib/
 *.tsbuildinfo
+*.tgz
+
+# Next.js
+.next/
+.turbo/
+next-env.d.ts
 
 # Logs
 *.log
@@ -15,6 +21,7 @@ Thumbs.db
 
 # IDE
 .idea/
+.vscode/
 *.swp
 *.swo
 *~

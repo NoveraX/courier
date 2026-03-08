@@ -1,0 +1,36 @@
+import cors from "cors";
+import express from "express";
+import miscRouter from "./routes/misc.js";
+import postsRouter from "./routes/posts.js";
+import uploadRouter from "./routes/upload.js";
+import usersRouter from "./routes/users.js";
+
+const app = express();
+const PORT = Number(process.env.EXPRESS_PORT ?? 4000);
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin || /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  }),
+);
+app.use(express.json());
+
+app.use("/users", usersRouter);
+app.use("/posts", postsRouter);
+app.use("/upload", uploadRouter);
+app.use("/", miscRouter);
+
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+app.listen(PORT, () => {
+  console.log(`Express mock backend running on http://localhost:${PORT}`);
+});

@@ -5,10 +5,10 @@ import ky, {
   type SearchParamsOption,
 } from "ky";
 
-import HTTPError from "../error";
+import { HTTPError } from "../error";
 import { afterResponse, beforeRequestHook, supportsAbortController } from "../hooks/index";
 import { generateUrl, getUrl, isFormData } from "../utils/helpers";
-import mergeHeaders from "../utils/merge-headers";
+import { mergeHeaders } from "../utils/merge-headers";
 import type {
   BaseOptions,
   Context,
@@ -350,5 +350,3 @@ export class Instance {
     return methodsInstance;
   }
 }
-
-export default Instance;

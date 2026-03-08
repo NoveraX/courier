@@ -1,7 +1,7 @@
-import HTTPError from "../error";
+import { HTTPError } from "../error";
 import type { Context } from "../instance/types";
 import type { CommonRequest } from "../types";
-import createRequest from "../utils/createRequest";
+import { createRequest } from "../utils/createRequest";
 import { parseQueryRequest } from "../utils/helpers";
 
 import type { Sources } from "./types";
@@ -81,5 +81,3 @@ export function createDirectRequest<T extends Sources>(
       }
     }) as CommonRequest<T, true>;
 }
-
-export default createDirectRequest;

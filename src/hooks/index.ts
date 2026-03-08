@@ -1,6 +1,6 @@
 import type { NormalizedOptions } from "ky";
-import HTTPError from "../error";
-import type Instance from "../instance/index";
+import { HTTPError } from "../error";
+import type { Instance } from "../instance/index";
 
 export const supportsAbortController = typeof globalThis.AbortController === "function";
 

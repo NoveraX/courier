@@ -1,7 +1,7 @@
 type KyHeadersInit = NonNullable<RequestInit["headers"]> | Record<string, string | undefined>;
 
 import { isHeaders } from "./helpers";
-import neededHeaders from "./needed-headers";
+import { neededHeaders } from "./needed-headers";
 
 export const getRequestHeaders = (
   incomingHeaders?: RequestHeaders,
@@ -29,7 +29,7 @@ export const getRequestHeaders = (
   );
 };
 
-const mergeHeaders = (
+export const mergeHeaders = (
   kyHeaders: KyHeadersInit = {},
   requestHeaders?: RequestHeaders,
   validHeaders?: string[],
@@ -66,7 +66,5 @@ const mergeHeaders = (
 
   return newHeaders;
 };
-
-export default mergeHeaders;
 
 type RequestHeaders = Headers | KyHeadersInit;

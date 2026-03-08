@@ -1,6 +1,6 @@
 import { compile, type Key, parse } from "path-to-regexp";
 
-import HTTPError from "../error";
+import { HTTPError } from "../error";
 import type { MethodKyResponse, MethodsInstanceOptions } from "../instance/types";
 
 const MULTIPLE_SLASHES = /\/+/g;

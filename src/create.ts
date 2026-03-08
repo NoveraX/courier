@@ -1,6 +1,6 @@
 import ky, { HTTPError as KYHTTPError } from "ky";
 
-import HTTPError from "./error";
+import { HTTPError } from "./error";
 import type { CommonRequest, QueryOverrides } from "./types";
 import {
   type CreateRequestOptions,

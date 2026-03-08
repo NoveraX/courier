@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-import createRequest from "../utils/createRequest";
+import { createRequest } from "../utils/createRequest";
 
 export const apiRoute = (sources: Record<string, any>) => {
   const POST = async (request: NextRequest) => {
@@ -18,5 +18,3 @@ export const apiRoute = (sources: Record<string, any>) => {
 
   return { POST };
 };
-
-export default apiRoute;

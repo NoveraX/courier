@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-import HTTPError from "../error";
-import Instance from "../instance/index";
+import { HTTPError } from "../error";
+import { Instance } from "../instance/index";
 import type { AnyMethods, BaseOptions, Context, HookInfo } from "../instance/types";
 import type { Request } from "../RequestClass";
 import type { AnyGroups } from "../types";
@@ -11,7 +11,7 @@ import {
   headersToObject,
   isHeaders,
 } from "./helpers";
-import mergeHeaders, { getRequestHeaders } from "./merge-headers";
+import { getRequestHeaders, mergeHeaders } from "./merge-headers";
 
 function createInstance(baseOption?: BaseOptions, context?: Context) {
   return new Instance(baseOption, context);
@@ -241,8 +241,6 @@ export const createRequest = async (
     });
   }
 };
-
-export default createRequest;
 
 type InternalResponse = {
   status: number;

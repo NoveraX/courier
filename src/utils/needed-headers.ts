@@ -1,4 +1,4 @@
-const neededHeaders = [
+export const neededHeaders = [
   "referer",
   "origin",
   "authorization",
@@ -14,5 +14,3 @@ const neededHeaders = [
   "x-real-ip",
   "x-request-id",
 ] as const;
-
-export default neededHeaders;

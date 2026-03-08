@@ -18,5 +18,3 @@ export class HTTPError<R = unknown> extends Error {
 export function isHTTPError<R = unknown>(error: unknown): error is HTTPError<R> {
   return error instanceof HTTPError;
 }
-
-export default HTTPError;

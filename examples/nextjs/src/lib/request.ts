@@ -1,4 +1,4 @@
-import { createClientRequest } from "@noverax/nexus";
 import type { MethodsType } from "@/api";
+import { createQueryRequest } from "@noverax/nexus/query";
 
-export const request = createClientRequest<MethodsType>();
+export const { useQuery, useMutation, request } = createQueryRequest<MethodsType>();

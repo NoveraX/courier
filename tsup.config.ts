@@ -6,6 +6,7 @@ export default defineConfig({
     RequestClass: "src/RequestClass.ts",
     "direct/index": "src/direct/index.ts",
     "next/apiRoute": "src/next/apiRoute.ts",
+    "query/index": "src/query/index.ts",
   },
   outDir: "lib",
   format: ["esm"],

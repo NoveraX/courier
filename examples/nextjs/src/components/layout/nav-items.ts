@@ -20,8 +20,9 @@ export const docsNav: NavSection[] = [
   {
     label: "Introduction",
     icon: BookOpen,
+    defaultOpen: true,
     items: [
-      { title: "What is Nexus?", href: "/docs/introduction", disabled: true },
+      { title: "What is Nexus?", href: "/docs/introduction" },
       { title: "Why Nexus?", href: "/docs/why-nexus", disabled: true },
       { title: "Architecture", href: "/docs/architecture", disabled: true },
     ],
@@ -29,10 +30,11 @@ export const docsNav: NavSection[] = [
   {
     label: "Getting Started",
     icon: Rocket,
+    defaultOpen: true,
     items: [
-      { title: "Installation", href: "/docs/installation", disabled: true },
-      { title: "Quick Start", href: "/docs/quick-start", disabled: true },
-      { title: "Project Setup", href: "/docs/project-setup", disabled: true },
+      { title: "Installation", href: "/docs/installation" },
+      { title: "Quick Start", href: "/docs/quick-start" },
+      { title: "Project Setup", href: "/docs/project-setup" },
     ],
   },
   {

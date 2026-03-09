@@ -356,3 +356,181 @@ describe("integration: multiple sources", () => {
 		}
 	});
 });
+
+describe("integration: HTTP-semantic proxy", () => {
+	it("rejects GET proxy for endpoints without type: query", async () => {
+		// usersGroup endpoints have no type metadata → should be rejected via GET
+		try {
+			await executeRequest(sources, {
+				source: "api",
+				group: "users",
+				method: "getAll",
+			}, { proxyMethod: "GET" } as any);
+			expect.fail("should have thrown");
+		} catch (error) {
+			expect(error).toBeInstanceOf(HTTPError);
+			expect((error as HTTPError).status).toBe(405);
+		}
+	});
+
+	it("allows GET proxy for endpoints with type: query", async () => {
+		mockKyInstance.get.mockResolvedValue(mockResponse([{ id: 1, name: "A", email: "a@b.com" }]));
+
+		const queryApi = defineApi({
+			baseURL: "https://api.example.com",
+			groups: {
+				users: defineGroup({
+					prefix: "users",
+					endpoints: {
+						getAll: endpoint<User[]>({ type: "query" })(({ get }) => get()),
+					},
+				}),
+			},
+		});
+
+		const result = await executeRequest({ api: queryApi }, {
+			source: "api",
+			group: "users",
+			method: "getAll",
+		}, { proxyMethod: "GET" } as any);
+
+		expect(result).toEqual([{ id: 1, name: "A", email: "a@b.com" }]);
+	});
+
+	it("allows POST proxy for any endpoint regardless of type", async () => {
+		mockKyInstance.get.mockResolvedValue(mockResponse([]));
+
+		const queryApi = defineApi({
+			baseURL: "https://api.example.com",
+			groups: {
+				users: defineGroup({
+					prefix: "users",
+					endpoints: {
+						getAll: endpoint<User[]>({ type: "query" })(({ get }) => get()),
+					},
+				}),
+			},
+		});
+
+		const result = await executeRequest({ api: queryApi }, {
+			source: "api",
+			group: "users",
+			method: "getAll",
+		}, { proxyMethod: "POST" } as any);
+
+		expect(result).toEqual([]);
+	});
+
+	it("adds Cache-Control header for GET proxy with cache config", async () => {
+		mockKyInstance.get.mockResolvedValue(mockResponse([{ id: 1, name: "A", email: "a@b.com" }]));
+
+		const { NextResponse } = await import("next/server");
+
+		const cachedApi = defineApi({
+			baseURL: "https://api.example.com",
+			groups: {
+				users: defineGroup({
+					prefix: "users",
+					endpoints: {
+						getAll: endpoint<User[]>({ type: "query", cache: { revalidate: 60 } })(
+							({ get }) => get(),
+						),
+					},
+				}),
+			},
+		});
+
+		const response = await executeRequest({ api: cachedApi }, {
+			source: "api",
+			group: "users",
+			method: "getAll",
+		}, { res: new NextResponse(), proxyMethod: "GET" }) as Response;
+
+		expect(response.headers.get("cache-control")).toBe("s-maxage=60, stale-while-revalidate");
+	});
+
+	it("adds x-nexus-tags header for GET proxy with cache tags", async () => {
+		mockKyInstance.get.mockResolvedValue(mockResponse([]));
+
+		const { NextResponse } = await import("next/server");
+
+		const taggedApi = defineApi({
+			baseURL: "https://api.example.com",
+			groups: {
+				users: defineGroup({
+					prefix: "users",
+					endpoints: {
+						getAll: endpoint<User[]>({
+							type: "query",
+							cache: { revalidate: 30, tags: ["users", "list"] },
+						})(({ get }) => get()),
+					},
+				}),
+			},
+		});
+
+		const response = await executeRequest({ api: taggedApi }, {
+			source: "api",
+			group: "users",
+			method: "getAll",
+		}, { res: new NextResponse(), proxyMethod: "GET" }) as Response;
+
+		expect(response.headers.get("x-nexus-tags")).toBe("users,list");
+		expect(response.headers.get("cache-control")).toBe("s-maxage=30, stale-while-revalidate");
+	});
+
+	it("does not add cache headers for POST proxy even with cache config", async () => {
+		mockKyInstance.get.mockResolvedValue(mockResponse([]));
+
+		const { NextResponse } = await import("next/server");
+
+		const cachedApi = defineApi({
+			baseURL: "https://api.example.com",
+			groups: {
+				users: defineGroup({
+					prefix: "users",
+					endpoints: {
+						getAll: endpoint<User[]>({ type: "query", cache: { revalidate: 60 } })(
+							({ get }) => get(),
+						),
+					},
+				}),
+			},
+		});
+
+		const response = await executeRequest({ api: cachedApi }, {
+			source: "api",
+			group: "users",
+			method: "getAll",
+		}, { res: new NextResponse(), proxyMethod: "POST" }) as Response;
+
+		expect(response.headers.get("cache-control")).toBeNull();
+	});
+
+	it("works with type: mutation for POST endpoints", async () => {
+		mockKyInstance.post.mockResolvedValue(mockResponse({ id: 1, name: "Alice", email: "a@b.com" }, 201));
+
+		const mutationApi = defineApi({
+			baseURL: "https://api.example.com",
+			groups: {
+				users: defineGroup({
+					prefix: "users",
+					endpoints: {
+						create: endpoint<User, { name: string; email: string }>({ type: "mutation" })(
+							({ post }, vars) => post("", vars),
+						),
+					},
+				}),
+			},
+		});
+
+		const result = await executeRequest({ api: mutationApi }, {
+			source: "api",
+			group: "users",
+			method: "create",
+			variables: { name: "Alice", email: "a@b.com" },
+		});
+
+		expect(result).toEqual({ id: 1, name: "Alice", email: "a@b.com" });
+	});
+});

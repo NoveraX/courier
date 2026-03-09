@@ -141,6 +141,59 @@ async function readErrorResponse(response: Response): Promise<unknown> {
   }
 }
 
+async function readKyErrorData(
+  error: InstanceType<typeof KYHTTPError>,
+  stream: boolean,
+): Promise<unknown> {
+  if (stream) {
+    return { success: false, message: `HTTP ${error.response.status}` };
+  }
+  try {
+    return await error.response.json();
+  } catch {
+    return await error.response.text().catch(() => error.message);
+  }
+}
+
+async function sendKy(
+  method: "get" | "post",
+  url: string,
+  options: Record<string, unknown>,
+  ctx: {
+    stream: boolean;
+    requestPayload: { body?: FormData; json?: Partial<RequestPayload> };
+    onSuccess?: (data: unknown) => void | Promise<void>;
+    onError?: (error: HTTPError) => void | Promise<void>;
+  },
+): Promise<unknown> {
+  const kyFn = method === "get" ? ky.get : ky.post;
+
+  try {
+    if (ctx.stream) {
+      const response = await kyFn(url, options);
+      await ctx.onSuccess?.(response);
+      return response;
+    }
+
+    const response = await kyFn(url, options).json();
+    await ctx.onSuccess?.(response);
+    return response;
+  } catch (error) {
+    if (error instanceof KYHTTPError) {
+      const responseData = await readKyErrorData(error, ctx.stream);
+      const httpError = buildHttpError(
+        error.response.status,
+        error.response.headers,
+        responseData,
+        ctx.requestPayload,
+      );
+      await ctx.onError?.(httpError);
+      throw httpError;
+    }
+    throw error;
+  }
+}
+
 export function createClientRequest<T extends Record<string, unknown> = Record<string, unknown>>(
   defaults: ClientRequestDefaults = {},
 ): RequestFn<T> {
@@ -156,23 +209,72 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
     onSuccess: globalOnSuccess,
   } = defaults;
 
+  const url = `/api/${routePath}`;
+  const kyCtx = { onSuccess: globalOnSuccess, onError: globalOnError };
+
   const selectSource = (source: string, options?: CallOptions<boolean>) => {
     async function execute(...arguments_: [string] | [string, FormData | Record<string, unknown>]) {
       const [endpoint, variables] = arguments_;
       const { group, method } = parseEndpointKey(endpoint);
 
-      const { cache, onDownloadProgress, onUploadProgress, next, signal, stream, ...kyOptions } =
-        options || {};
+      const {
+        cache,
+        onDownloadProgress,
+        onUploadProgress,
+        next,
+        signal,
+        stream,
+        method: proxyMethod,
+        ...kyOptions
+      } = options || {};
 
       if (kyOptions.timeout === undefined && defaultTimeout !== undefined) {
         kyOptions.timeout = defaultTimeout;
       }
 
+      const serverOptions = stream ? { ...kyOptions, stream } : kyOptions;
+
+      // GET proxy: encode everything as query params
+      if (proxyMethod === "GET" && !isFormData(variables) && !onUploadProgress) {
+        const searchParams: Record<string, string> = { _s: source, _m: method };
+        if (group) searchParams._g = group;
+
+        if (variables && typeof variables === "object") {
+          for (const [k, v] of Object.entries(variables)) {
+            if (v !== undefined && v !== null) searchParams[k] = String(v);
+          }
+        }
+
+        const serverOptionsStr = JSON.stringify(serverOptions);
+        if (serverOptionsStr !== "{}") {
+          searchParams._o = serverOptionsStr;
+        }
+
+        return sendKy(
+          "get",
+          url,
+          {
+            searchParams,
+            credentials,
+            headers: defaultHeaders,
+            signal,
+            timeout: kyOptions.timeout,
+            cache,
+            next,
+            onDownloadProgress,
+          },
+          {
+            ...kyCtx,
+            stream: !!stream,
+            requestPayload: { json: { source, group, method, variables } },
+          },
+        );
+      }
+
+      // POST proxy: build JSON or FormData payload
       let requestPayload:
         | { body: FormData; json?: undefined }
         | { json: Partial<RequestPayload>; body?: undefined };
-
-      const serverOptions = stream ? { ...kyOptions, stream } : kyOptions;
 
       if (isFormData(variables)) {
         const body = new FormData();
@@ -199,8 +301,7 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
         };
       }
 
-      let kyPostOptions: Record<string, unknown>;
-
+      // XHR upload path (real network-level progress)
       if (onUploadProgress) {
         if (process.env.NODE_ENV !== "production") {
           if (cache)
@@ -222,7 +323,7 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
           : JSON.stringify(requestPayload.json);
 
         try {
-          const response = await xhrUpload(`/api/${routePath}`, body, {
+          const response = await xhrUpload(url, body, {
             headers: defaultHeaders,
             credentials,
             timeout: kyOptions.timeout || undefined,
@@ -252,54 +353,26 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
         }
       }
 
-      kyPostOptions = {
-        ...requestPayload,
-        credentials,
-        cache,
-        onDownloadProgress,
-        next,
-        signal,
-        timeout: kyOptions.timeout,
-        headers: defaultHeaders,
-      };
-
-      try {
-        if (stream) {
-          const response = await ky.post(`/api/${routePath}`, kyPostOptions);
-          await globalOnSuccess?.(response);
-          return response;
-        }
-
-        const response = await ky.post(`/api/${routePath}`, kyPostOptions).json();
-        await globalOnSuccess?.(response);
-        return response;
-      } catch (error) {
-        if (error instanceof KYHTTPError) {
-          let responseData: unknown;
-
-          if (stream) {
-            responseData = { success: false, message: `HTTP ${error.response.status}` };
-          } else {
-            try {
-              responseData = await error.response.json();
-            } catch {
-              responseData = await error.response.text().catch(() => error.message);
-            }
-          }
-
-          const httpError = buildHttpError(
-            error.response.status,
-            error.response.headers,
-            responseData,
-            requestPayload,
-          );
-
-          await globalOnError?.(httpError);
-          throw httpError;
-        }
-
-        throw error;
-      }
+      // POST via ky
+      return sendKy(
+        "post",
+        url,
+        {
+          ...requestPayload,
+          credentials,
+          cache,
+          onDownloadProgress,
+          next,
+          signal,
+          timeout: kyOptions.timeout,
+          headers: defaultHeaders,
+        },
+        {
+          ...kyCtx,
+          stream: !!stream,
+          requestPayload,
+        },
+      );
     }
     return execute;
   };

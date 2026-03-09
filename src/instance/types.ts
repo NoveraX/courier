@@ -33,10 +33,15 @@ export type UploadProgress = {
   totalBytes: number;
 };
 
-export type CallOptions<R extends boolean = false> = Omit<SimpleOptions, "onUploadProgress"> & {
+export type CallOptions<R extends boolean = false> = Omit<
+  SimpleOptions,
+  "onUploadProgress" | "method"
+> & {
   rawData?: R;
   forwardVariables?: boolean;
   stream?: boolean;
+  /** Proxy HTTP method: "GET" for cacheable reads, "POST" (default) for mutations */
+  method?: "GET" | "POST";
   onUploadProgress?: (progress: UploadProgress) => void;
 };
 
@@ -97,4 +102,6 @@ export type Context = {
   req?: NextRequest;
   res?: NextResponse;
   headers?: Headers;
+  /** HTTP method of the proxy request (set by apiRoute) */
+  proxyMethod?: "GET" | "POST";
 };

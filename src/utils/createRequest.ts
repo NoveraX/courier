@@ -32,19 +32,20 @@ const getEndpoint = (target: object, name: string): AnyEndpoints[string] | undef
   return isEndpointFn(endpoint) ? endpoint : undefined;
 };
 
-const buildValidationError = (
+const buildErrorResponse = (
   context: Context | undefined,
+  status: number,
   message: string,
 ): ReturnType<typeof buildResponse> => {
-  const responseResult = {
-    status: 400,
+  const result = {
+    status,
     headers: new Headers(),
     data: { success: false, message },
   };
 
   return buildResponse(context, {
-    ...responseResult,
-    throw: new HTTPError(responseResult),
+    ...result,
+    throw: new HTTPError(result),
     rawData: false,
   });
 };
@@ -121,11 +122,11 @@ export async function executeRequest(
     typeof source === "string" && Object.hasOwn(sources, source) ? sources[source] : undefined;
 
   if (!dataSource) {
-    return buildValidationError(context, `[${String(source)}]: source not found`);
+    return buildErrorResponse(context, 400, `[${String(source)}]: source not found`);
   }
 
   if (variables && typeof variables !== "object") {
-    return buildValidationError(context, "[variables] must be an object");
+    return buildErrorResponse(context, 400, "[variables] must be an object");
   }
 
   const endpointGroup =
@@ -142,12 +143,17 @@ export async function executeRequest(
 
   if (typeof endpoint !== "function") {
     const methodPath = group ? `[${group}][${method}]` : `[${method}]`;
-    return buildValidationError(context, `[${String(source)}][${methodPath}]: method not found`);
+    return buildErrorResponse(context, 400, `[${String(source)}][${methodPath}]: method not found`);
   }
 
   const schema = (endpoint as unknown as Record<symbol, SchemaMetadata | undefined>)[
     ENDPOINT_SCHEMA
   ];
+
+  // GET proxy: only allow endpoints explicitly marked as "query"
+  if (context?.proxyMethod === "GET" && schema?.type !== "query") {
+    return buildErrorResponse(context, 405, "This endpoint does not support GET requests");
+  }
 
   const instance = createHttpClient(dataSource.options, context);
 
@@ -216,13 +222,28 @@ export async function executeRequest(
       ? await composeMiddleware(middlewares)(middlewareCtx, execute)
       : await execute();
 
-    return buildResponse(context, {
+    const response = buildResponse(context, {
       headers: result.headers,
       status: result.status,
       data: result.data,
       rawData,
       stream,
     });
+
+    // Add cache headers after buildResponse (filterHeaders strips non-allowed headers)
+    if (context?.proxyMethod === "GET" && schema?.cache && response instanceof Response) {
+      if (schema.cache.revalidate !== undefined) {
+        response.headers.set(
+          "Cache-Control",
+          `s-maxage=${schema.cache.revalidate}, stale-while-revalidate`,
+        );
+      }
+      if (schema.cache.tags?.length) {
+        response.headers.set("x-nexus-tags", schema.cache.tags.join(","));
+      }
+    }
+
+    return response;
   } catch (error) {
     if (error instanceof ValidationError) {
       const responseResult = {

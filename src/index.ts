@@ -8,5 +8,5 @@ export type {
   NextFn,
 } from "./middleware/types";
 export type { SuccessResponse } from "./types";
-export type { ValidationIssue } from "./validation";
+export type { CacheConfig, ValidationIssue } from "./validation";
 export { isValidationError, ValidationError } from "./validation";

@@ -53,6 +53,36 @@ describe("endpoint", () => {
 		const response = await fn(mockMethods(), undefined);
 		expect(response).toEqual({ status: 200, headers: expect.any(Headers), data: {} });
 	});
+
+	it("attaches type metadata to endpoint function", () => {
+		const SCHEMA = Symbol.for("nexus.endpoint.schema");
+		const fn = endpoint<string[]>({ type: "query" })(({ get }) => get());
+		expect((fn as any)[SCHEMA].type).toBe("query");
+	});
+
+	it("attaches cache metadata to endpoint function", () => {
+		const SCHEMA = Symbol.for("nexus.endpoint.schema");
+		const fn = endpoint<string[]>({ type: "query", cache: { revalidate: 60, tags: ["users"] } })(
+			({ get }) => get(),
+		);
+		expect((fn as any)[SCHEMA].cache).toEqual({ revalidate: 60, tags: ["users"] });
+	});
+
+	it("supports type+cache without schema (EndpointOptions overload)", () => {
+		const SCHEMA = Symbol.for("nexus.endpoint.schema");
+		const fn = endpoint<string[]>({ type: "query", cache: { revalidate: 30 } })(
+			({ get }) => get(),
+		);
+		expect((fn as any)[SCHEMA]).toEqual({ type: "query", cache: { revalidate: 30 } });
+	});
+
+	it("supports type: mutation", () => {
+		const SCHEMA = Symbol.for("nexus.endpoint.schema");
+		const fn = endpoint<void, { id: string }>({ type: "mutation" })(
+			({ del }, vars) => del(":id", vars),
+		);
+		expect((fn as any)[SCHEMA].type).toBe("mutation");
+	});
 });
 
 // ---- defineGroup() ----

@@ -171,5 +171,148 @@ describe("apiRoute", () => {
       expect(context.req).toBeInstanceOf(NextRequest);
       expect(context.res).toBeDefined();
     });
+
+    it("POST handler sets proxyMethod: POST in context", async () => {
+      mockExecuteRequest.mockResolvedValue(new Response("{}"));
+
+      const { POST } = apiRoute({});
+      const req = createRequest(JSON.stringify({ source: "api", method: "list" }));
+
+      await POST(req);
+
+      const context = mockExecuteRequest.mock.calls[0]?.[2] as any;
+      expect(context.proxyMethod).toBe("POST");
+    });
+  });
+
+  describe("GET handler", () => {
+    it("exports GET handler", () => {
+      const route = apiRoute({});
+      expect(route.GET).toBeDefined();
+      expect(typeof route.GET).toBe("function");
+    });
+
+    it("returns 400 when _s param is missing", async () => {
+      const { GET } = apiRoute({});
+      const req = new NextRequest("http://localhost:3000/api/request?_m=getAll");
+
+      const res = await GET(req);
+      expect(res.status).toBe(400);
+
+      const data = await res.json();
+      expect(data.message).toContain("_s");
+    });
+
+    it("returns 400 when _m param is missing", async () => {
+      const { GET } = apiRoute({});
+      const req = new NextRequest("http://localhost:3000/api/request?_s=api");
+
+      const res = await GET(req);
+      expect(res.status).toBe(400);
+
+      const data = await res.json();
+      expect(data.message).toContain("_m");
+    });
+
+    it("parses _s, _g, _m from query params", async () => {
+      mockExecuteRequest.mockResolvedValue(new Response("{}"));
+
+      const { GET } = apiRoute({ api: {} } as any);
+      const req = new NextRequest(
+        "http://localhost:3000/api/request?_s=api&_g=users&_m=getAll",
+      );
+
+      await GET(req);
+
+      expect(mockExecuteRequest).toHaveBeenCalledWith(
+        { api: {} },
+        { source: "api", group: "users", method: "getAll", variables: undefined, options: undefined },
+        expect.objectContaining({ proxyMethod: "GET" }),
+      );
+    });
+
+    it("collects non-meta params as variables", async () => {
+      mockExecuteRequest.mockResolvedValue(new Response("{}"));
+
+      const { GET } = apiRoute({ api: {} } as any);
+      const req = new NextRequest(
+        "http://localhost:3000/api/request?_s=api&_m=list&page=2&limit=10",
+      );
+
+      await GET(req);
+
+      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
+      expect(payload.variables).toEqual({ page: "2", limit: "10" });
+    });
+
+    it("parses _o as JSON options", async () => {
+      mockExecuteRequest.mockResolvedValue(new Response("{}"));
+
+      const { GET } = apiRoute({ api: {} } as any);
+      const opts = JSON.stringify({ rawData: true });
+      const req = new NextRequest(
+        `http://localhost:3000/api/request?_s=api&_m=list&_o=${encodeURIComponent(opts)}`,
+      );
+
+      await GET(req);
+
+      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
+      expect(payload.options).toEqual({ rawData: true });
+    });
+
+    it("ignores invalid _o JSON", async () => {
+      mockExecuteRequest.mockResolvedValue(new Response("{}"));
+
+      const { GET } = apiRoute({ api: {} } as any);
+      const req = new NextRequest(
+        "http://localhost:3000/api/request?_s=api&_m=list&_o=invalid",
+      );
+
+      await GET(req);
+
+      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
+      expect(payload.options).toBeUndefined();
+    });
+
+    it("does not require origin header (no CSRF check for GET)", async () => {
+      mockExecuteRequest.mockResolvedValue(new Response("{}"));
+
+      const { GET } = apiRoute({ api: {} } as any);
+      const req = new NextRequest(
+        "http://localhost:3000/api/request?_s=api&_m=list",
+      );
+
+      await GET(req);
+      expect(mockExecuteRequest).toHaveBeenCalled();
+    });
+
+    it("handles group-less endpoints", async () => {
+      mockExecuteRequest.mockResolvedValue(new Response("{}"));
+
+      const { GET } = apiRoute({ api: {} } as any);
+      const req = new NextRequest(
+        "http://localhost:3000/api/request?_s=api&_m=health",
+      );
+
+      await GET(req);
+
+      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
+      expect(payload.group).toBeUndefined();
+    });
+
+    it("sanitizes __proto__ in _o JSON", async () => {
+      mockExecuteRequest.mockResolvedValue(new Response("{}"));
+
+      const { GET } = apiRoute({ api: {} } as any);
+      const opts = JSON.stringify({ __proto__: { polluted: true }, rawData: true });
+      const req = new NextRequest(
+        `http://localhost:3000/api/request?_s=api&_m=list&_o=${encodeURIComponent(opts)}`,
+      );
+
+      await GET(req);
+
+      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
+      expect(payload.options).toEqual({ rawData: true });
+    });
   });
 });

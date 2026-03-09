@@ -3,10 +3,22 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 /** Symbol key for attaching schema metadata to endpoint functions */
 export const ENDPOINT_SCHEMA: unique symbol = Symbol.for("nexus.endpoint.schema");
 
+/** Cache configuration for proxy GET responses */
+export interface CacheConfig {
+  /** Cache duration in seconds (maps to s-maxage) */
+  revalidate?: number;
+  /** Tags for Next.js revalidateTag() invalidation */
+  tags?: string[];
+}
+
 /** Schema metadata attached to an endpoint function */
 export interface SchemaMetadata {
   response?: StandardSchemaV1;
   variables?: StandardSchemaV1;
+  /** Endpoint type — "query" enables GET proxy, "mutation" requires POST */
+  type?: "query" | "mutation";
+  /** Cache hints for proxy GET responses */
+  cache?: CacheConfig;
 }
 
 /** A single validation issue from Standard Schema */

@@ -12,7 +12,7 @@ vi.mock("ky", () => {
   }
 
   return {
-    default: { post: vi.fn() },
+    default: { post: vi.fn(), get: vi.fn() },
     HTTPError: KYHTTPError,
   };
 });
@@ -21,6 +21,7 @@ import ky, { HTTPError as KYHTTPError } from "ky";
 import { createClientRequest } from "../src/create";
 
 const mockPost = vi.mocked(ky.post);
+const mockGet = vi.mocked(ky.get);
 
 function createKyError(response: Record<string, unknown>) {
   const error = Object.create(KYHTTPError.prototype);
@@ -43,6 +44,7 @@ function kyRejectedResponse(error: unknown) {
 
 beforeEach(() => {
   mockPost.mockReset();
+  mockGet.mockReset();
 });
 
 afterEach(() => {
@@ -351,6 +353,172 @@ describe("createClientRequest", () => {
 
       await expect(client("api", { stream: true })("events")).rejects.toBeInstanceOf(HTTPError);
       expect(onError).toHaveBeenCalled();
+    });
+  });
+
+  describe("GET proxy mode", () => {
+    it("uses ky.get when method: GET is set", async () => {
+      mockGet.mockReturnValue(kyResponse({ users: [] }));
+
+      const client = createClientRequest() as any;
+      await client("api", { method: "GET" })("users:getAll");
+
+      expect(mockGet).toHaveBeenCalledWith(
+        "/api/request",
+        expect.objectContaining({
+          searchParams: expect.objectContaining({
+            _s: "api",
+            _g: "users",
+            _m: "getAll",
+          }),
+        }),
+      );
+      expect(mockPost).not.toHaveBeenCalled();
+    });
+
+    it("includes variables as query params", async () => {
+      mockGet.mockReturnValue(kyResponse([]));
+
+      const client = createClientRequest() as any;
+      await client("api", { method: "GET" })("users:list", { page: 2, limit: 10 });
+
+      const call = mockGet.mock.calls[0];
+      expect(call?.[1]?.searchParams).toEqual(
+        expect.objectContaining({
+          _s: "api",
+          _g: "users",
+          _m: "list",
+          page: "2",
+          limit: "10",
+        }),
+      );
+    });
+
+    it("omits _g when no group in endpoint key", async () => {
+      mockGet.mockReturnValue(kyResponse([]));
+
+      const client = createClientRequest() as any;
+      await client("api", { method: "GET" })("health");
+
+      const call = mockGet.mock.calls[0];
+      const params = call?.[1]?.searchParams as Record<string, string>;
+      expect(params._g).toBeUndefined();
+      expect(params._m).toBe("health");
+    });
+
+    it("skips undefined/null variables", async () => {
+      mockGet.mockReturnValue(kyResponse([]));
+
+      const client = createClientRequest() as any;
+      await client("api", { method: "GET" })("list", { page: 1, filter: undefined, sort: null });
+
+      const params = mockGet.mock.calls[0]?.[1]?.searchParams as Record<string, string>;
+      expect(params.page).toBe("1");
+      expect(params.filter).toBeUndefined();
+      expect(params.sort).toBeUndefined();
+    });
+
+    it("includes server options as _o when non-empty", async () => {
+      mockGet.mockReturnValue(kyResponse([]));
+
+      const client = createClientRequest() as any;
+      await client("api", { method: "GET", rawData: true })("list");
+
+      const params = mockGet.mock.calls[0]?.[1]?.searchParams as Record<string, string>;
+      expect(JSON.parse(params._o!)).toEqual({ rawData: true });
+    });
+
+    it("omits _o when server options are empty", async () => {
+      mockGet.mockReturnValue(kyResponse([]));
+
+      const client = createClientRequest() as any;
+      await client("api", { method: "GET" })("list");
+
+      const params = mockGet.mock.calls[0]?.[1]?.searchParams as Record<string, string>;
+      expect(params._o).toBeUndefined();
+    });
+
+    it("sends credentials and headers in GET mode", async () => {
+      mockGet.mockReturnValue(kyResponse([]));
+
+      const client = createClientRequest({ headers: { "x-key": "abc" } }) as any;
+      await client("api", { method: "GET" })("list");
+
+      expect(mockGet).toHaveBeenCalledWith(
+        "/api/request",
+        expect.objectContaining({
+          credentials: "include",
+          headers: { "x-key": "abc" },
+        }),
+      );
+    });
+
+    it("calls globalOnSuccess in GET mode", async () => {
+      mockGet.mockReturnValue(kyResponse({ ok: true }));
+      const onSuccess = vi.fn();
+
+      const client = createClientRequest({ onSuccess }) as any;
+      await client("api", { method: "GET" })("list");
+
+      expect(onSuccess).toHaveBeenCalledWith({ ok: true });
+    });
+
+    it("converts ky HTTPError to custom HTTPError in GET mode", async () => {
+      const errorResponse = {
+        status: 404,
+        headers: new Headers(),
+        json: () => Promise.resolve({ error: "not found" }),
+        text: () => Promise.resolve("not found"),
+      };
+      mockGet.mockReturnValue(kyRejectedResponse(createKyError(errorResponse)));
+
+      const client = createClientRequest() as any;
+
+      try {
+        await client("api", { method: "GET" })("missing");
+        expect.fail("should have thrown");
+      } catch (error) {
+        expect(error).toBeInstanceOf(HTTPError);
+        expect((error as HTTPError).status).toBe(404);
+      }
+    });
+
+    it("calls globalOnError in GET error path", async () => {
+      const errorResponse = {
+        status: 500,
+        headers: new Headers(),
+        json: () => Promise.resolve({ error: "fail" }),
+        text: () => Promise.resolve("fail"),
+      };
+      mockGet.mockReturnValue(kyRejectedResponse(createKyError(errorResponse)));
+      const onError = vi.fn();
+
+      const client = createClientRequest({ onError }) as any;
+
+      await expect(client("api", { method: "GET" })("fail")).rejects.toBeInstanceOf(HTTPError);
+      expect(onError).toHaveBeenCalled();
+    });
+
+    it("falls back to POST for FormData even with method: GET", async () => {
+      mockPost.mockReturnValue(kyResponse({ ok: true }));
+
+      const fd = new FormData();
+      fd.append("file", new File(["x"], "f.txt"));
+
+      const client = createClientRequest() as any;
+      await client("api", { method: "GET" })("upload", fd);
+
+      expect(mockPost).toHaveBeenCalled();
+      expect(mockGet).not.toHaveBeenCalled();
+    });
+
+    it("uses custom routePath in GET mode", async () => {
+      mockGet.mockReturnValue(kyResponse([]));
+
+      const client = createClientRequest({ routePath: "custom" }) as any;
+      await client("api", { method: "GET" })("list");
+
+      expect(mockGet).toHaveBeenCalledWith("/api/custom", expect.any(Object));
     });
   });
 });

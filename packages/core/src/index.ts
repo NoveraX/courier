@@ -1,3 +1,4 @@
+export { type AdapterHandler, createHandler } from "./adapter";
 export { type ClientRequestDefaults, createClientRequest } from "./create";
 export { HTTPError, isHTTPError } from "./error";
 export type {

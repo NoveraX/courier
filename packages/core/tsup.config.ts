@@ -6,6 +6,7 @@ export default defineConfig({
     "define/index": "src/define/index.ts",
     "direct/index": "src/direct/index.ts",
     "middleware/index": "src/middleware/index.ts",
+    node: "src/node.ts",
   },
   outDir: "lib",
   format: ["esm"],

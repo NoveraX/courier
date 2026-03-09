@@ -1,0 +1,36 @@
+{
+  "name": "@noverax/nexus-nuxt",
+  "version": "0.0.0",
+  "description": "Nuxt adapter for @noverax/nexus — h3/Nitro event handler",
+  "author": "NoveraX",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@noverax/nexus": "*"
+  },
+  "peerDependencies": {
+    "h3": ">=1"
+  }
+}

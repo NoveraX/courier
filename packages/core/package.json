@@ -25,6 +25,10 @@
     "./middleware": {
       "types": "./lib/middleware/index.d.ts",
       "import": "./lib/middleware/index.js"
+    },
+    "./node": {
+      "types": "./lib/node.d.ts",
+      "import": "./lib/node.js"
     }
   },
   "files": [

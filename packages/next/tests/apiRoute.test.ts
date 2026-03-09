@@ -1,24 +1,31 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
+const mockHandleGet = vi.fn();
+const mockHandlePost = vi.fn();
+
 vi.mock("@noverax/nexus", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@noverax/nexus")>();
   return {
     ...actual,
-    executeRequest: vi.fn(),
+    createHandler: vi.fn(() => ({
+      handle: vi.fn(),
+      handleGet: mockHandleGet,
+      handlePost: mockHandlePost,
+    })),
   };
 });
 
-import { executeRequest } from "@noverax/nexus";
+import { createHandler } from "@noverax/nexus";
 import { apiRoute } from "../src/apiRoute";
 
-const mockExecuteRequest = vi.mocked(executeRequest);
+const mockCreateHandler = vi.mocked(createHandler);
 
 afterEach(() => {
   vi.clearAllMocks();
 });
 
-function createRequest(
+function createPostRequest(
   body: string | FormData,
   options: { contentType?: string; origin?: string; url?: string } = {},
 ) {
@@ -40,186 +47,25 @@ function createRequest(
 }
 
 describe("apiRoute", () => {
-  describe("origin validation", () => {
-    it("returns 403 when origin is missing", async () => {
-      const { POST } = apiRoute({});
-      const req = new NextRequest("http://localhost:3000/api/request", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({}),
-      });
-
-      const res = await POST(req);
-      expect(res.status).toBe(403);
-
-      const data = await res.json();
-      expect(data.message).toContain("Origin mismatch");
+  describe("structure", () => {
+    it("returns { GET, POST } handlers", () => {
+      const route = apiRoute({});
+      expect(route.GET).toBeDefined();
+      expect(route.POST).toBeDefined();
+      expect(typeof route.GET).toBe("function");
+      expect(typeof route.POST).toBe("function");
     });
 
-    it("returns 403 when origin does not match request URL", async () => {
-      const { POST } = apiRoute({});
-      const req = createRequest(JSON.stringify({}), {
-        origin: "http://evil.com",
-      });
-
-      const res = await POST(req);
-      expect(res.status).toBe(403);
-    });
-
-    it("allows request when origin matches", async () => {
-      mockExecuteRequest.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
-
-      const { POST } = apiRoute({});
-      const req = createRequest(JSON.stringify({ source: "api", method: "list" }));
-
-      await POST(req);
-      expect(mockExecuteRequest).toHaveBeenCalled();
-    });
-  });
-
-  describe("content-type handling", () => {
-    it("returns 415 for unsupported content type", async () => {
-      const { POST } = apiRoute({});
-      const req = createRequest("plain text", { contentType: "text/plain" });
-
-      const res = await POST(req);
-      expect(res.status).toBe(415);
-
-      const data = await res.json();
-      expect(data.message).toContain("Unsupported Content-Type");
-    });
-
-    it("parses JSON body", async () => {
-      mockExecuteRequest.mockResolvedValue(new Response("{}"));
-
-      const { POST } = apiRoute({ api: {} } as any);
-      const payload = { source: "api", method: "list", variables: { page: 1 } };
-      const req = createRequest(JSON.stringify(payload));
-
-      await POST(req);
-
-      expect(mockExecuteRequest).toHaveBeenCalledWith(
-        { api: {} },
-        payload,
-        expect.objectContaining({
-          req: expect.any(NextRequest),
-        }),
-      );
-    });
-
-    it("returns 400 for invalid JSON", async () => {
-      const { POST } = apiRoute({});
-      const req = createRequest("not-valid-json");
-
-      const res = await POST(req);
-      expect(res.status).toBe(400);
-
-      const data = await res.json();
-      expect(data.message).toContain("Invalid JSON");
-    });
-
-    it("parses multipart/form-data body", async () => {
-      mockExecuteRequest.mockResolvedValue(new Response("{}"));
-
-      const { POST } = apiRoute({ api: {} } as any);
-
-      const fd = new FormData();
-      fd.append("_source", "api");
-      fd.append("_method", "upload");
-      fd.append("file", new File(["content"], "test.txt"));
-
-      const req = new NextRequest("http://localhost:3000/api/request", {
-        method: "POST",
-        headers: { origin: "http://localhost:3000" },
-        body: fd,
-      });
-
-      await POST(req);
-
-      expect(mockExecuteRequest).toHaveBeenCalledWith(
-        { api: {} },
-        expect.any(FormData),
-        expect.objectContaining({
-          req: expect.any(NextRequest),
-        }),
-      );
-    });
-  });
-
-  describe("executeRequest integration", () => {
-    it("passes sources to executeRequest", async () => {
-      mockExecuteRequest.mockResolvedValue(new Response("{}"));
-
+    it("calls createHandler with sources", () => {
       const sources = { users: {}, auth: {} } as any;
-      const { POST } = apiRoute(sources);
-      const req = createRequest(JSON.stringify({ source: "users", method: "list" }));
-
-      await POST(req);
-
-      expect(mockExecuteRequest).toHaveBeenCalledWith(
-        sources,
-        expect.any(Object),
-        expect.any(Object),
-      );
-    });
-
-    it("provides context with req and res to executeRequest", async () => {
-      mockExecuteRequest.mockResolvedValue(new Response("{}"));
-
-      const { POST } = apiRoute({});
-      const req = createRequest(JSON.stringify({ source: "api", method: "list" }));
-
-      await POST(req);
-
-      const context = mockExecuteRequest.mock.calls[0]?.[2] as any;
-      expect(context.req).toBeInstanceOf(NextRequest);
-      expect(context.res).toBeDefined();
-    });
-
-    it("POST handler sets proxyMethod: POST in context", async () => {
-      mockExecuteRequest.mockResolvedValue(new Response("{}"));
-
-      const { POST } = apiRoute({});
-      const req = createRequest(JSON.stringify({ source: "api", method: "list" }));
-
-      await POST(req);
-
-      const context = mockExecuteRequest.mock.calls[0]?.[2] as any;
-      expect(context.proxyMethod).toBe("POST");
+      apiRoute(sources);
+      expect(mockCreateHandler).toHaveBeenCalledWith(sources);
     });
   });
 
   describe("GET handler", () => {
-    it("exports GET handler", () => {
-      const route = apiRoute({});
-      expect(route.GET).toBeDefined();
-      expect(typeof route.GET).toBe("function");
-    });
-
-    it("returns 400 when _s param is missing", async () => {
-      const { GET } = apiRoute({});
-      const req = new NextRequest("http://localhost:3000/api/request?_m=getAll");
-
-      const res = await GET(req);
-      expect(res.status).toBe(400);
-
-      const data = await res.json();
-      expect(data.message).toContain("_s");
-    });
-
-    it("returns 400 when _m param is missing", async () => {
-      const { GET } = apiRoute({});
-      const req = new NextRequest("http://localhost:3000/api/request?_s=api");
-
-      const res = await GET(req);
-      expect(res.status).toBe(400);
-
-      const data = await res.json();
-      expect(data.message).toContain("_m");
-    });
-
-    it("parses _s, _g, _m from query params", async () => {
-      mockExecuteRequest.mockResolvedValue(new Response("{}"));
+    it("delegates to handleGet with the NextRequest", async () => {
+      mockHandleGet.mockResolvedValue(new Response("{}"));
 
       const { GET } = apiRoute({ api: {} } as any);
       const req = new NextRequest(
@@ -228,95 +74,79 @@ describe("apiRoute", () => {
 
       await GET(req);
 
-      expect(mockExecuteRequest).toHaveBeenCalledWith(
-        { api: {} },
-        { source: "api", group: "users", method: "getAll", variables: undefined, options: undefined },
-        expect.objectContaining({ proxyMethod: "GET" }),
-      );
+      expect(mockHandleGet).toHaveBeenCalledWith(req);
     });
 
-    it("collects non-meta params as variables", async () => {
-      mockExecuteRequest.mockResolvedValue(new Response("{}"));
+    it("returns the Response from handleGet", async () => {
+      const expectedResponse = new Response(JSON.stringify({ data: "test" }));
+      mockHandleGet.mockResolvedValue(expectedResponse);
 
       const { GET } = apiRoute({ api: {} } as any);
-      const req = new NextRequest(
-        "http://localhost:3000/api/request?_s=api&_m=list&page=2&limit=10",
-      );
+      const req = new NextRequest("http://localhost:3000/api/request?_s=api&_m=list");
 
-      await GET(req);
-
-      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
-      expect(payload.variables).toEqual({ page: "2", limit: "10" });
+      const result = await GET(req);
+      expect(result).toBe(expectedResponse);
     });
 
-    it("parses _o as JSON options", async () => {
-      mockExecuteRequest.mockResolvedValue(new Response("{}"));
-
-      const { GET } = apiRoute({ api: {} } as any);
-      const opts = JSON.stringify({ rawData: true });
-      const req = new NextRequest(
-        `http://localhost:3000/api/request?_s=api&_m=list&_o=${encodeURIComponent(opts)}`,
+    it("returns 400 when params missing (via createHandler)", async () => {
+      mockHandleGet.mockResolvedValue(
+        Response.json({ success: false, message: "Missing required params: _s, _m" }, { status: 400 }),
       );
 
-      await GET(req);
+      const { GET } = apiRoute({});
+      const req = new NextRequest("http://localhost:3000/api/request?_m=getAll");
 
-      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
-      expect(payload.options).toEqual({ rawData: true });
+      const res = await GET(req);
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe("POST handler", () => {
+    it("delegates to handlePost with the NextRequest", async () => {
+      mockHandlePost.mockResolvedValue(new Response("{}"));
+
+      const { POST } = apiRoute({ api: {} } as any);
+      const req = createPostRequest(JSON.stringify({ source: "api", method: "list" }));
+
+      await POST(req);
+
+      expect(mockHandlePost).toHaveBeenCalledWith(req);
     });
 
-    it("ignores invalid _o JSON", async () => {
-      mockExecuteRequest.mockResolvedValue(new Response("{}"));
+    it("returns the Response from handlePost", async () => {
+      const expectedResponse = new Response(JSON.stringify({ ok: true }));
+      mockHandlePost.mockResolvedValue(expectedResponse);
 
-      const { GET } = apiRoute({ api: {} } as any);
-      const req = new NextRequest(
-        "http://localhost:3000/api/request?_s=api&_m=list&_o=invalid",
-      );
+      const { POST } = apiRoute({});
+      const req = createPostRequest(JSON.stringify({ source: "api", method: "list" }));
 
-      await GET(req);
-
-      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
-      expect(payload.options).toBeUndefined();
+      const result = await POST(req);
+      expect(result).toBe(expectedResponse);
     });
 
-    it("does not require origin header (no CSRF check for GET)", async () => {
-      mockExecuteRequest.mockResolvedValue(new Response("{}"));
-
-      const { GET } = apiRoute({ api: {} } as any);
-      const req = new NextRequest(
-        "http://localhost:3000/api/request?_s=api&_m=list",
+    it("returns 403 for origin mismatch (via createHandler)", async () => {
+      mockHandlePost.mockResolvedValue(
+        Response.json({ success: false, message: "Origin mismatch" }, { status: 403 }),
       );
 
-      await GET(req);
-      expect(mockExecuteRequest).toHaveBeenCalled();
+      const { POST } = apiRoute({});
+      const req = createPostRequest(JSON.stringify({}), { origin: "http://evil.com" });
+
+      const res = await POST(req);
+      expect(res.status).toBe(403);
     });
 
-    it("handles group-less endpoints", async () => {
-      mockExecuteRequest.mockResolvedValue(new Response("{}"));
+    it("passes NextRequest which extends Request", async () => {
+      mockHandlePost.mockResolvedValue(new Response("{}"));
 
-      const { GET } = apiRoute({ api: {} } as any);
-      const req = new NextRequest(
-        "http://localhost:3000/api/request?_s=api&_m=health",
-      );
+      const { POST } = apiRoute({});
+      const req = createPostRequest(JSON.stringify({ source: "api", method: "list" }));
 
-      await GET(req);
+      await POST(req);
 
-      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
-      expect(payload.group).toBeUndefined();
-    });
-
-    it("sanitizes __proto__ in _o JSON", async () => {
-      mockExecuteRequest.mockResolvedValue(new Response("{}"));
-
-      const { GET } = apiRoute({ api: {} } as any);
-      const opts = JSON.stringify({ __proto__: { polluted: true }, rawData: true });
-      const req = new NextRequest(
-        `http://localhost:3000/api/request?_s=api&_m=list&_o=${encodeURIComponent(opts)}`,
-      );
-
-      await GET(req);
-
-      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
-      expect(payload.options).toEqual({ rawData: true });
+      const passedReq = mockHandlePost.mock.calls[0]?.[0];
+      expect(passedReq).toBeInstanceOf(NextRequest);
+      expect(passedReq).toBeInstanceOf(Request);
     });
   });
 });

@@ -1,33 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import ky from "ky";
 import { defineApi, defineGroup } from "../src/define/index";
 import { HTTPError } from "../src/error";
-import type { HttpMethods } from "../src/instance/types";
+import type { HttpMethods } from "../src/http-client/types";
 import { executeRequest } from "../src/utils/createRequest";
 
-let mockKyInstance: Record<"get" | "post" | "put" | "patch" | "delete" | "head", ReturnType<typeof vi.fn>>;
+let fetchSpy: ReturnType<typeof vi.fn>;
 
-function mockResponse(data: unknown, status = 200, headers = new Headers()) {
-  return {
-    status,
-    headers,
-    json: () => Promise.resolve(data),
-    text: () => Promise.resolve(typeof data === "string" ? data : JSON.stringify(data)),
-    body: new ReadableStream(),
-  };
+function mockFetchResponse(data: unknown, status = 200, headers = new Headers()) {
+  return new Response(status === 204 ? null : JSON.stringify(data), { status, headers });
 }
 
 beforeEach(() => {
-  mockKyInstance = {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    patch: vi.fn(),
-    delete: vi.fn(),
-    head: vi.fn(),
-  };
-
-  vi.spyOn(ky, "create").mockReturnValue(mockKyInstance as unknown as typeof ky);
+  fetchSpy = vi.fn().mockResolvedValue(mockFetchResponse({}));
+  vi.stubGlobal("fetch", fetchSpy);
 });
 
 afterEach(() => {
@@ -102,7 +87,7 @@ describe("executeRequest", () => {
   describe("successful request", () => {
     it("calls method and returns data", async () => {
       const responseData = { users: [{ id: 1, name: "Alice" }] };
-      mockKyInstance.get.mockResolvedValue(mockResponse(responseData));
+      fetchSpy.mockResolvedValue(mockFetchResponse(responseData));
 
       const source = createTestSource({
         list: (methods: HttpMethods) => methods.get("users"),
@@ -119,7 +104,7 @@ describe("executeRequest", () => {
 
     it("passes variables to method", async () => {
       const responseData = { id: 1, name: "Alice" };
-      mockKyInstance.get.mockResolvedValue(mockResponse(responseData));
+      fetchSpy.mockResolvedValue(mockFetchResponse(responseData));
 
       const methodFn = vi.fn((methods: HttpMethods, _vars: unknown) =>
         methods.get("users/1"),
@@ -138,7 +123,7 @@ describe("executeRequest", () => {
 
     it("returns rawData when rawData option is true", async () => {
       const responseData = { users: [] };
-      mockKyInstance.get.mockResolvedValue(mockResponse(responseData));
+      fetchSpy.mockResolvedValue(mockFetchResponse(responseData));
 
       const source = createTestSource({
         list: (methods: HttpMethods) => methods.get("users"),
@@ -226,7 +211,7 @@ describe("executeRequest", () => {
   describe("groups", () => {
     it("resolves method from group", async () => {
       const responseData = { token: "abc" };
-      mockKyInstance.post.mockResolvedValue(mockResponse(responseData));
+      fetchSpy.mockResolvedValue(mockFetchResponse(responseData));
 
       const loginFn = vi.fn((methods: HttpMethods) => methods.post("login"));
 
@@ -252,7 +237,7 @@ describe("executeRequest", () => {
 
     it("falls back to source method if not found in group", async () => {
       const responseData = { health: "ok" };
-      mockKyInstance.get.mockResolvedValue(mockResponse(responseData));
+      fetchSpy.mockResolvedValue(mockFetchResponse(responseData));
 
       const healthFn = vi.fn((methods: HttpMethods) => methods.get("health"));
 
@@ -277,7 +262,7 @@ describe("executeRequest", () => {
   describe("FormData input", () => {
     it("parses request options from FormData", async () => {
       const responseData = { ok: true };
-      mockKyInstance.get.mockResolvedValue(mockResponse(responseData));
+      fetchSpy.mockResolvedValue(mockFetchResponse(responseData));
 
       const listFn = vi.fn((methods: HttpMethods) => methods.get("items"));
       const source = createTestSource({ list: listFn });
@@ -295,7 +280,7 @@ describe("executeRequest", () => {
 
   describe("middleware", () => {
     it("middleware receives context with source and method", async () => {
-      mockKyInstance.get.mockResolvedValue(mockResponse({ ok: true }));
+      fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
       const spy = vi.fn();
       const source = createTestSource(
@@ -315,7 +300,7 @@ describe("executeRequest", () => {
     });
 
     it("middleware can modify variables", async () => {
-      mockKyInstance.get.mockResolvedValue(mockResponse({ ok: true }));
+      fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
       const source = createTestSource(
         { list: (methods: HttpMethods) => methods.get("users") },
@@ -328,11 +313,11 @@ describe("executeRequest", () => {
 
       await executeRequest(sources, { source: "users", method: "list" });
 
-      expect(mockKyInstance.get).toHaveBeenCalled();
+      expect(fetchSpy).toHaveBeenCalled();
     });
 
     it("middleware can transform response", async () => {
-      mockKyInstance.get.mockResolvedValue(mockResponse({ raw: true }));
+      fetchSpy.mockResolvedValue(mockFetchResponse({ raw: true }));
 
       const source = createTestSource(
         { list: (methods: HttpMethods) => methods.get("users") },
@@ -400,13 +385,7 @@ describe("executeRequest", () => {
 
   describe("204 No Content", () => {
     it("handles 204 response correctly", async () => {
-      mockKyInstance.get.mockResolvedValue({
-        status: 204,
-        headers: new Headers(),
-        json: () => Promise.reject(new Error("no body")),
-        text: () => Promise.resolve(""),
-        body: null,
-      });
+      fetchSpy.mockResolvedValue(mockFetchResponse(null, 204));
 
       const source = createTestSource({
         remove: (methods: HttpMethods) => methods.get("users/1"),
@@ -425,11 +404,10 @@ describe("executeRequest", () => {
   describe("stream mode", () => {
     it("returns stream data when stream option is true", async () => {
       const stream = new ReadableStream();
-      mockKyInstance.get.mockResolvedValue({
+      fetchSpy.mockResolvedValue(new Response(stream, {
         status: 200,
         headers: new Headers(),
-        body: stream,
-      });
+      }));
 
       const source = createTestSource({
         events: (methods: HttpMethods) => methods.get("events"),
@@ -445,7 +423,7 @@ describe("executeRequest", () => {
       expect(result).toEqual(
         expect.objectContaining({
           status: 200,
-          data: stream,
+          data: expect.any(ReadableStream),
         }),
       );
     });

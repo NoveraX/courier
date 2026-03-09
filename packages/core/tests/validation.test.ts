@@ -1,35 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import ky from "ky";
 import * as v from "valibot";
 import { z } from "zod";
 import { defineApi, defineGroup, endpoint } from "../src/define/index";
 import { ENDPOINT_SCHEMA, ValidationError, isValidationError, validateSchema } from "../src/validation";
 import { executeRequest } from "../src/utils/createRequest";
 
-// ---- mock ky ----
+// ---- mock fetch ----
 
-let mockKyInstance: Record<"get" | "post" | "put" | "patch" | "delete" | "head", ReturnType<typeof vi.fn>>;
+let fetchSpy: ReturnType<typeof vi.fn>;
 
-function mockResponse(data: unknown, status = 200, headers = new Headers()) {
-	return {
-		status,
-		headers,
-		json: () => Promise.resolve(data),
-		text: () => Promise.resolve(typeof data === "string" ? data : JSON.stringify(data)),
-		body: new ReadableStream(),
-	};
+function mockFetchResponse(data: unknown, status = 200, headers = new Headers()) {
+	return new Response(status === 204 ? null : JSON.stringify(data), { status, headers });
 }
 
 beforeEach(() => {
-	mockKyInstance = {
-		get: vi.fn(),
-		post: vi.fn(),
-		put: vi.fn(),
-		patch: vi.fn(),
-		delete: vi.fn(),
-		head: vi.fn(),
-	};
-	vi.spyOn(ky, "create").mockReturnValue(mockKyInstance as unknown as typeof ky);
+	fetchSpy = vi.fn().mockResolvedValue(mockFetchResponse({}));
+	vi.stubGlobal("fetch", fetchSpy);
 });
 
 afterEach(() => {
@@ -201,7 +187,7 @@ describe("integration: response validation", () => {
 		});
 
 		const users = [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }];
-		mockKyInstance.get.mockResolvedValue(mockResponse(users));
+		fetchSpy.mockResolvedValue(mockFetchResponse(users));
 
 		const result = await executeRequest({ api }, {
 			source: "api",
@@ -228,7 +214,7 @@ describe("integration: response validation", () => {
 		});
 
 		// Return malformed data (name is a number instead of string)
-		mockKyInstance.get.mockResolvedValue(mockResponse([{ id: 1, name: 42 }]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1, name: 42 }]));
 
 		try {
 			await executeRequest({ api }, {
@@ -259,7 +245,7 @@ describe("integration: response validation", () => {
 		});
 
 		const posts = [{ id: 1, title: "Hello" }];
-		mockKyInstance.get.mockResolvedValue(mockResponse(posts));
+		fetchSpy.mockResolvedValue(mockFetchResponse(posts));
 
 		const result = await executeRequest({ api }, {
 			source: "api",
@@ -291,7 +277,7 @@ describe("integration: variables validation", () => {
 		});
 
 		const newUser = { id: 1, name: "Alice", email: "alice@test.com" };
-		mockKyInstance.post.mockResolvedValue(mockResponse(newUser, 201));
+		fetchSpy.mockResolvedValue(mockFetchResponse(newUser, 201));
 
 		const result = await executeRequest({ api }, {
 			source: "api",
@@ -359,7 +345,7 @@ describe("integration: variables validation", () => {
 			expect.fail("should have thrown");
 		} catch {
 			// HTTP request should never have been made
-			expect(mockKyInstance.get).not.toHaveBeenCalled();
+			expect(fetchSpy).not.toHaveBeenCalled();
 		}
 	});
 });
@@ -378,7 +364,7 @@ describe("integration: endpoints without schema", () => {
 			},
 		});
 
-		mockKyInstance.get.mockResolvedValue(mockResponse("pong"));
+		fetchSpy.mockResolvedValue(mockFetchResponse("pong"));
 
 		const result = await executeRequest({ api }, {
 			source: "api",
@@ -408,7 +394,7 @@ describe("integration: schema transforms", () => {
 			},
 		});
 
-		mockKyInstance.get.mockResolvedValue(mockResponse({ createdAt: "2024-01-01T00:00:00Z" }));
+		fetchSpy.mockResolvedValue(mockFetchResponse({ createdAt: "2024-01-01T00:00:00Z" }));
 
 		const result = await executeRequest({ api }, {
 			source: "api",

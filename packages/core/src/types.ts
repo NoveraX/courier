@@ -1,5 +1,5 @@
 import type { Endpoint } from "./define/types";
-import type { CallOptions, Context, HttpResponse } from "./instance/types";
+import type { CallOptions, Context, HttpResponse } from "./http-client/types";
 
 export type RequestFn<T extends Record<string, any>, D extends boolean = false> = <
   K extends keyof T,

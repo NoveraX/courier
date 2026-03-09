@@ -5,26 +5,20 @@
 import { type ReactNode, Suspense, createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("ky", () => {
-	return {
-		default: { post: vi.fn(), get: vi.fn() },
-		HTTPError: class KYHTTPError extends Error {
-			response: any;
-			constructor(response: any) {
-				super(`HTTP ${response.status}`);
-				this.name = "HTTPError";
-				this.response = response;
-			}
-		},
-	};
-});
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import ky from "ky";
 import type { Endpoint } from "@noverax/nexus/define";
 import { createQueryKeys } from "../src/keys";
 import { createQueryRequest, optimisticOptions } from "../src/index";
+
+let fetchSpy: ReturnType<typeof vi.fn>;
+
+function mockFetchResponse(data: unknown, status = 200) {
+	return new Response(JSON.stringify(data), {
+		status,
+		headers: new Headers({ "content-type": "application/json" }),
+	});
+}
 
 type TestApi = {
 	api: {
@@ -44,16 +38,6 @@ type TestApi = {
 	};
 };
 
-const mockPost = vi.mocked(ky.post);
-
-function kyResponse(data: unknown, status = 200) {
-	const response = { status, headers: new Headers(), ok: status < 400 };
-	const p = Promise.resolve(response);
-	(p as any).json = () => Promise.resolve(data);
-	(p as any).text = () => Promise.resolve(JSON.stringify(data));
-	return p as any;
-}
-
 let queryClient: QueryClient;
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -69,7 +53,8 @@ function suspenseWrapper({ children }: { children: ReactNode }) {
 }
 
 beforeEach(() => {
-	mockPost.mockReset();
+	fetchSpy = vi.fn().mockResolvedValue(mockFetchResponse({}));
+	vi.stubGlobal("fetch", fetchSpy);
 	queryClient = new QueryClient({
 		defaultOptions: {
 			queries: { retry: false, gcTime: 0 },
@@ -82,6 +67,11 @@ afterEach(() => {
 	queryClient.clear();
 	vi.restoreAllMocks();
 });
+
+function getFetchBody(index = 0) {
+	const body = fetchSpy.mock.calls[index]?.[1]?.body;
+	return body ? JSON.parse(body as string) : undefined;
+}
 
 // ---------------------------------------------------------------------------
 // createQueryRequest — basic
@@ -112,7 +102,7 @@ describe("createQueryRequest", () => {
 describe("useQuery", () => {
 	it("fetches data and returns result", async () => {
 		const users = [{ id: 1, name: "Alice" }];
-		mockPost.mockReturnValue(kyResponse(users));
+		fetchSpy.mockResolvedValue(mockFetchResponse(users));
 
 		const { useQuery } = createQueryRequest<TestApi>();
 		const { result } = renderHook(() => useQuery("api", "users:getAll"), { wrapper });
@@ -123,7 +113,7 @@ describe("useQuery", () => {
 
 	it("passes variables to the request", async () => {
 		const user = { id: 1, name: "Alice" };
-		mockPost.mockReturnValue(kyResponse(user));
+		fetchSpy.mockResolvedValue(mockFetchResponse(user));
 
 		const { useQuery } = createQueryRequest<TestApi>();
 		const { result } = renderHook(
@@ -133,19 +123,17 @@ describe("useQuery", () => {
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-		const postCall = mockPost.mock.calls[0];
-		expect(postCall).toBeDefined();
-		const body = postCall?.[1]?.json as any;
+		const body = getFetchBody();
 		expect(body?.variables).toEqual({ id: 1 });
 	});
 
 	it("builds query key without variables when undefined", async () => {
-		mockPost.mockReturnValue(kyResponse([]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
 		const { useQuery } = createQueryRequest<TestApi>();
 		renderHook(() => useQuery("api", "users:getAll"), { wrapper });
 
-		await waitFor(() => expect(mockPost).toHaveBeenCalled());
+		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
 
 		const cache = queryClient.getQueryCache().getAll();
 		expect(cache).toHaveLength(1);
@@ -153,7 +141,7 @@ describe("useQuery", () => {
 	});
 
 	it("builds query key with variables when provided", async () => {
-		mockPost.mockReturnValue(kyResponse({}));
+		fetchSpy.mockResolvedValue(mockFetchResponse({}));
 
 		const { useQuery } = createQueryRequest<TestApi>();
 		renderHook(
@@ -161,7 +149,7 @@ describe("useQuery", () => {
 			{ wrapper },
 		);
 
-		await waitFor(() => expect(mockPost).toHaveBeenCalled());
+		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
 
 		const cache = queryClient.getQueryCache().getAll();
 		expect(cache).toHaveLength(1);
@@ -176,16 +164,11 @@ describe("useQuery", () => {
 		);
 
 		expect(result.current.fetchStatus).toBe("idle");
-		expect(mockPost).not.toHaveBeenCalled();
+		expect(fetchSpy).not.toHaveBeenCalled();
 	});
 
 	it("handles fetch errors", async () => {
-		const error = new Error("Network error");
-		const p = Promise.reject(error);
-		(p as any).json = () => Promise.reject(error);
-		(p as any).text = () => Promise.reject(error);
-		p.catch(() => {});
-		mockPost.mockReturnValue(p as any);
+		fetchSpy.mockRejectedValue(new Error("Network error"));
 
 		const { useQuery } = createQueryRequest<TestApi>();
 		const { result } = renderHook(() => useQuery("api", "users:getAll"), { wrapper });
@@ -202,7 +185,7 @@ describe("useQuery", () => {
 describe("useSuspenseQuery", () => {
 	it("fetches data with suspense", async () => {
 		const users = [{ id: 1, name: "Alice" }];
-		mockPost.mockReturnValue(kyResponse(users));
+		fetchSpy.mockResolvedValue(mockFetchResponse(users));
 
 		const { useSuspenseQuery } = createQueryRequest<TestApi>();
 		const { result } = renderHook(
@@ -215,7 +198,7 @@ describe("useSuspenseQuery", () => {
 
 	it("passes variables in suspense mode", async () => {
 		const user = { id: 1, name: "Alice" };
-		mockPost.mockReturnValue(kyResponse(user));
+		fetchSpy.mockResolvedValue(mockFetchResponse(user));
 
 		const { useSuspenseQuery } = createQueryRequest<TestApi>();
 		const { result } = renderHook(
@@ -225,12 +208,12 @@ describe("useSuspenseQuery", () => {
 
 		await waitFor(() => expect(result.current.data).toEqual(user));
 
-		const body = mockPost.mock.calls[0]?.[1]?.json as any;
+		const body = getFetchBody();
 		expect(body?.variables).toEqual({ id: 1 });
 	});
 
 	it("builds correct query key", async () => {
-		mockPost.mockReturnValue(kyResponse([]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
 		const { useSuspenseQuery } = createQueryRequest<TestApi>();
 		renderHook(
@@ -238,7 +221,7 @@ describe("useSuspenseQuery", () => {
 			{ wrapper: suspenseWrapper },
 		);
 
-		await waitFor(() => expect(mockPost).toHaveBeenCalled());
+		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
 
 		const cache = queryClient.getQueryCache().getAll();
 		expect(cache).toHaveLength(1);
@@ -253,7 +236,7 @@ describe("useSuspenseQuery", () => {
 describe("useInfiniteQuery", () => {
 	it("fetches first page", async () => {
 		const page1 = { items: [{ id: 1 }], nextCursor: 2 };
-		mockPost.mockReturnValue(kyResponse(page1));
+		fetchSpy.mockResolvedValue(mockFetchResponse(page1));
 
 		const { useInfiniteQuery } = createQueryRequest<TestApi>();
 		const { result } = renderHook(
@@ -273,7 +256,7 @@ describe("useInfiniteQuery", () => {
 
 	it("passes page param as variables", async () => {
 		const page1 = { items: [{ id: 1 }], nextCursor: 2 };
-		mockPost.mockReturnValue(kyResponse(page1));
+		fetchSpy.mockResolvedValue(mockFetchResponse(page1));
 
 		const { useInfiniteQuery } = createQueryRequest<TestApi>();
 		renderHook(
@@ -286,18 +269,18 @@ describe("useInfiniteQuery", () => {
 			{ wrapper },
 		);
 
-		await waitFor(() => expect(mockPost).toHaveBeenCalled());
+		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
 
-		const body = mockPost.mock.calls[0]?.[1]?.json as any;
+		const body = getFetchBody();
 		expect(body?.variables).toEqual({ cursor: 0 });
 	});
 
 	it("fetches next page", async () => {
 		const page1 = { items: [{ id: 1 }], nextCursor: 2 };
 		const page2 = { items: [{ id: 2 }], nextCursor: null };
-		mockPost
-			.mockReturnValueOnce(kyResponse(page1))
-			.mockReturnValueOnce(kyResponse(page2));
+		fetchSpy
+			.mockResolvedValueOnce(mockFetchResponse(page1))
+			.mockResolvedValueOnce(mockFetchResponse(page2));
 
 		const { useInfiniteQuery } = createQueryRequest<TestApi>();
 		const { result } = renderHook(
@@ -321,7 +304,7 @@ describe("useInfiniteQuery", () => {
 	});
 
 	it("builds query key without variables", async () => {
-		mockPost.mockReturnValue(kyResponse({ items: [], nextCursor: null }));
+		fetchSpy.mockResolvedValue(mockFetchResponse({ items: [], nextCursor: null }));
 
 		const { useInfiniteQuery } = createQueryRequest<TestApi>();
 		renderHook(
@@ -334,7 +317,7 @@ describe("useInfiniteQuery", () => {
 			{ wrapper },
 		);
 
-		await waitFor(() => expect(mockPost).toHaveBeenCalled());
+		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
 
 		const cache = queryClient.getQueryCache().getAll();
 		expect(cache).toHaveLength(1);
@@ -349,7 +332,7 @@ describe("useInfiniteQuery", () => {
 describe("useMutation", () => {
 	it("performs mutation and returns data", async () => {
 		const created = { id: 1, name: "Alice" };
-		mockPost.mockReturnValue(kyResponse(created));
+		fetchSpy.mockResolvedValue(mockFetchResponse(created));
 
 		const { useMutation } = createQueryRequest<TestApi>();
 		const { result } = renderHook(
@@ -364,7 +347,7 @@ describe("useMutation", () => {
 	});
 
 	it("passes variables to mutationFn", async () => {
-		mockPost.mockReturnValue(kyResponse({ id: 1 }));
+		fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1 }));
 
 		const { useMutation } = createQueryRequest<TestApi>();
 		const { result } = renderHook(
@@ -376,12 +359,12 @@ describe("useMutation", () => {
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-		const body = mockPost.mock.calls[0]?.[1]?.json as any;
+		const body = getFetchBody();
 		expect(body?.variables).toEqual({ name: "Bob" });
 	});
 
 	it("calls onSuccess callback", async () => {
-		mockPost.mockReturnValue(kyResponse({ id: 1 }));
+		fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1 }));
 		const onSuccess = vi.fn();
 
 		const { useMutation } = createQueryRequest<TestApi>();
@@ -401,12 +384,7 @@ describe("useMutation", () => {
 	});
 
 	it("handles mutation errors", async () => {
-		const error = new Error("Server error");
-		const p = Promise.reject(error);
-		(p as any).json = () => Promise.reject(error);
-		(p as any).text = () => Promise.reject(error);
-		p.catch(() => {});
-		mockPost.mockReturnValue(p as any);
+		fetchSpy.mockRejectedValue(new Error("Server error"));
 
 		const { useMutation } = createQueryRequest<TestApi>();
 		const { result } = renderHook(
@@ -421,7 +399,7 @@ describe("useMutation", () => {
 	});
 
 	it("mutates without variables for void endpoints", async () => {
-		mockPost.mockReturnValue(kyResponse({ ok: true }));
+		fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
 		const { useMutation } = createQueryRequest<TestApi>();
 		const { result } = renderHook(
@@ -436,7 +414,7 @@ describe("useMutation", () => {
 
 	it("auto-invalidates queries on mutation success", async () => {
 		const spy = vi.spyOn(queryClient, "invalidateQueries");
-		mockPost.mockReturnValue(kyResponse({ id: 2, name: "New" }));
+		fetchSpy.mockResolvedValue(mockFetchResponse({ id: 2, name: "New" }));
 
 		const { useMutation } = createQueryRequest<TestApi>();
 		const { result } = renderHook(
@@ -456,7 +434,7 @@ describe("useMutation", () => {
 
 	it("calls user onSettled alongside auto-invalidation", async () => {
 		const spy = vi.spyOn(queryClient, "invalidateQueries");
-		mockPost.mockReturnValue(kyResponse({ id: 1 }));
+		fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1 }));
 
 		const onSettled = vi.fn();
 		const { useMutation } = createQueryRequest<TestApi>();
@@ -485,7 +463,7 @@ describe("useMutation", () => {
 describe("prefetchQuery", () => {
 	it("prefetches and populates query cache", async () => {
 		const users = [{ id: 1, name: "Alice" }];
-		mockPost.mockReturnValue(kyResponse(users));
+		fetchSpy.mockResolvedValue(mockFetchResponse(users));
 
 		const { prefetchQuery } = createQueryRequest<TestApi>();
 		await prefetchQuery(queryClient, "api", "users:getAll");
@@ -496,7 +474,7 @@ describe("prefetchQuery", () => {
 
 	it("prefetches with variables", async () => {
 		const user = { id: 1, name: "Alice" };
-		mockPost.mockReturnValue(kyResponse(user));
+		fetchSpy.mockResolvedValue(mockFetchResponse(user));
 
 		const { prefetchQuery } = createQueryRequest<TestApi>();
 		await prefetchQuery(queryClient, "api", "users:getById", { variables: { id: 1 } });
@@ -506,7 +484,7 @@ describe("prefetchQuery", () => {
 	});
 
 	it("respects staleTime option", async () => {
-		mockPost.mockReturnValue(kyResponse([]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
 		const { prefetchQuery } = createQueryRequest<TestApi>();
 		await prefetchQuery(queryClient, "api", "users:getAll", { staleTime: 60_000 });
@@ -591,13 +569,13 @@ describe("createQueryKeys", () => {
 	});
 
 	it("keys match query cache keys", async () => {
-		mockPost.mockReturnValue(kyResponse([]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([]));
 		const key = createQueryKeys<TestApi>();
 
 		const { useQuery } = createQueryRequest<TestApi>();
 		renderHook(() => useQuery("api", "users:getAll"), { wrapper });
 
-		await waitFor(() => expect(mockPost).toHaveBeenCalled());
+		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
 
 		const cached = queryClient.getQueryData(key("api", "users:getAll"));
 		expect(cached).toEqual([]);

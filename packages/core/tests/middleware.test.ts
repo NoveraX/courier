@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import ky from "ky";
 import { defineApi, defineGroup, endpoint } from "../src/define/index";
 import {
 	authMiddleware,
@@ -13,36 +12,17 @@ import {
 import type { MiddlewareFn, MiddlewareResponse } from "../src/middleware/types";
 import { executeRequest } from "../src/utils/createRequest";
 
-// ---- mock ky ----
+// ---- mock fetch ----
 
-let mockKyInstance: Record<
-	"get" | "post" | "put" | "patch" | "delete" | "head",
-	ReturnType<typeof vi.fn>
->;
+let fetchSpy: ReturnType<typeof vi.fn>;
 
-function mockResponse(data: unknown, status = 200, headers = new Headers()) {
-	return {
-		status,
-		headers,
-		json: () => Promise.resolve(data),
-		text: () =>
-			Promise.resolve(typeof data === "string" ? data : JSON.stringify(data)),
-		body: new ReadableStream(),
-	};
+function mockFetchResponse(data: unknown, status = 200, headers = new Headers()) {
+	return new Response(status === 204 ? null : JSON.stringify(data), { status, headers });
 }
 
 beforeEach(() => {
-	mockKyInstance = {
-		get: vi.fn(),
-		post: vi.fn(),
-		put: vi.fn(),
-		patch: vi.fn(),
-		delete: vi.fn(),
-		head: vi.fn(),
-	};
-	vi.spyOn(ky, "create").mockReturnValue(
-		mockKyInstance as unknown as typeof ky,
-	);
+	fetchSpy = vi.fn().mockResolvedValue(mockFetchResponse({}));
+	vi.stubGlobal("fetch", fetchSpy);
 });
 
 afterEach(() => {
@@ -71,11 +51,11 @@ function createApi(middleware?: MiddlewareFn[]) {
 	});
 }
 
-const ok = (data: unknown = []) => MiddlewareResponse(200, data);
+const ok = (data: unknown = []) => MiddlewareResponseHelper(200, data);
 const serverError = (data: unknown = { error: "fail" }) =>
-	MiddlewareResponse(500, data);
+	MiddlewareResponseHelper(500, data);
 
-function MiddlewareResponse(
+function MiddlewareResponseHelper(
 	status: number,
 	data: unknown,
 ): MiddlewareResponse {
@@ -235,11 +215,11 @@ describe("integration: middleware in executeRequest", () => {
 		});
 
 		const api = createApi([addAuth]);
-		mockKyInstance.get.mockResolvedValue(mockResponse([{ id: 1, name: "A" }]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1, name: "A" }]));
 
 		await executeRequest({ api }, { source: "api", group: "users", method: "getAll" });
 
-		expect(mockKyInstance.get).toHaveBeenCalled();
+		expect(fetchSpy).toHaveBeenCalled();
 	});
 
 	it("middleware can transform response data", async () => {
@@ -249,7 +229,7 @@ describe("integration: middleware in executeRequest", () => {
 		});
 
 		const api = createApi([wrap]);
-		mockKyInstance.get.mockResolvedValue(mockResponse([{ id: 1, name: "A" }]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1, name: "A" }]));
 
 		const result = await executeRequest(
 			{ api },
@@ -277,7 +257,7 @@ describe("integration: middleware in executeRequest", () => {
 		);
 
 		expect(result).toBe("blocked");
-		expect(mockKyInstance.get).not.toHaveBeenCalled();
+		expect(fetchSpy).not.toHaveBeenCalled();
 	});
 
 	it("multiple middleware compose correctly in executeRequest", async () => {
@@ -298,7 +278,7 @@ describe("integration: middleware in executeRequest", () => {
 		});
 
 		const api = createApi([first, second]);
-		mockKyInstance.get.mockResolvedValue(mockResponse([]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
 		await executeRequest(
 			{ api },
@@ -310,9 +290,7 @@ describe("integration: middleware in executeRequest", () => {
 
 	it("without middleware, executeRequest works as before", async () => {
 		const api = createApi();
-		mockKyInstance.get.mockResolvedValue(
-			mockResponse([{ id: 1, name: "Alice" }]),
-		);
+		fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1, name: "Alice" }]));
 
 		const result = await executeRequest(
 			{ api },

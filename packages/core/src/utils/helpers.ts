@@ -1,20 +1,35 @@
-import { compile, type Key, parse } from "path-to-regexp";
-
 import { HTTPError } from "../error";
-import type { CallOptions, SearchParamsSerializer } from "../instance/types";
+import type { CallOptions, SearchParamsSerializer } from "../http-client/types";
 
 const MULTIPLE_SLASHES = /\/+/g;
+const PARAM_RE = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
 
-type CompiledFn = ReturnType<typeof compile>;
-const compileCache = new Map<string, CompiledFn>();
+type CompileFn = (params: Record<string, string>) => string;
+const compileCache = new Map<string, CompileFn>();
 
-const cachedCompile = (path: string): CompiledFn => {
+const cachedCompile = (path: string): CompileFn => {
   let fn = compileCache.get(path);
   if (!fn) {
-    fn = compile(path);
+    fn = (params: Record<string, string>) =>
+      path.replace(PARAM_RE, (_, name: string) => {
+        const value = params[name];
+        if (value === undefined || value === null || value === "undefined") {
+          throw new Error(`Missing required parameter: ${name}`);
+        }
+        return encodeURIComponent(String(value));
+      });
     compileCache.set(path, fn);
   }
   return fn;
+};
+
+const extractParamNames = (path: string): string[] => {
+  const names: string[] = [];
+  const re = new RegExp(PARAM_RE.source, PARAM_RE.flags);
+  for (let match = re.exec(path); match !== null; match = re.exec(path)) {
+    if (match[1]) names.push(match[1]);
+  }
+  return names;
 };
 
 export const pathJoin = (parts: string[]) =>
@@ -61,16 +76,11 @@ export const compileUrl = (
   const pathOptions = { ...generatedPathOptions, ...variablesObject };
   const pathKeys: Record<string, string> = {};
 
-  const keysArray = parse(urlPath).tokens.filter(
-    (token): token is Key =>
-      typeof token === "object" && "name" in token && typeof token.name === "string",
-  );
+  const paramNames = extractParamNames(urlPath);
 
-  for (const key of keysArray) {
-    const pathKey = key.name;
-
+  for (const pathKey of paramNames) {
     if (isFormData(newVariables)) {
-      newVariables.delete(pathKey.toString());
+      newVariables.delete(pathKey);
     } else {
       delete newVariables[pathKey];
     }

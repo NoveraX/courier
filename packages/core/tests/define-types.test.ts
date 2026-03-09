@@ -8,7 +8,7 @@
 import { describe, expectTypeOf, it } from "vitest";
 import { defineApi, defineGroup, endpoint } from "../src/define/index";
 import type { Endpoint } from "../src/define/types";
-import type { HttpResponse } from "../src/instance/types";
+import type { HttpResponse } from "../src/http-client/types";
 import type { EndpointKey, ResolveEndpoint, RequestFn } from "../src/types";
 
 // ---- test fixtures ----

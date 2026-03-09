@@ -1,22 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import ky from "ky";
 import { NextResponse } from "next/server";
-import type { HttpMethods } from "../src/instance/types";
+import type { HttpMethods } from "../src/http-client/types";
 import { executeRequest } from "../src/utils/createRequest";
 
-let mockKyInstance: Record<"get" | "post" | "put" | "patch" | "delete" | "head", ReturnType<typeof vi.fn>>;
+const fetchSpy = vi.fn();
 
 beforeEach(() => {
-  mockKyInstance = {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    patch: vi.fn(),
-    delete: vi.fn(),
-    head: vi.fn(),
-  };
-
-  vi.spyOn(ky, "create").mockReturnValue(mockKyInstance as unknown as typeof ky);
+  fetchSpy.mockReset();
+  vi.stubGlobal("fetch", fetchSpy);
 });
 
 afterEach(() => {
@@ -32,18 +23,12 @@ function makeResponseWithCookies(data: unknown, cookies: string[]) {
   for (const cookie of cookies) {
     headers.append("set-cookie", cookie);
   }
-  return {
-    status: 200,
-    headers,
-    json: () => Promise.resolve(data),
-    text: () => Promise.resolve(JSON.stringify(data)),
-    body: null,
-  };
+  return new Response(JSON.stringify(data), { status: 200, headers });
 }
 
 describe("cookie forwarding", () => {
   it("forwards a single cookie via set-cookie", async () => {
-    mockKyInstance.get.mockResolvedValue(
+    fetchSpy.mockResolvedValue(
       makeResponseWithCookies({ ok: true }, ["session=abc123; Path=/; HttpOnly"]),
     );
 
@@ -61,7 +46,7 @@ describe("cookie forwarding", () => {
   });
 
   it("forwards multiple cookies", async () => {
-    mockKyInstance.get.mockResolvedValue(
+    fetchSpy.mockResolvedValue(
       makeResponseWithCookies({ ok: true }, [
         "session=abc123; Path=/; HttpOnly",
         "token=xyz789; Path=/; Secure",
@@ -83,7 +68,7 @@ describe("cookie forwarding", () => {
   });
 
   it("does not split cookies with dates (comma in Expires)", async () => {
-    mockKyInstance.get.mockResolvedValue(
+    fetchSpy.mockResolvedValue(
       makeResponseWithCookies({ ok: true }, [
         "session=abc; Expires=Thu, 01 Jan 2099 00:00:00 GMT; Path=/",
       ]),
@@ -105,7 +90,7 @@ describe("cookie forwarding", () => {
   });
 
   it("returns Response (not data) when context has NextResponse", async () => {
-    mockKyInstance.get.mockResolvedValue(
+    fetchSpy.mockResolvedValue(
       makeResponseWithCookies({ ok: true }, []),
     );
 

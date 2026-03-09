@@ -1,7 +1,7 @@
 import type { Sources } from "../define/types";
 import { HTTPError } from "../error";
-import { HttpClient } from "../instance/index";
-import type { AnyEndpoints, BaseOptions, Context } from "../instance/types";
+import { HttpClient } from "../http-client/index";
+import type { AnyEndpoints, BaseOptions, Context } from "../http-client/types";
 import { composeMiddleware } from "../middleware/index";
 import type { MiddlewareContext, MiddlewareResponse } from "../middleware/types";
 import {

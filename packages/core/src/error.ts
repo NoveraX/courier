@@ -1,4 +1,4 @@
-import type { HttpResponse } from "./instance/types";
+import type { HttpResponse } from "./http-client/types";
 
 export class HTTPError<R = unknown> extends Error {
   status: number;

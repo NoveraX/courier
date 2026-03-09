@@ -5,7 +5,7 @@ export type {
   Context,
   HttpResponse,
   UploadProgress,
-} from "./instance/types";
+} from "./http-client/types";
 export type {
   MiddlewareContext,
   MiddlewareFn,

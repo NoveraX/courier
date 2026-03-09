@@ -1,4 +1,4 @@
-import type { BaseOptions, GroupOptions, HttpMethods, HttpResponse } from "../instance/types";
+import type { BaseOptions, GroupOptions, HttpMethods, HttpResponse } from "../http-client/types";
 
 /** Typed endpoint function — the core building block */
 export type Endpoint<R, V = undefined> = (

@@ -1,5 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import type { BaseOptions } from "../instance/types";
+import type { BaseOptions } from "../http-client/types";
 import {
   type CacheConfig,
   ENDPOINT_SCHEMA,

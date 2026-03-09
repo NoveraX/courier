@@ -1,50 +1,45 @@
-import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import ky from "ky";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HTTPError } from "../src/error";
-import { HttpClient } from "../src/instance/index";
+import { HttpClient } from "../src/http-client/index";
 
-let mockKyInstance: Record<"get" | "post" | "put" | "patch" | "delete" | "head", ReturnType<typeof vi.fn>>;
-let createSpy: MockInstance;
+let fetchSpy: ReturnType<typeof vi.fn>;
 
-function mockResponse(data: unknown, status = 200, headers = new Headers()) {
-  return {
-    status,
-    headers,
-    json: () => Promise.resolve(data),
-    text: () => Promise.resolve(typeof data === "string" ? data : JSON.stringify(data)),
-    body: new ReadableStream(),
-  };
+function mockFetchResponse(data: unknown, status = 200, headers = new Headers()) {
+  return new Response(status === 204 ? null : JSON.stringify(data), { status, headers });
+}
+
+function textResponse(text: string, status = 200) {
+  return new Response(text, { status });
 }
 
 beforeEach(() => {
-  mockKyInstance = {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    patch: vi.fn(),
-    delete: vi.fn(),
-    head: vi.fn(),
-  };
-
-  createSpy = vi.spyOn(ky, "create").mockReturnValue(mockKyInstance as unknown as typeof ky);
+  fetchSpy = vi.fn().mockResolvedValue(mockFetchResponse({}));
+  vi.stubGlobal("fetch", fetchSpy);
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
+function getFetchCall(index = 0) {
+  const [url, options] = fetchSpy.mock.calls[index] || [];
+  return { url: url as string, options: options as RequestInit & Record<string, unknown> };
+}
+
 describe("HttpClient", () => {
   describe("constructor", () => {
-    it("creates ky instance via ky.create", () => {
-      new HttpClient({ baseURL: "https://api.example.com" });
-      expect(createSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ prefixUrl: "https://api.example.com" }),
-      );
+    it("stores baseURL and prefixes requests", async () => {
+      const instance = new HttpClient({ baseURL: "https://api.example.com" });
+      const { get } = instance.createMethods();
+      await get("users");
+      expect(getFetchCall().url).toBe("https://api.example.com/users");
     });
 
-    it("works without options", () => {
-      new HttpClient();
-      expect(createSpy).toHaveBeenCalled();
+    it("works without options", async () => {
+      const instance = new HttpClient();
+      const { get } = instance.createMethods();
+      await get("users");
+      expect(getFetchCall().url).toBe("users");
     });
   });
 
@@ -72,48 +67,45 @@ describe("HttpClient", () => {
   describe("GET request", () => {
     it("makes GET request and returns parsed JSON", async () => {
       const data = { users: [{ id: 1 }] };
-      mockKyInstance.get.mockResolvedValue(mockResponse(data));
+      fetchSpy.mockResolvedValue(mockFetchResponse(data));
 
       const instance = new HttpClient();
       const { get } = instance.createMethods();
       const result = await get("users");
 
-      expect(mockKyInstance.get).toHaveBeenCalledWith("users", expect.any(Object));
+      expect(getFetchCall().options.method).toBe("GET");
+      expect(getFetchCall().url).toBe("users");
       expect(result.status).toBe(200);
       expect(result.data).toEqual(data);
     });
 
     it("passes variables as searchParams for GET", async () => {
-      mockKyInstance.get.mockResolvedValue(mockResponse({}));
-
       const instance = new HttpClient();
       const { get } = instance.createMethods({ variables: { page: "1", limit: "10" } });
       await get("users");
 
-      const callOptions = mockKyInstance.get.mock.calls[0]![1];
-      expect(callOptions.searchParams).toBeDefined();
-      expect(callOptions.searchParams.get("page")).toBe("1");
-      expect(callOptions.searchParams.get("limit")).toBe("10");
+      const { url } = getFetchCall();
+      const params = new URL(url, "http://base").searchParams;
+      expect(params.get("page")).toBe("1");
+      expect(params.get("limit")).toBe("10");
     });
   });
 
   describe("POST request", () => {
     it("makes POST request with JSON body", async () => {
       const data = { id: 1, name: "test" };
-      mockKyInstance.post.mockResolvedValue(mockResponse(data, 201));
+      fetchSpy.mockResolvedValue(mockFetchResponse(data, 201));
 
       const instance = new HttpClient();
       const { post } = instance.createMethods();
       const result = await post("users", { name: "test" });
 
-      expect(mockKyInstance.post).toHaveBeenCalledWith("users", expect.any(Object));
+      expect(getFetchCall().options.method).toBe("POST");
       expect(result.status).toBe(201);
       expect(result.data).toEqual(data);
     });
 
     it("sends FormData as body for POST", async () => {
-      mockKyInstance.post.mockResolvedValue(mockResponse({ ok: true }));
-
       const fd = new FormData();
       fd.append("file", new Blob(["content"]), "test.txt");
 
@@ -121,94 +113,88 @@ describe("HttpClient", () => {
       const { post } = instance.createMethods();
       await post("upload", fd as unknown as Record<string, unknown>);
 
-      const callOptions = mockKyInstance.post.mock.calls[0]![1];
-      expect(callOptions.body).toBeInstanceOf(FormData);
+      expect(getFetchCall().options.body).toBeInstanceOf(FormData);
     });
   });
 
   describe("PUT request", () => {
     it("makes PUT request", async () => {
-      mockKyInstance.put.mockResolvedValue(mockResponse({ updated: true }));
+      fetchSpy.mockResolvedValue(mockFetchResponse({ updated: true }));
 
       const instance = new HttpClient();
       const { put } = instance.createMethods();
       const result = await put("users/1", { name: "updated" });
 
-      expect(mockKyInstance.put).toHaveBeenCalled();
+      expect(getFetchCall().options.method).toBe("PUT");
       expect(result.data).toEqual({ updated: true });
     });
   });
 
   describe("PATCH request", () => {
     it("makes PATCH request", async () => {
-      mockKyInstance.patch.mockResolvedValue(mockResponse({ patched: true }));
+      fetchSpy.mockResolvedValue(mockFetchResponse({ patched: true }));
 
       const instance = new HttpClient();
       const { patch } = instance.createMethods();
       const result = await patch("users/1", { email: "new@test.com" });
 
-      expect(mockKyInstance.patch).toHaveBeenCalled();
+      expect(getFetchCall().options.method).toBe("PATCH");
       expect(result.data).toEqual({ patched: true });
     });
   });
 
   describe("DELETE request", () => {
-    it("maps del to ky.delete", async () => {
-      mockKyInstance.delete.mockResolvedValue(mockResponse(null, 204));
+    it("maps del to DELETE method", async () => {
+      fetchSpy.mockResolvedValue(mockFetchResponse(null, 204));
 
       const instance = new HttpClient();
       const { del } = instance.createMethods();
       const result = await del("users/1");
 
-      expect(mockKyInstance.delete).toHaveBeenCalledWith("users/1", expect.any(Object));
+      expect(getFetchCall().options.method).toBe("DELETE");
+      expect(getFetchCall().url).toBe("users/1");
       expect(result.status).toBe(204);
     });
 
     it("passes variables as searchParams for DELETE", async () => {
-      mockKyInstance.delete.mockResolvedValue(mockResponse(null, 204));
+      fetchSpy.mockResolvedValue(mockFetchResponse(null, 204));
 
       const instance = new HttpClient();
       const { del } = instance.createMethods({ variables: { force: "true" } });
       await del("users/1");
 
-      const callOptions = mockKyInstance.delete.mock.calls[0]![1];
-      expect(callOptions.searchParams).toBeDefined();
+      const { url } = getFetchCall();
+      expect(url).toContain("force=true");
     });
   });
 
   describe("HEAD request", () => {
     it("makes HEAD request", async () => {
-      mockKyInstance.head.mockResolvedValue(mockResponse(null, 200));
+      fetchSpy.mockResolvedValue(mockFetchResponse(null, 200));
 
       const instance = new HttpClient();
       const { head } = instance.createMethods();
       const result = await head("users");
 
-      expect(mockKyInstance.head).toHaveBeenCalledWith("users", expect.any(Object));
+      expect(getFetchCall().options.method).toBe("HEAD");
       expect(result.status).toBe(200);
     });
   });
 
   describe("path params", () => {
     it("compiles path params from variables", async () => {
-      mockKyInstance.get.mockResolvedValue(mockResponse({ id: 42 }));
-
       const instance = new HttpClient();
       const { get } = instance.createMethods({ variables: { id: "42" } });
       await get("users/:id");
 
-      const url = mockKyInstance.get.mock.calls[0]![0];
+      const { url } = getFetchCall();
       expect(url).toBe("users/42");
     });
   });
 
   describe("responseType", () => {
     it("returns text when responseType is text", async () => {
-      mockKyInstance.get.mockResolvedValue({
-        status: 200,
-        headers: new Headers(),
-        text: () => Promise.resolve("plain text response"),
-      });
+      fetchSpy.mockResolvedValue(textResponse("plain text response"));
 
       const instance = new HttpClient({ responseType: "text" });
       const { get } = instance.createMethods();
@@ -218,11 +204,7 @@ describe("HttpClient", () => {
     });
 
     it("handles 204 No Content with json", async () => {
-      mockKyInstance.get.mockResolvedValue({
-        status: 204,
-        headers: new Headers(),
-        json: () => Promise.reject(new Error("no body")),
-      });
+      fetchSpy.mockResolvedValue(new Response(null, { status: 204 }));
 
       const instance = new HttpClient();
       const { get } = instance.createMethods();
@@ -233,11 +215,7 @@ describe("HttpClient", () => {
     });
 
     it("handles 204 No Content with text", async () => {
-      mockKyInstance.get.mockResolvedValue({
-        status: 204,
-        headers: new Headers(),
-        text: () => Promise.reject(new Error("no body")),
-      });
+      fetchSpy.mockResolvedValue(new Response(null, { status: 204 }));
 
       const instance = new HttpClient({ responseType: "text" });
       const { get } = instance.createMethods();
@@ -248,11 +226,7 @@ describe("HttpClient", () => {
     });
 
     it("throws HTTPError on json parse failure", async () => {
-      mockKyInstance.get.mockResolvedValue({
-        status: 200,
-        headers: new Headers(),
-        json: () => Promise.reject(new SyntaxError("Unexpected token")),
-      });
+      fetchSpy.mockResolvedValue(textResponse("not valid json"));
 
       const instance = new HttpClient();
       const { get } = instance.createMethods();
@@ -263,48 +237,40 @@ describe("HttpClient", () => {
 
   describe("defaultBody and defaultQueryParams", () => {
     it("merges defaultBody into POST body", async () => {
-      mockKyInstance.post.mockResolvedValue(mockResponse({ ok: true }));
-
       const instance = new HttpClient({ defaultBody: { app: "test" } });
       const { post } = instance.createMethods();
       await post("users", { name: "new" });
 
-      const callOptions = mockKyInstance.post.mock.calls[0]![1];
-      expect(callOptions.json).toEqual({ app: "test", name: "new" });
+      const { options } = getFetchCall();
+      expect(JSON.parse(options.body as string)).toEqual({ app: "test", name: "new" });
     });
 
     it("merges defaultQueryParams into GET searchParams", async () => {
-      mockKyInstance.get.mockResolvedValue(mockResponse({}));
-
       const instance = new HttpClient({ defaultQueryParams: { locale: "en" } });
       const { get } = instance.createMethods({ variables: { page: "1" } });
       await get("users");
 
-      const callOptions = mockKyInstance.get.mock.calls[0]![1];
-      expect(callOptions.searchParams.get("locale")).toBe("en");
-      expect(callOptions.searchParams.get("page")).toBe("1");
+      const { url } = getFetchCall();
+      const params = new URL(url, "http://base").searchParams;
+      expect(params.get("locale")).toBe("en");
+      expect(params.get("page")).toBe("1");
     });
   });
 
   describe("bodySerializer", () => {
     it("uses custom bodySerializer for POST", async () => {
-      mockKyInstance.post.mockResolvedValue(mockResponse({ ok: true }));
-
       const serializer = vi.fn((obj: Record<string, unknown>) => JSON.stringify(obj));
       const instance = new HttpClient({ bodySerializer: serializer });
       const { post } = instance.createMethods();
       await post("users", { name: "test" });
 
       expect(serializer).toHaveBeenCalledWith({ name: "test" });
-      const callOptions = mockKyInstance.post.mock.calls[0]![1];
-      expect(callOptions.body).toBe('{"name":"test"}');
+      expect(getFetchCall().options.body).toBe('{"name":"test"}');
     });
   });
 
   describe("searchParamsSerializer", () => {
     it("uses custom searchParamsSerializer.stringify for GET", async () => {
-      mockKyInstance.get.mockResolvedValue(mockResponse({}));
-
       const serializer = {
         stringify: vi.fn(
           (obj: Record<string, unknown>) => `custom=${Object.keys(obj).join(",")}`,
@@ -322,11 +288,7 @@ describe("HttpClient", () => {
   describe("responseParser", () => {
     it("uses custom responseParser when provided", async () => {
       const xmlString = "<root><item>test</item></root>";
-      mockKyInstance.get.mockResolvedValue({
-        status: 200,
-        headers: new Headers(),
-        text: () => Promise.resolve(xmlString),
-      });
+      fetchSpy.mockResolvedValue(textResponse(xmlString));
 
       const parser = vi.fn(async (response: Response) => {
         const text = await response.text();
@@ -342,11 +304,7 @@ describe("HttpClient", () => {
     });
 
     it("responseParser takes priority over responseType", async () => {
-      mockKyInstance.get.mockResolvedValue({
-        status: 200,
-        headers: new Headers(),
-        text: () => Promise.resolve("custom"),
-      });
+      fetchSpy.mockResolvedValue(textResponse("custom"));
 
       const parser = async (response: Response) => `parsed:${await response.text()}`;
       const instance = new HttpClient({ responseType: "json", responseParser: parser });
@@ -360,37 +318,22 @@ describe("HttpClient", () => {
   describe("stream mode", () => {
     it("returns ReadableStream in data when stream=true", async () => {
       const stream = new ReadableStream();
-      mockKyInstance.get.mockResolvedValue({
-        status: 200,
-        headers: new Headers(),
-        body: stream,
-      });
+      fetchSpy.mockResolvedValue(new Response(stream, { status: 200 }));
 
       const instance = new HttpClient();
       const { get } = instance.createMethods({ stream: true });
       const result = await get("events");
 
-      expect(result.data).toBe(stream);
+      expect(result.data).toBeInstanceOf(ReadableStream);
       expect(result.status).toBe(200);
     });
   });
 
   describe("error handling", () => {
-    it("converts ky HTTPError to custom HTTPError", async () => {
-      const { HTTPError: KyHTTPError } = await import("ky");
-
-      const errorResponse = {
-        status: 404,
-        headers: new Headers(),
-        json: () => Promise.resolve({ error: "not found" }),
-        text: () => Promise.resolve('{"error":"not found"}'),
-      };
-
-      const kyError = Object.create(KyHTTPError.prototype);
-      kyError.response = errorResponse;
-      kyError.message = "Request failed with status code 404";
-
-      mockKyInstance.get.mockRejectedValue(kyError);
+    it("throws HTTPError for non-ok responses", async () => {
+      fetchSpy.mockResolvedValue(
+        new Response(JSON.stringify({ error: "not found" }), { status: 404 }),
+      );
 
       const instance = new HttpClient();
       const { get } = instance.createMethods();
@@ -410,7 +353,7 @@ describe("HttpClient", () => {
       (cause as Error & { code: string }).code = "ECONNREFUSED";
       networkError.cause = cause;
 
-      mockKyInstance.get.mockRejectedValue(networkError);
+      fetchSpy.mockRejectedValue(networkError);
 
       const instance = new HttpClient();
       const { get } = instance.createMethods();
@@ -430,7 +373,7 @@ describe("HttpClient", () => {
     });
 
     it("re-throws unknown errors", async () => {
-      mockKyInstance.get.mockRejectedValue("string error");
+      fetchSpy.mockRejectedValue("string error");
 
       const instance = new HttpClient();
       const { get } = instance.createMethods();
@@ -441,49 +384,40 @@ describe("HttpClient", () => {
 
   describe("header merging", () => {
     it("passes merged headers to request", async () => {
-      mockKyInstance.get.mockResolvedValue(mockResponse({}));
-
       const instance = new HttpClient();
       const { get } = instance.createMethods({
         headers: { "content-type": "application/json" },
       });
       await get("users", { headers: new Headers({ authorization: "Bearer token" }) });
 
-      const callOptions = mockKyInstance.get.mock.calls[0]![1];
-      expect(callOptions.headers).toBeInstanceOf(Headers);
+      expect(getFetchCall().options.headers).toBeInstanceOf(Headers);
     });
   });
 
   describe("allowedHeaders", () => {
     it("extends header whitelist with allowedHeaders", async () => {
-      mockKyInstance.get.mockResolvedValue(mockResponse({}));
-
       const instance = new HttpClient({ allowedHeaders: ["x-custom-header"] });
       const { get } = instance.createMethods();
       await get("users", undefined, { headers: new Headers({ "x-custom-header": "value" }) });
 
-      const callOptions = mockKyInstance.get.mock.calls[0]![1];
-      expect(callOptions.headers.get("x-custom-header")).toBe("value");
+      const headers = getFetchCall().options.headers as Headers;
+      expect(headers.get("x-custom-header")).toBe("value");
     });
   });
 
   describe("stripUndefined", () => {
     it("removes undefined values from variables in POST", async () => {
-      mockKyInstance.post.mockResolvedValue(mockResponse({ ok: true }));
-
       const instance = new HttpClient();
       const { post } = instance.createMethods();
       await post("users", { name: "test", age: undefined });
 
-      const callOptions = mockKyInstance.post.mock.calls[0]![1];
-      expect(callOptions.json).toEqual({ name: "test" });
+      const { options } = getFetchCall();
+      expect(JSON.parse(options.body as string)).toEqual({ name: "test" });
     });
   });
 
   describe("FormData handling", () => {
     it("removes empty files from FormData", async () => {
-      mockKyInstance.post.mockResolvedValue(mockResponse({ ok: true }));
-
       const fd = new FormData();
       fd.append("name", "test");
       fd.append("avatar", new File([], "empty.png"));
@@ -493,8 +427,7 @@ describe("HttpClient", () => {
       const { post } = instance.createMethods();
       await post("upload", fd as unknown as Record<string, unknown>);
 
-      const callOptions = mockKyInstance.post.mock.calls[0]![1];
-      const body = callOptions.body as FormData;
+      const body = getFetchCall().options.body as FormData;
       expect(body.has("name")).toBe(true);
       expect(body.has("avatar")).toBe(false);
       expect(body.has("doc")).toBe(true);
@@ -502,22 +435,19 @@ describe("HttpClient", () => {
   });
 
   describe("baseURL handling", () => {
-    it("passes baseURL as prefixUrl to ky", () => {
-      new HttpClient({ baseURL: "https://api.example.com" });
-      expect(createSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ prefixUrl: "https://api.example.com" }),
-      );
+    it("prefixes requests with baseURL", async () => {
+      const instance = new HttpClient({ baseURL: "https://api.example.com" });
+      const { get } = instance.createMethods();
+      await get("users");
+      expect(getFetchCall().url).toBe("https://api.example.com/users");
     });
 
     it("overrides prefixUrl when URL has absolute basePath", async () => {
-      mockKyInstance.get.mockResolvedValue(mockResponse({}));
-
       const instance = new HttpClient({ baseURL: "https://default.com" });
       const { get } = instance.createMethods();
       await get("https://other.com/api/users");
 
-      const callOptions = mockKyInstance.get.mock.calls[0]![1];
-      expect(callOptions.prefixUrl).toBe("https://other.com");
+      expect(getFetchCall().url).toBe("https://other.com/api/users");
     });
   });
 });

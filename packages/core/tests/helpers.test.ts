@@ -122,9 +122,8 @@ describe("compileUrl", () => {
     expect(url).toBe("users/42");
   });
 
-  it("uses String(undefined) when path param is missing", () => {
-    const [url] = compileUrl("users/:id");
-    expect(url).toBe("users/undefined");
+  it("throws HTTPError when path param is missing", () => {
+    expect(() => compileUrl("users/:id")).toThrow();
   });
 
   it("removes path params from FormData", () => {

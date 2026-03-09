@@ -1,37 +1,22 @@
 /**
  * Integration test: proves the full pipeline works with the functional API.
  *
- * defineApi/defineGroup/endpoint → executeRequest → HttpClient → ky (mocked) → response
+ * defineApi/defineGroup/endpoint → executeRequest → HttpClient → fetch (mocked) → response
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import ky from "ky";
 import { defineApi, defineGroup, endpoint } from "../src/define/index";
 import { HTTPError } from "../src/error";
 import { executeRequest } from "../src/utils/createRequest";
 
-let mockKyInstance: Record<"get" | "post" | "put" | "patch" | "delete" | "head", ReturnType<typeof vi.fn>>;
+const fetchSpy = vi.fn();
 
-function mockResponse(data: unknown, status = 200, headers = new Headers()) {
-	return {
-		status,
-		headers,
-		json: () => Promise.resolve(data),
-		text: () => Promise.resolve(typeof data === "string" ? data : JSON.stringify(data)),
-		body: new ReadableStream(),
-	};
+function mockFetchResponse(data: unknown, status = 200, headers = new Headers()) {
+	return new Response(status === 204 ? null : JSON.stringify(data), { status, headers });
 }
 
 beforeEach(() => {
-	mockKyInstance = {
-		get: vi.fn(),
-		post: vi.fn(),
-		put: vi.fn(),
-		patch: vi.fn(),
-		delete: vi.fn(),
-		head: vi.fn(),
-	};
-
-	vi.spyOn(ky, "create").mockReturnValue(mockKyInstance as unknown as typeof ky);
+	fetchSpy.mockReset();
+	vi.stubGlobal("fetch", fetchSpy);
 });
 
 afterEach(() => {
@@ -80,7 +65,7 @@ describe("integration: functional API → executeRequest → response", () => {
 			{ id: 1, name: "Alice", email: "alice@test.com" },
 			{ id: 2, name: "Bob", email: "bob@test.com" },
 		];
-		mockKyInstance.get.mockResolvedValue(mockResponse(users));
+		fetchSpy.mockResolvedValue(mockFetchResponse(users));
 
 		const result = await executeRequest(sources, {
 			source: "api",
@@ -89,12 +74,14 @@ describe("integration: functional API → executeRequest → response", () => {
 		});
 
 		expect(result).toEqual(users);
-		expect(mockKyInstance.get).toHaveBeenCalled();
+		expect(fetchSpy).toHaveBeenCalled();
+		const [, options] = fetchSpy.mock.calls[0]!;
+		expect(options.method).toBe("GET");
 	});
 
 	it("GET user by id with path params", async () => {
 		const user: User = { id: 42, name: "Charlie", email: "charlie@test.com" };
-		mockKyInstance.get.mockResolvedValue(mockResponse(user));
+		fetchSpy.mockResolvedValue(mockFetchResponse(user));
 
 		const result = await executeRequest(sources, {
 			source: "api",
@@ -104,12 +91,14 @@ describe("integration: functional API → executeRequest → response", () => {
 		});
 
 		expect(result).toEqual(user);
-		expect(mockKyInstance.get).toHaveBeenCalled();
+		expect(fetchSpy).toHaveBeenCalled();
+		const [, options] = fetchSpy.mock.calls[0]!;
+		expect(options.method).toBe("GET");
 	});
 
 	it("POST create user with body", async () => {
 		const newUser: User = { id: 3, name: "Diana", email: "diana@test.com" };
-		mockKyInstance.post.mockResolvedValue(mockResponse(newUser, 201));
+		fetchSpy.mockResolvedValue(mockFetchResponse(newUser, 201));
 
 		const result = await executeRequest(sources, {
 			source: "api",
@@ -119,12 +108,14 @@ describe("integration: functional API → executeRequest → response", () => {
 		});
 
 		expect(result).toEqual(newUser);
-		expect(mockKyInstance.post).toHaveBeenCalled();
+		expect(fetchSpy).toHaveBeenCalled();
+		const [, options] = fetchSpy.mock.calls[0]!;
+		expect(options.method).toBe("POST");
 	});
 
 	it("PUT update user", async () => {
 		const updated: User = { id: 1, name: "Alice Updated", email: "alice@test.com" };
-		mockKyInstance.put.mockResolvedValue(mockResponse(updated));
+		fetchSpy.mockResolvedValue(mockFetchResponse(updated));
 
 		const result = await executeRequest(sources, {
 			source: "api",
@@ -134,11 +125,13 @@ describe("integration: functional API → executeRequest → response", () => {
 		});
 
 		expect(result).toEqual(updated);
-		expect(mockKyInstance.put).toHaveBeenCalled();
+		expect(fetchSpy).toHaveBeenCalled();
+		const [, options] = fetchSpy.mock.calls[0]!;
+		expect(options.method).toBe("PUT");
 	});
 
 	it("DELETE user", async () => {
-		mockKyInstance.delete.mockResolvedValue(mockResponse(null, 204));
+		fetchSpy.mockResolvedValue(mockFetchResponse(null, 204));
 
 		const result = await executeRequest(sources, {
 			source: "api",
@@ -152,7 +145,7 @@ describe("integration: functional API → executeRequest → response", () => {
 
 	it("works across different groups (posts)", async () => {
 		const posts: Post[] = [{ id: 1, title: "Hello", body: "World" }];
-		mockKyInstance.get.mockResolvedValue(mockResponse(posts));
+		fetchSpy.mockResolvedValue(mockFetchResponse(posts));
 
 		const result = await executeRequest(sources, {
 			source: "api",
@@ -164,7 +157,7 @@ describe("integration: functional API → executeRequest → response", () => {
 	});
 
 	it("returns rawData envelope when requested", async () => {
-		mockKyInstance.get.mockResolvedValue(mockResponse([{ id: 1 }]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1 }]));
 
 		const result = await executeRequest(sources, {
 			source: "api",
@@ -185,7 +178,7 @@ describe("integration: functional API → executeRequest → response", () => {
 describe("integration: middleware with functional API", () => {
 	it("middleware receives correct context", async () => {
 		const spy = vi.fn();
-		mockKyInstance.get.mockResolvedValue(mockResponse([]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
 		const { defineMiddleware } = await import("../src/middleware/index");
 
@@ -223,7 +216,7 @@ describe("integration: middleware with functional API", () => {
 	});
 
 	it("middleware can transform response", async () => {
-		mockKyInstance.get.mockResolvedValue(mockResponse({ raw: true }));
+		fetchSpy.mockResolvedValue(mockFetchResponse({ raw: true }));
 
 		const { defineMiddleware } = await import("../src/middleware/index");
 
@@ -303,7 +296,7 @@ describe("integration: middleware with functional API", () => {
 
 describe("integration: multiple sources", () => {
 	it("routes to correct source", async () => {
-		mockKyInstance.get.mockResolvedValue(mockResponse({ token: "abc" }));
+		fetchSpy.mockResolvedValue(mockFetchResponse({ token: "abc" }));
 
 		const authApi = defineApi({
 			baseURL: "https://auth.example.com",
@@ -374,7 +367,7 @@ describe("integration: HTTP-semantic proxy", () => {
 	});
 
 	it("allows GET proxy for endpoints with type: query", async () => {
-		mockKyInstance.get.mockResolvedValue(mockResponse([{ id: 1, name: "A", email: "a@b.com" }]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1, name: "A", email: "a@b.com" }]));
 
 		const queryApi = defineApi({
 			baseURL: "https://api.example.com",
@@ -398,7 +391,7 @@ describe("integration: HTTP-semantic proxy", () => {
 	});
 
 	it("allows POST proxy for any endpoint regardless of type", async () => {
-		mockKyInstance.get.mockResolvedValue(mockResponse([]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
 		const queryApi = defineApi({
 			baseURL: "https://api.example.com",
@@ -422,7 +415,7 @@ describe("integration: HTTP-semantic proxy", () => {
 	});
 
 	it("adds Cache-Control header for GET proxy with cache config", async () => {
-		mockKyInstance.get.mockResolvedValue(mockResponse([{ id: 1, name: "A", email: "a@b.com" }]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1, name: "A", email: "a@b.com" }]));
 
 		const { NextResponse } = await import("next/server");
 
@@ -450,7 +443,7 @@ describe("integration: HTTP-semantic proxy", () => {
 	});
 
 	it("adds x-nexus-tags header for GET proxy with cache tags", async () => {
-		mockKyInstance.get.mockResolvedValue(mockResponse([]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
 		const { NextResponse } = await import("next/server");
 
@@ -480,7 +473,7 @@ describe("integration: HTTP-semantic proxy", () => {
 	});
 
 	it("does not add cache headers for POST proxy even with cache config", async () => {
-		mockKyInstance.get.mockResolvedValue(mockResponse([]));
+		fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
 		const { NextResponse } = await import("next/server");
 
@@ -508,7 +501,7 @@ describe("integration: HTTP-semantic proxy", () => {
 	});
 
 	it("works with type: mutation for POST endpoints", async () => {
-		mockKyInstance.post.mockResolvedValue(mockResponse({ id: 1, name: "Alice", email: "a@b.com" }, 201));
+		fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1, name: "Alice", email: "a@b.com" }, 201));
 
 		const mutationApi = defineApi({
 			baseURL: "https://api.example.com",

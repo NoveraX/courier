@@ -1,7 +1,11 @@
-import ky, { HTTPError as KYHTTPError, type KyResponse, type Options } from "ky";
-
 import { HTTPError } from "../error";
-import { cleanupAfterResponse, deduplicateRequest, supportsAbortController } from "../hooks/index";
+import {
+  cleanupDeduplication,
+  deduplicateAndAbortPrevious,
+  getDedupeKey,
+  supportsAbortController,
+} from "../utils/deduplicate";
+import { coreFetch } from "../utils/fetch";
 import { compileUrl, isFormData, resolveBasePath } from "../utils/helpers";
 import { mergeHeaders } from "../utils/merge-headers";
 
@@ -16,6 +20,7 @@ import type {
   BaseOptions,
   BoundMethodOptions,
   Context,
+  FetchOptions,
   GroupOptions,
   HttpMethod,
   HttpMethods,
@@ -35,7 +40,10 @@ export class HttpClient {
   private pathOptions?: PathOptions;
   private bodySerializer?: (data: Record<string, unknown>) => BodyInit;
   private searchParamsSerializer?: SearchParamsSerializer;
-  private options: Options = {};
+  private deduplicate = false;
+  private prefixUrl = "";
+  private baseTimeout?: number;
+  private baseFetchInit: RequestInit = {};
 
   context?: Context;
   pendingRequests: { [key: string]: AbortController } = {};
@@ -57,9 +65,10 @@ export class HttpClient {
       bodySerializer,
       searchParamsSerializer,
       deduplicate,
-      hooks,
       middleware: _middleware,
-      ...kyOptions
+      timeout,
+      onDownloadProgress: _dp,
+      ...baseFetchInit
     } = options || {};
 
     this.responseType = responseType;
@@ -69,37 +78,36 @@ export class HttpClient {
     this.pathOptions = pathOptions;
     this.bodySerializer = bodySerializer;
     this.searchParamsSerializer = searchParamsSerializer;
+    this.deduplicate = !!(deduplicate && supportsAbortController);
+    this.prefixUrl = baseURL || "";
+    this.baseTimeout = timeout;
+    this.baseFetchInit = baseFetchInit as RequestInit;
 
     if (defaultQueryParams) {
       this.defaultQueryParams = { ...defaultQueryParams };
     }
-
-    const newHooks = {
-      ...hooks,
-    };
-
-    if (deduplicate && supportsAbortController) {
-      newHooks.afterResponse = [
-        ...(newHooks?.afterResponse ?? []),
-        cleanupAfterResponse.bind(this),
-      ];
-
-      newHooks.beforeRequest = [...(newHooks?.beforeRequest ?? []), deduplicateRequest.bind(this)];
-    }
-
-    this.options = {
-      ...kyOptions,
-      hooks: newHooks,
-      prefixUrl: baseURL,
-    };
-
-    this._http = ky.create(this.options);
   }
 
-  private _http: ReturnType<typeof ky.create> = ky.create({});
+  private async fetchRequest(
+    method: string,
+    url: string,
+    options: Partial<FetchOptions> = {},
+  ): Promise<Response> {
+    const { prefixUrl: overridePrefixUrl, onDownloadProgress: _dp, ...fetchOptions } = options;
 
-  private get http() {
-    return this._http;
+    const effectivePrefixUrl = overridePrefixUrl !== undefined ? overridePrefixUrl : this.prefixUrl;
+    let fullUrl = url;
+    if (effectivePrefixUrl) {
+      const base = effectivePrefixUrl.endsWith("/") ? effectivePrefixUrl : `${effectivePrefixUrl}/`;
+      const path = url.startsWith("/") ? url.slice(1) : url;
+      fullUrl = `${base}${path}`;
+    }
+
+    return coreFetch(method, fullUrl, {
+      ...this.baseFetchInit,
+      ...fetchOptions,
+      timeout: fetchOptions.timeout ?? this.baseTimeout,
+    });
   }
 
   private toSearchParams(variables?: Record<string, unknown>) {
@@ -133,7 +141,7 @@ export class HttpClient {
   private buildSearchParams(
     variables?: Record<string, unknown>,
     searchParameters?: Record<string, unknown>,
-  ): Pick<Options, "searchParams"> | undefined {
+  ): Pick<FetchOptions, "searchParams"> | undefined {
     const params = this.toSearchParams({
       ...this.defaultQueryParams,
       ...searchParameters,
@@ -144,7 +152,7 @@ export class HttpClient {
 
   private buildRequestBody(
     variables?: FormData | Record<string, unknown>,
-  ): Pick<Options, "body" | "json"> | undefined {
+  ): Pick<FetchOptions, "body" | "json"> | undefined {
     if (isFormData(variables)) {
       this.filterEmptyFiles(variables);
       return { body: variables };
@@ -173,7 +181,7 @@ export class HttpClient {
     method: HttpMethod,
     variables?: FormData | Record<string, unknown>,
     searchParameters?: Record<string, unknown>,
-  ): Pick<Options, "body" | "json" | "searchParams"> | undefined {
+  ): Pick<FetchOptions, "body" | "json" | "searchParams"> | undefined {
     variables = this.stripUndefined(variables);
 
     switch (method) {
@@ -193,7 +201,7 @@ export class HttpClient {
     }
   }
 
-  private async getResponse(response: KyResponse, message?: string) {
+  private async getResponse(response: Response, message?: string) {
     const data = await this.getResponseData(response, message);
 
     const { status, headers } = response;
@@ -201,7 +209,7 @@ export class HttpClient {
     return { status, headers, data };
   }
 
-  private async getResponseData(response: KyResponse, message?: string): Promise<unknown> {
+  private async getResponseData(response: Response, message?: string): Promise<unknown> {
     if (response.status === 204) {
       return null;
     }
@@ -238,7 +246,12 @@ export class HttpClient {
     boundOptions?: BoundMethodOptions,
     groupOptions?: GroupOptions,
   ) {
-    const { variables: vars, headers: kyHeaders, stream, ...kyOptions } = boundOptions || {};
+    const {
+      variables: vars,
+      headers: boundHeaders,
+      stream,
+      ...boundFetchOptions
+    } = boundOptions || {};
     const { prefix = "", pathOptions } = groupOptions || {};
 
     const cleanedVars = this.stripUndefined(vars);
@@ -262,16 +275,16 @@ export class HttpClient {
 
       const prefixUrlOverride = baseUrl ? { prefixUrl: baseUrl } : {};
 
-      let options: Options;
+      let options: Partial<FetchOptions>;
 
       if (method === "head") {
         const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[1] || {};
 
         options = {
           ...otherArgumentOptions,
-          ...kyOptions,
+          ...boundFetchOptions,
           ...prefixUrlOverride,
-          headers: mergeHeaders(kyHeaders, toHeadersInit(optionHeaders), this.allowedHeaders),
+          headers: mergeHeaders(boundHeaders, toHeadersInit(optionHeaders), this.allowedHeaders),
           searchParams: this.toSearchParams({
             ...this.defaultQueryParams,
             ...newSearchParameters,
@@ -285,9 +298,9 @@ export class HttpClient {
 
         options = {
           ...otherArgumentOptions,
-          ...kyOptions,
+          ...boundFetchOptions,
           ...prefixUrlOverride,
-          headers: mergeHeaders(kyHeaders, optionHeaders, this.allowedHeaders),
+          headers: mergeHeaders(boundHeaders, optionHeaders, this.allowedHeaders),
           ...this.buildBody(method, arguments_[1] || newVariables, {
             ...searchParameters,
             ...newSearchParameters,
@@ -295,8 +308,26 @@ export class HttpClient {
         };
       }
 
+      // Deduplication: abort previous request with the same key
+      let dedupeKey: string | undefined;
+      if (this.deduplicate) {
+        dedupeKey = getDedupeKey(url, method);
+        const controller = deduplicateAndAbortPrevious(this, dedupeKey);
+
+        options.signal = options.signal
+          ? AbortSignal.any([controller.signal, options.signal])
+          : controller.signal;
+      }
+
       try {
-        const response = await this.http[method === "del" ? "delete" : method](url, options);
+        const response = await this.fetchRequest(method, url, options);
+
+        if (dedupeKey) cleanupDeduplication(this, dedupeKey);
+
+        if (!response.ok) {
+          const errorResponse = await this.getResponse(response, `HTTP ${response.status}`);
+          throw new HTTPError(errorResponse);
+        }
 
         const result = stream
           ? { status: response.status, headers: response.headers, data: response.body }
@@ -304,20 +335,17 @@ export class HttpClient {
 
         return result as HttpResponse<T>;
       } catch (error) {
-        if (error instanceof KYHTTPError) {
-          const response = await this.getResponse(error.response, error.message);
-          throw new HTTPError(response);
-        }
+        if (dedupeKey) cleanupDeduplication(this, dedupeKey);
 
-        if (error instanceof Error && error.cause instanceof Error && "code" in error.cause) {
+        if (error instanceof HTTPError) throw error;
+
+        if (error instanceof Error) {
+          const cause = error.cause instanceof Error ? error.cause : error;
+          const code = "code" in cause ? String(cause.code) : undefined;
           throw new HTTPError({
             status: 0,
             headers: new Headers(),
-            data: {
-              success: false,
-              message: error.cause.message,
-              code: String(error.cause.code),
-            },
+            data: { success: false, message: cause.message, ...(code && { code }) },
           });
         }
 

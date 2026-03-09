@@ -1,13 +1,6 @@
-import type ky from "ky";
-import type { Options } from "ky";
-
 import type { MiddlewareFn } from "../middleware/types";
 
-type KyInstance = typeof ky;
-
-export type HttpMethod = Exclude<KyMethods, "delete"> | "del";
-
-type KyMethods = keyof Omit<KyInstance, "create" | "extend" | "retry" | "stop">;
+export type HttpMethod = "get" | "post" | "put" | "patch" | "del" | "head";
 
 export type AnyEndpoints = Partial<{
   [k: string]: (
@@ -26,6 +19,12 @@ export type BoundMethodOptions = SimpleOptions & {
 };
 
 export type UploadProgress = {
+  percent: number;
+  transferredBytes: number;
+  totalBytes: number;
+};
+
+export type DownloadProgress = {
   percent: number;
   transferredBytes: number;
   totalBytes: number;
@@ -53,13 +52,22 @@ export type MethodParameters<T extends HttpMethod> = T extends "head"
   ? [url?: string, options?: MethodOptions<T>]
   : [url?: string, variables?: Record<string, unknown>, options?: MethodOptions<T>];
 
-export type OptionsWithSearchParams = Omit<Options, "searchParams"> & {
+/** Core fetch options — extends standard RequestInit with convenience properties */
+export type FetchOptions = Omit<RequestInit, "method"> & {
+  json?: unknown;
+  searchParams?: string | URLSearchParams | Record<string, string>;
+  timeout?: number;
+  prefixUrl?: string;
+  onDownloadProgress?: (progress: DownloadProgress) => void;
+};
+
+export type OptionsWithSearchParams = Omit<FetchOptions, "searchParams"> & {
   searchParams?: Record<string, unknown>;
 };
 
 export type SimpleOptions = Omit<OptionsWithSearchParams, "body" | "json" | "searchParams">;
 
-export type MethodOptions<T extends HttpMethod> = T extends "delete" | "get" | "head"
+export type MethodOptions<T extends HttpMethod> = T extends "del" | "get" | "head"
   ? SimpleOptions
   : OptionsWithSearchParams;
 
@@ -71,7 +79,7 @@ export type SearchParamsSerializer = {
 };
 
 export type BaseOptions = MergeOptions &
-  Omit<Options, "body" | "json" | "prefixUrl" | "searchParams"> & {
+  Omit<FetchOptions, "body" | "json" | "prefixUrl" | "searchParams"> & {
     baseURL?: string;
     responseType?: ResponseType;
     responseParser?: (response: Response) => Promise<unknown>;

@@ -1,5 +1,5 @@
 import { HTTPError } from "../error";
-import type { CallOptions, Context } from "../instance/types";
+import type { CallOptions, Context } from "../http-client/types";
 import type { RequestFn } from "../types";
 import { executeRequest } from "../utils/createRequest";
 import { parseEndpointKey } from "../utils/helpers";

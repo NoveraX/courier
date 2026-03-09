@@ -1,8 +1,8 @@
-import ky, { HTTPError as KYHTTPError } from "ky";
-
 import { HTTPError } from "./error";
-import type { CallOptions, UploadProgress } from "./instance/types";
+import type { CallOptions, UploadProgress } from "./http-client/types";
 import type { RequestFn } from "./types";
+import type { CoreFetchInit } from "./utils/fetch";
+import { coreFetch } from "./utils/fetch";
 import {
   isFormData,
   parseEndpointKey,
@@ -141,21 +141,7 @@ async function readErrorResponse(response: Response): Promise<unknown> {
   }
 }
 
-async function readKyErrorData(
-  error: InstanceType<typeof KYHTTPError>,
-  stream: boolean,
-): Promise<unknown> {
-  if (stream) {
-    return { success: false, message: `HTTP ${error.response.status}` };
-  }
-  try {
-    return await error.response.json();
-  } catch {
-    return await error.response.text().catch(() => error.message);
-  }
-}
-
-async function sendKy(
+async function sendFetch(
   method: "get" | "post",
   url: string,
   options: Record<string, unknown>,
@@ -166,30 +152,33 @@ async function sendKy(
     onError?: (error: HTTPError) => void | Promise<void>;
   },
 ): Promise<unknown> {
-  const kyFn = method === "get" ? ky.get : ky.post;
+  const { onDownloadProgress: _dp, ...fetchOptions } = options;
 
   try {
-    if (ctx.stream) {
-      const response = await kyFn(url, options);
-      await ctx.onSuccess?.(response);
-      return response;
-    }
+    const response = await coreFetch(method, url, fetchOptions as CoreFetchInit);
 
-    const response = await kyFn(url, options).json();
-    await ctx.onSuccess?.(response);
-    return response;
-  } catch (error) {
-    if (error instanceof KYHTTPError) {
-      const responseData = await readKyErrorData(error, ctx.stream);
+    if (!response.ok) {
+      const responseData = await readErrorResponse(response);
       const httpError = buildHttpError(
-        error.response.status,
-        error.response.headers,
+        response.status,
+        response.headers,
         responseData,
         ctx.requestPayload,
       );
       await ctx.onError?.(httpError);
       throw httpError;
     }
+
+    if (ctx.stream) {
+      await ctx.onSuccess?.(response);
+      return response;
+    }
+
+    const data = await response.json();
+    await ctx.onSuccess?.(data);
+    return data;
+  } catch (error) {
+    if (error instanceof HTTPError) throw error;
     throw error;
   }
 }
@@ -210,7 +199,7 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
   } = defaults;
 
   const url = `/api/${routePath}`;
-  const kyCtx = { onSuccess: globalOnSuccess, onError: globalOnError };
+  const fetchCtx = { onSuccess: globalOnSuccess, onError: globalOnError };
 
   const selectSource = (source: string, options?: CallOptions<boolean>) => {
     async function execute(...arguments_: [string] | [string, FormData | Record<string, unknown>]) {
@@ -224,7 +213,7 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
         signal,
         stream,
         method: proxyMethod,
-        ...kyOptions
+        ...extraOptions
       } = options || {};
 
       // Next.js augments RequestInit with a `next` property for caching (revalidate, tags).
@@ -233,11 +222,11 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
         | Record<string, unknown>
         | undefined;
 
-      if (kyOptions.timeout === undefined && defaultTimeout !== undefined) {
-        kyOptions.timeout = defaultTimeout;
+      if (extraOptions.timeout === undefined && defaultTimeout !== undefined) {
+        extraOptions.timeout = defaultTimeout;
       }
 
-      const serverOptions = stream ? { ...kyOptions, stream } : kyOptions;
+      const serverOptions = stream ? { ...extraOptions, stream } : extraOptions;
 
       // GET proxy: encode everything as query params
       if (proxyMethod === "GET" && !isFormData(variables) && !onUploadProgress) {
@@ -255,7 +244,7 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
           searchParams._o = serverOptionsStr;
         }
 
-        return sendKy(
+        return sendFetch(
           "get",
           url,
           {
@@ -263,13 +252,13 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
             credentials,
             headers: defaultHeaders,
             signal,
-            timeout: kyOptions.timeout,
+            timeout: extraOptions.timeout,
             cache,
             next,
             onDownloadProgress,
           },
           {
-            ...kyCtx,
+            ...fetchCtx,
             stream: !!stream,
             requestPayload: { json: { source, group, method, variables } },
           },
@@ -331,7 +320,7 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
           const response = await xhrUpload(url, body, {
             headers: defaultHeaders,
             credentials,
-            timeout: kyOptions.timeout || undefined,
+            timeout: extraOptions.timeout || undefined,
             signal: signal || undefined,
             onProgress: onUploadProgress,
           });
@@ -358,8 +347,8 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
         }
       }
 
-      // POST via ky
-      return sendKy(
+      // POST via fetch
+      return sendFetch(
         "post",
         url,
         {
@@ -369,11 +358,11 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
           next,
           onDownloadProgress,
           signal,
-          timeout: kyOptions.timeout,
+          timeout: extraOptions.timeout,
           headers: defaultHeaders,
         },
         {
-          ...kyCtx,
+          ...fetchCtx,
           stream: !!stream,
           requestPayload,
         },

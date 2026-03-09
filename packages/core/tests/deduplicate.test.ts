@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  cleanupAfterResponse,
-  deduplicateRequest,
+  cleanupDeduplication,
+  deduplicateAndAbortPrevious,
   getDedupeKey,
   supportsAbortController,
-} from "../src/hooks/index";
-import type { HttpClient } from "../src/instance/index";
+} from "../src/utils/deduplicate";
+import type { HttpClient } from "../src/http-client/index";
 
 describe("supportsAbortController", () => {
   it("is true in Node.js test environment", () => {
@@ -48,7 +48,7 @@ describe("getDedupeKey", () => {
   });
 });
 
-describe("cleanupAfterResponse", () => {
+describe("cleanupDeduplication", () => {
   it("removes pending request by key", () => {
     const client = {
       pendingRequests: {
@@ -56,8 +56,7 @@ describe("cleanupAfterResponse", () => {
       },
     } as unknown as HttpClient;
 
-    const request = new Request("https://api.com/users", { method: "GET" });
-    cleanupAfterResponse.call(client, request);
+    cleanupDeduplication(client, "GET:https://api.com/users");
 
     expect(client.pendingRequests["GET:https://api.com/users"]).toBeUndefined();
   });
@@ -67,37 +66,19 @@ describe("cleanupAfterResponse", () => {
       pendingRequests: {},
     } as unknown as HttpClient;
 
-    const request = new Request("https://api.com/users", { method: "GET" });
-    cleanupAfterResponse.call(client, request);
+    cleanupDeduplication(client, "GET:https://api.com/users");
 
     expect(Object.keys(client.pendingRequests)).toHaveLength(0);
   });
-
-  it("strips query params when computing key", () => {
-    const controller = new AbortController();
-    const client = {
-      pendingRequests: {
-        "GET:https://api.com/users": controller,
-      },
-    } as unknown as HttpClient;
-
-    const request = new Request("https://api.com/users?page=1", { method: "GET" });
-    cleanupAfterResponse.call(client, request);
-
-    expect(client.pendingRequests["GET:https://api.com/users"]).toBeUndefined();
-  });
 });
 
-describe("deduplicateRequest", () => {
+describe("deduplicateAndAbortPrevious", () => {
   it("stores new AbortController in pendingRequests", () => {
     const client = {
       pendingRequests: {} as Record<string, AbortController>,
     } as unknown as HttpClient;
 
-    const request = new Request("https://api.com/users", { method: "GET" });
-    const options = {} as any;
-
-    deduplicateRequest.call(client, request, options);
+    deduplicateAndAbortPrevious(client, "GET:https://api.com/users");
 
     expect(client.pendingRequests["GET:https://api.com/users"]).toBeInstanceOf(AbortController);
   });
@@ -112,40 +93,21 @@ describe("deduplicateRequest", () => {
       } as Record<string, AbortController>,
     } as unknown as HttpClient;
 
-    const request = new Request("https://api.com/users", { method: "GET" });
-    const options = {} as any;
-
-    deduplicateRequest.call(client, request, options);
+    deduplicateAndAbortPrevious(client, "GET:https://api.com/users");
 
     expect(abortSpy).toHaveBeenCalled();
     // New controller replaces the old one
     expect(client.pendingRequests["GET:https://api.com/users"]).not.toBe(previousController);
   });
 
-  it("returns a new Request", () => {
+  it("returns the new AbortController", () => {
     const client = {
       pendingRequests: {} as Record<string, AbortController>,
     } as unknown as HttpClient;
 
-    const request = new Request("https://api.com/users", { method: "GET" });
-    const options = {} as any;
+    const controller = deduplicateAndAbortPrevious(client, "GET:https://api.com/users");
 
-    const result = deduplicateRequest.call(client, request, options);
-
-    expect(result).toBeInstanceOf(Request);
-  });
-
-  it("sets signal on options", () => {
-    const client = {
-      pendingRequests: {} as Record<string, AbortController>,
-    } as unknown as HttpClient;
-
-    const request = new Request("https://api.com/users", { method: "GET" });
-    const options = {} as any;
-
-    deduplicateRequest.call(client, request, options);
-
-    expect(options.signal).toBeDefined();
-    expect(options.signal).toBeInstanceOf(AbortSignal);
+    expect(controller).toBeInstanceOf(AbortController);
+    expect(client.pendingRequests["GET:https://api.com/users"]).toBe(controller);
   });
 });

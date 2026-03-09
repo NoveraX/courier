@@ -1,4 +1,4 @@
-import type { Endpoint, EndpointGroup } from "./datasource";
+import type { Endpoint } from "./define/types";
 import type { CallOptions, Context, HttpResponse } from "./instance/types";
 
 export type RequestFn<T extends Record<string, any>, D extends boolean = false> = <
@@ -46,13 +46,13 @@ export type ResolveEndpoint<
 > = G extends string ? Groups<T>[G][M] : T[M];
 
 type GroupedEndpoints<T extends Record<string, any>> = {
-  [K in keyof T]: K extends string ? `${K}:${ClassEndpoints<T[K]>}` : never;
+  [K in keyof T]: K extends string ? `${K}:${FunctionKeys<T[K]>}` : never;
 }[keyof T];
 
 export type EndpointKey<T extends Record<string, any>, K extends Record<string, any> = Groups<T>> =
-  K extends Record<string, any> ? ClassEndpoints<T> | GroupedEndpoints<K> : ClassEndpoints<T>;
+  K extends Record<string, any> ? FunctionKeys<T> | GroupedEndpoints<K> : FunctionKeys<T>;
 
-type ClassEndpoints<T extends Record<string, any>> = NonNullable<
+type FunctionKeys<T extends Record<string, any>> = NonNullable<
   {
     [K in keyof T]: T[K] extends (...args: never[]) => unknown
       ? K extends string
@@ -67,10 +67,6 @@ type Groups<T extends Record<string, any>> = NonNullable<T["options"]>["groups"]
 type EndpointResult<T extends boolean = false, R = unknown> = Promise<
   T extends true ? Partial<HttpResponse<R>> : R
 >;
-
-export type GroupsRecord = {
-  [k: string]: EndpointGroup;
-};
 
 export type SuccessResponse<D = unknown> = {
   success: true;

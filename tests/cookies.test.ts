@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ky from "ky";
 import { NextResponse } from "next/server";
-import { Datasource } from "../src/datasource";
 import type { HttpMethods } from "../src/instance/types";
 import { executeRequest } from "../src/utils/createRequest";
 
@@ -25,11 +24,7 @@ afterEach(() => {
 });
 
 function createTestSource(methods: Record<string, Function>, options = {}) {
-  const source = new Datasource(options);
-  for (const [name, fn] of Object.entries(methods)) {
-    (source as Record<string, unknown>)[name] = fn;
-  }
-  return source;
+  return { options, ...methods };
 }
 
 function makeResponseWithCookies(data: unknown, cookies: string[]) {

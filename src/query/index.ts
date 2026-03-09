@@ -15,7 +15,7 @@ import {
   useQuery,
 } from "@tanstack/react-query";
 import { type ClientRequestDefaults, createClientRequest } from "../create";
-import type { Endpoint } from "../datasource";
+import type { Endpoint } from "../define/types";
 import type { CallOptions } from "../instance/types";
 import type { EndpointKey, ResolveEndpoint } from "../types";
 

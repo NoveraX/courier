@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ky from "ky";
+import { defineApi, defineGroup } from "../src/define/index";
 import { HTTPError } from "../src/error";
-import { Datasource, EndpointGroup } from "../src/datasource";
 import type { HttpMethods } from "../src/instance/types";
 import { executeRequest } from "../src/utils/createRequest";
 
@@ -35,10 +35,7 @@ afterEach(() => {
 });
 
 function createTestSource(methods: Record<string, Function>, options = {}) {
-  const source = new Datasource(options);
-  for (const [name, fn] of Object.entries(methods)) {
-    (source as Record<string, unknown>)[name] = fn;
-  }
+  const source = { options, ...methods };
   return source;
 }
 
@@ -233,10 +230,14 @@ describe("executeRequest", () => {
 
       const loginFn = vi.fn((methods: HttpMethods) => methods.post("login"));
 
-      const authGroup = new EndpointGroup({ prefix: "auth" });
-      (authGroup as Record<string, unknown>).login = loginFn;
-
-      const source = new Datasource({ groups: { auth: authGroup } });
+      const source = defineApi({
+        groups: {
+          auth: defineGroup({
+            prefix: "auth",
+            endpoints: { login: loginFn as any },
+          }),
+        },
+      });
       const sources = { api: source };
 
       const result = await executeRequest(sources, {
@@ -255,9 +256,11 @@ describe("executeRequest", () => {
 
       const healthFn = vi.fn((methods: HttpMethods) => methods.get("health"));
 
-      const emptyGroup = new EndpointGroup();
-      const source = new Datasource({ groups: { misc: emptyGroup } });
-      (source as Record<string, unknown>).health = healthFn;
+      const emptyGroup = defineGroup({ endpoints: {} });
+      const source = {
+        options: { groups: { misc: emptyGroup } },
+        health: healthFn,
+      };
       const sources = { api: source };
 
       const result = await executeRequest(sources, {

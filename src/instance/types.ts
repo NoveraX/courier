@@ -100,6 +100,10 @@ export type MergeOptions = {
   pathOptions?: PathOptions;
 };
 
+export type GroupOptions = MergeOptions & {
+  prefix?: string;
+};
+
 export type PathOptions = (request?: NextRequest) => PathOptionsResult | Promise<PathOptionsResult>;
 
 type PathOptionsResult = Record<string, boolean | number | string | null | undefined> | undefined;

@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import type { Datasource } from "../datasource";
+import type { Sources } from "../define/types";
 import { HTTPError } from "../error";
 import { HttpClient } from "../instance/index";
 import type { AnyEndpoints, BaseOptions, Context, HookInfo } from "../instance/types";
-import type { GroupsRecord } from "../types";
 import {
   headersToObject,
   isHeaders,
@@ -92,17 +91,17 @@ const buildResponse = (context: Context | undefined, response: InternalResponse)
 };
 
 export async function executeRequest(
-  sources: Record<string, Datasource<GroupsRecord | undefined>>,
+  sources: Sources,
   requestPayload: RequestPayloadInput,
   context: Context & { res: NextResponse },
 ): Promise<Response>;
 export async function executeRequest(
-  sources: Record<string, Datasource<GroupsRecord | undefined>>,
+  sources: Sources,
   requestPayload: RequestPayloadInput,
   context?: Context,
 ): Promise<unknown>;
 export async function executeRequest(
-  sources: Record<string, Datasource<GroupsRecord | undefined>>,
+  sources: Sources,
   requestPayload: RequestPayloadInput,
   context?: Context,
 ) {

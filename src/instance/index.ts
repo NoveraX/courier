@@ -12,12 +12,11 @@ const toHeadersInit = (value: unknown): HeadersInit | undefined => {
   return undefined;
 };
 
-import type { EndpointGroupOptions } from "../datasource";
-
 import type {
   BaseOptions,
   BoundMethodOptions,
   Context,
+  GroupOptions,
   HttpMethod,
   HttpMethods,
   HttpResponse,
@@ -239,7 +238,7 @@ export class HttpClient {
   private bindMethod(
     method: HttpMethod,
     boundOptions?: BoundMethodOptions,
-    groupOptions?: EndpointGroupOptions,
+    groupOptions?: GroupOptions,
   ) {
     const { variables: vars, headers: kyHeaders, stream, ...kyOptions } = boundOptions || {};
     const { prefix = "", pathOptions } = groupOptions || {};
@@ -329,7 +328,7 @@ export class HttpClient {
     };
   }
 
-  createMethods(options?: BoundMethodOptions, groupOptions?: EndpointGroupOptions): HttpMethods {
+  createMethods(options?: BoundMethodOptions, groupOptions?: GroupOptions): HttpMethods {
     return {
       get: this.bindMethod("get", options, groupOptions),
       post: this.bindMethod("post", options, groupOptions),

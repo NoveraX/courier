@@ -1,5 +1,5 @@
 import type { Sources } from "./define/types";
-import { executeRequest } from "./utils/createRequest";
+import { executeRequest } from "./utils/execute";
 import type { RequestPayloadInput } from "./utils/helpers";
 
 const META_KEYS = new Set(["_s", "_g", "_m", "_o"]);

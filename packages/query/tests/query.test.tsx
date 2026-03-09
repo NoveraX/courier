@@ -88,8 +88,8 @@ describe("createQueryRequest", () => {
 		expect(result).toHaveProperty("request");
 	});
 
-	it("passes defaults to createClientRequest", () => {
-		const defaults = { routePath: "/custom" };
+	it("passes defaults to createProxyRequest", () => {
+		const defaults = { proxyUrl: "/custom" };
 		const { request } = createQueryRequest<TestApi>(defaults);
 		expect(typeof request).toBe("function");
 	});

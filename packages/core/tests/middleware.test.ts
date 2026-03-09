@@ -10,7 +10,7 @@ import {
 	retryMiddleware,
 } from "../src/middleware/index";
 import type { MiddlewareFn, MiddlewareResponse } from "../src/middleware/types";
-import { executeRequest } from "../src/utils/createRequest";
+import { executeRequest } from "../src/utils/execute";
 
 // ---- mock fetch ----
 

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineApi, defineGroup } from "../src/define/index";
 import { HTTPError } from "../src/error";
 import type { HttpMethods } from "../src/http-client/types";
-import { executeRequest } from "../src/utils/createRequest";
+import { executeRequest } from "../src/utils/execute";
 
 let fetchSpy: ReturnType<typeof vi.fn>;
 

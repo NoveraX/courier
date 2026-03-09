@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../src/utils/createRequest", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/utils/createRequest")>();
+vi.mock("../src/utils/execute", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/utils/execute")>();
   return {
     ...actual,
     executeRequest: vi.fn(),
   };
 });
 
-import { executeRequest } from "../src/utils/createRequest";
+import { executeRequest } from "../src/utils/execute";
 import { createHandler } from "../src/adapter";
 
 const mockExecuteRequest = vi.mocked(executeRequest);

@@ -1,12 +1,11 @@
-import { HTTPError } from "../error";
-import type { CallOptions, Context } from "../http-client/types";
-import type { RequestFn } from "../types";
-import { executeRequest } from "../utils/createRequest";
-import { parseEndpointKey } from "../utils/helpers";
+import type { Sources } from "./define/types";
+import { HTTPError } from "./error";
+import type { CallOptions, Context } from "./http-client/types";
+import type { RequestFn } from "./types";
+import { executeRequest } from "./utils/execute";
+import { parseEndpointKey } from "./utils/helpers";
 
-import type { Sources } from "./types";
-
-export type DirectRequestDefaults = {
+export type RequestDefaults = {
   timeout?: number;
   headers?: Record<string, string>;
   onError?: (error: HTTPError) => void | Promise<void>;
@@ -21,9 +20,9 @@ const isContext = (value: unknown): value is Context =>
     ("res" in value && value.res instanceof Response) ||
     ("headers" in value && value.headers instanceof Headers));
 
-export function createDirectRequest<T extends Sources>(
+export function createRequest<T extends Sources>(
   sources: T,
-  defaults: DirectRequestDefaults = {},
+  defaults: RequestDefaults = {},
 ): RequestFn<T, true> {
   const {
     timeout: defaultTimeout,
@@ -51,7 +50,7 @@ export function createDirectRequest<T extends Sources>(
         mergedOptions.headers = options?.headers
           ? {
               ...defaultHeaders,
-              ...Object.fromEntries(new Headers(options.headers as HeadersInit)), // ky KyHeadersInit → DOM HeadersInit bridge
+              ...Object.fromEntries(new Headers(options.headers as HeadersInit)),
             }
           : defaultHeaders;
       }

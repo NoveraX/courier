@@ -3,7 +3,7 @@ import * as v from "valibot";
 import { z } from "zod";
 import { defineApi, defineGroup, endpoint } from "../src/define/index";
 import { ENDPOINT_SCHEMA, ValidationError, isValidationError, validateSchema } from "../src/validation";
-import { executeRequest } from "../src/utils/createRequest";
+import { executeRequest } from "../src/utils/execute";
 
 // ---- mock fetch ----
 

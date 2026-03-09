@@ -1,5 +1,4 @@
 export { type AdapterHandler, createHandler } from "./adapter";
-export { type ClientRequestDefaults, createClientRequest } from "./create";
 export { HTTPError, isHTTPError } from "./error";
 export type {
   CallOptions,
@@ -13,8 +12,10 @@ export type {
   MiddlewareResponse,
   NextFn,
 } from "./middleware/types";
+export { createProxyRequest, type ProxyRequestDefaults } from "./proxy";
+export { createRequest, type RequestDefaults } from "./request";
 export type { EndpointKey, RequestFn, ResolveEndpoint, SuccessResponse } from "./types";
-export { executeRequest } from "./utils/createRequest";
+export { executeRequest } from "./utils/execute";
 export { parseEndpointKey, type RequestPayloadInput } from "./utils/helpers";
 export type { CacheConfig, ValidationIssue } from "./validation";
 export { isValidationError, ValidationError } from "./validation";

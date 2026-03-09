@@ -5,10 +5,10 @@ export { createQueryKeys } from "./keys";
 
 import {
   type CallOptions,
-  type ClientRequestDefaults,
-  createClientRequest,
+  createProxyRequest,
   type EndpointKey,
   type HTTPError,
+  type ProxyRequestDefaults,
   type ResolveEndpoint,
 } from "@noverax/nexus";
 import type { Endpoint } from "@noverax/nexus/define";
@@ -195,9 +195,9 @@ export function optimisticOptions<CacheData, MutationVars>(
 // ---------------------------------------------------------------------------
 
 export function createQueryRequest<T extends Record<string, any> = Record<string, any>>(
-  defaults?: ClientRequestDefaults,
+  defaults?: ProxyRequestDefaults,
 ) {
-  const client = createClientRequest<T>(defaults);
+  const client = createProxyRequest<T>(defaults);
 
   function buildQueryKey(source: string, endpoint: string, variables?: unknown): QueryKey {
     return variables !== undefined ? [source, endpoint, variables] : [source, endpoint];

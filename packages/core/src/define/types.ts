@@ -30,7 +30,7 @@ export type DefinedApi<G extends GroupRecord = GroupRecord> = {
   options: BaseOptions & { groups: G };
 };
 
-/** Loose source type for executeRequest / createDirectRequest */
+/** Loose source type for executeRequest / createRequest */
 export type AnySource = {
   options?: BaseOptions & { groups?: Record<string, { options?: GroupOptions }> };
 };

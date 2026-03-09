@@ -107,8 +107,9 @@ function xhrUpload(
   });
 }
 
-export type ClientRequestDefaults = {
-  routePath?: string;
+export type ProxyRequestDefaults = {
+  /** Full URL path to the proxy endpoint (default: "/api/request") */
+  proxyUrl?: string;
   timeout?: number;
   credentials?: RequestCredentials;
   headers?: Record<string, string>;
@@ -183,14 +184,11 @@ async function sendFetch(
   }
 }
 
-export function createClientRequest<T extends Record<string, unknown> = Record<string, unknown>>(
-  defaults: ClientRequestDefaults = {},
+export function createProxyRequest<T extends Record<string, unknown> = Record<string, unknown>>(
+  defaults: ProxyRequestDefaults = {},
 ): RequestFn<T> {
   const {
-    routePath = (process.env.NEXT_PUBLIC_REQUEST_PAGE || "request").replace(
-      /[^a-zA-Z0-9_\-/]/g,
-      "",
-    ),
+    proxyUrl = "/api/request",
     credentials = "include",
     headers: defaultHeaders,
     timeout: defaultTimeout,
@@ -198,7 +196,7 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
     onSuccess: globalOnSuccess,
   } = defaults;
 
-  const url = `/api/${routePath}`;
+  const url = proxyUrl;
   const fetchCtx = { onSuccess: globalOnSuccess, onError: globalOnError };
 
   const selectSource = (source: string, options?: CallOptions<boolean>) => {

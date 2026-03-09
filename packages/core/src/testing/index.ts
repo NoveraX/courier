@@ -37,7 +37,7 @@ type ExtractEndpointResponse<M> = M extends Endpoint<infer R, any> ? R : unknown
 
 /** In-memory test client with mock support and request history */
 export type TestClient<T extends Record<string, any> = Record<string, any>> = {
-  /** Request function — same curried API as createClientRequest / createDirectRequest */
+  /** Request function — same curried API as createRequest / createProxyRequest */
   request: RequestFn<T>;
   /** Mock a specific endpoint's response */
   mock: <K extends keyof T & string, Q extends EndpointKey<T[K]>>(

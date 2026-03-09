@@ -34,7 +34,7 @@ export function Header() {
     <div className="sticky top-0 z-40">
       {/* Mobile announcement banner — above header */}
       {!dismissed && (
-        <div className="relative flex items-center justify-center gap-2 border-b bg-brand/5 px-8 py-1.5 md:hidden">
+        <div className="relative flex items-center justify-center gap-2 border-b bg-background px-8 py-1.5 md:hidden">
           <span className="relative flex h-1.5 w-1.5 shrink-0">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-50" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand" />

@@ -1,10 +1,11 @@
-import { BookOpen, Github, Package } from "lucide-react"
+import { BookOpen, Package } from "lucide-react"
 
+import { GithubIcon } from "@/components/icons/github"
 import { NexusLogo } from "@/components/nexus-logo"
 
 const links = [
   { label: "Documentation", href: "/docs/introduction", icon: BookOpen },
-  { label: "GitHub", href: "https://github.com/NoveraX/nexus", icon: Github, external: true },
+  { label: "GitHub", href: "https://github.com/NoveraX/nexus", icon: GithubIcon, external: true },
   {
     label: "npm",
     href: "https://www.npmjs.com/package/@noverax/nexus",

@@ -1,9 +1,11 @@
-import { ArrowRight, Github } from "lucide-react"
-import Image from "next/image"
+import { ArrowRight } from "lucide-react"
+
+import { GithubIcon } from "@/components/icons/github"
 import Link from "next/link"
 
 import { CodeBlock } from "@/components/docs/code-block"
 import { Button } from "@/components/ui/button"
+import { NexusLogo } from "../nexus-logo"
 import { InstallBadge } from "./install-badge"
 import { AnimatedSection } from "./section-animate"
 
@@ -40,13 +42,12 @@ export function Hero() {
           {/* Left: text */}
           <AnimatedSection className="max-w-xl">
             <div className="mb-6 flex items-center gap-4">
-              <Image
-                src="/logos/nexus-icon-gradient.png"
-                alt=""
-                width={56}
-                height={56}
+              <NexusLogo
+                variant="icon"
+                width={52}
+                height={52}
+                gradient
                 className="drop-shadow-[0_0_24px_oklch(0.65_0.25_270/0.5)]"
-                priority
               />
               <InstallBadge />
             </div>
@@ -70,7 +71,7 @@ export function Hero() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <Github className="mr-1 h-4 w-4" />
+                  <GithubIcon className="mr-1 h-4 w-4" />
                   GitHub
                 </a>
               </Button>

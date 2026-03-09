@@ -16,7 +16,7 @@ const logos: Record<Variant, { dark: string; light: string; gradient: string }> 
   icon: {
     dark: "/logos/nexus-icon-dark.png",
     light: "/logos/nexus-icon-light.png",
-    gradient: "/logos/nexus-icon-gradient.png",
+    gradient: "/logos/nexus-icon-gradient-2.png",
   },
   horizontal: {
     dark: "/logos/nexus-logo-horizontal-dark.png",

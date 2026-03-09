@@ -51,11 +51,13 @@ function MobileSection({
   pathname,
   onNavigate,
   searchQuery,
+  index,
 }: {
   section: NavSection
   pathname: string
   onNavigate: () => void
   searchQuery: string
+  index: number
 }) {
   const hasActiveItem = section.items.some((item) => item.href === pathname)
   const [open, setOpen] = useState(section.defaultOpen ?? hasActiveItem)
@@ -73,7 +75,10 @@ function MobileSection({
   const isOpen = searchQuery ? true : open
 
   return (
-    <div>
+    <div
+      className="mobile-nav-section"
+      style={{ animationDelay: `${index * 35 + 100}ms` }}
+    >
       <button
         type="button"
         onClick={() => !searchQuery && setOpen(!open)}
@@ -96,7 +101,7 @@ function MobileSection({
       </button>
       <div
         className={cn(
-          "grid transition-[grid-template-rows] duration-200 ease-out",
+          "grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
           isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
         )}
       >
@@ -131,7 +136,7 @@ export function MobileNav() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-72 p-0">
-        <SheetHeader className="border-b px-4 py-3">
+        <SheetHeader className="mobile-nav-header border-b px-4 py-3">
           <SheetTitle className="flex items-center gap-2 text-left">
             <NexusLogo variant="horizontal" width={82} height={22} />
             <span className="rounded-md bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-brand">
@@ -139,7 +144,7 @@ export function MobileNav() {
             </span>
           </SheetTitle>
         </SheetHeader>
-        <div className="px-3 pt-3">
+        <div className="mobile-nav-search px-3 pt-3">
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
             <input
@@ -159,13 +164,14 @@ export function MobileNav() {
         </div>
         <ScrollArea className="h-[calc(100vh-7.5rem)] py-3">
           <nav className="space-y-1 px-3">
-            {docsNav.map((section) => (
+            {docsNav.map((section, index) => (
               <MobileSection
                 key={section.label}
                 section={section}
                 pathname={pathname}
                 onNavigate={() => setOpen(false)}
                 searchQuery={search}
+                index={index}
               />
             ))}
             {search &&

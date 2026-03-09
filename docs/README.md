@@ -1,6 +1,6 @@
-# @noverax/nexus — Examples
+# @noverax/nexus — Documentation
 
-Interactive Next.js app demonstrating all `@noverax/nexus` features with a live Express mock backend.
+Documentation site and interactive examples for `@noverax/nexus`, built with Next.js and a live Express mock backend.
 
 ## Architecture
 
@@ -15,7 +15,7 @@ Browser ──► Next.js :3000 (proxy) ──► Express :4000 (backend)
 
 ```bash
 # from repo root
-cd examples/nextjs
+cd docs
 npm install
 npm run dev
 ```
@@ -72,14 +72,14 @@ This starts both servers concurrently:
 ## Project Structure
 
 ```
-examples/nextjs/
+docs/
 ├── server/                    # Express 5 mock backend
 │   ├── index.ts               # App entry, listen on :4000
 │   ├── routes/                # Route handlers
 │   └── data.ts                # In-memory data store
 │
 └── src/
-    ├── app/                   # Next.js pages (one per example)
+    ├── app/                   # Next.js pages (docs + examples)
     │   └── api/request/       # nexus apiRoute (proxy endpoint)
     ├── api/                   # nexus source definitions
     ├── lib/                   # request instances, utils

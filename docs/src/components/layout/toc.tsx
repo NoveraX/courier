@@ -24,7 +24,11 @@ export function TableOfContents() {
     const elements = content.querySelectorAll("h2[id], h3[id]")
     const items: TocItem[] = Array.from(elements).map((el) => ({
       id: el.id,
-      text: el.textContent ?? "",
+      text: Array.from(el.childNodes)
+        .filter((n) => !(n instanceof HTMLElement && n.hasAttribute("aria-hidden")))
+        .map((n) => n.textContent)
+        .join("")
+        .trim(),
       level: el.tagName === "H2" ? 2 : 3,
     }))
 
@@ -69,7 +73,11 @@ export function TableOfContents() {
               href={`#${heading.id}`}
               onClick={(e) => {
                 e.preventDefault()
-                document.getElementById(heading.id)?.scrollIntoView({ behavior: "smooth" })
+                const el = document.getElementById(heading.id)
+                if (el) {
+                  window.history.pushState(null, "", `#${heading.id}`)
+                  el.scrollIntoView({ behavior: "smooth" })
+                }
               }}
               className={cn(
                 "block py-1 text-sm transition-colors",

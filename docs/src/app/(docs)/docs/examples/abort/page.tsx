@@ -84,8 +84,8 @@ export default function AbortExamplesPage() {
         >
           <p className="text-sm text-muted-foreground">
             When <code className="rounded bg-muted px-1 py-0.5 text-xs">deduplicate: true</code> is
-            set, the HttpClient tracks in-flight requests by path and method. If a duplicate is fired,
-            the previous one is aborted with status 499.
+            set, the HttpClient tracks in-flight requests by path and method. If a duplicate is
+            fired, the previous one is aborted with status 499.
           </p>
         </ExampleBlock>
       </div>

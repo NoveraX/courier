@@ -1,0 +1,206 @@
+export const metadata = { title: "Architecture", description: "How Nexus works under the hood — request flow, core components, and the two transport modes." }
+
+Nexus is built around a simple idea: define your API once and access it from anywhere in your Next.js app. The architecture has four layers — definition, transport, execution, and integration — that work together to keep your code type-safe and DRY.
+
+## The Four Layers
+
+```typescript title="Architecture layers"
+// Layer 1 — API Definition (shared)
+class MyApi extends Datasource<{ users: Users }> { ... }
+export const sources = { myApi: new MyApi() }
+
+// Layer 2 — Transport (mode-specific)
+// Proxy:  createClientRequest → ky.post("/api/request") → apiRoute → createRequest
+// Direct: createDirectRequest → createRequest
+
+// Layer 3 — Execution (shared)
+// createRequest → HttpClient → ky → backend
+
+// Layer 4 — Integration (optional)
+// createQueryRequest wraps createClientRequest with React Query hooks
+```
+
+1. **Definition** — `Datasource` and `EndpointGroup` classes define your API structure, base URLs, methods, and types. This layer is shared between all modes.
+2. **Transport** — determines *how* the request reaches the server. Proxy mode goes through an API route; direct mode calls the backend immediately.
+3. **Execution** — `createRequest` is the single orchestrator that resolves source -> group -> method and delegates to `HttpClient` for the actual HTTP call.
+4. **Integration** — optional wrappers like `createQueryRequest` that add React Query hooks on top of the transport layer.
+
+## Proxy Mode Flow
+
+In proxy mode, the browser never talks to your backend directly. Requests go through a Next.js API route that acts as a reverse proxy:
+
+```bash title="Proxy mode"
+┌──────────────────────────────────────────────────────────────┐
+│  Browser (Client Component)                                  │
+│                                                              │
+│  createClientRequest<Sources>()                              │
+│       │                                                      │
+│       ▼                                                      │
+│  ky.post("/api/request", {                                   │
+│    json: { source, group, query, variables }                 │
+│  })                                                          │
+└──────────────────┬───────────────────────────────────────────┘
+                   │  POST /api/request
+                   ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Next.js API Route (Server)                                  │
+│                                                              │
+│  apiRoute(sources) → { POST }                                │
+│       │  ✓ origin validation                                 │
+│       │  ✓ cookie forwarding                                 │
+│       │  ✓ header whitelisting                               │
+│       ▼                                                      │
+│  createRequest(sources, body, context)                       │
+│       │                                                      │
+│       ▼                                                      │
+│  HttpClient → ky → GET/POST/PUT/PATCH/DELETE                 │
+└──────────────────┬───────────────────────────────────────────┘
+                   │  HTTP request
+                   ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Backend API (any REST server)                               │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Key steps in the proxy flow:
+
+1. `createClientRequest` serializes the method call (source, group, query, variables) into a JSON payload
+2. The payload is POSTed to `/api/request` via `ky`
+3. `apiRoute` validates the origin, extracts whitelisted headers and cookies, then calls `createRequest`
+4. `createRequest` resolves the source, group, and method, creates an `HttpClient`, and executes the HTTP call
+5. The response flows back: backend -> API route -> browser
+
+<Callout variant="info" title="Security built in">
+Proxy mode validates the `Origin` header, whitelists forwarded headers, and keeps your backend URL and API keys server-side. The browser only sees `/api/request`.
+</Callout>
+
+## Direct Mode Flow
+
+In direct mode, server-side code (RSC, Server Actions, API Routes) calls the backend with no intermediate HTTP hop:
+
+```bash title="Direct mode"
+┌──────────────────────────────────────────────────────────────┐
+│  Next.js Server (RSC / Server Action / API Route)            │
+│                                                              │
+│  createDirectRequest(sources)                                │
+│       │                                                      │
+│       ▼                                                      │
+│  createRequest(sources, body, context)                       │
+│       │                                                      │
+│       ▼                                                      │
+│  HttpClient → ky → GET/POST/PUT/PATCH/DELETE                 │
+└──────────────────┬───────────────────────────────────────────┘
+                   │  HTTP request
+                   ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Backend API (any REST server)                               │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Direct mode skips the API route entirely. `createDirectRequest` calls `createRequest` directly, which creates an `HttpClient` and makes the HTTP call. This eliminates the extra network hop and keeps the entire operation server-side.
+
+## Core Components
+
+### Datasource & EndpointGroup
+
+These are the foundation of your API definition. A `Datasource` class represents a backend service with a `baseURL` and one or more `EndpointGroup` instances. Each group represents a REST resource (e.g., users, products) with typed methods.
+
+```ts title="api/sources.ts"
+import { Datasource, EndpointGroup, type Endpoint } from "@noverax/nexus/datasource"
+
+type User = { id: number; name: string; email: string }
+
+// EndpointGroup — groups related endpoints under a URL prefix
+class Users extends EndpointGroup {
+  constructor() {
+    super({ prefix: "users" })
+  }
+
+  getAll: Endpoint<User[]> = ({ get }) => get()
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+  create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
+}
+
+// Datasource — top-level source with baseURL and groups
+class MyApi extends Datasource<{ users: Users }> {
+  constructor() {
+    super({
+      baseURL: process.env.API_URL!,
+      groups: { users: new Users() },
+    })
+  }
+}
+
+// Sources object — passed to apiRoute, createDirectRequest, createRequest
+export const sources = { myApi: new MyApi() }
+export type Sources = typeof sources
+```
+
+### createRequest
+
+The core orchestrator. Both proxy and direct modes converge here. `createRequest` receives the sources, a body describing which method to call, and an optional context (headers for cookie forwarding):
+
+```typescript title="Core orchestration"
+// createRequest is the single core orchestrator
+// Both proxy and direct modes call it with the same interface
+
+createRequest(sources, {
+  source: "myApi",       // which Datasource class
+  group: "users",        // which EndpointGroup
+  query: "getById",      // which Endpoint
+  variables: { id: 5 },  // typed variables
+}, context)
+
+// Internally:
+// 1. Looks up sources["myApi"] → MyApi instance
+// 2. Finds the group: myApi.groups["users"] → Users instance
+// 3. Creates an HttpClient with baseURL + prefix → "https://api.example.com/users"
+// 4. Calls the method: users.getById({ get, post, ... })
+// 5. The method calls get(":id") → HttpClient resolves to GET /users/5
+// 6. Returns the parsed JSON response
+```
+
+### HttpClient
+
+`HttpClient` wraps `ky` and provides typed HTTP methods. It resolves path parameters from variables, encodes request bodies, and manages abort controllers:
+
+```typescript title="HttpClient"
+// HttpClient wraps ky and generates typed HTTP methods
+// It handles: URL params, body encoding, search params, AbortController
+
+const instance = new HttpClient({
+  baseURL: "https://api.example.com/users",
+  variables: { id: 5 },
+  headers: { Authorization: "Bearer ..." },
+})
+
+// instance.createMethods provides:
+// { get, post, put, patch, del, head }
+
+// Each method resolves :param placeholders from variables
+// get(":id") → GET /users/5
+// post() with variables → POST /users with JSON body
+```
+
+<Callout variant="tip" title="ky under the hood">
+Nexus uses `ky` as the HTTP engine — a lightweight, modern `fetch` wrapper with retry, timeout, hooks, and JSON handling built in. You never interact with `ky` directly; Nexus configures it through `HttpClient`.
+</Callout>
+
+## Factory Functions
+
+Nexus provides three factory functions, each wrapping `createRequest` for a specific use case:
+
+| Factory | Mode | Environment | Returns |
+| --- | --- | --- | --- |
+| `createClientRequest` | Proxy | Browser | `RequestFn<Sources>` |
+| `createDirectRequest` | Direct | Server | `RequestFn<Sources>` |
+| `createQueryRequest` | Proxy | Browser | `{ useQuery, useMutation, request }` |
+
+All three return the same `RequestFn<Sources>` type (or wrap it), meaning you get identical type inference regardless of which factory you use.
+
+## Next Steps
+
+- [Installation](/docs/installation) — add Nexus to your project
+- [Datasource & EndpointGroup](/docs/core-concepts/request) — deep dive into API definitions
+- [Proxy Mode](/docs/proxy-mode/overview) — browser-to-backend request flow
+- [Direct Mode](/docs/server-side/overview) — server-side data fetching

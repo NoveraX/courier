@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next"
 
 import { flatNavItems } from "@/components/layout/nav-items"
 
-const BASE_URL = "https://nexus.noverax.dev"
+const BASE_URL = "https://nexus.noverax.cloud"
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const navItems = flatNavItems()

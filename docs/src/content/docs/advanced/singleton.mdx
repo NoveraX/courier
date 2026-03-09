@@ -1,0 +1,164 @@
+export const metadata = {
+  title: "Singleton Pattern",
+  description: "Use TypeScript module augmentation to eliminate generic parameters from every request call."
+}
+
+## The problem
+
+Without the singleton pattern, you need to pass the `Sources` generic type parameter to every factory function. This is repetitive and creates multiple places to update when sources change:
+
+```ts title="lib/request.ts"
+import { createClientRequest } from "@noverax/nexus"
+import { createDirectRequest } from "@noverax/nexus/direct"
+import { createQueryRequest } from "@noverax/nexus/query"
+import type { Sources } from "@/api"
+
+// You have to pass the Sources generic everywhere:
+const request = createClientRequest<Sources>()
+const directRequest = createDirectRequest<Sources>(sources)
+const { useQuery, useMutation } = createQueryRequest<Sources>()
+```
+
+## The solution
+
+TypeScript module augmentation lets you declare your sources once, and every Nexus factory function infers them automatically. No generic parameters needed.
+
+## Step-by-step setup
+
+### Step 1: Define your Datasource classes and sources
+
+Create your groups and sources as usual. Export the `sources` object so the type declaration can reference it:
+
+```ts title="api/index.ts"
+// api/users.ts
+import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+
+type User = { id: number; name: string; email: string }
+
+export class Users extends EndpointGroup {
+  constructor() {
+    super({ prefix: "users" })
+  }
+
+  getAll: Endpoint<User[]> = ({ get }) => get()
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+  create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
+}
+
+// api/index.ts
+import { Datasource } from "@noverax/nexus/datasource"
+import { Users } from "./users"
+
+const groups = { users: new Users() }
+
+class MyApi extends Datasource<typeof groups> {
+  constructor() {
+    super({
+      baseURL: process.env.API_URL ?? "http://localhost:4000",
+      groups,
+    })
+  }
+}
+
+export const sources = { myApi: new MyApi() }
+```
+
+### Step 2: Augment the module
+
+Create a `.d.ts` file that extends the Nexus `Sources` interface. Each key in the interface must match a key in your `sources` object:
+
+```ts title="types/nexus.d.ts"
+import type { sources } from "@/api"
+
+declare module "@noverax/nexus" {
+  interface Sources {
+    myApi: (typeof sources)["myApi"]
+  }
+}
+```
+
+<Callout variant="tip" title="File location">
+You can put this declaration anywhere TypeScript can see it — a dedicated `types/` directory, alongside your source definitions, or in a global `declarations.d.ts`. Just make sure it's included in your `tsconfig.json`.
+</Callout>
+
+### Step 3: Use without generics
+
+Now all factory functions infer your sources from the augmented interface. TypeScript provides full autocomplete for source names, query strings, and variable types:
+
+```ts title="lib/request.ts"
+import { createClientRequest } from "@noverax/nexus"
+import { createDirectRequest } from "@noverax/nexus/direct"
+import { createQueryRequest } from "@noverax/nexus/query"
+import { sources } from "@/api"
+
+// No generic parameter needed — TypeScript infers from module augmentation
+const request = createClientRequest()
+const directRequest = createDirectRequest(sources)
+const { useQuery, useMutation } = createQueryRequest()
+
+// Full autocomplete: source names, group:method queries, variable types
+useQuery("myApi", "users:getById", { variables: { id: 1 } })
+//        ^-- autocomplete          ^-- autocomplete     ^-- typed
+```
+
+## Using with React Query
+
+The singleton pattern is especially useful with `createQueryRequest`, where you call `useQuery` and `useMutation` throughout your app. Every call site gets full type inference without importing or passing types:
+
+```tsx title="components/user-list.tsx"
+"use client"
+
+import { useQuery, useMutation } from "@/lib/request"
+
+export function UserList() {
+  // TypeScript knows "myApi" is a valid source,
+  // "users:getAll" is a valid query,
+  // and data is User[]
+  const { data } = useQuery("myApi", "users:getAll")
+
+  const { mutate } = useMutation("myApi", "users:create", {
+    onSuccess: (user) => {
+      // user is typed as User — no generic needed
+      console.log(user.name)
+    },
+  })
+
+  return (
+    <div>
+      {data?.map((user) => <p key={user.id}>{user.name}</p>)}
+      <button onClick={() => mutate({ name: "Jane", email: "jane@test.com" })}>
+        Add User
+      </button>
+    </div>
+  )
+}
+```
+
+## Multiple sources
+
+If your app connects to multiple backends, add each source to the augmented interface. TypeScript enforces correct group names for each source:
+
+```ts title="types/nexus.d.ts"
+import type { sources } from "@/api"
+
+declare module "@noverax/nexus" {
+  interface Sources {
+    mainApi: (typeof sources)["mainApi"]
+    paymentApi: (typeof sources)["paymentApi"]
+  }
+}
+
+// Now both sources are available without generics:
+useQuery("mainApi", "users:getAll")       // ← knows mainApi groups
+useQuery("paymentApi", "products:list")   // ← knows paymentApi groups
+```
+
+<Callout variant="info" title="Single source of truth">
+The `Sources` interface is the single source of truth for your API types. When you add a new source or group, update the augmentation and every `useQuery` / `request` call in your app gets autocomplete for the new methods immediately.
+</Callout>
+
+## Next steps
+
+- [Project Setup](/docs/project-setup) — recommended file structure including type declarations
+- [Options](/docs/advanced/options) — source-level and per-request configuration
+- [Singleton Example](/docs/examples/singleton) — interactive demo of module augmentation

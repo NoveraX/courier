@@ -1,0 +1,145 @@
+export const metadata = { title: "React Query Setup", description: "Integrate Nexus with @tanstack/react-query for automatic caching, refetching, and type-safe hooks." }
+
+## Overview
+
+`createQueryRequest` wraps Nexus's proxy client with React Query hooks. It returns three things: `useQuery` for fetching data, `useMutation` for modifying data, and `request` — the raw `createClientRequest` client for non-hook usage.
+
+### Step 1: Install @tanstack/react-query
+
+React Query is a peer dependency — install it alongside Nexus:
+
+<CodeGroup items={[{ label: "npm", code: "npm install @tanstack/react-query", language: "bash" }, { label: "pnpm", code: "pnpm add @tanstack/react-query", language: "bash" }, { label: "yarn", code: "yarn add @tanstack/react-query", language: "bash" }, { label: "bun", code: "bun add @tanstack/react-query", language: "bash" }]} />
+
+### Step 2: Set up QueryClientProvider
+
+React Query requires a `QueryClientProvider` at the root of your app. Create a client component that wraps your layout:
+
+```ts title="app/providers.tsx"
+// app/providers.tsx
+"use client"
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { useState, type ReactNode } from "react"
+
+export function Providers({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 60 * 1000,
+            retry: 1,
+          },
+        },
+      })
+  )
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  )
+}
+```
+
+```ts title="app/layout.tsx"
+// app/layout.tsx
+import { Providers } from "./providers"
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  )
+}
+```
+
+### Step 3: Create the Nexus query client
+
+Call `createQueryRequest` with your `Sources` type. Export the hooks from a single file so every component imports from the same place:
+
+```ts title="lib/request.ts"
+// lib/request.ts
+import { createQueryRequest } from "@noverax/nexus/query"
+import type { Sources } from "@/api"
+
+export const api = createQueryRequest<Sources>()
+
+// Destructure for convenience
+export const { useQuery, useMutation, request } = api
+```
+
+<Callout variant="tip" title="Single export file">
+Keep `useQuery` and `useMutation` in one file. This ensures all components share the same client instance and defaults.
+</Callout>
+
+## Configuring defaults
+
+`createQueryRequest` accepts an optional `ClientRequestDefaults` object to configure the underlying proxy client. These defaults apply to every request made through `useQuery`, `useMutation`, and `request`:
+
+```ts title="lib/request.ts"
+// lib/request.ts
+import { createQueryRequest } from "@noverax/nexus/query"
+import type { Sources } from "@/api"
+
+export const { useQuery, useMutation, request } = createQueryRequest<Sources>({
+  // Custom proxy route path (default: "request")
+  routePath: "api/my-proxy",
+
+  // Request timeout in milliseconds
+  timeout: 10000,
+
+  // Include cookies in proxy requests
+  credentials: "include",
+
+  // Default headers for all requests
+  headers: {
+    "X-App-Version": "1.0.0",
+  },
+
+  // Global error handler
+  onError: async (error) => {
+    if (error.response?.status === 401) {
+      window.location.href = "/login"
+    }
+  },
+
+  // Global success handler
+  onSuccess: (data) => {
+    console.log("Request succeeded:", data)
+  },
+})
+```
+
+## The request escape hatch
+
+The `request` property is the raw `createClientRequest` function. Use it when you need to make a request outside of React hooks — in event handlers, utility functions, or anywhere hooks aren't available:
+
+```ts title="components/logout-button.tsx"
+"use client"
+
+import { request } from "@/lib/request"
+
+export function LogoutButton() {
+  const handleLogout = async () => {
+    // Use the raw client outside of React Query hooks
+    await request("myApi")("auth:logout")
+    window.location.href = "/login"
+  }
+
+  return <button onClick={handleLogout}>Log out</button>
+}
+```
+
+<Callout variant="info" title="Same client, same defaults">
+The `request` function shares the same defaults (timeout, headers, onError) as the hooks. It's the same underlying client — just without React Query wrapping.
+</Callout>
+
+## Next steps
+
+- [useQuery](/docs/react-query/use-query) — fetch data with type-safe queries
+- [useMutation](/docs/react-query/use-mutation) — create, update, and delete with typed mutations
+- [createClientRequest](/docs/proxy-mode/client-request) — the underlying proxy client API

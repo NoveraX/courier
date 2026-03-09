@@ -46,7 +46,7 @@
   "bugs": {
     "url": "https://github.com/NoveraX/nexus/issues"
   },
-  "homepage": "https://github.com/NoveraX/nexus#readme",
+  "homepage": "https://nexus.noverax.cloud",
   "keywords": [
     "http-client",
     "api-client",

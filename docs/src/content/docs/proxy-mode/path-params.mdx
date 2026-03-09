@@ -1,0 +1,183 @@
+export const metadata = { title: "Path Parameters", description: "Dynamic URL segments using :param syntax, compiled via path-to-regexp." }
+
+## Basic syntax
+
+Use the `:paramName` syntax in URL paths to define dynamic segments. Nexus compiles these paths using `path-to-regexp` and substitutes values from variables or `pathOptions`:
+
+```ts title="api/users.ts"
+import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+
+type User = { id: number; name: string }
+type Comment = { id: number; body: string }
+
+class Users extends EndpointGroup {
+  constructor() {
+    super({ prefix: "users" })
+  }
+
+  // GET /users/:id → compiled to GET /users/5
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+
+  // GET /users/:userId/posts/:postId/comments/:commentId
+  getComment: Endpoint<Comment, {
+    userId: number
+    postId: number
+    commentId: number
+  }> = ({ get }) => get(":userId/posts/:postId/comments/:commentId")
+}
+```
+
+## Variables as path params
+
+When you pass variables to a request, Nexus first extracts any values that match path parameter names. The remaining variables are sent as query parameters (for GET/DELETE) or as the request body (for POST/PUT/PATCH):
+
+```ts title="Variable consumption"
+// Path params are extracted from the variables object.
+// Remaining variables go to query params (GET) or body (POST).
+
+// GET /users/5 — { id: 5 } consumed by :id
+await request("myApi")("users:getById", { id: 5 })
+
+// GET /users/5?include=posts — { id: 5 } consumed by :id, { include: "posts" } → query param
+getWithDetails: Endpoint<User, { id: number; include?: string }> = ({ get }) => get(":id")
+await request("myApi")("users:getWithDetails", { id: 5, include: "posts" })
+
+// POST /users/5/avatar — { id: 5 } consumed by :id, { name: "photo.jpg" } → JSON body
+updateAvatar: Endpoint<void, { id: number; name: string }> = ({ post }) => post(":id/avatar")
+await request("myApi")("users:updateAvatar", { id: 5, name: "photo.jpg" })
+```
+
+<Callout variant="tip" title="Automatic extraction">
+You do not need to separate path params from body/query params manually. Nexus handles this automatically based on the path definition. Just pass all variables in a single object.
+</Callout>
+
+## pathOptions function
+
+For path parameters that come from server-side context (cookies, headers, session) rather than the caller, use the `pathOptions` function. It runs on the server before every request and provides values for path compilation:
+
+```ts title="api/index.ts"
+import { Datasource, EndpointGroup, Endpoint } from "@noverax/nexus/datasource"
+import { cookies } from "next/headers"
+
+type User = { id: number; name: string }
+
+class Users extends EndpointGroup {
+  constructor() {
+    super({ prefix: "orgs/:orgId/users" })
+  }
+
+  getAll: Endpoint<User[]> = ({ get }) => get()
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+}
+
+const groups = { users: new Users() }
+
+class MyApi extends Datasource<typeof groups> {
+  constructor() {
+    super({
+      baseURL: process.env.API_URL,
+      groups,
+      // pathOptions provides values for path params that come from context,
+      // not from the caller's variables
+      pathOptions: async (req) => {
+        const cookieStore = await cookies()
+        const orgId = cookieStore.get("orgId")?.value
+        return { orgId }
+      },
+    })
+  }
+}
+
+// Now every request automatically includes :orgId from the cookie:
+// GET /orgs/42/users       — orgId from pathOptions
+// GET /orgs/42/users/5     — orgId from pathOptions, id from variables
+```
+
+<Callout variant="info" title="Server-side only">
+The `pathOptions` function receives the `NextRequest` object and runs on the server inside the API route. It has access to cookies, headers, and any server-side context.
+</Callout>
+
+## Group-level pathOptions
+
+Each `EndpointGroup` can define its own `pathOptions` that override the source-level values for the same keys. This is useful when different groups resolve the same parameter differently:
+
+```ts title="api/groups.ts"
+import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+
+type Project = { id: number; name: string }
+type Task = { id: number; title: string }
+
+class Projects extends EndpointGroup {
+  constructor() {
+    super({
+      prefix: "workspaces/:workspaceId/projects",
+      // Group-level pathOptions override source-level pathOptions
+      pathOptions: async (req) => {
+        // For this group, workspaceId comes from a header
+        const workspaceId = req?.headers.get("x-workspace-id")
+        return { workspaceId }
+      },
+    })
+  }
+
+  getAll: Endpoint<Project[]> = ({ get }) => get()
+  getById: Endpoint<Project, { id: number }> = ({ get }) => get(":id")
+}
+
+class Tasks extends EndpointGroup {
+  constructor() {
+    super({ prefix: "tasks" })
+    // No group pathOptions — uses the source-level pathOptions if any
+  }
+
+  getAll: Endpoint<Task[]> = ({ get }) => get()
+}
+```
+
+## How variables flow
+
+Understanding how variables are consumed is important. Here is the complete resolution order:
+
+1. Source-level `pathOptions(request)` is called
+2. Group-level `pathOptions(request)` is called (overrides source values)
+3. Caller's variables are merged (overrides pathOptions for matching keys)
+4. Path parameters are extracted and consumed
+5. Remaining variables go to query params or body
+
+```typescript
+// The flow of variables through path compilation:
+
+// 1. pathOptions() is called → returns { orgId: "42" }
+// 2. variables from the caller are merged: { orgId: "42", id: 5, include: "posts" }
+// 3. Path ":orgId/users/:id" consumes orgId and id
+// 4. Remaining { include: "posts" } goes to query params (GET) or body (POST)
+// 5. Final URL: GET /orgs/42/users/5?include=posts
+
+// Group pathOptions override source pathOptions for the same key:
+// Source pathOptions:  { orgId: "42" }
+// Group pathOptions:   { orgId: "99" }
+// Result:              { orgId: "99" }  ← group wins
+```
+
+## Path compilation caching
+
+Nexus caches compiled path functions for performance. Each unique path string is compiled once and reused across all subsequent requests:
+
+```typescript
+// Path compilation functions are cached for performance.
+// The first call to compile("/users/:id") creates and caches the function.
+// Subsequent calls reuse the cached function.
+
+// This means paths like "/users/:id" are compiled once,
+// no matter how many times they are called with different variables.
+```
+
+<Callout variant="warning" title="Missing path params">
+If a required path parameter is not provided by either `pathOptions` or variables, the request will throw an `HTTPError` with status 400 and a descriptive message from `path-to-regexp`.
+</Callout>
+
+## Next Steps
+
+- [Encoding](/docs/proxy-mode/encoding) — custom body and query serialization
+- [File Upload](/docs/proxy-mode/upload) — upload files with progress tracking
+- [API Route Handler](/docs/proxy-mode/api-route) — how the server processes proxy requests

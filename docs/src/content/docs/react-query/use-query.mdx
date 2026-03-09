@@ -1,0 +1,167 @@
+export const metadata = { title: "useQuery", description: "Fetch data with automatic caching, refetching, and full type inference from your API definitions." }
+
+## Signature
+
+`useQuery` takes a source name, a `"group:method"` query string, and an optional options object. Types are fully inferred from your `Endpoint` definitions:
+
+```ts
+const result = useQuery(source, query, options?)
+
+// source  — key from your Sources type (e.g. "myApi")
+// query   — "group:method" string (e.g. "users:getAll")
+// options — { variables?, requestOptions?, ...reactQueryOptions }
+```
+
+## Basic query
+
+The simplest usage — fetch data on mount. The `data` type is automatically inferred from the method's response type:
+
+```ts title="components/user-list.tsx"
+"use client"
+
+import { useQuery } from "@/lib/request"
+
+export function UserList() {
+  const { data, isLoading, error } = useQuery("myApi", "users:getAll")
+  //      ^? UserList — auto-inferred from Endpoint<UserList>
+
+  if (isLoading) return <p>Loading...</p>
+  if (error) return <p>Error: {error.message}</p>
+
+  return (
+    <ul>
+      {data?.data.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+## Query with variables
+
+When a method defines variables (e.g. `Endpoint<User, { id: number }>`), the `variables` option becomes required. TypeScript will error if you omit it:
+
+```ts title="components/user-profile.tsx"
+"use client"
+
+import { useQuery } from "@/lib/request"
+
+export function UserProfile({ userId }: { userId: number }) {
+  // Endpoint<User, { id: number }> → variables is required
+  const { data: user, isLoading } = useQuery("myApi", "users:getById", {
+    variables: { id: userId },
+    //          ^? { id: number } — auto-inferred from Endpoint
+  })
+
+  if (isLoading) return <p>Loading...</p>
+
+  return (
+    <div>
+      <h1>{user?.name}</h1>
+      <p>{user?.email}</p>
+    </div>
+  )
+}
+```
+
+<Callout variant="info" title="Variables type safety">
+If a method declares `Endpoint<R>` without a second type parameter (or `Endpoint<R, undefined>`), the `variables` option is optional. If the method declares `Endpoint<R, V>` with a concrete V type, the options object with `variables` is required.
+</Callout>
+
+## Conditional queries
+
+Use the `enabled` option to conditionally execute a query. The query won't fire until the condition is true:
+
+```ts title="components/user-profile.tsx"
+"use client"
+
+import { useQuery } from "@/lib/request"
+
+export function UserProfile({ userId }: { userId: number | null }) {
+  const { data, isLoading } = useQuery("myApi", "users:getById", {
+    variables: { id: userId! },
+    // Only fetch when userId is available
+    enabled: userId !== null,
+  })
+
+  if (!userId) return <p>Select a user</p>
+  if (isLoading) return <p>Loading...</p>
+
+  return <h1>{data?.name}</h1>
+}
+```
+
+## React Query options
+
+All standard React Query options are supported alongside Nexus-specific options. Configure caching, refetching, and data transformation:
+
+```ts
+const { data } = useQuery("myApi", "users:getAll", {
+  variables: { page: 1, limit: 20 },
+
+  // Standard React Query options — all supported
+  staleTime: 5 * 60 * 1000,       // Consider data fresh for 5 minutes
+  refetchInterval: 30 * 1000,     // Refetch every 30 seconds
+  refetchOnWindowFocus: false,     // Don't refetch on tab focus
+  placeholderData: previousData,   // Keep previous data while refetching
+  select: (data) => data.data,     // Transform response before caching
+
+  // Nexus-specific options
+  requestOptions: {
+    rawData: true,   // Get { data, status, headers } instead of just data
+    stream: true,    // Handle streaming responses
+  },
+})
+```
+
+## Auto-generated query keys
+
+Nexus automatically generates query keys from the source, query, and variables. This means cache invalidation works without manually managing keys:
+
+```ts
+// Auto-generated query key: ["myApi", "users:getAll"]
+useQuery("myApi", "users:getAll")
+
+// With variables: ["myApi", "users:getById", { id: 5 }]
+useQuery("myApi", "users:getById", { variables: { id: 5 } })
+
+// Use the same key format for cache invalidation
+queryClient.invalidateQueries({ queryKey: ["myApi", "users:getAll"] })
+```
+
+<Callout variant="tip" title="Partial key matching">
+React Query supports partial key matching. Invalidating `["myApi", "users:getAll"]` will match all queries for that endpoint regardless of variables. Invalidating `["myApi"]` will match all queries for that source.
+</Callout>
+
+## Error handling
+
+The `error` property is typed as `Error`. Use `isHTTPError` to check if it's an HTTP error with status and response details:
+
+```ts title="components/user-list.tsx"
+"use client"
+
+import { isHTTPError } from "@noverax/nexus"
+import { useQuery } from "@/lib/request"
+
+export function UserList() {
+  const { data, error, isError } = useQuery("myApi", "users:getAll")
+
+  if (isError) {
+    // Check if it's an HTTP error with status/response
+    if (isHTTPError(error)) {
+      if (error.response.status === 404) return <p>Not found</p>
+      if (error.response.status === 403) return <p>Access denied</p>
+    }
+    return <p>Something went wrong: {error.message}</p>
+  }
+
+  return <ul>{data?.data.map((u) => <li key={u.id}>{u.name}</li>)}</ul>
+}
+```
+
+## Next steps
+
+- [useMutation](/docs/react-query/use-mutation) — create, update, and delete data with typed mutations
+- [Advanced Patterns](/docs/react-query/advanced) — prefetching, hydration, optimistic updates, and cache strategies
+- [Error Handling](/docs/core-concepts/error-handling) — deep dive into HTTPError and error recovery

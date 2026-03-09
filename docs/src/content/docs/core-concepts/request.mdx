@@ -1,0 +1,142 @@
+export const metadata = { title: "Request & RequestGroup", description: "Define your API structure with typed classes that serve as the single source of truth for all requests." }
+
+## Overview
+
+Every API in Nexus is described by two building blocks: `Datasource` and `EndpointGroup`. Together they define *what* your backend exposes and *how* each endpoint is called — with full type information, no code generation required.
+
+- **Datasource** — represents an entire backend service. It holds the base URL, shared options, and a map of groups.
+- **EndpointGroup** — organizes related endpoints under a common URL prefix. Each method inside the group declares its response and variables types.
+
+## The Datasource Class
+
+`Datasource` is the top-level container for an API source. At its simplest, it only needs a `baseURL`:
+
+```ts title="api/sources.ts"
+import { Datasource } from "@noverax/nexus/datasource"
+
+// A simple Request without groups — for flat APIs with few endpoints
+class SimpleApi extends Datasource {
+  constructor() {
+    super({
+      baseURL: "https://api.example.com",
+    })
+  }
+}
+```
+
+In practice, most APIs have multiple resource types, so you will pair `Datasource` with one or more `EndpointGroup` instances. The generic parameter `Datasource<typeof groups>` tells TypeScript exactly which groups and methods are available.
+
+## The EndpointGroup Class
+
+A `EndpointGroup` is a class where each property is a typed API method. The `prefix` option sets the URL path segment that is appended to the base URL for every method in the group.
+
+```ts title="api/users.ts"
+import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+
+type User = { id: number; name: string; email: string }
+type CreateUserVars = { name: string; email: string }
+
+export class Users extends EndpointGroup {
+  constructor() {
+    // The prefix becomes the URL path segment: /users
+    super({ prefix: "users" })
+  }
+
+  // Endpoint<ResponseType> — no variables needed
+  getAll: Endpoint<User[]> = ({ get }) => get()
+
+  // Endpoint<ResponseType, VariablesType> — variables are required
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+  create: Endpoint<User, CreateUserVars> = ({ post }) => post()
+  update: Endpoint<User, { id: number; name: string }> = ({ put }) => put(":id")
+  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
+}
+```
+
+<Callout variant="info" title="The Method type">
+`Endpoint<R, V>` is a generic type where `R` is the response type and `V` is the variables type. When `V` is omitted (defaults to `undefined`), no variables are required to call the method.
+</Callout>
+
+Each method receives a destructured `methods` object with HTTP helpers (`get`, `post`, `put`, `patch`, `del`, `head`) and optionally the `variables` passed by the caller. The return value is a `MethodKyResponse<R>` with `status`, `headers`, and typed `data`.
+
+## Composing Datasource with Groups
+
+Pass a `groups` object to your `Datasource` constructor. TypeScript infers the full shape of your API from this object:
+
+```ts title="api/index.ts"
+import { Datasource } from "@noverax/nexus/datasource"
+import { Users } from "./users"
+import { Posts } from "./posts"
+import { Comments } from "./comments"
+
+const groups = {
+  users: new Users(),
+  posts: new Posts(),
+  comments: new Comments(),
+}
+
+class BlogApi extends Datasource<typeof groups> {
+  constructor() {
+    super({
+      baseURL: process.env.API_URL ?? "http://localhost:4000",
+      groups,
+    })
+  }
+}
+
+export const sources = { blogApi: new BlogApi() }
+export type Sources = typeof sources
+```
+
+## The Query String Convention
+
+When calling a method, you reference it with a string. If the method belongs to a group, use the `"group:method"` format. If the Datasource has no groups, use the method name directly:
+
+```typescript
+// With groups — use "group:method" syntax
+const { data } = useQuery("blogApi", "users:getAll")
+const { data } = useQuery("blogApi", "posts:getBySlug", { variables: { slug: "hello" } })
+
+// Without groups — just the method name
+const { data } = useQuery("simpleApi", "getHealth")
+```
+
+<Callout variant="tip" title="Autocomplete works">
+TypeScript narrows the query string to a union of valid `"group:method"` combinations. You get autocomplete in your editor and a compile-time error if you mistype a method name.
+</Callout>
+
+## EndpointGroup Options
+
+`EndpointGroupOptions` accepts two properties:
+
+- `prefix` — URL path segment appended to the base URL (e.g. `"users"`, `"api/v2/products"`).
+- `pathOptions` — a function that returns dynamic key-value pairs (typically headers or cookies) to merge into each request.
+
+```ts title="api/products.ts"
+import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+
+type Product = { id: number; name: string; price: number }
+
+export class Products extends EndpointGroup {
+  constructor() {
+    super({
+      // URL prefix — appended to the base URL
+      prefix: "api/v2/products",
+
+      // pathOptions — dynamically inject headers/cookies per request
+      pathOptions: (req) => ({
+        Authorization: req?.headers.get("authorization") ?? undefined,
+      }),
+    })
+  }
+
+  list: Endpoint<Product[]> = ({ get }) => get()
+  getById: Endpoint<Product, { id: number }> = ({ get }) => get(":id")
+}
+```
+
+## Next Steps
+
+- [Instance & Methods](/docs/core-concepts/instance) — how the HTTP methods inside your groups actually work
+- [Type Safety](/docs/core-concepts/type-safety) — how Nexus infers types end-to-end without codegen
+- [Error Handling](/docs/core-concepts/error-handling) — handling HTTP errors with typed error data

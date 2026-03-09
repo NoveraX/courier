@@ -1,0 +1,179 @@
+export const metadata = { title: "createClientRequest", description: "The browser-side factory that sends typed requests through your Next.js proxy route." }
+
+## Overview
+
+`createClientRequest` creates a curried function that POSTs to your Next.js API route. It is the primary way to make requests from client components in proxy mode.
+
+```ts title="lib/request.ts"
+import { createClientRequest } from "@noverax/nexus"
+import type { Sources } from "@/api"
+
+// createClientRequest<T>(defaults?) returns RequestFn<T>
+const request = createClientRequest<Sources>()
+
+// Curried usage:
+const result = await request("sourceName")("group:method", variables)
+//                           ^? source      ^? query string  ^? data
+```
+
+The generic parameter `Sources` provides full type inference for source names, group names, method names, variables, and response types.
+
+## Defaults
+
+Pass a `ClientRequestDefaults` object to configure global behavior for all requests created by this factory:
+
+```typescript
+type ClientRequestDefaults = {
+  // API route path — default: "request" → POST /api/request
+  routePath?: string
+
+  // Request timeout in milliseconds
+  timeout?: number
+
+  // Cookie behavior — default: "include"
+  credentials?: RequestCredentials
+
+  // Extra headers sent with every proxy request
+  headers?: Record<string, string>
+
+  // Called on every failed request
+  onError?: (error: HTTPError) => void | Promise<void>
+
+  // Called on every successful request
+  onSuccess?: (data: unknown) => void | Promise<void>
+}
+```
+
+## Complete setup
+
+A typical setup creates a single request instance and exports it for use across all client components:
+
+```ts title="lib/request.ts"
+// lib/request.ts
+import { createClientRequest } from "@noverax/nexus"
+import type { Sources } from "@/api"
+
+export const request = createClientRequest<Sources>({
+  timeout: 30_000,
+  credentials: "include",
+  headers: {
+    "x-app-version": "1.0.0",
+  },
+  onError: (error) => {
+    if (error.status === 401) {
+      window.location.href = "/login"
+    }
+  },
+})
+```
+
+<Callout variant="tip" title="One instance per app">
+Create `createClientRequest` once in a shared module. All client components import from the same file, ensuring consistent defaults and callbacks.
+</Callout>
+
+## Query string convention
+
+The query string tells Nexus which method to call. It supports two formats:
+
+- `"group:method"` — calls a method on a `EndpointGroup` (most common)
+- `"method"` — calls a method directly on the `Datasource` class (no group)
+
+```ts title="Usage examples"
+// With a group — "groupName:methodName"
+await request("myApi")("users:getAll")
+await request("myApi")("users:getById", { id: 5 })
+await request("myApi")("posts:create", { title: "Hello", body: "World" })
+
+// Without a group — "methodName" (methods on the Request class itself)
+await request("myApi")("healthCheck")
+```
+
+## Body composition
+
+How the request body is built depends on the type of variables you pass:
+
+```ts title="JSON vs FormData"
+// JSON body (default for objects)
+// Sends: POST /api/request
+// Body:  { source: "myApi", group: "users", query: "create", variables: { name: "Jane" } }
+await request("myApi")("users:create", { name: "Jane" })
+
+// FormData body (when variables is FormData)
+// Sends: POST /api/request (multipart/form-data)
+// Body:  _source=myApi, _group=users, _query=create, _options={...}, name=Jane, avatar=File
+const formData = new FormData()
+formData.append("name", "Jane")
+formData.append("avatar", fileInput.files[0])
+await request("myApi")("users:create", formData)
+```
+
+<Callout variant="info" title="FormData meta fields">
+When sending FormData, Nexus appends metadata as special fields: `_source`, `_group`, `_query`, and `_options`. Your actual variables are appended alongside them. The API route strips these meta fields before passing variables to your method.
+</Callout>
+
+## Per-request options
+
+You can pass options to the source selector (the first curried call) to override defaults for a specific request chain:
+
+```ts title="Per-request options"
+// Per-request options (second argument of the source selector)
+const fetchUser = request("myApi", {
+  timeout: 5000,
+  signal: abortController.signal,
+  cache: "no-store",
+})
+
+const user = await fetchUser("users:getById", { id: 5 })
+```
+
+## Global callbacks
+
+The `onError` and `onSuccess` callbacks run for every request made by this factory. Use them for cross-cutting concerns like authentication redirects or logging:
+
+```ts title="Global error handling"
+const request = createClientRequest<Sources>({
+  onSuccess: (data) => {
+    // Called after every successful response
+    console.log("Response:", data)
+  },
+  onError: (error) => {
+    // Called after every failed response
+    // error.status  — HTTP status code
+    // error.data    — parsed response body
+    // error.headers — response headers
+
+    if (error.status === 401) {
+      window.location.href = "/login"
+    }
+
+    if (error.status === 429) {
+      toast.error("Too many requests. Please wait.")
+    }
+  },
+})
+```
+
+## Custom proxy endpoint
+
+By default, requests are sent to `/api/request`. You can change this in two ways:
+
+- Pass `routePath` in the defaults object
+- Set the `NEXT_PUBLIC_REQUEST_PAGE` environment variable
+
+```bash title=".env.local"
+# .env.local
+# Changes the proxy endpoint from /api/request to /api/my-proxy
+NEXT_PUBLIC_REQUEST_PAGE=my-proxy
+
+# The client will now POST to /api/my-proxy instead of /api/request
+```
+
+<Callout variant="warning" title="Match your API route">
+If you change the proxy endpoint, make sure your API route file matches. For example, `NEXT_PUBLIC_REQUEST_PAGE=my-proxy` requires the route handler at `app/api/my-proxy/route.ts`.
+</Callout>
+
+## Next Steps
+
+- [API Route Handler](/docs/proxy-mode/api-route) — set up the server-side endpoint
+- [File Upload](/docs/proxy-mode/upload) — upload files with progress tracking
+- [Proxy Mode Overview](/docs/proxy-mode/overview) — architecture and security model

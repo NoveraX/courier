@@ -1,0 +1,73 @@
+export const metadata = { title: "Installation", description: "Add @noverax/nexus to your Next.js project in under a minute." }
+
+## Install the package
+
+Install Nexus with your preferred package manager:
+
+<CodeGroup
+  items={[
+    { label: "npm", code: "npm install @noverax/nexus", language: "bash" },
+    { label: "pnpm", code: "pnpm add @noverax/nexus", language: "bash" },
+    { label: "yarn", code: "yarn add @noverax/nexus", language: "bash" },
+    { label: "bun", code: "bun add @noverax/nexus", language: "bash" },
+  ]}
+/>
+
+## Peer dependencies
+
+Nexus requires `next` (>=14) and `react` (>=18) as peer dependencies. If you're using React Query integration, you also need `@tanstack/react-query` (>=5):
+
+<CodeGroup
+  items={[
+    { label: "npm", code: "npm install @tanstack/react-query", language: "bash" },
+    { label: "pnpm", code: "pnpm add @tanstack/react-query", language: "bash" },
+    { label: "yarn", code: "yarn add @tanstack/react-query", language: "bash" },
+    { label: "bun", code: "bun add @tanstack/react-query", language: "bash" },
+  ]}
+/>
+
+<Callout variant="info" title="Optional peer dependencies">
+`next` and `@tanstack/react-query` are optional — you only need them if you use the corresponding features. The core `Datasource` / `EndpointGroup` classes and direct mode work without Next.js.
+</Callout>
+
+## TypeScript configuration
+
+Nexus is written in TypeScript and ships type declarations. Ensure your `tsconfig.json` has strict mode enabled for the best type inference:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "jsx": "preserve",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+```
+
+<Callout variant="tip" title="Path aliases">
+The examples in this documentation use the `@/*` path alias. This is configured by default in Next.js projects created with `create-next-app`.
+</Callout>
+
+## Environment variables
+
+Add your backend API URL as an environment variable. This is used server-side only and is never exposed to the browser:
+
+```bash title=".env.local"
+# Your backend API URL (server-side only)
+API_URL=http://localhost:4000
+
+# Optional: custom proxy route path (default: "request")
+# NEXT_PUBLIC_REQUEST_PAGE=api/my-request
+```
+
+The `API_URL` variable is read in your source definitions (the `Datasource` class constructor). In proxy mode, requests are routed through your Next.js API route, so the backend URL stays on the server.
+
+## Next steps
+
+- [Quick Start](/docs/quick-start) — define your first API source and make a request
+- [Project Setup](/docs/project-setup) — recommended file structure for production apps

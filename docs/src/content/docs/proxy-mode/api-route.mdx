@@ -1,0 +1,194 @@
+export const metadata = { title: "API Route Handler", description: "The server-side endpoint that receives proxy requests and forwards them to your backend." }
+
+## Overview
+
+`apiRoute` creates a Next.js App Router POST handler that acts as the server-side half of proxy mode. It receives requests from `createClientRequest`, validates them, and forwards them to your backend via `executeRequest`.
+
+```typescript
+import { apiRoute } from "@noverax/nexus/next/apiRoute"
+
+const { POST } = apiRoute(sources)
+// sources: Record<string, Datasource<...>>
+// POST: (request: NextRequest) => Promise<NextResponse>
+```
+
+## Setup
+
+Create a route handler file and export the `POST` method. This is the only file needed on the server side:
+
+### Step 1: Define your sources
+
+The sources object maps source names to `Datasource` instances. Each source can have multiple groups with typed methods:
+
+```ts title="api/index.ts"
+// api/index.ts
+import { Datasource, EndpointGroup, Endpoint } from "@noverax/nexus/datasource"
+
+class Users extends EndpointGroup {
+  constructor() {
+    super({ prefix: "users" })
+  }
+
+  getAll: Endpoint<User[]> = ({ get }) => get()
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+}
+
+class Posts extends EndpointGroup {
+  constructor() {
+    super({ prefix: "posts" })
+  }
+
+  list: Endpoint<Post[]> = ({ get }) => get()
+  create: Endpoint<Post, { title: string }> = ({ post }) => post()
+}
+
+const groups = { users: new Users(), posts: new Posts() }
+
+class MyApi extends Datasource<typeof groups> {
+  constructor() {
+    super({
+      baseURL: process.env.API_URL ?? "http://localhost:4000",
+      groups,
+    })
+  }
+}
+
+export const sources = { myApi: new MyApi() }
+export type Sources = typeof sources
+```
+
+### Step 2: Create the route handler
+
+Pass your sources to `apiRoute` and export the `POST` handler:
+
+```ts title="app/api/request/route.ts"
+// app/api/request/route.ts
+import { apiRoute } from "@noverax/nexus/next/apiRoute"
+import { sources } from "@/api"
+
+export const { POST } = apiRoute(sources)
+```
+
+<Callout variant="tip" title="That's it">
+This two-line file is all you need. The handler automatically validates origins, parses payloads, routes to the correct method, and returns the response.
+</Callout>
+
+## Origin validation
+
+Every request is checked to ensure the `Origin` header matches the request URL origin. This prevents cross-site request forgery and unauthorized third-party access:
+
+```typescript
+// Built-in origin validation
+const origin = request.headers.get("origin")
+
+if (!origin || new URL(request.url).origin !== origin) {
+  return NextResponse.json(
+    { success: false, message: "Origin mismatch" },
+    { status: 403 }
+  )
+}
+
+// Examples:
+// ✓ origin: "https://myapp.com"  → request URL: "https://myapp.com/api/request"
+// ✗ origin: "https://evil.com"   → request URL: "https://myapp.com/api/request"
+// ✗ origin: null (no header)     → rejected
+```
+
+## Content-Type handling
+
+The API route accepts two content types and rejects everything else:
+
+```typescript
+// The API route handles two content types:
+
+// 1. application/json — standard requests
+// Body: { source, group, query, variables, options }
+
+// 2. multipart/form-data — file uploads
+// Fields: _source, _group, _query, _options + user data/files
+
+// Anything else returns 415 Unsupported Media Type
+// { success: false, message: "Unsupported Content-Type" }
+```
+
+## Cookie forwarding
+
+Cookies are forwarded in both directions automatically. Browser cookies are included in the proxied request (via the header whitelist), and `set-cookie` headers from the backend are passed through to the browser response:
+
+```typescript
+// api/index.ts — cookies are forwarded automatically
+class MyApi extends Datasource<typeof groups> {
+  constructor() {
+    super({
+      baseURL: process.env.API_URL,
+      groups,
+      // Browser cookies (e.g., session tokens) are forwarded
+      // to the backend via the header whitelist.
+      // set-cookie headers from the backend are passed
+      // back to the browser in the proxy response.
+    })
+  }
+}
+
+// Browser side — credentials: "include" is the default
+const request = createClientRequest<Sources>()
+// Cookies are sent with every request automatically
+```
+
+<Callout variant="info" title="set-cookie handling">
+Nexus uses `getSetCookie()` to correctly handle multiple `set-cookie` headers, avoiding the common bug of splitting cookie values on commas.
+</Callout>
+
+## Error responses
+
+The API route returns consistent JSON error responses with appropriate HTTP status codes. Backend errors are forwarded with their original status:
+
+```typescript
+// Error responses follow a consistent format:
+
+// HTTP errors from the backend:
+// Status: forwarded from backend (e.g., 404, 422, 500)
+// Body:   parsed JSON from backend response
+
+// Validation errors (missing source, method not found):
+// Status: 400
+// Body:   { success: false, message: "[myApi][users][getById]: method not found" }
+
+// Origin mismatch:
+// Status: 403
+// Body:   { success: false, message: "Origin mismatch" }
+
+// Invalid JSON body:
+// Status: 400
+// Body:   { success: false, message: "Invalid JSON body" }
+
+// 204 responses from backend:
+// Status: 204
+// Body:   null (empty response)
+```
+
+## Custom proxy path
+
+The default proxy endpoint is `/api/request`. To use a different path, move the route file and update the environment variable:
+
+```ts title="app/api/my-proxy/route.ts"
+// If you need a custom proxy path:
+
+// 1. Move the route file
+//    app/api/my-proxy/route.ts
+
+// 2. Set the environment variable
+//    NEXT_PUBLIC_REQUEST_PAGE=my-proxy
+
+// 3. The route file content stays the same
+import { apiRoute } from "@noverax/nexus/next/apiRoute"
+import { sources } from "@/api"
+
+export const { POST } = apiRoute(sources)
+```
+
+## Next Steps
+
+- [createClientRequest](/docs/proxy-mode/client-request) — configure the browser-side client
+- [Path Parameters](/docs/proxy-mode/path-params) — dynamic URL segments
+- [Encoding](/docs/proxy-mode/encoding) — custom body and query serialization

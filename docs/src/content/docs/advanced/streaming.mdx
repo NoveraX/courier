@@ -1,0 +1,186 @@
+export const metadata = { title: "Streaming", description: "Receive responses as ReadableStreams for SSE, large downloads, and progressive rendering." }
+
+## Overview
+
+By default, Nexus parses the response body as JSON or text. When you set `stream: true` in the method options, Nexus returns the raw `ReadableStream` from `response.body` instead of parsing it.
+
+This is useful for Server-Sent Events (SSE), large file downloads, and any scenario where you want to process data incrementally rather than buffering the entire response.
+
+## Defining stream methods
+
+Enable streaming by passing `{ stream: true }` as the second argument to any HTTP method (`get`, `post`, etc.):
+
+```ts title="api/events.ts"
+import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+
+class Events extends EndpointGroup {
+  constructor() {
+    super({ prefix: "events" })
+  }
+
+  // Set stream: true to receive a ReadableStream instead of parsed JSON
+  subscribe: Endpoint<ReadableStream, { channel: string }> = ({ get }) =>
+    get(":channel/stream", { stream: true })
+}
+
+class Exports extends EndpointGroup {
+  constructor() {
+    super({ prefix: "exports" })
+  }
+
+  // Large file download as a stream
+  download: Endpoint<ReadableStream, { id: string }> = ({ get }) =>
+    get(":id/download", { stream: true })
+}
+```
+
+## Proxy mode behavior
+
+In proxy mode, the `apiRoute` handler detects streaming responses and returns a `Response` with the stream body and forwarded headers. The stream is not buffered in memory — data flows directly from your backend through the proxy to the browser.
+
+```ts
+// In proxy mode, apiRoute returns the stream directly as a Response:
+// Browser ← ReadableStream ← apiRoute ← Backend
+
+// The proxy preserves the stream — no buffering in memory
+// Headers like Content-Type are forwarded automatically
+```
+
+## Direct mode behavior
+
+In direct mode, the stream is returned inside the response object. You typically combine `stream: true` with `rawData: true` in direct mode to access both the stream and the response headers:
+
+```ts title="app/exports/[id]/page.tsx"
+// In direct mode, the stream is returned in the response object:
+// { status: 200, headers: Headers, data: ReadableStream }
+
+import { directRequest } from "@/lib/direct-request"
+
+export default async function ExportPage({ params }: { params: { id: string } }) {
+  const response = await directRequest("myApi", { rawData: true })("exports:download", {
+    id: params.id,
+  })
+
+  // response.data is a ReadableStream
+  // response.headers contains Content-Type, Content-Length, etc.
+}
+```
+
+## Consuming streams in client components
+
+Use the standard `ReadableStream` API to consume streamed responses. The `getReader()` method gives you a reader that yields chunks as they arrive:
+
+```ts title="components/event-stream.tsx"
+"use client"
+
+import { useEffect, useState } from "react"
+
+import { request } from "@/lib/request"
+
+export function EventStream({ channel }: { channel: string }) {
+  const [events, setEvents] = useState<string[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function consume() {
+      const response = await request("myApi")("events:subscribe", { channel })
+      const reader = (response as ReadableStream).getReader()
+      const decoder = new TextDecoder()
+
+      while (!cancelled) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const text = decoder.decode(value, { stream: true })
+        setEvents((prev) => [...prev, text])
+      }
+
+      reader.releaseLock()
+    }
+
+    consume()
+    return () => { cancelled = true }
+  }, [channel])
+
+  return (
+    <ul>
+      {events.map((event, i) => (
+        <li key={i}>{event}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+## SSE pattern
+
+Server-Sent Events follow a specific text format (`event:` and `data:` fields separated by double newlines). Here's a complete SSE consumer with event parsing:
+
+```ts title="components/sse-consumer.tsx"
+"use client"
+
+import { useEffect, useState } from "react"
+
+import { request } from "@/lib/request"
+
+type SSEEvent = { event: string; data: string }
+
+function parseSSE(chunk: string): SSEEvent[] {
+  return chunk
+    .split("\n\n")
+    .filter(Boolean)
+    .map((block) => {
+      const lines = block.split("\n")
+      const event = lines.find((l) => l.startsWith("event:"))?.slice(6).trim() ?? "message"
+      const data = lines.find((l) => l.startsWith("data:"))?.slice(5).trim() ?? ""
+      return { event, data }
+    })
+}
+
+export function SSEConsumer({ channel }: { channel: string }) {
+  const [messages, setMessages] = useState<SSEEvent[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function consume() {
+      const response = await request("myApi")("events:subscribe", { channel })
+      const reader = (response as ReadableStream).getReader()
+      const decoder = new TextDecoder()
+
+      while (!cancelled) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const text = decoder.decode(value, { stream: true })
+        const events = parseSSE(text)
+        setMessages((prev) => [...prev, ...events])
+      }
+
+      reader.releaseLock()
+    }
+
+    consume()
+    return () => { cancelled = true }
+  }, [channel])
+
+  return (
+    <ul>
+      {messages.map((msg, i) => (
+        <li key={i}>
+          <strong>{msg.event}:</strong> {msg.data}
+        </li>
+      ))}
+    </ul>
+  )
+}
+```
+
+<Callout variant="info" title="Stream and rawData">
+In proxy mode, `stream: true` returns the `ReadableStream` directly as the data value. The `rawData` option has no additional effect since the stream replaces normal response parsing entirely.
+</Callout>
+
+## Next steps
+
+- [Raw Data Mode](/docs/advanced/raw-data) — access status codes and headers alongside response data
+- [Options](/docs/advanced/options) — all per-request options including stream, rawData, and timeout
+- [Streaming Example](/streaming) — interactive demo of streaming responses

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 
+import { EditPageLink } from "@/components/docs/edit-page-link"
 import { Breadcrumbs } from "@/components/layout/breadcrumbs"
 import { ContentWrapper } from "@/components/layout/content-wrapper"
 import { Header } from "@/components/layout/header"
@@ -24,6 +25,7 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
             <ContentWrapper>
               <Breadcrumbs />
               {children}
+              <EditPageLink />
               <DocsPagination />
             </ContentWrapper>
           </main>

@@ -1,0 +1,222 @@
+export const metadata = { title: "useMutation", description: "Create, update, and delete data with type-safe mutations and automatic variable inference." }
+
+## Signature
+
+`useMutation` takes a source name, a `"group:method"` query string, and optional React Query mutation options. Variables are passed to `mutate()`, not to the hook:
+
+```ts
+const result = useMutation(source, query, options?)
+
+// source  — key from your Sources type (e.g. "myApi")
+// query   — "group:method" string (e.g. "users:create")
+// options — { requestOptions?, ...reactQueryMutationOptions }
+
+// Returns: UseMutationResult with typed mutate function
+// result.mutate(variables)   — fire and forget
+// result.mutateAsync(variables) — returns Promise<R>
+```
+
+<Callout variant="info" title="Variables go to mutate(), not the hook">
+Unlike `useQuery` where variables are passed in the options object, `useMutation` receives variables through the `mutate(variables)` call. This follows the standard React Query mutation pattern.
+</Callout>
+
+## Create mutation
+
+The most common pattern — submit a form and create a resource. The `mutate` function is typed based on the method's variable type:
+
+```ts title="components/create-user-form.tsx"
+"use client"
+
+import { useMutation } from "@/lib/request"
+
+export function CreateUserForm() {
+  // Method<User, { name: string; email: string; role: string }>
+  const { mutate, isPending } = useMutation("myApi", "users:create", {
+    onSuccess: (user) => {
+      console.log("Created:", user.name) // ← user is typed as User
+    },
+    onError: (error) => {
+      console.error("Failed:", error.message)
+    },
+  })
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = new FormData(e.currentTarget)
+
+    mutate({
+      name: form.get("name") as string,
+      email: form.get("email") as string,
+      role: "user",
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input name="name" placeholder="Name" required />
+      <input name="email" type="email" placeholder="Email" required />
+      <button type="submit" disabled={isPending}>
+        {isPending ? "Creating..." : "Create User"}
+      </button>
+    </form>
+  )
+}
+```
+
+## Update mutation
+
+For updates, pass all required fields (including the ID for path parameters) to `mutate()`. Nexus extracts path parameters automatically:
+
+```ts title="components/edit-user-form.tsx"
+"use client"
+
+import { useMutation } from "@/lib/request"
+
+export function EditUserForm({ user }: { user: User }) {
+  // Method<User, { id: number; name: string; email: string }>
+  const { mutate, isPending } = useMutation("myApi", "users:update")
+
+  const handleSave = (name: string, email: string) => {
+    // Variables passed to mutate(), not to the hook options
+    mutate({
+      id: user.id,
+      name,
+      email,
+    })
+    // ^? TypeScript enforces { id: number; name: string; email: string }
+  }
+
+  return (
+    <button onClick={() => handleSave("Jane", "jane@test.com")} disabled={isPending}>
+      Save
+    </button>
+  )
+}
+```
+
+## Delete mutation
+
+Delete methods typically return `null` and only need an ID. The variable type is inferred from the method definition:
+
+```ts title="components/delete-user-button.tsx"
+"use client"
+
+import { useMutation } from "@/lib/request"
+
+export function DeleteUserButton({ userId }: { userId: number }) {
+  // Method<null, { id: number }> → mutate takes { id: number }
+  const { mutate, isPending } = useMutation("myApi", "users:remove", {
+    onSuccess: () => {
+      console.log("User deleted")
+    },
+  })
+
+  return (
+    <button onClick={() => mutate({ id: userId })} disabled={isPending}>
+      {isPending ? "Deleting..." : "Delete"}
+    </button>
+  )
+}
+```
+
+## Cache invalidation
+
+After a mutation succeeds, invalidate related queries to trigger a refetch. Use the auto-generated query key format `[source, query, variables?]`:
+
+```ts title="components/create-user-form.tsx"
+"use client"
+
+import { useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@/lib/request"
+
+export function CreateUserForm() {
+  const queryClient = useQueryClient()
+
+  const { mutate } = useMutation("myApi", "users:create", {
+    onSuccess: () => {
+      // Invalidate the users list so it refetches
+      queryClient.invalidateQueries({ queryKey: ["myApi", "users:getAll"] })
+
+      // Or invalidate all queries for this source
+      // queryClient.invalidateQueries({ queryKey: ["myApi"] })
+    },
+  })
+
+  return (
+    <button onClick={() => mutate({ name: "Jane", email: "jane@test.com", role: "user" })}>
+      Create
+    </button>
+  )
+}
+```
+
+<Callout variant="tip" title="Partial key invalidation">
+Passing `{ queryKey: ["myApi"] }` invalidates every query for that source. Use `{ queryKey: ["myApi", "users:getAll"] }` to target a specific endpoint.
+</Callout>
+
+## Optimistic updates
+
+For instant UI feedback, update the cache optimistically before the server responds. Roll back on error, and always refetch on settle to ensure consistency:
+
+```ts title="components/user-manager.tsx"
+"use client"
+
+import { useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@/lib/request"
+
+type User = { id: number; name: string; email: string }
+
+export function UserManager() {
+  const queryClient = useQueryClient()
+  const { data: users } = useQuery("myApi", "users:getAll")
+
+  const { mutate: updateUser } = useMutation("myApi", "users:update", {
+    // 1. Cancel outgoing refetches so they don't overwrite our optimistic update
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ["myApi", "users:getAll"] })
+
+      // 2. Snapshot the previous value
+      const previous = queryClient.getQueryData<User[]>(["myApi", "users:getAll"])
+
+      // 3. Optimistically update the cache
+      queryClient.setQueryData<User[]>(["myApi", "users:getAll"], (old) =>
+        old?.map((u) => (u.id === variables.id ? { ...u, ...variables } : u))
+      )
+
+      return { previous }
+    },
+
+    // 4. On error, roll back to the previous value
+    onError: (_error, _variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["myApi", "users:getAll"], context.previous)
+      }
+    },
+
+    // 5. Always refetch after error or success to ensure consistency
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["myApi", "users:getAll"] })
+    },
+  })
+
+  return (
+    <ul>
+      {users?.map((user) => (
+        <li key={user.id}>
+          {user.name}
+          <button onClick={() => updateUser({ id: user.id, name: "Updated", email: user.email })}>
+            Update
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+```
+
+## Next steps
+
+- [useQuery](/docs/react-query/use-query) — fetch data with type-safe queries
+- [Advanced Patterns](/docs/react-query/advanced) — prefetching, hydration, infinite queries, and more
+- [Server Actions](/docs/server-side/actions) — mutations using Server Actions instead of proxy mode
+- [Error Handling](/docs/core-concepts/error-handling) — handling mutation errors and HTTP status codes

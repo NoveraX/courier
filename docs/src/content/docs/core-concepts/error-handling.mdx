@@ -1,0 +1,192 @@
+export const metadata = { title: "Error Handling", description: "Handle HTTP errors with typed error data, type guards, and global error hooks." }
+
+## The HTTPError Class
+
+When a request fails with an HTTP error status (400 or above), Nexus throws an `HTTPError`. This class extends the native `Error` and adds `status`, `headers`, and a typed `data` property containing the parsed response body:
+
+```typescript
+import { HTTPError } from "@noverax/nexus/error"
+
+// HTTPError extends the native Error class
+class HTTPError<R = unknown> extends Error {
+  status: number    // HTTP status code (400, 404, 500, ...)
+  headers: Headers  // Response headers
+  data: R           // Parsed response body — typed with the R generic
+}
+
+// The error message is automatically set to "HTTP {status}"
+// error.message → "HTTP 404"
+// error.name → "HTTPError"
+```
+
+<Callout variant="info" title="Typed error data">
+The `HTTPError<R>` generic lets you type the error response body. If your backend returns `{ "message": "Not found", "code": "NOT_FOUND" }`, you can access it as `error.data.message` with full type safety.
+</Callout>
+
+## The isHTTPError Type Guard
+
+Use `isHTTPError()` to narrow an unknown error to `HTTPError`. It works as a TypeScript type guard, giving you access to `status`, `headers`, and `data` inside the if block:
+
+```ts title="lib/api-helpers.ts"
+import { isHTTPError } from "@noverax/nexus/error"
+
+try {
+  const user = await directRequest("api")("users:getById", { id: 999 })
+} catch (error) {
+  // Type guard narrows error to HTTPError
+  if (isHTTPError(error)) {
+    console.log(error.status)  // 404
+    console.log(error.data)    // whatever the backend returned
+  }
+
+  // With a typed error body
+  if (isHTTPError<{ message: string; code: string }>(error)) {
+    console.log(error.data.message) // "User not found"
+    console.log(error.data.code)    // "USER_NOT_FOUND"
+  }
+}
+```
+
+## Error Handling Patterns
+
+### Direct mode — try/catch
+
+In Server Components and Server Actions, use standard try/catch to handle errors from `directRequest`:
+
+```ts title="app/users/[id]/page.tsx"
+import { isHTTPError } from "@noverax/nexus/error"
+
+// Direct mode — try/catch
+export default async function UserPage({ params }: { params: { id: string } }) {
+  try {
+    const user = await directRequest("api")("users:getById", {
+      id: Number(params.id),
+    })
+
+    return <UserProfile user={user} />
+  } catch (error) {
+    if (isHTTPError(error)) {
+      if (error.status === 404) {
+        return <NotFound message="User not found" />
+      }
+      return <ErrorPage status={error.status} />
+    }
+    throw error // Re-throw unexpected errors for error boundary
+  }
+}
+```
+
+### Proxy mode — React Query
+
+When using `useQuery` and `useMutation`, React Query catches errors automatically and exposes them via the `error` property:
+
+```ts title="components/users.tsx"
+"use client"
+
+import { isHTTPError } from "@noverax/nexus/error"
+import { useQuery, useMutation } from "@/lib/request"
+
+export function UsersList() {
+  const { data, error, isError } = useQuery("api", "users:getAll")
+
+  // React Query catches errors automatically
+  if (isError && isHTTPError(error)) {
+    return <div>Error {error.status}: Failed to load users</div>
+  }
+
+  return <ul>{data?.map((u) => <li key={u.id}>{u.name}</li>)}</ul>
+}
+
+export function CreateUserForm() {
+  const { mutate, error, isError } = useMutation("api", "users:create", {
+    onError: (error) => {
+      // Handle error in the mutation callback
+      if (isHTTPError<{ message: string }>(error)) {
+        toast.error(error.data.message)
+      }
+    },
+  })
+
+  return (
+    <form onSubmit={(e) => {
+      e.preventDefault()
+      mutate({ name: "Jane", email: "jane@test.com" })
+    }}>
+      {isError && isHTTPError(error) && (
+        <p className="text-red-500">Error: {error.status}</p>
+      )}
+      <button type="submit">Create User</button>
+    </form>
+  )
+}
+```
+
+## Global Error Hook
+
+For cross-cutting error handling (logging, authentication redirects, toast notifications), use the `onError` hook in your `Datasource` options. This hook runs for every failed request across all groups:
+
+```ts title="api/index.ts"
+import { Datasource } from "@noverax/nexus/datasource"
+
+const groups = { users: new Users(), posts: new Posts() }
+
+class MyApi extends Datasource<typeof groups> {
+  constructor() {
+    super({
+      baseURL: process.env.API_URL ?? "http://localhost:4000",
+      groups,
+
+      // Global error hook — runs for every failed request
+      onError: async (info, error) => {
+        // Log to your error tracking service
+        console.error(
+          `[${info.source}] ${info.group}:${info.method} failed with ${error.status}`,
+          { variables: info.variables, data: error.data }
+        )
+
+        // Handle 401 globally
+        if (error.status === 401) {
+          // Redirect to login, refresh token, etc.
+        }
+      },
+    })
+  }
+}
+```
+
+<Callout variant="warning" title="onError does not suppress errors">
+The `onError` hook is for side effects only (logging, toasts, redirects). The error is still thrown after the hook runs, so your try/catch or React Query error handling will still receive it.
+</Callout>
+
+## Error Types
+
+Nexus can throw different types of errors depending on the failure mode:
+
+```typescript
+// 1. HTTP errors (status >= 400) — most common
+// The backend returned an error response with a body
+if (isHTTPError(error)) {
+  error.status   // 400, 401, 403, 404, 500, ...
+  error.data     // Parsed response body (JSON or text)
+  error.headers  // Response headers
+}
+
+// 2. Network errors — no response received
+// Thrown as standard Error (not HTTPError)
+// error.message → "Failed to fetch" or similar
+
+// 3. Abort errors — request was cancelled
+// Thrown as HTTPError with status 499
+if (isHTTPError(error) && error.status === 499) {
+  // Request was aborted (by deduplicate or manual AbortController)
+}
+
+// 4. JSON parse errors — response is not valid JSON
+// Thrown when responseType is "json" but the body cannot be parsed
+```
+
+## Next Steps
+
+- [Instance & Methods](/docs/core-concepts/instance) — how requests are executed under the hood
+- [Type Safety](/docs/core-concepts/type-safety) — how types flow from definitions to error handling
+- [Request & RequestGroup](/docs/core-concepts/request) — where to configure global onError hooks

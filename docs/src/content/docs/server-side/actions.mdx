@@ -1,0 +1,245 @@
+export const metadata = { title: "Server Actions", description: "Use createDirectRequest inside Server Actions for type-safe mutations with automatic revalidation." }
+
+## The Server Action pattern
+
+Server Actions are async functions marked with `"use server"` that run on the server when called from client components. Combined with `createDirectRequest`, they give you type-safe mutations without writing API routes:
+
+```ts title="app/actions/users.ts"
+// app/actions/users.ts
+"use server"
+
+import { headers } from "next/headers"
+import { directRequest } from "@/lib/direct-request"
+
+type CreateUserInput = { name: string; email: string; role: string }
+
+export async function createUser(data: CreateUserInput) {
+  const user = await directRequest("myApi")(
+    "users:create",
+    data,
+    { headers: await headers() }
+  )
+
+  return user
+}
+```
+
+<Callout variant="info" title="Always forward headers">
+Server Actions receive the browser's request context, but `directRequest` does not have automatic access to it. Always pass `{ headers: await headers() }` as the context argument so authentication cookies reach your backend.
+</Callout>
+
+## Revalidation after mutations
+
+### revalidatePath
+
+Use `revalidatePath` to invalidate cached data for specific pages after a mutation. This causes Next.js to re-render the affected pages with fresh data:
+
+```ts title="app/actions/users.ts"
+// app/actions/users.ts
+"use server"
+
+import { headers } from "next/headers"
+import { revalidatePath } from "next/cache"
+import { directRequest } from "@/lib/direct-request"
+
+export async function updateUser(data: { id: number; name: string; email: string }) {
+  const user = await directRequest("myApi")(
+    "users:update",
+    data,
+    { headers: await headers() }
+  )
+
+  // Revalidate the users list and the specific user page
+  revalidatePath("/dashboard")
+  revalidatePath(`/users/${data.id}`)
+
+  return user
+}
+```
+
+### revalidateTag
+
+For more granular control, use `revalidateTag` to invalidate all cached data associated with a specific tag:
+
+```ts title="app/actions/posts.ts"
+// app/actions/posts.ts
+"use server"
+
+import { headers } from "next/headers"
+import { revalidateTag } from "next/cache"
+import { directRequest } from "@/lib/direct-request"
+
+export async function deletePost(id: number) {
+  await directRequest("myApi")(
+    "posts:remove",
+    { id },
+    { headers: await headers() }
+  )
+
+  // Revalidate all cached data tagged with "posts"
+  revalidateTag("posts")
+}
+```
+
+## Error handling
+
+Server Actions should not throw errors to the client — instead, return a result object that the client can inspect. Wrap the direct request call in a try/catch and return a discriminated union:
+
+```ts title="app/actions/users.ts"
+// app/actions/users.ts
+"use server"
+
+import { headers } from "next/headers"
+import { directRequest } from "@/lib/direct-request"
+
+type ActionResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string }
+
+export async function createUser(
+  data: { name: string; email: string }
+): Promise<ActionResult<{ id: number; name: string; email: string }>> {
+  try {
+    const user = await directRequest("myApi")(
+      "users:create",
+      data,
+      { headers: await headers() }
+    )
+
+    return { success: true, data: user }
+  } catch (error) {
+    // HTTPError from ky — contains status code and response
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
+    }
+
+    return { success: false, error: "An unexpected error occurred" }
+  }
+}
+```
+
+<Callout variant="warning" title="Don't throw in Server Actions">
+If a Server Action throws, Next.js shows the nearest `error.tsx` boundary. For form validation errors or expected API failures, return a result object instead so the UI can display a user-friendly message.
+</Callout>
+
+## Using with forms
+
+Call your Server Actions from client components using React's `useActionState` hook for built-in pending state and progressive enhancement:
+
+```ts title="app/users/create-form.tsx"
+// app/users/create-form.tsx
+"use client"
+
+import { useActionState } from "react"
+import { createUser } from "@/app/actions/users"
+
+export function CreateUserForm() {
+  const [state, action, isPending] = useActionState(
+    async (_prev: unknown, formData: FormData) => {
+      const result = await createUser({
+        name: formData.get("name") as string,
+        email: formData.get("email") as string,
+      })
+
+      if (!result.success) return { error: result.error }
+      return { success: true, user: result.data }
+    },
+    null
+  )
+
+  return (
+    <form action={action}>
+      <input name="name" placeholder="Name" required />
+      <input name="email" type="email" placeholder="Email" required />
+      <button type="submit" disabled={isPending}>
+        {isPending ? "Creating…" : "Create User"}
+      </button>
+      {state?.error && <p className="text-red-500">{state.error}</p>}
+    </form>
+  )
+}
+```
+
+## Returning data vs revalidation
+
+There are three patterns for handling the response from a mutation. Choose based on whether your UI needs the response data immediately:
+
+```ts title="app/actions/users.ts"
+// Pattern 1: Return data — let the client decide what to do
+export async function getUser(id: number) {
+  return await directRequest("myApi")(
+    "users:getById",
+    { id },
+    { headers: await headers() }
+  )
+}
+
+// Pattern 2: Mutate + revalidate — server handles cache busting
+export async function updateUser(data: { id: number; name: string }) {
+  await directRequest("myApi")(
+    "users:update",
+    data,
+    { headers: await headers() }
+  )
+
+  revalidatePath("/users")
+  // No return needed — the revalidated page re-fetches automatically
+}
+
+// Pattern 3: Mutate + return + revalidate — useful for optimistic UI
+export async function createUser(data: { name: string; email: string }) {
+  const user = await directRequest("myApi")(
+    "users:create",
+    data,
+    { headers: await headers() }
+  )
+
+  revalidatePath("/users")
+  return user // Return for immediate use before revalidation completes
+}
+```
+
+## Server Actions vs useMutation
+
+Both Server Actions and React Query's `useMutation` can handle mutations. They serve different use cases:
+
+- **Server Actions** — best for form submissions, progressive enhancement, and when you want Next.js to handle revalidation
+- **useMutation** — best for optimistic updates, cache invalidation via query keys, and when you need React Query's retry/rollback features
+
+You can combine both: call a Server Action from `useMutation` to get the best of both worlds — server-side execution with client-side cache management.
+
+```ts title="app/users/create-button.tsx"
+// app/users/create-button.tsx
+"use client"
+
+import { useMutation } from "@/lib/request"
+
+export function CreateUserButton() {
+  // useMutation calls the proxy route, not a Server Action
+  // Use this when you want React Query's cache management
+  const { mutate, isPending } = useMutation("myApi", "users:create", {
+    onSuccess: (user) => {
+      console.log("Created:", user.name)
+    },
+  })
+
+  return (
+    <button
+      onClick={() => mutate({ name: "Jane", email: "jane@test.com", role: "user" })}
+      disabled={isPending}
+    >
+      {isPending ? "Creating…" : "Add User"}
+    </button>
+  )
+}
+```
+
+<Callout variant="tip" title="Combine for optimistic updates">
+Use React Query's `useMutation` with `onMutate` for optimistic UI, while the actual request goes through the proxy route. The proxy mode handles serialization and cookie forwarding automatically.
+</Callout>
+
+## Next Steps
+
+- [createDirectRequest](/docs/server-side/direct) — full API reference with defaults and raw data mode
+- [useMutation](/docs/react-query/use-mutation) — React Query mutations with proxy mode
+- [Error Handling](/docs/core-concepts/error-handling) — HTTPError structure and error callbacks

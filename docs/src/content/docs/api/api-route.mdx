@@ -1,0 +1,177 @@
+export const metadata = { title: "apiRoute", description: "Creates a Next.js App Router POST handler that processes proxy-mode requests from createClientRequest." }
+
+## Import
+
+```ts
+import { apiRoute } from "@noverax/nexus/next"
+```
+
+## Signature
+
+`apiRoute` takes your source definitions and returns an object with a `POST` handler — ready to be exported from a Next.js route file.
+
+```ts
+import { apiRoute } from "@noverax/nexus/next"
+
+export const { POST } = apiRoute(sources)
+```
+
+## Parameters
+
+### sources
+
+A record mapping source names to `Request` instances. Each source defines its `baseURL`, headers, groups, and methods.
+
+```ts
+type Sources = Record<string, Datasource<GroupsRecord | undefined>>
+```
+
+## Return Type
+
+```ts
+{
+  POST: (request: NextRequest) => Promise<Response | NextResponse>
+}
+```
+
+## Basic Usage
+
+```ts title="app/api/request/route.ts"
+// app/api/request/route.ts
+import { apiRoute } from "@noverax/nexus/next"
+import { sources } from "@/api/sources"
+
+export const { POST } = apiRoute(sources)
+```
+
+## Defining Sources
+
+Sources are shared between `apiRoute` (server) and your type definitions (client). Define them once, export the type for `createClientRequest`.
+
+```ts title="api/sources.ts"
+// api/sources.ts
+import { Datasource, EndpointGroup } from "@noverax/nexus/datasource"
+
+const api = new Datasource({
+  baseURL: process.env.API_URL,
+  timeout: 10000,
+  headers: {
+    Authorization: `Bearer ${process.env.API_SECRET}`,
+  },
+  groups: {
+    users: new EndpointGroup({ prefix: "/users" }),
+    posts: new EndpointGroup({ prefix: "/posts" }),
+  },
+})
+
+export const sources = { api } as const
+export type Sources = typeof sources
+```
+
+<Callout variant="tip" title="Secret safety">
+Environment variables without the `NEXT_PUBLIC_` prefix (like `API_SECRET`) are only available server-side. The proxy pattern keeps your secrets safe — the client never sees the `baseURL` or `Authorization` header.
+</Callout>
+
+## Custom Route Path
+
+The route file location determines the API path. Match it with `routePath` in your client config.
+
+```ts
+// You can place the route at any path:
+// app/api/nexus/route.ts     → /api/nexus
+// app/api/v1/proxy/route.ts  → /api/v1/proxy
+
+// Then configure the client to match:
+const request = createClientRequest<Sources>({
+  routePath: "nexus",  // matches /api/nexus
+})
+```
+
+## Request Flow
+
+When `apiRoute` receives a POST request, it performs these steps:
+
+```bash title="Request Flow"
+// What happens when apiRoute receives a request:
+//
+// 1. Validate Origin header (CSRF protection)
+//    → 403 if origin doesn't match request URL
+//
+// 2. Parse Content-Type
+//    → multipart/form-data: parse as FormData (file uploads)
+//    → application/json: parse as JSON
+//    → other: 415 Unsupported Content-Type
+//
+// 3. Extract request params from body:
+//    JSON:     { source, group, query, variables, options }
+//    FormData: _source, _group, _query, _options fields + file fields
+//
+// 4. Call executeRequest(sources, body, context)
+//    → Resolves source → creates HttpClient → executes method
+//
+// 5. Return response to the client
+```
+
+## Request Body Format
+
+### JSON Body
+
+Standard requests send a JSON body with source, group, query, variables, and options.
+
+```json
+// JSON request body structure (sent by createClientRequest)
+{
+  "source": "api",
+  "group": "users",
+  "query": "getById",
+  "variables": { "id": "123" },
+  "options": { "timeout": 5000 }
+}
+```
+
+### FormData Body
+
+File uploads send a `multipart/form-data` body with Nexus metadata in prefixed fields.
+
+```bash
+// FormData request structure (file uploads)
+// Fields prefixed with _ are Nexus metadata:
+_source:  "api"
+_group:   "files"
+_query:   "upload"
+_options: '{"timeout":30000}'
+file:     <File>           // actual file data
+name:     "document.pdf"   // additional variables
+```
+
+## Security
+
+### Origin Validation
+
+The handler validates the `Origin` header against the request URL. If they don't match, a `403` is returned. This prevents cross-site request forgery (CSRF) attacks.
+
+<Callout variant="warning" title="Same-origin only">
+The `apiRoute` handler only accepts requests from the same origin. Cross-origin requests are rejected with a 403 status.
+</Callout>
+
+## Error Responses
+
+```json
+// Error responses returned by apiRoute:
+
+// 403 — Origin mismatch (CSRF protection)
+{ "success": false, "message": "Origin mismatch" }
+
+// 400 — Invalid JSON body
+{ "success": false, "message": "Invalid JSON body" }
+
+// 415 — Unsupported Content-Type
+{ "success": false, "message": "Unsupported Content-Type" }
+```
+
+## Related
+
+- [Proxy Mode Overview](/docs/proxy-mode/overview) — understand the proxy architecture
+- [API Route Guide](/docs/proxy-mode/api-route) — step-by-step setup
+- [createClientRequest](/docs/api/create-client-request) — the client that sends requests to apiRoute
+- [Request](/docs/api/request) — defining data sources

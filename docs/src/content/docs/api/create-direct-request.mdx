@@ -1,0 +1,181 @@
+export const metadata = { title: "createDirectRequest", description: "Factory function that creates a typed request function for server-side direct HTTP calls — no proxy hop needed." }
+
+## Import
+
+```ts
+import { createDirectRequest } from "@noverax/nexus/direct"
+```
+
+## Signature
+
+`createDirectRequest` takes your source definitions and optional defaults, returning a curried `RequestFn` function. Unlike `createClientRequest`, direct mode calls the backend directly without going through a proxy API route.
+
+```ts
+import { createDirectRequest } from "@noverax/nexus/direct"
+
+const request = createDirectRequest<Sources>(sources, defaults?)
+```
+
+## Parameters
+
+### sources
+
+A record of `Request` data source definitions. This is the same object you pass to `apiRoute`.
+
+```ts
+type Sources = Record<string, Datasource<GroupsRecord | undefined>>
+```
+
+### defaults
+
+Optional default settings applied to every request.
+
+```ts
+type DirectRequestDefaults = {
+  timeout?: number
+  headers?: Record<string, string>
+  onError?: (error: HTTPError) => void | Promise<void>
+  onSuccess?: (data: unknown) => void | Promise<void>
+}
+```
+
+- `timeout` — request timeout in milliseconds.
+- `headers` — default headers merged into every request. Per-call headers are merged on top.
+- `onError` — global error handler for every `HTTPError`.
+- `onSuccess` — global success handler for every successful response.
+
+## Return Type
+
+Direct mode returns `Partial<HttpResponse<R>>` instead of raw data. This gives you access to the status code, headers, and parsed data.
+
+```ts
+// Direct mode returns Partial<HttpResponse<R>> — includes status, headers, and data
+type HttpResponse<T = unknown> = {
+  status: number
+  headers: Headers
+  data: T
+}
+
+// Return type: Promise<Partial<HttpResponse<R>>>
+```
+
+<Callout variant="tip" title="Direct vs Proxy return types">
+`createClientRequest` returns just the data (`R`) by default. `createDirectRequest` always returns `Partial<HttpResponse<R>>` with `status`, `headers`, and `data`.
+</Callout>
+
+## Basic Usage
+
+```ts title="api/direct.ts"
+import { createDirectRequest } from "@noverax/nexus/direct"
+import { sources } from "@/api/sources"
+
+const request = createDirectRequest(sources, {
+  timeout: 10000,
+})
+
+// Usage: request(source)(query, variables?, context?)
+const result = await request("api")("users:getAll")
+const user = await request("api")("users:getById", { id: "123" })
+```
+
+## Passing Context
+
+The optional third argument is a `Context` object. Use it to forward cookies and headers from the incoming request to the backend — essential in RSC and Server Actions.
+
+```ts
+type Context = {
+  req?: NextRequest
+  res?: NextResponse
+  headers?: Headers
+}
+```
+
+```ts title="app/users/page.tsx"
+import { headers } from "next/headers"
+
+// Pass Next.js context for cookie/header forwarding
+const result = await request("api")(
+  "users:getProfile",
+  undefined,               // no variables
+  { headers: await headers() },  // context with headers
+)
+
+// With variables AND context
+const user = await request("api")(
+  "users:getById",
+  { id: "123" },           // variables
+  { headers: await headers() },  // context
+)
+```
+
+## React Server Components
+
+Direct mode is designed for server-only execution. Use it in React Server Components to fetch data without a proxy hop.
+
+```ts title="app/users/page.tsx"
+// app/users/page.tsx — React Server Component
+import { request } from "@/api/direct"
+
+export default async function UsersPage() {
+  const result = await request("api")("users:getAll")
+
+  return (
+    <ul>
+      {result.data?.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+## Server Actions
+
+Works seamlessly with Next.js Server Actions for mutations with automatic revalidation.
+
+```ts title="app/users/actions.ts"
+// app/users/actions.ts — Server Action
+"use server"
+
+import { request } from "@/api/direct"
+import { revalidatePath } from "next/cache"
+
+export async function createUser(formData: FormData) {
+  const name = formData.get("name") as string
+
+  await request("api")("users:create", { name })
+
+  revalidatePath("/users")
+}
+```
+
+## Configuring Defaults
+
+```ts title="api/direct.ts"
+const request = createDirectRequest(sources, {
+  // Request timeout in milliseconds
+  timeout: 15000,
+
+  // Default headers for every request
+  headers: {
+    "X-Internal-Service": "nexus-app",
+  },
+
+  // Global error handler
+  onError: (error) => {
+    console.error(`[Direct] HTTP ${error.status}:`, error.data)
+  },
+
+  // Global success handler
+  onSuccess: (data) => {
+    console.log("[Direct] Success:", data)
+  },
+})
+```
+
+## Related
+
+- [Server-Side Overview](/docs/server-side/overview) — understand direct mode architecture
+- [Server Actions](/docs/server-side/actions) — mutations with revalidation
+- [createClientRequest](/docs/api/create-client-request) — proxy-mode alternative for client components
+- [Request](/docs/api/request) — data source definition class

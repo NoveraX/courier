@@ -1,0 +1,168 @@
+export const metadata = { title: "Abort & Deduplication", description: "Automatically cancel duplicate in-flight requests and manually abort with AbortController." }
+
+## Overview
+
+When users interact quickly — typing in a search box, clicking pagination rapidly, or switching filters — multiple requests for the same endpoint can be in flight simultaneously. Nexus can automatically abort the previous request when a new one starts for the same endpoint.
+
+Enable this by setting `deduplicate: true` in your source options. Nexus will track active requests and cancel duplicates before they complete.
+
+## Enabling deduplication
+
+Set `deduplicate: true` in `BaseOptions` when creating your `Datasource` class. This applies to all methods in the source:
+
+```ts title="api/sources.ts"
+import { Datasource } from "@noverax/nexus/datasource"
+
+class MyApi extends Datasource<typeof groups> {
+  constructor() {
+    super({
+      baseURL: process.env.API_URL ?? "http://localhost:4000",
+      groups,
+      deduplicate: true, // Enable automatic deduplication
+    })
+  }
+}
+```
+
+## Deduplication key
+
+The dedup key is computed as `METHOD:origin/path`. The query string and hash are intentionally ignored — this means requests to the same endpoint with different query parameters are treated as duplicates:
+
+```ts
+// Dedup key format: METHOD:origin/path
+// Query string and hash are ignored
+
+// These two requests share the same dedup key (GET:https://api.example.com/users):
+request("myApi")("users:getAll", { page: 1 })  // ← aborted (status 499)
+request("myApi")("users:getAll", { page: 2 })  // ← executes
+
+// These have different keys (different paths):
+request("myApi")("users:getById", { id: 1 })   // GET:https://api.example.com/users/1
+request("myApi")("users:getById", { id: 2 })   // GET:https://api.example.com/users/2
+```
+
+<Callout variant="info" title="Why ignore query params?">
+In search-as-you-type scenarios, each keystroke sends a new query to the same endpoint. You typically only care about the latest results. By ignoring query parameters in the dedup key, the previous search is automatically cancelled.
+</Callout>
+
+## Abort behavior
+
+When a duplicate request is detected:
+
+1. The **previous** request is aborted and throws an `HTTPError` with status `499`.
+2. The **new** request proceeds normally.
+3. If the `onError` hook is defined, it receives the abort error.
+
+## Handling abort errors
+
+Aborted requests throw with status 499. In most cases you want to silently ignore these errors since they represent intentional cancellation:
+
+```ts title="components/search-users.tsx"
+"use client"
+
+import { useMutation, useQuery } from "@/lib/request"
+
+export function SearchUsers() {
+  const [query, setQuery] = useState("")
+
+  // With deduplicate enabled, rapid typing aborts previous searches
+  const { data, error } = useQuery("myApi", "users:search", {
+    variables: { q: query },
+    enabled: query.length > 0,
+  })
+
+  // Filter out abort errors (status 499) in error handling
+  useEffect(() => {
+    if (error && "response" in error) {
+      const status = (error as any).response?.status
+      if (status === 499) return // Ignore aborted requests
+      console.error("Search failed:", error)
+    }
+  }, [error])
+
+  return (
+    <div>
+      <input value={query} onChange={(e) => setQuery(e.target.value)} />
+      {data?.map((user) => <p key={user.id}>{user.name}</p>)}
+    </div>
+  )
+}
+```
+
+## Manual abort with AbortController
+
+You can also manually abort requests by passing a `signal` in the request options. This works independently of the deduplication feature — you can use one or both:
+
+```ts title="components/cancellable-request.tsx"
+"use client"
+
+import { useEffect, useRef } from "react"
+
+import { request } from "@/lib/request"
+
+export function CancellableRequest() {
+  const controllerRef = useRef<AbortController | null>(null)
+
+  async function fetchData() {
+    // Cancel any previous request
+    controllerRef.current?.abort()
+    controllerRef.current = new AbortController()
+
+    try {
+      const data = await request("myApi", {
+        signal: controllerRef.current.signal,
+      })("reports:generate", { type: "monthly" })
+
+      console.log("Report:", data)
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        console.log("Request was cancelled")
+        return
+      }
+      throw error
+    }
+  }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => controllerRef.current?.abort()
+  }, [])
+
+  return (
+    <div>
+      <button onClick={fetchData}>Generate Report</button>
+      <button onClick={() => controllerRef.current?.abort()}>Cancel</button>
+    </div>
+  )
+}
+```
+
+<Callout variant="tip" title="Signal merging">
+If you use both `deduplicate: true` and a manual `signal`, Nexus combines them using `AbortSignal.any()`. The request aborts if either signal fires.
+</Callout>
+
+## How it works internally
+
+Deduplication is implemented via ky hooks on the `HttpClient` class. Understanding the internals helps when debugging abort-related issues:
+
+```ts
+// How deduplication works internally:
+
+// 1. beforeRequestHook runs before each request
+//    - Computes dedup key: METHOD:origin/path
+//    - If a request with the same key exists, aborts it (status 499)
+//    - Stores new AbortController in currentExecutingRequests map
+
+// 2. afterResponse runs when a request completes
+//    - Removes the entry from currentExecutingRequests
+
+// 3. Signal merging
+//    - If you also pass a manual signal, both signals are combined
+//    - Uses AbortSignal.any() — request aborts if either signal fires
+```
+
+## Next steps
+
+- [Hooks](/docs/advanced/hooks) — use onError to filter out abort errors from your monitoring
+- [Options](/docs/advanced/options) — signal, retry, and other request-level options
+- [Abort Example](/abort) — interactive demo of deduplication in action

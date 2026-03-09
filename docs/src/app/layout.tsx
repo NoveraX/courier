@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   },
   description:
     "Type-safe HTTP client with request grouping, path parameters, and full Next.js integration. Proxy & direct modes, React Query, streaming, uploads.",
-  metadataBase: new URL("https://nexus.noverax.dev"),
+  metadataBase: new URL("https://nexus.noverax.cloud"),
   openGraph: {
     type: "website",
     locale: "en_US",

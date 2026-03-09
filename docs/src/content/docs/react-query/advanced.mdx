@@ -1,0 +1,219 @@
+export const metadata = { title: "Advanced React Query Patterns", description: "Prefetching, hydration, cache strategies, infinite queries, and escape hatches for complex scenarios." }
+
+## Prefetching and hydration
+
+For the best user experience, prefetch data in Server Components and pass it to the client via `HydrationBoundary`. The client component receives cached data instantly with no loading state:
+
+```ts title="app/users/page.tsx"
+// app/users/page.tsx — React Server Component
+import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query"
+import { request } from "@/lib/request"
+import { UserList } from "./user-list"
+
+export default async function UsersPage() {
+  const queryClient = new QueryClient()
+
+  // Prefetch using the raw `request` client in RSC
+  await queryClient.prefetchQuery({
+    queryKey: ["myApi", "users:getAll"],
+    queryFn: () => request("myApi")("users:getAll"),
+  })
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <UserList />
+    </HydrationBoundary>
+  )
+}
+```
+
+```ts title="app/users/user-list.tsx"
+// app/users/user-list.tsx
+"use client"
+
+import { useQuery } from "@/lib/request"
+
+export function UserList() {
+  // This picks up the prefetched data instantly — no loading state
+  const { data } = useQuery("myApi", "users:getAll")
+
+  return (
+    <ul>
+      {data?.data.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+<Callout variant="tip" title="Query key must match">
+The `queryKey` in `prefetchQuery` must exactly match the auto-generated key from `useQuery`. For a query `useQuery("myApi", "users:getAll")`, the key is `["myApi", "users:getAll"]`. With variables, include them as the third element.
+</Callout>
+
+## Cache invalidation patterns
+
+React Query uses partial key matching for invalidation. You can invalidate at different levels of specificity:
+
+```ts
+import { useQueryClient } from "@tanstack/react-query"
+
+const queryClient = useQueryClient()
+
+// Invalidate a specific query with exact variables
+queryClient.invalidateQueries({
+  queryKey: ["myApi", "users:getById", { id: 5 }],
+})
+
+// Invalidate all queries for a specific method (any variables)
+queryClient.invalidateQueries({
+  queryKey: ["myApi", "users:getAll"],
+})
+
+// Invalidate every query for a source
+queryClient.invalidateQueries({
+  queryKey: ["myApi"],
+})
+
+// Invalidate everything
+queryClient.invalidateQueries()
+```
+
+## Dependent queries
+
+When one query depends on another's result, use the `enabled` option to create a chain. The second query only fires after the first succeeds:
+
+```ts title="components/user-posts.tsx"
+"use client"
+
+import { useQuery } from "@/lib/request"
+
+export function UserPosts({ userId }: { userId: number }) {
+  // First query: fetch the user
+  const { data: user } = useQuery("myApi", "users:getById", {
+    variables: { id: userId },
+  })
+
+  // Second query: only runs after the first succeeds
+  const { data: posts, isLoading } = useQuery("myApi", "posts:getByAuthor", {
+    variables: { authorId: user?.id! },
+    enabled: !!user?.id,
+  })
+
+  if (isLoading) return <p>Loading posts...</p>
+
+  return (
+    <div>
+      <h2>Posts by {user?.name}</h2>
+      <ul>
+        {posts?.map((post) => (
+          <li key={post.id}>{post.title}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+## Parallel queries
+
+Multiple `useQuery` calls in the same component run in parallel automatically. React Query manages all the loading and error states independently:
+
+```ts title="components/dashboard.tsx"
+"use client"
+
+import { useQuery } from "@/lib/request"
+
+export function Dashboard() {
+  // These queries run in parallel automatically
+  const { data: users, isLoading: usersLoading } = useQuery("myApi", "users:getAll")
+  const { data: posts, isLoading: postsLoading } = useQuery("myApi", "posts:getAll")
+  const { data: stats, isLoading: statsLoading } = useQuery("myApi", "analytics:summary")
+
+  const isLoading = usersLoading || postsLoading || statsLoading
+  if (isLoading) return <p>Loading dashboard...</p>
+
+  return (
+    <div>
+      <h2>Users: {users?.total}</h2>
+      <h2>Posts: {posts?.total}</h2>
+      <h2>Views: {stats?.totalViews}</h2>
+    </div>
+  )
+}
+```
+
+## Infinite queries
+
+For paginated lists with a "load more" pattern, use React Query's `useInfiniteQuery` with the raw `request` client as the query function:
+
+```ts title="components/infinite-user-list.tsx"
+"use client"
+
+import { useInfiniteQuery } from "@tanstack/react-query"
+import { request } from "@/lib/request"
+
+type UserList = { data: User[]; total: number; nextPage: number | null }
+
+export function InfiniteUserList() {
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ["myApi", "users:getAll"],
+    queryFn: ({ pageParam }) =>
+      request("myApi")("users:getAll", { page: pageParam, limit: 20 }) as Promise<UserList>,
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => lastPage.nextPage,
+  })
+
+  return (
+    <div>
+      {data?.pages.flatMap((page) =>
+        page.data.map((user) => <div key={user.id}>{user.name}</div>)
+      )}
+      {hasNextPage && (
+        <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+          {isFetchingNextPage ? "Loading..." : "Load More"}
+        </button>
+      )}
+    </div>
+  )
+}
+```
+
+<Callout variant="info" title="Manual wrapper">
+Nexus doesn't wrap `useInfiniteQuery` directly — use the raw `request` function as the `queryFn`. This gives you full control over pagination logic while keeping the same proxy transport.
+</Callout>
+
+## The request escape hatch
+
+When you need to make API calls outside React components or hooks — in utility functions, event handlers, or third-party callbacks — use the `request` function directly:
+
+```ts title="lib/utils.ts"
+// In a utility function (no hooks available)
+import { request } from "@/lib/request"
+
+export async function checkAuthStatus(): Promise<boolean> {
+  try {
+    await request("myApi")("auth:me")
+    return true
+  } catch {
+    return false
+  }
+}
+
+// In an event handler
+const handleExport = async () => {
+  const data = await request("myApi")("reports:export", { format: "csv" })
+  downloadFile(data)
+}
+
+// In a third-party library callback
+analytics.onEvent(async (event) => {
+  await request("myApi")("analytics:track", { event })
+})
+```
+
+## Next steps
+
+- [Hooks (Lifecycle)](/docs/advanced/hooks) — onRequest, onResponse, and onError hooks for request interception
+- [Singleton Pattern](/docs/advanced/singleton) — module augmentation for global type-safe access
+- [createDirectRequest](/docs/server-side/direct) — server-side alternative for RSC and Server Actions

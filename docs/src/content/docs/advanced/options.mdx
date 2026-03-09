@@ -1,0 +1,176 @@
+export const metadata = { title: "Options", description: "Full reference of source-level and per-request configuration options." }
+
+## Overview
+
+Nexus options are split into two layers: **BaseOptions** for source-level configuration (applies to all methods in a source) and **MethodsInstanceOptions** for per-request overrides. Both layers build on top of ky's options, so any ky-compatible option can also be used.
+
+## BaseOptions
+
+Set in the `Request` constructor via `super()`. These apply to every request made through this source:
+
+```ts title="types"
+type BaseOptions = {
+  // URL & encoding
+  baseURL: string                              // Prefix URL for all requests
+  responseType?: "json" | "text"               // Response parsing (default: "json")
+  defaultData?: Record<string, unknown>        // Merged into every request body
+  defaultQueryParams?: Record<string, unknown> // Merged into every query string
+  bodyEncoder?: (body: unknown) => unknown     // Custom body serializer
+  searchParamsEncoder?: (params: unknown) => string // Custom query serializer
+  extraHeaders?: string[]                      // Additional header names to forward
+
+  // Behavior
+  requestAbort?: boolean                       // Enable request deduplication
+  timeout?: number                             // Request timeout in ms
+  retry?: number | RetryOptions                // Retry configuration
+  headers?: HeadersInit                        // Static headers for all requests
+  credentials?: RequestCredentials             // Cookie handling mode
+
+  // Hooks
+  onRequest?: (info: HookInfo) => HookInfo | undefined | Promise<...>
+  onResponse?: (info: HookInfo, response: ResponseInfo) => ResponseInfo | undefined | Promise<...>
+  onError?: (info: HookInfo, error: HTTPError) => undefined | Promise<undefined>
+
+  // All other ky options (cache, mode, redirect, signal, etc.)
+}
+```
+
+## MethodsInstanceOptions
+
+Passed as the second argument to a request function call. These are per-request options that control how a single request behaves:
+
+```ts title="types"
+type MethodsInstanceOptions = {
+  rawData?: boolean           // Return { status, headers, data } instead of just data
+  stream?: boolean            // Return ReadableStream instead of parsed response
+  passVars?: boolean          // Pass variables to method body (default: true)
+  onUploadProgress?: (progress: {
+    percent: number
+    transferredBytes: number
+    totalBytes: number
+  }) => void                  // Upload progress callback
+}
+```
+
+## Timeout & retry
+
+Configure request timeouts and automatic retry behavior. Retry uses ky's built-in retry logic with exponential or custom backoff:
+
+```ts title="api/sources.ts"
+class MyApi extends Request<typeof groups> {
+  constructor() {
+    super({
+      baseURL: process.env.API_URL ?? "http://localhost:4000",
+      groups,
+
+      // Timeout after 10 seconds
+      timeout: 10_000,
+
+      // Retry failed requests up to 3 times
+      retry: {
+        limit: 3,
+        methods: ["get"],           // Only retry GET requests
+        statusCodes: [408, 502, 503, 504],
+        backoffLimit: 3000,         // Max delay between retries (ms)
+        delay: (attemptCount) => 1000 * attemptCount, // Linear backoff
+      },
+    })
+  }
+}
+```
+
+<Callout variant="info" title="Retry methods">
+By default, ky only retries `GET`, `PUT`, and `HEAD` requests. POST, PATCH, and DELETE are not retried by default since they may not be idempotent. Override this with `retry.methods`.
+</Callout>
+
+## Next.js caching
+
+In direct mode, you can pass Next.js-specific caching options via the `next` and `cache` fields. These are forwarded directly to the underlying fetch call:
+
+```ts title="app/page.tsx"
+// Per-request caching with Next.js ISR
+const users = await directRequest("myApi", {
+  next: { revalidate: 60 },              // Revalidate every 60 seconds
+})("users:getAll")
+
+// Tag-based revalidation
+const post = await directRequest("myApi", {
+  next: { tags: ["posts", `post-${id}`] }, // Revalidate by tag
+})("posts:getById", { id })
+
+// Force no caching
+const live = await directRequest("myApi", {
+  cache: "no-store",                      // Always fetch fresh data
+})("stats:realtime")
+```
+
+<Callout variant="warning" title="Direct mode only">
+The `next` and `cache` options only work in direct mode (server-side). In proxy mode, the browser makes a POST to your API route, and Next.js caching does not apply to POST requests.
+</Callout>
+
+## Headers
+
+Set static headers at the source level or override them per-request. Source-level headers apply to all requests; per-request headers are merged on top:
+
+```ts title="api/sources.ts"
+// Static headers on the source (apply to all requests)
+class MyApi extends Request<typeof groups> {
+  constructor() {
+    super({
+      baseURL: process.env.API_URL ?? "http://localhost:4000",
+      groups,
+      headers: {
+        "X-API-Version": "2",
+        "Accept-Language": "en",
+      },
+    })
+  }
+}
+
+// Per-request headers
+const data = await request("myApi", {
+  headers: { "X-Custom-Header": "value" },
+})("users:getAll")
+```
+
+## Option precedence
+
+When the same option is set at multiple levels, per-request options take the highest priority:
+
+```ts title="api/sources.ts"
+// Options are merged with this precedence (highest wins):
+// 1. Per-request options  → request("myApi", { timeout: 5000 })("...")
+// 2. Source-level options → super({ timeout: 10000, ... })
+// 3. ky defaults          → ky's built-in defaults
+
+// Example: source sets 10s timeout, but this request uses 5s
+class MyApi extends Request<typeof groups> {
+  constructor() {
+    super({
+      baseURL: process.env.API_URL ?? "http://localhost:4000",
+      groups,
+      timeout: 10_000,  // Default for all requests in this source
+    })
+  }
+}
+
+// Override timeout for a slow endpoint
+const report = await request("myApi", {
+  timeout: 30_000,
+})("reports:generate", { type: "annual" })
+```
+
+## Credentials
+
+The `credentials` option controls cookie handling:
+
+- `"include"` — send cookies with cross-origin requests (default in proxy mode)
+- `"same-origin"` — send cookies only to same-origin requests
+- `"omit"` — never send cookies
+
+## Next steps
+
+- [Hooks](/docs/advanced/hooks) — lifecycle hooks for request interception and transformation
+- [Raw Data Mode](/docs/advanced/raw-data) — using rawData to access status codes and headers
+- [Streaming](/docs/advanced/streaming) — enabling stream mode for ReadableStream responses
+- [Options Example](/options) — interactive demo of timeout, retry, and cache options

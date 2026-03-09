@@ -1,0 +1,186 @@
+export const metadata = { title: "Type Safety", description: "How Nexus achieves end-to-end type safety from API definitions to React components — without code generation." }
+
+## Overview
+
+Nexus provides full type safety across the entire request lifecycle: from your API definition to the data in your components. There is no code generation, no schema files, and no build step. TypeScript classes are the single source of truth, and the type system does the rest.
+
+## The Method Generic
+
+Type safety starts with the `Endpoint<R, V>` generic. Every method in a `EndpointGroup` declares two type parameters:
+
+- `R` — the response type (what the backend returns)
+- `V` — the variables type (what the caller must pass). Defaults to `undefined`, meaning no variables are needed.
+
+```ts title="api/users.ts"
+import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+
+type User = { id: number; name: string; email: string }
+type UserList = { data: User[]; total: number }
+
+export class Users extends EndpointGroup {
+  constructor() {
+    super({ prefix: "users" })
+  }
+
+  // Endpoint<R> — R is the response type, no variables needed
+  getAll: Endpoint<UserList> = ({ get }) => get()
+
+  // Endpoint<R, V> — R is the response type, V is the variables type
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+
+  // V determines what the caller must pass
+  create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
+}
+```
+
+## The Inference Chain
+
+Nexus uses TypeScript's type inference to propagate types through a curried function chain. When you call `useQuery` or `directRequest`, TypeScript automatically infers the response type and variables type from your method definition:
+
+```typescript
+// 1. You define the source
+export const sources = { myApi: new MyApi() }
+export type Sources = typeof sources
+
+// 2. You create a typed client
+const { useQuery, useMutation } = createQueryRequest<Sources>()
+
+// 3. TypeScript infers everything at the call site
+const { data } = useQuery("myApi", "users:getAll")
+//      ^? UserList — inferred from Endpoint<UserList>
+
+const { data } = useQuery("myApi", "users:getById", {
+  variables: { id: 5 },
+  //           ^? { id: number } — inferred from Endpoint<User, { id: number }>
+})
+
+const { mutate } = useMutation("myApi", "users:create")
+mutate({ name: "Jane", email: "jane@test.com" })
+//      ^? { name: string; email: string } — inferred from Endpoint<User, CreateVars>
+```
+
+<Callout variant="tip" title="No manual type annotations">
+You never need to write `useQuery<UserList>("myApi", "users:getAll")`. The response type is inferred automatically from your `Endpoint<UserList>` definition. This means your types stay in one place and are never duplicated.
+</Callout>
+
+## Query String Literal Types
+
+The `"group:method"` query string is not just a runtime convention — it is a TypeScript string literal type. This gives you autocomplete and compile-time validation for every method call:
+
+```typescript
+// The first argument is narrowed to valid source names
+useQuery("myApi", "users:getAll")     // ✓ — "myApi" exists in Sources
+useQuery("unknown", "users:getAll")   // ✗ — Type error: "unknown" is not a valid source
+
+// The second argument is narrowed to valid "group:method" strings
+useQuery("myApi", "users:getAll")    // ✓
+useQuery("myApi", "users:unknown")   // ✗ — "unknown" is not a method on Users
+useQuery("myApi", "fake:getAll")     // ✗ — "fake" is not a group on MyApi
+
+// TypeScript parses the string literal using SplitEndpoint<T>
+type SplitEndpoint<T extends string> =
+  T extends `${infer Group}:${infer Method}`
+    ? { group: Group; method: Method }
+    : { group: undefined; method: T }
+```
+
+## Variables Enforcement
+
+TypeScript enforces whether variables are required, optional, or forbidden based on your `Endpoint<R, V>` definition:
+
+```typescript
+// Method with no variables — V defaults to undefined
+getAll: Endpoint<User[]> = ({ get }) => get()
+
+// ✓ No variables needed
+useQuery("myApi", "users:getAll")
+
+// ✗ Type error — this method doesn't accept variables
+useQuery("myApi", "users:getAll", { variables: { page: 1 } })
+
+// Method with required variables
+getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+
+// ✗ Type error — variables are required
+useQuery("myApi", "users:getById")
+
+// ✗ Type error — wrong variable type
+useQuery("myApi", "users:getById", { variables: { id: "abc" } })
+
+// ✓ Correct
+useQuery("myApi", "users:getById", { variables: { id: 5 } })
+```
+
+<Callout variant="info" title="Path parameters are included">
+If a method uses path parameters like `:id`, those keys must be part of the variables type. TypeScript enforces that `id` is present in the variables object.
+</Callout>
+
+## Pattern: Well-Typed Methods
+
+For the best developer experience, define your domain types explicitly and use utility types like `Omit` and `Partial` to derive variables types:
+
+```ts title="api/products.ts"
+import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+
+// 1. Define your domain types explicitly
+type Product = {
+  id: number
+  name: string
+  price: number
+  category: string
+}
+
+type ProductFilters = {
+  category?: string
+  minPrice?: number
+  maxPrice?: number
+  page?: number
+}
+
+type CreateProductVars = Omit<Product, "id">
+type UpdateProductVars = { id: number } & Partial<CreateProductVars>
+
+// 2. Use them in Method generics
+export class Products extends EndpointGroup {
+  constructor() {
+    super({ prefix: "products" })
+  }
+
+  list: Endpoint<Product[], ProductFilters> = ({ get }) => get()
+  getById: Endpoint<Product, { id: number }> = ({ get }) => get(":id")
+  create: Endpoint<Product, CreateProductVars> = ({ post }) => post()
+  update: Endpoint<Product, UpdateProductVars> = ({ patch }) => patch(":id")
+  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
+}
+
+// 3. Everything flows automatically
+// useQuery("api", "products:list", { variables: { category: "shoes" } })
+//                                                 ^? ProductFilters
+// → data is Product[]
+```
+
+## The MethodsInstance Type
+
+The `methods` object passed to each method function is strongly typed as `MethodsInstance`. Each HTTP helper is generic — it inherits the return type `T` from your `Endpoint<R, V>` definition:
+
+```typescript
+// The methods object passed to each Endpoint function is typed as MethodsInstance
+type MethodsInstance = {
+  get: <T>(url?: string, options?: SimpleOptions) => Promise<HttpResponse<T>>
+  post: <T>(url?: string, variables?: Record<string, unknown>) => Promise<HttpResponse<T>>
+  put: <T>(url?: string, variables?: Record<string, unknown>) => Promise<HttpResponse<T>>
+  patch: <T>(url?: string, variables?: Record<string, unknown>) => Promise<HttpResponse<T>>
+  del: <T>(url?: string, options?: SimpleOptions) => Promise<HttpResponse<T>>
+  head: <T>(url?: string, options?: SimpleOptions) => Promise<HttpResponse<T>>
+}
+
+// The response type T in HttpResponse<T> is inferred from Endpoint<R, V>
+// When you write: getAll: Endpoint<User[]> = ({ get }) => get()
+// TypeScript infers T = User[] through the Endpoint generic
+```
+
+## Next Steps
+
+- [Request & RequestGroup](/docs/core-concepts/request) — define your API structure with typed classes
+- [Instance & Methods](/docs/core-concepts/instance) — how the HTTP methods work under the hood
+- [Error Handling](/docs/core-concepts/error-handling) — typed error data with HTTPError

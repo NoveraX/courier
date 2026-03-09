@@ -29,6 +29,10 @@
     "./node": {
       "types": "./lib/node.d.ts",
       "import": "./lib/node.js"
+    },
+    "./testing": {
+      "types": "./lib/testing/index.d.ts",
+      "import": "./lib/testing/index.js"
     }
   },
   "files": [

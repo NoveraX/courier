@@ -293,20 +293,20 @@ describe("executeRequest", () => {
     });
   });
 
-  describe("hooks", () => {
-    it("calls onRequest hook before execution", async () => {
+  describe("middleware", () => {
+    it("middleware receives context with source and method", async () => {
       mockKyInstance.get.mockResolvedValue(mockResponse({ ok: true }));
 
-      const onRequest = vi.fn();
+      const spy = vi.fn();
       const source = createTestSource(
         { list: (methods: HttpMethods) => methods.get("users") },
-        { onRequest },
+        { middleware: [async (ctx: any, next: any) => { spy(ctx); return next(); }] },
       );
       const sources = { users: source };
 
       await executeRequest(sources, { source: "users", method: "list" });
 
-      expect(onRequest).toHaveBeenCalledWith(
+      expect(spy).toHaveBeenCalledWith(
         expect.objectContaining({
           source: "users",
           method: "list",
@@ -314,53 +314,32 @@ describe("executeRequest", () => {
       );
     });
 
-    it("onRequest can modify hookInfo", async () => {
+    it("middleware can modify variables", async () => {
       mockKyInstance.get.mockResolvedValue(mockResponse({ ok: true }));
 
-      const onRequest = vi.fn(() => ({
-        source: "users",
-        method: "list",
-        variables: { modified: true },
-      }));
       const source = createTestSource(
         { list: (methods: HttpMethods) => methods.get("users") },
-        { onRequest },
+        { middleware: [async (ctx: any, next: any) => {
+          ctx.variables = { modified: true };
+          return next();
+        }] },
       );
       const sources = { users: source };
 
       await executeRequest(sources, { source: "users", method: "list" });
 
-      expect(onRequest).toHaveBeenCalled();
+      expect(mockKyInstance.get).toHaveBeenCalled();
     });
 
-    it("calls onResponse hook after success", async () => {
-      mockKyInstance.get.mockResolvedValue(mockResponse({ users: [] }));
-
-      const onResponse = vi.fn();
-      const source = createTestSource(
-        { list: (methods: HttpMethods) => methods.get("users") },
-        { onResponse },
-      );
-      const sources = { users: source };
-
-      await executeRequest(sources, { source: "users", method: "list" });
-
-      expect(onResponse).toHaveBeenCalledWith(
-        expect.objectContaining({ source: "users", method: "list" }),
-        expect.objectContaining({ status: 200, data: { users: [] } }),
-      );
-    });
-
-    it("onResponse can transform response data", async () => {
+    it("middleware can transform response", async () => {
       mockKyInstance.get.mockResolvedValue(mockResponse({ raw: true }));
 
-      const onResponse = vi.fn(() => ({
-        status: 200,
-        data: { transformed: true },
-      }));
       const source = createTestSource(
         { list: (methods: HttpMethods) => methods.get("users") },
-        { onResponse },
+        { middleware: [async (_ctx: any, next: any) => {
+          const res = await next();
+          return { ...res, data: { transformed: true } };
+        }] },
       );
       const sources = { users: source };
 
@@ -369,8 +348,8 @@ describe("executeRequest", () => {
       expect(result).toEqual({ transformed: true });
     });
 
-    it("calls onError hook on failure", async () => {
-      const onError = vi.fn();
+    it("middleware can catch errors from endpoint", async () => {
+      const errorSpy = vi.fn();
       const source = createTestSource(
         {
           fail: () => {
@@ -381,7 +360,9 @@ describe("executeRequest", () => {
             });
           },
         },
-        { onError },
+        { middleware: [async (_ctx: any, next: any) => {
+          try { return await next(); } catch (e: any) { errorSpy(e); throw e; }
+        }] },
       );
       const sources = { api: source };
 
@@ -391,25 +372,19 @@ describe("executeRequest", () => {
         // expected
       }
 
-      expect(onError).toHaveBeenCalledWith(
-        expect.objectContaining({ source: "api", method: "fail" }),
-        expect.any(HTTPError),
-      );
+      expect(errorSpy).toHaveBeenCalledWith(expect.any(HTTPError));
     });
 
-    it("onRequest rejection throws and triggers onError", async () => {
-      const onError = vi.fn();
-      const onRequest = vi.fn(() => {
-        throw new HTTPError({
-          status: 403,
-          headers: new Headers(),
-          data: { message: "Forbidden" },
-        });
-      });
-
+    it("middleware rejection throws HTTPError", async () => {
       const source = createTestSource(
         { list: (methods: HttpMethods) => methods.get("users") },
-        { onRequest, onError },
+        { middleware: [async () => {
+          throw new HTTPError({
+            status: 403,
+            headers: new Headers(),
+            data: { message: "Forbidden" },
+          });
+        }] },
       );
       const sources = { users: source };
 
@@ -420,8 +395,6 @@ describe("executeRequest", () => {
         expect(error).toBeInstanceOf(HTTPError);
         expect((error as HTTPError).status).toBe(403);
       }
-
-      expect(onError).toHaveBeenCalled();
     });
   });
 

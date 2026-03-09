@@ -58,9 +58,7 @@ export class HttpClient {
       searchParamsSerializer,
       deduplicate,
       hooks,
-      onRequest: _onRequest,
-      onResponse: _onResponse,
-      onError: _onError,
+      middleware: _middleware,
       ...kyOptions
     } = options || {};
 

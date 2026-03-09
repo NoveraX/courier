@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import type { Sources } from "../define/types";
 import { HTTPError } from "../error";
 import { HttpClient } from "../instance/index";
-import type { AnyEndpoints, BaseOptions, Context, HookInfo } from "../instance/types";
+import type { AnyEndpoints, BaseOptions, Context } from "../instance/types";
+import { composeMiddleware } from "../middleware/index";
+import type { MiddlewareContext, MiddlewareResponse } from "../middleware/types";
 import {
   ENDPOINT_SCHEMA,
   type SchemaMetadata,
@@ -165,61 +167,59 @@ export async function executeRequest(
 
   const newHeaders = mergeHeaders(kyHeaders, mergedNextHeaders, dataSource.options?.allowedHeaders);
 
-  const hookInfo: HookInfo = {
+  const middlewareCtx: MiddlewareContext = {
     source: String(source),
     group: group ? String(group) : undefined,
     method: String(method),
     variables,
+    headers: newHeaders,
   };
 
   try {
     if (schema?.variables) {
-      hookInfo.variables = await validateSchema(schema.variables, hookInfo.variables, "variables");
+      middlewareCtx.variables = await validateSchema(
+        schema.variables,
+        middlewareCtx.variables,
+        "variables",
+      );
     }
 
-    if (dataSource.options?.onRequest) {
-      const modifiedInfo = await dataSource.options.onRequest(hookInfo);
-      if (modifiedInfo) {
-        Object.assign(hookInfo, modifiedInfo);
+    const execute = async (): Promise<MiddlewareResponse> => {
+      const vars = middlewareCtx.variables as FormData | Record<string, unknown> | undefined;
+
+      const response = await endpoint(
+        instance.createMethods(
+          {
+            ...(forwardVariables ? { variables: vars } : {}),
+            ...kyOptions,
+            headers: middlewareCtx.headers,
+            stream,
+          },
+          groupOptions,
+        ),
+        vars,
+      );
+
+      const headers = isHeaders(response.headers) ? response.headers : new Headers();
+      let data = response.data;
+      const status = response?.status || 200;
+
+      if (schema?.response) {
+        data = await validateSchema(schema.response, data, "response");
       }
-    }
 
-    const response = await endpoint(
-      instance.createMethods(
-        {
-          ...(forwardVariables ? { variables } : {}),
-          ...kyOptions,
-          headers: newHeaders,
-          stream,
-        },
-        groupOptions,
-      ),
-      variables,
-    );
-
-    const headers = isHeaders(response.headers) ? response.headers : new Headers();
-
-    const responseData = {
-      status: response?.status || 200,
-      data: response.data,
+      return { status, data, headers };
     };
 
-    if (dataSource.options?.onResponse) {
-      const transformed = await dataSource.options.onResponse(hookInfo, responseData);
-      if (transformed) {
-        responseData.status = transformed.status;
-        responseData.data = transformed.data;
-      }
-    }
-
-    if (schema?.response) {
-      responseData.data = await validateSchema(schema.response, responseData.data, "response");
-    }
+    const middlewares = dataSource.options?.middleware;
+    const result = middlewares?.length
+      ? await composeMiddleware(middlewares)(middlewareCtx, execute)
+      : await execute();
 
     return buildResponse(context, {
-      headers,
-      status: responseData.status,
-      data: responseData.data,
+      headers: result.headers,
+      status: result.status,
+      data: result.data,
       rawData,
       stream,
     });
@@ -256,14 +256,6 @@ export async function executeRequest(
           };
 
     const httpError = new HTTPError(responseResult);
-
-    if (dataSource.options?.onError) {
-      try {
-        await dataSource.options.onError(hookInfo, httpError);
-      } catch {
-        // prevent onError from propagating and masking the original error
-      }
-    }
 
     return buildResponse(context, {
       ...responseResult,

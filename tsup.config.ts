@@ -5,6 +5,7 @@ export default defineConfig({
     index: "src/index.ts",
     "define/index": "src/define/index.ts",
     "direct/index": "src/direct/index.ts",
+    "middleware/index": "src/middleware/index.ts",
     "next/apiRoute": "src/next/apiRoute.ts",
     "query/index": "src/query/index.ts",
   },

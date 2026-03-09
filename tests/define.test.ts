@@ -139,18 +139,14 @@ describe("defineApi", () => {
 	});
 
 	it("preserves all BaseOptions", () => {
-		const onRequest = vi.fn();
-		const onResponse = vi.fn();
-		const onError = vi.fn();
+		const mw = async (_ctx: any, next: any) => next();
 
 		const api = defineApi({
 			baseURL: "https://api.test.com",
 			responseType: "text",
 			deduplicate: true,
 			allowedHeaders: ["x-custom"],
-			onRequest,
-			onResponse,
-			onError,
+			middleware: [mw],
 			groups: {
 				items: defineGroup({
 					prefix: "items",
@@ -164,9 +160,7 @@ describe("defineApi", () => {
 		expect(api.options.responseType).toBe("text");
 		expect(api.options.deduplicate).toBe(true);
 		expect(api.options.allowedHeaders).toEqual(["x-custom"]);
-		expect(api.options.onRequest).toBe(onRequest);
-		expect(api.options.onResponse).toBe(onResponse);
-		expect(api.options.onError).toBe(onError);
+		expect(api.options.middleware).toEqual([mw]);
 	});
 
 	it("groups are accessible with correct structure", () => {

@@ -3,7 +3,7 @@ import type ky from "ky";
 import type { Options } from "ky";
 import type { NextRequest, NextResponse } from "next/server";
 
-import type { HTTPError } from "../error";
+import type { MiddlewareFn } from "../middleware/types";
 
 type KyInstance = typeof ky;
 
@@ -78,23 +78,8 @@ export type BaseOptions = MergeOptions &
     bodySerializer?: (data: Record<string, unknown>) => BodyInit;
     searchParamsSerializer?: SearchParamsSerializer;
     deduplicate?: boolean;
-    onRequest?: (info: HookInfo) => HookInfo | undefined | Promise<HookInfo | undefined>;
-    onResponse?: (
-      info: HookInfo,
-      response: { status: number; data: unknown },
-    ) =>
-      | { status: number; data: unknown }
-      | undefined
-      | Promise<{ status: number; data: unknown } | undefined>;
-    onError?: (info: HookInfo, error: HTTPError) => undefined | Promise<undefined>;
+    middleware?: MiddlewareFn[];
   };
-
-export type HookInfo = {
-  source: string;
-  group?: string;
-  method: string;
-  variables?: unknown;
-};
 
 export type MergeOptions = {
   pathOptions?: PathOptions;

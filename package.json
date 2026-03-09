@@ -22,6 +22,10 @@
       "types": "./lib/direct/index.d.ts",
       "import": "./lib/direct/index.js"
     },
+    "./middleware": {
+      "types": "./lib/middleware/index.d.ts",
+      "import": "./lib/middleware/index.js"
+    },
     "./next/apiRoute": {
       "types": "./lib/next/apiRoute.d.ts",
       "import": "./lib/next/apiRoute.js"

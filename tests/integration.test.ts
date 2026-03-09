@@ -182,14 +182,21 @@ describe("integration: functional API → executeRequest → response", () => {
 	});
 });
 
-describe("integration: hooks with functional API", () => {
-	it("onRequest hook fires with correct info", async () => {
-		const onRequest = vi.fn();
+describe("integration: middleware with functional API", () => {
+	it("middleware receives correct context", async () => {
+		const spy = vi.fn();
 		mockKyInstance.get.mockResolvedValue(mockResponse([]));
 
-		const hookedApi = defineApi({
+		const { defineMiddleware } = await import("../src/middleware/index");
+
+		const mw = defineMiddleware(async (ctx, next) => {
+			spy(ctx);
+			return next();
+		});
+
+		const api = defineApi({
 			baseURL: "https://api.example.com",
-			onRequest,
+			middleware: [mw],
 			groups: {
 				users: defineGroup({
 					prefix: "users",
@@ -200,13 +207,13 @@ describe("integration: hooks with functional API", () => {
 			},
 		});
 
-		await executeRequest({ api: hookedApi }, {
+		await executeRequest({ api }, {
 			source: "api",
 			group: "users",
 			method: "getAll",
 		});
 
-		expect(onRequest).toHaveBeenCalledWith(
+		expect(spy).toHaveBeenCalledWith(
 			expect.objectContaining({
 				source: "api",
 				group: "users",
@@ -215,15 +222,19 @@ describe("integration: hooks with functional API", () => {
 		);
 	});
 
-	it("onResponse hook can transform data", async () => {
+	it("middleware can transform response", async () => {
 		mockKyInstance.get.mockResolvedValue(mockResponse({ raw: true }));
 
-		const hookedApi = defineApi({
+		const { defineMiddleware } = await import("../src/middleware/index");
+
+		const mw = defineMiddleware(async (_ctx, next) => {
+			const res = await next();
+			return { ...res, data: { transformed: true } };
+		});
+
+		const api = defineApi({
 			baseURL: "https://api.example.com",
-			onResponse: (_info, _response) => ({
-				status: 200,
-				data: { transformed: true },
-			}),
+			middleware: [mw],
 			groups: {
 				data: defineGroup({
 					prefix: "data",
@@ -234,7 +245,7 @@ describe("integration: hooks with functional API", () => {
 			},
 		});
 
-		const result = await executeRequest({ api: hookedApi }, {
+		const result = await executeRequest({ api }, {
 			source: "api",
 			group: "data",
 			method: "fetch",
@@ -243,12 +254,23 @@ describe("integration: hooks with functional API", () => {
 		expect(result).toEqual({ transformed: true });
 	});
 
-	it("onError hook fires on endpoint failure", async () => {
-		const onError = vi.fn();
+	it("middleware can catch endpoint errors", async () => {
+		const errorSpy = vi.fn();
 
-		const hookedApi = defineApi({
+		const { defineMiddleware } = await import("../src/middleware/index");
+
+		const mw = defineMiddleware(async (_ctx, next) => {
+			try {
+				return await next();
+			} catch (error) {
+				errorSpy(error);
+				throw error;
+			}
+		});
+
+		const api = defineApi({
 			baseURL: "https://api.example.com",
-			onError,
+			middleware: [mw],
 			groups: {
 				ops: defineGroup({
 					prefix: "ops",
@@ -266,7 +288,7 @@ describe("integration: hooks with functional API", () => {
 		});
 
 		try {
-			await executeRequest({ api: hookedApi }, {
+			await executeRequest({ api }, {
 				source: "api",
 				group: "ops",
 				method: "fail",
@@ -275,10 +297,7 @@ describe("integration: hooks with functional API", () => {
 			// expected
 		}
 
-		expect(onError).toHaveBeenCalledWith(
-			expect.objectContaining({ source: "api", group: "ops", method: "fail" }),
-			expect.any(HTTPError),
-		);
+		expect(errorSpy).toHaveBeenCalledWith(expect.any(HTTPError));
 	});
 });
 

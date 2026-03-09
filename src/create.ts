@@ -116,6 +116,31 @@ export type ClientRequestDefaults = {
   onSuccess?: (data: unknown) => void | Promise<void>;
 };
 
+function buildHttpError(
+  status: number,
+  headers: Headers,
+  responseData: unknown,
+  requestPayload: { body?: FormData; json?: Partial<RequestPayload> },
+): HTTPError {
+  const { options } = parseRequestPayload(requestPayload.body || requestPayload.json);
+  const { rawData } = options ?? {};
+
+  const data =
+    rawData && typeof responseData === "object" && responseData !== null && "data" in responseData
+      ? (responseData as { data: unknown }).data
+      : responseData;
+
+  return new HTTPError({ status, headers, data });
+}
+
+async function readErrorResponse(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    return { success: false, message: `HTTP ${response.status}` };
+  }
+}
+
 export function createClientRequest<T extends Record<string, unknown> = Record<string, unknown>>(
   defaults: ClientRequestDefaults = {},
 ): RequestFn<T> {
@@ -206,33 +231,8 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
           });
 
           if (!response.ok) {
-            let responseData: unknown;
-            try {
-              responseData = await response.json();
-            } catch {
-              responseData = { success: false, message: `HTTP ${response.status}` };
-            }
-
-            const { options: parsedOptions } = parseRequestPayload(
-              requestPayload.body || requestPayload.json,
-            );
-            const { rawData } = parsedOptions ?? {};
-
-            const errorData =
-              rawData &&
-              typeof responseData === "object" &&
-              responseData !== null &&
-              "data" in responseData
-                ? (responseData as { data: unknown }).data
-                : responseData;
-
-            const httpError = new HTTPError({
-              status: response.status,
-              headers: response.headers,
-              data: errorData,
-            });
-
-            throw httpError;
+            const responseData = await readErrorResponse(response);
+            throw buildHttpError(response.status, response.headers, responseData, requestPayload);
           }
 
           if (stream) {
@@ -275,39 +275,24 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
         return response;
       } catch (error) {
         if (error instanceof KYHTTPError) {
-          let httpError: HTTPError;
+          let responseData: unknown;
 
           if (stream) {
-            httpError = new HTTPError({
-              status: error.response.status,
-              headers: error.response.headers,
-              data: { success: false, message: `HTTP ${error.response.status}` },
-            });
+            responseData = { success: false, message: `HTTP ${error.response.status}` };
           } else {
-            let response: unknown;
-
             try {
-              response = await error.response.json();
+              responseData = await error.response.json();
             } catch {
-              response = await error.response.text().catch(() => error.message);
+              responseData = await error.response.text().catch(() => error.message);
             }
-
-            const { options } = parseRequestPayload(requestPayload.body || requestPayload.json);
-            const { rawData } = options ?? {};
-
-            const errorData =
-              rawData && typeof response === "object" && response !== null && "data" in response
-                ? (response as { data: unknown }).data
-                : response;
-
-            const responseResult = {
-              status: error.response.status,
-              headers: error.response.headers,
-              data: errorData,
-            };
-
-            httpError = new HTTPError(responseResult);
           }
+
+          const httpError = buildHttpError(
+            error.response.status,
+            error.response.headers,
+            responseData,
+            requestPayload,
+          );
 
           await globalOnError?.(httpError);
           throw httpError;
@@ -318,5 +303,6 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
     }
     return execute;
   };
-  return selectSource as unknown as RequestFn<T>; // TS cannot infer curried generic closures
+  // TypeScript cannot infer curried generic closures; cast verified by type tests
+  return selectSource as unknown as RequestFn<T>;
 }

@@ -118,7 +118,7 @@ class MyApi extends Datasource<typeof groups> {
 }
 ```
 
-## defaultData
+## defaultBody
 
 Provide default values that are merged into every request. For GET/DELETE, they become query params. For POST/PUT/PATCH, they are merged into the JSON body. Caller variables override defaults with the same key:
 
@@ -130,7 +130,7 @@ class MyApi extends Datasource<typeof groups> {
       groups,
       // Merged into every request body (POST/PUT/PATCH)
       // and every query string (GET/DELETE)
-      defaultData: {
+      defaultBody: {
         apiVersion: "v2",
         locale: "en",
       },
@@ -147,7 +147,7 @@ await request("myApi")("users:getAll", { page: 1 })
 
 ## defaultQueryParams
 
-Unlike `defaultData`, which goes to the body for POST requests, `defaultQueryParams` always goes to the URL query string regardless of HTTP method:
+Unlike `defaultBody`, which goes to the body for POST requests, `defaultQueryParams` always goes to the URL query string regardless of HTTP method:
 
 ```ts title="api/index.ts"
 class MyApi extends Datasource<typeof groups> {
@@ -156,7 +156,7 @@ class MyApi extends Datasource<typeof groups> {
       baseURL: process.env.API_URL,
       groups,
       // Merged into query params for ALL methods (including POST)
-      // Unlike defaultData, this only affects the URL query string
+      // Unlike defaultBody, this only affects the URL query string
       defaultQueryParams: {
         api_key: "public-key-123",
       },
@@ -172,7 +172,7 @@ await request("myApi")("users:create", { name: "Jane" })
 ```
 
 <Callout variant="tip" title="When to use which">
-Use `defaultData` for values that should be part of the request payload (body or query depending on method). Use `defaultQueryParams` for values that must always appear in the URL, like API keys or version identifiers.
+Use `defaultBody` for values that should be part of the request payload (body or query depending on method). Use `defaultQueryParams` for values that must always appear in the URL, like API keys or version identifiers.
 </Callout>
 
 ## Complete variable flow
@@ -185,8 +185,8 @@ Understanding the order of operations helps when combining path params, defaults
 // 1. Path params are extracted first (see Path Parameters page)
 //    /users/:id + { id: 5, name: "Jane" } → URL: /users/5, remaining: { name: "Jane" }
 
-// 2. defaultData is merged with remaining variables
-//    defaultData: { locale: "en" }
+// 2. defaultBody is merged with remaining variables
+//    defaultBody: { locale: "en" }
 //    merged: { locale: "en", name: "Jane" }
 
 // 3. defaultQueryParams is merged into search params

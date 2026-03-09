@@ -37,7 +37,7 @@ class EncodedApi extends Datasource<typeof groups> {
       },
 
       // Auto-merged into every POST/PUT/PATCH body
-      defaultData: { apiVersion: "v2" },
+      defaultBody: { apiVersion: "v2" },
       // Auto-merged into every GET/DELETE query string
       defaultQueryParams: { format: "json" },
     })
@@ -49,7 +49,7 @@ await request("mockApi")("echo:send", { name: "John", role: "admin" })
 // Content-Type: application/json
 // Body: { "name": "John", "role": "admin" }
 
-// Custom (encodedApi): URL-encoded body + defaultData merged
+// Custom (encodedApi): URL-encoded body + defaultBody merged
 await request("encodedApi")("echo:send", { name: "John", role: "admin" })
 // Content-Type: application/x-www-form-urlencoded
 // Body: apiVersion=v2&name=John&role=admin`
@@ -61,7 +61,7 @@ await request("encodedApi")("echo:retrieve", {
 })
 // GET /echo?format=json&apiVersion=v2&tags[]=javascript&tags[]=react&page=1`
 
-const defaultsCode = `// defaultData auto-merges into POST body
+const defaultsCode = `// defaultBody auto-merges into POST body
 await request("encodedApi")("echo:send", { name: "John" })
 // Body includes: apiVersion=v2&name=John
 
@@ -114,7 +114,7 @@ export default function EncodingExamplesPage() {
 
         <ExampleBlock
           title="Default Data & Query Params"
-          description="defaultData merges into POST body. defaultQueryParams merges into GET query string."
+          description="defaultBody merges into POST body. defaultQueryParams merges into GET query string."
           code={defaultsCode}
         >
           <DefaultsDemo />

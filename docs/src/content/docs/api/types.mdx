@@ -136,7 +136,7 @@ type CallOptions<R extends boolean = false> = Omit<
   "onUploadProgress"
 > & {
   rawData?: R           // Return { status, headers, data } instead of just data
-  passVariables?: boolean    // Pass variables to methodsInstance (default: true)
+  forwardVariables?: boolean // Pass variables to methodsInstance (default: true)
   stream?: boolean      // Return ReadableStream response
   onUploadProgress?: (progress: UploadProgress) => void  // XHR upload progress
 }
@@ -201,7 +201,7 @@ type BaseOptions = MergeOptions &
     baseURL?: string
     responseType?: ResponseType
     responseParser?: (response: Response) => Promise<unknown>
-    defaultData?: Record<string, unknown>
+    defaultBody?: Record<string, unknown>
     defaultQueryParams?: Record<string, unknown>
     allowedHeaders?: string[]
     bodySerializer?: (data: Record<string, unknown>) => BodyInit

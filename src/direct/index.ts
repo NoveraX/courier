@@ -78,5 +78,6 @@ export function createDirectRequest<T extends Sources>(
         throw error;
       }
     };
-  } as unknown as RequestFn<T, true>; // TS cannot infer curried generic closures
+    // TypeScript cannot infer curried generic closures; cast verified by type tests
+  } as unknown as RequestFn<T, true>;
 }

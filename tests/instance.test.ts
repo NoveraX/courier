@@ -261,11 +261,11 @@ describe("HttpClient", () => {
     });
   });
 
-  describe("defaultData and defaultQueryParams", () => {
-    it("merges defaultData into POST body", async () => {
+  describe("defaultBody and defaultQueryParams", () => {
+    it("merges defaultBody into POST body", async () => {
       mockKyInstance.post.mockResolvedValue(mockResponse({ ok: true }));
 
-      const instance = new HttpClient({ defaultData: { app: "test" } });
+      const instance = new HttpClient({ defaultBody: { app: "test" } });
       const { post } = instance.createMethods();
       await post("users", { name: "new" });
 
@@ -467,7 +467,7 @@ describe("HttpClient", () => {
     });
   });
 
-  describe("clearVariables", () => {
+  describe("stripUndefined", () => {
     it("removes undefined values from variables in POST", async () => {
       mockKyInstance.post.mockResolvedValue(mockResponse({ ok: true }));
 

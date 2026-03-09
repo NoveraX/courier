@@ -49,7 +49,7 @@ class EncodedApi extends Datasource<typeof encodedGroups> {
         },
         parse: (str: string) => Object.fromEntries(new URLSearchParams(str).entries()),
       },
-      defaultData: { apiVersion: "v2" },
+      defaultBody: { apiVersion: "v2" },
       defaultQueryParams: { format: "json" },
     })
   }

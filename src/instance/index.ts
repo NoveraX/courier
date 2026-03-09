@@ -30,7 +30,7 @@ import type {
 export class HttpClient {
   private responseType: ResponseType = "json";
   private responseParser?: (response: Response) => Promise<unknown>;
-  private defaultData: Record<string, unknown> = {};
+  private defaultBody: Record<string, unknown> = {};
   private defaultQueryParams?: Record<string, unknown>;
   private allowedHeaders?: string[];
   private pathOptions?: PathOptions;
@@ -51,7 +51,7 @@ export class HttpClient {
       baseURL,
       responseType = "json",
       responseParser,
-      defaultData,
+      defaultBody,
       defaultQueryParams,
       allowedHeaders,
       pathOptions,
@@ -67,7 +67,7 @@ export class HttpClient {
 
     this.responseType = responseType;
     this.responseParser = responseParser;
-    this.defaultData = { ...defaultData };
+    this.defaultBody = { ...defaultBody };
     this.allowedHeaders = allowedHeaders;
     this.pathOptions = pathOptions;
     this.bodySerializer = bodySerializer;
@@ -115,7 +115,7 @@ export class HttpClient {
     return new URLSearchParams(Object.entries(variables).map(([k, v]) => [k, String(v)]));
   }
 
-  private clearVariables(variables?: FormData | Record<string, unknown>) {
+  private stripUndefined(variables?: FormData | Record<string, unknown>) {
     if (isFormData(variables)) {
       for (const key of variables.keys()) {
         if (variables.get(key) === undefined) {
@@ -133,60 +133,66 @@ export class HttpClient {
     return;
   }
 
+  private buildSearchParams(
+    variables?: Record<string, unknown>,
+    searchParameters?: Record<string, unknown>,
+  ): Pick<Options, "searchParams"> | undefined {
+    const params = this.toSearchParams({
+      ...this.defaultQueryParams,
+      ...searchParameters,
+      ...variables,
+    });
+    return params ? { searchParams: params } : undefined;
+  }
+
+  private buildRequestBody(
+    variables?: FormData | Record<string, unknown>,
+  ): Pick<Options, "body" | "json"> | undefined {
+    if (isFormData(variables)) {
+      this.filterEmptyFiles(variables);
+      return { body: variables };
+    }
+
+    const json = { ...this.defaultBody, ...variables };
+    if (Object.keys(json).length === 0) return undefined;
+
+    if (this.bodySerializer) {
+      return { body: this.bodySerializer(json) };
+    }
+    return { json };
+  }
+
+  private filterEmptyFiles(formData: FormData) {
+    const emptyKeys = [...formData.entries()]
+      .filter(([, value]) => value instanceof File && value.size === 0)
+      .map(([key]) => key);
+
+    for (const key of emptyKeys) {
+      formData.delete(key);
+    }
+  }
+
   private buildBody(
     method: HttpMethod,
     variables?: FormData | Record<string, unknown>,
     searchParameters?: Record<string, unknown>,
   ): Pick<Options, "body" | "json" | "searchParams"> | undefined {
-    variables = this.clearVariables(variables);
+    variables = this.stripUndefined(variables);
 
     switch (method) {
-      case "head": {
+      case "head":
         return;
-      }
       case "get":
-      case "del": {
-        const searchParameters_ = this.toSearchParams({
-          ...this.defaultQueryParams,
-          ...this.defaultData,
-          ...searchParameters,
-          ...variables,
-        });
-
-        if (searchParameters_) {
-          return { searchParams: searchParameters_ };
-        }
-        return;
-      }
-      default: {
-        const searchParameters_ = this.toSearchParams({
-          ...this.defaultQueryParams,
-          ...searchParameters,
-        });
-        const json = {
-          ...this.defaultData,
-          ...(isFormData(variables) ? {} : variables),
-        };
-
-        if (isFormData(variables)) {
-          const emptyFileKeys = [...variables.entries()]
-            .filter(([, value]) => value instanceof File && value.size === 0)
-            .map(([key]) => key);
-
-          for (const key of emptyFileKeys) {
-            variables.delete(key);
-          }
-        }
-
+      case "del":
+        return this.buildSearchParams(
+          isFormData(variables) ? undefined : variables,
+          searchParameters,
+        );
+      default:
         return {
-          ...(searchParameters_ ? { searchParams: searchParameters_ } : {}),
-          ...(!this.bodySerializer && Object.keys(json).length > 0 ? { json } : {}),
-          ...(this.bodySerializer && Object.keys(json).length > 0
-            ? { body: this.bodySerializer(json) }
-            : {}),
-          ...(isFormData(variables) ? { body: variables } : {}),
+          ...this.buildSearchParams(undefined, searchParameters),
+          ...this.buildRequestBody(variables),
         };
-      }
     }
   }
 
@@ -238,7 +244,7 @@ export class HttpClient {
     const { variables: vars, headers: kyHeaders, stream, ...kyOptions } = boundOptions || {};
     const { prefix = "", pathOptions } = groupOptions || {};
 
-    const cleanedVars = this.clearVariables(vars);
+    const cleanedVars = this.stripUndefined(vars);
 
     return async <T>(...arguments_: MethodParameters<typeof method>) => {
       const commonPathOptions = (await this.pathOptions?.(this.context?.req)) || {};

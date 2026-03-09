@@ -67,7 +67,7 @@ export function DefaultsDemo() {
       <div className="flex gap-3">
         <RunButton
           loading={postMutation.isPending}
-          label="POST (see defaultData)"
+          label="POST (see defaultBody)"
           onClick={() => postMutation.mutate({ name: "John" })}
         />
         <RunButton

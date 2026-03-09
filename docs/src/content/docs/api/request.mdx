@@ -43,7 +43,7 @@ type BaseOptions = MergeOptions & KyOptions & {
   responseParser?: (response: Response) => Promise<unknown>
 
   // Default body data merged into every POST/PUT/PATCH request
-  defaultData?: Record<string, unknown>
+  defaultBody?: Record<string, unknown>
 
   // Default query parameters merged into every request
   defaultQueryParams?: Record<string, unknown>
@@ -129,15 +129,15 @@ const api = new Datasource({
 })
 ```
 
-### defaultData
+### defaultBody
 
 Object merged into every POST/PUT/PATCH request body. Useful for API keys or common parameters.
 
 ```ts
-// defaultData is merged into every POST/PUT/PATCH request body
+// defaultBody is merged into every POST/PUT/PATCH request body
 const api = new Datasource({
   baseURL: process.env.API_URL,
-  defaultData: {
+  defaultBody: {
     apiKey: process.env.API_KEY,
     version: "v2",
   },

@@ -143,7 +143,7 @@ export async function executeRequest(
   const instanceOptions = options ?? {};
   const {
     rawData = false,
-    passVariables = true,
+    forwardVariables = true,
     headers: kyHeaders,
     stream = false,
     ...kyOptions
@@ -174,7 +174,7 @@ export async function executeRequest(
     const response = await endpoint(
       instance.createMethods(
         {
-          ...(passVariables ? { variables } : {}),
+          ...(forwardVariables ? { variables } : {}),
           ...kyOptions,
           headers: newHeaders,
           stream,

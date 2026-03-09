@@ -15,8 +15,7 @@
         "noParameterAssign": "off"
       },
       "suspicious": {
-        "noExplicitAny": "off",
-        "noImplicitAnyLet": "off"
+        "noExplicitAny": "warn"
       },
       "complexity": {
         "noForEach": "off",

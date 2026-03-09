@@ -36,6 +36,19 @@ export type NexusMutationOptions<R, V> = Omit<
   requestOptions?: CallOptions;
 };
 
+// Non-conditional versions for safe destructuring inside generic function bodies
+type QueryOptionsInternal<R, V> = {
+  variables?: V;
+  requestOptions?: CallOptions;
+} & Omit<UseQueryOptions<R, Error, R, QueryKey>, "queryKey" | "queryFn">;
+
+type MutationOptionsInternal<R, V> = {
+  requestOptions?: CallOptions;
+} & Omit<UseMutationOptions<R, Error, [V] extends [undefined] ? void : V>, "mutationFn">;
+
+// Curried execute shape — TS cannot infer RequestFn's nested generics through closures
+type ExecuteFn<R> = (endpoint: string, variables?: unknown) => Promise<R>;
+
 export function createQueryRequest<T extends Record<string, any> = Record<string, any>>(
   defaults?: ClientRequestDefaults,
 ) {
@@ -55,12 +68,15 @@ export function createQueryRequest<T extends Record<string, any> = Record<string
       : [options: NexusQueryOptions<R, V>]
   ): UseQueryResult<R, Error> {
     const options = args[0];
-    const { variables, requestOptions, ...queryOptions } = (options ?? {}) as any;
+    const { variables, requestOptions, ...queryOptions } = (options ?? {}) as QueryOptionsInternal<
+      R,
+      V
+    >;
 
     return useQuery<R, Error>({
       queryKey: variables !== undefined ? [source, endpoint, variables] : [source, endpoint],
       queryFn: () => {
-        const execute = client(source as any, requestOptions) as (...args: any[]) => Promise<R>;
+        const execute = client(source, requestOptions) as ExecuteFn<R>;
         return variables !== undefined ? execute(endpoint, variables) : execute(endpoint);
       },
       ...queryOptions,
@@ -78,11 +94,11 @@ export function createQueryRequest<T extends Record<string, any> = Record<string
     endpoint: Q,
     options?: NexusMutationOptions<R, V>,
   ): UseMutationResult<R, Error, [V] extends [undefined] ? void : V> {
-    const { requestOptions, ...mutationOptions } = (options ?? {}) as any;
+    const { requestOptions, ...mutationOptions } = (options ?? {}) as MutationOptionsInternal<R, V>;
 
     return useMutation<R, Error, [V] extends [undefined] ? void : V>({
-      mutationFn: (variables: any) => {
-        const execute = client(source as any, requestOptions) as (...args: any[]) => Promise<R>;
+      mutationFn: (variables) => {
+        const execute = client(source, requestOptions) as ExecuteFn<R>;
         return variables != null ? execute(endpoint, variables) : execute(endpoint);
       },
       ...mutationOptions,

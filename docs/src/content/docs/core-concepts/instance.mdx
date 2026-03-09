@@ -136,7 +136,7 @@ class MyApi extends Datasource<typeof groups> {
       responseType: "json",
 
       // Default data merged into every POST/PUT/PATCH body
-      defaultData: { locale: "en" },
+      defaultBody: { locale: "en" },
 
       // Default params merged into every GET request
       defaultQueryParams: { format: "full" },
@@ -161,8 +161,8 @@ class MyApi extends Datasource<typeof groups> {
 }
 ```
 
-<Callout variant="warning" title="defaultData and defaultQueryParams">
-`defaultData` is merged into every POST/PUT/PATCH body, and `defaultQueryParams` is merged into every GET request. Use these for values like locale, API version, or tenant ID that should be sent with every request.
+<Callout variant="warning" title="defaultBody and defaultQueryParams">
+`defaultBody` is merged into every POST/PUT/PATCH body, and `defaultQueryParams` is merged into every GET request. Use these for values like locale, API version, or tenant ID that should be sent with every request.
 </Callout>
 
 ## Next Steps

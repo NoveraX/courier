@@ -21,10 +21,12 @@ export const pathJoin = (parts: string[]) =>
   parts.join("/").replace(MULTIPLE_SLASHES, "/").replace(/^\//, "");
 
 export const parseEndpointKey = (endpointKey: string) => {
-  const [groupOrMethod, method] = endpointKey.split(":");
+  const parts = endpointKey.split(":");
+  const groupOrMethod = parts[0] ?? "";
+  const method = parts[1];
   return {
     group: method ? groupOrMethod : undefined,
-    method: method || groupOrMethod,
+    method: method ?? groupOrMethod,
   };
 };
 
@@ -47,7 +49,7 @@ export const compileUrl = (
   generatedPathOptions?: Record<string, unknown>,
   searchParamsSerializer?: SearchParamsSerializer,
 ): [string, FormData | Record<string, unknown>, Record<string, unknown>] => {
-  const [urlPath, searchParameters] = rawUrlPath.split("?");
+  const [urlPath = "", searchParameters] = rawUrlPath.split("?");
   const objectSearchParameters = searchParamsSerializer
     ? searchParamsSerializer.parse(searchParameters || "")
     : Object.fromEntries(new URLSearchParams(searchParameters || "").entries());

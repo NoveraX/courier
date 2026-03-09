@@ -35,7 +35,7 @@ export type UploadProgress = {
 
 export type CallOptions<R extends boolean = false> = Omit<SimpleOptions, "onUploadProgress"> & {
   rawData?: R;
-  passVariables?: boolean;
+  forwardVariables?: boolean;
   stream?: boolean;
   onUploadProgress?: (progress: UploadProgress) => void;
 };
@@ -72,7 +72,7 @@ export type BaseOptions = MergeOptions &
     baseURL?: string;
     responseType?: ResponseType;
     responseParser?: (response: Response) => Promise<unknown>;
-    defaultData?: Record<string, unknown>;
+    defaultBody?: Record<string, unknown>;
     defaultQueryParams?: Record<string, unknown>;
     allowedHeaders?: string[];
     bodySerializer?: (data: Record<string, unknown>) => BodyInit;

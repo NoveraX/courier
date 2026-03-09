@@ -29,6 +29,10 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     siteName: "Nexus Docs",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Nexus — Type-Safe HTTP for Next.js" }],
+  },
+  twitter: {
+    card: "summary_large_image",
   },
   other: {
     "apple-mobile-web-app-title": "Nexus",

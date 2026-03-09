@@ -1,18 +1,23 @@
 <div align="center">
+  <br />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/nexus/master/docs/public/logos/nexus-logo-horizontal-light.png" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/NoveraX/nexus/master/docs/public/logos/nexus-logo-horizontal-dark.png" />
+    <img alt="Nexus" src="https://raw.githubusercontent.com/NoveraX/nexus/master/docs/public/logos/nexus-logo-horizontal-dark.png" height="48" />
+  </picture>
+  <br />
+  <br />
+  <p><strong>Type-safe HTTP client for Next.js — define once, use everywhere.</strong></p>
 
-# @noverax/nexus
-
-**Type-safe HTTP client for Next.js — define once, use everywhere.**
-
-[![npm version](https://img.shields.io/npm/v/@noverax/nexus?color=blue&label=npm)](https://www.npmjs.com/package/@noverax/nexus)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/NoveraX/nexus/blob/main/LICENSE)
-
-[Documentation](https://nexus.noverax.cloud) · [Examples](https://nexus.noverax.cloud/docs/examples/basic) · [GitHub](https://github.com/NoveraX/nexus)
-
+  <a href="https://www.npmjs.com/package/@noverax/nexus"><img src="https://img.shields.io/npm/v/@noverax/nexus?color=7c3aed&label=npm&style=flat-square" alt="npm version" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white&style=flat-square" alt="TypeScript" /></a>
+  <a href="https://github.com/NoveraX/nexus/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT-22c55e?style=flat-square" alt="License: MIT" /></a>
+  <a href="https://bundlephobia.com/package/@noverax/nexus"><img src="https://img.shields.io/bundlephobia/minzip/@noverax/nexus?color=f59e0b&label=size&style=flat-square" alt="Bundle Size" /></a>
+  <br />
+  <a href="https://nexus.noverax.cloud">Documentation</a> &bull; <a href="https://nexus.noverax.cloud/docs/examples/basic">Examples</a> &bull; <a href="https://github.com/NoveraX/nexus">GitHub</a>
 </div>
 
----
+<br />
 
 Nexus is an HTTP client library designed for Next.js applications. It provides end-to-end type safety from your API definition to your React components — without code generation, schema files, or a custom backend.
 
@@ -20,16 +25,16 @@ Define your API as TypeScript classes. Nexus infers request and response types a
 
 ## Features
 
-- 🔒 **End-to-end type safety** — no codegen, no schema files. TypeScript classes are the source of truth
-- 🔀 **Two transport modes** — proxy (browser → API route → backend) and direct (server → backend)
-- ⚡ **React Query integration** — `useQuery` and `useMutation` with full type inference out of the box
-- 🛣️ **One proxy route for all endpoints** — single `apiRoute(sources)` replaces per-endpoint API routes
-- 📤 **File upload with progress** — built-in XHR-based upload tracking
-- 🔗 **Path parameters** — `:id` syntax with automatic resolution from variables
-- 🚫 **Request deduplication** — automatic AbortController management
-- 📡 **Streaming & SSE** — first-class stream response support
-- 🪝 **Lifecycle hooks** — `onRequest`, `onResponse`, `onError` at the datasource level
-- 🌐 **Works with any REST backend** — Express, FastAPI, Rails, Go, or any HTTP API
+- :lock: **End-to-end type safety** — no codegen, no schema files. TypeScript classes are the source of truth
+- :twisted_rightwards_arrows: **Two transport modes** — proxy (browser → API route → backend) and direct (server → backend)
+- :zap: **React Query integration** — `useQuery` and `useMutation` with full type inference out of the box
+- :motorway: **One proxy route for all endpoints** — single `apiRoute(sources)` replaces per-endpoint API routes
+- :outbox_tray: **File upload with progress** — built-in XHR-based upload tracking
+- :link: **Path parameters** — `:id` syntax with automatic resolution from variables
+- :no_entry_sign: **Request deduplication** — automatic AbortController management
+- :satellite: **Streaming & SSE** — first-class stream response support
+- :hook: **Lifecycle hooks** — `onRequest`, `onResponse`, `onError` at the datasource level
+- :globe_with_meridians: **Works with any REST backend** — Express, FastAPI, Rails, Go, or any HTTP API
 
 ## Install
 
@@ -158,8 +163,6 @@ export default async function DashboardPage() {
 
 ## How It Works
 
-Nexus supports two transport modes, both sharing the same API definition:
-
 ```
 Proxy Mode (browser):
   Browser → POST /api/request → Next.js API Route → HttpClient → Backend
@@ -196,7 +199,7 @@ Direct Mode (server):
 
 ## Documentation
 
-Full documentation with interactive examples is available at **[nexus.noverax.cloud](https://nexus.noverax.cloud)**.
+Full documentation with interactive examples at **[nexus.noverax.cloud](https://nexus.noverax.cloud)**.
 
 - [Introduction](https://nexus.noverax.cloud/docs/introduction) — what Nexus is and why
 - [Installation](https://nexus.noverax.cloud/docs/installation) — setup guide

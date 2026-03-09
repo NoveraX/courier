@@ -1,4 +1,5 @@
 import { ArrowRight, Github } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 
 import { CodeBlock } from "@/components/docs/code-block"
@@ -38,8 +39,18 @@ export function Hero() {
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           {/* Left: text */}
           <AnimatedSection className="max-w-xl">
-            <InstallBadge />
-            <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+            <div className="mb-6 flex items-center gap-4">
+              <Image
+                src="/logos/nexus-icon-gradient.png"
+                alt=""
+                width={56}
+                height={56}
+                className="drop-shadow-[0_0_24px_oklch(0.65_0.25_270/0.5)]"
+                priority
+              />
+              <InstallBadge />
+            </div>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
               Type-Safe HTTP <span className="gradient-brand-text">for Next.js</span>
             </h1>
             <p className="mt-4 text-lg leading-relaxed text-muted-foreground sm:text-xl">

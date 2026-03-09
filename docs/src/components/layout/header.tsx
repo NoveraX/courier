@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useTheme } from "next-themes"
 import { useState } from "react"
 
+import { NexusLogo } from "@/components/nexus-logo"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
@@ -64,7 +65,7 @@ export function Header() {
 
         {/* Mobile logo */}
         <Link href="/" className="flex items-center gap-2 md:hidden">
-          <span className="text-base font-semibold tracking-tight">Nexus</span>
+          <NexusLogo variant="horizontal" width={75} height={20} />
           <span className="rounded-md bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-brand">
             docs
           </span>

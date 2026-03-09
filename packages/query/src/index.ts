@@ -5,10 +5,10 @@ export { createQueryKeys } from "./keys";
 
 import {
   type CallOptions,
-  createProxyRequest,
+  createProxyCaller,
   type EndpointKey,
   type HTTPError,
-  type ProxyRequestDefaults,
+  type ProxyCallerDefaults,
   type ResolveEndpoint,
 } from "@noverax/nexus";
 import type { Endpoint } from "@noverax/nexus/define";
@@ -87,7 +87,7 @@ type PrefetchOptionsInternal<V> = {
   staleTime?: number;
 };
 
-// Curried execute shape — TS cannot infer RequestFn's nested generics through closures
+// Curried execute shape — TS cannot infer CallerFn's nested generics through closures
 type ExecuteFn<R> = (endpoint: string, variables?: unknown) => Promise<R>;
 
 // ---------------------------------------------------------------------------
@@ -194,10 +194,10 @@ export function optimisticOptions<CacheData, MutationVars>(
 // Main factory
 // ---------------------------------------------------------------------------
 
-export function createQueryRequest<T extends Record<string, any> = Record<string, any>>(
-  defaults?: ProxyRequestDefaults,
+export function createQueryCaller<T extends Record<string, any> = Record<string, any>>(
+  defaults?: ProxyCallerDefaults,
 ) {
-  const client = createProxyRequest<T>(defaults);
+  const client = createProxyCaller<T>(defaults);
 
   function buildQueryKey(source: string, endpoint: string, variables?: unknown): QueryKey {
     return variables !== undefined ? [source, endpoint, variables] : [source, endpoint];
@@ -375,6 +375,6 @@ export function createQueryRequest<T extends Record<string, any> = Record<string
     useInfiniteQuery: useNexusInfiniteQuery,
     useMutation: useNexusMutation,
     prefetchQuery: prefetchNexusQuery,
-    request: client,
+    caller: client,
   };
 }

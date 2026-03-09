@@ -1,6 +1,6 @@
 import { HTTPError } from "./error";
 import type { CallOptions, UploadProgress } from "./http-client/types";
-import type { RequestFn } from "./types";
+import type { CallerFn } from "./types";
 import type { CoreFetchInit } from "./utils/fetch";
 import { coreFetch } from "./utils/fetch";
 import {
@@ -107,7 +107,7 @@ function xhrUpload(
   });
 }
 
-export type ProxyRequestDefaults = {
+export type ProxyCallerDefaults = {
   /** Full URL path to the proxy endpoint (default: "/api/request") */
   proxyUrl?: string;
   timeout?: number;
@@ -184,9 +184,9 @@ async function sendFetch(
   }
 }
 
-export function createProxyRequest<T extends Record<string, unknown> = Record<string, unknown>>(
-  defaults: ProxyRequestDefaults = {},
-): RequestFn<T> {
+export function createProxyCaller<T extends Record<string, unknown> = Record<string, unknown>>(
+  defaults: ProxyCallerDefaults = {},
+): CallerFn<T> {
   const {
     proxyUrl = "/api/request",
     credentials = "include",
@@ -369,5 +369,5 @@ export function createProxyRequest<T extends Record<string, unknown> = Record<st
     return execute;
   };
   // TypeScript cannot infer curried generic closures; cast verified by type tests
-  return selectSource as unknown as RequestFn<T>;
+  return selectSource as unknown as CallerFn<T>;
 }

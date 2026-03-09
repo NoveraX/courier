@@ -3,7 +3,7 @@ import { HTTPError } from "../src/error";
 import { createTestClient, findRequests } from "../src/testing/index";
 
 const client = createTestClient();
-const { request, mock, history } = client;
+const { caller, mock, history } = client;
 
 afterEach(() => {
   client.reset();
@@ -14,14 +14,14 @@ describe("createTestClient", () => {
     it("returns mocked data for a simple endpoint", async () => {
       mock("api", "list").resolves([1, 2, 3]);
 
-      const result = await (request as any)("api")("list");
+      const result = await (caller as any)("api")("list");
       expect(result).toEqual([1, 2, 3]);
     });
 
     it("returns mocked data for a group:method endpoint", async () => {
       mock("api", "users:getAll").resolves([{ id: "1", name: "Alice" }]);
 
-      const result = await (request as any)("api")("users:getAll");
+      const result = await (caller as any)("api")("users:getAll");
       expect(result).toEqual([{ id: "1", name: "Alice" }]);
     });
 
@@ -31,7 +31,7 @@ describe("createTestClient", () => {
         name: `User ${vars.id}`,
       }));
 
-      const result = await (request as any)("api")("users:getById", { id: "42" });
+      const result = await (caller as any)("api")("users:getById", { id: "42" });
       expect(result).toEqual({ id: "42", name: "User 42" });
     });
 
@@ -40,7 +40,7 @@ describe("createTestClient", () => {
         return [{ id: "1" }];
       });
 
-      const result = await (request as any)("api")("users:getAll");
+      const result = await (caller as any)("api")("users:getAll");
       expect(result).toEqual([{ id: "1" }]);
     });
   });
@@ -49,12 +49,12 @@ describe("createTestClient", () => {
     it("throws HTTPError with .rejects()", async () => {
       mock("api", "users:create").rejects(403, { message: "Forbidden" });
 
-      await expect((request as any)("api")("users:create", { name: "Alice" })).rejects.toThrow(
+      await expect((caller as any)("api")("users:create", { name: "Alice" })).rejects.toThrow(
         HTTPError,
       );
 
       try {
-        await (request as any)("api")("users:create", { name: "Bob" });
+        await (caller as any)("api")("users:create", { name: "Bob" });
       } catch (error) {
         expect(error).toBeInstanceOf(HTTPError);
         expect((error as HTTPError).status).toBe(403);
@@ -66,14 +66,14 @@ describe("createTestClient", () => {
       mock("api", "fail").rejects(500);
 
       try {
-        await (request as any)("api")("fail");
+        await (caller as any)("api")("fail");
       } catch (error) {
         expect((error as HTTPError).data).toEqual({ success: false, message: "HTTP 500" });
       }
     });
 
     it("throws descriptive error when no mock is found", async () => {
-      await expect((request as any)("api")("unknown:endpoint")).rejects.toThrow(
+      await expect((caller as any)("api")("unknown:endpoint")).rejects.toThrow(
         /No mock for "api" > "unknown:endpoint"/,
       );
     });
@@ -83,20 +83,20 @@ describe("createTestClient", () => {
     it(".once() limits mock to a single call", async () => {
       mock("api", "users:getAll").resolves("first").once();
 
-      const result = await (request as any)("api")("users:getAll");
+      const result = await (caller as any)("api")("users:getAll");
       expect(result).toBe("first");
 
-      await expect((request as any)("api")("users:getAll")).rejects.toThrow(/No mock/);
+      await expect((caller as any)("api")("users:getAll")).rejects.toThrow(/No mock/);
     });
 
     it(".times(n) limits mock to n calls", async () => {
       mock("api", "users:getAll").resolves("data").times(3);
 
       for (let i = 0; i < 3; i++) {
-        expect(await (request as any)("api")("users:getAll")).toBe("data");
+        expect(await (caller as any)("api")("users:getAll")).toBe("data");
       }
 
-      await expect((request as any)("api")("users:getAll")).rejects.toThrow(/No mock/);
+      await expect((caller as any)("api")("users:getAll")).rejects.toThrow(/No mock/);
     });
 
     it("stack: latest mock wins, falls back after consumption", async () => {
@@ -104,10 +104,10 @@ describe("createTestClient", () => {
       mock("api", "users:getAll").resolves("override").once();
 
       // First call: override (consumed)
-      expect(await (request as any)("api")("users:getAll")).toBe("override");
+      expect(await (caller as any)("api")("users:getAll")).toBe("override");
       // Subsequent: default (permanent)
-      expect(await (request as any)("api")("users:getAll")).toBe("default");
-      expect(await (request as any)("api")("users:getAll")).toBe("default");
+      expect(await (caller as any)("api")("users:getAll")).toBe("default");
+      expect(await (caller as any)("api")("users:getAll")).toBe("default");
     });
 
     it("multiple temporary mocks are consumed LIFO", async () => {
@@ -115,9 +115,9 @@ describe("createTestClient", () => {
       mock("api", "users:getAll").resolves("second").once();
 
       // LIFO: second first, then first
-      expect(await (request as any)("api")("users:getAll")).toBe("second");
-      expect(await (request as any)("api")("users:getAll")).toBe("first");
-      await expect((request as any)("api")("users:getAll")).rejects.toThrow(/No mock/);
+      expect(await (caller as any)("api")("users:getAll")).toBe("second");
+      expect(await (caller as any)("api")("users:getAll")).toBe("first");
+      await expect((caller as any)("api")("users:getAll")).rejects.toThrow(/No mock/);
     });
   });
 
@@ -126,7 +126,7 @@ describe("createTestClient", () => {
       mock("api", "slow").resolves("done").delay(50);
 
       const start = Date.now();
-      const result = await (request as any)("api")("slow");
+      const result = await (caller as any)("api")("slow");
       const elapsed = Date.now() - start;
 
       expect(result).toBe("done");
@@ -137,7 +137,7 @@ describe("createTestClient", () => {
       mock("api", "slow-fail").rejects(500).delay(50);
 
       const start = Date.now();
-      await expect((request as any)("api")("slow-fail")).rejects.toThrow(HTTPError);
+      await expect((caller as any)("api")("slow-fail")).rejects.toThrow(HTTPError);
       const elapsed = Date.now() - start;
 
       expect(elapsed).toBeGreaterThanOrEqual(40);
@@ -147,7 +147,7 @@ describe("createTestClient", () => {
   describe("history tracking", () => {
     it("records successful requests", async () => {
       mock("api", "users:getAll").resolves([{ id: "1" }]);
-      await (request as any)("api")("users:getAll");
+      await (caller as any)("api")("users:getAll");
 
       expect(history).toHaveLength(1);
       expect(history[0]).toMatchObject({
@@ -163,7 +163,7 @@ describe("createTestClient", () => {
 
     it("records variables in history", async () => {
       mock("api", "users:create").resolves({ id: "new" });
-      await (request as any)("api")("users:create", { name: "Alice" });
+      await (caller as any)("api")("users:create", { name: "Alice" });
 
       expect(history[0]?.variables).toEqual({ name: "Alice" });
     });
@@ -172,7 +172,7 @@ describe("createTestClient", () => {
       mock("api", "users:delete").rejects(404, { message: "Not found" });
 
       try {
-        await (request as any)("api")("users:delete", { id: "999" });
+        await (caller as any)("api")("users:delete", { id: "999" });
       } catch {
         // expected
       }
@@ -188,7 +188,7 @@ describe("createTestClient", () => {
 
     it("records unmocked requests as errors", async () => {
       try {
-        await (request as any)("api")("nonexistent");
+        await (caller as any)("api")("nonexistent");
       } catch {
         // expected
       }
@@ -203,9 +203,9 @@ describe("createTestClient", () => {
       mock("api", "b").resolves(2);
       mock("api", "c").resolves(3);
 
-      await (request as any)("api")("a");
-      await (request as any)("api")("b");
-      await (request as any)("api")("c");
+      await (caller as any)("api")("a");
+      await (caller as any)("api")("b");
+      await (caller as any)("api")("c");
 
       expect(history).toHaveLength(3);
       expect(history.map((e) => e.endpoint)).toEqual(["a", "b", "c"]);
@@ -213,7 +213,7 @@ describe("createTestClient", () => {
 
     it("parses group and method for simple endpoints", async () => {
       mock("api", "list").resolves([]);
-      await (request as any)("api")("list");
+      await (caller as any)("api")("list");
 
       expect(history[0]).toMatchObject({
         group: undefined,
@@ -225,35 +225,35 @@ describe("createTestClient", () => {
   describe("reset methods", () => {
     it("reset() clears mocks and history", async () => {
       mock("api", "users:getAll").resolves([]);
-      await (request as any)("api")("users:getAll");
+      await (caller as any)("api")("users:getAll");
 
       expect(history).toHaveLength(1);
 
       client.reset();
 
       expect(history).toHaveLength(0);
-      await expect((request as any)("api")("users:getAll")).rejects.toThrow(/No mock/);
+      await expect((caller as any)("api")("users:getAll")).rejects.toThrow(/No mock/);
     });
 
     it("resetMocks() clears only mocks", async () => {
       mock("api", "users:getAll").resolves([]);
-      await (request as any)("api")("users:getAll");
+      await (caller as any)("api")("users:getAll");
 
       client.resetMocks();
 
       expect(history).toHaveLength(1); // history preserved
-      await expect((request as any)("api")("users:getAll")).rejects.toThrow(/No mock/);
+      await expect((caller as any)("api")("users:getAll")).rejects.toThrow(/No mock/);
     });
 
     it("resetHistory() clears only history", async () => {
       mock("api", "users:getAll").resolves([]);
-      await (request as any)("api")("users:getAll");
+      await (caller as any)("api")("users:getAll");
 
       client.resetHistory();
 
       expect(history).toHaveLength(0);
       // mock still works
-      const result = await (request as any)("api")("users:getAll");
+      const result = await (caller as any)("api")("users:getAll");
       expect(result).toEqual([]);
     });
   });
@@ -263,8 +263,8 @@ describe("createTestClient", () => {
       mock("api", "users:getAll").resolves([{ source: "api" }]);
       mock("auth", "users:getAll").resolves([{ source: "auth" }]);
 
-      const apiResult = await (request as any)("api")("users:getAll");
-      const authResult = await (request as any)("auth")("users:getAll");
+      const apiResult = await (caller as any)("api")("users:getAll");
+      const authResult = await (caller as any)("auth")("users:getAll");
 
       expect(apiResult).toEqual([{ source: "api" }]);
       expect(authResult).toEqual([{ source: "auth" }]);
@@ -275,15 +275,15 @@ describe("createTestClient", () => {
     it("supports chaining .resolves().once()", async () => {
       mock("api", "x").resolves("data").once();
 
-      expect(await (request as any)("api")("x")).toBe("data");
-      await expect((request as any)("api")("x")).rejects.toThrow(/No mock/);
+      expect(await (caller as any)("api")("x")).toBe("data");
+      await expect((caller as any)("api")("x")).rejects.toThrow(/No mock/);
     });
 
     it("supports chaining .rejects().delay()", async () => {
       mock("api", "x").rejects(500).delay(10);
 
       const start = Date.now();
-      await expect((request as any)("api")("x")).rejects.toThrow(HTTPError);
+      await expect((caller as any)("api")("x")).rejects.toThrow(HTTPError);
       expect(Date.now() - start).toBeGreaterThanOrEqual(5);
     });
 
@@ -293,9 +293,9 @@ describe("createTestClient", () => {
         .times(2)
         .delay(10);
 
-      expect(await (request as any)("api")("x")).toBe("dynamic");
-      expect(await (request as any)("api")("x")).toBe("dynamic");
-      await expect((request as any)("api")("x")).rejects.toThrow(/No mock/);
+      expect(await (caller as any)("api")("x")).toBe("dynamic");
+      expect(await (caller as any)("api")("x")).toBe("dynamic");
+      await expect((caller as any)("api")("x")).rejects.toThrow(/No mock/);
     });
   });
 });
@@ -312,9 +312,9 @@ describe("findRequests", () => {
     historyFixture.mock("auth", "b").resolves(2);
     historyFixture.mock("api", "c").resolves(3);
 
-    await (historyFixture.request as any)("api")("a");
-    await (historyFixture.request as any)("auth")("b");
-    await (historyFixture.request as any)("api")("c");
+    await (historyFixture.caller as any)("api")("a");
+    await (historyFixture.caller as any)("auth")("b");
+    await (historyFixture.caller as any)("api")("c");
 
     const apiRequests = findRequests(historyFixture.history, "api");
     expect(apiRequests).toHaveLength(2);
@@ -325,9 +325,9 @@ describe("findRequests", () => {
     historyFixture.mock("api", "users:getAll").resolves([]);
     historyFixture.mock("api", "users:create").resolves({});
 
-    await (historyFixture.request as any)("api")("users:getAll");
-    await (historyFixture.request as any)("api")("users:create", { name: "Alice" });
-    await (historyFixture.request as any)("api")("users:getAll");
+    await (historyFixture.caller as any)("api")("users:getAll");
+    await (historyFixture.caller as any)("api")("users:create", { name: "Alice" });
+    await (historyFixture.caller as any)("api")("users:getAll");
 
     const getRequests = findRequests(historyFixture.history, "api", "users:getAll");
     expect(getRequests).toHaveLength(2);

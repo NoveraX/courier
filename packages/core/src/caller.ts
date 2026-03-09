@@ -1,11 +1,11 @@
 import type { Sources } from "./define/types";
 import { HTTPError } from "./error";
 import type { CallOptions, Context } from "./http-client/types";
-import type { RequestFn } from "./types";
+import type { CallerFn } from "./types";
 import { executeRequest } from "./utils/execute";
 import { parseEndpointKey } from "./utils/helpers";
 
-export type RequestDefaults = {
+export type CallerDefaults = {
   timeout?: number;
   headers?: Record<string, string>;
   onError?: (error: HTTPError) => void | Promise<void>;
@@ -20,10 +20,10 @@ const isContext = (value: unknown): value is Context =>
     ("res" in value && value.res instanceof Response) ||
     ("headers" in value && value.headers instanceof Headers));
 
-export function createRequest<T extends Sources>(
+export function createCaller<T extends Sources>(
   sources: T,
-  defaults: RequestDefaults = {},
-): RequestFn<T, true> {
+  defaults: CallerDefaults = {},
+): CallerFn<T, true> {
   const {
     timeout: defaultTimeout,
     headers: defaultHeaders,
@@ -78,5 +78,5 @@ export function createRequest<T extends Sources>(
       }
     };
     // TypeScript cannot infer curried generic closures; cast verified by type tests
-  } as unknown as RequestFn<T, true>;
+  } as unknown as CallerFn<T, true>;
 }

@@ -1,6 +1,6 @@
 import type { Endpoint } from "../define/types";
 import { HTTPError } from "../error";
-import type { EndpointKey, RequestFn, ResolveEndpoint } from "../types";
+import type { CallerFn, EndpointKey, ResolveEndpoint } from "../types";
 import { parseEndpointKey } from "../utils/helpers";
 
 // --- Exported Types ---
@@ -37,8 +37,8 @@ type ExtractEndpointResponse<M> = M extends Endpoint<infer R, any> ? R : unknown
 
 /** In-memory test client with mock support and request history */
 export type TestClient<T extends Record<string, any> = Record<string, any>> = {
-  /** Request function — same curried API as createRequest / createProxyRequest */
-  request: RequestFn<T>;
+  /** Caller function — same curried API as createCaller / createProxyCaller */
+  caller: CallerFn<T>;
   /** Mock a specific endpoint's response */
   mock: <K extends keyof T & string, Q extends EndpointKey<T[K]>>(
     source: K,
@@ -74,10 +74,10 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
  * and records request history — no real HTTP calls.
  *
  * @example
- * const { request, mock, history } = createTestClient<typeof sources>();
+ * const { caller, mock, history } = createTestClient<typeof sources>();
  *
  * mock("api", "users:getAll").resolves([{ id: "1", name: "Alice" }]);
- * const users = await request("api")("users:getAll");
+ * const users = await caller("api")("users:getAll");
  *
  * expect(users).toEqual([{ id: "1", name: "Alice" }]);
  * expect(history).toHaveLength(1);
@@ -107,7 +107,7 @@ export function createTestClient<T extends Record<string, any> = Record<string, 
     return handler;
   }
 
-  const request = ((source: string) => {
+  const caller = ((source: string) => {
     return async (endpoint: string, variables?: unknown) => {
       const { group, method } = parseEndpointKey(endpoint);
       const handler = getMock(source, endpoint);
@@ -153,7 +153,7 @@ export function createTestClient<T extends Record<string, any> = Record<string, 
       history.push(entry);
       return data;
     };
-  }) as unknown as RequestFn<T>;
+  }) as unknown as CallerFn<T>;
 
   function mock(source: string, endpoint: string): MockBuilder<unknown> {
     const k = mockKey(source, endpoint);
@@ -200,7 +200,7 @@ export function createTestClient<T extends Record<string, any> = Record<string, 
   }
 
   return {
-    request,
+    caller,
     mock: mock as TestClient<T>["mock"],
     history,
     reset() {

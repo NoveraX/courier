@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HTTPError } from "../src/error";
-import { createRequest } from "../src/request";
+import { createCaller } from "../src/caller";
 
 vi.mock("../src/utils/execute", () => ({
   executeRequest: vi.fn(),
@@ -15,9 +15,9 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("createRequest", () => {
+describe("createCaller", () => {
   it("returns a curried function", () => {
-    const request = createRequest(mockSources) as any;
+    const request = createCaller(mockSources) as any;
     expect(typeof request).toBe("function");
     const execute = request("api");
     expect(typeof execute).toBe("function");
@@ -27,7 +27,7 @@ describe("createRequest", () => {
     it("builds payload with source and method", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
-      const request = createRequest(mockSources) as any;
+      const request = createCaller(mockSources) as any;
       await request("api")("list");
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
@@ -44,7 +44,7 @@ describe("createRequest", () => {
     it("builds payload with variables", async () => {
       mockExecuteRequest.mockResolvedValue({ id: 1 });
 
-      const request = createRequest(mockSources) as any;
+      const request = createCaller(mockSources) as any;
       await request("api")("getUser", { id: 1 });
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
@@ -61,7 +61,7 @@ describe("createRequest", () => {
     it("parses group:method endpoint key", async () => {
       mockExecuteRequest.mockResolvedValue({ token: "abc" });
 
-      const request = createRequest(mockSources) as any;
+      const request = createCaller(mockSources) as any;
       await request("api")("auth:login", { email: "test@test.com" });
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
@@ -79,7 +79,7 @@ describe("createRequest", () => {
     it("passes call options to payload", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
-      const request = createRequest(mockSources) as any;
+      const request = createCaller(mockSources) as any;
       await request("api", { rawData: true, timeout: 5000 })("list");
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
@@ -97,7 +97,7 @@ describe("createRequest", () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
       const context = { headers: new Headers({ authorization: "Bearer token" }) };
-      const request = createRequest(mockSources) as any;
+      const request = createCaller(mockSources) as any;
       await request("api")("list", context);
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
@@ -111,7 +111,7 @@ describe("createRequest", () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
       const context = { res: new Response() };
-      const request = createRequest(mockSources) as any;
+      const request = createCaller(mockSources) as any;
       await request("api")("list", context);
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
@@ -125,7 +125,7 @@ describe("createRequest", () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
       const context = { headers: new Headers() };
-      const request = createRequest(mockSources) as any;
+      const request = createCaller(mockSources) as any;
       await request("api")("getUser", { id: 1 }, context);
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
@@ -138,7 +138,7 @@ describe("createRequest", () => {
     it("treats plain object as variables, not context", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
-      const request = createRequest(mockSources) as any;
+      const request = createCaller(mockSources) as any;
       await request("api")("search", { query: "test" });
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
@@ -153,7 +153,7 @@ describe("createRequest", () => {
     it("applies default timeout when option timeout is undefined", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
-      const request = createRequest(mockSources, { timeout: 10000 }) as any;
+      const request = createCaller(mockSources, { timeout: 10000 }) as any;
       await request("api")("list");
 
       const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
@@ -163,7 +163,7 @@ describe("createRequest", () => {
     it("preserves option timeout over default", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
-      const request = createRequest(mockSources, { timeout: 10000 }) as any;
+      const request = createCaller(mockSources, { timeout: 10000 }) as any;
       await request("api", { timeout: 5000 })("list");
 
       const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
@@ -173,7 +173,7 @@ describe("createRequest", () => {
     it("applies default headers", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
-      const request = createRequest(mockSources, {
+      const request = createCaller(mockSources, {
         headers: { "x-api-key": "abc" },
       }) as any;
       await request("api")("list");
@@ -185,7 +185,7 @@ describe("createRequest", () => {
     it("merges option headers with default headers", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
-      const request = createRequest(mockSources, {
+      const request = createCaller(mockSources, {
         headers: { "x-api-key": "abc" },
       }) as any;
       await request("api", { headers: { authorization: "Bearer token" } })("list");
@@ -201,7 +201,7 @@ describe("createRequest", () => {
       mockExecuteRequest.mockResolvedValue(data);
       const onSuccess = vi.fn();
 
-      const request = createRequest(mockSources, { onSuccess }) as any;
+      const request = createCaller(mockSources, { onSuccess }) as any;
       await request("api")("list");
 
       expect(onSuccess).toHaveBeenCalledWith(data);
@@ -216,7 +216,7 @@ describe("createRequest", () => {
       mockExecuteRequest.mockRejectedValue(httpError);
       const onError = vi.fn();
 
-      const request = createRequest(mockSources, { onError }) as any;
+      const request = createCaller(mockSources, { onError }) as any;
 
       await expect(request("api")("fail")).rejects.toThrow();
       expect(onError).toHaveBeenCalledWith(httpError);
@@ -226,7 +226,7 @@ describe("createRequest", () => {
       mockExecuteRequest.mockRejectedValue(new Error("network fail"));
       const onError = vi.fn();
 
-      const request = createRequest(mockSources, { onError }) as any;
+      const request = createCaller(mockSources, { onError }) as any;
 
       await expect(request("api")("fail")).rejects.toThrow("network fail");
       expect(onError).not.toHaveBeenCalled();

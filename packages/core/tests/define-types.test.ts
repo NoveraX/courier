@@ -9,7 +9,7 @@ import { describe, expectTypeOf, it } from "vitest";
 import { defineApi, defineGroup, endpoint } from "../src/define/index";
 import type { Endpoint } from "../src/define/types";
 import type { HttpResponse } from "../src/http-client/types";
-import type { EndpointKey, ResolveEndpoint, RequestFn } from "../src/types";
+import type { CallerFn, EndpointKey, ResolveEndpoint } from "../src/types";
 
 // ---- test fixtures ----
 
@@ -133,13 +133,13 @@ describe("ResolveEndpoint type resolution", () => {
 	});
 });
 
-// ---- RequestFn type inference ----
+// ---- CallerFn type inference ----
 
-describe("RequestFn type inference", () => {
+describe("CallerFn type inference", () => {
 	type Sources = typeof sources;
 
 	it("source key is constrained to source names", () => {
-		type Fn = RequestFn<Sources>;
+		type Fn = CallerFn<Sources>;
 		// This just verifies the type is constructible — actual runtime
 		// testing of the curried call chain is done in integration tests.
 		expectTypeOf<Fn>().toBeFunction();

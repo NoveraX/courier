@@ -20,7 +20,10 @@ export type DefinedGroup<E extends EndpointRecord = EndpointRecord> = E & {
 };
 
 /** Constraint for groups parameter in defineApi() */
-export type GroupRecord = Record<string, DefinedGroup>;
+export type GroupRecord = Record<
+  string,
+  { options: GroupOptions; [key: string]: Endpoint<any, any> | GroupOptions }
+>;
 
 /** Result of defineApi() */
 export type DefinedApi<G extends GroupRecord = GroupRecord> = {

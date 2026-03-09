@@ -9,7 +9,7 @@ import { defineApi, defineGroup, endpoint } from "../src/define/index";
 import { HTTPError } from "../src/error";
 import { executeRequest } from "../src/utils/createRequest";
 
-let mockKyInstance: Record<string, ReturnType<typeof vi.fn>>;
+let mockKyInstance: Record<"get" | "post" | "put" | "patch" | "delete" | "head", ReturnType<typeof vi.fn>>;
 
 function mockResponse(data: unknown, status = 200, headers = new Headers()) {
 	return {

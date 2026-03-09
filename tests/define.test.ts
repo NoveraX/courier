@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type Endpoint, defineApi, defineGroup, endpoint } from "../src/define/index";
-import type { HttpMethods, HttpResponse } from "../src/instance/types";
+import type { HttpMethods } from "../src/instance/types";
 
 vi.mock("../src/utils/createRequest", () => ({
 	executeRequest: vi.fn(),

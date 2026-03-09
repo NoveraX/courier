@@ -5,7 +5,7 @@ import { HTTPError } from "../src/error";
 import type { HttpMethods } from "../src/instance/types";
 import { executeRequest } from "../src/utils/createRequest";
 
-let mockKyInstance: Record<string, ReturnType<typeof vi.fn>>;
+let mockKyInstance: Record<"get" | "post" | "put" | "patch" | "delete" | "head", ReturnType<typeof vi.fn>>;
 
 function mockResponse(data: unknown, status = 200, headers = new Headers()) {
   return {
@@ -121,7 +121,7 @@ describe("executeRequest", () => {
       const responseData = { id: 1, name: "Alice" };
       mockKyInstance.get.mockResolvedValue(mockResponse(responseData));
 
-      const methodFn = vi.fn((methods: HttpMethods, vars: unknown) =>
+      const methodFn = vi.fn((methods: HttpMethods, _vars: unknown) =>
         methods.get("users/1"),
       );
       const source = createTestSource({ getUser: methodFn });

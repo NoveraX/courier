@@ -167,7 +167,7 @@ describe("structural compatibility", () => {
 	it("endpoint return matches HttpResponse shape", async () => {
 		const fn = endpoint<User>()(({ get }) => get());
 		// Endpoint<R, V> returns HttpResponse<R> | Promise<HttpResponse<R>>
-		type ReturnType = Awaited<ReturnType<typeof fn>>;
-		expectTypeOf<ReturnType>().toMatchTypeOf<HttpResponse<User>>();
+		type FnReturn = Awaited<ReturnType<typeof fn>>;
+		expectTypeOf<FnReturn>().toMatchTypeOf<HttpResponse<User>>();
 	});
 });

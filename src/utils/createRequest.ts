@@ -4,6 +4,12 @@ import { HTTPError } from "../error";
 import { HttpClient } from "../instance/index";
 import type { AnyEndpoints, BaseOptions, Context, HookInfo } from "../instance/types";
 import {
+  ENDPOINT_SCHEMA,
+  type SchemaMetadata,
+  ValidationError,
+  validateSchema,
+} from "../validation";
+import {
   headersToObject,
   isHeaders,
   parseRequestPayload,
@@ -137,6 +143,10 @@ export async function executeRequest(
     return buildValidationError(context, `[${String(source)}][${methodPath}]: method not found`);
   }
 
+  const schema = (endpoint as unknown as Record<symbol, SchemaMetadata | undefined>)[
+    ENDPOINT_SCHEMA
+  ];
+
   const instance = createHttpClient(dataSource.options, context);
 
   const instanceOptions = options ?? {};
@@ -163,6 +173,10 @@ export async function executeRequest(
   };
 
   try {
+    if (schema?.variables) {
+      hookInfo.variables = await validateSchema(schema.variables, hookInfo.variables, "variables");
+    }
+
     if (dataSource.options?.onRequest) {
       const modifiedInfo = await dataSource.options.onRequest(hookInfo);
       if (modifiedInfo) {
@@ -198,6 +212,10 @@ export async function executeRequest(
       }
     }
 
+    if (schema?.response) {
+      responseData.data = await validateSchema(schema.response, responseData.data, "response");
+    }
+
     return buildResponse(context, {
       headers,
       status: responseData.status,
@@ -206,6 +224,25 @@ export async function executeRequest(
       stream,
     });
   } catch (error) {
+    if (error instanceof ValidationError) {
+      const responseResult = {
+        status: 422,
+        headers: new Headers(),
+        data: {
+          success: false,
+          message: error.message,
+          target: error.target,
+          issues: error.issues,
+        },
+      };
+
+      return buildResponse(context, {
+        ...responseResult,
+        throw: error,
+        rawData,
+      });
+    }
+
     const responseResult =
       error instanceof HTTPError
         ? { status: error.status, headers: error.headers, data: error.data }

@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import type { HttpMethods } from "../src/instance/types";
 import { executeRequest } from "../src/utils/createRequest";
 
-let mockKyInstance: Record<string, ReturnType<typeof vi.fn>>;
+let mockKyInstance: Record<"get" | "post" | "put" | "patch" | "delete" | "head", ReturnType<typeof vi.fn>>;
 
 beforeEach(() => {
   mockKyInstance = {

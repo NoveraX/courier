@@ -68,7 +68,7 @@ describe("apiRoute", () => {
       const { POST } = apiRoute({});
       const req = createRequest(JSON.stringify({ source: "api", method: "list" }));
 
-      const res = await POST(req);
+      await POST(req);
       expect(mockExecuteRequest).toHaveBeenCalled();
     });
   });

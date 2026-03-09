@@ -3,7 +3,7 @@ import ky from "ky";
 import { HTTPError } from "../src/error";
 import { HttpClient } from "../src/instance/index";
 
-let mockKyInstance: Record<string, ReturnType<typeof vi.fn>>;
+let mockKyInstance: Record<"get" | "post" | "put" | "patch" | "delete" | "head", ReturnType<typeof vi.fn>>;
 let createSpy: MockInstance;
 
 function mockResponse(data: unknown, status = 200, headers = new Headers()) {
@@ -90,7 +90,7 @@ describe("HttpClient", () => {
       const { get } = instance.createMethods({ variables: { page: "1", limit: "10" } });
       await get("users");
 
-      const callOptions = mockKyInstance.get.mock.calls[0][1];
+      const callOptions = mockKyInstance.get.mock.calls[0]![1];
       expect(callOptions.searchParams).toBeDefined();
       expect(callOptions.searchParams.get("page")).toBe("1");
       expect(callOptions.searchParams.get("limit")).toBe("10");
@@ -119,9 +119,9 @@ describe("HttpClient", () => {
 
       const instance = new HttpClient();
       const { post } = instance.createMethods();
-      await post("upload", fd);
+      await post("upload", fd as unknown as Record<string, unknown>);
 
-      const callOptions = mockKyInstance.post.mock.calls[0][1];
+      const callOptions = mockKyInstance.post.mock.calls[0]![1];
       expect(callOptions.body).toBeInstanceOf(FormData);
     });
   });
@@ -171,7 +171,7 @@ describe("HttpClient", () => {
       const { del } = instance.createMethods({ variables: { force: "true" } });
       await del("users/1");
 
-      const callOptions = mockKyInstance.delete.mock.calls[0][1];
+      const callOptions = mockKyInstance.delete.mock.calls[0]![1];
       expect(callOptions.searchParams).toBeDefined();
     });
   });
@@ -197,7 +197,7 @@ describe("HttpClient", () => {
       const { get } = instance.createMethods({ variables: { id: "42" } });
       await get("users/:id");
 
-      const url = mockKyInstance.get.mock.calls[0][0];
+      const url = mockKyInstance.get.mock.calls[0]![0];
       expect(url).toBe("users/42");
     });
   });
@@ -269,7 +269,7 @@ describe("HttpClient", () => {
       const { post } = instance.createMethods();
       await post("users", { name: "new" });
 
-      const callOptions = mockKyInstance.post.mock.calls[0][1];
+      const callOptions = mockKyInstance.post.mock.calls[0]![1];
       expect(callOptions.json).toEqual({ app: "test", name: "new" });
     });
 
@@ -280,7 +280,7 @@ describe("HttpClient", () => {
       const { get } = instance.createMethods({ variables: { page: "1" } });
       await get("users");
 
-      const callOptions = mockKyInstance.get.mock.calls[0][1];
+      const callOptions = mockKyInstance.get.mock.calls[0]![1];
       expect(callOptions.searchParams.get("locale")).toBe("en");
       expect(callOptions.searchParams.get("page")).toBe("1");
     });
@@ -296,7 +296,7 @@ describe("HttpClient", () => {
       await post("users", { name: "test" });
 
       expect(serializer).toHaveBeenCalledWith({ name: "test" });
-      const callOptions = mockKyInstance.post.mock.calls[0][1];
+      const callOptions = mockKyInstance.post.mock.calls[0]![1];
       expect(callOptions.body).toBe('{"name":"test"}');
     });
   });
@@ -449,7 +449,7 @@ describe("HttpClient", () => {
       });
       await get("users", { headers: new Headers({ authorization: "Bearer token" }) });
 
-      const callOptions = mockKyInstance.get.mock.calls[0][1];
+      const callOptions = mockKyInstance.get.mock.calls[0]![1];
       expect(callOptions.headers).toBeInstanceOf(Headers);
     });
   });
@@ -462,7 +462,7 @@ describe("HttpClient", () => {
       const { get } = instance.createMethods();
       await get("users", undefined, { headers: new Headers({ "x-custom-header": "value" }) });
 
-      const callOptions = mockKyInstance.get.mock.calls[0][1];
+      const callOptions = mockKyInstance.get.mock.calls[0]![1];
       expect(callOptions.headers.get("x-custom-header")).toBe("value");
     });
   });
@@ -475,7 +475,7 @@ describe("HttpClient", () => {
       const { post } = instance.createMethods();
       await post("users", { name: "test", age: undefined });
 
-      const callOptions = mockKyInstance.post.mock.calls[0][1];
+      const callOptions = mockKyInstance.post.mock.calls[0]![1];
       expect(callOptions.json).toEqual({ name: "test" });
     });
   });
@@ -491,9 +491,9 @@ describe("HttpClient", () => {
 
       const instance = new HttpClient();
       const { post } = instance.createMethods();
-      await post("upload", fd);
+      await post("upload", fd as unknown as Record<string, unknown>);
 
-      const callOptions = mockKyInstance.post.mock.calls[0][1];
+      const callOptions = mockKyInstance.post.mock.calls[0]![1];
       const body = callOptions.body as FormData;
       expect(body.has("name")).toBe(true);
       expect(body.has("avatar")).toBe(false);
@@ -516,7 +516,7 @@ describe("HttpClient", () => {
       const { get } = instance.createMethods();
       await get("https://other.com/api/users");
 
-      const callOptions = mockKyInstance.get.mock.calls[0][1];
+      const callOptions = mockKyInstance.get.mock.calls[0]![1];
       expect(callOptions.prefixUrl).toBe("https://other.com");
     });
   });

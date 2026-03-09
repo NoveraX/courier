@@ -1,12 +1,11 @@
 {
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "tests/**/*", "*.config.ts"],
   "exclude": ["lib"],
   "compilerOptions": {
     "module": "ESNext",
     "lib": ["DOM", "ESNext", "DOM.Iterable"],
     "target": "ESNext",
     "declaration": true,
-    "rootDir": "src",
     "strict": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,

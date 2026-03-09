@@ -79,7 +79,7 @@ export function Hero() {
           </AnimatedSection>
 
           {/* Right: code */}
-          <AnimatedSection delay={0.15}>
+          <AnimatedSection delay={0.15} className="min-w-0">
             <CodeBlock code={heroCode} language="typescript" filename="app/page.tsx" />
           </AnimatedSection>
         </div>

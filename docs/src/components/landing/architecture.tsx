@@ -75,17 +75,19 @@ export function Architecture() {
             <span className="mb-4 inline-block rounded-md bg-brand/10 px-2.5 py-1 text-xs font-semibold text-brand">
               Proxy Mode
             </span>
-            <div className="flex items-center justify-center gap-2 overflow-x-auto sm:gap-4">
-              <Node label="Browser" sub="Client Component" className="bg-surface" delay={0.1} />
-              <Arrow delay={0.2} label="POST" />
-              <Node
-                label="Next.js"
-                sub="API Route"
-                className="border-brand/30 bg-brand/5"
-                delay={0.3}
-              />
-              <Arrow delay={0.4} label="Proxy" />
-              <Node label="Backend" sub="REST API" className="bg-surface" delay={0.5} />
+            <div className="overflow-x-auto">
+              <div className="mx-auto flex w-fit items-center gap-2 sm:gap-4">
+                <Node label="Browser" sub="Client Component" className="bg-surface" delay={0.1} />
+                <Arrow delay={0.2} label="POST" />
+                <Node
+                  label="Next.js"
+                  sub="API Route"
+                  className="border-brand/30 bg-brand/5"
+                  delay={0.3}
+                />
+                <Arrow delay={0.4} label="Proxy" />
+                <Node label="Backend" sub="REST API" className="bg-surface" delay={0.5} />
+              </div>
             </div>
           </div>
 
@@ -94,15 +96,17 @@ export function Architecture() {
             <span className="mb-4 inline-block rounded-md bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
               Direct Mode
             </span>
-            <div className="flex items-center justify-center gap-2 overflow-x-auto sm:gap-4">
-              <Node
-                label="Server"
-                sub="RSC / Actions"
-                className="border-success/30 bg-success/5"
-                delay={0.1}
-              />
-              <Arrow delay={0.2} label="Direct" />
-              <Node label="Backend" sub="REST API" className="bg-surface" delay={0.3} />
+            <div className="overflow-x-auto">
+              <div className="mx-auto flex w-fit items-center gap-2 sm:gap-4">
+                <Node
+                  label="Server"
+                  sub="RSC / Actions"
+                  className="border-success/30 bg-success/5"
+                  delay={0.1}
+                />
+                <Arrow delay={0.2} label="Direct" />
+                <Node label="Backend" sub="REST API" className="bg-surface" delay={0.3} />
+              </div>
             </div>
             <p className="mt-4 text-center text-xs text-muted-foreground">
               No proxy hop — server components call the backend directly

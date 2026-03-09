@@ -248,6 +248,10 @@
   margin: 0 -1rem;
 }
 
+.shiki-wrapper pre.shiki .line:empty::before {
+  content: " ";
+}
+
 /* Line numbers */
 
 .shiki-wrapper.show-line-numbers pre.shiki .line::before {

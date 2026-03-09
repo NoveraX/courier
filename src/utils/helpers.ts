@@ -1,7 +1,7 @@
 import { compile, type Key, parse } from "path-to-regexp";
 
 import { HTTPError } from "../error";
-import type { CallOptions } from "../instance/types";
+import type { CallOptions, SearchParamsSerializer } from "../instance/types";
 
 const MULTIPLE_SLASHES = /\/+/g;
 
@@ -45,11 +45,11 @@ export const compileUrl = (
   rawUrlPath: string,
   variables?: FormData | Record<string, unknown>,
   generatedPathOptions?: Record<string, unknown>,
-  searchParametersParse?: (string: string) => Record<string, unknown>,
+  searchParamsSerializer?: SearchParamsSerializer,
 ): [string, FormData | Record<string, unknown>, Record<string, unknown>] => {
   const [urlPath, searchParameters] = rawUrlPath.split("?");
-  const objectSearchParameters = searchParametersParse
-    ? searchParametersParse(searchParameters || "")
+  const objectSearchParameters = searchParamsSerializer
+    ? searchParamsSerializer.parse(searchParameters || "")
     : Object.fromEntries(new URLSearchParams(searchParameters || "").entries());
 
   const variablesObject = isFormData(variables)

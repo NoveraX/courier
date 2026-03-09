@@ -1,5 +1,4 @@
 import { Datasource } from "@noverax/nexus/datasource"
-import type { SearchParamsOption } from "ky"
 import { Echo } from "./echo"
 import { Files } from "./files"
 import { Misc } from "./misc"
@@ -34,18 +33,21 @@ class EncodedApi extends Datasource<typeof encodedGroups> {
     super({
       baseURL: API_URL,
       groups: encodedGroups,
-      bodyEncoder: (data: Record<string, unknown>) =>
+      bodySerializer: (data: Record<string, unknown>) =>
         new URLSearchParams(Object.entries(data).map(([k, v]) => [k, String(v)])),
-      searchParamsEncoder: (params: Record<string, unknown>): SearchParamsOption => {
-        const sp = new URLSearchParams()
-        for (const [key, value] of Object.entries(params)) {
-          if (Array.isArray(value)) {
-            for (const item of value) sp.append(`${key}[]`, String(item))
-          } else {
-            sp.append(key, String(value))
+      searchParamsSerializer: {
+        stringify: (params: Record<string, unknown>) => {
+          const sp = new URLSearchParams()
+          for (const [key, value] of Object.entries(params)) {
+            if (Array.isArray(value)) {
+              for (const item of value) sp.append(`${key}[]`, String(item))
+            } else {
+              sp.append(key, String(value))
+            }
           }
-        }
-        return sp
+          return sp.toString()
+        },
+        parse: (str: string) => Object.fromEntries(new URLSearchParams(str).entries()),
       },
       defaultData: { apiVersion: "v2" },
       defaultQueryParams: { format: "json" },

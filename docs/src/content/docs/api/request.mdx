@@ -36,8 +36,11 @@ type BaseOptions = MergeOptions & KyOptions & {
   // Base URL for all requests from this source
   baseURL?: string
 
-  // Response parsing: "json" (default) or "text"
-  responseType?: "json" | "text"
+  // Response parsing (default: "json")
+  responseType?: "json" | "text" | "blob" | "arrayBuffer" | "formData"
+
+  // Custom response parser (overrides responseType)
+  responseParser?: (response: Response) => Promise<unknown>
 
   // Default body data merged into every POST/PUT/PATCH request
   defaultData?: Record<string, unknown>
@@ -48,14 +51,11 @@ type BaseOptions = MergeOptions & KyOptions & {
   // Additional header names to preserve through the proxy
   allowedHeaders?: string[]
 
-  // Custom body encoder (e.g., for URL-encoded forms)
-  bodyEncoder?: (object: Record<string, unknown>) => BodyInit
+  // Custom body serializer (e.g., for URL-encoded forms)
+  bodySerializer?: (data: Record<string, unknown>) => BodyInit
 
-  // Custom search params encoder
-  searchParamsEncoder?: (object: Record<string, unknown>) => SearchParamsOption
-
-  // Custom search params parser (for URL path parameters)
-  searchParamsParse?: (string: string) => Record<string, unknown>
+  // Custom search params serializer (e.g., qs)
+  searchParamsSerializer?: { stringify: (obj) => string; parse: (str) => Record<string, unknown> }
 
   // Enable AbortController for request deduplication
   deduplicate?: boolean
@@ -113,7 +113,21 @@ Sets the base URL (prefix) for all requests from this source. Maps to `ky`'s `pr
 
 ### responseType
 
-Controls response parsing. `"json"` (default) calls `response.json()`, `"text"` calls `response.text()`. A `204` status always returns `null`.
+Controls response parsing. Supported values: `"json"` (default), `"text"`, `"blob"`, `"arrayBuffer"`, `"formData"`. A `204` status always returns `null`.
+
+### responseParser
+
+Custom response parser that overrides `responseType`. Receives the raw `Response` object. Useful for XML, Protocol Buffers, or any format not covered by `responseType`:
+
+```ts
+const api = new Datasource({
+  baseURL: process.env.API_URL,
+  responseParser: async (response) => {
+    const text = await response.text()
+    return new DOMParser().parseFromString(text, "text/xml")
+  },
+})
+```
 
 ### defaultData
 
@@ -201,24 +215,21 @@ type HookInfo = {
 Override the default JSON body encoding and search params serialization.
 
 ```ts
-// Custom body encoder — e.g., URL-encoded form data
+// Custom body serializer — e.g., URL-encoded form data
 const api = new Datasource({
   baseURL: process.env.API_URL,
-  bodyEncoder: (data) => {
+  bodySerializer: (data) => {
     return new URLSearchParams(
       Object.entries(data).map(([k, v]) => [k, String(v)])
     ).toString()
   },
 })
 
-// Custom search params encoder
+// Custom search params serializer — e.g., using qs
+import qs from "qs"
 const api2 = new Datasource({
   baseURL: process.env.API_URL,
-  searchParamsEncoder: (params) => {
-    return new URLSearchParams(
-      Object.entries(params).map(([k, v]) => [k, String(v)])
-    )
-  },
+  searchParamsSerializer: qs,
 })
 ```
 

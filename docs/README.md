@@ -39,7 +39,7 @@ This starts both servers concurrently:
 |------|-------|-------------|
 | Groups | `/groups` | `EndpointGroup` with prefix, `group:method` syntax |
 | Path Params | `/path-params` | Dynamic `:id`, `:postId` URL segments |
-| Encoding | `/encoding` | Custom `bodyEncoder` and `searchParamsEncoder` |
+| Encoding | `/encoding` | Custom `bodySerializer` and `searchParamsSerializer` |
 | Upload | `/upload` | FormData file upload with `onUploadProgress` |
 
 ### Server-Side

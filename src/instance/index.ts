@@ -1,9 +1,4 @@
-import ky, {
-  HTTPError as KYHTTPError,
-  type KyResponse,
-  type Options,
-  type SearchParamsOption,
-} from "ky";
+import ky, { HTTPError as KYHTTPError, type KyResponse, type Options } from "ky";
 
 import { HTTPError } from "../error";
 import { cleanupAfterResponse, deduplicateRequest, supportsAbortController } from "../hooks/index";
@@ -29,17 +24,18 @@ import type {
   MethodParameters,
   PathOptions,
   ResponseType,
+  SearchParamsSerializer,
 } from "./types";
 
 export class HttpClient {
   private responseType: ResponseType = "json";
+  private responseParser?: (response: Response) => Promise<unknown>;
   private defaultData: Record<string, unknown> = {};
   private defaultQueryParams?: Record<string, unknown>;
   private allowedHeaders?: string[];
   private pathOptions?: PathOptions;
-  private bodyEncoder?: (object: Record<string, unknown>) => BodyInit;
-  private searchParamsEncoder?: (object: Record<string, unknown>) => SearchParamsOption;
-  private searchParamsParse?: (string: string) => Record<string, unknown>;
+  private bodySerializer?: (data: Record<string, unknown>) => BodyInit;
+  private searchParamsSerializer?: SearchParamsSerializer;
   private options: Options = {};
 
   context?: Context;
@@ -54,13 +50,13 @@ export class HttpClient {
     const {
       baseURL,
       responseType = "json",
+      responseParser,
       defaultData,
       defaultQueryParams,
       allowedHeaders,
       pathOptions,
-      bodyEncoder,
-      searchParamsEncoder,
-      searchParamsParse,
+      bodySerializer,
+      searchParamsSerializer,
       deduplicate,
       hooks,
       onRequest: _onRequest,
@@ -70,12 +66,12 @@ export class HttpClient {
     } = options || {};
 
     this.responseType = responseType;
+    this.responseParser = responseParser;
     this.defaultData = { ...defaultData };
     this.allowedHeaders = allowedHeaders;
     this.pathOptions = pathOptions;
-    this.bodyEncoder = bodyEncoder;
-    this.searchParamsEncoder = searchParamsEncoder;
-    this.searchParamsParse = searchParamsParse;
+    this.bodySerializer = bodySerializer;
+    this.searchParamsSerializer = searchParamsSerializer;
 
     if (defaultQueryParams) {
       this.defaultQueryParams = { ...defaultQueryParams };
@@ -112,8 +108,8 @@ export class HttpClient {
   private toSearchParams(variables?: Record<string, unknown>) {
     if (!variables || Object.keys(variables).length === 0) return;
 
-    if (this.searchParamsEncoder) {
-      return this.searchParamsEncoder(variables);
+    if (this.searchParamsSerializer) {
+      return this.searchParamsSerializer.stringify(variables);
     }
 
     return new URLSearchParams(Object.entries(variables).map(([k, v]) => [k, String(v)]));
@@ -184,9 +180,9 @@ export class HttpClient {
 
         return {
           ...(searchParameters_ ? { searchParams: searchParameters_ } : {}),
-          ...(!this.bodyEncoder && Object.keys(json).length > 0 ? { json } : {}),
-          ...(this.bodyEncoder && Object.keys(json).length > 0
-            ? { body: this.bodyEncoder(json) }
+          ...(!this.bodySerializer && Object.keys(json).length > 0 ? { json } : {}),
+          ...(this.bodySerializer && Object.keys(json).length > 0
+            ? { body: this.bodySerializer(json) }
             : {}),
           ...(isFormData(variables) ? { body: variables } : {}),
         };
@@ -208,7 +204,22 @@ export class HttpClient {
     }
 
     try {
-      return this.responseType === "json" ? await response.json() : await response.text();
+      if (this.responseParser) {
+        return await this.responseParser(response);
+      }
+
+      switch (this.responseType) {
+        case "text":
+          return await response.text();
+        case "blob":
+          return await response.blob();
+        case "arrayBuffer":
+          return await response.arrayBuffer();
+        case "formData":
+          return await response.formData();
+        default:
+          return await response.json();
+      }
     } catch {
       const fallbackMessage = message || "Failed to parse response body";
       throw new HTTPError({
@@ -243,7 +254,7 @@ export class HttpClient {
         path,
         cleanedVars,
         generatedPathOptions,
-        this.searchParamsParse,
+        this.searchParamsSerializer,
       );
 
       const prefixUrlOverride = baseUrl ? { prefixUrl: baseUrl } : {};

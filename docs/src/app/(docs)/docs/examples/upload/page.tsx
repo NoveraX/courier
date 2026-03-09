@@ -32,7 +32,7 @@ class Files extends EndpointGroup {
     super({ prefix: "upload" })
   }
 
-  // FormData auto-detected — no bodyEncoder needed
+  // FormData auto-detected — no bodySerializer needed
   // Empty files are automatically removed before sending
   upload: Endpoint<UploadResponse, FormData> = ({ post }) => post()
 }`

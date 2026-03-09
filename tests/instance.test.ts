@@ -286,33 +286,74 @@ describe("HttpClient", () => {
     });
   });
 
-  describe("bodyEncoder", () => {
-    it("uses custom bodyEncoder for POST", async () => {
+  describe("bodySerializer", () => {
+    it("uses custom bodySerializer for POST", async () => {
       mockKyInstance.post.mockResolvedValue(mockResponse({ ok: true }));
 
-      const encoder = vi.fn((obj: Record<string, unknown>) => JSON.stringify(obj));
-      const instance = new HttpClient({ bodyEncoder: encoder });
+      const serializer = vi.fn((obj: Record<string, unknown>) => JSON.stringify(obj));
+      const instance = new HttpClient({ bodySerializer: serializer });
       const { post } = instance.createMethods();
       await post("users", { name: "test" });
 
-      expect(encoder).toHaveBeenCalledWith({ name: "test" });
+      expect(serializer).toHaveBeenCalledWith({ name: "test" });
       const callOptions = mockKyInstance.post.mock.calls[0][1];
       expect(callOptions.body).toBe('{"name":"test"}');
     });
   });
 
-  describe("searchParamsEncoder", () => {
-    it("uses custom searchParamsEncoder for GET", async () => {
+  describe("searchParamsSerializer", () => {
+    it("uses custom searchParamsSerializer.stringify for GET", async () => {
       mockKyInstance.get.mockResolvedValue(mockResponse({}));
 
-      const encoder = vi.fn(
-        (obj: Record<string, unknown>) => `custom=${Object.keys(obj).join(",")}`,
-      );
-      const instance = new HttpClient({ searchParamsEncoder: encoder });
+      const serializer = {
+        stringify: vi.fn(
+          (obj: Record<string, unknown>) => `custom=${Object.keys(obj).join(",")}`,
+        ),
+        parse: vi.fn((str: string) => Object.fromEntries(new URLSearchParams(str).entries())),
+      };
+      const instance = new HttpClient({ searchParamsSerializer: serializer });
       const { get } = instance.createMethods({ variables: { a: "1", b: "2" } });
       await get("users");
 
-      expect(encoder).toHaveBeenCalled();
+      expect(serializer.stringify).toHaveBeenCalled();
+    });
+  });
+
+  describe("responseParser", () => {
+    it("uses custom responseParser when provided", async () => {
+      const xmlString = "<root><item>test</item></root>";
+      mockKyInstance.get.mockResolvedValue({
+        status: 200,
+        headers: new Headers(),
+        text: () => Promise.resolve(xmlString),
+      });
+
+      const parser = vi.fn(async (response: Response) => {
+        const text = await response.text();
+        return { xml: text };
+      });
+
+      const instance = new HttpClient({ responseParser: parser });
+      const { get } = instance.createMethods();
+      const result = await get("data");
+
+      expect(parser).toHaveBeenCalled();
+      expect(result.data).toEqual({ xml: xmlString });
+    });
+
+    it("responseParser takes priority over responseType", async () => {
+      mockKyInstance.get.mockResolvedValue({
+        status: 200,
+        headers: new Headers(),
+        text: () => Promise.resolve("custom"),
+      });
+
+      const parser = async (response: Response) => `parsed:${await response.text()}`;
+      const instance = new HttpClient({ responseType: "json", responseParser: parser });
+      const { get } = instance.createMethods();
+      const result = await get("data");
+
+      expect(result.data).toBe("parsed:custom");
     });
   });
 

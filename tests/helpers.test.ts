@@ -103,9 +103,12 @@ describe("compileUrl", () => {
     expect(search).toEqual({ page: "1", limit: "10" });
   });
 
-  it("uses custom searchParametersParse", () => {
-    const parser = (s: string) => ({ custom: s });
-    const [, , search] = compileUrl("users?raw", undefined, undefined, parser);
+  it("uses custom searchParamsSerializer.parse", () => {
+    const serializer = {
+      stringify: (obj: Record<string, unknown>) => new URLSearchParams(Object.entries(obj).map(([k, v]) => [k, String(v)])).toString(),
+      parse: (s: string) => ({ custom: s }),
+    };
+    const [, , search] = compileUrl("users?raw", undefined, undefined, serializer);
     expect(search).toEqual({ custom: "raw" });
   });
 

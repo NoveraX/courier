@@ -21,7 +21,7 @@ await request("myApi")("users:create", { name: "Jane", email: "jane@test.com" })
 check: Endpoint<void> = ({ head }) => head()
 ```
 
-## bodyEncoder
+## bodySerializer
 
 Override the default JSON serialization for request bodies. This is useful when your backend expects a different format like `application/x-www-form-urlencoded`, Protocol Buffers, or any custom encoding:
 
@@ -36,7 +36,7 @@ class MyApi extends Datasource<typeof groups> {
       baseURL: process.env.API_URL,
       groups,
       // Custom body serialization — e.g., x-www-form-urlencoded
-      bodyEncoder: (data) => {
+      bodySerializer: (data) => {
         const params = new URLSearchParams()
         for (const [key, value] of Object.entries(data)) {
           params.append(key, String(value))
@@ -58,15 +58,18 @@ await request("myApi")("auth:login", {
 ```
 
 <Callout variant="info" title="Scope">
-`bodyEncoder` is set at the source level and applies to all POST/PUT/PATCH requests for that source. If you need different encoding per group, create separate `Datasource` sources.
+`bodySerializer` is set at the source level and applies to all POST/PUT/PATCH requests for that source. If you need different encoding per group, create separate `Datasource` sources.
 </Callout>
 
-## searchParamsEncoder
+## searchParamsSerializer
 
-Override how query parameters are serialized. The default behavior converts each key-value pair to a simple `key=value` string. Use a custom encoder for array params, nested objects, or other formats:
+Unified serializer for query parameters. Handles both encoding (object → string) and parsing (string → object). The default behavior converts each key-value pair to a simple `key=value` string using `URLSearchParams`.
+
+You can pass any library with `stringify` and `parse` methods (e.g., `qs`):
 
 ```ts title="api/index.ts"
 import { Datasource } from "@noverax/nexus/datasource"
+import qs from "qs"
 
 const groups = { products: new Products() }
 
@@ -75,21 +78,8 @@ class MyApi extends Datasource<typeof groups> {
     super({
       baseURL: process.env.API_URL,
       groups,
-      // Custom query string format — e.g., array params
-      searchParamsEncoder: (data) => {
-        const params = new URLSearchParams()
-        for (const [key, value] of Object.entries(data)) {
-          if (Array.isArray(value)) {
-            // tags[]=a&tags[]=b instead of tags=a,b
-            for (const item of value) {
-              params.append(`${key}[]`, String(item))
-            }
-          } else {
-            params.append(key, String(value))
-          }
-        }
-        return params
-      },
+      // Use qs for nested objects and arrays
+      searchParamsSerializer: qs,
     })
   }
 }
@@ -101,9 +91,7 @@ await request("myApi")("products:search", {
 })
 ```
 
-## searchParamsParse
-
-When a method URL contains a query string (e.g., `get("items?sort=asc")`), Nexus parses it into an object and merges it with the caller's variables. Use `searchParamsParse` to customize this parsing:
+Or provide custom `stringify` and `parse` functions:
 
 ```ts title="api/index.ts"
 class MyApi extends Datasource<typeof groups> {
@@ -111,15 +99,19 @@ class MyApi extends Datasource<typeof groups> {
     super({
       baseURL: process.env.API_URL,
       groups,
-      // Parse query params from URL paths back to an object
-      // Used when a method URL contains a query string: get("items?sort=asc")
-      searchParamsParse: (queryString) => {
-        const params = new URLSearchParams(queryString)
-        const result: Record<string, unknown> = {}
-        for (const [key, value] of params.entries()) {
-          result[key] = value
-        }
-        return result
+      searchParamsSerializer: {
+        stringify: (data) => {
+          const params = new URLSearchParams()
+          for (const [key, value] of Object.entries(data)) {
+            if (Array.isArray(value)) {
+              for (const item of value) params.append(`${key}[]`, String(item))
+            } else {
+              params.append(key, String(value))
+            }
+          }
+          return params.toString()
+        },
+        parse: (str) => Object.fromEntries(new URLSearchParams(str).entries()),
       },
     })
   }

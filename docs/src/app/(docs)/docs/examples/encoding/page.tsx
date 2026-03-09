@@ -13,23 +13,27 @@ class EncodedApi extends Datasource<typeof groups> {
       groups: { echo: new Echo() },
 
       // Sends URL-encoded body instead of JSON
-      bodyEncoder: (data) =>
+      bodySerializer: (data) =>
         new URLSearchParams(
           Object.entries(data).map(([k, v]) => [k, String(v)])
         ),
 
       // Encodes arrays as key[]=val1&key[]=val2
-      searchParamsEncoder: (params) => {
-        const sp = new URLSearchParams()
-        for (const [key, value] of Object.entries(params)) {
-          if (Array.isArray(value)) {
-            for (const item of value)
-              sp.append(\`\${key}[]\`, String(item))
-          } else {
-            sp.append(key, String(value))
+      searchParamsSerializer: {
+        stringify: (params) => {
+          const sp = new URLSearchParams()
+          for (const [key, value] of Object.entries(params)) {
+            if (Array.isArray(value)) {
+              for (const item of value)
+                sp.append(\`\${key}[]\`, String(item))
+            } else {
+              sp.append(key, String(value))
+            }
           }
-        }
-        return sp
+          return sp.toString()
+        },
+        parse: (str) =>
+          Object.fromEntries(new URLSearchParams(str).entries()),
       },
 
       // Auto-merged into every POST/PUT/PATCH body
@@ -50,7 +54,7 @@ await request("encodedApi")("echo:send", { name: "John", role: "admin" })
 // Content-Type: application/x-www-form-urlencoded
 // Body: apiVersion=v2&name=John&role=admin`
 
-const searchParamsCode = `// Custom searchParamsEncoder supports arrays
+const searchParamsCode = `// Custom searchParamsSerializer supports arrays
 await request("encodedApi")("echo:retrieve", {
   tags: ["javascript", "react"],
   page: 1,

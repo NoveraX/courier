@@ -12,11 +12,12 @@ Set in the `Request` constructor via `super()`. These apply to every request mad
 type BaseOptions = {
   // URL & encoding
   baseURL: string                              // Prefix URL for all requests
-  responseType?: "json" | "text"               // Response parsing (default: "json")
+  responseType?: "json" | "text" | "blob" | "arrayBuffer" | "formData" // Response parsing (default: "json")
+  responseParser?: (response: Response) => Promise<unknown>           // Custom response parser (overrides responseType)
   defaultData?: Record<string, unknown>        // Merged into every request body
   defaultQueryParams?: Record<string, unknown> // Merged into every query string
-  bodyEncoder?: (body: unknown) => unknown     // Custom body serializer
-  searchParamsEncoder?: (params: unknown) => string // Custom query serializer
+  bodySerializer?: (data: Record<string, unknown>) => BodyInit       // Custom body serializer
+  searchParamsSerializer?: SearchParamsSerializer                     // Custom query serializer ({ stringify, parse })
   extraHeaders?: string[]                      // Additional header names to forward
 
   // Behavior

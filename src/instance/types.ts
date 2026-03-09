@@ -1,6 +1,6 @@
 /// <reference types="next" />
 import type ky from "ky";
-import type { Options, SearchParamsOption } from "ky";
+import type { Options } from "ky";
 import type { NextRequest, NextResponse } from "next/server";
 
 import type { HTTPError } from "../error";
@@ -60,18 +60,23 @@ export type MethodOptions<T extends HttpMethod> = T extends "delete" | "get" | "
   ? SimpleOptions
   : OptionsWithSearchParams;
 
-export type ResponseType = "json" | "text";
+export type ResponseType = "json" | "text" | "blob" | "arrayBuffer" | "formData";
+
+export type SearchParamsSerializer = {
+  stringify: (obj: Record<string, unknown>) => string;
+  parse: (str: string) => Record<string, unknown>;
+};
 
 export type BaseOptions = MergeOptions &
   Omit<Options, "body" | "json" | "prefixUrl" | "searchParams"> & {
     baseURL?: string;
     responseType?: ResponseType;
+    responseParser?: (response: Response) => Promise<unknown>;
     defaultData?: Record<string, unknown>;
     defaultQueryParams?: Record<string, unknown>;
     allowedHeaders?: string[];
-    bodyEncoder?: (object: Record<string, unknown>) => BodyInit;
-    searchParamsEncoder?: (object: Record<string, unknown>) => SearchParamsOption;
-    searchParamsParse?: (string: string) => Record<string, unknown>;
+    bodySerializer?: (data: Record<string, unknown>) => BodyInit;
+    searchParamsSerializer?: SearchParamsSerializer;
     deduplicate?: boolean;
     onRequest?: (info: HookInfo) => HookInfo | undefined | Promise<HookInfo | undefined>;
     onResponse?: (

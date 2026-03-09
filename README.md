@@ -1,25 +1,35 @@
-# @noverax/nexus <!-- omit in toc -->
+<div align="center">
 
-This library is designed to create HTTP requests.
+# @noverax/nexus
 
-> @noverax/nexus is written in `typescript` and supports the [NextJS](https://nextjs.org/) library. Thanks to middleware, you can bypass **cors**.
+**Type-safe HTTP client for Next.js — define once, use everywhere.**
 
-- [Install](#install)
-- [Usage](#usage)
-  - [DataSourse](#datasourse)
-    - [RequestClass API](#requestclass-api)
-      - [baseURL](#baseurl)
-      - [headers](#headers)
-      - [defaultData](#defaultdata)
-      - [defaultQueryParams](#defaultqueryparams)
-      - [pathOptions](#pathoptions)
-      - [bodyEncoder](#bodyencoder)
-      - [...other](#other)
-    - [RequestGroupClass API](#requestgroupclass-api)
-      - [prefix](#prefix)
-      - [pathOptions](#pathoptions-1)
-  - [Create api route (optional)](#create-api-route-optional)
-  - [Create request](#create-request)
+[![npm version](https://img.shields.io/npm/v/@noverax/nexus?color=blue&label=npm)](https://www.npmjs.com/package/@noverax/nexus)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/NoveraX/nexus/blob/main/LICENSE)
+
+[Documentation](https://nexus.noverax.cloud) · [Examples](https://nexus.noverax.cloud/docs/examples/basic) · [GitHub](https://github.com/NoveraX/nexus)
+
+</div>
+
+---
+
+Nexus is an HTTP client library designed for Next.js applications. It provides end-to-end type safety from your API definition to your React components — without code generation, schema files, or a custom backend.
+
+Define your API as TypeScript classes. Nexus infers request and response types automatically, giving you autocomplete for method names, variables, and response shapes.
+
+## Features
+
+- 🔒 **End-to-end type safety** — no codegen, no schema files. TypeScript classes are the source of truth
+- 🔀 **Two transport modes** — proxy (browser → API route → backend) and direct (server → backend)
+- ⚡ **React Query integration** — `useQuery` and `useMutation` with full type inference out of the box
+- 🛣️ **One proxy route for all endpoints** — single `apiRoute(sources)` replaces per-endpoint API routes
+- 📤 **File upload with progress** — built-in XHR-based upload tracking
+- 🔗 **Path parameters** — `:id` syntax with automatic resolution from variables
+- 🚫 **Request deduplication** — automatic AbortController management
+- 📡 **Streaming & SSE** — first-class stream response support
+- 🪝 **Lifecycle hooks** — `onRequest`, `onResponse`, `onError` at the datasource level
+- 🌐 **Works with any REST backend** — Express, FastAPI, Rails, Go, or any HTTP API
 
 ## Install
 
@@ -27,257 +37,173 @@ This library is designed to create HTTP requests.
 npm install @noverax/nexus
 ```
 
-or
+Peer dependencies (all optional — install only what you use):
 
 ```bash
-yarn add @noverax/nexus
+# Required for proxy mode
+npm install next
+
+# Required for React Query integration
+npm install @tanstack/react-query
 ```
 
-## Usage
+## Quick Start
 
-### DataSourse
+### 1. Define your API
 
 ```ts
-import { Method, Request, RequestGroup } from "@noverax/nexus/RequestClass";
+// api/sources.ts
+import { Datasource, EndpointGroup, Endpoint } from "@noverax/nexus/datasource"
 
-type Response = {
-  success: boolean;
-};
+type User = { id: number; name: string; email: string }
 
-class City extends RequestGroup {
+class Users extends EndpointGroup {
   constructor() {
-    super({
-      prefix: "city",
-    });
+    super({ prefix: "users" })
   }
 
-  update: Method<Response, { custom: string }> = async ({ put }) => {
-    return await put("/update");
-  };
+  getAll: Endpoint<User[]> = ({ get }) => get()
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+  create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
+  update: Endpoint<User, { id: number; name: string }> = ({ put }) => put(":id")
+  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
 }
 
-const groups = { city: new City() };
-
-export class MyAPI extends Request<typeof groups> {
+class MyApi extends Datasource<{ users: Users }> {
   constructor() {
     super({
-      baseURL: "https://myapi.com",
-      groups,
-    });
+      baseURL: process.env.API_URL!,
+      groups: { users: new Users() },
+    })
   }
-
-  getUsers: Method<Response> = async ({ get }) => {
-    return await get("/get-user");
-  };
-
-  getUser: Method<Response, { id: number }> = async ({ get }) => {
-    return await get("/get-user/:id");
-  };
-
-  // the variables will be automatically passed to the query,
-  // but you can still get them
-  addUser: Method<Response, { name: string }> = async ({ post }, variables) => {
-    return await post("/add-user");
-  };
 }
 
-export default MyAPI;
+export const sources = { myApi: new MyApi() }
+export type Sources = typeof sources
 ```
 
-#### RequestClass API
+### 2. Set up the transport
 
-##### baseURL
-
-- Type: `string`
-- Default: `undefined`
-
-Request URL
-
-##### headers
-
-- Type: `object`
-- Default: `undefined`
-
-Request headers
-
-##### defaultData
-
-- Type: `Record<string, any>`
-- Default: `undefined`
-
-Initial data (body or query params) that is added to each request
-
-##### defaultQueryParams
-
-- Type: `Record<string, any>`
-- Default: `undefined`
-
-Initial query params that is added to each request
-
-##### pathOptions
-
-- Type: `(request?: NextApiRequest | NextRequest | IncomingMessage) => Record<string, string | number | boolean | null | undefined>`
-- Default: `undefined`
-
-Parameters for generating the url path
+**Proxy mode** — create an API route and a client:
 
 ```ts
+// app/api/request/route.ts
+import { apiRoute } from "@noverax/nexus/next/apiRoute"
+import { sources } from "@/api/sources"
 
-/**
- *
- * pathOptions: () => {
- *  return {
- *    id: 1009
- *  }
- * }
- *
-*/
-
-async updateUser({ put }) {
-  return await put("/:id/update"); // -> https://myapi.com/1009/update
-}
-
+export const { POST } = apiRoute(sources)
 ```
 
-##### bodyEncoder
-
-- Type: `(object: Record<string, any>) => BodyInit`
-- Default: `undefined`
-
-Request body encoder
-
 ```ts
-import qs from "qs";
+// lib/request.ts
+import { createQueryRequest } from "@noverax/nexus/query"
+import type { Sources } from "@/api/sources"
 
-export class MyAPI extends Request<typeof groups> {
-  constructor() {
-    super({
-      ...,
-
-      bodyEncoder: qs.stringify,
-      headers: {
-        "content-type": "application/x-www-form-urlencoded",
-      },
-
-      ...
-    });
-  }
-
-  addUser: Method<Response, { name: string }> = async ({ post }) => {
-    return await post("/add-user");
-  };
-}
-
+export const { useQuery, useMutation, request } = createQueryRequest<Sources>()
 ```
 
-##### ...other
-
-All other ky options
-
-#### RequestGroupClass API
-
-##### prefix
-
-- Type: `string`
-- Default: `undefined`
-
-You can specify a prefix that will be inserted at the beginning of each request of this group
+**Direct mode** — for Server Components and Server Actions:
 
 ```ts
+// lib/direct-request.ts
+import { createDirectRequest } from "@noverax/nexus/direct"
+import { sources } from "@/api/sources"
 
-// without prefix "city"
-update: Method<Response> = async ({ put }) => {
-  return await put("/update"); // -> https://myapi.com/update
-};
-
-// with prefix "city"
-update: Method<Response> = async ({ put }) => {
-  return await put("/update"); // -> https://myapi.com/city/update
-};
-
+export const directRequest = createDirectRequest(sources)
 ```
 
-##### pathOptions
+### 3. Use in components
 
-- Type: `(request?: NextApiRequest | NextRequest | IncomingMessage) => Record<string, string | number | boolean | null | undefined>`
-- Default: `undefined`
+**Client component** with React Query:
 
-Parameters for generating the url path
+```tsx
+"use client"
+import { useQuery, useMutation } from "@/lib/request"
 
-```ts
+export default function UsersPage() {
+  const { data, isLoading } = useQuery("myApi", "users:getAll")
+  //      ^? User[]
 
-/**
- *
- * pathOptions: () => {
- *  return {
- *    id: 1009
- *  }
- * }
- *
-*/
+  const { mutate } = useMutation("myApi", "users:create", {
+    onSuccess: (user) => console.log("Created:", user.name),
+    //                                          ^? string
+  })
 
-async updateUser({ put }) {
-  return await put("/:id/update"); // -> https://myapi.com/1009/update
-}
+  if (isLoading) return <p>Loading...</p>
 
-```
-
-### Create api route (optional)
-
-If you are using [NextJS](https://nextjs.org/) it is recommended to use middleware.
-Create new file `app/api/request/route.js`. You can change the page name by `REQUEST_PAGE` environment variable.
-
-```ts
-import apiRoute from "@noverax/nexus/next/apiRoute";
-import { methods } from "@methods";
-
-type Methods = typeof methods;
-
-type MethodsType = {
-  [K in keyof Methods]: Methods[K];
-};
-
-export const { POST } = apiRoute(methods);
-
-declare module "@noverax/nexus" {
-  // eslint-disable-next-line @typescript-eslint/no-empty-interface
-  interface QueryOverrides extends MethodsType {}
+  return (
+    <ul>
+      {data?.map((user) => <li key={user.id}>{user.name}</li>)}
+      <button onClick={() => mutate({ name: "Jane", email: "jane@test.com" })}>
+        Add User
+      </button>
+    </ul>
+  )
 }
 ```
 
-### Create request
+**Server component** with direct mode:
 
-#### Using NestJS middleware <!-- omit in toc -->
+```tsx
+// app/dashboard/page.tsx
+import { directRequest } from "@/lib/direct-request"
 
-##### From @noverax/nexus <!-- omit in toc -->
+export default async function DashboardPage() {
+  const users = await directRequest("myApi")("users:getAll")
+  //    ^? User[]
 
-```js
-import request from "@noverax/nexus";
-
-const users = await request("myApi")("getUser");
-const response = await request("myApi")("addUser", { name: "Jhon", age: 23 });
-
-// if you used groups, then the format looks like "group:method"
-const cityResponse = await request("myApi")("city:update");
+  return <ul>{users.map((u) => <li key={u.id}>{u.name}</li>)}</ul>
+}
 ```
 
-#### Using direct request <!-- omit in toc -->
+## How It Works
 
-```js
-import setup from "@noverax/nexus/direct";
+Nexus supports two transport modes, both sharing the same API definition:
 
-import MyAPI from "./datasourse/MyAPI";
-
-const myApi = new MyAPI();
-
-const directRequest = setup({ myApi });
-
-const users = await directRequest("myApi")("getUser");
-const response = await directRequest("myApi")("addUser", {
-  name: "Jhon",
-  age: 23,
-});
-
-// if you used groups, then the format looks like "group:method"
-const cityResponse = await directRequest("myApi")("city:update");
 ```
+Proxy Mode (browser):
+  Browser → POST /api/request → Next.js API Route → HttpClient → Backend
+
+Direct Mode (server):
+  Server Component → HttpClient → Backend
+```
+
+**Proxy mode** hides secrets, bypasses CORS, and forwards cookies automatically. The browser only sees `/api/request`.
+
+**Direct mode** skips the proxy hop entirely — server-side code calls the backend directly with zero overhead.
+
+## Comparison
+
+| Feature | fetch | axios | tRPC | **Nexus** |
+| --- | --- | --- | --- | --- |
+| Type Safety | Manual | Manual | Full | **Full** |
+| React Query | Manual | Manual | Built-in | **Built-in** |
+| Server Components | Manual | No | Limited | **First-class** |
+| Request Grouping | No | No | Router | **EndpointGroup** |
+| Upload Progress | No | Yes | Plugin | **Built-in** |
+| Path Parameters | Manual | Manual | No | **Built-in** |
+| Backend Requirement | Any | Any | tRPC server | **Any REST** |
+
+## Exports
+
+| Import | Description |
+| --- | --- |
+| `@noverax/nexus` | `createClientRequest`, `HTTPError`, `isHTTPError` |
+| `@noverax/nexus/datasource` | `Datasource`, `EndpointGroup`, `Endpoint` |
+| `@noverax/nexus/direct` | `createDirectRequest` |
+| `@noverax/nexus/next/apiRoute` | `apiRoute` |
+| `@noverax/nexus/query` | `createQueryRequest`, `QueryClient`, `QueryClientProvider` |
+
+## Documentation
+
+Full documentation with interactive examples is available at **[nexus.noverax.cloud](https://nexus.noverax.cloud)**.
+
+- [Introduction](https://nexus.noverax.cloud/docs/introduction) — what Nexus is and why
+- [Installation](https://nexus.noverax.cloud/docs/installation) — setup guide
+- [Quick Start](https://nexus.noverax.cloud/docs/quick-start) — first request in 4 steps
+- [Architecture](https://nexus.noverax.cloud/docs/architecture) — how it works under the hood
+- [Examples](https://nexus.noverax.cloud/docs/examples/basic) — interactive demos of every feature
+
+## License
+
+[MIT](./LICENSE)

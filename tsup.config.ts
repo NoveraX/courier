@@ -7,6 +7,7 @@ export default defineConfig({
     "direct/index": "src/direct/index.ts",
     "middleware/index": "src/middleware/index.ts",
     "next/apiRoute": "src/next/apiRoute.ts",
+    "next/actions": "src/next/actions.ts",
     "query/index": "src/query/index.ts",
   },
   outDir: "lib",

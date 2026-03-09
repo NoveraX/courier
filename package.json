@@ -30,6 +30,10 @@
       "types": "./lib/next/apiRoute.d.ts",
       "import": "./lib/next/apiRoute.js"
     },
+    "./next/actions": {
+      "types": "./lib/next/actions.d.ts",
+      "import": "./lib/next/actions.js"
+    },
     "./query": {
       "types": "./lib/query/index.d.ts",
       "import": "./lib/query/index.js"

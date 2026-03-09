@@ -11,7 +11,7 @@ import { docsMetadata } from "@/lib/metadata"
 const signatureCode = `import { apiRoute } from "@noverax/nexus/next/apiRoute"
 
 const { POST } = apiRoute(sources)
-// sources: Record<string, Request<...>>
+// sources: Record<string, Datasource<...>>
 // POST: (request: NextRequest) => Promise<NextResponse>`
 
 const setupCode = `// app/api/request/route.ts
@@ -21,29 +21,29 @@ import { sources } from "@/api"
 export const { POST } = apiRoute(sources)`
 
 const sourcesCode = `// api/index.ts
-import { Request, RequestGroup, Method } from "@noverax/nexus/RequestClass"
+import { Datasource, EndpointGroup, Endpoint } from "@noverax/nexus/datasource"
 
-class Users extends RequestGroup {
+class Users extends EndpointGroup {
   constructor() {
     super({ prefix: "users" })
   }
 
-  getAll: Method<User[]> = ({ get }) => get()
-  getById: Method<User, { id: number }> = ({ get }) => get(":id")
+  getAll: Endpoint<User[]> = ({ get }) => get()
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
 }
 
-class Posts extends RequestGroup {
+class Posts extends EndpointGroup {
   constructor() {
     super({ prefix: "posts" })
   }
 
-  list: Method<Post[]> = ({ get }) => get()
-  create: Method<Post, { title: string }> = ({ post }) => post()
+  list: Endpoint<Post[]> = ({ get }) => get()
+  create: Endpoint<Post, { title: string }> = ({ post }) => post()
 }
 
 const groups = { users: new Users(), posts: new Posts() }
 
-class MyApi extends Request<typeof groups> {
+class MyApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: process.env.API_URL ?? "http://localhost:4000",
@@ -82,7 +82,7 @@ const contentTypeCode = `// The API route handles two content types:
 // { success: false, message: "Unsupported Content-Type" }`
 
 const cookieCode = `// api/index.ts — cookies are forwarded automatically
-class MyApi extends Request<typeof groups> {
+class MyApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: process.env.API_URL,
@@ -177,7 +177,7 @@ export default async function ApiRoutePage() {
             content: (
               <div className="mt-4 space-y-4">
                 <p>
-                  The sources object maps source names to <InlineCode>Request</InlineCode>{" "}
+                  The sources object maps source names to <InlineCode>Datasource</InlineCode>{" "}
                   instances. Each source can have multiple groups with typed methods:
                 </p>
                 <CodeBlock code={sourcesCode} filename="api/index.ts" />

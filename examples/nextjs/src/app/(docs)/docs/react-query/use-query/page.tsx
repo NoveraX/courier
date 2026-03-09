@@ -19,7 +19,7 @@ import { useQuery } from "@/lib/request"
 
 export function UserList() {
   const { data, isLoading, error } = useQuery("myApi", "users:getAll")
-  //      ^? UserList — auto-inferred from Method<UserList>
+  //      ^? UserList — auto-inferred from Endpoint<UserList>
 
   if (isLoading) return <p>Loading...</p>
   if (error) return <p>Error: {error.message}</p>
@@ -38,10 +38,10 @@ const variablesCode = `"use client"
 import { useQuery } from "@/lib/request"
 
 export function UserProfile({ userId }: { userId: number }) {
-  // Method<User, { id: number }> → variables is required
+  // Endpoint<User, { id: number }> → variables is required
   const { data: user, isLoading } = useQuery("myApi", "users:getById", {
     variables: { id: userId },
-    //          ^? { id: number } — auto-inferred from Method
+    //          ^? { id: number } — auto-inferred from Endpoint
   })
 
   if (isLoading) return <p>Loading...</p>
@@ -136,7 +136,7 @@ export default async function UseQueryPage() {
         <p>
           <InlineCode>useQuery</InlineCode> takes a source name, a{" "}
           <InlineCode>{'"group:method"'}</InlineCode> query string, and an optional options object.
-          Types are fully inferred from your <InlineCode>Method</InlineCode> definitions:
+          Types are fully inferred from your <InlineCode>Endpoint</InlineCode> definitions:
         </p>
       </Prose>
 
@@ -158,7 +158,7 @@ export default async function UseQueryPage() {
 
         <p>
           When a method defines variables (e.g.{" "}
-          <InlineCode>{"Method<User, { id: number }>"}</InlineCode>), the{" "}
+          <InlineCode>{"Endpoint<User, { id: number }>"}</InlineCode>), the{" "}
           <InlineCode>variables</InlineCode> option becomes required. TypeScript will error if you
           omit it:
         </p>
@@ -168,10 +168,10 @@ export default async function UseQueryPage() {
 
       <Callout variant="info" title="Variables type safety">
         <p>
-          If a method declares <InlineCode>{"Method<R>"}</InlineCode> without a second type
-          parameter (or <InlineCode>{"Method<R, undefined>"}</InlineCode>), the{" "}
+          If a method declares <InlineCode>{"Endpoint<R>"}</InlineCode> without a second type
+          parameter (or <InlineCode>{"Endpoint<R, undefined>"}</InlineCode>), the{" "}
           <InlineCode>variables</InlineCode> option is optional. If the method declares{" "}
-          <InlineCode>{"Method<R, V>"}</InlineCode> with a concrete V type, the options object with{" "}
+          <InlineCode>{"Endpoint<R, V>"}</InlineCode> with a concrete V type, the options object with{" "}
           <InlineCode>variables</InlineCode> is required.
         </p>
       </Callout>

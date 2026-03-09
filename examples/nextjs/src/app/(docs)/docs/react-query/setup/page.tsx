@@ -63,7 +63,7 @@ import type { Sources } from "@/api"
 
 export const { useQuery, useMutation, request } = createQueryRequest<Sources>({
   // Custom proxy route path (default: "request")
-  requestPage: "api/my-proxy",
+  routePath: "api/my-proxy",
 
   // Request timeout in milliseconds
   timeout: 10000,

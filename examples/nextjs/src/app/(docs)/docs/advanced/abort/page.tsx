@@ -7,14 +7,14 @@ import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
-const enableCode = `import { Request } from "@noverax/nexus/RequestClass"
+const enableCode = `import { Datasource } from "@noverax/nexus/datasource"
 
-class MyApi extends Request<typeof groups> {
+class MyApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: process.env.API_URL ?? "http://localhost:4000",
       groups,
-      requestAbort: true, // Enable automatic deduplication
+      deduplicate: true, // Enable automatic deduplication
     })
   }
 }`
@@ -37,7 +37,7 @@ import { useMutation, useQuery } from "@/lib/request"
 export function SearchUsers() {
   const [query, setQuery] = useState("")
 
-  // With requestAbort enabled, rapid typing aborts previous searches
+  // With deduplicate enabled, rapid typing aborts previous searches
   const { data, error } = useQuery("myApi", "users:search", {
     variables: { q: query },
     enabled: query.length > 0,
@@ -140,7 +140,7 @@ export default async function AbortPage() {
         </p>
 
         <p>
-          Enable this by setting <InlineCode>requestAbort: true</InlineCode> in your source options.
+          Enable this by setting <InlineCode>deduplicate: true</InlineCode> in your source options.
           Nexus will track active requests and cancel duplicates before they complete.
         </p>
       </Prose>
@@ -149,8 +149,8 @@ export default async function AbortPage() {
         <h2 id="enabling">Enabling deduplication</h2>
 
         <p>
-          Set <InlineCode>requestAbort: true</InlineCode> in <InlineCode>BaseOptions</InlineCode>{" "}
-          when creating your <InlineCode>Request</InlineCode> class. This applies to all methods in
+          Set <InlineCode>deduplicate: true</InlineCode> in <InlineCode>BaseOptions</InlineCode>{" "}
+          when creating your <InlineCode>Datasource</InlineCode> class. This applies to all methods in
           the source:
         </p>
       </Prose>
@@ -221,7 +221,7 @@ export default async function AbortPage() {
 
       <Callout variant="tip" title="Signal merging">
         <p>
-          If you use both <InlineCode>requestAbort: true</InlineCode> and a manual{" "}
+          If you use both <InlineCode>deduplicate: true</InlineCode> and a manual{" "}
           <InlineCode>signal</InlineCode>, Nexus combines them using{" "}
           <InlineCode>AbortSignal.any()</InlineCode>. The request aborts if either signal fires.
         </p>
@@ -231,7 +231,7 @@ export default async function AbortPage() {
         <h2 id="internals">How it works internally</h2>
 
         <p>
-          Deduplication is implemented via ky hooks on the <InlineCode>Instance</InlineCode> class.
+          Deduplication is implemented via ky hooks on the <InlineCode>HttpClient</InlineCode> class.
           Understanding the internals helps when debugging abort-related issues:
         </p>
       </Prose>

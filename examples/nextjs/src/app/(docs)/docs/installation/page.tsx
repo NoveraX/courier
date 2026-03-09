@@ -94,7 +94,7 @@ export default async function InstallationPage() {
         <p>
           <InlineCode>next</InlineCode> and <InlineCode>@tanstack/react-query</InlineCode> are
           optional — you only need them if you use the corresponding features. The core{" "}
-          <InlineCode>Request</InlineCode> / <InlineCode>RequestGroup</InlineCode> classes and
+          <InlineCode>Datasource</InlineCode> / <InlineCode>EndpointGroup</InlineCode> classes and
           direct mode work without Next.js.
         </p>
       </Callout>
@@ -133,7 +133,7 @@ export default async function InstallationPage() {
       <Prose>
         <p>
           The <InlineCode>API_URL</InlineCode> variable is read in your source definitions (the{" "}
-          <InlineCode>Request</InlineCode> class constructor). In proxy mode, requests are routed
+          <InlineCode>Datasource</InlineCode> class constructor). In proxy mode, requests are routed
           through your Next.js API route, so the backend URL stays on the server.
         </p>
 

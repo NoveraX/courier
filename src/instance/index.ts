@@ -6,35 +6,36 @@ import ky, {
 } from "ky";
 
 import { HTTPError } from "../error";
-import { afterResponse, beforeRequestHook, supportsAbortController } from "../hooks/index";
-import { generateUrl, getUrl, isFormData } from "../utils/helpers";
+import { cleanupAfterResponse, deduplicateRequest, supportsAbortController } from "../hooks/index";
+import { compileUrl, isFormData, resolveBasePath } from "../utils/helpers";
 import { mergeHeaders } from "../utils/merge-headers";
 
-const extractHeaders = (value: unknown): HeadersInit | undefined => {
+const toHeadersInit = (value: unknown): HeadersInit | undefined => {
   if (value instanceof Headers) return value;
   if (Array.isArray(value)) return value;
   if (typeof value === "object" && value !== null) return value as Record<string, string>;
   return undefined;
 };
 
+import type { EndpointGroupOptions } from "../datasource";
+
 import type {
   BaseOptions,
+  BoundMethodOptions,
   Context,
-  GenerateMethodOptions,
-  MethodKyResponse,
+  HttpMethod,
+  HttpMethods,
+  HttpResponse,
   MethodParameters,
-  Methods,
-  MethodsInstance,
-  MethodsInstanceDatasourceOptions,
   PathOptions,
   ResponseType,
 } from "./types";
 
-export class Instance {
+export class HttpClient {
   private responseType: ResponseType = "json";
   private defaultData: Record<string, unknown> = {};
   private defaultQueryParams?: Record<string, unknown>;
-  private extraHeaders?: string[];
+  private allowedHeaders?: string[];
   private pathOptions?: PathOptions;
   private bodyEncoder?: (object: Record<string, unknown>) => BodyInit;
   private searchParamsEncoder?: (object: Record<string, unknown>) => SearchParamsOption;
@@ -42,7 +43,7 @@ export class Instance {
   private options: Options = {};
 
   context?: Context;
-  currentExecutingRequests: { [key: string]: AbortController } = {};
+  pendingRequests: { [key: string]: AbortController } = {};
 
   constructor(options?: BaseOptions, context?: Context) {
     this.init(options, context);
@@ -55,12 +56,12 @@ export class Instance {
       responseType = "json",
       defaultData,
       defaultQueryParams,
-      extraHeaders,
+      allowedHeaders,
       pathOptions,
       bodyEncoder,
       searchParamsEncoder,
       searchParamsParse,
-      requestAbort,
+      deduplicate,
       hooks,
       onRequest: _onRequest,
       onResponse: _onResponse,
@@ -70,7 +71,7 @@ export class Instance {
 
     this.responseType = responseType;
     this.defaultData = { ...defaultData };
-    this.extraHeaders = extraHeaders;
+    this.allowedHeaders = allowedHeaders;
     this.pathOptions = pathOptions;
     this.bodyEncoder = bodyEncoder;
     this.searchParamsEncoder = searchParamsEncoder;
@@ -84,10 +85,13 @@ export class Instance {
       ...hooks,
     };
 
-    if (requestAbort && supportsAbortController) {
-      newHooks.afterResponse = [...(newHooks?.afterResponse ?? []), afterResponse.bind(this)];
+    if (deduplicate && supportsAbortController) {
+      newHooks.afterResponse = [
+        ...(newHooks?.afterResponse ?? []),
+        cleanupAfterResponse.bind(this),
+      ];
 
-      newHooks.beforeRequest = [...(newHooks?.beforeRequest ?? []), beforeRequestHook.bind(this)];
+      newHooks.beforeRequest = [...(newHooks?.beforeRequest ?? []), deduplicateRequest.bind(this)];
     }
 
     this.options = {
@@ -133,8 +137,8 @@ export class Instance {
     return;
   }
 
-  private generateVariables(
-    method: Methods,
+  private buildBody(
+    method: HttpMethod,
     variables?: FormData | Record<string, unknown>,
     searchParameters?: Record<string, unknown>,
   ): Pick<Options, "body" | "json" | "searchParams"> | undefined {
@@ -215,13 +219,13 @@ export class Instance {
     }
   }
 
-  private generateMethod(
-    method: Methods,
-    generateOptions?: GenerateMethodOptions,
-    datasourceOptions?: MethodsInstanceDatasourceOptions,
+  private bindMethod(
+    method: HttpMethod,
+    boundOptions?: BoundMethodOptions,
+    groupOptions?: EndpointGroupOptions,
   ) {
-    const { vars, headers: kyHeaders, stream, ...kyOptions } = generateOptions || {};
-    const { prefix = "", pathOptions } = datasourceOptions || {};
+    const { variables: vars, headers: kyHeaders, stream, ...kyOptions } = boundOptions || {};
+    const { prefix = "", pathOptions } = groupOptions || {};
 
     const cleanedVars = this.clearVariables(vars);
 
@@ -233,9 +237,9 @@ export class Instance {
         ...groupPathOptions,
       };
 
-      const { path, baseUrl } = getUrl(prefix, arguments_[0]);
+      const { path, baseUrl } = resolveBasePath(prefix, arguments_[0]);
 
-      const [url, newVariables, newSearchParameters] = generateUrl(
+      const [url, newVariables, newSearchParameters] = compileUrl(
         path,
         cleanedVars,
         generatedPathOptions,
@@ -253,7 +257,7 @@ export class Instance {
           ...otherArgumentOptions,
           ...kyOptions,
           ...prefixUrlOverride,
-          headers: mergeHeaders(kyHeaders, extractHeaders(optionHeaders), this.extraHeaders),
+          headers: mergeHeaders(kyHeaders, toHeadersInit(optionHeaders), this.allowedHeaders),
           searchParams: this.toSearchParams({
             ...this.defaultQueryParams,
             ...newSearchParameters,
@@ -269,8 +273,8 @@ export class Instance {
           ...otherArgumentOptions,
           ...kyOptions,
           ...prefixUrlOverride,
-          headers: mergeHeaders(kyHeaders, optionHeaders, this.extraHeaders),
-          ...this.generateVariables(method, arguments_[1] || newVariables, {
+          headers: mergeHeaders(kyHeaders, optionHeaders, this.allowedHeaders),
+          ...this.buildBody(method, arguments_[1] || newVariables, {
             ...searchParameters,
             ...newSearchParameters,
           }),
@@ -284,7 +288,7 @@ export class Instance {
           ? { status: response.status, headers: response.headers, data: response.body }
           : await this.getResponse(response);
 
-        return result as MethodKyResponse<T>;
+        return result as HttpResponse<T>;
       } catch (error) {
         if (error instanceof KYHTTPError) {
           const response = await this.getResponse(error.response, error.message);
@@ -308,17 +312,14 @@ export class Instance {
     };
   }
 
-  methodsInstance(
-    options?: GenerateMethodOptions,
-    datasourceOptions?: MethodsInstanceDatasourceOptions,
-  ): MethodsInstance {
+  createMethods(options?: BoundMethodOptions, groupOptions?: EndpointGroupOptions): HttpMethods {
     return {
-      get: this.generateMethod("get", options, datasourceOptions),
-      post: this.generateMethod("post", options, datasourceOptions),
-      put: this.generateMethod("put", options, datasourceOptions),
-      patch: this.generateMethod("patch", options, datasourceOptions),
-      del: this.generateMethod("del", options, datasourceOptions),
-      head: this.generateMethod("head", options, datasourceOptions),
+      get: this.bindMethod("get", options, groupOptions),
+      post: this.bindMethod("post", options, groupOptions),
+      put: this.bindMethod("put", options, groupOptions),
+      patch: this.bindMethod("patch", options, groupOptions),
+      del: this.bindMethod("del", options, groupOptions),
+      head: this.bindMethod("head", options, groupOptions),
     };
   }
 }

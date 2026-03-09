@@ -14,12 +14,12 @@ const { useQuery, useMutation, request } = createQueryRequest<Sources>(defaults?
 const returnTypeCode = `{
   useQuery: <K, Q>(source: K, query: Q, options?) => UseQueryResult<R, Error>
   useMutation: <K, Q>(source: K, query: Q, options?) => UseMutationResult<R, Error, V>
-  request: CommonRequest<T>  // same as createClientRequest
+  request: RequestFn<T>  // same as createClientRequest
 }`
 
 const queryOptionsCode = `type NexusQueryOptions<R, V> = WithVariables<V> &
   Omit<UseQueryOptions<R, Error, R, QueryKey>, "queryKey" | "queryFn"> & {
-    requestOptions?: MethodsInstanceOptions
+    requestOptions?: CallOptions
   }
 
 // WithVariables makes \`variables\` required when the method expects variables
@@ -31,7 +31,7 @@ const mutationOptionsCode = `type NexusMutationOptions<R, V> = Omit<
   UseMutationOptions<R, Error, [V] extends [undefined] ? void : V>,
   "mutationFn"
 > & {
-  requestOptions?: MethodsInstanceOptions
+  requestOptions?: CallOptions
 }`
 
 const setupCode = `// lib/query.ts
@@ -137,7 +137,7 @@ const { mutate } = useMutation("api", "files:upload", {
   },
 })`
 
-const rawRequestCode = `// The \`request\` property is the same CommonRequest returned by createClientRequest
+const rawRequestCode = `// The \`request\` property is the same RequestFn returned by createClientRequest
 // Use it for imperative calls outside of React hooks
 import { request } from "@/lib/query"
 
@@ -205,7 +205,7 @@ export default async function CreateQueryRequestPage() {
             <InlineCode>mutate()</InlineCode>.
           </li>
           <li>
-            <InlineCode>request</InlineCode> — the underlying <InlineCode>CommonRequest</InlineCode>{" "}
+            <InlineCode>request</InlineCode> — the underlying <InlineCode>RequestFn</InlineCode>{" "}
             for imperative use outside hooks.
           </li>
         </ul>
@@ -277,7 +277,7 @@ export default async function CreateQueryRequestPage() {
         <h2 id="request-options">Per-Request Options</h2>
         <p>
           Use <InlineCode>requestOptions</InlineCode> to pass{" "}
-          <InlineCode>MethodsInstanceOptions</InlineCode> (timeout, cache, upload progress, etc.)
+          <InlineCode>CallOptions</InlineCode> (timeout, cache, upload progress, etc.)
           alongside React Query options.
         </p>
       </Prose>
@@ -288,7 +288,7 @@ export default async function CreateQueryRequestPage() {
         <h2 id="raw-request">Raw Request</h2>
         <p>
           The returned <InlineCode>request</InlineCode> is the same{" "}
-          <InlineCode>CommonRequest</InlineCode> from <InlineCode>createClientRequest</InlineCode>.
+          <InlineCode>RequestFn</InlineCode> from <InlineCode>createClientRequest</InlineCode>.
           Use it for imperative calls, prefetching, or anywhere outside React component lifecycle.
         </p>
       </Prose>

@@ -1,11 +1,11 @@
-import type { MethodKyResponse } from "./instance/types";
+import type { HttpResponse } from "./instance/types";
 
 export class HTTPError<R = unknown> extends Error {
   status: number;
   headers: Headers;
   data: R;
 
-  constructor(response: MethodKyResponse<R>) {
+  constructor(response: HttpResponse<R>) {
     super(`HTTP ${response.status}`);
     this.name = "HTTPError";
 

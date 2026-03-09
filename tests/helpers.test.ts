@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  generateUrl,
-  getRequestOptions,
-  getUrl,
+  compileUrl,
   headersToObject,
   isFormData,
   isHeaders,
-  parseQueryRequest,
+  parseEndpointKey,
+  parseRequestPayload,
   pathJoin,
+  resolveBasePath,
 } from "../src/utils/helpers";
 
 describe("pathJoin", () => {
@@ -32,64 +32,64 @@ describe("pathJoin", () => {
   });
 });
 
-describe("parseQueryRequest", () => {
-  it("parses simple query (no group)", () => {
-    expect(parseQueryRequest("list")).toEqual({ group: undefined, query: "list" });
+describe("parseEndpointKey", () => {
+  it("parses simple method (no group)", () => {
+    expect(parseEndpointKey("list")).toEqual({ group: undefined, method: "list" });
   });
 
-  it("parses group:query format", () => {
-    expect(parseQueryRequest("auth:login")).toEqual({ group: "auth", query: "login" });
+  it("parses group:method format", () => {
+    expect(parseEndpointKey("auth:login")).toEqual({ group: "auth", method: "login" });
   });
 
   it("handles empty string", () => {
-    expect(parseQueryRequest("")).toEqual({ group: undefined, query: "" });
+    expect(parseEndpointKey("")).toEqual({ group: undefined, method: "" });
   });
 });
 
-describe("getUrl", () => {
+describe("resolveBasePath", () => {
   it("returns prefix when no basePath", () => {
-    expect(getUrl("users")).toEqual({ path: "users" });
+    expect(resolveBasePath("users")).toEqual({ path: "users" });
   });
 
   it("returns prefix when basePath is empty", () => {
-    expect(getUrl("users", "")).toEqual({ path: "users" });
+    expect(resolveBasePath("users", "")).toEqual({ path: "users" });
   });
 
   it("joins prefix and relative basePath", () => {
-    expect(getUrl("api", "v2")).toEqual({ path: "api/v2" });
+    expect(resolveBasePath("api", "v2")).toEqual({ path: "api/v2" });
   });
 
   it("extracts origin from absolute URL basePath", () => {
-    expect(getUrl("api", "https://example.com/v2")).toEqual({
+    expect(resolveBasePath("api", "https://example.com/v2")).toEqual({
       path: "v2",
       baseUrl: "https://example.com",
     });
   });
 
   it("handles absolute URL with trailing slash", () => {
-    expect(getUrl("api", "https://example.com/v2/")).toEqual({
+    expect(resolveBasePath("api", "https://example.com/v2/")).toEqual({
       path: "v2/",
       baseUrl: "https://example.com",
     });
   });
 });
 
-describe("generateUrl", () => {
+describe("compileUrl", () => {
   it("returns url unchanged when no path params", () => {
-    const [url, vars, search] = generateUrl("users/list", { page: "1" });
+    const [url, vars, search] = compileUrl("users/list", { page: "1" });
     expect(url).toBe("users/list");
     expect(vars).toEqual({ page: "1" });
     expect(search).toEqual({});
   });
 
   it("compiles path params from variables", () => {
-    const [url, vars] = generateUrl("users/:id", { id: "42", name: "test" });
+    const [url, vars] = compileUrl("users/:id", { id: "42", name: "test" });
     expect(url).toBe("users/42");
     expect(vars).toEqual({ name: "test" });
   });
 
   it("removes path params from variables", () => {
-    const [, vars] = generateUrl("users/:id/posts/:postId", {
+    const [, vars] = compileUrl("users/:id/posts/:postId", {
       id: "1",
       postId: "2",
       extra: "keep",
@@ -98,29 +98,29 @@ describe("generateUrl", () => {
   });
 
   it("parses query string from URL", () => {
-    const [url, , search] = generateUrl("users?page=1&limit=10");
+    const [url, , search] = compileUrl("users?page=1&limit=10");
     expect(url).toBe("users");
     expect(search).toEqual({ page: "1", limit: "10" });
   });
 
   it("uses custom searchParametersParse", () => {
     const parser = (s: string) => ({ custom: s });
-    const [, , search] = generateUrl("users?raw", undefined, undefined, parser);
+    const [, , search] = compileUrl("users?raw", undefined, undefined, parser);
     expect(search).toEqual({ custom: "raw" });
   });
 
   it("uses generatedPathOptions for path params", () => {
-    const [url] = generateUrl("users/:id", {}, { id: "99" });
+    const [url] = compileUrl("users/:id", {}, { id: "99" });
     expect(url).toBe("users/99");
   });
 
   it("variables override generatedPathOptions", () => {
-    const [url] = generateUrl("users/:id", { id: "42" }, { id: "99" });
+    const [url] = compileUrl("users/:id", { id: "42" }, { id: "99" });
     expect(url).toBe("users/42");
   });
 
   it("uses String(undefined) when path param is missing", () => {
-    const [url] = generateUrl("users/:id");
+    const [url] = compileUrl("users/:id");
     expect(url).toBe("users/undefined");
   });
 
@@ -128,7 +128,7 @@ describe("generateUrl", () => {
     const fd = new FormData();
     fd.append("id", "42");
     fd.append("name", "test");
-    const [url, vars] = generateUrl("users/:id", fd);
+    const [url, vars] = compileUrl("users/:id", fd);
     expect(url).toBe("users/42");
     expect(vars).toBeInstanceOf(FormData);
     expect((vars as FormData).has("id")).toBe(false);
@@ -136,38 +136,38 @@ describe("generateUrl", () => {
   });
 });
 
-describe("getRequestOptions", () => {
+describe("parseRequestPayload", () => {
   it("extracts fields from plain object", () => {
-    const result = getRequestOptions({
+    const result = parseRequestPayload({
       source: "users",
       group: "auth",
-      query: "login",
+      method: "login",
       variables: { email: "test@test.com" },
     });
     expect(result.source).toBe("users");
     expect(result.group).toBe("auth");
-    expect(result.query).toBe("login");
+    expect(result.method).toBe("login");
     expect(result.variables).toEqual({ email: "test@test.com" });
   });
 
   it("handles undefined input", () => {
-    const result = getRequestOptions(undefined);
+    const result = parseRequestPayload(undefined);
     expect(result.source).toBeUndefined();
-    expect(result.query).toBeUndefined();
+    expect(result.method).toBeUndefined();
   });
 
   it("extracts from FormData", () => {
     const fd = new FormData();
     fd.append("_source", "users");
     fd.append("_group", "auth");
-    fd.append("_query", "login");
+    fd.append("_method", "login");
     fd.append("_options", JSON.stringify({ timeout: 5000 }));
     fd.append("name", "test");
 
-    const result = getRequestOptions(fd);
+    const result = parseRequestPayload(fd);
     expect(result.source).toBe("users");
     expect(result.group).toBe("auth");
-    expect(result.query).toBe("login");
+    expect(result.method).toBe("login");
     expect(result.options).toEqual({ timeout: 5000 });
     expect(result.variables).toBeInstanceOf(FormData);
     expect((result.variables as FormData).get("name")).toBe("test");
@@ -176,22 +176,22 @@ describe("getRequestOptions", () => {
   it("ignores invalid _options JSON in FormData", () => {
     const fd = new FormData();
     fd.append("_source", "users");
-    fd.append("_query", "list");
+    fd.append("_method", "list");
     fd.append("_options", "not-json");
 
-    const result = getRequestOptions(fd);
+    const result = parseRequestPayload(fd);
     expect(result.options).toBeUndefined();
   });
 
   it("preserves multiple files with the same field name", () => {
     const fd = new FormData();
     fd.append("_source", "files");
-    fd.append("_query", "upload");
+    fd.append("_method", "upload");
     fd.append("files", new File(["a"], "a.txt"));
     fd.append("files", new File(["b"], "b.txt"));
     fd.append("files", new File(["c"], "c.txt"));
 
-    const result = getRequestOptions(fd);
+    const result = parseRequestPayload(fd);
     const vars = result.variables as FormData;
     expect(vars.getAll("files")).toHaveLength(3);
   });
@@ -200,15 +200,15 @@ describe("getRequestOptions", () => {
     const fd = new FormData();
     fd.append("_source", "files");
     fd.append("_group", "uploads");
-    fd.append("_query", "create");
+    fd.append("_method", "create");
     fd.append("_options", JSON.stringify({ timeout: 1000 }));
     fd.append("name", "test");
 
-    const result = getRequestOptions(fd);
+    const result = parseRequestPayload(fd);
     const vars = result.variables as FormData;
     expect(vars.has("_source")).toBe(false);
     expect(vars.has("_group")).toBe(false);
-    expect(vars.has("_query")).toBe(false);
+    expect(vars.has("_method")).toBe(false);
     expect(vars.has("_options")).toBe(false);
     expect(vars.get("name")).toBe("test");
   });
@@ -216,10 +216,10 @@ describe("getRequestOptions", () => {
   it("rejects prototype pollution in _options JSON", () => {
     const fd = new FormData();
     fd.append("_source", "users");
-    fd.append("_query", "list");
+    fd.append("_method", "list");
     fd.append("_options", JSON.stringify({ __proto__: { admin: true }, timeout: 5000 }));
 
-    const result = getRequestOptions(fd);
+    const result = parseRequestPayload(fd);
     expect(result.options).toBeDefined();
     expect(result.options).not.toHaveProperty("__proto__");
     expect(result.options).toHaveProperty("timeout", 5000);

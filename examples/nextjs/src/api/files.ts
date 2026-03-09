@@ -1,4 +1,4 @@
-import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
 type UploadResponse = {
   success: boolean
@@ -10,12 +10,12 @@ type UploadResponse = {
   fields: Record<string, string>
 }
 
-export class Files extends RequestGroup {
+export class Files extends EndpointGroup {
   constructor() {
     super({ prefix: "upload" })
   }
 
-  upload: Method<UploadResponse, FormData> = ({ post }) => post()
+  upload: Endpoint<UploadResponse, FormData> = ({ post }) => post()
 }
 
 export type { UploadResponse }

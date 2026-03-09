@@ -25,16 +25,16 @@ const result = await request("mockApi", {
   },
 })("files:upload", formData)`
 
-const sourceCode = `import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+const sourceCode = `import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
-class Files extends RequestGroup {
+class Files extends EndpointGroup {
   constructor() {
     super({ prefix: "upload" })
   }
 
   // FormData auto-detected — no bodyEncoder needed
   // Empty files are automatically removed before sending
-  upload: Method<UploadResponse, FormData> = ({ post }) => post()
+  upload: Endpoint<UploadResponse, FormData> = ({ post }) => post()
 }`
 
 export const metadata = docsMetadata(

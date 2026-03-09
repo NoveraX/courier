@@ -15,25 +15,25 @@ import {
   useQuery,
 } from "@tanstack/react-query";
 import { type ClientRequestDefaults, createClientRequest } from "../create";
-import type { MethodsInstanceOptions } from "../instance/types";
-import type { Method } from "../RequestClass";
-import type { MethodGroup, MethodSource } from "../types";
+import type { Endpoint } from "../datasource";
+import type { CallOptions } from "../instance/types";
+import type { EndpointKey, ResolveEndpoint } from "../types";
 
-type InferResponse<M> = M extends Method<infer R, any> ? R : unknown;
-type InferVariables<M> = M extends Method<any, infer V> ? V : undefined;
+type InferResponse<M> = M extends Endpoint<infer R, any> ? R : unknown;
+type InferVariables<M> = M extends Endpoint<any, infer V> ? V : undefined;
 
 type WithVariables<V> = [V] extends [undefined] ? { variables?: undefined } : { variables: V };
 
 export type NexusQueryOptions<R, V> = WithVariables<V> &
   Omit<UseQueryOptions<R, Error, R, QueryKey>, "queryKey" | "queryFn"> & {
-    requestOptions?: MethodsInstanceOptions;
+    requestOptions?: CallOptions;
   };
 
 export type NexusMutationOptions<R, V> = Omit<
   UseMutationOptions<R, Error, [V] extends [undefined] ? void : V>,
   "mutationFn"
 > & {
-  requestOptions?: MethodsInstanceOptions;
+  requestOptions?: CallOptions;
 };
 
 export function createQueryRequest<T extends Record<string, any> = Record<string, any>>(
@@ -43,13 +43,13 @@ export function createQueryRequest<T extends Record<string, any> = Record<string
 
   function useNexusQuery<
     K extends keyof T & string,
-    Q extends MethodGroup<T[K]>,
-    M = MethodSource<T[K], Q>,
-    R = InferResponse<M extends Method<any, any> ? M : never>,
-    V = InferVariables<M extends Method<any, any> ? M : never>,
+    Q extends EndpointKey<T[K]>,
+    M = ResolveEndpoint<T[K], Q>,
+    R = InferResponse<M extends Endpoint<any, any> ? M : never>,
+    V = InferVariables<M extends Endpoint<any, any> ? M : never>,
   >(
     source: K,
-    query: Q,
+    endpoint: Q,
     ...args: [V] extends [undefined]
       ? [options?: NexusQueryOptions<R, V>]
       : [options: NexusQueryOptions<R, V>]
@@ -58,10 +58,10 @@ export function createQueryRequest<T extends Record<string, any> = Record<string
     const { variables, requestOptions, ...queryOptions } = (options ?? {}) as any;
 
     return useQuery<R, Error>({
-      queryKey: variables !== undefined ? [source, query, variables] : [source, query],
+      queryKey: variables !== undefined ? [source, endpoint, variables] : [source, endpoint],
       queryFn: () => {
         const execute = client(source as any, requestOptions) as (...args: any[]) => Promise<R>;
-        return variables !== undefined ? execute(query, variables) : execute(query);
+        return variables !== undefined ? execute(endpoint, variables) : execute(endpoint);
       },
       ...queryOptions,
     });
@@ -69,13 +69,13 @@ export function createQueryRequest<T extends Record<string, any> = Record<string
 
   function useNexusMutation<
     K extends keyof T & string,
-    Q extends MethodGroup<T[K]>,
-    M = MethodSource<T[K], Q>,
-    R = InferResponse<M extends Method<any, any> ? M : never>,
-    V = InferVariables<M extends Method<any, any> ? M : never>,
+    Q extends EndpointKey<T[K]>,
+    M = ResolveEndpoint<T[K], Q>,
+    R = InferResponse<M extends Endpoint<any, any> ? M : never>,
+    V = InferVariables<M extends Endpoint<any, any> ? M : never>,
   >(
     source: K,
-    query: Q,
+    endpoint: Q,
     options?: NexusMutationOptions<R, V>,
   ): UseMutationResult<R, Error, [V] extends [undefined] ? void : V> {
     const { requestOptions, ...mutationOptions } = (options ?? {}) as any;
@@ -83,7 +83,7 @@ export function createQueryRequest<T extends Record<string, any> = Record<string
     return useMutation<R, Error, [V] extends [undefined] ? void : V>({
       mutationFn: (variables: any) => {
         const execute = client(source as any, requestOptions) as (...args: any[]) => Promise<R>;
-        return variables != null ? execute(query, variables) : execute(query);
+        return variables != null ? execute(endpoint, variables) : execute(endpoint);
       },
       ...mutationOptions,
     });

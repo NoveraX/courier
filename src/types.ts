@@ -1,60 +1,58 @@
-import type { Context, MethodKyResponse, MethodsInstanceOptions } from "./instance/types";
-import type { Method, RequestGroup } from "./RequestClass";
+import type { Endpoint, EndpointGroup } from "./datasource";
+import type { CallOptions, Context, HttpResponse } from "./instance/types";
 
-export type CommonRequest<T extends Record<string, any>, D extends boolean = false> = <
+export type RequestFn<T extends Record<string, any>, D extends boolean = false> = <
   K extends keyof T,
   RD extends boolean = false,
 >(
   source: K,
-  options?: MethodsInstanceOptions<RD>,
+  options?: CallOptions<RD>,
 ) => <
-  Q extends MethodGroup<T[K]>,
-  M extends MethodSource<T[K], Q>,
-  R = MethodQueryResponse<M extends Method<any, any> ? M : unknown>,
+  Q extends EndpointKey<T[K]>,
+  M extends ResolveEndpoint<T[K], Q>,
+  R = ExtractResponse<M extends Endpoint<any, any> ? M : unknown>,
 >(
-  ...arguments_: RequestArguments<Q, M, D>
-) => MethodRequestResponse<RD, R>;
+  ...arguments_: EndpointArguments<Q, M, D>
+) => EndpointResult<RD, R>;
 
-type RequestArguments<
+type EndpointArguments<
   Q,
-  M extends Method<any, any>,
+  M extends Endpoint<any, any>,
   D extends boolean = false,
-  V = MethodRequestQueryVariables<M>,
+  V = ExtractVariables<M>,
 > = D extends false
   ? V extends undefined
-    ? [queryRequest: Q]
-    : [queryRequest: Q, variables: V]
+    ? [endpoint: Q]
+    : [endpoint: Q, variables: V]
   : V extends undefined
-    ? [queryRequest: Q, context?: Context]
-    : [queryRequest: Q, variables: V, context?: Context];
+    ? [endpoint: Q, context?: Context]
+    : [endpoint: Q, variables: V, context?: Context];
 
-type MethodRequestQueryVariables<M extends Method<any, any>> = MethodQueryVariables<M>;
+type ExtractResponse<C extends Endpoint<any, any>> = C extends Endpoint<infer T, any> ? T : unknown;
 
-type MethodQueryResponse<C extends Method<any, any>> = C extends Method<infer T, any> ? T : unknown;
+type ExtractVariables<C extends Endpoint<any, any>> =
+  C extends Endpoint<any, infer T> ? T : unknown;
 
-type MethodQueryVariables<C extends Method<any, any>> =
-  C extends Method<any, infer T> ? T : unknown;
-
-type SplitMethod<T extends string> = T extends `${infer Group}:${infer Method}`
+type SplitEndpointKey<T extends string> = T extends `${infer Group}:${infer Method}`
   ? { group: Group; method: Method }
   : { group: undefined; method: T };
 
-export type MethodSource<
+export type ResolveEndpoint<
   T extends Record<string, any>,
-  R extends MethodGroup<T>,
-  S extends Record<string, any> = SplitMethod<R>,
+  R extends EndpointKey<T>,
+  S extends Record<string, any> = SplitEndpointKey<R>,
   G extends string = S["group"],
   M extends string = S["method"],
 > = G extends string ? Groups<T>[G][M] : T[M];
 
-type TransformToGroup<T extends Record<string, any>> = {
-  [K in keyof T]: K extends string ? `${K}:${ClassMethods<T[K]>}` : never;
+type GroupedEndpoints<T extends Record<string, any>> = {
+  [K in keyof T]: K extends string ? `${K}:${ClassEndpoints<T[K]>}` : never;
 }[keyof T];
 
-export type MethodGroup<T extends Record<string, any>, K extends Record<string, any> = Groups<T>> =
-  K extends Record<string, any> ? ClassMethods<T> | TransformToGroup<K> : ClassMethods<T>;
+export type EndpointKey<T extends Record<string, any>, K extends Record<string, any> = Groups<T>> =
+  K extends Record<string, any> ? ClassEndpoints<T> | GroupedEndpoints<K> : ClassEndpoints<T>;
 
-type ClassMethods<T extends Record<string, any>> = NonNullable<
+type ClassEndpoints<T extends Record<string, any>> = NonNullable<
   {
     [K in keyof T]: T[K] extends (...args: never[]) => unknown
       ? K extends string
@@ -66,12 +64,12 @@ type ClassMethods<T extends Record<string, any>> = NonNullable<
 
 type Groups<T extends Record<string, any>> = NonNullable<T["options"]>["groups"];
 
-type MethodRequestResponse<T extends boolean = false, R = unknown> = Promise<
-  T extends true ? Partial<MethodKyResponse<R>> : R
+type EndpointResult<T extends boolean = false, R = unknown> = Promise<
+  T extends true ? Partial<HttpResponse<R>> : R
 >;
 
-export type AnyGroups = {
-  [k: string]: RequestGroup;
+export type GroupsRecord = {
+  [k: string]: EndpointGroup;
 };
 
 export type SuccessResponse<D = unknown> = {

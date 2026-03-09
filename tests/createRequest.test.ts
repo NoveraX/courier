@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ky from "ky";
 import { HTTPError } from "../src/error";
-import { Request, RequestGroup } from "../src/RequestClass";
-import type { MethodsInstance } from "../src/instance/types";
-import { createRequest } from "../src/utils/createRequest";
+import { Datasource, EndpointGroup } from "../src/datasource";
+import type { HttpMethods } from "../src/instance/types";
+import { executeRequest } from "../src/utils/createRequest";
 
 let mockKyInstance: Record<string, ReturnType<typeof vi.fn>>;
 
@@ -35,20 +35,20 @@ afterEach(() => {
 });
 
 function createTestSource(methods: Record<string, Function>, options = {}) {
-  const source = new Request(options);
+  const source = new Datasource(options);
   for (const [name, fn] of Object.entries(methods)) {
     (source as Record<string, unknown>)[name] = fn;
   }
   return source;
 }
 
-describe("createRequest", () => {
+describe("executeRequest", () => {
   describe("source validation", () => {
     it("throws HTTPError 400 when source not found", async () => {
       const sources = {};
 
       try {
-        await createRequest(sources, { source: "nonexistent", query: "list" });
+        await executeRequest(sources, { source: "nonexistent", method: "list" });
         expect.fail("should have thrown");
       } catch (error) {
         expect(error).toBeInstanceOf(HTTPError);
@@ -61,7 +61,7 @@ describe("createRequest", () => {
 
     it("throws HTTPError 400 when source is undefined", async () => {
       try {
-        await createRequest({}, { query: "list" });
+        await executeRequest({}, { method: "list" });
         expect.fail("should have thrown");
       } catch (error) {
         expect(error).toBeInstanceOf(HTTPError);
@@ -76,7 +76,7 @@ describe("createRequest", () => {
       const sources = { users: source };
 
       try {
-        await createRequest(sources, { source: "users", query: "nonexistent" });
+        await executeRequest(sources, { source: "users", method: "nonexistent" });
         expect.fail("should have thrown");
       } catch (error) {
         expect(error).toBeInstanceOf(HTTPError);
@@ -93,7 +93,7 @@ describe("createRequest", () => {
       const sources = { users: source };
 
       try {
-        await createRequest(sources, { source: "users", query: "list" });
+        await executeRequest(sources, { source: "users", method: "list" });
         expect.fail("should have thrown");
       } catch (error) {
         expect(error).toBeInstanceOf(HTTPError);
@@ -108,13 +108,13 @@ describe("createRequest", () => {
       mockKyInstance.get.mockResolvedValue(mockResponse(responseData));
 
       const source = createTestSource({
-        list: (methods: MethodsInstance) => methods.get("users"),
+        list: (methods: HttpMethods) => methods.get("users"),
       });
       const sources = { users: source };
 
-      const result = await createRequest(sources, {
+      const result = await executeRequest(sources, {
         source: "users",
-        query: "list",
+        method: "list",
       });
 
       expect(result).toEqual(responseData);
@@ -124,15 +124,15 @@ describe("createRequest", () => {
       const responseData = { id: 1, name: "Alice" };
       mockKyInstance.get.mockResolvedValue(mockResponse(responseData));
 
-      const methodFn = vi.fn((methods: MethodsInstance, vars: unknown) =>
+      const methodFn = vi.fn((methods: HttpMethods, vars: unknown) =>
         methods.get("users/1"),
       );
       const source = createTestSource({ getUser: methodFn });
       const sources = { users: source };
 
-      await createRequest(sources, {
+      await executeRequest(sources, {
         source: "users",
-        query: "getUser",
+        method: "getUser",
         variables: { id: 1 },
       });
 
@@ -144,13 +144,13 @@ describe("createRequest", () => {
       mockKyInstance.get.mockResolvedValue(mockResponse(responseData));
 
       const source = createTestSource({
-        list: (methods: MethodsInstance) => methods.get("users"),
+        list: (methods: HttpMethods) => methods.get("users"),
       });
       const sources = { users: source };
 
-      const result = await createRequest(sources, {
+      const result = await executeRequest(sources, {
         source: "users",
-        query: "list",
+        method: "list",
         options: { rawData: true },
       });
 
@@ -164,7 +164,7 @@ describe("createRequest", () => {
   });
 
   describe("error handling", () => {
-    it("wraps HTTPError from Instance and re-throws", async () => {
+    it("wraps HTTPError from HttpClient and re-throws", async () => {
       const source = createTestSource({
         fail: () => {
           throw new HTTPError({
@@ -177,7 +177,7 @@ describe("createRequest", () => {
       const sources = { api: source };
 
       try {
-        await createRequest(sources, { source: "api", query: "fail" });
+        await executeRequest(sources, { source: "api", method: "fail" });
         expect.fail("should have thrown");
       } catch (error) {
         expect(error).toBeInstanceOf(HTTPError);
@@ -194,7 +194,7 @@ describe("createRequest", () => {
       const sources = { api: source };
 
       try {
-        await createRequest(sources, { source: "api", query: "fail" });
+        await executeRequest(sources, { source: "api", method: "fail" });
         expect.fail("should have thrown");
       } catch (error) {
         expect(error).toBeInstanceOf(HTTPError);
@@ -214,7 +214,7 @@ describe("createRequest", () => {
       const sources = { api: source };
 
       try {
-        await createRequest(sources, { source: "api", query: "fail" });
+        await executeRequest(sources, { source: "api", method: "fail" });
         expect.fail("should have thrown");
       } catch (error) {
         expect(error).toBeInstanceOf(HTTPError);
@@ -231,18 +231,18 @@ describe("createRequest", () => {
       const responseData = { token: "abc" };
       mockKyInstance.post.mockResolvedValue(mockResponse(responseData));
 
-      const loginFn = vi.fn((methods: MethodsInstance) => methods.post("login"));
+      const loginFn = vi.fn((methods: HttpMethods) => methods.post("login"));
 
-      const authGroup = new RequestGroup({ prefix: "auth" });
+      const authGroup = new EndpointGroup({ prefix: "auth" });
       (authGroup as Record<string, unknown>).login = loginFn;
 
-      const source = new Request({ groups: { auth: authGroup } });
+      const source = new Datasource({ groups: { auth: authGroup } });
       const sources = { api: source };
 
-      const result = await createRequest(sources, {
+      const result = await executeRequest(sources, {
         source: "api",
         group: "auth",
-        query: "login",
+        method: "login",
       });
 
       expect(loginFn).toHaveBeenCalled();
@@ -253,17 +253,17 @@ describe("createRequest", () => {
       const responseData = { health: "ok" };
       mockKyInstance.get.mockResolvedValue(mockResponse(responseData));
 
-      const healthFn = vi.fn((methods: MethodsInstance) => methods.get("health"));
+      const healthFn = vi.fn((methods: HttpMethods) => methods.get("health"));
 
-      const emptyGroup = new RequestGroup();
-      const source = new Request({ groups: { misc: emptyGroup } });
+      const emptyGroup = new EndpointGroup();
+      const source = new Datasource({ groups: { misc: emptyGroup } });
       (source as Record<string, unknown>).health = healthFn;
       const sources = { api: source };
 
-      const result = await createRequest(sources, {
+      const result = await executeRequest(sources, {
         source: "api",
         group: "misc",
-        query: "health",
+        method: "health",
       });
 
       expect(healthFn).toHaveBeenCalled();
@@ -276,15 +276,15 @@ describe("createRequest", () => {
       const responseData = { ok: true };
       mockKyInstance.get.mockResolvedValue(mockResponse(responseData));
 
-      const listFn = vi.fn((methods: MethodsInstance) => methods.get("items"));
+      const listFn = vi.fn((methods: HttpMethods) => methods.get("items"));
       const source = createTestSource({ list: listFn });
       const sources = { items: source };
 
       const fd = new FormData();
       fd.append("_source", "items");
-      fd.append("_query", "list");
+      fd.append("_method", "list");
 
-      const result = await createRequest(sources, fd);
+      const result = await executeRequest(sources, fd);
       expect(listFn).toHaveBeenCalled();
       expect(result).toEqual(responseData);
     });
@@ -296,17 +296,17 @@ describe("createRequest", () => {
 
       const onRequest = vi.fn();
       const source = createTestSource(
-        { list: (methods: MethodsInstance) => methods.get("users") },
+        { list: (methods: HttpMethods) => methods.get("users") },
         { onRequest },
       );
       const sources = { users: source };
 
-      await createRequest(sources, { source: "users", query: "list" });
+      await executeRequest(sources, { source: "users", method: "list" });
 
       expect(onRequest).toHaveBeenCalledWith(
         expect.objectContaining({
           source: "users",
-          query: "list",
+          method: "list",
         }),
       );
     });
@@ -316,16 +316,16 @@ describe("createRequest", () => {
 
       const onRequest = vi.fn(() => ({
         source: "users",
-        query: "list",
+        method: "list",
         variables: { modified: true },
       }));
       const source = createTestSource(
-        { list: (methods: MethodsInstance) => methods.get("users") },
+        { list: (methods: HttpMethods) => methods.get("users") },
         { onRequest },
       );
       const sources = { users: source };
 
-      await createRequest(sources, { source: "users", query: "list" });
+      await executeRequest(sources, { source: "users", method: "list" });
 
       expect(onRequest).toHaveBeenCalled();
     });
@@ -335,15 +335,15 @@ describe("createRequest", () => {
 
       const onResponse = vi.fn();
       const source = createTestSource(
-        { list: (methods: MethodsInstance) => methods.get("users") },
+        { list: (methods: HttpMethods) => methods.get("users") },
         { onResponse },
       );
       const sources = { users: source };
 
-      await createRequest(sources, { source: "users", query: "list" });
+      await executeRequest(sources, { source: "users", method: "list" });
 
       expect(onResponse).toHaveBeenCalledWith(
-        expect.objectContaining({ source: "users", query: "list" }),
+        expect.objectContaining({ source: "users", method: "list" }),
         expect.objectContaining({ status: 200, data: { users: [] } }),
       );
     });
@@ -356,12 +356,12 @@ describe("createRequest", () => {
         data: { transformed: true },
       }));
       const source = createTestSource(
-        { list: (methods: MethodsInstance) => methods.get("users") },
+        { list: (methods: HttpMethods) => methods.get("users") },
         { onResponse },
       );
       const sources = { users: source };
 
-      const result = await createRequest(sources, { source: "users", query: "list" });
+      const result = await executeRequest(sources, { source: "users", method: "list" });
 
       expect(result).toEqual({ transformed: true });
     });
@@ -383,13 +383,13 @@ describe("createRequest", () => {
       const sources = { api: source };
 
       try {
-        await createRequest(sources, { source: "api", query: "fail" });
+        await executeRequest(sources, { source: "api", method: "fail" });
       } catch {
         // expected
       }
 
       expect(onError).toHaveBeenCalledWith(
-        expect.objectContaining({ source: "api", query: "fail" }),
+        expect.objectContaining({ source: "api", method: "fail" }),
         expect.any(HTTPError),
       );
     });
@@ -405,13 +405,13 @@ describe("createRequest", () => {
       });
 
       const source = createTestSource(
-        { list: (methods: MethodsInstance) => methods.get("users") },
+        { list: (methods: HttpMethods) => methods.get("users") },
         { onRequest, onError },
       );
       const sources = { users: source };
 
       try {
-        await createRequest(sources, { source: "users", query: "list" });
+        await executeRequest(sources, { source: "users", method: "list" });
         expect.fail("should have thrown");
       } catch (error) {
         expect(error).toBeInstanceOf(HTTPError);
@@ -433,13 +433,13 @@ describe("createRequest", () => {
       });
 
       const source = createTestSource({
-        remove: (methods: MethodsInstance) => methods.get("users/1"),
+        remove: (methods: HttpMethods) => methods.get("users/1"),
       });
       const sources = { users: source };
 
-      const result = await createRequest(sources, {
+      const result = await executeRequest(sources, {
         source: "users",
-        query: "remove",
+        method: "remove",
       });
 
       expect(result).toBeNull();
@@ -456,13 +456,13 @@ describe("createRequest", () => {
       });
 
       const source = createTestSource({
-        events: (methods: MethodsInstance) => methods.get("events"),
+        events: (methods: HttpMethods) => methods.get("events"),
       });
       const sources = { api: source };
 
-      const result = await createRequest(sources, {
+      const result = await executeRequest(sources, {
         source: "api",
-        query: "events",
+        method: "events",
         options: { stream: true },
       });
 

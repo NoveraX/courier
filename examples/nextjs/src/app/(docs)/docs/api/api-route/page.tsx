@@ -11,7 +11,7 @@ const signatureCode = `import { apiRoute } from "@noverax/nexus/next"
 
 export const { POST } = apiRoute(sources)`
 
-const sourcesTypeCode = `type Sources = Record<string, Request<AnyGroups | undefined>>`
+const sourcesTypeCode = `type Sources = Record<string, Datasource<GroupsRecord | undefined>>`
 
 const returnTypeCode = `{
   POST: (request: NextRequest) => Promise<Response | NextResponse>
@@ -24,17 +24,17 @@ import { sources } from "@/api/sources"
 export const { POST } = apiRoute(sources)`
 
 const sourcesExampleCode = `// api/sources.ts
-import { Request, RequestGroup } from "@noverax/nexus/classes"
+import { Datasource, EndpointGroup } from "@noverax/nexus/datasource"
 
-const api = new Request({
+const api = new Datasource({
   baseURL: process.env.API_URL,
   timeout: 10000,
   headers: {
     Authorization: \`Bearer \${process.env.API_SECRET}\`,
   },
   groups: {
-    users: new RequestGroup({ prefix: "/users" }),
-    posts: new RequestGroup({ prefix: "/posts" }),
+    users: new EndpointGroup({ prefix: "/users" }),
+    posts: new EndpointGroup({ prefix: "/posts" }),
   },
 })
 
@@ -47,7 +47,7 @@ const customRouteCode = `// You can place the route at any path:
 
 // Then configure the client to match:
 const request = createClientRequest<Sources>({
-  requestPage: "nexus",  // matches /api/nexus
+  routePath: "nexus",  // matches /api/nexus
 })`
 
 const requestFlowCode = `// What happens when apiRoute receives a request:
@@ -64,8 +64,8 @@ const requestFlowCode = `// What happens when apiRoute receives a request:
 //    JSON:     { source, group, query, variables, options }
 //    FormData: _source, _group, _query, _options fields + file fields
 //
-// 4. Call createRequest(sources, body, context)
-//    → Resolves source → creates Instance → executes method
+// 4. Call executeRequest(sources, body, context)
+//    → Resolves source → creates HttpClient → executes method
 //
 // 5. Return response to the client`
 
@@ -175,7 +175,7 @@ export default async function ApiRoutePage() {
         <h2 id="custom-route">Custom Route Path</h2>
         <p>
           The route file location determines the API path. Match it with{" "}
-          <InlineCode>requestPage</InlineCode> in your client config.
+          <InlineCode>routePath</InlineCode> in your client config.
         </p>
       </Prose>
 

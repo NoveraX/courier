@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getRequestHeaders, mergeHeaders } from "../src/utils/merge-headers";
+import { filterHeaders, mergeHeaders } from "../src/utils/merge-headers";
 
-describe("getRequestHeaders", () => {
+describe("filterHeaders", () => {
   it("returns empty Headers when no input", () => {
-    const result = getRequestHeaders();
+    const result = filterHeaders();
     expect([...result.entries()]).toEqual([]);
   });
 
@@ -13,7 +13,7 @@ describe("getRequestHeaders", () => {
       "content-type": "application/json",
       "x-custom": "value",
     });
-    const result = getRequestHeaders(incoming);
+    const result = filterHeaders(incoming);
     expect(result.get("authorization")).toBe("Bearer token");
     expect(result.has("content-type")).toBe(false);
     expect(result.has("x-custom")).toBe(false);
@@ -30,7 +30,7 @@ describe("getRequestHeaders", () => {
       "x-real-ip": "1.2.3.4",
       "x-request-id": "abc-123",
     });
-    const result = getRequestHeaders(incoming);
+    const result = filterHeaders(incoming);
     expect(result.get("authorization")).toBe("Bearer token");
     expect(result.get("cookie")).toBe("session=abc");
     expect(result.get("referer")).toBe("https://example.com");
@@ -43,23 +43,23 @@ describe("getRequestHeaders", () => {
 
   it("extends whitelist with validHeaders", () => {
     const incoming = new Headers({ "x-custom-header": "value" });
-    const result = getRequestHeaders(incoming, ["x-custom-header"]);
+    const result = filterHeaders(incoming, ["x-custom-header"]);
     expect(result.get("x-custom-header")).toBe("value");
   });
 
   it("accepts Record input", () => {
-    const result = getRequestHeaders({ authorization: "Bearer token", "x-bad": "drop" });
+    const result = filterHeaders({ authorization: "Bearer token", "x-bad": "drop" });
     expect(result.get("authorization")).toBe("Bearer token");
     expect(result.has("x-bad")).toBe(false);
   });
 
   it("accepts array tuple input", () => {
-    const result = getRequestHeaders([["authorization", "Bearer token"]]);
+    const result = filterHeaders([["authorization", "Bearer token"]]);
     expect(result.get("authorization")).toBe("Bearer token");
   });
 
   it("is case-insensitive", () => {
-    const result = getRequestHeaders({ Authorization: "Bearer token" });
+    const result = filterHeaders({ Authorization: "Bearer token" });
     expect(result.get("authorization")).toBe("Bearer token");
   });
 });

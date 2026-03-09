@@ -4,30 +4,30 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { GroupInfo, GroupsDemo } from "./_components"
 
-const definitionCode = `import { Request, RequestGroup, type Method } from "@noverax/nexus/RequestClass"
+const definitionCode = `import { Datasource, EndpointGroup, type Endpoint } from "@noverax/nexus/datasource"
 
-// Each RequestGroup has a prefix that maps to a backend path
-class Users extends RequestGroup {
+// Each EndpointGroup has a prefix that maps to a backend path
+class Users extends EndpointGroup {
   constructor() {
     super({ prefix: "users" }) // → /users/*
   }
 
-  getAll: Method<UsersListResponse> = ({ get }) => get()       // GET /users
-  getById: Method<User, { id: number }> = ({ get }) => get(":id") // GET /users/:id
-  create: Method<User, CreateBody> = ({ post }) => post()      // POST /users
+  getAll: Endpoint<UsersListResponse> = ({ get }) => get()       // GET /users
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id") // GET /users/:id
+  create: Endpoint<User, CreateBody> = ({ post }) => post()      // POST /users
 }
 
-class Posts extends RequestGroup {
+class Posts extends EndpointGroup {
   constructor() {
     super({ prefix: "posts" }) // → /posts/*
   }
 
-  getAll: Method<PostsListResponse> = ({ get }) => get()       // GET /posts
-  create: Method<Post, CreateBody> = ({ post }) => post()      // POST /posts
+  getAll: Endpoint<PostsListResponse> = ({ get }) => get()       // GET /posts
+  create: Endpoint<Post, CreateBody> = ({ post }) => post()      // POST /posts
 }
 
-// Groups are registered in the Request class
-class MockApi extends Request<typeof groups> {
+// Groups are registered in the Datasource class
+class MockApi extends Datasource<typeof groups> {
   constructor() {
     super({ baseURL: "http://localhost:4000", groups })
   }
@@ -47,7 +47,7 @@ const user  = useQuery("mockApi", "users:getById", { variables: { id: 1 } })
 
 export const metadata = docsMetadata(
   "Request Groups",
-  "Organize methods into groups with prefixes using RequestGroup."
+  "Organize methods into groups with prefixes using EndpointGroup."
 )
 
 export default function GroupsExamplesPage() {
@@ -55,16 +55,16 @@ export default function GroupsExamplesPage() {
     <>
       <PageHeader
         title="Request Groups"
-        description="Organize methods into groups with prefixes using RequestGroup."
+        description="Organize methods into groups with prefixes using EndpointGroup."
       />
 
       <div className="space-y-8">
         <ExampleBlock
           title="Group Definition"
-          description="Each RequestGroup has a prefix that maps to a backend path segment."
+          description="Each EndpointGroup has a prefix that maps to a backend path segment."
           code={definitionCode}
           learnMoreHref="/docs/core-concepts/request"
-          learnMoreLabel="RequestGroup docs"
+          learnMoreLabel="EndpointGroup docs"
         >
           <GroupInfo />
         </ExampleBlock>

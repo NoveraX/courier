@@ -4,9 +4,9 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { BodyEncodingDemo, DefaultsDemo, SearchParamsDemo } from "./_components"
 
-const sourceConfigCode = `import { Request } from "@noverax/nexus/RequestClass"
+const sourceConfigCode = `import { Datasource } from "@noverax/nexus/datasource"
 
-class EncodedApi extends Request<typeof groups> {
+class EncodedApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: "http://localhost:4000",
@@ -81,7 +81,7 @@ export default function EncodingExamplesPage() {
       <div className="space-y-8">
         <ExampleBlock
           title="Source Configuration"
-          description="Configure encoding options on the Request class. These apply to all methods in the source."
+          description="Configure encoding options on the Datasource class. These apply to all methods in the source."
           code={sourceConfigCode}
           learnMoreHref="/docs/proxy-mode/encoding"
           learnMoreLabel="Encoding docs"

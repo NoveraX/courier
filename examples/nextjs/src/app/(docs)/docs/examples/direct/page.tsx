@@ -50,7 +50,7 @@ export default async function DirectExamplesPage() {
           <p className="text-sm text-muted-foreground">
             Direct mode calls the backend directly from the server. No{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-xs">/api/request</code> proxy hop —
-            requests go straight to the backend URL defined in your Request class.
+            requests go straight to the backend URL defined in your Datasource class.
           </p>
         </ExampleBlock>
 

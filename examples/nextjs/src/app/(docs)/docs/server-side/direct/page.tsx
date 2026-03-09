@@ -13,7 +13,7 @@ const signatureCode = `import { createDirectRequest } from "@noverax/nexus/direc
 function createDirectRequest<T extends Sources>(
   sources: T,
   defaults?: DirectRequestDefaults
-): CommonRequest<T, true>`
+): RequestFn<T, true>`
 
 const defaultsCode = `type DirectRequestDefaults = {
   // Request timeout in milliseconds
@@ -49,7 +49,7 @@ export default async function UsersPage() {
 
   // Step 2: call with query and variables
   const users = await request("users:getAll", { page: 1, limit: 20 })
-  //    ^? UserList — fully typed from your Method definition
+  //    ^? UserList — fully typed from your Endpoint definition
 
   // Or chain it in one expression
   const user = await directRequest("myApi")("users:getById", { id: 5 })

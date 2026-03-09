@@ -12,7 +12,7 @@ const classCode = `class HTTPError<R = unknown> extends Error {
   headers: Headers
   data: R
 
-  constructor(response: MethodKyResponse<R>)
+  constructor(response: HttpResponse<R>)
 }`
 
 const guardCode = `function isHTTPError<R = unknown>(error: unknown): error is HTTPError<R>`
@@ -99,11 +99,11 @@ const request = createClientRequest<Sources>({
 })`
 
 const hookErrorCode = `// Source-level error hook via Request options
-const api = new Request({
+const api = new Datasource({
   baseURL: process.env.API_URL,
   onError: (info, error) => {
     console.error(
-      \`[\${info.source}:\${info.group}:\${info.query}] \` +
+      \`[\${info.source}:\${info.group}:\${info.method}] \` +
       \`HTTP \${error.status}: \${JSON.stringify(error.data)}\`
     )
     return undefined

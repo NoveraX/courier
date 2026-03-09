@@ -1,8 +1,8 @@
 import { HTTPError } from "../error";
-import type { Context, MethodsInstanceOptions } from "../instance/types";
-import type { CommonRequest } from "../types";
-import { createRequest } from "../utils/createRequest";
-import { parseQueryRequest } from "../utils/helpers";
+import type { CallOptions, Context } from "../instance/types";
+import type { RequestFn } from "../types";
+import { executeRequest } from "../utils/createRequest";
+import { parseEndpointKey } from "../utils/helpers";
 
 import type { Sources } from "./types";
 
@@ -24,7 +24,7 @@ const isContext = (value: unknown): value is Context =>
 export function createDirectRequest<T extends Sources>(
   sources: T,
   defaults: DirectRequestDefaults = {},
-): CommonRequest<T, true> {
+): RequestFn<T, true> {
   const {
     timeout: defaultTimeout,
     headers: defaultHeaders,
@@ -32,12 +32,12 @@ export function createDirectRequest<T extends Sources>(
     onSuccess: globalOnSuccess,
   } = defaults;
 
-  return function selectSource(source: string, options?: MethodsInstanceOptions<boolean>) {
-    return async function executeQuery(
+  return function selectSource(source: string, options?: CallOptions<boolean>) {
+    return async function execute(
       ...arguments_: [string, Context] | [string, Record<string, unknown>, Context]
     ) {
-      const [queryRequest] = arguments_;
-      const { group, query } = parseQueryRequest(queryRequest);
+      const [endpoint] = arguments_;
+      const { group, method } = parseEndpointKey(endpoint);
 
       const variables = isContext(arguments_[1]) ? undefined : arguments_[1];
 
@@ -56,10 +56,10 @@ export function createDirectRequest<T extends Sources>(
           : defaultHeaders;
       }
 
-      const requestOptions = {
+      const requestPayload = {
         source,
         group,
-        query,
+        method,
         variables,
         options: mergedOptions,
       };
@@ -68,7 +68,7 @@ export function createDirectRequest<T extends Sources>(
       const context = isContext(contextArg) ? contextArg : undefined;
 
       try {
-        const result = await createRequest(sources, requestOptions, context);
+        const result = await executeRequest(sources, requestPayload, context);
         await globalOnSuccess?.(result);
         return result;
       } catch (error) {
@@ -78,5 +78,5 @@ export function createDirectRequest<T extends Sources>(
         throw error;
       }
     };
-  } as unknown as CommonRequest<T, true>; // TS cannot infer curried generic closures
+  } as unknown as RequestFn<T, true>; // TS cannot infer curried generic closures
 }

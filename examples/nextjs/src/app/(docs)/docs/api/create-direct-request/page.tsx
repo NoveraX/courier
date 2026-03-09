@@ -18,16 +18,16 @@ const defaultsTypeCode = `type DirectRequestDefaults = {
   onSuccess?: (data: unknown) => void | Promise<void>
 }`
 
-const sourcesTypeCode = `type Sources = Record<string, Request<AnyGroups | undefined>>`
+const sourcesTypeCode = `type Sources = Record<string, Datasource<GroupsRecord | undefined>>`
 
-const returnTypeCode = `// Direct mode returns Partial<MethodKyResponse<R>> — includes status, headers, and data
-type MethodKyResponse<T = unknown> = {
+const returnTypeCode = `// Direct mode returns Partial<HttpResponse<R>> — includes status, headers, and data
+type HttpResponse<T = unknown> = {
   status: number
   headers: Headers
   data: T
 }
 
-// Return type: Promise<Partial<MethodKyResponse<R>>>`
+// Return type: Promise<Partial<HttpResponse<R>>>`
 
 const basicUsageCode = `import { createDirectRequest } from "@noverax/nexus/direct"
 import { sources } from "@/api/sources"
@@ -138,7 +138,7 @@ export default async function CreateDirectRequestPage() {
         <h2 id="signature">Signature</h2>
         <p>
           <InlineCode>createDirectRequest</InlineCode> takes your source definitions and optional
-          defaults, returning a curried <InlineCode>CommonRequest</InlineCode> function. Unlike{" "}
+          defaults, returning a curried <InlineCode>RequestFn</InlineCode> function. Unlike{" "}
           <InlineCode>createClientRequest</InlineCode>, direct mode calls the backend directly
           without going through a proxy API route.
         </p>
@@ -187,7 +187,7 @@ export default async function CreateDirectRequestPage() {
       <Prose>
         <h2 id="return-type">Return Type</h2>
         <p>
-          Direct mode returns <InlineCode>Partial&lt;MethodKyResponse&lt;R&gt;&gt;</InlineCode>{" "}
+          Direct mode returns <InlineCode>Partial&lt;HttpResponse&lt;R&gt;&gt;</InlineCode>{" "}
           instead of raw data. This gives you access to the status code, headers, and parsed data.
         </p>
       </Prose>
@@ -198,7 +198,7 @@ export default async function CreateDirectRequestPage() {
         <p>
           <InlineCode>createClientRequest</InlineCode> returns just the data (
           <InlineCode>R</InlineCode>) by default. <InlineCode>createDirectRequest</InlineCode>{" "}
-          always returns <InlineCode>Partial&lt;MethodKyResponse&lt;R&gt;&gt;</InlineCode> with{" "}
+          always returns <InlineCode>Partial&lt;HttpResponse&lt;R&gt;&gt;</InlineCode> with{" "}
           <InlineCode>status</InlineCode>, <InlineCode>headers</InlineCode>, and{" "}
           <InlineCode>data</InlineCode>.
         </p>

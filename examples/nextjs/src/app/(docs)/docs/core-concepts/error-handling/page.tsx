@@ -98,11 +98,11 @@ export function CreateUserForm() {
   )
 }`
 
-const onErrorHookCode = `import { Request } from "@noverax/nexus/RequestClass"
+const onErrorHookCode = `import { Datasource } from "@noverax/nexus/datasource"
 
 const groups = { users: new Users(), posts: new Posts() }
 
-class MyApi extends Request<typeof groups> {
+class MyApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: process.env.API_URL ?? "http://localhost:4000",
@@ -112,7 +112,7 @@ class MyApi extends Request<typeof groups> {
       onError: async (info, error) => {
         // Log to your error tracking service
         console.error(
-          \`[\${info.source}] \${info.group}:\${info.query} failed with \${error.status}\`,
+          \`[\${info.source}] \${info.group}:\${info.method} failed with \${error.status}\`,
           { variables: info.variables, data: error.data }
         )
 
@@ -140,7 +140,7 @@ if (isHTTPError(error)) {
 // 3. Abort errors — request was cancelled
 // Thrown as HTTPError with status 499
 if (isHTTPError(error) && error.status === 499) {
-  // Request was aborted (by requestAbort or manual AbortController)
+  // Request was aborted (by deduplicate or manual AbortController)
 }
 
 // 4. JSON parse errors — response is not valid JSON

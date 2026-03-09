@@ -1,7 +1,7 @@
 import { compile, type Key, parse } from "path-to-regexp";
 
 import { HTTPError } from "../error";
-import type { MethodsInstanceOptions } from "../instance/types";
+import type { CallOptions } from "../instance/types";
 
 const MULTIPLE_SLASHES = /\/+/g;
 
@@ -20,15 +20,15 @@ const cachedCompile = (path: string): CompiledFn => {
 export const pathJoin = (parts: string[]) =>
   parts.join("/").replace(MULTIPLE_SLASHES, "/").replace(/^\//, "");
 
-export const parseQueryRequest = (queryRequest: string) => {
-  const [queryGroup, queryMethod] = queryRequest.split(":");
+export const parseEndpointKey = (endpointKey: string) => {
+  const [groupOrMethod, method] = endpointKey.split(":");
   return {
-    group: queryMethod ? queryGroup : undefined,
-    query: queryMethod || queryGroup,
+    group: method ? groupOrMethod : undefined,
+    method: method || groupOrMethod,
   };
 };
 
-export const getUrl = (prefix: string, basePath?: string) => {
+export const resolveBasePath = (prefix: string, basePath?: string) => {
   if (!basePath) {
     return { path: prefix };
   }
@@ -41,7 +41,7 @@ export const getUrl = (prefix: string, basePath?: string) => {
   return { path: pathJoin([prefix, basePath]) };
 };
 
-export const generateUrl = (
+export const compileUrl = (
   rawUrlPath: string,
   variables?: FormData | Record<string, unknown>,
   generatedPathOptions?: Record<string, unknown>,
@@ -93,21 +93,21 @@ export const generateUrl = (
   }
 };
 
-export const getRequestOptions = (requestOptions: CreateRequestOptionsType) => {
+export const parseRequestPayload = (requestPayload: RequestPayloadInput) => {
   let source: FormDataEntryValue | string | undefined;
   let group: FormDataEntryValue | string | undefined;
-  let query: FormDataEntryValue | string | undefined;
+  let method: FormDataEntryValue | string | undefined;
   let variables: FormData | Record<string, unknown> | undefined;
-  let options: MethodsInstanceOptions<boolean> | undefined;
+  let options: CallOptions<boolean> | undefined;
 
-  if (isFormData(requestOptions)) {
-    const META_KEYS = new Set(["_source", "_group", "_query", "_options"]);
+  if (isFormData(requestPayload)) {
+    const META_KEYS = new Set(["_source", "_group", "_method", "_options"]);
 
-    source = requestOptions.get("_source") ?? undefined;
-    group = requestOptions.get("_group") ?? undefined;
-    query = requestOptions.get("_query") ?? undefined;
+    source = requestPayload.get("_source") ?? undefined;
+    group = requestPayload.get("_group") ?? undefined;
+    method = requestPayload.get("_method") ?? undefined;
 
-    const rawOptions = requestOptions.get("_options");
+    const rawOptions = requestPayload.get("_options");
     if (typeof rawOptions === "string") {
       try {
         options = JSON.parse(rawOptions, (key, value) => {
@@ -123,7 +123,7 @@ export const getRequestOptions = (requestOptions: CreateRequestOptionsType) => {
 
     const formData = new FormData();
 
-    for (const [key, value] of requestOptions.entries()) {
+    for (const [key, value] of requestPayload.entries()) {
       if (!META_KEYS.has(key)) {
         formData.append(key, value);
       }
@@ -131,14 +131,14 @@ export const getRequestOptions = (requestOptions: CreateRequestOptionsType) => {
 
     variables = formData;
   } else {
-    source = requestOptions?.source;
-    group = requestOptions?.group;
-    query = requestOptions?.query;
-    options = requestOptions?.options;
-    variables = requestOptions?.variables;
+    source = requestPayload?.source;
+    group = requestPayload?.group;
+    method = requestPayload?.method;
+    options = requestPayload?.options;
+    variables = requestPayload?.variables;
   }
 
-  return { source, group, query, options, variables };
+  return { source, group, method, options, variables };
 };
 
 export const headersToObject = (headers?: Headers) => {
@@ -152,12 +152,12 @@ export const isFormData = (variables: unknown): variables is FormData =>
 export const isHeaders = (variables: unknown): variables is Headers =>
   typeof Headers !== "undefined" && variables instanceof Headers;
 
-export type CreateRequestOptionsType = FormData | Partial<CreateRequestOptions> | undefined;
+export type RequestPayloadInput = FormData | Partial<RequestPayload> | undefined;
 
-export type CreateRequestOptions = {
+export type RequestPayload = {
   source: string;
   group: string;
-  query: string;
+  method: string;
   variables: Record<string, unknown>;
-  options: MethodsInstanceOptions<boolean>;
+  options: CallOptions<boolean>;
 };

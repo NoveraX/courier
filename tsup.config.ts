@@ -3,7 +3,7 @@ import { defineConfig } from "tsup";
 export default defineConfig({
   entry: {
     index: "src/index.ts",
-    RequestClass: "src/RequestClass.ts",
+    datasource: "src/datasource.ts",
     "direct/index": "src/direct/index.ts",
     "next/apiRoute": "src/next/apiRoute.ts",
     "query/index": "src/query/index.ts",

@@ -7,25 +7,25 @@ import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
-const methodCode = `import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+const methodCode = `import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
-class Events extends RequestGroup {
+class Events extends EndpointGroup {
   constructor() {
     super({ prefix: "events" })
   }
 
   // Set stream: true to receive a ReadableStream instead of parsed JSON
-  subscribe: Method<ReadableStream, { channel: string }> = ({ get }) =>
+  subscribe: Endpoint<ReadableStream, { channel: string }> = ({ get }) =>
     get(":channel/stream", { stream: true })
 }
 
-class Exports extends RequestGroup {
+class Exports extends EndpointGroup {
   constructor() {
     super({ prefix: "exports" })
   }
 
   // Large file download as a stream
-  download: Method<ReadableStream, { id: string }> = ({ get }) =>
+  download: Endpoint<ReadableStream, { id: string }> = ({ get }) =>
     get(":id/download", { stream: true })
 }`
 

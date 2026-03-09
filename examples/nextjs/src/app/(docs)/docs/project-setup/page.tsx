@@ -9,10 +9,10 @@ import { docsMetadata } from "@/lib/metadata"
 
 const fileStructureCode = `src/
 ├── api/
-│   ├── index.ts          # Request classes + sources export
-│   ├── users.ts          # Users RequestGroup
-│   ├── posts.ts          # Posts RequestGroup
-│   └── files.ts          # Files RequestGroup
+│   ├── index.ts          # Datasource classes + sources export
+│   ├── users.ts          # Users EndpointGroup
+│   ├── posts.ts          # Posts EndpointGroup
+│   └── files.ts          # Files EndpointGroup
 ├── lib/
 │   ├── request.ts        # createQueryRequest (proxy + React Query)
 │   └── direct-request.ts # createDirectRequest (server-side)
@@ -25,7 +25,7 @@ const fileStructureCode = `src/
 └── ...`
 
 const sourcesCode = `// api/index.ts
-import { Request } from "@noverax/nexus/RequestClass"
+import { Datasource } from "@noverax/nexus/datasource"
 import { Users } from "./users"
 import { Posts } from "./posts"
 import { Files } from "./files"
@@ -38,7 +38,7 @@ const groups = {
   files: new Files(),
 }
 
-class MyApi extends Request<typeof groups> {
+class MyApi extends Datasource<typeof groups> {
   constructor() {
     super({ baseURL: API_URL, groups })
   }
@@ -48,20 +48,20 @@ export const sources = { myApi: new MyApi() }
 export type Sources = typeof sources`
 
 const groupCode = `// api/users.ts
-import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
 type User = { id: number; name: string; email: string }
 
-export class Users extends RequestGroup {
+export class Users extends EndpointGroup {
   constructor() {
     super({ prefix: "users" })
   }
 
-  getAll: Method<User[]> = ({ get }) => get()
-  getById: Method<User, { id: number }> = ({ get }) => get(":id")
-  create: Method<User, { name: string; email: string }> = ({ post }) => post()
-  update: Method<User, { id: number; name: string }> = ({ put }) => put(":id")
-  remove: Method<null, { id: number }> = ({ del }) => del(":id")
+  getAll: Endpoint<User[]> = ({ get }) => get()
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+  create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
+  update: Endpoint<User, { id: number; name: string }> = ({ put }) => put(":id")
+  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
 }`
 
 const proxyClientCode = `// lib/request.ts
@@ -83,14 +83,14 @@ import { sources } from "@/api"
 export const { POST } = apiRoute(sources)`
 
 const multiSourceCode = `// api/index.ts
-import { Request } from "@noverax/nexus/RequestClass"
+import { Datasource } from "@noverax/nexus/datasource"
 import { Users } from "./users"
 import { Products } from "./products"
 
 const groups = { users: new Users() }
 const productGroups = { products: new Products() }
 
-class MainApi extends Request<typeof groups> {
+class MainApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: process.env.API_URL ?? "http://localhost:4000",
@@ -99,7 +99,7 @@ class MainApi extends Request<typeof groups> {
   }
 }
 
-class PaymentApi extends Request<typeof productGroups> {
+class PaymentApi extends Datasource<typeof productGroups> {
   constructor() {
     super({
       baseURL: process.env.PAYMENT_API_URL ?? "http://localhost:5000",
@@ -157,7 +157,7 @@ export default async function ProjectSetupPage() {
 
         <p>
           The <InlineCode>api/</InlineCode> directory contains your API structure. The main file
-          creates <InlineCode>Request</InlineCode> instances with groups, and each group lives in
+          creates <InlineCode>Datasource</InlineCode> instances with groups, and each group lives in
           its own file:
         </p>
       </Prose>
@@ -167,7 +167,7 @@ export default async function ProjectSetupPage() {
 
       <Callout variant="tip" title="One group per file">
         <p>
-          Keeping each <InlineCode>RequestGroup</InlineCode> in its own file makes it easy to find
+          Keeping each <InlineCode>EndpointGroup</InlineCode> in its own file makes it easy to find
           and modify endpoints. The types stay co-located with the methods that use them.
         </p>
       </Callout>
@@ -195,7 +195,7 @@ export default async function ProjectSetupPage() {
 
         <p>
           If your app talks to multiple backend services, create a separate{" "}
-          <InlineCode>Request</InlineCode> class for each one. They can all be passed to the same
+          <InlineCode>Datasource</InlineCode> class for each one. They can all be passed to the same
           sources object:
         </p>
       </Prose>

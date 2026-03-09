@@ -1,49 +1,48 @@
 import { NextResponse } from "next/server";
-
+import type { Datasource } from "../datasource";
 import { HTTPError } from "../error";
-import { Instance } from "../instance/index";
-import type { AnyMethods, BaseOptions, Context, HookInfo } from "../instance/types";
-import type { Request } from "../RequestClass";
-import type { AnyGroups } from "../types";
+import { HttpClient } from "../instance/index";
+import type { AnyEndpoints, BaseOptions, Context, HookInfo } from "../instance/types";
+import type { GroupsRecord } from "../types";
 import {
-  type CreateRequestOptionsType,
-  getRequestOptions,
   headersToObject,
   isHeaders,
+  parseRequestPayload,
+  type RequestPayloadInput,
 } from "./helpers";
-import { getRequestHeaders, mergeHeaders } from "./merge-headers";
+import { filterHeaders, mergeHeaders } from "./merge-headers";
 
-function createInstance(baseOption?: BaseOptions, context?: Context) {
-  return new Instance(baseOption, context);
+function createHttpClient(baseOption?: BaseOptions, context?: Context) {
+  return new HttpClient(baseOption, context);
 }
 
-const isMethodFn = (value: unknown): value is AnyMethods[string] => typeof value === "function";
+const isEndpointFn = (value: unknown): value is AnyEndpoints[string] => typeof value === "function";
 
-const getMethod = (target: object, name: string): AnyMethods[string] | undefined => {
+const getEndpoint = (target: object, name: string): AnyEndpoints[string] | undefined => {
   if (!(name in target)) return undefined;
   // object has no index signature; in-narrowing validates property exists
-  const method = (target as Record<string, unknown>)[name];
-  return isMethodFn(method) ? method : undefined;
+  const endpoint = (target as Record<string, unknown>)[name];
+  return isEndpointFn(endpoint) ? endpoint : undefined;
 };
 
-const formatValidationError = (
+const buildValidationError = (
   context: Context | undefined,
   message: string,
-): ReturnType<typeof formatResponse> => {
+): ReturnType<typeof buildResponse> => {
   const responseResult = {
     status: 400,
     headers: new Headers(),
     data: { success: false, message },
   };
 
-  return formatResponse(context, {
+  return buildResponse(context, {
     ...responseResult,
     throw: new HTTPError(responseResult),
     rawData: false,
   });
 };
 
-const formatResponse = (context: Context | undefined, response: InternalResponse) => {
+const buildResponse = (context: Context | undefined, response: InternalResponse) => {
   if (response.stream) {
     if (context?.res instanceof NextResponse && response.data instanceof ReadableStream) {
       return new Response(response.data, {
@@ -61,7 +60,7 @@ const formatResponse = (context: Context | undefined, response: InternalResponse
 
   const baseResult = {
     status: response.status,
-    headers: getRequestHeaders(response.headers),
+    headers: filterHeaders(response.headers),
   };
 
   const data = response.rawData ? { ...baseResult, data: response.data } : response.data;
@@ -92,22 +91,22 @@ const formatResponse = (context: Context | undefined, response: InternalResponse
   throw new Error("Unknown error");
 };
 
-export async function createRequest(
-  sources: Record<string, Request<AnyGroups | undefined>>,
-  requestOptions: CreateRequestOptionsType,
+export async function executeRequest(
+  sources: Record<string, Datasource<GroupsRecord | undefined>>,
+  requestPayload: RequestPayloadInput,
   context: Context & { res: NextResponse },
 ): Promise<Response>;
-export async function createRequest(
-  sources: Record<string, Request<AnyGroups | undefined>>,
-  requestOptions: CreateRequestOptionsType,
+export async function executeRequest(
+  sources: Record<string, Datasource<GroupsRecord | undefined>>,
+  requestPayload: RequestPayloadInput,
   context?: Context,
 ): Promise<unknown>;
-export async function createRequest(
-  sources: Record<string, Request<AnyGroups | undefined>>,
-  requestOptions: CreateRequestOptionsType,
+export async function executeRequest(
+  sources: Record<string, Datasource<GroupsRecord | undefined>>,
+  requestPayload: RequestPayloadInput,
   context?: Context,
 ) {
-  const { source, group, query, variables, options } = getRequestOptions(requestOptions);
+  const { source, group, method, variables, options } = parseRequestPayload(requestPayload);
 
   const { req: nextRequest, headers: nextHeaders } = context || {};
 
@@ -115,36 +114,36 @@ export async function createRequest(
     typeof source === "string" && Object.hasOwn(sources, source) ? sources[source] : undefined;
 
   if (!dataSource) {
-    return formatValidationError(context, `[${String(source)}]: source not found`);
+    return buildValidationError(context, `[${String(source)}]: source not found`);
   }
 
   if (variables && typeof variables !== "object") {
-    return formatValidationError(context, "[variables] must be an object");
+    return buildValidationError(context, "[variables] must be an object");
   }
 
-  const groupDataSource =
+  const endpointGroup =
     typeof group === "string" && dataSource.options && "groups" in dataSource.options
       ? dataSource?.options?.groups?.[group]
       : undefined;
 
-  const methodOptions = groupDataSource?.options;
+  const groupOptions = endpointGroup?.options;
 
-  const method =
-    typeof query === "string"
-      ? (groupDataSource && getMethod(groupDataSource, query)) || getMethod(dataSource, query)
+  const endpoint =
+    typeof method === "string"
+      ? (endpointGroup && getEndpoint(endpointGroup, method)) || getEndpoint(dataSource, method)
       : undefined;
 
-  if (typeof method !== "function") {
-    const queryGroup = group ? `[${group}][${query}]` : `[${query}]`;
-    return formatValidationError(context, `[${String(source)}][${queryGroup}]: method not found`);
+  if (typeof endpoint !== "function") {
+    const methodPath = group ? `[${group}][${method}]` : `[${method}]`;
+    return buildValidationError(context, `[${String(source)}][${methodPath}]: method not found`);
   }
 
-  const instance = createInstance(dataSource.options, context);
+  const instance = createHttpClient(dataSource.options, context);
 
   const instanceOptions = options ?? {};
   const {
     rawData = false,
-    passVars: passVariables = true,
+    passVariables = true,
     headers: kyHeaders,
     stream = false,
     ...kyOptions
@@ -155,12 +154,12 @@ export async function createRequest(
     ...headersToObject(nextHeaders),
   };
 
-  const newHeaders = mergeHeaders(kyHeaders, mergedNextHeaders, dataSource.options?.extraHeaders);
+  const newHeaders = mergeHeaders(kyHeaders, mergedNextHeaders, dataSource.options?.allowedHeaders);
 
   const hookInfo: HookInfo = {
     source: String(source),
     group: group ? String(group) : undefined,
-    query: String(query),
+    method: String(method),
     variables,
   };
 
@@ -172,15 +171,15 @@ export async function createRequest(
       }
     }
 
-    const response = await method(
-      instance.methodsInstance(
+    const response = await endpoint(
+      instance.createMethods(
         {
-          ...(passVariables ? { vars: variables } : {}),
+          ...(passVariables ? { variables } : {}),
           ...kyOptions,
           headers: newHeaders,
           stream,
         },
-        methodOptions,
+        groupOptions,
       ),
       variables,
     );
@@ -200,7 +199,7 @@ export async function createRequest(
       }
     }
 
-    return formatResponse(context, {
+    return buildResponse(context, {
       headers,
       status: responseData.status,
       data: responseData.data,
@@ -230,7 +229,7 @@ export async function createRequest(
       }
     }
 
-    return formatResponse(context, {
+    return buildResponse(context, {
       ...responseResult,
       throw: httpError,
       rawData,

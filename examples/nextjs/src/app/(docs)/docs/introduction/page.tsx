@@ -7,21 +7,21 @@ import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
-const exampleCode = `import { Request, RequestGroup, Method } from "@noverax/nexus/RequestClass"
+const exampleCode = `import { Datasource, EndpointGroup, Endpoint } from "@noverax/nexus/datasource"
 
 type User = { id: number; name: string; email: string }
 
-class Users extends RequestGroup {
+class Users extends EndpointGroup {
   constructor() {
     super({ prefix: "users" })
   }
 
-  getAll: Method<User[]> = ({ get }) => get()
-  getById: Method<User, { id: number }> = ({ get }) => get(":id")
-  create: Method<User, { name: string; email: string }> = ({ post }) => post()
+  getAll: Endpoint<User[]> = ({ get }) => get()
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+  create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
 }
 
-class MyApi extends Request<{ users: Users }> {
+class MyApi extends Datasource<{ users: Users }> {
   constructor() {
     super({ baseURL: "https://api.example.com", groups: { users: new Users() } })
   }
@@ -64,9 +64,9 @@ export default async function IntroductionPage() {
         <h2 id="how-it-works">How It Works</h2>
 
         <p>
-          Define your API structure using <InlineCode>Request</InlineCode> and{" "}
-          <InlineCode>RequestGroup</InlineCode> classes. Each method declares its response type and
-          variables type using the <InlineCode>{"Method<Response, Variables>"}</InlineCode> generic:
+          Define your API structure using <InlineCode>Datasource</InlineCode> and{" "}
+          <InlineCode>EndpointGroup</InlineCode> classes. Each method declares its response type and
+          variables type using the <InlineCode>{"Endpoint<Response, Variables>"}</InlineCode> generic:
         </p>
       </Prose>
 
@@ -100,7 +100,7 @@ export default async function IntroductionPage() {
 
       <Callout variant="tip" title="Same definitions, two modes">
         <p>
-          You write your <InlineCode>Request</InlineCode> and <InlineCode>RequestGroup</InlineCode>{" "}
+          You write your <InlineCode>Datasource</InlineCode> and <InlineCode>EndpointGroup</InlineCode>{" "}
           classes once. Both <InlineCode>createClientRequest</InlineCode> (proxy) and{" "}
           <InlineCode>createDirectRequest</InlineCode> (direct) consume them with identical type
           inference.
@@ -172,7 +172,7 @@ export default async function IntroductionPage() {
               <td className="px-4 py-3">No</td>
               <td className="px-4 py-3">No</td>
               <td className="px-4 py-3">Router</td>
-              <td className="px-4 py-3 text-success">RequestGroup</td>
+              <td className="px-4 py-3 text-success">EndpointGroup</td>
             </tr>
             <tr className="border-b border-border/50">
               <td className="py-3 pr-4 font-medium text-foreground">Upload Progress</td>

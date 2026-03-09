@@ -1,7 +1,7 @@
 import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ky from "ky";
 import { HTTPError } from "../src/error";
-import { Instance } from "../src/instance/index";
+import { HttpClient } from "../src/instance/index";
 
 let mockKyInstance: Record<string, ReturnType<typeof vi.fn>>;
 let createSpy: MockInstance;
@@ -33,25 +33,25 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("Instance", () => {
+describe("HttpClient", () => {
   describe("constructor", () => {
     it("creates ky instance via ky.create", () => {
-      new Instance({ baseURL: "https://api.example.com" });
+      new HttpClient({ baseURL: "https://api.example.com" });
       expect(createSpy).toHaveBeenCalledWith(
         expect.objectContaining({ prefixUrl: "https://api.example.com" }),
       );
     });
 
     it("works without options", () => {
-      new Instance();
+      new HttpClient();
       expect(createSpy).toHaveBeenCalled();
     });
   });
 
-  describe("methodsInstance", () => {
+  describe("createMethods", () => {
     it("returns all 6 HTTP methods", () => {
-      const instance = new Instance();
-      const methods = instance.methodsInstance();
+      const instance = new HttpClient();
+      const methods = instance.createMethods();
       expect(methods).toHaveProperty("get");
       expect(methods).toHaveProperty("post");
       expect(methods).toHaveProperty("put");
@@ -61,8 +61,8 @@ describe("Instance", () => {
     });
 
     it("each method is a function", () => {
-      const instance = new Instance();
-      const methods = instance.methodsInstance();
+      const instance = new HttpClient();
+      const methods = instance.createMethods();
       for (const method of Object.values(methods)) {
         expect(typeof method).toBe("function");
       }
@@ -74,8 +74,8 @@ describe("Instance", () => {
       const data = { users: [{ id: 1 }] };
       mockKyInstance.get.mockResolvedValue(mockResponse(data));
 
-      const instance = new Instance();
-      const { get } = instance.methodsInstance();
+      const instance = new HttpClient();
+      const { get } = instance.createMethods();
       const result = await get("users");
 
       expect(mockKyInstance.get).toHaveBeenCalledWith("users", expect.any(Object));
@@ -86,8 +86,8 @@ describe("Instance", () => {
     it("passes variables as searchParams for GET", async () => {
       mockKyInstance.get.mockResolvedValue(mockResponse({}));
 
-      const instance = new Instance();
-      const { get } = instance.methodsInstance({ vars: { page: "1", limit: "10" } });
+      const instance = new HttpClient();
+      const { get } = instance.createMethods({ variables: { page: "1", limit: "10" } });
       await get("users");
 
       const callOptions = mockKyInstance.get.mock.calls[0][1];
@@ -102,8 +102,8 @@ describe("Instance", () => {
       const data = { id: 1, name: "test" };
       mockKyInstance.post.mockResolvedValue(mockResponse(data, 201));
 
-      const instance = new Instance();
-      const { post } = instance.methodsInstance();
+      const instance = new HttpClient();
+      const { post } = instance.createMethods();
       const result = await post("users", { name: "test" });
 
       expect(mockKyInstance.post).toHaveBeenCalledWith("users", expect.any(Object));
@@ -117,8 +117,8 @@ describe("Instance", () => {
       const fd = new FormData();
       fd.append("file", new Blob(["content"]), "test.txt");
 
-      const instance = new Instance();
-      const { post } = instance.methodsInstance();
+      const instance = new HttpClient();
+      const { post } = instance.createMethods();
       await post("upload", fd);
 
       const callOptions = mockKyInstance.post.mock.calls[0][1];
@@ -130,8 +130,8 @@ describe("Instance", () => {
     it("makes PUT request", async () => {
       mockKyInstance.put.mockResolvedValue(mockResponse({ updated: true }));
 
-      const instance = new Instance();
-      const { put } = instance.methodsInstance();
+      const instance = new HttpClient();
+      const { put } = instance.createMethods();
       const result = await put("users/1", { name: "updated" });
 
       expect(mockKyInstance.put).toHaveBeenCalled();
@@ -143,8 +143,8 @@ describe("Instance", () => {
     it("makes PATCH request", async () => {
       mockKyInstance.patch.mockResolvedValue(mockResponse({ patched: true }));
 
-      const instance = new Instance();
-      const { patch } = instance.methodsInstance();
+      const instance = new HttpClient();
+      const { patch } = instance.createMethods();
       const result = await patch("users/1", { email: "new@test.com" });
 
       expect(mockKyInstance.patch).toHaveBeenCalled();
@@ -156,8 +156,8 @@ describe("Instance", () => {
     it("maps del to ky.delete", async () => {
       mockKyInstance.delete.mockResolvedValue(mockResponse(null, 204));
 
-      const instance = new Instance();
-      const { del } = instance.methodsInstance();
+      const instance = new HttpClient();
+      const { del } = instance.createMethods();
       const result = await del("users/1");
 
       expect(mockKyInstance.delete).toHaveBeenCalledWith("users/1", expect.any(Object));
@@ -167,8 +167,8 @@ describe("Instance", () => {
     it("passes variables as searchParams for DELETE", async () => {
       mockKyInstance.delete.mockResolvedValue(mockResponse(null, 204));
 
-      const instance = new Instance();
-      const { del } = instance.methodsInstance({ vars: { force: "true" } });
+      const instance = new HttpClient();
+      const { del } = instance.createMethods({ variables: { force: "true" } });
       await del("users/1");
 
       const callOptions = mockKyInstance.delete.mock.calls[0][1];
@@ -180,8 +180,8 @@ describe("Instance", () => {
     it("makes HEAD request", async () => {
       mockKyInstance.head.mockResolvedValue(mockResponse(null, 200));
 
-      const instance = new Instance();
-      const { head } = instance.methodsInstance();
+      const instance = new HttpClient();
+      const { head } = instance.createMethods();
       const result = await head("users");
 
       expect(mockKyInstance.head).toHaveBeenCalledWith("users", expect.any(Object));
@@ -190,11 +190,11 @@ describe("Instance", () => {
   });
 
   describe("path params", () => {
-    it("compiles path params from vars", async () => {
+    it("compiles path params from variables", async () => {
       mockKyInstance.get.mockResolvedValue(mockResponse({ id: 42 }));
 
-      const instance = new Instance();
-      const { get } = instance.methodsInstance({ vars: { id: "42" } });
+      const instance = new HttpClient();
+      const { get } = instance.createMethods({ variables: { id: "42" } });
       await get("users/:id");
 
       const url = mockKyInstance.get.mock.calls[0][0];
@@ -210,8 +210,8 @@ describe("Instance", () => {
         text: () => Promise.resolve("plain text response"),
       });
 
-      const instance = new Instance({ responseType: "text" });
-      const { get } = instance.methodsInstance();
+      const instance = new HttpClient({ responseType: "text" });
+      const { get } = instance.createMethods();
       const result = await get("data");
 
       expect(result.data).toBe("plain text response");
@@ -224,8 +224,8 @@ describe("Instance", () => {
         json: () => Promise.reject(new Error("no body")),
       });
 
-      const instance = new Instance();
-      const { get } = instance.methodsInstance();
+      const instance = new HttpClient();
+      const { get } = instance.createMethods();
       const result = await get("empty");
 
       expect(result.status).toBe(204);
@@ -239,8 +239,8 @@ describe("Instance", () => {
         text: () => Promise.reject(new Error("no body")),
       });
 
-      const instance = new Instance({ responseType: "text" });
-      const { get } = instance.methodsInstance();
+      const instance = new HttpClient({ responseType: "text" });
+      const { get } = instance.createMethods();
       const result = await get("empty");
 
       expect(result.status).toBe(204);
@@ -254,8 +254,8 @@ describe("Instance", () => {
         json: () => Promise.reject(new SyntaxError("Unexpected token")),
       });
 
-      const instance = new Instance();
-      const { get } = instance.methodsInstance();
+      const instance = new HttpClient();
+      const { get } = instance.createMethods();
 
       await expect(get("broken")).rejects.toThrow("HTTP 200");
     });
@@ -265,8 +265,8 @@ describe("Instance", () => {
     it("merges defaultData into POST body", async () => {
       mockKyInstance.post.mockResolvedValue(mockResponse({ ok: true }));
 
-      const instance = new Instance({ defaultData: { app: "test" } });
-      const { post } = instance.methodsInstance();
+      const instance = new HttpClient({ defaultData: { app: "test" } });
+      const { post } = instance.createMethods();
       await post("users", { name: "new" });
 
       const callOptions = mockKyInstance.post.mock.calls[0][1];
@@ -276,8 +276,8 @@ describe("Instance", () => {
     it("merges defaultQueryParams into GET searchParams", async () => {
       mockKyInstance.get.mockResolvedValue(mockResponse({}));
 
-      const instance = new Instance({ defaultQueryParams: { locale: "en" } });
-      const { get } = instance.methodsInstance({ vars: { page: "1" } });
+      const instance = new HttpClient({ defaultQueryParams: { locale: "en" } });
+      const { get } = instance.createMethods({ variables: { page: "1" } });
       await get("users");
 
       const callOptions = mockKyInstance.get.mock.calls[0][1];
@@ -291,8 +291,8 @@ describe("Instance", () => {
       mockKyInstance.post.mockResolvedValue(mockResponse({ ok: true }));
 
       const encoder = vi.fn((obj: Record<string, unknown>) => JSON.stringify(obj));
-      const instance = new Instance({ bodyEncoder: encoder });
-      const { post } = instance.methodsInstance();
+      const instance = new HttpClient({ bodyEncoder: encoder });
+      const { post } = instance.createMethods();
       await post("users", { name: "test" });
 
       expect(encoder).toHaveBeenCalledWith({ name: "test" });
@@ -308,8 +308,8 @@ describe("Instance", () => {
       const encoder = vi.fn(
         (obj: Record<string, unknown>) => `custom=${Object.keys(obj).join(",")}`,
       );
-      const instance = new Instance({ searchParamsEncoder: encoder });
-      const { get } = instance.methodsInstance({ vars: { a: "1", b: "2" } });
+      const instance = new HttpClient({ searchParamsEncoder: encoder });
+      const { get } = instance.createMethods({ variables: { a: "1", b: "2" } });
       await get("users");
 
       expect(encoder).toHaveBeenCalled();
@@ -325,8 +325,8 @@ describe("Instance", () => {
         body: stream,
       });
 
-      const instance = new Instance();
-      const { get } = instance.methodsInstance({ stream: true });
+      const instance = new HttpClient();
+      const { get } = instance.createMethods({ stream: true });
       const result = await get("events");
 
       expect(result.data).toBe(stream);
@@ -351,8 +351,8 @@ describe("Instance", () => {
 
       mockKyInstance.get.mockRejectedValue(kyError);
 
-      const instance = new Instance();
-      const { get } = instance.methodsInstance();
+      const instance = new HttpClient();
+      const { get } = instance.createMethods();
 
       try {
         await get("users/999");
@@ -371,8 +371,8 @@ describe("Instance", () => {
 
       mockKyInstance.get.mockRejectedValue(networkError);
 
-      const instance = new Instance();
-      const { get } = instance.methodsInstance();
+      const instance = new HttpClient();
+      const { get } = instance.createMethods();
 
       try {
         await get("users");
@@ -391,8 +391,8 @@ describe("Instance", () => {
     it("re-throws unknown errors", async () => {
       mockKyInstance.get.mockRejectedValue("string error");
 
-      const instance = new Instance();
-      const { get } = instance.methodsInstance();
+      const instance = new HttpClient();
+      const { get } = instance.createMethods();
 
       await expect(get("users")).rejects.toBe("string error");
     });
@@ -402,8 +402,8 @@ describe("Instance", () => {
     it("passes merged headers to request", async () => {
       mockKyInstance.get.mockResolvedValue(mockResponse({}));
 
-      const instance = new Instance();
-      const { get } = instance.methodsInstance({
+      const instance = new HttpClient();
+      const { get } = instance.createMethods({
         headers: { "content-type": "application/json" },
       });
       await get("users", { headers: new Headers({ authorization: "Bearer token" }) });
@@ -413,12 +413,12 @@ describe("Instance", () => {
     });
   });
 
-  describe("extraHeaders", () => {
-    it("extends header whitelist with extraHeaders", async () => {
+  describe("allowedHeaders", () => {
+    it("extends header whitelist with allowedHeaders", async () => {
       mockKyInstance.get.mockResolvedValue(mockResponse({}));
 
-      const instance = new Instance({ extraHeaders: ["x-custom-header"] });
-      const { get } = instance.methodsInstance();
+      const instance = new HttpClient({ allowedHeaders: ["x-custom-header"] });
+      const { get } = instance.createMethods();
       await get("users", undefined, { headers: new Headers({ "x-custom-header": "value" }) });
 
       const callOptions = mockKyInstance.get.mock.calls[0][1];
@@ -430,8 +430,8 @@ describe("Instance", () => {
     it("removes undefined values from variables in POST", async () => {
       mockKyInstance.post.mockResolvedValue(mockResponse({ ok: true }));
 
-      const instance = new Instance();
-      const { post } = instance.methodsInstance();
+      const instance = new HttpClient();
+      const { post } = instance.createMethods();
       await post("users", { name: "test", age: undefined });
 
       const callOptions = mockKyInstance.post.mock.calls[0][1];
@@ -448,8 +448,8 @@ describe("Instance", () => {
       fd.append("avatar", new File([], "empty.png"));
       fd.append("doc", new File(["content"], "doc.pdf"));
 
-      const instance = new Instance();
-      const { post } = instance.methodsInstance();
+      const instance = new HttpClient();
+      const { post } = instance.createMethods();
       await post("upload", fd);
 
       const callOptions = mockKyInstance.post.mock.calls[0][1];
@@ -462,7 +462,7 @@ describe("Instance", () => {
 
   describe("baseURL handling", () => {
     it("passes baseURL as prefixUrl to ky", () => {
-      new Instance({ baseURL: "https://api.example.com" });
+      new HttpClient({ baseURL: "https://api.example.com" });
       expect(createSpy).toHaveBeenCalledWith(
         expect.objectContaining({ prefixUrl: "https://api.example.com" }),
       );
@@ -471,8 +471,8 @@ describe("Instance", () => {
     it("overrides prefixUrl when URL has absolute basePath", async () => {
       mockKyInstance.get.mockResolvedValue(mockResponse({}));
 
-      const instance = new Instance({ baseURL: "https://default.com" });
-      const { get } = instance.methodsInstance();
+      const instance = new HttpClient({ baseURL: "https://default.com" });
+      const { get } = instance.createMethods();
       await get("https://other.com/api/users");
 
       const callOptions = mockKyInstance.get.mock.calls[0][1];

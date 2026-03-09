@@ -1,4 +1,4 @@
-export const neededHeaders = [
+export const ALLOWED_HEADERS = [
   "referer",
   "origin",
   "authorization",

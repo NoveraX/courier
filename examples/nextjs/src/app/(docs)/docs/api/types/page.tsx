@@ -7,36 +7,36 @@ import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
-const commonRequestCode = `type CommonRequest<T extends Record<string, any>, D extends boolean = false> = <
+const commonRequestCode = `type RequestFn<T extends Record<string, any>, D extends boolean = false> = <
   K extends keyof T,
   RD extends boolean = false,
 >(
   source: K,
-  options?: MethodsInstanceOptions<RD>,
+  options?: CallOptions<RD>,
 ) => <
-  Q extends MethodGroup<T[K]>,
-  M extends MethodSource<T[K], Q>,
-  R = MethodQueryResponse<M extends Method<any, any> ? M : unknown>,
+  Q extends EndpointKey<T[K]>,
+  M extends ResolveEndpoint<T[K], Q>,
+  R = MethodQueryResponse<M extends Endpoint<any, any> ? M : unknown>,
 >(
   ...arguments_: RequestArguments<Q, M, D>
 ) => MethodRequestResponse<RD, R>
 
 // D = false → Proxy mode → returns Promise<R>
-// D = true  → Direct mode → returns Promise<Partial<MethodKyResponse<R>>>`
+// D = true  → Direct mode → returns Promise<Partial<HttpResponse<R>>>`
 
-const methodCode = `type Method<R, V = undefined> = (
+const methodCode = `type Endpoint<R, V = undefined> = (
   methods: Methods,
   variables: V,
-) => MethodKyResponse<R> | Promise<MethodKyResponse<R>>
+) => HttpResponse<R> | Promise<HttpResponse<R>>
 
 // R = response type
 // V = variables type (undefined if no variables needed)
 
 // Usage in source definition:
 type UserMethods = {
-  getAll: Method<User[]>                    // no variables
-  getById: Method<User, { id: string }>     // requires { id: string }
-  create: Method<User, CreateUserInput>     // requires CreateUserInput
+  getAll: Endpoint<User[]>                    // no variables
+  getById: Endpoint<User, { id: string }>     // requires { id: string }
+  create: Endpoint<User, CreateUserInput>     // requires CreateUserInput
 }`
 
 const methodsCode = `// HTTP method names — matches ky methods, with "del" instead of "delete"
@@ -45,12 +45,12 @@ type Methods = "get" | "post" | "put" | "patch" | "del" | "head"`
 const methodsInstanceCode = `type MethodsInstance = {
   [K in Methods]: <T = unknown>(
     ...arguments_: MethodParameters<K>
-  ) => Promise<MethodKyResponse<T>>
+  ) => Promise<HttpResponse<T>>
 }
 
 // The object your method definitions receive as the first argument`
 
-const methodKyResponseCode = `type MethodKyResponse<T = unknown> = {
+const methodKyResponseCode = `type HttpResponse<T = unknown> = {
   status: number    // HTTP status code (e.g., 200, 404)
   headers: Headers  // Response headers
   data: T           // Parsed response body
@@ -74,12 +74,12 @@ type OptionsWithSearchParams = Omit<Options, "searchParams"> & {
   searchParams?: Record<string, unknown>
 }`
 
-const methodsInstanceOptionsCode = `type MethodsInstanceOptions<R extends boolean = false> = Omit<
+const methodsInstanceOptionsCode = `type CallOptions<R extends boolean = false> = Omit<
   SimpleOptions,
   "onUploadProgress"
 > & {
   rawData?: R           // Return { status, headers, data } instead of just data
-  passVars?: boolean    // Pass variables to methodsInstance (default: true)
+  passVariables?: boolean    // Pass variables to methodsInstance (default: true)
   stream?: boolean      // Return ReadableStream response
   onUploadProgress?: (progress: UploadProgress) => void  // XHR upload progress
 }`
@@ -96,11 +96,11 @@ const baseOptionsCode = `type BaseOptions = MergeOptions &
     responseType?: ResponseType
     defaultData?: Record<string, unknown>
     defaultQueryParams?: Record<string, unknown>
-    extraHeaders?: string[]
+    allowedHeaders?: string[]
     bodyEncoder?: (object: Record<string, unknown>) => BodyInit
     searchParamsEncoder?: (object: Record<string, unknown>) => SearchParamsOption
     searchParamsParse?: (string: string) => Record<string, unknown>
-    requestAbort?: boolean
+    deduplicate?: boolean
     onRequest?: (info: HookInfo) => HookInfo | undefined | Promise<HookInfo | undefined>
     onResponse?: (
       info: HookInfo,
@@ -114,7 +114,7 @@ const responseTypeCode = `type ResponseType = "json" | "text"`
 const hookInfoCode = `type HookInfo = {
   source: string       // Source name (e.g., "api")
   group?: string       // Group name (e.g., "users")
-  query: string        // Method name (e.g., "getById")
+  method: string       // Method name (e.g., "getById")
   variables?: unknown  // Request variables
 }`
 
@@ -136,13 +136,13 @@ const contextCode = `type Context = {
   headers?: Headers    // Request headers to forward (direct mode)
 }`
 
-const sourcesCode = `type Sources = Record<string, Request<AnyGroups | undefined>>
+const sourcesCode = `type Sources = Record<string, Datasource<GroupsRecord | undefined>>
 
-type AnyGroups = {
-  [k: string]: RequestGroup
+type GroupsRecord = {
+  [k: string]: EndpointGroup
 }`
 
-const requestGroupOptionsCode = `type RequestGroupOptions = MergeOptions & {
+const requestGroupOptionsCode = `type EndpointGroupOptions = MergeOptions & {
   prefix?: string  // URL prefix for all methods in this group
 }`
 
@@ -152,7 +152,7 @@ const successResponseCode = `type SuccessResponse<D = unknown> = {
 }`
 
 const clientRequestDefaultsCode = `type ClientRequestDefaults = {
-  requestPage?: string
+  routePath?: string
   timeout?: number
   credentials?: RequestCredentials
   headers?: Record<string, string>
@@ -175,17 +175,17 @@ const generateMethodOptionsCode = `type GenerateMethodOptions = SimpleOptions & 
 const queryTypesCode = `// Utility types for query/method resolution
 
 // Extracts all valid query strings for a source
-type MethodGroup<T> = ClassMethods<T> | TransformToGroup<Groups<T>>
+type EndpointKey<T> = ClassMethods<T> | TransformToGroup<Groups<T>>
 // Result: "methodName" | "group:methodName"
 
-// Resolves the actual Method type from a query string
-type MethodSource<T, Q> = /* resolves to Method<R, V> */
+// Resolves the actual Endpoint type from a query string
+type ResolveEndpoint<T, Q> = /* resolves to Endpoint<R, V> */
 
-// Extracts response type from a Method
-type MethodQueryResponse<M extends Method<any, any>> = M extends Method<infer R, any> ? R : unknown
+// Extracts response type from an Endpoint
+type MethodQueryResponse<M extends Endpoint<any, any>> = M extends Endpoint<infer R, any> ? R : unknown
 
-// Extracts variables type from a Method
-type MethodQueryVariables<M extends Method<any, any>> = M extends Method<any, infer V> ? V : unknown
+// Extracts variables type from an Endpoint
+type MethodQueryVariables<M extends Endpoint<any, any>> = M extends Endpoint<any, infer V> ? V : unknown
 
 // Determines arguments based on mode and variables
 type RequestArguments<Q, M, D> =
@@ -195,21 +195,21 @@ type RequestArguments<Q, M, D> =
 
 // Return type based on rawData flag
 type MethodRequestResponse<RD, R> = Promise<
-  RD extends true ? Partial<MethodKyResponse<R>> : R
+  RD extends true ? Partial<HttpResponse<R>> : R
 >`
 
 const nexusQueryOptionsCode = `// React Query integration types
 
 type NexusQueryOptions<R, V> = WithVariables<V> &
   Omit<UseQueryOptions<R, Error, R, QueryKey>, "queryKey" | "queryFn"> & {
-    requestOptions?: MethodsInstanceOptions
+    requestOptions?: CallOptions
   }
 
 type NexusMutationOptions<R, V> = Omit<
   UseMutationOptions<R, Error, [V] extends [undefined] ? void : V>,
   "mutationFn"
 > & {
-  requestOptions?: MethodsInstanceOptions
+  requestOptions?: CallOptions
 }
 
 type WithVariables<V> = [V] extends [undefined]
@@ -240,7 +240,7 @@ export default async function TypesPage() {
 
       <Prose>
         <h2 id="request-functions">Request Function Types</h2>
-        <h3 id="common-request">CommonRequest</h3>
+        <h3 id="common-request">RequestFn</h3>
         <p>
           The curried request function type returned by <InlineCode>createClientRequest</InlineCode>
           , <InlineCode>createDirectRequest</InlineCode>, and{" "}
@@ -295,7 +295,7 @@ export default async function TypesPage() {
 
       <Prose>
         <h2 id="response-types">Response Types</h2>
-        <h3 id="method-ky-response">MethodKyResponse</h3>
+        <h3 id="method-ky-response">HttpResponse</h3>
       </Prose>
 
       <CodeBlock code={methodKyResponseCode} language="typescript" />
@@ -309,7 +309,7 @@ export default async function TypesPage() {
 
       <Prose>
         <h2 id="options-types">Options Types</h2>
-        <h3 id="methods-instance-options">MethodsInstanceOptions</h3>
+        <h3 id="methods-instance-options">CallOptions</h3>
         <p>Per-request options passed when calling a source method.</p>
       </Prose>
 
@@ -423,14 +423,14 @@ export default async function TypesPage() {
           </li>
           <li>
             <Link href="/docs/api/create-client-request">createClientRequest</Link> — uses
-            CommonRequest and ClientRequestDefaults
+            RequestFn and ClientRequestDefaults
           </li>
           <li>
             <Link href="/docs/api/request">Request</Link> — uses BaseOptions
           </li>
           <li>
             <Link href="/docs/api/instance">Instance</Link> — uses MethodsInstance and
-            MethodKyResponse
+            HttpResponse
           </li>
         </ul>
       </Prose>

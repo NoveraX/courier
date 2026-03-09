@@ -7,21 +7,21 @@ import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
-const basicCode = `import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+const basicCode = `import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
 type User = { id: number; name: string }
 type Comment = { id: number; body: string }
 
-class Users extends RequestGroup {
+class Users extends EndpointGroup {
   constructor() {
     super({ prefix: "users" })
   }
 
   // GET /users/:id → compiled to GET /users/5
-  getById: Method<User, { id: number }> = ({ get }) => get(":id")
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
 
   // GET /users/:userId/posts/:postId/comments/:commentId
-  getComment: Method<Comment, {
+  getComment: Endpoint<Comment, {
     userId: number
     postId: number
     commentId: number
@@ -35,30 +35,30 @@ const variablesCode = `// Path params are extracted from the variables object.
 await request("myApi")("users:getById", { id: 5 })
 
 // GET /users/5?include=posts — { id: 5 } consumed by :id, { include: "posts" } → query param
-getWithDetails: Method<User, { id: number; include?: string }> = ({ get }) => get(":id")
+getWithDetails: Endpoint<User, { id: number; include?: string }> = ({ get }) => get(":id")
 await request("myApi")("users:getWithDetails", { id: 5, include: "posts" })
 
 // POST /users/5/avatar — { id: 5 } consumed by :id, { name: "photo.jpg" } → JSON body
-updateAvatar: Method<void, { id: number; name: string }> = ({ post }) => post(":id/avatar")
+updateAvatar: Endpoint<void, { id: number; name: string }> = ({ post }) => post(":id/avatar")
 await request("myApi")("users:updateAvatar", { id: 5, name: "photo.jpg" })`
 
-const pathOptionsCode = `import { Request, RequestGroup, Method } from "@noverax/nexus/RequestClass"
+const pathOptionsCode = `import { Datasource, EndpointGroup, Endpoint } from "@noverax/nexus/datasource"
 import { cookies } from "next/headers"
 
 type User = { id: number; name: string }
 
-class Users extends RequestGroup {
+class Users extends EndpointGroup {
   constructor() {
     super({ prefix: "orgs/:orgId/users" })
   }
 
-  getAll: Method<User[]> = ({ get }) => get()
-  getById: Method<User, { id: number }> = ({ get }) => get(":id")
+  getAll: Endpoint<User[]> = ({ get }) => get()
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
 }
 
 const groups = { users: new Users() }
 
-class MyApi extends Request<typeof groups> {
+class MyApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: process.env.API_URL,
@@ -78,12 +78,12 @@ class MyApi extends Request<typeof groups> {
 // GET /orgs/42/users       — orgId from pathOptions
 // GET /orgs/42/users/5     — orgId from pathOptions, id from variables`
 
-const groupPathOptionsCode = `import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+const groupPathOptionsCode = `import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
 type Project = { id: number; name: string }
 type Task = { id: number; title: string }
 
-class Projects extends RequestGroup {
+class Projects extends EndpointGroup {
   constructor() {
     super({
       prefix: "workspaces/:workspaceId/projects",
@@ -96,17 +96,17 @@ class Projects extends RequestGroup {
     })
   }
 
-  getAll: Method<Project[]> = ({ get }) => get()
-  getById: Method<Project, { id: number }> = ({ get }) => get(":id")
+  getAll: Endpoint<Project[]> = ({ get }) => get()
+  getById: Endpoint<Project, { id: number }> = ({ get }) => get(":id")
 }
 
-class Tasks extends RequestGroup {
+class Tasks extends EndpointGroup {
   constructor() {
     super({ prefix: "tasks" })
     // No group pathOptions — uses the source-level pathOptions if any
   }
 
-  getAll: Method<Task[]> = ({ get }) => get()
+  getAll: Endpoint<Task[]> = ({ get }) => get()
 }`
 
 const variableConsumptionCode = `// The flow of variables through path compilation:
@@ -198,7 +198,7 @@ export default async function PathParamsPage() {
         <h2 id="group-path-options">Group-level pathOptions</h2>
 
         <p>
-          Each <InlineCode>RequestGroup</InlineCode> can define its own{" "}
+          Each <InlineCode>EndpointGroup</InlineCode> can define its own{" "}
           <InlineCode>pathOptions</InlineCode> that override the source-level values for the same
           keys. This is useful when different groups resolve the same parameter differently:
         </p>

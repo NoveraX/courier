@@ -22,9 +22,9 @@
       "types": "./lib/next/apiRoute.d.ts",
       "import": "./lib/next/apiRoute.js"
     },
-    "./RequestClass": {
-      "types": "./lib/RequestClass.d.ts",
-      "import": "./lib/RequestClass.js"
+    "./datasource": {
+      "types": "./lib/datasource.d.ts",
+      "import": "./lib/datasource.js"
     },
     "./query": {
       "types": "./lib/query/index.d.ts",

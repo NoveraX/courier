@@ -1,4 +1,4 @@
-import { neededHeaders } from "./needed-headers";
+import { ALLOWED_HEADERS } from "./allowed-headers";
 
 type HeadersInput = HeadersInit | Record<string, string | undefined>;
 
@@ -20,11 +20,11 @@ const toHeaders = (input: HeadersInput): Headers => {
   return headers;
 };
 
-export const getRequestHeaders = (
+export const filterHeaders = (
   incomingHeaders?: HeadersInput,
   validHeaders: string[] = [],
 ): Headers => {
-  const allValidHeaders = new Set<string>([...neededHeaders, ...validHeaders]);
+  const allValidHeaders = new Set<string>([...ALLOWED_HEADERS, ...validHeaders]);
   const source = incomingHeaders ? toHeaders(incomingHeaders) : new Headers();
   const result = new Headers();
 
@@ -46,7 +46,7 @@ export const mergeHeaders = (
 
   if (!requestHeaders) return merged;
 
-  const filtered = getRequestHeaders(requestHeaders, validHeaders);
+  const filtered = filterHeaders(requestHeaders, validHeaders);
 
   filtered.forEach((value, key) => {
     merged.set(key, value);

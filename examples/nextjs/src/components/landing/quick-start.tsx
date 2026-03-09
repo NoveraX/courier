@@ -8,13 +8,13 @@ import { AnimatedSection } from "./section-animate"
 
 const installCode = `npm install @noverax/nexus`
 
-const defineCode = `import { Request, RequestGroup } from "@noverax/nexus"
+const defineCode = `import { Datasource, EndpointGroup } from "@noverax/nexus"
 
-class Users extends RequestGroup {
+class Users extends EndpointGroup {
   prefix = "users"
-  getAll = new Request({ method: "GET" })
-  getOne = new Request({ method: "GET", path: ":id" })
-  create = new Request({ method: "POST" })
+  getAll = new Datasource({ method: "GET" })
+  getOne = new Datasource({ method: "GET", path: ":id" })
+  create = new Datasource({ method: "POST" })
 }
 
 export const api = { users: new Users() }`

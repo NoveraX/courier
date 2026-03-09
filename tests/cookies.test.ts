@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ky from "ky";
 import { NextResponse } from "next/server";
-import { Request } from "../src/RequestClass";
-import type { MethodsInstance } from "../src/instance/types";
-import { createRequest } from "../src/utils/createRequest";
+import { Datasource } from "../src/datasource";
+import type { HttpMethods } from "../src/instance/types";
+import { executeRequest } from "../src/utils/createRequest";
 
 let mockKyInstance: Record<string, ReturnType<typeof vi.fn>>;
 
@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 function createTestSource(methods: Record<string, Function>, options = {}) {
-  const source = new Request(options);
+  const source = new Datasource(options);
   for (const [name, fn] of Object.entries(methods)) {
     (source as Record<string, unknown>)[name] = fn;
   }
@@ -53,11 +53,11 @@ describe("cookie forwarding", () => {
     );
 
     const source = createTestSource({
-      login: (methods: MethodsInstance) => methods.get("login"),
+      login: (methods: HttpMethods) => methods.get("login"),
     });
 
     const res = new NextResponse();
-    const result = (await createRequest({ api: source }, { source: "api", query: "login" }, {
+    const result = (await executeRequest({ api: source }, { source: "api", method: "login" }, {
       res,
     })) as Response;
 
@@ -74,11 +74,11 @@ describe("cookie forwarding", () => {
     );
 
     const source = createTestSource({
-      login: (methods: MethodsInstance) => methods.get("login"),
+      login: (methods: HttpMethods) => methods.get("login"),
     });
 
     const res = new NextResponse();
-    const result = (await createRequest({ api: source }, { source: "api", query: "login" }, {
+    const result = (await executeRequest({ api: source }, { source: "api", method: "login" }, {
       res,
     })) as Response;
 
@@ -95,11 +95,11 @@ describe("cookie forwarding", () => {
     );
 
     const source = createTestSource({
-      login: (methods: MethodsInstance) => methods.get("login"),
+      login: (methods: HttpMethods) => methods.get("login"),
     });
 
     const res = new NextResponse();
-    const result = (await createRequest({ api: source }, { source: "api", query: "login" }, {
+    const result = (await executeRequest({ api: source }, { source: "api", method: "login" }, {
       res,
     })) as Response;
 
@@ -115,11 +115,11 @@ describe("cookie forwarding", () => {
     );
 
     const source = createTestSource({
-      list: (methods: MethodsInstance) => methods.get("users"),
+      list: (methods: HttpMethods) => methods.get("users"),
     });
 
     const res = new NextResponse();
-    const result = await createRequest({ api: source }, { source: "api", query: "list" }, {
+    const result = await executeRequest({ api: source }, { source: "api", method: "list" }, {
       res,
     });
 

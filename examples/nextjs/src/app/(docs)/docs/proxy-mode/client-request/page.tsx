@@ -10,7 +10,7 @@ import { docsMetadata } from "@/lib/metadata"
 const signatureCode = `import { createClientRequest } from "@noverax/nexus"
 import type { Sources } from "@/api"
 
-// createClientRequest<T>(defaults?) returns CommonRequest<T>
+// createClientRequest<T>(defaults?) returns RequestFn<T>
 const request = createClientRequest<Sources>()
 
 // Curried usage:
@@ -19,7 +19,7 @@ const result = await request("sourceName")("group:method", variables)
 
 const defaultsCode = `type ClientRequestDefaults = {
   // API route path — default: "request" → POST /api/request
-  requestPage?: string
+  routePath?: string
 
   // Request timeout in milliseconds
   timeout?: number
@@ -178,11 +178,11 @@ export default async function ClientRequestPage() {
         <ul>
           <li>
             <InlineCode>{`"group:method"`}</InlineCode> — calls a method on a{" "}
-            <InlineCode>RequestGroup</InlineCode> (most common)
+            <InlineCode>EndpointGroup</InlineCode> (most common)
           </li>
           <li>
             <InlineCode>{`"method"`}</InlineCode> — calls a method directly on the{" "}
-            <InlineCode>Request</InlineCode> class (no group)
+            <InlineCode>Datasource</InlineCode> class (no group)
           </li>
         </ul>
       </Prose>
@@ -240,7 +240,7 @@ export default async function ClientRequestPage() {
 
         <ul>
           <li>
-            Pass <InlineCode>requestPage</InlineCode> in the defaults object
+            Pass <InlineCode>routePath</InlineCode> in the defaults object
           </li>
           <li>
             Set the <InlineCode>NEXT_PUBLIC_REQUEST_PAGE</InlineCode> environment variable

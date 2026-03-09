@@ -7,11 +7,11 @@ import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
-const classCode = `class RequestGroup {
-  constructor(public options?: RequestGroupOptions)
+const classCode = `class EndpointGroup {
+  constructor(public options?: EndpointGroupOptions)
 }`
 
-const optionsCode = `type RequestGroupOptions = MergeOptions & {
+const optionsCode = `type EndpointGroupOptions = MergeOptions & {
   prefix?: string
 }
 
@@ -27,14 +27,14 @@ type PathOptionsResult =
   | Record<string, boolean | number | string | null | undefined>
   | undefined`
 
-const basicUsageCode = `import { Request, RequestGroup } from "@noverax/nexus/classes"
+const basicUsageCode = `import { Datasource, EndpointGroup } from "@noverax/nexus/datasource"
 
-const api = new Request({
+const api = new Datasource({
   baseURL: process.env.API_URL,
   groups: {
-    users: new RequestGroup({ prefix: "/users" }),
-    posts: new RequestGroup({ prefix: "/posts" }),
-    auth: new RequestGroup({ prefix: "/auth" }),
+    users: new EndpointGroup({ prefix: "/users" }),
+    posts: new EndpointGroup({ prefix: "/posts" }),
+    auth: new EndpointGroup({ prefix: "/auth" }),
   },
 })
 
@@ -42,16 +42,16 @@ const api = new Request({
 // Calling "posts:getById" → GET {baseURL}/posts/:id`
 
 const prefixCode = `// The prefix is prepended to all method URLs within this group
-const usersGroup = new RequestGroup({ prefix: "/api/v2/users" })
+const usersGroup = new EndpointGroup({ prefix: "/api/v2/users" })
 
 // Method URL: "/:id"      → /api/v2/users/:id
 // Method URL: "/search"   → /api/v2/users/search
 // Method URL: ""          → /api/v2/users`
 
-const pathOptionsCode = `import { RequestGroup } from "@noverax/nexus/classes"
+const pathOptionsCode = `import { EndpointGroup } from "@noverax/nexus/datasource"
 
 // pathOptions dynamically injects URL parameters
-const tenantGroup = new RequestGroup({
+const tenantGroup = new EndpointGroup({
   prefix: "/:tenantId/users",
   pathOptions: async (req) => {
     // req is the NextRequest object (available in proxy mode)
@@ -64,14 +64,14 @@ const tenantGroup = new RequestGroup({
 // Method URL: ""       → /acme/users
 // Method URL: "/:id"   → /acme/users/:id`
 
-const multiLevelCode = `const api = new Request({
+const multiLevelCode = `const api = new Datasource({
   baseURL: process.env.API_URL,
   // pathOptions at Request level apply to ALL groups
   pathOptions: async (req) => ({
     version: "v2",
   }),
   groups: {
-    users: new RequestGroup({
+    users: new EndpointGroup({
       prefix: "/:version/users",
       // pathOptions at group level are merged with Request-level
       pathOptions: async (req) => ({
@@ -110,7 +110,7 @@ export default async function RequestGroupPage() {
       </Prose>
 
       <CodeBlock
-        code={`import { RequestGroup } from "@noverax/nexus/classes"`}
+        code={`import { EndpointGroup } from "@noverax/nexus/datasource"`}
         language="typescript"
       />
 

@@ -4,27 +4,26 @@ import type { Options, SearchParamsOption } from "ky";
 import type { NextRequest, NextResponse } from "next/server";
 
 import type { HTTPError } from "../error";
-import type { RequestGroupOptions } from "../RequestClass";
 
 type KyInstance = typeof ky;
 
-export type Methods = Exclude<KyMethods, "delete"> | "del";
+export type HttpMethod = Exclude<KyMethods, "delete"> | "del";
 
 type KyMethods = keyof Omit<KyInstance, "create" | "extend" | "retry" | "stop">;
 
-export type AnyMethods = Partial<{
+export type AnyEndpoints = Partial<{
   [k: string]: (
-    methods: MethodsInstance,
+    methods: HttpMethods,
     variables: unknown,
-  ) => Promise<MethodKyResponse<unknown>> | MethodKyResponse<unknown>;
+  ) => Promise<HttpResponse<unknown>> | HttpResponse<unknown>;
 }>;
 
-export type MethodsInstance = {
-  [K in Methods]: <T = unknown>(...arguments_: MethodParameters<K>) => Promise<MethodKyResponse<T>>;
+export type HttpMethods = {
+  [K in HttpMethod]: <T = unknown>(...arguments_: MethodParameters<K>) => Promise<HttpResponse<T>>;
 };
 
-export type GenerateMethodOptions = SimpleOptions & {
-  vars?: FormData | Record<string, unknown>;
+export type BoundMethodOptions = SimpleOptions & {
+  variables?: FormData | Record<string, unknown>;
   stream?: boolean;
 };
 
@@ -34,25 +33,20 @@ export type UploadProgress = {
   totalBytes: number;
 };
 
-export type MethodsInstanceOptions<R extends boolean = false> = Omit<
-  SimpleOptions,
-  "onUploadProgress"
-> & {
+export type CallOptions<R extends boolean = false> = Omit<SimpleOptions, "onUploadProgress"> & {
   rawData?: R;
-  passVars?: boolean;
+  passVariables?: boolean;
   stream?: boolean;
   onUploadProgress?: (progress: UploadProgress) => void;
 };
 
-export type MethodsInstanceDatasourceOptions = RequestGroupOptions;
-
-export type MethodKyResponse<T = unknown> = {
+export type HttpResponse<T = unknown> = {
   status: number;
   headers: Headers;
   data: T;
 };
 
-export type MethodParameters<T extends Methods> = T extends "head"
+export type MethodParameters<T extends HttpMethod> = T extends "head"
   ? [url?: string, options?: MethodOptions<T>]
   : [url?: string, variables?: Record<string, unknown>, options?: MethodOptions<T>];
 
@@ -62,7 +56,7 @@ export type OptionsWithSearchParams = Omit<Options, "searchParams"> & {
 
 export type SimpleOptions = Omit<OptionsWithSearchParams, "body" | "json" | "searchParams">;
 
-export type MethodOptions<T extends Methods> = T extends "delete" | "get" | "head"
+export type MethodOptions<T extends HttpMethod> = T extends "delete" | "get" | "head"
   ? SimpleOptions
   : OptionsWithSearchParams;
 
@@ -74,11 +68,11 @@ export type BaseOptions = MergeOptions &
     responseType?: ResponseType;
     defaultData?: Record<string, unknown>;
     defaultQueryParams?: Record<string, unknown>;
-    extraHeaders?: string[];
+    allowedHeaders?: string[];
     bodyEncoder?: (object: Record<string, unknown>) => BodyInit;
     searchParamsEncoder?: (object: Record<string, unknown>) => SearchParamsOption;
     searchParamsParse?: (string: string) => Record<string, unknown>;
-    requestAbort?: boolean;
+    deduplicate?: boolean;
     onRequest?: (info: HookInfo) => HookInfo | undefined | Promise<HookInfo | undefined>;
     onResponse?: (
       info: HookInfo,
@@ -93,7 +87,7 @@ export type BaseOptions = MergeOptions &
 export type HookInfo = {
   source: string;
   group?: string;
-  query: string;
+  method: string;
   variables?: unknown;
 };
 

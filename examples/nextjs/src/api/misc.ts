@@ -1,4 +1,4 @@
-import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
 type SlowResponse = {
   success: boolean
@@ -11,12 +11,12 @@ type ErrorResponse = {
   code: number
 }
 
-export class Misc extends RequestGroup {
-  stream: Method<ReadableStream> = ({ get }) => get("stream")
+export class Misc extends EndpointGroup {
+  stream: Endpoint<ReadableStream> = ({ get }) => get("stream")
 
-  slow: Method<SlowResponse> = ({ get }) => get("slow")
+  slow: Endpoint<SlowResponse> = ({ get }) => get("slow")
 
-  error: Method<ErrorResponse, { code: number }> = ({ get }) => get("error/:code")
+  error: Endpoint<ErrorResponse, { code: number }> = ({ get }) => get("error/:code")
 }
 
 export type { SlowResponse, ErrorResponse }

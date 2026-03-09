@@ -37,7 +37,7 @@ This starts both servers concurrently:
 
 | Page | Route | Description |
 |------|-------|-------------|
-| Groups | `/groups` | `RequestGroup` with prefix, `group:method` syntax |
+| Groups | `/groups` | `EndpointGroup` with prefix, `group:method` syntax |
 | Path Params | `/path-params` | Dynamic `:id`, `:postId` URL segments |
 | Encoding | `/encoding` | Custom `bodyEncoder` and `searchParamsEncoder` |
 | Upload | `/upload` | FormData file upload with `onUploadProgress` |

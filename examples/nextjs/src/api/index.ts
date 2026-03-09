@@ -1,4 +1,4 @@
-import { Request } from "@noverax/nexus/RequestClass"
+import { Datasource } from "@noverax/nexus/datasource"
 import type { SearchParamsOption } from "ky"
 import { Echo } from "./echo"
 import { Files } from "./files"
@@ -16,7 +16,7 @@ const groups = {
   echo: new Echo(),
 }
 
-class MockApi extends Request<typeof groups> {
+class MockApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: API_URL,
@@ -29,7 +29,7 @@ class MockApi extends Request<typeof groups> {
 
 const encodedGroups = { echo: new Echo() }
 
-class EncodedApi extends Request<typeof encodedGroups> {
+class EncodedApi extends Datasource<typeof encodedGroups> {
   constructor() {
     super({
       baseURL: API_URL,
@@ -60,13 +60,13 @@ const hookedGroups = {
   misc: new Misc(),
 }
 
-class HookedApi extends Request<typeof hookedGroups> {
+class HookedApi extends Datasource<typeof hookedGroups> {
   constructor() {
     super({
       baseURL: API_URL,
       groups: hookedGroups,
       onRequest: (info) => {
-        console.log(`[nexus:onRequest] ${info.source} → ${info.group}:${info.query}`)
+        console.log(`[nexus:onRequest] ${info.source} → ${info.group}:${info.method}`)
         return info
       },
       onResponse: (_info, response) => ({
@@ -83,7 +83,7 @@ class HookedApi extends Request<typeof hookedGroups> {
       }),
       onError: (info, error) => {
         console.log(
-          `[nexus:onError] ${info.source} → ${info.group}:${info.query} — ${error.status}`
+          `[nexus:onError] ${info.source} → ${info.group}:${info.method} — ${error.status}`
         )
         return undefined
       },

@@ -15,7 +15,7 @@ export const { useQuery, useMutation, request } =
 // - Response types and variable types per method`
 
 const sourcesCode = `// api/index.ts — Define and export all sources
-import { Request } from "@noverax/nexus/RequestClass"
+import { Datasource } from "@noverax/nexus/datasource"
 
 const groups = {
   users: new Users(),   // Users group with CRUD methods
@@ -23,7 +23,7 @@ const groups = {
   files: new Files(),   // File upload methods
 }
 
-class MockApi extends Request<typeof groups> {
+class MockApi extends Datasource<typeof groups> {
   constructor() {
     super({ baseURL: "http://localhost:4000", groups })
   }
@@ -32,38 +32,38 @@ class MockApi extends Request<typeof groups> {
 export const methods = { mockApi: new MockApi() }
 export type MethodsType = typeof methods`
 
-const methodTypeCode = `// How Method<Response, Variables> drives the type system
-import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+const methodTypeCode = `// How Endpoint<Response, Variables> drives the type system
+import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
-class Users extends RequestGroup {
+class Users extends EndpointGroup {
   constructor() {
     super({ prefix: "users" })
   }
 
-  // Method<ResponseType, VariablesType>
-  getAll: Method<UserListResponse, Record<string, never>> =
+  // Endpoint<ResponseType, VariablesType>
+  getAll: Endpoint<UserListResponse, Record<string, never>> =
     ({ get }) => get()
 
-  getById: Method<User, { id: number }> =
+  getById: Endpoint<User, { id: number }> =
     ({ get }) => get(":id")
 
-  create: Method<User, CreateUserInput> =
+  create: Endpoint<User, CreateUserInput> =
     ({ post }) => post()
 
-  update: Method<User, { id: number } & Partial<CreateUserInput>> =
+  update: Endpoint<User, { id: number } & Partial<CreateUserInput>> =
     ({ put }) => put(":id")
 
-  delete: Method<{ success: boolean }, { id: number }> =
+  delete: Endpoint<{ success: boolean }, { id: number }> =
     ({ del }) => del(":id")
 }
 
 // These types flow through the entire chain:
-// Method definition → Request class → MethodsType → createQueryRequest
+// Endpoint definition → Datasource class → MethodsType → createQueryRequest
 // → useQuery/useMutation/request → call site`
 
 const inferenceCode = `// Full type inference at call site — no manual types needed
 
-// useQuery infers Response type from the Method definition
+// useQuery infers Response type from the Endpoint definition
 const { data } = useQuery("mockApi", "users:getAll")
 //      ^? { data: User[], total: number } | undefined
 
@@ -139,7 +139,7 @@ export default function SingletonExamplesPage() {
 
         <ExampleBlock
           title="Source Definition"
-          description="Define sources with Request and RequestGroup classes. Export the methods map and its type."
+          description="Define sources with Datasource and EndpointGroup classes. Export the methods map and its type."
           code={sourcesCode}
         >
           <p className="text-sm text-muted-foreground">
@@ -150,12 +150,12 @@ export default function SingletonExamplesPage() {
 
         <ExampleBlock
           title="Method Types"
-          description="Method<Response, Variables> is the foundation of the type system."
+          description="Endpoint<Response, Variables> is the foundation of the type system."
           code={methodTypeCode}
         >
           <p className="text-sm text-muted-foreground">
             Each method declares its response and variables types. These flow through the chain:
-            Method → RequestGroup → Request → MethodsType → createQueryRequest → call site.
+            Endpoint → EndpointGroup → Datasource → MethodsType → createQueryRequest → call site.
           </p>
         </ExampleBlock>
 

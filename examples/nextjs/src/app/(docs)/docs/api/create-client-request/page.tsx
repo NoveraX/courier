@@ -12,7 +12,7 @@ const signatureCode = `import { createClientRequest } from "@noverax/nexus"
 const request = createClientRequest<Sources>(defaults?)`
 
 const defaultsTypeCode = `type ClientRequestDefaults = {
-  requestPage?: string
+  routePath?: string
   timeout?: number
   credentials?: RequestCredentials
   headers?: Record<string, string>
@@ -20,10 +20,10 @@ const defaultsTypeCode = `type ClientRequestDefaults = {
   onSuccess?: (data: unknown) => void | Promise<void>
 }`
 
-const returnTypeCode = `type CommonRequest<T> = <K extends keyof T>(
+const returnTypeCode = `type RequestFn<T> = <K extends keyof T>(
   source: K,
-  options?: MethodsInstanceOptions,
-) => <Q extends MethodGroup<T[K]>>(
+  options?: CallOptions,
+) => <Q extends EndpointKey<T[K]>>(
   queryRequest: Q,
   variables?: Variables,
 ) => Promise<Response>`
@@ -42,9 +42,9 @@ const users = await request("api")("users:getAll")
 const user = await request("api")("users:getById", { id: "123" })`
 
 const defaultsUsageCode = `const request = createClientRequest<Sources>({
-  // API route name — maps to /api/{requestPage}
+  // API route name — maps to /api/{routePath}
   // Default: process.env.NEXT_PUBLIC_REQUEST_PAGE || "request"
-  requestPage: "nexus",
+  routePath: "nexus",
 
   // Request timeout in milliseconds
   timeout: 15000,
@@ -132,7 +132,7 @@ export default async function CreateClientRequestPage() {
         <p>
           <InlineCode>createClientRequest</InlineCode> accepts an optional{" "}
           <InlineCode>ClientRequestDefaults</InlineCode> object and returns a curried{" "}
-          <InlineCode>CommonRequest</InlineCode> function. The generic parameter{" "}
+          <InlineCode>RequestFn</InlineCode> function. The generic parameter{" "}
           <InlineCode>T</InlineCode> is your <InlineCode>Sources</InlineCode> type — it enables full
           type inference for source names, query names, variables, and response types.
         </p>
@@ -151,8 +151,8 @@ export default async function CreateClientRequestPage() {
       <Prose>
         <ul>
           <li>
-            <InlineCode>requestPage</InlineCode> — the API route segment. Requests are sent to{" "}
-            <InlineCode>{"/api/{requestPage}"}</InlineCode>. Defaults to{" "}
+            <InlineCode>routePath</InlineCode> — the API route segment. Requests are sent to{" "}
+            <InlineCode>{"/api/{routePath}"}</InlineCode>. Defaults to{" "}
             <InlineCode>process.env.NEXT_PUBLIC_REQUEST_PAGE</InlineCode> or{" "}
             <InlineCode>&quot;request&quot;</InlineCode>.
           </li>
@@ -181,7 +181,7 @@ export default async function CreateClientRequestPage() {
       <Prose>
         <h2 id="return-type">Return Type</h2>
         <p>
-          Returns a <InlineCode>CommonRequest&lt;T&gt;</InlineCode> — a curried function with two
+          Returns a <InlineCode>RequestFn&lt;T&gt;</InlineCode> — a curried function with two
           invocation levels:
         </p>
         <ol>
@@ -215,7 +215,7 @@ export default async function CreateClientRequestPage() {
         <h2 id="per-request-options">Per-Request Options</h2>
         <p>
           The second argument to the source selector accepts{" "}
-          <InlineCode>MethodsInstanceOptions</InlineCode> — per-call overrides for timeout, caching,
+          <InlineCode>CallOptions</InlineCode> — per-call overrides for timeout, caching,
           streaming, abort signals, and more.
         </p>
       </Prose>

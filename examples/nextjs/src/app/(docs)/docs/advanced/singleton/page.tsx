@@ -19,27 +19,27 @@ const directRequest = createDirectRequest<Sources>(sources)
 const { useQuery, useMutation } = createQueryRequest<Sources>()`
 
 const step1Code = `// api/users.ts
-import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
 type User = { id: number; name: string; email: string }
 
-export class Users extends RequestGroup {
+export class Users extends EndpointGroup {
   constructor() {
     super({ prefix: "users" })
   }
 
-  getAll: Method<User[]> = ({ get }) => get()
-  getById: Method<User, { id: number }> = ({ get }) => get(":id")
-  create: Method<User, { name: string; email: string }> = ({ post }) => post()
+  getAll: Endpoint<User[]> = ({ get }) => get()
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+  create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
 }
 
 // api/index.ts
-import { Request } from "@noverax/nexus/RequestClass"
+import { Datasource } from "@noverax/nexus/datasource"
 import { Users } from "./users"
 
 const groups = { users: new Users() }
 
-class MyApi extends Request<typeof groups> {
+class MyApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: process.env.API_URL ?? "http://localhost:4000",
@@ -155,7 +155,7 @@ export default async function SingletonPage() {
       <StepList
         steps={[
           {
-            title: "Define your Request classes and sources",
+            title: "Define your Datasource classes and sources",
             content: (
               <div className="mt-4 space-y-3">
                 <p>

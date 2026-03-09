@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import type { Sources } from "../direct/types";
-import { createRequest } from "../utils/createRequest";
-import type { CreateRequestOptionsType } from "../utils/helpers";
+import { executeRequest } from "../utils/createRequest";
+import type { RequestPayloadInput } from "../utils/helpers";
 
 export const apiRoute = (sources: Sources) => {
   const POST = async (request: NextRequest) => {
@@ -14,7 +14,7 @@ export const apiRoute = (sources: Sources) => {
 
     const contentType = request.headers.get("content-type");
 
-    let body: CreateRequestOptionsType;
+    let body: RequestPayloadInput;
 
     if (contentType?.includes("multipart/form-data")) {
       body = await request.formData();
@@ -31,7 +31,7 @@ export const apiRoute = (sources: Sources) => {
       );
     }
 
-    return createRequest(sources, body, {
+    return executeRequest(sources, body, {
       req: request,
       res: new NextResponse(),
     });

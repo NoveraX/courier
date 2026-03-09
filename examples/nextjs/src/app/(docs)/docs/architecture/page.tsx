@@ -30,7 +30,7 @@ const proxyFlowCode = `┌──────────────────
 │  createRequest(sources, body, context)                       │
 │       │                                                      │
 │       ▼                                                      │
-│  Instance → ky → GET/POST/PUT/PATCH/DELETE                   │
+│  HttpClient → ky → GET/POST/PUT/PATCH/DELETE                   │
 └──────────────────┬───────────────────────────────────────────┘
                    │  HTTP request
                    ▼
@@ -47,7 +47,7 @@ const directFlowCode = `┌─────────────────�
 │  createRequest(sources, body, context)                       │
 │       │                                                      │
 │       ▼                                                      │
-│  Instance → ky → GET/POST/PUT/PATCH/DELETE                   │
+│  HttpClient → ky → GET/POST/PUT/PATCH/DELETE                   │
 └──────────────────┬───────────────────────────────────────────┘
                    │  HTTP request
                    ▼
@@ -55,23 +55,23 @@ const directFlowCode = `┌─────────────────�
 │  Backend API (any REST server)                               │
 └──────────────────────────────────────────────────────────────┘`
 
-const sourcesCode = `import { Request, RequestGroup, type Method } from "@noverax/nexus/RequestClass"
+const sourcesCode = `import { Datasource, EndpointGroup, type Endpoint } from "@noverax/nexus/datasource"
 
 type User = { id: number; name: string; email: string }
 
-// RequestGroup — groups related endpoints under a URL prefix
-class Users extends RequestGroup {
+// EndpointGroup — groups related endpoints under a URL prefix
+class Users extends EndpointGroup {
   constructor() {
     super({ prefix: "users" })
   }
 
-  getAll: Method<User[]> = ({ get }) => get()
-  getById: Method<User, { id: number }> = ({ get }) => get(":id")
-  create: Method<User, { name: string; email: string }> = ({ post }) => post()
+  getAll: Endpoint<User[]> = ({ get }) => get()
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+  create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
 }
 
-// Request — top-level source with baseURL and groups
-class MyApi extends Request<{ users: Users }> {
+// Datasource — top-level source with baseURL and groups
+class MyApi extends Datasource<{ users: Users }> {
   constructor() {
     super({
       baseURL: process.env.API_URL!,
@@ -88,30 +88,30 @@ const createRequestCode = `// createRequest is the single core orchestrator
 // Both proxy and direct modes call it with the same interface
 
 createRequest(sources, {
-  source: "myApi",       // which Request class
-  group: "users",        // which RequestGroup
-  query: "getById",      // which Method
+  source: "myApi",       // which Datasource class
+  group: "users",        // which EndpointGroup
+  query: "getById",      // which Endpoint
   variables: { id: 5 },  // typed variables
 }, context)
 
 // Internally:
 // 1. Looks up sources["myApi"] → MyApi instance
 // 2. Finds the group: myApi.groups["users"] → Users instance
-// 3. Creates an Instance with baseURL + prefix → "https://api.example.com/users"
+// 3. Creates an HttpClient with baseURL + prefix → "https://api.example.com/users"
 // 4. Calls the method: users.getById({ get, post, ... })
-// 5. The method calls get(":id") → Instance resolves to GET /users/5
+// 5. The method calls get(":id") → HttpClient resolves to GET /users/5
 // 6. Returns the parsed JSON response`
 
-const instanceCode = `// Instance wraps ky and generates typed HTTP methods
+const instanceCode = `// HttpClient wraps ky and generates typed HTTP methods
 // It handles: URL params, body encoding, search params, AbortController
 
-const instance = new Instance({
+const instance = new HttpClient({
   baseURL: "https://api.example.com/users",
   variables: { id: 5 },
   headers: { Authorization: "Bearer ..." },
 })
 
-// instance.methodsInstance provides:
+// instance.createMethods provides:
 // { get, post, put, patch, del, head }
 
 // Each method resolves :param placeholders from variables
@@ -119,7 +119,7 @@ const instance = new Instance({
 // post() with variables → POST /users with JSON body`
 
 const layersCode = `// Layer 1 — API Definition (shared)
-class MyApi extends Request<{ users: Users }> { ... }
+class MyApi extends Datasource<{ users: Users }> { ... }
 export const sources = { myApi: new MyApi() }
 
 // Layer 2 — Transport (mode-specific)
@@ -127,7 +127,7 @@ export const sources = { myApi: new MyApi() }
 // Direct: createDirectRequest → createRequest
 
 // Layer 3 — Execution (shared)
-// createRequest → Instance → ky → backend
+// createRequest → HttpClient → ky → backend
 
 // Layer 4 — Integration (optional)
 // createQueryRequest wraps createClientRequest with React Query hooks`
@@ -160,8 +160,8 @@ export default async function ArchitecturePage() {
       <Prose>
         <ol>
           <li>
-            <strong>Definition</strong> — <InlineCode>Request</InlineCode> and{" "}
-            <InlineCode>RequestGroup</InlineCode> classes define your API structure, base URLs,
+            <strong>Definition</strong> — <InlineCode>Datasource</InlineCode> and{" "}
+            <InlineCode>EndpointGroup</InlineCode> classes define your API structure, base URLs,
             methods, and types. This layer is shared between all modes.
           </li>
           <li>
@@ -171,7 +171,7 @@ export default async function ArchitecturePage() {
           <li>
             <strong>Execution</strong> — <InlineCode>createRequest</InlineCode> is the single
             orchestrator that resolves source → group → method and delegates to{" "}
-            <InlineCode>Instance</InlineCode> for the actual HTTP call.
+            <InlineCode>HttpClient</InlineCode> for the actual HTTP call.
           </li>
           <li>
             <strong>Integration</strong> — optional wrappers like{" "}
@@ -208,7 +208,7 @@ export default async function ArchitecturePage() {
           </li>
           <li>
             <InlineCode>createRequest</InlineCode> resolves the source, group, and method, creates
-            an <InlineCode>Instance</InlineCode>, and executes the HTTP call
+            an <InlineCode>HttpClient</InlineCode>, and executes the HTTP call
           </li>
           <li>The response flows back: backend → API route → browser</li>
         </ol>
@@ -237,7 +237,7 @@ export default async function ArchitecturePage() {
         <p>
           Direct mode skips the API route entirely. <InlineCode>createDirectRequest</InlineCode>{" "}
           calls <InlineCode>createRequest</InlineCode> directly, which creates an{" "}
-          <InlineCode>Instance</InlineCode> and makes the HTTP call. This eliminates the extra
+          <InlineCode>HttpClient</InlineCode> and makes the HTTP call. This eliminates the extra
           network hop and keeps the entire operation server-side.
         </p>
       </Prose>
@@ -245,12 +245,12 @@ export default async function ArchitecturePage() {
       <Prose>
         <h2 id="core-components">Core Components</h2>
 
-        <h3 id="request-requestgroup">Request & RequestGroup</h3>
+        <h3 id="request-requestgroup">Datasource & EndpointGroup</h3>
 
         <p>
-          These are the foundation of your API definition. A <InlineCode>Request</InlineCode> class
+          These are the foundation of your API definition. A <InlineCode>Datasource</InlineCode> class
           represents a backend service with a <InlineCode>baseURL</InlineCode> and one or more{" "}
-          <InlineCode>RequestGroup</InlineCode> instances. Each group represents a REST resource
+          <InlineCode>EndpointGroup</InlineCode> instances. Each group represents a REST resource
           (e.g., users, products) with typed methods.
         </p>
       </Prose>
@@ -270,23 +270,23 @@ export default async function ArchitecturePage() {
       <CodeBlock code={createRequestCode} language="typescript" filename="Core orchestration" />
 
       <Prose>
-        <h3 id="instance">Instance</h3>
+        <h3 id="instance">HttpClient</h3>
 
         <p>
-          <InlineCode>Instance</InlineCode> wraps <InlineCode>ky</InlineCode> and provides typed
+          <InlineCode>HttpClient</InlineCode> wraps <InlineCode>ky</InlineCode> and provides typed
           HTTP methods. It resolves path parameters from variables, encodes request bodies, and
           manages abort controllers:
         </p>
       </Prose>
 
-      <CodeBlock code={instanceCode} language="typescript" filename="Instance" />
+      <CodeBlock code={instanceCode} language="typescript" filename="HttpClient" />
 
       <Callout variant="tip" title="ky under the hood">
         <p>
           Nexus uses <InlineCode>ky</InlineCode> as the HTTP engine — a lightweight, modern{" "}
           <InlineCode>fetch</InlineCode> wrapper with retry, timeout, hooks, and JSON handling built
           in. You never interact with <InlineCode>ky</InlineCode> directly; Nexus configures it
-          through <InlineCode>Instance</InlineCode>.
+          through <InlineCode>HttpClient</InlineCode>.
         </p>
       </Callout>
 
@@ -317,7 +317,7 @@ export default async function ArchitecturePage() {
               <td className="px-4 py-3">Proxy</td>
               <td className="px-4 py-3">Browser</td>
               <td className="px-4 py-3">
-                <InlineCode>{"CommonRequest<Sources>"}</InlineCode>
+                <InlineCode>{"RequestFn<Sources>"}</InlineCode>
               </td>
             </tr>
             <tr className="border-b border-border/50">
@@ -327,7 +327,7 @@ export default async function ArchitecturePage() {
               <td className="px-4 py-3">Direct</td>
               <td className="px-4 py-3">Server</td>
               <td className="px-4 py-3">
-                <InlineCode>{"CommonRequest<Sources>"}</InlineCode>
+                <InlineCode>{"RequestFn<Sources>"}</InlineCode>
               </td>
             </tr>
             <tr>
@@ -346,7 +346,7 @@ export default async function ArchitecturePage() {
 
       <Prose>
         <p>
-          All three return the same <InlineCode>{"CommonRequest<Sources>"}</InlineCode> type (or
+          All three return the same <InlineCode>{"RequestFn<Sources>"}</InlineCode> type (or
           wrap it), meaning you get identical type inference regardless of which factory you use.
         </p>
 
@@ -357,7 +357,7 @@ export default async function ArchitecturePage() {
             <Link href="/docs/installation">Installation</Link> — add Nexus to your project
           </li>
           <li>
-            <Link href="/docs/core-concepts/request">Request & RequestGroup</Link> — deep dive into
+            <Link href="/docs/core-concepts/request">Datasource & EndpointGroup</Link> — deep dive into
             API definitions
           </li>
           <li>

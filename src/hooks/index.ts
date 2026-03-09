@@ -1,11 +1,11 @@
 import type { NormalizedOptions } from "ky";
 import { HTTPError } from "../error";
-import type { Instance } from "../instance/index";
+import type { HttpClient } from "../instance/index";
 
 export const supportsAbortController = typeof globalThis.AbortController === "function";
 
-export function makeSignals(
-  this: Instance,
+export function mergeAbortSignals(
+  this: HttpClient,
   newSignal: AbortSignal,
   originalSignal: AbortSignal,
   url: string,
@@ -15,9 +15,9 @@ export function makeSignals(
   }
 
   const handler = () => {
-    const source = this.currentExecutingRequests[url];
+    const source = this.pendingRequests[url];
     if (source) {
-      delete this.currentExecutingRequests[url];
+      delete this.pendingRequests[url];
       source.abort("cancel request");
     }
   };
@@ -31,13 +31,13 @@ export function makeSignals(
   return newSignal;
 }
 
-export function beforeRequestHook(this: Instance, request: Request, options: NormalizedOptions) {
-  const cancelUniqId = pathAndOrigin(request.url, request.method);
+export function deduplicateRequest(this: HttpClient, request: Request, options: NormalizedOptions) {
+  const dedupeKey = getDedupeKey(request.url, request.method);
 
-  const source = this.currentExecutingRequests[cancelUniqId];
+  const source = this.pendingRequests[dedupeKey];
 
   if (source) {
-    delete this.currentExecutingRequests[cancelUniqId];
+    delete this.pendingRequests[dedupeKey];
     source.abort(
       new HTTPError({
         data: {
@@ -51,21 +51,21 @@ export function beforeRequestHook(this: Instance, request: Request, options: Nor
   }
 
   const cancelToken = new AbortController();
-  this.currentExecutingRequests[cancelUniqId] = cancelToken;
+  this.pendingRequests[dedupeKey] = cancelToken;
 
-  options.signal = makeSignals.call(this, cancelToken.signal, request.signal, cancelUniqId);
+  options.signal = mergeAbortSignals.call(this, cancelToken.signal, request.signal, dedupeKey);
 
   return new Request(request, options);
 }
 
-export function afterResponse(this: Instance, request: Request) {
-  const url = pathAndOrigin(request.url, request.method);
-  if (this.currentExecutingRequests[url]) {
-    delete this.currentExecutingRequests[url];
+export function cleanupAfterResponse(this: HttpClient, request: Request) {
+  const url = getDedupeKey(request.url, request.method);
+  if (this.pendingRequests[url]) {
+    delete this.pendingRequests[url];
   }
 }
 
-export function pathAndOrigin(url: string, method: string) {
+export function getDedupeKey(url: string, method: string) {
   if (!url) return "";
   const queryIndex = url.indexOf("?");
   const hashIndex = url.indexOf("#");

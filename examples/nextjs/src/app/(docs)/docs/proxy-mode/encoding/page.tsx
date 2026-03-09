@@ -11,22 +11,22 @@ const defaultBehaviorCode = `// Default encoding behavior depends on the HTTP me
 
 // GET, DELETE → variables go to URLSearchParams
 // GET /users?page=1&limit=10
-getAll: Method<User[], { page: number; limit: number }> = ({ get }) => get()
+getAll: Endpoint<User[], { page: number; limit: number }> = ({ get }) => get()
 await request("myApi")("users:getAll", { page: 1, limit: 10 })
 
 // POST, PUT, PATCH → variables go to JSON body
 // POST /users  Body: { "name": "Jane", "email": "jane@test.com" }
-create: Method<User, { name: string; email: string }> = ({ post }) => post()
+create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
 await request("myApi")("users:create", { name: "Jane", email: "jane@test.com" })
 
 // HEAD → no variables sent
-check: Method<void> = ({ head }) => head()`
+check: Endpoint<void> = ({ head }) => head()`
 
-const bodyEncoderCode = `import { Request } from "@noverax/nexus/RequestClass"
+const bodyEncoderCode = `import { Datasource } from "@noverax/nexus/datasource"
 
 const groups = { auth: new Auth() }
 
-class MyApi extends Request<typeof groups> {
+class MyApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: process.env.API_URL,
@@ -52,11 +52,11 @@ await request("myApi")("auth:login", {
   password: "secret",
 })`
 
-const searchParamsEncoderCode = `import { Request } from "@noverax/nexus/RequestClass"
+const searchParamsEncoderCode = `import { Datasource } from "@noverax/nexus/datasource"
 
 const groups = { products: new Products() }
 
-class MyApi extends Request<typeof groups> {
+class MyApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: process.env.API_URL,
@@ -86,7 +86,7 @@ await request("myApi")("products:search", {
   tags: ["sale", "new"],
 })`
 
-const searchParamsParseCode = `class MyApi extends Request<typeof groups> {
+const searchParamsParseCode = `class MyApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: process.env.API_URL,
@@ -105,7 +105,7 @@ const searchParamsParseCode = `class MyApi extends Request<typeof groups> {
   }
 }`
 
-const defaultDataCode = `class MyApi extends Request<typeof groups> {
+const defaultDataCode = `class MyApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: process.env.API_URL,
@@ -126,7 +126,7 @@ await request("myApi")("users:create", { name: "Jane" })
 // GET /users?apiVersion=v2&locale=en&page=1
 await request("myApi")("users:getAll", { page: 1 })`
 
-const defaultQueryParamsCode = `class MyApi extends Request<typeof groups> {
+const defaultQueryParamsCode = `class MyApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: process.env.API_URL,
@@ -203,7 +203,7 @@ export default async function EncodingPage() {
         <p>
           <InlineCode>bodyEncoder</InlineCode> is set at the source level and applies to all
           POST/PUT/PATCH requests for that source. If you need different encoding per group, create
-          separate <InlineCode>Request</InlineCode> sources.
+          separate <InlineCode>Datasource</InlineCode> sources.
         </p>
       </Callout>
 

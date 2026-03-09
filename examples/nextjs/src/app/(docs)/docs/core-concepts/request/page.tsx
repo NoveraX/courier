@@ -7,10 +7,10 @@ import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
-const requestClassCode = `import { Request } from "@noverax/nexus/RequestClass"
+const requestClassCode = `import { Datasource } from "@noverax/nexus/datasource"
 
 // A simple Request without groups — for flat APIs with few endpoints
-class SimpleApi extends Request {
+class SimpleApi extends Datasource {
   constructor() {
     super({
       baseURL: "https://api.example.com",
@@ -18,28 +18,28 @@ class SimpleApi extends Request {
   }
 }`
 
-const requestGroupCode = `import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+const requestGroupCode = `import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
 type User = { id: number; name: string; email: string }
 type CreateUserVars = { name: string; email: string }
 
-export class Users extends RequestGroup {
+export class Users extends EndpointGroup {
   constructor() {
     // The prefix becomes the URL path segment: /users
     super({ prefix: "users" })
   }
 
-  // Method<ResponseType> — no variables needed
-  getAll: Method<User[]> = ({ get }) => get()
+  // Endpoint<ResponseType> — no variables needed
+  getAll: Endpoint<User[]> = ({ get }) => get()
 
-  // Method<ResponseType, VariablesType> — variables are required
-  getById: Method<User, { id: number }> = ({ get }) => get(":id")
-  create: Method<User, CreateUserVars> = ({ post }) => post()
-  update: Method<User, { id: number; name: string }> = ({ put }) => put(":id")
-  remove: Method<null, { id: number }> = ({ del }) => del(":id")
+  // Endpoint<ResponseType, VariablesType> — variables are required
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+  create: Endpoint<User, CreateUserVars> = ({ post }) => post()
+  update: Endpoint<User, { id: number; name: string }> = ({ put }) => put(":id")
+  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
 }`
 
-const requestWithGroupsCode = `import { Request } from "@noverax/nexus/RequestClass"
+const requestWithGroupsCode = `import { Datasource } from "@noverax/nexus/datasource"
 import { Users } from "./users"
 import { Posts } from "./posts"
 import { Comments } from "./comments"
@@ -50,7 +50,7 @@ const groups = {
   comments: new Comments(),
 }
 
-class BlogApi extends Request<typeof groups> {
+class BlogApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: process.env.API_URL ?? "http://localhost:4000",
@@ -69,11 +69,11 @@ const { data } = useQuery("blogApi", "posts:getBySlug", { variables: { slug: "he
 // Without groups — just the method name
 const { data } = useQuery("simpleApi", "getHealth")`
 
-const groupOptionsCode = `import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+const groupOptionsCode = `import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
 type Product = { id: number; name: string; price: number }
 
-export class Products extends RequestGroup {
+export class Products extends EndpointGroup {
   constructor() {
     super({
       // URL prefix — appended to the base URL
@@ -86,8 +86,8 @@ export class Products extends RequestGroup {
     })
   }
 
-  list: Method<Product[]> = ({ get }) => get()
-  getById: Method<Product, { id: number }> = ({ get }) => get(":id")
+  list: Endpoint<Product[]> = ({ get }) => get()
+  getById: Endpoint<Product, { id: number }> = ({ get }) => get(":id")
 }`
 
 export const metadata = docsMetadata(
@@ -155,7 +155,7 @@ export default async function RequestPage() {
 
       <Callout variant="info" title="The Method type">
         <p>
-          <InlineCode>{"Method<R, V>"}</InlineCode> is a generic type where{" "}
+          <InlineCode>{"Endpoint<R, V>"}</InlineCode> is a generic type where{" "}
           <InlineCode>R</InlineCode> is the response type and <InlineCode>V</InlineCode> is the
           variables type. When <InlineCode>V</InlineCode> is omitted (defaults to{" "}
           <InlineCode>undefined</InlineCode>), no variables are required to call the method.

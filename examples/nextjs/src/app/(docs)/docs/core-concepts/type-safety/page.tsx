@@ -7,24 +7,24 @@ import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
-const methodTypeCode = `import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+const methodTypeCode = `import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
 type User = { id: number; name: string; email: string }
 type UserList = { data: User[]; total: number }
 
-export class Users extends RequestGroup {
+export class Users extends EndpointGroup {
   constructor() {
     super({ prefix: "users" })
   }
 
-  // Method<R> — R is the response type, no variables needed
-  getAll: Method<UserList> = ({ get }) => get()
+  // Endpoint<R> — R is the response type, no variables needed
+  getAll: Endpoint<UserList> = ({ get }) => get()
 
-  // Method<R, V> — R is the response type, V is the variables type
-  getById: Method<User, { id: number }> = ({ get }) => get(":id")
+  // Endpoint<R, V> — R is the response type, V is the variables type
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
 
   // V determines what the caller must pass
-  create: Method<User, { name: string; email: string }> = ({ post }) => post()
+  create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
 }`
 
 const inferenceChainCode = `// 1. You define the source
@@ -36,16 +36,16 @@ const { useQuery, useMutation } = createQueryRequest<Sources>()
 
 // 3. TypeScript infers everything at the call site
 const { data } = useQuery("myApi", "users:getAll")
-//      ^? UserList — inferred from Method<UserList>
+//      ^? UserList — inferred from Endpoint<UserList>
 
 const { data } = useQuery("myApi", "users:getById", {
   variables: { id: 5 },
-  //           ^? { id: number } — inferred from Method<User, { id: number }>
+  //           ^? { id: number } — inferred from Endpoint<User, { id: number }>
 })
 
 const { mutate } = useMutation("myApi", "users:create")
 mutate({ name: "Jane", email: "jane@test.com" })
-//      ^? { name: string; email: string } — inferred from Method<User, CreateVars>`
+//      ^? { name: string; email: string } — inferred from Endpoint<User, CreateVars>`
 
 const queryStringTypesCode = `// The first argument is narrowed to valid source names
 useQuery("myApi", "users:getAll")     // ✓ — "myApi" exists in Sources
@@ -56,14 +56,14 @@ useQuery("myApi", "users:getAll")    // ✓
 useQuery("myApi", "users:unknown")   // ✗ — "unknown" is not a method on Users
 useQuery("myApi", "fake:getAll")     // ✗ — "fake" is not a group on MyApi
 
-// TypeScript parses the string literal using SplitMethod<T>
-type SplitMethod<T extends string> =
+// TypeScript parses the string literal using SplitEndpoint<T>
+type SplitEndpoint<T extends string> =
   T extends \`\${infer Group}:\${infer Method}\`
     ? { group: Group; method: Method }
     : { group: undefined; method: T }`
 
 const variablesEnforcementCode = `// Method with no variables — V defaults to undefined
-getAll: Method<User[]> = ({ get }) => get()
+getAll: Endpoint<User[]> = ({ get }) => get()
 
 // ✓ No variables needed
 useQuery("myApi", "users:getAll")
@@ -72,7 +72,7 @@ useQuery("myApi", "users:getAll")
 useQuery("myApi", "users:getAll", { variables: { page: 1 } })
 
 // Method with required variables
-getById: Method<User, { id: number }> = ({ get }) => get(":id")
+getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
 
 // ✗ Type error — variables are required
 useQuery("myApi", "users:getById")
@@ -83,7 +83,7 @@ useQuery("myApi", "users:getById", { variables: { id: "abc" } })
 // ✓ Correct
 useQuery("myApi", "users:getById", { variables: { id: 5 } })`
 
-const wellTypedPatternCode = `import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+const wellTypedPatternCode = `import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
 // 1. Define your domain types explicitly
 type Product = {
@@ -104,16 +104,16 @@ type CreateProductVars = Omit<Product, "id">
 type UpdateProductVars = { id: number } & Partial<CreateProductVars>
 
 // 2. Use them in Method generics
-export class Products extends RequestGroup {
+export class Products extends EndpointGroup {
   constructor() {
     super({ prefix: "products" })
   }
 
-  list: Method<Product[], ProductFilters> = ({ get }) => get()
-  getById: Method<Product, { id: number }> = ({ get }) => get(":id")
-  create: Method<Product, CreateProductVars> = ({ post }) => post()
-  update: Method<Product, UpdateProductVars> = ({ patch }) => patch(":id")
-  remove: Method<null, { id: number }> = ({ del }) => del(":id")
+  list: Endpoint<Product[], ProductFilters> = ({ get }) => get()
+  getById: Endpoint<Product, { id: number }> = ({ get }) => get(":id")
+  create: Endpoint<Product, CreateProductVars> = ({ post }) => post()
+  update: Endpoint<Product, UpdateProductVars> = ({ patch }) => patch(":id")
+  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
 }
 
 // 3. Everything flows automatically
@@ -121,19 +121,19 @@ export class Products extends RequestGroup {
 //                                                 ^? ProductFilters
 // → data is Product[]`
 
-const methodsInstanceCode = `// The methods object passed to each Method function is typed as MethodsInstance
+const methodsInstanceCode = `// The methods object passed to each Endpoint function is typed as MethodsInstance
 type MethodsInstance = {
-  get: <T>(url?: string, options?: SimpleOptions) => Promise<MethodKyResponse<T>>
-  post: <T>(url?: string, variables?: Record<string, unknown>) => Promise<MethodKyResponse<T>>
-  put: <T>(url?: string, variables?: Record<string, unknown>) => Promise<MethodKyResponse<T>>
-  patch: <T>(url?: string, variables?: Record<string, unknown>) => Promise<MethodKyResponse<T>>
-  del: <T>(url?: string, options?: SimpleOptions) => Promise<MethodKyResponse<T>>
-  head: <T>(url?: string, options?: SimpleOptions) => Promise<MethodKyResponse<T>>
+  get: <T>(url?: string, options?: SimpleOptions) => Promise<HttpResponse<T>>
+  post: <T>(url?: string, variables?: Record<string, unknown>) => Promise<HttpResponse<T>>
+  put: <T>(url?: string, variables?: Record<string, unknown>) => Promise<HttpResponse<T>>
+  patch: <T>(url?: string, variables?: Record<string, unknown>) => Promise<HttpResponse<T>>
+  del: <T>(url?: string, options?: SimpleOptions) => Promise<HttpResponse<T>>
+  head: <T>(url?: string, options?: SimpleOptions) => Promise<HttpResponse<T>>
 }
 
-// The response type T in MethodKyResponse<T> is inferred from Method<R, V>
-// When you write: getAll: Method<User[]> = ({ get }) => get()
-// TypeScript infers T = User[] through the Method generic`
+// The response type T in HttpResponse<T> is inferred from Endpoint<R, V>
+// When you write: getAll: Endpoint<User[]> = ({ get }) => get()
+// TypeScript infers T = User[] through the Endpoint generic`
 
 export const metadata = docsMetadata(
   "Type Safety",
@@ -161,7 +161,7 @@ export default async function TypeSafetyPage() {
         <h2 id="method-generic">The Method Generic</h2>
 
         <p>
-          Type safety starts with the <InlineCode>{"Method<R, V>"}</InlineCode> generic. Every
+          Type safety starts with the <InlineCode>{"Endpoint<R, V>"}</InlineCode> generic. Every
           method in a <InlineCode>RequestGroup</InlineCode> declares two type parameters:
         </p>
 
@@ -195,7 +195,7 @@ export default async function TypeSafetyPage() {
         <p>
           You never need to write{" "}
           <InlineCode>{'useQuery<UserList>("myApi", "users:getAll")'}</InlineCode>. The response
-          type is inferred automatically from your <InlineCode>{"Method<UserList>"}</InlineCode>{" "}
+          type is inferred automatically from your <InlineCode>{"Endpoint<UserList>"}</InlineCode>{" "}
           definition. This means your types stay in one place and are never duplicated.
         </p>
       </Callout>
@@ -217,7 +217,7 @@ export default async function TypeSafetyPage() {
 
         <p>
           TypeScript enforces whether variables are required, optional, or forbidden based on your{" "}
-          <InlineCode>{"Method<R, V>"}</InlineCode> definition:
+          <InlineCode>{"Endpoint<R, V>"}</InlineCode> definition:
         </p>
       </Prose>
 
@@ -250,7 +250,7 @@ export default async function TypeSafetyPage() {
           The <InlineCode>methods</InlineCode> object passed to each method function is strongly
           typed as <InlineCode>MethodsInstance</InlineCode>. Each HTTP helper is generic — it
           inherits the return type <InlineCode>T</InlineCode> from your{" "}
-          <InlineCode>{"Method<R, V>"}</InlineCode> definition:
+          <InlineCode>{"Endpoint<R, V>"}</InlineCode> definition:
         </p>
       </Prose>
 

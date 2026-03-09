@@ -7,14 +7,14 @@ import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
-const classCode = `class Request<T extends RequestGroupType | undefined = undefined> {
+const classCode = `class Datasource<T extends RequestGroupType | undefined = undefined> {
   constructor(public options?: RequestOptions<T>)
 }`
 
 const requestOptionsCode = `type RequestOptions<T> = BaseOptions &
   (T extends RequestGroupType ? { groups: T } : {})
 
-type RequestGroupType = Record<string, RequestGroup>`
+type RequestGroupType = Record<string, EndpointGroup>`
 
 const baseOptionsCode = `type BaseOptions = MergeOptions & KyOptions & {
   // Base URL for all requests from this source
@@ -30,7 +30,7 @@ const baseOptionsCode = `type BaseOptions = MergeOptions & KyOptions & {
   defaultQueryParams?: Record<string, unknown>
 
   // Additional header names to preserve through the proxy
-  extraHeaders?: string[]
+  allowedHeaders?: string[]
 
   // Custom body encoder (e.g., for URL-encoded forms)
   bodyEncoder?: (object: Record<string, unknown>) => BodyInit
@@ -42,7 +42,7 @@ const baseOptionsCode = `type BaseOptions = MergeOptions & KyOptions & {
   searchParamsParse?: (string: string) => Record<string, unknown>
 
   // Enable AbortController for request deduplication
-  requestAbort?: boolean
+  deduplicate?: boolean
 
   // Lifecycle hooks
   onRequest?: (info: HookInfo) => HookInfo | undefined | Promise<HookInfo | undefined>
@@ -53,10 +53,10 @@ const baseOptionsCode = `type BaseOptions = MergeOptions & KyOptions & {
   onError?: (info: HookInfo, error: HTTPError) => undefined | Promise<undefined>
 }`
 
-const basicUsageCode = `import { Request } from "@noverax/nexus/classes"
+const basicUsageCode = `import { Datasource } from "@noverax/nexus/datasource"
 
 // Simple source without groups
-const api = new Request({
+const api = new Datasource({
   baseURL: "https://api.example.com/v1",
   timeout: 10000,
   headers: {
@@ -64,22 +64,22 @@ const api = new Request({
   },
 })`
 
-const withGroupsCode = `import { Request, RequestGroup } from "@noverax/nexus/classes"
+const withGroupsCode = `import { Datasource, EndpointGroup } from "@noverax/nexus/datasource"
 
 // Source with request groups
-const api = new Request({
+const api = new Datasource({
   baseURL: process.env.API_URL,
   timeout: 10000,
   responseType: "json",
   groups: {
-    users: new RequestGroup({ prefix: "/users" }),
-    posts: new RequestGroup({ prefix: "/posts" }),
-    files: new RequestGroup({ prefix: "/files" }),
+    users: new EndpointGroup({ prefix: "/users" }),
+    posts: new EndpointGroup({ prefix: "/posts" }),
+    files: new EndpointGroup({ prefix: "/files" }),
   },
 })`
 
 const defaultDataCode = `// defaultData is merged into every POST/PUT/PATCH request body
-const api = new Request({
+const api = new Datasource({
   baseURL: process.env.API_URL,
   defaultData: {
     apiKey: process.env.API_KEY,
@@ -91,7 +91,7 @@ const api = new Request({
 // The apiKey and version are automatically included`
 
 const defaultQueryParamsCode = `// defaultQueryParams is merged into every request's search parameters
-const api = new Request({
+const api = new Datasource({
   baseURL: process.env.API_URL,
   defaultQueryParams: {
     locale: "en",
@@ -102,12 +102,12 @@ const api = new Request({
 // GET /users → GET /users?locale=en&format=json
 // GET /users?page=1 → GET /users?locale=en&format=json&page=1`
 
-const hooksCode = `const api = new Request({
+const hooksCode = `const api = new Datasource({
   baseURL: process.env.API_URL,
 
   // Called before every request — can modify or cancel
   onRequest: (info) => {
-    console.log(\`[\${info.source}] \${info.group}:\${info.query}\`)
+    console.log(\`[\${info.source}] \${info.group}:\${info.method}\`)
     return info // return modified info or undefined to continue
   },
 
@@ -127,12 +127,12 @@ const hooksCode = `const api = new Request({
 const hookInfoCode = `type HookInfo = {
   source: string      // source name (e.g., "api")
   group?: string       // group name (e.g., "users")
-  query: string        // method name (e.g., "getById")
+  method: string       // method name (e.g., "getById")
   variables?: unknown  // request variables
 }`
 
 const encoderCode = `// Custom body encoder — e.g., URL-encoded form data
-const api = new Request({
+const api = new Datasource({
   baseURL: process.env.API_URL,
   bodyEncoder: (data) => {
     return new URLSearchParams(
@@ -142,7 +142,7 @@ const api = new Request({
 })
 
 // Custom search params encoder
-const api2 = new Request({
+const api2 = new Datasource({
   baseURL: process.env.API_URL,
   searchParamsEncoder: (params) => {
     return new URLSearchParams(
@@ -152,16 +152,16 @@ const api2 = new Request({
 })`
 
 const abortCode = `// Enable request deduplication via AbortController
-const api = new Request({
+const api = new Datasource({
   baseURL: process.env.API_URL,
-  requestAbort: true,
+  deduplicate: true,
 })
 
 // If the same request is fired while one is in-flight,
 // the previous request is automatically aborted`
 
 const kyOptionsCode = `// All ky options are supported — they pass through to ky.create()
-const api = new Request({
+const api = new Datasource({
   baseURL: process.env.API_URL,
 
   // Timeout per request (ms)
@@ -201,7 +201,7 @@ export default async function RequestClassPage() {
         <h2 id="import">Import</h2>
       </Prose>
 
-      <CodeBlock code={`import { Request } from "@noverax/nexus/classes"`} language="typescript" />
+      <CodeBlock code={`import { Datasource } from "@noverax/nexus/datasource"`} language="typescript" />
 
       <Prose>
         <h2 id="signature">Signature</h2>
@@ -276,7 +276,7 @@ export default async function RequestClassPage() {
       <CodeBlock code={defaultQueryParamsCode} language="typescript" />
 
       <Prose>
-        <h3 id="extra-headers">extraHeaders</h3>
+        <h3 id="extra-headers">allowedHeaders</h3>
         <p>
           An array of header names that should be preserved when forwarding requests through the
           proxy. By default, only standard headers are forwarded.
@@ -311,7 +311,7 @@ export default async function RequestClassPage() {
       <Prose>
         <h2 id="request-abort">Request Abort</h2>
         <p>
-          Enable <InlineCode>requestAbort</InlineCode> for automatic request deduplication. When a
+          Enable <InlineCode>deduplicate</InlineCode> for automatic request deduplication. When a
           duplicate request is fired while one is in-flight, the previous request is aborted.
         </p>
       </Prose>

@@ -7,32 +7,32 @@ import { Prose } from "@/components/docs/prose"
 import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
-const methodsCode = `import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+const methodsCode = `import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
 type User = { id: number; name: string; email: string }
 
-export class Users extends RequestGroup {
+export class Users extends EndpointGroup {
   constructor() {
     super({ prefix: "users" })
   }
 
   // GET /users — variables become search params
-  getAll: Method<User[], { page?: number; limit?: number }> = ({ get }) => get()
+  getAll: Endpoint<User[], { page?: number; limit?: number }> = ({ get }) => get()
 
   // GET /users/:id — :id is extracted from variables
-  getById: Method<User, { id: number }> = ({ get }) => get(":id")
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
 
   // POST /users — variables become JSON body
-  create: Method<User, { name: string; email: string }> = ({ post }) => post()
+  create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
 
   // PUT /users/:id — :id extracted, rest becomes JSON body
-  update: Method<User, { id: number; name: string }> = ({ put }) => put(":id")
+  update: Endpoint<User, { id: number; name: string }> = ({ put }) => put(":id")
 
   // PATCH /users/:id — partial update
-  patch: Method<User, { id: number; email: string }> = ({ patch }) => patch(":id")
+  patch: Endpoint<User, { id: number; email: string }> = ({ patch }) => patch(":id")
 
   // DELETE /users/:id
-  remove: Method<null, { id: number }> = ({ del }) => del(":id")
+  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
 }`
 
 const methodSignaturesCode = `// GET, DELETE, HEAD — accept (url?, options?)
@@ -49,21 +49,21 @@ const methodSignaturesCode = `// GET, DELETE, HEAD — accept (url?, options?)
 ({ post }) => post("bulk")
 // → POST /users/bulk`
 
-const pathParamsCode = `import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+const pathParamsCode = `import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
 type Comment = { id: number; body: string; author: string }
 
-export class Comments extends RequestGroup {
+export class Comments extends EndpointGroup {
   constructor() {
     super({ prefix: "posts" })
   }
 
   // Multiple path params: /posts/:postId/comments/:commentId
-  getOne: Method<Comment, { postId: number; commentId: number }> = ({ get }) =>
+  getOne: Endpoint<Comment, { postId: number; commentId: number }> = ({ get }) =>
     get(":postId/comments/:commentId")
 
   // Path params + body: :postId is extracted, rest becomes body
-  create: Method<Comment, { postId: number; body: string }> = ({ post }) =>
+  create: Endpoint<Comment, { postId: number; body: string }> = ({ post }) =>
     post(":postId/comments")
 }
 
@@ -74,8 +74,8 @@ export class Comments extends RequestGroup {
 // mutate({ postId: 5, body: "Great post!" })
 // → POST /posts/5/comments  body: { body: "Great post!" }`
 
-const responseTypeCode = `// MethodKyResponse<T> — what every method returns
-type MethodKyResponse<T> = {
+const responseTypeCode = `// HttpResponse<T> — what every method returns
+type HttpResponse<T> = {
   status: number   // HTTP status code (200, 201, 404, ...)
   headers: Headers // Response headers
   data: T          // Parsed response body, typed as T
@@ -89,7 +89,7 @@ const users = await directRequest("api")("users:getAll")
 const response = await directRequest("api", { rawData: true })("users:getAll")
 //    ^? { status: number; headers: Headers; data: User[] }`
 
-const baseOptionsCode = `class MyApi extends Request<typeof groups> {
+const baseOptionsCode = `class MyApi extends Datasource<typeof groups> {
   constructor() {
     super({
       // Required: your backend URL
@@ -110,7 +110,7 @@ const baseOptionsCode = `class MyApi extends Request<typeof groups> {
       headers: { "X-Client": "nexus" },
 
       // Cancel duplicate in-flight requests (default: false)
-      requestAbort: true,
+      deduplicate: true,
 
       // Lifecycle hooks
       onRequest: (info) => { /* modify before send */ },
@@ -211,7 +211,7 @@ export default async function InstancePage() {
         <h2 id="response-type">Response Type</h2>
 
         <p>
-          Every HTTP method returns a <InlineCode>{"MethodKyResponse<T>"}</InlineCode> internally.
+          Every HTTP method returns a <InlineCode>{"HttpResponse<T>"}</InlineCode> internally.
           By default, Nexus unwraps this and returns just the <InlineCode>data</InlineCode>{" "}
           property. If you need the full response (status code, headers), use the{" "}
           <InlineCode>rawData</InlineCode> option:

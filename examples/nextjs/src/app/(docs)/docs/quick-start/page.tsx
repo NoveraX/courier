@@ -8,29 +8,29 @@ import { StepList } from "@/components/docs/step-list"
 import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
-const step1Code = `import { Request, RequestGroup, Method } from "@noverax/nexus/RequestClass"
+const step1Code = `import { Datasource, EndpointGroup, Endpoint } from "@noverax/nexus/datasource"
 
 // 1. Define response & request types
 type User = { id: number; name: string; email: string; role: string }
 type UserList = { data: User[]; total: number }
 
-// 2. Create a RequestGroup with typed methods
-class Users extends RequestGroup {
+// 2. Create an EndpointGroup with typed methods
+class Users extends EndpointGroup {
   constructor() {
     super({ prefix: "users" })
   }
 
-  getAll: Method<UserList, { page?: number; limit?: number }> = ({ get }) => get()
-  getById: Method<User, { id: number }> = ({ get }) => get(":id")
-  create: Method<User, { name: string; email: string; role: string }> = ({ post }) => post()
-  update: Method<User, { id: number; name: string; email: string }> = ({ put }) => put(":id")
-  remove: Method<null, { id: number }> = ({ del }) => del(":id")
+  getAll: Endpoint<UserList, { page?: number; limit?: number }> = ({ get }) => get()
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+  create: Endpoint<User, { name: string; email: string; role: string }> = ({ post }) => post()
+  update: Endpoint<User, { id: number; name: string; email: string }> = ({ put }) => put(":id")
+  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
 }
 
-// 3. Create a Request with groups and base URL
+// 3. Create a Datasource with groups and base URL
 const groups = { users: new Users() }
 
-class MyApi extends Request<typeof groups> {
+class MyApi extends Datasource<typeof groups> {
   constructor() {
     super({
       baseURL: process.env.API_URL ?? "http://localhost:4000",
@@ -138,7 +138,7 @@ export default async function QuickStartPage() {
             content: (
               <div className="mt-4 space-y-4">
                 <p>
-                  Create a file with your API definition. Each <InlineCode>RequestGroup</InlineCode>{" "}
+                  Create a file with your API definition. Each <InlineCode>EndpointGroup</InlineCode>{" "}
                   organizes related endpoints under a URL prefix, and each method declares its
                   response and variables types:
                 </p>
@@ -247,7 +247,7 @@ export default async function QuickStartPage() {
           </li>
           <li>
             The API route finds the <InlineCode>Users</InlineCode> group, calls{" "}
-            <InlineCode>getById</InlineCode> with an <InlineCode>Instance</InlineCode> that wraps ky
+            <InlineCode>getById</InlineCode> with an <InlineCode>HttpClient</InlineCode> that wraps ky
           </li>
           <li>
             The <InlineCode>{":id"}</InlineCode> path parameter is extracted from variables, and the

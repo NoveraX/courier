@@ -1,13 +1,13 @@
 import ky, { HTTPError as KYHTTPError } from "ky";
 
 import { HTTPError } from "./error";
-import type { MethodsInstanceOptions, UploadProgress } from "./instance/types";
-import type { CommonRequest } from "./types";
+import type { CallOptions, UploadProgress } from "./instance/types";
+import type { RequestFn } from "./types";
 import {
-  type CreateRequestOptions,
-  getRequestOptions,
   isFormData,
-  parseQueryRequest,
+  parseEndpointKey,
+  parseRequestPayload,
+  type RequestPayload,
 } from "./utils/helpers";
 
 /**
@@ -108,7 +108,7 @@ function xhrUpload(
 }
 
 export type ClientRequestDefaults = {
-  requestPage?: string;
+  routePath?: string;
   timeout?: number;
   credentials?: RequestCredentials;
   headers?: Record<string, string>;
@@ -118,9 +118,9 @@ export type ClientRequestDefaults = {
 
 export function createClientRequest<T extends Record<string, unknown> = Record<string, unknown>>(
   defaults: ClientRequestDefaults = {},
-): CommonRequest<T> {
+): RequestFn<T> {
   const {
-    requestPage = (process.env.NEXT_PUBLIC_REQUEST_PAGE || "request").replace(
+    routePath = (process.env.NEXT_PUBLIC_REQUEST_PAGE || "request").replace(
       /[^a-zA-Z0-9_\-/]/g,
       "",
     ),
@@ -131,12 +131,10 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
     onSuccess: globalOnSuccess,
   } = defaults;
 
-  const selectSource = (source: string, options?: MethodsInstanceOptions<boolean>) => {
-    async function executeQuery(
-      ...arguments_: [string] | [string, FormData | Record<string, unknown>]
-    ) {
-      const [queryRequest, variables] = arguments_;
-      const { group, query } = parseQueryRequest(queryRequest);
+  const selectSource = (source: string, options?: CallOptions<boolean>) => {
+    async function execute(...arguments_: [string] | [string, FormData | Record<string, unknown>]) {
+      const [endpoint, variables] = arguments_;
+      const { group, method } = parseEndpointKey(endpoint);
 
       const { cache, onDownloadProgress, onUploadProgress, next, signal, stream, ...kyOptions } =
         options || {};
@@ -145,9 +143,9 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
         kyOptions.timeout = defaultTimeout;
       }
 
-      let requestOptions:
+      let requestPayload:
         | { body: FormData; json?: undefined }
-        | { json: Partial<CreateRequestOptions>; body?: undefined };
+        | { json: Partial<RequestPayload>; body?: undefined };
 
       const serverOptions = stream ? { ...kyOptions, stream } : kyOptions;
 
@@ -160,16 +158,16 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
 
         body.append("_source", source);
         body.append("_group", group || "");
-        body.append("_query", query);
+        body.append("_method", method);
         body.append("_options", JSON.stringify(serverOptions));
 
-        requestOptions = { body };
+        requestPayload = { body };
       } else {
-        requestOptions = {
+        requestPayload = {
           json: {
             source,
             group,
-            query,
+            method,
             variables,
             options: serverOptions,
           },
@@ -195,11 +193,11 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
         }
 
         const body = isFormData(variables)
-          ? (requestOptions.body as FormData)
-          : JSON.stringify(requestOptions.json);
+          ? (requestPayload.body as FormData)
+          : JSON.stringify(requestPayload.json);
 
         try {
-          const response = await xhrUpload(`/api/${requestPage}`, body, {
+          const response = await xhrUpload(`/api/${routePath}`, body, {
             headers: defaultHeaders,
             credentials,
             timeout: kyOptions.timeout || undefined,
@@ -215,8 +213,8 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
               responseData = { success: false, message: `HTTP ${response.status}` };
             }
 
-            const { options: parsedOptions } = getRequestOptions(
-              requestOptions.body || requestOptions.json,
+            const { options: parsedOptions } = parseRequestPayload(
+              requestPayload.body || requestPayload.json,
             );
             const { rawData } = parsedOptions ?? {};
 
@@ -255,7 +253,7 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
       }
 
       kyPostOptions = {
-        ...requestOptions,
+        ...requestPayload,
         credentials,
         cache,
         onDownloadProgress,
@@ -267,12 +265,12 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
 
       try {
         if (stream) {
-          const response = await ky.post(`/api/${requestPage}`, kyPostOptions);
+          const response = await ky.post(`/api/${routePath}`, kyPostOptions);
           await globalOnSuccess?.(response);
           return response;
         }
 
-        const response = await ky.post(`/api/${requestPage}`, kyPostOptions).json();
+        const response = await ky.post(`/api/${routePath}`, kyPostOptions).json();
         await globalOnSuccess?.(response);
         return response;
       } catch (error) {
@@ -294,7 +292,7 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
               response = await error.response.text().catch(() => error.message);
             }
 
-            const { options } = getRequestOptions(requestOptions.body || requestOptions.json);
+            const { options } = parseRequestPayload(requestPayload.body || requestPayload.json);
             const { rawData } = options ?? {};
 
             const errorData =
@@ -318,7 +316,7 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
         throw error;
       }
     }
-    return executeQuery;
+    return execute;
   };
-  return selectSource as unknown as CommonRequest<T>; // TS cannot infer curried generic closures
+  return selectSource as unknown as RequestFn<T>; // TS cannot infer curried generic closures
 }

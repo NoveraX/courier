@@ -83,7 +83,7 @@ export default async function ServerSideOverviewPage() {
         </p>
 
         <pre>
-          <code>createDirectRequest → createRequest → Instance → ky → backend</code>
+          <code>createDirectRequest → createRequest → HttpClient → ky → backend</code>
         </pre>
 
         <p>
@@ -94,8 +94,8 @@ export default async function ServerSideOverviewPage() {
 
       <Callout variant="info" title="Same sources, different transport">
         <p>
-          Direct mode uses the same <InlineCode>Request</InlineCode> and{" "}
-          <InlineCode>RequestGroup</InlineCode> classes as proxy mode. You define your API structure
+          Direct mode uses the same <InlineCode>Datasource</InlineCode> and{" "}
+          <InlineCode>EndpointGroup</InlineCode> classes as proxy mode. You define your API structure
           once and use it from both client and server code.
         </p>
       </Callout>

@@ -1,4 +1,4 @@
-import { type Method, RequestGroup } from "@noverax/nexus/RequestClass"
+import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
 
 type User = {
   id: number
@@ -27,28 +27,28 @@ type UserPostResponse = {
   }
 }
 
-export class Users extends RequestGroup {
+export class Users extends EndpointGroup {
   constructor() {
     super({ prefix: "users" })
   }
 
-  getAll: Method<UsersListResponse, { page?: number; limit?: number; search?: string }> = ({
+  getAll: Endpoint<UsersListResponse, { page?: number; limit?: number; search?: string }> = ({
     get,
   }) => get()
 
-  getById: Method<User, { id: number }> = ({ get }) => get(":id")
+  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
 
-  create: Method<User, { name: string; email: string; role?: string }> = ({ post }) => post()
+  create: Endpoint<User, { name: string; email: string; role?: string }> = ({ post }) => post()
 
-  update: Method<User, { id: number; name: string; email: string; role: string }> = ({ put }) =>
+  update: Endpoint<User, { id: number; name: string; email: string; role: string }> = ({ put }) =>
     put(":id")
 
-  patch: Method<User, { id: number } & Partial<Omit<User, "id" | "createdAt">>> = ({ patch }) =>
+  patch: Endpoint<User, { id: number } & Partial<Omit<User, "id" | "createdAt">>> = ({ patch }) =>
     patch(":id")
 
-  remove: Method<null, { id: number }> = ({ del }) => del(":id")
+  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
 
-  getUserPost: Method<UserPostResponse, { id: number; postId: number }> = ({ get }) =>
+  getUserPost: Endpoint<UserPostResponse, { id: number; postId: number }> = ({ get }) =>
     get(":id/posts/:postId")
 }
 

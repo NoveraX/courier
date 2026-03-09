@@ -1,21 +1,12 @@
 {
-  "include": ["src/**/*", "tests/**/*", "*.config.ts"],
-  "exclude": ["lib"],
+  "extends": "./tsconfig.base.json",
+  "include": ["packages/*/src/**/*", "packages/*/tests/**/*"],
   "compilerOptions": {
-    "module": "ESNext",
-    "lib": ["DOM", "ESNext", "DOM.Iterable"],
-    "target": "ESNext",
-    "declaration": true,
-    "strict": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noUncheckedIndexedAccess": true,
-    "moduleResolution": "bundler",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "noEmit": true
+    "paths": {
+      "@noverax/nexus": ["./packages/core/src/index.ts"],
+      "@noverax/nexus/define": ["./packages/core/src/define/index.ts"],
+      "@noverax/nexus/direct": ["./packages/core/src/direct/index.ts"],
+      "@noverax/nexus/middleware": ["./packages/core/src/middleware/index.ts"]
+    }
   }
 }

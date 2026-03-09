@@ -1,4 +1,4 @@
-import type { EndpointKey } from "../types";
+import type { EndpointKey } from "@noverax/nexus";
 
 /**
  * Creates a type-safe query key factory for manual cache invalidation.

@@ -1,0 +1,47 @@
+{
+  "name": "@noverax/nexus",
+  "version": "0.0.0",
+  "description": "Type-safe HTTP client with dual-mode transport, middleware chain, and runtime validation",
+  "author": "NoveraX",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    },
+    "./define": {
+      "types": "./lib/define/index.d.ts",
+      "import": "./lib/define/index.js"
+    },
+    "./direct": {
+      "types": "./lib/direct/index.d.ts",
+      "import": "./lib/direct/index.js"
+    },
+    "./middleware": {
+      "types": "./lib/middleware/index.d.ts",
+      "import": "./lib/middleware/index.js"
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@standard-schema/spec": "^1.1.0",
+    "ky": "^1.14.3",
+    "path-to-regexp": "^8.3.0"
+  }
+}

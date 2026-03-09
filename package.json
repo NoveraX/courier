@@ -1,51 +1,16 @@
 {
-  "name": "@noverax/nexus",
-  "version": "0.0.0",
-  "description": "Type-safe HTTP client with request grouping, path parameters, and optional Next.js integration",
+  "name": "@noverax/nexus-monorepo",
+  "private": true,
+  "description": "Type-safe HTTP client with dual-mode transport, middleware chain, and runtime validation",
   "author": "NoveraX",
   "license": "MIT",
   "type": "module",
-  "sideEffects": false,
-  "main": "./lib/index.js",
-  "module": "./lib/index.js",
-  "types": "./lib/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./lib/index.d.ts",
-      "import": "./lib/index.js"
-    },
-    "./define": {
-      "types": "./lib/define/index.d.ts",
-      "import": "./lib/define/index.js"
-    },
-    "./direct": {
-      "types": "./lib/direct/index.d.ts",
-      "import": "./lib/direct/index.js"
-    },
-    "./middleware": {
-      "types": "./lib/middleware/index.d.ts",
-      "import": "./lib/middleware/index.js"
-    },
-    "./next/apiRoute": {
-      "types": "./lib/next/apiRoute.d.ts",
-      "import": "./lib/next/apiRoute.js"
-    },
-    "./next/actions": {
-      "types": "./lib/next/actions.d.ts",
-      "import": "./lib/next/actions.js"
-    },
-    "./query": {
-      "types": "./lib/query/index.d.ts",
-      "import": "./lib/query/index.js"
-    }
-  },
-  "files": [
-    "lib",
-    "README.md",
-    "LICENSE"
+  "packageManager": "npm@11.6.2",
+  "workspaces": [
+    "packages/*"
   ],
-  "publishConfig": {
-    "access": "public"
+  "engines": {
+    "node": ">=18"
   },
   "repository": {
     "type": "git",
@@ -55,78 +20,46 @@
     "url": "https://github.com/NoveraX/nexus/issues"
   },
   "homepage": "https://nexus.noverax.cloud",
-  "keywords": [
-    "http-client",
-    "api-client",
-    "fetch",
-    "request",
-    "typescript",
-    "type-safe",
-    "nextjs",
-    "ky",
-    "rest-api",
-    "request-group",
-    "path-params"
-  ],
-  "engines": {
-    "node": ">=18"
-  },
-  "peerDependencies": {
-    "@tanstack/react-query": ">=5",
-    "next": ">=14",
-    "react": ">=18"
-  },
-  "peerDependenciesMeta": {
-    "next": {
-      "optional": true
-    },
-    "react": {
-      "optional": true
-    },
-    "@tanstack/react-query": {
-      "optional": true
-    }
-  },
-  "dependencies": {
-    "@standard-schema/spec": "^1.1.0",
-    "ky": "^1.14.3",
-    "path-to-regexp": "^8.3.0"
-  },
   "devDependencies": {
     "@biomejs/biome": "^2.4.6",
     "@commitlint/cli": "^20.4.3",
     "@commitlint/config-conventional": "^20.4.3",
     "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/exec": "^7.0.3",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^12.0.6",
+    "@standard-schema/spec": "^1.1.0",
     "@tanstack/react-query": "^5.90.21",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.14",
     "@vitest/coverage-v8": "^4.0.18",
     "husky": "^9.1.7",
     "jsdom": "^28.1.0",
+    "ky": "^1.14.3",
     "lint-staged": "^16.3.2",
     "next": "^16.1.6",
+    "path-to-regexp": "^8.3.0",
     "semantic-release": "^25.0.3",
     "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "turbo": "^2.5.4",
     "typescript": "^5.9.3",
     "valibot": "^1.2.0",
     "vitest": "^4.0.18",
     "zod": "^4.3.6"
   },
   "scripts": {
-    "start": "tsup --watch",
-    "build": "tsup",
+    "build": "turbo run build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "biome check --write src/ && tsc --noEmit",
-    "format": "biome format --write src/",
-    "check": "biome check src/",
-    "refresh": "rm -rf ./node_modules ./package-lock.json && npm install",
+    "lint": "biome check --write packages/",
+    "typecheck": "turbo run typecheck",
+    "format": "biome format --write packages/",
+    "check": "biome check packages/",
     "release": "HUSKY=0 semantic-release",
     "prepare": "husky"
   },
   "lint-staged": {
-    "src/**/*.ts": "biome check --write --no-errors-on-unmatched"
+    "packages/*/src/**/*.ts": "biome check --write --no-errors-on-unmatched"
   }
 }

@@ -1,0 +1,40 @@
+{
+  "name": "@noverax/nexus-next",
+  "version": "0.0.0",
+  "description": "Next.js adapter for @noverax/nexus — API route handler and Server Actions",
+  "author": "NoveraX",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    },
+    "./actions": {
+      "types": "./lib/actions.d.ts",
+      "import": "./lib/actions.js"
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@noverax/nexus": "*"
+  },
+  "peerDependencies": {
+    "next": ">=14"
+  }
+}

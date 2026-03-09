@@ -4,6 +4,15 @@ export { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 export { createQueryKeys } from "./keys";
 
 import {
+  type CallOptions,
+  type ClientRequestDefaults,
+  createClientRequest,
+  type EndpointKey,
+  type HTTPError,
+  type ResolveEndpoint,
+} from "@noverax/nexus";
+import type { Endpoint } from "@noverax/nexus/define";
+import {
   type InfiniteData,
   type QueryClient as QueryClientType,
   type QueryKey,
@@ -21,11 +30,6 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { type ClientRequestDefaults, createClientRequest } from "../create";
-import type { Endpoint } from "../define/types";
-import type { HTTPError } from "../error";
-import type { CallOptions } from "../instance/types";
-import type { EndpointKey, ResolveEndpoint } from "../types";
 
 // ---------------------------------------------------------------------------
 // Type helpers

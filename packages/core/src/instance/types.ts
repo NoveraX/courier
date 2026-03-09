@@ -1,7 +1,5 @@
-/// <reference types="next" />
 import type ky from "ky";
 import type { Options } from "ky";
-import type { NextRequest, NextResponse } from "next/server";
 
 import type { MiddlewareFn } from "../middleware/types";
 
@@ -94,13 +92,13 @@ export type GroupOptions = MergeOptions & {
   prefix?: string;
 };
 
-export type PathOptions = (request?: NextRequest) => PathOptionsResult | Promise<PathOptionsResult>;
+export type PathOptions = (request?: Request) => PathOptionsResult | Promise<PathOptionsResult>;
 
 type PathOptionsResult = Record<string, boolean | number | string | null | undefined> | undefined;
 
 export type Context = {
-  req?: NextRequest;
-  res?: NextResponse;
+  req?: Request;
+  res?: Response;
   headers?: Headers;
   /** HTTP method of the proxy request (set by apiRoute) */
   proxyMethod?: "GET" | "POST";

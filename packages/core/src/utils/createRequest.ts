@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import type { Sources } from "../define/types";
 import { HTTPError } from "../error";
 import { HttpClient } from "../instance/index";
@@ -52,7 +51,7 @@ const buildErrorResponse = (
 
 const buildResponse = (context: Context | undefined, response: InternalResponse) => {
   if (response.stream) {
-    if (context?.res instanceof NextResponse && response.data instanceof ReadableStream) {
+    if (context?.res instanceof Response && response.data instanceof ReadableStream) {
       return new Response(response.data, {
         status: response.status,
         headers: response.headers,
@@ -73,11 +72,9 @@ const buildResponse = (context: Context | undefined, response: InternalResponse)
 
   const data = response.rawData ? { ...baseResult, data: response.data } : response.data;
 
-  if (context?.res instanceof NextResponse) {
+  if (context?.res instanceof Response) {
     const jsonResponse =
-      baseResult.status === 204
-        ? new Response(null, baseResult)
-        : NextResponse.json(data, baseResult);
+      baseResult.status === 204 ? new Response(null, baseResult) : Response.json(data, baseResult);
 
     if (response.headers?.has("set-cookie")) {
       for (const cookie of response.headers.getSetCookie()) {
@@ -102,7 +99,7 @@ const buildResponse = (context: Context | undefined, response: InternalResponse)
 export async function executeRequest(
   sources: Sources,
   requestPayload: RequestPayloadInput,
-  context: Context & { res: NextResponse },
+  context: Context & { res: Response },
 ): Promise<Response>;
 export async function executeRequest(
   sources: Sources,

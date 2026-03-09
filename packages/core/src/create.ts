@@ -221,12 +221,17 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
         cache,
         onDownloadProgress,
         onUploadProgress,
-        next,
         signal,
         stream,
         method: proxyMethod,
         ...kyOptions
       } = options || {};
+
+      // Next.js augments RequestInit with a `next` property for caching (revalidate, tags).
+      // Extract it from raw options so it flows through to fetch() without core depending on Next.js types.
+      const next = (options as Record<string, unknown> | undefined)?.next as
+        | Record<string, unknown>
+        | undefined;
 
       if (kyOptions.timeout === undefined && defaultTimeout !== undefined) {
         kyOptions.timeout = defaultTimeout;
@@ -308,13 +313,13 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
             console.warn(
               "[nexus] 'cache' option is ignored when 'onUploadProgress' is set (XHR transport)",
             );
-          if (onDownloadProgress)
-            console.warn(
-              "[nexus] 'onDownloadProgress' option is ignored when 'onUploadProgress' is set (XHR transport)",
-            );
           if (next)
             console.warn(
               "[nexus] 'next' option is ignored when 'onUploadProgress' is set (XHR transport)",
+            );
+          if (onDownloadProgress)
+            console.warn(
+              "[nexus] 'onDownloadProgress' option is ignored when 'onUploadProgress' is set (XHR transport)",
             );
         }
 
@@ -361,8 +366,8 @@ export function createClientRequest<T extends Record<string, unknown> = Record<s
           ...requestPayload,
           credentials,
           cache,
-          onDownloadProgress,
           next,
+          onDownloadProgress,
           signal,
           timeout: kyOptions.timeout,
           headers: defaultHeaders,

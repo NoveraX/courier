@@ -1,12 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { apiRoute } from "../src/next/apiRoute";
 
-vi.mock("../src/utils/createRequest", () => ({
-  executeRequest: vi.fn(),
-}));
+vi.mock("@noverax/nexus", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@noverax/nexus")>();
+  return {
+    ...actual,
+    executeRequest: vi.fn(),
+  };
+});
 
-import { executeRequest } from "../src/utils/createRequest";
+import { executeRequest } from "@noverax/nexus";
+import { apiRoute } from "../src/apiRoute";
 
 const mockExecuteRequest = vi.mocked(executeRequest);
 

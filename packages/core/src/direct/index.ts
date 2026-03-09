@@ -17,7 +17,7 @@ const isContext = (value: unknown): value is Context =>
   typeof value === "object" &&
   value !== null &&
   !Array.isArray(value) &&
-  (("req" in value && value.req instanceof Request && "nextUrl" in value.req) ||
+  (("req" in value && value.req instanceof Request) ||
     ("res" in value && value.res instanceof Response) ||
     ("headers" in value && value.headers instanceof Headers));
 

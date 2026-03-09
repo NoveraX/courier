@@ -22,9 +22,9 @@ vi.mock("ky", () => {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import ky from "ky";
-import type { Endpoint } from "../src/define/types";
-import { createQueryKeys } from "../src/query/keys";
-import { createQueryRequest, optimisticOptions } from "../src/query/index";
+import type { Endpoint } from "@noverax/nexus/define";
+import { createQueryKeys } from "../src/keys";
+import { createQueryRequest, optimisticOptions } from "../src/index";
 
 type TestApi = {
 	api: {

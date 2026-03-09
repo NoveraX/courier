@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { HTTPError } from "../src/error";
-import { ValidationError } from "../src/validation";
+import { HTTPError, ValidationError } from "@noverax/nexus";
 
-vi.mock("../src/utils/createRequest", () => ({
-  executeRequest: vi.fn(),
-}));
+vi.mock("@noverax/nexus", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@noverax/nexus")>();
+  return {
+    ...actual,
+    executeRequest: vi.fn(),
+  };
+});
 
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
@@ -15,8 +18,8 @@ vi.mock("next/headers", () => ({
   headers: vi.fn().mockResolvedValue(new Headers({ authorization: "Bearer test-token" })),
 }));
 
-import { executeRequest } from "../src/utils/createRequest";
-import { createAction } from "../src/next/actions";
+import { executeRequest } from "@noverax/nexus";
+import { createAction } from "../src/actions";
 
 const mockExecuteRequest = vi.mocked(executeRequest);
 const mockSources = { api: { options: {} } } as any;

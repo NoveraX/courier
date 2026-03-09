@@ -1,8 +1,6 @@
+import { executeRequest, type RequestPayloadInput } from "@noverax/nexus";
+import type { Sources } from "@noverax/nexus/define";
 import { type NextRequest, NextResponse } from "next/server";
-
-import type { Sources } from "../direct/types";
-import { executeRequest } from "../utils/createRequest";
-import type { RequestPayloadInput } from "../utils/helpers";
 
 const META_KEYS = new Set(["_s", "_g", "_m", "_o"]);
 

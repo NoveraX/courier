@@ -30,6 +30,9 @@ export const metadata: Metadata = {
     locale: "en_US",
     siteName: "Nexus Docs",
   },
+  other: {
+    "apple-mobile-web-app-title": "Nexus",
+  },
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -19,6 +19,10 @@ import type { Tab, Theme } from "./store"
 import { useSocketConnection } from "./socket"
 import { useDevToolsStore } from "./store"
 import { TimelineView } from "./views/timeline"
+import { WaterfallView } from "./views/waterfall"
+import { MiddlewareView } from "./views/middleware"
+import { AnalyticsView } from "./views/analytics"
+import { CompareView } from "./views/compare"
 import { PlaceholderView } from "./views/placeholder"
 
 // ── Tab config ──────────────────────────────────────────────────────────────
@@ -114,6 +118,14 @@ export function App() {
         <main className="flex flex-1 flex-col overflow-hidden">
           {activeTab === "timeline" ? (
             <TimelineView />
+          ) : activeTab === "waterfall" ? (
+            <WaterfallView />
+          ) : activeTab === "middleware" ? (
+            <MiddlewareView />
+          ) : activeTab === "analytics" ? (
+            <AnalyticsView />
+          ) : activeTab === "compare" ? (
+            <CompareView />
           ) : (
             <PlaceholderView tab={activeTab} />
           )}

@@ -1,13 +1,15 @@
-import { useState, useMemo } from "react"
+import { useMemo } from "react"
 import { ArrowLeftRight, X } from "lucide-react"
 
-import type { RequestEntry } from "../../store"
+import type { RequestEntry, CompareTab } from "../../store"
 import { useDevToolsStore } from "../../store"
-import { Badge, formatDuration, formatSize } from "../../components/ui"
+import { Badge, formatDuration, formatSize, DisconnectedBanner } from "../../components/ui"
 import { JsonTree } from "../../components/json-tree"
 import { STATUS_CONFIG, HTTP_METHOD_COLORS } from "../timeline/constants"
 
-type CompareTab = "payload" | "response" | "headers" | "timing"
+// ── Constants ───────────────────────────────────────────────────────────────
+
+const TIMING_AMBER_MS = 200
 
 const COMPARE_TABS: { id: CompareTab; label: string }[] = [
   { id: "payload", label: "Payload" },
@@ -19,11 +21,14 @@ const COMPARE_TABS: { id: CompareTab; label: string }[] = [
 // ── Compare View ────────────────────────────────────────────────────────────
 
 export function CompareView() {
-  const { requests } = useDevToolsStore()
-  const [leftId, setLeftId] = useState<string | null>(null)
-  const [rightId, setRightId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<CompareTab>("response")
-  const [pickerSide, setPickerSide] = useState<"left" | "right" | null>(null)
+  const {
+    requests, connected,
+    compareLeftId: leftId, compareRightId: rightId,
+    compareActiveTab: activeTab, comparePickerSide: pickerSide,
+    setCompareLeftId: setLeftId, setCompareRightId: setRightId,
+    setCompareActiveTab: setActiveTab, setComparePickerSide: setPickerSide,
+    clearCompareSelection,
+  } = useDevToolsStore()
 
   const completed = useMemo(
     () => requests.filter((r) => r.status !== "pending"),
@@ -43,6 +48,7 @@ export function CompareView() {
   if (!leftReq && !rightReq) {
     return (
       <div className="flex flex-1 flex-col">
+        {!connected && <DisconnectedBanner />}
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-text-muted">
           <ArrowLeftRight size={36} strokeWidth={1} />
           <p className="text-sm">Select two requests to compare</p>
@@ -68,6 +74,7 @@ export function CompareView() {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
+      {!connected && <DisconnectedBanner />}
       {/* Header with selections */}
       <div className="flex shrink-0 items-center justify-between border-b border-border-default px-3 py-1.5">
         <div className="flex items-center gap-2">
@@ -101,7 +108,7 @@ export function CompareView() {
         </div>
 
         {/* Clear */}
-        <button type="button" onClick={() => { setLeftId(null); setRightId(null) }} className="rounded p-1 text-text-muted hover:bg-surface-1 hover:text-text-secondary">
+        <button type="button" onClick={clearCompareSelection} className="rounded p-1 text-text-muted hover:bg-surface-1 hover:text-text-secondary">
           <X size={14} />
         </button>
       </div>
@@ -137,7 +144,7 @@ function RequestTag({ request }: { request: RequestEntry }) {
       <div className={`h-1.5 w-1.5 rounded-full ${statusCfg.dotClass}`} />
       <span className={`text-[10px] font-medium ${methodColor}`}>{request.httpMethod ?? "GET"}</span>
       <span className="font-mono text-[10px] text-text-secondary">{label}</span>
-      {request.statusCode && (
+      {request.statusCode != null && (
         <span className="text-[10px] text-text-muted">{request.statusCode}</span>
       )}
     </div>
@@ -302,7 +309,7 @@ function TimingCompare({ request }: { request: RequestEntry }) {
               style={{ width: `${t.total > 0 ? (seg.value / t.total) * 100 : 0}%` }}
             />
           </div>
-          <span className={`w-14 text-right text-[10px] ${seg.value > 200 ? "text-amber-400" : "text-text-muted"}`}>
+          <span className={`w-14 text-right text-[10px] ${seg.value > TIMING_AMBER_MS ? "text-amber-400" : "text-text-muted"}`}>
             {formatDuration(seg.value)}
           </span>
         </div>

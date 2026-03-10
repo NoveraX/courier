@@ -3,7 +3,13 @@ import { ChevronDown, ChevronRight, AlertTriangle, Zap, RotateCcw, Database } fr
 
 import type { RequestEntry } from "../../store"
 import { useDevToolsStore } from "../../store"
-import { Badge, formatDuration } from "../../components/ui"
+import { Badge, formatDuration, DisconnectedBanner } from "../../components/ui"
+
+// ── Constants ───────────────────────────────────────────────────────────────
+
+const SLOW_STEP_MS = 5
+const OVERHEAD_WARN_PERCENT = 20
+const MAX_DURATION_WARN_MS = 10
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -118,9 +124,11 @@ function computeAggregateStats(requests: RequestEntry[]): MiddlewareStats[] {
 // ── Middleware Inspector View ────────────────────────────────────────────────
 
 export function MiddlewareView() {
-  const { requests } = useDevToolsStore()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [showStats, setShowStats] = useState(false)
+  const {
+    requests, connected,
+    middlewareSelectedId: selectedId, middlewareShowStats: showStats,
+    setMiddlewareSelectedId: setSelectedId, setMiddlewareShowStats: setShowStats,
+  } = useDevToolsStore()
 
   const requestsWithMiddleware = useMemo(
     () => requests.filter((r) => r.middlewareCount > 0 && r.status !== "pending"),
@@ -136,16 +144,21 @@ export function MiddlewareView() {
 
   if (requestsWithMiddleware.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 text-text-muted">
-        <Zap size={32} strokeWidth={1} />
-        <p className="text-sm">No middleware activity</p>
-        <p className="text-xs">Requests with middleware will appear here</p>
+      <div className="flex flex-1 flex-col">
+        {!connected && <DisconnectedBanner />}
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-text-muted">
+          <Zap size={32} strokeWidth={1} />
+          <p className="text-sm">No middleware activity</p>
+          <p className="text-xs">Requests with middleware will appear here</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-1 overflow-hidden">
+    <div className="flex flex-1 flex-col overflow-hidden">
+      {!connected && <DisconnectedBanner />}
+      <div className="flex flex-1 overflow-hidden">
       {/* Request list (left) */}
       <div className="flex w-[280px] shrink-0 flex-col border-r border-border-default">
         {/* Toggle header */}
@@ -155,7 +168,7 @@ export function MiddlewareView() {
           </span>
           <button
             type="button"
-            onClick={() => setShowStats((s) => !s)}
+            onClick={() => setShowStats(!showStats)}
             className={`rounded px-1.5 py-0.5 text-[10px] transition-colors ${showStats ? "bg-surface-2 text-text-primary" : "text-text-muted hover:text-text-secondary"}`}
           >
             Stats
@@ -182,7 +195,7 @@ export function MiddlewareView() {
                     <div className="flex items-center gap-2 text-[10px] text-text-muted">
                       <span>{r.middlewareCount} middleware</span>
                       <span>{formatDuration(r.timing?.middleware ?? 0)}</span>
-                      <span className={overhead > 20 ? "text-amber-400" : ""}>{overhead.toFixed(0)}% overhead</span>
+                      <span className={overhead > OVERHEAD_WARN_PERCENT ? "text-amber-400" : ""}>{overhead.toFixed(0)}% overhead</span>
                     </div>
                   </div>
                 </button>
@@ -201,6 +214,7 @@ export function MiddlewareView() {
             Select a request to inspect middleware chain
           </div>
         )}
+      </div>
       </div>
     </div>
   )
@@ -229,7 +243,7 @@ function MiddlewareChain({ request }: { request: RequestEntry }) {
         <div className="mt-1 flex items-center gap-3 text-[11px] text-text-muted">
           <span>Total: {formatDuration(request.timing?.total ?? 0)}</span>
           <span>Middleware: {formatDuration(request.timing?.middleware ?? 0)}</span>
-          <span className={overhead > 20 ? "text-amber-400" : ""}>
+          <span className={overhead > OVERHEAD_WARN_PERCENT ? "text-amber-400" : ""}>
             Overhead: {overhead.toFixed(1)}%
           </span>
         </div>
@@ -240,8 +254,8 @@ function MiddlewareChain({ request }: { request: RequestEntry }) {
 
       {/* Request phase (down) */}
       <div className="space-y-0">
-        {requestPhase.map((step, i) => (
-          <MiddlewareStepNode key={`req-${step.index}`} step={step} isFirst={i === 0} isLast={false} direction="down" />
+        {requestPhase.map((step) => (
+          <MiddlewareStepNode key={`req-${step.index}`} step={step} direction="down" />
         ))}
       </div>
 
@@ -263,8 +277,8 @@ function MiddlewareChain({ request }: { request: RequestEntry }) {
 
       {/* Response phase (up) */}
       <div className="space-y-0">
-        {responsePhase.map((step, i) => (
-          <MiddlewareStepNode key={`res-${step.index}`} step={step} isFirst={false} isLast={i === responsePhase.length - 1} direction="up" />
+        {responsePhase.map((step) => (
+          <MiddlewareStepNode key={`res-${step.index}`} step={step} direction="up" />
         ))}
       </div>
 
@@ -281,18 +295,14 @@ function MiddlewareChain({ request }: { request: RequestEntry }) {
 
 function MiddlewareStepNode({
   step,
-  isFirst: _isFirst,
-  isLast: _isLast,
   direction,
 }: {
   step: MiddlewareStep
-  isFirst: boolean
-  isLast: boolean
   direction: "down" | "up"
 }) {
   const [expanded, setExpanded] = useState(false)
   const arrow = direction === "down" ? "→" : "←"
-  const isSlow = step.duration > 5
+  const isSlow = step.duration > SLOW_STEP_MS
 
   return (
     <div className="ml-2">
@@ -372,7 +382,7 @@ function AggregateStatsPanel({ stats }: { stats: MiddlewareStats[] }) {
               <td className="px-3 py-1.5 font-mono text-text-secondary">{s.name}</td>
               <td className="px-2 py-1.5 text-right text-text-muted">{s.calls}</td>
               <td className="px-2 py-1.5 text-right text-text-muted">{formatDuration(s.avgDuration)}</td>
-              <td className={`px-2 py-1.5 text-right ${s.maxDuration > 10 ? "text-amber-400" : "text-text-muted"}`}>
+              <td className={`px-2 py-1.5 text-right ${s.maxDuration > MAX_DURATION_WARN_MS ? "text-amber-400" : "text-text-muted"}`}>
                 {formatDuration(s.maxDuration)}
               </td>
               <td className={`px-2 py-1.5 text-right ${s.errors > 0 ? "text-red-400" : "text-text-muted"}`}>

@@ -1,10 +1,10 @@
-import { useState, useMemo, useRef, useCallback } from "react"
+import { useMemo, useRef, useCallback } from "react"
 import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react"
 
-import type { RequestEntry } from "../../store"
+import type { RequestEntry, WaterfallSortField, WaterfallGroupBy } from "../../store"
 import { useDevToolsStore } from "../../store"
-import { formatDuration } from "../../components/ui"
-import { STATUS_CONFIG, HTTP_METHOD_COLORS } from "../timeline/constants"
+import { formatDuration, DisconnectedBanner } from "../../components/ui"
+import { STATUS_CONFIG, HTTP_METHOD_COLORS, TIMING_SLOW_MS } from "../timeline/constants"
 
 // ── Segment colors ──────────────────────────────────────────────────────────
 
@@ -17,8 +17,14 @@ const SEGMENT_COLORS: Record<string, { bg: string; label: string }> = {
   validation: { bg: "bg-emerald-500", label: "Validation" },
 }
 
-type SortField = "startTime" | "duration" | "size"
-type GroupBy = "none" | "source" | "group"
+// ── Waterfall constants ─────────────────────────────────────────────────────
+
+const BASE_TIMELINE_WIDTH = 800
+const LABEL_COLUMN_WIDTH = 220
+const ZOOM_FACTOR = 1.5
+const MAX_ZOOM = 20
+const MIN_ZOOM = 0.5
+const TICK_SPACING_PX = 80
 
 // ── Segment calculation ─────────────────────────────────────────────────────
 
@@ -68,10 +74,11 @@ function getSegments(r: RequestEntry, timelineStart: number): Segment[] {
 // ── Waterfall View ──────────────────────────────────────────────────────────
 
 export function WaterfallView() {
-  const { requests, selectRequest, selectedRequestId } = useDevToolsStore()
-  const [sortBy, setSortBy] = useState<SortField>("startTime")
-  const [groupBy, setGroupBy] = useState<GroupBy>("none")
-  const [zoom, setZoom] = useState(1)
+  const {
+    requests, selectRequest, selectedRequestId, connected,
+    waterfallSortBy: sortBy, waterfallGroupBy: groupBy, waterfallZoom: zoom,
+    setWaterfallSortBy: setSortBy, setWaterfallGroupBy: setGroupBy, setWaterfallZoom: setZoom,
+  } = useDevToolsStore()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const completedRequests = useMemo(
@@ -117,30 +124,34 @@ export function WaterfallView() {
   }, [sorted])
 
   const totalDuration = Math.max(timelineEnd - timelineStart, 1)
-  const pxPerMs = (800 * zoom) / totalDuration
+  const pxPerMs = (BASE_TIMELINE_WIDTH * zoom) / totalDuration
 
-  const handleZoomIn = useCallback(() => setZoom((z) => Math.min(z * 1.5, 20)), [])
-  const handleZoomOut = useCallback(() => setZoom((z) => Math.max(z / 1.5, 0.5)), [])
-  const handleFit = useCallback(() => setZoom(1), [])
+  const handleZoomIn = useCallback(() => setZoom(Math.min(zoom * ZOOM_FACTOR, MAX_ZOOM)), [zoom, setZoom])
+  const handleZoomOut = useCallback(() => setZoom(Math.max(zoom / ZOOM_FACTOR, MIN_ZOOM)), [zoom, setZoom])
+  const handleFit = useCallback(() => setZoom(1), [setZoom])
 
   if (completedRequests.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 text-text-muted">
-        <p className="text-sm">No completed requests yet</p>
-        <p className="text-xs">Waterfall will appear once requests complete</p>
+      <div className="flex flex-1 flex-col">
+        {!connected && <DisconnectedBanner />}
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-text-muted">
+          <p className="text-sm">No completed requests yet</p>
+          <p className="text-xs">Waterfall will appear once requests complete</p>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
+      {!connected && <DisconnectedBanner />}
       {/* Toolbar */}
       <div className="flex shrink-0 items-center justify-between border-b border-border-default bg-surface-0 px-3 py-1.5">
         <div className="flex items-center gap-3">
           {/* Sort */}
           <div className="flex items-center gap-1.5 text-[11px]">
             <span className="text-text-muted">Sort:</span>
-            {(["startTime", "duration", "size"] as SortField[]).map((f) => (
+            {(["startTime", "duration", "size"] as WaterfallSortField[]).map((f) => (
               <button
                 key={f}
                 type="button"
@@ -155,7 +166,7 @@ export function WaterfallView() {
           {/* Group by */}
           <div className="flex items-center gap-1.5 text-[11px]">
             <span className="text-text-muted">Group:</span>
-            {(["none", "source", "group"] as GroupBy[]).map((g) => (
+            {(["none", "source", "group"] as WaterfallGroupBy[]).map((g) => (
               <button
                 key={g}
                 type="button"
@@ -195,7 +206,7 @@ export function WaterfallView() {
 
       {/* Waterfall content */}
       <div ref={containerRef} className="flex-1 overflow-auto">
-        <div style={{ minWidth: `${Math.max(800, totalDuration * pxPerMs + 240)}px` }}>
+        <div style={{ minWidth: `${Math.max(BASE_TIMELINE_WIDTH, totalDuration * pxPerMs + LABEL_COLUMN_WIDTH + 20)}px` }}>
           {/* Time ruler */}
           <TimeRuler duration={totalDuration} pxPerMs={pxPerMs} />
 
@@ -228,7 +239,7 @@ export function WaterfallView() {
 // ── Time Ruler ──────────────────────────────────────────────────────────────
 
 function TimeRuler({ duration, pxPerMs }: { duration: number; pxPerMs: number }) {
-  const tickCount = Math.max(2, Math.min(20, Math.floor((duration * pxPerMs) / 80)))
+  const tickCount = Math.max(2, Math.min(20, Math.floor((duration * pxPerMs) / TICK_SPACING_PX)))
   const tickInterval = duration / tickCount
   const ticks = Array.from({ length: tickCount + 1 }, (_, i) => i * tickInterval)
 
@@ -270,7 +281,7 @@ function WaterfallRow({
   const statusCfg = STATUS_CONFIG[request.status]
   const methodColor = HTTP_METHOD_COLORS[request.httpMethod ?? "GET"] ?? "text-text-secondary"
   const label = [request.source, request.group, request.method].filter(Boolean).join(".")
-  const isSlow = (request.timing?.total ?? 0) > 500
+  const isSlow = (request.timing?.total ?? 0) > TIMING_SLOW_MS
 
   return (
     <button

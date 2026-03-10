@@ -205,6 +205,15 @@ export const EMPTY_FILTERS: TimelineFilters = {
 export type ExplorerView = "graph" | "pipeline" | "list"
 export type GraphLayout = "LR" | "TB"
 
+// ── Waterfall state ─────────────────────────────────────────────────────────
+
+export type WaterfallSortField = "startTime" | "duration" | "size"
+export type WaterfallGroupBy = "none" | "source" | "group"
+
+// ── Compare state ───────────────────────────────────────────────────────────
+
+export type CompareTab = "payload" | "response" | "headers" | "timing"
+
 // ── Audit state ─────────────────────────────────────────────────────────────
 
 export type AuditSeverityFilter = "error" | "warning" | "hint" | "pass" | "all"
@@ -242,6 +251,21 @@ interface DevToolsState {
   explorerSelectedEndpoint: { source: string; group: string; method: string } | null
   graphLayout: GraphLayout
 
+  // Waterfall
+  waterfallSortBy: WaterfallSortField
+  waterfallGroupBy: WaterfallGroupBy
+  waterfallZoom: number
+
+  // Middleware
+  middlewareSelectedId: string | null
+  middlewareShowStats: boolean
+
+  // Compare
+  compareLeftId: string | null
+  compareRightId: string | null
+  compareActiveTab: CompareTab
+  comparePickerSide: "left" | "right" | null
+
   // Audit
   auditFilter: AuditSeverityFilter
   auditExpandedIds: Set<string>
@@ -278,6 +302,22 @@ interface DevToolsState {
   setExplorerView: (view: ExplorerView) => void
   setExplorerSelectedEndpoint: (ep: { source: string; group: string; method: string } | null) => void
   setGraphLayout: (layout: GraphLayout) => void
+
+  // Actions — Waterfall
+  setWaterfallSortBy: (sort: WaterfallSortField) => void
+  setWaterfallGroupBy: (group: WaterfallGroupBy) => void
+  setWaterfallZoom: (zoom: number) => void
+
+  // Actions — Middleware
+  setMiddlewareSelectedId: (id: string | null) => void
+  setMiddlewareShowStats: (show: boolean) => void
+
+  // Actions — Compare
+  setCompareLeftId: (id: string | null) => void
+  setCompareRightId: (id: string | null) => void
+  setCompareActiveTab: (tab: CompareTab) => void
+  setComparePickerSide: (side: "left" | "right" | null) => void
+  clearCompareSelection: () => void
 
   // Actions — Audit
   setAuditFilter: (filter: AuditSeverityFilter) => void
@@ -317,6 +357,21 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
   explorerView: "graph",
   explorerSelectedEndpoint: null,
   graphLayout: "LR",
+
+  // Waterfall
+  waterfallSortBy: "startTime",
+  waterfallGroupBy: "none",
+  waterfallZoom: 1,
+
+  // Middleware
+  middlewareSelectedId: null,
+  middlewareShowStats: false,
+
+  // Compare
+  compareLeftId: null,
+  compareRightId: null,
+  compareActiveTab: "response",
+  comparePickerSide: null,
 
   // Actions — UI
   setActiveTab: (tab) => set({ activeTab: tab }),
@@ -372,6 +427,22 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
   setExplorerView: (view) => set({ explorerView: view }),
   setExplorerSelectedEndpoint: (ep) => set({ explorerSelectedEndpoint: ep }),
   setGraphLayout: (layout) => set({ graphLayout: layout }),
+
+  // Actions — Waterfall
+  setWaterfallSortBy: (sort) => set({ waterfallSortBy: sort }),
+  setWaterfallGroupBy: (group) => set({ waterfallGroupBy: group }),
+  setWaterfallZoom: (zoom) => set({ waterfallZoom: zoom }),
+
+  // Actions — Middleware
+  setMiddlewareSelectedId: (id) => set({ middlewareSelectedId: id }),
+  setMiddlewareShowStats: (show) => set({ middlewareShowStats: show }),
+
+  // Actions — Compare
+  setCompareLeftId: (id) => set({ compareLeftId: id }),
+  setCompareRightId: (id) => set({ compareRightId: id }),
+  setCompareActiveTab: (tab) => set({ compareActiveTab: tab }),
+  setComparePickerSide: (side) => set({ comparePickerSide: side }),
+  clearCompareSelection: () => set({ compareLeftId: null, compareRightId: null, comparePickerSide: null }),
 
   // Actions — Audit
   setAuditFilter: (filter) => set({ auditFilter: filter }),

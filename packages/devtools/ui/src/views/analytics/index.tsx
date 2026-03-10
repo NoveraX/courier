@@ -3,7 +3,19 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react"
 
 import type { RequestEntry } from "../../store"
 import { useDevToolsStore } from "../../store"
-import { formatDuration, formatSize } from "../../components/ui"
+import { formatDuration, formatSize, DisconnectedBanner } from "../../components/ui"
+import { TIMING_SLOW_MS } from "../timeline/constants"
+
+// ── Constants ───────────────────────────────────────────────────────────────
+
+const TREND_THRESHOLD = 0.1
+const RECENT_WINDOW = 10
+const MAX_ENDPOINTS_SHOWN = 15
+const SUCCESS_RATE_GOOD = 95
+const SUCCESS_RATE_WARN = 80
+const RESPONSE_TIME_GOOD_MS = 200
+const CACHE_HIT_GOOD = 50
+const ERROR_RATE_WARN = 10
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -16,8 +28,8 @@ function percentile(sorted: number[], p: number): number {
 function trend(recent: number, overall: number): "up" | "down" | "flat" {
   if (overall === 0) return "flat"
   const diff = (recent - overall) / overall
-  if (diff > 0.1) return "up"
-  if (diff < -0.1) return "down"
+  if (diff > TREND_THRESHOLD) return "up"
+  if (diff < -TREND_THRESHOLD) return "down"
   return "flat"
 }
 
@@ -48,11 +60,11 @@ function computeKPIs(requests: RequestEntry[]): KPIData {
   const avgSize = completed.length > 0 ? totalSize / completed.length : 0
 
   // Trend: compare last 10 to overall
-  const recentTiming = withTiming.slice(0, 10)
+  const recentTiming = withTiming.slice(0, RECENT_WINDOW)
   const recentAvg = recentTiming.length > 0 ? recentTiming.reduce((s, r) => s + (r.timing?.total ?? 0), 0) / recentTiming.length : 0
-  const recentErrors = completed.slice(0, 10).filter((r) => r.status === "error" || r.status === "validation_error").length
+  const recentErrors = completed.slice(0, RECENT_WINDOW).filter((r) => r.status === "error" || r.status === "validation_error").length
   const overallErrorRate = completed.length > 0 ? errors.length / completed.length : 0
-  const recentErrorRate = Math.min(10, completed.length) > 0 ? recentErrors / Math.min(10, completed.length) : 0
+  const recentErrorRate = Math.min(RECENT_WINDOW, completed.length) > 0 ? recentErrors / Math.min(RECENT_WINDOW, completed.length) : 0
 
   return {
     totalRequests: completed.length,
@@ -191,7 +203,7 @@ function computeEndpointStats(requests: RequestEntry[]): EndpointStats[] {
 // ── Analytics View ──────────────────────────────────────────────────────────
 
 export function AnalyticsView() {
-  const { requests } = useDevToolsStore()
+  const { requests, connected } = useDevToolsStore()
 
   const kpis = useMemo(() => computeKPIs(requests), [requests])
   const histogram = useMemo(() => computeHistogram(requests), [requests])
@@ -200,28 +212,33 @@ export function AnalyticsView() {
 
   if (requests.filter((r) => r.status !== "pending").length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 text-text-muted">
-        <p className="text-sm">No data yet</p>
-        <p className="text-xs">Analytics will populate as requests complete</p>
+      <div className="flex flex-1 flex-col">
+        {!connected && <DisconnectedBanner />}
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-text-muted">
+          <p className="text-sm">No data yet</p>
+          <p className="text-xs">Analytics will populate as requests complete</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex flex-1 flex-col overflow-hidden">
+      {!connected && <DisconnectedBanner />}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
       {/* Row 1: KPI Cards */}
       <div className="grid grid-cols-3 gap-3 xl:grid-cols-6">
         <KPICard label="Total Requests" value={String(kpis.totalRequests)} />
         <KPICard
           label="Success Rate"
           value={`${kpis.successRate.toFixed(1)}%`}
-          color={kpis.successRate >= 95 ? "text-emerald-400" : kpis.successRate >= 80 ? "text-amber-400" : "text-red-400"}
+          color={kpis.successRate >= SUCCESS_RATE_GOOD ? "text-emerald-400" : kpis.successRate >= SUCCESS_RATE_WARN ? "text-amber-400" : "text-red-400"}
         />
         <KPICard
           label="Avg Response"
           value={formatDuration(kpis.avgResponseTime)}
           trend={kpis.responseTrend}
-          color={kpis.avgResponseTime < 200 ? "text-emerald-400" : kpis.avgResponseTime < 500 ? "text-amber-400" : "text-red-400"}
+          color={kpis.avgResponseTime < RESPONSE_TIME_GOOD_MS ? "text-emerald-400" : kpis.avgResponseTime < TIMING_SLOW_MS ? "text-amber-400" : "text-red-400"}
         />
         <KPICard
           label="Errors"
@@ -232,7 +249,7 @@ export function AnalyticsView() {
         <KPICard
           label="Cache Hit Rate"
           value={`${kpis.cacheHitRate.toFixed(0)}%`}
-          color={kpis.cacheHitRate > 50 ? "text-emerald-400" : "text-text-secondary"}
+          color={kpis.cacheHitRate > CACHE_HIT_GOOD ? "text-emerald-400" : "text-text-secondary"}
         />
         <KPICard label="Avg Size" value={formatSize(kpis.avgSize)} />
       </div>
@@ -318,19 +335,19 @@ export function AnalyticsView() {
               </tr>
             </thead>
             <tbody>
-              {endpointStats.slice(0, 15).map((ep) => (
+              {endpointStats.slice(0, MAX_ENDPOINTS_SHOWN).map((ep) => (
                 <tr key={ep.label} className="border-b border-border-subtle">
                   <td className="py-1.5 pr-4 font-mono text-text-secondary">{ep.label}</td>
                   <td className="py-1.5 pr-4 text-right text-text-muted">{ep.calls}</td>
                   <td className="py-1.5 pr-4 text-right text-text-muted">{formatDuration(ep.p50)}</td>
-                  <td className={`py-1.5 pr-4 text-right ${ep.p95 > 500 ? "text-red-400" : ep.p95 > 200 ? "text-amber-400" : "text-text-muted"}`}>
+                  <td className={`py-1.5 pr-4 text-right ${ep.p95 > TIMING_SLOW_MS ? "text-red-400" : ep.p95 > RESPONSE_TIME_GOOD_MS ? "text-amber-400" : "text-text-muted"}`}>
                     {formatDuration(ep.p95)}
                   </td>
-                  <td className={`py-1.5 pr-4 text-right ${ep.p99 > 1000 ? "text-red-400" : "text-text-muted"}`}>
+                  <td className={`py-1.5 pr-4 text-right ${ep.p99 > TIMING_SLOW_MS * 2 ? "text-red-400" : "text-text-muted"}`}>
                     {formatDuration(ep.p99)}
                   </td>
                   <td className="py-1.5 pr-4 text-right text-text-muted">{formatSize(ep.avgSize)}</td>
-                  <td className={`py-1.5 text-right ${ep.errorRate > 10 ? "text-red-400" : ep.errorRate > 0 ? "text-amber-400" : "text-text-muted"}`}>
+                  <td className={`py-1.5 text-right ${ep.errorRate > ERROR_RATE_WARN ? "text-red-400" : ep.errorRate > 0 ? "text-amber-400" : "text-text-muted"}`}>
                     {ep.errorRate.toFixed(1)}%
                   </td>
                 </tr>
@@ -338,6 +355,7 @@ export function AnalyticsView() {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
     </div>
   )

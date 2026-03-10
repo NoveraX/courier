@@ -34,7 +34,7 @@ try {
 
 const globalCode = `import { createProxyCaller } from "@noverax/nexus"
 
-const caller = createProxyCaller({
+const caller = createProxyCaller<typeof api>("api", {
   // Called for every failed request
   onError: (error) => {
     toast.error(\`Request failed: \${error.status}\`)

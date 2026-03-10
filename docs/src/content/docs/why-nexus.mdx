@@ -44,8 +44,8 @@ export const { GET, POST } = apiRoute(sources) // or nexusHandler(sources)
 You define your API structure **once** using `defineApi`, `defineGroup`, and `endpoint`. Each endpoint declares its response and variables types. From that single definition, Nexus gives you:
 
 - **Direct mode** — server calls via `createCaller(api)`
-- **Proxy mode** — browser calls via `createProxyCaller()`
-- **React Query** — hooks via `createQueryCaller()`
+- **Proxy mode** — browser calls via `createProxyCaller("api")`
+- **React Query** — hooks via `createQueryCaller("api")`
 - **Server Actions** — form handling via `createAction(sources)`
 
 All share the same types and autocomplete:

@@ -14,7 +14,7 @@ import { createQueryCaller } from "@noverax/nexus-query"
 import { api } from "@/api"
 
 // You have to pass the type everywhere:
-const caller = createProxyCaller<typeof api>()
+const caller = createProxyCaller<typeof api>("api")
 const directCaller = createCaller(api)
 const q = createQueryCaller<typeof api>("api")
 ```
@@ -82,7 +82,7 @@ import { createQueryCaller } from "@noverax/nexus-query"
 import { api } from "@/api"
 
 // No generic parameter needed — TypeScript infers from module augmentation
-const caller = createProxyCaller()
+const caller = createProxyCaller("api")
 const directCaller = createCaller(api)
 const q = createQueryCaller("api")
 

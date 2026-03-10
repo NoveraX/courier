@@ -9,14 +9,14 @@ Every API call in Nexus follows a well-defined lifecycle. There are two transpor
 | Factory | Mode | Runtime | Use Case |
 |---------|------|---------|----------|
 | `createCaller(api)` | Direct | Any (Node.js, Bun, Deno, browser) | Server Components, Server Actions, scripts, CLI |
-| `createProxyCaller<typeof api>()` | Proxy | Browser | Client Components — hides backend URL, handles CORS, forwards cookies |
+| `createProxyCaller<typeof api>("api")` | Proxy | Browser | Client Components — hides backend URL, handles CORS, forwards cookies |
 
 ## Request Flow
 
 ```
 Direct:  createCaller(api) → caller.users.getAll() → executeRequest → middleware → HttpClient → fetch → backend
 
-Proxy:   createProxyCaller() → caller.users.getAll() → POST /api/request → handler → executeRequest → middleware → HttpClient → fetch → backend
+Proxy:   createProxyCaller("api") → caller.users.getAll() → POST /api/request → handler → executeRequest → middleware → HttpClient → fetch → backend
 ```
 
 In direct mode, the caller invokes `executeRequest` directly with the `api` object. In proxy mode, the browser sends the request payload to your server's proxy route (e.g., `/api/request`), which then calls `executeRequest` on the server side.

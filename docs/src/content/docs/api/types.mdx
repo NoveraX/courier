@@ -4,29 +4,38 @@ export const metadata = { title: "Types", description: "Complete reference for a
 
 All TypeScript types used across the Nexus library, organized by category.
 
-## Caller Types
+## Client Types
 
-### CallerFn
+### TypedClient
 
-The caller function type used internally by `createCaller`, `createProxyCaller`, and `createQueryCaller`. The public API exposes a `TypedClient` with dot-notation access.
+The main typed client returned by `createCaller` and `createProxyCaller`. Provides dot-notation access to groups, `.raw` for full response, and `.with()` for per-request options.
 
 ```ts
-type CallerFn<T extends Record<string, any>, D extends boolean = false> = <
-  K extends keyof T,
-  RD extends boolean = false,
->(
-  source: K,
-  options?: CallOptions<RD>,
-) => <
-  Q extends EndpointKey<T[K]>,
-  M extends ResolveEndpoint<T[K], Q>,
-  R = ExtractResponse<M>,
->(
-  ...arguments_: EndpointArguments<Q, M, D>
-) => EndpointResult<RD, R>
+type TypedClient<T extends DefinedApi<any>, Raw extends boolean = false> = {
+  [K in keyof ApiGroups<T>]: GroupClient<ApiGroups<T>[K], Raw>
+} & {
+  raw: TypedClient<T, true>
+  with(options: WithOptions): TypedClient<T, Raw>
+}
+```
 
-// D = false → Proxy mode → returns Promise<R>
-// D = true  → Direct mode → returns Promise<Partial<HttpResponse<R>>>
+### GroupClient
+
+A group with typed endpoint methods, `.raw` accessor, and `.with()`.
+
+```ts
+type GroupClient<G, Raw extends boolean = false> = GroupMethods<G, Raw> & {
+  raw: GroupClient<G, true>
+  with(options: WithOptions): GroupClient<G, Raw>
+}
+```
+
+### WithOptions
+
+Options for `.with()` — all `CallOptions` except `rawData` (controlled via `.raw`).
+
+```ts
+type WithOptions = Omit<CallOptions, "rawData">
 ```
 
 ### CallerDefaults

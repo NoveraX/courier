@@ -55,7 +55,7 @@ revalidateTag("users")`
 const globalDefaultsCode = `import { createProxyCaller } from "@noverax/nexus"
 
 // Set defaults for all requests
-const caller = createProxyCaller({
+const caller = createProxyCaller<typeof api>("api", {
   timeout: 10000,           // 10s default timeout
   credentials: "include",  // send cookies
   headers: {

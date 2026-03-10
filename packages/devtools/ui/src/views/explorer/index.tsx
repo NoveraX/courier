@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from "react"
+import { useMemo, useCallback } from "react"
 import {
   Network,
   ArrowLeftRight,
@@ -168,10 +168,9 @@ export function ExplorerView() {
     setExplorerSelectedEndpoint,
     graphLayout,
     setGraphLayout,
+    showSchemas,
+    setShowSchemas,
   } = useDevToolsStore()
-
-  // Graph filter toggles
-  const [showSchemas, setShowSchemas] = useState(true)
 
   // Merge source maps from all connected sessions, or use demo
   const { sourceMap, isDemo } = useMemo(() => {
@@ -217,7 +216,7 @@ export function ExplorerView() {
               {/* Schema indicators toggle */}
               <button
                 type="button"
-                onClick={() => setShowSchemas((s) => !s)}
+                onClick={() => setShowSchemas(!showSchemas)}
                 className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] transition-colors ${
                   showSchemas
                     ? "bg-emerald-500/10 text-emerald-400"
@@ -281,6 +280,7 @@ export function ExplorerView() {
               sourceMap={sourceMap}
               selected={explorerSelectedEndpoint}
               requests={requests}
+              onSelectEndpoint={handleSelectEndpoint}
             />
           )}
           {explorerView === "list" && (

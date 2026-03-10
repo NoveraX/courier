@@ -204,6 +204,8 @@ export const EMPTY_FILTERS: TimelineFilters = {
 
 export type ExplorerView = "graph" | "pipeline" | "list"
 export type GraphLayout = "LR" | "TB"
+export type ListSortKey = "source" | "group" | "method" | "type" | "middleware" | "schemas"
+export type ListSortDir = "asc" | "desc"
 
 // ── Waterfall state ─────────────────────────────────────────────────────────
 
@@ -250,6 +252,10 @@ interface DevToolsState {
   explorerView: ExplorerView
   explorerSelectedEndpoint: { source: string; group: string; method: string } | null
   graphLayout: GraphLayout
+  showSchemas: boolean
+  listSearch: string
+  listSortKey: ListSortKey
+  listSortDir: ListSortDir
 
   // Waterfall
   waterfallSortBy: WaterfallSortField
@@ -302,6 +308,10 @@ interface DevToolsState {
   setExplorerView: (view: ExplorerView) => void
   setExplorerSelectedEndpoint: (ep: { source: string; group: string; method: string } | null) => void
   setGraphLayout: (layout: GraphLayout) => void
+  setShowSchemas: (show: boolean) => void
+  setListSearch: (search: string) => void
+  setListSortKey: (key: ListSortKey) => void
+  setListSortDir: (dir: ListSortDir) => void
 
   // Actions — Waterfall
   setWaterfallSortBy: (sort: WaterfallSortField) => void
@@ -357,6 +367,10 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
   explorerView: "graph",
   explorerSelectedEndpoint: null,
   graphLayout: "LR",
+  showSchemas: true,
+  listSearch: "",
+  listSortKey: "source",
+  listSortDir: "asc",
 
   // Waterfall
   waterfallSortBy: "startTime",
@@ -427,6 +441,10 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
   setExplorerView: (view) => set({ explorerView: view }),
   setExplorerSelectedEndpoint: (ep) => set({ explorerSelectedEndpoint: ep }),
   setGraphLayout: (layout) => set({ graphLayout: layout }),
+  setShowSchemas: (show) => set({ showSchemas: show }),
+  setListSearch: (search) => set({ listSearch: search }),
+  setListSortKey: (key) => set({ listSortKey: key }),
+  setListSortDir: (dir) => set({ listSortDir: dir }),
 
   // Actions — Waterfall
   setWaterfallSortBy: (sort) => set({ waterfallSortBy: sort }),

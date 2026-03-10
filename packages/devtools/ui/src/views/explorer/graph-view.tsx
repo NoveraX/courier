@@ -18,18 +18,37 @@ import { Database, Folder, Zap, Shield, CheckCircle, XCircle, Download } from "l
 
 import type { SourceMap, GraphLayout } from "../../store"
 import { Badge } from "../../components/ui"
+import { NODE_DELIM } from "./helpers"
+
+// ── Layout constants ────────────────────────────────────────────────────────
+
+const COL_GAP = 280
+const ROW_GAP = 200
+const ENDPOINT_ROW_HEIGHT = 52
+const SOURCE_VERTICAL_PAD = 80
+const SOURCE_HORIZONTAL_SPREAD = 400
+const GROUP_HORIZONTAL_SPREAD = 180
+
+// ── Handle position helpers ─────────────────────────────────────────────────
+
+function sourcePos(layout: GraphLayout): Position {
+  return layout === "LR" ? Position.Right : Position.Bottom
+}
+
+function targetPos(layout: GraphLayout): Position {
+  return layout === "LR" ? Position.Left : Position.Top
+}
 
 // ── Custom node components ──────────────────────────────────────────────────
 
 function SourceNode({
   data,
 }: {
-  data: { label: string; baseURL: string; groupCount: number }
+  data: { label: string; baseURL: string; groupCount: number; layout: GraphLayout }
 }) {
   return (
     <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-4 py-3 shadow-lg backdrop-blur-sm">
-
-      <Handle type="source" position={Position.Right} className="!bg-indigo-400 !w-2 !h-2" />
+      <Handle type="source" position={sourcePos(data.layout)} className="!bg-indigo-400 !w-2 !h-2" />
       <div className="flex items-center gap-2">
         <Database size={14} className="text-indigo-400" />
         <span className="text-xs font-semibold text-indigo-300">{data.label}</span>
@@ -43,13 +62,12 @@ function SourceNode({
 function GroupNode({
   data,
 }: {
-  data: { label: string; prefix: string; endpointCount: number }
+  data: { label: string; prefix: string; endpointCount: number; layout: GraphLayout }
 }) {
   return (
     <div className="rounded-lg border border-zinc-600/50 bg-surface-2 px-4 py-3 shadow-lg">
-
-      <Handle type="target" position={Position.Left} className="!bg-zinc-400 !w-2 !h-2" />
-      <Handle type="source" position={Position.Right} className="!bg-zinc-400 !w-2 !h-2" />
+      <Handle type="target" position={targetPos(data.layout)} className="!bg-zinc-400 !w-2 !h-2" />
+      <Handle type="source" position={sourcePos(data.layout)} className="!bg-zinc-400 !w-2 !h-2" />
       <div className="flex items-center gap-2">
         <Folder size={14} className="text-zinc-400" />
         <span className="text-xs font-semibold text-text-primary">{data.label}</span>
@@ -77,6 +95,7 @@ function EndpointNode({
     source: string
     group: string
     showSchemas: boolean
+    layout: GraphLayout
   }
 }) {
   const isQuery = data.type === "query"
@@ -91,7 +110,7 @@ function EndpointNode({
     >
       <Handle
         type="target"
-        position={Position.Left}
+        position={targetPos(data.layout)}
         className={`!w-2 !h-2 ${isQuery ? "!bg-emerald-400" : "!bg-orange-400"}`}
       />
       <div className="flex items-center gap-2">
@@ -152,11 +171,11 @@ function buildAdjacency(sourceMap: SourceMap) {
   }
   for (const [sourceName, source] of Object.entries(sourceMap)) {
     for (const [groupName, group] of Object.entries(source.groups)) {
-      addEdge(`source:${sourceName}`, `group:${sourceName}.${groupName}`)
+      addEdge(`source:${sourceName}`, `group:${sourceName}${NODE_DELIM}${groupName}`)
       for (const methodName of Object.keys(group.endpoints)) {
         addEdge(
-          `group:${sourceName}.${groupName}`,
-          `endpoint:${sourceName}.${groupName}.${methodName}`,
+          `group:${sourceName}${NODE_DELIM}${groupName}`,
+          `endpoint:${sourceName}${NODE_DELIM}${groupName}${NODE_DELIM}${methodName}`,
         )
       }
     }
@@ -169,7 +188,7 @@ function getConnectedIds(adj: Map<string, Set<string>>, startId: string): Set<st
   const visited = new Set<string>([startId])
   const queue = [startId]
   while (queue.length > 0) {
-    const current = queue.pop()!
+    const current = queue.shift()!
     for (const neighbor of adj.get(current) ?? []) {
       if (!visited.has(neighbor)) {
         visited.add(neighbor)
@@ -189,8 +208,8 @@ function buildGraph(
   const edges: Edge[] = []
 
   const isLR = layout === "LR"
-  const colGap = isLR ? 280 : 0
-  const rowGap = isLR ? 0 : 200
+  const colGap = isLR ? COL_GAP : 0
+  const rowGap = isLR ? 0 : ROW_GAP
 
   let sourceIdx = 0
   for (const [sourceName, source] of Object.entries(sourceMap)) {
@@ -200,8 +219,8 @@ function buildGraph(
       0,
     )
 
-    const sourceY = isLR ? sourceIdx * (totalEndpoints * 52 + 80) : 0
-    const sourceX = isLR ? 0 : sourceIdx * 400
+    const sourceY = isLR ? sourceIdx * (totalEndpoints * ENDPOINT_ROW_HEIGHT + SOURCE_VERTICAL_PAD) : 0
+    const sourceX = isLR ? 0 : sourceIdx * SOURCE_HORIZONTAL_SPREAD
     const sourceId = `source:${sourceName}`
 
     nodes.push({
@@ -212,6 +231,7 @@ function buildGraph(
         label: sourceName,
         baseURL: source.baseURL,
         groupCount: groupNames.length,
+        layout,
       },
     })
 
@@ -219,10 +239,10 @@ function buildGraph(
 
     for (const [groupName, group] of Object.entries(source.groups)) {
       const endpointNames = Object.keys(group.endpoints)
-      const groupId = `group:${sourceName}.${groupName}`
+      const groupId = `group:${sourceName}${NODE_DELIM}${groupName}`
 
-      const gx = isLR ? sourceX + colGap : sourceX + endpointOffset * 180
-      const gy = isLR ? sourceY + endpointOffset * 52 : sourceY + rowGap
+      const gx = isLR ? sourceX + colGap : sourceX + endpointOffset * GROUP_HORIZONTAL_SPREAD
+      const gy = isLR ? sourceY + endpointOffset * ENDPOINT_ROW_HEIGHT : sourceY + rowGap
 
       nodes.push({
         id: groupId,
@@ -232,6 +252,7 @@ function buildGraph(
           label: groupName,
           prefix: group.prefix,
           endpointCount: endpointNames.length,
+          layout,
         },
       })
 
@@ -254,10 +275,10 @@ function buildGraph(
       for (let i = 0; i < endpointNames.length; i++) {
         const methodName = endpointNames[i]!
         const ep = group.endpoints[methodName]!
-        const epId = `endpoint:${sourceName}.${groupName}.${methodName}`
+        const epId = `endpoint:${sourceName}${NODE_DELIM}${groupName}${NODE_DELIM}${methodName}`
 
-        const ex = isLR ? gx + colGap : gx + i * 180
-        const ey = isLR ? gy + i * 52 : gy + rowGap
+        const ex = isLR ? gx + colGap : gx + i * GROUP_HORIZONTAL_SPREAD
+        const ey = isLR ? gy + i * ENDPOINT_ROW_HEIGHT : gy + rowGap
 
         nodes.push({
           id: epId,
@@ -272,6 +293,7 @@ function buildGraph(
             source: sourceName,
             group: groupName,
             showSchemas,
+            layout,
           },
         })
 
@@ -313,13 +335,13 @@ function GraphInner({
   layout,
   showSchemas,
   onSelectEndpoint,
-  onExportPng,
+  onExportSvg,
 }: {
   sourceMap: SourceMap
   layout: GraphLayout
   showSchemas: boolean
   onSelectEndpoint: (ep: { source: string; group: string; method: string }) => void
-  onExportPng: () => void
+  onExportSvg: () => void
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const adjRef = useRef<Map<string, Set<string>>>(new Map())
@@ -356,7 +378,6 @@ function GraphInner({
       if (!connectedIds) {
         el.style.opacity = ""
       } else {
-        // Edge source/target are encoded in data attributes
         const sourceId = el.getAttribute("data-source")
         const targetId = el.getAttribute("data-target")
         const isConnected =
@@ -369,7 +390,7 @@ function GraphInner({
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
       if (node.id.startsWith("endpoint:")) {
-        const parts = node.id.replace("endpoint:", "").split(".")
+        const parts = node.id.replace("endpoint:", "").split(NODE_DELIM)
         if (parts.length === 3) {
           onSelectEndpoint({ source: parts[0]!, group: parts[1]!, method: parts[2]! })
         }
@@ -423,7 +444,7 @@ function GraphInner({
         <Panel position="top-right">
           <button
             type="button"
-            onClick={onExportPng}
+            onClick={onExportSvg}
             className="flex items-center gap-1.5 rounded bg-surface-1 border border-border-default px-2 py-1 text-[10px] text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-colors shadow-sm"
             title="Export as SVG"
           >
@@ -434,6 +455,22 @@ function GraphInner({
       </ReactFlow>
     </div>
   )
+}
+
+// ── Collect all CSS rules for embedding in exported SVG ─────────────────────
+
+function collectCssRules(): string {
+  const rules: string[] = []
+  for (const sheet of document.styleSheets) {
+    try {
+      for (const rule of sheet.cssRules) {
+        rules.push(rule.cssText)
+      }
+    } catch {
+      // Cross-origin stylesheets can't be read — skip
+    }
+  }
+  return rules.join("\n")
 }
 
 // ── Graph View Component (with Provider) ────────────────────────────────────
@@ -451,14 +488,10 @@ export function GraphView({
 }) {
   const graphRef = useRef<HTMLDivElement>(null)
 
-  const handleExportPng = useCallback(() => {
-    // Find the viewport element inside our specific graph wrapper
+  const handleExportSvg = useCallback(() => {
     const wrapper = graphRef.current
     if (!wrapper) return
-    const viewport = wrapper.querySelector(".react-flow__viewport") as SVGElement | null
-    if (!viewport) return
 
-    // Get the bounding box of all nodes to determine export dimensions
     const nodeEls = wrapper.querySelectorAll<HTMLElement>(".react-flow__node")
     if (nodeEls.length === 0) return
 
@@ -475,12 +508,12 @@ export function GraphView({
     const width = maxX - minX + padding * 2
     const height = maxY - minY + padding * 2
 
-    // Use foreignObject in SVG to capture the DOM content
     const svgNs = "http://www.w3.org/2000/svg"
     const svg = document.createElementNS(svgNs, "svg")
     svg.setAttribute("width", String(width))
     svg.setAttribute("height", String(height))
     svg.setAttribute("xmlns", svgNs)
+    svg.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink")
 
     const fo = document.createElementNS(svgNs, "foreignObject")
     fo.setAttribute("width", "100%")
@@ -494,6 +527,11 @@ export function GraphView({
     clone.style.height = `${height}px`
     clone.style.position = "relative"
 
+    // Embed CSS so the SVG renders correctly standalone
+    const styleEl = document.createElement("style")
+    styleEl.textContent = collectCssRules()
+    clone.insertBefore(styleEl, clone.firstChild)
+
     fo.appendChild(clone)
     svg.appendChild(fo)
 
@@ -501,7 +539,6 @@ export function GraphView({
     const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" })
     const url = URL.createObjectURL(blob)
 
-    // Download as SVG (more reliable than canvas conversion for complex DOM)
     const link = document.createElement("a")
     link.download = "nexus-api-graph.svg"
     link.href = url
@@ -517,7 +554,7 @@ export function GraphView({
           layout={layout}
           showSchemas={showSchemas}
           onSelectEndpoint={onSelectEndpoint}
-          onExportPng={handleExportPng}
+          onExportSvg={handleExportSvg}
         />
       </ReactFlowProvider>
     </div>

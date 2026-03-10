@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useMemo, useCallback } from "react"
 import {
   ArrowUpDown,
   ArrowUp,
@@ -9,19 +9,17 @@ import {
   Search,
 } from "lucide-react"
 
-import type { SourceMap } from "../../store"
+import type { SourceMap, ListSortKey, ListSortDir } from "../../store"
+import { useDevToolsStore } from "../../store"
 import { Badge } from "../../components/ui"
 import { flattenEndpoints, type FlatEndpoint } from "./helpers"
 
-// ── Sort state ──────────────────────────────────────────────────────────────
-
-type SortKey = "source" | "group" | "method" | "type" | "middleware" | "schemas"
-type SortDir = "asc" | "desc"
+// ── Sort logic ──────────────────────────────────────────────────────────────
 
 function sortEndpoints(
   endpoints: FlatEndpoint[],
-  key: SortKey,
-  dir: SortDir,
+  key: ListSortKey,
+  dir: ListSortDir,
 ): FlatEndpoint[] {
   const sorted = [...endpoints]
   const m = dir === "asc" ? 1 : -1
@@ -62,10 +60,10 @@ function SortHeader({
   className = "",
 }: {
   label: string
-  sortKey: SortKey
-  currentKey: SortKey
-  currentDir: SortDir
-  onSort: (key: SortKey) => void
+  sortKey: ListSortKey
+  currentKey: ListSortKey
+  currentDir: ListSortDir
+  onSort: (key: ListSortKey) => void
   className?: string
 }) {
   const isActive = currentKey === sortKey
@@ -98,15 +96,14 @@ export function ListView({
   sourceMap: SourceMap
   onSelectEndpoint: (ep: { source: string; group: string; method: string }) => void
 }) {
-  const [search, setSearch] = useState("")
-  const [sortKey, setSortKey] = useState<SortKey>("source")
-  const [sortDir, setSortDir] = useState<SortDir>("asc")
+  const { listSearch, setListSearch, listSortKey, setListSortKey, listSortDir, setListSortDir } =
+    useDevToolsStore()
 
   const allEndpoints = useMemo(() => flattenEndpoints(sourceMap), [sourceMap])
 
   const filtered = useMemo(() => {
-    if (!search) return allEndpoints
-    const q = search.toLowerCase()
+    if (!listSearch) return allEndpoints
+    const q = listSearch.toLowerCase()
     return allEndpoints.filter(
       (ep) =>
         ep.source.toLowerCase().includes(q) ||
@@ -115,18 +112,21 @@ export function ListView({
         ep.prefix.toLowerCase().includes(q) ||
         ep.middleware.some((m) => m.toLowerCase().includes(q)),
     )
-  }, [allEndpoints, search])
+  }, [allEndpoints, listSearch])
 
-  const sorted = useMemo(() => sortEndpoints(filtered, sortKey, sortDir), [filtered, sortKey, sortDir])
+  const sorted = useMemo(() => sortEndpoints(filtered, listSortKey, listSortDir), [filtered, listSortKey, listSortDir])
 
-  function handleSort(key: SortKey) {
-    if (key === sortKey) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-    } else {
-      setSortKey(key)
-      setSortDir("asc")
-    }
-  }
+  const handleSort = useCallback(
+    (key: ListSortKey) => {
+      if (key === listSortKey) {
+        setListSortDir(listSortDir === "asc" ? "desc" : "asc")
+      } else {
+        setListSortKey(key)
+        setListSortDir("asc")
+      }
+    },
+    [listSortKey, listSortDir, setListSortKey, setListSortDir],
+  )
 
   return (
     <div className="flex h-full flex-col">
@@ -135,8 +135,8 @@ export function ListView({
         <Search size={14} className="text-text-muted" />
         <input
           type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={listSearch}
+          onChange={(e) => setListSearch(e.target.value)}
           placeholder="Filter endpoints..."
           className="flex-1 bg-transparent text-xs text-text-primary outline-none placeholder:text-text-muted"
         />
@@ -147,19 +147,19 @@ export function ListView({
 
       {/* Table header */}
       <div className="grid grid-cols-[1fr_1fr_1.5fr_80px_80px_100px] items-center gap-2 border-b border-border-default bg-surface-1 px-3 py-1.5">
-        <SortHeader label="Source" sortKey="source" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-        <SortHeader label="Group" sortKey="group" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-        <SortHeader label="Method" sortKey="method" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-        <SortHeader label="Type" sortKey="type" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-        <SortHeader label="MW" sortKey="middleware" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-        <SortHeader label="Schemas" sortKey="schemas" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
+        <SortHeader label="Source" sortKey="source" currentKey={listSortKey} currentDir={listSortDir} onSort={handleSort} />
+        <SortHeader label="Group" sortKey="group" currentKey={listSortKey} currentDir={listSortDir} onSort={handleSort} />
+        <SortHeader label="Method" sortKey="method" currentKey={listSortKey} currentDir={listSortDir} onSort={handleSort} />
+        <SortHeader label="Type" sortKey="type" currentKey={listSortKey} currentDir={listSortDir} onSort={handleSort} />
+        <SortHeader label="MW" sortKey="middleware" currentKey={listSortKey} currentDir={listSortDir} onSort={handleSort} />
+        <SortHeader label="Schemas" sortKey="schemas" currentKey={listSortKey} currentDir={listSortDir} onSort={handleSort} />
       </div>
 
       {/* Table body */}
       <div className="flex-1 overflow-y-auto">
         {sorted.length === 0 ? (
           <div className="flex items-center justify-center py-12 text-xs text-text-muted">
-            {search ? "No endpoints match your search" : "No endpoints available"}
+            {listSearch ? "No endpoints match your search" : "No endpoints available"}
           </div>
         ) : (
           sorted.map((ep) => (

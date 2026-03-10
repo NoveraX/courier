@@ -11,10 +11,11 @@ import {
   Position,
   MarkerType,
 } from "@xyflow/react"
-import { Shield, Zap, CheckCircle, XCircle, ArrowRight } from "lucide-react"
+import { Shield, Zap, CheckCircle, XCircle, ArrowRight, ChevronDown } from "lucide-react"
 
 import type { SourceMap, RequestEntry } from "../../store"
 import { Badge, formatDuration } from "../../components/ui"
+import { flattenEndpoints } from "./helpers"
 
 // ── Compute runtime stats from request history ──────────────────────────────
 
@@ -197,6 +198,8 @@ const pipelineNodeTypes: NodeTypes = {
 
 // ── Build pipeline ──────────────────────────────────────────────────────────
 
+const PIPELINE_X_GAP = 200
+
 function buildPipeline(
   sourceMap: SourceMap,
   selected: { source: string; group: string; method: string },
@@ -210,12 +213,17 @@ function buildPipeline(
   if (!ep) return null
 
   const middleware = ep.middleware ?? []
-  const epStats = computeEndpointStats(requests, selected.source, selected.group, selected.method)
-  const mwStats = computeMiddlewareStats(requests, selected.source, selected.group, selected.method, middleware.length)
+
+  // Filter requests relevant to this endpoint only
+  const relevantRequests = requests.filter(
+    (r) => r.source === selected.source && r.group === selected.group && r.method === selected.method,
+  )
+
+  const epStats = computeEndpointStats(relevantRequests, selected.source, selected.group, selected.method)
+  const mwStats = computeMiddlewareStats(relevantRequests, selected.source, selected.group, selected.method, middleware.length)
 
   const nodes: Node[] = []
   const edges: Edge[] = []
-  const xGap = 200
   let x = 0
 
   // 1. Variables validation
@@ -226,7 +234,7 @@ function buildPipeline(
     position: { x, y: 0 },
     data: { label: "Validation", target: "variables", hasSchema: ep.hasVariablesSchema ?? false },
   })
-  x += xGap
+  x += PIPELINE_X_GAP
 
   let prevId = varValidId
 
@@ -249,7 +257,7 @@ function buildPipeline(
       markerEnd: { type: MarkerType.ArrowClosed, color: "rgba(139, 92, 246, 0.5)" },
     })
     prevId = mwId
-    x += xGap
+    x += PIPELINE_X_GAP
   }
 
   // 3. Endpoint
@@ -281,7 +289,7 @@ function buildPipeline(
       color: ep.type === "query" ? "rgba(56, 189, 248, 0.5)" : "rgba(251, 146, 60, 0.5)",
     },
   })
-  x += xGap
+  x += PIPELINE_X_GAP
 
   // 4. Response validation
   const resValidId = "pipeline:res-validation"
@@ -304,29 +312,83 @@ function buildPipeline(
   return { nodes, edges }
 }
 
+// ── Endpoint picker for Pipeline view ───────────────────────────────────────
+
+function EndpointPicker({
+  sourceMap,
+  onSelect,
+}: {
+  sourceMap: SourceMap
+  onSelect: (ep: { source: string; group: string; method: string }) => void
+}) {
+  const endpoints = useMemo(() => flattenEndpoints(sourceMap), [sourceMap])
+
+  if (endpoints.length === 0) return null
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 text-text-muted">
+      <ArrowRight size={32} strokeWidth={1} />
+      <p className="text-xs">Select an endpoint to visualize its middleware pipeline</p>
+      <div className="relative w-64">
+        <select
+          className="w-full appearance-none rounded border border-border-default bg-surface-1 px-3 py-2 pr-8 text-xs text-text-primary outline-none focus:border-indigo-500/50"
+          defaultValue=""
+          onChange={(e) => {
+            const val = e.target.value
+            if (!val) return
+            const [source, group, method] = val.split("::")
+            if (source && group && method) {
+              onSelect({ source, group, method })
+            }
+          }}
+        >
+          <option value="" disabled>Choose endpoint...</option>
+          {endpoints.map((ep) => (
+            <option
+              key={`${ep.source}::${ep.group}::${ep.method}`}
+              value={`${ep.source}::${ep.group}::${ep.method}`}
+            >
+              {ep.source}.{ep.group}.{ep.method} ({ep.type})
+            </option>
+          ))}
+        </select>
+        <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-text-muted" />
+      </div>
+    </div>
+  )
+}
+
 // ── Pipeline View Component ─────────────────────────────────────────────────
 
 export function PipelineView({
   sourceMap,
   selected,
   requests,
+  onSelectEndpoint,
 }: {
   sourceMap: SourceMap
   selected: { source: string; group: string; method: string } | null
   requests: RequestEntry[]
+  onSelectEndpoint: (ep: { source: string; group: string; method: string }) => void
 }) {
+  // Stable key for memoization: only rebuild when the selected endpoint or its requests change
+  const selectedKey = selected ? `${selected.source}::${selected.group}::${selected.method}` : null
+
+  const relevantRequestsCount = useMemo(() => {
+    if (!selected) return 0
+    return requests.filter(
+      (r) => r.source === selected.source && r.group === selected.group && r.method === selected.method && r.status !== "pending",
+    ).length
+  }, [requests, selected])
+
   const graph = useMemo(
     () => (selected ? buildPipeline(sourceMap, selected, requests) : null),
-    [sourceMap, selected, requests],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sourceMap, selectedKey, relevantRequestsCount],
   )
 
   if (!selected || !graph) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 text-text-muted">
-        <ArrowRight size={32} strokeWidth={1} />
-        <p className="text-xs">Select an endpoint from Graph or List view to see its pipeline</p>
-      </div>
-    )
+    return <EndpointPicker sourceMap={sourceMap} onSelect={onSelectEndpoint} />
   }
 
   return (

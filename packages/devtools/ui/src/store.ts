@@ -121,15 +121,41 @@ export interface RequestEntry {
   pinned?: boolean
 }
 
+// ── Source map (from connection:init / connection:sources) ───────────────────
+
+export interface EndpointInfo {
+  type: "query" | "mutation"
+  hasVariablesSchema: boolean
+  hasResponseSchema: boolean
+  middleware: string[]
+}
+
+export interface GroupInfo {
+  prefix: string
+  endpoints: Record<string, EndpointInfo>
+}
+
+export interface SourceInfo {
+  baseURL: string
+  groups: Record<string, GroupInfo>
+}
+
+export type SourceMap = Record<string, SourceInfo>
+
 export interface SessionInfo {
   sessionId: string
   framework: string
   nexusVersion: string
-  sources: Record<string, unknown>
+  sources: SourceMap
   connectedAt: number
 }
 
 // ── Store ──────────────────────────────────────────────────────────────────
+
+// ── Explorer state ──────────────────────────────────────────────────────────
+
+export type ExplorerView = "graph" | "pipeline" | "list"
+export type GraphLayout = "LR" | "TB"
 
 interface DevToolsState {
   // UI
@@ -145,6 +171,11 @@ interface DevToolsState {
   selectedRequestId: string | null
   paused: boolean
   preserveLog: boolean
+
+  // Explorer
+  explorerView: ExplorerView
+  explorerSelectedEndpoint: { source: string; group: string; method: string } | null
+  graphLayout: GraphLayout
 
   // Actions — UI
   setActiveTab: (tab: Tab) => void
@@ -163,6 +194,11 @@ interface DevToolsState {
   clearRequests: () => void
   togglePin: (id: string) => void
   handleEvent: (event: DevToolsEvent & Record<string, unknown>) => void
+
+  // Actions — Explorer
+  setExplorerView: (view: ExplorerView) => void
+  setExplorerSelectedEndpoint: (ep: { source: string; group: string; method: string } | null) => void
+  setGraphLayout: (layout: GraphLayout) => void
 }
 
 const savedTheme = (localStorage.getItem("nexus-devtools-theme") as Theme) || "dark"
@@ -182,6 +218,11 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
   selectedRequestId: null,
   paused: false,
   preserveLog: false,
+
+  // Explorer
+  explorerView: "graph",
+  explorerSelectedEndpoint: null,
+  graphLayout: "LR",
 
   // Actions — UI
   setActiveTab: (tab) => set({ activeTab: tab }),
@@ -214,6 +255,11 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
     set((s) => ({
       requests: s.requests.map((r) => (r.id === id ? { ...r, pinned: !r.pinned } : r)),
     })),
+
+  // Actions — Explorer
+  setExplorerView: (view) => set({ explorerView: view }),
+  setExplorerSelectedEndpoint: (ep) => set({ explorerSelectedEndpoint: ep }),
+  setGraphLayout: (layout) => set({ graphLayout: layout }),
 
   handleEvent: (event) => {
     if (get().paused) return

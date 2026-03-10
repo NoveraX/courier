@@ -23,6 +23,7 @@ import { WaterfallView } from "./views/waterfall"
 import { MiddlewareView } from "./views/middleware"
 import { AnalyticsView } from "./views/analytics"
 import { CompareView } from "./views/compare"
+import { ExplorerView } from "./views/explorer"
 import { PlaceholderView } from "./views/placeholder"
 
 // ── Tab config ──────────────────────────────────────────────────────────────
@@ -126,6 +127,8 @@ export function App() {
             <AnalyticsView />
           ) : activeTab === "compare" ? (
             <CompareView />
+          ) : activeTab === "explorer" ? (
+            <ExplorerView />
           ) : (
             <PlaceholderView tab={activeTab} />
           )}

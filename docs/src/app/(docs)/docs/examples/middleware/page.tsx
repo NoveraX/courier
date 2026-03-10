@@ -29,7 +29,7 @@ const api = defineApi({
 })`
 
 const middlewareExampleCode = `// Middleware transforms responses — adds _meta to every response
-const data = await caller.users.getAll({})
+const data = await caller.users.getAll()
 
 // data now contains:
 // {

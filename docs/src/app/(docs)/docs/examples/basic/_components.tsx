@@ -5,7 +5,7 @@ import { RunButton } from "@/components/run-button"
 import { q } from "@/lib/query"
 
 export function GetDemo() {
-  const { data, isLoading, error } = q.users.useQuery("getAll", { variables: {} })
+  const { data, isLoading, error } = q.users.useQuery("getAll")
 
   return (
     <>

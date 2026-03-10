@@ -273,15 +273,21 @@ type QueryOptions<R, V> = WithVariables<V> &
   }
 
 type MutationOptions<R, V> = Omit<
-  UseMutationOptions<R, HTTPError, [V] extends [undefined] ? void : V>,
+  UseMutationOptions<R, HTTPError, MutationVariables<V>>,
   "mutationFn"
 > & {
   requestOptions?: CallOptions
 }
 
+type MutationVariables<V> = [V] extends [undefined]
+  ? void
+  : {} extends V ? void | V : V
+
 type WithVariables<V> = [V] extends [undefined]
   ? { variables?: undefined }
-  : { variables: V }
+  : {} extends V
+    ? { variables?: V }
+    : { variables: V }
 ```
 
 ## Related

@@ -63,7 +63,7 @@ const { mutate } = q.users.useMutation("create")
 //      ^? (variables: { name: string, email: string, role?: string }) => void
 
 // caller (non-hook) also infers types
-const users = await caller.users.getAll({})
+const users = await caller.users.getAll()
 //    ^? { data: User[], total: number }
 
 // Dot-notation resolves the correct nested type
@@ -96,7 +96,7 @@ import { api } from "@/api"
 export const caller = createCaller(api)
 
 // Server Component or Server Action
-const users = await caller.users.getAll({})
+const users = await caller.users.getAll()
 //    ^? { data: User[], total: number }`
 
 export const metadata = docsMetadata(

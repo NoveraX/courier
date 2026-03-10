@@ -14,13 +14,13 @@ import { api } from "@/api"
 const caller = createCaller(api)`
 
 const fetchAllCode = `// Server Component — runs on the server, zero client JS
-const users = await caller.users.getAll({})`
+const users = await caller.users.getAll()`
 
 const fetchOneCode = `// Path params are passed as the variables object
 const user = await caller.users.getById({ id: 1 })`
 
 const fetchPostsCode = `// Access any request group via dot-notation
-const posts = await caller.posts.getAll({})`
+const posts = await caller.posts.getAll()`
 
 export const metadata = docsMetadata(
   "Direct Mode",
@@ -28,9 +28,9 @@ export const metadata = docsMetadata(
 )
 
 export default async function DirectExamplesPage() {
-  const users = await caller.users.getAll({})
+  const users = await caller.users.getAll()
   const user = await caller.users.getById({ id: 1 })
-  const posts = await caller.posts.getAll({})
+  const posts = await caller.posts.getAll()
 
   return (
     <>

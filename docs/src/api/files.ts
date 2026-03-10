@@ -14,7 +14,7 @@ export const files = defineGroup({
   prefix: "upload",
   endpoints: {
     upload: endpoint<UploadResponse, FormData>()((http, vars) =>
-      http.post("", vars as unknown as Record<string, unknown>)
+      http.post("", vars)
     ),
   },
 })

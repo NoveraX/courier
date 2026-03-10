@@ -34,8 +34,8 @@ export function GroupInfo() {
 }
 
 export function GroupsDemo() {
-  const users = q.users.useQuery("getAll", { variables: {} })
-  const posts = q.posts.useQuery("getAll", { variables: {} })
+  const users = q.users.useQuery("getAll")
+  const posts = q.posts.useQuery("getAll")
   const singleUser = q.users.useQuery("getById", { variables: { id: 1 } })
 
   const isLoading = users.isLoading || posts.isLoading || singleUser.isLoading

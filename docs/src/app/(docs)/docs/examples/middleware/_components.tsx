@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 
+import { isHTTPError } from "@noverax/nexus"
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
 import { middlewareCaller } from "@/lib/caller"
@@ -15,7 +16,7 @@ export function MiddlewareDemo() {
       <RunButton
         loading={isPending}
         label="Fetch Users (with middleware)"
-        onClick={() => mutate({})}
+        onClick={() => mutate()}
       />
       {error && <ResponseViewer error={error.message} />}
       {data && <ResponseViewer data={data} status={200} />}
@@ -37,12 +38,19 @@ export function OnErrorDemo() {
     try {
       await middlewareCaller.misc.error({ code: 500 })
     } catch (e: unknown) {
-      const err = e as { status?: number; data?: unknown; message?: string }
-      setCaughtError({
-        status: err.status ?? 500,
-        data: err.data,
-        message: err.message ?? "Unknown error",
-      })
+      if (isHTTPError(e)) {
+        setCaughtError({
+          status: e.status,
+          data: e.data,
+          message: e.message,
+        })
+      } else {
+        setCaughtError({
+          status: 500,
+          data: null,
+          message: e instanceof Error ? e.message : "Unknown error",
+        })
+      }
     } finally {
       setLoading(false)
     }

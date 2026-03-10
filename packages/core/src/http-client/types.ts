@@ -50,7 +50,7 @@ export type HttpResponse<T = unknown> = {
 
 export type MethodParameters<T extends HttpMethod> = T extends "head"
   ? [url?: string, options?: MethodOptions<T>]
-  : [url?: string, variables?: Record<string, unknown>, options?: MethodOptions<T>];
+  : [url?: string, variables?: FormData | Record<string, unknown>, options?: MethodOptions<T>];
 
 /** Core fetch options — extends standard RequestInit with convenience properties */
 export type FetchOptions = Omit<RequestInit, "method"> & {

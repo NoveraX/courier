@@ -9,13 +9,6 @@ import { UserList } from "./user-list"
 
 const action = createAction(sources, "api")
 
-type UsersResponse = {
-  data: { id: number; name: string; email: string; role: string; createdAt: string }[]
-  total: number
-  page: number
-  limit: number
-}
-
 const actionCode = `// app/actions/actions.ts
 "use server"
 
@@ -79,7 +72,7 @@ export const metadata = docsMetadata(
 )
 
 export default async function ActionsExamplesPage() {
-  const users = (await action.users.getAll({})) as UsersResponse
+  const users = await action.users.getAll()
 
   return (
     <>

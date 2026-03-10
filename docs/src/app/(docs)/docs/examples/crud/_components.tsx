@@ -19,7 +19,7 @@ type User = {
 export function CrudDemo() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
-  const { data, isLoading, refetch } = q.users.useQuery("getAll", { variables: {} })
+  const { data, isLoading, refetch } = q.users.useQuery("getAll")
 
   const create = q.users.useMutation("create", {
     onSuccess: () => refetch(),

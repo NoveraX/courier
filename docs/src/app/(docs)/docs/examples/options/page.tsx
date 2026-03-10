@@ -31,22 +31,22 @@ const api = defineApi({
 const cacheCode = `// Next.js cache option (passed through to fetch)
 const data = await caller.users.with({
   cache: "force-cache",
-}).getAll({})
+}).getAll()
 
 // No caching
 const fresh = await caller.users.with({
   cache: "no-store",
-}).getAll({})`
+}).getAll()`
 
 const revalidateCode = `// Next.js revalidation — ISR-style caching
 const data = await caller.users.with({
   next: { revalidate: 60 },  // revalidate every 60 seconds
-}).getAll({})
+}).getAll()
 
 // Tag-based revalidation
 const data = await caller.users.with({
   next: { tags: ["users"] },
-}).getAll({})
+}).getAll()
 
 // Then in a Server Action:
 import { revalidateTag } from "next/cache"

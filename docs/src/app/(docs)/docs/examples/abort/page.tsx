@@ -21,7 +21,7 @@ function handleClick() {
   const controller = new AbortController()
   abortRef.current = controller
 
-  caller.users.with({ signal: controller.signal }).getAll({})
+  caller.users.with({ signal: controller.signal }).getAll()
 }`
 
 const deduplicateCode = `import { defineApi } from "@noverax/nexus/define"

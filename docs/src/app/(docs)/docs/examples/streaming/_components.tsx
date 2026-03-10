@@ -21,9 +21,9 @@ export function StreamDemo() {
     setLoading(true)
 
     try {
-      const response = (await caller.misc.with({ stream: true }).stream()) as unknown as Response
+      const response = await caller.misc.with({ stream: true }).stream()
 
-      const reader = response.body?.getReader()
+      const reader = response.getReader()
       if (!reader) return
       const decoder = new TextDecoder()
       let buffer = ""

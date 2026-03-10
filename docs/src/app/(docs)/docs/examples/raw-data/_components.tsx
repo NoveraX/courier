@@ -1,16 +1,11 @@
 "use client"
 
 import { useState } from "react"
+import type { HttpResponse } from "@noverax/nexus"
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
 import { caller } from "@/lib/caller"
-
-type RawResponse = {
-  status: number
-  headers: unknown
-  data: unknown
-}
 
 export function NormalFetchDemo() {
   const [data, setData] = useState<unknown>(null)
@@ -20,7 +15,7 @@ export function NormalFetchDemo() {
     setLoading(true)
     setData(null)
     try {
-      const result = await caller.users.getAll({})
+      const result = await caller.users.getAll()
       setData(result)
     } finally {
       setLoading(false)
@@ -36,14 +31,14 @@ export function NormalFetchDemo() {
 }
 
 export function RawFetchDemo() {
-  const [result, setResult] = useState<RawResponse | null>(null)
+  const [result, setResult] = useState<Partial<HttpResponse> | null>(null)
   const [loading, setLoading] = useState(false)
 
   const handleFetch = async () => {
     setLoading(true)
     setResult(null)
     try {
-      const data = (await caller.users.raw.getAll({})) as unknown as RawResponse
+      const data = await caller.users.raw.getAll()
       setResult(data)
     } finally {
       setLoading(false)

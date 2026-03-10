@@ -14,7 +14,9 @@ type EndpointReturn<R, Raw extends boolean> = Promise<
 /** Typed method signature — adapts based on whether variables are required */
 type EndpointMethod<R, V, Raw extends boolean> = [V] extends [undefined]
   ? () => EndpointReturn<R, Raw>
-  : (variables: V) => EndpointReturn<R, Raw>;
+  : {} extends V
+    ? (variables?: V) => EndpointReturn<R, Raw>
+    : (variables: V) => EndpointReturn<R, Raw>;
 
 /** Methods exposed on a group client (excludes 'options' from the group) */
 type GroupMethods<G, Raw extends boolean> = {

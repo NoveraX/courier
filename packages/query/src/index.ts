@@ -39,7 +39,15 @@ import {
 // Type helpers
 // ---------------------------------------------------------------------------
 
-type WithVariables<V> = [V] extends [undefined] ? { variables?: undefined } : { variables: V };
+type WithVariables<V> = [V] extends [undefined]
+  ? { variables?: undefined }
+  : {} extends V
+    ? { variables?: V }
+    : { variables: V };
+
+/** Resolve TVariables for react-query mutations: void when no args needed */
+// biome-ignore lint/suspicious/noConfusingVoidType: void is required for react-query's mutate() to accept zero arguments
+type MutationVariables<V> = [V] extends [undefined] ? void : {} extends V ? void | V : V;
 
 type GroupMethodKeys<G> = Exclude<keyof G, "options"> & string;
 
@@ -74,14 +82,16 @@ export type NexusInfiniteQueryOptions<R, V, P> = {
   ) => P | undefined | null;
 } & ([V] extends [undefined]
   ? { variables?: (pageParam: P) => V }
-  : { variables: (pageParam: P) => V }) &
+  : {} extends V
+    ? { variables?: (pageParam: P) => V }
+    : { variables: (pageParam: P) => V }) &
   Omit<
     UseInfiniteQueryOptions<R, HTTPError, InfiniteData<R, P>, QueryKey, P>,
     "queryKey" | "queryFn" | "initialPageParam" | "getNextPageParam" | "getPreviousPageParam"
   >;
 
 export type NexusMutationOptions<R, V> = Omit<
-  UseMutationOptions<R, HTTPError, [V] extends [undefined] ? void : V>,
+  UseMutationOptions<R, HTTPError, MutationVariables<V>>,
   "mutationFn"
 > & {
   requestOptions?: CallOptions;
@@ -91,7 +101,9 @@ export type NexusMutationOptions<R, V> = Omit<
 
 export type NexusPrefetchOptions<V> = [V] extends [undefined]
   ? { variables?: undefined; requestOptions?: CallOptions; staleTime?: number }
-  : { variables: V; requestOptions?: CallOptions; staleTime?: number };
+  : {} extends V
+    ? { variables?: V; requestOptions?: CallOptions; staleTime?: number }
+    : { variables: V; requestOptions?: CallOptions; staleTime?: number };
 
 // ---------------------------------------------------------------------------
 // QueryGroupClient & QueryCallerClient types
@@ -104,7 +116,9 @@ export type QueryGroupClient<G> = {
     ...args: G[M] extends Endpoint<infer R, infer V>
       ? [V] extends [undefined]
         ? [options?: NexusQueryOptions<R, V>]
-        : [options: NexusQueryOptions<R, V>]
+        : {} extends V
+          ? [options?: NexusQueryOptions<R, V>]
+          : [options: NexusQueryOptions<R, V>]
       : [options?: Record<string, unknown>]
   ) => G[M] extends Endpoint<infer R, any>
     ? UseQueryResult<R, HTTPError>
@@ -115,7 +129,9 @@ export type QueryGroupClient<G> = {
     ...args: G[M] extends Endpoint<infer R, infer V>
       ? [V] extends [undefined]
         ? [options?: NexusSuspenseQueryOptions<R, V>]
-        : [options: NexusSuspenseQueryOptions<R, V>]
+        : {} extends V
+          ? [options?: NexusSuspenseQueryOptions<R, V>]
+          : [options: NexusSuspenseQueryOptions<R, V>]
       : [options?: Record<string, unknown>]
   ) => G[M] extends Endpoint<infer R, any>
     ? UseSuspenseQueryResult<R, HTTPError>
@@ -132,7 +148,7 @@ export type QueryGroupClient<G> = {
     method: M,
     options?: G[M] extends Endpoint<infer R, infer V> ? NexusMutationOptions<R, V> : never,
   ) => G[M] extends Endpoint<infer R, infer V>
-    ? UseMutationResult<R, HTTPError, [V] extends [undefined] ? void : V>
+    ? UseMutationResult<R, HTTPError, MutationVariables<V>>
     : never;
 
   prefetchQuery: <M extends GroupMethodKeys<G>>(
@@ -141,7 +157,9 @@ export type QueryGroupClient<G> = {
     ...args: G[M] extends Endpoint<any, infer V>
       ? [V] extends [undefined]
         ? [options?: NexusPrefetchOptions<V>]
-        : [options: NexusPrefetchOptions<V>]
+        : {} extends V
+          ? [options?: NexusPrefetchOptions<V>]
+          : [options: NexusPrefetchOptions<V>]
       : [options?: Record<string, unknown>]
   ) => Promise<void>;
 };

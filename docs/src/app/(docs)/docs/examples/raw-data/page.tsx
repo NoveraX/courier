@@ -5,11 +5,11 @@ import { docsMetadata } from "@/lib/metadata"
 import { NormalFetchDemo, RawFetchDemo } from "./_components"
 
 const normalCode = `// Default — returns just the data
-const users = await caller.users.getAll({})
+const users = await caller.users.getAll()
 // → { data: [...], total: 3 }`
 
 const rawDataCode = `// .raw accessor — returns { status, headers, data }
-const response = await caller.users.raw.getAll({})
+const response = await caller.users.raw.getAll()
 
 // response.status  → 200
 // response.headers → { "content-type": "application/json", ... }
@@ -23,10 +23,10 @@ type EndpointReturn<R, Raw extends boolean> = Promise<
 >
 
 // Usage with type safety:
-const data = await caller.users.getAll({})
+const data = await caller.users.getAll()
 //    ^? { data: User[], total: number }
 
-const raw = await caller.users.raw.getAll({})
+const raw = await caller.users.raw.getAll()
 //    ^? { status?: number, headers?: Headers, data?: ... }`
 
 export const metadata = docsMetadata(

@@ -87,7 +87,7 @@ export function DedupDemo() {
     setResult(null)
 
     try {
-      const data = await caller.users.with({ signal: controller.signal }).getAll({})
+      const data = await caller.users.with({ signal: controller.signal }).getAll()
       setResult(data)
     } catch {
       // Aborted — ignore

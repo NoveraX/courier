@@ -23,13 +23,13 @@ export const api = defineApi({ baseURL: "...", groups: { users } })`
 
 const useCode = `import { createProxyCaller } from "@noverax/nexus"
 
-const caller = createProxyCaller<Sources>()
+const caller = createProxyCaller<typeof api>("api")
 
 // GET /users — returns User[]
-const users = await caller("api")("users:getAll")
+const users = await caller.users.getAll()
 
 // POST /users — create a new user
-const newUser = await caller("api")("users:create", {
+const newUser = await caller.users.create({
   name: "Alice", email: "alice@example.com",
 })`
 

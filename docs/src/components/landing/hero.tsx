@@ -9,11 +9,11 @@ import { AnimatedSection } from "./section-animate"
 
 const heroCode = `import { createProxyCaller } from "@noverax/nexus"
 
-const caller = createProxyCaller<Sources>()
+const caller = createProxyCaller<typeof api>("api")
 
 // Fully typed — response, variables, path params
-const users = await caller("api")("users:getAll")
-const user = await caller("api")("users:getById", { id: 1 })`
+const users = await caller.users.getAll()
+const user = await caller.users.getById({ id: 1 })`
 
 export function Hero() {
   return (

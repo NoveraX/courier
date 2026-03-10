@@ -18,9 +18,9 @@ const user: unknown = await res.json()`
 const afterCode = `// Nexus — typed, zero boilerplate
 import { createProxyCaller } from "@noverax/nexus"
 
-const caller = createProxyCaller<Sources>()
+const caller = createProxyCaller<typeof api>("api")
 
-const user = await caller("api")("users:getById", { id: 1 })
+const user = await caller.users.getById({ id: 1 })
 // user is User — fully typed!`
 
 export function CodeComparison() {

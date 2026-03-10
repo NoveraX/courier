@@ -17,6 +17,7 @@ export interface DevToolsHooks {
     status: number;
     data: unknown;
     headers: Record<string, string>;
+    requestHeaders: Record<string, string>;
     timing: {
       total: number;
       middleware: number;

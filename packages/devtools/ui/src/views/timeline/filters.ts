@@ -1,32 +1,15 @@
-import type { RequestEntry, RequestStatus } from "../../store"
+import type { RequestEntry } from "../../store"
+import { EMPTY_FILTERS } from "../../store"
 
-// ── Filter Types ─────────────────────────────────────────────────────────────
+import type { TimelineFilters } from "../../store"
 
-export interface Filters {
-  search: string
-  status: RequestStatus[]
-  mode: ("direct" | "proxy")[]
-  type: ("query" | "mutation")[]
-  httpMethod: string[]
-  source: string[]
-  group: string[]
-  minDuration: number | null
-}
-
-export const EMPTY_FILTERS: Filters = {
-  search: "",
-  status: [],
-  mode: [],
-  type: [],
-  httpMethod: [],
-  source: [],
-  group: [],
-  minDuration: null,
-}
+// Re-export for convenience
+export type { TimelineFilters as Filters }
+export { EMPTY_FILTERS }
 
 // ── Filter Logic ─────────────────────────────────────────────────────────────
 
-export function hasActiveFilters(f: Filters): boolean {
+export function hasActiveFilters(f: TimelineFilters): boolean {
   return (
     f.search !== "" ||
     f.status.length > 0 ||
@@ -39,8 +22,9 @@ export function hasActiveFilters(f: Filters): boolean {
   )
 }
 
-export function countActiveFilters(f: Filters): number {
+export function countActiveFilters(f: TimelineFilters): number {
   return [
+    f.search !== "" ? 1 : 0,
     f.status.length,
     f.mode.length,
     f.type.length,
@@ -51,7 +35,7 @@ export function countActiveFilters(f: Filters): number {
   ].reduce((a, b) => a + b, 0)
 }
 
-export function filterRequests(requests: RequestEntry[], filters: Filters): RequestEntry[] {
+export function filterRequests(requests: RequestEntry[], filters: TimelineFilters): RequestEntry[] {
   return requests.filter((r) => {
     if (filters.search) {
       const q = filters.search.toLowerCase()

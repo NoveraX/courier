@@ -89,6 +89,60 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
     // Send current sessions to newly connected UI
     socket.emit("sessions", Array.from(sessions.values()));
 
+    // Replay: re-execute a request from timeline (result streams back as events)
+    socket.on(
+      "replay",
+      (
+        payload: {
+          source: string;
+          group: string;
+          method: string;
+          variables: unknown;
+          headers: Record<string, string>;
+          mode: "direct" | "proxy";
+        },
+        callback: (result: { ok: boolean; error?: string }) => void,
+      ) => {
+        const appSockets = Array.from(appNamespace.sockets.values());
+        if (appSockets.length === 0) {
+          callback({ ok: false, error: "No application connected" });
+          return;
+        }
+
+        let responded = false;
+        const respond = (result: { ok: boolean; error?: string }) => {
+          if (responded) return;
+          responded = true;
+          callback(result);
+        };
+
+        const targetSocket = appSockets[0] as (typeof appSockets)[number];
+        targetSocket.emit(
+          "playground:execute",
+          {
+            source: payload.source,
+            group: payload.group,
+            method: payload.method,
+            variables: payload.variables,
+            headers: payload.headers ?? {},
+            mode: payload.mode,
+          },
+          (result: Record<string, unknown>) => {
+            if (result.error) {
+              respond({ ok: false, error: String(result.error) });
+            } else {
+              respond({ ok: true });
+            }
+          },
+        );
+
+        // Timeout: if app never responds
+        setTimeout(() => {
+          respond({ ok: false, error: "Application did not respond within 15s" });
+        }, 15_000);
+      },
+    );
+
     // Playground: forward request to a connected app and return the result
     socket.on(
       "playground:send",

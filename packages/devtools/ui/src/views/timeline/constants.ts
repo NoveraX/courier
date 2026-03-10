@@ -1,5 +1,15 @@
 import type { RequestStatus } from "../../store"
 
+// ── Row ─────────────────────────────────────────────────────────────────────
+
+/** Estimated height of a request row in pixels (for virtualizer) */
+export const ROW_HEIGHT = 40
+
+// ── Timing Thresholds (ms) ──────────────────────────────────────────────────
+
+export const TIMING_SLOW_MS = 500
+export const TIMING_WARN_MS = 100
+
 // ── Status Config ────────────────────────────────────────────────────────────
 
 export const STATUS_CONFIG: Record<

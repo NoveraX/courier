@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { Copy, Check } from "lucide-react"
 
 // ── Badge ────────────────────────────────────────────────────────────────────
@@ -90,11 +90,15 @@ export function CopyButton({
   className?: string
 }) {
   const [copied, setCopied] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  useEffect(() => () => clearTimeout(timerRef.current), [])
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(text)
     setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+    clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => setCopied(false), 1500)
   }, [text])
 
   return (

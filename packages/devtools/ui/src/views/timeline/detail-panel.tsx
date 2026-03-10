@@ -4,7 +4,7 @@ import { X, Copy } from "lucide-react"
 import type { RequestEntry } from "../../store"
 
 import { STATUS_CONFIG, getCodeColor } from "./constants"
-import { buildCurl } from "./request-helpers"
+import { buildCurl, getRequestLabel } from "./request-helpers"
 import { GeneralTab } from "./tabs/general-tab"
 import { HeadersTab } from "./tabs/headers-tab"
 import { PayloadTab } from "./tabs/payload-tab"
@@ -37,7 +37,7 @@ export function DetailPanel({
   onClose: () => void
 }) {
   const [activeTab, setActiveTab] = useState<DetailTab>("general")
-  const label = [request.source, request.group, request.method].filter(Boolean).join(".")
+  const label = getRequestLabel(request)
   const statusCfg = STATUS_CONFIG[request.status]
 
   const visibleTabs = DETAIL_TABS.filter((t) => t.show(request))

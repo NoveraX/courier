@@ -5,6 +5,7 @@ import type { RequestEntry } from "../../store"
 
 import { RequestRow } from "./request-row"
 import { RequestContextMenu } from "./context-menu"
+import { ROW_HEIGHT } from "./constants"
 
 import type { ContextMenuState } from "./context-menu"
 
@@ -27,7 +28,7 @@ export function VirtualRequestList({
   const virtualizer = useVirtualizer({
     count: requests.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 40,
+    estimateSize: () => ROW_HEIGHT,
     overscan: 20,
   })
 

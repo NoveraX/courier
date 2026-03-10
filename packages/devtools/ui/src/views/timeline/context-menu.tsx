@@ -3,6 +3,7 @@ import { Copy, Terminal, Braces, Download, RotateCcw, Pin } from "lucide-react"
 
 import type { RequestEntry } from "../../store"
 
+import { useDevToolsStore } from "../../store"
 import { getSocket } from "../../socket"
 import { buildCurl, buildFetchSnippet, exportRequestAsJson, getRequestLabel } from "./request-helpers"
 
@@ -27,6 +28,17 @@ export function RequestContextMenu({
 }) {
   const menuRef = useRef<HTMLDivElement>(null)
 
+  // Clamp position so menu stays within viewport
+  useEffect(() => {
+    const menu = menuRef.current
+    if (!menu) return
+    const rect = menu.getBoundingClientRect()
+    const overflowX = rect.right - window.innerWidth
+    const overflowY = rect.bottom - window.innerHeight
+    if (overflowX > 0) menu.style.left = `${state.x - overflowX - 8}px`
+    if (overflowY > 0) menu.style.top = `${state.y - overflowY - 8}px`
+  }, [state.x, state.y])
+
   useEffect(() => {
     function handleMouseDown(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose()
@@ -47,13 +59,25 @@ export function RequestContextMenu({
 
   function handleReplay() {
     const socket = getSocket()
-    socket.emit("replay", {
-      source: request.source,
-      group: request.group,
-      method: request.method,
-      variables: request.variables,
-      mode: request.mode,
-    })
+    const { showToast } = useDevToolsStore.getState()
+    socket.emit(
+      "replay",
+      {
+        source: request.source,
+        group: request.group,
+        method: request.method,
+        variables: request.variables,
+        headers: request.requestHeaders ?? {},
+        mode: request.mode,
+      },
+      (result: { ok: boolean; error?: string }) => {
+        if (result.ok) {
+          showToast("Replay sent — new request will appear in timeline", "success")
+        } else {
+          showToast(result.error ?? "Replay failed", "error")
+        }
+      },
+    )
     onClose()
   }
 

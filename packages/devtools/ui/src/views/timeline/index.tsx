@@ -1,13 +1,11 @@
-import { useState } from "react"
+import { useEffect } from "react"
 import { Activity, Filter } from "lucide-react"
 
-import { useDevToolsStore } from "../../store"
+import { useDevToolsStore, EMPTY_FILTERS } from "../../store"
 import { Toolbar, FilterBar } from "./toolbar"
 import { VirtualRequestList } from "./request-list"
 import { DetailPanel } from "./detail-panel"
-import { EMPTY_FILTERS, hasActiveFilters, filterRequests } from "./filters"
-
-import type { Filters } from "./filters"
+import { hasActiveFilters, filterRequests } from "./filters"
 
 // ── Timeline View ────────────────────────────────────────────────────────────
 
@@ -23,15 +21,27 @@ export function TimelineView() {
     clearRequests,
     connected,
     togglePin,
+    timelineFilters: filters,
+    setTimelineFilters: setFilters,
+    timelineShowFilters: showFilters,
+    setTimelineShowFilters: setShowFilters,
   } = useDevToolsStore()
-
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
-  const [showFilters, setShowFilters] = useState(false)
 
   const selectedRequest = requests.find((r) => r.id === selectedRequestId)
   const filteredRequests = hasActiveFilters(filters)
     ? filterRequests(requests, filters)
     : requests
+
+  // Escape to close detail panel
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && selectedRequestId) {
+        selectRequest(null)
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [selectedRequestId, selectRequest])
 
   return (
     <div className="flex flex-1 overflow-hidden">

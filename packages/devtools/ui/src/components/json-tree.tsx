@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { ChevronRight, Copy, Check } from "lucide-react";
 
 // ── JSON Tree Viewer ─────────────────────────────────────────────────────────
@@ -47,10 +47,14 @@ function JsonNode({
   const isObject = value !== null && typeof value === "object";
   const isArray = Array.isArray(value);
 
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
   const copyPath = useCallback(() => {
     navigator.clipboard.writeText(path);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setCopied(false), 1500);
   }, [path]);
 
   const matchesSearch = searchQuery

@@ -4,7 +4,8 @@ import { Pin } from "lucide-react"
 import type { RequestEntry } from "../../store"
 
 import { Badge, formatRelativeTime, formatAbsoluteTime, formatSize } from "../../components/ui"
-import { STATUS_CONFIG, HTTP_METHOD_COLORS, getCodeColor } from "./constants"
+import { STATUS_CONFIG, HTTP_METHOD_COLORS, getCodeColor, TIMING_SLOW_MS, TIMING_WARN_MS } from "./constants"
+import { getRequestLabel } from "./request-helpers"
 
 // ── Request Row ──────────────────────────────────────────────────────────────
 
@@ -23,8 +24,8 @@ export function RequestRow({
 }) {
   const [, setTick] = useState(0)
   const statusCfg = STATUS_CONFIG[request.status]
-  const label = [request.source, request.group, request.method].filter(Boolean).join(".")
-  const codeColor = request.statusCode ? getCodeColor(request.statusCode) : ""
+  const label = getRequestLabel(request)
+  const codeColor = request.statusCode != null ? getCodeColor(request.statusCode) : ""
 
   // Tick every 10s for relative timestamps on pending requests
   useEffect(() => {
@@ -113,9 +114,9 @@ export function RequestRow({
       {request.timing ? (
         <span
           className={`w-12 shrink-0 text-right text-[11px] tabular-nums ${
-            request.timing.total > 500
+            request.timing.total > TIMING_SLOW_MS
               ? "text-red-400"
-              : request.timing.total > 100
+              : request.timing.total > TIMING_WARN_MS
                 ? "text-amber-400"
                 : "text-emerald-400"
           }`}

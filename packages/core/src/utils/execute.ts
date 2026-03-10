@@ -317,6 +317,7 @@ export async function executeRequest(
       status: result.status,
       data: result.data,
       headers: headersToObject(result.headers) ?? {},
+      requestHeaders: headersToObject(middlewareCtx.headers) ?? {},
       timing: {
         total: hasDevtools ? performance.now() - t0 : 0,
         middleware: tMiddleware,

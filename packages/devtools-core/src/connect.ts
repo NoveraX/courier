@@ -102,9 +102,16 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
   const createEvent = <T extends AnyDevToolsEvent>(partial: Omit<T, "sessionId">): T =>
     ({ ...partial, sessionId }) as T;
 
-  // Check if event should be filtered
+  // Resolve "_" (used by createCaller) to the real source name
+  const sourceKeys = sources ? Object.keys(sources) : [];
+  const resolveSourceName = (name: string): string => {
+    if (name !== "_" || !sources || Object.hasOwn(sources, "_")) return name;
+    return sourceKeys[0] ?? name;
+  };
+
+  // Check if event should be filtered (uses resolved source name)
   const shouldFilter = (source: string): boolean => {
-    if (filter?.sources && !filter.sources.includes(source)) return true;
+    if (filter?.sources && !filter.sources.includes(resolveSourceName(source))) return true;
     return false;
   };
 
@@ -117,7 +124,7 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
         id: e.id,
         type: "request:start",
         timestamp: e.timestamp,
-        source: e.source,
+        source: resolveSourceName(e.source),
         group: e.group,
         method: e.method,
         variables: e.variables,
@@ -138,6 +145,7 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
         status: e.status,
         data: e.data,
         headers: e.headers,
+        requestHeaders: e.requestHeaders,
         timing: e.timing,
       }),
     );
@@ -270,7 +278,7 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
         type: "proxy:receive",
         timestamp: e.timestamp,
         proxyMethod: e.proxyMethod,
-        source: e.source,
+        source: resolveSourceName(e.source),
         group: e.group,
         method: e.method,
       }),
@@ -285,7 +293,7 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
         type: "proxy:respond",
         timestamp: e.timestamp,
         proxyMethod: e.proxyMethod,
-        source: e.source,
+        source: resolveSourceName(e.source),
         group: e.group,
         method: e.method,
         status: e.status,
@@ -508,8 +516,24 @@ async function tryConnectSocket(
 
         const startTime = performance.now();
 
+        // createCaller() uses "_" as the internal source key, but connectDevTools
+        // receives the user's sources object with real keys. Resolve unknown
+        // source keys by matching group, or falling back to the first source.
+        let resolvedSource = payload.source;
+        if (!Object.hasOwn(sources, resolvedSource)) {
+          const keys = Object.keys(sources);
+          // Try to find a source that has the requested group
+          const match = payload.group
+            ? keys.find((k) => {
+                const s = sources[k];
+                return s?.options?.groups && payload.group in s.options.groups;
+              })
+            : undefined;
+          resolvedSource = match ?? keys[0] ?? resolvedSource;
+        }
+
         executeRequest(sources, {
-          source: payload.source,
+          source: resolvedSource,
           group: payload.group,
           method: payload.method,
           variables: payload.variables as Record<string, unknown>,
@@ -526,9 +550,10 @@ async function tryConnectSocket(
             });
           })
           .catch((err: unknown) => {
-            const error = err as { status?: number; message?: string };
+            const error = err as { status?: number; message?: string; data?: { message?: string } };
+            const detail = error.data?.message ?? error.message ?? "Unknown error";
             callback({
-              error: error.message ?? "Unknown error",
+              error: detail,
               status: error.status ?? 500,
               headers: {},
               duration: performance.now() - startTime,

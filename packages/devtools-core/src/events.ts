@@ -102,6 +102,7 @@ export interface RequestEndEvent extends DevToolsEvent {
   status: number;
   data: unknown;
   headers: Record<string, string>;
+  requestHeaders: Record<string, string>;
   timing: RequestTiming;
 }
 

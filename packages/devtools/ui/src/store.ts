@@ -171,6 +171,33 @@ export interface PlaygroundHistoryEntry {
 
 export const PLAYGROUND_MAX_HISTORY = 50
 
+/** Maximum number of requests kept in memory */
+export const MAX_REQUESTS = 2000
+
+// ── Timeline filters ────────────────────────────────────────────────────────
+
+export interface TimelineFilters {
+  search: string
+  status: RequestStatus[]
+  mode: ("direct" | "proxy")[]
+  type: ("query" | "mutation")[]
+  httpMethod: string[]
+  source: string[]
+  group: string[]
+  minDuration: number | null
+}
+
+export const EMPTY_FILTERS: TimelineFilters = {
+  search: "",
+  status: [],
+  mode: [],
+  type: [],
+  httpMethod: [],
+  source: [],
+  group: [],
+  minDuration: null,
+}
+
 // ── Store ──────────────────────────────────────────────────────────────────
 
 // ── Explorer state ──────────────────────────────────────────────────────────
@@ -182,10 +209,19 @@ export type GraphLayout = "LR" | "TB"
 
 export type AuditSeverityFilter = "error" | "warning" | "hint" | "pass" | "all"
 
+// ── Toast ───────────────────────────────────────────────────────────────────
+
+export interface Toast {
+  id: string
+  message: string
+  type: "success" | "error" | "info"
+}
+
 interface DevToolsState {
   // UI
   activeTab: Tab
   theme: Theme
+  toasts: Toast[]
 
   // Connection
   connected: boolean
@@ -196,6 +232,10 @@ interface DevToolsState {
   selectedRequestId: string | null
   paused: boolean
   preserveLog: boolean
+
+  // Timeline filters (persisted across tab switches)
+  timelineFilters: TimelineFilters
+  timelineShowFilters: boolean
 
   // Explorer
   explorerView: ExplorerView
@@ -209,6 +249,8 @@ interface DevToolsState {
   // Actions — UI
   setActiveTab: (tab: Tab) => void
   setTheme: (theme: Theme) => void
+  showToast: (message: string, type?: Toast["type"]) => void
+  dismissToast: (id: string) => void
 
   // Actions — Connection
   setConnected: (connected: boolean) => void
@@ -223,6 +265,10 @@ interface DevToolsState {
   clearRequests: () => void
   togglePin: (id: string) => void
   handleEvent: (event: DevToolsEvent & Record<string, unknown>) => void
+
+  // Actions — Timeline filters
+  setTimelineFilters: (f: TimelineFilters) => void
+  setTimelineShowFilters: (v: boolean) => void
 
   // Playground
   playgroundHistory: PlaygroundHistoryEntry[]
@@ -251,6 +297,7 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
   // UI
   activeTab: "timeline",
   theme: savedTheme,
+  toasts: [],
 
   // Connection
   connected: false,
@@ -261,6 +308,10 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
   selectedRequestId: null,
   paused: false,
   preserveLog: false,
+
+  // Timeline filters
+  timelineFilters: EMPTY_FILTERS,
+  timelineShowFilters: false,
 
   // Explorer
   explorerView: "graph",
@@ -274,6 +325,12 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
     applyTheme(theme)
     set({ theme })
   },
+  showToast: (message, type = "info") => {
+    const id = `toast_${Date.now().toString(36)}`
+    set((s) => ({ toasts: [...s.toasts, { id, message, type }] }))
+    setTimeout(() => get().dismissToast(id), 3000)
+  },
+  dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
   // Actions — Connection
   setConnected: (connected) => set({ connected }),
@@ -298,6 +355,10 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
     set((s) => ({
       requests: s.requests.map((r) => (r.id === id ? { ...r, pinned: !r.pinned } : r)),
     })),
+
+  // Actions — Timeline filters
+  setTimelineFilters: (f) => set({ timelineFilters: f }),
+  setTimelineShowFilters: (v) => set({ timelineShowFilters: v }),
 
   // Playground
   playgroundHistory: [],
@@ -365,7 +426,8 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
             startedAt: event.timestamp as number,
             url: (event.url as string | undefined) ?? undefined,
           }
-          return { requests: [entry, ...state.requests] }
+          const updated = [entry, ...state.requests]
+          return { requests: updated.length > MAX_REQUESTS ? updated.slice(0, MAX_REQUESTS) : updated }
         }
 
         case "request:end": {

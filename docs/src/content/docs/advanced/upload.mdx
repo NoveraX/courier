@@ -1,4 +1,4 @@
-export const metadata = { title: "File Upload", description: "Upload files with FormData and real-time progress tracking via XHR." }
+export const metadata = { title: "File Upload", description: "Upload files with FormData and real-time progress tracking via XHR.", mode: "both" }
 
 ## Overview
 
@@ -141,7 +141,7 @@ export function DocumentUpload() {
 }
 ```
 
-## FormData composition (proxy mode)
+## FormData composition <ModeBadge mode="proxy" />
 
 When FormData is sent through the proxy, Nexus appends metadata fields with underscore prefixes. The server handler strips these before forwarding to your endpoint. In direct mode, FormData is sent as-is without any metadata fields:
 

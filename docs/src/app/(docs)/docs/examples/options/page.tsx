@@ -81,6 +81,7 @@ export default function OptionsExamplesPage() {
       <PageHeader
         title="Request Options"
         description="Configure timeout, retry, cache, and Next.js revalidation per request or globally."
+        mode="both"
       />
 
       <div className="space-y-8">

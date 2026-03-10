@@ -1,4 +1,4 @@
-export const metadata = { title: "Options", description: "Full reference of source-level and per-request configuration options." }
+export const metadata = { title: "Options", description: "Full reference of source-level and per-request configuration options.", mode: "both" }
 
 ## Overview
 
@@ -92,7 +92,7 @@ Retry logic is handled by `retryMiddleware` from `@noverax/nexus/middleware`. It
 
 The `next` and `cache` fetch options control how the underlying `fetch` call is cached. They work in both direct and proxy modes.
 
-### Direct mode
+### Direct mode <ModeBadge mode="direct" />
 
 Options are forwarded directly to the server-side `fetch` call:
 
@@ -115,7 +115,7 @@ const live = await serverCaller("api", {
 })("stats:realtime")
 ```
 
-### Proxy mode
+### Proxy mode <ModeBadge mode="proxy" />
 
 In proxy mode with `method: "GET"`, caching works at two levels:
 

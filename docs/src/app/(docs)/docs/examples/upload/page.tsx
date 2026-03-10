@@ -47,6 +47,7 @@ export default function UploadExamplesPage() {
       <PageHeader
         title="File Upload"
         description="FormData file upload with progress tracking. Nexus auto-detects FormData and handles encoding."
+        mode="both"
       />
 
       <div className="space-y-8">

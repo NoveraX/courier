@@ -5,6 +5,7 @@ import { Callout } from "@/components/docs/callout"
 import { CodeBlock } from "@/components/docs/code-block"
 import { CodeGroup } from "@/components/docs/code-group"
 import { ComparisonTable } from "@/components/docs/comparison-table"
+import { ModeBadge } from "@/components/docs/mode-badge"
 import { StepList } from "@/components/docs/step-list"
 
 function AnchorHeading({
@@ -66,6 +67,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     CodeBlock,
     CodeGroup,
     ComparisonTable,
+    ModeBadge,
     StepList,
     ...components,
   }

@@ -53,6 +53,7 @@ export default function GroupsExamplesPage() {
       <PageHeader
         title="Request Groups"
         description="Organize endpoints into groups with prefixes using defineGroup."
+        mode="both"
       />
 
       <div className="space-y-8">

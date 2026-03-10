@@ -114,6 +114,7 @@ export default function SingletonExamplesPage() {
       <PageHeader
         title="Typed Singleton"
         description="Create a single typed request instance with full type inference across your entire application."
+        mode="both"
       />
 
       <div className="space-y-8">

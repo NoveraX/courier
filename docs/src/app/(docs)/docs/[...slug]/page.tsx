@@ -44,7 +44,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
   const slugPath = slug.join("/")
 
   let Content: React.ComponentType
-  let meta: { title: string; description: string }
+  let meta: { title: string; description: string; mode?: "direct" | "proxy" | "both" }
 
   try {
     const mod = await import(`@/content/docs/${slugPath}.mdx`)
@@ -56,7 +56,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
 
   return (
     <div className="space-y-8">
-      <PageHeader title={meta.title} description={meta.description} />
+      <PageHeader title={meta.title} description={meta.description} mode={meta.mode} />
       <Prose>
         <Content />
       </Prose>

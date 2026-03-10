@@ -41,6 +41,7 @@ export default function PathParamsExamplesPage() {
       <PageHeader
         title="Path Parameters"
         description="Dynamic URL segments with :param placeholders, auto-replaced from variables."
+        mode="both"
       />
 
       <div className="space-y-8">

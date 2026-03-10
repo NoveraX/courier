@@ -61,6 +61,7 @@ export default function StreamingExamplesPage() {
       <PageHeader
         title="Streaming"
         description="Stream responses progressively with stream: true. Chunks arrive in real time via SSE."
+        mode="both"
       />
 
       <div className="space-y-8">

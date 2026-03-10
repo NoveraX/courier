@@ -35,6 +35,7 @@ export default function BasicExamplesPage() {
       <PageHeader
         title="Basic Requests"
         description="Simple GET and POST requests using the proxy mode with React Query hooks."
+        mode="proxy"
       />
 
       <div className="space-y-8">

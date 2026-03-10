@@ -63,6 +63,7 @@ export default function CrudExamplesPage() {
       <PageHeader
         title="CRUD Operations"
         description="Full create, read, update, and delete cycle with useMutation and useQuery."
+        mode="proxy"
       />
 
       <div className="space-y-8">

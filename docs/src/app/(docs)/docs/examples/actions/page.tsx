@@ -80,7 +80,7 @@ export default async function ActionsExamplesPage() {
       <PageHeader
         title="Server Actions"
         description="Mutate data with Server Actions + direct mode. The page revalidates automatically after each action."
-        badge="Server-Side"
+        mode="direct"
       />
 
       <div className="space-y-8">

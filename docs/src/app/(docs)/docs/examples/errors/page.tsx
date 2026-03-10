@@ -59,6 +59,7 @@ export default function ErrorsExamplesPage() {
       <PageHeader
         title="Error Handling"
         description="HTTPError class, isHTTPError type guard, and global error callbacks."
+        mode="both"
       />
 
       <div className="space-y-8">

@@ -76,6 +76,7 @@ export default function EncodingExamplesPage() {
       <PageHeader
         title="Encoding"
         description="Custom body and search params encoding with default values."
+        mode="both"
       />
 
       <div className="space-y-8">

@@ -1,4 +1,4 @@
-export const metadata = { title: "Request Lifecycle", description: "How requests flow through callers, middleware, and the HTTP client in direct and proxy modes." }
+export const metadata = { title: "Request Lifecycle", description: "How requests flow through callers, middleware, and the HTTP client in direct and proxy modes.", mode: "both" }
 
 ## Overview
 
@@ -23,7 +23,7 @@ In direct mode, the caller invokes `executeRequest` directly with the `sources` 
 
 ## Setting Up Callers
 
-### Direct mode — server-side
+### Direct mode — server-side <ModeBadge mode="direct" />
 
 ```ts title="lib/caller.ts"
 import { createCaller } from "@noverax/nexus"
@@ -45,7 +45,7 @@ const user = await call("api")("users:getById", { id: "1" })
 Use direct mode whenever you have access to the `sources` object: Server Components, Server Actions, API routes, CLI scripts, cron jobs, or any non-browser runtime.
 </Callout>
 
-### Proxy mode — browser-side
+### Proxy mode — browser-side <ModeBadge mode="proxy" />
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/nexus"

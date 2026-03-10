@@ -1,4 +1,4 @@
-export const metadata = { title: "Error Handling", description: "Handle HTTP errors with typed error data, type guards, and middleware-based error hooks." }
+export const metadata = { title: "Error Handling", description: "Handle HTTP errors with typed error data, type guards, and middleware-based error hooks.", mode: "both" }
 
 ## The HTTPError Class
 
@@ -49,7 +49,7 @@ try {
 
 ## Error Handling Patterns
 
-### Direct mode — try/catch
+### Direct mode — try/catch <ModeBadge mode="direct" />
 
 In Server Components and Server Actions, use standard try/catch to handle errors from `createCaller`:
 
@@ -77,7 +77,7 @@ export default async function UserPage({ params }: { params: { id: string } }) {
 }
 ```
 
-### Proxy mode — React Query
+### Proxy mode — React Query <ModeBadge mode="proxy" />
 
 When using `createQueryCaller`, React Query catches errors automatically and exposes them via the `error` property:
 

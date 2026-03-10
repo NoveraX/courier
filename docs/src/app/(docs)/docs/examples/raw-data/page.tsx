@@ -44,6 +44,7 @@ export default function RawDataExamplesPage() {
       <PageHeader
         title="Raw Data Mode"
         description="Access full response metadata with rawData: true — status code, headers, and data in one object."
+        mode="both"
       />
 
       <div className="space-y-8">

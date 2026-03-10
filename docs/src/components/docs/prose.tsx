@@ -31,6 +31,7 @@ export function Prose({ children, className }: ProseProps) {
         "[&_td]:border-b [&_td]:border-border [&_td]:px-4 [&_td]:py-2.5 [&_td]:text-muted-foreground",
         "[&_tr:last-child_td]:border-b-0",
         "[&_:not(pre)>code]:rounded-md [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-muted [&_:not(pre)>code]:px-1.5 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:font-mono [&_:not(pre)>code]:text-[0.875em]",
+        "[&_:is(h2,h3,h4)]:flex [&_:is(h2,h3,h4)]:items-center [&_:is(h2,h3,h4)_[data-slot=mode-badge]]:ml-2",
         className
       )}
     >

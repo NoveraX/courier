@@ -1,4 +1,4 @@
-export const metadata = { title: "Streaming", description: "Receive responses as ReadableStreams for SSE, large downloads, and progressive rendering." }
+export const metadata = { title: "Streaming", description: "Receive responses as ReadableStreams for SSE, large downloads, and progressive rendering.", mode: "both" }
 
 ## Overview
 
@@ -32,7 +32,7 @@ export const exports = defineGroup({
 })
 ```
 
-## Proxy mode behavior
+## Proxy mode behavior <ModeBadge mode="proxy" />
 
 In proxy mode, the `apiRoute` handler detects streaming responses and returns a `Response` with the stream body and forwarded headers. The stream is not buffered in memory — data flows directly from your backend through the proxy to the browser.
 
@@ -44,7 +44,7 @@ In proxy mode, the `apiRoute` handler detects streaming responses and returns a 
 // Headers like Content-Type are forwarded automatically
 ```
 
-## Direct mode behavior
+## Direct mode behavior <ModeBadge mode="direct" />
 
 In direct mode, the stream is returned inside the response object. You typically combine `stream: true` with `rawData: true` in direct mode to access both the stream and the response headers:
 

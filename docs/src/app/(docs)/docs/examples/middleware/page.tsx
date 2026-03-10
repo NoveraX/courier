@@ -74,6 +74,7 @@ export default function MiddlewareExamplesPage() {
       <PageHeader
         title="Middleware"
         description="Request middleware for logging, transformation, and error handling."
+        mode="both"
       />
 
       <div className="space-y-8">

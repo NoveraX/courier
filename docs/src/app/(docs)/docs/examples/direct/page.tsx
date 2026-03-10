@@ -36,7 +36,7 @@ export default async function DirectExamplesPage() {
       <PageHeader
         title="Direct Mode"
         description="Server Components fetch data directly from the backend — no proxy, no API route, no client JS."
-        badge="Server-Side"
+        mode="direct"
       />
 
       <div className="space-y-8">

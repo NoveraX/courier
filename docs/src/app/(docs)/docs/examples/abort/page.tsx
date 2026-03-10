@@ -52,6 +52,7 @@ export default function AbortExamplesPage() {
       <PageHeader
         title="Abort & Deduplication"
         description="Cancel in-flight requests with AbortController and deduplicate rapid calls."
+        mode="both"
       />
 
       <div className="space-y-8">

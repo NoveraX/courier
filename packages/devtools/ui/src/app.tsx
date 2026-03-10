@@ -57,7 +57,7 @@ const THEME_CYCLE: Theme[] = ["dark", "light", "system"]
 export function App() {
   useSocketConnection()
 
-  const { activeTab, setActiveTab, theme, setTheme, connected, sessions, requests, paused, toasts, dismissToast } =
+  const { activeTab, setActiveTab, theme, setTheme, connectionStatus, sessions, requests, paused, toasts, dismissToast } =
     useDevToolsStore()
 
   function nextTheme() {
@@ -148,14 +148,22 @@ export function App() {
           {/* Connection status */}
           <div className="flex items-center gap-1.5">
             <div
-              className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-emerald-500" : "bg-zinc-600"}`}
+              className={`h-1.5 w-1.5 rounded-full ${
+                connectionStatus === "connected"
+                  ? "bg-emerald-500"
+                  : connectionStatus === "reconnecting"
+                    ? "bg-amber-500 animate-pulse-dot"
+                    : "bg-zinc-600"
+              }`}
             />
             <span className="text-text-muted">
-              {connected
+              {connectionStatus === "connected"
                 ? sessions.length > 0
                   ? `${sessions.length} app${sessions.length > 1 ? "s" : ""} connected`
                   : "Connected, waiting for apps"
-                : "Disconnected"}
+                : connectionStatus === "reconnecting"
+                  ? "Reconnecting\u2026"
+                  : "Disconnected"}
             </span>
           </div>
 

@@ -110,9 +110,11 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
         }
 
         let responded = false;
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
         const respond = (result: { ok: boolean; error?: string }) => {
           if (responded) return;
           responded = true;
+          clearTimeout(timeoutId);
           callback(result);
         };
 
@@ -136,8 +138,7 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
           },
         );
 
-        // Timeout: if app never responds
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           respond({ ok: false, error: "Application did not respond within 15s" });
         }, 15_000);
       },
@@ -179,10 +180,12 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
 
         const startTime = Date.now();
         let responded = false;
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
         const respond = (result: Record<string, unknown>) => {
           if (responded) return;
           responded = true;
+          clearTimeout(timeoutId);
           callback(result);
         };
 
@@ -204,8 +207,7 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
           },
         );
 
-        // Server-side timeout: if app never responds within 30s
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           respond({
             error: "Application did not respond within 30s",
             status: 0,
@@ -250,6 +252,7 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
 
   const close = () =>
     new Promise<void>((resolve, reject) => {
+      sessions.clear();
       io.close();
       httpServer.close((err) => (err ? reject(err) : resolve()));
     });

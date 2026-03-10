@@ -18,12 +18,24 @@ export type Tab =
 
 export type Theme = "dark" | "light" | "system"
 
+let mediaQueryCleanup: (() => void) | undefined
+
 function applyTheme(theme: Theme) {
   const root = document.documentElement
+
+  // Clean up previous system theme listener
+  mediaQueryCleanup?.()
+  mediaQueryCleanup = undefined
+
   if (theme === "system") {
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-    root.removeAttribute("data-theme")
-    if (!prefersDark) root.setAttribute("data-theme", "light")
+    const mq = window.matchMedia("(prefers-color-scheme: dark)")
+    const apply = () => {
+      root.removeAttribute("data-theme")
+      if (!mq.matches) root.setAttribute("data-theme", "light")
+    }
+    apply()
+    mq.addEventListener("change", apply)
+    mediaQueryCleanup = () => mq.removeEventListener("change", apply)
   } else if (theme === "light") {
     root.setAttribute("data-theme", "light")
   } else {
@@ -48,6 +60,14 @@ export type EventType =
   | "validation:fail"
   | "proxy:receive"
   | "proxy:respond"
+  | "cache:hit"
+  | "cache:miss"
+  | "cache:store"
+  | "cache:invalidate"
+  | "dedup:abort"
+  | "dedup:reuse"
+  | "upload:progress"
+  | "upload:complete"
 
 export interface DevToolsEvent {
   id: string
@@ -75,6 +95,19 @@ export interface ValidationIssue {
   message: string
   expected?: string
   received?: string
+}
+
+// ── Middleware event model ─────────────────────────────────────────────────
+
+export interface MiddlewareEntry {
+  requestId: string
+  name: string
+  index: number
+  totalCount?: number
+  startedAt: number
+  duration?: number
+  status: "running" | "completed" | "error"
+  error?: string
 }
 
 // ── Request model (aggregated from events) ─────────────────────────────────
@@ -115,10 +148,12 @@ export interface RequestEntry {
     validationIssues?: ValidationIssue[]
   }
   middlewareCount: number
+  middlewareEntries: MiddlewareEntry[]
   hasValidation: { variables: boolean; response: boolean }
   startedAt: number
   url?: string
   pinned?: boolean
+  sessionId: string
 }
 
 // ── Source map (from connection:init / connection:sources) ───────────────────
@@ -173,6 +208,10 @@ export const PLAYGROUND_MAX_HISTORY = 50
 
 /** Maximum number of requests kept in memory */
 export const MAX_REQUESTS = 2000
+
+// ── Connection state ────────────────────────────────────────────────────────
+
+export type ConnectionStatus = "connected" | "disconnected" | "reconnecting"
 
 // ── Timeline filters ────────────────────────────────────────────────────────
 
@@ -235,6 +274,8 @@ interface DevToolsState {
   toasts: Toast[]
 
   // Connection
+  connectionStatus: ConnectionStatus
+  reconnectAttempt: number
   connected: boolean
   sessions: SessionInfo[]
 
@@ -283,7 +324,8 @@ interface DevToolsState {
   dismissToast: (id: string) => void
 
   // Actions — Connection
-  setConnected: (connected: boolean) => void
+  setConnectionStatus: (status: ConnectionStatus) => void
+  setReconnectAttempt: (attempt: number) => void
   setSessions: (sessions: SessionInfo[]) => void
   addSession: (session: SessionInfo) => void
   removeSession: (sessionId: string) => void
@@ -340,17 +382,61 @@ interface DevToolsState {
   clearPlaygroundHistory: () => void
 }
 
-const savedTheme = (localStorage.getItem("nexus-devtools-theme") as Theme) || "dark"
+// ── Safe localStorage reads ─────────────────────────────────────────────────
+
+const THEME_STORAGE_KEY = "nexus-devtools-theme"
+const TAB_STORAGE_KEY = "nexus-devtools-tab"
+
+const VALID_THEMES: ReadonlySet<string> = new Set<Theme>(["dark", "light", "system"])
+const VALID_TABS: ReadonlySet<string> = new Set<Tab>([
+  "timeline", "waterfall", "middleware", "analytics", "explorer",
+  "playground", "audit", "codegen", "compare", "settings",
+])
+
+function loadTheme(): Theme {
+  const raw = localStorage.getItem(THEME_STORAGE_KEY)
+  return raw && VALID_THEMES.has(raw) ? (raw as Theme) : "dark"
+}
+
+function loadTab(): Tab {
+  const raw = localStorage.getItem(TAB_STORAGE_KEY)
+  return raw && VALID_TABS.has(raw) ? (raw as Tab) : "timeline"
+}
+
+// ── Safe event field helpers ────────────────────────────────────────────────
+
+function str(val: unknown, fallback = ""): string {
+  return typeof val === "string" ? val : fallback
+}
+
+function num(val: unknown, fallback = 0): number {
+  return typeof val === "number" && Number.isFinite(val) ? val : fallback
+}
+
+function optStr(val: unknown): string | undefined {
+  return typeof val === "string" ? val : undefined
+}
+
+function optNum(val: unknown): number | undefined {
+  return typeof val === "number" && Number.isFinite(val) ? val : undefined
+}
+
+const savedTheme = loadTheme()
+const savedTab = loadTab()
 applyTheme(savedTheme)
 
 export const useDevToolsStore = create<DevToolsState>((set, get) => ({
   // UI
-  activeTab: "timeline",
+  activeTab: savedTab,
   theme: savedTheme,
   toasts: [],
 
   // Connection
-  connected: false,
+  connectionStatus: "disconnected",
+  reconnectAttempt: 0,
+  get connected() {
+    return get().connectionStatus === "connected"
+  },
   sessions: [],
 
   // Requests
@@ -388,9 +474,12 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
   comparePickerSide: null,
 
   // Actions — UI
-  setActiveTab: (tab) => set({ activeTab: tab }),
+  setActiveTab: (tab) => {
+    localStorage.setItem(TAB_STORAGE_KEY, tab)
+    set({ activeTab: tab })
+  },
   setTheme: (theme) => {
-    localStorage.setItem("nexus-devtools-theme", theme)
+    localStorage.setItem(THEME_STORAGE_KEY, theme)
     applyTheme(theme)
     set({ theme })
   },
@@ -402,11 +491,21 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
   // Actions — Connection
-  setConnected: (connected) => set({ connected }),
+  setConnectionStatus: (status) => {
+    set({ connectionStatus: status })
+    if (status === "connected") set({ reconnectAttempt: 0 })
+  },
+  setReconnectAttempt: (attempt) => set({ reconnectAttempt: attempt }),
   setSessions: (sessions) => set({ sessions }),
   addSession: (session) => set((s) => ({ sessions: [...s.sessions, session] })),
   removeSession: (sessionId) =>
-    set((s) => ({ sessions: s.sessions.filter((ss) => ss.sessionId !== sessionId) })),
+    set((s) => ({
+      sessions: s.sessions.filter((ss) => ss.sessionId !== sessionId),
+      // Clean up requests from disconnected session (unless preserveLog)
+      requests: s.preserveLog
+        ? s.requests
+        : s.requests.filter((r) => r.sessionId !== sessionId || r.pinned),
+    })),
 
   // Actions — Requests
   selectRequest: (id) => set({ selectedRequestId: id }),
@@ -492,58 +591,63 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
 
   handleEvent: (event) => {
     if (get().paused) return
+    if (!event || typeof event.type !== "string") return
 
     set((state) => {
       switch (event.type) {
         case "request:start": {
           const entry: RequestEntry = {
-            id: event.id as string,
-            source: event.source as string,
-            group: event.group as string | undefined,
-            method: event.method as string,
-            httpMethod: (event.httpMethod as string | undefined) ?? undefined,
+            id: str(event.id),
+            source: str(event.source),
+            group: optStr(event.group),
+            method: str(event.method),
+            httpMethod: optStr(event.httpMethod),
             variables: event.variables,
-            mode: (event.mode as "direct" | "proxy") ?? "direct",
-            type: (event.endpointType as "query" | "mutation" | undefined) ?? undefined,
+            mode: event.mode === "proxy" ? "proxy" : "direct",
+            type:
+              event.endpointType === "query" || event.endpointType === "mutation"
+                ? event.endpointType
+                : undefined,
             status: "pending",
-            middlewareCount: (event.middlewareCount as number) ?? 0,
+            middlewareCount: num(event.middlewareCount),
+            middlewareEntries: [],
             hasValidation:
-              (event.hasValidation as { variables: boolean; response: boolean }) ?? {
-                variables: false,
-                response: false,
-              },
-            startedAt: event.timestamp as number,
-            url: (event.url as string | undefined) ?? undefined,
+              event.hasValidation &&
+              typeof event.hasValidation === "object" &&
+              "variables" in event.hasValidation &&
+              "response" in event.hasValidation
+                ? (event.hasValidation as { variables: boolean; response: boolean })
+                : { variables: false, response: false },
+            startedAt: num(event.timestamp, Date.now()),
+            url: optStr(event.url),
+            sessionId: str(event.sessionId),
           }
           const updated = [entry, ...state.requests]
           return { requests: updated.length > MAX_REQUESTS ? updated.slice(0, MAX_REQUESTS) : updated }
         }
 
         case "request:end": {
-          const requestId = event.requestId as string
+          const requestId = str(event.requestId)
           return {
             requests: state.requests.map((r) =>
               r.id === requestId
                 ? {
                     ...r,
                     status: "success" as const,
-                    statusCode: event.status as number,
-                    timing: event.timing as RequestTiming,
-                    proxyTiming: (event.proxyTiming as ProxyTiming | undefined) ?? undefined,
-                    size: (event.size as number | undefined) ?? undefined,
+                    statusCode: optNum(event.status),
+                    timing: event.timing as RequestTiming | undefined,
+                    proxyTiming: event.proxyTiming as ProxyTiming | undefined,
+                    size: optNum(event.size),
                     data: event.data,
-                    rawResponse: (event.rawResponse as string | undefined) ?? undefined,
-                    validatedResponse:
-                      (event.validatedResponse as unknown | undefined) ?? undefined,
-                    validatedVariables:
-                      (event.validatedVariables as unknown | undefined) ?? undefined,
-                    sentBody: (event.sentBody as unknown | undefined) ?? undefined,
-                    requestHeaders:
-                      (event.requestHeaders as Record<string, string> | undefined) ?? undefined,
-                    headers: event.headers as Record<string, string>,
-                    middlewareHeaders:
-                      (event.middlewareHeaders as Record<string, string[]> | undefined) ??
-                      undefined,
+                    rawResponse: optStr(event.rawResponse),
+                    validatedResponse: event.validatedResponse,
+                    validatedVariables: event.validatedVariables,
+                    sentBody: event.sentBody,
+                    requestHeaders: event.requestHeaders as Record<string, string> | undefined,
+                    headers: event.headers as Record<string, string> | undefined,
+                    middlewareHeaders: event.middlewareHeaders as
+                      | Record<string, string[]>
+                      | undefined,
                   }
                 : r,
             ),
@@ -551,13 +655,13 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
         }
 
         case "request:error": {
-          const requestId = event.requestId as string
+          const requestId = str(event.requestId)
           const rawError = event.error as Record<string, unknown> | undefined
           const errorData = rawError
             ? {
-                type: (rawError.type as string) ?? "Error",
-                status: rawError.status as number | undefined,
-                message: (rawError.message as string) ?? "Unknown error",
+                type: str(rawError.type, "Error"),
+                status: optNum(rawError.status),
+                message: str(rawError.message, "Unknown error"),
                 validationIssues:
                   (rawError.validationIssues as ValidationIssue[] | undefined) ?? undefined,
               }
@@ -582,6 +686,128 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
             ),
           }
         }
+
+        // ── Middleware events ────────────────────────────────────────────
+        case "middleware:enter": {
+          const requestId = str(event.requestId)
+          const mwEntry: MiddlewareEntry = {
+            requestId,
+            name: str(event.name),
+            index: num(event.index),
+            totalCount: optNum(event.totalCount),
+            startedAt: num(event.timestamp, Date.now()),
+            status: "running",
+          }
+          return {
+            requests: state.requests.map((r) =>
+              r.id === requestId
+                ? { ...r, middlewareEntries: [...r.middlewareEntries, mwEntry] }
+                : r,
+            ),
+          }
+        }
+
+        case "middleware:exit": {
+          const requestId = str(event.requestId)
+          const index = num(event.index)
+          return {
+            requests: state.requests.map((r) =>
+              r.id === requestId
+                ? {
+                    ...r,
+                    middlewareEntries: r.middlewareEntries.map((m) =>
+                      m.index === index
+                        ? { ...m, status: "completed" as const, duration: optNum(event.duration) }
+                        : m,
+                    ),
+                  }
+                : r,
+            ),
+          }
+        }
+
+        case "middleware:error": {
+          const requestId = str(event.requestId)
+          const index = num(event.index)
+          return {
+            requests: state.requests.map((r) =>
+              r.id === requestId
+                ? {
+                    ...r,
+                    middlewareEntries: r.middlewareEntries.map((m) =>
+                      m.index === index
+                        ? {
+                            ...m,
+                            status: "error" as const,
+                            error:
+                              typeof event.error === "string"
+                                ? event.error
+                                : str((event.error as Record<string, unknown> | undefined)?.message),
+                          }
+                        : m,
+                    ),
+                  }
+                : r,
+            ),
+          }
+        }
+
+        // ── HTTP fetch events ───────────────────────────────────────────
+        case "http:fetch:start": {
+          const requestId = str(event.requestId)
+          return {
+            requests: state.requests.map((r) =>
+              r.id === requestId
+                ? {
+                    ...r,
+                    url: optStr(event.url) ?? r.url,
+                    httpMethod: optStr(event.method) ?? r.httpMethod,
+                  }
+                : r,
+            ),
+          }
+        }
+
+        case "http:fetch:end":
+          return state
+
+        // ── Validation events ───────────────────────────────────────────
+        case "validation:start":
+        case "validation:pass":
+          return state
+
+        case "validation:fail": {
+          const requestId = str(event.requestId)
+          const issues = event.issues as ValidationIssue[] | undefined
+          if (!issues) return state
+          return {
+            requests: state.requests.map((r) =>
+              r.id === requestId
+                ? {
+                    ...r,
+                    error: {
+                      type: "ValidationError",
+                      message: `Validation failed: ${issues.length} issue(s)`,
+                      validationIssues: issues,
+                    },
+                  }
+                : r,
+            ),
+          }
+        }
+
+        // ── Proxy, cache, dedup, upload — informational ─────────────────
+        case "proxy:receive":
+        case "proxy:respond":
+        case "cache:hit":
+        case "cache:miss":
+        case "cache:store":
+        case "cache:invalidate":
+        case "dedup:abort":
+        case "dedup:reuse":
+        case "upload:progress":
+        case "upload:complete":
+          return state
 
         default:
           return state

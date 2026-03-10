@@ -20,30 +20,53 @@ export function getSocket(): Socket {
 }
 
 export function useSocketConnection() {
-  const { setConnected, setSessions, addSession, removeSession, handleEvent } =
-    useDevToolsStore()
-
   useEffect(() => {
     const s = getSocket()
+    const store = useDevToolsStore.getState
 
-    s.on("connect", () => setConnected(true))
-    s.on("disconnect", () => setConnected(false))
-    s.on("sessions", (sessions: SessionInfo[]) => setSessions(sessions))
-    s.on("session:connect", (session: SessionInfo) => addSession(session))
-    s.on("session:disconnect", ({ sessionId }: { sessionId: string }) =>
-      removeSession(sessionId),
-    )
-    s.on("event", handleEvent)
+    const onConnect = () => store().setConnectionStatus("connected")
 
-    s.connect()
+    const onDisconnect = () => store().setConnectionStatus("disconnected")
+
+    const onReconnectAttempt = (attempt: number) => {
+      store().setConnectionStatus("reconnecting")
+      store().setReconnectAttempt(attempt)
+    }
+
+    const onReconnect = () => store().setConnectionStatus("connected")
+
+    const onConnectError = () => store().setConnectionStatus("disconnected")
+
+    const onSessions = (sessions: SessionInfo[]) => store().setSessions(sessions)
+
+    const onSessionConnect = (session: SessionInfo) => store().addSession(session)
+
+    const onSessionDisconnect = ({ sessionId }: { sessionId: string }) =>
+      store().removeSession(sessionId)
+
+    // biome-ignore lint/suspicious/noExplicitAny: event shape validated inside handleEvent
+    const onEvent = (event: any) => store().handleEvent(event)
+
+    s.on("connect", onConnect)
+    s.on("disconnect", onDisconnect)
+    s.io.on("reconnect_attempt", onReconnectAttempt)
+    s.io.on("reconnect", onReconnect)
+    s.on("connect_error", onConnectError)
+    s.on("sessions", onSessions)
+    s.on("session:connect", onSessionConnect)
+    s.on("session:disconnect", onSessionDisconnect)
+    s.on("event", onEvent)
 
     return () => {
-      s.off("connect")
-      s.off("disconnect")
-      s.off("sessions")
-      s.off("session:connect")
-      s.off("session:disconnect")
-      s.off("event")
+      s.off("connect", onConnect)
+      s.off("disconnect", onDisconnect)
+      s.io.off("reconnect_attempt", onReconnectAttempt)
+      s.io.off("reconnect", onReconnect)
+      s.off("connect_error", onConnectError)
+      s.off("sessions", onSessions)
+      s.off("session:connect", onSessionConnect)
+      s.off("session:disconnect", onSessionDisconnect)
+      s.off("event", onEvent)
     }
-  }, [setConnected, setSessions, addSession, removeSession, handleEvent])
+  }, [])
 }

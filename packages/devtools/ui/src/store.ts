@@ -1,5 +1,36 @@
 import { create } from "zustand";
 
+// ── Tabs ────────────────────────────────────────────────────────────────────
+
+export type Tab =
+  | "timeline"
+  | "waterfall"
+  | "middleware"
+  | "analytics"
+  | "explorer"
+  | "playground"
+  | "audit"
+  | "codegen"
+  | "compare"
+  | "settings";
+
+// ── Theme ───────────────────────────────────────────────────────────────────
+
+export type Theme = "dark" | "light" | "system";
+
+function applyTheme(theme: Theme) {
+  const root = document.documentElement;
+  if (theme === "system") {
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    root.removeAttribute("data-theme");
+    if (!prefersDark) root.setAttribute("data-theme", "light");
+  } else if (theme === "light") {
+    root.setAttribute("data-theme", "light");
+  } else {
+    root.removeAttribute("data-theme");
+  }
+}
+
 // ── Event types (mirrored from devtools-core) ──────────────────────────────
 
 export type EventType =
@@ -63,34 +94,69 @@ export interface SessionInfo {
 // ── Store ──────────────────────────────────────────────────────────────────
 
 interface DevToolsState {
+  // UI
+  activeTab: Tab;
+  theme: Theme;
+
+  // Connection
   connected: boolean;
   sessions: SessionInfo[];
+
+  // Requests
   requests: RequestEntry[];
   selectedRequestId: string | null;
   paused: boolean;
 
+  // Actions — UI
+  setActiveTab: (tab: Tab) => void;
+  setTheme: (theme: Theme) => void;
+
+  // Actions — Connection
   setConnected: (connected: boolean) => void;
   setSessions: (sessions: SessionInfo[]) => void;
   addSession: (session: SessionInfo) => void;
   removeSession: (sessionId: string) => void;
+
+  // Actions — Requests
   selectRequest: (id: string | null) => void;
   togglePaused: () => void;
   clearRequests: () => void;
   handleEvent: (event: DevToolsEvent & Record<string, unknown>) => void;
 }
 
+const savedTheme = (localStorage.getItem("nexus-devtools-theme") as Theme) || "dark";
+applyTheme(savedTheme);
+
 export const useDevToolsStore = create<DevToolsState>((set, get) => ({
+  // UI
+  activeTab: "timeline",
+  theme: savedTheme,
+
+  // Connection
   connected: false,
   sessions: [],
+
+  // Requests
   requests: [],
   selectedRequestId: null,
   paused: false,
 
+  // Actions — UI
+  setActiveTab: (tab) => set({ activeTab: tab }),
+  setTheme: (theme) => {
+    localStorage.setItem("nexus-devtools-theme", theme);
+    applyTheme(theme);
+    set({ theme });
+  },
+
+  // Actions — Connection
   setConnected: (connected) => set({ connected }),
   setSessions: (sessions) => set({ sessions }),
   addSession: (session) => set((s) => ({ sessions: [...s.sessions, session] })),
   removeSession: (sessionId) =>
     set((s) => ({ sessions: s.sessions.filter((ss) => ss.sessionId !== sessionId) })),
+
+  // Actions — Requests
   selectRequest: (id) => set({ selectedRequestId: id }),
   togglePaused: () => set((s) => ({ paused: !s.paused })),
   clearRequests: () => set({ requests: [], selectedRequestId: null }),

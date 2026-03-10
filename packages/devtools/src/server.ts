@@ -103,8 +103,8 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
 
   if (existsSync(uiDistPath)) {
     app.use(express.static(uiDistPath));
-    // SPA fallback
-    app.get("*", (_req, res) => {
+    // SPA fallback — Express 5 requires named param for catch-all
+    app.get("/{*splat}", (_req, res) => {
       res.sendFile(join(uiDistPath, "index.html"));
     });
   }

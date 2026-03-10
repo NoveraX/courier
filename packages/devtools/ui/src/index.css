@@ -1,1 +1,71 @@
 @import "tailwindcss";
+
+@theme {
+  /* ── Surface ── */
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  /* ── Text ── */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  /* ── Border ── */
+  --color-border-default: var(--border-default);
+  --color-border-subtle: var(--border-subtle);
+}
+
+/* ── Dark theme (default) ── */
+:root {
+  color-scheme: dark;
+
+  --surface-0: #09090b;
+  --surface-1: #18181b;
+  --surface-2: #27272a;
+  --surface-3: #3f3f46;
+
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+
+  --border-default: #27272a;
+  --border-subtle: rgba(39, 39, 42, 0.6);
+}
+
+/* ── Light theme ── */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --surface-0: #ffffff;
+  --surface-1: #f4f4f5;
+  --surface-2: #e4e4e7;
+  --surface-3: #d4d4d8;
+
+  --text-primary: #09090b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
+
+  --border-default: #e4e4e7;
+  --border-subtle: rgba(228, 228, 231, 0.6);
+}
+
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}

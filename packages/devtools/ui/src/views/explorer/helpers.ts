@@ -17,17 +17,17 @@ export interface FlatEndpoint {
 export function mergeSourceMaps(sessions: { sources: SourceMap }[]): SourceMap {
   const merged: SourceMap = {}
   for (const session of sessions) {
-    for (const [sourceName, source] of Object.entries(session.sources)) {
+    for (const [sourceName, source] of Object.entries(session.sources ?? {})) {
       if (!merged[sourceName]) {
         merged[sourceName] = source
       } else {
         // Merge groups and endpoints
-        for (const [groupName, group] of Object.entries(source.groups)) {
+        for (const [groupName, group] of Object.entries(source.groups ?? {})) {
           if (!merged[sourceName]!.groups[groupName]) {
             merged[sourceName]!.groups[groupName] = group
           } else {
             // Merge endpoints within existing group
-            for (const [epName, ep] of Object.entries(group.endpoints)) {
+            for (const [epName, ep] of Object.entries(group.endpoints ?? {})) {
               if (!merged[sourceName]!.groups[groupName]!.endpoints[epName]) {
                 merged[sourceName]!.groups[groupName]!.endpoints[epName] = ep
               }
@@ -43,8 +43,8 @@ export function mergeSourceMaps(sessions: { sources: SourceMap }[]): SourceMap {
 export function flattenEndpoints(sourceMap: SourceMap): FlatEndpoint[] {
   const result: FlatEndpoint[] = []
   for (const [sourceName, source] of Object.entries(sourceMap)) {
-    for (const [groupName, group] of Object.entries(source.groups)) {
-      for (const [methodName, ep] of Object.entries(group.endpoints)) {
+    for (const [groupName, group] of Object.entries(source.groups ?? {})) {
+      for (const [methodName, ep] of Object.entries(group.endpoints ?? {})) {
         result.push({
           source: sourceName,
           group: groupName,

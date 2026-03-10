@@ -150,12 +150,37 @@ export interface SessionInfo {
   connectedAt: number
 }
 
+// ── Playground model ─────────────────────────────────────────────────────────
+
+export interface PlaygroundHistoryEntry {
+  id: string
+  source: string
+  group: string
+  method: string
+  variables: string
+  headers: string
+  mode: "direct" | "proxy"
+  timestamp: number
+  status: "pending" | "success" | "error"
+  statusCode?: number
+  duration?: number
+  response?: unknown
+  responseHeaders?: Record<string, string>
+  timing?: RequestTiming
+}
+
+export const PLAYGROUND_MAX_HISTORY = 50
+
 // ── Store ──────────────────────────────────────────────────────────────────
 
 // ── Explorer state ──────────────────────────────────────────────────────────
 
 export type ExplorerView = "graph" | "pipeline" | "list"
 export type GraphLayout = "LR" | "TB"
+
+// ── Audit state ─────────────────────────────────────────────────────────────
+
+export type AuditSeverityFilter = "error" | "warning" | "hint" | "pass" | "all"
 
 interface DevToolsState {
   // UI
@@ -177,6 +202,10 @@ interface DevToolsState {
   explorerSelectedEndpoint: { source: string; group: string; method: string } | null
   graphLayout: GraphLayout
 
+  // Audit
+  auditFilter: AuditSeverityFilter
+  auditExpandedIds: Set<string>
+
   // Actions — UI
   setActiveTab: (tab: Tab) => void
   setTheme: (theme: Theme) => void
@@ -195,10 +224,24 @@ interface DevToolsState {
   togglePin: (id: string) => void
   handleEvent: (event: DevToolsEvent & Record<string, unknown>) => void
 
+  // Playground
+  playgroundHistory: PlaygroundHistoryEntry[]
+  playgroundActiveResponse: PlaygroundHistoryEntry | null
+
   // Actions — Explorer
   setExplorerView: (view: ExplorerView) => void
   setExplorerSelectedEndpoint: (ep: { source: string; group: string; method: string } | null) => void
   setGraphLayout: (layout: GraphLayout) => void
+
+  // Actions — Audit
+  setAuditFilter: (filter: AuditSeverityFilter) => void
+  toggleAuditExpanded: (id: string) => void
+
+  // Actions — Playground
+  addPlaygroundEntry: (entry: PlaygroundHistoryEntry) => void
+  updatePlaygroundEntry: (id: string, patch: Partial<PlaygroundHistoryEntry>) => void
+  setPlaygroundActiveResponse: (entry: PlaygroundHistoryEntry | null) => void
+  clearPlaygroundHistory: () => void
 }
 
 const savedTheme = (localStorage.getItem("nexus-devtools-theme") as Theme) || "dark"
@@ -256,10 +299,46 @@ export const useDevToolsStore = create<DevToolsState>((set, get) => ({
       requests: s.requests.map((r) => (r.id === id ? { ...r, pinned: !r.pinned } : r)),
     })),
 
+  // Playground
+  playgroundHistory: [],
+  playgroundActiveResponse: null,
+
+  // Audit
+  auditFilter: "all",
+  auditExpandedIds: new Set<string>(),
+
   // Actions — Explorer
   setExplorerView: (view) => set({ explorerView: view }),
   setExplorerSelectedEndpoint: (ep) => set({ explorerSelectedEndpoint: ep }),
   setGraphLayout: (layout) => set({ graphLayout: layout }),
+
+  // Actions — Audit
+  setAuditFilter: (filter) => set({ auditFilter: filter }),
+  toggleAuditExpanded: (id) =>
+    set((s) => {
+      const next = new Set(s.auditExpandedIds)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return { auditExpandedIds: next }
+    }),
+
+  // Actions — Playground
+  addPlaygroundEntry: (entry) =>
+    set((s) => ({
+      playgroundHistory: [entry, ...s.playgroundHistory].slice(0, PLAYGROUND_MAX_HISTORY),
+      playgroundActiveResponse: entry,
+    })),
+  updatePlaygroundEntry: (id, patch) =>
+    set((s) => {
+      const updated = s.playgroundHistory.map((h) => (h.id === id ? { ...h, ...patch } : h))
+      const active =
+        s.playgroundActiveResponse?.id === id
+          ? { ...s.playgroundActiveResponse, ...patch }
+          : s.playgroundActiveResponse
+      return { playgroundHistory: updated, playgroundActiveResponse: active }
+    }),
+  setPlaygroundActiveResponse: (entry) => set({ playgroundActiveResponse: entry }),
+  clearPlaygroundHistory: () => set({ playgroundHistory: [], playgroundActiveResponse: null }),
 
   handleEvent: (event) => {
     if (get().paused) return

@@ -39,7 +39,10 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
   const sessions = new Map<string, SessionInfo>();
 
   const io = new SocketIOServer(httpServer, {
-    cors: { origin: "*", methods: ["GET", "POST"] },
+    cors: {
+      origin: [`http://${host}:${port}`, `http://localhost:${port}`, "http://localhost:4381"],
+      methods: ["GET", "POST"],
+    },
     serveClient: false,
   });
 
@@ -56,6 +59,7 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
       // Track sessions
       if (event.type === "connection:init") {
         sessionId = event.sessionId as string;
+        socket.data.sessionId = sessionId;
         sessions.set(sessionId, {
           sessionId,
           framework: (event.framework as string) ?? "unknown",
@@ -84,6 +88,79 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
   uiNamespace.on("connection", (socket) => {
     // Send current sessions to newly connected UI
     socket.emit("sessions", Array.from(sessions.values()));
+
+    // Playground: forward request to a connected app and return the result
+    socket.on(
+      "playground:send",
+      (
+        payload: {
+          sessionId?: string;
+          source: string;
+          group: string;
+          method: string;
+          variables: unknown;
+          headers: Record<string, string>;
+          mode: "direct" | "proxy";
+        },
+        callback: (result: Record<string, unknown>) => void,
+      ) => {
+        // Pick target app socket — explicit sessionId or first available
+        const appSockets = Array.from(appNamespace.sockets.values());
+        if (appSockets.length === 0) {
+          callback({
+            error:
+              "No application connected. Start your app with the Nexus devtools plugin enabled.",
+            status: 0,
+            headers: {},
+            duration: 0,
+          });
+          return;
+        }
+
+        let targetSocket = appSockets[0] as (typeof appSockets)[number];
+        if (payload.sessionId) {
+          const found = appSockets.find((s) => s.data?.sessionId === payload.sessionId);
+          if (found) targetSocket = found;
+        }
+
+        const startTime = Date.now();
+        let responded = false;
+
+        const respond = (result: Record<string, unknown>) => {
+          if (responded) return;
+          responded = true;
+          callback(result);
+        };
+
+        targetSocket.emit(
+          "playground:execute",
+          {
+            source: payload.source,
+            group: payload.group,
+            method: payload.method,
+            variables: payload.variables,
+            headers: payload.headers,
+            mode: payload.mode,
+          },
+          (result: Record<string, unknown>) => {
+            respond({
+              ...result,
+              duration: result.duration ?? Date.now() - startTime,
+            });
+          },
+        );
+
+        // Server-side timeout: if app never responds within 30s
+        setTimeout(() => {
+          respond({
+            error: "Application did not respond within 30s",
+            status: 0,
+            headers: {},
+            duration: Date.now() - startTime,
+          });
+        }, 30_000);
+      },
+    );
   });
 
   // ── REST API ─────────────────────────────────────────────────────────────────

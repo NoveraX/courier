@@ -24,6 +24,8 @@ import { MiddlewareView } from "./views/middleware"
 import { AnalyticsView } from "./views/analytics"
 import { CompareView } from "./views/compare"
 import { ExplorerView } from "./views/explorer"
+import { PlaygroundView } from "./views/playground"
+import { AuditView } from "./views/audit"
 import { PlaceholderView } from "./views/placeholder"
 
 // ── Tab config ──────────────────────────────────────────────────────────────
@@ -129,6 +131,10 @@ export function App() {
             <CompareView />
           ) : activeTab === "explorer" ? (
             <ExplorerView />
+          ) : activeTab === "playground" ? (
+            <PlaygroundView />
+          ) : activeTab === "audit" ? (
+            <AuditView />
           ) : (
             <PlaceholderView tab={activeTab} />
           )}

@@ -1,4 +1,4 @@
-import { devtoolsHooks } from "@noverax/nexus";
+import { devtoolsHooks, executeRequest } from "@noverax/nexus";
 import type { Sources } from "@noverax/nexus/define";
 import { EventBus } from "./event-bus";
 import type {
@@ -405,6 +405,7 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
     framework,
     nexusVersion,
     resolvedSourceMap,
+    sources,
   ).then((cleanup) => {
     socketCleanup = cleanup;
   });
@@ -452,7 +453,8 @@ async function tryConnectSocket(
   port: number,
   framework: string,
   nexusVersion: string,
-  sources?: SourceMap,
+  sourceMap?: SourceMap,
+  sources?: Sources,
 ): Promise<(() => void) | undefined> {
   try {
     const { io } = await import("socket.io-client");
@@ -472,7 +474,7 @@ async function tryConnectSocket(
         sessionId,
         framework,
         nexusVersion,
-        sources: sources ?? {},
+        sources: sourceMap ?? {},
       });
     });
 
@@ -480,6 +482,60 @@ async function tryConnectSocket(
     const unsubscribe = bus.on((event) => {
       socket.emit("event", event);
     });
+
+    // Playground: execute endpoint on behalf of DevTools UI
+    socket.on(
+      "playground:execute",
+      (
+        payload: {
+          source: string;
+          group: string;
+          method: string;
+          variables: unknown;
+          headers: Record<string, string>;
+          mode: "direct" | "proxy";
+        },
+        callback: (result: Record<string, unknown>) => void,
+      ) => {
+        if (!sources) {
+          callback({
+            error: "No sources provided to connectDevTools — cannot execute endpoints",
+            status: 0,
+            headers: {},
+          });
+          return;
+        }
+
+        const startTime = performance.now();
+
+        executeRequest(sources, {
+          source: payload.source,
+          group: payload.group,
+          method: payload.method,
+          variables: payload.variables as Record<string, unknown>,
+          options: {
+            headers: payload.headers,
+          },
+        })
+          .then((data) => {
+            callback({
+              status: 200,
+              data,
+              headers: {},
+              duration: performance.now() - startTime,
+            });
+          })
+          .catch((err: unknown) => {
+            const error = err as { status?: number; message?: string };
+            callback({
+              error: error.message ?? "Unknown error",
+              status: error.status ?? 500,
+              headers: {},
+              duration: performance.now() - startTime,
+            });
+          });
+      },
+    );
 
     return () => {
       unsubscribe();

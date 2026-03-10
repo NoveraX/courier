@@ -1,4 +1,5 @@
 import type { Sources } from "./define/types";
+import { devtoolsHooks } from "./devtools";
 import { executeRequest } from "./utils/execute";
 import type { RequestPayloadInput } from "./utils/helpers";
 
@@ -32,6 +33,8 @@ export function createHandler(sources: Sources): AdapterHandler {
   const execute = (request: Request, payload: RequestPayloadInput, proxyMethod: "GET" | "POST") =>
     executeRequest(sources, payload, { req: request, res: new Response(), proxyMethod });
 
+  const dt = devtoolsHooks;
+
   const handleGet = async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
     const source = url.searchParams.get("_s");
@@ -49,7 +52,15 @@ export function createHandler(sources: Sources): AdapterHandler {
       }
     }
 
-    return execute(
+    dt.onProxyReceive?.({
+      proxyMethod: "GET",
+      source,
+      group,
+      method,
+      timestamp: performance.now(),
+    });
+
+    const response = await execute(
       request,
       {
         source,
@@ -60,6 +71,17 @@ export function createHandler(sources: Sources): AdapterHandler {
       },
       "GET",
     );
+
+    dt.onProxyRespond?.({
+      proxyMethod: "GET",
+      source,
+      group,
+      method,
+      status: response.status,
+      timestamp: performance.now(),
+    });
+
+    return response;
   };
 
   const handlePost = async (request: Request): Promise<Response> => {
@@ -85,7 +107,26 @@ export function createHandler(sources: Sources): AdapterHandler {
       return errorResponse(415, "Unsupported Content-Type");
     }
 
-    return execute(request, body, "POST");
+    dt.onProxyReceive?.({
+      proxyMethod: "POST",
+      source: "unknown",
+      group: undefined,
+      method: "unknown",
+      timestamp: performance.now(),
+    });
+
+    const response = await execute(request, body, "POST");
+
+    dt.onProxyRespond?.({
+      proxyMethod: "POST",
+      source: "unknown",
+      group: undefined,
+      method: "unknown",
+      status: response.status,
+      timestamp: performance.now(),
+    });
+
+    return response;
   };
 
   const handle = async (request: Request): Promise<Response> => {

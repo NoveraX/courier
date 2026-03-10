@@ -31,6 +31,6 @@
     "@noverax/nexus": "*"
   },
   "peerDependencies": {
-    "h3": ">=1"
+    "h3": ">=2.0.0-rc.0"
   }
 }

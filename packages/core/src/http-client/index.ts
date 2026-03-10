@@ -29,6 +29,7 @@ import type {
   PathOptions,
   ResponseType,
   SearchParamsSerializer,
+  SimpleOptions,
 } from "./types";
 
 export class HttpClient {
@@ -278,7 +279,8 @@ export class HttpClient {
       let options: Partial<FetchOptions>;
 
       if (method === "head") {
-        const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[1] || {};
+        const { headers: optionHeaders, ...otherArgumentOptions } =
+          (arguments_[1] as SimpleOptions) || {};
 
         options = {
           ...otherArgumentOptions,

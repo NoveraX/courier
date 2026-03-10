@@ -1,4 +1,5 @@
 import type { Sources } from "../define/types";
+import { devtoolsHooks, generateRequestId } from "../devtools";
 import { HTTPError } from "../error";
 import { HttpClient } from "../http-client/index";
 import type { AnyEndpoints, BaseOptions, Context } from "../http-client/types";
@@ -112,6 +113,12 @@ export async function executeRequest(
   context?: Context,
 ) {
   const { source, group, method, variables, options } = parseRequestPayload(requestPayload);
+  const dt = devtoolsHooks;
+  const hasDevtools = dt.onRequestStart !== undefined;
+  const requestId = hasDevtools ? generateRequestId() : "";
+  const t0 = hasDevtools ? performance.now() : 0;
+  let tMiddleware = 0;
+  let tValidation = 0;
 
   const { req: nextRequest, headers: nextHeaders } = context || {};
 
@@ -178,17 +185,67 @@ export async function executeRequest(
     headers: newHeaders,
   };
 
+  const mode = context?.res instanceof Response ? "proxy" : "direct";
+
+  dt.onRequestStart?.({
+    id: requestId,
+    source: String(source),
+    group: group ? String(group) : undefined,
+    method: String(method),
+    variables,
+    mode,
+    middlewareCount: dataSource.options?.middleware?.length ?? 0,
+    hasValidation: {
+      variables: !!schema?.variables,
+      response: !!schema?.response,
+    },
+    timestamp: t0,
+  });
+
   try {
     if (schema?.variables) {
-      middlewareCtx.variables = await validateSchema(
-        schema.variables,
-        middlewareCtx.variables,
-        "variables",
-      );
+      const vt0 = hasDevtools ? performance.now() : 0;
+      dt.onValidationStart?.({ requestId, target: "variables", timestamp: vt0 });
+      try {
+        middlewareCtx.variables = await validateSchema(
+          schema.variables,
+          middlewareCtx.variables,
+          "variables",
+        );
+        const vDuration = hasDevtools ? performance.now() - vt0 : 0;
+        tValidation += vDuration;
+        dt.onValidationPass?.({
+          requestId,
+          target: "variables",
+          duration: vDuration,
+          timestamp: performance.now(),
+        });
+      } catch (validationError) {
+        const vDuration = hasDevtools ? performance.now() - vt0 : 0;
+        tValidation += vDuration;
+        if (validationError instanceof ValidationError) {
+          dt.onValidationFail?.({
+            requestId,
+            target: "variables",
+            issues: validationError.issues,
+            duration: vDuration,
+            timestamp: performance.now(),
+          });
+        }
+        throw validationError;
+      }
     }
 
     const execute = async (): Promise<MiddlewareResponse> => {
       const vars = middlewareCtx.variables as FormData | Record<string, unknown> | undefined;
+
+      const ft0 = hasDevtools ? performance.now() : 0;
+      dt.onHttpFetchStart?.({
+        requestId,
+        url: dataSource.options?.baseURL ?? "",
+        method: String(method),
+        timestamp: ft0,
+      });
 
       const response = await endpoint(
         instance.createMethods(
@@ -203,21 +260,71 @@ export async function executeRequest(
         vars,
       );
 
+      const fetchDuration = hasDevtools ? performance.now() - ft0 : 0;
+
       const headers = isHeaders(response.headers) ? response.headers : new Headers();
       let data = response.data;
       const status = response?.status || 200;
 
+      dt.onHttpFetchEnd?.({
+        requestId,
+        status,
+        duration: fetchDuration,
+        timestamp: performance.now(),
+      });
+
       if (schema?.response) {
-        data = await validateSchema(schema.response, data, "response");
+        const rvt0 = hasDevtools ? performance.now() : 0;
+        dt.onValidationStart?.({ requestId, target: "response", timestamp: rvt0 });
+        try {
+          data = await validateSchema(schema.response, data, "response");
+          const rvDuration = hasDevtools ? performance.now() - rvt0 : 0;
+          tValidation += rvDuration;
+          dt.onValidationPass?.({
+            requestId,
+            target: "response",
+            duration: rvDuration,
+            timestamp: performance.now(),
+          });
+        } catch (validationError) {
+          const rvDuration = hasDevtools ? performance.now() - rvt0 : 0;
+          tValidation += rvDuration;
+          if (validationError instanceof ValidationError) {
+            dt.onValidationFail?.({
+              requestId,
+              target: "response",
+              issues: validationError.issues,
+              duration: rvDuration,
+              timestamp: performance.now(),
+            });
+          }
+          throw validationError;
+        }
       }
 
       return { status, data, headers };
     };
 
     const middlewares = dataSource.options?.middleware;
+    const mt0 = hasDevtools ? performance.now() : 0;
     const result = middlewares?.length
       ? await composeMiddleware(middlewares)(middlewareCtx, execute)
       : await execute();
+    tMiddleware = hasDevtools && middlewares?.length ? performance.now() - mt0 : 0;
+
+    dt.onRequestEnd?.({
+      id: requestId,
+      status: result.status,
+      data: result.data,
+      headers: headersToObject(result.headers) ?? {},
+      timing: {
+        total: hasDevtools ? performance.now() - t0 : 0,
+        middleware: tMiddleware,
+        fetch: 0,
+        validation: tValidation,
+      },
+      timestamp: performance.now(),
+    });
 
     const response = buildResponse(context, {
       headers: result.headers,
@@ -242,6 +349,23 @@ export async function executeRequest(
 
     return response;
   } catch (error) {
+    dt.onRequestError?.({
+      id: requestId,
+      error: {
+        type:
+          error instanceof ValidationError
+            ? "validation"
+            : error instanceof HTTPError
+              ? "http"
+              : error instanceof TypeError
+                ? "network"
+                : "unknown",
+        status: error instanceof HTTPError ? error.status : undefined,
+        message: error instanceof Error ? error.message : String(error),
+      },
+      timestamp: performance.now(),
+    });
+
     if (error instanceof ValidationError) {
       const responseResult = {
         status: 422,

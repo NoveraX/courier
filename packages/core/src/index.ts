@@ -7,6 +7,7 @@ export {
   type TypedClient,
   type WithOptions,
 } from "./client";
+export { type DevToolsHooks, devtoolsHooks } from "./devtools";
 export { HTTPError, isHTTPError } from "./error";
 export type {
   CallOptions,

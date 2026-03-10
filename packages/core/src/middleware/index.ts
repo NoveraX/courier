@@ -5,6 +5,7 @@ export type {
   NextFn,
 } from "./types";
 
+import { devtoolsHooks } from "../devtools";
 import type { MiddlewareFn, MiddlewareResponse } from "./types";
 
 /**
@@ -29,11 +30,49 @@ export function composeMiddleware(middlewares: MiddlewareFn[]): MiddlewareFn {
     return (_ctx, next) => next();
   }
 
+  const dt = devtoolsHooks;
+  const totalCount = middlewares.length;
+
   return (ctx, next) => {
     function dispatch(i: number): Promise<MiddlewareResponse> {
       const fn = middlewares[i];
       if (!fn) return next();
-      return fn(ctx, () => dispatch(i + 1));
+
+      const name = fn.name || `middleware[${i}]`;
+      const requestId = `${ctx.source}:${ctx.group ?? ""}:${ctx.method}`;
+
+      dt.onMiddlewareEnter?.({
+        requestId,
+        name,
+        index: i,
+        totalCount,
+        timestamp: performance.now(),
+      });
+
+      const t0 = dt.onMiddlewareExit ? performance.now() : 0;
+
+      return fn(ctx, () => dispatch(i + 1)).then(
+        (response) => {
+          dt.onMiddlewareExit?.({
+            requestId,
+            name,
+            index: i,
+            duration: performance.now() - t0,
+            timestamp: performance.now(),
+          });
+          return response;
+        },
+        (error) => {
+          dt.onMiddlewareError?.({
+            requestId,
+            name,
+            index: i,
+            error: error instanceof Error ? error.message : String(error),
+            timestamp: performance.now(),
+          });
+          throw error;
+        },
+      );
     }
     return dispatch(0);
   };

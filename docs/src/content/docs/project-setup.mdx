@@ -56,8 +56,7 @@ const api = defineApi({
   groups: { users, posts, files },
 })
 
-export const sources = { api }
-export type Sources = typeof sources
+export { api }
 ```
 
 <Callout variant="tip" title="One group per file">
@@ -70,23 +69,23 @@ Create the appropriate caller for your use case:
 
 ```ts title="lib/caller.ts (React Query)"
 import { createQueryCaller } from "@noverax/nexus-query"
-import type { Sources } from "@/api"
+import { api } from "@/api"
 
-export const { useQuery, useMutation, useSuspenseQuery, caller } = createQueryCaller<Sources>()
+export const { useQuery, useMutation, useSuspenseQuery, caller } = createQueryCaller<typeof api>()
 ```
 
 ```ts title="lib/caller.ts (Vanilla / Vue / Svelte)"
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "@/api"
+import { api } from "@/api"
 
-export const caller = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
+export const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
 ```
 
 ```ts title="lib/server-caller.ts (Server-side)"
 import { createCaller } from "@noverax/nexus"
-import { sources } from "@/api"
+import { api } from "@/api"
 
-export const call = createCaller(sources)
+export const caller = createCaller(api)
 ```
 
 ## Multiple backends
@@ -108,15 +107,17 @@ const authApi = defineApi({
   groups: { auth },
 })
 
-export const sources = { mainApi, authApi }
-export type Sources = typeof sources
+export { mainApi, authApi }
 ```
 
-TypeScript enforces that you use the correct group names for each source:
+Create separate callers for each API, with full type inference:
 
 ```ts
-const users = await call("mainApi")("users:getAll")
-const token = await call("authApi")("auth:login", { email, password })
+const mainCaller = createCaller(mainApi)
+const authCaller = createCaller(authApi)
+
+const users = await mainCaller.users.getAll()
+const token = await authCaller.auth.login({ email, password })
 ```
 
 ## Environment variables

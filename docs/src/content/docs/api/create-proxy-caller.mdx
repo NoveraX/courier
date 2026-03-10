@@ -8,10 +8,10 @@ import { createProxyCaller } from "@noverax/nexus"
 
 ## Signature
 
-`createProxyCaller` accepts an optional defaults object and returns a curried `CallerFn`. The generic parameter `T` is your `Sources` type — it enables full type inference for source names, endpoint keys, variables, and response types.
+`createProxyCaller` accepts an optional defaults object and returns a `TypedClient`. The generic parameter `T` is your `typeof api` type — it enables full type inference for endpoint groups, methods, variables, and response types.
 
 ```ts
-const call = createProxyCaller<Sources>(defaults?)
+const caller = createProxyCaller<typeof api>(defaults?)
 ```
 
 ## Parameters
@@ -40,41 +40,42 @@ type ProxyCallerDefaults = {
 
 ## Return Type
 
-Returns a `CallerFn<T>` — a curried function with two invocation levels:
+Returns a `TypedClient<T>` — a typed object with dot-notation access to your API groups and endpoints:
 
-1. **Source selection** — `call(source, options?)` — picks a data source and optional per-request settings.
-2. **Endpoint execution** — `call(source)("group:method", variables?)` — executes an endpoint with optional variables.
+1. **Group access** — `caller.users` — accesses the endpoint group.
+2. **Endpoint execution** — `caller.users.getAll(variables?, options?)` — executes an endpoint with optional variables and options.
 
 ```ts
-type CallerFn<T> = <K extends keyof T>(
-  source: K,
-  options?: CallOptions,
-) => <Q extends EndpointKey<T[K]>>(
-  endpoint: Q,
-  variables?: Variables,
-) => Promise<Response>
+type TypedClient<T> = {
+  [Group in keyof T["groups"]]: {
+    [Method in keyof T["groups"][Group]]: (
+      variables?: Variables,
+      options?: CallOptions,
+    ) => Promise<Response>
+  }
+}
 ```
 
 ## Basic Usage
 
 ```ts title="lib/query.ts"
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "@/api"
+import type { api } from "@/api"
 
-const call = createProxyCaller<Sources>({
+const caller = createProxyCaller<typeof api>({
   timeout: 10000,
   credentials: "include",
 })
 
-// Curried: call(source)(endpoint, variables?)
-const users = await call("api")("users:getAll")
-const user = await call("api")("users:getById", { id: "123" })
+// Dot-notation: caller.group.method(variables?, options?)
+const users = await caller.users.getAll()
+const user = await caller.users.getById({ id: "123" })
 ```
 
 ## Configuring Defaults
 
 ```ts title="lib/query.ts"
-const call = createProxyCaller<Sources>({
+const caller = createProxyCaller<typeof api>({
   // Proxy endpoint URL (default: "/api/request")
   proxyUrl: "/api/nexus",
 
@@ -106,16 +107,14 @@ const call = createProxyCaller<Sources>({
 
 ## Per-Request Options
 
-The second argument to the source selector accepts `CallOptions`:
+Pass `CallOptions` as the second argument after variables:
 
 ```ts
-const user = await call("api", {
+const user = await caller.users.getById({ id: "123" }, {
   timeout: 5000,
-  rawData: true,
-  stream: true,
   signal: controller.signal,
   method: "GET",  // Use GET for cacheable reads
-})("users:getById", { id: "123" })
+})
 ```
 
 ## Upload Progress
@@ -123,11 +122,11 @@ const user = await call("api", {
 Pass `onUploadProgress` to track file upload progress. When set, Nexus uses `XMLHttpRequest` for real network-level progress tracking.
 
 ```ts
-const result = await call("api", {
+const result = await caller.files.upload(formData, {
   onUploadProgress: (progress) => {
     console.log(`${Math.round(progress.percent * 100)}%`)
   },
-})("files:upload", formData)
+})
 ```
 
 <Callout variant="info" title="XHR Transport">
@@ -140,10 +139,10 @@ By default, proxy requests use POST. Set `method: "GET"` for cacheable reads —
 
 ```ts
 // GET proxy: cacheable, works with CDN and browser cache
-const users = await call("api", { method: "GET" })("users:getAll")
+const users = await caller.users.getAll(undefined, { method: "GET" })
 
 // POST proxy: default, used for mutations and complex payloads
-const user = await call("api")("users:create", { name: "Jane" })
+const user = await caller.users.create({ name: "Jane" })
 ```
 
 ## Related

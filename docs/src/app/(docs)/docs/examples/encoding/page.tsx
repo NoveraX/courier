@@ -41,28 +41,28 @@ const encodedApi = defineApi({
 })`
 
 const bodyEncodingCode = `// Default (api): JSON body
-await caller("api")("echo:send", { name: "John", role: "admin" })
+await caller.echo.send({ name: "John", role: "admin" })
 // Content-Type: application/json
 // Body: { "name": "John", "role": "admin" }
 
 // Custom (encodedApi): URL-encoded body + defaultBody merged
-await caller("encodedApi")("echo:send", { name: "John", role: "admin" })
+await encodedCaller.echo.send({ name: "John", role: "admin" })
 // Content-Type: application/x-www-form-urlencoded
 // Body: apiVersion=v2&name=John&role=admin`
 
 const searchParamsCode = `// Custom searchParamsSerializer supports arrays
-await caller("encodedApi")("echo:retrieve", {
+await encodedCaller.echo.retrieve({
   tags: ["javascript", "react"],
   page: 1,
 })
 // GET /echo?format=json&apiVersion=v2&tags[]=javascript&tags[]=react&page=1`
 
 const defaultsCode = `// defaultBody auto-merges into POST body
-await caller("encodedApi")("echo:send", { name: "John" })
+await encodedCaller.echo.send({ name: "John" })
 // Body includes: apiVersion=v2&name=John
 
 // defaultQueryParams auto-merges into GET query
-await caller("encodedApi")("echo:retrieve", { page: 1 })
+await encodedCaller.echo.retrieve({ page: 1 })
 // Query includes: format=json&page=1`
 
 export const metadata = docsMetadata(

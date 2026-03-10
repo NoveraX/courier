@@ -125,7 +125,7 @@ Cookies are forwarded in both directions automatically. Browser cookies are incl
 // Backend → proxy handler → browser (set-cookie headers passed through)
 
 // Browser side — credentials: "include" is the default
-const call = createProxyCaller<Sources>()
+const caller = createProxyCaller<typeof api>()
 // Cookies are sent with every request automatically
 ```
 

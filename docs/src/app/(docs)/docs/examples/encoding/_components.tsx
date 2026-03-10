@@ -2,11 +2,11 @@
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
-import { useMutation } from "@/lib/query"
+import { encodedQ, q } from "@/lib/query"
 
 export function BodyEncodingDemo() {
-  const jsonMutation = useMutation("api", "echo:send")
-  const encodedMutation = useMutation("encodedApi", "echo:send")
+  const jsonMutation = q.echo.useMutation("send")
+  const encodedMutation = encodedQ.echo.useMutation("send")
   const variables = { name: "John", role: "admin" }
 
   return (
@@ -44,7 +44,7 @@ export function BodyEncodingDemo() {
 }
 
 export function SearchParamsDemo() {
-  const { mutate, data, isPending } = useMutation("encodedApi", "echo:retrieve")
+  const { mutate, data, isPending } = encodedQ.echo.useMutation("retrieve")
 
   return (
     <>
@@ -59,8 +59,8 @@ export function SearchParamsDemo() {
 }
 
 export function DefaultsDemo() {
-  const postMutation = useMutation("encodedApi", "echo:send")
-  const getMutation = useMutation("encodedApi", "echo:retrieve")
+  const postMutation = encodedQ.echo.useMutation("send")
+  const getMutation = encodedQ.echo.useMutation("retrieve")
 
   return (
     <>

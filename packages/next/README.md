@@ -53,63 +53,42 @@ That's it. The proxy caller on the client will POST to this route, and query-typ
 ### Setup
 
 ```ts
-// app/users/actions.ts
-"use server"
+// lib/actions.ts
 import { createAction } from "@noverax/nexus-next"
 import { sources } from "@/api/sources"
 
-const action = createAction(sources)
-
-export const createUser = action("api")("users:create", {
-  revalidatePath: "/users",
-})
-
-export const deleteUser = action("api")("users:remove", {
-  revalidateTag: "users",
-})
+export const action = createAction(sources, "api")
 ```
 
-### With `useActionState`
+```ts
+// app/actions/users.ts
+"use server"
+import { revalidatePath } from "next/cache"
+import { action } from "@/lib/actions"
 
-```tsx
-"use client"
-import { useActionState } from "react"
-import { createUser } from "./actions"
+export async function createUser(data: { name: string; email: string }) {
+  const user = await action.users.create(data)
+  revalidatePath("/users")
+  return user
+}
 
-export function CreateUserForm() {
-  const [state, formAction, pending] = useActionState(createUser, {
-    data: null,
-    error: null,
-  })
-
-  return (
-    <form action={formAction}>
-      <input name="name" required />
-      <input name="email" type="email" required />
-      <button disabled={pending}>Create</button>
-
-      {state.error && <p className="error">{state.error.message}</p>}
-      {state.data && <p>Created: {state.data.name}</p>}
-    </form>
-  )
+export async function deleteUser(id: number) {
+  await action.users.remove({ id })
+  revalidatePath("/users")
 }
 ```
 
-### Action Options
+### ActionDefaults
 
 ```ts
-action("api")("users:create", {
-  revalidatePath: "/users",              // revalidate a path after success
-  revalidateTag: "users",               // revalidate a cache tag
-  revalidatePath: ["/users", "/admin"],  // multiple paths
-  headers: true,                         // forward request headers (default: true)
-  parse: "raw",                          // pass raw FormData to endpoint
+createAction(sources, "api", {
+  headers: true,  // forward request headers via next/headers (default: true)
 })
 ```
 
 ### ActionState Type
 
-Every Server Action returns `ActionState<T>`:
+Convenience type for `useActionState` return values:
 
 ```ts
 type ActionState<T> = {

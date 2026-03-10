@@ -3,31 +3,27 @@ import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
 const singletonCode = `// lib/query.ts — Single typed instance for the entire app
-import type { Sources } from "@/api"
+import type { api } from "@/api"
 import { createQueryCaller } from "@noverax/nexus-query"
 
-export const { useQuery, useMutation, caller } =
-  createQueryCaller<Sources>()
+export const q = createQueryCaller<typeof api>("api")
 
-// Sources carries full type information:
-// - Source names (keys)
-// - Group names and method names per source
-// - Response types and variable types per method`
+// typeof api carries full type information:
+// - Group names and endpoint names
+// - Response types and variable types per endpoint
+// q.group.useQuery("endpoint") — full autocompletion`
 
-const sourcesCode = `// api/index.ts — Define and export all sources
+const sourcesCode = `// api/index.ts — Define and export the API source
 import { defineApi } from "@noverax/nexus/define"
 
-const api = defineApi({
+export const api = defineApi({
   baseURL: "http://localhost:4000",
   groups: {
     users,  // Users group with CRUD endpoints
     posts,  // Posts group
     files,  // File upload endpoints
   },
-})
-
-export const sources = { api }
-export type Sources = typeof sources`
+})`
 
 const methodTypeCode = `// How endpoint<Response, Variables> drives the type system
 import { defineGroup, endpoint } from "@noverax/nexus/define"
@@ -53,54 +49,54 @@ const users = defineGroup({
 })
 
 // These types flow through the entire chain:
-// endpoint → defineGroup → defineApi → Sources → createQueryCaller
-// → useQuery/useMutation/caller → call site`
+// endpoint → defineGroup → defineApi → createQueryCaller
+// → q.group.useQuery("endpoint") → call site`
 
 const inferenceCode = `// Full type inference at call site — no manual types needed
 
 // useQuery infers Response type from the Endpoint definition
-const { data } = useQuery("api", "users:getAll")
+const { data } = q.users.useQuery("getAll")
 //      ^? { data: User[], total: number } | undefined
 
 // useMutation infers both Response and Variables
-const { mutate } = useMutation("api", "users:create")
+const { mutate } = q.users.useMutation("create")
 //      ^? (variables: { name: string, email: string, role?: string }) => void
 
 // caller (non-hook) also infers types
-const users = await caller("api")("users:getAll", {})
+const users = await caller.users.getAll({})
 //    ^? { data: User[], total: number }
 
-// Group:method syntax resolves the correct nested type
-const user = await caller("api")("users:getById", { id: 1 })
+// Dot-notation resolves the correct nested type
+const user = await caller.users.getById({ id: 1 })
 //    ^? User`
 
 const multiInstanceCode = `// Multiple instances for different backends
 import { createQueryCaller } from "@noverax/nexus-query"
 
 // Internal API
-export const internal = createQueryCaller<InternalSources>({
+export const internalQ = createQueryCaller<typeof internalApi>("internalApi", {
   timeout: 5000,
   headers: { "X-Internal": "true" },
 })
 
 // External API
-export const external = createQueryCaller<ExternalSources>({
+export const externalQ = createQueryCaller<typeof externalApi>("externalApi", {
   timeout: 15000,
   onError: (error) => Sentry.captureException(error),
 })
 
 // Usage — each instance is fully typed independently
-const { data } = internal.useQuery("users", "getAll")
-const { mutate } = external.useMutation("payments", "charge")`
+const { data } = internalQ.users.useQuery("getAll")
+const { mutate } = externalQ.payments.useMutation("charge")`
 
 const directCode = `// Direct mode — same type system, no proxy
 import { createCaller } from "@noverax/nexus"
-import { sources } from "@/api"
+import { api } from "@/api"
 
-export const direct = createCaller(sources)
+export const caller = createCaller(api)
 
 // Server Component or Server Action
-const users = await direct("api")("users:getAll", {})
+const users = await caller.users.getAll({})
 //    ^? { data: User[], total: number }`
 
 export const metadata = docsMetadata(
@@ -127,9 +123,9 @@ export default function SingletonExamplesPage() {
         >
           <p className="text-sm text-muted-foreground">
             The generic parameter{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">{"<Sources>"}</code> carries all
-            source, group, endpoint, response, and variable types. Every call site gets full
-            autocompletion and type checking.
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">{"<typeof api>"}</code> carries
+            all group, endpoint, response, and variable types. Every call site gets full
+            autocompletion and type checking via dot-notation.
           </p>
         </ExampleBlock>
 
@@ -139,7 +135,7 @@ export default function SingletonExamplesPage() {
           code={sourcesCode}
         >
           <p className="text-sm text-muted-foreground">
-            The <code className="rounded bg-muted px-1 py-0.5 text-xs">Sources</code> type is
+            The <code className="rounded bg-muted px-1 py-0.5 text-xs">typeof api</code> type is
             derived from the actual definitions — no need to manually define or sync types.
           </p>
         </ExampleBlock>
@@ -151,7 +147,7 @@ export default function SingletonExamplesPage() {
         >
           <p className="text-sm text-muted-foreground">
             Each endpoint declares its response and variables types. These flow through the chain:
-            endpoint → defineGroup → defineApi → Sources → createQueryCaller → call site.
+            endpoint → defineGroup → defineApi → createQueryCaller → q.group.useQuery.
           </p>
         </ExampleBlock>
 
@@ -161,8 +157,8 @@ export default function SingletonExamplesPage() {
           code={inferenceCode}
         >
           <p className="text-sm text-muted-foreground">
-            TypeScript infers source names, group:method queries, response types, and variable types
-            automatically. Errors are caught at compile time.
+            TypeScript infers group names, endpoint names, response types, and variable types
+            automatically via dot-notation. Errors are caught at compile time.
           </p>
         </ExampleBlock>
 

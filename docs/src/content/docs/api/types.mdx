@@ -8,7 +8,7 @@ All TypeScript types used across the Nexus library, organized by category.
 
 ### CallerFn
 
-The curried caller function type returned by `createCaller`, `createProxyCaller`, and `createQueryCaller`.
+The caller function type used internally by `createCaller`, `createProxyCaller`, and `createQueryCaller`. The public API exposes a `TypedClient` with dot-notation access.
 
 ```ts
 type CallerFn<T extends Record<string, any>, D extends boolean = false> = <
@@ -37,6 +37,7 @@ Options for `createCaller`.
 type CallerDefaults = {
   timeout?: number
   headers?: Record<string, string>
+  context?: Context
   onError?: (error: HTTPError) => void | Promise<void>
   onSuccess?: (data: unknown) => void | Promise<void>
 }
@@ -260,7 +261,7 @@ type ExtractVariables<M extends Endpoint<any, any>> =
 ```
 
 <Callout variant="info" title="Type inference">
-These utility types are what make Nexus fully type-safe. When you call `call("api")("users:getById", { id })`, TypeScript resolves the source, group, endpoint, variables, and response types automatically.
+These utility types are what make Nexus fully type-safe. When you call `caller.users.getById({ id })`, TypeScript resolves the group, endpoint, variables, and response types automatically.
 </Callout>
 
 ## React Query Types
@@ -286,6 +287,6 @@ type WithVariables<V> = [V] extends [undefined]
 ## Related
 
 - [Type Safety Guide](/docs/core-concepts/type-safety) — how type inference works
-- [createProxyCaller](/docs/api/create-proxy-caller) — uses CallerFn and ProxyCallerDefaults
+- [createProxyCaller](/docs/api/create-proxy-caller) — uses TypedClient and ProxyCallerDefaults
 - [defineApi](/docs/api/define) — uses BaseOptions
 - [HttpClient](/docs/api/instance) — uses HttpMethods and HttpResponse

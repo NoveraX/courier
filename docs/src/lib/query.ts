@@ -1,6 +1,6 @@
 import { createQueryCaller } from "@noverax/nexus-query"
-import type { Sources } from "@/api"
+import type { api, encodedApi, middlewareApi } from "@/api"
 
-const q = createQueryCaller<Sources>()
-
-export const { useQuery, useMutation, useSuspenseQuery, caller } = q
+export const q = createQueryCaller<typeof api>("api")
+export const encodedQ = createQueryCaller<typeof encodedApi>("encodedApi")
+export const middlewareQ = createQueryCaller<typeof middlewareApi>("middlewareApi")

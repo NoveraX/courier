@@ -12,7 +12,7 @@ Create a FormData object with your files, pass it as variables, and use `onUploa
 "use client"
 
 import { useState } from "react"
-import { call } from "@/lib/caller"
+import { caller } from "@/lib/caller"
 
 export function AvatarUpload() {
   const [progress, setProgress] = useState(0)
@@ -29,11 +29,11 @@ export function AvatarUpload() {
     setProgress(0)
 
     try {
-      await call("api", {
+      await caller.users.uploadAvatar(formData, {
         onUploadProgress: ({ percent }) => {
           setProgress(Math.round(percent * 100))
         },
-      })("users:uploadAvatar", formData)
+      })
     } finally {
       setUploading(false)
     }
@@ -105,7 +105,7 @@ Upload multiple files in a single request by appending them to the same FormData
 "use client"
 
 import { useState } from "react"
-import { call } from "@/lib/caller"
+import { caller } from "@/lib/caller"
 
 export function DocumentUpload() {
   const [progress, setProgress] = useState(0)
@@ -125,11 +125,11 @@ export function DocumentUpload() {
     formData.append("folder", "invoices")
     formData.append("tags", "2024,finance")
 
-    await call("api", {
+    await caller.files.upload(formData, {
       onUploadProgress: ({ percent }) => {
         setProgress(Math.round(percent * 100))
       },
-    })("files:upload", formData)
+    })
   }
 
   return (
@@ -197,12 +197,12 @@ Nexus uses `XMLHttpRequest` instead of `fetch` for uploads because the Fetch API
 // onUploadProgress is provided. No configuration needed.
 
 // Standard request — uses fetch
-await call("api")("users:getAll")
+await caller.users.getAll()
 
 // Upload request — automatically uses XHR
-await call("api", {
+await caller.users.uploadAvatar(formData, {
   onUploadProgress: (p) => console.log(p.percent),
-})("users:uploadAvatar", formData)
+})
 ```
 
 <Callout variant="tip" title="HTTP/1.1 and HTTP/2">
@@ -216,7 +216,7 @@ When `onUploadProgress` is set, certain fetch-specific options are not available
 ```typescript
 // When using onUploadProgress (XHR transport), these options are ignored:
 
-await call("api", {
+await caller.files.upload(formData, {
   onUploadProgress: ({ percent }) => setProgress(percent),
 
   // Ignored — XHR does not support the fetch cache API
@@ -227,7 +227,7 @@ await call("api", {
 
   // Ignored — Next.js-specific fetch option, not available in XHR
   next: { revalidate: 0 },
-})("files:upload", formData)
+})
 
 // In development, Nexus logs warnings for each ignored option.
 // In production, they are silently ignored.

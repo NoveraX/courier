@@ -52,7 +52,7 @@ Use `isHTTPError(error)` instead of `error instanceof HTTPError`. The type guard
 import { isHTTPError } from "@noverax/nexus/error"
 
 try {
-  const user = await call("api")("users:getById", { id: "999" })
+  const user = await caller.users.getById({ id: "999" })
 } catch (error) {
   if (isHTTPError(error)) {
     console.error(`HTTP ${error.status}:`, error.data)
@@ -72,7 +72,7 @@ type ErrorResponse = {
 }
 
 try {
-  await call("api")("users:getById", { id: "999" })
+  await caller.users.getById({ id: "999" })
 } catch (error) {
   if (isHTTPError<ErrorResponse>(error)) {
     console.error(error.data.message)  // "User not found"
@@ -85,7 +85,7 @@ try {
 
 ```ts
 try {
-  await call("api")("users:getAll")
+  await caller.users.getAll()
 } catch (error) {
   if (isHTTPError(error)) {
     switch (error.status) {
@@ -127,7 +127,7 @@ Network-level errors (DNS failures, connection refused, timeouts) are converted 
 
 ```ts
 try {
-  await call("api")("users:getAll")
+  await caller.users.getAll()
 } catch (error) {
   if (isHTTPError(error) && error.status === 0) {
     console.error("Network error:", error.data)

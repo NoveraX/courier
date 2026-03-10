@@ -1,4 +1,4 @@
-export const metadata = { title: "createQueryCaller", description: "Creates type-safe React Query hooks (useQuery, useMutation, useSuspenseQuery) and a caller — all wired to your Nexus sources.", mode: "proxy" }
+export const metadata = { title: "createQueryCaller", description: "Creates a type-safe query client with dot-notation access to React Query hooks for every endpoint group.", mode: "proxy" }
 
 ## Import
 
@@ -12,42 +12,36 @@ import { createQueryCaller } from "@noverax/nexus-query"
 
 ## Signature
 
-Accepts `ProxyCallerDefaults` (same as `createProxyCaller`). Returns an object with hooks and a raw caller function.
+Accepts a source name and optional `ProxyCallerDefaults` (same as `createProxyCaller`). Returns a Proxy-based client with dot-notation access to hooks for each group.
 
 ```ts
-const { useQuery, useMutation, useSuspenseQuery, useInfiniteQuery, caller } =
-  createQueryCaller<Sources>(defaults?)
+const q = createQueryCaller<typeof api>(source, defaults?)
 ```
 
 ## Return Type
 
+The returned object provides dot-notation access to every group defined in your API. Each group exposes:
+
 ```ts
-{
-  useQuery: (source, endpoint, options?) => UseQueryResult<R, HTTPError>
-  useMutation: (source, endpoint, options?) => UseMutationResult<R, HTTPError, V>
-  useSuspenseQuery: (source, endpoint, options?) => UseSuspenseQueryResult<R, HTTPError>
-  useInfiniteQuery: (source, endpoint, options?) => UseInfiniteQueryResult<R, HTTPError>
-  caller: CallerFn<T>
+type QueryGroupClient<G> = {
+  useQuery(method, options?): UseQueryResult<R, HTTPError>
+  useSuspenseQuery(method, options?): UseSuspenseQueryResult<R, HTTPError>
+  useInfiniteQuery(method, options): UseInfiniteQueryResult<R, HTTPError>
+  useMutation(method, options?): UseMutationResult<R, HTTPError, V>
+  prefetchQuery(queryClient, method, options?): Promise<void>
 }
 ```
-
-- `useQuery` — fetches data reactively with automatic caching.
-- `useMutation` — performs mutations. Variables are passed to `mutate()`.
-- `useSuspenseQuery` — Suspense-compatible query that throws a promise while loading.
-- `useInfiniteQuery` — paginated queries with `fetchNextPage`.
-- `caller` — the underlying `CallerFn` for imperative use outside hooks.
 
 ## Setup
 
 ```ts title="lib/query.ts"
 import { createQueryCaller } from "@noverax/nexus-query"
-import type { Sources } from "@/api"
+import type { api } from "@/api"
 
-export const { useQuery, useMutation, useSuspenseQuery, caller } =
-  createQueryCaller<Sources>({
-    timeout: 10000,
-    credentials: "include",
-  })
+export const q = createQueryCaller<typeof api>("api", {
+  timeout: 10000,
+  credentials: "include",
+})
 ```
 
 ## useQuery
@@ -57,10 +51,10 @@ Wraps `@tanstack/react-query`'s `useQuery`. All standard options are supported.
 ```tsx title="components/user-list.tsx"
 "use client"
 
-import { useQuery } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function UserList() {
-  const { data, isLoading, error } = useQuery("api", "users:getAll", {
+  const { data, isLoading, error } = q.users.useQuery("getAll", {
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   })
@@ -83,7 +77,7 @@ export function UserList() {
 When an endpoint expects variables, the `variables` option becomes required — enforced by TypeScript.
 
 ```ts
-const { data } = useQuery("api", "users:getById", {
+const { data } = q.users.useQuery("getById", {
   variables: { id: "123" },
   enabled: !!id,
 })
@@ -96,15 +90,15 @@ Variables are passed to the `mutate` function, not to the hook.
 ```tsx title="components/create-user.tsx"
 "use client"
 
-import { useMutation } from "@/lib/query"
+import { q } from "@/lib/query"
 import { useQueryClient } from "@noverax/nexus-query"
 
 export function CreateUserForm() {
   const queryClient = useQueryClient()
 
-  const { mutate, isPending } = useMutation("api", "users:create", {
+  const { mutate, isPending } = q.users.useMutation("create", {
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["api", "users:getAll"] })
+      queryClient.invalidateQueries({ queryKey: ["api", "users", "getAll"] })
     },
   })
 
@@ -125,20 +119,21 @@ export function CreateUserForm() {
 
 ## Query Keys
 
-Query keys are auto-generated from source, endpoint, and variables:
+Query keys are auto-generated with a hierarchical format: `[source, group, method, variables?]`:
 
 ```ts
-// Without variables: [source, endpoint]
-// With variables:    [source, endpoint, variables]
+// Without variables: [source, group, method]
+// With variables:    [source, group, method, variables]
 
-useQuery("api", "users:getAll")         // → ["api", "users:getAll"]
-useQuery("api", "users:getById", {
+q.users.useQuery("getAll")          // → ["api", "users", "getAll"]
+q.users.useQuery("getById", {
   variables: { id: "123" }
-})                                       // → ["api", "users:getById", { id: "123" }]
+})                                   // → ["api", "users", "getById", { id: "123" }]
 
 // Cache invalidation
-queryClient.invalidateQueries({ queryKey: ["api", "users:getAll"] })
-queryClient.invalidateQueries({ queryKey: ["api"] })  // all "api" queries
+queryClient.invalidateQueries({ queryKey: ["api", "users", "getAll"] })
+queryClient.invalidateQueries({ queryKey: ["api", "users"] })  // entire group
+queryClient.invalidateQueries({ queryKey: ["api"] })            // entire source
 ```
 
 ## Per-Request Options
@@ -146,7 +141,7 @@ queryClient.invalidateQueries({ queryKey: ["api"] })  // all "api" queries
 Use `requestOptions` to pass `CallOptions` alongside React Query options:
 
 ```ts
-const { data } = useQuery("api", "users:getAll", {
+const { data } = q.users.useQuery("getAll", {
   requestOptions: {
     timeout: 5000,
     method: "GET",  // cacheable GET proxy
@@ -154,7 +149,7 @@ const { data } = useQuery("api", "users:getAll", {
   staleTime: 30_000,
 })
 
-const { mutate } = useMutation("api", "files:upload", {
+const { mutate } = q.files.useMutation("upload", {
   requestOptions: {
     onUploadProgress: (progress) => {
       setProgress(progress.percent)
@@ -163,15 +158,24 @@ const { mutate } = useMutation("api", "files:upload", {
 })
 ```
 
-## The caller Escape Hatch
+## prefetchQuery
 
-The `caller` property is the same `CallerFn` from `createProxyCaller`. Use it for imperative calls outside React hooks:
+Prefetch data in Server Components for instant hydration on the client:
 
-```ts
-import { caller } from "@/lib/query"
+```ts title="app/users/page.tsx"
+import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/nexus-query"
+import { q } from "@/lib/query"
 
-async function prefetchUser(id: string) {
-  return caller("api")("users:getById", { id })
+export default async function UsersPage() {
+  const queryClient = new QueryClient()
+
+  await q.users.prefetchQuery(queryClient, "getAll")
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <UserList />
+    </HydrationBoundary>
+  )
 }
 ```
 

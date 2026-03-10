@@ -5,29 +5,31 @@ import { docsMetadata } from "@/lib/metadata"
 import { MixedParamsDemo, NestedParamsDemo, SimpleParamDemo } from "./_components"
 
 const simpleCode = `// Method definition with :id placeholder
-getById: Method<User, { id: number }> = ({ get }) => get(":id")
+getById: endpoint<User, { id: number }>()((http) => http.get(":id"))
 
 // Usage — :id is replaced with the value from variables
-await caller("api")("users:getById", { id: 1 })
+await caller.users.getById({ id: 1 })
 // → GET /users/1`
 
 const nestedCode = `// Multiple path params in one URL
-getUserPost: Method<UserPostResponse, { id: number; postId: number }> =
-  ({ get }) => get(":id/posts/:postId")
+getUserPost: endpoint<UserPostResponse, { id: number; postId: number }>()(
+  (http) => http.get(":id/posts/:postId")
+)
 
 // Both :id and :postId are replaced
-await caller("api")("users:getUserPost", { id: 1, postId: 2 })
+await caller.users.getUserPost({ id: 1, postId: 2 })
 // → GET /users/1/posts/2`
 
 const mixedCode = `// Path params + query params work together
 // Variables matching :placeholders go into the URL path
 // Remaining variables go as query params
 
-getAll: Method<UsersListResponse, { page?: number; limit?: number }> =
-  ({ get }) => get()
+getAll: endpoint<UsersListResponse, { page?: number; limit?: number }>()(
+  (http) => http.get()
+)
 
 // No path params — all variables become ?query params
-await caller("api")("users:getAll", { page: 1, limit: 5 })
+await caller.users.getAll({ page: 1, limit: 5 })
 // → GET /users?page=1&limit=5`
 
 export const metadata = docsMetadata(

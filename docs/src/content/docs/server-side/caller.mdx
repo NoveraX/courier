@@ -2,16 +2,16 @@ export const metadata = { title: "createCaller", description: "Factory function 
 
 ## API signature
 
-`createCaller` accepts your sources object and optional defaults. It returns a curried function that selects a source, then executes an endpoint:
+`createCaller` accepts your API definition and optional defaults. It returns a typed client with dot-notation access to all endpoint groups:
 
 ```ts title="@noverax/nexus"
 import { createCaller } from "@noverax/nexus"
 
 // Full signature
-function createCaller<T extends Sources>(
-  sources: T,
+function createCaller<T extends DefinedApi>(
+  api: T,
   defaults?: CallerDefaults
-): CallerFn<T, true>
+): TypedClient<T>
 ```
 
 ## CallerDefaults
@@ -24,6 +24,8 @@ type CallerDefaults = {
   timeout?: number
   // Headers sent with every request
   headers?: Record<string, string>
+  // Shared context passed to every endpoint
+  context?: Context
   // Called when any request fails
   onError?: (error: HTTPError) => void | Promise<void>
   // Called when any request succeeds
@@ -35,9 +37,9 @@ These defaults are merged with per-request options. Per-request headers are merg
 
 ```ts title="lib/caller.ts"
 import { createCaller } from "@noverax/nexus"
-import { sources } from "@/api"
+import { api } from "@/api"
 
-export const caller = createCaller(sources, {
+export const caller = createCaller(api, {
   timeout: 10000,
   headers: {
     "X-Service": "my-app",
@@ -54,21 +56,17 @@ The `onError` callback is useful for centralized error logging. It fires before 
 
 ## Basic usage
 
-The returned function is curried: first select a source, then call an endpoint with optional variables and context:
+The returned client uses dot-notation — access a group, then call a method:
 
 ```ts title="app/users/page.tsx"
 import { caller } from "@/lib/caller"
 
 export default async function UsersPage() {
-  // Step 1: select the source -> returns a curried function
-  const api = caller("api")
-
-  // Step 2: call with endpoint key and variables
-  const users = await api("users:getAll", { page: 1, limit: 20 })
+  // Dot-notation: group.method(variables?)
+  const users = await caller.users.getAll({ page: 1, limit: 20 })
   //    ^? UserList — fully typed from your Endpoint definition
 
-  // Or chain it in one expression
-  const user = await caller("api")("users:getById", { id: 5 })
+  const user = await caller.users.getById({ id: 5 })
   //    ^? User
 
   return (
@@ -86,25 +84,25 @@ export default async function UsersPage() {
 
 ## Call signatures
 
-The endpoint function accepts different argument combinations depending on whether your endpoint requires variables and whether you need to pass context:
+The method accepts different argument combinations depending on whether your endpoint requires variables and whether you need to pass context:
 
 ```ts
 // No variables, no context
-await caller("api")("users:getAll")
+await caller.users.getAll()
 
 // With variables, no context
-await caller("api")("users:getById", { id: 5 })
+await caller.users.getById({ id: 5 })
 
 // No variables, with context
-await caller("api")("users:me", { headers: await headers() })
+await caller.users.me(undefined, { headers: await headers() })
 
 // With variables and context
-await caller("api")("users:create", { name: "Jane" }, { headers: await headers() })
+await caller.users.create({ name: "Jane" }, { headers: await headers() })
 ```
 
 ## Context parameter
 
-The `Context` parameter is what makes direct mode different from proxy mode. In proxy mode, cookies are forwarded automatically through the handler. In direct mode, you must pass them explicitly:
+The `Context` parameter is what makes direct mode different from proxy mode. In proxy mode, cookies are forwarded automatically through the handler. In direct mode, you must pass them explicitly as the second argument:
 
 ```ts
 import type { Context } from "@noverax/nexus"
@@ -126,10 +124,9 @@ import { caller } from "@/lib/caller"
 
 export default async function ProfilePage() {
   // headers() returns the incoming request headers (including cookies)
-  const profile = await caller("api")(
-    "users:me",
-    undefined,        // no variables needed
-    { headers: await headers() }  // forward auth cookies to backend
+  const profile = await caller.users.me(
+    undefined,                     // no variables needed
+    { headers: await headers() }   // forward auth cookies to backend
   )
 
   return <h1>Welcome, {profile.name}</h1>
@@ -146,8 +143,7 @@ import { caller } from "@/lib/caller"
 
 export async function GET(req: Request) {
   // Pass the Request directly — headers are extracted automatically
-  const stats = await caller("api")(
-    "dashboard:getStats",
+  const stats = await caller.dashboard.getStats(
     undefined,
     { req }
   )
@@ -162,14 +158,11 @@ When you pass context headers, Nexus only forwards a safe subset: `authorization
 
 ## Raw data mode
 
-By default, the request returns the parsed JSON body. If you need access to the HTTP status code and response headers, pass `rawData: true` as an option:
+By default, the request returns the parsed JSON body. If you need access to the HTTP status code and response headers, use `.raw`:
 
 ```ts
 // Access status code and response headers
-const result = await caller("api", { rawData: true })(
-  "users:getById",
-  { id: 5 }
-)
+const result = await caller.users.raw.getById({ id: 5 })
 
 console.log(result.status)   // 200
 console.log(result.headers)  // Headers object
@@ -178,24 +171,24 @@ console.log(result.data)     // User — still fully typed
 
 ## Difference from createProxyCaller
 
-The key difference is the `Context` parameter. In proxy mode, cookies are forwarded automatically through the browser request. In direct mode, you pass them explicitly:
+The key difference is the `Context` parameter. In proxy mode, cookies are forwarded automatically through the browser request. In direct mode, you pass them explicitly as the second argument:
 
 ```ts
 // Proxy mode (client components) — no context parameter
-const call = createProxyCaller<Sources>()
-await call("api")("users:getAll", { page: 1 })
-//                                 ^ variables only
+const caller = createProxyCaller<typeof api>()
+await caller.users.getAll({ page: 1 })
+//                          ^ variables only
 
-// Direct mode (server components) — context as last argument
-const caller = createCaller(sources)
-await caller("api")("users:getAll", { page: 1 }, { headers: await headers() })
-//                                   ^ variables    ^ context (optional)
+// Direct mode (server components) — context as second argument
+const caller = createCaller(api)
+await caller.users.getAll({ page: 1 }, { headers: await headers() })
+//                          ^ variables    ^ context (optional)
 ```
 
 Both functions use the same `executeRequest` core under the hood.
 
 <Callout variant="warning" title="Server-only import">
-Never import `createCaller` or your caller in `"use client"` files. The sources object contains your `process.env.API_URL`, which would be exposed in the client bundle.
+Never import `createCaller` or your caller in `"use client"` files. The API definition contains your `process.env.API_URL`, which would be exposed in the client bundle.
 </Callout>
 
 ## Next Steps

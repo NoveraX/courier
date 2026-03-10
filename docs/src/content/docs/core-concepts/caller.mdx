@@ -2,12 +2,12 @@ export const metadata = { title: "Caller & Proxy", description: "Two transport m
 
 ## Overview
 
-Nexus provides two ways to call your API endpoints. Both share the same curried `CallerFn` interface and the same type inference:
+Nexus provides two ways to call your API endpoints. Both share the same `TypedClient` interface and the same type inference:
 
 | Factory | Mode | Use Case |
 |---------|------|----------|
-| `createCaller(sources)` | Direct | Server-side, Node.js, Bun, Deno, scripts |
-| `createProxyCaller<Sources>()` | Proxy | Browser → your server → backend |
+| `createCaller(api)` | Direct | Server-side, Node.js, Bun, Deno, scripts |
+| `createProxyCaller<typeof api>()` | Proxy | Browser → your server → backend |
 
 ## createCaller (Direct Mode) <ModeBadge mode="direct" />
 
@@ -15,22 +15,22 @@ Calls your backend directly. Works in any JavaScript runtime with `fetch`.
 
 ```ts title="lib/caller.ts"
 import { createCaller } from "@noverax/nexus"
-import { sources } from "@/api/sources"
+import { api } from "@/api/sources"
 
-export const call = createCaller(sources)
+export const caller = createCaller(api)
 ```
 
 ```ts
 // Works anywhere: Node.js, Bun, Deno, Server Components, scripts
-const users = await call("api")("users:getAll")
+const users = await caller.users.getAll()
 //    ^? User[]
 
-const user = await call("api")("users:getById", { id: "1" })
+const user = await caller.users.getById({ id: "1" })
 //    ^? User
 ```
 
 <Callout variant="info" title="When to use direct mode">
-Use direct mode for server-side code where you have access to the `sources` object: Server Components, Server Actions, API routes, CLI scripts, cron jobs.
+Use direct mode for server-side code where you have access to the `api` object: Server Components, Server Actions, API routes, CLI scripts, cron jobs.
 </Callout>
 
 ## createProxyCaller (Proxy Mode) <ModeBadge mode="proxy" />
@@ -39,9 +39,9 @@ Sends requests through your server's proxy route. The browser never sees your ba
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "@/api/sources"
+import type { api } from "@/api/sources"
 
-export const call = createProxyCaller<Sources>({
+export const caller = createProxyCaller<typeof api>({
   proxyUrl: "/api/request",   // default
   timeout: 10000,
   credentials: "include",     // forward cookies
@@ -53,11 +53,11 @@ export const call = createProxyCaller<Sources>({
 
 ```ts
 // Browser sends POST /api/request → your server → backend
-const users = await call("api")("users:getAll")
+const users = await caller.users.getAll()
 ```
 
 <Callout variant="tip" title="Type-only import">
-Notice that proxy mode imports `type { Sources }` — the actual `sources` object stays on the server. Only the type information is used for inference.
+Notice that proxy mode imports `type { api }` — the actual `api` object stays on the server. Only the type information is used for inference.
 </Callout>
 
 ### ProxyCallerDefaults
@@ -71,41 +71,37 @@ Notice that proxy mode imports `type { Sources }` — the actual `sources` objec
 | `onError` | `(error: HTTPError) => void` | — | Global error callback |
 | `onSuccess` | `(data: unknown) => void` | — | Global success callback |
 
-## The Curried Interface
+## The Dot-Notation Interface
 
-Both factories return a curried function:
+Both factories return a typed client with dot-notation access:
 
 ```ts
-const call = createCaller(sources)
+const caller = createCaller(api)
 
-// Step 1: select source (+ optional call options)
-const apiCall = call("api")
-const apiGetCall = call("api", { method: "GET" })
-
-// Step 2: call endpoint with optional variables
-const users = await apiCall("users:getAll")
-const user = await apiCall("users:getById", { id: "1" })
+// Access endpoints via group.method notation
+const users = await caller.users.getAll()
+const user = await caller.users.getById({ id: "1" })
 ```
 
 ### Call Options
 
-The second argument to the source selector accepts runtime options:
+Pass runtime options as the second argument after variables:
 
 ```ts
 // Stream mode — returns raw Response
-const response = await call("api", { stream: true })("events:stream")
+const response = await caller.events.stream.stream()
 
 // GET proxy — encodes as query params instead of POST body
-const users = await call("api", { method: "GET" })("users:getAll", { page: 1 })
+const users = await caller.users.getAll({ page: 1 }, { method: "GET" })
 
 // Upload progress tracking
-await call("api", {
+await caller.files.upload(formData, {
   onUploadProgress: ({ percent }) => console.log(`${Math.round(percent * 100)}%`),
-})("files:upload", formData)
+})
 
 // Abort signal
 const controller = new AbortController()
-await call("api", { signal: controller.signal })("users:getAll")
+await caller.users.getAll(undefined, { signal: controller.signal })
 ```
 
 ## Using Both Modes Together
@@ -114,14 +110,13 @@ Most apps use both modes — proxy for the browser, direct for the server:
 
 ```ts title="lib/caller.ts"
 import { createCaller, createProxyCaller } from "@noverax/nexus"
-import { sources } from "@/api/sources"
-import type { Sources } from "@/api/sources"
+import { api } from "@/api/sources"
 
 // Server-side (RSC, Server Actions, API routes)
-export const serverCall = createCaller(sources)
+export const serverCaller = createCaller(api)
 
 // Client-side (React components)
-export const clientCall = createProxyCaller<Sources>()
+export const clientCaller = createProxyCaller<typeof api>()
 ```
 
 ## Next Steps

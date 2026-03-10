@@ -12,10 +12,8 @@ const misc = defineGroup({
   },
 })
 
-// Call with stream: true — returns raw Response instead of parsed JSON
-const response = await call("api", { stream: true })(
-  "misc:stream"
-)
+// Call with stream: true via .with() — returns raw Response instead of parsed JSON
+const response = await caller.misc.with({ stream: true }).stream()
 
 // Read the stream
 const reader = response.body.getReader()

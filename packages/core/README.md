@@ -77,7 +77,7 @@ import {
 ```ts
 import {
   createTestClient,  // In-memory mock client with history tracking
-  findRequests,       // Filter request history by source/endpoint
+  findRequests,      // Filter request history by group/method
 } from "@noverax/nexus/testing"
 ```
 
@@ -110,13 +110,10 @@ const users = defineGroup({
   },
 })
 
-const api = defineApi({
+export const api = defineApi({
   baseURL: "https://api.example.com",
   groups: { users },
 })
-
-export const sources = { api }
-export type Sources = typeof sources
 ```
 
 ### 2. Call endpoints
@@ -125,14 +122,14 @@ export type Sources = typeof sources
 
 ```ts
 import { createCaller } from "@noverax/nexus"
-import { sources } from "./api/sources"
+import { api } from "./api/sources"
 
-const call = createCaller(sources)
+const caller = createCaller(api)
 
-const users = await call("api")("users:getAll")
+const users = await caller.users.getAll()
 //    ^? User[]
 
-const user = await call("api")("users:getById", { id: "1" })
+const user = await caller.users.getById({ id: "1" })
 //    ^? User
 ```
 
@@ -140,11 +137,11 @@ const user = await call("api")("users:getById", { id: "1" })
 
 ```ts
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "./api/sources"
+import type { api } from "./api/sources"
 
-const call = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
+const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
 
-const users = await call("api")("users:getAll")
+const users = await caller.users.getAll()
 ```
 
 ### 3. Add middleware
@@ -183,21 +180,23 @@ const users = defineGroup({
 
 ```ts
 import { createTestClient } from "@noverax/nexus/testing"
+import type { api } from "./api/sources"
 
-const { caller, mock, history, reset } = createTestClient<Sources>()
+const { client, mock, history, reset } = createTestClient<typeof api>()
 
-mock("api", "users:getAll").resolves([{ id: "1", name: "Alice", email: "alice@test.com" }])
+mock("users", "getAll").resolves([{ id: "1", name: "Alice", email: "alice@test.com" }])
 
-const users = await caller("api")("users:getAll")
+const users = await client.users.getAll()
 expect(users).toHaveLength(1)
 expect(history).toHaveLength(1)
-expect(history[0].endpoint).toBe("users:getAll")
+expect(history[0].group).toBe("users")
+expect(history[0].method).toBe("getAll")
 
 // Mock lifecycle
-mock("api", "users:getAll").resolves("once").once()         // consumed after 1 call
-mock("api", "users:getAll").resolves("data").times(3)        // consumed after 3 calls
-mock("api", "slow").resolves("done").delay(100)              // artificial delay
-mock("api", "fail").rejects(500, { message: "Error" })       // mock errors
+mock("users", "getAll").resolves("once").once()         // consumed after 1 call
+mock("users", "getAll").resolves("data").times(3)        // consumed after 3 calls
+mock("users", "getAll").resolves("done").delay(100)      // artificial delay
+mock("users", "getById").rejects(500, { message: "Error" })  // mock errors
 ```
 
 <br />

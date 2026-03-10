@@ -51,8 +51,8 @@ Pair with `createProxyCaller` on the client:
 ```ts
 import { createProxyCaller } from "@noverax/nexus"
 
-const call = createProxyCaller({ proxyUrl: "/api/request" })
-const users = await call("api")("users:getAll")
+const caller = createProxyCaller({ proxyUrl: "/api/request" })
+const users = await caller.users.getAll()
 ```
 
 Or with React Query:
@@ -60,7 +60,7 @@ Or with React Query:
 ```ts
 import { createQueryCaller } from "@noverax/nexus-query"
 
-const { useQuery } = createQueryCaller({ proxyUrl: "/api/request" })
+const q = createQueryCaller("api", { proxyUrl: "/api/request" })
 ```
 
 ## License

@@ -6,10 +6,8 @@ import { DedupDemo, ManualAbortDemo } from "./_components"
 
 const manualAbortCode = `const controller = new AbortController()
 
-// Pass signal to cancel the request at any time
-const promise = request("api", { signal: controller.signal })(
-  "misc:slow"
-)
+// Pass signal via .with() to cancel the request at any time
+const promise = caller.misc.with({ signal: controller.signal }).slow()
 
 // Cancel the request
 controller.abort()`
@@ -23,9 +21,7 @@ function handleClick() {
   const controller = new AbortController()
   abortRef.current = controller
 
-  request("api", { signal: controller.signal })(
-    "users:getAll", {}
-  )
+  caller.users.with({ signal: controller.signal }).getAll({})
 }`
 
 const deduplicateCode = `import { defineApi } from "@noverax/nexus/define"

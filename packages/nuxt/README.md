@@ -45,9 +45,9 @@ Use `createProxyCaller` in a composable:
 ```ts
 // composables/useCaller.ts
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "~/api/sources"
+import type { api } from "~/api/sources"
 
-export const caller = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
+export const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
 ```
 
 ```vue
@@ -55,7 +55,7 @@ export const caller = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
 import { caller } from "~/composables/useCaller"
 
 const { data: users } = useAsyncData("users", () =>
-  caller("api")("users:getAll")
+  caller.users.getAll()
 )
 </script>
 
@@ -73,12 +73,12 @@ Call endpoints directly in Nitro routes:
 ```ts
 // server/api/dashboard.ts
 import { createCaller } from "@noverax/nexus"
-import { sources } from "~/api/sources"
+import { api } from "~/api/sources"
 
-const call = createCaller(sources)
+const caller = createCaller(api)
 
 export default defineEventHandler(async () => {
-  const users = await call("api")("users:getAll")
+  const users = await caller.users.getAll()
   return { users }
 })
 ```

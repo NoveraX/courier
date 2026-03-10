@@ -1,25 +1,26 @@
+import { createCaller } from "@noverax/nexus"
+import { api } from "@/api"
 import { ExampleBlock } from "@/components/docs/example-block"
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { PageHeader } from "@/components/layout/page-header"
-import { call } from "@/lib/caller"
 import { docsMetadata } from "@/lib/metadata"
 
-const setupCode = `// lib/caller.ts
+const caller = createCaller(api)
+
+const setupCode = `// Direct mode — import source and create caller inline
 import { createCaller } from "@noverax/nexus"
-import { sources } from "@/api"
+import { api } from "@/api"
 
-export const call = createCaller(sources)`
+const caller = createCaller(api)`
 
-const fetchAllCode = `import { call } from "@/lib/caller"
+const fetchAllCode = `// Server Component — runs on the server, zero client JS
+const users = await caller.users.getAll({})`
 
-// Server Component — runs on the server, zero client JS
-const users = await call("api")("users:getAll", {})`
+const fetchOneCode = `// Path params are passed as the variables object
+const user = await caller.users.getById({ id: 1 })`
 
-const fetchOneCode = `// Path params work identically to proxy mode
-const user = await call("api")("users:getById", { id: 1 })`
-
-const fetchPostsCode = `// Access any request group — same API as proxy mode
-const posts = await call("api")("posts:getAll", {})`
+const fetchPostsCode = `// Access any request group via dot-notation
+const posts = await caller.posts.getAll({})`
 
 export const metadata = docsMetadata(
   "Direct Mode",
@@ -27,9 +28,9 @@ export const metadata = docsMetadata(
 )
 
 export default async function DirectExamplesPage() {
-  const users = await call("api")("users:getAll", {})
-  const user = await call("api")("users:getById", { id: 1 })
-  const posts = await call("api")("posts:getAll", {})
+  const users = await caller.users.getAll({})
+  const user = await caller.users.getById({ id: 1 })
+  const posts = await caller.posts.getAll({})
 
   return (
     <>

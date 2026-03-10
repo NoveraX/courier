@@ -2,10 +2,10 @@
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
-import { useMutation, useQuery } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function GetDemo() {
-  const { data, isLoading, error } = useQuery("api", "users:getAll", { variables: {} })
+  const { data, isLoading, error } = q.users.useQuery("getAll", { variables: {} })
 
   return (
     <>
@@ -17,7 +17,7 @@ export function GetDemo() {
 }
 
 export function PostDemo() {
-  const { mutate, data, isPending, error } = useMutation("api", "users:create")
+  const { mutate, data, isPending, error } = q.users.useMutation("create")
 
   return (
     <>
@@ -33,7 +33,7 @@ export function PostDemo() {
 }
 
 export function ManualDemo() {
-  const { mutate, data, isPending, error } = useMutation("api", "users:getById")
+  const { mutate, data, isPending, error } = q.users.useMutation("getById")
 
   return (
     <>

@@ -52,9 +52,9 @@ Create a caller by passing your sources to `createCaller`:
 
 ```ts title="lib/caller.ts"
 import { createCaller } from "@noverax/nexus"
-import { sources } from "@/api"
+import { api } from "@/api"
 
-export const caller = createCaller(sources)
+export const caller = createCaller(api)
 ```
 
 ## Usage in Server Components
@@ -65,7 +65,7 @@ Call the caller in any `async` server component. The data is fetched at render t
 import { caller } from "@/lib/caller"
 
 export default async function DashboardPage() {
-  const users = await caller("api")("users:getAll", { page: 1, limit: 10 })
+  const users = await caller.users.getAll({ page: 1, limit: 10 })
 
   return (
     <ul>
@@ -89,8 +89,7 @@ import { revalidatePath } from "next/cache"
 import { caller } from "@/lib/caller"
 
 export async function createUser(data: { name: string; email: string }) {
-  const user = await caller("api")(
-    "users:create",
+  const user = await caller.users.create(
     data,
     { headers: await headers() }
   )
@@ -110,8 +109,7 @@ import { caller } from "@/lib/caller"
 
 export default async function ProfilePage() {
   // Pass headers so cookies (auth tokens) reach the backend
-  const profile = await caller("api")(
-    "users:me",
+  const profile = await caller.users.me(
     undefined,
     { headers: await headers() }
   )

@@ -29,8 +29,8 @@ const users = defineGroup({
   },
 })
 
-await call("api")("users:getAll", { page: 1, limit: 10 })
-await call("api")("users:create", { name: "Jane", email: "jane@test.com" })
+await caller.users.getAll({ page: 1, limit: 10 })
+await caller.users.create({ name: "Jane", email: "jane@test.com" })
 ```
 
 ## bodySerializer
@@ -67,7 +67,7 @@ const api = defineApi({
 // POST /auth/token
 // Content-Type: application/x-www-form-urlencoded
 // Body: grant_type=password&username=jane&password=secret
-await call("api")("auth:login", {
+await caller.auth.login({
   grant_type: "password",
   username: "jane",
   password: "secret",
@@ -108,7 +108,7 @@ const api = defineApi({
 })
 
 // GET /products?category=electronics&tags[]=sale&tags[]=new
-await call("api")("products:search", {
+await caller.products.search({
   category: "electronics",
   tags: ["sale", "new"],
 })
@@ -154,10 +154,10 @@ const api = defineApi({
 })
 
 // POST /users  Body: { "apiVersion": "v2", "locale": "en", "name": "Jane" }
-await call("api")("users:create", { name: "Jane" })
+await caller.users.create({ name: "Jane" })
 
 // GET /users?apiVersion=v2&locale=en&page=1
-await call("api")("users:getAll", { page: 1 })
+await caller.users.getAll({ page: 1 })
 ```
 
 ## defaultQueryParams
@@ -176,10 +176,10 @@ const api = defineApi({
 })
 
 // GET /users?api_key=public-key-123&page=1
-await call("api")("users:getAll", { page: 1 })
+await caller.users.getAll({ page: 1 })
 
 // POST /users?api_key=public-key-123  Body: { "name": "Jane" }
-await call("api")("users:create", { name: "Jane" })
+await caller.users.create({ name: "Jane" })
 ```
 
 <Callout variant="tip" title="When to use which">

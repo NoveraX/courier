@@ -50,9 +50,10 @@ The plugin registers a wildcard route under the given prefix. It automatically d
 
 ```ts
 import { createProxyCaller } from "@noverax/nexus"
+import { api } from "./api/sources"
 
-const call = createProxyCaller({ proxyUrl: "/api/request" })
-const users = await call("api")("users:getAll")
+const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
+const users = await caller.users.getAll()
 ```
 
 ## License

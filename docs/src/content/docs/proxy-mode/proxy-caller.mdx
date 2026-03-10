@@ -6,17 +6,17 @@ export const metadata = { title: "createProxyCaller", description: "The browser-
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "@/api"
+import { api } from "@/api"
 
-// createProxyCaller<T>(defaults?) returns CallerFn<T>
-const call = createProxyCaller<Sources>()
+// createProxyCaller<T>(defaults?) returns TypedClient<T>
+const caller = createProxyCaller<typeof api>()
 
-// Curried usage:
-const result = await call("api")("users:getById", { id: 5 })
-//                        ^? source  ^? endpoint key   ^? variables
+// Dot-notation usage:
+const result = await caller.users.getById({ id: 5 })
+//                         ^? group ^? endpoint  ^? variables
 ```
 
-The generic parameter `Sources` provides full type inference for source names, group names, endpoint names, variables, and response types.
+The generic parameter `typeof api` provides full type inference for group names, endpoint names, variables, and response types.
 
 ## Defaults
 
@@ -50,9 +50,9 @@ A typical setup creates a single caller instance and exports it for use across a
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "@/api"
+import { api } from "@/api"
 
-export const call = createProxyCaller<Sources>({
+export const caller = createProxyCaller<typeof api>({
   timeout: 30_000,
   credentials: "include",
   headers: {
@@ -70,32 +70,24 @@ export const call = createProxyCaller<Sources>({
 Create `createProxyCaller` once in a shared module. All client components import from the same file, ensuring consistent defaults and callbacks.
 </Callout>
 
-## Endpoint key convention
+## Dot-notation usage
 
-The endpoint key tells Nexus which endpoint to call. It uses the `"group:method"` format:
+Access endpoints using `caller.{group}.{method}(vars?)` dot notation:
 
 ```ts title="Usage examples"
-// "groupName:endpointName"
-await call("api")("users:getAll")
-await call("api")("users:getById", { id: 5 })
-await call("api")("posts:create", { title: "Hello", body: "World" })
+// caller.groupName.endpointName(variables?)
+await caller.users.getAll()
+await caller.users.getById({ id: 5 })
+await caller.posts.create({ title: "Hello", body: "World" })
 ```
 
-## Curried usage
+## Raw data access
 
-The first call selects the source and optional per-request options. The second call specifies the endpoint and variables:
+To access response status and headers, use the `.raw` namespace:
 
-```ts title="Curried calls"
-// Basic — source only
-await call("api")("users:getAll")
-
-// With per-request options
-await call("api", { rawData: true })("users:getById", { id: "5" })
-
-// Store the source selector for reuse
-const api = call("api")
-const users = await api("users:getAll")
-const user = await api("users:getById", { id: 5 })
+```ts title="Raw data calls"
+// Raw data — returns { status, headers, data }
+const response = await caller.users.raw.getById({ id: "5" })
 ```
 
 ## Body composition
@@ -106,7 +98,7 @@ How the request body is built depends on the type of variables you pass:
 // JSON body (default for objects)
 // Sends: POST /api/request
 // Body:  { source: "api", group: "users", method: "create", variables: { name: "Jane" } }
-await call("api")("users:create", { name: "Jane" })
+await caller.users.create({ name: "Jane" })
 
 // FormData body (when variables is FormData)
 // Sends: POST /api/request (multipart/form-data)
@@ -114,7 +106,7 @@ await call("api")("users:create", { name: "Jane" })
 const formData = new FormData()
 formData.append("name", "Jane")
 formData.append("avatar", fileInput.files[0])
-await call("api")("users:create", formData)
+await caller.users.create(formData)
 ```
 
 <Callout variant="info" title="FormData meta fields">
@@ -123,17 +115,14 @@ When sending FormData, Nexus appends metadata as special fields: `_source`, `_gr
 
 ## Per-request options
 
-You can pass options to the source selector (the first curried call) to override defaults for a specific request chain:
+You can pass options as the second argument to any endpoint call to override defaults for a specific request:
 
 ```ts title="Per-request options"
-// Per-request options (second argument of the source selector)
-const fetchUser = call("api", {
+const user = await caller.users.getById({ id: 5 }, {
   timeout: 5000,
   signal: abortController.signal,
   cache: "no-store",
 })
-
-const user = await fetchUser("users:getById", { id: 5 })
 ```
 
 ## Global callbacks
@@ -141,7 +130,7 @@ const user = await fetchUser("users:getById", { id: 5 })
 The `onError` and `onSuccess` callbacks run for every request made by this factory. Use them for cross-cutting concerns like authentication redirects or logging:
 
 ```ts title="Global error handling"
-const call = createProxyCaller<Sources>({
+const caller = createProxyCaller<typeof api>({
   onSuccess: (data) => {
     // Called after every successful response
     console.log("Response:", data)
@@ -168,7 +157,7 @@ const call = createProxyCaller<Sources>({
 By default, requests are sent to `/api/request`. Change it by passing `proxyUrl` in the defaults:
 
 ```ts title="lib/caller.ts"
-export const call = createProxyCaller<Sources>({
+export const caller = createProxyCaller<typeof api>({
   proxyUrl: "/api/my-proxy",
 })
 ```

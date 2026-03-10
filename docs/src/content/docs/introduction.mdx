@@ -27,17 +27,21 @@ const api = defineApi({
   groups: { users },
 })
 
-export const sources = { api }
-export type Sources = typeof sources
+export { api }
 ```
 
-Then call it with full type inference:
+Create a caller and use it with full type inference:
 
-```ts title="app/page.tsx"
-const users = await call("api")("users:getAll")
+```ts title="lib/caller.ts"
+import { createCaller } from "@noverax/nexus"
+import { api } from "@/api/sources"
+
+const caller = createCaller(api)
+
+const users = await caller.users.getAll()
 //    ^? User[]
 
-const user = await call("api")("users:getById", { id: "1" })
+const user = await caller.users.getById({ id: "1" })
 //    ^? User
 ```
 
@@ -45,8 +49,8 @@ const user = await call("api")("users:getById", { id: "1" })
 
 Both modes share the same API definition and the same type inference:
 
-- **Direct** — `createCaller(sources)` — call backends directly from any runtime (Node.js, Bun, Deno, Cloudflare Workers, server components).
-- **Proxy** — `createProxyCaller()` — browser sends requests through your server, which hides API keys, bypasses CORS, and forwards cookies.
+- **Direct** — `createCaller(api)` — call backends directly from any runtime (Node.js, Bun, Deno, Cloudflare Workers, server components).
+- **Proxy** — `createProxyCaller<typeof api>()` — browser sends requests through your server, which hides API keys, bypasses CORS, and forwards cookies.
 
 <Callout variant="tip" title="Same definitions, two modes">
 You define your API once. Both `createCaller` (direct) and `createProxyCaller` (proxy) consume the same sources with identical type inference.

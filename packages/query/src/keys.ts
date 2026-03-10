@@ -1,31 +1,34 @@
-import type { EndpointKey } from "@noverax/nexus";
+import type { DefinedApi } from "@noverax/nexus/define";
 
 /**
  * Creates a type-safe query key factory for manual cache invalidation.
  *
  * @example
  * ```ts
- * const key = createQueryKeys<MyApi>();
- * key("api")                              // → ["api"]
- * key("api", "users:getAll")              // → ["api", "users:getAll"]
- * key("api", "users:getById", { id: 1 })  // → ["api", "users:getById", { id: 1 }]
+ * const key = createQueryKeys<typeof api>("api");
+ * key("users")                          // → ["api", "users"]
+ * key("users", "getAll")               // → ["api", "users", "getAll"]
+ * key("users", "getById", { id: 1 })   // → ["api", "users", "getById", { id: 1 }]
  * ```
  */
-export function createQueryKeys<T extends Record<string, any>>() {
-  function queryKey<K extends keyof T & string>(source: K): readonly [K];
-  function queryKey<K extends keyof T & string, Q extends EndpointKey<T[K]>>(
-    source: K,
-    endpoint: Q,
-  ): readonly [K, Q];
-  function queryKey<K extends keyof T & string, Q extends EndpointKey<T[K]>>(
-    source: K,
-    endpoint: Q,
+export function createQueryKeys<T extends DefinedApi<any>>(source: string) {
+  type Groups = T["options"]["groups"];
+  type GroupKeys = keyof Groups & string;
+
+  function queryKey<G extends GroupKeys>(group: G): readonly [string, G];
+  function queryKey<G extends GroupKeys, M extends Exclude<keyof Groups[G], "options"> & string>(
+    group: G,
+    method: M,
+  ): readonly [string, G, M];
+  function queryKey<G extends GroupKeys, M extends Exclude<keyof Groups[G], "options"> & string>(
+    group: G,
+    method: M,
     variables: Record<string, unknown>,
-  ): readonly [K, Q, Record<string, unknown>];
-  function queryKey(source: string, endpoint?: string, variables?: Record<string, unknown>) {
-    if (endpoint === undefined) return [source] as const;
-    if (variables !== undefined) return [source, endpoint, variables] as const;
-    return [source, endpoint] as const;
+  ): readonly [string, G, M, Record<string, unknown>];
+  function queryKey(group: string, method?: string, variables?: Record<string, unknown>) {
+    if (method === undefined) return [source, group] as const;
+    if (variables !== undefined) return [source, group, method, variables] as const;
+    return [source, group, method] as const;
   }
 
   return queryKey;

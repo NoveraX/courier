@@ -9,7 +9,8 @@ import { describe, expectTypeOf, it } from "vitest";
 import { defineApi, defineGroup, endpoint } from "../src/define/index";
 import type { Endpoint } from "../src/define/types";
 import type { HttpResponse } from "../src/http-client/types";
-import type { CallerFn, EndpointKey, ResolveEndpoint } from "../src/types";
+import type { GroupClient, TypedClient } from "../src/client";
+import type { EndpointKey, ResolveEndpoint } from "../src/types";
 
 // ---- test fixtures ----
 
@@ -37,8 +38,6 @@ const api = defineApi({
 	baseURL: "https://api.example.com",
 	groups: { users: usersGroup, posts: postsGroup },
 });
-
-const sources = { api };
 
 // ---- endpoint() type inference ----
 
@@ -133,16 +132,87 @@ describe("ResolveEndpoint type resolution", () => {
 	});
 });
 
-// ---- CallerFn type inference ----
+// ---- TypedClient type inference ----
 
-describe("CallerFn type inference", () => {
-	type Sources = typeof sources;
+describe("TypedClient type inference", () => {
+	type Client = TypedClient<typeof api>;
 
-	it("source key is constrained to source names", () => {
-		type Fn = CallerFn<Sources>;
-		// This just verifies the type is constructible — actual runtime
-		// testing of the curried call chain is done in integration tests.
+	it("exposes groups as properties", () => {
+		expectTypeOf<Client>().toHaveProperty("users");
+		expectTypeOf<Client>().toHaveProperty("posts");
+	});
+
+	it("exposes methods on groups", () => {
+		type UsersGroup = Client["users"];
+		expectTypeOf<UsersGroup["getAll"]>().toBeFunction();
+		expectTypeOf<UsersGroup["getById"]>().toBeFunction();
+		expectTypeOf<UsersGroup["create"]>().toBeFunction();
+	});
+
+	it("getAll returns Promise<User[]>", () => {
+		type Result = ReturnType<Client["users"]["getAll"]>;
+		expectTypeOf<Result>().toEqualTypeOf<Promise<User[]>>();
+	});
+
+	it("getById requires variables and returns Promise<User>", () => {
+		type Fn = Client["users"]["getById"];
 		expectTypeOf<Fn>().toBeFunction();
+		expectTypeOf<Parameters<Fn>>().toEqualTypeOf<[{ id: number }]>();
+		expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<Promise<User>>();
+	});
+
+	it("create requires variables and returns Promise<User>", () => {
+		type Fn = Client["users"]["create"];
+		expectTypeOf<Parameters<Fn>>().toEqualTypeOf<[CreateUserInput]>();
+		expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<Promise<User>>();
+	});
+
+	it(".raw changes return type to Partial<HttpResponse<R>>", () => {
+		type RawResult = ReturnType<Client["users"]["raw"]["getAll"]>;
+		expectTypeOf<RawResult>().toEqualTypeOf<Promise<Partial<HttpResponse<User[]>>>>();
+	});
+
+	it(".raw preserves variables requirement", () => {
+		type RawFn = Client["users"]["raw"]["getById"];
+		expectTypeOf<Parameters<RawFn>>().toEqualTypeOf<[{ id: number }]>();
+		expectTypeOf<ReturnType<RawFn>>().toEqualTypeOf<Promise<Partial<HttpResponse<User>>>>();
+	});
+
+	it("client.raw.group also switches return type", () => {
+		type RawResult = ReturnType<Client["raw"]["users"]["getAll"]>;
+		expectTypeOf<RawResult>().toEqualTypeOf<Promise<Partial<HttpResponse<User[]>>>>();
+	});
+
+	it(".with() returns same typed client", () => {
+		type WithClient = ReturnType<Client["with"]>;
+		expectTypeOf<WithClient>().toHaveProperty("users");
+		expectTypeOf<ReturnType<WithClient["users"]["getAll"]>>().toEqualTypeOf<Promise<User[]>>();
+	});
+
+	it(".with() on group preserves raw state", () => {
+		type RawGroup = Client["users"]["raw"];
+		type WithRawGroup = ReturnType<RawGroup["with"]>;
+		type Result = ReturnType<WithRawGroup["getAll"]>;
+		expectTypeOf<Result>().toEqualTypeOf<Promise<Partial<HttpResponse<User[]>>>>();
+	});
+});
+
+// ---- GroupClient type inference ----
+
+describe("GroupClient type inference", () => {
+	type UsersClient = GroupClient<typeof usersGroup>;
+
+	it("exposes endpoint methods", () => {
+		expectTypeOf<UsersClient["getAll"]>().toBeFunction();
+		expectTypeOf<UsersClient["getById"]>().toBeFunction();
+	});
+
+	it("has raw accessor", () => {
+		expectTypeOf<UsersClient>().toHaveProperty("raw");
+	});
+
+	it("has with method", () => {
+		expectTypeOf<UsersClient["with"]>().toBeFunction();
 	});
 });
 

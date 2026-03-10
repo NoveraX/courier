@@ -4,10 +4,11 @@ import { useState } from "react"
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
-import { caller, useMutation } from "@/lib/query"
+import { middlewareCaller } from "@/lib/caller"
+import { middlewareQ } from "@/lib/query"
 
 export function MiddlewareDemo() {
-  const { mutate, data, isPending, error } = useMutation("middlewareApi", "users:getAll")
+  const { mutate, data, isPending, error } = middlewareQ.users.useMutation("getAll")
 
   return (
     <>
@@ -34,7 +35,7 @@ export function OnErrorDemo() {
     setLoading(true)
     setCaughtError(null)
     try {
-      await caller("middlewareApi")("misc:error", { code: 500 })
+      await middlewareCaller.misc.error({ code: 500 })
     } catch (e: unknown) {
       const err = e as { status?: number; data?: unknown; message?: string }
       setCaughtError({

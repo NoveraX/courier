@@ -1,7 +1,7 @@
 "use client"
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
-import { useQuery } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function GroupInfo() {
   return (
@@ -34,9 +34,9 @@ export function GroupInfo() {
 }
 
 export function GroupsDemo() {
-  const users = useQuery("api", "users:getAll", { variables: {} })
-  const posts = useQuery("api", "posts:getAll", { variables: {} })
-  const singleUser = useQuery("api", "users:getById", { variables: { id: 1 } })
+  const users = q.users.useQuery("getAll", { variables: {} })
+  const posts = q.posts.useQuery("getAll", { variables: {} })
+  const singleUser = q.users.useQuery("getById", { variables: { id: 1 } })
 
   const isLoading = users.isLoading || posts.isLoading || singleUser.isLoading
 

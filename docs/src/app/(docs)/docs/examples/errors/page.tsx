@@ -5,9 +5,10 @@ import { docsMetadata } from "@/lib/metadata"
 import { CatchDemo, GuardDemo } from "./_components"
 
 const catchCode = `import { HTTPError } from "@noverax/nexus"
+import { caller } from "@/lib/caller"
 
 try {
-  await caller("api")("misc:error", { code: 404 })
+  await caller.misc.error({ code: 404 })
 } catch (error) {
   if (error instanceof HTTPError) {
     console.log(error.status)  // 404
@@ -17,9 +18,10 @@ try {
 }`
 
 const guardCode = `import { isHTTPError } from "@noverax/nexus"
+import { caller } from "@/lib/caller"
 
 try {
-  await caller("api")("misc:error", { code: 403 })
+  await caller.misc.error({ code: 403 })
 } catch (error) {
   if (isHTTPError(error)) {
     // TypeScript knows: error.status, error.data, error.headers

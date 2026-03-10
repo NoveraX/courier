@@ -2,7 +2,7 @@ export const metadata = { title: "Mocking", description: "MockBuilder API for co
 
 ## MockBuilder API
 
-When you call `mock(source, endpoint)`, you get a `MockBuilder` with a fluent chainable API:
+When you call `mock(group, method)`, you get a `MockBuilder` with a fluent chainable API:
 
 ```ts title="types"
 type MockBuilder<R> = {
@@ -31,12 +31,12 @@ type MockBuilder<R> = {
 Return static data with a 200 status. This is the most common mock:
 
 ```ts
-mock("api", "users:getAll").resolves([
+mock("users", "getAll").resolves([
   { id: 1, name: "Alice" },
   { id: 2, name: "Bob" },
 ])
 
-const users = await caller("api")("users:getAll")
+const users = await client.users.getAll()
 // users === [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]
 ```
 
@@ -45,22 +45,22 @@ const users = await caller("api")("users:getAll")
 Provide a function that receives the request variables and returns data dynamically:
 
 ```ts
-mock("api", "users:getById").returns((vars) => {
+mock("users", "getById").returns((vars) => {
   const { id } = vars as { id: number }
   return { id, name: `User ${id}`, email: `user${id}@test.com` }
 })
 
-const user1 = await caller("api")("users:getById", { id: 1 })
+const user1 = await client.users.getById({ id: 1 })
 // user1 === { id: 1, name: "User 1", email: "user1@test.com" }
 
-const user2 = await caller("api")("users:getById", { id: 2 })
+const user2 = await client.users.getById({ id: 2 })
 // user2 === { id: 2, name: "User 2", email: "user2@test.com" }
 ```
 
 The function can also be `async`:
 
 ```ts
-mock("api", "users:getById").returns(async (vars) => {
+mock("users", "getById").returns(async (vars) => {
   const { id } = vars as { id: number }
   // Simulate async work
   return { id, name: "Loaded" }
@@ -72,19 +72,19 @@ mock("api", "users:getById").returns(async (vars) => {
 Throw an `HTTPError` with a given status code and optional response body:
 
 ```ts
-mock("api", "users:getById").rejects(404, { message: "Not found" })
+mock("users", "getById").rejects(404, { message: "Not found" })
 
 // Throws HTTPError with status 404 and data { message: "Not found" }
-await caller("api")("users:getById", { id: 999 })
+await client.users.getById({ id: 999 })
 ```
 
 If you omit the data argument, a default error body is used:
 
 ```ts
-mock("api", "users:delete").rejects(403)
+mock("users", "delete").rejects(403)
 
 // Throws HTTPError with status 403 and data { success: false, message: "HTTP 403" }
-await caller("api")("users:delete", { id: 1 })
+await client.users.delete({ id: 1 })
 ```
 
 ## once
@@ -92,13 +92,13 @@ await caller("api")("users:delete", { id: 1 })
 Limit a mock to a single invocation. After the mock is consumed, the next call will use a previously registered mock (LIFO) or throw a "no mock" error:
 
 ```ts
-mock("api", "users:getAll").resolves([{ id: 1, name: "Alice" }]) // permanent fallback
-mock("api", "users:getAll").resolves([]).once()                   // consumed first
+mock("users", "getAll").resolves([{ id: 1, name: "Alice" }]) // permanent fallback
+mock("users", "getAll").resolves([]).once()                   // consumed first
 
-const first = await caller("api")("users:getAll")
+const first = await client.users.getAll()
 // first === [] (the .once() mock)
 
-const second = await caller("api")("users:getAll")
+const second = await client.users.getAll()
 // second === [{ id: 1, name: "Alice" }] (falls back to the permanent mock)
 ```
 
@@ -107,11 +107,11 @@ const second = await caller("api")("users:getAll")
 Limit a mock to N invocations:
 
 ```ts
-mock("api", "users:getAll")
+mock("users", "getAll")
   .rejects(500, { error: "Server error" })
   .times(2)
 
-mock("api", "users:getAll").resolves([]) // fallback
+mock("users", "getAll").resolves([]) // fallback
 
 // First two calls throw HTTPError 500
 // Third call returns []
@@ -122,12 +122,12 @@ mock("api", "users:getAll").resolves([]) // fallback
 Add an artificial delay before the mock responds. Useful for testing loading states and timeouts:
 
 ```ts
-mock("api", "users:getAll")
+mock("users", "getAll")
   .resolves([{ id: 1, name: "Alice" }])
   .delay(1000) // 1 second delay
 
 // Takes ~1 second to resolve
-const users = await caller("api")("users:getAll")
+const users = await client.users.getAll()
 ```
 
 ## Chaining
@@ -135,7 +135,7 @@ const users = await caller("api")("users:getAll")
 All methods return the same `MockBuilder`, so you can chain freely:
 
 ```ts
-mock("api", "users:getAll")
+mock("users", "getAll")
   .resolves([{ id: 1, name: "Alice" }])
   .delay(100)
   .once()
@@ -147,8 +147,8 @@ Mocks for the same endpoint form a **LIFO (last-in, first-out) stack**. The most
 
 ```ts
 // Stack (bottom to top):
-mock("api", "users:getAll").resolves([])               // 1. permanent base
-mock("api", "users:getAll").rejects(500).once()        // 2. consumed first
+mock("users", "getAll").resolves([])               // 1. permanent base
+mock("users", "getAll").rejects(500).once()        // 2. consumed first
 
 // Call 1: uses mock #2 (top of stack, .once()) → HTTPError 500
 // Call 2: uses mock #1 (permanent) → []
@@ -162,55 +162,55 @@ Once a `.once()` or `.times(n)` mock is exhausted, it is popped off the stack, a
 ```ts title="tests/retry.test.ts"
 it("retries after server error", async () => {
   // Permanent success mock (base)
-  mock("api", "users:getAll").resolves([{ id: 1, name: "Alice" }])
+  mock("users", "getAll").resolves([{ id: 1, name: "Alice" }])
 
   // Temporary failure (consumed first)
-  mock("api", "users:getAll")
+  mock("users", "getAll")
     .rejects(500, { error: "Temporary failure" })
     .once()
 
   // First call fails
   await expect(
-    caller("api")("users:getAll"),
+    client.users.getAll(),
   ).rejects.toThrow()
 
   // Second call succeeds (failure mock was consumed)
-  const result = await caller("api")("users:getAll")
+  const result = await client.users.getAll()
   expect(result).toEqual([{ id: 1, name: "Alice" }])
 })
 ```
 
 ## findRequests Helper
 
-Use `findRequests` to filter the history array by source and optionally by endpoint:
+Use `findRequests` to filter the history array by group and optionally by method:
 
 ```ts title="types"
 function findRequests(
   history: HistoryEntry[],
-  source: string,
-  endpoint?: string,
+  group: string,
+  method?: string,
 ): HistoryEntry[]
 ```
 
 ```ts title="tests/analytics.test.ts"
 import { createTestClient, findRequests } from "@noverax/nexus/testing"
 
-const { caller, mock, history } = createTestClient<typeof sources>()
+const { client, mock, history } = createTestClient<typeof api>()
 
-mock("api", "users:getAll").resolves([])
-mock("api", "posts:getAll").resolves([])
+mock("users", "getAll").resolves([])
+mock("posts", "getAll").resolves([])
 
-await caller("api")("users:getAll")
-await caller("api")("posts:getAll")
-await caller("api")("users:getAll")
+await client.users.getAll()
+await client.posts.getAll()
+await client.users.getAll()
 
-// All API calls
-const all = findRequests(history, "api")
-expect(all).toHaveLength(3)
-
-// Only user calls
-const userCalls = findRequests(history, "api", "users:getAll")
+// All user calls
+const userCalls = findRequests(history, "users")
 expect(userCalls).toHaveLength(2)
+
+// Only getAll calls
+const getAllCalls = findRequests(history, "users", "getAll")
+expect(getAllCalls).toHaveLength(2)
 ```
 
 ## History Entry Structure
@@ -219,9 +219,7 @@ Each entry records full request and response details:
 
 ```ts title="types"
 type HistoryEntry = {
-  source: string       // "api"
-  endpoint: string     // "users:getAll"
-  group?: string       // "users"
+  group: string        // "users"
   method: string       // "getAll"
   variables?: unknown  // { name: "Alice" }
   result?: {
@@ -237,26 +235,26 @@ type HistoryEntry = {
 
 ```ts title="tests/audit.test.ts"
 it("sends correct variables to create endpoint", async () => {
-  mock("api", "users:create").resolves({ id: 1, name: "Alice" })
+  mock("users", "create").resolves({ id: 1, name: "Alice" })
 
-  await caller("api")("users:create", { name: "Alice", email: "a@b.com" })
+  await client.users.create({ name: "Alice", email: "a@b.com" })
 
-  const [entry] = findRequests(history, "api", "users:create")
+  const [entry] = findRequests(history, "users", "create")
   expect(entry.variables).toEqual({ name: "Alice", email: "a@b.com" })
   expect(entry.result?.status).toBe(200)
   expect(entry.error).toBeUndefined()
 })
 
 it("records errors in history", async () => {
-  mock("api", "users:delete").rejects(403)
+  mock("users", "delete").rejects(403)
 
   try {
-    await caller("api")("users:delete", { id: 1 })
+    await client.users.delete({ id: 1 })
   } catch {
     // expected
   }
 
-  const [entry] = findRequests(history, "api", "users:delete")
+  const [entry] = findRequests(history, "users", "delete")
   expect(entry.error).toBeDefined()
   expect(entry.result?.status).toBe(403)
 })

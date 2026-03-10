@@ -5,7 +5,7 @@ import { useState } from "react"
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
-import { caller } from "@/lib/query"
+import { caller } from "@/lib/caller"
 
 const ERROR_CODES = [400, 401, 403, 404, 422, 500, 502, 503] as const
 
@@ -23,7 +23,7 @@ export function CatchDemo() {
     setLoading(true)
     setError(null)
     try {
-      await caller("api")("misc:error", { code: selectedCode })
+      await caller.misc.error({ code: selectedCode })
     } catch (e: unknown) {
       if (isHTTPError(e)) {
         setError({
@@ -71,7 +71,7 @@ export function GuardDemo() {
     setLoading(true)
     setResult(null)
     try {
-      await caller("api")("misc:error", { code: 403 })
+      await caller.misc.error({ code: 403 })
     } catch (error: unknown) {
       if (isHTTPError(error)) {
         setResult({

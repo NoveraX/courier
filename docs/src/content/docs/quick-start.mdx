@@ -20,13 +20,10 @@ const users = defineGroup({
   },
 })
 
-const api = defineApi({
+export const api = defineApi({
   baseURL: process.env.API_URL!,
   groups: { users },
 })
-
-export const sources = { api }
-export type Sources = typeof sources
 ```
 
 <Callout variant="info" title="Path parameters">
@@ -41,31 +38,31 @@ Choose the mode that fits your use case:
 
 ```ts title="lib/caller.ts"
 import { createCaller } from "@noverax/nexus"
-import { sources } from "@/api/sources"
+import { api } from "@/api/sources"
 
-export const call = createCaller(sources)
+export const caller = createCaller(api)
 ```
 
 **Proxy mode** — browser requests go through your server (hides API keys, bypasses CORS):
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "@/api/sources"
+import type { api } from "@/api/sources"
 
-export const call = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
+export const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
 ```
 
 **React Query** — hooks with full type inference:
 
-```ts title="lib/caller.ts"
+```ts title="lib/query.ts"
 import { createQueryCaller } from "@noverax/nexus-query"
-import type { Sources } from "@/api/sources"
+import type { api } from "@/api/sources"
 
-export const { useQuery, useMutation, caller } = createQueryCaller<Sources>()
+export const q = createQueryCaller<typeof api>("api")
 ```
 
 <Callout variant="tip" title="Use both modes together">
-Most apps use proxy/React Query for client-side and direct mode for server-side. Both share the same source definitions.
+Most apps use proxy/React Query for client-side and direct mode for server-side. Both share the same API definitions.
 </Callout>
 
 ## Step 3: Use it
@@ -74,13 +71,13 @@ Most apps use proxy/React Query for client-side and direct mode for server-side.
 
 ```tsx title="app/users/page.tsx"
 "use client"
-import { useQuery, useMutation } from "@/lib/caller"
+import { q } from "@/lib/query"
 
 export default function UsersPage() {
-  const { data: users, isLoading } = useQuery("api", "users:getAll")
+  const { data: users, isLoading } = q.users.useQuery("getAll")
   //      ^? User[]
 
-  const { mutate } = useMutation("api", "users:create", {
+  const { mutate } = q.users.useMutation("create", {
     onSuccess: (user) => console.log("Created:", user.name),
     //                                           ^? string
   })
@@ -103,10 +100,10 @@ export default function UsersPage() {
 **Direct mode (server-side):**
 
 ```tsx title="app/dashboard/page.tsx"
-import { call } from "@/lib/caller"
+import { caller } from "@/lib/caller"
 
 export default async function DashboardPage() {
-  const users = await call("api")("users:getAll")
+  const users = await caller.users.getAll()
   //    ^? User[]
 
   return <ul>{users.map((u) => <li key={u.id}>{u.name}</li>)}</ul>
@@ -117,19 +114,19 @@ export default async function DashboardPage() {
 
 ```ts
 import { createCaller } from "@noverax/nexus"
-import { sources } from "./api/sources"
+import { api } from "./api/sources"
 
-const call = createCaller(sources)
+const caller = createCaller(api)
 
-const users = await call("api")("users:getAll")
-const user = await call("api")("users:getById", { id: "1" })
+const users = await caller.users.getAll()
+const user = await caller.users.getById({ id: "1" })
 ```
 
 ## What's happening under the hood
 
-When you call `call("api")("users:getById", { id: "5" })`:
+When you call `caller.users.getById({ id: "5" })`:
 
-1. Nexus parses `"users:getById"` into group `users` and method `getById`
+1. Nexus resolves the `users` group and `getById` method
 2. The `:id` path parameter is extracted from variables → `GET /users/5`
 3. Middleware chain runs (retry, auth, logging, etc.)
 4. Schema validation runs (if configured)

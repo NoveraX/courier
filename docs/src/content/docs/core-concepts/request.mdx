@@ -8,18 +8,18 @@ Every API call in Nexus follows a well-defined lifecycle. There are two transpor
 
 | Factory | Mode | Runtime | Use Case |
 |---------|------|---------|----------|
-| `createCaller(sources)` | Direct | Any (Node.js, Bun, Deno, browser) | Server Components, Server Actions, scripts, CLI |
-| `createProxyCaller<Sources>()` | Proxy | Browser | Client Components — hides backend URL, handles CORS, forwards cookies |
+| `createCaller(api)` | Direct | Any (Node.js, Bun, Deno, browser) | Server Components, Server Actions, scripts, CLI |
+| `createProxyCaller<typeof api>()` | Proxy | Browser | Client Components — hides backend URL, handles CORS, forwards cookies |
 
 ## Request Flow
 
 ```
-Direct:  createCaller(sources) → call("api")("users:getAll") → executeRequest → middleware → HttpClient → fetch → backend
+Direct:  createCaller(api) → caller.users.getAll() → executeRequest → middleware → HttpClient → fetch → backend
 
-Proxy:   createProxyCaller()   → call("api")("users:getAll") → POST /api/request → handler → executeRequest → middleware → HttpClient → fetch → backend
+Proxy:   createProxyCaller() → caller.users.getAll() → POST /api/request → handler → executeRequest → middleware → HttpClient → fetch → backend
 ```
 
-In direct mode, the caller invokes `executeRequest` directly with the `sources` object. In proxy mode, the browser sends the request payload to your server's proxy route (e.g., `/api/request`), which then calls `executeRequest` on the server side.
+In direct mode, the caller invokes `executeRequest` directly with the `api` object. In proxy mode, the browser sends the request payload to your server's proxy route (e.g., `/api/request`), which then calls `executeRequest` on the server side.
 
 ## Setting Up Callers
 
@@ -27,92 +27,89 @@ In direct mode, the caller invokes `executeRequest` directly with the `sources` 
 
 ```ts title="lib/caller.ts"
 import { createCaller } from "@noverax/nexus"
-import { sources } from "@/api/sources"
+import { api } from "@/api/sources"
 
-export const call = createCaller(sources)
+export const caller = createCaller(api)
 ```
 
 ```ts
-// Works anywhere with access to the sources object
-const users = await call("api")("users:getAll")
+// Works anywhere with access to the api object
+const users = await caller.users.getAll()
 //    ^? User[]
 
-const user = await call("api")("users:getById", { id: "1" })
+const user = await caller.users.getById({ id: "1" })
 //    ^? User
 ```
 
 <Callout variant="info" title="When to use direct mode">
-Use direct mode whenever you have access to the `sources` object: Server Components, Server Actions, API routes, CLI scripts, cron jobs, or any non-browser runtime.
+Use direct mode whenever you have access to the `api` object: Server Components, Server Actions, API routes, CLI scripts, cron jobs, or any non-browser runtime.
 </Callout>
 
 ### Proxy mode — browser-side <ModeBadge mode="proxy" />
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "@/api/sources"
+import type { api } from "@/api/sources"
 
-export const call = createProxyCaller<Sources>()
+export const caller = createProxyCaller<typeof api>()
 ```
 
 ```ts
 // Browser sends POST /api/request → your server → backend
-const users = await call("api")("users:getAll")
+const users = await caller.users.getAll()
 ```
 
 <Callout variant="tip" title="Type-only import">
-Proxy mode imports `type { Sources }` — only the type information crosses to the client. The actual `sources` object (with your backend URL and secrets) stays on the server.
+Proxy mode imports `type { api }` — only the type information crosses to the client. The actual `api` object (with your backend URL and secrets) stays on the server.
 </Callout>
 
-## The Curried Calling Pattern
+## The Dot-Notation API
 
-Both `createCaller` and `createProxyCaller` return a curried function with two steps:
+Both `createCaller` and `createProxyCaller` return a typed client with dot-notation access to your API groups and endpoints:
 
 ```ts
-// Step 1: select source (+ optional call options)
-const apiCall = call("api")
-
-// Step 2: call endpoint with optional variables
-const users = await apiCall("users:getAll")
-const user = await apiCall("users:getById", { id: "1" })
+// Access endpoints via group.method notation
+const users = await caller.users.getAll()
+const user = await caller.users.getById({ id: "1" })
 ```
 
-The endpoint key uses `"group:method"` format, which TypeScript validates at compile time:
+TypeScript validates group and method names at compile time:
 
 ```ts
-call("api")("users:getAll")              // group: "users", method: "getAll"
-call("api")("users:getById", { id: "1" }) // group: "users", method: "getById"
-call("api")("posts:create", vars)         // group: "posts", method: "create"
+caller.users.getAll()              // group: "users", method: "getAll"
+caller.users.getById({ id: "1" }) // group: "users", method: "getById"
+caller.posts.create(vars)         // group: "posts", method: "create"
 ```
 
 ## Call Options
 
-The second argument to the source selector accepts runtime options that control how the request is executed:
+Each endpoint supports runtime options that control how the request is executed:
 
 ```ts
 // Raw response — returns { status, headers, data } instead of just data
-const response = await call("api", { rawData: true })("users:getAll")
+const response = await caller.users.raw.getAll()
 //    ^? { status: number; headers: Headers; data: User[] }
 
 // Stream mode — returns raw Response object
-const response = await call("api", { stream: true })("events:stream")
+const response = await caller.events.stream.stream()
 
 // GET proxy — encodes as query params instead of POST body (cacheable)
-const users = await call("api", { method: "GET" })("users:getAll")
+const users = await caller.users.getAll(undefined, { method: "GET" })
 
 // Upload with progress tracking
-await call("api", {
+await caller.files.upload(formData, {
   onUploadProgress: ({ percent }) => console.log(`${Math.round(percent * 100)}%`),
-})("files:upload", formData)
+})
 
 // Abort signal
 const controller = new AbortController()
-await call("api", { signal: controller.signal })("users:getAll")
+await caller.users.getAll(undefined, { signal: controller.signal })
 
 // Custom headers and timeout per call
-await call("api", {
+await caller.users.getAll(undefined, {
   headers: { "X-Request-Id": crypto.randomUUID() },
   timeout: 5000,
-})("users:getAll")
+})
 ```
 
 ### CallOptions Reference
@@ -159,13 +156,12 @@ In direct mode, you can pass an optional `Context` as the last argument to forwa
 
 ```ts
 import { createCaller } from "@noverax/nexus"
-import { sources } from "@/api/sources"
+import { api } from "@/api/sources"
 
-const call = createCaller(sources)
+const caller = createCaller(api)
 
 // In a Server Component or API route
-const user = await call("api")(
-  "users:getById",
+const user = await caller.users.getById(
   { id: "1" },
   { req: request, headers: request.headers },
 )

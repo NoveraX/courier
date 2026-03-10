@@ -31,7 +31,7 @@ With Nexus, the same functionality is type-safe and zero-boilerplate:
 
 ```typescript title="With Nexus"
 // Type-safe, fully inferred
-const user = await call("api")("users:getById", { id: "5" })
+const user = await caller.users.getById({ id: "5" })
 //    ^? User — inferred from endpoint<User, { id: string }>
 
 // Proxy? One line in your server:
@@ -43,7 +43,7 @@ export const { GET, POST } = apiRoute(sources) // or nexusHandler(sources)
 
 You define your API structure **once** using `defineApi`, `defineGroup`, and `endpoint`. Each endpoint declares its response and variables types. From that single definition, Nexus gives you:
 
-- **Direct mode** — server calls via `createCaller(sources)`
+- **Direct mode** — server calls via `createCaller(api)`
 - **Proxy mode** — browser calls via `createProxyCaller()`
 - **React Query** — hooks via `createQueryCaller()`
 - **Server Actions** — form handling via `createAction(sources)`
@@ -62,13 +62,13 @@ const users = defineGroup({
 })
 
 // Direct — server-side
-const user = await call("api")("users:getById", { id: "5" })
+const user = await caller.users.getById({ id: "5" })
 
 // Proxy — client-side
-const user = await clientCall("api")("users:getById", { id: "5" })
+const user = await proxyCaller.users.getById({ id: "5" })
 
 // React Query — same types again
-const { data } = useQuery("api", "users:getById", { variables: { id: "5" } })
+const { data } = q.users.useQuery("getById", { variables: { id: "5" } })
 ```
 
 <Callout variant="tip" title="No code generation">
@@ -99,7 +99,7 @@ const { data } = useQuery({
 })
 
 // Nexus — one line, fully typed
-const { data } = useQuery("api", "users:getById", { variables: { id } })
+const { data } = q.users.useQuery("getById", { variables: { id } })
 //      ^? User
 ```
 

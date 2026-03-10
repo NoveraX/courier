@@ -29,12 +29,12 @@ The dedup key is computed as `METHOD:origin/path`. The query string and hash are
 // Query string and hash are ignored
 
 // These two requests share the same dedup key (GET:https://api.example.com/users):
-call("api")("users:getAll", { page: 1 })  // ← aborted (status 499)
-call("api")("users:getAll", { page: 2 })  // ← executes
+caller.users.getAll({ page: 1 })  // ← aborted (status 499)
+caller.users.getAll({ page: 2 })  // ← executes
 
 // These have different keys (different paths):
-call("api")("users:getById", { id: 1 })   // GET:https://api.example.com/users/1
-call("api")("users:getById", { id: 2 })   // GET:https://api.example.com/users/2
+caller.users.getById({ id: 1 })   // GET:https://api.example.com/users/1
+caller.users.getById({ id: 2 })   // GET:https://api.example.com/users/2
 ```
 
 <Callout variant="info" title="Why ignore query params?">
@@ -56,13 +56,13 @@ Aborted requests throw with status 499. In most cases you want to silently ignor
 ```ts title="components/search-users.tsx"
 "use client"
 
-import { useQuery } from "@/lib/query-caller"
+import { q } from "@/lib/query"
 
 export function SearchUsers() {
   const [query, setQuery] = useState("")
 
   // With deduplicate enabled, rapid typing aborts previous searches
-  const { data, error } = useQuery("api", "users:search", {
+  const { data, error } = q.users.useQuery("search", {
     variables: { q: query },
     enabled: query.length > 0,
   })
@@ -94,7 +94,7 @@ You can also manually abort requests by passing a `signal` in the call options. 
 
 import { useEffect, useRef } from "react"
 
-import { caller } from "@/lib/query-caller"
+import { caller } from "@/lib/caller"
 
 export function CancellableRequest() {
   const controllerRef = useRef<AbortController | null>(null)
@@ -105,9 +105,10 @@ export function CancellableRequest() {
     controllerRef.current = new AbortController()
 
     try {
-      const data = await caller("api", {
-        signal: controllerRef.current.signal,
-      })("reports:generate", { type: "monthly" })
+      const data = await caller.reports.generate(
+        { type: "monthly" },
+        { signal: controllerRef.current.signal },
+      )
 
       console.log("Report:", data)
     } catch (error) {

@@ -4,7 +4,7 @@ import { useRef, useState } from "react"
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
-import { caller } from "@/lib/query"
+import { caller } from "@/lib/caller"
 
 function useFilePicker() {
   const [file, setFile] = useState<File | null>(null)
@@ -71,7 +71,7 @@ export function SimpleUploadDemo() {
       formData.append("file", file)
       formData.append("description", "Uploaded via nexus demo")
 
-      const response = await caller("api")("files:upload", formData)
+      const response = await caller.files.upload(formData)
       setResult(response)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed")
@@ -129,14 +129,16 @@ export function ProgressUploadDemo() {
       formData.append("file", file)
       formData.append("description", "Uploaded via nexus demo")
 
-      const response = await caller("api", {
-        onUploadProgress: (p) => {
-          const pct = Math.round(p.percent * 100)
-          setProgress(pct)
-          if (barRef.current) barRef.current.style.width = `${pct}%`
-          if (labelRef.current) labelRef.current.textContent = `${pct}%`
-        },
-      })("files:upload", formData)
+      const response = await caller.files
+        .with({
+          onUploadProgress: (p) => {
+            const pct = Math.round(p.percent * 100)
+            setProgress(pct)
+            if (barRef.current) barRef.current.style.width = `${pct}%`
+            if (labelRef.current) labelRef.current.textContent = `${pct}%`
+          },
+        })
+        .upload(formData)
 
       setResult(response)
     } catch (e) {

@@ -1,82 +1,87 @@
-import type { Sources } from "./define/types";
+import { buildClientProxy, type ExecuteBackend, type TypedClient } from "./client";
+import type { DefinedApi } from "./define/types";
 import { HTTPError } from "./error";
-import type { CallOptions, Context } from "./http-client/types";
-import type { CallerFn } from "./types";
+import type { Context } from "./http-client/types";
 import { executeRequest } from "./utils/execute";
-import { parseEndpointKey } from "./utils/helpers";
 
 export type CallerDefaults = {
   timeout?: number;
   headers?: Record<string, string>;
+  context?: Context;
   onError?: (error: HTTPError) => void | Promise<void>;
   onSuccess?: (data: unknown) => void | Promise<void>;
 };
 
-const isContext = (value: unknown): value is Context =>
-  typeof value === "object" &&
-  value !== null &&
-  !Array.isArray(value) &&
-  (("req" in value && value.req instanceof Request) ||
-    ("res" in value && value.res instanceof Response) ||
-    ("headers" in value && value.headers instanceof Headers));
-
-export function createCaller<T extends Sources>(
-  sources: T,
+/**
+ * Create a typed client for direct (universal) mode.
+ * Works everywhere: browser, Node.js, Deno, Bun.
+ *
+ * @example
+ * ```ts
+ * const client = createCaller(api);
+ *
+ * // Data only:
+ * const users = await client.users.getAll();
+ *
+ * // Full HTTP response:
+ * const response = await client.users.raw.getById({ id: 1 });
+ *
+ * // With options:
+ * const fast = client.with({ timeout: 1000 });
+ * await fast.users.getAll();
+ * ```
+ */
+export function createCaller<T extends DefinedApi<any>>(
+  source: T,
   defaults: CallerDefaults = {},
-): CallerFn<T, true> {
+): TypedClient<T> {
   const {
     timeout: defaultTimeout,
     headers: defaultHeaders,
+    context: defaultContext,
     onError: globalOnError,
     onSuccess: globalOnSuccess,
   } = defaults;
 
-  return function selectSource(source: string, options?: CallOptions<boolean>) {
-    return async function execute(
-      ...arguments_: [string, Context] | [string, Record<string, unknown>, Context]
-    ) {
-      const [endpoint] = arguments_;
-      const { group, method } = parseEndpointKey(endpoint);
+  const sources = { _: source };
 
-      const variables = isContext(arguments_[1]) ? undefined : arguments_[1];
+  const backend: ExecuteBackend = async (group, method, variables, options, raw) => {
+    const mergedOptions: Record<string, unknown> = { ...options };
 
-      const mergedOptions: Record<string, unknown> = { ...options };
+    if (raw) mergedOptions.rawData = true;
 
-      if (mergedOptions.timeout === undefined && defaultTimeout !== undefined) {
-        mergedOptions.timeout = defaultTimeout;
-      }
+    if (mergedOptions.timeout === undefined && defaultTimeout !== undefined) {
+      mergedOptions.timeout = defaultTimeout;
+    }
 
-      if (defaultHeaders) {
-        mergedOptions.headers = options?.headers
-          ? {
-              ...defaultHeaders,
-              ...Object.fromEntries(new Headers(options.headers as HeadersInit)),
-            }
-          : defaultHeaders;
-      }
+    if (defaultHeaders) {
+      mergedOptions.headers = options.headers
+        ? {
+            ...defaultHeaders,
+            ...Object.fromEntries(new Headers(options.headers as HeadersInit)),
+          }
+        : defaultHeaders;
+    }
 
-      const requestPayload = {
-        source,
-        group,
-        method,
-        variables,
-        options: mergedOptions,
-      };
-
-      const contextArg = arguments_.length > 2 ? arguments_[2] : arguments_[1];
-      const context = isContext(contextArg) ? contextArg : undefined;
-
-      try {
-        const result = await executeRequest(sources, requestPayload, context);
-        await globalOnSuccess?.(result);
-        return result;
-      } catch (error) {
-        if (error instanceof HTTPError) {
-          await globalOnError?.(error);
-        }
-        throw error;
-      }
+    const requestPayload = {
+      source: "_",
+      group,
+      method,
+      variables: variables as Record<string, unknown> | undefined,
+      options: mergedOptions,
     };
-    // TypeScript cannot infer curried generic closures; cast verified by type tests
-  } as unknown as CallerFn<T, true>;
+
+    try {
+      const result = await executeRequest(sources, requestPayload, defaultContext);
+      await globalOnSuccess?.(result);
+      return result;
+    } catch (error) {
+      if (error instanceof HTTPError) {
+        await globalOnError?.(error);
+      }
+      throw error;
+    }
+  };
+
+  return buildClientProxy<T>(backend);
 }

@@ -2,13 +2,13 @@ export const metadata = { title: "useMutation", description: "Create, update, an
 
 ## Signature
 
-`useMutation` takes a source name, a `"group:method"` query string, and optional React Query mutation options. Variables are passed to `mutate()`, not to the hook:
+Access `useMutation` through the query caller's dot-notation API. Variables are passed to `mutate()`, not to the hook:
 
 ```ts
-const result = useMutation(source, query, options?)
+const result = q.{group}.useMutation(method, options?)
 
-// source  — key from your Sources type (e.g. "api")
-// query   — "group:method" string (e.g. "users:create")
+// group   — endpoint group name (e.g. "users")
+// method  — method name within the group (e.g. "create")
 // options — { requestOptions?, ...reactQueryMutationOptions }
 
 // Returns: UseMutationResult with typed mutate function
@@ -27,11 +27,11 @@ The most common pattern — submit a form and create a resource. The `mutate` fu
 ```ts title="components/create-user-form.tsx"
 "use client"
 
-import { useMutation } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function CreateUserForm() {
   // Method<User, { name: string; email: string; role: string }>
-  const { mutate, isPending } = useMutation("api", "users:create", {
+  const { mutate, isPending } = q.users.useMutation("create", {
     onSuccess: (user) => {
       console.log("Created:", user.name) // ← user is typed as User
     },
@@ -70,11 +70,11 @@ For updates, pass all required fields (including the ID for path parameters) to 
 ```ts title="components/edit-user-form.tsx"
 "use client"
 
-import { useMutation } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function EditUserForm({ user }: { user: User }) {
   // Method<User, { id: number; name: string; email: string }>
-  const { mutate, isPending } = useMutation("api", "users:update")
+  const { mutate, isPending } = q.users.useMutation("update")
 
   const handleSave = (name: string, email: string) => {
     // Variables passed to mutate(), not to the hook options
@@ -101,11 +101,11 @@ Delete methods typically return `null` and only need an ID. The variable type is
 ```ts title="components/delete-user-button.tsx"
 "use client"
 
-import { useMutation } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function DeleteUserButton({ userId }: { userId: number }) {
   // Method<null, { id: number }> → mutate takes { id: number }
-  const { mutate, isPending } = useMutation("api", "users:remove", {
+  const { mutate, isPending } = q.users.useMutation("remove", {
     onSuccess: () => {
       console.log("User deleted")
     },
@@ -121,24 +121,24 @@ export function DeleteUserButton({ userId }: { userId: number }) {
 
 ## Cache invalidation
 
-After a mutation succeeds, invalidate related queries to trigger a refetch. Use the auto-generated query key format `[source, query, variables?]`:
+After a mutation succeeds, invalidate related queries to trigger a refetch. Use the hierarchical query key format `[source, group, method?, variables?]`:
 
 ```ts title="components/create-user-form.tsx"
 "use client"
 
 import { useQueryClient } from "@noverax/nexus-query"
-import { useMutation } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function CreateUserForm() {
   const queryClient = useQueryClient()
 
-  const { mutate } = useMutation("api", "users:create", {
+  const { mutate } = q.users.useMutation("create", {
     onSuccess: () => {
-      // Invalidate the users list so it refetches
-      queryClient.invalidateQueries({ queryKey: ["api", "users:getAll"] })
+      // Invalidate a specific method
+      queryClient.invalidateQueries({ queryKey: ["api", "users", "getAll"] })
 
-      // Or invalidate all queries for this source
-      // queryClient.invalidateQueries({ queryKey: ["api"] })
+      // Or invalidate the entire users group
+      // queryClient.invalidateQueries({ queryKey: ["api", "users"] })
     },
   })
 
@@ -150,8 +150,8 @@ export function CreateUserForm() {
 }
 ```
 
-<Callout variant="tip" title="Partial key invalidation">
-Passing `{ queryKey: ["api"] }` invalidates every query for that source. Use `{ queryKey: ["api", "users:getAll"] }` to target a specific endpoint.
+<Callout variant="tip" title="Group-level invalidation">
+Use `["api", "users"]` to invalidate all queries in the users group at once — `getAll`, `getById`, and any other method. Use `["api"]` to invalidate every query for that source.
 </Callout>
 
 ## Optimistic updates
@@ -162,24 +162,24 @@ For instant UI feedback, update the cache optimistically before the server respo
 "use client"
 
 import { useQueryClient } from "@noverax/nexus-query"
-import { useMutation, useQuery } from "@/lib/query"
+import { q } from "@/lib/query"
 
 type User = { id: number; name: string; email: string }
 
 export function UserManager() {
   const queryClient = useQueryClient()
-  const { data: users } = useQuery("api", "users:getAll")
+  const { data: users } = q.users.useQuery("getAll")
 
-  const { mutate: updateUser } = useMutation("api", "users:update", {
+  const { mutate: updateUser } = q.users.useMutation("update", {
     // 1. Cancel outgoing refetches so they don't overwrite our optimistic update
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: ["api", "users:getAll"] })
+      await queryClient.cancelQueries({ queryKey: ["api", "users", "getAll"] })
 
       // 2. Snapshot the previous value
-      const previous = queryClient.getQueryData<User[]>(["api", "users:getAll"])
+      const previous = queryClient.getQueryData<User[]>(["api", "users", "getAll"])
 
       // 3. Optimistically update the cache
-      queryClient.setQueryData<User[]>(["api", "users:getAll"], (old) =>
+      queryClient.setQueryData<User[]>(["api", "users", "getAll"], (old) =>
         old?.map((u) => (u.id === variables.id ? { ...u, ...variables } : u))
       )
 
@@ -189,13 +189,13 @@ export function UserManager() {
     // 4. On error, roll back to the previous value
     onError: (_error, _variables, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(["api", "users:getAll"], context.previous)
+        queryClient.setQueryData(["api", "users", "getAll"], context.previous)
       }
     },
 
     // 5. Always refetch after error or success to ensure consistency
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["api", "users:getAll"] })
+      queryClient.invalidateQueries({ queryKey: ["api", "users", "getAll"] })
     },
   })
 

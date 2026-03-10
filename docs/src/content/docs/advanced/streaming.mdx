@@ -52,12 +52,10 @@ In direct mode, the stream is returned inside the response object. You typically
 // In direct mode, the stream is returned in the response object:
 // { status: 200, headers: Headers, data: ReadableStream }
 
-import { call } from "@/lib/caller"
+import { caller } from "@/lib/caller"
 
 export default async function ExportPage({ params }: { params: { id: string } }) {
-  const response = await call("api", { rawData: true })("exports:download", {
-    id: params.id,
-  })
+  const response = await caller.exports.raw.download({ id: params.id })
 
   // response.data is a ReadableStream
   // response.headers contains Content-Type, Content-Length, etc.
@@ -73,7 +71,7 @@ Use the standard `ReadableStream` API to consume streamed responses. The `getRea
 
 import { useEffect, useState } from "react"
 
-import { caller } from "@/lib/query-caller"
+import { caller } from "@/lib/caller"
 
 export function EventStream({ channel }: { channel: string }) {
   const [events, setEvents] = useState<string[]>([])
@@ -82,7 +80,7 @@ export function EventStream({ channel }: { channel: string }) {
     let cancelled = false
 
     async function consume() {
-      const response = await caller("api")("events:subscribe", { channel })
+      const response = await caller.events.subscribe({ channel })
       const reader = (response as ReadableStream).getReader()
       const decoder = new TextDecoder()
 
@@ -119,7 +117,7 @@ Server-Sent Events follow a specific text format (`event:` and `data:` fields se
 
 import { useEffect, useState } from "react"
 
-import { caller } from "@/lib/query-caller"
+import { caller } from "@/lib/caller"
 
 type SSEEvent = { event: string; data: string }
 
@@ -142,7 +140,7 @@ export function SSEConsumer({ channel }: { channel: string }) {
     let cancelled = false
 
     async function consume() {
-      const response = await caller("api")("events:subscribe", { channel })
+      const response = await caller.events.subscribe({ channel })
       const reader = (response as ReadableStream).getReader()
       const decoder = new TextDecoder()
 

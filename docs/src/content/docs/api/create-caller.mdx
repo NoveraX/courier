@@ -8,22 +8,22 @@ import { createCaller } from "@noverax/nexus"
 
 ## Signature
 
-`createCaller` takes your source definitions and optional defaults, returning a curried `CallerFn`. Direct mode calls the backend directly without going through a proxy.
+`createCaller` takes your API definition and optional defaults, returning a `TypedClient`. Direct mode calls the backend directly without going through a proxy.
 
 ```ts
-const call = createCaller(sources, defaults?)
+const caller = createCaller(api, defaults?)
 ```
 
 ## Parameters
 
-### sources
+### api
 
-A record of API source definitions created with `defineApi()`.
+An API source definition created with `defineApi()`.
 
 ```ts
-import { sources } from "@/api"
+import { api } from "@/api"
 
-const call = createCaller(sources)
+const caller = createCaller(api)
 ```
 
 ### CallerDefaults
@@ -34,6 +34,7 @@ Optional default settings applied to every request.
 type CallerDefaults = {
   timeout?: number
   headers?: Record<string, string>
+  context?: Context
   onError?: (error: HTTPError) => void | Promise<void>
   onSuccess?: (data: unknown) => void | Promise<void>
 }
@@ -55,15 +56,15 @@ type HttpResponse<T> = {
 
 ```ts title="lib/caller.ts"
 import { createCaller } from "@noverax/nexus"
-import { sources } from "@/api"
+import { api } from "@/api"
 
-export const call = createCaller(sources, {
+export const caller = createCaller(api, {
   timeout: 10000,
 })
 
-// Usage: call(source)(endpoint, variables?, context?)
-const result = await call("api")("users:getAll")
-const user = await call("api")("users:getById", { id: "123" })
+// Usage: caller.group.method(variables?, context?)
+const result = await caller.users.getAll()
+const user = await caller.users.getById({ id: "123" })
 ```
 
 ## Passing Context
@@ -82,15 +83,13 @@ type Context = {
 import { headers } from "next/headers"
 
 // Pass context for cookie/header forwarding
-const result = await call("api")(
-  "users:getProfile",
+const result = await caller.users.getProfile(
   undefined,
   { headers: await headers() },
 )
 
 // With variables AND context
-const user = await call("api")(
-  "users:getById",
+const user = await caller.users.getById(
   { id: "123" },
   { headers: await headers() },
 )
@@ -101,10 +100,10 @@ const user = await call("api")(
 Direct mode is designed for server-only execution. Use it in React Server Components, API routes, server actions, or any backend runtime.
 
 ```ts title="app/users/page.tsx"
-import { call } from "@/lib/caller"
+import { caller } from "@/lib/caller"
 
 export default async function UsersPage() {
-  const result = await call("api")("users:getAll")
+  const result = await caller.users.getAll()
 
   return (
     <ul>
@@ -121,12 +120,12 @@ export default async function UsersPage() {
 ```ts title="app/users/actions.ts"
 "use server"
 
-import { call } from "@/lib/caller"
+import { caller } from "@/lib/caller"
 import { revalidatePath } from "next/cache"
 
 export async function createUser(formData: FormData) {
   const name = formData.get("name") as string
-  await call("api")("users:create", { name })
+  await caller.users.create({ name })
   revalidatePath("/users")
 }
 ```
@@ -134,7 +133,7 @@ export async function createUser(formData: FormData) {
 ## Configuring Defaults
 
 ```ts title="lib/caller.ts"
-const call = createCaller(sources, {
+const caller = createCaller(api, {
   timeout: 15000,
   headers: {
     "X-Internal-Service": "nexus-app",

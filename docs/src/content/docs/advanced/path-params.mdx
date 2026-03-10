@@ -39,7 +39,7 @@ When you pass variables to a request, Nexus first extracts any values that match
 // Remaining variables go to query params (GET) or body (POST).
 
 // GET /users/5 — { id: 5 } consumed by :id
-await call("api")("users:getById", { id: 5 })
+await caller.users.getById({ id: 5 })
 
 // GET /users/5?include=posts — { id: 5 } consumed by :id, { include: "posts" } -> query param
 const users = defineGroup({
@@ -50,7 +50,7 @@ const users = defineGroup({
     ),
   },
 })
-await call("api")("users:getWithDetails", { id: 5, include: "posts" })
+await caller.users.getWithDetails({ id: 5, include: "posts" })
 
 // POST /users/5/avatar — { id: 5 } consumed by :id, { name: "photo.jpg" } -> JSON body
 const users = defineGroup({
@@ -61,7 +61,7 @@ const users = defineGroup({
     ),
   },
 })
-await call("api")("users:updateAvatar", { id: 5, name: "photo.jpg" })
+await caller.users.updateAvatar({ id: 5, name: "photo.jpg" })
 ```
 
 <Callout variant="tip" title="Automatic extraction">

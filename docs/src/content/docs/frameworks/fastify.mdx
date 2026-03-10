@@ -27,14 +27,12 @@ const users = defineGroup({
   },
 })
 
-export const sources = {
-  myApi: defineApi({
-    baseURL: process.env.API_URL ?? "http://localhost:4000",
-    groups: { users },
-  }),
-}
+export const api = defineApi({
+  baseURL: process.env.API_URL ?? "http://localhost:4000",
+  groups: { users },
+})
 
-export type Sources = typeof sources
+export const sources = { myApi: api }
 ```
 
 ## Setup
@@ -159,9 +157,9 @@ On the client, point your caller to this server's proxy URL. Choose the guide fo
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "../shared/sources"
+import type { api } from "../shared/sources"
 
-export const caller = createProxyCaller<Sources>({
+export const caller = createProxyCaller<typeof api>({
   proxyUrl: "http://localhost:3001/api/request",
 })
 ```

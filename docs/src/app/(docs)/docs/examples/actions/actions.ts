@@ -1,7 +1,10 @@
 "use server"
 
+import { createAction } from "@noverax/nexus-next"
 import { revalidatePath } from "next/cache"
-import { call } from "@/lib/caller"
+import { sources } from "@/api"
+
+const action = createAction(sources, "api")
 
 export type ActionState = {
   success?: boolean
@@ -19,7 +22,7 @@ export async function createUser(_prev: ActionState, formData: FormData): Promis
   }
 
   try {
-    const user = await call("api")("users:create", { name, email, role })
+    const user = await action.users.create({ name, email, role })
     revalidatePath("/docs/examples/actions")
     return { success: true, data: user }
   } catch {
@@ -35,7 +38,7 @@ export async function deleteUser(_prev: ActionState, formData: FormData): Promis
   }
 
   try {
-    await call("api")("users:remove", { id })
+    await action.users.remove({ id })
     revalidatePath("/docs/examples/actions")
     return { success: true, data: { id } }
   } catch {

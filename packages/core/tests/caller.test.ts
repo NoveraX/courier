@@ -9,31 +9,30 @@ vi.mock("../src/utils/execute", () => ({
 import { executeRequest } from "../src/utils/execute";
 
 const mockExecuteRequest = vi.mocked(executeRequest);
-const mockSources = { api: {} } as any;
+const mockSource = { options: { groups: {} } } as any;
 
 afterEach(() => {
   vi.clearAllMocks();
 });
 
 describe("createCaller", () => {
-  it("returns a curried function", () => {
-    const request = createCaller(mockSources) as any;
-    expect(typeof request).toBe("function");
-    const execute = request("api");
-    expect(typeof execute).toBe("function");
+  it("returns a proxy object (not a function)", () => {
+    const client = createCaller(mockSource);
+    expect(typeof client).toBe("object");
   });
 
   describe("request payload", () => {
-    it("builds payload with source and method", async () => {
+    it("builds payload with group and method", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
-      const request = createCaller(mockSources) as any;
-      await request("api")("list");
+      const client = createCaller(mockSource);
+      await (client as any).users.list();
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
-        mockSources,
+        { _: mockSource },
         expect.objectContaining({
-          source: "api",
+          source: "_",
+          group: "users",
           method: "list",
           variables: undefined,
         }),
@@ -44,108 +43,99 @@ describe("createCaller", () => {
     it("builds payload with variables", async () => {
       mockExecuteRequest.mockResolvedValue({ id: 1 });
 
-      const request = createCaller(mockSources) as any;
-      await request("api")("getUser", { id: 1 });
+      const client = createCaller(mockSource);
+      await (client as any).users.getById({ id: 1 });
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
-        mockSources,
+        { _: mockSource },
         expect.objectContaining({
-          source: "api",
-          method: "getUser",
+          group: "users",
+          method: "getById",
           variables: { id: 1 },
-        }),
-        undefined,
-      );
-    });
-
-    it("parses group:method endpoint key", async () => {
-      mockExecuteRequest.mockResolvedValue({ token: "abc" });
-
-      const request = createCaller(mockSources) as any;
-      await request("api")("auth:login", { email: "test@test.com" });
-
-      expect(mockExecuteRequest).toHaveBeenCalledWith(
-        mockSources,
-        expect.objectContaining({
-          source: "api",
-          group: "auth",
-          method: "login",
-          variables: { email: "test@test.com" },
-        }),
-        undefined,
-      );
-    });
-
-    it("passes call options to payload", async () => {
-      mockExecuteRequest.mockResolvedValue({ ok: true });
-
-      const request = createCaller(mockSources) as any;
-      await request("api", { rawData: true, timeout: 5000 })("list");
-
-      expect(mockExecuteRequest).toHaveBeenCalledWith(
-        mockSources,
-        expect.objectContaining({
-          options: expect.objectContaining({ rawData: true, timeout: 5000 }),
         }),
         undefined,
       );
     });
   });
 
-  describe("context detection", () => {
-    it("detects context with Headers as second arg", async () => {
-      mockExecuteRequest.mockResolvedValue({ ok: true });
+  describe(".raw accessor", () => {
+    it("passes rawData: true via client.raw.group.method()", async () => {
+      mockExecuteRequest.mockResolvedValue({ status: 200, data: [] });
 
-      const context = { headers: new Headers({ authorization: "Bearer token" }) };
-      const request = createCaller(mockSources) as any;
-      await request("api")("list", context);
+      const client = createCaller(mockSource);
+      await (client as any).raw.users.getAll();
 
-      expect(mockExecuteRequest).toHaveBeenCalledWith(
-        mockSources,
-        expect.objectContaining({ variables: undefined }),
-        context,
-      );
+      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
+      expect(payload.options.rawData).toBe(true);
     });
 
-    it("detects context with Response as second arg", async () => {
-      mockExecuteRequest.mockResolvedValue({ ok: true });
+    it("passes rawData: true via client.group.raw.method()", async () => {
+      mockExecuteRequest.mockResolvedValue({ status: 200, data: [] });
 
-      const context = { res: new Response() };
-      const request = createCaller(mockSources) as any;
-      await request("api")("list", context);
+      const client = createCaller(mockSource);
+      await (client as any).users.raw.getAll();
 
-      expect(mockExecuteRequest).toHaveBeenCalledWith(
-        mockSources,
-        expect.objectContaining({ variables: undefined }),
-        context,
-      );
+      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
+      expect(payload.options.rawData).toBe(true);
     });
 
-    it("passes variables and context when both provided", async () => {
+    it("does not set rawData when .raw is not used", async () => {
+      mockExecuteRequest.mockResolvedValue([]);
+
+      const client = createCaller(mockSource);
+      await (client as any).users.getAll();
+
+      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
+      expect(payload.options.rawData).toBeUndefined();
+    });
+  });
+
+  describe(".with() options", () => {
+    it("passes options from client.with()", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
-      const context = { headers: new Headers() };
-      const request = createCaller(mockSources) as any;
-      await request("api")("getUser", { id: 1 }, context);
+      const client = createCaller(mockSource);
+      await (client as any).with({ timeout: 5000 }).users.list();
 
-      expect(mockExecuteRequest).toHaveBeenCalledWith(
-        mockSources,
-        expect.objectContaining({ variables: { id: 1 } }),
-        context,
-      );
+      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
+      expect(payload.options.timeout).toBe(5000);
     });
 
-    it("treats plain object as variables, not context", async () => {
+    it("passes options from client.group.with()", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
-      const request = createCaller(mockSources) as any;
-      await request("api")("search", { query: "test" });
+      const client = createCaller(mockSource);
+      await (client as any).users.with({ timeout: 3000 }).list();
 
-      expect(mockExecuteRequest).toHaveBeenCalledWith(
-        mockSources,
-        expect.objectContaining({ variables: { query: "test" } }),
-        undefined,
-      );
+      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
+      expect(payload.options.timeout).toBe(3000);
+    });
+
+    it("preserves raw through .with()", async () => {
+      mockExecuteRequest.mockResolvedValue({ status: 200, data: [] });
+
+      const client = createCaller(mockSource);
+      await (client as any).users.raw.with({ timeout: 1000 }).getAll();
+
+      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
+      expect(payload.options.rawData).toBe(true);
+      expect(payload.options.timeout).toBe(1000);
+    });
+
+    it("returns a new proxy (immutable)", async () => {
+      mockExecuteRequest.mockResolvedValue({ ok: true });
+
+      const client = createCaller(mockSource);
+      const fast = (client as any).with({ timeout: 1000 });
+
+      await fast.users.list();
+      await (client as any).users.list();
+
+      const fastPayload = mockExecuteRequest.mock.calls[0]?.[1] as any;
+      const normalPayload = mockExecuteRequest.mock.calls[1]?.[1] as any;
+
+      expect(fastPayload.options.timeout).toBe(1000);
+      expect(normalPayload.options.timeout).toBeUndefined();
     });
   });
 
@@ -153,18 +143,18 @@ describe("createCaller", () => {
     it("applies default timeout when option timeout is undefined", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
-      const request = createCaller(mockSources, { timeout: 10000 }) as any;
-      await request("api")("list");
+      const client = createCaller(mockSource, { timeout: 10000 });
+      await (client as any).users.list();
 
       const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
       expect(payload.options.timeout).toBe(10000);
     });
 
-    it("preserves option timeout over default", async () => {
+    it("preserves .with() timeout over default", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
-      const request = createCaller(mockSources, { timeout: 10000 }) as any;
-      await request("api", { timeout: 5000 })("list");
+      const client = createCaller(mockSource, { timeout: 10000 });
+      await (client as any).users.with({ timeout: 5000 }).list();
 
       const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
       expect(payload.options.timeout).toBe(5000);
@@ -173,25 +163,25 @@ describe("createCaller", () => {
     it("applies default headers", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
-      const request = createCaller(mockSources, {
-        headers: { "x-api-key": "abc" },
-      }) as any;
-      await request("api")("list");
+      const client = createCaller(mockSource, { headers: { "x-api-key": "abc" } });
+      await (client as any).users.list();
 
       const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
       expect(payload.options.headers).toEqual({ "x-api-key": "abc" });
     });
 
-    it("merges option headers with default headers", async () => {
+    it("passes context from defaults to executeRequest", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
-      const request = createCaller(mockSources, {
-        headers: { "x-api-key": "abc" },
-      }) as any;
-      await request("api", { headers: { authorization: "Bearer token" } })("list");
+      const context = { headers: new Headers({ authorization: "Bearer token" }) };
+      const client = createCaller(mockSource, { context });
+      await (client as any).users.list();
 
-      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
-      expect(payload.options.headers["x-api-key"]).toBe("abc");
+      expect(mockExecuteRequest).toHaveBeenCalledWith(
+        { _: mockSource },
+        expect.anything(),
+        context,
+      );
     });
   });
 
@@ -201,8 +191,8 @@ describe("createCaller", () => {
       mockExecuteRequest.mockResolvedValue(data);
       const onSuccess = vi.fn();
 
-      const request = createCaller(mockSources, { onSuccess }) as any;
-      await request("api")("list");
+      const client = createCaller(mockSource, { onSuccess });
+      await (client as any).users.list();
 
       expect(onSuccess).toHaveBeenCalledWith(data);
     });
@@ -216,9 +206,9 @@ describe("createCaller", () => {
       mockExecuteRequest.mockRejectedValue(httpError);
       const onError = vi.fn();
 
-      const request = createCaller(mockSources, { onError }) as any;
+      const client = createCaller(mockSource, { onError });
 
-      await expect(request("api")("fail")).rejects.toThrow();
+      await expect((client as any).users.fail()).rejects.toThrow();
       expect(onError).toHaveBeenCalledWith(httpError);
     });
 
@@ -226,10 +216,19 @@ describe("createCaller", () => {
       mockExecuteRequest.mockRejectedValue(new Error("network fail"));
       const onError = vi.fn();
 
-      const request = createCaller(mockSources, { onError }) as any;
+      const client = createCaller(mockSource, { onError });
 
-      await expect(request("api")("fail")).rejects.toThrow("network fail");
+      await expect((client as any).users.fail()).rejects.toThrow("network fail");
       expect(onError).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("proxy safety", () => {
+    it("does not trigger thenable detection (await on client itself)", async () => {
+      const client = createCaller(mockSource);
+      // If 'then' is not handled, this would hang or error
+      const result = await Promise.resolve(client);
+      expect(result).toBe(client);
     });
   });
 });

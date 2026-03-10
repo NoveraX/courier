@@ -68,7 +68,7 @@ endpoint<UserPost, { id: string; postId: string }>()(
   (http) => http.get(":id/posts/:postId")
 )
 
-// call("api")("users:getUserPost", { id: "1", postId: "42" })
+// caller.users.getUserPost({ id: "1", postId: "42" })
 // → GET /users/1/posts/42
 ```
 
@@ -132,18 +132,21 @@ export type Sources = typeof sources
 Then call them by name:
 
 ```ts
-const users = await call("mainApi")("users:getAll")
-const token = await call("authApi")("auth:login", { email, password })
+const mainCaller = createCaller(mainApi)
+const authCaller = createCaller(authApi)
+
+const users = await mainCaller.users.getAll()
+const token = await authCaller.auth.login({ email, password })
 ```
 
-## Endpoint Key Format
+## Dot-Notation Access
 
-When calling endpoints, the key format is `"group:method"`:
+When calling endpoints, use dot-notation to access groups and methods:
 
 ```ts
-call("api")("users:getAll")         // group: "users", method: "getAll"
-call("api")("users:getById", vars)  // group: "users", method: "getById"
-call("api")("posts:create", vars)   // group: "posts", method: "create"
+caller.users.getAll()         // group: "users", method: "getAll"
+caller.users.getById(vars)    // group: "users", method: "getById"
+caller.posts.create(vars)     // group: "posts", method: "create"
 ```
 
 ## Next Steps

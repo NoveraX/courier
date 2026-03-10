@@ -55,9 +55,10 @@ Hono uses Web Standard `Request`/`Response` natively, so the adapter simply pass
 
 ```ts
 import { createProxyCaller } from "@noverax/nexus"
+import { api } from "./api/sources"
 
-const call = createProxyCaller({ proxyUrl: "/api/request" })
-const users = await call("api")("users:getAll")
+const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
+const users = await caller.users.getAll()
 ```
 
 ## License

@@ -30,12 +30,12 @@ const api = defineApi({
   groups: { users, posts },
 })`
 
-const usageCode = `import { useQuery } from "@/lib/query"
+const usageCode = `import { q } from "@/lib/query"
 
-// "group:method" syntax — group name is the key in groups object
-const users = useQuery("api", "users:getAll", { variables: {} })
-const posts = useQuery("api", "posts:getAll", { variables: {} })
-const user  = useQuery("api", "users:getById", { variables: { id: 1 } })
+// Dot-notation — group name maps to the key in defineApi groups
+const users = q.users.useQuery("getAll")
+const posts = q.posts.useQuery("getAll")
+const user  = q.users.useQuery("getById", { variables: { id: 1 } })
 
 // The prefix is prepended automatically:
 //   users:getAll  → GET  /users

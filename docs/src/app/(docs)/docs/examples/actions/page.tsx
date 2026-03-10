@@ -1,10 +1,13 @@
+import { createAction } from "@noverax/nexus-next"
+import { sources } from "@/api"
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
-import { call } from "@/lib/caller"
 import { docsMetadata } from "@/lib/metadata"
 
 import { CreateUserForm } from "./create-form"
 import { UserList } from "./user-list"
+
+const action = createAction(sources, "api")
 
 type UsersResponse = {
   data: { id: number; name: string; email: string; role: string; createdAt: string }[]
@@ -16,15 +19,18 @@ type UsersResponse = {
 const actionCode = `// app/actions/actions.ts
 "use server"
 
+import { createAction } from "@noverax/nexus-next"
 import { revalidatePath } from "next/cache"
-import { call } from "@/lib/caller"
+import { sources } from "@/api"
+
+const action = createAction(sources, "api")
 
 export async function createUser(_prev: ActionState, formData: FormData) {
   const name = formData.get("name") as string
   const email = formData.get("email") as string
   const role = formData.get("role") as string
 
-  const user = await call("api")("users:create", { name, email, role })
+  const user = await action.users.create({ name, email, role })
   revalidatePath("/docs/examples/actions")
   return { success: true, data: user }
 }`
@@ -51,7 +57,7 @@ export function CreateUserForm() {
 const deleteCode = `// Server action for delete + revalidation
 export async function deleteUser(_prev: ActionState, formData: FormData) {
   const id = Number(formData.get("id"))
-  await call("api")("users:remove", { id })
+  await action.users.remove({ id })
   revalidatePath("/docs/examples/actions")
   return { success: true }
 }
@@ -73,7 +79,7 @@ export const metadata = docsMetadata(
 )
 
 export default async function ActionsExamplesPage() {
-  const users = (await call("api")("users:getAll", {})) as UsersResponse
+  const users = (await action.users.getAll({})) as UsersResponse
 
   return (
     <>
@@ -93,8 +99,8 @@ export default async function ActionsExamplesPage() {
         >
           <p className="text-sm text-muted-foreground">
             Server Actions run entirely on the server. They use{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">call</code> to call the backend
-            directly, then{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">createAction</code> to call the
+            backend directly, then{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-xs">revalidatePath</code> to refresh
             server-rendered data.
           </p>

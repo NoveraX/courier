@@ -33,14 +33,12 @@ const products = defineGroup({
   },
 })
 
-export const sources = {
-  myApi: defineApi({
-    baseURL: process.env.API_URL ?? "http://localhost:4000",
-    groups: { products },
-  }),
-}
+export const api = defineApi({
+  baseURL: process.env.API_URL ?? "http://localhost:4000",
+  groups: { products },
+})
 
-export type Sources = typeof sources
+export const sources = { myApi: api }
 ```
 
 ## Step 1: Set up the proxy backend
@@ -71,11 +69,11 @@ You can use any supported adapter: [Express](/docs/frameworks/express), [Hono](/
 
 ## Step 2: Create the query caller
 
-```ts title="src/lib/caller.ts"
+```ts title="src/lib/query.ts"
 import { createQueryCaller } from "@noverax/nexus-query"
-import type { Sources } from "../../shared/sources"
+import type { api } from "../../shared/sources"
 
-export const { useQuery, useMutation, caller } = createQueryCaller<Sources>({
+export const q = createQueryCaller<typeof api>("myApi", {
   proxyUrl: "http://localhost:3001/api/request",
 })
 ```
@@ -104,10 +102,10 @@ createRoot(document.getElementById("root")!).render(
 ## Step 4: Use in components
 
 ```tsx title="src/components/ProductList.tsx"
-import { useQuery } from "@/lib/caller"
+import { q } from "@/lib/query"
 
 export function ProductList() {
-  const { data, isLoading, error } = useQuery("myApi", "products:getAll", {
+  const { data, isLoading, error } = q.products.useQuery("getAll", {
     variables: { page: 1, category: "electronics" },
   })
 
@@ -130,7 +128,7 @@ export function ProductList() {
 ```
 
 ```tsx title="src/components/CreateProduct.tsx"
-import { useMutation } from "@/lib/caller"
+import { q } from "@/lib/query"
 import { useState } from "react"
 import { useQueryClient } from "@noverax/nexus-query"
 
@@ -139,7 +137,7 @@ export function CreateProduct() {
   const [name, setName] = useState("")
   const [price, setPrice] = useState("")
 
-  const { mutate, isPending } = useMutation("myApi", "products:create", {
+  const { mutate, isPending } = q.products.useMutation("create", {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myApi", "products:getAll"] })
       setName("")
@@ -187,10 +185,10 @@ shared/
 server/
   index.ts                  # Express/Hono/Fastify with nexusHandler
 src/
-  lib/caller.ts             # createQueryCaller<Sources>()
+  lib/query.ts              # createQueryCaller<typeof api>("myApi")
   components/
-    ProductList.tsx          # useQuery usage
-    CreateProduct.tsx        # useMutation usage
+    ProductList.tsx          # q.products.useQuery usage
+    CreateProduct.tsx        # q.products.useMutation usage
   main.tsx                  # QueryClientProvider setup
 ```
 
@@ -202,11 +200,11 @@ Use a `.env` file to configure the proxy URL for different environments:
 VITE_PROXY_URL=http://localhost:3001/api/request
 ```
 
-```ts title="src/lib/caller.ts"
+```ts title="src/lib/query.ts"
 import { createQueryCaller } from "@noverax/nexus-query"
-import type { Sources } from "../../shared/sources"
+import type { api } from "../../shared/sources"
 
-export const { useQuery, useMutation, caller } = createQueryCaller<Sources>({
+export const q = createQueryCaller<typeof api>("myApi", {
   proxyUrl: import.meta.env.VITE_PROXY_URL,
 })
 ```

@@ -4,11 +4,11 @@ import { useState } from "react"
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
-import { useMutation } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function SimpleParamDemo() {
   const [userId, setUserId] = useState(1)
-  const { mutate, data, isPending, error } = useMutation("api", "users:getById")
+  const { mutate, data, isPending, error } = q.users.useMutation("getById")
 
   return (
     <>
@@ -45,7 +45,7 @@ export function SimpleParamDemo() {
 export function NestedParamsDemo() {
   const [userId, setUserId] = useState(1)
   const [postId, setPostId] = useState(1)
-  const { mutate, data, isPending, error } = useMutation("api", "users:getUserPost")
+  const { mutate, data, isPending, error } = q.users.useMutation("getUserPost")
 
   return (
     <>
@@ -96,7 +96,7 @@ export function NestedParamsDemo() {
 export function MixedParamsDemo() {
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(2)
-  const { mutate, data, isPending } = useMutation("api", "users:getAll")
+  const { mutate, data, isPending } = q.users.useMutation("getAll")
 
   return (
     <>

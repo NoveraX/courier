@@ -6,29 +6,28 @@ export const metadata = {
 
 ## The problem
 
-Without the singleton pattern, you need to pass the `Sources` generic type parameter to every factory function. This is repetitive and creates multiple places to update when sources change:
+Without the singleton pattern, you need to pass the API type as a generic parameter to every factory function. This is repetitive and creates multiple places to update when your API changes:
 
 ```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/nexus"
-import { createCaller } from "@noverax/nexus"
+import { createProxyCaller, createCaller } from "@noverax/nexus"
 import { createQueryCaller } from "@noverax/nexus-query"
-import type { Sources } from "@/api"
+import { api } from "@/api"
 
-// You have to pass the Sources generic everywhere:
-const call = createProxyCaller<Sources>()
-const directCall = createCaller<Sources>(sources)
-const { useQuery, useMutation } = createQueryCaller<Sources>()
+// You have to pass the type everywhere:
+const caller = createProxyCaller<typeof api>()
+const directCaller = createCaller(api)
+const q = createQueryCaller<typeof api>("api")
 ```
 
 ## The solution
 
-TypeScript module augmentation lets you declare your sources once, and every Nexus factory function infers them automatically. No generic parameters needed.
+TypeScript module augmentation lets you declare your API type once, and every Nexus factory function infers it automatically. No generic parameters needed.
 
 ## Step-by-step setup
 
 ### Step 1: Define your API with the functional API
 
-Create your groups and sources using `defineGroup`, `endpoint`, and `defineApi`. Export the `sources` object so the type declaration can reference it:
+Create your groups and API definition using `defineGroup`, `endpoint`, and `defineApi`:
 
 ```ts title="api/users.ts"
 import { defineGroup, endpoint } from "@noverax/nexus/define"
@@ -49,69 +48,65 @@ export const users = defineGroup({
 import { defineApi } from "@noverax/nexus/define"
 import { users } from "./users"
 
-const groups = { users }
-
-const api = defineApi({
+export const api = defineApi({
   baseURL: process.env.API_URL ?? "http://localhost:4000",
-  groups,
+  groups: { users },
 })
-
-export const sources = { api }
 ```
 
 ### Step 2: Augment the module
 
-Create a `.d.ts` file that extends the Nexus `Sources` interface. Each key in the interface must match a key in your `sources` object:
+Create a `.d.ts` file that extends the Nexus `DefaultApi` interface:
 
 ```ts title="types/nexus.d.ts"
-import type { sources } from "@/api"
+import type { api } from "@/api"
 
 declare module "@noverax/nexus/define" {
-  interface Sources {
-    api: (typeof sources)["api"]
+  interface DefaultApi {
+    api: typeof api
   }
 }
 ```
 
 <Callout variant="tip" title="File location">
-You can put this declaration anywhere TypeScript can see it — a dedicated `types/` directory, alongside your source definitions, or in a global `declarations.d.ts`. Just make sure it's included in your `tsconfig.json`.
+You can put this declaration anywhere TypeScript can see it — a dedicated `types/` directory, alongside your API definitions, or in a global `declarations.d.ts`. Just make sure it's included in your `tsconfig.json`.
 </Callout>
 
 ### Step 3: Use without generics
 
-Now all factory functions infer your sources from the augmented interface. TypeScript provides full autocomplete for source names, endpoint keys, and variable types:
+Now all factory functions infer your API type from the augmented interface. TypeScript provides full autocomplete for group names, method names, and variable types:
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller, createCaller } from "@noverax/nexus"
 import { createQueryCaller } from "@noverax/nexus-query"
-import { sources } from "@/api"
+import { api } from "@/api"
 
 // No generic parameter needed — TypeScript infers from module augmentation
-const call = createProxyCaller()
-const directCall = createCaller(sources)
-const { useQuery, useMutation, caller } = createQueryCaller()
+const caller = createProxyCaller()
+const directCaller = createCaller(api)
+const q = createQueryCaller("api")
 
-// Full autocomplete: source names, group:method endpoints, variable types
-useQuery("api", "users:getById", { variables: { id: 1 } })
-//        ^-- autocomplete       ^-- autocomplete      ^-- typed
+// Full autocomplete: group names, method names, variable types
+q.users.useQuery("getById", { variables: { id: 1 } })
+//       ^-- autocomplete     ^-- autocomplete  ^-- typed
 ```
 
 ## Using with React Query
 
-The singleton pattern is especially useful with `createQueryCaller`, where you call `useQuery` and `useMutation` throughout your app. Every call site gets full type inference without importing or passing types:
+The singleton pattern is especially useful with `createQueryCaller`, where you access hooks throughout your app. Every call site gets full type inference without importing or passing types:
 
 ```tsx title="components/user-list.tsx"
 "use client"
 
-import { useQuery, useMutation } from "@/lib/caller"
+import { q } from "@/lib/caller"
 
 export function UserList() {
-  // TypeScript knows "api" is a valid source,
-  // "users:getAll" is a valid endpoint,
+  // TypeScript knows "users" is a valid group,
+  // "getAll" is a valid method,
   // and data is User[]
-  const { data } = useQuery("api", "users:getAll")
+  const { data } = q.users.useQuery("getAll")
 
-  const { mutate } = useMutation("api", "users:create", {
+  const { mutate } = q.users.useMutation("create", {
     onSuccess: (user) => {
       // user is typed as User — no generic needed
       console.log(user.name)
@@ -131,27 +126,30 @@ export function UserList() {
 
 ## Multiple sources
 
-If your app connects to multiple backends, add each source to the augmented interface. TypeScript enforces correct endpoint names for each source:
+If your app connects to multiple backends, define multiple APIs and augment the interface for each:
 
 ```ts title="types/nexus.d.ts"
-import type { sources } from "@/api"
+import type { mainApi, paymentApi } from "@/api"
 
 declare module "@noverax/nexus/define" {
-  interface Sources {
-    mainApi: (typeof sources)["mainApi"]
-    paymentApi: (typeof sources)["paymentApi"]
+  interface DefaultApi {
+    mainApi: typeof mainApi
+    paymentApi: typeof paymentApi
   }
 }
 ```
 
 ```ts
-// Now both sources are available without generics:
-useQuery("mainApi", "users:getAll")       // ← knows mainApi groups
-useQuery("paymentApi", "products:list")   // ← knows paymentApi groups
+// Create separate query callers for each source:
+const mainQ = createQueryCaller("mainApi")
+const paymentQ = createQueryCaller("paymentApi")
+
+mainQ.users.useQuery("getAll")        // ← knows mainApi groups
+paymentQ.products.useQuery("list")    // ← knows paymentApi groups
 ```
 
 <Callout variant="info" title="Single source of truth">
-The `Sources` interface is the single source of truth for your API types. When you add a new source or group, update the augmentation and every `useQuery` / `call` call in your app gets autocomplete for the new endpoints immediately.
+The `DefaultApi` interface is the single source of truth for your API types. When you add a new group or method, update the API definition and every `q.{group}.useQuery()` / `caller.{group}.{method}()` call gets autocomplete for the new endpoints immediately.
 </Callout>
 
 ## Next steps

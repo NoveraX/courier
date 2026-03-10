@@ -11,13 +11,11 @@ export { createQueryKeys } from "./keys";
 
 import {
   type CallOptions,
-  createProxyCaller,
-  type EndpointKey,
+  createProxyCallerFn,
   type HTTPError,
   type ProxyCallerDefaults,
-  type ResolveEndpoint,
 } from "@noverax/nexus";
-import type { Endpoint } from "@noverax/nexus/define";
+import type { DefinedApi, Endpoint } from "@noverax/nexus/define";
 import {
   type InfiniteData,
   type QueryClient as QueryClientType,
@@ -41,60 +39,9 @@ import {
 // Type helpers
 // ---------------------------------------------------------------------------
 
-type InferResponse<M> = M extends Endpoint<infer R, any> ? R : unknown;
-type InferVariables<M> = M extends Endpoint<any, infer V> ? V : undefined;
-
 type WithVariables<V> = [V] extends [undefined] ? { variables?: undefined } : { variables: V };
 
-// Non-conditional versions for safe destructuring inside generic function bodies
-type QueryOptionsInternal<R, V> = {
-  variables?: V;
-  requestOptions?: CallOptions;
-} & Omit<UseQueryOptions<R, HTTPError, R, QueryKey>, "queryKey" | "queryFn">;
-
-type SuspenseOptionsInternal<R, V> = {
-  variables?: V;
-  requestOptions?: CallOptions;
-} & Omit<UseSuspenseQueryOptions<R, HTTPError, R, QueryKey>, "queryKey" | "queryFn">;
-
-type InfiniteOptionsInternal<R, V, P> = {
-  variables?: V | ((pageParam: P) => V);
-  requestOptions?: CallOptions;
-  initialPageParam: P;
-  getNextPageParam: (
-    lastPage: R,
-    allPages: R[],
-    lastPageParam: P,
-    allPageParams: P[],
-  ) => P | undefined | null;
-  getPreviousPageParam?: (
-    firstPage: R,
-    allPages: R[],
-    firstPageParam: P,
-    allPageParams: P[],
-  ) => P | undefined | null;
-} & Omit<
-  UseInfiniteQueryOptions<R, HTTPError, InfiniteData<R, P>, QueryKey, P>,
-  "queryKey" | "queryFn" | "initialPageParam" | "getNextPageParam" | "getPreviousPageParam"
->;
-
-type MutationOptionsInternal<R, V> = {
-  requestOptions?: CallOptions;
-  invalidate?: QueryKey[];
-  onSettled?: (...args: any[]) => any;
-} & Omit<
-  UseMutationOptions<R, HTTPError, [V] extends [undefined] ? void : V>,
-  "mutationFn" | "onSettled"
->;
-
-type PrefetchOptionsInternal<V> = {
-  variables?: V;
-  requestOptions?: CallOptions;
-  staleTime?: number;
-};
-
-// Curried execute shape — TS cannot infer CallerFn's nested generics through closures
-type ExecuteFn<R> = (endpoint: string, variables?: unknown) => Promise<R>;
+type GroupMethodKeys<G> = Exclude<keyof G, "options"> & string;
 
 // ---------------------------------------------------------------------------
 // Exported option types
@@ -147,6 +94,64 @@ export type NexusPrefetchOptions<V> = [V] extends [undefined]
   : { variables: V; requestOptions?: CallOptions; staleTime?: number };
 
 // ---------------------------------------------------------------------------
+// QueryGroupClient & QueryCallerClient types
+// ---------------------------------------------------------------------------
+
+/** Hooks and utilities exposed per API group */
+export type QueryGroupClient<G> = {
+  useQuery: <M extends GroupMethodKeys<G>>(
+    method: M,
+    ...args: G[M] extends Endpoint<infer R, infer V>
+      ? [V] extends [undefined]
+        ? [options?: NexusQueryOptions<R, V>]
+        : [options: NexusQueryOptions<R, V>]
+      : [options?: Record<string, unknown>]
+  ) => G[M] extends Endpoint<infer R, any>
+    ? UseQueryResult<R, HTTPError>
+    : UseQueryResult<unknown, HTTPError>;
+
+  useSuspenseQuery: <M extends GroupMethodKeys<G>>(
+    method: M,
+    ...args: G[M] extends Endpoint<infer R, infer V>
+      ? [V] extends [undefined]
+        ? [options?: NexusSuspenseQueryOptions<R, V>]
+        : [options: NexusSuspenseQueryOptions<R, V>]
+      : [options?: Record<string, unknown>]
+  ) => G[M] extends Endpoint<infer R, any>
+    ? UseSuspenseQueryResult<R, HTTPError>
+    : UseSuspenseQueryResult<unknown, HTTPError>;
+
+  useInfiniteQuery: <M extends GroupMethodKeys<G>, P>(
+    method: M,
+    options: G[M] extends Endpoint<infer R, infer V> ? NexusInfiniteQueryOptions<R, V, P> : never,
+  ) => G[M] extends Endpoint<infer R, any>
+    ? UseInfiniteQueryResult<InfiniteData<R, P>, HTTPError>
+    : never;
+
+  useMutation: <M extends GroupMethodKeys<G>>(
+    method: M,
+    options?: G[M] extends Endpoint<infer R, infer V> ? NexusMutationOptions<R, V> : never,
+  ) => G[M] extends Endpoint<infer R, infer V>
+    ? UseMutationResult<R, HTTPError, [V] extends [undefined] ? void : V>
+    : never;
+
+  prefetchQuery: <M extends GroupMethodKeys<G>>(
+    queryClient: QueryClientType,
+    method: M,
+    ...args: G[M] extends Endpoint<any, infer V>
+      ? [V] extends [undefined]
+        ? [options?: NexusPrefetchOptions<V>]
+        : [options: NexusPrefetchOptions<V>]
+      : [options?: Record<string, unknown>]
+  ) => Promise<void>;
+};
+
+/** Top-level query client with group-based dot-notation access */
+export type QueryCallerClient<T extends DefinedApi<any>> = {
+  [K in keyof T["options"]["groups"]]: QueryGroupClient<T["options"]["groups"][K]>;
+};
+
+// ---------------------------------------------------------------------------
 // Optimistic update helper
 // ---------------------------------------------------------------------------
 
@@ -162,9 +167,9 @@ export type OptimisticConfig<CacheData, MutationVars> = {
  * @example
  * ```ts
  * const qc = useQueryClient();
- * useMutation("api", "users:create", {
+ * q.users.useMutation("create", {
  *   ...optimisticOptions(qc, {
- *     queryKey: key("api", "users:getAll"),
+ *     queryKey: key("users", "getAll"),
  *     updater: (old, vars) => [...(old ?? []), { ...vars, id: "temp" }],
  *   }),
  * });
@@ -200,187 +205,142 @@ export function optimisticOptions<CacheData, MutationVars>(
 // Main factory
 // ---------------------------------------------------------------------------
 
-export function createQueryCaller<T extends Record<string, any> = Record<string, any>>(
+/**
+ * Create a query client with dot-notation access to react-query hooks per API group.
+ *
+ * @param source - Source name matching the key in server-side apiRoute({ [source]: ... })
+ * @param defaults - Proxy configuration (proxyUrl, timeout, credentials, etc.)
+ *
+ * @example
+ * ```ts
+ * const q = createQueryCaller<typeof api>("api");
+ *
+ * // In components:
+ * const { data } = q.users.useQuery("getAll");
+ * const { data } = q.users.useQuery("getById", { variables: { id: 1 } });
+ * const mutation = q.users.useMutation("create");
+ *
+ * // Destructuring works:
+ * const { useQuery, useMutation } = q.users;
+ * const { data } = useQuery("getAll");
+ *
+ * // SSR prefetch:
+ * await q.users.prefetchQuery(queryClient, "getAll");
+ * ```
+ */
+export function createQueryCaller<T extends DefinedApi<any>>(
+  source: string,
   defaults?: ProxyCallerDefaults,
-) {
-  const client = createProxyCaller<T>(defaults);
+): QueryCallerClient<T> {
+  const callerFn = createProxyCallerFn(defaults);
+  const groupCache = new Map<string, QueryGroupClient<any>>();
 
-  function buildQueryKey(source: string, endpoint: string, variables?: unknown): QueryKey {
-    return variables !== undefined ? [source, endpoint, variables] : [source, endpoint];
+  function buildQueryKey(group: string, method: string, variables?: unknown): QueryKey {
+    return variables !== undefined ? [source, group, method, variables] : [source, group, method];
   }
 
-  // ---- useQuery ----------------------------------------------------------
+  function createGroupHooks(groupName: string): QueryGroupClient<any> {
+    function executeEndpoint(method: string, variables: unknown, requestOptions?: CallOptions) {
+      const execute = (callerFn as any)(source, requestOptions);
+      const endpoint = `${groupName}:${method}`;
+      return variables !== undefined ? execute(endpoint, variables) : execute(endpoint);
+    }
 
-  function useNexusQuery<
-    K extends keyof T & string,
-    Q extends EndpointKey<T[K]>,
-    M = ResolveEndpoint<T[K], Q>,
-    R = InferResponse<M extends Endpoint<any, any> ? M : never>,
-    V = InferVariables<M extends Endpoint<any, any> ? M : never>,
-  >(
-    source: K,
-    endpoint: Q,
-    ...args: [V] extends [undefined]
-      ? [options?: NexusQueryOptions<R, V>]
-      : [options: NexusQueryOptions<R, V>]
-  ): UseQueryResult<R, HTTPError> {
-    const { variables, requestOptions, ...queryOptions } = (args[0] ?? {}) as QueryOptionsInternal<
-      R,
-      V
-    >;
+    return {
+      useQuery(method: string, ...args: [options?: any]) {
+        const { variables, requestOptions, ...queryOptions } = args[0] ?? {};
 
-    return useQuery<R, HTTPError>({
-      queryKey: buildQueryKey(source, endpoint, variables),
-      queryFn: () => {
-        const execute = client(source, requestOptions) as ExecuteFn<R>;
-        return variables !== undefined ? execute(endpoint, variables) : execute(endpoint);
+        return useQuery({
+          queryKey: buildQueryKey(groupName, method, variables),
+          queryFn: () => executeEndpoint(method, variables, requestOptions),
+          ...queryOptions,
+        });
       },
-      ...queryOptions,
-    });
-  }
 
-  // ---- useSuspenseQuery --------------------------------------------------
+      useSuspenseQuery(method: string, ...args: [options?: any]) {
+        const { variables, requestOptions, ...queryOptions } = args[0] ?? {};
 
-  function useNexusSuspenseQuery<
-    K extends keyof T & string,
-    Q extends EndpointKey<T[K]>,
-    M = ResolveEndpoint<T[K], Q>,
-    R = InferResponse<M extends Endpoint<any, any> ? M : never>,
-    V = InferVariables<M extends Endpoint<any, any> ? M : never>,
-  >(
-    source: K,
-    endpoint: Q,
-    ...args: [V] extends [undefined]
-      ? [options?: NexusSuspenseQueryOptions<R, V>]
-      : [options: NexusSuspenseQueryOptions<R, V>]
-  ): UseSuspenseQueryResult<R, HTTPError> {
-    const { variables, requestOptions, ...queryOptions } = (args[0] ??
-      {}) as SuspenseOptionsInternal<R, V>;
-
-    return useSuspenseQuery<R, HTTPError>({
-      queryKey: buildQueryKey(source, endpoint, variables),
-      queryFn: () => {
-        const execute = client(source, requestOptions) as ExecuteFn<R>;
-        return variables !== undefined ? execute(endpoint, variables) : execute(endpoint);
+        return useSuspenseQuery({
+          queryKey: buildQueryKey(groupName, method, variables),
+          queryFn: () => executeEndpoint(method, variables, requestOptions),
+          ...queryOptions,
+        });
       },
-      ...queryOptions,
-    });
-  }
 
-  // ---- useInfiniteQuery --------------------------------------------------
+      useInfiniteQuery(method: string, options: any) {
+        const {
+          variables,
+          requestOptions,
+          initialPageParam,
+          getNextPageParam,
+          getPreviousPageParam,
+          ...infiniteOptions
+        } = options;
 
-  function useNexusInfiniteQuery<
-    K extends keyof T & string,
-    Q extends EndpointKey<T[K]>,
-    PageParam,
-    M = ResolveEndpoint<T[K], Q>,
-    R = InferResponse<M extends Endpoint<any, any> ? M : never>,
-    V = InferVariables<M extends Endpoint<any, any> ? M : never>,
-  >(
-    source: K,
-    endpoint: Q,
-    options: NexusInfiniteQueryOptions<R, V, PageParam>,
-  ): UseInfiniteQueryResult<InfiniteData<R, PageParam>, HTTPError> {
-    const {
-      variables,
-      requestOptions,
-      initialPageParam,
-      getNextPageParam,
-      getPreviousPageParam,
-      ...infiniteOptions
-    } = options as InfiniteOptionsInternal<R, V, PageParam>;
-
-    return useInfiniteQuery<R, HTTPError, InfiniteData<R, PageParam>, QueryKey, PageParam>({
-      queryKey: buildQueryKey(source, endpoint),
-      queryFn: ({ pageParam }) => {
-        const pp = pageParam as PageParam;
-        const vars =
-          typeof variables === "function" ? (variables as (p: PageParam) => V)(pp) : variables;
-        const execute = client(source, requestOptions) as ExecuteFn<R>;
-        return vars !== undefined ? execute(endpoint, vars) : execute(endpoint);
+        return useInfiniteQuery({
+          queryKey: buildQueryKey(groupName, method),
+          queryFn: ({ pageParam }) => {
+            const vars = typeof variables === "function" ? variables(pageParam) : variables;
+            return executeEndpoint(method, vars, requestOptions);
+          },
+          initialPageParam,
+          getNextPageParam,
+          getPreviousPageParam,
+          ...infiniteOptions,
+        });
       },
-      initialPageParam,
-      getNextPageParam,
-      getPreviousPageParam,
-      ...infiniteOptions,
-    });
-  }
 
-  // ---- useMutation (with auto-invalidation) -----------------------------
+      useMutation(method: string, options?: any) {
+        const qc = useQueryClient();
+        const {
+          requestOptions,
+          invalidate,
+          onSettled: userOnSettled,
+          ...mutationOptions
+        } = options ?? {};
 
-  function useNexusMutation<
-    K extends keyof T & string,
-    Q extends EndpointKey<T[K]>,
-    M = ResolveEndpoint<T[K], Q>,
-    R = InferResponse<M extends Endpoint<any, any> ? M : never>,
-    V = InferVariables<M extends Endpoint<any, any> ? M : never>,
-  >(
-    source: K,
-    endpoint: Q,
-    options?: NexusMutationOptions<R, V>,
-  ): UseMutationResult<R, HTTPError, [V] extends [undefined] ? void : V> {
-    const queryClient = useQueryClient();
-    const {
-      requestOptions,
-      invalidate,
-      onSettled: userOnSettled,
-      ...mutationOptions
-    } = (options ?? {}) as MutationOptionsInternal<R, V>;
-
-    return useMutation<R, HTTPError, [V] extends [undefined] ? void : V>({
-      mutationFn: (variables) => {
-        const execute = client(source, requestOptions) as ExecuteFn<R>;
-        return variables != null ? execute(endpoint, variables) : execute(endpoint);
-      },
-      ...mutationOptions,
-      onSettled:
-        invalidate || userOnSettled
-          ? (...args: any[]) => {
-              if (invalidate) {
-                for (const key of invalidate) {
-                  queryClient.invalidateQueries({ queryKey: key });
+        return useMutation({
+          mutationFn: (variables: any) =>
+            executeEndpoint(method, variables != null ? variables : undefined, requestOptions),
+          ...mutationOptions,
+          onSettled:
+            invalidate || userOnSettled
+              ? (...args: any[]) => {
+                  if (invalidate) {
+                    for (const key of invalidate) {
+                      qc.invalidateQueries({ queryKey: key });
+                    }
+                  }
+                  userOnSettled?.(...args);
                 }
-              }
-              userOnSettled?.(...args);
-            }
-          : undefined,
-    });
-  }
-
-  // ---- prefetchQuery (non-hook, for SSR / client prefetch) ---------------
-
-  async function prefetchNexusQuery<
-    K extends keyof T & string,
-    Q extends EndpointKey<T[K]>,
-    M = ResolveEndpoint<T[K], Q>,
-    R = InferResponse<M extends Endpoint<any, any> ? M : never>,
-    V = InferVariables<M extends Endpoint<any, any> ? M : never>,
-  >(
-    queryClient: QueryClientType,
-    source: K,
-    endpoint: Q,
-    ...args: [V] extends [undefined]
-      ? [options?: NexusPrefetchOptions<V>]
-      : [options: NexusPrefetchOptions<V>]
-  ): Promise<void> {
-    const { variables, requestOptions, staleTime } = (args[0] ?? {}) as PrefetchOptionsInternal<V>;
-
-    await queryClient.prefetchQuery({
-      queryKey: buildQueryKey(source, endpoint, variables),
-      queryFn: () => {
-        const execute = client(source, requestOptions) as ExecuteFn<R>;
-        return variables !== undefined ? execute(endpoint, variables) : execute(endpoint);
+              : undefined,
+        });
       },
-      staleTime,
-    });
+
+      async prefetchQuery(queryClient: QueryClientType, method: string, ...args: [options?: any]) {
+        const { variables, requestOptions, staleTime } = args[0] ?? {};
+
+        await queryClient.prefetchQuery({
+          queryKey: buildQueryKey(groupName, method, variables),
+          queryFn: () => executeEndpoint(method, variables, requestOptions),
+          staleTime,
+        });
+      },
+    };
   }
 
-  return {
-    useQuery: useNexusQuery,
-    useSuspenseQuery: useNexusSuspenseQuery,
-    useInfiniteQuery: useNexusInfiniteQuery,
-    useMutation: useNexusMutation,
-    prefetchQuery: prefetchNexusQuery,
-    caller: client,
-  };
+  return new Proxy(Object.create(null), {
+    get(_, prop) {
+      if (typeof prop === "symbol") return undefined;
+      if (prop === "then" || prop === "toJSON" || prop === "valueOf" || prop === "$$typeof") {
+        return undefined;
+      }
+
+      const key = prop as string;
+      if (!groupCache.has(key)) {
+        groupCache.set(key, createGroupHooks(key));
+      }
+      return groupCache.get(key);
+    },
+  }) as QueryCallerClient<T>;
 }

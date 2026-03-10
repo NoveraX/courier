@@ -8,14 +8,14 @@ import { users } from "./users"
 
 const API_URL = process.env.API_URL ?? "http://localhost:4000"
 
-const api = defineApi({
+export const api = defineApi({
   baseURL: API_URL,
   groups: { users, posts, files, misc, echo },
 })
 
 // --- Encoding demo source ---
 
-const encodedApi = defineApi({
+export const encodedApi = defineApi({
   baseURL: API_URL,
   groups: { echo },
   bodySerializer: (data: Record<string, unknown>) =>
@@ -40,7 +40,7 @@ const encodedApi = defineApi({
 
 // --- Middleware demo source ---
 
-const middlewareApi = defineApi({
+export const middlewareApi = defineApi({
   baseURL: API_URL,
   middleware: [logMiddleware()],
   groups: { users, misc },

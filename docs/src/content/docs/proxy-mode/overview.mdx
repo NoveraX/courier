@@ -13,7 +13,7 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 ┌──────────────────────────────────────────────────────────────┐
 │  Browser (Client Component)                                  │
 │                                                              │
-│  createProxyCaller<Sources>()                                │
+│  createProxyCaller<typeof api>()                             │
 │       │                                                      │
 │       ▼                                                      │
 │  fetch POST "/api/request"                                   │
@@ -56,8 +56,8 @@ Here is the complete flow from a browser call to the backend response:
 
 ```ts title="Request lifecycle"
 // 1. Browser — call a typed endpoint
-const call = createProxyCaller<Sources>()
-const user = await call("api")("users:getById", { id: 5 })
+const caller = createProxyCaller<typeof api>()
+const user = await caller.users.getById({ id: 5 })
 
 // 2. Under the hood, Nexus sends:
 //    POST /api/request
@@ -120,12 +120,12 @@ Use **proxy mode** for client components where the browser initiates the request
 ```ts title="Comparison"
 // Proxy mode — browser cannot see API_URL or secrets
 // Browser → POST /api/request → Server → GET https://internal-api.company.com/users
-const call = createProxyCaller<Sources>()
-const users = await call("api")("users:getAll")
+const caller = createProxyCaller<typeof api>()
+const users = await caller.users.getAll()
 
 // Direct mode — server calls backend directly, no proxy hop
 // Server → GET https://internal-api.company.com/users
-const users = await caller("api")("users:getAll")
+const users = await directCaller.users.getAll()
 ```
 
 <Callout variant="info" title="Same API definitions">

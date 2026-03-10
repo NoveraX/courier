@@ -5,7 +5,7 @@ import { useState } from "react"
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
-import { caller } from "@/lib/query"
+import { caller } from "@/lib/caller"
 
 export function TimeoutDemo() {
   const [timeoutMs, setTimeoutMs] = useState(1000)
@@ -22,7 +22,7 @@ export function TimeoutDemo() {
     const start = Date.now()
 
     try {
-      const data = await caller("api", { timeout: timeoutMs })("misc:slow")
+      const data = await caller.misc.with({ timeout: timeoutMs }).slow()
       setResult({ type: "success", data, elapsed: Date.now() - start })
     } catch (error: unknown) {
       const elapsed = Date.now() - start

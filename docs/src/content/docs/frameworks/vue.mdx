@@ -36,14 +36,12 @@ const tasks = defineGroup({
   },
 })
 
-export const sources = {
-  myApi: defineApi({
-    baseURL: process.env.API_URL ?? "http://localhost:4000",
-    groups: { tasks },
-  }),
-}
+export const api = defineApi({
+  baseURL: process.env.API_URL ?? "http://localhost:4000",
+  groups: { tasks },
+})
 
-export type Sources = typeof sources
+export const sources = { myApi: api }
 ```
 
 ## Step 1: Set up the proxy backend
@@ -76,9 +74,9 @@ You can use any supported adapter: [Express](/docs/frameworks/express), [Hono](/
 
 ```ts title="src/composables/useCaller.ts"
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "../../shared/sources"
+import type { api } from "../../shared/sources"
 
-export const caller = createProxyCaller<Sources>({
+export const caller = createProxyCaller<typeof api>({
   proxyUrl: import.meta.env.VITE_PROXY_URL ?? "http://localhost:3001/api/request",
 })
 ```
@@ -102,7 +100,7 @@ async function fetchTasks(status?: "all" | "active" | "completed") {
   isLoading.value = true
   error.value = null
   try {
-    tasks.value = await caller("myApi")("tasks:getAll", { status })
+    tasks.value = await caller.tasks.getAll({ status })
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Failed to load tasks"
   } finally {
@@ -151,7 +149,7 @@ async function handleSubmit() {
   form.isSubmitting = true
   form.error = null
   try {
-    await caller("myApi")("tasks:create", { title: form.title })
+    await caller.tasks.create({ title: form.title })
     form.title = ""
     emit("created")
   } catch (e) {
@@ -182,9 +180,7 @@ import { ref, onMounted, type Ref } from "vue"
 import { caller } from "./useCaller"
 
 export function useNexusQuery<T>(
-  source: string,
-  query: string,
-  variables?: Record<string, unknown>
+  fn: (caller: typeof import("./useCaller").caller) => Promise<T>
 ) {
   const data = ref<T | null>(null) as Ref<T | null>
   const isLoading = ref(true)
@@ -194,7 +190,7 @@ export function useNexusQuery<T>(
     isLoading.value = true
     error.value = null
     try {
-      data.value = await (caller as any)(source)(query, variables)
+      data.value = await fn(caller)
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Request failed"
     } finally {
@@ -217,7 +213,7 @@ import { caller } from "@/composables/useCaller"
 
 const { data, isLoading } = useQuery({
   queryKey: ["tasks"],
-  queryFn: () => caller("myApi")("tasks:getAll", { status: "active" }),
+  queryFn: () => caller.tasks.getAll({ status: "active" }),
 })
 ```
 </Callout>
@@ -231,7 +227,7 @@ server/
   index.ts                    # Express/Hono/Fastify proxy backend
 src/
   composables/
-    useCaller.ts              # createProxyCaller<Sources>()
+    useCaller.ts              # createProxyCaller<typeof api>()
     useNexusQuery.ts          # optional generic fetch composable
   components/
     TaskList.vue              # data fetching with ref

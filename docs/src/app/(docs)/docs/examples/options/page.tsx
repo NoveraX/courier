@@ -4,10 +4,10 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { TimeoutDemo } from "./_components"
 
-const timeoutCode = `// Set timeout in milliseconds
+const timeoutCode = `// Set timeout in milliseconds via .with()
 // The /slow endpoint takes 3 seconds — this will timeout
 try {
-  await caller("api", { timeout: 1000 })("misc:slow")
+  await caller.misc.with({ timeout: 1000 }).slow()
 } catch (error) {
   // HTTPError with timeout message
   console.error("Request timed out")
@@ -29,24 +29,24 @@ const api = defineApi({
 })`
 
 const cacheCode = `// Next.js cache option (passed through to fetch)
-const data = await caller("api", {
+const data = await caller.users.with({
   cache: "force-cache",
-})("users:getAll", {})
+}).getAll({})
 
 // No caching
-const fresh = await caller("api", {
+const fresh = await caller.users.with({
   cache: "no-store",
-})("users:getAll", {})`
+}).getAll({})`
 
 const revalidateCode = `// Next.js revalidation — ISR-style caching
-const data = await caller("api", {
+const data = await caller.users.with({
   next: { revalidate: 60 },  // revalidate every 60 seconds
-})("users:getAll", {})
+}).getAll({})
 
 // Tag-based revalidation
-const data = await caller("api", {
+const data = await caller.users.with({
   next: { tags: ["users"] },
-})("users:getAll", {})
+}).getAll({})
 
 // Then in a Server Action:
 import { revalidateTag } from "next/cache"

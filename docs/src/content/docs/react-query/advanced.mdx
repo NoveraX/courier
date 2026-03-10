@@ -7,17 +7,14 @@ For the best user experience, prefetch data in Server Components and pass it to 
 ```ts title="app/users/page.tsx"
 // app/users/page.tsx — React Server Component
 import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/nexus-query"
-import { caller } from "@/lib/query"
+import { q } from "@/lib/query"
 import { UserList } from "./user-list"
 
 export default async function UsersPage() {
   const queryClient = new QueryClient()
 
-  // Prefetch using the raw `caller` in RSC
-  await queryClient.prefetchQuery({
-    queryKey: ["api", "users:getAll"],
-    queryFn: () => caller("api")("users:getAll"),
-  })
+  // Prefetch using the built-in prefetchQuery
+  await q.users.prefetchQuery(queryClient, "getAll")
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -31,11 +28,11 @@ export default async function UsersPage() {
 // app/users/user-list.tsx
 "use client"
 
-import { useQuery } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function UserList() {
   // This picks up the prefetched data instantly — no loading state
-  const { data } = useQuery("api", "users:getAll")
+  const { data } = q.users.useQuery("getAll")
 
   return (
     <ul>
@@ -48,12 +45,34 @@ export function UserList() {
 ```
 
 <Callout variant="tip" title="Query key must match">
-The `queryKey` in `prefetchQuery` must exactly match the auto-generated key from `useQuery`. For a query `useQuery("api", "users:getAll")`, the key is `["api", "users:getAll"]`. With variables, include them as the third element.
+`prefetchQuery` automatically generates the same hierarchical key as `useQuery`. For `q.users.useQuery("getAll")`, the key is `["api", "users", "getAll"]`. With variables, include them as the fourth element.
 </Callout>
+
+## Prefetching with variables
+
+```ts title="app/users/[id]/page.tsx"
+import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/nexus-query"
+import { q } from "@/lib/query"
+import { UserProfile } from "./user-profile"
+
+export default async function UserPage({ params }: { params: { id: string } }) {
+  const queryClient = new QueryClient()
+
+  await q.users.prefetchQuery(queryClient, "getById", {
+    variables: { id: Number(params.id) },
+  })
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <UserProfile userId={Number(params.id)} />
+    </HydrationBoundary>
+  )
+}
+```
 
 ## Cache invalidation patterns
 
-React Query uses partial key matching for invalidation. You can invalidate at different levels of specificity:
+React Query uses partial key matching for invalidation. Hierarchical keys enable invalidation at different levels:
 
 ```ts
 import { useQueryClient } from "@noverax/nexus-query"
@@ -62,12 +81,17 @@ const queryClient = useQueryClient()
 
 // Invalidate a specific query with exact variables
 queryClient.invalidateQueries({
-  queryKey: ["api", "users:getById", { id: 5 }],
+  queryKey: ["api", "users", "getById", { id: 5 }],
 })
 
 // Invalidate all queries for a specific method (any variables)
 queryClient.invalidateQueries({
-  queryKey: ["api", "users:getAll"],
+  queryKey: ["api", "users", "getAll"],
+})
+
+// Invalidate all queries for a group
+queryClient.invalidateQueries({
+  queryKey: ["api", "users"],
 })
 
 // Invalidate every query for a source
@@ -86,16 +110,16 @@ When one query depends on another's result, use the `enabled` option to create a
 ```ts title="components/user-posts.tsx"
 "use client"
 
-import { useQuery } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function UserPosts({ userId }: { userId: number }) {
   // First query: fetch the user
-  const { data: user } = useQuery("api", "users:getById", {
+  const { data: user } = q.users.useQuery("getById", {
     variables: { id: userId },
   })
 
   // Second query: only runs after the first succeeds
-  const { data: posts, isLoading } = useQuery("api", "posts:getByAuthor", {
+  const { data: posts, isLoading } = q.posts.useQuery("getByAuthor", {
     variables: { authorId: user?.id! },
     enabled: !!user?.id,
   })
@@ -122,13 +146,13 @@ Multiple `useQuery` calls in the same component run in parallel automatically. R
 ```ts title="components/dashboard.tsx"
 "use client"
 
-import { useQuery } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function Dashboard() {
   // These queries run in parallel automatically
-  const { data: users, isLoading: usersLoading } = useQuery("api", "users:getAll")
-  const { data: posts, isLoading: postsLoading } = useQuery("api", "posts:getAll")
-  const { data: stats, isLoading: statsLoading } = useQuery("api", "analytics:summary")
+  const { data: users, isLoading: usersLoading } = q.users.useQuery("getAll")
+  const { data: posts, isLoading: postsLoading } = q.posts.useQuery("getAll")
+  const { data: stats, isLoading: statsLoading } = q.analytics.useQuery("summary")
 
   const isLoading = usersLoading || postsLoading || statsLoading
   if (isLoading) return <p>Loading dashboard...</p>
@@ -145,24 +169,21 @@ export function Dashboard() {
 
 ## Infinite queries
 
-For paginated lists with a "load more" pattern, use the built-in `useInfiniteQuery` hook from `createQueryCaller`. It wraps React Query's `useInfiniteQuery` with the same proxy transport and type safety:
+For paginated lists with a "load more" pattern, use `useInfiniteQuery`. It wraps React Query's `useInfiniteQuery` with the same proxy transport and type safety:
 
 ```ts title="components/infinite-user-list.tsx"
 "use client"
 
-import { useInfiniteQuery } from "@/lib/query"
+import { q } from "@/lib/query"
 
 type UserList = { data: User[]; total: number; nextPage: number | null }
 
 export function InfiniteUserList() {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery(
-    "api",
-    "users:getAll",
-    {
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    q.users.useInfiniteQuery("getAll", {
       initialPageParam: 1,
       getNextPageParam: (lastPage) => lastPage.nextPage,
-    }
-  )
+    })
 
   return (
     <div>
@@ -180,37 +201,8 @@ export function InfiniteUserList() {
 ```
 
 <Callout variant="info" title="Built-in infinite queries">
-`useInfiniteQuery` is returned directly from `createQueryCaller` — no need to import from `@tanstack/react-query` or wire up the `caller` manually. It uses the same proxy transport and shares the same defaults as `useQuery` and `useMutation`.
+`useInfiniteQuery` is accessed through the same dot-notation API — no need to import from `@tanstack/react-query` or wire up the caller manually. It uses the same proxy transport and shares the same defaults as `useQuery` and `useMutation`.
 </Callout>
-
-## The caller escape hatch
-
-When you need to make API calls outside React components or hooks — in utility functions, event handlers, or third-party callbacks — use the `caller` function directly:
-
-```ts title="lib/utils.ts"
-// In a utility function (no hooks available)
-import { caller } from "@/lib/query"
-
-export async function checkAuthStatus(): Promise<boolean> {
-  try {
-    await caller("api")("auth:me")
-    return true
-  } catch {
-    return false
-  }
-}
-
-// In an event handler
-const handleExport = async () => {
-  const data = await caller("api")("reports:export", { format: "csv" })
-  downloadFile(data)
-}
-
-// In a third-party library callback
-analytics.onEvent(async (event) => {
-  await caller("api")("analytics:track", { event })
-})
-```
 
 ## Next steps
 

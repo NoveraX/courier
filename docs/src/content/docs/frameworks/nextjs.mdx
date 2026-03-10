@@ -39,14 +39,12 @@ const users = defineGroup({
   },
 })
 
-export const sources = {
-  myApi: defineApi({
-    baseURL: process.env.API_URL ?? "http://localhost:4000",
-    groups: { users },
-  }),
-}
+export const api = defineApi({
+  baseURL: process.env.API_URL ?? "http://localhost:4000",
+  groups: { users },
+})
 
-export type Sources = typeof sources
+export const sources = { myApi: api }
 ```
 
 ## Step 1: API Route
@@ -66,11 +64,11 @@ This single route handles all Nexus proxy requests. It parses the incoming POST 
 
 Create a query caller for use in client components:
 
-```ts title="lib/caller.ts"
+```ts title="lib/query.ts"
 import { createQueryCaller } from "@noverax/nexus-query"
-import type { Sources } from "@/lib/sources"
+import type { api } from "@/lib/sources"
 
-export const { useQuery, useMutation, caller } = createQueryCaller<Sources>()
+export const q = createQueryCaller<typeof api>("myApi")
 ```
 
 Use it in client components:
@@ -78,14 +76,14 @@ Use it in client components:
 ```tsx title="app/users/page.tsx"
 "use client"
 
-import { useQuery, useMutation } from "@/lib/caller"
+import { q } from "@/lib/query"
 
 export default function UsersPage() {
-  const { data, isLoading } = useQuery("myApi", "users:getAll", {
+  const { data, isLoading } = q.users.useQuery("getAll", {
     variables: { page: 1, limit: 10 },
   })
 
-  const { mutate, isPending } = useMutation("myApi", "users:create", {
+  const { mutate, isPending } = q.users.useMutation("create", {
     onSuccess: (user) => {
       console.log("Created:", user.name) // fully typed
     },
@@ -122,16 +120,16 @@ For React Server Components, use `createCaller` to call your backend directly wi
 
 ```ts title="lib/server-caller.ts"
 import { createCaller } from "@noverax/nexus"
-import { sources } from "@/lib/sources"
+import { api } from "@/lib/sources"
 
-export const serverCaller = createCaller(sources)
+export const caller = createCaller(api)
 ```
 
 ```tsx title="app/dashboard/page.tsx"
-import { serverCaller } from "@/lib/server-caller"
+import { caller } from "@/lib/server-caller"
 
 export default async function DashboardPage() {
-  const users = await serverCaller("myApi")("users:getAll", {
+  const users = await caller.users.getAll({
     page: 1,
     limit: 5,
   })
@@ -161,7 +159,7 @@ Use `createAction` for type-safe server actions that automatically forward reque
 import { createAction } from "@noverax/nexus-next"
 import { sources } from "@/lib/sources"
 
-export const action = createAction(sources)
+export const action = createAction(sources, "myApi")
 ```
 
 ```ts title="app/actions/users.ts"
@@ -171,14 +169,14 @@ import { revalidatePath } from "next/cache"
 import { action } from "@/lib/actions"
 
 export async function createUser(data: { name: string; email: string }) {
-  const user = await action("myApi")("users:create", data)
+  const user = await action.users.create(data)
 
   revalidatePath("/users")
   return user
 }
 
 export async function deleteUser(id: number) {
-  await action("myApi")("users:remove", { id })
+  await action.users.remove({ id })
 
   revalidatePath("/users")
 }
@@ -226,9 +224,9 @@ app/
   dashboard/page.tsx      # server component with createCaller
 lib/
   sources.ts              # defineApi + defineGroup + endpoint
-  caller.ts               # createQueryCaller<Sources>()
-  server-caller.ts        # createCaller(sources)
-  actions.ts              # createAction(sources)
+  query.ts                # createQueryCaller<typeof api>("myApi")
+  server-caller.ts        # createCaller(api)
+  actions.ts              # createAction(sources, "myApi")
 ```
 
 <Callout variant="tip" title="Use both modes together">

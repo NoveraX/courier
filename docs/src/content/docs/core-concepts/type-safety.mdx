@@ -34,47 +34,45 @@ export const users = defineGroup({
 
 ## The Inference Chain
 
-Nexus uses TypeScript's type inference to propagate types through a curried function chain:
+Nexus uses TypeScript's type inference to propagate types through dot-notation access:
 
 ```typescript
-// 1. You define the source
-export const sources = { api }
-export type Sources = typeof sources
+// 1. You define the API
+export const api = defineApi({ baseURL: "...", groups: { users } })
 
-// 2. You create a typed caller
-const { useQuery, useMutation } = createQueryCaller<Sources>()
+// 2. You create a typed query caller
+const q = createQueryCaller<typeof api>("api")
 
 // 3. TypeScript infers everything at the call site
-const { data } = useQuery("api", "users:getAll")
+const { data } = q.users.useQuery("getAll")
 //      ^? UserList — inferred from endpoint<UserList>
 
-const { data } = useQuery("api", "users:getById", {
+const { data } = q.users.useQuery("getById", {
   variables: { id: "5" },
   //           ^? { id: string } — inferred from endpoint<User, { id: string }>
 })
 
-const { mutate } = useMutation("api", "users:create")
+const { mutate } = q.users.useMutation("create")
 mutate({ name: "Jane", email: "jane@test.com" })
 //      ^? { name: string; email: string } — inferred from endpoint
 ```
 
 <Callout variant="tip" title="No manual type annotations">
-You never need to write `useQuery<UserList>("api", "users:getAll")`. The response type is inferred automatically. Types stay in one place and are never duplicated.
+You never need to write explicit response types. The response type is inferred automatically. Types stay in one place and are never duplicated.
 </Callout>
 
-## Endpoint Key Literals
+## Dot-Notation Validation
 
-The `"group:method"` key is a TypeScript string literal type. This gives you autocomplete and compile-time validation:
+Group and method names are validated at the type level. TypeScript gives you autocomplete and compile-time errors:
 
 ```typescript
-// Source names are validated
-call("api")("users:getAll")         // valid
-call("unknown")("users:getAll")     // Type error: "unknown" is not a valid source
+// Group names are validated
+caller.users.getAll()       // valid
+caller.unknown.getAll()     // Type error: "unknown" is not a valid group
 
-// Endpoint keys are validated
-call("api")("users:getAll")         // valid
-call("api")("users:unknown")        // Type error: "unknown" is not a method on users
-call("api")("fake:getAll")          // Type error: "fake" is not a group
+// Method names are validated
+caller.users.getAll()       // valid
+caller.users.unknown()      // Type error: "unknown" is not a method on users
 ```
 
 ## Variables Enforcement
@@ -85,15 +83,15 @@ TypeScript enforces whether variables are required, optional, or forbidden:
 // No variables — V defaults to undefined
 endpoint<User[]>()((http) => http.get())
 
-call("api")("users:getAll")                          // valid
-call("api")("users:getAll", { page: 1 })             // Type error — no variables expected
+caller.users.getAll()                          // valid
+caller.users.getAll({ page: 1 })               // Type error — no variables expected
 
 // Required variables
 endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars))
 
-call("api")("users:getById")                         // Type error — variables required
-call("api")("users:getById", { id: 123 })            // Type error — id must be string
-call("api")("users:getById", { id: "5" })            // valid
+caller.users.getById()                         // Type error — variables required
+caller.users.getById({ id: 123 })              // Type error — id must be string
+caller.users.getById({ id: "5" })              // valid
 ```
 
 ## Pattern: Well-Typed Endpoints
@@ -127,8 +125,8 @@ export const products = defineGroup({
 })
 
 // Everything flows automatically:
-// useQuery("api", "products:list", { variables: { category: "shoes" } })
-//                                                ^? ProductFilters
+// q.products.useQuery("list", { variables: { category: "shoes" } })
+//                                           ^? ProductFilters
 // → data is Product[]
 ```
 

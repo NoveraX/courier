@@ -4,26 +4,26 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { ProgressUploadDemo, SimpleUploadDemo } from "./_components"
 
-const simpleCode = `import { caller } from "@/lib/query"
+const simpleCode = `import { caller } from "@/lib/caller"
 
 const formData = new FormData()
 formData.append("file", file)
 formData.append("description", "My upload")
 
 // FormData is auto-detected — nexus sends multipart/form-data
-const result = await caller("api")("files:upload", formData)`
+const result = await caller.files.upload(formData)`
 
-const progressCode = `import { caller } from "@/lib/query"
+const progressCode = `import { caller } from "@/lib/caller"
 
 const formData = new FormData()
 formData.append("file", file)
 
 // onUploadProgress tracks real upload progress (HTTP/2 compatible)
-const result = await caller("api", {
+const result = await caller.files.with({
   onUploadProgress: (progress) => {
     setProgress(Math.round(progress.percent * 100))
   },
-})("files:upload", formData)`
+}).upload(formData)`
 
 const sourceCode = `import { defineGroup, endpoint } from "@noverax/nexus/define"
 

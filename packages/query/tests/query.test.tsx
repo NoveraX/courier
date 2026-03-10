@@ -21,18 +21,18 @@ function mockFetchResponse(data: unknown, status = 200) {
 }
 
 type TestApi = {
-	api: {
-		options: {
-			groups: {
-				users: {
-					getAll: Endpoint<{ id: number; name: string }[]>;
-					getById: Endpoint<{ id: number; name: string }, { id: number }>;
-					create: Endpoint<{ id: number; name: string }, { name: string }>;
-					list: Endpoint<{ items: { id: number }[]; nextCursor: number | null }, { cursor: number }>;
-				};
-				cache: {
-					clear: Endpoint<{ ok: boolean }>;
-				};
+	options: {
+		groups: {
+			users: {
+				options: { prefix?: string };
+				getAll: Endpoint<{ id: number; name: string }[]>;
+				getById: Endpoint<{ id: number; name: string }, { id: number }>;
+				create: Endpoint<{ id: number; name: string }, { name: string }>;
+				list: Endpoint<{ items: { id: number }[]; nextCursor: number | null }, { cursor: number }>;
+			};
+			cache: {
+				options: { prefix?: string };
+				clear: Endpoint<{ ok: boolean }>;
 			};
 		};
 	};
@@ -78,20 +78,33 @@ function getFetchBody(index = 0) {
 // ---------------------------------------------------------------------------
 
 describe("createQueryCaller", () => {
-	it("returns all hooks, prefetchQuery, and caller", () => {
-		const result = createQueryCaller<TestApi>();
-		expect(result).toHaveProperty("useQuery");
-		expect(result).toHaveProperty("useSuspenseQuery");
-		expect(result).toHaveProperty("useInfiniteQuery");
-		expect(result).toHaveProperty("useMutation");
-		expect(result).toHaveProperty("prefetchQuery");
-		expect(result).toHaveProperty("caller");
+	it("returns a proxy with group access", () => {
+		const q = createQueryCaller<TestApi>("api");
+		expect(typeof q).toBe("object");
+		expect(typeof (q as any).users).toBe("object");
 	});
 
-	it("passes defaults to createProxyCaller", () => {
-		const defaults = { proxyUrl: "/custom" };
-		const { caller } = createQueryCaller<TestApi>(defaults);
-		expect(typeof caller).toBe("function");
+	it("group exposes all hooks", () => {
+		const q = createQueryCaller<TestApi>("api");
+		const users = (q as any).users;
+		expect(typeof users.useQuery).toBe("function");
+		expect(typeof users.useSuspenseQuery).toBe("function");
+		expect(typeof users.useInfiniteQuery).toBe("function");
+		expect(typeof users.useMutation).toBe("function");
+		expect(typeof users.prefetchQuery).toBe("function");
+	});
+
+	it("supports destructuring from group", () => {
+		const q = createQueryCaller<TestApi>("api");
+		const { useQuery: uq, useMutation: um } = (q as any).users;
+		expect(typeof uq).toBe("function");
+		expect(typeof um).toBe("function");
+	});
+
+	it("does not trigger thenable detection", async () => {
+		const q = createQueryCaller<TestApi>("api");
+		const result = await Promise.resolve(q);
+		expect(result).toBe(q);
 	});
 });
 
@@ -104,8 +117,8 @@ describe("useQuery", () => {
 		const users = [{ id: 1, name: "Alice" }];
 		fetchSpy.mockResolvedValue(mockFetchResponse(users));
 
-		const { useQuery } = createQueryCaller<TestApi>();
-		const { result } = renderHook(() => useQuery("api", "users:getAll"), { wrapper });
+		const q = createQueryCaller<TestApi>("api");
+		const { result } = renderHook(() => (q as any).users.useQuery("getAll"), { wrapper });
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(result.current.data).toEqual(users);
@@ -115,9 +128,9 @@ describe("useQuery", () => {
 		const user = { id: 1, name: "Alice" };
 		fetchSpy.mockResolvedValue(mockFetchResponse(user));
 
-		const { useQuery } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		const { result } = renderHook(
-			() => useQuery("api", "users:getById", { variables: { id: 1 } }),
+			() => (q as any).users.useQuery("getById", { variables: { id: 1 } }),
 			{ wrapper },
 		);
 
@@ -130,22 +143,22 @@ describe("useQuery", () => {
 	it("builds query key without variables when undefined", async () => {
 		fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
-		const { useQuery } = createQueryCaller<TestApi>();
-		renderHook(() => useQuery("api", "users:getAll"), { wrapper });
+		const q = createQueryCaller<TestApi>("api");
+		renderHook(() => (q as any).users.useQuery("getAll"), { wrapper });
 
 		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
 
 		const cache = queryClient.getQueryCache().getAll();
 		expect(cache).toHaveLength(1);
-		expect(cache[0]?.queryKey).toEqual(["api", "users:getAll"]);
+		expect(cache[0]?.queryKey).toEqual(["api", "users", "getAll"]);
 	});
 
 	it("builds query key with variables when provided", async () => {
 		fetchSpy.mockResolvedValue(mockFetchResponse({}));
 
-		const { useQuery } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		renderHook(
-			() => useQuery("api", "users:getById", { variables: { id: 5 } }),
+			() => (q as any).users.useQuery("getById", { variables: { id: 5 } }),
 			{ wrapper },
 		);
 
@@ -153,13 +166,13 @@ describe("useQuery", () => {
 
 		const cache = queryClient.getQueryCache().getAll();
 		expect(cache).toHaveLength(1);
-		expect(cache[0]?.queryKey).toEqual(["api", "users:getById", { id: 5 }]);
+		expect(cache[0]?.queryKey).toEqual(["api", "users", "getById", { id: 5 }]);
 	});
 
 	it("forwards extra query options (enabled: false)", () => {
-		const { useQuery } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		const { result } = renderHook(
-			() => useQuery("api", "users:getAll", { enabled: false }),
+			() => (q as any).users.useQuery("getAll", { enabled: false }),
 			{ wrapper },
 		);
 
@@ -170,11 +183,22 @@ describe("useQuery", () => {
 	it("handles fetch errors", async () => {
 		fetchSpy.mockRejectedValue(new Error("Network error"));
 
-		const { useQuery } = createQueryCaller<TestApi>();
-		const { result } = renderHook(() => useQuery("api", "users:getAll"), { wrapper });
+		const q = createQueryCaller<TestApi>("api");
+		const { result } = renderHook(() => (q as any).users.useQuery("getAll"), { wrapper });
 
 		await waitFor(() => expect(result.current.isError).toBe(true));
 		expect(result.current.error?.message).toBe("Network error");
+	});
+
+	it("works with destructured useQuery", async () => {
+		fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1 }]));
+
+		const q = createQueryCaller<TestApi>("api");
+		const { useQuery } = (q as any).users;
+		const { result } = renderHook(() => useQuery("getAll"), { wrapper });
+
+		await waitFor(() => expect(result.current.isSuccess).toBe(true));
+		expect(result.current.data).toEqual([{ id: 1 }]);
 	});
 });
 
@@ -187,9 +211,9 @@ describe("useSuspenseQuery", () => {
 		const users = [{ id: 1, name: "Alice" }];
 		fetchSpy.mockResolvedValue(mockFetchResponse(users));
 
-		const { useSuspenseQuery } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		const { result } = renderHook(
-			() => useSuspenseQuery("api", "users:getAll"),
+			() => (q as any).users.useSuspenseQuery("getAll"),
 			{ wrapper: suspenseWrapper },
 		);
 
@@ -200,9 +224,9 @@ describe("useSuspenseQuery", () => {
 		const user = { id: 1, name: "Alice" };
 		fetchSpy.mockResolvedValue(mockFetchResponse(user));
 
-		const { useSuspenseQuery } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		const { result } = renderHook(
-			() => useSuspenseQuery("api", "users:getById", { variables: { id: 1 } }),
+			() => (q as any).users.useSuspenseQuery("getById", { variables: { id: 1 } }),
 			{ wrapper: suspenseWrapper },
 		);
 
@@ -215,9 +239,9 @@ describe("useSuspenseQuery", () => {
 	it("builds correct query key", async () => {
 		fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
-		const { useSuspenseQuery } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		renderHook(
-			() => useSuspenseQuery("api", "users:getAll"),
+			() => (q as any).users.useSuspenseQuery("getAll"),
 			{ wrapper: suspenseWrapper },
 		);
 
@@ -225,7 +249,7 @@ describe("useSuspenseQuery", () => {
 
 		const cache = queryClient.getQueryCache().getAll();
 		expect(cache).toHaveLength(1);
-		expect(cache[0]?.queryKey).toEqual(["api", "users:getAll"]);
+		expect(cache[0]?.queryKey).toEqual(["api", "users", "getAll"]);
 	});
 });
 
@@ -238,12 +262,12 @@ describe("useInfiniteQuery", () => {
 		const page1 = { items: [{ id: 1 }], nextCursor: 2 };
 		fetchSpy.mockResolvedValue(mockFetchResponse(page1));
 
-		const { useInfiniteQuery } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		const { result } = renderHook(
 			() =>
-				useInfiniteQuery("api", "users:list", {
+				(q as any).users.useInfiniteQuery("list", {
 					initialPageParam: 0,
-					getNextPageParam: (lastPage) => lastPage.nextCursor,
+					getNextPageParam: (lastPage: any) => lastPage.nextCursor,
 					variables: (pageParam: number) => ({ cursor: pageParam }),
 				}),
 			{ wrapper },
@@ -258,12 +282,12 @@ describe("useInfiniteQuery", () => {
 		const page1 = { items: [{ id: 1 }], nextCursor: 2 };
 		fetchSpy.mockResolvedValue(mockFetchResponse(page1));
 
-		const { useInfiniteQuery } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		renderHook(
 			() =>
-				useInfiniteQuery("api", "users:list", {
+				(q as any).users.useInfiniteQuery("list", {
 					initialPageParam: 0,
-					getNextPageParam: (lastPage) => lastPage.nextCursor,
+					getNextPageParam: (lastPage: any) => lastPage.nextCursor,
 					variables: (pageParam: number) => ({ cursor: pageParam }),
 				}),
 			{ wrapper },
@@ -282,12 +306,12 @@ describe("useInfiniteQuery", () => {
 			.mockResolvedValueOnce(mockFetchResponse(page1))
 			.mockResolvedValueOnce(mockFetchResponse(page2));
 
-		const { useInfiniteQuery } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		const { result } = renderHook(
 			() =>
-				useInfiniteQuery("api", "users:list", {
+				(q as any).users.useInfiniteQuery("list", {
 					initialPageParam: 0,
-					getNextPageParam: (lastPage) => lastPage.nextCursor,
+					getNextPageParam: (lastPage: any) => lastPage.nextCursor,
 					variables: (pageParam: number) => ({ cursor: pageParam }),
 				}),
 			{ wrapper },
@@ -306,12 +330,12 @@ describe("useInfiniteQuery", () => {
 	it("builds query key without variables", async () => {
 		fetchSpy.mockResolvedValue(mockFetchResponse({ items: [], nextCursor: null }));
 
-		const { useInfiniteQuery } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		renderHook(
 			() =>
-				useInfiniteQuery("api", "users:list", {
+				(q as any).users.useInfiniteQuery("list", {
 					initialPageParam: 0,
-					getNextPageParam: (lastPage) => lastPage.nextCursor,
+					getNextPageParam: (lastPage: any) => lastPage.nextCursor,
 					variables: (pageParam: number) => ({ cursor: pageParam }),
 				}),
 			{ wrapper },
@@ -321,7 +345,7 @@ describe("useInfiniteQuery", () => {
 
 		const cache = queryClient.getQueryCache().getAll();
 		expect(cache).toHaveLength(1);
-		expect(cache[0]?.queryKey).toEqual(["api", "users:list"]);
+		expect(cache[0]?.queryKey).toEqual(["api", "users", "list"]);
 	});
 });
 
@@ -334,9 +358,9 @@ describe("useMutation", () => {
 		const created = { id: 1, name: "Alice" };
 		fetchSpy.mockResolvedValue(mockFetchResponse(created));
 
-		const { useMutation } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		const { result } = renderHook(
-			() => useMutation("api", "users:create"),
+			() => (q as any).users.useMutation("create"),
 			{ wrapper },
 		);
 
@@ -349,13 +373,13 @@ describe("useMutation", () => {
 	it("passes variables to mutationFn", async () => {
 		fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1 }));
 
-		const { useMutation } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		const { result } = renderHook(
-			() => useMutation("api", "users:create"),
+			() => (q as any).users.useMutation("create"),
 			{ wrapper },
 		);
 
-		result.current.mutate({ name: "Bob" } as any);
+		result.current.mutate({ name: "Bob" });
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -367,12 +391,9 @@ describe("useMutation", () => {
 		fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1 }));
 		const onSuccess = vi.fn();
 
-		const { useMutation } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		const { result } = renderHook(
-			() =>
-				useMutation("api", "users:create", {
-					onSuccess: onSuccess as (data: { id: number; name: string }) => void,
-				}),
+			() => (q as any).users.useMutation("create", { onSuccess }),
 			{ wrapper },
 		);
 
@@ -386,9 +407,9 @@ describe("useMutation", () => {
 	it("handles mutation errors", async () => {
 		fetchSpy.mockRejectedValue(new Error("Server error"));
 
-		const { useMutation } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		const { result } = renderHook(
-			() => useMutation("api", "users:create"),
+			() => (q as any).users.useMutation("create"),
 			{ wrapper },
 		);
 
@@ -401,9 +422,9 @@ describe("useMutation", () => {
 	it("mutates without variables for void endpoints", async () => {
 		fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-		const { useMutation } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		const { result } = renderHook(
-			() => useMutation("api", "cache:clear"),
+			() => (q as any).cache.useMutation("clear"),
 			{ wrapper },
 		);
 
@@ -416,11 +437,11 @@ describe("useMutation", () => {
 		const spy = vi.spyOn(queryClient, "invalidateQueries");
 		fetchSpy.mockResolvedValue(mockFetchResponse({ id: 2, name: "New" }));
 
-		const { useMutation } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		const { result } = renderHook(
 			() =>
-				useMutation("api", "users:create", {
-					invalidate: [["api", "users:getAll"]],
+				(q as any).users.useMutation("create", {
+					invalidate: [["api", "users", "getAll"]],
 				}),
 			{ wrapper },
 		);
@@ -428,7 +449,7 @@ describe("useMutation", () => {
 		result.current.mutate({ name: "New" });
 
 		await waitFor(() =>
-			expect(spy).toHaveBeenCalledWith({ queryKey: ["api", "users:getAll"] }),
+			expect(spy).toHaveBeenCalledWith({ queryKey: ["api", "users", "getAll"] }),
 		);
 	});
 
@@ -437,12 +458,12 @@ describe("useMutation", () => {
 		fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1 }));
 
 		const onSettled = vi.fn();
-		const { useMutation } = createQueryCaller<TestApi>();
+		const q = createQueryCaller<TestApi>("api");
 		const { result } = renderHook(
 			() =>
-				useMutation("api", "users:create", {
-					invalidate: [["api", "users:getAll"]],
-					onSettled: onSettled as () => void,
+				(q as any).users.useMutation("create", {
+					invalidate: [["api", "users", "getAll"]],
+					onSettled,
 				}),
 			{ wrapper },
 		);
@@ -451,7 +472,7 @@ describe("useMutation", () => {
 
 		await waitFor(() => {
 			expect(onSettled).toHaveBeenCalled();
-			expect(spy).toHaveBeenCalledWith({ queryKey: ["api", "users:getAll"] });
+			expect(spy).toHaveBeenCalledWith({ queryKey: ["api", "users", "getAll"] });
 		});
 	});
 });
@@ -465,10 +486,10 @@ describe("prefetchQuery", () => {
 		const users = [{ id: 1, name: "Alice" }];
 		fetchSpy.mockResolvedValue(mockFetchResponse(users));
 
-		const { prefetchQuery } = createQueryCaller<TestApi>();
-		await prefetchQuery(queryClient, "api", "users:getAll");
+		const q = createQueryCaller<TestApi>("api");
+		await (q as any).users.prefetchQuery(queryClient, "getAll");
 
-		const cached = queryClient.getQueryData(["api", "users:getAll"]);
+		const cached = queryClient.getQueryData(["api", "users", "getAll"]);
 		expect(cached).toEqual(users);
 	});
 
@@ -476,20 +497,20 @@ describe("prefetchQuery", () => {
 		const user = { id: 1, name: "Alice" };
 		fetchSpy.mockResolvedValue(mockFetchResponse(user));
 
-		const { prefetchQuery } = createQueryCaller<TestApi>();
-		await prefetchQuery(queryClient, "api", "users:getById", { variables: { id: 1 } });
+		const q = createQueryCaller<TestApi>("api");
+		await (q as any).users.prefetchQuery(queryClient, "getById", { variables: { id: 1 } });
 
-		const cached = queryClient.getQueryData(["api", "users:getById", { id: 1 }]);
+		const cached = queryClient.getQueryData(["api", "users", "getById", { id: 1 }]);
 		expect(cached).toEqual(user);
 	});
 
 	it("respects staleTime option", async () => {
 		fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
-		const { prefetchQuery } = createQueryCaller<TestApi>();
-		await prefetchQuery(queryClient, "api", "users:getAll", { staleTime: 60_000 });
+		const q = createQueryCaller<TestApi>("api");
+		await (q as any).users.prefetchQuery(queryClient, "getAll", { staleTime: 60_000 });
 
-		const state = queryClient.getQueryState(["api", "users:getAll"]);
+		const state = queryClient.getQueryState(["api", "users", "getAll"]);
 		expect(state?.data).toEqual([]);
 	});
 });
@@ -500,16 +521,16 @@ describe("prefetchQuery", () => {
 
 describe("optimisticOptions", () => {
 	it("sets optimistic data on mutate", async () => {
-		queryClient.setQueryData(["api", "users:getAll"], [{ id: 1, name: "Alice" }]);
+		queryClient.setQueryData(["api", "users", "getAll"], [{ id: 1, name: "Alice" }]);
 
 		const opts = optimisticOptions<{ id: number; name: string }[], { name: string }>(queryClient, {
-			queryKey: ["api", "users:getAll"],
+			queryKey: ["api", "users", "getAll"],
 			updater: (old, vars) => [...(old ?? []), { id: 999, name: vars.name }],
 		});
 
 		await opts.onMutate({ name: "Bob" });
 
-		const cached = queryClient.getQueryData<{ id: number; name: string }[]>(["api", "users:getAll"]);
+		const cached = queryClient.getQueryData<{ id: number; name: string }[]>(["api", "users", "getAll"]);
 		expect(cached).toEqual([
 			{ id: 1, name: "Alice" },
 			{ id: 999, name: "Bob" },
@@ -518,32 +539,32 @@ describe("optimisticOptions", () => {
 
 	it("rolls back on error", async () => {
 		const original = [{ id: 1, name: "Alice" }];
-		queryClient.setQueryData(["api", "users:getAll"], original);
+		queryClient.setQueryData(["api", "users", "getAll"], original);
 
 		const opts = optimisticOptions<{ id: number; name: string }[], { name: string }>(queryClient, {
-			queryKey: ["api", "users:getAll"],
+			queryKey: ["api", "users", "getAll"],
 			updater: (old, vars) => [...(old ?? []), { id: 999, name: vars.name }],
 		});
 
 		const context = await opts.onMutate({ name: "Bob" });
 		opts.onError(new Error("fail") as any, { name: "Bob" }, context);
 
-		const cached = queryClient.getQueryData(["api", "users:getAll"]);
+		const cached = queryClient.getQueryData(["api", "users", "getAll"]);
 		expect(cached).toEqual(original);
 	});
 
 	it("invalidates on settled", async () => {
-		queryClient.setQueryData(["api", "users:getAll"], []);
+		queryClient.setQueryData(["api", "users", "getAll"], []);
 
 		const opts = optimisticOptions<{ id: number; name: string }[], { name: string }>(queryClient, {
-			queryKey: ["api", "users:getAll"],
+			queryKey: ["api", "users", "getAll"],
 			updater: (old, vars) => [...(old ?? []), { id: 1, name: vars.name }],
 		});
 
 		await opts.onMutate({ name: "Alice" });
 		opts.onSettled();
 
-		const state = queryClient.getQueryState(["api", "users:getAll"]);
+		const state = queryClient.getQueryState(["api", "users", "getAll"]);
 		expect(state?.isInvalidated).toBe(true);
 	});
 });
@@ -553,31 +574,31 @@ describe("optimisticOptions", () => {
 // ---------------------------------------------------------------------------
 
 describe("createQueryKeys", () => {
-	it("creates source-level key", () => {
-		const key = createQueryKeys<TestApi>();
-		expect(key("api")).toEqual(["api"]);
+	it("creates group-level key", () => {
+		const key = createQueryKeys<TestApi>("api");
+		expect(key("users")).toEqual(["api", "users"]);
 	});
 
-	it("creates endpoint-level key", () => {
-		const key = createQueryKeys<TestApi>();
-		expect(key("api", "users:getAll")).toEqual(["api", "users:getAll"]);
+	it("creates method-level key", () => {
+		const key = createQueryKeys<TestApi>("api");
+		expect(key("users", "getAll")).toEqual(["api", "users", "getAll"]);
 	});
 
 	it("creates key with variables", () => {
-		const key = createQueryKeys<TestApi>();
-		expect(key("api", "users:getById", { id: 1 })).toEqual(["api", "users:getById", { id: 1 }]);
+		const key = createQueryKeys<TestApi>("api");
+		expect(key("users", "getById", { id: 1 })).toEqual(["api", "users", "getById", { id: 1 }]);
 	});
 
 	it("keys match query cache keys", async () => {
 		fetchSpy.mockResolvedValue(mockFetchResponse([]));
-		const key = createQueryKeys<TestApi>();
+		const key = createQueryKeys<TestApi>("api");
 
-		const { useQuery } = createQueryCaller<TestApi>();
-		renderHook(() => useQuery("api", "users:getAll"), { wrapper });
+		const q = createQueryCaller<TestApi>("api");
+		renderHook(() => (q as any).users.useQuery("getAll"), { wrapper });
 
 		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
 
-		const cached = queryClient.getQueryData(key("api", "users:getAll"));
+		const cached = queryClient.getQueryData(key("users", "getAll"));
 		expect(cached).toEqual([]);
 	});
 });

@@ -17,7 +17,7 @@
 
 ## Overview
 
-Wraps `@tanstack/react-query` with full Nexus type inference. Endpoint names, variables, and response types are inferred automatically — no manual generics.
+Wraps `@tanstack/react-query` with full Nexus type inference. Group names, method names, variables, and response types are inferred automatically — no manual generics.
 
 <br />
 
@@ -32,18 +32,11 @@ npm install @noverax/nexus-query @noverax/nexus @tanstack/react-query
 ## Setup
 
 ```ts
-// lib/caller.ts
+// lib/query.ts
 import { createQueryCaller } from "@noverax/nexus-query"
-import type { Sources } from "@/api/sources"
+import type { api } from "@/api/sources"
 
-export const {
-  useQuery,
-  useMutation,
-  useSuspenseQuery,
-  useInfiniteQuery,
-  prefetchQuery,
-  caller,
-} = createQueryCaller<Sources>({
+export const q = createQueryCaller<typeof api>("api", {
   proxyUrl: "/api/request",  // optional, defaults to "/api/request"
   timeout: 10000,            // optional default timeout
 })
@@ -53,13 +46,15 @@ export const {
 
 ## Hooks
 
+Access hooks through dot-notation: `q.{group}.useQuery(method, options?)`.
+
 ### `useQuery`
 
 ```tsx
-import { useQuery } from "@/lib/caller"
+import { q } from "@/lib/query"
 
 function Users() {
-  const { data, isLoading, error } = useQuery("api", "users:getAll")
+  const { data, isLoading, error } = q.users.useQuery("getAll")
   //      ^? User[]
 }
 ```
@@ -67,14 +62,14 @@ function Users() {
 With variables:
 
 ```tsx
-const { data } = useQuery("api", "users:getById", { variables: { id: "1" } })
+const { data } = q.users.useQuery("getById", { variables: { id: "1" } })
 //      ^? User
 ```
 
 With React Query options:
 
 ```tsx
-const { data } = useQuery("api", "users:getAll", {
+const { data } = q.users.useQuery("getAll", {
   staleTime: 5 * 60 * 1000,
   refetchOnWindowFocus: false,
 })
@@ -83,10 +78,10 @@ const { data } = useQuery("api", "users:getAll", {
 ### `useSuspenseQuery`
 
 ```tsx
-import { useSuspenseQuery } from "@/lib/caller"
+import { q } from "@/lib/query"
 
 function Users() {
-  const { data } = useSuspenseQuery("api", "users:getAll")
+  const { data } = q.users.useSuspenseQuery("getAll")
   //      ^? User[] (never undefined)
 }
 ```
@@ -94,10 +89,10 @@ function Users() {
 ### `useMutation`
 
 ```tsx
-import { useMutation } from "@/lib/caller"
+import { q } from "@/lib/query"
 
 function CreateUser() {
-  const { mutate, isPending } = useMutation("api", "users:create", {
+  const { mutate, isPending } = q.users.useMutation("create", {
     onSuccess: (user) => console.log(user.name),
     //                               ^? string
   })
@@ -113,10 +108,10 @@ function CreateUser() {
 ### `useInfiniteQuery`
 
 ```tsx
-import { useInfiniteQuery } from "@/lib/caller"
+import { q } from "@/lib/query"
 
 function Feed() {
-  const { data, fetchNextPage } = useInfiniteQuery("api", "posts:list", {
+  const { data, fetchNextPage } = q.posts.useInfiniteQuery("list", {
     variables: { limit: 20 },
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -129,27 +124,32 @@ function Feed() {
 Server-side prefetching for Next.js or SSR:
 
 ```ts
-import { prefetchQuery } from "@/lib/caller"
+import { q } from "@/lib/query"
 import { QueryClient } from "@noverax/nexus-query"
 
 const queryClient = new QueryClient()
 
-await prefetchQuery(queryClient, "api", "users:getAll")
+await q.users.prefetchQuery(queryClient, "getAll")
 ```
 
 <br />
 
-## Optimistic Updates
+## Query Keys
+
+Keys are generated hierarchically: `[source, group, method, variables?]`:
 
 ```ts
-import { optimisticOptions } from "@noverax/nexus-query"
+q.users.useQuery("getAll")                             // → ["api", "users", "getAll"]
+q.users.useQuery("getById", { variables: { id: "1" }}) // → ["api", "users", "getById", { id: "1" }]
 
-const { mutate } = useMutation("api", "users:create", {
-  ...optimisticOptions(queryClient, {
-    queryKey: ["api", "users:getAll"],
-    updater: (current, newUser) => [...current, newUser],
-  }),
-})
+// Invalidate a specific method
+queryClient.invalidateQueries({ queryKey: ["api", "users", "getAll"] })
+
+// Invalidate an entire group
+queryClient.invalidateQueries({ queryKey: ["api", "users"] })
+
+// Invalidate everything
+queryClient.invalidateQueries({ queryKey: ["api"] })
 ```
 
 <br />

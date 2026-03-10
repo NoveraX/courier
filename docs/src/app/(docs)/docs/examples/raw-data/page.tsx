@@ -5,32 +5,28 @@ import { docsMetadata } from "@/lib/metadata"
 import { NormalFetchDemo, RawFetchDemo } from "./_components"
 
 const normalCode = `// Default — returns just the data
-const users = await caller("api")("users:getAll", {})
+const users = await caller.users.getAll({})
 // → { data: [...], total: 3 }`
 
-const rawDataCode = `// rawData: true — returns { status, headers, data }
-const response = await caller("api", { rawData: true })(
-  "users:getAll", {}
-)
+const rawDataCode = `// .raw accessor — returns { status, headers, data }
+const response = await caller.users.raw.getAll({})
 
 // response.status  → 200
 // response.headers → { "content-type": "application/json", ... }
 // response.data    → { data: [...], total: 3 }`
 
-const typeCode = `// TypeScript type changes based on rawData flag
-type MethodRequestResponse<T extends boolean, R> = Promise<
-  T extends true
-    ? Partial<MethodKyResponse<R>>  // { status, headers, data }
-    : R                              // just the data
+const typeCode = `// TypeScript type changes based on .raw accessor
+type EndpointReturn<R, Raw extends boolean> = Promise<
+  Raw extends true
+    ? Partial<HttpResponse<R>>  // { status, headers, data }
+    : R                          // just the data
 >
 
 // Usage with type safety:
-const data = await caller("api")("users:getAll", {})
+const data = await caller.users.getAll({})
 //    ^? { data: User[], total: number }
 
-const raw = await caller("api", { rawData: true })(
-  "users:getAll", {}
-)
+const raw = await caller.users.raw.getAll({})
 //    ^? { status?: number, headers?: Headers, data?: ... }`
 
 export const metadata = docsMetadata(
@@ -74,10 +70,10 @@ export default function RawDataExamplesPage() {
           code={typeCode}
         >
           <p className="text-sm text-muted-foreground">
-            With <code className="rounded bg-muted px-1 py-0.5 text-xs">rawData: true</code>, the
-            return type wraps data in a{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">MethodKyResponse</code> object
-            with status and headers. Without it, you get the data directly.
+            With the <code className="rounded bg-muted px-1 py-0.5 text-xs">.raw</code> accessor,
+            the return type wraps data in an{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">HttpResponse</code> object with
+            status and headers. Without it, you get the data directly.
           </p>
         </ExampleBlock>
       </div>

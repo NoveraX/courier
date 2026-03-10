@@ -238,7 +238,7 @@ import { isValidationError } from "@noverax/nexus"
 
 async function handleSubmit(formData: FormData) {
   try {
-    await caller("api")("users:create", {
+    await caller.users.create({
       name: formData.get("name") as string,
       email: formData.get("email") as string,
     })

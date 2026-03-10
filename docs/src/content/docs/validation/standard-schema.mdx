@@ -63,7 +63,7 @@ When a `variables` schema is attached, Nexus validates the variables **before** 
 ```ts
 // CreateUserSchema requires name (string) and email (string)
 // This will throw a ValidationError immediately -- no HTTP request is made
-await caller("api")("users:create", { name: 123 })
+await caller.users.create({ name: 123 })
 ```
 
 ### Response validation (post-request)
@@ -73,7 +73,7 @@ When a `response` schema is attached, Nexus validates the parsed response body *
 ```ts
 // If the backend returns { id: 1, name: null } but the schema
 // requires name to be a string, a ValidationError is thrown
-const user = await caller("api")("users:getAll")
+const user = await caller.users.getAll()
 ```
 
 ### Schema transforms
@@ -100,7 +100,7 @@ const api = defineApi({
 })
 
 // event.createdAt is a Date object, not a string
-const event = await caller("api")("events:get", { id: 1 })
+const event = await caller.events.get({ id: 1 })
 ```
 
 ## ValidationError
@@ -132,7 +132,7 @@ Use the `isValidationError` type guard to narrow the error type:
 import { isValidationError } from "@noverax/nexus"
 
 try {
-  await caller("api")("users:create", formData)
+  await caller.users.create(formData)
 } catch (error) {
   if (isValidationError(error)) {
     console.log(error.target)  // "variables" or "response"

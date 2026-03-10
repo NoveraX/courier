@@ -1,15 +1,12 @@
-import type { Endpoint } from "../define/types";
+import { buildClientProxy, type ExecuteBackend, type TypedClient } from "../client";
+import type { DefinedApi, Endpoint } from "../define/types";
 import { HTTPError } from "../error";
-import type { CallerFn, EndpointKey, ResolveEndpoint } from "../types";
-import { parseEndpointKey } from "../utils/helpers";
 
 // --- Exported Types ---
 
 /** A recorded request in the test client history */
 export type HistoryEntry = {
-  source: string;
-  endpoint: string;
-  group?: string;
+  group: string;
   method: string;
   variables?: unknown;
   result?: { status: number; data: unknown };
@@ -35,15 +32,20 @@ export type MockBuilder<R = unknown> = {
 
 type ExtractEndpointResponse<M> = M extends Endpoint<infer R, any> ? R : unknown;
 
+type ApiGroups<T extends DefinedApi<any>> = T["options"]["groups"];
+
 /** In-memory test client with mock support and request history */
-export type TestClient<T extends Record<string, any> = Record<string, any>> = {
-  /** Caller function — same curried API as createCaller / createProxyCaller */
-  caller: CallerFn<T>;
+export type TestClient<T extends DefinedApi<any> = DefinedApi<any>> = {
+  /** Typed client — same dot-notation API as createCaller / createProxyCaller */
+  client: TypedClient<T>;
   /** Mock a specific endpoint's response */
-  mock: <K extends keyof T & string, Q extends EndpointKey<T[K]>>(
-    source: K,
-    endpoint: Q,
-  ) => MockBuilder<ExtractEndpointResponse<ResolveEndpoint<T[K], Q>>>;
+  mock: <
+    G extends keyof ApiGroups<T> & string,
+    M extends Exclude<keyof ApiGroups<T>[G], "options"> & string,
+  >(
+    group: G,
+    method: M,
+  ) => MockBuilder<ExtractEndpointResponse<ApiGroups<T>[G][M]>>;
   /** Array of all recorded requests */
   history: HistoryEntry[];
   /** Clear all mocks and history */
@@ -74,24 +76,24 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
  * and records request history — no real HTTP calls.
  *
  * @example
- * const { caller, mock, history } = createTestClient<typeof sources>();
+ * ```ts
+ * const { client, mock, history } = createTestClient<typeof api>();
  *
- * mock("api", "users:getAll").resolves([{ id: "1", name: "Alice" }]);
- * const users = await caller("api")("users:getAll");
+ * mock("users", "getAll").resolves([{ id: "1", name: "Alice" }]);
+ * const users = await client.users.getAll();
  *
  * expect(users).toEqual([{ id: "1", name: "Alice" }]);
  * expect(history).toHaveLength(1);
+ * ```
  */
-export function createTestClient<T extends Record<string, any> = Record<string, any>>(
-  _sources?: Record<string, any>,
-): TestClient<T> {
+export function createTestClient<T extends DefinedApi<any> = DefinedApi<any>>(): TestClient<T> {
   const mocks = new Map<string, MockHandler[]>();
   const history: HistoryEntry[] = [];
 
-  const mockKey = (source: string, endpoint: string) => `${source}/${endpoint}`;
+  const mockKey = (group: string, method: string) => `${group}/${method}`;
 
-  function getMock(source: string, endpoint: string): MockHandler | undefined {
-    const handlers = mocks.get(mockKey(source, endpoint));
+  function getMock(group: string, method: string): MockHandler | undefined {
+    const handlers = mocks.get(mockKey(group, method));
     if (!handlers?.length) return undefined;
 
     // Stack: latest mock wins, consumed mocks are popped
@@ -107,56 +109,51 @@ export function createTestClient<T extends Record<string, any> = Record<string, 
     return handler;
   }
 
-  const caller = ((source: string) => {
-    return async (endpoint: string, variables?: unknown) => {
-      const { group, method } = parseEndpointKey(endpoint);
-      const handler = getMock(source, endpoint);
+  const backend: ExecuteBackend = async (group, method, variables, _options, _raw) => {
+    const handler = getMock(group, method);
 
-      const entry: HistoryEntry = {
-        source,
-        endpoint,
-        group,
-        method,
-        variables,
-        timestamp: Date.now(),
-      };
-
-      if (!handler) {
-        const error = new Error(
-          `[nexus/testing] No mock for "${source}" > "${endpoint}". ` +
-            `Call mock("${source}", "${endpoint}").resolves(data) first.`,
-        );
-        entry.error = error;
-        history.push(entry);
-        throw error;
-      }
-
-      if (handler.delayMs) {
-        await sleep(handler.delayMs);
-      }
-
-      if (handler.isError) {
-        const httpError = new HTTPError({
-          status: handler.status,
-          headers: new Headers(),
-          data: handler.data,
-        });
-        entry.error = httpError;
-        entry.result = { status: handler.status, data: handler.data };
-        history.push(entry);
-        throw httpError;
-      }
-
-      const data = handler.resolver ? await handler.resolver(variables) : handler.data;
-
-      entry.result = { status: handler.status, data };
-      history.push(entry);
-      return data;
+    const entry: HistoryEntry = {
+      group,
+      method,
+      variables,
+      timestamp: Date.now(),
     };
-  }) as unknown as CallerFn<T>;
 
-  function mock(source: string, endpoint: string): MockBuilder<unknown> {
-    const k = mockKey(source, endpoint);
+    if (!handler) {
+      const error = new Error(
+        `[nexus/testing] No mock for "${group}.${method}". ` +
+          `Call mock("${group}", "${method}").resolves(data) first.`,
+      );
+      entry.error = error;
+      history.push(entry);
+      throw error;
+    }
+
+    if (handler.delayMs) {
+      await sleep(handler.delayMs);
+    }
+
+    if (handler.isError) {
+      const httpError = new HTTPError({
+        status: handler.status,
+        headers: new Headers(),
+        data: handler.data,
+      });
+      entry.error = httpError;
+      entry.result = { status: handler.status, data: handler.data };
+      history.push(entry);
+      throw httpError;
+    }
+
+    const data = handler.resolver ? await handler.resolver(variables) : handler.data;
+
+    entry.result = { status: handler.status, data };
+    history.push(entry);
+    return data;
+  };
+
+  function mock(group: string, method: string): MockBuilder<unknown> {
+    const k = mockKey(group, method);
     if (!mocks.has(k)) mocks.set(k, []);
 
     const handler: MockHandler = { status: 200, isError: false };
@@ -200,7 +197,7 @@ export function createTestClient<T extends Record<string, any> = Record<string, 
   }
 
   return {
-    caller,
+    client: buildClientProxy<T>(backend),
     mock: mock as TestClient<T>["mock"],
     history,
     reset() {
@@ -216,13 +213,11 @@ export function createTestClient<T extends Record<string, any> = Record<string, 
   };
 }
 
-/** Filter history entries by source and optionally by endpoint */
+/** Filter history entries by group and optionally by method */
 export function findRequests(
   history: HistoryEntry[],
-  source: string,
-  endpoint?: string,
+  group: string,
+  method?: string,
 ): HistoryEntry[] {
-  return history.filter(
-    (e) => e.source === source && (endpoint === undefined || e.endpoint === endpoint),
-  );
+  return history.filter((e) => e.group === group && (method === undefined || e.method === method));
 }

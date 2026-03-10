@@ -101,10 +101,10 @@ export const comments = defineGroup({
 })
 
 // Usage:
-// call("api")("comments:getOne", { postId: "5", commentId: "12" })
+// caller.comments.getOne({ postId: "5", commentId: "12" })
 // → GET /posts/5/comments/12
 
-// call("api")("comments:create", { postId: "5", body: "Great post!" })
+// caller.comments.create({ postId: "5", body: "Great post!" })
 // → POST /posts/5/comments  body: { body: "Great post!" }
 ```
 
@@ -125,11 +125,11 @@ type HttpResponse<T> = {
 }
 
 // By default, Nexus returns just the data (unwrapped)
-const users = await call("api")("users:getAll")
+const users = await caller.users.getAll()
 //    ^? User[]
 
 // With rawData: true, you get the full response object
-const response = await call("api", { rawData: true })("users:getAll")
+const response = await caller.users.raw.getAll()
 //    ^? { status: number; headers: Headers; data: User[] }
 ```
 

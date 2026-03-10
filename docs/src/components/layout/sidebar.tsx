@@ -108,7 +108,7 @@ export function Sidebar() {
   return (
     <aside
       aria-label="Documentation navigation"
-      className="hidden w-64 shrink-0 flex-col border-r bg-sidebar-background md:flex"
+      className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r bg-sidebar-background md:flex"
     >
       <div className="flex h-14 items-center gap-2 border-b px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">

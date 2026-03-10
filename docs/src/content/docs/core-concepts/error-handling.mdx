@@ -31,7 +31,7 @@ Use `isHTTPError()` to narrow an unknown error to `HTTPError`. It works as a Typ
 import { isHTTPError } from "@noverax/nexus/error"
 
 try {
-  const user = await call("api")("users:getById", { id: "999" })
+  const user = await caller.users.getById({ id: "999" })
 } catch (error) {
   // Type guard narrows error to HTTPError
   if (isHTTPError(error)) {
@@ -55,14 +55,11 @@ In Server Components and Server Actions, use standard try/catch to handle errors
 
 ```ts title="app/users/[id]/page.tsx"
 import { isHTTPError } from "@noverax/nexus/error"
-import { createCaller } from "@noverax/nexus"
-import { sources } from "@/api/sources"
-
-const call = createCaller(sources)
+import { caller } from "@/lib/caller"
 
 export default async function UserPage({ params }: { params: { id: string } }) {
   try {
-    const user = await call("api")("users:getById", { id: params.id })
+    const user = await caller.users.getById({ id: params.id })
 
     return <UserProfile user={user} />
   } catch (error) {
@@ -85,10 +82,10 @@ When using `createQueryCaller`, React Query catches errors automatically and exp
 "use client"
 
 import { isHTTPError } from "@noverax/nexus/error"
-import { useQuery, useMutation } from "@/lib/caller"
+import { q } from "@/lib/query"
 
 export function UsersList() {
-  const { data, error, isError } = useQuery("api", "users:getAll")
+  const { data, error, isError } = q.users.useQuery("getAll")
 
   // React Query catches errors automatically
   if (isError && isHTTPError(error)) {
@@ -99,7 +96,7 @@ export function UsersList() {
 }
 
 export function CreateUserForm() {
-  const { mutate, error, isError } = useMutation("api", "users:create", {
+  const { mutate, error, isError } = q.users.useMutation("create", {
     onError: (error) => {
       // Handle error in the mutation callback
       if (isHTTPError<{ message: string }>(error)) {

@@ -36,14 +36,12 @@ const posts = defineGroup({
   },
 })
 
-export const sources = {
-  myApi: defineApi({
-    baseURL: process.env.API_URL ?? "http://localhost:4000",
-    groups: { posts },
-  }),
-}
+export const api = defineApi({
+  baseURL: process.env.API_URL ?? "http://localhost:4000",
+  groups: { posts },
+})
 
-export type Sources = typeof sources
+export const sources = { myApi: api }
 ```
 
 ## Step 1: Server route
@@ -65,9 +63,9 @@ Create a composable using `createProxyCaller` for client-side requests:
 
 ```ts title="composables/useCaller.ts"
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "~/lib/sources"
+import type { api } from "~/lib/sources"
 
-export const caller = createProxyCaller<Sources>({
+export const caller = createProxyCaller<typeof api>({
   proxyUrl: "/api/request",
 })
 ```
@@ -79,7 +77,7 @@ Use it in your pages and components:
 import { caller } from "~/composables/useCaller"
 
 const { data: posts, status } = useAsyncData("posts", () =>
-  caller("myApi")("posts:getAll", { page: 1 })
+  caller.posts.getAll({ page: 1 })
 )
 </script>
 
@@ -104,18 +102,18 @@ For server-side data fetching in event handlers, use `createCaller` directly:
 
 ```ts title="lib/server-caller.ts"
 import { createCaller } from "@noverax/nexus"
-import { sources } from "~/lib/sources"
+import { api } from "~/lib/sources"
 
-export const serverCaller = createCaller(sources)
+export const caller = createCaller(api)
 ```
 
 Use it in Nuxt server routes or event handlers:
 
 ```ts title="server/api/dashboard.get.ts"
-import { serverCaller } from "~/lib/server-caller"
+import { caller } from "~/lib/server-caller"
 
 export default defineEventHandler(async () => {
-  const posts = await serverCaller("myApi")("posts:getAll", { page: 1 })
+  const posts = await caller.posts.getAll({ page: 1 })
 
   return {
     totalPosts: posts.total,
@@ -144,12 +142,12 @@ const { data: post } = useFetch(`/api/posts/${route.params.id}`)
 ```
 
 ```ts title="server/api/posts/[id].get.ts"
-import { serverCaller } from "~/lib/server-caller"
+import { caller } from "~/lib/server-caller"
 
 export default defineEventHandler(async (event) => {
   const id = Number(getRouterParam(event, "id"))
 
-  return await serverCaller("myApi")("posts:getById", { id })
+  return await caller.posts.getById({ id })
 })
 ```
 
@@ -168,7 +166,7 @@ const isSubmitting = ref(false)
 async function handleSubmit() {
   isSubmitting.value = true
   try {
-    const post = await caller("myApi")("posts:create", {
+    const post = await caller.posts.create({
       title: title.value,
       body: body.value,
     })
@@ -198,10 +196,10 @@ For advanced caching and mutation management, consider using `@tanstack/vue-quer
 
 ```
 composables/
-  useCaller.ts              # createProxyCaller<Sources>()
+  useCaller.ts              # createProxyCaller<typeof api>()
 lib/
   sources.ts                # defineApi + defineGroup + endpoint
-  server-caller.ts          # createCaller(sources)
+  server-caller.ts          # createCaller(api)
 server/
   api/
     request.post.ts         # nexusHandler(sources)

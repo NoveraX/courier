@@ -4,7 +4,7 @@ import { useState } from "react"
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
-import { caller } from "@/lib/query"
+import { caller } from "@/lib/caller"
 
 type RawResponse = {
   status: number
@@ -20,7 +20,7 @@ export function NormalFetchDemo() {
     setLoading(true)
     setData(null)
     try {
-      const result = await caller("api")("users:getAll", {})
+      const result = await caller.users.getAll({})
       setData(result)
     } finally {
       setLoading(false)
@@ -43,10 +43,7 @@ export function RawFetchDemo() {
     setLoading(true)
     setResult(null)
     try {
-      const data = (await caller("api", { rawData: true })(
-        "users:getAll",
-        {}
-      )) as unknown as RawResponse
+      const data = (await caller.users.raw.getAll({})) as unknown as RawResponse
       setResult(data)
     } finally {
       setLoading(false)

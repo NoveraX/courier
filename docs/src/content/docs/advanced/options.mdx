@@ -33,7 +33,7 @@ type BaseOptions = {
 
 ## CallOptions
 
-Passed as the second argument to a `call` / `caller` function. These are per-request options that control how a single request behaves:
+Passed as the second argument to a caller method. These are per-request options that control how a single request behaves:
 
 ```ts title="types"
 type CallOptions = {
@@ -97,22 +97,22 @@ The `next` and `cache` fetch options control how the underlying `fetch` call is 
 Options are forwarded directly to the server-side `fetch` call:
 
 ```ts title="app/page.tsx"
-import { serverCaller } from "@/lib/server-caller"
+import { caller } from "@/lib/caller"
 
 // Per-request caching with Next.js ISR
-const users = await serverCaller("api", {
+const users = await caller.users.getAll(undefined, {
   next: { revalidate: 60 },
-})("users:getAll")
+})
 
 // Tag-based revalidation
-const post = await serverCaller("api", {
+const post = await caller.posts.getById({ id }, {
   next: { tags: ["posts", `post-${id}`] },
-})("posts:getById", { id })
+})
 
 // Force no caching
-const live = await serverCaller("api", {
+const live = await caller.stats.realtime(undefined, {
   cache: "no-store",
-})("stats:realtime")
+})
 ```
 
 ### Proxy mode <ModeBadge mode="proxy" />
@@ -120,11 +120,11 @@ const live = await serverCaller("api", {
 In proxy mode with `method: "GET"`, caching works at two levels:
 
 ```ts title="components/users.tsx"
-const users = await call("api", {
+const users = await caller.users.getAll(undefined, {
   method: "GET",
   next: { revalidate: 60 },
   cache: "force-cache",
-})("users:getAll")
+})
 ```
 
 **Level 1 — Browser/CDN cache**: The `cache` option controls the browser's HTTP cache for the `GET /api/request` response. Combined with `Cache-Control` headers from the server (set via `schema.cache` in endpoint definitions), this enables edge and CDN caching.
@@ -153,9 +153,9 @@ const api = defineApi({
 })
 
 // Per-request headers
-const data = await caller("api", {
+const data = await caller.users.getAll(undefined, {
   headers: { "X-Custom-Header": "value" },
-})("users:getAll")
+})
 ```
 
 ## Option precedence
@@ -166,20 +166,20 @@ When the same option is set at multiple levels, per-request options take the hig
 import { defineApi } from "@noverax/nexus/define"
 
 // Options are merged with this precedence (highest wins):
-// 1. Per-request options  → caller("api", { timeout: 5000 })("...")
+// 1. Per-request options  → caller.reports.generate(vars, { timeout: 5000 })
 // 2. Source-level options → defineApi({ timeout: 10000, ... })
 // 3. fetch defaults       → native fetch defaults
 
 const api = defineApi({
   baseURL: process.env.API_URL ?? "http://localhost:4000",
-  groups: { users },
+  groups: { users, reports },
   timeout: 10_000,  // Default for all requests in this source
 })
 
 // Override timeout for a slow endpoint
-const report = await caller("api", {
+const report = await caller.reports.generate({ type: "annual" }, {
   timeout: 30_000,
-})("reports:generate", { type: "annual" })
+})
 ```
 
 ## Credentials

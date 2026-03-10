@@ -2,13 +2,13 @@ export const metadata = { title: "useQuery", description: "Fetch data with autom
 
 ## Signature
 
-`useQuery` takes a source name, a `"group:method"` query string, and an optional options object. Types are fully inferred from your `Endpoint` definitions:
+Access `useQuery` through the query caller's dot-notation API. Types are fully inferred from your `Endpoint` definitions:
 
 ```ts
-const result = useQuery(source, query, options?)
+const result = q.{group}.useQuery(method, options?)
 
-// source  — key from your Sources type (e.g. "api")
-// query   — "group:method" string (e.g. "users:getAll")
+// group   — endpoint group name (e.g. "users")
+// method  — method name within the group (e.g. "getAll")
 // options — { variables?, requestOptions?, ...reactQueryOptions }
 ```
 
@@ -19,10 +19,10 @@ The simplest usage — fetch data on mount. The `data` type is automatically inf
 ```ts title="components/user-list.tsx"
 "use client"
 
-import { useQuery } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function UserList() {
-  const { data, isLoading, error } = useQuery("api", "users:getAll")
+  const { data, isLoading, error } = q.users.useQuery("getAll")
   //      ^? UserList — auto-inferred from Endpoint<UserList>
 
   if (isLoading) return <p>Loading...</p>
@@ -45,11 +45,11 @@ When a method defines variables (e.g. `Endpoint<User, { id: number }>`), the `va
 ```ts title="components/user-profile.tsx"
 "use client"
 
-import { useQuery } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function UserProfile({ userId }: { userId: number }) {
   // Endpoint<User, { id: number }> → variables is required
-  const { data: user, isLoading } = useQuery("api", "users:getById", {
+  const { data: user, isLoading } = q.users.useQuery("getById", {
     variables: { id: userId },
     //          ^? { id: number } — auto-inferred from Endpoint
   })
@@ -76,10 +76,10 @@ Use the `enabled` option to conditionally execute a query. The query won't fire 
 ```ts title="components/user-profile.tsx"
 "use client"
 
-import { useQuery } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function UserProfile({ userId }: { userId: number | null }) {
-  const { data, isLoading } = useQuery("api", "users:getById", {
+  const { data, isLoading } = q.users.useQuery("getById", {
     variables: { id: userId! },
     // Only fetch when userId is available
     enabled: userId !== null,
@@ -97,7 +97,7 @@ export function UserProfile({ userId }: { userId: number | null }) {
 All standard React Query options are supported alongside Nexus-specific options. Configure caching, refetching, and data transformation:
 
 ```ts
-const { data } = useQuery("api", "users:getAll", {
+const { data } = q.users.useQuery("getAll", {
   variables: { page: 1, limit: 20 },
 
   // Standard React Query options — all supported
@@ -117,21 +117,27 @@ const { data } = useQuery("api", "users:getAll", {
 
 ## Auto-generated query keys
 
-Nexus automatically generates query keys from the source, query, and variables. This means cache invalidation works without manually managing keys:
+Nexus automatically generates hierarchical query keys from the source, group, method, and variables. This enables cache invalidation at different levels of specificity:
 
 ```ts
-// Auto-generated query key: ["api", "users:getAll"]
-useQuery("api", "users:getAll")
+// Auto-generated query key: ["api", "users", "getAll"]
+q.users.useQuery("getAll")
 
-// With variables: ["api", "users:getById", { id: 5 }]
-useQuery("api", "users:getById", { variables: { id: 5 } })
+// With variables: ["api", "users", "getById", { id: 5 }]
+q.users.useQuery("getById", { variables: { id: 5 } })
 
-// Use the same key format for cache invalidation
-queryClient.invalidateQueries({ queryKey: ["api", "users:getAll"] })
+// Invalidate a specific method
+queryClient.invalidateQueries({ queryKey: ["api", "users", "getAll"] })
+
+// Invalidate all queries for a group
+queryClient.invalidateQueries({ queryKey: ["api", "users"] })
+
+// Invalidate all queries for the source
+queryClient.invalidateQueries({ queryKey: ["api"] })
 ```
 
-<Callout variant="tip" title="Partial key matching">
-React Query supports partial key matching. Invalidating `["api", "users:getAll"]` will match all queries for that endpoint regardless of variables. Invalidating `["api"]` will match all queries for that source.
+<Callout variant="tip" title="Group-level invalidation">
+Unlike flat key formats, hierarchical keys let you invalidate all queries for a group at once. `["api", "users"]` matches `getAll`, `getById`, `create` — everything in the `users` group.
 </Callout>
 
 ## Error handling
@@ -142,10 +148,10 @@ The `error` property is typed as `Error`. Use `isHTTPError` to check if it's an 
 "use client"
 
 import { isHTTPError } from "@noverax/nexus/error"
-import { useQuery } from "@/lib/query"
+import { q } from "@/lib/query"
 
 export function UserList() {
-  const { data, error, isError } = useQuery("api", "users:getAll")
+  const { data, error, isError } = q.users.useQuery("getAll")
 
   if (isError) {
     // Check if it's an HTTP error with status/response

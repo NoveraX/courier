@@ -7,11 +7,11 @@ Nexus is built around a simple idea: **define your API once, call it from anywhe
 ```typescript title="Architecture layers"
 // Layer 1 — Definition (shared across all frameworks)
 const api = defineApi({ baseURL: "...", groups: { users } })
-export const sources = { api }
+export { api }
 
 // Layer 2 — Transport (mode-specific)
-// Direct: createCaller(sources) → executeRequest → fetch → backend
-// Proxy:  createProxyCaller() → POST /api/request → adapter → executeRequest → fetch → backend
+// Direct: createCaller(api) → executeRequest → fetch → backend
+// Proxy:  createProxyCaller<typeof api>() → POST /api/request → adapter → executeRequest → fetch → backend
 
 // Layer 3 — Execution (shared core engine)
 // executeRequest → middleware chain → schema validation → HttpClient → fetch
@@ -35,7 +35,7 @@ Server-side code calls the backend with no proxy hop:
 ┌──────────────────────────────────────────────────────────────┐
 │  Any Runtime (Node.js, Bun, Deno, RSC, Server Actions)       │
 │                                                              │
-│  createCaller(sources)                                       │
+│  createCaller(api)                                           │
 │       │                                                      │
 │       ▼                                                      │
 │  executeRequest(sources, payload, context)                   │
@@ -59,7 +59,7 @@ The browser sends requests through your server, which hides API keys and bypasse
 ┌──────────────────────────────────────────────────────────────┐
 │  Browser                                                     │
 │                                                              │
-│  createProxyCaller<Sources>()                                │
+│  createProxyCaller<typeof api>()                              │
 │       │                                                      │
 │       ▼                                                      │
 │  fetch("/api/request", {                                     │
@@ -118,7 +118,7 @@ const api = defineApi({
   groups: { users },
 })
 
-export const sources = { api }
+export { api }
 ```
 
 ### executeRequest
@@ -176,11 +176,11 @@ The universal adapter interface. All server framework adapters use it internally
 
 | Factory | Mode | Environment | Returns |
 | --- | --- | --- | --- |
-| `createCaller(sources)` | Direct | Any runtime | `CallerFn<Sources>` |
-| `createProxyCaller<Sources>()` | Proxy | Browser | `CallerFn<Sources>` |
-| `createQueryCaller<Sources>()` | Proxy + hooks | Browser (React) | `{ useQuery, useMutation, caller, ... }` |
+| `createCaller(api)` | Direct | Any runtime | `TypedClient<typeof api>` |
+| `createProxyCaller<typeof api>()` | Proxy | Browser | `TypedClient<typeof api>` |
+| `createQueryCaller<typeof api>()` | Proxy + hooks | Browser (React) | `{ useQuery, useMutation, caller, ... }` |
 
-All return the same curried `CallerFn<Sources>` type (or wrap it), giving you identical type inference regardless of which factory you use.
+All return the same `TypedClient<typeof api>` type (or wrap it), giving you identical type inference regardless of which factory you use.
 
 ## Next Steps
 

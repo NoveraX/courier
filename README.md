@@ -117,13 +117,10 @@ const users = defineGroup({
   },
 })
 
-const api = defineApi({
+export const api = defineApi({
   baseURL: process.env.API_URL!,
   groups: { users },
 })
-
-export const sources = { api }
-export type Sources = typeof sources
 ```
 
 <br />
@@ -153,24 +150,24 @@ export const { GET, POST } = apiRoute(sources)
 **2. Client caller** — React Query hooks with full type inference:
 
 ```ts
-// lib/caller.ts
+// lib/query.ts
 import { createQueryCaller } from "@noverax/nexus-query"
-import type { Sources } from "@/api/sources"
+import type { api } from "@/api/sources"
 
-export const { useQuery, useMutation, useSuspenseQuery, caller } = createQueryCaller<Sources>()
+export const q = createQueryCaller<typeof api>("api")
 ```
 
 **3. Client Components:**
 
 ```tsx
 "use client"
-import { useQuery, useMutation } from "@/lib/caller"
+import { q } from "@/lib/query"
 
 export default function UsersPage() {
-  const { data: users, isLoading } = useQuery("api", "users:getAll")
+  const { data: users, isLoading } = q.users.useQuery("getAll")
   //      ^? User[]
 
-  const { mutate } = useMutation("api", "users:create", {
+  const { mutate } = q.users.useMutation("create", {
     onSuccess: (user) => console.log("Created:", user.name),
     //                                           ^? string
   })
@@ -193,12 +190,12 @@ export default function UsersPage() {
 ```tsx
 // app/users/page.tsx
 import { createCaller } from "@noverax/nexus"
-import { sources } from "@/api/sources"
+import { api } from "@/api/sources"
 
-const call = createCaller(sources)
+const caller = createCaller(api)
 
 export default async function UsersPage() {
-  const users = await call("api")("users:getAll")
+  const users = await caller.users.getAll()
   //    ^? User[]
 
   return <ul>{users.map((u) => <li key={u.id}>{u.name}</li>)}</ul>
@@ -260,9 +257,9 @@ export default nexusHandler(sources)
 ```ts
 // composables/useCaller.ts
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "~/api/sources"
+import type { api } from "~/api/sources"
 
-export const caller = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
+export const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
 ```
 
 **3. Components:**
@@ -273,7 +270,7 @@ export const caller = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
 import { caller } from "~/composables/useCaller"
 
 const { data: users, status } = useAsyncData("users", () =>
-  caller("api")("users:getAll")
+  caller.users.getAll()
 )
 </script>
 
@@ -292,12 +289,12 @@ const { data: users, status } = useAsyncData("users", () =>
 ```ts
 // server/api/dashboard.ts
 import { createCaller } from "@noverax/nexus"
-import { sources } from "~/api/sources"
+import { api } from "~/api/sources"
 
-const call = createCaller(sources)
+const caller = createCaller(api)
 
 export default defineEventHandler(async () => {
-  const users = await call("api")("users:getAll")
+  const users = await caller.users.getAll()
   return { users }
 })
 ```
@@ -313,11 +310,11 @@ Works with any React setup. Pair with Express, Hono, or Fastify on the server si
 **1. Caller with React Query:**
 
 ```ts
-// lib/caller.ts
+// lib/query.ts
 import { createQueryCaller } from "@noverax/nexus-query"
-import type { Sources } from "./api/sources"
+import type { api } from "./api/sources"
 
-export const { useQuery, useMutation, caller } = createQueryCaller<Sources>({
+export const q = createQueryCaller<typeof api>("api", {
   proxyUrl: "/api/request", // points to your backend proxy route
 })
 ```
@@ -325,14 +322,14 @@ export const { useQuery, useMutation, caller } = createQueryCaller<Sources>({
 **2. Components:**
 
 ```tsx
-import { useQuery, useMutation } from "./lib/caller"
+import { q } from "./lib/query"
 import { QueryClient, QueryClientProvider } from "@noverax/nexus-query"
 
 const queryClient = new QueryClient()
 
 function Users() {
-  const { data: users } = useQuery("api", "users:getAll")
-  const { mutate } = useMutation("api", "users:create")
+  const { data: users } = q.users.useQuery("getAll")
+  const { mutate } = q.users.useMutation("create")
 
   return (
     <ul>
@@ -362,9 +359,9 @@ The core caller is framework-agnostic — use it with `ref`, `reactive`, or any 
 ```ts
 // composables/useCaller.ts
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "@/api/sources"
+import type { api } from "@/api/sources"
 
-export const caller = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
+export const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
 ```
 
 ```vue
@@ -376,12 +373,12 @@ const users = ref<User[]>([])
 const loading = ref(true)
 
 onMounted(async () => {
-  users.value = await caller("api")("users:getAll")
+  users.value = await caller.users.getAll()
   loading.value = false
 })
 
 async function createUser(name: string, email: string) {
-  const user = await caller("api")("users:create", { name, email })
+  const user = await caller.users.create({ name, email })
   users.value.push(user)
 }
 </script>
@@ -394,7 +391,7 @@ async function createUser(name: string, email: string) {
 </template>
 ```
 
-> **Tip:** For Vue + TanStack Query, use `@tanstack/vue-query` with `caller("api")("users:getAll")` as your `queryFn`.
+> **Tip:** For Vue + TanStack Query, use `@tanstack/vue-query` with `caller.users.getAll()` as your `queryFn`.
 
 <br />
 
@@ -405,9 +402,9 @@ async function createUser(name: string, email: string) {
 ```ts
 // lib/caller.ts
 import { createProxyCaller } from "@noverax/nexus"
-import type { Sources } from "./api/sources"
+import type { api } from "./api/sources"
 
-export const caller = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
+export const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
 ```
 
 ```svelte
@@ -419,7 +416,7 @@ export const caller = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
   let users = $state([])
 
   onMount(async () => {
-    users = await caller("api")("users:getAll")
+    users = await caller.users.getAll()
   })
 </script>
 
@@ -503,13 +500,13 @@ The core caller works in any JavaScript runtime — no framework required.
 
 ```ts
 import { createCaller } from "@noverax/nexus"
-import { sources } from "./api/sources"
+import { api } from "./api/sources"
 
-const call = createCaller(sources)
+const caller = createCaller(api)
 
 // Works in Node.js, Bun, Deno, Cloudflare Workers — anywhere with fetch
-const users = await call("api")("users:getAll")
-const user = await call("api")("users:getById", { id: "1" })
+const users = await caller.users.getAll()
+const user = await caller.users.getById({ id: "1" })
 ```
 
 <br />
@@ -574,25 +571,26 @@ In-memory test client with mock builder — no network, no setup.
 
 ```ts
 import { createTestClient } from "@noverax/nexus/testing"
-import type { Sources } from "./api/sources"
+import type { api } from "./api/sources"
 
-const { caller, mock, history } = createTestClient<Sources>()
+const { client, mock, history } = createTestClient<typeof api>()
 
 // Mock responses
-mock("api", "users:getAll").resolves([{ id: "1", name: "Alice" }])
-mock("api", "users:create").returns((vars) => ({ id: "2", ...vars }))
-mock("api", "users:delete").rejects(404, { message: "Not found" })
+mock("users", "getAll").resolves([{ id: "1", name: "Alice" }])
+mock("users", "create").returns((vars) => ({ id: "2", ...vars }))
+mock("users", "remove").rejects(404, { message: "Not found" })
 
 // Use like the real caller
-const users = await caller("api")("users:getAll")
+const users = await client.users.getAll()
 
 // Assert on request history
 expect(history).toHaveLength(1)
-expect(history[0].endpoint).toBe("users:getAll")
+expect(history[0].group).toBe("users")
+expect(history[0].method).toBe("getAll")
 
 // Lifecycle control
-mock("api", "users:getAll").resolves("first").once()
-mock("api", "slow").resolves("done").delay(100)
+mock("users", "getAll").resolves("first").once()
+mock("users", "getAll").resolves("done").delay(100)
 ```
 
 <br />
@@ -616,7 +614,7 @@ mock("api", "slow").resolves("done").delay(100)
               │  (server)  │          │  (browser) │                   │
               └─────┬──────┘          └─────┬──────┘                   │
                     │                       │                          │
-           createCaller(sources)    createProxyCaller()                │
+           createCaller(api)      createProxyCaller()                │
                     │                       │                          │
                     │                  POST /api/request               │
                     │                       │                          │
@@ -640,7 +638,7 @@ mock("api", "slow").resolves("done").delay(100)
 
 **Proxy mode** — browser sends requests through your server, which hides API keys, bypasses CORS, and forwards cookies automatically.
 
-Both modes share the same `sources` definition, the same middleware chain, and the same type inference.
+Both modes share the same API definition, the same middleware chain, and the same type inference.
 
 <br />
 

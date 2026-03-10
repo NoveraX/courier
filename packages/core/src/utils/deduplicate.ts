@@ -1,3 +1,4 @@
+import { devtoolsHooks } from "../devtools";
 import { HTTPError } from "../error";
 import type { HttpClient } from "../http-client/index";
 
@@ -19,6 +20,11 @@ export function deduplicateAndAbortPrevious(
 
   if (existing) {
     delete client.pendingRequests[dedupeKey];
+    devtoolsHooks.onDedupAbort?.({
+      requestId: dedupeKey,
+      key: dedupeKey,
+      timestamp: performance.now(),
+    });
     existing.abort(
       new HTTPError({
         data: { success: false, message: "cancel request" },

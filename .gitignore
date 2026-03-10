@@ -3,6 +3,7 @@ node_modules/
 
 # Build output
 packages/*/lib/
+packages/**/dist/
 *.tsbuildinfo
 *.tgz
 

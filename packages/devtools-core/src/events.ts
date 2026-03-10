@@ -23,13 +23,20 @@ export type EventType =
   | "validation:fail"
   // Proxy
   | "proxy:receive"
+  | "proxy:parse"
+  | "proxy:origin-reject"
   | "proxy:respond"
   // Cache
   | "cache:hit"
   | "cache:miss"
+  | "cache:store"
+  | "cache:invalidate"
   // Deduplication
   | "dedup:abort"
-  | "dedup:reuse";
+  | "dedup:reuse"
+  // Upload
+  | "upload:progress"
+  | "upload:complete";
 
 /** Base envelope for all events */
 export interface DevToolsEvent {
@@ -202,6 +209,20 @@ export interface ProxyReceiveEvent extends DevToolsEvent {
   method: string;
 }
 
+export interface ProxyParseEvent extends DevToolsEvent {
+  type: "proxy:parse";
+  source: string;
+  group: string | undefined;
+  method: string;
+  variables: unknown;
+}
+
+export interface ProxyOriginRejectEvent extends DevToolsEvent {
+  type: "proxy:origin-reject";
+  origin: string;
+  allowedOrigins: string[];
+}
+
 export interface ProxyRespondEvent extends DevToolsEvent {
   type: "proxy:respond";
   proxyMethod: "GET" | "POST";
@@ -209,6 +230,63 @@ export interface ProxyRespondEvent extends DevToolsEvent {
   group: string | undefined;
   method: string;
   status: number;
+}
+
+// ── Cache Events ──────────────────────────────────────────────────────────────
+
+export interface CacheHitEvent extends DevToolsEvent {
+  type: "cache:hit";
+  requestId: string;
+  key: string;
+  age: number;
+}
+
+export interface CacheMissEvent extends DevToolsEvent {
+  type: "cache:miss";
+  requestId: string;
+  key: string;
+}
+
+export interface CacheStoreEvent extends DevToolsEvent {
+  type: "cache:store";
+  requestId: string;
+  key: string;
+  ttl: number;
+}
+
+export interface CacheInvalidateEvent extends DevToolsEvent {
+  type: "cache:invalidate";
+  key: string;
+  reason: string;
+}
+
+// ── Deduplication Events ──────────────────────────────────────────────────────
+
+export interface DedupAbortEvent extends DevToolsEvent {
+  type: "dedup:abort";
+  requestId: string;
+  key: string;
+}
+
+export interface DedupReuseEvent extends DevToolsEvent {
+  type: "dedup:reuse";
+  requestId: string;
+  key: string;
+}
+
+// ── Upload Events ─────────────────────────────────────────────────────────────
+
+export interface UploadProgressEvent extends DevToolsEvent {
+  type: "upload:progress";
+  requestId: string;
+  loaded: number;
+  total: number;
+  percentage: number;
+}
+
+export interface UploadCompleteEvent extends DevToolsEvent {
+  type: "upload:complete";
+  requestId: string;
 }
 
 // ── Union type ─────────────────────────────────────────────────────────────────
@@ -231,4 +309,14 @@ export type AnyDevToolsEvent =
   | ValidationPassEvent
   | ValidationFailEvent
   | ProxyReceiveEvent
-  | ProxyRespondEvent;
+  | ProxyParseEvent
+  | ProxyOriginRejectEvent
+  | ProxyRespondEvent
+  | CacheHitEvent
+  | CacheMissEvent
+  | CacheStoreEvent
+  | CacheInvalidateEvent
+  | DedupAbortEvent
+  | DedupReuseEvent
+  | UploadProgressEvent
+  | UploadCompleteEvent;

@@ -321,11 +321,73 @@ describe("DevTools Instrumentation", () => {
     expect(events.find((e) => e.type === "proxy:receive")).toBeUndefined();
   });
 
+  it("emits cache:hit, cache:miss, cache:store via hooks", () => {
+    const events: AnyDevToolsEvent[] = [];
+    connection = connectDevTools();
+    connection.bus.on((e) => events.push(e));
+
+    devtoolsHooks.onCacheMiss?.({
+      requestId: "api:users:getAll",
+      key: "api:users:getAll:{}",
+      timestamp: performance.now(),
+    });
+
+    devtoolsHooks.onCacheStore?.({
+      requestId: "api:users:getAll",
+      key: "api:users:getAll:{}",
+      ttl: 60000,
+      timestamp: performance.now(),
+    });
+
+    devtoolsHooks.onCacheHit?.({
+      requestId: "api:users:getAll",
+      key: "api:users:getAll:{}",
+      age: 5000,
+      timestamp: performance.now(),
+    });
+
+    expect(events.find((e) => e.type === "cache:miss")).toMatchObject({
+      type: "cache:miss",
+      key: "api:users:getAll:{}",
+    });
+
+    expect(events.find((e) => e.type === "cache:store")).toMatchObject({
+      type: "cache:store",
+      key: "api:users:getAll:{}",
+      ttl: 60000,
+    });
+
+    expect(events.find((e) => e.type === "cache:hit")).toMatchObject({
+      type: "cache:hit",
+      key: "api:users:getAll:{}",
+      age: 5000,
+    });
+  });
+
+  it("emits dedup:abort via hooks", () => {
+    const events: AnyDevToolsEvent[] = [];
+    connection = connectDevTools();
+    connection.bus.on((e) => events.push(e));
+
+    devtoolsHooks.onDedupAbort?.({
+      requestId: "GET:/api/users",
+      key: "GET:/api/users",
+      timestamp: performance.now(),
+    });
+
+    expect(events.find((e) => e.type === "dedup:abort")).toMatchObject({
+      type: "dedup:abort",
+      key: "GET:/api/users",
+    });
+  });
+
   it("cleans up all hooks on disconnect", () => {
     connection = connectDevTools();
     expect(devtoolsHooks.onRequestStart).toBeDefined();
     expect(devtoolsHooks.onProxyReceive).toBeDefined();
     expect(devtoolsHooks.onMiddlewareEnter).toBeDefined();
+    expect(devtoolsHooks.onCacheHit).toBeDefined();
+    expect(devtoolsHooks.onDedupAbort).toBeDefined();
 
     connection.disconnect();
     connection = null;
@@ -338,6 +400,14 @@ describe("DevTools Instrumentation", () => {
     expect(devtoolsHooks.onMiddlewareEnter).toBeUndefined();
     expect(devtoolsHooks.onMiddlewareExit).toBeUndefined();
     expect(devtoolsHooks.onMiddlewareError).toBeUndefined();
+    expect(devtoolsHooks.onCacheHit).toBeUndefined();
+    expect(devtoolsHooks.onCacheMiss).toBeUndefined();
+    expect(devtoolsHooks.onCacheStore).toBeUndefined();
+    expect(devtoolsHooks.onCacheInvalidate).toBeUndefined();
+    expect(devtoolsHooks.onDedupAbort).toBeUndefined();
+    expect(devtoolsHooks.onDedupReuse).toBeUndefined();
+    expect(devtoolsHooks.onUploadProgress).toBeUndefined();
+    expect(devtoolsHooks.onUploadComplete).toBeUndefined();
   });
 
   it("prevents double connection", () => {

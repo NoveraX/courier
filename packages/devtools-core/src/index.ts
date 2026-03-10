@@ -7,9 +7,15 @@ export {
 export { EventBus } from "./event-bus";
 export type {
   AnyDevToolsEvent,
+  CacheHitEvent,
+  CacheInvalidateEvent,
+  CacheMissEvent,
+  CacheStoreEvent,
   ConnectionHeartbeatEvent,
   ConnectionInitEvent,
   ConnectionSourcesEvent,
+  DedupAbortEvent,
+  DedupReuseEvent,
   DevToolsEvent,
   EventType,
   HttpFetchEndEvent,
@@ -18,6 +24,8 @@ export type {
   MiddlewareEnterEvent,
   MiddlewareErrorEvent,
   MiddlewareExitEvent,
+  ProxyOriginRejectEvent,
+  ProxyParseEvent,
   ProxyReceiveEvent,
   ProxyRespondEvent,
   RequestAbortEvent,
@@ -26,7 +34,10 @@ export type {
   RequestStartEvent,
   RequestTiming,
   SourceMap,
+  UploadCompleteEvent,
+  UploadProgressEvent,
   ValidationFailEvent,
   ValidationPassEvent,
   ValidationStartEvent,
 } from "./events";
+export { extractSourceMap } from "./source-map";

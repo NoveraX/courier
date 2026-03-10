@@ -111,6 +111,33 @@ export interface DevToolsHooks {
     status: number;
     timestamp: number;
   }) => void;
+
+  onCacheHit?: (event: { requestId: string; key: string; age: number; timestamp: number }) => void;
+
+  onCacheMiss?: (event: { requestId: string; key: string; timestamp: number }) => void;
+
+  onCacheStore?: (event: {
+    requestId: string;
+    key: string;
+    ttl: number;
+    timestamp: number;
+  }) => void;
+
+  onCacheInvalidate?: (event: { key: string; reason: string; timestamp: number }) => void;
+
+  onDedupAbort?: (event: { requestId: string; key: string; timestamp: number }) => void;
+
+  onDedupReuse?: (event: { requestId: string; key: string; timestamp: number }) => void;
+
+  onUploadProgress?: (event: {
+    requestId: string;
+    loaded: number;
+    total: number;
+    percentage: number;
+    timestamp: number;
+  }) => void;
+
+  onUploadComplete?: (event: { requestId: string; timestamp: number }) => void;
 }
 
 /** Global hooks object. Devtools-core sets these callbacks via connectDevTools(). */

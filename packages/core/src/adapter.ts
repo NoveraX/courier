@@ -107,11 +107,24 @@ export function createHandler(sources: Sources): AdapterHandler {
       return errorResponse(415, "Unsupported Content-Type");
     }
 
+    const proxySource =
+      body instanceof FormData
+        ? String(body.get("_source") ?? "unknown")
+        : ((body?.source as string) ?? "unknown");
+    const proxyGroup =
+      body instanceof FormData
+        ? ((body.get("_group") as string | null) ?? undefined)
+        : (body?.group as string | undefined);
+    const proxyMethod =
+      body instanceof FormData
+        ? String(body.get("_method") ?? "unknown")
+        : ((body?.method as string) ?? "unknown");
+
     dt.onProxyReceive?.({
       proxyMethod: "POST",
-      source: "unknown",
-      group: undefined,
-      method: "unknown",
+      source: proxySource,
+      group: proxyGroup,
+      method: proxyMethod,
       timestamp: performance.now(),
     });
 
@@ -119,9 +132,9 @@ export function createHandler(sources: Sources): AdapterHandler {
 
     dt.onProxyRespond?.({
       proxyMethod: "POST",
-      source: "unknown",
-      group: undefined,
-      method: "unknown",
+      source: proxySource,
+      group: proxyGroup,
+      method: proxyMethod,
       status: response.status,
       timestamp: performance.now(),
     });

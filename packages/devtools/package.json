@@ -1,0 +1,42 @@
+{
+  "name": "@noverax/nexus-devtools",
+  "version": "0.0.0",
+  "description": "Standalone DevTools server and UI for @noverax/nexus",
+  "author": "NoveraX",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "nexus-devtools": "./lib/cli.js"
+  },
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    }
+  },
+  "files": [
+    "lib",
+    "ui/dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup && npm run build:ui",
+    "build:server": "tsup",
+    "build:ui": "cd ui && npx vite build",
+    "dev:ui": "cd ui && npx vite",
+    "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "socket.io": "^4.8.3",
+    "citty": "^0.1.6",
+    "open": "^10.2.0"
+  }
+}

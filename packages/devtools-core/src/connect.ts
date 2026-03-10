@@ -1,7 +1,14 @@
 import { devtoolsHooks } from "@noverax/nexus";
+import type { Sources } from "@noverax/nexus/define";
 import { EventBus } from "./event-bus";
 import type {
   AnyDevToolsEvent,
+  CacheHitEvent,
+  CacheInvalidateEvent,
+  CacheMissEvent,
+  CacheStoreEvent,
+  DedupAbortEvent,
+  DedupReuseEvent,
   HttpFetchEndEvent,
   HttpFetchStartEvent,
   MiddlewareEnterEvent,
@@ -13,10 +20,13 @@ import type {
   RequestErrorEvent,
   RequestStartEvent,
   SourceMap,
+  UploadCompleteEvent,
+  UploadProgressEvent,
   ValidationFailEvent,
   ValidationPassEvent,
   ValidationStartEvent,
 } from "./events";
+import { extractSourceMap } from "./source-map";
 
 export interface ConnectDevToolsOptions {
   /** DevTools server port (default: 4380) */
@@ -27,8 +37,10 @@ export interface ConnectDevToolsOptions {
   framework?: string;
   /** Nexus version for connection:init */
   nexusVersion?: string;
-  /** Source map for API Explorer */
-  sources?: SourceMap;
+  /** Sources object — auto-extracts source map for API Explorer */
+  sources?: Sources;
+  /** Pre-built source map (alternative to sources) */
+  sourceMap?: SourceMap;
   /** Max buffered events before a listener connects */
   maxBufferSize?: number;
   /** Filter events */
@@ -76,9 +88,12 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
     framework = "unknown",
     nexusVersion = "0.0.0",
     sources,
+    sourceMap,
     maxBufferSize,
     filter,
   } = options;
+
+  const resolvedSourceMap = sourceMap ?? (sources ? extractSourceMap(sources) : undefined);
 
   const bus = new EventBus({ maxBufferSize });
   const sessionId = `session_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -278,16 +293,121 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
     );
   };
 
+  devtoolsHooks.onCacheHit = (e) => {
+    bus.emit(
+      createEvent<CacheHitEvent>({
+        id: e.requestId,
+        type: "cache:hit",
+        timestamp: e.timestamp,
+        requestId: e.requestId,
+        key: e.key,
+        age: e.age,
+      }),
+    );
+  };
+
+  devtoolsHooks.onCacheMiss = (e) => {
+    bus.emit(
+      createEvent<CacheMissEvent>({
+        id: e.requestId,
+        type: "cache:miss",
+        timestamp: e.timestamp,
+        requestId: e.requestId,
+        key: e.key,
+      }),
+    );
+  };
+
+  devtoolsHooks.onCacheStore = (e) => {
+    bus.emit(
+      createEvent<CacheStoreEvent>({
+        id: e.requestId,
+        type: "cache:store",
+        timestamp: e.timestamp,
+        requestId: e.requestId,
+        key: e.key,
+        ttl: e.ttl,
+      }),
+    );
+  };
+
+  devtoolsHooks.onCacheInvalidate = (e) => {
+    bus.emit(
+      createEvent<CacheInvalidateEvent>({
+        id: `cache_${Date.now().toString(36)}`,
+        type: "cache:invalidate",
+        timestamp: e.timestamp,
+        key: e.key,
+        reason: e.reason,
+      }),
+    );
+  };
+
+  devtoolsHooks.onDedupAbort = (e) => {
+    bus.emit(
+      createEvent<DedupAbortEvent>({
+        id: e.requestId,
+        type: "dedup:abort",
+        timestamp: e.timestamp,
+        requestId: e.requestId,
+        key: e.key,
+      }),
+    );
+  };
+
+  devtoolsHooks.onDedupReuse = (e) => {
+    bus.emit(
+      createEvent<DedupReuseEvent>({
+        id: e.requestId,
+        type: "dedup:reuse",
+        timestamp: e.timestamp,
+        requestId: e.requestId,
+        key: e.key,
+      }),
+    );
+  };
+
+  devtoolsHooks.onUploadProgress = (e) => {
+    bus.emit(
+      createEvent<UploadProgressEvent>({
+        id: e.requestId,
+        type: "upload:progress",
+        timestamp: e.timestamp,
+        requestId: e.requestId,
+        loaded: e.loaded,
+        total: e.total,
+        percentage: e.percentage,
+      }),
+    );
+  };
+
+  devtoolsHooks.onUploadComplete = (e) => {
+    bus.emit(
+      createEvent<UploadCompleteEvent>({
+        id: e.requestId,
+        type: "upload:complete",
+        timestamp: e.timestamp,
+        requestId: e.requestId,
+      }),
+    );
+  };
+
   // ── Socket.IO connection (optional) ────────────────────────────────────────
 
   let socketCleanup: (() => void) | undefined;
 
   // Dynamic import — socket.io-client is an optional peer dependency
-  void tryConnectSocket(bus, sessionId, host, port, framework, nexusVersion, sources).then(
-    (cleanup) => {
-      socketCleanup = cleanup;
-    },
-  );
+  void tryConnectSocket(
+    bus,
+    sessionId,
+    host,
+    port,
+    framework,
+    nexusVersion,
+    resolvedSourceMap,
+  ).then((cleanup) => {
+    socketCleanup = cleanup;
+  });
 
   // ── Build connection object ────────────────────────────────────────────────
 
@@ -306,6 +426,14 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
     devtoolsHooks.onHttpFetchEnd = undefined;
     devtoolsHooks.onProxyReceive = undefined;
     devtoolsHooks.onProxyRespond = undefined;
+    devtoolsHooks.onCacheHit = undefined;
+    devtoolsHooks.onCacheMiss = undefined;
+    devtoolsHooks.onCacheStore = undefined;
+    devtoolsHooks.onCacheInvalidate = undefined;
+    devtoolsHooks.onDedupAbort = undefined;
+    devtoolsHooks.onDedupReuse = undefined;
+    devtoolsHooks.onUploadProgress = undefined;
+    devtoolsHooks.onUploadComplete = undefined;
 
     socketCleanup?.();
     bus.clear();

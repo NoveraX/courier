@@ -1,4 +1,4 @@
-import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+import { defineGroup, endpoint } from "@noverax/nexus/define"
 
 type Post = {
   id: number
@@ -14,18 +14,15 @@ type PostsListResponse = {
   total: number
 }
 
-export class Posts extends EndpointGroup {
-  constructor() {
-    super({ prefix: "posts" })
-  }
-
-  getAll: Endpoint<PostsListResponse, { userId?: number }> = ({ get }) => get()
-
-  getById: Endpoint<Post, { id: number }> = ({ get }) => get(":id")
-
-  create: Endpoint<Post, { userId?: number; title: string; body: string; tags?: string[] }> = ({
-    post,
-  }) => post()
-}
+export const posts = defineGroup({
+  prefix: "posts",
+  endpoints: {
+    getAll: endpoint<PostsListResponse, { userId?: number }>()((http) => http.get()),
+    getById: endpoint<Post, { id: number }>()((http) => http.get(":id")),
+    create: endpoint<Post, { userId?: number; title: string; body: string; tags?: string[] }>()(
+      (http, vars) => http.post("", vars)
+    ),
+  },
+})
 
 export type { Post, PostsListResponse }

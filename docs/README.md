@@ -7,8 +7,8 @@ Documentation site and interactive examples for `@noverax/nexus`, built with Nex
 ```
 Browser ──► Next.js :3000 (proxy) ──► Express :4000 (backend)
                 │
-                ├─ Proxy mode:   createClientRequest → apiRoute → backend
-                └─ Direct mode:  createDirectRequest → backend (no proxy hop)
+                ├─ Proxy mode:   createProxyCaller → apiRoute → backend
+                └─ Direct mode:  createCaller → backend (no proxy hop)
 ```
 
 ## Quick Start
@@ -37,7 +37,7 @@ This starts both servers concurrently:
 
 | Page | Route | Description |
 |------|-------|-------------|
-| Groups | `/groups` | `EndpointGroup` with prefix, `group:method` syntax |
+| Groups | `/groups` | `defineGroup` with prefix, `group:method` syntax |
 | Path Params | `/path-params` | Dynamic `:id`, `:postId` URL segments |
 | Encoding | `/encoding` | Custom `bodySerializer` and `searchParamsSerializer` |
 | Upload | `/upload` | FormData file upload with `onUploadProgress` |
@@ -46,14 +46,14 @@ This starts both servers concurrently:
 
 | Page | Route | Description |
 |------|-------|-------------|
-| Direct | `/direct` | RSC with `createDirectRequest` (no proxy hop) |
+| Direct | `/direct` | RSC with `createCaller` (no proxy hop) |
 | Actions | `/actions` | Server Actions + direct mode with `revalidatePath` |
 
 ### Advanced
 
 | Page | Route | Description |
 |------|-------|-------------|
-| Hooks | `/hooks` | `onRequest`, `onResponse`, `onError` lifecycle hooks |
+| Middleware | `/middleware` | Composable middleware chain for logging, auth, retry |
 | Errors | `/errors` | `HTTPError` class, `isHTTPError` guard, global handlers |
 | Abort | `/abort` | `AbortController`, manual cancel, request deduplication |
 | Streaming | `/streaming` | `stream: true` with SSE progressive rendering |

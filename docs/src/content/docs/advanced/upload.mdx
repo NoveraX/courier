@@ -1,8 +1,8 @@
-export const metadata = { title: "File Upload", description: "Upload files through the proxy with real-time progress tracking via XHR." }
+export const metadata = { title: "File Upload", description: "Upload files with FormData and real-time progress tracking via XHR." }
 
 ## Overview
 
-Nexus supports file uploads through proxy mode using FormData. When you provide an `onUploadProgress` callback, Nexus automatically switches from `fetch` to `XMLHttpRequest` for real network-level progress tracking.
+Nexus supports file uploads using FormData in both direct and proxy modes. When you provide an `onUploadProgress` callback, Nexus automatically switches from `fetch` to `XMLHttpRequest` for real network-level progress tracking.
 
 ## Basic file upload
 
@@ -12,7 +12,7 @@ Create a FormData object with your files, pass it as variables, and use `onUploa
 "use client"
 
 import { useState } from "react"
-import { request } from "@/lib/request"
+import { call } from "@/lib/caller"
 
 export function AvatarUpload() {
   const [progress, setProgress] = useState(0)
@@ -29,7 +29,7 @@ export function AvatarUpload() {
     setProgress(0)
 
     try {
-      await request("myApi", {
+      await call("api", {
         onUploadProgress: ({ percent }) => {
           setProgress(Math.round(percent * 100))
         },
@@ -46,6 +46,28 @@ export function AvatarUpload() {
     </div>
   )
 }
+```
+
+## Endpoint definition
+
+Define upload endpoints using `defineGroup` and `endpoint`:
+
+```ts title="api/users.ts"
+import { defineGroup, endpoint } from "@noverax/nexus/define"
+
+type User = { id: number; name: string; avatarUrl: string }
+
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    uploadAvatar: endpoint<User, FormData>()((http, vars) =>
+      http.post("avatar", vars)
+    ),
+    uploadDocument: endpoint<{ url: string }, FormData>()((http, vars) =>
+      http.post("documents", vars)
+    ),
+  },
+})
 ```
 
 ## Progress tracking
@@ -83,7 +105,7 @@ Upload multiple files in a single request by appending them to the same FormData
 "use client"
 
 import { useState } from "react"
-import { request } from "@/lib/request"
+import { call } from "@/lib/caller"
 
 export function DocumentUpload() {
   const [progress, setProgress] = useState(0)
@@ -103,7 +125,7 @@ export function DocumentUpload() {
     formData.append("folder", "invoices")
     formData.append("tags", "2024,finance")
 
-    await request("myApi", {
+    await call("api", {
       onUploadProgress: ({ percent }) => {
         setProgress(Math.round(percent * 100))
       },
@@ -119,9 +141,9 @@ export function DocumentUpload() {
 }
 ```
 
-## FormData composition
+## FormData composition (proxy mode)
 
-When FormData is sent through the proxy, Nexus appends metadata fields with underscore prefixes. The API route strips these before forwarding to your method:
+When FormData is sent through the proxy, Nexus appends metadata fields with underscore prefixes. The server handler strips these before forwarding to your endpoint. In direct mode, FormData is sent as-is without any metadata fields:
 
 ```typescript
 // When sending FormData through the proxy, Nexus composes it like this:
@@ -131,15 +153,15 @@ formData.append("avatar", file)
 formData.append("name", "profile-pic")
 
 // What gets sent to /api/request:
-// _source  = "myApi"            ← meta field
-// _group   = "users"            ← meta field
-// _query   = "uploadAvatar"     ← meta field
-// _options = '{"timeout":30000}'← meta field (JSON string)
-// avatar   = File               ← your data
-// name     = "profile-pic"      ← your data
+// _source  = "api"              <- meta field
+// _group   = "users"            <- meta field
+// _method  = "uploadAvatar"     <- meta field
+// _options = '{"timeout":30000}'<- meta field (JSON string)
+// avatar   = File               <- your data
+// name     = "profile-pic"      <- your data
 
-// The API route strips _source, _group, _query, _options
-// and passes a clean FormData with only your data to the method
+// The server handler strips _source, _group, _method, _options
+// and passes a clean FormData with only your data to the endpoint
 ```
 
 ## Empty file handling
@@ -151,8 +173,8 @@ Nexus automatically detects and removes empty files (0 bytes) from FormData befo
 // This prevents sending 0-byte File objects that can cause backend errors.
 
 const formData = new FormData()
-formData.append("avatar", file)          // File with content → kept
-formData.append("thumbnail", emptyFile)  // File with size 0 → removed
+formData.append("avatar", file)          // File with content -> kept
+formData.append("thumbnail", emptyFile)  // File with size 0 -> removed
 
 // Only "avatar" is sent to the backend
 ```
@@ -171,14 +193,14 @@ Nexus uses `XMLHttpRequest` instead of `fetch` for uploads because the Fetch API
 // XMLHttpRequest provides real network-level progress via the
 // upload.onprogress event, which works on both HTTP/1.1 and HTTP/2.
 //
-// Nexus automatically switches from fetch (ky) to XHR when
+// Nexus automatically switches from fetch to XHR when
 // onUploadProgress is provided. No configuration needed.
 
-// Standard request — uses ky (fetch)
-await request("myApi")("users:getAll")
+// Standard request — uses fetch
+await call("api")("users:getAll")
 
 // Upload request — automatically uses XHR
-await request("myApi", {
+await call("api", {
   onUploadProgress: (p) => console.log(p.percent),
 })("users:uploadAvatar", formData)
 ```
@@ -194,16 +216,16 @@ When `onUploadProgress` is set, certain fetch-specific options are not available
 ```typescript
 // When using onUploadProgress (XHR transport), these options are ignored:
 
-await request("myApi", {
+await call("api", {
   onUploadProgress: ({ percent }) => setProgress(percent),
 
-  // ⚠️ Ignored — XHR does not support the fetch cache API
+  // Ignored — XHR does not support the fetch cache API
   cache: "no-store",
 
-  // ⚠️ Ignored — XHR cannot track download progress simultaneously
+  // Ignored — XHR cannot track download progress simultaneously
   onDownloadProgress: () => {},
 
-  // ⚠️ Ignored — Next.js-specific fetch option, not available in XHR
+  // Ignored — Next.js-specific fetch option, not available in XHR
   next: { revalidate: 0 },
 })("files:upload", formData)
 
@@ -217,6 +239,6 @@ In development mode, Nexus logs a console warning for each ignored option so you
 
 ## Next Steps
 
-- [Encoding](/docs/proxy-mode/encoding) — body and query serialization options
-- [createClientRequest](/docs/proxy-mode/client-request) — full proxy client API reference
-- [Proxy Mode Overview](/docs/proxy-mode/overview) — architecture and security model
+- [Encoding](/docs/advanced/encoding) — body and query serialization options
+- [Streaming](/docs/advanced/streaming) — streaming responses with ReadableStream
+- [Options Reference](/docs/advanced/options) — timeout, retry, caching, and more

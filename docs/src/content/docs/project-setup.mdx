@@ -2,169 +2,130 @@ export const metadata = { title: "Project Setup", description: "Recommended file
 
 ## Recommended file structure
 
-Keep your API definitions separate from your UI code. A typical Nexus project follows this structure:
+Keep your API definitions separate from your UI code. The structure is the same regardless of framework:
 
 ```bash
 src/
 ├── api/
-│   ├── index.ts          # Datasource classes + sources export
-│   ├── users.ts          # Users EndpointGroup
-│   ├── posts.ts          # Posts EndpointGroup
-│   └── files.ts          # Files EndpointGroup
+│   ├── index.ts          # defineApi + sources export
+│   ├── users.ts          # users group (defineGroup)
+│   ├── posts.ts          # posts group
+│   └── files.ts          # files group
 ├── lib/
-│   ├── request.ts        # createQueryRequest (proxy + React Query)
-│   └── direct-request.ts # createDirectRequest (server-side)
-├── app/
+│   └── caller.ts         # createCaller / createProxyCaller / createQueryCaller
+├── app/                  # (Next.js) or pages/ (Nuxt) or routes/ (SvelteKit)
 │   ├── api/
 │   │   └── request/
-│   │       └── route.ts  # apiRoute handler
-│   ├── layout.tsx
-│   └── page.tsx
-└── ...
+│   │       └── route.ts  # proxy route handler
+│   └── ...
+└── server/               # (if using Express/Hono/Fastify separately)
+    └── index.ts
 ```
 
 ## Source definitions
 
-The `api/` directory contains your API structure. The main file creates `Datasource` instances with groups, and each group lives in its own file:
+The `api/` directory contains your API structure. Each group lives in its own file:
+
+```ts title="api/users.ts"
+import { defineGroup, endpoint } from "@noverax/nexus/define"
+
+type User = { id: string; name: string; email: string }
+
+export const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll:  endpoint<User[]>()((http) => http.get()),
+    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
+    create:  endpoint<User, { name: string; email: string }>()((http, vars) => http.post("", vars)),
+    update:  endpoint<User, { id: string; name: string }>()((http, vars) => http.put(":id", vars)),
+    remove:  endpoint<null, { id: string }>()((http, vars) => http.del(":id", vars)),
+  },
+})
+```
+
+The main file combines groups into an API source:
 
 ```ts title="api/index.ts"
-// api/index.ts
-import { Datasource } from "@noverax/nexus/datasource"
-import { Users } from "./users"
-import { Posts } from "./posts"
-import { Files } from "./files"
+import { defineApi } from "@noverax/nexus/define"
+import { users } from "./users"
+import { posts } from "./posts"
+import { files } from "./files"
 
-const API_URL = process.env.API_URL ?? "http://localhost:4000"
+const api = defineApi({
+  baseURL: process.env.API_URL!,
+  groups: { users, posts, files },
+})
 
-const groups = {
-  users: new Users(),
-  posts: new Posts(),
-  files: new Files(),
-}
-
-class MyApi extends Datasource<typeof groups> {
-  constructor() {
-    super({ baseURL: API_URL, groups })
-  }
-}
-
-export const sources = { myApi: new MyApi() }
+export const sources = { api }
 export type Sources = typeof sources
 ```
 
-```ts title="api/users.ts"
-// api/users.ts
-import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
-
-type User = { id: number; name: string; email: string }
-
-export class Users extends EndpointGroup {
-  constructor() {
-    super({ prefix: "users" })
-  }
-
-  getAll: Endpoint<User[]> = ({ get }) => get()
-  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
-  create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
-  update: Endpoint<User, { id: number; name: string }> = ({ put }) => put(":id")
-  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
-}
-```
-
 <Callout variant="tip" title="One group per file">
-Keeping each `EndpointGroup` in its own file makes it easy to find and modify endpoints. The types stay co-located with the methods that use them.
+Keeping each group in its own file makes it easy to find and modify endpoints. Types stay co-located with the endpoints that use them.
 </Callout>
 
-## Client setup files
+## Caller setup
 
-Create two files in `lib/` — one for proxy mode (client components) and one for direct mode (server components):
+Create the appropriate caller for your use case:
 
-```ts title="lib/request.ts"
-// lib/request.ts
-import { createQueryRequest } from "@noverax/nexus/query"
+```ts title="lib/caller.ts (React Query)"
+import { createQueryCaller } from "@noverax/nexus-query"
 import type { Sources } from "@/api"
 
-export const { useQuery, useMutation, request } = createQueryRequest<Sources>()
+export const { useQuery, useMutation, useSuspenseQuery, caller } = createQueryCaller<Sources>()
 ```
 
-```ts title="lib/direct-request.ts"
-// lib/direct-request.ts
-import { createDirectRequest } from "@noverax/nexus/direct"
-import { sources } from "@/api"
+```ts title="lib/caller.ts (Vanilla / Vue / Svelte)"
+import { createProxyCaller } from "@noverax/nexus"
+import type { Sources } from "@/api"
 
-export const directRequest = createDirectRequest(sources)
+export const caller = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
 ```
 
-And the API route handler that the proxy client sends requests through:
-
-```ts title="app/api/request/route.ts"
-// app/api/request/route.ts
-import { apiRoute } from "@noverax/nexus/next/apiRoute"
+```ts title="lib/server-caller.ts (Server-side)"
+import { createCaller } from "@noverax/nexus"
 import { sources } from "@/api"
 
-export const { POST } = apiRoute(sources)
+export const call = createCaller(sources)
 ```
 
 ## Multiple backends
 
-If your app talks to multiple backend services, create a separate `Datasource` class for each one. They can all be passed to the same sources object:
+Define a separate `defineApi` for each backend service:
 
 ```ts title="api/index.ts"
-// api/index.ts
-import { Datasource } from "@noverax/nexus/datasource"
-import { Users } from "./users"
-import { Products } from "./products"
+import { defineApi } from "@noverax/nexus/define"
+import { users, posts } from "./groups"
+import { auth } from "./auth"
 
-const groups = { users: new Users() }
-const productGroups = { products: new Products() }
+const mainApi = defineApi({
+  baseURL: process.env.API_URL!,
+  groups: { users, posts },
+})
 
-class MainApi extends Datasource<typeof groups> {
-  constructor() {
-    super({
-      baseURL: process.env.API_URL ?? "http://localhost:4000",
-      groups,
-    })
-  }
-}
+const authApi = defineApi({
+  baseURL: process.env.AUTH_API_URL!,
+  groups: { auth },
+})
 
-class PaymentApi extends Datasource<typeof productGroups> {
-  constructor() {
-    super({
-      baseURL: process.env.PAYMENT_API_URL ?? "http://localhost:5000",
-      groups: productGroups,
-    })
-  }
-}
-
-export const sources = {
-  mainApi: new MainApi(),
-  paymentApi: new PaymentApi(),
-}
-
+export const sources = { mainApi, authApi }
 export type Sources = typeof sources
 ```
 
-Both sources share the same proxy route and direct client. TypeScript enforces that you use the correct group names for each source:
+TypeScript enforces that you use the correct group names for each source:
 
 ```ts
-// Fully typed — TypeScript knows which groups belong to which source
-const { data: users } = useQuery("mainApi", "users:getAll")
-const { data: products } = useQuery("paymentApi", "products:list")
+const users = await call("mainApi")("users:getAll")
+const token = await call("authApi")("auth:login", { email, password })
 ```
 
 ## Environment variables
 
-Backend URLs should always be server-side environment variables (no `NEXT_PUBLIC_` prefix). The proxy route keeps them hidden from the browser:
+Backend URLs should always be server-side environment variables:
 
 ```bash title=".env.local"
-# .env.local
 API_URL=http://localhost:4000
-
-# Multiple backends
-PAYMENT_API_URL=http://localhost:5000
-
-# Optional: custom proxy route path
-# NEXT_PUBLIC_REQUEST_PAGE=api/my-proxy
+AUTH_API_URL=http://localhost:5000
 ```
 
 <Callout variant="warning" title="Never expose API_URL to the client">
@@ -173,5 +134,5 @@ In proxy mode, the browser only talks to `/api/request`. Your backend URL, API k
 
 ## Next steps
 
+- [Framework Guides](/docs/frameworks/nextjs) — complete setup for your framework
 - [Examples](/docs/examples/basic) — interactive demos of every feature
-- [What is Nexus?](/docs/introduction) — architecture overview and comparison

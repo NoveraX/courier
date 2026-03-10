@@ -1,0 +1,284 @@
+export const metadata = { title: "Zod Examples", description: "Practical examples of using Zod schemas for request validation and type inference in Nexus endpoints." }
+
+## Why Zod?
+
+[Zod](https://zod.dev/) is the most popular Standard Schema-compatible validation library. When you pass Zod schemas to `endpoint()`, Nexus automatically infers TypeScript types from the schema -- no manual generics needed.
+
+<Callout variant="info" title="Not just Zod">
+Everything on this page works identically with **Valibot** and **ArkType** (or any library implementing the Standard Schema spec). The examples use Zod for familiarity, but the patterns apply universally.
+</Callout>
+
+## Type Inference from Schemas
+
+Without schemas, you write explicit generics:
+
+```ts
+// Manual types -- you maintain the generic parameters yourself
+endpoint<User[], { status: "active" | "inactive" }>()(
+  ({ get }, vars) => get("", vars),
+)
+```
+
+With Zod schemas, types are inferred automatically:
+
+```ts title="lib/sources.ts"
+import { endpoint } from "@noverax/nexus/define"
+import { z } from "zod"
+
+const UserSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  email: z.string().email(),
+  role: z.enum(["admin", "user"]),
+})
+
+const FilterSchema = z.object({
+  status: z.enum(["active", "inactive"]),
+})
+
+// Return type is z.infer<typeof UserSchema>[]
+// Variables type is z.infer<typeof FilterSchema>
+// No generics needed -- everything is inferred
+endpoint({ response: z.array(UserSchema), variables: FilterSchema })(
+  ({ get }, vars) => get("", vars),
+)
+```
+
+## Common Schema Patterns
+
+### Object schemas
+
+```ts title="lib/schemas.ts"
+import { z } from "zod"
+
+export const UserSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  email: z.string().email(),
+  createdAt: z.string(),
+})
+
+export const CreateUserSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  role: z.enum(["admin", "user"]).default("user"),
+})
+
+export const UpdateUserSchema = CreateUserSchema.partial()
+```
+
+### Array responses
+
+```ts title="lib/sources.ts"
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint({ response: z.array(UserSchema) })(
+      ({ get }) => get(),
+    ),
+  },
+})
+```
+
+### Nested objects
+
+```ts title="lib/schemas.ts"
+const AddressSchema = z.object({
+  street: z.string(),
+  city: z.string(),
+  zip: z.string().regex(/^\d{5}$/),
+})
+
+const CompanySchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  address: AddressSchema,
+  employees: z.array(UserSchema),
+})
+```
+
+### Paginated responses
+
+```ts title="lib/schemas.ts"
+function paginated<T extends z.ZodType>(itemSchema: T) {
+  return z.object({
+    items: z.array(itemSchema),
+    total: z.number(),
+    page: z.number(),
+    pageSize: z.number(),
+  })
+}
+
+const PaginatedUsersSchema = paginated(UserSchema)
+```
+
+### Variables with path params
+
+```ts title="lib/sources.ts"
+const GetByIdSchema = z.object({
+  id: z.number(),
+})
+
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getById: endpoint({
+      response: UserSchema,
+      variables: GetByIdSchema,
+    })(({ get }, vars) => get(":id", vars)),
+  },
+})
+```
+
+## Full Source Definition
+
+Here is a complete source definition using Zod schemas for every endpoint:
+
+```ts title="lib/sources.ts"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { z } from "zod"
+
+// --- Schemas ---
+
+const UserSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  email: z.string().email(),
+})
+
+const CreateUserSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+})
+
+const UpdateUserSchema = z.object({
+  id: z.number(),
+  name: z.string().min(1).optional(),
+  email: z.string().email().optional(),
+})
+
+const DeleteSchema = z.object({
+  id: z.number(),
+})
+
+// --- Source ---
+
+export const api = defineApi({
+  baseURL: process.env.API_URL!,
+  groups: {
+    users: defineGroup({
+      prefix: "users",
+      endpoints: {
+        getAll: endpoint({ response: z.array(UserSchema) })(
+          ({ get }) => get(),
+        ),
+
+        getById: endpoint({
+          response: UserSchema,
+          variables: z.object({ id: z.number() }),
+        })(({ get }, vars) => get(":id", vars)),
+
+        create: endpoint({
+          response: UserSchema,
+          variables: CreateUserSchema,
+        })(({ post }, vars) => post("", vars)),
+
+        update: endpoint({
+          response: UserSchema,
+          variables: UpdateUserSchema,
+        })(({ put }, vars) => put(":id", vars)),
+
+        delete: endpoint({
+          variables: DeleteSchema,
+        })(({ del }, vars) => del(":id", vars)),
+      },
+    }),
+  },
+})
+```
+
+## Response-only vs Variables-only
+
+You can attach a schema to just one side:
+
+```ts title="lib/sources.ts"
+// Response-only: validate what the backend returns, no variables validation
+endpoint({ response: z.array(UserSchema) })(({ get }) => get())
+
+// Variables-only: validate what the caller sends, no response validation
+endpoint({ variables: CreateUserSchema })(({ post }, vars) => post("", vars))
+
+// Both: full bidirectional validation
+endpoint({ response: UserSchema, variables: CreateUserSchema })(
+  ({ post }, vars) => post("", vars),
+)
+```
+
+## Transforms and Coercion
+
+Zod transforms are applied during validation. The validated value (after transforms) is what your code receives:
+
+```ts title="lib/schemas.ts"
+const EventSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  // Backend sends ISO string, Zod coerces to Date
+  startDate: z.coerce.date(),
+  // Trim and lowercase the slug
+  slug: z.string().trim().toLowerCase(),
+})
+
+// event.startDate is a Date, event.slug is trimmed and lowercased
+```
+
+## Handling Validation Errors
+
+```ts title="components/create-user-form.tsx"
+import { isValidationError } from "@noverax/nexus"
+
+async function handleSubmit(formData: FormData) {
+  try {
+    await caller("api")("users:create", {
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+    })
+  } catch (error) {
+    if (isValidationError(error)) {
+      // error.target === "variables" means the input was invalid
+      // error.issues contains Zod's detailed error messages
+      for (const issue of error.issues) {
+        console.log(issue.path, issue.message)
+        // ["email"] "Invalid email address"
+      }
+    }
+  }
+}
+```
+
+## Using Valibot
+
+The same patterns work with Valibot -- just swap the import:
+
+```ts title="lib/sources.ts"
+import * as v from "valibot"
+
+const UserSchema = v.object({
+  id: v.number(),
+  name: v.string(),
+  email: v.pipe(v.string(), v.email()),
+})
+
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint({ response: v.array(UserSchema) })(
+      ({ get }) => get(),
+    ),
+  },
+})
+```
+
+## Next Steps
+
+- [Standard Schema](/docs/validation/standard-schema) -- how validation works under the hood
+- [Error Handling](/docs/core-concepts/error-handling) -- catching and displaying validation errors

@@ -1,0 +1,236 @@
+export const metadata = { title: "Next.js", description: "Full Next.js integration with apiRoute, createQueryCaller, createCaller for RSC, and createAction for Server Actions." }
+
+Nexus has first-class Next.js support through the `@noverax/nexus-next` package. It covers every Next.js pattern: API routes, client components with React Query, server components, and server actions.
+
+## Installation
+
+```bash
+npm install @noverax/nexus @noverax/nexus-next @noverax/nexus-query @tanstack/react-query
+```
+
+## Define your API sources
+
+Create a shared API definition used by all callers. This file can be imported on both server and client:
+
+```ts title="lib/sources.ts"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+
+type User = { id: number; name: string; email: string }
+type UserList = { data: User[]; total: number }
+
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint<UserList, { page?: number; limit?: number }>()(
+      ({ get }) => get()
+    ),
+    getById: endpoint<User, { id: number }>()(
+      ({ get }) => get(":id")
+    ),
+    create: endpoint<User, { name: string; email: string }>()(
+      ({ post }) => post()
+    ),
+    update: endpoint<User, { id: number; name: string; email: string }>()(
+      ({ put }) => put(":id")
+    ),
+    remove: endpoint<null, { id: number }>()(
+      ({ del }) => del(":id")
+    ),
+  },
+})
+
+export const sources = {
+  myApi: defineApi({
+    baseURL: process.env.API_URL ?? "http://localhost:4000",
+    groups: { users },
+  }),
+}
+
+export type Sources = typeof sources
+```
+
+## Step 1: API Route
+
+Create a Next.js App Router route handler that proxies browser requests to your backend:
+
+```ts title="app/api/request/route.ts"
+import { apiRoute } from "@noverax/nexus-next"
+import { sources } from "@/lib/sources"
+
+export const { POST } = apiRoute(sources)
+```
+
+This single route handles all Nexus proxy requests. It parses the incoming POST body, resolves the correct endpoint, calls your backend, and returns the response.
+
+## Step 2: Client-side caller (React Query)
+
+Create a query caller for use in client components:
+
+```ts title="lib/caller.ts"
+import { createQueryCaller } from "@noverax/nexus-query"
+import type { Sources } from "@/lib/sources"
+
+export const { useQuery, useMutation, caller } = createQueryCaller<Sources>()
+```
+
+Use it in client components:
+
+```tsx title="app/users/page.tsx"
+"use client"
+
+import { useQuery, useMutation } from "@/lib/caller"
+
+export default function UsersPage() {
+  const { data, isLoading } = useQuery("myApi", "users:getAll", {
+    variables: { page: 1, limit: 10 },
+  })
+
+  const { mutate, isPending } = useMutation("myApi", "users:create", {
+    onSuccess: (user) => {
+      console.log("Created:", user.name) // fully typed
+    },
+  })
+
+  if (isLoading) return <p>Loading...</p>
+
+  return (
+    <div>
+      <h1>Users ({data?.total})</h1>
+      <ul>
+        {data?.data.map((user) => (
+          <li key={user.id}>{user.name} — {user.email}</li>
+        ))}
+      </ul>
+      <button
+        onClick={() => mutate({ name: "Jane", email: "jane@test.com" })}
+        disabled={isPending}
+      >
+        Add User
+      </button>
+    </div>
+  )
+}
+```
+
+<Callout variant="info" title="QueryClientProvider">
+Wrap your app with `QueryClientProvider` in your root layout. See the [React Query setup](/docs/react-query/setup) page for details.
+</Callout>
+
+## Step 3: Server Components (createCaller)
+
+For React Server Components, use `createCaller` to call your backend directly without the proxy hop:
+
+```ts title="lib/server-caller.ts"
+import { createCaller } from "@noverax/nexus"
+import { sources } from "@/lib/sources"
+
+export const serverCaller = createCaller(sources)
+```
+
+```tsx title="app/dashboard/page.tsx"
+import { serverCaller } from "@/lib/server-caller"
+
+export default async function DashboardPage() {
+  const users = await serverCaller("myApi")("users:getAll", {
+    page: 1,
+    limit: 5,
+  })
+
+  return (
+    <div>
+      <h1>Dashboard ({users.total} users)</h1>
+      <ul>
+        {users.data.map((user) => (
+          <li key={user.id}>{user.name}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+<Callout variant="tip" title="No proxy overhead">
+`createCaller` calls your backend directly from the server. There is no round-trip through the API route, making it ideal for SSR and RSC.
+</Callout>
+
+## Step 4: Server Actions (createAction)
+
+Use `createAction` for type-safe server actions that automatically forward request headers:
+
+```ts title="lib/actions.ts"
+import { createAction } from "@noverax/nexus-next"
+import { sources } from "@/lib/sources"
+
+export const action = createAction(sources)
+```
+
+```ts title="app/actions/users.ts"
+"use server"
+
+import { revalidatePath } from "next/cache"
+import { action } from "@/lib/actions"
+
+export async function createUser(data: { name: string; email: string }) {
+  const user = await action("myApi")("users:create", data)
+
+  revalidatePath("/users")
+  return user
+}
+
+export async function deleteUser(id: number) {
+  await action("myApi")("users:remove", { id })
+
+  revalidatePath("/users")
+}
+```
+
+Use server actions in client components:
+
+```tsx title="app/users/create-form.tsx"
+"use client"
+
+import { useActionState } from "react"
+import { createUser } from "@/app/actions/users"
+
+export function CreateUserForm() {
+  const [state, formAction, isPending] = useActionState(
+    async (_prev: unknown, formData: FormData) => {
+      const result = await createUser({
+        name: formData.get("name") as string,
+        email: formData.get("email") as string,
+      })
+      return result
+    },
+    null
+  )
+
+  return (
+    <form action={formAction}>
+      <input name="name" placeholder="Name" required />
+      <input name="email" type="email" placeholder="Email" required />
+      <button type="submit" disabled={isPending}>
+        {isPending ? "Creating..." : "Create User"}
+      </button>
+    </form>
+  )
+}
+```
+
+## Full project structure
+
+```
+app/
+  api/request/route.ts    # apiRoute(sources)
+  actions/users.ts        # server actions with createAction
+  users/page.tsx          # client component with useQuery
+  dashboard/page.tsx      # server component with createCaller
+lib/
+  sources.ts              # defineApi + defineGroup + endpoint
+  caller.ts               # createQueryCaller<Sources>()
+  server-caller.ts        # createCaller(sources)
+  actions.ts              # createAction(sources)
+```
+
+<Callout variant="tip" title="Use both modes together">
+Most Next.js apps use all three: `createQueryCaller` for client components, `createCaller` for server components, and `createAction` for server actions. They all share the same source definitions.
+</Callout>

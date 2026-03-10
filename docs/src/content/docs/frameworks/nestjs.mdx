@@ -1,0 +1,166 @@
+export const metadata = { title: "NestJS", description: "NestJS adapter using nexusMiddleware applied via MiddlewareConsumer for the Nexus proxy route." }
+
+The `@noverax/nexus-nestjs` adapter provides a middleware that integrates Nexus into your NestJS application using the standard `MiddlewareConsumer`.
+
+## Installation
+
+```bash
+npm install @noverax/nexus @noverax/nexus-nestjs
+```
+
+## Define your API sources
+
+```ts title="src/lib/sources.ts"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+
+type User = { id: number; name: string; email: string }
+
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint<User[]>()(({ get }) => get()),
+    getById: endpoint<User, { id: number }>()(({ get }) => get(":id")),
+    create: endpoint<User, { name: string; email: string }>()(
+      ({ post }) => post()
+    ),
+    remove: endpoint<null, { id: number }>()(({ del }) => del(":id")),
+  },
+})
+
+export const sources = {
+  myApi: defineApi({
+    baseURL: process.env.API_URL ?? "http://localhost:4000",
+    groups: { users },
+  }),
+}
+
+export type Sources = typeof sources
+```
+
+## Setup
+
+Apply the `nexusMiddleware` in your root `AppModule` using the `MiddlewareConsumer`:
+
+```ts title="src/app.module.ts"
+import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
+import { nexusMiddleware } from "@noverax/nexus-nestjs"
+import { sources } from "./lib/sources"
+
+@Module({
+  imports: [],
+  controllers: [],
+  providers: [],
+})
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(nexusMiddleware(sources))
+      .forRoutes("api/request")
+  }
+}
+```
+
+The `nexusMiddleware` function returns a NestJS-compatible middleware that handles incoming Nexus proxy requests and forwards them to your backend.
+
+## With CORS
+
+Enable CORS in your `main.ts` bootstrap:
+
+```ts title="src/main.ts"
+import { NestFactory } from "@nestjs/core"
+import { AppModule } from "./app.module"
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule)
+
+  app.enableCors({
+    origin: process.env.ALLOWED_ORIGINS?.split(",") ?? "http://localhost:5173",
+    credentials: true,
+  })
+
+  await app.listen(3001)
+}
+
+bootstrap()
+```
+
+## With existing modules
+
+The Nexus middleware sits alongside your existing NestJS controllers and modules:
+
+```ts title="src/app.module.ts"
+import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
+import { nexusMiddleware } from "@noverax/nexus-nestjs"
+import { sources } from "./lib/sources"
+import { HealthModule } from "./health/health.module"
+import { StatsModule } from "./stats/stats.module"
+
+@Module({
+  imports: [HealthModule, StatsModule],
+  controllers: [],
+  providers: [],
+})
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(nexusMiddleware(sources))
+      .forRoutes("api/request")
+  }
+}
+```
+
+<Callout variant="info" title="Middleware scope">
+The `forRoutes("api/request")` call limits the middleware to the proxy path only. It will not interfere with your other controllers or routes.
+</Callout>
+
+## Using with a dedicated module
+
+For larger applications, you can isolate the Nexus setup into its own module:
+
+```ts title="src/nexus/nexus.module.ts"
+import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
+import { nexusMiddleware } from "@noverax/nexus-nestjs"
+import { sources } from "../lib/sources"
+
+@Module({})
+export class NexusModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(nexusMiddleware(sources))
+      .forRoutes("api/request")
+  }
+}
+```
+
+```ts title="src/app.module.ts"
+import { Module } from "@nestjs/common"
+import { NexusModule } from "./nexus/nexus.module"
+import { HealthModule } from "./health/health.module"
+
+@Module({
+  imports: [NexusModule, HealthModule],
+})
+export class AppModule {}
+```
+
+<Callout variant="tip" title="Guards and interceptors">
+NestJS guards and interceptors applied globally or to the `api/request` route will execute before the Nexus middleware. This lets you add authentication or logging on top of the proxy route using standard NestJS patterns.
+</Callout>
+
+## Client-side setup
+
+On the client, point your caller to this server's proxy URL. Choose the guide for your frontend:
+
+- [React (Vite / CRA)](/docs/frameworks/react) — `createQueryCaller` with React Query hooks
+- [Vue](/docs/frameworks/vue) — `createProxyCaller` with composables
+- [Next.js](/docs/frameworks/nextjs) — full-stack with `apiRoute` and `createQueryCaller`
+- [Nuxt](/docs/frameworks/nuxt) — full-stack with `nexusHandler` and `createProxyCaller`
+
+```ts title="lib/caller.ts"
+import { createProxyCaller } from "@noverax/nexus"
+import type { Sources } from "../shared/sources"
+
+export const caller = createProxyCaller<Sources>({
+  proxyUrl: "http://localhost:3001/api/request",
+})
+```

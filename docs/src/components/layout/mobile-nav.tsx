@@ -75,10 +75,7 @@ function MobileSection({
   const isOpen = searchQuery ? true : open
 
   return (
-    <div
-      className="mobile-nav-section"
-      style={{ animationDelay: `${index * 35 + 100}ms` }}
-    >
+    <div className="mobile-nav-section" style={{ animationDelay: `${index * 35 + 100}ms` }}>
       <button
         type="button"
         onClick={() => !searchQuery && setOpen(!open)}

@@ -1,0 +1,205 @@
+export const metadata = { title: "createCaller", description: "Factory function for server-side calls — call your backend directly from any server runtime." }
+
+## API signature
+
+`createCaller` accepts your sources object and optional defaults. It returns a curried function that selects a source, then executes an endpoint:
+
+```ts title="@noverax/nexus"
+import { createCaller } from "@noverax/nexus"
+
+// Full signature
+function createCaller<T extends Sources>(
+  sources: T,
+  defaults?: CallerDefaults
+): CallerFn<T, true>
+```
+
+## CallerDefaults
+
+The optional second argument configures defaults applied to every request made through this caller:
+
+```ts
+type CallerDefaults = {
+  // Request timeout in milliseconds
+  timeout?: number
+  // Headers sent with every request
+  headers?: Record<string, string>
+  // Called when any request fails
+  onError?: (error: HTTPError) => void | Promise<void>
+  // Called when any request succeeds
+  onSuccess?: (data: unknown) => void | Promise<void>
+}
+```
+
+These defaults are merged with per-request options. Per-request headers are merged (not replaced), while `timeout` is overridden if specified per-request.
+
+```ts title="lib/caller.ts"
+import { createCaller } from "@noverax/nexus"
+import { sources } from "@/api"
+
+export const caller = createCaller(sources, {
+  timeout: 10000,
+  headers: {
+    "X-Service": "my-app",
+  },
+  onError: (error) => {
+    console.error(`[API] ${error.status}: ${error.message}`)
+  },
+})
+```
+
+<Callout variant="tip" title="Global error logging">
+The `onError` callback is useful for centralized error logging. It fires before the error propagates to your component, so you can log to Sentry or a custom service without repeating try/catch blocks.
+</Callout>
+
+## Basic usage
+
+The returned function is curried: first select a source, then call an endpoint with optional variables and context:
+
+```ts title="app/users/page.tsx"
+import { caller } from "@/lib/caller"
+
+export default async function UsersPage() {
+  // Step 1: select the source -> returns a curried function
+  const api = caller("api")
+
+  // Step 2: call with endpoint key and variables
+  const users = await api("users:getAll", { page: 1, limit: 20 })
+  //    ^? UserList — fully typed from your Endpoint definition
+
+  // Or chain it in one expression
+  const user = await caller("api")("users:getById", { id: 5 })
+  //    ^? User
+
+  return (
+    <div>
+      <h1>Users ({users.total})</h1>
+      <ul>
+        {users.data.map((u) => (
+          <li key={u.id}>{u.name}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+## Call signatures
+
+The endpoint function accepts different argument combinations depending on whether your endpoint requires variables and whether you need to pass context:
+
+```ts
+// No variables, no context
+await caller("api")("users:getAll")
+
+// With variables, no context
+await caller("api")("users:getById", { id: 5 })
+
+// No variables, with context
+await caller("api")("users:me", { headers: await headers() })
+
+// With variables and context
+await caller("api")("users:create", { name: "Jane" }, { headers: await headers() })
+```
+
+## Context parameter
+
+The `Context` parameter is what makes direct mode different from proxy mode. In proxy mode, cookies are forwarded automatically through the handler. In direct mode, you must pass them explicitly:
+
+```ts
+import type { Context } from "@noverax/nexus"
+
+type Context = {
+  req?: Request      // Web Standard request object
+  res?: Response     // Web Standard response object
+  headers?: Headers  // Headers to forward (cookies, auth)
+}
+```
+
+### In React Server Components
+
+Use Next.js `headers()` from `next/headers` to get the incoming request headers. This includes cookies, authorization headers, and other browser-sent headers:
+
+```ts title="app/profile/page.tsx"
+import { headers } from "next/headers"
+import { caller } from "@/lib/caller"
+
+export default async function ProfilePage() {
+  // headers() returns the incoming request headers (including cookies)
+  const profile = await caller("api")(
+    "users:me",
+    undefined,        // no variables needed
+    { headers: await headers() }  // forward auth cookies to backend
+  )
+
+  return <h1>Welcome, {profile.name}</h1>
+}
+```
+
+### In API routes
+
+In route handlers, pass the `Request` object directly. Nexus extracts the headers from it:
+
+```ts title="app/api/dashboard/route.ts"
+import { NextResponse } from "next/server"
+import { caller } from "@/lib/caller"
+
+export async function GET(req: Request) {
+  // Pass the Request directly — headers are extracted automatically
+  const stats = await caller("api")(
+    "dashboard:getStats",
+    undefined,
+    { req }
+  )
+
+  return NextResponse.json(stats)
+}
+```
+
+<Callout variant="info" title="Header whitelist">
+When you pass context headers, Nexus only forwards a safe subset: `authorization`, `cookie`, `user-agent`, `x-forwarded-for`, `x-forwarded-host`, `x-forwarded-proto`, `x-real-ip`, and a few others. This prevents accidentally forwarding headers like `host` or `content-length` that would break the backend request.
+</Callout>
+
+## Raw data mode
+
+By default, the request returns the parsed JSON body. If you need access to the HTTP status code and response headers, pass `rawData: true` as an option:
+
+```ts
+// Access status code and response headers
+const result = await caller("api", { rawData: true })(
+  "users:getById",
+  { id: 5 }
+)
+
+console.log(result.status)   // 200
+console.log(result.headers)  // Headers object
+console.log(result.data)     // User — still fully typed
+```
+
+## Difference from createProxyCaller
+
+The key difference is the `Context` parameter. In proxy mode, cookies are forwarded automatically through the browser request. In direct mode, you pass them explicitly:
+
+```ts
+// Proxy mode (client components) — no context parameter
+const call = createProxyCaller<Sources>()
+await call("api")("users:getAll", { page: 1 })
+//                                 ^ variables only
+
+// Direct mode (server components) — context as last argument
+const caller = createCaller(sources)
+await caller("api")("users:getAll", { page: 1 }, { headers: await headers() })
+//                                   ^ variables    ^ context (optional)
+```
+
+Both functions use the same `executeRequest` core under the hood.
+
+<Callout variant="warning" title="Server-only import">
+Never import `createCaller` or your caller in `"use client"` files. The sources object contains your `process.env.API_URL`, which would be exposed in the client bundle.
+</Callout>
+
+## Next Steps
+
+- [Server Actions](/docs/server-side/actions) — type-safe mutations with `createAction`
+- [createProxyCaller](/docs/proxy-mode/proxy-caller) — the proxy mode equivalent for client components
+- [React Query useQuery](/docs/react-query/use-query) — use with proxy mode for client-side data fetching

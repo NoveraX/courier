@@ -4,13 +4,16 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { StreamDemo } from "./_components"
 
-const streamConfigCode = `// Method definition — return type is ReadableStream
-class Misc extends RequestGroup {
-  stream: Method<ReadableStream> = ({ get }) => get("stream")
-}
+const streamConfigCode = `// Endpoint definition — return type is ReadableStream
+const misc = defineGroup({
+  prefix: "misc",
+  endpoints: {
+    stream: endpoint<ReadableStream>()((http) => http.get("stream")),
+  },
+})
 
 // Call with stream: true — returns raw Response instead of parsed JSON
-const response = await request("mockApi", { stream: true })(
+const response = await call("api", { stream: true })(
   "misc:stream"
 )
 

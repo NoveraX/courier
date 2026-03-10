@@ -1,0 +1,253 @@
+export const metadata = { title: "Middleware", description: "Intercept, transform, and observe every request with composable middleware functions." }
+
+## Overview
+
+Nexus uses a middleware chain to intercept requests at any stage. Middleware replaces the old `onRequest`, `onResponse`, and `onError` hooks with a single, composable pattern inspired by Koa and Express.
+
+Each middleware wraps around the next one, forming an onion-like execution model:
+
+1. **Before** the HTTP call — modify headers, variables, or context.
+2. Call `next()` to execute the next middleware (or the endpoint handler).
+3. **After** the HTTP call — inspect or transform the response.
+
+## Defining middleware
+
+Use `defineMiddleware` to create a typed middleware function. Every middleware receives a context object and a `next` function:
+
+```ts title="middleware/logger.ts"
+import { defineMiddleware } from "@noverax/nexus/middleware"
+
+const logger = defineMiddleware(async (ctx, next) => {
+  const label = [ctx.source, ctx.group, ctx.method].filter(Boolean).join(":")
+  const start = performance.now()
+
+  try {
+    const response = await next()
+    const ms = Math.round(performance.now() - start)
+    console.log(`${label} → ${response.status} (${ms}ms)`)
+    return response
+  } catch (error) {
+    const ms = Math.round(performance.now() - start)
+    console.error(`${label} → ERROR (${ms}ms)`)
+    throw error
+  }
+})
+```
+
+## Middleware context
+
+The `ctx` object provides information about the current request. You can read or modify it before calling `next()`:
+
+```ts title="types"
+type MiddlewareContext = {
+  source: string       // Source name (e.g., "api")
+  group?: string       // Group name (e.g., "users")
+  method: string       // Endpoint method name (e.g., "getAll")
+  variables?: unknown  // Request variables — can be modified
+  headers: Headers     // Request headers — can be modified
+}
+
+type MiddlewareResponse = {
+  status: number
+  data: unknown
+  headers: Headers
+}
+
+type NextFn = () => Promise<MiddlewareResponse>
+type MiddlewareFn = (ctx: MiddlewareContext, next: NextFn) => Promise<MiddlewareResponse>
+```
+
+## Applying middleware
+
+Pass middleware as an array to `defineApi`. They execute in array order — the first middleware is the outermost (runs first on request, last on response):
+
+```ts title="api/index.ts"
+import { defineApi } from "@noverax/nexus/define"
+import { logMiddleware, authMiddleware } from "@noverax/nexus/middleware"
+
+const api = defineApi({
+  baseURL: process.env.API_URL ?? "http://localhost:4000",
+  middleware: [
+    logMiddleware(),
+    authMiddleware({ getToken: () => getAuthToken() }),
+  ],
+  groups: { users, posts },
+})
+```
+
+## Built-in middleware
+
+Nexus ships with five built-in middleware functions ready to use:
+
+### logMiddleware
+
+Logs every request with endpoint name, status code, and duration:
+
+```ts
+import { logMiddleware } from "@noverax/nexus/middleware"
+
+logMiddleware()                                    // Uses console.log
+logMiddleware({ logger: (msg) => myLogger(msg) })  // Custom logger
+```
+
+### authMiddleware
+
+Attaches an auth token to every request. Optionally refreshes the token on 401:
+
+```ts
+import { authMiddleware } from "@noverax/nexus/middleware"
+
+authMiddleware({
+  getToken: () => localStorage.getItem("token")!,
+  refreshToken: () => refreshAccessToken(),  // Optional: retry on 401
+  header: "Authorization",                   // Default
+  scheme: "Bearer",                          // Default
+})
+```
+
+### retryMiddleware
+
+Retries failed requests with exponential backoff:
+
+```ts
+import { retryMiddleware } from "@noverax/nexus/middleware"
+
+retryMiddleware({
+  limit: 3,                                        // Max retries (default: 3)
+  backoff: 300,                                    // Base delay in ms (default: 300)
+  retryOn: (response) => response.status >= 500,   // Custom condition
+})
+```
+
+### rateLimitMiddleware
+
+Delays requests to stay within a rate limit window:
+
+```ts
+import { rateLimitMiddleware } from "@noverax/nexus/middleware"
+
+rateLimitMiddleware({
+  maxRequests: 10,  // Max requests in the window
+  window: 1000,     // Time window in ms
+})
+```
+
+### cacheMiddleware
+
+Caches successful responses with a configurable TTL:
+
+```ts
+import { cacheMiddleware } from "@noverax/nexus/middleware"
+
+cacheMiddleware({
+  ttl: 30_000,   // Time-to-live in ms (default: 60000)
+  storage: map,  // Optional custom Map storage
+})
+```
+
+## Composing middleware
+
+Use `composeMiddleware` to combine multiple middleware into a single function. This is useful when you want to create reusable middleware stacks:
+
+```ts title="middleware/index.ts"
+import { composeMiddleware } from "@noverax/nexus/middleware"
+import { logMiddleware, authMiddleware, retryMiddleware } from "@noverax/nexus/middleware"
+
+// Combine into a single middleware
+const defaultStack = composeMiddleware([
+  logMiddleware(),
+  authMiddleware({ getToken: () => getAuthToken() }),
+  retryMiddleware({ limit: 2 }),
+])
+
+// Use as a single entry
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  middleware: [defaultStack],
+  groups: { users },
+})
+```
+
+## Custom middleware examples
+
+### Auth token injection
+
+```ts title="middleware/auth.ts"
+import { defineMiddleware } from "@noverax/nexus/middleware"
+
+const auth = defineMiddleware(async (ctx, next) => {
+  const token = await getAuthToken()
+  ctx.headers.set("Authorization", `Bearer ${token}`)
+  return next()
+})
+```
+
+### Response transformation
+
+Unwrap API envelopes so your components receive clean data:
+
+```ts title="middleware/unwrap.ts"
+import { defineMiddleware } from "@noverax/nexus/middleware"
+
+const unwrapEnvelope = defineMiddleware(async (_ctx, next) => {
+  const response = await next()
+
+  // Many APIs wrap responses in { data: ..., meta: ... }
+  if (response.data && typeof response.data === "object" && "data" in response.data) {
+    return {
+      ...response,
+      data: (response.data as { data: unknown }).data,
+    }
+  }
+
+  return response
+})
+```
+
+### Error reporting
+
+```ts title="middleware/sentry.ts"
+import * as Sentry from "@sentry/nextjs"
+import { defineMiddleware } from "@noverax/nexus/middleware"
+
+const sentryMiddleware = defineMiddleware(async (ctx, next) => {
+  try {
+    return await next()
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { source: ctx.source, group: ctx.group, method: ctx.method },
+      extra: { variables: ctx.variables },
+    })
+    throw error
+  }
+})
+```
+
+## Full logging example
+
+Combine built-in and custom middleware for a complete request logging pipeline:
+
+```ts title="api/index.ts"
+import { defineApi } from "@noverax/nexus/define"
+import { logMiddleware, authMiddleware, retryMiddleware } from "@noverax/nexus/middleware"
+
+const api = defineApi({
+  baseURL: process.env.API_URL ?? "http://localhost:4000",
+  middleware: [
+    logMiddleware(),
+    authMiddleware({ getToken: () => getAuthToken() }),
+    retryMiddleware({ limit: 3, backoff: 500 }),
+  ],
+  groups: { users, posts },
+})
+```
+
+<Callout variant="tip" title="Middleware is async-compatible">
+All middleware functions are `async` by default. Nexus awaits the return value before proceeding through the chain.
+</Callout>
+
+## Next steps
+
+- [Options](/docs/advanced/options) — full reference of source-level and per-request options
+- [Abort & Deduplication](/docs/advanced/abort) — automatic request deduplication with abort signals
+- [Streaming](/docs/advanced/streaming) — receive responses as ReadableStreams for SSE and large downloads

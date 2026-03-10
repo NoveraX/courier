@@ -1,0 +1,153 @@
+export const metadata = { title: "createCaller", description: "Factory function that creates a typed caller for server-side direct HTTP calls — no proxy hop needed." }
+
+## Import
+
+```ts
+import { createCaller } from "@noverax/nexus"
+```
+
+## Signature
+
+`createCaller` takes your source definitions and optional defaults, returning a curried `CallerFn`. Direct mode calls the backend directly without going through a proxy.
+
+```ts
+const call = createCaller(sources, defaults?)
+```
+
+## Parameters
+
+### sources
+
+A record of API source definitions created with `defineApi()`.
+
+```ts
+import { sources } from "@/api"
+
+const call = createCaller(sources)
+```
+
+### CallerDefaults
+
+Optional default settings applied to every request.
+
+```ts
+type CallerDefaults = {
+  timeout?: number
+  headers?: Record<string, string>
+  onError?: (error: HTTPError) => void | Promise<void>
+  onSuccess?: (data: unknown) => void | Promise<void>
+}
+```
+
+## Return Type
+
+Direct mode returns the full response by default — `Partial<HttpResponse<R>>` with `status`, `headers`, and `data`.
+
+```ts
+type HttpResponse<T> = {
+  status: number
+  headers: Headers
+  data: T
+}
+```
+
+## Basic Usage
+
+```ts title="lib/caller.ts"
+import { createCaller } from "@noverax/nexus"
+import { sources } from "@/api"
+
+export const call = createCaller(sources, {
+  timeout: 10000,
+})
+
+// Usage: call(source)(endpoint, variables?, context?)
+const result = await call("api")("users:getAll")
+const user = await call("api")("users:getById", { id: "123" })
+```
+
+## Passing Context
+
+The optional third argument is a `Context` object. Use it to forward cookies and headers from the incoming request to the backend:
+
+```ts
+type Context = {
+  req?: Request
+  res?: Response
+  headers?: Headers
+}
+```
+
+```ts title="app/users/page.tsx"
+import { headers } from "next/headers"
+
+// Pass context for cookie/header forwarding
+const result = await call("api")(
+  "users:getProfile",
+  undefined,
+  { headers: await headers() },
+)
+
+// With variables AND context
+const user = await call("api")(
+  "users:getById",
+  { id: "123" },
+  { headers: await headers() },
+)
+```
+
+## Server Components
+
+Direct mode is designed for server-only execution. Use it in React Server Components, API routes, server actions, or any backend runtime.
+
+```ts title="app/users/page.tsx"
+import { call } from "@/lib/caller"
+
+export default async function UsersPage() {
+  const result = await call("api")("users:getAll")
+
+  return (
+    <ul>
+      {result.data?.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+## Server Actions
+
+```ts title="app/users/actions.ts"
+"use server"
+
+import { call } from "@/lib/caller"
+import { revalidatePath } from "next/cache"
+
+export async function createUser(formData: FormData) {
+  const name = formData.get("name") as string
+  await call("api")("users:create", { name })
+  revalidatePath("/users")
+}
+```
+
+## Configuring Defaults
+
+```ts title="lib/caller.ts"
+const call = createCaller(sources, {
+  timeout: 15000,
+  headers: {
+    "X-Internal-Service": "nexus-app",
+  },
+  onError: (error) => {
+    console.error(`[Direct] HTTP ${error.status}:`, error.data)
+  },
+})
+```
+
+## Related
+
+- [Server-Side Usage](/docs/server-side/overview) — direct mode architecture
+- [Server Actions](/docs/server-side/actions) — mutations with revalidation
+- [createProxyCaller](/docs/api/create-proxy-caller) — proxy-mode alternative for client components
+- [defineApi](/docs/api/define) — defining data sources

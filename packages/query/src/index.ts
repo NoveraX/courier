@@ -1,6 +1,12 @@
 "use client";
 
-export { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+export {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+  QueryClientProvider,
+  useQueryClient,
+} from "@tanstack/react-query";
 export { createQueryKeys } from "./keys";
 
 import {

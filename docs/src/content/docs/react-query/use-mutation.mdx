@@ -7,7 +7,7 @@ export const metadata = { title: "useMutation", description: "Create, update, an
 ```ts
 const result = useMutation(source, query, options?)
 
-// source  — key from your Sources type (e.g. "myApi")
+// source  — key from your Sources type (e.g. "api")
 // query   — "group:method" string (e.g. "users:create")
 // options — { requestOptions?, ...reactQueryMutationOptions }
 
@@ -27,11 +27,11 @@ The most common pattern — submit a form and create a resource. The `mutate` fu
 ```ts title="components/create-user-form.tsx"
 "use client"
 
-import { useMutation } from "@/lib/request"
+import { useMutation } from "@/lib/query"
 
 export function CreateUserForm() {
   // Method<User, { name: string; email: string; role: string }>
-  const { mutate, isPending } = useMutation("myApi", "users:create", {
+  const { mutate, isPending } = useMutation("api", "users:create", {
     onSuccess: (user) => {
       console.log("Created:", user.name) // ← user is typed as User
     },
@@ -70,11 +70,11 @@ For updates, pass all required fields (including the ID for path parameters) to 
 ```ts title="components/edit-user-form.tsx"
 "use client"
 
-import { useMutation } from "@/lib/request"
+import { useMutation } from "@/lib/query"
 
 export function EditUserForm({ user }: { user: User }) {
   // Method<User, { id: number; name: string; email: string }>
-  const { mutate, isPending } = useMutation("myApi", "users:update")
+  const { mutate, isPending } = useMutation("api", "users:update")
 
   const handleSave = (name: string, email: string) => {
     // Variables passed to mutate(), not to the hook options
@@ -101,11 +101,11 @@ Delete methods typically return `null` and only need an ID. The variable type is
 ```ts title="components/delete-user-button.tsx"
 "use client"
 
-import { useMutation } from "@/lib/request"
+import { useMutation } from "@/lib/query"
 
 export function DeleteUserButton({ userId }: { userId: number }) {
   // Method<null, { id: number }> → mutate takes { id: number }
-  const { mutate, isPending } = useMutation("myApi", "users:remove", {
+  const { mutate, isPending } = useMutation("api", "users:remove", {
     onSuccess: () => {
       console.log("User deleted")
     },
@@ -126,19 +126,19 @@ After a mutation succeeds, invalidate related queries to trigger a refetch. Use 
 ```ts title="components/create-user-form.tsx"
 "use client"
 
-import { useQueryClient } from "@tanstack/react-query"
-import { useMutation } from "@/lib/request"
+import { useQueryClient } from "@noverax/nexus-query"
+import { useMutation } from "@/lib/query"
 
 export function CreateUserForm() {
   const queryClient = useQueryClient()
 
-  const { mutate } = useMutation("myApi", "users:create", {
+  const { mutate } = useMutation("api", "users:create", {
     onSuccess: () => {
       // Invalidate the users list so it refetches
-      queryClient.invalidateQueries({ queryKey: ["myApi", "users:getAll"] })
+      queryClient.invalidateQueries({ queryKey: ["api", "users:getAll"] })
 
       // Or invalidate all queries for this source
-      // queryClient.invalidateQueries({ queryKey: ["myApi"] })
+      // queryClient.invalidateQueries({ queryKey: ["api"] })
     },
   })
 
@@ -151,7 +151,7 @@ export function CreateUserForm() {
 ```
 
 <Callout variant="tip" title="Partial key invalidation">
-Passing `{ queryKey: ["myApi"] }` invalidates every query for that source. Use `{ queryKey: ["myApi", "users:getAll"] }` to target a specific endpoint.
+Passing `{ queryKey: ["api"] }` invalidates every query for that source. Use `{ queryKey: ["api", "users:getAll"] }` to target a specific endpoint.
 </Callout>
 
 ## Optimistic updates
@@ -161,25 +161,25 @@ For instant UI feedback, update the cache optimistically before the server respo
 ```ts title="components/user-manager.tsx"
 "use client"
 
-import { useQueryClient } from "@tanstack/react-query"
-import { useMutation, useQuery } from "@/lib/request"
+import { useQueryClient } from "@noverax/nexus-query"
+import { useMutation, useQuery } from "@/lib/query"
 
 type User = { id: number; name: string; email: string }
 
 export function UserManager() {
   const queryClient = useQueryClient()
-  const { data: users } = useQuery("myApi", "users:getAll")
+  const { data: users } = useQuery("api", "users:getAll")
 
-  const { mutate: updateUser } = useMutation("myApi", "users:update", {
+  const { mutate: updateUser } = useMutation("api", "users:update", {
     // 1. Cancel outgoing refetches so they don't overwrite our optimistic update
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: ["myApi", "users:getAll"] })
+      await queryClient.cancelQueries({ queryKey: ["api", "users:getAll"] })
 
       // 2. Snapshot the previous value
-      const previous = queryClient.getQueryData<User[]>(["myApi", "users:getAll"])
+      const previous = queryClient.getQueryData<User[]>(["api", "users:getAll"])
 
       // 3. Optimistically update the cache
-      queryClient.setQueryData<User[]>(["myApi", "users:getAll"], (old) =>
+      queryClient.setQueryData<User[]>(["api", "users:getAll"], (old) =>
         old?.map((u) => (u.id === variables.id ? { ...u, ...variables } : u))
       )
 
@@ -189,13 +189,13 @@ export function UserManager() {
     // 4. On error, roll back to the previous value
     onError: (_error, _variables, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(["myApi", "users:getAll"], context.previous)
+        queryClient.setQueryData(["api", "users:getAll"], context.previous)
       }
     },
 
     // 5. Always refetch after error or success to ensure consistency
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["myApi", "users:getAll"] })
+      queryClient.invalidateQueries({ queryKey: ["api", "users:getAll"] })
     },
   })
 

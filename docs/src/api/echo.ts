@@ -1,4 +1,4 @@
-import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+import { defineGroup, endpoint } from "@noverax/nexus/define"
 
 type EchoResponse = {
   method: string
@@ -9,14 +9,12 @@ type EchoResponse = {
   rawQuery: string | null
 }
 
-export class Echo extends EndpointGroup {
-  constructor() {
-    super({ prefix: "echo" })
-  }
-
-  send: Endpoint<EchoResponse, Record<string, unknown>> = ({ post }) => post()
-
-  retrieve: Endpoint<EchoResponse, Record<string, unknown>> = ({ get }) => get()
-}
+export const echo = defineGroup({
+  prefix: "echo",
+  endpoints: {
+    send: endpoint<EchoResponse, Record<string, unknown>>()((http, vars) => http.post("", vars)),
+    retrieve: endpoint<EchoResponse, Record<string, unknown>>()((http) => http.get()),
+  },
+})
 
 export type { EchoResponse }

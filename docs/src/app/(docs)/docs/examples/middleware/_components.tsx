@@ -4,14 +4,18 @@ import { useState } from "react"
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
-import { request, useMutation } from "@/lib/request"
+import { caller, useMutation } from "@/lib/query"
 
-export function OnResponseDemo() {
-  const { mutate, data, isPending, error } = useMutation("hookedApi", "users:getAll")
+export function MiddlewareDemo() {
+  const { mutate, data, isPending, error } = useMutation("middlewareApi", "users:getAll")
 
   return (
     <>
-      <RunButton loading={isPending} label="Fetch Users (hooked)" onClick={() => mutate({})} />
+      <RunButton
+        loading={isPending}
+        label="Fetch Users (with middleware)"
+        onClick={() => mutate({})}
+      />
       {error && <ResponseViewer error={error.message} />}
       {data && <ResponseViewer data={data} status={200} />}
     </>
@@ -30,7 +34,7 @@ export function OnErrorDemo() {
     setLoading(true)
     setCaughtError(null)
     try {
-      await request("hookedApi")("misc:error", { code: 500 })
+      await caller("middlewareApi")("misc:error", { code: 500 })
     } catch (e: unknown) {
       const err = e as { status?: number; data?: unknown; message?: string }
       setCaughtError({
@@ -49,7 +53,7 @@ export function OnErrorDemo() {
       {caughtError && (
         <ResponseViewer
           data={{
-            note: "Error caught on client (after server-side onError hook fired)",
+            note: "Error caught on client (after server-side middleware fired)",
             ...caughtError,
           }}
           status={caughtError.status}

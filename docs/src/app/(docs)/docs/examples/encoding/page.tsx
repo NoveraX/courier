@@ -4,69 +4,65 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { BodyEncodingDemo, DefaultsDemo, SearchParamsDemo } from "./_components"
 
-const sourceConfigCode = `import { Datasource } from "@noverax/nexus/datasource"
+const sourceConfigCode = `import { defineApi } from "@noverax/nexus/define"
 
-class EncodedApi extends Datasource<typeof groups> {
-  constructor() {
-    super({
-      baseURL: "http://localhost:4000",
-      groups: { echo: new Echo() },
+const encodedApi = defineApi({
+  baseURL: "http://localhost:4000",
+  groups: { echo },
 
-      // Sends URL-encoded body instead of JSON
-      bodySerializer: (data) =>
-        new URLSearchParams(
-          Object.entries(data).map(([k, v]) => [k, String(v)])
-        ),
+  // Sends URL-encoded body instead of JSON
+  bodySerializer: (data) =>
+    new URLSearchParams(
+      Object.entries(data).map(([k, v]) => [k, String(v)])
+    ),
 
-      // Encodes arrays as key[]=val1&key[]=val2
-      searchParamsSerializer: {
-        stringify: (params) => {
-          const sp = new URLSearchParams()
-          for (const [key, value] of Object.entries(params)) {
-            if (Array.isArray(value)) {
-              for (const item of value)
-                sp.append(\`\${key}[]\`, String(item))
-            } else {
-              sp.append(key, String(value))
-            }
-          }
-          return sp.toString()
-        },
-        parse: (str) =>
-          Object.fromEntries(new URLSearchParams(str).entries()),
-      },
+  // Encodes arrays as key[]=val1&key[]=val2
+  searchParamsSerializer: {
+    stringify: (params) => {
+      const sp = new URLSearchParams()
+      for (const [key, value] of Object.entries(params)) {
+        if (Array.isArray(value)) {
+          for (const item of value)
+            sp.append(\`\${key}[]\`, String(item))
+        } else {
+          sp.append(key, String(value))
+        }
+      }
+      return sp.toString()
+    },
+    parse: (str) =>
+      Object.fromEntries(new URLSearchParams(str).entries()),
+  },
 
-      // Auto-merged into every POST/PUT/PATCH body
-      defaultBody: { apiVersion: "v2" },
-      // Auto-merged into every GET/DELETE query string
-      defaultQueryParams: { format: "json" },
-    })
-  }
-}`
+  // Auto-merged into every POST/PUT/PATCH body
+  defaultBody: { apiVersion: "v2" },
+  // Auto-merged into every GET/DELETE query string
+  defaultQueryParams: { format: "json" },
+})`
 
-const bodyEncodingCode = `// Default (mockApi): JSON body
-await request("mockApi")("echo:send", { name: "John", role: "admin" })
+const bodyEncodingCode = `// Default (api): JSON body
+await caller("api")("echo:send", { name: "John", role: "admin" })
 // Content-Type: application/json
 // Body: { "name": "John", "role": "admin" }
 
 // Custom (encodedApi): URL-encoded body + defaultBody merged
-await request("encodedApi")("echo:send", { name: "John", role: "admin" })
+await caller("encodedApi")("echo:send", { name: "John", role: "admin" })
 // Content-Type: application/x-www-form-urlencoded
 // Body: apiVersion=v2&name=John&role=admin`
 
 const searchParamsCode = `// Custom searchParamsSerializer supports arrays
-await request("encodedApi")("echo:retrieve", {
+await caller("encodedApi")("echo:retrieve", {
   tags: ["javascript", "react"],
   page: 1,
 })
 // GET /echo?format=json&apiVersion=v2&tags[]=javascript&tags[]=react&page=1`
 
 const defaultsCode = `// defaultBody auto-merges into POST body
-await request("encodedApi")("echo:send", { name: "John" })
+await caller("encodedApi")("echo:send", { name: "John" })
 // Body includes: apiVersion=v2&name=John
 
 // defaultQueryParams auto-merges into GET query
-await request("encodedApi")("echo:retrieve", { page: 1 })
+await caller("encodedApi")("echo:retrieve", { page: 1 })
 // Query includes: format=json&page=1`
 
 export const metadata = docsMetadata(
@@ -85,9 +81,9 @@ export default function EncodingExamplesPage() {
       <div className="space-y-8">
         <ExampleBlock
           title="Source Configuration"
-          description="Configure encoding options on the Datasource class. These apply to all methods in the source."
+          description="Configure encoding options on the defineApi call. These apply to all endpoints in the source."
           code={sourceConfigCode}
-          learnMoreHref="/docs/proxy-mode/encoding"
+          learnMoreHref="/docs/advanced/encoding"
           learnMoreLabel="Encoding docs"
         >
           <p className="text-sm text-muted-foreground">

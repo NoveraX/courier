@@ -4,42 +4,41 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { ProgressUploadDemo, SimpleUploadDemo } from "./_components"
 
-const simpleCode = `import { request } from "@/lib/request"
+const simpleCode = `import { caller } from "@/lib/query"
 
 const formData = new FormData()
 formData.append("file", file)
 formData.append("description", "My upload")
 
 // FormData is auto-detected — nexus sends multipart/form-data
-const result = await request("mockApi")("files:upload", formData)`
+const result = await caller("api")("files:upload", formData)`
 
-const progressCode = `import { request } from "@/lib/request"
+const progressCode = `import { caller } from "@/lib/query"
 
 const formData = new FormData()
 formData.append("file", file)
 
 // onUploadProgress tracks real upload progress (HTTP/2 compatible)
-const result = await request("mockApi", {
+const result = await caller("api", {
   onUploadProgress: (progress) => {
     setProgress(Math.round(progress.percent * 100))
   },
 })("files:upload", formData)`
 
-const sourceCode = `import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+const sourceCode = `import { defineGroup, endpoint } from "@noverax/nexus/define"
 
-class Files extends EndpointGroup {
-  constructor() {
-    super({ prefix: "upload" })
-  }
-
-  // FormData auto-detected — no bodySerializer needed
-  // Empty files are automatically removed before sending
-  upload: Endpoint<UploadResponse, FormData> = ({ post }) => post()
-}`
+const files = defineGroup({
+  prefix: "upload",
+  endpoints: {
+    // FormData auto-detected — no bodySerializer needed
+    // Empty files are automatically removed before sending
+    upload: endpoint<UploadResponse, FormData>()((http) => http.post()),
+  },
+})`
 
 export const metadata = docsMetadata(
   "File Upload",
-  "FormData file upload through the proxy. Nexus auto-detects FormData and handles encoding."
+  "FormData file upload with progress tracking. Nexus auto-detects FormData and handles encoding."
 )
 
 export default function UploadExamplesPage() {
@@ -47,7 +46,7 @@ export default function UploadExamplesPage() {
     <>
       <PageHeader
         title="File Upload"
-        description="FormData file upload through the proxy. Nexus auto-detects FormData and handles encoding."
+        description="FormData file upload with progress tracking. Nexus auto-detects FormData and handles encoding."
       />
 
       <div className="space-y-8">
@@ -55,7 +54,7 @@ export default function UploadExamplesPage() {
           title="Simple Upload"
           description="Single-request file upload. FormData is auto-detected by nexus."
           code={simpleCode}
-          learnMoreHref="/docs/proxy-mode/upload"
+          learnMoreHref="/docs/advanced/upload"
           learnMoreLabel="Upload docs"
         >
           <SimpleUploadDemo />

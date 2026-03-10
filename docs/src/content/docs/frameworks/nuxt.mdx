@@ -1,0 +1,214 @@
+export const metadata = { title: "Nuxt", description: "Nuxt integration with nexusHandler for server routes, createProxyCaller for client-side, and createCaller for server-side data fetching." }
+
+Nexus works with Nuxt through the `@noverax/nexus-nuxt` adapter. Use `nexusHandler` for the server proxy route, `createProxyCaller` for client-side requests, and `createCaller` for server-side data fetching.
+
+## Installation
+
+```bash
+npm install @noverax/nexus @noverax/nexus-nuxt
+```
+
+## Define your API sources
+
+Create a shared API definition:
+
+```ts title="lib/sources.ts"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+
+type Post = { id: number; title: string; body: string }
+type PostList = { data: Post[]; total: number }
+
+const posts = defineGroup({
+  prefix: "posts",
+  endpoints: {
+    getAll: endpoint<PostList, { page?: number }>()(
+      ({ get }) => get()
+    ),
+    getById: endpoint<Post, { id: number }>()(
+      ({ get }) => get(":id")
+    ),
+    create: endpoint<Post, { title: string; body: string }>()(
+      ({ post }) => post()
+    ),
+    remove: endpoint<null, { id: number }>()(
+      ({ del }) => del(":id")
+    ),
+  },
+})
+
+export const sources = {
+  myApi: defineApi({
+    baseURL: process.env.API_URL ?? "http://localhost:4000",
+    groups: { posts },
+  }),
+}
+
+export type Sources = typeof sources
+```
+
+## Step 1: Server route
+
+Create a Nuxt server route that proxies client requests to your backend:
+
+```ts title="server/api/request.post.ts"
+import { nexusHandler } from "@noverax/nexus-nuxt"
+import { sources } from "~/lib/sources"
+
+export default nexusHandler(sources)
+```
+
+This creates a `POST /api/request` endpoint that Nexus clients use as the proxy target.
+
+## Step 2: Client-side composable
+
+Create a composable using `createProxyCaller` for client-side requests:
+
+```ts title="composables/useCaller.ts"
+import { createProxyCaller } from "@noverax/nexus"
+import type { Sources } from "~/lib/sources"
+
+export const caller = createProxyCaller<Sources>({
+  proxyUrl: "/api/request",
+})
+```
+
+Use it in your pages and components:
+
+```vue title="pages/posts.vue"
+<script setup lang="ts">
+import { caller } from "~/composables/useCaller"
+
+const { data: posts, status } = useAsyncData("posts", () =>
+  caller("myApi")("posts:getAll", { page: 1 })
+)
+</script>
+
+<template>
+  <div>
+    <p v-if="status === 'pending'">Loading...</p>
+    <template v-else-if="posts">
+      <h1>Posts ({{ posts.total }})</h1>
+      <ul>
+        <li v-for="post in posts.data" :key="post.id">
+          {{ post.title }}
+        </li>
+      </ul>
+    </template>
+  </div>
+</template>
+```
+
+## Step 3: Server-side data fetching
+
+For server-side data fetching in event handlers, use `createCaller` directly:
+
+```ts title="lib/server-caller.ts"
+import { createCaller } from "@noverax/nexus"
+import { sources } from "~/lib/sources"
+
+export const serverCaller = createCaller(sources)
+```
+
+Use it in Nuxt server routes or event handlers:
+
+```ts title="server/api/dashboard.get.ts"
+import { serverCaller } from "~/lib/server-caller"
+
+export default defineEventHandler(async () => {
+  const posts = await serverCaller("myApi")("posts:getAll", { page: 1 })
+
+  return {
+    totalPosts: posts.total,
+    latestPosts: posts.data.slice(0, 5),
+  }
+})
+```
+
+## Using with useFetch
+
+You can also combine the server caller with `useFetch` for SSR data that hydrates on the client:
+
+```vue title="pages/posts/[id].vue"
+<script setup lang="ts">
+const route = useRoute()
+
+const { data: post } = useFetch(`/api/posts/${route.params.id}`)
+</script>
+
+<template>
+  <article v-if="post">
+    <h1>{{ post.title }}</h1>
+    <p>{{ post.body }}</p>
+  </article>
+</template>
+```
+
+```ts title="server/api/posts/[id].get.ts"
+import { serverCaller } from "~/lib/server-caller"
+
+export default defineEventHandler(async (event) => {
+  const id = Number(getRouterParam(event, "id"))
+
+  return await serverCaller("myApi")("posts:getById", { id })
+})
+```
+
+## Mutations
+
+Handle mutations by calling the proxy caller from client-side event handlers:
+
+```vue title="pages/posts/create.vue"
+<script setup lang="ts">
+import { caller } from "~/composables/useCaller"
+
+const title = ref("")
+const body = ref("")
+const isSubmitting = ref(false)
+
+async function handleSubmit() {
+  isSubmitting.value = true
+  try {
+    const post = await caller("myApi")("posts:create", {
+      title: title.value,
+      body: body.value,
+    })
+    navigateTo(`/posts/${post.id}`)
+  } finally {
+    isSubmitting.value = false
+  }
+}
+</script>
+
+<template>
+  <form @submit.prevent="handleSubmit">
+    <input v-model="title" placeholder="Title" required />
+    <textarea v-model="body" placeholder="Body" required />
+    <button type="submit" :disabled="isSubmitting">
+      {{ isSubmitting ? "Creating..." : "Create Post" }}
+    </button>
+  </form>
+</template>
+```
+
+<Callout variant="tip" title="@tanstack/vue-query">
+For advanced caching and mutation management, consider using `@tanstack/vue-query` alongside `createProxyCaller`. Nexus proxy callers return standard promises, so they work seamlessly with any data-fetching library.
+</Callout>
+
+## Project structure
+
+```
+composables/
+  useCaller.ts              # createProxyCaller<Sources>()
+lib/
+  sources.ts                # defineApi + defineGroup + endpoint
+  server-caller.ts          # createCaller(sources)
+server/
+  api/
+    request.post.ts         # nexusHandler(sources)
+    dashboard.get.ts        # server-side with createCaller
+    posts/[id].get.ts       # dynamic server route
+pages/
+  posts.vue                 # client-side with useAsyncData
+  posts/create.vue          # mutations
+  posts/[id].vue            # dynamic page with useFetch
+```

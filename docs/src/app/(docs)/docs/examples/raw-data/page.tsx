@@ -5,11 +5,11 @@ import { docsMetadata } from "@/lib/metadata"
 import { NormalFetchDemo, RawFetchDemo } from "./_components"
 
 const normalCode = `// Default — returns just the data
-const users = await request("mockApi")("users:getAll", {})
+const users = await caller("api")("users:getAll", {})
 // → { data: [...], total: 3 }`
 
 const rawDataCode = `// rawData: true — returns { status, headers, data }
-const response = await request("mockApi", { rawData: true })(
+const response = await caller("api", { rawData: true })(
   "users:getAll", {}
 )
 
@@ -25,10 +25,10 @@ type MethodRequestResponse<T extends boolean, R> = Promise<
 >
 
 // Usage with type safety:
-const data = await request("mockApi")("users:getAll", {})
+const data = await caller("api")("users:getAll", {})
 //    ^? { data: User[], total: number }
 
-const raw = await request("mockApi", { rawData: true })(
+const raw = await caller("api", { rawData: true })(
   "users:getAll", {}
 )
 //    ^? { status?: number, headers?: Headers, data?: ... }`

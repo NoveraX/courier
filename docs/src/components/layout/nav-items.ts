@@ -1,5 +1,19 @@
 import type { LucideIcon } from "lucide-react"
-import { BookOpen, Code2, Layers, Play, Puzzle, Rocket, Server, Settings, Zap } from "lucide-react"
+import {
+  BookOpen,
+  Box,
+  Code2,
+  Globe,
+  Layers,
+  Play,
+  Puzzle,
+  Rocket,
+  Server,
+  Settings,
+  Shield,
+  TestTube,
+  Zap,
+} from "lucide-react"
 
 export type NavItem = {
   title: string
@@ -41,31 +55,27 @@ export const docsNav: NavSection[] = [
     label: "Core Concepts",
     icon: Puzzle,
     items: [
-      { title: "Request & RequestGroup", href: "/docs/core-concepts/request" },
-      { title: "Instance & Methods", href: "/docs/core-concepts/instance" },
+      { title: "Defining APIs", href: "/docs/core-concepts/defining-apis" },
+      { title: "Caller & Proxy", href: "/docs/core-concepts/caller" },
+      { title: "Request Lifecycle", href: "/docs/core-concepts/request" },
+      { title: "HTTP Client & Methods", href: "/docs/core-concepts/instance" },
       { title: "Type Safety", href: "/docs/core-concepts/type-safety" },
       { title: "Error Handling", href: "/docs/core-concepts/error-handling" },
     ],
   },
   {
-    label: "Proxy Mode",
-    icon: Layers,
+    label: "Framework Guides",
+    icon: Box,
+    defaultOpen: true,
     items: [
-      { title: "Overview", href: "/docs/proxy-mode/overview" },
-      { title: "createClientRequest", href: "/docs/proxy-mode/client-request" },
-      { title: "API Route Handler", href: "/docs/proxy-mode/api-route" },
-      { title: "Path Parameters", href: "/docs/proxy-mode/path-params" },
-      { title: "Encoding", href: "/docs/proxy-mode/encoding" },
-      { title: "File Upload", href: "/docs/proxy-mode/upload" },
-    ],
-  },
-  {
-    label: "Server-Side",
-    icon: Server,
-    items: [
-      { title: "Overview", href: "/docs/server-side/overview" },
-      { title: "createDirectRequest", href: "/docs/server-side/direct" },
-      { title: "Server Actions", href: "/docs/server-side/actions" },
+      { title: "Next.js", href: "/docs/frameworks/nextjs" },
+      { title: "Nuxt", href: "/docs/frameworks/nuxt" },
+      { title: "React", href: "/docs/frameworks/react" },
+      { title: "Vue", href: "/docs/frameworks/vue" },
+      { title: "Hono", href: "/docs/frameworks/hono" },
+      { title: "Express", href: "/docs/frameworks/express" },
+      { title: "Fastify", href: "/docs/frameworks/fastify" },
+      { title: "NestJS", href: "/docs/frameworks/nestjs" },
     ],
   },
   {
@@ -79,28 +89,74 @@ export const docsNav: NavSection[] = [
     ],
   },
   {
+    label: "Middleware",
+    icon: Layers,
+    items: [
+      { title: "Overview", href: "/docs/middleware/overview" },
+      { title: "Built-in Middleware", href: "/docs/middleware/built-in" },
+      { title: "Custom Middleware", href: "/docs/middleware/custom" },
+    ],
+  },
+  {
+    label: "Validation",
+    icon: Shield,
+    items: [
+      { title: "Standard Schema", href: "/docs/validation/standard-schema" },
+      { title: "Zod Integration", href: "/docs/validation/zod" },
+    ],
+  },
+  {
+    label: "Proxy Mode",
+    icon: Globe,
+    items: [
+      { title: "Overview", href: "/docs/proxy-mode/overview" },
+      { title: "createProxyCaller", href: "/docs/proxy-mode/proxy-caller" },
+      { title: "Server Handler", href: "/docs/proxy-mode/api-route" },
+    ],
+  },
+  {
+    label: "Server-Side",
+    icon: Server,
+    items: [
+      { title: "Overview", href: "/docs/server-side/overview" },
+      { title: "createCaller", href: "/docs/server-side/caller" },
+      { title: "Server Actions", href: "/docs/server-side/actions" },
+    ],
+  },
+  {
     label: "Advanced",
     icon: Settings,
     items: [
-      { title: "Hooks (Lifecycle)", href: "/docs/advanced/hooks" },
+      { title: "Middleware", href: "/docs/advanced/middleware" },
       { title: "Streaming", href: "/docs/advanced/streaming" },
+      { title: "Path Parameters", href: "/docs/advanced/path-params" },
+      { title: "Encoding", href: "/docs/advanced/encoding" },
+      { title: "File Upload", href: "/docs/advanced/upload" },
       { title: "Abort & Deduplication", href: "/docs/advanced/abort" },
       { title: "Raw Data Mode", href: "/docs/advanced/raw-data" },
-      { title: "Options", href: "/docs/advanced/options" },
+      { title: "Options Reference", href: "/docs/advanced/options" },
       { title: "Singleton Pattern", href: "/docs/advanced/singleton" },
+    ],
+  },
+  {
+    label: "Testing",
+    icon: TestTube,
+    items: [
+      { title: "Test Client", href: "/docs/testing/test-client" },
+      { title: "Mocking Responses", href: "/docs/testing/mocking" },
     ],
   },
   {
     label: "API Reference",
     icon: Code2,
     items: [
-      { title: "createClientRequest", href: "/docs/api/create-client-request" },
-      { title: "createDirectRequest", href: "/docs/api/create-direct-request" },
-      { title: "createQueryRequest", href: "/docs/api/create-query-request" },
-      { title: "apiRoute", href: "/docs/api/api-route" },
-      { title: "Request", href: "/docs/api/request" },
-      { title: "RequestGroup", href: "/docs/api/request-group" },
-      { title: "Instance", href: "/docs/api/instance" },
+      { title: "defineApi", href: "/docs/api/define" },
+      { title: "defineGroup / endpoint", href: "/docs/api/define-group" },
+      { title: "createCaller", href: "/docs/api/create-caller" },
+      { title: "createProxyCaller", href: "/docs/api/create-proxy-caller" },
+      { title: "createQueryCaller", href: "/docs/api/create-query-caller" },
+      { title: "createHandler", href: "/docs/api/api-route" },
+      { title: "HttpClient", href: "/docs/api/instance" },
       { title: "HTTPError", href: "/docs/api/http-error" },
       { title: "Types", href: "/docs/api/types" },
     ],
@@ -108,11 +164,14 @@ export const docsNav: NavSection[] = [
   {
     label: "Examples",
     icon: Play,
-    defaultOpen: true,
     items: [
       { title: "Basic", href: "/docs/examples/basic", description: "Simple GET/POST requests" },
       { title: "CRUD", href: "/docs/examples/crud", description: "Create, read, update, delete" },
-      { title: "Groups", href: "/docs/examples/groups", description: "RequestGroup with prefix" },
+      {
+        title: "Groups",
+        href: "/docs/examples/groups",
+        description: "Endpoint groups with prefix",
+      },
       {
         title: "Path Params",
         href: "/docs/examples/path-params",
@@ -127,7 +186,7 @@ export const docsNav: NavSection[] = [
       {
         title: "Direct",
         href: "/docs/examples/direct",
-        description: "RSC with createDirectRequest",
+        description: "Server-side with createCaller",
       },
       {
         title: "Actions",
@@ -135,9 +194,9 @@ export const docsNav: NavSection[] = [
         description: "Server Actions + direct mode",
       },
       {
-        title: "Hooks",
-        href: "/docs/examples/hooks",
-        description: "onRequest / onResponse / onError",
+        title: "Middleware",
+        href: "/docs/examples/middleware",
+        description: "Middleware chain",
       },
       { title: "Errors", href: "/docs/examples/errors", description: "HTTPError handling" },
       { title: "Abort", href: "/docs/examples/abort", description: "AbortController & dedup" },
@@ -152,7 +211,6 @@ export const docsNav: NavSection[] = [
         description: "rawData: status + headers",
       },
       { title: "Options", href: "/docs/examples/options", description: "timeout, retry, cache" },
-      { title: "Singleton", href: "/docs/examples/singleton", description: "Module augmentation" },
     ],
   },
 ]

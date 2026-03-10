@@ -1,0 +1,268 @@
+export const metadata = { title: "Mocking", description: "MockBuilder API for controlling endpoint responses in tests -- static data, dynamic handlers, errors, limits, and delays." }
+
+## MockBuilder API
+
+When you call `mock(source, endpoint)`, you get a `MockBuilder` with a fluent chainable API:
+
+```ts title="types"
+type MockBuilder<R> = {
+  /** Return static data (status 200) */
+  resolves(data: R): MockBuilder<R>
+
+  /** Return dynamic data based on variables */
+  returns(fn: (variables?: unknown) => R | Promise<R>): MockBuilder<R>
+
+  /** Throw HTTPError with the given status and optional data */
+  rejects(status: number, data?: unknown): MockBuilder<R>
+
+  /** Limit this mock to a single invocation */
+  once(): MockBuilder<R>
+
+  /** Limit this mock to N invocations */
+  times(n: number): MockBuilder<R>
+
+  /** Add artificial delay (ms) before responding */
+  delay(ms: number): MockBuilder<R>
+}
+```
+
+## resolves
+
+Return static data with a 200 status. This is the most common mock:
+
+```ts
+mock("api", "users:getAll").resolves([
+  { id: 1, name: "Alice" },
+  { id: 2, name: "Bob" },
+])
+
+const users = await caller("api")("users:getAll")
+// users === [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]
+```
+
+## returns
+
+Provide a function that receives the request variables and returns data dynamically:
+
+```ts
+mock("api", "users:getById").returns((vars) => {
+  const { id } = vars as { id: number }
+  return { id, name: `User ${id}`, email: `user${id}@test.com` }
+})
+
+const user1 = await caller("api")("users:getById", { id: 1 })
+// user1 === { id: 1, name: "User 1", email: "user1@test.com" }
+
+const user2 = await caller("api")("users:getById", { id: 2 })
+// user2 === { id: 2, name: "User 2", email: "user2@test.com" }
+```
+
+The function can also be `async`:
+
+```ts
+mock("api", "users:getById").returns(async (vars) => {
+  const { id } = vars as { id: number }
+  // Simulate async work
+  return { id, name: "Loaded" }
+})
+```
+
+## rejects
+
+Throw an `HTTPError` with a given status code and optional response body:
+
+```ts
+mock("api", "users:getById").rejects(404, { message: "Not found" })
+
+// Throws HTTPError with status 404 and data { message: "Not found" }
+await caller("api")("users:getById", { id: 999 })
+```
+
+If you omit the data argument, a default error body is used:
+
+```ts
+mock("api", "users:delete").rejects(403)
+
+// Throws HTTPError with status 403 and data { success: false, message: "HTTP 403" }
+await caller("api")("users:delete", { id: 1 })
+```
+
+## once
+
+Limit a mock to a single invocation. After the mock is consumed, the next call will use a previously registered mock (LIFO) or throw a "no mock" error:
+
+```ts
+mock("api", "users:getAll").resolves([{ id: 1, name: "Alice" }]) // permanent fallback
+mock("api", "users:getAll").resolves([]).once()                   // consumed first
+
+const first = await caller("api")("users:getAll")
+// first === [] (the .once() mock)
+
+const second = await caller("api")("users:getAll")
+// second === [{ id: 1, name: "Alice" }] (falls back to the permanent mock)
+```
+
+## times
+
+Limit a mock to N invocations:
+
+```ts
+mock("api", "users:getAll")
+  .rejects(500, { error: "Server error" })
+  .times(2)
+
+mock("api", "users:getAll").resolves([]) // fallback
+
+// First two calls throw HTTPError 500
+// Third call returns []
+```
+
+## delay
+
+Add an artificial delay before the mock responds. Useful for testing loading states and timeouts:
+
+```ts
+mock("api", "users:getAll")
+  .resolves([{ id: 1, name: "Alice" }])
+  .delay(1000) // 1 second delay
+
+// Takes ~1 second to resolve
+const users = await caller("api")("users:getAll")
+```
+
+## Chaining
+
+All methods return the same `MockBuilder`, so you can chain freely:
+
+```ts
+mock("api", "users:getAll")
+  .resolves([{ id: 1, name: "Alice" }])
+  .delay(100)
+  .once()
+```
+
+## LIFO Stack Behavior
+
+Mocks for the same endpoint form a **LIFO (last-in, first-out) stack**. The most recently added mock is checked first. This lets you override specific scenarios without removing earlier mocks:
+
+```ts
+// Stack (bottom to top):
+mock("api", "users:getAll").resolves([])               // 1. permanent base
+mock("api", "users:getAll").rejects(500).once()        // 2. consumed first
+
+// Call 1: uses mock #2 (top of stack, .once()) → HTTPError 500
+// Call 2: uses mock #1 (permanent) → []
+// Call 3: uses mock #1 (permanent) → []
+```
+
+Once a `.once()` or `.times(n)` mock is exhausted, it is popped off the stack, and the next mock below takes over.
+
+### Testing optimistic → error → retry pattern
+
+```ts title="tests/retry.test.ts"
+it("retries after server error", async () => {
+  // Permanent success mock (base)
+  mock("api", "users:getAll").resolves([{ id: 1, name: "Alice" }])
+
+  // Temporary failure (consumed first)
+  mock("api", "users:getAll")
+    .rejects(500, { error: "Temporary failure" })
+    .once()
+
+  // First call fails
+  await expect(
+    caller("api")("users:getAll"),
+  ).rejects.toThrow()
+
+  // Second call succeeds (failure mock was consumed)
+  const result = await caller("api")("users:getAll")
+  expect(result).toEqual([{ id: 1, name: "Alice" }])
+})
+```
+
+## findRequests Helper
+
+Use `findRequests` to filter the history array by source and optionally by endpoint:
+
+```ts title="types"
+function findRequests(
+  history: HistoryEntry[],
+  source: string,
+  endpoint?: string,
+): HistoryEntry[]
+```
+
+```ts title="tests/analytics.test.ts"
+import { createTestClient, findRequests } from "@noverax/nexus/testing"
+
+const { caller, mock, history } = createTestClient<typeof sources>()
+
+mock("api", "users:getAll").resolves([])
+mock("api", "posts:getAll").resolves([])
+
+await caller("api")("users:getAll")
+await caller("api")("posts:getAll")
+await caller("api")("users:getAll")
+
+// All API calls
+const all = findRequests(history, "api")
+expect(all).toHaveLength(3)
+
+// Only user calls
+const userCalls = findRequests(history, "api", "users:getAll")
+expect(userCalls).toHaveLength(2)
+```
+
+## History Entry Structure
+
+Each entry records full request and response details:
+
+```ts title="types"
+type HistoryEntry = {
+  source: string       // "api"
+  endpoint: string     // "users:getAll"
+  group?: string       // "users"
+  method: string       // "getAll"
+  variables?: unknown  // { name: "Alice" }
+  result?: {
+    status: number     // 200
+    data: unknown      // the resolved mock data
+  }
+  error?: Error        // HTTPError or "no mock" Error
+  timestamp: number    // Date.now() at call time
+}
+```
+
+### Asserting on history entries
+
+```ts title="tests/audit.test.ts"
+it("sends correct variables to create endpoint", async () => {
+  mock("api", "users:create").resolves({ id: 1, name: "Alice" })
+
+  await caller("api")("users:create", { name: "Alice", email: "a@b.com" })
+
+  const [entry] = findRequests(history, "api", "users:create")
+  expect(entry.variables).toEqual({ name: "Alice", email: "a@b.com" })
+  expect(entry.result?.status).toBe(200)
+  expect(entry.error).toBeUndefined()
+})
+
+it("records errors in history", async () => {
+  mock("api", "users:delete").rejects(403)
+
+  try {
+    await caller("api")("users:delete", { id: 1 })
+  } catch {
+    // expected
+  }
+
+  const [entry] = findRequests(history, "api", "users:delete")
+  expect(entry.error).toBeDefined()
+  expect(entry.result?.status).toBe(403)
+})
+```
+
+## Next Steps
+
+- [Test Client](/docs/testing/test-client) -- creating and using the test client
+- [Error Handling](/docs/core-concepts/error-handling) -- HTTPError and isHTTPError for assertions

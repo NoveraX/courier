@@ -4,48 +4,47 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { TimeoutDemo } from "./_components"
 
-const timeoutCode = `// Set timeout in milliseconds (ky option)
+const timeoutCode = `// Set timeout in milliseconds
 // The /slow endpoint takes 3 seconds — this will timeout
 try {
-  await request("mockApi", { timeout: 1000 })("misc:slow")
+  await caller("api", { timeout: 1000 })("misc:slow")
 } catch (error) {
-  // TimeoutError or HTTPError with timeout message
+  // HTTPError with timeout message
   console.error("Request timed out")
 }`
 
-const retryCode = `// retry: number of times to retry on failure (ky option)
-// Retries on network errors and 408, 413, 429, 500, 502, 503, 504
-const data = await request("mockApi", { retry: 3 })(
-  "users:getAll", {}
-)
+const retryCode = `// Use retryMiddleware for automatic retries
+import { retryMiddleware } from "@noverax/nexus/middleware"
 
-// Custom retry config via retry object
-const data = await request("mockApi", {
-  retry: {
-    limit: 3,
-    methods: ["get"],
-    statusCodes: [408, 429, 500, 502, 503],
-    backoffLimit: 3000,
-  },
-})("users:getAll", {})`
+const api = defineApi({
+  baseURL: "...",
+  middleware: [
+    retryMiddleware({
+      limit: 3,
+      backoff: 300,
+      retryOn: (res) => [408, 502, 503, 504].includes(res.status),
+    }),
+  ],
+  groups: { users },
+})`
 
 const cacheCode = `// Next.js cache option (passed through to fetch)
-const data = await request("mockApi", {
+const data = await caller("api", {
   cache: "force-cache",
 })("users:getAll", {})
 
 // No caching
-const fresh = await request("mockApi", {
+const fresh = await caller("api", {
   cache: "no-store",
 })("users:getAll", {})`
 
 const revalidateCode = `// Next.js revalidation — ISR-style caching
-const data = await request("mockApi", {
+const data = await caller("api", {
   next: { revalidate: 60 },  // revalidate every 60 seconds
 })("users:getAll", {})
 
 // Tag-based revalidation
-const data = await request("mockApi", {
+const data = await caller("api", {
   next: { tags: ["users"] },
 })("users:getAll", {})
 
@@ -53,10 +52,10 @@ const data = await request("mockApi", {
 import { revalidateTag } from "next/cache"
 revalidateTag("users")`
 
-const globalDefaultsCode = `import { createClientRequest } from "@noverax/nexus"
+const globalDefaultsCode = `import { createProxyCaller } from "@noverax/nexus"
 
 // Set defaults for all requests
-const request = createClientRequest({
+const caller = createProxyCaller({
   timeout: 10000,           // 10s default timeout
   credentials: "include",  // send cookies
   headers: {
@@ -101,8 +100,8 @@ export default function OptionsExamplesPage() {
           code={retryCode}
         >
           <p className="text-sm text-muted-foreground">
-            Retry is a ky option passed through to the underlying HTTP client. By default ky retries
-            on network errors and specific status codes (408, 413, 429, 500, 502, 503, 504).
+            Retry is handled via retryMiddleware from @noverax/nexus/middleware. It supports
+            exponential backoff and custom retry conditions.
           </p>
         </ExampleBlock>
 
@@ -135,7 +134,7 @@ export default function OptionsExamplesPage() {
 
         <ExampleBlock
           title="Global Defaults"
-          description="Set defaults for all requests via createClientRequest or createQueryRequest."
+          description="Set defaults for all requests via createProxyCaller or createQueryCaller."
           code={globalDefaultsCode}
         >
           <p className="text-sm text-muted-foreground">

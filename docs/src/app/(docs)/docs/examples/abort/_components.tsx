@@ -5,7 +5,7 @@ import { useRef, useState } from "react"
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
-import { request } from "@/lib/request"
+import { caller } from "@/lib/query"
 
 export function ManualAbortDemo() {
   const controllerRef = useRef<AbortController | null>(null)
@@ -23,7 +23,7 @@ export function ManualAbortDemo() {
     controllerRef.current = controller
 
     try {
-      const data = await request("mockApi", { signal: controller.signal })("misc:slow")
+      const data = await caller("api", { signal: controller.signal })("misc:slow")
       setResult({ type: "success", data })
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === "AbortError") {
@@ -87,7 +87,7 @@ export function DedupDemo() {
     setResult(null)
 
     try {
-      const data = await request("mockApi", { signal: controller.signal })("users:getAll", {})
+      const data = await caller("api", { signal: controller.signal })("users:getAll", {})
       setResult(data)
     } catch {
       // Aborted — ignore

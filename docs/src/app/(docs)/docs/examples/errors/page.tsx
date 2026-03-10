@@ -7,7 +7,7 @@ import { CatchDemo, GuardDemo } from "./_components"
 const catchCode = `import { HTTPError } from "@noverax/nexus"
 
 try {
-  await request("mockApi")("misc:error", { code: 404 })
+  await caller("api")("misc:error", { code: 404 })
 } catch (error) {
   if (error instanceof HTTPError) {
     console.log(error.status)  // 404
@@ -19,7 +19,7 @@ try {
 const guardCode = `import { isHTTPError } from "@noverax/nexus"
 
 try {
-  await request("mockApi")("misc:error", { code: 403 })
+  await caller("api")("misc:error", { code: 403 })
 } catch (error) {
   if (isHTTPError(error)) {
     // TypeScript knows: error.status, error.data, error.headers
@@ -30,9 +30,9 @@ try {
   }
 }`
 
-const globalCode = `import { createClientRequest } from "@noverax/nexus"
+const globalCode = `import { createProxyCaller } from "@noverax/nexus"
 
-const request = createClientRequest({
+const caller = createProxyCaller({
   // Called for every failed request
   onError: (error) => {
     toast.error(\`Request failed: \${error.status}\`)
@@ -82,7 +82,7 @@ export default function ErrorsExamplesPage() {
 
         <ExampleBlock
           title="Global onError / onSuccess"
-          description="Configure global callbacks for all requests in createClientRequest defaults."
+          description="Configure global callbacks for all requests in createProxyCaller defaults."
           code={globalCode}
         >
           <p className="text-sm text-muted-foreground">

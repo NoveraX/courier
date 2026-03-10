@@ -1,0 +1,145 @@
+export const metadata = { title: "Express", description: "Express server adapter using nexusHandler for hosting the Nexus proxy route." }
+
+The `@noverax/nexus-express` adapter provides a handler for Express that serves as the Nexus proxy route.
+
+## Installation
+
+```bash
+npm install @noverax/nexus @noverax/nexus-express express cors
+npm install -D @types/express @types/cors
+```
+
+## Define your API sources
+
+```ts title="lib/sources.ts"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+
+type User = { id: number; name: string; email: string }
+
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint<User[]>()(({ get }) => get()),
+    getById: endpoint<User, { id: number }>()(({ get }) => get(":id")),
+    create: endpoint<User, { name: string; email: string }>()(
+      ({ post }) => post()
+    ),
+    remove: endpoint<null, { id: number }>()(({ del }) => del(":id")),
+  },
+})
+
+export const sources = {
+  myApi: defineApi({
+    baseURL: process.env.API_URL ?? "http://localhost:4000",
+    groups: { users },
+  }),
+}
+
+export type Sources = typeof sources
+```
+
+## Setup
+
+Create an Express server with the Nexus handler:
+
+```ts title="server.ts"
+import express from "express"
+import cors from "cors"
+import { nexusHandler } from "@noverax/nexus-express"
+import { sources } from "./lib/sources"
+
+const app = express()
+
+app.use(cors({ origin: "http://localhost:5173", credentials: true }))
+app.use(express.json())
+
+// Mount the Nexus proxy route
+app.all("/api/request", nexusHandler(sources))
+
+app.listen(3001, () => {
+  console.log("Server running on http://localhost:3001")
+})
+```
+
+The `nexusHandler` returns a standard Express middleware that handles incoming Nexus proxy requests and forwards them to your backend.
+
+## With existing Express app
+
+If you already have an Express server, add the Nexus handler alongside your existing routes:
+
+```ts title="server.ts"
+import express from "express"
+import cors from "cors"
+import { nexusHandler } from "@noverax/nexus-express"
+import { sources } from "./lib/sources"
+
+const app = express()
+
+app.use(cors({ origin: "http://localhost:5173", credentials: true }))
+app.use(express.json())
+
+// Your existing routes
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" })
+})
+
+app.get("/api/stats", (req, res) => {
+  res.json({ uptime: process.uptime() })
+})
+
+// Add Nexus proxy route
+app.all("/api/request", nexusHandler(sources))
+
+app.listen(3001)
+```
+
+<Callout variant="warning" title="Body parsing">
+Make sure `express.json()` middleware is applied before the Nexus handler. The handler expects the request body to be parsed as JSON.
+</Callout>
+
+## CORS configuration
+
+For production, restrict the allowed origins:
+
+```ts title="server.ts"
+import express from "express"
+import cors from "cors"
+import { nexusHandler } from "@noverax/nexus-express"
+import { sources } from "./lib/sources"
+
+const app = express()
+
+app.use(
+  cors({
+    origin: process.env.ALLOWED_ORIGINS?.split(",") ?? "http://localhost:5173",
+    credentials: true,
+  })
+)
+app.use(express.json())
+
+app.all("/api/request", nexusHandler(sources))
+
+app.listen(Number(process.env.PORT) || 3001)
+```
+
+<Callout variant="info" title="Credentials">
+Set `credentials: true` in your CORS config if your backend uses cookies for authentication. The Nexus proxy route forwards cookies from the browser to your backend automatically.
+</Callout>
+
+## Client-side setup
+
+On the client, point your caller to this server's proxy URL. Choose the guide for your frontend:
+
+- [React (Vite / CRA)](/docs/frameworks/react) — `createQueryCaller` with React Query hooks
+- [Vue](/docs/frameworks/vue) — `createProxyCaller` with composables
+- [Next.js](/docs/frameworks/nextjs) — full-stack with `apiRoute` and `createQueryCaller`
+- [Nuxt](/docs/frameworks/nuxt) — full-stack with `nexusHandler` and `createProxyCaller`
+
+```ts title="lib/caller.ts"
+import { createProxyCaller } from "@noverax/nexus"
+import type { Sources } from "../shared/sources"
+
+export const caller = createProxyCaller<Sources>({
+  proxyUrl: "http://localhost:3001/api/request",
+})
+```

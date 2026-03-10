@@ -1,4 +1,4 @@
-export const metadata = { title: "Error Handling", description: "Handle HTTP errors with typed error data, type guards, and global error hooks." }
+export const metadata = { title: "Error Handling", description: "Handle HTTP errors with typed error data, type guards, and middleware-based error hooks." }
 
 ## The HTTPError Class
 
@@ -31,7 +31,7 @@ Use `isHTTPError()` to narrow an unknown error to `HTTPError`. It works as a Typ
 import { isHTTPError } from "@noverax/nexus/error"
 
 try {
-  const user = await directRequest("api")("users:getById", { id: 999 })
+  const user = await call("api")("users:getById", { id: "999" })
 } catch (error) {
   // Type guard narrows error to HTTPError
   if (isHTTPError(error)) {
@@ -51,17 +51,18 @@ try {
 
 ### Direct mode — try/catch
 
-In Server Components and Server Actions, use standard try/catch to handle errors from `directRequest`:
+In Server Components and Server Actions, use standard try/catch to handle errors from `createCaller`:
 
 ```ts title="app/users/[id]/page.tsx"
 import { isHTTPError } from "@noverax/nexus/error"
+import { createCaller } from "@noverax/nexus"
+import { sources } from "@/api/sources"
 
-// Direct mode — try/catch
+const call = createCaller(sources)
+
 export default async function UserPage({ params }: { params: { id: string } }) {
   try {
-    const user = await directRequest("api")("users:getById", {
-      id: Number(params.id),
-    })
+    const user = await call("api")("users:getById", { id: params.id })
 
     return <UserProfile user={user} />
   } catch (error) {
@@ -78,13 +79,13 @@ export default async function UserPage({ params }: { params: { id: string } }) {
 
 ### Proxy mode — React Query
 
-When using `useQuery` and `useMutation`, React Query catches errors automatically and exposes them via the `error` property:
+When using `createQueryCaller`, React Query catches errors automatically and exposes them via the `error` property:
 
 ```ts title="components/users.tsx"
 "use client"
 
 import { isHTTPError } from "@noverax/nexus/error"
-import { useQuery, useMutation } from "@/lib/request"
+import { useQuery, useMutation } from "@/lib/caller"
 
 export function UsersList() {
   const { data, error, isError } = useQuery("api", "users:getAll")
@@ -121,42 +122,76 @@ export function CreateUserForm() {
 }
 ```
 
-## Global Error Hook
+## Middleware-Based Error Handling
 
-For cross-cutting error handling (logging, authentication redirects, toast notifications), use the `onError` hook in your `Datasource` options. This hook runs for every failed request across all groups:
+For cross-cutting error handling (logging, authentication redirects, toast notifications), define a custom middleware with `defineMiddleware`. This middleware wraps every request in the source and can intercept errors before they reach your components:
 
-```ts title="api/index.ts"
-import { Datasource } from "@noverax/nexus/datasource"
+```ts title="api/sources.ts"
+import { defineApi } from "@noverax/nexus/define"
+import { defineMiddleware } from "@noverax/nexus/middleware"
+import { isHTTPError } from "@noverax/nexus/error"
+import { users } from "./users"
+import { posts } from "./posts"
 
-const groups = { users: new Users(), posts: new Posts() }
+const errorMiddleware = defineMiddleware(async (ctx, next) => {
+  try {
+    return await next()
+  } catch (error) {
+    // Log to your error tracking service
+    if (isHTTPError(error)) {
+      console.error(
+        `[${ctx.source}] ${ctx.group}:${ctx.method} failed with ${error.status}`,
+        { variables: ctx.variables, data: error.data },
+      )
 
-class MyApi extends Datasource<typeof groups> {
-  constructor() {
-    super({
-      baseURL: process.env.API_URL ?? "http://localhost:4000",
-      groups,
+      // Handle 401 globally — redirect to login, refresh token, etc.
+      if (error.status === 401) {
+        window.location.href = "/login"
+      }
+    }
 
-      // Global error hook — runs for every failed request
-      onError: async (info, error) => {
-        // Log to your error tracking service
-        console.error(
-          `[${info.source}] ${info.group}:${info.method} failed with ${error.status}`,
-          { variables: info.variables, data: error.data }
-        )
-
-        // Handle 401 globally
-        if (error.status === 401) {
-          // Redirect to login, refresh token, etc.
-        }
-      },
-    })
+    // Re-throw so try/catch and React Query still receive the error
+    throw error
   }
-}
+})
+
+const api = defineApi({
+  baseURL: process.env.API_URL!,
+  middleware: [errorMiddleware],
+  groups: { users, posts },
+})
+
+export const sources = { api }
 ```
 
-<Callout variant="warning" title="onError does not suppress errors">
-The `onError` hook is for side effects only (logging, toasts, redirects). The error is still thrown after the hook runs, so your try/catch or React Query error handling will still receive it.
+<Callout variant="warning" title="Middleware does not suppress errors">
+The middleware re-throws the error after handling side effects. Your try/catch or React Query error handling will still receive it. If you want to suppress an error, return a fallback `MiddlewareResponse` instead of re-throwing.
 </Callout>
+
+### Combining with Built-in Middleware
+
+You can compose the error middleware with Nexus's built-in middleware. Middleware executes in array order — the first middleware is the outermost wrapper:
+
+```ts title="api/sources.ts"
+import { defineApi } from "@noverax/nexus/define"
+import {
+  defineMiddleware,
+  retryMiddleware,
+  logMiddleware,
+  authMiddleware,
+} from "@noverax/nexus/middleware"
+
+const api = defineApi({
+  baseURL: process.env.API_URL!,
+  middleware: [
+    logMiddleware(),                                   // logs endpoint, status, duration
+    retryMiddleware({ limit: 2, backoff: 300 }),       // retries on 5xx
+    authMiddleware({ getToken: () => getAuthToken() }),  // attaches Bearer token
+    errorMiddleware,                                   // custom error handling
+  ],
+  groups: { users, posts },
+})
+```
 
 ## Error Types
 
@@ -187,6 +222,6 @@ if (isHTTPError(error) && error.status === 499) {
 
 ## Next Steps
 
-- [Instance & Methods](/docs/core-concepts/instance) — how requests are executed under the hood
+- [HTTP Client & Methods](/docs/core-concepts/instance) — how requests are executed under the hood
 - [Type Safety](/docs/core-concepts/type-safety) — how types flow from definitions to error handling
-- [Request & RequestGroup](/docs/core-concepts/request) — where to configure global onError hooks
+- [Middleware](/docs/middleware/overview) — built-in retry, auth, logging, rate limiting, and caching middleware

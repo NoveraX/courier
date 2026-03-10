@@ -6,7 +6,7 @@ import { useState } from "react"
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
 import { Button } from "@/components/ui/button"
-import { useMutation, useQuery } from "@/lib/request"
+import { useMutation, useQuery } from "@/lib/query"
 
 type User = {
   id: number
@@ -19,27 +19,27 @@ type User = {
 export function CrudDemo() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
-  const { data, isLoading, refetch } = useQuery("mockApi", "users:getAll", { variables: {} })
+  const { data, isLoading, refetch } = useQuery("api", "users:getAll", { variables: {} })
 
-  const create = useMutation("mockApi", "users:create", {
+  const create = useMutation("api", "users:create", {
     onSuccess: () => refetch(),
   })
 
-  const update = useMutation("mockApi", "users:update", {
+  const update = useMutation("api", "users:update", {
     onSuccess: () => {
       refetch()
       setSelectedUser(null)
     },
   })
 
-  const patch = useMutation("mockApi", "users:patch", {
+  const patch = useMutation("api", "users:patch", {
     onSuccess: () => {
       refetch()
       setSelectedUser(null)
     },
   })
 
-  const remove = useMutation("mockApi", "users:remove", {
+  const remove = useMutation("api", "users:remove", {
     onSuccess: () => {
       refetch()
       setSelectedUser(null)

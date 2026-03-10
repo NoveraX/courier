@@ -1,0 +1,277 @@
+export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, and caching middleware shipped with Nexus." }
+
+Nexus ships five production-ready middleware functions. Import them from `@noverax/nexus/middleware`:
+
+```ts
+import {
+  retryMiddleware,
+  authMiddleware,
+  logMiddleware,
+  rateLimitMiddleware,
+  cacheMiddleware,
+} from "@noverax/nexus/middleware"
+```
+
+---
+
+## retryMiddleware
+
+Automatic retry with exponential backoff. Retries on server errors (status >= 500) or thrown exceptions.
+
+```ts title="signature"
+function retryMiddleware(options?: {
+  /** Maximum number of retries (default: 3) */
+  limit?: number
+  /** Base delay in ms for exponential backoff (default: 300) */
+  backoff?: number
+  /** Custom retry condition (default: status >= 500) */
+  retryOn?: (response: MiddlewareResponse) => boolean
+}): MiddlewareFn
+```
+
+The delay between retries follows the formula `backoff * 2^attempt` -- so with the default 300ms base, the delays are 300ms, 600ms, 1200ms.
+
+```ts title="lib/sources.ts"
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  middleware: [
+    retryMiddleware({ limit: 3, backoff: 300 }),
+  ],
+  groups: { /* ... */ },
+})
+```
+
+### Custom retry condition
+
+Override `retryOn` to retry on specific status codes:
+
+```ts title="lib/sources.ts"
+retryMiddleware({
+  limit: 2,
+  backoff: 500,
+  retryOn: (response) => response.status === 429 || response.status >= 500,
+})
+```
+
+<Callout variant="tip" title="Thrown errors always retry">
+If the endpoint handler throws (e.g., a network failure), the retry middleware catches it and retries regardless of the `retryOn` condition. After exhausting all retries, the original error is re-thrown.
+</Callout>
+
+---
+
+## authMiddleware
+
+JWT/OAuth token injection with automatic refresh on 401.
+
+```ts title="signature"
+function authMiddleware(options: {
+  /** Function to get the current auth token */
+  getToken: () => string | Promise<string>
+  /** Optional function to refresh the token on 401 */
+  refreshToken?: () => string | Promise<string>
+  /** Header name (default: "Authorization") */
+  header?: string
+  /** Auth scheme prefix (default: "Bearer") */
+  scheme?: string
+}): MiddlewareFn
+```
+
+### Basic usage
+
+```ts title="lib/sources.ts"
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  middleware: [
+    authMiddleware({
+      getToken: () => localStorage.getItem("access_token")!,
+    }),
+  ],
+  groups: { /* ... */ },
+})
+```
+
+### With token refresh
+
+When `refreshToken` is provided and the endpoint returns a 401, the middleware calls `refreshToken()`, updates the header, and retries the request automatically:
+
+```ts title="lib/sources.ts"
+authMiddleware({
+  getToken: () => tokenStore.accessToken,
+  refreshToken: async () => {
+    const { accessToken } = await refreshAccessToken(tokenStore.refreshToken)
+    tokenStore.accessToken = accessToken
+    return accessToken
+  },
+})
+```
+
+### API key authentication
+
+Set `scheme` to an empty string and use a custom header for non-Bearer auth:
+
+```ts title="lib/sources.ts"
+authMiddleware({
+  getToken: () => process.env.API_KEY!,
+  header: "X-API-Key",
+  scheme: "",
+})
+```
+
+---
+
+## logMiddleware
+
+Request/response logging with timing information.
+
+```ts title="signature"
+function logMiddleware(options?: {
+  /** Custom logger function (default: console.log) */
+  logger?: (message: string) => void
+}): MiddlewareFn
+```
+
+Logs each request as `source:group:method -> status (duration)`. On errors, logs `source:group:method -> ERROR (duration)`.
+
+```ts title="lib/sources.ts"
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  middleware: [
+    logMiddleware(),
+  ],
+  groups: { /* ... */ },
+})
+
+// Output:
+// api:users:getAll → 200 (42ms)
+// api:users:create → 201 (89ms)
+// api:auth:login → ERROR (1203ms)
+```
+
+### Custom logger
+
+Send logs to your observability platform:
+
+```ts title="lib/sources.ts"
+import * as Sentry from "@sentry/node"
+
+logMiddleware({
+  logger: (message) => {
+    Sentry.addBreadcrumb({ category: "api", message })
+  },
+})
+```
+
+---
+
+## rateLimitMiddleware
+
+Client-side rate limiting. Delays requests that exceed the configured limit within a time window.
+
+```ts title="signature"
+function rateLimitMiddleware(options: {
+  /** Maximum number of requests in the window */
+  maxRequests: number
+  /** Time window in milliseconds */
+  window: number
+}): MiddlewareFn
+```
+
+```ts title="lib/sources.ts"
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  middleware: [
+    rateLimitMiddleware({ maxRequests: 10, window: 1000 }),
+  ],
+  groups: { /* ... */ },
+})
+```
+
+<Callout variant="info" title="Queuing, not rejecting">
+Unlike server-side rate limiters that return 429 errors, this middleware **delays** requests until the window allows them. Your code does not need to handle rate limit errors -- the middleware transparently queues requests.
+</Callout>
+
+---
+
+## cacheMiddleware
+
+In-memory response caching with configurable TTL.
+
+```ts title="signature"
+function cacheMiddleware(options?: {
+  /** Time-to-live in milliseconds (default: 60000) */
+  ttl?: number
+  /** Custom storage map (default: in-memory Map) */
+  storage?: Map<string, { data: MiddlewareResponse; expiry: number }>
+}): MiddlewareFn
+```
+
+Caches successful responses (2xx status) keyed by `source:group:method:variables`. Non-2xx responses are never cached.
+
+```ts title="lib/sources.ts"
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  middleware: [
+    cacheMiddleware({ ttl: 30_000 }), // 30 seconds
+  ],
+  groups: { /* ... */ },
+})
+```
+
+### Custom storage
+
+Provide your own `Map` instance to control the cache externally (e.g., for manual invalidation):
+
+```ts title="lib/sources.ts"
+const apiCache = new Map()
+
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  middleware: [
+    cacheMiddleware({ ttl: 60_000, storage: apiCache }),
+  ],
+  groups: { /* ... */ },
+})
+
+// Invalidate the entire cache
+function invalidateCache() {
+  apiCache.clear()
+}
+```
+
+<Callout variant="warning" title="Variables affect the cache key">
+Two requests to the same endpoint with different variables produce different cache keys. `users:getById` with `{ id: 1 }` and `{ id: 2 }` are cached separately.
+</Callout>
+
+---
+
+## Composing Built-in Middleware
+
+Order matters. Place middleware in the array from outermost to innermost:
+
+```ts title="lib/sources.ts"
+import { defineApi } from "@noverax/nexus/define"
+import {
+  authMiddleware,
+  cacheMiddleware,
+  logMiddleware,
+  rateLimitMiddleware,
+  retryMiddleware,
+} from "@noverax/nexus/middleware"
+
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  middleware: [
+    logMiddleware(),                                    // 1. Log everything
+    cacheMiddleware({ ttl: 30_000 }),                   // 2. Return cached if available
+    rateLimitMiddleware({ maxRequests: 10, window: 1000 }), // 3. Throttle outgoing
+    retryMiddleware({ limit: 3, backoff: 300 }),        // 4. Retry on failure
+    authMiddleware({ getToken: () => getToken() }),     // 5. Attach token last
+  ],
+  groups: { /* ... */ },
+})
+```
+
+## Next Steps
+
+- [Custom Middleware](/docs/middleware/custom) -- write your own middleware
+- [Middleware Overview](/docs/middleware/overview) -- the onion model and core types

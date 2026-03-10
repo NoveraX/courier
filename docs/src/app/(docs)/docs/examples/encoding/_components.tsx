@@ -2,10 +2,10 @@
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
-import { useMutation } from "@/lib/request"
+import { useMutation } from "@/lib/query"
 
 export function BodyEncodingDemo() {
-  const jsonMutation = useMutation("mockApi", "echo:send")
+  const jsonMutation = useMutation("api", "echo:send")
   const encodedMutation = useMutation("encodedApi", "echo:send")
   const variables = { name: "John", role: "admin" }
 

@@ -1,4 +1,4 @@
-import { apiRoute } from "@noverax/nexus/next/apiRoute"
-import { methods } from "@/api"
+import { apiRoute } from "@noverax/nexus-next"
+import { sources } from "@/api"
 
-export const { POST } = apiRoute(methods)
+export const { GET, POST } = apiRoute(sources)

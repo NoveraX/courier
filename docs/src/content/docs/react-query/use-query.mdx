@@ -7,7 +7,7 @@ export const metadata = { title: "useQuery", description: "Fetch data with autom
 ```ts
 const result = useQuery(source, query, options?)
 
-// source  — key from your Sources type (e.g. "myApi")
+// source  — key from your Sources type (e.g. "api")
 // query   — "group:method" string (e.g. "users:getAll")
 // options — { variables?, requestOptions?, ...reactQueryOptions }
 ```
@@ -19,10 +19,10 @@ The simplest usage — fetch data on mount. The `data` type is automatically inf
 ```ts title="components/user-list.tsx"
 "use client"
 
-import { useQuery } from "@/lib/request"
+import { useQuery } from "@/lib/query"
 
 export function UserList() {
-  const { data, isLoading, error } = useQuery("myApi", "users:getAll")
+  const { data, isLoading, error } = useQuery("api", "users:getAll")
   //      ^? UserList — auto-inferred from Endpoint<UserList>
 
   if (isLoading) return <p>Loading...</p>
@@ -45,11 +45,11 @@ When a method defines variables (e.g. `Endpoint<User, { id: number }>`), the `va
 ```ts title="components/user-profile.tsx"
 "use client"
 
-import { useQuery } from "@/lib/request"
+import { useQuery } from "@/lib/query"
 
 export function UserProfile({ userId }: { userId: number }) {
   // Endpoint<User, { id: number }> → variables is required
-  const { data: user, isLoading } = useQuery("myApi", "users:getById", {
+  const { data: user, isLoading } = useQuery("api", "users:getById", {
     variables: { id: userId },
     //          ^? { id: number } — auto-inferred from Endpoint
   })
@@ -76,10 +76,10 @@ Use the `enabled` option to conditionally execute a query. The query won't fire 
 ```ts title="components/user-profile.tsx"
 "use client"
 
-import { useQuery } from "@/lib/request"
+import { useQuery } from "@/lib/query"
 
 export function UserProfile({ userId }: { userId: number | null }) {
-  const { data, isLoading } = useQuery("myApi", "users:getById", {
+  const { data, isLoading } = useQuery("api", "users:getById", {
     variables: { id: userId! },
     // Only fetch when userId is available
     enabled: userId !== null,
@@ -97,7 +97,7 @@ export function UserProfile({ userId }: { userId: number | null }) {
 All standard React Query options are supported alongside Nexus-specific options. Configure caching, refetching, and data transformation:
 
 ```ts
-const { data } = useQuery("myApi", "users:getAll", {
+const { data } = useQuery("api", "users:getAll", {
   variables: { page: 1, limit: 20 },
 
   // Standard React Query options — all supported
@@ -120,18 +120,18 @@ const { data } = useQuery("myApi", "users:getAll", {
 Nexus automatically generates query keys from the source, query, and variables. This means cache invalidation works without manually managing keys:
 
 ```ts
-// Auto-generated query key: ["myApi", "users:getAll"]
-useQuery("myApi", "users:getAll")
+// Auto-generated query key: ["api", "users:getAll"]
+useQuery("api", "users:getAll")
 
-// With variables: ["myApi", "users:getById", { id: 5 }]
-useQuery("myApi", "users:getById", { variables: { id: 5 } })
+// With variables: ["api", "users:getById", { id: 5 }]
+useQuery("api", "users:getById", { variables: { id: 5 } })
 
 // Use the same key format for cache invalidation
-queryClient.invalidateQueries({ queryKey: ["myApi", "users:getAll"] })
+queryClient.invalidateQueries({ queryKey: ["api", "users:getAll"] })
 ```
 
 <Callout variant="tip" title="Partial key matching">
-React Query supports partial key matching. Invalidating `["myApi", "users:getAll"]` will match all queries for that endpoint regardless of variables. Invalidating `["myApi"]` will match all queries for that source.
+React Query supports partial key matching. Invalidating `["api", "users:getAll"]` will match all queries for that endpoint regardless of variables. Invalidating `["api"]` will match all queries for that source.
 </Callout>
 
 ## Error handling
@@ -141,17 +141,17 @@ The `error` property is typed as `Error`. Use `isHTTPError` to check if it's an 
 ```ts title="components/user-list.tsx"
 "use client"
 
-import { isHTTPError } from "@noverax/nexus"
-import { useQuery } from "@/lib/request"
+import { isHTTPError } from "@noverax/nexus/error"
+import { useQuery } from "@/lib/query"
 
 export function UserList() {
-  const { data, error, isError } = useQuery("myApi", "users:getAll")
+  const { data, error, isError } = useQuery("api", "users:getAll")
 
   if (isError) {
     // Check if it's an HTTP error with status/response
     if (isHTTPError(error)) {
-      if (error.response.status === 404) return <p>Not found</p>
-      if (error.response.status === 403) return <p>Access denied</p>
+      if (error.status === 404) return <p>Not found</p>
+      if (error.status === 403) return <p>Access denied</p>
     }
     return <p>Something went wrong: {error.message}</p>
   }

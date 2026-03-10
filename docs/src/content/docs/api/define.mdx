@@ -1,0 +1,195 @@
+export const metadata = { title: "defineApi", description: "Creates a data source with base URL, options, middleware, and endpoint groups." }
+
+## Import
+
+```ts
+import { defineApi } from "@noverax/nexus/define"
+```
+
+## Signature
+
+```ts
+function defineApi<G extends GroupRecord>(
+  options: BaseOptions & { groups: G }
+): DefinedApi<G>
+```
+
+## Parameters
+
+### BaseOptions
+
+The core configuration for a data source:
+
+```ts
+type BaseOptions = {
+  baseURL?: string
+  responseType?: "json" | "text" | "blob" | "arrayBuffer" | "formData"
+  responseParser?: (response: Response) => Promise<unknown>
+  defaultBody?: Record<string, unknown>
+  defaultQueryParams?: Record<string, unknown>
+  allowedHeaders?: string[]
+  bodySerializer?: (data: Record<string, unknown>) => BodyInit
+  searchParamsSerializer?: SearchParamsSerializer
+  deduplicate?: boolean
+  middleware?: MiddlewareFn[]
+  pathOptions?: PathOptions
+  timeout?: number
+  headers?: HeadersInit
+  signal?: AbortSignal
+}
+```
+
+## Basic Usage
+
+### With Groups
+
+```ts title="api/index.ts"
+import { defineApi } from "@noverax/nexus/define"
+import { users } from "./users"
+import { posts } from "./posts"
+
+const api = defineApi({
+  baseURL: process.env.API_URL ?? "http://localhost:4000",
+  groups: { users, posts },
+})
+
+export const sources = { api }
+export type Sources = typeof sources
+```
+
+### With Options
+
+```ts title="api/index.ts"
+import { defineApi } from "@noverax/nexus/define"
+import { logMiddleware, authMiddleware } from "@noverax/nexus/middleware"
+
+const api = defineApi({
+  baseURL: process.env.API_URL ?? "http://localhost:4000",
+
+  // Response parsing (default: "json")
+  responseType: "json",
+
+  // Default data merged into every POST/PUT/PATCH body
+  defaultBody: { apiKey: process.env.API_KEY },
+
+  // Default params merged into every request
+  defaultQueryParams: { locale: "en" },
+
+  // Request timeout in milliseconds
+  timeout: 10_000,
+
+  // Static headers
+  headers: {
+    "X-Client": "nexus",
+    Authorization: `Bearer ${process.env.API_SECRET}`,
+  },
+
+  // Middleware chain
+  middleware: [
+    logMiddleware(),
+    authMiddleware(() => getAuthToken()),
+  ],
+
+  // Enable request deduplication
+  deduplicate: true,
+
+  groups: { users, posts },
+})
+```
+
+## Options Reference
+
+### baseURL
+
+Sets the base URL prefix for all requests from this source.
+
+### responseType
+
+Controls response parsing. Supported: `"json"` (default), `"text"`, `"blob"`, `"arrayBuffer"`, `"formData"`. A `204` status always returns `null`.
+
+### responseParser
+
+Custom response parser that overrides `responseType`:
+
+```ts
+const api = defineApi({
+  baseURL: "...",
+  responseParser: async (response) => {
+    const text = await response.text()
+    return new DOMParser().parseFromString(text, "text/xml")
+  },
+  groups: { ... },
+})
+```
+
+### defaultBody
+
+Object merged into every POST/PUT/PATCH body:
+
+```ts
+const api = defineApi({
+  baseURL: "...",
+  defaultBody: { apiKey: "...", version: "v2" },
+  groups: { ... },
+})
+// POST /users body: { apiKey: "...", version: "v2", name: "Alice" }
+```
+
+### defaultQueryParams
+
+Object merged into every request's search parameters:
+
+```ts
+const api = defineApi({
+  baseURL: "...",
+  defaultQueryParams: { locale: "en", format: "json" },
+  groups: { ... },
+})
+// GET /users → GET /users?locale=en&format=json
+```
+
+### middleware
+
+Array of middleware functions applied to every request. See [Middleware](/docs/middleware/overview).
+
+### bodySerializer
+
+Custom body encoder (e.g., for URL-encoded forms):
+
+```ts
+const api = defineApi({
+  baseURL: "...",
+  bodySerializer: (data) =>
+    new URLSearchParams(Object.entries(data).map(([k, v]) => [k, String(v)])),
+  groups: { ... },
+})
+```
+
+### searchParamsSerializer
+
+Custom search params encoder:
+
+```ts
+const api = defineApi({
+  baseURL: "...",
+  searchParamsSerializer: {
+    stringify: (obj) => qs.stringify(obj),
+    parse: (str) => qs.parse(str),
+  },
+  groups: { ... },
+})
+```
+
+### deduplicate
+
+Enable automatic request deduplication via `AbortController`. See [Abort & Dedup](/docs/advanced/abort).
+
+### allowedHeaders
+
+Additional header names to forward through the proxy.
+
+## Related
+
+- [defineGroup](/docs/api/define-group) — defining endpoint groups
+- [Defining APIs Guide](/docs/core-concepts/defining-apis) — in-depth usage patterns
+- [Middleware](/docs/advanced/middleware) — middleware reference

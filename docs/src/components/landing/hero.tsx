@@ -1,24 +1,19 @@
 import { ArrowRight } from "lucide-react"
-
-import { GithubIcon } from "@/components/icons/github"
 import Link from "next/link"
-
 import { CodeBlock } from "@/components/docs/code-block"
+import { GithubIcon } from "@/components/icons/github"
 import { Button } from "@/components/ui/button"
 import { NexusLogo } from "../nexus-logo"
 import { InstallBadge } from "./install-badge"
 import { AnimatedSection } from "./section-animate"
 
-const heroCode = `import { createClientRequest } from "@noverax/nexus"
-import { api } from "@/lib/api"
+const heroCode = `import { createProxyCaller } from "@noverax/nexus"
 
-const request = createClientRequest()
+const caller = createProxyCaller<Sources>()
 
 // Fully typed — response, variables, path params
-const users = await request<User[]>(api.users.getAll)
-const user = await request<User>(api.users.getOne, {
-  path: { id: "1" },
-})`
+const users = await caller("api")("users:getAll")
+const user = await caller("api")("users:getById", { id: 1 })`
 
 export function Hero() {
   return (
@@ -56,7 +51,7 @@ export function Hero() {
             </h1>
             <p className="mt-4 text-lg leading-relaxed text-muted-foreground sm:text-xl">
               Zero boilerplate, full type inference. Proxy & direct modes, React Query integration,
-              streaming, uploads — all from a single class definition.
+              streaming, uploads — all from a single API definition.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" className="gradient-brand glow-brand text-white">

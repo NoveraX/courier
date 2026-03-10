@@ -1,0 +1,239 @@
+export const metadata = { title: "Vue", description: "Use Nexus with Vue via createProxyCaller in composables with ref/reactive patterns." }
+
+For Vue apps (with Vite), Nexus provides `createProxyCaller` for type-safe API calls. Since Vue apps don't have a built-in server, you need a separate backend (Express, Hono, or Fastify) to host the proxy route.
+
+## Installation
+
+```bash
+npm install @noverax/nexus
+```
+
+## Define your API sources
+
+```ts title="shared/sources.ts"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+
+type Task = { id: number; title: string; completed: boolean }
+
+const tasks = defineGroup({
+  prefix: "tasks",
+  endpoints: {
+    getAll: endpoint<Task[], { status?: "all" | "active" | "completed" }>()(
+      ({ get }) => get()
+    ),
+    getById: endpoint<Task, { id: number }>()(
+      ({ get }) => get(":id")
+    ),
+    create: endpoint<Task, { title: string }>()(
+      ({ post }) => post()
+    ),
+    toggle: endpoint<Task, { id: number; completed: boolean }>()(
+      ({ patch }) => patch(":id")
+    ),
+    remove: endpoint<null, { id: number }>()(
+      ({ del }) => del(":id")
+    ),
+  },
+})
+
+export const sources = {
+  myApi: defineApi({
+    baseURL: process.env.API_URL ?? "http://localhost:4000",
+    groups: { tasks },
+  }),
+}
+
+export type Sources = typeof sources
+```
+
+## Step 1: Set up the proxy backend
+
+You need a backend server to host the Nexus proxy route. Here is an example using Express:
+
+```ts title="server/index.ts"
+import express from "express"
+import cors from "cors"
+import { nexusHandler } from "@noverax/nexus-express"
+import { sources } from "../shared/sources"
+
+const app = express()
+
+app.use(cors({ origin: "http://localhost:5173", credentials: true }))
+app.use(express.json())
+
+app.all("/api/request", nexusHandler(sources))
+
+app.listen(3001, () => {
+  console.log("Proxy server running on http://localhost:3001")
+})
+```
+
+<Callout variant="info" title="Choose your backend">
+You can use any supported adapter: [Express](/docs/frameworks/express), [Hono](/docs/frameworks/hono), [Fastify](/docs/frameworks/fastify), or [NestJS](/docs/frameworks/nestjs). The proxy route is framework-agnostic — only the adapter differs.
+</Callout>
+
+## Step 2: Create a composable
+
+```ts title="src/composables/useCaller.ts"
+import { createProxyCaller } from "@noverax/nexus"
+import type { Sources } from "../../shared/sources"
+
+export const caller = createProxyCaller<Sources>({
+  proxyUrl: import.meta.env.VITE_PROXY_URL ?? "http://localhost:3001/api/request",
+})
+```
+
+## Step 3: Use in components
+
+### Fetching data with ref
+
+```vue title="src/components/TaskList.vue"
+<script setup lang="ts">
+import { ref, onMounted } from "vue"
+import { caller } from "@/composables/useCaller"
+
+type Task = { id: number; title: string; completed: boolean }
+
+const tasks = ref<Task[]>([])
+const isLoading = ref(true)
+const error = ref<string | null>(null)
+
+async function fetchTasks(status?: "all" | "active" | "completed") {
+  isLoading.value = true
+  error.value = null
+  try {
+    tasks.value = await caller("myApi")("tasks:getAll", { status })
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : "Failed to load tasks"
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(() => fetchTasks())
+</script>
+
+<template>
+  <div>
+    <div>
+      <button @click="fetchTasks('all')">All</button>
+      <button @click="fetchTasks('active')">Active</button>
+      <button @click="fetchTasks('completed')">Completed</button>
+    </div>
+
+    <p v-if="isLoading">Loading...</p>
+    <p v-else-if="error">{{ error }}</p>
+    <ul v-else>
+      <li v-for="task in tasks" :key="task.id">
+        <span :class="{ completed: task.completed }">{{ task.title }}</span>
+      </li>
+    </ul>
+  </div>
+</template>
+```
+
+### Mutations with reactive state
+
+```vue title="src/components/CreateTask.vue"
+<script setup lang="ts">
+import { reactive } from "vue"
+import { caller } from "@/composables/useCaller"
+
+const emit = defineEmits<{ created: [] }>()
+
+const form = reactive({
+  title: "",
+  isSubmitting: false,
+  error: null as string | null,
+})
+
+async function handleSubmit() {
+  form.isSubmitting = true
+  form.error = null
+  try {
+    await caller("myApi")("tasks:create", { title: form.title })
+    form.title = ""
+    emit("created")
+  } catch (e) {
+    form.error = e instanceof Error ? e.message : "Failed to create task"
+  } finally {
+    form.isSubmitting = false
+  }
+}
+</script>
+
+<template>
+  <form @submit.prevent="handleSubmit">
+    <input v-model="form.title" placeholder="New task" required />
+    <button type="submit" :disabled="form.isSubmitting">
+      {{ form.isSubmitting ? "Creating..." : "Add Task" }}
+    </button>
+    <p v-if="form.error" class="error">{{ form.error }}</p>
+  </form>
+</template>
+```
+
+### Composable with auto-fetch
+
+For reusable data fetching, create a generic composable:
+
+```ts title="src/composables/useNexusQuery.ts"
+import { ref, onMounted, type Ref } from "vue"
+import { caller } from "./useCaller"
+
+export function useNexusQuery<T>(
+  source: string,
+  query: string,
+  variables?: Record<string, unknown>
+) {
+  const data = ref<T | null>(null) as Ref<T | null>
+  const isLoading = ref(true)
+  const error = ref<string | null>(null)
+
+  async function refetch() {
+    isLoading.value = true
+    error.value = null
+    try {
+      data.value = await (caller as any)(source)(query, variables)
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : "Request failed"
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  onMounted(refetch)
+
+  return { data, isLoading, error, refetch }
+}
+```
+
+<Callout variant="tip" title="@tanstack/vue-query">
+For production apps with advanced caching, background refetching, and optimistic updates, use `@tanstack/vue-query`. Nexus callers return standard promises, so they integrate directly:
+
+```ts
+import { useQuery } from "@tanstack/vue-query"
+import { caller } from "@/composables/useCaller"
+
+const { data, isLoading } = useQuery({
+  queryKey: ["tasks"],
+  queryFn: () => caller("myApi")("tasks:getAll", { status: "active" }),
+})
+```
+</Callout>
+
+## Project structure
+
+```
+shared/
+  sources.ts                  # defineApi + defineGroup + endpoint
+server/
+  index.ts                    # Express/Hono/Fastify proxy backend
+src/
+  composables/
+    useCaller.ts              # createProxyCaller<Sources>()
+    useNexusQuery.ts          # optional generic fetch composable
+  components/
+    TaskList.vue              # data fetching with ref
+    CreateTask.vue            # mutations with reactive
+```

@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { directRequest } from "@/lib/direct-request"
+import { call } from "@/lib/caller"
 
 export type ActionState = {
   success?: boolean
@@ -19,7 +19,7 @@ export async function createUser(_prev: ActionState, formData: FormData): Promis
   }
 
   try {
-    const user = await directRequest("mockApi")("users:create", { name, email, role })
+    const user = await call("api")("users:create", { name, email, role })
     revalidatePath("/docs/examples/actions")
     return { success: true, data: user }
   } catch {
@@ -35,7 +35,7 @@ export async function deleteUser(_prev: ActionState, formData: FormData): Promis
   }
 
   try {
-    await directRequest("mockApi")("users:remove", { id })
+    await call("api")("users:remove", { id })
     revalidatePath("/docs/examples/actions")
     return { success: true, data: { id } }
   } catch {

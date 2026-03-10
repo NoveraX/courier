@@ -3,7 +3,7 @@
 import { useState } from "react"
 
 import { RunButton } from "@/components/run-button"
-import { request } from "@/lib/request"
+import { caller } from "@/lib/query"
 
 type StreamChunk = {
   chunk: string
@@ -21,9 +21,7 @@ export function StreamDemo() {
     setLoading(true)
 
     try {
-      const response = (await request("mockApi", { stream: true })(
-        "misc:stream"
-      )) as unknown as Response
+      const response = (await caller("api", { stream: true })("misc:stream")) as unknown as Response
 
       const reader = response.body?.getReader()
       if (!reader) return

@@ -1,8 +1,6 @@
-export const metadata = { title: "Installation", description: "Add @noverax/nexus to your Next.js project in under a minute." }
+export const metadata = { title: "Installation", description: "Add @noverax/nexus to your project — works with any JavaScript framework." }
 
-## Install the package
-
-Install Nexus with your preferred package manager:
+## Install the core package
 
 <CodeGroup
   items={[
@@ -13,26 +11,47 @@ Install Nexus with your preferred package manager:
   ]}
 />
 
-## Peer dependencies
+The core package has zero runtime dependencies and works in any JavaScript runtime with `fetch`.
 
-Nexus requires `next` (>=14) and `react` (>=18) as peer dependencies. If you're using React Query integration, you also need `@tanstack/react-query` (>=5):
+## Framework adapters
+
+Install the adapter for your server framework. Each adapter is a thin wrapper around `createHandler` — see the [Server Handler](/docs/proxy-mode/api-route) docs for details.
+
+| Framework | Package | Export |
+|-----------|---------|--------|
+| **Next.js** | `@noverax/nexus-next` | `apiRoute`, `createAction` |
+| **Nuxt / Nitro / h3** | `@noverax/nexus-nuxt` | `nexusHandler` |
+| **Express** | `@noverax/nexus-express` | `nexusHandler` |
+| **Hono** | `@noverax/nexus-hono` | `nexusHandler` |
+| **Fastify** | `@noverax/nexus-fastify` | `nexusPlugin` |
+| **NestJS** | `@noverax/nexus-nestjs` | `nexusMiddleware` |
 
 <CodeGroup
   items={[
-    { label: "npm", code: "npm install @tanstack/react-query", language: "bash" },
-    { label: "pnpm", code: "pnpm add @tanstack/react-query", language: "bash" },
-    { label: "yarn", code: "yarn add @tanstack/react-query", language: "bash" },
-    { label: "bun", code: "bun add @tanstack/react-query", language: "bash" },
+    { label: "Next.js", code: "npm install @noverax/nexus-next", language: "bash" },
+    { label: "Nuxt", code: "npm install @noverax/nexus-nuxt", language: "bash" },
+    { label: "Express", code: "npm install @noverax/nexus-express", language: "bash" },
+    { label: "Hono", code: "npm install @noverax/nexus-hono", language: "bash" },
+    { label: "Fastify", code: "npm install @noverax/nexus-fastify", language: "bash" },
+    { label: "NestJS", code: "npm install @noverax/nexus-nestjs", language: "bash" },
   ]}
 />
 
-<Callout variant="info" title="Optional peer dependencies">
-`next` and `@tanstack/react-query` are optional — you only need them if you use the corresponding features. The core `Datasource` / `EndpointGroup` classes and direct mode work without Next.js.
+## React Query integration
+
+For React apps, add the query package for type-safe hooks (`useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery`):
+
+```bash
+npm install @noverax/nexus-query @tanstack/react-query
+```
+
+<Callout variant="info" title="Install only what you use">
+All framework packages and integrations are optional. The core `@noverax/nexus` package works standalone for direct API calls from any runtime.
 </Callout>
 
 ## TypeScript configuration
 
-Nexus is written in TypeScript and ships type declarations. Ensure your `tsconfig.json` has strict mode enabled for the best type inference:
+Nexus ships type declarations. Enable strict mode for the best type inference:
 
 ```json title="tsconfig.json"
 {
@@ -40,34 +59,23 @@ Nexus is written in TypeScript and ships type declarations. Ensure your `tsconfi
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "strict": true,
-    "jsx": "preserve",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "strict": true
   }
 }
 ```
 
-<Callout variant="tip" title="Path aliases">
-The examples in this documentation use the `@/*` path alias. This is configured by default in Next.js projects created with `create-next-app`.
-</Callout>
-
 ## Environment variables
 
-Add your backend API URL as an environment variable. This is used server-side only and is never exposed to the browser:
+Add your backend API URL as a server-side environment variable:
 
 ```bash title=".env.local"
 # Your backend API URL (server-side only)
 API_URL=http://localhost:4000
-
-# Optional: custom proxy route path (default: "request")
-# NEXT_PUBLIC_REQUEST_PAGE=api/my-request
 ```
 
-The `API_URL` variable is read in your source definitions (the `Datasource` class constructor). In proxy mode, requests are routed through your Next.js API route, so the backend URL stays on the server.
+This is used in your `defineApi` call. In proxy mode, the browser never sees this URL — requests go through your server's proxy route.
 
 ## Next steps
 
-- [Quick Start](/docs/quick-start) — define your first API source and make a request
-- [Project Setup](/docs/project-setup) — recommended file structure for production apps
+- [Quick Start](/docs/quick-start) — define your first API and make a request
+- [Framework Guides](/docs/frameworks/nextjs) — complete setup for your framework

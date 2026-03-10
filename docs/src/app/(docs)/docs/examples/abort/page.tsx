@@ -7,7 +7,7 @@ import { DedupDemo, ManualAbortDemo } from "./_components"
 const manualAbortCode = `const controller = new AbortController()
 
 // Pass signal to cancel the request at any time
-const promise = request("mockApi", { signal: controller.signal })(
+const promise = request("api", { signal: controller.signal })(
   "misc:slow"
 )
 
@@ -23,27 +23,23 @@ function handleClick() {
   const controller = new AbortController()
   abortRef.current = controller
 
-  request("mockApi", { signal: controller.signal })(
+  request("api", { signal: controller.signal })(
     "users:getAll", {}
   )
 }`
 
-const deduplicateCode = `import { Datasource } from "@noverax/nexus/datasource"
+const deduplicateCode = `import { defineApi } from "@noverax/nexus/define"
 
 // deduplicate: true enables automatic deduplication
 // at the HttpClient level — if the same path+method is called
 // again while a request is in-flight, the old one is aborted
 // with a 499 status code.
 
-class Api extends Datasource<typeof groups> {
-  constructor() {
-    super({
-      baseURL: "http://localhost:4000",
-      groups,
-      deduplicate: true,
-    })
-  }
-}`
+const api = defineApi({
+  baseURL: "http://localhost:4000",
+  groups,
+  deduplicate: true,
+})`
 
 export const metadata = docsMetadata(
   "Abort & Deduplication",

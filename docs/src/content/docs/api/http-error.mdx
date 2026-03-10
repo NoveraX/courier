@@ -3,7 +3,7 @@ export const metadata = { title: "HTTPError", description: "Custom error class f
 ## Import
 
 ```ts
-import { HTTPError, isHTTPError } from "@noverax/nexus"
+import { HTTPError, isHTTPError } from "@noverax/nexus/error"
 ```
 
 ## HTTPError Class
@@ -21,7 +21,6 @@ class HTTPError<R = unknown> extends Error {
 ## Properties
 
 ```ts
-// HTTPError properties:
 error.name       // "HTTPError"
 error.message    // "HTTP {status}" (e.g., "HTTP 404")
 error.status     // HTTP status code (e.g., 404)
@@ -29,15 +28,15 @@ error.headers    // Response headers (Headers object)
 error.data       // Parsed response body (typed as R)
 ```
 
-- `status` — the HTTP status code. `0` for network errors (DNS failure, connection refused, etc.).
+- `status` — the HTTP status code. `0` for network errors (DNS failure, connection refused).
 - `headers` — the response `Headers` object. Empty `Headers` for network errors.
-- `data` — the parsed response body. Typed as `R` (generic, defaults to `unknown`).
+- `data` — the parsed response body. Typed as `R` (defaults to `unknown`).
 - `name` — always `"HTTPError"`.
 - `message` — `"HTTP {status}"` (e.g., `"HTTP 404"`).
 
 ## isHTTPError
 
-Type guard function to check if an error is an HTTPError.
+Type guard function to check if an error is an HTTPError:
 
 ```ts
 function isHTTPError<R = unknown>(error: unknown): error is HTTPError<R>
@@ -47,40 +46,25 @@ function isHTTPError<R = unknown>(error: unknown): error is HTTPError<R>
 Use `isHTTPError(error)` instead of `error instanceof HTTPError`. The type guard works reliably across module boundaries and different package versions.
 </Callout>
 
-```ts
-// isHTTPError vs instanceof
-// Both work, but isHTTPError is the recommended approach:
-
-// ✅ Recommended — works across module boundaries
-if (isHTTPError(error)) { ... }
-
-// ⚠️ Works, but may fail across different module instances
-if (error instanceof HTTPError) { ... }
-```
-
 ## Basic Usage
 
 ```ts
-import { isHTTPError } from "@noverax/nexus"
+import { isHTTPError } from "@noverax/nexus/error"
 
 try {
-  const user = await request("api")("users:getById", { id: "999" })
+  const user = await call("api")("users:getById", { id: "999" })
 } catch (error) {
   if (isHTTPError(error)) {
     console.error(`HTTP ${error.status}:`, error.data)
-    // error.status  → 404
-    // error.headers → Headers { content-type: "application/json" }
-    // error.data    → { message: "User not found" }
   }
 }
 ```
 
 ## Typed Error Data
 
-Pass a type parameter to `isHTTPError` to type the error's `data` property.
+Pass a type parameter to `isHTTPError` to type the error's `data`:
 
 ```ts
-// Type the error data for better inference
 type ErrorResponse = {
   success: false
   message: string
@@ -88,10 +72,9 @@ type ErrorResponse = {
 }
 
 try {
-  await request("api")("users:getById", { id: "999" })
+  await call("api")("users:getById", { id: "999" })
 } catch (error) {
   if (isHTTPError<ErrorResponse>(error)) {
-    // error.data is typed as ErrorResponse
     console.error(error.data.message)  // "User not found"
     console.error(error.data.code)     // "USER_NOT_FOUND"
   }
@@ -102,112 +85,59 @@ try {
 
 ```ts
 try {
-  await request("api")("users:getAll")
+  await call("api")("users:getAll")
 } catch (error) {
   if (isHTTPError(error)) {
     switch (error.status) {
-      case 400:
-        console.error("Bad request:", error.data)
-        break
-      case 401:
-        redirectToLogin()
-        break
-      case 403:
-        showForbiddenMessage()
-        break
-      case 404:
-        showNotFound()
-        break
-      case 429:
-        console.warn("Rate limited, retry later")
-        break
+      case 400: console.error("Bad request:", error.data); break
+      case 401: redirectToLogin(); break
+      case 403: showForbiddenMessage(); break
+      case 404: showNotFound(); break
+      case 429: console.warn("Rate limited, retry later"); break
       default:
-        if (error.status >= 500) {
-          console.error("Server error:", error.data)
-        }
+        if (error.status >= 500) console.error("Server error:", error.data)
     }
   }
 }
 ```
 
-## Global Error Handler
+## Middleware-Based Error Handling
 
-Use `onError` in `createClientRequest` or `createDirectRequest` to handle errors globally.
-
-```ts
-// Global error handler via createClientRequest
-const request = createClientRequest<Sources>({
-  onError: (error) => {
-    // Called for every HTTPError across all requests
-    if (error.status === 401) {
-      // Token expired — redirect to login
-      window.location.href = "/login"
-    }
-
-    if (error.status >= 500) {
-      // Log server errors
-      reportError(error)
-    }
-  },
-})
-```
-
-## Source-Level Error Hook
-
-The `onError` hook on `Request` receives both the request metadata and the error.
+Use middleware to handle errors globally across all requests:
 
 ```ts
-// Source-level error hook via Request options
-const api = new Datasource({
-  baseURL: process.env.API_URL,
-  onError: (info, error) => {
-    console.error(
-      `[${info.source}:${info.group}:${info.method}] ` +
-      `HTTP ${error.status}: ${JSON.stringify(error.data)}`
-    )
-    return undefined
-  },
+import { defineMiddleware } from "@noverax/nexus/middleware"
+import { isHTTPError } from "@noverax/nexus/error"
+
+const errorMiddleware = defineMiddleware(async (ctx, next) => {
+  try {
+    return await next()
+  } catch (error) {
+    if (isHTTPError(error) && error.status === 401) {
+      // redirect to login, refresh token, etc.
+    }
+    throw error
+  }
 })
 ```
 
 ## Network Errors
 
-Network-level errors (DNS failures, connection refused, timeouts at the TCP level) are converted to `HTTPError` with `status: 0`.
+Network-level errors (DNS failures, connection refused, timeouts) are converted to `HTTPError` with `status: 0`:
 
 ```ts
-// Network errors (DNS failure, connection refused, etc.)
-// are converted to HTTPError with status: 0
 try {
-  await request("api")("users:getAll")
+  await call("api")("users:getAll")
 } catch (error) {
-  if (isHTTPError(error)) {
-    if (error.status === 0) {
-      // Network error — no HTTP response received
-      console.error("Network error:", error.data)
-      // error.data → { success: false, message: "...", code: "ECONNREFUSED" }
-    }
+  if (isHTTPError(error) && error.status === 0) {
+    console.error("Network error:", error.data)
   }
 }
-```
-
-## Raw Data Mode
-
-When using `rawData: true`, the error data is extracted from the wrapper object if present.
-
-```ts
-// With rawData mode, error.data contains the raw response data
-// (without the wrapper object)
-const result = await request("api", { rawData: true })(
-  "users:getById",
-  { id: "999" },
-)
-// If the response is { data: { message: "Not found" } },
-// rawData mode extracts error.data as { message: "Not found" }
 ```
 
 ## Related
 
 - [Error Handling Guide](/docs/core-concepts/error-handling) — in-depth error handling patterns
-- [Hooks](/docs/advanced/hooks) — lifecycle hooks including onError
-- [Instance](/docs/api/instance) — where HTTPError is thrown
-- [Types](/docs/api/types) — MethodKyResponse and related types
+- [Middleware](/docs/middleware/overview) — middleware chain for error interception
+- [HttpClient](/docs/api/instance) — where HTTPError is thrown
+- [Types](/docs/api/types) — HttpResponse and related types

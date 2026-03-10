@@ -1,0 +1,179 @@
+export const metadata = { title: "Hono", description: "Hono server adapter using nexusHandler — works on Node.js, Bun, Deno, and Cloudflare Workers." }
+
+The `@noverax/nexus-hono` adapter lets you host the Nexus proxy route on any Hono-supported runtime: Node.js, Bun, Deno, and Cloudflare Workers.
+
+## Installation
+
+```bash
+npm install @noverax/nexus @noverax/nexus-hono hono
+```
+
+## Define your API sources
+
+```ts title="lib/sources.ts"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+
+type User = { id: number; name: string; email: string }
+
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint<User[]>()(({ get }) => get()),
+    getById: endpoint<User, { id: number }>()(({ get }) => get(":id")),
+    create: endpoint<User, { name: string; email: string }>()(
+      ({ post }) => post()
+    ),
+  },
+})
+
+export const sources = {
+  myApi: defineApi({
+    baseURL: process.env.API_URL ?? "http://localhost:4000",
+    groups: { users },
+  }),
+}
+
+export type Sources = typeof sources
+```
+
+## Setup
+
+Create a Hono app with the Nexus handler:
+
+```ts title="src/index.ts"
+import { Hono } from "hono"
+import { cors } from "hono/cors"
+import { nexusHandler } from "@noverax/nexus-hono"
+import { sources } from "./lib/sources"
+
+const app = new Hono()
+
+app.use("/api/*", cors())
+
+app.all("/api/request", nexusHandler(sources))
+
+export default app
+```
+
+That is all you need. The `nexusHandler` function returns a standard Hono handler that processes incoming Nexus proxy requests and forwards them to your backend.
+
+## Runtime-specific entry points
+
+### Node.js
+
+```ts title="src/index.ts"
+import { serve } from "@hono/node-server"
+import { Hono } from "hono"
+import { cors } from "hono/cors"
+import { nexusHandler } from "@noverax/nexus-hono"
+import { sources } from "./lib/sources"
+
+const app = new Hono()
+
+app.use("/api/*", cors())
+app.all("/api/request", nexusHandler(sources))
+
+serve({ fetch: app.fetch, port: 3001 }, (info) => {
+  console.log(`Server running on http://localhost:${info.port}`)
+})
+```
+
+### Bun
+
+```ts title="src/index.ts"
+import { Hono } from "hono"
+import { cors } from "hono/cors"
+import { nexusHandler } from "@noverax/nexus-hono"
+import { sources } from "./lib/sources"
+
+const app = new Hono()
+
+app.use("/api/*", cors())
+app.all("/api/request", nexusHandler(sources))
+
+export default {
+  port: 3001,
+  fetch: app.fetch,
+}
+```
+
+### Deno
+
+```ts title="src/index.ts"
+import { Hono } from "hono"
+import { cors } from "hono/cors"
+import { nexusHandler } from "@noverax/nexus-hono"
+import { sources } from "./lib/sources.ts"
+
+const app = new Hono()
+
+app.use("/api/*", cors())
+app.all("/api/request", nexusHandler(sources))
+
+Deno.serve({ port: 3001 }, app.fetch)
+```
+
+### Cloudflare Workers
+
+```ts title="src/index.ts"
+import { Hono } from "hono"
+import { cors } from "hono/cors"
+import { nexusHandler } from "@noverax/nexus-hono"
+import { sources } from "./lib/sources"
+
+const app = new Hono()
+
+app.use("/api/*", cors())
+app.all("/api/request", nexusHandler(sources))
+
+export default app
+```
+
+<Callout variant="info" title="Same handler, any runtime">
+The `nexusHandler` function uses the standard Web API `Request`/`Response` objects, so it works identically across all Hono-supported runtimes with zero configuration changes.
+</Callout>
+
+## Adding other routes
+
+The Nexus handler only handles the proxy route. You can add any other Hono routes alongside it:
+
+```ts title="src/index.ts"
+import { Hono } from "hono"
+import { cors } from "hono/cors"
+import { nexusHandler } from "@noverax/nexus-hono"
+import { sources } from "./lib/sources"
+
+const app = new Hono()
+
+app.use("/api/*", cors())
+
+// Nexus proxy route
+app.all("/api/request", nexusHandler(sources))
+
+// Your own routes
+app.get("/health", (c) => c.json({ status: "ok" }))
+
+app.get("/api/stats", (c) => {
+  return c.json({ uptime: process.uptime() })
+})
+
+export default app
+```
+
+## Client-side setup
+
+On the client, point your caller to this server's proxy URL. Choose the guide for your frontend:
+
+- [React (Vite / CRA)](/docs/frameworks/react) — `createQueryCaller` with React Query hooks
+- [Vue](/docs/frameworks/vue) — `createProxyCaller` with composables
+- [Next.js](/docs/frameworks/nextjs) — full-stack with `apiRoute` and `createQueryCaller`
+- [Nuxt](/docs/frameworks/nuxt) — full-stack with `nexusHandler` and `createProxyCaller`
+
+```ts title="lib/caller.ts"
+import { createProxyCaller } from "@noverax/nexus"
+import type { Sources } from "../shared/sources"
+
+export const caller = createProxyCaller<Sources>({
+  proxyUrl: "http://localhost:3001/api/request",
+})
+```

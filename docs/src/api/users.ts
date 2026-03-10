@@ -1,4 +1,4 @@
-import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+import { defineGroup, endpoint } from "@noverax/nexus/define"
 
 type User = {
   id: number
@@ -27,29 +27,27 @@ type UserPostResponse = {
   }
 }
 
-export class Users extends EndpointGroup {
-  constructor() {
-    super({ prefix: "users" })
-  }
-
-  getAll: Endpoint<UsersListResponse, { page?: number; limit?: number; search?: string }> = ({
-    get,
-  }) => get()
-
-  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
-
-  create: Endpoint<User, { name: string; email: string; role?: string }> = ({ post }) => post()
-
-  update: Endpoint<User, { id: number; name: string; email: string; role: string }> = ({ put }) =>
-    put(":id")
-
-  patch: Endpoint<User, { id: number } & Partial<Omit<User, "id" | "createdAt">>> = ({ patch }) =>
-    patch(":id")
-
-  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
-
-  getUserPost: Endpoint<UserPostResponse, { id: number; postId: number }> = ({ get }) =>
-    get(":id/posts/:postId")
-}
+export const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint<UsersListResponse, { page?: number; limit?: number; search?: string }>()(
+      (http) => http.get()
+    ),
+    getById: endpoint<User, { id: number }>()((http) => http.get(":id")),
+    create: endpoint<User, { name: string; email: string; role?: string }>()((http, vars) =>
+      http.post("", vars)
+    ),
+    update: endpoint<User, { id: number; name: string; email: string; role: string }>()(
+      (http, vars) => http.put(":id", vars)
+    ),
+    patch: endpoint<User, { id: number } & Partial<Omit<User, "id" | "createdAt">>>()(
+      (http, vars) => http.patch(":id", vars)
+    ),
+    remove: endpoint<null, { id: number }>()((http, vars) => http.del(":id", vars)),
+    getUserPost: endpoint<UserPostResponse, { id: number; postId: number }>()((http) =>
+      http.get(":id/posts/:postId")
+    ),
+  },
+})
 
 export type { User, UsersListResponse }

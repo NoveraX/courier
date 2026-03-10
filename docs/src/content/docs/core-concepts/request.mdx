@@ -1,142 +1,186 @@
-export const metadata = { title: "Request & RequestGroup", description: "Define your API structure with typed classes that serve as the single source of truth for all requests." }
+export const metadata = { title: "Request Lifecycle", description: "How requests flow through callers, middleware, and the HTTP client in direct and proxy modes." }
 
 ## Overview
 
-Every API in Nexus is described by two building blocks: `Datasource` and `EndpointGroup`. Together they define *what* your backend exposes and *how* each endpoint is called — with full type information, no code generation required.
+Every API call in Nexus follows a well-defined lifecycle. There are two transport modes — **Direct** and **Proxy** — but both converge on the same internal `executeRequest` function. Understanding this flow helps you debug issues, write middleware, and choose the right mode for your use case.
 
-- **Datasource** — represents an entire backend service. It holds the base URL, shared options, and a map of groups.
-- **EndpointGroup** — organizes related endpoints under a common URL prefix. Each method inside the group declares its response and variables types.
+## Two Modes
 
-## The Datasource Class
+| Factory | Mode | Runtime | Use Case |
+|---------|------|---------|----------|
+| `createCaller(sources)` | Direct | Any (Node.js, Bun, Deno, browser) | Server Components, Server Actions, scripts, CLI |
+| `createProxyCaller<Sources>()` | Proxy | Browser | Client Components — hides backend URL, handles CORS, forwards cookies |
 
-`Datasource` is the top-level container for an API source. At its simplest, it only needs a `baseURL`:
+## Request Flow
 
-```ts title="api/sources.ts"
-import { Datasource } from "@noverax/nexus/datasource"
+```
+Direct:  createCaller(sources) → call("api")("users:getAll") → executeRequest → middleware → HttpClient → fetch → backend
 
-// A simple Request without groups — for flat APIs with few endpoints
-class SimpleApi extends Datasource {
-  constructor() {
-    super({
-      baseURL: "https://api.example.com",
-    })
-  }
-}
+Proxy:   createProxyCaller()   → call("api")("users:getAll") → POST /api/request → handler → executeRequest → middleware → HttpClient → fetch → backend
 ```
 
-In practice, most APIs have multiple resource types, so you will pair `Datasource` with one or more `EndpointGroup` instances. The generic parameter `Datasource<typeof groups>` tells TypeScript exactly which groups and methods are available.
+In direct mode, the caller invokes `executeRequest` directly with the `sources` object. In proxy mode, the browser sends the request payload to your server's proxy route (e.g., `/api/request`), which then calls `executeRequest` on the server side.
 
-## The EndpointGroup Class
+## Setting Up Callers
 
-A `EndpointGroup` is a class where each property is a typed API method. The `prefix` option sets the URL path segment that is appended to the base URL for every method in the group.
+### Direct mode — server-side
 
-```ts title="api/users.ts"
-import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+```ts title="lib/caller.ts"
+import { createCaller } from "@noverax/nexus"
+import { sources } from "@/api/sources"
 
-type User = { id: number; name: string; email: string }
-type CreateUserVars = { name: string; email: string }
-
-export class Users extends EndpointGroup {
-  constructor() {
-    // The prefix becomes the URL path segment: /users
-    super({ prefix: "users" })
-  }
-
-  // Endpoint<ResponseType> — no variables needed
-  getAll: Endpoint<User[]> = ({ get }) => get()
-
-  // Endpoint<ResponseType, VariablesType> — variables are required
-  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
-  create: Endpoint<User, CreateUserVars> = ({ post }) => post()
-  update: Endpoint<User, { id: number; name: string }> = ({ put }) => put(":id")
-  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
-}
+export const call = createCaller(sources)
 ```
 
-<Callout variant="info" title="The Method type">
-`Endpoint<R, V>` is a generic type where `R` is the response type and `V` is the variables type. When `V` is omitted (defaults to `undefined`), no variables are required to call the method.
+```ts
+// Works anywhere with access to the sources object
+const users = await call("api")("users:getAll")
+//    ^? User[]
+
+const user = await call("api")("users:getById", { id: "1" })
+//    ^? User
+```
+
+<Callout variant="info" title="When to use direct mode">
+Use direct mode whenever you have access to the `sources` object: Server Components, Server Actions, API routes, CLI scripts, cron jobs, or any non-browser runtime.
 </Callout>
 
-Each method receives a destructured `methods` object with HTTP helpers (`get`, `post`, `put`, `patch`, `del`, `head`) and optionally the `variables` passed by the caller. The return value is a `MethodKyResponse<R>` with `status`, `headers`, and typed `data`.
+### Proxy mode — browser-side
 
-## Composing Datasource with Groups
+```ts title="lib/caller.ts"
+import { createProxyCaller } from "@noverax/nexus"
+import type { Sources } from "@/api/sources"
 
-Pass a `groups` object to your `Datasource` constructor. TypeScript infers the full shape of your API from this object:
-
-```ts title="api/index.ts"
-import { Datasource } from "@noverax/nexus/datasource"
-import { Users } from "./users"
-import { Posts } from "./posts"
-import { Comments } from "./comments"
-
-const groups = {
-  users: new Users(),
-  posts: new Posts(),
-  comments: new Comments(),
-}
-
-class BlogApi extends Datasource<typeof groups> {
-  constructor() {
-    super({
-      baseURL: process.env.API_URL ?? "http://localhost:4000",
-      groups,
-    })
-  }
-}
-
-export const sources = { blogApi: new BlogApi() }
-export type Sources = typeof sources
+export const call = createProxyCaller<Sources>()
 ```
 
-## The Query String Convention
-
-When calling a method, you reference it with a string. If the method belongs to a group, use the `"group:method"` format. If the Datasource has no groups, use the method name directly:
-
-```typescript
-// With groups — use "group:method" syntax
-const { data } = useQuery("blogApi", "users:getAll")
-const { data } = useQuery("blogApi", "posts:getBySlug", { variables: { slug: "hello" } })
-
-// Without groups — just the method name
-const { data } = useQuery("simpleApi", "getHealth")
+```ts
+// Browser sends POST /api/request → your server → backend
+const users = await call("api")("users:getAll")
 ```
 
-<Callout variant="tip" title="Autocomplete works">
-TypeScript narrows the query string to a union of valid `"group:method"` combinations. You get autocomplete in your editor and a compile-time error if you mistype a method name.
+<Callout variant="tip" title="Type-only import">
+Proxy mode imports `type { Sources }` — only the type information crosses to the client. The actual `sources` object (with your backend URL and secrets) stays on the server.
 </Callout>
 
-## EndpointGroup Options
+## The Curried Calling Pattern
 
-`EndpointGroupOptions` accepts two properties:
+Both `createCaller` and `createProxyCaller` return a curried function with two steps:
 
-- `prefix` — URL path segment appended to the base URL (e.g. `"users"`, `"api/v2/products"`).
-- `pathOptions` — a function that returns dynamic key-value pairs (typically headers or cookies) to merge into each request.
+```ts
+// Step 1: select source (+ optional call options)
+const apiCall = call("api")
 
-```ts title="api/products.ts"
-import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
-
-type Product = { id: number; name: string; price: number }
-
-export class Products extends EndpointGroup {
-  constructor() {
-    super({
-      // URL prefix — appended to the base URL
-      prefix: "api/v2/products",
-
-      // pathOptions — dynamically inject headers/cookies per request
-      pathOptions: (req) => ({
-        Authorization: req?.headers.get("authorization") ?? undefined,
-      }),
-    })
-  }
-
-  list: Endpoint<Product[]> = ({ get }) => get()
-  getById: Endpoint<Product, { id: number }> = ({ get }) => get(":id")
-}
+// Step 2: call endpoint with optional variables
+const users = await apiCall("users:getAll")
+const user = await apiCall("users:getById", { id: "1" })
 ```
+
+The endpoint key uses `"group:method"` format, which TypeScript validates at compile time:
+
+```ts
+call("api")("users:getAll")              // group: "users", method: "getAll"
+call("api")("users:getById", { id: "1" }) // group: "users", method: "getById"
+call("api")("posts:create", vars)         // group: "posts", method: "create"
+```
+
+## Call Options
+
+The second argument to the source selector accepts runtime options that control how the request is executed:
+
+```ts
+// Raw response — returns { status, headers, data } instead of just data
+const response = await call("api", { rawData: true })("users:getAll")
+//    ^? { status: number; headers: Headers; data: User[] }
+
+// Stream mode — returns raw Response object
+const response = await call("api", { stream: true })("events:stream")
+
+// GET proxy — encodes as query params instead of POST body (cacheable)
+const users = await call("api", { method: "GET" })("users:getAll")
+
+// Upload with progress tracking
+await call("api", {
+  onUploadProgress: ({ percent }) => console.log(`${Math.round(percent * 100)}%`),
+})("files:upload", formData)
+
+// Abort signal
+const controller = new AbortController()
+await call("api", { signal: controller.signal })("users:getAll")
+
+// Custom headers and timeout per call
+await call("api", {
+  headers: { "X-Request-Id": crypto.randomUUID() },
+  timeout: 5000,
+})("users:getAll")
+```
+
+### CallOptions Reference
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `rawData` | `boolean` | Return full `{ status, headers, data }` instead of just data |
+| `stream` | `boolean` | Return raw `Response` for streaming |
+| `method` | `"GET" \| "POST"` | Proxy HTTP method (GET for cacheable reads) |
+| `signal` | `AbortSignal` | Cancel the request |
+| `timeout` | `number` | Request timeout in ms |
+| `headers` | `HeadersInit` | Additional headers for this call |
+| `onUploadProgress` | `(progress) => void` | Upload progress callback (proxy mode, uses XHR) |
+| `onDownloadProgress` | `(progress) => void` | Download progress callback |
+| `forwardVariables` | `boolean` | Pass variables to the HTTP method (default: `true`) |
+
+## Internal Lifecycle
+
+When `executeRequest` receives a request payload, it goes through these steps:
+
+1. **Resolve source** — looks up the source object in the `sources` map
+2. **Resolve endpoint** — finds the group and endpoint function by parsing the `"group:method"` key
+3. **Validate variables** — if the endpoint has a schema attached (via `endpoint({ variables: schema })`), validates the input
+4. **Run middleware chain** — executes middleware in array order, each wrapping the next
+5. **Execute endpoint** — creates `HttpClient`, calls the endpoint function with `http` methods and variables
+6. **Validate response** — if the endpoint has a response schema, validates the output
+7. **Build response** — formats the result based on context (proxy Response vs direct data)
+
+```
+executeRequest
+  ├─ resolve source & endpoint
+  ├─ validate variables (if schema)
+  ├─ middleware[0]
+  │   └─ middleware[1]
+  │       └─ middleware[n]
+  │           └─ endpoint(http, vars) → HttpClient.fetch → backend
+  ├─ validate response (if schema)
+  └─ return data (or Response for proxy)
+```
+
+## Context (Direct Mode)
+
+In direct mode, you can pass an optional `Context` as the last argument to forward incoming request headers (useful in Server Components and API routes):
+
+```ts
+import { createCaller } from "@noverax/nexus"
+import { sources } from "@/api/sources"
+
+const call = createCaller(sources)
+
+// In a Server Component or API route
+const user = await call("api")(
+  "users:getById",
+  { id: "1" },
+  { req: request, headers: request.headers },
+)
+```
+
+The context object accepts:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `req` | `Request` | Incoming request (for header forwarding) |
+| `res` | `Response` | When set, `executeRequest` returns a `Response` object |
+| `headers` | `Headers` | Additional headers to merge |
 
 ## Next Steps
 
-- [Instance & Methods](/docs/core-concepts/instance) — how the HTTP methods inside your groups actually work
-- [Type Safety](/docs/core-concepts/type-safety) — how Nexus infers types end-to-end without codegen
-- [Error Handling](/docs/core-concepts/error-handling) — handling HTTP errors with typed error data
+- [Caller & Proxy](/docs/core-concepts/caller) — detailed options for both caller factories
+- [HTTP Client & Methods](/docs/core-concepts/instance) — how endpoint functions use HTTP methods
+- [Middleware](/docs/middleware/overview) — add retry, auth, logging to the request lifecycle

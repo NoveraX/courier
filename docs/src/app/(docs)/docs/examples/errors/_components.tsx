@@ -5,7 +5,7 @@ import { useState } from "react"
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
-import { request } from "@/lib/request"
+import { caller } from "@/lib/query"
 
 const ERROR_CODES = [400, 401, 403, 404, 422, 500, 502, 503] as const
 
@@ -23,7 +23,7 @@ export function CatchDemo() {
     setLoading(true)
     setError(null)
     try {
-      await request("mockApi")("misc:error", { code: selectedCode })
+      await caller("api")("misc:error", { code: selectedCode })
     } catch (e: unknown) {
       if (isHTTPError(e)) {
         setError({
@@ -71,7 +71,7 @@ export function GuardDemo() {
     setLoading(true)
     setResult(null)
     try {
-      await request("mockApi")("misc:error", { code: 403 })
+      await caller("api")("misc:error", { code: 403 })
     } catch (error: unknown) {
       if (isHTTPError(error)) {
         setResult({

@@ -1,4 +1,4 @@
-import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+import { defineGroup, endpoint } from "@noverax/nexus/define"
 
 type SlowResponse = {
   success: boolean
@@ -11,12 +11,13 @@ type ErrorResponse = {
   code: number
 }
 
-export class Misc extends EndpointGroup {
-  stream: Endpoint<ReadableStream> = ({ get }) => get("stream")
-
-  slow: Endpoint<SlowResponse> = ({ get }) => get("slow")
-
-  error: Endpoint<ErrorResponse, { code: number }> = ({ get }) => get("error/:code")
-}
+export const misc = defineGroup({
+  prefix: "",
+  endpoints: {
+    stream: endpoint<ReadableStream>()((http) => http.get("stream")),
+    slow: endpoint<SlowResponse>()((http) => http.get("slow")),
+    error: endpoint<ErrorResponse, { code: number }>()((http) => http.get("error/:code")),
+  },
+})
 
 export type { SlowResponse, ErrorResponse }

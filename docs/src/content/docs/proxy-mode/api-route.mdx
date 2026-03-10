@@ -1,111 +1,115 @@
-export const metadata = { title: "API Route Handler", description: "The server-side endpoint that receives proxy requests and forwards them to your backend." }
+export const metadata = { title: "Server Handler", description: "The universal server-side handler that receives proxy requests and forwards them to your backend — works with any framework." }
 
 ## Overview
 
-`apiRoute` creates a Next.js App Router POST handler that acts as the server-side half of proxy mode. It receives requests from `createClientRequest`, validates them, and forwards them to your backend via `executeRequest`.
+`createHandler` creates a universal request handler that acts as the server-side half of proxy mode. It receives requests from `createProxyCaller`, validates them, and forwards them to your backend via `executeRequest`.
 
 ```typescript
-import { apiRoute } from "@noverax/nexus/next/apiRoute"
+import { createHandler } from "@noverax/nexus"
 
-const { POST } = apiRoute(sources)
-// sources: Record<string, Datasource<...>>
-// POST: (request: NextRequest) => Promise<NextResponse>
+const { handle, handleGet, handlePost } = createHandler(sources)
+// handle:     (request: Request) => Promise<Response>  — auto-routes GET/POST
+// handleGet:  (request: Request) => Promise<Response>  — query endpoints
+// handlePost: (request: Request) => Promise<Response>  — mutations + data
 ```
+
+The handler works with Web Standard `Request`/`Response` objects, making it compatible with any JavaScript runtime and framework.
 
 ## Setup
 
-Create a route handler file and export the `POST` method. This is the only file needed on the server side:
-
 ### Step 1: Define your sources
 
-The sources object maps source names to `Datasource` instances. Each source can have multiple groups with typed methods:
+The sources object maps source names to API definitions created with `defineApi`:
 
 ```ts title="api/index.ts"
-// api/index.ts
-import { Datasource, EndpointGroup, Endpoint } from "@noverax/nexus/datasource"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import type { Endpoint } from "@noverax/nexus/define"
 
-class Users extends EndpointGroup {
-  constructor() {
-    super({ prefix: "users" })
-  }
+type User = { id: number; name: string; email: string }
+type Post = { id: number; title: string; body: string }
 
-  getAll: Endpoint<User[]> = ({ get }) => get()
-  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
-}
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint<User[]>()((http) => http.get()),
+    getById: endpoint<User, { id: number }>()((http, vars) => http.get(":id", vars)),
+  },
+})
 
-class Posts extends EndpointGroup {
-  constructor() {
-    super({ prefix: "posts" })
-  }
+const posts = defineGroup({
+  prefix: "posts",
+  endpoints: {
+    list: endpoint<Post[]>()((http) => http.get()),
+    create: endpoint<Post, { title: string }>()((http, vars) => http.post("", vars)),
+  },
+})
 
-  list: Endpoint<Post[]> = ({ get }) => get()
-  create: Endpoint<Post, { title: string }> = ({ post }) => post()
-}
+const api = defineApi({
+  baseURL: process.env.API_URL ?? "http://localhost:4000",
+  groups: { users, posts },
+})
 
-const groups = { users: new Users(), posts: new Posts() }
-
-class MyApi extends Datasource<typeof groups> {
-  constructor() {
-    super({
-      baseURL: process.env.API_URL ?? "http://localhost:4000",
-      groups,
-    })
-  }
-}
-
-export const sources = { myApi: new MyApi() }
+export const sources = { api }
 export type Sources = typeof sources
 ```
 
-### Step 2: Create the route handler
+### Step 2: Create the server handler
 
-Pass your sources to `apiRoute` and export the `POST` handler:
+Choose the adapter that matches your framework:
 
-```ts title="app/api/request/route.ts"
-// app/api/request/route.ts
-import { apiRoute } from "@noverax/nexus/next/apiRoute"
-import { sources } from "@/api"
+<CodeGroup
+  items={[
+    { label: "Next.js", code: `import { apiRoute } from "@noverax/nexus-next"\nimport { sources } from "@/api"\n\nexport const { GET, POST } = apiRoute(sources)`, language: "ts", meta: 'title="app/api/request/route.ts"' },
+    { label: "Express", code: `import express from "express"\nimport { nexusHandler } from "@noverax/nexus-express"\nimport { sources } from "./api"\n\nconst app = express()\napp.all("/api/request", nexusHandler(sources))`, language: "ts", meta: 'title="server.ts"' },
+    { label: "Hono", code: `import { Hono } from "hono"\nimport { nexusHandler } from "@noverax/nexus-hono"\nimport { sources } from "./api"\n\nconst app = new Hono()\napp.all("/api/request", nexusHandler(sources))`, language: "ts", meta: 'title="src/index.ts"' },
+    { label: "Fastify", code: `import Fastify from "fastify"\nimport { nexusPlugin } from "@noverax/nexus-fastify"\nimport { sources } from "./api"\n\nconst app = Fastify()\napp.register(nexusPlugin, { sources, prefix: "/api/request" })`, language: "ts", meta: 'title="server.ts"' },
+    { label: "NestJS", code: `import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"\nimport { nexusMiddleware } from "@noverax/nexus-nestjs"\nimport { sources } from "./api"\n\n@Module({})\nexport class AppModule implements NestModule {\n  configure(consumer: MiddlewareConsumer) {\n    consumer.apply(nexusMiddleware(sources)).forRoutes("/api/request")\n  }\n}`, language: "ts", meta: 'title="src/app.module.ts"' },
+    { label: "Nuxt", code: `import { nexusHandler } from "@noverax/nexus-nuxt"\nimport { sources } from "../api"\n\nexport default nexusHandler(sources)`, language: "ts", meta: 'title="server/api/request.ts"' },
+  ]}
+/>
 
-export const { POST } = apiRoute(sources)
-```
-
-<Callout variant="tip" title="That's it">
-This two-line file is all you need. The handler automatically validates origins, parses payloads, routes to the correct method, and returns the response.
+<Callout variant="tip" title="All adapters use createHandler">
+Every framework adapter is a thin wrapper around `createHandler(sources)` from `@noverax/nexus`. If your framework is not listed, use `createHandler` directly with Web Standard `Request`/`Response`.
 </Callout>
+
+## How it works
+
+All adapters delegate to `createHandler(sources)`, which returns three methods:
+
+- **`handle(request)`** — auto-routes GET and POST, returns 405 for other methods
+- **`handleGet(request)`** — parses query parameters (`_s`, `_g`, `_m` + variables) for cacheable read endpoints
+- **`handlePost(request)`** — validates origin, parses JSON or FormData body for mutations
 
 ## Origin validation
 
-Every request is checked to ensure the `Origin` header matches the request URL origin. This prevents cross-site request forgery and unauthorized third-party access:
+Every POST request is checked to ensure the `Origin` header matches the request URL origin. This prevents cross-site request forgery and unauthorized third-party access:
 
 ```typescript
-// Built-in origin validation
+// Built-in origin validation (POST only)
 const origin = request.headers.get("origin")
 
 if (!origin || new URL(request.url).origin !== origin) {
-  return NextResponse.json(
+  return Response.json(
     { success: false, message: "Origin mismatch" },
     { status: 403 }
   )
 }
 
-// Examples:
-// ✓ origin: "https://myapp.com"  → request URL: "https://myapp.com/api/request"
-// ✗ origin: "https://evil.com"   → request URL: "https://myapp.com/api/request"
-// ✗ origin: null (no header)     → rejected
+// GET requests skip origin validation (cacheable, no side effects)
 ```
 
 ## Content-Type handling
 
-The API route accepts two content types and rejects everything else:
+The POST handler accepts two content types and rejects everything else:
 
 ```typescript
-// The API route handles two content types:
+// The handler accepts two content types:
 
 // 1. application/json — standard requests
-// Body: { source, group, query, variables, options }
+// Body: { source, group, method, variables, options }
 
 // 2. multipart/form-data — file uploads
-// Fields: _source, _group, _query, _options + user data/files
+// Fields: _source, _group, _method, _options + user data/files
 
 // Anything else returns 415 Unsupported Media Type
 // { success: false, message: "Unsupported Content-Type" }
@@ -116,22 +120,12 @@ The API route accepts two content types and rejects everything else:
 Cookies are forwarded in both directions automatically. Browser cookies are included in the proxied request (via the header whitelist), and `set-cookie` headers from the backend are passed through to the browser response:
 
 ```typescript
-// api/index.ts — cookies are forwarded automatically
-class MyApi extends Datasource<typeof groups> {
-  constructor() {
-    super({
-      baseURL: process.env.API_URL,
-      groups,
-      // Browser cookies (e.g., session tokens) are forwarded
-      // to the backend via the header whitelist.
-      // set-cookie headers from the backend are passed
-      // back to the browser in the proxy response.
-    })
-  }
-}
+// Cookies are forwarded automatically:
+// Browser → proxy handler → backend (via header whitelist)
+// Backend → proxy handler → browser (set-cookie headers passed through)
 
 // Browser side — credentials: "include" is the default
-const request = createClientRequest<Sources>()
+const call = createProxyCaller<Sources>()
 // Cookies are sent with every request automatically
 ```
 
@@ -141,7 +135,7 @@ Nexus uses `getSetCookie()` to correctly handle multiple `set-cookie` headers, a
 
 ## Error responses
 
-The API route returns consistent JSON error responses with appropriate HTTP status codes. Backend errors are forwarded with their original status:
+The handler returns consistent JSON error responses with appropriate HTTP status codes:
 
 ```typescript
 // Error responses follow a consistent format:
@@ -150,9 +144,9 @@ The API route returns consistent JSON error responses with appropriate HTTP stat
 // Status: forwarded from backend (e.g., 404, 422, 500)
 // Body:   parsed JSON from backend response
 
-// Validation errors (missing source, method not found):
+// Validation errors (missing source, endpoint not found):
 // Status: 400
-// Body:   { success: false, message: "[myApi][users][getById]: method not found" }
+// Body:   { success: false, message: "[api][users][getById]: method not found" }
 
 // Origin mismatch:
 // Status: 403
@@ -161,34 +155,10 @@ The API route returns consistent JSON error responses with appropriate HTTP stat
 // Invalid JSON body:
 // Status: 400
 // Body:   { success: false, message: "Invalid JSON body" }
-
-// 204 responses from backend:
-// Status: 204
-// Body:   null (empty response)
-```
-
-## Custom proxy path
-
-The default proxy endpoint is `/api/request`. To use a different path, move the route file and update the environment variable:
-
-```ts title="app/api/my-proxy/route.ts"
-// If you need a custom proxy path:
-
-// 1. Move the route file
-//    app/api/my-proxy/route.ts
-
-// 2. Set the environment variable
-//    NEXT_PUBLIC_REQUEST_PAGE=my-proxy
-
-// 3. The route file content stays the same
-import { apiRoute } from "@noverax/nexus/next/apiRoute"
-import { sources } from "@/api"
-
-export const { POST } = apiRoute(sources)
 ```
 
 ## Next Steps
 
-- [createClientRequest](/docs/proxy-mode/client-request) — configure the browser-side client
-- [Path Parameters](/docs/proxy-mode/path-params) — dynamic URL segments
-- [Encoding](/docs/proxy-mode/encoding) — custom body and query serialization
+- [createProxyCaller](/docs/proxy-mode/proxy-caller) — configure the browser-side client
+- [Path Parameters](/docs/advanced/path-params) — dynamic URL segments
+- [Encoding](/docs/advanced/encoding) — custom body and query serialization

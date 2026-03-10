@@ -1,0 +1,153 @@
+export const metadata = { title: "Defining APIs", description: "Define your API structure with defineApi, defineGroup, and endpoint — the foundation of type-safe API calls." }
+
+## Overview
+
+Every API in Nexus is described by three building blocks:
+
+- **`defineApi`** — creates an API source with a base URL, groups, and shared options (middleware, headers, etc.)
+- **`defineGroup`** — organizes related endpoints under a common URL prefix
+- **`endpoint`** — declares a single endpoint with its response type, variables type, and HTTP logic
+
+All three are imported from `@noverax/nexus/define`.
+
+## defineGroup
+
+Groups related endpoints under a URL prefix:
+
+```ts title="api/users.ts"
+import { defineGroup, endpoint } from "@noverax/nexus/define"
+
+type User = { id: string; name: string; email: string }
+
+export const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll:  endpoint<User[]>()((http) => http.get()),
+    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
+    create:  endpoint<User, { name: string; email: string }>()((http, vars) => http.post("", vars)),
+    update:  endpoint<User, { id: string; name: string }>()((http, vars) => http.put(":id", vars)),
+    remove:  endpoint<null, { id: string }>()((http, vars) => http.del(":id", vars)),
+  },
+})
+```
+
+## endpoint
+
+The `endpoint` function uses a double-call pattern for partial generic inference:
+
+```ts
+// Explicit types — you specify Response and Variables
+endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars))
+
+// Response only — no variables needed
+endpoint<User[]>()((http) => http.get())
+
+// With schema — types inferred from Zod/Valibot/ArkType
+endpoint({ response: UserSchema, variables: CreateUserSchema })((http, vars) => http.post("", vars))
+```
+
+The inner function receives `http` — an object with typed HTTP methods (`get`, `post`, `put`, `patch`, `del`, `head`) — and optionally `vars` (the variables).
+
+### HTTP Methods
+
+```ts
+http.get()                    // GET /users
+http.get(":id", vars)         // GET /users/5 (path param from vars)
+http.post("", vars)           // POST /users with JSON body
+http.put(":id", vars)         // PUT /users/5 with JSON body
+http.patch(":id", vars)       // PATCH /users/5 with JSON body
+http.del(":id", vars)         // DELETE /users/5
+```
+
+### Path Parameters
+
+The `:param` syntax extracts values from variables automatically:
+
+```ts
+endpoint<UserPost, { id: string; postId: string }>()(
+  (http) => http.get(":id/posts/:postId")
+)
+
+// call("api")("users:getUserPost", { id: "1", postId: "42" })
+// → GET /users/1/posts/42
+```
+
+## defineApi
+
+Creates an API source by combining groups with a base URL and shared options:
+
+```ts title="api/sources.ts"
+import { defineApi } from "@noverax/nexus/define"
+import { users } from "./users"
+import { posts } from "./posts"
+
+const api = defineApi({
+  baseURL: process.env.API_URL!,
+  groups: { users, posts },
+})
+
+export const sources = { api }
+export type Sources = typeof sources
+```
+
+### Options
+
+`defineApi` accepts all `BaseOptions`:
+
+```ts
+defineApi({
+  baseURL: "https://api.example.com",
+  groups: { users, posts },
+
+  // Shared options for all endpoints in this source:
+  middleware: [retryMiddleware(), authMiddleware(...)],
+  timeout: 10000,
+  headers: { "X-API-Version": "2" },
+  responseType: "json",         // "json" | "text" | "blob" | "arrayBuffer" | "formData"
+  deduplicate: true,            // automatic request deduplication
+  defaultBody: { lang: "en" },
+  defaultQueryParams: { format: "json" },
+})
+```
+
+## Multiple Sources
+
+You can define multiple API sources for different backends:
+
+```ts title="api/sources.ts"
+const mainApi = defineApi({
+  baseURL: "https://api.example.com",
+  groups: { users, posts },
+})
+
+const authApi = defineApi({
+  baseURL: "https://auth.example.com",
+  groups: { auth },
+})
+
+export const sources = { mainApi, authApi }
+export type Sources = typeof sources
+```
+
+Then call them by name:
+
+```ts
+const users = await call("mainApi")("users:getAll")
+const token = await call("authApi")("auth:login", { email, password })
+```
+
+## Endpoint Key Format
+
+When calling endpoints, the key format is `"group:method"`:
+
+```ts
+call("api")("users:getAll")         // group: "users", method: "getAll"
+call("api")("users:getById", vars)  // group: "users", method: "getById"
+call("api")("posts:create", vars)   // group: "posts", method: "create"
+```
+
+## Next Steps
+
+- [Caller & Proxy](/docs/core-concepts/caller) — how to call your endpoints
+- [Middleware](/docs/middleware/overview) — add retry, auth, logging to your API
+- [Validation](/docs/validation/standard-schema) — runtime schema validation

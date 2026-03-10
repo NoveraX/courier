@@ -4,39 +4,39 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { CrudDemo, OperationsInfo } from "./_components"
 
-const fullCode = `import { useQuery, useMutation } from "@/lib/request"
+const fullCode = `import { useQuery, useMutation } from "@/lib/query"
 
 // List
-const { data, refetch } = useQuery("mockApi", "users:getAll")
+const { data, refetch } = useQuery("api", "users:getAll")
 
 // Create
-const create = useMutation("mockApi", "users:create", {
+const create = useMutation("api", "users:create", {
   onSuccess: () => refetch(),
 })
 
 // Update (PUT — full replace)
-const update = useMutation("mockApi", "users:update", {
+const update = useMutation("api", "users:update", {
   onSuccess: () => refetch(),
 })
 
 // Patch (PATCH — partial update)
-const patch = useMutation("mockApi", "users:patch", {
+const patch = useMutation("api", "users:patch", {
   onSuccess: () => refetch(),
 })
 
 // Delete
-const remove = useMutation("mockApi", "users:remove", {
+const remove = useMutation("api", "users:remove", {
   onSuccess: () => refetch(),
 })`
 
 const operationsCode = `// CREATE
-const create = useMutation("mockApi", "users:create", {
+const create = useMutation("api", "users:create", {
   onSuccess: () => refetch(),
 })
 create.mutate({ name: "New User", email: "new@example.com" })
 
 // UPDATE (PUT)
-const update = useMutation("mockApi", "users:update")
+const update = useMutation("api", "users:update")
 update.mutate({
   id: 1,
   name: "Updated Name",
@@ -45,11 +45,11 @@ update.mutate({
 })
 
 // PATCH
-const patch = useMutation("mockApi", "users:patch")
+const patch = useMutation("api", "users:patch")
 patch.mutate({ id: 1, name: "Patched Name" })
 
 // DELETE
-const remove = useMutation("mockApi", "users:remove")
+const remove = useMutation("api", "users:remove")
 remove.mutate({ id: 1 })`
 
 export const metadata = docsMetadata(

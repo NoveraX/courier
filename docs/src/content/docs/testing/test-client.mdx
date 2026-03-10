@@ -1,0 +1,189 @@
+export const metadata = { title: "Test Client", description: "In-memory test client with mock support and request history -- no real HTTP calls." }
+
+## Overview
+
+`createTestClient` creates an in-memory client that replaces real HTTP calls with configurable mocks. It records every request in a history array, making it straightforward to assert what your code called and with which arguments.
+
+```ts title="install"
+import { createTestClient } from "@noverax/nexus/testing"
+```
+
+## Creating a Test Client
+
+Pass your sources type as a generic parameter. The test client exposes the same curried caller API as `createCaller` / `createProxyCaller`:
+
+```ts title="tests/users.test.ts"
+import { createTestClient } from "@noverax/nexus/testing"
+import type { sources } from "../lib/sources"
+
+const { caller, mock, history, reset } = createTestClient<typeof sources>()
+```
+
+## API Reference
+
+```ts title="types"
+type TestClient<T> = {
+  /** Caller function -- same curried API as createCaller / createProxyCaller */
+  caller: CallerFn<T>
+
+  /** Mock a specific endpoint's response */
+  mock: (source: string, endpoint: string) => MockBuilder
+
+  /** Array of all recorded requests */
+  history: HistoryEntry[]
+
+  /** Clear all mocks and history */
+  reset(): void
+
+  /** Clear only mocks */
+  resetMocks(): void
+
+  /** Clear only history */
+  resetHistory(): void
+}
+```
+
+## Basic Usage
+
+Set up a mock, call the endpoint through the caller, and assert the result:
+
+```ts title="tests/users.test.ts"
+import { describe, it, expect, beforeEach } from "vitest"
+import { createTestClient } from "@noverax/nexus/testing"
+import type { sources } from "../lib/sources"
+
+describe("users", () => {
+  const { caller, mock, history, reset } = createTestClient<typeof sources>()
+
+  beforeEach(() => {
+    reset() // clear mocks and history between tests
+  })
+
+  it("fetches all users", async () => {
+    const users = [
+      { id: 1, name: "Alice" },
+      { id: 2, name: "Bob" },
+    ]
+
+    mock("api", "users:getAll").resolves(users)
+
+    const result = await caller("api")("users:getAll")
+
+    expect(result).toEqual(users)
+    expect(history).toHaveLength(1)
+    expect(history[0].endpoint).toBe("users:getAll")
+  })
+
+  it("creates a user with variables", async () => {
+    mock("api", "users:create").resolves({ id: 3, name: "Charlie" })
+
+    const result = await caller("api")("users:create", {
+      name: "Charlie",
+      email: "charlie@test.com",
+    })
+
+    expect(result).toEqual({ id: 3, name: "Charlie" })
+    expect(history[0].variables).toEqual({
+      name: "Charlie",
+      email: "charlie@test.com",
+    })
+  })
+})
+```
+
+<Callout variant="warning" title="Mocks are required">
+If you call an endpoint without setting up a mock first, the test client throws an error with a helpful message: `No mock for "api" > "users:getAll". Call mock("api", "users:getAll").resolves(data) first.`
+</Callout>
+
+## The Caller
+
+The `caller` returned by `createTestClient` has the exact same curried API as `createCaller` and `createProxyCaller`:
+
+```ts
+// Same signature as production code
+const result = await caller("api")("users:getById", { id: 1 })
+```
+
+This means you can inject the test caller into any code that accepts a `CallerFn` without changing the calling code.
+
+## Reset Methods
+
+| Method | Clears mocks | Clears history |
+|---|---|---|
+| `reset()` | Yes | Yes |
+| `resetMocks()` | Yes | No |
+| `resetHistory()` | No | Yes |
+
+Use `reset()` in `beforeEach` for a clean slate. Use `resetHistory()` when you want to keep mocks but verify only new requests.
+
+## History Entries
+
+Every call through the caller is recorded in the `history` array, regardless of whether it succeeds or fails:
+
+```ts title="types"
+type HistoryEntry = {
+  source: string       // "api"
+  endpoint: string     // "users:getAll"
+  group?: string       // "users"
+  method: string       // "getAll"
+  variables?: unknown  // { id: 1 }
+  result?: {
+    status: number     // 200
+    data: unknown      // the mock response
+  }
+  error?: Error        // set if the mock threw
+  timestamp: number    // Date.now()
+}
+```
+
+### Filtering history
+
+Use the `findRequests` helper to filter history entries by source and endpoint:
+
+```ts title="tests/users.test.ts"
+import { createTestClient, findRequests } from "@noverax/nexus/testing"
+
+const { caller, mock, history } = createTestClient<typeof sources>()
+
+mock("api", "users:getAll").resolves([])
+mock("api", "users:getById").resolves({ id: 1, name: "Alice" })
+
+await caller("api")("users:getAll")
+await caller("api")("users:getById", { id: 1 })
+await caller("api")("users:getAll")
+
+// Filter by source only
+const allApiCalls = findRequests(history, "api")
+expect(allApiCalls).toHaveLength(3)
+
+// Filter by source and endpoint
+const getAllCalls = findRequests(history, "api", "users:getAll")
+expect(getAllCalls).toHaveLength(2)
+```
+
+## Testing Error Handling
+
+Mock a failing endpoint with `.rejects()` and verify your error handling code works:
+
+```ts title="tests/error-handling.test.ts"
+import { isHTTPError } from "@noverax/nexus"
+
+it("handles 404 errors", async () => {
+  mock("api", "users:getById").rejects(404, { message: "User not found" })
+
+  try {
+    await caller("api")("users:getById", { id: 999 })
+    expect.fail("should have thrown")
+  } catch (error) {
+    expect(isHTTPError(error)).toBe(true)
+    if (isHTTPError(error)) {
+      expect(error.status).toBe(404)
+      expect(error.data).toEqual({ message: "User not found" })
+    }
+  }
+})
+```
+
+## Next Steps
+
+- [Mocking](/docs/testing/mocking) -- full MockBuilder API reference with `.once()`, `.times()`, `.delay()`, and LIFO behavior

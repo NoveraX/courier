@@ -1,25 +1,25 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { PageHeader } from "@/components/layout/page-header"
-import { directRequest } from "@/lib/direct-request"
+import { call } from "@/lib/caller"
 import { docsMetadata } from "@/lib/metadata"
 
-const setupCode = `// lib/direct-request.ts
-import { createDirectRequest } from "@noverax/nexus/direct"
-import { methods } from "@/api"
+const setupCode = `// lib/caller.ts
+import { createCaller } from "@noverax/nexus"
+import { sources } from "@/api"
 
-export const directRequest = createDirectRequest(methods)`
+export const call = createCaller(sources)`
 
-const fetchAllCode = `import { directRequest } from "@/lib/direct-request"
+const fetchAllCode = `import { call } from "@/lib/caller"
 
 // Server Component — runs on the server, zero client JS
-const users = await directRequest("mockApi")("users:getAll", {})`
+const users = await call("api")("users:getAll", {})`
 
 const fetchOneCode = `// Path params work identically to proxy mode
-const user = await directRequest("mockApi")("users:getById", { id: 1 })`
+const user = await call("api")("users:getById", { id: 1 })`
 
 const fetchPostsCode = `// Access any request group — same API as proxy mode
-const posts = await directRequest("mockApi")("posts:getAll", {})`
+const posts = await call("api")("posts:getAll", {})`
 
 export const metadata = docsMetadata(
   "Direct Mode",
@@ -27,9 +27,9 @@ export const metadata = docsMetadata(
 )
 
 export default async function DirectExamplesPage() {
-  const users = await directRequest("mockApi")("users:getAll", {})
-  const user = await directRequest("mockApi")("users:getById", { id: 1 })
-  const posts = await directRequest("mockApi")("posts:getAll", {})
+  const users = await call("api")("users:getAll", {})
+  const user = await call("api")("users:getById", { id: 1 })
+  const posts = await call("api")("posts:getAll", {})
 
   return (
     <>
@@ -42,15 +42,15 @@ export default async function DirectExamplesPage() {
       <div className="space-y-8">
         <ExampleBlock
           title="Setup"
-          description="createDirectRequest uses the same source definitions as proxy mode. One line to set up."
+          description="createCaller uses the same source definitions as proxy mode. One line to set up."
           code={setupCode}
-          learnMoreHref="/docs/server-side/direct"
+          learnMoreHref="/docs/server-side/caller"
           learnMoreLabel="Direct mode docs"
         >
           <p className="text-sm text-muted-foreground">
             Direct mode calls the backend directly from the server. No{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-xs">/api/request</code> proxy hop —
-            requests go straight to the backend URL defined in your Datasource class.
+            requests go straight to the backend URL defined in your defineApi call.
           </p>
         </ExampleBlock>
 

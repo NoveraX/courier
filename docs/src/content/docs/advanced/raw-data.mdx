@@ -2,17 +2,17 @@ export const metadata = { title: "Raw Data Mode", description: "Access response 
 
 ## Overview
 
-By default, Nexus returns only the parsed response body (JSON or text). When you need to inspect the HTTP status code or read response headers, enable raw data mode by passing `{ rawData: true }` in the request options.
+By default, Nexus returns only the parsed response body (JSON or text). When you need to inspect the HTTP status code or read response headers, enable raw data mode by passing `{ rawData: true }` in the call options.
 
-Raw data mode changes the return type from `Promise<T>` to `Promise<{ status, headers, data }>`:
+Raw data mode changes the return type from `Promise<T>` to `Promise<HttpResponse<T>>`:
 
 ```ts
 // Normal mode (default) — returns just the data
-const users = await request("myApi")("users:getAll")
+const users = await call("api")("users:getAll")
 // users = [{ id: 1, name: "Jane" }, ...]
 
 // Raw data mode — returns status, headers, and data
-const response = await request("myApi", { rawData: true })("users:getAll")
+const response = await call("api", { rawData: true })("users:getAll")
 // response = {
 //   status: 200,
 //   headers: Headers { "content-type": "application/json", ... },
@@ -22,10 +22,10 @@ const response = await request("myApi", { rawData: true })("users:getAll")
 
 ## Enabling raw data mode
 
-Pass `rawData: true` as the second argument to your request function. This is set per-request, not per-source, so you can use it only where you need the extra metadata:
+Pass `rawData: true` as the second argument to your call function. This is set per-request, not per-source, so you can use it only where you need the extra metadata:
 
 <Callout variant="info" title="Per-request option">
-`rawData` is a `MethodsInstanceOptions` field. It does not go in `BaseOptions` on the source — you enable it on individual requests where you need status or headers.
+`rawData` is a `CallOptions` field. It does not go in `defineApi` options — you enable it on individual requests where you need status or headers.
 </Callout>
 
 ## Checking status codes
@@ -33,8 +33,10 @@ Pass `rawData: true` as the second argument to your request function. This is se
 Use raw data mode when your API uses different status codes to communicate different outcomes. For example, distinguishing between "created" (201) and "already exists" (200):
 
 ```ts title="lib/api-helpers.ts"
+import { call } from "@/lib/caller"
+
 async function createUser(data: { name: string; email: string }) {
-  const response = await request("myApi", { rawData: true })("users:create", data)
+  const response = await call("api", { rawData: true })("users:create", data)
 
   if (response.status === 201) {
     console.log("User created:", response.data)
@@ -57,8 +59,10 @@ Many APIs include useful metadata in response headers. Raw data mode gives you a
 ### Pagination headers
 
 ```ts title="lib/api-helpers.ts"
+import { call } from "@/lib/caller"
+
 async function fetchPaginatedUsers(page: number) {
-  const response = await request("myApi", { rawData: true })("users:getAll", {
+  const response = await call("api", { rawData: true })("users:getAll", {
     page,
     limit: 20,
   })
@@ -78,12 +82,14 @@ async function fetchPaginatedUsers(page: number) {
 ### Rate-limit headers
 
 ```ts title="lib/api-helpers.ts"
+import { call } from "@/lib/caller"
+
 async function safeRequest<T>(
   source: string,
   query: string,
   variables?: unknown
 ): Promise<{ data: T; rateLimited: boolean }> {
-  const response = await request(source, { rawData: true })(query, variables)
+  const response = await call(source, { rawData: true })(query, variables)
 
   const remaining = Number(response.headers?.get("X-RateLimit-Remaining") ?? -1)
   const resetAt = response.headers?.get("X-RateLimit-Reset")
@@ -101,14 +107,13 @@ async function safeRequest<T>(
 
 ## Raw data in direct mode
 
-Raw data mode works identically in both proxy and direct modes. The response shape is always `{ status, headers, data }`:
+Raw data mode works identically in both proxy and direct modes. The response shape is always `HttpResponse<T>` — `{ status, headers, data }`:
 
 ```ts title="app/dashboard/page.tsx"
-// Raw data works identically in direct mode
-import { directRequest } from "@/lib/direct-request"
+import { call } from "@/lib/caller"
 
 export default async function DashboardPage() {
-  const response = await directRequest("myApi", { rawData: true })("stats:overview")
+  const response = await call("api", { rawData: true })("stats:overview")
 
   // Same shape: { status, headers, data }
   const cacheStatus = response.headers?.get("X-Cache")
@@ -123,11 +128,11 @@ export default async function DashboardPage() {
 ```
 
 <Callout variant="tip" title="Type inference with rawData">
-When `rawData: true` is set, TypeScript automatically infers the return type as `Promise<Partial<MethodKyResponse<T>>>` instead of `Promise<T>`. The `data` field inside the response retains the original method's response type.
+When `rawData: true` is set, TypeScript automatically infers the return type as `Promise<HttpResponse<T>>` instead of `Promise<T>`. The `data` field inside the response retains the original endpoint's response type.
 </Callout>
 
 ## Next steps
 
 - [Streaming](/docs/advanced/streaming) — receive responses as ReadableStreams for SSE and large downloads
-- [Options](/docs/advanced/options) — all per-request options including rawData, stream, and forwardVars
-- [Raw Data Example](/raw-data) — interactive demo of raw data mode
+- [Options](/docs/advanced/options) — all per-request options including rawData, stream, and timeout
+- [Middleware](/docs/advanced/middleware) — intercept and transform requests with composable middleware

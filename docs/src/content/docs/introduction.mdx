@@ -1,84 +1,98 @@
-export const metadata = { title: "What is Nexus?", description: "A type-safe HTTP client for Next.js with request grouping, two transport modes, and built-in React Query integration." }
+export const metadata = { title: "What is Nexus?", description: "A type-safe, framework-agnostic HTTP client with middleware, runtime validation, and adapters for Next.js, Nuxt, Hono, Express, Fastify, and NestJS." }
 
-**@noverax/nexus** is an HTTP client library designed specifically for Next.js applications. It provides end-to-end type safety from your API definition to your React components — without code generation, schema files, or a custom backend.
+**@noverax/nexus** is a type-safe HTTP client that works with any JavaScript framework and any REST backend. Define your API once as plain TypeScript functions — get autocomplete, type inference, runtime validation, and middleware out of the box.
 
-You define your API as TypeScript classes with typed methods. Nexus infers request and response types automatically, giving you autocomplete for method names, variables, and response shapes.
+No codegen. No schema files. No custom backend.
 
 ## How It Works
 
-Define your API structure using `Datasource` and `EndpointGroup` classes. Each method declares its response type and variables type using the `Endpoint<Response, Variables>` generic:
+Define your API using `defineApi`, `defineGroup`, and `endpoint`. Each endpoint declares its response and variables types:
 
 ```ts title="api/sources.ts"
-import { Datasource, EndpointGroup, Endpoint } from "@noverax/nexus/datasource"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
 
-type User = { id: number; name: string; email: string }
+type User = { id: string; name: string; email: string }
 
-class Users extends EndpointGroup {
-  constructor() {
-    super({ prefix: "users" })
-  }
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll:  endpoint<User[]>()((http) => http.get()),
+    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
+    create:  endpoint<User, { name: string; email: string }>()((http, vars) => http.post("", vars)),
+  },
+})
 
-  getAll: Endpoint<User[]> = ({ get }) => get()
-  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
-  create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
-}
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  groups: { users },
+})
 
-class MyApi extends Datasource<{ users: Users }> {
-  constructor() {
-    super({ baseURL: "https://api.example.com", groups: { users: new Users() } })
-  }
-}
+export const sources = { api }
+export type Sources = typeof sources
 ```
 
-Then use it in your components with full type inference:
+Then call it with full type inference:
 
 ```ts title="app/page.tsx"
-// React Query integration — fully typed
-const { data, isLoading } = useQuery("myApi", "users:getAll")
-//      ^? User[]
+const users = await call("api")("users:getAll")
+//    ^? User[]
 
-const { mutate } = useMutation("myApi", "users:create")
-mutate({ name: "Jane", email: "jane@example.com" })
-//      ^? { name: string; email: string } — auto-inferred
+const user = await call("api")("users:getById", { id: "1" })
+//    ^? User
 ```
 
 ## Two Transport Modes
 
-Nexus supports two modes for executing requests, both sharing the same API definition:
+Both modes share the same API definition and the same type inference:
 
-- **Proxy Mode** — browser sends a POST to your Next.js API route, which forwards the request to your backend. Hides secrets, bypasses CORS, and forwards cookies automatically.
-- **Direct Mode** — server-side code (RSC, Server Actions) calls the backend directly with no proxy hop. Same type safety, zero overhead.
+- **Direct** — `createCaller(sources)` — call backends directly from any runtime (Node.js, Bun, Deno, Cloudflare Workers, server components).
+- **Proxy** — `createProxyCaller()` — browser sends requests through your server, which hides API keys, bypasses CORS, and forwards cookies.
 
 <Callout variant="tip" title="Same definitions, two modes">
-You write your `Datasource` and `EndpointGroup` classes once. Both `createClientRequest` (proxy) and `createDirectRequest` (direct) consume them with identical type inference.
+You define your API once. Both `createCaller` (direct) and `createProxyCaller` (proxy) consume the same sources with identical type inference.
 </Callout>
+
+## Framework Agnostic
+
+The core runs on any JavaScript runtime with `fetch`. Official adapters handle the server-side proxy for your framework:
+
+| Framework | Server Package | Handler |
+|-----------|---------------|---------|
+| **Next.js** | `@noverax/nexus-next` | `apiRoute(sources)` |
+| **Nuxt** | `@noverax/nexus-nuxt` | `nexusHandler(sources)` |
+| **Hono** | `@noverax/nexus-hono` | `nexusHandler(sources)` |
+| **Express** | `@noverax/nexus-express` | `nexusHandler(sources)` |
+| **Fastify** | `@noverax/nexus-fastify` | `nexusPlugin` |
+| **NestJS** | `@noverax/nexus-nestjs` | `nexusMiddleware(sources)` |
+
+On the client side, use `createProxyCaller` (vanilla) or `createQueryCaller` (React Query hooks).
 
 ## Core Philosophy
 
-- **Type safety without codegen** — no generated files, no build steps. TypeScript classes are the source of truth.
+- **Type safety without codegen** — TypeScript functions are the source of truth. No generated files, no build steps.
 - **Zero boilerplate** — define a method signature and Nexus handles serialization, path parameters, headers, and error wrapping.
-- **Next.js-first** — App Router, Server Components, Server Actions, and API Routes are first-class citizens.
-- **Works with any REST backend** — no custom server required. Connect to Express, FastAPI, Rails, or any HTTP API.
+- **Any backend** — works with Express, FastAPI, Rails, Go, Laravel, Django — anything that speaks HTTP.
+- **Composable middleware** — retry, auth, logging, rate-limiting, caching — or write your own.
+- **Standard Schema validation** — plug in Zod, Valibot, ArkType, or any Standard Schema library.
 
 ## Comparison
-
-How Nexus compares to common alternatives:
 
 <ComparisonTable
   headers={["Feature", "fetch", "axios", "tRPC", { label: "Nexus", highlight: true }]}
   rows={[
     ["Type Safety", "Manual", "Manual", { label: "Full", highlight: true }, { label: "Full", highlight: true }],
+    ["Framework Agnostic", { label: "Yes", highlight: true }, { label: "Yes", highlight: true }, "No", { label: "Yes", highlight: true }],
     ["React Query", "Manual", "Manual", { label: "Built-in", highlight: true }, { label: "Built-in", highlight: true }],
     ["Server Components", "Manual", "No", "Limited", { label: "First-class", highlight: true }],
-    ["Request Grouping", "No", "No", "Router", { label: "EndpointGroup", highlight: true }],
+    ["Middleware Chain", "No", "Interceptors", "Built-in", { label: "Composable", highlight: true }],
+    ["Runtime Validation", "No", "No", "Zod only", { label: "Any Standard Schema", highlight: true }],
     ["Upload Progress", "No", { label: "Yes", highlight: true }, "Plugin", { label: "Built-in", highlight: true }],
-    ["Path Parameters", "Manual", "Manual", "No", { label: "Built-in", highlight: true }],
     ["Backend Requirement", "Any", "Any", "tRPC server", { label: "Any REST", highlight: true }],
   ]}
 />
 
 ## Next Steps
 
-- [Installation](/docs/installation) — add Nexus to your project
-- [Quick Start](/docs/quick-start) — build your first request in 5 minutes
-- [Project Setup](/docs/project-setup) — recommended file structure and patterns
+1. [Installation](/docs/installation) — add Nexus to your project
+2. [Quick Start](/docs/quick-start) — make your first type-safe API call
+3. [Framework Guides](/docs/frameworks/nextjs) — setup for your specific framework

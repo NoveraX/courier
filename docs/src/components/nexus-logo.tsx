@@ -48,14 +48,7 @@ export function NexusLogo({
 
   if (gradient) {
     return (
-      <Image
-        src={paths.gradient}
-        alt="Nexus"
-        width={w}
-        height={h}
-        className={className}
-        priority
-      />
+      <Image src={paths.gradient} alt="Nexus" width={w} height={h} className={className} priority />
     )
   }
 

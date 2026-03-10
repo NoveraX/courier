@@ -2,94 +2,89 @@ import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
 import { docsMetadata } from "@/lib/metadata"
 
-const singletonCode = `// lib/request.ts — Single typed instance for the entire app
-import type { MethodsType } from "@/api"
-import { createQueryRequest } from "@noverax/nexus/query"
+const singletonCode = `// lib/query.ts — Single typed instance for the entire app
+import type { Sources } from "@/api"
+import { createQueryCaller } from "@noverax/nexus-query"
 
-export const { useQuery, useMutation, request } =
-  createQueryRequest<MethodsType>()
+export const { useQuery, useMutation, caller } =
+  createQueryCaller<Sources>()
 
-// MethodsType carries full type information:
+// Sources carries full type information:
 // - Source names (keys)
 // - Group names and method names per source
 // - Response types and variable types per method`
 
 const sourcesCode = `// api/index.ts — Define and export all sources
-import { Datasource } from "@noverax/nexus/datasource"
+import { defineApi } from "@noverax/nexus/define"
 
-const groups = {
-  users: new Users(),   // Users group with CRUD methods
-  posts: new Posts(),   // Posts group
-  files: new Files(),   // File upload methods
-}
+const api = defineApi({
+  baseURL: "http://localhost:4000",
+  groups: {
+    users,  // Users group with CRUD endpoints
+    posts,  // Posts group
+    files,  // File upload endpoints
+  },
+})
 
-class MockApi extends Datasource<typeof groups> {
-  constructor() {
-    super({ baseURL: "http://localhost:4000", groups })
-  }
-}
+export const sources = { api }
+export type Sources = typeof sources`
 
-export const methods = { mockApi: new MockApi() }
-export type MethodsType = typeof methods`
+const methodTypeCode = `// How endpoint<Response, Variables> drives the type system
+import { defineGroup, endpoint } from "@noverax/nexus/define"
 
-const methodTypeCode = `// How Endpoint<Response, Variables> drives the type system
-import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    // endpoint<ResponseType, VariablesType>()
+    getAll: endpoint<UserListResponse>()((http) => http.get()),
 
-class Users extends EndpointGroup {
-  constructor() {
-    super({ prefix: "users" })
-  }
+    getById: endpoint<User, { id: number }>()((http) => http.get(":id")),
 
-  // Endpoint<ResponseType, VariablesType>
-  getAll: Endpoint<UserListResponse, Record<string, never>> =
-    ({ get }) => get()
+    create: endpoint<User, CreateUserInput>()((http) => http.post()),
 
-  getById: Endpoint<User, { id: number }> =
-    ({ get }) => get(":id")
+    update: endpoint<User, { id: number } & Partial<CreateUserInput>>()(
+      (http) => http.put(":id")
+    ),
 
-  create: Endpoint<User, CreateUserInput> =
-    ({ post }) => post()
-
-  update: Endpoint<User, { id: number } & Partial<CreateUserInput>> =
-    ({ put }) => put(":id")
-
-  delete: Endpoint<{ success: boolean }, { id: number }> =
-    ({ del }) => del(":id")
-}
+    delete: endpoint<{ success: boolean }, { id: number }>()(
+      (http) => http.del(":id")
+    ),
+  },
+})
 
 // These types flow through the entire chain:
-// Endpoint definition → Datasource class → MethodsType → createQueryRequest
-// → useQuery/useMutation/request → call site`
+// endpoint → defineGroup → defineApi → Sources → createQueryCaller
+// → useQuery/useMutation/caller → call site`
 
 const inferenceCode = `// Full type inference at call site — no manual types needed
 
 // useQuery infers Response type from the Endpoint definition
-const { data } = useQuery("mockApi", "users:getAll")
+const { data } = useQuery("api", "users:getAll")
 //      ^? { data: User[], total: number } | undefined
 
 // useMutation infers both Response and Variables
-const { mutate } = useMutation("mockApi", "users:create")
+const { mutate } = useMutation("api", "users:create")
 //      ^? (variables: { name: string, email: string, role?: string }) => void
 
-// request (non-hook) also infers types
-const users = await request("mockApi")("users:getAll", {})
+// caller (non-hook) also infers types
+const users = await caller("api")("users:getAll", {})
 //    ^? { data: User[], total: number }
 
 // Group:method syntax resolves the correct nested type
-const user = await request("mockApi")("users:getById", { id: 1 })
+const user = await caller("api")("users:getById", { id: 1 })
 //    ^? User`
 
 const multiInstanceCode = `// Multiple instances for different backends
-import { createQueryRequest } from "@noverax/nexus/query"
+import { createQueryCaller } from "@noverax/nexus-query"
 
 // Internal API
-export const internal = createQueryRequest<InternalMethods>({
+export const internal = createQueryCaller<InternalSources>({
   timeout: 5000,
   headers: { "X-Internal": "true" },
 })
 
 // External API
-export const external = createQueryRequest<ExternalMethods>({
+export const external = createQueryCaller<ExternalSources>({
   timeout: 15000,
   onError: (error) => Sentry.captureException(error),
 })
@@ -99,13 +94,13 @@ const { data } = internal.useQuery("users", "getAll")
 const { mutate } = external.useMutation("payments", "charge")`
 
 const directCode = `// Direct mode — same type system, no proxy
-import { createDirectRequest } from "@noverax/nexus/direct"
-import { methods } from "@/api"
+import { createCaller } from "@noverax/nexus"
+import { sources } from "@/api"
 
-export const direct = createDirectRequest(methods)
+export const direct = createCaller(sources)
 
 // Server Component or Server Action
-const users = await direct("mockApi")("users:getAll", {})
+const users = await direct("api")("users:getAll", {})
 //    ^? { data: User[], total: number }`
 
 export const metadata = docsMetadata(
@@ -124,38 +119,38 @@ export default function SingletonExamplesPage() {
       <div className="space-y-8">
         <ExampleBlock
           title="The Singleton Pattern"
-          description="One createQueryRequest call exports typed hooks for the entire app."
+          description="One createQueryCaller call exports typed hooks for the entire app."
           code={singletonCode}
           learnMoreHref="/docs/advanced/singleton"
           learnMoreLabel="Singleton docs"
         >
           <p className="text-sm text-muted-foreground">
             The generic parameter{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">{"<MethodsType>"}</code> carries
-            all source, group, method, response, and variable types. Every call site gets full
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">{"<Sources>"}</code> carries all
+            source, group, endpoint, response, and variable types. Every call site gets full
             autocompletion and type checking.
           </p>
         </ExampleBlock>
 
         <ExampleBlock
           title="Source Definition"
-          description="Define sources with Datasource and EndpointGroup classes. Export the methods map and its type."
+          description="Define sources with defineApi and defineGroup functions. Export the sources map and its type."
           code={sourcesCode}
         >
           <p className="text-sm text-muted-foreground">
-            The <code className="rounded bg-muted px-1 py-0.5 text-xs">MethodsType</code> is derived
-            from the actual instances — no need to manually define or sync types.
+            The <code className="rounded bg-muted px-1 py-0.5 text-xs">Sources</code> type is
+            derived from the actual definitions — no need to manually define or sync types.
           </p>
         </ExampleBlock>
 
         <ExampleBlock
           title="Method Types"
-          description="Endpoint<Response, Variables> is the foundation of the type system."
+          description="endpoint<Response, Variables>() is the foundation of the type system."
           code={methodTypeCode}
         >
           <p className="text-sm text-muted-foreground">
-            Each method declares its response and variables types. These flow through the chain:
-            Endpoint → EndpointGroup → Datasource → MethodsType → createQueryRequest → call site.
+            Each endpoint declares its response and variables types. These flow through the chain:
+            endpoint → defineGroup → defineApi → Sources → createQueryCaller → call site.
           </p>
         </ExampleBlock>
 
@@ -183,7 +178,7 @@ export default function SingletonExamplesPage() {
 
         <ExampleBlock
           title="Direct Mode"
-          description="createDirectRequest uses the same type system for server-side usage."
+          description="createCaller uses the same type system for server-side usage."
           code={directCode}
         >
           <p className="text-sm text-muted-foreground">

@@ -224,7 +224,11 @@ export function createProxyCaller<T extends Record<string, unknown> = Record<str
         extraOptions.timeout = defaultTimeout;
       }
 
-      const serverOptions = stream ? { ...extraOptions, stream } : extraOptions;
+      const serverOptions = {
+        ...extraOptions,
+        ...(stream && { stream }),
+        ...(cache && { cache }),
+      };
 
       // GET proxy: encode everything as query params
       if (proxyMethod === "GET" && !isFormData(variables) && !onUploadProgress) {

@@ -4,23 +4,23 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { GetDemo, ManualDemo, PostDemo } from "./_components"
 
-const getCode = `import { useQuery } from "@/lib/request"
+const getCode = `import { useQuery } from "@/lib/query"
 
 // useQuery fetches data automatically on mount
-const { data, isLoading, error } = useQuery("mockApi", "users:getAll", {
+const { data, isLoading, error } = useQuery("api", "users:getAll", {
   variables: {},
 })`
 
-const postCode = `import { useMutation } from "@/lib/request"
+const postCode = `import { useMutation } from "@/lib/query"
 
-const { mutate, data, isPending } = useMutation("mockApi", "users:create")
+const { mutate, data, isPending } = useMutation("api", "users:create")
 
 mutate({ name: "Jane Doe", email: "jane@example.com", role: "user" })`
 
-const manualCode = `import { useMutation } from "@/lib/request"
+const manualCode = `import { useMutation } from "@/lib/query"
 
 // useMutation for on-demand calls — no need for manual useState
-const { mutate, data, isPending } = useMutation("mockApi", "users:getById")
+const { mutate, data, isPending } = useMutation("api", "users:getById")
 
 mutate({ id: 1 })`
 

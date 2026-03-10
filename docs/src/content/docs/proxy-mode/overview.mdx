@@ -1,37 +1,38 @@
-export const metadata = { title: "Proxy Mode Overview", description: "How Nexus routes browser requests through your Next.js server to keep secrets hidden and bypass CORS." }
+export const metadata = { title: "Proxy Mode", description: "Framework-agnostic reverse proxy that hides secrets, bypasses CORS, and forwards cookies from any frontend to any backend." }
 
 ## What is proxy mode?
 
-In proxy mode, browser requests never reach your backend directly. Instead, every request goes through a Next.js API route that acts as a reverse proxy:
+In proxy mode, browser requests never reach your backend directly. Instead, every call goes through a server-side handler that acts as a reverse proxy:
 
-1. The browser calls `createClientRequest`, which POSTs to `/api/request`
-2. The API route (`apiRoute`) validates the origin, parses the payload, and calls `executeRequest`
-3. `executeRequest` looks up the source, group, and method, creates an `HttpClient`, and makes the real HTTP call to your backend
+1. The browser calls `createProxyCaller`, which POSTs (or GETs) to a configurable proxy URL
+2. The server handler (`createHandler`) validates the origin, parses the payload, and calls `executeRequest`
+3. `executeRequest` looks up the source, group, and endpoint, creates an `HttpClient`, and makes the real HTTP call to your backend
 4. The response is forwarded back to the browser
 
 ```bash title="Architecture"
 ┌──────────────────────────────────────────────────────────────┐
 │  Browser (Client Component)                                  │
 │                                                              │
-│  createClientRequest<Sources>()                              │
+│  createProxyCaller<Sources>()                                │
 │       │                                                      │
 │       ▼                                                      │
-│  ky.post("/api/request", { json: { source, group, query } }) │
+│  fetch POST "/api/request"                                   │
+│  { source, group, method, variables }                        │
 └──────────────────┬───────────────────────────────────────────┘
                    │  POST /api/request
                    ▼
 ┌──────────────────────────────────────────────────────────────┐
-│  Next.js API Route (Server)                                  │
+│  Server Handler (any framework)                              │
 │                                                              │
-│  apiRoute(sources) → { POST }                                │
+│  createHandler(sources) → { handleGet, handlePost, handle }  │
 │       │  ✓ origin validation                                 │
 │       │  ✓ cookie forwarding                                 │
 │       │  ✓ header whitelisting                               │
 │       ▼                                                      │
-│  createRequest(sources, body, context)                        │
+│  executeRequest(sources, payload, context)                   │
 │       │                                                      │
 │       ▼                                                      │
-│  Instance → ky → GET/POST/PUT/PATCH/DELETE                   │
+│  HttpClient → fetch → GET/POST/PUT/PATCH/DELETE              │
 └──────────────────┬───────────────────────────────────────────┘
                    │  HTTP request
                    ▼
@@ -44,28 +45,28 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 ## Why use proxy mode?
 
 - **Hide API secrets** — your backend URL, API keys, and tokens stay on the server. The browser only sees `/api/request`.
-- **Bypass CORS** — the proxy route runs on the same origin as your frontend, so there are no cross-origin restrictions.
+- **Bypass CORS** — the proxy handler runs on the same origin as your frontend, so there are no cross-origin restrictions.
 - **Forward cookies** — credentials are included automatically (`credentials: "include"` by default), and `set-cookie` headers from the backend are passed through.
-- **Centralized error handling** — the API route catches errors and returns consistent JSON responses with proper HTTP status codes.
-- **Request/response hooks** — use `onRequest`, `onResponse`, and `onError` hooks at the source level to transform, log, or enrich every request.
+- **Centralized error handling** — the handler catches errors and returns consistent JSON responses with proper HTTP status codes.
+- **Framework-agnostic** — works with Next.js, Hono, Express, Fastify, Nuxt, and NestJS through thin adapter packages.
 
 ## Request flow
 
 Here is the complete flow from a browser call to the backend response:
 
 ```ts title="Request lifecycle"
-// 1. Browser — call a typed request
-const request = createClientRequest<Sources>()
-const user = await request("myApi")("users:getById", { id: 5 })
+// 1. Browser — call a typed endpoint
+const call = createProxyCaller<Sources>()
+const user = await call("api")("users:getById", { id: 5 })
 
 // 2. Under the hood, Nexus sends:
 //    POST /api/request
-//    { source: "myApi", group: "users", query: "getById", variables: { id: 5 } }
+//    { source: "api", group: "users", method: "getById", variables: { id: 5 } }
 
-// 3. API route receives the POST, finds the source and method,
-//    creates an Instance, and calls: GET {baseURL}/users/5
+// 3. Server handler receives the POST, finds the source and endpoint,
+//    creates an HttpClient, and calls: GET {baseURL}/users/5
 
-// 4. Response flows back: backend → API route → browser
+// 4. Response flows back: backend → handler → browser
 ```
 
 ## Security
@@ -74,14 +75,14 @@ Proxy mode includes two built-in security layers: origin validation and header w
 
 ### Origin validation
 
-The API route rejects requests whose `Origin` header does not match the request URL origin. This prevents third-party sites from calling your proxy:
+The handler rejects POST requests whose `Origin` header does not match the request URL origin. This prevents third-party sites from calling your proxy:
 
 ```typescript
-// src/next/apiRoute.ts — built-in origin check
+// Built-in origin check (POST only)
 const origin = request.headers.get("origin")
 
 if (!origin || new URL(request.url).origin !== origin) {
-  return NextResponse.json(
+  return Response.json(
     { success: false, message: "Origin mismatch" },
     { status: 403 }
   )
@@ -104,12 +105,12 @@ const whitelistedHeaders = [
   "x-forwarded",
   "x-real-ip",
   "x-request-id",
-  // ... plus custom headers via extraHeaders option
+  // ... plus custom headers via allowedHeaders option
 ]
 ```
 
 <Callout variant="tip" title="Custom headers">
-Need additional headers forwarded? Use the `extraHeaders` option in your `Datasource` class constructor to extend the whitelist.
+Need additional headers forwarded? Use the `allowedHeaders` option in `defineApi()` to extend the whitelist.
 </Callout>
 
 ## When to use proxy vs direct mode
@@ -119,20 +120,20 @@ Use **proxy mode** for client components where the browser initiates the request
 ```ts title="Comparison"
 // Proxy mode — browser cannot see API_URL or secrets
 // Browser → POST /api/request → Server → GET https://internal-api.company.com/users
-const request = createClientRequest<Sources>()
-const users = await request("myApi")("users:getAll")
+const call = createProxyCaller<Sources>()
+const users = await call("api")("users:getAll")
 
 // Direct mode — server calls backend directly, no proxy hop
 // Server → GET https://internal-api.company.com/users
-const users = await directRequest("myApi")("users:getAll")
+const users = await caller("api")("users:getAll")
 ```
 
 <Callout variant="info" title="Same API definitions">
-Both modes share the same `Datasource` and `EndpointGroup` classes. You define your API once and use it from both client and server code with full type safety.
+Both modes share the same `defineApi` and `defineGroup` definitions. You define your API once and use it from both client and server code with full type safety.
 </Callout>
 
 ## Next Steps
 
-- [createClientRequest](/docs/proxy-mode/client-request) — set up the browser-side proxy client
-- [API Route Handler](/docs/proxy-mode/api-route) — configure the server-side proxy endpoint
-- [Path Parameters](/docs/proxy-mode/path-params) — dynamic URL segments with `:param` syntax
+- [createProxyCaller](/docs/proxy-mode/proxy-caller) — set up the browser-side proxy client
+- [Server Handler](/docs/proxy-mode/api-route) — configure the server-side proxy endpoint
+- [Path Parameters](/docs/advanced/path-params) — dynamic URL segments with `:param` syntax

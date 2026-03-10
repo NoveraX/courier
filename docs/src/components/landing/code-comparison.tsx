@@ -16,13 +16,11 @@ if (!res.ok) throw new Error(res.statusText)
 const user: unknown = await res.json()`
 
 const afterCode = `// Nexus — typed, zero boilerplate
-import { api } from "@/lib/api"
+import { createProxyCaller } from "@noverax/nexus"
 
-const request = createClientRequest()
+const caller = createProxyCaller<Sources>()
 
-const user = await request<User>(api.users.getOne, {
-  path: { id: "1" },
-})
+const user = await caller("api")("users:getById", { id: 1 })
 // user is User — fully typed!`
 
 export function CodeComparison() {

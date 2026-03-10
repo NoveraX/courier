@@ -1,0 +1,259 @@
+export const metadata = { title: "Custom Middleware", description: "Write your own middleware to intercept requests, modify headers, transform responses, and handle errors." }
+
+## Writing a Middleware Function
+
+A middleware function receives a `MiddlewareContext` and a `NextFn`, and must return a `Promise<MiddlewareResponse>`. Use `defineMiddleware` for full type inference:
+
+```ts title="lib/middleware/timing.ts"
+import { defineMiddleware } from "@noverax/nexus/middleware"
+
+export const timingMiddleware = defineMiddleware(async (ctx, next) => {
+  const start = performance.now()
+  const response = await next()
+  const ms = Math.round(performance.now() - start)
+
+  response.headers.set("X-Response-Time", `${ms}ms`)
+  return response
+})
+```
+
+## Accessing Context
+
+The `ctx` object gives you full visibility into the current request:
+
+```ts title="types"
+type MiddlewareContext = {
+  source: string       // Source name (e.g., "api")
+  group?: string       // Group name (e.g., "users")
+  method: string       // Endpoint method (e.g., "getAll")
+  variables?: unknown  // Request body/params — mutable
+  headers: Headers     // Request headers — mutable
+}
+```
+
+You can read or modify any of these properties before calling `next()`:
+
+```ts title="lib/middleware/enrich.ts"
+import { defineMiddleware } from "@noverax/nexus/middleware"
+
+export const enrichMiddleware = defineMiddleware(async (ctx, next) => {
+  // Add a custom header
+  ctx.headers.set("X-Request-Source", ctx.source)
+
+  // Inject a default variable
+  if (ctx.variables && typeof ctx.variables === "object") {
+    ctx.variables = { ...ctx.variables, _locale: "en" }
+  }
+
+  return next()
+})
+```
+
+## Calling next()
+
+`next()` calls the next middleware in the chain, or the endpoint handler if this is the innermost middleware. You **must** either call `next()` and return its result, or return your own `MiddlewareResponse`.
+
+### Pass-through
+
+The simplest middleware just calls `next()` and returns the result:
+
+```ts
+const passthrough = defineMiddleware(async (_ctx, next) => {
+  return next()
+})
+```
+
+### Transform the response
+
+Await `next()`, then modify the response before returning:
+
+```ts title="lib/middleware/unwrap.ts"
+import { defineMiddleware } from "@noverax/nexus/middleware"
+
+// Unwrap a { data, meta } API envelope
+export const unwrapMiddleware = defineMiddleware(async (_ctx, next) => {
+  const response = await next()
+
+  if (
+    response.data &&
+    typeof response.data === "object" &&
+    "data" in response.data
+  ) {
+    return { ...response, data: (response.data as any).data }
+  }
+
+  return response
+})
+```
+
+### Short-circuit (skip the endpoint)
+
+Return a `MiddlewareResponse` without calling `next()` to prevent the request from executing:
+
+```ts title="lib/middleware/maintenance.ts"
+import { defineMiddleware } from "@noverax/nexus/middleware"
+
+export const maintenanceMiddleware = defineMiddleware(async (_ctx, _next) => {
+  if (isMaintenanceMode()) {
+    return {
+      status: 503,
+      data: { message: "Service temporarily unavailable" },
+      headers: new Headers(),
+    }
+  }
+
+  return _next()
+})
+```
+
+### Retry
+
+Call `next()` multiple times to implement retry logic:
+
+```ts title="lib/middleware/retry-on-stale.ts"
+import { defineMiddleware } from "@noverax/nexus/middleware"
+
+export const retryOnStale = defineMiddleware(async (ctx, next) => {
+  const response = await next()
+
+  // Retry once if the response indicates stale data
+  if (response.headers.get("X-Data-Stale") === "true") {
+    ctx.headers.set("Cache-Control", "no-cache")
+    return next()
+  }
+
+  return response
+})
+```
+
+## Error Handling
+
+Wrap `next()` in a try/catch to intercept errors from downstream middleware or the endpoint handler:
+
+```ts title="lib/middleware/error-reporter.ts"
+import { defineMiddleware } from "@noverax/nexus/middleware"
+import * as Sentry from "@sentry/node"
+
+export const errorReporter = defineMiddleware(async (ctx, next) => {
+  try {
+    return await next()
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: {
+        source: ctx.source,
+        group: ctx.group,
+        method: ctx.method,
+      },
+    })
+    throw error // re-throw so the caller still receives the error
+  }
+})
+```
+
+<Callout variant="warning" title="Always re-throw or return">
+If you catch an error, either re-throw it or return a valid `MiddlewareResponse`. Swallowing errors silently will cause the caller to receive `undefined` instead of data, which leads to confusing bugs.
+</Callout>
+
+## Middleware Factories
+
+For configurable middleware, write a factory function that returns a `MiddlewareFn`:
+
+```ts title="lib/middleware/timeout.ts"
+import { defineMiddleware } from "@noverax/nexus/middleware"
+import type { MiddlewareFn } from "@noverax/nexus"
+
+export function timeoutMiddleware(ms: number): MiddlewareFn {
+  return defineMiddleware(async (_ctx, next) => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), ms)
+
+    try {
+      const response = await next()
+      return response
+    } catch (error) {
+      if (controller.signal.aborted) {
+        return {
+          status: 408,
+          data: { message: `Request timed out after ${ms}ms` },
+          headers: new Headers(),
+        }
+      }
+      throw error
+    } finally {
+      clearTimeout(timer)
+    }
+  })
+}
+```
+
+Use it like any other middleware:
+
+```ts title="lib/sources.ts"
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  middleware: [
+    timeoutMiddleware(5000),
+  ],
+  groups: { /* ... */ },
+})
+```
+
+## Composing Custom Middleware
+
+Use `composeMiddleware` to bundle multiple middleware into a reusable unit:
+
+```ts title="lib/middleware/production.ts"
+import { composeMiddleware } from "@noverax/nexus/middleware"
+import { errorReporter } from "./error-reporter"
+import { timingMiddleware } from "./timing"
+import { unwrapMiddleware } from "./unwrap"
+
+// Single middleware that applies all three
+export const productionMiddleware = composeMiddleware([
+  errorReporter,
+  timingMiddleware,
+  unwrapMiddleware,
+])
+```
+
+Then use the composed middleware in your source definition:
+
+```ts title="lib/sources.ts"
+import { defineApi } from "@noverax/nexus/define"
+import { productionMiddleware } from "./middleware/production"
+
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  middleware: [productionMiddleware],
+  groups: { /* ... */ },
+})
+```
+
+## Conditional Middleware
+
+Apply middleware only for specific sources, groups, or methods by checking `ctx`:
+
+```ts title="lib/middleware/admin-only.ts"
+import { defineMiddleware } from "@noverax/nexus/middleware"
+
+export const adminGuard = defineMiddleware(async (ctx, next) => {
+  // Only enforce on admin endpoints
+  if (ctx.group === "admin") {
+    const isAdmin = await checkAdminPermission()
+    if (!isAdmin) {
+      return {
+        status: 403,
+        data: { message: "Admin access required" },
+        headers: new Headers(),
+      }
+    }
+  }
+
+  return next()
+})
+```
+
+## Next Steps
+
+- [Built-in Middleware](/docs/middleware/built-in) -- reference for all shipped middleware
+- [Middleware Overview](/docs/middleware/overview) -- the onion model and core types

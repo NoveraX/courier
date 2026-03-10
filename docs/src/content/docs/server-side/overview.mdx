@@ -1,17 +1,17 @@
-export const metadata = { title: "Server-Side Overview", description: "Fetch data directly from your backend in React Server Components and Server Actions — no proxy hop, no client bundle." }
+export const metadata = { title: "Server-Side Usage", description: "Call your backend directly from any server runtime — no proxy hop, no client bundle, zero overhead." }
 
 ## What is direct mode?
 
-In **direct mode**, your server-side code calls the backend directly without routing through an API proxy. The request flow is straightforward:
+In **direct mode**, your server-side code calls the backend directly without routing through a proxy handler. The request flow is straightforward:
 
 ```
-createDirectRequest → createRequest → HttpClient → ky → backend
+createCaller → executeRequest → HttpClient → fetch → backend
 ```
 
-There is no intermediate HTTP hop, no serialization through an API route, and no exposure to the client bundle. Your backend URL, API keys, and other secrets remain on the server.
+There is no intermediate HTTP hop, no serialization through a proxy endpoint, and no exposure to the client bundle. Your backend URL, API keys, and other secrets remain on the server.
 
 <Callout variant="info" title="Same sources, different transport">
-Direct mode uses the same `Datasource` and `EndpointGroup` classes as proxy mode. You define your API structure once and use it from both client and server code.
+Direct mode uses the same `defineApi` and `defineGroup` definitions as proxy mode. You define your API structure once and use it from both client and server code.
 </Callout>
 
 ## When to use direct mode
@@ -20,53 +20,52 @@ Use direct mode whenever your code runs on the server:
 
 - **React Server Components (RSC)** — fetch data at render time with zero client JavaScript
 - **Server Actions** — handle form submissions and mutations without writing API routes
-- **API Routes** — when your Next.js route handler needs to aggregate data from your backend
-- **Middleware** — validate tokens or fetch user data before routing
+- **API Routes** — when your route handler needs to aggregate data from your backend
+- **Any server runtime** — Node.js, Deno, Bun, or edge runtimes with fetch support
 
 ## Benefits over proxy mode
 
-- **Lower latency** — eliminates the extra HTTP hop through `/api/request`
+- **Lower latency** — eliminates the extra HTTP hop through the proxy endpoint
 - **Server-only secrets** — backend URLs and API keys never appear in the client bundle
 - **No client JavaScript** — RSC data fetching adds zero bytes to the browser bundle
 - **Simpler error handling** — errors stay on the server, no need to serialize them for the client
+- **Universal** — works in any runtime with native `fetch` (Node.js, Deno, Bun, edge)
 
 ## Proxy vs Direct mode
 
 <ComparisonTable
   headers={["Feature", "Proxy Mode", { label: "Direct Mode", highlight: true }]}
   rows={[
-    ["Execution", "Browser → API route → backend", "Server → backend"],
+    ["Execution", "Browser -> proxy handler -> backend", "Server -> backend"],
     ["Latency", "Extra HTTP hop", { label: "Single hop", highlight: true }],
     ["Client bundle", "Includes request code", { label: "Zero bytes", highlight: true }],
     ["React Query", { label: "Built-in hooks", highlight: true }, "Not needed (async/await)"],
     ["Cookie forwarding", { label: "Automatic", highlight: true }, "Via Context parameter"],
     ["Use case", "Client components", "RSC, Server Actions, API routes"],
-    ["Requires API route", "Yes", { label: "No", highlight: true }],
+    ["Requires proxy handler", "Yes", { label: "No", highlight: true }],
   ]}
 />
 
 ## Quick setup
 
-Create a direct request client by passing your sources to `createDirectRequest`:
+Create a caller by passing your sources to `createCaller`:
 
-```ts title="lib/direct-request.ts"
-// lib/direct-request.ts
-import { createDirectRequest } from "@noverax/nexus/direct"
+```ts title="lib/caller.ts"
+import { createCaller } from "@noverax/nexus"
 import { sources } from "@/api"
 
-export const directRequest = createDirectRequest(sources)
+export const caller = createCaller(sources)
 ```
 
 ## Usage in Server Components
 
-Call the direct request client in any `async` server component. The data is fetched at render time on the server:
+Call the caller in any `async` server component. The data is fetched at render time on the server:
 
 ```ts title="app/dashboard/page.tsx"
-// app/dashboard/page.tsx — React Server Component
-import { directRequest } from "@/lib/direct-request"
+import { caller } from "@/lib/caller"
 
 export default async function DashboardPage() {
-  const users = await directRequest("myApi")("users:getAll", { page: 1, limit: 10 })
+  const users = await caller("api")("users:getAll", { page: 1, limit: 10 })
 
   return (
     <ul>
@@ -80,18 +79,17 @@ export default async function DashboardPage() {
 
 ## Usage in Server Actions
 
-Server Actions use the same direct request client. Pass `headers()` as context to forward authentication cookies:
+Server Actions use the same caller. Pass `headers()` as context to forward authentication cookies:
 
 ```ts title="app/actions/users.ts"
-// app/actions/users.ts — Server Action
 "use server"
 
 import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
-import { directRequest } from "@/lib/direct-request"
+import { caller } from "@/lib/caller"
 
 export async function createUser(data: { name: string; email: string }) {
-  const user = await directRequest("myApi")(
+  const user = await caller("api")(
     "users:create",
     data,
     { headers: await headers() }
@@ -107,13 +105,12 @@ export async function createUser(data: { name: string; email: string }) {
 In direct mode, the browser's cookies are not automatically available. To forward authentication headers, pass a `Context` object with the current `headers()`:
 
 ```ts title="app/profile/page.tsx"
-// app/profile/page.tsx — forwarding cookies for auth
 import { headers } from "next/headers"
-import { directRequest } from "@/lib/direct-request"
+import { caller } from "@/lib/caller"
 
 export default async function ProfilePage() {
   // Pass headers so cookies (auth tokens) reach the backend
-  const profile = await directRequest("myApi")(
+  const profile = await caller("api")(
     "users:me",
     undefined,
     { headers: await headers() }
@@ -133,15 +130,15 @@ Direct mode runs exclusively on the server. This means:
 
 - Your backend URL (`API_URL`) is never sent to the browser
 - API keys and tokens in `defaults.headers` stay server-side
-- Source code for `createDirectRequest` is tree-shaken from the client bundle
+- Source code for `createCaller` is tree-shaken from the client bundle
 - Error details (stack traces, internal URLs) never leak to the client
 
-<Callout variant="warning" title="Don't import direct-request.ts in client components">
-If you import your direct request client in a `"use client"` file, Next.js will try to bundle your source definitions (including `process.env.API_URL`) into the client. Keep direct request imports in server-only files.
+<Callout variant="warning" title="Don't import caller in client components">
+If you import your caller in a `"use client"` file, your bundler will try to include your source definitions (including `process.env.API_URL`) in the client. Keep caller imports in server-only files.
 </Callout>
 
 ## Next Steps
 
-- [createDirectRequest](/docs/server-side/direct) — full API reference, defaults, and advanced usage
-- [Server Actions](/docs/server-side/actions) — mutations, revalidation, and error handling patterns
-- [Proxy Mode Overview](/docs/proxy-mode/overview) — client-side requests through the API route
+- [createCaller](/docs/server-side/caller) — full API reference, defaults, and advanced usage
+- [Server Actions](/docs/server-side/actions) — type-safe mutations with `createAction`
+- [Proxy Mode Overview](/docs/proxy-mode/overview) — client-side requests through the proxy handler

@@ -1,0 +1,140 @@
+export const metadata = { title: "Middleware Overview", description: "Koa-style onion model middleware for intercepting, transforming, and controlling every request in Nexus." }
+
+## How Middleware Works
+
+Nexus uses a **Koa-style onion model** for middleware. Each middleware wraps around the next one (and ultimately the endpoint handler), giving you full control over both the request and response phases of every call.
+
+```
+Request  ──▶  middleware A (before)  ──▶  middleware B (before)  ──▶  endpoint handler
+Response ◀──  middleware A (after)   ◀──  middleware B (after)   ◀──  response
+```
+
+The first middleware in the array is the **outermost** layer: it runs first on the way in and last on the way out.
+
+## Core Types
+
+Every middleware function receives a `MiddlewareContext` and a `NextFn`:
+
+```ts title="types"
+type MiddlewareContext = {
+  /** Source name (e.g., "api") */
+  source: string
+  /** Group name (e.g., "users") */
+  group?: string
+  /** Endpoint method name (e.g., "getAll") */
+  method: string
+  /** Request variables (body/params) — can be modified by middleware */
+  variables?: unknown
+  /** Request headers — can be modified by middleware */
+  headers: Headers
+}
+
+type MiddlewareResponse = {
+  status: number
+  data: unknown
+  headers: Headers
+}
+
+type NextFn = () => Promise<MiddlewareResponse>
+
+type MiddlewareFn = (
+  ctx: MiddlewareContext,
+  next: NextFn,
+) => Promise<MiddlewareResponse>
+```
+
+## defineMiddleware
+
+The `defineMiddleware` helper provides type inference for your middleware function. It returns the same function you pass in -- no wrapping, no overhead:
+
+```ts title="lib/middleware.ts"
+import { defineMiddleware } from "@noverax/nexus/middleware"
+
+const timing = defineMiddleware(async (ctx, next) => {
+  const start = performance.now()
+  const response = await next()
+  const ms = Math.round(performance.now() - start)
+
+  console.log(`${ctx.source}:${ctx.group}:${ctx.method} took ${ms}ms`)
+  return response
+})
+```
+
+## composeMiddleware
+
+`composeMiddleware` combines an array of middleware into a single `MiddlewareFn`. Middleware execute in array order -- the first element is the outermost layer:
+
+```ts title="lib/middleware.ts"
+import { composeMiddleware, defineMiddleware } from "@noverax/nexus/middleware"
+
+const auth = defineMiddleware(async (ctx, next) => {
+  ctx.headers.set("Authorization", "Bearer my-token")
+  return next()
+})
+
+const logger = defineMiddleware(async (ctx, next) => {
+  console.log(`→ ${ctx.method}`)
+  const res = await next()
+  console.log(`← ${res.status}`)
+  return res
+})
+
+// auth runs first (outermost), logger runs second (innermost)
+const combined = composeMiddleware([auth, logger])
+```
+
+## Adding Middleware to defineApi
+
+Pass a `middleware` array in your `defineApi` configuration. The middleware wraps `executeRequest` and applies to every endpoint in that source:
+
+```ts title="lib/sources.ts"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import {
+  authMiddleware,
+  logMiddleware,
+  retryMiddleware,
+} from "@noverax/nexus/middleware"
+
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  middleware: [
+    logMiddleware(),
+    retryMiddleware({ limit: 3, backoff: 300 }),
+    authMiddleware({ getToken: () => getAccessToken() }),
+  ],
+  groups: {
+    users: defineGroup({
+      prefix: "users",
+      endpoints: {
+        getAll: endpoint<User[]>()(({ get }) => get()),
+        create: endpoint<User, CreateUserInput>()(({ post }, vars) =>
+          post("", vars),
+        ),
+      },
+    }),
+  },
+})
+```
+
+<Callout variant="info" title="Execution order matters">
+Middleware execute in array order. In the example above, `logMiddleware` is outermost (logs first, receives the final response last), `authMiddleware` is innermost (runs right before the endpoint handler). Place cross-cutting concerns like logging and retry at the beginning, and request-specific concerns like auth at the end.
+</Callout>
+
+## Key Capabilities
+
+Middleware can do any of the following:
+
+| Capability | How |
+|---|---|
+| **Modify request headers** | Set values on `ctx.headers` before calling `next()` |
+| **Modify variables** | Reassign `ctx.variables` before calling `next()` |
+| **Transform response** | Await `next()`, then return a modified `MiddlewareResponse` |
+| **Short-circuit** | Return a `MiddlewareResponse` without calling `next()` |
+| **Retry** | Call `next()` multiple times |
+| **Measure timing** | Record `performance.now()` before and after `next()` |
+| **Handle errors** | Wrap `next()` in try/catch |
+
+## Next Steps
+
+- [Built-in Middleware](/docs/middleware/built-in) -- ready-to-use middleware for retry, auth, logging, rate limiting, and caching
+- [Custom Middleware](/docs/middleware/custom) -- how to write your own middleware from scratch

@@ -8,28 +8,29 @@ import { AnimatedSection } from "./section-animate"
 
 const installCode = `npm install @noverax/nexus`
 
-const defineCode = `import { Datasource, EndpointGroup } from "@noverax/nexus"
+const defineCode = `import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
 
-class Users extends EndpointGroup {
-  prefix = "users"
-  getAll = new Datasource({ method: "GET" })
-  getOne = new Datasource({ method: "GET", path: ":id" })
-  create = new Datasource({ method: "POST" })
-}
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint<User[]>()((http) => http.get()),
+    getById: endpoint<User, { id: number }>()((http, v) => http.get(":id", v)),
+    create: endpoint<User, CreateUser>()((http, v) => http.post("", v)),
+  },
+})
 
-export const api = { users: new Users() }`
+export const api = defineApi({ baseURL: "...", groups: { users } })`
 
-const useCode = `import { createClientRequest } from "@noverax/nexus"
-import { api } from "@/lib/api"
+const useCode = `import { createProxyCaller } from "@noverax/nexus"
 
-const request = createClientRequest()
+const caller = createProxyCaller<Sources>()
 
 // GET /users — returns User[]
-const users = await request<User[]>(api.users.getAll)
+const users = await caller("api")("users:getAll")
 
 // POST /users — create a new user
-const newUser = await request<User>(api.users.create, {
-  body: { name: "Alice", email: "alice@example.com" },
+const newUser = await caller("api")("users:create", {
+  name: "Alice", email: "alice@example.com",
 })`
 
 const steps = [

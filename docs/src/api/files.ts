@@ -1,4 +1,4 @@
-import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+import { defineGroup, endpoint } from "@noverax/nexus/define"
 
 type UploadResponse = {
   success: boolean
@@ -10,12 +10,13 @@ type UploadResponse = {
   fields: Record<string, string>
 }
 
-export class Files extends EndpointGroup {
-  constructor() {
-    super({ prefix: "upload" })
-  }
-
-  upload: Endpoint<UploadResponse, FormData> = ({ post }) => post()
-}
+export const files = defineGroup({
+  prefix: "upload",
+  endpoints: {
+    upload: endpoint<UploadResponse, FormData>()((http, vars) =>
+      http.post("", vars as unknown as Record<string, unknown>)
+    ),
+  },
+})
 
 export type { UploadResponse }

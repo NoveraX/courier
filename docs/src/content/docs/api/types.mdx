@@ -2,16 +2,16 @@ export const metadata = { title: "Types", description: "Complete reference for a
 
 ## Overview
 
-This page lists all TypeScript types used across the Nexus library. Types are organized by category — from the high-level request functions down to the internal method types.
+All TypeScript types used across the Nexus library, organized by category.
 
-## Request Function Types
+## Caller Types
 
-### RequestFn
+### CallerFn
 
-The curried request function type returned by `createClientRequest`, `createDirectRequest`, and `createQueryRequest`.
+The curried caller function type returned by `createCaller`, `createProxyCaller`, and `createQueryCaller`.
 
 ```ts
-type RequestFn<T extends Record<string, any>, D extends boolean = false> = <
+type CallerFn<T extends Record<string, any>, D extends boolean = false> = <
   K extends keyof T,
   RD extends boolean = false,
 >(
@@ -20,22 +20,35 @@ type RequestFn<T extends Record<string, any>, D extends boolean = false> = <
 ) => <
   Q extends EndpointKey<T[K]>,
   M extends ResolveEndpoint<T[K], Q>,
-  R = MethodQueryResponse<M extends Endpoint<any, any> ? M : unknown>,
+  R = ExtractResponse<M>,
 >(
-  ...arguments_: RequestArguments<Q, M, D>
-) => MethodRequestResponse<RD, R>
+  ...arguments_: EndpointArguments<Q, M, D>
+) => EndpointResult<RD, R>
 
 // D = false → Proxy mode → returns Promise<R>
 // D = true  → Direct mode → returns Promise<Partial<HttpResponse<R>>>
 ```
 
-### ClientRequestDefaults
+### CallerDefaults
 
-Options for `createClientRequest` and `createQueryRequest`.
+Options for `createCaller`.
 
 ```ts
-type ClientRequestDefaults = {
-  routePath?: string
+type CallerDefaults = {
+  timeout?: number
+  headers?: Record<string, string>
+  onError?: (error: HTTPError) => void | Promise<void>
+  onSuccess?: (data: unknown) => void | Promise<void>
+}
+```
+
+### ProxyCallerDefaults
+
+Options for `createProxyCaller` and `createQueryCaller`.
+
+```ts
+type ProxyCallerDefaults = {
+  proxyUrl?: string
   timeout?: number
   credentials?: RequestCredentials
   headers?: Record<string, string>
@@ -44,61 +57,31 @@ type ClientRequestDefaults = {
 }
 ```
 
-### DirectRequestDefaults
+## Endpoint Definition Types
 
-Options for `createDirectRequest`.
+### Endpoint
 
-```ts
-type DirectRequestDefaults = {
-  timeout?: number
-  headers?: Record<string, string>
-  onError?: (error: HTTPError) => void | Promise<void>
-  onSuccess?: (data: unknown) => void | Promise<void>
-}
-```
-
-## Method Definition Types
-
-### Method
-
-The type of a query method definition. Generic over response type `R` and variables type `V`.
+The type of an endpoint function. Generic over response type `R` and variables type `V`.
 
 ```ts
 type Endpoint<R, V = undefined> = (
-  methods: Methods,
+  methods: HttpMethods,
   variables: V,
 ) => HttpResponse<R> | Promise<HttpResponse<R>>
-
-// R = response type
-// V = variables type (undefined if no variables needed)
-
-// Usage in source definition:
-type UserMethods = {
-  getAll: Endpoint<User[]>                    // no variables
-  getById: Endpoint<User, { id: string }>     // requires { id: string }
-  create: Endpoint<User, CreateUserInput>     // requires CreateUserInput
-}
 ```
 
-### Methods
+### HttpMethods
+
+The object your endpoint definitions receive with HTTP method functions.
 
 ```ts
-// HTTP method names — matches ky methods, with "del" instead of "delete"
-type Methods = "get" | "post" | "put" | "patch" | "del" | "head"
-```
-
-### MethodsInstance
-
-The object your method definitions receive. Contains all six HTTP method functions.
-
-```ts
-type MethodsInstance = {
-  [K in Methods]: <T = unknown>(
+type HttpMethods = {
+  [K in HttpMethod]: <T = unknown>(
     ...arguments_: MethodParameters<K>
   ) => Promise<HttpResponse<T>>
 }
 
-// The object your method definitions receive as the first argument
+type HttpMethod = "get" | "post" | "put" | "patch" | "del" | "head"
 ```
 
 ## Response Types
@@ -107,15 +90,13 @@ type MethodsInstance = {
 
 ```ts
 type HttpResponse<T = unknown> = {
-  status: number    // HTTP status code (e.g., 200, 404)
+  status: number    // HTTP status code
   headers: Headers  // Response headers
   data: T           // Parsed response body
 }
 ```
 
 ### SuccessResponse
-
-Convenience type for standard success response wrappers.
 
 ```ts
 type SuccessResponse<D = unknown> = {
@@ -128,92 +109,63 @@ type SuccessResponse<D = unknown> = {
 
 ### CallOptions
 
-Per-request options passed when calling a source method.
+Per-request options passed when calling an endpoint.
 
 ```ts
-type CallOptions<R extends boolean = false> = Omit<
-  SimpleOptions,
-  "onUploadProgress"
-> & {
-  rawData?: R           // Return { status, headers, data } instead of just data
-  forwardVariables?: boolean // Pass variables to methodsInstance (default: true)
-  stream?: boolean      // Return ReadableStream response
-  onUploadProgress?: (progress: UploadProgress) => void  // XHR upload progress
-}
-```
-
-### MethodParameters
-
-```ts
-// Parameters for HTTP methods
-type MethodParameters<T extends Methods> = T extends "head"
-  ? [url?: string, options?: MethodOptions<T>]
-  : [url?: string, variables?: Record<string, unknown>, options?: MethodOptions<T>]
-
-// Head has no body/variables, other methods accept variables
-```
-
-### MethodOptions
-
-```ts
-// Per-call options (subset of ky Options)
-type MethodOptions<T extends Methods> = T extends "delete" | "get" | "head"
-  ? SimpleOptions
-  : OptionsWithSearchParams
-
-type SimpleOptions = Omit<OptionsWithSearchParams, "body" | "json" | "searchParams">
-
-type OptionsWithSearchParams = Omit<Options, "searchParams"> & {
-  searchParams?: Record<string, unknown>
-}
-```
-
-### GenerateMethodOptions
-
-```ts
-type GenerateMethodOptions = SimpleOptions & {
-  vars?: FormData | Record<string, unknown>
+type CallOptions<R extends boolean = false> = SimpleOptions & {
+  rawData?: R
+  forwardVariables?: boolean
   stream?: boolean
+  method?: "GET" | "POST"
+  onUploadProgress?: (progress: UploadProgress) => void
 }
 ```
-
-## Upload Types
 
 ### UploadProgress
 
 ```ts
 type UploadProgress = {
   percent: number           // 0 to 1
-  transferredBytes: number  // Bytes transferred so far
-  totalBytes: number        // Total bytes to transfer
+  transferredBytes: number
+  totalBytes: number
 }
+```
+
+### MethodParameters
+
+```ts
+type MethodParameters<T extends HttpMethod> = T extends "head"
+  ? [url?: string, options?: MethodOptions<T>]
+  : [url?: string, variables?: Record<string, unknown>, options?: MethodOptions<T>]
 ```
 
 ## Source & Config Types
 
 ### BaseOptions
 
-The core configuration type for `Request`.
+Core configuration for `defineApi()`.
 
 ```ts
-type BaseOptions = MergeOptions &
-  Omit<Options, "body" | "json" | "prefixUrl" | "searchParams"> & {
-    baseURL?: string
-    responseType?: ResponseType
-    responseParser?: (response: Response) => Promise<unknown>
-    defaultBody?: Record<string, unknown>
-    defaultQueryParams?: Record<string, unknown>
-    allowedHeaders?: string[]
-    bodySerializer?: (data: Record<string, unknown>) => BodyInit
-    searchParamsSerializer?: SearchParamsSerializer
-    deduplicate?: boolean
-    onRequest?: (info: HookInfo) => HookInfo | undefined | Promise<HookInfo | undefined>
-    onResponse?: (
-      info: HookInfo,
-      response: { status: number; data: unknown },
-    ) => { status: number; data: unknown } | undefined | Promise<...>
-    onError?: (info: HookInfo, error: HTTPError) => undefined | Promise<undefined>
-  }
+type BaseOptions = MergeOptions & FetchOptions & {
+  baseURL?: string
+  responseType?: ResponseType
+  responseParser?: (response: Response) => Promise<unknown>
+  defaultBody?: Record<string, unknown>
+  defaultQueryParams?: Record<string, unknown>
+  allowedHeaders?: string[]
+  bodySerializer?: (data: Record<string, unknown>) => BodyInit
+  searchParamsSerializer?: SearchParamsSerializer
+  deduplicate?: boolean
+  middleware?: MiddlewareFn[]
+}
+```
+
+### GroupOptions
+
+```ts
+type GroupOptions = MergeOptions & {
+  prefix?: string
+}
 ```
 
 ### ResponseType
@@ -231,115 +183,96 @@ type SearchParamsSerializer = {
 }
 ```
 
-### Sources
-
-```ts
-type Sources = Record<string, Datasource<GroupsRecord | undefined>>
-
-type GroupsRecord = {
-  [k: string]: EndpointGroup
-}
-```
-
-### RequestGroupOptions
-
-```ts
-type EndpointGroupOptions = MergeOptions & {
-  prefix?: string  // URL prefix for all methods in this group
-}
-```
-
-## Hook Types
-
-### HookInfo
-
-```ts
-type HookInfo = {
-  source: string       // Source name (e.g., "api")
-  group?: string       // Group name (e.g., "users")
-  method: string       // Method name (e.g., "getById")
-  variables?: unknown  // Request variables
-}
-```
-
-### MergeOptions & PathOptions
-
-```ts
-type MergeOptions = {
-  pathOptions?: PathOptions
-}
-
-type PathOptions = (
-  request?: NextRequest,
-) => PathOptionsResult | Promise<PathOptionsResult>
-
-type PathOptionsResult =
-  | Record<string, boolean | number | string | null | undefined>
-  | undefined
-```
-
-## Context Types
-
 ### Context
 
 ```ts
 type Context = {
-  req?: NextRequest    // Incoming Next.js request (proxy mode)
-  res?: NextResponse   // Outgoing Next.js response
-  headers?: Headers    // Request headers to forward (direct mode)
+  req?: Request
+  res?: Response
+  headers?: Headers
+  proxyMethod?: "GET" | "POST"
 }
+```
+
+### PathOptions
+
+```ts
+type PathOptions = (request?: Request) =>
+  Record<string, boolean | number | string | null | undefined> | undefined
+  | Promise<Record<string, boolean | number | string | null | undefined> | undefined>
+```
+
+## Middleware Types
+
+### MiddlewareFn
+
+```ts
+type MiddlewareFn = (ctx: MiddlewareContext, next: NextFn) => Promise<MiddlewareResponse>
+```
+
+### MiddlewareContext
+
+```ts
+type MiddlewareContext = {
+  source: string
+  group?: string
+  method: string
+  variables?: unknown
+  headers: Headers
+}
+```
+
+### MiddlewareResponse
+
+```ts
+type MiddlewareResponse = {
+  status: number
+  data: unknown
+  headers: Headers
+}
+```
+
+### NextFn
+
+```ts
+type NextFn = () => Promise<MiddlewareResponse>
 ```
 
 ## Query Utility Types
 
-Internal utility types that power the type inference engine. These resolve source names, group names, and method signatures into fully typed request calls.
+Internal utility types that power the type inference engine:
 
 ```ts
-// Utility types for query/method resolution
-
-// Extracts all valid query strings for a source
-type EndpointKey<T> = ClassMethods<T> | TransformToGroup<Groups<T>>
+// Extracts all valid endpoint keys for a source
+type EndpointKey<T> = FunctionKeys<T> | GroupedEndpoints<Groups<T>>
 // Result: "methodName" | "group:methodName"
 
-// Resolves the actual Endpoint type from a query string
+// Resolves the Endpoint type from an endpoint key
 type ResolveEndpoint<T, Q> = /* resolves to Endpoint<R, V> */
 
 // Extracts response type from an Endpoint
-type MethodQueryResponse<M extends Endpoint<any, any>> = M extends Endpoint<infer R, any> ? R : unknown
+type ExtractResponse<M extends Endpoint<any, any>> =
+  M extends Endpoint<infer R, any> ? R : unknown
 
 // Extracts variables type from an Endpoint
-type MethodQueryVariables<M extends Endpoint<any, any>> = M extends Endpoint<any, infer V> ? V : unknown
-
-// Determines arguments based on mode and variables
-type RequestArguments<Q, M, D> =
-  D extends false
-    ? V extends undefined ? [Q] : [Q, V]                  // Proxy mode
-    : V extends undefined ? [Q, Context?] : [Q, V, Context?]  // Direct mode
-
-// Return type based on rawData flag
-type MethodRequestResponse<RD, R> = Promise<
-  RD extends true ? Partial<HttpResponse<R>> : R
->
+type ExtractVariables<M extends Endpoint<any, any>> =
+  M extends Endpoint<any, infer V> ? V : unknown
 ```
 
 <Callout variant="info" title="Type inference">
-These utility types are what make Nexus fully type-safe. When you call `request("api")("users:getById", { id })`, TypeScript resolves the source, group, method, variables, and response types automatically.
+These utility types are what make Nexus fully type-safe. When you call `call("api")("users:getById", { id })`, TypeScript resolves the source, group, endpoint, variables, and response types automatically.
 </Callout>
 
 ## React Query Types
 
-### NexusQueryOptions & NexusMutationOptions
-
 ```ts
-// React Query integration types
-
-type NexusQueryOptions<R, V> = WithVariables<V> &
-  Omit<UseQueryOptions<R, Error, R, QueryKey>, "queryKey" | "queryFn"> & {
+type QueryOptions<R, V> = WithVariables<V> &
+  Omit<UseQueryOptions<R, HTTPError, R, QueryKey>, "queryKey" | "queryFn"> & {
     requestOptions?: CallOptions
   }
 
-type NexusMutationOptions<R, V> = Omit<
-  UseMutationOptions<R, Error, [V] extends [undefined] ? void : V>,
+type MutationOptions<R, V> = Omit<
+  UseMutationOptions<R, HTTPError, [V] extends [undefined] ? void : V>,
   "mutationFn"
 > & {
   requestOptions?: CallOptions
@@ -352,7 +285,7 @@ type WithVariables<V> = [V] extends [undefined]
 
 ## Related
 
-- [Type Safety Guide](/docs/core-concepts/type-safety) — how type inference works in practice
-- [createClientRequest](/docs/api/create-client-request) — uses RequestFn and ClientRequestDefaults
-- [Request](/docs/api/request) — uses BaseOptions
-- [Instance](/docs/api/instance) — uses MethodsInstance and HttpResponse
+- [Type Safety Guide](/docs/core-concepts/type-safety) — how type inference works
+- [createProxyCaller](/docs/api/create-proxy-caller) — uses CallerFn and ProxyCallerDefaults
+- [defineApi](/docs/api/define) — uses BaseOptions
+- [HttpClient](/docs/api/instance) — uses HttpMethods and HttpResponse

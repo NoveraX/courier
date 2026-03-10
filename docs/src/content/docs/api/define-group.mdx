@@ -1,0 +1,124 @@
+export const metadata = { title: "defineGroup", description: "Creates a typed endpoint group with a shared URL prefix and endpoint definitions." }
+
+## Import
+
+```ts
+import { defineGroup, endpoint } from "@noverax/nexus/define"
+```
+
+## Signature
+
+```ts
+function defineGroup<E extends EndpointRecord>(
+  config: DefineGroupConfig<E>
+): DefinedGroup<E>
+```
+
+## Parameters
+
+### DefineGroupConfig
+
+```ts
+type DefineGroupConfig<E> = GroupOptions & {
+  endpoints: E
+}
+
+type GroupOptions = {
+  prefix?: string
+  pathOptions?: (request?: Request) => Record<string, unknown> | Promise<Record<string, unknown>>
+}
+```
+
+- `prefix` — URL path segment prepended to all endpoint URLs in this group.
+- `pathOptions` — async function that returns dynamic key-value pairs (headers, cookies) to inject per request.
+- `endpoints` — record of typed endpoint functions.
+
+## Basic Usage
+
+```ts title="api/users.ts"
+import { defineGroup, endpoint } from "@noverax/nexus/define"
+
+type User = { id: string; name: string; email: string }
+
+export const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint<User[]>()((http) => http.get()),
+    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
+    create: endpoint<User, { name: string; email: string }>()((http, vars) => http.post("", vars)),
+    update: endpoint<User, { id: string; name: string }>()((http, vars) => http.put(":id", vars)),
+    remove: endpoint<null, { id: string }>()((http, vars) => http.del(":id", vars)),
+  },
+})
+```
+
+## Prefix
+
+The prefix is prepended to all endpoint URLs within the group:
+
+```ts
+const products = defineGroup({
+  prefix: "api/v2/products",
+  endpoints: {
+    list: endpoint<Product[]>()((http) => http.get()),
+    // → GET {baseURL}/api/v2/products
+
+    getById: endpoint<Product, { id: string }>()((http, vars) => http.get(":id", vars)),
+    // → GET {baseURL}/api/v2/products/:id
+  },
+})
+```
+
+## Dynamic Path Options
+
+`pathOptions` returns key-value pairs for URL parameter substitution:
+
+```ts
+const tenantUsers = defineGroup({
+  prefix: ":tenantId/users",
+  pathOptions: async (req) => {
+    const tenantId = req?.headers.get("x-tenant-id") || "default"
+    return { tenantId }
+  },
+  endpoints: {
+    list: endpoint<User[]>()((http) => http.get()),
+    // When tenantId = "acme": GET {baseURL}/acme/users
+  },
+})
+```
+
+<Callout variant="info" title="Path resolution">
+Path options from `defineApi()` are resolved first, then group-level `pathOptions` are merged on top. Group options take precedence for overlapping keys.
+</Callout>
+
+## The endpoint() Helper
+
+`endpoint<R, V>()` creates a typed endpoint function with a curried API:
+
+```ts
+// endpoint<Response, Variables>()((http, vars) => ...)
+// R = response type, V = variables type (defaults to undefined)
+
+endpoint<User[]>()((http) => http.get())
+// No variables — V defaults to undefined
+
+endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars))
+// Variables required — caller must pass { id: string }
+```
+
+## Endpoint Type
+
+The `Endpoint<R, V>` type is the function signature for endpoint definitions:
+
+```ts
+type Endpoint<R, V = undefined> = (
+  methods: HttpMethods,
+  variables: V,
+) => HttpResponse<R> | Promise<HttpResponse<R>>
+```
+
+## Related
+
+- [defineApi](/docs/api/define) — composing groups into a source
+- [Defining APIs Guide](/docs/core-concepts/defining-apis) — in-depth usage patterns
+- [Type Safety](/docs/core-concepts/type-safety) — how types flow from endpoint definitions

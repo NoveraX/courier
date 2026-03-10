@@ -23,7 +23,7 @@ export function ComparisonTable({ headers, rows }: ComparisonTableProps) {
           <tr className="border-b border-border text-left">
             {headers.map((header, i) => (
               <th
-                key={i}
+                key={getCellLabel(header)}
                 className={cn("py-3 font-semibold", i === 0 ? "pr-4" : "px-4")}
                 style={isCellHighlighted(header) ? { color: "var(--color-brand)" } : undefined}
               >

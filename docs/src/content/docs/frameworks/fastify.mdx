@@ -1,0 +1,167 @@
+export const metadata = { title: "Fastify", description: "Fastify server adapter using nexusPlugin for hosting the Nexus proxy route." }
+
+The `@noverax/nexus-fastify` adapter provides a Fastify plugin that registers the Nexus proxy route.
+
+## Installation
+
+```bash
+npm install @noverax/nexus @noverax/nexus-fastify fastify @fastify/cors
+```
+
+## Define your API sources
+
+```ts title="lib/sources.ts"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+
+type User = { id: number; name: string; email: string }
+
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint<User[]>()(({ get }) => get()),
+    getById: endpoint<User, { id: number }>()(({ get }) => get(":id")),
+    create: endpoint<User, { name: string; email: string }>()(
+      ({ post }) => post()
+    ),
+    remove: endpoint<null, { id: number }>()(({ del }) => del(":id")),
+  },
+})
+
+export const sources = {
+  myApi: defineApi({
+    baseURL: process.env.API_URL ?? "http://localhost:4000",
+    groups: { users },
+  }),
+}
+
+export type Sources = typeof sources
+```
+
+## Setup
+
+Create a Fastify server with the Nexus plugin:
+
+```ts title="server.ts"
+import Fastify from "fastify"
+import cors from "@fastify/cors"
+import { nexusPlugin } from "@noverax/nexus-fastify"
+import { sources } from "./lib/sources"
+
+const app = Fastify({ logger: true })
+
+async function start() {
+  await app.register(cors, {
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+
+  // Register the Nexus proxy plugin
+  await app.register(nexusPlugin, {
+    sources,
+    prefix: "/api/request",
+  })
+
+  await app.listen({ port: 3001 })
+}
+
+start()
+```
+
+The `nexusPlugin` registers a route handler at the specified prefix that processes Nexus proxy requests and forwards them to your backend.
+
+## With existing Fastify app
+
+Add the Nexus plugin alongside your existing routes and plugins:
+
+```ts title="server.ts"
+import Fastify from "fastify"
+import cors from "@fastify/cors"
+import { nexusPlugin } from "@noverax/nexus-fastify"
+import { sources } from "./lib/sources"
+
+const app = Fastify({ logger: true })
+
+async function start() {
+  await app.register(cors, {
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+
+  // Your existing routes
+  app.get("/health", async () => {
+    return { status: "ok" }
+  })
+
+  app.get("/api/stats", async () => {
+    return { uptime: process.uptime() }
+  })
+
+  // Register Nexus proxy plugin
+  await app.register(nexusPlugin, {
+    sources,
+    prefix: "/api/request",
+  })
+
+  await app.listen({ port: 3001 })
+}
+
+start()
+```
+
+<Callout variant="info" title="Plugin encapsulation">
+The `nexusPlugin` follows Fastify's plugin system. It encapsulates its routes under the given prefix without interfering with your other routes or plugins.
+</Callout>
+
+## CORS configuration
+
+For production, restrict the allowed origins:
+
+```ts title="server.ts"
+import Fastify from "fastify"
+import cors from "@fastify/cors"
+import { nexusPlugin } from "@noverax/nexus-fastify"
+import { sources } from "./lib/sources"
+
+const app = Fastify({ logger: true })
+
+async function start() {
+  await app.register(cors, {
+    origin: process.env.ALLOWED_ORIGINS?.split(",") ?? "http://localhost:5173",
+    credentials: true,
+  })
+
+  await app.register(nexusPlugin, {
+    sources,
+    prefix: "/api/request",
+  })
+
+  await app.listen({
+    port: Number(process.env.PORT) || 3001,
+    host: "0.0.0.0",
+  })
+}
+
+start()
+```
+
+<Callout variant="tip" title="Fastify performance">
+Fastify's schema-based validation and serialization make it one of the fastest Node.js frameworks. The Nexus plugin benefits from Fastify's built-in JSON parsing, so no additional body parser setup is needed.
+</Callout>
+
+## Client-side setup
+
+On the client, point your caller to this server's proxy URL. Choose the guide for your frontend:
+
+- [React (Vite / CRA)](/docs/frameworks/react) — `createQueryCaller` with React Query hooks
+- [Vue](/docs/frameworks/vue) — `createProxyCaller` with composables
+- [Next.js](/docs/frameworks/nextjs) — full-stack with `apiRoute` and `createQueryCaller`
+- [Nuxt](/docs/frameworks/nuxt) — full-stack with `nexusHandler` and `createProxyCaller`
+
+```ts title="lib/caller.ts"
+import { createProxyCaller } from "@noverax/nexus"
+import type { Sources } from "../shared/sources"
+
+export const caller = createProxyCaller<Sources>({
+  proxyUrl: "http://localhost:3001/api/request",
+})
+```

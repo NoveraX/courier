@@ -1,106 +1,94 @@
-export const metadata = { title: "Why Nexus?", description: "The problems Nexus solves: boilerplate, type safety, proxy complexity, and scattered API logic in Next.js applications." }
+export const metadata = { title: "Why Nexus?", description: "The problems Nexus solves: boilerplate, type safety, proxy complexity, and scattered API logic — across any framework." }
 
-Building a Next.js app that talks to a REST API sounds simple — until you need type safety, a proxy layer, cookie forwarding, error handling, upload progress, and React Query integration. Each of these adds boilerplate, and without a unified approach, your API logic scatters across dozens of files.
+Building a web app that talks to a REST API sounds simple — until you need type safety, a proxy layer, cookie forwarding, error handling, upload progress, middleware, validation, and framework integration. Each of these adds boilerplate, and without a unified approach, your API logic scatters across dozens of files.
 
-Nexus solves this by giving you a single, typed API definition that works across client components, server components, and server actions — with zero code generation.
+Nexus solves this by giving you a single, typed API definition that works across any framework — with zero code generation.
 
 ## The Problem
 
-A typical Next.js + REST API setup requires you to:
+A typical frontend + REST API setup requires you to:
 
 1. Write `fetch` calls with manual URL construction, headers, and error handling
 2. Cast response types manually with no runtime guarantee
-3. Create a separate API route for every endpoint you want to proxy
+3. Create separate API routes for every endpoint you want to proxy
 4. Duplicate type annotations between your fetch logic and your components
-5. Wire up React Query with custom query keys and fetch functions for each endpoint
+5. Wire up React Query (or Vue composables, Svelte stores) with custom keys and fetch functions per endpoint
 
-This leads to fragile, repetitive code that is hard to maintain:
+This leads to fragile, repetitive code:
 
 ```typescript title="Without Nexus"
-// Without Nexus — manual fetch with no type safety
+// Manual fetch — no type safety, lots of boilerplate
 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${id}`, {
   headers: { Authorization: `Bearer ${token}` },
 })
 if (!res.ok) throw new Error("Failed to fetch user")
 const user = (await res.json()) as User // manual cast, no guarantee
 
-// Need a proxy? Write your own API route:
-// app/api/users/[id]/route.ts — boilerplate for every endpoint
-export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const res = await fetch(`${process.env.API_URL}/users/${params.id}`, {
-    headers: { Authorization: `Bearer ${process.env.API_KEY}` },
-  })
-  return Response.json(await res.json())
-}
+// Need a proxy? Write a route handler for every endpoint...
 ```
 
-With Nexus, the same functionality requires far less code and is fully type-safe:
+With Nexus, the same functionality is type-safe and zero-boilerplate:
 
 ```typescript title="With Nexus"
-// With Nexus — type-safe, zero boilerplate
-const user = await request("myApi")("users:getById", { id: 5 })
-//    ^? User — inferred from Method<User, { id: number }>
+// Type-safe, fully inferred
+const user = await call("api")("users:getById", { id: "5" })
+//    ^? User — inferred from endpoint<User, { id: string }>
 
-// Proxy mode? One line in your API route:
-// app/api/request/route.ts
-export const { POST } = apiRoute(sources)
+// Proxy? One line in your server:
+export const { GET, POST } = apiRoute(sources) // or nexusHandler(sources)
 // Done. Every endpoint works through this single route.
 ```
 
 ## Define Once, Use Everywhere
 
-The core idea behind Nexus is that you define your API structure **once** using `Request` and `RequestGroup` classes. Every method declares its response type and variables type through the `Method<R, V>` generic. From that single definition, Nexus gives you:
+You define your API structure **once** using `defineApi`, `defineGroup`, and `endpoint`. Each endpoint declares its response and variables types. From that single definition, Nexus gives you:
 
-- **Proxy mode** — browser requests through `createClientRequest`
-- **Direct mode** — server requests through `createDirectRequest`
-- **React Query** — hooks through `createQueryRequest`
+- **Direct mode** — server calls via `createCaller(sources)`
+- **Proxy mode** — browser calls via `createProxyCaller()`
+- **React Query** — hooks via `createQueryCaller()`
+- **Server Actions** — form handling via `createAction(sources)`
 
-All three share the same types, autocomplete, and validation:
+All share the same types and autocomplete:
 
-```typescript title="One definition, three modes"
-// Define once — use everywhere
-class Users extends RequestGroup {
-  constructor() {
-    super({ prefix: "users" })
-  }
+```typescript title="One definition, multiple modes"
+// Define once
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll:  endpoint<User[]>()((http) => http.get()),
+    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
+    create:  endpoint<User, CreateUserVars>()((http, vars) => http.post("", vars)),
+  },
+})
 
-  getAll: Method<User[]> = ({ get }) => get()
-  getById: Method<User, { id: number }> = ({ get }) => get(":id")
-  create: Method<User, CreateUserVars> = ({ post }) => post()
-  update: Method<User, UpdateUserVars> = ({ patch }) => patch(":id")
-  remove: Method<void, { id: number }> = ({ del }) => del(":id")
-}
+// Direct — server-side
+const user = await call("api")("users:getById", { id: "5" })
 
-// Client component — proxy mode
-const user = await request("myApi")("users:getById", { id: 5 })
-
-// Server component — direct mode, same types
-const user = await directRequest("myApi")("users:getById", { id: 5 })
+// Proxy — client-side
+const user = await clientCall("api")("users:getById", { id: "5" })
 
 // React Query — same types again
-const { data } = useQuery("myApi", "users:getById", { variables: { id: 5 } })
+const { data } = useQuery("api", "users:getById", { variables: { id: "5" } })
 ```
 
 <Callout variant="tip" title="No code generation">
-Unlike tRPC or GraphQL codegen, Nexus uses plain TypeScript classes as the source of truth. There are no generated files, no build steps, and no schema syncing. Rename a method, and TypeScript catches every broken call site instantly.
+Unlike tRPC or GraphQL codegen, Nexus uses plain TypeScript functions as the source of truth. No generated files, no build steps. Rename a method and TypeScript catches every broken call site instantly.
 </Callout>
 
 ## One Proxy Route for Everything
 
-Without Nexus, proxying requests means creating an API route for every backend endpoint. With Nexus, a single `apiRoute(sources)` call handles all endpoints through one `POST /api/request` route. It automatically:
+Without Nexus, proxying requests means creating a route for every backend endpoint. With Nexus, a single handler covers all endpoints. It automatically:
 
 - Validates the request origin (CSRF protection)
-- Forwards whitelisted headers and cookies
+- Forwards headers and cookies
 - Routes to the correct source, group, and method
 - Handles errors with proper HTTP status codes
 - Supports file uploads and multipart encoding
 
 ## React Query Without the Boilerplate
 
-React Query is powerful, but wiring it up for every endpoint is tedious. You need query keys, fetch functions, type annotations, and error handling — repeated per endpoint. Nexus wraps React Query with full type inference:
-
 ```typescript title="React Query comparison"
-// Traditional React Query — manual setup per endpoint
+// Traditional — manual setup per endpoint
 const { data } = useQuery({
   queryKey: ["users", id],
   queryFn: async () => {
@@ -110,8 +98,8 @@ const { data } = useQuery({
   },
 })
 
-// With Nexus — one line, fully typed
-const { data } = useQuery("myApi", "users:getById", { variables: { id } })
+// Nexus — one line, fully typed
+const { data } = useQuery("api", "users:getById", { variables: { id } })
 //      ^? User
 ```
 
@@ -120,13 +108,14 @@ const { data } = useQuery("myApi", "users:getById", { variables: { id } })
 <ComparisonTable
   headers={["Problem", { label: "Nexus Solution", highlight: true }]}
   rows={[
-    ["Manual type casting", "End-to-end inference from Method<R, V>"],
-    ["API route per endpoint", "Single apiRoute(sources) handles all"],
-    ["Scattered fetch logic", "Centralized in Request/RequestGroup classes"],
-    ["Duplicate client/server code", "One definition, proxy + direct modes"],
+    ["Manual type casting", "End-to-end inference from endpoint<R, V>"],
+    ["Route per endpoint", "Single handler for all endpoints"],
+    ["Scattered fetch logic", "Centralized in defineApi/defineGroup"],
+    ["Framework lock-in", "Core works everywhere, adapters for 6+ frameworks"],
+    ["No runtime validation", "Standard Schema (Zod, Valibot, ArkType)"],
     ["React Query boilerplate", "useQuery / useMutation with auto inference"],
-    ["Upload progress tracking", "Built-in XHR fallback with progress callback"],
-    ["CORS and cookie issues", "Proxy mode handles same-origin + cookie forwarding"],
+    ["Upload progress", "Built-in XHR tracking with progress callback"],
+    ["Middleware per-endpoint", "Composable chain: retry, auth, logging, cache"],
   ]}
 />
 
@@ -134,17 +123,18 @@ const { data } = useQuery("myApi", "users:getById", { variables: { id } })
 
 Nexus is designed for teams and projects that:
 
-- Use Next.js App Router with a separate REST backend
+- Use any modern framework (Next.js, Nuxt, React, Vue, Hono, Express, etc.)
+- Have a separate REST backend (Express, FastAPI, Rails, Go, Laravel — anything)
 - Want type safety without adopting tRPC or GraphQL
 - Need both client-side and server-side data fetching
 - Value DX — autocomplete, compile-time errors, minimal boilerplate
 
 <Callout variant="info" title="Works with any REST backend">
-Nexus does not require a specific backend framework. It works with Express, FastAPI, Rails, Go, or any HTTP API that returns JSON. Your backend does not need any Nexus-specific setup.
+Nexus does not require a specific backend framework. It works with any HTTP API that returns JSON. Your backend needs zero Nexus-specific setup.
 </Callout>
 
 ## Next Steps
 
-- [Architecture](/docs/architecture) — understand how Nexus works under the hood
+- [Architecture](/docs/architecture) — how Nexus works under the hood
 - [Installation](/docs/installation) — add Nexus to your project
-- [Quick Start](/docs/quick-start) — build your first request in 5 minutes
+- [Quick Start](/docs/quick-start) — your first type-safe API call

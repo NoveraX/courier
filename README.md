@@ -5,36 +5,63 @@
     <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/NoveraX/nexus/master/docs/public/logos/nexus-logo-horizontal-dark.png" />
     <img alt="Nexus" src="https://raw.githubusercontent.com/NoveraX/nexus/master/docs/public/logos/nexus-logo-horizontal-dark.png" height="48" />
   </picture>
+
   <br />
   <br />
-  <p><strong>Type-safe HTTP client for Next.js — define once, use everywhere.</strong></p>
+
+  <p><strong>Type-safe API client for any framework. Define once, call anywhere.</strong></p>
+  <p>End-to-end type safety from API definition to UI — no codegen, no schema files, no custom backend.</p>
+
+  <br />
 
   <a href="https://www.npmjs.com/package/@noverax/nexus"><img src="https://img.shields.io/npm/v/@noverax/nexus?color=7c3aed&label=npm&style=flat-square" alt="npm version" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white&style=flat-square" alt="TypeScript" /></a>
   <a href="https://github.com/NoveraX/nexus/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT-22c55e?style=flat-square" alt="License: MIT" /></a>
   <a href="https://bundlephobia.com/package/@noverax/nexus"><img src="https://img.shields.io/bundlephobia/minzip/@noverax/nexus?color=f59e0b&label=size&style=flat-square" alt="Bundle Size" /></a>
+
   <br />
-  <a href="https://nexus.noverax.cloud">Documentation</a> &bull; <a href="https://nexus.noverax.cloud/docs/examples/basic">Examples</a> &bull; <a href="https://github.com/NoveraX/nexus">GitHub</a>
+  <br />
+
+  <code>Next.js</code> &nbsp; <code>Nuxt</code> &nbsp; <code>React</code> &nbsp; <code>Vue</code> &nbsp; <code>Hono</code> &nbsp; <code>Express</code> &nbsp; <code>Fastify</code> &nbsp; <code>NestJS</code> &nbsp; <code>Node.js</code> &nbsp; <code>Bun</code> &nbsp; <code>Deno</code>
+
+  <br />
+  <br />
+
+  <a href="https://nexus.noverax.cloud">Documentation</a> &nbsp;&nbsp;|&nbsp;&nbsp; <a href="https://nexus.noverax.cloud/docs/examples/basic">Examples</a> &nbsp;&nbsp;|&nbsp;&nbsp; <a href="https://github.com/NoveraX/nexus">GitHub</a>
 </div>
 
 <br />
 
-Nexus is an HTTP client library designed for Next.js applications. It provides end-to-end type safety from your API definition to your React components — without code generation, schema files, or a custom backend.
+---
 
-Define your API as TypeScript classes. Nexus infers request and response types automatically, giving you autocomplete for method names, variables, and response shapes.
+<br />
 
-## Features
+## Why Nexus
 
-- :lock: **End-to-end type safety** — no codegen, no schema files. TypeScript classes are the source of truth
-- :twisted_rightwards_arrows: **Two transport modes** — proxy (browser → API route → backend) and direct (server → backend)
-- :zap: **React Query integration** — `useQuery` and `useMutation` with full type inference out of the box
-- :motorway: **One proxy route for all endpoints** — single `apiRoute(sources)` replaces per-endpoint API routes
-- :outbox_tray: **File upload with progress** — built-in XHR-based upload tracking
-- :link: **Path parameters** — `:id` syntax with automatic resolution from variables
-- :no_entry_sign: **Request deduplication** — automatic AbortController management
-- :satellite: **Streaming & SSE** — first-class stream response support
-- :hook: **Lifecycle hooks** — `onRequest`, `onResponse`, `onError` at the datasource level
-- :globe_with_meridians: **Works with any REST backend** — Express, FastAPI, Rails, Go, or any HTTP API
+Most HTTP clients stop at "send a request, get a response." You still write boilerplate for every endpoint, duplicate types between client and server, and glue together validation, caching, and error handling yourself.
+
+Nexus takes a different approach. You **define your API once** as plain TypeScript functions — and get autocomplete, type inference, runtime validation, middleware, and framework adapters out of the box. It works with **any REST backend** (Express, FastAPI, Rails, Go, Laravel — anything that speaks HTTP).
+
+<br />
+
+### Key Capabilities
+
+- 🔒 **End-to-end type safety** — response types, variables, endpoint names — all inferred. Zero codegen.
+- 🌍 **Framework agnostic** — core runs on any runtime with `fetch`. Adapters for Next.js, Nuxt, Hono, Express, Fastify, NestJS.
+- 🔀 **Two transport modes** — **Universal** — call backends from anywhere. **Proxy** — hide secrets, bypass CORS, forward cookies.
+- 🧩 **Middleware chain** — retry, auth, logging, rate-limiting, caching — composable, type-safe, or write your own.
+- 🛡️ **Runtime validation** — plug in Zod, Valibot, ArkType, or any Standard Schema library. Validate on both sides.
+- ⚡ **React Query built-in** — `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery` — fully typed, zero config.
+- 🚀 **Server Actions** — Next.js `useActionState` with automatic FormData parsing, revalidation, and error handling.
+- 📤 **Upload progress** — real network-level tracking via XHR. Works on HTTP/1.1 and HTTP/2.
+- 📡 **Streaming & SSE** — first-class stream response support with typed error handling.
+- 🧪 **Testing utilities** — in-memory test client with mock builder, request history, and delay simulation.
+
+<br />
+
+---
+
+<br />
 
 ## Install
 
@@ -42,103 +69,117 @@ Define your API as TypeScript classes. Nexus infers request and response types a
 npm install @noverax/nexus
 ```
 
-Peer dependencies (all optional — install only what you use):
+<details>
+<summary><strong>Framework-specific packages</strong></summary>
+<br />
 
 ```bash
-# Required for proxy mode
-npm install next
+# React Query integration
+npm install @noverax/nexus-query @tanstack/react-query
 
-# Required for React Query integration
-npm install @tanstack/react-query
+# Next.js (API routes + Server Actions)
+npm install @noverax/nexus-next
+
+# Server adapters — install only what you use
+npm install @noverax/nexus-express    # Express
+npm install @noverax/nexus-fastify    # Fastify
+npm install @noverax/nexus-hono       # Hono
+npm install @noverax/nexus-nestjs     # NestJS
+npm install @noverax/nexus-nuxt       # Nuxt / Nitro / h3
 ```
 
-## Quick Start
+</details>
 
-### 1. Define your API
+<br />
+
+---
+
+<br />
+
+## Define Your API
+
+This is shared across all frameworks. Define once — use everywhere.
 
 ```ts
 // api/sources.ts
-import { Datasource, EndpointGroup, Endpoint } from "@noverax/nexus/datasource"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
 
-type User = { id: number; name: string; email: string }
+type User = { id: string; name: string; email: string }
 
-class Users extends EndpointGroup {
-  constructor() {
-    super({ prefix: "users" })
-  }
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll:  endpoint<User[]>()((http) => http.get()),
+    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
+    create:  endpoint<User, { name: string; email: string }>()((http, vars) => http.post("", vars)),
+    update:  endpoint<User, { id: string; name: string }>()((http, vars) => http.put(":id", vars)),
+    remove:  endpoint<null, { id: string }>()((http, vars) => http.del(":id", vars)),
+  },
+})
 
-  getAll: Endpoint<User[]> = ({ get }) => get()
-  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
-  create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
-  update: Endpoint<User, { id: number; name: string }> = ({ put }) => put(":id")
-  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
-}
+const api = defineApi({
+  baseURL: process.env.API_URL!,
+  groups: { users },
+})
 
-class MyApi extends Datasource<{ users: Users }> {
-  constructor() {
-    super({
-      baseURL: process.env.API_URL!,
-      groups: { users: new Users() },
-    })
-  }
-}
-
-export const sources = { myApi: new MyApi() }
+export const sources = { api }
 export type Sources = typeof sources
 ```
 
-### 2. Set up the transport
+<br />
 
-**Proxy mode** — create an API route and a client:
+---
+
+<br />
+
+## Framework Guides
+
+<br />
+
+### <img src="https://api.iconify.design/logos/nextjs-icon.svg" height="20" align="center" />&nbsp;&nbsp;Next.js
+
+Full-stack setup with proxy route, React Query hooks, Server Components, and Server Actions.
+
+**1. Proxy route** — single route handles all endpoints:
 
 ```ts
 // app/api/request/route.ts
-import { apiRoute } from "@noverax/nexus/next/apiRoute"
+import { apiRoute } from "@noverax/nexus-next"
 import { sources } from "@/api/sources"
 
-export const { POST } = apiRoute(sources)
+export const { GET, POST } = apiRoute(sources)
 ```
 
+**2. Client caller** — React Query hooks with full type inference:
+
 ```ts
-// lib/request.ts
-import { createQueryRequest } from "@noverax/nexus/query"
+// lib/caller.ts
+import { createQueryCaller } from "@noverax/nexus-query"
 import type { Sources } from "@/api/sources"
 
-export const { useQuery, useMutation, request } = createQueryRequest<Sources>()
+export const { useQuery, useMutation, useSuspenseQuery, caller } = createQueryCaller<Sources>()
 ```
 
-**Direct mode** — for Server Components and Server Actions:
-
-```ts
-// lib/direct-request.ts
-import { createDirectRequest } from "@noverax/nexus/direct"
-import { sources } from "@/api/sources"
-
-export const directRequest = createDirectRequest(sources)
-```
-
-### 3. Use in components
-
-**Client component** with React Query:
+**3. Client Components:**
 
 ```tsx
 "use client"
-import { useQuery, useMutation } from "@/lib/request"
+import { useQuery, useMutation } from "@/lib/caller"
 
 export default function UsersPage() {
-  const { data, isLoading } = useQuery("myApi", "users:getAll")
+  const { data: users, isLoading } = useQuery("api", "users:getAll")
   //      ^? User[]
 
-  const { mutate } = useMutation("myApi", "users:create", {
+  const { mutate } = useMutation("api", "users:create", {
     onSuccess: (user) => console.log("Created:", user.name),
-    //                                          ^? string
+    //                                           ^? string
   })
 
   if (isLoading) return <p>Loading...</p>
 
   return (
     <ul>
-      {data?.map((user) => <li key={user.id}>{user.name}</li>)}
+      {users?.map((u) => <li key={u.id}>{u.name}</li>)}
       <button onClick={() => mutate({ name: "Jane", email: "jane@test.com" })}>
         Add User
       </button>
@@ -147,66 +188,527 @@ export default function UsersPage() {
 }
 ```
 
-**Server component** with direct mode:
+**4. Server Components** — direct backend calls, no proxy hop:
 
 ```tsx
-// app/dashboard/page.tsx
-import { directRequest } from "@/lib/direct-request"
+// app/users/page.tsx
+import { createCaller } from "@noverax/nexus"
+import { sources } from "@/api/sources"
 
-export default async function DashboardPage() {
-  const users = await directRequest("myApi")("users:getAll")
+const call = createCaller(sources)
+
+export default async function UsersPage() {
+  const users = await call("api")("users:getAll")
   //    ^? User[]
 
   return <ul>{users.map((u) => <li key={u.id}>{u.name}</li>)}</ul>
 }
 ```
 
-## How It Works
+**5. Server Actions** — type-safe form handling with revalidation:
+
+```ts
+// app/users/actions.ts
+"use server"
+import { createAction } from "@noverax/nexus-next"
+import { sources } from "@/api/sources"
+
+const action = createAction(sources)
+
+export const createUser = action("api")("users:create", {
+  revalidatePath: "/users",
+})
+```
+
+```tsx
+"use client"
+import { useActionState } from "react"
+import { createUser } from "./actions"
+
+export function CreateUserForm() {
+  const [state, formAction, pending] = useActionState(createUser, { data: null, error: null })
+
+  return (
+    <form action={formAction}>
+      <input name="name" required />
+      <input name="email" type="email" required />
+      <button disabled={pending}>Create</button>
+      {state.error && <p>{state.error.message}</p>}
+    </form>
+  )
+}
+```
+
+<br />
+
+---
+
+### <img src="https://api.iconify.design/logos/nuxt-icon.svg" height="20" align="center" />&nbsp;&nbsp;Nuxt
+
+**1. Server route** — Nitro/h3 event handler:
+
+```ts
+// server/api/request.ts
+import { nexusHandler } from "@noverax/nexus-nuxt"
+import { sources } from "~/api/sources"
+
+export default nexusHandler(sources)
+```
+
+**2. Composable** — use with any state management:
+
+```ts
+// composables/useCaller.ts
+import { createProxyCaller } from "@noverax/nexus"
+import type { Sources } from "~/api/sources"
+
+export const caller = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
+```
+
+**3. Components:**
+
+```vue
+<!-- pages/users.vue -->
+<script setup lang="ts">
+import { caller } from "~/composables/useCaller"
+
+const { data: users, status } = useAsyncData("users", () =>
+  caller("api")("users:getAll")
+)
+</script>
+
+<template>
+  <div>
+    <p v-if="status === 'pending'">Loading...</p>
+    <ul v-else>
+      <li v-for="user in users" :key="user.id">{{ user.name }}</li>
+    </ul>
+  </div>
+</template>
+```
+
+**4. Server-side** — direct calls in Nitro:
+
+```ts
+// server/api/dashboard.ts
+import { createCaller } from "@noverax/nexus"
+import { sources } from "~/api/sources"
+
+const call = createCaller(sources)
+
+export default defineEventHandler(async () => {
+  const users = await call("api")("users:getAll")
+  return { users }
+})
+```
+
+<br />
+
+---
+
+### <img src="https://api.iconify.design/logos/react.svg" height="20" align="center" />&nbsp;&nbsp;React (Vite / CRA / any bundler)
+
+Works with any React setup. Pair with Express, Hono, or Fastify on the server side.
+
+**1. Caller with React Query:**
+
+```ts
+// lib/caller.ts
+import { createQueryCaller } from "@noverax/nexus-query"
+import type { Sources } from "./api/sources"
+
+export const { useQuery, useMutation, caller } = createQueryCaller<Sources>({
+  proxyUrl: "/api/request", // points to your backend proxy route
+})
+```
+
+**2. Components:**
+
+```tsx
+import { useQuery, useMutation } from "./lib/caller"
+import { QueryClient, QueryClientProvider } from "@noverax/nexus-query"
+
+const queryClient = new QueryClient()
+
+function Users() {
+  const { data: users } = useQuery("api", "users:getAll")
+  const { mutate } = useMutation("api", "users:create")
+
+  return (
+    <ul>
+      {users?.map((u) => <li key={u.id}>{u.name}</li>)}
+      <button onClick={() => mutate({ name: "Jane", email: "jane@test.com" })}>Add</button>
+    </ul>
+  )
+}
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Users />
+    </QueryClientProvider>
+  )
+}
+```
+
+<br />
+
+---
+
+### <img src="https://api.iconify.design/logos/vue.svg" height="20" align="center" />&nbsp;&nbsp;Vue
+
+The core caller is framework-agnostic — use it with `ref`, `reactive`, or any Vue composable.
+
+```ts
+// composables/useCaller.ts
+import { createProxyCaller } from "@noverax/nexus"
+import type { Sources } from "@/api/sources"
+
+export const caller = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
+```
+
+```vue
+<script setup lang="ts">
+import { ref, onMounted } from "vue"
+import { caller } from "@/composables/useCaller"
+
+const users = ref<User[]>([])
+const loading = ref(true)
+
+onMounted(async () => {
+  users.value = await caller("api")("users:getAll")
+  loading.value = false
+})
+
+async function createUser(name: string, email: string) {
+  const user = await caller("api")("users:create", { name, email })
+  users.value.push(user)
+}
+</script>
+
+<template>
+  <p v-if="loading">Loading...</p>
+  <ul v-else>
+    <li v-for="user in users" :key="user.id">{{ user.name }}</li>
+  </ul>
+</template>
+```
+
+> **Tip:** For Vue + TanStack Query, use `@tanstack/vue-query` with `caller("api")("users:getAll")` as your `queryFn`.
+
+<br />
+
+---
+
+### <img src="https://api.iconify.design/logos/svelte-icon.svg" height="20" align="center" />&nbsp;&nbsp;Svelte
+
+```ts
+// lib/caller.ts
+import { createProxyCaller } from "@noverax/nexus"
+import type { Sources } from "./api/sources"
+
+export const caller = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
+```
+
+```svelte
+<!-- routes/users/+page.svelte -->
+<script lang="ts">
+  import { caller } from "$lib/caller"
+  import { onMount } from "svelte"
+
+  let users = $state([])
+
+  onMount(async () => {
+    users = await caller("api")("users:getAll")
+  })
+</script>
+
+{#each users as user (user.id)}
+  <p>{user.name}</p>
+{/each}
+```
+
+<br />
+
+---
+
+### Server Adapters
+
+Each adapter exposes a single handler that plugs into your server framework. All of them use the same `sources` object.
+
+<br />
+
+#### <img src="https://api.iconify.design/logos/hono.svg" height="16" align="center" />&nbsp;&nbsp;Hono
+
+```ts
+import { Hono } from "hono"
+import { nexusHandler } from "@noverax/nexus-hono"
+import { sources } from "./api/sources"
+
+const app = new Hono()
+
+app.all("/api/request", nexusHandler(sources))
+
+export default app
+```
+
+#### <img src="https://api.iconify.design/logos/express.svg" height="16" align="center" />&nbsp;&nbsp;Express
+
+```ts
+import express from "express"
+import { nexusHandler } from "@noverax/nexus-express"
+import { sources } from "./api/sources"
+
+const app = express()
+
+app.all("/api/request", nexusHandler(sources))
+
+app.listen(3000)
+```
+
+#### <img src="https://api.iconify.design/logos/fastify-icon.svg" height="16" align="center" />&nbsp;&nbsp;Fastify
+
+```ts
+import Fastify from "fastify"
+import { nexusPlugin } from "@noverax/nexus-fastify"
+import { sources } from "./api/sources"
+
+const app = Fastify()
+
+app.register(nexusPlugin, { sources, prefix: "/api/request" })
+
+app.listen({ port: 3000 })
+```
+
+#### <img src="https://api.iconify.design/logos/nestjs.svg" height="16" align="center" />&nbsp;&nbsp;NestJS
+
+```ts
+import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
+import { nexusMiddleware } from "@noverax/nexus-nestjs"
+import { sources } from "./api/sources"
+
+@Module({})
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(nexusMiddleware(sources)).forRoutes("/api/request")
+  }
+}
+```
+
+<br />
+
+#### Universal (Node.js / Bun / Deno)
+
+The core caller works in any JavaScript runtime — no framework required.
+
+```ts
+import { createCaller } from "@noverax/nexus"
+import { sources } from "./api/sources"
+
+const call = createCaller(sources)
+
+// Works in Node.js, Bun, Deno, Cloudflare Workers — anywhere with fetch
+const users = await call("api")("users:getAll")
+const user = await call("api")("users:getById", { id: "1" })
+```
+
+<br />
+
+---
+
+<br />
+
+## Advanced Features
+
+### Middleware
+
+Composable middleware chain with built-in utilities.
+
+```ts
+import { defineApi } from "@noverax/nexus/define"
+import {
+  retryMiddleware,
+  authMiddleware,
+  logMiddleware,
+} from "@noverax/nexus/middleware"
+
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  middleware: [
+    retryMiddleware({ limit: 3, backoff: "exponential" }),
+    authMiddleware({
+      getToken: () => localStorage.getItem("token"),
+      refreshToken: async () => { /* refresh logic */ },
+    }),
+    logMiddleware(),
+  ],
+  groups: { users },
+})
+```
+
+### Runtime Validation
+
+Works with any [Standard Schema](https://github.com/standard-schema/standard-schema) library — Zod, Valibot, ArkType.
+
+```ts
+import { endpoint } from "@noverax/nexus/define"
+import { z } from "zod"
+
+const UserSchema = z.object({ id: z.string(), name: z.string(), email: z.string().email() })
+const CreateUserSchema = z.object({ name: z.string().min(1), email: z.string().email() })
+
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint({ response: z.array(UserSchema) })((http) => http.get()),
+    create: endpoint({ response: UserSchema, variables: CreateUserSchema })((http, vars) =>
+      http.post("", vars)
+    ),
+  },
+})
+```
+
+### Testing
+
+In-memory test client with mock builder — no network, no setup.
+
+```ts
+import { createTestClient } from "@noverax/nexus/testing"
+import type { Sources } from "./api/sources"
+
+const { caller, mock, history } = createTestClient<Sources>()
+
+// Mock responses
+mock("api", "users:getAll").resolves([{ id: "1", name: "Alice" }])
+mock("api", "users:create").returns((vars) => ({ id: "2", ...vars }))
+mock("api", "users:delete").rejects(404, { message: "Not found" })
+
+// Use like the real caller
+const users = await caller("api")("users:getAll")
+
+// Assert on request history
+expect(history).toHaveLength(1)
+expect(history[0].endpoint).toBe("users:getAll")
+
+// Lifecycle control
+mock("api", "users:getAll").resolves("first").once()
+mock("api", "slow").resolves("done").delay(100)
+```
+
+<br />
+
+---
+
+<br />
+
+## Architecture
 
 ```
-Proxy Mode (browser):
-  Browser → POST /api/request → Next.js API Route → HttpClient → Backend
-
-Direct Mode (server):
-  Server Component → HttpClient → Backend
+                         ┌─────────────────────────────────────────┐
+                         │              Your Backend               │
+                         │     (Express, FastAPI, Rails, Go…)      │
+                         └───────────────────┬─────────────────────┘
+                                             │
+                    ┌───────────────────────┐│┌────────────────────────┐
+                    │                       │││                        │
+              ┌─────▼──────┐          ┌─────▼▼─────┐                   │
+              │ Universal  │          │   Proxy    │                   │
+              │  (server)  │          │  (browser) │                   │
+              └─────┬──────┘          └─────┬──────┘                   │
+                    │                       │                          │
+           createCaller(sources)    createProxyCaller()                │
+                    │                       │                          │
+                    │                  POST /api/request               │
+                    │                       │                          │
+                    │               ┌───────▼────────┐                 │
+                    │               │ Server Adapter  │                │
+                    │               │ (Next, Hono,    │                │
+                    │               │  Express, etc.) │                │
+                    │               └───────┬────────┘                 │
+                    │                       │                          │
+                    └───────────┬───────────┘                          │
+                                │                                      │
+                       ┌────────▼──────────┐                           │
+                       │  executeRequest   │────── middleware chain ───┘
+                       │  (core engine)    │────── schema validation
+                       └────────┬──────────┘
+                                │
+                         native fetch()
 ```
 
-**Proxy mode** hides secrets, bypasses CORS, and forwards cookies automatically. The browser only sees `/api/request`.
+**Universal mode** — server-side code calls your backend directly. Zero overhead, full type safety.
 
-**Direct mode** skips the proxy hop entirely — server-side code calls the backend directly with zero overhead.
+**Proxy mode** — browser sends requests through your server, which hides API keys, bypasses CORS, and forwards cookies automatically.
+
+Both modes share the same `sources` definition, the same middleware chain, and the same type inference.
+
+<br />
+
+---
+
+<br />
 
 ## Comparison
 
 | Feature | fetch | axios | tRPC | **Nexus** |
-| --- | --- | --- | --- | --- |
-| Type Safety | Manual | Manual | Full | **Full** |
-| React Query | Manual | Manual | Built-in | **Built-in** |
-| Server Components | Manual | No | Limited | **First-class** |
-| Request Grouping | No | No | Router | **EndpointGroup** |
-| Upload Progress | No | Yes | Plugin | **Built-in** |
-| Path Parameters | Manual | Manual | No | **Built-in** |
-| Backend Requirement | Any | Any | tRPC server | **Any REST** |
+| --- | :---: | :---: | :---: | :---: |
+| End-to-end type safety | - | - | Yes | **Yes** |
+| No custom backend required | Yes | Yes | - | **Yes** |
+| Framework agnostic | Yes | Yes | - | **Yes** |
+| React Query integration | - | - | Yes | **Yes** |
+| Server Components | Manual | - | Limited | **First-class** |
+| Server Actions | - | - | - | **Built-in** |
+| Middleware chain | - | Interceptors | Middleware | **Composable** |
+| Runtime validation | - | - | Zod only | **Any Standard Schema** |
+| Upload progress | - | Yes | Plugin | **Built-in** |
+| Path parameters | Manual | Manual | - | **Built-in** |
+| Request deduplication | - | - | - | **Built-in** |
+| Streaming & SSE | Manual | - | Experimental | **First-class** |
+| Test utilities | - | - | - | **Built-in** |
 
-## Exports
+<br />
 
-| Import | Description |
-| --- | --- |
-| `@noverax/nexus` | `createClientRequest`, `HTTPError`, `isHTTPError` |
-| `@noverax/nexus/datasource` | `Datasource`, `EndpointGroup`, `Endpoint` |
-| `@noverax/nexus/direct` | `createDirectRequest` |
-| `@noverax/nexus/next/apiRoute` | `apiRoute` |
-| `@noverax/nexus/query` | `createQueryRequest`, `QueryClient`, `QueryClientProvider` |
+---
+
+<br />
+
+## Packages
+
+| Package | Description | |
+| --- | --- | --- |
+| [`@noverax/nexus`](./packages/core) | Core — caller factories, HTTP client, middleware, validation, testing | [![npm](https://img.shields.io/npm/v/@noverax/nexus?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus) |
+| [`@noverax/nexus-query`](./packages/query) | React Query hooks — `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery` | [![npm](https://img.shields.io/npm/v/@noverax/nexus-query?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-query) |
+| [`@noverax/nexus-next`](./packages/next) | Next.js — `apiRoute` handler + `createAction` for Server Actions | [![npm](https://img.shields.io/npm/v/@noverax/nexus-next?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-next) |
+| [`@noverax/nexus-express`](./packages/express) | Express middleware adapter | [![npm](https://img.shields.io/npm/v/@noverax/nexus-express?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-express) |
+| [`@noverax/nexus-fastify`](./packages/fastify) | Fastify plugin adapter | [![npm](https://img.shields.io/npm/v/@noverax/nexus-fastify?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-fastify) |
+| [`@noverax/nexus-hono`](./packages/hono) | Hono Web Standard adapter | [![npm](https://img.shields.io/npm/v/@noverax/nexus-hono?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-hono) |
+| [`@noverax/nexus-nestjs`](./packages/nestjs) | NestJS middleware adapter | [![npm](https://img.shields.io/npm/v/@noverax/nexus-nestjs?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-nestjs) |
+| [`@noverax/nexus-nuxt`](./packages/nuxt) | Nuxt / Nitro / h3 event handler adapter | [![npm](https://img.shields.io/npm/v/@noverax/nexus-nuxt?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-nuxt) |
+
+<br />
+
+---
+
+<br />
 
 ## Documentation
 
 Full documentation with interactive examples at **[nexus.noverax.cloud](https://nexus.noverax.cloud)**.
 
-- [Introduction](https://nexus.noverax.cloud/docs/introduction) — what Nexus is and why
-- [Installation](https://nexus.noverax.cloud/docs/installation) — setup guide
-- [Quick Start](https://nexus.noverax.cloud/docs/quick-start) — first request in 4 steps
-- [Architecture](https://nexus.noverax.cloud/docs/architecture) — how it works under the hood
-- [Examples](https://nexus.noverax.cloud/docs/examples/basic) — interactive demos of every feature
+<br />
+
+## Contributing
+
+Contributions are welcome. Please open an issue first to discuss what you would like to change.
+
+<br />
 
 ## License
 
 [MIT](./LICENSE)
+
+<br />
+
+<div align="center">
+  <sub>Built by <a href="https://github.com/NoveraX">NoveraX</a></sub>
+</div>

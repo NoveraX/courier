@@ -1,41 +1,54 @@
-export const metadata = { title: "Instance & Methods", description: "How Nexus wraps HTTP calls with typed methods, automatic serialization, and path parameter extraction." }
+export const metadata = { title: "HTTP Client & Methods", description: "How Nexus wraps native fetch with typed methods, automatic serialization, and path parameter extraction." }
 
 ## Overview
 
-Under the hood, Nexus uses an `HttpClient` class that wraps the `ky` HTTP client. You never create an `HttpClient` directly — it is created internally when a request is executed. What you interact with are the **typed HTTP methods** that HttpClient provides to your `EndpointGroup` method definitions.
+Under the hood, Nexus uses an `HttpClient` class that wraps the native `fetch` API — no external HTTP libraries. You never create an `HttpClient` directly — it is created internally when a request is executed. What you interact with are the **typed HTTP methods** that HttpClient provides to your endpoint definitions via the `http` object.
 
 ## HTTP Methods
 
-Every method in a `EndpointGroup` receives a `methods` object with six HTTP helpers: `get`, `post`, `put`, `patch`, `del`, and `head`.
+Every endpoint defined with `endpoint()` receives an `http` object with six HTTP helpers: `get`, `post`, `put`, `patch`, `del`, and `head`.
 
 ```ts title="api/users.ts"
-import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+import { defineGroup, endpoint } from "@noverax/nexus/define"
 
-type User = { id: number; name: string; email: string }
+type User = { id: string; name: string; email: string }
+type CreateUserVars = { name: string; email: string }
+type UpdateUserVars = { id: string; name: string; email: string }
 
-export class Users extends EndpointGroup {
-  constructor() {
-    super({ prefix: "users" })
-  }
+export const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    // GET /users — variables become search params
+    getAll: endpoint<User[], { page?: number; limit?: number }>()(
+      (http) => http.get()
+    ),
 
-  // GET /users — variables become search params
-  getAll: Endpoint<User[], { page?: number; limit?: number }> = ({ get }) => get()
+    // GET /users/:id — :id is extracted from variables
+    getById: endpoint<User, { id: string }>()(
+      (http, vars) => http.get(":id", vars)
+    ),
 
-  // GET /users/:id — :id is extracted from variables
-  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
+    // POST /users — variables become JSON body
+    create: endpoint<User, CreateUserVars>()(
+      (http, vars) => http.post("", vars)
+    ),
 
-  // POST /users — variables become JSON body
-  create: Endpoint<User, { name: string; email: string }> = ({ post }) => post()
+    // PUT /users/:id — :id extracted, rest becomes JSON body
+    update: endpoint<User, UpdateUserVars>()(
+      (http, vars) => http.put(":id", vars)
+    ),
 
-  // PUT /users/:id — :id extracted, rest becomes JSON body
-  update: Endpoint<User, { id: number; name: string }> = ({ put }) => put(":id")
+    // PATCH /users/:id — partial update
+    patch: endpoint<User, { id: string; email: string }>()(
+      (http, vars) => http.patch(":id", vars)
+    ),
 
-  // PATCH /users/:id — partial update
-  patch: Endpoint<User, { id: number; email: string }> = ({ patch }) => patch(":id")
-
-  // DELETE /users/:id
-  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
-}
+    // DELETE /users/:id
+    remove: endpoint<null, { id: string }>()(
+      (http, vars) => http.del(":id", vars)
+    ),
+  },
+})
 ```
 
 ## Method Signatures
@@ -46,23 +59,21 @@ The key difference between methods is how they handle variables:
 - **POST, PUT, PATCH** — variables are automatically sent as a JSON body.
 
 ```typescript
-// GET, DELETE, HEAD — accept (url?, options?)
-// Variables are sent as search params automatically
-({ get }) => get("/search")
+// GET, DELETE, HEAD — variables sent as search params
+(http) => http.get("/search")
 // → GET /users/search?page=1&limit=10
 
-// POST, PUT, PATCH — accept (url?, variables?, options?)
-// Variables are sent as JSON body automatically
-({ post }) => post()
+// POST, PUT, PATCH — variables sent as JSON body
+(http, vars) => http.post("", vars)
 // → POST /users  body: { name: "Jane", email: "jane@test.com" }
 
 // You can also pass a sub-path
-({ post }) => post("bulk")
+(http, vars) => http.post("bulk", vars)
 // → POST /users/bulk
 ```
 
 <Callout variant="tip" title="Automatic serialization">
-You never need to call `JSON.stringify` or build query strings manually. Nexus handles encoding based on the HTTP method. You can customize this with `bodySerializer` and `searchParamsSerializer` in BaseOptions.
+You never need to call `JSON.stringify` or build query strings manually. Nexus handles encoding based on the HTTP method. You can customize this with `bodySerializer` and `searchParamsSerializer` in `defineApi` options.
 </Callout>
 
 ## Path Parameters
@@ -70,42 +81,43 @@ You never need to call `JSON.stringify` or build query strings manually. Nexus h
 Use the `:param` syntax in URLs to define path parameters. Nexus extracts matching keys from variables, inserts them into the URL, and sends the remaining variables as body or search params:
 
 ```ts title="api/comments.ts"
-import { type Endpoint, EndpointGroup } from "@noverax/nexus/datasource"
+import { defineGroup, endpoint } from "@noverax/nexus/define"
 
-type Comment = { id: number; body: string; author: string }
+type Comment = { id: string; body: string; author: string }
 
-export class Comments extends EndpointGroup {
-  constructor() {
-    super({ prefix: "posts" })
-  }
+export const comments = defineGroup({
+  prefix: "posts",
+  endpoints: {
+    // Multiple path params: /posts/:postId/comments/:commentId
+    getOne: endpoint<Comment, { postId: string; commentId: string }>()(
+      (http, vars) => http.get(":postId/comments/:commentId", vars)
+    ),
 
-  // Multiple path params: /posts/:postId/comments/:commentId
-  getOne: Endpoint<Comment, { postId: number; commentId: number }> = ({ get }) =>
-    get(":postId/comments/:commentId")
-
-  // Path params + body: :postId is extracted, rest becomes body
-  create: Endpoint<Comment, { postId: number; body: string }> = ({ post }) =>
-    post(":postId/comments")
-}
+    // Path params + body: :postId is extracted, rest becomes body
+    create: endpoint<Comment, { postId: string; body: string }>()(
+      (http, vars) => http.post(":postId/comments", vars)
+    ),
+  },
+})
 
 // Usage:
-// request("api")("comments:getOne", { postId: 5, commentId: 12 })
+// call("api")("comments:getOne", { postId: "5", commentId: "12" })
 // → GET /posts/5/comments/12
 
-// mutate({ postId: 5, body: "Great post!" })
+// call("api")("comments:create", { postId: "5", body: "Great post!" })
 // → POST /posts/5/comments  body: { body: "Great post!" }
 ```
 
-<Callout variant="info" title="Powered by path-to-regexp">
-Path parameter extraction uses the same `path-to-regexp` library that Express and Next.js use. Any valid pattern like `:id` or `:slug` works out of the box.
+<Callout variant="info" title="Internal regex parser">
+Path parameter extraction uses an internal regex-based `:param` parser. Any pattern like `:id`, `:slug`, or `:postId` works out of the box. The parser is cached for performance.
 </Callout>
 
 ## Response Type
 
-Every HTTP method returns a `HttpResponse<T>` internally. By default, Nexus unwraps this and returns just the `data` property. If you need the full response (status code, headers), use the `rawData` option:
+Every HTTP method returns an `HttpResponse<T>` internally. By default, Nexus unwraps this and returns just the `data` property. If you need the full response (status code, headers), use the `rawData` option:
 
 ```typescript
-// HttpResponse<T> — what every method returns
+// HttpResponse<T> — what every method returns internally
 type HttpResponse<T> = {
   status: number   // HTTP status code (200, 201, 404, ...)
   headers: Headers // Response headers
@@ -113,52 +125,60 @@ type HttpResponse<T> = {
 }
 
 // By default, Nexus returns just the data (unwrapped)
-const users = await directRequest("api")("users:getAll")
+const users = await call("api")("users:getAll")
 //    ^? User[]
 
 // With rawData: true, you get the full response object
-const response = await directRequest("api", { rawData: true })("users:getAll")
+const response = await call("api", { rawData: true })("users:getAll")
 //    ^? { status: number; headers: Headers; data: User[] }
 ```
 
-## BaseOptions
+## Configuring the HTTP Client
 
-The `Datasource` constructor accepts `BaseOptions` — a comprehensive set of options that configure the underlying HttpClient. These options apply to every method in every group under this Datasource:
+The `defineApi` function accepts `BaseOptions` — a comprehensive set of options that configure the underlying HttpClient. These options apply to every endpoint in every group under this source:
 
-```ts title="api/index.ts"
-class MyApi extends Datasource<typeof groups> {
-  constructor() {
-    super({
-      // Required: your backend URL
-      baseURL: process.env.API_URL ?? "http://localhost:4000",
+```ts title="api/sources.ts"
+import { defineApi } from "@noverax/nexus/define"
+import {
+  retryMiddleware,
+  authMiddleware,
+  logMiddleware,
+} from "@noverax/nexus/middleware"
+import { users } from "./users"
+import { posts } from "./posts"
 
-      // Response format (default: "json")
-      responseType: "json",
+const api = defineApi({
+  // Required: your backend URL
+  baseURL: process.env.API_URL!,
 
-      // Default data merged into every POST/PUT/PATCH body
-      defaultBody: { locale: "en" },
+  // Response format (default: "json")
+  responseType: "json",
 
-      // Default params merged into every GET request
-      defaultQueryParams: { format: "full" },
+  // Default data merged into every POST/PUT/PATCH body
+  defaultBody: { locale: "en" },
 
-      // ky options — timeout, retry, headers, etc.
-      timeout: 30_000,
-      retry: { limit: 2, statusCodes: [408, 429, 502, 503] },
-      headers: { "X-Client": "nexus" },
+  // Default params merged into every GET request
+  defaultQueryParams: { format: "full" },
 
-      // Cancel duplicate in-flight requests (default: false)
-      deduplicate: true,
+  // Timeout in milliseconds
+  timeout: 30_000,
 
-      // Lifecycle hooks
-      onRequest: (info) => { /* modify before send */ },
-      onResponse: (info, response) => { /* transform response */ },
-      onError: (info, error) => { /* handle errors globally */ },
+  // Default headers for all requests
+  headers: { "X-Client": "nexus" },
 
-      // Groups
-      groups,
-    })
-  }
-}
+  // Cancel duplicate in-flight requests (default: false)
+  deduplicate: true,
+
+  // Middleware chain — retry, auth, logging, etc.
+  middleware: [
+    logMiddleware(),
+    retryMiddleware({ limit: 2 }),
+    authMiddleware({ getToken: () => getAuthToken() }),
+  ],
+
+  // Groups
+  groups: { users, posts },
+})
 ```
 
 <Callout variant="warning" title="defaultBody and defaultQueryParams">
@@ -167,6 +187,6 @@ class MyApi extends Datasource<typeof groups> {
 
 ## Next Steps
 
-- [Request & RequestGroup](/docs/core-concepts/request) — how to define and compose API sources
+- [Request Lifecycle](/docs/core-concepts/request) — how requests flow through callers, middleware, and fetch
 - [Type Safety](/docs/core-concepts/type-safety) — how types flow from method definitions to your components
 - [Error Handling](/docs/core-concepts/error-handling) — handling HTTP errors and the HTTPError class

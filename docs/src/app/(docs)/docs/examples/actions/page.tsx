@@ -1,6 +1,6 @@
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
-import { directRequest } from "@/lib/direct-request"
+import { call } from "@/lib/caller"
 import { docsMetadata } from "@/lib/metadata"
 
 import { CreateUserForm } from "./create-form"
@@ -17,14 +17,14 @@ const actionCode = `// app/actions/actions.ts
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { directRequest } from "@/lib/direct-request"
+import { call } from "@/lib/caller"
 
 export async function createUser(_prev: ActionState, formData: FormData) {
   const name = formData.get("name") as string
   const email = formData.get("email") as string
   const role = formData.get("role") as string
 
-  const user = await directRequest("mockApi")("users:create", { name, email, role })
+  const user = await call("api")("users:create", { name, email, role })
   revalidatePath("/docs/examples/actions")
   return { success: true, data: user }
 }`
@@ -51,7 +51,7 @@ export function CreateUserForm() {
 const deleteCode = `// Server action for delete + revalidation
 export async function deleteUser(_prev: ActionState, formData: FormData) {
   const id = Number(formData.get("id"))
-  await directRequest("mockApi")("users:remove", { id })
+  await call("api")("users:remove", { id })
   revalidatePath("/docs/examples/actions")
   return { success: true }
 }
@@ -73,7 +73,7 @@ export const metadata = docsMetadata(
 )
 
 export default async function ActionsExamplesPage() {
-  const users = (await directRequest("mockApi")("users:getAll", {})) as UsersResponse
+  const users = (await call("api")("users:getAll", {})) as UsersResponse
 
   return (
     <>
@@ -86,15 +86,15 @@ export default async function ActionsExamplesPage() {
       <div className="space-y-8">
         <ExampleBlock
           title="Server Action Definition"
-          description='Define actions in a "use server" file. directRequest runs on the server, revalidatePath refreshes the page.'
+          description='Define actions in a "use server" file. call runs on the server, revalidatePath refreshes the page.'
           code={actionCode}
           learnMoreHref="/docs/server-side/actions"
           learnMoreLabel="Server Actions docs"
         >
           <p className="text-sm text-muted-foreground">
             Server Actions run entirely on the server. They use{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">directRequest</code> to call the
-            backend directly, then{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">call</code> to call the backend
+            directly, then{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-xs">revalidatePath</code> to refresh
             server-rendered data.
           </p>

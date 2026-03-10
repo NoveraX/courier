@@ -2,134 +2,158 @@ export const metadata = { title: "Options", description: "Full reference of sour
 
 ## Overview
 
-Nexus options are split into two layers: **BaseOptions** for source-level configuration (applies to all methods in a source) and **MethodsInstanceOptions** for per-request overrides. Both layers build on top of ky's options, so any ky-compatible option can also be used.
+Nexus options are split into two layers: **BaseOptions** for source-level configuration (applies to all endpoints in a source) and **CallOptions** for per-request overrides. Nexus uses native `fetch` under the hood — no third-party HTTP clients.
 
 ## BaseOptions
 
-Set in the `Request` constructor via `super()`. These apply to every request made through this source:
+Set in `defineApi()`. These apply to every request made through this source:
 
 ```ts title="types"
 type BaseOptions = {
   // URL & encoding
-  baseURL: string                              // Prefix URL for all requests
+  baseURL?: string                               // Prefix URL for all requests
   responseType?: "json" | "text" | "blob" | "arrayBuffer" | "formData" // Response parsing (default: "json")
   responseParser?: (response: Response) => Promise<unknown>           // Custom response parser (overrides responseType)
-  defaultBody?: Record<string, unknown>         // Merged into every request body
-  defaultQueryParams?: Record<string, unknown> // Merged into every query string
+  defaultBody?: Record<string, unknown>          // Merged into every request body
+  defaultQueryParams?: Record<string, unknown>   // Merged into every query string
   bodySerializer?: (data: Record<string, unknown>) => BodyInit       // Custom body serializer
-  searchParamsSerializer?: SearchParamsSerializer                     // Custom query serializer ({ stringify, parse })
-  extraHeaders?: string[]                      // Additional header names to forward
+  searchParamsSerializer?: SearchParamsSerializer // Custom query serializer ({ stringify, parse })
+  allowedHeaders?: string[]                      // Additional header names to forward
 
   // Behavior
-  requestAbort?: boolean                       // Enable request deduplication
-  timeout?: number                             // Request timeout in ms
-  retry?: number | RetryOptions                // Retry configuration
-  headers?: HeadersInit                        // Static headers for all requests
-  credentials?: RequestCredentials             // Cookie handling mode
+  deduplicate?: boolean                          // Enable request deduplication
+  timeout?: number                               // Request timeout in ms
+  headers?: HeadersInit                          // Static headers for all requests
+  credentials?: RequestCredentials               // Cookie handling mode
+  middleware?: MiddlewareFn[]                    // Middleware chain
 
-  // Hooks
-  onRequest?: (info: HookInfo) => HookInfo | undefined | Promise<...>
-  onResponse?: (info: HookInfo, response: ResponseInfo) => ResponseInfo | undefined | Promise<...>
-  onError?: (info: HookInfo, error: HTTPError) => undefined | Promise<undefined>
-
-  // All other ky options (cache, mode, redirect, signal, etc.)
+  // All other fetch options (cache, mode, redirect, signal, etc.)
 }
 ```
 
-## MethodsInstanceOptions
+## CallOptions
 
-Passed as the second argument to a request function call. These are per-request options that control how a single request behaves:
+Passed as the second argument to a `call` / `caller` function. These are per-request options that control how a single request behaves:
 
 ```ts title="types"
-type MethodsInstanceOptions = {
-  rawData?: boolean           // Return { status, headers, data } instead of just data
-  stream?: boolean            // Return ReadableStream instead of parsed response
-  forwardVars?: boolean       // Pass variables to method body (default: true)
+type CallOptions = {
+  rawData?: boolean              // Return { status, headers, data } instead of just data
+  stream?: boolean               // Return ReadableStream instead of parsed response
+  forwardVariables?: boolean     // Pass variables to method body (default: true)
+  method?: "GET" | "POST"       // Proxy HTTP method (default: "POST")
+  signal?: AbortSignal           // Manual abort signal
+  timeout?: number               // Per-request timeout override
+  headers?: HeadersInit          // Per-request header overrides
+  cache?: RequestCache           // Fetch cache mode
   onUploadProgress?: (progress: {
     percent: number
     transferredBytes: number
     totalBytes: number
-  }) => void                  // Upload progress callback
+  }) => void                     // Upload progress callback
+  onDownloadProgress?: (progress: {
+    percent: number
+    transferredBytes: number
+    totalBytes: number
+  }) => void                     // Download progress callback
 }
 ```
 
 ## Timeout & retry
 
-Configure request timeouts and automatic retry behavior. Retry uses ky's built-in retry logic with exponential or custom backoff:
+Configure request timeouts at the source level and automatic retry behavior via middleware:
 
-```ts title="api/sources.ts"
-class MyApi extends Request<typeof groups> {
-  constructor() {
-    super({
-      baseURL: process.env.API_URL ?? "http://localhost:4000",
-      groups,
+```ts title="api/index.ts"
+import { defineApi } from "@noverax/nexus/define"
+import { retryMiddleware } from "@noverax/nexus/middleware"
 
-      // Timeout after 10 seconds
-      timeout: 10_000,
+const api = defineApi({
+  baseURL: process.env.API_URL ?? "http://localhost:4000",
+  groups: { users, posts },
 
-      // Retry failed requests up to 3 times
-      retry: {
-        limit: 3,
-        methods: ["get"],           // Only retry GET requests
-        statusCodes: [408, 502, 503, 504],
-        backoffLimit: 3000,         // Max delay between retries (ms)
-        delay: (attemptCount) => 1000 * attemptCount, // Linear backoff
-      },
-    })
-  }
-}
+  // Timeout after 10 seconds
+  timeout: 10_000,
+
+  // Retry failed requests via middleware
+  middleware: [
+    retryMiddleware({
+      limit: 3,
+      backoff: 300,
+      retryOn: (response) => [408, 502, 503, 504].includes(response.status),
+    }),
+  ],
+})
 ```
 
-<Callout variant="info" title="Retry methods">
-By default, ky only retries `GET`, `PUT`, and `HEAD` requests. POST, PATCH, and DELETE are not retried by default since they may not be idempotent. Override this with `retry.methods`.
+<Callout variant="info" title="Retry via middleware">
+Retry logic is handled by `retryMiddleware` from `@noverax/nexus/middleware`. It supports exponential backoff with a configurable base delay and custom retry conditions. See [Middleware](/docs/advanced/middleware) for details.
 </Callout>
 
-## Next.js caching
+## Caching
 
-In direct mode, you can pass Next.js-specific caching options via the `next` and `cache` fields. These are forwarded directly to the underlying fetch call:
+The `next` and `cache` fetch options control how the underlying `fetch` call is cached. They work in both direct and proxy modes.
+
+### Direct mode
+
+Options are forwarded directly to the server-side `fetch` call:
 
 ```ts title="app/page.tsx"
+import { serverCaller } from "@/lib/server-caller"
+
 // Per-request caching with Next.js ISR
-const users = await directRequest("myApi", {
-  next: { revalidate: 60 },              // Revalidate every 60 seconds
+const users = await serverCaller("api", {
+  next: { revalidate: 60 },
 })("users:getAll")
 
 // Tag-based revalidation
-const post = await directRequest("myApi", {
-  next: { tags: ["posts", `post-${id}`] }, // Revalidate by tag
+const post = await serverCaller("api", {
+  next: { tags: ["posts", `post-${id}`] },
 })("posts:getById", { id })
 
 // Force no caching
-const live = await directRequest("myApi", {
-  cache: "no-store",                      // Always fetch fresh data
+const live = await serverCaller("api", {
+  cache: "no-store",
 })("stats:realtime")
 ```
 
-<Callout variant="warning" title="Direct mode only">
-The `next` and `cache` options only work in direct mode (server-side). In proxy mode, the browser makes a POST to your API route, and Next.js caching does not apply to POST requests.
+### Proxy mode
+
+In proxy mode with `method: "GET"`, caching works at two levels:
+
+```ts title="components/users.tsx"
+const users = await call("api", {
+  method: "GET",
+  next: { revalidate: 60 },
+  cache: "force-cache",
+})("users:getAll")
+```
+
+**Level 1 — Browser/CDN cache**: The `cache` option controls the browser's HTTP cache for the `GET /api/request` response. Combined with `Cache-Control` headers from the server (set via `schema.cache` in endpoint definitions), this enables edge and CDN caching.
+
+**Level 2 — Server-side data cache**: Both `next` and `cache` options are forwarded through the proxy to the server handler's `fetch` call to the backend. Next.js Data Cache caches this fetch result, so subsequent requests skip the backend entirely.
+
+<Callout variant="info" title="Requires GET proxy">
+Proxy caching only works with `method: "GET"`. Endpoints must be marked with `type: "query"` to accept GET requests. POST requests are never cached.
 </Callout>
 
 ## Headers
 
 Set static headers at the source level or override them per-request. Source-level headers apply to all requests; per-request headers are merged on top:
 
-```ts title="api/sources.ts"
+```ts title="api/index.ts"
+import { defineApi } from "@noverax/nexus/define"
+
 // Static headers on the source (apply to all requests)
-class MyApi extends Request<typeof groups> {
-  constructor() {
-    super({
-      baseURL: process.env.API_URL ?? "http://localhost:4000",
-      groups,
-      headers: {
-        "X-API-Version": "2",
-        "Accept-Language": "en",
-      },
-    })
-  }
-}
+const api = defineApi({
+  baseURL: process.env.API_URL ?? "http://localhost:4000",
+  groups: { users },
+  headers: {
+    "X-API-Version": "2",
+    "Accept-Language": "en",
+  },
+})
 
 // Per-request headers
-const data = await request("myApi", {
+const data = await caller("api", {
   headers: { "X-Custom-Header": "value" },
 })("users:getAll")
 ```
@@ -138,25 +162,22 @@ const data = await request("myApi", {
 
 When the same option is set at multiple levels, per-request options take the highest priority:
 
-```ts title="api/sources.ts"
-// Options are merged with this precedence (highest wins):
-// 1. Per-request options  → request("myApi", { timeout: 5000 })("...")
-// 2. Source-level options → super({ timeout: 10000, ... })
-// 3. ky defaults          → ky's built-in defaults
+```ts title="api/index.ts"
+import { defineApi } from "@noverax/nexus/define"
 
-// Example: source sets 10s timeout, but this request uses 5s
-class MyApi extends Request<typeof groups> {
-  constructor() {
-    super({
-      baseURL: process.env.API_URL ?? "http://localhost:4000",
-      groups,
-      timeout: 10_000,  // Default for all requests in this source
-    })
-  }
-}
+// Options are merged with this precedence (highest wins):
+// 1. Per-request options  → caller("api", { timeout: 5000 })("...")
+// 2. Source-level options → defineApi({ timeout: 10000, ... })
+// 3. fetch defaults       → native fetch defaults
+
+const api = defineApi({
+  baseURL: process.env.API_URL ?? "http://localhost:4000",
+  groups: { users },
+  timeout: 10_000,  // Default for all requests in this source
+})
 
 // Override timeout for a slow endpoint
-const report = await request("myApi", {
+const report = await caller("api", {
   timeout: 30_000,
 })("reports:generate", { type: "annual" })
 ```
@@ -171,7 +192,7 @@ The `credentials` option controls cookie handling:
 
 ## Next steps
 
-- [Hooks](/docs/advanced/hooks) — lifecycle hooks for request interception and transformation
+- [Middleware](/docs/advanced/middleware) — composable middleware for auth, logging, retry, and more
 - [Raw Data Mode](/docs/advanced/raw-data) — using rawData to access status codes and headers
 - [Streaming](/docs/advanced/streaming) — enabling stream mode for ReadableStream responses
-- [Options Example](/options) — interactive demo of timeout, retry, and cache options
+- [Abort & Deduplication](/docs/advanced/abort) — automatic request deduplication with abort signals

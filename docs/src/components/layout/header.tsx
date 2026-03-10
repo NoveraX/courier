@@ -60,7 +60,7 @@ export function Header() {
       )}
 
       {/* Main header */}
-      <header className="flex h-14 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur-sm">
+      <header className="flex h-14 items-center gap-2 border-b border-border/50 bg-background/60 px-4 backdrop-blur-xl">
         <MobileNav />
 
         {/* Mobile logo */}

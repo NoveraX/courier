@@ -1,225 +1,105 @@
-export const metadata = { title: "Instance", description: "HTTP client wrapper around ky that generates typed HTTP methods (get, post, put, patch, del, head) with automatic URL parameter resolution." }
+export const metadata = { title: "HttpClient", description: "Internal HTTP client that wraps native fetch with typed methods, automatic serialization, and path parameter resolution." }
 
 ## Overview
 
-`Instance` is the low-level HTTP client at the core of Nexus. It wraps `ky` and provides the `methodsInstance()` method that generates typed HTTP method functions. You rarely use `Instance` directly — it's created internally by `createRequest` when processing proxy or direct requests.
+`HttpClient` is the low-level HTTP client at the core of Nexus. It wraps the native `fetch` API and provides typed HTTP method functions (`get`, `post`, `put`, `patch`, `del`, `head`). You never create an `HttpClient` directly — it is created internally by `executeRequest`.
 
 <Callout variant="info" title="Internal class">
-`Instance` is used internally by Nexus. Understanding it helps with writing method definitions and debugging, but you don't need to instantiate it yourself.
+`HttpClient` is used internally by Nexus. Understanding it helps with debugging and writing endpoint definitions, but you don't instantiate it yourself.
 </Callout>
 
-## Signature
+## HTTP Methods
+
+Every endpoint definition receives an `HttpMethods` object with six method functions:
 
 ```ts
-class Instance {
-  constructor(options?: BaseOptions, context?: Context)
-
-  methodsInstance(
-    options?: GenerateMethodOptions,
-    datasourceOptions?: MethodsInstanceDatasourceOptions,
-  ): MethodsInstance
+type HttpMethods = {
+  get: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
+  post: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
+  put: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
+  patch: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
+  del: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
+  head: <T>(url?, options?) => Promise<HttpResponse<T>>
 }
 ```
 
-## methodsInstance()
+## HttpResponse
 
-Returns a `MethodsInstance` object with six HTTP method functions. This is the object your method definitions receive as the first argument.
-
-```ts
-type MethodsInstance = {
-  get: <T>(url?: string, variables?: Record<string, unknown>, options?: MethodOptions) => Promise<MethodKyResponse<T>>
-  post: <T>(url?: string, variables?: Record<string, unknown>, options?: MethodOptions) => Promise<MethodKyResponse<T>>
-  put: <T>(url?: string, variables?: Record<string, unknown>, options?: MethodOptions) => Promise<MethodKyResponse<T>>
-  patch: <T>(url?: string, variables?: Record<string, unknown>, options?: MethodOptions) => Promise<MethodKyResponse<T>>
-  del: <T>(url?: string, variables?: Record<string, unknown>, options?: MethodOptions) => Promise<MethodKyResponse<T>>
-  head: <T>(url?: string, options?: MethodOptions) => Promise<MethodKyResponse<T>>
-}
-```
-
-### MethodKyResponse
-
-Every method returns a `MethodKyResponse` wrapping the status code, headers, and parsed data.
+Every method returns an `HttpResponse` wrapping status, headers, and typed data:
 
 ```ts
-type MethodKyResponse<T = unknown> = {
+type HttpResponse<T = unknown> = {
   status: number    // HTTP status code
   headers: Headers  // Response headers
   data: T           // Parsed response body
 }
 ```
 
-### GenerateMethodOptions
+## Variable Handling
 
-Options passed to `methodsInstance()` that configure how methods behave.
+How variables are sent depends on the HTTP method:
 
-```ts
-type GenerateMethodOptions = SimpleOptions & {
-  // Variables to inject into methods (from request body)
-  vars?: FormData | Record<string, unknown>
-
-  // Return ReadableStream instead of parsed body
-  stream?: boolean
-}
-```
-
-## Method Parameters
+- **GET, DELETE, HEAD** — variables become search parameters
+- **POST, PUT, PATCH** — variables become JSON body (or FormData if detected)
 
 ```ts
-// For get, post, put, patch, del:
-type MethodParameters = [
-  url?: string,
-  variables?: Record<string, unknown>,
-  options?: MethodOptions,
-]
+// GET: variables → search params
+http.get("", { page: 1, limit: 10 })
+// → GET /users?page=1&limit=10
 
-// For head (no variables):
-type MethodParameters = [
-  url?: string,
-  options?: MethodOptions,
-]
-```
+// POST: variables → JSON body
+http.post("", { name: "Jane", email: "jane@test.com" })
+// → POST /users  body: { name: "Jane", email: "jane@test.com" }
 
-## Defining Methods
-
-Your source methods are functions that receive `MethodsInstance` and optional variables. They call the appropriate HTTP method and return the response.
-
-```ts
-// Methods receive MethodsInstance — the object returned by methodsInstance()
-// This is how you define request methods on your sources:
-
-type UserMethods = {
-  // GET request — variables become search params
-  getAll: Method<User[]>
-  getById: Method<User, { id: string }>
-
-  // POST request — variables become JSON body
-  create: Method<User, { name: string; email: string }>
-
-  // PUT request
-  update: Method<User, { id: string; name: string }>
-
-  // DELETE request
-  delete: Method<void, { id: string }>
-}
-
-// Implementation:
-const getAll = (methods: MethodsInstance) =>
-  methods.get<User[]>()
-
-const getById = (methods: MethodsInstance, { id }: { id: string }) =>
-  methods.get<User>("/:id", { id })
-
-const create = (methods: MethodsInstance, data: { name: string; email: string }) =>
-  methods.post<User>("", data)
-
-const update = (methods: MethodsInstance, { id, ...data }: { id: string; name: string }) =>
-  methods.put<User>("/:id", { id, ...data })
-
-const remove = (methods: MethodsInstance, { id }: { id: string }) =>
-  methods.del<void>("/:id", { id })
+// FormData detected automatically
+http.post("", formData)
+// → POST /users  body: FormData (multipart)
 ```
 
 ## Path Parameters
 
-Use `:param` syntax in URLs. Matching variables are substituted, and remaining variables are handled based on the HTTP method.
+`:param` syntax in URLs is replaced with matching variable values. Remaining variables go to body or search params:
 
 ```ts
-// :param syntax in URLs is replaced with matching variable values
-methods.get("/:id", { id: "123" })
-// → GET /users/123
-
-methods.get("/:userId/posts/:postId", { userId: "1", postId: "42" })
-// → GET /users/1/posts/42
-
-// Remaining variables (not matching :params) become search params for GET/DEL
-methods.get("/:id", { id: "123", include: "posts" })
+http.get(":id", { id: "123", include: "posts" })
 // → GET /users/123?include=posts
 
-// For POST/PUT/PATCH, remaining variables go into the JSON body
-methods.put("/:id", { id: "123", name: "Alice" })
+http.put(":id", { id: "123", name: "Alice" })
 // → PUT /users/123  body: { name: "Alice" }
-```
 
-## Variable Handling by Method
-
-How variables are sent depends on the HTTP method:
-
-- `GET` / `DEL` — variables become search parameters
-- `POST` / `PUT` / `PATCH` — variables become JSON body (or FormData if detected)
-- `HEAD` — no variables, only URL and options
-
-```ts
-// GET & DEL: all variables become search parameters
-methods.get("", { page: "1", limit: "10" })
-// → GET /users?page=1&limit=10
-
-// POST, PUT, PATCH: variables become JSON body
-methods.post("", { name: "Alice", email: "alice@example.com" })
-// → POST /users  body: { name: "Alice", email: "alice@example.com" }
-
-// FormData is detected automatically
-const formData = new FormData()
-formData.append("file", file)
-methods.post("/upload", formData)
-// → POST /users/upload  body: FormData (multipart)
-
-// HEAD: no variables allowed, only URL and options
-methods.head("/health")
+http.get(":userId/posts/:postId", { userId: "1", postId: "42" })
+// → GET /users/1/posts/42
 ```
 
 ## Streaming
 
-When `stream: true` is set, the response `data` is a `ReadableStream` instead of parsed JSON or text.
+When `stream: true` is set in the endpoint options, the response `data` is a `ReadableStream`:
 
 ```ts
-// When stream: true is set in GenerateMethodOptions,
-// the response data is a ReadableStream instead of parsed JSON/text
-const instance = new Instance({ baseURL: "https://api.example.com" })
-
-const methods = instance.methodsInstance({ stream: true })
-const response = await methods.get("/events")
-// response.data is ReadableStream
+endpoint<ReadableStream, { channel: string }>()((http, vars) =>
+  http.get(":channel/stream", vars, { stream: true })
+)
 ```
 
 ## Context
 
-The `Context` object provides access to the incoming Next.js request and headers. It's used by `pathOptions` to resolve dynamic URL parameters.
+The `Context` object provides access to the incoming request for cookie/header forwarding:
 
 ```ts
 type Context = {
-  req?: NextRequest   // Incoming Next.js request
-  res?: NextResponse  // Outgoing Next.js response
-  headers?: Headers   // Request headers to forward
+  req?: Request      // Incoming request
+  res?: Response     // Outgoing response
+  headers?: Headers  // Headers to forward
 }
-
-// Context is passed to the Instance constructor
-// and used by pathOptions to access request metadata
-const instance = new Instance(options, {
-  req: nextRequest,
-  headers: await headers(),
-})
 ```
 
 ## Error Handling
 
-`Instance` automatically converts `ky` errors and network errors into Nexus `HTTPError` objects.
-
-```ts
-// Instance wraps ky errors into Nexus HTTPError
-try {
-  const response = await methods.get("/:id", { id: "999" })
-} catch (error) {
-  // ky HTTPError → Nexus HTTPError with { status, headers, data }
-  // Network errors → HTTPError with status: 0
-}
-
-// Error responses (4xx, 5xx) are parsed and included in error.data
-// 204 No Content → returns null as data
-```
+`HttpClient` converts HTTP error responses (status >= 400) into `HTTPError` objects with `status`, `headers`, and parsed `data`. Network errors produce `HTTPError` with `status: 0`.
 
 ## Related
 
-- [Instance & Methods Guide](/docs/core-concepts/instance) — in-depth usage patterns
-- [Request](/docs/api/request) — defines the BaseOptions that configure Instance
-- [HTTPError](/docs/api/http-error) — error class thrown by Instance
+- [HTTP Client Guide](/docs/core-concepts/instance) — in-depth usage patterns
+- [defineGroup](/docs/api/define-group) — where endpoint definitions use HttpMethods
+- [HTTPError](/docs/api/http-error) — error class thrown by HttpClient
 - [Types](/docs/api/types) — all type definitions

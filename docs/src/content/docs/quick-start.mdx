@@ -1,126 +1,98 @@
-export const metadata = { title: "Quick Start", description: "Define your API, set up the transport, and make your first typed request — in 4 steps." }
+export const metadata = { title: "Quick Start", description: "Define your API, set up a caller, and make your first typed request — in 3 steps." }
 
-### Step 1: Define your API sources
+## Step 1: Define your API
 
-Create a file with your API definition. Each `EndpointGroup` organizes related endpoints under a URL prefix, and each method declares its response and variables types:
+Create a file with your API definition using `defineApi`, `defineGroup`, and `endpoint`:
 
 ```ts title="api/sources.ts"
-import { Datasource, EndpointGroup, Endpoint } from "@noverax/nexus/datasource"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
 
-// 1. Define response & request types
-type User = { id: number; name: string; email: string; role: string }
-type UserList = { data: User[]; total: number }
+type User = { id: string; name: string; email: string }
 
-// 2. Create an EndpointGroup with typed methods
-class Users extends EndpointGroup {
-  constructor() {
-    super({ prefix: "users" })
-  }
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll:  endpoint<User[]>()((http) => http.get()),
+    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
+    create:  endpoint<User, { name: string; email: string }>()((http, vars) => http.post("", vars)),
+    update:  endpoint<User, { id: string; name: string }>()((http, vars) => http.put(":id", vars)),
+    remove:  endpoint<null, { id: string }>()((http, vars) => http.del(":id", vars)),
+  },
+})
 
-  getAll: Endpoint<UserList, { page?: number; limit?: number }> = ({ get }) => get()
-  getById: Endpoint<User, { id: number }> = ({ get }) => get(":id")
-  create: Endpoint<User, { name: string; email: string; role: string }> = ({ post }) => post()
-  update: Endpoint<User, { id: number; name: string; email: string }> = ({ put }) => put(":id")
-  remove: Endpoint<null, { id: number }> = ({ del }) => del(":id")
-}
+const api = defineApi({
+  baseURL: process.env.API_URL!,
+  groups: { users },
+})
 
-// 3. Create a Datasource with groups and base URL
-const groups = { users: new Users() }
-
-class MyApi extends Datasource<typeof groups> {
-  constructor() {
-    super({
-      baseURL: process.env.API_URL ?? "http://localhost:4000",
-      groups,
-    })
-  }
-}
-
-// 4. Export sources object
-export const sources = { myApi: new MyApi() }
+export const sources = { api }
 export type Sources = typeof sources
 ```
 
 <Callout variant="info" title="Path parameters">
-The `:id` syntax in `get(":id")` automatically extracts `id` from the variables and inserts it into the URL. The remaining variables are sent as query params (GET) or body (POST/PUT/PATCH).
+The `:id` syntax automatically extracts `id` from variables and inserts it into the URL. Remaining variables become query params (GET) or body (POST/PUT/PATCH).
 </Callout>
 
-### Step 2: Set up the transport
+## Step 2: Set up the caller
 
-**Proxy mode (browser -> API route -> backend):**
+Choose the mode that fits your use case:
 
-Create an API route that forwards browser requests to your backend, then create a client with React Query hooks:
+**Direct mode** — call your backend from any runtime:
 
-```ts title="app/api/request/route.ts"
-// app/api/request/route.ts
-import { apiRoute } from "@noverax/nexus/next/apiRoute"
+```ts title="lib/caller.ts"
+import { createCaller } from "@noverax/nexus"
 import { sources } from "@/api/sources"
 
-export const { POST } = apiRoute(sources)
+export const call = createCaller(sources)
 ```
 
-```ts title="lib/request.ts"
-// lib/request.ts
-import { createQueryRequest } from "@noverax/nexus/query"
+**Proxy mode** — browser requests go through your server (hides API keys, bypasses CORS):
+
+```ts title="lib/caller.ts"
+import { createProxyCaller } from "@noverax/nexus"
 import type { Sources } from "@/api/sources"
 
-export const { useQuery, useMutation, request } = createQueryRequest<Sources>()
+export const call = createProxyCaller<Sources>({ proxyUrl: "/api/request" })
 ```
 
-**Direct mode (server -> backend):**
+**React Query** — hooks with full type inference:
 
-For Server Components and Server Actions, create a direct request client:
+```ts title="lib/caller.ts"
+import { createQueryCaller } from "@noverax/nexus-query"
+import type { Sources } from "@/api/sources"
 
-```ts title="lib/direct-request.ts"
-// app/api/request/route.ts  — already done in Step 2
-
-// lib/direct-request.ts
-import { createDirectRequest } from "@noverax/nexus/direct"
-import { sources } from "@/api/sources"
-
-export const directRequest = createDirectRequest(sources)
+export const { useQuery, useMutation, caller } = createQueryCaller<Sources>()
 ```
 
 <Callout variant="tip" title="Use both modes together">
-Most apps use proxy mode for client components and direct mode for server components. Both share the same source definitions.
+Most apps use proxy/React Query for client-side and direct mode for server-side. Both share the same source definitions.
 </Callout>
 
-### Step 3: Use in components
+## Step 3: Use it
 
-**Client component (proxy + React Query):**
+**With React Query:**
 
 ```tsx title="app/users/page.tsx"
 "use client"
-
-import { useQuery, useMutation } from "@/lib/request"
+import { useQuery, useMutation } from "@/lib/caller"
 
 export default function UsersPage() {
-  // Auto-fetches on mount, returns typed data
-  const { data, isLoading } = useQuery("myApi", "users:getAll", {
-    variables: { page: 1, limit: 10 },
+  const { data: users, isLoading } = useQuery("api", "users:getAll")
+  //      ^? User[]
+
+  const { mutate } = useMutation("api", "users:create", {
+    onSuccess: (user) => console.log("Created:", user.name),
+    //                                           ^? string
   })
 
-  // Mutation for creating users
-  const { mutate, isPending } = useMutation("myApi", "users:create", {
-    onSuccess: (user) => {
-      console.log("Created:", user.name) // ← fully typed
-    },
-  })
-
-  if (isLoading) return <p>Loading…</p>
+  if (isLoading) return <p>Loading...</p>
 
   return (
     <div>
-      <h1>Users ({data?.total})</h1>
       <ul>
-        {data?.data.map((user) => (
-          <li key={user.id}>{user.name} — {user.email}</li>
-        ))}
+        {users?.map((u) => <li key={u.id}>{u.name} — {u.email}</li>)}
       </ul>
-      <button
-        onClick={() => mutate({ name: "Jane", email: "jane@test.com", role: "user" })}
-        disabled={isPending}
-      >
+      <button onClick={() => mutate({ name: "Jane", email: "jane@test.com" })}>
         Add User
       </button>
     </div>
@@ -128,51 +100,45 @@ export default function UsersPage() {
 }
 ```
 
-**Server component (direct mode):**
+**Direct mode (server-side):**
 
 ```tsx title="app/dashboard/page.tsx"
-// app/dashboard/page.tsx — React Server Component
-import { directRequest } from "@/lib/direct-request"
+import { call } from "@/lib/caller"
 
 export default async function DashboardPage() {
-  const users = await directRequest("myApi")("users:getAll", { page: 1, limit: 5 })
+  const users = await call("api")("users:getAll")
+  //    ^? User[]
 
-  return (
-    <div>
-      <h1>Dashboard ({users.total} users)</h1>
-      <ul>
-        {users.data.map((user) => (
-          <li key={user.id}>{user.name}</li>
-        ))}
-      </ul>
-    </div>
-  )
+  return <ul>{users.map((u) => <li key={u.id}>{u.name}</li>)}</ul>
 }
 ```
 
-### Step 4: Run your app
+**Vanilla TypeScript (no framework):**
 
-Start your backend server and Next.js dev server. The proxy route handles serialization, CORS, and cookie forwarding automatically.
+```ts
+import { createCaller } from "@noverax/nexus"
+import { sources } from "./api/sources"
 
-<Callout variant="warning" title="Don't forget your backend">
-Nexus doesn't replace your backend — it connects to any REST API. Make sure your backend is running at the URL specified in `API_URL`.
-</Callout>
+const call = createCaller(sources)
+
+const users = await call("api")("users:getAll")
+const user = await call("api")("users:getById", { id: "1" })
+```
 
 ## What's happening under the hood
 
-When you call a query like this:
-
-```typescript
-useQuery("myApi", "users:getById", { variables: { id: 5 } })
-```
+When you call `call("api")("users:getById", { id: "5" })`:
 
 1. Nexus parses `"users:getById"` into group `users` and method `getById`
-2. In proxy mode, it POSTs to `/api/request` with the source, group, query, and variables
-3. The API route finds the `Users` group, calls `getById` with an `HttpClient` that wraps ky
-4. The `:id` path parameter is extracted from variables, and the request goes to `GET /users/5`
-5. The typed response flows back through React Query to your component
+2. The `:id` path parameter is extracted from variables → `GET /users/5`
+3. Middleware chain runs (retry, auth, logging, etc.)
+4. Schema validation runs (if configured)
+5. The typed response flows back to your code
+
+In proxy mode, step 2-5 happen on your server. The browser only sees `/api/request`.
 
 ## Next steps
 
-- [Project Setup](/docs/project-setup) — recommended file structure for production
-- [Examples](/docs/examples/basic) — interactive demos of every feature
+- [Framework Guides](/docs/frameworks/nextjs) — complete setup for your framework
+- [Middleware](/docs/middleware/overview) — add retry, auth, logging
+- [Examples](/docs/examples/basic) — interactive demos

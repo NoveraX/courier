@@ -8,7 +8,7 @@ const simpleCode = `// Method definition with :id placeholder
 getById: Method<User, { id: number }> = ({ get }) => get(":id")
 
 // Usage — :id is replaced with the value from variables
-await request("mockApi")("users:getById", { id: 1 })
+await caller("api")("users:getById", { id: 1 })
 // → GET /users/1`
 
 const nestedCode = `// Multiple path params in one URL
@@ -16,7 +16,7 @@ getUserPost: Method<UserPostResponse, { id: number; postId: number }> =
   ({ get }) => get(":id/posts/:postId")
 
 // Both :id and :postId are replaced
-await request("mockApi")("users:getUserPost", { id: 1, postId: 2 })
+await caller("api")("users:getUserPost", { id: 1, postId: 2 })
 // → GET /users/1/posts/2`
 
 const mixedCode = `// Path params + query params work together
@@ -27,7 +27,7 @@ getAll: Method<UsersListResponse, { page?: number; limit?: number }> =
   ({ get }) => get()
 
 // No path params — all variables become ?query params
-await request("mockApi")("users:getAll", { page: 1, limit: 5 })
+await caller("api")("users:getAll", { page: 1, limit: 5 })
 // → GET /users?page=1&limit=5`
 
 export const metadata = docsMetadata(
@@ -48,7 +48,7 @@ export default function PathParamsExamplesPage() {
           title="Simple :id"
           description="A single path parameter replaced from the variables object."
           code={simpleCode}
-          learnMoreHref="/docs/proxy-mode/path-params"
+          learnMoreHref="/docs/advanced/path-params"
           learnMoreLabel="Path params docs"
         >
           <SimpleParamDemo />

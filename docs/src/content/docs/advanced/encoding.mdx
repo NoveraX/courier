@@ -1,0 +1,215 @@
+export const metadata = { title: "Encoding", description: "Control how request bodies and query parameters are serialized." }
+
+## Default behavior
+
+By default, Nexus serializes variables based on the HTTP method. GET and DELETE methods send variables as URL search params. POST, PUT, and PATCH send them as a JSON body:
+
+```ts title="Default encoding"
+import { defineGroup, endpoint } from "@noverax/nexus/define"
+
+type User = { id: number; name: string; email: string }
+
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    // GET, DELETE -> variables go to URLSearchParams
+    // GET /users?page=1&limit=10
+    getAll: endpoint<User[], { page: number; limit: number }>()((http, vars) =>
+      http.get("", vars)
+    ),
+
+    // POST, PUT, PATCH -> variables go to JSON body
+    // POST /users  Body: { "name": "Jane", "email": "jane@test.com" }
+    create: endpoint<User, { name: string; email: string }>()((http, vars) =>
+      http.post("", vars)
+    ),
+
+    // HEAD -> no variables sent
+    check: endpoint<void>()((http) => http.head()),
+  },
+})
+
+await call("api")("users:getAll", { page: 1, limit: 10 })
+await call("api")("users:create", { name: "Jane", email: "jane@test.com" })
+```
+
+## bodySerializer
+
+Override the default JSON serialization for request bodies. This is useful when your backend expects a different format like `application/x-www-form-urlencoded`, Protocol Buffers, or any custom encoding:
+
+```ts title="api/index.ts"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+
+const auth = defineGroup({
+  prefix: "auth",
+  endpoints: {
+    login: endpoint<{ token: string }, {
+      grant_type: string
+      username: string
+      password: string
+    }>()((http, vars) => http.post("token", vars)),
+  },
+})
+
+const api = defineApi({
+  baseURL: process.env.API_URL,
+  groups: { auth },
+  // Custom body serialization — e.g., x-www-form-urlencoded
+  bodySerializer: (data) => {
+    const params = new URLSearchParams()
+    for (const [key, value] of Object.entries(data)) {
+      params.append(key, String(value))
+    }
+    return params
+  },
+})
+
+// POST /auth/token
+// Content-Type: application/x-www-form-urlencoded
+// Body: grant_type=password&username=jane&password=secret
+await call("api")("auth:login", {
+  grant_type: "password",
+  username: "jane",
+  password: "secret",
+})
+```
+
+<Callout variant="info" title="Scope">
+`bodySerializer` is set at the source level in `defineApi()` and applies to all POST/PUT/PATCH requests for that source. If you need different encoding per group, create separate sources.
+</Callout>
+
+## searchParamsSerializer
+
+Unified serializer for query parameters. Handles both encoding (object to string) and parsing (string to object). The default behavior converts each key-value pair to a simple `key=value` string using `URLSearchParams`.
+
+You can pass any library with `stringify` and `parse` methods (e.g., `qs`):
+
+```ts title="api/index.ts"
+import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import qs from "qs"
+
+type Product = { id: number; name: string; category: string }
+
+const products = defineGroup({
+  prefix: "products",
+  endpoints: {
+    search: endpoint<Product[], {
+      category: string
+      tags: string[]
+    }>()((http, vars) => http.get("", vars)),
+  },
+})
+
+const api = defineApi({
+  baseURL: process.env.API_URL,
+  groups: { products },
+  // Use qs for nested objects and arrays
+  searchParamsSerializer: qs,
+})
+
+// GET /products?category=electronics&tags[]=sale&tags[]=new
+await call("api")("products:search", {
+  category: "electronics",
+  tags: ["sale", "new"],
+})
+```
+
+Or provide custom `stringify` and `parse` functions:
+
+```ts title="api/index.ts"
+const api = defineApi({
+  baseURL: process.env.API_URL,
+  groups: { products },
+  searchParamsSerializer: {
+    stringify: (data) => {
+      const params = new URLSearchParams()
+      for (const [key, value] of Object.entries(data)) {
+        if (Array.isArray(value)) {
+          for (const item of value) params.append(`${key}[]`, String(item))
+        } else {
+          params.append(key, String(value))
+        }
+      }
+      return params.toString()
+    },
+    parse: (str) => Object.fromEntries(new URLSearchParams(str).entries()),
+  },
+})
+```
+
+## defaultBody
+
+Provide default values that are merged into every request. For GET/DELETE, they become query params. For POST/PUT/PATCH, they are merged into the JSON body. Caller variables override defaults with the same key:
+
+```ts title="api/index.ts"
+const api = defineApi({
+  baseURL: process.env.API_URL,
+  groups: { users, posts },
+  // Merged into every request body (POST/PUT/PATCH)
+  // and every query string (GET/DELETE)
+  defaultBody: {
+    apiVersion: "v2",
+    locale: "en",
+  },
+})
+
+// POST /users  Body: { "apiVersion": "v2", "locale": "en", "name": "Jane" }
+await call("api")("users:create", { name: "Jane" })
+
+// GET /users?apiVersion=v2&locale=en&page=1
+await call("api")("users:getAll", { page: 1 })
+```
+
+## defaultQueryParams
+
+Unlike `defaultBody`, which goes to the body for POST requests, `defaultQueryParams` always goes to the URL query string regardless of HTTP method:
+
+```ts title="api/index.ts"
+const api = defineApi({
+  baseURL: process.env.API_URL,
+  groups: { users, posts },
+  // Merged into query params for ALL methods (including POST)
+  // Unlike defaultBody, this only affects the URL query string
+  defaultQueryParams: {
+    api_key: "public-key-123",
+  },
+})
+
+// GET /users?api_key=public-key-123&page=1
+await call("api")("users:getAll", { page: 1 })
+
+// POST /users?api_key=public-key-123  Body: { "name": "Jane" }
+await call("api")("users:create", { name: "Jane" })
+```
+
+<Callout variant="tip" title="When to use which">
+Use `defaultBody` for values that should be part of the request payload (body or query depending on method). Use `defaultQueryParams` for values that must always appear in the URL, like API keys or version identifiers.
+</Callout>
+
+## Complete variable flow
+
+Understanding the order of operations helps when combining path params, defaults, and caller variables:
+
+```typescript
+// Complete variable flow:
+
+// 1. Path params are extracted first (see Path Parameters page)
+//    /users/:id + { id: 5, name: "Jane" } -> URL: /users/5, remaining: { name: "Jane" }
+
+// 2. defaultBody is merged with remaining variables
+//    defaultBody: { locale: "en" }
+//    merged: { locale: "en", name: "Jane" }
+
+// 3. defaultQueryParams is merged into search params
+//    defaultQueryParams: { api_key: "123" }
+
+// 4. Method determines where merged variables go:
+//    GET/DELETE  -> URLSearchParams: /users/5?locale=en&name=Jane&api_key=123
+//    POST/PUT   -> JSON body: { locale: "en", name: "Jane" } + query: ?api_key=123
+```
+
+## Next Steps
+
+- [Path Parameters](/docs/advanced/path-params) — dynamic URL segments extracted from variables
+- [File Upload](/docs/advanced/upload) — FormData-based uploads with progress
+- [Options Reference](/docs/advanced/options) — timeout, retry, caching, and more

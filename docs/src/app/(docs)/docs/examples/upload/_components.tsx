@@ -4,7 +4,7 @@ import { useRef, useState } from "react"
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
-import { request } from "@/lib/request"
+import { caller } from "@/lib/query"
 
 function useFilePicker() {
   const [file, setFile] = useState<File | null>(null)
@@ -71,7 +71,7 @@ export function SimpleUploadDemo() {
       formData.append("file", file)
       formData.append("description", "Uploaded via nexus demo")
 
-      const response = await request("mockApi")("files:upload", formData)
+      const response = await caller("api")("files:upload", formData)
       setResult(response)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed")
@@ -129,7 +129,7 @@ export function ProgressUploadDemo() {
       formData.append("file", file)
       formData.append("description", "Uploaded via nexus demo")
 
-      const response = await request("mockApi", {
+      const response = await caller("api", {
         onUploadProgress: (p) => {
           const pct = Math.round(p.percent * 100)
           setProgress(pct)

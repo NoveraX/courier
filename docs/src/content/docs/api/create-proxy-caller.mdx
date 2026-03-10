@@ -1,0 +1,154 @@
+export const metadata = { title: "createProxyCaller", description: "Factory function that creates a typed, curried caller for proxy-mode HTTP calls from the browser." }
+
+## Import
+
+```ts
+import { createProxyCaller } from "@noverax/nexus"
+```
+
+## Signature
+
+`createProxyCaller` accepts an optional defaults object and returns a curried `CallerFn`. The generic parameter `T` is your `Sources` type — it enables full type inference for source names, endpoint keys, variables, and response types.
+
+```ts
+const call = createProxyCaller<Sources>(defaults?)
+```
+
+## Parameters
+
+### ProxyCallerDefaults
+
+All fields are optional.
+
+```ts
+type ProxyCallerDefaults = {
+  proxyUrl?: string
+  timeout?: number
+  credentials?: RequestCredentials
+  headers?: Record<string, string>
+  onError?: (error: HTTPError) => void | Promise<void>
+  onSuccess?: (data: unknown) => void | Promise<void>
+}
+```
+
+- `proxyUrl` — full URL path to the proxy endpoint. Defaults to `"/api/request"`.
+- `timeout` — request timeout in milliseconds.
+- `credentials` — cookie handling policy. Defaults to `"include"`.
+- `headers` — default headers merged into every request.
+- `onError` — global error handler invoked on every `HTTPError`.
+- `onSuccess` — global success handler invoked on every successful response.
+
+## Return Type
+
+Returns a `CallerFn<T>` — a curried function with two invocation levels:
+
+1. **Source selection** — `call(source, options?)` — picks a data source and optional per-request settings.
+2. **Endpoint execution** — `call(source)("group:method", variables?)` — executes an endpoint with optional variables.
+
+```ts
+type CallerFn<T> = <K extends keyof T>(
+  source: K,
+  options?: CallOptions,
+) => <Q extends EndpointKey<T[K]>>(
+  endpoint: Q,
+  variables?: Variables,
+) => Promise<Response>
+```
+
+## Basic Usage
+
+```ts title="lib/query.ts"
+import { createProxyCaller } from "@noverax/nexus"
+import type { Sources } from "@/api"
+
+const call = createProxyCaller<Sources>({
+  timeout: 10000,
+  credentials: "include",
+})
+
+// Curried: call(source)(endpoint, variables?)
+const users = await call("api")("users:getAll")
+const user = await call("api")("users:getById", { id: "123" })
+```
+
+## Configuring Defaults
+
+```ts title="lib/query.ts"
+const call = createProxyCaller<Sources>({
+  // Proxy endpoint URL (default: "/api/request")
+  proxyUrl: "/api/nexus",
+
+  // Request timeout in milliseconds
+  timeout: 15000,
+
+  // Cookie handling (default: "include")
+  credentials: "include",
+
+  // Default headers for every request
+  headers: {
+    "X-App-Version": "1.0.0",
+    "Accept-Language": "en",
+  },
+
+  // Global error handler
+  onError: (error) => {
+    if (error.status === 401) {
+      window.location.href = "/login"
+    }
+  },
+
+  // Global success handler
+  onSuccess: (data) => {
+    console.log("Request succeeded:", data)
+  },
+})
+```
+
+## Per-Request Options
+
+The second argument to the source selector accepts `CallOptions`:
+
+```ts
+const user = await call("api", {
+  timeout: 5000,
+  rawData: true,
+  stream: true,
+  signal: controller.signal,
+  method: "GET",  // Use GET for cacheable reads
+})("users:getById", { id: "123" })
+```
+
+## Upload Progress
+
+Pass `onUploadProgress` to track file upload progress. When set, Nexus uses `XMLHttpRequest` for real network-level progress tracking.
+
+```ts
+const result = await call("api", {
+  onUploadProgress: (progress) => {
+    console.log(`${Math.round(progress.percent * 100)}%`)
+  },
+})("files:upload", formData)
+```
+
+<Callout variant="info" title="XHR Transport">
+When `onUploadProgress` is set, Nexus uses `XMLHttpRequest` instead of `fetch` to provide real network-level progress tracking on both HTTP/1.1 and HTTP/2.
+</Callout>
+
+## GET Proxy Mode
+
+By default, proxy requests use POST. Set `method: "GET"` for cacheable reads — variables are encoded as query parameters:
+
+```ts
+// GET proxy: cacheable, works with CDN and browser cache
+const users = await call("api", { method: "GET" })("users:getAll")
+
+// POST proxy: default, used for mutations and complex payloads
+const user = await call("api")("users:create", { name: "Jane" })
+```
+
+## Related
+
+- [Proxy Mode](/docs/proxy-mode/overview) — architecture and security model
+- [Server Handler](/docs/proxy-mode/api-route) — the server-side handler that processes proxy requests
+- [createQueryCaller](/docs/api/create-query-caller) — React Query wrapper built on top of createProxyCaller
+- [Types](/docs/api/types) — full type definitions

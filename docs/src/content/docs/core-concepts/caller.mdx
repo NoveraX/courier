@@ -1,0 +1,131 @@
+export const metadata = { title: "Caller & Proxy", description: "Two transport modes for calling your API — direct and proxy — with the same type-safe interface." }
+
+## Overview
+
+Nexus provides two ways to call your API endpoints. Both share the same curried `CallerFn` interface and the same type inference:
+
+| Factory | Mode | Use Case |
+|---------|------|----------|
+| `createCaller(sources)` | Direct | Server-side, Node.js, Bun, Deno, scripts |
+| `createProxyCaller<Sources>()` | Proxy | Browser → your server → backend |
+
+## createCaller (Direct Mode)
+
+Calls your backend directly. Works in any JavaScript runtime with `fetch`.
+
+```ts title="lib/caller.ts"
+import { createCaller } from "@noverax/nexus"
+import { sources } from "@/api/sources"
+
+export const call = createCaller(sources)
+```
+
+```ts
+// Works anywhere: Node.js, Bun, Deno, Server Components, scripts
+const users = await call("api")("users:getAll")
+//    ^? User[]
+
+const user = await call("api")("users:getById", { id: "1" })
+//    ^? User
+```
+
+<Callout variant="info" title="When to use direct mode">
+Use direct mode for server-side code where you have access to the `sources` object: Server Components, Server Actions, API routes, CLI scripts, cron jobs.
+</Callout>
+
+## createProxyCaller (Proxy Mode)
+
+Sends requests through your server's proxy route. The browser never sees your backend URL.
+
+```ts title="lib/caller.ts"
+import { createProxyCaller } from "@noverax/nexus"
+import type { Sources } from "@/api/sources"
+
+export const call = createProxyCaller<Sources>({
+  proxyUrl: "/api/request",   // default
+  timeout: 10000,
+  credentials: "include",     // forward cookies
+  headers: { "X-Custom": "value" },
+  onError: (error) => console.error(error),
+  onSuccess: (data) => console.log(data),
+})
+```
+
+```ts
+// Browser sends POST /api/request → your server → backend
+const users = await call("api")("users:getAll")
+```
+
+<Callout variant="tip" title="Type-only import">
+Notice that proxy mode imports `type { Sources }` — the actual `sources` object stays on the server. Only the type information is used for inference.
+</Callout>
+
+### ProxyCallerDefaults
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `proxyUrl` | `string` | `"/api/request"` | Proxy endpoint URL |
+| `timeout` | `number` | — | Request timeout in ms |
+| `credentials` | `RequestCredentials` | `"include"` | Cookie forwarding mode |
+| `headers` | `Record<string, string>` | — | Default headers |
+| `onError` | `(error: HTTPError) => void` | — | Global error callback |
+| `onSuccess` | `(data: unknown) => void` | — | Global success callback |
+
+## The Curried Interface
+
+Both factories return a curried function:
+
+```ts
+const call = createCaller(sources)
+
+// Step 1: select source (+ optional call options)
+const apiCall = call("api")
+const apiGetCall = call("api", { method: "GET" })
+
+// Step 2: call endpoint with optional variables
+const users = await apiCall("users:getAll")
+const user = await apiCall("users:getById", { id: "1" })
+```
+
+### Call Options
+
+The second argument to the source selector accepts runtime options:
+
+```ts
+// Stream mode — returns raw Response
+const response = await call("api", { stream: true })("events:stream")
+
+// GET proxy — encodes as query params instead of POST body
+const users = await call("api", { method: "GET" })("users:getAll", { page: 1 })
+
+// Upload progress tracking
+await call("api", {
+  onUploadProgress: ({ percent }) => console.log(`${Math.round(percent * 100)}%`),
+})("files:upload", formData)
+
+// Abort signal
+const controller = new AbortController()
+await call("api", { signal: controller.signal })("users:getAll")
+```
+
+## Using Both Modes Together
+
+Most apps use both modes — proxy for the browser, direct for the server:
+
+```ts title="lib/caller.ts"
+import { createCaller, createProxyCaller } from "@noverax/nexus"
+import { sources } from "@/api/sources"
+import type { Sources } from "@/api/sources"
+
+// Server-side (RSC, Server Actions, API routes)
+export const serverCall = createCaller(sources)
+
+// Client-side (React components)
+export const clientCall = createProxyCaller<Sources>()
+```
+
+## Next Steps
+
+- [Framework Guides](/docs/frameworks/nextjs) — complete setup for your framework
+- [React Query](/docs/react-query/setup) — hooks with full type inference
+- [Error Handling](/docs/core-concepts/error-handling) — handling HTTPError

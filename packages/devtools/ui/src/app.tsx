@@ -1,24 +1,7 @@
-import {
-  Activity,
-  GitBranch,
-  Layers,
-  BarChart3,
-  Network,
-  Play,
-  ShieldCheck,
-  Code,
-  GitCompare,
-  Settings,
-  Sun,
-  Moon,
-  Monitor,
-  X,
-} from "lucide-react"
-
-import type { Tab, Theme } from "./store"
-
 import { useSocketConnection } from "./socket"
 import { useDevToolsStore } from "./store"
+import { TABS, THEME_ICONS, THEME_CYCLE } from "./app-config"
+import { ToastOverlay } from "./components/toast-overlay"
 import { TimelineView } from "./views/timeline"
 import { WaterfallView } from "./views/waterfall"
 import { MiddlewareView } from "./views/middleware"
@@ -29,29 +12,6 @@ import { PlaygroundView } from "./views/playground"
 import { AuditView } from "./views/audit"
 import { CodegenView } from "./views/codegen"
 import { PlaceholderView } from "./views/placeholder"
-
-// ── Tab config ──────────────────────────────────────────────────────────────
-
-const TABS: { id: Tab; icon: typeof Activity; label: string }[] = [
-  { id: "timeline", icon: Activity, label: "Timeline" },
-  { id: "waterfall", icon: GitBranch, label: "Waterfall" },
-  { id: "middleware", icon: Layers, label: "Middleware" },
-  { id: "analytics", icon: BarChart3, label: "Analytics" },
-  { id: "explorer", icon: Network, label: "API Explorer" },
-  { id: "playground", icon: Play, label: "Playground" },
-  { id: "audit", icon: ShieldCheck, label: "Audit" },
-  { id: "codegen", icon: Code, label: "Codegen" },
-  { id: "compare", icon: GitCompare, label: "Compare" },
-  { id: "settings", icon: Settings, label: "Settings" },
-]
-
-const THEME_ICONS: Record<Theme, typeof Sun> = {
-  light: Sun,
-  dark: Moon,
-  system: Monitor,
-}
-
-const THEME_CYCLE: Theme[] = ["dark", "light", "system"]
 
 // ── App Shell ───────────────────────────────────────────────────────────────
 
@@ -188,31 +148,7 @@ export function App() {
       </footer>
 
       {/* ── Toasts ── */}
-      {toasts.length > 0 && (
-        <div className="fixed bottom-10 right-4 z-50 flex flex-col gap-2">
-          {toasts.map((toast) => (
-            <div
-              key={toast.id}
-              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs shadow-lg animate-slide-in ${
-                toast.type === "error"
-                  ? "border-red-500/20 bg-red-500/10 text-red-400"
-                  : toast.type === "success"
-                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-                    : "border-border-default bg-surface-1 text-text-secondary"
-              }`}
-            >
-              <span>{toast.message}</span>
-              <button
-                type="button"
-                onClick={() => dismissToast(toast.id)}
-                className="shrink-0 text-text-muted hover:text-text-primary"
-              >
-                <X size={12} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+      <ToastOverlay toasts={toasts} onDismiss={dismissToast} />
     </div>
   )
 }

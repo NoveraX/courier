@@ -1,0 +1,89 @@
+/**
+ * Postman Collection parser.
+ */
+
+import type { ParsedEndpoint, ParsedGroup, ParsedSchema, ParsedSpec } from "./types";
+import {
+  convertPathParams,
+  extractPostmanPath,
+  findCommonPrefix,
+  inferSchemaFromValue,
+  toCamelCase,
+} from "./utils";
+
+export function parsePostman(collection: any): ParsedSpec {
+  const title = collection.info?.name ?? "Postman Collection";
+  const version = collection.info?.version ?? "1.0.0";
+
+  const groups: ParsedGroup[] = [];
+
+  function processItems(items: any[], groupName: string) {
+    const endpoints: ParsedEndpoint[] = [];
+
+    for (const item of items) {
+      if (item.item) {
+        processItems(item.item, item.name ?? groupName);
+        continue;
+      }
+
+      const request = item.request;
+      if (!request) continue;
+
+      const method = (request.method ?? "GET").toLowerCase();
+      if (!["get", "post", "put", "patch", "delete"].includes(method)) continue;
+
+      const url = typeof request.url === "string" ? request.url : (request.url?.raw ?? "");
+      const path = extractPostmanPath(url);
+
+      let requestBody: ParsedSchema | null = null;
+      if (request.body?.mode === "raw" && request.body.raw) {
+        try {
+          const bodyObj = JSON.parse(request.body.raw);
+          requestBody = inferSchemaFromValue("RequestBody", bodyObj);
+        } catch {
+          /* not JSON */
+        }
+      }
+
+      endpoints.push({
+        name: toCamelCase(item.name ?? `${method}${path}`),
+        operationId: null,
+        httpMethod: method as ParsedEndpoint["httpMethod"],
+        path: convertPathParams(path),
+        fullPath: path,
+        description: item.name ?? "",
+        secured: false,
+        requestBody,
+        parameters: [],
+        responseSchema: null,
+        tags: [groupName],
+      });
+    }
+
+    if (endpoints.length > 0) {
+      const prefix = findCommonPrefix(endpoints.map((e) => e.fullPath));
+      groups.push({
+        name: toCamelCase(groupName),
+        description: "",
+        prefix,
+        endpoints: endpoints.map((e) => ({
+          ...e,
+          path: convertPathParams(e.fullPath.slice(prefix.length) || "/"),
+        })),
+      });
+    }
+  }
+
+  processItems(collection.item ?? [], "default");
+
+  return {
+    title,
+    version,
+    description: "",
+    baseURL: "/",
+    format: "postman",
+    groups,
+    schemas: {},
+    securitySchemes: [],
+  };
+}

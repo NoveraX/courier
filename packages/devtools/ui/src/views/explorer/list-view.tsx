@@ -1,93 +1,11 @@
 import { useMemo, useCallback } from "react"
-import {
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  CheckCircle,
-  XCircle,
-  Shield,
-  Search,
-} from "lucide-react"
+import { Search } from "lucide-react"
 
-import type { SourceMap, ListSortKey, ListSortDir } from "../../store"
+import type { SourceMap, ListSortKey } from "../../store"
 import { useDevToolsStore } from "../../store"
-import { Badge } from "../../components/ui"
-import { flattenEndpoints, type FlatEndpoint } from "./helpers"
-
-// ── Sort logic ──────────────────────────────────────────────────────────────
-
-function sortEndpoints(
-  endpoints: FlatEndpoint[],
-  key: ListSortKey,
-  dir: ListSortDir,
-): FlatEndpoint[] {
-  const sorted = [...endpoints]
-  const m = dir === "asc" ? 1 : -1
-
-  sorted.sort((a, b) => {
-    switch (key) {
-      case "source":
-        return a.source.localeCompare(b.source) * m
-      case "group":
-        return a.group.localeCompare(b.group) * m
-      case "method":
-        return a.method.localeCompare(b.method) * m
-      case "type":
-        return a.type.localeCompare(b.type) * m
-      case "middleware":
-        return (a.middleware.length - b.middleware.length) * m
-      case "schemas": {
-        const aCount = (a.hasVariablesSchema ? 1 : 0) + (a.hasResponseSchema ? 1 : 0)
-        const bCount = (b.hasVariablesSchema ? 1 : 0) + (b.hasResponseSchema ? 1 : 0)
-        return (aCount - bCount) * m
-      }
-      default:
-        return 0
-    }
-  })
-
-  return sorted
-}
-
-// ── Sort header ─────────────────────────────────────────────────────────────
-
-function SortHeader({
-  label,
-  sortKey,
-  currentKey,
-  currentDir,
-  onSort,
-  className = "",
-}: {
-  label: string
-  sortKey: ListSortKey
-  currentKey: ListSortKey
-  currentDir: ListSortDir
-  onSort: (key: ListSortKey) => void
-  className?: string
-}) {
-  const isActive = currentKey === sortKey
-  return (
-    <button
-      type="button"
-      onClick={() => onSort(sortKey)}
-      className={`flex items-center gap-1 text-left text-[10px] font-semibold uppercase tracking-wider text-text-muted hover:text-text-secondary transition-colors ${className}`}
-    >
-      {label}
-      {isActive ? (
-        currentDir === "asc" ? (
-          <ArrowUp size={10} />
-        ) : (
-          <ArrowDown size={10} />
-        )
-      ) : (
-        <ArrowUpDown size={10} className="opacity-30" />
-      )}
-    </button>
-  )
-}
-
-// ── List View Component ─────────────────────────────────────────────────────
+import { flattenEndpoints } from "./helpers"
+import { sortEndpoints } from "./list-sort"
+import { SortHeader, EndpointRow } from "./list-row"
 
 export function ListView({
   sourceMap,
@@ -110,7 +28,7 @@ export function ListView({
         ep.group.toLowerCase().includes(q) ||
         ep.method.toLowerCase().includes(q) ||
         ep.prefix.toLowerCase().includes(q) ||
-        ep.middleware.some((m) => m.toLowerCase().includes(q)),
+        ep.middleware.some((m) => m.toLowerCase().includes(q))
     )
   }, [allEndpoints, listSearch])
 
@@ -125,7 +43,7 @@ export function ListView({
         setListSortDir("asc")
       }
     },
-    [listSortKey, listSortDir, setListSortKey, setListSortDir],
+    [listSortKey, listSortDir, setListSortKey, setListSortDir]
   )
 
   return (
@@ -163,49 +81,11 @@ export function ListView({
           </div>
         ) : (
           sorted.map((ep) => (
-            <button
+            <EndpointRow
               key={`${ep.source}.${ep.group}.${ep.method}`}
-              type="button"
-              onClick={() =>
-                onSelectEndpoint({ source: ep.source, group: ep.group, method: ep.method })
-              }
-              className="grid w-full grid-cols-[1fr_1fr_1.5fr_80px_80px_100px] items-center gap-2 border-b border-border-subtle px-3 py-2 text-left transition-colors hover:bg-surface-1"
-            >
-              <span className="truncate text-xs text-indigo-400 font-medium">{ep.source}</span>
-              <span className="truncate text-xs text-text-secondary">{ep.group}</span>
-              <span className="truncate text-xs font-mono text-text-primary">{ep.method}</span>
-              <div>
-                <Badge variant={ep.type === "query" ? "emerald" : "orange"}>{ep.type}</Badge>
-              </div>
-              <div className="flex items-center gap-1">
-                {ep.middleware.length > 0 ? (
-                  <>
-                    <Shield size={11} className="text-violet-400" />
-                    <span className="text-[10px] text-text-muted">{ep.middleware.length}</span>
-                  </>
-                ) : (
-                  <span className="text-[10px] text-text-muted">0</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-0.5" title="Variables schema">
-                  {ep.hasVariablesSchema ? (
-                    <CheckCircle size={11} className="text-emerald-400" />
-                  ) : (
-                    <XCircle size={11} className="text-zinc-600" />
-                  )}
-                  <span className="text-[9px] text-text-muted">V</span>
-                </div>
-                <div className="flex items-center gap-0.5" title="Response schema">
-                  {ep.hasResponseSchema ? (
-                    <CheckCircle size={11} className="text-emerald-400" />
-                  ) : (
-                    <XCircle size={11} className="text-zinc-600" />
-                  )}
-                  <span className="text-[9px] text-text-muted">R</span>
-                </div>
-              </div>
-            </button>
+              ep={ep}
+              onSelect={() => onSelectEndpoint({ source: ep.source, group: ep.group, method: ep.method })}
+            />
           ))
         )}
       </div>

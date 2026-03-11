@@ -54,8 +54,8 @@ export class EventBus {
     set.add(listener);
 
     return () => {
-      set!.delete(listener);
-      if (set!.size === 0) {
+      set?.delete(listener);
+      if (set?.size === 0) {
         this.typeListeners.delete(type);
       }
     };

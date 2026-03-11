@@ -40,4 +40,4 @@ tmp/
 temp/
 
 # Test apps
-playground/
+/playground

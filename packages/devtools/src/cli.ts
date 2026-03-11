@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { defineCommand, runMain } from "citty";
-import { createDevToolsServer } from "./server.js";
+import { createDevToolsServer } from "./server/index.js";
 
 const main = defineCommand({
   meta: {

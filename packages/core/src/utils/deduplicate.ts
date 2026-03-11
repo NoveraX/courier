@@ -1,6 +1,9 @@
 import { devtoolsHooks } from "../devtools";
 import { HTTPError } from "../error";
-import type { HttpClient } from "../http-client/index";
+
+export type DedupeHost = {
+  pendingRequests: { [key: string]: AbortController };
+};
 
 export const supportsAbortController = typeof globalThis.AbortController === "function";
 
@@ -12,14 +15,11 @@ export function getDedupeKey(url: string, method: string) {
   return `${method}:${url.slice(0, endIndex)}`;
 }
 
-export function deduplicateAndAbortPrevious(
-  client: HttpClient,
-  dedupeKey: string,
-): AbortController {
-  const existing = client.pendingRequests[dedupeKey];
+export function deduplicateAndAbortPrevious(host: DedupeHost, dedupeKey: string): AbortController {
+  const existing = host.pendingRequests[dedupeKey];
 
   if (existing) {
-    delete client.pendingRequests[dedupeKey];
+    delete host.pendingRequests[dedupeKey];
     devtoolsHooks.onDedupAbort?.({
       requestId: dedupeKey,
       key: dedupeKey,
@@ -35,12 +35,12 @@ export function deduplicateAndAbortPrevious(
   }
 
   const controller = new AbortController();
-  client.pendingRequests[dedupeKey] = controller;
+  host.pendingRequests[dedupeKey] = controller;
   return controller;
 }
 
-export function cleanupDeduplication(client: HttpClient, dedupeKey: string) {
-  if (client.pendingRequests[dedupeKey]) {
-    delete client.pendingRequests[dedupeKey];
+export function cleanupDeduplication(host: DedupeHost, dedupeKey: string) {
+  if (host.pendingRequests[dedupeKey]) {
+    delete host.pendingRequests[dedupeKey];
   }
 }

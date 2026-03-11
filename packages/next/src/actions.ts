@@ -81,5 +81,5 @@ export function createAction<S extends Record<string, DefinedApi<any>>, K extend
     );
   };
 
-  return buildClientProxy<S[K]>(backend);
+  return buildClientProxy(backend) as TypedClient<S[K]>;
 }

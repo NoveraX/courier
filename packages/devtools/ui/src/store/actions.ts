@@ -29,7 +29,7 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
 
     // Connection
     setConnectionStatus: (status) => {
-      set({ connectionStatus: status })
+      set({ connectionStatus: status, connected: status === "connected" })
       if (status === "connected") set({ reconnectAttempt: 0 })
     },
     setReconnectAttempt: (attempt) => set({ reconnectAttempt: attempt }),

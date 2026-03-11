@@ -98,7 +98,7 @@ function registerUpdateRoutes(app: RouteApp): void {
         return;
       }
 
-      const diff = diffSpecs(source.cachedSpec ?? newSpec, newSpec);
+      const diff = diffSpecs(source.specDigest ?? newSpec, newSpec);
       res.json({ changed: true, diff, newSpec });
     } catch (err) {
       res.status(500).json({ error: errMsg(err, "Failed to check updates") });

@@ -9,7 +9,7 @@ import { describe, expectTypeOf, it } from "vitest";
 import { defineApi, defineGroup, endpoint } from "../src/define/index";
 import type { Endpoint } from "../src/define/types";
 import type { HttpResponse } from "../src/http-client/types";
-import type { GroupClient, TypedClient } from "../src/client";
+import type { FlatClient, GroupClient, InferClient, MixedClient, TypedClient } from "../src/client";
 import type { EndpointKey, ResolveEndpoint } from "../src/types";
 
 // ---- test fixtures ----
@@ -239,5 +239,154 @@ describe("structural compatibility", () => {
 		// Endpoint<R, V> returns HttpResponse<R> | Promise<HttpResponse<R>>
 		type FnReturn = Awaited<ReturnType<typeof fn>>;
 		expectTypeOf<FnReturn>().toMatchTypeOf<HttpResponse<User>>();
+	});
+});
+
+// ---- FlatClient type inference ----
+
+describe("FlatClient type inference", () => {
+	type FlatEndpoints = {
+		healthCheck: Endpoint<{ ok: boolean }, undefined>;
+		getUsers: Endpoint<User[], undefined>;
+		createUser: Endpoint<User, CreateUserInput>;
+	};
+
+	type Client = FlatClient<FlatEndpoints>;
+
+	it("exposes flat endpoint methods", () => {
+		expectTypeOf<Client["healthCheck"]>().toBeFunction();
+		expectTypeOf<Client["getUsers"]>().toBeFunction();
+		expectTypeOf<Client["createUser"]>().toBeFunction();
+	});
+
+	it("healthCheck returns Promise<{ ok: boolean }>", () => {
+		type Result = ReturnType<Client["healthCheck"]>;
+		expectTypeOf<Result>().toEqualTypeOf<Promise<{ ok: boolean }>>();
+	});
+
+	it("createUser requires variables", () => {
+		type Fn = Client["createUser"];
+		expectTypeOf<Parameters<Fn>>().toEqualTypeOf<[CreateUserInput]>();
+		expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<Promise<User>>();
+	});
+
+	it("has .raw accessor", () => {
+		expectTypeOf<Client>().toHaveProperty("raw");
+	});
+
+	it("has .with() method", () => {
+		expectTypeOf<Client["with"]>().toBeFunction();
+	});
+
+	it(".raw changes return type", () => {
+		type RawResult = ReturnType<Client["raw"]["getUsers"]>;
+		expectTypeOf<RawResult>().toEqualTypeOf<Promise<Partial<HttpResponse<User[]>>>>();
+	});
+
+	it("flat method has .raw accessor (method-level)", () => {
+		type RawResult = ReturnType<Client["healthCheck"]["raw"]>;
+		expectTypeOf<RawResult>().toEqualTypeOf<Promise<Partial<HttpResponse<{ ok: boolean }>>>>();
+	});
+
+	it("flat method has .with() (method-level)", () => {
+		type WithMethod = ReturnType<Client["healthCheck"]["with"]>;
+		expectTypeOf<WithMethod>().toBeFunction();
+		type Result = ReturnType<WithMethod>;
+		expectTypeOf<Result>().toEqualTypeOf<Promise<{ ok: boolean }>>();
+	});
+
+	it("flat method .raw.with() chain works", () => {
+		type RawWithMethod = ReturnType<Client["healthCheck"]["raw"]["with"]>;
+		expectTypeOf<RawWithMethod>().toBeFunction();
+		type Result = ReturnType<RawWithMethod>;
+		expectTypeOf<Result>().toEqualTypeOf<Promise<Partial<HttpResponse<{ ok: boolean }>>>>();
+	});
+});
+
+// ---- MixedClient type inference ----
+
+describe("MixedClient type inference", () => {
+	type Groups = { users: typeof usersGroup };
+	type FlatEndpoints = { healthCheck: Endpoint<{ ok: boolean }, undefined> };
+	type Client = MixedClient<Groups, FlatEndpoints>;
+
+	it("exposes groups as properties", () => {
+		expectTypeOf<Client>().toHaveProperty("users");
+	});
+
+	it("exposes flat methods at root level", () => {
+		expectTypeOf<Client["healthCheck"]>().toBeFunction();
+	});
+
+	it("group methods work normally", () => {
+		type UsersGroup = Client["users"];
+		expectTypeOf<UsersGroup["getAll"]>().toBeFunction();
+		expectTypeOf<ReturnType<UsersGroup["getAll"]>>().toEqualTypeOf<Promise<User[]>>();
+	});
+
+	it("flat method returns correct type", () => {
+		type Result = ReturnType<Client["healthCheck"]>;
+		expectTypeOf<Result>().toEqualTypeOf<Promise<{ ok: boolean }>>();
+	});
+
+	it("has .raw and .with()", () => {
+		expectTypeOf<Client>().toHaveProperty("raw");
+		expectTypeOf<Client["with"]>().toBeFunction();
+	});
+
+	it(".raw works on both groups and flat", () => {
+		type RawGroupResult = ReturnType<Client["raw"]["users"]["getAll"]>;
+		expectTypeOf<RawGroupResult>().toEqualTypeOf<Promise<Partial<HttpResponse<User[]>>>>();
+
+		type RawFlatResult = ReturnType<Client["raw"]["healthCheck"]>;
+		expectTypeOf<RawFlatResult>().toEqualTypeOf<Promise<Partial<HttpResponse<{ ok: boolean }>>>>();
+	});
+
+	it("flat method has .raw and .with() at method level", () => {
+		type RawResult = ReturnType<Client["healthCheck"]["raw"]>;
+		expectTypeOf<RawResult>().toEqualTypeOf<Promise<Partial<HttpResponse<{ ok: boolean }>>>>();
+
+		type WithMethod = ReturnType<Client["healthCheck"]["with"]>;
+		expectTypeOf<WithMethod>().toBeFunction();
+	});
+});
+
+// ---- InferClient type mapping ----
+
+describe("InferClient type mapping", () => {
+	it("maps grouped API to TypedClient", () => {
+		type Result = InferClient<typeof api>;
+		expectTypeOf<Result>().toHaveProperty("users");
+		expectTypeOf<Result>().toHaveProperty("posts");
+		expectTypeOf<Result>().toHaveProperty("raw");
+		expectTypeOf<Result>().toHaveProperty("with");
+	});
+
+	it("maps flat API to FlatClient", () => {
+		const flatApi = defineApi({
+			baseURL: "https://api.example.com",
+			endpoints: {
+				healthCheck: endpoint<{ ok: boolean }>()(({ get }) => get("health")),
+			},
+		});
+		type Result = InferClient<typeof flatApi>;
+		expectTypeOf<Result["healthCheck"]>().toBeFunction();
+		expectTypeOf<Result>().toHaveProperty("raw");
+		expectTypeOf<Result>().toHaveProperty("with");
+	});
+
+	it("maps mixed API to MixedClient", () => {
+		const mixedApi = defineApi({
+			baseURL: "https://api.example.com",
+			groups: { users: usersGroup },
+			endpoints: {
+				healthCheck: endpoint<{ ok: boolean }>()(({ get }) => get("health")),
+			},
+		});
+		type Result = InferClient<typeof mixedApi>;
+		expectTypeOf<Result>().toHaveProperty("users");
+		expectTypeOf<Result["healthCheck"]>().toBeFunction();
+		expectTypeOf<Result>().toHaveProperty("raw");
+		expectTypeOf<Result>().toHaveProperty("with");
 	});
 });

@@ -8,7 +8,9 @@ import {
 } from "../validation";
 import type {
   DefinedApi,
+  DefinedFlatApi,
   DefinedGroup,
+  DefinedMixedApi,
   DefineGroupConfig,
   Endpoint,
   EndpointRecord,
@@ -18,7 +20,9 @@ import type {
 export type {
   AnySource,
   DefinedApi,
+  DefinedFlatApi,
   DefinedGroup,
+  DefinedMixedApi,
   DefineGroupConfig,
   Endpoint,
   EndpointRecord,
@@ -104,16 +108,47 @@ export function defineGroup<E extends EndpointRecord>(
  * Define an API source with groups of typed endpoints.
  *
  * @example
+ * // With groups:
  * const api = defineApi({
  *   baseURL: "https://api.example.com",
- *   groups: {
- *     users: usersGroup,
- *     posts: postsGroup,
+ *   groups: { users: usersGroup, posts: postsGroup },
+ * })
+ *
+ * // Flat (no groups):
+ * const api = defineApi({
+ *   baseURL: "https://api.example.com",
+ *   endpoints: {
+ *     getUsers: endpoint<User[]>()((http) => http.get("/users")),
+ *   },
+ * })
+ *
+ * // Mixed (groups + flat endpoints):
+ * const api = defineApi({
+ *   baseURL: "https://api.example.com",
+ *   groups: { users: usersGroup },
+ *   endpoints: {
+ *     healthCheck: endpoint()((http) => http.get("/health")),
  *   },
  * })
  */
+export function defineApi<G extends GroupRecord, E extends EndpointRecord>(
+  config: BaseOptions & { groups: G; endpoints: E },
+): DefinedMixedApi<G, E>;
+
 export function defineApi<G extends GroupRecord>(
   config: BaseOptions & { groups: G },
-): DefinedApi<G> {
-  return { options: config };
+): DefinedApi<G>;
+
+export function defineApi<E extends EndpointRecord>(
+  config: BaseOptions & { endpoints: E },
+): DefinedFlatApi<E>;
+
+export function defineApi(
+  config: BaseOptions & { groups?: GroupRecord; endpoints?: EndpointRecord },
+): DefinedApi | DefinedFlatApi | DefinedMixedApi {
+  const { endpoints, ...rest } = config;
+  if (endpoints) {
+    return Object.assign({ options: rest }, endpoints);
+  }
+  return { options: config } as DefinedApi;
 }

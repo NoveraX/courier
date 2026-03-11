@@ -1,5 +1,4 @@
 import type {
-  CodegenMultiConfig,
   GenerateOptions,
   GeneratedFile,
   ImportSource,
@@ -33,38 +32,41 @@ export async function fetchGenerateCode(spec: ParsedSpec, options: GenerateOptio
   return data.files as GeneratedFile[]
 }
 
-export async function fetchWriteFiles(files: GeneratedFile[]): Promise<{ written: number }> {
+export interface WriteResult {
+  written: number
+  merged: number
+  deleted?: number
+  files: { path: string; status: string }[]
+}
+
+/**
+ * Smart write: sends source info so server can merge with existing
+ * files when source is already in registry (preserves user edits).
+ * Also handles registry registration in one call.
+ */
+export async function fetchWriteFiles(
+  files: GeneratedFile[],
+  ctx?: {
+    sourceName: string
+    spec: ParsedSpec
+    specSource: { type: ImportSource; value: string }
+    options: GenerateOptions
+  },
+): Promise<WriteResult> {
   const res = await fetch(`${API_BASE}/api/codegen/write`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ files }),
+    body: JSON.stringify({
+      files,
+      sourceName: ctx?.sourceName,
+      spec: ctx?.spec,
+      specSource: ctx?.specSource,
+      options: ctx?.options,
+    }),
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error ?? "Failed to write files")
-  return data as { written: number }
-}
-
-export async function fetchSaveConfig(config: CodegenMultiConfig): Promise<{ path: string }> {
-  const res = await fetch(`${API_BASE}/api/codegen/save-config`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ config }),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error ?? "Failed to save config")
-  return data as { path: string }
-}
-
-export async function fetchLoadConfig(): Promise<CodegenMultiConfig | null> {
-  const res = await fetch(`${API_BASE}/api/codegen/load-config`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({}),
-  })
-  if (res.status === 404) return null
-  const data = await res.json()
-  if (!res.ok) return null
-  return data as CodegenMultiConfig
+  return data as WriteResult
 }
 
 // ── Registry ───────────────────────────────────────────────────────────────

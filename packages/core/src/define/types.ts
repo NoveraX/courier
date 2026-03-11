@@ -25,10 +25,23 @@ export type GroupRecord = Record<
   { options: GroupOptions; [key: string]: Endpoint<any, any> | GroupOptions }
 >;
 
-/** Result of defineApi() */
+/** Result of defineApi() with groups */
 export type DefinedApi<G extends GroupRecord = GroupRecord> = {
   options: BaseOptions & { groups: G };
 };
+
+/** Result of defineApi() with flat endpoints (no groups) */
+export type DefinedFlatApi<E extends EndpointRecord = EndpointRecord> = {
+  options: BaseOptions;
+} & E;
+
+/** Result of defineApi() with groups + flat endpoints */
+export type DefinedMixedApi<
+  G extends GroupRecord = GroupRecord,
+  E extends EndpointRecord = EndpointRecord,
+> = {
+  options: BaseOptions & { groups: G };
+} & E;
 
 /** Loose source type for executeRequest / createRequest */
 export type AnySource = {

@@ -6,7 +6,7 @@ import {
   Network,
   Play,
   ShieldCheck,
-  Code,
+  ChevronsLeftRightEllipsis,
   GitCompare,
   Settings,
   Sun,
@@ -26,7 +26,7 @@ export const TABS: { id: Tab; icon: typeof Activity; label: string }[] = [
   { id: "explorer", icon: Network, label: "API Explorer" },
   { id: "playground", icon: Play, label: "Playground" },
   { id: "audit", icon: ShieldCheck, label: "Audit" },
-  { id: "codegen", icon: Code, label: "Codegen" },
+  { id: "codegen", icon: ChevronsLeftRightEllipsis, label: "APIs" },
   { id: "compare", icon: GitCompare, label: "Compare" },
   { id: "settings", icon: Settings, label: "Settings" },
 ]

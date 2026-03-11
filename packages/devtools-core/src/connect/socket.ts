@@ -117,7 +117,7 @@ async function handlePlaygroundExecute(
           const s = sources[k];
           return s?.options?.groups && payload.group in s.options.groups;
         })
-      : undefined;
+      : keys[0];
     resolvedSource = match ?? keys[0] ?? resolvedSource;
   }
 

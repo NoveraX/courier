@@ -118,8 +118,9 @@ export function ExplorerView() {
           {explorerSelectedEndpoint && (
             <div className="flex items-center gap-1.5 rounded bg-surface-1 px-2 py-1">
               <span className="text-[10px] font-mono text-indigo-400">
-                {explorerSelectedEndpoint.source}.{explorerSelectedEndpoint.group}.
-                {explorerSelectedEndpoint.method}
+                {explorerSelectedEndpoint.group
+                  ? `${explorerSelectedEndpoint.source}.${explorerSelectedEndpoint.group}.${explorerSelectedEndpoint.method}`
+                  : `${explorerSelectedEndpoint.source}.${explorerSelectedEndpoint.method}`}
               </span>
               <button
                 type="button"

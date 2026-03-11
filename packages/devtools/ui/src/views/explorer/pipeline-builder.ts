@@ -77,7 +77,7 @@ export function buildPipeline(
     type: "pipelineEndpoint",
     position: { x, y: 0 },
     data: {
-      label: `${selected.group}.${selected.method}`,
+      label: selected.group ? `${selected.group}.${selected.method}` : selected.method,
       type: ep.type,
       prefix: group.prefix,
       method: selected.method,

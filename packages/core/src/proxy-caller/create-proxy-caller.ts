@@ -1,5 +1,4 @@
-import { buildClientProxy, type ExecuteBackend, type TypedClient } from "../client";
-import type { DefinedApi } from "../define/types";
+import { buildClientProxy, type ExecuteBackend, type InferClient } from "../client";
 import { createProxyCallerFn, type ProxyCallerDefaults } from "./create-proxy-caller-fn";
 import type { UntypedCallerFn } from "./types";
 
@@ -12,31 +11,40 @@ import type { UntypedCallerFn } from "./types";
  *
  * @example
  * ```ts
- * const client = createProxyCaller<typeof api>("api");
+ * const client = createProxyCaller<typeof api>("api")
  *
- * // Data only:
- * const users = await client.users.getAll();
+ * // Grouped: client.users.getAll()
+ * // Flat:    client.getFinances()
+ * // Mixed:   both work simultaneously
  *
- * // Full HTTP response:
- * const response = await client.users.raw.getById({ id: 1 });
+ * // .raw and .with() — at client level (applies to all calls):
+ * await client.raw.users.getById({ id: 1 })
+ * await client.with({ timeout: 5000 }).users.getAll()
  *
- * // With options:
- * await client.users.with({ method: "GET" }).getAll();
+ * // .raw and .with() — at group level:
+ * await client.users.raw.getById({ id: 1 })
+ * await client.users.with({ timeout: 5000 }).getAll()
+ *
+ * // .raw and .with() — at flat method level:
+ * await client.getFinances.raw()
+ * await client.getFinances.with({ timeout: 5000 })()
  * ```
  */
-export function createProxyCaller<T extends DefinedApi<any>>(
+export function createProxyCaller<T>(
   source: string,
-  defaults: ProxyCallerDefaults = {},
-): TypedClient<T> {
+  defaults?: ProxyCallerDefaults,
+): InferClient<T>;
+
+export function createProxyCaller(source: string, defaults: ProxyCallerDefaults = {}): unknown {
   const fn = createProxyCallerFn(defaults) as unknown as UntypedCallerFn;
 
   const backend: ExecuteBackend = async (group, method, variables, options, raw) => {
     const callOptions = { ...options, ...(raw && { rawData: true }) };
     const executeFn = fn(source, callOptions);
-    const endpointKey = `${group}:${method}`;
+    const endpointKey = group ? `${group}:${method}` : method;
 
     return variables !== undefined ? executeFn(endpointKey, variables) : executeFn(endpointKey);
   };
 
-  return buildClientProxy<T>(backend);
+  return buildClientProxy(backend);
 }

@@ -63,8 +63,13 @@ export function PlaygroundToolbar({
 
         <div className="ml-2 flex items-center gap-1">
           <Dropdown value={selectedSource} options={sourceNames} onChange={onSourceChange} placeholder="Source" />
-          <span className="text-text-muted">.</span>
-          <Dropdown value={selectedGroup} options={groups} onChange={onGroupChange} placeholder="Group" />
+          {/* Hide group dropdown for flat APIs (single empty-name group) */}
+          {!(groups.length === 1 && groups[0] === "") && (
+            <>
+              <span className="text-text-muted">.</span>
+              <Dropdown value={selectedGroup} options={groups} onChange={onGroupChange} placeholder="Group" />
+            </>
+          )}
           <span className="text-text-muted">.</span>
           <Dropdown value={selectedMethod} options={methods} onChange={onMethodChange} placeholder="Method" />
         </div>

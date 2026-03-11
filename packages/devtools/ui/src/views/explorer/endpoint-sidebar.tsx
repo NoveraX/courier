@@ -46,7 +46,7 @@ export function EndpointSidebar({
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-text-muted">Path</span>
               <span className="text-[11px] font-mono text-indigo-400">
-                {selected.source}.{selected.group}.{selected.method}
+                {selected.group ? `${selected.source}.${selected.group}.${selected.method}` : `${selected.source}.${selected.method}`}
               </span>
             </div>
             <div className="flex items-center justify-between">

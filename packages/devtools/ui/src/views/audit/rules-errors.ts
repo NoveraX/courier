@@ -32,7 +32,7 @@ export function collectErrors(
 
   for (const ep of endpoints) {
     if (ep.middleware.length === 0 && !ep.hasVariablesSchema && !ep.hasResponseSchema) {
-      items.push({ id: nextId(), severity: "error", title: "No error handling", description: `${ep.source}.${ep.group}.${ep.method} has no middleware and no validation schemas.`, suggestion: "Add at least error handling middleware or validation schemas to protect against unexpected responses.", endpoint: `${ep.source}.${ep.group}.${ep.method}`, category: "reliability" })
+      items.push({ id: nextId(), severity: "error", title: "No error handling", description: `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")} has no middleware and no validation schemas.`, suggestion: "Add at least error handling middleware or validation schemas to protect against unexpected responses.", endpoint: `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")}`, category: "reliability" })
     }
   }
 

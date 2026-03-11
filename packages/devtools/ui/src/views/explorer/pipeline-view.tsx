@@ -48,7 +48,7 @@ function EndpointPicker({
               key={`${ep.source}::${ep.group}::${ep.method}`}
               value={`${ep.source}::${ep.group}::${ep.method}`}
             >
-              {ep.source}.{ep.group}.{ep.method} ({ep.type})
+              {ep.group ? `${ep.source}.${ep.group}.${ep.method}` : `${ep.source}.${ep.method}`} ({ep.type})
             </option>
           ))}
         </select>

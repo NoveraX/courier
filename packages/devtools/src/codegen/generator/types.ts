@@ -13,8 +13,6 @@ export interface GenerateOptions {
   validation: "zod" | "valibot" | "arktype" | "none";
   /** Grouping strategy */
   groupBy: "tag" | "path" | "single";
-  /** Naming convention */
-  naming: "camelCase" | "as-is";
   /** Generate TypeScript types */
   generateTypes: boolean;
   /** Generate validation schemas */
@@ -34,7 +32,6 @@ export const DEFAULT_OPTIONS: GenerateOptions = {
   outputDir: "src/api",
   validation: "zod",
   groupBy: "tag",
-  naming: "camelCase",
   generateTypes: true,
   generateSchemas: true,
   addAuthMiddleware: true,

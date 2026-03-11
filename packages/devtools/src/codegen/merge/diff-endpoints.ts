@@ -1,9 +1,9 @@
 /**
  * Endpoint-level diffing between two parsed specs.
+ * Accepts both ParsedGroup[] and DigestGroup[] (structurally compatible).
  */
 
-import type { ParsedEndpoint, ParsedGroup } from "../parser/types";
-import type { DiffEndpoint } from "./types";
+import type { DiffEndpoint, DigestEndpoint, DigestGroup } from "./types";
 
 export interface EndpointDiffResult {
   added: DiffEndpoint[];
@@ -11,18 +11,18 @@ export interface EndpointDiffResult {
   modified: DiffEndpoint[];
 }
 
-function endpointKey(group: string, ep: ParsedEndpoint): string {
+function endpointKey(group: string, ep: DigestEndpoint): string {
   return `${group}.${ep.name}`;
 }
 
-function toDiffEndpoint(group: string, ep: ParsedEndpoint): DiffEndpoint {
+function toDiffEndpoint(group: string, ep: DigestEndpoint): DiffEndpoint {
   return { group, name: ep.name, method: ep.httpMethod, path: ep.fullPath };
 }
 
 function buildEndpointMap(
-  groups: ParsedGroup[],
-): Map<string, { group: string; endpoint: ParsedEndpoint }> {
-  const map = new Map<string, { group: string; endpoint: ParsedEndpoint }>();
+  groups: DigestGroup[],
+): Map<string, { group: string; endpoint: DigestEndpoint }> {
+  const map = new Map<string, { group: string; endpoint: DigestEndpoint }>();
   for (const group of groups) {
     for (const ep of group.endpoints) {
       map.set(endpointKey(group.name, ep), { group: group.name, endpoint: ep });
@@ -31,7 +31,7 @@ function buildEndpointMap(
   return map;
 }
 
-function compareParams(oldEp: ParsedEndpoint, newEp: ParsedEndpoint): string[] {
+function compareParams(oldEp: DigestEndpoint, newEp: DigestEndpoint): string[] {
   const changes: string[] = [];
   const oldParams = new Set(oldEp.parameters.map((p) => `${p.in}:${p.name}`));
   const newParams = new Set(newEp.parameters.map((p) => `${p.in}:${p.name}`));
@@ -44,7 +44,7 @@ function compareParams(oldEp: ParsedEndpoint, newEp: ParsedEndpoint): string[] {
   return changes;
 }
 
-function compareEndpoints(oldEp: ParsedEndpoint, newEp: ParsedEndpoint): string[] {
+function compareEndpoints(oldEp: DigestEndpoint, newEp: DigestEndpoint): string[] {
   const changes: string[] = [];
 
   if (oldEp.httpMethod !== newEp.httpMethod) {
@@ -78,8 +78,8 @@ function compareEndpoints(oldEp: ParsedEndpoint, newEp: ParsedEndpoint): string[
 }
 
 export function diffEndpoints(
-  oldGroups: ParsedGroup[],
-  newGroups: ParsedGroup[],
+  oldGroups: DigestGroup[],
+  newGroups: DigestGroup[],
 ): EndpointDiffResult {
   const oldMap = buildEndpointMap(oldGroups);
   const newMap = buildEndpointMap(newGroups);

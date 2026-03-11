@@ -3,7 +3,10 @@ export { type CallerDefaults, createCaller } from "./caller";
 export {
   buildClientProxy,
   type ExecuteBackend,
+  type FlatClient,
   type GroupClient,
+  type InferClient,
+  type MixedClient,
   type TypedClient,
   type WithOptions,
 } from "./client";

@@ -46,6 +46,7 @@ export function RegistryView({ onImportNew, onReviewUpdates }: {
             statusInfo={reg.statuses[source.name] ?? { status: "up-to-date" }}
             onCheckUpdates={() => handleCheckUpdates(source.name)}
             onRemove={() => reg.removeSource(source.name)}
+            onRegenerated={reg.refresh}
           />
         ))}
       </div>

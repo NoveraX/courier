@@ -140,7 +140,7 @@ export function createTestClient<T extends DefinedApi<any> = DefinedApi<any>>():
   }
 
   return {
-    client: buildClientProxy<T>(backend),
+    client: buildClientProxy(backend) as TestClient<T>["client"],
     mock: mock as TestClient<T>["mock"],
     history,
     reset() {

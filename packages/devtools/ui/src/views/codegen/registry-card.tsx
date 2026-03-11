@@ -1,3 +1,4 @@
+import { useState } from "react"
 import {
   Clock,
   ExternalLink,
@@ -11,18 +12,22 @@ import {
 
 import type { SourceStatusInfo, SourceSummary } from "./types"
 import { ActionButton, STATUS_CONFIG, StatusBadge, formatRelativeTime, truncateUrl } from "./registry-helpers"
+import { RegistrySettings } from "./registry-settings"
 
 export function RegistryCard({
   source,
   statusInfo,
   onCheckUpdates,
   onRemove,
+  onRegenerated,
 }: {
   source: SourceSummary
   statusInfo: SourceStatusInfo
   onCheckUpdates: () => void
   onRemove: () => void
+  onRegenerated: () => void
 }) {
+  const [showSettings, setShowSettings] = useState(false)
   const cfg = STATUS_CONFIG[statusInfo.status]
 
   return (
@@ -41,9 +46,13 @@ export function RegistryCard({
       <CardActions
         canCheck={source.specSource.type === "url"}
         checking={statusInfo.status === "checking"}
+        showSettings={showSettings}
         onCheckUpdates={onCheckUpdates}
+        onToggleSettings={() => setShowSettings((v) => !v)}
         onRemove={onRemove}
       />
+
+      {showSettings && <RegistrySettings source={source} onClose={() => setShowSettings(false)} onRegenerated={onRegenerated} />}
     </div>
   )
 }
@@ -93,12 +102,16 @@ function SourceOrigin({ source }: { source: SourceSummary }) {
 function CardActions({
   canCheck,
   checking,
+  showSettings,
   onCheckUpdates,
+  onToggleSettings,
   onRemove,
 }: {
   canCheck: boolean
   checking: boolean
+  showSettings: boolean
   onCheckUpdates: () => void
+  onToggleSettings: () => void
   onRemove: () => void
 }) {
   return (
@@ -106,7 +119,12 @@ function CardActions({
       {canCheck && (
         <ActionButton onClick={onCheckUpdates} disabled={checking} icon={RefreshCw} label="Check for Updates" />
       )}
-      <ActionButton onClick={() => {}} icon={Settings} label="Settings" />
+      <ActionButton
+        onClick={onToggleSettings}
+        icon={Settings}
+        label={showSettings ? "Hide Settings" : "Settings"}
+        active={showSettings}
+      />
       <div className="flex-1" />
       <ActionButton onClick={onRemove} icon={Trash2} label="Remove" danger />
     </div>

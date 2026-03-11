@@ -17,6 +17,7 @@ export type {
   RegistrySource,
   SchemaDiff,
   SpecDiff,
+  SpecDigest,
   SpecSource,
   UpdateChoices,
   UpdateFileResult,
@@ -25,6 +26,7 @@ export type {
 export {
   classifyEndpoints,
   computeHash,
+  createSpecDigest,
   diffSpecs,
   extractEndpoints,
   generateFingerprints,

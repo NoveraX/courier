@@ -96,7 +96,7 @@ export function buildGraph(
       nodes.push({
         id: groupId, type: "group",
         position: { x: gx, y: gy },
-        data: { label: groupName, prefix: group.prefix, endpointCount: endpointNames.length, layout },
+        data: { label: groupName || "endpoints", prefix: group.prefix, endpointCount: endpointNames.length, layout },
       })
 
       edges.push({

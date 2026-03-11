@@ -1,5 +1,17 @@
-import { buildClientProxy, type ExecuteBackend, type TypedClient } from "./client";
-import type { DefinedApi } from "./define/types";
+import {
+  buildClientProxy,
+  type ExecuteBackend,
+  type FlatClient,
+  type MixedClient,
+  type TypedClient,
+} from "./client";
+import type {
+  DefinedApi,
+  DefinedFlatApi,
+  DefinedMixedApi,
+  EndpointRecord,
+  GroupRecord,
+} from "./define/types";
 import { HTTPError } from "./error";
 import type { Context } from "./http-client/types";
 import { executeRequest } from "./utils/execute";
@@ -18,23 +30,39 @@ export type CallerDefaults = {
  *
  * @example
  * ```ts
- * const client = createCaller(api);
+ * const client = createCaller(api)
  *
- * // Data only:
- * const users = await client.users.getAll();
+ * // Grouped: client.users.getAll()
+ * // Flat:    client.getAll()
+ * // Mixed:   client.users.getAll() + client.healthCheck()
  *
- * // Full HTTP response:
- * const response = await client.users.raw.getById({ id: 1 });
- *
- * // With options:
- * const fast = client.with({ timeout: 1000 });
- * await fast.users.getAll();
+ * // .raw and .with() — at any level:
+ * await client.raw.users.getById({ id: 1 })        // client level
+ * await client.users.raw.getById({ id: 1 })         // group level
+ * await client.getAll.raw()                          // flat method level
+ * await client.with({ timeout: 5000 }).getAll()      // client level
+ * await client.getAll.with({ timeout: 5000 })()      // flat method level
  * ```
  */
-export function createCaller<T extends DefinedApi<any>>(
+export function createCaller<G extends GroupRecord, E extends EndpointRecord>(
+  source: DefinedMixedApi<G, E>,
+  defaults?: CallerDefaults,
+): MixedClient<G, E>;
+
+export function createCaller<E extends EndpointRecord>(
+  source: DefinedFlatApi<E>,
+  defaults?: CallerDefaults,
+): FlatClient<E>;
+
+export function createCaller<T extends DefinedApi>(
   source: T,
+  defaults?: CallerDefaults,
+): TypedClient<T>;
+
+export function createCaller(
+  source: DefinedApi | DefinedFlatApi | DefinedMixedApi,
   defaults: CallerDefaults = {},
-): TypedClient<T> {
+): unknown {
   const {
     timeout: defaultTimeout,
     headers: defaultHeaders,
@@ -83,5 +111,5 @@ export function createCaller<T extends DefinedApi<any>>(
     }
   };
 
-  return buildClientProxy<T>(backend);
+  return buildClientProxy(backend);
 }

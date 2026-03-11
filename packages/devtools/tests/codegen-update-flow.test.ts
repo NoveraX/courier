@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { GeneratedFile } from "../src/codegen/generator/types"
 import { computeHash } from "../src/codegen/merge/hash"
+import { createSpecDigest } from "../src/codegen/merge/spec-digest"
 import type { EndpointFingerprint, RegistrySource } from "../src/codegen/merge/types"
 import { previewUpdate } from "../src/codegen/merge/update-flow"
 import type { ParsedSpec } from "../src/codegen/parser/types"
@@ -68,7 +69,6 @@ function makeSource(overrides: Partial<RegistrySource> = {}): RegistrySource {
       outputDir: "src/api",
       validation: "zod",
       groupBy: "tag",
-      naming: "camelCase",
       generateTypes: true,
       generateSchemas: true,
       addAuthMiddleware: true,
@@ -77,7 +77,7 @@ function makeSource(overrides: Partial<RegistrySource> = {}): RegistrySource {
       selectedEndpoints: null,
     },
     endpoints: makeFingerprints(GROUP_CONTENT),
-    cachedSpec: makeSpec(),
+    specDigest: createSpecDigest(makeSpec()),
     ...overrides,
   }
 }
@@ -196,7 +196,7 @@ describe("previewUpdate", () => {
         endpoints: [],
       }],
     })
-    const source = makeSource({ cachedSpec: oldSpec })
+    const source = makeSource({ specDigest: createSpecDigest(oldSpec) })
     const generated: GeneratedFile[] = [
       { path: "src/api/test/users.ts", content: GROUP_CONTENT },
     ]
@@ -217,7 +217,7 @@ describe("previewUpdate", () => {
     const result = previewUpdate(source, newSpec, generated, {})
 
     expect(result.registryUpdate.specVersion).toBe("2.0.0")
-    expect(result.registryUpdate.cachedSpec).toEqual(newSpec)
+    expect(result.registryUpdate.specDigest).toEqual(createSpecDigest(newSpec))
     expect(result.registryUpdate.lastSynced).not.toBe(source.lastSynced)
   })
 

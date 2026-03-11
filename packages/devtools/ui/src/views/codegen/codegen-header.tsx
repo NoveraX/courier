@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import { Code, Database, Eye, Save, Plus, Trash2, Wand2 } from "lucide-react"
+import { ChevronsLeftRightEllipsis, Database, Download, Eye, Plus, Trash2 } from "lucide-react"
 
 import type { CodegenTab, Step, SourceConfig, SourceState } from "./types"
 
@@ -7,10 +7,7 @@ export function CodegenHeader({
   st,
   src,
   watching,
-  sources,
-  states,
   onToggleWatch,
-  onSaveConfig,
   step,
   onStepChange,
   tab,
@@ -19,10 +16,7 @@ export function CodegenHeader({
   st: SourceState
   src: SourceConfig
   watching: boolean
-  sources: SourceConfig[]
-  states: SourceState[]
   onToggleWatch: () => void
-  onSaveConfig: () => void
   step: Step
   onStepChange: (s: Step) => void
   tab: CodegenTab
@@ -32,17 +26,17 @@ export function CodegenHeader({
     <div className="flex items-center justify-between border-b border-border-default px-4 py-2.5">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <Code size={16} className="text-text-muted" />
-          <span className="text-sm font-medium">Codegen</span>
+          <ChevronsLeftRightEllipsis size={16} className="text-text-muted" />
+          <span className="text-sm font-medium">APIs</span>
         </div>
         <TabSwitcher tab={tab} onTabChange={onTabChange} />
-        {tab === "wizard" && st.spec && (
+        {tab === "import" && st.spec && (
           <span className="text-xs text-text-muted">{st.spec.title} v{st.spec.version}</span>
         )}
       </div>
       <div className="flex items-center gap-2">
-        {tab === "wizard" && (
-          <WizardControls st={st} src={src} watching={watching} sources={sources} states={states} onToggleWatch={onToggleWatch} onSaveConfig={onSaveConfig} step={step} onStepChange={onStepChange} />
+        {tab === "import" && (
+          <ImportControls st={st} src={src} watching={watching} onToggleWatch={onToggleWatch} step={step} onStepChange={onStepChange} />
         )}
       </div>
     </div>
@@ -52,8 +46,8 @@ export function CodegenHeader({
 function TabSwitcher({ tab, onTabChange }: { tab: CodegenTab; onTabChange: (t: CodegenTab) => void }) {
   return (
     <div className="flex items-center rounded-md bg-surface-1 p-0.5">
-      <TabButton active={tab === "wizard"} onClick={() => onTabChange("wizard")} icon={Wand2} label="Wizard" />
       <TabButton active={tab === "registry"} onClick={() => onTabChange("registry")} icon={Database} label="Registry" />
+      <TabButton active={tab === "import"} onClick={() => onTabChange("import")} icon={Download} label="Import" />
     </div>
   )
 }
@@ -67,9 +61,9 @@ function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; on
   )
 }
 
-function WizardControls({ st, src, watching, sources, states, onToggleWatch, onSaveConfig, step, onStepChange }: {
-  st: SourceState; src: SourceConfig; watching: boolean; sources: SourceConfig[]; states: SourceState[]
-  onToggleWatch: () => void; onSaveConfig: () => void; step: Step; onStepChange: (s: Step) => void
+function ImportControls({ st, src, watching, onToggleWatch, step, onStepChange }: {
+  st: SourceState; src: SourceConfig; watching: boolean
+  onToggleWatch: () => void; step: Step; onStepChange: (s: Step) => void
 }) {
   return (
     <>
@@ -77,11 +71,6 @@ function WizardControls({ st, src, watching, sources, states, onToggleWatch, onS
         <button type="button" onClick={onToggleWatch} title={watching ? "Stop watching" : "Watch spec URL (10s)"} className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors ${watching ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" : "text-text-muted hover:text-text-secondary"}`}>
           <Eye size={12} className={watching ? "animate-pulse" : ""} />
           {watching ? "Watching" : "Watch"}
-        </button>
-      )}
-      {sources.some((_, i) => states[i]?.spec) && (
-        <button type="button" onClick={onSaveConfig} title="Save codegen config" className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-secondary">
-          <Save size={12} /> Save Config
         </button>
       )}
       <div className="mx-1 h-4 w-px bg-border-subtle" />

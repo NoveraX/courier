@@ -55,8 +55,5 @@ applyTheme(savedTheme)
 
 export const useDevToolsStore = create<DevToolsState>((set, get) => ({
   ...createInitialState(savedTheme, savedTab),
-  get connected() {
-    return get().connectionStatus === "connected"
-  },
   ...createActions(set, get),
 }))

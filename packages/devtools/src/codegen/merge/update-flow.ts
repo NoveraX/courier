@@ -10,6 +10,7 @@ import { extractEndpoints } from "./extract-endpoints";
 import { classifyEndpoints, generateFingerprints } from "./fingerprint";
 import { mergeGroupFile } from "./merge-group";
 import { diffSpecs } from "./spec-diff";
+import { createSpecDigest } from "./spec-digest";
 import type { EndpointFingerprint, RegistrySource, UpdateFileResult, UpdateResult } from "./types";
 
 const GROUP_MARKER = "defineGroup(";
@@ -32,8 +33,8 @@ export function previewUpdate(
   generated: GeneratedFile[],
   existingFiles: Record<string, string>,
 ): UpdateResult {
-  const oldSpec = source.cachedSpec ?? newSpec;
-  const diff = diffSpecs(oldSpec, newSpec);
+  const oldDigest = source.specDigest ?? createSpecDigest(newSpec);
+  const diff = diffSpecs(oldDigest, newSpec);
 
   const files = generated.map((gen) => mergeOrOverwrite(gen, existingFiles[gen.path], source));
 
@@ -59,6 +60,15 @@ function mergeOrOverwrite(
   const existingCode = extractEndpoints(existing);
   const specNames = Object.keys(extractEndpoints(gen.content));
   const fp = classifyEndpoints(existingCode, source.endpoints, specNames);
+
+  /* If no endpoints were user-modified, overwrite entirely.
+   * This ensures import changes (zod→arktype), naming convention
+   * changes, and removed endpoints all apply cleanly. */
+  const hasUserModifications = Object.values(fp.endpoints).some((s) => s === "modified");
+  if (!hasUserModifications) {
+    return { path: gen.path, content: gen.content, status: "safe", changes: [] };
+  }
+
   const result = mergeGroupFile(existing, gen.content, fp);
 
   return {
@@ -79,7 +89,7 @@ function buildUpdatedSource(
     specHash: computeSpecHash(newSpec),
     specVersion: newSpec.version,
     lastSynced: new Date().toISOString(),
-    cachedSpec: newSpec,
+    specDigest: createSpecDigest(newSpec),
     endpoints: collectGroupFingerprints(generated),
   };
 }

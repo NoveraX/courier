@@ -35,12 +35,14 @@ export function ActionButton({
   label,
   disabled,
   danger,
+  active,
 }: {
   onClick: () => void
   icon: LucideIcon
   label: string
   disabled?: boolean
   danger?: boolean
+  active?: boolean
 }) {
   return (
     <button
@@ -49,9 +51,11 @@ export function ActionButton({
       disabled={disabled}
       title={label}
       className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors disabled:opacity-30 ${
-        danger
-          ? "text-text-muted hover:bg-red-500/15 hover:text-red-400"
-          : "text-text-muted hover:bg-surface-2 hover:text-text-secondary"
+        active
+          ? "bg-indigo-500/15 text-indigo-400"
+          : danger
+            ? "text-text-muted hover:bg-red-500/15 hover:text-red-400"
+            : "text-text-muted hover:bg-surface-2 hover:text-text-secondary"
       }`}
     >
       <Icon size={12} />

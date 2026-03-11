@@ -20,13 +20,13 @@ export function collectWarnings(
 
   for (const ep of endpoints) {
     if (!ep.hasResponseSchema) {
-      items.push({ id: nextId(), severity: "warning", title: "No response validation", description: `${ep.source}.${ep.group}.${ep.method} has no response validation schema.`, suggestion: `Add response schema: endpoint<T>().schema({ response: z.object({...}) })`, endpoint: `${ep.source}.${ep.group}.${ep.method}`, category: "validation" })
+      items.push({ id: nextId(), severity: "warning", title: "No response validation", description: `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")} has no response validation schema.`, suggestion: `Add response schema: endpoint<T>().schema({ response: z.object({...}) })`, endpoint: `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")}`, category: "validation" })
     }
   }
 
   for (const ep of endpoints) {
     if (ep.type === "mutation" && !ep.hasVariablesSchema) {
-      items.push({ id: nextId(), severity: "warning", title: "Mutation without input validation", description: `${ep.source}.${ep.group}.${ep.method} is a mutation without variables validation.`, suggestion: `Add variables schema: endpoint<R, V>().schema({ variables: z.object({...}) })`, endpoint: `${ep.source}.${ep.group}.${ep.method}`, category: "validation" })
+      items.push({ id: nextId(), severity: "warning", title: "Mutation without input validation", description: `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")} is a mutation without variables validation.`, suggestion: `Add variables schema: endpoint<R, V>().schema({ variables: z.object({...}) })`, endpoint: `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")}`, category: "validation" })
     }
   }
 
@@ -44,7 +44,7 @@ export function collectWarnings(
     const duplicates: string[] = []
     for (const mw of ep.middleware) { if (seen.has(mw)) duplicates.push(mw); seen.add(mw) }
     if (duplicates.length > 0) {
-      items.push({ id: nextId(), severity: "warning", title: "Duplicate middleware", description: `${ep.source}.${ep.group}.${ep.method} has duplicate middleware: ${duplicates.join(", ")}.`, suggestion: "Remove duplicate middleware entries from the chain.", endpoint: `${ep.source}.${ep.group}.${ep.method}`, category: "middleware" })
+      items.push({ id: nextId(), severity: "warning", title: "Duplicate middleware", description: `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")} has duplicate middleware: ${duplicates.join(", ")}.`, suggestion: "Remove duplicate middleware entries from the chain.", endpoint: `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")}`, category: "middleware" })
     }
   }
 

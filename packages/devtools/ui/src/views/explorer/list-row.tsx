@@ -57,7 +57,7 @@ export function EndpointRow({
       className="grid w-full grid-cols-[1fr_1fr_1.5fr_80px_80px_100px] items-center gap-2 border-b border-border-subtle px-3 py-2 text-left transition-colors hover:bg-surface-1"
     >
       <span className="truncate text-xs text-indigo-400 font-medium">{ep.source}</span>
-      <span className="truncate text-xs text-text-secondary">{ep.group}</span>
+      <span className="truncate text-xs text-text-secondary">{ep.group || "—"}</span>
       <span className="truncate text-xs font-mono text-text-primary">{ep.method}</span>
       <div>
         <Badge variant={ep.type === "query" ? "emerald" : "orange"}>{ep.type}</Badge>

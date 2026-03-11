@@ -120,4 +120,60 @@ describe("extractSourceMap", () => {
   it("handles empty sources", () => {
     expect(extractSourceMap({})).toEqual({});
   });
+
+  it("extracts flat API (no groups) into empty-name group", () => {
+    const api = defineApi({
+      baseURL: "https://flat.api",
+      endpoints: {
+        healthCheck: endpoint<{ ok: boolean }>({ type: "query" })((http) => http.get("health")),
+        search: endpoint<string[], { q: string }>()((http, vars) => http.get("search", vars)),
+      },
+    });
+
+    const result = extractSourceMap({ api });
+
+    expect(result.api!.baseURL).toBe("https://flat.api");
+    expect(Object.keys(result.api!.groups)).toEqual([""]);
+
+    const flat = result.api!.groups[""]!;
+    expect(flat.prefix).toBe("");
+    expect(Object.keys(flat.endpoints)).toEqual(["healthCheck", "search"]);
+    expect(flat.endpoints.healthCheck).toEqual({
+      type: "query",
+      hasVariablesSchema: false,
+      hasResponseSchema: false,
+    });
+  });
+
+  it("extracts mixed API (groups + flat endpoints)", () => {
+    const api = defineApi({
+      baseURL: "https://mixed.api",
+      groups: {
+        users: defineGroup({
+          prefix: "users",
+          endpoints: {
+            getAll: endpoint<unknown[]>()((http) => http.get()),
+          },
+        }),
+      },
+      endpoints: {
+        healthCheck: endpoint<boolean>()((http) => http.get("health")),
+      },
+    });
+
+    const result = extractSourceMap({ api });
+
+    // Both grouped and flat endpoints extracted
+    expect(Object.keys(result.api!.groups).sort()).toEqual(["", "users"]);
+
+    // Grouped
+    const users = result.api!.groups.users!;
+    expect(users.prefix).toBe("users");
+    expect(Object.keys(users.endpoints)).toEqual(["getAll"]);
+
+    // Flat
+    const flat = result.api!.groups[""]!;
+    expect(flat.prefix).toBe("");
+    expect(Object.keys(flat.endpoints)).toEqual(["healthCheck"]);
+  });
 });

@@ -3,7 +3,6 @@
  */
 
 import type { GenerateOptions } from "../generator/types";
-import type { ParsedSpec } from "../parser/types";
 
 // ── Fingerprint ─────────────────────────────────────────────────────────────
 
@@ -115,6 +114,40 @@ export interface ExistingGroupInfo {
   trailingCode: string[];
 }
 
+// ── Spec Digest (lightweight spec snapshot for diffing) ─────────────────────
+
+/** Minimal endpoint — structurally compatible with ParsedEndpoint for diffing */
+export interface DigestEndpoint {
+  name: string;
+  httpMethod: string;
+  path: string;
+  fullPath: string;
+  secured: boolean;
+  parameters: { in: string; name: string }[];
+  responseSchema: { refName?: string; type?: string } | null;
+  requestBody: { refName?: string; type?: string } | null;
+}
+
+/** Minimal group — structurally compatible with ParsedGroup for diffing */
+export interface DigestGroup {
+  name: string;
+  endpoints: DigestEndpoint[];
+}
+
+/** Minimal schema — structurally compatible with ParsedSchema for diffing */
+export interface DigestSchema {
+  name: string;
+  type: string;
+  properties?: Record<string, { type: string; required: boolean }>;
+  required?: string[];
+}
+
+/** Lightweight spec snapshot — only the structure needed for diff/breaking detection */
+export interface SpecDigest {
+  groups: DigestGroup[];
+  schemas: Record<string, DigestSchema>;
+}
+
 // ── Registry ────────────────────────────────────────────────────────────────
 
 export interface SpecSource {
@@ -130,8 +163,8 @@ export interface RegistrySource {
   outputDir: string;
   options: GenerateOptions;
   endpoints: Record<string, EndpointFingerprint>;
-  /** Cached parsed spec for offline re-generation */
-  cachedSpec?: ParsedSpec;
+  /** Lightweight spec snapshot for diffing (replaces full cachedSpec) */
+  specDigest?: SpecDigest;
 }
 
 export interface RegistryConfig {

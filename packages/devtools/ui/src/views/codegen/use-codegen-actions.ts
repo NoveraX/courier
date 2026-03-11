@@ -1,10 +1,8 @@
 import type { SourceConfig, SourceState } from "./types"
-import { fetchParseSpec, fetchGenerateCode, fetchWriteFiles, fetchSaveConfig } from "./api"
-import { createDefaultState, groupKey, deriveSourceName } from "./helpers"
+import { fetchParseSpec, fetchGenerateCode, fetchWriteFiles } from "./api"
+import { groupKey, deriveSourceName, formatWriteResult } from "./helpers"
 
 interface ActionDeps {
-  sources: SourceConfig[]
-  states: SourceState[]
   activeSourceIdx: number
   src: SourceConfig
   st: SourceState
@@ -19,29 +17,11 @@ interface ActionDeps {
 
 export function createCodegenActions(deps: ActionDeps) {
   const {
-    sources, states, activeSourceIdx, src, st,
+    activeSourceIdx, src, st,
     setSources, updateState,
     setStep, setLoading, setError, setWriteResult,
     savedSelectionsRef,
   } = deps
-
-  async function handleSaveConfig() {
-    try {
-      const serialized: SourceConfig[] = sources.map((s, i) => {
-        const state = states[i] ?? createDefaultState()
-        const selectedEndpoints: Record<string, string[]> = {}
-        for (const [group, endpoints] of Object.entries(state.selection)) {
-          if (endpoints.size > 0) selectedEndpoints[group] = [...endpoints]
-        }
-        return { ...s, options: { ...s.options, selectedEndpoints }, selectedEndpoints }
-      })
-      await fetchSaveConfig({ sources: serialized })
-      setWriteResult("Config saved to codegen.nexus.json")
-      setTimeout(() => setWriteResult(null), 2000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save config")
-    }
-  }
 
   async function handleParse() {
     if (!src.importContent.trim()) return
@@ -100,8 +80,20 @@ export function createCodegenActions(deps: ActionDeps) {
     setError(null)
     setWriteResult(null)
     try {
-      const result = await fetchWriteFiles(st.files)
-      setWriteResult(`${result.written} file${result.written > 1 ? "s" : ""} written`)
+      const selectedEndpoints: Record<string, string[]> = {}
+      for (const [group, endpoints] of Object.entries(st.selection)) {
+        if (endpoints.size > 0) selectedEndpoints[group] = [...endpoints]
+      }
+
+      const ctx = st.spec ? {
+        sourceName: src.name,
+        spec: st.spec,
+        specSource: { type: src.importSource, value: src.importContent.trim() },
+        options: { ...src.options, selectedEndpoints },
+      } : undefined
+
+      const result = await fetchWriteFiles(st.files, ctx)
+      setWriteResult(formatWriteResult(result))
     } catch (err) {
       setError(err instanceof Error ? err.message : "Write failed")
     } finally {
@@ -127,5 +119,5 @@ export function createCodegenActions(deps: ActionDeps) {
     URL.revokeObjectURL(url)
   }
 
-  return { handleSaveConfig, handleParse, handleGenerate, handleWrite, handleCopyAll, handleDownload }
+  return { handleParse, handleGenerate, handleWrite, handleCopyAll, handleDownload }
 }

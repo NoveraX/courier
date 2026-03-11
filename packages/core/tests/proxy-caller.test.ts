@@ -298,6 +298,158 @@ describe("createProxyCaller", () => {
     });
   });
 
+  describe("flat mode (no groups)", () => {
+    it("sends method without group for flat calls", async () => {
+      fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
+
+      const client = createProxyCaller("api") as any;
+      await client.healthCheck();
+
+      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
+      expect(body).toEqual(
+        expect.objectContaining({
+          source: "api",
+          method: "healthCheck",
+        }),
+      );
+      expect(body.group).toBeUndefined();
+    });
+
+    it("sends variables in flat call", async () => {
+      fetchSpy.mockResolvedValue(mockFetchResponse([]));
+
+      const client = createProxyCaller("api") as any;
+      await client.search({ query: "test" });
+
+      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
+      expect(body).toEqual(
+        expect.objectContaining({
+          source: "api",
+          method: "search",
+          variables: { query: "test" },
+        }),
+      );
+    });
+
+    it(".raw works on flat calls", async () => {
+      fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
+
+      const client = createProxyCaller("api") as any;
+      await client.raw.healthCheck();
+
+      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
+      expect(body.method).toBe("healthCheck");
+      expect(body.options).toEqual(expect.objectContaining({ rawData: true }));
+    });
+
+    it(".with() works on flat calls", async () => {
+      fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
+
+      const client = createProxyCaller("api") as any;
+      await client.with({ timeout: 3000 }).healthCheck();
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      const init = fetchSpy.mock.calls[0]![1];
+      expect(init.signal).toBeDefined();
+    });
+  });
+
+  describe("dual proxy (mixed mode)", () => {
+    it("same property works as both flat call and group accessor", async () => {
+      fetchSpy
+        .mockResolvedValueOnce(mockFetchResponse("flat"))
+        .mockResolvedValueOnce(mockFetchResponse("nested"));
+
+      const client = createProxyCaller("api") as any;
+
+      // Flat: client.users() → endpointKey = "users"
+      await client.users();
+      const body1 = JSON.parse(fetchSpy.mock.calls[0]![1].body);
+      expect(body1.method).toBe("users");
+      expect(body1.group).toBeUndefined();
+
+      // Nested: client.users.getAll() → group="users", method="getAll" → endpointKey = "users:getAll"
+      await client.users.getAll();
+      const body2 = JSON.parse(fetchSpy.mock.calls[1]![1].body);
+      expect(body2.method).toBe("getAll");
+      expect(body2.group).toBe("users");
+    });
+
+    it("method-level .raw() on flat call", async () => {
+      fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
+
+      const client = createProxyCaller("api") as any;
+      await client.healthCheck.raw();
+
+      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
+      expect(body.method).toBe("healthCheck");
+      expect(body.options).toEqual(expect.objectContaining({ rawData: true }));
+    });
+
+    it("method-level .with()() on flat call", async () => {
+      fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
+
+      const client = createProxyCaller("api") as any;
+      await client.healthCheck.with({ timeout: 2000 })();
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      const init = fetchSpy.mock.calls[0]![1];
+      expect(init.signal).toBeDefined();
+    });
+
+    it("method-level .raw.with()() chained on flat call", async () => {
+      fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
+
+      const client = createProxyCaller("api") as any;
+      await client.healthCheck.raw.with({ timeout: 1500 })();
+
+      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
+      expect(body.method).toBe("healthCheck");
+      expect(body.options).toEqual(expect.objectContaining({ rawData: true }));
+    });
+
+    it("client.raw.with().method() — combined at client level", async () => {
+      fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
+
+      const client = createProxyCaller("api") as any;
+      await client.raw.with({ timeout: 3000 }).healthCheck();
+
+      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
+      expect(body.method).toBe("healthCheck");
+      expect(body.options).toEqual(expect.objectContaining({ rawData: true }));
+    });
+
+    it("client.with().raw.group.method() — combined at client level for groups", async () => {
+      fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
+
+      const client = createProxyCaller("api") as any;
+      await client.with({ timeout: 3000 }).raw.users.getAll();
+
+      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
+      expect(body.method).toBe("getAll");
+      expect(body.group).toBe("users");
+      expect(body.options).toEqual(expect.objectContaining({ rawData: true }));
+    });
+  });
+
+  describe("proxy isolation", () => {
+    it("client.raw does not affect subsequent calls", async () => {
+      fetchSpy
+        .mockResolvedValueOnce(mockFetchResponse({ ok: true }))
+        .mockResolvedValueOnce(mockFetchResponse({ ok: true }));
+
+      const client = createProxyCaller("api") as any;
+      await client.raw.healthCheck();
+      await client.healthCheck();
+
+      const rawBody = JSON.parse(fetchSpy.mock.calls[0]![1].body);
+      const normalBody = JSON.parse(fetchSpy.mock.calls[1]![1].body);
+
+      expect(rawBody.options).toEqual(expect.objectContaining({ rawData: true }));
+      expect(normalBody.options?.rawData).toBeUndefined();
+    });
+  });
+
   describe("proxy safety", () => {
     it("does not trigger thenable detection", async () => {
       const client = createProxyCaller("api") as any;

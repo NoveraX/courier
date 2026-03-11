@@ -13,7 +13,6 @@ export const DEFAULT_OPTIONS: GenerateOptions = {
   outputDir: "src/api",
   validation: "zod",
   groupBy: "tag",
-  naming: "camelCase",
   generateTypes: true,
   generateSchemas: true,
   addAuthMiddleware: true,
@@ -68,4 +67,12 @@ export function deriveSourceName(title: string, baseURL?: string): string {
     } catch { /* not a valid URL */ }
   }
   return "api"
+}
+
+/** Format write result into a human-readable message */
+export function formatWriteResult(r: { written: number; merged: number; deleted?: number }): string {
+  const parts = [`${r.written} file${r.written !== 1 ? "s" : ""} written`]
+  if (r.merged > 0) parts.push(`${r.merged} merged`)
+  if (r.deleted && r.deleted > 0) parts.push(`${r.deleted} removed`)
+  return parts.length > 1 ? `${parts[0]} (${parts.slice(1).join(", ")})` : parts[0]
 }

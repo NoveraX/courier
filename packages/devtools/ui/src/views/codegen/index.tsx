@@ -17,11 +17,11 @@ import { UpdateView } from "./update-view"
 export function CodegenView() {
   const { connectionStatus } = useDevToolsStore()
   const cg = useCodegen()
-  const [tab, setTab] = useState<CodegenTab>("wizard")
+  const [tab, setTab] = useState<CodegenTab>("registry")
   const [updateCtx, setUpdateCtx] = useState<UpdateContext | null>(null)
 
   const switchToImport = () => {
-    setTab("wizard")
+    setTab("import")
     cg.setStep("import")
   }
 
@@ -43,17 +43,14 @@ export function CodegenView() {
         st={cg.st}
         src={cg.src}
         watching={cg.watching}
-        sources={cg.sources}
-        states={cg.states}
         onToggleWatch={cg.toggleWatch}
-        onSaveConfig={cg.handleSaveConfig}
         step={cg.step}
         onStepChange={cg.setStep}
         tab={tab}
         onTabChange={setTab}
       />
 
-      {tab === "wizard" && (
+      {tab === "import" && (
         <SourceTabs
           sources={cg.sources}
           states={cg.states}
@@ -64,9 +61,9 @@ export function CodegenView() {
         />
       )}
 
-      {tab === "wizard" && cg.error && <ErrorBanner error={cg.error} onDismiss={() => cg.setError(null)} />}
+      {tab === "import" && cg.error && <ErrorBanner error={cg.error} onDismiss={() => cg.setError(null)} />}
 
-      {tab === "wizard" && cg.watchDiff && (
+      {tab === "import" && cg.watchDiff && (
         <WatchDiffBanner
           watchDiff={cg.watchDiff}
           st={cg.st}
@@ -78,16 +75,16 @@ export function CodegenView() {
       <div className="flex-1 overflow-auto p-4">
         {tab === "registry" && <RegistryView onImportNew={switchToImport} onReviewUpdates={handleReviewUpdates} />}
         {tab === "update" && updateCtx && <UpdateView ctx={updateCtx} onBack={handleUpdateBack} />}
-        {tab === "wizard" && cg.step === "import" && (
+        {tab === "import" && cg.step === "import" && (
           <ImportStep source={cg.src.importSource} content={cg.src.importContent} loading={cg.loading} onSourceChange={(v) => cg.updateSource({ importSource: v })} onContentChange={(v) => cg.updateSource({ importContent: v })} onParse={cg.handleParse} />
         )}
-        {tab === "wizard" && cg.step === "select" && cg.st.spec && (
+        {tab === "import" && cg.step === "select" && cg.st.spec && (
           <SelectStep spec={cg.st.spec} selection={cg.st.selection} totalSelected={cg.totalSelected} totalEndpoints={cg.totalEndpoints} options={cg.src.options} groupKeys={cg.groupKeys} onToggleGroup={cg.toggleGroup} onToggleEndpoint={cg.toggleEndpoint} onSelectAll={cg.selectAll} onDeselectAll={cg.deselectAll} onOptionsChange={(o) => cg.updateSource({ name: o.sourceName, options: o })} onNext={() => cg.setStep("options")} />
         )}
-        {tab === "wizard" && cg.step === "options" && cg.st.spec && (
+        {tab === "import" && cg.step === "options" && cg.st.spec && (
           <OptionsStep options={cg.src.options} loading={cg.loading} onOptionsChange={(o) => cg.updateSource({ options: o })} onGenerate={cg.handleGenerate} />
         )}
-        {tab === "wizard" && cg.step === "preview" && cg.st.files.length > 0 && (
+        {tab === "import" && cg.step === "preview" && cg.st.files.length > 0 && (
           <PreviewStep files={cg.st.files} activeFileIndex={cg.st.activeFileIndex} loading={cg.loading} writeResult={cg.writeResult} onFileSelect={(i) => cg.updateState({ activeFileIndex: i })} onWrite={cg.handleWrite} onCopy={cg.handleCopyAll} onDownload={cg.handleDownload} />
         )}
       </div>

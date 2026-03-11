@@ -35,7 +35,7 @@ export function useSendRequest({
   }, [])
 
   const handleSend = useCallback(() => {
-    if (!canSend || !selectedSource || !selectedGroup || !selectedMethod) return
+    if (!canSend || !selectedSource || !selectedMethod) return
 
     const parsedVars: unknown = JSON.parse(variables)
     const parsedHeaders = JSON.parse(headers) as Record<string, string>

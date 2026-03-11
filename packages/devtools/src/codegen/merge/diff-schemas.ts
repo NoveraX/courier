@@ -2,10 +2,9 @@
  * Schema-level diffing between two parsed specs.
  */
 
-import type { ParsedSchema } from "../parser/types";
-import type { SchemaDiff } from "./types";
+import type { DigestSchema, SchemaDiff } from "./types";
 
-function compareSchemas(oldSchema: ParsedSchema, newSchema: ParsedSchema): string[] {
+function compareSchemas(oldSchema: DigestSchema, newSchema: DigestSchema): string[] {
   const changes: string[] = [];
 
   if (oldSchema.type !== newSchema.type) {
@@ -49,8 +48,8 @@ function compareSchemas(oldSchema: ParsedSchema, newSchema: ParsedSchema): strin
 }
 
 export function diffSchemas(
-  oldSchemas: Record<string, ParsedSchema>,
-  newSchemas: Record<string, ParsedSchema>,
+  oldSchemas: Record<string, DigestSchema>,
+  newSchemas: Record<string, DigestSchema>,
 ): SchemaDiff[] {
   const result: SchemaDiff[] = [];
   const oldNames = new Set(Object.keys(oldSchemas));

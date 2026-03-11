@@ -31,7 +31,6 @@ export interface GenerateOptions {
   outputDir: string
   validation: "zod" | "valibot" | "arktype" | "none"
   groupBy: "tag" | "path" | "single"
-  naming: "camelCase" | "as-is"
   generateTypes: boolean
   generateSchemas: boolean
   addAuthMiddleware: boolean
@@ -47,7 +46,7 @@ export interface GeneratedFile {
 
 export type ImportSource = "url" | "raw" | "file"
 export type Step = "import" | "select" | "options" | "preview"
-export type CodegenTab = "wizard" | "registry" | "update"
+export type CodegenTab = "import" | "registry" | "update"
 
 // ── Registry ───────────────────────────────────────────────────────────────
 
@@ -61,6 +60,7 @@ export interface SourceSummary {
   version: string
   specSource: SpecSource
   outputDir: string
+  options: GenerateOptions
   lastSynced: string
   endpointCount: number
   modifiedCount: number
@@ -143,11 +143,6 @@ export interface SourceConfig {
   importContent: string
   options: GenerateOptions
   selectedEndpoints: Record<string, string[]>
-}
-
-/** Multi-source config file format */
-export interface CodegenMultiConfig {
-  sources: SourceConfig[]
 }
 
 /** Per-source runtime state (not persisted) */

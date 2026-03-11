@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { GenerateOptions } from "../generator/types";
+import { createSpecDigest } from "../merge/spec-digest";
 import type { ParsedSpec } from "../parser/types";
 import type { EndpointFingerprint, RegistryConfig, RegistrySource, SpecSource } from "./types";
 
@@ -23,7 +24,15 @@ export function loadRegistry(configPath?: string): RegistryConfig {
     return { sources: {} };
   }
   const content = readFileSync(filePath, "utf-8");
-  return JSON.parse(content) as RegistryConfig;
+  const parsed: unknown = JSON.parse(content);
+  const obj = parsed as { sources?: unknown };
+
+  /* Ignore legacy wizard-format files (sources as array instead of object) */
+  if (!obj.sources || Array.isArray(obj.sources)) {
+    return { sources: {} };
+  }
+
+  return parsed as RegistryConfig;
 }
 
 /** Save registry config to disk. */
@@ -56,7 +65,7 @@ export function addSource(
     outputDir: options.outputDir,
     options,
     endpoints: fingerprints,
-    cachedSpec: spec,
+    specDigest: createSpecDigest(spec),
   };
 
   return {
@@ -83,6 +92,7 @@ export function listSources(config: RegistryConfig): SourceSummary[] {
     version: source.specVersion,
     specSource: source.specSource,
     outputDir: source.outputDir,
+    options: source.options,
     lastSynced: source.lastSynced,
     endpointCount: Object.keys(source.endpoints).length,
     modifiedCount: Object.values(source.endpoints).filter((e) => e.userModified).length,
@@ -94,6 +104,7 @@ export interface SourceSummary {
   version: string;
   specSource: SpecSource;
   outputDir: string;
+  options: GenerateOptions;
   lastSynced: string;
   endpointCount: number;
   modifiedCount: number;
@@ -134,7 +145,7 @@ export function updateFingerprints(
     specVersion: newSpec.version,
     lastSynced: new Date().toISOString(),
     endpoints: fingerprints,
-    cachedSpec: newSpec,
+    specDigest: createSpecDigest(newSpec),
   };
 
   return {

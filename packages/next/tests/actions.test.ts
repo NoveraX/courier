@@ -27,8 +27,8 @@ describe("createAction", () => {
   it("returns a dot-notation client", () => {
     const action = createAction(mockSources, "api") as any;
     expect(typeof action).toBe("object");
-    // Group access returns a proxy
-    expect(typeof action.users).toBe("object");
+    // Group access returns a dual proxy (callable function with property access)
+    expect(action.users).toBeDefined();
   });
 
   describe("request execution", () => {

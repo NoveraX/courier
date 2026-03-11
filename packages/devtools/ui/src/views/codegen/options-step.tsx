@@ -112,16 +112,6 @@ export function OptionsStep({
         />
 
         <RadioGroup
-          label="Naming Convention"
-          value={options.naming}
-          items={[
-            { id: "camelCase", label: "camelCase" },
-            { id: "as-is", label: "As-is from spec" },
-          ]}
-          onChange={(v) => onOptionsChange({ ...options, naming: v as GenerateOptions["naming"] })}
-        />
-
-        <RadioGroup
           label="Client File"
           value={options.generateClient}
           items={[

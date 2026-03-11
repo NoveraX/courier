@@ -34,14 +34,16 @@ export function generateSourceFile(
     }
   }
 
-  lines.push(`  groups: {`);
-  for (const group of groups) {
-    if (options.includeComments && group.description) {
-      lines.push(`    /** ${group.description} */`);
+  if (groups.length > 0) {
+    lines.push(`  groups: {`);
+    for (const group of groups) {
+      if (options.includeComments && group.description) {
+        lines.push(`    /** ${group.description} */`);
+      }
+      lines.push(`    ${group.name},`);
     }
-    lines.push(`    ${group.name},`);
+    lines.push(`  },`);
   }
-  lines.push(`  },`);
   lines.push(`});`);
   lines.push("");
 

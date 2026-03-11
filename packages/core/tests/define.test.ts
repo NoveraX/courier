@@ -211,6 +211,82 @@ describe("defineApi", () => {
 	});
 });
 
+// ---- defineApi() flat ----
+
+describe("defineApi flat (no groups)", () => {
+	it("spreads endpoints onto the result object", () => {
+		const getAll = endpoint<string[]>()(({ get }) => get());
+		const create = endpoint<string, { name: string }>()(({ post }) => post());
+
+		const api = defineApi({
+			baseURL: "https://api.example.com",
+			endpoints: { getAll, create },
+		});
+
+		expect(typeof api.getAll).toBe("function");
+		expect(typeof api.create).toBe("function");
+		expect(api.options.baseURL).toBe("https://api.example.com");
+	});
+
+	it("does not add groups to options", () => {
+		const api = defineApi({
+			baseURL: "https://flat.api",
+			endpoints: {
+				health: endpoint<boolean>()(({ get }) => get("health")),
+			},
+		});
+
+		expect((api.options as any).groups).toBeUndefined();
+	});
+});
+
+// ---- defineApi() mixed (groups + flat endpoints) ----
+
+describe("defineApi mixed (groups + flat endpoints)", () => {
+	it("combines groups in options and flat endpoints on source", () => {
+		const usersGroup = defineGroup({
+			prefix: "users",
+			endpoints: {
+				getAll: endpoint<string[]>()(({ get }) => get()),
+			},
+		});
+
+		const api = defineApi({
+			baseURL: "https://api.example.com",
+			groups: { users: usersGroup },
+			endpoints: {
+				healthCheck: endpoint<{ ok: boolean }>()(({ get }) => get("health")),
+			},
+		});
+
+		// Groups accessible via options
+		expect(api.options.groups.users).toBe(usersGroup);
+		expect(typeof api.options.groups.users.getAll).toBe("function");
+
+		// Flat endpoints on source object
+		expect(typeof api.healthCheck).toBe("function");
+		expect(api.options.baseURL).toBe("https://api.example.com");
+	});
+
+	it("flat endpoints are callable", async () => {
+		const api = defineApi({
+			baseURL: "https://api.example.com",
+			groups: {
+				items: defineGroup({
+					prefix: "items",
+					endpoints: { list: endpoint<number[]>()(({ get }) => get()) },
+				}),
+			},
+			endpoints: {
+				ping: endpoint<string>()(({ get }) => get("ping")),
+			},
+		});
+
+		const response = await api.ping(mockMethods(), undefined);
+		expect(response.status).toBe(200);
+	});
+});
+
 // ---- structural compatibility with executeRequest ----
 
 describe("executeRequest compatibility", () => {

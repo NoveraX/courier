@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 
 import type { Step, SourceConfig, SourceState } from "./types"
-import { fetchParseSpec, fetchLoadConfig } from "./api"
+import { fetchParseSpec } from "./api"
 import { createDefaultSource, createDefaultState, groupKey } from "./helpers"
 import { createCodegenActions } from "./use-codegen-actions"
 
@@ -36,22 +36,6 @@ export function useCodegen() {
     st.spec.groups.forEach((g, i) => map.set(g, groupKey(g, i)))
     return map
   }, [st.spec])
-
-  // Load saved config on mount
-  useEffect(() => {
-    const loadConfig = async () => {
-      const config = await fetchLoadConfig()
-      if (!config?.sources?.length) return
-      setSources(config.sources)
-      setStates(config.sources.map(() => createDefaultState()))
-      config.sources.forEach((s, i) => {
-        if (s.selectedEndpoints && Object.keys(s.selectedEndpoints).length > 0) {
-          savedSelectionsRef.current.set(i, s.selectedEndpoints)
-        }
-      })
-    }
-    void loadConfig()
-  }, [])
 
   // Watch mode
   useEffect(() => {
@@ -162,7 +146,7 @@ export function useCodegen() {
   const totalEndpoints = st.spec?.groups.reduce((sum, g) => sum + g.endpoints.length, 0) ?? 0
 
   const actions = createCodegenActions({
-    sources, states, activeSourceIdx, src, st,
+    activeSourceIdx, src, st,
     setSources, updateState,
     setStep, setLoading, setError, setWriteResult,
     savedSelectionsRef,

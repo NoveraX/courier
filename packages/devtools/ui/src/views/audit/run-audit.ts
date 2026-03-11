@@ -20,7 +20,7 @@ export function runAudit(
   const epSizes = new Map<string, number[]>()
 
   for (const req of requests) {
-    const key = `${req.source}.${req.group ?? "?"}.${req.method}`
+    const key = [req.source, req.group, req.method].filter(Boolean).join(".")
     if (req.timing && req.status === "success") {
       const arr = epDurations.get(key) ?? []
       arr.push(req.timing.total)

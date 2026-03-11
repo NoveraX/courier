@@ -71,14 +71,18 @@ export function usePlayground() {
     }
   }, [selectedSource, sourceNames, groups, selectedGroup])
 
+  /* Flat API: single group with empty name "" — auto-select it */
+  const isFlat = groups.length === 1 && groups[0] === ""
+
   // Auto-cascade: when group changes, reset method
   useEffect(() => {
-    if (selectedGroup && methods.length > 0 && !methods.includes(selectedMethod)) {
+    const hasGroup = selectedGroup !== "" || isFlat
+    if (hasGroup && methods.length > 0 && !methods.includes(selectedMethod)) {
       setSelectedMethod(methods[0] as string)
     } else if (methods.length === 0) {
       setSelectedMethod("")
     }
-  }, [selectedGroup, methods, selectedMethod])
+  }, [selectedGroup, methods, selectedMethod, isFlat])
 
   const handleSourceChange = useCallback((source: string) => {
     setSelectedSource(source)

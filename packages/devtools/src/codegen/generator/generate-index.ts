@@ -10,6 +10,7 @@ export function generateIndexFile(
   groups: ParsedGroup[],
   options: GenerateOptions,
   groupSchemaMap?: Map<string, Set<string>>,
+  flat = false,
 ): GeneratedFile {
   const lines: string[] = [];
   const name = options.sourceName;
@@ -77,8 +78,13 @@ export function generateIndexFile(
     lines.push("");
   }
 
-  // Re-export schemas/types from each group folder
-  if (groupSchemaMap && groupSchemaMap.size > 0) {
+  // Re-export schemas/types
+  if (flat) {
+    const file = options.generateSchemas ? "schemas" : "types";
+    if (options.generateSchemas || options.generateTypes) {
+      lines.push(`export * from "./${file}";`);
+    }
+  } else if (groupSchemaMap && groupSchemaMap.size > 0) {
     const file = options.generateSchemas ? "schemas" : "types";
     const exported = new Set<string>();
 
@@ -86,15 +92,12 @@ export function generateIndexFile(
       const schemaNames = groupSchemaMap.get(group.name);
       if (!schemaNames) continue;
 
-      // Find which names from this group are unique (not yet exported)
       const unique = [...schemaNames].filter((n) => !exported.has(n));
       if (unique.length === 0) continue;
 
-      // If ALL names are unique, use `export *`
       if (unique.length === schemaNames.size) {
         lines.push(`export * from "./${group.name}/${file}";`);
       } else {
-        // Selective re-export to avoid duplicates
         const imports: string[] = [];
         for (const n of unique) {
           if (options.generateSchemas) imports.push(`${n}Schema`);

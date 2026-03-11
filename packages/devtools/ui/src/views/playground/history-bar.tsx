@@ -75,7 +75,7 @@ function HistoryEntry({
       />
       <span className="text-text-muted">{formatAbsoluteTime(entry.timestamp)}</span>
       <span className="font-mono text-text-secondary">
-        {entry.source}.{entry.group}.{entry.method}
+        {entry.group ? `${entry.source}.${entry.group}.${entry.method}` : `${entry.source}.${entry.method}`}
       </span>
       {entry.statusCode != null && (
         <span

@@ -18,7 +18,7 @@ export function collectHints(
 
   for (const ep of endpoints) {
     if (ep.type === "query" && !ep.middleware.includes("cache")) {
-      const key = `${ep.source}.${ep.group}.${ep.method}`
+      const key = `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")}`
       const callCount = epDurations.get(key)?.length ?? 0
       if (callCount >= MIN_CALLS_FOR_CACHE_HINT) {
         items.push({ id: nextId(), severity: "hint", title: "Consider caching", description: `${key} is a query endpoint called ${callCount} times with no caching.`, suggestion: `Add cacheMiddleware({ ttl: 60 }) to the middleware chain.`, endpoint: key, category: "performance" })
@@ -28,7 +28,7 @@ export function collectHints(
 
   for (const ep of endpoints) {
     if (!ep.middleware.includes("retry")) {
-      const key = `${ep.source}.${ep.group}.${ep.method}`
+      const key = `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")}`
       const stats = epErrors.get(key)
       if (stats && stats.transportErrors > 0 && stats.transportErrors / stats.total < ERROR_RATE_THRESHOLD) {
         items.push({ id: nextId(), severity: "hint", title: "Consider retry middleware", description: `${key} has occasional transport errors but no retry middleware.`, suggestion: "Add retryMiddleware({ maxRetries: 3, backoff: 'exponential' }) to handle transient failures.", endpoint: key, category: "reliability" })

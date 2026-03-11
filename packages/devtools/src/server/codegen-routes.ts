@@ -1,19 +1,27 @@
 /**
- * Express routes for codegen: parse, generate, write, config, diff, fingerprint.
+ * Express routes for codegen: parse, generate, write, diff, fingerprint.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import {
+  addSource,
   diffSpecs,
   type FingerprintResult,
   type GenerateOptions,
   generateCode,
   generateFingerprints,
+  getSource,
+  loadRegistry,
   mergeGroupFile,
   type ParsedSpec,
   parseSpec,
+  saveRegistry,
 } from "../codegen/index.js";
+import type { SpecSource } from "../codegen/merge/types.js";
+import { previewUpdate } from "../codegen/merge/update-flow.js";
+import { cleanupOrphanFiles } from "./cleanup-orphans.js";
+import { collectFingerprints } from "./registry-helpers.js";
 import { registerRegistryRoutes } from "./registry-routes.js";
 import type { RouteApp } from "./route-types.js";
 import { registerUpdateFlowRoutes } from "./update-routes.js";
@@ -38,40 +46,71 @@ export function registerCodegenRoutes(app: RouteApp): void {
     }
   });
 
+  /**
+   * Smart write: if source exists in registry, merges with existing files
+   * to preserve user modifications. Otherwise writes directly.
+   */
   app.post("/api/codegen/write", (req, res) => {
     try {
-      const { files } = req.body as { files: { path: string; content: string }[] };
+      const { files, sourceName, spec, specSource, options } = req.body as {
+        files: { path: string; content: string }[];
+        sourceName?: string;
+        spec?: ParsedSpec;
+        specSource?: SpecSource;
+        options?: GenerateOptions;
+      };
+
+      const config = loadRegistry();
+      const source = sourceName ? getSource(config, sourceName) : undefined;
+
+      /* Source exists in registry → use merge to preserve user edits */
+      if (source && sourceName && spec && specSource && options) {
+        const existingFiles = readExistingFiles(files.map((f) => f.path));
+        const preview = previewUpdate(source, spec, files, existingFiles);
+
+        for (const file of preview.files) {
+          writeFileSafe(resolve(file.path), file.content);
+        }
+
+        /* Clean up orphan files — scan effective dir (outputDir/sourceName) */
+        const newPaths = new Set(files.map((f) => resolve(f.path)));
+        const effectiveDir = `${source.outputDir.replace(/\/+$/, "")}/${options.sourceName}`;
+        const deleted = cleanupOrphanFiles(effectiveDir, newPaths);
+
+        /* Update registry with new fingerprints */
+        const fingerprints = collectFingerprints(files);
+        const updated = addSource(config, sourceName, spec, specSource, options, fingerprints);
+        saveRegistry(updated);
+
+        const mergedCount = preview.files.filter((f) => f.status === "merged").length;
+        res.json({
+          written: preview.files.length,
+          merged: mergedCount,
+          deleted,
+          files: preview.files.map((f) => ({ path: f.path, status: f.status })),
+        });
+        return;
+      }
+
+      /* No registry entry → raw write */
       for (const file of files) {
         writeFileSafe(resolve(file.path), file.content);
       }
-      res.json({ written: files.length, files: files.map((f) => f.path) });
+
+      /* Register in registry if spec info provided */
+      if (sourceName && spec && specSource && options) {
+        const fingerprints = collectFingerprints(files);
+        const updated = addSource(config, sourceName, spec, specSource, options, fingerprints);
+        saveRegistry(updated);
+      }
+
+      res.json({
+        written: files.length,
+        merged: 0,
+        files: files.map((f) => ({ path: f.path, status: "safe" })),
+      });
     } catch (err) {
       res.status(500).json({ error: errMsg(err, "Failed to write files") });
-    }
-  });
-
-  app.post("/api/codegen/save-config", (req, res) => {
-    try {
-      const { config, path: configPath } = req.body as { config: unknown; path?: string };
-      const filePath = resolve(configPath ?? "codegen.nexus.json");
-      writeFileSafe(filePath, `${JSON.stringify(config, null, 2)}\n`);
-      res.json({ path: filePath });
-    } catch (err) {
-      res.status(500).json({ error: errMsg(err, "Failed to save config") });
-    }
-  });
-
-  app.post("/api/codegen/load-config", (req, res) => {
-    try {
-      const { path: configPath } = req.body as { path?: string };
-      const filePath = resolve(configPath ?? "codegen.nexus.json");
-      if (!existsSync(filePath)) {
-        res.status(404).json({ error: "Config file not found" });
-        return;
-      }
-      res.json(JSON.parse(readFileSync(filePath, "utf-8")));
-    } catch (err) {
-      res.status(500).json({ error: errMsg(err, "Failed to load config") });
     }
   });
 
@@ -137,6 +176,17 @@ async function resolveSpecContent(
     return readFileSync(filePath, "utf-8");
   }
   return content;
+}
+
+function readExistingFiles(paths: string[]): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const filePath of paths) {
+    const absPath = resolve(filePath);
+    if (existsSync(absPath)) {
+      result[filePath] = readFileSync(absPath, "utf-8");
+    }
+  }
+  return result;
 }
 
 function writeFileSafe(filePath: string, content: string): void {

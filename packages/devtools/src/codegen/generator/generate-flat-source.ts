@@ -1,0 +1,119 @@
+/**
+ * Generates a flat source file with endpoints directly in defineApi.
+ * Used when groupBy === "single".
+ */
+
+import type { ParsedEndpoint, ParsedSpec } from "../parser/types";
+import { buildEndpointDefinition } from "./build-endpoint";
+import { collectSchemaRefs } from "./schema-refs";
+import { resolveResponseType } from "./schema-types";
+import { getSchemaRefName } from "./schema-utils";
+import type { GeneratedFile, GenerateOptions } from "./types";
+
+export function generateFlatSourceFile(
+  endpoints: ParsedEndpoint[],
+  spec: ParsedSpec,
+  options: GenerateOptions,
+): GeneratedFile {
+  const lines: string[] = [];
+  const imports = new Set<string>(["defineApi", "endpoint"]);
+  const schemaImports = new Set<string>();
+
+  for (const ep of endpoints) {
+    collectSchemaRefs(ep.responseSchema, schemaImports);
+    collectSchemaRefs(ep.requestBody, schemaImports);
+  }
+
+  const typeImports = collectTypeImports(endpoints, spec, options, schemaImports);
+  const needsValidation = checkNeedsValidation(endpoints, options, schemaImports);
+
+  lines.push(`import { ${[...imports].join(", ")} } from "@noverax/nexus/define";`);
+
+  if (needsValidation) {
+    if (options.validation === "zod") lines.push(`import { z } from "zod";`);
+    else if (options.validation === "valibot") lines.push(`import * as v from "valibot";`);
+  }
+
+  if (schemaImports.size > 0 && (options.generateSchemas || options.generateTypes)) {
+    const schemaFile = options.generateSchemas ? "./schemas" : "./types";
+    const importNames = [...schemaImports].map((name) =>
+      options.generateSchemas ? `${name}Schema` : name,
+    );
+    if (options.generateTypes && options.generateSchemas && typeImports.size > 0) {
+      importNames.push(...[...typeImports].map((name) => `type ${name}`));
+    }
+    lines.push(`import { ${importNames.join(", ")} } from "${schemaFile}";`);
+  }
+
+  lines.push("");
+  lines.push(`export const ${options.sourceName} = defineApi({`);
+  lines.push(`  baseURL: "${spec.baseURL}",`);
+  lines.push(`  endpoints: {`);
+
+  for (const ep of endpoints) {
+    if (options.includeComments && ep.description) {
+      lines.push(`    /** ${ep.description} */`);
+    }
+    const def = buildEndpointDefinition(ep, spec, options, schemaImports);
+    lines.push(`    ${ep.name}: ${def},`);
+  }
+
+  lines.push(`  },`);
+  lines.push(`});`);
+  lines.push("");
+
+  return {
+    path: `${options.outputDir}/source.ts`,
+    content: lines.join("\n"),
+  };
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function collectTypeImports(
+  endpoints: ParsedEndpoint[],
+  spec: ParsedSpec,
+  options: GenerateOptions,
+  schemaImports: Set<string>,
+): Set<string> {
+  const typeImports = new Set<string>();
+  if (!options.generateTypes || !options.generateSchemas) return typeImports;
+
+  for (const ep of endpoints) {
+    const responseType = resolveResponseType(ep, spec, options);
+    for (const ref of schemaImports) {
+      if (responseType === ref || responseType === `${ref}[]`) {
+        typeImports.add(ref);
+      }
+    }
+    /* Body refs used as type generics in endpoint<R, V>() */
+    const bodyRef = getSchemaRefName(ep.requestBody);
+    if (bodyRef && schemaImports.has(bodyRef)) {
+      const bodySchema = spec.schemas[bodyRef];
+      if (
+        bodySchema?.properties &&
+        Object.values(bodySchema.properties).some((p) => p.description)
+      ) {
+        typeImports.add(bodyRef);
+      }
+    }
+  }
+  return typeImports;
+}
+
+function checkNeedsValidation(
+  endpoints: ParsedEndpoint[],
+  options: GenerateOptions,
+  schemaImports: Set<string>,
+): boolean {
+  if (!options.generateSchemas || options.validation === "none") return false;
+
+  for (const ep of endpoints) {
+    const ref = getSchemaRefName(ep.responseSchema);
+    if (ep.responseSchema?.type === "array" && ref && schemaImports.has(ref)) return true;
+    const bodyRef = getSchemaRefName(ep.requestBody);
+    const hasPathParams = ep.parameters.some((p) => p.in === "path");
+    if (bodyRef && schemaImports.has(bodyRef) && hasPathParams) return true;
+  }
+  return false;
+}

@@ -30,3 +30,4 @@ export type {
   UpdateFileResult,
   UpdateResult,
 } from "./types";
+export { previewUpdate } from "./update-flow";

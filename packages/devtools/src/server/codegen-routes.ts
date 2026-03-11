@@ -16,6 +16,7 @@ import {
 } from "../codegen/index.js";
 import { registerRegistryRoutes } from "./registry-routes.js";
 import type { RouteApp } from "./route-types.js";
+import { registerUpdateFlowRoutes } from "./update-routes.js";
 
 export function registerCodegenRoutes(app: RouteApp): void {
   app.post("/api/codegen/parse", async (req, res) => {
@@ -110,6 +111,7 @@ export function registerCodegenRoutes(app: RouteApp): void {
   });
 
   registerRegistryRoutes(app);
+  registerUpdateFlowRoutes(app);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

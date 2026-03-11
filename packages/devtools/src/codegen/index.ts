@@ -19,6 +19,7 @@ export type {
   SpecDiff,
   SpecSource,
   UpdateChoices,
+  UpdateFileResult,
   UpdateResult,
 } from "./merge";
 export {
@@ -31,6 +32,7 @@ export {
   mergeImports,
   normalizeCode,
   parseExistingGroup,
+  previewUpdate,
   splitEndpoint,
 } from "./merge";
 export type {

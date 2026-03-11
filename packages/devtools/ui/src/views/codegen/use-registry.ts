@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 
-import type { SourceStatusInfo, SourceSummary } from "./types"
+import type { SourceStatusInfo, SourceSummary, UpdateContext } from "./types"
 import {
   fetchCheckAllUpdates,
   fetchCheckUpdates,
@@ -14,7 +14,7 @@ interface UseRegistryReturn {
   loading: boolean
   error: string | null
   refresh: () => Promise<void>
-  checkUpdates: (name: string) => Promise<void>
+  checkUpdates: (name: string) => Promise<UpdateContext | null>
   checkAll: () => Promise<void>
   removeSource: (name: string) => Promise<void>
 }
@@ -31,7 +31,6 @@ export function useRegistry(): UseRegistryReturn {
     try {
       const list = await fetchRegistrySources()
       setSources(list)
-      /* Reset statuses for sources that no longer exist */
       setStatuses((prev) => {
         const next: Record<string, SourceStatusInfo> = {}
         for (const s of list) {
@@ -48,21 +47,27 @@ export function useRegistry(): UseRegistryReturn {
 
   useEffect(() => { void refresh() }, [refresh])
 
-  const checkUpdates = useCallback(async (name: string) => {
+  const checkUpdates = useCallback(async (name: string): Promise<UpdateContext | null> => {
     setStatuses((prev) => ({ ...prev, [name]: { status: "checking" } }))
     try {
       const result = await fetchCheckUpdates(name)
-      setStatuses((prev) => ({
-        ...prev,
-        [name]: result.error
-          ? { status: "error", error: result.error }
-          : { status: result.changed ? "updates-available" : "up-to-date" },
-      }))
+      if (result.error) {
+        setStatuses((prev) => ({ ...prev, [name]: { status: "error", error: result.error } }))
+        return null
+      }
+      const status = result.changed ? "updates-available" : "up-to-date"
+      setStatuses((prev) => ({ ...prev, [name]: { status } }))
+
+      if (result.changed && result.diff && result.newSpec) {
+        return { sourceName: name, diff: result.diff, newSpec: result.newSpec }
+      }
+      return null
     } catch (err) {
       setStatuses((prev) => ({
         ...prev,
         [name]: { status: "error", error: err instanceof Error ? err.message : "Check failed" },
       }))
+      return null
     }
   }, [])
 

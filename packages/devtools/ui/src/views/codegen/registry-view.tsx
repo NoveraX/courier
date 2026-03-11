@@ -1,10 +1,19 @@
 import { Database, Loader2, Plus, RefreshCw } from "lucide-react"
 
+import type { UpdateContext } from "./types"
 import { RegistryCard } from "./registry-card"
 import { useRegistry } from "./use-registry"
 
-export function RegistryView({ onImportNew }: { onImportNew: () => void }) {
+export function RegistryView({ onImportNew, onReviewUpdates }: {
+  onImportNew: () => void
+  onReviewUpdates: (ctx: UpdateContext) => void
+}) {
   const reg = useRegistry()
+
+  const handleCheckUpdates = async (name: string) => {
+    const ctx = await reg.checkUpdates(name)
+    if (ctx) onReviewUpdates(ctx)
+  }
 
   if (reg.loading && reg.sources.length === 0) {
     return <LoadingState />
@@ -35,7 +44,7 @@ export function RegistryView({ onImportNew }: { onImportNew: () => void }) {
             key={source.name}
             source={source}
             statusInfo={reg.statuses[source.name] ?? { status: "up-to-date" }}
-            onCheckUpdates={() => reg.checkUpdates(source.name)}
+            onCheckUpdates={() => handleCheckUpdates(source.name)}
             onRemove={() => reg.removeSource(source.name)}
           />
         ))}
@@ -44,16 +53,8 @@ export function RegistryView({ onImportNew }: { onImportNew: () => void }) {
   )
 }
 
-function RegistryToolbar({
-  sourceCount,
-  onCheckAll,
-  onRefresh,
-  onImportNew,
-}: {
-  sourceCount: number
-  onCheckAll: () => void
-  onRefresh: () => void
-  onImportNew: () => void
+function RegistryToolbar({ sourceCount, onCheckAll, onRefresh, onImportNew }: {
+  sourceCount: number; onCheckAll: () => void; onRefresh: () => void; onImportNew: () => void
 }) {
   return (
     <div className="flex items-center justify-between">

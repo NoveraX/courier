@@ -3,7 +3,7 @@ import { useState } from "react"
 import { DisconnectedBanner } from "../../components/ui"
 import { useDevToolsStore } from "../../store"
 
-import type { CodegenTab } from "./types"
+import type { CodegenTab, UpdateContext } from "./types"
 import { useCodegen } from "./use-codegen"
 import { CodegenHeader, SourceTabs } from "./codegen-header"
 import { ErrorBanner, WatchDiffBanner } from "./codegen-banners"
@@ -12,15 +12,27 @@ import { SelectStep } from "./select-step"
 import { OptionsStep } from "./options-step"
 import { PreviewStep } from "./preview-step"
 import { RegistryView } from "./registry-view"
+import { UpdateView } from "./update-view"
 
 export function CodegenView() {
   const { connectionStatus } = useDevToolsStore()
   const cg = useCodegen()
   const [tab, setTab] = useState<CodegenTab>("wizard")
+  const [updateCtx, setUpdateCtx] = useState<UpdateContext | null>(null)
 
   const switchToImport = () => {
     setTab("wizard")
     cg.setStep("import")
+  }
+
+  const handleReviewUpdates = (ctx: UpdateContext) => {
+    setUpdateCtx(ctx)
+    setTab("update")
+  }
+
+  const handleUpdateBack = () => {
+    setUpdateCtx(null)
+    setTab("registry")
   }
 
   return (
@@ -64,7 +76,8 @@ export function CodegenView() {
       )}
 
       <div className="flex-1 overflow-auto p-4">
-        {tab === "registry" && <RegistryView onImportNew={switchToImport} />}
+        {tab === "registry" && <RegistryView onImportNew={switchToImport} onReviewUpdates={handleReviewUpdates} />}
+        {tab === "update" && updateCtx && <UpdateView ctx={updateCtx} onBack={handleUpdateBack} />}
         {tab === "wizard" && cg.step === "import" && (
           <ImportStep source={cg.src.importSource} content={cg.src.importContent} loading={cg.loading} onSourceChange={(v) => cg.updateSource({ importSource: v })} onContentChange={(v) => cg.updateSource({ importContent: v })} onParse={cg.handleParse} />
         )}

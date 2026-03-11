@@ -47,7 +47,7 @@ export interface GeneratedFile {
 
 export type ImportSource = "url" | "raw" | "file"
 export type Step = "import" | "select" | "options" | "preview"
-export type CodegenTab = "wizard" | "registry"
+export type CodegenTab = "wizard" | "registry" | "update"
 
 // ── Registry ───────────────────────────────────────────────────────────────
 
@@ -71,6 +71,69 @@ export type SourceStatus = "up-to-date" | "updates-available" | "checking" | "er
 export interface SourceStatusInfo {
   status: SourceStatus
   error?: string
+}
+
+// ── Update Flow ──────────────────────────────────────────────────────────────
+
+export type BreakingSeverity = "breaking" | "potentially-breaking" | "non-breaking"
+
+export interface BreakingChange {
+  severity: BreakingSeverity
+  category: string
+  message: string
+  endpoint?: string
+  schema?: string
+}
+
+export interface DiffEndpoint {
+  group: string
+  name: string
+  method: string
+  path: string
+  changes?: string[]
+}
+
+export interface SchemaDiff {
+  name: string
+  type: "added" | "removed" | "modified"
+  changes?: string[]
+}
+
+export interface SpecDiff {
+  added: DiffEndpoint[]
+  removed: DiffEndpoint[]
+  modified: DiffEndpoint[]
+  schemaChanges: SchemaDiff[]
+  breakingChanges: BreakingChange[]
+}
+
+export type MergeStatus = "safe" | "merged" | "conflict"
+
+export type MergeChangeType = "added" | "removed" | "updated" | "preserved"
+
+export interface MergeChange {
+  type: MergeChangeType
+  target: string
+  detail: string
+}
+
+export interface UpdateFileResult {
+  path: string
+  content: string
+  status: MergeStatus
+  changes: MergeChange[]
+}
+
+export interface UpdateResult {
+  files: UpdateFileResult[]
+  breakingChanges: BreakingChange[]
+}
+
+/** Context passed from registry to update view */
+export interface UpdateContext {
+  sourceName: string
+  diff: SpecDiff
+  newSpec: ParsedSpec
 }
 
 /** Per-source state persisted in config */

@@ -1,4 +1,13 @@
-import type { CodegenMultiConfig, GenerateOptions, GeneratedFile, ImportSource, ParsedSpec, SourceSummary } from "./types"
+import type {
+  CodegenMultiConfig,
+  GenerateOptions,
+  GeneratedFile,
+  ImportSource,
+  ParsedSpec,
+  SourceSummary,
+  SpecDiff,
+  UpdateResult,
+} from "./types"
 
 const API_BASE = import.meta.env.DEV ? "http://localhost:4380" : ""
 
@@ -83,7 +92,14 @@ export async function fetchRemoveSource(name: string): Promise<void> {
   }
 }
 
-export async function fetchCheckUpdates(name: string): Promise<{ changed: boolean; error?: string }> {
+export interface CheckUpdatesResult {
+  changed: boolean
+  diff?: SpecDiff
+  newSpec?: ParsedSpec
+  error?: string
+}
+
+export async function fetchCheckUpdates(name: string): Promise<CheckUpdatesResult> {
   const res = await fetch(`${API_BASE}/api/codegen/registry/check-updates`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -91,7 +107,7 @@ export async function fetchCheckUpdates(name: string): Promise<{ changed: boolea
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error ?? "Failed to check updates")
-  return data as { changed: boolean }
+  return data as CheckUpdatesResult
 }
 
 export async function fetchCheckAllUpdates(): Promise<Record<string, { changed: boolean; error?: string }>> {
@@ -103,4 +119,32 @@ export async function fetchCheckAllUpdates(): Promise<Record<string, { changed: 
   const data = await res.json()
   if (!res.ok) throw new Error(data.error ?? "Failed to check sources")
   return data.results as Record<string, { changed: boolean; error?: string }>
+}
+
+// ── Update Flow ──────────────────────────────────────────────────────────────
+
+export async function fetchUpdatePreview(name: string, newSpec: ParsedSpec): Promise<UpdateResult> {
+  const res = await fetch(`${API_BASE}/api/codegen/update/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, newSpec }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? "Failed to preview update")
+  return data as UpdateResult
+}
+
+export async function fetchUpdateApply(
+  name: string,
+  newSpec: ParsedSpec,
+  files: { path: string; content: string }[],
+): Promise<{ written: number }> {
+  const res = await fetch(`${API_BASE}/api/codegen/update/apply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, newSpec, files }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? "Failed to apply update")
+  return data as { written: number }
 }

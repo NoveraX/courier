@@ -28,7 +28,7 @@ import { z } from "zod"
 const UserSchema = z.object({
   id: z.number(),
   name: z.string(),
-  email: z.string().email(),
+  email: z.email(),
   role: z.enum(["admin", "user"]),
 })
 
@@ -54,13 +54,13 @@ import { z } from "zod"
 export const UserSchema = z.object({
   id: z.number(),
   name: z.string(),
-  email: z.string().email(),
+  email: z.email(),
   createdAt: z.string(),
 })
 
 export const CreateUserSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email address"),
+  email: z.email("Invalid email address"),
   role: z.enum(["admin", "user"]).default("user"),
 })
 
@@ -143,18 +143,18 @@ import { z } from "zod"
 const UserSchema = z.object({
   id: z.number(),
   name: z.string(),
-  email: z.string().email(),
+  email: z.email(),
 })
 
 const CreateUserSchema = z.object({
   name: z.string().min(1),
-  email: z.string().email(),
+  email: z.email(),
 })
 
 const UpdateUserSchema = z.object({
   id: z.number(),
   name: z.string().min(1).optional(),
-  email: z.string().email().optional(),
+  email: z.email().optional(),
 })
 
 const DeleteSchema = z.object({

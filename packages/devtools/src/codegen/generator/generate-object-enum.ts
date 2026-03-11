@@ -31,34 +31,14 @@ function generateObjectWithValidation(
   schema: ParsedSchema,
   options: GenerateOptions,
 ): void {
-  const hasPropertyDocs =
-    options.includeComments &&
-    options.generateTypes &&
-    schema.properties &&
-    Object.values(schema.properties).some((p) => p.description);
-
-  if (hasPropertyDocs) {
+  /* Always emit explicit type when generateTypes is on — preserves JSDoc on ref fields */
+  if (options.generateTypes) {
     lines.push(`export type ${name} = ${schemaToInterface(schema)}`);
     lines.push("");
     const satisfies = satisfiesExpr(name, options);
     lines.push(`export const ${name}Schema = ${schemaToValidation(schema, options)}${satisfies};`);
   } else {
     lines.push(`export const ${name}Schema = ${schemaToValidation(schema, options)};`);
-  }
-  lines.push("");
-
-  if (options.generateTypes && !hasPropertyDocs) {
-    appendInferredType(lines, name, options);
-  }
-}
-
-function appendInferredType(lines: string[], name: string, options: GenerateOptions): void {
-  if (options.validation === "zod") {
-    lines.push(`export type ${name} = z.infer<typeof ${name}Schema>;`);
-  } else if (options.validation === "valibot") {
-    lines.push(`export type ${name} = v.InferOutput<typeof ${name}Schema>;`);
-  } else if (options.validation === "arktype") {
-    lines.push(`export type ${name} = typeof ${name}Schema.infer;`);
   }
   lines.push("");
 }

@@ -168,7 +168,7 @@ const users = defineGroup({
     getAll: endpoint({ response: z.array(UserSchema) })((http) => http.get()),
     create: endpoint({
       response: UserSchema,
-      variables: z.object({ name: z.string().min(1), email: z.string().email() }),
+      variables: z.object({ name: z.string().min(1), email: z.email() }),
     })((http, vars) => http.post("", vars)),
   },
 })

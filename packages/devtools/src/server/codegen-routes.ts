@@ -16,6 +16,7 @@ import {
   mergeGroupFile,
   type ParsedSpec,
   parseSpec,
+  removeSource,
   saveRegistry,
 } from "../codegen/index.js";
 import type { SpecSource } from "../codegen/merge/types.js";
@@ -77,9 +78,12 @@ export function registerCodegenRoutes(app: RouteApp): void {
         const effectiveDir = `${source.outputDir.replace(/\/+$/, "")}/${options.sourceName}`;
         const deleted = cleanupOrphanFiles(effectiveDir, newPaths);
 
-        /* Update registry with new fingerprints */
+        /* Update registry — remove source if no endpoints left */
         const fingerprints = collectFingerprints(files);
-        const updated = addSource(config, sourceName, spec, specSource, options, fingerprints);
+        const updated =
+          Object.keys(fingerprints).length === 0
+            ? removeSource(config, sourceName)
+            : addSource(config, sourceName, spec, specSource, options, fingerprints);
         saveRegistry(updated);
 
         const mergedCount = preview.files.filter((f) => f.status === "merged").length;
@@ -97,11 +101,13 @@ export function registerCodegenRoutes(app: RouteApp): void {
         writeFileSafe(resolve(file.path), file.content);
       }
 
-      /* Register in registry if spec info provided */
+      /* Register in registry if spec info provided (skip if no endpoints) */
       if (sourceName && spec && specSource && options) {
         const fingerprints = collectFingerprints(files);
-        const updated = addSource(config, sourceName, spec, specSource, options, fingerprints);
-        saveRegistry(updated);
+        if (Object.keys(fingerprints).length > 0) {
+          const updated = addSource(config, sourceName, spec, specSource, options, fingerprints);
+          saveRegistry(updated);
+        }
       }
 
       res.json({

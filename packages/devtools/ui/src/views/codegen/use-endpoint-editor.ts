@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react"
 
 import type { ParsedGroup, ParsedSpec, SourceSummary } from "./types"
-import { fetchParseSpec, fetchGenerateCode, fetchWriteFiles } from "./api"
+import { fetchParseSpec, fetchGenerateCode, fetchRemoveSource, fetchWriteFiles } from "./api"
 import { formatWriteResult, groupKey } from "./helpers"
 
 export function useEndpointEditor(source: SourceSummary, onApplied: () => void) {
@@ -118,11 +118,18 @@ export function useEndpointEditor(source: SourceSummary, onApplied: () => void) 
   const deselectAll = useCallback(() => setSelection({}), [])
 
   const handleApply = useCallback(async () => {
-    if (!spec || totalSelected === 0) return
+    if (!spec) return
     setApplying(true)
     setError(null)
     setResult(null)
     try {
+      /* All endpoints deselected → remove source from registry */
+      if (totalSelected === 0) {
+        await fetchRemoveSource(source.name)
+        setResult("Source removed from registry")
+        onApplied()
+        return
+      }
       const selectedEndpoints: Record<string, string[]> = {}
       for (const [gKey, endpoints] of Object.entries(selection)) {
         if (endpoints.size > 0) selectedEndpoints[gKey] = [...endpoints]

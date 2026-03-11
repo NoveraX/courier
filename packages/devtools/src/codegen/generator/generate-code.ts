@@ -3,6 +3,7 @@
  */
 
 import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
+import { extractEndpointTypes } from "./extract-endpoint-types";
 import { generateFlatSourceFile } from "./generate-flat-source";
 import { generateGroupFile } from "./generate-group";
 import { generateIndexFile } from "./generate-index";
@@ -29,30 +30,25 @@ export function generateCode(spec: ParsedSpec, options: GenerateOptions): Genera
 
 function generateFlat(spec: ParsedSpec, opts: GenerateOptions): GeneratedFile[] {
   const files: GeneratedFile[] = [];
-  const allEndpoints = spec.groups.flatMap((g) => g.endpoints);
-
-  /* Collect only schemas referenced by selected endpoints */
   const flatGroup: ParsedGroup = {
     name: "api",
     description: "",
     prefix: "/",
-    endpoints: allEndpoints,
+    endpoints: spec.groups.flatMap((g) => g.endpoints),
   };
-  const usedSchemaNames = collectGroupSchemas(flatGroup, spec);
 
-  if (usedSchemaNames.size > 0) {
-    const usedSchemas: Record<string, ParsedSchema> = {};
-    for (const name of usedSchemaNames) {
-      if (spec.schemas[name]) usedSchemas[name] = spec.schemas[name];
-    }
+  const { group: processed, schemas: extracted } = extractEndpointTypes(flatGroup);
+  const groupSchemas = buildSchemaRecord(processed, spec, extracted);
+
+  if (Object.keys(groupSchemas).length > 0 && (opts.generateSchemas || opts.generateTypes)) {
     if (opts.generateSchemas) {
-      files.push(generateSchemasFile(usedSchemas, opts));
-    } else if (opts.generateTypes) {
-      files.push(generateTypesFile(usedSchemas, opts));
+      files.push(generateSchemasFile(groupSchemas, opts));
+    } else {
+      files.push(generateTypesFile(groupSchemas, opts));
     }
   }
 
-  files.push(generateFlatSourceFile(allEndpoints, spec, opts));
+  files.push(generateFlatSourceFile(processed.endpoints, spec, opts, extracted));
   files.push(generateIndexFile(spec, [], opts, new Map(), true));
 
   return files;
@@ -60,33 +56,70 @@ function generateFlat(spec: ParsedSpec, opts: GenerateOptions): GeneratedFile[] 
 
 function generateGrouped(spec: ParsedSpec, opts: GenerateOptions): GeneratedFile[] {
   const files: GeneratedFile[] = [];
-  const groups = spec.groups;
-  const hasSchemas = Object.keys(spec.schemas).length > 0;
   const groupSchemaMap = new Map<string, Set<string>>();
 
-  for (const group of groups) {
-    if (hasSchemas && (opts.generateSchemas || opts.generateTypes)) {
-      const groupSchemaNames = collectGroupSchemas(group, spec);
-      if (groupSchemaNames.size > 0) {
-        groupSchemaMap.set(group.name, groupSchemaNames);
-        const groupSchemas: Record<string, ParsedSchema> = {};
-        for (const name of groupSchemaNames) {
-          if (spec.schemas[name]) groupSchemas[name] = spec.schemas[name];
-        }
-        if (opts.generateSchemas) {
-          files.push(generateSchemasFile(groupSchemas, opts, group.name));
-        } else {
-          files.push(generateTypesFile(groupSchemas, opts, group.name));
-        }
+  for (const group of spec.groups) {
+    const { group: processed, schemas: extracted } = extractEndpointTypes(group);
+    const groupSchemas = buildSchemaRecord(processed, spec, extracted);
+
+    if (Object.keys(groupSchemas).length > 0 && (opts.generateSchemas || opts.generateTypes)) {
+      groupSchemaMap.set(group.name, new Set(Object.keys(groupSchemas)));
+      if (opts.generateSchemas) {
+        files.push(generateSchemasFile(groupSchemas, opts, group.name));
+      } else {
+        files.push(generateTypesFile(groupSchemas, opts, group.name));
       }
     }
-    files.push(generateGroupFile(group, spec, opts));
+
+    files.push(generateGroupFile(processed, spec, opts, extracted));
   }
 
-  files.push(generateSourceFile(groups, spec, opts));
-  files.push(generateIndexFile(spec, groups, opts, groupSchemaMap));
+  files.push(generateSourceFile(spec.groups, spec, opts));
+  files.push(generateIndexFile(spec, spec.groups, opts, groupSchemaMap));
 
   return files;
+}
+
+/** Collect spec schemas + extracted endpoint types, including transitive deps */
+function buildSchemaRecord(
+  group: ParsedGroup,
+  spec: ParsedSpec,
+  extracted: Record<string, ParsedSchema>,
+): Record<string, ParsedSchema> {
+  /* Use extended spec so BFS can resolve deps from extracted schemas */
+  const extendedSpec = { ...spec, schemas: { ...spec.schemas, ...extracted } };
+  const names = collectGroupSchemas(group, extendedSpec);
+
+  /* Ensure all extracted types are included + collect their transitive deps */
+  for (const [name, schema] of Object.entries(extracted)) {
+    names.add(name);
+    collectDeepRefs(schema, spec, names);
+  }
+
+  const result: Record<string, ParsedSchema> = {};
+  for (const name of names) {
+    if (spec.schemas[name]) result[name] = spec.schemas[name];
+    else if (extracted[name]) result[name] = extracted[name];
+  }
+  return result;
+}
+
+/** Recursively collect schema refs from properties */
+function collectDeepRefs(schema: ParsedSchema, spec: ParsedSpec, refs: Set<string>): void {
+  if (!schema.properties) return;
+  for (const prop of Object.values(schema.properties)) {
+    const refSchema = prop.refName ? spec.schemas[prop.refName] : undefined;
+    if (prop.refName && refSchema && !refs.has(prop.refName)) {
+      refs.add(prop.refName);
+      collectDeepRefs(refSchema, spec, refs);
+    }
+    const itemRef = prop.items?.type === "ref" ? prop.items.refName : undefined;
+    const itemSchema = itemRef ? spec.schemas[itemRef] : undefined;
+    if (itemRef && itemSchema && !refs.has(itemRef)) {
+      refs.add(itemRef);
+      collectDeepRefs(itemSchema, spec, refs);
+    }
+  }
 }
 
 // ── Filter by selection ──────────────────────────────────────────────────────

@@ -3,6 +3,7 @@
  */
 
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
+import { propToTsType, schemaToTsType } from "./inline-types";
 import type { GenerateOptions } from "./types";
 
 export function schemaToInterface(schema: ParsedSchema): string {
@@ -16,7 +17,7 @@ export function schemaToInterface(schema: ParsedSchema): string {
     const nullable = prop.nullable ? " | null" : "";
     const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : `"${name}"`;
     if (prop.description) lines.push(`  /** ${prop.description} */`);
-    lines.push(`  ${key}${optional}: ${tsType(prop.type, prop.format)}${nullable};`);
+    lines.push(`  ${key}${optional}: ${propToTsType(prop)}${nullable};`);
   }
 
   return `{\n${lines.join("\n")}\n};`;
@@ -47,7 +48,7 @@ export function resolveResponseType(
     return options.generateTypes && name ? `${name}[]` : "unknown[]";
   }
 
-  return "unknown";
+  return schemaToTsType(ep.responseSchema);
 }
 
 export function resolveVariablesType(

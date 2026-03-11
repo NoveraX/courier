@@ -2,7 +2,7 @@
  * Builds endpoint() call expressions for group generation.
  */
 
-import type { ParsedEndpoint, ParsedSpec } from "../parser/types";
+import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointCall, resolveBodyInterfaceType } from "./build-endpoint-helpers";
 import { resolveResponseType, resolveVariablesType } from "./schema-types";
 import { extendSchemaWithParams, getSchemaRefName } from "./schema-utils";
@@ -13,13 +13,15 @@ export function buildEndpointDefinition(
   spec: ParsedSpec,
   options: GenerateOptions,
   schemaImports: Set<string>,
+  extracted?: Record<string, ParsedSchema>,
 ): string {
   const hasSchema = options.generateSchemas && options.validation !== "none";
   const schemaConfig = buildSchemaConfig(ep, options, hasSchema, schemaImports);
   const typeConfig: string[] = ep.httpMethod === "get" ? [`type: "query"`] : [];
 
   const responseType = resolveResponseType(ep, spec, options);
-  const varsType = resolveVariablesType(ep, spec, options);
+  const paramsName = `${toPascalCase(ep.name)}Params`;
+  const varsType = extracted?.[paramsName] ? paramsName : resolveVariablesType(ep, spec, options);
   const pathParams = ep.parameters.filter((p) => p.in === "path");
 
   const bodyInterfaceType = resolveBodyInterfaceType(
@@ -87,6 +89,10 @@ function buildResponseExpr(
     else if (options.validation === "arktype") expr = `${responseRef}Schema.array()`;
   }
   return expr;
+}
+
+function toPascalCase(name: string): string {
+  return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
 function buildFnBody(ep: ParsedEndpoint): string {

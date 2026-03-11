@@ -2,7 +2,7 @@
  * Generates group definition files (defineGroup + endpoints).
  */
 
-import type { ParsedGroup, ParsedSpec } from "../parser/types";
+import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointDefinition } from "./build-endpoint";
 import { collectSchemaRefs } from "./schema-refs";
 import { resolveResponseType } from "./schema-types";
@@ -13,51 +13,30 @@ export function generateGroupFile(
   group: ParsedGroup,
   spec: ParsedSpec,
   options: GenerateOptions,
+  extracted?: Record<string, ParsedSchema>,
 ): GeneratedFile {
   const lines: string[] = [];
-  const imports = new Set<string>();
   const schemaImports = new Set<string>();
 
-  imports.add("defineGroup");
-  imports.add("endpoint");
-
-  // Collect schema refs used by this group
   for (const ep of group.endpoints) {
     collectSchemaRefs(ep.responseSchema, schemaImports);
     collectSchemaRefs(ep.requestBody, schemaImports);
   }
 
-  // Track which types are actually used in endpoint generics (not just as schema configs)
-  const typeImports = collectTypeImports(group, spec, options, schemaImports);
+  const typeImports = collectTypeImports(group, spec, options, schemaImports, extracted);
+  const needsValidation = checkNeedsValidationImport(group, options, schemaImports);
 
-  // Check if any endpoint needs validation lib import in group file
-  const needsValidationImport = checkNeedsValidationImport(group, options, schemaImports);
+  lines.push(`import { defineGroup, endpoint } from "@noverax/nexus/define";`);
 
-  // Core import
-  lines.push(`import { ${[...imports].join(", ")} } from "@noverax/nexus/define";`);
-
-  // Validation lib import (only if needed for array wrappers in endpoint configs)
-  if (needsValidationImport) {
+  if (needsValidation) {
     if (options.validation === "zod") lines.push(`import { z } from "zod";`);
     else if (options.validation === "valibot") lines.push(`import * as v from "valibot";`);
   }
 
-  // Schema/type imports — only import types that are actually used in generics
-  if (schemaImports.size > 0 && (options.generateSchemas || options.generateTypes)) {
-    const schemaFile = options.generateSchemas ? "./schemas" : "./types";
-    const importNames = [...schemaImports].map((name) =>
-      options.generateSchemas ? `${name}Schema` : name,
-    );
-    if (options.generateTypes && options.generateSchemas && typeImports.size > 0) {
-      const typeNames = [...typeImports].map((name) => `type ${name}`);
-      importNames.push(...typeNames);
-    }
-    lines.push(`import { ${importNames.join(", ")} } from "${schemaFile}";`);
-  }
+  const importLine = buildImportLine(schemaImports, typeImports, options);
+  if (importLine) lines.push(importLine);
 
   lines.push("");
-
-  // defineGroup
   lines.push(`export const ${group.name} = defineGroup({`);
   lines.push(`  prefix: "${group.prefix}",`);
   lines.push(`  endpoints: {`);
@@ -66,9 +45,8 @@ export function generateGroupFile(
     if (options.includeComments && ep.description) {
       lines.push(`    /** ${ep.description} */`);
     }
-
-    const endpointDef = buildEndpointDefinition(ep, spec, options, schemaImports);
-    lines.push(`    ${ep.name}: ${endpointDef},`);
+    const def = buildEndpointDefinition(ep, spec, options, schemaImports, extracted);
+    lines.push(`    ${ep.name}: ${def},`);
   }
 
   lines.push(`  },`);
@@ -83,14 +61,41 @@ export function generateGroupFile(
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+function buildImportLine(
+  schemaImports: Set<string>,
+  typeImports: Set<string>,
+  options: GenerateOptions,
+): string | null {
+  if (schemaImports.size === 0 && typeImports.size === 0) return null;
+  if (!options.generateSchemas && !options.generateTypes) return null;
+
+  const parts: string[] = [];
+  const schemaFile = options.generateSchemas ? "./schemas" : "./types";
+
+  for (const name of schemaImports) {
+    parts.push(options.generateSchemas ? `${name}Schema` : name);
+  }
+  for (const name of typeImports) {
+    if (options.generateSchemas) {
+      parts.push(`type ${name}`);
+    } else if (!schemaImports.has(name)) {
+      parts.push(name);
+    }
+  }
+
+  if (parts.length === 0) return null;
+  return `import { ${parts.join(", ")} } from "${schemaFile}";`;
+}
+
 function collectTypeImports(
   group: ParsedGroup,
   spec: ParsedSpec,
   options: GenerateOptions,
   schemaImports: Set<string>,
+  extracted?: Record<string, ParsedSchema>,
 ): Set<string> {
   const typeImports = new Set<string>();
-  if (!options.generateTypes || !options.generateSchemas) return typeImports;
+  if (!options.generateTypes) return typeImports;
 
   for (const ep of group.endpoints) {
     const responseType = resolveResponseType(ep, spec, options);
@@ -112,6 +117,14 @@ function collectTypeImports(
       }
     }
   }
+
+  /* Add extracted params types as type-only imports */
+  if (extracted) {
+    for (const name of Object.keys(extracted)) {
+      if (name.endsWith("Params")) typeImports.add(name);
+    }
+  }
+
   return typeImports;
 }
 
@@ -124,14 +137,10 @@ function checkNeedsValidationImport(
 
   for (const ep of group.endpoints) {
     const ref = getSchemaRefName(ep.responseSchema);
-    if (ep.responseSchema?.type === "array" && ref && schemaImports.has(ref)) {
-      return true;
-    }
+    if (ep.responseSchema?.type === "array" && ref && schemaImports.has(ref)) return true;
     const bodyRef = getSchemaRefName(ep.requestBody);
     const hasPathParams = ep.parameters.some((p) => p.in === "path");
-    if (bodyRef && schemaImports.has(bodyRef) && hasPathParams) {
-      return true;
-    }
+    if (bodyRef && schemaImports.has(bodyRef) && hasPathParams) return true;
   }
   return false;
 }

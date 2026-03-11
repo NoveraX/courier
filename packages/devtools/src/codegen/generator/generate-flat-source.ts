@@ -3,7 +3,7 @@
  * Used when groupBy === "single".
  */
 
-import type { ParsedEndpoint, ParsedSpec } from "../parser/types";
+import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointDefinition } from "./build-endpoint";
 import { collectSchemaRefs } from "./schema-refs";
 import { resolveResponseType } from "./schema-types";
@@ -14,9 +14,9 @@ export function generateFlatSourceFile(
   endpoints: ParsedEndpoint[],
   spec: ParsedSpec,
   options: GenerateOptions,
+  extracted?: Record<string, ParsedSchema>,
 ): GeneratedFile {
   const lines: string[] = [];
-  const imports = new Set<string>(["defineApi", "endpoint"]);
   const schemaImports = new Set<string>();
 
   for (const ep of endpoints) {
@@ -24,25 +24,33 @@ export function generateFlatSourceFile(
     collectSchemaRefs(ep.requestBody, schemaImports);
   }
 
-  const typeImports = collectTypeImports(endpoints, spec, options, schemaImports);
+  const typeImports = collectTypeImports(endpoints, spec, options, schemaImports, extracted);
   const needsValidation = checkNeedsValidation(endpoints, options, schemaImports);
 
-  lines.push(`import { ${[...imports].join(", ")} } from "@noverax/nexus/define";`);
+  lines.push(`import { defineApi, endpoint } from "@noverax/nexus/define";`);
 
   if (needsValidation) {
     if (options.validation === "zod") lines.push(`import { z } from "zod";`);
     else if (options.validation === "valibot") lines.push(`import * as v from "valibot";`);
   }
 
-  if (schemaImports.size > 0 && (options.generateSchemas || options.generateTypes)) {
+  if (
+    (schemaImports.size > 0 || typeImports.size > 0) &&
+    (options.generateSchemas || options.generateTypes)
+  ) {
     const schemaFile = options.generateSchemas ? "./schemas" : "./types";
-    const importNames = [...schemaImports].map((name) =>
-      options.generateSchemas ? `${name}Schema` : name,
-    );
-    if (options.generateTypes && options.generateSchemas && typeImports.size > 0) {
-      importNames.push(...[...typeImports].map((name) => `type ${name}`));
+    const parts: string[] = [];
+    for (const name of schemaImports) {
+      parts.push(options.generateSchemas ? `${name}Schema` : name);
     }
-    lines.push(`import { ${importNames.join(", ")} } from "${schemaFile}";`);
+    for (const name of typeImports) {
+      if (options.generateSchemas) {
+        parts.push(`type ${name}`);
+      } else if (!schemaImports.has(name)) {
+        parts.push(name);
+      }
+    }
+    if (parts.length > 0) lines.push(`import { ${parts.join(", ")} } from "${schemaFile}";`);
   }
 
   lines.push("");
@@ -54,7 +62,7 @@ export function generateFlatSourceFile(
     if (options.includeComments && ep.description) {
       lines.push(`    /** ${ep.description} */`);
     }
-    const def = buildEndpointDefinition(ep, spec, options, schemaImports);
+    const def = buildEndpointDefinition(ep, spec, options, schemaImports, extracted);
     lines.push(`    ${ep.name}: ${def},`);
   }
 
@@ -75,9 +83,10 @@ function collectTypeImports(
   spec: ParsedSpec,
   options: GenerateOptions,
   schemaImports: Set<string>,
+  extracted?: Record<string, ParsedSchema>,
 ): Set<string> {
   const typeImports = new Set<string>();
-  if (!options.generateTypes || !options.generateSchemas) return typeImports;
+  if (!options.generateTypes) return typeImports;
 
   for (const ep of endpoints) {
     const responseType = resolveResponseType(ep, spec, options);
@@ -86,7 +95,6 @@ function collectTypeImports(
         typeImports.add(ref);
       }
     }
-    /* Body refs used as type generics in endpoint<R, V>() */
     const bodyRef = getSchemaRefName(ep.requestBody);
     if (bodyRef && schemaImports.has(bodyRef)) {
       const bodySchema = spec.schemas[bodyRef];
@@ -98,6 +106,13 @@ function collectTypeImports(
       }
     }
   }
+
+  if (extracted) {
+    for (const name of Object.keys(extracted)) {
+      if (name.endsWith("Params")) typeImports.add(name);
+    }
+  }
+
   return typeImports;
 }
 

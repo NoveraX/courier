@@ -551,8 +551,8 @@ Works with any [Standard Schema](https://github.com/standard-schema/standard-sch
 import { endpoint } from "@noverax/nexus/define"
 import { z } from "zod"
 
-const UserSchema = z.object({ id: z.string(), name: z.string(), email: z.string().email() })
-const CreateUserSchema = z.object({ name: z.string().min(1), email: z.string().email() })
+const UserSchema = z.object({ id: z.string(), name: z.string(), email: z.email() })
+const CreateUserSchema = z.object({ name: z.string().min(1), email: z.email() })
 
 const users = defineGroup({
   prefix: "users",

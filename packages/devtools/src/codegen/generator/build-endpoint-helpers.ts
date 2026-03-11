@@ -48,6 +48,9 @@ export function buildEndpointCall(
     if (needsVarsGeneric) {
       return `endpoint<${responseType}, ${effectiveVarsType}>({ ${configParts.join(", ")} })`;
     }
+    if (responseType !== "unknown") {
+      return `endpoint<${responseType}>({ ${configParts.join(", ")} })`;
+    }
     return `endpoint({ ${configParts.join(", ")} })`;
   }
 

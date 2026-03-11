@@ -49,10 +49,10 @@ export function propToZod(prop: ParsedSchemaProperty): string {
 }
 
 export function primitiveToZod(type: string, format?: string): string {
-  if (type === "string" && format === "email") return "z.string().email()";
-  if (type === "string" && format === "date-time") return "z.string().datetime()";
-  if (type === "string" && format === "uri") return "z.string().url()";
-  if (type === "string" && format === "uuid") return "z.string().uuid()";
+  if (type === "string" && format === "email") return "z.email()";
+  if (type === "string" && format === "date-time") return "z.iso.datetime()";
+  if (type === "string" && format === "uri") return "z.url()";
+  if (type === "string" && format === "uuid") return "z.uuid()";
   if (type === "string") return "z.string()";
   if (type === "number" || type === "integer") return "z.number()";
   if (type === "boolean") return "z.boolean()";

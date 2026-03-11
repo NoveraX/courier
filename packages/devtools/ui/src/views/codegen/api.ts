@@ -1,4 +1,4 @@
-import type { ImportSource, ParsedSpec, GenerateOptions, GeneratedFile, CodegenMultiConfig } from "./types"
+import type { CodegenMultiConfig, GenerateOptions, GeneratedFile, ImportSource, ParsedSpec, SourceSummary } from "./types"
 
 const API_BASE = import.meta.env.DEV ? "http://localhost:4380" : ""
 
@@ -56,4 +56,51 @@ export async function fetchLoadConfig(): Promise<CodegenMultiConfig | null> {
   const data = await res.json()
   if (!res.ok) return null
   return data as CodegenMultiConfig
+}
+
+// ── Registry ───────────────────────────────────────────────────────────────
+
+export async function fetchRegistrySources(): Promise<SourceSummary[]> {
+  const res = await fetch(`${API_BASE}/api/codegen/registry/list`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? "Failed to list sources")
+  return data.sources as SourceSummary[]
+}
+
+export async function fetchRemoveSource(name: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/codegen/registry/remove`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  })
+  if (!res.ok) {
+    const data = await res.json()
+    throw new Error(data.error ?? "Failed to remove source")
+  }
+}
+
+export async function fetchCheckUpdates(name: string): Promise<{ changed: boolean; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/codegen/registry/check-updates`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? "Failed to check updates")
+  return data as { changed: boolean }
+}
+
+export async function fetchCheckAllUpdates(): Promise<Record<string, { changed: boolean; error?: string }>> {
+  const res = await fetch(`${API_BASE}/api/codegen/registry/check-all`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? "Failed to check sources")
+  return data.results as Record<string, { changed: boolean; error?: string }>
 }

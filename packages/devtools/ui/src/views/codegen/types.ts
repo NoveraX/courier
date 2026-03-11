@@ -47,6 +47,31 @@ export interface GeneratedFile {
 
 export type ImportSource = "url" | "raw" | "file"
 export type Step = "import" | "select" | "options" | "preview"
+export type CodegenTab = "wizard" | "registry"
+
+// ── Registry ───────────────────────────────────────────────────────────────
+
+export interface SpecSource {
+  type: "url" | "file" | "raw"
+  value: string
+}
+
+export interface SourceSummary {
+  name: string
+  version: string
+  specSource: SpecSource
+  outputDir: string
+  lastSynced: string
+  endpointCount: number
+  modifiedCount: number
+}
+
+export type SourceStatus = "up-to-date" | "updates-available" | "checking" | "error"
+
+export interface SourceStatusInfo {
+  status: SourceStatus
+  error?: string
+}
 
 /** Per-source state persisted in config */
 export interface SourceConfig {

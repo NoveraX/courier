@@ -1,6 +1,7 @@
-import { Code, Eye, Save, Plus, Trash2 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+import { Code, Database, Eye, Save, Plus, Trash2, Wand2 } from "lucide-react"
 
-import type { Step, SourceConfig, SourceState } from "./types"
+import type { CodegenTab, Step, SourceConfig, SourceState } from "./types"
 
 export function CodegenHeader({
   st,
@@ -12,6 +13,8 @@ export function CodegenHeader({
   onSaveConfig,
   step,
   onStepChange,
+  tab,
+  onTabChange,
 }: {
   st: SourceState
   src: SourceConfig
@@ -22,35 +25,73 @@ export function CodegenHeader({
   onSaveConfig: () => void
   step: Step
   onStepChange: (s: Step) => void
+  tab: CodegenTab
+  onTabChange: (t: CodegenTab) => void
 }) {
   return (
     <div className="flex items-center justify-between border-b border-border-default px-4 py-2.5">
-      <div className="flex items-center gap-2">
-        <Code size={16} className="text-text-muted" />
-        <span className="text-sm font-medium">Codegen</span>
-        {st.spec && <span className="text-xs text-text-muted">{st.spec.title} v{st.spec.version}</span>}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Code size={16} className="text-text-muted" />
+          <span className="text-sm font-medium">Codegen</span>
+        </div>
+        <TabSwitcher tab={tab} onTabChange={onTabChange} />
+        {tab === "wizard" && st.spec && (
+          <span className="text-xs text-text-muted">{st.spec.title} v{st.spec.version}</span>
+        )}
       </div>
       <div className="flex items-center gap-2">
-        {st.spec && src.importSource === "url" && (
-          <button type="button" onClick={onToggleWatch} title={watching ? "Stop watching" : "Watch spec URL (10s)"} className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors ${watching ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" : "text-text-muted hover:text-text-secondary"}`}>
-            <Eye size={12} className={watching ? "animate-pulse" : ""} />
-            {watching ? "Watching" : "Watch"}
-          </button>
+        {tab === "wizard" && (
+          <WizardControls st={st} src={src} watching={watching} sources={sources} states={states} onToggleWatch={onToggleWatch} onSaveConfig={onSaveConfig} step={step} onStepChange={onStepChange} />
         )}
-        {sources.some((_, i) => states[i]?.spec) && (
-          <button type="button" onClick={onSaveConfig} title="Save codegen config" className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-secondary">
-            <Save size={12} /> Save Config
-          </button>
-        )}
-        <div className="mx-1 h-4 w-px bg-border-subtle" />
-        {(["import", "select", "options", "preview"] as Step[]).map((s, i) => (
-          <button key={s} type="button" disabled={(s === "select" && !st.spec) || (s === "options" && !st.spec) || (s === "preview" && st.files.length === 0)} onClick={() => onStepChange(s)} className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors ${step === s ? "bg-indigo-500/15 text-indigo-400" : "text-text-muted hover:text-text-secondary disabled:opacity-30"}`}>
-            <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${step === s ? "bg-indigo-500 text-white" : "bg-surface-2 text-text-muted"}`}>{i + 1}</span>
-            <span className="hidden sm:inline">{s.charAt(0).toUpperCase() + s.slice(1)}</span>
-          </button>
-        ))}
       </div>
     </div>
+  )
+}
+
+function TabSwitcher({ tab, onTabChange }: { tab: CodegenTab; onTabChange: (t: CodegenTab) => void }) {
+  return (
+    <div className="flex items-center rounded-md bg-surface-1 p-0.5">
+      <TabButton active={tab === "wizard"} onClick={() => onTabChange("wizard")} icon={Wand2} label="Wizard" />
+      <TabButton active={tab === "registry"} onClick={() => onTabChange("registry")} icon={Database} label="Registry" />
+    </div>
+  )
+}
+
+function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: LucideIcon; label: string }) {
+  return (
+    <button type="button" onClick={onClick} className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors ${active ? "bg-surface-2 text-text-primary shadow-sm" : "text-text-muted hover:text-text-secondary"}`}>
+      <Icon size={11} />
+      {label}
+    </button>
+  )
+}
+
+function WizardControls({ st, src, watching, sources, states, onToggleWatch, onSaveConfig, step, onStepChange }: {
+  st: SourceState; src: SourceConfig; watching: boolean; sources: SourceConfig[]; states: SourceState[]
+  onToggleWatch: () => void; onSaveConfig: () => void; step: Step; onStepChange: (s: Step) => void
+}) {
+  return (
+    <>
+      {st.spec && src.importSource === "url" && (
+        <button type="button" onClick={onToggleWatch} title={watching ? "Stop watching" : "Watch spec URL (10s)"} className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors ${watching ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" : "text-text-muted hover:text-text-secondary"}`}>
+          <Eye size={12} className={watching ? "animate-pulse" : ""} />
+          {watching ? "Watching" : "Watch"}
+        </button>
+      )}
+      {sources.some((_, i) => states[i]?.spec) && (
+        <button type="button" onClick={onSaveConfig} title="Save codegen config" className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-secondary">
+          <Save size={12} /> Save Config
+        </button>
+      )}
+      <div className="mx-1 h-4 w-px bg-border-subtle" />
+      {(["import", "select", "options", "preview"] as Step[]).map((s, i) => (
+        <button key={s} type="button" disabled={(s === "select" && !st.spec) || (s === "options" && !st.spec) || (s === "preview" && st.files.length === 0)} onClick={() => onStepChange(s)} className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors ${step === s ? "bg-indigo-500/15 text-indigo-400" : "text-text-muted hover:text-text-secondary disabled:opacity-30"}`}>
+          <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${step === s ? "bg-indigo-500 text-white" : "bg-surface-2 text-text-muted"}`}>{i + 1}</span>
+          <span className="hidden sm:inline">{s.charAt(0).toUpperCase() + s.slice(1)}</span>
+        </button>
+      ))}
+    </>
   )
 }
 

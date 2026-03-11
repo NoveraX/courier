@@ -126,18 +126,28 @@ export async function executeRequest(
         timestamp: ft0,
       });
 
-      const response = await endpoint(
-        instance.createMethods(
-          {
-            ...(forwardVariables ? { variables: vars } : {}),
-            ...kyOptions,
-            headers: middlewareCtx.headers,
-            stream,
-          },
-          endpointGroup?.options,
-        ),
-        vars,
-      );
+      let response: Awaited<ReturnType<typeof endpoint>>;
+      try {
+        response = await endpoint(
+          instance.createMethods(
+            {
+              ...(forwardVariables ? { variables: vars } : {}),
+              ...kyOptions,
+              headers: middlewareCtx.headers,
+              stream,
+            },
+            endpointGroup?.options,
+          ),
+          vars,
+        );
+      } catch (fetchError) {
+        dt.onHttpFetchError?.({
+          requestId,
+          message: fetchError instanceof Error ? fetchError.message : String(fetchError),
+          timestamp: performance.now(),
+        });
+        throw fetchError;
+      }
 
       dt.onHttpFetchEnd?.({
         requestId,

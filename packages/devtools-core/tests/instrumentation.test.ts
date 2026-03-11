@@ -381,6 +381,147 @@ describe("DevTools Instrumentation", () => {
     });
   });
 
+  it("emits request:abort via hooks", () => {
+    const events: AnyDevToolsEvent[] = [];
+    connection = connectDevTools();
+    connection.bus.on((e) => events.push(e));
+
+    devtoolsHooks.onRequestAbort?.({
+      id: "req_123",
+      reason: "deduplication",
+      timestamp: performance.now(),
+    });
+
+    expect(events.find((e) => e.type === "request:abort")).toMatchObject({
+      type: "request:abort",
+      requestId: "req_123",
+      reason: "deduplication",
+    });
+  });
+
+  it("emits http:fetch:error via hooks", () => {
+    const events: AnyDevToolsEvent[] = [];
+    connection = connectDevTools();
+    connection.bus.on((e) => events.push(e));
+
+    devtoolsHooks.onHttpFetchError?.({
+      requestId: "req_456",
+      message: "Network request failed",
+      timestamp: performance.now(),
+    });
+
+    expect(events.find((e) => e.type === "http:fetch:error")).toMatchObject({
+      type: "http:fetch:error",
+      requestId: "req_456",
+      message: "Network request failed",
+    });
+  });
+
+  it("emits proxy:parse via hooks", () => {
+    const events: AnyDevToolsEvent[] = [];
+    connection = connectDevTools();
+    connection.bus.on((e) => events.push(e));
+
+    devtoolsHooks.onProxyParse?.({
+      source: "api",
+      group: "users",
+      method: "getById",
+      variables: { id: 1 },
+      timestamp: performance.now(),
+    });
+
+    expect(events.find((e) => e.type === "proxy:parse")).toMatchObject({
+      type: "proxy:parse",
+      source: "api",
+      group: "users",
+      method: "getById",
+      variables: { id: 1 },
+    });
+  });
+
+  it("emits proxy:origin-reject via hooks", () => {
+    const events: AnyDevToolsEvent[] = [];
+    connection = connectDevTools();
+    connection.bus.on((e) => events.push(e));
+
+    devtoolsHooks.onProxyOriginReject?.({
+      origin: "https://evil.com",
+      timestamp: performance.now(),
+    });
+
+    expect(events.find((e) => e.type === "proxy:origin-reject")).toMatchObject({
+      type: "proxy:origin-reject",
+      origin: "https://evil.com",
+    });
+  });
+
+  it("emits dedup:reuse via hooks", () => {
+    const events: AnyDevToolsEvent[] = [];
+    connection = connectDevTools();
+    connection.bus.on((e) => events.push(e));
+
+    devtoolsHooks.onDedupReuse?.({
+      requestId: "GET:/api/users",
+      key: "GET:/api/users",
+      timestamp: performance.now(),
+    });
+
+    expect(events.find((e) => e.type === "dedup:reuse")).toMatchObject({
+      type: "dedup:reuse",
+      key: "GET:/api/users",
+    });
+  });
+
+  it("emits upload:progress and upload:complete via hooks", () => {
+    const events: AnyDevToolsEvent[] = [];
+    connection = connectDevTools();
+    connection.bus.on((e) => events.push(e));
+
+    devtoolsHooks.onUploadProgress?.({
+      requestId: "upload_1",
+      loaded: 500,
+      total: 1000,
+      percentage: 0.5,
+      timestamp: performance.now(),
+    });
+
+    devtoolsHooks.onUploadComplete?.({
+      requestId: "upload_1",
+      timestamp: performance.now(),
+    });
+
+    expect(events.find((e) => e.type === "upload:progress")).toMatchObject({
+      type: "upload:progress",
+      requestId: "upload_1",
+      loaded: 500,
+      total: 1000,
+      percentage: 0.5,
+    });
+
+    expect(events.find((e) => e.type === "upload:complete")).toMatchObject({
+      type: "upload:complete",
+      requestId: "upload_1",
+    });
+  });
+
+  it("emits cache:invalidate via hooks", () => {
+    const events: AnyDevToolsEvent[] = [];
+    connection = connectDevTools();
+    connection.bus.on((e) => events.push(e));
+
+    devtoolsHooks.onCacheInvalidate?.({
+      key: "api:users:getAll:{}",
+      reason: "manual",
+      timestamp: performance.now(),
+    });
+
+    expect(events.find((e) => e.type === "cache:invalidate")).toMatchObject({
+      type: "cache:invalidate",
+      key: "api:users:getAll:{}",
+      reason: "manual",
+    });
+  });
+
   it("cleans up all hooks on disconnect", () => {
     connection = connectDevTools();
     expect(devtoolsHooks.onRequestStart).toBeDefined();
@@ -395,11 +536,17 @@ describe("DevTools Instrumentation", () => {
     expect(devtoolsHooks.onRequestStart).toBeUndefined();
     expect(devtoolsHooks.onRequestEnd).toBeUndefined();
     expect(devtoolsHooks.onRequestError).toBeUndefined();
+    expect(devtoolsHooks.onRequestAbort).toBeUndefined();
     expect(devtoolsHooks.onProxyReceive).toBeUndefined();
     expect(devtoolsHooks.onProxyRespond).toBeUndefined();
+    expect(devtoolsHooks.onProxyParse).toBeUndefined();
+    expect(devtoolsHooks.onProxyOriginReject).toBeUndefined();
     expect(devtoolsHooks.onMiddlewareEnter).toBeUndefined();
     expect(devtoolsHooks.onMiddlewareExit).toBeUndefined();
     expect(devtoolsHooks.onMiddlewareError).toBeUndefined();
+    expect(devtoolsHooks.onHttpFetchStart).toBeUndefined();
+    expect(devtoolsHooks.onHttpFetchEnd).toBeUndefined();
+    expect(devtoolsHooks.onHttpFetchError).toBeUndefined();
     expect(devtoolsHooks.onCacheHit).toBeUndefined();
     expect(devtoolsHooks.onCacheMiss).toBeUndefined();
     expect(devtoolsHooks.onCacheStore).toBeUndefined();

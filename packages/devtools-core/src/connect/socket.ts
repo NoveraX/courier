@@ -36,6 +36,18 @@ export async function tryConnectSocket(
       });
     });
 
+    // Heartbeat every 30s to signal liveness
+    const heartbeatInterval = setInterval(() => {
+      if (socket.connected) {
+        socket.emit("event", {
+          id: sessionId,
+          type: "connection:heartbeat",
+          timestamp: performance.now(),
+          sessionId,
+        });
+      }
+    }, 30_000);
+
     // Forward all bus events to Socket.IO
     const unsubscribe = bus.on((event) => {
       socket.emit("event", event);
@@ -60,6 +72,7 @@ export async function tryConnectSocket(
     );
 
     return () => {
+      clearInterval(heartbeatInterval);
       unsubscribe();
       socket.disconnect();
     };

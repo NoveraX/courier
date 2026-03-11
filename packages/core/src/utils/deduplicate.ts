@@ -25,6 +25,11 @@ export function deduplicateAndAbortPrevious(host: DedupeHost, dedupeKey: string)
       key: dedupeKey,
       timestamp: performance.now(),
     });
+    devtoolsHooks.onRequestAbort?.({
+      id: dedupeKey,
+      reason: "deduplication",
+      timestamp: performance.now(),
+    });
     existing.abort(
       new HTTPError({
         data: { success: false, message: "cancel request" },

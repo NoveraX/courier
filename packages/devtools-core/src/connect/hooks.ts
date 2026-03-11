@@ -5,6 +5,7 @@ import type {
   MiddlewareEnterEvent,
   MiddlewareErrorEvent,
   MiddlewareExitEvent,
+  RequestAbortEvent,
   RequestEndEvent,
   RequestErrorEvent,
   RequestStartEvent,
@@ -68,6 +69,18 @@ export function wireHooks(
         timestamp: e.timestamp,
         requestId: e.id,
         error: e.error,
+      }),
+    );
+  };
+
+  devtoolsHooks.onRequestAbort = (e) => {
+    bus.emit(
+      createEvent<RequestAbortEvent>(sessionId, {
+        id: e.id,
+        type: "request:abort",
+        timestamp: e.timestamp,
+        requestId: e.id,
+        reason: e.reason,
       }),
     );
   };

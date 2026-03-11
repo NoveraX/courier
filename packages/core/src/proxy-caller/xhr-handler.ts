@@ -1,3 +1,4 @@
+import { devtoolsHooks } from "../devtools";
 import { HTTPError } from "../error";
 import type { UploadProgress } from "../http-client/types";
 import { isFormData } from "../utils/helpers";
@@ -45,12 +46,29 @@ export async function handleXhrUpload(ctx: XhrHandlerCtx): Promise<unknown> {
     : JSON.stringify(ctx.requestPayload.json);
 
   try {
+    const dt = devtoolsHooks;
+    const uploadId = `upload_${Date.now().toString(36)}`;
+
     const response = await xhrUpload(ctx.url, body, {
       headers: ctx.defaultHeaders,
       credentials: ctx.credentials,
       timeout: ctx.timeout || undefined,
       signal: ctx.signal || undefined,
-      onProgress: ctx.onUploadProgress,
+      onProgress: (progress) => {
+        ctx.onUploadProgress(progress);
+        dt.onUploadProgress?.({
+          requestId: uploadId,
+          loaded: progress.transferredBytes,
+          total: progress.totalBytes,
+          percentage: progress.percent,
+          timestamp: performance.now(),
+        });
+      },
+    });
+
+    dt.onUploadComplete?.({
+      requestId: uploadId,
+      timestamp: performance.now(),
     });
 
     if (!response.ok) {

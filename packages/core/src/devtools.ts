@@ -37,6 +37,12 @@ export interface DevToolsHooks {
     timestamp: number;
   }) => void;
 
+  onRequestAbort?: (event: {
+    id: string;
+    reason: "deduplication" | "manual" | "timeout";
+    timestamp: number;
+  }) => void;
+
   onMiddlewareEnter?: (event: {
     requestId: string;
     name: string;
@@ -96,6 +102,8 @@ export interface DevToolsHooks {
     timestamp: number;
   }) => void;
 
+  onHttpFetchError?: (event: { requestId: string; message: string; timestamp: number }) => void;
+
   onProxyReceive?: (event: {
     proxyMethod: "GET" | "POST";
     source: string;
@@ -112,6 +120,16 @@ export interface DevToolsHooks {
     status: number;
     timestamp: number;
   }) => void;
+
+  onProxyParse?: (event: {
+    source: string;
+    group: string | undefined;
+    method: string;
+    variables: unknown;
+    timestamp: number;
+  }) => void;
+
+  onProxyOriginReject?: (event: { origin: string; timestamp: number }) => void;
 
   onCacheHit?: (event: { requestId: string; key: string; age: number; timestamp: number }) => void;
 

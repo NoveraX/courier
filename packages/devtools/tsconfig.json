@@ -5,5 +5,5 @@
       "@noverax/nexus-devtools-core": ["../devtools-core/src/index.ts"]
     }
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "tests/**/*"]
 }

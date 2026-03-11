@@ -9,7 +9,10 @@ import type {
   DedupAbortEvent,
   DedupReuseEvent,
   HttpFetchEndEvent,
+  HttpFetchErrorEvent,
   HttpFetchStartEvent,
+  ProxyOriginRejectEvent,
+  ProxyParseEvent,
   ProxyReceiveEvent,
   ProxyRespondEvent,
   UploadCompleteEvent,
@@ -55,6 +58,18 @@ export function wireHttpHooks(
     );
   };
 
+  devtoolsHooks.onHttpFetchError = (e) => {
+    bus.emit(
+      createEvent<HttpFetchErrorEvent>(sessionId, {
+        id: e.requestId,
+        type: "http:fetch:error",
+        timestamp: e.timestamp,
+        requestId: e.requestId,
+        message: e.message,
+      }),
+    );
+  };
+
   devtoolsHooks.onProxyReceive = (e) => {
     if (shouldFilter(e.source)) return;
     bus.emit(
@@ -82,6 +97,33 @@ export function wireHttpHooks(
         group: e.group,
         method: e.method,
         status: e.status,
+      }),
+    );
+  };
+
+  devtoolsHooks.onProxyParse = (e) => {
+    if (shouldFilter(e.source)) return;
+    bus.emit(
+      createEvent<ProxyParseEvent>(sessionId, {
+        id: `proxy_${Date.now().toString(36)}`,
+        type: "proxy:parse",
+        timestamp: e.timestamp,
+        source: resolveSourceName(e.source),
+        group: e.group,
+        method: e.method,
+        variables: e.variables,
+      }),
+    );
+  };
+
+  devtoolsHooks.onProxyOriginReject = (e) => {
+    bus.emit(
+      createEvent<ProxyOriginRejectEvent>(sessionId, {
+        id: `proxy_${Date.now().toString(36)}`,
+        type: "proxy:origin-reject",
+        timestamp: e.timestamp,
+        origin: e.origin,
+        allowedOrigins: [],
       }),
     );
   };

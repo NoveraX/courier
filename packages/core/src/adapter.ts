@@ -60,13 +60,23 @@ export function createHandler(sources: Sources): AdapterHandler {
       timestamp: performance.now(),
     });
 
+    const parsedVars = Object.keys(variables).length > 0 ? variables : undefined;
+
+    dt.onProxyParse?.({
+      source,
+      group,
+      method,
+      variables: parsedVars,
+      timestamp: performance.now(),
+    });
+
     const response = await execute(
       request,
       {
         source,
         group,
         method,
-        variables: Object.keys(variables).length > 0 ? variables : undefined,
+        variables: parsedVars,
         options: parseOptions(url.searchParams.get("_o")),
       },
       "GET",
@@ -88,6 +98,10 @@ export function createHandler(sources: Sources): AdapterHandler {
     const origin = request.headers.get("origin");
 
     if (!origin || new URL(request.url).origin !== origin) {
+      dt.onProxyOriginReject?.({
+        origin: origin ?? "",
+        timestamp: performance.now(),
+      });
       return errorResponse(403, "Origin mismatch");
     }
 
@@ -125,6 +139,16 @@ export function createHandler(sources: Sources): AdapterHandler {
       source: proxySource,
       group: proxyGroup,
       method: proxyMethod,
+      timestamp: performance.now(),
+    });
+
+    const proxyVariables = body instanceof FormData ? undefined : (body?.variables as unknown);
+
+    dt.onProxyParse?.({
+      source: proxySource,
+      group: proxyGroup,
+      method: proxyMethod,
+      variables: proxyVariables,
       timestamp: performance.now(),
     });
 

@@ -7,7 +7,7 @@ import { generateGroupFile } from "./generate-group";
 import { generateIndexFile } from "./generate-index";
 import { generateSchemasFile, generateTypesFile } from "./generate-schemas";
 import { generateSourceFile } from "./generate-source";
-import { collectGroupSchemas } from "./schema-utils";
+import { collectGroupSchemas } from "./schema-refs";
 import type { GeneratedFile, GenerateOptions } from "./types";
 
 export function generateCode(spec: ParsedSpec, options: GenerateOptions): GeneratedFile[] {

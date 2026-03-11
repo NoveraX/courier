@@ -1,127 +1,129 @@
 /**
- * Express routes for the codegen API.
+ * Express routes for codegen: parse, generate, write, config, diff, fingerprint.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import {
+  diffSpecs,
   type GenerateOptions,
   generateCode,
+  generateFingerprints,
   type ParsedSpec,
   parseSpec,
 } from "../codegen/index.js";
-
-interface JsonResponse {
-  status(code: number): JsonResponse;
-  json(data: unknown): void;
-}
-
-interface RouteApp {
-  post(
-    path: string,
-    handler: (req: { body: Record<string, unknown> }, res: JsonResponse) => void | Promise<void>,
-  ): void;
-}
+import { registerRegistryRoutes } from "./registry-routes.js";
+import type { RouteApp } from "./route-types.js";
 
 export function registerCodegenRoutes(app: RouteApp): void {
-  // Parse spec (URL, raw content, or file path)
   app.post("/api/codegen/parse", async (req, res) => {
     try {
       const { source, content } = req.body as { source: "url" | "raw" | "file"; content: string };
-      let raw: string;
-
-      if (source === "url") {
-        const response = await fetch(content);
-        if (!response.ok) {
-          res
-            .status(400)
-            .json({ error: `Failed to fetch spec: ${response.status} ${response.statusText}` });
-          return;
-        }
-        raw = await response.text();
-      } else if (source === "file") {
-        const filePath = resolve(content);
-        if (!existsSync(filePath)) {
-          res.status(400).json({ error: `File not found: ${filePath}` });
-          return;
-        }
-        raw = readFileSync(filePath, "utf-8");
-      } else {
-        raw = content;
-      }
-
-      const spec = parseSpec(raw);
-      res.json(spec);
+      const raw = await resolveSpecContent(source, content);
+      res.json(parseSpec(raw));
     } catch (err) {
-      res.status(400).json({ error: err instanceof Error ? err.message : "Failed to parse spec" });
+      res.status(400).json({ error: errMsg(err, "Failed to parse spec") });
     }
   });
 
-  // Generate code from parsed spec + options
   app.post("/api/codegen/generate", (req, res) => {
     try {
       const { spec, options } = req.body as { spec: ParsedSpec; options: GenerateOptions };
-      const files = generateCode(spec, options);
-      res.json({ files });
+      res.json({ files: generateCode(spec, options) });
     } catch (err) {
-      res
-        .status(400)
-        .json({ error: err instanceof Error ? err.message : "Code generation failed" });
+      res.status(400).json({ error: errMsg(err, "Code generation failed") });
     }
   });
 
-  // Write generated files to disk
   app.post("/api/codegen/write", (req, res) => {
     try {
       const { files } = req.body as { files: { path: string; content: string }[] };
-      let written = 0;
-
       for (const file of files) {
-        const filePath = resolve(file.path);
-        const dir = dirname(filePath);
-        if (!existsSync(dir)) {
-          mkdirSync(dir, { recursive: true });
-        }
-        writeFileSync(filePath, file.content, "utf-8");
-        written++;
+        writeFileSafe(resolve(file.path), file.content);
       }
-
-      res.json({ written, files: files.map((f) => f.path) });
+      res.json({ written: files.length, files: files.map((f) => f.path) });
     } catch (err) {
-      res.status(500).json({ error: err instanceof Error ? err.message : "Failed to write files" });
+      res.status(500).json({ error: errMsg(err, "Failed to write files") });
     }
   });
 
-  // Save codegen config as codegen.nexus.json
   app.post("/api/codegen/save-config", (req, res) => {
     try {
       const { config, path: configPath } = req.body as { config: unknown; path?: string };
       const filePath = resolve(configPath ?? "codegen.nexus.json");
-      const dir = dirname(filePath);
-      if (!existsSync(dir)) {
-        mkdirSync(dir, { recursive: true });
-      }
-      writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`, "utf-8");
+      writeFileSafe(filePath, `${JSON.stringify(config, null, 2)}\n`);
       res.json({ path: filePath });
     } catch (err) {
-      res.status(500).json({ error: err instanceof Error ? err.message : "Failed to save config" });
+      res.status(500).json({ error: errMsg(err, "Failed to save config") });
     }
   });
 
-  // Load codegen config
   app.post("/api/codegen/load-config", (req, res) => {
     try {
       const { path: configPath } = req.body as { path?: string };
       const filePath = resolve(configPath ?? "codegen.nexus.json");
-
       if (!existsSync(filePath)) {
         res.status(404).json({ error: "Config file not found" });
         return;
       }
-      const content = readFileSync(filePath, "utf-8");
-      res.json(JSON.parse(content));
+      res.json(JSON.parse(readFileSync(filePath, "utf-8")));
     } catch (err) {
-      res.status(500).json({ error: err instanceof Error ? err.message : "Failed to load config" });
+      res.status(500).json({ error: errMsg(err, "Failed to load config") });
     }
   });
+
+  app.post("/api/codegen/diff", (req, res) => {
+    try {
+      const { oldSpec, newSpec } = req.body as { oldSpec: ParsedSpec; newSpec: ParsedSpec };
+      res.json(diffSpecs(oldSpec, newSpec));
+    } catch (err) {
+      res.status(400).json({ error: errMsg(err, "Failed to diff specs") });
+    }
+  });
+
+  app.post("/api/codegen/fingerprint", (req, res) => {
+    try {
+      const { files } = req.body as { files: { path: string; content: string }[] };
+      const result: Record<string, Record<string, { hash: string; userModified: boolean }>> = {};
+      for (const file of files) {
+        result[file.path] = generateFingerprints(file.content);
+      }
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: errMsg(err, "Failed to compute fingerprints") });
+    }
+  });
+
+  registerRegistryRoutes(app);
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function errMsg(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback;
+}
+
+async function resolveSpecContent(
+  source: "url" | "raw" | "file",
+  content: string,
+): Promise<string> {
+  if (source === "url") {
+    const response = await fetch(content);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch spec: ${response.status} ${response.statusText}`);
+    }
+    return response.text();
+  }
+  if (source === "file") {
+    const filePath = resolve(content);
+    if (!existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
+    return readFileSync(filePath, "utf-8");
+  }
+  return content;
+}
+
+function writeFileSafe(filePath: string, content: string): void {
+  const dir = dirname(filePath);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  writeFileSync(filePath, content, "utf-8");
 }

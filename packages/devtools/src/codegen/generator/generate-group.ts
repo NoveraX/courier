@@ -4,8 +4,9 @@
 
 import type { ParsedGroup, ParsedSpec } from "../parser/types";
 import { buildEndpointDefinition } from "./build-endpoint";
+import { collectSchemaRefs } from "./schema-refs";
 import { resolveResponseType } from "./schema-types";
-import { collectSchemaRefs, getSchemaRefName } from "./schema-utils";
+import { getSchemaRefName } from "./schema-utils";
 import type { GeneratedFile, GenerateOptions } from "./types";
 
 export function generateGroupFile(

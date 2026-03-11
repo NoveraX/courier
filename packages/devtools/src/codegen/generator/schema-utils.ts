@@ -8,15 +8,6 @@ import { schemaToArkType } from "./validation-arktype";
 import { schemaToValibot } from "./validation-valibot";
 import { schemaToZod } from "./validation-zod";
 
-// Re-export from split modules for backward compatibility
-export { collectGroupSchemas, collectSchemaRefs, topoSortSchemas } from "./schema-refs";
-export {
-  resolveResponseType,
-  resolveVariablesType,
-  schemaToInterface,
-  tsType,
-} from "./schema-types";
-
 /** Generate `satisfies ZodType<T>` / `satisfies GenericSchema<...>` expression for type-safe sync */
 export function satisfiesExpr(typeName: string, options: GenerateOptions): string {
   if (options.validation === "zod") return ` satisfies z.ZodType<${typeName}>`;

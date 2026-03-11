@@ -3,6 +3,7 @@
  */
 
 import type { ParsedEndpoint, ParsedSpec } from "../parser/types";
+import { buildEndpointCall, resolveBodyInterfaceType } from "./build-endpoint-helpers";
 import { resolveResponseType, resolveVariablesType } from "./schema-types";
 import { extendSchemaWithParams, getSchemaRefName } from "./schema-utils";
 import type { GenerateOptions } from "./types";
@@ -14,60 +15,23 @@ export function buildEndpointDefinition(
   schemaImports: Set<string>,
 ): string {
   const hasSchema = options.generateSchemas && options.validation !== "none";
-  const responseRef = getSchemaRefName(ep.responseSchema);
-  const bodyRef = getSchemaRefName(ep.requestBody);
+  const schemaConfig = buildSchemaConfig(ep, options, hasSchema, schemaImports);
+  const typeConfig: string[] = ep.httpMethod === "get" ? [`type: "query"`] : [];
 
-  // Determine if we need schema config
-  const schemaConfig: string[] = [];
-  if (hasSchema && responseRef && schemaImports.has(responseRef)) {
-    let schemaExpr = `${responseRef}Schema`;
-    if (ep.responseSchema?.type === "array") {
-      if (options.validation === "zod") schemaExpr = `z.array(${responseRef}Schema)`;
-      else if (options.validation === "valibot") schemaExpr = `v.array(${responseRef}Schema)`;
-      else if (options.validation === "arktype") schemaExpr = `${responseRef}Schema.array()`;
-    }
-    schemaConfig.push(`response: ${schemaExpr}`);
-  }
-
-  // Build variables schema — merge body schema with path params when both exist
-  const pathParams = ep.parameters.filter((p) => p.in === "path");
-  if (hasSchema && bodyRef && schemaImports.has(bodyRef)) {
-    if (pathParams.length > 0) {
-      const varsExpr = extendSchemaWithParams(
-        `${bodyRef}Schema`,
-        pathParams.map((p) => p.name),
-        options,
-      );
-      schemaConfig.push(`variables: ${varsExpr}`);
-    } else {
-      schemaConfig.push(`variables: ${bodyRef}Schema`);
-    }
-  }
-
-  // Type annotation for endpoint type
-  const typeConfig: string[] = [];
-  if (ep.httpMethod === "get") {
-    typeConfig.push(`type: "query"`);
-  }
-
-  // Resolve explicit types for generics
   const responseType = resolveResponseType(ep, spec, options);
   const varsType = resolveVariablesType(ep, spec, options);
+  const pathParams = ep.parameters.filter((p) => p.in === "path");
 
-  // Check if body schema has an explicit interface (properties with descriptions)
   const bodyInterfaceType = resolveBodyInterfaceType(
-    ep,
     spec,
     options,
     hasSchema,
-    bodyRef,
+    getSchemaRefName(ep.requestBody),
     schemaImports,
     pathParams,
   );
 
   const configParts = [...schemaConfig, ...typeConfig];
-
-  // Build the endpoint() call
   const epCall = buildEndpointCall(
     configParts,
     schemaConfig,
@@ -75,85 +39,64 @@ export function buildEndpointDefinition(
     varsType,
     responseType,
   );
-
-  // Build the function body
-  const httpMethod = ep.httpMethod === "delete" ? "del" : ep.httpMethod;
-  const path = ep.path === "/" ? "" : ep.path.replace(/^\//, "");
-
-  const hasPathParams = ep.parameters.some((p) => p.in === "path");
-  const hasQueryParams = ep.parameters.some((p) => p.in === "query");
-  const hasBody = ep.requestBody !== null;
-  const hasVars = hasPathParams || hasBody || hasQueryParams;
-
-  let fnBody: string;
-  if (hasVars) {
-    fnBody = `(http, vars) => http.${httpMethod}("${path}"${path || hasVars ? ", vars" : ""})`;
-  } else {
-    fnBody = `(http) => http.${httpMethod}("${path}")`;
-  }
+  const fnBody = buildFnBody(ep);
 
   return `${epCall}(${fnBody})`;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function resolveBodyInterfaceType(
-  _ep: ParsedEndpoint,
-  spec: ParsedSpec,
+function buildSchemaConfig(
+  ep: ParsedEndpoint,
   options: GenerateOptions,
   hasSchema: boolean,
-  bodyRef: string | null,
   schemaImports: Set<string>,
-  pathParams: ParsedEndpoint["parameters"],
-): string | null {
-  if (
-    !hasSchema ||
-    !bodyRef ||
-    !schemaImports.has(bodyRef) ||
-    !options.includeComments ||
-    !options.generateTypes
-  ) {
-    return null;
+): string[] {
+  const config: string[] = [];
+  const responseRef = getSchemaRefName(ep.responseSchema);
+  const bodyRef = getSchemaRefName(ep.requestBody);
+
+  if (hasSchema && responseRef && schemaImports.has(responseRef)) {
+    config.push(`response: ${buildResponseExpr(responseRef, ep, options)}`);
   }
 
-  const bodySchema = spec.schemas[bodyRef];
-  if (!bodySchema?.properties || !Object.values(bodySchema.properties).some((p) => p.description)) {
-    return null;
+  if (hasSchema && bodyRef && schemaImports.has(bodyRef)) {
+    const pathParams = ep.parameters.filter((p) => p.in === "path");
+    if (pathParams.length > 0) {
+      const varsExpr = extendSchemaWithParams(
+        `${bodyRef}Schema`,
+        pathParams.map((p) => p.name),
+        options,
+      );
+      config.push(`variables: ${varsExpr}`);
+    } else {
+      config.push(`variables: ${bodyRef}Schema`);
+    }
   }
 
-  let result = bodyRef;
-  if (pathParams.length > 0) {
-    const paramParts = pathParams.map((p) => {
-      const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(p.name) ? p.name : `"${p.name}"`;
-      return `${key}: string`;
-    });
-    result = `${bodyRef} & { ${paramParts.join("; ")} }`;
-  }
-  return result;
+  return config;
 }
 
-function buildEndpointCall(
-  configParts: string[],
-  schemaConfig: string[],
-  bodyInterfaceType: string | null,
-  varsType: string | null,
-  responseType: string,
+function buildResponseExpr(
+  responseRef: string,
+  ep: ParsedEndpoint,
+  options: GenerateOptions,
 ): string {
-  if (configParts.length > 0) {
-    const hasSchemaVars = schemaConfig.some((s) => s.startsWith("variables:"));
-    const effectiveVarsType = bodyInterfaceType ?? varsType;
-    const needsVarsGeneric =
-      effectiveVarsType &&
-      effectiveVarsType !== "undefined" &&
-      (!hasSchemaVars || bodyInterfaceType);
-    if (needsVarsGeneric) {
-      return `endpoint<${responseType}, ${effectiveVarsType}>({ ${configParts.join(", ")} })`;
-    }
-    return `endpoint({ ${configParts.join(", ")} })`;
+  let expr = `${responseRef}Schema`;
+  if (ep.responseSchema?.type === "array") {
+    if (options.validation === "zod") expr = `z.array(${responseRef}Schema)`;
+    else if (options.validation === "valibot") expr = `v.array(${responseRef}Schema)`;
+    else if (options.validation === "arktype") expr = `${responseRef}Schema.array()`;
   }
+  return expr;
+}
 
-  if (varsType && varsType !== "undefined") {
-    return `endpoint<${responseType}, ${varsType}>()`;
+function buildFnBody(ep: ParsedEndpoint): string {
+  const httpMethod = ep.httpMethod === "delete" ? "del" : ep.httpMethod;
+  const path = ep.path === "/" ? "" : ep.path.replace(/^\//, "");
+  const hasVars =
+    ep.parameters.some((p) => p.in === "path" || p.in === "query") || ep.requestBody !== null;
+
+  if (hasVars) {
+    return `(http, vars) => http.${httpMethod}("${path}"${path || hasVars ? ", vars" : ""})`;
   }
-  return `endpoint<${responseType}>()`;
+  return `(http) => http.${httpMethod}("${path}")`;
 }

@@ -380,4 +380,92 @@ export const users = defineGroup({
     expect(result.content).toContain("New updated description")
     expect(result.content).not.toContain("Old description")
   })
+
+  it("preserves removed-from-spec endpoint when it exists in user file", () => {
+    const existing = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+
+export const users = defineGroup({
+  prefix: "/users",
+  endpoints: {
+    getAll: endpoint<User[]>()((http) => http.get("")),
+    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
+  },
+});
+`
+    /* New spec removed getById — generated only has getAll */
+    const generated = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+
+export const users = defineGroup({
+  prefix: "/users",
+  endpoints: {
+    getAll: endpoint<User[]>()((http) => http.get("")),
+  },
+});
+`
+    const fingerprints: FingerprintResult = {
+      endpoints: { getAll: "safe" },
+      existingCode: {},
+    }
+    const result = mergeGroupFile(existing, generated, fingerprints)
+    /* getById should be preserved as user-added */
+    expect(result.content).toContain("getById:")
+    expect(result.content).toContain('http.get(":id"')
+    expect(result.changes.some((c) => c.type === "preserved" && c.target === "endpoint:getById")).toBe(true)
+  })
+
+  it("produces consistent output format with 2-space indent", () => {
+    const existing = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+
+export const users = defineGroup({
+  prefix: "/users",
+  endpoints: {
+    getAll: endpoint<User[]>()((http) => http.get("")),
+  },
+});
+`
+    const fingerprints: FingerprintResult = {
+      endpoints: { getAll: "safe" },
+      existingCode: {},
+    }
+    const result = mergeGroupFile(existing, existing, fingerprints)
+    /* Verify structural lines use 2-space indent */
+    expect(result.content).toContain("export const users = defineGroup({")
+    expect(result.content).toContain('  prefix: "/users",')
+    expect(result.content).toContain("  endpoints: {")
+    expect(result.content).toContain("  },")
+    expect(result.content).toContain("});")
+  })
+
+  it("handles endpoint with complex multi-line body as modified", () => {
+    const existing = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+
+export const users = defineGroup({
+  prefix: "/users",
+  endpoints: {
+    getAll: endpoint<User[]>()((http) => {
+      const res = http.get("")
+      return res
+    }),
+  },
+});
+`
+    const generated = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+import { z } from "zod";
+
+export const users = defineGroup({
+  prefix: "/users",
+  endpoints: {
+    getAll: endpoint<User[]>({ response: z.array(z.object({})) })((http) => http.get("")),
+  },
+});
+`
+    const fingerprints: FingerprintResult = {
+      endpoints: { getAll: "modified" },
+      existingCode: {},
+    }
+    const result = mergeGroupFile(existing, generated, fingerprints)
+    expect(result.content).toContain("getAll:")
+    expect(result.status).toBe("merged")
+    expect(result.changes.some((c) => c.type === "preserved" && c.target === "endpoint:getAll")).toBe(true)
+  })
 })

@@ -377,6 +377,295 @@ describe("diffSpecs", () => {
     expect(diff.schemaChanges).toHaveLength(0)
   })
 
+  it("detects path change as breaking", () => {
+    const baseEp = {
+      name: "getById",
+      operationId: null,
+      httpMethod: "get" as const,
+      description: "",
+      secured: false,
+      requestBody: null,
+      responseSchema: null,
+      parameters: [],
+      tags: [],
+    }
+    const oldSpec = makeSpec({
+      groups: [{
+        name: "users",
+        description: "",
+        prefix: "/users",
+        endpoints: [{ ...baseEp, path: "/:id", fullPath: "/users/:id" }],
+      }],
+    })
+    const newSpec = makeSpec({
+      groups: [{
+        name: "users",
+        description: "",
+        prefix: "/users",
+        endpoints: [{ ...baseEp, path: "/:userId", fullPath: "/users/:userId" }],
+      }],
+    })
+    const diff = diffSpecs(oldSpec, newSpec)
+    expect(diff.modified).toHaveLength(1)
+    expect(diff.modified[0]?.changes?.some((c) => c.includes("path changed"))).toBe(true)
+    expect(diff.breakingChanges.some((b) => b.category === "path-changed")).toBe(true)
+  })
+
+  it("detects response type change as potentially breaking", () => {
+    const baseEp = {
+      name: "getAll",
+      operationId: null,
+      httpMethod: "get" as const,
+      path: "/",
+      fullPath: "/users",
+      description: "",
+      secured: false,
+      requestBody: null,
+      parameters: [],
+      tags: [],
+    }
+    const oldSpec = makeSpec({
+      groups: [{
+        name: "users",
+        description: "",
+        prefix: "/users",
+        endpoints: [{ ...baseEp, responseSchema: { name: "UserList", type: "array" as const, refName: "UserList" } }],
+      }],
+    })
+    const newSpec = makeSpec({
+      groups: [{
+        name: "users",
+        description: "",
+        prefix: "/users",
+        endpoints: [{ ...baseEp, responseSchema: { name: "UserPage", type: "object" as const, refName: "UserPage" } }],
+      }],
+    })
+    const diff = diffSpecs(oldSpec, newSpec)
+    expect(diff.modified).toHaveLength(1)
+    expect(diff.modified[0]?.changes?.some((c) => c.includes("response type changed"))).toBe(true)
+    expect(diff.breakingChanges.some((b) => b.category === "response-changed")).toBe(true)
+  })
+
+  it("detects request body change as potentially breaking", () => {
+    const baseEp = {
+      name: "create",
+      operationId: null,
+      httpMethod: "post" as const,
+      path: "/",
+      fullPath: "/users",
+      description: "",
+      secured: false,
+      responseSchema: null,
+      parameters: [],
+      tags: [],
+    }
+    const oldSpec = makeSpec({
+      groups: [{
+        name: "users",
+        description: "",
+        prefix: "/users",
+        endpoints: [{ ...baseEp, requestBody: { name: "CreateUser", type: "object" as const, refName: "CreateUser" } }],
+      }],
+    })
+    const newSpec = makeSpec({
+      groups: [{
+        name: "users",
+        description: "",
+        prefix: "/users",
+        endpoints: [{ ...baseEp, requestBody: { name: "CreateUserV2", type: "object" as const, refName: "CreateUserV2" } }],
+      }],
+    })
+    const diff = diffSpecs(oldSpec, newSpec)
+    expect(diff.modified[0]?.changes?.some((c) => c.includes("request body changed"))).toBe(true)
+    expect(diff.breakingChanges.some((b) => b.category === "body-changed")).toBe(true)
+  })
+
+  it("detects security change as potentially breaking", () => {
+    const baseEp = {
+      name: "getAll",
+      operationId: null,
+      httpMethod: "get" as const,
+      path: "/",
+      fullPath: "/users",
+      description: "",
+      requestBody: null,
+      responseSchema: null,
+      parameters: [],
+      tags: [],
+    }
+    const oldSpec = makeSpec({
+      groups: [{
+        name: "users",
+        description: "",
+        prefix: "/users",
+        endpoints: [{ ...baseEp, secured: false }],
+      }],
+    })
+    const newSpec = makeSpec({
+      groups: [{
+        name: "users",
+        description: "",
+        prefix: "/users",
+        endpoints: [{ ...baseEp, secured: true }],
+      }],
+    })
+    const diff = diffSpecs(oldSpec, newSpec)
+    expect(diff.modified[0]?.changes?.some((c) => c.includes("security changed"))).toBe(true)
+    expect(diff.breakingChanges.some((b) => b.category === "security-changed")).toBe(true)
+  })
+
+  it("detects parameter removed as breaking", () => {
+    const baseEp = {
+      name: "search",
+      operationId: null,
+      httpMethod: "get" as const,
+      path: "/search",
+      fullPath: "/users/search",
+      description: "",
+      secured: false,
+      requestBody: null,
+      responseSchema: null,
+      tags: [],
+    }
+    const oldSpec = makeSpec({
+      groups: [{
+        name: "users",
+        description: "",
+        prefix: "/users",
+        endpoints: [{
+          ...baseEp,
+          parameters: [
+            { name: "q", in: "query" as const, required: true, type: "string", description: "" },
+            { name: "limit", in: "query" as const, required: false, type: "number", description: "" },
+          ],
+        }],
+      }],
+    })
+    const newSpec = makeSpec({
+      groups: [{
+        name: "users",
+        description: "",
+        prefix: "/users",
+        endpoints: [{
+          ...baseEp,
+          parameters: [
+            { name: "q", in: "query" as const, required: true, type: "string", description: "" },
+          ],
+        }],
+      }],
+    })
+    const diff = diffSpecs(oldSpec, newSpec)
+    expect(diff.modified[0]?.changes?.some((c) => c.includes("parameter removed"))).toBe(true)
+    expect(diff.breakingChanges.some((b) => b.category === "parameter-removed")).toBe(true)
+  })
+
+  it("detects schema field removed as breaking", () => {
+    const oldSpec = makeSpec({
+      schemas: {
+        User: {
+          name: "User",
+          type: "object",
+          properties: {
+            id: { type: "number", required: true },
+            name: { type: "string", required: true },
+            bio: { type: "string", required: false },
+          },
+        },
+      },
+    })
+    const newSpec = makeSpec({
+      schemas: {
+        User: {
+          name: "User",
+          type: "object",
+          properties: {
+            id: { type: "number", required: true },
+            name: { type: "string", required: true },
+          },
+        },
+      },
+    })
+    const diff = diffSpecs(oldSpec, newSpec)
+    expect(diff.schemaChanges[0]?.changes).toContain("field removed: bio")
+    expect(diff.breakingChanges.some((b) => b.category === "schema-field-removed")).toBe(true)
+  })
+
+  it("detects schema field became required as potentially breaking", () => {
+    const oldSpec = makeSpec({
+      schemas: {
+        User: {
+          name: "User",
+          type: "object",
+          properties: { name: { type: "string", required: false } },
+        },
+      },
+    })
+    const newSpec = makeSpec({
+      schemas: {
+        User: {
+          name: "User",
+          type: "object",
+          properties: { name: { type: "string", required: true } },
+        },
+      },
+    })
+    const diff = diffSpecs(oldSpec, newSpec)
+    expect(diff.schemaChanges[0]?.changes?.some((c) => c.includes("became required"))).toBe(true)
+    expect(diff.breakingChanges.some((b) => b.category === "schema-field-required")).toBe(true)
+  })
+
+  it("detects schema field became optional as non-breaking", () => {
+    const oldSpec = makeSpec({
+      schemas: {
+        User: {
+          name: "User",
+          type: "object",
+          properties: { name: { type: "string", required: true } },
+        },
+      },
+    })
+    const newSpec = makeSpec({
+      schemas: {
+        User: {
+          name: "User",
+          type: "object",
+          properties: { name: { type: "string", required: false } },
+        },
+      },
+    })
+    const diff = diffSpecs(oldSpec, newSpec)
+    expect(diff.schemaChanges[0]?.changes?.some((c) => c.includes("became optional"))).toBe(true)
+    expect(diff.breakingChanges.some((b) => b.category === "schema-field-optional")).toBe(true)
+  })
+
+  it("classifies added endpoints as non-breaking", () => {
+    const oldSpec = makeSpec({
+      groups: [{ name: "users", description: "", prefix: "/users", endpoints: [] }],
+    })
+    const newSpec = makeSpec({
+      groups: [{
+        name: "users",
+        description: "",
+        prefix: "/users",
+        endpoints: [{
+          name: "create",
+          operationId: null,
+          httpMethod: "post",
+          path: "/",
+          fullPath: "/users",
+          description: "",
+          secured: false,
+          requestBody: null,
+          parameters: [],
+          responseSchema: null,
+          tags: [],
+        }],
+      }],
+    })
+    const diff = diffSpecs(oldSpec, newSpec)
+    expect(diff.breakingChanges.some((b) => b.severity === "non-breaking" && b.category === "endpoint-added")).toBe(true)
+  })
+
   it("detects parameter changes", () => {
     const baseEp = {
       name: "getById",

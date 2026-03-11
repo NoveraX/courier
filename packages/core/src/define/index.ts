@@ -64,6 +64,10 @@ export function endpoint<VS extends StandardSchemaV1>(
 
 export function endpoint<R, V = undefined>(): (fn: Endpoint<R, V>) => Endpoint<R, V>;
 
+export function endpoint<R, V>(
+  config: { response?: StandardSchemaV1; variables?: StandardSchemaV1 } & EndpointOptions,
+): (fn: Endpoint<R, V>) => Endpoint<R, V>;
+
 export function endpoint<R, V = undefined>(
   config: EndpointOptions,
 ): (fn: Endpoint<R, V>) => Endpoint<R, V>;

@@ -27,6 +27,7 @@ import { CompareView } from "./views/compare"
 import { ExplorerView } from "./views/explorer"
 import { PlaygroundView } from "./views/playground"
 import { AuditView } from "./views/audit"
+import { CodegenView } from "./views/codegen"
 import { PlaceholderView } from "./views/placeholder"
 
 // ── Tab config ──────────────────────────────────────────────────────────────
@@ -136,6 +137,8 @@ export function App() {
             <PlaygroundView />
           ) : activeTab === "audit" ? (
             <AuditView />
+          ) : activeTab === "codegen" ? (
+            <CodegenView />
           ) : (
             <PlaceholderView tab={activeTab} />
           )}

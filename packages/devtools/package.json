@@ -34,9 +34,10 @@
     "access": "public"
   },
   "dependencies": {
-    "express": "^5.1.0",
-    "socket.io": "^4.8.3",
     "citty": "^0.1.6",
-    "open": "^10.2.0"
+    "express": "^5.1.0",
+    "open": "^10.2.0",
+    "socket.io": "^4.8.3",
+    "yaml": "^2.8.2"
   }
 }

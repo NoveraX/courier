@@ -20,7 +20,7 @@ type EndpointMethod<R, V, Raw extends boolean> = [V] extends [undefined]
 
 /** Methods exposed on a group client (excludes 'options' from the group) */
 type GroupMethods<G, Raw extends boolean> = {
-  [K in Exclude<keyof G, "options">]: G[K] extends Endpoint<infer R, infer V>
+  [K in keyof G as K extends "options" ? never : K]: G[K] extends Endpoint<infer R, infer V>
     ? EndpointMethod<R, V, Raw>
     : never;
 };

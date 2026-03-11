@@ -255,7 +255,7 @@ export class HttpClient {
     } = boundOptions || {};
     const { prefix = "", pathOptions } = groupOptions || {};
 
-    const cleanedVars = this.stripUndefined(vars);
+    const cleanedVars = this.stripUndefined(vars as FormData | Record<string, unknown> | undefined);
 
     return async <T>(...arguments_: MethodParameters<typeof method>) => {
       const commonPathOptions = (await this.pathOptions?.(this.context?.req)) || {};
@@ -303,10 +303,14 @@ export class HttpClient {
           ...boundFetchOptions,
           ...prefixUrlOverride,
           headers: mergeHeaders(boundHeaders, optionHeaders, this.allowedHeaders),
-          ...this.buildBody(method, arguments_[1] || newVariables, {
-            ...searchParameters,
-            ...newSearchParameters,
-          }),
+          ...this.buildBody(
+            method,
+            (arguments_[1] || newVariables) as FormData | Record<string, unknown> | undefined,
+            {
+              ...searchParameters,
+              ...newSearchParameters,
+            },
+          ),
         };
       }
 

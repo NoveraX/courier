@@ -83,6 +83,38 @@ export interface MergeResult {
   changes: MergeChange[];
 }
 
+// ── Parse Existing ──────────────────────────────────────────────────────────
+
+export interface ParsedImport {
+  /** Full import line as-is */
+  raw: string;
+  /** Module specifier (e.g., "zod", "./schemas") */
+  source: string;
+  /** Named imports (e.g., ["defineGroup", "endpoint"]) */
+  names: string[];
+  /** Type-only imports (e.g., ["User", "Post"]) */
+  typeNames: string[];
+  /** Namespace import name if `import * as X` (e.g., "v") */
+  namespaceImport?: string;
+}
+
+export interface ExistingEndpointInfo {
+  name: string;
+  /** Full code block including indentation and trailing comma */
+  code: string;
+  /** JSDoc comment above the endpoint (if any) */
+  comment?: string;
+}
+
+export interface ExistingGroupInfo {
+  groupName: string;
+  prefix: string;
+  imports: ParsedImport[];
+  endpoints: ExistingEndpointInfo[];
+  /** Code lines after the defineGroup block (user's helpers, constants) */
+  trailingCode: string[];
+}
+
 // ── Registry ────────────────────────────────────────────────────────────────
 
 export interface SpecSource {

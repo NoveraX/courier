@@ -6,9 +6,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import {
   diffSpecs,
+  type FingerprintResult,
   type GenerateOptions,
   generateCode,
   generateFingerprints,
+  mergeGroupFile,
   type ParsedSpec,
   parseSpec,
 } from "../codegen/index.js";
@@ -91,6 +93,19 @@ export function registerCodegenRoutes(app: RouteApp): void {
       res.json(result);
     } catch (err) {
       res.status(500).json({ error: errMsg(err, "Failed to compute fingerprints") });
+    }
+  });
+
+  app.post("/api/codegen/merge", (req, res) => {
+    try {
+      const { existing, generated, fingerprints } = req.body as {
+        existing: string;
+        generated: string;
+        fingerprints: FingerprintResult;
+      };
+      res.json(mergeGroupFile(existing, generated, fingerprints));
+    } catch (err) {
+      res.status(500).json({ error: errMsg(err, "Failed to merge files") });
     }
   });
 

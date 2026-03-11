@@ -8,6 +8,7 @@ import type {
   ParsedParameter,
   ParsedSchema,
   ParsedSpec,
+  SpecNode,
 } from "./types";
 import {
   convertPathParams,
@@ -23,7 +24,7 @@ import {
   toSafeIdentifier,
 } from "./utils";
 
-export function parseOpenApi3(spec: any): ParsedSpec {
+export function parseOpenApi3(spec: SpecNode): ParsedSpec {
   const title = spec.info?.title ?? "API";
   const version = spec.info?.version ?? "1.0.0";
   const description = spec.info?.description
@@ -41,17 +42,17 @@ export function parseOpenApi3(spec: any): ParsedSpec {
     for (const [name, schema] of Object.entries(spec.components.schemas)) {
       const safeName = toSafeIdentifier(name);
       if (schemas[safeName]) continue;
-      schemas[safeName] = convertSchema(safeName, schema as any);
+      schemas[safeName] = convertSchema(safeName, schema as SpecNode);
     }
   }
 
   const endpointsByTag = new Map<string, ParsedEndpoint[]>();
 
   for (const [path, methods] of Object.entries(spec.paths ?? {})) {
-    for (const [method, operation] of Object.entries(methods as any)) {
+    for (const [method, operation] of Object.entries(methods as SpecNode)) {
       if (!["get", "post", "put", "patch", "delete"].includes(method)) continue;
 
-      const op = operation as any;
+      const op = operation as SpecNode;
       const tags = op.tags?.length > 0 ? op.tags : ["default"];
       const tag = tags[0] as string;
 
@@ -118,7 +119,12 @@ export function parseOpenApi3(spec: any): ParsedSpec {
   };
 }
 
-function parseOpenApi3Operation(path: string, method: string, op: any, spec: any): ParsedEndpoint {
+function parseOpenApi3Operation(
+  path: string,
+  method: string,
+  op: SpecNode,
+  spec: SpecNode,
+): ParsedEndpoint {
   // Parameters
   const parameters: ParsedParameter[] = [];
   for (const param of op.parameters ?? []) {

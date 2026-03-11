@@ -2,7 +2,7 @@
  * Postman Collection parser.
  */
 
-import type { ParsedEndpoint, ParsedGroup, ParsedSchema, ParsedSpec } from "./types";
+import type { ParsedEndpoint, ParsedGroup, ParsedSchema, ParsedSpec, SpecNode } from "./types";
 import {
   convertPathParams,
   extractPostmanPath,
@@ -11,13 +11,13 @@ import {
   toCamelCase,
 } from "./utils";
 
-export function parsePostman(collection: any): ParsedSpec {
+export function parsePostman(collection: SpecNode): ParsedSpec {
   const title = collection.info?.name ?? "Postman Collection";
   const version = collection.info?.version ?? "1.0.0";
 
   const groups: ParsedGroup[] = [];
 
-  function processItems(items: any[], groupName: string) {
+  function processItems(items: SpecNode[], groupName: string) {
     const endpoints: ParsedEndpoint[] = [];
 
     for (const item of items) {

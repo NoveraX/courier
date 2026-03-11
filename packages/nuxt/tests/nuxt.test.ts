@@ -17,6 +17,7 @@ vi.mock("h3", () => ({
 }));
 
 import { createHandler } from "@noverax/nexus";
+import type { Sources } from "@noverax/nexus/define";
 import { fromWebHandler } from "h3";
 import { nexusHandler } from "../src/index";
 
@@ -33,30 +34,29 @@ function getMockHandle() {
 
 describe("nexusHandler", () => {
   it("returns a function", () => {
-    const handler = nexusHandler({} as any);
+    const handler = nexusHandler({} as Sources);
     expect(typeof handler).toBe("function");
   });
 
   it("calls createHandler with sources", () => {
-    const sources = { api: {} } as any;
+    const sources = { api: {} } as Sources;
     nexusHandler(sources);
     expect(mockCreateHandler).toHaveBeenCalledWith(sources);
   });
 
   it("wraps handler with fromWebHandler", () => {
-    nexusHandler({} as any);
+    nexusHandler({} as Sources);
     expect(mockFromWebHandler).toHaveBeenCalledWith(expect.any(Function));
   });
 
   it("delegates to handle with the request", async () => {
     const webRequest = new Request("http://localhost/api/request?_s=api&_m=list");
 
-    const handler = nexusHandler({} as any);
+    // fromWebHandler is mocked to passthrough — handler accepts Request at runtime
+    const handler = nexusHandler({} as Sources) as unknown as (req: Request) => Promise<Response>;
     const mockHandle = getMockHandle();
     mockHandle.mockResolvedValue(new Response("{}"));
 
-    // fromWebHandler is mocked to passthrough the inner function
-    // so handler IS the (request) => handle(request) function
     await handler(webRequest);
 
     expect(mockHandle).toHaveBeenCalledWith(webRequest);
@@ -65,7 +65,7 @@ describe("nexusHandler", () => {
   it("returns the Response from handle", async () => {
     const expectedResponse = new Response(JSON.stringify({ data: "test" }));
 
-    const handler = nexusHandler({} as any);
+    const handler = nexusHandler({} as Sources) as unknown as (req: Request) => Promise<Response>;
     const mockHandle = getMockHandle();
     mockHandle.mockResolvedValue(expectedResponse);
 

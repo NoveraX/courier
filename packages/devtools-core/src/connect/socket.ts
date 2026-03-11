@@ -70,7 +70,7 @@ export async function tryConnectSocket(
 }
 
 /** Handle playground:execute requests from DevTools UI */
-function handlePlaygroundExecute(
+async function handlePlaygroundExecute(
   sources: Sources | undefined,
   payload: {
     source: string;
@@ -81,7 +81,7 @@ function handlePlaygroundExecute(
     mode: "direct" | "proxy";
   },
   callback: (result: Record<string, unknown>) => void,
-): void {
+): Promise<void> {
   if (!sources) {
     callback({
       error: "No sources provided to connectDevTools — cannot execute endpoints",
@@ -99,7 +99,6 @@ function handlePlaygroundExecute(
   let resolvedSource = payload.source;
   if (!Object.hasOwn(sources, resolvedSource)) {
     const keys = Object.keys(sources);
-    // Try to find a source that has the requested group
     const match = payload.group
       ? keys.find((k) => {
           const s = sources[k];
@@ -109,31 +108,31 @@ function handlePlaygroundExecute(
     resolvedSource = match ?? keys[0] ?? resolvedSource;
   }
 
-  executeRequest(sources, {
-    source: resolvedSource,
-    group: payload.group,
-    method: payload.method,
-    variables: payload.variables as Record<string, unknown>,
-    options: {
-      headers: payload.headers,
-    },
-  })
-    .then((data) => {
-      callback({
-        status: 200,
-        data,
-        headers: {},
-        duration: performance.now() - startTime,
-      });
-    })
-    .catch((err: unknown) => {
-      const error = err as { status?: number; message?: string; data?: { message?: string } };
-      const detail = error.data?.message ?? error.message ?? "Unknown error";
-      callback({
-        error: detail,
-        status: error.status ?? 500,
-        headers: {},
-        duration: performance.now() - startTime,
-      });
+  try {
+    const data = await executeRequest(sources, {
+      source: resolvedSource,
+      group: payload.group,
+      method: payload.method,
+      variables: payload.variables as Record<string, unknown>,
+      options: {
+        headers: payload.headers,
+      },
     });
+
+    callback({
+      status: 200,
+      data,
+      headers: {},
+      duration: performance.now() - startTime,
+    });
+  } catch (err: unknown) {
+    const error = err as { status?: number; message?: string; data?: { message?: string } };
+    const detail = error.data?.message ?? error.message ?? "Unknown error";
+    callback({
+      error: detail,
+      status: error.status ?? 500,
+      headers: {},
+      duration: performance.now() - startTime,
+    });
+  }
 }

@@ -75,7 +75,7 @@ export function endpoint<R, V = undefined>(
 export function endpoint(config?: SchemaMetadata) {
   return (fn: Endpoint<any, any>) => {
     if (config) {
-      (fn as any)[ENDPOINT_SCHEMA] = config;
+      (fn as unknown as Record<symbol, unknown>)[ENDPOINT_SCHEMA] = config;
     }
     return fn;
   };

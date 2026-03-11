@@ -44,6 +44,8 @@ export function composeMiddleware(middlewares: MiddlewareFn[]): MiddlewareFn {
 
       const t0 = dt.onMiddlewareExit ? performance.now() : 0;
 
+      // Intentional .then(onFulfilled, onRejected) — dual handlers ensure devtools
+      // hook errors don't get caught by the error handler (unlike try/catch)
       return fn(ctx, () => dispatch(i + 1)).then(
         (response) => {
           dt.onMiddlewareExit?.({

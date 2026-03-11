@@ -25,6 +25,7 @@ export {
   createProxyCaller,
   createProxyCallerFn,
   type ProxyCallerDefaults,
+  type UntypedCallerFn,
 } from "./proxy-caller";
 export type { CallerFn, EndpointKey, ResolveEndpoint, SuccessResponse } from "./types";
 export { executeRequest } from "./utils/execute";

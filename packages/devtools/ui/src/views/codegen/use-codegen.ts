@@ -39,7 +39,8 @@ export function useCodegen() {
 
   // Load saved config on mount
   useEffect(() => {
-    fetchLoadConfig().then((config) => {
+    const loadConfig = async () => {
+      const config = await fetchLoadConfig()
       if (!config?.sources?.length) return
       setSources(config.sources)
       setStates(config.sources.map(() => createDefaultState()))
@@ -48,7 +49,8 @@ export function useCodegen() {
           savedSelectionsRef.current.set(i, s.selectedEndpoints)
         }
       })
-    })
+    }
+    void loadConfig()
   }, [])
 
   // Watch mode

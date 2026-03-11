@@ -65,7 +65,8 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
   // Socket.IO connection (optional)
   let socketCleanup: (() => void) | undefined;
 
-  // Dynamic import — socket.io-client is an optional peer dependency
+  // Fire-and-forget — connectDevTools is synchronous so consumers don't need to await.
+  // Socket connection happens asynchronously in the background.
   void tryConnectSocket(
     bus,
     sessionId,

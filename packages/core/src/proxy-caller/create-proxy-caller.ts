@@ -1,6 +1,7 @@
 import { buildClientProxy, type ExecuteBackend, type TypedClient } from "../client";
 import type { DefinedApi } from "../define/types";
 import { createProxyCallerFn, type ProxyCallerDefaults } from "./create-proxy-caller-fn";
+import type { UntypedCallerFn } from "./types";
 
 /**
  * Create a typed proxy client for browser → server mode.
@@ -27,11 +28,11 @@ export function createProxyCaller<T extends DefinedApi<any>>(
   source: string,
   defaults: ProxyCallerDefaults = {},
 ): TypedClient<T> {
-  const fn = createProxyCallerFn(defaults);
+  const fn = createProxyCallerFn(defaults) as unknown as UntypedCallerFn;
 
   const backend: ExecuteBackend = async (group, method, variables, options, raw) => {
     const callOptions = { ...options, ...(raw && { rawData: true }) };
-    const executeFn = (fn as any)(source, callOptions);
+    const executeFn = fn(source, callOptions);
     const endpointKey = `${group}:${method}`;
 
     return variables !== undefined ? executeFn(endpointKey, variables) : executeFn(endpointKey);

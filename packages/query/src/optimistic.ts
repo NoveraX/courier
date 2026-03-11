@@ -28,7 +28,15 @@ export type OptimisticConfig<CacheData, MutationVars> = {
 export function optimisticOptions<CacheData, MutationVars>(
   queryClient: QueryClient,
   config: OptimisticConfig<CacheData, MutationVars>,
-) {
+): {
+  onMutate: (variables: MutationVars) => Promise<{ _previousData: CacheData | undefined }>;
+  onError: (
+    _err: HTTPError,
+    _vars: MutationVars,
+    context: { _previousData?: CacheData } | undefined,
+  ) => void;
+  onSettled: () => void;
+} {
   return {
     onMutate: async (variables: MutationVars) => {
       await queryClient.cancelQueries({ queryKey: config.queryKey });

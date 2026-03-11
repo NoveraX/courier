@@ -1,6 +1,12 @@
 "use client";
 
-import { type CallOptions, createProxyCallerFn, type ProxyCallerDefaults } from "@noverax/nexus";
+import {
+  type CallOptions,
+  createProxyCallerFn,
+  type HTTPError,
+  type ProxyCallerDefaults,
+  type UntypedCallerFn,
+} from "@noverax/nexus";
 import type { DefinedApi } from "@noverax/nexus/define";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import {
@@ -29,36 +35,40 @@ function buildQueryKey(
 function createGroupHooks(
   source: string,
   groupName: string,
-  callerFn: ReturnType<typeof createProxyCallerFn>,
+  callerFn: UntypedCallerFn,
 ): QueryGroupClient<any> {
-  function executeEndpoint(method: string, variables: unknown, requestOptions?: CallOptions) {
-    const execute = (callerFn as any)(source, requestOptions);
+  function executeEndpoint(
+    method: string,
+    variables: unknown,
+    requestOptions?: CallOptions,
+  ): Promise<unknown> {
+    const execute = callerFn(source, requestOptions as Record<string, unknown>);
     const endpoint = `${groupName}:${method}`;
     return variables !== undefined ? execute(endpoint, variables) : execute(endpoint);
   }
 
   return {
-    useQuery(method: string, ...args: [options?: any]) {
+    useQuery(method: string, ...args: [options?: Record<string, unknown>]) {
       const { variables, requestOptions, ...queryOptions } = args[0] ?? {};
 
       return useQuery({
         queryKey: buildQueryKey(source, groupName, method, variables),
-        queryFn: () => executeEndpoint(method, variables, requestOptions),
+        queryFn: () => executeEndpoint(method, variables, requestOptions as CallOptions),
         ...queryOptions,
       });
     },
 
-    useSuspenseQuery(method: string, ...args: [options?: any]) {
+    useSuspenseQuery(method: string, ...args: [options?: Record<string, unknown>]) {
       const { variables, requestOptions, ...queryOptions } = args[0] ?? {};
 
       return useSuspenseQuery({
         queryKey: buildQueryKey(source, groupName, method, variables),
-        queryFn: () => executeEndpoint(method, variables, requestOptions),
+        queryFn: () => executeEndpoint(method, variables, requestOptions as CallOptions),
         ...queryOptions,
       });
     },
 
-    useInfiniteQuery(method: string, options: any) {
+    useInfiniteQuery(method: string, options: Record<string, unknown>) {
       const {
         variables,
         requestOptions,
@@ -72,16 +82,16 @@ function createGroupHooks(
         queryKey: buildQueryKey(source, groupName, method),
         queryFn: ({ pageParam }) => {
           const vars = typeof variables === "function" ? variables(pageParam) : variables;
-          return executeEndpoint(method, vars, requestOptions);
+          return executeEndpoint(method, vars, requestOptions as CallOptions);
         },
         initialPageParam,
-        getNextPageParam,
-        getPreviousPageParam,
+        getNextPageParam: getNextPageParam as (...args: unknown[]) => unknown,
+        getPreviousPageParam: getPreviousPageParam as ((...args: unknown[]) => unknown) | undefined,
         ...infiniteOptions,
       });
     },
 
-    useMutation(method: string, options?: any) {
+    useMutation(method: string, options?: Record<string, unknown>) {
       const qc = useQueryClient();
       const {
         requestOptions,
@@ -90,31 +100,35 @@ function createGroupHooks(
         ...mutationOptions
       } = options ?? {};
 
-      return useMutation({
-        mutationFn: (variables: any) =>
-          executeEndpoint(method, variables != null ? variables : undefined, requestOptions),
+      return useMutation<unknown, HTTPError, unknown>({
+        mutationFn: (variables: unknown) =>
+          executeEndpoint(method, variables ?? undefined, requestOptions as CallOptions),
         ...mutationOptions,
         onSettled:
           invalidate || userOnSettled
-            ? (...args: any[]) => {
+            ? (...args: unknown[]) => {
                 if (invalidate) {
-                  for (const key of invalidate) {
+                  for (const key of invalidate as QueryKey[]) {
                     qc.invalidateQueries({ queryKey: key });
                   }
                 }
-                userOnSettled?.(...args);
+                (userOnSettled as ((...a: unknown[]) => void) | undefined)?.(...args);
               }
             : undefined,
       });
     },
 
-    async prefetchQuery(queryClient: QueryClient, method: string, ...args: [options?: any]) {
+    async prefetchQuery(
+      queryClient: QueryClient,
+      method: string,
+      ...args: [options?: Record<string, unknown>]
+    ) {
       const { variables, requestOptions, staleTime } = args[0] ?? {};
 
       await queryClient.prefetchQuery({
         queryKey: buildQueryKey(source, groupName, method, variables),
-        queryFn: () => executeEndpoint(method, variables, requestOptions),
-        staleTime,
+        queryFn: () => executeEndpoint(method, variables, requestOptions as CallOptions),
+        staleTime: staleTime as number | undefined,
       });
     },
   };
@@ -151,7 +165,8 @@ export function createQueryCaller<T extends DefinedApi<any>>(
   source: string,
   defaults?: ProxyCallerDefaults,
 ): QueryCallerClient<T> {
-  const callerFn = createProxyCallerFn(defaults);
+  const callerFn = createProxyCallerFn(defaults) as unknown as UntypedCallerFn;
+  // biome-ignore lint/suspicious/noExplicitAny: cache stores untyped group hooks — typed via QueryCallerClient<T> proxy cast
   const groupCache = new Map<string, QueryGroupClient<any>>();
 
   return new Proxy(Object.create(null), {

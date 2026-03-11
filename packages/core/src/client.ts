@@ -70,7 +70,7 @@ function createGroupProxy(
   groupName: string,
   options: Record<string, unknown>,
   raw: boolean,
-): any {
+): unknown {
   return new Proxy(Object.create(null), {
     get(_, prop) {
       if (shouldPassthrough(prop)) return undefined;

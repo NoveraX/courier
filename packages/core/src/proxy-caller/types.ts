@@ -14,3 +14,9 @@ export type FetchCallbacks = {
   onSuccess?: (data: unknown) => void | Promise<void>;
   onError?: (error: HTTPError) => void | Promise<void>;
 };
+
+/** Untyped caller shape used internally to bypass complex CallerFn generics */
+export type UntypedCallerFn = (
+  source: string,
+  options?: Record<string, unknown>,
+) => (...args: unknown[]) => Promise<unknown>;

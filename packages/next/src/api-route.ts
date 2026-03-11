@@ -12,11 +12,14 @@ import type { NextRequest } from "next/server";
  * export const { GET, POST } = apiRoute(sources);
  * ```
  */
-export const apiRoute = (sources: Sources) => {
+export function apiRoute(sources: Sources): {
+  GET: (request: NextRequest) => Promise<Response>;
+  POST: (request: NextRequest) => Promise<Response>;
+} {
   const { handleGet, handlePost } = createHandler(sources);
 
   return {
     GET: (request: NextRequest) => handleGet(request),
     POST: (request: NextRequest) => handlePost(request),
   };
-};
+}

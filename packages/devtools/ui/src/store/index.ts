@@ -5,8 +5,43 @@ import { loadTheme, loadTab } from "./constants"
 import { applyTheme } from "./theme"
 import { createActions, createInitialState } from "./actions"
 
-// Re-export everything consumers need
-export * from "./types"
+// Re-export types consumers need
+export type {
+  EventType,
+  DevToolsEvent,
+  RequestTiming,
+  ProxyTiming,
+  ValidationIssue,
+  MiddlewareEntry,
+} from "./types-events"
+
+export type {
+  RequestStatus,
+  RequestEntry,
+} from "./types-request"
+
+export type {
+  Tab,
+  Theme,
+  ConnectionStatus,
+  EndpointInfo,
+  GroupInfo,
+  SourceInfo,
+  SourceMap,
+  SessionInfo,
+  PlaygroundHistoryEntry,
+  TimelineFilters,
+  ExplorerView,
+  GraphLayout,
+  ListSortKey,
+  ListSortDir,
+  WaterfallSortField,
+  WaterfallGroupBy,
+  CompareTab,
+  AuditSeverityFilter,
+  Toast,
+} from "./types-ui"
+
 export type { DevToolsState } from "./store-types"
 export { EMPTY_FILTERS, PLAYGROUND_MAX_HISTORY, MAX_REQUESTS } from "./constants"
 

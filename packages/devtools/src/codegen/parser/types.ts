@@ -2,6 +2,10 @@
  * Normalized types for parsed API specifications.
  */
 
+/** Loose type for raw spec JSON nodes — external specs are untyped by nature */
+// biome-ignore lint/suspicious/noExplicitAny: external spec objects have arbitrary nested shapes
+export type SpecNode = Record<string, any>;
+
 export interface ParsedSpec {
   title: string;
   version: string;

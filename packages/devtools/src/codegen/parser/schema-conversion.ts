@@ -3,9 +3,9 @@
  */
 
 import { toSafeIdentifier } from "./naming-utils";
-import type { ParsedSchema, ParsedSchemaProperty } from "./types";
+import type { ParsedSchema, ParsedSchemaProperty, SpecNode } from "./types";
 
-export function convertSchema(name: string, schema: any): ParsedSchema {
+export function convertSchema(name: string, schema: SpecNode): ParsedSchema {
   // Handle $ref at top level (schema aliases)
   if (schema.$ref) {
     const refName = toSafeIdentifier(schema.$ref.split("/").pop());
@@ -20,7 +20,7 @@ export function convertSchema(name: string, schema: any): ParsedSchema {
   // Handle oneOf / anyOf — treat as enum if all are literals, otherwise use first
   if (schema.oneOf || schema.anyOf) {
     const variants = schema.oneOf || schema.anyOf;
-    const allEnums = variants.every((v: any) => v.enum || v.const !== undefined);
+    const allEnums = variants.every((v: SpecNode) => v.enum || v.const !== undefined);
     if (allEnums) {
       const values: (string | number)[] = [];
       for (const v of variants) {
@@ -56,8 +56,8 @@ export function convertSchema(name: string, schema: any): ParsedSchema {
   return { name, type: "any", description: schema.description };
 }
 
-function convertAllOf(name: string, schema: any): ParsedSchema {
-  const merged: any = {
+function convertAllOf(name: string, schema: SpecNode): ParsedSchema {
+  const merged: SpecNode = {
     type: "object",
     properties: {},
     required: [],
@@ -77,7 +77,7 @@ function convertAllOf(name: string, schema: any): ParsedSchema {
     return convertSchema(name, merged);
   }
   // If allOf only contains $refs, treat as ref to first one
-  const firstRef = schema.allOf.find((s: any) => s.$ref);
+  const firstRef = schema.allOf.find((s: SpecNode) => s.$ref);
   if (firstRef) {
     const refName = toSafeIdentifier(firstRef.$ref.split("/").pop());
     return { name, type: "ref", refName, description: schema.description };
@@ -85,20 +85,20 @@ function convertAllOf(name: string, schema: any): ParsedSchema {
   return { name, type: "any", description: schema.description };
 }
 
-function convertObjectSchema(name: string, schema: any): ParsedSchema {
+function convertObjectSchema(name: string, schema: SpecNode): ParsedSchema {
   const properties: Record<string, ParsedSchemaProperty> = {};
   const requiredFields = new Set(schema.required ?? []);
 
   for (const [propName, propSchema] of Object.entries(schema.properties ?? {})) {
-    const prop = propSchema as any;
+    const prop = propSchema as SpecNode;
     let resolvedProp = prop;
 
     if (prop.allOf) {
-      const firstRef = prop.allOf.find((s: any) => s.$ref);
+      const firstRef = prop.allOf.find((s: SpecNode) => s.$ref);
       if (firstRef) {
         resolvedProp = { ...firstRef, description: prop.description, nullable: prop.nullable };
       } else {
-        const merged: any = {};
+        const merged: SpecNode = {};
         for (const sub of prop.allOf) Object.assign(merged, sub);
         resolvedProp = {
           ...merged,
@@ -108,7 +108,7 @@ function convertObjectSchema(name: string, schema: any): ParsedSchema {
       }
     } else if ((prop.oneOf || prop.anyOf) && !prop.type) {
       const variants = prop.oneOf || prop.anyOf;
-      const firstRef = variants.find((s: any) => s.$ref);
+      const firstRef = variants.find((s: SpecNode) => s.$ref);
       if (firstRef) {
         resolvedProp = { ...firstRef, description: prop.description, nullable: prop.nullable };
       }
@@ -135,7 +135,7 @@ function convertObjectSchema(name: string, schema: any): ParsedSchema {
   };
 }
 
-export function convertSchemaInline(schema: any, spec: any): ParsedSchema {
+export function convertSchemaInline(schema: SpecNode, spec: SpecNode): ParsedSchema {
   if (schema.$ref) {
     const rawName = schema.$ref.split("/").pop();
     const refName = toSafeIdentifier(rawName);

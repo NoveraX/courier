@@ -17,7 +17,7 @@ vi.mock("@noverax/nexus", async (importOriginal) => {
 });
 
 import { createHandler } from "@noverax/nexus";
-import { apiRoute } from "../src/apiRoute";
+import { apiRoute } from "../src/api-route";
 
 const mockCreateHandler = vi.mocked(createHandler);
 

@@ -2,9 +2,9 @@
  * Ref resolution and security scheme parsing utilities.
  */
 
-import type { ParsedSecurityScheme } from "./types";
+import type { ParsedSecurityScheme, SpecNode } from "./types";
 
-export function resolveRef(spec: any, ref: string): any {
+export function resolveRef(spec: SpecNode, ref: string): SpecNode {
   const parts = ref.replace("#/", "").split("/");
   let result = spec;
   for (const part of parts) {
@@ -14,12 +14,12 @@ export function resolveRef(spec: any, ref: string): any {
 }
 
 /** Parse security schemes from OpenAPI 3 or Swagger 2 spec */
-export function parseSecuritySchemes(spec: any): ParsedSecurityScheme[] {
+export function parseSecuritySchemes(spec: SpecNode): ParsedSecurityScheme[] {
   const raw = spec.components?.securitySchemes ?? spec.securityDefinitions ?? {};
   const schemes: ParsedSecurityScheme[] = [];
 
   for (const [name, def] of Object.entries(raw)) {
-    const d = def as any;
+    const d = def as SpecNode;
     if (d.type === "http" && d.scheme === "bearer") {
       schemes.push({ name, type: "bearer" });
     } else if (d.type === "http" && d.scheme === "basic") {

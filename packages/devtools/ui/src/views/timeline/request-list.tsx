@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react"
+import { useRef, useState, useCallback, useEffect } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 
 import type { RequestEntry } from "../../store"
@@ -39,6 +39,36 @@ export function VirtualRequestList({
     },
     [],
   )
+
+  // Keyboard navigation: ↑/↓ to move selection
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return
+      if (requests.length === 0) return
+
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault()
+        const currentIdx = selectedId
+          ? requests.findIndex((r) => r.id === selectedId)
+          : -1
+
+        const nextIdx =
+          e.key === "ArrowDown"
+            ? Math.min(currentIdx + 1, requests.length - 1)
+            : Math.max(currentIdx - 1, 0)
+
+        const next = requests[nextIdx]
+        if (next) {
+          onSelect(next.id)
+          virtualizer.scrollToIndex(nextIdx, { align: "auto" })
+        }
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [requests, selectedId, onSelect, virtualizer])
 
   return (
     <div ref={parentRef} className="h-full overflow-y-auto">

@@ -1,7 +1,12 @@
+import { useState, useMemo } from "react"
+
 import { useSocketConnection } from "./socket"
 import { useDevToolsStore } from "./store"
+import type { Tab } from "./store"
 import { TABS, THEME_ICONS, THEME_CYCLE } from "./app-config"
 import { ToastOverlay } from "./components/toast-overlay"
+import { CommandPalette } from "./components/command-palette"
+import { useHotkeys } from "./components/use-hotkeys"
 import { TimelineView } from "./views/timeline"
 import { WaterfallView } from "./views/waterfall"
 import { MiddlewareView } from "./views/middleware"
@@ -13,13 +18,39 @@ import { AuditView } from "./views/audit"
 import { CodegenView } from "./views/codegen"
 import { PlaceholderView } from "./views/placeholder"
 
+// Tab order for number key shortcuts (1-9 maps to first 9 tabs)
+const TAB_ORDER: Tab[] = [
+  "timeline", "waterfall", "middleware", "analytics",
+  "explorer", "playground", "audit", "codegen", "compare",
+]
+
 // ── App Shell ───────────────────────────────────────────────────────────────
 
 export function App() {
   useSocketConnection()
+  const [commandOpen, setCommandOpen] = useState(false)
 
-  const { activeTab, setActiveTab, theme, setTheme, connectionStatus, sessions, requests, paused, toasts, dismissToast } =
-    useDevToolsStore()
+  const {
+    activeTab, setActiveTab, theme, setTheme,
+    connectionStatus, sessions, requests, paused, toasts, dismissToast,
+    togglePaused, clearRequests, setTimelineShowFilters,
+  } = useDevToolsStore()
+
+  // Global keyboard shortcuts
+  const hotkeys = useMemo(() => [
+    { key: "k", meta: true, handler: () => setCommandOpen(true) },
+    { key: "e", meta: true, handler: () => clearRequests() },
+    { key: "p", meta: true, handler: () => togglePaused() },
+    { key: "f", meta: true, handler: () => { setActiveTab("timeline"); setTimelineShowFilters(true) } },
+    { key: ",", meta: true, handler: () => setActiveTab("settings") },
+    // Number keys 1-9 switch tabs
+    ...TAB_ORDER.map((tab, i) => ({
+      key: String(i + 1),
+      handler: () => setActiveTab(tab),
+    })),
+  ], [setActiveTab, clearRequests, togglePaused, setTimelineShowFilters])
+
+  useHotkeys(hotkeys)
 
   function nextTheme() {
     const idx = THEME_CYCLE.indexOf(theme)
@@ -149,6 +180,9 @@ export function App() {
 
       {/* ── Toasts ── */}
       <ToastOverlay toasts={toasts} onDismiss={dismissToast} />
+
+      {/* ── Command Palette ── */}
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
     </div>
   )
 }

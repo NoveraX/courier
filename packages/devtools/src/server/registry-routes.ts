@@ -27,6 +27,7 @@ import {
   persistCaches,
 } from "./registry-helpers";
 import type { RouteApp } from "./route-types";
+import { validateNameBody, validateRegistryAddBody } from "./validate-body-registry";
 
 export function registerRegistryRoutes(app: RouteApp): void {
   app.post("/api/codegen/registry/list", (req, res) => {
@@ -41,27 +42,22 @@ export function registerRegistryRoutes(app: RouteApp): void {
 
   app.post("/api/codegen/registry/add", (req, res) => {
     try {
-      const { name, spec, specUrl, importType, options, generatedFiles, configPath } = req.body as {
-        name: string;
-        spec: ParsedSpec;
-        specUrl: string;
-        importType?: "url" | "file" | "raw";
-        options: GenerateOptions;
-        generatedFiles: { path: string; content: string }[];
-        configPath?: string;
-      };
+      const body = validateRegistryAddBody(req.body, res);
+      if (!body) return;
 
-      const fingerprints = collectFingerprints(generatedFiles);
+      const spec = body.spec as unknown as ParsedSpec;
+      const options = body.options as unknown as GenerateOptions;
+      const fingerprints = collectFingerprints(body.generatedFiles);
       const endpointCount = Object.keys(fingerprints).length;
 
-      let config = loadRegistry(configPath);
-      config = addSource(config, name, spec, specUrl, importType ?? "url", options, endpointCount);
-      saveRegistry(config, configPath);
+      let config = loadRegistry(body.configPath);
+      config = addSource(config, body.name, spec, body.specUrl, (body.importType ?? "url") as "url" | "file" | "raw", options, endpointCount);
+      saveRegistry(config, body.configPath);
 
       /* Save fingerprints + digest to cache */
-      persistCaches(name, fingerprints, spec);
+      persistCaches(body.name, fingerprints, spec);
 
-      res.json({ success: true, source: getSource(config, name) });
+      res.json({ success: true, source: getSource(config, body.name) });
     } catch (err) {
       res.status(500).json({ error: errMsg(err, "Failed to add source") });
     }
@@ -69,7 +65,9 @@ export function registerRegistryRoutes(app: RouteApp): void {
 
   app.post("/api/codegen/registry/remove", (req, res) => {
     try {
-      const { name, configPath } = req.body as { name: string; configPath?: string };
+      const body = validateNameBody(req.body, res);
+      if (!body) return;
+      const { name, configPath } = body;
       let config = loadRegistry(configPath);
 
       if (!getSource(config, name)) {
@@ -99,7 +97,9 @@ export function registerRegistryRoutes(app: RouteApp): void {
 function registerUpdateRoutes(app: RouteApp): void {
   app.post("/api/codegen/registry/check-updates", async (req, res) => {
     try {
-      const { name, configPath } = req.body as { name: string; configPath?: string };
+      const body = validateNameBody(req.body, res);
+      if (!body) return;
+      const { name, configPath } = body;
       const config = loadRegistry(configPath);
       const source = getSource(config, name);
 

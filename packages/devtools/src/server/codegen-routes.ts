@@ -19,14 +19,22 @@ import { registerRegistryRoutes } from "./registry-routes";
 import type { RouteApp } from "./route-types";
 import { registerScannerRoutes } from "./scanner-routes";
 import { registerUpdateFlowRoutes } from "./update-routes";
+import {
+  validateDiffBody,
+  validateFingerprintBody,
+  validateGenerateBody,
+  validateMergeBody,
+  validateParseBody,
+} from "./validate-body";
 import { validateSpecUrl } from "./validate-url";
 import { registerWriteRoutes } from "./write-routes";
 
 export function registerCodegenRoutes(app: RouteApp): void {
   app.post("/api/codegen/parse", async (req, res) => {
     try {
-      const { source, content } = req.body as { source: "url" | "raw" | "file"; content: string };
-      const raw = await resolveSpecContent(source, content);
+      const body = validateParseBody(req.body, res);
+      if (!body) return;
+      const raw = await resolveSpecContent(body.source, body.content);
       res.json(parseSpec(raw));
     } catch (err) {
       res.status(400).json({ error: errMsg(err, "Failed to parse spec") });
@@ -35,8 +43,9 @@ export function registerCodegenRoutes(app: RouteApp): void {
 
   app.post("/api/codegen/generate", (req, res) => {
     try {
-      const { spec, options } = req.body as { spec: ParsedSpec; options: GenerateOptions };
-      res.json({ files: generateCode(spec, options) });
+      const body = validateGenerateBody(req.body, res);
+      if (!body) return;
+      res.json({ files: generateCode(body.spec as unknown as ParsedSpec, body.options as unknown as GenerateOptions) });
     } catch (err) {
       res.status(400).json({ error: errMsg(err, "Code generation failed") });
     }
@@ -46,8 +55,9 @@ export function registerCodegenRoutes(app: RouteApp): void {
 
   app.post("/api/codegen/diff", (req, res) => {
     try {
-      const { oldSpec, newSpec } = req.body as { oldSpec: ParsedSpec; newSpec: ParsedSpec };
-      res.json(diffSpecs(oldSpec, newSpec));
+      const body = validateDiffBody(req.body, res);
+      if (!body) return;
+      res.json(diffSpecs(body.oldSpec as unknown as ParsedSpec, body.newSpec as unknown as ParsedSpec));
     } catch (err) {
       res.status(400).json({ error: errMsg(err, "Failed to diff specs") });
     }
@@ -55,9 +65,10 @@ export function registerCodegenRoutes(app: RouteApp): void {
 
   app.post("/api/codegen/fingerprint", (req, res) => {
     try {
-      const { files } = req.body as { files: { path: string; content: string }[] };
+      const body = validateFingerprintBody(req.body, res);
+      if (!body) return;
       const result: Record<string, Record<string, string>> = {};
-      for (const file of files) {
+      for (const file of body.files) {
         result[file.path] = generateFingerprints(file.content);
       }
       res.json(result);
@@ -68,12 +79,9 @@ export function registerCodegenRoutes(app: RouteApp): void {
 
   app.post("/api/codegen/merge", (req, res) => {
     try {
-      const { existing, generated, fingerprints } = req.body as {
-        existing: string;
-        generated: string;
-        fingerprints: FingerprintResult;
-      };
-      res.json(mergeGroupFile(existing, generated, fingerprints));
+      const body = validateMergeBody(req.body, res);
+      if (!body) return;
+      res.json(mergeGroupFile(body.existing, body.generated, body.fingerprints as unknown as FingerprintResult));
     } catch (err) {
       res.status(500).json({ error: errMsg(err, "Failed to merge files") });
     }

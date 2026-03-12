@@ -2,7 +2,7 @@ import type { DevToolsPluginOptions, ResolvedOptions } from "./types";
 
 const DEFAULT_PORT = 4380;
 const DEFAULT_HOST = "localhost";
-const HOST_RE = /^[a-zA-Z0-9.:-]+$/;
+const HOST_RE = /^[a-zA-Z0-9.-]+$/;
 
 export function resolveOptions(options: DevToolsPluginOptions = {}): ResolvedOptions {
   const port = options.port ?? DEFAULT_PORT;

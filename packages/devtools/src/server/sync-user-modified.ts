@@ -8,7 +8,7 @@ import type { FingerprintCache } from "../codegen/registry/cache";
 import { getCachedFingerprints } from "../codegen/registry/cache";
 import { saveRegistry } from "../codegen/registry/registry";
 import type { RegistryConfig, RegistrySource } from "../codegen/registry/types";
-import { resolveProject } from "../context";
+import { resolveProjectSafe } from "../context";
 
 interface Snapshot {
   invalidate: () => void;
@@ -44,7 +44,7 @@ function computeModifiedSet(
 /** Compare changed file's endpoints against cached fingerprints */
 export function syncUserModified(filePath: string, snapshot: Snapshot): void {
   try {
-    const content = readFileSync(resolveProject(filePath), "utf-8");
+    const content = readFileSync(resolveProjectSafe(filePath), "utf-8");
     const diskFps = generateFingerprints(content);
     if (Object.keys(diskFps).length === 0) return;
 

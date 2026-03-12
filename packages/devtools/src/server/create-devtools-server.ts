@@ -50,6 +50,8 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
 
   // ── REST API ─────────────────────────────────────────────────────────────────
 
+  app.use(express.json({ limit: "5mb" }));
+
   app.get("/api/sessions", (_req, res) => {
     res.json(Array.from(sessions.values()));
   });
@@ -58,9 +60,6 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
     res.json({ status: "ok", sessions: sessions.size });
   });
 
-  // ── Codegen API ────────────────────────────────────────────────────────────
-
-  app.use(express.json({ limit: "5mb" }));
   registerCodegenRoutes(app);
 
   // ── Static UI serving ────────────────────────────────────────────────────────

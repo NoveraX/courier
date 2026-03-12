@@ -5,14 +5,17 @@
 import { getSource, loadRegistry } from "../codegen";
 import { errMsg } from "./registry-helpers";
 import type { RouteApp } from "./route-types";
+import { validateWriteBody } from "./validate-body";
 import { handleMergeWrite, handleRawWrite } from "./write-helpers";
 import type { WriteBody } from "./write-types";
 
 export function registerWriteRoutes(app: RouteApp): void {
   app.post("/api/codegen/write", (req, res) => {
     try {
+      const validated = validateWriteBody(req.body, res);
+      if (!validated) return;
       const { files, sourceName, spec, specUrl, importType, options } =
-        req.body as unknown as WriteBody;
+        validated as unknown as WriteBody;
 
       const config = loadRegistry();
       const source = sourceName ? getSource(config, sourceName) : undefined;

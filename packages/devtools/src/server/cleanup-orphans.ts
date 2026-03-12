@@ -3,8 +3,8 @@
  * part of the current generation set, then cleans empty directories.
  */
 
-import { existsSync, readdirSync, rmdirSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, lstatSync, readdirSync, rmdirSync, unlinkSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { resolveProjectSafe } from "../context";
 
 export function cleanupOrphanFiles(outputDir: string, newPaths: Set<string>): number {
@@ -12,21 +12,32 @@ export function cleanupOrphanFiles(outputDir: string, newPaths: Set<string>): nu
   if (!existsSync(absDir)) return 0;
 
   try {
-    return removeOrphansRecursive(absDir, newPaths);
+    return removeOrphansRecursive(absDir, newPaths, absDir);
   } catch (err) {
     console.warn("Orphan cleanup failed:", err);
     return 0;
   }
 }
 
-function removeOrphansRecursive(dir: string, newPaths: Set<string>): number {
+function removeOrphansRecursive(dir: string, newPaths: Set<string>, root: string): number {
   const entries = readdirSync(dir, { withFileTypes: true });
   let deleted = 0;
 
   for (const entry of entries) {
     const fullPath = join(dir, entry.name);
+
+    /* Skip symlinks — don't follow them to avoid escaping project root */
+    if (lstatSync(fullPath).isSymbolicLink()) {
+      unlinkSync(fullPath);
+      continue;
+    }
+
+    /* Verify resolved path stays within project root */
+    const real = resolve(fullPath);
+    if (!real.startsWith(`${root}/`)) continue;
+
     if (entry.isDirectory()) {
-      deleted += removeOrphansRecursive(fullPath, newPaths);
+      deleted += removeOrphansRecursive(fullPath, newPaths, root);
       try {
         rmdirSync(fullPath);
       } catch {

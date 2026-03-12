@@ -1,7 +1,8 @@
-import { Database, Loader2, Plus, RefreshCw } from "lucide-react"
+import { Database, Loader2, PenTool, Plus, RefreshCw } from "lucide-react"
 
-import type { UpdateContext } from "./types"
+import type { ParsedSpec, UpdateContext } from "./types"
 import { RegistryCard } from "./registry-card"
+import { ScannedCard } from "./scanned-card"
 import { useRegistry } from "./use-registry"
 
 export function RegistryView({ onImportNew, onReviewUpdates }: {
@@ -15,18 +16,24 @@ export function RegistryView({ onImportNew, onReviewUpdates }: {
     if (ctx) onReviewUpdates(ctx)
   }
 
-  if (reg.loading && reg.sources.length === 0) {
+  const handleManualUpdate = (name: string, spec: ParsedSpec) => {
+    onReviewUpdates({ sourceName: name, newSpec: spec })
+  }
+
+  const totalSources = reg.sources.length + reg.scannedSources.length
+
+  if (reg.loading && totalSources === 0) {
     return <LoadingState />
   }
 
-  if (reg.sources.length === 0) {
+  if (totalSources === 0) {
     return <EmptyState onImportNew={onImportNew} />
   }
 
   return (
     <div className="space-y-4">
       <RegistryToolbar
-        sourceCount={reg.sources.length}
+        sourceCount={totalSources}
         onCheckAll={reg.checkAll}
         onRefresh={reg.refresh}
         onImportNew={onImportNew}
@@ -38,18 +45,35 @@ export function RegistryView({ onImportNew, onReviewUpdates }: {
         </div>
       )}
 
-      <div className="grid gap-3">
-        {reg.sources.map((source) => (
-          <RegistryCard
-            key={source.name}
-            source={source}
-            statusInfo={reg.statuses[source.name] ?? { status: "up-to-date" }}
-            onCheckUpdates={() => handleCheckUpdates(source.name)}
-            onRemove={() => reg.removeSource(source.name)}
-            onRegenerated={reg.refresh}
+      {reg.sources.length > 0 && (
+        <div className="grid gap-3">
+          {reg.sources.map((source) => (
+            <RegistryCard
+              key={source.name}
+              source={source}
+              statusInfo={reg.statuses[source.name] ?? { status: "up-to-date" }}
+              onCheckUpdates={() => handleCheckUpdates(source.name)}
+              onManualUpdate={(spec) => handleManualUpdate(source.name, spec)}
+              onRemove={() => reg.removeSource(source.name)}
+              onRegenerated={reg.refresh}
+            />
+          ))}
+        </div>
+      )}
+
+      {reg.scannedSources.length > 0 && (
+        <>
+          <SectionHeader
+            icon={PenTool}
+            label={`${reg.scannedSources.length} hand-written ${reg.scannedSources.length === 1 ? "source" : "sources"}`}
           />
-        ))}
-      </div>
+          <div className="grid gap-3">
+            {reg.scannedSources.map((source) => (
+              <ScannedCard key={source.name} source={source} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -76,6 +100,16 @@ function RegistryToolbar({ sourceCount, onCheckAll, onRefresh, onImportNew }: {
           <Plus size={12} /> Import New API
         </button>
       </div>
+    </div>
+  )
+}
+
+function SectionHeader({ icon: Icon, label }: { icon: typeof Database; label: string }) {
+  return (
+    <div className="flex items-center gap-2 pt-2">
+      <Icon size={14} className="text-text-muted" />
+      <span className="text-sm text-text-secondary">{label}</span>
+      <div className="h-px flex-1 bg-border-default" />
     </div>
   )
 }

@@ -2,20 +2,12 @@
  * Types for smart merge, fingerprinting, and spec diffing.
  */
 
-import type { GenerateOptions } from "../generator/types";
+import type { ParsedSpec } from "../parser/types";
 
 // ── Fingerprint ─────────────────────────────────────────────────────────────
 
 /** Classification of an endpoint's modification status */
 export type EndpointStatus = "safe" | "modified" | "new" | "removed";
-
-/** Per-endpoint fingerprint info stored in registry */
-export interface EndpointFingerprint {
-  /** SHA-256 hash of the generated code for this endpoint */
-  hash: string;
-  /** Whether user has modified this endpoint (detected on last check) */
-  userModified: boolean;
-}
 
 /** Result of fingerprinting an existing file against stored hashes */
 export interface FingerprintResult {
@@ -116,16 +108,17 @@ export interface ExistingGroupInfo {
 
 // ── Spec Digest (lightweight spec snapshot for diffing) ─────────────────────
 
-/** Minimal endpoint — structurally compatible with ParsedEndpoint for diffing */
+/** Compact endpoint snapshot for diffing (fullPath removed — reconstructable from group) */
 export interface DigestEndpoint {
   name: string;
   httpMethod: string;
   path: string;
-  fullPath: string;
   secured: boolean;
   parameters: { in: string; name: string }[];
-  responseSchema: { refName?: string; type?: string } | null;
-  requestBody: { refName?: string; type?: string } | null;
+  /** Schema ref name or primitive type, e.g. "UserDto" or "object" */
+  responseRef: string | null;
+  /** Schema ref name or primitive type, e.g. "CreateUserDto" or "object" */
+  requestRef: string | null;
 }
 
 /** Minimal group — structurally compatible with ParsedGroup for diffing */
@@ -134,64 +127,33 @@ export interface DigestGroup {
   endpoints: DigestEndpoint[];
 }
 
-/** Minimal schema — structurally compatible with ParsedSchema for diffing */
+/** Compact schema snapshot for diffing (required[] removed — redundant with per-property flag) */
 export interface DigestSchema {
   name: string;
   type: string;
   properties?: Record<string, { type: string; required: boolean }>;
-  required?: string[];
 }
 
 /** Lightweight spec snapshot — only the structure needed for diff/breaking detection */
 export interface SpecDigest {
+  /** Discriminant for type-safe ParsedSpec vs SpecDigest detection */
+  _kind: "digest";
   groups: DigestGroup[];
   schemas: Record<string, DigestSchema>;
 }
 
-// ── Registry ────────────────────────────────────────────────────────────────
+/** Either a full ParsedSpec or a lightweight SpecDigest — accepted by diffSpecs */
+export type DiffableSpec = ParsedSpec | SpecDigest;
 
-export interface SpecSource {
-  type: "url" | "file" | "raw";
-  value: string;
-}
+// ── Registry (re-exported from registry/types for backward compat) ───────────
 
-export interface RegistrySource {
-  specSource: SpecSource;
-  specHash: string;
-  specVersion: string;
-  lastSynced: string;
-  outputDir: string;
-  options: GenerateOptions;
-  endpoints: Record<string, EndpointFingerprint>;
-  /** Lightweight spec snapshot for diffing (replaces full cachedSpec) */
-  specDigest?: SpecDigest;
-}
-
-export interface RegistryConfig {
-  sources: Record<string, RegistrySource>;
-}
-
-// ── Update Flow ─────────────────────────────────────────────────────────────
-
-export type RemovedEndpointAction = "remove" | "keep" | "deprecate";
-
-export interface UpdateChoices {
-  /** Per-endpoint decisions for removed endpoints: endpointKey → action */
-  removedActions: Record<string, RemovedEndpointAction>;
-  /** Endpoint keys to include from new spec (defaults to all) */
-  includeNew: string[];
-}
-
-export interface UpdateFileResult {
-  path: string;
-  content: string;
-  status: MergeStatus;
-  changes: MergeChange[];
-}
-
-export interface UpdateResult {
-  files: UpdateFileResult[];
-  breakingChanges: BreakingChange[];
-  /** Updated registry entry to persist */
-  registryUpdate: RegistrySource;
-}
+export type {
+  PersistedGenerateOptions,
+  RegistryConfig,
+  RegistrySource,
+  RemovedEndpointAction,
+  SpecImportType,
+  UpdateChoices,
+  UpdateFileResult,
+  UpdateResult,
+} from "../registry/types";

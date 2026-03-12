@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { X } from "lucide-react"
 
 import type { GenerateOptions, SourceSummary } from "./types"
@@ -21,19 +21,27 @@ export function RegistrySettings({ source, onClose, onRegenerated }: {
   const [error, setError] = useState<string | null>(null)
   const [showEditor, setShowEditor] = useState(false)
 
-  const isDirty = JSON.stringify(opts) !== JSON.stringify(source.options)
+  const isDirty = useMemo(
+    () => JSON.stringify(opts) !== JSON.stringify(source.options),
+    [opts, source.options],
+  )
 
   const handleApply = async () => {
     setLoading(true)
     setError(null)
     setResult(null)
     try {
-      const spec = await fetchParseSpec(source.specSource.type, source.specSource.value)
+      if (!source.specUrl) {
+        setError("Cannot re-generate: spec was imported from file/paste. Use \"Check for Updates\" to provide the new spec.")
+        return
+      }
+      const spec = await fetchParseSpec(source.specUrl)
       const files = await fetchGenerateCode(spec, opts)
       const writeResult = await fetchWriteFiles(files, {
         sourceName: source.name,
         spec,
-        specSource: source.specSource,
+        specUrl: source.specUrl,
+        importType: source.importType,
         options: opts,
       })
       setResult(formatWriteResult(writeResult))
@@ -64,7 +72,7 @@ export function RegistrySettings({ source, onClose, onRegenerated }: {
       <SettingsActions
         loading={loading}
         isDirty={isDirty}
-        isRaw={source.specSource.type === "raw"}
+        isRaw={false}
         onApply={handleApply}
         onEditEndpoints={() => setShowEditor(true)}
       />

@@ -16,7 +16,7 @@ function endpointKey(group: string, ep: DigestEndpoint): string {
 }
 
 function toDiffEndpoint(group: string, ep: DigestEndpoint): DiffEndpoint {
-  return { group, name: ep.name, method: ep.httpMethod, path: ep.fullPath };
+  return { group, name: ep.name, method: ep.httpMethod, path: ep.path };
 }
 
 function buildEndpointMap(
@@ -56,16 +56,16 @@ function compareEndpoints(oldEp: DigestEndpoint, newEp: DigestEndpoint): string[
 
   changes.push(...compareParams(oldEp, newEp));
 
-  const oldRef = oldEp.responseSchema?.refName ?? oldEp.responseSchema?.type;
-  const newRef = newEp.responseSchema?.refName ?? newEp.responseSchema?.type;
-  if (oldRef !== newRef) {
-    changes.push(`response type changed: ${oldRef ?? "none"} → ${newRef ?? "none"}`);
+  if (oldEp.responseRef !== newEp.responseRef) {
+    changes.push(
+      `response type changed: ${oldEp.responseRef ?? "none"} → ${newEp.responseRef ?? "none"}`,
+    );
   }
 
-  const oldBody = oldEp.requestBody?.refName ?? oldEp.requestBody?.type;
-  const newBody = newEp.requestBody?.refName ?? newEp.requestBody?.type;
-  if (oldBody !== newBody) {
-    changes.push(`request body changed: ${oldBody ?? "none"} → ${newBody ?? "none"}`);
+  if (oldEp.requestRef !== newEp.requestRef) {
+    changes.push(
+      `request body changed: ${oldEp.requestRef ?? "none"} → ${newEp.requestRef ?? "none"}`,
+    );
   }
 
   if (oldEp.secured !== newEp.secured) {

@@ -9,6 +9,7 @@ import type { DigestEndpoint, DigestGroup, DigestSchema, SpecDigest } from "./ty
 
 export function createSpecDigest(spec: ParsedSpec): SpecDigest {
   return {
+    _kind: "digest",
     groups: spec.groups.map(digestGroup),
     schemas: digestSchemas(spec.schemas),
   };
@@ -26,15 +27,10 @@ function digestEndpoint(ep: ParsedEndpoint): DigestEndpoint {
     name: ep.name,
     httpMethod: ep.httpMethod,
     path: ep.path,
-    fullPath: ep.fullPath,
     secured: ep.secured,
     parameters: ep.parameters.map((p) => ({ in: p.in, name: p.name })),
-    responseSchema: ep.responseSchema
-      ? { refName: ep.responseSchema.refName, type: ep.responseSchema.type }
-      : null,
-    requestBody: ep.requestBody
-      ? { refName: ep.requestBody.refName, type: ep.requestBody.type }
-      : null,
+    responseRef: ep.responseSchema?.refName ?? ep.responseSchema?.type ?? null,
+    requestRef: ep.requestBody?.refName ?? ep.requestBody?.type ?? null,
   };
 }
 
@@ -48,7 +44,6 @@ function digestSchemas(schemas: Record<string, ParsedSchema>): Record<string, Di
         digest.properties[prop] = { type: val.type, required: val.required };
       }
     }
-    if (schema.required?.length) digest.required = schema.required;
     result[name] = digest;
   }
   return result;

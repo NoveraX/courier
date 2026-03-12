@@ -3,8 +3,18 @@ import { io } from "socket.io-client"
 
 import type { Socket } from "socket.io-client"
 import type { SessionInfo } from "./store"
+import type { DevToolsEvent } from "./store/types-events"
 
 import { useDevToolsStore } from "./store"
+
+function isDevToolsEvent(value: unknown): value is DevToolsEvent & Record<string, unknown> {
+  if (typeof value !== "object" || value === null) return false
+  const obj = value as Record<string, unknown>
+  return typeof obj.id === "string"
+    && typeof obj.type === "string"
+    && typeof obj.timestamp === "number"
+    && typeof obj.sessionId === "string"
+}
 
 let socket: Socket | null = null
 
@@ -44,8 +54,9 @@ export function useSocketConnection() {
     const onSessionDisconnect = ({ sessionId }: { sessionId: string }) =>
       store().removeSession(sessionId)
 
-    // biome-ignore lint/suspicious/noExplicitAny: event shape validated inside handleEvent
-    const onEvent = (event: any) => store().handleEvent(event)
+    const onEvent = (event: unknown) => {
+      if (isDevToolsEvent(event)) store().handleEvent(event)
+    }
 
     s.on("connect", onConnect)
     s.on("disconnect", onDisconnect)
@@ -57,6 +68,17 @@ export function useSocketConnection() {
     s.on("session:disconnect", onSessionDisconnect)
     s.on("event", onEvent)
 
+    /* File watcher events — forwarded to custom event listeners */
+    const onScanUpdated = (data: unknown) => {
+      window.dispatchEvent(new CustomEvent("nexus:scan:updated", { detail: data }))
+    }
+    const onRegistryUpdated = (data: unknown) => {
+      window.dispatchEvent(new CustomEvent("nexus:registry:updated", { detail: data }))
+    }
+
+    s.on("scan:updated", onScanUpdated)
+    s.on("registry:updated", onRegistryUpdated)
+
     return () => {
       s.off("connect", onConnect)
       s.off("disconnect", onDisconnect)
@@ -67,6 +89,8 @@ export function useSocketConnection() {
       s.off("session:connect", onSessionConnect)
       s.off("session:disconnect", onSessionDisconnect)
       s.off("event", onEvent)
+      s.off("scan:updated", onScanUpdated)
+      s.off("registry:updated", onRegistryUpdated)
     }
   }, [])
 }

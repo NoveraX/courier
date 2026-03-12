@@ -35,6 +35,10 @@ Thumbs.db
 # Coverage & testing
 coverage/
 
+# Nexus devtools cache
+.nexus-cache.json
+.nexus-digests.json
+
 # Temporary
 tmp/
 temp/

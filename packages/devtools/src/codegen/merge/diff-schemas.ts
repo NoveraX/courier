@@ -36,14 +36,6 @@ function compareSchemas(oldSchema: DigestSchema, newSchema: DigestSchema): strin
     }
   }
 
-  const oldRequired = new Set(oldSchema.required ?? []);
-  const newRequired = new Set(newSchema.required ?? []);
-  for (const field of newRequired) {
-    if (!oldRequired.has(field) && oldProps.has(field)) {
-      changes.push(`field "${field}" became required`);
-    }
-  }
-
   return changes;
 }
 

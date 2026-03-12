@@ -8,12 +8,17 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { Server as SocketIOServer } from "socket.io";
+import { setProjectRoot } from "../context";
 import { registerCodegenRoutes } from "./codegen-routes";
+import { startFileWatcher } from "./file-watcher";
+import { initProject } from "./init";
 import { setupAppNamespace, setupUiNamespace } from "./socket-handlers";
 import type { DevToolsServer, DevToolsServerOptions, SessionInfo } from "./types";
 
 export function createDevToolsServer(options: DevToolsServerOptions = {}): DevToolsServer {
-  const { port = 4380, host = "localhost", onReady } = options;
+  const { port = 4380, host = "localhost", projectRoot = process.cwd(), onReady } = options;
+
+  setProjectRoot(projectRoot);
 
   const app = express();
   const httpServer = createServer(app);
@@ -34,6 +39,14 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
 
   setupAppNamespace(appNamespace, uiNamespace, sessions);
   setupUiNamespace(appNamespace, uiNamespace, sessions);
+
+  // ── Init (registry + .gitignore) ────────────────────────────────────────────
+
+  initProject();
+
+  // ── File Watcher (hot reload) ──────────────────────────────────────────────
+
+  const stopWatcher = startFileWatcher(uiNamespace);
 
   // ── REST API ─────────────────────────────────────────────────────────────────
 
@@ -73,6 +86,7 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
 
   const close = () =>
     new Promise<void>((resolve, reject) => {
+      stopWatcher();
       sessions.clear();
       io.close();
       httpServer.close((err) => (err ? reject(err) : resolve()));

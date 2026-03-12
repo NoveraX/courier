@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import type { Step, SourceConfig, SourceState } from "./types"
 import { fetchParseSpec } from "./api"
 import { createDefaultSource, createDefaultState, groupKey } from "./helpers"
-import { createCodegenActions } from "./use-codegen-actions"
+import { createCodegenActions } from "./codegen-actions"
 
 export function useCodegen() {
   const [sources, setSources] = useState<SourceConfig[]>([createDefaultSource()])

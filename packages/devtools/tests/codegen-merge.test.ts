@@ -3,8 +3,6 @@ import { extractEndpoints } from "../src/codegen/merge/extract-endpoints"
 import { classifyEndpoints, generateFingerprints } from "../src/codegen/merge/fingerprint"
 import { computeHash, normalizeCode } from "../src/codegen/merge/hash"
 import { diffSpecs } from "../src/codegen/merge/spec-diff"
-import type { EndpointFingerprint } from "../src/codegen/merge/types"
-import type { ParsedSpec } from "../src/codegen/parser/types"
 
 // ── Fingerprint: normalizeCode ──────────────────────────────────────────────
 
@@ -111,9 +109,8 @@ describe("generateFingerprints", () => {
 })`
     const fps = generateFingerprints(file)
     expect(Object.keys(fps)).toEqual(["getAll", "create"])
-    expect(fps.getAll?.hash).toMatch(/^[0-9a-f]{16}$/)
-    expect(fps.getAll?.userModified).toBe(false)
-    expect(fps.create?.userModified).toBe(false)
+    expect(fps.getAll).toMatch(/^[0-9a-f]{16}$/)
+    expect(fps.create).toMatch(/^[0-9a-f]{16}$/)
   })
 })
 
@@ -125,10 +122,10 @@ describe("classifyEndpoints", () => {
     getById: `    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars))`,
   }
 
-  function makeFingerprints(code: Record<string, string>): Record<string, EndpointFingerprint> {
-    const result: Record<string, EndpointFingerprint> = {}
+  function makeFingerprints(code: Record<string, string>): Record<string, string> {
+    const result: Record<string, string> = {}
     for (const [name, c] of Object.entries(code)) {
-      result[name] = { hash: computeHash(c), userModified: false }
+      result[name] = computeHash(c)
     }
     return result
   }
@@ -186,19 +183,7 @@ describe("classifyEndpoints", () => {
 
 // ── Spec Diff ───────────────────────────────────────────────────────────────
 
-function makeSpec(overrides: Partial<ParsedSpec> = {}): ParsedSpec {
-  return {
-    title: "Test API",
-    version: "1.0.0",
-    description: "",
-    baseURL: "/api",
-    format: "openapi3",
-    groups: [],
-    schemas: {},
-    securitySchemes: [],
-    ...overrides,
-  }
-}
+import { makeSpec } from "./helpers/make-spec"
 
 describe("diffSpecs", () => {
   it("detects added endpoints", () => {

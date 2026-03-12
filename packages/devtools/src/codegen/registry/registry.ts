@@ -1,25 +1,31 @@
 /**
  * API Registry — CRUD operations for managing imported API sources.
  *
- * Persists to `codegen.nexus.json` in the project root.
- * Tracks spec versions, fingerprints, sync status, and cached specs.
+ * Persists to `registry.nexus.json` in the project root.
+ * Stores user config + userModified list (fingerprints live in .nexus-cache.json).
  */
 
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname } from "node:path";
+import { resolveProject } from "../../context";
 import type { GenerateOptions } from "../generator/types";
-import { createSpecDigest } from "../merge/spec-digest";
 import type { ParsedSpec } from "../parser/types";
-import type { EndpointFingerprint, RegistryConfig, RegistrySource, SpecSource } from "./types";
+import type {
+  PersistedGenerateOptions,
+  RegistryConfig,
+  RegistrySource,
+  SpecImportType,
+} from "./types";
 
-const DEFAULT_CONFIG_PATH = "codegen.nexus.json";
+const DEFAULT_CONFIG_PATH = "registry.nexus.json";
+const SCHEMA_REF = "./node_modules/@noverax/nexus-devtools/registry.schema.json";
 
 // ── Config I/O ──────────────────────────────────────────────────────────────
 
 /** Load registry config from disk. Returns empty config if file doesn't exist. */
 export function loadRegistry(configPath?: string): RegistryConfig {
-  const filePath = resolve(configPath ?? DEFAULT_CONFIG_PATH);
+  const filePath = resolveProject(configPath ?? DEFAULT_CONFIG_PATH);
   if (!existsSync(filePath)) {
     return { sources: {} };
   }
@@ -32,17 +38,19 @@ export function loadRegistry(configPath?: string): RegistryConfig {
     return { sources: {} };
   }
 
-  return parsed as RegistryConfig;
+  const { $schema: _, ...config } = parsed as RegistryConfig & { $schema?: string };
+  return config;
 }
 
 /** Save registry config to disk. */
 export function saveRegistry(config: RegistryConfig, configPath?: string): string {
-  const filePath = resolve(configPath ?? DEFAULT_CONFIG_PATH);
+  const filePath = resolveProject(configPath ?? DEFAULT_CONFIG_PATH);
   const dir = dirname(filePath);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
-  writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`, "utf-8");
+  const output = { $schema: SCHEMA_REF, ...config };
+  writeFileSync(filePath, `${JSON.stringify(output, null, 2)}\n`, "utf-8");
   return filePath;
 }
 
@@ -53,19 +61,21 @@ export function addSource(
   config: RegistryConfig,
   name: string,
   spec: ParsedSpec,
-  specSource: SpecSource,
+  specUrl: string,
+  importType: SpecImportType,
   options: GenerateOptions,
-  fingerprints: Record<string, EndpointFingerprint>,
+  endpointCount: number,
+  userModified: string[] = [],
 ): RegistryConfig {
+  const { selectedEndpoints: _, ...persistedOptions } = options;
   const source: RegistrySource = {
-    specSource,
+    specUrl: importType === "url" ? specUrl : "",
+    importType,
     specHash: computeSpecHash(spec),
-    specVersion: spec.version,
-    lastSynced: new Date().toISOString(),
     outputDir: options.outputDir,
-    options,
-    endpoints: fingerprints,
-    specDigest: createSpecDigest(spec),
+    options: { ...persistedOptions, selectedEndpoints: null },
+    userModified,
+    endpointCount,
   };
 
   return {
@@ -89,25 +99,21 @@ export function getSource(config: RegistryConfig, name: string): RegistrySource 
 export function listSources(config: RegistryConfig): SourceSummary[] {
   return Object.entries(config.sources).map(([name, source]) => ({
     name,
-    version: source.specVersion,
-    specSource: source.specSource,
+    specUrl: source.specUrl,
+    importType: source.importType ?? "url",
     outputDir: source.outputDir,
     options: source.options,
-    lastSynced: source.lastSynced,
-    endpointCount: Object.keys(source.endpoints).length,
-    modifiedCount: Object.values(source.endpoints).filter((e) => e.userModified).length,
+    endpointCount: source.endpointCount,
   }));
 }
 
 export interface SourceSummary {
   name: string;
-  version: string;
-  specSource: SpecSource;
+  specUrl: string;
+  importType: SpecImportType;
   outputDir: string;
-  options: GenerateOptions;
-  lastSynced: string;
+  options: PersistedGenerateOptions;
   endpointCount: number;
-  modifiedCount: number;
 }
 
 // ── Update Detection ────────────────────────────────────────────────────────
@@ -129,27 +135,22 @@ export function hasSpecChanged(source: RegistrySource, newSpec: ParsedSpec): boo
   return computeSpecHash(newSpec) !== source.specHash;
 }
 
-/** Update fingerprints for a source after re-generation. */
-export function updateFingerprints(
+/** Update specHash and userModified for a source after re-generation. */
+export function updateSource(
   config: RegistryConfig,
   name: string,
-  fingerprints: Record<string, EndpointFingerprint>,
-  newSpec: ParsedSpec,
+  specHash: string,
+  endpointCount: number,
+  userModified: string[] = [],
 ): RegistryConfig {
   const source = config.sources[name];
   if (!source) return config;
 
-  const updated: RegistrySource = {
-    ...source,
-    specHash: computeSpecHash(newSpec),
-    specVersion: newSpec.version,
-    lastSynced: new Date().toISOString(),
-    endpoints: fingerprints,
-    specDigest: createSpecDigest(newSpec),
-  };
-
   return {
     ...config,
-    sources: { ...config.sources, [name]: updated },
+    sources: {
+      ...config.sources,
+      [name]: { ...source, specHash, endpointCount, userModified },
+    },
   };
 }

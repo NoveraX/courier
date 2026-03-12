@@ -2,26 +2,31 @@
  * Express routes for the API registry (manage imported sources).
  */
 
-import type { GenerateOptions, ParsedSpec, SpecSource } from "../codegen/index.js";
+import type { GenerateOptions, ParsedSpec } from "../codegen";
 import {
   addSource,
-  diffSpecs,
   getSource,
   hasSpecChanged,
   listSources,
+  loadCache,
+  loadDigestCache,
   loadRegistry,
   parseSpec,
+  removeCachedDigest,
+  removeCachedSource,
   removeSource,
+  saveCache,
+  saveDigestCache,
   saveRegistry,
-  updateFingerprints,
-} from "../codegen/index.js";
+} from "../codegen";
 import {
   checkSingleSource,
   collectFingerprints,
   errMsg,
   fetchSpecRaw,
-} from "./registry-helpers.js";
-import type { RouteApp } from "./route-types.js";
+  persistCaches,
+} from "./registry-helpers";
+import type { RouteApp } from "./route-types";
 
 export function registerRegistryRoutes(app: RouteApp): void {
   app.post("/api/codegen/registry/list", (req, res) => {
@@ -36,19 +41,25 @@ export function registerRegistryRoutes(app: RouteApp): void {
 
   app.post("/api/codegen/registry/add", (req, res) => {
     try {
-      const { name, spec, specSource, options, generatedFiles, configPath } = req.body as {
+      const { name, spec, specUrl, importType, options, generatedFiles, configPath } = req.body as {
         name: string;
         spec: ParsedSpec;
-        specSource: SpecSource;
+        specUrl: string;
+        importType?: "url" | "file" | "raw";
         options: GenerateOptions;
         generatedFiles: { path: string; content: string }[];
         configPath?: string;
       };
 
       const fingerprints = collectFingerprints(generatedFiles);
+      const endpointCount = Object.keys(fingerprints).length;
+
       let config = loadRegistry(configPath);
-      config = addSource(config, name, spec, specSource, options, fingerprints);
+      config = addSource(config, name, spec, specUrl, importType ?? "url", options, endpointCount);
       saveRegistry(config, configPath);
+
+      /* Save fingerprints + digest to cache */
+      persistCaches(name, fingerprints, spec);
 
       res.json({ success: true, source: getSource(config, name) });
     } catch (err) {
@@ -68,6 +79,14 @@ export function registerRegistryRoutes(app: RouteApp): void {
 
       config = removeSource(config, name);
       saveRegistry(config, configPath);
+
+      /* Clean up caches */
+      const cache = loadCache();
+      saveCache(removeCachedSource(cache, name));
+
+      const digestCache = loadDigestCache();
+      saveDigestCache(removeCachedDigest(digestCache, name));
+
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: errMsg(err, "Failed to remove source") });
@@ -89,7 +108,7 @@ function registerUpdateRoutes(app: RouteApp): void {
         return;
       }
 
-      const raw = await fetchSpecRaw(source.specSource, res);
+      const raw = await fetchSpecRaw(source.specUrl, res);
       if (!raw) return;
 
       const newSpec = parseSpec(raw);
@@ -98,8 +117,7 @@ function registerUpdateRoutes(app: RouteApp): void {
         return;
       }
 
-      const diff = diffSpecs(source.specDigest ?? newSpec, newSpec);
-      res.json({ changed: true, diff, newSpec });
+      res.json({ changed: true, newSpec });
     } catch (err) {
       res.status(500).json({ error: errMsg(err, "Failed to check updates") });
     }
@@ -109,39 +127,17 @@ function registerUpdateRoutes(app: RouteApp): void {
     try {
       const { configPath } = req.body as { configPath?: string };
       const config = loadRegistry(configPath);
-      const results: Record<string, { changed: boolean; error?: string }> = {};
+      const entries = Object.entries(config.sources);
+      const checks = await Promise.all(
+        entries.map(async ([name, source]) => [name, await checkSingleSource(source)] as const),
+      );
 
-      for (const [name, source] of Object.entries(config.sources)) {
-        if (source.specSource.type !== "url") {
-          results[name] = { changed: false };
-          continue;
-        }
-        results[name] = await checkSingleSource(source);
-      }
+      const results: Record<string, { changed: boolean; error?: string }> = {};
+      for (const [name, result] of checks) results[name] = result;
 
       res.json({ results });
     } catch (err) {
       res.status(500).json({ error: errMsg(err, "Failed to check sources") });
-    }
-  });
-
-  app.post("/api/codegen/registry/update-fingerprints", (req, res) => {
-    try {
-      const { name, generatedFiles, newSpec, configPath } = req.body as {
-        name: string;
-        generatedFiles: { path: string; content: string }[];
-        newSpec: ParsedSpec;
-        configPath?: string;
-      };
-
-      const fingerprints = collectFingerprints(generatedFiles);
-      let config = loadRegistry(configPath);
-      config = updateFingerprints(config, name, fingerprints, newSpec);
-      saveRegistry(config, configPath);
-
-      res.json({ success: true });
-    } catch (err) {
-      res.status(500).json({ error: errMsg(err, "Failed to update fingerprints") });
     }
   });
 }

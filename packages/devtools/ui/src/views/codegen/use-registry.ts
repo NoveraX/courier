@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from "react"
 
-import type { SourceStatusInfo, SourceSummary, UpdateContext } from "./types"
+import type { ScannedSource, SourceStatusInfo, SourceSummary, UpdateContext } from "./types"
 import {
   fetchCheckAllUpdates,
   fetchCheckUpdates,
   fetchRegistrySources,
   fetchRemoveSource,
-} from "./api"
+} from "./api-registry";
+import { fetchScanProject } from "./api-scanner";
 
 interface UseRegistryReturn {
   sources: SourceSummary[]
+  scannedSources: ScannedSource[]
   statuses: Record<string, SourceStatusInfo>
   loading: boolean
   error: string | null
@@ -21,6 +23,7 @@ interface UseRegistryReturn {
 
 export function useRegistry(): UseRegistryReturn {
   const [sources, setSources] = useState<SourceSummary[]>([])
+  const [scannedSources, setScannedSources] = useState<ScannedSource[]>([])
   const [statuses, setStatuses] = useState<Record<string, SourceStatusInfo>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,8 +32,14 @@ export function useRegistry(): UseRegistryReturn {
     setLoading(true)
     setError(null)
     try {
-      const list = await fetchRegistrySources()
+      const [list, scan] = await Promise.all([
+        fetchRegistrySources(),
+        fetchScanProject().catch(() => ({ sources: [], scannedFiles: 0 })),
+      ])
       setSources(list)
+      /* Only show hand-written sources (not already imported) */
+      const importedNames = new Set(list.map((s) => s.name))
+      setScannedSources(scan.sources.filter((s) => !s.isImported && !importedNames.has(s.name)))
       setStatuses((prev) => {
         const next: Record<string, SourceStatusInfo> = {}
         for (const s of list) {
@@ -47,6 +56,22 @@ export function useRegistry(): UseRegistryReturn {
 
   useEffect(() => { void refresh() }, [refresh])
 
+  /* Hot reload: auto-refresh when files change on disk (debounced 300ms) */
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const handler = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => { void refresh() }, 300)
+    }
+    window.addEventListener("nexus:scan:updated", handler)
+    window.addEventListener("nexus:registry:updated", handler)
+    return () => {
+      if (timer) clearTimeout(timer)
+      window.removeEventListener("nexus:scan:updated", handler)
+      window.removeEventListener("nexus:registry:updated", handler)
+    }
+  }, [refresh])
+
   const checkUpdates = useCallback(async (name: string): Promise<UpdateContext | null> => {
     setStatuses((prev) => ({ ...prev, [name]: { status: "checking" } }))
     try {
@@ -58,8 +83,8 @@ export function useRegistry(): UseRegistryReturn {
       const status = result.changed ? "updates-available" : "up-to-date"
       setStatuses((prev) => ({ ...prev, [name]: { status } }))
 
-      if (result.changed && result.diff && result.newSpec) {
-        return { sourceName: name, diff: result.diff, newSpec: result.newSpec }
+      if (result.changed && result.newSpec) {
+        return { sourceName: name, newSpec: result.newSpec }
       }
       return null
     } catch (err) {
@@ -72,10 +97,9 @@ export function useRegistry(): UseRegistryReturn {
   }, [])
 
   const checkAll = useCallback(async () => {
-    const urlSources = sources.filter((s) => s.specSource.type === "url")
-    if (urlSources.length === 0) return
+    if (sources.length === 0) return
 
-    for (const s of urlSources) {
+    for (const s of sources) {
       setStatuses((prev) => ({ ...prev, [s.name]: { status: "checking" } }))
     }
 
@@ -104,5 +128,5 @@ export function useRegistry(): UseRegistryReturn {
     }
   }, [refresh])
 
-  return { sources, statuses, loading, error, refresh, checkUpdates, checkAll, removeSource: remove }
+  return { sources, scannedSources, statuses, loading, error, refresh, checkUpdates, checkAll, removeSource: remove }
 }

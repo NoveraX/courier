@@ -4,7 +4,7 @@
 
 import { extractEndpoints } from "./extract-endpoints";
 import { computeHash } from "./hash";
-import type { EndpointFingerprint, EndpointStatus, FingerprintResult } from "./types";
+import type { EndpointStatus, FingerprintResult } from "./types";
 
 /**
  * Compare extracted endpoints against stored fingerprints and new spec names.
@@ -17,7 +17,7 @@ import type { EndpointFingerprint, EndpointStatus, FingerprintResult } from "./t
  */
 export function classifyEndpoints(
   existingCode: Record<string, string>,
-  storedFingerprints: Record<string, EndpointFingerprint>,
+  storedFingerprints: Record<string, string>,
   newSpecEndpoints: string[],
 ): FingerprintResult {
   const endpoints: Record<string, EndpointStatus> = {};
@@ -38,31 +38,30 @@ export function classifyEndpoints(
 function classifySingle(
   name: string,
   existingCode: Record<string, string>,
-  storedFingerprints: Record<string, EndpointFingerprint>,
+  storedFingerprints: Record<string, string>,
   newSpecSet: Set<string>,
 ): EndpointStatus {
-  const stored = storedFingerprints[name];
-  if (!stored) return "modified";
+  const storedHash = storedFingerprints[name];
+  if (!storedHash) return "modified";
 
   const currentHash = computeHash(existingCode[name] ?? "");
-  if (currentHash !== stored.hash) {
+  if (currentHash !== storedHash) {
     return newSpecSet.has(name) ? "modified" : "removed";
   }
   return newSpecSet.has(name) ? "safe" : "removed";
 }
 
 /**
- * Generate fingerprints for all endpoints in generated code.
- * Call after code generation to store hashes for future comparison.
+ * Generate compact fingerprints for all endpoints in generated code.
+ *
+ * @returns Endpoint name → code hash map
  */
-export function generateFingerprints(
-  generatedContent: string,
-): Record<string, EndpointFingerprint> {
+export function generateFingerprints(generatedContent: string): Record<string, string> {
   const endpoints = extractEndpoints(generatedContent);
-  const fingerprints: Record<string, EndpointFingerprint> = {};
+  const fingerprints: Record<string, string> = {};
 
   for (const [name, code] of Object.entries(endpoints)) {
-    fingerprints[name] = { hash: computeHash(code), userModified: false };
+    fingerprints[name] = computeHash(code);
   }
 
   return fingerprints;

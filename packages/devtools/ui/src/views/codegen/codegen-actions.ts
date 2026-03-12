@@ -1,6 +1,7 @@
-import type { SourceConfig, SourceState } from "./types"
-import { fetchParseSpec, fetchGenerateCode, fetchWriteFiles } from "./api"
-import { groupKey, deriveSourceName, formatWriteResult } from "./helpers"
+import { fetchGenerateCode, fetchParseSpec, fetchWriteFiles } from "./api";
+import { deriveSourceName, formatWriteResult, groupKey } from "./helpers";
+import { buildSelectedEndpoints } from "./selection-helpers";
+import type { SourceConfig, SourceState } from "./types";
 
 interface ActionDeps {
   activeSourceIdx: number
@@ -12,7 +13,7 @@ interface ActionDeps {
   setLoading: (v: boolean) => void
   setError: (v: string | null) => void
   setWriteResult: (v: string | null) => void
-  savedSelectionsRef: React.MutableRefObject<Map<number, Record<string, string[]>>>
+  savedSelectionsRef: React.RefObject<Map<number, Record<string, string[]>>>
 }
 
 export function createCodegenActions(deps: ActionDeps) {
@@ -61,10 +62,7 @@ export function createCodegenActions(deps: ActionDeps) {
     setLoading(true)
     setError(null)
     try {
-      const selectedEndpoints: Record<string, string[]> = {}
-      for (const [group, endpoints] of Object.entries(st.selection)) {
-        if (endpoints.size > 0) selectedEndpoints[group] = [...endpoints]
-      }
+      const selectedEndpoints = buildSelectedEndpoints(st.selection)
       const generated = await fetchGenerateCode(st.spec, { ...src.options, selectedEndpoints })
       updateState({ files: generated, activeFileIndex: 0 })
       setStep("preview")
@@ -80,15 +78,14 @@ export function createCodegenActions(deps: ActionDeps) {
     setError(null)
     setWriteResult(null)
     try {
-      const selectedEndpoints: Record<string, string[]> = {}
-      for (const [group, endpoints] of Object.entries(st.selection)) {
-        if (endpoints.size > 0) selectedEndpoints[group] = [...endpoints]
-      }
+      const selectedEndpoints = buildSelectedEndpoints(st.selection)
 
+      const specUrl = src.importSource === "url" ? src.importContent.trim() : ""
       const ctx = st.spec ? {
         sourceName: src.name,
         spec: st.spec,
-        specSource: { type: src.importSource, value: src.importContent.trim() },
+        specUrl,
+        importType: src.importSource,
         options: { ...src.options, selectedEndpoints },
       } : undefined
 

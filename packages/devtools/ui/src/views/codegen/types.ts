@@ -50,20 +50,18 @@ export type CodegenTab = "import" | "registry" | "update"
 
 // ── Registry ───────────────────────────────────────────────────────────────
 
-export interface SpecSource {
-  type: "url" | "file" | "raw"
-  value: string
+/** Options stored in registry — selectedEndpoints is always null on disk */
+export type PersistedGenerateOptions = Omit<GenerateOptions, "selectedEndpoints"> & {
+  selectedEndpoints: null
 }
 
 export interface SourceSummary {
   name: string
-  version: string
-  specSource: SpecSource
+  specUrl: string
+  importType: ImportSource
   outputDir: string
-  options: GenerateOptions
-  lastSynced: string
+  options: PersistedGenerateOptions
   endpointCount: number
-  modifiedCount: number
 }
 
 export type SourceStatus = "up-to-date" | "updates-available" | "checking" | "error"
@@ -126,14 +124,54 @@ export interface UpdateFileResult {
 
 export interface UpdateResult {
   files: UpdateFileResult[]
+  /** File paths on disk that will be removed (not in new spec) */
+  deletedFiles?: string[]
   breakingChanges: BreakingChange[]
+  /** API-level structural diff (present when old digest is cached) */
+  specDiff?: SpecDiff
 }
 
 /** Context passed from registry to update view */
 export interface UpdateContext {
   sourceName: string
-  diff: SpecDiff
   newSpec: ParsedSpec
+}
+
+// ── Scanner ──────────────────────────────────────────────────────────────────
+/* Mirror of src/codegen/scanner/types.ts — keep in sync */
+
+export interface ScanResult {
+  sources: ScannedSource[]
+  scannedFiles: number
+}
+
+export interface ScannedSource {
+  name: string
+  baseURL: string
+  filePath: string
+  groups: ScannedGroup[]
+  inlineEndpoints?: ScannedEndpoint[]
+  isImported: boolean
+  hasClient: boolean
+}
+
+export interface ScannedGroup {
+  name: string
+  prefix: string
+  filePath: string
+  endpoints: ScannedEndpoint[]
+}
+
+export interface ScannedEndpoint {
+  name: string
+  analysis: {
+    hasResponseType: boolean
+    hasVariablesType: boolean
+    hasValidation: boolean
+    httpMethod: string
+    path: string
+    type: "query" | "mutation" | null
+  }
 }
 
 /** Per-source state persisted in config */

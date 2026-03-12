@@ -1,3 +1,16 @@
+export type { DigestCache, FingerprintCache } from "./cache";
+export {
+  getCachedDigest,
+  getCachedFingerprints,
+  loadCache,
+  loadDigestCache,
+  removeCachedDigest,
+  removeCachedSource,
+  saveCache,
+  saveDigestCache,
+  updateCachedDigest,
+  updateCachedFingerprints,
+} from "./cache";
 export type { SourceSummary } from "./registry";
 export {
   addSource,
@@ -8,11 +21,15 @@ export {
   loadRegistry,
   removeSource,
   saveRegistry,
-  updateFingerprints,
+  updateSource,
 } from "./registry";
 export type {
-  EndpointFingerprint,
+  PersistedGenerateOptions,
   RegistryConfig,
   RegistrySource,
-  SpecSource,
+  RemovedEndpointAction,
+  SpecImportType,
+  UpdateChoices,
+  UpdateFileResult,
+  UpdateResult,
 } from "./types";

@@ -4,14 +4,10 @@
  */
 
 import type { GeneratedFile } from "../generator/types";
-import type { ParsedSpec } from "../parser/types";
-import { computeSpecHash } from "../registry";
 import { extractEndpoints } from "./extract-endpoints";
-import { classifyEndpoints, generateFingerprints } from "./fingerprint";
+import { classifyEndpoints } from "./fingerprint";
 import { mergeGroupFile } from "./merge-group";
-import { diffSpecs } from "./spec-diff";
-import { createSpecDigest } from "./spec-digest";
-import type { EndpointFingerprint, RegistrySource, UpdateFileResult, UpdateResult } from "./types";
+import type { UpdateFileResult, UpdateResult } from "./types";
 
 const GROUP_MARKER = "defineGroup(";
 
@@ -21,28 +17,25 @@ const GROUP_MARKER = "defineGroup(";
  * For each generated file, checks if an existing version has user modifications
  * and performs smart merge (new config + user body) when needed.
  *
- * @param source - Current registry entry for this source
- * @param newSpec - Newly parsed spec to update to
+ * @param fingerprints - Stored fingerprints for the source (endpoint name → hash)
  * @param generated - Freshly generated files from the new spec
  * @param existingFiles - Map of file path → content for files currently on disk
- * @returns Full preview with merged files, breaking changes, and registry update
+ * @returns Preview with merged files
  */
 export function previewUpdate(
-  source: RegistrySource,
-  newSpec: ParsedSpec,
+  fingerprints: Record<string, string>,
   generated: GeneratedFile[],
   existingFiles: Record<string, string>,
 ): UpdateResult {
-  const oldDigest = source.specDigest ?? createSpecDigest(newSpec);
-  const diff = diffSpecs(oldDigest, newSpec);
+  const files = generated.map((gen) =>
+    mergeOrOverwrite(gen, existingFiles[gen.path], fingerprints),
+  );
 
-  const files = generated.map((gen) => mergeOrOverwrite(gen, existingFiles[gen.path], source));
+  /* Detect files on disk that are no longer in the generated set */
+  const generatedPaths = new Set(generated.map((g) => g.path));
+  const deletedFiles = Object.keys(existingFiles).filter((p) => !generatedPaths.has(p));
 
-  return {
-    files,
-    breakingChanges: diff.breakingChanges,
-    registryUpdate: buildUpdatedSource(source, newSpec, generated),
-  };
+  return { files, deletedFiles, breakingChanges: [] };
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -50,7 +43,7 @@ export function previewUpdate(
 function mergeOrOverwrite(
   gen: GeneratedFile,
   existing: string | undefined,
-  source: RegistrySource,
+  fingerprints: Record<string, string>,
 ): UpdateFileResult {
   /* No existing file or non-group file → safe overwrite */
   if (!existing || !existing.includes(GROUP_MARKER)) {
@@ -59,7 +52,7 @@ function mergeOrOverwrite(
 
   const existingCode = extractEndpoints(existing);
   const specNames = Object.keys(extractEndpoints(gen.content));
-  const fp = classifyEndpoints(existingCode, source.endpoints, specNames);
+  const fp = classifyEndpoints(existingCode, fingerprints, specNames);
 
   /* If no endpoints were user-modified, overwrite entirely.
    * This ensures import changes (zod→arktype), naming convention
@@ -77,28 +70,4 @@ function mergeOrOverwrite(
     status: result.status,
     changes: result.changes,
   };
-}
-
-function buildUpdatedSource(
-  source: RegistrySource,
-  newSpec: ParsedSpec,
-  generated: GeneratedFile[],
-): RegistrySource {
-  return {
-    ...source,
-    specHash: computeSpecHash(newSpec),
-    specVersion: newSpec.version,
-    lastSynced: new Date().toISOString(),
-    specDigest: createSpecDigest(newSpec),
-    endpoints: collectGroupFingerprints(generated),
-  };
-}
-
-function collectGroupFingerprints(generated: GeneratedFile[]): Record<string, EndpointFingerprint> {
-  const result: Record<string, EndpointFingerprint> = {};
-  for (const file of generated) {
-    if (!file.content.includes(GROUP_MARKER)) continue;
-    Object.assign(result, generateFingerprints(file.content));
-  }
-  return result;
 }

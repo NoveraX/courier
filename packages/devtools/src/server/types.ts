@@ -7,6 +7,8 @@ export interface DevToolsServerOptions {
   port?: number;
   /** Server host (default: "localhost") */
   host?: string;
+  /** Project root directory — all file paths resolve relative to this (default: process.cwd()) */
+  projectRoot?: string;
   /** Called when server is ready */
   onReady?: (url: string) => void;
 }

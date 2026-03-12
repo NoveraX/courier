@@ -1,24 +1,31 @@
 /**
  * Spec diff engine — orchestrates endpoint, schema, and breaking change diffing.
  *
- * Accepts either a full ParsedSpec or a lightweight SpecDigest for the old spec,
- * so the registry can store only the digest while still producing accurate diffs.
+ * Accepts either a full ParsedSpec or a lightweight SpecDigest.
+ * When given a ParsedSpec, converts to digest first for uniform comparison.
  */
 
 import { classifyBreakingChanges } from "./classify-breaking";
 import { diffEndpoints } from "./diff-endpoints";
 import { diffSchemas } from "./diff-schemas";
-import type { DigestGroup, DigestSchema, SpecDiff } from "./types";
+import { createSpecDigest } from "./spec-digest";
+import type { DiffableSpec, SpecDiff, SpecDigest } from "./types";
 
-/** Shape that both ParsedSpec and SpecDigest satisfy for diffing */
-interface DiffableSpec {
-  groups: DigestGroup[];
-  schemas: Record<string, DigestSchema>;
+/** Type guard — checks the `_kind` discriminant set by createSpecDigest */
+function isDigest(spec: DiffableSpec): spec is SpecDigest {
+  return "_kind" in spec && spec._kind === "digest";
+}
+
+function toDigest(spec: DiffableSpec): SpecDigest {
+  return isDigest(spec) ? spec : createSpecDigest(spec);
 }
 
 export function diffSpecs(oldSpec: DiffableSpec, newSpec: DiffableSpec): SpecDiff {
-  const endpointDiff = diffEndpoints(oldSpec.groups, newSpec.groups);
-  const schemaChanges = diffSchemas(oldSpec.schemas, newSpec.schemas);
+  const oldDigest = toDigest(oldSpec);
+  const newDigest = toDigest(newSpec);
+
+  const endpointDiff = diffEndpoints(oldDigest.groups, newDigest.groups);
+  const schemaChanges = diffSchemas(oldDigest.schemas, newDigest.schemas);
   const breakingChanges = classifyBreakingChanges(endpointDiff, schemaChanges);
 
   return { ...endpointDiff, schemaChanges, breakingChanges };

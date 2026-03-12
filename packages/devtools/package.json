@@ -14,12 +14,50 @@
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
-      "import": "./lib/index.js"
-    }
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
+    "./vite": {
+      "types": "./lib/vite.d.ts",
+      "import": "./lib/vite.js",
+      "default": "./lib/vite.js"
+    },
+    "./next": {
+      "types": "./lib/next.d.ts",
+      "import": "./lib/next.js",
+      "default": "./lib/next.js"
+    },
+    "./nuxt": {
+      "types": "./lib/nuxt.d.ts",
+      "import": "./lib/nuxt.js",
+      "default": "./lib/nuxt.js"
+    },
+    "./webpack": {
+      "types": "./lib/webpack.d.ts",
+      "import": "./lib/webpack.js",
+      "default": "./lib/webpack.js"
+    },
+    "./esbuild": {
+      "types": "./lib/esbuild.d.ts",
+      "import": "./lib/esbuild.js",
+      "default": "./lib/esbuild.js"
+    },
+    "./rollup": {
+      "types": "./lib/rollup.d.ts",
+      "import": "./lib/rollup.js",
+      "default": "./lib/rollup.js"
+    },
+    "./astro": {
+      "types": "./lib/astro.d.ts",
+      "import": "./lib/astro.js",
+      "default": "./lib/astro.js"
+    },
+    "./cli": "./lib/cli.js"
   },
   "files": [
     "lib",
     "ui/dist",
+    "registry.schema.json",
     "README.md",
     "LICENSE"
   ],
@@ -34,10 +72,28 @@
     "access": "public"
   },
   "dependencies": {
+    "chokidar": "^5.0.0",
     "citty": "^0.1.6",
     "express": "^5.1.0",
     "open": "^10.2.0",
     "socket.io": "^4.8.3",
+    "unplugin": "^3.0.0",
     "yaml": "^2.8.2"
+  },
+  "peerDependencies": {
+    "vite": ">=5.0.0",
+    "webpack": ">=5.0.0",
+    "next": ">=14.0.0",
+    "esbuild": ">=0.17.0",
+    "rollup": ">=3.0.0",
+    "astro": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": { "optional": true },
+    "webpack": { "optional": true },
+    "next": { "optional": true },
+    "esbuild": { "optional": true },
+    "rollup": { "optional": true },
+    "astro": { "optional": true }
   }
 }

@@ -3,8 +3,8 @@ export { DEFAULT_OPTIONS, deriveSourceName, generateCode } from "./generator";
 export type {
   BreakingChange,
   BreakingSeverity,
+  DiffableSpec,
   DiffEndpoint,
-  EndpointFingerprint,
   EndpointStatus,
   ExistingEndpointInfo,
   ExistingGroupInfo,
@@ -18,7 +18,6 @@ export type {
   SchemaDiff,
   SpecDiff,
   SpecDigest,
-  SpecSource,
   UpdateChoices,
   UpdateFileResult,
   UpdateResult,
@@ -47,15 +46,34 @@ export type {
   SpecFormat,
 } from "./parser";
 export { detectFormat, parseSpec } from "./parser";
-export type { SourceSummary } from "./registry";
+export type { DigestCache, FingerprintCache, SourceSummary } from "./registry";
 export {
   addSource,
   computeSpecHash,
+  getCachedDigest,
+  getCachedFingerprints,
   getSource,
   hasSpecChanged,
   listSources,
+  loadCache,
+  loadDigestCache,
   loadRegistry,
+  removeCachedDigest,
+  removeCachedSource,
   removeSource,
+  saveCache,
+  saveDigestCache,
   saveRegistry,
-  updateFingerprints,
+  updateCachedDigest,
+  updateCachedFingerprints,
+  updateSource,
 } from "./registry";
+export type {
+  EndpointAnalysis,
+  ScanConfig,
+  ScannedEndpoint,
+  ScannedGroup,
+  ScannedSource,
+  ScanResult,
+} from "./scanner";
+export { scanProject } from "./scanner";

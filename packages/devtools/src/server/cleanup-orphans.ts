@@ -4,15 +4,17 @@
  */
 
 import { existsSync, readdirSync, rmdirSync, unlinkSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
+import { resolveProjectSafe } from "../context";
 
 export function cleanupOrphanFiles(outputDir: string, newPaths: Set<string>): number {
-  const absDir = resolve(outputDir);
+  const absDir = resolveProjectSafe(outputDir);
   if (!existsSync(absDir)) return 0;
 
   try {
     return removeOrphansRecursive(absDir, newPaths);
-  } catch {
+  } catch (err) {
+    console.warn("Orphan cleanup failed:", err);
     return 0;
   }
 }

@@ -3,6 +3,7 @@
  */
 
 import { errMsg } from "./registry-helpers";
+import { withRegistryLock } from "./registry-lock";
 import type { RouteApp } from "./route-types";
 import { handleApplyUpdate, handlePreviewUpdate } from "./update-helpers";
 import { validateUpdateApplyBody, validateUpdatePreviewBody } from "./validate-body-registry";
@@ -12,7 +13,9 @@ export function registerUpdateFlowRoutes(app: RouteApp): void {
     try {
       const body = validateUpdatePreviewBody(req.body, res);
       if (!body) return;
-      const result = handlePreviewUpdate(body as unknown as Parameters<typeof handlePreviewUpdate>[0]);
+      const result = handlePreviewUpdate(
+        body as unknown as Parameters<typeof handlePreviewUpdate>[0],
+      );
       if ("error" in result) {
         res.status(result.status).json({ error: result.error });
         return;
@@ -24,17 +27,18 @@ export function registerUpdateFlowRoutes(app: RouteApp): void {
   });
 
   app.post("/api/codegen/update/apply", (req, res) => {
-    try {
-      const body = validateUpdateApplyBody(req.body, res);
-      if (!body) return;
+    const body = validateUpdateApplyBody(req.body, res);
+    if (!body) return;
+
+    void withRegistryLock(() => {
       const result = handleApplyUpdate(body as unknown as Parameters<typeof handleApplyUpdate>[0]);
       if ("error" in result) {
         res.status(result.status).json({ error: result.error });
         return;
       }
       res.json(result);
-    } catch (err) {
+    }).catch((err) => {
       res.status(500).json({ error: errMsg(err, "Failed to apply update") });
-    }
+    });
   });
 }

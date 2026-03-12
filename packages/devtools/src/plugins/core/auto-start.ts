@@ -20,26 +20,38 @@ function resolveCliBin(): string {
   return require.resolve("@noverax/nexus-devtools/cli");
 }
 
+// Singleton — prevents signal listener accumulation on HMR rebuilds
+let activeCleanup: (() => void) | undefined;
+
 /**
  * Starts the DevTools server as a detached child process.
  * Probes `/api/health` first to avoid duplicate servers.
  *
- * The child is detached from the parent's process group so it
- * does NOT receive Ctrl+C signals directly. Instead, we kill
- * it explicitly via `exit` and signal handlers on the parent.
+ * Singleton: repeated calls in watch/HMR mode return the
+ * existing cleanup function without spawning a second server
+ * or registering duplicate signal handlers.
  */
 export function startDevToolsServer(options: ResolvedOptions): () => void {
+  if (activeCleanup) return activeCleanup;
+
   let child: ChildProcess | undefined;
 
   const stop = (): void => {
     if (!child?.pid) return;
     try {
-      // Detached child needs negative pid to kill process group
       process.kill(-child.pid, "SIGTERM");
     } catch {
       // Already exited
     }
     child = undefined;
+  };
+
+  const cleanup = (): void => {
+    stop();
+    process.off("SIGINT", stop);
+    process.off("SIGTERM", stop);
+    process.off("exit", stop);
+    activeCleanup = undefined;
   };
 
   void isServerRunning(options).then((running) => {
@@ -67,10 +79,6 @@ export function startDevToolsServer(options: ResolvedOptions): () => void {
     }
   });
 
-  return () => {
-    stop();
-    process.off("SIGINT", stop);
-    process.off("SIGTERM", stop);
-    process.off("exit", stop);
-  };
+  activeCleanup = cleanup;
+  return cleanup;
 }

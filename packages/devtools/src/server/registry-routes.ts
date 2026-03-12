@@ -26,6 +26,7 @@ import {
   fetchSpecRaw,
   persistCaches,
 } from "./registry-helpers";
+import { withRegistryLock } from "./registry-lock";
 import type { RouteApp } from "./route-types";
 import { validateNameBody, validateRegistryAddBody } from "./validate-body-registry";
 
@@ -41,32 +42,39 @@ export function registerRegistryRoutes(app: RouteApp): void {
   });
 
   app.post("/api/codegen/registry/add", (req, res) => {
-    try {
-      const body = validateRegistryAddBody(req.body, res);
-      if (!body) return;
+    const body = validateRegistryAddBody(req.body, res);
+    if (!body) return;
 
+    void withRegistryLock(() => {
       const spec = body.spec as unknown as ParsedSpec;
       const options = body.options as unknown as GenerateOptions;
       const fingerprints = collectFingerprints(body.generatedFiles);
       const endpointCount = Object.keys(fingerprints).length;
 
       let config = loadRegistry(body.configPath);
-      config = addSource(config, body.name, spec, body.specUrl, (body.importType ?? "url") as "url" | "file" | "raw", options, endpointCount);
+      config = addSource(
+        config,
+        body.name,
+        spec,
+        body.specUrl,
+        (body.importType ?? "url") as "url" | "file" | "raw",
+        options,
+        endpointCount,
+      );
       saveRegistry(config, body.configPath);
 
-      /* Save fingerprints + digest to cache */
       persistCaches(body.name, fingerprints, spec);
-
       res.json({ success: true, source: getSource(config, body.name) });
-    } catch (err) {
+    }).catch((err) => {
       res.status(500).json({ error: errMsg(err, "Failed to add source") });
-    }
+    });
   });
 
   app.post("/api/codegen/registry/remove", (req, res) => {
-    try {
-      const body = validateNameBody(req.body, res);
-      if (!body) return;
+    const body = validateNameBody(req.body, res);
+    if (!body) return;
+
+    void withRegistryLock(() => {
       const { name, configPath } = body;
       let config = loadRegistry(configPath);
 
@@ -78,7 +86,6 @@ export function registerRegistryRoutes(app: RouteApp): void {
       config = removeSource(config, name);
       saveRegistry(config, configPath);
 
-      /* Clean up caches */
       const cache = loadCache();
       saveCache(removeCachedSource(cache, name));
 
@@ -86,9 +93,9 @@ export function registerRegistryRoutes(app: RouteApp): void {
       saveDigestCache(removeCachedDigest(digestCache, name));
 
       res.json({ success: true });
-    } catch (err) {
+    }).catch((err) => {
       res.status(500).json({ error: errMsg(err, "Failed to remove source") });
-    }
+    });
   });
 
   registerUpdateRoutes(app);

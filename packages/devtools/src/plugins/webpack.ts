@@ -26,7 +26,8 @@ export function nexusDevTools(options?: DevToolsPluginOptions): WebpackPluginLik
       if (!resolved.enabled) return;
 
       if (resolved.autoStart) {
-        startDevToolsServer(resolved);
+        const cleanup = startDevToolsServer(resolved);
+        compiler.hooks?.shutdown?.tap("nexus-devtools", cleanup);
       }
 
       // Skip server-side bundles

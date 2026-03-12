@@ -20,6 +20,7 @@ import type { DevToolsPluginOptions } from "./core/types";
 export function nexusDevTools(options?: DevToolsPluginOptions): RollupPluginLike {
   const resolved = resolveOptions(options);
   let injected = false;
+  let cleanup: (() => void) | undefined;
 
   return {
     name: "nexus-devtools",
@@ -28,8 +29,12 @@ export function nexusDevTools(options?: DevToolsPluginOptions): RollupPluginLike
       injected = false;
       if (!resolved.enabled) return;
       if (resolved.autoStart) {
-        startDevToolsServer(resolved);
+        cleanup = startDevToolsServer(resolved);
       }
+    },
+
+    closeBundle() {
+      cleanup?.();
     },
 
     resolveId(id: string) {
@@ -62,6 +67,7 @@ interface RollupTransformContext {
 interface RollupPluginLike {
   name: string;
   buildStart(): void;
+  closeBundle(): void;
   resolveId(id: string): string | undefined;
   load(id: string): string | undefined;
   transform(

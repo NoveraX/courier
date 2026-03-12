@@ -9,14 +9,7 @@
 import { promises as dns } from "node:dns";
 import { isIP } from "node:net";
 
-const BLOCKED_HOSTNAMES = new Set([
-  "localhost",
-  "0.0.0.0",
-  "::",
-  "::1",
-  "[::1]",
-  "[::]",
-]);
+const BLOCKED_HOSTNAMES = new Set(["localhost", "0.0.0.0", "::", "::1", "[::1]", "[::]"]);
 
 /**
  * Validate that a spec URL is safe to fetch (no SSRF).

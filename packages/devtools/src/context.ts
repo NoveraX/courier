@@ -1,9 +1,12 @@
 /**
- * Project root context — stores the absolute path to the user's project.
+ * Project root context — singleton module storing the user's project path.
  *
  * All file operations in the server resolve relative paths against this root
  * instead of process.cwd(), so devtools works correctly regardless of
  * where the server process was started.
+ *
+ * **Singleton by design**: one devtools server per process, one project root.
+ * Tests that need isolation should call `resetProjectRoot()` in `afterEach`.
  */
 
 import { resolve } from "node:path";
@@ -39,4 +42,9 @@ export function resolveProjectSafe(...paths: string[]): string {
     throw new Error(`Path traversal detected: resolved path escapes project root`);
   }
   return resolved;
+}
+
+/** Reset to `process.cwd()` — only for test isolation */
+export function resetProjectRoot(): void {
+  projectRoot = process.cwd();
 }

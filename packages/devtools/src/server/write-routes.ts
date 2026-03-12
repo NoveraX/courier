@@ -4,6 +4,7 @@
 
 import { getSource, loadRegistry } from "../codegen";
 import { errMsg } from "./registry-helpers";
+import { withRegistryLock } from "./registry-lock";
 import type { RouteApp } from "./route-types";
 import { validateWriteBody } from "./validate-body";
 import { handleMergeWrite, handleRawWrite } from "./write-helpers";
@@ -11,9 +12,10 @@ import type { WriteBody } from "./write-types";
 
 export function registerWriteRoutes(app: RouteApp): void {
   app.post("/api/codegen/write", (req, res) => {
-    try {
-      const validated = validateWriteBody(req.body, res);
-      if (!validated) return;
+    const validated = validateWriteBody(req.body, res);
+    if (!validated) return;
+
+    void withRegistryLock(() => {
       const { files, sourceName, spec, specUrl, importType, options } =
         validated as unknown as WriteBody;
 
@@ -37,8 +39,8 @@ export function registerWriteRoutes(app: RouteApp): void {
 
       const result = handleRawWrite(files, sourceName, spec, specUrl, importType, options, config);
       res.json(result);
-    } catch (err) {
+    }).catch((err) => {
       res.status(500).json({ error: errMsg(err, "Failed to write files") });
-    }
+    });
   });
 }

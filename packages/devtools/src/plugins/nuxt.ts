@@ -51,7 +51,8 @@ export async function nexusDevToolsModule(
   if (!resolved.enabled) return;
 
   if (resolved.autoStart) {
-    startDevToolsServer(resolved);
+    const cleanup = startDevToolsServer(resolved);
+    nuxt.hook("close", cleanup);
   }
 
   const snippet = generateConnectSnippet(resolved);

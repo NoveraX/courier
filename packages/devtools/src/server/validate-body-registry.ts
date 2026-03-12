@@ -67,10 +67,7 @@ interface UpdateApplyBody {
   configPath?: string;
 }
 
-export function validateUpdateApplyBody(
-  body: unknown,
-  res: JsonResponse,
-): UpdateApplyBody | null {
+export function validateUpdateApplyBody(body: unknown, res: JsonResponse): UpdateApplyBody | null {
   if (!isObject(body)) return reject(res, "body");
   if (!isString(body.name) || body.name.length === 0) return reject(res, "name");
   if (!isObject(body.newSpec)) return reject(res, "newSpec");

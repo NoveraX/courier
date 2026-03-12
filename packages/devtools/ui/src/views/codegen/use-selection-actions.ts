@@ -7,7 +7,7 @@ import { buildSelectAll } from "./selection-helpers";
 interface UseSelectionActionsParams {
   spec: ParsedSpec | null;
   setSelection: React.Dispatch<React.SetStateAction<Record<string, Set<string>>>>;
-  setExpandedGroups: React.Dispatch<React.SetStateAction<Set<string>>>;
+  setExpandedGroups?: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
 export interface SelectionActions {
@@ -44,7 +44,7 @@ export function useSelectionActions({
   }, [setSelection]);
 
   const toggleExpand = useCallback((key: string) => {
-    setExpandedGroups((prev) => {
+    setExpandedGroups?.((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);

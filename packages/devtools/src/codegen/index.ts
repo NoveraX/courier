@@ -13,14 +13,9 @@ export type {
   MergeResult,
   MergeStatus,
   ParsedImport,
-  RegistryConfig,
-  RegistrySource,
   SchemaDiff,
   SpecDiff,
   SpecDigest,
-  UpdateChoices,
-  UpdateFileResult,
-  UpdateResult,
 } from "./merge";
 export {
   classifyEndpoints,
@@ -46,7 +41,19 @@ export type {
   SpecFormat,
 } from "./parser";
 export { detectFormat, parseSpec } from "./parser";
-export type { DigestCache, FingerprintCache, SourceSummary } from "./registry";
+export type {
+  DigestCache,
+  FingerprintCache,
+  PersistedGenerateOptions,
+  RegistryConfig,
+  RegistrySource,
+  RemovedEndpointAction,
+  SourceSummary,
+  SpecImportType,
+  UpdateChoices,
+  UpdateFileResult,
+  UpdateResult,
+} from "./registry";
 export {
   addSource,
   computeSpecHash,

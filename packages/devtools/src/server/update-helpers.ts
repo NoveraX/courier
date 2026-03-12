@@ -2,8 +2,6 @@
  * Helpers for update flow routes — preview and apply logic.
  */
 
-import { existsSync, readdirSync } from "node:fs";
-import { join, relative } from "node:path";
 import type { ParsedSpec } from "../codegen";
 import {
   computeSpecHash,
@@ -20,7 +18,7 @@ import {
   updateSource,
 } from "../codegen";
 import { previewUpdate } from "../codegen/merge/update-flow";
-import { getProjectRoot, resolveProjectSafe } from "../context";
+import { resolveProjectSafe } from "../context";
 import { cleanupOrphanFiles } from "./cleanup-orphans";
 import {
   buildFallbackFingerprints,
@@ -30,6 +28,7 @@ import {
   readFilesFromDisk,
   writeFileSafe,
 } from "./registry-helpers";
+import { scanTsFiles } from "./scan-ts-files";
 
 interface PreviewRequest {
   name: string;
@@ -100,44 +99,13 @@ export function handleApplyUpdate(
   const userModified = detectUserModified(newFingerprints, mergedFiles);
   const endpointCount = Object.keys(newFingerprints).length;
 
-  config = updateSource(
-    config,
-    body.name,
-    computeSpecHash(body.newSpec),
-    endpointCount,
-    userModified,
-  );
+  config = updateSource(config, body.name, computeSpecHash(body.newSpec), endpointCount, userModified);
   saveRegistry(config, body.configPath);
 
   return { success: true, written: body.files.length, deleted };
 }
 
 // ── Internal helpers ─────────────────────────────────────────────────────────
-
-function scanTsFiles(
-  source: NonNullable<ReturnType<typeof getSource>>,
-  generated: { path: string }[],
-): string[] {
-  const effectiveDir = `${source.outputDir.replace(/\/+$/, "")}/${source.options.sourceName}`;
-  const absDir = resolveProjectSafe(effectiveDir);
-  const diskPaths = existsSync(absDir) ? collectTsFilesRecursive(absDir) : [];
-  return [...new Set([...generated.map((g) => g.path), ...diskPaths])];
-}
-
-function collectTsFilesRecursive(dir: string): string[] {
-  const cwd = getProjectRoot();
-  const paths: string[] = [];
-  walkTsFiles(dir, cwd, paths);
-  return paths;
-}
-
-function walkTsFiles(dir: string, cwd: string, out: string[]): void {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) walkTsFiles(full, cwd, out);
-    else if (entry.isFile() && entry.name.endsWith(".ts")) out.push(relative(cwd, full));
-  }
-}
 
 function loadFingerprints(
   name: string,

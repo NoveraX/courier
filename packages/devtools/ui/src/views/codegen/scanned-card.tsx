@@ -11,6 +11,7 @@ import {
   XCircle,
 } from "lucide-react"
 
+import { HTTP_METHOD_COLORS } from "../timeline/constants"
 import type { ScannedSource, ScannedEndpoint, ScannedGroup } from "./types"
 
 export function ScannedCard({ source }: { source: ScannedSource }) {
@@ -120,7 +121,7 @@ function GroupSection({ group }: { group: ScannedGroup }) {
 function EndpointRow({ endpoint }: { endpoint: ScannedEndpoint }) {
   const { analysis } = endpoint
   const method = analysis.httpMethod.toUpperCase()
-  const methodColor = METHOD_COLORS[method] ?? "text-text-muted"
+  const methodColor = HTTP_METHOD_COLORS[method] ?? "text-text-muted"
 
   return (
     <div className="flex items-center gap-2 py-0.5 text-[11px]">
@@ -149,12 +150,3 @@ function Badge({ ok, label, title }: { ok: boolean; label: string; title: string
     </span>
   )
 }
-
-const METHOD_COLORS: Record<string, string> = {
-  GET: "text-emerald-400",
-  POST: "text-sky-400",
-  PUT: "text-amber-400",
-  PATCH: "text-orange-400",
-  DELETE: "text-red-400",
-  DEL: "text-red-400",
-} satisfies Record<string, string>

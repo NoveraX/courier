@@ -24,14 +24,8 @@ export type {
   MergeResult,
   MergeStatus,
   ParsedImport,
-  RegistryConfig,
-  RegistrySource,
-  RemovedEndpointAction,
   SchemaDiff,
   SpecDiff,
   SpecDigest,
-  UpdateChoices,
-  UpdateFileResult,
-  UpdateResult,
 } from "./types";
 export { previewUpdate } from "./update-flow";

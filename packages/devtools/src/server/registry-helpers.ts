@@ -2,8 +2,7 @@
  * Helpers for registry routes: spec fetching, fingerprint collection, update checks.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import type { ParsedSpec } from "../codegen";
 import {
   computeSpecHash,
@@ -19,31 +18,11 @@ import {
 } from "../codegen";
 import type { RegistrySource } from "../codegen/registry/types";
 import { resolveProjectSafe } from "../context";
+import { isUrl } from "./fs-helpers";
 import type { JsonResponse } from "./route-types";
 import { validateSpecUrl } from "./validate-url";
 
-export function errMsg(err: unknown, fallback: string): string {
-  return err instanceof Error ? err.message : fallback;
-}
-
-/** Read files from disk, keyed by relative path */
-export function readFilesFromDisk(paths: string[]): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const filePath of paths) {
-    const absPath = resolveProjectSafe(filePath);
-    if (existsSync(absPath)) {
-      result[filePath] = readFileSync(absPath, "utf-8");
-    }
-  }
-  return result;
-}
-
-/** Write file with automatic directory creation */
-export function writeFileSafe(filePath: string, content: string): void {
-  const dir = dirname(filePath);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  writeFileSync(filePath, content, "utf-8");
-}
+export { errMsg, readFilesFromDisk, writeFileSafe } from "./fs-helpers";
 
 /** Persist fingerprint and digest caches for a source in one call */
 export function persistCaches(
@@ -108,11 +87,6 @@ export function detectUserModified(
     if (genHash && genHash !== diskHash) modified.push(name);
   }
   return modified;
-}
-
-/** Auto-detect whether specUrl is a URL or file path */
-function isUrl(specUrl: string): boolean {
-  return specUrl.startsWith("http://") || specUrl.startsWith("https://");
 }
 
 export async function fetchSpecRaw(specUrl: string, res: JsonResponse): Promise<string | null> {

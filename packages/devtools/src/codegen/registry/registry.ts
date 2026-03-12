@@ -5,12 +5,12 @@
  * Stores user config + userModified list (fingerprints live in .nexus-cache.json).
  */
 
-import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { resolveProject } from "../../context";
 import type { GenerateOptions } from "../generator/types";
 import type { ParsedSpec } from "../parser/types";
+import { computeSpecHash } from "./spec-hash";
 import type {
   PersistedGenerateOptions,
   RegistryConfig,
@@ -116,41 +116,5 @@ export interface SourceSummary {
   endpointCount: number;
 }
 
-// ── Update Detection ────────────────────────────────────────────────────────
-
-/** Compute a hash of the spec for change detection. */
-export function computeSpecHash(spec: ParsedSpec): string {
-  const content = JSON.stringify({
-    title: spec.title,
-    version: spec.version,
-    groups: spec.groups,
-    schemas: spec.schemas,
-    securitySchemes: spec.securitySchemes,
-  });
-  return createHash("sha256").update(content).digest("hex").slice(0, 32);
-}
-
-/** Check if a new spec differs from the stored version. */
-export function hasSpecChanged(source: RegistrySource, newSpec: ParsedSpec): boolean {
-  return computeSpecHash(newSpec) !== source.specHash;
-}
-
-/** Update specHash and userModified for a source after re-generation. */
-export function updateSource(
-  config: RegistryConfig,
-  name: string,
-  specHash: string,
-  endpointCount: number,
-  userModified: string[] = [],
-): RegistryConfig {
-  const source = config.sources[name];
-  if (!source) return config;
-
-  return {
-    ...config,
-    sources: {
-      ...config.sources,
-      [name]: { ...source, specHash, endpointCount, userModified },
-    },
-  };
-}
+// Update detection functions moved to ./spec-hash.ts
+export { computeSpecHash, hasSpecChanged, updateSource } from "./spec-hash";

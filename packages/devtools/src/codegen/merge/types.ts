@@ -144,16 +144,3 @@ export interface SpecDigest {
 
 /** Either a full ParsedSpec or a lightweight SpecDigest — accepted by diffSpecs */
 export type DiffableSpec = ParsedSpec | SpecDigest;
-
-// ── Registry (re-exported from registry/types for backward compat) ───────────
-
-export type {
-  PersistedGenerateOptions,
-  RegistryConfig,
-  RegistrySource,
-  RemovedEndpointAction,
-  SpecImportType,
-  UpdateChoices,
-  UpdateFileResult,
-  UpdateResult,
-} from "../registry/types";

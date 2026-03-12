@@ -4,6 +4,7 @@ import type { Step, SourceConfig, SourceState } from "./types"
 import { fetchParseSpec } from "./api"
 import { createDefaultSource, createDefaultState, groupKey } from "./helpers"
 import { createCodegenActions } from "./codegen-actions"
+import { useSelectionActions } from "./use-selection-actions"
 
 export function useCodegen() {
   const [sources, setSources] = useState<SourceConfig[]>([createDefaultSource()])
@@ -29,6 +30,23 @@ export function useCodegen() {
   function updateState(patch: Partial<SourceState>) {
     setStates((prev) => prev.map((s, i) => (i === activeSourceIdx ? { ...s, ...patch } : s)))
   }
+
+  /* Selection adapter: bridges per-source state with useSelectionActions */
+  const setSelection: React.Dispatch<React.SetStateAction<Record<string, Set<string>>>> = useCallback(
+    (action) => {
+      setStates((prev) => prev.map((s, i) => {
+        if (i !== activeSourceIdx) return s
+        const next = typeof action === "function" ? action(s.selection) : action
+        return { ...s, selection: next }
+      }))
+    },
+    [activeSourceIdx],
+  )
+
+  const { toggleGroup, toggleEndpoint, selectAll, deselectAll } = useSelectionActions({
+    spec: st.spec,
+    setSelection,
+  })
 
   const groupKeys = useMemo(() => {
     if (!st.spec) return new Map()
@@ -105,41 +123,6 @@ export function useCodegen() {
     if (targetState?.files?.length) setStep("preview")
     else if (targetState?.spec) setStep("select")
     else setStep("import")
-  }
-
-  // Selection helpers
-  function toggleGroup(gKey: string) {
-    const group = st.spec?.groups.find((g, i) => groupKey(g, i) === gKey)
-    if (!group) return
-    const current = st.selection[gKey] ?? new Set()
-    const next = { ...st.selection }
-    next[gKey] = current.size === group.endpoints.length
-      ? new Set()
-      : new Set(group.endpoints.map((e) => e.name))
-    updateState({ selection: next })
-  }
-
-  function toggleEndpoint(gKey: string, endpointName: string) {
-    const next = { ...st.selection }
-    const current = new Set(st.selection[gKey] ?? [])
-    if (current.has(endpointName)) current.delete(endpointName)
-    else current.add(endpointName)
-    next[gKey] = current
-    updateState({ selection: next })
-  }
-
-  function selectAll() {
-    if (!st.spec) return
-    const sel: Record<string, Set<string>> = {}
-    st.spec.groups.forEach((group, i) => { sel[groupKey(group, i)] = new Set(group.endpoints.map((e) => e.name)) })
-    updateState({ selection: sel })
-  }
-
-  function deselectAll() {
-    if (!st.spec) return
-    const sel: Record<string, Set<string>> = {}
-    st.spec.groups.forEach((group, i) => { sel[groupKey(group, i)] = new Set() })
-    updateState({ selection: sel })
   }
 
   const totalSelected = Object.values(st.selection).reduce((sum, s) => sum + s.size, 0)

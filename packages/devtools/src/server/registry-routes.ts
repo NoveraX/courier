@@ -27,7 +27,7 @@ import {
   persistCaches,
 } from "./registry-helpers";
 import { withRegistryLock } from "./registry-lock";
-import type { RouteApp } from "./route-types";
+import type { JsonResponse, RouteApp } from "./route-types";
 import { validateNameBody, validateRegistryAddBody } from "./validate-body-registry";
 
 export function registerRegistryRoutes(app: RouteApp): void {
@@ -102,49 +102,51 @@ export function registerRegistryRoutes(app: RouteApp): void {
 }
 
 function registerUpdateRoutes(app: RouteApp): void {
-  app.post("/api/codegen/registry/check-updates", async (req, res) => {
-    try {
-      const body = validateNameBody(req.body, res);
-      if (!body) return;
-      const { name, configPath } = body;
-      const config = loadRegistry(configPath);
-      const source = getSource(config, name);
+  app.post("/api/codegen/registry/check-updates", handleCheckUpdates);
+  app.post("/api/codegen/registry/check-all", handleCheckAll);
+}
 
-      if (!source) {
-        res.status(404).json({ error: `Source "${name}" not found in registry` });
-        return;
-      }
+async function handleCheckUpdates(
+  req: { body: Record<string, unknown> },
+  res: JsonResponse,
+): Promise<void> {
+  try {
+    const body = validateNameBody(req.body, res);
+    if (!body) return;
 
-      const raw = await fetchSpecRaw(source.specUrl, res);
-      if (!raw) return;
-
-      const newSpec = parseSpec(raw);
-      if (!hasSpecChanged(source, newSpec)) {
-        res.json({ changed: false });
-        return;
-      }
-
-      res.json({ changed: true, newSpec });
-    } catch (err) {
-      res.status(500).json({ error: errMsg(err, "Failed to check updates") });
+    const source = getSource(loadRegistry(body.configPath), body.name);
+    if (!source) {
+      res.status(404).json({ error: `Source "${body.name}" not found in registry` });
+      return;
     }
-  });
 
-  app.post("/api/codegen/registry/check-all", async (req, res) => {
-    try {
-      const { configPath } = req.body as { configPath?: string };
-      const config = loadRegistry(configPath);
-      const entries = Object.entries(config.sources);
-      const checks = await Promise.all(
-        entries.map(async ([name, source]) => [name, await checkSingleSource(source)] as const),
-      );
+    const raw = await fetchSpecRaw(source.specUrl, res);
+    if (!raw) return;
 
-      const results: Record<string, { changed: boolean; error?: string }> = {};
-      for (const [name, result] of checks) results[name] = result;
+    const newSpec = parseSpec(raw);
+    res.json(hasSpecChanged(source, newSpec) ? { changed: true, newSpec } : { changed: false });
+  } catch (err) {
+    res.status(500).json({ error: errMsg(err, "Failed to check updates") });
+  }
+}
 
-      res.json({ results });
-    } catch (err) {
-      res.status(500).json({ error: errMsg(err, "Failed to check sources") });
-    }
-  });
+async function handleCheckAll(
+  req: { body: Record<string, unknown> },
+  res: JsonResponse,
+): Promise<void> {
+  try {
+    const { configPath } = req.body as { configPath?: string };
+    const config = loadRegistry(configPath);
+    const checks = await Promise.all(
+      Object.entries(config.sources).map(
+        async ([name, source]) => [name, await checkSingleSource(source)] as const,
+      ),
+    );
+
+    const results: Record<string, { changed: boolean; error?: string }> = {};
+    for (const [name, result] of checks) results[name] = result;
+    res.json({ results });
+  } catch (err) {
+    res.status(500).json({ error: errMsg(err, "Failed to check sources") });
+  }
 }

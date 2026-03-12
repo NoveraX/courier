@@ -14,18 +14,22 @@ export function buildSelectionFromScan(
     });
     return sel;
   }
-  /* Build set of endpoint names found on disk */
-  const onDisk = new Set<string>();
+  /* Build per-group set of endpoint names found on disk */
+  const onDisk = new Map<string, Set<string>>()
   for (const group of scanned.groups) {
-    for (const ep of group.endpoints) onDisk.add(ep.name);
+    const names = onDisk.get(group.name) ?? new Set<string>()
+    for (const ep of group.endpoints) names.add(ep.name)
+    onDisk.set(group.name, names)
   }
   /* Select only endpoints that exist both in spec and on disk */
   spec.groups.forEach((g, i) => {
-    const selected = g.endpoints.filter((e) => onDisk.has(e.name));
+    const diskNames = onDisk.get(g.name)
+    if (!diskNames) return
+    const selected = g.endpoints.filter((e) => diskNames.has(e.name))
     if (selected.length > 0) {
-      sel[groupKey(g, i)] = new Set(selected.map((e) => e.name));
+      sel[groupKey(g, i)] = new Set(selected.map((e) => e.name))
     }
-  });
+  })
   return sel;
 }
 

@@ -67,8 +67,8 @@ function resolveEntryPaths(entryPoints: unknown): Set<string> {
       if (typeof entry === "string") {
         paths.push(entry);
       } else if (typeof entry === "object" && entry !== null && "in" in entry) {
-        const value = (entry as Record<string, unknown>).in;
-        if (typeof value === "string") paths.push(value);
+        const obj = entry as { in: unknown };
+        if (typeof obj.in === "string") paths.push(obj.in);
       }
     }
   } else if (typeof entryPoints === "object" && entryPoints !== null) {

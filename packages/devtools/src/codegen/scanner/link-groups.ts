@@ -32,7 +32,7 @@ export function resolveGroup(
 /** Extract group variable names from import statements */
 export function extractImportedGroups(content: string): string[] {
   const names: string[] = [];
-  const importRe = /import\s+\{([^}]+)\}\s+from\s+["']\.\/([^"']+)["']/g;
+  const importRe = /import\s+\{([^}]+)\}\s+from\s+["'](\.\.?\/[^"']+)["']/g;
 
   for (const match of content.matchAll(importRe)) {
     const imported = (match[1] ?? "")

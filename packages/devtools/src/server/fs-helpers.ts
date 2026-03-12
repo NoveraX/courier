@@ -23,8 +23,8 @@ export function readFilesFromDisk(paths: string[]): Record<string, string> {
   return result;
 }
 
-/** Write file with automatic directory creation */
-export function writeFileSafe(filePath: string, content: string): void {
+/** Write file, creating parent directories as needed */
+export function writeFileWithDirs(filePath: string, content: string): void {
   const dir = dirname(filePath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   writeFileSync(filePath, content, "utf-8");
@@ -33,4 +33,9 @@ export function writeFileSafe(filePath: string, content: string): void {
 /** Auto-detect whether specUrl is a URL or file path */
 export function isUrl(specUrl: string): boolean {
   return specUrl.startsWith("http://") || specUrl.startsWith("https://");
+}
+
+/** Build the effective output directory for a source: `outputDir/sourceName` */
+export function getEffectiveDir(outputDir: string, sourceName: string): string {
+  return `${outputDir.replace(/\/+$/, "")}/${sourceName}`;
 }

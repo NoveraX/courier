@@ -3,7 +3,7 @@
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { extname, join, relative } from "node:path";
 
 const TS_EXTENSIONS = new Set([".ts", ".tsx"]);
 
@@ -43,17 +43,11 @@ function walkDir(dir: string, ignore: string[], result: string[]): void {
       const stat = statSync(full);
       if (stat.isDirectory()) {
         walkDir(full, ignore, result);
-      } else if (stat.isFile() && hasExtension(entry)) {
+      } else if (stat.isFile() && TS_EXTENSIONS.has(extname(entry))) {
         result.push(full);
       }
     } catch {
       /* skip unreadable entries */
     }
   }
-}
-
-function hasExtension(fileName: string): boolean {
-  const dot = fileName.lastIndexOf(".");
-  if (dot < 0) return false;
-  return TS_EXTENSIONS.has(fileName.slice(dot));
 }

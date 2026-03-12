@@ -11,9 +11,10 @@ const init = defineCommand({
   },
   run() {
     setProjectRoot(process.cwd());
-    initProject();
-    console.log("  ✓ registry.nexus.json created (if missing)");
-    console.log("  ✓ .nexus-cache.json added to .gitignore");
+    const { registryCreated, gitignoreUpdated } = initProject();
+    if (registryCreated) console.log("  ✓ registry.nexus.json created");
+    if (gitignoreUpdated) console.log("  ✓ .gitignore updated with cache files");
+    if (!registryCreated && !gitignoreUpdated) console.log("  ✓ project already initialized");
   },
 });
 

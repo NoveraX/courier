@@ -48,34 +48,46 @@ export function classifyBreakingChanges(
   endpointDiff: EndpointDiffResult,
   schemaChanges: SchemaDiff[],
 ): BreakingChange[] {
+  return [
+    ...classifyRemovedEndpoints(endpointDiff.removed),
+    ...classifyModifiedEndpoints(endpointDiff.modified),
+    ...classifyAddedEndpoints(endpointDiff.added),
+    ...classifySchemaChanges(schemaChanges),
+  ];
+}
+
+function classifyRemovedEndpoints(endpoints: DiffEndpoint[]): BreakingChange[] {
+  return endpoints.map((ep) => ({
+    severity: "breaking" as const,
+    category: "endpoint-removed",
+    message: `Endpoint removed: ${ep.method.toUpperCase()} ${ep.path}`,
+    endpoint: `${ep.group}.${ep.name}`,
+  }));
+}
+
+function classifyModifiedEndpoints(endpoints: DiffEndpoint[]): BreakingChange[] {
   const result: BreakingChange[] = [];
-
-  for (const ep of endpointDiff.removed) {
-    result.push({
-      severity: "breaking",
-      category: "endpoint-removed",
-      message: `Endpoint removed: ${ep.method.toUpperCase()} ${ep.path}`,
-      endpoint: `${ep.group}.${ep.name}`,
-    });
-  }
-
-  for (const ep of endpointDiff.modified) {
+  for (const ep of endpoints) {
     for (const change of ep.changes ?? []) {
       const classified = classifyEndpointChange(ep, change);
       if (classified) result.push(classified);
     }
   }
+  return result;
+}
 
-  for (const ep of endpointDiff.added) {
-    result.push({
-      severity: "non-breaking",
-      category: "endpoint-added",
-      message: `New endpoint: ${ep.method.toUpperCase()} ${ep.path}`,
-      endpoint: `${ep.group}.${ep.name}`,
-    });
-  }
+function classifyAddedEndpoints(endpoints: DiffEndpoint[]): BreakingChange[] {
+  return endpoints.map((ep) => ({
+    severity: "non-breaking" as const,
+    category: "endpoint-added",
+    message: `New endpoint: ${ep.method.toUpperCase()} ${ep.path}`,
+    endpoint: `${ep.group}.${ep.name}`,
+  }));
+}
 
-  for (const schema of schemaChanges) {
+function classifySchemaChanges(schemas: SchemaDiff[]): BreakingChange[] {
+  const result: BreakingChange[] = [];
+  for (const schema of schemas) {
     if (schema.type === "removed") {
       result.push({
         severity: "breaking",
@@ -97,6 +109,5 @@ export function classifyBreakingChanges(
       }
     }
   }
-
   return result;
 }

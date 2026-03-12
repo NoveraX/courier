@@ -85,7 +85,8 @@ export function getCachedDigest(cache: DigestCache, sourceName: string): SpecDig
   const digest = cache[sourceName];
   if (!digest) return null;
   /* Migrate old cached digests that lack the _kind discriminant */
-  if (!("_kind" in digest)) (digest as { _kind: string })._kind = "digest";
+  if (!("_kind" in digest))
+    return { ...(digest as object), _kind: "digest" as const } as SpecDigest;
   return digest;
 }
 

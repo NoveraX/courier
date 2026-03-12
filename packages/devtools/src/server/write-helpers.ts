@@ -3,19 +3,20 @@
  */
 
 import type { GenerateOptions, ParsedSpec } from "../codegen";
-import {
-  addSource,
-  removeSource,
-  saveRegistry,
-} from "../codegen";
-import type { RegistryConfig, RegistrySource, SpecImportType, UpdateResult } from "../codegen/registry/types";
+import { addSource, removeSource, saveRegistry } from "../codegen";
+import type {
+  RegistryConfig,
+  RegistrySource,
+  SpecImportType,
+  UpdateResult,
+} from "../codegen/registry/types";
 import { resolveProjectSafe } from "../context";
 import { computeMergePreview, persistRawSource, removeOrphanFiles } from "./merge-preview";
 import {
   collectFingerprints,
   detectUserModified,
   persistCaches,
-  writeFileSafe,
+  writeFileWithDirs,
 } from "./registry-helpers";
 import type { WriteBody, WriteResult } from "./write-types";
 
@@ -33,7 +34,7 @@ export function handleMergeWrite(
   const preview = computeMergePreview(files, sourceName, source);
 
   for (const file of preview.files) {
-    writeFileSafe(resolveProjectSafe(file.path), file.content);
+    writeFileWithDirs(resolveProjectSafe(file.path), file.content);
   }
 
   const deleted = removeOrphanFiles(files, source, options);
@@ -62,7 +63,7 @@ export function handleRawWrite(
   config: RegistryConfig,
 ): WriteResult {
   for (const file of files) {
-    writeFileSafe(resolveProjectSafe(file.path), file.content);
+    writeFileWithDirs(resolveProjectSafe(file.path), file.content);
   }
 
   if (sourceName && spec && options) {
@@ -91,23 +92,16 @@ function finalizeRegistry(
   const newFingerprints = collectFingerprints(files);
   persistCaches(sourceName, newFingerprints, spec);
 
-  const mergedFiles = Object.fromEntries(preview.files.map((f) => [f.path, f.content]));
-  const userModified = detectUserModified(newFingerprints, mergedFiles);
-  const count = Object.keys(newFingerprints).length;
-
-  const updated =
-    count === 0
-      ? removeSource(config, sourceName)
-      : addSource(
-          config,
-          sourceName,
-          spec,
-          specUrl ?? "",
-          importType ?? "url",
-          options,
-          count,
-          userModified,
-        );
+  const updated = buildSourceEntry(
+    config,
+    sourceName,
+    spec,
+    specUrl,
+    importType,
+    options,
+    newFingerprints,
+    preview,
+  );
   saveRegistry(updated);
 
   const mergedCount = preview.files.filter((f) => f.status === "merged").length;
@@ -116,4 +110,32 @@ function finalizeRegistry(
     merged: mergedCount,
     files: preview.files.map((f) => ({ path: f.path, status: f.status })),
   };
+}
+
+function buildSourceEntry(
+  config: RegistryConfig,
+  sourceName: string,
+  spec: ParsedSpec,
+  specUrl: string | undefined,
+  importType: SpecImportType | undefined,
+  options: GenerateOptions,
+  fingerprints: Record<string, string>,
+  preview: UpdateResult,
+): RegistryConfig {
+  const mergedFiles = Object.fromEntries(preview.files.map((f) => [f.path, f.content]));
+  const userModified = detectUserModified(fingerprints, mergedFiles);
+  const count = Object.keys(fingerprints).length;
+
+  return count === 0
+    ? removeSource(config, sourceName)
+    : addSource(
+        config,
+        sourceName,
+        spec,
+        specUrl ?? "",
+        importType ?? "url",
+        options,
+        count,
+        userModified,
+      );
 }

@@ -12,7 +12,7 @@ export interface EndpointDiffResult {
 }
 
 function endpointKey(group: string, ep: DigestEndpoint): string {
-  return `${group}.${ep.name}`;
+  return `${group}::${ep.name}`;
 }
 
 function toDiffEndpoint(group: string, ep: DigestEndpoint): DiffEndpoint {
@@ -88,8 +88,8 @@ export function diffEndpoints(
   const removed: DiffEndpoint[] = [];
   const modified: DiffEndpoint[] = [];
 
-  for (const [_key, { group, endpoint: oldEp }] of oldMap) {
-    const newEntry = newMap.get(endpointKey(group, oldEp));
+  for (const [key, { group, endpoint: oldEp }] of oldMap) {
+    const newEntry = newMap.get(key);
     if (!newEntry) {
       removed.push(toDiffEndpoint(group, oldEp));
       continue;

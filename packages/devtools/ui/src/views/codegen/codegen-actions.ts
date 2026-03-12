@@ -1,7 +1,7 @@
-import { fetchGenerateCode, fetchParseSpec, fetchWriteFiles } from "./api";
-import { deriveSourceName, formatWriteResult, groupKey } from "./helpers";
-import { buildSelectedEndpoints } from "./selection-helpers";
-import type { SourceConfig, SourceState } from "./types";
+import { fetchGenerateCode, fetchParseSpec, fetchWriteFiles } from "./api"
+import { deriveSourceName, formatWriteResult, groupKey } from "./helpers"
+import { buildSelectedEndpoints } from "./selection-helpers"
+import type { ParsedGroup, SourceConfig, SourceState } from "./types"
 
 interface ActionDeps {
   activeSourceIdx: number
@@ -30,17 +30,7 @@ export function createCodegenActions(deps: ActionDeps) {
     setError(null)
     try {
       const parsed = await fetchParseSpec(src.importSource, src.importContent.trim())
-      const saved = savedSelectionsRef.current.get(activeSourceIdx)
-      const sel: Record<string, Set<string>> = {}
-      for (const group of parsed.groups) {
-        const key = groupKey(group, parsed.groups.indexOf(group))
-        if (saved?.[key]) {
-          const validNames = new Set(group.endpoints.map((e) => e.name))
-          sel[key] = new Set(saved[key].filter((name) => validNames.has(name)))
-        } else {
-          sel[key] = new Set()
-        }
-      }
+      const sel = restoreSelections(parsed, savedSelectionsRef.current.get(activeSourceIdx))
       savedSelectionsRef.current.delete(activeSourceIdx)
       const derived = deriveSourceName(parsed.title, parsed.baseURL)
       if (src.name === "api" && derived !== "api") {
@@ -98,10 +88,14 @@ export function createCodegenActions(deps: ActionDeps) {
     }
   }
 
-  function handleCopyAll() {
+  async function handleCopyAll() {
     const content = st.files.map((f) => `// ${f.path}\n${f.content}`).join("\n\n// ────────────────────────────────────────\n\n")
-    navigator.clipboard.writeText(content)
-    setWriteResult("Copied to clipboard")
+    try {
+      await navigator.clipboard.writeText(content)
+      setWriteResult("Copied to clipboard")
+    } catch {
+      setError("Clipboard access denied (requires HTTPS)")
+    }
     setTimeout(() => setWriteResult(null), 2000)
   }
 
@@ -113,8 +107,26 @@ export function createCodegenActions(deps: ActionDeps) {
     a.href = url
     a.download = `${src.options.sourceName}-nexus-api.ts`
     a.click()
-    URL.revokeObjectURL(url)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   return { handleParse, handleGenerate, handleWrite, handleCopyAll, handleDownload }
+}
+
+/** Restore previously saved selections, filtering to valid endpoint names */
+function restoreSelections(
+  parsed: { groups: { name: string; prefix: string; endpoints: { name: string }[] }[] },
+  saved: Record<string, string[]> | undefined,
+): Record<string, Set<string>> {
+  const sel: Record<string, Set<string>> = {}
+  for (const [idx, group] of parsed.groups.entries()) {
+    const key = groupKey(group as ParsedGroup, idx)
+    if (saved?.[key]) {
+      const validNames = new Set(group.endpoints.map((e) => e.name))
+      sel[key] = new Set(saved[key].filter((name) => validNames.has(name)))
+    } else {
+      sel[key] = new Set()
+    }
+  }
+  return sel
 }

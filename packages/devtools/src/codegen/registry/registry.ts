@@ -31,10 +31,11 @@ export function loadRegistry(configPath?: string): RegistryConfig {
   }
   const content = readFileSync(filePath, "utf-8");
   const parsed: unknown = JSON.parse(content);
-  const obj = parsed as { sources?: unknown };
 
-  /* Ignore legacy wizard-format files (sources as array instead of object) */
-  if (!obj.sources || Array.isArray(obj.sources)) {
+  /* Validate shape: sources must be a non-array object */
+  if (typeof parsed !== "object" || parsed === null) return { sources: {} };
+  const obj = parsed as Record<string, unknown>;
+  if (!obj.sources || typeof obj.sources !== "object" || Array.isArray(obj.sources)) {
     return { sources: {} };
   }
 

@@ -7,6 +7,7 @@
  *   ),
  */
 
+import { extractBalancedBlock } from "./parse-utils";
 import type { EndpointAnalysis, ScannedEndpoint } from "./types";
 
 /** Find `name: endpoint` markers and parse each one */
@@ -29,40 +30,43 @@ export function extractEndpoints(endpointsBlock: string): ScannedEndpoint[] {
 
 /** Parse the endpoint(...)(fn) call after the marker */
 function parseEndpointCall(generics: string | undefined, rest: string): EndpointAnalysis | null {
-  /* Extract config object (first parenthesized block) */
   const configBlock = extractParenBlock(rest);
   if (!configBlock) return null;
 
-  /* After config, find the function call: ((http, vars) => ...) */
+  const { method, path } = extractHttpCall(rest, configBlock);
+  const config = analyzeConfig(configBlock, generics);
+
+  return {
+    hasResponseType: config.hasResponseType,
+    hasVariablesType: config.hasVariablesType,
+    hasValidation: config.hasValidation,
+    httpMethod: (method === "del" ? "delete" : method) as EndpointAnalysis["httpMethod"],
+    path,
+    type: config.type,
+  };
+}
+
+function extractHttpCall(rest: string, configBlock: string): { method: string; path: string } {
   const afterConfig = rest.slice(configBlock.length).trimStart();
-  const fnBlock = extractParenBlock(afterConfig);
-  const fnContent = fnBlock ?? "";
+  const fnBlock = extractParenBlock(afterConfig) ?? "";
+  const httpMatch = fnBlock.match(/http\.(get|post|put|patch|del)\(\s*(?:"([^"]*)")?/);
+  return { method: httpMatch?.[1] ?? "get", path: httpMatch?.[2] ?? "" };
+}
 
-  /* Parse HTTP method call from function body */
-  const httpMatch = fnContent.match(/http\.(get|post|put|patch|del)\(\s*(?:"([^"]*)")?/);
-  const method = httpMatch?.[1] ?? "get";
-  const path = httpMatch?.[2] ?? "";
-
-  /* Analyze config content */
+function analyzeConfig(configBlock: string, generics: string | undefined) {
   const config = configBlock.slice(1, -1);
   const hasResponse = config.includes("response:");
   const hasVariables = config.includes("variables:");
-  const hasValidation = hasResponse || hasVariables;
-
   const typeMatch = config.match(/type:\s*"(query|mutation)"/);
-  const type = typeMatch ? (typeMatch[1] as "query" | "mutation") : null;
 
   const genericParts = generics ? splitGenerics(generics) : [];
   const hasResponseType = genericParts.length >= 1 && genericParts[0] !== "unknown";
-  const hasVariablesType = genericParts.length >= 2;
 
   return {
     hasResponseType: hasResponseType || hasResponse,
-    hasVariablesType: hasVariablesType || hasVariables,
-    hasValidation,
-    httpMethod: method === "del" ? "delete" : method,
-    path,
-    type,
+    hasVariablesType: genericParts.length >= 2 || hasVariables,
+    hasValidation: hasResponse || hasVariables,
+    type: typeMatch ? (typeMatch[1] as "query" | "mutation") : null,
   };
 }
 
@@ -70,14 +74,7 @@ function parseEndpointCall(generics: string | undefined, rest: string): Endpoint
 function extractParenBlock(str: string): string | null {
   const start = str.indexOf("(");
   if (start < 0) return null;
-
-  let depth = 0;
-  for (let i = start; i < str.length; i++) {
-    if (str[i] === "(") depth++;
-    else if (str[i] === ")") depth--;
-    if (depth === 0) return str.slice(start, i + 1);
-  }
-  return null;
+  return extractBalancedBlock(str, start, "(", ")");
 }
 
 /** Split generic parameters handling nested angle brackets */

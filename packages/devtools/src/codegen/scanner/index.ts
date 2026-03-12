@@ -71,26 +71,37 @@ function processFile(
   sourceMap: Map<string, ScannedSource>,
   groupsByImport: Map<string, ScannedGroup[]>,
 ): void {
-  /* Check for defineApi() */
-  const source = extractSource(content, filePath);
-  if (source?.name) {
-    sourceMap.set(source.name, source as ScannedSource);
-    /* Collect imported group variable names */
-    const imports = extractImportedGroups(content);
-    groupsByImport.set(
-      source.name,
-      imports.map((name) => ({
-        name,
-        prefix: "",
-        filePath: "",
-        endpoints: [],
-      })),
-    );
-  }
+  registerSource(content, filePath, sourceMap, groupsByImport);
 
-  /* Check for all defineGroup() calls in file */
   const groups = extractGroups(content, filePath);
   for (const group of groups) {
     resolveGroup(group, sourceMap, groupsByImport, filePath);
   }
+}
+
+function registerSource(
+  content: string,
+  filePath: string,
+  sourceMap: Map<string, ScannedSource>,
+  groupsByImport: Map<string, ScannedGroup[]>,
+): void {
+  const source = extractSource(content, filePath);
+  if (!source?.name) return;
+
+  const validated: ScannedSource = {
+    name: source.name,
+    baseURL: source.baseURL ?? "",
+    filePath: source.filePath ?? filePath,
+    groups: source.groups ?? [],
+    isImported: source.isImported ?? false,
+    hasClient: source.hasClient ?? false,
+    inlineEndpoints: source.inlineEndpoints,
+  };
+
+  sourceMap.set(validated.name, validated);
+  const imports = extractImportedGroups(content);
+  groupsByImport.set(
+    validated.name,
+    imports.map((name) => ({ name, prefix: "", filePath: "", endpoints: [] })),
+  );
 }

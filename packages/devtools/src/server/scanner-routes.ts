@@ -4,6 +4,7 @@
 
 import { scanProject } from "../codegen/scanner";
 import type { ScanConfig } from "../codegen/scanner/types";
+import { errMsg } from "./fs-helpers";
 import type { RouteApp } from "./route-types";
 
 export function registerScannerRoutes(app: RouteApp): void {
@@ -14,7 +15,7 @@ export function registerScannerRoutes(app: RouteApp): void {
       res.json(result);
     } catch (err) {
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Scan failed",
+        error: errMsg(err, "Scan failed"),
       });
     }
   });

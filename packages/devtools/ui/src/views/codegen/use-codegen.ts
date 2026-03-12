@@ -27,9 +27,9 @@ export function useCodegen() {
     setSources((prev) => prev.map((s, i) => (i === activeSourceIdx ? { ...s, ...patch } : s)))
   }
 
-  function updateState(patch: Partial<SourceState>) {
+  const updateState = useCallback((patch: Partial<SourceState>) => {
     setStates((prev) => prev.map((s, i) => (i === activeSourceIdx ? { ...s, ...patch } : s)))
-  }
+  }, [activeSourceIdx])
 
   /* Selection adapter: bridges per-source state with useSelectionActions */
   const setSelection: React.Dispatch<React.SetStateAction<Record<string, Set<string>>>> = useCallback(
@@ -73,7 +73,7 @@ export function useCodegen() {
         updateState({ prevSpec: st.spec, spec: newSpec })
       }
     } catch { /* Silently ignore watch errors */ }
-  }, [src.importContent, src.importSource, st.spec])
+  }, [src.importContent, src.importSource, st.spec, updateState])
 
   function toggleWatch() {
     if (watching) {
@@ -128,12 +128,12 @@ export function useCodegen() {
   const totalSelected = Object.values(st.selection).reduce((sum, s) => sum + s.size, 0)
   const totalEndpoints = st.spec?.groups.reduce((sum, g) => sum + g.endpoints.length, 0) ?? 0
 
-  const actions = createCodegenActions({
+  const actions = useMemo(() => createCodegenActions({
     activeSourceIdx, src, st,
     setSources, updateState,
     setStep, setLoading, setError, setWriteResult,
     savedSelectionsRef,
-  })
+  }), [activeSourceIdx, src, st, updateState])
 
   return {
     sources, states, activeSourceIdx, src, st,

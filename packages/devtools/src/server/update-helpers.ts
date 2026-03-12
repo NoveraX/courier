@@ -17,16 +17,19 @@ import {
   saveRegistry,
   updateSource,
 } from "../codegen";
+import type { BreakingChange, MergeChange, SpecDiff } from "../codegen/merge/types";
 import { previewUpdate } from "../codegen/merge/update-flow";
+import type { RegistryConfig } from "../codegen/registry/types";
 import { resolveProjectSafe } from "../context";
 import { cleanupOrphanFiles } from "./cleanup-orphans";
+import { getEffectiveDir } from "./fs-helpers";
 import {
   buildFallbackFingerprints,
   collectFingerprints,
   detectUserModified,
   persistCaches,
   readFilesFromDisk,
-  writeFileSafe,
+  writeFileWithDirs,
 } from "./registry-helpers";
 import { scanTsFiles } from "./scan-ts-files";
 
@@ -44,10 +47,10 @@ interface ApplyRequest {
 }
 
 interface PreviewResponse {
-  files: { path: string; content: string; status: string; changes: unknown[] }[];
+  files: { path: string; content: string; status: string; changes: MergeChange[] }[];
   deletedFiles?: string[];
-  breakingChanges: unknown[];
-  specDiff?: unknown;
+  breakingChanges: BreakingChange[];
+  specDiff?: SpecDiff;
 }
 
 /** Compute a preview of what an update would change */
@@ -81,28 +84,44 @@ export function handleApplyUpdate(
   const source = getSource(config, body.name);
   if (!source) return { error: `Source "${body.name}" not found`, status: 404 };
 
-  for (const file of body.files) {
-    writeFileSafe(resolveProjectSafe(file.path), file.content);
-  }
+  writeUpdateFiles(body.files);
 
   const generated = generateCode(body.newSpec, source.options);
   const newFingerprints = collectFingerprints(generated);
-
-  const newPaths = new Set(generated.map((f) => resolveProjectSafe(f.path)));
-  const effectiveDir = `${source.outputDir.replace(/\/+$/, "")}/${source.options.sourceName}`;
-  const deleted = cleanupOrphanFiles(effectiveDir, newPaths);
+  const deleted = cleanupOrphanFiles(
+    getEffectiveDir(source.outputDir, source.options.sourceName),
+    new Set(generated.map((f) => resolveProjectSafe(f.path))),
+  );
 
   persistCaches(body.name, newFingerprints, body.newSpec);
-
-  const mergedFiles: Record<string, string> = {};
-  for (const f of body.files) mergedFiles[f.path] = f.content;
-  const userModified = detectUserModified(newFingerprints, mergedFiles);
-  const endpointCount = Object.keys(newFingerprints).length;
-
-  config = updateSource(config, body.name, computeSpecHash(body.newSpec), endpointCount, userModified);
+  config = buildUpdateState(config, body, newFingerprints);
   saveRegistry(config, body.configPath);
 
   return { success: true, written: body.files.length, deleted };
+}
+
+function writeUpdateFiles(files: { path: string; content: string }[]): void {
+  for (const file of files) {
+    writeFileWithDirs(resolveProjectSafe(file.path), file.content);
+  }
+}
+
+function buildUpdateState(
+  config: RegistryConfig,
+  body: ApplyRequest,
+  fingerprints: Record<string, string>,
+): RegistryConfig {
+  const mergedFiles: Record<string, string> = {};
+  for (const f of body.files) mergedFiles[f.path] = f.content;
+
+  const userModified = detectUserModified(fingerprints, mergedFiles);
+  return updateSource(
+    config,
+    body.name,
+    computeSpecHash(body.newSpec),
+    Object.keys(fingerprints).length,
+    userModified,
+  );
 }
 
 // ── Internal helpers ─────────────────────────────────────────────────────────

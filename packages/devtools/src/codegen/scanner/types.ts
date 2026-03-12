@@ -6,8 +6,8 @@ export interface EndpointAnalysis {
   hasVariablesType: boolean;
   /** Has runtime validation schema (response/variables) */
   hasValidation: boolean;
-  /** HTTP method (get, post, put, patch, del) */
-  httpMethod: string;
+  /** HTTP method */
+  httpMethod: "get" | "post" | "put" | "patch" | "delete";
   /** URL path from the endpoint call */
   path: string;
   /** Endpoint type hint ("query" | "mutation" | null) */
@@ -46,7 +46,7 @@ export interface ScannedSource {
 export interface ScanConfig {
   /** Directories to scan (relative to project root) */
   scanPaths: string[];
-  /** Glob patterns to ignore */
+  /** Directory/file names to ignore */
   ignore: string[];
 }
 

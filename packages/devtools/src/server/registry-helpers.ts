@@ -22,7 +22,7 @@ import { isUrl } from "./fs-helpers";
 import type { JsonResponse } from "./route-types";
 import { validateSpecUrl } from "./validate-url";
 
-export { errMsg, readFilesFromDisk, writeFileSafe } from "./fs-helpers";
+export { errMsg, readFilesFromDisk, writeFileWithDirs } from "./fs-helpers";
 
 /** Persist fingerprint and digest caches for a source in one call */
 export function persistCaches(

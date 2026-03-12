@@ -4,10 +4,10 @@
  */
 
 import type { GeneratedFile } from "../generator/types";
+import type { UpdateFileResult, UpdateResult } from "../registry/types";
 import { extractEndpoints } from "./extract-endpoints";
 import { classifyEndpoints } from "./fingerprint";
 import { mergeGroupFile } from "./merge-group";
-import type { UpdateFileResult, UpdateResult } from "../registry/types";
 
 const GROUP_MARKER = "defineGroup(";
 

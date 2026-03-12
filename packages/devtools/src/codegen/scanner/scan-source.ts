@@ -2,6 +2,7 @@
  * Scans TypeScript files for defineApi/defineGroup/endpoint patterns.
  */
 
+import { extractBalancedBlock } from "./parse-utils";
 import { extractEndpoints } from "./scan-endpoint";
 import type { ScannedGroup, ScannedSource } from "./types";
 
@@ -10,7 +11,7 @@ export function isNexusFile(content: string): boolean {
   return content.includes("defineApi(") || content.includes("defineGroup(");
 }
 
-/** Extract all defineApi() sources from a file */
+/** Extract first defineApi() source from a file */
 export function extractSource(content: string, filePath: string): Partial<ScannedSource> | null {
   const re = /(?:export\s+)?const\s+(\w+)\s*=\s*defineApi\(\{/g;
   const match = re.exec(content);
@@ -72,30 +73,13 @@ function extractEndpointsBlock(content: string, startPos: number): string | null
   const openBrace = content.indexOf("{", markerIdx + marker.length);
   if (openBrace < 0) return null;
 
-  return extractBraceBlock(content, openBrace);
+  return extractBalancedBlock(content, openBrace, "{", "}");
 }
 
 /** Find the end of the current defineGroup/defineApi block */
 function findBlockEnd(content: string, startPos: number): number {
   const openBrace = content.indexOf("{", startPos);
   if (openBrace < 0) return -1;
-
-  let depth = 0;
-  for (let i = openBrace; i < content.length; i++) {
-    if (content[i] === "{") depth++;
-    else if (content[i] === "}") depth--;
-    if (depth === 0) return i;
-  }
-  return -1;
-}
-
-/** Extract content between matched braces */
-function extractBraceBlock(content: string, openPos: number): string | null {
-  let depth = 0;
-  for (let i = openPos; i < content.length; i++) {
-    if (content[i] === "{") depth++;
-    else if (content[i] === "}") depth--;
-    if (depth === 0) return content.slice(openPos, i + 1);
-  }
-  return null;
+  const block = extractBalancedBlock(content, openBrace, "{", "}");
+  return block ? openBrace + block.length - 1 : -1;
 }

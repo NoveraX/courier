@@ -24,7 +24,7 @@ const cachedCompile = (path: string): CompileFn => {
   return fn;
 };
 
-const extractParamNames = (path: string): string[] => {
+export const extractParamNames = (path: string): string[] => {
   const names: string[] = [];
   const re = new RegExp(PARAM_RE.source, PARAM_RE.flags);
   for (let match = re.exec(path); match !== null; match = re.exec(path)) {

@@ -30,6 +30,8 @@ export class HttpClient {
 
   context?: Context;
   pendingRequests: { [key: string]: AbortController } = {};
+  /** Hook called with resolved (method, fullUrl) right before fetch */
+  onBeforeFetch?: (method: string, url: string) => void;
 
   constructor(options?: BaseOptions, context?: Context) {
     this.init(options, context);
@@ -84,6 +86,21 @@ export class HttpClient {
       const base = effectivePrefixUrl.endsWith("/") ? effectivePrefixUrl : `${effectivePrefixUrl}/`;
       const path = url.startsWith("/") ? url.slice(1) : url;
       fullUrl = `${base}${path}`;
+    }
+
+    if (this.onBeforeFetch) {
+      let hookUrl = fullUrl;
+      const sp = fetchOptions.searchParams;
+      if (sp) {
+        const qs =
+          sp instanceof URLSearchParams
+            ? sp.toString()
+            : typeof sp === "string"
+              ? sp
+              : new URLSearchParams(sp as Record<string, string>).toString();
+        if (qs) hookUrl += (hookUrl.includes("?") ? "&" : "?") + qs;
+      }
+      this.onBeforeFetch(method, hookUrl);
     }
 
     return coreFetch(method, fullUrl, {

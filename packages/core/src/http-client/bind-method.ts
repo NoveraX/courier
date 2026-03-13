@@ -4,7 +4,7 @@ import {
   deduplicateAndAbortPrevious,
   getDedupeKey,
 } from "../utils/deduplicate";
-import { compileUrl, resolveBasePath } from "../utils/helpers";
+import { compileUrl, extractParamNames, isFormData, resolveBasePath } from "../utils/helpers";
 import { mergeHeaders } from "../utils/merge-headers";
 import { buildBody, stripUndefined, toSearchParams } from "./body-builder";
 import { getResponse } from "./response";
@@ -21,6 +21,28 @@ import type {
   SearchParamsSerializer,
   SimpleOptions,
 } from "./types";
+
+/** Remove path-param keys from variables so they don't leak into query/body */
+const stripPathParams = (
+  path: string,
+  variables: FormData | Record<string, unknown> | undefined,
+): FormData | Record<string, unknown> | undefined => {
+  if (!variables) return undefined;
+  const paramNames = extractParamNames(path);
+  if (paramNames.length === 0) return variables;
+
+  if (isFormData(variables)) {
+    const copy = new FormData();
+    for (const [k, v] of variables.entries()) {
+      if (!paramNames.includes(k)) copy.append(k, v);
+    }
+    return copy;
+  }
+
+  const copy = { ...variables };
+  for (const name of paramNames) delete copy[name];
+  return Object.keys(copy).length > 0 ? copy : undefined;
+};
 
 const toHeadersInit = (value: unknown): HeadersInit | undefined => {
   if (value instanceof Headers) return value;
@@ -77,6 +99,12 @@ export function bindMethod(
 
     const prefixUrlOverride = baseUrl ? { prefixUrl: baseUrl } : {};
 
+    // Strip path params from direct variables to avoid them leaking into query/body
+    const directVars = stripPathParams(
+      path,
+      arguments_[1] as FormData | Record<string, unknown> | undefined,
+    );
+
     let options: Partial<FetchOptions>;
 
     if (method === "head") {
@@ -106,7 +134,7 @@ export function bindMethod(
         headers: mergeHeaders(boundHeaders, optionHeaders, deps.allowedHeaders),
         ...buildBody(
           method,
-          (arguments_[1] || newVariables) as FormData | Record<string, unknown> | undefined,
+          (directVars || newVariables) as FormData | Record<string, unknown> | undefined,
           { ...searchParameters, ...newSearchParameters },
           deps.defaultBody,
           deps.defaultQueryParams,

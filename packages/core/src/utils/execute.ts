@@ -67,6 +67,17 @@ export async function executeRequest(
   }
 
   const instance = createHttpClient(dataSource.options, context);
+
+  if (hasDevtools) {
+    instance.onBeforeFetch = (httpMethod, fullUrl) => {
+      dt.onHttpFetchStart?.({
+        requestId,
+        url: fullUrl,
+        method: httpMethod === "del" ? "DELETE" : httpMethod.toUpperCase(),
+        timestamp: Date.now(),
+      });
+    };
+  }
   const {
     rawData = false,
     forwardVariables = true,
@@ -119,12 +130,6 @@ export async function executeRequest(
     const execute = async (): Promise<MiddlewareResponse> => {
       const vars = middlewareCtx.variables as FormData | Record<string, unknown> | undefined;
       const ft0 = hasDevtools ? performance.now() : 0;
-      dt.onHttpFetchStart?.({
-        requestId,
-        url: dataSource.options?.baseURL ?? "",
-        method: String(method),
-        timestamp: Date.now(),
-      });
 
       let response: Awaited<ReturnType<typeof endpoint>>;
       try {

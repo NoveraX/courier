@@ -9,12 +9,18 @@ export function buildCurl(request: RequestEntry): string {
     `[${request.source}] ${[request.source, request.group, request.method].filter(Boolean).join(".")}`
   let curl = `curl -X ${method} '${url}'`
 
-  if (request.requestHeaders) {
-    for (const [k, v] of Object.entries(request.requestHeaders)) {
-      curl += ` \\\n  -H '${k}: ${v}'`
-    }
+  const headers = { ...request.requestHeaders }
+  const hasBody = request.variables && method !== "GET"
+
+  // Ensure Content-Type is present when sending JSON body
+  if (hasBody && !Object.keys(headers).some((k) => k.toLowerCase() === "content-type")) {
+    headers["content-type"] = "application/json"
   }
-  if (request.variables && method !== "GET") {
+
+  for (const [k, v] of Object.entries(headers)) {
+    curl += ` \\\n  -H '${k}: ${v}'`
+  }
+  if (hasBody) {
     curl += ` \\\n  -d '${JSON.stringify(request.variables)}'`
   }
   return curl
@@ -27,13 +33,20 @@ export function buildFetchSnippet(request: RequestEntry): string {
   const url = request.url ?? "/api/request"
   const opts: string[] = []
 
+  const headers = { ...request.requestHeaders }
+  const hasBody = request.variables && method !== "GET"
+
+  if (hasBody && !Object.keys(headers).some((k) => k.toLowerCase() === "content-type")) {
+    headers["content-type"] = "application/json"
+  }
+
   if (method !== "GET") opts.push(`  method: "${method}"`)
-  if (request.requestHeaders && Object.keys(request.requestHeaders).length > 0) {
+  if (Object.keys(headers).length > 0) {
     opts.push(
-      `  headers: ${JSON.stringify(request.requestHeaders, null, 2).replace(/\n/g, "\n  ")}`,
+      `  headers: ${JSON.stringify(headers, null, 2).replace(/\n/g, "\n  ")}`,
     )
   }
-  if (request.variables && method !== "GET") {
+  if (hasBody) {
     opts.push(
       `  body: JSON.stringify(${JSON.stringify(request.variables, null, 2).replace(/\n/g, "\n  ")})`,
     )

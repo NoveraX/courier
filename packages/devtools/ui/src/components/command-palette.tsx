@@ -78,8 +78,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             onClear={() => { store.clearRequests(); close(); }}
             onTogglePause={() => { store.togglePaused(); close(); }}
             onShowFilters={() => {
-              void navigate({ to: "/timeline" });
-              store.setTimelineShowFilters(true);
+              void navigate({ to: "/timeline", search: { filters: true } });
               close();
             }}
           />

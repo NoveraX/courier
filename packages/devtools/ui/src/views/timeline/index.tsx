@@ -6,27 +6,18 @@ import { Toolbar, FilterBar } from "./toolbar"
 import { VirtualRequestList } from "./request-list"
 import { DetailPanel } from "./detail-panel"
 import { hasActiveFilters, filterRequests } from "./filters"
+import { useTimelineSearch } from "./use-timeline-search"
 
 // ── Timeline View ────────────────────────────────────────────────────────────
 
 export function TimelineView() {
   const {
-    requests,
-    selectedRequestId,
-    selectRequest,
-    togglePaused,
-    paused,
-    preserveLog,
-    togglePreserveLog,
-    clearRequests,
-    connected,
-    togglePin,
-    timelineFilters: filters,
-    setTimelineFilters: setFilters,
-    timelineShowFilters: showFilters,
-    setTimelineShowFilters: setShowFilters,
-    settings,
+    requests, paused, preserveLog, connected, settings,
+    togglePaused, togglePreserveLog, clearRequests, togglePin,
   } = useDevToolsStore()
+
+  const { filters, setFilters, selectedRequestId, selectRequest, showFilters, setShowFilters } =
+    useTimelineSearch()
 
   const selectedRequest = requests.find((r) => r.id === selectedRequestId)
   const filteredRequests = hasActiveFilters(filters)

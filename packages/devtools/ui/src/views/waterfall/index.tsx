@@ -1,4 +1,5 @@
 import { useMemo, useRef, useCallback } from "react"
+import { useNavigate } from "@tanstack/react-router"
 import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react"
 
 import type { WaterfallSortField, WaterfallGroupBy } from "../../store"
@@ -15,10 +16,15 @@ import { TimeRuler, WaterfallRow } from "./waterfall-row"
 
 export function WaterfallView() {
   const {
-    requests, selectRequest, selectedRequestId, connected,
+    requests, connected,
     waterfallSortBy: sortBy, waterfallGroupBy: groupBy, waterfallZoom: zoom,
     setWaterfallSortBy: setSortBy, setWaterfallGroupBy: setGroupBy, setWaterfallZoom: setZoom,
   } = useDevToolsStore()
+  const navigate = useNavigate()
+  const selectRequest = useCallback(
+    (id: string) => { void navigate({ to: "/timeline", search: { request: id } }) },
+    [navigate],
+  )
   const containerRef = useRef<HTMLDivElement>(null)
 
   const completedRequests = useMemo(
@@ -164,7 +170,7 @@ export function WaterfallView() {
                   request={r}
                   timelineStart={timelineStart}
                   pxPerMs={pxPerMs}
-                  selected={r.id === selectedRequestId}
+                  selected={false}
                   onSelect={() => selectRequest(r.id)}
                 />
               ))}

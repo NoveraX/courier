@@ -17,20 +17,20 @@ function RootComponent() {
   const {
     theme, setTheme,
     toasts, dismissToast,
-    togglePaused, clearRequests, setTimelineShowFilters,
+    togglePaused, clearRequests,
   } = useDevToolsStore();
 
   const hotkeys = useMemo(() => [
     { key: "k", meta: true, handler: () => setCommandOpen(true) },
     { key: "e", meta: true, handler: () => clearRequests() },
     { key: "p", meta: true, handler: () => togglePaused() },
-    { key: "f", meta: true, handler: () => { void navigate({ to: "/timeline" }); setTimelineShowFilters(true); } },
+    { key: "f", meta: true, handler: () => { void navigate({ to: "/timeline", search: { filters: true } }); } },
     { key: ",", meta: true, handler: () => { void navigate({ to: "/settings" }); } },
     ...TAB_ROUTES.map((to, i) => ({
       key: String(i + 1),
       handler: () => { void navigate({ to }); },
     })),
-  ], [navigate, clearRequests, togglePaused, setTimelineShowFilters]);
+  ], [navigate, clearRequests, togglePaused]);
 
   useHotkeys(hotkeys);
 

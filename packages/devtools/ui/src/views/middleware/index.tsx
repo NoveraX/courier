@@ -1,4 +1,5 @@
-import { useMemo } from "react"
+import { useMemo, useCallback } from "react"
+import { getRouteApi } from "@tanstack/react-router"
 import { Zap } from "lucide-react"
 
 import { useDevToolsStore } from "../../store"
@@ -8,12 +9,20 @@ import { OVERHEAD_WARN_PERCENT, getOverheadPercent, computeAggregateStats } from
 import { MiddlewareChain } from "./middleware-chain"
 import { AggregateStatsPanel } from "./aggregate-stats"
 
+const routeApi = getRouteApi("/middleware")
+
 export function MiddlewareView() {
   const {
     requests, connected,
-    middlewareSelectedId: selectedId, middlewareShowStats: showStats,
-    setMiddlewareSelectedId: setSelectedId, setMiddlewareShowStats: setShowStats,
+    middlewareShowStats: showStats, setMiddlewareShowStats: setShowStats,
   } = useDevToolsStore()
+
+  const { request: selectedId } = routeApi.useSearch()
+  const navigate = routeApi.useNavigate()
+  const setSelectedId = useCallback(
+    (id: string) => { void navigate({ search: { request: id } }) },
+    [navigate],
+  )
 
   const requestsWithMiddleware = useMemo(
     () => requests.filter((r) => r.middlewareCount > 0 && r.status !== "pending"),

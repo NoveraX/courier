@@ -62,25 +62,20 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
       })),
 
     // Requests
-    selectRequest: (id) => set({ selectedRequestId: id }),
     togglePaused: () => set((s) => ({ paused: !s.paused })),
     togglePreserveLog: () => set((s) => ({ preserveLog: !s.preserveLog })),
     clearRequests: () =>
       set((s) => {
         if (s.preserveLog) {
           const pinned = s.requests.filter((r) => r.pinned)
-          return { requests: pinned, selectedRequestId: null }
+          return { requests: pinned }
         }
-        return { requests: [], selectedRequestId: null }
+        return { requests: [] }
       }),
     togglePin: (id) =>
       set((s) => ({
         requests: s.requests.map((r) => (r.id === id ? { ...r, pinned: !r.pinned } : r)),
       })),
-
-    // Timeline filters
-    setTimelineFilters: (f) => set({ timelineFilters: f }),
-    setTimelineShowFilters: (v) => set({ timelineShowFilters: v }),
 
     // Explorer
     setExplorerSelectedEndpoint: (ep) => set({ explorerSelectedEndpoint: ep }),
@@ -96,18 +91,12 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
     setWaterfallZoom: (zoom) => set({ waterfallZoom: zoom }),
 
     // Middleware
-    setMiddlewareSelectedId: (id) => set({ middlewareSelectedId: id }),
     setMiddlewareShowStats: (show) => set({ middlewareShowStats: show }),
 
     // Compare
-    setCompareLeftId: (id) => set({ compareLeftId: id }),
-    setCompareRightId: (id) => set({ compareRightId: id }),
-    setCompareActiveTab: (tab) => set({ compareActiveTab: tab }),
     setComparePickerSide: (side) => set({ comparePickerSide: side }),
-    clearCompareSelection: () => set({ compareLeftId: null, compareRightId: null, comparePickerSide: null }),
 
     // Audit
-    setAuditFilter: (filter) => set({ auditFilter: filter }),
     toggleAuditExpanded: (id) =>
       set((s) => {
         const next = new Set(s.auditExpandedIds)
@@ -160,4 +149,3 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
     },
   }
 }
-

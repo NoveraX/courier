@@ -1,4 +1,5 @@
-import { useMemo } from "react"
+import { useMemo, useCallback } from "react"
+import { getRouteApi } from "@tanstack/react-router"
 import { ArrowLeftRight, X } from "lucide-react"
 
 import type { CompareTab } from "../../store"
@@ -16,17 +17,37 @@ const COMPARE_TABS: { id: CompareTab; label: string }[] = [
   { id: "timing", label: "Timing" },
 ]
 
+const routeApi = getRouteApi("/compare")
+
 // ── Compare View ────────────────────────────────────────────────────────────
 
 export function CompareView() {
-  const {
-    requests, connected,
-    compareLeftId: leftId, compareRightId: rightId,
-    compareActiveTab: activeTab, comparePickerSide: pickerSide,
-    setCompareLeftId: setLeftId, setCompareRightId: setRightId,
-    setCompareActiveTab: setActiveTab, setComparePickerSide: setPickerSide,
-    clearCompareSelection,
-  } = useDevToolsStore()
+  const { requests, connected, comparePickerSide: pickerSide, setComparePickerSide: setPickerSide } =
+    useDevToolsStore()
+
+  const search = routeApi.useSearch()
+  const navigate = routeApi.useNavigate()
+
+  const leftId = search.left ?? null
+  const rightId = search.right ?? null
+  const activeTab: CompareTab = search.tab ?? "response"
+
+  const setLeftId = useCallback(
+    (id: string) => { void navigate({ search: (prev) => ({ ...prev, left: id }) }) },
+    [navigate],
+  )
+  const setRightId = useCallback(
+    (id: string) => { void navigate({ search: (prev) => ({ ...prev, right: id }) }) },
+    [navigate],
+  )
+  const setActiveTab = useCallback(
+    (tab: CompareTab) => { void navigate({ search: (prev) => ({ ...prev, tab }) }) },
+    [navigate],
+  )
+  const clearCompareSelection = useCallback(
+    () => { void navigate({ search: {} }); setPickerSide(null) },
+    [navigate, setPickerSide],
+  )
 
   const completed = useMemo(
     () => requests.filter((r) => r.status !== "pending"),

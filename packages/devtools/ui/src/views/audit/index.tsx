@@ -1,8 +1,8 @@
-import { useMemo } from "react"
-import { useNavigate } from "@tanstack/react-router"
+import { useMemo, useCallback } from "react"
+import { getRouteApi, useNavigate } from "@tanstack/react-router"
 import { ShieldCheck, CheckCircle2, ChevronRight, Play, Info } from "lucide-react"
 
-import type { SourceMap } from "../../store"
+import type { SourceMap, AuditSeverityFilter } from "../../store"
 
 import { useDevToolsStore } from "../../store"
 import { Badge } from "../../components/ui"
@@ -12,10 +12,20 @@ import type { AuditSeverity } from "./types"
 import { SEVERITY_CONFIG } from "./constants"
 import { runAudit } from "./run-audit"
 
+const routeApi = getRouteApi("/audit")
+
 export function AuditView() {
-  const { sessions, requests, auditFilter, auditExpandedIds, setAuditFilter, toggleAuditExpanded } =
-    useDevToolsStore()
+  const { sessions, requests, auditExpandedIds, toggleAuditExpanded } = useDevToolsStore()
   const navigate = useNavigate()
+
+  const { severity: auditFilter = "all" } = routeApi.useSearch()
+  const routeNavigate = routeApi.useNavigate()
+  const setAuditFilter = useCallback(
+    (f: AuditSeverityFilter) => {
+      void routeNavigate({ search: { severity: f === "all" ? undefined : f } })
+    },
+    [routeNavigate],
+  )
 
   const merged = useMemo(() => mergeSourceMaps(sessions), [sessions])
   const isDemo = Object.keys(merged).length === 0

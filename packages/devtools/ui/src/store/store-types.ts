@@ -5,15 +5,12 @@ import type {
   SourceMap,
   RequestEntry,
   DevToolsEvent,
-  TimelineFilters,
   PlaygroundHistoryEntry,
   GraphLayout,
   ListSortKey,
   ListSortDir,
   WaterfallSortField,
   WaterfallGroupBy,
-  CompareTab,
-  AuditSeverityFilter,
   Settings,
   Toast,
 } from "./types"
@@ -31,13 +28,8 @@ export interface DevToolsState {
 
   // Requests
   requests: RequestEntry[]
-  selectedRequestId: string | null
   paused: boolean
   preserveLog: boolean
-
-  // Timeline filters
-  timelineFilters: TimelineFilters
-  timelineShowFilters: boolean
 
   // Explorer
   explorerSelectedEndpoint: { source: string; group: string; method: string } | null
@@ -53,17 +45,12 @@ export interface DevToolsState {
   waterfallZoom: number
 
   // Middleware
-  middlewareSelectedId: string | null
   middlewareShowStats: boolean
 
-  // Compare
-  compareLeftId: string | null
-  compareRightId: string | null
-  compareActiveTab: CompareTab
+  // Compare (transient UI only — IDs and tab are in URL)
   comparePickerSide: "left" | "right" | null
 
   // Audit
-  auditFilter: AuditSeverityFilter
   auditExpandedIds: Set<string>
 
   // Playground
@@ -88,16 +75,11 @@ export interface DevToolsState {
   updateSessionSources: (sessionId: string, sources: SourceMap) => void
 
   // Actions — Requests
-  selectRequest: (id: string | null) => void
   togglePaused: () => void
   togglePreserveLog: () => void
   clearRequests: () => void
   togglePin: (id: string) => void
   handleEvent: (event: DevToolsEvent & Record<string, unknown>) => void
-
-  // Actions — Timeline filters
-  setTimelineFilters: (f: TimelineFilters) => void
-  setTimelineShowFilters: (v: boolean) => void
 
   // Actions — Explorer
   setExplorerSelectedEndpoint: (ep: { source: string; group: string; method: string } | null) => void
@@ -113,18 +95,12 @@ export interface DevToolsState {
   setWaterfallZoom: (zoom: number) => void
 
   // Actions — Middleware
-  setMiddlewareSelectedId: (id: string | null) => void
   setMiddlewareShowStats: (show: boolean) => void
 
   // Actions — Compare
-  setCompareLeftId: (id: string | null) => void
-  setCompareRightId: (id: string | null) => void
-  setCompareActiveTab: (tab: CompareTab) => void
   setComparePickerSide: (side: "left" | "right" | null) => void
-  clearCompareSelection: () => void
 
   // Actions — Audit
-  setAuditFilter: (filter: AuditSeverityFilter) => void
   toggleAuditExpanded: (id: string) => void
 
   // Actions — Playground

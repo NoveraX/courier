@@ -1,0 +1,77 @@
+const SECOND = 1000;
+const MINUTE = 60 * SECOND;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
+const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+export function formatRelativeTime(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+
+  if (diff < MINUTE) return "just now";
+  if (diff < HOUR) return rtf.format(-Math.floor(diff / MINUTE), "minute");
+  if (diff < DAY) return rtf.format(-Math.floor(diff / HOUR), "hour");
+  return rtf.format(-Math.floor(diff / DAY), "day");
+}
+
+export function formatAbsoluteTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString("en-US", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    fractionalSecondDigits: 3,
+  });
+}
+
+export function formatTimestamp(
+  timestamp: number,
+  format: "relative" | "absolute",
+): string {
+  return format === "relative"
+    ? formatRelativeTime(timestamp)
+    : formatAbsoluteTime(timestamp);
+}
+
+export function formatDuration(ms: number): string {
+  if (ms < 1) return `${(ms * 1000).toFixed(0)}µs`;
+  if (ms < SECOND) return `${ms.toFixed(ms < 10 ? 1 : 0)}ms`;
+  if (ms < MINUTE) return `${(ms / SECOND).toFixed(2)}s`;
+  return `${Math.floor(ms / MINUTE)}m ${Math.floor((ms % MINUTE) / SECOND)}s`;
+}
+
+const SIZE_UNITS = ["B", "KB", "MB", "GB"] as const;
+
+export function formatSize(bytes: number): string {
+  if (bytes === 0) return "0 B";
+
+  let unitIndex = 0;
+  let size = Math.abs(bytes);
+
+  while (size >= 1024 && unitIndex < SIZE_UNITS.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+
+  return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${SIZE_UNITS[unitIndex]}`;
+}
+
+export function formatNumber(n: number): string {
+  if (n < 1000) return n.toString();
+  if (n < 1_000_000) return `${(n / 1000).toFixed(1)}K`;
+  return `${(n / 1_000_000).toFixed(1)}M`;
+}
+
+export function formatStatusCode(code: number): string {
+  return code.toString();
+}
+
+export function formatPercent(value: number, total: number): string {
+  if (total === 0) return "0%";
+  return `${((value / total) * 100).toFixed(1)}%`;
+}
+
+export function truncate(str: string, maxLen: number): string {
+  if (str.length <= maxLen) return str;
+  return `${str.slice(0, maxLen - 1)}…`;
+}

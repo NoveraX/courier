@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
-    "@tanstack/react-router": "^1.166.7",
+"@tanstack/react-router": "^1.166.7",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.21",
     "@tanstack/router-plugin": "^1.166.7",

@@ -3,6 +3,7 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
+import { createFetch } from "@noverax/nexus/fetch";
 import type { ParsedSpec } from "../apis";
 import {
   computeSpecHash,
@@ -23,6 +24,8 @@ import type { JsonResponse } from "./route-types";
 import { validateSpecUrl } from "./validate-url";
 
 export { errMsg, readFilesFromDisk, writeFileWithDirs } from "./fs-helpers";
+
+const specClient = createFetch();
 
 /** Persist fingerprint and digest caches for a source in one call */
 export function persistCaches(
@@ -92,12 +95,12 @@ export function detectUserModified(
 export async function fetchSpecRaw(specUrl: string, res: JsonResponse): Promise<string | null> {
   if (isUrl(specUrl)) {
     await validateSpecUrl(specUrl);
-    const response = await fetch(specUrl);
-    if (!response.ok) {
-      res.status(502).json({ error: `Failed to fetch spec: ${response.status}` });
+    try {
+      return await specClient.get<string>(specUrl, { responseType: "text" });
+    } catch {
+      res.status(502).json({ error: `Failed to fetch spec from ${specUrl}` });
       return null;
     }
-    return response.text();
   }
 
   const filePath = resolveProjectSafe(specUrl);
@@ -127,8 +130,11 @@ export async function checkSingleSource(
 
 async function fetchRemoteSpec(specUrl: string): Promise<string | null> {
   await validateSpecUrl(specUrl);
-  const response = await fetch(specUrl);
-  return response.ok ? response.text() : null;
+  try {
+    return await specClient.get<string>(specUrl, { responseType: "text" });
+  } catch {
+    return null;
+  }
 }
 
 function readLocalSpec(specUrl: string): string | null {

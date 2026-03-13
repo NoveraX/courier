@@ -1,3 +1,4 @@
+import { client, rethrowMessage } from "./client";
 import type {
   GenerateOptions,
   GeneratedFile,
@@ -5,37 +6,25 @@ import type {
   ParsedSpec,
 } from "./types";
 
-export const API_BASE = import.meta.env.DEV ? "http://localhost:4380" : "";
-
 /**
  * Parse a spec from URL, file path, or raw content.
  * When called with a single string arg, auto-detects URL vs file path.
  * When called with two args, uses explicit source type (for import wizard).
  */
 export async function fetchParseSpec(sourceOrUrl: ImportSource | string, content?: string): Promise<ParsedSpec> {
-  /* Overload: single arg = specUrl (auto-detect), two args = explicit source + content */
   const body = content !== undefined
     ? { source: sourceOrUrl, content }
     : { source: /^https?:\/\//.test(sourceOrUrl) ? "url" : "file", content: sourceOrUrl };
-  const res = await fetch(`${API_BASE}/api/apis/parse`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Failed to parse spec");
-  return data as ParsedSpec;
+
+  return client.post<ParsedSpec>("/api/apis/parse", { json: body })
+    .catch(rethrowMessage("Failed to parse spec"));
 }
 
 export async function fetchGenerateCode(spec: ParsedSpec, options: GenerateOptions): Promise<GeneratedFile[]> {
-  const res = await fetch(`${API_BASE}/api/apis/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ spec, options }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Code generation failed");
-  return data.files as GeneratedFile[];
+  const data = await client.post<{ files: GeneratedFile[] }>("/api/apis/generate", {
+    json: { spec, options },
+  }).catch(rethrowMessage("Code generation failed"));
+  return data.files;
 }
 
 export interface WriteResult {
@@ -60,19 +49,14 @@ export async function fetchWriteFiles(
     options: GenerateOptions;
   },
 ): Promise<WriteResult> {
-  const res = await fetch(`${API_BASE}/api/apis/write`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  return client.post<WriteResult>("/api/apis/write", {
+    json: {
       files,
       sourceName: ctx?.sourceName,
       spec: ctx?.spec,
       specUrl: ctx?.specUrl,
       importType: ctx?.importType,
       options: ctx?.options,
-    }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Failed to write files");
-  return data as WriteResult;
+    },
+  }).catch(rethrowMessage("Failed to write files"));
 }

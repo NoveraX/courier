@@ -26,6 +26,10 @@
       "types": "./lib/node.d.ts",
       "import": "./lib/node.js"
     },
+    "./fetch": {
+      "types": "./lib/fetch/index.d.ts",
+      "import": "./lib/fetch/index.js"
+    },
     "./testing": {
       "types": "./lib/testing/index.d.ts",
       "import": "./lib/testing/index.js"

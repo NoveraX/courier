@@ -3,6 +3,7 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
+import { createFetch } from "@noverax/nexus/fetch";
 import {
   diffSpecs,
   type FingerprintResult,
@@ -28,6 +29,8 @@ import {
 } from "./validate-body";
 import { validateSpecUrl } from "./validate-url";
 import { registerWriteRoutes } from "./write-routes";
+
+const specClient = createFetch();
 
 export function registerApisRoutes(app: RouteApp): void {
   app.post("/api/apis/parse", async (req, res) => {
@@ -113,11 +116,7 @@ async function resolveSpecContent(
 ): Promise<string> {
   if (source === "url") {
     await validateSpecUrl(content);
-    const response = await fetch(content);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch spec: ${response.status} ${response.statusText}`);
-    }
-    return response.text();
+    return specClient.get<string>(content, { responseType: "text" });
   }
   if (source === "file") {
     const filePath = resolveProjectSafe(content);

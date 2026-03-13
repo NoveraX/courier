@@ -1,15 +1,10 @@
+import { client, rethrowMessage } from "./client";
 import type { ParsedSpec, UpdateResult } from "./types";
-import { API_BASE } from "./api";
 
 export async function fetchUpdatePreview(name: string, newSpec: ParsedSpec): Promise<UpdateResult> {
-  const res = await fetch(`${API_BASE}/api/apis/update/preview`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, newSpec }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Failed to preview update");
-  return data as UpdateResult;
+  return client.post<UpdateResult>("/api/apis/update/preview", {
+    json: { name, newSpec },
+  }).catch(rethrowMessage("Failed to preview update"));
 }
 
 export async function fetchUpdateApply(
@@ -17,12 +12,7 @@ export async function fetchUpdateApply(
   newSpec: ParsedSpec,
   files: { path: string; content: string }[],
 ): Promise<{ written: number; deleted: number }> {
-  const res = await fetch(`${API_BASE}/api/apis/update/apply`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, newSpec, files }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Failed to apply update");
-  return data as { written: number; deleted: number };
+  return client.post<{ written: number; deleted: number }>("/api/apis/update/apply", {
+    json: { name, newSpec, files },
+  }).catch(rethrowMessage("Failed to apply update"));
 }

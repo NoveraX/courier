@@ -12,6 +12,7 @@ export {
 } from "./client";
 export { type DevToolsHooks, devtoolsHooks } from "./devtools";
 export { HTTPError, isHTTPError } from "./error";
+export { createFetch, type FetchClient, type FetchClientOptions } from "./fetch";
 export type {
   CallOptions,
   Context,

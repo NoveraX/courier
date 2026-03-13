@@ -39,8 +39,8 @@ function createSnapshot() {
   };
 }
 
-/** Start watching project files, emit changes to UI namespace */
-export function startFileWatcher(uiNamespace: Namespace): () => void {
+/** Start watching project files, emit changes to UI and app namespaces */
+export function startFileWatcher(uiNamespace: Namespace, appNamespace?: Namespace): () => void {
   const initialRegistry = loadRegistry();
   const scanPaths = initialRegistry.scanPaths ?? ["src/api"];
   const snapshot = createSnapshot();
@@ -93,6 +93,8 @@ export function startFileWatcher(uiNamespace: Namespace): () => void {
     if (TS_EXTENSIONS.test(filePath)) {
       emitScanUpdate();
       scheduleModifiedCheck(filePath);
+      // Notify connected apps to re-emit their source map (hot reload fallback)
+      appNamespace?.emit("sources:invalidate", { timestamp: Date.now() });
     }
   };
 

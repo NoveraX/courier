@@ -43,3 +43,9 @@ export type {
   ValidationStartEvent,
 } from "./events";
 export { extractSourceMap } from "./source-map";
+export {
+  getSources,
+  getSourcesGeneration,
+  onSourcesChange,
+  registerSources,
+} from "./sources-registry";

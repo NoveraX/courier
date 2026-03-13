@@ -1,13 +1,13 @@
 /**
  * Project initialization — ensures registry.nexus.json exists
- * and .nexus-cache.json is in .gitignore.
+ * and `.nexus/` directory is in .gitignore.
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { loadRegistry, saveRegistry } from "../apis";
 import { resolveProject } from "../context";
 
-const CACHE_FILES = [".nexus-cache.json", ".nexus-digests.json"];
+const NEXUS_DIR = ".nexus/";
 const GITIGNORE = ".gitignore";
 
 /** Initialize project: create registry if missing, update .gitignore */
@@ -27,16 +27,15 @@ function ensureGitignore(): boolean {
   const gitignorePath = resolveProject(GITIGNORE);
 
   if (!existsSync(gitignorePath)) {
-    writeFileSync(gitignorePath, `# Nexus devtools cache\n${CACHE_FILES.join("\n")}\n`, "utf-8");
+    writeFileSync(gitignorePath, `# Nexus devtools cache\n${NEXUS_DIR}\n`, "utf-8");
     return true;
   }
 
   const content = readFileSync(gitignorePath, "utf-8");
-  const missing = CACHE_FILES.filter((f) => !content.includes(f));
-  if (missing.length === 0) return false;
+  if (content.includes(NEXUS_DIR)) return false;
 
   const separator = content.endsWith("\n") ? "" : "\n";
   const header = content.includes("# Nexus devtools cache") ? "" : "\n# Nexus devtools cache";
-  writeFileSync(gitignorePath, `${content}${separator}${header}\n${missing.join("\n")}\n`, "utf-8");
+  writeFileSync(gitignorePath, `${content}${separator}${header}\n${NEXUS_DIR}\n`, "utf-8");
   return true;
 }

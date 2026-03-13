@@ -2,6 +2,8 @@ import { executeRequest } from "@noverax/nexus";
 import type { Sources } from "@noverax/nexus/define";
 import type { EventBus } from "../event-bus";
 import type { SourceMap } from "../events";
+import { extractSourceMap } from "../source-map";
+import { getSources, onSourcesChange } from "../sources-registry";
 
 /** Try to connect via Socket.IO (fails silently if not installed) */
 export async function tryConnectSocket(
@@ -49,8 +51,21 @@ export async function tryConnectSocket(
     }, 30_000);
 
     // Forward all bus events to Socket.IO
-    const unsubscribe = bus.on((event) => {
+    const unsubBus = bus.on((event) => {
       socket.emit("event", event);
+    });
+
+    // Emit connection:sources when global registry updates
+    const unsubSources = onSourcesChange((newSources) => {
+      if (!socket.connected) return;
+      const newSourceMap = extractSourceMap(newSources);
+      socket.emit("event", {
+        id: sessionId,
+        type: "connection:sources",
+        timestamp: Date.now(),
+        sessionId,
+        sources: newSourceMap,
+      });
     });
 
     // Playground: execute endpoint on behalf of DevTools UI
@@ -67,13 +82,29 @@ export async function tryConnectSocket(
         },
         callback: (result: Record<string, unknown>) => void,
       ) => {
-        handlePlaygroundExecute(sources, payload, callback);
+        // Always resolve from global registry for fresh sources after HMR
+        handlePlaygroundExecute(getSources() ?? sources, payload, callback);
       },
     );
 
+    // Listen for sources:invalidate from devtools server (file watcher fallback)
+    socket.on("sources:invalidate", () => {
+      const current = getSources();
+      if (!current || !socket.connected) return;
+      const freshMap = extractSourceMap(current);
+      socket.emit("event", {
+        id: sessionId,
+        type: "connection:sources",
+        timestamp: Date.now(),
+        sessionId,
+        sources: freshMap,
+      });
+    });
+
     return () => {
       clearInterval(heartbeatInterval);
-      unsubscribe();
+      unsubBus();
+      unsubSources();
       socket.disconnect();
     };
   } catch {

@@ -2,7 +2,7 @@
  * API Registry — CRUD operations for managing imported API sources.
  *
  * Persists to `registry.nexus.json` in the project root.
- * Stores user config + userModified list (fingerprints live in .nexus-cache.json).
+ * Stores user config + userModified list (fingerprints live in `.nexus/cache.json`).
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";

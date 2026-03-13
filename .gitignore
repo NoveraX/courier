@@ -39,8 +39,7 @@ coverage/
 routeTree.gen.ts
 
 # Nexus devtools cache
-.nexus-cache.json
-.nexus-digests.json
+.nexus/
 
 # Temporary
 tmp/

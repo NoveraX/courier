@@ -1,12 +1,27 @@
 import { devtoolsHooks } from "@noverax/nexus";
+import type { AnySource } from "@noverax/nexus/define";
 import { EventBus } from "../event-bus";
 import { extractSourceMap } from "../source-map";
+import { getSources, registerSources } from "../sources-registry";
 import { wireHooks } from "./hooks";
 import { wireHttpHooks } from "./hooks-http";
 import { tryConnectSocket } from "./socket";
 import type { ConnectDevToolsOptions, DevToolsConnection } from "./types";
 
-let activeConnection: DevToolsConnection | null = null;
+/**
+ * Store activeConnection on globalThis so it survives Turbopack / webpack
+ * module duplication — same pattern as devtoolsHooks in core.
+ */
+const CONNECTION_KEY = Symbol.for("nexus.devtools.connection");
+const g = globalThis as Record<symbol, unknown>;
+
+function getActiveConnection(): DevToolsConnection | null {
+  return (g[CONNECTION_KEY] as DevToolsConnection | undefined) ?? null;
+}
+
+function setActiveConnection(conn: DevToolsConnection | null): void {
+  g[CONNECTION_KEY] = conn;
+}
 
 /**
  * Connect Nexus to DevTools.
@@ -16,6 +31,10 @@ let activeConnection: DevToolsConnection | null = null;
  * 2. Wires core devtools hooks to emit events on the bus
  * 3. Optionally connects to a DevTools server via Socket.IO
  *
+ * Safe to call multiple times — subsequent calls with new `sources`
+ * update the global registry and emit `connection:sources` without
+ * tearing down the existing socket connection.
+ *
  * Call this in development only:
  * ```ts
  * if (process.env.NODE_ENV === 'development') {
@@ -24,9 +43,14 @@ let activeConnection: DevToolsConnection | null = null;
  * ```
  */
 export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsConnection {
-  // Prevent double connection
-  if (activeConnection) {
-    return activeConnection;
+  const existing = getActiveConnection();
+
+  // Re-entry: update sources in global registry (triggers connection:sources via listener)
+  if (existing) {
+    if (options.sources) {
+      registerSources(options.sources);
+    }
+    return existing;
   }
 
   const {
@@ -39,6 +63,11 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
     maxBufferSize,
     filter,
   } = options;
+
+  // Populate global registry on first connection
+  if (sources) {
+    registerSources(sources);
+  }
 
   const resolvedSourceMap = sourceMap ?? (sources ? extractSourceMap(sources) : undefined);
 
@@ -61,6 +90,22 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
   // Wire core hooks to EventBus
   wireHooks(bus, sessionId, resolveSourceName, shouldFilter);
   wireHttpHooks(bus, sessionId, resolveSourceName, shouldFilter);
+
+  // HMR reconciliation: when defineApi() re-creates a source with the same
+  // baseURL, replace the old entry in the registry so Playground uses fresh code.
+  devtoolsHooks.onSourceDefined = (newSource: unknown, baseURL: string) => {
+    const current = getSources();
+    if (!current || !baseURL) return;
+
+    const src = newSource as AnySource;
+    for (const [key, existing] of Object.entries(current)) {
+      if (existing.options?.baseURL === baseURL && existing !== src) {
+        current[key] = src;
+        registerSources({ ...current });
+        return;
+      }
+    }
+  };
 
   // Socket.IO connection (optional)
   let socketCleanup: (() => void) | undefined;
@@ -108,17 +153,19 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
     devtoolsHooks.onDedupReuse = undefined;
     devtoolsHooks.onUploadProgress = undefined;
     devtoolsHooks.onUploadComplete = undefined;
+    devtoolsHooks.onSourceDefined = undefined;
 
     socketCleanup?.();
     bus.clear();
-    activeConnection = null;
+    setActiveConnection(null);
   };
 
-  activeConnection = { bus, sessionId, disconnect };
-  return activeConnection;
+  const connection: DevToolsConnection = { bus, sessionId, disconnect };
+  setActiveConnection(connection);
+  return connection;
 }
 
 /** Get the active DevTools connection (if any) */
 export function getDevToolsConnection(): DevToolsConnection | null {
-  return activeConnection;
+  return getActiveConnection();
 }

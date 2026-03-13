@@ -1,5 +1,6 @@
 import type { StateCreator } from "zustand"
 
+import type { SourceMap } from "./types"
 import type { DevToolsState } from "./store-types"
 import { THEME_STORAGE_KEY, PLAYGROUND_MAX_HISTORY, DEFAULT_SETTINGS, saveSettings, saveSessionStartedAt } from "./constants"
 import { applyTheme } from "./theme"
@@ -53,6 +54,12 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
             : s.requests.filter((r) => r.sessionId !== sessionId || r.pinned),
         }
       }),
+    updateSessionSources: (sessionId, sources) =>
+      set((s) => ({
+        sessions: s.sessions.map((ss) =>
+          ss.sessionId === sessionId ? { ...ss, sources } : ss
+        ),
+      })),
 
     // Requests
     selectRequest: (id) => set({ selectedRequestId: id }),
@@ -129,6 +136,14 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
 
     handleEvent: (event) => {
       if (get().paused) return
+
+      // Hot reload: update session sources without going through request reducer
+      if (event.type === "connection:sources" && event.sources) {
+        get().updateSessionSources(event.sessionId, event.sources as SourceMap)
+        get().showToast("Sources updated", "info")
+        return
+      }
+
       set((state) => handleEventReducer(state, event))
       notifyOnEvent(event, get)
     },

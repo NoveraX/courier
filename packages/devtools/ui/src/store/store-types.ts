@@ -2,6 +2,7 @@ import type {
   Theme,
   ConnectionStatus,
   SessionInfo,
+  SourceMap,
   RequestEntry,
   DevToolsEvent,
   TimelineFilters,
@@ -84,6 +85,7 @@ export interface DevToolsState {
   setSessions: (sessions: SessionInfo[]) => void
   addSession: (session: SessionInfo) => void
   removeSession: (sessionId: string) => void
+  updateSessionSources: (sessionId: string, sources: SourceMap) => void
 
   // Actions — Requests
   selectRequest: (id: string | null) => void

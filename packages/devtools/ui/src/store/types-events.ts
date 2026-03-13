@@ -2,6 +2,7 @@
 
 export type EventType =
   | "connection:init"
+  | "connection:sources"
   | "request:start"
   | "request:end"
   | "request:error"

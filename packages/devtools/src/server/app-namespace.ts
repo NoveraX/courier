@@ -34,6 +34,14 @@ export function setupAppNamespace(
         uiNamespace.emit("session:connect", sessions.get(sessionId));
       }
 
+      // Hot reload: update session sources when app re-registers
+      if (event.type === "connection:sources" && sessionId) {
+        const session = sessions.get(sessionId);
+        if (session) {
+          session.sources = (event.sources as Record<string, unknown>) ?? {};
+        }
+      }
+
       // Forward all events to UI namespace
       uiNamespace.emit("event", event);
     });

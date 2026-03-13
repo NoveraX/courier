@@ -157,6 +157,9 @@ export interface DevToolsHooks {
   }) => void;
 
   onUploadComplete?: (event: { requestId: string; timestamp: number }) => void;
+
+  /** Dev-only: fired when defineApi() creates or re-creates a source (HMR support) */
+  onSourceDefined?: (source: unknown, baseURL: string) => void;
 }
 
 /**

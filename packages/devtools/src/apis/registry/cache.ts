@@ -1,12 +1,13 @@
 /**
- * Local caches (gitignored):
- * - `.nexus-cache.json` — endpoint fingerprint hashes for user-modification detection
- * - `.nexus-digests.json` — compact spec snapshots for API-level diffing
+ * Local caches stored in `.nexus/` directory (gitignored):
+ * - `cache.json` — endpoint fingerprint hashes for user-modification detection
+ * - `digests.json` — compact spec snapshots for API-level diffing
  *
  * Both files are minified JSON for compact storage.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { resolveProject } from "../../context";
 
 import type { SpecDigest } from "../merge/types";
@@ -21,10 +22,15 @@ export interface DigestCache {
   [sourceName: string]: SpecDigest;
 }
 
-const CACHE_PATH = ".nexus-cache.json";
-const DIGEST_PATH = ".nexus-digests.json";
+const CACHE_PATH = ".nexus/cache.json";
+const DIGEST_PATH = ".nexus/digests.json";
 
 // ── Shared I/O ──────────────────────────────────────────────────────────────
+
+function ensureParentDir(filePath: string): void {
+  const dir = dirname(filePath);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+}
 
 function readJson<T>(path: string): T | null {
   const filePath = resolveProject(path);
@@ -38,7 +44,9 @@ function readJson<T>(path: string): T | null {
 }
 
 function writeJson(path: string, data: unknown): void {
-  writeFileSync(resolveProject(path), JSON.stringify(data), "utf-8");
+  const filePath = resolveProject(path);
+  ensureParentDir(filePath);
+  writeFileSync(filePath, JSON.stringify(data), "utf-8");
 }
 
 // ── Fingerprint Cache ───────────────────────────────────────────────────────

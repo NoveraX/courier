@@ -1,4 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import { devtoolsHooks } from "../devtools";
 import type { BaseOptions } from "../http-client/types";
 import {
   type CacheConfig,
@@ -143,8 +144,14 @@ export function defineApi(
   config: BaseOptions & { groups?: GroupRecord; endpoints?: EndpointRecord },
 ): DefinedApi | DefinedFlatApi | DefinedMixedApi {
   const { endpoints, ...rest } = config;
-  if (endpoints) {
-    return Object.assign({ options: rest }, endpoints);
+  const result = endpoints
+    ? Object.assign({ options: rest }, endpoints)
+    : ({ options: config } as DefinedApi);
+
+  // Dev-only: notify devtools of source (re)creation for HMR hot reload
+  if (process.env.NODE_ENV !== "production") {
+    devtoolsHooks.onSourceDefined?.(result, config.baseURL ?? "");
   }
-  return { options: config } as DefinedApi;
+
+  return result;
 }

@@ -18,7 +18,7 @@ export function JsonTreePrimitive({
   const { display, type } = formatValue(value);
 
   return (
-    <span className={cn("text-mono-sm", VALUE_STYLES[type])}>
+    <span className={cn("mono-sm", VALUE_STYLES[type])}>
       {display}
     </span>
   );

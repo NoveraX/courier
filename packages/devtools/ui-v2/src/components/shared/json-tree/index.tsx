@@ -10,6 +10,8 @@ interface JsonTreeProps {
   data: unknown;
   className?: string;
   maxHeight?: string;
+  /** Fill all available parent height (parent must be flex column) */
+  fill?: boolean;
   showPath?: boolean;
   showCopy?: boolean;
 }
@@ -18,6 +20,7 @@ export function JsonTree({
   data,
   className,
   maxHeight = "400px",
+  fill = false,
   showPath = true,
   showCopy = true,
 }: JsonTreeProps): React.ReactElement {
@@ -29,25 +32,30 @@ export function JsonTree({
 
   const serialized = safeStringify(data);
   const isExpandable = isComplex(data);
+  const scrollStyle = !fill && maxHeight !== "none" ? { maxHeight } : undefined;
 
   return (
-    <div className={cn("rounded-lg border border-border-subtle bg-background-inset", className)}>
+    <div className={cn(
+      "overflow-hidden rounded-lg border border-border-subtle bg-background-inset",
+      fill && "flex min-h-0 flex-1 flex-col",
+      className,
+    )}>
       {(showPath || showCopy) && (
-        <div className="flex items-center justify-between border-b border-border-subtle px-3 py-1.5">
+        <div className="flex shrink-0 items-center justify-between border-b border-border-subtle px-3 py-1.5">
           {showPath && <PathBreadcrumb path={selectedPath} />}
           {!showPath && <div />}
           {showCopy && <CopyButton value={serialized} label="Copy JSON" />}
         </div>
       )}
 
-      <ScrollArea style={{ maxHeight }} className="p-2">
+      <ScrollArea style={scrollStyle} className={cn("p-2", fill && "min-h-0 flex-1")}>
         {isExpandable ? (
           <RootEntries
             data={data}
             onSelect={handleSelect}
           />
         ) : (
-          <pre className="text-mono-sm px-1 py-0.5">{serialized}</pre>
+          <pre className="mono-sm px-1 py-0.5">{serialized}</pre>
         )}
       </ScrollArea>
     </div>

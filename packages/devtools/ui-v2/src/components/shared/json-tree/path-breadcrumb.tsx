@@ -24,7 +24,7 @@ export function PathBreadcrumb({
   return (
     <div
       className={cn(
-        "flex items-center gap-0.5 text-mono-xs text-muted-foreground",
+        "flex items-center gap-0.5 mono-xs text-muted-foreground",
         className,
       )}
     >

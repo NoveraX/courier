@@ -93,7 +93,7 @@ export function FilterSelect({
                   </div>
                   <span className="flex-1 truncate">{option.label}</span>
                   {option.count !== undefined && (
-                    <span className="text-mono-xs text-muted-foreground">
+                    <span className="mono-xs text-muted-foreground">
                       {option.count}
                     </span>
                   )}

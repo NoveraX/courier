@@ -24,7 +24,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-4 py-16 text-center",
+        "flex flex-col items-center justify-center gap-4 px-12 py-16 text-center",
         "rounded-xl border border-dashed border-border-subtle",
         "bg-gradient-to-b from-background-inset/50 to-transparent",
         className,
@@ -36,7 +36,7 @@ export function EmptyState({
 
       <div className="space-y-1.5">
         <h3 className="text-h3 text-foreground">{heading}</h3>
-        <p className="text-body-sm text-muted-foreground max-w-[280px]">
+        <p className="text-body-sm text-muted-foreground max-w-[360px]">
           {description}
         </p>
       </div>

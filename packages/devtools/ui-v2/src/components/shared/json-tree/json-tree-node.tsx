@@ -56,8 +56,8 @@ export function JsonTreeNode({
           <span className="w-3.5 shrink-0" />
         )}
 
-        <span className="text-mono-sm text-violet-400">{name}</span>
-        <span className="text-mono-sm text-muted-foreground/50">:</span>
+        <span className="mono-sm text-violet-400">{name}</span>
+        <span className="mono-sm text-muted-foreground/50">:</span>
 
         {!isExpandable && (
           <JsonTreePrimitive value={value} />
@@ -83,14 +83,14 @@ export function JsonTreeNode({
 function CollapsedPreview({ value }: { value: unknown }): React.ReactElement {
   if (isArray(value)) {
     return (
-      <span className="text-mono-xs text-muted-foreground">
+      <span className="mono-xs text-muted-foreground">
         [{(value as unknown[]).length}]
       </span>
     );
   }
   const keys = Object.keys(value as object);
   return (
-    <span className="text-mono-xs text-muted-foreground">
+    <span className="mono-xs text-muted-foreground">
       {`{${keys.length}}`}
     </span>
   );

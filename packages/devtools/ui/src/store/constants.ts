@@ -27,6 +27,14 @@ export const DEFAULT_SETTINGS: Settings = {
   toastOnError: true,
   toastOnSlowRequest: true,
   slowRequestThreshold: 500,
+  autoReconnect: true,
+  reconnectDelay: 1000,
+  codegenValidation: "zod",
+  codegenGroupBy: "tag",
+  codegenGenerateTypes: true,
+  codegenGenerateSchemas: true,
+  codegenIncludeComments: true,
+  codegenClient: "direct",
 }
 
 // ── Safe localStorage reads ─────────────────────────────────────────────────

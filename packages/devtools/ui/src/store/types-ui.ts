@@ -107,6 +107,9 @@ export type AuditSeverityFilter = "error" | "warning" | "hint" | "pass" | "all"
 
 export type TimestampFormat = "relative" | "absolute"
 export type JsonIndent = 2 | 4
+export type ValidationLib = "zod" | "valibot" | "arktype" | "none"
+export type CodegenGroupBy = "tag" | "path" | "single"
+export type CodegenClient = "direct" | "proxy" | "both" | "none"
 
 export interface Settings {
   // Recording
@@ -122,6 +125,18 @@ export interface Settings {
   toastOnError: boolean
   toastOnSlowRequest: boolean
   slowRequestThreshold: number
+
+  // Connection
+  autoReconnect: boolean
+  reconnectDelay: number
+
+  // Codegen defaults
+  codegenValidation: ValidationLib
+  codegenGroupBy: CodegenGroupBy
+  codegenGenerateTypes: boolean
+  codegenGenerateSchemas: boolean
+  codegenIncludeComments: boolean
+  codegenClient: CodegenClient
 }
 
 // ── Toast ───────────────────────────────────────────────────────────────────

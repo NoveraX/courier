@@ -1,9 +1,11 @@
 import { RotateCcw } from "lucide-react"
 
 import { useDevToolsStore } from "../../store"
+import { ConnectionSection } from "./connection-section"
 import { RecordingSection } from "./recording-section"
 import { DisplaySection } from "./display-section"
 import { NotificationsSection } from "./notifications-section"
+import { CodegenSection } from "./codegen-section"
 import { SessionHistorySection } from "./session-history-section"
 
 // ── Settings View ───────────────────────────────────────────────────────────
@@ -38,9 +40,11 @@ export function SettingsView() {
 
       {/* Sections */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <ConnectionSection settings={settings} onUpdate={updateSettings} />
         <RecordingSection settings={settings} onUpdate={updateSettings} />
         <DisplaySection settings={settings} onUpdate={updateSettings} />
         <NotificationsSection settings={settings} onUpdate={updateSettings} />
+        <CodegenSection settings={settings} onUpdate={updateSettings} />
         <SessionHistorySection />
 
         {/* Version info */}

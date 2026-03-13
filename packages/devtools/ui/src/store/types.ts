@@ -34,6 +34,9 @@ export type {
   AuditSeverityFilter,
   TimestampFormat,
   JsonIndent,
+  ValidationLib,
+  CodegenGroupBy,
+  CodegenClient,
   Settings,
   Toast,
 } from "./types-ui"

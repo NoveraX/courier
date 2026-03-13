@@ -11,9 +11,7 @@ export interface ConnectDevToolsOptions {
   framework?: string;
   /** Nexus version for connection:init */
   nexusVersion?: string;
-  /** Sources object — auto-extracts source map for API Explorer */
-  sources?: Sources;
-  /** Pre-built source map (alternative to sources) */
+  /** Pre-built source map (sent in connection:init before registry populates) */
   sourceMap?: SourceMap;
   /** Max buffered events before a listener connects */
   maxBufferSize?: number;

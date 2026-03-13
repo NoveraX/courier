@@ -3,7 +3,7 @@ import type { Sources } from "@noverax/nexus/define";
 import type { EventBus } from "../event-bus";
 import type { SourceMap } from "../events";
 import { extractSourceMap } from "../source-map";
-import { getSources, onSourcesChange } from "../sources-registry";
+import { getSources, getSourcesGeneration, onSourcesChange } from "../sources-registry";
 
 /** Try to connect via Socket.IO (fails silently if not installed) */
 export async function tryConnectSocket(
@@ -14,7 +14,6 @@ export async function tryConnectSocket(
   framework: string,
   nexusVersion: string,
   sourceMap?: SourceMap,
-  sources?: Sources,
 ): Promise<(() => void) | undefined> {
   try {
     const { io } = await import("socket.io-client");
@@ -83,26 +82,40 @@ export async function tryConnectSocket(
         callback: (result: Record<string, unknown>) => void,
       ) => {
         // Always resolve from global registry for fresh sources after HMR
-        handlePlaygroundExecute(getSources() ?? sources, payload, callback);
+        handlePlaygroundExecute(getSources(), payload, callback);
       },
     );
 
-    // Listen for sources:invalidate from devtools server (file watcher fallback)
+    // Listen for sources:invalidate from devtools server (file watcher).
+    // Only re-emit if HMR actually updated the registry (generation bumped).
+    // If generation is unchanged, the runtime data is stale — the server's
+    // file watcher already pushed fresh scan-derived data via pushSourceMapToSessions.
+    let invalidateTimer: ReturnType<typeof setTimeout> | undefined;
     socket.on("sources:invalidate", () => {
-      const current = getSources();
-      if (!current || !socket.connected) return;
-      const freshMap = extractSourceMap(current);
-      socket.emit("event", {
-        id: sessionId,
-        type: "connection:sources",
-        timestamp: Date.now(),
-        sessionId,
-        sources: freshMap,
-      });
+      clearTimeout(invalidateTimer);
+      const genBefore = getSourcesGeneration();
+      invalidateTimer = setTimeout(() => {
+        if (!socket.connected) return;
+        // Generation unchanged → HMR didn't fire → runtime data is stale.
+        // The file watcher already pushed scan-derived data — don't overwrite.
+        if (getSourcesGeneration() === genBefore) return;
+        // HMR fired but onSourcesChange already emitted — this is a redundant
+        // safety net in case the listener missed (shouldn't happen in practice).
+        const current = getSources();
+        if (!current) return;
+        socket.emit("event", {
+          id: sessionId,
+          type: "connection:sources",
+          timestamp: Date.now(),
+          sessionId,
+          sources: extractSourceMap(current),
+        });
+      }, 500);
     });
 
     return () => {
       clearInterval(heartbeatInterval);
+      clearTimeout(invalidateTimer);
       unsubBus();
       unsubSources();
       socket.disconnect();

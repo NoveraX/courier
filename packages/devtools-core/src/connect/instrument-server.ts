@@ -1,3 +1,5 @@
+import { extractSourceMap } from "../source-map";
+import { registerSources } from "../sources-registry";
 import { connectDevTools } from "./connect-devtools";
 import type { DevToolsConnection, InstrumentServerOptions } from "./types";
 
@@ -57,9 +59,13 @@ export function instrumentServer(options: InstrumentServerOptions): DevToolsConn
 
   const { sources, framework, ...rest } = options;
 
+  // Register sources before connectDevTools so the registry is populated
+  // (onSourcesChange listener isn't set up yet, so we pass sourceMap explicitly)
+  registerSources(sources);
+
   return connectDevTools({
     ...rest,
-    sources,
+    sourceMap: extractSourceMap(sources),
     framework: framework ?? detectFramework(),
   });
 }

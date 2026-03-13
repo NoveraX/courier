@@ -48,7 +48,7 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
 
   // ── File Watcher (hot reload) ──────────────────────────────────────────────
 
-  const stopWatcher = startFileWatcher(uiNamespace, appNamespace);
+  const stopWatcher = startFileWatcher(uiNamespace, appNamespace, sessions);
 
   // ── REST API ─────────────────────────────────────────────────────────────────
 

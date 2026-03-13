@@ -12,8 +12,10 @@ import { loadCache } from "../apis/registry/cache";
 import { loadRegistry } from "../apis/registry/registry";
 import type { RegistryConfig } from "../apis/registry/types";
 import { scanProject } from "../apis/scanner";
+import { scanToSourceMap } from "../apis/scanner/scan-to-source-map";
 import { resolveProject } from "../context";
 import { syncUserModified } from "./sync-user-modified";
+import type { SessionInfo } from "./types";
 
 export interface FileChangeEvent {
   type: "scan" | "registry";
@@ -40,7 +42,11 @@ function createSnapshot() {
 }
 
 /** Start watching project files, emit changes to UI and app namespaces */
-export function startFileWatcher(uiNamespace: Namespace, appNamespace?: Namespace): () => void {
+export function startFileWatcher(
+  uiNamespace: Namespace,
+  appNamespace?: Namespace,
+  sessions?: Map<string, SessionInfo>,
+): () => void {
   const initialRegistry = loadRegistry();
   const scanPaths = initialRegistry.scanPaths ?? ["src/api"];
   const snapshot = createSnapshot();
@@ -65,7 +71,18 @@ export function startFileWatcher(uiNamespace: Namespace, appNamespace?: Namespac
   const emitScanUpdate = () => {
     scanTimer = debounce(scanTimer, DEBOUNCE_MS, () => {
       try {
-        uiNamespace.emit("scan:updated", scanProject());
+        const scan = scanProject();
+        uiNamespace.emit("scan:updated", scan);
+
+        // Push scan-derived source map into all active sessions so the
+        // Playground/Explorer always reflect file-system truth — even when
+        // the app's runtime registry hasn't been updated by HMR yet.
+        if (sessions && sessions.size > 0) {
+          const freshMap = scanToSourceMap(scan);
+          if (Object.keys(freshMap).length > 0) {
+            pushSourceMapToSessions(freshMap, sessions, uiNamespace);
+          }
+        }
       } catch (err) {
         console.warn("Failed to emit scan update:", err);
       }
@@ -108,4 +125,22 @@ export function startFileWatcher(uiNamespace: Namespace, appNamespace?: Namespac
     if (modifiedTimer) clearTimeout(modifiedTimer);
     void watcher.close();
   };
+}
+
+/** Replace session source maps with scan-derived data and notify UI */
+function pushSourceMapToSessions(
+  freshMap: Record<string, unknown>,
+  sessions: Map<string, SessionInfo>,
+  uiNamespace: Namespace,
+): void {
+  for (const [, session] of sessions) {
+    session.sources = freshMap;
+    uiNamespace.emit("event", {
+      id: session.sessionId,
+      type: "connection:sources",
+      timestamp: Date.now(),
+      sessionId: session.sessionId,
+      sources: freshMap,
+    });
+  }
 }

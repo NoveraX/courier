@@ -11,6 +11,13 @@ import { createInitialState } from "./initial-state"
 type Setter = Parameters<StateCreator<DevToolsState>>[0]
 type Getter = Parameters<StateCreator<DevToolsState>>[1]
 
+/** Collapse rapid-fire "Sources updated" toasts into a single one */
+let sourcesToastTimer: ReturnType<typeof setTimeout> | undefined
+function debouncedSourcesToast(get: Getter): void {
+  clearTimeout(sourcesToastTimer)
+  sourcesToastTimer = setTimeout(() => get().showToast("Sources updated", "info"), 500)
+}
+
 export function createActions(set: Setter, get: Getter): Omit<DevToolsState, keyof ReturnType<typeof createInitialState>> {
   return {
     // UI
@@ -129,7 +136,7 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
       // Hot reload: update session sources without going through request reducer
       if (event.type === "connection:sources" && event.sources) {
         get().updateSessionSources(event.sessionId, event.sources as SourceMap)
-        get().showToast("Sources updated", "info")
+        debouncedSourcesToast(get)
         return
       }
 

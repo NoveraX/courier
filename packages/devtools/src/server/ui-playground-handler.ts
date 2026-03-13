@@ -79,5 +79,7 @@ function resolveTargetSocket(
     const found = appSockets.find((s) => s.data?.sessionId === sessionId);
     if (found) return found;
   }
-  return appSockets[0] as (typeof appSockets)[number];
+  // Prefer the most recently connected socket — browser sessions connect
+  // after server sessions and have fresher sources thanks to push-based HMR.
+  return appSockets[appSockets.length - 1] as (typeof appSockets)[number];
 }

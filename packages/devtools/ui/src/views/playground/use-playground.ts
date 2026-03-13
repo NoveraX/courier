@@ -17,6 +17,8 @@ export function usePlayground() {
     clearPlaygroundHistory,
   } = useDevToolsStore()
 
+  const hasSessions = sessions.length > 0
+
   const sourceMap = useMemo(() => {
     const merged = mergeSourceMaps(sessions)
     return Object.keys(merged).length > 0 ? merged : getDemoSourceMap()
@@ -125,6 +127,7 @@ export function usePlayground() {
 
   return {
     connected,
+    hasSessions,
     isUsingDemo,
     sourceNames,
     selectedSource,

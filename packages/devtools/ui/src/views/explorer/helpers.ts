@@ -22,25 +22,10 @@ export function mergeSourceMaps(sessions: { sources: SourceMap }[]): SourceMap {
   const merged: SourceMap = {}
   for (const session of sessions) {
     for (const [sourceName, source] of Object.entries(session.sources ?? {})) {
-      if (!merged[sourceName]) {
-        merged[sourceName] = structuredClone(source)
-      } else {
-        // Update baseURL to latest session's value
-        merged[sourceName]!.baseURL = source.baseURL
-        // Merge groups and endpoints
-        for (const [groupName, group] of Object.entries(source.groups ?? {})) {
-          if (!merged[sourceName]!.groups[groupName]) {
-            merged[sourceName]!.groups[groupName] = group
-          } else {
-            // Update prefix to latest
-            merged[sourceName]!.groups[groupName]!.prefix = group.prefix
-            // Merge endpoints within existing group
-            for (const [epName, ep] of Object.entries(group.endpoints ?? {})) {
-              merged[sourceName]!.groups[groupName]!.endpoints[epName] = ep
-            }
-          }
-        }
-      }
+      // Later sessions replace earlier ones for the same source —
+      // this ensures HMR renames/deletions are reflected correctly
+      // when server and browser sessions report different snapshots.
+      merged[sourceName] = structuredClone(source)
     }
   }
   return merged

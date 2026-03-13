@@ -1,46 +1,19 @@
-import { Command } from "cmdk";
 import {
-  Activity, GitBranch, Layers, BarChart3, Network, Play,
-  ShieldCheck, ChevronsLeftRightEllipsis, GitCompare, Settings,
-  Trash2, Pause, Sun, Moon, Monitor, Search,
+  Trash2, Pause, Play, Search, Sun, Moon, Monitor,
 } from "lucide-react";
 
-import type { LucideIcon } from "lucide-react";
 import type { RequestEntry } from "../store";
 
-// ── Constants ────────────────────────────────────────────────────────────────
+import { ALL_NAV_ITEMS, SETTINGS_NAV } from "../app-config";
+import {
+  CommandGroup,
+  CommandItem,
+  CommandShortcut,
+} from "@/components/ui/command";
 
-const NAV_ITEMS: { to: string; icon: LucideIcon; label: string; shortcut?: string[] }[] = [
-  { to: "/timeline", icon: Activity, label: "Timeline", shortcut: ["1"] },
-  { to: "/waterfall", icon: GitBranch, label: "Waterfall", shortcut: ["2"] },
-  { to: "/middleware", icon: Layers, label: "Middleware" },
-  { to: "/analytics", icon: BarChart3, label: "Analytics" },
-  { to: "/explorer", icon: Network, label: "API Explorer" },
-  { to: "/playground", icon: Play, label: "Playground", shortcut: ["6"] },
-  { to: "/audit", icon: ShieldCheck, label: "Audit" },
-  { to: "/apis", icon: ChevronsLeftRightEllipsis, label: "APIs" },
-  { to: "/compare", icon: GitCompare, label: "Compare" },
-  { to: "/settings", icon: Settings, label: "Settings", shortcut: ["⌘", ","] },
-];
+// ── Status dot (for recent requests) ────────────────────────────────────────
 
-// ── Shared Helpers ───────────────────────────────────────────────────────────
-
-export function Shortcut({ keys }: { keys: string[] }) {
-  return (
-    <span className="ml-auto flex items-center gap-0.5">
-      {keys.map((k) => (
-        <kbd
-          key={k}
-          className="rounded border border-border bg-muted px-1 py-0.5 text-[10px] text-muted-foreground"
-        >
-          {k}
-        </kbd>
-      ))}
-    </span>
-  );
-}
-
-export function StatusDot({ status }: { status: string }) {
+function StatusDot({ status }: { status: string }) {
   const color =
     status === "success"
       ? "bg-emerald-500"
@@ -50,31 +23,28 @@ export function StatusDot({ status }: { status: string }) {
           ? "bg-sky-500"
           : "bg-zinc-500";
 
-  return <div className={`h-2 w-2 shrink-0 rounded-full ${color}`} />;
+  return <div className={`size-2 shrink-0 rounded-full ${color}`} />;
 }
 
-// ── Navigate Group ───────────────────────────────────────────────────────────
+// ── Navigate ────────────────────────────────────────────────────────────────
+
+const NAV_ITEMS = [...ALL_NAV_ITEMS, SETTINGS_NAV];
 
 export function NavigateGroup({ onNavigate }: { onNavigate: (path: string) => void }) {
   return (
-    <Command.Group heading="Navigate" className="command-group">
+    <CommandGroup heading="Navigate">
       {NAV_ITEMS.map(({ to, icon: Icon, label, shortcut }) => (
-        <Command.Item
-          key={to}
-          value={`navigate ${to} ${label}`}
-          onSelect={() => onNavigate(to)}
-          className="command-item"
-        >
-          <Icon size={14} className="shrink-0 text-muted-foreground" />
+        <CommandItem key={to} value={`navigate ${to} ${label}`} onSelect={() => onNavigate(to)}>
+          <Icon />
           <span>{label}</span>
-          {shortcut && <Shortcut keys={shortcut} />}
-        </Command.Item>
+          {shortcut && <CommandShortcut>{shortcut}</CommandShortcut>}
+        </CommandItem>
       ))}
-    </Command.Group>
+    </CommandGroup>
   );
 }
 
-// ── Actions Group ────────────────────────────────────────────────────────────
+// ── Actions ─────────────────────────────────────────────────────────────────
 
 export function ActionsGroup({
   paused,
@@ -88,48 +58,48 @@ export function ActionsGroup({
   onShowFilters: () => void;
 }) {
   return (
-    <Command.Group heading="Actions" className="command-group">
-      <Command.Item value="clear requests" onSelect={onClear} className="command-item">
-        <Trash2 size={14} className="shrink-0 text-muted-foreground" />
+    <CommandGroup heading="Actions">
+      <CommandItem value="clear requests" onSelect={onClear}>
+        <Trash2 />
         <span>Clear all requests</span>
-        <Shortcut keys={["⌘", "E"]} />
-      </Command.Item>
-      <Command.Item value="pause resume recording" onSelect={onTogglePause} className="command-item">
-        <Pause size={14} className="shrink-0 text-muted-foreground" />
+        <CommandShortcut>⌘E</CommandShortcut>
+      </CommandItem>
+      <CommandItem value="pause resume recording" onSelect={onTogglePause}>
+        {paused ? <Play /> : <Pause />}
         <span>{paused ? "Resume recording" : "Pause recording"}</span>
-        <Shortcut keys={["⌘", "P"]} />
-      </Command.Item>
-      <Command.Item value="search filter requests" onSelect={onShowFilters} className="command-item">
-        <Search size={14} className="shrink-0 text-muted-foreground" />
+        <CommandShortcut>⌘P</CommandShortcut>
+      </CommandItem>
+      <CommandItem value="search filter requests" onSelect={onShowFilters}>
+        <Search />
         <span>Search / filter requests</span>
-        <Shortcut keys={["⌘", "F"]} />
-      </Command.Item>
-    </Command.Group>
+        <CommandShortcut>⌘F</CommandShortcut>
+      </CommandItem>
+    </CommandGroup>
   );
 }
 
-// ── Theme Group ──────────────────────────────────────────────────────────────
+// ── Theme ───────────────────────────────────────────────────────────────────
 
 export function ThemeGroup({ onSelect }: { onSelect: (theme: "dark" | "light" | "system") => void }) {
   return (
-    <Command.Group heading="Theme" className="command-group">
-      <Command.Item value="theme dark" onSelect={() => onSelect("dark")} className="command-item">
-        <Moon size={14} className="shrink-0 text-muted-foreground" />
+    <CommandGroup heading="Theme">
+      <CommandItem value="theme dark" onSelect={() => onSelect("dark")}>
+        <Moon />
         <span>Dark theme</span>
-      </Command.Item>
-      <Command.Item value="theme light" onSelect={() => onSelect("light")} className="command-item">
-        <Sun size={14} className="shrink-0 text-muted-foreground" />
+      </CommandItem>
+      <CommandItem value="theme light" onSelect={() => onSelect("light")}>
+        <Sun />
         <span>Light theme</span>
-      </Command.Item>
-      <Command.Item value="theme system auto" onSelect={() => onSelect("system")} className="command-item">
-        <Monitor size={14} className="shrink-0 text-muted-foreground" />
+      </CommandItem>
+      <CommandItem value="theme system auto" onSelect={() => onSelect("system")}>
+        <Monitor />
         <span>System theme</span>
-      </Command.Item>
-    </Command.Group>
+      </CommandItem>
+    </CommandGroup>
   );
 }
 
-// ── Recent Requests Group ────────────────────────────────────────────────────
+// ── Recent Requests ─────────────────────────────────────────────────────────
 
 export function RecentRequestsGroup({
   requests,
@@ -141,23 +111,22 @@ export function RecentRequestsGroup({
   if (requests.length === 0) return null;
 
   return (
-    <Command.Group heading="Recent Requests" className="command-group">
+    <CommandGroup heading="Recent Requests">
       {requests.map((r) => (
-        <Command.Item
+        <CommandItem
           key={r.id}
           value={`request ${r.source} ${r.group} ${r.method} ${r.id}`}
           onSelect={() => onSelect(r.id)}
-          className="command-item"
         >
           <StatusDot status={r.status} />
           <span className="font-mono text-xs">
             {r.source}.{r.group}.{r.method}
           </span>
           {r.statusCode && (
-            <span className="ml-auto text-xs text-muted-foreground">{r.statusCode}</span>
+            <CommandShortcut>{r.statusCode}</CommandShortcut>
           )}
-        </Command.Item>
+        </CommandItem>
       ))}
-    </Command.Group>
+    </CommandGroup>
   );
 }

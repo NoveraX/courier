@@ -1,7 +1,12 @@
+import { useNavigate } from "@tanstack/react-router";
+
 import { useDevToolsStore } from "../store";
 import { useSessionTimer } from "./use-session-timer";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 export function StatusBar() {
+  const navigate = useNavigate();
   const {
     connectionStatus, sessions, requests, paused,
     settings, sessionStartedAt,
@@ -17,61 +22,57 @@ export function StatusBar() {
     (r) => r.timing?.total != null && r.timing.total > settings.slowRequestThreshold,
   ).length;
 
+  const dotColor =
+    connectionStatus === "connected"
+      ? "bg-emerald-500"
+      : connectionStatus === "reconnecting"
+        ? "bg-amber-500 animate-pulse-dot"
+        : "bg-zinc-600";
+
   return (
     <footer className="flex h-7 shrink-0 items-center justify-between border-t border-border bg-background px-3 text-[11px]">
-      <div className="flex items-center gap-3">
-        <ConnectionIndicator status={connectionStatus} sessionCount={sessions.length} />
-        {paused && <span className="text-amber-400">Paused</span>}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => void navigate({ to: "/settings" })}
+          className="flex items-center gap-1.5 rounded px-1 py-0.5 hover:bg-accent"
+        >
+          <div className={`size-1.5 rounded-full ${dotColor}`} />
+          <span className="text-muted-foreground">
+            {connectionStatus === "connected"
+              ? `${sessions.length} app${sessions.length !== 1 ? "s" : ""}`
+              : connectionStatus === "reconnecting"
+                ? "Reconnecting\u2026"
+                : "Offline"}
+          </span>
+        </button>
+
+        {paused && (
+          <>
+            <Separator orientation="vertical" className="h-3" />
+            <Badge variant="outline" className="h-4 px-1 py-0 text-[10px] text-warning-foreground">
+              Paused
+            </Badge>
+          </>
+        )}
       </div>
 
-      <div className="flex items-center gap-3">
-        {sessionTime && (
-          <span className="text-muted-foreground" title="Session duration">{sessionTime}</span>
-        )}
-        <span className="text-muted-foreground">{requests.length} requests</span>
+      <div className="flex items-center gap-2 text-muted-foreground">
+        {sessionTime && <span title="Session duration">{sessionTime}</span>}
+        <Separator orientation="vertical" className="h-3" />
+        <span>{requests.length} requests</span>
         {errorCount > 0 && (
-          <span className="text-red-400">
+          <span className="text-destructive-foreground">
             {errorCount} error{errorCount > 1 ? "s" : ""}
           </span>
         )}
         {slowCount > 0 && (
-          <span className="text-amber-400">{slowCount} slow</span>
+          <span className="text-warning-foreground">{slowCount} slow</span>
         )}
         {pendingCount > 0 && (
-          <span className="text-sky-400">{pendingCount} pending</span>
+          <span className="text-info-foreground">{pendingCount} pending</span>
         )}
       </div>
     </footer>
-  );
-}
-
-function ConnectionIndicator({
-  status,
-  sessionCount,
-}: {
-  status: string
-  sessionCount: number
-}) {
-  const dotColor =
-    status === "connected"
-      ? "bg-emerald-500"
-      : status === "reconnecting"
-        ? "bg-amber-500 animate-pulse-dot"
-        : "bg-zinc-600";
-
-  const label =
-    status === "connected"
-      ? sessionCount > 0
-        ? `${sessionCount} app${sessionCount > 1 ? "s" : ""} connected`
-        : "Connected, waiting for apps"
-      : status === "reconnecting"
-        ? "Reconnecting\u2026"
-        : "Disconnected";
-
-  return (
-    <div className="flex items-center gap-1.5">
-      <div className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
-      <span className="text-muted-foreground">{label}</span>
-    </div>
   );
 }

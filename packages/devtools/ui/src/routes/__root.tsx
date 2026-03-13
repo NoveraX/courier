@@ -1,25 +1,23 @@
 import { useState, useMemo } from "react";
 import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
 
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { useSocketConnection } from "../socket";
 import { useDevToolsStore } from "../store";
-import { TAB_ROUTES, THEME_ICONS, THEME_CYCLE } from "../app-config";
+import { TAB_ROUTES } from "../app-config";
 import { CommandPalette } from "../components/command-palette";
 import { StatusBar } from "../components/status-bar";
 import { useHotkeys } from "../components/use-hotkeys";
-import { Sidebar } from "../components/sidebar";
+import { AppSidebar } from "../components/app-sidebar";
+import { TopBar } from "../components/top-bar";
 
 function RootComponent() {
   useSocketConnection();
   const [commandOpen, setCommandOpen] = useState(false);
   const navigate = useNavigate();
 
-  const {
-    theme, setTheme,
-    togglePaused, clearRequests,
-  } = useDevToolsStore();
+  const { togglePaused, clearRequests } = useDevToolsStore();
 
   const hotkeys = useMemo(() => [
     { key: "k", meta: true, handler: () => setCommandOpen(true) },
@@ -35,29 +33,25 @@ function RootComponent() {
 
   useHotkeys(hotkeys);
 
-  function nextTheme() {
-    const idx = THEME_CYCLE.indexOf(theme);
-    setTheme(THEME_CYCLE[(idx + 1) % THEME_CYCLE.length]!);
-  }
-
-  const ThemeIcon = THEME_ICONS[theme];
-
   return (
-    <TooltipProvider delayDuration={300}>
-      <div className="flex h-screen flex-col bg-background text-foreground">
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar themeIcon={ThemeIcon} theme={theme} onThemeToggle={nextTheme} />
+    <SidebarProvider
+      defaultOpen={false}
+      style={{ "--sidebar-width": "13.75rem" } as React.CSSProperties}
+      className="h-screen! min-h-0!"
+    >
+      <AppSidebar />
 
-          <main className="flex flex-1 flex-col overflow-hidden">
-            <Outlet />
-          </main>
-        </div>
-
+      <SidebarInset className="flex flex-col overflow-hidden">
+        <TopBar onSearchClick={() => setCommandOpen(true)} />
+        <main className="flex flex-1 flex-col overflow-hidden">
+          <Outlet />
+        </main>
         <StatusBar />
-        <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-      </div>
+      </SidebarInset>
+
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
       <Toaster />
-    </TooltipProvider>
+    </SidebarProvider>
   );
 }
 

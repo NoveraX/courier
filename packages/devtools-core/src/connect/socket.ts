@@ -122,15 +122,20 @@ async function handlePlaygroundExecute(
   }
 
   try {
-    const data = await executeRequest(sources, {
-      source: resolvedSource,
-      group: payload.group,
-      method: payload.method,
-      variables: payload.variables as Record<string, unknown>,
-      options: {
-        headers: payload.headers,
+    const context = payload.mode === "proxy" ? { mode: "proxy" as const } : undefined;
+    const data = await executeRequest(
+      sources,
+      {
+        source: resolvedSource,
+        group: payload.group,
+        method: payload.method,
+        variables: payload.variables as Record<string, unknown>,
+        options: {
+          headers: payload.headers,
+        },
       },
-    });
+      context,
+    );
 
     callback({
       status: 200,

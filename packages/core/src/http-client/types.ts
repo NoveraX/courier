@@ -110,4 +110,6 @@ export type Context = {
   headers?: Headers;
   /** HTTP method of the proxy request (set by apiRoute) */
   proxyMethod?: "GET" | "POST";
+  /** Override mode for devtools events (e.g. playground replay preserving original mode) */
+  mode?: "direct" | "proxy";
 };

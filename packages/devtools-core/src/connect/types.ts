@@ -32,3 +32,16 @@ export interface DevToolsConnection {
   /** Disconnect and restore original hooks */
   disconnect: () => void;
 }
+
+export interface InstrumentServerOptions {
+  /** API sources to instrument (required for server-side hook wiring) */
+  sources: Sources;
+  /** DevTools server port (default: 4380) */
+  port?: number;
+  /** DevTools server host (default: "localhost") */
+  host?: string;
+  /** Framework identifier (default: "server") */
+  framework?: string;
+  /** Event filtering */
+  filter?: ConnectDevToolsOptions["filter"];
+}

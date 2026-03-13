@@ -3,6 +3,8 @@ export {
   connectDevTools,
   type DevToolsConnection,
   getDevToolsConnection,
+  type InstrumentServerOptions,
+  instrumentServer,
 } from "./connect";
 export { EventBus } from "./event-bus";
 export type {

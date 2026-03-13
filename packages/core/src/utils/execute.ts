@@ -90,7 +90,7 @@ export async function executeRequest(
     headers: newHeaders,
   };
 
-  const mode = context?.res instanceof Response ? "proxy" : "direct";
+  const mode = context?.mode ?? (context?.res instanceof Response ? "proxy" : "direct");
   const validationCtx = { hasDevtools, requestId, dt };
 
   dt.onRequestStart?.({

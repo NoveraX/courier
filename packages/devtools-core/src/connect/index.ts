@@ -1,2 +1,3 @@
 export { connectDevTools, getDevToolsConnection } from "./connect-devtools";
-export type { ConnectDevToolsOptions, DevToolsConnection } from "./types";
+export { instrumentServer } from "./instrument-server";
+export type { ConnectDevToolsOptions, DevToolsConnection, InstrumentServerOptions } from "./types";

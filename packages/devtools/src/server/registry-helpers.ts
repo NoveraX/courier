@@ -3,7 +3,7 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import type { ParsedSpec } from "../codegen";
+import type { ParsedSpec } from "../apis";
 import {
   computeSpecHash,
   createSpecDigest,
@@ -15,8 +15,8 @@ import {
   saveDigestCache,
   updateCachedDigest,
   updateCachedFingerprints,
-} from "../codegen";
-import type { RegistrySource } from "../codegen/registry/types";
+} from "../apis";
+import type { RegistrySource } from "../apis/registry/types";
 import { resolveProjectSafe } from "../context";
 import { isUrl } from "./fs-helpers";
 import type { JsonResponse } from "./route-types";

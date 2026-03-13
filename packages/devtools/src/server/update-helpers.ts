@@ -2,7 +2,7 @@
  * Helpers for update flow routes — preview and apply logic.
  */
 
-import type { ParsedSpec } from "../codegen";
+import type { ParsedSpec } from "../apis";
 import {
   computeSpecHash,
   createSpecDigest,
@@ -16,10 +16,10 @@ import {
   loadRegistry,
   saveRegistry,
   updateSource,
-} from "../codegen";
-import type { BreakingChange, MergeChange, SpecDiff } from "../codegen/merge/types";
-import { previewUpdate } from "../codegen/merge/update-flow";
-import type { RegistryConfig } from "../codegen/registry/types";
+} from "../apis";
+import type { BreakingChange, MergeChange, SpecDiff } from "../apis/merge/types";
+import { previewUpdate } from "../apis/merge/update-flow";
+import type { RegistryConfig } from "../apis/registry/types";
 import { resolveProjectSafe } from "../context";
 import { cleanupOrphanFiles } from "./cleanup-orphans";
 import { getEffectiveDir } from "./fs-helpers";

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { extractEndpoints } from "../src/codegen/scanner/scan-endpoint"
-import { extractGroups, extractSource, isNexusFile } from "../src/codegen/scanner/scan-source"
+import { extractEndpoints } from "../src/apis/scanner/scan-endpoint"
+import { extractGroups, extractSource, isNexusFile } from "../src/apis/scanner/scan-source"
 
 describe("scanner", () => {
   describe("isNexusFile", () => {

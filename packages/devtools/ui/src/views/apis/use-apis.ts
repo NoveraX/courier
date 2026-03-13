@@ -3,10 +3,10 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import type { Step, SourceConfig, SourceState } from "./types"
 import { fetchParseSpec } from "./api"
 import { createDefaultSource, createDefaultState, groupKey } from "./helpers"
-import { createCodegenActions } from "./codegen-actions"
+import { createApisActions } from "./apis-actions"
 import { useSelectionActions } from "./use-selection-actions"
 
-export function useCodegen() {
+export function useApis() {
   const [sources, setSources] = useState<SourceConfig[]>([createDefaultSource()])
   const [states, setStates] = useState<SourceState[]>([createDefaultState()])
   const [activeSourceIdx, setActiveSourceIdx] = useState(0)
@@ -128,7 +128,7 @@ export function useCodegen() {
   const totalSelected = Object.values(st.selection).reduce((sum, s) => sum + s.size, 0)
   const totalEndpoints = st.spec?.groups.reduce((sum, g) => sum + g.endpoints.length, 0) ?? 0
 
-  const actions = useMemo(() => createCodegenActions({
+  const actions = useMemo(() => createApisActions({
     activeSourceIdx, src, st,
     setSources, updateState,
     setStep, setLoading, setError, setWriteResult,

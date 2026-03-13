@@ -1,8 +1,8 @@
 /**
- * Express route for codegen write — merges with existing files or writes raw.
+ * Express route for apis write — merges with existing files or writes raw.
  */
 
-import { getSource, loadRegistry } from "../codegen";
+import { getSource, loadRegistry } from "../apis";
 import { errMsg } from "./registry-helpers";
 import { withRegistryLock } from "./registry-lock";
 import type { RouteApp } from "./route-types";
@@ -11,7 +11,7 @@ import { handleMergeWrite, handleRawWrite } from "./write-helpers";
 import type { WriteBody } from "./write-types";
 
 export function registerWriteRoutes(app: RouteApp): void {
-  app.post("/api/codegen/write", (req, res) => {
+  app.post("/api/apis/write", (req, res) => {
     const validated = validateWriteBody(req.body, res);
     if (!validated) return;
 

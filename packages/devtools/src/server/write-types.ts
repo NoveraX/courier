@@ -1,9 +1,9 @@
 /**
- * Shared types for codegen write routes.
+ * Shared types for apis write routes.
  */
 
-import type { GenerateOptions, ParsedSpec } from "../codegen";
-import type { SpecImportType } from "../codegen/registry/types";
+import type { GenerateOptions, ParsedSpec } from "../apis";
+import type { SpecImportType } from "../apis/registry/types";
 
 export interface WriteBody {
   files: { path: string; content: string }[];

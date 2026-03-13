@@ -7,11 +7,11 @@
 
 import { watch } from "chokidar";
 import type { Namespace } from "socket.io";
-import type { FingerprintCache } from "../codegen/registry/cache";
-import { loadCache } from "../codegen/registry/cache";
-import { loadRegistry } from "../codegen/registry/registry";
-import type { RegistryConfig } from "../codegen/registry/types";
-import { scanProject } from "../codegen/scanner";
+import type { FingerprintCache } from "../apis/registry/cache";
+import { loadCache } from "../apis/registry/cache";
+import { loadRegistry } from "../apis/registry/registry";
+import type { RegistryConfig } from "../apis/registry/types";
+import { scanProject } from "../apis/scanner";
 import { resolveProject } from "../context";
 import { syncUserModified } from "./sync-user-modified";
 

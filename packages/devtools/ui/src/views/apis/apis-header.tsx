@@ -1,9 +1,9 @@
 import type { LucideIcon } from "lucide-react"
 import { ChevronsLeftRightEllipsis, Database, Download, Eye, Plus, Trash2 } from "lucide-react"
 
-import type { CodegenTab, Step, SourceConfig, SourceState } from "./types"
+import type { ApisTab, Step, SourceConfig, SourceState } from "./types"
 
-export function CodegenHeader({
+export function ApisHeader({
   st,
   src,
   watching,
@@ -19,8 +19,8 @@ export function CodegenHeader({
   onToggleWatch: () => void
   step: Step
   onStepChange: (s: Step) => void
-  tab: CodegenTab
-  onTabChange: (t: CodegenTab) => void
+  tab: ApisTab
+  onTabChange: (t: ApisTab) => void
 }) {
   return (
     <div className="flex items-center justify-between border-b border-border-default px-4 py-2.5">
@@ -43,7 +43,7 @@ export function CodegenHeader({
   )
 }
 
-function TabSwitcher({ tab, onTabChange }: { tab: CodegenTab; onTabChange: (t: CodegenTab) => void }) {
+function TabSwitcher({ tab, onTabChange }: { tab: ApisTab; onTabChange: (t: ApisTab) => void }) {
   return (
     <div className="flex items-center rounded-md bg-surface-1 p-0.5">
       <TabButton active={tab === "registry"} onClick={() => onTabChange("registry")} icon={Database} label="Registry" />

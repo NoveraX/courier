@@ -12,8 +12,8 @@ import {
   saveDigestCache,
   updateCachedDigest,
   updateCachedFingerprints,
-} from "../src/codegen/registry/cache"
-import type { SpecDigest } from "../src/codegen/merge/types"
+} from "../src/apis/registry/cache"
+import type { SpecDigest } from "../src/apis/merge/types"
 
 const TEST_CACHE_PATH = join(import.meta.dirname, ".tmp-test-cache.json")
 const TEST_DIGEST_PATH = join(import.meta.dirname, ".tmp-test-digests.json")

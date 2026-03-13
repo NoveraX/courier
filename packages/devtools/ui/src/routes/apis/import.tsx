@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCodegenContext } from "../../views/codegen/codegen-context";
-import { ImportStep } from "../../views/codegen/import-step";
-import { SelectStep } from "../../views/codegen/select-step";
-import { OptionsStep } from "../../views/codegen/options-step";
-import { PreviewStep } from "../../views/codegen/preview-step";
+import { useApisContext } from "../../views/apis/apis-context";
+import { ImportStep } from "../../views/apis/import-step";
+import { SelectStep } from "../../views/apis/select-step";
+import { OptionsStep } from "../../views/apis/options-step";
+import { PreviewStep } from "../../views/apis/preview-step";
 
-function CodegenImportRoute() {
-  const cg = useCodegenContext();
+function ApisImportRoute() {
+  const cg = useApisContext();
 
   if (cg.step === "select" && cg.st.spec) {
     return (
@@ -65,6 +65,6 @@ function CodegenImportRoute() {
   );
 }
 
-export const Route = createFileRoute("/codegen/import")({
-  component: CodegenImportRoute,
+export const Route = createFileRoute("/apis/import")({
+  component: ApisImportRoute,
 });

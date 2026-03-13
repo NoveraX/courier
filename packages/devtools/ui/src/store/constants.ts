@@ -29,12 +29,12 @@ export const DEFAULT_SETTINGS: Settings = {
   slowRequestThreshold: 500,
   autoReconnect: true,
   reconnectDelay: 1000,
-  codegenValidation: "zod",
-  codegenGroupBy: "tag",
-  codegenGenerateTypes: true,
-  codegenGenerateSchemas: true,
-  codegenIncludeComments: true,
-  codegenClient: "direct",
+  apisValidation: "zod",
+  apisGroupBy: "tag",
+  apisGenerateTypes: true,
+  apisGenerateSchemas: true,
+  apisIncludeComments: true,
+  apisClient: "direct",
 }
 
 // ── Safe localStorage reads ─────────────────────────────────────────────────

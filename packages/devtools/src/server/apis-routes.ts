@@ -1,5 +1,5 @@
 /**
- * Express routes for codegen: parse, generate, write, diff, fingerprint.
+ * Express routes for apis: parse, generate, write, diff, fingerprint.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -12,7 +12,7 @@ import {
   mergeGroupFile,
   type ParsedSpec,
   parseSpec,
-} from "../codegen";
+} from "../apis";
 import { resolveProjectSafe } from "../context";
 import { errMsg } from "./registry-helpers";
 import { registerRegistryRoutes } from "./registry-routes";
@@ -29,8 +29,8 @@ import {
 import { validateSpecUrl } from "./validate-url";
 import { registerWriteRoutes } from "./write-routes";
 
-export function registerCodegenRoutes(app: RouteApp): void {
-  app.post("/api/codegen/parse", async (req, res) => {
+export function registerApisRoutes(app: RouteApp): void {
+  app.post("/api/apis/parse", async (req, res) => {
     try {
       const body = validateParseBody(req.body, res);
       if (!body) return;
@@ -41,7 +41,7 @@ export function registerCodegenRoutes(app: RouteApp): void {
     }
   });
 
-  app.post("/api/codegen/generate", (req, res) => {
+  app.post("/api/apis/generate", (req, res) => {
     try {
       const body = validateGenerateBody(req.body, res);
       if (!body) return;
@@ -58,7 +58,7 @@ export function registerCodegenRoutes(app: RouteApp): void {
 
   registerWriteRoutes(app);
 
-  app.post("/api/codegen/diff", (req, res) => {
+  app.post("/api/apis/diff", (req, res) => {
     try {
       const body = validateDiffBody(req.body, res);
       if (!body) return;
@@ -70,7 +70,7 @@ export function registerCodegenRoutes(app: RouteApp): void {
     }
   });
 
-  app.post("/api/codegen/fingerprint", (req, res) => {
+  app.post("/api/apis/fingerprint", (req, res) => {
     try {
       const body = validateFingerprintBody(req.body, res);
       if (!body) return;
@@ -84,7 +84,7 @@ export function registerCodegenRoutes(app: RouteApp): void {
     }
   });
 
-  app.post("/api/codegen/merge", (req, res) => {
+  app.post("/api/apis/merge", (req, res) => {
     try {
       const body = validateMergeBody(req.body, res);
       if (!body) return;

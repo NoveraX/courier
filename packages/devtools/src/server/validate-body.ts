@@ -1,5 +1,5 @@
 /**
- * Runtime body validation guards for codegen route handlers.
+ * Runtime body validation guards for apis route handlers.
  *
  * Each guard returns a typed body or null if validation fails.
  * Keeps validation at the system boundary — internal code can trust the shapes.

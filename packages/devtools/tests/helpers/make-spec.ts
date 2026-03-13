@@ -1,4 +1,4 @@
-import type { ParsedSpec } from "../../src/codegen";
+import type { ParsedSpec } from "../../src/apis";
 
 /** Create a minimal ParsedSpec with optional overrides — shared test helper */
 export function makeSpec(overrides: Partial<ParsedSpec> = {}): ParsedSpec {

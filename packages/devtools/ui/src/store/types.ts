@@ -35,8 +35,8 @@ export type {
   TimestampFormat,
   JsonIndent,
   ValidationLib,
-  CodegenGroupBy,
-  CodegenClient,
+  ApisGroupBy,
+  ApisClient,
   Settings,
   Toast,
 } from "./types-ui"

@@ -10,7 +10,7 @@ export type Tab =
   | "explorer"
   | "playground"
   | "audit"
-  | "codegen"
+  | "apis"
   | "compare"
   | "settings"
 
@@ -108,8 +108,8 @@ export type AuditSeverityFilter = "error" | "warning" | "hint" | "pass" | "all"
 export type TimestampFormat = "relative" | "absolute"
 export type JsonIndent = 2 | 4
 export type ValidationLib = "zod" | "valibot" | "arktype" | "none"
-export type CodegenGroupBy = "tag" | "path" | "single"
-export type CodegenClient = "direct" | "proxy" | "both" | "none"
+export type ApisGroupBy = "tag" | "path" | "single"
+export type ApisClient = "direct" | "proxy" | "both" | "none"
 
 export interface Settings {
   // Recording
@@ -130,13 +130,13 @@ export interface Settings {
   autoReconnect: boolean
   reconnectDelay: number
 
-  // Codegen defaults
-  codegenValidation: ValidationLib
-  codegenGroupBy: CodegenGroupBy
-  codegenGenerateTypes: boolean
-  codegenGenerateSchemas: boolean
-  codegenIncludeComments: boolean
-  codegenClient: CodegenClient
+  // Apis defaults
+  apisValidation: ValidationLib
+  apisGroupBy: ApisGroupBy
+  apisGenerateTypes: boolean
+  apisGenerateSchemas: boolean
+  apisIncludeComments: boolean
+  apisClient: ApisClient
 }
 
 // ── Toast ───────────────────────────────────────────────────────────────────

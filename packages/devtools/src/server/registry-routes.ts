@@ -2,7 +2,7 @@
  * Express routes for the API registry (manage imported sources).
  */
 
-import type { GenerateOptions, ParsedSpec } from "../codegen";
+import type { GenerateOptions, ParsedSpec } from "../apis";
 import {
   addSource,
   getSource,
@@ -18,7 +18,7 @@ import {
   saveCache,
   saveDigestCache,
   saveRegistry,
-} from "../codegen";
+} from "../apis";
 import {
   checkSingleSource,
   collectFingerprints,
@@ -31,7 +31,7 @@ import type { JsonResponse, RouteApp } from "./route-types";
 import { validateNameBody, validateRegistryAddBody } from "./validate-body-registry";
 
 export function registerRegistryRoutes(app: RouteApp): void {
-  app.post("/api/codegen/registry/list", (req, res) => {
+  app.post("/api/apis/registry/list", (req, res) => {
     try {
       const { configPath } = req.body as { configPath?: string };
       const config = loadRegistry(configPath);
@@ -41,7 +41,7 @@ export function registerRegistryRoutes(app: RouteApp): void {
     }
   });
 
-  app.post("/api/codegen/registry/add", (req, res) => {
+  app.post("/api/apis/registry/add", (req, res) => {
     const body = validateRegistryAddBody(req.body, res);
     if (!body) return;
 
@@ -70,7 +70,7 @@ export function registerRegistryRoutes(app: RouteApp): void {
     });
   });
 
-  app.post("/api/codegen/registry/remove", (req, res) => {
+  app.post("/api/apis/registry/remove", (req, res) => {
     const body = validateNameBody(req.body, res);
     if (!body) return;
 
@@ -102,8 +102,8 @@ export function registerRegistryRoutes(app: RouteApp): void {
 }
 
 function registerUpdateRoutes(app: RouteApp): void {
-  app.post("/api/codegen/registry/check-updates", handleCheckUpdates);
-  app.post("/api/codegen/registry/check-all", handleCheckAll);
+  app.post("/api/apis/registry/check-updates", handleCheckUpdates);
+  app.post("/api/apis/registry/check-all", handleCheckAll);
 }
 
 async function handleCheckUpdates(

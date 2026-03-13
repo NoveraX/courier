@@ -2,15 +2,15 @@
  * Merge preview and orphan cleanup helpers for write flow.
  */
 
-import type { GenerateOptions, ParsedSpec } from "../codegen";
-import { addSource, getCachedFingerprints, loadCache, saveRegistry } from "../codegen";
-import { previewUpdate } from "../codegen/merge/update-flow";
+import type { GenerateOptions, ParsedSpec } from "../apis";
+import { addSource, getCachedFingerprints, loadCache, saveRegistry } from "../apis";
+import { previewUpdate } from "../apis/merge/update-flow";
 import type {
   RegistryConfig,
   RegistrySource,
   SpecImportType,
   UpdateResult,
-} from "../codegen/registry/types";
+} from "../apis/registry/types";
 import { resolveProjectSafe } from "../context";
 import { cleanupOrphanFiles } from "./cleanup-orphans";
 import {

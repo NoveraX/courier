@@ -2,7 +2,7 @@ import type { ParsedSpec, SourceSummary } from "./types";
 import { API_BASE } from "./api";
 
 export async function fetchRegistrySources(): Promise<SourceSummary[]> {
-  const res = await fetch(`${API_BASE}/api/codegen/registry/list`, {
+  const res = await fetch(`${API_BASE}/api/apis/registry/list`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
@@ -13,7 +13,7 @@ export async function fetchRegistrySources(): Promise<SourceSummary[]> {
 }
 
 export async function fetchRemoveSource(name: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/codegen/registry/remove`, {
+  const res = await fetch(`${API_BASE}/api/apis/registry/remove`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name }),
@@ -31,7 +31,7 @@ export interface CheckUpdatesResult {
 }
 
 export async function fetchCheckUpdates(name: string): Promise<CheckUpdatesResult> {
-  const res = await fetch(`${API_BASE}/api/codegen/registry/check-updates`, {
+  const res = await fetch(`${API_BASE}/api/apis/registry/check-updates`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name }),
@@ -42,7 +42,7 @@ export async function fetchCheckUpdates(name: string): Promise<CheckUpdatesResul
 }
 
 export async function fetchCheckAllUpdates(): Promise<Record<string, { changed: boolean; error?: string }>> {
-  const res = await fetch(`${API_BASE}/api/codegen/registry/check-all`, {
+  const res = await fetch(`${API_BASE}/api/apis/registry/check-all`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),

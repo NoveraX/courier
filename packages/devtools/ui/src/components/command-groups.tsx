@@ -18,7 +18,7 @@ const NAV_ITEMS: { to: string; icon: LucideIcon; label: string; shortcut?: strin
   { to: "/explorer", icon: Network, label: "API Explorer" },
   { to: "/playground", icon: Play, label: "Playground", shortcut: ["6"] },
   { to: "/audit", icon: ShieldCheck, label: "Audit" },
-  { to: "/codegen", icon: ChevronsLeftRightEllipsis, label: "APIs" },
+  { to: "/apis", icon: ChevronsLeftRightEllipsis, label: "APIs" },
   { to: "/compare", icon: GitCompare, label: "Compare" },
   { to: "/settings", icon: Settings, label: "Settings", shortcut: ["⌘", ","] },
 ];

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { mergeGroupFile } from "../src/codegen/merge/merge-group"
-import { mergeImports } from "../src/codegen/merge/merge-imports"
-import { parseExistingGroup } from "../src/codegen/merge/parse-existing"
-import { splitEndpoint } from "../src/codegen/merge/split-endpoint"
-import type { FingerprintResult, MergeChange } from "../src/codegen/merge/types"
+import { mergeGroupFile } from "../src/apis/merge/merge-group"
+import { mergeImports } from "../src/apis/merge/merge-imports"
+import { parseExistingGroup } from "../src/apis/merge/parse-existing"
+import { splitEndpoint } from "../src/apis/merge/split-endpoint"
+import type { FingerprintResult, MergeChange } from "../src/apis/merge/types"
 
 // ── splitEndpoint ──────────────────────────────────────────────────────────
 

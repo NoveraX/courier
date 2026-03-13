@@ -9,7 +9,7 @@ import { handleApplyUpdate, handlePreviewUpdate } from "./update-helpers";
 import { validateUpdateApplyBody, validateUpdatePreviewBody } from "./validate-body-registry";
 
 export function registerUpdateFlowRoutes(app: RouteApp): void {
-  app.post("/api/codegen/update/preview", (req, res) => {
+  app.post("/api/apis/update/preview", (req, res) => {
     try {
       const body = validateUpdatePreviewBody(req.body, res);
       if (!body) return;
@@ -26,7 +26,7 @@ export function registerUpdateFlowRoutes(app: RouteApp): void {
     }
   });
 
-  app.post("/api/codegen/update/apply", (req, res) => {
+  app.post("/api/apis/update/apply", (req, res) => {
     const body = validateUpdateApplyBody(req.body, res);
     if (!body) return;
 

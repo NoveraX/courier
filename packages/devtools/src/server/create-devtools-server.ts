@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import { Server as SocketIOServer } from "socket.io";
 import { setProjectRoot } from "../context";
-import { registerCodegenRoutes } from "./codegen-routes";
+import { registerApisRoutes } from "./apis-routes";
 import { startFileWatcher } from "./file-watcher";
 import { initProject } from "./init";
 import { clearBuffer } from "./session-buffer";
@@ -62,7 +62,7 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
     res.json({ status: "ok", sessions: sessions.size });
   });
 
-  registerCodegenRoutes(app);
+  registerApisRoutes(app);
   registerSessionRoutes(app);
 
   // ── Static UI serving ────────────────────────────────────────────────────────

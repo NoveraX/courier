@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { extractEndpoints } from "../src/codegen/merge/extract-endpoints"
-import { classifyEndpoints, generateFingerprints } from "../src/codegen/merge/fingerprint"
-import { computeHash, normalizeCode } from "../src/codegen/merge/hash"
-import { diffSpecs } from "../src/codegen/merge/spec-diff"
+import { extractEndpoints } from "../src/apis/merge/extract-endpoints"
+import { classifyEndpoints, generateFingerprints } from "../src/apis/merge/fingerprint"
+import { computeHash, normalizeCode } from "../src/apis/merge/hash"
+import { diffSpecs } from "../src/apis/merge/spec-diff"
 
 // ── Fingerprint: normalizeCode ──────────────────────────────────────────────
 

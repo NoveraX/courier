@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
-import type { GeneratedFile } from "../src/codegen/generator/types"
-import { computeHash } from "../src/codegen/merge/hash"
-import { previewUpdate } from "../src/codegen/merge/update-flow"
+import type { GeneratedFile } from "../src/apis/generator/types"
+import { computeHash } from "../src/apis/merge/hash"
+import { previewUpdate } from "../src/apis/merge/update-flow"
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

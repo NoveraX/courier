@@ -11,9 +11,9 @@ import {
   removeSource,
   saveRegistry,
   updateSource,
-} from "../src/codegen/registry/registry"
-import type { PersistedGenerateOptions, RegistryConfig } from "../src/codegen/registry/types"
-import { DEFAULT_OPTIONS } from "../src/codegen/generator/types"
+} from "../src/apis/registry/registry"
+import type { PersistedGenerateOptions, RegistryConfig } from "../src/apis/registry/types"
+import { DEFAULT_OPTIONS } from "../src/apis/generator/types"
 
 /** DEFAULT_OPTIONS already has selectedEndpoints: null — narrow the type for registry tests */
 const PERSISTED_OPTIONS: PersistedGenerateOptions = DEFAULT_OPTIONS as PersistedGenerateOptions

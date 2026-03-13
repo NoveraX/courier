@@ -13,31 +13,31 @@ import {
 
 import { useDevToolsStore } from "../store";
 import { DisconnectedBanner } from "../components/ui";
-import { CodegenProvider, useCodegenContext } from "../views/codegen/codegen-context";
-import { SourceTabs } from "../views/codegen/codegen-header";
-import { ErrorBanner, WatchDiffBanner } from "../views/codegen/codegen-banners";
+import { ApisProvider, useApisContext } from "../views/apis/apis-context";
+import { SourceTabs } from "../views/apis/apis-header";
+import { ErrorBanner, WatchDiffBanner } from "../views/apis/apis-banners";
 
-import type { Step } from "../views/codegen/types";
+import type { Step } from "../views/apis/types";
 
-function CodegenLayout() {
+function ApisLayout() {
   const { connectionStatus } = useDevToolsStore();
 
   return (
-    <CodegenProvider>
+    <ApisProvider>
       <div className="flex h-full flex-col overflow-hidden">
         {connectionStatus === "disconnected" && <DisconnectedBanner />}
-        <CodegenToolbar />
+        <ApisToolbar />
         <ImportExtras />
         <div className="flex-1 overflow-auto p-4">
           <Outlet />
         </div>
       </div>
-    </CodegenProvider>
+    </ApisProvider>
   );
 }
 
-function CodegenToolbar() {
-  const cg = useCodegenContext();
+function ApisToolbar() {
+  const cg = useApisContext();
   const currentPath = useRouterState({ select: (s) => s.location.pathname });
   const isImport = currentPath.includes("/import");
 
@@ -50,8 +50,8 @@ function CodegenToolbar() {
         </div>
 
         <div className="flex items-center rounded-md bg-surface-1 p-0.5">
-          <TabLink to="/codegen/registry" icon={Database} label="Registry" />
-          <TabLink to="/codegen/import" icon={Download} label="Import" />
+          <TabLink to="/apis/registry" icon={Database} label="Registry" />
+          <TabLink to="/apis/import" icon={Download} label="Import" />
         </div>
 
         {isImport && cg.st.spec && (
@@ -80,7 +80,7 @@ function TabLink({ to, icon: Icon, label }: { to: string; icon: typeof Database;
 }
 
 function ImportStepControls() {
-  const { st, src, watching, toggleWatch, step, setStep } = useCodegenContext();
+  const { st, src, watching, toggleWatch, step, setStep } = useApisContext();
   const steps: Step[] = ["import", "select", "options", "preview"];
 
   return (
@@ -132,7 +132,7 @@ function ImportStepControls() {
 }
 
 function ImportExtras() {
-  const cg = useCodegenContext();
+  const cg = useApisContext();
   const currentPath = useRouterState({ select: (s) => s.location.pathname });
   const isImport = currentPath.includes("/import");
 
@@ -161,6 +161,6 @@ function ImportExtras() {
   );
 }
 
-export const Route = createFileRoute("/codegen")({
-  component: CodegenLayout,
+export const Route = createFileRoute("/apis")({
+  component: ApisLayout,
 });

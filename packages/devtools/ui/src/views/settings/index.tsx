@@ -5,7 +5,7 @@ import { ConnectionSection } from "./connection-section"
 import { RecordingSection } from "./recording-section"
 import { DisplaySection } from "./display-section"
 import { NotificationsSection } from "./notifications-section"
-import { CodegenSection } from "./codegen-section"
+import { ApisSection } from "./apis-section"
 import { SessionHistorySection } from "./session-history-section"
 
 // ── Settings View ───────────────────────────────────────────────────────────
@@ -44,7 +44,7 @@ export function SettingsView() {
         <RecordingSection settings={settings} onUpdate={updateSettings} />
         <DisplaySection settings={settings} onUpdate={updateSettings} />
         <NotificationsSection settings={settings} onUpdate={updateSettings} />
-        <CodegenSection settings={settings} onUpdate={updateSettings} />
+        <ApisSection settings={settings} onUpdate={updateSettings} />
         <SessionHistorySection />
 
         {/* Version info */}

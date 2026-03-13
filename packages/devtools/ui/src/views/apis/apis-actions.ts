@@ -16,7 +16,7 @@ interface ActionDeps {
   savedSelectionsRef: React.RefObject<Map<number, Record<string, string[]>>>
 }
 
-export function createCodegenActions(deps: ActionDeps) {
+export function createApisActions(deps: ActionDeps) {
   const {
     activeSourceIdx, src, st,
     setSources, updateState,

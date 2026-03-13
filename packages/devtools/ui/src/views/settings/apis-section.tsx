@@ -1,7 +1,7 @@
-import type { Settings, ValidationLib, CodegenGroupBy, CodegenClient } from "../../store"
+import type { Settings, ValidationLib, ApisGroupBy, ApisClient } from "../../store"
 import { SettingsSection, SettingRow, Toggle, Select } from "./section"
 
-// ── Codegen Default Settings ───────────────────────────────────────────────
+// ── Apis Default Settings ───────────────────────────────────────────────
 
 const VALIDATION_OPTIONS: { value: ValidationLib; label: string }[] = [
   { value: "zod", label: "Zod" },
@@ -10,20 +10,20 @@ const VALIDATION_OPTIONS: { value: ValidationLib; label: string }[] = [
   { value: "none", label: "None" },
 ]
 
-const GROUP_BY_OPTIONS: { value: CodegenGroupBy; label: string }[] = [
+const GROUP_BY_OPTIONS: { value: ApisGroupBy; label: string }[] = [
   { value: "tag", label: "By tag" },
   { value: "path", label: "By path prefix" },
   { value: "single", label: "Single group" },
 ]
 
-const CLIENT_OPTIONS: { value: CodegenClient; label: string }[] = [
+const CLIENT_OPTIONS: { value: ApisClient; label: string }[] = [
   { value: "direct", label: "Direct" },
   { value: "proxy", label: "Proxy" },
   { value: "both", label: "Both" },
   { value: "none", label: "None" },
 ]
 
-export function CodegenSection({
+export function ApisSection({
   settings,
   onUpdate,
 }: {
@@ -32,7 +32,7 @@ export function CodegenSection({
 }) {
   return (
     <SettingsSection
-      title="Codegen Defaults"
+      title="API Defaults"
       description="Default options for OpenAPI code generation"
       defaultOpen={false}
     >
@@ -41,9 +41,9 @@ export function CodegenSection({
         description="Schema validation library for generated code"
       >
         <Select
-          value={settings.codegenValidation}
+          value={settings.apisValidation}
           options={VALIDATION_OPTIONS}
-          onChange={(codegenValidation) => onUpdate({ codegenValidation })}
+          onChange={(apisValidation) => onUpdate({ apisValidation })}
         />
       </SettingRow>
 
@@ -52,9 +52,9 @@ export function CodegenSection({
         description="How endpoints are grouped into files"
       >
         <Select
-          value={settings.codegenGroupBy}
+          value={settings.apisGroupBy}
           options={GROUP_BY_OPTIONS}
-          onChange={(codegenGroupBy) => onUpdate({ codegenGroupBy })}
+          onChange={(apisGroupBy) => onUpdate({ apisGroupBy })}
         />
       </SettingRow>
 
@@ -63,9 +63,9 @@ export function CodegenSection({
         description="Generated client type (direct, proxy, or both)"
       >
         <Select
-          value={settings.codegenClient}
+          value={settings.apisClient}
           options={CLIENT_OPTIONS}
-          onChange={(codegenClient) => onUpdate({ codegenClient })}
+          onChange={(apisClient) => onUpdate({ apisClient })}
         />
       </SettingRow>
 
@@ -74,8 +74,8 @@ export function CodegenSection({
         description="Generate TypeScript type definitions"
       >
         <Toggle
-          checked={settings.codegenGenerateTypes}
-          onChange={(codegenGenerateTypes) => onUpdate({ codegenGenerateTypes })}
+          checked={settings.apisGenerateTypes}
+          onChange={(apisGenerateTypes) => onUpdate({ apisGenerateTypes })}
         />
       </SettingRow>
 
@@ -84,8 +84,8 @@ export function CodegenSection({
         description="Generate runtime validation schemas"
       >
         <Toggle
-          checked={settings.codegenGenerateSchemas}
-          onChange={(codegenGenerateSchemas) => onUpdate({ codegenGenerateSchemas })}
+          checked={settings.apisGenerateSchemas}
+          onChange={(apisGenerateSchemas) => onUpdate({ apisGenerateSchemas })}
         />
       </SettingRow>
 
@@ -94,8 +94,8 @@ export function CodegenSection({
         description="Add JSDoc from OpenAPI descriptions"
       >
         <Toggle
-          checked={settings.codegenIncludeComments}
-          onChange={(codegenIncludeComments) => onUpdate({ codegenIncludeComments })}
+          checked={settings.apisIncludeComments}
+          onChange={(apisIncludeComments) => onUpdate({ apisIncludeComments })}
         />
       </SettingRow>
     </SettingsSection>

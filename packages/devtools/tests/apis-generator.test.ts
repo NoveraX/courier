@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { generateCode } from "../src/codegen/generator"
-import { DEFAULT_OPTIONS } from "../src/codegen/generator/types"
-import type { ParsedSpec } from "../src/codegen/parser/types"
+import { generateCode } from "../src/apis/generator"
+import { DEFAULT_OPTIONS } from "../src/apis/generator/types"
+import type { ParsedSpec } from "../src/apis/parser/types"
 
 const MOCK_SPEC: ParsedSpec = {
   title: "Pet Store",

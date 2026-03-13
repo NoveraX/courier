@@ -2,13 +2,13 @@
  * Express routes for code scanner.
  */
 
-import { scanProject } from "../codegen/scanner";
-import type { ScanConfig } from "../codegen/scanner/types";
+import { scanProject } from "../apis/scanner";
+import type { ScanConfig } from "../apis/scanner/types";
 import { errMsg } from "./fs-helpers";
 import type { RouteApp } from "./route-types";
 
 export function registerScannerRoutes(app: RouteApp): void {
-  app.post("/api/codegen/scan", (req, res) => {
+  app.post("/api/apis/scan", (req, res) => {
     try {
       const config = req.body as Partial<ScanConfig> | undefined;
       const result = scanProject(config ?? {});

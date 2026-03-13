@@ -17,7 +17,7 @@ export async function fetchParseSpec(sourceOrUrl: ImportSource | string, content
   const body = content !== undefined
     ? { source: sourceOrUrl, content }
     : { source: /^https?:\/\//.test(sourceOrUrl) ? "url" : "file", content: sourceOrUrl };
-  const res = await fetch(`${API_BASE}/api/codegen/parse`, {
+  const res = await fetch(`${API_BASE}/api/apis/parse`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -28,7 +28,7 @@ export async function fetchParseSpec(sourceOrUrl: ImportSource | string, content
 }
 
 export async function fetchGenerateCode(spec: ParsedSpec, options: GenerateOptions): Promise<GeneratedFile[]> {
-  const res = await fetch(`${API_BASE}/api/codegen/generate`, {
+  const res = await fetch(`${API_BASE}/api/apis/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ spec, options }),
@@ -60,7 +60,7 @@ export async function fetchWriteFiles(
     options: GenerateOptions;
   },
 ): Promise<WriteResult> {
-  const res = await fetch(`${API_BASE}/api/codegen/write`, {
+  const res = await fetch(`${API_BASE}/api/apis/write`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

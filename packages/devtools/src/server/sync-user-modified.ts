@@ -3,11 +3,11 @@
  */
 
 import { readFileSync } from "node:fs";
-import { generateFingerprints } from "../codegen/merge/fingerprint";
-import type { FingerprintCache } from "../codegen/registry/cache";
-import { getCachedFingerprints } from "../codegen/registry/cache";
-import { saveRegistry } from "../codegen/registry/registry";
-import type { RegistryConfig, RegistrySource } from "../codegen/registry/types";
+import { generateFingerprints } from "../apis/merge/fingerprint";
+import type { FingerprintCache } from "../apis/registry/cache";
+import { getCachedFingerprints } from "../apis/registry/cache";
+import { saveRegistry } from "../apis/registry/registry";
+import type { RegistryConfig, RegistrySource } from "../apis/registry/types";
 import { resolveProjectSafe } from "../context";
 
 interface Snapshot {

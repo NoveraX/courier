@@ -4,7 +4,7 @@
 
 import { existsSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
-import type { getSource } from "../codegen";
+import type { getSource } from "../apis";
 import { getProjectRoot, resolveProjectSafe } from "../context";
 
 /** Collect all .ts file paths (relative) from a source's output dir + generated list */

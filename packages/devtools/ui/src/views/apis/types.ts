@@ -46,7 +46,7 @@ export interface GeneratedFile {
 
 export type ImportSource = "url" | "raw" | "file"
 export type Step = "import" | "select" | "options" | "preview"
-export type CodegenTab = "import" | "registry" | "update"
+export type ApisTab = "import" | "registry" | "update"
 
 // ── Registry ───────────────────────────────────────────────────────────────
 
@@ -138,7 +138,7 @@ export interface UpdateContext {
 }
 
 // ── Scanner ──────────────────────────────────────────────────────────────────
-/* Mirror of src/codegen/scanner/types.ts — keep in sync */
+/* Mirror of src/apis/scanner/types.ts — keep in sync */
 
 export interface ScanResult {
   sources: ScannedSource[]

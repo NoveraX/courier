@@ -4,7 +4,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { loadRegistry, saveRegistry } from "../codegen";
+import { loadRegistry, saveRegistry } from "../apis";
 import { resolveProject } from "../context";
 
 const CACHE_FILES = [".nexus-cache.json", ".nexus-digests.json"];

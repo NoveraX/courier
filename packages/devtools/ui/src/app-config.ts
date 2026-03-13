@@ -26,7 +26,7 @@ export const TABS: { to: string; icon: typeof Activity; label: string }[] = [
   { to: "/explorer", icon: Network, label: "API Explorer" },
   { to: "/playground", icon: Play, label: "Playground" },
   { to: "/audit", icon: ShieldCheck, label: "Audit" },
-  { to: "/codegen", icon: ChevronsLeftRightEllipsis, label: "APIs" },
+  { to: "/apis", icon: ChevronsLeftRightEllipsis, label: "APIs" },
   { to: "/compare", icon: GitCompare, label: "Compare" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { detectFormat, parseSpec } from "../src/codegen/parser"
+import { detectFormat, parseSpec } from "../src/apis/parser"
 
 const OPENAPI3_SPEC = JSON.stringify({
   openapi: "3.0.0",

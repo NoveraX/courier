@@ -1,15 +1,15 @@
 /**
- * Helpers for codegen write routes — merge and raw write logic.
+ * Helpers for apis write routes — merge and raw write logic.
  */
 
-import type { GenerateOptions, ParsedSpec } from "../codegen";
-import { addSource, removeSource, saveRegistry } from "../codegen";
+import type { GenerateOptions, ParsedSpec } from "../apis";
+import { addSource, removeSource, saveRegistry } from "../apis";
 import type {
   RegistryConfig,
   RegistrySource,
   SpecImportType,
   UpdateResult,
-} from "../codegen/registry/types";
+} from "../apis/registry/types";
 import { resolveProjectSafe } from "../context";
 import { computeMergePreview, persistRawSource, removeOrphanFiles } from "./merge-preview";
 import {

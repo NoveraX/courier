@@ -1,6 +1,6 @@
 export function PrimitiveValue({ value, searchQuery }: { value: unknown; searchQuery?: string }) {
   if (value === null) return <span className="text-orange-400 italic">null</span>
-  if (value === undefined) return <span className="text-text-muted italic">undefined</span>
+  if (value === undefined) return <span className="italic text-muted-foreground">undefined</span>
 
   if (typeof value === "boolean") {
     return <span className="text-amber-400">{String(value)}</span>
@@ -18,7 +18,7 @@ export function PrimitiveValue({ value, searchQuery }: { value: unknown; searchQ
     return <span className="text-emerald-400">{str}</span>
   }
 
-  return <span className="text-text-secondary">{String(value)}</span>
+  return <span className="text-muted-foreground">{String(value)}</span>
 }
 
 function highlightMatch(text: string, query: string) {

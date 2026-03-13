@@ -26,29 +26,29 @@ export function HeadersTab({ request }: { request: RequestEntry }) {
     <div className="space-y-4">
       {/* Search */}
       <div className="relative">
-        <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-muted" />
+        <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
           placeholder="Filter headers..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-7 w-full rounded bg-surface-1 pl-7 pr-7 text-[11px] text-text-primary outline-none placeholder:text-text-muted focus:ring-1 focus:ring-indigo-500/50"
+          className="h-7 w-full rounded bg-muted pl-7 pr-7 text-[11px] text-foreground outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-ring/50"
         />
         {search && (
           <button
             type="button"
             onClick={() => setSearch("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
             <X size={10} />
           </button>
         )}
       </div>
 
-      {noHeaders && <p className="text-[11px] italic text-text-muted">No headers captured</p>}
+      {noHeaders && <p className="text-[11px] italic text-muted-foreground">No headers captured</p>}
 
       {!noHeaders && !hasAny && search && (
-        <p className="text-[11px] italic text-text-muted">No headers match &quot;{search}&quot;</p>
+        <p className="text-[11px] italic text-muted-foreground">No headers match &quot;{search}&quot;</p>
       )}
 
       {/* Two-column layout */}
@@ -99,9 +99,9 @@ function HeaderRow({
   middlewareSource?: string[]
 }) {
   return (
-    <div className="group flex items-start gap-2 rounded px-1.5 py-1 hover:bg-surface-1">
+    <div className="group flex items-start gap-2 rounded px-1.5 py-1 hover:bg-accent/50">
       <span className="shrink-0 font-mono text-[11px] text-violet-400">{headerKey}</span>
-      <span className="min-w-0 flex-1 break-all font-mono text-[11px] text-text-secondary">
+      <span className="min-w-0 flex-1 break-all font-mono text-[11px] text-muted-foreground">
         {headerValue}
       </span>
       {middlewareSource && middlewareSource.length > 0 && (

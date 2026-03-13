@@ -1,24 +1,19 @@
 import { Search, X, Filter, Pause, Play, Trash2, BookmarkCheck } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Kbd } from "@/components/ui/kbd"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { Separator } from "@/components/ui/separator"
+
 import type { Filters } from "./filters"
 import { hasActiveFilters, countActiveFilters } from "./filters"
 
 // Re-export FilterBar for backward compatibility
 export { FilterBar } from "./filter-bar"
 
-export function Toolbar({
-  filters,
-  setFilters,
-  showFilters,
-  setShowFilters,
-  paused,
-  onTogglePause,
-  preserveLog,
-  onTogglePreserveLog,
-  onClear,
-  total,
-  filtered,
-}: {
+interface ToolbarProps {
   filters: Filters
   setFilters: (f: Filters) => void
   showFilters: boolean
@@ -30,89 +25,117 @@ export function Toolbar({
   onClear: () => void
   total: number
   filtered: number
-}) {
+}
+
+export function Toolbar({
+  filters, setFilters, showFilters, setShowFilters,
+  paused, onTogglePause, preserveLog, onTogglePreserveLog,
+  onClear, total, filtered,
+}: ToolbarProps) {
   const active = hasActiveFilters(filters)
 
   return (
-    <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border-subtle px-3">
+    <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-border px-2">
       {/* Search */}
       <div className="relative flex-1">
-        <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
+        <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input
           placeholder="Search requests..."
           value={filters.search}
           onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-          className="h-7 w-full rounded bg-surface-1 pl-7 pr-7 text-xs text-text-primary outline-none placeholder:text-text-muted focus:ring-1 focus:ring-indigo-500/50"
+          className="h-7 pl-7 pr-7 text-xs"
         />
         {filters.search && (
           <button
             type="button"
             onClick={() => setFilters({ ...filters, search: "" })}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
-            <X size={12} />
+            <X className="size-3" />
           </button>
         )}
       </div>
 
       {/* Count */}
-      <span className="shrink-0 text-[11px] tabular-nums text-text-muted">
+      <Badge variant="secondary" className="h-5 px-1.5 text-[10px] tabular-nums">
         {active ? `${filtered}/${total}` : total}
-      </span>
+      </Badge>
+
+      <Separator orientation="vertical" className="mx-0.5 h-4" />
 
       {/* Filter toggle */}
-      <button
-        type="button"
+      <ToolbarButton
+        tooltip={showFilters ? "Hide filters" : "Show filters"}
+        kbd="⌘⇧F"
+        active={showFilters || active}
+        activeClassName="bg-indigo-500/15 text-indigo-400 hover:bg-indigo-500/25 hover:text-indigo-400"
         onClick={() => setShowFilters(!showFilters)}
-        className={`flex h-7 items-center gap-1 rounded px-2 text-xs transition-colors ${
-          showFilters || active
-            ? "bg-indigo-500/15 text-indigo-400"
-            : "bg-surface-2 text-text-secondary hover:text-text-primary"
-        }`}
-        title="Toggle filters"
       >
-        <Filter size={12} />
-        {active && <span className="text-[10px]">{countActiveFilters(filters)}</span>}
-      </button>
+        <Filter className="size-3.5" />
+        {active && (
+          <span className="text-[10px] font-medium">{countActiveFilters(filters)}</span>
+        )}
+      </ToolbarButton>
 
       {/* Preserve log */}
-      <button
-        type="button"
+      <ToolbarButton
+        tooltip={preserveLog ? "Preserve log: ON" : "Preserve log: OFF"}
+        active={preserveLog}
+        activeClassName="bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 hover:text-emerald-400"
         onClick={onTogglePreserveLog}
-        className={`flex h-7 w-7 items-center justify-center rounded transition-colors ${
-          preserveLog
-            ? "bg-emerald-500/20 text-emerald-400"
-            : "bg-surface-2 text-text-secondary hover:text-text-primary"
-        }`}
-        title={preserveLog ? "Preserve log: ON (pinned kept on clear)" : "Preserve log: OFF"}
       >
-        <BookmarkCheck size={12} />
-      </button>
+        <BookmarkCheck className="size-3.5" />
+      </ToolbarButton>
 
-      {/* Pause */}
-      <button
-        type="button"
+      {/* Pause / Resume */}
+      <ToolbarButton
+        tooltip={paused ? "Resume recording" : "Pause recording"}
+        kbd="⌘P"
+        active={paused}
+        activeClassName="bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 hover:text-amber-400"
         onClick={onTogglePause}
-        className={`flex h-7 w-7 items-center justify-center rounded transition-colors ${
-          paused
-            ? "bg-amber-500/20 text-amber-400"
-            : "bg-surface-2 text-text-secondary hover:text-text-primary"
-        }`}
-        title={paused ? "Resume recording" : "Pause recording"}
       >
-        {paused ? <Play size={12} /> : <Pause size={12} />}
-      </button>
+        {paused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
+      </ToolbarButton>
 
       {/* Clear */}
-      <button
-        type="button"
-        onClick={onClear}
-        className="flex h-7 w-7 items-center justify-center rounded bg-surface-2 text-text-secondary transition-colors hover:text-text-primary"
-        title="Clear all requests"
-      >
-        <Trash2 size={12} />
-      </button>
+      <ToolbarButton tooltip="Clear all" kbd="⌘E" onClick={onClear}>
+        <Trash2 className="size-3.5" />
+      </ToolbarButton>
     </div>
+  )
+}
+
+// ── Toolbar Button with Tooltip + Kbd ────────────────────────────────────────
+
+function ToolbarButton({
+  tooltip, kbd, active, activeClassName, onClick, children,
+}: {
+  tooltip: string
+  kbd?: string
+  active?: boolean
+  activeClassName?: string
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={onClick}
+          className={active && activeClassName ? activeClassName : undefined}
+        >
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={4}>
+        <span className="flex items-center gap-2">
+          {tooltip}
+          {kbd && <Kbd>{kbd}</Kbd>}
+        </span>
+      </TooltipContent>
+    </Tooltip>
   )
 }

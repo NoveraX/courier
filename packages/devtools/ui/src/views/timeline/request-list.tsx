@@ -1,23 +1,17 @@
-import { useRef, useState, useCallback, useEffect } from "react"
+import { useRef, useEffect, useMemo } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 
 import type { RequestEntry, TimestampFormat } from "../../store"
 
 import { RequestRow } from "./request-row"
-import { RequestContextMenu } from "./context-menu"
+import { RequestContextMenuWrapper } from "./context-menu"
+import { PinnedSection } from "./pinned-section"
 import { ROW_HEIGHT } from "./constants"
 
-import type { ContextMenuState } from "./context-menu"
-
-// ── Virtual Request List ─────────────────────────────────────────────────────
+// ── Virtual Request List ────────────────────────────────────────────────────
 
 export function VirtualRequestList({
-  requests,
-  selectedId,
-  onSelect,
-  onTogglePin,
-  timestampFormat,
-  slowThreshold,
+  requests, selectedId, onSelect, onTogglePin, timestampFormat, slowThreshold,
 }: {
   requests: RequestEntry[]
   selectedId: string | null
@@ -27,88 +21,102 @@ export function VirtualRequestList({
   slowThreshold: number
 }) {
   const parentRef = useRef<HTMLDivElement>(null)
-  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+
+  const { pinned, unpinned } = useMemo(() => {
+    const p: RequestEntry[] = []
+    const u: RequestEntry[] = []
+    for (const r of requests) {
+      if (r.pinned) p.push(r)
+      else u.push(r)
+    }
+    return { pinned: p, unpinned: u }
+  }, [requests])
 
   const virtualizer = useVirtualizer({
-    count: requests.length,
+    count: unpinned.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 20,
   })
 
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent, request: RequestEntry) => {
-      e.preventDefault()
-      setContextMenu({ x: e.clientX, y: e.clientY, request })
-    },
-    [],
-  )
+  // Keyboard navigation: ↑/↓ across both pinned and unpinned
+  const allOrdered = useMemo(() => [...pinned, ...unpinned], [pinned, unpinned])
 
-  // Keyboard navigation: ↑/↓ to move selection
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const target = e.target as HTMLElement
       if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return
-      if (requests.length === 0) return
+      if (allOrdered.length === 0) return
 
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault()
         const currentIdx = selectedId
-          ? requests.findIndex((r) => r.id === selectedId)
+          ? allOrdered.findIndex((r) => r.id === selectedId)
           : -1
 
-        const nextIdx =
-          e.key === "ArrowDown"
-            ? Math.min(currentIdx + 1, requests.length - 1)
-            : Math.max(currentIdx - 1, 0)
+        const nextIdx = e.key === "ArrowDown"
+          ? Math.min(currentIdx + 1, allOrdered.length - 1)
+          : Math.max(currentIdx - 1, 0)
 
-        const next = requests[nextIdx]
+        const next = allOrdered[nextIdx]
         if (next) {
           onSelect(next.id)
-          virtualizer.scrollToIndex(nextIdx, { align: "auto" })
+          const unpinnedIdx = unpinned.findIndex((r) => r.id === next.id)
+          if (unpinnedIdx >= 0) {
+            virtualizer.scrollToIndex(unpinnedIdx, { align: "auto" })
+          }
         }
       }
     }
 
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [requests, selectedId, onSelect, virtualizer])
+  }, [allOrdered, unpinned, selectedId, onSelect, virtualizer])
 
   return (
     <div ref={parentRef} className="h-full overflow-y-auto">
+      {/* Pinned section */}
+      {pinned.length > 0 && (
+        <PinnedSection
+          pinned={pinned}
+          selectedId={selectedId}
+          onSelect={onSelect}
+          onTogglePin={onTogglePin}
+          timestampFormat={timestampFormat}
+          slowThreshold={slowThreshold}
+        />
+      )}
+
+      {/* Virtual unpinned list */}
       <div className="relative" style={{ height: `${virtualizer.getTotalSize()}px` }}>
         {virtualizer.getVirtualItems().map((virtualItem) => {
-          const request = requests[virtualItem.index]!
+          const request = unpinned[virtualItem.index]!
           return (
             <div
               key={virtualItem.key}
-              className="absolute left-0 w-full animate-slide-in"
+              className="absolute left-0 w-full"
               style={{
                 height: `${virtualItem.size}px`,
                 transform: `translateY(${virtualItem.start}px)`,
               }}
             >
-              <RequestRow
+              <RequestContextMenuWrapper
                 request={request}
-                selected={request.id === selectedId}
-                onSelect={() => onSelect(request.id)}
                 onTogglePin={() => onTogglePin(request.id)}
-                onContextMenu={(e) => handleContextMenu(e, request)}
-                timestampFormat={timestampFormat}
-                slowThreshold={slowThreshold}
-              />
+              >
+                <RequestRow
+                  request={request}
+                  selected={request.id === selectedId}
+                  onSelect={() => onSelect(request.id)}
+                  onTogglePin={() => onTogglePin(request.id)}
+                  timestampFormat={timestampFormat}
+                  slowThreshold={slowThreshold}
+                />
+              </RequestContextMenuWrapper>
             </div>
           )
         })}
       </div>
-
-      {contextMenu && (
-        <RequestContextMenu
-          state={contextMenu}
-          onClose={() => setContextMenu(null)}
-          onTogglePin={onTogglePin}
-        />
-      )}
     </div>
   )
 }

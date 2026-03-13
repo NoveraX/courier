@@ -235,22 +235,4 @@
   --border-default: oklch(0.92 0.004 286.32);
 }
 
-/* ── Custom scrollbar (will be replaced by shadcn ScrollArea) ── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--accent);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--ring);
-}
 

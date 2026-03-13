@@ -6,7 +6,7 @@ import { Section, Row, formatDuration } from "../../../components/ui"
 
 export function TimingTab({ request }: { request: RequestEntry }) {
   if (!request.timing) {
-    return <p className="text-[11px] italic text-text-muted">No timing data</p>
+    return <p className="text-[11px] italic text-muted-foreground">No timing data</p>
   }
 
   return (
@@ -42,7 +42,7 @@ export function TimingBar({ timing }: { timing: RequestTiming }) {
 
   return (
     <div className="mb-2">
-      <div className="flex h-2.5 overflow-hidden rounded-full bg-surface-2">
+      <div className="flex h-2.5 overflow-hidden rounded-full bg-muted">
         {segments.map((seg) => (
           <div
             key={seg.label}
@@ -56,8 +56,8 @@ export function TimingBar({ timing }: { timing: RequestTiming }) {
         {segments.map((seg) => (
           <div key={seg.label} className="flex items-center gap-1">
             <div className={`h-1.5 w-1.5 rounded-full ${seg.color}`} />
-            <span className="text-[10px] text-text-muted">{seg.label}</span>
-            <span className="text-[10px] tabular-nums text-text-secondary">
+            <span className="text-[10px] text-muted-foreground">{seg.label}</span>
+            <span className="text-[10px] tabular-nums text-foreground/60">
               {formatDuration(seg.value)}
             </span>
           </div>

@@ -10,7 +10,7 @@ import { getErrorSuggestions } from "../request-helpers"
 
 export function ErrorTab({ request }: { request: RequestEntry }) {
   if (!request.error) {
-    return <p className="text-[11px] italic text-text-muted">No error</p>
+    return <p className="text-[11px] italic text-muted-foreground">No error</p>
   }
 
   const { error } = request
@@ -23,7 +23,7 @@ export function ErrorTab({ request }: { request: RequestEntry }) {
         <Row label="Type" value={error.type} />
         {error.status != null && <Row label="Status" value={String(error.status)} />}
         <div className="mt-2">
-          <h4 className="mb-1 text-[10px] font-medium text-text-muted">Message</h4>
+          <h4 className="mb-1 text-[10px] font-medium text-muted-foreground">Message</h4>
           <pre className="whitespace-pre-wrap rounded border border-red-500/10 bg-red-500/5 p-2 text-[11px] text-red-400">
             {error.message}
           </pre>
@@ -47,16 +47,16 @@ export function ErrorTab({ request }: { request: RequestEntry }) {
                         {issue.path || "(root)"}
                       </code>
                     </div>
-                    <p className="mt-0.5 text-[11px] text-text-secondary">{issue.message}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{issue.message}</p>
                     {(issue.expected || issue.received) && (
                       <div className="mt-1 flex gap-3 text-[10px]">
                         {issue.expected && (
-                          <span className="text-text-muted">
+                          <span className="text-muted-foreground">
                             Expected: <Badge variant="emerald">{issue.expected}</Badge>
                           </span>
                         )}
                         {issue.received && (
-                          <span className="text-text-muted">
+                          <span className="text-muted-foreground">
                             Received: <Badge variant="red">{issue.received}</Badge>
                           </span>
                         )}
@@ -80,7 +80,7 @@ export function ErrorTab({ request }: { request: RequestEntry }) {
                   size={12}
                   className="mt-0.5 shrink-0 text-amber-400"
                 />
-                <span className="text-text-secondary">{suggestion}</span>
+                <span className="text-muted-foreground">{suggestion}</span>
               </div>
             ))}
           </div>

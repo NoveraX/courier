@@ -65,5 +65,5 @@ export const HTTP_METHOD_COLORS: Record<string, string> = {
 }
 
 export function getCodeColor(statusCode: number): string {
-  return CODE_COLORS[String(statusCode)[0]!] ?? "text-text-secondary"
+  return CODE_COLORS[String(statusCode)[0]!] ?? "text-muted-foreground"
 }

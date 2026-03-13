@@ -25,7 +25,7 @@ export function ProxyTab({ request }: { request: RequestEntry }) {
           </div>
 
           {/* Labels */}
-          <div className="flex justify-between px-1 text-[10px] text-text-muted">
+          <div className="flex justify-between px-1 text-[10px] text-muted-foreground">
             <span>Client</span>
             <span>Proxy Server</span>
             <span>Backend</span>
@@ -51,7 +51,7 @@ export function ProxyTab({ request }: { request: RequestEntry }) {
           <Row label="Proxy → Backend" value={formatDuration(pt.proxyToBackend)} />
           <Row label="Backend → Proxy" value={formatDuration(pt.backendToProxy)} />
           <Row label="Proxy → Client" value={formatDuration(pt.proxyToClient)} />
-          <div className="mt-1 border-t border-border-subtle pt-1">
+          <div className="mt-1 border-t border-border pt-1">
             <Row
               label="Total round-trip"
               value={formatDuration(
@@ -71,7 +71,7 @@ export function ProxyTab({ request }: { request: RequestEntry }) {
       )}
 
       {!pt && (
-        <div className="rounded border border-border-subtle bg-surface-1 px-2 py-1.5 text-[10px] text-text-muted">
+        <div className="rounded border border-border bg-muted px-2 py-1.5 text-[10px] text-muted-foreground">
           Per-hop timing not available — enable proxy instrumentation for detailed breakdown
         </div>
       )}
@@ -118,14 +118,14 @@ function FlowArrow({
       <div
         className={`flex w-full items-center gap-0.5 ${reverse ? "flex-row-reverse" : ""}`}
       >
-        <div className="h-px flex-1 border-b border-dashed border-border-subtle" />
+        <div className="h-px flex-1 border-b border-dashed border-border" />
         <ArrowRight
           size={10}
-          className={`shrink-0 text-text-muted ${reverse ? "rotate-180" : ""}`}
+          className={`shrink-0 text-muted-foreground ${reverse ? "rotate-180" : ""}`}
         />
       </div>
       {duration !== undefined && (
-        <span className="text-[9px] tabular-nums text-text-muted">
+        <span className="text-[9px] tabular-nums text-muted-foreground">
           {formatDuration(duration)}
         </span>
       )}

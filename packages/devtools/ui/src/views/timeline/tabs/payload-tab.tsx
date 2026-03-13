@@ -41,12 +41,12 @@ export function PayloadTab({ request }: { request: RequestEntry }) {
       {currentData !== undefined ? (
         <JsonTree data={currentData} defaultExpanded={3} />
       ) : (
-        <p className="text-[11px] italic text-text-muted">No variables</p>
+        <p className="text-[11px] italic text-muted-foreground">No variables</p>
       )}
 
       {/* Schema info */}
       {request.hasValidation.variables && (
-        <div className="mt-2 rounded border border-border-subtle bg-surface-1 px-2 py-1.5 text-[10px] text-text-muted">
+        <div className="mt-2 rounded border border-border bg-muted px-2 py-1.5 text-[10px] text-muted-foreground">
           Variables validated against schema
           {hasValidated && view === "original" && " — switch to Validated to see result"}
         </div>

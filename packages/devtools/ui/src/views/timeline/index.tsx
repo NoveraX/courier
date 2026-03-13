@@ -1,10 +1,11 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Activity, Filter } from "lucide-react"
 
 import { useDevToolsStore, EMPTY_FILTERS } from "../../store"
 import { Toolbar, FilterBar } from "./toolbar"
 import { VirtualRequestList } from "./request-list"
 import { DetailPanel } from "./detail-panel"
+import { DragHandle } from "./drag-handle"
 import { hasActiveFilters, filterRequests } from "./filters"
 import { useTimelineSearch } from "./use-timeline-search"
 
@@ -35,11 +36,12 @@ export function TimelineView() {
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [selectedRequestId, selectRequest])
 
+  const [detailWidth, setDetailWidth] = useState(480)
+
   return (
     <div className="flex flex-1 overflow-hidden">
       {/* Request list */}
-      <div className="flex flex-1 flex-col overflow-hidden border-r border-border-default">
-        {/* Toolbar */}
+      <div className="flex flex-1 flex-col overflow-hidden">
         <Toolbar
           filters={filters}
           setFilters={setFilters}
@@ -54,12 +56,10 @@ export function TimelineView() {
           filtered={filteredRequests.length}
         />
 
-        {/* Filter bar */}
         {showFilters && (
           <FilterBar filters={filters} setFilters={setFilters} requests={requests} />
         )}
 
-        {/* List */}
         <div className="flex-1 overflow-hidden">
           {filteredRequests.length === 0 ? (
             requests.length === 0 ? (
@@ -80,9 +80,14 @@ export function TimelineView() {
         </div>
       </div>
 
-      {/* Detail panel */}
+      {/* Detail panel with drag-to-resize */}
       {selectedRequest && (
-        <DetailPanel request={selectedRequest} onClose={() => selectRequest(null)} />
+        <>
+          <DragHandle onResize={setDetailWidth} />
+          <div style={{ width: detailWidth }} className="shrink-0">
+            <DetailPanel request={selectedRequest} onClose={() => selectRequest(null)} />
+          </div>
+        </>
       )}
     </div>
   )
@@ -92,7 +97,7 @@ export function TimelineView() {
 
 function EmptyState({ connected }: { connected: boolean }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 text-text-muted">
+    <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
       <Activity size={32} strokeWidth={1} />
       <p className="text-sm">
         {connected ? "Waiting for requests..." : "Connecting to server..."}
@@ -100,7 +105,7 @@ function EmptyState({ connected }: { connected: boolean }) {
       {connected && (
         <p className="max-w-xs text-center text-xs">
           Call{" "}
-          <code className="rounded bg-surface-2 px-1.5 py-0.5 text-text-secondary">
+          <code className="rounded bg-muted px-1.5 py-0.5 text-foreground">
             connectDevTools()
           </code>{" "}
           in your app to start streaming events.
@@ -112,13 +117,13 @@ function EmptyState({ connected }: { connected: boolean }) {
 
 function NoMatchState({ onClear }: { onClear: () => void }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 text-text-muted">
+    <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
       <Filter size={28} strokeWidth={1} />
       <p className="text-sm">No requests match filters</p>
       <button
         type="button"
         onClick={onClear}
-        className="text-xs text-indigo-400 hover:underline"
+        className="text-xs text-primary hover:underline"
       >
         Clear filters
       </button>

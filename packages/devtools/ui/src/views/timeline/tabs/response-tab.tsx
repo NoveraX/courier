@@ -36,13 +36,13 @@ export function ResponseTab({ request }: { request: RequestEntry }) {
         request.data !== undefined ? (
           <JsonTree data={request.data} defaultExpanded={3} />
         ) : (
-          <p className="text-[11px] italic text-text-muted">No response data</p>
+          <p className="text-[11px] italic text-muted-foreground">No response data</p>
         )
       )}
 
       {/* Raw view — plain text */}
       {view === "raw" && (
-        <pre className="max-h-80 overflow-auto rounded bg-surface-1 p-2 text-[11px] text-text-muted">
+        <pre className="max-h-80 overflow-auto rounded bg-muted p-2 text-[11px] text-muted-foreground">
           {request.rawResponse ?? "No raw response captured"}
         </pre>
       )}
@@ -52,20 +52,20 @@ export function ResponseTab({ request }: { request: RequestEntry }) {
         request.validatedResponse !== undefined ? (
           <JsonTree data={request.validatedResponse} defaultExpanded={3} />
         ) : (
-          <p className="text-[11px] italic text-text-muted">No validated response</p>
+          <p className="text-[11px] italic text-muted-foreground">No validated response</p>
         )
       )}
 
       {/* Size info */}
       {request.size != null && request.size > 0 && (
-        <div className="mt-2 text-[10px] text-text-muted">
+        <div className="mt-2 text-[10px] text-muted-foreground">
           Response size: {formatSize(request.size)}
         </div>
       )}
 
       {/* Schema info */}
       {request.hasValidation.response && (
-        <div className="mt-1 rounded border border-border-subtle bg-surface-1 px-2 py-1.5 text-[10px] text-text-muted">
+        <div className="mt-1 rounded border border-border bg-muted px-2 py-1.5 text-[10px] text-muted-foreground">
           Response validated against schema
           {hasValidated && view === "formatted" && " — switch to Validated to see result"}
         </div>

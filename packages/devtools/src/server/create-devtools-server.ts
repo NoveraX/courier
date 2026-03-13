@@ -28,7 +28,12 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
 
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: [`http://${host}:${port}`, `http://localhost:${port}`, "http://localhost:4381"],
+      origin: [
+        `http://${host}:${port}`,
+        `http://localhost:${port}`,
+        "http://localhost:4381",
+        "http://localhost:4382",
+      ],
       methods: ["GET", "POST"],
     },
     serveClient: false,

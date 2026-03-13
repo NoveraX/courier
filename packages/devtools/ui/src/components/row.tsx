@@ -9,10 +9,10 @@ export function Row({
 }) {
   return (
     <div className="flex justify-between gap-4">
-      <span className="shrink-0 text-text-muted">{label}</span>
-      <span className={`truncate text-text-secondary ${mono ? "font-mono" : ""}`}>
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className={`truncate text-secondary-foreground ${mono ? "font-mono" : ""}`}>
         {value}
       </span>
     </div>
-  )
+  );
 }

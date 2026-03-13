@@ -31,7 +31,7 @@ export function Shortcut({ keys }: { keys: string[] }) {
       {keys.map((k) => (
         <kbd
           key={k}
-          className="rounded border border-border-default bg-surface-2 px-1 py-0.5 text-[10px] text-text-muted"
+          className="rounded border border-border bg-muted px-1 py-0.5 text-[10px] text-muted-foreground"
         >
           {k}
         </kbd>
@@ -65,7 +65,7 @@ export function NavigateGroup({ onNavigate }: { onNavigate: (path: string) => vo
           onSelect={() => onNavigate(to)}
           className="command-item"
         >
-          <Icon size={14} className="shrink-0 text-text-muted" />
+          <Icon size={14} className="shrink-0 text-muted-foreground" />
           <span>{label}</span>
           {shortcut && <Shortcut keys={shortcut} />}
         </Command.Item>
@@ -90,17 +90,17 @@ export function ActionsGroup({
   return (
     <Command.Group heading="Actions" className="command-group">
       <Command.Item value="clear requests" onSelect={onClear} className="command-item">
-        <Trash2 size={14} className="shrink-0 text-text-muted" />
+        <Trash2 size={14} className="shrink-0 text-muted-foreground" />
         <span>Clear all requests</span>
         <Shortcut keys={["⌘", "E"]} />
       </Command.Item>
       <Command.Item value="pause resume recording" onSelect={onTogglePause} className="command-item">
-        <Pause size={14} className="shrink-0 text-text-muted" />
+        <Pause size={14} className="shrink-0 text-muted-foreground" />
         <span>{paused ? "Resume recording" : "Pause recording"}</span>
         <Shortcut keys={["⌘", "P"]} />
       </Command.Item>
       <Command.Item value="search filter requests" onSelect={onShowFilters} className="command-item">
-        <Search size={14} className="shrink-0 text-text-muted" />
+        <Search size={14} className="shrink-0 text-muted-foreground" />
         <span>Search / filter requests</span>
         <Shortcut keys={["⌘", "F"]} />
       </Command.Item>
@@ -114,15 +114,15 @@ export function ThemeGroup({ onSelect }: { onSelect: (theme: "dark" | "light" | 
   return (
     <Command.Group heading="Theme" className="command-group">
       <Command.Item value="theme dark" onSelect={() => onSelect("dark")} className="command-item">
-        <Moon size={14} className="shrink-0 text-text-muted" />
+        <Moon size={14} className="shrink-0 text-muted-foreground" />
         <span>Dark theme</span>
       </Command.Item>
       <Command.Item value="theme light" onSelect={() => onSelect("light")} className="command-item">
-        <Sun size={14} className="shrink-0 text-text-muted" />
+        <Sun size={14} className="shrink-0 text-muted-foreground" />
         <span>Light theme</span>
       </Command.Item>
       <Command.Item value="theme system auto" onSelect={() => onSelect("system")} className="command-item">
-        <Monitor size={14} className="shrink-0 text-text-muted" />
+        <Monitor size={14} className="shrink-0 text-muted-foreground" />
         <span>System theme</span>
       </Command.Item>
     </Command.Group>
@@ -154,7 +154,7 @@ export function RecentRequestsGroup({
             {r.source}.{r.group}.{r.method}
           </span>
           {r.statusCode && (
-            <span className="ml-auto text-xs text-text-muted">{r.statusCode}</span>
+            <span className="ml-auto text-xs text-muted-foreground">{r.statusCode}</span>
           )}
         </Command.Item>
       ))}

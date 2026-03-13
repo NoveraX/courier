@@ -1,76 +1,98 @@
 @import "tailwindcss";
 
-@theme {
-  /* ── Surface ── */
-  --color-surface-0: var(--surface-0);
-  --color-surface-1: var(--surface-1);
-  --color-surface-2: var(--surface-2);
-  --color-surface-3: var(--surface-3);
+/* ── shadcn/ui theme tokens (Tailwind v4) ── */
+@theme inline {
+  /* ── Colors (semantic) ── */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
-  /* ── Text ── */
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-muted: var(--text-muted);
+  /* ── Status colors (devtools-specific) ── */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
 
-  /* ── Border ── */
-  --color-border-default: var(--border-default);
+  /* ── Chart palette ── */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* ── Sidebar ── */
+  --color-sidebar: var(--sidebar-background);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* ── Legacy aliases (backward compat during migration) ── */
+  --color-surface-0: var(--background);
+  --color-surface-1: var(--card);
+  --color-surface-2: var(--border);
+  --color-surface-3: var(--accent);
+  --color-text-primary: var(--foreground);
+  --color-text-secondary: var(--muted-foreground);
+  --color-text-muted: var(--ring);
+  --color-border-default: var(--border);
   --color-border-subtle: var(--border-subtle);
+
+  /* ── Border radius ── */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px oklch(0 0 0 / 0.1), 0 2px 4px -2px oklch(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px oklch(0 0 0 / 0.1), 0 4px 6px -4px oklch(0 0 0 / 0.1);
+
+  /* ── Typography (mono) ── */
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono",
+    Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* ── Animations ── */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-slide-in: slide-in-row 200ms ease-out;
+  --animate-pulse-dot: pulse-dot 1.5s ease-in-out infinite;
 }
 
-/* ── Dark theme (default) ── */
-:root {
-  color-scheme: dark;
-
-  --surface-0: #09090b;
-  --surface-1: #18181b;
-  --surface-2: #27272a;
-  --surface-3: #3f3f46;
-
-  --text-primary: #fafafa;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-
-  --border-default: #27272a;
-  --border-subtle: rgba(39, 39, 42, 0.6);
+/* ── Keyframes ── */
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
 }
 
-/* ── Light theme ── */
-:root[data-theme="light"] {
-  color-scheme: light;
-
-  --surface-0: #ffffff;
-  --surface-1: #f4f4f5;
-  --surface-2: #e4e4e7;
-  --surface-3: #d4d4d8;
-
-  --text-primary: #09090b;
-  --text-secondary: #52525b;
-  --text-muted: #a1a1aa;
-
-  --border-default: #e4e4e7;
-  --border-subtle: rgba(228, 228, 231, 0.6);
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
 }
 
-/* ── Custom scrollbar ── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--surface-3);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
-
-/* ── Animations ── */
 @keyframes slide-in-row {
   from {
     opacity: 0;
@@ -82,17 +104,151 @@
   }
 }
 
-.animate-slide-in {
-  animation: slide-in-row 200ms ease-out;
-}
-
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
 
-.animate-pulse-dot {
-  animation: pulse-dot 1.5s ease-in-out infinite;
+/* ── Dark theme (default) ── */
+:root {
+  color-scheme: dark;
+
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.178 0.004 286);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.178 0.004 286);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0.006 286.029);
+  --secondary: oklch(0.274 0.006 286.029);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.029);
+  --muted-foreground: oklch(0.632 0.014 264.436);
+  --accent: oklch(0.32 0.009 286);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.768);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.274 0.006 286.029);
+  --input: oklch(0.274 0.006 286.029);
+  --ring: oklch(0.553 0.013 286);
+  --radius: 0.5rem;
+
+  /* Status */
+  --success: oklch(0.35 0.108 145);
+  --success-foreground: oklch(0.62 0.194 145);
+  --warning: oklch(0.42 0.12 75);
+  --warning-foreground: oklch(0.75 0.183 75);
+  --info: oklch(0.35 0.1 250);
+  --info-foreground: oklch(0.62 0.17 250);
+
+  /* Charts */
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.714);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+
+  /* Sidebar */
+  --sidebar-background: oklch(0.178 0.004 286);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.205 0.006 286.029);
+  --sidebar-accent: oklch(0.274 0.006 286.029);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.274 0.006 286.029);
+  --sidebar-ring: oklch(0.442 0.017 285.786);
+
+  /* Legacy (for views not yet migrated) */
+  --border-subtle: oklch(0.274 0.006 286.029 / 0.6);
+  --surface-0: oklch(0.145 0 0);
+  --surface-1: oklch(0.178 0.004 286);
+  --surface-2: oklch(0.274 0.006 286.029);
+  --surface-3: oklch(0.32 0.009 286);
+  --text-primary: oklch(0.985 0 0);
+  --text-secondary: oklch(0.632 0.014 264.436);
+  --text-muted: oklch(0.553 0.013 286);
+  --border-default: oklch(0.274 0.006 286.029);
+}
+
+/* ── Light theme ── */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0.006 286.029);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.205 0.006 286.029);
+  --muted: oklch(0.967 0.001 286.375);
+  --muted-foreground: oklch(0.442 0.017 285.786);
+  --accent: oklch(0.967 0.001 286.375);
+  --accent-foreground: oklch(0.205 0.006 286.029);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.92 0.004 286.32);
+  --input: oklch(0.92 0.004 286.32);
+  --ring: oklch(0.705 0.015 286.067);
+
+  /* Status */
+  --success: oklch(0.45 0.13 145);
+  --success-foreground: oklch(0.35 0.108 145);
+  --warning: oklch(0.55 0.15 75);
+  --warning-foreground: oklch(0.42 0.12 75);
+  --info: oklch(0.5 0.13 250);
+  --info-foreground: oklch(0.35 0.1 250);
+
+  /* Charts */
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.714);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+
+  /* Sidebar */
+  --sidebar-background: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0.006 286.029);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.967 0.001 286.375);
+  --sidebar-accent-foreground: oklch(0.205 0.006 286.029);
+  --sidebar-border: oklch(0.92 0.004 286.32);
+  --sidebar-ring: oklch(0.705 0.015 286.067);
+
+  /* Legacy */
+  --border-subtle: oklch(0.92 0.004 286.32 / 0.6);
+  --surface-0: oklch(1 0 0);
+  --surface-1: oklch(0.967 0.001 286.375);
+  --surface-2: oklch(0.92 0.004 286.32);
+  --surface-3: oklch(0.869 0.005 286.286);
+  --text-primary: oklch(0.145 0 0);
+  --text-secondary: oklch(0.442 0.017 285.786);
+  --text-muted: oklch(0.705 0.015 286.067);
+  --border-default: oklch(0.92 0.004 286.32);
+}
+
+/* ── Custom scrollbar (will be replaced by shadcn ScrollArea) ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ring);
 }
 
 /* ── Command palette (cmdk) ── */
@@ -100,7 +256,7 @@
   padding: 6px 8px 4px;
   font-size: 11px;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--muted-foreground);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -112,16 +268,16 @@
   padding: 6px 8px;
   border-radius: 6px;
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--muted-foreground);
   cursor: pointer;
   user-select: none;
 }
 
 .command-item[data-selected="true"] {
-  background: var(--surface-2);
-  color: var(--text-primary);
+  background: var(--accent);
+  color: var(--foreground);
 }
 
 .command-item:active {
-  background: var(--surface-3);
+  background: var(--secondary);
 }

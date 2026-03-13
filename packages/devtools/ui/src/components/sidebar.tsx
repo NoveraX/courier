@@ -11,7 +11,7 @@ interface SidebarProps {
 
 export function Sidebar({ themeIcon: ThemeIcon, theme, onThemeToggle }: SidebarProps) {
   return (
-    <nav className="flex w-12 shrink-0 flex-col items-center border-r border-border-default bg-surface-0 py-2">
+    <nav className="flex w-12 shrink-0 flex-col items-center border-r border-border bg-background py-2">
       <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/15">
         <span className="text-sm font-bold text-indigo-400">N</span>
       </div>
@@ -23,13 +23,13 @@ export function Sidebar({ themeIcon: ThemeIcon, theme, onThemeToggle }: SidebarP
             to={to}
             preload="intent"
             activeOptions={{ exact: false }}
-            className="group relative flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-secondary"
-            activeProps={{ className: "!bg-surface-2 !text-text-primary" }}
+            className="group relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-card hover:text-secondary-foreground"
+            activeProps={{ className: "!bg-muted !text-foreground" }}
           >
             {({ isActive }) => (
               <>
                 <Icon size={18} strokeWidth={isActive ? 2 : 1.5} />
-                <span className="pointer-events-none absolute left-full z-50 ml-2 hidden whitespace-nowrap rounded bg-surface-3 px-2 py-1 text-xs text-text-primary shadow-lg group-hover:block">
+                <span className="pointer-events-none absolute left-full z-50 ml-2 hidden whitespace-nowrap rounded bg-accent px-2 py-1 text-xs text-foreground shadow-lg group-hover:block">
                   {label}
                 </span>
               </>
@@ -42,7 +42,7 @@ export function Sidebar({ themeIcon: ThemeIcon, theme, onThemeToggle }: SidebarP
         type="button"
         title={`Theme: ${theme}`}
         onClick={onThemeToggle}
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-secondary"
+        className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-card hover:text-secondary-foreground"
       >
         <ThemeIcon size={16} />
       </button>

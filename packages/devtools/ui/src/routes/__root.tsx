@@ -1,9 +1,11 @@
 import { useState, useMemo } from "react";
 import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
+
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 import { useSocketConnection } from "../socket";
 import { useDevToolsStore } from "../store";
 import { TAB_ROUTES, THEME_ICONS, THEME_CYCLE } from "../app-config";
-import { ToastOverlay } from "../components/toast-overlay";
 import { CommandPalette } from "../components/command-palette";
 import { StatusBar } from "../components/status-bar";
 import { useHotkeys } from "../components/use-hotkeys";
@@ -16,7 +18,6 @@ function RootComponent() {
 
   const {
     theme, setTheme,
-    toasts, dismissToast,
     togglePaused, clearRequests,
   } = useDevToolsStore();
 
@@ -42,19 +43,21 @@ function RootComponent() {
   const ThemeIcon = THEME_ICONS[theme];
 
   return (
-    <div className="flex h-screen flex-col bg-surface-0 text-text-primary">
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar themeIcon={ThemeIcon} theme={theme} onThemeToggle={nextTheme} />
+    <TooltipProvider delayDuration={300}>
+      <div className="flex h-screen flex-col bg-background text-foreground">
+        <div className="flex flex-1 overflow-hidden">
+          <Sidebar themeIcon={ThemeIcon} theme={theme} onThemeToggle={nextTheme} />
 
-        <main className="flex flex-1 flex-col overflow-hidden">
-          <Outlet />
-        </main>
+          <main className="flex flex-1 flex-col overflow-hidden">
+            <Outlet />
+          </main>
+        </div>
+
+        <StatusBar />
+        <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
       </div>
-
-      <StatusBar />
-      <ToastOverlay toasts={toasts} onDismiss={dismissToast} />
-      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-    </div>
+      <Toaster />
+    </TooltipProvider>
   );
 }
 

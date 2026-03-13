@@ -10,12 +10,12 @@ export function Section({
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {title}
         </h3>
         {actions}
       </div>
       <div className="space-y-1">{children}</div>
     </div>
-  )
+  );
 }

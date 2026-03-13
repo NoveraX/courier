@@ -1,6 +1,6 @@
 import { Check, ChevronDown, ChevronRight, Minus } from "lucide-react"
 
-import { Badge } from "../../components/badge"
+import { Badge } from "../../components/ui"
 import { HTTP_METHOD_COLORS } from "./helpers"
 
 export function GroupHeader({

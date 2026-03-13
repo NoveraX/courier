@@ -49,25 +49,25 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       />
 
       <Command
-        className="relative w-full max-w-lg overflow-hidden rounded-xl border border-border-default bg-surface-1 shadow-2xl"
+        className="relative w-full max-w-lg overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
         shouldFilter={true}
         loop
       >
-        <div className="flex items-center border-b border-border-default px-3">
-          <Search size={16} className="shrink-0 text-text-muted" />
+        <div className="flex items-center border-b border-border px-3">
+          <Search size={16} className="shrink-0 text-muted-foreground" />
           <Command.Input
             value={search}
             onValueChange={setSearch}
             placeholder="Type a command or search…"
-            className="h-11 w-full bg-transparent px-2 text-sm text-text-primary outline-none placeholder:text-text-muted"
+            className="h-11 w-full bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
           />
-          <kbd className="shrink-0 rounded border border-border-default bg-surface-2 px-1.5 py-0.5 text-[10px] text-text-muted">
+          <kbd className="shrink-0 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
             ESC
           </kbd>
         </div>
 
         <Command.List className="max-h-72 overflow-y-auto p-1.5">
-          <Command.Empty className="px-3 py-6 text-center text-sm text-text-muted">
+          <Command.Empty className="px-3 py-6 text-center text-sm text-muted-foreground">
             No results found.
           </Command.Empty>
 

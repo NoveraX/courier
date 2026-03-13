@@ -17,6 +17,11 @@
       "import": "./lib/index.js",
       "default": "./lib/index.js"
     },
+    "./server": {
+      "types": "./lib/server.d.ts",
+      "import": "./lib/server.js",
+      "default": "./lib/server.js"
+    },
     "./vite": {
       "types": "./lib/vite.d.ts",
       "import": "./lib/vite.js",

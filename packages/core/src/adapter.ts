@@ -57,7 +57,7 @@ export function createHandler(sources: Sources): AdapterHandler {
       source,
       group,
       method,
-      timestamp: performance.now(),
+      timestamp: Date.now(),
     });
 
     const parsedVars = Object.keys(variables).length > 0 ? variables : undefined;
@@ -67,7 +67,7 @@ export function createHandler(sources: Sources): AdapterHandler {
       group,
       method,
       variables: parsedVars,
-      timestamp: performance.now(),
+      timestamp: Date.now(),
     });
 
     const response = await execute(
@@ -88,7 +88,7 @@ export function createHandler(sources: Sources): AdapterHandler {
       group,
       method,
       status: response.status,
-      timestamp: performance.now(),
+      timestamp: Date.now(),
     });
 
     return response;
@@ -100,7 +100,7 @@ export function createHandler(sources: Sources): AdapterHandler {
     if (!origin || new URL(request.url).origin !== origin) {
       dt.onProxyOriginReject?.({
         origin: origin ?? "",
-        timestamp: performance.now(),
+        timestamp: Date.now(),
       });
       return errorResponse(403, "Origin mismatch");
     }
@@ -139,7 +139,7 @@ export function createHandler(sources: Sources): AdapterHandler {
       source: proxySource,
       group: proxyGroup,
       method: proxyMethod,
-      timestamp: performance.now(),
+      timestamp: Date.now(),
     });
 
     const proxyVariables = body instanceof FormData ? undefined : (body?.variables as unknown);
@@ -149,7 +149,7 @@ export function createHandler(sources: Sources): AdapterHandler {
       group: proxyGroup,
       method: proxyMethod,
       variables: proxyVariables,
-      timestamp: performance.now(),
+      timestamp: Date.now(),
     });
 
     const response = await execute(request, body, "POST");
@@ -160,7 +160,7 @@ export function createHandler(sources: Sources): AdapterHandler {
       group: proxyGroup,
       method: proxyMethod,
       status: response.status,
-      timestamp: performance.now(),
+      timestamp: Date.now(),
     });
 
     return response;

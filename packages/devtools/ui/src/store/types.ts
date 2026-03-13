@@ -32,5 +32,8 @@ export type {
   WaterfallGroupBy,
   CompareTab,
   AuditSeverityFilter,
+  TimestampFormat,
+  JsonIndent,
+  Settings,
   Toast,
 } from "./types-ui"

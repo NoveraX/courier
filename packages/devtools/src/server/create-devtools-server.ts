@@ -12,6 +12,8 @@ import { setProjectRoot } from "../context";
 import { registerCodegenRoutes } from "./codegen-routes";
 import { startFileWatcher } from "./file-watcher";
 import { initProject } from "./init";
+import { clearBuffer } from "./session-buffer";
+import { registerSessionRoutes } from "./session-routes";
 import { setupAppNamespace, setupUiNamespace } from "./socket-handlers";
 import type { DevToolsServer, DevToolsServerOptions, SessionInfo } from "./types";
 
@@ -61,6 +63,7 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
   });
 
   registerCodegenRoutes(app);
+  registerSessionRoutes(app);
 
   // ── Static UI serving ────────────────────────────────────────────────────────
 
@@ -79,6 +82,14 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
 
   const url = `http://${host}:${port}`;
 
+  httpServer.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      console.log(`  ✦ Nexus DevTools already running on ${url}`);
+      return;
+    }
+    throw err;
+  });
+
   httpServer.listen(port, host, () => {
     onReady?.(url);
   });
@@ -86,6 +97,7 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
   const close = () =>
     new Promise<void>((resolve, reject) => {
       stopWatcher();
+      clearBuffer();
       sessions.clear();
       io.close();
       httpServer.close((err) => (err ? reject(err) : resolve()));

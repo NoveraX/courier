@@ -28,7 +28,7 @@ export async function tryConnectSocket(
       socket.emit("event", {
         id: sessionId,
         type: "connection:init",
-        timestamp: performance.now(),
+        timestamp: Date.now(),
         sessionId,
         framework,
         nexusVersion,
@@ -42,7 +42,7 @@ export async function tryConnectSocket(
         socket.emit("event", {
           id: sessionId,
           type: "connection:heartbeat",
-          timestamp: performance.now(),
+          timestamp: Date.now(),
           sessionId,
         });
       }

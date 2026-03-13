@@ -30,18 +30,18 @@ export function cacheMiddleware(options?: {
         requestId,
         key,
         age: Date.now() - (cached.expiry - ttl),
-        timestamp: performance.now(),
+        timestamp: Date.now(),
       });
       return cached.data;
     }
 
-    dt.onCacheMiss?.({ requestId, key, timestamp: performance.now() });
+    dt.onCacheMiss?.({ requestId, key, timestamp: Date.now() });
 
     const response = await next();
 
     if (response.status >= 200 && response.status < 300) {
       storage.set(key, { data: response, expiry: Date.now() + ttl });
-      dt.onCacheStore?.({ requestId, key, ttl, timestamp: performance.now() });
+      dt.onCacheStore?.({ requestId, key, ttl, timestamp: Date.now() });
     }
 
     return response;

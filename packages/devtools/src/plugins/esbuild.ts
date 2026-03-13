@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { startDevToolsServer } from "./core/auto-start";
 import { resolveOptions } from "./core/options";
 import { generateConnectSnippet } from "./core/snippet";
 import type { DevToolsPluginOptions } from "./core/types";
@@ -28,10 +27,6 @@ export function nexusDevTools(options?: DevToolsPluginOptions): EsbuildPluginLik
     name: "nexus-devtools",
     setup(build) {
       if (!resolved.enabled) return;
-
-      if (resolved.autoStart) {
-        startDevToolsServer(resolved);
-      }
 
       build.onResolve({ filter: new RegExp(`^${VIRTUAL_ID}$`) }, () => ({
         path: VIRTUAL_ID,

@@ -1,4 +1,3 @@
-import { startDevToolsServer } from "./core/auto-start";
 import { resolveOptions } from "./core/options";
 import { generateConnectSnippet } from "./core/snippet";
 import type { DevToolsPluginOptions } from "./core/types";
@@ -49,11 +48,6 @@ export async function nexusDevToolsModule(
 
   const resolved = resolveOptions(options);
   if (!resolved.enabled) return;
-
-  if (resolved.autoStart) {
-    const cleanup = startDevToolsServer(resolved);
-    nuxt.hook("close", cleanup);
-  }
 
   const snippet = generateConnectSnippet(resolved);
 

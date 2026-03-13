@@ -39,7 +39,7 @@ export function composeMiddleware(middlewares: MiddlewareFn[]): MiddlewareFn {
         name,
         index: i,
         totalCount,
-        timestamp: performance.now(),
+        timestamp: Date.now(),
       });
 
       const t0 = dt.onMiddlewareExit ? performance.now() : 0;
@@ -53,7 +53,7 @@ export function composeMiddleware(middlewares: MiddlewareFn[]): MiddlewareFn {
             name,
             index: i,
             duration: performance.now() - t0,
-            timestamp: performance.now(),
+            timestamp: Date.now(),
           });
           return response;
         },
@@ -63,7 +63,7 @@ export function composeMiddleware(middlewares: MiddlewareFn[]): MiddlewareFn {
             name,
             index: i,
             error: error instanceof Error ? error.message : String(error),
-            timestamp: performance.now(),
+            timestamp: Date.now(),
           });
           throw error;
         },

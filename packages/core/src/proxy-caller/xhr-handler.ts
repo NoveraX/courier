@@ -61,14 +61,14 @@ export async function handleXhrUpload(ctx: XhrHandlerCtx): Promise<unknown> {
           loaded: progress.transferredBytes,
           total: progress.totalBytes,
           percentage: progress.percent,
-          timestamp: performance.now(),
+          timestamp: Date.now(),
         });
       },
     });
 
     dt.onUploadComplete?.({
       requestId: uploadId,
-      timestamp: performance.now(),
+      timestamp: Date.now(),
     });
 
     if (!response.ok) {

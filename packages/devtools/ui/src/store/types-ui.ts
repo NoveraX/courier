@@ -103,6 +103,27 @@ export type CompareTab = "payload" | "response" | "headers" | "timing"
 
 export type AuditSeverityFilter = "error" | "warning" | "hint" | "pass" | "all"
 
+// ── Settings ────────────────────────────────────────────────────────────────
+
+export type TimestampFormat = "relative" | "absolute"
+export type JsonIndent = 2 | 4
+
+export interface Settings {
+  // Recording
+  maxRequests: number
+  preserveLog: boolean
+
+  // Display
+  timestampFormat: TimestampFormat
+  jsonIndent: JsonIndent
+  showRequestPreview: boolean
+
+  // Notifications
+  toastOnError: boolean
+  toastOnSlowRequest: boolean
+  slowRequestThreshold: number
+}
+
 // ── Toast ───────────────────────────────────────────────────────────────────
 
 export interface Toast {

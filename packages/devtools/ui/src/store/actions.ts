@@ -1,9 +1,11 @@
 import type { StateCreator } from "zustand"
 
 import type { DevToolsState } from "./store-types"
-import { THEME_STORAGE_KEY, TAB_STORAGE_KEY, PLAYGROUND_MAX_HISTORY } from "./constants"
+import { THEME_STORAGE_KEY, TAB_STORAGE_KEY, PLAYGROUND_MAX_HISTORY, DEFAULT_SETTINGS, saveSettings, saveSessionStartedAt } from "./constants"
 import { applyTheme } from "./theme"
 import { handleEventReducer } from "./handle-event"
+import { notifyOnEvent } from "./event-notifications"
+import { createInitialState } from "./initial-state"
 
 type Setter = Parameters<StateCreator<DevToolsState>>[0]
 type Getter = Parameters<StateCreator<DevToolsState>>[1]
@@ -34,14 +36,27 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
     },
     setReconnectAttempt: (attempt) => set({ reconnectAttempt: attempt }),
     setSessions: (sessions) => set({ sessions }),
-    addSession: (session) => set((s) => ({ sessions: [...s.sessions, session] })),
+    addSession: (session) => set((s) => {
+      const sessionStartedAt = s.sessionStartedAt ?? Date.now()
+      if (!s.sessionStartedAt) saveSessionStartedAt(sessionStartedAt)
+      return {
+        sessions: [...s.sessions, session],
+        sessionStartedAt,
+      }
+    }),
     removeSession: (sessionId) =>
-      set((s) => ({
-        sessions: s.sessions.filter((ss) => ss.sessionId !== sessionId),
-        requests: s.preserveLog
-          ? s.requests
-          : s.requests.filter((r) => r.sessionId !== sessionId || r.pinned),
-      })),
+      set((s) => {
+        const sessions = s.sessions.filter((ss) => ss.sessionId !== sessionId)
+        const sessionStartedAt = sessions.length === 0 ? null : s.sessionStartedAt
+        if (sessions.length === 0) saveSessionStartedAt(null)
+        return {
+          sessions,
+          sessionStartedAt,
+          requests: s.preserveLog
+            ? s.requests
+            : s.requests.filter((r) => r.sessionId !== sessionId || r.pinned),
+        }
+      }),
 
     // Requests
     selectRequest: (id) => set({ selectedRequestId: id }),
@@ -120,44 +135,19 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
     handleEvent: (event) => {
       if (get().paused) return
       set((state) => handleEventReducer(state, event))
+      notifyOnEvent(event, get)
+    },
+
+    // Settings
+    updateSettings: (patch) => {
+      const next = { ...get().settings, ...patch }
+      saveSettings(next)
+      set({ settings: next })
+    },
+    resetSettings: () => {
+      saveSettings(DEFAULT_SETTINGS)
+      set({ settings: DEFAULT_SETTINGS })
     },
   }
 }
 
-export function createInitialState(savedTheme: DevToolsState["theme"], savedTab: DevToolsState["activeTab"]) {
-  return {
-    activeTab: savedTab,
-    theme: savedTheme,
-    toasts: [] as DevToolsState["toasts"],
-    connectionStatus: "disconnected" as const,
-    reconnectAttempt: 0,
-    sessions: [] as DevToolsState["sessions"],
-    requests: [] as DevToolsState["requests"],
-    selectedRequestId: null as string | null,
-    paused: false,
-    preserveLog: false,
-    timelineFilters: { search: "", status: [], mode: [], type: [], httpMethod: [], source: [], group: [], minDuration: null } as DevToolsState["timelineFilters"],
-    timelineShowFilters: false,
-    explorerView: "graph" as const,
-    explorerSelectedEndpoint: null as DevToolsState["explorerSelectedEndpoint"],
-    graphLayout: "LR" as const,
-    showSchemas: true,
-    listSearch: "",
-    listSortKey: "source" as const,
-    listSortDir: "asc" as const,
-    waterfallSortBy: "startTime" as const,
-    waterfallGroupBy: "none" as const,
-    waterfallZoom: 1,
-    middlewareSelectedId: null as string | null,
-    middlewareShowStats: false,
-    compareLeftId: null as string | null,
-    compareRightId: null as string | null,
-    compareActiveTab: "response" as const,
-    comparePickerSide: null as DevToolsState["comparePickerSide"],
-    auditFilter: "all" as const,
-    auditExpandedIds: new Set<string>(),
-    playgroundHistory: [] as DevToolsState["playgroundHistory"],
-    playgroundActiveResponse: null as DevToolsState["playgroundActiveResponse"],
-    connected: false,
-  }
-}

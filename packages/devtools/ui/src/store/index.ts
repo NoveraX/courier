@@ -3,7 +3,8 @@ import { create } from "zustand"
 import type { DevToolsState } from "./store-types"
 import { loadTheme, loadTab } from "./constants"
 import { applyTheme } from "./theme"
-import { createActions, createInitialState } from "./actions"
+import { createActions } from "./actions"
+import { createInitialState } from "./initial-state"
 
 // Re-export types consumers need
 export type {
@@ -39,11 +40,14 @@ export type {
   WaterfallGroupBy,
   CompareTab,
   AuditSeverityFilter,
+  TimestampFormat,
+  JsonIndent,
+  Settings,
   Toast,
 } from "./types-ui"
 
 export type { DevToolsState } from "./store-types"
-export { EMPTY_FILTERS, PLAYGROUND_MAX_HISTORY, MAX_REQUESTS } from "./constants"
+export { EMPTY_FILTERS, PLAYGROUND_MAX_HISTORY, MAX_REQUESTS, DEFAULT_SETTINGS } from "./constants"
 
 // ── Initialize theme ────────────────────────────────────────────────────────
 

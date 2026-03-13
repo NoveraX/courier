@@ -26,7 +26,7 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
       status: error instanceof HTTPError ? error.status : undefined,
       message: error instanceof Error ? error.message : String(error),
     },
-    timestamp: performance.now(),
+    timestamp: Date.now(),
   });
 
   if (error instanceof ValidationError) {

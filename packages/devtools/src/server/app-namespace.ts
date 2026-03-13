@@ -3,6 +3,7 @@
  */
 
 import type { Namespace } from "socket.io";
+import { bufferEvent } from "./session-buffer";
 import type { SessionInfo } from "./types";
 
 export function setupAppNamespace(
@@ -14,6 +15,9 @@ export function setupAppNamespace(
     let sessionId: string | undefined;
 
     socket.on("event", (event: Record<string, unknown>) => {
+      // Buffer events for session persistence
+      bufferEvent(event);
+
       // Track sessions
       if (event.type === "connection:init") {
         sessionId = event.sessionId as string;

@@ -1,6 +1,2 @@
-export {
-  createDevToolsServer,
-  type DevToolsServer,
-  type DevToolsServerOptions,
-  type SessionInfo,
-} from "./server";
+export { createDevToolsServer } from "./server";
+export type { DevToolsServer, DevToolsServerOptions, SessionInfo } from "./server/types";

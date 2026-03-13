@@ -14,7 +14,11 @@ export async function validateVariables(
   ctx: ValidationTimingCtx,
 ): Promise<{ validated: unknown; duration: number }> {
   const vt0 = ctx.hasDevtools ? performance.now() : 0;
-  ctx.dt.onValidationStart?.({ requestId: ctx.requestId, target: "variables", timestamp: vt0 });
+  ctx.dt.onValidationStart?.({
+    requestId: ctx.requestId,
+    target: "variables",
+    timestamp: Date.now(),
+  });
 
   try {
     const validated = await validateSchema(schema, variables, "variables");
@@ -23,7 +27,7 @@ export async function validateVariables(
       requestId: ctx.requestId,
       target: "variables",
       duration,
-      timestamp: performance.now(),
+      timestamp: Date.now(),
     });
     return { validated, duration };
   } catch (error) {
@@ -34,7 +38,7 @@ export async function validateVariables(
         target: "variables",
         issues: error.issues,
         duration,
-        timestamp: performance.now(),
+        timestamp: Date.now(),
       });
     }
     throw error;
@@ -47,7 +51,11 @@ export async function validateResponse(
   ctx: ValidationTimingCtx,
 ): Promise<{ validated: unknown; duration: number }> {
   const rvt0 = ctx.hasDevtools ? performance.now() : 0;
-  ctx.dt.onValidationStart?.({ requestId: ctx.requestId, target: "response", timestamp: rvt0 });
+  ctx.dt.onValidationStart?.({
+    requestId: ctx.requestId,
+    target: "response",
+    timestamp: Date.now(),
+  });
 
   try {
     const validated = await validateSchema(schema, data, "response");
@@ -56,7 +64,7 @@ export async function validateResponse(
       requestId: ctx.requestId,
       target: "response",
       duration,
-      timestamp: performance.now(),
+      timestamp: Date.now(),
     });
     return { validated, duration };
   } catch (error) {
@@ -67,7 +75,7 @@ export async function validateResponse(
         target: "response",
         issues: error.issues,
         duration,
-        timestamp: performance.now(),
+        timestamp: Date.now(),
       });
     }
     throw error;

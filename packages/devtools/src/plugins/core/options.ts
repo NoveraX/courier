@@ -18,7 +18,6 @@ export function resolveOptions(options: DevToolsPluginOptions = {}): ResolvedOpt
   return {
     port,
     host,
-    autoStart: options.autoStart ?? false,
     enabled: options.enabled ?? process.env.NODE_ENV !== "production",
     filter: options.filter,
   };

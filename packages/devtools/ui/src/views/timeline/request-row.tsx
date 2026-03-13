@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react"
 import { Pin } from "lucide-react"
 
-import type { RequestEntry } from "../../store"
+import type { RequestEntry, TimestampFormat } from "../../store"
 
 import { Badge, formatRelativeTime, formatAbsoluteTime, formatSize } from "../../components/ui"
-import { STATUS_CONFIG, HTTP_METHOD_COLORS, getCodeColor, TIMING_SLOW_MS, TIMING_WARN_MS } from "./constants"
+import { STATUS_CONFIG, HTTP_METHOD_COLORS, getCodeColor, TIMING_WARN_MS } from "./constants"
 import { getRequestLabel } from "./request-helpers"
 
 // ── Request Row ──────────────────────────────────────────────────────────────
@@ -15,24 +15,30 @@ export function RequestRow({
   onSelect,
   onTogglePin,
   onContextMenu,
+  timestampFormat = "relative",
+  slowThreshold = 1000,
 }: {
   request: RequestEntry
   selected: boolean
   onSelect: () => void
   onTogglePin: () => void
   onContextMenu: (e: React.MouseEvent) => void
+  timestampFormat?: TimestampFormat
+  slowThreshold?: number
 }) {
   const [, setTick] = useState(0)
   const statusCfg = STATUS_CONFIG[request.status]
   const label = getRequestLabel(request)
   const codeColor = request.statusCode != null ? getCodeColor(request.statusCode) : ""
 
-  // Tick every 10s for relative timestamps on pending requests
+  // Tick every 10s for relative timestamps
   useEffect(() => {
-    if (request.status !== "pending") return
+    if (timestampFormat !== "relative" && request.status !== "pending") return
     const interval = setInterval(() => setTick((t) => t + 1), 10_000)
     return () => clearInterval(interval)
-  }, [request.status])
+  }, [request.status, timestampFormat])
+
+  const formatTimestamp = timestampFormat === "relative" ? formatRelativeTime : formatAbsoluteTime
 
   return (
     <button
@@ -114,7 +120,7 @@ export function RequestRow({
       {request.timing ? (
         <span
           className={`w-12 shrink-0 text-right text-[11px] tabular-nums ${
-            request.timing.total > TIMING_SLOW_MS
+            request.timing.total > slowThreshold
               ? "text-red-400"
               : request.timing.total > TIMING_WARN_MS
                 ? "text-amber-400"
@@ -133,7 +139,7 @@ export function RequestRow({
 
       {/* Timestamp */}
       <span className="w-14 shrink-0 text-right text-[10px] tabular-nums text-text-muted">
-        {formatAbsoluteTime(request.startedAt)}
+        {formatTimestamp(request.startedAt)}
       </span>
     </button>
   )

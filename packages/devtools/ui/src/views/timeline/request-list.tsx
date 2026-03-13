@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 
-import type { RequestEntry } from "../../store"
+import type { RequestEntry, TimestampFormat } from "../../store"
 
 import { RequestRow } from "./request-row"
 import { RequestContextMenu } from "./context-menu"
@@ -16,11 +16,15 @@ export function VirtualRequestList({
   selectedId,
   onSelect,
   onTogglePin,
+  timestampFormat,
+  slowThreshold,
 }: {
   requests: RequestEntry[]
   selectedId: string | null
   onSelect: (id: string) => void
   onTogglePin: (id: string) => void
+  timestampFormat: TimestampFormat
+  slowThreshold: number
 }) {
   const parentRef = useRef<HTMLDivElement>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
@@ -90,6 +94,8 @@ export function VirtualRequestList({
                 onSelect={() => onSelect(request.id)}
                 onTogglePin={() => onTogglePin(request.id)}
                 onContextMenu={(e) => handleContextMenu(e, request)}
+                timestampFormat={timestampFormat}
+                slowThreshold={slowThreshold}
               />
             </div>
           )

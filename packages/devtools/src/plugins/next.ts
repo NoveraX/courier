@@ -1,22 +1,26 @@
 import type { NextConfig } from "next";
-import { startDevToolsServer } from "./core/auto-start";
 import { createDataUri } from "./core/data-uri";
 import { resolveOptions } from "./core/options";
 import { generateConnectSnippet } from "./core/snippet";
 import type { DevToolsPluginOptions } from "./core/types";
 
 /**
- * Next.js config wrapper for Nexus DevTools.
+ * Next.js config wrapper for Nexus DevTools (webpack mode only).
  * Injects `connectDevTools()` into the client webpack bundle in dev mode.
+ *
+ * **Turbopack** ignores `webpack()` config — use `instrumentation-client.ts` instead:
+ * ```ts
+ * import { connectDevTools } from "@noverax/nexus-devtools-core"
+ * connectDevTools()
+ * ```
+ *
+ * **Server** — run separately: `npx nexus-devtools` or `npm run devtools`
  *
  * @example
  * ```ts
- * // next.config.ts
+ * // next.config.ts (webpack mode)
  * import { withNexusDevTools } from "@noverax/nexus-devtools/next"
- *
- * export default withNexusDevTools()({
- *   // your Next.js config
- * })
+ * export default withNexusDevTools()({ ... })
  * ```
  */
 export function withNexusDevTools(pluginOptions?: DevToolsPluginOptions) {
@@ -24,10 +28,6 @@ export function withNexusDevTools(pluginOptions?: DevToolsPluginOptions) {
 
   return (nextConfig: NextConfig): NextConfig => {
     if (!resolved.enabled) return nextConfig;
-
-    if (resolved.autoStart) {
-      startDevToolsServer(resolved);
-    }
 
     const snippet = generateConnectSnippet(resolved);
     const dataUri = createDataUri(snippet);

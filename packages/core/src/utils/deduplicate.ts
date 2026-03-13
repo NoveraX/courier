@@ -23,12 +23,12 @@ export function deduplicateAndAbortPrevious(host: DedupeHost, dedupeKey: string)
     devtoolsHooks.onDedupAbort?.({
       requestId: dedupeKey,
       key: dedupeKey,
-      timestamp: performance.now(),
+      timestamp: Date.now(),
     });
     devtoolsHooks.onRequestAbort?.({
       id: dedupeKey,
       reason: "deduplication",
-      timestamp: performance.now(),
+      timestamp: Date.now(),
     });
     existing.abort(
       new HTTPError({

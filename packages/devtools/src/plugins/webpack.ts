@@ -1,4 +1,3 @@
-import { startDevToolsServer } from "./core/auto-start";
 import { createDataUri } from "./core/data-uri";
 import { resolveOptions } from "./core/options";
 import { generateConnectSnippet } from "./core/snippet";
@@ -24,11 +23,6 @@ export function nexusDevTools(options?: DevToolsPluginOptions): WebpackPluginLik
   return {
     apply(compiler) {
       if (!resolved.enabled) return;
-
-      if (resolved.autoStart) {
-        const cleanup = startDevToolsServer(resolved);
-        compiler.hooks?.shutdown?.tap("nexus-devtools", cleanup);
-      }
 
       // Skip server-side bundles
       if (compiler.options?.target === "node") return;

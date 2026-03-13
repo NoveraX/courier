@@ -15,6 +15,7 @@ import type {
   WaterfallGroupBy,
   CompareTab,
   AuditSeverityFilter,
+  Settings,
   Toast,
 } from "./types"
 
@@ -71,6 +72,10 @@ export interface DevToolsState {
   // Playground
   playgroundHistory: PlaygroundHistoryEntry[]
   playgroundActiveResponse: PlaygroundHistoryEntry | null
+
+  // Settings
+  settings: Settings
+  sessionStartedAt: number | null
 
   // Actions — UI
   setActiveTab: (tab: Tab) => void
@@ -131,4 +136,8 @@ export interface DevToolsState {
   updatePlaygroundEntry: (id: string, patch: Partial<PlaygroundHistoryEntry>) => void
   setPlaygroundActiveResponse: (entry: PlaygroundHistoryEntry | null) => void
   clearPlaygroundHistory: () => void
+
+  // Actions — Settings
+  updateSettings: (patch: Partial<Settings>) => void
+  resetSettings: () => void
 }

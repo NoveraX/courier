@@ -102,7 +102,7 @@ export async function executeRequest(
     mode,
     middlewareCount: dataSource.options?.middleware?.length ?? 0,
     hasValidation: { variables: !!schema?.variables, response: !!schema?.response },
-    timestamp: t0,
+    timestamp: Date.now(),
   });
 
   try {
@@ -123,7 +123,7 @@ export async function executeRequest(
         requestId,
         url: dataSource.options?.baseURL ?? "",
         method: String(method),
-        timestamp: ft0,
+        timestamp: Date.now(),
       });
 
       let response: Awaited<ReturnType<typeof endpoint>>;
@@ -144,7 +144,7 @@ export async function executeRequest(
         dt.onHttpFetchError?.({
           requestId,
           message: fetchError instanceof Error ? fetchError.message : String(fetchError),
-          timestamp: performance.now(),
+          timestamp: Date.now(),
         });
         throw fetchError;
       }
@@ -153,7 +153,7 @@ export async function executeRequest(
         requestId,
         status: response?.status || 200,
         duration: hasDevtools ? performance.now() - ft0 : 0,
-        timestamp: performance.now(),
+        timestamp: Date.now(),
       });
 
       const headers = isHeaders(response.headers) ? response.headers : new Headers();
@@ -188,7 +188,7 @@ export async function executeRequest(
         fetch: 0,
         validation: tValidation,
       },
-      timestamp: performance.now(),
+      timestamp: Date.now(),
     });
 
     const response = buildResponse(context, {

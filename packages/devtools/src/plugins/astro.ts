@@ -1,4 +1,3 @@
-import { startDevToolsServer } from "./core/auto-start";
 import { resolveOptions } from "./core/options";
 import { generateConnectSnippet } from "./core/snippet";
 import type { DevToolsPluginOptions } from "./core/types";
@@ -25,11 +24,6 @@ export function nexusDevTools(options?: DevToolsPluginOptions): AstroIntegration
     hooks: {
       "astro:config:setup"(ctx: AstroSetupContext) {
         if (ctx.command !== "dev" || !resolved.enabled) return;
-
-        if (resolved.autoStart) {
-          startDevToolsServer(resolved);
-        }
-
         ctx.injectScript("page-init", generateConnectSnippet(resolved));
       },
     },

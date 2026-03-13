@@ -1,4 +1,3 @@
-import { startDevToolsServer } from "./core/auto-start";
 import { RESOLVED_ID, VIRTUAL_ID } from "./core/constants";
 import { resolveOptions } from "./core/options";
 import { generateConnectSnippet } from "./core/snippet";
@@ -20,29 +19,22 @@ import type { DevToolsPluginOptions } from "./core/types";
 export function nexusDevTools(options?: DevToolsPluginOptions): RollupPluginLike {
   const resolved = resolveOptions(options);
   let injected = false;
-  let cleanup: (() => void) | undefined;
 
   return {
     name: "nexus-devtools",
 
     buildStart() {
       injected = false;
-      if (!resolved.enabled) return;
-      if (resolved.autoStart) {
-        cleanup = startDevToolsServer(resolved);
-      }
-    },
-
-    closeBundle() {
-      cleanup?.();
     },
 
     resolveId(id: string) {
+      if (!resolved.enabled) return undefined;
       if (id === VIRTUAL_ID) return RESOLVED_ID;
       return undefined;
     },
 
     load(id: string) {
+      if (!resolved.enabled) return undefined;
       if (id === RESOLVED_ID) return generateConnectSnippet(resolved);
       return undefined;
     },
@@ -67,7 +59,6 @@ interface RollupTransformContext {
 interface RollupPluginLike {
   name: string;
   buildStart(): void;
-  closeBundle(): void;
   resolveId(id: string): string | undefined;
   load(id: string): string | undefined;
   transform(

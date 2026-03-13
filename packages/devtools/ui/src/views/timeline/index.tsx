@@ -25,6 +25,7 @@ export function TimelineView() {
     setTimelineFilters: setFilters,
     timelineShowFilters: showFilters,
     setTimelineShowFilters: setShowFilters,
+    settings,
   } = useDevToolsStore()
 
   const selectedRequest = requests.find((r) => r.id === selectedRequestId)
@@ -81,6 +82,8 @@ export function TimelineView() {
               selectedId={selectedRequestId}
               onSelect={selectRequest}
               onTogglePin={togglePin}
+              timestampFormat={settings.timestampFormat}
+              slowThreshold={settings.slowRequestThreshold}
             />
           )}
         </div>

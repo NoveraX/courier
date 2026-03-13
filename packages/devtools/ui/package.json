@@ -8,7 +8,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-router": "^1.166.7",
     "@tanstack/react-virtual": "^3.13.21",
+    "@tanstack/router-plugin": "^1.166.7",
     "@xyflow/react": "^12.10.1",
     "cmdk": "^1.1.1",
     "lucide-react": "^0.577.0",

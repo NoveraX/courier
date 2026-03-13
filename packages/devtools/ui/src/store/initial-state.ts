@@ -5,10 +5,8 @@ import { loadSettings, loadSessionStartedAt } from "./constants"
 
 export function createInitialState(
   savedTheme: DevToolsState["theme"],
-  savedTab: DevToolsState["activeTab"],
 ) {
   return {
-    activeTab: savedTab,
     theme: savedTheme,
     toasts: [] as DevToolsState["toasts"],
     connectionStatus: "disconnected" as const,
@@ -23,7 +21,6 @@ export function createInitialState(
       httpMethod: [], source: [], group: [], minDuration: null,
     } as DevToolsState["timelineFilters"],
     timelineShowFilters: false,
-    explorerView: "graph" as const,
     explorerSelectedEndpoint: null as DevToolsState["explorerSelectedEndpoint"],
     graphLayout: "LR" as const,
     showSchemas: true,

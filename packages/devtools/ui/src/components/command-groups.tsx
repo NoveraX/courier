@@ -1,27 +1,27 @@
-import { Command } from "cmdk"
+import { Command } from "cmdk";
 import {
   Activity, GitBranch, Layers, BarChart3, Network, Play,
   ShieldCheck, ChevronsLeftRightEllipsis, GitCompare, Settings,
   Trash2, Pause, Sun, Moon, Monitor, Search,
-} from "lucide-react"
+} from "lucide-react";
 
-import type { Tab } from "../store"
-import type { RequestEntry } from "../store"
+import type { LucideIcon } from "lucide-react";
+import type { RequestEntry } from "../store";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const TAB_ICONS: Record<Tab, typeof Activity> = {
-  timeline: Activity, waterfall: GitBranch, middleware: Layers,
-  analytics: BarChart3, explorer: Network, playground: Play,
-  audit: ShieldCheck, codegen: ChevronsLeftRightEllipsis,
-  compare: GitCompare, settings: Settings,
-}
-
-const TAB_LABELS: Record<Tab, string> = {
-  timeline: "Timeline", waterfall: "Waterfall", middleware: "Middleware",
-  analytics: "Analytics", explorer: "API Explorer", playground: "Playground",
-  audit: "Audit", codegen: "APIs", compare: "Compare", settings: "Settings",
-}
+const NAV_ITEMS: { to: string; icon: LucideIcon; label: string; shortcut?: string[] }[] = [
+  { to: "/timeline", icon: Activity, label: "Timeline", shortcut: ["1"] },
+  { to: "/waterfall", icon: GitBranch, label: "Waterfall", shortcut: ["2"] },
+  { to: "/middleware", icon: Layers, label: "Middleware" },
+  { to: "/analytics", icon: BarChart3, label: "Analytics" },
+  { to: "/explorer", icon: Network, label: "API Explorer" },
+  { to: "/playground", icon: Play, label: "Playground", shortcut: ["6"] },
+  { to: "/audit", icon: ShieldCheck, label: "Audit" },
+  { to: "/codegen", icon: ChevronsLeftRightEllipsis, label: "APIs" },
+  { to: "/compare", icon: GitCompare, label: "Compare" },
+  { to: "/settings", icon: Settings, label: "Settings", shortcut: ["⌘", ","] },
+];
 
 // ── Shared Helpers ───────────────────────────────────────────────────────────
 
@@ -37,7 +37,7 @@ export function Shortcut({ keys }: { keys: string[] }) {
         </kbd>
       ))}
     </span>
-  )
+  );
 }
 
 export function StatusDot({ status }: { status: string }) {
@@ -48,36 +48,30 @@ export function StatusDot({ status }: { status: string }) {
         ? "bg-red-500"
         : status === "pending"
           ? "bg-sky-500"
-          : "bg-zinc-500"
+          : "bg-zinc-500";
 
-  return <div className={`h-2 w-2 shrink-0 rounded-full ${color}`} />
+  return <div className={`h-2 w-2 shrink-0 rounded-full ${color}`} />;
 }
 
 // ── Navigate Group ───────────────────────────────────────────────────────────
 
-export function NavigateGroup({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
+export function NavigateGroup({ onNavigate }: { onNavigate: (path: string) => void }) {
   return (
     <Command.Group heading="Navigate" className="command-group">
-      {(Object.keys(TAB_LABELS) as Tab[]).map((tab) => {
-        const Icon = TAB_ICONS[tab]
-        return (
-          <Command.Item
-            key={tab}
-            value={`navigate ${tab} ${TAB_LABELS[tab]}`}
-            onSelect={() => onNavigate(tab)}
-            className="command-item"
-          >
-            <Icon size={14} className="shrink-0 text-text-muted" />
-            <span>{TAB_LABELS[tab]}</span>
-            {tab === "timeline" && <Shortcut keys={["1"]} />}
-            {tab === "waterfall" && <Shortcut keys={["2"]} />}
-            {tab === "playground" && <Shortcut keys={["6"]} />}
-            {tab === "settings" && <Shortcut keys={["⌘", ","]} />}
-          </Command.Item>
-        )
-      })}
+      {NAV_ITEMS.map(({ to, icon: Icon, label, shortcut }) => (
+        <Command.Item
+          key={to}
+          value={`navigate ${to} ${label}`}
+          onSelect={() => onNavigate(to)}
+          className="command-item"
+        >
+          <Icon size={14} className="shrink-0 text-text-muted" />
+          <span>{label}</span>
+          {shortcut && <Shortcut keys={shortcut} />}
+        </Command.Item>
+      ))}
     </Command.Group>
-  )
+  );
 }
 
 // ── Actions Group ────────────────────────────────────────────────────────────
@@ -88,10 +82,10 @@ export function ActionsGroup({
   onTogglePause,
   onShowFilters,
 }: {
-  paused: boolean
-  onClear: () => void
-  onTogglePause: () => void
-  onShowFilters: () => void
+  paused: boolean;
+  onClear: () => void;
+  onTogglePause: () => void;
+  onShowFilters: () => void;
 }) {
   return (
     <Command.Group heading="Actions" className="command-group">
@@ -111,7 +105,7 @@ export function ActionsGroup({
         <Shortcut keys={["⌘", "F"]} />
       </Command.Item>
     </Command.Group>
-  )
+  );
 }
 
 // ── Theme Group ──────────────────────────────────────────────────────────────
@@ -132,7 +126,7 @@ export function ThemeGroup({ onSelect }: { onSelect: (theme: "dark" | "light" | 
         <span>System theme</span>
       </Command.Item>
     </Command.Group>
-  )
+  );
 }
 
 // ── Recent Requests Group ────────────────────────────────────────────────────
@@ -141,10 +135,10 @@ export function RecentRequestsGroup({
   requests,
   onSelect,
 }: {
-  requests: RequestEntry[]
-  onSelect: (id: string) => void
+  requests: RequestEntry[];
+  onSelect: (id: string) => void;
 }) {
-  if (requests.length === 0) return null
+  if (requests.length === 0) return null;
 
   return (
     <Command.Group heading="Recent Requests" className="command-group">
@@ -165,5 +159,5 @@ export function RecentRequestsGroup({
         </Command.Item>
       ))}
     </Command.Group>
-  )
+  );
 }

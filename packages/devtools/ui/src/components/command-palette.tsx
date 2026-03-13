@@ -1,45 +1,45 @@
-import { useState, useMemo, useEffect } from "react"
-import { Command } from "cmdk"
-import { Search } from "lucide-react"
+import { useState, useMemo, useEffect } from "react";
+import { Command } from "cmdk";
+import { Search } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 
-import type { Tab } from "../store"
-import { useDevToolsStore } from "../store"
-import { NavigateGroup, ActionsGroup, ThemeGroup, RecentRequestsGroup } from "./command-groups"
+import { useDevToolsStore } from "../store";
+import { NavigateGroup, ActionsGroup, ThemeGroup, RecentRequestsGroup } from "./command-groups";
 
 interface CommandPaletteProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
-  const [search, setSearch] = useState("")
-  const store = useDevToolsStore()
+  const [search, setSearch] = useState("");
+  const store = useDevToolsStore();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (!open) setSearch("")
-  }, [open])
+    if (!open) setSearch("");
+  }, [open]);
 
   const recentRequests = useMemo(
     () => store.requests.slice(-20).reverse(),
     [store.requests],
-  )
+  );
 
   function close() {
-    onOpenChange(false)
+    onOpenChange(false);
   }
 
-  function navigateTab(tab: Tab) {
-    store.setActiveTab(tab)
-    close()
+  function navigateTo(path: string) {
+    void navigate({ to: path });
+    close();
   }
 
   function selectRequest(id: string) {
-    store.setActiveTab("timeline")
-    store.selectRequest(id)
-    close()
+    void navigate({ to: "/timeline", search: { request: id } });
+    close();
   }
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
@@ -71,24 +71,24 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             No results found.
           </Command.Empty>
 
-          <NavigateGroup onNavigate={navigateTab} />
+          <NavigateGroup onNavigate={navigateTo} />
 
           <ActionsGroup
             paused={store.paused}
-            onClear={() => { store.clearRequests(); close() }}
-            onTogglePause={() => { store.togglePaused(); close() }}
+            onClear={() => { store.clearRequests(); close(); }}
+            onTogglePause={() => { store.togglePaused(); close(); }}
             onShowFilters={() => {
-              store.setActiveTab("timeline")
-              store.setTimelineShowFilters(true)
-              close()
+              void navigate({ to: "/timeline" });
+              store.setTimelineShowFilters(true);
+              close();
             }}
           />
 
-          <ThemeGroup onSelect={(t) => { store.setTheme(t); close() }} />
+          <ThemeGroup onSelect={(t) => { store.setTheme(t); close(); }} />
 
           <RecentRequestsGroup requests={recentRequests} onSelect={selectRequest} />
         </Command.List>
       </Command>
     </div>
-  )
+  );
 }

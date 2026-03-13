@@ -35,6 +35,9 @@ Thumbs.db
 # Coverage & testing
 coverage/
 
+# TanStack Router (auto-generated)
+routeTree.gen.ts
+
 # Nexus devtools cache
 .nexus-cache.json
 .nexus-digests.json

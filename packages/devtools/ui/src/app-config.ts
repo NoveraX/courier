@@ -12,29 +12,32 @@ import {
   Sun,
   Moon,
   Monitor,
-} from "lucide-react"
+} from "lucide-react";
 
-import type { Tab, Theme } from "./store"
+import type { Theme } from "./store";
 
 // ── Tab config ──────────────────────────────────────────────────────────────
 
-export const TABS: { id: Tab; icon: typeof Activity; label: string }[] = [
-  { id: "timeline", icon: Activity, label: "Timeline" },
-  { id: "waterfall", icon: GitBranch, label: "Waterfall" },
-  { id: "middleware", icon: Layers, label: "Middleware" },
-  { id: "analytics", icon: BarChart3, label: "Analytics" },
-  { id: "explorer", icon: Network, label: "API Explorer" },
-  { id: "playground", icon: Play, label: "Playground" },
-  { id: "audit", icon: ShieldCheck, label: "Audit" },
-  { id: "codegen", icon: ChevronsLeftRightEllipsis, label: "APIs" },
-  { id: "compare", icon: GitCompare, label: "Compare" },
-  { id: "settings", icon: Settings, label: "Settings" },
-]
+export const TABS: { to: string; icon: typeof Activity; label: string }[] = [
+  { to: "/timeline", icon: Activity, label: "Timeline" },
+  { to: "/waterfall", icon: GitBranch, label: "Waterfall" },
+  { to: "/middleware", icon: Layers, label: "Middleware" },
+  { to: "/analytics", icon: BarChart3, label: "Analytics" },
+  { to: "/explorer", icon: Network, label: "API Explorer" },
+  { to: "/playground", icon: Play, label: "Playground" },
+  { to: "/audit", icon: ShieldCheck, label: "Audit" },
+  { to: "/codegen", icon: ChevronsLeftRightEllipsis, label: "APIs" },
+  { to: "/compare", icon: GitCompare, label: "Compare" },
+  { to: "/settings", icon: Settings, label: "Settings" },
+];
+
+// Route paths for keyboard shortcuts (1-9 maps to first 9 tabs)
+export const TAB_ROUTES = TABS.slice(0, 9).map((t) => t.to);
 
 export const THEME_ICONS: Record<Theme, typeof Sun> = {
   light: Sun,
   dark: Moon,
   system: Monitor,
-}
+};
 
-export const THEME_CYCLE: Theme[] = ["dark", "light", "system"]
+export const THEME_CYCLE: Theme[] = ["dark", "light", "system"];

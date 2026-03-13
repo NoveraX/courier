@@ -1,7 +1,7 @@
 import type { StateCreator } from "zustand"
 
 import type { DevToolsState } from "./store-types"
-import { THEME_STORAGE_KEY, TAB_STORAGE_KEY, PLAYGROUND_MAX_HISTORY, DEFAULT_SETTINGS, saveSettings, saveSessionStartedAt } from "./constants"
+import { THEME_STORAGE_KEY, PLAYGROUND_MAX_HISTORY, DEFAULT_SETTINGS, saveSettings, saveSessionStartedAt } from "./constants"
 import { applyTheme } from "./theme"
 import { handleEventReducer } from "./handle-event"
 import { notifyOnEvent } from "./event-notifications"
@@ -13,10 +13,6 @@ type Getter = Parameters<StateCreator<DevToolsState>>[1]
 export function createActions(set: Setter, get: Getter): Omit<DevToolsState, keyof ReturnType<typeof createInitialState>> {
   return {
     // UI
-    setActiveTab: (tab) => {
-      localStorage.setItem(TAB_STORAGE_KEY, tab)
-      set({ activeTab: tab })
-    },
     setTheme: (theme) => {
       localStorage.setItem(THEME_STORAGE_KEY, theme)
       applyTheme(theme)
@@ -80,7 +76,6 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
     setTimelineShowFilters: (v) => set({ timelineShowFilters: v }),
 
     // Explorer
-    setExplorerView: (view) => set({ explorerView: view }),
     setExplorerSelectedEndpoint: (ep) => set({ explorerSelectedEndpoint: ep }),
     setGraphLayout: (layout) => set({ graphLayout: layout }),
     setShowSchemas: (show) => set({ showSchemas: show }),

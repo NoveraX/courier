@@ -1,4 +1,4 @@
-import type { Tab, Theme, TimelineFilters, Settings } from "./types"
+import type { Theme, TimelineFilters, Settings } from "./types"
 
 export const PLAYGROUND_MAX_HISTORY = 50
 
@@ -40,24 +40,13 @@ export const DEFAULT_SETTINGS: Settings = {
 // ── Safe localStorage reads ─────────────────────────────────────────────────
 
 export const THEME_STORAGE_KEY = "nexus-devtools-theme"
-export const TAB_STORAGE_KEY = "nexus-devtools-tab"
 export const SETTINGS_STORAGE_KEY = "nexus-devtools-settings"
 export const SESSION_STARTED_KEY = "nexus-devtools-session-started"
 
 const VALID_THEMES: ReadonlySet<string> = new Set<Theme>(["dark", "light", "system"])
-const VALID_TABS: ReadonlySet<string> = new Set<Tab>([
-  "timeline", "waterfall", "middleware", "analytics", "explorer",
-  "playground", "audit", "codegen", "compare", "settings",
-])
-
 export function loadTheme(): Theme {
   const raw = localStorage.getItem(THEME_STORAGE_KEY)
   return raw && VALID_THEMES.has(raw) ? (raw as Theme) : "dark"
-}
-
-export function loadTab(): Tab {
-  const raw = localStorage.getItem(TAB_STORAGE_KEY)
-  return raw && VALID_TABS.has(raw) ? (raw as Tab) : "timeline"
 }
 
 export function loadSettings(): Settings {

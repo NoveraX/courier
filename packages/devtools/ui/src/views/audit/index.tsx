@@ -1,4 +1,5 @@
 import { useMemo } from "react"
+import { useNavigate } from "@tanstack/react-router"
 import { ShieldCheck, CheckCircle2, ChevronRight, Play, Info } from "lucide-react"
 
 import type { SourceMap } from "../../store"
@@ -12,8 +13,9 @@ import { SEVERITY_CONFIG } from "./constants"
 import { runAudit } from "./run-audit"
 
 export function AuditView() {
-  const { sessions, requests, auditFilter, auditExpandedIds, setAuditFilter, toggleAuditExpanded, setActiveTab } =
+  const { sessions, requests, auditFilter, auditExpandedIds, setAuditFilter, toggleAuditExpanded } =
     useDevToolsStore()
+  const navigate = useNavigate()
 
   const merged = useMemo(() => mergeSourceMaps(sessions), [sessions])
   const isDemo = Object.keys(merged).length === 0
@@ -52,7 +54,7 @@ export function AuditView() {
 
   function handleOpenInPlayground(endpoint: string) {
     const parts = endpoint.split(".")
-    if (parts.length >= 3) setActiveTab("playground")
+    if (parts.length >= 3) void navigate({ to: "/playground" })
   }
 
   return (

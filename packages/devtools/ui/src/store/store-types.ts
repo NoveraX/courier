@@ -1,5 +1,4 @@
 import type {
-  Tab,
   Theme,
   ConnectionStatus,
   SessionInfo,
@@ -7,7 +6,6 @@ import type {
   DevToolsEvent,
   TimelineFilters,
   PlaygroundHistoryEntry,
-  ExplorerView,
   GraphLayout,
   ListSortKey,
   ListSortDir,
@@ -21,7 +19,6 @@ import type {
 
 export interface DevToolsState {
   // UI
-  activeTab: Tab
   theme: Theme
   toasts: Toast[]
 
@@ -42,7 +39,6 @@ export interface DevToolsState {
   timelineShowFilters: boolean
 
   // Explorer
-  explorerView: ExplorerView
   explorerSelectedEndpoint: { source: string; group: string; method: string } | null
   graphLayout: GraphLayout
   showSchemas: boolean
@@ -78,7 +74,6 @@ export interface DevToolsState {
   sessionStartedAt: number | null
 
   // Actions — UI
-  setActiveTab: (tab: Tab) => void
   setTheme: (theme: Theme) => void
   showToast: (message: string, type?: Toast["type"]) => void
   dismissToast: (id: string) => void
@@ -103,7 +98,6 @@ export interface DevToolsState {
   setTimelineShowFilters: (v: boolean) => void
 
   // Actions — Explorer
-  setExplorerView: (view: ExplorerView) => void
   setExplorerSelectedEndpoint: (ep: { source: string; group: string; method: string } | null) => void
   setGraphLayout: (layout: GraphLayout) => void
   setShowSchemas: (show: boolean) => void

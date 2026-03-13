@@ -1,7 +1,7 @@
 import { create } from "zustand"
 
 import type { DevToolsState } from "./store-types"
-import { loadTheme, loadTab } from "./constants"
+import { loadTheme } from "./constants"
 import { applyTheme } from "./theme"
 import { createActions } from "./actions"
 import { createInitialState } from "./initial-state"
@@ -22,7 +22,6 @@ export type {
 } from "./types-request"
 
 export type {
-  Tab,
   Theme,
   ConnectionStatus,
   EndpointInfo,
@@ -32,7 +31,6 @@ export type {
   SessionInfo,
   PlaygroundHistoryEntry,
   TimelineFilters,
-  ExplorerView,
   GraphLayout,
   ListSortKey,
   ListSortDir,
@@ -55,12 +53,11 @@ export { EMPTY_FILTERS, PLAYGROUND_MAX_HISTORY, MAX_REQUESTS, DEFAULT_SETTINGS }
 // ── Initialize theme ────────────────────────────────────────────────────────
 
 const savedTheme = loadTheme()
-const savedTab = loadTab()
 applyTheme(savedTheme)
 
 // ── Store ───────────────────────────────────────────────────────────────────
 
 export const useDevToolsStore = create<DevToolsState>((set, get) => ({
-  ...createInitialState(savedTheme, savedTab),
+  ...createInitialState(savedTheme),
   ...createActions(set, get),
 }))

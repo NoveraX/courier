@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MethodBadge } from "@/components/shared/method-badge";
@@ -7,6 +8,7 @@ import type { RequestEntry } from "@/store/types";
 import { DETAIL_TABS } from "./constants";
 
 import { GeneralTab } from "./tabs/general-tab";
+import { SnippetsTab } from "./tabs/snippets-tab";
 import { HeadersTab } from "./tabs/headers-tab";
 import { PayloadTab } from "./tabs/payload-tab";
 import { ResponseTab } from "./tabs/response-tab";
@@ -38,17 +40,25 @@ export function DetailPanel({
         onValueChange={onTabChange}
         className="flex flex-1 flex-col overflow-hidden"
       >
-        <TabsList className="mx-3 mt-1 w-fit">
-          {visibleTabs.map((tab) => (
-            <TabsTrigger key={tab.key} value={tab.key} className="text-body-sm">
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="border-b border-border-subtle px-3">
+          <TabsList variant="line" className="h-9">
+            {visibleTabs.map((tab) => (
+              <TabsTrigger key={tab.key} value={tab.key} className={cn(
+                "text-body-sm",
+                tab.key === "error" && "text-rose-400/70 data-[state=active]:text-rose-400",
+              )}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
         <div className="flex flex-1 flex-col min-h-0">
           <TabsContent value="general" className="mt-0 h-full overflow-auto">
             <GeneralTab request={request} />
+          </TabsContent>
+          <TabsContent value="snippets" className="mt-0 h-full overflow-hidden">
+            <SnippetsTab request={request} />
           </TabsContent>
           <TabsContent value="headers" className="mt-0 h-full overflow-hidden">
             <HeadersTab request={request} />

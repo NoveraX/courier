@@ -14,10 +14,13 @@ export function GeneralTab({ request }: GeneralTabProps): React.ReactElement {
   const status = STATUS_CONFIG[request.status];
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-5 p-4">
       <Section title="Overview">
         <Row label="Status">
-          <span className={status.text}>{status.label}</span>
+          <div className="flex items-center gap-1.5">
+            <span className={cn("size-1.5 rounded-full", status.dot)} />
+            <span className={cn("text-body-sm font-medium", status.text)}>{status.label}</span>
+          </div>
         </Row>
         <Row label="Method">
           <MethodBadge method={request.httpMethod ?? "GET"} />
@@ -36,7 +39,7 @@ export function GeneralTab({ request }: GeneralTabProps): React.ReactElement {
         {request.type && <Row label="Type">{request.type}</Row>}
         {request.statusCode && (
           <Row label="Status Code">
-            <StatusCodeValue code={request.statusCode} />
+            <StatusCodePill code={request.statusCode} />
           </Row>
         )}
         {request.url && (
@@ -71,16 +74,15 @@ export function GeneralTab({ request }: GeneralTabProps): React.ReactElement {
   );
 }
 
-function Section({
-  title,
-  children,
-}: {
+// ── Layout helpers ────────────────────────────────────────────────────────
+
+function Section({ title, children }: {
   title: string;
   children: React.ReactNode;
 }): React.ReactElement {
   return (
     <div>
-      <h4 className="text-caption text-muted-foreground mb-2">{title}</h4>
+      <h4 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">{title}</h4>
       <div className="rounded-lg border border-border-subtle divide-y divide-border-subtle">
         {children}
       </div>
@@ -88,10 +90,7 @@ function Section({
   );
 }
 
-function Row({
-  label,
-  children,
-}: {
+function Row({ label, children }: {
   label: string;
   children: React.ReactNode;
 }): React.ReactElement {
@@ -103,16 +102,22 @@ function Row({
   );
 }
 
-function StatusCodeValue({ code }: { code: number }): React.ReactElement {
-  const color = code >= 500
-    ? "text-rose-400"
-    : code >= 400
-      ? "text-orange-400"
-      : code >= 300
-        ? "text-amber-400"
-        : "text-emerald-400";
+// ── Value renderers ───────────────────────────────────────────────────────
 
-  return <span className={cn("mono-sm font-medium tabular-nums", color)}>{code}</span>;
+function StatusCodePill({ code }: { code: number }): React.ReactElement {
+  const styles = code >= 500
+    ? "bg-fuchsia-500/10 text-fuchsia-400"
+    : code >= 400
+      ? "bg-rose-500/10 text-rose-400"
+      : code >= 300
+        ? "bg-amber-500/10 text-amber-400"
+        : "bg-emerald-500/10 text-emerald-400";
+
+  return (
+    <span className={cn("mono-sm rounded-md px-1.5 py-0.5 font-medium tabular-nums", styles)}>
+      {code}
+    </span>
+  );
 }
 
 function DurationValue({ duration }: { duration: number }): React.ReactElement {

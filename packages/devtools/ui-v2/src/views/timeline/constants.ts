@@ -58,6 +58,7 @@ export const HTTP_METHOD_COLORS: Record<string, string> = {
 
 export const DETAIL_TABS = [
   { key: "general", label: "General" },
+  { key: "snippets", label: "Snippets" },
   { key: "headers", label: "Headers" },
   { key: "payload", label: "Payload" },
   { key: "response", label: "Response" },

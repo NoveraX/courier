@@ -47,7 +47,7 @@ function DataSection({
 }): React.ReactElement {
   return (
     <div>
-      <h4 className="text-caption text-muted-foreground mb-2">{title}</h4>
+      <h4 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">{title}</h4>
       <JsonTree data={data} maxHeight="300px" />
     </div>
   );

@@ -1,54 +1,60 @@
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/components/shared/formatters";
+import type { ProxyTiming } from "@/store/types-events";
 
-const COLORS = {
-  network: "bg-blue-500",
-  overhead: "bg-amber-500",
-  fetch: "bg-emerald-500",
-  download: "bg-violet-500",
-} as const;
+const PHASES: { key: keyof ProxyTiming; label: string; color: string }[] = [
+  { key: "clientToProxy", label: "Upload", color: "bg-blue-500" },
+  { key: "proxyToBackend", label: "Processing", color: "bg-amber-500" },
+  { key: "backendToProxy", label: "Backend", color: "bg-emerald-500" },
+  { key: "proxyToClient", label: "Download", color: "bg-violet-500" },
+];
 
-interface WaterfallBarProps {
-  clientToProxy: number;
-  proxyToBackend: number;
-  backendToProxy: number;
-  proxyToClient: number;
+interface ProxyWaterfallProps {
+  timing: ProxyTiming;
   total: number;
 }
 
-export function WaterfallBar({
-  clientToProxy,
-  proxyToBackend,
-  backendToProxy,
-  proxyToClient,
-  total,
-}: WaterfallBarProps): React.ReactElement {
-  const pct = (v: number) => `${Math.max(1, (v / total) * 100)}%`;
+export function ProxyWaterfall({ timing, total }: ProxyWaterfallProps): React.ReactElement {
+  let offset = 0;
+  const rows = PHASES.map((phase) => {
+    const value = timing[phase.key];
+    const start = offset;
+    offset += value;
+    return { ...phase, value, start };
+  }).filter((r) => r.value > 0);
 
   return (
-    <div className="space-y-2">
-      <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/30">
-        <div className={cn(COLORS.network, "rounded-l-full")} style={{ width: pct(clientToProxy) }} title={`Network: ${formatDuration(clientToProxy)}`} />
-        <div className={COLORS.overhead} style={{ width: pct(proxyToBackend) }} title={`Overhead: ${formatDuration(proxyToBackend)}`} />
-        <div className={COLORS.fetch} style={{ width: pct(backendToProxy) }} title={`Fetch: ${formatDuration(backendToProxy)}`} />
-        <div className={cn(COLORS.download, "rounded-r-full")} style={{ width: pct(proxyToClient) }} title={`Download: ${formatDuration(proxyToClient)}`} />
+    <div>
+      <h4 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
+        Waterfall
+      </h4>
+      <div className="overflow-hidden rounded-lg border border-border-subtle">
+        {rows.map((row) => (
+          <div
+            key={row.key}
+            className="flex items-center gap-3 border-b border-border-subtle px-3 py-2 last:border-b-0"
+          >
+            <span className="w-20 shrink-0 text-body-sm text-muted-foreground">
+              {row.label}
+            </span>
+            <div className="relative h-5 flex-1 rounded bg-muted/10">
+              <div
+                className={cn(
+                  "absolute bottom-0.5 top-0.5 rounded opacity-80 transition-all duration-500",
+                  row.color,
+                )}
+                style={{
+                  left: `${(row.start / total) * 100}%`,
+                  width: `${Math.max((row.value / total) * 100, 2)}%`,
+                }}
+              />
+            </div>
+            <span className="w-16 shrink-0 text-right mono-sm tabular-nums text-foreground">
+              {formatDuration(row.value)}
+            </span>
+          </div>
+        ))}
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1">
-        <Legend color={COLORS.network} label="Network" value={clientToProxy} />
-        <Legend color={COLORS.overhead} label="Overhead" value={proxyToBackend} />
-        <Legend color={COLORS.fetch} label="Fetch" value={backendToProxy} />
-        <Legend color={COLORS.download} label="Download" value={proxyToClient} />
-      </div>
-    </div>
-  );
-}
-
-function Legend({ color, label, value }: { color: string; label: string; value: number }): React.ReactElement {
-  return (
-    <div className="flex items-center gap-1.5">
-      <div className={cn("size-2 rounded-full", color)} />
-      <span className="text-body-sm text-muted-foreground">{label}</span>
-      <span className="mono-sm tabular-nums text-foreground">{formatDuration(value)}</span>
     </div>
   );
 }

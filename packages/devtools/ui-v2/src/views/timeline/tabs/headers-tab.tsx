@@ -46,7 +46,7 @@ function HeaderSection({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-caption text-muted-foreground">{title}</h4>
+        <h4 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">{title}</h4>
         <CopyButton value={serialized} label={`Copy ${title.toLowerCase()}`} />
       </div>
       <div className="rounded-lg border border-border-subtle divide-y divide-border-subtle">
@@ -65,7 +65,7 @@ function MiddlewareHeaderSection({
 }): React.ReactElement {
   return (
     <div>
-      <h4 className="text-caption text-muted-foreground mb-2">Middleware Headers</h4>
+      <h4 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">Middleware Headers</h4>
       <div className="rounded-lg border border-border-subtle divide-y divide-border-subtle">
         {Object.entries(headers).map(([key, values]) => (
           <HeaderRow key={key} name={key} value={values.join(", ")} />

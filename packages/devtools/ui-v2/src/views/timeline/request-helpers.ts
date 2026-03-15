@@ -10,17 +10,17 @@ export function buildCurl(r: RequestEntry): string {
   }
 
   if (r.url) {
-    parts.push(`'${r.url}'`);
+    parts.push(`'${shellEscape(r.url)}'`);
   }
 
   if (r.requestHeaders) {
     for (const [key, value] of Object.entries(r.requestHeaders)) {
-      parts.push(`-H '${key}: ${value}'`);
+      parts.push(`-H '${shellEscape(`${key}: ${value}`)}'`);
     }
   }
 
   if (r.variables && method !== "GET") {
-    parts.push(`-d '${safeStringify(r.variables)}'`);
+    parts.push(`-d '${shellEscape(safeStringify(r.variables))}'`);
   }
 
   return parts.join(" \\\n  ");
@@ -37,13 +37,14 @@ export function buildFetchSnippet(r: RequestEntry): string {
 
   if (r.requestHeaders && Object.keys(r.requestHeaders).length > 0) {
     const headers = Object.entries(r.requestHeaders)
-      .map(([k, v]) => `    "${k}": "${v}"`)
+      .map(([k, v]) => `    ${JSON.stringify(k)}: ${JSON.stringify(v)}`)
       .join(",\n");
     options.push(`  headers: {\n${headers}\n  },`);
   }
 
   if (r.variables && method !== "GET") {
-    options.push(`  body: JSON.stringify(${safeStringify(r.variables, 4)}),`);
+    const json = safeStringify(r.variables, 2).replace(/\n/g, "\n  ");
+    options.push(`  body: JSON.stringify(${json}),`);
   }
 
   const url = r.url ?? `/${r.source}/${r.group}/${r.method}`;
@@ -82,4 +83,9 @@ function safeStringify(value: unknown, indent = 0): string {
   } catch {
     return String(value);
   }
+}
+
+/** Escape single quotes for shell strings */
+function shellEscape(s: string): string {
+  return s.replace(/'/g, "'\\''");
 }

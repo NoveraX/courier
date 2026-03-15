@@ -2,6 +2,7 @@
 
 type TokenType = "keyword" | "string" | "number" | "boolean" | "property" | "flag" | "builtin";
 
+// Always rendered on a dark code-block background — no theme variants needed
 const COLORS: Record<TokenType, string> = {
   keyword: "text-violet-400",
   builtin: "text-sky-300",

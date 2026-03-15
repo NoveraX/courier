@@ -58,20 +58,20 @@ function SnippetSection({ format, snippet, onFormatChange }: {
         <h4 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
           Snippet
         </h4>
-        <div className="inline-flex items-center gap-0.5 rounded-lg bg-muted/50 p-0.5">
+        <div className="inline-flex items-center gap-px rounded-lg border border-border-subtle bg-muted/60 p-0.5">
           {FORMATS.map((f) => (
             <button
               key={f.key}
               type="button"
               onClick={() => onFormatChange(f.key)}
               className={cn(
-                "flex items-center gap-1 rounded-md px-2 py-1 text-[14px] font-medium transition-colors",
+                "flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-all",
                 format === f.key
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "bg-background text-foreground shadow-sm ring-1 ring-border-subtle"
+                  : "text-muted-foreground hover:text-foreground hover:bg-background/50",
               )}
             >
-              <f.icon className="size-3" />
+              <f.icon className="size-2.5" />
               {f.label}
             </button>
           ))}
@@ -92,7 +92,7 @@ function CodeBlock({ code, language }: {
   const gutterW = `${String(lines.length).length}ch`;
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-border-subtle bg-background-inset">
+    <div className="relative overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
       <div className="absolute right-2 top-2 z-10">
         <CopyButton value={code} label={`Copy ${language}`} />
       </div>
@@ -100,12 +100,12 @@ function CodeBlock({ code, language }: {
         {lines.map((line, i) => (
           <div key={i} className="flex px-3">
             <span
-              className="mr-3 shrink-0 select-none text-right text-[10px] tabular-nums leading-relaxed text-muted-foreground/25"
+              className="mr-3 shrink-0 select-none text-right text-[10px] tabular-nums leading-relaxed text-zinc-600"
               style={{ minWidth: gutterW }}
             >
               {i + 1}
             </span>
-            <span className="min-w-0 flex-1 mono-sm whitespace-pre-wrap break-all leading-relaxed text-foreground/70">
+            <span className="min-w-0 flex-1 mono-sm whitespace-pre-wrap break-all leading-relaxed text-zinc-300">
               {highlightLine(line, language)}
             </span>
           </div>

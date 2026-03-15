@@ -32,7 +32,8 @@ export async function executeRequest(
   const hasDevtools = dt.onRequestStart !== undefined;
   const requestId = hasDevtools ? generateRequestId() : "";
   const t0 = hasDevtools ? performance.now() : 0;
-  let tValidation = 0;
+  let tVarValidation = 0;
+  let tRespValidation = 0;
   let tFetch = 0;
 
   const dataSource =
@@ -125,7 +126,7 @@ export async function executeRequest(
         validationCtx,
       );
       middlewareCtx.variables = result.validated;
-      tValidation += result.duration;
+      tVarValidation = result.duration;
     }
 
     const execute = async (): Promise<MiddlewareResponse> => {
@@ -171,7 +172,7 @@ export async function executeRequest(
       if (schema?.response) {
         const result = await validateResponse(schema.response, data, validationCtx);
         data = result.validated;
-        tValidation += result.duration;
+        tRespValidation = result.duration;
       }
 
       return { status, data, headers };
@@ -182,9 +183,14 @@ export async function executeRequest(
     const result = middlewares?.length
       ? await composeMiddleware(middlewares)(middlewareCtx, execute)
       : await execute();
-    const tMiddleware = hasDevtools && middlewares?.length ? performance.now() - mt0 : 0;
+    const tMiddlewareTotal = hasDevtools && middlewares?.length ? performance.now() - mt0 : 0;
 
     const tTotal = hasDevtools ? performance.now() - t0 : 0;
+
+    // Compute non-overlapping middleware self-time (exclude fetch + response validation)
+    const tMiddleware =
+      tMiddlewareTotal > 0 ? Math.max(0, tMiddlewareTotal - tFetch - tRespValidation) : 0;
+    const tValidation = tVarValidation + tRespValidation;
 
     const proxyReceiveAt = context?.proxyReceiveAt;
     const proxyTiming =

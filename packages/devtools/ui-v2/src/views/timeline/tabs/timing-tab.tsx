@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { formatDuration } from "@/components/shared/formatters";
 import type { RequestEntry } from "@/store/types";
 import type { RequestTiming, ProxyTiming } from "@/store/types-events";
+import { MiddlewareTiming } from "./middleware-timing";
 
 interface TimingTabProps {
   request: RequestEntry;
@@ -31,31 +32,53 @@ export function TimingTab({ request }: TimingTabProps): React.ReactElement {
   );
 }
 
-const TIMING_SEGMENTS: { key: keyof RequestTiming; label: string; color: string }[] = [
-  { key: "middleware", label: "Middleware", color: "bg-violet-500" },
-  { key: "fetch", label: "Fetch", color: "bg-sky-500" },
-  { key: "validation", label: "Validation", color: "bg-amber-500" },
-];
+interface TimingSegment {
+  label: string;
+  value: number;
+  color: string;
+}
+
+function computeSegments(timing: RequestTiming): TimingSegment[] {
+  const overhead = Math.max(0, timing.total - timing.middleware - timing.fetch - timing.validation);
+  const segments: TimingSegment[] = [];
+  if (overhead > 0.5) segments.push({ label: "Overhead", value: overhead, color: "bg-slate-400" });
+  if (timing.middleware > 0.5) segments.push({ label: "Middleware", value: timing.middleware, color: "bg-violet-500" });
+  segments.push({ label: "Fetch", value: timing.fetch, color: "bg-sky-500" });
+  if (timing.validation > 0.5) segments.push({ label: "Validation", value: timing.validation, color: "bg-amber-500" });
+  return segments;
+}
 
 function TimingBars({ timing }: { timing: RequestTiming }): React.ReactElement {
+  const segments = computeSegments(timing);
+
   return (
-    <div>
-      <h4 className="text-caption text-muted-foreground mb-3">Request Timing</h4>
-      <TimingBar
-        label="Total"
-        value={timing.total}
-        total={timing.total}
-        color="bg-emerald-500"
-      />
-      {TIMING_SEGMENTS.map((seg) => (
-        <TimingBar
-          key={seg.key}
-          label={seg.label}
-          value={timing[seg.key]}
-          total={timing.total}
-          color={seg.color}
-        />
-      ))}
+    <div className="space-y-3">
+      <h4 className="text-caption text-muted-foreground">Request Timing</h4>
+      <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/30">
+        {segments.map((seg) => (
+          <div
+            key={seg.label}
+            className={cn(seg.color, "first:rounded-l-full last:rounded-r-full")}
+            style={{ width: `${Math.max(1, (seg.value / timing.total) * 100)}%` }}
+            title={`${seg.label}: ${formatDuration(seg.value)}`}
+          />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {segments.map((seg) => (
+          <div key={seg.label} className="flex items-center gap-1.5">
+            <div className={cn("size-2 rounded-full", seg.color)} />
+            <span className="text-body-sm text-muted-foreground">{seg.label}</span>
+            <span className="mono-sm tabular-nums text-foreground">{formatDuration(seg.value)}</span>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-lg border border-border-subtle">
+        <div className="flex items-center justify-between px-3 py-2">
+          <span className="text-body-sm font-medium text-foreground">Total</span>
+          <span className="mono-sm tabular-nums font-medium text-foreground">{formatDuration(timing.total)}</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -115,32 +138,3 @@ function TimingBar({
   );
 }
 
-function MiddlewareTiming({
-  entries,
-}: {
-  entries: RequestEntry["middlewareEntries"];
-}): React.ReactElement {
-  return (
-    <div>
-      <h4 className="text-caption text-muted-foreground mb-2">Middleware Chain</h4>
-      <div className="rounded-lg border border-border-subtle divide-y divide-border-subtle">
-        {entries.map((mw, i) => (
-          <div key={i} className="flex items-center justify-between px-3 py-1.5">
-            <div className="flex items-center gap-2">
-              <span className={cn(
-                "size-1.5 rounded-full",
-                mw.status === "completed" ? "bg-emerald-400" : mw.status === "error" ? "bg-rose-400" : "bg-amber-400 animate-pulse",
-              )} />
-              <span className="mono-sm text-foreground">{mw.name}</span>
-            </div>
-            {mw.duration != null && (
-              <span className="mono-sm text-muted-foreground tabular-nums">
-                {formatDuration(mw.duration)}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}

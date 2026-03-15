@@ -20,6 +20,8 @@ export const RequestRow = memo(function RequestRow({
   onSelect,
 }: RequestRowProps): React.ReactElement {
   const status = STATUS_CONFIG[request.status];
+  const path = buildPath(request);
+  const hasMetrics = Boolean(request.statusCode) || request.timing?.total != null;
 
   return (
     <button
@@ -37,13 +39,14 @@ export const RequestRow = memo(function RequestRow({
       {/* Status dot */}
       <span className={cn("size-2 shrink-0 rounded-full", status.dot)} />
 
-      {/* Method badge */}
-      <MethodBadge method={request.httpMethod ?? "GET"} className="shrink-0" />
+      {/* Method — fixed-width cell for column alignment */}
+      <span className="inline-flex w-[4.25rem] shrink-0 items-center">
+        <MethodBadge method={request.httpMethod ?? "GET"} />
+      </span>
 
-      {/* Endpoint path */}
+      {/* Full path: source.group.method */}
       <span className="min-w-0 flex-1 truncate mono-sm text-foreground">
-        {request.group ? `${request.group}.` : ""}
-        {request.method}
+        {path}
       </span>
 
       {/* Mode */}
@@ -54,14 +57,9 @@ export const RequestRow = memo(function RequestRow({
         {request.mode}
       </Badge>
 
-      {/* Source */}
-      <span className="hidden shrink-0 text-body-sm text-muted-foreground sm:inline">
-        {request.source}
-      </span>
-
-      {/* Metrics pill */}
-      {(request.statusCode || request.timing?.total != null) && (
-        <span className="flex shrink-0 items-center gap-2 rounded-md bg-muted/50 px-2 py-0.5">
+      {/* Metrics pill — status code + duration kept together */}
+      {hasMetrics && (
+        <span className="inline-flex shrink-0 items-center gap-2 rounded-md bg-muted/50 px-2 py-0.5">
           {request.statusCode && <StatusCode code={request.statusCode} />}
           {request.statusCode && request.timing?.total != null && (
             <span className="h-3 w-px bg-border" />
@@ -73,7 +71,7 @@ export const RequestRow = memo(function RequestRow({
       )}
 
       {/* Time */}
-      <span className="w-20 shrink-0 text-right mono-sm text-muted-foreground">
+      <span className="inline-flex w-24 shrink-0 items-center justify-end mono-sm tabular-nums text-muted-foreground">
         {formatAbsoluteTime(request.startedAt)}
       </span>
 
@@ -84,6 +82,14 @@ export const RequestRow = memo(function RequestRow({
     </button>
   );
 });
+
+function buildPath(r: RequestEntry): string {
+  const parts: string[] = [];
+  if (r.source) parts.push(r.source);
+  if (r.group) parts.push(r.group);
+  parts.push(r.method);
+  return parts.join(".");
+}
 
 function StatusCode({ code }: { code: number }): React.ReactElement {
   const color = code >= 500

@@ -59,14 +59,17 @@ export const RequestRow = memo(function RequestRow({
         {request.source}
       </span>
 
-      {/* Status code */}
-      {request.statusCode && (
-        <StatusCode code={request.statusCode} />
-      )}
-
-      {/* Duration */}
-      {request.timing?.total != null && (
-        <DurationCell duration={request.timing.total} />
+      {/* Metrics pill */}
+      {(request.statusCode || request.timing?.total != null) && (
+        <span className="flex shrink-0 items-center gap-2 rounded-md bg-muted/50 px-2 py-0.5">
+          {request.statusCode && <StatusCode code={request.statusCode} />}
+          {request.statusCode && request.timing?.total != null && (
+            <span className="h-3 w-px bg-border" />
+          )}
+          {request.timing?.total != null && (
+            <DurationCell duration={request.timing.total} />
+          )}
+        </span>
       )}
 
       {/* Time */}
@@ -92,7 +95,7 @@ function StatusCode({ code }: { code: number }): React.ReactElement {
         : "text-emerald-400";
 
   return (
-    <span className={cn("w-8 shrink-0 text-center mono-sm tabular-nums", color)}>
+    <span className={cn("mono-sm tabular-nums", color)}>
       {code}
     </span>
   );
@@ -106,7 +109,7 @@ function DurationCell({ duration }: { duration: number }): React.ReactElement {
       : "text-muted-foreground";
 
   return (
-    <span className={cn("w-16 shrink-0 text-right mono-sm tabular-nums", color)}>
+    <span className={cn("mono-sm tabular-nums", color)}>
       {formatDuration(duration)}
     </span>
   );

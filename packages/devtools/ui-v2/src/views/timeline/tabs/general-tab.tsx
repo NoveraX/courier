@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { CopyButton } from "@/components/shared/copy-button";
@@ -34,7 +35,9 @@ export function GeneralTab({ request }: GeneralTabProps): React.ReactElement {
         </Row>
         {request.type && <Row label="Type">{request.type}</Row>}
         {request.statusCode && (
-          <Row label="Status Code">{request.statusCode}</Row>
+          <Row label="Status Code">
+            <StatusCodeValue code={request.statusCode} />
+          </Row>
         )}
         {request.url && (
           <Row label="URL">
@@ -48,7 +51,9 @@ export function GeneralTab({ request }: GeneralTabProps): React.ReactElement {
 
       <Section title="Metrics">
         {request.timing?.total != null && (
-          <Row label="Duration">{formatDuration(request.timing.total)}</Row>
+          <Row label="Duration">
+            <DurationValue duration={request.timing.total} />
+          </Row>
         )}
         {request.size != null && (
           <Row label="Size">{formatSize(request.size)}</Row>
@@ -95,5 +100,31 @@ function Row({
       <span className="shrink-0 text-body-sm text-muted-foreground">{label}</span>
       <span className="min-w-0 text-right text-body-sm text-foreground">{children}</span>
     </div>
+  );
+}
+
+function StatusCodeValue({ code }: { code: number }): React.ReactElement {
+  const color = code >= 500
+    ? "text-rose-400"
+    : code >= 400
+      ? "text-orange-400"
+      : code >= 300
+        ? "text-amber-400"
+        : "text-emerald-400";
+
+  return <span className={cn("mono-sm font-medium tabular-nums", color)}>{code}</span>;
+}
+
+function DurationValue({ duration }: { duration: number }): React.ReactElement {
+  const color = duration > 1000
+    ? "text-rose-400"
+    : duration > 300
+      ? "text-amber-400"
+      : "text-emerald-400";
+
+  return (
+    <span className={cn("mono-sm font-medium tabular-nums", color)}>
+      {formatDuration(duration)}
+    </span>
   );
 }

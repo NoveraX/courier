@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { Kbd } from "@/components/ui/kbd";
 
 import type { Theme } from "@/store";
 
@@ -92,10 +92,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
                       Go to&nbsp;<strong className="font-semibold">{item.label}</strong>
                     </span>
                     {item.kbd && (
-                      <KbdGroup className="ml-auto">
-                        <Kbd>{"\u2318"}</Kbd>
-                        <Kbd>{item.kbd}</Kbd>
-                      </KbdGroup>
+                      <Kbd className="ml-auto">{"\u2318"}{item.kbd}</Kbd>
                     )}
                   </CommandItem>
                 ))}

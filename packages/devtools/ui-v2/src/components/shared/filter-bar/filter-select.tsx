@@ -83,12 +83,12 @@ export function FilterSelect({
                     className={cn(
                       "flex size-4 items-center justify-center rounded-sm border",
                       selected.includes(option.value)
-                        ? "border-accent-brand bg-accent-brand text-white"
+                        ? "border-accent-brand bg-accent-brand"
                         : "border-muted-foreground/30",
                     )}
                   >
                     {selected.includes(option.value) && (
-                      <Check className="size-3" />
+                      <Check className="size-3 text-white" strokeWidth={3} />
                     )}
                   </div>
                   <span className="flex-1 truncate">{option.label}</span>

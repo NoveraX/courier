@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useDevToolsStore } from "@/store";
 import { NAV_GROUPS } from "@/app-config";
 import type { NavItem } from "@/app-config";
+import { KbdHint } from "@/components/shared/kbd-hint";
 import {
   Sidebar,
   SidebarContent,
@@ -12,7 +13,6 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarRail,
@@ -30,15 +30,22 @@ function NavBadge({ item }: { item: NavItem }): React.ReactNode {
 
   if (count === 0) return null;
 
+  const isError = item.badge === "errors";
+  const label = count > 999 ? "999+" : count;
+
   return (
-    <SidebarMenuBadge
+    <span
       className={cn(
-        "text-[10px] tabular-nums",
-        item.badge === "errors" && count > 0 && "text-destructive-foreground",
+        "inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5",
+        "text-[10px] font-semibold tabular-nums leading-none",
+        "group-data-[collapsible=icon]:hidden",
+        isError
+          ? "bg-destructive/15 text-destructive ring-1 ring-destructive/25"
+          : "bg-accent-brand/15 text-accent-brand ring-1 ring-accent-brand/25",
       )}
     >
-      {count > 999 ? "999+" : count}
-    </SidebarMenuBadge>
+      {label}
+    </span>
   );
 }
 
@@ -49,15 +56,20 @@ export function AppSidebar(): React.ReactNode {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="px-3 py-4">
         <Link to="/timeline" className="flex items-center gap-2.5 px-1">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-accent-brand text-accent-brand-foreground shadow-sm">
-            <span className="text-xs font-bold leading-none">N</span>
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-sidebar-accent ring-1 ring-sidebar-border">
+            <img src="/nexus-icon.png" alt="" className="when-dark size-[18px]" />
+            <img src="/nexus-icon-dark.png" alt="" className="when-light size-[18px]" />
           </div>
-          <div className="flex flex-col gap-0 group-data-[collapsible=icon]:hidden">
-            <span className="text-body-sm font-semibold leading-none tracking-tight">
-              Nexus
-            </span>
-            <span className="text-[10px] leading-none text-muted-foreground">
-              DevTools
+          <div className="flex flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
+            <div className="flex items-start gap-1">
+              <img src="/nexus-wordmark-light.png" alt="Nexus" className="when-dark mt-0.5 h-3.5" />
+              <img src="/nexus-wordmark-dark.png" alt="Nexus" className="when-light mt-0.5 h-3.5" />
+              <span className="-ml-0.5 text-[8px] font-semibold leading-none text-accent-brand">
+                dev
+              </span>
+            </div>
+            <span className="text-[9px] tracking-[0.14em] uppercase text-muted-foreground/60">
+              Console
             </span>
           </div>
         </Link>
@@ -88,14 +100,15 @@ export function AppSidebar(): React.ReactNode {
                         <Link to={item.path}>
                           <item.icon className="size-4 shrink-0" />
                           <span className="truncate">{item.label}</span>
+                          <NavBadge item={item} />
                           {item.kbd && (
-                            <span className="ml-auto text-[10px] text-muted-foreground group-data-[collapsible=icon]:hidden">
-                              {"\u2318"}{item.kbd}
-                            </span>
+                            <KbdHint
+                              keys={`mod+${item.kbd}`}
+                              className="ml-auto group-data-[collapsible=icon]:hidden"
+                            />
                           )}
                         </Link>
                       </SidebarMenuButton>
-                      <NavBadge item={item} />
                     </SidebarMenuItem>
                   );
                 })}

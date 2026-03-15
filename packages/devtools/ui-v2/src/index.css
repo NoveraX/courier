@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -461,6 +462,15 @@ body::after {
 :root[data-theme="light"] body::after {
   opacity: 0;
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Theme-aware visibility utilities
+   ══════════════════════════════════════════════════════════════════════ */
+
+.when-dark  { display: initial; }
+.when-light { display: none; }
+:root[data-theme="light"] .when-dark  { display: none; }
+:root[data-theme="light"] .when-light { display: initial; }
 
 /* ══════════════════════════════════════════════════════════════════════
    Scrollbar Styling

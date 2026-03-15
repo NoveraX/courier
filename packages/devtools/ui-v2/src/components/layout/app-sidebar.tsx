@@ -54,8 +54,8 @@ export function AppSidebar(): React.ReactNode {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <SidebarHeader className="px-3 py-4">
-        <Link to="/timeline" className="flex items-center gap-2.5 px-1">
+      <SidebarHeader className="px-3 py-4 group-data-[collapsible=icon]:p-2">
+        <Link to="/timeline" className="flex items-center gap-2.5 px-1 group-data-[collapsible=icon]:px-0">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-sidebar-accent ring-1 ring-sidebar-border">
             <img src="/nexus-icon.png" alt="" className="when-dark size-[18px]" />
             <img src="/nexus-icon-dark.png" alt="" className="when-light size-[18px]" />
@@ -75,7 +75,7 @@ export function AppSidebar(): React.ReactNode {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="px-1">
+      <SidebarContent className="px-1 group-data-[collapsible=icon]:px-0">
         {NAV_GROUPS.map((group) => (
           <SidebarGroup key={group.label} className="py-1">
             <SidebarGroupLabel className="mb-0.5 px-3 text-caption text-muted-foreground">

@@ -55,6 +55,7 @@ export function wireHooks(
         requestId: e.id,
         status: e.status,
         data: e.data,
+        size: e.size,
         headers: e.headers,
         requestHeaders: e.requestHeaders,
         timing: e.timing,

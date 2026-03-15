@@ -8,7 +8,7 @@ import { handleExecuteError } from "./execute-error";
 import { createHttpClient, getEndpoint } from "./execute-helpers";
 import { buildErrorResponse, buildResponse } from "./execute-response";
 import { validateResponse, validateVariables } from "./execute-validation";
-import { headersToObject, isHeaders } from "./helpers";
+import { estimateResponseSize, headersToObject, isHeaders } from "./helpers";
 import { mergeHeaders } from "./merge-headers";
 import { parseRequestPayload, type RequestPayloadInput } from "./request-payload";
 
@@ -207,6 +207,7 @@ export async function executeRequest(
       id: requestId,
       status: result.status,
       data: result.data,
+      size: estimateResponseSize(result.data, result.headers),
       headers: headersToObject(result.headers) ?? {},
       requestHeaders: headersToObject(middlewareCtx.headers) ?? {},
       timing: {

@@ -16,6 +16,7 @@ export interface DevToolsHooks {
     id: string;
     status: number;
     data: unknown;
+    size: number;
     headers: Record<string, string>;
     requestHeaders: Record<string, string>;
     timing: {

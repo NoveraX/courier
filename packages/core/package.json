@@ -18,7 +18,7 @@
       "types": "./lib/define/index.d.ts",
       "import": "./lib/define/index.js"
     },
-"./middleware": {
+    "./middleware": {
       "types": "./lib/middleware/index.d.ts",
       "import": "./lib/middleware/index.js"
     },

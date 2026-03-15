@@ -30,12 +30,24 @@ export type AdapterHandler = {
 };
 
 export function createHandler(sources: Sources): AdapterHandler {
-  const execute = (request: Request, payload: RequestPayloadInput, proxyMethod: "GET" | "POST") =>
-    executeRequest(sources, payload, { req: request, res: new Response(), proxyMethod });
+  const execute = (
+    request: Request,
+    payload: RequestPayloadInput,
+    proxyMethod: "GET" | "POST",
+    proxyReceiveAt: number,
+  ) =>
+    executeRequest(sources, payload, {
+      req: request,
+      res: new Response(),
+      proxyMethod,
+      mode: "proxy",
+      proxyReceiveAt,
+    });
 
   const dt = devtoolsHooks;
 
   const handleGet = async (request: Request): Promise<Response> => {
+    const proxyReceiveAt = performance.now();
     const url = new URL(request.url);
     const source = url.searchParams.get("_s");
     const group = url.searchParams.get("_g") || undefined;
@@ -80,6 +92,7 @@ export function createHandler(sources: Sources): AdapterHandler {
         options: parseOptions(url.searchParams.get("_o")),
       },
       "GET",
+      proxyReceiveAt,
     );
 
     dt.onProxyRespond?.({
@@ -95,6 +108,7 @@ export function createHandler(sources: Sources): AdapterHandler {
   };
 
   const handlePost = async (request: Request): Promise<Response> => {
+    const proxyReceiveAt = performance.now();
     const origin = request.headers.get("origin");
 
     if (!origin || new URL(request.url).origin !== origin) {
@@ -152,7 +166,7 @@ export function createHandler(sources: Sources): AdapterHandler {
       timestamp: Date.now(),
     });
 
-    const response = await execute(request, body, "POST");
+    const response = await execute(request, body, "POST", proxyReceiveAt);
 
     dt.onProxyRespond?.({
       proxyMethod: "POST",

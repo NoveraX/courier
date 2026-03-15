@@ -1,3 +1,4 @@
+import { devtoolsHooks } from "../devtools";
 import { HTTPError } from "../error";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
@@ -40,12 +41,16 @@ export async function sendFetch(
   },
 ): Promise<unknown> {
   const { onDownloadProgress: _dp, ...fetchOptions } = options;
+  const hasTimingHook = devtoolsHooks.onProxyClientTiming !== undefined;
+  const t0 = hasTimingHook ? performance.now() : 0;
 
   try {
     const response = await coreFetch(method, url, fetchOptions as CoreFetchInit);
+    const tHeaders = hasTimingHook ? performance.now() : 0;
 
     if (!response.ok) {
       const responseData = await readErrorResponse(response);
+      emitClientTiming(response, t0, tHeaders);
       const httpError = buildHttpError(
         response.status,
         response.headers,
@@ -62,10 +67,37 @@ export async function sendFetch(
     }
 
     const data = await response.json();
+    emitClientTiming(response, t0, tHeaders);
     await ctx.onSuccess?.(data);
     return data;
   } catch (error) {
     if (error instanceof HTTPError) throw error;
     throw error;
   }
+}
+
+/** Parse Server-Timing header to extract nexus duration (ms) */
+function parseServerTimingDur(header: string): number {
+  const match = /nexus;dur=([\d.]+)/.exec(header);
+  return match?.[1] ? parseFloat(match[1]) : 0;
+}
+
+/** Emit browser-measured network timing for proxy requests */
+function emitClientTiming(response: Response, t0: number, tHeaders: number): void {
+  if (t0 === 0) return;
+  const tEnd = performance.now();
+  const rid = response.headers.get("x-nexus-rid");
+  const stHeader = response.headers.get("server-timing");
+  if (!rid || !stHeader) return;
+
+  const serverDur = parseServerTimingDur(stHeader);
+  const ttfb = tHeaders - t0;
+
+  devtoolsHooks.onProxyClientTiming?.({
+    requestId: rid,
+    networkLatency: Math.max(0, ttfb - serverDur),
+    download: tEnd - tHeaders,
+    totalRoundTrip: tEnd - t0,
+    timestamp: Date.now(),
+  });
 }

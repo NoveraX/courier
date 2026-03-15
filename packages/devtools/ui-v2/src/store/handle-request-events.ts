@@ -1,4 +1,5 @@
 import type {
+  ProxyTiming,
   RequestEntry,
   RequestStatus,
   RequestTiming,
@@ -51,7 +52,7 @@ export function handleRequestEnd(state: State, event: EventPayload): { requests:
             status: "success" as const,
             statusCode: optNum(event.status),
             timing: event.timing as RequestTiming | undefined,
-            proxyTiming: event.proxyTiming as RequestEntry["proxyTiming"],
+            proxyTiming: mergeProxyTiming(event.proxyTiming as ProxyTiming | undefined, r.proxyTiming),
             size: optNum(event.size),
             data: event.data,
             rawResponse: optStr(event.rawResponse),
@@ -97,5 +98,39 @@ export function handleRequestError(state: State, event: EventPayload): { request
           }
         : r
     ),
+  }
+}
+
+export function handleProxyClientTiming(state: State, event: EventPayload): { requests: RequestEntry[] } {
+  const requestId = str(event.requestId)
+  const networkLatency = num(event.networkLatency)
+  const download = num(event.download)
+  return {
+    requests: state.requests.map((r) =>
+      r.id === requestId
+        ? {
+            ...r,
+            proxyTiming: {
+              clientToProxy: networkLatency,
+              proxyToBackend: r.proxyTiming?.proxyToBackend ?? 0,
+              backendToProxy: r.proxyTiming?.backendToProxy ?? 0,
+              proxyToClient: download,
+            },
+          }
+        : r
+    ),
+  }
+}
+
+/** Merge server-side proxyTiming with already-received browser-side values */
+function mergeProxyTiming(
+  server: ProxyTiming | undefined,
+  existing: ProxyTiming | undefined,
+): ProxyTiming | undefined {
+  if (!server) return existing
+  return {
+    ...server,
+    clientToProxy: server.clientToProxy || existing?.clientToProxy || 0,
+    proxyToClient: server.proxyToClient || existing?.proxyToClient || 0,
   }
 }

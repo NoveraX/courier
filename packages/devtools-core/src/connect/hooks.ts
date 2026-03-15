@@ -5,6 +5,7 @@ import type {
   MiddlewareEnterEvent,
   MiddlewareErrorEvent,
   MiddlewareExitEvent,
+  ProxyClientTimingEvent,
   RequestAbortEvent,
   RequestEndEvent,
   RequestErrorEvent,
@@ -57,6 +58,7 @@ export function wireHooks(
         headers: e.headers,
         requestHeaders: e.requestHeaders,
         timing: e.timing,
+        proxyTiming: e.proxyTiming,
       }),
     );
   };
@@ -162,6 +164,20 @@ export function wireHooks(
         target: e.target,
         issues: e.issues,
         duration: e.duration,
+      }),
+    );
+  };
+
+  devtoolsHooks.onProxyClientTiming = (e) => {
+    bus.emit(
+      createEvent<ProxyClientTimingEvent>(sessionId, {
+        id: e.requestId,
+        type: "proxy:client-timing",
+        timestamp: e.timestamp,
+        requestId: e.requestId,
+        networkLatency: e.networkLatency,
+        download: e.download,
+        totalRoundTrip: e.totalRoundTrip,
       }),
     );
   };

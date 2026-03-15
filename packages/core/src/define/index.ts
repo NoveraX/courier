@@ -128,25 +128,48 @@ export function defineGroup<E extends EndpointRecord>(
  *   },
  * })
  */
+/** Symbol for storing source name on the source object — survives module duplication */
+const SOURCE_NAME_KEY = Symbol.for("nexus.source.name");
+
+/** Derive a human-readable name from baseURL hostname */
+function deriveSourceName(baseURL?: string): string {
+  if (!baseURL) return "api";
+  try {
+    return new URL(baseURL).hostname.split(".")[0] || "api";
+  } catch {
+    return "api";
+  }
+}
+
+/** Read the stored source name from a source object */
+export function getSourceName(source: unknown): string | undefined {
+  if (!source || typeof source !== "object") return undefined;
+  return (source as Record<symbol, unknown>)[SOURCE_NAME_KEY] as string | undefined;
+}
+
 export function defineApi<G extends GroupRecord, E extends EndpointRecord>(
-  config: BaseOptions & { groups: G; endpoints: E },
+  config: BaseOptions & { name?: string; groups: G; endpoints: E },
 ): DefinedMixedApi<G, E>;
 
 export function defineApi<G extends GroupRecord>(
-  config: BaseOptions & { groups: G },
+  config: BaseOptions & { name?: string; groups: G },
 ): DefinedApi<G>;
 
 export function defineApi<E extends EndpointRecord>(
-  config: BaseOptions & { endpoints: E },
+  config: BaseOptions & { name?: string; endpoints: E },
 ): DefinedFlatApi<E>;
 
 export function defineApi(
-  config: BaseOptions & { groups?: GroupRecord; endpoints?: EndpointRecord },
+  config: BaseOptions & { name?: string; groups?: GroupRecord; endpoints?: EndpointRecord },
 ): DefinedApi | DefinedFlatApi | DefinedMixedApi {
-  const { endpoints, ...rest } = config;
+  const { endpoints, name, ...rest } = config;
   const result = endpoints
     ? Object.assign({ options: rest }, endpoints)
-    : ({ options: config } as DefinedApi);
+    : ({ options: rest } as DefinedApi);
+
+  // Store name for devtools identification
+  const sourceName = name ?? deriveSourceName(config.baseURL);
+  (result as Record<symbol, unknown>)[SOURCE_NAME_KEY] = sourceName;
 
   // Dev-only: notify devtools of source (re)creation for HMR hot reload
   if (process.env.NODE_ENV !== "production") {

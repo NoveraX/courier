@@ -27,6 +27,7 @@ export type {
   ProxyRespondEvent,
 } from "./proxy";
 export type {
+  ProxyClientTimingEvent,
   RequestAbortEvent,
   RequestEndEvent,
   RequestErrorEvent,
@@ -59,6 +60,7 @@ import type {
   ProxyRespondEvent,
 } from "./proxy";
 import type {
+  ProxyClientTimingEvent,
   RequestAbortEvent,
   RequestEndEvent,
   RequestErrorEvent,
@@ -88,6 +90,7 @@ export type AnyDevToolsEvent =
   | ProxyParseEvent
   | ProxyOriginRejectEvent
   | ProxyRespondEvent
+  | ProxyClientTimingEvent
   | CacheHitEvent
   | CacheMissEvent
   | CacheStoreEvent

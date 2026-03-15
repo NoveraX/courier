@@ -78,7 +78,7 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
 
   // Auto-register sources from defineApi() calls.
   // On HMR: replaces existing entry matched by baseURL + group overlap.
-  // On first call: adds new entry with a generated key.
+  // On first call: uses stored name from defineApi() or generates a key.
   devtoolsHooks.onSourceDefined = (newSource: unknown, baseURL: string) => {
     const current = getSources() ?? {};
     const src = newSource as AnySource;
@@ -92,7 +92,7 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
       }
     }
 
-    current[generateSourceKey(current)] = src;
+    current[resolveNewSourceKey(current, src)] = src;
     registerSources({ ...current });
   };
 
@@ -135,6 +135,7 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
     devtoolsHooks.onDedupReuse = undefined;
     devtoolsHooks.onUploadProgress = undefined;
     devtoolsHooks.onUploadComplete = undefined;
+    devtoolsHooks.onProxyClientTiming = undefined;
     devtoolsHooks.onSourceDefined = undefined;
 
     socketCleanup?.();
@@ -196,9 +197,16 @@ function getGroupNames(source: AnySource): string[] {
   return opts?.groups ? Object.keys(opts.groups) : [];
 }
 
-/** Generate a unique key for a new source in the registry. */
-function generateSourceKey(existing: Record<string, unknown>): string {
+const SOURCE_NAME_KEY = Symbol.for("nexus.source.name");
+
+/** Resolve a unique registry key for a new source — prefers the stored name from defineApi(). */
+function resolveNewSourceKey(existing: Record<string, unknown>, source: AnySource): string {
+  const storedName = (source as Record<symbol, unknown>)[SOURCE_NAME_KEY] as string | undefined;
+  if (storedName && !Object.hasOwn(existing, storedName)) return storedName;
+
+  // Collision or no stored name — append counter
+  const base = storedName ?? "source";
   let idx = Object.keys(existing).length;
-  while (Object.hasOwn(existing, `source_${idx}`)) idx++;
-  return `source_${idx}`;
+  while (Object.hasOwn(existing, `${base}_${idx}`)) idx++;
+  return `${base}_${idx}`;
 }

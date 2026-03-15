@@ -24,6 +24,12 @@ export interface DevToolsHooks {
       fetch: number;
       validation: number;
     };
+    proxyTiming?: {
+      clientToProxy: number;
+      proxyToBackend: number;
+      backendToProxy: number;
+      proxyToClient: number;
+    };
     timestamp: number;
   }) => void;
 
@@ -157,6 +163,15 @@ export interface DevToolsHooks {
   }) => void;
 
   onUploadComplete?: (event: { requestId: string; timestamp: number }) => void;
+
+  /** Browser-side proxy timing — fired after fetch completes with network measurement */
+  onProxyClientTiming?: (event: {
+    requestId: string;
+    networkLatency: number;
+    download: number;
+    totalRoundTrip: number;
+    timestamp: number;
+  }) => void;
 
   /** Dev-only: fired when defineApi() creates or re-creates a source (HMR support) */
   onSourceDefined?: (source: unknown, baseURL: string) => void;

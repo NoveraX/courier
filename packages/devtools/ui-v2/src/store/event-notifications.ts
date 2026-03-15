@@ -50,5 +50,12 @@ function notifySlowRequest(
 
   const label = resolveLabel(event, requests)
   const ms = Math.round(timing.total)
-  toast.warning(`Slow request: ${label} (${ms}ms)`)
+  const message = `Slow request: ${label} (${ms}ms)`
+
+  // Match request-row color: >1s = red (error), >threshold = yellow (warning)
+  if (ms > 1000) {
+    toast.error(message)
+  } else {
+    toast.warning(message)
+  }
 }

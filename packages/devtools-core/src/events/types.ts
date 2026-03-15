@@ -26,6 +26,7 @@ export type EventType =
   | "proxy:parse"
   | "proxy:origin-reject"
   | "proxy:respond"
+  | "proxy:client-timing"
   // Cache
   | "cache:hit"
   | "cache:miss"

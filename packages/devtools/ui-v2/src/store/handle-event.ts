@@ -1,6 +1,6 @@
 import type { DevToolsEvent, RequestEntry, ValidationIssue } from "./types"
 import { str, optStr } from "./event-helpers"
-import { handleRequestStart, handleRequestEnd, handleRequestError } from "./handle-request-events"
+import { handleRequestStart, handleRequestEnd, handleRequestError, handleProxyClientTiming } from "./handle-request-events"
 import { handleMiddlewareEnter, handleMiddlewareExit, handleMiddlewareError } from "./handle-middleware-events"
 
 type EventPayload = DevToolsEvent & Record<string, unknown>
@@ -60,6 +60,9 @@ export function handleEventReducer(
         ),
       }
     }
+
+    case "proxy:client-timing":
+      return handleProxyClientTiming(state, event)
 
     case "http:fetch:end":
     case "validation:start":

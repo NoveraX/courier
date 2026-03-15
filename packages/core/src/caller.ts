@@ -5,6 +5,7 @@ import {
   type MixedClient,
   type TypedClient,
 } from "./client";
+import { getSourceName } from "./define";
 import type {
   DefinedApi,
   DefinedFlatApi,
@@ -71,7 +72,8 @@ export function createCaller(
     onSuccess: globalOnSuccess,
   } = defaults;
 
-  const sources = { _: source };
+  const sourceName = getSourceName(source) ?? "_";
+  const sources = { [sourceName]: source };
 
   const backend: ExecuteBackend = async (group, method, variables, options, raw) => {
     const mergedOptions: Record<string, unknown> = { ...options };
@@ -92,7 +94,7 @@ export function createCaller(
     }
 
     const requestPayload = {
-      source: "_",
+      source: sourceName,
       group,
       method,
       variables: variables as Record<string, unknown> | undefined,

@@ -15,6 +15,10 @@ export function StatusBar(): React.ReactNode {
   const errors = requests.filter((r) => r.status === "error").length;
   const pending = requests.filter((r) => r.status === "pending").length;
 
+  // Browser companion sessions (framework "unknown") are not separate apps
+  const appCount = sessions.filter((s) => s.framework !== "unknown").length
+    || (sessions.length > 0 ? 1 : 0);
+
   return (
     <footer className="flex h-6 shrink-0 items-center border-t border-border bg-background-inset text-[10px] tabular-nums select-none">
       {/* Left segment: connection — the ONLY connection indicator in the entire UI */}
@@ -36,7 +40,7 @@ export function StatusBar(): React.ReactNode {
         />
         <span className="font-medium">
           {connected
-            ? `${sessions.length} ${sessions.length === 1 ? "app" : "apps"}`
+            ? `${appCount} ${appCount === 1 ? "app" : "apps"}`
             : reconnecting
               ? "reconnecting..."
               : "disconnected"}

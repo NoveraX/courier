@@ -21,6 +21,14 @@ export interface RequestEndEvent extends DevToolsEvent {
   headers: Record<string, string>;
   requestHeaders: Record<string, string>;
   timing: RequestTiming;
+  proxyTiming?: ProxyTiming;
+}
+
+export interface ProxyTiming {
+  clientToProxy: number;
+  proxyToBackend: number;
+  backendToProxy: number;
+  proxyToClient: number;
 }
 
 export interface RequestTiming {
@@ -38,6 +46,14 @@ export interface RequestErrorEvent extends DevToolsEvent {
     status?: number;
     message: string;
   };
+}
+
+export interface ProxyClientTimingEvent extends DevToolsEvent {
+  type: "proxy:client-timing";
+  requestId: string;
+  networkLatency: number;
+  download: number;
+  totalRoundTrip: number;
 }
 
 export interface RequestAbortEvent extends DevToolsEvent {

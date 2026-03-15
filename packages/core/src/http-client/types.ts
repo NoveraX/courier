@@ -112,4 +112,6 @@ export type Context = {
   proxyMethod?: "GET" | "POST";
   /** Override mode for devtools events (e.g. playground replay preserving original mode) */
   mode?: "direct" | "proxy";
+  /** High-resolution timestamp when the proxy adapter received the request (performance.now()) */
+  proxyReceiveAt?: number;
 };

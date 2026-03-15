@@ -16,6 +16,7 @@ export type EventType =
   | "validation:fail"
   | "proxy:receive"
   | "proxy:respond"
+  | "proxy:client-timing"
   | "cache:hit"
   | "cache:miss"
   | "cache:store"

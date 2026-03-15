@@ -33,6 +33,7 @@ export async function executeRequest(
   const requestId = hasDevtools ? generateRequestId() : "";
   const t0 = hasDevtools ? performance.now() : 0;
   let tValidation = 0;
+  let tFetch = 0;
 
   const dataSource =
     typeof source === "string" && Object.hasOwn(sources, source) ? sources[source] : undefined;
@@ -101,7 +102,7 @@ export async function executeRequest(
     headers: newHeaders,
   };
 
-  const mode = context?.mode ?? (context?.res instanceof Response ? "proxy" : "direct");
+  const mode = context?.mode ?? (context?.proxyMethod ? "proxy" : "direct");
   const validationCtx = { hasDevtools, requestId, dt };
 
   dt.onRequestStart?.({
@@ -154,10 +155,12 @@ export async function executeRequest(
         throw fetchError;
       }
 
+      tFetch = hasDevtools ? performance.now() - ft0 : 0;
+
       dt.onHttpFetchEnd?.({
         requestId,
         status: response?.status || 200,
-        duration: hasDevtools ? performance.now() - ft0 : 0,
+        duration: tFetch,
         timestamp: Date.now(),
       });
 
@@ -181,6 +184,19 @@ export async function executeRequest(
       : await execute();
     const tMiddleware = hasDevtools && middlewares?.length ? performance.now() - mt0 : 0;
 
+    const tTotal = hasDevtools ? performance.now() - t0 : 0;
+
+    const proxyReceiveAt = context?.proxyReceiveAt;
+    const proxyTiming =
+      proxyReceiveAt != null && hasDevtools
+        ? {
+            clientToProxy: 0,
+            proxyToBackend: tTotal - tFetch,
+            backendToProxy: tFetch,
+            proxyToClient: 0,
+          }
+        : undefined;
+
     dt.onRequestEnd?.({
       id: requestId,
       status: result.status,
@@ -188,11 +204,12 @@ export async function executeRequest(
       headers: headersToObject(result.headers) ?? {},
       requestHeaders: headersToObject(middlewareCtx.headers) ?? {},
       timing: {
-        total: hasDevtools ? performance.now() - t0 : 0,
+        total: tTotal,
         middleware: tMiddleware,
-        fetch: 0,
+        fetch: tFetch,
         validation: tValidation,
       },
+      proxyTiming,
       timestamp: Date.now(),
     });
 
@@ -203,6 +220,12 @@ export async function executeRequest(
       rawData,
       stream,
     });
+
+    // Inject timing headers for browser-side network measurement
+    if (context?.proxyMethod && response instanceof Response && hasDevtools) {
+      response.headers.set("Server-Timing", `nexus;dur=${tTotal.toFixed(1)}`);
+      response.headers.set("X-Nexus-Rid", requestId);
+    }
 
     if (context?.proxyMethod === "GET" && schema?.cache && response instanceof Response) {
       if (schema.cache.revalidate !== undefined) {

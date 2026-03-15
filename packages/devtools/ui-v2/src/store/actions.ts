@@ -12,9 +12,14 @@ import { createInitialState } from "./initial-state"
 type Setter = Parameters<StateCreator<DevToolsState>>[0]
 type Getter = Parameters<StateCreator<DevToolsState>>[1]
 
-/** Collapse rapid-fire "Sources updated" toasts into a single one */
+/** Toast only when source map actually changes — not on initial registration or duplicate events */
+const lastSourceSnapshots = new Map<string, string>()
 let sourcesToastTimer: ReturnType<typeof setTimeout> | undefined
-function debouncedSourcesToast(): void {
+function debouncedSourcesToast(sessionId: string, sources: SourceMap): void {
+  const snapshot = JSON.stringify(sources)
+  const prev = lastSourceSnapshots.get(sessionId)
+  lastSourceSnapshots.set(sessionId, snapshot)
+  if (!prev || prev === snapshot) return
   clearTimeout(sourcesToastTimer)
   sourcesToastTimer = setTimeout(() => toast.info("Sources updated"), 500)
 }
@@ -131,7 +136,7 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
       // Hot reload: update session sources without going through request reducer
       if (event.type === "connection:sources" && event.sources) {
         get().updateSessionSources(event.sessionId, event.sources as SourceMap)
-        debouncedSourcesToast()
+        debouncedSourcesToast(event.sessionId, event.sources as SourceMap)
         return
       }
 

@@ -9,6 +9,7 @@
 import type { Sources } from "@noverax/nexus/define";
 
 const SOURCES_KEY = Symbol.for("nexus.devtools.sources");
+const SOURCE_NAME_KEY = Symbol.for("nexus.source.name");
 
 type SourcesListener = (sources: Sources) => void;
 
@@ -27,8 +28,14 @@ function getRegistry(): SourcesRegistry {
   return g[SOURCES_KEY] as SourcesRegistry;
 }
 
-/** Replace current sources and notify all listeners */
+/** Replace current sources and notify all listeners.
+ *  Syncs SOURCE_NAME_KEY on each source object to match its registry key,
+ *  so that createCaller(api) emits the same source name as the registry. */
 export function registerSources(sources: Sources): void {
+  for (const [key, src] of Object.entries(sources)) {
+    (src as Record<symbol, unknown>)[SOURCE_NAME_KEY] = key;
+  }
+
   const registry = getRegistry();
   registry.current = sources;
   registry.generation++;

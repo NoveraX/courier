@@ -38,7 +38,7 @@ export function DetailPanel({
       <Tabs
         value={activeTab}
         onValueChange={onTabChange}
-        className="flex flex-1 flex-col overflow-hidden"
+        className="flex min-h-0 flex-1 flex-col overflow-hidden"
       >
         <div className="border-b border-border-subtle px-3">
           <TabsList variant="line" className="h-9">

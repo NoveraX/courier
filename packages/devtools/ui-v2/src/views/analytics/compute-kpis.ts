@@ -105,7 +105,10 @@ function extractDurations(requests: RequestEntry[]): number[] {
   return requests.filter((r) => r.timing).map((r) => r.timing!.total).sort((a, b) => a - b);
 }
 
-/** Minutes spanning from earliest request start to latest request end */
+/**
+ * Minutes spanning from earliest request start to latest request end.
+ * Minimum 1-minute window to avoid burst inflation.
+ */
 function computeSpanMinutes(completed: RequestEntry[]): number {
   if (completed.length < 2) return 0;
   let minStart = Infinity;
@@ -115,5 +118,5 @@ function computeSpanMinutes(completed: RequestEntry[]): number {
     const end = r.startedAt + (r.timing?.total ?? 0);
     if (end > maxEnd) maxEnd = end;
   }
-  return (maxEnd - minStart) / 60_000;
+  return Math.max(maxEnd - minStart, 60_000) / 60_000;
 }

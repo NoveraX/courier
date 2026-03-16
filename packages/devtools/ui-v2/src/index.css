@@ -138,6 +138,7 @@
   to { opacity: 1; }
 }
 
+
 @keyframes gradient-shift {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -418,7 +419,7 @@
 
   /* ── Charts ── */
   --chart-1: oklch(0.55 0.22 280);
-  --chart-2: oklch(0.55 0.18 155);
+  --chart-2: oklch(0.55 0.12 160);
   --chart-3: oklch(0.60 0.22 40);
   --chart-4: oklch(0.50 0.16 310);
   --chart-5: oklch(0.65 0.16 85);
@@ -489,6 +490,18 @@ body::after {
 /* ══════════════════════════════════════════════════════════════════════
    Reduced Motion
    ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Heatmap diagonal stripes for "no data" cells ── */
+
+.diagonal-stripes {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 3px,
+    oklch(0.30 0 0 / 0.3) 3px,
+    oklch(0.30 0 0 / 0.3) 4px
+  );
+}
 
 @media (prefers-reduced-motion: reduce) {
   *,

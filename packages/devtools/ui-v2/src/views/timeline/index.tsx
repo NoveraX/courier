@@ -50,7 +50,7 @@ export function TimelineView(): React.ReactElement {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <Toolbar
         filters={filters}
         showFilters={showFilters}

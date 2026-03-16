@@ -40,7 +40,7 @@ export function RequestList({
 
   return (
     <div
-      className="flex flex-1 flex-col overflow-hidden"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden"
       onKeyDown={handleKeyDown}
       tabIndex={0}
       role="listbox"

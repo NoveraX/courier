@@ -29,6 +29,7 @@ export interface EndpointInfo {
   hasVariablesSchema: boolean
   hasResponseSchema: boolean
   middleware: string[]
+  path?: string
 }
 
 export interface GroupInfo {

@@ -43,10 +43,10 @@ function RootComponent(): React.ReactNode {
       style={{ "--sidebar-width": "14rem", "--sidebar-width-icon": "3rem" } as React.CSSProperties}
     >
       <AppSidebar />
-      <SidebarInset className="flex flex-col overflow-hidden">
+      <SidebarInset className="flex min-h-0 flex-col overflow-hidden">
         <DisconnectedBanner />
         <TopBar onOpenSearch={() => setCommandOpen(true)} />
-        <div className="flex flex-1 flex-col overflow-auto">
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto">
           <Outlet />
         </div>
         <StatusBar />

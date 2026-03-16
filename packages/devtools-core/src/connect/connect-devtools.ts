@@ -58,12 +58,34 @@ export function connectDevTools(options: ConnectDevToolsOptions = {}): DevToolsC
   const bus = new EventBus({ maxBufferSize });
   const sessionId = `session_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
-  // Resolve "_" (used by createCaller) to the real source name — reads registry dynamically
+  // Resolve event source names to canonical registry keys.
+  // Handles: "_" fallback, derived names from getSourceName(), case mismatches.
   const resolveSourceName = (name: string): string => {
-    if (name !== "_") return name;
     const current = getSources();
-    if (!current || Object.hasOwn(current, "_")) return name;
-    return Object.keys(current)[0] ?? name;
+    if (!current) return name;
+
+    // Already a registry key — fast path
+    if (Object.hasOwn(current, name)) return name;
+
+    // "_" fallback (single-source direct mode without defineApi name)
+    if (name === "_") {
+      const keys = Object.keys(current);
+      return (keys.length === 1 ? keys[0] : undefined) ?? name;
+    }
+
+    // Reverse lookup: find registry key whose source object has this stored name
+    for (const [key, src] of Object.entries(current)) {
+      const stored = (src as Record<symbol, unknown>)[SOURCE_NAME_KEY] as string | undefined;
+      if (stored === name) return key;
+    }
+
+    // Case-insensitive fallback against registry keys
+    const lower = name.toLowerCase();
+    for (const key of Object.keys(current)) {
+      if (key.toLowerCase() === lower) return key;
+    }
+
+    return name;
   };
 
   // Check if event should be filtered (uses resolved source name)

@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { BarChart3 } from "lucide-react";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmptyState } from "@/components/shared/empty-state";
+import { PageShell } from "@/components/shared/page-shell";
 import { formatDuration, formatSize, formatNumber } from "@/components/shared/formatters";
 import { useDevToolsStore } from "@/store";
 
@@ -47,7 +47,7 @@ export function AnalyticsView(): React.ReactElement {
   }
 
   return (
-    <ScrollArea className="flex-1">
+    <PageShell>
       <div className="space-y-5 p-5">
         <KPIGrid kpis={kpis} />
         <ChartGrid
@@ -60,7 +60,7 @@ export function AnalyticsView(): React.ReactElement {
           <EndpointsTable data={endpoints} requests={requests} />
         </ChartPanel>
       </div>
-    </ScrollArea>
+    </PageShell>
   );
 }
 

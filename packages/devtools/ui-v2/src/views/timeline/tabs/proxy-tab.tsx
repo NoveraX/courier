@@ -74,7 +74,7 @@ function FlowLink({ forward, backward }: {
   backward: number;
 }): React.ReactElement {
   return (
-    <div className="flex flex-1 flex-col gap-1.5 px-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-1.5 px-3">
       <div className="flex items-center gap-1.5">
         <div className="h-px flex-1 bg-border" />
         <ArrowRight className="size-3 shrink-0 text-muted-foreground/50" />

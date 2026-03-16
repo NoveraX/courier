@@ -59,6 +59,8 @@ export interface SourceMap {
             type: "query" | "mutation" | undefined;
             hasVariablesSchema: boolean;
             hasResponseSchema: boolean;
+            middleware?: string[];
+            path?: string;
           };
         };
       };

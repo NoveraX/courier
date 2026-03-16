@@ -1,31 +1,13 @@
-import { Search, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { KbdHint } from "@/components/shared/kbd-hint";
+import { SearchInput } from "@/components/shared/search-input";
 
-export function SearchInput({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}): React.ReactElement {
-  return (
-    <div className="relative w-56">
-      <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-      <Input
-        placeholder="Filter requests…"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-7 pl-8 text-body-sm"
-      />
-    </div>
-  );
-}
+export { SearchInput };
 
 export function FilterToggle({
   active,

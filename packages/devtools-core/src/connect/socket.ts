@@ -140,13 +140,15 @@ async function handleDirectExecute(
   const captured: {
     status: number;
     headers: Record<string, string>;
+    requestHeaders: Record<string, string>;
     timing: { total: number; middleware: number; fetch: number; validation: number } | undefined;
-  } = { status: 200, headers: {}, timing: undefined };
+  } = { status: 200, headers: {}, requestHeaders: {}, timing: undefined };
 
   const unsub = bus.on("request:end", (event) => {
     const e = event as unknown as Record<string, unknown>;
     captured.status = (e.status as number) ?? 200;
     captured.headers = (e.headers as Record<string, string>) ?? {};
+    captured.requestHeaders = (e.requestHeaders as Record<string, string>) ?? {};
     captured.timing = e.timing as typeof captured.timing;
   });
 
@@ -165,6 +167,7 @@ async function handleDirectExecute(
       status: captured.status,
       data,
       headers: captured.headers,
+      requestHeaders: captured.requestHeaders,
       timing: captured.timing,
       duration: performance.now() - startTime,
     });

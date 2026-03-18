@@ -125,6 +125,15 @@ function HistoryRow({ entry, active, onSelect }: {
         </span>
       )}
 
+      <span className={cn(
+        "shrink-0 rounded px-1 py-px text-[9px] uppercase leading-none tracking-wide",
+        entry.mode === "proxy"
+          ? "bg-blue-500/15 text-blue-400"
+          : "bg-amber-500/15 text-amber-400",
+      )}>
+        {entry.mode === "proxy" ? "prx" : "dir"}
+      </span>
+
       <span className="min-w-0 flex-1 truncate">
         {entry.group}.{entry.method}
       </span>

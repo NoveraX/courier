@@ -23,6 +23,7 @@ interface SocketResponse {
   data?: unknown;
   error?: string;
   headers?: Record<string, string>;
+  requestHeaders?: Record<string, string>;
   duration?: number;
   timing?: RequestTiming;
 }
@@ -71,6 +72,7 @@ export function useSendRequest() {
         duration: res.duration,
         response: res.error ?? res.data,
         responseHeaders: res.headers,
+        requestHeaders: res.requestHeaders,
         timing: res.timing,
       });
 

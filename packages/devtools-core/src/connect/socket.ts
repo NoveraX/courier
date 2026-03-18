@@ -1,9 +1,9 @@
-import { executeRequest } from "@noverax/nexus";
+import { createProxyCallerFn, executeRequest } from "@noverax/nexus";
 import type { Sources } from "@noverax/nexus/define";
 import type { EventBus } from "../event-bus";
 import type { SourceMap } from "../events";
 import { extractSourceMap } from "../source-map";
-import { getSources, getSourcesGeneration, onSourcesChange } from "../sources-registry";
+import { getSources, onSourcesChange, renameSourceKeys } from "../sources-registry";
 
 /** Try to connect via Socket.IO (fails silently if not installed) */
 export async function tryConnectSocket(
@@ -37,7 +37,6 @@ export async function tryConnectSocket(
       });
     });
 
-    // Heartbeat every 30s to signal liveness
     const heartbeatInterval = setInterval(() => {
       if (socket.connected) {
         socket.emit("event", {
@@ -49,25 +48,22 @@ export async function tryConnectSocket(
       }
     }, 30_000);
 
-    // Forward all bus events to Socket.IO
     const unsubBus = bus.on((event) => {
       socket.emit("event", event);
     });
 
-    // Emit connection:sources when global registry updates
     const unsubSources = onSourcesChange((newSources) => {
       if (!socket.connected) return;
-      const newSourceMap = extractSourceMap(newSources);
       socket.emit("event", {
         id: sessionId,
         type: "connection:sources",
         timestamp: Date.now(),
         sessionId,
-        sources: newSourceMap,
+        sources: extractSourceMap(newSources),
       });
     });
 
-    // Playground: execute endpoint on behalf of DevTools UI
+    // Playground: execute endpoint, capture result from bus events
     socket.on(
       "playground:execute",
       (
@@ -81,105 +77,135 @@ export async function tryConnectSocket(
         },
         callback: (result: Record<string, unknown>) => void,
       ) => {
-        // Always resolve from global registry for fresh sources after HMR
-        handlePlaygroundExecute(getSources(), payload, callback);
+        handlePlaygroundExecute(bus, getSources(), payload, callback);
       },
     );
 
-    // Listen for sources:invalidate from devtools server (file watcher).
-    // Only re-emit if HMR actually updated the registry (generation bumped).
-    // If generation is unchanged, the runtime data is stale — the server's
-    // file watcher already pushed fresh scan-derived data via pushSourceMapToSessions.
-    let invalidateTimer: ReturnType<typeof setTimeout> | undefined;
-    socket.on("sources:invalidate", () => {
-      clearTimeout(invalidateTimer);
-      const genBefore = getSourcesGeneration();
-      invalidateTimer = setTimeout(() => {
-        if (!socket.connected) return;
-        // Generation unchanged → HMR didn't fire → runtime data is stale.
-        // The file watcher already pushed scan-derived data — don't overwrite.
-        if (getSourcesGeneration() === genBefore) return;
-        // HMR fired but onSourcesChange already emitted — this is a redundant
-        // safety net in case the listener missed (shouldn't happen in practice).
-        const current = getSources();
-        if (!current) return;
-        socket.emit("event", {
-          id: sessionId,
-          type: "connection:sources",
-          timestamp: Date.now(),
-          sessionId,
-          sources: extractSourceMap(current),
-        });
-      }, 500);
+    socket.on("catalog:names", (mapping: Record<string, string>) => {
+      renameSourceKeys(mapping);
     });
 
     return () => {
       clearInterval(heartbeatInterval);
-      clearTimeout(invalidateTimer);
       unsubBus();
       unsubSources();
       socket.disconnect();
     };
   } catch {
-    // socket.io-client not installed — run in local-only mode
     return undefined;
   }
 }
 
-/** Handle playground:execute requests from DevTools UI */
+// ── Playground execution ────────────────────────────────────────────────────
+
+interface PlaygroundPayload {
+  source: string;
+  group: string;
+  method: string;
+  variables: unknown;
+  headers: Record<string, string>;
+  mode: "direct" | "proxy";
+}
+
+type PlaygroundCallback = (result: Record<string, unknown>) => void;
+
 async function handlePlaygroundExecute(
+  bus: EventBus,
   sources: Sources | undefined,
-  payload: {
-    source: string;
-    group: string;
-    method: string;
-    variables: unknown;
-    headers: Record<string, string>;
-    mode: "direct" | "proxy";
-  },
-  callback: (result: Record<string, unknown>) => void,
+  payload: PlaygroundPayload,
+  callback: PlaygroundCallback,
+): Promise<void> {
+  if (payload.mode === "proxy") {
+    await handleProxyViaFetch(bus, payload, callback);
+    return;
+  }
+  await handleDirectExecute(bus, sources, payload, callback);
+}
+
+/** Direct mode: call executeRequest on current process, capture result from bus */
+async function handleDirectExecute(
+  bus: EventBus,
+  sources: Sources | undefined,
+  payload: PlaygroundPayload,
+  callback: PlaygroundCallback,
 ): Promise<void> {
   if (!sources) {
-    callback({
-      error: "No sources provided to connectDevTools — cannot execute endpoints",
-      status: 0,
-      headers: {},
-    });
+    callback({ error: "No sources registered — cannot execute", status: 0, headers: {} });
     return;
   }
 
   const startTime = performance.now();
+  const resolvedSource = resolveSource(sources, payload.source, payload.group);
 
-  // createCaller() uses "_" as the internal source key, but connectDevTools
-  // receives the user's sources object with real keys. Resolve unknown
-  // source keys by matching group, or falling back to the first source.
-  let resolvedSource = payload.source;
-  if (!Object.hasOwn(sources, resolvedSource)) {
-    const keys = Object.keys(sources);
-    const match = payload.group
-      ? keys.find((k) => {
-          const s = sources[k];
-          return s?.options?.groups && payload.group in s.options.groups;
-        })
-      : keys[0];
-    resolvedSource = match ?? keys[0] ?? resolvedSource;
-  }
+  const captured: {
+    status: number;
+    headers: Record<string, string>;
+    timing: { total: number; middleware: number; fetch: number; validation: number } | undefined;
+  } = { status: 200, headers: {}, timing: undefined };
+
+  const unsub = bus.on("request:end", (event) => {
+    const e = event as unknown as Record<string, unknown>;
+    captured.status = (e.status as number) ?? 200;
+    captured.headers = (e.headers as Record<string, string>) ?? {};
+    captured.timing = e.timing as typeof captured.timing;
+  });
 
   try {
-    const context = payload.mode === "proxy" ? { mode: "proxy" as const } : undefined;
-    const data = await executeRequest(
-      sources,
-      {
-        source: resolvedSource,
-        group: payload.group,
-        method: payload.method,
-        variables: payload.variables as Record<string, unknown>,
-        options: {
-          headers: payload.headers,
-        },
-      },
-      context,
-    );
+    const data = await executeRequest(sources, {
+      source: resolvedSource,
+      group: payload.group,
+      method: payload.method,
+      variables: payload.variables as Record<string, unknown>,
+      options: { headers: payload.headers },
+    });
+
+    unsub();
+
+    callback({
+      status: captured.status,
+      data,
+      headers: captured.headers,
+      timing: captured.timing,
+      duration: performance.now() - startTime,
+    });
+  } catch (err: unknown) {
+    unsub();
+    const error = err as { status?: number; message?: string; data?: { message?: string } };
+    callback({
+      error: error.data?.message ?? error.message ?? "Unknown error",
+      status: error.status ?? 500,
+      headers: {},
+      timing: captured.timing,
+      duration: performance.now() - startTime,
+    });
+  }
+}
+
+/**
+ * Proxy mode: use createProxyCallerFn to go through the real Nexus proxy flow.
+ * Browser → POST /api/request → server executeRequest → backend.
+ * All devtools hooks fire (both browser and server side), producing full
+ * timing data including client↔proxy leg. Headers and timing are picked up
+ * from the store via pollForTiming on the UI side.
+ */
+async function handleProxyViaFetch(
+  _bus: EventBus,
+  payload: PlaygroundPayload,
+  callback: PlaygroundCallback,
+): Promise<void> {
+  const startTime = performance.now();
+
+  try {
+    const callerFn = createProxyCallerFn({ headers: payload.headers }) as (
+      source: string,
+      options?: Record<string, unknown>,
+    ) => (...args: [string] | [string, Record<string, unknown>]) => Promise<unknown>;
+
+    const endpointKey = payload.group ? `${payload.group}:${payload.method}` : payload.method;
+    const execute = callerFn(payload.source);
+    const data = payload.variables
+      ? await execute(endpointKey, payload.variables as Record<string, unknown>)
+      : await execute(endpointKey);
 
     callback({
       status: 200,
@@ -189,12 +215,24 @@ async function handlePlaygroundExecute(
     });
   } catch (err: unknown) {
     const error = err as { status?: number; message?: string; data?: { message?: string } };
-    const detail = error.data?.message ?? error.message ?? "Unknown error";
     callback({
-      error: detail,
+      error: error.data?.message ?? error.message ?? "Proxy request failed",
       status: error.status ?? 500,
       headers: {},
       duration: performance.now() - startTime,
     });
   }
+}
+
+function resolveSource(sources: Sources, source: string, group: string): string {
+  if (Object.hasOwn(sources, source)) return source;
+  const keys = Object.keys(sources);
+  const hasGroup = group !== undefined && group !== "";
+  const match = hasGroup
+    ? keys.find((k) => {
+        const s = sources[k];
+        return s?.options?.groups && group in s.options.groups;
+      })
+    : keys[0];
+  return match ?? keys[0] ?? source;
 }

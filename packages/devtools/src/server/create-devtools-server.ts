@@ -10,6 +10,7 @@ import express from "express";
 import { Server as SocketIOServer } from "socket.io";
 import { setProjectRoot } from "../context";
 import { registerApisRoutes } from "./apis-routes";
+import { CatalogStore } from "./catalog";
 import { startFileWatcher } from "./file-watcher";
 import { initProject } from "./init";
 import { clearBuffer } from "./session-buffer";
@@ -25,6 +26,7 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
   const app = express();
   const httpServer = createServer(app);
   const sessions = new Map<string, SessionInfo>();
+  const catalogStore = new CatalogStore();
 
   const io = new SocketIOServer(httpServer, {
     cors: {
@@ -44,8 +46,8 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
   const appNamespace = io.of("/app");
   const uiNamespace = io.of("/ui");
 
-  setupAppNamespace(appNamespace, uiNamespace, sessions);
-  setupUiNamespace(appNamespace, uiNamespace, sessions);
+  setupAppNamespace(appNamespace, uiNamespace, sessions, catalogStore);
+  setupUiNamespace(appNamespace, uiNamespace, sessions, catalogStore);
 
   // ── Init (registry + .gitignore) ────────────────────────────────────────────
 
@@ -53,7 +55,7 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
 
   // ── File Watcher (hot reload) ──────────────────────────────────────────────
 
-  const stopWatcher = startFileWatcher(uiNamespace, appNamespace, sessions);
+  const stopWatcher = startFileWatcher(uiNamespace, catalogStore);
 
   // ── REST API ─────────────────────────────────────────────────────────────────
 
@@ -61,6 +63,10 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
 
   app.get("/api/sessions", (_req, res) => {
     res.json(Array.from(sessions.values()));
+  });
+
+  app.get("/api/catalog", (_req, res) => {
+    res.json(catalogStore.getSnapshot());
   });
 
   app.get("/api/health", (_req, res) => {

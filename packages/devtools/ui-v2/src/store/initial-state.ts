@@ -9,6 +9,7 @@ export function createInitialState(savedTheme: DevToolsState["theme"]) {
     connectionStatus: "disconnected" as const,
     reconnectAttempt: 0,
     sessions: [] as DevToolsState["sessions"],
+    catalog: {} as DevToolsState["catalog"],
     requests: [] as DevToolsState["requests"],
     paused: false,
     preserveLog: false,

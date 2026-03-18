@@ -31,7 +31,13 @@ export function handlePlayground(
       return;
     }
 
-    const targetSocket = resolveTargetSocket(appSockets, payload.sessionId);
+    // Direct: prefer server socket (has runtime sources)
+    // Proxy: prefer browser socket (will fetch through /api/request like a real user)
+    const targetSocket = resolveTargetSocket(
+      appSockets,
+      payload.sessionId,
+      payload.mode === "direct",
+    );
     const startTime = Date.now();
     let responded = false;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -74,12 +80,24 @@ function resolveTargetSocket(
     ? T[]
     : never,
   sessionId?: string,
+  preferServer?: boolean,
 ): (typeof appSockets)[number] {
   if (sessionId) {
     const found = appSockets.find((s) => s.data?.sessionId === sessionId);
     if (found) return found;
   }
-  // Prefer the most recently connected socket — browser sessions connect
-  // after server sessions and have fresher sources thanks to push-based HMR.
+
+  if (preferServer) {
+    // Proxy mode: prefer server session (instrumentServer).
+    // Server sessions have a real framework name; browser has "unknown".
+    const serverSocket = appSockets.find(
+      (s) => s.data?.framework && s.data.framework !== "unknown",
+    );
+    if (serverSocket) return serverSocket;
+    // Fallback: first connected socket (server starts before browser)
+    if (appSockets.length > 1) return appSockets[0] as (typeof appSockets)[number];
+  }
+
+  // Direct mode: use the LAST connected socket (browser session with HMR)
   return appSockets[appSockets.length - 1] as (typeof appSockets)[number];
 }

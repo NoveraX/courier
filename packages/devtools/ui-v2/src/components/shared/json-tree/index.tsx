@@ -14,6 +14,8 @@ interface JsonTreeProps {
   fill?: boolean;
   showPath?: boolean;
   showCopy?: boolean;
+  /** Extra content rendered in the header bar (left side, before copy) */
+  headerExtra?: React.ReactNode;
 }
 
 export function JsonTree({
@@ -23,6 +25,7 @@ export function JsonTree({
   fill = false,
   showPath = true,
   showCopy = true,
+  headerExtra,
 }: JsonTreeProps): React.ReactElement {
   const [selectedPath, setSelectedPath] = useState<string[]>([]);
 
@@ -40,10 +43,11 @@ export function JsonTree({
       fill && "flex min-h-0 flex-1 flex-col",
       className,
     )}>
-      {(showPath || showCopy) && (
-        <div className="flex shrink-0 items-center justify-between border-b border-border-subtle px-3 py-1.5">
+      {(showPath || showCopy || headerExtra) && (
+        <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-3 py-1.5">
           {showPath && <PathBreadcrumb path={selectedPath} />}
-          {!showPath && <div />}
+          {headerExtra}
+          <div className="flex-1" />
           {showCopy && <CopyButton value={serialized} label="Copy JSON" />}
         </div>
       )}

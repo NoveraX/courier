@@ -1,8 +1,9 @@
 import type {
   Theme,
   ConnectionStatus,
+  Catalog,
+  CatalogSnapshot,
   SessionInfo,
-  SourceMap,
   RequestEntry,
   DevToolsEvent,
   PlaygroundHistoryEntry,
@@ -23,6 +24,9 @@ export interface DevToolsState {
   reconnectAttempt: number
   connected: boolean
   sessions: SessionInfo[]
+
+  // Catalog (server-authoritative merged source map)
+  catalog: Catalog
 
   // Requests
   requests: RequestEntry[]
@@ -68,7 +72,9 @@ export interface DevToolsState {
   setSessions: (sessions: SessionInfo[]) => void
   addSession: (session: SessionInfo) => void
   removeSession: (sessionId: string) => void
-  updateSessionSources: (sessionId: string, sources: SourceMap) => void
+
+  // Actions — Catalog
+  setCatalog: (snapshot: CatalogSnapshot) => void
 
   // Actions — Requests
   togglePaused: () => void

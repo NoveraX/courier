@@ -1,7 +1,7 @@
 import type { StateCreator } from "zustand"
 import { toast } from "sonner"
 
-import type { SourceMap } from "./types"
+import type { Catalog, CatalogSnapshot, DevToolsEvent } from "./types"
 import type { DevToolsState } from "./store-types"
 import { THEME_STORAGE_KEY, PLAYGROUND_MAX_HISTORY, DEFAULT_SETTINGS, saveSettings, saveSessionStartedAt } from "./constants"
 import { applyTheme } from "./theme"
@@ -12,16 +12,51 @@ import { createInitialState } from "./initial-state"
 type Setter = Parameters<StateCreator<DevToolsState>>[0]
 type Getter = Parameters<StateCreator<DevToolsState>>[1]
 
-/** Toast only when source map actually changes — not on initial registration or duplicate events */
-const lastSourceSnapshots = new Map<string, string>()
-let sourcesToastTimer: ReturnType<typeof setTimeout> | undefined
-function debouncedSourcesToast(sessionId: string, sources: SourceMap): void {
-  const snapshot = JSON.stringify(sources)
-  const prev = lastSourceSnapshots.get(sessionId)
-  lastSourceSnapshots.set(sessionId, snapshot)
-  if (!prev || prev === snapshot) return
-  clearTimeout(sourcesToastTimer)
-  sourcesToastTimer = setTimeout(() => toast.info("Sources updated"), 500)
+/** Toast on catalog change — debounced to avoid spam */
+let lastCatalogHash = ""
+let catalogToastTimer: ReturnType<typeof setTimeout> | undefined
+function catalogChangedToast(catalog: CatalogSnapshot["catalog"]): void {
+  const hash = JSON.stringify(catalog)
+  if (!lastCatalogHash || lastCatalogHash === hash) {
+    lastCatalogHash = hash
+    return
+  }
+  lastCatalogHash = hash
+  clearTimeout(catalogToastTimer)
+  catalogToastTimer = setTimeout(() => toast.info("Sources updated"), 300)
+}
+
+/**
+ * Normalize event source name against catalog keys (case-insensitive).
+ * Runtime emits lowercase names (from URL hostname), catalog uses
+ * scanner-derived names (PascalCase). This is the single reconciliation
+ * point — all views read from the store and never see the mismatch.
+ */
+let canonMap: Map<string, string> | null = null
+let canonMapCatalog: Catalog | null = null
+
+type EventPayload = DevToolsEvent & Record<string, unknown>
+
+function normalizeEventSource(
+  event: EventPayload,
+  catalog: Catalog,
+): EventPayload {
+  if (!event.source || typeof event.source !== "string") return event
+
+  // Rebuild lookup only when catalog reference changes
+  if (catalog !== canonMapCatalog) {
+    canonMap = new Map()
+    for (const key of Object.keys(catalog)) {
+      canonMap.set(key.toLowerCase(), key)
+    }
+    canonMapCatalog = catalog
+  }
+
+  const canonical = canonMap!.get((event.source as string).toLowerCase())
+  if (canonical && canonical !== event.source) {
+    return { ...event, source: canonical }
+  }
+  return event
 }
 
 export function createActions(set: Setter, get: Getter): Omit<DevToolsState, keyof ReturnType<typeof createInitialState>> {
@@ -61,12 +96,12 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
             : s.requests.filter((r) => r.sessionId !== sessionId || r.pinned),
         }
       }),
-    updateSessionSources: (sessionId, sources) =>
-      set((s) => ({
-        sessions: s.sessions.map((ss) =>
-          ss.sessionId === sessionId ? { ...ss, sources } : ss
-        ),
-      })),
+
+    // Catalog (server-authoritative — NOT gated by paused flag)
+    setCatalog: (snapshot) => {
+      catalogChangedToast(snapshot.catalog)
+      set({ catalog: snapshot.catalog })
+    },
 
     // Requests
     togglePaused: () => set((s) => ({ paused: !s.paused })),
@@ -132,16 +167,11 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
 
     handleEvent: (event) => {
       if (get().paused) return
-
-      // Hot reload: update session sources without going through request reducer
-      if (event.type === "connection:sources" && event.sources) {
-        get().updateSessionSources(event.sessionId, event.sources as SourceMap)
-        debouncedSourcesToast(event.sessionId, event.sources as SourceMap)
-        return
-      }
-
-      set((state) => handleEventReducer(state, event))
-      notifyOnEvent(event, get)
+      // Normalize event source name against catalog (case-insensitive).
+      // Runtime emits lowercase (from URL hostname), catalog uses scanner names (PascalCase).
+      const normalized = normalizeEventSource(event, get().catalog)
+      set((state) => handleEventReducer(state, normalized))
+      notifyOnEvent(normalized, get)
     },
 
     // Settings

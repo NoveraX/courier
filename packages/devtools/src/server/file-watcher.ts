@@ -1,5 +1,6 @@
 /**
- * File watcher — monitors project files and pushes change events via Socket.IO.
+ * File watcher — monitors project files and pushes scan results
+ * into the CatalogStore (scan layer).
  *
  * Uses in-memory snapshots of cache/registry with lazy invalidation
  * to avoid disk reads on every file change.
@@ -14,8 +15,8 @@ import type { RegistryConfig } from "../apis/registry/types";
 import { scanProject } from "../apis/scanner";
 import { scanToSourceMap } from "../apis/scanner/scan-to-source-map";
 import { resolveProject } from "../context";
+import type { CatalogStore } from "./catalog";
 import { syncUserModified } from "./sync-user-modified";
-import type { SessionInfo } from "./types";
 
 export interface FileChangeEvent {
   type: "scan" | "registry";
@@ -41,12 +42,8 @@ function createSnapshot() {
   };
 }
 
-/** Start watching project files, emit changes to UI and app namespaces */
-export function startFileWatcher(
-  uiNamespace: Namespace,
-  appNamespace?: Namespace,
-  sessions?: Map<string, SessionInfo>,
-): () => void {
+/** Start watching project files, push scan results into CatalogStore */
+export function startFileWatcher(uiNamespace: Namespace, catalogStore: CatalogStore): () => void {
   const initialRegistry = loadRegistry();
   const scanPaths = initialRegistry.scanPaths ?? ["src/api"];
   const snapshot = createSnapshot();
@@ -74,14 +71,9 @@ export function startFileWatcher(
         const scan = scanProject();
         uiNamespace.emit("scan:updated", scan);
 
-        // Push scan-derived source map into all active sessions so the
-        // Playground/Explorer always reflect file-system truth — even when
-        // the app's runtime registry hasn't been updated by HMR yet.
-        if (sessions && sessions.size > 0) {
-          const freshMap = scanToSourceMap(scan);
-          if (Object.keys(freshMap).length > 0) {
-            pushSourceMapToSessions(freshMap, sessions, uiNamespace);
-          }
+        const freshMap = scanToSourceMap(scan);
+        if (Object.keys(freshMap).length > 0) {
+          catalogStore.setScanLayer(freshMap);
         }
       } catch (err) {
         console.warn("Failed to emit scan update:", err);
@@ -110,8 +102,6 @@ export function startFileWatcher(
     if (TS_EXTENSIONS.test(filePath)) {
       emitScanUpdate();
       scheduleModifiedCheck(filePath);
-      // Notify connected apps to re-emit their source map (hot reload fallback)
-      appNamespace?.emit("sources:invalidate", { timestamp: Date.now() });
     }
   };
 
@@ -125,22 +115,4 @@ export function startFileWatcher(
     if (modifiedTimer) clearTimeout(modifiedTimer);
     void watcher.close();
   };
-}
-
-/** Replace session source maps with scan-derived data and notify UI */
-function pushSourceMapToSessions(
-  freshMap: Record<string, unknown>,
-  sessions: Map<string, SessionInfo>,
-  uiNamespace: Namespace,
-): void {
-  for (const [, session] of sessions) {
-    session.sources = freshMap;
-    uiNamespace.emit("event", {
-      id: session.sessionId,
-      type: "connection:sources",
-      timestamp: Date.now(),
-      sessionId: session.sessionId,
-      sources: freshMap,
-    });
-  }
 }

@@ -26,6 +26,5 @@ export interface SessionInfo {
   sessionId: string;
   framework: string;
   nexusVersion: string;
-  sources: Record<string, unknown>;
   connectedAt: number;
 }

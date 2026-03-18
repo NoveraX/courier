@@ -58,3 +58,35 @@ export function onSourcesChange(fn: SourcesListener): () => void {
 export function getSourcesGeneration(): number {
   return getRegistry().generation;
 }
+
+/**
+ * Rename source keys to canonical names (from server catalog).
+ * Updates both registry keys and SOURCE_NAME_KEY on source objects,
+ * so createCaller(source).getSourceName() returns the canonical name.
+ *
+ * Does NOT trigger listeners — this is a silent rename, not a structural change.
+ */
+export function renameSourceKeys(mapping: Record<string, string>): void {
+  const registry = getRegistry();
+  if (!registry.current) return;
+
+  let changed = false;
+  const renamed: Sources = {};
+
+  for (const [key, src] of Object.entries(registry.current)) {
+    const canonical = mapping[key];
+    if (canonical && canonical !== key) {
+      renamed[canonical] = src;
+      (src as Record<symbol, unknown>)[SOURCE_NAME_KEY] = canonical;
+      changed = true;
+    } else {
+      renamed[key] = src;
+    }
+  }
+
+  if (changed) {
+    registry.current = renamed;
+    // Don't bump generation or notify — this is a rename, not a content change.
+    // The catalog already has the correct structure.
+  }
+}

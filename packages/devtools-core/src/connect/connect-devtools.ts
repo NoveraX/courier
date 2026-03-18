@@ -190,6 +190,7 @@ function findMatchingSourceKey(
   baseURL: string,
 ): string | undefined {
   const newGroups = new Set(getGroupNames(newSource));
+  const isNewFlat = newGroups.size === 0;
 
   let bestKey: string | undefined;
   let bestOverlap = -1;
@@ -198,6 +199,9 @@ function findMatchingSourceKey(
   for (const [key, existing] of Object.entries(current)) {
     if (existing.options?.baseURL !== baseURL || existing === newSource) continue;
     candidateCount++;
+
+    // Flat → flat match: flat API replaces another flat API with same baseURL
+    if (isNewFlat && getGroupNames(existing).length === 0) return key;
 
     const overlap = getGroupNames(existing).filter((g) => newGroups.has(g)).length;
     if (overlap > bestOverlap) {
@@ -224,11 +228,20 @@ const SOURCE_NAME_KEY = Symbol.for("nexus.source.name");
 /** Resolve a unique registry key for a new source — prefers the stored name from defineApi(). */
 function resolveNewSourceKey(existing: Record<string, unknown>, source: AnySource): string {
   const storedName = (source as Record<symbol, unknown>)[SOURCE_NAME_KEY] as string | undefined;
-  if (storedName && !Object.hasOwn(existing, storedName)) return storedName;
+  if (storedName) {
+    if (!Object.hasOwn(existing, storedName)) {
+      // Case-insensitive check: "jsonplaceholder" should reuse "jsonPlaceholder"
+      const lower = storedName.toLowerCase();
+      for (const key of Object.keys(existing)) {
+        if (key.toLowerCase() === lower) return key;
+      }
+      return storedName;
+    }
+    return storedName;
+  }
 
-  // Collision or no stored name — append counter
-  const base = storedName ?? "source";
+  // No stored name — append counter
   let idx = Object.keys(existing).length;
-  while (Object.hasOwn(existing, `${base}_${idx}`)) idx++;
-  return `${base}_${idx}`;
+  while (Object.hasOwn(existing, `source_${idx}`)) idx++;
+  return `source_${idx}`;
 }

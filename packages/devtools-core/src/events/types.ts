@@ -61,6 +61,8 @@ export interface SourceMap {
             hasResponseSchema: boolean;
             middleware?: string[];
             path?: string;
+            /** Default variables stub generated from schema shape */
+            variablesStub?: Record<string, unknown>;
           };
         };
       };

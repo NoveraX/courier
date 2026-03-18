@@ -65,12 +65,12 @@ describe("filterHeaders", () => {
 });
 
 describe("mergeHeaders", () => {
-  it("returns ky headers when no request headers", () => {
+  it("returns base headers when no request headers", () => {
     const result = mergeHeaders({ "content-type": "application/json" });
     expect(result.get("content-type")).toBe("application/json");
   });
 
-  it("merges ky and filtered request headers", () => {
+  it("merges base and filtered request headers", () => {
     const result = mergeHeaders(
       { "content-type": "application/json" },
       { authorization: "Bearer token", "x-bad": "drop" },
@@ -80,7 +80,7 @@ describe("mergeHeaders", () => {
     expect(result.has("x-bad")).toBe(false);
   });
 
-  it("request headers override ky headers for same key", () => {
+  it("request headers override base headers for same key", () => {
     const result = mergeHeaders({ authorization: "old" }, { authorization: "new" });
     expect(result.get("authorization")).toBe("new");
   });

@@ -40,7 +40,7 @@ export function SingleSelect({
   className,
 }: SingleSelectProps): React.ReactElement {
   const [open, setOpen] = useState(false);
-  const active = options.find((o) => o.value === value) ?? options[0];
+  const active = options.find((o) => o.value === value) ?? options[0] ?? { value: "", label: "—" };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -61,7 +61,8 @@ export function SingleSelect({
             <CommandGroup>
               {options.map((opt) => (
                 <CommandItem
-                  key={opt.value}
+                  key={opt.value || opt.label}
+                  value={opt.value || opt.label}
                   onSelect={() => { onChange(opt.value); setOpen(false); }}
                 >
                   {opt.icon && <opt.icon className="size-3.5 text-muted-foreground" />}

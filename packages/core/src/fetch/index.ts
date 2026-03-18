@@ -1,5 +1,5 @@
 /**
- * Standalone fetch client — lightweight ky-like wrapper over native fetch.
+ * Standalone fetch client — lightweight wrapper over native fetch.
  *
  * @example
  * ```ts

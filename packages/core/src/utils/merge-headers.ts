@@ -38,11 +38,11 @@ export const filterHeaders = (
 };
 
 export const mergeHeaders = (
-  kyHeaders: HeadersInput = {},
+  baseHeaders: HeadersInput = {},
   requestHeaders?: HeadersInput,
   validHeaders?: string[],
 ): Headers => {
-  const merged = toHeaders(kyHeaders);
+  const merged = toHeaders(baseHeaders);
 
   if (!requestHeaders) return merged;
 

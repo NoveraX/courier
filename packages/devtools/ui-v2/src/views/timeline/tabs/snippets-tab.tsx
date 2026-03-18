@@ -1,16 +1,15 @@
 import { Braces, Code2, Terminal } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { CopyButton } from "@/components/shared/copy-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+import { CopyButton } from "@/components/shared/copy-button";
+import { CodeBlock, FormatSwitcher } from "@/components/shared/code-block";
 import type { RequestEntry } from "@/store/types";
 import {
   buildCurl,
   buildFetchSnippet,
   buildRequestJson,
 } from "../request-helpers";
-import { highlightLine } from "./syntax-highlight";
 
 const FORMATS = [
   { key: "curl", label: "cURL", icon: Terminal },
@@ -38,80 +37,22 @@ export function SnippetsTab({ request }: SnippetsTabProps): React.ReactElement {
   return (
     <ScrollArea className="h-full">
       <div className="space-y-5 p-4">
-        <SnippetSection format={format} snippet={snippet} onFormatChange={setFormat} />
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <h4 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
+              Snippet
+            </h4>
+            <FormatSwitcher
+              formats={FORMATS as unknown as { key: string; label: string; icon: React.ComponentType<{ className?: string }> }[]}
+              active={format}
+              onChange={(k) => setFormat(k as Format)}
+            />
+          </div>
+          <CodeBlock code={snippet} language={format} />
+        </div>
         <QuickCopySection request={request} />
       </div>
     </ScrollArea>
-  );
-}
-
-// ── Snippet section ───────────────────────────────────────────────────────
-
-function SnippetSection({ format, snippet, onFormatChange }: {
-  format: Format;
-  snippet: string;
-  onFormatChange: (f: Format) => void;
-}): React.ReactElement {
-  return (
-    <div>
-      <div className="mb-3 flex items-center justify-between">
-        <h4 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
-          Snippet
-        </h4>
-        <div className="inline-flex items-center gap-px rounded-lg border border-border-subtle bg-muted/60 p-0.5">
-          {FORMATS.map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => onFormatChange(f.key)}
-              className={cn(
-                "flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-all",
-                format === f.key
-                  ? "bg-background text-foreground shadow-sm ring-1 ring-border-subtle"
-                  : "text-muted-foreground hover:text-foreground hover:bg-background/50",
-              )}
-            >
-              <f.icon className="size-2.5" />
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <CodeBlock code={snippet} language={format} />
-    </div>
-  );
-}
-
-// ── Code block with line numbers + syntax highlighting ────────────────────
-
-function CodeBlock({ code, language }: {
-  code: string;
-  language: string;
-}): React.ReactElement {
-  const lines = code.split("\n");
-  const gutterW = `${String(lines.length).length}ch`;
-
-  return (
-    <div className="relative overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
-      <div className="absolute right-2 top-2 z-10">
-        <CopyButton value={code} label={`Copy ${language}`} />
-      </div>
-      <div className="max-h-72 overflow-auto py-3">
-        {lines.map((line, i) => (
-          <div key={i} className="flex px-3">
-            <span
-              className="mr-3 shrink-0 select-none text-right text-[10px] tabular-nums leading-relaxed text-zinc-600"
-              style={{ minWidth: gutterW }}
-            >
-              {i + 1}
-            </span>
-            <span className="min-w-0 flex-1 mono-sm whitespace-pre-wrap break-all leading-relaxed text-zinc-300">
-              {highlightLine(line, language)}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
 

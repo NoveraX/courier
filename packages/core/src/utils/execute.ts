@@ -83,9 +83,9 @@ export async function executeRequest(
   const {
     rawData = false,
     forwardVariables = true,
-    headers: kyHeaders,
+    headers: baseHeaders,
     stream = false,
-    ...kyOptions
+    ...baseOptions
   } = options ?? {};
   const { req: nextRequest, headers: nextHeaders } = context || {};
 
@@ -93,7 +93,11 @@ export async function executeRequest(
     ...headersToObject(nextRequest?.headers),
     ...headersToObject(nextHeaders),
   };
-  const newHeaders = mergeHeaders(kyHeaders, mergedNextHeaders, dataSource.options?.allowedHeaders);
+  const newHeaders = mergeHeaders(
+    baseHeaders,
+    mergedNextHeaders,
+    dataSource.options?.allowedHeaders,
+  );
 
   const middlewareCtx: MiddlewareContext = {
     source: String(source),
@@ -139,7 +143,7 @@ export async function executeRequest(
           instance.createMethods(
             {
               ...(forwardVariables ? { variables: vars } : {}),
-              ...kyOptions,
+              ...baseOptions,
               headers: middlewareCtx.headers,
               stream,
             },

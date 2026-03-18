@@ -4,7 +4,7 @@ import type { NodeProps } from "@xyflow/react";
 import type { EndpointNodeData } from "../../types";
 import { getHealthLevel } from "../../compute-metrics";
 import { HealthIndicator } from "../../shared/health-indicator";
-import { TypeBadge } from "../../shared/type-badge";
+import { TypeBadge } from "@/components/shared/type-badge";
 import { PathDisplay } from "../../shared/path-display";
 import { SchemaIndicators } from "./schema-indicators";
 import { cn } from "@/lib/utils";

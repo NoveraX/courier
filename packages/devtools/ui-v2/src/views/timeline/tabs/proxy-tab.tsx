@@ -32,7 +32,7 @@ export function ProxyTab({ request }: ProxyTabProps): React.ReactElement {
 
 // ── Flow diagram ──────────────────────────────────────────────────────────
 
-function FlowDiagram({ timing }: { timing: ProxyTiming }): React.ReactElement {
+export function FlowDiagram({ timing }: { timing: ProxyTiming }): React.ReactElement {
   return (
     <div>
       <h4 className="mb-4 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">

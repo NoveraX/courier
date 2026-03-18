@@ -5,7 +5,7 @@ import { getHealthLevel } from "../compute-metrics";
 import { HTTP_METHOD_COLORS } from "../constants";
 import { HealthIndicator } from "../shared/health-indicator";
 import { PathDisplay } from "../shared/path-display";
-import { TypeBadge } from "../shared/type-badge";
+import { TypeBadge } from "@/components/shared/type-badge";
 import type { EndpointNodeData } from "../types";
 
 // ── Props ────────────────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@ import { useEffect } from "react"
 import { io } from "socket.io-client"
 
 import type { Socket } from "socket.io-client"
-import type { SessionInfo } from "./store"
+import type { SessionInfo, CatalogSnapshot } from "./store"
 import type { DevToolsEvent } from "./store/types-events"
 
 import { useDevToolsStore } from "./store"
@@ -58,6 +58,12 @@ export function useSocketConnection(): void {
       if (isDevToolsEvent(event)) store().handleEvent(event)
     }
 
+    const onCatalogSnapshot = (data: unknown) => {
+      if (data && typeof data === "object" && "catalog" in data) {
+        store().setCatalog(data as CatalogSnapshot)
+      }
+    }
+
     s.on("connect", onConnect)
     s.on("disconnect", onDisconnect)
     s.io.on("reconnect_attempt", onReconnectAttempt)
@@ -67,6 +73,7 @@ export function useSocketConnection(): void {
     s.on("session:connect", onSessionConnect)
     s.on("session:disconnect", onSessionDisconnect)
     s.on("event", onEvent)
+    s.on("catalog:snapshot", onCatalogSnapshot)
 
     /* File watcher events — forwarded to custom event listeners */
     const onScanUpdated = (data: unknown) => {
@@ -89,6 +96,7 @@ export function useSocketConnection(): void {
       s.off("session:connect", onSessionConnect)
       s.off("session:disconnect", onSessionDisconnect)
       s.off("event", onEvent)
+      s.off("catalog:snapshot", onCatalogSnapshot)
       s.off("scan:updated", onScanUpdated)
       s.off("registry:updated", onRegistryUpdated)
     }

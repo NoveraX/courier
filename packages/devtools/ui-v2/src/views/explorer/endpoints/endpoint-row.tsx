@@ -7,7 +7,7 @@ import {
   formatSize,
 } from "@/components/shared/formatters";
 import { HealthIndicator } from "../shared/health-indicator";
-import { TypeBadge } from "../shared/type-badge";
+import { TypeBadge } from "@/components/shared/type-badge";
 import { PathDisplay } from "../shared/path-display";
 import { getHealthLevel } from "../compute-metrics";
 import { formatEndpointKey } from "../helpers";

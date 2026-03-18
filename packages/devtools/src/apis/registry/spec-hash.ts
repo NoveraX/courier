@@ -28,7 +28,6 @@ export function updateSource(
   config: RegistryConfig,
   name: string,
   specHash: string,
-  endpointCount: number,
   userModified: string[] = [],
 ): RegistryConfig {
   const source = config.sources[name];
@@ -38,7 +37,7 @@ export function updateSource(
     ...config,
     sources: {
       ...config.sources,
-      [name]: { ...source, specHash, endpointCount, userModified },
+      [name]: { ...source, specHash, userModified },
     },
   };
 }

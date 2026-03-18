@@ -5,21 +5,21 @@ import { cn } from "@/lib/utils";
 // ── Legend items ──────────────────────────────────────────────────────────────
 
 const NODE_ITEMS = [
-  { label: "Source", color: "oklch(0.65 0.18 280)" },
-  { label: "Group", color: "oklch(0.50 0.12 310)" },
-  { label: "Endpoint", color: "oklch(0.50 0.10 230)" },
+  { label: "Source", color: "var(--graph-node-source-border)" },
+  { label: "Group", color: "var(--graph-node-group-border)" },
+  { label: "Endpoint", color: "var(--graph-edge-endpoint)" },
 ] as const;
 
 const EDGE_ITEMS = [
-  { label: "Active", dashed: false, color: "oklch(0.65 0.18 280)" },
-  { label: "Idle", dashed: true, color: "oklch(0.30 0 0)" },
+  { label: "Active", dashed: false, color: "var(--graph-edge-source)" },
+  { label: "Idle", dashed: true, color: "var(--graph-edge-default)" },
 ] as const;
 
 const HEALTH_ITEMS = [
-  { label: "Healthy", color: "oklch(0.72 0.15 142)" },
-  { label: "Degraded", color: "oklch(0.75 0.17 86)" },
-  { label: "Critical", color: "oklch(0.71 0.19 29)" },
-  { label: "Inactive", color: "oklch(0.40 0 0)" },
+  { label: "Healthy", color: "var(--success-foreground)" },
+  { label: "Degraded", color: "var(--warning-foreground)" },
+  { label: "Critical", color: "var(--destructive-foreground)" },
+  { label: "Inactive", color: "var(--muted-foreground)" },
 ] as const;
 
 // ── Component ────────────────────────────────────────────────────────────────

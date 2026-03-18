@@ -15,21 +15,22 @@ function GroupNodeComponent({ data, selected }: NodeProps): React.ReactElement {
   return (
     <div
       aria-label={`Group: ${d.name}, ${d.endpointCount} endpoints, ${Math.round(d.metrics.successRate)}% health`}
+      style={{
+        background: "var(--graph-node-group-bg)",
+        borderColor: "var(--graph-node-group-border)",
+      }}
       className={cn(
-        "group/node w-55 rounded-lg border-l-[3px] border p-3",
-        "bg-[oklch(0.18_0.02_310/0.8)] backdrop-blur-sm",
-        "border-[oklch(0.35_0.08_310)] border-l-[oklch(0.50_0.12_310)]",
+        "group/node w-55 rounded-lg border-l-[3px] border p-3 backdrop-blur-sm",
         "transition-all duration-200 ease-out",
-        "hover:scale-[1.01] hover:bg-[oklch(0.20_0.03_310/0.85)] hover:shadow-md",
-        selected && "border-accent-brand shadow-[0_0_20px_oklch(0.65_0.18_280/0.35)]",
-        d.metrics.isActive && !selected && "border-l-[oklch(0.60_0.15_310)]",
-        isError && "border-l-rose-400 shadow-[0_0_14px_oklch(0.71_0.19_29/0.2)]",
+        "hover:scale-[1.01] hover:brightness-110 hover:shadow-md",
+        selected && "border-accent-brand shadow-[0_0_20px_var(--glow-brand)]",
+        isError && "border-l-rose-400 shadow-[0_0_14px_var(--destructive)]",
       )}
     >
       {/* Header */}
       <div className="flex items-center gap-2">
-        <div className="flex size-5 items-center justify-center rounded bg-[oklch(0.50_0.12_310/0.15)]">
-          <Folder className="size-3 text-[oklch(0.50_0.12_310)]" />
+        <div className="flex size-5 items-center justify-center rounded" style={{ background: "color-mix(in oklch, var(--graph-node-group-border) 15%, transparent)" }}>
+          <Folder className="size-3" style={{ color: "var(--graph-node-group-border)" }} />
         </div>
         <span className="text-body-sm font-semibold text-foreground truncate">
           {d.name}
@@ -48,8 +49,8 @@ function GroupNodeComponent({ data, selected }: NodeProps): React.ReactElement {
         <span>{Math.round(d.metrics.successRate)}%</span>
       </div>
 
-      <Handle type="target" position={Position.Left} className="bg-[oklch(0.50_0.12_310)]! size-2! border-0!" />
-      <Handle type="source" position={Position.Right} className="bg-[oklch(0.50_0.12_310)]! size-2! border-0!" />
+      <Handle type="target" position={Position.Left} style={{ background: "var(--graph-node-group-border)" }} className="size-2! border-0!" />
+      <Handle type="source" position={Position.Right} style={{ background: "var(--graph-node-group-border)" }} className="size-2! border-0!" />
     </div>
   );
 }

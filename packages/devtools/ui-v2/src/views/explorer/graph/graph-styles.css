@@ -10,7 +10,7 @@
 
 /* Dot-grid background */
 .explorer-graph .react-flow__background {
-  background-color: oklch(0.13 0.01 264);
+  background-color: var(--graph-bg);
 }
 
 /* Remove ALL default node styling from base.css */
@@ -27,21 +27,21 @@
 
 /* Selection box */
 .explorer-graph .react-flow__selection {
-  background: oklch(0.65 0.18 280 / 0.08);
-  border: 1px solid oklch(0.65 0.18 280 / 0.4);
+  background: var(--graph-selection-bg);
+  border: 1px solid var(--graph-selection-border);
   border-radius: 4px;
 }
 
 /* Default edge styling */
 .explorer-graph .react-flow__edge-path {
-  stroke: oklch(0.30 0 0);
+  stroke: var(--graph-edge-default);
   stroke-width: 1.5;
 }
 
 /* Minimap overrides */
 .explorer-graph .react-flow__minimap {
-  background: oklch(0.14 0.01 264 / 0.9);
-  border: 1px solid oklch(0.25 0.01 264);
+  background: var(--graph-minimap-bg);
+  border: 1px solid var(--graph-minimap-border);
   border-radius: 8px;
   backdrop-filter: blur(8px);
 }
@@ -54,7 +54,7 @@
 /* Node selected state — accent glow */
 .explorer-graph .react-flow__node.selected > div {
   box-shadow:
-    0 0 0 2px oklch(0.65 0.18 280),
+    0 0 0 2px var(--graph-node-source-border),
     0 8px 24px oklch(0 0 0 / 0.4);
 }
 

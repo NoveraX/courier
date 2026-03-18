@@ -15,6 +15,7 @@ import {
   parseSpec,
 } from "../apis";
 import { resolveProjectSafe } from "../context";
+import { registerManageRoutes } from "./manage-routes";
 import { errMsg } from "./registry-helpers";
 import { registerRegistryRoutes } from "./registry-routes";
 import type { RouteApp } from "./route-types";
@@ -104,6 +105,7 @@ export function registerApisRoutes(app: RouteApp): void {
   });
 
   registerRegistryRoutes(app);
+  registerManageRoutes(app);
   registerScannerRoutes(app);
   registerUpdateFlowRoutes(app);
 }

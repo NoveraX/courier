@@ -15,6 +15,7 @@ import type { RegistryConfig } from "../apis/registry/types";
 import { scanProject } from "../apis/scanner";
 import { scanToSourceMap } from "../apis/scanner/scan-to-source-map";
 import { resolveProject } from "../context";
+import { onEnvChange } from "../runtime-env";
 import type { CatalogStore } from "./catalog";
 import { syncUserModified } from "./sync-user-modified";
 
@@ -109,10 +110,14 @@ export function startFileWatcher(uiNamespace: Namespace, catalogStore: CatalogSt
   watcher.on("change", handleChange);
   watcher.on("unlink", handleChange);
 
+  // Re-scan when app sends updated process.env (env var changed)
+  const unsubEnv = onEnvChange(emitScanUpdate);
+
   return () => {
     if (scanTimer) clearTimeout(scanTimer);
     if (registryTimer) clearTimeout(registryTimer);
     if (modifiedTimer) clearTimeout(modifiedTimer);
+    unsubEnv();
     void watcher.close();
   };
 }

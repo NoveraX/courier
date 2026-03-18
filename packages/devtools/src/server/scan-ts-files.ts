@@ -12,7 +12,7 @@ export function scanTsFiles(
   source: NonNullable<ReturnType<typeof getSource>>,
   generated: { path: string }[],
 ): string[] {
-  const effectiveDir = `${source.outputDir.replace(/\/+$/, "")}/${source.options.sourceName}`;
+  const effectiveDir = `${source.options.outputDir.replace(/\/+$/, "")}/${source.options.sourceName}`;
   const absDir = resolveProjectSafe(effectiveDir);
   const diskPaths = existsSync(absDir) ? collectTsFilesRecursive(absDir) : [];
   return [...new Set([...generated.map((g) => g.path), ...diskPaths])];

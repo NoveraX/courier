@@ -43,10 +43,8 @@ describe("loadRegistry", () => {
           specUrl: "https://example.com/spec.json",
           importType: "url",
           specHash: "abc123",
-          outputDir: "src/api",
           options: PERSISTED_OPTIONS,
           userModified: [],
-          endpointCount: 5,
         },
       },
     }
@@ -80,12 +78,10 @@ describe("addSource", () => {
       "https://petstore.io/spec.json",
       "url",
       DEFAULT_OPTIONS,
-      3,
       ["getById"],
     )
 
     expect(config.sources.petstore).toBeDefined()
-    expect(config.sources.petstore?.endpointCount).toBe(3)
     expect(config.sources.petstore?.userModified).toEqual(["getById"])
   })
 
@@ -94,23 +90,23 @@ describe("addSource", () => {
     const spec1 = makeSpec({ version: "1.0.0" })
     const spec2 = makeSpec({ version: "2.0.0" })
 
-    config = addSource(config, "api", spec1, "https://a.com", "url", DEFAULT_OPTIONS, 0)
-    config = addSource(config, "api", spec2, "https://a.com", "url", DEFAULT_OPTIONS, 0)
+    config = addSource(config, "api", spec1, "https://a.com", "url", DEFAULT_OPTIONS)
+    config = addSource(config, "api", spec2, "https://a.com", "url", DEFAULT_OPTIONS)
 
     expect(computeSpecHash(spec2)).not.toBe(computeSpecHash(spec1))
     expect(config.sources.api?.specHash).toBe(computeSpecHash(spec2))
   })
 
-  it("strips selectedEndpoints from stored options", () => {
+  it("excludes selectedEndpoints from stored options", () => {
     let config: RegistryConfig = { sources: {} }
     const opts = { ...DEFAULT_OPTIONS, selectedEndpoints: { users: ["getAll"] } }
-    config = addSource(config, "api", makeSpec(), "https://a.com", "url", opts, 1)
-    expect(config.sources.api?.options.selectedEndpoints).toBeNull()
+    config = addSource(config, "api", makeSpec(), "https://a.com", "url", opts)
+    expect("selectedEndpoints" in (config.sources.api?.options ?? {})).toBe(false)
   })
 
   it("defaults userModified to empty array", () => {
     let config: RegistryConfig = { sources: {} }
-    config = addSource(config, "api", makeSpec(), "https://a.com", "url", DEFAULT_OPTIONS, 2)
+    config = addSource(config, "api", makeSpec(), "https://a.com", "url", DEFAULT_OPTIONS)
     expect(config.sources.api?.userModified).toEqual([])
   })
 })
@@ -118,7 +114,7 @@ describe("addSource", () => {
 describe("removeSource", () => {
   it("removes a source from config", () => {
     let config: RegistryConfig = { sources: {} }
-    config = addSource(config, "api", makeSpec(), "https://a.com", "url", DEFAULT_OPTIONS, 0)
+    config = addSource(config, "api", makeSpec(), "https://a.com", "url", DEFAULT_OPTIONS)
     expect(getSource(config, "api")).toBeDefined()
 
     config = removeSource(config, "api")
@@ -135,7 +131,7 @@ describe("removeSource", () => {
 describe("getSource", () => {
   it("returns source by name", () => {
     let config: RegistryConfig = { sources: {} }
-    config = addSource(config, "api", makeSpec(), "https://a.com", "url", DEFAULT_OPTIONS, 0)
+    config = addSource(config, "api", makeSpec(), "https://a.com", "url", DEFAULT_OPTIONS)
     expect(getSource(config, "api")?.specHash).toBe(computeSpecHash(makeSpec()))
   })
 
@@ -147,17 +143,13 @@ describe("getSource", () => {
 describe("listSources", () => {
   it("lists all sources with summary", () => {
     let config: RegistryConfig = { sources: {} }
-    config = addSource(config, "api", makeSpec(), "https://a.com", "url", DEFAULT_OPTIONS, 2)
-    config = addSource(config, "cms", makeSpec({ version: "2.0.0" }), "./cms.json", "file", DEFAULT_OPTIONS, 0)
+    config = addSource(config, "api", makeSpec(), "https://a.com", "url", DEFAULT_OPTIONS)
+    config = addSource(config, "cms", makeSpec({ version: "2.0.0" }), "", "file", DEFAULT_OPTIONS)
 
     const list = listSources(config)
     expect(list).toHaveLength(2)
-
-    const api = list.find((s) => s.name === "api")
-    expect(api?.endpointCount).toBe(2)
-
-    const cms = list.find((s) => s.name === "cms")
-    expect(cms?.endpointCount).toBe(0)
+    expect(list.find((s) => s.name === "api")).toBeDefined()
+    expect(list.find((s) => s.name === "cms")?.importType).toBe("file")
   })
 })
 
@@ -185,14 +177,14 @@ describe("hasSpecChanged", () => {
   it("returns false when spec has not changed", () => {
     const spec = makeSpec()
     let config: RegistryConfig = { sources: {} }
-    config = addSource(config, "api", spec, "https://a.com", "url", DEFAULT_OPTIONS, 0)
+    config = addSource(config, "api", spec, "https://a.com", "url", DEFAULT_OPTIONS)
     expect(hasSpecChanged(config.sources.api!, spec)).toBe(false)
   })
 
   it("returns true when spec version changes", () => {
     const spec = makeSpec({ version: "1.0.0" })
     let config: RegistryConfig = { sources: {} }
-    config = addSource(config, "api", spec, "https://a.com", "url", DEFAULT_OPTIONS, 0)
+    config = addSource(config, "api", spec, "https://a.com", "url", DEFAULT_OPTIONS)
 
     const newSpec = makeSpec({ version: "2.0.0" })
     expect(hasSpecChanged(config.sources.api!, newSpec)).toBe(true)
@@ -200,23 +192,22 @@ describe("hasSpecChanged", () => {
 })
 
 describe("updateSource", () => {
-  it("updates specHash, endpointCount and userModified", () => {
+  it("updates specHash and userModified", () => {
     let config: RegistryConfig = { sources: {} }
     const spec = makeSpec({ version: "1.0.0" })
-    config = addSource(config, "api", spec, "https://a.com", "url", DEFAULT_OPTIONS, 1)
+    config = addSource(config, "api", spec, "https://a.com", "url", DEFAULT_OPTIONS)
 
     const newSpec = makeSpec({ version: "2.0.0" })
-    config = updateSource(config, "api", computeSpecHash(newSpec), 3, ["getById"])
+    config = updateSource(config, "api", computeSpecHash(newSpec), ["getById"])
 
     const source = config.sources.api!
     expect(source.specHash).toBe(computeSpecHash(newSpec))
-    expect(source.endpointCount).toBe(3)
     expect(source.userModified).toEqual(["getById"])
   })
 
   it("does nothing if source not found", () => {
     const config: RegistryConfig = { sources: {} }
-    const result = updateSource(config, "nonexistent", "hash", 0)
+    const result = updateSource(config, "nonexistent", "hash")
     expect(result.sources).toEqual({})
   })
 })

@@ -7,6 +7,7 @@ export interface ConnectionInitEvent extends DevToolsEvent {
   framework: string;
   nexusVersion: string;
   sources: SourceMap;
+  env?: Record<string, string>;
 }
 
 export interface ConnectionHeartbeatEvent extends DevToolsEvent {
@@ -16,4 +17,5 @@ export interface ConnectionHeartbeatEvent extends DevToolsEvent {
 export interface ConnectionSourcesEvent extends DevToolsEvent {
   type: "connection:sources";
   sources: SourceMap;
+  env?: Record<string, string>;
 }

@@ -1,10 +1,14 @@
 /**
  * Code scanner — discovers nexus API definitions in the project.
+ *
+ * Two-pass scan: first discover all sources (defineApi), then resolve groups (defineGroup).
+ * This ensures groups are linked to their sources regardless of file processing order.
  */
 
 import { getProjectRoot, resolveProjectSafe } from "../../context";
 import { loadRegistry } from "../registry/registry";
 import { extractImportedGroups, linkGroupsToSources, resolveGroup } from "./link-groups";
+import { stripComments } from "./parse-utils";
 import { discoverFiles, readFileSafe, toRelative } from "./scan-files";
 import { extractGroups, extractSource, isNexusFile } from "./scan-source";
 import type { ScanConfig, ScannedGroup, ScannedSource, ScanResult } from "./types";
@@ -26,7 +30,6 @@ const DEFAULT_CONFIG: ScanConfig = {
 /** Scan project directories for nexus API definitions */
 export function scanProject(config: Partial<ScanConfig> = {}): ScanResult {
   const registry = loadRegistry();
-  /* Merge: explicit config > registry.nexus.json > defaults */
   const cfg: ScanConfig = {
     scanPaths: config.scanPaths ?? registry.scanPaths ?? DEFAULT_CONFIG.scanPaths,
     ignore: config.ignore ?? registry.scanIgnore ?? DEFAULT_CONFIG.ignore,
@@ -35,48 +38,46 @@ export function scanProject(config: Partial<ScanConfig> = {}): ScanResult {
 
   const sourceMap = new Map<string, ScannedSource>();
   const groupsByImport = new Map<string, ScannedGroup[]>();
-  let scannedFiles = 0;
+
+  // Collect all nexus files first
+  const nexusFiles: Array<{ content: string; relPath: string }> = [];
 
   for (const scanPath of cfg.scanPaths) {
     const absPath = resolveProjectSafe(scanPath);
     const files = discoverFiles(absPath, cfg.ignore);
-    scannedFiles += files.length;
 
     for (const file of files) {
-      const content = readFileSafe(file);
-      if (!content || !isNexusFile(content)) continue;
-
-      const relPath = toRelative(file, getProjectRoot());
-      processFile(content, relPath, sourceMap, groupsByImport);
+      const raw = readFileSafe(file);
+      if (!raw || !isNexusFile(raw)) continue;
+      nexusFiles.push({ content: stripComments(raw), relPath: toRelative(file, getProjectRoot()) });
     }
   }
 
-  /* Link groups to their sources via import analysis */
+  // Pass 1: register all sources (defineApi) and create import placeholders
+  for (const { content, relPath } of nexusFiles) {
+    registerSource(content, relPath, sourceMap, groupsByImport);
+  }
+
+  // Pass 2: resolve all groups (defineGroup) — placeholders already exist
+  for (const { content, relPath } of nexusFiles) {
+    const groups = extractGroups(content, relPath);
+    for (const group of groups) {
+      resolveGroup(group, sourceMap, groupsByImport, relPath);
+    }
+  }
+
+  // Link remaining groups to sources
   linkGroupsToSources(sourceMap, groupsByImport);
 
-  /* Mark imported sources */
+  // Mark imported sources
   for (const source of sourceMap.values()) {
     source.isImported = importedNames.has(source.name);
   }
 
   return {
     sources: [...sourceMap.values()],
-    scannedFiles,
+    scannedFiles: nexusFiles.length,
   };
-}
-
-function processFile(
-  content: string,
-  filePath: string,
-  sourceMap: Map<string, ScannedSource>,
-  groupsByImport: Map<string, ScannedGroup[]>,
-): void {
-  registerSource(content, filePath, sourceMap, groupsByImport);
-
-  const groups = extractGroups(content, filePath);
-  for (const group of groups) {
-    resolveGroup(group, sourceMap, groupsByImport, filePath);
-  }
 }
 
 function registerSource(

@@ -104,6 +104,15 @@
   --animate-shimmer: shimmer 2s ease-in-out infinite;
 }
 
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
 /* ══════════════════════════════════════════════════════════════════════
    Keyframes
    ══════════════════════════════════════════════════════════════════════ */
@@ -314,10 +323,10 @@
   --destructive-foreground: oklch(0.65 0.22 25);
 
   /* ── Borders (3 levels) ── */
-  --border:        oklch(0.26 0.008 264);
-  --border-subtle: oklch(0.22 0.006 264);
-  --border-strong: oklch(0.35 0.010 264);
-  --input:         oklch(0.26 0.008 264);
+  --border:        oklch(1 0 0 / 10%);
+  --border-subtle: oklch(1 0 0 / 7%);
+  --border-strong: oklch(1 0 0 / 16%);
+  --input:         oklch(1 0 0 / 15%);
   --ring:          oklch(0.65 0.18 280);
 
   /* ── Status Colors ── */
@@ -356,6 +365,24 @@
   --glow-brand:   oklch(0.65 0.18 280 / 0.15);
   --gradient-accent-from: oklch(0.55 0.22 280);
   --gradient-accent-to:   oklch(0.60 0.20 320);
+
+  /* ── Graph (Explorer) ── */
+  --graph-bg:             oklch(0.13 0.01 264);
+  --graph-node-source-bg: oklch(0.18 0.02 280 / 0.8);
+  --graph-node-source-border: oklch(0.65 0.18 280);
+  --graph-node-group-bg:  oklch(0.18 0.02 310 / 0.8);
+  --graph-node-group-border: oklch(0.50 0.12 310);
+  --graph-node-ep-bg:     oklch(0.16 0 0 / 0.9);
+  --graph-node-ep-border: oklch(0.30 0 0);
+  --graph-edge-default:   oklch(0.30 0 0);
+  --graph-edge-source:    oklch(0.65 0.18 280);
+  --graph-edge-group:     oklch(0.55 0.16 310);
+  --graph-edge-endpoint:  oklch(0.60 0.14 230);
+  --graph-minimap-bg:     oklch(0.14 0.01 264 / 0.9);
+  --graph-minimap-border: oklch(0.25 0.01 264);
+  --graph-selection-bg:   oklch(0.65 0.18 280 / 0.08);
+  --graph-selection-border: oklch(0.65 0.18 280 / 0.4);
+  --graph-dot-color:      oklch(0.30 0.01 264);
 
   --radius: 0.5rem;
 }
@@ -442,6 +469,24 @@
   --glow-brand:   oklch(0.55 0.22 280 / 0.08);
   --gradient-accent-from: oklch(0.50 0.22 280);
   --gradient-accent-to:   oklch(0.55 0.20 320);
+
+  /* ── Graph (Explorer) ── */
+  --graph-bg:             oklch(0.97 0.003 264);
+  --graph-node-source-bg: oklch(0.95 0.02 280 / 0.6);
+  --graph-node-source-border: oklch(0.55 0.22 280);
+  --graph-node-group-bg:  oklch(0.95 0.02 310 / 0.6);
+  --graph-node-group-border: oklch(0.50 0.16 310);
+  --graph-node-ep-bg:     oklch(1.0 0 0 / 0.9);
+  --graph-node-ep-border: oklch(0.82 0.005 264);
+  --graph-edge-default:   oklch(0.82 0.005 264);
+  --graph-edge-source:    oklch(0.55 0.22 280);
+  --graph-edge-group:     oklch(0.50 0.16 310);
+  --graph-edge-endpoint:  oklch(0.50 0.14 230);
+  --graph-minimap-bg:     oklch(0.97 0.003 264 / 0.9);
+  --graph-minimap-border: oklch(0.88 0.005 264);
+  --graph-selection-bg:   oklch(0.55 0.22 280 / 0.08);
+  --graph-selection-border: oklch(0.55 0.22 280 / 0.3);
+  --graph-dot-color:      oklch(0.82 0.005 264);
 }
 
 /* ══════════════════════════════════════════════════════════════════════

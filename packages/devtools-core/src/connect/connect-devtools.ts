@@ -210,9 +210,17 @@ function findMatchingSourceKey(
     }
   }
 
-  // Only accept a zero-overlap match when there is exactly one candidate —
-  // avoids replacing the wrong source when multiple share the same baseURL.
-  if (bestOverlap === 0 && candidateCount > 1) return undefined;
+  if (bestOverlap === 0) {
+    // Multiple candidates with zero overlap — ambiguous, reject.
+    if (candidateCount > 1) return undefined;
+
+    // Single candidate but structural mismatch (flat ↔ grouped) — different source, reject.
+    const bestEntry = bestKey ? current[bestKey] : undefined;
+    if (bestEntry) {
+      const existingIsFlat = getGroupNames(bestEntry).length === 0;
+      if (isNewFlat !== existingIsFlat) return undefined;
+    }
+  }
 
   return bestKey;
 }

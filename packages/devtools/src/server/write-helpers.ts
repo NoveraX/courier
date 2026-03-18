@@ -124,9 +124,8 @@ function buildSourceEntry(
 ): RegistryConfig {
   const mergedFiles = Object.fromEntries(preview.files.map((f) => [f.path, f.content]));
   const userModified = detectUserModified(fingerprints, mergedFiles);
-  const count = Object.keys(fingerprints).length;
 
-  return count === 0
+  return Object.keys(fingerprints).length === 0
     ? removeSource(config, sourceName)
     : addSource(
         config,
@@ -135,7 +134,6 @@ function buildSourceEntry(
         specUrl ?? "",
         importType ?? "url",
         options,
-        count,
         userModified,
       );
 }

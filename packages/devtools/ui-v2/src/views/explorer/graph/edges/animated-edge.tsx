@@ -13,9 +13,9 @@ const GRADIENT_BY_TIER: Record<EdgeTier, string> = {
 };
 
 const PARTICLE_COLOR_BY_TIER: Record<EdgeTier, string> = {
-  "source-to-group": "oklch(0.65 0.18 280)",
-  "source-to-endpoint": "oklch(0.65 0.18 280)",
-  "group-to-endpoint": "oklch(0.60 0.14 230)",
+  "source-to-group": "var(--graph-edge-source)",
+  "source-to-endpoint": "var(--graph-edge-source)",
+  "group-to-endpoint": "var(--graph-edge-endpoint)",
 };
 
 // ── Edge component ──────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ function AnimatedEdgeComponent({
   });
 
   const gradientUrl = hasErrors ? "url(#edge-grad-error)" : GRADIENT_BY_TIER[tier];
-  const particleColor = hasErrors ? "oklch(0.71 0.19 29)" : PARTICLE_COLOR_BY_TIER[tier];
+  const particleColor = hasErrors ? "var(--destructive)" : PARTICLE_COLOR_BY_TIER[tier];
 
   return (
     <g className={isActive ? "edge-active" : undefined}>
@@ -50,7 +50,7 @@ function AnimatedEdgeComponent({
         id={id}
         d={path}
         fill="none"
-        stroke={isActive ? undefined : "oklch(0.30 0 0)"}
+        stroke={isActive ? undefined : "var(--graph-edge-default)"}
         strokeWidth={EDGE_CONFIG.strokeWidth}
         strokeDasharray={isActive ? undefined : "8 4"}
         strokeOpacity={isActive ? 0 : 0.4}

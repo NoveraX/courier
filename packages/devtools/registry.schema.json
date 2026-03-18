@@ -30,7 +30,7 @@
   "$defs": {
     "RegistrySource": {
       "type": "object",
-      "required": ["specUrl", "importType", "specHash", "outputDir", "options", "userModified", "endpointCount"],
+      "required": ["specUrl", "importType", "specHash", "options", "userModified"],
       "additionalProperties": false,
       "properties": {
         "specUrl": {
@@ -47,10 +47,6 @@
           "description": "SHA-256 hash (32 hex chars) for change detection",
           "pattern": "^[a-f0-9]{32}$"
         },
-        "outputDir": {
-          "type": "string",
-          "description": "Directory where generated files are written"
-        },
         "options": {
           "$ref": "#/$defs/GenerateOptions"
         },
@@ -58,11 +54,6 @@
           "type": "array",
           "description": "Endpoint names that were user-modified at last sync",
           "items": { "type": "string" }
-        },
-        "endpointCount": {
-          "type": "integer",
-          "description": "Total number of generated endpoints",
-          "minimum": 0
         }
       }
     },
@@ -119,19 +110,6 @@
           "type": "string",
           "enum": ["direct", "proxy", "both", "none"],
           "description": "Client generation mode"
-        },
-        "selectedEndpoints": {
-          "description": "Map of groupName → endpoint names to include, null = all",
-          "oneOf": [
-            { "type": "null" },
-            {
-              "type": "object",
-              "additionalProperties": {
-                "type": "array",
-                "items": { "type": "string" }
-              }
-            }
-          ]
         }
       }
     }

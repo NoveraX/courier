@@ -120,7 +120,9 @@ function mergeSource(scan: SourceMap[string], rt: SourceMap[string] | null): Cat
     }
   }
 
-  return { baseURL: rt?.baseURL ?? scan.baseURL, groups };
+  // Scan layer re-resolves env vars on every run → freshest baseURL source.
+  // Runtime SourceMap captures baseURL at defineApi() call time → may be stale.
+  return { baseURL: scan.baseURL || rt?.baseURL || "", groups };
 }
 
 /** Merge endpoint: runtime wins for shared fields, scan fills gaps */

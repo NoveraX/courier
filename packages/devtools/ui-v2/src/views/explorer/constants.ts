@@ -23,30 +23,30 @@ export const RESPONSE_TIME_WARN_MS = 500;
 /** Seconds since last request to consider a node "active" */
 export const ACTIVE_THRESHOLD_MS = 30_000;
 
-// ── Node colors (OKLCH) ────────────────────────────────────────────────────
+// ── Node colors (CSS custom properties → theme-aware) ─────────────────────
 
 export const NODE_COLORS = {
   source: {
-    bg: "oklch(0.18 0.02 280 / 0.8)",
-    border: "oklch(0.65 0.18 280)",
+    bg: "var(--graph-node-source-bg)",
+    border: "var(--graph-node-source-border)",
   },
   group: {
-    bg: "oklch(0.18 0.02 310 / 0.8)",
-    border: "oklch(0.50 0.12 310)",
+    bg: "var(--graph-node-group-bg)",
+    border: "var(--graph-node-group-border)",
   },
   endpoint: {
-    bg: "oklch(0.16 0 0 / 0.9)",
-    border: "oklch(0.30 0 0)",
+    bg: "var(--graph-node-ep-bg)",
+    border: "var(--graph-node-ep-border)",
   },
 } as const;
 
 // ── Health colors ───────────────────────────────────────────────────────────
 
 export const HEALTH_COLORS = {
-  healthy: "oklch(0.72 0.15 142)",
-  degraded: "oklch(0.75 0.17 86)",
-  critical: "oklch(0.71 0.19 29)",
-  inactive: "oklch(0.40 0 0)",
+  healthy: "var(--success-foreground)",
+  degraded: "var(--warning-foreground)",
+  critical: "var(--destructive-foreground)",
+  inactive: "var(--muted-foreground)",
 } as const;
 
 // ── HTTP method badge colors (tailwind classes) ─────────────────────────────

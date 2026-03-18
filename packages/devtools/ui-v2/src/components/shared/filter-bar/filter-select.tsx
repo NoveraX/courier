@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
@@ -79,18 +80,10 @@ export function FilterSelect({
                   key={option.value}
                   onSelect={() => toggle(option.value)}
                 >
-                  <div
-                    className={cn(
-                      "flex size-4 items-center justify-center rounded-sm border",
-                      selected.includes(option.value)
-                        ? "border-accent-brand bg-accent-brand"
-                        : "border-muted-foreground/30",
-                    )}
-                  >
-                    {selected.includes(option.value) && (
-                      <Check className="size-3 text-white" strokeWidth={3} />
-                    )}
-                  </div>
+                  <Checkbox
+                    checked={selected.includes(option.value)}
+                    className="pointer-events-none size-3.5"
+                  />
                   <span className="flex-1 truncate">{option.label}</span>
                   {option.count !== undefined && (
                     <span className="mono-xs text-muted-foreground">

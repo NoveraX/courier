@@ -43,7 +43,7 @@ export function removeOrphanFiles(
   options: GenerateOptions,
 ): number {
   const newPaths = new Set(files.map((f) => resolveProjectSafe(f.path)));
-  const effectiveDir = `${source.outputDir.replace(/\/+$/, "")}/${options.sourceName}`;
+  const effectiveDir = `${source.options.outputDir.replace(/\/+$/, "")}/${options.sourceName}`;
   return cleanupOrphanFiles(effectiveDir, newPaths);
 }
 
@@ -57,8 +57,7 @@ export function persistRawSource(
   config: RegistryConfig,
 ): void {
   const newFingerprints = collectFingerprints(files);
-  const count = Object.keys(newFingerprints).length;
-  if (count > 0) {
+  if (Object.keys(newFingerprints).length > 0) {
     const updated = addSource(
       config,
       sourceName,
@@ -66,7 +65,6 @@ export function persistRawSource(
       specUrl ?? "",
       importType ?? "url",
       options,
-      count,
     );
     saveRegistry(updated);
     persistCaches(sourceName, newFingerprints, spec);

@@ -7,10 +7,8 @@ import type { BreakingChange, MergeChange, MergeStatus, SpecDiff } from "../merg
 
 // ── Persisted Options ────────────────────────────────────────────────────────
 
-/** Options stored in registry — selectedEndpoints is always null on disk */
-export type PersistedGenerateOptions = Omit<GenerateOptions, "selectedEndpoints"> & {
-  selectedEndpoints: null;
-};
+/** Options stored in registry — transient fields (selectedEndpoints) are excluded */
+export type PersistedGenerateOptions = Omit<GenerateOptions, "selectedEndpoints">;
 
 /** How the spec was originally imported */
 export type SpecImportType = "url" | "file" | "raw";
@@ -21,12 +19,9 @@ export interface RegistrySource {
   /** How the spec was imported — determines update check behavior */
   importType: SpecImportType;
   specHash: string;
-  outputDir: string;
   options: PersistedGenerateOptions;
   /** Endpoint names that were user-modified at last sync */
   userModified: string[];
-  /** Total number of generated endpoints */
-  endpointCount: number;
 }
 
 export interface RegistryConfig {

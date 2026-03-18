@@ -3,6 +3,7 @@
  */
 
 import { extractBalancedBlock } from "./parse-utils";
+import { resolveEnvVar } from "./resolve-env";
 import { extractEndpoints } from "./scan-endpoint";
 import type { ScannedGroup, ScannedSource } from "./types";
 
@@ -57,9 +58,23 @@ function extractStringProp(content: string, startPos: number, prop: string): str
   /* Search within ~500 chars after the match position */
   const region = content.slice(startPos, startPos + 500);
   const escaped = prop.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(`${escaped}:\\s*["'\`]([^"'\`]*)["'\`]`);
-  const match = region.match(re);
-  return match?.[1] ?? null;
+
+  /* 1. Try string literal: baseURL: "https://..." */
+  const strRe = new RegExp(`${escaped}:\\s*["'\`]([^"'\`]*)["'\`]`);
+  const strMatch = region.match(strRe);
+  if (strMatch?.[1]) return strMatch[1];
+
+  /* 2. Try process.env.XXX (with optional ?? or || fallback) */
+  const envRe = new RegExp(
+    `${escaped}:\\s*process\\.env(?:\\.|\\[["'])([A-Z_][A-Z0-9_]*)(?:["']\\])?` +
+      `(?:\\s*(?:\\?\\?|\\|\\|)\\s*["'\`]([^"'\`]*)["'\`])?`,
+  );
+  const envMatch = region.match(envRe);
+  if (envMatch?.[1]) {
+    return resolveEnvVar(envMatch[1]) ?? envMatch[2] ?? null;
+  }
+
+  return null;
 }
 
 /** Extract the endpoints: { ... } block from a defineGroup/defineApi call */

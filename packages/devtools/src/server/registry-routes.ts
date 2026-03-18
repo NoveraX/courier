@@ -25,6 +25,7 @@ import {
   errMsg,
   fetchSpecRaw,
   persistCaches,
+  removeGeneratedFiles,
 } from "./registry-helpers";
 import { withRegistryLock } from "./registry-lock";
 import type { JsonResponse, RouteApp } from "./route-types";
@@ -49,7 +50,6 @@ export function registerRegistryRoutes(app: RouteApp): void {
       const spec = body.spec as unknown as ParsedSpec;
       const options = body.options as unknown as GenerateOptions;
       const fingerprints = collectFingerprints(body.generatedFiles);
-      const endpointCount = Object.keys(fingerprints).length;
 
       let config = loadRegistry(body.configPath);
       config = addSource(
@@ -59,7 +59,6 @@ export function registerRegistryRoutes(app: RouteApp): void {
         body.specUrl,
         (body.importType ?? "url") as "url" | "file" | "raw",
         options,
-        endpointCount,
       );
       saveRegistry(config, body.configPath);
 
@@ -78,10 +77,13 @@ export function registerRegistryRoutes(app: RouteApp): void {
       const { name, configPath } = body;
       let config = loadRegistry(configPath);
 
-      if (!getSource(config, name)) {
+      const source = getSource(config, name);
+      if (!source) {
         res.status(404).json({ error: `Source "${name}" not found in registry` });
         return;
       }
+
+      removeGeneratedFiles(source.options.outputDir, name);
 
       config = removeSource(config, name);
       saveRegistry(config, configPath);
@@ -117,6 +119,11 @@ async function handleCheckUpdates(
     const source = getSource(loadRegistry(body.configPath), body.name);
     if (!source) {
       res.status(404).json({ error: `Source "${body.name}" not found in registry` });
+      return;
+    }
+
+    if (source.importType !== "url") {
+      res.status(400).json({ error: "Auto-check is only available for URL imports" });
       return;
     }
 

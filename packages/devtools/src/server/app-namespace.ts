@@ -8,6 +8,7 @@
 
 import type { SourceMap } from "@noverax/nexus-devtools-core";
 import type { Namespace } from "socket.io";
+import { removeSessionEnv, setSessionEnv } from "../runtime-env";
 import type { CatalogStore } from "./catalog";
 import { bufferEvent } from "./session-buffer";
 import type { SessionInfo } from "./types";
@@ -52,6 +53,10 @@ export function setupAppNamespace(
           catalogStore.setRuntimeLayer(sessionId, sources);
         }
 
+        // Store app's process.env for scanner env resolution
+        const env = event.env as Record<string, string> | undefined;
+        if (env) setSessionEnv(sessionId, env);
+
         uiNamespace.emit("session:connect", sessions.get(sessionId));
       }
 
@@ -61,6 +66,9 @@ export function setupAppNamespace(
         if (sources) {
           catalogStore.setRuntimeLayer(sessionId, sources);
         }
+
+        const env = event.env as Record<string, string> | undefined;
+        if (env) setSessionEnv(sessionId, env);
       }
 
       // Forward all events to UI (request lifecycle, middleware, etc.)
@@ -70,6 +78,7 @@ export function setupAppNamespace(
     socket.on("disconnect", () => {
       if (sessionId) {
         catalogStore.removeRuntimeLayer(sessionId);
+        removeSessionEnv(sessionId);
         sessions.delete(sessionId);
         uiNamespace.emit("session:disconnect", { sessionId });
       }

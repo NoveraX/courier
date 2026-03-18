@@ -19,14 +19,16 @@ function EndpointNodeComponent({ data, selected }: NodeProps): React.ReactElemen
   return (
     <div
       aria-label={`${d.httpMethod} ${d.method} — ${d.fullPath}, ${d.metrics.totalRequests} calls, ${Math.round(d.metrics.avgResponseTime)}ms avg`}
+      style={{
+        background: "var(--graph-node-ep-bg)",
+        borderColor: "var(--graph-node-ep-border)",
+      }}
       className={cn(
-        "group/node w-70 rounded-lg border p-2.5",
-        "bg-[oklch(0.16_0_0/0.9)] backdrop-blur-sm",
-        "border-[oklch(0.28_0_0)]",
+        "group/node w-70 rounded-lg border p-2.5 backdrop-blur-sm",
         "transition-all duration-200 ease-out",
-        "hover:scale-[1.01] hover:bg-[oklch(0.18_0_0/0.95)] hover:shadow-md",
-        selected && "border-accent-brand shadow-[0_0_20px_oklch(0.65_0.18_280/0.35)]",
-        isError && "border-[oklch(0.50_0.12_29)] shadow-[0_0_14px_oklch(0.71_0.19_29/0.2)]",
+        "hover:scale-[1.01] hover:brightness-110 hover:shadow-md",
+        selected && "border-accent-brand shadow-[0_0_20px_var(--glow-brand)]",
+        isError && "border-destructive shadow-[0_0_14px_var(--destructive)]",
       )}
     >
       {/* Header: method badge + name + type + health */}
@@ -48,22 +50,22 @@ function EndpointNodeComponent({ data, selected }: NodeProps): React.ReactElemen
       </div>
 
       {/* Separator */}
-      <div className="mt-2 border-t border-white/6" />
+      <div className="mt-2 border-t border-border-subtle" />
 
       {/* Inline metrics */}
       <div className="mt-1.5 flex items-center gap-2 text-body-xs text-muted-foreground">
         <span>{d.metrics.totalRequests} calls</span>
-        <span className="text-white/10">·</span>
+        <span className="text-border-subtle">·</span>
         <span className={latencyColor(d.metrics.avgResponseTime)}>
           {Math.round(d.metrics.avgResponseTime)}ms avg
         </span>
-        <span className="text-white/10">·</span>
+        <span className="text-border-subtle">·</span>
         <span className={d.metrics.errorCount > 0 ? "text-rose-400" : ""}>
           {d.metrics.errorCount} err
         </span>
       </div>
 
-      <Handle type="target" position={Position.Left} className="bg-[oklch(0.40_0_0)]! size-2! border-0!" />
+      <Handle type="target" position={Position.Left} className="bg-muted-foreground! size-2! border-0!" />
     </div>
   );
 }

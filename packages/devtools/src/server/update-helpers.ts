@@ -61,7 +61,7 @@ export function handlePreviewUpdate(
   const source = getSource(config, body.name);
   if (!source) return { error: `Source "${body.name}" not found`, status: 404 };
 
-  const generated = generateCode(body.newSpec, source.options);
+  const generated = generateCode(body.newSpec, { ...source.options, selectedEndpoints: null });
   const diskPaths = scanTsFiles(source, generated);
   const existingFiles = readFilesFromDisk(diskPaths);
   const fingerprints = loadFingerprints(body.name, existingFiles, source);
@@ -86,10 +86,10 @@ export function handleApplyUpdate(
 
   writeUpdateFiles(body.files);
 
-  const generated = generateCode(body.newSpec, source.options);
+  const generated = generateCode(body.newSpec, { ...source.options, selectedEndpoints: null });
   const newFingerprints = collectFingerprints(generated);
   const deleted = cleanupOrphanFiles(
-    getEffectiveDir(source.outputDir, source.options.sourceName),
+    getEffectiveDir(source.options.outputDir, source.options.sourceName),
     new Set(generated.map((f) => resolveProjectSafe(f.path))),
   );
 
@@ -115,13 +115,7 @@ function buildUpdateState(
   for (const f of body.files) mergedFiles[f.path] = f.content;
 
   const userModified = detectUserModified(fingerprints, mergedFiles);
-  return updateSource(
-    config,
-    body.name,
-    computeSpecHash(body.newSpec),
-    Object.keys(fingerprints).length,
-    userModified,
-  );
+  return updateSource(config, body.name, computeSpecHash(body.newSpec), userModified);
 }
 
 // ── Internal helpers ─────────────────────────────────────────────────────────

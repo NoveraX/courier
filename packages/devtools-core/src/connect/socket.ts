@@ -34,6 +34,7 @@ export async function tryConnectSocket(
         framework,
         nexusVersion,
         sources: sourceMap ?? {},
+        env: extractProcessEnv(),
       });
     });
 
@@ -60,6 +61,7 @@ export async function tryConnectSocket(
         timestamp: Date.now(),
         sessionId,
         sources: extractSourceMap(newSources),
+        env: extractProcessEnv(),
       });
     });
 
@@ -224,6 +226,20 @@ async function handleProxyViaFetch(
       headers: {},
       duration: performance.now() - startTime,
     });
+  }
+}
+
+/** Safely extract process.env as a plain Record (Node.js only) */
+function extractProcessEnv(): Record<string, string> {
+  try {
+    if (typeof process === "undefined" || !process.env) return {};
+    const env: Record<string, string> = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (typeof value === "string") env[key] = value;
+    }
+    return env;
+  } catch {
+    return {};
   }
 }
 

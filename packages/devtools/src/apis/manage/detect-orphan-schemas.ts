@@ -1,0 +1,121 @@
+/**
+ * Detects orphaned schemas — those no longer referenced by any remaining endpoint.
+ *
+ * Builds a simple dependency graph to avoid removing schemas
+ * that are still depended on by non-orphan schemas.
+ */
+
+const DECLARATION_RE = /^export\s+(?:const|type|interface|enum)\s+(\w+)/;
+
+/**
+ * Find schema names that are no longer referenced after endpoint removal.
+ *
+ * @param schemaFileContent - Full content of the schema file
+ * @param remainingGroupContents - Combined content of all remaining group files
+ * @returns Array of schema names safe to remove
+ */
+export function detectOrphanSchemas(
+  schemaFileContent: string,
+  remainingGroupContents: string,
+): string[] {
+  const allSchemas = collectSchemaNames(schemaFileContent);
+  if (allSchemas.length === 0) return [];
+
+  const referencedByGroups = findReferencedIdentifiers(remainingGroupContents, allSchemas);
+  const schemaDeps = buildSchemaDeps(schemaFileContent, allSchemas);
+
+  // Propagate: if an alive schema depends on X, then X is alive too
+  const alive = new Set<string>(referencedByGroups);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [schema, deps] of schemaDeps) {
+      if (!alive.has(schema)) continue;
+      for (const dep of deps) {
+        if (!alive.has(dep)) {
+          alive.add(dep);
+          changed = true;
+        }
+      }
+    }
+  }
+
+  return allSchemas.filter((name) => !alive.has(name));
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function collectSchemaNames(content: string): string[] {
+  const names: string[] = [];
+  for (const line of content.split("\n")) {
+    const match = line.match(DECLARATION_RE);
+    if (match?.[1]) names.push(match[1]);
+  }
+  return names;
+}
+
+/** Find which schema names appear as identifiers in group content (excluding imports) */
+function findReferencedIdentifiers(groupContent: string, schemaNames: string[]): Set<string> {
+  // Strip import lines — we only care about usage in actual code
+  const codeOnly = groupContent
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("import"))
+    .join("\n");
+
+  const found = new Set<string>();
+  for (const name of schemaNames) {
+    const re = new RegExp(`\\b${name}\\b`);
+    if (re.test(codeOnly)) found.add(name);
+  }
+  return found;
+}
+
+/** For each schema, find which other schemas it references */
+function buildSchemaDeps(schemaContent: string, allSchemas: string[]): Map<string, string[]> {
+  const deps = new Map<string, string[]>();
+  const lines = schemaContent.split("\n");
+  const nameSet = new Set(allSchemas);
+  let i = 0;
+
+  while (i < lines.length) {
+    const match = lines[i]?.match(DECLARATION_RE);
+    if (!match?.[1]) {
+      i++;
+      continue;
+    }
+
+    const name = match[1];
+    const endIdx = findBlockEnd(lines, i);
+    const block = lines.slice(i, endIdx + 1).join("\n");
+
+    const schemaDeps: string[] = [];
+    for (const other of nameSet) {
+      if (other === name) continue;
+      if (new RegExp(`\\b${other}\\b`).test(block)) schemaDeps.push(other);
+    }
+
+    deps.set(name, schemaDeps);
+    i = endIdx + 1;
+  }
+
+  return deps;
+}
+
+function findBlockEnd(lines: string[], start: number): number {
+  let depth = 0;
+  let foundOpen = false;
+
+  for (let j = start; j < lines.length; j++) {
+    for (const ch of lines[j] ?? "") {
+      if (ch === "{" || ch === "(" || ch === "[") {
+        depth++;
+        foundOpen = true;
+      }
+      if (ch === "}" || ch === ")" || ch === "]") depth--;
+    }
+    if (!foundOpen && (lines[j] ?? "").endsWith(";")) return j;
+    if (foundOpen && depth <= 0) return j;
+  }
+
+  return lines.length - 1;
+}

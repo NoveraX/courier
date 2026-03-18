@@ -31,7 +31,7 @@ export function ExplorerLayout(): React.ReactElement {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <nav className="flex h-8 shrink-0 items-center gap-0.5 border-b border-border-subtle px-3">
+      <nav className="relative flex h-11 shrink-0 items-center gap-0.5 border-b border-border-subtle px-3">
         {TABS.map((tab) => {
           const active = pathname.startsWith(tab.path);
           return (
@@ -48,7 +48,7 @@ export function ExplorerLayout(): React.ReactElement {
               <tab.icon className="size-3" />
               {tab.label}
               {active && (
-                <span className="absolute inset-x-0.5 -bottom-1 h-px bg-accent-brand" />
+                <span className="absolute inset-x-0.5 -bottom-1.25 h-px bg-accent-brand" />
               )}
             </Link>
           );

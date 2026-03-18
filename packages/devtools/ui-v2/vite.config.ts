@@ -18,7 +18,7 @@ export default defineConfig({
   server: {
     port: 4382,
     proxy: {
-      "/api": "http://localhost:4380",
+      "/api/": "http://localhost:4380",
       "/socket.io": {
         target: "http://localhost:4380",
         ws: true,

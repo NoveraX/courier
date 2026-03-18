@@ -135,7 +135,7 @@ export function ExplorerGraph(): React.ReactElement {
         proOptions={{ hideAttribution: true }}
       >
         <EdgeDefinitions />
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="oklch(0.25 0 0 / 0.4)" />
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--graph-dot-color)" />
         {showMinimap && <GraphMinimap />}
       </ReactFlow>
 

@@ -1,6 +1,8 @@
 /**
  * SVG <defs> for explorer graph edges — gradients, glow filters, markers.
  * Rendered once inside <ReactFlow> as a child; referenced by animated-edge via url(#id).
+ *
+ * Uses CSS custom properties for theme-awareness.
  */
 export function EdgeDefinitions(): React.ReactElement {
   return (
@@ -8,14 +10,14 @@ export function EdgeDefinitions(): React.ReactElement {
       <defs>
         {/* ── Gradient: source → group (indigo → violet) ──────────────── */}
         <linearGradient id="edge-grad-source" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="oklch(0.65 0.18 280)" />
-          <stop offset="100%" stopColor="oklch(0.55 0.16 310)" />
+          <stop offset="0%" style={{ stopColor: "var(--graph-edge-source)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--graph-edge-group)" }} />
         </linearGradient>
 
         {/* ── Gradient: group → endpoint (violet → sky) ───────────────── */}
         <linearGradient id="edge-grad-group" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="oklch(0.55 0.16 310)" />
-          <stop offset="100%" stopColor="oklch(0.60 0.14 230)" />
+          <stop offset="0%" style={{ stopColor: "var(--graph-edge-group)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--graph-edge-endpoint)" }} />
         </linearGradient>
 
         {/* ── Gradient: error edges (rose tinted) ─────────────────────── */}

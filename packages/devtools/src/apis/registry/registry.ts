@@ -65,7 +65,6 @@ export function addSource(
   specUrl: string,
   importType: SpecImportType,
   options: GenerateOptions,
-  endpointCount: number,
   userModified: string[] = [],
 ): RegistryConfig {
   const { selectedEndpoints: _, ...persistedOptions } = options;
@@ -73,10 +72,8 @@ export function addSource(
     specUrl: importType === "url" ? specUrl : "",
     importType,
     specHash: computeSpecHash(spec),
-    outputDir: options.outputDir,
-    options: { ...persistedOptions, selectedEndpoints: null },
+    options: persistedOptions,
     userModified,
-    endpointCount,
   };
 
   return {
@@ -102,9 +99,8 @@ export function listSources(config: RegistryConfig): SourceSummary[] {
     name,
     specUrl: source.specUrl,
     importType: source.importType ?? "url",
-    outputDir: source.outputDir,
+    outputDir: source.options.outputDir,
     options: source.options,
-    endpointCount: source.endpointCount,
   }));
 }
 
@@ -114,7 +110,6 @@ export interface SourceSummary {
   importType: SpecImportType;
   outputDir: string;
   options: PersistedGenerateOptions;
-  endpointCount: number;
 }
 
 // Update detection functions moved to ./spec-hash.ts

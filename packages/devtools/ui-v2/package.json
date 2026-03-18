@@ -27,6 +27,7 @@
     "react-hook-form": "^7.71.2",
     "react-resizable-panels": "^4.7.2",
     "recharts": "^2.15.4",
+    "shiki": "^4.0.2",
     "socket.io-client": "^4.8.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",

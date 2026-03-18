@@ -6,20 +6,13 @@ import { cn } from "@/lib/utils";
 import { useDevToolsStore } from "@/store";
 import { NAV_GROUPS } from "@/app-config";
 import {
-  Command,
+  CommandDialog,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Kbd } from "@/components/ui/kbd";
 
 import type { Theme } from "@/store";
@@ -34,8 +27,6 @@ const THEME_META: Array<{ value: Theme; icon: React.ReactNode; label: string }> 
   { value: "light", icon: <Sun className="size-4" />, label: "Light mode" },
   { value: "system", icon: <Monitor className="size-4" />, label: "System theme" },
 ];
-
-const ITEM_CLASS = "mx-2 rounded-lg py-2.5";
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): React.ReactNode {
   const navigate = useNavigate();
@@ -54,91 +45,78 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogHeader className="sr-only">
-        <DialogTitle>Command Palette</DialogTitle>
-        <DialogDescription>Search for a command to run.</DialogDescription>
-      </DialogHeader>
-      <DialogContent
-        className="gap-0 overflow-hidden rounded-xl border-border/50 p-0 shadow-lg sm:max-w-lg"
-        showCloseButton={false}
-      >
-        <Command className="flex h-full w-full flex-col overflow-hidden bg-popover **:data-[slot=command-input-wrapper]:h-auto **:data-[slot=command-input-wrapper]:grow **:data-[slot=command-input-wrapper]:border-0 **:data-[slot=command-input-wrapper]:px-0">
-          <div className="flex h-12 items-center gap-2 border-b border-border/50 px-4">
-            <CommandInput className="h-10 text-[15px]" placeholder="What do you need?" />
-            <button
-              className="flex shrink-0 items-center"
-              onClick={() => onOpenChange(false)}
-              type="button"
-            >
-              <Kbd>Esc</Kbd>
-            </button>
-          </div>
+    <CommandDialog open={open} onOpenChange={onOpenChange} showCloseButton={false}>
+      <CommandInput className="h-12" placeholder="What do you need?" />
 
-          <CommandList className="max-h-[400px] py-2">
-            <CommandEmpty>Nothing found.</CommandEmpty>
+      <CommandList className="max-h-100">
+        <CommandEmpty>Nothing found.</CommandEmpty>
 
-            {NAV_GROUPS.map((group) => (
-              <CommandGroup key={group.label} heading={group.label}>
-                {group.items.map((item) => (
-                  <CommandItem
-                    key={item.path}
-                    className={ITEM_CLASS}
-                    value={`go to ${item.label}`}
-                    onSelect={() => run(() => navigate({ to: item.path }))}
-                  >
-                    <item.icon aria-hidden />
-                    <span>
-                      Go to&nbsp;<strong className="font-semibold">{item.label}</strong>
-                    </span>
-                    {item.kbd && (
-                      <Kbd className="ml-auto">{"\u2318"}{item.kbd}</Kbd>
-                    )}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+        {NAV_GROUPS.map((group) => (
+          <CommandGroup key={group.label} heading={group.label}>
+            {group.items.map((item) => (
+              <CommandItem
+                key={item.path}
+                value={`go to ${item.label}`}
+                onSelect={() => run(() => navigate({ to: item.path }))}
+              >
+                <item.icon aria-hidden />
+                <span>
+                  Go to&nbsp;<strong className="font-semibold">{item.label}</strong>
+                </span>
+                {item.kbd && (
+                  <Kbd className="ml-auto">{"\u2318"}{item.kbd}</Kbd>
+                )}
+              </CommandItem>
             ))}
+          </CommandGroup>
+        ))}
 
-            <CommandGroup heading="Recording">
-              <CommandItem
-                className={ITEM_CLASS}
-                value={paused ? "resume recording" : "pause recording"}
-                onSelect={() => run(togglePaused)}
-              >
-                <Circle
-                  aria-hidden
-                  className={cn(paused ? "text-warning-foreground" : "text-success")}
-                />
-                {paused ? "Resume recording" : "Pause recording"}
-              </CommandItem>
-              <CommandItem
-                className={ITEM_CLASS}
-                value="clear requests"
-                onSelect={() => run(clearRequests)}
-              >
-                <Trash2 aria-hidden />
-                Clear all requests
-              </CommandItem>
-            </CommandGroup>
+        <CommandGroup heading="Recording">
+          <CommandItem
+            value={paused ? "resume recording" : "pause recording"}
+            onSelect={() => run(togglePaused)}
+          >
+            <Circle
+              aria-hidden
+              className={cn(paused ? "text-warning-foreground" : "text-success")}
+            />
+            {paused ? "Resume recording" : "Pause recording"}
+          </CommandItem>
+          <CommandItem
+            value="clear requests"
+            onSelect={() => run(clearRequests)}
+          >
+            <Trash2 aria-hidden />
+            Clear all requests
+          </CommandItem>
+        </CommandGroup>
 
-            <CommandGroup heading="Appearance">
-              {THEME_META
-                .filter((t) => t.value !== theme)
-                .map((t) => (
-                  <CommandItem
-                    key={t.value}
-                    className={ITEM_CLASS}
-                    value={`theme ${t.label}`}
-                    onSelect={() => run(() => setTheme(t.value))}
-                  >
-                    {t.icon}
-                    {t.label}
-                  </CommandItem>
-                ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </DialogContent>
-    </Dialog>
+        <CommandGroup heading="Appearance">
+          {THEME_META
+            .filter((t) => t.value !== theme)
+            .map((t) => (
+              <CommandItem
+                key={t.value}
+                value={`theme ${t.label}`}
+                onSelect={() => run(() => setTheme(t.value))}
+              >
+                {t.icon}
+                {t.label}
+              </CommandItem>
+            ))}
+        </CommandGroup>
+      </CommandList>
+
+      <div className="flex h-12 items-center justify-end border-t px-3">
+        <button
+          className="flex items-center gap-1 text-muted-foreground text-sm hover:text-foreground"
+          onClick={() => onOpenChange(false)}
+          type="button"
+        >
+          <span>Close</span>
+          <Kbd className="ml-1">Esc</Kbd>
+        </button>
+      </div>
+    </CommandDialog>
   );
 }

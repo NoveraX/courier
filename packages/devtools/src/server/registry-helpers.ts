@@ -2,7 +2,8 @@
  * Helpers for registry routes: spec fetching, fingerprint collection, update checks.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { createFetch } from "@noverax/nexus/fetch";
 import type { ParsedSpec } from "../apis";
 import {
@@ -112,15 +113,13 @@ export async function fetchSpecRaw(specUrl: string, res: JsonResponse): Promise<
 }
 
 export async function checkSingleSource(
-  source: Pick<RegistrySource, "specUrl" | "specHash">,
+  source: Pick<RegistrySource, "specUrl" | "importType" | "specHash">,
 ): Promise<{ changed: boolean; error?: string }> {
-  if (!source.specUrl) return { changed: false };
+  if (source.importType !== "url" || !source.specUrl) return { changed: false };
 
   try {
-    const raw = isUrl(source.specUrl)
-      ? await fetchRemoteSpec(source.specUrl)
-      : readLocalSpec(source.specUrl);
-    if (!raw) return { changed: false, error: "Failed to read spec" };
+    const raw = await fetchRemoteSpec(source.specUrl);
+    if (!raw) return { changed: false, error: "Failed to fetch spec" };
     const newSpec = parseSpec(raw);
     return { changed: computeSpecHash(newSpec) !== source.specHash };
   } catch (err) {
@@ -137,7 +136,19 @@ async function fetchRemoteSpec(specUrl: string): Promise<string | null> {
   }
 }
 
-function readLocalSpec(specUrl: string): string | null {
-  const filePath = resolveProjectSafe(specUrl);
-  return existsSync(filePath) ? readFileSync(filePath, "utf-8") : null;
+/** Remove generated files from disk for a source. */
+export function removeGeneratedFiles(outputDir: string, name: string): void {
+  const dir = resolveProjectSafe(join(outputDir, name));
+  if (existsSync(dir)) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** Count group subdirectories on disk for a source. */
+export function countGroupsOnDisk(outputDir: string, name: string): number {
+  const dir = resolveProjectSafe(join(outputDir, name));
+  if (!existsSync(dir)) return 0;
+  return readdirSync(dir).filter((entry) => {
+    return statSync(join(dir, entry)).isDirectory();
+  }).length;
 }

@@ -7,6 +7,7 @@ export function StatusBar(): React.ReactNode {
   const paused = useDevToolsStore((s) => s.paused);
   const connectionStatus = useDevToolsStore((s) => s.connectionStatus);
   const sessions = useDevToolsStore((s) => s.sessions);
+  const droppedRequests = useDevToolsStore((s) => s.droppedRequests);
   const elapsed = useSessionTimer();
 
   const connected = connectionStatus === "connected";
@@ -55,6 +56,11 @@ export function StatusBar(): React.ReactNode {
         <span>{requests.length} req</span>
         {errors > 0 && <span className="text-destructive-foreground">{errors} err</span>}
         {pending > 0 && <span className="text-warning-foreground">{pending} pending</span>}
+        {droppedRequests > 0 && (
+          <span className="text-amber-400" title={`${droppedRequests} older requests dropped — increase limit in Settings`}>
+            {droppedRequests} dropped
+          </span>
+        )}
         {paused && <span className="font-medium text-warning-foreground">REC PAUSED</span>}
       </div>
 

@@ -12,12 +12,12 @@ function resolve(value: string | null, keys: string[]): string {
 }
 
 /** Build prefilled variables from schema stub or path params */
-function buildVariablesStub(endpoint: CatalogEndpoint | null): string {
+function buildVariablesStub(endpoint: CatalogEndpoint | null, indent: number): string {
   if (!endpoint) return "{}";
 
   // Prefer schema-derived stub (has field names + typed defaults)
   if (endpoint.variablesStub && Object.keys(endpoint.variablesStub).length > 0) {
-    return JSON.stringify(endpoint.variablesStub, null, 2);
+    return JSON.stringify(endpoint.variablesStub, null, indent);
   }
 
   // Fallback: extract path params (`:id` → { "id": "" })
@@ -26,13 +26,14 @@ function buildVariablesStub(endpoint: CatalogEndpoint | null): string {
   if (!params || params.length === 0) return "{}";
   const obj: Record<string, string> = {};
   for (const p of params) obj[p.slice(1)] = "";
-  return JSON.stringify(obj, null, 2);
+  return JSON.stringify(obj, null, indent);
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────
 
 export function usePlayground() {
   const sourceMap = useDevToolsStore((s) => s.catalog);
+  const jsonIndent = useDevToolsStore((s) => s.settings.jsonIndent);
   const sourceKeys = useMemo(() => Object.keys(sourceMap), [sourceMap]);
 
   const [source, setSource] = useState<string | null>(null);
@@ -72,7 +73,7 @@ export function usePlayground() {
   const endpointKey = `${effectiveSource}.${effectiveGroup}.${effectiveMethod}`;
   if (endpointKey !== prevEndpointKey.current) {
     prevEndpointKey.current = endpointKey;
-    const stub = buildVariablesStub(endpointInfo);
+    const stub = buildVariablesStub(endpointInfo, jsonIndent);
     if (stub !== "{}") setVariables(stub);
     else setVariables("{}");
   }

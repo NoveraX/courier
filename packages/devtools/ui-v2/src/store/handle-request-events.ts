@@ -5,13 +5,12 @@ import type {
   RequestTiming,
   ValidationIssue,
 } from "./types"
-import { MAX_REQUESTS } from "./constants"
 import { str, num, optStr, optNum } from "./event-helpers"
 
 type EventPayload = Record<string, unknown>
 type State = { requests: RequestEntry[] }
 
-export function handleRequestStart(state: State, event: EventPayload): { requests: RequestEntry[] } {
+export function handleRequestStart(state: State, event: EventPayload, maxRequests: number): { requests: RequestEntry[]; droppedCount: number } {
   const entry: RequestEntry = {
     id: str(event.id),
     source: str(event.source),
@@ -39,7 +38,11 @@ export function handleRequestStart(state: State, event: EventPayload): { request
     sessionId: str(event.sessionId),
   }
   const updated = [entry, ...state.requests]
-  return { requests: updated.length > MAX_REQUESTS ? updated.slice(0, MAX_REQUESTS) : updated }
+  const overflow = updated.length > maxRequests
+  return {
+    requests: overflow ? updated.slice(0, maxRequests) : updated,
+    droppedCount: overflow ? updated.length - maxRequests : 0,
+  }
 }
 
 export function handleRequestEnd(state: State, event: EventPayload): { requests: RequestEntry[] } {

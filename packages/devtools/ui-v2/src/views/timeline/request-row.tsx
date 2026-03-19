@@ -4,8 +4,9 @@ import { Pin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { MethodBadge } from "@/components/shared/method-badge";
-import { formatDuration, formatAbsoluteTime } from "@/components/shared/formatters";
+import { formatDuration, formatTimestamp } from "@/components/shared/formatters";
 import type { RequestEntry } from "@/store/types";
+import { useDevToolsStore } from "@/store";
 import { STATUS_CONFIG } from "./constants";
 
 interface RequestRowProps {
@@ -19,6 +20,10 @@ export const RequestRow = memo(function RequestRow({
   selected,
   onSelect,
 }: RequestRowProps): React.ReactElement {
+  const timestampFormat = useDevToolsStore((s) => s.settings.timestampFormat);
+  const showPreview = useDevToolsStore((s) => s.settings.showRequestPreview);
+  // Subscribe to tick so relative timestamps auto-refresh (selector returns primitive)
+  useDevToolsStore((s) => s.settings.timestampFormat === "relative" ? s.relativeTick : 0);
   const status = STATUS_CONFIG[request.status];
   const path = buildPath(request);
   const hasMetrics = Boolean(request.statusCode) || request.timing?.total != null;
@@ -28,7 +33,7 @@ export const RequestRow = memo(function RequestRow({
       type="button"
       className={cn(
         "group flex w-full items-center gap-3 px-3 text-left",
-        "h-9 transition-colors duration-75",
+        "h-[var(--density-row-h)] transition-colors duration-75",
         "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         selected && "bg-accent-brand/8 hover:bg-accent-brand/12",
         request.pinned && !selected && "bg-violet-500/5",
@@ -49,30 +54,33 @@ export const RequestRow = memo(function RequestRow({
         {path}
       </span>
 
-      {/* Mode */}
-      <Badge
-        variant={request.mode === "proxy" ? "sky" : "secondary"}
-        className="shrink-0 text-[9px] px-1.5 py-0"
-      >
-        {request.mode}
-      </Badge>
+      {/* Mode + Metrics — hidden when showRequestPreview is off */}
+      {showPreview && (
+        <>
+          <Badge
+            variant={request.mode === "proxy" ? "sky" : "secondary"}
+            className="shrink-0 text-[9px] px-1.5 py-0"
+          >
+            {request.mode}
+          </Badge>
 
-      {/* Metrics pill — status code + duration kept together */}
-      {hasMetrics && (
-        <span className="inline-flex shrink-0 items-center gap-2 rounded-md bg-muted/50 px-2 py-0.5">
-          {request.statusCode && <StatusCode code={request.statusCode} />}
-          {request.statusCode && request.timing?.total != null && (
-            <span className="h-3 w-px bg-border" />
+          {hasMetrics && (
+            <span className="inline-flex shrink-0 items-center gap-2 rounded-md bg-muted/50 px-2 py-0.5">
+              {request.statusCode && <StatusCode code={request.statusCode} />}
+              {request.statusCode && request.timing?.total != null && (
+                <span className="h-3 w-px bg-border" />
+              )}
+              {request.timing?.total != null && (
+                <DurationCell duration={request.timing.total} />
+              )}
+            </span>
           )}
-          {request.timing?.total != null && (
-            <DurationCell duration={request.timing.total} />
-          )}
-        </span>
+        </>
       )}
 
       {/* Time */}
       <span className="inline-flex w-24 shrink-0 items-center justify-end mono-sm tabular-nums text-muted-foreground">
-        {formatAbsoluteTime(request.startedAt)}
+        {formatTimestamp(request.startedAt, timestampFormat)}
       </span>
 
       {/* Pin indicator */}

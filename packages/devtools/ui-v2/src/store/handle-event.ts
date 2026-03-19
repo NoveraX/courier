@@ -5,15 +5,21 @@ import { handleMiddlewareEnter, handleMiddlewareExit, handleMiddlewareError } fr
 
 type EventPayload = DevToolsEvent & Record<string, unknown>
 
+interface ReducerResult {
+  requests: RequestEntry[]
+  droppedCount?: number
+}
+
 export function handleEventReducer(
   state: { requests: RequestEntry[] },
-  event: EventPayload
-): { requests: RequestEntry[] } | typeof state {
+  event: EventPayload,
+  maxRequests: number = 2000,
+): ReducerResult | typeof state {
   if (!event || typeof event.type !== "string") return state
 
   switch (event.type) {
     case "request:start":
-      return handleRequestStart(state, event)
+      return handleRequestStart(state, event, maxRequests)
     case "request:end":
       return handleRequestEnd(state, event)
     case "request:error":

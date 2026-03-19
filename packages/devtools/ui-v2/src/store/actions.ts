@@ -3,8 +3,9 @@ import { toast } from "sonner"
 
 import type { Catalog, CatalogSnapshot, DevToolsEvent } from "./types"
 import type { DevToolsState } from "./store-types"
-import { THEME_STORAGE_KEY, PLAYGROUND_MAX_HISTORY, DEFAULT_SETTINGS, saveSettings, saveSessionStartedAt } from "./constants"
+import { PLAYGROUND_MAX_HISTORY, DEFAULT_SETTINGS, saveSettings, saveSessionStartedAt } from "./constants"
 import { applyTheme } from "./theme"
+import { applyDensity } from "./density"
 import { handleEventReducer } from "./handle-event"
 import { notifyOnEvent } from "./event-notifications"
 import { createInitialState } from "./initial-state"
@@ -37,6 +38,33 @@ let canonMapCatalog: Catalog | null = null
 
 type EventPayload = DevToolsEvent & Record<string, unknown>
 
+// ── Ignore patterns — cached regex compilation ──────────────────────────────
+
+let cachedPatterns: string[] = []
+let cachedRegexes: RegExp[] = []
+
+function shouldIgnoreRequest(event: EventPayload, patterns: string[]): boolean {
+  if (patterns.length === 0) return false
+  const url = typeof event.url === "string" ? event.url : ""
+  const method = typeof event.method === "string" ? event.method : ""
+  const target = url || method
+  if (!target) return false
+
+  // Re-compile only when patterns array changes
+  if (patterns !== cachedPatterns) {
+    cachedPatterns = patterns
+    cachedRegexes = patterns
+      .filter((p) => p.length > 0)
+      .map((p) => {
+        try { return new RegExp(p, "i") }
+        catch { return null }
+      })
+      .filter((r): r is RegExp => r !== null)
+  }
+
+  return cachedRegexes.some((re) => re.test(target))
+}
+
 function normalizeEventSource(
   event: EventPayload,
   catalog: Catalog,
@@ -63,9 +91,10 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
   return {
     // UI
     setTheme: (theme) => {
-      localStorage.setItem(THEME_STORAGE_KEY, theme)
+      const next = { ...get().settings, theme }
+      saveSettings(next)
       applyTheme(theme)
-      set({ theme })
+      set({ theme, settings: next })
     },
 
     // Connection
@@ -91,7 +120,7 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
         return {
           sessions,
           sessionStartedAt,
-          requests: s.preserveLog
+          requests: s.settings.preserveLog
             ? s.requests
             : s.requests.filter((r) => r.sessionId !== sessionId || r.pinned),
         }
@@ -105,14 +134,19 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
 
     // Requests
     togglePaused: () => set((s) => ({ paused: !s.paused })),
-    togglePreserveLog: () => set((s) => ({ preserveLog: !s.preserveLog })),
+    togglePreserveLog: () => {
+      const next = !get().settings.preserveLog
+      const settings = { ...get().settings, preserveLog: next }
+      saveSettings(settings)
+      set({ settings })
+    },
     clearRequests: () =>
       set((s) => {
-        if (s.preserveLog) {
+        if (s.settings.preserveLog) {
           const pinned = s.requests.filter((r) => r.pinned)
-          return { requests: pinned }
+          return { requests: pinned, droppedRequests: 0 }
         }
-        return { requests: [] }
+        return { requests: [], droppedRequests: 0 }
       }),
     togglePin: (id) =>
       set((s) => ({
@@ -167,10 +201,18 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
 
     handleEvent: (event) => {
       if (get().paused) return
+      // Skip requests matching ignore patterns
+      if (event.type === "request:start" && shouldIgnoreRequest(event, get().settings.ignorePatterns)) return
       // Normalize event source name against catalog (case-insensitive).
       // Runtime emits lowercase (from URL hostname), catalog uses scanner names (PascalCase).
       const normalized = normalizeEventSource(event, get().catalog)
-      set((state) => handleEventReducer(state, normalized))
+      set((state) => {
+        const result = handleEventReducer(state, normalized, get().settings.maxRequests)
+        if ("droppedCount" in result && result.droppedCount) {
+          return { ...result, droppedRequests: state.droppedRequests + result.droppedCount }
+        }
+        return result
+      })
       notifyOnEvent(normalized, get)
     },
 
@@ -178,10 +220,14 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
     updateSettings: (patch) => {
       const next = { ...get().settings, ...patch }
       saveSettings(next)
+      if (patch.theme) applyTheme(patch.theme)
+      if (patch.density) applyDensity(patch.density)
       set({ settings: next })
     },
     resetSettings: () => {
       saveSettings(DEFAULT_SETTINGS)
+      applyTheme(DEFAULT_SETTINGS.theme)
+      applyDensity(DEFAULT_SETTINGS.density)
       set({ settings: DEFAULT_SETTINGS })
     },
   }

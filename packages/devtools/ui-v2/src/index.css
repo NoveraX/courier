@@ -559,3 +559,25 @@ body::after {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   Compact Density Mode
+   Reduces row heights, gaps, padding for maximum data density.
+   Activated via data-density="compact" on :root.
+   ══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --density-row-h: 2.25rem;     /* 36px comfortable */
+  --density-toolbar-h: 2.75rem; /* 44px */
+  --density-gap: 0.75rem;       /* 12px */
+  --density-px: 0.75rem;        /* 12px */
+  --density-py: 0.5rem;         /* 8px */
+}
+
+:root[data-density="compact"] {
+  --density-row-h: 1.75rem;     /* 28px compact */
+  --density-toolbar-h: 2.25rem; /* 36px */
+  --density-gap: 0.5rem;        /* 8px */
+  --density-px: 0.5rem;         /* 8px */
+  --density-py: 0.25rem;        /* 4px */
+}
+

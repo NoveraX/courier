@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 
 import { cn } from "@/lib/utils";
+import { useDevToolsStore } from "@/store";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CopyButton } from "@/components/shared/copy-button";
 import { JsonTreeNode } from "./json-tree-node";
@@ -27,13 +28,14 @@ export function JsonTree({
   showCopy = true,
   headerExtra,
 }: JsonTreeProps): React.ReactElement {
+  const jsonIndent = useDevToolsStore((s) => s.settings.jsonIndent);
   const [selectedPath, setSelectedPath] = useState<string[]>([]);
 
   const handleSelect = useCallback((path: string[]) => {
     setSelectedPath(path);
   }, []);
 
-  const serialized = safeStringify(data);
+  const serialized = safeStringify(data, jsonIndent);
   const isExpandable = isComplex(data);
   const scrollStyle = !fill && maxHeight !== "none" ? { maxHeight } : undefined;
 
@@ -97,9 +99,9 @@ function isComplex(value: unknown): boolean {
   return value !== null && typeof value === "object";
 }
 
-function safeStringify(value: unknown): string {
+function safeStringify(value: unknown, indent: number = 2): string {
   try {
-    return JSON.stringify(value, null, 2);
+    return JSON.stringify(value, null, indent);
   } catch {
     return String(value);
   }

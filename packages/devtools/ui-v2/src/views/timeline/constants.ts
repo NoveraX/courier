@@ -4,5 +4,11 @@ export type { DetailTabKey } from "@/components/shared/detail-panel/constants";
 
 // ── Timeline-specific constants ───────────────────────────────────────────
 
+import type { DensityMode } from "@/store/types";
+
 export const ROW_HEIGHT = 36;
+export const ROW_HEIGHTS: Record<DensityMode, number> = {
+  comfortable: 36,
+  compact: 28,
+};
 export const OVERSCAN = 15;

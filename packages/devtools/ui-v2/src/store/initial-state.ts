@@ -12,7 +12,6 @@ export function createInitialState(savedTheme: DevToolsState["theme"]) {
     catalog: {} as DevToolsState["catalog"],
     requests: [] as DevToolsState["requests"],
     paused: false,
-    preserveLog: false,
     explorerSelectedEndpoint: null as DevToolsState["explorerSelectedEndpoint"],
     graphLayout: "LR" as const,
     showSchemas: true,
@@ -30,5 +29,7 @@ export function createInitialState(savedTheme: DevToolsState["theme"]) {
     connected: false,
     settings: loadSettings(),
     sessionStartedAt: loadSessionStartedAt(),
+    relativeTick: 0,
+    droppedRequests: 0,
   }
 }

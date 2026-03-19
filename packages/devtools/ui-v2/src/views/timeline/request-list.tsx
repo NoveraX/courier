@@ -3,7 +3,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 
 import type { RequestEntry } from "@/store/types";
 
-import { ROW_HEIGHT, OVERSCAN } from "./constants";
+import { useDevToolsStore } from "@/store";
+import { OVERSCAN, ROW_HEIGHTS } from "./constants";
 import { RequestRow } from "./request-row";
 import { RequestContextMenu } from "./context-menu";
 import { PinnedSection } from "./pinned-section";
@@ -23,11 +24,13 @@ export function RequestList({
 }: RequestListProps): React.ReactElement {
   const scrollRef = useRef<HTMLDivElement>(null);
   const shouldAutoScroll = useRef(true);
+  const density = useDevToolsStore((s) => s.settings.density);
+  const rowHeight = ROW_HEIGHTS[density];
 
   const virtualizer = useVirtualizer({
     count: requests.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => rowHeight,
     overscan: OVERSCAN,
   });
 
@@ -92,7 +95,7 @@ function useAutoScroll(
     const el = ref.current;
     if (!el || !enabled.current) return;
 
-    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < ROW_HEIGHT * 3;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 36 * 3;
     if (isNearBottom) {
       el.scrollTop = el.scrollHeight;
     }

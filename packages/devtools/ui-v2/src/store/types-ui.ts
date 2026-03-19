@@ -123,11 +123,18 @@ export type JsonIndent = 2 | 4
 export type ValidationLib = "zod" | "valibot" | "arktype" | "none"
 export type ApisGroupBy = "tag" | "path" | "single"
 export type ApisClient = "direct" | "proxy" | "both" | "none"
+export type ExportFormat = "har" | "json" | "postman"
+export type DensityMode = "comfortable" | "compact"
 
 export interface Settings {
+  // Appearance
+  theme: Theme
+  density: DensityMode
+
   // Recording
   maxRequests: number
   preserveLog: boolean
+  ignorePatterns: string[]
 
   // Display
   timestampFormat: TimestampFormat
@@ -142,6 +149,9 @@ export interface Settings {
   // Connection
   autoReconnect: boolean
   reconnectDelay: number
+
+  // Export
+  defaultExportFormat: ExportFormat
 
   // Apis defaults
   apisValidation: ValidationLib

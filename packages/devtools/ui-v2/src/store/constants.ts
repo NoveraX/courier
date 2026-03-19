@@ -19,8 +19,11 @@ export const EMPTY_FILTERS: TimelineFilters = {
 // ── Default settings ────────────────────────────────────────────────────────
 
 export const DEFAULT_SETTINGS: Settings = {
+  theme: "dark",
+  density: "comfortable",
   maxRequests: 2000,
   preserveLog: false,
+  ignorePatterns: [],
   timestampFormat: "relative",
   jsonIndent: 2,
   showRequestPreview: true,
@@ -29,6 +32,7 @@ export const DEFAULT_SETTINGS: Settings = {
   slowRequestThreshold: 500,
   autoReconnect: true,
   reconnectDelay: 1000,
+  defaultExportFormat: "har",
   apisValidation: "zod",
   apisGroupBy: "tag",
   apisGenerateTypes: true,

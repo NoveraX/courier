@@ -8,10 +8,10 @@ export { computeTextDiff } from "./text-diff";
 
 // ── Serialization ───────────────────────────────────────────────────────────
 
-export function serializeForDiff(data: unknown): string {
+export function serializeForDiff(data: unknown, indent: number = 2): string {
   if (data === undefined || data === null) return "";
   if (typeof data === "string") return data;
-  return JSON.stringify(data, null, 2);
+  return JSON.stringify(data, null, indent);
 }
 
 // ── Header diff ─────────────────────────────────────────────────────────────

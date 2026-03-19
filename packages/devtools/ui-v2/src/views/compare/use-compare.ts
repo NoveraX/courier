@@ -18,6 +18,7 @@ export function useCompare() {
   const params = useSearch({ from: "/compare" }) as CompareSearchParams;
   const navigate = useNavigate({ from: "/compare" });
   const requests = useDevToolsStore((s) => s.requests);
+  const jsonIndent = useDevToolsStore((s) => s.settings.jsonIndent);
 
   const tab: CompareTab = params.tab ?? "payload";
   const leftId = params.left;
@@ -36,17 +37,17 @@ export function useCompare() {
   // Memoized diffs — only computed when both sides present
   const payloadDiff = useMemo(() => {
     if (!leftReq || !rightReq) return null;
-    const l = serializeForDiff(getPayloadData(leftReq));
-    const r = serializeForDiff(getPayloadData(rightReq));
+    const l = serializeForDiff(getPayloadData(leftReq), jsonIndent);
+    const r = serializeForDiff(getPayloadData(rightReq), jsonIndent);
     return computeTextDiff(l, r);
-  }, [leftReq, rightReq]);
+  }, [leftReq, rightReq, jsonIndent]);
 
   const responseDiff = useMemo(() => {
     if (!leftReq || !rightReq) return null;
-    const l = serializeForDiff(getResponseData(leftReq));
-    const r = serializeForDiff(getResponseData(rightReq));
+    const l = serializeForDiff(getResponseData(leftReq), jsonIndent);
+    const r = serializeForDiff(getResponseData(rightReq), jsonIndent);
     return computeTextDiff(l, r);
-  }, [leftReq, rightReq]);
+  }, [leftReq, rightReq, jsonIndent]);
 
   const headersDiff = useMemo(() => {
     if (!leftReq || !rightReq) return null;

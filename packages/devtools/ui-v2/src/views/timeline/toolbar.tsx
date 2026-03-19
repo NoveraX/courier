@@ -26,7 +26,7 @@ export function Toolbar({
   filteredCount,
   pinnedCount,
 }: ToolbarProps): React.ReactElement {
-  const preserveLog = useDevToolsStore((s) => s.preserveLog);
+  const preserveLog = useDevToolsStore((s) => s.settings.preserveLog);
   const togglePreserveLog = useDevToolsStore((s) => s.togglePreserveLog);
 
   const activeFilterCount = countActiveFilters(filters);

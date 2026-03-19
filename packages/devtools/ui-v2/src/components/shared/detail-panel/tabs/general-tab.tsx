@@ -2,8 +2,9 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { CopyButton } from "@/components/shared/copy-button";
-import { formatDuration, formatAbsoluteTime, formatSize } from "@/components/shared/formatters";
+import { formatDuration, formatTimestamp, formatSize } from "@/components/shared/formatters";
 import type { RequestEntry } from "@/store/types";
+import { useDevToolsStore } from "@/store";
 import { STATUS_CONFIG } from "../constants";
 
 interface GeneralTabProps {
@@ -11,6 +12,8 @@ interface GeneralTabProps {
 }
 
 export function GeneralTab({ request }: GeneralTabProps): React.ReactElement {
+  const timestampFormat = useDevToolsStore((s) => s.settings.timestampFormat);
+  useDevToolsStore((s) => s.settings.timestampFormat === "relative" ? s.relativeTick : 0);
   const status = STATUS_CONFIG[request.status];
 
   return (
@@ -61,7 +64,7 @@ export function GeneralTab({ request }: GeneralTabProps): React.ReactElement {
         {request.size != null && (
           <Row label="Size">{formatSize(request.size)}</Row>
         )}
-        <Row label="Started">{formatAbsoluteTime(request.startedAt)}</Row>
+        <Row label="Started">{formatTimestamp(request.startedAt, timestampFormat)}</Row>
         <Row label="Middleware">{request.middlewareCount}</Row>
         {request.hasValidation.variables && (
           <Row label="Variables Validated">Yes</Row>

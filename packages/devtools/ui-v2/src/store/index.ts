@@ -1,8 +1,9 @@
 import { create } from "zustand"
 
 import type { DevToolsState } from "./store-types"
-import { loadTheme } from "./constants"
+import { loadSettings } from "./constants"
 import { applyTheme } from "./theme"
+import { applyDensity } from "./density"
 import { createActions } from "./actions"
 import { createInitialState } from "./initial-state"
 
@@ -49,20 +50,23 @@ export type {
   ValidationLib,
   ApisGroupBy,
   ApisClient,
+  ExportFormat,
+  DensityMode,
   Settings,
 } from "./types-ui"
 
 export type { DevToolsState } from "./store-types"
 export { EMPTY_FILTERS, PLAYGROUND_MAX_HISTORY, MAX_REQUESTS, DEFAULT_SETTINGS } from "./constants"
 
-// ── Initialize theme ────────────────────────────────────────────────────────
+// ── Initialize appearance from persisted settings ────────────────────────────
 
-const savedTheme = loadTheme()
-applyTheme(savedTheme)
+const savedSettings = loadSettings()
+applyTheme(savedSettings.theme)
+applyDensity(savedSettings.density)
 
 // ── Store ───────────────────────────────────────────────────────────────────
 
 export const useDevToolsStore = create<DevToolsState>((set, get) => ({
-  ...createInitialState(savedTheme),
+  ...createInitialState(savedSettings.theme),
   ...createActions(set, get),
 }))

@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { MethodBadge } from "@/components/shared/method-badge";
-import { formatDuration, formatAbsoluteTime } from "@/components/shared/formatters";
+import { formatDuration, formatTimestamp } from "@/components/shared/formatters";
+import { useDevToolsStore } from "@/store";
 
 import type { ActivityEntry } from "./compute-activity";
 
@@ -44,6 +45,8 @@ export function ActivityFeed({
 // ── Feed row ────────────────────────────────────────────────────────────────
 
 function FeedRow({ entry, onSelect }: { entry: ActivityEntry; onSelect?: () => void }): React.ReactElement {
+  const timestampFormat = useDevToolsStore((s) => s.settings.timestampFormat);
+  useDevToolsStore((s) => s.settings.timestampFormat === "relative" ? s.relativeTick : 0);
   const dotClass = STATUS_DOT[entry.status] ?? STATUS_DOT.error;
 
   return (
@@ -57,7 +60,7 @@ function FeedRow({ entry, onSelect }: { entry: ActivityEntry; onSelect?: () => v
 
       {/* Time */}
       <span className="w-18 shrink-0 tabular-nums text-muted-foreground/60 text-mono-xs">
-        {formatAbsoluteTime(entry.timestamp)}
+        {formatTimestamp(entry.timestamp, timestampFormat)}
       </span>
 
       {/* HTTP method */}

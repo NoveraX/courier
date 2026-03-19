@@ -4,6 +4,7 @@ import { WandSparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useDevToolsStore } from "@/store";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -17,6 +18,7 @@ interface JsonEditorProps {
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function JsonEditor({ value, onChange, placeholder, className }: JsonEditorProps): React.ReactElement {
+  const jsonIndent = useDevToolsStore((s) => s.settings.jsonIndent);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isValid = isValidJsonc(value);
 
@@ -98,7 +100,7 @@ export function JsonEditor({ value, onChange, placeholder, className }: JsonEdit
               variant="ghost"
               size="icon"
               className="size-5 text-muted-foreground/40 hover:text-foreground"
-              onClick={() => { try { onChange(JSON.stringify(JSON.parse(stripComments(value)), null, 2)); } catch { /* skip */ } }}
+              onClick={() => { try { onChange(JSON.stringify(JSON.parse(stripComments(value)), null, jsonIndent)); } catch { /* skip */ } }}
             >
               <WandSparkles className="size-3" />
             </Button>

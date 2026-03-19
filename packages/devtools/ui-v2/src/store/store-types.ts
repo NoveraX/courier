@@ -31,7 +31,6 @@ export interface DevToolsState {
   // Requests
   requests: RequestEntry[]
   paused: boolean
-  preserveLog: boolean
 
   // Explorer
   explorerSelectedEndpoint: { source: string; group: string; method: string } | null
@@ -62,6 +61,12 @@ export interface DevToolsState {
   // Settings
   settings: Settings
   sessionStartedAt: number | null
+
+  // Relative timestamp refresh (bumped by global interval)
+  relativeTick: number
+
+  // Request buffer overflow tracking
+  droppedRequests: number
 
   // Actions — UI
   setTheme: (theme: Theme) => void

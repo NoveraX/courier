@@ -42,5 +42,7 @@ export type {
   ValidationLib,
   ApisGroupBy,
   ApisClient,
+  ExportFormat,
+  DensityMode,
   Settings,
 } from "./types-ui"

@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 
 import { cn } from "@/lib/utils";
 import { useDevToolsStore } from "@/store";
+import { runAudit } from "@/views/audit/run-audit";
 import { NAV_GROUPS } from "@/app-config";
 import type { NavItem } from "@/app-config";
 import { KbdHint } from "@/components/shared/kbd-hint";
@@ -22,6 +24,8 @@ import { SidebarFooterSection } from "./sidebar-footer";
 function NavBadge({ item }: { item: NavItem }): React.ReactNode {
   const requests = useDevToolsStore((s) => s.requests);
   if (!item.badge) return null;
+
+  if (item.badge === "audit-score") return <AuditScoreBadge />;
 
   let count = 0;
   if (item.badge === "requests") count = requests.length;
@@ -45,6 +49,38 @@ function NavBadge({ item }: { item: NavItem }): React.ReactNode {
       )}
     >
       {label}
+    </span>
+  );
+}
+
+function AuditScoreBadge(): React.ReactNode {
+  const requests = useDevToolsStore((s) => s.requests);
+  const catalog = useDevToolsStore((s) => s.catalog);
+
+  const score = useMemo(() => {
+    if (requests.length === 0) return null;
+    return runAudit(requests, catalog).score;
+  }, [requests, catalog]);
+
+  if (score === null) return null;
+
+  const colorClass =
+    score >= 90
+      ? "bg-success-muted text-success-foreground ring-1 ring-success/25"
+      : score >= 70
+        ? "bg-warning-muted text-warning-foreground ring-1 ring-warning/25"
+        : "bg-destructive/15 text-destructive ring-1 ring-destructive/25";
+
+  return (
+    <span
+      className={cn(
+        "inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1.5",
+        "text-[10px] font-semibold tabular-nums leading-none",
+        "group-data-[collapsible=icon]:hidden",
+        colorClass,
+      )}
+    >
+      {score}
     </span>
   );
 }

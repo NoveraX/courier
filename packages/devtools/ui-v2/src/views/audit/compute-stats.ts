@@ -1,0 +1,123 @@
+import type { RequestEntry } from "../../store/types-request";
+import type { EndpointStats } from "./types";
+
+function percentile(sorted: number[], p: number): number {
+  if (sorted.length === 0) return 0;
+  const idx = Math.ceil((p / 100) * sorted.length) - 1;
+  return sorted[Math.max(0, idx)] ?? 0;
+}
+
+export function buildKey(r: RequestEntry): string {
+  return `${r.source}:${r.group ?? ""}:${r.method}`;
+}
+
+function createEmptyStats(r: RequestEntry, key: string): EndpointStats {
+  return {
+    key,
+    source: r.source,
+    group: r.group ?? "",
+    method: r.method,
+    avgDuration: 0,
+    p95: 0,
+    errorRate: 0,
+    count: 0,
+    sizes: [],
+    avgSize: 0,
+    hasVariablesValidation: false,
+    hasResponseValidation: false,
+    modes: new Set(),
+    statusCodes: [],
+    middlewareOverhead: 0,
+    validationOverhead: 0,
+    proxyOverhead: 0,
+    httpMethods: new Set(),
+    type: r.type,
+    requestIds: [],
+  };
+}
+
+/** Pre-aggregate per-endpoint statistics from raw requests. */
+export function computeEndpointStats(
+  requests: RequestEntry[],
+): Map<string, EndpointStats> {
+  const map = new Map<string, EndpointStats>();
+
+  for (const r of requests) {
+    const key = buildKey(r);
+    let s = map.get(key);
+    if (!s) {
+      s = createEmptyStats(r, key);
+      map.set(key, s);
+    }
+
+    s.count++;
+    s.requestIds.push(r.id);
+    s.modes.add(r.mode);
+    if (r.httpMethod) s.httpMethods.add(r.httpMethod.toUpperCase());
+    if (r.hasValidation.variables) s.hasVariablesValidation = true;
+    if (r.hasValidation.response) s.hasResponseValidation = true;
+    if (r.size != null) s.sizes.push(r.size);
+    if (r.statusCode != null) s.statusCodes.push(r.statusCode);
+  }
+
+  for (const [key, s] of map) {
+    const reqs = requests.filter((r) => buildKey(r) === key);
+    computeDurations(s, reqs);
+    computeOverheads(s, reqs);
+  }
+
+  return map;
+}
+
+function computeDurations(s: EndpointStats, reqs: RequestEntry[]): void {
+  const durations = reqs
+    .map((r) => r.timing?.total ?? 0)
+    .filter((d) => d > 0)
+    .sort((a, b) => a - b);
+
+  const errors = reqs.filter(
+    (r) => r.status === "error" || r.status === "validation_error",
+  ).length;
+
+  s.avgDuration = durations.length > 0
+    ? durations.reduce((a, b) => a + b, 0) / durations.length
+    : 0;
+  s.p95 = percentile(durations, 95);
+  s.errorRate = s.count > 0 ? errors / s.count : 0;
+  s.avgSize = s.sizes.length > 0
+    ? s.sizes.reduce((a, b) => a + b, 0) / s.sizes.length
+    : 0;
+}
+
+function computeOverheads(s: EndpointStats, reqs: RequestEntry[]): void {
+  let mwSum = 0;
+  let valSum = 0;
+  let proxySum = 0;
+  let mwCount = 0;
+  let valCount = 0;
+  let proxyCount = 0;
+
+  for (const r of reqs) {
+    const total = r.timing?.total;
+    if (!total || total <= 0) continue;
+
+    if (r.timing?.middleware != null) {
+      mwSum += r.timing.middleware / total;
+      mwCount++;
+    }
+    if (r.timing?.validation != null) {
+      valSum += r.timing.validation / total;
+      valCount++;
+    }
+    if (r.proxyTiming) {
+      const proxyOverhead =
+        (r.proxyTiming.clientToProxy ?? 0) + (r.proxyTiming.proxyToClient ?? 0);
+      proxySum += proxyOverhead / total;
+      proxyCount++;
+    }
+  }
+
+  s.middlewareOverhead = mwCount > 0 ? mwSum / mwCount : 0;
+  s.validationOverhead = valCount > 0 ? valSum / valCount : 0;
+  s.proxyOverhead = proxyCount > 0 ? proxySum / proxyCount : 0;
+}

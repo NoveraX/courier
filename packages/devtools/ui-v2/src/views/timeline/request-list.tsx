@@ -1,7 +1,6 @@
 import { useRef, useCallback, useEffect } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { RequestEntry } from "@/store/types";
 
 import { ROW_HEIGHT, OVERSCAN } from "./constants";
@@ -22,20 +21,18 @@ export function RequestList({
   selectedId,
   onSelect,
 }: RequestListProps): React.ReactElement {
-  const parentRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const shouldAutoScroll = useRef(true);
 
   const virtualizer = useVirtualizer({
     count: requests.length,
-    getScrollElement: () => parentRef.current,
+    getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: OVERSCAN,
   });
 
-  // Auto-scroll to bottom when new requests arrive
-  useAutoScroll(parentRef, requests.length, shouldAutoScroll);
+  useAutoScroll(scrollRef, requests.length, shouldAutoScroll);
 
-  // Keyboard navigation (↑↓)
   const handleKeyDown = useKeyboardNav(requests, selectedId, onSelect);
 
   return (
@@ -52,7 +49,7 @@ export function RequestList({
         onSelect={onSelect}
       />
 
-      <ScrollArea ref={parentRef} className="flex-1">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div
           style={{ height: virtualizer.getTotalSize(), position: "relative" }}
         >
@@ -81,7 +78,7 @@ export function RequestList({
             );
           })}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

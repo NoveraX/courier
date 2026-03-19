@@ -21,7 +21,7 @@ export interface NavItem {
   path: string;
   icon: LucideIcon;
   kbd?: string;
-  badge?: "requests" | "errors" | "sessions";
+  badge?: "requests" | "errors" | "sessions" | "audit-score";
 }
 
 export interface NavGroup {
@@ -49,7 +49,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Quality",
     items: [
-      { label: "Audit", path: "/audit", icon: Shield, kbd: "7" },
+      { label: "Audit", path: "/audit", icon: Shield, kbd: "7", badge: "audit-score" },
       { label: "Middleware", path: "/middleware", icon: Workflow, kbd: "8" },
       { label: "Compare", path: "/compare", icon: GitCompare, kbd: "9" },
     ],

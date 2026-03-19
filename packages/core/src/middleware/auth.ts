@@ -1,5 +1,5 @@
 import { defineMiddleware } from "./compose";
-import type { MiddlewareFn } from "./types";
+import type { Middleware } from "./types";
 
 /**
  * Auth middleware — attaches token and optionally refreshes on 401.
@@ -19,12 +19,13 @@ export function authMiddleware(options: {
   header?: string;
   /** Auth scheme prefix (default: "Bearer") */
   scheme?: string;
-}): MiddlewareFn {
+}): Middleware {
   const { getToken, refreshToken, header = "Authorization", scheme = "Bearer" } = options;
 
   const formatToken = (token: string) => (scheme ? `${scheme} ${token}` : token);
 
-  return defineMiddleware(async (ctx, next) => {
+  // Wraps because it may retry on 401 (needs response access)
+  return defineMiddleware("auth", "wrap", async (ctx, next) => {
     const token = await getToken();
     ctx.headers.set(header, formatToken(token));
 

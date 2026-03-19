@@ -2,10 +2,10 @@ import { Play, Loader2, Zap, Globe } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { SegmentedControl } from "@/components/shared/segmented-control";
 import { SingleSelect } from "@/components/shared/single-select";
 import { TypeBadge } from "@/components/shared/type-badge";
 import { KbdHint } from "@/components/shared/kbd-hint";
-import { cn } from "@/lib/utils";
 
 import type { EndpointInfo } from "@/store/types-ui";
 
@@ -140,23 +140,8 @@ function ModeToggle({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className="inline-flex items-center gap-px rounded-lg border border-border-subtle bg-muted/60 p-0.5">
-          {MODE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onChange(opt.value)}
-              className={cn(
-                "flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-all",
-                mode === opt.value
-                  ? "bg-background text-foreground shadow-sm ring-1 ring-border-subtle"
-                  : "text-muted-foreground hover:text-foreground hover:bg-background/50",
-              )}
-            >
-              <opt.icon className="size-3" />
-              {opt.label}
-            </button>
-          ))}
+        <div>
+          <SegmentedControl options={MODE_OPTIONS} value={mode} onChange={onChange} />
         </div>
       </TooltipTrigger>
       <TooltipContent side="bottom">

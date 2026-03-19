@@ -65,4 +65,12 @@ export interface MiddlewareEntry {
   duration?: number
   status: "running" | "completed" | "error"
   error?: string
+  /** Declared phase: "before" | "after" | "wrap" */
+  phase?: string
+  /** Time spent before calling next() (ms) */
+  beforeDuration?: number
+  /** Time spent after next() returned (ms) */
+  afterDuration?: number
+  /** Header names added by this middleware */
+  headersAdded?: string[]
 }

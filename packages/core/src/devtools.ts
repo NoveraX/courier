@@ -55,6 +55,7 @@ export interface DevToolsHooks {
     name: string;
     index: number;
     totalCount: number;
+    phase: string;
     timestamp: number;
   }) => void;
 
@@ -63,6 +64,10 @@ export interface DevToolsHooks {
     name: string;
     index: number;
     duration: number;
+    phase: string;
+    beforeDuration: number;
+    afterDuration: number;
+    headersAdded: string[];
     timestamp: number;
   }) => void;
 
@@ -70,6 +75,7 @@ export interface DevToolsHooks {
     requestId: string;
     name: string;
     index: number;
+    phase: string;
     error: string;
     timestamp: number;
   }) => void;

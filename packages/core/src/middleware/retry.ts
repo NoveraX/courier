@@ -1,5 +1,5 @@
 import { defineMiddleware } from "./compose";
-import type { MiddlewareFn, MiddlewareResponse } from "./types";
+import type { Middleware, MiddlewareResponse } from "./types";
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -21,10 +21,10 @@ export function retryMiddleware(options?: {
   backoff?: number;
   /** Custom retry condition (default: status >= 500) */
   retryOn?: (response: MiddlewareResponse) => boolean;
-}): MiddlewareFn {
+}): Middleware {
   const { limit = 3, backoff = 300, retryOn } = options ?? {};
 
-  return defineMiddleware(async (_ctx, next) => {
+  return defineMiddleware("retry", "wrap", async (_ctx, next) => {
     for (let attempt = 0; attempt <= limit; attempt++) {
       try {
         const response = await next();

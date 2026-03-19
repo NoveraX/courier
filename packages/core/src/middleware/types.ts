@@ -10,6 +10,8 @@ export type MiddlewareContext = {
   variables?: unknown;
   /** Request headers — can be modified by middleware */
   headers: Headers;
+  /** Internal: DevTools request ID for event correlation */
+  _requestId?: string;
 };
 
 /** Response returned from the middleware chain / endpoint execution */
@@ -22,5 +24,41 @@ export type MiddlewareResponse = {
 /** Calls the next middleware in the chain, or the endpoint handler */
 export type NextFn = () => Promise<MiddlewareResponse>;
 
-/** Middleware function — wraps around the next middleware / endpoint handler */
-export type MiddlewareFn = (ctx: MiddlewareContext, next: NextFn) => Promise<MiddlewareResponse>;
+// ── Phase-specific handler signatures ──────────────────────────────────────
+
+/** Runs before fetch — can modify ctx/headers, does NOT see response */
+export type BeforeHandler = (ctx: MiddlewareContext) => void | Promise<void>;
+
+/** Runs after fetch — receives response, can transform it */
+export type AfterHandler = (
+  ctx: MiddlewareContext,
+  response: MiddlewareResponse,
+) => MiddlewareResponse | Promise<MiddlewareResponse>;
+
+/** Wraps around fetch — full onion model, calls next() */
+export type WrapHandler = (ctx: MiddlewareContext, next: NextFn) => Promise<MiddlewareResponse>;
+
+// ── Middleware types (discriminated union) ──────────────────────────────────
+
+export type MiddlewarePhase = "before" | "after" | "wrap";
+
+export interface BeforeMiddleware {
+  name: string;
+  phase: "before";
+  handler: BeforeHandler;
+}
+
+export interface AfterMiddleware {
+  name: string;
+  phase: "after";
+  handler: AfterHandler;
+}
+
+export interface WrapMiddleware {
+  name: string;
+  phase: "wrap";
+  handler: WrapHandler;
+}
+
+/** Fully typed middleware with explicit phase and handler signature */
+export type Middleware = BeforeMiddleware | AfterMiddleware | WrapMiddleware;

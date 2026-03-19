@@ -15,9 +15,9 @@ export interface Segment {
 export function buildRequestSegments(timing: RequestTiming): Segment[] {
   const overhead = Math.max(0, timing.total - timing.middleware - timing.fetch - timing.validation);
   const segments: Segment[] = [];
-  if (timing.middleware > 0.5) segments.push({ label: "Middleware", value: timing.middleware, color: "bg-violet-500" });
+  if (timing.middleware > 0) segments.push({ label: "Middleware", value: timing.middleware, color: "bg-violet-500" });
   segments.push({ label: "Fetch", value: timing.fetch, color: "bg-sky-500" });
-  if (timing.validation > 0.5) segments.push({ label: "Validation", value: timing.validation, color: "bg-amber-500" });
+  if (timing.validation > 0) segments.push({ label: "Validation", value: timing.validation, color: "bg-amber-500" });
   if (overhead > 0.5) segments.push({ label: "Overhead", value: overhead, color: "bg-slate-400" });
   return segments;
 }

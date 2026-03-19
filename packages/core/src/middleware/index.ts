@@ -7,8 +7,15 @@ export {
 } from "./builtin";
 export { composeMiddleware, defineMiddleware } from "./compose";
 export type {
+  AfterHandler,
+  AfterMiddleware,
+  BeforeHandler,
+  BeforeMiddleware,
+  Middleware,
   MiddlewareContext,
-  MiddlewareFn,
+  MiddlewarePhase,
   MiddlewareResponse,
   NextFn,
+  WrapHandler,
+  WrapMiddleware,
 } from "./types";

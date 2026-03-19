@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type Endpoint, defineApi, defineGroup, endpoint } from "../src/define/index";
 import type { HttpMethods } from "../src/http-client/types";
+import { defineMiddleware } from "../src/middleware/index";
 
 vi.mock("../src/utils/execute", () => ({
 	executeRequest: vi.fn(),
@@ -169,7 +170,7 @@ describe("defineApi", () => {
 	});
 
 	it("preserves all BaseOptions", () => {
-		const mw = async (_ctx: any, next: any) => next();
+		const mw = defineMiddleware("test", "wrap", async (_ctx, next) => next());
 
 		const api = defineApi({
 			baseURL: "https://api.test.com",

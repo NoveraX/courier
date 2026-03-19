@@ -13,6 +13,7 @@ export function handleMiddlewareEnter(state: State, event: EventPayload): { requ
     totalCount: optNum(event.totalCount),
     startedAt: num(event.timestamp, Date.now()),
     status: "running",
+    phase: typeof event.phase === "string" ? event.phase : undefined,
   }
   return {
     requests: state.requests.map((r) =>
@@ -33,7 +34,15 @@ export function handleMiddlewareExit(state: State, event: EventPayload): { reque
             ...r,
             middlewareEntries: r.middlewareEntries.map((m) =>
               m.index === index
-                ? { ...m, status: "completed" as const, duration: optNum(event.duration) }
+                ? {
+                    ...m,
+                    status: "completed" as const,
+                    duration: optNum(event.duration),
+                    phase: typeof event.phase === "string" ? event.phase : m.phase,
+                    beforeDuration: optNum(event.beforeDuration),
+                    afterDuration: optNum(event.afterDuration),
+                    headersAdded: Array.isArray(event.headersAdded) ? event.headersAdded as string[] : undefined,
+                  }
                 : m
             ),
           }

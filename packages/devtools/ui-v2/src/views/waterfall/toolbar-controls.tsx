@@ -10,9 +10,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { KbdHint } from "@/components/shared/kbd-hint";
+import { SegmentedControl } from "@/components/shared/segmented-control";
 import { SingleSelect } from "@/components/shared/single-select";
 import type { SingleSelectOption } from "@/components/shared/single-select";
-import { cn } from "@/lib/utils";
 
 import type { WaterfallSortField, WaterfallGroupBy } from "@/store/types";
 import type { ModeFilter } from "./types";
@@ -67,10 +67,10 @@ export function GroupSelect({
 
 // ── Mode toggle ────────────────────────────────────────────────────────────
 
-const MODE_OPTIONS: Array<{ value: ModeFilter; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "direct", label: "Direct" },
-  { value: "proxy", label: "Proxy" },
+const MODE_OPTIONS = [
+  { value: "all" as const, label: "All" },
+  { value: "direct" as const, label: "Direct" },
+  { value: "proxy" as const, label: "Proxy" },
 ];
 
 export function ModeToggle({
@@ -80,25 +80,7 @@ export function ModeToggle({
   value: ModeFilter;
   onChange: (v: ModeFilter) => void;
 }): React.ReactElement {
-  return (
-    <div className="inline-flex items-center gap-px rounded-lg border border-border-subtle bg-muted/60 p-0.5">
-      {MODE_OPTIONS.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={cn(
-            "rounded-md px-2 py-0.5 text-[11px] font-medium transition-all",
-            value === opt.value
-              ? "bg-background text-foreground shadow-sm ring-1 ring-border-subtle"
-              : "text-muted-foreground hover:text-foreground hover:bg-background/50",
-          )}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
+  return <SegmentedControl options={MODE_OPTIONS} value={value} onChange={onChange} />;
 }
 
 // ── Zoom controls ──────────────────────────────────────────────────────────

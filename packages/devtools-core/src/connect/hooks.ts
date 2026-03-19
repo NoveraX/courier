@@ -98,6 +98,7 @@ export function wireHooks(
         name: e.name,
         index: e.index,
         totalCount: e.totalCount,
+        phase: e.phase,
       }),
     );
   };
@@ -112,6 +113,10 @@ export function wireHooks(
         name: e.name,
         index: e.index,
         duration: e.duration,
+        phase: e.phase,
+        beforeDuration: e.beforeDuration,
+        afterDuration: e.afterDuration,
+        headersAdded: e.headersAdded,
       }),
     );
   };
@@ -125,6 +130,7 @@ export function wireHooks(
         requestId: e.requestId,
         name: e.name,
         index: e.index,
+        phase: e.phase,
         error: e.error,
       }),
     );

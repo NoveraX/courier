@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineApi, defineGroup } from "../src/define/index";
 import { HTTPError } from "../src/error";
+import { defineMiddleware } from "../src/middleware/compose";
 import type { HttpMethods } from "../src/http-client/types";
 import { executeRequest } from "../src/utils/execute";
 
@@ -285,7 +286,7 @@ describe("executeRequest", () => {
       const spy = vi.fn();
       const source = createTestSource(
         { list: (methods: HttpMethods) => methods.get("users") },
-        { middleware: [async (ctx: any, next: any) => { spy(ctx); return next(); }] },
+        { middleware: [defineMiddleware("spy", "wrap", async (ctx, next) => { spy(ctx); return next(); })] },
       );
       const sources = { users: source };
 
@@ -304,10 +305,10 @@ describe("executeRequest", () => {
 
       const source = createTestSource(
         { list: (methods: HttpMethods) => methods.get("users") },
-        { middleware: [async (ctx: any, next: any) => {
+        { middleware: [defineMiddleware("modify", "wrap", async (ctx, next) => {
           ctx.variables = { modified: true };
           return next();
-        }] },
+        })] },
       );
       const sources = { users: source };
 
@@ -321,10 +322,10 @@ describe("executeRequest", () => {
 
       const source = createTestSource(
         { list: (methods: HttpMethods) => methods.get("users") },
-        { middleware: [async (_ctx: any, next: any) => {
+        { middleware: [defineMiddleware("transform", "wrap", async (_ctx, next) => {
           const res = await next();
           return { ...res, data: { transformed: true } };
-        }] },
+        })] },
       );
       const sources = { users: source };
 
@@ -345,9 +346,9 @@ describe("executeRequest", () => {
             });
           },
         },
-        { middleware: [async (_ctx: any, next: any) => {
-          try { return await next(); } catch (e: any) { errorSpy(e); throw e; }
-        }] },
+        { middleware: [defineMiddleware("errorCatch", "wrap", async (_ctx, next) => {
+          try { return await next(); } catch (e: unknown) { errorSpy(e); throw e; }
+        })] },
       );
       const sources = { api: source };
 
@@ -363,13 +364,13 @@ describe("executeRequest", () => {
     it("middleware rejection throws HTTPError", async () => {
       const source = createTestSource(
         { list: (methods: HttpMethods) => methods.get("users") },
-        { middleware: [async () => {
+        { middleware: [defineMiddleware("reject", "wrap", async () => {
           throw new HTTPError({
             status: 403,
             headers: new Headers(),
             data: { message: "Forbidden" },
           });
-        }] },
+        })] },
       );
       const sources = { users: source };
 

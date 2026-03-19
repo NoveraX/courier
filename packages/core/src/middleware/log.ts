@@ -1,5 +1,5 @@
 import { defineMiddleware } from "./compose";
-import type { MiddlewareFn } from "./types";
+import type { Middleware } from "./types";
 
 /**
  * Logging middleware — logs endpoint, status, and duration.
@@ -13,10 +13,10 @@ import type { MiddlewareFn } from "./types";
 export function logMiddleware(options?: {
   /** Custom logger function (default: console.log) */
   logger?: (message: string) => void;
-}): MiddlewareFn {
+}): Middleware {
   const { logger = console.log } = options ?? {};
 
-  return defineMiddleware(async (ctx, next) => {
+  return defineMiddleware("log", "wrap", async (ctx, next) => {
     const label = [ctx.source, ctx.group, ctx.method].filter(Boolean).join(":");
     const start = performance.now();
 

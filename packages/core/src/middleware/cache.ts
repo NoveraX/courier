@@ -1,6 +1,6 @@
 import { devtoolsHooks } from "../devtools";
 import { defineMiddleware } from "./compose";
-import type { MiddlewareFn, MiddlewareResponse } from "./types";
+import type { Middleware, MiddlewareResponse } from "./types";
 
 /**
  * Cache middleware — caches successful responses with TTL.
@@ -16,10 +16,11 @@ export function cacheMiddleware(options?: {
   ttl?: number;
   /** Custom storage map (default: in-memory Map) */
   storage?: Map<string, { data: MiddlewareResponse; expiry: number }>;
-}): MiddlewareFn {
+}): Middleware {
   const { ttl = 60_000, storage = new Map() } = options ?? {};
 
-  return defineMiddleware(async (ctx, next) => {
+  // Wraps because it may short-circuit (cache hit) or store (post-fetch)
+  return defineMiddleware("cache", "wrap", async (ctx, next) => {
     const dt = devtoolsHooks;
     const key = `${ctx.source}:${ctx.group ?? ""}:${ctx.method}:${JSON.stringify(ctx.variables ?? {})}`;
     const requestId = `${ctx.source}:${ctx.group ?? ""}:${ctx.method}`;

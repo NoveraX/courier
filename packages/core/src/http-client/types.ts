@@ -1,4 +1,4 @@
-import type { MiddlewareFn } from "../middleware/types";
+import type { Middleware } from "../middleware/types";
 
 export type HttpMethod = "get" | "post" | "put" | "patch" | "del" | "head";
 
@@ -89,7 +89,7 @@ export type BaseOptions = MergeOptions &
     bodySerializer?: (data: Record<string, unknown>) => BodyInit;
     searchParamsSerializer?: SearchParamsSerializer;
     deduplicate?: boolean;
-    middleware?: MiddlewareFn[];
+    middleware?: Middleware[];
   };
 
 export type MergeOptions = {

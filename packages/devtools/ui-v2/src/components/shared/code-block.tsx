@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { codeToHtml, type BundledTheme } from "shiki";
 
-import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/shared/copy-button";
+import { SegmentedControl } from "@/components/shared/segmented-control";
 import { highlightLine } from "@/components/shared/detail-panel/tabs/syntax-highlight";
 
 // ── Format switcher ─────────────────────────────────────────────────────────
@@ -18,26 +18,8 @@ export function FormatSwitcher({ formats, active, onChange }: {
   active: string;
   onChange: (key: string) => void;
 }): React.ReactElement {
-  return (
-    <div className="inline-flex items-center gap-px rounded-lg border border-border-subtle bg-muted/60 p-0.5">
-      {formats.map((f) => (
-        <button
-          key={f.key}
-          type="button"
-          onClick={() => onChange(f.key)}
-          className={cn(
-            "flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-all",
-            active === f.key
-              ? "bg-background text-foreground shadow-sm ring-1 ring-border-subtle"
-              : "text-muted-foreground hover:text-foreground hover:bg-background/50",
-          )}
-        >
-          <f.icon className="size-2.5" />
-          {f.label}
-        </button>
-      ))}
-    </div>
-  );
+  const options = formats.map((f) => ({ value: f.key, label: f.label, icon: f.icon }));
+  return <SegmentedControl options={options} value={active} onChange={onChange} iconSize="size-2.5" />;
 }
 
 // ── Shiki languages ──────────────────────────────────────────────────────────

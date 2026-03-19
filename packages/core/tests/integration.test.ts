@@ -182,7 +182,7 @@ describe("integration: middleware with functional API", () => {
 
 		const { defineMiddleware } = await import("../src/middleware/index");
 
-		const mw = defineMiddleware(async (ctx, next) => {
+		const mw = defineMiddleware("spy", "wrap", async (ctx, next) => {
 			spy(ctx);
 			return next();
 		});
@@ -220,7 +220,7 @@ describe("integration: middleware with functional API", () => {
 
 		const { defineMiddleware } = await import("../src/middleware/index");
 
-		const mw = defineMiddleware(async (_ctx, next) => {
+		const mw = defineMiddleware("transform", "wrap", async (_ctx, next) => {
 			const res = await next();
 			return { ...res, data: { transformed: true } };
 		});
@@ -252,7 +252,7 @@ describe("integration: middleware with functional API", () => {
 
 		const { defineMiddleware } = await import("../src/middleware/index");
 
-		const mw = defineMiddleware(async (_ctx, next) => {
+		const mw = defineMiddleware("errorCatcher", "wrap", async (_ctx, next) => {
 			try {
 				return await next();
 			} catch (error) {

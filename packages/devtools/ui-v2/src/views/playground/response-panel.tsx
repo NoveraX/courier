@@ -6,7 +6,7 @@ import { KbdHint } from "@/components/shared/kbd-hint";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { SegmentedControl } from "@/components/shared/segmented-control";
 
 import { BreakdownCard, buildProxySegments, buildRequestSegments, computeProxyTotal } from "@/components/shared/timing-breakdown";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
@@ -49,23 +49,13 @@ export function ResponsePanel({
       <StatusBar entry={entry} />
 
       <Tabs value={activeTab} onValueChange={onTabChange} className="flex min-h-0 flex-1 flex-col">
-        <div className="mx-3 mt-2 inline-flex w-fit items-center gap-px rounded-lg border border-border-subtle bg-muted/60 p-0.5">
-          {RESPONSE_TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => onTabChange(t.key)}
-              className={cn(
-                "flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-all",
-                activeTab === t.key
-                  ? "bg-background text-foreground shadow-sm ring-1 ring-border-subtle"
-                  : "text-muted-foreground hover:text-foreground hover:bg-background/50",
-              )}
-            >
-              <t.icon className="size-2.5" />
-              {t.label}
-            </button>
-          ))}
+        <div className="mx-3 mt-2">
+          <SegmentedControl
+            options={RESPONSE_TABS.map((t) => ({ value: t.key, label: t.label, icon: t.icon }))}
+            value={activeTab}
+            onChange={onTabChange}
+            iconSize="size-2.5"
+          />
         </div>
 
         <TabsContent value="body" className="mt-0 flex min-h-0 flex-1 flex-col p-3">

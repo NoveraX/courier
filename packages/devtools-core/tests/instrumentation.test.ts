@@ -266,6 +266,7 @@ describe("DevTools Instrumentation", () => {
       name: "auth",
       index: 0,
       totalCount: 2,
+      phase: "before",
       timestamp: performance.now(),
     });
 
@@ -274,6 +275,10 @@ describe("DevTools Instrumentation", () => {
       name: "auth",
       index: 0,
       duration: 5,
+      phase: "before",
+      beforeDuration: 5,
+      afterDuration: 0,
+      headersAdded: ["Authorization"],
       timestamp: performance.now(),
     });
 
@@ -281,6 +286,7 @@ describe("DevTools Instrumentation", () => {
       requestId: "api:users:getAll",
       name: "logger",
       index: 1,
+      phase: "wrap",
       error: "Something failed",
       timestamp: performance.now(),
     });

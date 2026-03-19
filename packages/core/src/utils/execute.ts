@@ -105,6 +105,7 @@ export async function executeRequest(
     method: String(method),
     variables,
     headers: newHeaders,
+    _requestId: requestId || undefined,
   };
 
   const mode = context?.mode ?? (context?.proxyMethod ? "proxy" : "direct");

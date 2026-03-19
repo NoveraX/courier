@@ -28,13 +28,12 @@ export function KbdHint({
   keys,
   className,
 }: KbdHintProps): React.ReactElement {
-  const label = keys
-    .split("+")
-    .map((k) => {
-      const lower = k.trim().toLowerCase();
-      return SYMBOL_MAP[lower] ?? k.trim().toUpperCase();
-    })
-    .join("");
+  const label = keys.length === 1
+    ? (SYMBOL_MAP[keys] ?? keys)
+    : keys.split("+").map((k) => {
+        const lower = k.trim().toLowerCase();
+        return SYMBOL_MAP[lower] ?? k.trim().toUpperCase();
+      }).join("");
 
   return <Kbd className={className}>{label}</Kbd>;
 }

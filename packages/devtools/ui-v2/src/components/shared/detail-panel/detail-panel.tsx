@@ -1,3 +1,4 @@
+import { useCallback, useRef, useState } from "react";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -6,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MethodBadge } from "@/components/shared/method-badge";
 import type { RequestEntry } from "@/store/types";
 import { DETAIL_TABS } from "./constants";
+import type { DetailTabKey } from "./constants";
 
 import { GeneralTab } from "./tabs/general-tab";
 import { SnippetsTab } from "./tabs/snippets-tab";
@@ -18,8 +20,8 @@ import { ProxyTab } from "./tabs/proxy-tab";
 
 interface DetailPanelProps {
   request: RequestEntry;
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  activeTab: DetailTabKey;
+  onTabChange: (tab: DetailTabKey) => void;
   onClose: () => void;
 }
 
@@ -37,11 +39,11 @@ export function DetailPanel({
 
       <Tabs
         value={activeTab}
-        onValueChange={onTabChange}
+        onValueChange={(v) => onTabChange(v as DetailTabKey)}
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
       >
-        <div className="border-b border-border-subtle px-3">
-          <TabsList variant="line" className="h-9">
+        <ScrollableTabs>
+          <TabsList variant="line" className="h-9 w-max">
             {visibleTabs.map((tab) => (
               <TabsTrigger key={tab.key} value={tab.key} className={cn(
                 "text-body-sm",
@@ -51,7 +53,7 @@ export function DetailPanel({
               </TabsTrigger>
             ))}
           </TabsList>
-        </div>
+        </ScrollableTabs>
 
         <div className="flex flex-1 flex-col min-h-0">
           <TabsContent value="general" className="mt-0 h-full overflow-auto">
@@ -112,4 +114,38 @@ function getVisibleTabs(request: RequestEntry): typeof DETAIL_TABS[number][] {
     if (tab.key === "proxy") return request.mode === "proxy";
     return true;
   });
+}
+
+// ── Scrollable tabs with fade edge indicators ─────────────────────────────
+
+function ScrollableTabs({ children }: { children: React.ReactNode }): React.ReactElement {
+  const ref = useRef<HTMLDivElement>(null);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  }, []);
+
+  return (
+    <div className="relative border-b border-border-subtle">
+      <div
+        ref={ref}
+        className="overflow-x-auto overflow-y-hidden px-3 scrollbar-none"
+        onScroll={checkScroll}
+        onMouseEnter={checkScroll}
+      >
+        {children}
+      </div>
+
+      {/* Right fade gradient — hints at more tabs */}
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l from-background to-transparent transition-opacity duration-150",
+          canScrollRight ? "opacity-100" : "opacity-0",
+        )}
+      />
+    </div>
+  );
 }

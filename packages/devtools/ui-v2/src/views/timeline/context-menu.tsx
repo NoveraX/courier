@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 import type { RequestEntry } from "@/store/types";
 import { useDevToolsStore } from "@/store";
-import { buildCurl, buildFetchSnippet, buildRequestJson } from "./request-helpers";
+import { buildCurl, buildFetchSnippet, buildRequestJson } from "@/components/shared/detail-panel";
 
 interface RequestContextMenuProps {
   request: RequestEntry;

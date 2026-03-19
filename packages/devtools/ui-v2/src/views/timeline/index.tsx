@@ -1,8 +1,8 @@
-import { useMemo, useCallback, useEffect } from "react";
+import { useMemo, useCallback } from "react";
 import { Activity } from "lucide-react";
 
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { EmptyState } from "@/components/shared/empty-state";
+import { useRequestDetail } from "@/hooks/use-request-detail";
 import { useDevToolsStore } from "@/store";
 
 import { filterRequests } from "./filters";
@@ -10,13 +10,13 @@ import { useTimelineSearch } from "./use-timeline-search";
 import { Toolbar } from "./toolbar";
 import { TimelineFilterBar } from "./filter-bar";
 import { RequestList } from "./request-list";
-import { DetailPanel } from "./detail-panel";
 
 export function TimelineView(): React.ReactElement {
   const requests = useDevToolsStore((s) => s.requests);
+  const { selectRequest } = useRequestDetail();
   const {
-    filters, selectedId, showFilters, detailTab,
-    setFilter, resetFilters, selectRequest, toggleFilters, setDetailTab,
+    filters, showFilters,
+    setFilter, resetFilters, toggleFilters,
   } = useTimelineSearch();
 
   const filtered = useMemo(() => filterRequests(requests, filters), [requests, filters]);
@@ -24,17 +24,14 @@ export function TimelineView(): React.ReactElement {
   const unpinned = useMemo(() => filtered.filter((r) => !r.pinned), [filtered]);
   const pinnedCount = useMemo(() => requests.filter((r) => r.pinned).length, [requests]);
 
-  const selectedRequest = useMemo(
-    () => requests.find((r) => r.id === selectedId) ?? null,
-    [requests, selectedId],
-  );
-
-  // Escape closes detail panel
-  useEscapeClose(selectedId, selectRequest);
-
   const handleSearchChange = useCallback(
     (value: string) => setFilter("search", value),
     [setFilter],
+  );
+
+  const handleSelect = useCallback(
+    (id: string | null) => { if (id) selectRequest(id); },
+    [selectRequest],
   );
 
   if (requests.length === 0) {
@@ -70,46 +67,12 @@ export function TimelineView(): React.ReactElement {
         />
       )}
 
-      <ResizablePanelGroup orientation="horizontal" className="flex-1">
-        <ResizablePanel defaultSize={selectedRequest ? 55 : 100} minSize={30}>
-          <RequestList
-            requests={unpinned}
-            pinnedRequests={pinned}
-            selectedId={selectedId}
-            onSelect={selectRequest}
-          />
-        </ResizablePanel>
-
-        {selectedRequest && (
-          <>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={45} minSize={25}>
-              <DetailPanel
-                request={selectedRequest}
-                activeTab={detailTab}
-                onTabChange={setDetailTab}
-                onClose={() => selectRequest(null)}
-              />
-            </ResizablePanel>
-          </>
-        )}
-      </ResizablePanelGroup>
+      <RequestList
+        requests={unpinned}
+        pinnedRequests={pinned}
+        selectedId={null}
+        onSelect={handleSelect}
+      />
     </div>
   );
-}
-
-function useEscapeClose(
-  selectedId: string | null,
-  selectRequest: (id: string | null) => void,
-): void {
-  useEffect(() => {
-    if (!selectedId) return;
-
-    function handleKeyDown(e: KeyboardEvent): void {
-      if (e.key === "Escape") selectRequest(null);
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [selectedId, selectRequest]);
 }

@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 import { BreakdownCard, buildProxySegments, buildRequestSegments, computeProxyTotal } from "@/components/shared/timing-breakdown";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
-import { FlowDiagram } from "@/views/timeline/tabs/proxy-tab";
+import { FlowDiagram } from "@/components/shared/detail-panel/tabs/proxy-tab";
 import { BodyMeta } from "./response-body-meta";
 import { DroppedHeadersSection, HeadersSection } from "@/components/shared/headers-section";
 

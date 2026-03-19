@@ -1,13 +1,12 @@
 import { useState, useMemo } from "react";
 import { ChevronRight } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
-
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { formatDuration, formatSize } from "@/components/shared/formatters";
+import { useRequestDetail } from "@/hooks/use-request-detail";
 import type { RequestEntry } from "@/store/types";
 
 import type { EndpointStat, EndpointSortKey, SortDir } from "./types";
@@ -26,7 +25,7 @@ export function EndpointsTable({ data, requests }: EndpointsTableProps): React.R
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [showAll, setShowAll] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const { selectRequest } = useRequestDetail();
 
   const sorted = useMemo(() => sortEndpoints(data, sortKey, sortDir), [data, sortKey, sortDir]);
   const visible = showAll ? sorted : sorted.slice(0, MAX_ENDPOINTS_SHOWN);
@@ -39,7 +38,7 @@ export function EndpointsTable({ data, requests }: EndpointsTableProps): React.R
 
   function handleRowClick(stat: EndpointStat): void {
     if (stat.calls === 1) {
-      navigate({ to: "/timeline", search: { selected: stat.requestIds[0], tab: "general" } });
+      selectRequest(stat.requestIds[0]!);
     } else {
       setExpanded((prev) => (prev === stat.endpoint ? null : stat.endpoint));
     }

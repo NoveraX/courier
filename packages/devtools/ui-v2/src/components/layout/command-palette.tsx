@@ -1,8 +1,7 @@
 import { useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Circle, Monitor, Moon, Sun, Trash2 } from "lucide-react";
+import { Monitor, Moon, Pause, Sun, Trash2 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
 import { useDevToolsStore } from "@/store";
 import { NAV_GROUPS } from "@/app-config";
 import {
@@ -76,11 +75,26 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
             value={paused ? "resume recording" : "pause recording"}
             onSelect={() => run(togglePaused)}
           >
-            <Circle
-              aria-hidden
-              className={cn(paused ? "text-warning-foreground" : "text-success")}
-            />
-            {paused ? "Resume recording" : "Pause recording"}
+            {paused ? (
+              <>
+                <Pause aria-hidden className="size-4 text-muted-foreground" />
+                <span>Resume recording</span>
+                <span className="ml-auto rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning-foreground">
+                  Paused
+                </span>
+              </>
+            ) : (
+              <>
+                <span aria-hidden className="relative flex size-4 items-center justify-center">
+                  <span className="absolute size-2.5 animate-ping rounded-full bg-emerald-500/40" />
+                  <span className="relative size-2 rounded-full bg-emerald-500" />
+                </span>
+                <span>Pause recording</span>
+                <span className="ml-auto rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                  Recording
+                </span>
+              </>
+            )}
           </CommandItem>
           <CommandItem
             value="clear requests"

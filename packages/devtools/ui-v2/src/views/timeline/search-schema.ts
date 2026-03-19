@@ -12,8 +12,6 @@ export interface TimelineSearchParams {
   source?: string;
   group?: string;
   minDuration?: number;
-  selected?: string;
-  tab?: string;
   filters?: boolean;
 }
 
@@ -28,8 +26,6 @@ export function validateTimelineSearch(raw: Record<string, unknown>): TimelineSe
     source: parseString(raw.source),
     group: parseString(raw.group),
     minDuration: parseNumber(raw.minDuration),
-    selected: parseString(raw.selected),
-    tab: parseString(raw.tab),
     filters: parseBoolean(raw.filters),
   };
 }
@@ -51,7 +47,7 @@ export function searchToFilters(params: TimelineSearchParams): TimelineFilters {
 /** Convert TimelineFilters → URL search params (omits empty values) */
 export function filtersToSearch(
   filters: TimelineFilters,
-  extra: { selected?: string | null; tab?: string; showFilters?: boolean },
+  extra: { showFilters?: boolean },
 ): TimelineSearchParams {
   const params: TimelineSearchParams = {};
 
@@ -63,8 +59,6 @@ export function filtersToSearch(
   if (filters.source.length > 0) params.source = filters.source.join(",");
   if (filters.group.length > 0) params.group = filters.group.join(",");
   if (filters.minDuration !== null) params.minDuration = filters.minDuration;
-  if (extra.selected) params.selected = extra.selected;
-  if (extra.tab && extra.tab !== "general") params.tab = extra.tab;
   if (extra.showFilters) params.filters = true;
 
   return params;

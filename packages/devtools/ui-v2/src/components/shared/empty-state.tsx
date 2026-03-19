@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -25,8 +25,6 @@ export function EmptyState({
     <div
       className={cn(
         "flex flex-col items-center justify-center gap-4 px-12 py-16 text-center",
-        "rounded-xl border border-dashed border-border-subtle",
-        "bg-gradient-to-b from-background-inset/50 to-transparent",
         className,
       )}
     >

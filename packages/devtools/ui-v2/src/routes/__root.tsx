@@ -11,6 +11,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { StatusBar } from "@/components/layout/status-bar";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { DisconnectedBanner } from "@/components/layout/disconnected-banner";
+import { GlobalDetailPanel } from "@/components/layout/global-detail-panel";
 import { NotFound } from "@/components/layout/not-found";
 
 function RootComponent(): React.ReactNode {
@@ -46,9 +47,9 @@ function RootComponent(): React.ReactNode {
       <SidebarInset className="flex min-h-0 flex-col overflow-hidden">
         <DisconnectedBanner />
         <TopBar onOpenSearch={() => setCommandOpen(true)} />
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto">
+        <GlobalDetailPanel>
           <Outlet />
-        </div>
+        </GlobalDetailPanel>
         <StatusBar />
       </SidebarInset>
 

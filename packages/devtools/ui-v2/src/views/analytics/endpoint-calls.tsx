@@ -1,11 +1,11 @@
 import { ExternalLink } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
 
 import { cn } from "@/lib/utils";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { formatDuration, formatSize } from "@/components/shared/formatters";
+import { useRequestDetail } from "@/hooks/use-request-detail";
 import type { RequestEntry } from "@/store/types";
-import { STATUS_CONFIG } from "@/views/timeline/constants";
+import { STATUS_CONFIG } from "@/components/shared/detail-panel";
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -17,10 +17,10 @@ interface EndpointCallsProps {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function EndpointCalls({ requestIds, requestsMap }: EndpointCallsProps): React.ReactElement {
-  const navigate = useNavigate();
+  const { selectRequest } = useRequestDetail();
 
   function handleClick(id: string): void {
-    navigate({ to: "/timeline", search: { selected: id, tab: "general" } });
+    selectRequest(id);
   }
 
   return (

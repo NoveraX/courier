@@ -3,7 +3,7 @@ import { codeToHtml, type BundledTheme } from "shiki";
 
 import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/shared/copy-button";
-import { highlightLine } from "@/views/timeline/tabs/syntax-highlight";
+import { highlightLine } from "@/components/shared/detail-panel/tabs/syntax-highlight";
 
 // ── Format switcher ─────────────────────────────────────────────────────────
 

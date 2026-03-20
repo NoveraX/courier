@@ -1,155 +1,130 @@
-import { useState, useEffect } from "react"
-import { Pin } from "lucide-react"
+import { memo } from "react";
+import { Pin } from "lucide-react";
 
-import type { RequestEntry, TimestampFormat } from "../../store"
-import { cn } from "@/lib/utils"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { MethodBadge } from "@/components/shared/method-badge";
+import { formatDuration, formatTimestamp } from "@/components/shared/formatters";
+import type { RequestEntry } from "@/store/types";
+import { useDevToolsStore } from "@/store";
+import { STATUS_CONFIG } from "./constants";
 
-import { formatRelativeTime, formatAbsoluteTime, formatSize } from "../../components/ui"
-import { STATUS_CONFIG, HTTP_METHOD_COLORS, getCodeColor, TIMING_WARN_MS } from "./constants"
-import { getRequestLabel } from "./request-helpers"
-
-// ── Request Row ─────────────────────────────────────────────────────────────
-
-export function RequestRow({
-  request, selected, onSelect, onTogglePin,
-  timestampFormat = "relative", slowThreshold = 1000,
-}: {
-  request: RequestEntry
-  selected: boolean
-  onSelect: () => void
-  onTogglePin: () => void
-  timestampFormat?: TimestampFormat
-  slowThreshold?: number
-}) {
-  const [, setTick] = useState(0)
-  const statusCfg = STATUS_CONFIG[request.status]
-  const label = getRequestLabel(request)
-  const codeColor = request.statusCode != null ? getCodeColor(request.statusCode) : ""
-  const isError = request.status === "error" || request.status === "validation_error"
-
-  // Tick every 10s for relative timestamps
-  useEffect(() => {
-    if (timestampFormat !== "relative" && request.status !== "pending") return
-    const interval = setInterval(() => setTick((t) => t + 1), 10_000)
-    return () => clearInterval(interval)
-  }, [request.status, timestampFormat])
-
-  const formatTimestamp = timestampFormat === "relative" ? formatRelativeTime : formatAbsoluteTime
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onSelect}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelect() }}
-      className={cn(
-        "group flex h-full w-full items-center gap-2 border-l-2 px-3 text-left text-xs transition-colors",
-        selected
-          ? "border-l-primary bg-accent"
-          : isError
-            ? "border-l-transparent bg-destructive/5 hover:bg-accent/50"
-            : request.pinned
-              ? "border-l-transparent bg-amber-500/5 hover:bg-accent/50"
-              : "border-l-transparent hover:bg-accent/50",
-      )}
-    >
-      {/* Status dot */}
-      <div className="flex w-3 justify-center">
-        <div className={cn("size-2 rounded-full", statusCfg.dotClass)} title={statusCfg.label} />
-      </div>
-
-      {/* HTTP method */}
-      {request.httpMethod && (
-        <span className={cn(
-          "w-9 shrink-0 text-[10px] font-bold tabular-nums",
-          HTTP_METHOD_COLORS[request.httpMethod] ?? "text-muted-foreground",
-        )}>
-          {request.httpMethod}
-        </span>
-      )}
-
-      {/* Mode badge */}
-      <Badge variant={request.mode === "proxy" ? "violet" : "sky"}>{request.mode}</Badge>
-
-      {/* Type badge */}
-      {request.type && (
-        <Badge variant={request.type === "query" ? "emerald" : "amber"}>
-          {request.type === "query" ? "Q" : "M"}
-        </Badge>
-      )}
-
-      {/* Endpoint path */}
-      <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-muted-foreground">
-        {label}
-      </span>
-
-      {/* Pinned indicator */}
-      {request.pinned && <Pin className="size-2.5 shrink-0 fill-amber-400 text-amber-400" />}
-
-      {/* Pin button (on hover) */}
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        onClick={(e) => { e.stopPropagation(); onTogglePin() }}
-        className={cn(
-          "hidden size-5 group-hover:inline-flex",
-          request.pinned ? "text-amber-400" : "text-muted-foreground",
-        )}
-        title={request.pinned ? "Unpin" : "Pin"}
-      >
-        <Pin className="size-2.5" />
-      </Button>
-
-      {/* Status code */}
-      {request.statusCode != null && (
-        <span className={cn("w-7 shrink-0 text-right text-[11px] font-medium tabular-nums", codeColor)}>
-          {request.statusCode}
-        </span>
-      )}
-
-      {/* Size */}
-      {request.size != null && request.size > 0 && (
-        <span className="w-12 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
-          {formatSize(request.size)}
-        </span>
-      )}
-
-      {/* Duration */}
-      <DurationCell request={request} slowThreshold={slowThreshold} />
-
-      {/* Timestamp */}
-      <span className="w-14 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
-        {formatTimestamp(request.startedAt)}
-      </span>
-    </div>
-  )
+interface RequestRowProps {
+  request: RequestEntry;
+  selected: boolean;
+  onSelect: (id: string) => void;
 }
 
-// ── Duration Cell ───────────────────────────────────────────────────────────
+export const RequestRow = memo(function RequestRow({
+  request,
+  selected,
+  onSelect,
+}: RequestRowProps): React.ReactElement {
+  const timestampFormat = useDevToolsStore((s) => s.settings.timestampFormat);
+  const showPreview = useDevToolsStore((s) => s.settings.showRequestPreview);
+  // Subscribe to tick so relative timestamps auto-refresh (selector returns primitive)
+  useDevToolsStore((s) => s.settings.timestampFormat === "relative" ? s.relativeTick : 0);
+  const status = STATUS_CONFIG[request.status];
+  const path = buildPath(request);
+  const hasMetrics = Boolean(request.statusCode) || request.timing?.total != null;
 
-function DurationCell({ request, slowThreshold }: { request: RequestEntry; slowThreshold: number }) {
-  if (request.timing) {
-    return (
-      <span className={cn(
-        "w-12 shrink-0 text-right text-[11px] tabular-nums",
-        request.timing.total > slowThreshold ? "text-red-400"
-          : request.timing.total > TIMING_WARN_MS ? "text-amber-400"
-            : "text-emerald-400",
-      )}>
-        {Math.round(request.timing.total)}ms
+  return (
+    <button
+      type="button"
+      className={cn(
+        "group flex w-full items-center gap-3 px-3 text-left",
+        "h-[var(--density-row-h)] transition-colors duration-75",
+        "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        selected && "bg-accent-brand/8 hover:bg-accent-brand/12",
+        request.pinned && !selected && "bg-violet-500/5",
+      )}
+      onClick={() => onSelect(request.id)}
+      data-request-id={request.id}
+    >
+      {/* Status dot */}
+      <span className={cn("size-2 shrink-0 rounded-full", status.dot)} />
+
+      {/* Method — fixed-width cell for column alignment */}
+      <span className="inline-flex w-[4.25rem] shrink-0 items-center">
+        <MethodBadge method={request.httpMethod ?? "GET"} />
       </span>
-    )
-  }
 
-  if (request.status === "pending") {
-    return (
-      <span className="w-12 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
-        {formatRelativeTime(request.startedAt)}
+      {/* Full path: source.group.method */}
+      <span className="min-w-0 flex-1 truncate mono-sm text-foreground">
+        {path}
       </span>
-    )
-  }
 
-  return <span className="w-12" />
+      {/* Mode + Metrics — hidden when showRequestPreview is off */}
+      {showPreview && (
+        <>
+          <Badge
+            variant={request.mode === "proxy" ? "sky" : "secondary"}
+            className="shrink-0 text-[9px] px-1.5 py-0"
+          >
+            {request.mode}
+          </Badge>
+
+          {hasMetrics && (
+            <span className="inline-flex shrink-0 items-center gap-2 rounded-md bg-muted/50 px-2 py-0.5">
+              {request.statusCode && <StatusCode code={request.statusCode} />}
+              {request.statusCode && request.timing?.total != null && (
+                <span className="h-3 w-px bg-border" />
+              )}
+              {request.timing?.total != null && (
+                <DurationCell duration={request.timing.total} />
+              )}
+            </span>
+          )}
+        </>
+      )}
+
+      {/* Time */}
+      <span className="inline-flex w-24 shrink-0 items-center justify-end mono-sm tabular-nums text-muted-foreground">
+        {formatTimestamp(request.startedAt, timestampFormat)}
+      </span>
+
+      {/* Pin indicator */}
+      {request.pinned && (
+        <Pin className="size-3 shrink-0 text-violet-400" />
+      )}
+    </button>
+  );
+});
+
+function buildPath(r: RequestEntry): string {
+  const parts: string[] = [];
+  if (r.source) parts.push(r.source);
+  if (r.group) parts.push(r.group);
+  parts.push(r.method);
+  return parts.join(".");
+}
+
+function StatusCode({ code }: { code: number }): React.ReactElement {
+  const color = code >= 500
+    ? "text-fuchsia-400"
+    : code >= 400
+      ? "text-rose-400"
+      : code >= 300
+        ? "text-amber-400"
+        : "text-emerald-400";
+
+  return (
+    <span className={cn("mono-sm tabular-nums", color)}>
+      {code}
+    </span>
+  );
+}
+
+function DurationCell({ duration }: { duration: number }): React.ReactElement {
+  const color = duration > 1000
+    ? "text-rose-400"
+    : duration > 300
+      ? "text-amber-400"
+      : "text-muted-foreground";
+
+  return (
+    <span className={cn("mono-sm tabular-nums", color)}>
+      {formatDuration(duration)}
+    </span>
+  );
 }

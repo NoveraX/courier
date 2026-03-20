@@ -1,84 +1,174 @@
-import { useState } from "react"
-import { Download, FileJson, Trash2 } from "lucide-react"
+import { useState } from "react";
+import {
+  MoreHorizontal,
+  Download,
+  Upload,
+  Trash2,
+  FileJson,
+  FileText,
+  FileCode,
+} from "lucide-react";
 
-import { formatSize } from "../../components/ui"
-import type { SessionSummary } from "./use-session-history"
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { formatDuration, formatRelativeTime } from "@/components/shared/formatters";
+import { useDevToolsStore } from "@/store";
 
-// ── Session Card ───────────────────────────────────────────────────────────
+import type { ExportFormat } from "@/store/types";
+import { ConfirmDialog } from "./confirm-dialog";
+
+// ── Session card ─────────────────────────────────────────────────────────────
+
+interface SessionCardProps {
+  session: {
+    id: string;
+    name: string;
+    savedAt: number;
+    duration: number;
+    stats: {
+      totalRequests: number;
+      successCount: number;
+      errorCount: number;
+      avgDuration: number;
+    };
+  };
+  onLoad: (id: string) => void;
+  onDelete: (id: string) => void;
+  onExport: (id: string, format: ExportFormat) => void;
+}
 
 export function SessionCard({
   session,
+  onLoad,
   onDelete,
   onExport,
-}: {
-  session: SessionSummary
-  onDelete: () => void
-  onExport: (id: string, format: string) => void
-}) {
-  const [showExport, setShowExport] = useState(false)
-
-  const date = new Date(session.savedAt)
-  const dateStr = date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+}: SessionCardProps): React.ReactElement {
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
-    <div className="group rounded-md border border-border-subtle bg-surface-1 px-3 py-2">
-      <div className="flex items-center justify-between">
-        <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-text-primary">{session.name}</p>
-          <p className="text-[10px] text-text-muted">{dateStr}</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-          <button
-            type="button"
-            title="Export"
-            onClick={() => setShowExport(!showExport)}
-            className="rounded p-1 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-secondary"
-          >
-            <Download size={12} />
-          </button>
-          <button
-            type="button"
-            title="Delete"
-            onClick={onDelete}
-            className="rounded p-1 text-text-muted transition-colors hover:bg-red-500/15 hover:text-red-400"
-          >
-            <Trash2 size={12} />
-          </button>
-        </div>
+    <>
+      <div className="flex items-center gap-3 rounded-lg border border-border-subtle bg-card px-3 py-2.5">
+        <SessionInfo session={session} />
+        <SessionActions
+          session={session}
+          onLoad={onLoad}
+          onExport={onExport}
+          onRequestDelete={() => setConfirmDelete(true)}
+        />
       </div>
 
-      {/* Stats row */}
-      <div className="mt-1 flex gap-3 text-[10px] text-text-muted">
-        <span>{session.stats.totalRequests} req</span>
-        <span className="text-emerald-400">{session.stats.successCount} ok</span>
-        {session.stats.errorCount > 0 && (
-          <span className="text-red-400">{session.stats.errorCount} err</span>
-        )}
-        <span>{Math.round(session.stats.avgDuration)}ms avg</span>
-        <span>{formatSize(session.stats.totalSize)}</span>
-      </div>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Delete session"
+        description={`Are you sure you want to delete "${session.name}"? This action cannot be undone.`}
+        onConfirm={() => onDelete(session.id)}
+      />
+    </>
+  );
+}
 
-      {/* Export dropdown */}
-      {showExport && (
-        <div className="mt-2 flex gap-2 border-t border-border-subtle pt-2">
-          {(["har", "json", "postman"] as const).map((fmt) => (
-            <button
-              key={fmt}
-              type="button"
-              onClick={() => onExport(session.id, fmt)}
-              className="flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-[10px] text-text-secondary transition-colors hover:bg-surface-2"
-            >
-              <FileJson size={10} />
-              {fmt === "har" ? "HAR" : fmt === "json" ? "JSON" : "Postman"}
-            </button>
-          ))}
-        </div>
-      )}
+// ── Info block ────────────────────────────────────────────────────────────────
+
+function SessionInfo({
+  session,
+}: {
+  session: SessionCardProps["session"];
+}): React.ReactElement {
+  useDevToolsStore((s) => s.relativeTick);
+  return (
+    <div className="min-w-0 flex-1">
+      <p className="text-body-sm font-medium text-foreground truncate">
+        {session.name}
+      </p>
+      <div className="mt-0.5 flex items-center gap-2 text-body-xs text-muted-foreground">
+        <span>{formatRelativeTime(session.savedAt)}</span>
+        <span>·</span>
+        <span>{session.stats.totalRequests} requests</span>
+        <span>·</span>
+        <span>{formatDuration(session.duration)}</span>
+      </div>
     </div>
-  )
+  );
+}
+
+// ── Actions dropdown ─────────────────────────────────────────────────────────
+
+function SessionActions({
+  session,
+  onLoad,
+  onExport,
+  onRequestDelete,
+}: {
+  session: SessionCardProps["session"];
+  onLoad: (id: string) => void;
+  onExport: (id: string, format: ExportFormat) => void;
+  onRequestDelete: () => void;
+}): React.ReactElement {
+  const defaultFormat = useDevToolsStore((s) => s.settings.defaultExportFormat);
+
+  return (
+    <div className="flex shrink-0 items-center gap-1.5">
+      {session.stats.errorCount > 0 && (
+        <Badge variant="destructive" className="text-[10px]">
+          {session.stats.errorCount} errors
+        </Badge>
+      )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label="Session options" className="size-7">
+            <MoreHorizontal className="size-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => onLoad(session.id)}>
+            <Upload className="mr-2 size-3.5" />
+            Load session
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onExport(session.id, defaultFormat)}>
+            <Download className="mr-2 size-3.5" />
+            Export as {defaultFormat.toUpperCase()}
+          </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Download className="mr-2 size-3.5" />
+              Export as...
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem onClick={() => onExport(session.id, "har")}>
+                <FileText className="mr-2 size-3.5" />
+                HAR
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onExport(session.id, "json")}>
+                <FileJson className="mr-2 size-3.5" />
+                JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onExport(session.id, "postman")}>
+                <FileCode className="mr-2 size-3.5" />
+                Postman
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-destructive"
+            onClick={onRequestDelete}
+          >
+            <Trash2 className="mr-2 size-3.5" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 }

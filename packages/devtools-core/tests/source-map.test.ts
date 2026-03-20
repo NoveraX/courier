@@ -38,6 +38,7 @@ describe("extractSourceMap", () => {
                 type: undefined,
                 hasVariablesSchema: false,
                 hasResponseSchema: false,
+                path: ":id",
               },
             },
           },
@@ -80,6 +81,7 @@ describe("extractSourceMap", () => {
       type: "mutation",
       hasVariablesSchema: true,
       hasResponseSchema: true,
+      variablesStub: { name: "" },
     });
   });
 
@@ -142,6 +144,7 @@ describe("extractSourceMap", () => {
       type: "query",
       hasVariablesSchema: false,
       hasResponseSchema: false,
+      path: "health",
     });
   });
 

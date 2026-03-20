@@ -2,14 +2,19 @@ import type { Sources } from "../define/types";
 import { devtoolsHooks, generateRequestId } from "../devtools";
 import type { Context } from "../http-client/types";
 import { composeMiddleware } from "../middleware/index";
-import type { MiddlewareContext, MiddlewareResponse } from "../middleware/types";
-import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../validation";
+import {
+  attachFetchHook,
+  emitRequestEnd,
+  emitRequestStart,
+  injectTimingHeaders,
+  type TimingState,
+} from "./execute-devtools";
 import { handleExecuteError } from "./execute-error";
-import { createHttpClient, getEndpoint } from "./execute-helpers";
+import { createHttpClient } from "./execute-helpers";
+import { executeInner } from "./execute-inner";
+import { applyCacheHeaders, buildMiddlewareContext, resolveEndpoint } from "./execute-resolve";
 import { buildErrorResponse, buildResponse } from "./execute-response";
-import { validateResponse, validateVariables } from "./execute-validation";
-import { estimateResponseSize, headersToObject, isHeaders } from "./helpers";
-import { mergeHeaders } from "./merge-headers";
+import { validateVariables } from "./execute-validation";
 import { parseRequestPayload, type RequestPayloadInput } from "./request-payload";
 
 export async function executeRequest(
@@ -31,55 +36,36 @@ export async function executeRequest(
   const dt = devtoolsHooks;
   const hasDevtools = dt.onRequestStart !== undefined;
   const requestId = hasDevtools ? generateRequestId() : "";
-  const t0 = hasDevtools ? performance.now() : 0;
-  let tVarValidation = 0;
-  let tRespValidation = 0;
-  let tFetch = 0;
+  const timing: TimingState = {
+    t0: hasDevtools ? performance.now() : 0,
+    tVarValidation: 0,
+    tRespValidation: 0,
+    tFetch: 0,
+  };
+  const dCtx = { hasDevtools, requestId, dt };
 
   const dataSource =
     typeof source === "string" && Object.hasOwn(sources, source) ? sources[source] : undefined;
 
   if (!dataSource) return buildErrorResponse(context, 400, `[${String(source)}]: source not found`);
-
   if (variables && typeof variables !== "object") {
     return buildErrorResponse(context, 400, "[variables] must be an object");
   }
 
-  const endpointGroup =
-    typeof group === "string" && dataSource.options && "groups" in dataSource.options
-      ? dataSource?.options?.groups?.[group]
-      : undefined;
-
-  const endpoint =
-    typeof method === "string"
-      ? (endpointGroup && getEndpoint(endpointGroup, method)) || getEndpoint(dataSource, method)
-      : undefined;
+  const { endpoint, endpointGroup, schema } = resolveEndpoint(dataSource, group, method);
 
   if (typeof endpoint !== "function") {
     const methodPath = group ? `[${group}][${method}]` : `[${method}]`;
     return buildErrorResponse(context, 400, `[${String(source)}][${methodPath}]: method not found`);
   }
 
-  const schema = (endpoint as unknown as Record<symbol, SchemaMetadata | undefined>)[
-    ENDPOINT_SCHEMA
-  ];
-
   if (context?.proxyMethod === "GET" && schema?.type !== "query") {
     return buildErrorResponse(context, 405, "This endpoint does not support GET requests");
   }
 
   const instance = createHttpClient(dataSource.options, context);
+  if (hasDevtools) attachFetchHook(instance, dCtx);
 
-  if (hasDevtools) {
-    instance.onBeforeFetch = (httpMethod, fullUrl) => {
-      dt.onHttpFetchStart?.({
-        requestId,
-        url: fullUrl,
-        method: httpMethod === "del" ? "DELETE" : httpMethod.toUpperCase(),
-        timestamp: Date.now(),
-      });
-    };
-  }
   const {
     rawData = false,
     forwardVariables = true,
@@ -87,100 +73,57 @@ export async function executeRequest(
     stream = false,
     ...baseOptions
   } = options ?? {};
-  const { req: nextRequest, headers: nextHeaders } = context || {};
 
-  const mergedNextHeaders = {
-    ...headersToObject(nextRequest?.headers),
-    ...headersToObject(nextHeaders),
-  };
-  const newHeaders = mergeHeaders(
-    baseHeaders,
-    mergedNextHeaders,
-    dataSource.options?.allowedHeaders,
-  );
-
-  const middlewareCtx: MiddlewareContext = {
-    source: String(source),
-    group: group ? String(group) : undefined,
-    method: String(method),
+  const middlewareCtx = buildMiddlewareContext(
+    source,
+    group,
+    method,
     variables,
-    headers: newHeaders,
-    _requestId: requestId || undefined,
-  };
-
+    baseHeaders,
+    context,
+    dataSource,
+    requestId,
+  );
   const mode = context?.mode ?? (context?.proxyMethod ? "proxy" : "direct");
-  const validationCtx = { hasDevtools, requestId, dt };
 
-  dt.onRequestStart?.({
-    id: requestId,
-    source: String(source),
-    group: group ? String(group) : undefined,
-    method: String(method),
+  emitRequestStart(
+    dCtx,
+    source,
+    group,
+    method,
     variables,
     mode,
-    middlewareCount: dataSource.options?.middleware?.length ?? 0,
-    hasValidation: { variables: !!schema?.variables, response: !!schema?.response },
-    timestamp: Date.now(),
-  });
+    dataSource.options?.middleware?.length ?? 0,
+    schema,
+  );
 
   try {
     if (schema?.variables) {
-      const result = await validateVariables(
-        schema.variables,
-        middlewareCtx.variables,
-        validationCtx,
-      );
+      const result = await validateVariables(schema.variables, middlewareCtx.variables, dCtx);
       middlewareCtx.variables = result.validated;
-      tVarValidation = result.duration;
+      timing.tVarValidation = result.duration;
     }
 
-    const execute = async (): Promise<MiddlewareResponse> => {
-      const vars = middlewareCtx.variables as FormData | Record<string, unknown> | undefined;
-      const ft0 = hasDevtools ? performance.now() : 0;
-
-      let response: Awaited<ReturnType<typeof endpoint>>;
-      try {
-        response = await endpoint(
-          instance.createMethods(
-            {
-              ...(forwardVariables ? { variables: vars } : {}),
-              ...baseOptions,
-              headers: middlewareCtx.headers,
-              stream,
-            },
-            endpointGroup?.options,
-          ),
-          vars,
-        );
-      } catch (fetchError) {
-        dt.onHttpFetchError?.({
-          requestId,
-          message: fetchError instanceof Error ? fetchError.message : String(fetchError),
-          timestamp: Date.now(),
-        });
-        throw fetchError;
-      }
-
-      tFetch = hasDevtools ? performance.now() - ft0 : 0;
-
-      dt.onHttpFetchEnd?.({
+    const execute = async () => {
+      const innerResult = await executeInner({
+        endpoint: endpoint as (
+          ...args: unknown[]
+        ) => Promise<{ status?: number; data: unknown; headers?: unknown }>,
+        instance,
+        endpointGroupOptions: endpointGroup?.options,
+        middlewareHeaders: middlewareCtx.headers,
+        variables: middlewareCtx.variables as FormData | Record<string, unknown> | undefined,
+        forwardVariables,
+        baseOptions,
+        stream,
+        schema,
+        hasDevtools,
         requestId,
-        status: response?.status || 200,
-        duration: tFetch,
-        timestamp: Date.now(),
+        dt,
       });
-
-      const headers = isHeaders(response.headers) ? response.headers : new Headers();
-      let data = response.data;
-      const status = response?.status || 200;
-
-      if (schema?.response) {
-        const result = await validateResponse(schema.response, data, validationCtx);
-        data = result.validated;
-        tRespValidation = result.duration;
-      }
-
-      return { status, data, headers };
+      timing.tFetch = innerResult.tFetch;
+      timing.tRespValidation = innerResult.tRespValidation;
+      return innerResult.response;
     };
 
     const middlewares = dataSource.options?.middleware;
@@ -190,40 +133,9 @@ export async function executeRequest(
       : await execute();
     const tMiddlewareTotal = hasDevtools && middlewares?.length ? performance.now() - mt0 : 0;
 
-    const tTotal = hasDevtools ? performance.now() - t0 : 0;
-
-    // Compute non-overlapping middleware self-time (exclude fetch + response validation)
-    const tMiddleware =
-      tMiddlewareTotal > 0 ? Math.max(0, tMiddlewareTotal - tFetch - tRespValidation) : 0;
-    const tValidation = tVarValidation + tRespValidation;
-
-    const proxyReceiveAt = context?.proxyReceiveAt;
-    const proxyTiming =
-      proxyReceiveAt != null && hasDevtools
-        ? {
-            clientToProxy: 0,
-            proxyToBackend: tTotal - tFetch,
-            backendToProxy: tFetch,
-            proxyToClient: 0,
-          }
-        : undefined;
-
-    dt.onRequestEnd?.({
-      id: requestId,
-      status: result.status,
-      data: result.data,
-      size: estimateResponseSize(result.data, result.headers),
-      headers: headersToObject(result.headers) ?? {},
-      requestHeaders: headersToObject(middlewareCtx.headers) ?? {},
-      timing: {
-        total: tTotal,
-        middleware: tMiddleware,
-        fetch: tFetch,
-        validation: tValidation,
-      },
-      proxyTiming,
-      timestamp: Date.now(),
-    });
+    if (hasDevtools) {
+      emitRequestEnd(dCtx, result, middlewareCtx.headers, timing, tMiddlewareTotal, context);
+    }
 
     const response = buildResponse(context, {
       headers: result.headers,
@@ -233,22 +145,11 @@ export async function executeRequest(
       stream,
     });
 
-    // Inject timing headers for browser-side network measurement
     if (context?.proxyMethod && response instanceof Response && hasDevtools) {
-      response.headers.set("Server-Timing", `nexus;dur=${tTotal.toFixed(1)}`);
-      response.headers.set("X-Nexus-Rid", requestId);
+      injectTimingHeaders(response, requestId, timing.t0);
     }
-
     if (context?.proxyMethod === "GET" && schema?.cache && response instanceof Response) {
-      if (schema.cache.revalidate !== undefined) {
-        response.headers.set(
-          "Cache-Control",
-          `s-maxage=${schema.cache.revalidate}, stale-while-revalidate`,
-        );
-      }
-      if (schema.cache.tags?.length) {
-        response.headers.set("x-nexus-tags", schema.cache.tags.join(","));
-      }
+      applyCacheHeaders(response, schema);
     }
 
     return response;

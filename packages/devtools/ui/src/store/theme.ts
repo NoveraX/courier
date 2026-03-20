@@ -2,7 +2,7 @@ import type { Theme } from "./types"
 
 let mediaQueryCleanup: (() => void) | undefined
 
-export function applyTheme(theme: Theme) {
+export function applyTheme(theme: Theme): void {
   const root = document.documentElement
 
   // Clean up previous system theme listener

@@ -1,77 +1,163 @@
-import type { SourceMap } from "../../store"
-import type { FlatEndpoint } from "../explorer/helpers"
-import type { AuditItem } from "./types"
-import {
-  P95_THRESHOLD_MS,
-  ERROR_RATE_THRESHOLD,
-  MIN_SAMPLES_FOR_P95,
-  LARGE_PAYLOAD_BYTES,
-} from "./constants"
+import type { RequestEntry } from "../../store/types-request";
+import type { Catalog } from "../../store/types-ui";
+import { P95_SLOW_MS } from "./constants";
+import type { AuditEndpoint, AuditItem, EndpointStats } from "./types";
 
+function formatEp(s: EndpointStats): AuditEndpoint {
+  return {
+    key: s.key,
+    label: s.group ? `${s.source}.${s.group}.${s.method}` : `${s.source}.${s.method}`,
+    requestIds: s.requestIds,
+  };
+}
+
+function slowEndpoints(stats: Map<string, EndpointStats>): AuditItem[] {
+  const matched = [...stats.values()].filter(
+    (s) => s.p95 > P95_SLOW_MS && s.p95 <= 5000 && s.count >= 1,
+  );
+  if (matched.length === 0) return [];
+  return [{
+    id: "warn-slow",
+    severity: "warning",
+    category: "performance",
+    title: "Slow endpoints",
+    description: "P95 response time exceeds 1 second.",
+    suggestion: "Consider caching, pagination, or backend optimization.",
+    endpoints: matched.map((s) => ({
+      ...formatEp(s),
+      detail: `P95 = ${s.p95.toFixed(0)}ms`,
+    })),
+  }];
+}
+
+function inconsistentSizes(stats: Map<string, EndpointStats>): AuditItem[] {
+  const matched: { s: EndpointStats; cv: number }[] = [];
+  for (const [, s] of stats) {
+    if (s.sizes.length < 3 || s.avgSize === 0) continue;
+    const variance =
+      s.sizes.reduce((sum, v) => sum + (v - s.avgSize) ** 2, 0) / s.sizes.length;
+    const cv = Math.sqrt(variance) / s.avgSize;
+    if (cv > 1.0) matched.push({ s, cv });
+  }
+  if (matched.length === 0) return [];
+  return [{
+    id: "warn-inconsistent-size",
+    severity: "warning",
+    category: "reliability",
+    title: "Inconsistent response sizes",
+    description: "Response size varies wildly across calls.",
+    suggestion: "Check if the endpoint returns different shapes under different conditions.",
+    endpoints: matched.map(({ s, cv }) => ({
+      ...formatEp(s),
+      detail: `CV = ${cv.toFixed(1)}`,
+    })),
+  }];
+}
+
+function unusedProxyMode(stats: Map<string, EndpointStats>): AuditItem[] {
+  const allDirect = [...stats.values()].every(
+    (s) => s.modes.size === 1 && s.modes.has("direct"),
+  );
+  if (!allDirect || stats.size === 0) return [];
+  return [{
+    id: "warn-unused-proxy",
+    severity: "warning",
+    category: "best-practices",
+    title: "All requests use direct mode",
+    description: "No requests use proxy mode — secrets may be exposed client-side.",
+    suggestion: "Use createProxyCaller() for endpoints that require server-side secrets.",
+    codeSuggestion: `const client = createProxyCaller<typeof api>("api", {\n  proxyUrl: "/api/request",\n});`,
+  }];
+}
+
+const MIDDLEWARE_OVERHEAD_THRESHOLD = 0.3;
+
+function middlewareOverhead(stats: Map<string, EndpointStats>): AuditItem[] {
+  const matched = [...stats.values()].filter(
+    (s) => s.middlewareOverhead > MIDDLEWARE_OVERHEAD_THRESHOLD && s.count >= 1,
+  );
+  if (matched.length === 0) return [];
+  return [{
+    id: "warn-middleware-overhead",
+    severity: "warning",
+    category: "performance",
+    title: "High middleware overhead",
+    description: "Middleware takes more than 30% of total request time.",
+    suggestion: "Review middleware chain — reduce, reorder, or cache expensive middleware.",
+    endpoints: matched.map((s) => ({
+      ...formatEp(s),
+      detail: `${(s.middlewareOverhead * 100).toFixed(0)}% overhead`,
+    })),
+  }];
+}
+
+function httpMethodMismatch(stats: Map<string, EndpointStats>): AuditItem[] {
+  const matched = [...stats.values()].filter((s) => {
+    if (!s.type || s.httpMethods.size === 0) return false;
+    if (s.type === "query" && !s.httpMethods.has("GET")) return true;
+    if (s.type === "mutation" && s.httpMethods.has("GET")) return true;
+    return false;
+  });
+  if (matched.length === 0) return [];
+  return [{
+    id: "warn-method-mismatch",
+    severity: "warning",
+    category: "best-practices",
+    title: "HTTP method mismatch",
+    description: "Endpoint type doesn't match HTTP method (e.g. query using POST, mutation using GET).",
+    suggestion: "Use GET for queries and POST/PUT/PATCH/DELETE for mutations.",
+    endpoints: matched.map((s) => ({
+      ...formatEp(s),
+      detail: `type: ${s.type}, methods: ${[...s.httpMethods].join("/")}`,
+    })),
+  }];
+}
+
+function repeatedValidationFailures(requests: RequestEntry[]): AuditItem[] {
+  const failMap = new Map<string, { count: number; message: string; ids: string[] }>();
+
+  for (const r of requests) {
+    if (r.status !== "validation_error" || !r.error?.validationIssues) continue;
+    for (const issue of r.error.validationIssues) {
+      const key = `${r.source}:${r.group ?? ""}:${r.method}:${issue.message}`;
+      const entry = failMap.get(key) ?? { count: 0, message: issue.message, ids: [] };
+      entry.count++;
+      entry.ids.push(r.id);
+      failMap.set(key, entry);
+    }
+  }
+
+  const repeated = [...failMap.values()].filter((e) => e.count >= 2);
+  if (repeated.length === 0) return [];
+
+  return [{
+    id: "warn-repeated-validation",
+    severity: "warning",
+    category: "reliability",
+    title: "Repeated validation failures",
+    description: "Same validation error occurs repeatedly — likely a bug in the API contract.",
+    suggestion: "Check if the response schema matches the actual API response shape.",
+    endpoints: repeated.map((e) => ({
+      key: e.message,
+      label: e.message,
+      detail: `${e.count}x`,
+      requestIds: e.ids,
+    })),
+  }];
+}
+
+/** Collect all warning-severity audit items. */
 export function collectWarnings(
-  sourceMap: SourceMap,
-  endpoints: FlatEndpoint[],
-  epDurations: Map<string, number[]>,
-  epErrors: Map<string, { total: number; transportErrors: number; validationErrors: number }>,
-  epSizes: Map<string, number[]>,
-  nextId: () => string
+  stats: Map<string, EndpointStats>,
+  _catalog: Catalog,
+  requests: RequestEntry[],
 ): AuditItem[] {
-  const items: AuditItem[] = []
-
-  for (const ep of endpoints) {
-    if (!ep.hasResponseSchema) {
-      items.push({ id: nextId(), severity: "warning", title: "No response validation", description: `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")} has no response validation schema.`, suggestion: `Add response schema: endpoint<T>().schema({ response: z.object({...}) })`, endpoint: `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")}`, category: "validation" })
-    }
-  }
-
-  for (const ep of endpoints) {
-    if (ep.type === "mutation" && !ep.hasVariablesSchema) {
-      items.push({ id: nextId(), severity: "warning", title: "Mutation without input validation", description: `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")} is a mutation without variables validation.`, suggestion: `Add variables schema: endpoint<R, V>().schema({ variables: z.object({...}) })`, endpoint: `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")}`, category: "validation" })
-    }
-  }
-
-  for (const [sourceName, source] of Object.entries(sourceMap)) {
-    for (const [groupName, group] of Object.entries(source.groups ?? {})) {
-      const allEps = Object.values(group.endpoints ?? {})
-      if (!allEps.some((ep) => (ep.middleware?.length ?? 0) > 0) && allEps.length > 0) {
-        items.push({ id: nextId(), severity: "warning", title: "Group without middleware", description: `${sourceName}.${groupName} has no middleware on any endpoint.`, suggestion: "Add at least logging middleware to track requests and auth middleware for protected routes.", endpoint: `${sourceName}.${groupName}`, category: "middleware" })
-      }
-    }
-  }
-
-  for (const ep of endpoints) {
-    const seen = new Set<string>()
-    const duplicates: string[] = []
-    for (const mw of ep.middleware) { if (seen.has(mw)) duplicates.push(mw); seen.add(mw) }
-    if (duplicates.length > 0) {
-      items.push({ id: nextId(), severity: "warning", title: "Duplicate middleware", description: `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")} has duplicate middleware: ${duplicates.join(", ")}.`, suggestion: "Remove duplicate middleware entries from the chain.", endpoint: `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")}`, category: "middleware" })
-    }
-  }
-
-  for (const [epKey, durations] of epDurations) {
-    if (durations.length >= MIN_SAMPLES_FOR_P95) {
-      const sorted = [...durations].sort((a, b) => a - b)
-      const p95 = sorted[Math.floor(sorted.length * 0.95)]!
-      if (p95 > P95_THRESHOLD_MS) {
-        items.push({ id: nextId(), severity: "warning", title: "Slow endpoint", description: `${epKey} has P95 response time of ${Math.round(p95)}ms (${durations.length} samples).`, suggestion: "Add cacheMiddleware({ ttl: 60 }) for GET endpoints, or optimize the backend query.", endpoint: epKey, category: "performance" })
-      }
-    }
-  }
-
-  for (const [epKey, stats] of epErrors) {
-    if (stats.total >= MIN_SAMPLES_FOR_P95 && stats.transportErrors / stats.total > ERROR_RATE_THRESHOLD) {
-      items.push({ id: nextId(), severity: "warning", title: "High error rate", description: `${epKey} has ${Math.round((stats.transportErrors / stats.total) * 100)}% error rate (${stats.transportErrors}/${stats.total} requests).`, suggestion: "Add retryMiddleware for transient failures or investigate the root cause.", endpoint: epKey, category: "reliability" })
-    }
-  }
-
-  for (const [epKey, sizes] of epSizes) {
-    if (sizes.length > 0) {
-      const avg = sizes.reduce((a, b) => a + b, 0) / sizes.length
-      if (avg > LARGE_PAYLOAD_BYTES) {
-        items.push({ id: nextId(), severity: "warning", title: "Large response payload", description: `${epKey} has average response size of ${(avg / 1_048_576).toFixed(1)}MB.`, suggestion: "Consider pagination, field selection, or compression to reduce payload size.", endpoint: epKey, category: "performance" })
-      }
-    }
-  }
-
-  return items
+  return [
+    ...slowEndpoints(stats),
+    ...inconsistentSizes(stats),
+    ...unusedProxyMode(stats),
+    ...middlewareOverhead(stats),
+    ...httpMethodMismatch(stats),
+    ...repeatedValidationFailures(requests),
+  ];
 }

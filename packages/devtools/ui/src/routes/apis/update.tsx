@@ -1,24 +1,13 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useApisContext } from "../../views/apis/apis-context";
-import { UpdateView } from "../../views/apis/update-view";
+import { createFileRoute } from "@tanstack/react-router";
 
-function ApisUpdateRoute() {
-  const { updateCtx, setUpdateCtx } = useApisContext();
-  const navigate = useNavigate();
-
-  if (!updateCtx) {
-    void navigate({ to: "/apis/registry" });
-    return null;
-  }
-
-  function handleBack() {
-    setUpdateCtx(null);
-    void navigate({ to: "/apis/registry" });
-  }
-
-  return <UpdateView ctx={updateCtx} onBack={handleBack} />;
+function UpdatePage(): React.ReactNode {
+  return (
+    <div className="flex flex-1 items-center justify-center text-body-sm text-muted-foreground">
+      API Update
+    </div>
+  );
 }
 
 export const Route = createFileRoute("/apis/update")({
-  component: ApisUpdateRoute,
+  component: UpdatePage,
 });

@@ -30,10 +30,10 @@ import type { UntypedCallerFn } from "./types";
  * await client.getFinances.with({ timeout: 5000 })()
  * ```
  */
-export function createProxyCaller<T>(
+export function createProxyCaller<TApi>(
   source: string,
   defaults?: ProxyCallerDefaults,
-): InferClient<T>;
+): InferClient<TApi>;
 
 export function createProxyCaller(source: string, defaults: ProxyCallerDefaults = {}): unknown {
   const fn = createProxyCallerFn(defaults) as unknown as UntypedCallerFn;

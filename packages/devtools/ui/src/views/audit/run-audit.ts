@@ -1,51 +1,91 @@
-import type { SourceMap, RequestEntry } from "../../store"
-import type { FlatEndpoint } from "../explorer/helpers"
-import type { AuditSeverity, AuditItem } from "./types"
+import type { RequestEntry } from "../../store/types-request";
+import type { Catalog } from "../../store/types-ui";
+import { computeEndpointStats } from "./compute-stats";
+import { MAX_SCORE, SEVERITY_CONFIG } from "./constants";
+import { collectDeepPerformance } from "./rules-deep";
+import { collectNexusRules } from "./rules-nexus";
+import { collectErrors } from "./rules-errors";
+import { collectHints, collectPasses } from "./rules-hints";
+import { detectDuplicates, detectNPlusOne, detectWaterfall } from "./rules-patterns";
+import { collectSecurityRules } from "./rules-security";
+import { collectWarnings } from "./rules-warnings";
+import type { AuditItem, AuditResult, AuditSeverity } from "./types";
 
-import { collectErrors } from "./rules-errors"
-import { collectWarnings } from "./rules-warnings"
-import { collectHints, collectPasses } from "./rules-hints"
+const SEVERITY_ORDER: AuditSeverity[] = ["error", "warning", "hint", "pass"];
 
-export function runAudit(
-  sourceMap: SourceMap,
-  endpoints: FlatEndpoint[],
-  requests: RequestEntry[]
-): AuditItem[] {
-  let id = 0
-  const nextId = () => `audit-${++id}`
+/** Cap penalty per severity so one category can't zero the score. */
+const MAX_PENALTY: Record<AuditSeverity, number> = {
+  error: 60,
+  warning: 30,
+  hint: 10,
+  pass: Infinity,
+};
 
-  // Pre-compute request analytics
-  const epDurations = new Map<string, number[]>()
-  const epErrors = new Map<string, { total: number; transportErrors: number; validationErrors: number }>()
-  const epSizes = new Map<string, number[]>()
-
-  for (const req of requests) {
-    const key = [req.source, req.group, req.method].filter(Boolean).join(".")
-    if (req.timing && req.status === "success") {
-      const arr = epDurations.get(key) ?? []
-      arr.push(req.timing.total)
-      epDurations.set(key, arr)
-    }
-    const stats = epErrors.get(key) ?? { total: 0, transportErrors: 0, validationErrors: 0 }
-    stats.total++
-    if (req.status === "error") stats.transportErrors++
-    if (req.status === "validation_error") stats.validationErrors++
-    epErrors.set(key, stats)
-    if (req.size != null && req.status === "success") {
-      const arr = epSizes.get(key) ?? []
-      arr.push(req.size)
-      epSizes.set(key, arr)
-    }
+function computeScore(items: AuditItem[]): number {
+  const penalties: Record<AuditSeverity, number> = { error: 0, warning: 0, hint: 0, pass: 0 };
+  for (const item of items) {
+    const sev = item.severity;
+    const w = Math.abs(SEVERITY_CONFIG[sev].weight);
+    penalties[sev] = Math.min(penalties[sev] + w, MAX_PENALTY[sev]);
   }
+  const totalPenalty = penalties.error + penalties.warning + penalties.hint;
+  const bonus = penalties.pass;
+  return Math.max(0, Math.min(MAX_SCORE, MAX_SCORE - totalPenalty + bonus));
+}
 
-  const items: AuditItem[] = [
-    ...collectErrors(sourceMap, endpoints, nextId),
-    ...collectWarnings(sourceMap, endpoints, epDurations, epErrors, epSizes, nextId),
-    ...collectHints(sourceMap, endpoints, epDurations, epErrors, nextId),
-    ...collectPasses(endpoints, requests, nextId),
-  ]
+function countBreakdown(items: AuditItem[]): Record<AuditSeverity, number> {
+  const counts = { error: 0, warning: 0, hint: 0, pass: 0 };
+  for (const item of items) counts[item.severity]++;
+  return counts;
+}
 
-  const order: Record<AuditSeverity, number> = { error: 0, warning: 1, hint: 2, pass: 3 }
-  items.sort((a, b) => order[a.severity] - order[b.severity])
-  return items
+function deduplicateItems(items: AuditItem[]): AuditItem[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
+function sortBySeverity(items: AuditItem[]): AuditItem[] {
+  return [...items].sort(
+    (a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity),
+  );
+}
+
+/** Run the full audit engine against requests and catalog. */
+export function runAudit(
+  requests: RequestEntry[],
+  catalog: Catalog,
+): AuditResult {
+  const completed = requests.filter((r) => r.status !== "pending");
+  const stats = computeEndpointStats(completed);
+
+  const raw = [
+    // Stats-based rules
+    ...collectErrors(stats, catalog, completed),
+    ...collectWarnings(stats, catalog, completed),
+    ...collectHints(stats, catalog),
+    ...collectPasses(stats),
+    // Temporal pattern rules
+    ...detectNPlusOne(completed),
+    ...detectDuplicates(completed),
+    ...detectWaterfall(completed),
+    // Security rules
+    ...collectSecurityRules(completed, catalog),
+    // Deep performance rules
+    ...collectDeepPerformance(completed),
+    // Nexus-specific rules
+    ...collectNexusRules(stats, catalog),
+  ];
+
+  const items = sortBySeverity(deduplicateItems(raw));
+
+  return {
+    items,
+    score: computeScore(items),
+    breakdown: countBreakdown(items),
+    timestamp: Date.now(),
+  };
 }

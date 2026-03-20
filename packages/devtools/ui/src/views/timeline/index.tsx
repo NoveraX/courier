@@ -1,132 +1,78 @@
-import { useEffect, useState } from "react"
-import { Activity, Filter } from "lucide-react"
+import { useMemo, useCallback } from "react";
+import { Activity } from "lucide-react";
 
-import { useDevToolsStore, EMPTY_FILTERS } from "../../store"
-import { Toolbar, FilterBar } from "./toolbar"
-import { VirtualRequestList } from "./request-list"
-import { DetailPanel } from "./detail-panel"
-import { DragHandle } from "./drag-handle"
-import { hasActiveFilters, filterRequests } from "./filters"
-import { useTimelineSearch } from "./use-timeline-search"
+import { EmptyState } from "@/components/shared/empty-state";
+import { useRequestDetail } from "@/hooks/use-request-detail";
+import { useDevToolsStore } from "@/store";
 
-// ── Timeline View ────────────────────────────────────────────────────────────
+import { filterRequests } from "./filters";
+import { useTimelineSearch } from "./use-timeline-search";
+import { Toolbar } from "./toolbar";
+import { TimelineFilterBar } from "./filter-bar";
+import { RequestList } from "./request-list";
 
-export function TimelineView() {
+export function TimelineView(): React.ReactElement {
+  const requests = useDevToolsStore((s) => s.requests);
+  const { selectRequest } = useRequestDetail();
   const {
-    requests, paused, preserveLog, connected, settings,
-    togglePaused, togglePreserveLog, clearRequests, togglePin,
-  } = useDevToolsStore()
+    filters, showFilters,
+    setFilter, resetFilters, toggleFilters,
+  } = useTimelineSearch();
 
-  const { filters, setFilters, selectedRequestId, selectRequest, showFilters, setShowFilters } =
-    useTimelineSearch()
+  const filtered = useMemo(() => filterRequests(requests, filters), [requests, filters]);
+  const pinned = useMemo(() => filtered.filter((r) => r.pinned), [filtered]);
+  const unpinned = useMemo(() => filtered.filter((r) => !r.pinned), [filtered]);
+  const pinnedCount = useMemo(() => requests.filter((r) => r.pinned).length, [requests]);
 
-  const selectedRequest = requests.find((r) => r.id === selectedRequestId)
-  const filteredRequests = hasActiveFilters(filters)
-    ? filterRequests(requests, filters)
-    : requests
+  const handleSearchChange = useCallback(
+    (value: string) => setFilter("search", value),
+    [setFilter],
+  );
 
-  // Escape to close detail panel
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && selectedRequestId) {
-        selectRequest(null)
-      }
-    }
-    document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [selectedRequestId, selectRequest])
+  const handleSelect = useCallback(
+    (id: string | null) => { if (id) selectRequest(id); },
+    [selectRequest],
+  );
 
-  const [detailWidth, setDetailWidth] = useState(480)
-
-  return (
-    <div className="flex flex-1 overflow-hidden">
-      {/* Request list */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Toolbar
-          filters={filters}
-          setFilters={setFilters}
-          showFilters={showFilters}
-          setShowFilters={setShowFilters}
-          paused={paused}
-          onTogglePause={togglePaused}
-          preserveLog={preserveLog}
-          onTogglePreserveLog={togglePreserveLog}
-          onClear={clearRequests}
-          total={requests.length}
-          filtered={filteredRequests.length}
+  if (requests.length === 0) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-8">
+        <EmptyState
+          icon={Activity}
+          heading="Waiting for requests"
+          description="Make API calls from your app to see them here in real-time."
         />
-
-        {showFilters && (
-          <FilterBar filters={filters} setFilters={setFilters} requests={requests} />
-        )}
-
-        <div className="flex-1 overflow-hidden">
-          {filteredRequests.length === 0 ? (
-            requests.length === 0 ? (
-              <EmptyState connected={connected} />
-            ) : (
-              <NoMatchState onClear={() => setFilters(EMPTY_FILTERS)} />
-            )
-          ) : (
-            <VirtualRequestList
-              requests={filteredRequests}
-              selectedId={selectedRequestId}
-              onSelect={selectRequest}
-              onTogglePin={togglePin}
-              timestampFormat={settings.timestampFormat}
-              slowThreshold={settings.slowRequestThreshold}
-            />
-          )}
-        </div>
       </div>
+    );
+  }
 
-      {/* Detail panel with drag-to-resize */}
-      {selectedRequest && (
-        <>
-          <DragHandle onResize={setDetailWidth} />
-          <div style={{ width: detailWidth }} className="shrink-0">
-            <DetailPanel request={selectedRequest} onClose={() => selectRequest(null)} />
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-// ── Empty States ─────────────────────────────────────────────────────────────
-
-function EmptyState({ connected }: { connected: boolean }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
-      <Activity size={32} strokeWidth={1} />
-      <p className="text-sm">
-        {connected ? "Waiting for requests..." : "Connecting to server..."}
-      </p>
-      {connected && (
-        <p className="max-w-xs text-center text-xs">
-          Call{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5 text-foreground">
-            connectDevTools()
-          </code>{" "}
-          in your app to start streaming events.
-        </p>
-      )}
-    </div>
-  )
-}
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <Toolbar
+        filters={filters}
+        showFilters={showFilters}
+        onSearchChange={handleSearchChange}
+        onToggleFilters={toggleFilters}
+        totalCount={requests.length}
+        filteredCount={filtered.length}
+        pinnedCount={pinnedCount}
+      />
 
-function NoMatchState({ onClear }: { onClear: () => void }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
-      <Filter size={28} strokeWidth={1} />
-      <p className="text-sm">No requests match filters</p>
-      <button
-        type="button"
-        onClick={onClear}
-        className="text-xs text-primary hover:underline"
-      >
-        Clear filters
-      </button>
+      {showFilters && (
+        <TimelineFilterBar
+          requests={requests}
+          filters={filters}
+          onFilterChange={setFilter}
+          onReset={resetFilters}
+        />
+      )}
+
+      <RequestList
+        requests={unpinned}
+        pinnedRequests={pinned}
+        selectedId={null}
+        onSelect={handleSelect}
+      />
     </div>
-  )
+  );
 }

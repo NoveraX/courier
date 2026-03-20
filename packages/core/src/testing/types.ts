@@ -12,37 +12,38 @@ export type HistoryEntry = {
 };
 
 /** Fluent builder for configuring endpoint mocks */
-export type MockBuilder<R = unknown> = {
+export type MockBuilder<TResponse = unknown> = {
   /** Return static data on success (status 200) */
-  resolves(data: R): MockBuilder<R>;
+  resolves(data: TResponse): MockBuilder<TResponse>;
   /** Return dynamic data based on variables */
-  returns(fn: (variables?: unknown) => R | Promise<R>): MockBuilder<R>;
+  returns(fn: (variables?: unknown) => TResponse | Promise<TResponse>): MockBuilder<TResponse>;
   /** Throw HTTPError with given status and optional data */
-  rejects(status: number, data?: unknown): MockBuilder<R>;
+  rejects(status: number, data?: unknown): MockBuilder<TResponse>;
   /** Limit mock to a single invocation */
-  once(): MockBuilder<R>;
+  once(): MockBuilder<TResponse>;
   /** Limit mock to N invocations */
-  times(n: number): MockBuilder<R>;
+  times(n: number): MockBuilder<TResponse>;
   /** Add artificial delay (ms) before responding */
-  delay(ms: number): MockBuilder<R>;
+  delay(ms: number): MockBuilder<TResponse>;
 };
 
-export type ExtractEndpointResponse<M> = M extends Endpoint<infer R, any> ? R : unknown;
+export type ExtractEndpointResponse<TEndpoint> =
+  TEndpoint extends Endpoint<infer TResponse, any> ? TResponse : unknown;
 
-export type ApiGroups<T extends DefinedApi<any>> = T["options"]["groups"];
+export type ApiGroups<TApi extends DefinedApi<any>> = TApi["options"]["groups"];
 
 /** In-memory test client with mock support and request history */
-export type TestClient<T extends DefinedApi<any> = DefinedApi<any>> = {
+export type TestClient<TApi extends DefinedApi<any> = DefinedApi<any>> = {
   /** Typed client — same dot-notation API as createCaller / createProxyCaller */
-  client: TypedClient<T>;
+  client: TypedClient<TApi>;
   /** Mock a specific endpoint's response */
   mock: <
-    G extends keyof ApiGroups<T> & string,
-    M extends Exclude<keyof ApiGroups<T>[G], "options"> & string,
+    TGroup extends keyof ApiGroups<TApi> & string,
+    TMethod extends Exclude<keyof ApiGroups<TApi>[TGroup], "options"> & string,
   >(
-    group: G,
-    method: M,
-  ) => MockBuilder<ExtractEndpointResponse<ApiGroups<T>[G][M]>>;
+    group: TGroup,
+    method: TMethod,
+  ) => MockBuilder<ExtractEndpointResponse<ApiGroups<TApi>[TGroup][TMethod]>>;
   /** Array of all recorded requests */
   history: HistoryEntry[];
   /** Clear all mocks and history */

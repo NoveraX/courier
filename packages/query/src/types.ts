@@ -18,59 +18,72 @@ import type {
 // Internal type helpers
 // ---------------------------------------------------------------------------
 
-export type WithVariables<V> = [V] extends [undefined]
+export type WithVariables<TVariables> = [TVariables] extends [undefined]
   ? { variables?: undefined }
-  : {} extends V
-    ? { variables?: V }
-    : { variables: V };
+  : {} extends TVariables
+    ? { variables?: TVariables }
+    : { variables: TVariables };
 
 /** Resolve TVariables for react-query mutations: void when no args needed */
 // biome-ignore lint/suspicious/noConfusingVoidType: void is required for react-query's mutate() to accept zero arguments
-export type MutationVariables<V> = [V] extends [undefined] ? void : {} extends V ? void | V : V;
+export type MutationVariables<TVariables> = [TVariables] extends [undefined]
+  ? void
+  : {} extends TVariables
+    ? void | TVariables
+    : TVariables;
 
-export type GroupMethodKeys<G> = Exclude<keyof G, "options"> & string;
+export type GroupMethodKeys<TGroup> = Exclude<keyof TGroup, "options"> & string;
 
 // ---------------------------------------------------------------------------
 // Exported option types
 // ---------------------------------------------------------------------------
 
-export type NexusQueryOptions<R, V> = WithVariables<V> &
-  Omit<UseQueryOptions<R, HTTPError, R, QueryKey>, "queryKey" | "queryFn"> & {
+export type NexusQueryOptions<TResponse, TVariables> = WithVariables<TVariables> &
+  Omit<UseQueryOptions<TResponse, HTTPError, TResponse, QueryKey>, "queryKey" | "queryFn"> & {
     requestOptions?: CallOptions;
   };
 
-export type NexusSuspenseQueryOptions<R, V> = WithVariables<V> &
-  Omit<UseSuspenseQueryOptions<R, HTTPError, R, QueryKey>, "queryKey" | "queryFn"> & {
-    requestOptions?: CallOptions;
-  };
-
-export type NexusInfiniteQueryOptions<R, V, P> = {
-  requestOptions?: CallOptions;
-  initialPageParam: P;
-  getNextPageParam: (
-    lastPage: R,
-    allPages: R[],
-    lastPageParam: P,
-    allPageParams: P[],
-  ) => P | undefined | null;
-  getPreviousPageParam?: (
-    firstPage: R,
-    allPages: R[],
-    firstPageParam: P,
-    allPageParams: P[],
-  ) => P | undefined | null;
-} & ([V] extends [undefined]
-  ? { variables?: (pageParam: P) => V }
-  : {} extends V
-    ? { variables?: (pageParam: P) => V }
-    : { variables: (pageParam: P) => V }) &
+export type NexusSuspenseQueryOptions<TResponse, TVariables> = WithVariables<TVariables> &
   Omit<
-    UseInfiniteQueryOptions<R, HTTPError, InfiniteData<R, P>, QueryKey, P>,
+    UseSuspenseQueryOptions<TResponse, HTTPError, TResponse, QueryKey>,
+    "queryKey" | "queryFn"
+  > & {
+    requestOptions?: CallOptions;
+  };
+
+export type NexusInfiniteQueryOptions<TResponse, TVariables, TPageParam> = {
+  requestOptions?: CallOptions;
+  initialPageParam: TPageParam;
+  getNextPageParam: (
+    lastPage: TResponse,
+    allPages: TResponse[],
+    lastPageParam: TPageParam,
+    allPageParams: TPageParam[],
+  ) => TPageParam | undefined | null;
+  getPreviousPageParam?: (
+    firstPage: TResponse,
+    allPages: TResponse[],
+    firstPageParam: TPageParam,
+    allPageParams: TPageParam[],
+  ) => TPageParam | undefined | null;
+} & ([TVariables] extends [undefined]
+  ? { variables?: (pageParam: TPageParam) => TVariables }
+  : {} extends TVariables
+    ? { variables?: (pageParam: TPageParam) => TVariables }
+    : { variables: (pageParam: TPageParam) => TVariables }) &
+  Omit<
+    UseInfiniteQueryOptions<
+      TResponse,
+      HTTPError,
+      InfiniteData<TResponse, TPageParam>,
+      QueryKey,
+      TPageParam
+    >,
     "queryKey" | "queryFn" | "initialPageParam" | "getNextPageParam" | "getPreviousPageParam"
   >;
 
-export type NexusMutationOptions<R, V> = Omit<
-  UseMutationOptions<R, HTTPError, MutationVariables<V>>,
+export type NexusMutationOptions<TResponse, TVariables> = Omit<
+  UseMutationOptions<TResponse, HTTPError, MutationVariables<TVariables>>,
   "mutationFn"
 > & {
   requestOptions?: CallOptions;
@@ -78,72 +91,76 @@ export type NexusMutationOptions<R, V> = Omit<
   invalidate?: QueryKey[];
 };
 
-export type NexusPrefetchOptions<V> = [V] extends [undefined]
+export type NexusPrefetchOptions<TVariables> = [TVariables] extends [undefined]
   ? { variables?: undefined; requestOptions?: CallOptions; staleTime?: number }
-  : {} extends V
-    ? { variables?: V; requestOptions?: CallOptions; staleTime?: number }
-    : { variables: V; requestOptions?: CallOptions; staleTime?: number };
+  : {} extends TVariables
+    ? { variables?: TVariables; requestOptions?: CallOptions; staleTime?: number }
+    : { variables: TVariables; requestOptions?: CallOptions; staleTime?: number };
 
 // ---------------------------------------------------------------------------
 // QueryGroupClient & QueryCallerClient types
 // ---------------------------------------------------------------------------
 
 /** Hooks and utilities exposed per API group */
-export type QueryGroupClient<G> = {
-  useQuery: <M extends GroupMethodKeys<G>>(
-    method: M,
-    ...args: G[M] extends Endpoint<infer R, infer V>
-      ? [V] extends [undefined]
-        ? [options?: NexusQueryOptions<R, V>]
-        : {} extends V
-          ? [options?: NexusQueryOptions<R, V>]
-          : [options: NexusQueryOptions<R, V>]
+export type QueryGroupClient<TGroup> = {
+  useQuery: <TMethod extends GroupMethodKeys<TGroup>>(
+    method: TMethod,
+    ...args: TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
+      ? [TVariables] extends [undefined]
+        ? [options?: NexusQueryOptions<TResponse, TVariables>]
+        : {} extends TVariables
+          ? [options?: NexusQueryOptions<TResponse, TVariables>]
+          : [options: NexusQueryOptions<TResponse, TVariables>]
       : [options?: Record<string, unknown>]
-  ) => G[M] extends Endpoint<infer R, any>
-    ? UseQueryResult<R, HTTPError>
+  ) => TGroup[TMethod] extends Endpoint<infer TResponse, any>
+    ? UseQueryResult<TResponse, HTTPError>
     : UseQueryResult<unknown, HTTPError>;
 
-  useSuspenseQuery: <M extends GroupMethodKeys<G>>(
-    method: M,
-    ...args: G[M] extends Endpoint<infer R, infer V>
-      ? [V] extends [undefined]
-        ? [options?: NexusSuspenseQueryOptions<R, V>]
-        : {} extends V
-          ? [options?: NexusSuspenseQueryOptions<R, V>]
-          : [options: NexusSuspenseQueryOptions<R, V>]
+  useSuspenseQuery: <TMethod extends GroupMethodKeys<TGroup>>(
+    method: TMethod,
+    ...args: TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
+      ? [TVariables] extends [undefined]
+        ? [options?: NexusSuspenseQueryOptions<TResponse, TVariables>]
+        : {} extends TVariables
+          ? [options?: NexusSuspenseQueryOptions<TResponse, TVariables>]
+          : [options: NexusSuspenseQueryOptions<TResponse, TVariables>]
       : [options?: Record<string, unknown>]
-  ) => G[M] extends Endpoint<infer R, any>
-    ? UseSuspenseQueryResult<R, HTTPError>
+  ) => TGroup[TMethod] extends Endpoint<infer TResponse, any>
+    ? UseSuspenseQueryResult<TResponse, HTTPError>
     : UseSuspenseQueryResult<unknown, HTTPError>;
 
-  useInfiniteQuery: <M extends GroupMethodKeys<G>, P>(
-    method: M,
-    options: G[M] extends Endpoint<infer R, infer V> ? NexusInfiniteQueryOptions<R, V, P> : never,
-  ) => G[M] extends Endpoint<infer R, any>
-    ? UseInfiniteQueryResult<InfiniteData<R, P>, HTTPError>
+  useInfiniteQuery: <TMethod extends GroupMethodKeys<TGroup>, TPageParam>(
+    method: TMethod,
+    options: TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
+      ? NexusInfiniteQueryOptions<TResponse, TVariables, TPageParam>
+      : never,
+  ) => TGroup[TMethod] extends Endpoint<infer TResponse, any>
+    ? UseInfiniteQueryResult<InfiniteData<TResponse, TPageParam>, HTTPError>
     : never;
 
-  useMutation: <M extends GroupMethodKeys<G>>(
-    method: M,
-    options?: G[M] extends Endpoint<infer R, infer V> ? NexusMutationOptions<R, V> : never,
-  ) => G[M] extends Endpoint<infer R, infer V>
-    ? UseMutationResult<R, HTTPError, MutationVariables<V>>
+  useMutation: <TMethod extends GroupMethodKeys<TGroup>>(
+    method: TMethod,
+    options?: TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
+      ? NexusMutationOptions<TResponse, TVariables>
+      : never,
+  ) => TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
+    ? UseMutationResult<TResponse, HTTPError, MutationVariables<TVariables>>
     : never;
 
-  prefetchQuery: <M extends GroupMethodKeys<G>>(
+  prefetchQuery: <TMethod extends GroupMethodKeys<TGroup>>(
     queryClient: QueryClient,
-    method: M,
-    ...args: G[M] extends Endpoint<any, infer V>
-      ? [V] extends [undefined]
-        ? [options?: NexusPrefetchOptions<V>]
-        : {} extends V
-          ? [options?: NexusPrefetchOptions<V>]
-          : [options: NexusPrefetchOptions<V>]
+    method: TMethod,
+    ...args: TGroup[TMethod] extends Endpoint<any, infer TVariables>
+      ? [TVariables] extends [undefined]
+        ? [options?: NexusPrefetchOptions<TVariables>]
+        : {} extends TVariables
+          ? [options?: NexusPrefetchOptions<TVariables>]
+          : [options: NexusPrefetchOptions<TVariables>]
       : [options?: Record<string, unknown>]
   ) => Promise<void>;
 };
 
 /** Top-level query client with group-based dot-notation access */
-export type QueryCallerClient<T extends DefinedApi<any>> = {
-  [K in keyof T["options"]["groups"]]: QueryGroupClient<T["options"]["groups"][K]>;
+export type QueryCallerClient<TApi extends DefinedApi<any>> = {
+  [TKey in keyof TApi["options"]["groups"]]: QueryGroupClient<TApi["options"]["groups"][TKey]>;
 };

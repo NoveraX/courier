@@ -1,74 +1,65 @@
-import type { RequestEntry } from "../../store"
-import { EMPTY_FILTERS } from "../../store"
+import type { RequestEntry } from "@/store/types";
+import type { TimelineFilters } from "@/store/types";
 
-import type { TimelineFilters } from "../../store"
+/** Apply all active filters + search to a request list */
+export function filterRequests(
+  requests: readonly RequestEntry[],
+  filters: TimelineFilters,
+): RequestEntry[] {
+  return requests.filter((r) => matchesAllFilters(r, filters));
+}
 
-// Re-export for convenience
-export type { TimelineFilters as Filters }
-export { EMPTY_FILTERS }
+function matchesAllFilters(r: RequestEntry, f: TimelineFilters): boolean {
+  if (f.search && !matchesSearch(r, f.search)) return false;
+  if (f.status.length > 0 && !f.status.includes(r.status)) return false;
+  if (f.mode.length > 0 && !f.mode.includes(r.mode)) return false;
+  if (f.type.length > 0 && !f.type.includes(r.type ?? "query")) return false;
+  if (f.httpMethod.length > 0 && !f.httpMethod.includes(r.httpMethod ?? "GET")) return false;
+  if (f.source.length > 0 && !f.source.includes(r.source)) return false;
+  if (f.group.length > 0 && !f.group.includes(r.group ?? "")) return false;
+  if (f.minDuration !== null && (r.timing?.total ?? 0) < f.minDuration) return false;
+  return true;
+}
 
-// ── Filter Logic ─────────────────────────────────────────────────────────────
+const SEARCH_FIELDS = ["source", "group", "method", "url"] as const;
 
-export function hasActiveFilters(f: TimelineFilters): boolean {
+function matchesSearch(r: RequestEntry, query: string): boolean {
+  const q = query.toLowerCase();
+
+  for (const field of SEARCH_FIELDS) {
+    const value = r[field];
+    if (typeof value === "string" && value.toLowerCase().includes(q)) return true;
+  }
+
+  // Match status code
+  if (r.statusCode && String(r.statusCode).includes(q)) return true;
+
+  return false;
+}
+
+/** Check if any filter is active */
+export function hasActiveFilters(filters: TimelineFilters): boolean {
   return (
-    f.search !== "" ||
-    f.status.length > 0 ||
-    f.mode.length > 0 ||
-    f.type.length > 0 ||
-    f.httpMethod.length > 0 ||
-    f.source.length > 0 ||
-    f.group.length > 0 ||
-    f.minDuration !== null
-  )
+    filters.search !== "" ||
+    filters.status.length > 0 ||
+    filters.mode.length > 0 ||
+    filters.type.length > 0 ||
+    filters.httpMethod.length > 0 ||
+    filters.source.length > 0 ||
+    filters.group.length > 0 ||
+    filters.minDuration !== null
+  );
 }
 
-export function countActiveFilters(f: TimelineFilters): number {
-  return [
-    f.search !== "" ? 1 : 0,
-    f.status.length,
-    f.mode.length,
-    f.type.length,
-    f.httpMethod.length,
-    f.source.length,
-    f.group.length,
-    f.minDuration !== null ? 1 : 0,
-  ].reduce((a, b) => a + b, 0)
-}
-
-export function filterRequests(requests: RequestEntry[], filters: TimelineFilters): RequestEntry[] {
-  return requests.filter((r) => {
-    if (filters.search) {
-      const q = filters.search.toLowerCase()
-      const label = [r.source, r.group, r.method].filter(Boolean).join(".").toLowerCase()
-      const url = (r.url ?? "").toLowerCase()
-      if (
-        !label.includes(q) &&
-        !url.includes(q) &&
-        !String(r.statusCode ?? "").includes(q)
-      )
-        return false
-    }
-
-    if (filters.status.length > 0 && !filters.status.includes(r.status)) return false
-    if (filters.mode.length > 0 && !filters.mode.includes(r.mode)) return false
-    if (filters.type.length > 0 && (!r.type || !filters.type.includes(r.type))) return false
-    if (
-      filters.httpMethod.length > 0 &&
-      (!r.httpMethod || !filters.httpMethod.includes(r.httpMethod))
-    )
-      return false
-    if (filters.source.length > 0 && !filters.source.includes(r.source)) return false
-    if (
-      filters.group.length > 0 &&
-      (!r.group || !filters.group.includes(r.group))
-    )
-      return false
-    if (
-      filters.minDuration !== null &&
-      (!r.timing || r.timing.total < filters.minDuration)
-    )
-      return false
-
-    return true
-  })
+/** Count active filter dimensions (not counting search) */
+export function countActiveFilters(filters: TimelineFilters): number {
+  let count = 0;
+  if (filters.status.length > 0) count++;
+  if (filters.mode.length > 0) count++;
+  if (filters.type.length > 0) count++;
+  if (filters.httpMethod.length > 0) count++;
+  if (filters.source.length > 0) count++;
+  if (filters.group.length > 0) count++;
+  if (filters.minDuration !== null) count++;
+  return count;
 }

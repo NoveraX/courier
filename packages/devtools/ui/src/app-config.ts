@@ -1,29 +1,27 @@
 import {
   Activity,
-  GitBranch,
   BarChart3,
+  GitCompare,
+  Globe,
   Network,
   Play,
-  Layers,
-  ShieldCheck,
-  ChevronsLeftRightEllipsis,
-  GitCompare,
   Settings,
-  Sun,
-  Moon,
-  Monitor,
+  Shield,
+  Timer,
+  Workflow,
 } from "lucide-react";
 
 import type { LucideIcon } from "lucide-react";
 import type { Theme } from "./store";
 
-// ── Types ───────────────────────────────────────────────────────────────────
+// ── Navigation ─────────────────────────────────────────────────────────────
 
 export interface NavItem {
-  to: string;
-  icon: LucideIcon;
   label: string;
-  shortcut?: string;
+  path: string;
+  icon: LucideIcon;
+  kbd?: string;
+  badge?: "requests" | "errors" | "sessions" | "audit-score";
 }
 
 export interface NavGroup {
@@ -31,52 +29,69 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-// ── Sidebar navigation groups ───────────────────────────────────────────────
-
-export const SIDEBAR_GROUPS: NavGroup[] = [
+export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Inspect",
     items: [
-      { to: "/timeline", icon: Activity, label: "Timeline", shortcut: "1" },
-      { to: "/waterfall", icon: GitBranch, label: "Waterfall", shortcut: "2" },
-      { to: "/analytics", icon: BarChart3, label: "Analytics", shortcut: "3" },
+      { label: "Timeline", path: "/timeline", icon: Activity, kbd: "1", badge: "requests" },
+      { label: "Waterfall", path: "/waterfall", icon: Timer, kbd: "2" },
+      { label: "Analytics", path: "/analytics", icon: BarChart3, kbd: "3" },
     ],
   },
   {
     label: "Build",
     items: [
-      { to: "/explorer", icon: Network, label: "Explorer", shortcut: "4" },
-      { to: "/playground", icon: Play, label: "Playground", shortcut: "5" },
-      { to: "/apis", icon: ChevronsLeftRightEllipsis, label: "APIs", shortcut: "6" },
+      { label: "Explorer", path: "/explorer", icon: Network, kbd: "4" },
+      { label: "Playground", path: "/playground", icon: Play, kbd: "5" },
+      { label: "APIs", path: "/apis", icon: Globe, kbd: "6" },
     ],
   },
   {
     label: "Quality",
     items: [
-      { to: "/audit", icon: ShieldCheck, label: "Audit", shortcut: "7" },
-      { to: "/middleware", icon: Layers, label: "Middleware", shortcut: "8" },
-      { to: "/compare", icon: GitCompare, label: "Compare", shortcut: "9" },
+      { label: "Audit", path: "/audit", icon: Shield, kbd: "7", badge: "audit-score" },
+      { label: "Middleware", path: "/middleware", icon: Workflow, kbd: "8" },
+      { label: "Compare", path: "/compare", icon: GitCompare, kbd: "9" },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { label: "Settings", path: "/settings", icon: Settings },
     ],
   },
 ];
 
-export const SETTINGS_NAV: NavItem = {
-  to: "/settings",
-  icon: Settings,
-  label: "Settings",
-  shortcut: "⌘,",
+export const ALL_NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
+
+// ── Theme cycle ────────────────────────────────────────────────────────────
+
+const THEME_CYCLE: Theme[] = ["dark", "light", "system"];
+
+export function nextTheme(current: Theme): Theme {
+  const idx = THEME_CYCLE.indexOf(current);
+  return THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
+}
+
+export const THEME_LABELS: Record<Theme, string> = {
+  dark: "Dark",
+  light: "Light",
+  system: "System",
 };
 
-// Flat list of all nav items (for keyboard shortcuts: keys 1-9)
-export const ALL_NAV_ITEMS: NavItem[] = SIDEBAR_GROUPS.flatMap((g) => g.items);
-export const TAB_ROUTES = ALL_NAV_ITEMS.map((item) => item.to);
+// ── Breadcrumb helpers ─────────────────────────────────────────────────────
 
-// ── Theme ───────────────────────────────────────────────────────────────────
+export function getPageTitle(pathname: string): string {
+  if (pathname === "/") return "Welcome";
+  const item = ALL_NAV_ITEMS.find((n) => pathname.startsWith(n.path));
+  return item?.label ?? "Not Found";
+}
 
-export const THEME_ICONS: Record<Theme, LucideIcon> = {
-  light: Sun,
-  dark: Moon,
-  system: Monitor,
-};
-
-export const THEME_CYCLE: Theme[] = ["dark", "light", "system"];
+export function getPageGroup(pathname: string): string | null {
+  for (const group of NAV_GROUPS) {
+    if (group.items.some((n) => pathname.startsWith(n.path))) {
+      return group.label;
+    }
+  }
+  return null;
+}

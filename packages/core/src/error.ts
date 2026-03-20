@@ -1,11 +1,11 @@
 import type { HttpResponse } from "./http-client/types";
 
-export class HTTPError<R = unknown> extends Error {
+export class HTTPError<TData = unknown> extends Error {
   status: number;
   headers: Headers;
-  data: R;
+  data: TData;
 
-  constructor(response: HttpResponse<R>) {
+  constructor(response: HttpResponse<TData>) {
     super(`HTTP ${response.status}`);
     this.name = "HTTPError";
 
@@ -15,6 +15,6 @@ export class HTTPError<R = unknown> extends Error {
   }
 }
 
-export function isHTTPError<R = unknown>(error: unknown): error is HTTPError<R> {
+export function isHTTPError<TData = unknown>(error: unknown): error is HTTPError<TData> {
   return error instanceof HTTPError;
 }

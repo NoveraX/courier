@@ -1,152 +1,147 @@
-import { useMemo, useCallback } from "react"
-import { getRouteApi } from "@tanstack/react-router"
-import { ArrowLeftRight, X } from "lucide-react"
+import { ArrowLeftRight, GitCompare } from "lucide-react";
 
-import type { CompareTab } from "../../store"
-import { useDevToolsStore } from "../../store"
-import { DisconnectedBanner } from "../../components/ui"
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/shared/empty-state";
+import { PageShell } from "@/components/shared/page-shell";
+import {
+  SegmentedControl,
+  type SegmentOption,
+} from "@/components/shared/segmented-control";
 
-import { RequestTag, RequestPicker, ComparePanel } from "./compare-components"
+import type { CompareTab } from "./types";
+import { useCompare } from "./use-compare";
+import { RequestPicker } from "./request-picker";
+import { DiffViewer } from "./diff-viewer";
+import { HeadersDiffView } from "./headers-diff";
+import { TimingDiffView } from "./timing-diff";
 
-// ── Constants ───────────────────────────────────────────────────────────────
+// ── Tab config ──────────────────────────────────────────────────────────────
 
-const COMPARE_TABS: { id: CompareTab; label: string }[] = [
-  { id: "payload", label: "Payload" },
-  { id: "response", label: "Response" },
-  { id: "headers", label: "Headers" },
-  { id: "timing", label: "Timing" },
-]
+const TAB_OPTIONS: SegmentOption<CompareTab>[] = [
+  { value: "payload", label: "Payload" },
+  { value: "response", label: "Response" },
+  { value: "headers", label: "Headers" },
+  { value: "timing", label: "Timing" },
+];
 
-const routeApi = getRouteApi("/compare")
+// ── View ────────────────────────────────────────────────────────────────────
 
-// ── Compare View ────────────────────────────────────────────────────────────
+export function CompareView(): React.ReactNode {
+  const compare = useCompare();
 
-export function CompareView() {
-  const { requests, connected, comparePickerSide: pickerSide, setComparePickerSide: setPickerSide } =
-    useDevToolsStore()
-
-  const search = routeApi.useSearch()
-  const navigate = routeApi.useNavigate()
-
-  const leftId = search.left ?? null
-  const rightId = search.right ?? null
-  const activeTab: CompareTab = search.tab ?? "response"
-
-  const setLeftId = useCallback(
-    (id: string) => { void navigate({ search: (prev) => ({ ...prev, left: id }) }) },
-    [navigate],
-  )
-  const setRightId = useCallback(
-    (id: string) => { void navigate({ search: (prev) => ({ ...prev, right: id }) }) },
-    [navigate],
-  )
-  const setActiveTab = useCallback(
-    (tab: CompareTab) => { void navigate({ search: (prev) => ({ ...prev, tab }) }) },
-    [navigate],
-  )
-  const clearCompareSelection = useCallback(
-    () => { void navigate({ search: {} }); setPickerSide(null) },
-    [navigate, setPickerSide],
-  )
-
-  const completed = useMemo(
-    () => requests.filter((r) => r.status !== "pending"),
-    [requests],
-  )
-
-  const leftReq = useMemo(() => completed.find((r) => r.id === leftId) ?? null, [completed, leftId])
-  const rightReq = useMemo(() => completed.find((r) => r.id === rightId) ?? null, [completed, rightId])
-
-  function handleSelect(id: string) {
-    if (pickerSide === "left") setLeftId(id)
-    else if (pickerSide === "right") setRightId(id)
-    setPickerSide(null)
-  }
-
-  // If neither selected, show picker for both
-  if (!leftReq && !rightReq) {
+  if (compare.requests.length === 0) {
     return (
-      <div className="flex flex-1 flex-col">
-        {!connected && <DisconnectedBanner />}
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-text-muted">
-          <ArrowLeftRight size={36} strokeWidth={1} />
-          <p className="text-sm">Select two requests to compare</p>
-          <p className="text-xs">Pick from the list below</p>
-        </div>
-        <RequestPicker requests={completed} onSelect={(id) => { setLeftId(id); setPickerSide("right") }} selectedIds={[]} />
-      </div>
-    )
-  }
-
-  if (leftReq && !rightReq) {
-    return (
-      <div className="flex flex-1 flex-col">
-        <div className="flex shrink-0 items-center gap-2 border-b border-border-default px-3 py-2">
-          <RequestTag request={leftReq} />
-          <span className="text-text-muted">vs</span>
-          <span className="text-[11px] text-text-muted">Select second request...</span>
-        </div>
-        <RequestPicker requests={completed} onSelect={(id) => setRightId(id)} selectedIds={[leftId!]} />
-      </div>
-    )
+      <PageShell center>
+        <EmptyState
+          icon={GitCompare}
+          heading="No requests to compare"
+          description="Make some API calls first to compare requests side by side."
+        />
+      </PageShell>
+    );
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      {!connected && <DisconnectedBanner />}
-      {/* Header with selections */}
-      <div className="flex shrink-0 items-center justify-between border-b border-border-default px-3 py-1.5">
-        <div className="flex items-center gap-2">
-          {/* Left slot */}
-          <button type="button" onClick={() => setPickerSide(pickerSide === "left" ? null : "left")} className="group flex items-center gap-1 rounded px-2 py-1 hover:bg-surface-1">
-            {leftReq ? <RequestTag request={leftReq} /> : <span className="text-[11px] text-text-muted">Select...</span>}
-          </button>
+    <PageShell noScroll toolbar={<CompareToolbar compare={compare} />}>
+      <CompareContent compare={compare} />
+    </PageShell>
+  );
+}
 
-          <ArrowLeftRight size={14} className="text-text-muted" />
+// ── Toolbar ─────────────────────────────────────────────────────────────────
 
-          {/* Right slot */}
-          <button type="button" onClick={() => setPickerSide(pickerSide === "right" ? null : "right")} className="group flex items-center gap-1 rounded px-2 py-1 hover:bg-surface-1">
-            {rightReq ? <RequestTag request={rightReq} /> : <span className="text-[11px] text-text-muted">Select...</span>}
-          </button>
-        </div>
-
-        {/* Tab switcher */}
-        <div className="flex items-center gap-0.5 rounded-lg bg-surface-1 p-0.5">
-          {COMPARE_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`rounded px-2 py-1 text-[10px] font-medium transition-colors ${
-                activeTab === tab.id ? "bg-surface-2 text-text-primary" : "text-text-muted hover:text-text-secondary"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Clear */}
-        <button type="button" onClick={clearCompareSelection} className="rounded p-1 text-text-muted hover:bg-surface-1 hover:text-text-secondary">
-          <X size={14} />
-        </button>
+function CompareToolbar({
+  compare,
+}: {
+  compare: ReturnType<typeof useCompare>;
+}): React.ReactElement {
+  return (
+    <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-3 py-2">
+      <div className="min-w-0 flex-1">
+        <RequestPicker
+          requests={compare.requests}
+          selectedId={compare.leftReq?.id}
+          onSelect={compare.setLeft}
+          label="Select left request..."
+          excludeId={compare.rightReq?.id}
+        />
       </div>
 
-      {/* Picker dropdown */}
-      {pickerSide && (
-        <RequestPicker
-          requests={completed}
-          onSelect={handleSelect}
-          selectedIds={[leftId, rightId].filter(Boolean) as string[]}
-        />
-      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
+        onClick={compare.swap}
+        disabled={!compare.leftReq || !compare.rightReq}
+        aria-label="Swap sides"
+      >
+        <ArrowLeftRight className="size-3.5" />
+      </Button>
 
-      {/* Comparison content */}
-      {leftReq && rightReq && !pickerSide && (
-        <div className="flex flex-1 overflow-hidden">
-          <ComparePanel left={leftReq} right={rightReq} tab={activeTab} />
-        </div>
-      )}
+      <div className="min-w-0 flex-1">
+        <RequestPicker
+          requests={compare.requests}
+          selectedId={compare.rightReq?.id}
+          onSelect={compare.setRight}
+          label="Select right request..."
+          excludeId={compare.leftReq?.id}
+        />
+      </div>
+
+      <div className="ml-2 shrink-0">
+        <SegmentedControl
+          options={TAB_OPTIONS}
+          value={compare.tab}
+          onChange={compare.setTab}
+        />
+      </div>
     </div>
-  )
+  );
+}
+
+// ── Content ─────────────────────────────────────────────────────────────────
+
+function CompareContent({
+  compare,
+}: {
+  compare: ReturnType<typeof useCompare>;
+}): React.ReactElement {
+  if (!compare.leftReq || !compare.rightReq) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <EmptyState
+          icon={GitCompare}
+          heading="Select two requests"
+          description={
+            !compare.leftReq && !compare.rightReq
+              ? "Choose a request on each side to start comparing."
+              : "Choose one more request to see the diff."
+          }
+        />
+      </div>
+    );
+  }
+
+  switch (compare.tab) {
+    case "payload":
+      return (
+        <DiffViewer
+          lines={compare.payloadDiff ?? []}
+          leftLabel="Left Payload"
+          rightLabel="Right Payload"
+        />
+      );
+    case "response":
+      return (
+        <DiffViewer
+          lines={compare.responseDiff ?? []}
+          leftLabel="Left Response"
+          rightLabel="Right Response"
+        />
+      );
+    case "headers":
+      return <HeadersDiffView headers={compare.headersDiff ?? []} />;
+    case "timing":
+      return <TimingDiffView comparisons={compare.timingDiff ?? []} />;
+  }
 }

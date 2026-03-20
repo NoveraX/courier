@@ -1,9 +1,11 @@
 import type { StateCreator } from "zustand"
+import { toast } from "sonner"
 
-import type { SourceMap } from "./types"
+import type { Catalog, CatalogSnapshot, DevToolsEvent } from "./types"
 import type { DevToolsState } from "./store-types"
-import { THEME_STORAGE_KEY, PLAYGROUND_MAX_HISTORY, DEFAULT_SETTINGS, saveSettings, saveSessionStartedAt } from "./constants"
+import { PLAYGROUND_MAX_HISTORY, DEFAULT_SETTINGS, saveSettings, saveSessionStartedAt } from "./constants"
 import { applyTheme } from "./theme"
+import { applyDensity } from "./density"
 import { handleEventReducer } from "./handle-event"
 import { notifyOnEvent } from "./event-notifications"
 import { createInitialState } from "./initial-state"
@@ -11,27 +13,89 @@ import { createInitialState } from "./initial-state"
 type Setter = Parameters<StateCreator<DevToolsState>>[0]
 type Getter = Parameters<StateCreator<DevToolsState>>[1]
 
-/** Collapse rapid-fire "Sources updated" toasts into a single one */
-let sourcesToastTimer: ReturnType<typeof setTimeout> | undefined
-function debouncedSourcesToast(get: Getter): void {
-  clearTimeout(sourcesToastTimer)
-  sourcesToastTimer = setTimeout(() => get().showToast("Sources updated", "info"), 500)
+/** Toast on catalog change — debounced to avoid spam */
+let lastCatalogHash = ""
+let catalogToastTimer: ReturnType<typeof setTimeout> | undefined
+function catalogChangedToast(catalog: CatalogSnapshot["catalog"]): void {
+  const hash = JSON.stringify(catalog)
+  if (!lastCatalogHash || lastCatalogHash === hash) {
+    lastCatalogHash = hash
+    return
+  }
+  lastCatalogHash = hash
+  clearTimeout(catalogToastTimer)
+  catalogToastTimer = setTimeout(() => toast.info("Sources updated"), 300)
+}
+
+/**
+ * Normalize event source name against catalog keys (case-insensitive).
+ * Runtime emits lowercase names (from URL hostname), catalog uses
+ * scanner-derived names (PascalCase). This is the single reconciliation
+ * point — all views read from the store and never see the mismatch.
+ */
+let canonMap: Map<string, string> | null = null
+let canonMapCatalog: Catalog | null = null
+
+type EventPayload = DevToolsEvent & Record<string, unknown>
+
+// ── Ignore patterns — cached regex compilation ──────────────────────────────
+
+let cachedPatterns: string[] = []
+let cachedRegexes: RegExp[] = []
+
+function shouldIgnoreRequest(event: EventPayload, patterns: string[]): boolean {
+  if (patterns.length === 0) return false
+  const url = typeof event.url === "string" ? event.url : ""
+  const method = typeof event.method === "string" ? event.method : ""
+  const target = url || method
+  if (!target) return false
+
+  // Re-compile only when patterns array changes
+  if (patterns !== cachedPatterns) {
+    cachedPatterns = patterns
+    cachedRegexes = patterns
+      .filter((p) => p.length > 0)
+      .map((p) => {
+        try { return new RegExp(p, "i") }
+        catch { return null }
+      })
+      .filter((r): r is RegExp => r !== null)
+  }
+
+  return cachedRegexes.some((re) => re.test(target))
+}
+
+function normalizeEventSource(
+  event: EventPayload,
+  catalog: Catalog,
+): EventPayload {
+  if (!event.source || typeof event.source !== "string") return event
+
+  // Rebuild lookup only when catalog reference changes
+  if (catalog !== canonMapCatalog) {
+    canonMap = new Map()
+    for (const key of Object.keys(catalog)) {
+      canonMap.set(key.toLowerCase(), key)
+    }
+    canonMapCatalog = catalog
+  }
+
+  const canonical = canonMap!.get((event.source as string).toLowerCase())
+  if (canonical && canonical !== event.source) {
+    return { ...event, source: canonical }
+  }
+  return event
 }
 
 export function createActions(set: Setter, get: Getter): Omit<DevToolsState, keyof ReturnType<typeof createInitialState>> {
   return {
     // UI
     setTheme: (theme) => {
-      localStorage.setItem(THEME_STORAGE_KEY, theme)
+      const next = { ...get().settings, theme }
+      saveSettings(next)
       applyTheme(theme)
-      set({ theme })
+      set({ theme, settings: next })
     },
-    showToast: (message, type = "info") => {
-      const id = `toast_${Date.now().toString(36)}`
-      set((s) => ({ toasts: [...s.toasts, { id, message, type }] }))
-      setTimeout(() => get().dismissToast(id), 3000)
-    },
-    dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
     // Connection
     setConnectionStatus: (status) => {
@@ -56,52 +120,38 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
         return {
           sessions,
           sessionStartedAt,
-          requests: s.preserveLog
+          requests: s.settings.preserveLog
             ? s.requests
             : s.requests.filter((r) => r.sessionId !== sessionId || r.pinned),
         }
       }),
-    updateSessionSources: (sessionId, sources) =>
-      set((s) => ({
-        sessions: s.sessions.map((ss) =>
-          ss.sessionId === sessionId ? { ...ss, sources } : ss
-        ),
-      })),
+
+    // Catalog (server-authoritative — NOT gated by paused flag)
+    setCatalog: (snapshot) => {
+      catalogChangedToast(snapshot.catalog)
+      set({ catalog: snapshot.catalog })
+    },
 
     // Requests
     togglePaused: () => set((s) => ({ paused: !s.paused })),
-    togglePreserveLog: () => set((s) => ({ preserveLog: !s.preserveLog })),
+    togglePreserveLog: () => {
+      const next = !get().settings.preserveLog
+      const settings = { ...get().settings, preserveLog: next }
+      saveSettings(settings)
+      set({ settings })
+    },
     clearRequests: () =>
       set((s) => {
-        if (s.preserveLog) {
+        if (s.settings.preserveLog) {
           const pinned = s.requests.filter((r) => r.pinned)
-          return { requests: pinned }
+          return { requests: pinned, droppedRequests: 0 }
         }
-        return { requests: [] }
+        return { requests: [], droppedRequests: 0 }
       }),
     togglePin: (id) =>
       set((s) => ({
         requests: s.requests.map((r) => (r.id === id ? { ...r, pinned: !r.pinned } : r)),
       })),
-
-    // Explorer
-    setExplorerSelectedEndpoint: (ep) => set({ explorerSelectedEndpoint: ep }),
-    setGraphLayout: (layout) => set({ graphLayout: layout }),
-    setShowSchemas: (show) => set({ showSchemas: show }),
-    setListSearch: (search) => set({ listSearch: search }),
-    setListSortKey: (key) => set({ listSortKey: key }),
-    setListSortDir: (dir) => set({ listSortDir: dir }),
-
-    // Waterfall
-    setWaterfallSortBy: (sort) => set({ waterfallSortBy: sort }),
-    setWaterfallGroupBy: (group) => set({ waterfallGroupBy: group }),
-    setWaterfallZoom: (zoom) => set({ waterfallZoom: zoom }),
-
-    // Middleware
-    setMiddlewareShowStats: (show) => set({ middlewareShowStats: show }),
-
-    // Compare
-    setComparePickerSide: (side) => set({ comparePickerSide: side }),
 
     // Audit
     toggleAuditExpanded: (id) =>
@@ -132,26 +182,33 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
 
     handleEvent: (event) => {
       if (get().paused) return
-
-      // Hot reload: update session sources without going through request reducer
-      if (event.type === "connection:sources" && event.sources) {
-        get().updateSessionSources(event.sessionId, event.sources as SourceMap)
-        debouncedSourcesToast(get)
-        return
-      }
-
-      set((state) => handleEventReducer(state, event))
-      notifyOnEvent(event, get)
+      // Skip requests matching ignore patterns
+      if (event.type === "request:start" && shouldIgnoreRequest(event, get().settings.ignorePatterns)) return
+      // Normalize event source name against catalog (case-insensitive).
+      // Runtime emits lowercase (from URL hostname), catalog uses scanner names (PascalCase).
+      const normalized = normalizeEventSource(event, get().catalog)
+      set((state) => {
+        const result = handleEventReducer(state, normalized, get().settings.maxRequests)
+        if ("droppedCount" in result && result.droppedCount) {
+          return { ...result, droppedRequests: state.droppedRequests + result.droppedCount }
+        }
+        return result
+      })
+      notifyOnEvent(normalized, get)
     },
 
     // Settings
     updateSettings: (patch) => {
       const next = { ...get().settings, ...patch }
       saveSettings(next)
+      if (patch.theme) applyTheme(patch.theme)
+      if (patch.density) applyDensity(patch.density)
       set({ settings: next })
     },
     resetSettings: () => {
       saveSettings(DEFAULT_SETTINGS)
+      applyTheme(DEFAULT_SETTINGS.theme)
+      applyDensity(DEFAULT_SETTINGS.density)
       set({ settings: DEFAULT_SETTINGS })
     },
   }

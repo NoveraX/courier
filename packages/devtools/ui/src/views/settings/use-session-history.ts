@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { createFetch } from "@noverax/nexus/fetch";
+import { toast } from "sonner";
 
-// ── Types ──────────────────────────────────────────────────────────────────
+import type { ExportFormat } from "@/store/types";
 
-export interface SessionSummary {
+// ── Session summary (matches server SessionSummary) ──────────────────────────
+
+interface SessionSummary {
   id: string;
   name: string;
   savedAt: number;
@@ -19,95 +21,99 @@ export interface SessionSummary {
   appCount: number;
 }
 
-// ── API helpers ────────────────────────────────────────────────────────────
-
-const client = createFetch();
-
-async function fetchHistory(): Promise<SessionSummary[]> {
-  try {
-    return await client.post<SessionSummary[]>("/api/sessions/list", { json: {} });
-  } catch {
-    return [];
-  }
-}
-
-async function deleteSessionApi(id: string): Promise<boolean> {
-  try {
-    await client.post("/api/sessions/delete", { json: { id } });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function saveSessionApi(
-  requests: unknown[],
-  apps: unknown[],
-  name?: string,
-): Promise<{ id: string; name: string } | null> {
-  try {
-    return await client.post<{ id: string; name: string }>("/api/sessions/save", {
-      json: { requests, apps, name },
-    });
-  } catch {
-    return null;
-  }
-}
-
-async function exportSession(id: string, format: string): Promise<void> {
-  let blob: Blob;
-  try {
-    blob = await client.post<Blob>("/api/sessions/export", {
-      json: { id, format },
-      responseType: "blob",
-    });
-  } catch {
-    return;
-  }
-
-  const ext = format === "postman" ? "postman_collection.json" : format === "har" ? "har" : "json";
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `session-${id}.${ext}`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ── Hook ───────────────────────────────────────────────────────────────────
+// ── Session history hook ─────────────────────────────────────────────────────
 
 export function useSessionHistory() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    const list = await fetchHistory();
-    setSessions(list);
-    setLoading(false);
+  const fetchSessions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/sessions/list", { method: "POST" });
+      const data = (await res.json()) as { sessions: SessionSummary[] };
+      setSessions(data.sessions ?? []);
+    } catch {
+      setSessions([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useEffect(() => { fetchSessions(); }, [fetchSessions]);
 
-  const remove = useCallback(
-    async (id: string) => {
-      const ok = await deleteSessionApi(id);
-      if (ok) setSessions((prev) => prev.filter((s) => s.id !== id));
-      return ok;
-    },
-    [],
-  );
+  async function saveCurrentSession(name: string): Promise<void> {
+    const res = await fetch("/api/sessions/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) throw new Error("Failed to save session");
+    toast.success("Session saved");
+    await fetchSessions();
+  }
 
-  const save = useCallback(
-    async (requests: unknown[], apps: unknown[], name?: string) => {
-      const result = await saveSessionApi(requests, apps, name);
-      if (result) await refresh();
-      return result;
-    },
-    [refresh],
-  );
+  async function loadSession(id: string): Promise<void> {
+    const res = await fetch("/api/sessions/load", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (!res.ok) throw new Error("Failed to load session");
+    toast.success("Session loaded");
+  }
 
-  return { sessions, loading, refresh, remove, save, exportSession };
+  async function deleteSession(id: string): Promise<void> {
+    const res = await fetch("/api/sessions/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (!res.ok) throw new Error("Failed to delete session");
+    toast.success("Session deleted");
+    await fetchSessions();
+  }
+
+  async function exportSession(
+    id: string,
+    format: ExportFormat,
+  ): Promise<void> {
+    const res = await fetch("/api/sessions/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, format }),
+    });
+    if (!res.ok) throw new Error("Failed to export session");
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `session-${id}.${format === "har" ? "har" : "json"}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported as ${format.toUpperCase()}`);
+  }
+
+  async function deleteAllSessions(): Promise<void> {
+    for (const session of sessions) {
+      await fetch("/api/sessions/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: session.id }),
+      });
+    }
+    toast.success("All sessions deleted");
+    await fetchSessions();
+  }
+
+  return {
+    sessions,
+    loading,
+    saveCurrentSession,
+    loadSession,
+    deleteSession,
+    exportSession,
+    deleteAllSessions,
+    refresh: fetchSessions,
+  };
 }

@@ -1,7 +1,9 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
+
+function ExplorerIndex(): React.ReactNode {
+  return <Navigate to="/explorer/graph" replace />;
+}
 
 export const Route = createFileRoute("/explorer/")({
-  beforeLoad: () => {
-    throw redirect({ to: "/explorer/graph" });
-  },
+  component: ExplorerIndex,
 });

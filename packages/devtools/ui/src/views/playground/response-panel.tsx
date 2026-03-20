@@ -1,158 +1,134 @@
-import { Loader2, Send } from "lucide-react"
+import { Clock, FileJson, KeyRound, Timer } from "lucide-react";
 
-import type { PlaygroundHistoryEntry } from "../../store"
+import { formatDuration } from "@/components/shared/formatters";
+import { JsonTree } from "@/components/shared/json-tree";
+import { KbdHint } from "@/components/shared/kbd-hint";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { SegmentedControl } from "@/components/shared/segmented-control";
 
-import { formatDuration } from "../../components/ui"
-import { JsonTree } from "../../components/json-tree"
-import { TimingRow } from "./timing-row"
+import { BreakdownCard, buildProxySegments, buildRequestSegments, computeProxyTotal } from "@/components/shared/timing-breakdown";
+import type { PlaygroundHistoryEntry } from "@/store/types-ui";
+import { FlowDiagram } from "@/components/shared/detail-panel/tabs/proxy-tab";
+import { BodyMeta } from "./response-body-meta";
+import { DroppedHeadersSection, HeadersSection } from "@/components/shared/headers-section";
+
+// ── Types ──────────────────────────────────────────────────────────────────
+
+interface ResponsePanelProps {
+  entry: PlaygroundHistoryEntry | null;
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+}
+
+const RESPONSE_TABS = [
+  { key: "body", label: "Body", icon: FileJson },
+  { key: "headers", label: "Headers", icon: KeyRound },
+  { key: "timing", label: "Timing", icon: Timer },
+];
+
+// ── Component ──────────────────────────────────────────────────────────────
 
 export function ResponsePanel({
-  response,
-  responseTab,
-  setResponseTab,
-}: {
-  response: PlaygroundHistoryEntry | null
-  responseTab: "body" | "headers" | "timing"
-  setResponseTab: (tab: "body" | "headers" | "timing") => void
-}) {
-  if (!response) {
+  entry, activeTab, onTabChange,
+}: ResponsePanelProps): React.ReactElement {
+  if (!entry) {
     return (
-      <div className="flex w-1/2 flex-col">
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-text-muted">
-          <Send size={32} strokeWidth={1} />
-          <p className="text-xs">Select an endpoint and send a request</p>
-          <p className="text-[10px] text-text-muted">Cmd+Enter to send</p>
-        </div>
+      <div className="flex h-full flex-col items-center justify-center gap-2">
+        <p className="text-body-sm text-muted-foreground/50">
+          Send a request to see the response
+        </p>
+        <KbdHint keys="mod+enter" className="text-muted-foreground/40" />
       </div>
-    )
+    );
   }
 
   return (
-    <div className="flex w-1/2 flex-col">
-      <ResponseHeader
-        response={response}
-        responseTab={responseTab}
-        setResponseTab={setResponseTab}
-      />
-      <div className="flex-1 overflow-y-auto p-4">
-        {responseTab === "body" && <ResponseBody response={response} />}
-        {responseTab === "headers" && <ResponseHeaders response={response} />}
-        {responseTab === "timing" && <ResponseTiming response={response} />}
-      </div>
+    <div className="flex h-full flex-col">
+      <StatusBar entry={entry} />
+
+      <Tabs value={activeTab} onValueChange={onTabChange} className="flex min-h-0 flex-1 flex-col">
+        <div className="mx-3 mt-2">
+          <SegmentedControl
+            options={RESPONSE_TABS.map((t) => ({ value: t.key, label: t.label, icon: t.icon }))}
+            value={activeTab}
+            onChange={onTabChange}
+            iconSize="size-2.5"
+          />
+        </div>
+
+        <TabsContent value="body" className="mt-0 flex min-h-0 flex-1 flex-col p-3">
+          {entry.response !== undefined
+            ? <JsonTree data={entry.response} headerExtra={<BodyMeta data={entry.response} />} fill />
+            : <EmptyTab message="No response body" />
+          }
+        </TabsContent>
+
+        <TabsContent value="headers" className="mt-0 min-h-0 flex-1">
+          <ScrollArea className="h-full">
+            <div className="space-y-3 p-3">
+              <DroppedHeadersSection sent={entry.headers} forwarded={entry.requestHeaders} />
+              <HeadersSection title="Request Headers" headers={entry.requestHeaders} />
+              <HeadersSection title="Response Headers" headers={entry.responseHeaders} />
+              {!entry.requestHeaders && !entry.responseHeaders && (
+                <EmptyTab message="No headers" />
+              )}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="timing" className="mt-0 min-h-0 flex-1">
+          <ScrollArea className="h-full">
+            {entry.timing ? (
+              <div className="space-y-5 p-4">
+                <BreakdownCard title="Request Timing" segments={buildRequestSegments(entry.timing)} total={entry.timing.total} />
+                {entry.proxyTiming && (
+                  <>
+                    <FlowDiagram timing={entry.proxyTiming} />
+                    <BreakdownCard
+                      title="Proxy Timing"
+                      segments={buildProxySegments(entry.proxyTiming)}
+                      total={computeProxyTotal(entry.proxyTiming)}
+                    />
+                  </>
+                )}
+              </div>
+            ) : (
+              <EmptyTab message="No timing data" />
+            )}
+          </ScrollArea>
+        </TabsContent>
+      </Tabs>
     </div>
-  )
+  );
 }
 
-function ResponseHeader({
-  response,
-  responseTab,
-  setResponseTab,
-}: {
-  response: PlaygroundHistoryEntry
-  responseTab: "body" | "headers" | "timing"
-  setResponseTab: (tab: "body" | "headers" | "timing") => void
-}) {
-  return (
-    <div className="flex items-center gap-2 border-b border-border-default px-4 py-2">
-      {response.status === "pending" ? (
-        <Loader2 size={14} className="animate-spin text-sky-400" />
-      ) : response.status === "success" ? (
-        <div className="h-2 w-2 rounded-full bg-emerald-500" />
-      ) : (
-        <div className="h-2 w-2 rounded-full bg-red-500" />
-      )}
-
-      {response.statusCode != null && (
-        <span
-          className={`font-mono text-xs font-medium ${
-            response.statusCode < 300
-              ? "text-emerald-400"
-              : response.statusCode < 400
-                ? "text-amber-400"
-                : "text-red-400"
-          }`}
-        >
-          {response.statusCode}
-        </span>
-      )}
-
-      {response.duration != null && (
-        <span className="text-[11px] text-text-muted">
-          {formatDuration(response.duration)}
-        </span>
-      )}
-
-      <div className="ml-auto flex gap-0.5 rounded-lg bg-surface-1 p-0.5">
-        {(["body", "headers", "timing"] as const).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setResponseTab(tab)}
-            className={`rounded px-2 py-0.5 text-[10px] font-medium capitalize transition-colors ${
-              responseTab === tab
-                ? "bg-surface-2 text-text-primary"
-                : "text-text-muted hover:text-text-secondary"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
+function EmptyTab({ message }: { message: string }): React.ReactElement {
+  return <p className="py-8 text-center text-body-sm text-muted-foreground/50">{message}</p>;
 }
 
-function ResponseBody({ response }: { response: PlaygroundHistoryEntry }) {
-  return (
-    <div className="text-[11px]">
-      {response.response !== undefined ? (
-        typeof response.response === "string" ? (
-          <pre className="whitespace-pre-wrap text-text-secondary">
-            {response.response}
-          </pre>
-        ) : (
-          <JsonTree data={response.response} defaultExpanded={3} />
-        )
-      ) : (
-        <span className="italic text-text-muted">Waiting for response...</span>
-      )}
-    </div>
-  )
-}
+// ── Status bar ─────────────────────────────────────────────────────────────
 
-function ResponseHeaders({ response }: { response: PlaygroundHistoryEntry }) {
-  return (
-    <div className="space-y-1 text-[11px]">
-      {response.responseHeaders &&
-      Object.keys(response.responseHeaders).length > 0 ? (
-        Object.entries(response.responseHeaders).map(([key, value]) => (
-          <div key={key} className="flex gap-2">
-            <span className="shrink-0 font-mono text-violet-400">{key}</span>
-            <span className="truncate font-mono text-text-secondary">{value}</span>
-          </div>
-        ))
-      ) : (
-        <span className="italic text-text-muted">No headers available</span>
-      )}
-    </div>
-  )
-}
+function StatusBar({ entry }: { entry: PlaygroundHistoryEntry }): React.ReactElement {
+  const isPending = entry.status === "pending";
+  const isError = entry.status === "error";
 
-function ResponseTiming({ response }: { response: PlaygroundHistoryEntry }) {
   return (
-    <div className="space-y-2 text-[11px]">
-      {response.timing ? (
-        <>
-          <TimingRow label="Total" value={response.timing.total} total={response.timing.total} color="bg-indigo-500" />
-          <TimingRow label="Middleware" value={response.timing.middleware} total={response.timing.total} color="bg-violet-500" />
-          <TimingRow label="Fetch" value={response.timing.fetch} total={response.timing.total} color="bg-sky-500" />
-          <TimingRow label="Validation" value={response.timing.validation} total={response.timing.total} color="bg-emerald-500" />
-        </>
-      ) : response.duration != null ? (
-        <TimingRow label="Total" value={response.duration} total={response.duration} color="bg-indigo-500" />
-      ) : (
-        <span className="italic text-text-muted">No timing data</span>
+    <div className="flex h-9 items-center gap-2 border-b border-border-subtle px-3">
+      <Badge variant={isError ? "rose" : isPending ? "secondary" : "emerald"} className="text-[10px]">
+        {isPending ? "Pending..." : entry.statusCode ?? (isError ? "Error" : "OK")}
+      </Badge>
+      {entry.duration !== undefined && (
+        <div className="flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground">
+          <Clock className="size-3" />
+          {formatDuration(entry.duration)}
+        </div>
       )}
+      <div className="flex-1" />
+      <span className="text-caption text-muted-foreground/50">
+        {entry.group}.{entry.method}
+      </span>
     </div>
-  )
+  );
 }

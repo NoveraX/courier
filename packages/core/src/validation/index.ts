@@ -47,21 +47,21 @@ export function isValidationError(error: unknown): error is ValidationError {
 }
 
 /** Validate a value against a Standard Schema, throws ValidationError on failure */
-export async function validateSchema<T>(
-  schema: StandardSchemaV1<unknown, T>,
+export async function validateSchema<TOutput>(
+  schema: StandardSchemaV1<unknown, TOutput>,
   value: unknown,
   target: "response" | "variables",
-): Promise<T> {
+): Promise<TOutput> {
   const result = await schema["~standard"].validate(value);
 
   if (result.issues) {
     throw new ValidationError(target, result.issues);
   }
 
-  return (result as StandardSchemaV1.SuccessResult<T>).value;
+  return (result as StandardSchemaV1.SuccessResult<TOutput>).value;
 }
 
 /** Infer the output type from a Standard Schema */
-export type InferOutput<T extends StandardSchemaV1> = NonNullable<
-  T["~standard"]["types"]
+export type InferOutput<TSchema extends StandardSchemaV1> = NonNullable<
+  TSchema["~standard"]["types"]
 >["output"];

@@ -6,7 +6,9 @@ import { existsSync } from "node:fs";
 import { createServer } from "node:http";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import compression from "compression";
 import express from "express";
+import type { RequestHandler } from "express-serve-static-core";
 import { Server as SocketIOServer } from "socket.io";
 import { setProjectRoot } from "../context";
 import { registerApisRoutes } from "./apis-routes";
@@ -30,12 +32,7 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
 
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: [
-        `http://${host}:${port}`,
-        `http://localhost:${port}`,
-        "http://localhost:4381",
-        "http://localhost:4382",
-      ],
+      origin: [`http://${host}:${port}`, `http://localhost:${port}`, "http://localhost:4382"],
       methods: ["GET", "POST"],
     },
     serveClient: false,
@@ -59,6 +56,7 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
 
   // ── REST API ─────────────────────────────────────────────────────────────────
 
+  app.use(compression());
   app.use(express.json({ limit: "5mb" }));
 
   app.get("/api/sessions", (_req, res) => {
@@ -82,6 +80,13 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
   const uiDistPath = join(__dirname, "..", "ui", "dist");
 
   if (existsSync(uiDistPath)) {
+    // Hashed assets — immutable cache (hash in filename = safe to cache forever)
+    const serveAssets = express.static(join(uiDistPath, "assets")) as RequestHandler;
+    const setCacheHeaders: RequestHandler = (_req, res, next) => {
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      return serveAssets(_req, res, next);
+    };
+    app.use("/assets", setCacheHeaders);
     app.use(express.static(uiDistPath));
     // SPA fallback — Express 5 requires named param for catch-all
     app.get("/{*splat}", (_req, res) => {

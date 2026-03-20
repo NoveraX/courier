@@ -4,9 +4,9 @@ import {
   deduplicateAndAbortPrevious,
   getDedupeKey,
 } from "../utils/deduplicate";
-import { compileUrl, extractParamNames, isFormData, resolveBasePath } from "../utils/helpers";
-import { mergeHeaders } from "../utils/merge-headers";
-import { buildBody, stripUndefined, toSearchParams } from "./body-builder";
+import { compileUrl, resolveBasePath } from "../utils/helpers";
+import { stripUndefined } from "./body-builder";
+import { buildRequestOptions } from "./request-builder";
 import { getResponse } from "./response";
 import type {
   BoundMethodOptions,
@@ -19,37 +19,7 @@ import type {
   PathOptions,
   ResponseType,
   SearchParamsSerializer,
-  SimpleOptions,
 } from "./types";
-
-/** Remove path-param keys from variables so they don't leak into query/body */
-const stripPathParams = (
-  path: string,
-  variables: FormData | Record<string, unknown> | undefined,
-): FormData | Record<string, unknown> | undefined => {
-  if (!variables) return undefined;
-  const paramNames = extractParamNames(path);
-  if (paramNames.length === 0) return variables;
-
-  if (isFormData(variables)) {
-    const copy = new FormData();
-    for (const [k, v] of variables.entries()) {
-      if (!paramNames.includes(k)) copy.append(k, v);
-    }
-    return copy;
-  }
-
-  const copy = { ...variables };
-  for (const name of paramNames) delete copy[name];
-  return Object.keys(copy).length > 0 ? copy : undefined;
-};
-
-const toHeadersInit = (value: unknown): HeadersInit | undefined => {
-  if (value instanceof Headers) return value;
-  if (Array.isArray(value)) return value;
-  if (typeof value === "object" && value !== null) return value as Record<string, string>;
-  return undefined;
-};
 
 export type BindMethodDeps = {
   context?: Context;
@@ -80,16 +50,14 @@ export function bindMethod(
     ...boundFetchOptions
   } = boundOptions || {};
   const { prefix = "", pathOptions } = groupOptions || {};
-
   const cleanedVars = stripUndefined(vars as FormData | Record<string, unknown> | undefined);
 
-  return async <T>(...arguments_: MethodParameters<typeof method>) => {
+  return async <TResponse>(...arguments_: MethodParameters<typeof method>) => {
     const commonPathOptions = (await deps.pathOptions?.(deps.context?.req)) || {};
     const groupPathOptions = (await pathOptions?.(deps.context?.req)) || {};
     const generatedPathOptions = { ...commonPathOptions, ...groupPathOptions };
 
     const { path, baseUrl } = resolveBasePath(prefix, arguments_[0]);
-
     const [url, newVariables, newSearchParameters] = compileUrl(
       path,
       cleanedVars,
@@ -98,69 +66,25 @@ export function bindMethod(
     );
 
     const prefixUrlOverride = baseUrl ? { prefixUrl: baseUrl } : {};
-
-    // Strip path params from direct variables to avoid them leaking into query/body
-    const directVars = stripPathParams(
+    const options = buildRequestOptions(
+      method,
       path,
-      arguments_[1] as FormData | Record<string, unknown> | undefined,
+      arguments_,
+      boundHeaders,
+      boundFetchOptions,
+      prefixUrlOverride,
+      newVariables,
+      newSearchParameters,
+      deps,
     );
 
-    let options: Partial<FetchOptions>;
-
-    if (method === "head") {
-      const { headers: optionHeaders, ...otherArgumentOptions } =
-        (arguments_[1] as SimpleOptions) || {};
-
-      options = {
-        ...otherArgumentOptions,
-        ...boundFetchOptions,
-        ...prefixUrlOverride,
-        headers: mergeHeaders(boundHeaders, toHeadersInit(optionHeaders), deps.allowedHeaders),
-        searchParams: toSearchParams(
-          { ...deps.defaultQueryParams, ...newSearchParameters },
-          deps.searchParamsSerializer,
-        ),
-      };
-    } else {
-      const searchParameters =
-        arguments_[2] && "searchParams" in arguments_[2] ? arguments_[2].searchParams : undefined;
-
-      const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[2] || {};
-
-      options = {
-        ...otherArgumentOptions,
-        ...boundFetchOptions,
-        ...prefixUrlOverride,
-        headers: mergeHeaders(boundHeaders, optionHeaders, deps.allowedHeaders),
-        ...buildBody(
-          method,
-          (directVars || newVariables) as FormData | Record<string, unknown> | undefined,
-          { ...searchParameters, ...newSearchParameters },
-          deps.defaultBody,
-          deps.defaultQueryParams,
-          deps.searchParamsSerializer,
-          deps.bodySerializer,
-        ),
-      };
-    }
-
-    // Deduplication: abort previous request with the same key
-    let dedupeKey: string | undefined;
     if (deps.deduplicate) {
-      dedupeKey = getDedupeKey(url, method);
-      const controller = deduplicateAndAbortPrevious(
-        { pendingRequests: deps.pendingRequests },
-        dedupeKey,
-      );
-
-      options.signal = options.signal
-        ? AbortSignal.any([controller.signal, options.signal])
-        : controller.signal;
+      applyDeduplication(deps, url, method, options);
     }
+    const dedupeKey = deps.deduplicate ? getDedupeKey(url, method) : undefined;
 
     try {
       const response = await deps.fetchRequest(method, url, options);
-
       if (dedupeKey) cleanupDeduplication({ pendingRequests: deps.pendingRequests }, dedupeKey);
 
       if (!response.ok) {
@@ -177,10 +101,9 @@ export function bindMethod(
         ? { status: response.status, headers: response.headers, data: response.body }
         : await getResponse(response, deps.responseType, deps.responseParser);
 
-      return result as HttpResponse<T>;
+      return result as HttpResponse<TResponse>;
     } catch (error) {
       if (dedupeKey) cleanupDeduplication({ pendingRequests: deps.pendingRequests }, dedupeKey);
-
       if (error instanceof HTTPError) throw error;
 
       if (error instanceof Error) {
@@ -196,4 +119,20 @@ export function bindMethod(
       throw error;
     }
   };
+}
+
+function applyDeduplication(
+  deps: BindMethodDeps,
+  url: string,
+  method: HttpMethod,
+  options: Partial<FetchOptions>,
+): void {
+  const dedupeKey = getDedupeKey(url, method);
+  const controller = deduplicateAndAbortPrevious(
+    { pendingRequests: deps.pendingRequests },
+    dedupeKey,
+  );
+  options.signal = options.signal
+    ? AbortSignal.any([controller.signal, options.signal])
+    : controller.signal;
 }

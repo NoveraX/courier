@@ -1,155 +1,104 @@
-import { X } from "lucide-react"
+import { useMemo } from "react";
 
-import type { RequestEntry, RequestStatus } from "../../store"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
+import { FilterBar as SharedFilterBar } from "@/components/shared/filter-bar";
+import type { FilterConfig } from "@/components/shared/filter-bar";
+import type { FilterOption } from "@/components/shared/filter-bar";
+import type { RequestEntry } from "@/store/types";
+import type { TimelineFilters } from "@/store/types";
 
-import type { Filters } from "./filters"
-import { STATUS_CONFIG } from "./constants"
-import { hasActiveFilters, EMPTY_FILTERS } from "./filters"
-import { FilterSelect } from "./filter-select"
-
-// ── Filter Bar ──────────────────────────────────────────────────────────────
-
-export function FilterBar({
-  filters, setFilters, requests,
-}: {
-  filters: Filters
-  setFilters: (f: Filters) => void
-  requests: RequestEntry[]
-}) {
-  const availableMethods = [...new Set(requests.map((r) => r.httpMethod).filter(Boolean))] as string[]
-  const availableSources = [...new Set(requests.map((r) => r.source))]
-  const availableGroups = [...new Set(requests.map((r) => r.group).filter(Boolean))] as string[]
-
-  return (
-    <div className="flex flex-wrap items-center gap-1.5 border-b border-border px-2 py-1.5">
-      <FilterSelect
-        label="Status"
-        options={["pending", "success", "error", "aborted", "validation_error"] as RequestStatus[]}
-        selected={filters.status}
-        onChange={(v) => setFilters({ ...filters, status: v })}
-        renderOption={(o) => STATUS_CONFIG[o]?.label ?? o}
-      />
-
-      <FilterSelect
-        label="Mode"
-        options={["direct", "proxy"]}
-        selected={filters.mode}
-        onChange={(v) => setFilters({ ...filters, mode: v })}
-      />
-
-      <FilterSelect
-        label="Type"
-        options={["query", "mutation"]}
-        selected={filters.type}
-        onChange={(v) => setFilters({ ...filters, type: v })}
-      />
-
-      {availableSources.length > 1 && (
-        <FilterSelect
-          label="Source"
-          options={availableSources}
-          selected={filters.source}
-          onChange={(v) => setFilters({ ...filters, source: v })}
-        />
-      )}
-
-      {availableGroups.length > 1 && (
-        <FilterSelect
-          label="Group"
-          options={availableGroups}
-          selected={filters.group}
-          onChange={(v) => setFilters({ ...filters, group: v })}
-        />
-      )}
-
-      {availableMethods.length > 0 && (
-        <FilterSelect
-          label="Method"
-          options={availableMethods}
-          selected={filters.httpMethod}
-          onChange={(v) => setFilters({ ...filters, httpMethod: v })}
-        />
-      )}
-
-      <Separator orientation="vertical" className="mx-0.5 h-4" />
-
-      {/* Min duration */}
-      <div className="flex items-center gap-1">
-        <span className="text-[10px] text-muted-foreground">Min:</span>
-        <Input
-          type="number"
-          placeholder="ms"
-          value={filters.minDuration ?? ""}
-          onChange={(e) =>
-            setFilters({
-              ...filters,
-              minDuration: e.target.value ? Number(e.target.value) : null,
-            })
-          }
-          className="h-6 w-16 px-1.5 text-[11px] tabular-nums"
-        />
-      </div>
-
-      {/* Active filter badges */}
-      <ActiveFilterBadges filters={filters} setFilters={setFilters} />
-
-      {/* Clear all */}
-      {hasActiveFilters(filters) && (
-        <Button variant="ghost" size="xs" className="text-destructive" onClick={() => setFilters(EMPTY_FILTERS)}>
-          <X className="size-3" />
-          Reset
-        </Button>
-      )}
-    </div>
-  )
+interface TimelineFilterBarProps {
+  requests: readonly RequestEntry[];
+  filters: TimelineFilters;
+  onFilterChange: <K extends keyof TimelineFilters>(key: K, value: TimelineFilters[K]) => void;
+  onReset: () => void;
 }
 
-// ── Active Filter Badges ────────────────────────────────────────────────────
+export function TimelineFilterBar({
+  requests,
+  filters,
+  onFilterChange,
+  onReset,
+}: TimelineFilterBarProps): React.ReactElement {
+  const filterConfigs = useMemo(() => buildFilterConfigs(requests), [requests]);
 
-function ActiveFilterBadges({
-  filters, setFilters,
-}: {
-  filters: Filters
-  setFilters: (f: Filters) => void
-}) {
-  const badges: Array<{ label: string; onRemove: () => void }> = []
-
-  for (const status of filters.status) {
-    badges.push({
-      label: STATUS_CONFIG[status]?.label ?? status,
-      onRemove: () => setFilters({ ...filters, status: filters.status.filter((s) => s !== status) }),
-    })
-  }
-  for (const mode of filters.mode) {
-    badges.push({
-      label: mode,
-      onRemove: () => setFilters({ ...filters, mode: filters.mode.filter((m) => m !== mode) }),
-    })
-  }
-  for (const type of filters.type) {
-    badges.push({
-      label: type,
-      onRemove: () => setFilters({ ...filters, type: filters.type.filter((t) => t !== type) }),
-    })
-  }
-
-  if (badges.length === 0) return null
+  const values: Record<string, string[]> = {
+    status: filters.status,
+    mode: filters.mode,
+    type: filters.type,
+    httpMethod: filters.httpMethod,
+    source: filters.source,
+    group: filters.group,
+  };
 
   return (
-    <>
-      <Separator orientation="vertical" className="mx-0.5 h-4" />
-      {badges.map((b) => (
-        <Badge key={b.label} variant="secondary" className="gap-1 text-[10px]">
-          {b.label}
-          <button type="button" onClick={b.onRemove} className="hover:text-foreground">
-            <X className="size-2.5" />
-          </button>
-        </Badge>
-      ))}
-    </>
-  )
+    <div className="border-b border-border-subtle px-3 py-2">
+      <SharedFilterBar
+        filters={filterConfigs}
+        values={values}
+        onChange={(key, selected) =>
+          onFilterChange(key as keyof TimelineFilters, selected as never)
+        }
+        onReset={onReset}
+      />
+    </div>
+  );
+}
+
+function buildFilterConfigs(requests: readonly RequestEntry[]): FilterConfig[] {
+  return [
+    { key: "status", label: "Status", options: STATUS_OPTIONS },
+    { key: "mode", label: "Mode", options: MODE_OPTIONS },
+    { key: "type", label: "Type", options: TYPE_OPTIONS },
+    { key: "httpMethod", label: "Method", options: extractMethods(requests), searchable: true },
+    { key: "source", label: "Source", options: extractUnique(requests, "source"), searchable: true },
+    { key: "group", label: "Group", options: extractGroups(requests), searchable: true },
+  ];
+}
+
+const STATUS_OPTIONS: FilterOption[] = [
+  { value: "success", label: "Success" },
+  { value: "error", label: "Error" },
+  { value: "pending", label: "Pending" },
+  { value: "aborted", label: "Aborted" },
+  { value: "validation_error", label: "Validation Error" },
+];
+
+const MODE_OPTIONS: FilterOption[] = [
+  { value: "direct", label: "Direct" },
+  { value: "proxy", label: "Proxy" },
+];
+
+const TYPE_OPTIONS: FilterOption[] = [
+  { value: "query", label: "Query" },
+  { value: "mutation", label: "Mutation" },
+];
+
+function extractMethods(requests: readonly RequestEntry[]): FilterOption[] {
+  const methods = new Set<string>();
+  for (const r of requests) {
+    if (r.httpMethod) methods.add(r.httpMethod);
+  }
+  return Array.from(methods)
+    .sort()
+    .map((m) => ({ value: m, label: m }));
+}
+
+function extractUnique(requests: readonly RequestEntry[], field: "source"): FilterOption[] {
+  const values = new Set<string>();
+  for (const r of requests) {
+    values.add(r[field]);
+  }
+  return Array.from(values)
+    .sort()
+    .map((v) => ({ value: v, label: v }));
+}
+
+function extractGroups(requests: readonly RequestEntry[]): FilterOption[] {
+  const groups = new Set<string>();
+  for (const r of requests) {
+    if (r.group) groups.add(r.group);
+  }
+  return Array.from(groups)
+    .sort()
+    .map((g) => ({ value: g, label: g }));
 }

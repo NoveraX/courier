@@ -1,140 +1,159 @@
-import type { EndpointInfo } from "../../store"
+import { useState, useCallback } from "react";
+import { FileJson, KeyRound, ChevronDown, Terminal, Code2, Copy, Link } from "lucide-react";
+import { toast } from "sonner";
 
-import { Badge } from "../../components/ui"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { PathDisplay } from "@/views/explorer/shared/path-display";
+import { buildCurlSnippet, buildFetchSnippet, resolvePathParams } from "@/lib/snippets";
 
-export function RequestPanel({
-  variables,
-  setVariables,
-  headers,
-  setHeaders,
-  variablesValid,
-  headersValid,
-  endpointInfo,
-  selectedSource,
-  selectedGroup,
-  selectedMethod,
-}: {
-  variables: string
-  setVariables: (v: string) => void
-  headers: string
-  setHeaders: (v: string) => void
-  variablesValid: boolean
-  headersValid: boolean
-  endpointInfo: EndpointInfo | null
-  selectedSource: string
-  selectedGroup: string
-  selectedMethod: string
-}) {
-  return (
-    <div className="flex w-1/2 flex-col border-r border-border-default">
-      <div className="flex-1 overflow-y-auto p-4">
-        {/* Variables editor */}
-        <div className="mb-4">
-          <div className="mb-1.5 flex items-center justify-between">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
-              Variables
-            </label>
-            {endpointInfo?.hasVariablesSchema && (
-              <span className="text-[10px] text-emerald-400">Schema defined</span>
-            )}
-          </div>
-          <textarea
-            value={variables}
-            onChange={(e) => setVariables(e.target.value)}
-            className="h-32 w-full resize-y rounded-lg border border-border-default bg-surface-1 p-3 font-mono text-[11px] text-text-primary outline-none focus:border-indigo-500/50"
-            placeholder='{ "id": 1 }'
-            spellCheck={false}
-          />
-          {!variablesValid && variables !== "{}" && (
-            <p className="mt-1 text-[10px] text-red-400">Invalid JSON</p>
-          )}
-        </div>
+import type { EndpointInfo, SourceInfo } from "@/store/types-ui";
+import { JsonEditor, stripComments } from "./json-editor";
 
-        {/* Headers editor */}
-        <div className="mb-4">
-          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-text-muted">
-            Headers
-          </label>
-          <textarea
-            value={headers}
-            onChange={(e) => setHeaders(e.target.value)}
-            className="h-20 w-full resize-y rounded-lg border border-border-default bg-surface-1 p-3 font-mono text-[11px] text-text-primary outline-none focus:border-indigo-500/50"
-            placeholder='{ "Authorization": "Bearer ..." }'
-            spellCheck={false}
-          />
-          {!headersValid && headers !== "{}" && (
-            <p className="mt-1 text-[10px] text-red-400">
-              Invalid headers — must be a flat {"{"} key: string {"}"} object
-            </p>
-          )}
-        </div>
+// ── Types ──────────────────────────────────────────────────────────────────
 
-        {/* Endpoint info */}
-        {endpointInfo && (
-          <EndpointInfoPanel
-            endpointInfo={endpointInfo}
-            selectedSource={selectedSource}
-            selectedGroup={selectedGroup}
-            selectedMethod={selectedMethod}
-          />
-        )}
-      </div>
-    </div>
-  )
+interface RequestPanelProps {
+  variables: string;
+  headers: string;
+  endpointInfo: EndpointInfo | null;
+  sourceInfo: SourceInfo | null;
+  groupPrefix: string;
+  onVariablesChange: (v: string) => void;
+  onHeadersChange: (h: string) => void;
 }
 
-function EndpointInfoPanel({
-  endpointInfo,
-  selectedSource,
-  selectedGroup,
-  selectedMethod,
-}: {
-  endpointInfo: EndpointInfo
-  selectedSource: string
-  selectedGroup: string
-  selectedMethod: string
-}) {
+// ── Component ──────────────────────────────────────────────────────────────
+
+export function RequestPanel({
+  variables, headers, endpointInfo, sourceInfo, groupPrefix,
+  onVariablesChange, onHeadersChange,
+}: RequestPanelProps): React.ReactElement {
+  const [headersOpen, setHeadersOpen] = useState(false);
+  const fullPath = buildFullPath(sourceInfo?.baseURL, groupPrefix, endpointInfo?.path);
+
+  const buildSnippetInput = useCallback(() => {
+    const parsedVars = safeParse(variables);
+    return {
+      url: fullPath ? resolvePathParams(fullPath, parsedVars) : "",
+      method: endpointInfo?.type === "mutation" ? "POST" : "GET",
+      headers: { "Content-Type": "application/json", ...safeParse(headers) },
+      body: parsedVars,
+    };
+  }, [fullPath, variables, headers, endpointInfo]);
+
   return (
-    <div className="rounded-lg border border-border-default bg-surface-1 p-3">
-      <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
-        Endpoint Info
-      </h4>
-      <div className="space-y-1 text-[11px]">
-        <div className="flex justify-between">
-          <span className="text-text-muted">Path</span>
-          <span className="font-mono text-text-secondary">
-            {selectedSource}.{selectedGroup}.{selectedMethod}
-          </span>
+    <div className="flex h-full flex-col overflow-auto p-3">
+      {/* Endpoint path + copy menu */}
+      {fullPath && (
+        <div className="mb-2 flex items-center gap-1.5 rounded-md border border-border-subtle bg-card/30 px-2.5 py-1.5">
+          <span className="text-caption text-muted-foreground/50">URL</span>
+          <PathDisplay path={fullPath} className="flex-1 text-[11px]" />
+          <CopyMenu buildInput={buildSnippetInput} />
         </div>
-        <div className="flex justify-between">
-          <span className="text-text-muted">Type</span>
-          <Badge variant={endpointInfo.type === "query" ? "emerald" : "amber"}>
-            {endpointInfo.type}
-          </Badge>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-text-muted">Variables Schema</span>
-          <span className={endpointInfo.hasVariablesSchema ? "text-emerald-400" : "text-text-muted"}>
-            {endpointInfo.hasVariablesSchema ? "Yes" : "No"}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-text-muted">Response Schema</span>
-          <span className={endpointInfo.hasResponseSchema ? "text-emerald-400" : "text-text-muted"}>
-            {endpointInfo.hasResponseSchema ? "Yes" : "No"}
-          </span>
-        </div>
-        {(endpointInfo.middleware?.length ?? 0) > 0 && (
-          <div className="flex justify-between">
-            <span className="text-text-muted">Middleware</span>
-            <div className="flex gap-1">
-              {endpointInfo.middleware.map((m) => (
-                <Badge key={m} variant="violet">{m}</Badge>
-              ))}
-            </div>
-          </div>
-        )}
+      )}
+
+      {/* Variables editor */}
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5">
+        <EditorLabel icon={FileJson} label="Variables" hint={endpointInfo?.hasVariablesSchema ? "Schema validated" : undefined} />
+        <JsonEditor value={variables} onChange={onVariablesChange} placeholder='{ "id": 1 }' className="min-h-0 flex-1" />
       </div>
+
+      {/* Headers — collapsible */}
+      <Collapsible open={headersOpen} onOpenChange={setHeadersOpen} className="mt-2">
+        <CollapsibleTrigger className="flex w-full items-center gap-1.5 py-1">
+          <ChevronDown className={cn("size-3 text-muted-foreground transition-transform", headersOpen && "rotate-0", !headersOpen && "-rotate-90")} />
+          <EditorLabel icon={KeyRound} label="Headers" />
+          {headers.trim() !== "{}" && <span className="text-[10px] text-accent-brand/60">modified</span>}
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <JsonEditor value={headers} onChange={onHeadersChange} placeholder='{ "Authorization": "Bearer ..." }' className="mt-1.5 h-28" />
+        </CollapsibleContent>
+      </Collapsible>
     </div>
-  )
+  );
+}
+
+// ── Copy menu ──────────────────────────────────────────────────────────────
+
+function CopyMenu({ buildInput }: {
+  buildInput: () => { url: string; method: string; headers: Record<string, string>; body: unknown };
+}): React.ReactElement {
+  const [open, setOpen] = useState(false);
+
+  const copy = (fn: () => string, label: string) => () => {
+    navigator.clipboard.writeText(fn());
+    toast.success(`${label} copied`);
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Copy as" className="size-5 shrink-0 text-muted-foreground/40 hover:text-foreground">
+              <Copy className="size-3" />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="left">Copy as...</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" side="bottom" className="w-auto p-1">
+        <div className="flex flex-col">
+          <CopyRow icon={Link} label="URL" onClick={copy(() => buildInput().url, "URL")} />
+          <CopyRow icon={Terminal} label="cURL" onClick={copy(() => buildCurlSnippet(buildInput()), "cURL")} />
+          <CopyRow icon={Code2} label="fetch" onClick={copy(() => buildFetchSnippet(buildInput()), "fetch")} />
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function CopyRow({ icon: Icon, label, onClick }: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  onClick: () => void;
+}): React.ReactElement {
+  return (
+    <button type="button" onClick={onClick} className="flex items-center gap-2 rounded px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-card hover:text-foreground">
+      <Icon className="size-3" />
+      {label}
+    </button>
+  );
+}
+
+// ── Subcomponents ──────────────────────────────────────────────────────────
+
+function EditorLabel({ icon: Icon, label, hint }: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  hint?: string;
+}): React.ReactElement {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Icon className="size-3.5 text-muted-foreground" />
+      <span className="text-caption text-muted-foreground">{label}</span>
+      {hint && <span className="text-[10px] text-emerald-400/70">{hint}</span>}
+    </div>
+  );
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+export function buildFullPath(baseURL?: string, prefix?: string, path?: string): string {
+  const parts = [baseURL, prefix, path].filter(Boolean);
+  if (parts.length === 0) return "";
+  return parts.reduce((acc, part) => {
+    if (!acc) return part!;
+    const a = acc.endsWith("/") ? acc.slice(0, -1) : acc;
+    const b = part!.startsWith("/") ? part! : `/${part}`;
+    return a + b;
+  }, "")!;
+}
+
+function safeParse(json: string): Record<string, string> {
+  try { return JSON.parse(stripComments(json)); } catch { return {}; }
 }

@@ -1,85 +1,190 @@
-import type { SourceMap, RequestEntry } from "../../store"
-import type { FlatEndpoint } from "../explorer/helpers"
-import type { AuditItem } from "./types"
-import {
-  ERROR_RATE_THRESHOLD,
-  MIN_CALLS_FOR_CACHE_HINT,
-  LARGE_GROUP_ENDPOINT_COUNT,
-} from "./constants"
+import type { Catalog } from "../../store/types-ui";
+import type { AuditEndpoint, AuditItem, EndpointStats } from "./types";
 
-export function collectHints(
-  sourceMap: SourceMap,
-  endpoints: FlatEndpoint[],
-  epDurations: Map<string, number[]>,
-  epErrors: Map<string, { total: number; transportErrors: number; validationErrors: number }>,
-  nextId: () => string
-): AuditItem[] {
-  const items: AuditItem[] = []
-
-  for (const ep of endpoints) {
-    if (ep.type === "query" && !ep.middleware.includes("cache")) {
-      const key = `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")}`
-      const callCount = epDurations.get(key)?.length ?? 0
-      if (callCount >= MIN_CALLS_FOR_CACHE_HINT) {
-        items.push({ id: nextId(), severity: "hint", title: "Consider caching", description: `${key} is a query endpoint called ${callCount} times with no caching.`, suggestion: `Add cacheMiddleware({ ttl: 60 }) to the middleware chain.`, endpoint: key, category: "performance" })
-      }
-    }
-  }
-
-  for (const ep of endpoints) {
-    if (!ep.middleware.includes("retry")) {
-      const key = `${[ep.source, ep.group, ep.method].filter(Boolean).join(".")}`
-      const stats = epErrors.get(key)
-      if (stats && stats.transportErrors > 0 && stats.transportErrors / stats.total < ERROR_RATE_THRESHOLD) {
-        items.push({ id: nextId(), severity: "hint", title: "Consider retry middleware", description: `${key} has occasional transport errors but no retry middleware.`, suggestion: "Add retryMiddleware({ maxRetries: 3, backoff: 'exponential' }) to handle transient failures.", endpoint: key, category: "reliability" })
-      }
-    }
-  }
-
-  for (const [sourceName, source] of Object.entries(sourceMap)) {
-    for (const [groupName, group] of Object.entries(source.groups ?? {})) {
-      const epCount = Object.keys(group.endpoints ?? {}).length
-      if (epCount > LARGE_GROUP_ENDPOINT_COUNT) {
-        items.push({ id: nextId(), severity: "hint", title: "Large group", description: `${sourceName}.${groupName} has ${epCount} endpoints.`, suggestion: "Consider splitting into smaller, more focused groups.", endpoint: `${sourceName}.${groupName}`, category: "structure" })
-      }
-    }
-  }
-
-  return items
+function formatEp(s: EndpointStats): AuditEndpoint {
+  return {
+    key: s.key,
+    label: s.group ? `${s.source}.${s.group}.${s.method}` : `${s.source}.${s.method}`,
+    requestIds: s.requestIds,
+  };
 }
 
-export function collectPasses(
-  endpoints: FlatEndpoint[],
-  requests: RequestEntry[],
-  nextId: () => string
+function noCachingDetected(stats: Map<string, EndpointStats>): AuditItem[] {
+  const frequent = [...stats.values()].filter((s) => s.count >= 3);
+  if (frequent.length === 0) return [];
+  return [{
+    id: "hint-no-caching",
+    severity: "hint",
+    category: "performance",
+    title: "No caching detected",
+    description: "None of the frequently called endpoints show caching behavior.",
+    suggestion: "Add cache middleware or set cache headers for read-only endpoints.",
+    codeSuggestion: `import { cache } from "@noverax/nexus/middleware";\n\ndefineApi({\n  middleware: [cache({ ttl: 60_000 })],\n});`,
+  }];
+}
+
+function noResponseValidation(stats: Map<string, EndpointStats>): AuditItem[] {
+  const matched = [...stats.values()].filter((s) => !s.hasResponseValidation);
+  if (matched.length === 0) return [];
+  return [{
+    id: "hint-no-res-val",
+    severity: "hint",
+    category: "security",
+    title: "No response validation",
+    description: "Endpoints without a response schema — malformed data may slip through.",
+    suggestion: "Add a response schema with Zod, Valibot, or ArkType.",
+    codeSuggestion: `endpoint<User>({\n  response: z.object({\n    id: z.number(),\n    name: z.string(),\n  }),\n})((http) => http.get("users/1"));`,
+    endpoints: matched.map(formatEp),
+  }];
+}
+
+function noVariablesValidation(stats: Map<string, EndpointStats>): AuditItem[] {
+  const matched = [...stats.values()].filter((s) => !s.hasVariablesValidation);
+  if (matched.length === 0) return [];
+  return [{
+    id: "hint-no-var-val",
+    severity: "hint",
+    category: "security",
+    title: "No input validation",
+    description: "Endpoints send unvalidated variables to the server.",
+    suggestion: "Add a variables schema to validate inputs before sending.",
+    codeSuggestion: `endpoint<Response, { id: number }>({\n  variables: z.object({ id: z.number() }),\n})((http, vars) => http.get(\`users/\${vars.id}\`));`,
+    endpoints: matched.map(formatEp),
+  }];
+}
+
+/** Only reports catalog endpoints that were NOT called. */
+function missingAllSchemas(
+  stats: Map<string, EndpointStats>,
+  catalog: Catalog,
 ): AuditItem[] {
-  const items: AuditItem[] = []
-
-  if (endpoints.every((ep) => ep.hasResponseSchema) && endpoints.length > 0) {
-    items.push({ id: nextId(), severity: "pass", title: "All endpoints have response validation", description: "Every endpoint has a response schema defined for runtime type-checking.", category: "validation" })
+  const calledKeys = new Set(stats.keys());
+  const matched: AuditEndpoint[] = [];
+  for (const [src, entry] of Object.entries(catalog)) {
+    for (const [grp, group] of Object.entries(entry.groups)) {
+      for (const [ep, cfg] of Object.entries(group.endpoints)) {
+        const key = `${src}:${grp}:${ep}`;
+        if (calledKeys.has(key)) continue;
+        if (!cfg.hasVariablesSchema && !cfg.hasResponseSchema) {
+          const label = grp ? `${src}.${grp}.${ep}` : `${src}.${ep}`;
+          matched.push({ key, label });
+        }
+      }
+    }
   }
+  if (matched.length === 0) return [];
+  return [{
+    id: "hint-no-schema",
+    severity: "hint",
+    category: "best-practices",
+    title: "No schemas at all",
+    description: "Uncalled endpoints with neither variables nor response schema.",
+    suggestion: "Add type-safe schemas for full validation coverage.",
+    endpoints: matched,
+  }];
+}
 
-  const mutations = endpoints.filter((ep) => ep.type === "mutation")
-  if (mutations.every((ep) => ep.hasVariablesSchema) && mutations.length > 0) {
-    items.push({ id: nextId(), severity: "pass", title: "All mutations have input validation", description: "Every mutation endpoint validates its input with a schema.", category: "validation" })
-  }
+const PROXY_OVERHEAD_THRESHOLD = 0.5;
 
-  if (endpoints.some((ep) => ep.middleware.includes("auth"))) {
-    items.push({ id: nextId(), severity: "pass", title: "Auth middleware applied", description: "Auth middleware is configured on one or more endpoints.", category: "security" })
-  }
+function proxyLatencyOverhead(stats: Map<string, EndpointStats>): AuditItem[] {
+  const matched = [...stats.values()].filter(
+    (s) => s.proxyOverhead > PROXY_OVERHEAD_THRESHOLD && s.modes.has("proxy"),
+  );
+  if (matched.length === 0) return [];
+  return [{
+    id: "hint-proxy-overhead",
+    severity: "hint",
+    category: "performance",
+    title: "High proxy overhead",
+    description: "Proxy mode adds more than 50% latency overhead vs direct fetch.",
+    suggestion: "Use direct mode for endpoints that don't need server-side secrets.",
+    endpoints: matched.map((s) => ({
+      ...formatEp(s),
+      detail: `${(s.proxyOverhead * 100).toFixed(0)}% overhead`,
+    })),
+  }];
+}
 
-  if (endpoints.some((ep) => ep.middleware.some((mw) => mw.includes("error")))) {
-    items.push({ id: nextId(), severity: "pass", title: "Error middleware in chain", description: "Error handling middleware is configured on one or more endpoints.", category: "reliability" })
-  }
+const VALIDATION_OVERHEAD_THRESHOLD = 0.2;
 
-  if (endpoints.some((ep) => ep.middleware.includes("log"))) {
-    items.push({ id: nextId(), severity: "pass", title: "Logging middleware present", description: "Logging middleware is active for request tracking.", category: "observability" })
-  }
+function validationOverhead(stats: Map<string, EndpointStats>): AuditItem[] {
+  const matched = [...stats.values()].filter(
+    (s) => s.validationOverhead > VALIDATION_OVERHEAD_THRESHOLD,
+  );
+  if (matched.length === 0) return [];
+  return [{
+    id: "hint-validation-overhead",
+    severity: "hint",
+    category: "performance",
+    title: "High validation overhead",
+    description: "Schema validation takes more than 20% of total request time.",
+    suggestion: "Simplify the schema or use a faster validation library.",
+    endpoints: matched.map((s) => ({
+      ...formatEp(s),
+      detail: `${(s.validationOverhead * 100).toFixed(0)}% of request time`,
+    })),
+  }];
+}
 
-  const recentErrors = requests.filter((r) => r.status === "error" || r.status === "validation_error")
-  if (requests.length > 0 && recentErrors.length === 0) {
-    items.push({ id: nextId(), severity: "pass", title: "No errors in current session", description: `All ${requests.length} requests completed successfully.`, category: "reliability" })
-  }
+function inconsistentStatusCodes(stats: Map<string, EndpointStats>): AuditItem[] {
+  const matched = [...stats.values()].filter((s) => {
+    const successCodes = s.statusCodes.filter((c) => c >= 200 && c < 300);
+    const unique = new Set(successCodes);
+    return unique.size > 1;
+  });
+  if (matched.length === 0) return [];
+  return [{
+    id: "hint-inconsistent-status",
+    severity: "hint",
+    category: "best-practices",
+    title: "Inconsistent status codes",
+    description: "Same endpoint returns different success status codes (e.g. mix of 200/201/204).",
+    suggestion: "Standardize success status codes for predictable client handling.",
+    endpoints: matched.map((s) => {
+      const unique = [...new Set(s.statusCodes.filter((c) => c >= 200 && c < 300))];
+      return { ...formatEp(s), detail: unique.join(", ") };
+    }),
+  }];
+}
 
-  return items
+/** Collect pass items for endpoints that meet all quality criteria. */
+export function collectPasses(
+  stats: Map<string, EndpointStats>,
+): AuditItem[] {
+  const matched = [...stats.values()].filter(
+    (s) =>
+      s.hasVariablesValidation &&
+      s.hasResponseValidation &&
+      s.errorRate < 0.05 &&
+      s.p95 < 500 &&
+      s.count >= 3,
+  );
+  if (matched.length === 0) return [];
+  return [{
+    id: "pass-healthy",
+    severity: "pass",
+    category: "best-practices",
+    title: "Healthy endpoints",
+    description: "Endpoints with schemas, low error rate, and fast response times.",
+    endpoints: matched.map((s) => ({
+      ...formatEp(s),
+      detail: `P95 = ${s.p95.toFixed(0)}ms`,
+    })),
+  }];
+}
+
+/** Collect all hint-severity audit items. */
+export function collectHints(
+  stats: Map<string, EndpointStats>,
+  catalog: Catalog,
+): AuditItem[] {
+  return [
+    ...noCachingDetected(stats),
+    ...noResponseValidation(stats),
+    ...noVariablesValidation(stats),
+    ...missingAllSchemas(stats, catalog),
+    ...proxyLatencyOverhead(stats),
+    ...validationOverhead(stats),
+    ...inconsistentStatusCodes(stats),
+  ];
 }

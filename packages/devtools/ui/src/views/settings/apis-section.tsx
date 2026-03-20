@@ -1,103 +1,150 @@
-import type { Settings, ValidationLib, ApisGroupBy, ApisClient } from "../../store"
-import { SettingsSection, SettingRow, Toggle, Select } from "./section"
+import { Controller } from "react-hook-form";
 
-// ── Apis Default Settings ───────────────────────────────────────────────
+import type { UseFormReturn } from "react-hook-form";
+import type { Settings } from "@/store/types";
 
-const VALIDATION_OPTIONS: { value: ValidationLib; label: string }[] = [
-  { value: "zod", label: "Zod" },
-  { value: "valibot", label: "Valibot" },
-  { value: "arktype", label: "ArkType" },
-  { value: "none", label: "None" },
-]
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  VALIDATION_LIB_OPTIONS,
+  GROUP_BY_OPTIONS,
+  CLIENT_OPTIONS,
+} from "./constants";
+import { SettingRow } from "./setting-row";
 
-const GROUP_BY_OPTIONS: { value: ApisGroupBy; label: string }[] = [
-  { value: "tag", label: "By tag" },
-  { value: "path", label: "By path prefix" },
-  { value: "single", label: "Single group" },
-]
+// ── APIs defaults section ────────────────────────────────────────────────────
 
-const CLIENT_OPTIONS: { value: ApisClient; label: string }[] = [
-  { value: "direct", label: "Direct" },
-  { value: "proxy", label: "Proxy" },
-  { value: "both", label: "Both" },
-  { value: "none", label: "None" },
-]
+interface ApisSectionProps {
+  form: UseFormReturn<Settings>;
+}
 
 export function ApisSection({
-  settings,
-  onUpdate,
-}: {
-  settings: Settings
-  onUpdate: (patch: Partial<Settings>) => void
-}) {
+  form,
+}: ApisSectionProps): React.ReactElement {
   return (
-    <SettingsSection
-      title="API Defaults"
-      description="Default options for OpenAPI code generation"
-      defaultOpen={false}
-    >
-      <SettingRow
-        label="Validation library"
-        description="Schema validation library for generated code"
-      >
-        <Select
-          value={settings.apisValidation}
-          options={VALIDATION_OPTIONS}
-          onChange={(apisValidation) => onUpdate({ apisValidation })}
+    <>
+      <SettingRow label="Validation library">
+        <Controller
+          control={form.control}
+          name="apisValidation"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger className="w-28" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VALIDATION_LIB_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         />
       </SettingRow>
 
-      <SettingRow
-        label="Group by"
-        description="How endpoints are grouped into files"
-      >
-        <Select
-          value={settings.apisGroupBy}
-          options={GROUP_BY_OPTIONS}
-          onChange={(apisGroupBy) => onUpdate({ apisGroupBy })}
+      <SettingRow label="Group by">
+        <Controller
+          control={form.control}
+          name="apisGroupBy"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger className="w-32" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {GROUP_BY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         />
       </SettingRow>
 
-      <SettingRow
-        label="Client mode"
-        description="Generated client type (direct, proxy, or both)"
-      >
-        <Select
-          value={settings.apisClient}
-          options={CLIENT_OPTIONS}
-          onChange={(apisClient) => onUpdate({ apisClient })}
+      <SettingRow label="HTTP client">
+        <Controller
+          control={form.control}
+          name="apisClient"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger className="w-36" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CLIENT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         />
       </SettingRow>
 
       <SettingRow
         label="Generate types"
-        description="Generate TypeScript type definitions"
+        description="Include TypeScript type definitions in generated code"
+        htmlFor="apisGenerateTypes"
       >
-        <Toggle
-          checked={settings.apisGenerateTypes}
-          onChange={(apisGenerateTypes) => onUpdate({ apisGenerateTypes })}
+        <Controller
+          control={form.control}
+          name="apisGenerateTypes"
+          render={({ field }) => (
+            <Switch
+              id="apisGenerateTypes"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          )}
         />
       </SettingRow>
 
       <SettingRow
         label="Generate schemas"
-        description="Generate runtime validation schemas"
+        description="Include validation schemas in generated code"
+        htmlFor="apisGenerateSchemas"
       >
-        <Toggle
-          checked={settings.apisGenerateSchemas}
-          onChange={(apisGenerateSchemas) => onUpdate({ apisGenerateSchemas })}
+        <Controller
+          control={form.control}
+          name="apisGenerateSchemas"
+          render={({ field }) => (
+            <Switch
+              id="apisGenerateSchemas"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          )}
         />
       </SettingRow>
 
       <SettingRow
         label="Include comments"
-        description="Add JSDoc from OpenAPI descriptions"
+        description="Add JSDoc comments to generated code"
+        htmlFor="apisIncludeComments"
       >
-        <Toggle
-          checked={settings.apisIncludeComments}
-          onChange={(apisIncludeComments) => onUpdate({ apisIncludeComments })}
+        <Controller
+          control={form.control}
+          name="apisIncludeComments"
+          render={({ field }) => (
+            <Switch
+              id="apisIncludeComments"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          )}
         />
       </SettingRow>
-    </SettingsSection>
-  )
+    </>
+  );
 }

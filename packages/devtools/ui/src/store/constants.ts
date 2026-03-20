@@ -19,8 +19,11 @@ export const EMPTY_FILTERS: TimelineFilters = {
 // ── Default settings ────────────────────────────────────────────────────────
 
 export const DEFAULT_SETTINGS: Settings = {
+  theme: "dark",
+  density: "comfortable",
   maxRequests: 2000,
   preserveLog: false,
+  ignorePatterns: [],
   timestampFormat: "relative",
   jsonIndent: 2,
   showRequestPreview: true,
@@ -29,6 +32,7 @@ export const DEFAULT_SETTINGS: Settings = {
   slowRequestThreshold: 500,
   autoReconnect: true,
   reconnectDelay: 1000,
+  defaultExportFormat: "har",
   apisValidation: "zod",
   apisGroupBy: "tag",
   apisGenerateTypes: true,
@@ -37,11 +41,11 @@ export const DEFAULT_SETTINGS: Settings = {
   apisClient: "direct",
 }
 
-// ── Safe localStorage reads ─────────────────────────────────────────────────
+// ── Safe localStorage reads (v2 prefix to avoid conflicts) ──────────────────
 
-export const THEME_STORAGE_KEY = "nexus-devtools-theme"
-export const SETTINGS_STORAGE_KEY = "nexus-devtools-settings"
-export const SESSION_STARTED_KEY = "nexus-devtools-session-started"
+export const THEME_STORAGE_KEY = "nexus-devtools-v2-theme"
+export const SETTINGS_STORAGE_KEY = "nexus-devtools-v2-settings"
+export const SESSION_STARTED_KEY = "nexus-devtools-v2-session-started"
 
 const VALID_THEMES: ReadonlySet<string> = new Set<Theme>(["dark", "light", "system"])
 export function loadTheme(): Theme {

@@ -1,123 +1,75 @@
-import { useState } from "react"
-import { Copy, Download, FolderOpen, FileText, Loader2, Check } from "lucide-react"
+import { FileCode, ChevronRight } from "lucide-react";
+import { useState } from "react";
 
-import type { GeneratedFile } from "./types"
+import { Badge } from "@/components/ui/badge";
+import { CodeBlock } from "@/components/shared/code-block";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
-export function PreviewStep({
+import type { GeneratedFile } from "./types";
+
+interface PreviewStepProps {
+  files: GeneratedFile[];
+  sourceName: string;
+  error: string | null;
+}
+
+export function PreviewStepView({
   files,
-  activeFileIndex,
-  loading,
-  writeResult,
-  onFileSelect,
-  onWrite,
-  onCopy,
-  onDownload,
-}: {
-  files: GeneratedFile[]
-  activeFileIndex: number
-  loading: boolean
-  writeResult: string | null
-  onFileSelect: (i: number) => void
-  onWrite: () => void
-  onCopy: () => void
-  onDownload: () => void
-}) {
-  const [copied, setCopied] = useState(false)
-  const activeFile = files[activeFileIndex]
-
-  function copyFile() {
-    if (!activeFile) return
-    navigator.clipboard.writeText(activeFile.content)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+  sourceName,
+  error,
+}: PreviewStepProps): React.ReactElement {
+  const [expandedFile, setExpandedFile] = useState<string | null>(
+    files[0]?.path ?? null,
+  );
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      {/* Actions bar */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className="text-base font-medium">Preview</h2>
-          <p className="text-xs text-text-muted">{files.length} file{files.length > 1 ? "s" : ""} generated</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {writeResult && (
-            <span className="text-xs text-emerald-400 flex items-center gap-1">
-              <Check size={12} /> {writeResult}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={onCopy}
-            className="flex items-center gap-1.5 rounded-lg border border-border-default bg-surface-1 px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-2"
-          >
-            <Copy size={12} /> Copy All
-          </button>
-          <button
-            type="button"
-            onClick={onDownload}
-            className="flex items-center gap-1.5 rounded-lg border border-border-default bg-surface-1 px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-2"
-          >
-            <Download size={12} /> Download
-          </button>
-          <button
-            type="button"
-            onClick={onWrite}
-            disabled={loading}
-            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-          >
-            {loading ? <Loader2 size={12} className="animate-spin" /> : <FolderOpen size={12} />}
-            Write to Project
-          </button>
-        </div>
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <h3 className="text-h3 text-foreground">Preview Generated Code</h3>
+        <p className="text-body-sm text-muted-foreground">
+          {files.length} files will be created for <span className="font-mono text-foreground">{sourceName}</span>
+        </p>
       </div>
 
-      {/* File tabs + content */}
-      <div className="flex flex-1 overflow-hidden rounded-lg border border-border-default">
-        {/* File tabs (left) */}
-        <div className="w-48 shrink-0 overflow-auto border-r border-border-default bg-surface-0">
-          {files.map((file, i) => {
-            const fileName = file.path.split("/").pop() ?? file.path
-            return (
-              <button
-                key={file.path}
-                type="button"
-                onClick={() => onFileSelect(i)}
-                className={`flex w-full items-center gap-1.5 px-3 py-2 text-left text-xs transition-colors ${
-                  i === activeFileIndex
-                    ? "bg-surface-2 text-text-primary"
-                    : "text-text-muted hover:bg-surface-1 hover:text-text-secondary"
-                }`}
-              >
-                <FileText size={12} className="shrink-0" />
-                <span className="truncate font-mono">{fileName}</span>
-              </button>
-            )
-          })}
-        </div>
+      <div className="space-y-1.5">
+        {files.map((file) => {
+          const isExpanded = expandedFile === file.path;
+          const ext = file.path.split(".").pop() ?? "ts";
+          const lines = file.content.split("\n").length;
 
-        {/* Code preview */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {activeFile && (
-            <>
-              <div className="flex items-center justify-between border-b border-border-subtle bg-surface-0 px-3 py-1.5">
-                <span className="font-mono text-xs text-text-muted">{activeFile.path}</span>
-                <button
-                  type="button"
-                  onClick={copyFile}
-                  className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary"
-                >
-                  {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                  {copied ? "Copied" : "Copy"}
-                </button>
-              </div>
-              <pre className="flex-1 overflow-auto bg-surface-1 p-4 font-mono text-xs leading-5 text-text-primary">
-                {activeFile.content}
-              </pre>
-            </>
-          )}
-        </div>
+          return (
+            <Collapsible
+              key={file.path}
+              open={isExpanded}
+              onOpenChange={(open) => setExpandedFile(open ? file.path : null)}
+            >
+              <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 hover:bg-muted/30 transition-colors">
+                <ChevronRight className={cn(
+                  "size-3 text-muted-foreground transition-transform",
+                  isExpanded && "rotate-90",
+                )} />
+                <FileCode className="size-3.5 text-indigo-400 shrink-0" />
+                <span className="text-xs font-mono text-foreground truncate">{file.path}</span>
+                <Badge variant="secondary" className="ml-auto text-[10px] shrink-0">
+                  {lines} lines
+                </Badge>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="mt-1 ml-5">
+                  <CodeBlock code={file.content} language={ext} />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        })}
       </div>
+
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
-  )
+  );
 }

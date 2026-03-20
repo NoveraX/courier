@@ -57,12 +57,12 @@ async function parseResponse(response: Response, type?: string): Promise<unknown
   }
 }
 
-async function request<T>(
+async function request<TResponse>(
   method: string,
   url: string,
   defaults: FetchClientOptions,
   options?: RequestOptions,
-): Promise<T> {
+): Promise<TResponse> {
   const fullUrl = joinUrl(defaults.baseURL ?? "", url);
   const headers = mergeHeaders(defaults.headers, options?.headers);
 
@@ -75,7 +75,7 @@ async function request<T>(
     ...(headers && { headers }),
   });
 
-  if (method === "head") return response.headers as T;
+  if (method === "head") return response.headers as TResponse;
 
   if (!response.ok) {
     let data: unknown;
@@ -87,7 +87,7 @@ async function request<T>(
     throw new HTTPError({ status: response.status, headers: response.headers, data });
   }
 
-  return (await parseResponse(response, options?.responseType)) as T;
+  return (await parseResponse(response, options?.responseType)) as TResponse;
 }
 
 /**

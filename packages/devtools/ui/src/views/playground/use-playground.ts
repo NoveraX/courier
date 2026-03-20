@@ -1,160 +1,123 @@
-import { useState, useMemo, useCallback, useEffect } from "react"
+import { useState, useMemo, useCallback, useRef } from "react";
 
-import type { PlaygroundHistoryEntry } from "../../store"
+import { useDevToolsStore } from "@/store";
+import type { CatalogEndpoint, CatalogEntry } from "@/store/types-ui";
 
-import { useDevToolsStore } from "../../store"
-import { mergeSourceMaps, getDemoSourceMap } from "../explorer/helpers"
-import { isValidJson, isValidHeadersJson } from "./helpers"
-import { useSendRequest } from "./use-send-request"
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+/** Pick first available key, or fallback. null = "not selected" sentinel. */
+function resolve(value: string | null, keys: string[]): string {
+  if (value !== null && keys.includes(value)) return value;
+  return keys[0] ?? "";
+}
+
+/** Build prefilled variables from schema stub or path params */
+function buildVariablesStub(endpoint: CatalogEndpoint | null, indent: number): string {
+  if (!endpoint) return "{}";
+
+  // Prefer schema-derived stub (has field names + typed defaults)
+  if (endpoint.variablesStub && Object.keys(endpoint.variablesStub).length > 0) {
+    return JSON.stringify(endpoint.variablesStub, null, indent);
+  }
+
+  // Fallback: extract path params (`:id` → { "id": "" })
+  if (!endpoint.path) return "{}";
+  const params = endpoint.path.match(/:(\w+)/g);
+  if (!params || params.length === 0) return "{}";
+  const obj: Record<string, string> = {};
+  for (const p of params) obj[p.slice(1)] = "";
+  return JSON.stringify(obj, null, indent);
+}
+
+// ── Hook ───────────────────────────────────────────────────────────────────
 
 export function usePlayground() {
-  const {
-    sessions,
-    connected,
-    playgroundHistory,
-    playgroundActiveResponse: response,
-    setPlaygroundActiveResponse,
-    clearPlaygroundHistory,
-  } = useDevToolsStore()
+  const sourceMap = useDevToolsStore((s) => s.catalog);
+  const jsonIndent = useDevToolsStore((s) => s.settings.jsonIndent);
+  const sourceKeys = useMemo(() => Object.keys(sourceMap), [sourceMap]);
 
-  const hasSessions = sessions.length > 0
+  const [source, setSource] = useState<string | null>(null);
+  const [group, setGroup] = useState<string | null>(null);
+  const [method, setMethod] = useState<string | null>(null);
+  const [variables, setVariables] = useState("{}");
+  const [headers, setHeaders] = useState("{}");
+  const [mode, setMode] = useState<"direct" | "proxy">("direct");
+  const [responseTab, setResponseTab] = useState("body");
 
-  const sourceMap = useMemo(() => {
-    const merged = mergeSourceMaps(sessions)
-    return Object.keys(merged).length > 0 ? merged : getDemoSourceMap()
-  }, [sessions])
+  // Track previous endpoint to detect selection changes
+  const prevEndpointKey = useRef("");
 
-  const isUsingDemo = useMemo(
-    () => Object.keys(mergeSourceMaps(sessions)).length === 0,
-    [sessions]
-  )
+  const effectiveSource = resolve(source, sourceKeys);
 
-  const sourceNames = useMemo(() => Object.keys(sourceMap), [sourceMap])
+  const groupKeys = useMemo(() => {
+    const src = sourceMap[effectiveSource];
+    return src ? Object.keys(src.groups) : [];
+  }, [sourceMap, effectiveSource]);
 
-  // Selection state
-  const [selectedSource, setSelectedSource] = useState<string>("")
-  const [selectedGroup, setSelectedGroup] = useState<string>("")
-  const [selectedMethod, setSelectedMethod] = useState<string>("")
+  const effectiveGroup = resolve(group, groupKeys);
 
-  // Request state
-  const [variables, setVariables] = useState<string>("{}")
-  const [headers, setHeaders] = useState<string>("{}")
-  const [mode, setMode] = useState<"direct" | "proxy">("proxy")
+  const methodKeys = useMemo(() => {
+    const grp = sourceMap[effectiveSource]?.groups[effectiveGroup];
+    return grp ? Object.keys(grp.endpoints) : [];
+  }, [sourceMap, effectiveSource, effectiveGroup]);
 
-  // Response tab
-  const [responseTab, setResponseTab] = useState<"body" | "headers" | "timing">("body")
+  const effectiveMethod = resolve(method, methodKeys);
+  const sourceInfo: CatalogEntry | null = sourceMap[effectiveSource] ?? null;
+  const groupPrefix = sourceInfo?.groups[effectiveGroup]?.prefix ?? "";
+  const endpointInfo: CatalogEndpoint | null = useMemo(
+    () => sourceInfo?.groups[effectiveGroup]?.endpoints[effectiveMethod] ?? null,
+    [sourceInfo, effectiveGroup, effectiveMethod],
+  );
 
-  // Derived data
-  const groups = useMemo(() => {
-    const src = sourceMap[selectedSource]
-    return src ? Object.keys(src.groups) : []
-  }, [sourceMap, selectedSource])
+  // Prefill variables when endpoint changes
+  const endpointKey = `${effectiveSource}.${effectiveGroup}.${effectiveMethod}`;
+  if (endpointKey !== prevEndpointKey.current) {
+    prevEndpointKey.current = endpointKey;
+    const stub = buildVariablesStub(endpointInfo, jsonIndent);
+    if (stub !== "{}") setVariables(stub);
+    else setVariables("{}");
+  }
 
-  const methods = useMemo(() => {
-    const eps = sourceMap[selectedSource]?.groups[selectedGroup]?.endpoints
-    return eps ? Object.keys(eps) : []
-  }, [sourceMap, selectedSource, selectedGroup])
+  const handleSource = useCallback((s: string) => {
+    setSource(s);
+    setGroup(null);
+    setMethod(null);
+  }, []);
 
-  const endpointInfo = useMemo(() => {
-    if (!selectedMethod) return null
-    return sourceMap[selectedSource]?.groups[selectedGroup]?.endpoints[selectedMethod] ?? null
-  }, [sourceMap, selectedSource, selectedGroup, selectedMethod])
+  const handleGroup = useCallback((g: string) => {
+    setGroup(g);
+    setMethod(null);
+  }, []);
 
-  // Auto-cascade: when source changes, reset group
-  useEffect(() => {
-    if (!selectedSource && sourceNames.length > 0) {
-      setSelectedSource(sourceNames[0] as string)
-      return
-    }
-    if (selectedSource && groups.length > 0 && !groups.includes(selectedGroup)) {
-      setSelectedGroup(groups[0] as string)
-    } else if (groups.length === 0) {
-      setSelectedGroup("")
-    }
-  }, [selectedSource, sourceNames, groups, selectedGroup])
-
-  /* Flat API: single group with empty name "" — auto-select it */
-  const isFlat = groups.length === 1 && groups[0] === ""
-
-  // Auto-cascade: when group changes, reset method
-  useEffect(() => {
-    const hasGroup = selectedGroup !== "" || isFlat
-    if (hasGroup && methods.length > 0 && !methods.includes(selectedMethod)) {
-      setSelectedMethod(methods[0] as string)
-    } else if (methods.length === 0) {
-      setSelectedMethod("")
-    }
-  }, [selectedGroup, methods, selectedMethod, isFlat])
-
-  const handleSourceChange = useCallback((source: string) => {
-    setSelectedSource(source)
-    setSelectedGroup("")
-    setSelectedMethod("")
-  }, [])
-
-  const handleGroupChange = useCallback((group: string) => {
-    setSelectedGroup(group)
-    setSelectedMethod("")
-  }, [])
-
-  const variablesValid = isValidJson(variables)
-  const headersValid = isValidHeadersJson(headers)
-  const canSend = !!selectedMethod && variablesValid && headersValid
-
-  const { loading, handleSend } = useSendRequest({
-    canSend,
-    selectedSource,
-    selectedGroup,
-    selectedMethod,
-    variables,
-    headers,
-    mode,
-  })
-
-  // Load from history
-  const loadFromHistory = useCallback(
-    (entry: PlaygroundHistoryEntry) => {
-      setSelectedSource(entry.source)
-      setSelectedGroup(entry.group)
-      setSelectedMethod(entry.method)
-      setVariables(entry.variables)
-      setHeaders(entry.headers)
-      setMode(entry.mode)
-      setPlaygroundActiveResponse(entry)
-    },
-    [setPlaygroundActiveResponse]
-  )
+  const selectEndpoint = useCallback((s: string, g: string, m: string) => {
+    setSource(s);
+    setGroup(g);
+    setMethod(m);
+  }, []);
 
   return {
-    connected,
-    hasSessions,
-    isUsingDemo,
-    sourceNames,
-    selectedSource,
-    selectedGroup,
-    selectedMethod,
-    groups,
-    methods,
+    sourceMap,
+    sources: sourceKeys,
+    groups: groupKeys,
+    methods: methodKeys,
+    sourceInfo,
+    groupPrefix,
     endpointInfo,
+    source: effectiveSource,
+    group: effectiveGroup,
+    method: effectiveMethod,
+    setSource: handleSource,
+    setGroup: handleGroup,
+    setMethod,
+    selectEndpoint,
     variables,
     setVariables,
     headers,
     setHeaders,
     mode,
     setMode,
-    loading,
-    canSend: canSend && !loading,
-    variablesValid,
-    headersValid,
     responseTab,
     setResponseTab,
-    response,
-    playgroundHistory,
-    handleSourceChange,
-    handleGroupChange,
-    setSelectedMethod,
-    handleSend,
-    loadFromHistory,
-    clearPlaygroundHistory,
-  }
+    canSend: Boolean(effectiveSource && effectiveMethod && groupKeys.includes(effectiveGroup)),
+  };
 }

@@ -5,7 +5,8 @@ export {
   rateLimitMiddleware,
   retryMiddleware,
 } from "./builtin";
-export { composeMiddleware, defineMiddleware } from "./compose";
+export { composeMiddleware } from "./compose";
+export { defineMiddleware } from "./define";
 export type {
   AfterHandler,
   AfterMiddleware,

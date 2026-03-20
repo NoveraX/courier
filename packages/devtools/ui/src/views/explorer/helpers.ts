@@ -1,93 +1,144 @@
-import type { SourceMap } from "../../store"
+import type { RequestEntry, SourceMap } from "@/store/types";
 
-// ── Node ID delimiter (safe for source/group/method names that may contain dots) ──
+// ── Path resolution ─────────────────────────────────────────────────────────
 
-export const NODE_DELIM = "::"
+/**
+ * Resolves the full URL path for an endpoint (e.g. `/users/:id`).
+ * Extracts path from actual request URLs when available, generalizing
+ * numeric/UUID segments into `:param` placeholders.
+ * Falls back to group prefix when no requests exist.
+ */
+export function resolveFullPath(
+  source: string,
+  group: string,
+  method: string,
+  sourceMap: SourceMap,
+  requests: RequestEntry[],
+): string {
+  const src = sourceMap[source];
+  const baseURL = src?.baseURL ?? "";
+  const grp = src?.groups[group];
+  const prefix = grp?.prefix || (group ? `/${group}` : "");
+  const endpointPath = grp?.endpoints[method]?.path;
 
-// ── Merged source map from all sessions ─────────────────────────────────────
+  // 1. Use probed path template from SourceMap (e.g. ":id" → "/users/:id")
+  if (endpointPath) {
+    return prefix ? `${prefix}/${endpointPath}` : `/${endpointPath}`;
+  }
 
-export interface FlatEndpoint {
-  source: string
-  group: string
-  method: string
-  prefix: string
-  baseURL: string
-  type: "query" | "mutation"
-  hasVariablesSchema: boolean
-  hasResponseSchema: boolean
-  middleware: string[]
+  // 2. Try to extract path from the first request with a URL
+  const req = requests.find(
+    (r) =>
+      r.source === source &&
+      (r.group ?? "") === group &&
+      r.method === method &&
+      r.url,
+  );
+
+  if (req?.url) {
+    return extractPathFromUrl(req.url, baseURL);
+  }
+
+  // 3. Fallback to group prefix or /methodName for flat endpoints
+  return prefix || `/${method}`;
 }
 
-export function mergeSourceMaps(sessions: { sources: SourceMap }[]): SourceMap {
-  const merged: SourceMap = {}
-  for (const session of sessions) {
-    for (const [sourceName, source] of Object.entries(session.sources ?? {})) {
-      // Later sessions replace earlier ones for the same source —
-      // this ensures HMR renames/deletions are reflected correctly
-      // when server and browser sessions report different snapshots.
-      merged[sourceName] = structuredClone(source)
-    }
+/** Strips baseURL, generalizes dynamic segments into `:param` */
+function extractPathFromUrl(url: string, baseURL: string): string {
+  let path = url;
+
+  // Remove baseURL prefix if present
+  if (baseURL && path.startsWith(baseURL)) {
+    path = path.slice(baseURL.length);
   }
-  return merged
+
+  // Remove protocol + host if still a full URL
+  try {
+    const parsed = new URL(path);
+    path = parsed.pathname + parsed.search;
+  } catch {
+    // Already a relative path
+  }
+
+  // Remove query string
+  const queryIdx = path.indexOf("?");
+  if (queryIdx !== -1) path = path.slice(0, queryIdx);
+
+  // Generalize dynamic segments (numbers, UUIDs) into :param
+  return generalizePath(path);
 }
 
-export function flattenEndpoints(sourceMap: SourceMap): FlatEndpoint[] {
-  const result: FlatEndpoint[] = []
-  for (const [sourceName, source] of Object.entries(sourceMap)) {
-    for (const [groupName, group] of Object.entries(source.groups ?? {})) {
-      for (const [methodName, ep] of Object.entries(group.endpoints ?? {})) {
-        result.push({
-          source: sourceName,
-          group: groupName,
-          method: methodName,
-          prefix: group.prefix,
-          baseURL: source.baseURL,
-          type: ep.type,
-          hasVariablesSchema: ep.hasVariablesSchema ?? false,
-          hasResponseSchema: ep.hasResponseSchema ?? false,
-          middleware: ep.middleware ?? [],
-        })
-      }
-    }
-  }
-  return result
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Replaces numeric/UUID path segments with `:id` / `:param` */
+function generalizePath(path: string): string {
+  return path
+    .split("/")
+    .map((seg) => {
+      if (!seg) return seg;
+      if (/^\d+$/.test(seg)) return ":id";
+      if (UUID_RE.test(seg)) return ":id";
+      return seg;
+    })
+    .join("/");
 }
 
-// ── Demo source map for when no sessions are connected ──────────────────────
+// ── HTTP method inference ───────────────────────────────────────────────────
 
-export function getDemoSourceMap(): SourceMap {
-  return {
-    api: {
-      baseURL: "https://api.example.com",
-      groups: {
-        users: {
-          prefix: "/users",
-          endpoints: {
-            getAll: { type: "query", hasVariablesSchema: false, hasResponseSchema: true, middleware: ["auth", "log"] },
-            getById: { type: "query", hasVariablesSchema: true, hasResponseSchema: true, middleware: ["auth", "log"] },
-            create: { type: "mutation", hasVariablesSchema: true, hasResponseSchema: true, middleware: ["auth", "log", "rateLimit"] },
-            update: { type: "mutation", hasVariablesSchema: true, hasResponseSchema: true, middleware: ["auth", "log"] },
-            delete: { type: "mutation", hasVariablesSchema: true, hasResponseSchema: false, middleware: ["auth", "log"] },
-          },
-        },
-        posts: {
-          prefix: "/posts",
-          endpoints: {
-            getAll: { type: "query", hasVariablesSchema: false, hasResponseSchema: true, middleware: ["log", "cache"] },
-            getById: { type: "query", hasVariablesSchema: true, hasResponseSchema: true, middleware: ["log", "cache"] },
-            create: { type: "mutation", hasVariablesSchema: true, hasResponseSchema: true, middleware: ["auth", "log"] },
-            search: { type: "query", hasVariablesSchema: true, hasResponseSchema: true, middleware: ["log", "rateLimit"] },
-          },
-        },
-        auth: {
-          prefix: "/auth",
-          endpoints: {
-            login: { type: "mutation", hasVariablesSchema: true, hasResponseSchema: true, middleware: ["log", "rateLimit"] },
-            refresh: { type: "mutation", hasVariablesSchema: true, hasResponseSchema: true, middleware: ["log"] },
-            logout: { type: "mutation", hasVariablesSchema: false, hasResponseSchema: false, middleware: ["auth", "log"] },
-          },
-        },
-      },
-    },
+const HTTP_HEURISTICS: [RegExp, string][] = [
+  [/^(get|find|list|fetch|load|search|read|check)/i, "GET"],
+  [/^(create|add|insert|register|submit|upload)/i, "POST"],
+  [/^(update|edit|modify|replace|set)/i, "PUT"],
+  [/^(patch|partial)/i, "PATCH"],
+  [/^(delete|remove|destroy|drop|revoke)/i, "DELETE"],
+];
+
+/** Infers HTTP method from endpoint name and type */
+export function inferHttpMethod(
+  endpointType: "query" | "mutation" | "untyped",
+  method: string,
+): string {
+  for (const [pattern, httpMethod] of HTTP_HEURISTICS) {
+    if (pattern.test(method)) return httpMethod;
   }
+  return endpointType === "mutation" ? "POST" : "GET";
+}
+
+// ── Endpoint key ────────────────────────────────────────────────────────────
+
+export function formatEndpointKey(
+  source: string,
+  group: string,
+  method: string,
+): string {
+  return `${source}.${group}.${method}`;
+}
+
+export function parseEndpointKey(
+  key: string,
+): { source: string; group: string; method: string } {
+  const [source = "", group = "", method = ""] = key.split(".");
+  return { source, group, method };
+}
+
+// ── Request filtering ───────────────────────────────────────────────────────
+
+/**
+ * Filters requests for a specific source/group/method combination.
+ * Source matching is case-insensitive because server and client sessions
+ * may register the same API under different-cased keys.
+ */
+export function filterRequests(
+  requests: RequestEntry[],
+  source: string,
+  group?: string,
+  method?: string,
+): RequestEntry[] {
+  const srcLower = source.toLowerCase();
+  return requests.filter((r) => {
+    if (r.source.toLowerCase() !== srcLower) return false;
+    if (group !== undefined && r.group !== group) return false;
+    if (method !== undefined && r.method !== method) return false;
+    return true;
+  });
 }

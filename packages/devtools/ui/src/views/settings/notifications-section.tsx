@@ -1,52 +1,89 @@
-import type { Settings } from "../../store"
-import { SettingsSection, SettingRow, Toggle, NumberInput } from "./section"
+import { Controller } from "react-hook-form";
 
-// ── Notifications Settings ──────────────────────────────────────────────────
+import type { UseFormReturn } from "react-hook-form";
+import type { Settings } from "@/store/types";
+
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { SLOW_THRESHOLD_OPTIONS } from "./constants";
+import { SettingRow } from "./setting-row";
+
+// ── Notifications section ────────────────────────────────────────────────────
+
+interface NotificationsSectionProps {
+  form: UseFormReturn<Settings>;
+}
 
 export function NotificationsSection({
-  settings,
-  onUpdate,
-}: {
-  settings: Settings
-  onUpdate: (patch: Partial<Settings>) => void
-}) {
+  form,
+}: NotificationsSectionProps): React.ReactElement {
   return (
-    <SettingsSection
-      title="Notifications"
-      description="Configure toast alerts and status bar indicators"
-    >
+    <>
       <SettingRow
         label="Toast on error"
-        description="Show a toast notification when a request fails"
+        description="Show a notification when a request fails"
+        htmlFor="toastOnError"
       >
-        <Toggle
-          checked={settings.toastOnError}
-          onChange={(toastOnError) => onUpdate({ toastOnError })}
+        <Controller
+          control={form.control}
+          name="toastOnError"
+          render={({ field }) => (
+            <Switch
+              id="toastOnError"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          )}
         />
       </SettingRow>
 
       <SettingRow
         label="Toast on slow request"
-        description="Show a toast when a request exceeds the threshold"
+        description="Show a notification when a request exceeds the threshold"
+        htmlFor="toastOnSlowRequest"
       >
-        <Toggle
-          checked={settings.toastOnSlowRequest}
-          onChange={(toastOnSlowRequest) => onUpdate({ toastOnSlowRequest })}
+        <Controller
+          control={form.control}
+          name="toastOnSlowRequest"
+          render={({ field }) => (
+            <Switch
+              id="toastOnSlowRequest"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          )}
         />
       </SettingRow>
 
-      <SettingRow
-        label="Slow request threshold"
-        description="Requests slower than this are flagged (ms)"
-      >
-        <NumberInput
-          value={settings.slowRequestThreshold}
-          onChange={(slowRequestThreshold) => onUpdate({ slowRequestThreshold })}
-          min={100}
-          max={30000}
-          step={100}
+      <SettingRow label="Slow request threshold">
+        <Controller
+          control={form.control}
+          name="slowRequestThreshold"
+          render={({ field }) => (
+            <Select
+              value={String(field.value)}
+              onValueChange={(v) => field.onChange(Number(v))}
+            >
+              <SelectTrigger className="w-28" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SLOW_THRESHOLD_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         />
       </SettingRow>
-    </SettingsSection>
-  )
+    </>
+  );
 }

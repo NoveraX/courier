@@ -1,24 +1,18 @@
 import type {
   Theme,
   ConnectionStatus,
+  Catalog,
+  CatalogSnapshot,
   SessionInfo,
-  SourceMap,
   RequestEntry,
   DevToolsEvent,
   PlaygroundHistoryEntry,
-  GraphLayout,
-  ListSortKey,
-  ListSortDir,
-  WaterfallSortField,
-  WaterfallGroupBy,
   Settings,
-  Toast,
 } from "./types"
 
 export interface DevToolsState {
   // UI
   theme: Theme
-  toasts: Toast[]
 
   // Connection
   connectionStatus: ConnectionStatus
@@ -26,29 +20,12 @@ export interface DevToolsState {
   connected: boolean
   sessions: SessionInfo[]
 
+  // Catalog (server-authoritative merged source map)
+  catalog: Catalog
+
   // Requests
   requests: RequestEntry[]
   paused: boolean
-  preserveLog: boolean
-
-  // Explorer
-  explorerSelectedEndpoint: { source: string; group: string; method: string } | null
-  graphLayout: GraphLayout
-  showSchemas: boolean
-  listSearch: string
-  listSortKey: ListSortKey
-  listSortDir: ListSortDir
-
-  // Waterfall
-  waterfallSortBy: WaterfallSortField
-  waterfallGroupBy: WaterfallGroupBy
-  waterfallZoom: number
-
-  // Middleware
-  middlewareShowStats: boolean
-
-  // Compare (transient UI only — IDs and tab are in URL)
-  comparePickerSide: "left" | "right" | null
 
   // Audit
   auditExpandedIds: Set<string>
@@ -61,10 +38,14 @@ export interface DevToolsState {
   settings: Settings
   sessionStartedAt: number | null
 
+  // Relative timestamp refresh (bumped by global interval)
+  relativeTick: number
+
+  // Request buffer overflow tracking
+  droppedRequests: number
+
   // Actions — UI
   setTheme: (theme: Theme) => void
-  showToast: (message: string, type?: Toast["type"]) => void
-  dismissToast: (id: string) => void
 
   // Actions — Connection
   setConnectionStatus: (status: ConnectionStatus) => void
@@ -72,7 +53,9 @@ export interface DevToolsState {
   setSessions: (sessions: SessionInfo[]) => void
   addSession: (session: SessionInfo) => void
   removeSession: (sessionId: string) => void
-  updateSessionSources: (sessionId: string, sources: SourceMap) => void
+
+  // Actions — Catalog
+  setCatalog: (snapshot: CatalogSnapshot) => void
 
   // Actions — Requests
   togglePaused: () => void
@@ -80,25 +63,6 @@ export interface DevToolsState {
   clearRequests: () => void
   togglePin: (id: string) => void
   handleEvent: (event: DevToolsEvent & Record<string, unknown>) => void
-
-  // Actions — Explorer
-  setExplorerSelectedEndpoint: (ep: { source: string; group: string; method: string } | null) => void
-  setGraphLayout: (layout: GraphLayout) => void
-  setShowSchemas: (show: boolean) => void
-  setListSearch: (search: string) => void
-  setListSortKey: (key: ListSortKey) => void
-  setListSortDir: (dir: ListSortDir) => void
-
-  // Actions — Waterfall
-  setWaterfallSortBy: (sort: WaterfallSortField) => void
-  setWaterfallGroupBy: (group: WaterfallGroupBy) => void
-  setWaterfallZoom: (zoom: number) => void
-
-  // Actions — Middleware
-  setMiddlewareShowStats: (show: boolean) => void
-
-  // Actions — Compare
-  setComparePickerSide: (side: "left" | "right" | null) => void
 
   // Actions — Audit
   toggleAuditExpanded: (id: string) => void

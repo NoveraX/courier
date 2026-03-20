@@ -161,12 +161,12 @@ function createGroupHooks(
  * await q.users.prefetchQuery(queryClient, "getAll");
  * ```
  */
-export function createQueryCaller<T extends DefinedApi<any>>(
+export function createQueryCaller<TApi extends DefinedApi<any>>(
   source: string,
   defaults?: ProxyCallerDefaults,
-): QueryCallerClient<T> {
+): QueryCallerClient<TApi> {
   const callerFn = createProxyCallerFn(defaults) as unknown as UntypedCallerFn;
-  // biome-ignore lint/suspicious/noExplicitAny: cache stores untyped group hooks — typed via QueryCallerClient<T> proxy cast
+  // biome-ignore lint/suspicious/noExplicitAny: cache stores untyped group hooks — typed via QueryCallerClient<TApi> proxy cast
   const groupCache = new Map<string, QueryGroupClient<any>>();
 
   return new Proxy(Object.create(null), {
@@ -182,5 +182,5 @@ export function createQueryCaller<T extends DefinedApi<any>>(
       }
       return groupCache.get(key);
     },
-  }) as QueryCallerClient<T>;
+  }) as QueryCallerClient<TApi>;
 }

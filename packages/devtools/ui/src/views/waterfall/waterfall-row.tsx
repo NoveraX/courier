@@ -1,101 +1,103 @@
-import { useMemo } from "react"
+import { memo } from "react";
 
-import type { RequestEntry } from "../../store"
-import { formatDuration } from "../../components/ui"
-import { STATUS_CONFIG, HTTP_METHOD_COLORS, TIMING_SLOW_MS } from "../timeline/constants"
+import { formatDuration } from "@/components/shared/formatters";
+import { MethodBadge } from "@/components/shared/method-badge";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
-import { getSegments, TICK_SPACING_PX } from "./waterfall-helpers"
+import { MIN_BAR_HEIGHT } from "./constants";
+import { SegmentBar } from "./segment-bar";
+import type { WaterfallRow, WaterfallSegment } from "./types";
 
-// ── Time Ruler ──────────────────────────────────────────────────────────────
-
-export function TimeRuler({ duration, pxPerMs }: { duration: number; pxPerMs: number }) {
-  const tickCount = Math.max(2, Math.min(20, Math.floor((duration * pxPerMs) / TICK_SPACING_PX)))
-  const tickInterval = duration / tickCount
-  const ticks = Array.from({ length: tickCount + 1 }, (_, i) => i * tickInterval)
-
-  return (
-    <div className="sticky top-0 z-10 flex h-6 border-b border-border-default bg-surface-0">
-      <div className="w-[220px] shrink-0" />
-      <div className="relative flex-1">
-        {ticks.map((t) => (
-          <div
-            key={t}
-            className="absolute top-0 flex h-full flex-col items-center"
-            style={{ left: `${t * pxPerMs}px` }}
-          >
-            <div className="h-2 w-px bg-border-subtle" />
-            <span className="text-[9px] text-text-muted">{formatDuration(t)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+interface WaterfallRowProps {
+  row: WaterfallRow;
+  pxPerMs: number;
+  isSelected: boolean;
+  index: number;
+  onSelect: (id: string | null) => void;
+  onSegmentHover: (segment: WaterfallSegment | null, row: WaterfallRow, x: number, y: number) => void;
 }
 
-// ── Waterfall Row ───────────────────────────────────────────────────────────
-
-export function WaterfallRow({
-  request,
-  timelineStart,
-  pxPerMs,
-  selected,
-  onSelect,
-}: {
-  request: RequestEntry
-  timelineStart: number
-  pxPerMs: number
-  selected: boolean
-  onSelect: () => void
-}) {
-  const segments = useMemo(() => getSegments(request, timelineStart), [request, timelineStart])
-  const statusCfg = STATUS_CONFIG[request.status]
-  const methodColor = HTTP_METHOD_COLORS[request.httpMethod ?? "GET"] ?? "text-text-secondary"
-  const label = [request.source, request.group, request.method].filter(Boolean).join(".")
-  const isSlow = (request.timing?.total ?? 0) > TIMING_SLOW_MS
+export const WaterfallRowItem = memo(function WaterfallRowItem({
+  row, pxPerMs, isSelected, index, onSelect, onSegmentHover,
+}: WaterfallRowProps): React.ReactElement {
+  const offsetPx = row.offsetMs * pxPerMs;
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`flex h-8 w-full items-center border-b border-border-subtle transition-colors hover:bg-surface-1 ${
-        selected ? "bg-surface-1" : ""
-      }`}
+    <div
+      className={cn(
+        "group relative flex items-center cursor-pointer transition-colors",
+        "hover:bg-muted/30",
+        index % 2 === 1 && "bg-muted/10",
+        isSelected && "bg-accent-brand/5 ring-1 ring-inset ring-accent-brand/20",
+      )}
+      style={{ height: MIN_BAR_HEIGHT }}
+      onClick={() => onSelect(row.request.id)}
     >
-      {/* Label column */}
-      <div className="flex w-[220px] shrink-0 items-center gap-2 overflow-hidden px-3">
-        <div className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusCfg.dotClass}`} />
-        <span className={`text-[10px] font-medium ${methodColor}`}>{request.httpMethod ?? "GET"}</span>
-        <span className="truncate font-mono text-[11px] text-text-secondary">{label}</span>
-      </div>
+      <SegmentBar
+        segments={row.segments}
+        row={row}
+        offsetPx={offsetPx}
+        pxPerMs={pxPerMs}
+        onSegmentHover={onSegmentHover}
+      />
+    </div>
+  );
+});
 
-      {/* Bar column */}
-      <div className="relative flex-1 pr-3">
-        {segments.map((seg) => (
-          <div
-            key={seg.key}
-            className={`group/seg absolute top-1/2 h-4 -translate-y-1/2 rounded-sm ${seg.color} ${isSlow && seg.key === "fetch" ? "opacity-100" : "opacity-80"} hover:opacity-100`}
-            style={{
-              left: `${seg.start * pxPerMs}px`,
-              width: `${Math.max(seg.width * pxPerMs, 2)}px`,
-            }}
-            title={`${seg.label}: ${formatDuration(seg.duration)}`}
-          >
-            {/* Tooltip */}
-            <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-surface-3 px-2 py-1 text-[10px] text-text-primary shadow-lg group-hover/seg:block">
-              {seg.label}: {formatDuration(seg.duration)}
-            </div>
-          </div>
-        ))}
-        {/* Total duration label */}
-        {request.timing && (
-          <span
-            className={`absolute top-1/2 -translate-y-1/2 text-[10px] ${isSlow ? "text-red-400" : "text-text-muted"}`}
-            style={{ left: `${(request.startedAt - timelineStart + request.timing.total) * pxPerMs + 6}px` }}
-          >
-            {formatDuration(request.timing.total)}
-          </span>
-        )}
-      </div>
-    </button>
-  )
+// ── Row label (rendered in label column) ──────────────────────────────────
+
+interface RowLabelProps {
+  row: WaterfallRow;
+  index: number;
+  onSelect: (id: string | null) => void;
+  isSelected: boolean;
 }
+
+export const RowLabel = memo(function RowLabel({
+  row, index, onSelect, isSelected,
+}: RowLabelProps): React.ReactElement {
+  const fullPath = [row.request.source, row.request.group, row.request.method].filter(Boolean).join(".");
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1.5 px-2 h-8 cursor-pointer transition-colors",
+        "hover:bg-muted/30",
+        index % 2 === 1 && "bg-muted/10",
+        row.isProxy && "border-l-2 border-indigo-500/60",
+        isSelected && "bg-accent-brand/5",
+      )}
+      onClick={() => onSelect(row.request.id)}
+    >
+      {/* Status dot */}
+      <div className={cn(
+        "size-1.5 shrink-0 rounded-full",
+        row.request.status === "success" && "bg-emerald-500",
+        row.request.status === "error" && "bg-rose-500",
+        row.request.status === "validation_error" && "bg-amber-500",
+        row.request.status === "pending" && "bg-sky-500 animate-pulse",
+        row.request.status === "aborted" && "bg-muted-foreground",
+      )} />
+
+      <MethodBadge method={row.request.httpMethod ?? "GET"} className="shrink-0" />
+
+      <span className="min-w-0 flex items-baseline gap-0.5 mono-md overflow-hidden" title={fullPath}>
+        {row.request.group && (
+          <span className="shrink text-muted-foreground/60 truncate">{row.request.group}.</span>
+        )}
+        <span className="shrink-0 text-foreground/80">{row.request.method}</span>
+      </span>
+
+      {row.isProxy && (
+        <Badge variant="indigo" className="shrink-0 text-[8px] px-1 py-0 leading-3">
+          PROXY
+        </Badge>
+      )}
+
+      <span className="ml-auto shrink-0 mono-md text-muted-foreground tabular-nums">
+        {formatDuration(row.totalDuration)}
+      </span>
+    </div>
+  );
+});

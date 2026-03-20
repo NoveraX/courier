@@ -1,18 +1,4 @@
-import type { RequestStatus, RequestTiming } from "./types"
-
-// ── Tabs ────────────────────────────────────────────────────────────────────
-
-export type Tab =
-  | "timeline"
-  | "waterfall"
-  | "middleware"
-  | "analytics"
-  | "explorer"
-  | "playground"
-  | "audit"
-  | "apis"
-  | "compare"
-  | "settings"
+import type { ProxyTiming, RequestStatus, RequestTiming } from "./types"
 
 // ── Theme ───────────────────────────────────────────────────────────────────
 
@@ -22,33 +8,57 @@ export type Theme = "dark" | "light" | "system"
 
 export type ConnectionStatus = "connected" | "disconnected" | "reconnecting"
 
-// ── Source map (from connection:init / connection:sources) ───────────────────
+// ── Catalog (server-authoritative merged source map) ────────────────────────
 
-export interface EndpointInfo {
-  type: "query" | "mutation"
+export interface CatalogEndpoint {
+  type: "query" | "mutation" | undefined
   hasVariablesSchema: boolean
   hasResponseSchema: boolean
-  middleware: string[]
   path?: string
+  httpMethod?: string
+  middleware?: string[]
+  /** Default variables stub from schema introspection */
+  variablesStub?: Record<string, unknown>
+  origin: "scan" | "runtime" | "both"
 }
 
-export interface GroupInfo {
+export interface CatalogGroup {
   prefix: string
-  endpoints: Record<string, EndpointInfo>
+  endpoints: Record<string, CatalogEndpoint>
 }
 
-export interface SourceInfo {
+export interface CatalogEntry {
   baseURL: string
-  groups: Record<string, GroupInfo>
+  groups: Record<string, CatalogGroup>
 }
 
-export type SourceMap = Record<string, SourceInfo>
+export type Catalog = Record<string, CatalogEntry>
+
+export interface CatalogMeta {
+  scanTimestamp: number | null
+  runtimeSessions: string[]
+  totalEndpoints: number
+}
+
+export interface CatalogSnapshot {
+  catalog: Catalog
+  timestamp: number
+  meta: CatalogMeta
+}
+
+// ── Legacy aliases (for gradual migration of existing views) ────────────────
+
+export type EndpointInfo = CatalogEndpoint
+export type GroupInfo = CatalogGroup
+export type SourceInfo = CatalogEntry
+export type SourceMap = Catalog
+
+// ── Session (no longer carries sources — catalog is separate) ───────────────
 
 export interface SessionInfo {
   sessionId: string
   framework: string
   nexusVersion: string
-  sources: SourceMap
   connectedAt: number
 }
 
@@ -69,6 +79,8 @@ export interface PlaygroundHistoryEntry {
   response?: unknown
   responseHeaders?: Record<string, string>
   timing?: RequestTiming
+  proxyTiming?: ProxyTiming
+  requestHeaders?: Record<string, string>
 }
 
 // ── Timeline filters ────────────────────────────────────────────────────────
@@ -84,25 +96,10 @@ export interface TimelineFilters {
   minDuration: number | null
 }
 
-// ── Explorer state ──────────────────────────────────────────────────────────
-
-export type ExplorerView = "graph" | "pipeline" | "list"
-export type GraphLayout = "LR" | "TB"
-export type ListSortKey = "source" | "group" | "method" | "type" | "middleware" | "schemas"
-export type ListSortDir = "asc" | "desc"
-
 // ── Waterfall state ─────────────────────────────────────────────────────────
 
 export type WaterfallSortField = "startTime" | "duration" | "size"
 export type WaterfallGroupBy = "none" | "source" | "group"
-
-// ── Compare state ───────────────────────────────────────────────────────────
-
-export type CompareTab = "payload" | "response" | "headers" | "timing"
-
-// ── Audit state ─────────────────────────────────────────────────────────────
-
-export type AuditSeverityFilter = "error" | "warning" | "hint" | "pass" | "all"
 
 // ── Settings ────────────────────────────────────────────────────────────────
 
@@ -111,11 +108,18 @@ export type JsonIndent = 2 | 4
 export type ValidationLib = "zod" | "valibot" | "arktype" | "none"
 export type ApisGroupBy = "tag" | "path" | "single"
 export type ApisClient = "direct" | "proxy" | "both" | "none"
+export type ExportFormat = "har" | "json" | "postman"
+export type DensityMode = "comfortable" | "compact"
 
 export interface Settings {
+  // Appearance
+  theme: Theme
+  density: DensityMode
+
   // Recording
   maxRequests: number
   preserveLog: boolean
+  ignorePatterns: string[]
 
   // Display
   timestampFormat: TimestampFormat
@@ -131,6 +135,9 @@ export interface Settings {
   autoReconnect: boolean
   reconnectDelay: number
 
+  // Export
+  defaultExportFormat: ExportFormat
+
   // Apis defaults
   apisValidation: ValidationLib
   apisGroupBy: ApisGroupBy
@@ -138,12 +145,4 @@ export interface Settings {
   apisGenerateSchemas: boolean
   apisIncludeComments: boolean
   apisClient: ApisClient
-}
-
-// ── Toast ───────────────────────────────────────────────────────────────────
-
-export interface Toast {
-  id: string
-  message: string
-  type: "success" | "error" | "info"
 }

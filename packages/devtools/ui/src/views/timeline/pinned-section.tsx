@@ -1,54 +1,37 @@
-import { Pin } from "lucide-react"
+import { Pin } from "lucide-react";
 
-import type { RequestEntry, TimestampFormat } from "../../store"
-import { Separator } from "@/components/ui/separator"
+import type { RequestEntry } from "@/store/types";
+import { RequestContextMenu } from "./context-menu";
+import { RequestRow } from "./request-row";
 
-import { RequestRow } from "./request-row"
-import { RequestContextMenuWrapper } from "./context-menu"
-import { ROW_HEIGHT } from "./constants"
-
-// ── Pinned Section ──────────────────────────────────────────────────────────
+interface PinnedSectionProps {
+  requests: RequestEntry[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}
 
 export function PinnedSection({
-  pinned, selectedId, onSelect, onTogglePin, timestampFormat, slowThreshold,
-}: {
-  pinned: RequestEntry[]
-  selectedId: string | null
-  onSelect: (id: string) => void
-  onTogglePin: (id: string) => void
-  timestampFormat: TimestampFormat
-  slowThreshold: number
-}) {
+  requests,
+  selectedId,
+  onSelect,
+}: PinnedSectionProps): React.ReactElement | null {
+  if (requests.length === 0) return null;
+
   return (
-    <div className="sticky top-0 z-10 bg-background">
-      {/* Header */}
-      <div className="flex h-6 items-center gap-1.5 border-b border-border px-3">
-        <Pin className="size-2.5 fill-amber-400 text-amber-400" />
-        <span className="text-[10px] font-medium text-amber-400">
-          Pinned ({pinned.length})
-        </span>
+    <div className="border-b border-border-subtle">
+      <div className="flex items-center gap-2 px-3 py-1.5 text-body-sm text-violet-400">
+        <Pin className="size-3" />
+        <span className="font-medium">Pinned ({requests.length})</span>
       </div>
-
-      {/* Pinned rows */}
-      {pinned.map((request) => (
-        <div key={request.id} style={{ height: ROW_HEIGHT }}>
-          <RequestContextMenuWrapper
-            request={request}
-            onTogglePin={() => onTogglePin(request.id)}
-          >
-            <RequestRow
-              request={request}
-              selected={request.id === selectedId}
-              onSelect={() => onSelect(request.id)}
-              onTogglePin={() => onTogglePin(request.id)}
-              timestampFormat={timestampFormat}
-              slowThreshold={slowThreshold}
-            />
-          </RequestContextMenuWrapper>
-        </div>
+      {requests.map((r) => (
+        <RequestContextMenu key={r.id} request={r}>
+          <RequestRow
+            request={r}
+            selected={selectedId === r.id}
+            onSelect={onSelect}
+          />
+        </RequestContextMenu>
       ))}
-
-      <Separator />
     </div>
-  )
+  );
 }

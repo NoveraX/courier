@@ -1,57 +1,114 @@
-import { RotateCcw } from "lucide-react"
+import { useRef, useState } from "react";
 
-import { useDevToolsStore } from "../../store"
-import { ConnectionSection } from "./connection-section"
-import { RecordingSection } from "./recording-section"
-import { DisplaySection } from "./display-section"
-import { NotificationsSection } from "./notifications-section"
-import { ApisSection } from "./apis-section"
-import { SessionHistorySection } from "./session-history-section"
+import { PageShell } from "@/components/shared/page-shell";
 
-// ── Settings View ───────────────────────────────────────────────────────────
+import type { UseFormReturn } from "react-hook-form";
+import type { Settings } from "@/store/types";
 
-export function SettingsView() {
-  const { settings, updateSettings, resetSettings, showToast } = useDevToolsStore()
+import { SECTION_CONFIG } from "./constants";
+import { useSettingsForm } from "./use-settings-form";
+import { useSessionHistory } from "./use-session-history";
+import { useScrollSpy } from "./use-scroll-spy";
+import { SectionWrapper } from "./section-wrapper";
+import { SectionNav } from "./section-nav";
+import { UnsavedBanner } from "./unsaved-banner";
+import { AppearanceSection } from "./appearance-section";
+import { ConnectionSection } from "./connection-section";
+import { RecordingSection } from "./recording-section";
+import { DisplaySection } from "./display-section";
+import { NotificationsSection } from "./notifications-section";
+import { ExportSection } from "./export-section";
+import { ApisSection } from "./apis-section";
+import { SessionHistorySection } from "./session-history-section";
+import { DangerZone } from "./danger-zone";
 
-  function handleReset() {
-    resetSettings()
-    showToast("Settings reset to defaults", "success")
-  }
+// ── Settings view ────────────────────────────────────────────────────────────
+
+export function SettingsView(): React.ReactNode {
+  const { form, isDirty, onSave, onDiscard, onResetDefaults } =
+    useSettingsForm();
+  const history = useSessionHistory();
+  const [activeSection, setActiveSection] = useState(SECTION_CONFIG[0].id);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useScrollSpy(contentRef, setActiveSection);
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-border-default px-4 py-2.5">
-        <div>
-          <h2 className="text-sm font-semibold text-text-primary">Settings</h2>
-          <p className="text-[11px] text-text-muted">
-            Preferences are saved automatically to localStorage
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={handleReset}
-          className="flex items-center gap-1.5 rounded-md border border-border-default px-2.5 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-1"
+    <PageShell
+      toolbar={
+        isDirty ? (
+          <UnsavedBanner
+            onSave={form.handleSubmit(onSave)}
+            onDiscard={onDiscard}
+          />
+        ) : null
+      }
+      noScroll
+    >
+      <div className="flex min-h-0 flex-1">
+        <SectionNav activeSection={activeSection} />
+        <div
+          ref={contentRef}
+          className="min-h-0 flex-1 overflow-y-auto px-6 py-4"
         >
-          <RotateCcw size={12} />
-          Reset to defaults
-        </button>
-      </div>
-
-      {/* Sections */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        <ConnectionSection settings={settings} onUpdate={updateSettings} />
-        <RecordingSection settings={settings} onUpdate={updateSettings} />
-        <DisplaySection settings={settings} onUpdate={updateSettings} />
-        <NotificationsSection settings={settings} onUpdate={updateSettings} />
-        <ApisSection settings={settings} onUpdate={updateSettings} />
-        <SessionHistorySection />
-
-        {/* Version info */}
-        <div className="pt-2 text-center text-[10px] text-text-muted">
-          Nexus DevTools &middot; Settings stored in localStorage
+          <div className="mx-auto max-w-2xl space-y-1">
+            {SECTION_CONFIG.map((s) => (
+              <SectionWrapper
+                key={s.id}
+                id={s.id}
+                icon={s.icon}
+                title={s.label}
+                description={s.description}
+                destructive={s.id === "danger"}
+              >
+                <SectionContent
+                  sectionId={s.id}
+                  form={form}
+                  history={history}
+                  onResetDefaults={onResetDefaults}
+                />
+              </SectionWrapper>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
-  )
+    </PageShell>
+  );
+}
+
+// ── Section content dispatcher ───────────────────────────────────────────────
+
+function SectionContent({
+  sectionId,
+  form,
+  history,
+  onResetDefaults,
+}: {
+  sectionId: string;
+  form: UseFormReturn<Settings>;
+  history: ReturnType<typeof useSessionHistory>;
+  onResetDefaults: () => void;
+}): React.ReactElement {
+  switch (sectionId) {
+    case "appearance":
+      return <AppearanceSection form={form} />;
+    case "connection":
+      return <ConnectionSection form={form} />;
+    case "recording":
+      return <RecordingSection form={form} />;
+    case "display":
+      return <DisplaySection form={form} />;
+    case "notifications":
+      return <NotificationsSection form={form} />;
+    case "export":
+      return <ExportSection form={form} />;
+    case "apis":
+      return <ApisSection form={form} />;
+    case "sessions":
+      return <SessionHistorySection history={history} />;
+    case "danger":
+      return <DangerZone onResetDefaults={onResetDefaults} history={history} />;
+    default:
+      return <></>;
+  }
 }

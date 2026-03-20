@@ -1,25 +1,13 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useApisContext } from "../../views/apis/apis-context";
-import { RegistryView } from "../../views/apis/registry-view";
+import { createFileRoute } from "@tanstack/react-router";
 
-import type { UpdateContext } from "../../views/apis/types";
-
-function ApisRegistryRoute() {
-  const { setUpdateCtx } = useApisContext();
-  const navigate = useNavigate();
-
-  function handleImportNew() {
-    void navigate({ to: "/apis/import" });
-  }
-
-  function handleReviewUpdates(ctx: UpdateContext) {
-    setUpdateCtx(ctx);
-    void navigate({ to: "/apis/update" });
-  }
-
-  return <RegistryView onImportNew={handleImportNew} onReviewUpdates={handleReviewUpdates} />;
+function RegistryPage(): React.ReactNode {
+  return (
+    <div className="flex flex-1 items-center justify-center text-body-sm text-muted-foreground">
+      API Registry
+    </div>
+  );
 }
 
 export const Route = createFileRoute("/apis/registry")({
-  component: ApisRegistryRoute,
+  component: RegistryPage,
 });

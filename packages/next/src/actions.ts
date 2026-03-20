@@ -9,8 +9,8 @@ import {
 import type { DefinedApi } from "@noverax/nexus/define";
 
 /** State returned by server actions for useActionState */
-export type ActionState<T = unknown> = {
-  data: T | null;
+export type ActionState<TData = unknown> = {
+  data: TData | null;
   error: {
     message: string;
     status?: number;
@@ -63,11 +63,10 @@ async function getRequestHeaders(): Promise<Headers | undefined> {
  * }
  * ```
  */
-export function createAction<S extends Record<string, DefinedApi<any>>, K extends string & keyof S>(
-  sources: S,
-  source: K,
-  defaults: ActionDefaults = {},
-): TypedClient<S[K]> {
+export function createAction<
+  TSources extends Record<string, DefinedApi<any>>,
+  TKey extends string & keyof TSources,
+>(sources: TSources, source: TKey, defaults: ActionDefaults = {}): TypedClient<TSources[TKey]> {
   const backend: ExecuteBackend = async (group, method, variables, _options, _raw) => {
     const context: Context | undefined =
       defaults.headers !== false
@@ -81,5 +80,5 @@ export function createAction<S extends Record<string, DefinedApi<any>>, K extend
     );
   };
 
-  return buildClientProxy(backend) as TypedClient<S[K]>;
+  return buildClientProxy(backend) as TypedClient<TSources[TKey]>;
 }

@@ -1,61 +1,92 @@
-import type { Settings, TimestampFormat, JsonIndent } from "../../store"
-import { SettingsSection, SettingRow, Toggle, Select } from "./section"
+import { Controller } from "react-hook-form";
 
-// ── Display Settings ────────────────────────────────────────────────────────
+import type { UseFormReturn } from "react-hook-form";
+import type { Settings } from "@/store/types";
 
-const TIMESTAMP_OPTIONS: { value: TimestampFormat; label: string }[] = [
-  { value: "relative", label: "Relative (2s ago)" },
-  { value: "absolute", label: "Absolute (14:32:05)" },
-]
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { TIMESTAMP_OPTIONS, JSON_INDENT_OPTIONS } from "./constants";
+import { SettingRow } from "./setting-row";
 
-const JSON_INDENT_OPTIONS: { value: JsonIndent; label: string }[] = [
-  { value: 2, label: "2 spaces" },
-  { value: 4, label: "4 spaces" },
-]
+// ── Display section ──────────────────────────────────────────────────────────
+
+interface DisplaySectionProps {
+  form: UseFormReturn<Settings>;
+}
 
 export function DisplaySection({
-  settings,
-  onUpdate,
-}: {
-  settings: Settings
-  onUpdate: (patch: Partial<Settings>) => void
-}) {
+  form,
+}: DisplaySectionProps): React.ReactElement {
   return (
-    <SettingsSection
-      title="Display"
-      description="Customize how data is presented"
-    >
-      <SettingRow
-        label="Timestamp format"
-        description="How timestamps appear in the timeline"
-      >
-        <Select
-          value={settings.timestampFormat}
-          options={TIMESTAMP_OPTIONS}
-          onChange={(timestampFormat) => onUpdate({ timestampFormat })}
+    <>
+      <SettingRow label="Timestamp format">
+        <Controller
+          control={form.control}
+          name="timestampFormat"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger className="w-40" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIMESTAMP_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+      </SettingRow>
+
+      <SettingRow label="JSON indentation">
+        <Controller
+          control={form.control}
+          name="jsonIndent"
+          render={({ field }) => (
+            <Select
+              value={String(field.value)}
+              onValueChange={(v) => field.onChange(Number(v))}
+            >
+              <SelectTrigger className="w-28" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {JSON_INDENT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         />
       </SettingRow>
 
       <SettingRow
-        label="JSON indentation"
-        description="Indent size for JSON previews"
+        label="Show request preview"
+        description="Display request payload preview in timeline list"
+        htmlFor="showRequestPreview"
       >
-        <Select
-          value={settings.jsonIndent}
-          options={JSON_INDENT_OPTIONS}
-          onChange={(v) => onUpdate({ jsonIndent: Number(v) as JsonIndent })}
+        <Controller
+          control={form.control}
+          name="showRequestPreview"
+          render={({ field }) => (
+            <Switch
+              id="showRequestPreview"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          )}
         />
       </SettingRow>
-
-      <SettingRow
-        label="Request body preview"
-        description="Show inline body preview in timeline rows"
-      >
-        <Toggle
-          checked={settings.showRequestPreview}
-          onChange={(showRequestPreview) => onUpdate({ showRequestPreview })}
-        />
-      </SettingRow>
-    </SettingsSection>
-  )
+    </>
+  );
 }

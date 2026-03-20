@@ -1,78 +1,161 @@
-import type { ParsedGroup, GenerateOptions, SourceConfig, SourceState } from "./types"
+import type {
+  ParsedSpec,
+  ParsedGroup,
+  ScannedSource,
+  SourceSummary,
+  GenerateOptions,
+} from "./types";
 
-export const HTTP_METHOD_COLORS: Record<string, string> = {
-  get: "text-emerald-400",
-  post: "text-amber-400",
-  put: "text-sky-400",
-  patch: "text-indigo-400",
-  delete: "text-red-400",
+// ── Endpoint counting ───────────────────────────────────────────────────────
+
+export function countSpecEndpoints(spec: ParsedSpec): number {
+  return spec.groups.reduce((sum, g) => sum + g.endpoints.length, 0);
 }
 
-export const DEFAULT_OPTIONS: GenerateOptions = {
-  sourceName: "api",
-  outputDir: "src/api",
-  validation: "zod",
-  groupBy: "tag",
-  generateTypes: true,
-  generateSchemas: true,
-  addAuthMiddleware: true,
-  includeComments: true,
-  generateClient: "direct",
-  selectedEndpoints: null,
+export function countScannedEndpoints(source: ScannedSource): number {
+  const grouped = source.groups.reduce((s, g) => s + g.endpoints.length, 0);
+  return grouped + (source.inlineEndpoints?.length ?? 0);
 }
 
-export function createDefaultSource(name = "api"): SourceConfig {
+// ── Analysis stats ──────────────────────────────────────────────────────────
+
+export interface AnalysisStats {
+  responseType: { count: number; total: number };
+  variablesType: { count: number; total: number };
+  validation: { count: number; total: number };
+}
+
+const BODY_METHODS = new Set(["post", "put", "patch"]);
+
+/** Check if an endpoint needs variables (has path params or body method) */
+function needsVariables(a: ScannedSource["groups"][number]["endpoints"][number]["analysis"]): boolean {
+  return BODY_METHODS.has(a.httpMethod) || a.path.includes(":");
+}
+
+/** Count R/V/S stats from scanned endpoint analysis data */
+export function computeAnalysisStats(source: ScannedSource): AnalysisStats {
+  const allEndpoints = [
+    ...source.groups.flatMap((g) => g.endpoints),
+    ...(source.inlineEndpoints ?? []),
+  ];
+
+  let rCount = 0;
+  let vCount = 0;
+  let vTotal = 0;
+  let sCount = 0;
+
+  for (const ep of allEndpoints) {
+    if (ep.analysis.hasResponseType) rCount++;
+    if (ep.analysis.hasVariablesType) vCount++;
+    if (ep.analysis.hasValidation) sCount++;
+    if (needsVariables(ep.analysis) || ep.analysis.hasVariablesType) vTotal++;
+  }
+
   return {
-    name,
-    importSource: "url",
-    importContent: "",
-    options: { ...DEFAULT_OPTIONS, sourceName: name, outputDir: "src/api" },
-    selectedEndpoints: {},
+    responseType: { count: rCount, total: allEndpoints.length },
+    variablesType: { count: vCount, total: vTotal },
+    validation: { count: sCount, total: allEndpoints.length },
+  };
+}
+
+// ── Selection helpers ───────────────────────────────────────────────────────
+
+/** Build a "select all" map from parsed spec */
+export function selectAllEndpoints(
+  spec: ParsedSpec,
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  for (const group of spec.groups) {
+    result[group.name] = group.endpoints.map((e) => e.name);
   }
+  return result;
 }
 
-export function createDefaultState(): SourceState {
-  return { spec: null, prevSpec: null, selection: {}, files: [], activeFileIndex: 0 }
+/** Count total selected endpoints across all groups */
+export function countSelectedEndpoints(
+  selected: Record<string, string[]>,
+): number {
+  return Object.values(selected).reduce((sum, arr) => sum + arr.length, 0);
 }
 
-/** Generate a stable unique key for a group (handles empty/duplicate names). */
-export function groupKey(group: ParsedGroup, index: number): string {
-  if (group.name) return group.name
-  return `__group_${index}_${group.prefix.replace(/[^a-zA-Z0-9]/g, "_")}`
+/** Toggle a single endpoint in the selection map */
+export function toggleEndpointSelection(
+  selected: Record<string, string[]>,
+  group: string,
+  endpoint: string,
+): Record<string, string[]> {
+  const groupEndpoints = selected[group] ?? [];
+  const has = groupEndpoints.includes(endpoint);
+  return {
+    ...selected,
+    [group]: has
+      ? groupEndpoints.filter((e) => e !== endpoint)
+      : [...groupEndpoints, endpoint],
+  };
 }
 
-/** Derive a camelCase source name from the spec title and/or baseURL. */
-export function deriveSourceName(title: string, baseURL?: string): string {
-  const cleaned = title
-    .replace(/\b(api|service|platform|cloud|public|private|rest|restful|v\d+(\.\d+)*)\b/gi, "")
-    .replace(/[^a-zA-Z0-9]+/g, " ")
-    .trim()
-  if (cleaned) {
-    const words = cleaned.split(/\s+/).filter(Boolean)
-    if (words.length > 0) {
-      const parts = words.slice(0, 2)
-      const result = parts.map((w, i) => {
-        const lower = w.toLowerCase()
-        return i === 0 ? lower : lower.charAt(0).toUpperCase() + lower.slice(1)
-      }).join("")
-      if (result) return result
-    }
-  }
-  if (baseURL) {
-    try {
-      const hostname = new URL(baseURL).hostname
-      const parts = hostname.split(".")
-      const meaningful = parts.filter((p) => !["api", "www", "com", "org", "net", "io", "dev", "cloud", "app"].includes(p))
-      if (meaningful.length > 0 && meaningful[0]) return meaningful[0].toLowerCase()
-    } catch { /* not a valid URL */ }
-  }
-  return "api"
+/** Toggle all endpoints in a group */
+export function toggleGroupSelection(
+  selected: Record<string, string[]>,
+  group: ParsedGroup,
+): Record<string, string[]> {
+  const current = selected[group.name] ?? [];
+  const allSelected = current.length === group.endpoints.length;
+  return {
+    ...selected,
+    [group.name]: allSelected ? [] : group.endpoints.map((e) => e.name),
+  };
 }
 
-/** Format write result into a human-readable message */
-export function formatWriteResult(r: { written: number; merged: number; deleted?: number }): string {
-  const parts = [`${r.written} file${r.written !== 1 ? "s" : ""} written`]
-  if (r.merged > 0) parts.push(`${r.merged} merged`)
-  if (r.deleted && r.deleted > 0) parts.push(`${r.deleted} removed`)
-  return parts.length > 1 ? `${parts[0]} (${parts.slice(1).join(", ")})` : parts[0]
+// ── Default options from settings ───────────────────────────────────────────
+
+export function buildDefaultOptions(
+  sourceName: string,
+  settings: {
+    apisValidation: string;
+    apisGroupBy: string;
+    apisGenerateTypes: boolean;
+    apisGenerateSchemas: boolean;
+    apisIncludeComments: boolean;
+    apisClient: string;
+  },
+): GenerateOptions {
+  return {
+    sourceName,
+    outputDir: "src/api",
+    validation: settings.apisValidation as GenerateOptions["validation"],
+    groupBy: settings.apisGroupBy as GenerateOptions["groupBy"],
+    generateTypes: settings.apisGenerateTypes,
+    generateSchemas: settings.apisGenerateSchemas,
+    addAuthMiddleware: true,
+    includeComments: settings.apisIncludeComments,
+    generateClient: settings.apisClient as GenerateOptions["generateClient"],
+    selectedEndpoints: null,
+  };
+}
+
+// ── Format helpers ──────────────────────────────────────────────────────────
+
+export function formatSpecFormat(format: string): string {
+  const map: Record<string, string> = {
+    openapi3: "OpenAPI 3.x",
+    swagger2: "Swagger 2.0",
+    postman: "Postman",
+  };
+  return map[format] ?? format;
+}
+
+export function formatImportType(type: string): string {
+  const map: Record<string, string> = {
+    url: "URL",
+    file: "File",
+    raw: "Raw",
+  };
+  return map[type] ?? type;
+}
+
+/** Determine import source label for a registry source */
+export function sourceLabel(source: SourceSummary): string {
+  if (source.importType === "url" && source.specUrl) return source.specUrl;
+  return formatImportType(source.importType);
 }

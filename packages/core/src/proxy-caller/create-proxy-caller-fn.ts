@@ -9,9 +9,9 @@ import { handleXhrUpload } from "./xhr-handler";
 
 export type { ProxyCallerDefaults } from "./types";
 
-export function createProxyCallerFn<T extends Record<string, unknown> = Record<string, unknown>>(
-  defaults: ProxyCallerDefaults = {},
-): CallerFn<T> {
+export function createProxyCallerFn<
+  TSources extends Record<string, unknown> = Record<string, unknown>,
+>(defaults: ProxyCallerDefaults = {}): CallerFn<TSources> {
   const {
     proxyUrl = "/api/request",
     credentials = "include",
@@ -117,5 +117,5 @@ export function createProxyCallerFn<T extends Record<string, unknown> = Record<s
     return execute;
   };
 
-  return selectSource as unknown as CallerFn<T>;
+  return selectSource as unknown as CallerFn<TSources>;
 }

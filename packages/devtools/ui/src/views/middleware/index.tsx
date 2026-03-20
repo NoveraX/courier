@@ -1,103 +1,146 @@
-import { useMemo, useCallback } from "react"
-import { getRouteApi } from "@tanstack/react-router"
-import { Zap } from "lucide-react"
+import { useCallback } from "react";
+import { Workflow } from "lucide-react";
 
-import { useDevToolsStore } from "../../store"
-import { formatDuration, DisconnectedBanner } from "../../components/ui"
+import { PageShell } from "@/components/shared/page-shell";
+import { EmptyState } from "@/components/shared/empty-state";
 
-import { OVERHEAD_WARN_PERCENT, getOverheadPercent, computeAggregateStats } from "./helpers"
-import { MiddlewareChain } from "./middleware-chain"
-import { AggregateStatsPanel } from "./aggregate-stats"
+import { useMiddleware } from "./use-middleware";
+import { Toolbar } from "./toolbar";
+import { AggregateCards } from "./aggregate-cards";
+import { OverheadGauge } from "./overhead-gauge";
+import { MiddlewareBars } from "./middleware-bars";
+import { MiddlewareProfiles } from "./middleware-profiles";
+import { MiddlewareTable } from "./middleware-table";
+import { EndpointImpactPanel } from "./endpoint-impact";
+import { ChainView } from "./chain-view";
 
-const routeApi = getRouteApi("/middleware")
+/** Threshold: use profile cards for ≤ this many, table for more */
+const PROFILE_CARDS_MAX = 6;
 
-export function MiddlewareView() {
-  const {
-    requests, connected,
-    middlewareShowStats: showStats, setMiddlewareShowStats: setShowStats,
-  } = useDevToolsStore()
+// ── View ───────────────────────────────────────────────────────────────────
 
-  const { request: selectedId } = routeApi.useSearch()
-  const navigate = routeApi.useNavigate()
-  const setSelectedId = useCallback(
-    (id: string) => { void navigate({ search: { request: id } }) },
-    [navigate],
-  )
+export function MiddlewareView(): React.ReactElement {
+  const mw = useMiddleware();
 
-  const requestsWithMiddleware = useMemo(
-    () => requests.filter((r) => r.middlewareCount > 0 && r.status !== "pending"),
-    [requests]
-  )
-
-  const aggregateStats = useMemo(() => computeAggregateStats(requestsWithMiddleware), [requestsWithMiddleware])
-
-  const selectedRequest = useMemo(
-    () => requestsWithMiddleware.find((r) => r.id === selectedId) ?? null,
-    [requestsWithMiddleware, selectedId]
-  )
-
-  if (requestsWithMiddleware.length === 0) {
+  if (mw.totalRequests === 0) {
     return (
-      <div className="flex flex-1 flex-col">
-        {!connected && <DisconnectedBanner />}
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-text-muted">
-          <Zap size={32} strokeWidth={1} />
-          <p className="text-sm">No middleware activity</p>
-          <p className="text-xs">Requests with middleware will appear here</p>
-        </div>
-      </div>
-    )
+      <PageShell center>
+        <EmptyState icon={Workflow} heading="No requests yet" description="Make some API calls to see middleware statistics." />
+      </PageShell>
+    );
   }
 
+  if (mw.requests.length === 0) {
+    return (
+      <PageShell center>
+        <EmptyState icon={Workflow} heading="No middleware detected" description="None of the captured requests used middleware." />
+      </PageShell>
+    );
+  }
+
+  return <MiddlewareContent mw={mw} />;
+}
+
+// ── Content ────────────────────────────────────────────────────────────────
+
+function MiddlewareContent({
+  mw,
+}: {
+  mw: ReturnType<typeof useMiddleware>;
+}): React.ReactElement {
+  const handleProfileSelect = useCallback(
+    (name: string) => {
+      const req = mw.requests.find((r) =>
+        r.middlewareEntries.some((e) => e.name === name),
+      );
+      if (req) {
+        mw.setMode("chain");
+        mw.setSelectedRequest(req.id);
+      }
+    },
+    [mw],
+  );
+
+  const handleEndpointSelect = useCallback(
+    (requestId: string) => {
+      mw.setMode("chain");
+      mw.setSelectedRequest(requestId);
+    },
+    [mw],
+  );
+
+  const handleBack = useCallback(() => mw.setMode("aggregate"), [mw]);
+
+  const toolbar = (
+    <Toolbar
+      mode={mw.mode}
+      middlewareCount={mw.aggregateStats.length}
+      requestCount={mw.requests.length}
+      onModeChange={mw.setMode}
+    />
+  );
+
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      {!connected && <DisconnectedBanner />}
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex w-70 shrink-0 flex-col border-r border-border-default">
-          <div className="flex items-center justify-between border-b border-border-default px-3 py-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
-              Requests ({requestsWithMiddleware.length})
-            </span>
-            <button type="button" onClick={() => setShowStats(!showStats)} className={`rounded px-1.5 py-0.5 text-[10px] transition-colors ${showStats ? "bg-surface-2 text-text-primary" : "text-text-muted hover:text-text-secondary"}`}>
-              Stats
-            </button>
-          </div>
+    <PageShell toolbar={toolbar}>
+      <div className="space-y-5 p-5">
+        {mw.mode === "aggregate" ? (
+          <AggregateContent mw={mw} onProfileSelect={handleProfileSelect} onEndpointSelect={handleEndpointSelect} />
+        ) : (
+          <ChainView
+            requests={mw.requests}
+            selectedId={mw.selectedRequestId}
+            selectedRequest={mw.selectedRequest}
+            chain={mw.selectedChain}
+            aggregateStats={mw.aggregateStats}
+            onSelectRequest={mw.setSelectedRequest}
+            onBack={handleBack}
+          />
+        )}
+      </div>
+    </PageShell>
+  );
+}
 
-          {showStats ? (
-            <AggregateStatsPanel stats={aggregateStats} />
-          ) : (
-            <div className="flex-1 overflow-y-auto">
-              {requestsWithMiddleware.map((r) => {
-                const label = [r.source, r.group, r.method].filter(Boolean).join(".")
-                const overhead = getOverheadPercent(r)
-                const isSelected = r.id === selectedId
-                return (
-                  <button key={r.id} type="button" onClick={() => setSelectedId(r.id)} className={`flex w-full items-center gap-2 border-b border-border-subtle px-3 py-2 text-left transition-colors hover:bg-surface-1 ${isSelected ? "bg-surface-1" : ""}`}>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-mono text-[11px] text-text-secondary">{label}</div>
-                      <div className="flex items-center gap-2 text-[10px] text-text-muted">
-                        <span>{r.middlewareCount} middleware</span>
-                        <span>{formatDuration(r.timing?.middleware ?? 0)}</span>
-                        <span className={overhead > OVERHEAD_WARN_PERCENT ? "text-amber-400" : ""}>{overhead.toFixed(0)}% overhead</span>
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          )}
+// ── Aggregate content ──────────────────────────────────────────────────────
+
+function AggregateContent({
+  mw,
+  onProfileSelect,
+  onEndpointSelect,
+}: {
+  mw: ReturnType<typeof useMiddleware>;
+  onProfileSelect: (name: string) => void;
+  onEndpointSelect: (requestId: string) => void;
+}): React.ReactElement {
+  return (
+    <>
+      <AggregateCards
+        stats={mw.aggregateStats}
+        overheadPercent={mw.overheadStats.avgOverheadPercent}
+        execSparkline={mw.execSparkline}
+        overheadSparkline={mw.overheadSparkline}
+        p95Sparkline={mw.p95Sparkline}
+      />
+
+      {/* Hero: gauge + bars side by side */}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[auto_1fr]">
+        <div className="flex items-center justify-center rounded-xl border border-border-subtle bg-card px-8 py-6">
+          <OverheadGauge percent={mw.overheadStats.avgOverheadPercent} />
         </div>
-
-        <div className="flex flex-1 flex-col overflow-y-auto">
-          {selectedRequest ? (
-            <MiddlewareChain request={selectedRequest} />
-          ) : (
-            <div className="flex flex-1 items-center justify-center text-[11px] text-text-muted">
-              Select a request to inspect middleware chain
-            </div>
-          )}
+        <div className="rounded-xl border border-border-subtle bg-card p-4">
+          <MiddlewareBars stats={mw.aggregateStats} />
         </div>
       </div>
-    </div>
-  )
+
+      {/* Middleware detail: cards for few, table for many */}
+      {mw.aggregateStats.length <= PROFILE_CARDS_MAX ? (
+        <MiddlewareProfiles stats={mw.aggregateStats} onSelect={onProfileSelect} />
+      ) : (
+        <MiddlewareTable stats={mw.aggregateStats} onRowClick={onProfileSelect} />
+      )}
+
+      {/* Endpoint impact */}
+      <EndpointImpactPanel endpoints={mw.endpointImpact} onSelect={onEndpointSelect} />
+    </>
+  );
 }

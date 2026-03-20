@@ -1,74 +1,80 @@
 import type { Endpoint } from "./define/types";
 import type { CallOptions, Context, HttpResponse } from "./http-client/types";
 
-export type CallerFn<T extends Record<string, any>, D extends boolean = false> = <
-  K extends keyof T,
-  RD extends boolean = false,
+export type CallerFn<TSources extends Record<string, any>, TDirect extends boolean = false> = <
+  TKey extends keyof TSources,
+  TRaw extends boolean = false,
 >(
-  source: K,
-  options?: CallOptions<RD>,
+  source: TKey,
+  options?: CallOptions<TRaw>,
 ) => <
-  Q extends EndpointKey<T[K]>,
-  M extends ResolveEndpoint<T[K], Q>,
-  R = ExtractResponse<M extends Endpoint<any, any> ? M : unknown>,
+  TEndpointKey extends EndpointKey<TSources[TKey]>,
+  TEndpoint extends ResolveEndpoint<TSources[TKey], TEndpointKey>,
+  TResponse = ExtractResponse<TEndpoint extends Endpoint<any, any> ? TEndpoint : unknown>,
 >(
-  ...arguments_: EndpointArguments<Q, M, D>
-) => EndpointResult<RD, R>;
+  ...arguments_: EndpointArguments<TEndpointKey, TEndpoint, TDirect>
+) => EndpointResult<TRaw, TResponse>;
 
 type EndpointArguments<
-  Q,
-  M extends Endpoint<any, any>,
-  D extends boolean = false,
-  V = ExtractVariables<M>,
-> = D extends false
-  ? V extends undefined
-    ? [endpoint: Q]
-    : [endpoint: Q, variables: V]
-  : V extends undefined
-    ? [endpoint: Q, context?: Context]
-    : [endpoint: Q, variables: V, context?: Context];
+  TEndpointKey,
+  TEndpoint extends Endpoint<any, any>,
+  TDirect extends boolean = false,
+  TVariables = ExtractVariables<TEndpoint>,
+> = TDirect extends false
+  ? TVariables extends undefined
+    ? [endpoint: TEndpointKey]
+    : [endpoint: TEndpointKey, variables: TVariables]
+  : TVariables extends undefined
+    ? [endpoint: TEndpointKey, context?: Context]
+    : [endpoint: TEndpointKey, variables: TVariables, context?: Context];
 
-type ExtractResponse<C extends Endpoint<any, any>> = C extends Endpoint<infer T, any> ? T : unknown;
+type ExtractResponse<TCandidate extends Endpoint<any, any>> =
+  TCandidate extends Endpoint<infer TResponse, any> ? TResponse : unknown;
 
-type ExtractVariables<C extends Endpoint<any, any>> =
-  C extends Endpoint<any, infer T> ? T : unknown;
+type ExtractVariables<TCandidate extends Endpoint<any, any>> =
+  TCandidate extends Endpoint<any, infer TVariables> ? TVariables : unknown;
 
-type SplitEndpointKey<T extends string> = T extends `${infer Group}:${infer Method}`
-  ? { group: Group; method: Method }
-  : { group: undefined; method: T };
+type SplitEndpointKey<TKey extends string> = TKey extends `${infer TGroup}:${infer TMethod}`
+  ? { group: TGroup; method: TMethod }
+  : { group: undefined; method: TKey };
 
 export type ResolveEndpoint<
-  T extends Record<string, any>,
-  R extends EndpointKey<T>,
-  S extends Record<string, any> = SplitEndpointKey<R>,
-  G extends string = S["group"],
-  M extends string = S["method"],
-> = G extends string ? Groups<T>[G][M] : T[M];
+  TSource extends Record<string, any>,
+  TEndpointKey extends EndpointKey<TSource>,
+  TSplit extends Record<string, any> = SplitEndpointKey<TEndpointKey>,
+  TGroup extends string = TSplit["group"],
+  TMethod extends string = TSplit["method"],
+> = TGroup extends string ? Groups<TSource>[TGroup][TMethod] : TSource[TMethod];
 
-type GroupedEndpoints<T extends Record<string, any>> = {
-  [K in keyof T]: K extends string ? `${K}:${FunctionKeys<T[K]>}` : never;
-}[keyof T];
+type GroupedEndpoints<TGroups extends Record<string, any>> = {
+  [TKey in keyof TGroups]: TKey extends string ? `${TKey}:${FunctionKeys<TGroups[TKey]>}` : never;
+}[keyof TGroups];
 
-export type EndpointKey<T extends Record<string, any>, K extends Record<string, any> = Groups<T>> =
-  K extends Record<string, any> ? FunctionKeys<T> | GroupedEndpoints<K> : FunctionKeys<T>;
+export type EndpointKey<
+  TSource extends Record<string, any>,
+  TGroupMap extends Record<string, any> = Groups<TSource>,
+> =
+  TGroupMap extends Record<string, any>
+    ? FunctionKeys<TSource> | GroupedEndpoints<TGroupMap>
+    : FunctionKeys<TSource>;
 
-type FunctionKeys<T extends Record<string, any>> = NonNullable<
+type FunctionKeys<TObj extends Record<string, any>> = NonNullable<
   {
-    [K in keyof T]: T[K] extends (...args: never[]) => unknown
-      ? K extends string
-        ? K
+    [TKey in keyof TObj]: TObj[TKey] extends (...args: never[]) => unknown
+      ? TKey extends string
+        ? TKey
         : never
       : never;
-  }[keyof T]
+  }[keyof TObj]
 >;
 
-type Groups<T extends Record<string, any>> = NonNullable<T["options"]>["groups"];
+type Groups<TSource extends Record<string, any>> = NonNullable<TSource["options"]>["groups"];
 
-type EndpointResult<T extends boolean = false, R = unknown> = Promise<
-  T extends true ? Partial<HttpResponse<R>> : R
+type EndpointResult<TRaw extends boolean = false, TResponse = unknown> = Promise<
+  TRaw extends true ? Partial<HttpResponse<TResponse>> : TResponse
 >;
 
-export type SuccessResponse<D = unknown> = {
+export type SuccessResponse<TData = unknown> = {
   success: true;
-  data: D;
+  data: TData;
 };

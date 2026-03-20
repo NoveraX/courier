@@ -1,22 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useDevToolsStore } from "../../store";
-import { useExplorerContext } from "../../views/explorer/explorer-context";
-import { GraphView } from "../../views/explorer/graph-view";
+import { ReactFlowProvider } from "@xyflow/react";
+import { validateExplorerSearch } from "@/views/explorer/use-explorer-search";
+import { ExplorerGraph } from "@/views/explorer/graph";
 
-function ExplorerGraphRoute() {
-  const { sourceMap, onSelectEndpoint } = useExplorerContext();
-  const { graphLayout, showSchemas } = useDevToolsStore();
-
+function GraphPage(): React.ReactNode {
   return (
-    <GraphView
-      sourceMap={sourceMap}
-      layout={graphLayout}
-      showSchemas={showSchemas}
-      onSelectEndpoint={onSelectEndpoint}
-    />
+    <ReactFlowProvider>
+      <ExplorerGraph />
+    </ReactFlowProvider>
   );
 }
 
 export const Route = createFileRoute("/explorer/graph")({
-  component: ExplorerGraphRoute,
+  component: GraphPage,
+  validateSearch: validateExplorerSearch,
 });

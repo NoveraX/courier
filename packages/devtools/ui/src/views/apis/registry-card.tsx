@@ -1,136 +1,254 @@
-import { useState } from "react"
 import {
-  ExternalLink,
-  FileCode,
   Globe,
-  HardDrive,
-  RefreshCw,
-  Settings,
+  FileUp,
+  FileText,
+  MoreHorizontal,
   Trash2,
-} from "lucide-react"
+  RefreshCw,
+  Loader2,
+  ExternalLink,
+  Eye,
+  Zap,
+  ShieldCheck,
+  ShieldAlert,
+  Settings2,
+} from "lucide-react";
 
-import type { ParsedSpec, SourceStatusInfo, SourceSummary } from "./types"
-import { ActionButton, STATUS_CONFIG, StatusBadge, truncateUrl } from "./registry-helpers"
-import { RegistrySettings } from "./registry-settings"
-import { UpdateImport } from "./update-import"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+import type { SourceStatusInfo } from "./types";
+import type { EnrichedSource } from "./use-registry";
+import { computeAnalysisStats, countScannedEndpoints } from "./helpers";
+
+// ── Types ───────────────────────────────────────────────────────────────────
+
+interface RegistryCardProps {
+  source: EnrichedSource;
+  status?: SourceStatusInfo;
+  onCheckUpdates: () => void;
+  onManage: () => void;
+  onRemove: () => void;
+}
+
+// ── Constants ───────────────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<string, {
+  label: string;
+  variant: "emerald" | "amber" | "rose" | "secondary";
+}> = {
+  "up-to-date": { label: "Up to date", variant: "emerald" },
+  "updates-available": { label: "Update available", variant: "amber" },
+  checking: { label: "Checking…", variant: "secondary" },
+  error: { label: "Error", variant: "rose" },
+};
+
+const IMPORT_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
+  url: Globe,
+  file: FileUp,
+  raw: FileText,
+};
+
+// ── Component ───────────────────────────────────────────────────────────────
 
 export function RegistryCard({
   source,
-  statusInfo,
+  status,
   onCheckUpdates,
-  onManualUpdate,
+  onManage,
   onRemove,
-  onRegenerated,
-}: {
-  source: SourceSummary
-  statusInfo: SourceStatusInfo
-  onCheckUpdates: () => void
-  onManualUpdate: (spec: ParsedSpec) => void
-  onRemove: () => void
-  onRegenerated: () => void
-}) {
-  const [showSettings, setShowSettings] = useState(false)
-  const [showUpdateImport, setShowUpdateImport] = useState(false)
-  const cfg = STATUS_CONFIG[statusInfo.status]
-  const isRemote = source.importType === "url"
-
-  const handleCheckUpdates = () => {
-    if (isRemote) {
-      onCheckUpdates()
-    } else {
-      setShowUpdateImport(true)
-    }
-  }
-
-  const handleParsed = (spec: ParsedSpec) => {
-    setShowUpdateImport(false)
-    onManualUpdate(spec)
-  }
+}: RegistryCardProps): React.ReactElement {
+  const reg = source.registry;
+  const statusCfg = status ? STATUS_CONFIG[status.status] : null;
+  const hasUpdates = status?.status === "updates-available";
+  const isChecking = status?.status === "checking";
+  const importType = reg?.importType ?? "file";
+  const Icon = IMPORT_ICON[importType] ?? Globe;
+  const endpointCount = countScannedEndpoints(source);
+  const groupCount = source.groups.length;
+  const filePath = source.filePath.replace(/\/[^/]+$/, "");
+  const validation = reg?.options.validation ?? "none";
+  const stats = computeAnalysisStats(source);
 
   return (
-    <div className="group rounded-lg border border-border-default bg-surface-0 p-4 transition-colors hover:border-border-subtle">
-      <div className="flex items-start justify-between">
-        <CardHeader name={source.name} />
-        <StatusBadge icon={cfg.icon} color={cfg.color} label={cfg.label} spinning={statusInfo.status === "checking"} />
+    <div
+      className={cn(
+        "group relative flex flex-col gap-3 rounded-xl border p-4",
+        "bg-card transition-all hover:bg-card/80",
+        hasUpdates
+          ? "border-amber-500/30 shadow-[0_0_12px_-3px] shadow-amber-500/10"
+          : "border-border-subtle hover:border-border",
+      )}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 ring-1 ring-indigo-500/20">
+            <Icon className="size-4 text-indigo-400" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-h3 text-foreground truncate">{source.name}</h3>
+            <p className="text-[10px] text-muted-foreground truncate">{filePath}</p>
+          </div>
+        </div>
+
+        <CardMenu
+          isUrl={importType === "url"}
+          isChecking={isChecking}
+          onCheckUpdates={onCheckUpdates}
+          onManage={onManage}
+          onRemove={onRemove}
+        />
       </div>
 
-      {statusInfo.status === "error" && statusInfo.error && (
-        <p className="mt-2 text-xs text-red-400">{statusInfo.error}</p>
-      )}
+      {/* Stats row */}
+      <div className="flex items-center gap-3 text-[11px] text-muted-foreground truncate">
+        <span className="shrink-0">{endpointCount} {endpointCount === 1 ? "endpoint" : "endpoints"}</span>
+        <span className="shrink-0">·</span>
+        <span className="shrink-0">{groupCount} {groupCount === 1 ? "group" : "groups"}</span>
+        <span className="shrink-0">·</span>
+        <span className="shrink-0">{validation}</span>
+        {source.baseURL && (
+          <>
+            <span className="shrink-0">·</span>
+            <span className="truncate">{source.baseURL}</span>
+          </>
+        )}
+      </div>
 
-      <CardStats source={source} />
-      <SourceOrigin source={source} />
-      <CardActions
-        checking={statusInfo.status === "checking"}
-        showSettings={showSettings}
-        onCheckUpdates={handleCheckUpdates}
-        onToggleSettings={() => setShowSettings((v) => !v)}
-        onRemove={onRemove}
-      />
+      {/* Quality + status row */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <QualityPill icon={Eye} label="R" count={stats.responseType.count} total={stats.responseType.total} tooltip="Response types" />
+          <QualityPill icon={Zap} label="V" count={stats.variablesType.count} total={stats.variablesType.total} tooltip="Variables types" />
+          <QualityPill
+            icon={stats.validation.count === stats.validation.total ? ShieldCheck : ShieldAlert}
+            label="S"
+            count={stats.validation.count}
+            total={stats.validation.total}
+            tooltip="Validation schemas"
+          />
 
-      {showSettings && <RegistrySettings source={source} onClose={() => setShowSettings(false)} onRegenerated={onRegenerated} />}
-      {showUpdateImport && <UpdateImport sourceName={source.name} onParsed={handleParsed} onCancel={() => setShowUpdateImport(false)} />}
+          {statusCfg && (
+            <Badge variant={statusCfg.variant} className="border-0 text-[10px] ml-1">
+              {isChecking && <Loader2 className="mr-1 size-2.5 animate-spin" />}
+              {statusCfg.label}
+            </Badge>
+          )}
+        </div>
+
+        {hasUpdates && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 gap-1 text-[10px] border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+            onClick={onManage}
+          >
+            <Settings2 className="size-3" />
+            Manage
+          </Button>
+        )}
+
+        {reg?.specUrl && !hasUpdates && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <a
+                href={reg.specUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ExternalLink className="size-3" />
+              </a>
+            </TooltipTrigger>
+            <TooltipContent>Open spec URL</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
     </div>
-  )
+  );
 }
 
-function CardHeader({ name }: { name: string }) {
+// ── Card menu ───────────────────────────────────────────────────────────────
+
+function CardMenu({ isUrl, isChecking, onCheckUpdates, onManage, onRemove }: {
+  isUrl: boolean;
+  isChecking?: boolean;
+  onCheckUpdates: () => void;
+  onManage: () => void;
+  onRemove: () => void;
+}): React.ReactElement {
   return (
-    <div className="flex items-center gap-2">
-      <FileCode size={16} className="text-indigo-400" />
-      <span className="font-medium text-sm">{name}</span>
-    </div>
-  )
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="size-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <MoreHorizontal className="size-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem onClick={onManage}>
+          <Settings2 className="size-3.5" />
+          Manage endpoints
+        </DropdownMenuItem>
+        {isUrl && (
+          <DropdownMenuItem onClick={onCheckUpdates} disabled={isChecking}>
+            <RefreshCw className="size-3.5" />
+            Check updates
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onClick={onRemove}>
+          <Trash2 className="size-3.5" />
+          Remove
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
-function CardStats({ source }: { source: SourceSummary }) {
-  return (
-    <div className="mt-3 flex items-center gap-4 text-xs text-text-muted">
-      <span>{source.endpointCount} endpoints</span>
-    </div>
-  )
-}
+// ── Quality pill ────────────────────────────────────────────────────────────
 
-function SourceOrigin({ source }: { source: SourceSummary }) {
-  const isUrl = source.importType === "url"
-  const Icon = isUrl ? Globe : HardDrive
-  const label = isUrl ? truncateUrl(source.specUrl) : `Imported from ${source.importType}`
+function QualityPill({ icon: PillIcon, label, count, total, tooltip }: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  count: number;
+  total: number;
+  tooltip: string;
+}): React.ReactElement {
+  const allCovered = total > 0 && count === total;
+  const showFraction = total > 0 && count !== total;
+  const color = allCovered
+    ? "text-emerald-400 bg-emerald-500/10"
+    : count > 0
+      ? "text-amber-400 bg-amber-500/10"
+      : "text-zinc-500 bg-zinc-500/10";
 
   return (
-    <div className="mt-2 flex items-center gap-1.5 text-xs text-text-muted">
-      <Icon size={10} />
-      <span className="truncate max-w-[280px]" title={source.specUrl || undefined}>{label}</span>
-      {isUrl && <ExternalLink size={9} className="shrink-0 opacity-50" />}
-      <span className="mx-1 text-border-subtle">→</span>
-      <span className="text-text-secondary">{source.outputDir}</span>
-    </div>
-  )
-}
-
-function CardActions({
-  checking,
-  showSettings,
-  onCheckUpdates,
-  onToggleSettings,
-  onRemove,
-}: {
-  checking: boolean
-  showSettings: boolean
-  onCheckUpdates: () => void
-  onToggleSettings: () => void
-  onRemove: () => void
-}) {
-  return (
-    <div className="mt-3 flex items-center gap-1 border-t border-border-default pt-3 opacity-0 transition-opacity group-hover:opacity-100">
-      <ActionButton onClick={onCheckUpdates} disabled={checking} icon={RefreshCw} label="Check for Updates" />
-      <ActionButton
-        onClick={onToggleSettings}
-        icon={Settings}
-        label={showSettings ? "Hide Settings" : "Settings"}
-        active={showSettings}
-      />
-      <div className="flex-1" />
-      <ActionButton onClick={onRemove} icon={Trash2} label="Remove" danger />
-    </div>
-  )
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${color}`}>
+          <PillIcon className="size-2.5" />
+          {label}{showFraction ? ` ${count}/${total}` : ""}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}: {count} of {total}</TooltipContent>
+    </Tooltip>
+  );
 }

@@ -7,7 +7,7 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [
     tanstackRouter({ target: "react", autoCodeSplitting: true }),
-    react(),
+    react({ babel: { plugins: ["babel-plugin-react-compiler"] } }),
     tailwindcss(),
   ],
   resolve: {
@@ -16,9 +16,9 @@ export default defineConfig({
     },
   },
   server: {
-    port: 4381,
+    port: 4382,
     proxy: {
-      "/api": "http://localhost:4380",
+      "/api/": "http://localhost:4380",
       "/socket.io": {
         target: "http://localhost:4380",
         ws: true,
@@ -28,5 +28,18 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    chunkSizeWarningLimit: 500,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-router": ["@tanstack/react-router"],
+          "vendor-charts": ["recharts"],
+          "vendor-flow": ["@xyflow/react"],
+          "vendor-motion": ["motion"],
+          "vendor-shiki": ["shiki"],
+          "vendor-ui": ["sonner", "react-resizable-panels", "cmdk"],
+        },
+      },
+    },
   },
 });

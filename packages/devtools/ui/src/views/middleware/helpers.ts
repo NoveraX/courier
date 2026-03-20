@@ -1,103 +1,141 @@
-import type { RequestEntry } from "../../store"
+import type { RequestEntry } from "@/store/types";
 
-// ── Constants ───────────────────────────────────────────────────────────────
+import type { AggregateMiddleware, ChainEntry, MiddlewareStep } from "./types";
+import { SLOW_STEP_MS } from "./constants";
 
-export const SLOW_STEP_MS = 5
-export const OVERHEAD_WARN_PERCENT = 20
-export const MAX_DURATION_WARN_MS = 10
+// ── Aggregate stats ────────────────────────────────────────────────────────
 
-// ── Types ───────────────────────────────────────────────────────────────────
+export function computeAggregateStats(
+  requests: RequestEntry[],
+): AggregateMiddleware[] {
+  const map = new Map<string, { durations: number[]; errors: number }>();
 
-export interface MiddlewareStep {
-  name: string
-  index: number
-  duration: number
-  phase: "request" | "response"
-  headersAdded?: string[]
-  hasError?: boolean
-  isCacheHit?: boolean
-  isRetry?: boolean
-}
-
-export interface MiddlewareStats {
-  name: string
-  calls: number
-  avgDuration: number
-  maxDuration: number
-  errors: number
-}
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-export function guessMiddlewareName(
-  index: number,
-  headers: Record<string, string[]>,
-): string {
-  const knownNames = ["auth", "rateLimit", "retry", "log", "cache"]
-  const headerSources = new Set(Object.values(headers).flat())
-  for (const name of headerSources) {
-    if (!knownNames.includes(name)) knownNames.push(name)
-  }
-  if (index < knownNames.length) return knownNames[index]!
-  return `middleware_${index}`
-}
-
-export function estimateMiddlewareSteps(r: RequestEntry): MiddlewareStep[] {
-  if (r.middlewareCount === 0 || !r.timing) return []
-
-  const perMiddleware = r.timing.middleware / Math.max(r.middlewareCount * 2, 1)
-  const steps: MiddlewareStep[] = []
-  const middlewareHeaders = r.middlewareHeaders ?? {}
-
-  for (let i = 0; i < r.middlewareCount; i++) {
-    const name = guessMiddlewareName(i, middlewareHeaders)
-    const headersAdded = Object.entries(middlewareHeaders)
-      .filter(([, sources]) => sources.includes(name))
-      .map(([header]) => header)
-
-    steps.push({
-      name, index: i, duration: perMiddleware, phase: "request",
-      headersAdded: headersAdded.length > 0 ? headersAdded : undefined,
-      isCacheHit: name.toLowerCase().includes("cache") && r.timing.fetch === 0,
-    })
-  }
-
-  for (let i = r.middlewareCount - 1; i >= 0; i--) {
-    const reqStep = steps[i]!
-    steps.push({
-      name: reqStep.name, index: i, duration: perMiddleware, phase: "response",
-      hasError: i === r.middlewareCount - 1 && r.status === "error",
-    })
-  }
-
-  return steps
-}
-
-export function getOverheadPercent(r: RequestEntry): number {
-  if (!r.timing || r.timing.total === 0) return 0
-  return (r.timing.middleware / r.timing.total) * 100
-}
-
-export function computeAggregateStats(requests: RequestEntry[]): MiddlewareStats[] {
-  const map = new Map<string, { total: number; max: number; count: number; errors: number }>()
-
-  for (const r of requests) {
-    if (r.middlewareCount === 0 || !r.timing) continue
-    const perMw = r.timing.middleware / Math.max(r.middlewareCount, 1)
-    const mwHeaders = r.middlewareHeaders ?? {}
-
-    for (let i = 0; i < r.middlewareCount; i++) {
-      const name = guessMiddlewareName(i, mwHeaders)
-      const entry = map.get(name) ?? { total: 0, max: 0, count: 0, errors: 0 }
-      entry.total += perMw
-      entry.max = Math.max(entry.max, perMw)
-      entry.count += 1
-      if (r.status === "error") entry.errors += 1
-      map.set(name, entry)
+  for (const req of requests) {
+    for (const mw of req.middlewareEntries) {
+      const entry = map.get(mw.name) ?? { durations: [], errors: 0 };
+      entry.durations.push(mw.duration ?? 0);
+      if (mw.status === "error") entry.errors++;
+      map.set(mw.name, entry);
     }
   }
 
-  return Array.from(map, ([name, s]) => ({
-    name, calls: s.count, avgDuration: s.total / s.count, maxDuration: s.max, errors: s.errors,
-  })).sort((a, b) => b.avgDuration - a.avgDuration)
+  return Array.from(map.entries())
+    .map(([name, { durations, errors }]) => {
+      const sorted = [...durations].sort((a, b) => a - b);
+      const total = sorted.reduce((s, d) => s + d, 0);
+      return {
+        name,
+        calls: sorted.length,
+        avgDuration: sorted.length > 0 ? total / sorted.length : 0,
+        maxDuration: sorted.at(-1) ?? 0,
+        p95Duration: percentile(sorted, 95),
+        errors,
+        errorRate: sorted.length > 0 ? (errors / sorted.length) * 100 : 0,
+        totalDuration: total,
+      };
+    })
+    .sort((a, b) => b.calls - a.calls);
+}
+
+// ── Chain builder ──────────────────────────────────────────────────────────
+
+export function buildChain(request: RequestEntry): ChainEntry {
+  const sorted = [...request.middlewareEntries].sort(
+    (a, b) => a.index - b.index,
+  );
+
+  const steps: MiddlewareStep[] = sorted.map((mw) => ({
+    name: mw.name,
+    index: mw.index,
+    duration: mw.duration ?? 0,
+    status: mw.status,
+    phase: inferPhase(mw),
+    error: mw.error,
+    headersAdded: mw.headersAdded,
+    beforeDuration: mw.beforeDuration,
+    afterDuration: mw.afterDuration,
+  }));
+
+  const totalOverhead = request.timing?.middleware ?? 0;
+  const totalTime = request.timing?.total ?? 1;
+  const overheadPercent =
+    totalTime > 0 ? (totalOverhead / totalTime) * 100 : 0;
+
+  return {
+    requestId: request.id,
+    steps,
+    totalOverhead,
+    overheadPercent,
+  };
+}
+
+// ── Overhead across all requests ───────────────────────────────────────────
+
+export function computeOverheadStats(requests: RequestEntry[]): {
+  avgOverheadPercent: number;
+  avgFetchPercent: number;
+  avgOtherPercent: number;
+} {
+  const withTiming = requests.filter((r) => r.timing && r.timing.total > 0);
+  if (withTiming.length === 0) {
+    return { avgOverheadPercent: 0, avgFetchPercent: 0, avgOtherPercent: 0 };
+  }
+
+  let sumMw = 0;
+  let sumFetch = 0;
+  let sumOther = 0;
+
+  for (const r of withTiming) {
+    const t = r.timing!;
+    const mwPct = (t.middleware / t.total) * 100;
+    const fetchPct = (t.fetch / t.total) * 100;
+    sumMw += mwPct;
+    sumFetch += fetchPct;
+    sumOther += 100 - mwPct - fetchPct;
+  }
+
+  const n = withTiming.length;
+  return {
+    avgOverheadPercent: sumMw / n,
+    avgFetchPercent: sumFetch / n,
+    avgOtherPercent: sumOther / n,
+  };
+}
+
+// ── Phase inference ────────────────────────────────────────────────────────
+
+import type { MiddlewareEntry } from "@/store/types-events";
+
+/** Determine phase from declared metadata or measured timing */
+function inferPhase(mw: MiddlewareEntry): "request" | "response" | "wrap" {
+  // Use declared phase if present
+  if (mw.phase === "before") return "request";
+  if (mw.phase === "after") return "response";
+  if (mw.phase === "wrap") return "wrap";
+
+  // Infer from measured before/after timing
+  const before = mw.beforeDuration ?? 0;
+  const after = mw.afterDuration ?? 0;
+  if (before > 0 && after <= 0.01) return "request";
+  if (after > 0 && before <= 0.01) return "response";
+  return "wrap";
+}
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+
+export function isSlowStep(duration: number): boolean {
+  return duration >= SLOW_STEP_MS;
+}
+
+function percentile(sorted: number[], pct: number): number {
+  if (sorted.length === 0) return 0;
+  const idx = Math.ceil((pct / 100) * sorted.length) - 1;
+  return sorted[Math.max(0, idx)] ?? 0;
+}
+
+/** Requests that have at least one middleware entry */
+export function filterWithMiddleware(
+  requests: RequestEntry[],
+): RequestEntry[] {
+  return requests.filter((r) => r.middlewareEntries.length > 0);
 }

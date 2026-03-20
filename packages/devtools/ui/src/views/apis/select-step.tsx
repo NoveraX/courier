@@ -1,121 +1,97 @@
-import { useState, useMemo, useEffect } from "react"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { MethodBadge } from "@/components/shared/method-badge";
 
-import type { ParsedSpec, ParsedGroup, GenerateOptions } from "./types"
-import { groupKey } from "./helpers"
-import { SelectHeaderInfo, SelectConfigFields, SelectSearchBar } from "./select-header"
-import { EndpointTree } from "./endpoint-tree"
+import type { ParsedSpec } from "./types";
+import { countSelectedEndpoints } from "./helpers";
 
-export function SelectStep({
+interface SelectStepProps {
+  spec: ParsedSpec;
+  selected: Record<string, string[]>;
+  onToggleEndpoint: (group: string, endpoint: string) => void;
+  onToggleGroup: (group: string) => void;
+  onToggleAll: () => void;
+}
+
+export function SelectStepView({
   spec,
-  selection,
-  totalSelected,
-  totalEndpoints,
-  options,
-  groupKeys,
-  onToggleGroup,
+  selected,
   onToggleEndpoint,
-  onSelectAll,
-  onDeselectAll,
-  onOptionsChange,
-  onNext,
-}: {
-  spec: ParsedSpec
-  selection: Record<string, Set<string>>
-  totalSelected: number
-  totalEndpoints: number
-  options: GenerateOptions
-  groupKeys: Map<ParsedGroup, string>
-  onToggleGroup: (gKey: string) => void
-  onToggleEndpoint: (gKey: string, e: string) => void
-  onSelectAll: () => void
-  onDeselectAll: () => void
-  onOptionsChange: (o: GenerateOptions) => void
-  onNext: () => void
-}) {
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set())
-  const [search, setSearch] = useState("")
-
-  const searchLower = search.toLowerCase()
-
-  const filteredGroups = useMemo(() => {
-    if (!searchLower) return spec.groups
-    return spec.groups
-      .map((group) => ({
-        ...group,
-        endpoints: group.endpoints.filter(
-          (ep) =>
-            ep.name.toLowerCase().includes(searchLower) ||
-            ep.fullPath.toLowerCase().includes(searchLower) ||
-            ep.description.toLowerCase().includes(searchLower) ||
-            ep.httpMethod.toLowerCase().includes(searchLower)
-        ),
-      }))
-      .filter((g) => g.endpoints.length > 0 || g.name.toLowerCase().includes(searchLower))
-  }, [spec.groups, searchLower])
-
-  useEffect(() => {
-    if (searchLower) {
-      const matching = new Set<string>()
-      for (const group of filteredGroups) {
-        const key = groupKeys.get(spec.groups.find((g) => g.name === group.name && g.prefix === group.prefix)!) ?? group.name
-        if (group.endpoints.length > 0) matching.add(key)
-      }
-      setExpandedGroups(matching)
-    }
-  }, [searchLower, filteredGroups, groupKeys, spec.groups])
-
-  function toggleExpand(key: string) {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
-
-  function expandAll() {
-    setExpandedGroups(new Set(filteredGroups.map((g) => {
-      const original = spec.groups.find((og) => og.name === g.name && og.prefix === g.prefix)
-      return original ? (groupKeys.get(original) ?? g.name) : groupKey(g, filteredGroups.indexOf(g))
-    })))
-  }
+  onToggleGroup,
+  onToggleAll,
+}: SelectStepProps): React.ReactElement {
+  const totalEndpoints = spec.groups.reduce((n, g) => n + g.endpoints.length, 0);
+  const selectedCount = countSelectedEndpoints(selected);
+  const allSelected = selectedCount === totalEndpoints;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <SelectHeaderInfo
-        format={spec.format}
-        title={spec.title}
-        totalSelected={totalSelected}
-        totalEndpoints={totalEndpoints}
-        onNext={onNext}
-      />
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h3 className="text-h3 text-foreground">Select Endpoints</h3>
+          <p className="text-body-sm text-muted-foreground">
+            {selectedCount} of {totalEndpoints} selected
+          </p>
+        </div>
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onToggleAll}>
+          {allSelected ? "Deselect all" : "Select all"}
+        </Button>
+      </div>
 
-      <SelectConfigFields
-        options={options}
-        baseURL={spec.baseURL}
-        onOptionsChange={onOptionsChange}
-      />
+      {/* Groups */}
+      <div className="space-y-3">
+        {spec.groups.map((group) => {
+          const groupSelected = selected[group.name] ?? [];
+          const isAllGroupSelected = groupSelected.length === group.endpoints.length;
+          const isPartial = groupSelected.length > 0 && !isAllGroupSelected;
 
-      <SelectSearchBar
-        search={search}
-        setSearch={setSearch}
-        onSelectAll={onSelectAll}
-        onDeselectAll={onDeselectAll}
-        onExpandAll={expandAll}
-        onCollapseAll={() => setExpandedGroups(new Set())}
-      />
+          return (
+            <div key={group.name} className="rounded-lg border border-border-subtle overflow-hidden">
+              {/* Group header */}
+              <label className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors">
+                <Checkbox
+                  checked={isPartial ? "indeterminate" : isAllGroupSelected}
+                  onCheckedChange={() => onToggleGroup(group.name)}
+                  className="size-3.5"
+                />
+                <span className="text-xs font-semibold text-foreground">{group.name}</span>
+                {group.prefix && (
+                  <span className="text-[10px] text-muted-foreground font-mono">{group.prefix}</span>
+                )}
+                <Badge variant="secondary" className="ml-auto text-[10px]">
+                  {groupSelected.length}/{group.endpoints.length}
+                </Badge>
+              </label>
 
-      <EndpointTree
-        filteredGroups={filteredGroups}
-        allGroups={spec.groups}
-        groupKeys={groupKeys}
-        selection={selection}
-        expandedGroups={expandedGroups}
-        search={search}
-        onToggleExpand={toggleExpand}
-        onToggleGroup={onToggleGroup}
-        onToggleEndpoint={onToggleEndpoint}
-      />
+              {/* Endpoints */}
+              <div className="divide-y divide-border-subtle">
+                {group.endpoints.map((ep) => {
+                  const isSelected = groupSelected.includes(ep.name);
+                  return (
+                    <label
+                      key={ep.name}
+                      className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-muted/20 transition-colors cursor-pointer"
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => onToggleEndpoint(group.name, ep.name)}
+                        className="size-3.5"
+                      />
+                      <MethodBadge method={ep.httpMethod} className="shrink-0" />
+                      <span className="text-xs text-foreground font-mono truncate">{ep.name}</span>
+                      <span className="text-[10px] text-muted-foreground truncate ml-auto">
+                        {ep.path}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
-  )
+  );
 }

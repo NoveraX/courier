@@ -1,87 +1,126 @@
-import { WifiOff } from "lucide-react"
+import { useEffect, useCallback } from "react";
+import { Play } from "lucide-react";
 
-import { usePlayground } from "./use-playground"
-import { PlaygroundToolbar } from "./toolbar"
-import { RequestPanel } from "./request-panel"
-import { ResponsePanel } from "./response-panel"
-import { HistoryBar } from "./history-bar"
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { EmptyState } from "@/components/shared/empty-state";
+import { PageShell } from "@/components/shared/page-shell";
+import { useDevToolsStore } from "@/store";
 
-function EmptyState() {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-surface-1">
-        <WifiOff size={24} className="text-text-muted" />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <h3 className="text-sm font-medium text-text-primary">No app connected</h3>
-        <p className="max-w-xs text-xs leading-relaxed text-text-muted">
-          Start your application with Nexus DevTools enabled to use the API Playground.
-          The playground will appear automatically once a session connects.
-        </p>
-      </div>
-      <code className="rounded bg-surface-1 px-3 py-1.5 text-[11px] text-text-secondary">
-        connectDevTools(sources)
-      </code>
-    </div>
-  )
-}
+import { usePlayground } from "./use-playground";
+import { useSendRequest } from "./use-send-request";
+import { PlaygroundToolbar } from "./toolbar";
+import { RequestPanel } from "./request-panel";
+import { ResponsePanel } from "./response-panel";
+import { HistoryBar } from "./history-bar";
 
-export function PlaygroundView() {
-  const pg = usePlayground()
+import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 
-  if (!pg.hasSessions) {
-    return <EmptyState />
+export function PlaygroundView(): React.ReactElement {
+  const connected = useDevToolsStore((s) => s.connected);
+  const activeResponse = useDevToolsStore((s) => s.playgroundActiveResponse);
+  const setActiveResponse = useDevToolsStore((s) => s.setPlaygroundActiveResponse);
+
+  const pg = usePlayground();
+  const { send, sending } = useSendRequest();
+
+  const handleSend = useCallback(() => {
+    if (!pg.canSend || sending) return;
+    send({
+      source: pg.source,
+      group: pg.group,
+      method: pg.method,
+      variables: pg.variables,
+      headers: pg.headers,
+      mode: pg.mode,
+    });
+    pg.setResponseTab("body");
+  }, [send, sending, pg]);
+
+  // Cmd+Enter to send
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent): void {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        handleSend();
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [handleSend]);
+
+  const handleHistorySelect = (entry: PlaygroundHistoryEntry) => {
+    setActiveResponse(entry);
+    pg.selectEndpoint(entry.source, entry.group, entry.method);
+    pg.setVariables(entry.variables);
+    pg.setHeaders(entry.headers);
+    pg.setMode(entry.mode);
+    pg.setResponseTab("body");
+  };
+
+  if (!connected || pg.sources.length === 0) {
+    return (
+      <PageShell center>
+        <EmptyState
+          icon={Play}
+          heading="No app connected"
+          description="Start your app with Nexus DevTools enabled to use the playground."
+        />
+      </PageShell>
+    );
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <PlaygroundToolbar
-        connected={pg.connected}
-        isUsingDemo={pg.isUsingDemo}
-        sourceNames={pg.sourceNames}
-        selectedSource={pg.selectedSource}
-        selectedGroup={pg.selectedGroup}
-        selectedMethod={pg.selectedMethod}
-        groups={pg.groups}
-        methods={pg.methods}
-        endpointInfo={pg.endpointInfo}
-        mode={pg.mode}
-        setMode={pg.setMode}
-        loading={pg.loading}
-        canSend={pg.canSend}
-        onSourceChange={pg.handleSourceChange}
-        onGroupChange={pg.handleGroupChange}
-        onMethodChange={pg.setSelectedMethod}
-        onSend={pg.handleSend}
-      />
-
-      <div className="flex flex-1 overflow-hidden">
-        <RequestPanel
-          variables={pg.variables}
-          setVariables={pg.setVariables}
-          headers={pg.headers}
-          setHeaders={pg.setHeaders}
-          variablesValid={pg.variablesValid}
-          headersValid={pg.headersValid}
+    <PageShell
+      noScroll
+      toolbar={
+        <PlaygroundToolbar
+          sources={pg.sources}
+          groups={pg.groups}
+          methods={pg.methods}
+          source={pg.source}
+          group={pg.group}
+          method={pg.method}
+          mode={pg.mode}
           endpointInfo={pg.endpointInfo}
-          selectedSource={pg.selectedSource}
-          selectedGroup={pg.selectedGroup}
-          selectedMethod={pg.selectedMethod}
+          sending={sending}
+          canSend={pg.canSend}
+          onSourceChange={pg.setSource}
+          onGroupChange={pg.setGroup}
+          onMethodChange={pg.setMethod}
+          onModeChange={pg.setMode}
+          onSend={handleSend}
+          historySlot={
+            <HistoryBar
+              activeId={activeResponse?.id ?? null}
+              onSelect={handleHistorySelect}
+            />
+          }
         />
+      }
+    >
+      <ResizablePanelGroup orientation="horizontal" className="flex-1">
+        <ResizablePanel defaultSize={45} minSize={25}>
+          <RequestPanel
+            variables={pg.variables}
+            headers={pg.headers}
+            endpointInfo={pg.endpointInfo}
+            sourceInfo={pg.sourceInfo}
+            groupPrefix={pg.groupPrefix}
+            onVariablesChange={pg.setVariables}
+            onHeadersChange={pg.setHeaders}
+          />
+        </ResizablePanel>
 
-        <ResponsePanel
-          response={pg.response}
-          responseTab={pg.responseTab}
-          setResponseTab={pg.setResponseTab}
-        />
-      </div>
+        <ResizableHandle withHandle />
 
-      <HistoryBar
-        history={pg.playgroundHistory}
-        activeId={pg.response?.id}
-        onLoad={pg.loadFromHistory}
-        onClear={pg.clearPlaygroundHistory}
-      />
-    </div>
-  )
+        <ResizablePanel defaultSize={55} minSize={25}>
+          <ResponsePanel
+            entry={activeResponse}
+            activeTab={pg.responseTab}
+            onTabChange={pg.setResponseTab}
+          />
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </PageShell>
+  );
 }

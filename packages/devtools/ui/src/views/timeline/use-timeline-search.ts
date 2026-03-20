@@ -1,68 +1,56 @@
 import { useCallback, useMemo } from "react";
-import { getRouteApi } from "@tanstack/react-router";
+import { useSearch, useNavigate } from "@tanstack/react-router";
 
-import type { TimelineFilters } from "../../store";
+import type { TimelineFilters } from "@/store/types";
+import { EMPTY_FILTERS } from "@/store/constants";
 
-import type { TimelineSearchParams } from "../../routes/timeline";
+import type { TimelineSearchParams } from "./search-schema";
+import { searchToFilters, filtersToSearch } from "./search-schema";
 
-const routeApi = getRouteApi("/timeline");
-
-/** Maps URL search params → TimelineFilters (store-compatible shape) */
-function toFilters(s: TimelineSearchParams): TimelineFilters {
-  return {
-    search: s.search ?? "",
-    status: s.status ?? [],
-    mode: s.mode ?? [],
-    type: s.type ?? [],
-    httpMethod: s.method ?? [],
-    source: s.source ?? [],
-    group: s.group ?? [],
-    minDuration: s.minDuration ?? null,
-  };
+interface TimelineSearchState {
+  filters: TimelineFilters;
+  showFilters: boolean;
 }
 
-/** Maps TimelineFilters → partial search params for navigate() */
-function fromFilters(f: TimelineFilters): Partial<TimelineSearchParams> {
-  return {
-    search: f.search || undefined,
-    status: f.status.length > 0 ? f.status : undefined,
-    mode: f.mode.length > 0 ? f.mode : undefined,
-    type: f.type.length > 0 ? f.type : undefined,
-    method: f.httpMethod.length > 0 ? f.httpMethod : undefined,
-    source: f.source.length > 0 ? f.source : undefined,
-    group: f.group.length > 0 ? f.group : undefined,
-    minDuration: f.minDuration ?? undefined,
-  };
+interface TimelineSearchActions {
+  setFilter: <K extends keyof TimelineFilters>(key: K, value: TimelineFilters[K]) => void;
+  resetFilters: () => void;
+  toggleFilters: () => void;
 }
 
-export function useTimelineSearch() {
-  const search = routeApi.useSearch();
-  const navigate = routeApi.useNavigate();
+/** Timeline filter state synced with URL search params */
+export function useTimelineSearch(): TimelineSearchState & TimelineSearchActions {
+  const search = useSearch({ from: "/timeline" }) as TimelineSearchParams;
+  const navigate = useNavigate({ from: "/timeline" });
 
-  const filters = useMemo(() => toFilters(search), [search]);
-  const selectedRequestId = search.request ?? null;
+  const filters = useMemo(() => searchToFilters(search), [search]);
   const showFilters = search.filters ?? false;
 
-  const setFilters = useCallback(
-    (f: TimelineFilters) => {
-      void navigate({ search: (prev) => ({ ...prev, ...fromFilters(f) }) });
+  const updateUrl = useCallback(
+    (params: TimelineSearchParams) => {
+      navigate({ search: params, replace: true });
     },
     [navigate],
   );
 
-  const selectRequest = useCallback(
-    (id: string | null) => {
-      void navigate({ search: (prev) => ({ ...prev, request: id ?? undefined }) });
+  const setFilter = useCallback(
+    <K extends keyof TimelineFilters>(key: K, value: TimelineFilters[K]) => {
+      const next = { ...filters, [key]: value };
+      updateUrl(filtersToSearch(next, { showFilters }));
     },
-    [navigate],
+    [filters, showFilters, updateUrl],
   );
 
-  const setShowFilters = useCallback(
-    (v: boolean) => {
-      void navigate({ search: (prev) => ({ ...prev, filters: v || undefined }) });
-    },
-    [navigate],
-  );
+  const resetFilters = useCallback(() => {
+    updateUrl(filtersToSearch(EMPTY_FILTERS, { showFilters }));
+  }, [showFilters, updateUrl]);
 
-  return { filters, selectedRequestId, showFilters, setFilters, selectRequest, setShowFilters };
+  const toggleFilters = useCallback(() => {
+    updateUrl(filtersToSearch(filters, { showFilters: !showFilters }));
+  }, [filters, showFilters, updateUrl]);
+
+  return useMemo(
+    () => ({ filters, showFilters, setFilter, resetFilters, toggleFilters }),
+    [filters, showFilters, setFilter, resetFilters, toggleFilters],
+  );
 }

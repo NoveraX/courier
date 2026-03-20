@@ -16,7 +16,7 @@ export type RequestOptions = {
   responseType?: ResponseType;
 };
 
-type RequestFn = <T = unknown>(url: string, options?: RequestOptions) => Promise<T>;
+type RequestFn = <TResponse = unknown>(url: string, options?: RequestOptions) => Promise<TResponse>;
 
 export type FetchClient = {
   get: RequestFn;

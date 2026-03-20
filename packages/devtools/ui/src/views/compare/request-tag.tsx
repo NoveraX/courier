@@ -1,19 +1,54 @@
-import type { RequestEntry } from "../../store"
-import { STATUS_CONFIG, HTTP_METHOD_COLORS } from "../timeline/constants"
+import { X } from "lucide-react";
 
-export function RequestTag({ request }: { request: RequestEntry }) {
-  const label = [request.source, request.group, request.method].filter(Boolean).join(".")
-  const statusCfg = STATUS_CONFIG[request.status]
-  const methodColor = HTTP_METHOD_COLORS[request.httpMethod ?? "GET"] ?? "text-text-secondary"
+import { cn } from "@/lib/utils";
+import { MethodBadge } from "@/components/shared/method-badge";
+import { formatDuration } from "@/components/shared/formatters";
+import { STATUS_CONFIG } from "@/components/shared/detail-panel/constants";
+import type { RequestEntry } from "@/store/types-request";
 
+interface RequestTagProps {
+  request: RequestEntry;
+  onClear: () => void;
+  className?: string;
+}
+
+function buildPath(r: RequestEntry): string {
+  const parts = [r.source];
+  if (r.group) parts.push(r.group);
+  parts.push(r.method);
+  return parts.join(".");
+}
+
+export function RequestTag({
+  request,
+  onClear,
+  className,
+}: RequestTagProps): React.ReactElement {
   return (
-    <div className="flex items-center gap-1.5">
-      <div className={`h-1.5 w-1.5 rounded-full ${statusCfg.dotClass}`} />
-      <span className={`text-[10px] font-medium ${methodColor}`}>{request.httpMethod ?? "GET"}</span>
-      <span className="font-mono text-[10px] text-text-secondary">{label}</span>
-      {request.statusCode != null && (
-        <span className="text-[10px] text-text-muted">{request.statusCode}</span>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-muted/40 px-2 py-1",
+        className,
       )}
-    </div>
-  )
+    >
+      <span className={cn("size-1.5 shrink-0 rounded-full", STATUS_CONFIG[request.status].dot)} />
+      <MethodBadge method={request.httpMethod ?? "GET"} />
+      <span className="max-w-[180px] truncate font-mono text-[11px] text-foreground">
+        {buildPath(request)}
+      </span>
+      {request.timing?.total != null && (
+        <span className="text-[10px] text-muted-foreground">
+          {formatDuration(request.timing.total)}
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={onClear}
+        className="ml-0.5 rounded-sm p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-foreground transition-colors"
+        aria-label="Clear selection"
+      >
+        <X className="size-3" />
+      </button>
+    </span>
+  );
 }

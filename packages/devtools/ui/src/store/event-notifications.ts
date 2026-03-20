@@ -1,20 +1,22 @@
+import { toast } from "sonner"
+
 import type { DevToolsState } from "./store-types"
 import type { RequestEntry, Settings } from "./types"
 
 type EventPayload = Record<string, unknown>
 type Getter = () => DevToolsState
 
-// ── Event-driven toast notifications ────────────────────────────────────────
+// ── Event-driven Sonner notifications ───────────────────────────────────────
 
 export function notifyOnEvent(event: EventPayload, get: Getter): void {
-  const { settings, showToast, requests } = get()
+  const { settings, requests } = get()
 
   if (event.type === "request:error") {
-    notifyError(event, settings, showToast, requests)
+    notifyError(event, settings, requests)
   }
 
   if (event.type === "request:end") {
-    notifySlowRequest(event, settings, showToast, requests)
+    notifySlowRequest(event, settings, requests)
   }
 }
 
@@ -30,18 +32,16 @@ function resolveLabel(event: EventPayload, requests: RequestEntry[]): string {
 function notifyError(
   event: EventPayload,
   settings: Settings,
-  showToast: DevToolsState["showToast"],
   requests: RequestEntry[],
 ): void {
   if (!settings.toastOnError) return
   const label = resolveLabel(event, requests)
-  showToast(`Request failed: ${label}`, "error")
+  toast.error(`Request failed: ${label}`)
 }
 
 function notifySlowRequest(
   event: EventPayload,
   settings: Settings,
-  showToast: DevToolsState["showToast"],
   requests: RequestEntry[],
 ): void {
   if (!settings.toastOnSlowRequest) return
@@ -50,5 +50,12 @@ function notifySlowRequest(
 
   const label = resolveLabel(event, requests)
   const ms = Math.round(timing.total)
-  showToast(`Slow request: ${label} (${ms}ms)`, "info")
+  const message = `Slow request: ${label} (${ms}ms)`
+
+  // Match request-row color: >1s = red (error), >threshold = yellow (warning)
+  if (ms > 1000) {
+    toast.error(message)
+  } else {
+    toast.warning(message)
+  }
 }

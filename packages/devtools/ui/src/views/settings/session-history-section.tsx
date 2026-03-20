@@ -1,85 +1,112 @@
-import { useState } from "react"
-import { Save, Archive } from "lucide-react"
+import { useState } from "react";
+import { Save, Loader2 } from "lucide-react";
 
-import { useDevToolsStore } from "../../store"
-import { SettingsSection } from "./section"
-import { SessionCard } from "./session-card"
-import { useSessionHistory } from "./use-session-history"
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { EmptyState } from "@/components/shared/empty-state";
 
-// ── Session History Section ────────────────────────────────────────────────
+import type { useSessionHistory } from "./use-session-history";
+import { SessionCard } from "./session-card";
 
-export function SessionHistorySection() {
-  const { sessions, loading, remove, save, exportSession } = useSessionHistory()
-  const { requests, sessions: appSessions, showToast } = useDevToolsStore()
-  const [saving, setSaving] = useState(false)
+// ── Session history section ──────────────────────────────────────────────────
 
-  async function handleSave() {
-    setSaving(true)
-    const apps = appSessions.map((s) => ({
-      sessionId: s.sessionId,
-      framework: s.framework,
-      nexusVersion: s.nexusVersion,
-      connectedAt: s.connectedAt,
-    }))
-    const result = await save(requests, apps)
-    setSaving(false)
-    if (result) {
-      showToast(`Session saved: ${result.name}`, "success")
-    } else {
-      showToast("Failed to save session", "error")
-    }
+interface SessionHistorySectionProps {
+  history: ReturnType<typeof useSessionHistory>;
+}
+
+export function SessionHistorySection({
+  history,
+}: SessionHistorySectionProps): React.ReactElement {
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [name, setName] = useState("");
+
+  function handleSave(): void {
+    if (!name.trim()) return;
+    history.saveCurrentSession(name.trim());
+    setName("");
+    setSaveOpen(false);
+  }
+
+  if (history.loading) {
+    return (
+      <div className="flex items-center gap-2 py-4 text-body-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" />
+        Loading sessions...
+      </div>
+    );
   }
 
   return (
-    <SettingsSection
-      title="Session History"
-      description="Save and load captured request sessions"
-    >
-      {/* Save current session */}
+    <>
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-medium text-text-secondary">Current session</p>
-          <p className="text-[11px] text-text-muted">
-            {requests.length} request{requests.length !== 1 ? "s" : ""} captured
-          </p>
-        </div>
-        <button
-          type="button"
-          disabled={requests.length === 0 || saving}
-          onClick={handleSave}
-          className="flex items-center gap-1.5 rounded-md bg-indigo-500/15 px-2.5 py-1.5 text-xs font-medium text-indigo-400 transition-colors hover:bg-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed"
+        <p className="text-body-xs text-muted-foreground">
+          {history.sessions.length} saved session{history.sessions.length !== 1 && "s"}
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setSaveOpen(true)}
         >
-          <Save size={12} />
-          {saving ? "Saving\u2026" : "Save Session"}
-        </button>
+          <Save className="mr-1.5 size-3.5" />
+          Save current
+        </Button>
       </div>
 
-      {/* Divider */}
-      <div className="border-t border-border-subtle" />
-
-      {/* Saved sessions list */}
-      {loading ? (
-        <p className="py-2 text-center text-[11px] text-text-muted">Loading\u2026</p>
-      ) : sessions.length === 0 ? (
-        <div className="flex flex-col items-center gap-1 py-4 text-text-muted">
-          <Archive size={20} strokeWidth={1} />
-          <p className="text-[11px]">No saved sessions yet</p>
-        </div>
+      {history.sessions.length === 0 ? (
+        <EmptyState
+          icon={Save}
+          heading="No saved sessions"
+          description="Save the current session to revisit it later."
+          className="py-6"
+        />
       ) : (
         <div className="space-y-2">
-          {sessions.map((session) => (
+          {history.sessions.map((session) => (
             <SessionCard
               key={session.id}
               session={session}
-              onDelete={async () => {
-                const ok = await remove(session.id)
-                showToast(ok ? "Session deleted" : "Delete failed", ok ? "info" : "error")
-              }}
-              onExport={exportSession}
+              onLoad={history.loadSession}
+              onDelete={history.deleteSession}
+              onExport={history.exportSession}
             />
           ))}
         </div>
       )}
-    </SettingsSection>
-  )
+
+      <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Save session</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="session-name">Session name</Label>
+            <Input
+              id="session-name"
+              placeholder="e.g. Debugging auth flow"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSave()}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={!name.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }

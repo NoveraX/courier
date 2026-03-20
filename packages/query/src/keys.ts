@@ -11,20 +11,23 @@ import type { DefinedApi } from "@noverax/nexus/define";
  * key("users", "getById", { id: 1 })   // → ["api", "users", "getById", { id: 1 }]
  * ```
  */
-export function createQueryKeys<T extends DefinedApi<any>>(source: string) {
-  type Groups = T["options"]["groups"];
+export function createQueryKeys<TApi extends DefinedApi<any>>(source: string) {
+  type Groups = TApi["options"]["groups"];
   type GroupKeys = keyof Groups & string;
 
-  function queryKey<G extends GroupKeys>(group: G): readonly [string, G];
-  function queryKey<G extends GroupKeys, M extends Exclude<keyof Groups[G], "options"> & string>(
-    group: G,
-    method: M,
-  ): readonly [string, G, M];
-  function queryKey<G extends GroupKeys, M extends Exclude<keyof Groups[G], "options"> & string>(
-    group: G,
-    method: M,
+  function queryKey<TGroup extends GroupKeys>(group: TGroup): readonly [string, TGroup];
+  function queryKey<
+    TGroup extends GroupKeys,
+    TMethod extends Exclude<keyof Groups[TGroup], "options"> & string,
+  >(group: TGroup, method: TMethod): readonly [string, TGroup, TMethod];
+  function queryKey<
+    TGroup extends GroupKeys,
+    TMethod extends Exclude<keyof Groups[TGroup], "options"> & string,
+  >(
+    group: TGroup,
+    method: TMethod,
     variables: Record<string, unknown>,
-  ): readonly [string, G, M, Record<string, unknown>];
+  ): readonly [string, TGroup, TMethod, Record<string, unknown>];
   function queryKey(group: string, method?: string, variables?: Record<string, unknown>) {
     if (method === undefined) return [source, group] as const;
     if (variables !== undefined) return [source, group, method, variables] as const;

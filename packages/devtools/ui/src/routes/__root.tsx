@@ -1,60 +1,80 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { Toaster } from "sonner";
 
-import { Toaster } from "@/components/ui/sonner";
+import { useSocketConnection } from "@/socket";
+import { useRelativeTimeTick } from "@/hooks/use-relative-time";
+import { useHotkeys } from "@/hooks/use-hotkeys";
+import { ALL_NAV_ITEMS } from "@/app-config";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { useSocketConnection } from "../socket";
-import { useDevToolsStore } from "../store";
-import { TAB_ROUTES } from "../app-config";
-import { CommandPalette } from "../components/command-palette";
-import { StatusBar } from "../components/status-bar";
-import { useHotkeys } from "../components/use-hotkeys";
-import { AppSidebar } from "../components/app-sidebar";
-import { TopBar } from "../components/top-bar";
+import { AppSidebar } from "@/components/layout/app-sidebar";
+import { TopBar } from "@/components/layout/top-bar";
+import { StatusBar } from "@/components/layout/status-bar";
+import { CommandPalette } from "@/components/layout/command-palette";
+import { DisconnectedBanner } from "@/components/layout/disconnected-banner";
+import { GlobalDetailPanel } from "@/components/layout/global-detail-panel";
+import { SkipNav, MAIN_CONTENT_ID } from "@/components/layout/skip-nav";
+import { TourProvider } from "@/components/onboarding/tour-provider";
+import { NotFound } from "@/components/layout/not-found";
 
-function RootComponent() {
+function RootComponent(): React.ReactNode {
   useSocketConnection();
-  const [commandOpen, setCommandOpen] = useState(false);
+  useRelativeTimeTick();
+
   const navigate = useNavigate();
+  const [commandOpen, setCommandOpen] = useState(false);
 
-  const { togglePaused, clearRequests } = useDevToolsStore();
+  const hotkeyMap = useMemo(() => {
+    const map: Record<string, (e: KeyboardEvent) => void> = {
+      "mod+k": () => setCommandOpen(true),
+      "Escape": () => setCommandOpen(false),
+    };
 
-  const hotkeys = useMemo(() => [
-    { key: "k", meta: true, handler: () => setCommandOpen(true) },
-    { key: "e", meta: true, handler: () => clearRequests() },
-    { key: "p", meta: true, handler: () => togglePaused() },
-    { key: "f", meta: true, handler: () => { void navigate({ to: "/timeline", search: { filters: true } }); } },
-    { key: ",", meta: true, handler: () => { void navigate({ to: "/settings" }); } },
-    ...TAB_ROUTES.map((to, i) => ({
-      key: String(i + 1),
-      handler: () => { void navigate({ to }); },
-    })),
-  ], [navigate, clearRequests, togglePaused]);
+    // Cmd+1-9 for quick nav
+    for (const item of ALL_NAV_ITEMS) {
+      if (item.kbd) {
+        map[`mod+${item.kbd}`] = () => navigate({ to: item.path });
+      }
+    }
 
-  useHotkeys(hotkeys);
+    return map;
+  }, [navigate]);
+
+  useHotkeys(hotkeyMap);
 
   return (
     <SidebarProvider
-      defaultOpen={false}
-      style={{ "--sidebar-width": "13.75rem" } as React.CSSProperties}
-      className="h-screen! min-h-0!"
+      defaultOpen
+      style={{ "--sidebar-width": "14rem", "--sidebar-width-icon": "3rem" } as React.CSSProperties}
     >
+      <SkipNav />
       <AppSidebar />
-
-      <SidebarInset className="flex flex-col overflow-hidden">
-        <TopBar onSearchClick={() => setCommandOpen(true)} />
-        <main className="flex flex-1 flex-col overflow-hidden">
+      <SidebarInset id={MAIN_CONTENT_ID} className="flex min-h-0 flex-col overflow-hidden">
+        <DisconnectedBanner />
+        <TopBar onOpenSearch={() => setCommandOpen(true)} />
+        <GlobalDetailPanel>
           <Outlet />
-        </main>
+        </GlobalDetailPanel>
         <StatusBar />
       </SidebarInset>
 
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-      <Toaster />
+      <TourProvider />
+      <Toaster
+        position="bottom-right"
+        richColors
+        closeButton
+        toastOptions={{ className: "text-body-sm" }}
+      />
     </SidebarProvider>
   );
 }
 
+function RootNotFound(): React.ReactNode {
+  return <NotFound />;
+}
+
 export const Route = createRootRoute({
   component: RootComponent,
+  notFoundComponent: RootNotFound,
 });

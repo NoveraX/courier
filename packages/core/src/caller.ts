@@ -45,20 +45,20 @@ export type CallerDefaults = {
  * await client.getAll.with({ timeout: 5000 })()      // flat method level
  * ```
  */
-export function createCaller<G extends GroupRecord, E extends EndpointRecord>(
-  source: DefinedMixedApi<G, E>,
+export function createCaller<TGroups extends GroupRecord, TEndpoints extends EndpointRecord>(
+  source: DefinedMixedApi<TGroups, TEndpoints>,
   defaults?: CallerDefaults,
-): MixedClient<G, E>;
+): MixedClient<TGroups, TEndpoints>;
 
-export function createCaller<E extends EndpointRecord>(
-  source: DefinedFlatApi<E>,
+export function createCaller<TEndpoints extends EndpointRecord>(
+  source: DefinedFlatApi<TEndpoints>,
   defaults?: CallerDefaults,
-): FlatClient<E>;
+): FlatClient<TEndpoints>;
 
-export function createCaller<T extends DefinedApi>(
-  source: T,
+export function createCaller<TApi extends DefinedApi>(
+  source: TApi,
   defaults?: CallerDefaults,
-): TypedClient<T>;
+): TypedClient<TApi>;
 
 export function createCaller(
   source: DefinedApi | DefinedFlatApi | DefinedMixedApi,

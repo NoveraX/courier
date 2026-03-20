@@ -10,7 +10,9 @@ export type AnyEndpoints = Partial<{
 }>;
 
 export type HttpMethods = {
-  [K in HttpMethod]: <T = unknown>(...arguments_: MethodParameters<K>) => Promise<HttpResponse<T>>;
+  [TMethod in HttpMethod]: <TData = unknown>(
+    ...arguments_: MethodParameters<TMethod>
+  ) => Promise<HttpResponse<TData>>;
 };
 
 export type BoundMethodOptions = SimpleOptions & {
@@ -30,11 +32,11 @@ export type DownloadProgress = {
   totalBytes: number;
 };
 
-export type CallOptions<R extends boolean = false> = Omit<
+export type CallOptions<TRaw extends boolean = false> = Omit<
   SimpleOptions,
   "onUploadProgress" | "method"
 > & {
-  rawData?: R;
+  rawData?: TRaw;
   forwardVariables?: boolean;
   stream?: boolean;
   /** Proxy HTTP method: "GET" for cacheable reads, "POST" (default) for mutations */
@@ -42,15 +44,15 @@ export type CallOptions<R extends boolean = false> = Omit<
   onUploadProgress?: (progress: UploadProgress) => void;
 };
 
-export type HttpResponse<T = unknown> = {
+export type HttpResponse<TData = unknown> = {
   status: number;
   headers: Headers;
-  data: T;
+  data: TData;
 };
 
-export type MethodParameters<T extends HttpMethod> = T extends "head"
-  ? [url?: string, options?: MethodOptions<T>]
-  : [url?: string, variables?: FormData | object, options?: MethodOptions<T>];
+export type MethodParameters<TMethod extends HttpMethod> = TMethod extends "head"
+  ? [url?: string, options?: MethodOptions<TMethod>]
+  : [url?: string, variables?: FormData | object, options?: MethodOptions<TMethod>];
 
 /** Core fetch options — extends standard RequestInit with convenience properties */
 export type FetchOptions = Omit<RequestInit, "method"> & {
@@ -67,7 +69,7 @@ export type OptionsWithSearchParams = Omit<FetchOptions, "searchParams"> & {
 
 export type SimpleOptions = Omit<OptionsWithSearchParams, "body" | "json" | "searchParams">;
 
-export type MethodOptions<T extends HttpMethod> = T extends "del" | "get" | "head"
+export type MethodOptions<TMethod extends HttpMethod> = TMethod extends "del" | "get" | "head"
   ? SimpleOptions
   : OptionsWithSearchParams;
 

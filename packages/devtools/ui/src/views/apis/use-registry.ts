@@ -1,132 +1,162 @@
-import { useCallback, useEffect, useState } from "react"
+import { useState, useEffect, useCallback, useRef } from "react";
 
-import type { ScannedSource, SourceStatusInfo, SourceSummary, UpdateContext } from "./types"
+import type {
+  SourceSummary,
+  ScannedSource,
+  SourceStatus,
+  SourceStatusInfo,
+  ParsedSpec,
+} from "./types";
 import {
-  fetchCheckAllUpdates,
-  fetchCheckUpdates,
   fetchRegistrySources,
-  fetchRemoveSource,
-} from "./api-registry";
-import { fetchScanProject } from "./api-scanner";
+  scanProject,
+  checkSourceUpdates,
+  checkAllUpdates,
+  removeRegistrySource,
+} from "./client";
 
-interface UseRegistryReturn {
-  sources: SourceSummary[]
-  scannedSources: ScannedSource[]
-  statuses: Record<string, SourceStatusInfo>
-  loading: boolean
-  error: string | null
-  refresh: () => Promise<void>
-  checkUpdates: (name: string) => Promise<UpdateContext | null>
-  checkAll: () => Promise<void>
-  removeSource: (name: string) => Promise<void>
+/** Scanned source enriched with registry metadata (if imported) */
+export interface EnrichedSource extends ScannedSource {
+  registry?: SourceSummary;
 }
 
+interface UseRegistryReturn {
+  /** All sources (imported + hand-written) with live data from scanner */
+  imported: EnrichedSource[];
+  handWritten: ScannedSource[];
+  /** Per-source status (update check results) */
+  statuses: Record<string, SourceStatusInfo>;
+  loading: boolean;
+  refresh: () => Promise<void>;
+  checkUpdates: (name: string) => Promise<void>;
+  checkAll: () => Promise<void>;
+  remove: (name: string) => Promise<void>;
+  getNewSpec: (name: string) => ParsedSpec | undefined;
+}
+
+const DEBOUNCE_MS = 400;
+
 export function useRegistry(): UseRegistryReturn {
-  const [sources, setSources] = useState<SourceSummary[]>([])
-  const [scannedSources, setScannedSources] = useState<ScannedSource[]>([])
-  const [statuses, setStatuses] = useState<Record<string, SourceStatusInfo>>({})
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [imported, setImported] = useState<EnrichedSource[]>([]);
+  const [handWritten, setHandWritten] = useState<ScannedSource[]>([]);
+  const [statuses, setStatuses] = useState<Record<string, SourceStatusInfo>>({});
+  const [loading, setLoading] = useState(true);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const newSpecsRef = useRef<Record<string, ParsedSpec>>({});
 
   const refresh = useCallback(async () => {
-    setLoading(true)
-    setError(null)
     try {
-      const [list, scan] = await Promise.all([
+      const [reg, scan] = await Promise.all([
         fetchRegistrySources(),
-        fetchScanProject().catch(() => ({ sources: [], scannedFiles: 0 })),
-      ])
-      setSources(list)
-      /* Only show hand-written sources (not already imported) */
-      const importedNames = new Set(list.map((s) => s.name))
-      setScannedSources(scan.sources.filter((s) => !s.isImported && !importedNames.has(s.name)))
-      setStatuses((prev) => {
-        const next: Record<string, SourceStatusInfo> = {}
-        for (const s of list) {
-          next[s.name] = prev[s.name] ?? { status: "up-to-date" }
+        scanProject(),
+      ]);
+
+      const registryMap = new Map(reg.sources.map((s) => [s.name, s]));
+
+      const enriched: EnrichedSource[] = [];
+      const handW: ScannedSource[] = [];
+
+      for (const source of scan.sources) {
+        if (source.isImported) {
+          enriched.push({ ...source, registry: registryMap.get(source.name) });
+        } else {
+          handW.push(source);
         }
-        return next
-      })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load registry")
+      }
+
+      setImported(enriched);
+      setHandWritten(handW);
+    } catch {
+      // Silently fail — server may not be ready
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
-  useEffect(() => { void refresh() }, [refresh])
+  useEffect(() => { void refresh(); }, [refresh]);
 
-  /* Hot reload: auto-refresh when files change on disk (debounced 300ms) */
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null
     const handler = () => {
-      if (timer) clearTimeout(timer)
-      timer = setTimeout(() => { void refresh() }, 300)
-    }
-    window.addEventListener("nexus:scan:updated", handler)
-    window.addEventListener("nexus:registry:updated", handler)
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => void refresh(), DEBOUNCE_MS);
+    };
+    window.addEventListener("nexus:scan:updated", handler);
+    window.addEventListener("nexus:registry:updated", handler);
     return () => {
-      if (timer) clearTimeout(timer)
-      window.removeEventListener("nexus:scan:updated", handler)
-      window.removeEventListener("nexus:registry:updated", handler)
-    }
-  }, [refresh])
+      clearTimeout(debounceRef.current);
+      window.removeEventListener("nexus:scan:updated", handler);
+      window.removeEventListener("nexus:registry:updated", handler);
+    };
+  }, [refresh]);
 
-  const checkUpdates = useCallback(async (name: string): Promise<UpdateContext | null> => {
-    setStatuses((prev) => ({ ...prev, [name]: { status: "checking" } }))
+  const checkUpdates = useCallback(async (name: string) => {
+    setStatuses((prev) => ({
+      ...prev,
+      [name]: { status: "checking" as SourceStatus },
+    }));
     try {
-      const result = await fetchCheckUpdates(name)
-      if (result.error) {
-        setStatuses((prev) => ({ ...prev, [name]: { status: "error", error: result.error } }))
-        return null
-      }
-      const status = result.changed ? "updates-available" : "up-to-date"
-      setStatuses((prev) => ({ ...prev, [name]: { status } }))
-
-      if (result.changed && result.newSpec) {
-        return { sourceName: name, newSpec: result.newSpec }
-      }
-      return null
+      const result = await checkSourceUpdates(name);
+      if (result.newSpec) newSpecsRef.current[name] = result.newSpec;
+      setStatuses((prev) => ({
+        ...prev,
+        [name]: {
+          status: result.changed ? "updates-available" : "up-to-date",
+          newSpec: result.newSpec,
+        },
+      }));
     } catch (err) {
       setStatuses((prev) => ({
         ...prev,
-        [name]: { status: "error", error: err instanceof Error ? err.message : "Check failed" },
-      }))
-      return null
+        [name]: {
+          status: "error",
+          error: err instanceof Error ? err.message : "Check failed",
+        },
+      }));
     }
-  }, [])
+  }, []);
 
   const checkAll = useCallback(async () => {
-    if (sources.length === 0) return
-
-    for (const s of sources) {
-      setStatuses((prev) => ({ ...prev, [s.name]: { status: "checking" } }))
-    }
-
+    const checking: Record<string, SourceStatusInfo> = {};
+    for (const s of imported) checking[s.name] = { status: "checking" };
+    setStatuses(checking);
     try {
-      const results = await fetchCheckAllUpdates()
-      setStatuses((prev) => {
-        const next = { ...prev }
-        for (const [name, result] of Object.entries(results)) {
-          next[name] = result.error
-            ? { status: "error", error: result.error }
-            : { status: result.changed ? "updates-available" : "up-to-date" }
-        }
-        return next
-      })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to check updates")
+      const { results } = await checkAllUpdates();
+      const next: Record<string, SourceStatusInfo> = {};
+      for (const [name, result] of Object.entries(results)) {
+        next[name] = {
+          status: result.changed ? "updates-available" : "up-to-date",
+          error: result.error,
+        };
+      }
+      setStatuses(next);
+    } catch {
+      setStatuses({});
     }
-  }, [sources])
+  }, [imported]);
 
   const remove = useCallback(async (name: string) => {
-    try {
-      await fetchRemoveSource(name)
-      await refresh()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to remove source")
-    }
-  }, [refresh])
+    await removeRegistrySource(name);
+    setImported((prev) => prev.filter((s) => s.name !== name));
+    setStatuses((prev) => {
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  }, []);
 
-  return { sources, scannedSources, statuses, loading, error, refresh, checkUpdates, checkAll, removeSource: remove }
+  const getNewSpec = useCallback((name: string) => {
+    return newSpecsRef.current[name];
+  }, []);
+
+  return {
+    imported,
+    handWritten,
+    statuses,
+    loading,
+    refresh,
+    checkUpdates,
+    checkAll,
+    remove,
+    getNewSpec,
+  };
 }

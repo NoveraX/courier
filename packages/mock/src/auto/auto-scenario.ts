@@ -18,13 +18,21 @@ export interface AutoScenarioOptions {
  * Each group gets its own collection in the store, with handlers for
  * list/get/create/update/delete operations.
  */
+/** Auto-scenario with late-bound store */
+export interface AutoMockScenario extends MockScenario {
+  /** Bind the store after server creation (called internally by createAutoMockServer) */
+  bindStore(store: MockStore): void;
+}
+
 export function buildAutoScenario(
   routes: RouteInfo[],
-  store: MockStore,
   options: AutoScenarioOptions = {},
-): MockScenario {
+): AutoMockScenario {
   const { seedCount = 20, seedOverrides = {} } = options;
   const seededGroups = new Set<string>();
+
+  // Mutable ref — set by bindStore() before apply() is called
+  let boundStore: MockStore | undefined;
 
   // Group routes by group name
   const routesByGroup = new Map<string, RouteInfo[]>();
@@ -36,11 +44,18 @@ export function buildAutoScenario(
 
   return {
     name: "auto-generated",
+
+    bindStore(store: MockStore) {
+      boundStore = store;
+    },
+
     apply(mock: TypedMockFn<any>) {
+      if (!boundStore)
+        throw new Error("[nexus-mock] Auto-scenario store not bound. Call bindStore() first.");
       for (const [groupName, groupRoutes] of routesByGroup) {
         registerGroupHandlers(
           mock,
-          store,
+          boundStore,
           groupName,
           groupRoutes,
           seededGroups,

@@ -74,6 +74,8 @@ export interface SourceMap {
             hasResponseSchema: boolean;
             middleware?: string[];
             path?: string;
+            /** HTTP method (GET, POST, PUT, PATCH, DELETE) from endpoint probing */
+            httpMethod?: string;
             /** Default variables stub generated from schema shape */
             variablesStub?: Record<string, unknown>;
           };

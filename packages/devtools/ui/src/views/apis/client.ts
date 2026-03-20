@@ -13,21 +13,7 @@ import type {
   SourceSummary,
   SpecDiff,
 } from "./types";
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-async function post<TResult>(url: string, body?: unknown): Promise<TResult> {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) {
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error ?? `Request failed: ${res.status}`);
-  }
-  return res.json() as Promise<TResult>;
-}
+import { post } from "@/lib/api-client";
 
 // ── Parse ───────────────────────────────────────────────────────────────────
 

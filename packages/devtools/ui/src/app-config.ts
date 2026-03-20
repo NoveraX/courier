@@ -5,6 +5,7 @@ import {
   Globe,
   Network,
   Play,
+  Server,
   Settings,
   Shield,
   Timer,
@@ -44,6 +45,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Explorer", path: "/explorer", icon: Network, kbd: "4" },
       { label: "Playground", path: "/playground", icon: Play, kbd: "5" },
       { label: "APIs", path: "/apis", icon: Globe, kbd: "6" },
+      { label: "Mocks", path: "/mocks", icon: Server },
     ],
   },
   {

@@ -1,6 +1,6 @@
 import type { Sources } from "@noverax/nexus/define";
 import type { SourceMap } from "./events";
-import { probeEndpointPath } from "./source-map-probe";
+import { probeEndpoint } from "./source-map-probe";
 import { extractSchemaStub } from "./source-map-schema";
 
 const ENDPOINT_SCHEMA = Symbol.for("nexus.endpoint.schema");
@@ -67,7 +67,8 @@ export function extractEndpoints(
     if (name === "options" || typeof fn !== "function") continue;
 
     const schema = (fn as unknown as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
-    const path = probeEndpointPath(fn as (...args: unknown[]) => unknown);
+    const probed = probeEndpoint(fn as (...args: unknown[]) => unknown);
+    const httpMethod = normalizeHttpMethod(probed.method);
 
     const variablesStub = schema?.variables ? extractSchemaStub(schema.variables) : undefined;
 
@@ -76,10 +77,27 @@ export function extractEndpoints(
       hasVariablesSchema: !!schema?.variables,
       hasResponseSchema: !!schema?.response,
       ...(middlewareNames.length > 0 && { middleware: middlewareNames }),
-      ...(path && { path }),
+      ...(probed.path && { path: probed.path }),
+      ...(httpMethod && { httpMethod }),
       ...(variablesStub && { variablesStub }),
     };
   }
 
   return endpoints;
+}
+
+/** Normalize probed method name to uppercase HTTP method */
+function normalizeHttpMethod(method: string | undefined): string | undefined {
+  if (!method) return undefined;
+  const map: Record<string, string> = {
+    get: "GET",
+    post: "POST",
+    put: "PUT",
+    patch: "PATCH",
+    del: "DELETE",
+    delete: "DELETE",
+    head: "HEAD",
+    options: "OPTIONS",
+  };
+  return map[method] ?? method.toUpperCase();
 }

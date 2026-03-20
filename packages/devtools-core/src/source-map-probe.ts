@@ -1,17 +1,27 @@
+/** Result of probing an endpoint function */
+export interface ProbeResult {
+  /** HTTP method (get, post, put, patch, del) */
+  method?: string;
+  /** Path template (e.g. ":id") */
+  path?: string;
+}
+
 /**
  * Probes an endpoint function with a mock http client to capture
- * the path template (e.g. ":id") passed to http.get/post/etc.
+ * the HTTP method and path template (e.g. ":id") passed to http.get/post/etc.
  */
-export function probeEndpointPath(fn: (...args: unknown[]) => unknown): string | undefined {
-  let captured: string | undefined;
+export function probeEndpoint(fn: (...args: unknown[]) => unknown): ProbeResult {
+  let method: string | undefined;
+  let path: string | undefined;
 
   const handler: ProxyHandler<object> = {
-    get:
-      () =>
-      (...args: unknown[]) => {
-        if (typeof args[0] === "string") captured = args[0];
+    get: (_target, prop) => {
+      if (typeof prop === "string") method = prop;
+      return (...args: unknown[]) => {
+        if (typeof args[0] === "string") path = args[0];
         return Promise.resolve({});
-      },
+      };
+    },
   };
 
   const mockHttp = new Proxy({}, handler);
@@ -19,8 +29,19 @@ export function probeEndpointPath(fn: (...args: unknown[]) => unknown): string |
   try {
     fn(mockHttp, {});
   } catch {
-    // Endpoint may throw during probing — that's fine, path is already captured
+    // Endpoint may throw during probing — method/path already captured
   }
 
-  return captured || undefined;
+  return {
+    method: method || undefined,
+    path: path || undefined,
+  };
+}
+
+/**
+ * Probes an endpoint function to capture just the path template.
+ * @deprecated Use probeEndpoint() instead for both method and path.
+ */
+export function probeEndpointPath(fn: (...args: unknown[]) => unknown): string | undefined {
+  return probeEndpoint(fn).path;
 }

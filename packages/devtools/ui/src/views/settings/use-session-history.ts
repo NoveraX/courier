@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import type { ExportFormat } from "@/store/types";
+import { apiClient, post } from "@/lib/api-client";
 
 // ── Session summary (matches server SessionSummary) ──────────────────────────
 
@@ -29,8 +30,7 @@ export function useSessionHistory() {
 
   const fetchSessions = useCallback(async () => {
     try {
-      const res = await fetch("/api/sessions/list", { method: "POST" });
-      const data = (await res.json()) as { sessions: SessionSummary[] };
+      const data = await post<{ sessions: SessionSummary[] }>("/api/sessions/list");
       setSessions(data.sessions ?? []);
     } catch {
       setSessions([]);
@@ -42,49 +42,28 @@ export function useSessionHistory() {
   useEffect(() => { fetchSessions(); }, [fetchSessions]);
 
   async function saveCurrentSession(name: string): Promise<void> {
-    const res = await fetch("/api/sessions/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    if (!res.ok) throw new Error("Failed to save session");
+    await post("/api/sessions/save", { name });
     toast.success("Session saved");
     await fetchSessions();
   }
 
   async function loadSession(id: string): Promise<void> {
-    const res = await fetch("/api/sessions/load", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    if (!res.ok) throw new Error("Failed to load session");
+    await post("/api/sessions/load", { id });
     toast.success("Session loaded");
   }
 
   async function deleteSession(id: string): Promise<void> {
-    const res = await fetch("/api/sessions/delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    if (!res.ok) throw new Error("Failed to delete session");
+    await post("/api/sessions/delete", { id });
     toast.success("Session deleted");
     await fetchSessions();
   }
 
-  async function exportSession(
-    id: string,
-    format: ExportFormat,
-  ): Promise<void> {
-    const res = await fetch("/api/sessions/export", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, format }),
+  async function exportSession(id: string, format: ExportFormat): Promise<void> {
+    // Export needs raw blob response — use apiClient directly
+    const blob = await apiClient.post<Blob>("/api/sessions/export", {
+      json: { id, format },
+      responseType: "blob",
     });
-    if (!res.ok) throw new Error("Failed to export session");
-
-    const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -96,11 +75,7 @@ export function useSessionHistory() {
 
   async function deleteAllSessions(): Promise<void> {
     for (const session of sessions) {
-      await fetch("/api/sessions/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: session.id }),
-      });
+      await post("/api/sessions/delete", { id: session.id });
     }
     toast.success("All sessions deleted");
     await fetchSessions();

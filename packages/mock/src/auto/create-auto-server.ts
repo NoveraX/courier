@@ -2,6 +2,7 @@ import type { MockServer, MockServerConfig } from "../server/create-mock-server"
 import { createMockServer } from "../server/create-mock-server";
 import type { MockScenario, TypedMockFn } from "../types";
 import { buildAutoScenario } from "./auto-scenario";
+import { buildPresetScenarios } from "./preset-scenarios";
 import { analyzeRoutes } from "./route-analyzer";
 
 /** Configuration for the auto-generated mock server */
@@ -26,7 +27,7 @@ export interface AutoMockServerConfig {
   seed?: SeedConfig;
   /** Override specific endpoints after auto-generation */
   overrides?: (mock: TypedMockFn<any>) => void;
-  /** Additional named scenarios (auto-generated is always included) */
+  /** Additional named scenarios (merged with built-in presets) */
   scenarios?: Record<string, MockScenario>;
 }
 
@@ -41,7 +42,8 @@ export interface SeedConfig {
 /**
  * Create a mock server with auto-generated routes and data from an API source.
  *
- * Zero-config: pass a source definition, get a fully functional CRUD mock server.
+ * Zero-config: pass a source definition, get a fully functional CRUD mock server
+ * with built-in scenarios (happy-path, empty, server-error, slow-network).
  * Override specific endpoints for custom behavior.
  *
  * @example
@@ -64,6 +66,19 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
   const routes = analyzeRoutes(config.source.options.groups);
   const seedOverrides = parseSeedConfig(config.seed);
 
+  const autoScenario = buildAutoScenario(routes, {
+    seedCount: config.seed?.count ?? 20,
+    seedOverrides,
+  });
+
+  const presets = buildPresetScenarios(routes);
+
+  const allScenarios: Record<string, MockScenario> = {
+    "happy-path": autoScenario,
+    ...presets,
+    ...config.scenarios,
+  };
+
   const server = createMockServer({
     port: config.port,
     hostname: config.hostname,
@@ -71,30 +86,17 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
     admin: config.admin,
     log: config.log,
     source: config.source,
+    scenarios: allScenarios,
   });
 
-  // Build and apply auto-generated scenario
-  const autoScenario = buildAutoScenario(routes, server.store, {
-    seedCount: config.seed?.count ?? 20,
-    seedOverrides,
-  });
-
+  // Bind store and apply auto-scenario now that server exists
+  autoScenario.bindStore(server.store);
   server.applyScenario(autoScenario);
 
   // Apply user overrides on top
   if (config.overrides) {
     config.overrides(server.mock);
   }
-
-  // Register additional scenarios (include auto as default)
-  const allScenarios: Record<string, MockScenario> = {
-    "auto-generated": autoScenario,
-    ...config.scenarios,
-  };
-
-  // Expose scenarios via admin API by re-creating server with scenarios
-  // (scenarios are set at creation time, so we register them via admin)
-  void allScenarios;
 
   return server;
 }
@@ -104,7 +106,6 @@ function parseSeedConfig(seed?: SeedConfig): Record<string, number> {
   if (!seed) return {};
 
   const overrides: Record<string, number> = {};
-
   for (const [key, value] of Object.entries(seed)) {
     if (key === "count") continue;
     if (typeof value === "number") {
@@ -113,6 +114,5 @@ function parseSeedConfig(seed?: SeedConfig): Record<string, number> {
       overrides[key] = value.count;
     }
   }
-
   return overrides;
 }

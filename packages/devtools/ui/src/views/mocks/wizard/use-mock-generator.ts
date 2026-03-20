@@ -13,7 +13,7 @@ import type {
 
 const DEFAULT_OPTIONS: MockGeneratorOptions = {
   outputDir: "src/mocks",
-  port: 3001,
+  port: 7001,
   seedCount: 20,
   connectDevTools: true,
 };

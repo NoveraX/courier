@@ -1,6 +1,9 @@
+import { useMemo } from "react";
 import { create } from "zustand";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+export type NetworkPreset = "none" | "3g" | "flaky" | "down";
 
 export interface MockServerInfo {
   serverId: string;
@@ -15,7 +18,13 @@ export interface MockServerInfo {
   requestsServed: number;
   errorCount: number;
   activeScenario: string | null;
+  availableScenarios: string[];
   lastHeartbeat: number;
+  networkPreset: NetworkPreset;
+  /** Per-server data */
+  collections: MockCollectionEntry[];
+  routes: MockRouteEntry[];
+  scenarios: MockScenarioEntry[];
 }
 
 export interface MockRouteEntry {
@@ -56,11 +65,8 @@ export interface MockRequestLog {
 // ── State ─────────────────────────────────────────────────────────────────────
 
 export interface MockSliceState {
-  servers: Map<string, MockServerInfo>;
+  servers: Record<string, MockServerInfo>;
   activeServerId: string | null;
-  routes: MockRouteEntry[];
-  collections: MockCollectionEntry[];
-  scenarios: MockScenarioEntry[];
   logs: MockRequestLog[];
   logsPaused: boolean;
 
@@ -69,9 +75,9 @@ export interface MockSliceState {
   removeServer: (serverId: string) => void;
   updateServer: (serverId: string, patch: Partial<MockServerInfo>) => void;
   selectServer: (serverId: string | null) => void;
-  setRoutes: (routes: MockRouteEntry[]) => void;
-  setCollections: (collections: MockCollectionEntry[]) => void;
-  setScenarios: (scenarios: MockScenarioEntry[]) => void;
+  setServerCollections: (serverId: string, collections: MockCollectionEntry[]) => void;
+  setServerRoutes: (serverId: string, routes: MockRouteEntry[]) => void;
+  setServerScenarios: (serverId: string, scenarios: MockScenarioEntry[]) => void;
   addLog: (log: MockRequestLog) => void;
   clearLogs: () => void;
   toggleLogsPaused: () => void;
@@ -83,19 +89,14 @@ const MAX_LOGS = 500;
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 export const useMockStore = create<MockSliceState>((set, get) => ({
-  servers: new Map(),
+  servers: {},
   activeServerId: null,
-  routes: [],
-  collections: [],
-  scenarios: [],
   logs: [],
   logsPaused: false,
 
   addServer(server) {
     set((state) => {
-      const servers = new Map(state.servers);
-      servers.set(server.serverId, server);
-      // Auto-select first server
+      const servers = { ...state.servers, [server.serverId]: server };
       const activeServerId = state.activeServerId ?? server.serverId;
       return { servers, activeServerId };
     });
@@ -103,10 +104,10 @@ export const useMockStore = create<MockSliceState>((set, get) => ({
 
   removeServer(serverId) {
     set((state) => {
-      const servers = new Map(state.servers);
-      servers.delete(serverId);
+      const { [serverId]: _, ...servers } = state.servers;
+      const keys = Object.keys(servers);
       const activeServerId = state.activeServerId === serverId
-        ? (servers.keys().next().value ?? null)
+        ? (keys[0] ?? null)
         : state.activeServerId;
       return { servers, activeServerId };
     });
@@ -114,12 +115,11 @@ export const useMockStore = create<MockSliceState>((set, get) => ({
 
   updateServer(serverId, patch) {
     set((state) => {
-      const servers = new Map(state.servers);
-      const existing = servers.get(serverId);
-      if (existing) {
-        servers.set(serverId, { ...existing, ...patch });
-      }
-      return { servers };
+      const existing = state.servers[serverId];
+      if (!existing) return state;
+      return {
+        servers: { ...state.servers, [serverId]: { ...existing, ...patch } },
+      };
     });
   },
 
@@ -127,24 +127,41 @@ export const useMockStore = create<MockSliceState>((set, get) => ({
     set({ activeServerId: serverId });
   },
 
-  setRoutes(routes) {
-    set({ routes });
+  setServerCollections(serverId, collections) {
+    set((state) => {
+      const existing = state.servers[serverId];
+      if (!existing) return state;
+      return {
+        servers: { ...state.servers, [serverId]: { ...existing, collections } },
+      };
+    });
   },
 
-  setCollections(collections) {
-    set({ collections });
+  setServerRoutes(serverId, routes) {
+    set((state) => {
+      const existing = state.servers[serverId];
+      if (!existing) return state;
+      return {
+        servers: { ...state.servers, [serverId]: { ...existing, routes } },
+      };
+    });
   },
 
-  setScenarios(scenarios) {
-    set({ scenarios });
+  setServerScenarios(serverId, scenarios) {
+    set((state) => {
+      const existing = state.servers[serverId];
+      if (!existing) return state;
+      return {
+        servers: { ...state.servers, [serverId]: { ...existing, scenarios } },
+      };
+    });
   },
 
   addLog(log) {
     if (get().logsPaused) return;
-    set((state) => {
-      const logs = [log, ...state.logs].slice(0, MAX_LOGS);
-      return { logs };
-    });
+    set((state) => ({
+      logs: [log, ...state.logs].slice(0, MAX_LOGS),
+    }));
   },
 
   clearLogs() {
@@ -157,11 +174,8 @@ export const useMockStore = create<MockSliceState>((set, get) => ({
 
   resetMockState() {
     set({
-      servers: new Map(),
+      servers: {},
       activeServerId: null,
-      routes: [],
-      collections: [],
-      scenarios: [],
       logs: [],
       logsPaused: false,
     });
@@ -171,16 +185,16 @@ export const useMockStore = create<MockSliceState>((set, get) => ({
 // ── Selectors ─────────────────────────────────────────────────────────────────
 
 export function useActiveServer(): MockServerInfo | undefined {
-  return useMockStore((s) => {
-    if (!s.activeServerId) return undefined;
-    return s.servers.get(s.activeServerId);
-  });
+  const activeServerId = useMockStore((s) => s.activeServerId);
+  const servers = useMockStore((s) => s.servers);
+  return activeServerId ? servers[activeServerId] : undefined;
 }
 
 export function useServerCount(): number {
-  return useMockStore((s) => s.servers.size);
+  return useMockStore((s) => Object.keys(s.servers).length);
 }
 
 export function useAllServers(): MockServerInfo[] {
-  return useMockStore((s) => [...s.servers.values()]);
+  const servers = useMockStore((s) => s.servers);
+  return useMemo(() => Object.values(servers), [servers]);
 }

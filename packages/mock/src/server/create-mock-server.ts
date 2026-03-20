@@ -20,7 +20,7 @@ import { handleMockRequest, registerProxyRoute, registerRestRoutes } from "./rou
 
 /** Configuration for the mock HTTP server */
 export interface MockServerConfig {
-  /** Port to listen on (default: 3001) */
+  /** Port to listen on (default: 7001) */
   port?: number;
   /** Hostname (default: "localhost") */
   hostname?: string;
@@ -70,7 +70,7 @@ export interface MockServer {
  * @example
  * ```ts
  * const server = createMockServer({
- *   port: 3001,
+ *   port: 7001,
  *   admin: true,
  *   network: { latency: "4g" },
  * });
@@ -165,7 +165,7 @@ export function createMockServer(config?: MockServerConfig): MockServer {
     applyScenarioInternal(config.scenario);
   }
 
-  const port = config?.port ?? 3001;
+  const port = config?.port ?? 7001;
   const hostname = config?.hostname ?? "localhost";
 
   const mockServer: MockServer = {

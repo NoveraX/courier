@@ -8,6 +8,14 @@ export interface MockDevToolsBridgeOptions {
   port?: number;
   /** Human-readable server name (default: "Mock Server :${port}") */
   name?: string;
+  /** Mock server port (for display in DevTools UI) */
+  serverPort?: number;
+  /** Mock server URL (for display in DevTools UI) */
+  serverUrl?: string;
+  /** Number of registered routes */
+  routeCount?: number;
+  /** Available scenario names */
+  scenarios?: string[];
   /** Heartbeat interval in ms (default: 10_000) */
   heartbeatInterval?: number;
 }
@@ -26,8 +34,13 @@ export interface BridgeContext {
   serverId: string;
   sessionId: string;
   name: string;
+  port: number;
+  url: string;
   startedAt: number;
   requestCounter: number;
+  routeCount: number;
+  activeScenario: string;
+  availableScenarios: string[];
 }
 
 // ── Commands (UI → Mock Server) ───────────────────────────────────────────────

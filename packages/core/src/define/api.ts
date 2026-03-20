@@ -15,7 +15,9 @@ const SOURCE_NAME_KEY = Symbol.for("nexus.source.name");
 function deriveSourceName(baseURL?: string): string {
   if (!baseURL) return "api";
   try {
-    return new URL(baseURL).hostname.split(".")[0] || "api";
+    const host = new URL(baseURL).hostname.split(".")[0] || "api";
+    // Convert hyphenated hostname to camelCase: "json-placeholder" → "jsonPlaceholder"
+    return host.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
   } catch {
     return "api";
   }

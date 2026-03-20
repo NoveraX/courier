@@ -5,6 +5,7 @@
  */
 
 import type { Namespace } from "socket.io";
+import { mockServers } from "./app-namespace";
 import type { CatalogStore } from "./catalog";
 import type { SessionInfo } from "./types";
 import { handlePlayground } from "./ui-playground-handler";
@@ -28,6 +29,11 @@ export function setupUiNamespace(
     // Send current catalog snapshot
     socket.emit("catalog:snapshot", catalogStore.getSnapshot());
 
+    // Send current mock servers so UI restores state immediately
+    for (const event of mockServers.values()) {
+      socket.emit("event", event);
+    }
+
     // Handle explicit catalog requests (reconnection, gap recovery)
     socket.on("catalog:request", () => {
       socket.emit("catalog:snapshot", catalogStore.getSnapshot());
@@ -35,5 +41,12 @@ export function setupUiNamespace(
 
     socket.on("replay", handleReplay(appNamespace));
     socket.on("playground:send", handlePlayground(appNamespace));
+
+    // Forward mock commands from UI → all connected app sockets (mock servers)
+    socket.on("mock:command", (command: unknown) => {
+      for (const appSocket of appNamespace.sockets.values()) {
+        appSocket.emit("mock:command", command);
+      }
+    });
   });
 }

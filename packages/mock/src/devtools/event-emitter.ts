@@ -24,15 +24,27 @@ export function createEventEmitter(socket: Socket, ctx: BridgeContext) {
       const recordCount = collections.reduce((sum, name) => {
         return sum + store.collection(name).count();
       }, 0);
+      const errorCount = ctx.server.history.filter((h) => h.error).length;
+
+      const collectionDetails = collections.map((name) => ({
+        name,
+        count: store.collection(name).count(),
+        records: [],
+      }));
 
       emit("mock:server:connect", {
         name: ctx.name,
-        port: 0,
-        url: "",
-        routeCount: ctx.server.history.length === 0 ? 0 : 0,
+        port: ctx.port,
+        url: ctx.url,
+        uptime: Date.now() - ctx.startedAt,
+        routeCount: ctx.routeCount,
         collectionCount: collections.length,
         recordCount,
-        activeScenario: null,
+        requestsServed: ctx.requestCounter,
+        errorCount,
+        activeScenario: ctx.activeScenario,
+        availableScenarios: ctx.availableScenarios,
+        collections: collectionDetails,
       });
     },
 

@@ -13,6 +13,9 @@ import type { CatalogStore } from "./catalog";
 import { bufferEvent } from "./session-buffer";
 import type { SessionInfo } from "./types";
 
+/** Tracked mock server state (last connect event payload) */
+export const mockServers = new Map<string, Record<string, unknown>>();
+
 export function setupAppNamespace(
   appNamespace: Namespace,
   uiNamespace: Namespace,
@@ -71,6 +74,16 @@ export function setupAppNamespace(
         if (env) setSessionEnv(sessionId, env);
       }
 
+      // Track mock server state for UI reconnection
+      if (event.type === "mock:server:connect") {
+        const serverId = event.serverId as string;
+        if (serverId) mockServers.set(serverId, event);
+      }
+      if (event.type === "mock:server:disconnect") {
+        const serverId = event.serverId as string;
+        if (serverId) mockServers.delete(serverId);
+      }
+
       // Forward all events to UI (request lifecycle, middleware, etc.)
       uiNamespace.emit("event", event);
     });
@@ -81,6 +94,11 @@ export function setupAppNamespace(
         removeSessionEnv(sessionId);
         sessions.delete(sessionId);
         uiNamespace.emit("session:disconnect", { sessionId });
+
+        // Clean up mock servers from this session
+        for (const [id, server] of mockServers) {
+          if (server.sessionId === sessionId) mockServers.delete(id);
+        }
       }
     });
   });

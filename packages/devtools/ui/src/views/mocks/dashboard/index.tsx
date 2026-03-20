@@ -1,10 +1,12 @@
 import { Server } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
-import { useServerCount } from "@/store/mock-slice";
+import { useActiveServer, useServerCount } from "@/store/mock-slice";
 import { MockGeneratorWizard, useMockGenerator } from "../wizard";
+import { DashboardGrid } from "./dashboard-grid";
 
 export function MockDashboardView(): React.ReactElement {
   const serverCount = useServerCount();
+  const activeServer = useActiveServer();
   const wizard = useMockGenerator();
 
   if (serverCount === 0) {
@@ -24,12 +26,13 @@ export function MockDashboardView(): React.ReactElement {
     );
   }
 
+  if (!activeServer) {
+    return <div className="flex flex-1 items-center justify-center text-muted-foreground">Select a server</div>;
+  }
+
   return (
-    <div className="flex flex-1 flex-col gap-4 overflow-auto p-4">
-      <h2 className="text-h2">Mock Dashboard</h2>
-      <p className="text-body-sm text-muted-foreground">
-        {serverCount} server{serverCount > 1 ? "s" : ""} connected.
-      </p>
+    <div className="flex flex-1 flex-col overflow-auto">
+      <DashboardGrid server={activeServer} />
       <MockGeneratorWizard wizard={wizard} />
     </div>
   );

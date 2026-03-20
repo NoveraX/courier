@@ -21,7 +21,7 @@ export interface MockGeneratorState {
 export interface MockGeneratorOptions {
   /** Output directory (default: src/mocks/{source}) */
   outputDir: string;
-  /** Server port (default: 3001) */
+  /** Server port (default: 7001) */
   port: number;
   /** Seed count per collection (default: 20) */
   seedCount: number;

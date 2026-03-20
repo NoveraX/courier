@@ -6,6 +6,7 @@ import type { SessionInfo, CatalogSnapshot } from "./store"
 import type { DevToolsEvent } from "./store/types-events"
 
 import { useDevToolsStore } from "./store"
+import { handleMockEvent, isMockEvent } from "./store/handle-mock-events"
 
 function isDevToolsEvent(value: unknown): value is DevToolsEvent & Record<string, unknown> {
   if (typeof value !== "object" || value === null) return false
@@ -96,7 +97,15 @@ function buildBindings(
     onSessions: (sessions) => store().setSessions(sessions),
     onSessionConnect: (session) => store().addSession(session),
     onSessionDisconnect: ({ sessionId }) => store().removeSession(sessionId),
-    onEvent: (event) => { if (isDevToolsEvent(event)) store().handleEvent(event) },
+    onEvent: (event) => {
+      if (!isDevToolsEvent(event)) return
+      const e = event as DevToolsEvent & Record<string, unknown>
+      if (isMockEvent(e.type)) {
+        handleMockEvent(e)
+      } else {
+        store().handleEvent(e)
+      }
+    },
     onCatalogSnapshot: (data) => {
       if (data && typeof data === "object" && "catalog" in data) {
         store().setCatalog(data as CatalogSnapshot)

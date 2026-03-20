@@ -1,7 +1,9 @@
+import { getSourceName } from "@noverax/nexus/define";
+import { connectMockToDevTools } from "../devtools/bridge";
 import type { MockServer, MockServerConfig } from "../server/create-mock-server";
 import { createMockServer } from "../server/create-mock-server";
 import type { MockScenario, TypedMockFn } from "../types";
-import { buildAutoScenario } from "./auto-scenario";
+import { buildAutoScenario, seedAllCollections } from "./auto-scenario";
 import { buildPresetScenarios } from "./preset-scenarios";
 import { analyzeRoutes } from "./route-analyzer";
 
@@ -13,7 +15,7 @@ export interface AutoMockServerConfig {
       groups: Record<string, { options?: { prefix?: string } } & Record<string, unknown>>;
     };
   };
-  /** Port to listen on (default: 3001) */
+  /** Port to listen on (default: 7001) */
   port?: number;
   /** Hostname (default: "localhost") */
   hostname?: string;
@@ -29,6 +31,8 @@ export interface AutoMockServerConfig {
   overrides?: (mock: TypedMockFn<any>) => void;
   /** Additional named scenarios (merged with built-in presets) */
   scenarios?: Record<string, MockScenario>;
+  /** Connect to DevTools server (default: true) */
+  devtools?: boolean | { host?: string; port?: number; name?: string };
 }
 
 /** Seed data configuration */
@@ -50,7 +54,7 @@ export interface SeedConfig {
  * ```ts
  * const server = createAutoMockServer({
  *   source: myApi,
- *   port: 3001,
+ *   port: 7001,
  *   seed: { count: 20, products: { count: 100 } },
  *   overrides: (mock) => {
  *     mock("orders", "create").returns((ctx) => {
@@ -66,11 +70,7 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
   const routes = analyzeRoutes(config.source.options.groups);
   const seedOverrides = parseSeedConfig(config.seed);
 
-  const autoScenario = buildAutoScenario(routes, {
-    seedCount: config.seed?.count ?? 20,
-    seedOverrides,
-  });
-
+  const autoScenario = buildAutoScenario(routes);
   const presets = buildPresetScenarios(routes);
 
   const allScenarios: Record<string, MockScenario> = {
@@ -89,7 +89,13 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
     scenarios: allScenarios,
   });
 
-  // Bind store and apply auto-scenario now that server exists
+  // Eager seed — all collections populated at startup
+  seedAllCollections(routes, server.store, {
+    seedCount: config.seed?.count ?? 20,
+    seedOverrides,
+  });
+
+  // Bind store and apply auto-scenario
   autoScenario.bindStore(server.store);
   server.applyScenario(autoScenario);
 
@@ -98,7 +104,40 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
     config.overrides(server.mock);
   }
 
+  // Auto-connect to DevTools after start()
+  if (config.devtools !== false) {
+    wrapStartWithDevTools(server, config, routes.length, Object.keys(allScenarios));
+  }
+
   return server;
+}
+
+/** Wrap server.start() to auto-connect to DevTools after listening */
+function wrapStartWithDevTools(
+  server: MockServer,
+  config: AutoMockServerConfig,
+  routeCount: number,
+  scenarioNames: string[],
+): void {
+  const originalStart = server.start.bind(server);
+
+  server.start = async () => {
+    const info = await originalStart();
+
+    const devtoolsOpts = typeof config.devtools === "object" ? config.devtools : {};
+    const sourceName = getSourceName(config.source) ?? "mock";
+    void connectMockToDevTools(server, {
+      name: devtoolsOpts.name ?? sourceName,
+      host: devtoolsOpts.host,
+      port: devtoolsOpts.port,
+      serverPort: info.port,
+      serverUrl: info.url,
+      routeCount,
+      scenarios: scenarioNames,
+    });
+
+    return info;
+  };
 }
 
 /** Parse seed config into per-group count overrides */

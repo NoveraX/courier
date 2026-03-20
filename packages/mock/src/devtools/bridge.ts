@@ -11,7 +11,7 @@ import type { BridgeContext, MockDevToolsBridge, MockDevToolsBridgeOptions } fro
  *
  * @example
  * ```ts
- * const server = createMockServer({ port: 3001 });
+ * const server = createMockServer({ port: 7001 });
  * await server.start();
  * const bridge = await connectMockToDevTools(server, { port: 4380 });
  * // later: bridge.disconnect();
@@ -40,9 +40,14 @@ export async function connectMockToDevTools(
       server,
       serverId,
       sessionId,
-      name: name ?? `Mock Server`,
+      name: name ?? "Mock Server",
+      port: options.serverPort ?? 0,
+      url: options.serverUrl ?? "",
       startedAt: Date.now(),
       requestCounter: 0,
+      routeCount: options.routeCount ?? 0,
+      activeScenario: "happy-path",
+      availableScenarios: options.scenarios ?? [],
     };
 
     const emitter = createEventEmitter(socket, ctx);
@@ -53,16 +58,20 @@ export async function connectMockToDevTools(
       emitter.emitConnect();
     });
 
-    // Heartbeat
+    // First heartbeat after 1s, then regular interval
+    const firstHeartbeat = setTimeout(() => {
+      if (socket.connected) emitter.emitConnect();
+    }, 1000);
+
+    // Regular heartbeat — re-emits connect so UI recovers state after reload
     const heartbeat = setInterval(() => {
-      if (socket.connected) {
-        emitter.emitStatus();
-      }
+      if (socket.connected) emitter.emitConnect();
     }, heartbeatInterval);
 
     return {
       serverId,
       disconnect() {
+        clearTimeout(firstHeartbeat);
         clearInterval(heartbeat);
         commandCleanup();
         emitter.emitDisconnect();

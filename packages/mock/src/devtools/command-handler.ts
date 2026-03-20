@@ -12,7 +12,7 @@ type CommandCallback = (result: { ok: boolean; error?: string; data?: unknown })
  * Returns a cleanup function.
  */
 export function createCommandHandler(socket: Socket, ctx: BridgeContext): () => void {
-  const handler = (command: unknown, callback?: unknown) => {
+  const handler = async (command: unknown, callback?: unknown) => {
     const cmd = command as MockCommand;
     const cb = typeof callback === "function" ? (callback as CommandCallback) : undefined;
 
@@ -20,7 +20,7 @@ export function createCommandHandler(socket: Socket, ctx: BridgeContext): () => 
     if (cmd.serverId !== ctx.serverId) return;
 
     try {
-      const result = dispatchCommand(ctx, cmd);
+      const result = await dispatchCommand(ctx, cmd);
       cb?.({ ok: true, data: result });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -32,7 +32,7 @@ export function createCommandHandler(socket: Socket, ctx: BridgeContext): () => 
   return () => socket.off("mock:command", handler);
 }
 
-function dispatchCommand(ctx: BridgeContext, cmd: MockCommand): unknown {
+async function dispatchCommand(ctx: BridgeContext, cmd: MockCommand): Promise<unknown> {
   switch (cmd.action) {
     case "mock:store:create":
       return handleStoreCreate(ctx, cmd.collection, cmd.record);
@@ -92,10 +92,15 @@ function handleStoreSeed(
   return { seeded: count };
 }
 
-function handleScenarioApply(ctx: BridgeContext, scenarioName: string): { applied: string } {
-  // Scenario switching requires access to scenarios map — delegated via server
-  // For now, acknowledge the command; full wiring happens when server exposes scenario map
-  void ctx;
+async function handleScenarioApply(
+  ctx: BridgeContext,
+  scenarioName: string,
+): Promise<{ applied: string }> {
+  // Use admin API to switch scenario (it has access to scenario map)
+  const url = `${ctx.url}/__admin/scenarios/${encodeURIComponent(scenarioName)}`;
+  const res = await fetch(url, { method: "POST" });
+  if (!res.ok) throw new Error(`Failed to apply scenario "${scenarioName}"`);
+  ctx.activeScenario = scenarioName;
   return { applied: scenarioName };
 }
 

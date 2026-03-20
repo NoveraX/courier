@@ -45,7 +45,7 @@ export function registerRestRoutes(app: Hono, config: RouteConfig): void {
 }
 
 /** Core handler: resolve mock → apply network → return response */
-async function handleMockRequest(
+export async function handleMockRequest(
   c: HonoContext,
   group: string,
   method: string,

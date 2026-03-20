@@ -12,9 +12,11 @@ import type {
   TypedMockFn,
 } from "../types";
 import { registerAdminRoutes } from "./admin-api";
+import type { PrefixMapping } from "./prefix-routes";
+import { registerPrefixRoutes } from "./prefix-routes";
 import type { LogLevel } from "./request-logger";
 import { createRequestLogger } from "./request-logger";
-import { registerProxyRoute, registerRestRoutes } from "./route-generator";
+import { handleMockRequest, registerProxyRoute, registerRestRoutes } from "./route-generator";
 
 /** Configuration for the mock HTTP server */
 export interface MockServerConfig {
@@ -34,6 +36,12 @@ export interface MockServerConfig {
   scenario?: MockScenario;
   /** Named scenarios available via admin API */
   scenarios?: Record<string, MockScenario>;
+  /** API source — enables prefix-based routes (GET /products → products.getAll) */
+  source?: {
+    options: {
+      groups: Record<string, { options?: { prefix?: string } } & Record<string, unknown>>;
+    };
+  };
 }
 
 /** Mock HTTP server instance */
@@ -107,6 +115,15 @@ export function createMockServer(config?: MockServerConfig): MockServer {
 
   // REST routes (POST/GET /api/:group/:method)
   registerRestRoutes(app, routeConfig);
+
+  // Prefix routes (GET /products → products.getAll) — auto-generated from source
+  if (config?.source) {
+    const mappings = extractPrefixMappings(config.source);
+    registerPrefixRoutes(app, mappings, {
+      handleRequest: (c, group, method, variables) =>
+        handleMockRequest(c, group, method, variables, routeConfig),
+    });
+  }
 
   // Admin API
   if (config?.admin !== false) {
@@ -191,4 +208,18 @@ function resolveLogLevel(log?: LogLevel | boolean): LogLevel {
   if (log === true) return "normal";
   if (log === false) return "silent";
   return log ?? "normal";
+}
+
+/** Extract prefix mappings from a DefinedApi source */
+function extractPrefixMappings(source: NonNullable<MockServerConfig["source"]>): PrefixMapping[] {
+  const mappings: PrefixMapping[] = [];
+  const groups = source.options.groups;
+
+  for (const [groupName, group] of Object.entries(groups)) {
+    const prefix = group.options?.prefix ?? `/${groupName}`;
+    const methods = Object.keys(group).filter((k) => k !== "options");
+    mappings.push({ prefix, group: groupName, methods });
+  }
+
+  return mappings;
 }

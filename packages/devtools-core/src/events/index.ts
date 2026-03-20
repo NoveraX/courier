@@ -21,6 +21,24 @@ export type {
   MiddlewareExitEvent,
 } from "./middleware";
 export type {
+  MockCollectionSnapshot,
+  MockHotReloadEvent,
+  MockNetworkConfigEvent,
+  MockNetworkSnapshot,
+  MockRequestEndEvent,
+  MockRequestErrorEvent,
+  MockRequestStartEvent,
+  MockRouteInfo,
+  MockRouteListEvent,
+  MockScenarioActiveEvent,
+  MockScenarioInfo,
+  MockServerConnectEvent,
+  MockServerDisconnectEvent,
+  MockServerStatusEvent,
+  MockStoreChangeEvent,
+  MockStoreSnapshotEvent,
+} from "./mock";
+export type {
   ProxyOriginRejectEvent,
   ProxyParseEvent,
   ProxyReceiveEvent,
@@ -53,6 +71,20 @@ import type {
 import type { DedupAbortEvent, DedupReuseEvent } from "./dedup";
 import type { HttpFetchEndEvent, HttpFetchErrorEvent, HttpFetchStartEvent } from "./http";
 import type { MiddlewareEnterEvent, MiddlewareErrorEvent, MiddlewareExitEvent } from "./middleware";
+import type {
+  MockHotReloadEvent,
+  MockNetworkConfigEvent,
+  MockRequestEndEvent,
+  MockRequestErrorEvent,
+  MockRequestStartEvent,
+  MockRouteListEvent,
+  MockScenarioActiveEvent,
+  MockServerConnectEvent,
+  MockServerDisconnectEvent,
+  MockServerStatusEvent,
+  MockStoreChangeEvent,
+  MockStoreSnapshotEvent,
+} from "./mock";
 import type {
   ProxyOriginRejectEvent,
   ProxyParseEvent,
@@ -98,4 +130,16 @@ export type AnyDevToolsEvent =
   | DedupAbortEvent
   | DedupReuseEvent
   | UploadProgressEvent
-  | UploadCompleteEvent;
+  | UploadCompleteEvent
+  | MockServerConnectEvent
+  | MockServerDisconnectEvent
+  | MockServerStatusEvent
+  | MockRouteListEvent
+  | MockStoreSnapshotEvent
+  | MockStoreChangeEvent
+  | MockScenarioActiveEvent
+  | MockNetworkConfigEvent
+  | MockRequestStartEvent
+  | MockRequestEndEvent
+  | MockRequestErrorEvent
+  | MockHotReloadEvent;

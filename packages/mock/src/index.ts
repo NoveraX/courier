@@ -1,9 +1,34 @@
 // Core
 
+// Auto-generation
+export type {
+  AutoMockServerConfig,
+  AutoScenarioOptions,
+  CrudOperation,
+  RouteInfo,
+  SeedConfig,
+} from "./auto";
+export {
+  analyzeRoutes,
+  buildAutoScenario,
+  createAutoMockServer,
+  generateRecord,
+  generateRecords,
+  inferRoutes,
+} from "./auto";
 // Builder
 export { createEnhancedMockBuilder } from "./builder";
 export type { MockClient, MockClientConfig } from "./create-mock-client";
 export { createMockClient } from "./create-mock-client";
+export type {
+  FileWatcherHandle,
+  FileWatcherOptions,
+  MockCommand,
+  MockDevToolsBridge,
+  MockDevToolsBridgeOptions,
+} from "./devtools";
+// DevTools bridge
+export { connectMockToDevTools, createFileWatcher } from "./devtools";
 // Factory
 export type { FactoryConfig, ResponseFactory } from "./factory";
 export { defineFactory } from "./factory";

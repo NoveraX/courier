@@ -37,7 +37,20 @@ export type EventType =
   | "dedup:reuse"
   // Upload
   | "upload:progress"
-  | "upload:complete";
+  | "upload:complete"
+  // Mock server
+  | "mock:server:connect"
+  | "mock:server:disconnect"
+  | "mock:server:status"
+  | "mock:route:list"
+  | "mock:store:snapshot"
+  | "mock:store:change"
+  | "mock:scenario:active"
+  | "mock:network:config"
+  | "mock:request:start"
+  | "mock:request:end"
+  | "mock:request:error"
+  | "mock:hotreload";
 
 /** Base envelope for all events */
 export interface DevToolsEvent {

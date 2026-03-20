@@ -16,6 +16,24 @@ export { createMockRegistry } from "./registry";
 // Scenario
 export type { HandlerGroup } from "./scenario";
 export { defineHandlers, defineScenario, mergeHandlers } from "./scenario";
+// Store
+export type {
+  Collection,
+  CollectionConfig,
+  MockStore,
+  PaginatedResult,
+  QueryBuilder,
+  QueryOptions,
+  RelationDefinitions,
+  WherePredicate,
+} from "./store";
+export {
+  createCollection,
+  createMockStore,
+  defineRelations,
+  resolveMany,
+  resolveOne,
+} from "./store";
 // Types
 export type {
   ApiGroups,

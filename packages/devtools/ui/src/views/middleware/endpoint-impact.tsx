@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
+import { StaggerList, STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
 
 import type { EndpointImpact } from "./types";
 
@@ -31,17 +32,16 @@ export function EndpointImpactPanel({
       <h4 className="mb-3 text-caption text-muted-foreground/70">
         Endpoint Impact
       </h4>
-      <div className="space-y-1.5">
-        {shown.map((ep, i) => (
+      <StaggerList className="space-y-1.5">
+        {shown.map((ep) => (
           <EndpointRow
             key={ep.key}
             endpoint={ep}
             maxOverhead={maxOverhead}
-            index={i}
             onClick={() => onSelect(ep.sampleRequestId)}
           />
         ))}
-      </div>
+      </StaggerList>
     </div>
   );
 }
@@ -51,12 +51,10 @@ export function EndpointImpactPanel({
 function EndpointRow({
   endpoint: ep,
   maxOverhead,
-  index,
   onClick,
 }: {
   endpoint: EndpointImpact;
   maxOverhead: number;
-  index: number;
   onClick: () => void;
 }): React.ReactElement {
   const barPct = maxOverhead > 0 ? (ep.overheadPercent / maxOverhead) * 100 : 0;
@@ -65,9 +63,7 @@ function EndpointRow({
     <motion.button
       type="button"
       onClick={onClick}
-      initial={{ opacity: 0, x: -4 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.03, duration: 0.2 }}
+      variants={STAGGER_ITEM_VARIANTS}
       className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 transition-colors hover:bg-muted/30"
     >
       <MethodBadge method={ep.httpMethod} />
@@ -80,7 +76,7 @@ function EndpointRow({
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${Math.max(barPct, 3)}%` }}
-          transition={{ delay: index * 0.03 + 0.1, duration: 0.4 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
           className={cn(
             "h-full rounded-full",
             ep.overheadPercent > 20 ? "bg-rose-500" : ep.overheadPercent > 5 ? "bg-amber-500" : "bg-sky-500",

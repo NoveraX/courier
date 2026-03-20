@@ -1,6 +1,5 @@
-import { motion } from "motion/react";
-
 import { Badge } from "../../components/ui/badge";
+import { StaggerList, StaggerItem } from "../../components/shared/stagger-list";
 import { useDevToolsStore } from "../../store";
 import { CATEGORY_CONFIG, CATEGORY_ORDER } from "./constants";
 import type { AuditCategory, AuditItem } from "./types";
@@ -60,22 +59,17 @@ function CategorySection({
         </Badge>
       </div>
 
-      <div className="space-y-1.5">
-        {items.map((item, i) => (
-          <motion.div
-            key={item.id}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.03, duration: 0.15 }}
-          >
+      <StaggerList className="space-y-1.5">
+        {items.map((item) => (
+          <StaggerItem key={item.id}>
             <AuditItemCard
               item={item}
               expanded={expandedIds.has(item.id)}
               onToggle={() => onToggle(item.id)}
             />
-          </motion.div>
+          </StaggerItem>
         ))}
-      </div>
+      </StaggerList>
     </div>
   );
 }

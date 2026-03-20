@@ -2,15 +2,20 @@ import { motion } from "motion/react";
 
 import { cn } from "@/lib/utils";
 
-const CONTAINER_VARIANTS = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.03 },
-  },
-} as const;
-
-const ITEM_VARIANTS = {
+/**
+ * Shared stagger item variants — use directly on `motion.button` or other
+ * motion elements that can't be wrapped in an extra `<div>`.
+ *
+ * @example
+ * <StaggerList>
+ *   {items.map(item => (
+ *     <motion.button key={item.id} variants={STAGGER_ITEM_VARIANTS}>
+ *       ...
+ *     </motion.button>
+ *   ))}
+ * </StaggerList>
+ */
+export const STAGGER_ITEM_VARIANTS = {
   hidden: { opacity: 0, y: 6 },
   visible: {
     opacity: 1,
@@ -22,17 +27,26 @@ const ITEM_VARIANTS = {
 interface StaggerListProps {
   children: React.ReactNode;
   className?: string;
+  /** Delay between each child in seconds @default 0.03 */
+  stagger?: number;
 }
 
 /**
- * Wraps a list of items with staggered fade-in + slide-up animation.
- * Each direct child animates in sequence with 30ms delay between items.
+ * Container that staggers the entrance of its children.
+ * Children must use either `<StaggerItem>` or `variants={STAGGER_ITEM_VARIANTS}`.
  */
-export function StaggerList({ children, className }: StaggerListProps): React.ReactElement {
+export function StaggerList({
+  children,
+  className,
+  stagger = 0.03,
+}: StaggerListProps): React.ReactElement {
   return (
     <motion.div
       className={cn(className)}
-      variants={CONTAINER_VARIANTS}
+      variants={{
+        hidden: { opacity: 0 },
+        visible: { opacity: 1, transition: { staggerChildren: stagger } },
+      }}
       initial="hidden"
       animate="visible"
     >
@@ -41,13 +55,16 @@ export function StaggerList({ children, className }: StaggerListProps): React.Re
   );
 }
 
-/** Wrap each list item with this to pick up the stagger animation. */
+/** Wrapper div that picks up the stagger animation from a parent `StaggerList`. */
 export function StaggerItem({
   children,
   className,
-}: StaggerListProps): React.ReactElement {
+}: {
+  children: React.ReactNode;
+  className?: string;
+}): React.ReactElement {
   return (
-    <motion.div className={cn(className)} variants={ITEM_VARIANTS}>
+    <motion.div className={cn(className)} variants={STAGGER_ITEM_VARIANTS}>
       {children}
     </motion.div>
   );

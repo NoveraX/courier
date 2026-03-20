@@ -3,6 +3,7 @@ import { AlertCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/components/shared/formatters";
+import { StaggerList, STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
 
 import type { AggregateMiddleware } from "./types";
 import { durationColor, durationBg } from "./constants";
@@ -23,11 +24,11 @@ export function MiddlewareProfiles({
   const maxAvg = Math.max(...stats.map((s) => s.avgDuration), 0.001);
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {stats.map((mw, i) => (
-        <ProfileCard key={mw.name} mw={mw} maxAvg={maxAvg} index={i} onClick={() => onSelect(mw.name)} />
+    <StaggerList className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" stagger={0.05}>
+      {stats.map((mw) => (
+        <ProfileCard key={mw.name} mw={mw} maxAvg={maxAvg} onClick={() => onSelect(mw.name)} />
       ))}
-    </div>
+    </StaggerList>
   );
 }
 
@@ -36,12 +37,10 @@ export function MiddlewareProfiles({
 function ProfileCard({
   mw,
   maxAvg,
-  index,
   onClick,
 }: {
   mw: AggregateMiddleware;
   maxAvg: number;
-  index: number;
   onClick: () => void;
 }): React.ReactElement {
   const barPct = maxAvg > 0 ? (mw.avgDuration / maxAvg) * 100 : 0;
@@ -51,9 +50,7 @@ function ProfileCard({
     <motion.button
       type="button"
       onClick={onClick}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.25 }}
+      variants={STAGGER_ITEM_VARIANTS}
       className={cn(
         "group flex flex-col gap-3 rounded-xl border bg-card p-4 text-left transition-all",
         "hover:border-border hover:bg-card-elevated hover:shadow-sm",
@@ -76,7 +73,7 @@ function ProfileCard({
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${Math.max(barPct, 3)}%` }}
-          transition={{ delay: index * 0.05 + 0.15, duration: 0.4, ease: "easeOut" }}
+          transition={{ delay: 0.15, duration: 0.4, ease: "easeOut" }}
           className={cn("h-full rounded-full", durationBg(mw.avgDuration))}
         />
       </div>

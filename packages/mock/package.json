@@ -1,0 +1,58 @@
+{
+  "name": "@noverax/nexus-mock",
+  "version": "0.0.0",
+  "description": "Type-safe mock server with stateful store, scenarios, chaos engineering, and visual builder for @noverax/nexus",
+  "author": "NoveraX",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    },
+    "./server": {
+      "types": "./lib/server.d.ts",
+      "import": "./lib/server.js"
+    },
+    "./browser": {
+      "types": "./lib/browser.d.ts",
+      "import": "./lib/browser.js"
+    },
+    "./contract": {
+      "types": "./lib/contract/index.d.ts",
+      "import": "./lib/contract/index.js"
+    },
+    "./middleware": {
+      "types": "./lib/middleware/index.d.ts",
+      "import": "./lib/middleware/index.js"
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@noverax/nexus": "*"
+  },
+  "peerDependencies": {
+    "hono": ">=4"
+  },
+  "peerDependenciesMeta": {
+    "hono": {
+      "optional": true
+    }
+  }
+}

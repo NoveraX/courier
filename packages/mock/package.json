@@ -48,10 +48,14 @@
     "@noverax/nexus": "*"
   },
   "peerDependencies": {
-    "hono": ">=4"
+    "hono": ">=4",
+    "@hono/node-server": ">=1"
   },
   "peerDependenciesMeta": {
     "hono": {
+      "optional": true
+    },
+    "@hono/node-server": {
       "optional": true
     }
   }

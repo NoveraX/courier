@@ -1,0 +1,85 @@
+import type { Hono } from "hono";
+import type { MockRegistry } from "../registry";
+import type { MockStore } from "../store";
+import type { MockHistoryEntry, MockScenario } from "../types";
+
+interface AdminConfig {
+  registry: MockRegistry;
+  history: MockHistoryEntry[];
+  store: MockStore;
+  scenarios: Map<string, MockScenario>;
+  getScenarioState: () => string;
+  setScenarioState: (state: string) => void;
+  applyScenario: (scenario: MockScenario) => void;
+}
+
+/** Register admin API routes under /__admin/ */
+export function registerAdminRoutes(app: Hono, config: AdminConfig): void {
+  // List active mocks
+  app.get("/__admin/mocks", (c) => {
+    return c.json(config.registry.list());
+  });
+
+  // List available scenarios
+  app.get("/__admin/scenarios", (c) => {
+    const names = [...config.scenarios.keys()];
+    return c.json({ scenarios: names, current: config.getScenarioState() });
+  });
+
+  // Activate a scenario
+  app.post("/__admin/scenarios/:name", (c) => {
+    const name = c.req.param("name");
+    const scenario = config.scenarios.get(name);
+    if (!scenario) {
+      return c.json({ error: `Unknown scenario "${name}"` }, 404);
+    }
+    config.applyScenario(scenario);
+    return c.json({ applied: name });
+  });
+
+  // Reset scenario state
+  app.post("/__admin/scenarios/reset", (c) => {
+    config.setScenarioState("Started");
+    return c.json({ state: "Started" });
+  });
+
+  // Request history
+  app.get("/__admin/history", (c) => {
+    const limit = Number(new URL(c.req.url).searchParams.get("limit")) || 100;
+    return c.json(config.history.slice(-limit));
+  });
+
+  // Reset everything
+  app.post("/__admin/reset", (c) => {
+    config.registry.clear();
+    config.history.length = 0;
+    config.store.reset();
+    config.setScenarioState("Started");
+    return c.json({ reset: true });
+  });
+
+  // Store: list collections
+  app.get("/__admin/store", (c) => {
+    return c.json(config.store.list());
+  });
+
+  // Store: browse collection
+  app.get("/__admin/store/:collection", (c) => {
+    const name = c.req.param("collection");
+    if (!config.store.has(name)) {
+      return c.json({ error: `Collection "${name}" not found` }, 404);
+    }
+    const col = config.store.collection(name);
+    return c.json(col.getAll());
+  });
+
+  // Health check
+  app.get("/__admin/health", (c) => {
+    return c.json({
+      status: "ok",
+      mocks: config.registry.list().length,
+      history: config.history.length,
+      collections: config.store.list().length,
+    });
+  });
+}

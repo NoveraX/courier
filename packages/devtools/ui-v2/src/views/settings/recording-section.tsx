@@ -131,6 +131,7 @@ function IgnorePatternsField({
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Remove pattern"
             className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
             onClick={() => removePattern(i)}
           >

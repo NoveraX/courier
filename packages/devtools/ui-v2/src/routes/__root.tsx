@@ -13,6 +13,8 @@ import { StatusBar } from "@/components/layout/status-bar";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { DisconnectedBanner } from "@/components/layout/disconnected-banner";
 import { GlobalDetailPanel } from "@/components/layout/global-detail-panel";
+import { SkipNav, MAIN_CONTENT_ID } from "@/components/layout/skip-nav";
+import { TourProvider } from "@/components/onboarding/tour-provider";
 import { NotFound } from "@/components/layout/not-found";
 
 function RootComponent(): React.ReactNode {
@@ -45,8 +47,9 @@ function RootComponent(): React.ReactNode {
       defaultOpen
       style={{ "--sidebar-width": "14rem", "--sidebar-width-icon": "3rem" } as React.CSSProperties}
     >
+      <SkipNav />
       <AppSidebar />
-      <SidebarInset className="flex min-h-0 flex-col overflow-hidden">
+      <SidebarInset id={MAIN_CONTENT_ID} className="flex min-h-0 flex-col overflow-hidden">
         <DisconnectedBanner />
         <TopBar onOpenSearch={() => setCommandOpen(true)} />
         <GlobalDetailPanel>
@@ -56,6 +59,7 @@ function RootComponent(): React.ReactNode {
       </SidebarInset>
 
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+      <TourProvider />
       <Toaster
         position="bottom-right"
         richColors

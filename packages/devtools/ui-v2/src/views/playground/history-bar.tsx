@@ -71,6 +71,7 @@ export function HistoryBar({ activeId, onSelect }: HistoryBarProps): React.React
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Clear history"
                 className="size-5 text-muted-foreground/50 hover:text-rose-400"
                 onClick={clearHistory}
               >

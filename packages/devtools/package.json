@@ -57,6 +57,36 @@
       "import": "./lib/astro.js",
       "default": "./lib/astro.js"
     },
+    "./react": {
+      "types": "./lib/react.d.ts",
+      "import": "./lib/react.js",
+      "default": "./lib/react.js"
+    },
+    "./vue": {
+      "types": "./lib/vue.d.ts",
+      "import": "./lib/vue.js",
+      "default": "./lib/vue.js"
+    },
+    "./sveltekit": {
+      "types": "./lib/sveltekit.d.ts",
+      "import": "./lib/sveltekit.js",
+      "default": "./lib/sveltekit.js"
+    },
+    "./remix": {
+      "types": "./lib/remix.d.ts",
+      "import": "./lib/remix.js",
+      "default": "./lib/remix.js"
+    },
+    "./solid": {
+      "types": "./lib/solid.d.ts",
+      "import": "./lib/solid.js",
+      "default": "./lib/solid.js"
+    },
+    "./angular": {
+      "types": "./lib/angular.d.ts",
+      "import": "./lib/angular.js",
+      "default": "./lib/angular.js"
+    },
     "./cli": "./lib/cli.js"
   },
   "files": [

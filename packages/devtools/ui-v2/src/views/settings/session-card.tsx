@@ -126,7 +126,7 @@ function SessionActions({
       )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="size-7">
+          <Button variant="ghost" size="icon" aria-label="Session options" className="size-7">
             <MoreHorizontal className="size-3.5" />
           </Button>
         </DropdownMenuTrigger>

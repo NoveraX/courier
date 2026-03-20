@@ -94,7 +94,7 @@ function CopyMenu({ buildInput }: {
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-5 shrink-0 text-muted-foreground/40 hover:text-foreground">
+            <Button variant="ghost" size="icon" aria-label="Copy as" className="size-5 shrink-0 text-muted-foreground/40 hover:text-foreground">
               <Copy className="size-3" />
             </Button>
           </PopoverTrigger>

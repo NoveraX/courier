@@ -39,6 +39,7 @@ export function TopBar({ onOpenSearch }: TopBarProps): React.ReactNode {
         <Button
           variant="outline"
           size="sm"
+          data-tour="cmd-k"
           className="h-7 gap-1.5 px-2 text-body-xs text-muted-foreground"
           onClick={onOpenSearch}
         >
@@ -51,6 +52,8 @@ export function TopBar({ onOpenSearch }: TopBarProps): React.ReactNode {
             <Button
               variant="ghost"
               size="icon"
+              aria-label={paused ? "Resume recording" : "Pause recording"}
+              data-tour="pause"
               className={cn("size-7", paused && "text-warning-foreground")}
               onClick={togglePaused}
             >
@@ -67,6 +70,7 @@ export function TopBar({ onOpenSearch }: TopBarProps): React.ReactNode {
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Clear all requests"
               className="size-7 text-muted-foreground"
               onClick={clearRequests}
               disabled={requestCount === 0}

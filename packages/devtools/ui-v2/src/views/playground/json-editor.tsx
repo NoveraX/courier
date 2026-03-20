@@ -99,6 +99,7 @@ export function JsonEditor({ value, onChange, placeholder, className }: JsonEdit
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Prettify JSON"
               className="size-5 text-muted-foreground/40 hover:text-foreground"
               onClick={() => { try { onChange(JSON.stringify(JSON.parse(stripComments(value)), null, jsonIndent)); } catch { /* skip */ } }}
             >

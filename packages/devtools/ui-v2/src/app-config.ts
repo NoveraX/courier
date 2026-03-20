@@ -82,6 +82,7 @@ export const THEME_LABELS: Record<Theme, string> = {
 // ── Breadcrumb helpers ─────────────────────────────────────────────────────
 
 export function getPageTitle(pathname: string): string {
+  if (pathname === "/") return "Welcome";
   const item = ALL_NAV_ITEMS.find((n) => pathname.startsWith(n.path));
   return item?.label ?? "Not Found";
 }

@@ -3,6 +3,8 @@ import { registerSources } from "../sources-registry";
 import { connectDevTools } from "./connect-devtools";
 import type { DevToolsConnection, InstrumentServerOptions } from "./types";
 
+const PREFIX = "[nexus-devtools]";
+
 const NOOP_CONNECTION: DevToolsConnection = {
   bus: { on: () => () => {}, emit: () => {}, clear: () => {}, getBuffer: () => [] } as never,
   sessionId: "",
@@ -44,15 +46,24 @@ function detectFramework(): string {
  * @returns DevTools connection with `disconnect()` method
  */
 export function instrumentServer(options: InstrumentServerOptions): DevToolsConnection {
-  // No-op in production — zero overhead, safe to call unconditionally
+  // No-op in production
   if (typeof process !== "undefined" && process.env.NODE_ENV === "production") {
+    console.debug(`${PREFIX} Skipped — production environment.`);
     return NOOP_CONNECTION;
   }
 
   // Warn if accidentally called in browser
   if (typeof window !== "undefined") {
     console.warn(
-      "[nexus-devtools] instrumentServer() is for server use. Use connectDevTools() in browser.",
+      `${PREFIX} instrumentServer() is for server use. Use connectDevTools() in browser.`,
+    );
+    return NOOP_CONNECTION;
+  }
+
+  // Skip in Edge runtime — Socket.IO requires Node.js net/tls APIs
+  if (typeof process !== "undefined" && process.env.NEXT_RUNTIME === "edge") {
+    console.debug(
+      `${PREFIX} Skipped — Edge runtime does not support Socket.IO. Use Node.js runtime.`,
     );
     return NOOP_CONNECTION;
   }

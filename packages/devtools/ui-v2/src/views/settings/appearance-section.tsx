@@ -4,10 +4,15 @@ import { Moon, Sun, Monitor } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import type { Settings, Theme, DensityMode } from "@/store/types";
 
+import { useNavigate } from "@tanstack/react-router";
+
+import { Button } from "@/components/ui/button";
 import {
   SegmentedControl,
   type SegmentOption,
 } from "@/components/shared/segmented-control";
+import { restartTour } from "@/components/onboarding/tour-provider";
+import { WELCOME_STORAGE_KEY } from "@/views/welcome/frameworks";
 import { SettingRow } from "./setting-row";
 
 // ── Theme options ────────────────────────────────────────────────────────────
@@ -32,6 +37,7 @@ interface AppearanceSectionProps {
 export function AppearanceSection({
   form,
 }: AppearanceSectionProps): React.ReactElement {
+  const navigate = useNavigate();
   return (
     <>
       <SettingRow label="Theme" description="Color scheme for the DevTools UI">
@@ -63,6 +69,27 @@ export function AppearanceSection({
             />
           )}
         />
+      </SettingRow>
+
+      <SettingRow
+        label="Onboarding tour"
+        description="Walk through all features step by step"
+      >
+        <Button variant="outline" size="sm" onClick={restartTour}>
+          Restart tour
+        </Button>
+      </SettingRow>
+
+      <SettingRow
+        label="Setup wizard"
+        description="Re-run the framework setup if you switched your stack"
+      >
+        <Button variant="outline" size="sm" onClick={() => {
+          try { localStorage.removeItem(WELCOME_STORAGE_KEY); } catch { /* noop */ }
+          navigate({ to: "/" });
+        }}>
+          Restart setup
+        </Button>
       </SettingRow>
     </>
   );

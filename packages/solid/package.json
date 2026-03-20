@@ -1,0 +1,36 @@
+{
+  "name": "@noverax/nexus-solid",
+  "version": "0.0.0",
+  "description": "Solid Start adapter for @noverax/nexus — Web Standard proxy handler",
+  "author": "NoveraX",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@noverax/nexus": "*"
+  },
+  "peerDependencies": {
+    "@solidjs/start": ">=1"
+  }
+}

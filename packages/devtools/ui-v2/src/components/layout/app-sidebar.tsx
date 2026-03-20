@@ -89,7 +89,7 @@ export function AppSidebar(): React.ReactNode {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border" data-tour="sidebar">
       <SidebarHeader className="px-3 py-4 group-data-[collapsible=icon]:p-2">
         <Link to="/timeline" className="flex items-center gap-2.5 px-1 group-data-[collapsible=icon]:px-0">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-sidebar-accent ring-1 ring-sidebar-border">
@@ -133,7 +133,7 @@ export function AppSidebar(): React.ReactNode {
                           isActive && "before:absolute before:inset-y-1 before:left-0 before:w-[2px] before:rounded-full before:bg-accent-brand",
                         )}
                       >
-                        <Link to={item.path}>
+                        <Link to={item.path} data-tour={item.path.slice(1)}>
                           <item.icon className="size-4 shrink-0" />
                           <span className="truncate">{item.label}</span>
                           <NavBadge item={item} />

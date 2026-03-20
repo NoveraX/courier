@@ -33,6 +33,38 @@ export const SECTION_CONFIG: SectionConfig[] = [
   { id: "danger", label: "Danger Zone", icon: AlertTriangle, description: "Destructive actions — clear data, reset settings" },
 ];
 
+// ── Grouped nav for sidebar ─────────────────────────────────────────────────
+
+interface SectionNavGroup {
+  label: string;
+  items: SectionConfig[];
+}
+
+export const SECTION_NAV_GROUPS: SectionNavGroup[] = [
+  {
+    label: "General",
+    items: SECTION_CONFIG.filter((s) =>
+      ["appearance", "connection"].includes(s.id),
+    ),
+  },
+  {
+    label: "Capture",
+    items: SECTION_CONFIG.filter((s) =>
+      ["recording", "display", "notifications"].includes(s.id),
+    ),
+  },
+  {
+    label: "Advanced",
+    items: SECTION_CONFIG.filter((s) =>
+      ["export", "apis", "sessions"].includes(s.id),
+    ),
+  },
+  {
+    label: "System",
+    items: SECTION_CONFIG.filter((s) => s.id === "danger"),
+  },
+];
+
 // ── Select options ───────────────────────────────────────────────────────────
 
 export const TIMESTAMP_OPTIONS = [

@@ -9,10 +9,29 @@ export type { FactoryConfig, ResponseFactory } from "./factory";
 export { defineFactory } from "./factory";
 // Network
 export { LATENCY_PROFILES, resolveLatency } from "./network";
+// Record & Replay
+export type {
+  FieldChange,
+  Fixture,
+  FixtureDiff,
+  HarEntry,
+  HarLog,
+  RecorderClient,
+  RecorderConfig,
+  RecordMode,
+} from "./record";
+export {
+  createRecorder,
+  diffFixtures,
+  fixturesToHar,
+  harToFixtures,
+  replayFixtures,
+  replayHar,
+  sanitizeFixture,
+} from "./record";
 // Registry
 export type { MockRegistry } from "./registry";
 export { createMockRegistry } from "./registry";
-
 // Scenario
 export type { HandlerGroup } from "./scenario";
 export { defineHandlers, defineScenario, mergeHandlers } from "./scenario";

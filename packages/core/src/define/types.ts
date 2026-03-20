@@ -11,6 +11,7 @@ export type EndpointRecord = Record<string, Endpoint<any, any>>;
 
 /** Configuration for defineGroup() */
 export type DefineGroupConfig<TEndpoints extends EndpointRecord> = GroupOptions & {
+  /** Map of named endpoint functions belonging to this group */
   endpoints: TEndpoints;
 };
 

@@ -55,15 +55,32 @@ export function getSourceName(source: unknown): string | undefined {
  * })
  */
 export function defineApi<TGroups extends GroupRecord, TEndpoints extends EndpointRecord>(
-  config: BaseOptions & { name?: string; groups: TGroups; endpoints: TEndpoints },
+  config: BaseOptions & {
+    /** Human-readable source name for devtools and logging (derived from baseURL if omitted) */
+    name?: string;
+    /** Map of named endpoint groups created with defineGroup() */
+    groups: TGroups;
+    /** Map of flat endpoint functions (not in any group) */
+    endpoints: TEndpoints;
+  },
 ): DefinedMixedApi<TGroups, TEndpoints>;
 
 export function defineApi<TGroups extends GroupRecord>(
-  config: BaseOptions & { name?: string; groups: TGroups },
+  config: BaseOptions & {
+    /** Human-readable source name for devtools and logging (derived from baseURL if omitted) */
+    name?: string;
+    /** Map of named endpoint groups created with defineGroup() */
+    groups: TGroups;
+  },
 ): DefinedApi<TGroups>;
 
 export function defineApi<TEndpoints extends EndpointRecord>(
-  config: BaseOptions & { name?: string; endpoints: TEndpoints },
+  config: BaseOptions & {
+    /** Human-readable source name for devtools and logging (derived from baseURL if omitted) */
+    name?: string;
+    /** Map of flat endpoint functions (not in any group) */
+    endpoints: TEndpoints;
+  },
 ): DefinedFlatApi<TEndpoints>;
 
 export function defineApi(

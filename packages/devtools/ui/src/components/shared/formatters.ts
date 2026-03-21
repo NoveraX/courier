@@ -5,10 +5,11 @@ const DAY = 24 * HOUR;
 
 const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 
-export function formatRelativeTime(timestamp: number): string {
-  const diff = Date.now() - timestamp;
+export function formatRelativeTime(timestamp: number, now = Date.now()): string {
+  const diff = now - timestamp;
 
-  if (diff < MINUTE) return "just now";
+  if (diff < 10 * SECOND) return "just now";
+  if (diff < MINUTE) return `${Math.floor(diff / SECOND)}s ago`;
   if (diff < HOUR) return rtf.format(-Math.floor(diff / MINUTE), "minute");
   if (diff < DAY) return rtf.format(-Math.floor(diff / HOUR), "hour");
   return rtf.format(-Math.floor(diff / DAY), "day");
@@ -27,9 +28,10 @@ export function formatAbsoluteTime(timestamp: number): string {
 export function formatTimestamp(
   timestamp: number,
   format: "relative" | "absolute",
+  now = Date.now(),
 ): string {
   return format === "relative"
-    ? formatRelativeTime(timestamp)
+    ? formatRelativeTime(timestamp, now)
     : formatAbsoluteTime(timestamp);
 }
 

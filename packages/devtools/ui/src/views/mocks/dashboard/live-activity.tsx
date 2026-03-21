@@ -17,9 +17,9 @@ export function LiveActivity(): React.ReactElement {
 
   if (recent.length === 0) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-card p-4">
+      <div className="flex flex-col rounded-xl border border-border-subtle bg-card p-4">
         <SectionHeader />
-        <div className="flex flex-col items-center justify-center py-8 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
           <Activity className="size-5 text-muted-foreground/30 mb-2" />
           <p className="text-body-xs text-muted-foreground/50">
             No requests yet. Send a request to your mock server to see activity here.

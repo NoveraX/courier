@@ -18,7 +18,9 @@ export function createInitialState(savedTheme: DevToolsState["theme"]) {
     connected: false,
     settings: loadSettings(),
     sessionStartedAt: loadSessionStartedAt(),
-    relativeTick: 0,
+    scanSources: [] as DevToolsState["scanSources"],
+    registrySources: [] as DevToolsState["registrySources"],
+    clientTick: 0,
     droppedRequests: 0,
   }
 }

@@ -1,5 +1,6 @@
 import { getSourceName } from "@noverax/nexus/define";
 import { connectMockToDevTools } from "../devtools/bridge";
+import type { MockRouteInfo } from "../devtools/types";
 import type { MockServer, MockServerConfig } from "../server/create-mock-server";
 import { createMockServer } from "../server/create-mock-server";
 import type { MockScenario, TypedMockFn } from "../types";
@@ -106,7 +107,16 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
 
   // Auto-connect to DevTools after start()
   if (config.devtools !== false) {
-    wrapStartWithDevTools(server, config, routes.length, Object.keys(allScenarios));
+    const routeEntries = routes.map((r) => ({
+      group: r.group,
+      endpoint: r.endpoint,
+      httpMethod: r.httpMethod,
+      path: r.path,
+      fullPath: r.fullPath,
+      source: "auto" as const,
+      hits: 0,
+    }));
+    wrapStartWithDevTools(server, config, routeEntries, Object.keys(allScenarios));
   }
 
   return server;
@@ -116,7 +126,7 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
 function wrapStartWithDevTools(
   server: MockServer,
   config: AutoMockServerConfig,
-  routeCount: number,
+  routeEntries: MockRouteInfo[],
   scenarioNames: string[],
 ): void {
   const originalStart = server.start.bind(server);
@@ -132,7 +142,8 @@ function wrapStartWithDevTools(
       port: devtoolsOpts.port,
       serverPort: info.port,
       serverUrl: info.url,
-      routeCount,
+      routeCount: routeEntries.length,
+      routes: routeEntries,
       scenarios: scenarioNames,
     });
 

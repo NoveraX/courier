@@ -32,6 +32,15 @@ export { connectMockToDevTools, createFileWatcher } from "./devtools";
 // Factory
 export type { FactoryConfig, ResponseFactory } from "./factory";
 export { defineFactory } from "./factory";
+export type {
+  ChildMessage,
+  MockServerConfig,
+  MockServerDefinition,
+  MockServerSeedConfig,
+  ParentMessage,
+} from "./managed";
+// Managed (convention-based mock servers)
+export { defineMockServer, isMockServerDefinition } from "./managed";
 // Network
 export { LATENCY_PROFILES, resolveLatency } from "./network";
 // Record & Replay

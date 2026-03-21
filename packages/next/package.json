@@ -26,7 +26,8 @@
   ],
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev": "tsup --watch"
   },
   "publishConfig": {
     "access": "public"

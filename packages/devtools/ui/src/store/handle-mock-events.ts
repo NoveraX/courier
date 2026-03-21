@@ -1,6 +1,6 @@
 import { useMockStore } from "./mock-slice";
 
-import type { MockCollectionEntry } from "./mock-slice";
+import type { MockCollectionEntry, MockRouteEntry, ProcessStatus } from "./mock-slice";
 
 type MockEvent = Record<string, unknown>;
 
@@ -10,44 +10,54 @@ export function handleMockEvent(event: MockEvent): void {
   const serverId = event.serverId as string;
 
   switch (event.type) {
-    case "mock:server:connect":
-      store.addServer({
-        serverId,
-        name: (event.name as string) ?? serverId,
-        port: (event.port as number) ?? 0,
-        url: (event.url as string) ?? "",
-        status: "connected",
-        uptime: (event.uptime as number) ?? 0,
-        routeCount: (event.routeCount as number) ?? 0,
-        collectionCount: (event.collectionCount as number) ?? 0,
-        recordCount: (event.recordCount as number) ?? 0,
-        requestsServed: (event.requestsServed as number) ?? 0,
-        errorCount: (event.errorCount as number) ?? 0,
-        activeScenario: (event.activeScenario as string) ?? null,
-        availableScenarios: (event.availableScenarios as string[]) ?? [],
-        lastHeartbeat: Date.now(),
-        networkPreset: "none",
-        collections: (event.collections as MockCollectionEntry[]) ?? [],
-        routes: [],
-        scenarios: [],
-      });
+    case "mock:server:connect": {
+      const existing = useMockStore.getState().servers[serverId];
+      if (existing) {
+        // Reconnect — update stats, preserve client-side state (networkPreset)
+        store.updateServer(serverId, {
+          status: "connected",
+          startedAt: (event.startedAt as number) ?? existing.startedAt,
+          routeCount: (event.routeCount as number) ?? 0,
+          collectionCount: (event.collectionCount as number) ?? 0,
+          recordCount: (event.recordCount as number) ?? 0,
+          requestsServed: (event.requestsServed as number) ?? 0,
+          errorCount: (event.errorCount as number) ?? 0,
+          activeScenario: (event.activeScenario as string) ?? null,
+          availableScenarios: (event.availableScenarios as string[]) ?? [],
+          collections: (event.collections as MockCollectionEntry[]) ?? existing.collections,
+          routes: (event.routes as MockRouteEntry[]) ?? existing.routes,
+          processStatus: (event.processStatus as ProcessStatus) ?? existing.processStatus,
+        });
+      } else {
+        store.addServer({
+          serverId,
+          name: (event.name as string) ?? serverId,
+          port: (event.port as number) ?? 0,
+          url: (event.url as string) ?? "",
+          status: "connected",
+          startedAt: (event.startedAt as number) ?? Date.now(),
+          routeCount: (event.routeCount as number) ?? 0,
+          collectionCount: (event.collectionCount as number) ?? 0,
+          recordCount: (event.recordCount as number) ?? 0,
+          requestsServed: (event.requestsServed as number) ?? 0,
+          errorCount: (event.errorCount as number) ?? 0,
+          activeScenario: (event.activeScenario as string) ?? null,
+          availableScenarios: (event.availableScenarios as string[]) ?? [],
+          networkPreset: "none",
+          managed: (event.managed as boolean) ?? false,
+          processStatus: (event.processStatus as ProcessStatus) ?? "running",
+          origin: (event.origin as "devtools" | "external") ?? "external",
+          filePath: (event.filePath as string) ?? undefined,
+          collections: (event.collections as MockCollectionEntry[]) ?? [],
+          routes: (event.routes as MockRouteEntry[]) ?? [],
+          scenarios: [],
+        });
+      }
       break;
+    }
 
     case "mock:server:disconnect":
-      store.removeServer(serverId);
-      break;
-
-    case "mock:server:status":
-      store.updateServer(serverId, {
-        uptime: (event.uptime as number) ?? 0,
-        routeCount: (event.routeCount as number) ?? 0,
-        recordCount: (event.recordCount as number) ?? 0,
-        requestsServed: (event.requestsServed as number) ?? 0,
-        errorCount: (event.errorCount as number) ?? 0,
-        activeScenario: (event.activeScenario as string) ?? null,
-        lastHeartbeat: Date.now(),
-        status: "connected",
-      });
+      store.updateServer(serverId, { status: "disconnected" });
       break;
 
     case "mock:route:list":

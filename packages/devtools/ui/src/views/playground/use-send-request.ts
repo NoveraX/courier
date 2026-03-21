@@ -4,10 +4,11 @@ import { getSocket } from "@/socket";
 import { useDevToolsStore } from "@/store";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 import type { RequestTiming } from "@/store/types-events";
+import type { RequestEntry } from "@/store/types-request";
 import { stripComments } from "./json-editor";
 
 const TIMEOUT_MS = 30_000;
-const TIMING_POLL_MS = 300;
+const SUBSCRIBE_TIMEOUT_MS = 5_000;
 
 interface SendPayload {
   source: string;
@@ -76,11 +77,11 @@ export function useSendRequest() {
         timing: res.timing,
       });
 
-      // For proxy mode: timing comes through devtools events pipeline
-      // (request:end on server → socket → UI store.requests), not through
-      // the playground callback. Poll store for matching request with full timing.
+      // For proxy mode: timing arrives via devtools event pipeline
+      // (request:end → socket → store.requests), not the playground callback.
+      // Subscribe to store changes instead of polling.
       if (payload.mode === "proxy" && !res.timing) {
-        pollForProxyData(id, payload, sentAt, updateEntry);
+        subscribeForProxyData(id, payload, sentAt, updateEntry);
       }
     });
 
@@ -90,39 +91,71 @@ export function useSendRequest() {
   return { send, sending };
 }
 
-/** Find matching RequestEntry in store and copy timing + headers to playground entry */
-function pollForProxyData(
+/** Subscribe to store and copy timing + headers when matching request appears */
+function subscribeForProxyData(
   playgroundId: string,
   payload: SendPayload,
   sentAt: number,
   updateEntry: (id: string, patch: Partial<PlaygroundHistoryEntry>) => void,
 ): void {
-  let attempts = 0;
-  const poll = () => {
-    attempts++;
-    const requests = useDevToolsStore.getState().requests;
-    const match = requests.find((r) =>
-      r.source.toLowerCase() === payload.source.toLowerCase() &&
-      r.group === payload.group &&
-      r.method === payload.method &&
-      r.mode === "proxy" &&
-      r.startedAt >= sentAt - 1000,
-    );
+  let done = false;
 
-    if (match?.timing) {
-      const patch: Partial<PlaygroundHistoryEntry> = { timing: match.timing };
-      if (match.proxyTiming) patch.proxyTiming = match.proxyTiming;
-      if (match.statusCode) patch.statusCode = match.statusCode;
-      if (match.headers && Object.keys(match.headers).length > 0) {
-        patch.responseHeaders = match.headers;
-      }
-      if (match.requestHeaders && Object.keys(match.requestHeaders).length > 0) {
-        patch.requestHeaders = match.requestHeaders;
-      }
-      updateEntry(playgroundId, patch);
-    } else if (attempts < 5) {
-      setTimeout(poll, TIMING_POLL_MS);
-    }
+  const cleanup = () => {
+    if (done) return;
+    done = true;
+    unsub();
+    clearTimeout(timeout);
   };
-  setTimeout(poll, TIMING_POLL_MS);
+
+  const unsub = useDevToolsStore.subscribe((state) => {
+    const match = findMatchingRequest(state.requests, payload, sentAt);
+    if (!match?.timing) return;
+
+    cleanup();
+    applyProxyData(playgroundId, match, updateEntry);
+  });
+
+  const timeout = setTimeout(cleanup, SUBSCRIBE_TIMEOUT_MS);
+
+  // Check immediately — data may already be in store
+  const match = findMatchingRequest(
+    useDevToolsStore.getState().requests,
+    payload,
+    sentAt,
+  );
+  if (match?.timing) {
+    cleanup();
+    applyProxyData(playgroundId, match, updateEntry);
+  }
+}
+
+function findMatchingRequest(
+  requests: RequestEntry[],
+  payload: SendPayload,
+  sentAt: number,
+): RequestEntry | undefined {
+  return requests.find((r) =>
+    r.source.toLowerCase() === payload.source.toLowerCase() &&
+    r.group === payload.group &&
+    r.method === payload.method &&
+    r.mode === "proxy" &&
+    r.startedAt >= sentAt - 1000,
+  );
+}
+
+function applyProxyData(
+  playgroundId: string,
+  match: RequestEntry,
+  updateEntry: (id: string, patch: Partial<PlaygroundHistoryEntry>) => void,
+): void {
+  const patch: Partial<PlaygroundHistoryEntry> = { timing: match.timing };
+  if (match.proxyTiming) patch.proxyTiming = match.proxyTiming;
+  if (match.statusCode) patch.statusCode = match.statusCode;
+  if (match.headers && Object.keys(match.headers).length > 0) {
+    patch.responseHeaders = match.headers;
+  }
+  if (match.requestHeaders && Object.keys(match.requestHeaders).length > 0) {
+    patch.requestHeaders = match.requestHeaders;
+  }
+  updateEntry(playgroundId, patch);
 }

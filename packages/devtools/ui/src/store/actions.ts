@@ -132,6 +132,10 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
       set({ catalog: snapshot.catalog })
     },
 
+    // APIs — live scan + registry (pushed via socket, no HTTP round-trip)
+    setScanSources: (sources) => set({ scanSources: sources }),
+    setRegistrySources: (sources) => set({ registrySources: sources }),
+
     // Requests
     togglePaused: () => set((s) => ({ paused: !s.paused })),
     togglePreserveLog: () => {

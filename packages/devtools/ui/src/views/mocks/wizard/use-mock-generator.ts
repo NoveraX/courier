@@ -1,7 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { post } from "@/lib/api-client";
 import { useDevToolsStore } from "@/store";
-import type { ScanResult } from "@/views/apis/types";
 
 import type {
   EndpointSelection,
@@ -11,11 +10,19 @@ import type {
   MockWizardStep,
 } from "./types";
 
+// ── Global open trigger ──────────────────────────────────────────────────────
+
+const wizardBus = new EventTarget();
+
+/** Open the mock generator wizard from anywhere */
+export function openMockWizard(): void {
+  wizardBus.dispatchEvent(new Event("open"));
+}
+
 const DEFAULT_OPTIONS: MockGeneratorOptions = {
-  outputDir: "src/mocks",
+  outputDir: "mock-servers",
   port: 7001,
   seedCount: 20,
-  connectDevTools: true,
 };
 
 const INITIAL_STATE: MockGeneratorState = {
@@ -59,6 +66,13 @@ export function useMockGenerator(onSuccess?: () => void): UseMockGeneratorReturn
     setOpen(true);
   }, []);
 
+  // Listen for global open trigger
+  useEffect(() => {
+    const handler = () => openWizard();
+    wizardBus.addEventListener("open", handler);
+    return () => wizardBus.removeEventListener("open", handler);
+  }, [openWizard]);
+
   const close = useCallback(() => {
     setOpen(false);
     setError(null);
@@ -75,10 +89,7 @@ export function useMockGenerator(onSuccess?: () => void): UseMockGeneratorReturn
         ? s.selectedSources.filter((n) => n !== sourceName)
         : [...s.selectedSources, sourceName];
 
-      // Output dir: src/mocks/{sourceName}
-      const outputDir = selected.length === 1
-        ? `src/mocks/${selected[0]}`
-        : "src/mocks";
+      const outputDir = "mock-servers";
 
       return {
         ...s,
@@ -94,7 +105,6 @@ export function useMockGenerator(onSuccess?: () => void): UseMockGeneratorReturn
       ...s,
       standalone,
       selectedSources: standalone ? [] : s.selectedSources,
-      options: { ...s.options, outputDir: standalone ? "src/mocks" : s.options.outputDir },
     }));
   }, []);
 
@@ -145,39 +155,36 @@ export function useMockGenerator(onSuccess?: () => void): UseMockGeneratorReturn
     });
   }, []);
 
-  const generatePreview = useCallback(async () => {
+  const generatePreview = useCallback(() => {
     setLoading(true);
     setError(null);
 
     try {
-      // Scan project to get real file paths for selected sources
-      const scanResult = await post<ScanResult>("/api/apis/scan");
+      // Read scan data from store (pushed by server via socket)
+      const { scanSources } = useDevToolsStore.getState();
       const sourceFilePaths: Record<string, string> = {};
-      for (const scanned of scanResult.sources) {
+      for (const scanned of scanSources) {
         if (state.selectedSources.includes(scanned.name)) {
           sourceFilePaths[scanned.name] = scanned.filePath;
         }
       }
 
-      // Build endpoints from catalog
-      const catalog = useDevToolsStore.getState().catalog;
+      // Build endpoints from scan data (works without running app)
       const endpoints: Record<string, Record<string, EndpointSelection[]>> = {};
 
       for (const sourceName of state.selectedSources) {
-        const source = catalog[sourceName];
-        if (!source) continue;
+        const scanned = scanSources.find((s) => s.name === sourceName);
+        if (!scanned) continue;
 
         endpoints[sourceName] = {};
-        for (const [groupName, group] of Object.entries(source.groups)) {
-          endpoints[sourceName][groupName] = Object.entries(group.endpoints).map(
-            ([epName, ep]) => ({
-              group: groupName,
-              endpoint: epName,
-              httpMethod: ep.httpMethod ?? inferHttpMethod(epName, ep.type, ep.path),
-              path: ep.path ?? "",
-              selected: true,
-            }),
-          );
+        for (const group of scanned.groups) {
+          endpoints[sourceName][group.name] = group.endpoints.map((ep) => ({
+            group: group.name,
+            endpoint: ep.name,
+            httpMethod: ep.analysis.httpMethod ?? inferHttpMethod(ep.name, ep.analysis.type ?? undefined, ep.analysis.path),
+            path: ep.analysis.path ?? "",
+            selected: true,
+          }));
         }
       }
 
@@ -241,37 +248,29 @@ function generateMockFiles(
 ): GeneratedFile[] {
   const { options, selectedSources, sourceFilePaths } = state;
   const dir = options.outputDir;
-  const serverContent = buildServerFile(selectedSources, options, dir, sourceFilePaths);
 
-  return [
-    { path: `${dir}/server.ts`, content: serverContent },
-  ];
+  return selectedSources.map((source) => ({
+    path: `${dir}/${source}.server.ts`,
+    content: buildServerFile(source, options, dir, sourceFilePaths),
+  }));
 }
 
 function buildServerFile(
-  sources: string[],
+  source: string,
   options: MockGeneratorOptions,
   mockDir: string,
   sourceFilePaths: Record<string, string>,
 ): string {
-  const imports = sources.map((s) => {
-    const importPath = resolveRelativeImport(mockDir, sourceFilePaths[s] ?? `src/api/${s}`);
-    return `import { ${s} } from "${importPath}";`;
-  }).join("\n");
+  const importPath = resolveRelativeImport(mockDir, sourceFilePaths[source] ?? `src/api/${source}`);
 
-  const sourceArg = sources[0] ?? "api";
+  return `import { defineMockServer } from "@noverax/nexus-mock";
+import { ${source} } from "${importPath}";
 
-  return `import { createAutoMockServer } from "@noverax/nexus-mock";
-${imports}
-
-const server = createAutoMockServer({
-  source: ${sourceArg},
+export const mockServer = defineMockServer({
+  source: ${source},
   port: ${options.port},
   seed: { count: ${options.seedCount} },
 });
-
-const info = await server.start();
-console.log(\`Mock server running at \${info.url}\`);
 `;
 }
 

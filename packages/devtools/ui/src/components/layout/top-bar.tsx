@@ -7,6 +7,7 @@ import { getPageTitle } from "@/app-config";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { MockServerBar } from "@/views/mocks/shared/mock-server-bar";
 
 interface TopBarProps {
   onOpenSearch: () => void;
@@ -20,6 +21,7 @@ export function TopBar({ onOpenSearch }: TopBarProps): React.ReactNode {
   const requestCount = useDevToolsStore((s) => s.requests.length);
 
   const title = getPageTitle(pathname);
+  const isMocks = pathname.startsWith("/mocks");
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
@@ -32,6 +34,8 @@ export function TopBar({ onOpenSearch }: TopBarProps): React.ReactNode {
           Paused
         </span>
       )}
+
+      {isMocks && <MockServerBar />}
 
       <div className="flex-1" />
 

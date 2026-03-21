@@ -51,23 +51,22 @@ export function ApisView(): React.ReactElement {
             onCheckAll={() => void registry.checkAll()}
           />
         }
+        center={isEmpty && !registry.loading}
       >
         {registry.loading ? (
           <div className="p-5">
             <LoadingSkeleton layout="cards" />
           </div>
         ) : isEmpty ? (
-          <div className="flex flex-1 items-center justify-center p-8">
-            <EmptyState
-              icon={BookOpen}
-              heading="No APIs yet"
-              description="Import an OpenAPI, Swagger, or Postman spec to generate typed API code. Or start writing APIs by hand — they'll appear here automatically."
-              action={{
-                label: "Import API",
-                onClick: () => importWizard.openWizard(),
-              }}
-            />
-          </div>
+          <EmptyState
+            icon={BookOpen}
+            heading="No APIs yet"
+            description="Import an OpenAPI, Swagger, or Postman spec to generate typed API code. Or start writing APIs by hand — they'll appear here automatically."
+            action={{
+              label: "Import API",
+              onClick: () => importWizard.openWizard(),
+            }}
+          />
         ) : (
           <div className="p-5 space-y-6">
             {registry.imported.length > 0 && (

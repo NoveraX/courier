@@ -5,8 +5,11 @@
  */
 
 import type { Namespace } from "socket.io";
+import { listSources, loadRegistry } from "../apis/registry/registry";
+import { scanProject } from "../apis/scanner";
 import { mockServers } from "./app-namespace";
 import type { CatalogStore } from "./catalog";
+import type { LifecycleCoordinator } from "./mock-manager";
 import type { SessionInfo } from "./types";
 import { handlePlayground } from "./ui-playground-handler";
 import { handleReplay } from "./ui-replay-handler";
@@ -16,6 +19,7 @@ export function setupUiNamespace(
   uiNamespace: Namespace,
   sessions: Map<string, SessionInfo>,
   catalogStore: CatalogStore,
+  mockManager?: LifecycleCoordinator,
 ): void {
   // Broadcast catalog changes to all connected UI clients
   catalogStore.onChange((snapshot) => {
@@ -29,10 +33,21 @@ export function setupUiNamespace(
     // Send current catalog snapshot
     socket.emit("catalog:snapshot", catalogStore.getSnapshot());
 
+    // Send current scan + registry so APIs page works without HTTP round-trip
+    try {
+      socket.emit("scan:updated", scanProject());
+      socket.emit("registry:updated", { sources: listSources(loadRegistry()) });
+    } catch {
+      // Scanner/registry may not be configured — non-critical
+    }
+
     // Send current mock servers so UI restores state immediately
     for (const event of mockServers.values()) {
       socket.emit("event", event);
     }
+
+    // Send managed mock server states
+    mockManager?.sendSnapshot();
 
     // Handle explicit catalog requests (reconnection, gap recovery)
     socket.on("catalog:request", () => {
@@ -47,6 +62,11 @@ export function setupUiNamespace(
       for (const appSocket of appNamespace.sockets.values()) {
         appSocket.emit("mock:command", command);
       }
+    });
+
+    // Managed mock server lifecycle commands
+    socket.on("mock:managed", (data: { command: string } & Record<string, unknown>) => {
+      mockManager?.handleCommand(data.command, data);
     });
   });
 }

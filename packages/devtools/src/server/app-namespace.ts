@@ -16,13 +16,15 @@ import type { SessionInfo } from "./types";
 /** Tracked mock server state (last connect event payload) */
 export const mockServers = new Map<string, Record<string, unknown>>();
 
+/** Maps socket.id → Set of mock serverIds owned by that socket */
+const socketMockServers = new Map<string, Set<string>>();
+
 export function setupAppNamespace(
   appNamespace: Namespace,
   uiNamespace: Namespace,
   sessions: Map<string, SessionInfo>,
   catalogStore: CatalogStore,
 ): void {
-  // Broadcast canonical name mappings to all connected apps
   catalogStore.onNamesChange((mapping) => {
     appNamespace.emit("catalog:names", mapping);
   });
@@ -30,7 +32,6 @@ export function setupAppNamespace(
   appNamespace.on("connection", (socket) => {
     let sessionId: string | undefined;
 
-    // Send current name mapping to newly connected app
     const currentMapping = catalogStore.getNameMapping();
     if (Object.keys(currentMapping).length > 0) {
       socket.emit("catalog:names", currentMapping);
@@ -50,13 +51,11 @@ export function setupAppNamespace(
           connectedAt: Date.now(),
         });
 
-        // Feed initial sources into catalog (runtime layer)
         const sources = event.sources as SourceMap | undefined;
         if (sources && Object.keys(sources).length > 0) {
           catalogStore.setRuntimeLayer(sessionId, sources);
         }
 
-        // Store app's process.env for scanner env resolution
         const env = event.env as Record<string, string> | undefined;
         if (env) setSessionEnv(sessionId, env);
 
@@ -74,31 +73,51 @@ export function setupAppNamespace(
         if (env) setSessionEnv(sessionId, env);
       }
 
-      // Track mock server state for UI reconnection
+      // Track mock server state — keyed by socket.id for disconnect cleanup
       if (event.type === "mock:server:connect") {
         const serverId = event.serverId as string;
-        if (serverId) mockServers.set(serverId, event);
+        if (serverId) {
+          mockServers.set(serverId, event);
+          const owned = socketMockServers.get(socket.id) ?? new Set();
+          owned.add(serverId);
+          socketMockServers.set(socket.id, owned);
+        }
       }
       if (event.type === "mock:server:disconnect") {
         const serverId = event.serverId as string;
-        if (serverId) mockServers.delete(serverId);
+        if (serverId) {
+          mockServers.delete(serverId);
+          socketMockServers.get(socket.id)?.delete(serverId);
+        }
       }
 
-      // Forward all events to UI (request lifecycle, middleware, etc.)
+      // Forward all events to UI
       uiNamespace.emit("event", event);
     });
 
     socket.on("disconnect", () => {
+      // App session cleanup
       if (sessionId) {
         catalogStore.removeRuntimeLayer(sessionId);
         removeSessionEnv(sessionId);
         sessions.delete(sessionId);
         uiNamespace.emit("session:disconnect", { sessionId });
+      }
 
-        // Clean up mock servers from this session
-        for (const [id, server] of mockServers) {
-          if (server.sessionId === sessionId) mockServers.delete(id);
+      // Mock server cleanup — works for both app sessions and standalone mock bridges
+      const owned = socketMockServers.get(socket.id);
+      if (owned) {
+        for (const serverId of owned) {
+          mockServers.delete(serverId);
+          uiNamespace.emit("event", {
+            id: `disconnect_${serverId}_${Date.now().toString(36)}`,
+            type: "mock:server:disconnect",
+            timestamp: Date.now(),
+            sessionId: sessionId ?? socket.id,
+            serverId,
+          });
         }
+        socketMockServers.delete(socket.id);
       }
     });
   });

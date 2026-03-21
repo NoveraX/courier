@@ -1,4 +1,3 @@
-import { memo } from "react";
 import { Pin } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -7,6 +6,7 @@ import { MethodBadge } from "@/components/shared/method-badge";
 import { formatDuration, formatTimestamp } from "@/components/shared/formatters";
 import type { RequestEntry } from "@/store/types";
 import { useDevToolsStore } from "@/store";
+import { useNow } from "@/hooks/use-tick";
 import { STATUS_CONFIG } from "./constants";
 
 interface RequestRowProps {
@@ -15,15 +15,14 @@ interface RequestRowProps {
   onSelect: (id: string) => void;
 }
 
-export const RequestRow = memo(function RequestRow({
+export function RequestRow({
   request,
   selected,
   onSelect,
 }: RequestRowProps): React.ReactElement {
   const timestampFormat = useDevToolsStore((s) => s.settings.timestampFormat);
   const showPreview = useDevToolsStore((s) => s.settings.showRequestPreview);
-  // Subscribe to tick so relative timestamps auto-refresh (selector returns primitive)
-  useDevToolsStore((s) => s.settings.timestampFormat === "relative" ? s.relativeTick : 0);
+  const now = useNow();
   const status = STATUS_CONFIG[request.status];
   const path = buildPath(request);
   const hasMetrics = Boolean(request.statusCode) || request.timing?.total != null;
@@ -80,7 +79,7 @@ export const RequestRow = memo(function RequestRow({
 
       {/* Time */}
       <span className="inline-flex w-24 shrink-0 items-center justify-end mono-sm tabular-nums text-muted-foreground">
-        {formatTimestamp(request.startedAt, timestampFormat)}
+        {formatTimestamp(request.startedAt, timestampFormat, now)}
       </span>
 
       {/* Pin indicator */}
@@ -89,7 +88,7 @@ export const RequestRow = memo(function RequestRow({
       )}
     </button>
   );
-});
+}
 
 function buildPath(r: RequestEntry): string {
   const parts: string[] = [];

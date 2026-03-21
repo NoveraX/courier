@@ -3,6 +3,7 @@ import { Activity, AlertTriangle, Clock, Database, GitBranch, Route } from "luci
 import { AnimatedCounter } from "@/components/shared/animated-counter";
 import { StaggerList, STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
 import { cn } from "@/lib/utils";
+import { useElapsed } from "@/hooks/use-tick";
 
 import type { LucideIcon } from "lucide-react";
 import type { MockServerInfo } from "@/store/mock-slice";
@@ -24,7 +25,7 @@ export function KPIStrip({ server }: KPIStripProps): React.ReactElement {
         value={server.errorCount}
         variant={server.errorCount > 0 ? "danger" : "default"}
       />
-      <UptimeCard uptime={server.uptime} />
+      <UptimeCard startedAt={server.startedAt} active={server.processStatus === "running"} />
     </StaggerList>
   );
 }
@@ -108,7 +109,8 @@ function KPICard({
   );
 }
 
-function UptimeCard({ uptime }: { uptime: number }): React.ReactElement {
+function UptimeCard({ startedAt, active }: { startedAt: number; active: boolean }): React.ReactElement {
+  const elapsed = useElapsed(startedAt || null, active);
   const styles = VARIANT_STYLES.default;
 
   return (
@@ -123,7 +125,7 @@ function UptimeCard({ uptime }: { uptime: number }): React.ReactElement {
         <span className="text-caption text-muted-foreground/70">Uptime</span>
       </div>
       <span className={cn("mt-2.5 block text-h1 tabular-nums", styles.value)}>
-        {formatUptime(uptime)}
+        {elapsed ?? "—"}
       </span>
     </motion.div>
   );
@@ -131,14 +133,4 @@ function UptimeCard({ uptime }: { uptime: number }): React.ReactElement {
 
 function formatInt(n: number): string {
   return n.toLocaleString();
-}
-
-function formatUptime(ms: number): string {
-  if (ms < 1000) return "0s";
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
-  const hours = Math.floor(minutes / 60);
-  return `${hours}h ${minutes % 60}m`;
 }

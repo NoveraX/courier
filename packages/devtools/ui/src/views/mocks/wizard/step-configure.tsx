@@ -1,5 +1,4 @@
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 
 import type { UseMockGeneratorReturn } from "./use-mock-generator";
 
@@ -20,14 +19,9 @@ export function ConfigureStep({ wizard }: ConfigureStepProps): React.ReactElemen
         </p>
       </div>
 
-      {/* Output directory */}
+      {/* Output directory — fixed to mock-servers/ */}
       <FieldRow label="Output directory">
-        <Input
-          value={options.outputDir}
-          onChange={(e) => wizard.setOptions({ outputDir: e.target.value })}
-          className="h-8 max-w-[260px] font-mono text-xs"
-          placeholder="src/mocks"
-        />
+        <span className="font-mono text-xs text-muted-foreground">mock-servers/</span>
       </FieldRow>
 
       {/* Port */}
@@ -47,15 +41,6 @@ export function ConfigureStep({ wizard }: ConfigureStepProps): React.ReactElemen
           value={options.seedCount}
           onChange={(e) => wizard.setOptions({ seedCount: Number(e.target.value) || 20 })}
           className="h-8 max-w-[120px] font-mono text-xs"
-        />
-      </FieldRow>
-
-      {/* DevTools connection */}
-      <FieldRow label="Connect to DevTools on start">
-        <Switch
-          checked={options.connectDevTools}
-          onCheckedChange={(checked) => wizard.setOptions({ connectDevTools: checked })}
-          className="scale-75"
         />
       </FieldRow>
 

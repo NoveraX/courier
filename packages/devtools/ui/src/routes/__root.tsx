@@ -3,7 +3,7 @@ import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { Toaster } from "sonner";
 
 import { useSocketConnection } from "@/socket";
-import { useRelativeTimeTick } from "@/hooks/use-relative-time";
+import { useTickProvider } from "@/hooks/use-tick";
 import { useHotkeys } from "@/hooks/use-hotkeys";
 import { ALL_NAV_ITEMS } from "@/app-config";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
@@ -19,7 +19,7 @@ import { NotFound } from "@/components/layout/not-found";
 
 function RootComponent(): React.ReactNode {
   useSocketConnection();
-  useRelativeTimeTick();
+  useTickProvider();
 
   const navigate = useNavigate();
   const [commandOpen, setCommandOpen] = useState(false);

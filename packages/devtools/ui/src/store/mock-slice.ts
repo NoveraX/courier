@@ -4,6 +4,7 @@ import { create } from "zustand";
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type NetworkPreset = "none" | "3g" | "flaky" | "down";
+export type ProcessStatus = "declared" | "starting" | "running" | "stopping" | "stopped" | "crashed" | "restarting";
 
 export interface MockServerInfo {
   serverId: string;
@@ -11,7 +12,8 @@ export interface MockServerInfo {
   port: number;
   url: string;
   status: "connected" | "disconnected";
-  uptime: number;
+  /** Server start timestamp — uptime computed on client as Date.now() - startedAt */
+  startedAt: number;
   routeCount: number;
   collectionCount: number;
   recordCount: number;
@@ -19,8 +21,13 @@ export interface MockServerInfo {
   errorCount: number;
   activeScenario: string | null;
   availableScenarios: string[];
-  lastHeartbeat: number;
   networkPreset: NetworkPreset;
+  /** Managed lifecycle */
+  managed: boolean;
+  processStatus: ProcessStatus;
+  origin: "devtools" | "external";
+  filePath?: string;
+  lastError?: string;
   /** Per-server data */
   collections: MockCollectionEntry[];
   routes: MockRouteEntry[];

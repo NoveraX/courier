@@ -18,33 +18,33 @@ export function createEventEmitter(socket: Socket, ctx: BridgeContext) {
   };
 
   return {
+    /** Full snapshot — sent on (re)connect only */
     emitConnect() {
       const store = ctx.server.store;
       const collections = store.list();
-      const recordCount = collections.reduce((sum, name) => {
-        return sum + store.collection(name).count();
-      }, 0);
-      const errorCount = ctx.server.history.filter((h) => h.error).length;
-
-      const collectionDetails = collections.map((name) => ({
-        name,
-        count: store.collection(name).count(),
-        records: [],
-      }));
+      const recordCount = collections.reduce(
+        (sum, name) => sum + store.collection(name).count(),
+        0,
+      );
 
       emit("mock:server:connect", {
         name: ctx.name,
         port: ctx.port,
         url: ctx.url,
-        uptime: Date.now() - ctx.startedAt,
+        startedAt: ctx.startedAt,
         routeCount: ctx.routeCount,
         collectionCount: collections.length,
         recordCount,
         requestsServed: ctx.requestCounter,
-        errorCount,
+        errorCount: ctx.server.history.filter((h) => h.error).length,
         activeScenario: ctx.activeScenario,
         availableScenarios: ctx.availableScenarios,
-        collections: collectionDetails,
+        collections: collections.map((name) => ({
+          name,
+          count: store.collection(name).count(),
+          records: [],
+        })),
+        routes: ctx.routes,
       });
     },
 
@@ -52,23 +52,7 @@ export function createEventEmitter(socket: Socket, ctx: BridgeContext) {
       emit("mock:server:disconnect", {});
     },
 
-    emitStatus() {
-      const store = ctx.server.store;
-      const collections = store.list();
-      const recordCount = collections.reduce((sum, name) => {
-        return sum + store.collection(name).count();
-      }, 0);
-
-      emit("mock:server:status", {
-        uptime: Date.now() - ctx.startedAt,
-        routeCount: 0,
-        recordCount,
-        requestsServed: ctx.requestCounter,
-        errorCount: ctx.server.history.filter((h) => h.error).length,
-        activeScenario: null,
-      });
-    },
-
+    /** Pushed after each request completes — keeps counters in sync */
     emitRequestStart(
       requestId: string,
       httpMethod: string,
@@ -78,14 +62,7 @@ export function createEventEmitter(socket: Socket, ctx: BridgeContext) {
       variables?: unknown,
     ) {
       ctx.requestCounter++;
-      emit("mock:request:start", {
-        requestId,
-        httpMethod,
-        path,
-        group,
-        endpoint,
-        variables,
-      });
+      emit("mock:request:start", { requestId, httpMethod, path, group, endpoint, variables });
     },
 
     emitRequestEnd(
@@ -107,12 +84,7 @@ export function createEventEmitter(socket: Socket, ctx: BridgeContext) {
     },
 
     emitRequestError(requestId: string, status: number, message: string, duration: number) {
-      emit("mock:request:error", {
-        requestId,
-        status,
-        message,
-        duration,
-      });
+      emit("mock:request:error", { requestId, status, message, duration });
     },
 
     emitStoreChange(

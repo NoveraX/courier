@@ -23,6 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { formatDuration, formatRelativeTime } from "@/components/shared/formatters";
 import { useDevToolsStore } from "@/store";
+import { useNow } from "@/hooks/use-tick";
 
 import type { ExportFormat } from "@/store/types";
 import { ConfirmDialog } from "./confirm-dialog";
@@ -85,14 +86,14 @@ function SessionInfo({
 }: {
   session: SessionCardProps["session"];
 }): React.ReactElement {
-  useDevToolsStore((s) => s.relativeTick);
+  const now = useNow();
   return (
     <div className="min-w-0 flex-1">
       <p className="text-body-sm font-medium text-foreground truncate">
         {session.name}
       </p>
       <div className="mt-0.5 flex items-center gap-2 text-body-xs text-muted-foreground">
-        <span>{formatRelativeTime(session.savedAt)}</span>
+        <span>{formatRelativeTime(session.savedAt, now)}</span>
         <span>·</span>
         <span>{session.stats.totalRequests} requests</span>
         <span>·</span>

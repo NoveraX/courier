@@ -4,6 +4,7 @@ import { io } from "socket.io-client"
 import type { Socket } from "socket.io-client"
 import type { SessionInfo, CatalogSnapshot } from "./store"
 import type { DevToolsEvent } from "./store/types-events"
+import type { ScannedSource, SourceSummary } from "@/views/apis/types"
 
 import { useDevToolsStore } from "./store"
 import { handleMockEvent, isMockEvent } from "./store/handle-mock-events"
@@ -112,10 +113,14 @@ function buildBindings(
       }
     },
     onScanUpdated: (data) => {
-      window.dispatchEvent(new CustomEvent("nexus:scan:updated", { detail: data }))
+      if (data && typeof data === "object" && "sources" in data) {
+        store().setScanSources((data as { sources: ScannedSource[] }).sources)
+      }
     },
     onRegistryUpdated: (data) => {
-      window.dispatchEvent(new CustomEvent("nexus:registry:updated", { detail: data }))
+      if (data && typeof data === "object" && "sources" in data) {
+        store().setRegistrySources((data as { sources: SourceSummary[] }).sources)
+      }
     },
   }
 

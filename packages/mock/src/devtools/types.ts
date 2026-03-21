@@ -1,5 +1,16 @@
 import type { MockServer } from "../server/create-mock-server";
 
+/** Route entry sent to DevTools UI */
+export interface MockRouteInfo {
+  group: string;
+  endpoint: string;
+  httpMethod: string;
+  path: string;
+  fullPath: string;
+  source: "auto" | "override" | "scenario";
+  hits: number;
+}
+
 /** Options for connecting a mock server to DevTools */
 export interface MockDevToolsBridgeOptions {
   /** DevTools server host (default: "localhost") */
@@ -14,10 +25,10 @@ export interface MockDevToolsBridgeOptions {
   serverUrl?: string;
   /** Number of registered routes */
   routeCount?: number;
+  /** Route info for DevTools Routes tab */
+  routes?: MockRouteInfo[];
   /** Available scenario names */
   scenarios?: string[];
-  /** Heartbeat interval in ms (default: 10_000) */
-  heartbeatInterval?: number;
 }
 
 /** Active bridge connection — call disconnect() to tear down */
@@ -39,6 +50,7 @@ export interface BridgeContext {
   startedAt: number;
   requestCounter: number;
   routeCount: number;
+  routes: MockRouteInfo[];
   activeScenario: string;
   availableScenarios: string[];
 }

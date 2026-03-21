@@ -1,4 +1,5 @@
-import { Clock, Radio, RotateCw, Trash2 } from "lucide-react";
+import { Clock, RotateCw, Trash2 } from "lucide-react";
+import { useElapsed } from "@/hooks/use-tick";
 import { SegmentedControl } from "@/components/shared/segmented-control";
 import { CopyButton } from "@/components/shared/copy-button";
 import { Button } from "@/components/ui/button";
@@ -10,9 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 import { getSocket } from "@/socket";
-
 import { useMockStore } from "@/store/mock-slice";
 
 import type { MockServerInfo, NetworkPreset } from "@/store/mock-slice";
@@ -37,6 +36,8 @@ const NETWORK_CONFIGS: Record<NetworkPreset, Record<string, unknown>> = {
 
 export function StatusBar({ server }: StatusBarProps): React.ReactElement {
   const serverUrl = server.url || `http://localhost:${server.port}`;
+  const active = server.processStatus === "running";
+  const elapsed = useElapsed(server.startedAt || null, active);
 
   const sendCommand = (action: string, payload?: Record<string, unknown>) => {
     getSocket().emit("mock:command", { action, serverId: server.serverId, ...payload });
@@ -47,9 +48,6 @@ export function StatusBar({ server }: StatusBarProps): React.ReactElement {
     sendCommand("mock:network:set", { config: NETWORK_CONFIGS[preset], preset });
   };
 
-  const heartbeatAgo = Date.now() - server.lastHeartbeat;
-  const heartbeatFresh = heartbeatAgo < 15_000;
-
   return (
     <div className="flex items-center gap-2.5 rounded-lg border border-border-subtle bg-muted/20 px-3 py-1.5">
       {/* URL + copy */}
@@ -58,24 +56,11 @@ export function StatusBar({ server }: StatusBarProps): React.ReactElement {
         <CopyButton value={serverUrl} label="Copy URL" />
       </div>
 
-      {/* Uptime */}
+      {/* Uptime — computed on client from startedAt */}
       <div className="flex items-center gap-1 text-body-xs text-muted-foreground/50">
         <Clock className="size-3" />
-        <span className="tabular-nums">{formatUptime(server.uptime)}</span>
+        <span className="tabular-nums">{elapsed ?? "—"}</span>
       </div>
-
-      {/* Heartbeat */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center gap-1 text-body-xs text-muted-foreground/50">
-            <Radio className={cn("size-3", heartbeatFresh ? "text-emerald-400" : "text-amber-400")} />
-            <span className={cn("tabular-nums", heartbeatFresh ? "text-emerald-400/70" : "text-amber-400/70")}>
-              {formatHeartbeat(heartbeatAgo)}
-            </span>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Last heartbeat</TooltipContent>
-      </Tooltip>
 
       <div className="flex-1" />
 
@@ -135,19 +120,3 @@ export function StatusBar({ server }: StatusBarProps): React.ReactElement {
   );
 }
 
-function formatUptime(ms: number): string {
-  if (ms < 1000) return "just started";
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
-  const hours = Math.floor(minutes / 60);
-  return `${hours}h ${minutes % 60}m`;
-}
-
-function formatHeartbeat(ms: number): string {
-  if (ms < 2000) return "now";
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  return `${Math.floor(seconds / 60)}m ago`;
-}

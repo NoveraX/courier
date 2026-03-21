@@ -1,13 +1,15 @@
 import path from "node:path";
 import { defineConfig } from "vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import react from "@vitejs/plugin-react";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [
     tanstackRouter({ target: "react", autoCodeSplitting: true }),
-    react({ babel: { plugins: ["babel-plugin-react-compiler"] } }),
+    react(),
+    babel({ presets: [reactCompilerPreset()] }),
     tailwindcss(),
   ],
   resolve: {
@@ -29,15 +31,15 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     chunkSizeWarningLimit: 500,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          "vendor-router": ["@tanstack/react-router"],
-          "vendor-charts": ["recharts"],
-          "vendor-flow": ["@xyflow/react"],
-          "vendor-motion": ["motion"],
-          "vendor-shiki": ["shiki"],
-          "vendor-ui": ["sonner", "react-resizable-panels", "cmdk"],
+        manualChunks: (id) => {
+          if (id.includes("@tanstack/react-router")) return "vendor-router";
+          if (id.includes("recharts")) return "vendor-charts";
+          if (id.includes("@xyflow/react")) return "vendor-flow";
+          if (id.includes("motion")) return "vendor-motion";
+          if (id.includes("shiki")) return "vendor-shiki";
+          if (id.includes("sonner") || id.includes("react-resizable-panels") || id.includes("cmdk")) return "vendor-ui";
         },
       },
     },

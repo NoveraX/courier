@@ -20,6 +20,7 @@ import { MethodBadge } from "@/components/shared/method-badge";
 import { formatDuration, formatRelativeTime } from "@/components/shared/formatters";
 import { STATUS_CONFIG } from "@/components/shared/detail-panel/constants";
 import type { RequestEntry } from "@/store/types-request";
+import { useNow } from "@/hooks/use-tick";
 
 interface RequestPickerProps {
   requests: RequestEntry[];
@@ -44,6 +45,7 @@ export function RequestPicker({
   excludeId,
 }: RequestPickerProps): React.ReactElement {
   const [open, setOpen] = useState(false);
+  const now = useNow();
   const selected = requests.find((r) => r.id === selectedId);
   const filtered = excludeId ? requests.filter((r) => r.id !== excludeId) : requests;
 
@@ -100,7 +102,7 @@ export function RequestPicker({
                     </span>
                   )}
                   <span className="shrink-0 text-[10px] text-muted-foreground/60">
-                    {formatRelativeTime(r.startedAt)}
+                    {formatRelativeTime(r.startedAt, now)}
                   </span>
                   {r.id === selectedId && (
                     <Check className="size-3 shrink-0 text-accent-brand" />

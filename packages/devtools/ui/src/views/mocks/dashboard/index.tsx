@@ -1,27 +1,28 @@
 import { Server } from "lucide-react";
-import { EmptyState } from "@/components/shared/empty-state";
+import { Button } from "@/components/ui/button";
 import { useActiveServer, useServerCount } from "@/store/mock-slice";
-import { MockGeneratorWizard, useMockGenerator } from "../wizard";
+import { openMockWizard } from "../wizard";
 import { DashboardGrid } from "./dashboard-grid";
 
 export function MockDashboardView(): React.ReactElement {
   const serverCount = useServerCount();
   const activeServer = useActiveServer();
-  const wizard = useMockGenerator();
 
   if (serverCount === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <EmptyState
-          icon={Server}
-          heading="No mock servers connected"
-          description="Generate a mock server from your API definition or start an existing one to see it here."
-          action={{
-            label: "Generate Mock Server",
-            onClick: wizard.openWizard,
-          }}
-        />
-        <MockGeneratorWizard wizard={wizard} />
+      <div className="flex flex-1 flex-col items-center justify-center gap-4">
+        <div className="flex size-12 items-center justify-center rounded-xl border border-border-subtle bg-muted/30">
+          <Server className="size-5 text-muted-foreground/40" />
+        </div>
+        <div className="text-center">
+          <p className="text-body-sm font-medium text-foreground/70">No mock servers yet</p>
+          <p className="mt-1 text-body-xs text-muted-foreground/50">
+            Create a mock server from your API definitions to get started
+          </p>
+        </div>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={openMockWizard}>
+          Create mock server
+        </Button>
       </div>
     );
   }
@@ -33,7 +34,6 @@ export function MockDashboardView(): React.ReactElement {
   return (
     <div className="flex flex-1 flex-col overflow-auto">
       <DashboardGrid server={activeServer} />
-      <MockGeneratorWizard wizard={wizard} />
     </div>
   );
 }

@@ -19,7 +19,7 @@ export function DashboardGrid({ server }: DashboardGridProps): React.ReactElemen
 
       {/* Collections + Live Activity */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <CollectionsPanel collections={server.collections} />
+        <CollectionsPanel collections={server.collections} processStatus={server.processStatus} />
         <LiveActivity />
       </div>
     </div>

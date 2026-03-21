@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useDevToolsStore } from "@/store";
-import { useSessionTimer } from "@/hooks/use-session-timer";
+import { useElapsed } from "@/hooks/use-tick";
 
 export function StatusBar(): React.ReactNode {
   const requests = useDevToolsStore((s) => s.requests);
@@ -8,7 +8,8 @@ export function StatusBar(): React.ReactNode {
   const connectionStatus = useDevToolsStore((s) => s.connectionStatus);
   const sessions = useDevToolsStore((s) => s.sessions);
   const droppedRequests = useDevToolsStore((s) => s.droppedRequests);
-  const elapsed = useSessionTimer();
+  const sessionStartedAt = useDevToolsStore((s) => s.sessionStartedAt);
+  const elapsed = useElapsed(sessionStartedAt, connectionStatus === "connected");
 
   const connected = connectionStatus === "connected";
   const reconnecting = connectionStatus === "reconnecting";

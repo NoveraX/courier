@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
+import { MethodBadge } from "@/components/shared/method-badge";
 
 import type { UseMockGeneratorReturn } from "./use-mock-generator";
 
@@ -63,14 +63,7 @@ export function ReviewStep({ wizard }: ReviewStepProps): React.ReactElement {
                       className="flex w-full items-center gap-2.5 px-3 py-1.5 hover:bg-muted/20"
                     >
                       <Checkbox checked={ep.selected} className="size-3.5" />
-                      <span
-                        className={cn(
-                          "shrink-0 min-w-[3rem] text-[10px] font-bold tracking-wider",
-                          methodColor(ep.httpMethod),
-                        )}
-                      >
-                        {ep.httpMethod}
-                      </span>
+                      <MethodBadge method={ep.httpMethod} />
                       <span className="text-body-sm font-mono truncate">{ep.endpoint}</span>
                       {ep.path && (
                         <span className="text-body-xs text-muted-foreground font-mono ml-auto truncate">
@@ -87,17 +80,6 @@ export function ReviewStep({ wizard }: ReviewStepProps): React.ReactElement {
       ))}
     </div>
   );
-}
-
-function methodColor(method: string): string {
-  switch (method) {
-    case "GET": return "text-emerald-500";
-    case "POST": return "text-sky-500";
-    case "PUT": return "text-amber-500";
-    case "PATCH": return "text-violet-500";
-    case "DELETE": return "text-rose-500";
-    default: return "text-muted-foreground";
-  }
 }
 
 function countEndpoints(

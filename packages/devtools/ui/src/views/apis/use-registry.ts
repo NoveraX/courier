@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 
 import type {
   SourceSummary,
@@ -14,6 +14,7 @@ import {
   checkAllUpdates,
   removeRegistrySource,
 } from "./client";
+import { useDevToolsStore } from "@/store";
 
 /** Scanned source enriched with registry metadata (if imported) */
 export interface EnrichedSource extends ScannedSource {
@@ -34,16 +35,33 @@ interface UseRegistryReturn {
   getNewSpec: (name: string) => ParsedSpec | undefined;
 }
 
-const DEBOUNCE_MS = 400;
-
 export function useRegistry(): UseRegistryReturn {
-  const [imported, setImported] = useState<EnrichedSource[]>([]);
-  const [handWritten, setHandWritten] = useState<ScannedSource[]>([]);
   const [statuses, setStatuses] = useState<Record<string, SourceStatusInfo>>({});
-  const [loading, setLoading] = useState(true);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const newSpecsRef = useRef<Record<string, ParsedSpec>>({});
 
+  // Live data from socket (pushed by server on connect + file changes)
+  const scanSources = useDevToolsStore((s) => s.scanSources);
+  const registrySources = useDevToolsStore((s) => s.registrySources);
+  const connected = useDevToolsStore((s) => s.connected);
+  const loading = !connected || (scanSources.length === 0 && registrySources.length === 0);
+
+  // Derive enriched/handWritten from store data
+  const { imported, handWritten } = useMemo(() => {
+    const registryMap = new Map(registrySources.map((s) => [s.name, s]));
+    const enriched: EnrichedSource[] = [];
+    const handW: ScannedSource[] = [];
+
+    for (const source of scanSources) {
+      if (source.isImported) {
+        enriched.push({ ...source, registry: registryMap.get(source.name) });
+      } else {
+        handW.push(source);
+      }
+    }
+    return { imported: enriched, handWritten: handW };
+  }, [scanSources, registrySources]);
+
+  // Manual refresh — re-fetches from server (for post-import, post-update)
   const refresh = useCallback(async () => {
     try {
       const [reg, scan] = await Promise.all([
@@ -51,43 +69,12 @@ export function useRegistry(): UseRegistryReturn {
         scanProject(),
       ]);
 
-      const registryMap = new Map(reg.sources.map((s) => [s.name, s]));
-
-      const enriched: EnrichedSource[] = [];
-      const handW: ScannedSource[] = [];
-
-      for (const source of scan.sources) {
-        if (source.isImported) {
-          enriched.push({ ...source, registry: registryMap.get(source.name) });
-        } else {
-          handW.push(source);
-        }
-      }
-
-      setImported(enriched);
-      setHandWritten(handW);
+      useDevToolsStore.getState().setScanSources(scan.sources);
+      useDevToolsStore.getState().setRegistrySources(reg.sources);
     } catch {
       // Silently fail — server may not be ready
-    } finally {
-      setLoading(false);
     }
   }, []);
-
-  useEffect(() => { void refresh(); }, [refresh]);
-
-  useEffect(() => {
-    const handler = () => {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => void refresh(), DEBOUNCE_MS);
-    };
-    window.addEventListener("nexus:scan:updated", handler);
-    window.addEventListener("nexus:registry:updated", handler);
-    return () => {
-      clearTimeout(debounceRef.current);
-      window.removeEventListener("nexus:scan:updated", handler);
-      window.removeEventListener("nexus:registry:updated", handler);
-    };
-  }, [refresh]);
 
   const checkUpdates = useCallback(async (name: string) => {
     setStatuses((prev) => ({
@@ -136,7 +123,8 @@ export function useRegistry(): UseRegistryReturn {
 
   const remove = useCallback(async (name: string) => {
     await removeRegistrySource(name);
-    setImported((prev) => prev.filter((s) => s.name !== name));
+    const store = useDevToolsStore.getState();
+    store.setScanSources(store.scanSources.filter((s) => s.name !== name));
     setStatuses((prev) => {
       const next = { ...prev };
       delete next[name];

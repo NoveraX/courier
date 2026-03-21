@@ -6,27 +6,27 @@ import type { BridgeContext, MockDevToolsBridge, MockDevToolsBridgeOptions } fro
 /**
  * Connect a mock server to DevTools via Socket.IO.
  *
- * Emits mock:* events to the DevTools server and listens for
- * commands (store mutations, scenario switches, network config).
+ * Sends a full snapshot on connect (and reconnect).
+ * After that, events are pushed only when state changes
+ * (request served, store mutated, scenario switched).
+ * No polling or heartbeat — Socket.IO handles keepalive natively.
  *
  * @example
  * ```ts
  * const server = createMockServer({ port: 7001 });
  * await server.start();
  * const bridge = await connectMockToDevTools(server, { port: 4380 });
- * // later: bridge.disconnect();
  * ```
  */
 export async function connectMockToDevTools(
   server: MockServer,
   options: MockDevToolsBridgeOptions = {},
 ): Promise<MockDevToolsBridge | undefined> {
-  const { host = "localhost", port = 4380, heartbeatInterval = 10_000, name } = options;
+  const { host = "localhost", port = 4380, name } = options;
 
   try {
     const { io } = await import("socket.io-client");
-    const url = `http://${host}:${port}`;
-    const socket = io(`${url}/app`, {
+    const socket = io(`http://${host}:${port}/app`, {
       transports: ["websocket"],
       reconnection: true,
       reconnectionDelay: 1000,
@@ -46,6 +46,7 @@ export async function connectMockToDevTools(
       startedAt: Date.now(),
       requestCounter: 0,
       routeCount: options.routeCount ?? 0,
+      routes: options.routes ?? [],
       activeScenario: "happy-path",
       availableScenarios: options.scenarios ?? [],
     };
@@ -53,26 +54,14 @@ export async function connectMockToDevTools(
     const emitter = createEventEmitter(socket, ctx);
     const commandCleanup = createCommandHandler(socket, ctx);
 
-    // Emit connect event on socket connection
+    // Full snapshot on every (re)connect — UI rebuilds state from this
     socket.on("connect", () => {
       emitter.emitConnect();
     });
 
-    // First heartbeat after 1s, then regular interval
-    const firstHeartbeat = setTimeout(() => {
-      if (socket.connected) emitter.emitConnect();
-    }, 1000);
-
-    // Regular heartbeat — re-emits connect so UI recovers state after reload
-    const heartbeat = setInterval(() => {
-      if (socket.connected) emitter.emitConnect();
-    }, heartbeatInterval);
-
     return {
       serverId,
       disconnect() {
-        clearTimeout(firstHeartbeat);
-        clearInterval(heartbeat);
         commandCleanup();
         emitter.emitDisconnect();
         socket.disconnect();

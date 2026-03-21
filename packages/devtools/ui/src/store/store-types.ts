@@ -9,6 +9,7 @@ import type {
   PlaygroundHistoryEntry,
   Settings,
 } from "./types"
+import type { ScannedSource, SourceSummary } from "@/views/apis/types"
 
 export interface DevToolsState {
   // UI
@@ -27,6 +28,10 @@ export interface DevToolsState {
   requests: RequestEntry[]
   paused: boolean
 
+  // APIs — live scan + registry (pushed via socket)
+  scanSources: ScannedSource[]
+  registrySources: SourceSummary[]
+
   // Audit
   auditExpandedIds: Set<string>
 
@@ -38,8 +43,8 @@ export interface DevToolsState {
   settings: Settings
   sessionStartedAt: number | null
 
-  // Relative timestamp refresh (bumped by global interval)
-  relativeTick: number
+  // Global client tick (bumped every 1s by useTickProvider)
+  clientTick: number
 
   // Request buffer overflow tracking
   droppedRequests: number
@@ -56,6 +61,10 @@ export interface DevToolsState {
 
   // Actions — Catalog
   setCatalog: (snapshot: CatalogSnapshot) => void
+
+  // Actions — APIs
+  setScanSources: (sources: ScannedSource[]) => void
+  setRegistrySources: (sources: SourceSummary[]) => void
 
   // Actions — Requests
   togglePaused: () => void

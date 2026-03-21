@@ -15,6 +15,7 @@ import { registerApisRoutes } from "./apis-routes";
 import { CatalogStore } from "./catalog";
 import { startFileWatcher } from "./file-watcher";
 import { initProject } from "./init";
+import { createLifecycleCoordinator } from "./mock-manager";
 import { clearBuffer } from "./session-buffer";
 import { registerSessionRoutes } from "./session-routes";
 import { setupAppNamespace, setupUiNamespace } from "./socket-handlers";
@@ -44,7 +45,6 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
   const uiNamespace = io.of("/ui");
 
   setupAppNamespace(appNamespace, uiNamespace, sessions, catalogStore);
-  setupUiNamespace(appNamespace, uiNamespace, sessions, catalogStore);
 
   // ── Init (registry + .gitignore) ────────────────────────────────────────────
 
@@ -53,6 +53,18 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
   // ── File Watcher (hot reload) ──────────────────────────────────────────────
 
   const stopWatcher = startFileWatcher(uiNamespace, catalogStore);
+
+  // ── Mock Server Manager ──────────────────────────────────────────────────
+
+  const mocksDir = join(projectRoot, "mock-servers");
+  const mockManager = createLifecycleCoordinator({
+    mocksDir,
+    uiNamespace,
+    basePort: 7001,
+  });
+  mockManager.start();
+
+  setupUiNamespace(appNamespace, uiNamespace, sessions, catalogStore, mockManager);
 
   // ── REST API ─────────────────────────────────────────────────────────────────
 
@@ -90,6 +102,7 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
     app.use(express.static(uiDistPath));
     // SPA fallback — Express 5 requires named param for catch-all
     app.get("/{*splat}", (_req, res) => {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
       res.sendFile(join(uiDistPath, "index.html"));
     });
   }
@@ -110,14 +123,16 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
     onReady?.(url);
   });
 
-  const close = () =>
-    new Promise<void>((resolve, reject) => {
-      stopWatcher();
-      clearBuffer();
-      sessions.clear();
-      io.close();
+  const close = async () => {
+    await mockManager.stop();
+    stopWatcher();
+    clearBuffer();
+    sessions.clear();
+    io.close();
+    return new Promise<void>((resolve, reject) => {
       httpServer.close((err) => (err ? reject(err) : resolve()));
     });
+  };
 
   return { url, sessions, close };
 }

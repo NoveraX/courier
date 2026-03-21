@@ -11,8 +11,7 @@ interface SourceStepProps {
 
 export function SourceStep({ wizard }: SourceStepProps): React.ReactElement {
   const { state } = wizard;
-  const catalog = useDevToolsStore((s) => s.catalog);
-  const sourceNames = Object.keys(catalog);
+  const scanSources = useDevToolsStore((s) => s.scanSources);
 
   return (
     <div className="space-y-5">
@@ -57,24 +56,21 @@ export function SourceStep({ wizard }: SourceStepProps): React.ReactElement {
       {/* Source list */}
       {!state.standalone && (
         <div className="space-y-2">
-          {sourceNames.length === 0 ? (
+          {scanSources.length === 0 ? (
             <p className="text-body-sm text-muted-foreground py-8 text-center">
               No API sources found. Import an API first from the APIs page.
             </p>
           ) : (
-            sourceNames.map((name) => {
-              const source = catalog[name];
-              if (!source) return null;
-              const groupCount = Object.keys(source.groups).length;
-              const endpointCount = Object.values(source.groups)
-                .reduce((sum, g) => sum + Object.keys(g.endpoints).length, 0);
-              const selected = state.selectedSources.includes(name);
+            scanSources.map((source) => {
+              const endpointCount = source.groups
+                .reduce((sum, g) => sum + g.endpoints.length, 0);
+              const selected = state.selectedSources.includes(source.name);
 
               return (
                 <button
-                  key={name}
+                  key={source.name}
                   type="button"
-                  onClick={() => wizard.toggleSource(name)}
+                  onClick={() => wizard.toggleSource(source.name)}
                   className={cn(
                     "flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-all",
                     selected
@@ -93,14 +89,14 @@ export function SourceStep({ wizard }: SourceStepProps): React.ReactElement {
                     {selected && <span className="text-[9px] font-bold">✓</span>}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-body-sm font-medium truncate">{name}</p>
+                    <p className="text-body-sm font-medium truncate">{source.name}</p>
                     <p className="text-body-xs text-muted-foreground truncate">
                       {source.baseURL || "No base URL"}
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Badge variant="secondary" className="text-[10px]">
-                      {groupCount} group{groupCount !== 1 ? "s" : ""}
+                      {source.groups.length} group{source.groups.length !== 1 ? "s" : ""}
                     </Badge>
                     <Badge variant="secondary" className="text-[10px]">
                       {endpointCount} endpoint{endpointCount !== 1 ? "s" : ""}

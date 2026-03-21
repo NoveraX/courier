@@ -32,13 +32,11 @@ export function seedAllCollections(
 
   for (const route of routes) {
     if (seeded.has(route.group)) continue;
+    if (route.operation !== "list") continue;
 
-    // Use schema from the first list endpoint in this group
-    if (route.operation === "list" && route.responseSchema) {
-      seeded.add(route.group);
-      const count = seedOverrides[route.group] ?? seedCount;
-      seedCollection(store, route.group, route.responseSchema, count);
-    }
+    seeded.add(route.group);
+    const count = seedOverrides[route.group] ?? seedCount;
+    seedCollection(store, route.group, route.responseSchema, count);
   }
 
   // Groups without a list endpoint — create empty collection

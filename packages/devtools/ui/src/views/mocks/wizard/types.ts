@@ -19,14 +19,12 @@ export interface MockGeneratorState {
 }
 
 export interface MockGeneratorOptions {
-  /** Output directory (default: src/mocks/{source}) */
+  /** Output directory (default: mock-servers) */
   outputDir: string;
   /** Server port (default: 7001) */
   port: number;
   /** Seed count per collection (default: 20) */
   seedCount: number;
-  /** Connect to DevTools on start */
-  connectDevTools: boolean;
 }
 
 export interface EndpointSelection {

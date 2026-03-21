@@ -29,6 +29,14 @@
     "./middleware": {
       "types": "./lib/middleware/index.d.ts",
       "import": "./lib/middleware/index.js"
+    },
+    "./managed/worker-entry": {
+      "types": "./lib/managed/worker-entry.d.ts",
+      "import": "./lib/managed/worker-entry.js"
+    },
+    "./route-analyzer": {
+      "types": "./lib/auto/route-analyzer.d.ts",
+      "import": "./lib/auto/route-analyzer.js"
     }
   },
   "files": [
@@ -39,7 +47,8 @@
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev": "tsup --watch"
   },
   "publishConfig": {
     "access": "public"

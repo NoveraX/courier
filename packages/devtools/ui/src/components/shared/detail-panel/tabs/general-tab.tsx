@@ -5,6 +5,7 @@ import { CopyButton } from "@/components/shared/copy-button";
 import { formatDuration, formatTimestamp, formatSize } from "@/components/shared/formatters";
 import type { RequestEntry } from "@/store/types";
 import { useDevToolsStore } from "@/store";
+import { useNow } from "@/hooks/use-tick";
 import { STATUS_CONFIG } from "../constants";
 
 interface GeneralTabProps {
@@ -13,7 +14,7 @@ interface GeneralTabProps {
 
 export function GeneralTab({ request }: GeneralTabProps): React.ReactElement {
   const timestampFormat = useDevToolsStore((s) => s.settings.timestampFormat);
-  useDevToolsStore((s) => s.settings.timestampFormat === "relative" ? s.relativeTick : 0);
+  const now = useNow();
   const status = STATUS_CONFIG[request.status];
 
   return (
@@ -64,7 +65,7 @@ export function GeneralTab({ request }: GeneralTabProps): React.ReactElement {
         {request.size != null && (
           <Row label="Size">{formatSize(request.size)}</Row>
         )}
-        <Row label="Started">{formatTimestamp(request.startedAt, timestampFormat)}</Row>
+        <Row label="Started">{formatTimestamp(request.startedAt, timestampFormat, now)}</Row>
         <Row label="Middleware">{request.middlewareCount}</Row>
         {request.hasValidation.variables && (
           <Row label="Variables Validated">Yes</Row>

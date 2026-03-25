@@ -2,9 +2,12 @@
 import { createLogger } from "@noverax/nexus";
 import { defineCommand, runMain } from "citty";
 import { setProjectRoot } from "./context";
+import { checkNodeVersion } from "./node-version";
 import { createStudioServer } from "./server";
 import { printBanner } from "./server/banner";
 import { initProject } from "./server/init";
+
+checkNodeVersion();
 
 const log = createLogger("CLI");
 

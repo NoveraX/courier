@@ -103,7 +103,7 @@ function cleanOrigin(raw: string): string {
 const pid = process.pid;
 
 function prefix(): string {
-  return `${BRAND}[Studio]${R} ${WHITE}${pid}${R}  ${DARK}–${R} ${DIM}${shortTime()}${R}`;
+  return `${BRAND}[Nexus]${R} ${WHITE}${pid}${R}  ${DARK}–${R} ${DIM}${shortTime()}${R}`;
 }
 
 // ── Box ──────────────────────────────────────────────────────────────────────
@@ -151,23 +151,25 @@ export function printBanner(host: string, port: number): void {
 export function logAppConnect(framework: string, origin: string): void {
   const host = cleanOrigin(origin);
   console.log(
-    `${prefix()}     ${GREEN}CONN${R}  ${BRAND_LIGHT}[${framework}]${R} ${WHITE}connected${R} ${DIM}from ${host}${R}`,
+    `${prefix()}   ${GREEN}${BOLD} CONN${R}  ${BRAND_LIGHT}[${framework}]${R} ${WHITE}connected${R} ${DIM}from ${host}${R}`,
   );
 }
 
 export function logAppDisconnect(framework: string, origin: string): void {
   const host = cleanOrigin(origin);
   console.log(
-    `${prefix()}     ${RED}DROP${R}  ${BRAND_LIGHT}[${framework}]${R} ${WHITE}disconnected${R} ${DIM}from ${host}${R}`,
+    `${prefix()}   ${RED}${BOLD} DROP${R}  ${BRAND_LIGHT}[${framework}]${R} ${WHITE}disconnected${R} ${DIM}from ${host}${R}`,
   );
 }
 
 export function logMockServerStart(name: string, url: string): void {
   console.log(
-    `${prefix()}     ${AMBER}MOCK${R}  ${BRAND_LIGHT}[${name}]${R} ${WHITE}ready${R} ${DIM}at ${url}${R}`,
+    `${prefix()}   ${AMBER}${BOLD} MOCK${R}  ${BRAND_LIGHT}[${name}]${R} ${WHITE}ready${R} ${DIM}at ${url}${R}`,
   );
 }
 
 export function logMockServerStop(name: string): void {
-  console.log(`${prefix()}     ${RED}MOCK${R}  ${BRAND_LIGHT}[${name}]${R} ${WHITE}stopped${R}`);
+  console.log(
+    `${prefix()}   ${RED}${BOLD} MOCK${R}  ${BRAND_LIGHT}[${name}]${R} ${WHITE}stopped${R}`,
+  );
 }

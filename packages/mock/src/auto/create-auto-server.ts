@@ -1,10 +1,10 @@
 import { getSourceName } from "@noverax/nexus/define";
-import { connectMockToDevTools } from "../devtools/bridge";
-import type { MockRouteInfo } from "../devtools/types";
 import type { MockServer, MockServerConfig } from "../server/create-mock-server";
 import { createMockServer } from "../server/create-mock-server";
 import type { PrefixMapping } from "../server/prefix-routes";
 import type { MockStore } from "../store";
+import { connectMockToStudio } from "../studio/bridge";
+import type { MockRouteInfo } from "../studio/types";
 import type { MockScenario, NetworkConfig, TypedMockFn } from "../types";
 import { buildAutoHandlers, seedAllCollections } from "./auto-scenario";
 import { generateRecords } from "./data-generator";
@@ -41,8 +41,8 @@ export interface AutoMockServerConfig {
   scenarios?: Record<string, MockScenario>;
   /** Default network simulation (latency, errorRate, faultTypes) */
   network?: NetworkConfig;
-  /** Connect to DevTools server (default: true) */
-  devtools?: boolean | { host?: string; port?: number; name?: string };
+  /** Connect to Studio server (default: true) */
+  studio?: boolean | { host?: string; port?: number; name?: string };
 }
 
 /** Seed data configuration */
@@ -144,17 +144,17 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
     config.overrides(server.mock, server.store);
   }
 
-  if (config.devtools !== false) {
+  if (config.studio !== false) {
     const groupNames = getSourceGroupNames(config.source);
     const routeEntries = routes.map((r) => toRouteInfo(r, groupNames));
-    wrapStartWithDevTools(server, config, routeEntries, routes, allScenarios, reseed);
+    wrapStartWithStudio(server, config, routeEntries, routes, allScenarios, reseed);
   }
 
   return server;
 }
 
-/** Wrap server.start() to auto-connect to DevTools after listening */
-function wrapStartWithDevTools(
+/** Wrap server.start() to auto-connect to Studio after listening */
+function wrapStartWithStudio(
   server: MockServer,
   config: AutoMockServerConfig,
   routeEntries: MockRouteInfo[],
@@ -167,12 +167,12 @@ function wrapStartWithDevTools(
   server.start = async () => {
     const info = await originalStart();
 
-    const devtoolsOpts = typeof config.devtools === "object" ? config.devtools : {};
+    const studioOpts = typeof config.studio === "object" ? config.studio : {};
     const sourceName = getSourceName(config.source) ?? "mock";
-    void connectMockToDevTools(server, {
-      name: devtoolsOpts.name ?? sourceName,
-      host: devtoolsOpts.host,
-      port: devtoolsOpts.port,
+    void connectMockToStudio(server, {
+      name: studioOpts.name ?? sourceName,
+      host: studioOpts.host,
+      port: studioOpts.port,
       serverPort: info.port,
       serverUrl: info.url,
       routeCount: routeEntries.length,

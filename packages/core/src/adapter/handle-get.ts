@@ -1,4 +1,4 @@
-import type { DevToolsHooks } from "../devtools/hooks";
+import type { StudioHooks } from "../studio/hooks";
 import type { RequestPayloadInput } from "../utils/helpers";
 import { errorResponse, META_KEYS, parseOptions } from "./parse";
 
@@ -9,7 +9,7 @@ type ExecuteFn = (
   proxyReceiveAt: number,
 ) => Promise<Response>;
 
-export function createGetHandler(execute: ExecuteFn, dt: DevToolsHooks) {
+export function createGetHandler(execute: ExecuteFn, dt: StudioHooks) {
   return async (request: Request): Promise<Response> => {
     const proxyReceiveAt = performance.now();
     const url = new URL(request.url);

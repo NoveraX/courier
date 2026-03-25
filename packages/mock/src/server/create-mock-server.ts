@@ -66,7 +66,7 @@ export interface MockServer {
   scenarioState: string;
   /** All registered scenarios by name */
   scenarios: Record<string, MockScenario>;
-  /** Request lifecycle hooks — set by devtools bridge to emit events */
+  /** Request lifecycle hooks — set by studio bridge to emit events */
   requestHooks: RequestHooks;
   /** Dynamic network simulation state — use for runtime config changes */
   networkState: NetworkState;

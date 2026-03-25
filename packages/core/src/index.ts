@@ -10,7 +10,6 @@ export {
   type TypedClient,
   type WithOptions,
 } from "./client";
-export { type DevToolsHooks, devtoolsHooks } from "./devtools";
 export { HTTPError, isHTTPError } from "./error";
 export { createFetch, type FetchClient, type FetchClientOptions } from "./fetch";
 export type {
@@ -39,6 +38,7 @@ export {
   type ProxyCallerDefaults,
   type UntypedCallerFn,
 } from "./proxy-caller";
+export { type StudioHooks, studioHooks } from "./studio";
 export type { CallerFn, EndpointKey, ResolveEndpoint, SuccessResponse } from "./types";
 export { executeRequest } from "./utils/execute";
 export {

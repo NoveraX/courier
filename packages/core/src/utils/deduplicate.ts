@@ -1,5 +1,5 @@
-import { devtoolsHooks } from "../devtools";
 import { HTTPError } from "../error";
+import { studioHooks } from "../studio";
 
 export type DedupeHost = {
   pendingRequests: { [key: string]: AbortController };
@@ -20,12 +20,12 @@ export function deduplicateAndAbortPrevious(host: DedupeHost, dedupeKey: string)
 
   if (existing) {
     delete host.pendingRequests[dedupeKey];
-    devtoolsHooks.onDedupAbort?.({
+    studioHooks.onDedupAbort?.({
       requestId: dedupeKey,
       key: dedupeKey,
       timestamp: Date.now(),
     });
-    devtoolsHooks.onRequestAbort?.({
+    studioHooks.onRequestAbort?.({
       id: dedupeKey,
       reason: "deduplication",
       timestamp: Date.now(),

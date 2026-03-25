@@ -1,11 +1,11 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import type { DevToolsHooks } from "../devtools";
+import type { StudioHooks } from "../studio";
 import { ValidationError, validateSchema } from "../validation";
 
 export type ValidationTimingCtx = {
-  hasDevtools: boolean;
+  hasStudio: boolean;
   requestId: string;
-  dt: Partial<DevToolsHooks>;
+  dt: Partial<StudioHooks>;
 };
 
 export async function validateVariables(
@@ -13,7 +13,7 @@ export async function validateVariables(
   variables: unknown,
   ctx: ValidationTimingCtx,
 ): Promise<{ validated: unknown; duration: number }> {
-  const vt0 = ctx.hasDevtools ? performance.now() : 0;
+  const vt0 = ctx.hasStudio ? performance.now() : 0;
   ctx.dt.onValidationStart?.({
     requestId: ctx.requestId,
     target: "variables",
@@ -22,7 +22,7 @@ export async function validateVariables(
 
   try {
     const validated = await validateSchema(schema, variables, "variables");
-    const duration = ctx.hasDevtools ? performance.now() - vt0 : 0;
+    const duration = ctx.hasStudio ? performance.now() - vt0 : 0;
     ctx.dt.onValidationPass?.({
       requestId: ctx.requestId,
       target: "variables",
@@ -31,7 +31,7 @@ export async function validateVariables(
     });
     return { validated, duration };
   } catch (error) {
-    const duration = ctx.hasDevtools ? performance.now() - vt0 : 0;
+    const duration = ctx.hasStudio ? performance.now() - vt0 : 0;
     if (error instanceof ValidationError) {
       ctx.dt.onValidationFail?.({
         requestId: ctx.requestId,
@@ -50,7 +50,7 @@ export async function validateResponse(
   data: unknown,
   ctx: ValidationTimingCtx,
 ): Promise<{ validated: unknown; duration: number }> {
-  const rvt0 = ctx.hasDevtools ? performance.now() : 0;
+  const rvt0 = ctx.hasStudio ? performance.now() : 0;
   ctx.dt.onValidationStart?.({
     requestId: ctx.requestId,
     target: "response",
@@ -59,7 +59,7 @@ export async function validateResponse(
 
   try {
     const validated = await validateSchema(schema, data, "response");
-    const duration = ctx.hasDevtools ? performance.now() - rvt0 : 0;
+    const duration = ctx.hasStudio ? performance.now() - rvt0 : 0;
     ctx.dt.onValidationPass?.({
       requestId: ctx.requestId,
       target: "response",
@@ -68,7 +68,7 @@ export async function validateResponse(
     });
     return { validated, duration };
   } catch (error) {
-    const duration = ctx.hasDevtools ? performance.now() - rvt0 : 0;
+    const duration = ctx.hasStudio ? performance.now() - rvt0 : 0;
     if (error instanceof ValidationError) {
       ctx.dt.onValidationFail?.({
         requestId: ctx.requestId,

@@ -1,7 +1,7 @@
 /**
  * Child process entry point for managed mock servers.
  *
- * Loaded by DevTools via child_process.fork().
+ * Loaded by Studio via child_process.fork().
  * Receives config path via IPC, loads it, starts the server,
  * and forwards events back to parent via IPC.
  */
@@ -100,7 +100,7 @@ async function startServer(configPath: string, allocatedPort: number): Promise<v
     return sendError("Mock server requires a source. Pass source to defineMockServer().", true);
   }
 
-  // Use port allocated by DevTools coordinator, fall back to config
+  // Use port allocated by Studio coordinator, fall back to config
   const port = allocatedPort > 0 ? allocatedPort : config.port;
 
   const server = createAutoMockServer({
@@ -112,7 +112,7 @@ async function startServer(configPath: string, allocatedPort: number): Promise<v
     seed: config.seed,
     overrides: config.overrides,
     scenarios: config.scenarios,
-    devtools: false,
+    studio: false,
   });
 
   const { analyzeRoutes, getSourceGroupNames } = await import("../auto/route-analyzer");
@@ -129,7 +129,7 @@ async function startServer(configPath: string, allocatedPort: number): Promise<v
     hits: 0,
   }));
 
-  // Wire request lifecycle hooks → IPC events for DevTools Logs tab
+  // Wire request lifecycle hooks → IPC events for Studio Logs tab
   server.requestHooks.onStart = (
     id,
     httpMethod,

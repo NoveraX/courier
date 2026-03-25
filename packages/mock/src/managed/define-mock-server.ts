@@ -3,15 +3,15 @@ import type { MockServerConfig, MockServerDefinition } from "./types";
 /**
  * Define a mock server configuration.
  *
- * Place in `mock-servers/` for DevTools to auto-discover and manage.
+ * Place in `mock-servers/` for Studio to auto-discover and manage.
  * Conventions: `mock-servers/*.server.ts` or `mock-servers/{name}/server.ts`.
  * Export as named `mockServer` for auto-detection.
  *
- * Servers are NOT auto-started by default — start manually from DevTools UI
- * or set `autoStart: true` to launch when DevTools starts.
+ * Servers are NOT auto-started by default — start manually from Studio UI
+ * or set `autoStart: true` to launch when Studio starts.
  *
  * @param config - Server configuration (source, port, seed, overrides, etc.)
- * @returns Typed definition object consumed by DevTools lifecycle manager
+ * @returns Typed definition object consumed by Studio lifecycle manager
  *
  * @example
  * ```ts
@@ -23,7 +23,7 @@ import type { MockServerConfig, MockServerDefinition } from "./types";
  *   source: jsonPlaceholder,
  *   port: 7001,
  *   seed: { count: 20 },
- *   autoStart: true, // launch when DevTools starts
+ *   autoStart: true, // launch when Studio starts
  * });
  * ```
  */

@@ -1,7 +1,7 @@
-import type { DevToolsHooks } from "../devtools";
 import type { HttpClient } from "../http-client/index";
 import type { BoundMethodOptions, GroupOptions } from "../http-client/types";
 import type { MiddlewareResponse } from "../middleware/types";
+import type { StudioHooks } from "../studio";
 import type { SchemaMetadata } from "../validation";
 import { validateResponse } from "./execute-validation";
 import { isHeaders } from "./helpers";
@@ -16,9 +16,9 @@ type InnerExecuteDeps = {
   baseOptions: Omit<BoundMethodOptions, "variables" | "headers" | "stream">;
   stream: boolean;
   schema: SchemaMetadata | undefined;
-  hasDevtools: boolean;
+  hasStudio: boolean;
   requestId: string;
-  dt: DevToolsHooks;
+  dt: StudioHooks;
 };
 
 type InnerResult = {
@@ -33,7 +33,7 @@ type InnerResult = {
  */
 export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult> {
   const vars = deps.variables;
-  const ft0 = deps.hasDevtools ? performance.now() : 0;
+  const ft0 = deps.hasStudio ? performance.now() : 0;
 
   let response: Awaited<ReturnType<typeof deps.endpoint>>;
   try {
@@ -58,7 +58,7 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
     throw fetchError;
   }
 
-  const tFetch = deps.hasDevtools ? performance.now() - ft0 : 0;
+  const tFetch = deps.hasStudio ? performance.now() - ft0 : 0;
 
   deps.dt.onHttpFetchEnd?.({
     requestId: deps.requestId,
@@ -74,7 +74,7 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
 
   if (deps.schema?.response) {
     const validationCtx = {
-      hasDevtools: deps.hasDevtools,
+      hasStudio: deps.hasStudio,
       requestId: deps.requestId,
       dt: deps.dt,
     };

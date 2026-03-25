@@ -9,7 +9,7 @@ import type {
 /**
  * Define a typed middleware with explicit phase.
  *
- * @param name - Middleware name shown in DevTools
+ * @param name - Middleware name shown in Studio
  * @param phase - "before" (pre-fetch), "after" (post-fetch), "wrap" (both)
  * @param handler - Phase-specific handler function
  *

@@ -1,6 +1,6 @@
-import { devtoolsHooks } from "../devtools";
 import { HTTPError } from "../error";
 import type { UploadProgress } from "../http-client/types";
+import { studioHooks } from "../studio";
 import { isFormData } from "../utils/helpers";
 import type { RequestPayload } from "../utils/request-payload";
 import { buildHttpError, readErrorResponse } from "./send-fetch";
@@ -46,7 +46,7 @@ export async function handleXhrUpload(ctx: XhrHandlerCtx): Promise<unknown> {
     : JSON.stringify(ctx.requestPayload.json);
 
   try {
-    const dt = devtoolsHooks;
+    const dt = studioHooks;
     const uploadId = `upload_${Date.now().toString(36)}`;
 
     const response = await xhrUpload(ctx.url, body, {

@@ -38,7 +38,7 @@ describe("auto-mock overrides & builder", () => {
     source: api,
     port: 0,
     log: false,
-    devtools: false,
+    studio: false,
     seed: { count: 5 },
     overrides: (mock) => {
       // Decorator: withHeaders on auto-CRUD
@@ -125,7 +125,7 @@ describe("builder advanced features", () => {
     source: api,
     port: 0,
     log: false,
-    devtools: false,
+    studio: false,
     seed: { count: 3 },
     overrides: (mock) => {
       // .once() — first call returns special, then falls back to auto-CRUD
@@ -198,7 +198,7 @@ describe("state machine (inState/transitionTo)", () => {
     source: api,
     port: 0,
     log: false,
-    devtools: false,
+    studio: false,
     seed: { count: 0 },
     overrides: (mock) => {
       // Default state "Started" → unauthorized
@@ -259,7 +259,7 @@ describe("named latency profiles", () => {
     source: api,
     port: 0,
     log: false,
-    devtools: false,
+    studio: false,
     seed: { count: 1 },
     overrides: (mock) => {
       mock("items", "list").withLatency("3g"); // 200-600ms
@@ -293,7 +293,7 @@ describe(".rejects() without data arg", () => {
     source: api,
     port: 0,
     log: false,
-    devtools: false,
+    studio: false,
     seed: { count: 0 },
     overrides: (mock) => {
       mock("items", "list").rejects(418); // no data, just status
@@ -336,7 +336,7 @@ describe("query params routing", () => {
     source: apiWithFilters,
     port: 0,
     log: false,
-    devtools: false,
+    studio: false,
     seed: { count: 5 },
     overrides: (mock) => {
       mock("products", "getByCategory").returns((ctx) => {

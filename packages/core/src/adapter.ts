@@ -2,7 +2,7 @@ import { createGetHandler } from "./adapter/handle-get";
 import { createPostHandler } from "./adapter/handle-post";
 import { errorResponse } from "./adapter/parse";
 import type { Sources } from "./define/types";
-import { devtoolsHooks } from "./devtools";
+import { studioHooks } from "./studio";
 import { executeRequest } from "./utils/execute";
 import type { RequestPayloadInput } from "./utils/helpers";
 
@@ -30,7 +30,7 @@ export function createHandler(sources: Sources): AdapterHandler {
       proxyReceiveAt,
     });
 
-  const dt = devtoolsHooks;
+  const dt = studioHooks;
   const handleGet = createGetHandler(execute, dt);
   const handlePost = createPostHandler(execute, dt);
 

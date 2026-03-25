@@ -1,6 +1,6 @@
-import { devtoolsHooks } from "../devtools";
-import { emitExit, propagateInner } from "./devtools-tracking";
+import { studioHooks } from "../studio";
 import { runAfter, runBefore, runWrap } from "./phase-runners";
+import { emitExit, propagateInner } from "./studio-tracking";
 import type { Middleware, MiddlewareContext, MiddlewareResponse, NextFn } from "./types";
 
 // Re-export defineMiddleware so existing imports from "./middleware/compose" keep working
@@ -11,7 +11,7 @@ export function composeMiddleware(
 ): (ctx: MiddlewareContext, next: NextFn) => Promise<MiddlewareResponse> {
   if (middlewares.length === 0) return (_ctx, next) => next();
 
-  const dt = devtoolsHooks;
+  const dt = studioHooks;
   const totalCount = middlewares.length;
 
   return (ctx, next) => {

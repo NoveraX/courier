@@ -128,9 +128,9 @@ export interface MockHistoryEntry {
 /** Named scenario that configures multiple mocks at once */
 export interface MockScenario<TApi extends DefinedApi<any> = DefinedApi<any>> {
   name: string;
-  /** Short description shown in DevTools Scenarios panel */
+  /** Short description shown in Studio Scenarios panel */
   description?: string;
-  /** Tags for categorization in DevTools (e.g. ["error", "latency", "auth"]) */
+  /** Tags for categorization in Studio (e.g. ["error", "latency", "auth"]) */
   tags?: string[];
   /**
    * Initial scenario state when this scenario is applied.

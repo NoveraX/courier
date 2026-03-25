@@ -1,6 +1,6 @@
 /**
  * Persistent child process for extracting mock server metadata.
- * Spawned once by devtools scanner, handles N requests via IPC — no cold start per file.
+ * Spawned once by studio scanner, handles N requests via IPC — no cold start per file.
  *
  * IPC protocol:
  *   Parent → Worker: { type: "analyze", id, filePath }

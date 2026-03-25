@@ -1,5 +1,5 @@
-import { devtoolsHooks } from "../devtools";
 import { HTTPError } from "../error";
+import { studioHooks } from "../studio";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
 import { parseRequestPayload, type RequestPayload } from "../utils/request-payload";
@@ -41,7 +41,7 @@ export async function sendFetch(
   },
 ): Promise<unknown> {
   const { onDownloadProgress: _dp, ...fetchOptions } = options;
-  const hasTimingHook = devtoolsHooks.onProxyClientTiming !== undefined;
+  const hasTimingHook = studioHooks.onProxyClientTiming !== undefined;
   const t0 = hasTimingHook ? performance.now() : 0;
 
   try {
@@ -93,7 +93,7 @@ function emitClientTiming(response: Response, t0: number, tHeaders: number): voi
   const serverDur = parseServerTimingDur(stHeader);
   const ttfb = tHeaders - t0;
 
-  devtoolsHooks.onProxyClientTiming?.({
+  studioHooks.onProxyClientTiming?.({
     requestId: rid,
     networkLatency: Math.max(0, ttfb - serverDur),
     download: tEnd - tHeaders,

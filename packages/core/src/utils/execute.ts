@@ -1,19 +1,19 @@
 import type { Sources } from "../define/types";
-import { devtoolsHooks, generateRequestId } from "../devtools";
 import type { Context } from "../http-client/types";
 import { composeMiddleware } from "../middleware/index";
+import { generateRequestId, studioHooks } from "../studio";
+import { handleExecuteError } from "./execute-error";
+import { createHttpClient } from "./execute-helpers";
+import { executeInner } from "./execute-inner";
+import { applyCacheHeaders, buildMiddlewareContext, resolveEndpoint } from "./execute-resolve";
+import { buildErrorResponse, buildResponse } from "./execute-response";
 import {
   attachFetchHook,
   emitRequestEnd,
   emitRequestStart,
   injectTimingHeaders,
   type TimingState,
-} from "./execute-devtools";
-import { handleExecuteError } from "./execute-error";
-import { createHttpClient } from "./execute-helpers";
-import { executeInner } from "./execute-inner";
-import { applyCacheHeaders, buildMiddlewareContext, resolveEndpoint } from "./execute-resolve";
-import { buildErrorResponse, buildResponse } from "./execute-response";
+} from "./execute-studio";
 import { validateVariables } from "./execute-validation";
 import { parseRequestPayload, type RequestPayloadInput } from "./request-payload";
 
@@ -33,16 +33,16 @@ export async function executeRequest(
   context?: Context,
 ): Promise<unknown> {
   const { source, group, method, variables, options } = parseRequestPayload(requestPayload);
-  const dt = devtoolsHooks;
-  const hasDevtools = dt.onRequestStart !== undefined;
-  const requestId = hasDevtools ? generateRequestId() : "";
+  const dt = studioHooks;
+  const hasStudio = dt.onRequestStart !== undefined;
+  const requestId = hasStudio ? generateRequestId() : "";
   const timing: TimingState = {
-    t0: hasDevtools ? performance.now() : 0,
+    t0: hasStudio ? performance.now() : 0,
     tVarValidation: 0,
     tRespValidation: 0,
     tFetch: 0,
   };
-  const dCtx = { hasDevtools, requestId, dt };
+  const dCtx = { hasStudio, requestId, dt };
 
   const dataSource =
     typeof source === "string" && Object.hasOwn(sources, source) ? sources[source] : undefined;
@@ -64,7 +64,7 @@ export async function executeRequest(
   }
 
   const instance = createHttpClient(dataSource.options, context);
-  if (hasDevtools) attachFetchHook(instance, dCtx);
+  if (hasStudio) attachFetchHook(instance, dCtx);
 
   const {
     rawData = false,
@@ -117,7 +117,7 @@ export async function executeRequest(
         baseOptions,
         stream,
         schema,
-        hasDevtools,
+        hasStudio,
         requestId,
         dt,
       });
@@ -127,13 +127,13 @@ export async function executeRequest(
     };
 
     const middlewares = dataSource.options?.middleware;
-    const mt0 = hasDevtools ? performance.now() : 0;
+    const mt0 = hasStudio ? performance.now() : 0;
     const result = middlewares?.length
       ? await composeMiddleware(middlewares)(middlewareCtx, execute)
       : await execute();
-    const tMiddlewareTotal = hasDevtools && middlewares?.length ? performance.now() - mt0 : 0;
+    const tMiddlewareTotal = hasStudio && middlewares?.length ? performance.now() - mt0 : 0;
 
-    if (hasDevtools) {
+    if (hasStudio) {
       emitRequestEnd(dCtx, result, middlewareCtx.headers, timing, tMiddlewareTotal, context);
     }
 
@@ -145,7 +145,7 @@ export async function executeRequest(
       stream,
     });
 
-    if (context?.proxyMethod && response instanceof Response && hasDevtools) {
+    if (context?.proxyMethod && response instanceof Response && hasStudio) {
       injectTimingHeaders(response, requestId, timing.t0);
     }
     if (context?.proxyMethod === "GET" && schema?.cache && response instanceof Response) {

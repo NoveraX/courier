@@ -1,12 +1,12 @@
-import type { DevToolsHooks } from "../devtools";
 import { HTTPError } from "../error";
 import type { Context } from "../http-client/types";
+import type { StudioHooks } from "../studio";
 import { ValidationError } from "../validation";
 import { buildResponse } from "./execute-response";
 
 export type ErrorHandlerCtx = {
   requestId: string;
-  dt: Partial<DevToolsHooks>;
+  dt: Partial<StudioHooks>;
   context?: Context;
   rawData: boolean;
 };

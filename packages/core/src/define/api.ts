@@ -1,5 +1,5 @@
-import { devtoolsHooks } from "../devtools";
 import type { BaseOptions } from "../http-client/types";
+import { studioHooks } from "../studio";
 import type {
   DefinedApi,
   DefinedFlatApi,
@@ -58,7 +58,7 @@ export function getSourceName(source: unknown): string | undefined {
  */
 export function defineApi<TGroups extends GroupRecord, TEndpoints extends EndpointRecord>(
   config: BaseOptions & {
-    /** Human-readable source name for devtools and logging (derived from baseURL if omitted) */
+    /** Human-readable source name for studio and logging (derived from baseURL if omitted) */
     name?: string;
     /** Map of named endpoint groups created with defineGroup() */
     groups: TGroups;
@@ -69,7 +69,7 @@ export function defineApi<TGroups extends GroupRecord, TEndpoints extends Endpoi
 
 export function defineApi<TGroups extends GroupRecord>(
   config: BaseOptions & {
-    /** Human-readable source name for devtools and logging (derived from baseURL if omitted) */
+    /** Human-readable source name for studio and logging (derived from baseURL if omitted) */
     name?: string;
     /** Map of named endpoint groups created with defineGroup() */
     groups: TGroups;
@@ -78,7 +78,7 @@ export function defineApi<TGroups extends GroupRecord>(
 
 export function defineApi<TEndpoints extends EndpointRecord>(
   config: BaseOptions & {
-    /** Human-readable source name for devtools and logging (derived from baseURL if omitted) */
+    /** Human-readable source name for studio and logging (derived from baseURL if omitted) */
     name?: string;
     /** Map of flat endpoint functions (not in any group) */
     endpoints: TEndpoints;
@@ -93,13 +93,13 @@ export function defineApi(
     ? Object.assign({ options: rest }, endpoints)
     : ({ options: rest } as DefinedApi);
 
-  // Store name for devtools identification
+  // Store name for studio identification
   const sourceName = name ?? deriveSourceName(config.baseURL);
   (result as Record<symbol, unknown>)[SOURCE_NAME_KEY] = sourceName;
 
-  // Dev-only: notify devtools of source (re)creation for HMR hot reload
+  // Dev-only: notify studio of source (re)creation for HMR hot reload
   if (process.env.NODE_ENV !== "production") {
-    devtoolsHooks.onSourceDefined?.(result, config.baseURL ?? "");
+    studioHooks.onSourceDefined?.(result, config.baseURL ?? "");
   }
 
   return result;

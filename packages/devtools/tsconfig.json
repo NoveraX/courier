@@ -1,9 +1,0 @@
-{
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "paths": {
-      "@noverax/nexus-devtools-core": ["../devtools-core/src/index.ts"]
-    }
-  },
-  "include": ["src/**/*", "tests/**/*"]
-}

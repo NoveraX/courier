@@ -1,4 +1,4 @@
-import { diffHeaders, snapshotHeaders } from "./devtools-tracking";
+import { diffHeaders, snapshotHeaders } from "./studio-tracking";
 import type {
   AfterHandler,
   BeforeHandler,

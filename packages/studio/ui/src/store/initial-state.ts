@@ -1,0 +1,29 @@
+import type { StudioState } from "./store-types"
+import { loadSettings, loadSessionStartedAt } from "./constants"
+
+// ── Initial State Factory ───────────────────────────────────────────────────
+
+export function createInitialState(savedTheme: StudioState["theme"]) {
+  return {
+    theme: savedTheme,
+    connectionStatus: "disconnected" as const,
+    reconnectAttempt: 0,
+    sessions: [] as StudioState["sessions"],
+    catalog: {} as StudioState["catalog"],
+    requests: [] as StudioState["requests"],
+    paused: false,
+    auditExpandedIds: new Set<string>(),
+    playgroundHistory: [] as StudioState["playgroundHistory"],
+    playgroundActiveResponse: null as StudioState["playgroundActiveResponse"],
+    connected: false,
+    settings: loadSettings(),
+    sessionStartedAt: loadSessionStartedAt(),
+    scanSources: [] as StudioState["scanSources"],
+    registrySources: [] as StudioState["registrySources"],
+    clientTick: 0,
+    droppedRequests: 0,
+    watcherApiPaths: 0,
+    watcherMockFiles: 0,
+    watcherLastChange: null,
+  }
+}

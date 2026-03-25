@@ -14,7 +14,7 @@ import { isMockHttpError } from "./errors";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-/** Hooks for emitting request lifecycle events (set by devtools bridge) */
+/** Hooks for emitting request lifecycle events (set by studio bridge) */
 export interface RequestHooks {
   onStart?(
     id: string,

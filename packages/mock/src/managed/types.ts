@@ -17,7 +17,7 @@ export interface MockServerDefinition {
   name?: string;
   /** Seed configuration */
   seed?: MockServerSeedConfig;
-  /** Start automatically when DevTools launches (default: false) */
+  /** Start automatically when Studio launches (default: false) */
   autoStart: boolean;
   /** Endpoint overrides applied after auto-generation — persist across all scenario switches */
   overrides?: (mock: TypedMockFn<any>, store: MockStore) => void;
@@ -44,13 +44,13 @@ export interface MockServerSeedConfig {
 /** Input config for defineMockServer() — port and autoStart are optional */
 export type MockServerConfig = Omit<MockServerDefinition, "__type" | "port" | "autoStart"> & {
   port?: number;
-  /** Start automatically when DevTools launches (default: true) */
+  /** Start automatically when Studio launches (default: true) */
   autoStart?: boolean;
 };
 
 // ── IPC Protocol ─────────────────────────────────────────────────────────────
 
-/** Messages from DevTools (parent) → mock server (child) */
+/** Messages from Studio (parent) → mock server (child) */
 export type ParentMessage =
   | { type: "start"; configPath: string; port: number }
   | { type: "stop" }
@@ -77,7 +77,7 @@ export interface ChildScenarioMeta {
   }>;
 }
 
-/** Messages from mock server (child) → DevTools (parent) */
+/** Messages from mock server (child) → Studio (parent) */
 export type ChildMessage =
   | {
       type: "ready";
@@ -112,7 +112,7 @@ export interface MockProcessState {
   configuredPort: number;
   status: MockProcessStatus;
   /** Who started the process */
-  origin: "devtools" | "external";
+  origin: "studio" | "external";
   /** Actual port (may differ from configured if conflict) */
   actualPort?: number;
   url?: string;

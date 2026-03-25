@@ -1,4 +1,4 @@
-import { devtoolsHooks } from "../devtools";
+import { studioHooks } from "../studio";
 import { defineMiddleware } from "./compose";
 import type { Middleware, MiddlewareResponse } from "./types";
 
@@ -21,7 +21,7 @@ export function cacheMiddleware(options?: {
 
   // Wraps because it may short-circuit (cache hit) or store (post-fetch)
   return defineMiddleware("cache", "wrap", async (ctx, next) => {
-    const dt = devtoolsHooks;
+    const dt = studioHooks;
     const key = `${ctx.source}:${ctx.group ?? ""}:${ctx.method}:${JSON.stringify(ctx.variables ?? {})}`;
     const requestId = `${ctx.source}:${ctx.group ?? ""}:${ctx.method}`;
 

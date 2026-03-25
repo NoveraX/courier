@@ -10,7 +10,7 @@ export type MiddlewareContext = {
   variables?: unknown;
   /** Request headers — can be modified by middleware */
   headers: Headers;
-  /** Internal: DevTools request ID for event correlation */
+  /** Internal: Studio request ID for event correlation */
   _requestId?: string;
 };
 

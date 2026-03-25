@@ -1,25 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Database } from "lucide-react";
 import { PageShell } from "@/components/shared/page-shell";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useActiveServer } from "@/store/mock-slice";
 import { CollectionList } from "./collection-list";
 import { DataTable } from "./data-table";
-import { RecordDetail } from "./record-detail";
 import { useStoreCrud } from "./use-store-crud";
 
 export function MockStoreView(): React.ReactElement {
   const server = useActiveServer();
   const collections = server?.collections ?? [];
   const crud = useStoreCrud();
-  const [selectedRecord, setSelectedRecord] = useState<Record<string, unknown> | null>(null);
 
-  // Auto-select first collection
+  const { activeCollection, selectCollection } = crud;
   useEffect(() => {
-    if (!crud.activeCollection && collections.length > 0) {
-      crud.selectCollection(collections[0]!.name);
+    if (!activeCollection && collections.length > 0) {
+      selectCollection(collections[0]!.name);
     }
-  }, [collections, crud.activeCollection]);
+  }, [collections, activeCollection, selectCollection]);
 
   if (!server) {
     return (
@@ -37,33 +35,47 @@ export function MockStoreView(): React.ReactElement {
     );
   }
 
-  const activeCol = collections.find((c) => c.name === crud.activeCollection);
+  const activeCol = collections.find((c) => c.name === activeCollection);
+
+  const handleAddRecord = (defaults: Record<string, unknown>) => {
+    if (!activeCol) return;
+    crud.createRecord(server.serverId, activeCol.name, defaults);
+  };
+
+  const handleUpdateField = (recordId: string, field: string, value: unknown) => {
+    if (!activeCol) return;
+    crud.updateRecord(server.serverId, activeCol.name, recordId, { [field]: value });
+  };
+
+  const handleBulkDelete = (ids: string[]) => {
+    if (!activeCol) return;
+    for (const id of ids) crud.deleteRecord(server.serverId, activeCol.name, id);
+  };
 
   return (
     <PageShell noScroll>
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <CollectionList
           collections={collections}
-          active={crud.activeCollection}
-          onSelect={crud.selectCollection}
+          active={activeCollection}
+          disabled={server.processStatus !== "running"}
+          onSelect={selectCollection}
           onSeed={(name, count) => crud.seedCollection(server.serverId, name, count)}
           onClear={(name) => crud.clearCollection(server.serverId, name)}
+          onSeedAll={(count) => crud.seedAll(server.serverId, count)}
         />
 
         {activeCol ? (
-          <DataTable collection={activeCol} onSelectRecord={setSelectedRecord} />
+          <DataTable
+            collection={activeCol}
+            onDeleteRecords={handleBulkDelete}
+            onAddRecord={handleAddRecord}
+            onUpdateField={handleUpdateField}
+          />
         ) : (
           <div className="flex flex-1 items-center justify-center text-body-sm text-muted-foreground/50">
             Select a collection
           </div>
-        )}
-
-        {selectedRecord && activeCol && (
-          <RecordDetail
-            record={selectedRecord}
-            collection={activeCol.name}
-            onClose={() => setSelectedRecord(null)}
-          />
         )}
       </div>
     </PageShell>

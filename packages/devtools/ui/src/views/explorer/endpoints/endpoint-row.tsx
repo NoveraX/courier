@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { MethodBadge } from "@/components/shared/method-badge";
 import {
@@ -6,6 +7,7 @@ import {
   formatNumber,
   formatSize,
 } from "@/components/shared/formatters";
+import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
 import { HealthIndicator } from "../shared/health-indicator";
 import { TypeBadge } from "@/components/shared/type-badge";
 import { PathDisplay } from "../shared/path-display";
@@ -34,7 +36,8 @@ export const EndpointRow = memo(function EndpointRow({
   const key = formatEndpointKey(endpoint.source, endpoint.group, endpoint.method);
 
   return (
-    <tr
+    <motion.tr
+      variants={STAGGER_ITEM_VARIANTS}
       onClick={() => onSelect(key)}
       className={cn(
         "group cursor-pointer border-b border-border-subtle/50 transition-colors",
@@ -117,6 +120,6 @@ export const EndpointRow = memo(function EndpointRow({
       <td className="px-2 py-2.5 text-right tabular-nums text-body-xs text-muted-foreground">
         {metrics.totalRequests > 0 ? formatSize(metrics.avgSize) : "—"}
       </td>
-    </tr>
+    </motion.tr>
   );
 });

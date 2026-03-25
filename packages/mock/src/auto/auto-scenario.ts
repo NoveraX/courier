@@ -1,8 +1,9 @@
+import { MockHttpError } from "../server/errors";
 import type { MockStore } from "../store";
 import type { MockRequestContext, MockScenario, TypedMockFn } from "../types";
 import { generateRecords } from "./data-generator";
 import type { RouteInfo } from "./route-analyzer";
-import { unwrapArraySchema } from "./schema-introspect";
+import { extractPaginatedItemSchema, unwrapArraySchema } from "./schema-introspect";
 
 /** Options for auto-generated scenario */
 export interface AutoScenarioOptions {
@@ -20,7 +21,8 @@ export interface AutoMockScenario extends MockScenario {
 
 /**
  * Seed all collections eagerly at startup.
- * Uses the first "list" endpoint's response schema per group to generate data.
+ * Selects the best "list" endpoint per group: prefers root-path direct arrays
+ * over pagination wrappers, regardless of declaration order.
  */
 export function seedAllCollections(
   routes: RouteInfo[],
@@ -28,18 +30,15 @@ export function seedAllCollections(
   options: AutoScenarioOptions = {},
 ): void {
   const { seedCount = 20, seedOverrides = {} } = options;
-  const seeded = new Set<string>();
+  const bestPerGroup = selectBestListEndpoints(routes);
 
-  for (const route of routes) {
-    if (seeded.has(route.group)) continue;
-    if (route.operation !== "list") continue;
-
-    seeded.add(route.group);
-    const count = seedOverrides[route.group] ?? seedCount;
-    seedCollection(store, route.group, route.responseSchema, count);
+  for (const [groupName, route] of bestPerGroup) {
+    const count = seedOverrides[groupName] ?? seedCount;
+    seedCollection(store, groupName, route.responseSchema, count);
   }
 
   // Groups without a list endpoint — create empty collection
+  const seeded = new Set(bestPerGroup.keys());
   for (const route of routes) {
     if (!seeded.has(route.group)) {
       seeded.add(route.group);
@@ -85,6 +84,32 @@ export function buildAutoScenario(routes: RouteInfo[]): AutoMockScenario {
   };
 }
 
+/**
+ * Register auto-CRUD handlers directly via the given mock function.
+ * Use this to populate the base layer in createAutoMockServer so handlers
+ * survive scenario switches.
+ */
+export function buildAutoHandlers(
+  routes: RouteInfo[],
+  store: MockStore,
+  mock: TypedMockFn<any>,
+): void {
+  const routesByGroup = groupRoutesByName(routes);
+  for (const [groupName, groupRoutes] of routesByGroup) {
+    for (const route of groupRoutes) {
+      const handler = createHandler(store, groupName, route);
+      if (handler) {
+        (
+          mock as (
+            g: string,
+            m: string,
+          ) => { returns: (fn: (ctx: MockRequestContext) => unknown) => void }
+        )(groupName, route.endpoint).returns(handler);
+      }
+    }
+  }
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function groupRoutesByName(routes: RouteInfo[]): Map<string, RouteInfo[]> {
@@ -110,17 +135,26 @@ function createHandler(
       return (ctx) => {
         const id = extractId(ctx.variables);
         const record = store.collection(groupName).getById(id);
-        if (!record) throw new Error(`${groupName} with id ${id} not found`);
+        if (!record) throw new MockHttpError(404, `${groupName} with id ${id} not found`);
         return record;
       };
 
-    case "create":
+    case "create": {
+      const itemSchema = route.responseSchema
+        ? (unwrapArraySchema(route.responseSchema) ?? route.responseSchema)
+        : undefined;
       return (ctx) => {
         const col = store.collection(groupName);
         const vars = (ctx.variables ?? {}) as Record<string, unknown>;
         const id = vars.id ?? col.count() + 1;
-        return col.create({ ...vars, id } as Record<string, unknown>);
+        // Empty body + schema available → generate a realistic record rather than bare {id}
+        const base =
+          Object.keys(vars).length === 0 && itemSchema
+            ? ((generateRecords(itemSchema, 1)[0] ?? {}) as Record<string, unknown>)
+            : vars;
+        return col.create({ ...base, id } as Record<string, unknown>);
       };
+    }
 
     case "update":
       return (ctx) => {
@@ -132,7 +166,7 @@ function createHandler(
           .update((q) => q.where({ id } as Record<string, unknown>), {
             data: data as Record<string, unknown>,
           });
-        if (!updated) throw new Error(`${groupName} with id ${id} not found`);
+        if (!updated) throw new MockHttpError(404, `${groupName} with id ${id} not found`);
         return updated;
       };
 
@@ -158,7 +192,7 @@ function createHandler(
         const deleted = store
           .collection(groupName)
           .delete((q) => q.where({ id } as Record<string, unknown>));
-        if (!deleted) throw new Error(`${groupName} with id ${id} not found`);
+        if (!deleted) throw new MockHttpError(404, `${groupName} with id ${id} not found`);
         return { deleted: true, id };
       };
 
@@ -170,9 +204,56 @@ function createHandler(
         return { deleted: count };
       };
 
+    case "custom": {
+      // Generate a response from schema for static sub-path endpoints (e.g. "browse", "categories").
+      // Without this, requests hit the route but find no handler → 404.
+      if (!route.responseSchema) return undefined;
+      const schema = route.responseSchema;
+      const isArray = !!unwrapArraySchema(schema);
+      return () => {
+        const records = generateRecords(schema, isArray ? 5 : 1);
+        return isArray ? records : records[0];
+      };
+    }
+
     default:
       return undefined;
   }
+}
+
+/**
+ * Select the best list endpoint per group for seeding.
+ * Prefers: root-path direct arrays > root-path wrappers > sub-path arrays.
+ */
+function selectBestListEndpoints(routes: RouteInfo[]): Map<string, RouteInfo> {
+  const best = new Map<string, RouteInfo>();
+
+  for (const route of routes) {
+    if (route.operation !== "list") continue;
+    const existing = best.get(route.group);
+    if (!existing || isBetterSeedSource(route, existing)) {
+      best.set(route.group, route);
+    }
+  }
+  return best;
+}
+
+function isBetterSeedSource(candidate: RouteInfo, current: RouteInfo): boolean {
+  // Prefer endpoint with schema over schemaless
+  if (candidate.responseSchema && !current.responseSchema) return true;
+  if (!candidate.responseSchema && current.responseSchema) return false;
+
+  const candidateRoot = !candidate.path || candidate.path === "/";
+  const currentRoot = !current.path || current.path === "/";
+
+  // Prefer root path (group's base URL)
+  if (candidateRoot && !currentRoot) return true;
+  if (!candidateRoot && currentRoot) return false;
+
+  // Prefer direct array response over pagination wrapper
+  const candidateIsArray = !!unwrapArraySchema(candidate.responseSchema);
+  const currentIsArray = !!unwrapArraySchema(current.responseSchema);
+  return candidateIsArray && !currentIsArray;
 }
 
 function seedCollection(
@@ -182,7 +263,10 @@ function seedCollection(
   count: number,
 ): void {
   const col = store.collection(groupName, { idField: "id" });
-  const itemSchema = unwrapArraySchema(responseSchema) ?? responseSchema;
+  const itemSchema =
+    unwrapArraySchema(responseSchema) ??
+    extractPaginatedItemSchema(responseSchema) ??
+    responseSchema;
   const records = generateRecords(itemSchema, count);
   col.seed(records);
 }

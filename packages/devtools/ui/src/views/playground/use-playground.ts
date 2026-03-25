@@ -31,14 +31,20 @@ function buildVariablesStub(endpoint: CatalogEndpoint | null, indent: number): s
 
 // ── Hook ───────────────────────────────────────────────────────────────────
 
-export function usePlayground() {
+export interface PlaygroundInitParams {
+  source?: string;
+  group?: string;
+  method?: string;
+}
+
+export function usePlayground(init?: PlaygroundInitParams) {
   const sourceMap = useDevToolsStore((s) => s.catalog);
   const jsonIndent = useDevToolsStore((s) => s.settings.jsonIndent);
   const sourceKeys = useMemo(() => Object.keys(sourceMap), [sourceMap]);
 
-  const [source, setSource] = useState<string | null>(null);
-  const [group, setGroup] = useState<string | null>(null);
-  const [method, setMethod] = useState<string | null>(null);
+  const [source, setSource] = useState<string | null>(init?.source ?? null);
+  const [group, setGroup] = useState<string | null>(init?.group ?? null);
+  const [method, setMethod] = useState<string | null>(init?.method ?? null);
   const [variables, setVariables] = useState("{}");
   const [headers, setHeaders] = useState("{}");
   const [mode, setMode] = useState<"direct" | "proxy">("direct");

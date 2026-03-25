@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createEnhancedMockBuilder } from "../builder";
+import type { NetworkState } from "../network/state";
+import { createNetworkState } from "../network/state";
 import { createMockRegistry } from "../registry";
 import type { MockStore } from "../store";
 import { createMockStore } from "../store";
@@ -16,7 +18,9 @@ import type { PrefixMapping } from "./prefix-routes";
 import { registerPrefixRoutes } from "./prefix-routes";
 import type { LogLevel } from "./request-logger";
 import { createRequestLogger } from "./request-logger";
+import type { RequestHooks } from "./route-generator";
 import { handleMockRequest, registerProxyRoute, registerRestRoutes } from "./route-generator";
+import { tryListen } from "./try-listen";
 
 /** Configuration for the mock HTTP server */
 export interface MockServerConfig {
@@ -36,12 +40,10 @@ export interface MockServerConfig {
   scenario?: MockScenario;
   /** Named scenarios available via admin API */
   scenarios?: Record<string, MockScenario>;
-  /** API source — enables prefix-based routes (GET /products → products.getAll) */
-  source?: {
-    options: {
-      groups: Record<string, { options?: { prefix?: string } } & Record<string, unknown>>;
-    };
-  };
+  /** Prefix mappings for REST-style routes (GET /products → products.getAll) */
+  mappings?: PrefixMapping[];
+  /** Re-seed all collections after reset — provided by createAutoMockServer */
+  reseed?: () => void;
 }
 
 /** Mock HTTP server instance */
@@ -52,52 +54,49 @@ export interface MockServer {
   stop(): Promise<void>;
   /** The Hono app (for custom routes) */
   app: Hono;
-  /** Type-safe mock builder */
+  /** Base-layer mock builder — persists across scenario switches */
   mock: TypedMockFn<any>;
   /** Mock store */
   store: MockStore;
   /** Request history */
   history: MockHistoryEntry[];
-  /** Apply a scenario */
+  /** Apply a scenario (clears scenario layer, base layer untouched) */
   applyScenario(scenario: MockScenario): void;
   /** Current scenario state */
   scenarioState: string;
+  /** All registered scenarios by name */
+  scenarios: Record<string, MockScenario>;
+  /** Request lifecycle hooks — set by devtools bridge to emit events */
+  requestHooks: RequestHooks;
+  /** Dynamic network simulation state — use for runtime config changes */
+  networkState: NetworkState;
+  /** Determine the active source for a route: "auto" | "override" | "scenario" */
+  getRouteSource(group: string, method: string): "auto" | "override" | "scenario";
 }
 
-/**
- * Create a standalone HTTP mock server powered by Hono.
- *
- * @example
- * ```ts
- * const server = createMockServer({
- *   port: 7001,
- *   admin: true,
- *   network: { latency: "4g" },
- * });
- *
- * server.mock("users", "getAll").resolves([{ id: "1", name: "Alice" }]);
- * await server.start();
- * ```
- */
+/** @see {@link MockServerConfig} for full documentation */
 export function createMockServer(config?: MockServerConfig): MockServer {
   const registry = createMockRegistry();
   const store = createMockStore();
   const history: MockHistoryEntry[] = [];
   const callCounts = new Map<string, number>();
+  const scenariosRecord: Record<string, MockScenario> = { ...config?.scenarios };
+  const networkState = createNetworkState(config?.network);
   let scenarioState = "Started";
+  let activeScenario: string | null = null;
   let server: { close: () => void } | undefined;
 
   const app = new Hono();
 
-  // Logging
   const logLevel = resolveLogLevel(config?.log);
   app.use("*", createRequestLogger(logLevel));
 
-  // CORS
   if (config?.cors !== false) {
     const origin = typeof config?.cors === "object" ? config.cors.origin : "*";
     app.use("*", cors({ origin }));
   }
+
+  const requestHooks: RequestHooks = {};
 
   const routeConfig = {
     registry,
@@ -108,31 +107,22 @@ export function createMockServer(config?: MockServerConfig): MockServer {
       scenarioState = s;
     },
     network: config?.network,
+    networkState,
+    hooks: requestHooks,
   };
 
-  // Proxy route (POST /api/request)
   registerProxyRoute(app, routeConfig);
-
-  // REST routes (POST/GET /api/:group/:method)
   registerRestRoutes(app, routeConfig);
 
-  // Prefix routes (GET /products → products.getAll) — auto-generated from source
-  if (config?.source) {
-    const mappings = extractPrefixMappings(config.source);
-    registerPrefixRoutes(app, mappings, {
+  if (config?.mappings?.length) {
+    registerPrefixRoutes(app, config.mappings, {
       handleRequest: (c, group, method, variables) =>
         handleMockRequest(c, group, method, variables, routeConfig),
     });
   }
 
-  // Admin API
   if (config?.admin !== false) {
-    const scenarioMap = new Map<string, MockScenario>();
-    if (config?.scenarios) {
-      for (const [name, s] of Object.entries(config.scenarios)) {
-        scenarioMap.set(name, s);
-      }
-    }
+    const scenarioMap = new Map(Object.entries(scenariosRecord));
 
     registerAdminRoutes(app, {
       registry,
@@ -143,11 +133,27 @@ export function createMockServer(config?: MockServerConfig): MockServer {
       setScenarioState: (s) => {
         scenarioState = s;
       },
+      getActiveScenario: () => activeScenario,
+      setActiveScenario: (name) => {
+        activeScenario = name;
+      },
       applyScenario: (s) => applyScenarioInternal(s),
+      reseed: config?.reseed,
     });
   }
 
+  app.notFound((c) =>
+    c.json({ error: `Route not found: ${c.req.method} ${new URL(c.req.url).pathname}` }, 404),
+  );
+
   function mock(group: string, method: string): EnhancedMockBuilder {
+    const existing = registry.peek(group, method);
+    return createEnhancedMockBuilder((handler) => {
+      registry.setBase(group, method, handler);
+    }, existing);
+  }
+
+  function scenarioMock(group: string, method: string): EnhancedMockBuilder {
     return createEnhancedMockBuilder((handler) => {
       registry.set(group, method, handler);
     });
@@ -156,11 +162,10 @@ export function createMockServer(config?: MockServerConfig): MockServer {
   function applyScenarioInternal(scenario: MockScenario): void {
     registry.clear();
     callCounts.clear();
-    scenarioState = "Started";
-    scenario.apply(mock as TypedMockFn<any>);
+    scenarioState = scenario.initialState ?? "Started";
+    scenario.apply(scenarioMock as TypedMockFn<any>);
   }
 
-  // Apply initial scenario
   if (config?.scenario) {
     applyScenarioInternal(config.scenario);
   }
@@ -173,22 +178,24 @@ export function createMockServer(config?: MockServerConfig): MockServer {
     mock: mock as TypedMockFn<any>,
     store,
     history,
+    scenarios: scenariosRecord,
     scenarioState: "Started",
+    requestHooks,
+    networkState,
 
     applyScenario(scenario) {
       applyScenarioInternal(scenario);
     },
 
+    getRouteSource(group, method) {
+      if (registry.hasScenario(group, method)) return "scenario";
+      if (registry.baseCount(group, method) > 1) return "override";
+      return "auto";
+    },
+
     async start() {
       const { serve } = await import("@hono/node-server");
-      return new Promise<{ port: number; url: string }>((resolve) => {
-        const nodeServer = serve(
-          { fetch: app.fetch, port, hostname: hostname === "localhost" ? "0.0.0.0" : hostname },
-          (info) => {
-            const actualPort = info.port;
-            resolve({ port: actualPort, url: `http://localhost:${actualPort}` });
-          },
-        );
+      return tryListen(serve, app, port, hostname, (nodeServer) => {
         server = nodeServer;
       });
     },
@@ -208,18 +215,4 @@ function resolveLogLevel(log?: LogLevel | boolean): LogLevel {
   if (log === true) return "normal";
   if (log === false) return "silent";
   return log ?? "normal";
-}
-
-/** Extract prefix mappings from a DefinedApi source */
-function extractPrefixMappings(source: NonNullable<MockServerConfig["source"]>): PrefixMapping[] {
-  const mappings: PrefixMapping[] = [];
-  const groups = source.options.groups;
-
-  for (const [groupName, group] of Object.entries(groups)) {
-    const prefix = group.options?.prefix ?? `/${groupName}`;
-    const methods = Object.keys(group).filter((k) => k !== "options");
-    mappings.push({ prefix, group: groupName, methods });
-  }
-
-  return mappings;
 }

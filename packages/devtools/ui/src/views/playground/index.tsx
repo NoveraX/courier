@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { Play } from "lucide-react";
+import { useSearch } from "@tanstack/react-router";
 
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -19,8 +20,9 @@ export function PlaygroundView(): React.ReactElement {
   const connected = useDevToolsStore((s) => s.connected);
   const activeResponse = useDevToolsStore((s) => s.playgroundActiveResponse);
   const setActiveResponse = useDevToolsStore((s) => s.setPlaygroundActiveResponse);
+  const search = useSearch({ from: "/playground" });
 
-  const pg = usePlayground();
+  const pg = usePlayground(search);
   const { send, sending } = useSendRequest();
 
   const handleSend = useCallback(() => {

@@ -7,12 +7,15 @@ import type { RequestEntry } from "@/store/types";
 import { useDevToolsStore } from "@/store";
 import { useNow } from "@/hooks/use-tick";
 import { STATUS_CONFIG } from "../constants";
+import { DetailSection as Section, DetailRow as Row } from "../detail-rows";
 
 interface GeneralTabProps {
   request: RequestEntry;
+  /** Hide Source and Mode rows (e.g. for mock logs) */
+  hideSourceMode?: boolean;
 }
 
-export function GeneralTab({ request }: GeneralTabProps): React.ReactElement {
+export function GeneralTab({ request, hideSourceMode }: GeneralTabProps): React.ReactElement {
   const timestampFormat = useDevToolsStore((s) => s.settings.timestampFormat);
   const now = useNow();
   const status = STATUS_CONFIG[request.status];
@@ -34,14 +37,18 @@ export function GeneralTab({ request }: GeneralTabProps): React.ReactElement {
             {request.group ? `${request.group}.` : ""}{request.method}
           </code>
         </Row>
-        <Row label="Source">{request.source}</Row>
-        <Row label="Mode">
-          <Badge variant={request.mode === "proxy" ? "sky" : "secondary"}>
-            {request.mode}
-          </Badge>
-        </Row>
+        {!hideSourceMode && (
+          <>
+            <Row label="Source">{request.source}</Row>
+            <Row label="Mode">
+              <Badge variant={request.mode === "proxy" ? "sky" : "secondary"}>
+                {request.mode}
+              </Badge>
+            </Row>
+          </>
+        )}
         {request.type && <Row label="Type">{request.type}</Row>}
-        {request.statusCode && (
+        {request.statusCode != null && request.statusCode > 0 && (
           <Row label="Status Code">
             <StatusCodePill code={request.statusCode} />
           </Row>
@@ -62,11 +69,13 @@ export function GeneralTab({ request }: GeneralTabProps): React.ReactElement {
             <DurationValue duration={request.timing.total} />
           </Row>
         )}
-        {request.size != null && (
+        {request.size != null && request.size > 0 && (
           <Row label="Size">{formatSize(request.size)}</Row>
         )}
         <Row label="Started">{formatTimestamp(request.startedAt, timestampFormat, now)}</Row>
-        <Row label="Middleware">{request.middlewareCount}</Row>
+        {request.middlewareCount > 0 && (
+          <Row label="Middleware">{request.middlewareCount}</Row>
+        )}
         {request.hasValidation.variables && (
           <Row label="Variables Validated">Yes</Row>
         )}
@@ -78,33 +87,6 @@ export function GeneralTab({ request }: GeneralTabProps): React.ReactElement {
   );
 }
 
-// ── Layout helpers ────────────────────────────────────────────────────────
-
-function Section({ title, children }: {
-  title: string;
-  children: React.ReactNode;
-}): React.ReactElement {
-  return (
-    <div>
-      <h4 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">{title}</h4>
-      <div className="rounded-lg border border-border-subtle divide-y divide-border-subtle">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function Row({ label, children }: {
-  label: string;
-  children: React.ReactNode;
-}): React.ReactElement {
-  return (
-    <div className="flex items-center justify-between gap-4 px-3 py-2">
-      <span className="shrink-0 text-body-sm text-muted-foreground">{label}</span>
-      <span className="min-w-0 text-right text-body-sm text-foreground">{children}</span>
-    </div>
-  );
-}
 
 // ── Value renderers ───────────────────────────────────────────────────────
 

@@ -538,6 +538,24 @@ body::after {
 
 /* ── Heatmap diagonal stripes for "no data" cells ── */
 
+/* ── Data table frozen columns inherit row hover/selected ── */
+
+.frozen-cell {
+  background-color: var(--background);
+}
+
+.data-row:hover .frozen-cell {
+  background-color: color-mix(in oklch, var(--muted) 50%, var(--background));
+}
+
+.data-row.selected-row .frozen-cell {
+  background-color: color-mix(in oklch, var(--accent-brand) 5%, var(--background));
+}
+
+.data-row.selected-row:hover .frozen-cell {
+  background-color: color-mix(in oklch, var(--accent-brand) 8%, var(--background));
+}
+
 .diagonal-stripes {
   background-image: repeating-linear-gradient(
     45deg,

@@ -1,6 +1,7 @@
 import type { MockServer } from "../server/create-mock-server";
 import { createCommandHandler } from "./command-handler";
 import { createEventEmitter } from "./event-emitter";
+
 import type { BridgeContext, MockDevToolsBridge, MockDevToolsBridgeOptions } from "./types";
 
 /**
@@ -45,14 +46,39 @@ export async function connectMockToDevTools(
       url: options.serverUrl ?? "",
       startedAt: Date.now(),
       requestCounter: 0,
+      scenarioRequestCount: 0,
       routeCount: options.routeCount ?? 0,
       routes: options.routes ?? [],
+      analyzedRoutes: options.analyzedRoutes ?? [],
       activeScenario: "happy-path",
       availableScenarios: options.scenarios ?? [],
+      scenarioMap: options.scenarioMap ?? server.scenarios ?? {},
+      reseed: options.reseed,
     };
 
     const emitter = createEventEmitter(socket, ctx);
-    const commandCleanup = createCommandHandler(socket, ctx);
+    const commandCleanup = createCommandHandler(socket, ctx, emitter);
+
+    // Wire emitter into route handler hooks
+    const hooks = server.requestHooks;
+    hooks.onStart = (id, httpMethod, path, group, endpoint, variables, requestHeaders) =>
+      emitter.emitRequestStart(id, httpMethod, path, group, endpoint, variables, requestHeaders);
+    hooks.onEnd = (id, status, data, duration, latencyInjected, scenarioState, responseHeaders) => {
+      emitter.emitRequestEnd(
+        id,
+        status,
+        data,
+        duration,
+        latencyInjected,
+        scenarioState,
+        responseHeaders,
+      );
+      checkAndAutoHalt(server, emitter);
+    };
+    hooks.onError = (id, status, message, duration) => {
+      emitter.emitRequestError(id, status, message, duration);
+      checkAndAutoHalt(server, emitter);
+    };
 
     // Full snapshot on every (re)connect — UI rebuilds state from this
     socket.on("connect", () => {
@@ -63,6 +89,9 @@ export async function connectMockToDevTools(
       serverId,
       disconnect() {
         commandCleanup();
+        hooks.onStart = undefined;
+        hooks.onEnd = undefined;
+        hooks.onError = undefined;
         emitter.emitDisconnect();
         socket.disconnect();
       },
@@ -70,4 +99,27 @@ export async function connectMockToDevTools(
   } catch {
     return undefined;
   }
+}
+
+/** Check stop conditions after each request — auto-halt faults if threshold exceeded */
+function checkAndAutoHalt(
+  server: MockServer,
+  emitter: ReturnType<typeof createEventEmitter>,
+): void {
+  const reason = server.networkState.checkStopConditions();
+  if (!reason) return;
+
+  // Auto-halt: reset network config and notify UI
+  const prevConfig = server.networkState.getGlobalConfig();
+  server.networkState.setConfig(undefined);
+  server.networkState.resetMetrics();
+
+  emitter.emitNetworkConfig({
+    preset: "none",
+    latency: 0,
+    errorRate: 0,
+    autoHalted: true,
+    haltReason: reason,
+    previousConfig: prevConfig,
+  });
 }

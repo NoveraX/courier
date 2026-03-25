@@ -33,11 +33,13 @@ describe("extractSourceMap", () => {
                 type: undefined,
                 hasVariablesSchema: false,
                 hasResponseSchema: false,
+                httpMethod: "GET",
               },
               getById: {
                 type: undefined,
                 hasVariablesSchema: false,
                 hasResponseSchema: false,
+                httpMethod: "GET",
                 path: ":id",
               },
             },
@@ -75,12 +77,14 @@ describe("extractSourceMap", () => {
       type: "query",
       hasVariablesSchema: false,
       hasResponseSchema: true,
+      httpMethod: "GET",
     });
 
     expect(users.endpoints.create).toEqual({
       type: "mutation",
       hasVariablesSchema: true,
       hasResponseSchema: true,
+      httpMethod: "POST",
       variablesStub: { name: "" },
     });
   });
@@ -144,6 +148,7 @@ describe("extractSourceMap", () => {
       type: "query",
       hasVariablesSchema: false,
       hasResponseSchema: false,
+      httpMethod: "GET",
       path: "health",
     });
   });

@@ -1,9 +1,11 @@
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+
+import { useDevToolsStore } from "@/store";
+import { useAutoScroll } from "@/hooks/use-auto-scroll";
 
 import type { RequestEntry } from "@/store/types";
 
-import { useDevToolsStore } from "@/store";
 import { OVERSCAN, ROW_HEIGHTS } from "./constants";
 import { RequestRow } from "./request-row";
 import { RequestContextMenu } from "./context-menu";
@@ -36,7 +38,7 @@ export function RequestList({
 
   useAutoScroll(scrollRef, requests.length, shouldAutoScroll);
 
-  const handleKeyDown = useKeyboardNav(requests, selectedId, onSelect);
+  const handleKeyDown = useKeyboardNavById(requests, selectedId, onSelect);
 
   return (
     <div
@@ -86,23 +88,8 @@ export function RequestList({
   );
 }
 
-function useAutoScroll(
-  ref: React.RefObject<HTMLDivElement | null>,
-  count: number,
-  enabled: React.MutableRefObject<boolean>,
-): void {
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !enabled.current) return;
-
-    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 36 * 3;
-    if (isNearBottom) {
-      el.scrollTop = el.scrollHeight;
-    }
-  }, [count, ref, enabled]);
-}
-
-function useKeyboardNav(
+/** Keyboard nav that calls onSelect with the id string (timeline-specific) */
+function useKeyboardNavById(
   requests: RequestEntry[],
   selectedId: string | null,
   onSelect: (id: string) => void,

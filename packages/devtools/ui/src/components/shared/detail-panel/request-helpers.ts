@@ -1,6 +1,7 @@
 import {
   buildCurlSnippet,
   buildFetchSnippet as buildFetchSnippetShared,
+  safeStringify,
 } from "@/lib/snippets";
 import type { RequestEntry } from "@/store/types";
 
@@ -43,8 +44,4 @@ export function buildRequestJson(r: RequestEntry): string {
     headers: r.headers,
     error: r.error,
   }, 2);
-}
-
-function safeStringify(value: unknown, indent = 0): string {
-  try { return JSON.stringify(value, null, indent); } catch { return String(value); }
 }

@@ -56,7 +56,7 @@ function CompareToolbar({
   compare: ReturnType<typeof useCompare>;
 }): React.ReactElement {
   return (
-    <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-3 py-2">
+    <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border-subtle px-3">
       <div className="min-w-0 flex-1">
         <RequestPicker
           requests={compare.requests}

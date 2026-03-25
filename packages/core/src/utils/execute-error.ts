@@ -19,11 +19,13 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
         error instanceof ValidationError
           ? "validation"
           : error instanceof HTTPError
-            ? "http"
+            ? error.status > 0
+              ? "http"
+              : "network"
             : error instanceof TypeError
               ? "network"
               : "unknown",
-      status: error instanceof HTTPError ? error.status : undefined,
+      status: error instanceof HTTPError && error.status > 0 ? error.status : undefined,
       message: error instanceof Error ? error.message : String(error),
     },
     timestamp: Date.now(),

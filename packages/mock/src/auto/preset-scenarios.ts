@@ -1,3 +1,4 @@
+import type { MockStore } from "../store";
 import type { MockScenario, TypedMockFn } from "../types";
 import type { RouteInfo } from "./route-analyzer";
 
@@ -5,19 +6,25 @@ import type { RouteInfo } from "./route-analyzer";
  * Build standard preset scenarios from analyzed routes.
  * These are available out of the box with createAutoMockServer.
  */
-export function buildPresetScenarios(routes: RouteInfo[]): Record<string, MockScenario> {
+export function buildPresetScenarios(
+  routes: RouteInfo[],
+  getStore: () => MockStore | undefined,
+): Record<string, MockScenario> {
   const listRoutes = routes.filter((r) => r.operation === "list");
 
   return {
     empty: buildEmptyScenario(listRoutes),
-    "server-error": buildErrorScenario(listRoutes),
-    "slow-network": buildSlowNetworkScenario(listRoutes),
+    "server-error": buildErrorScenario(routes),
+    "slow-network": buildSlowNetworkScenario(listRoutes, getStore),
   };
 }
 
 function buildEmptyScenario(listRoutes: RouteInfo[]): MockScenario {
   return {
     name: "empty",
+    description:
+      "All list endpoints return empty arrays, simulating a freshly initialized system with no data.",
+    tags: ["data", "empty"],
     apply(mock: TypedMockFn<any>) {
       for (const route of listRoutes) {
         (mock as (g: string, m: string) => { resolves: (data: unknown) => void })(
@@ -29,7 +36,7 @@ function buildEmptyScenario(listRoutes: RouteInfo[]): MockScenario {
   };
 }
 
-function buildErrorScenario(listRoutes: RouteInfo[]): MockScenario {
+function buildErrorScenario(routes: RouteInfo[]): MockScenario {
   const errors = [
     { status: 500, message: "Database connection lost" },
     { status: 503, message: "Service temporarily unavailable" },
@@ -38,10 +45,15 @@ function buildErrorScenario(listRoutes: RouteInfo[]): MockScenario {
 
   return {
     name: "server-error",
+    description:
+      "All endpoints cycle through 500 / 503 / 502 errors, simulating a fully degraded backend.",
+    tags: ["error", "critical"],
     apply(mock: TypedMockFn<any>) {
-      for (let i = 0; i < listRoutes.length; i++) {
-        const route = listRoutes[i]!;
-        const err = errors[i % errors.length]!;
+      // All routes fail — simulates a fully degraded backend
+      for (let i = 0; i < routes.length; i++) {
+        const route = routes[i];
+        const err = errors[i % errors.length];
+        if (!route || !err) continue;
         (mock as (g: string, m: string) => { rejects: (status: number, data: unknown) => void })(
           route.group,
           route.endpoint,
@@ -51,18 +63,25 @@ function buildErrorScenario(listRoutes: RouteInfo[]): MockScenario {
   };
 }
 
-function buildSlowNetworkScenario(listRoutes: RouteInfo[]): MockScenario {
+function buildSlowNetworkScenario(
+  listRoutes: RouteInfo[],
+  getStore: () => MockStore | undefined,
+): MockScenario {
   return {
     name: "slow-network",
+    description:
+      "Adds 3G-equivalent latency (~2000ms) to all read endpoints to simulate a slow mobile connection.",
+    tags: ["latency", "network"],
     apply(mock: TypedMockFn<any>) {
       for (const route of listRoutes) {
+        const group = route.group;
         (
           mock as (
             g: string,
             m: string,
-          ) => { resolves: (data: unknown) => { withLatency: (p: string) => void } }
-        )(route.group, route.endpoint)
-          .resolves([])
+          ) => { returns: (fn: () => unknown) => { withLatency: (p: string) => void } }
+        )(group, route.endpoint)
+          .returns(() => getStore()?.collection(group).getAll() ?? [])
           .withLatency("3g");
       }
     },

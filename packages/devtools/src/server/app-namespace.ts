@@ -91,6 +91,22 @@ export function setupAppNamespace(
         }
       }
 
+      // Keep cached connect event up-to-date with network config changes
+      if (event.type === "mock:network:config") {
+        const serverId = event.serverId as string;
+        const cached = serverId ? mockServers.get(serverId) : undefined;
+        if (cached) {
+          const cfg = event.config as Record<string, unknown> | undefined;
+          if (cfg) {
+            cached.networkConfig = cfg;
+            cached.latencyPreset = cfg.latencyPreset;
+            cached.latencyStartedAt = cfg.latencyStartedAt;
+            cached.chaosPreset = cfg.chaosPreset;
+            cached.chaosStartedAt = cfg.chaosStartedAt;
+          }
+        }
+      }
+
       // Forward all events to UI
       uiNamespace.emit("event", event);
     });

@@ -59,17 +59,12 @@ export function useSessionHistory() {
   }
 
   async function exportSession(id: string, format: ExportFormat): Promise<void> {
-    // Export needs raw blob response — use apiClient directly
+    const { downloadFile } = await import("@/lib/export");
     const blob = await apiClient.post<Blob>("/api/sessions/export", {
       json: { id, format },
       responseType: "blob",
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `session-${id}.${format === "har" ? "har" : "json"}`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(blob, `session-${id}.${format === "har" ? "har" : "json"}`);
     toast.success(`Exported as ${format.toUpperCase()}`);
   }
 

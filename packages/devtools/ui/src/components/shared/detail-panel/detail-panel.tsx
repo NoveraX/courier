@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { ScrollArea as ScrollAreaPrimitive } from "radix-ui";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -23,6 +24,8 @@ interface DetailPanelProps {
   activeTab: DetailTabKey;
   onTabChange: (tab: DetailTabKey) => void;
   onClose: () => void;
+  /** Hide Source and Mode rows in General tab (e.g. for mock logs) */
+  hideSourceMode?: boolean;
 }
 
 export function DetailPanel({
@@ -30,6 +33,7 @@ export function DetailPanel({
   activeTab,
   onTabChange,
   onClose,
+  hideSourceMode,
 }: DetailPanelProps): React.ReactElement {
   const visibleTabs = getVisibleTabs(request);
 
@@ -57,24 +61,24 @@ export function DetailPanel({
 
         <div className="flex flex-1 flex-col min-h-0">
           <TabsContent value="general" className="mt-0 h-full overflow-auto">
-            <GeneralTab request={request} />
+            <GeneralTab request={request} hideSourceMode={hideSourceMode} />
           </TabsContent>
-          <TabsContent value="snippets" className="mt-0 h-full overflow-hidden">
+          <TabsContent value="snippets" className="mt-0 h-full overflow-auto">
             <SnippetsTab request={request} />
           </TabsContent>
-          <TabsContent value="headers" className="mt-0 h-full overflow-hidden">
+          <TabsContent value="headers" className="mt-0 h-full overflow-auto">
             <HeadersTab request={request} />
           </TabsContent>
-          <TabsContent value="payload" className="mt-0 h-full overflow-hidden">
+          <TabsContent value="payload" className="mt-0 h-full overflow-auto">
             <PayloadTab request={request} />
           </TabsContent>
-          <TabsContent value="response" className="mt-0 h-full overflow-hidden">
+          <TabsContent value="response" className="mt-0 h-full overflow-auto">
             <ResponseTab request={request} />
           </TabsContent>
           <TabsContent value="timing" className="mt-0 h-full overflow-auto">
             <TimingTab request={request} />
           </TabsContent>
-          <TabsContent value="error" className="mt-0 h-full overflow-hidden">
+          <TabsContent value="error" className="mt-0 h-full overflow-auto">
             <ErrorTab request={request} />
           </TabsContent>
           <TabsContent value="proxy" className="mt-0 h-full overflow-auto">
@@ -116,36 +120,48 @@ function getVisibleTabs(request: RequestEntry): typeof DETAIL_TABS[number][] {
   });
 }
 
-// ── Scrollable tabs with fade edge indicators ─────────────────────────────
+// ── Scrollable tabs with custom horizontal scrollbar ──────────────────────
 
 function ScrollableTabs({ children }: { children: React.ReactNode }): React.ReactElement {
   const ref = useRef<HTMLDivElement>(null);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [canScroll, setCanScroll] = useState({ left: false, right: false });
 
   const checkScroll = useCallback(() => {
     const el = ref.current;
     if (!el) return;
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+    setCanScroll({
+      left: el.scrollLeft > 2,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 2,
+    });
   }, []);
 
   return (
-    <div className="relative border-b border-border-subtle">
-      <div
+    <ScrollAreaPrimitive.Root className="relative border-b border-border-subtle">
+      <ScrollAreaPrimitive.Viewport
         ref={ref}
-        className="overflow-x-auto overflow-y-hidden px-3 scrollbar-none"
+        className="overflow-x-auto overflow-y-hidden"
         onScroll={checkScroll}
         onMouseEnter={checkScroll}
       >
-        {children}
-      </div>
+        <div className="px-3">{children}</div>
+      </ScrollAreaPrimitive.Viewport>
 
-      {/* Right fade gradient — hints at more tabs */}
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l from-background to-transparent transition-opacity duration-150",
-          canScrollRight ? "opacity-100" : "opacity-0",
-        )}
-      />
-    </div>
+      <ScrollAreaPrimitive.ScrollAreaScrollbar
+        orientation="horizontal"
+        className="flex h-1.5 touch-none select-none flex-col border-t border-t-transparent p-px transition-colors"
+      >
+        <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-border" />
+      </ScrollAreaPrimitive.ScrollAreaScrollbar>
+
+      {/* Fade edges */}
+      <div className={cn(
+        "pointer-events-none absolute inset-y-0 left-0 w-6 bg-linear-to-r from-background to-transparent transition-opacity duration-150",
+        canScroll.left ? "opacity-100" : "opacity-0",
+      )} />
+      <div className={cn(
+        "pointer-events-none absolute inset-y-0 right-0 w-6 bg-linear-to-l from-background to-transparent transition-opacity duration-150",
+        canScroll.right ? "opacity-100" : "opacity-0",
+      )} />
+    </ScrollAreaPrimitive.Root>
   );
 }

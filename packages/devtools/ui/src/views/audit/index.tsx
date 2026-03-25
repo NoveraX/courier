@@ -1,5 +1,7 @@
 import { ClipboardCopy, Download, Shield, Share2 } from "lucide-react";
 import { toast } from "sonner";
+import { copyToClipboard } from "@/lib/clipboard";
+import { downloadFile } from "@/lib/export";
 
 import {
   DropdownMenu,
@@ -41,19 +43,11 @@ function AuditContent(): React.ReactNode {
   const md = exportAsMarkdown(audit.result);
 
   const handleCopy = (): void => {
-    navigator.clipboard.writeText(md).then(() => {
-      toast.success("Report copied to clipboard");
-    });
+    copyToClipboard(md, "report");
   };
 
   const handleDownload = (): void => {
-    const blob = new Blob([md], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `nexus-audit-${Date.now()}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(md, `nexus-audit-${Date.now()}.md`, "text/markdown");
     toast.success("Report downloaded");
   };
 

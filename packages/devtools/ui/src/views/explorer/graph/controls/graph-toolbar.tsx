@@ -5,12 +5,9 @@ import { ZoomIn, ZoomOut, Maximize, Map } from "lucide-react";
 import type { ExplorerLayout, ExplorerMetricMode } from "../../types";
 import { LayoutToggle } from "./layout-toggle";
 import { MetricModeSelect } from "./metric-mode-select";
-import { ToolbarButton } from "./toolbar-button";
+import { ToolbarButton } from "@/components/shared/toolbar-button";
 import { SearchInput } from "./search-input";
 import { useGraphShortcuts } from "./use-graph-shortcuts";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { KbdHint } from "@/components/shared/kbd-hint";
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -72,30 +69,15 @@ export function GraphToolbar({
 
       {/* Zoom controls */}
       <div className="flex items-center gap-0.5">
-        <ToolbarButton icon={ZoomOut} label="Zoom out" onClick={() => zoomOut({ duration: 200 })} />
-        <ToolbarButton icon={ZoomIn} label="Zoom in" onClick={() => zoomIn({ duration: 200 })} />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={handleFitView}
-              className="text-muted-foreground hover:text-foreground"
-              aria-label="Fit view"
-            >
-              <Maximize className="size-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            Fit to view <KbdHint keys="mod+0" className="ml-1.5" />
-          </TooltipContent>
-        </Tooltip>
+        <ToolbarButton icon={ZoomOut} tooltip="Zoom out" onClick={() => zoomOut({ duration: 200 })} />
+        <ToolbarButton icon={ZoomIn} tooltip="Zoom in" onClick={() => zoomIn({ duration: 200 })} />
+        <ToolbarButton icon={Maximize} tooltip="Fit to view" kbd="mod+0" onClick={handleFitView} />
       </div>
 
       {/* Minimap toggle */}
       <ToolbarButton
         icon={Map}
-        label={showMinimap ? "Hide minimap" : "Show minimap"}
+        tooltip={showMinimap ? "Hide minimap" : "Show minimap"}
         onClick={onToggleMinimap}
         active={showMinimap}
       />

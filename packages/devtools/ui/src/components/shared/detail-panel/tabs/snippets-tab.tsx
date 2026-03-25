@@ -2,8 +2,8 @@ import { Braces, Code2, Terminal } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CopyButton } from "@/components/shared/copy-button";
 import { CodeBlock, FormatSwitcher } from "@/components/shared/code-block";
+import { QuickCopyRow } from "../detail-rows";
 import type { RequestEntry } from "@/store/types";
 import {
   buildCurl,
@@ -77,15 +77,3 @@ function QuickCopySection({ request }: { request: RequestEntry }): React.ReactEl
   );
 }
 
-function QuickCopyRow({ label, value }: {
-  label: string;
-  value: string;
-}): React.ReactElement {
-  return (
-    <div className="flex items-center gap-3 border-b border-border-subtle px-3 py-2 last:border-b-0">
-      <span className="w-20 shrink-0 text-body-sm text-muted-foreground">{label}</span>
-      <code className="min-w-0 flex-1 truncate mono-sm text-foreground/80">{value}</code>
-      <CopyButton value={value} label={`Copy ${label.toLowerCase()}`} />
-    </div>
-  );
-}

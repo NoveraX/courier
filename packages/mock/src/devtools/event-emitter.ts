@@ -1,7 +1,28 @@
+import type { RouteInfo } from "../auto/route-analyzer";
+import { introspectScenario } from "../auto/scenario-introspect";
 import type { BridgeContext } from "./types";
 
 interface Socket {
   emit(event: string, data: unknown): void;
+}
+
+function buildScenarioEntries(ctx: BridgeContext, routes: RouteInfo[]) {
+  return ctx.availableScenarios.map((name) => {
+    const scenario = ctx.scenarioMap[name];
+    const result = scenario
+      ? introspectScenario(scenario, routes)
+      : { endpoints: [], stateTransitions: [], hasStateMachine: false };
+    return {
+      name,
+      description: scenario?.description,
+      tags: scenario?.tags,
+      endpointCount: result.endpoints.length,
+      isActive: name === ctx.activeScenario,
+      hasStateMachine: result.hasStateMachine,
+      stateTransitions: result.stateTransitions,
+      endpoints: result.endpoints,
+    };
+  });
 }
 
 /** Creates an event emitter that sends mock:* events via Socket.IO */
@@ -26,6 +47,7 @@ export function createEventEmitter(socket: Socket, ctx: BridgeContext) {
         (sum, name) => sum + store.collection(name).count(),
         0,
       );
+      const scenarios = buildScenarioEntries(ctx, ctx.analyzedRoutes);
 
       emit("mock:server:connect", {
         name: ctx.name,
@@ -36,15 +58,22 @@ export function createEventEmitter(socket: Socket, ctx: BridgeContext) {
         collectionCount: collections.length,
         recordCount,
         requestsServed: ctx.requestCounter,
+        scenarioRequestCount: ctx.scenarioRequestCount,
         errorCount: ctx.server.history.filter((h) => h.error).length,
         activeScenario: ctx.activeScenario,
         availableScenarios: ctx.availableScenarios,
+        scenarios,
         collections: collections.map((name) => ({
           name,
           count: store.collection(name).count(),
-          records: [],
+          records: store.collection(name).getAll(),
         })),
         routes: ctx.routes,
+        networkConfig: ctx.server.networkState.getGlobalConfig() ?? null,
+        latencyPreset: ctx.server.networkState.latencyPreset,
+        latencyStartedAt: ctx.server.networkState.latencyStartedAt,
+        chaosPreset: ctx.server.networkState.chaosPreset,
+        chaosStartedAt: ctx.server.networkState.chaosStartedAt,
       });
     },
 
@@ -60,9 +89,19 @@ export function createEventEmitter(socket: Socket, ctx: BridgeContext) {
       group: string,
       endpoint: string,
       variables?: unknown,
+      requestHeaders?: Record<string, string>,
     ) {
       ctx.requestCounter++;
-      emit("mock:request:start", { requestId, httpMethod, path, group, endpoint, variables });
+      ctx.scenarioRequestCount++;
+      emit("mock:request:start", {
+        requestId,
+        httpMethod,
+        path,
+        group,
+        endpoint,
+        variables,
+        requestHeaders,
+      });
     },
 
     emitRequestEnd(
@@ -72,6 +111,7 @@ export function createEventEmitter(socket: Socket, ctx: BridgeContext) {
       duration: number,
       latencyInjected: number,
       scenarioState: string,
+      responseHeaders?: Record<string, string>,
     ) {
       emit("mock:request:end", {
         requestId,
@@ -80,11 +120,20 @@ export function createEventEmitter(socket: Socket, ctx: BridgeContext) {
         duration,
         latencyInjected,
         scenarioState,
+        responseHeaders,
+        scenarioRequestCount: ctx.scenarioRequestCount,
       });
     },
 
     emitRequestError(requestId: string, status: number, message: string, duration: number) {
-      emit("mock:request:error", { requestId, status, message, duration });
+      ctx.scenarioRequestCount++;
+      emit("mock:request:error", {
+        requestId,
+        status,
+        message,
+        duration,
+        scenarioRequestCount: ctx.scenarioRequestCount,
+      });
     },
 
     emitStoreChange(
@@ -106,11 +155,15 @@ export function createEventEmitter(socket: Socket, ctx: BridgeContext) {
       emit("mock:store:snapshot", { collections });
     },
 
-    emitScenarioActive(
-      scenario: string,
-      available: Array<{ name: string; endpointCount: number; isActive: boolean }>,
-    ) {
-      emit("mock:scenario:active", { scenario, available });
+    /** Push updated scenario list after activation — marks new active, resets per-scenario counter */
+    emitScenarioActive(activeScenario: string) {
+      ctx.scenarioRequestCount = 0;
+      const scenarios = buildScenarioEntries({ ...ctx, activeScenario }, ctx.analyzedRoutes);
+      emit("mock:scenario:active", {
+        scenario: activeScenario,
+        scenarios,
+        scenarioRequestCount: 0,
+      });
     },
 
     emitRouteList(routes: Array<Record<string, unknown>>) {
@@ -119,6 +172,10 @@ export function createEventEmitter(socket: Socket, ctx: BridgeContext) {
 
     emitNetworkConfig(config: Record<string, unknown>) {
       emit("mock:network:config", { config });
+    },
+
+    emitExperimentEvent(event: Record<string, unknown>) {
+      emit("mock:experiment:event", event);
     },
 
     emitHotReload(files: string[], routesChanged: number) {

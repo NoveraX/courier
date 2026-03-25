@@ -1,10 +1,12 @@
 import { useState, useMemo } from "react";
 import { ChevronRight } from "lucide-react";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
-  Table, TableBody, TableCell, TableHeader, TableRow,
+  Table, TableCell, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
 import { formatDuration, formatSize } from "@/components/shared/formatters";
 import { useRequestDetail } from "@/hooks/use-request-detail";
 import type { RequestEntry } from "@/store/types";
@@ -60,7 +62,12 @@ export function EndpointsTable({ data, requests }: EndpointsTableProps): React.R
               <SortHead label="Errors" sortKey="errorRate" current={sortKey} dir={sortDir} onSort={handleSort} />
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <motion.tbody
+            initial="hidden"
+            animate="visible"
+            variants={{ visible: { transition: { staggerChildren: 0.02 } } }}
+            className="[&_tr:last-child]:border-0"
+          >
             {visible.map((ep) => (
               <EndpointGroup
                 key={ep.endpoint}
@@ -70,7 +77,7 @@ export function EndpointsTable({ data, requests }: EndpointsTableProps): React.R
                 onClick={() => handleRowClick(ep)}
               />
             ))}
-          </TableBody>
+          </motion.tbody>
         </Table>
       </div>
 
@@ -97,7 +104,7 @@ function EndpointGroup({ stat, isExpanded, requestsMap, onClick }: {
 
   return (
     <>
-      <TableRow className="cursor-pointer border-border-subtle hover:bg-muted/40" onClick={onClick}>
+      <motion.tr variants={STAGGER_ITEM_VARIANTS} className="cursor-pointer border-b border-border-subtle hover:bg-muted/40" onClick={onClick}>
         <TableCell className="mono-sm text-foreground">
           <span className="flex items-center gap-1.5">
             {expandable && (
@@ -121,7 +128,7 @@ function EndpointGroup({ stat, isExpanded, requestsMap, onClick }: {
         <TableCell className={cn("text-right tabular-nums", errorRateColor(stat.errorRate))}>
           {stat.errorRate.toFixed(1)}%
         </TableCell>
-      </TableRow>
+      </motion.tr>
       {isExpanded && (
         <EndpointCalls requestIds={stat.requestIds} requestsMap={requestsMap} />
       )}

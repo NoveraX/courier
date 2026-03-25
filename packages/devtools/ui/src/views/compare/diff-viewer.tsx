@@ -1,6 +1,8 @@
 import { useMemo } from "react";
+import { motion } from "motion/react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
 
 import type { DiffLine } from "./types";
 import { DiffRow, CollapsedRegion } from "./diff-row";
@@ -87,17 +89,26 @@ export function DiffViewer({
       </div>
 
       <ScrollArea className="min-h-0 flex-1">
-        <div className="font-mono text-[11px] leading-5">
+        <motion.div
+          className="font-mono text-[11px] leading-5"
+          initial="hidden"
+          animate="visible"
+          variants={{ visible: { transition: { staggerChildren: 0.02 } } }}
+        >
           {regions.map((region, ri) =>
             region.type === "collapsed" ? (
-              <CollapsedRegion key={ri} lines={region.lines} />
+              <motion.div key={ri} variants={STAGGER_ITEM_VARIANTS}>
+                <CollapsedRegion lines={region.lines} />
+              </motion.div>
             ) : (
               region.lines.map((line, li) => (
-                <DiffRow key={`${ri}-${li}`} line={line} />
+                <motion.div key={`${ri}-${li}`} variants={STAGGER_ITEM_VARIANTS}>
+                  <DiffRow line={line} />
+                </motion.div>
               ))
             ),
           )}
-        </div>
+        </motion.div>
       </ScrollArea>
     </div>
   );

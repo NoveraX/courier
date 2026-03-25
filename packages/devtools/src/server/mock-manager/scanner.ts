@@ -1,18 +1,12 @@
-import { execFileSync } from "node:child_process";
 import type { FSWatcher } from "node:fs";
 import { existsSync, watch as fsWatch, readdirSync, statSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 
+import type { MetaResult, MetaRoute, MetaScenario } from "./meta-pool";
+import { createMetaPool } from "./meta-pool";
+
 /** Route info extracted from server config at scan time */
-export interface DeclaredRoute {
-  group: string;
-  endpoint: string;
-  httpMethod: string;
-  path: string;
-  fullPath: string;
-  source: "auto";
-  hits: 0;
-}
+export type DeclaredRoute = MetaRoute;
 
 /** Declared mock server discovered from the mock-servers/ directory */
 export interface DeclaredServer {
@@ -24,6 +18,7 @@ export interface DeclaredServer {
   autoStart: boolean;
   routes: DeclaredRoute[];
   collections: string[];
+  scenarios: MetaScenario[];
 }
 
 export interface ScannerEvents {
@@ -51,62 +46,18 @@ function deriveServerId(relPath: string): string {
   return deriveServerName(relPath);
 }
 
-interface ServerMeta {
-  autoStart: boolean;
-  routes: DeclaredRoute[];
-  collections: string[];
-}
-
-const FALLBACK_META: ServerMeta = { autoStart: false, routes: [], collections: [] };
-
-/** Read server metadata (autoStart, routes, collections) via tsx child process */
-function readServerMeta(filePath: string): ServerMeta {
-  try {
-    const script = `
-      Promise.all([
-        import("${filePath}"),
-        import("@noverax/nexus-mock/route-analyzer"),
-      ]).then(([m, { analyzeRoutes }]) => {
-        const c = m.mockServer ?? m.default;
-        const groups = c?.source?.options?.groups;
-        const routes = groups ? analyzeRoutes(groups) : [];
-        const collections = [...new Set(routes.map(r => r.group))];
-        const result = {
-          autoStart: c?.autoStart === true,
-          routes: routes.map(r => ({
-            group: r.group,
-            endpoint: r.endpoint,
-            httpMethod: r.httpMethod,
-            path: r.path,
-            fullPath: r.fullPath,
-            source: "auto",
-            hits: 0,
-          })),
-          collections,
-        };
-        process.stdout.write(JSON.stringify(result));
-      }).catch(() => process.stdout.write("null"));
-    `;
-    const raw = execFileSync("node", ["--import", "tsx/esm", "-e", script], {
-      encoding: "utf-8",
-      timeout: 5000,
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-    const parsed = JSON.parse(raw) as ServerMeta | null;
-    return parsed ?? FALLBACK_META;
-  } catch {
-    return FALLBACK_META;
-  }
-}
+const FALLBACK_META: MetaResult = { autoStart: false, routes: [], collections: [], scenarios: [] };
 
 export function createScanner(mocksDir: string, events: ScannerEvents) {
   let watcher: FSWatcher | undefined;
+  let parentWatcher: FSWatcher | undefined;
   const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const knownServers = new Map<string, string>();
+  const pool = createMetaPool();
 
-  function buildDeclared(filePath: string): DeclaredServer {
+  async function buildDeclared(filePath: string): Promise<DeclaredServer> {
     const rel = relative(mocksDir, filePath);
-    const meta = readServerMeta(filePath);
+    const meta = (await pool.analyze(filePath)) ?? FALLBACK_META;
     return {
       id: deriveServerId(rel),
       filePath,
@@ -130,13 +81,14 @@ export function createScanner(mocksDir: string, events: ScannerEvents) {
         debounceTimers.delete(id);
 
         if (existsSync(filePath)) {
-          const server = buildDeclared(filePath);
-          if (knownServers.has(id)) {
-            events.onChanged(server);
-          } else {
-            knownServers.set(id, filename);
-            events.onDeclared(server);
-          }
+          void buildDeclared(filePath).then((server) => {
+            if (knownServers.has(id)) {
+              events.onChanged(server);
+            } else {
+              knownServers.set(id, filename);
+              events.onDeclared(server);
+            }
+          });
         } else if (knownServers.has(id)) {
           knownServers.delete(id);
           events.onRemoved(id);
@@ -145,35 +97,48 @@ export function createScanner(mocksDir: string, events: ScannerEvents) {
     );
   }
 
-  function initialScan(): void {
+  /** Discover all server files and analyze them in parallel */
+  function collectEntries(): Array<{ id: string; rel: string; path: string }> {
+    const entries: Array<{ id: string; rel: string; path: string }> = [];
+
     for (const entry of readdirSync(mocksDir, { withFileTypes: true })) {
       if (entry.isFile() && entry.name.endsWith(SERVER_SUFFIX)) {
         const rel = entry.name;
-        knownServers.set(deriveServerId(rel), rel);
-        events.onDeclared(buildDeclared(join(mocksDir, rel)));
+        entries.push({ id: deriveServerId(rel), rel, path: join(mocksDir, rel) });
       } else if (entry.isDirectory()) {
         const serverFile = join(mocksDir, entry.name, DIR_ENTRY);
         if (existsSync(serverFile)) {
           const rel = `${entry.name}/${DIR_ENTRY}`;
-          knownServers.set(deriveServerId(rel), rel);
-          events.onDeclared(buildDeclared(serverFile));
+          entries.push({ id: deriveServerId(rel), rel, path: serverFile });
         }
+      }
+    }
+    return entries;
+  }
+
+  async function initialScan(): Promise<void> {
+    const entries = collectEntries();
+    const results = await Promise.all(entries.map((e) => buildDeclared(e.path)));
+
+    for (const [i, entry] of entries.entries()) {
+      const server = results[i];
+      if (server) {
+        knownServers.set(entry.id, entry.rel);
+        events.onDeclared(server);
       }
     }
   }
 
-  let parentWatcher: FSWatcher | undefined;
-
   function startWatching(): void {
     if (watcher) return;
 
-    initialScan();
+    // Fire-and-forget: events stream to UI as each server is analyzed
+    void initialScan();
 
     watcher = fsWatch(mocksDir, { recursive: true, persistent: true }, (_event, filename) => {
       if (filename) handleChange(filename);
     });
 
-    // Stop watching parent once mock dir exists
     parentWatcher?.close();
     parentWatcher = undefined;
   }
@@ -202,6 +167,7 @@ export function createScanner(mocksDir: string, events: ScannerEvents) {
     watcher = undefined;
     parentWatcher?.close();
     parentWatcher = undefined;
+    pool.shutdown();
   }
 
   return { start, stop };

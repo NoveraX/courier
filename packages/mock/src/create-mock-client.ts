@@ -177,9 +177,10 @@ export function createMockClient<TApi extends DefinedApi<any>>(
   };
 
   function mock(group: string, method: string): EnhancedMockBuilder {
+    const existing = registry.peek(group, method);
     return createEnhancedMockBuilder((handler) => {
       registry.set(group, method, handler);
-    });
+    }, existing);
   }
 
   const mockClient: MockClient<TApi> = {

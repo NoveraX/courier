@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { CountDisplay } from "@/components/shared/count-display";
 import { SearchInput } from "@/components/shared/search-input";
 
 import type { WaterfallSortField, WaterfallGroupBy } from "@/store/types";
@@ -45,10 +46,7 @@ export function Toolbar({
       <ZoomControls zoom={zoom} onIn={onZoomIn} onOut={onZoomOut} onReset={onResetZoom} onFit={onZoomToFit} />
 
       <div className="ml-auto flex items-center gap-2 text-body-sm text-muted-foreground">
-        <span className="tabular-nums">
-          {filteredCount !== totalCount ? `${filteredCount} / ${totalCount}` : totalCount}
-          {" requests"}
-        </span>
+        <CountDisplay filtered={filteredCount} total={totalCount} label="requests" />
         <Badge variant="secondary" className="text-[10px] tabular-nums">
           {zoom.toFixed(1)}×
         </Badge>

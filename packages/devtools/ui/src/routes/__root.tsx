@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
-import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { Toaster } from "sonner";
 
 import { useSocketConnection } from "@/socket";
 import { useTickProvider } from "@/hooks/use-tick";
 import { useHotkeys } from "@/hooks/use-hotkeys";
-import { ALL_NAV_ITEMS } from "@/app-config";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { TopBar } from "@/components/layout/top-bar";
@@ -21,24 +20,12 @@ function RootComponent(): React.ReactNode {
   useSocketConnection();
   useTickProvider();
 
-  const navigate = useNavigate();
   const [commandOpen, setCommandOpen] = useState(false);
 
-  const hotkeyMap = useMemo(() => {
-    const map: Record<string, (e: KeyboardEvent) => void> = {
-      "mod+k": () => setCommandOpen(true),
-      "Escape": () => setCommandOpen(false),
-    };
-
-    // Cmd+1-9 for quick nav
-    for (const item of ALL_NAV_ITEMS) {
-      if (item.kbd) {
-        map[`mod+${item.kbd}`] = () => navigate({ to: item.path });
-      }
-    }
-
-    return map;
-  }, [navigate]);
+  const hotkeyMap = useMemo<Record<string, (e: KeyboardEvent) => void>>(() => ({
+    "mod+k": () => setCommandOpen(true),
+    "Escape": () => setCommandOpen(false),
+  }), []);
 
   useHotkeys(hotkeyMap);
 

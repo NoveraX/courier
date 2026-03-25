@@ -9,7 +9,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     target: '[data-tour="sidebar"]',
     title: "Navigation",
-    description: "Switch between views using the sidebar. Keyboard shortcuts ⌘1-9 for instant access.",
+    description: "Switch between views using the sidebar. Use ⌘K to open the command palette from anywhere.",
     placement: "right",
   },
   {
@@ -40,6 +40,12 @@ export const TOUR_STEPS: TourStep[] = [
     target: '[data-tour="playground"]',
     title: "Playground",
     description: "Test endpoints interactively — pick an endpoint, edit the request, and fire it off.",
+    placement: "right",
+  },
+  {
+    target: '[data-tour="mocks"]',
+    title: "Mocks",
+    description: "Run a local mock server with zero config. Manage routes, activate scenarios, simulate network conditions, and inspect mock logs.",
     placement: "right",
   },
   {
@@ -81,7 +87,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     target: '[data-tour="cmd-k"]',
     title: "Command Palette",
-    description: "Press ⌘K to quickly search, navigate, and run actions from anywhere.",
+    description: "Search, navigate, and run actions from anywhere without touching the mouse.",
     placement: "bottom",
   },
 ];

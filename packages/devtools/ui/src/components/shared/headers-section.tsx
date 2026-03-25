@@ -17,7 +17,7 @@ export function HeadersSection({ title, headers, warning }: HeadersSectionProps)
   return (
     <div className="overflow-hidden rounded-lg border border-border-subtle bg-background-inset">
       <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-3 py-1.5">
-        <span className="rounded bg-card/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/50">
+        <span className="rounded bg-card/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
           {title} ({entries.length})
         </span>
         <div className="flex-1" />

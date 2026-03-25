@@ -1,35 +1,60 @@
-import type { EnhancedMockBuilder, MockHandlerFn, ResolvedHandler } from "../types";
+import type { EnhancedMockBuilder, MockHandlerFn, ResolvedHandler, SequenceEntry } from "../types";
 
-/** Callback invoked when the builder finalizes a handler */
+/** Callback invoked when a NEW handler needs to be pushed onto the stack */
 export type OnRegister = (handler: ResolvedHandler) => void;
 
-/** Create a fluent EnhancedMockBuilder that mutates a handler in place */
+/**
+ * Create a fluent EnhancedMockBuilder.
+ *
+ * Two modes of operation:
+ * - **With existing handler**: decorator methods (withLatency, withHeaders, delay, withStatus)
+ *   mutate the existing handler in-place — no new handler is pushed.
+ *   Response-defining methods (resolves, returns, rejects, sequence) create a new handler.
+ * - **Without existing**: a new handler is registered immediately (original behavior).
+ */
 export function createEnhancedMockBuilder<TResponse, TVariables>(
   onRegister: OnRegister,
+  existing?: ResolvedHandler,
 ): EnhancedMockBuilder<TResponse, TVariables> {
-  const handler: ResolvedHandler = {
+  // If no existing handler, create and register a new one immediately
+  // (backward compat: mutations update the same object reference)
+  let handler: ResolvedHandler = existing ?? {
     fn: () => undefined,
     status: 200,
     isError: false,
   };
 
-  // Register immediately — mutations update the same object reference
-  onRegister(handler);
+  if (!existing) {
+    onRegister(handler);
+  }
+
+  /** Switch to a fresh handler, push it onto the stack, apply any pending decorators */
+  function ensureOwnHandler(): void {
+    if (handler === existing) {
+      handler = { fn: handler.fn, status: handler.status, isError: handler.isError };
+      onRegister(handler);
+    }
+  }
 
   const builder: EnhancedMockBuilder<TResponse, TVariables> = {
     resolves(data) {
+      ensureOwnHandler();
       handler.fn = () => data;
+      handler.status = 200;
       handler.isError = false;
       return builder;
     },
 
     returns(fn) {
+      ensureOwnHandler();
       handler.fn = fn as MockHandlerFn;
+      handler.status = 200;
       handler.isError = false;
       return builder;
     },
 
     rejects(status, data) {
+      ensureOwnHandler();
       handler.status = status;
       handler.fn = () => data ?? { success: false, message: `HTTP ${status}` };
       handler.isError = true;
@@ -37,11 +62,13 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
     },
 
     once() {
+      ensureOwnHandler();
       handler.remaining = 1;
       return builder;
     },
 
     times(n) {
+      ensureOwnHandler();
       handler.remaining = n;
       return builder;
     },
@@ -67,6 +94,7 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
     },
 
     inState(state) {
+      ensureOwnHandler();
       handler.requiredState = state;
       return builder;
     },
@@ -77,16 +105,32 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
     },
 
     sequence(responses) {
+      ensureOwnHandler();
       let index = 0;
       handler.fn = () => {
-        const current =
+        const current: SequenceEntry<unknown> =
           index < responses.length ? responses[index] : responses[responses.length - 1];
         index++;
 
         if (!current) return undefined;
-        if (typeof current === "object" && current !== null && "data" in current) {
-          return (current as { data: unknown }).data;
+
+        if (typeof current === "object" && current !== null) {
+          if ("error" in current && current.error === true) {
+            const entry = current as { error: true; status: number; data?: unknown };
+            // Signal error by throwing — route-generator catches and returns error response
+            handler.isError = true;
+            handler.status = entry.status;
+            return entry.data ?? { success: false, message: `HTTP ${entry.status}` };
+          }
+          if ("data" in current) {
+            handler.isError = false;
+            handler.status = 200;
+            return (current as { data: unknown }).data;
+          }
         }
+
+        handler.isError = false;
+        handler.status = 200;
         return current;
       };
       handler.isError = false;

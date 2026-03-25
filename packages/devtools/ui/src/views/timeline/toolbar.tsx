@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useDevToolsStore } from "@/store";
 import type { TimelineFilters } from "@/store/types";
 
+import { CountDisplay } from "@/components/shared/count-display";
 import { countActiveFilters } from "./filters";
 import { SearchInput, FilterToggle, ToolbarButton } from "./toolbar-controls";
 
@@ -55,12 +56,7 @@ export function Toolbar({
             {pinnedCount}
           </Badge>
         )}
-        <span className="tabular-nums">
-          {filteredCount !== totalCount
-            ? `${filteredCount} / ${totalCount}`
-            : totalCount}
-          {" requests"}
-        </span>
+        <CountDisplay filtered={filteredCount} total={totalCount} label="requests" />
       </div>
     </div>
   );

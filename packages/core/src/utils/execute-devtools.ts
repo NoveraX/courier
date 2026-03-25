@@ -1,7 +1,7 @@
 import type { DevToolsHooks } from "../devtools";
 import type { Context } from "../http-client/types";
 import type { SchemaMetadata } from "../validation";
-import { estimateResponseSize, headersToObject } from "./helpers";
+import { estimateResponseSize, headersToObject, normalizeHttpMethod } from "./helpers";
 
 export type TimingState = {
   t0: number;
@@ -96,7 +96,7 @@ export function attachFetchHook(
     dCtx.dt.onHttpFetchStart?.({
       requestId: dCtx.requestId,
       url: fullUrl,
-      method: httpMethod === "del" ? "DELETE" : httpMethod.toUpperCase(),
+      method: normalizeHttpMethod(httpMethod),
       timestamp: Date.now(),
     });
   };

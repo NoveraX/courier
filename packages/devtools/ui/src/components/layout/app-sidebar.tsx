@@ -6,7 +6,6 @@ import { useDevToolsStore } from "@/store";
 import { runAudit } from "@/views/audit/run-audit";
 import { NAV_GROUPS } from "@/app-config";
 import type { NavItem } from "@/app-config";
-import { KbdHint } from "@/components/shared/kbd-hint";
 import {
   Sidebar,
   SidebarContent,
@@ -137,12 +136,6 @@ export function AppSidebar(): React.ReactNode {
                           <item.icon className="size-4 shrink-0" />
                           <span className="truncate">{item.label}</span>
                           <NavBadge item={item} />
-                          {item.kbd && (
-                            <KbdHint
-                              keys={`mod+${item.kbd}`}
-                              className="ml-auto group-data-[collapsible=icon]:hidden"
-                            />
-                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

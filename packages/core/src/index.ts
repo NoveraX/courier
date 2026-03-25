@@ -41,6 +41,11 @@ export {
 } from "./proxy-caller";
 export type { CallerFn, EndpointKey, ResolveEndpoint, SuccessResponse } from "./types";
 export { executeRequest } from "./utils/execute";
-export { parseEndpointKey, type RequestPayloadInput } from "./utils/helpers";
+export {
+  normalizeHttpMethod,
+  parseEndpointKey,
+  type RequestPayloadInput,
+  toInternalMethod,
+} from "./utils/helpers";
 export type { CacheConfig, ValidationIssue } from "./validation";
 export { isValidationError, ValidationError } from "./validation";

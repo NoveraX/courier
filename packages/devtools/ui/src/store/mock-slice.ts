@@ -3,7 +3,10 @@ import { create } from "zustand";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type NetworkPreset = "none" | "3g" | "flaky" | "down";
+export type NetworkPreset = "none" | "3g" | "4g" | "satellite" | "flaky" | "down";
+export type LatencyPreset = "none" | "3g" | "4g" | "satellite" | "custom";
+export type ChaosPreset = "none" | "degraded" | "unstable" | "down" | "custom";
+export type LatencyDistribution = "uniform" | "normal" | "log-normal";
 export type ProcessStatus = "declared" | "starting" | "running" | "stopping" | "stopped" | "crashed" | "restarting";
 
 export interface MockServerInfo {
@@ -18,10 +21,24 @@ export interface MockServerInfo {
   collectionCount: number;
   recordCount: number;
   requestsServed: number;
+  /** Requests served since the current scenario was last activated */
+  scenarioRequestCount: number;
   errorCount: number;
   activeScenario: string | null;
   availableScenarios: string[];
   networkPreset: NetworkPreset;
+  networkConfig: NetworkConfig | null;
+  /** UTC ms when current fault session was started; null when stable */
+  faultStartedAt?: number | null;
+  /** Independent latency state */
+  latencyPreset: LatencyPreset;
+  latencyStartedAt?: number | null;
+  /** Independent chaos state */
+  chaosPreset: ChaosPreset;
+  chaosStartedAt?: number | null;
+  stopConditions?: StopCondition;
+  routeOverrides?: RouteOverride[];
+  savedScenarios?: SavedScenario[];
   /** Managed lifecycle */
   managed: boolean;
   processStatus: ProcessStatus;
@@ -42,6 +59,12 @@ export interface MockRouteEntry {
   fullPath: string;
   source: "auto" | "override" | "scenario";
   hits: number;
+  /** Running average latency in ms — computed from request logs */
+  avgLatency: number;
+  /** Serialized response schema shape (field → type) for Schema tab */
+  responseSchema?: Record<string, string>;
+  /** Auto-generated example response for Example tab */
+  exampleResponse?: unknown;
 }
 
 export interface MockCollectionEntry {
@@ -50,10 +73,92 @@ export interface MockCollectionEntry {
   records: unknown[];
 }
 
+export interface MockScenarioEndpoint {
+  /** Null for top-level endpoints (not inside a group) */
+  group: string | null;
+  endpoint: string;
+  httpMethod: string;
+  behavior: "resolves" | "returns" | "rejects" | "custom" | "sequence";
+  latency?: number;
+  statusCode?: number;
+  sequenceLength?: number;
+  stateCondition?: string;
+}
+
+export interface StateTransition {
+  from: string;
+  to: string;
+  trigger: string;
+}
+
 export interface MockScenarioEntry {
   name: string;
+  description?: string;
+  tags?: string[];
   endpointCount: number;
   isActive: boolean;
+  hasStateMachine: boolean;
+  stateTransitions: StateTransition[];
+  endpoints: MockScenarioEndpoint[];
+}
+
+export interface FaultWeight {
+  type: string;
+  /** 0–100, weights are normalized to sum to 100 across enabled faults */
+  weight: number;
+}
+
+export interface StopCondition {
+  enabled: boolean;
+  /** Auto-halt when error rate exceeds this % for errorRateDurationSecs */
+  errorRateThreshold: number;
+  errorRateDurationSecs: number;
+  /** Auto-halt when P99 exceeds this ms for p99DurationSecs */
+  p99Threshold: number;
+  p99DurationSecs: number;
+  /** Hard cap on experiment duration in minutes; 0 = unlimited */
+  maxDurationMins: number;
+}
+
+export interface NetworkConfig {
+  latency: number | { min: number; max: number; jitter?: number; distribution?: LatencyDistribution };
+  errorRate: number;
+  faultWeights?: FaultWeight[];
+  /** Bandwidth cap in Kbps; 0 = unlimited */
+  bandwidth?: number;
+  stopConditions?: StopCondition;
+  routeOverrides?: RouteOverride[];
+}
+
+export interface RouteOverride {
+  /** "group:endpoint" key */
+  routeId: string;
+  enabled: boolean;
+  latency?: { min: number; max: number; jitter: number };
+  errorRate?: number;
+  faultTypes?: string[];
+}
+
+export interface SavedScenario {
+  id: string;
+  name: string;
+  createdAt: number;
+  chaosMode: string;
+  networkConfig: NetworkConfig;
+  networkPreset: NetworkPreset;
+}
+
+export interface ExperimentEvent {
+  id: string;
+  serverId: string;
+  timestamp: number;
+  type: "started" | "stopped" | "auto-halted";
+  mode: string;
+  errorRate: number;
+  peakErrorRate?: number;
+  peakP99?: number;
+  durationMs?: number;
+  reason?: string;
 }
 
 export interface MockRequestLog {
@@ -67,6 +172,10 @@ export interface MockRequestLog {
   status?: number;
   duration?: number;
   error?: string;
+  variables?: unknown;
+  data?: unknown;
+  requestHeaders?: Record<string, string>;
+  responseHeaders?: Record<string, string>;
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -76,6 +185,7 @@ export interface MockSliceState {
   activeServerId: string | null;
   logs: MockRequestLog[];
   logsPaused: boolean;
+  experimentHistory: ExperimentEvent[];
 
   // Actions
   addServer: (server: MockServerInfo) => void;
@@ -89,6 +199,11 @@ export interface MockSliceState {
   clearLogs: () => void;
   toggleLogsPaused: () => void;
   resetMockState: () => void;
+  addExperimentEvent: (event: ExperimentEvent) => void;
+  saveScenario: (serverId: string, scenario: SavedScenario) => void;
+  deleteScenario: (serverId: string, scenarioId: string) => void;
+  setRouteOverride: (serverId: string, override: RouteOverride) => void;
+  clearRouteOverrides: (serverId: string) => void;
 }
 
 const MAX_LOGS = 500;
@@ -100,6 +215,7 @@ export const useMockStore = create<MockSliceState>((set, get) => ({
   activeServerId: null,
   logs: [],
   logsPaused: false,
+  experimentHistory: [],
 
   addServer(server) {
     set((state) => {
@@ -185,6 +301,51 @@ export const useMockStore = create<MockSliceState>((set, get) => ({
       activeServerId: null,
       logs: [],
       logsPaused: false,
+      experimentHistory: [],
+    });
+  },
+
+  addExperimentEvent(event) {
+    set((state) => ({
+      experimentHistory: [event, ...state.experimentHistory].slice(0, 100),
+    }));
+  },
+
+  saveScenario(serverId, scenario) {
+    set((state) => {
+      const server = state.servers[serverId];
+      if (!server) return state;
+      const savedScenarios = [...(server.savedScenarios ?? []).filter((s) => s.id !== scenario.id), scenario];
+      return { servers: { ...state.servers, [serverId]: { ...server, savedScenarios } } };
+    });
+  },
+
+  deleteScenario(serverId, scenarioId) {
+    set((state) => {
+      const server = state.servers[serverId];
+      if (!server) return state;
+      const savedScenarios = (server.savedScenarios ?? []).filter((s) => s.id !== scenarioId);
+      return { servers: { ...state.servers, [serverId]: { ...server, savedScenarios } } };
+    });
+  },
+
+  setRouteOverride(serverId, override) {
+    set((state) => {
+      const server = state.servers[serverId];
+      if (!server) return state;
+      const routeOverrides = [
+        ...(server.routeOverrides ?? []).filter((r) => r.routeId !== override.routeId),
+        override,
+      ];
+      return { servers: { ...state.servers, [serverId]: { ...server, routeOverrides } } };
+    });
+  },
+
+  clearRouteOverrides(serverId) {
+    set((state) => {
+      const server = state.servers[serverId];
+      if (!server) return state;
+      return { servers: { ...state.servers, [serverId]: { ...server, routeOverrides: [] } } };
     });
   },
 }));

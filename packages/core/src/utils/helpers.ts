@@ -28,6 +28,30 @@ export const headersToObject = (headers?: Headers): Record<string, string> | und
 export const isFormData = (variables: unknown): variables is FormData =>
   typeof FormData !== "undefined" && variables instanceof FormData;
 
+/**
+ * Normalize HTTP method for external use.
+ * Core uses `del` internally (reserved word), but APIs expect `DELETE`.
+ *
+ * @example normalizeHttpMethod("del") // → "DELETE"
+ * @example normalizeHttpMethod("get") // → "GET"
+ */
+export function normalizeHttpMethod(method: string): string {
+  const upper = method.toUpperCase();
+  return upper === "DEL" ? "DELETE" : upper;
+}
+
+/**
+ * Convert standard HTTP method to core's internal method name.
+ * Inverse of `normalizeHttpMethod`.
+ *
+ * @example toInternalMethod("DELETE") // → "del"
+ * @example toInternalMethod("GET") // → "get"
+ */
+export function toInternalMethod(method: string): string {
+  const lower = method.toLowerCase();
+  return lower === "delete" ? "del" : lower;
+}
+
 export const isHeaders = (variables: unknown): variables is Headers =>
   typeof Headers !== "undefined" && variables instanceof Headers;
 

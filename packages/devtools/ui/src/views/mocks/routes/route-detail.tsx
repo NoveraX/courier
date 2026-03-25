@@ -1,67 +1,70 @@
 import { X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { CopyButton } from "@/components/shared/copy-button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MethodBadge } from "@/components/shared/method-badge";
 
 import type { MockRouteEntry } from "@/store/mock-slice";
 
+import { ExampleTab, GeneralTab, HandlerTab, SchemaTab } from "./route-detail-tabs";
+
 interface RouteDetailProps {
   route: MockRouteEntry;
   serverUrl: string;
+  sourceName: string;
   onClose: () => void;
 }
 
-export function RouteDetail({ route, serverUrl, onClose }: RouteDetailProps): React.ReactElement {
-  const curlCmd = `curl -X ${route.httpMethod} ${serverUrl}${route.fullPath}`;
+export function RouteDetail({ route, serverUrl, sourceName, onClose }: RouteDetailProps): React.ReactElement {
+  const navigate = useNavigate();
+  const openInPlayground = () => {
+    void navigate({ to: "/playground", search: { source: sourceName, group: route.group, method: route.endpoint } });
+  };
+
+  const hasSchema = route.responseSchema && Object.keys(route.responseSchema).length > 0;
+  const hasExample = route.exampleResponse != null;
 
   return (
-    <div className="flex h-full w-80 shrink-0 flex-col border-l border-border-subtle bg-card">
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border-subtle px-3 py-2">
-        <MethodBadge method={route.httpMethod} />
-        <span className="flex-1 truncate font-mono text-body-sm">{route.fullPath}</span>
-        <Button variant="ghost" size="icon" className="size-6" onClick={onClose}>
+    <div className="flex h-full w-105 shrink-0 flex-col border-l border-border-subtle bg-background">
+      {/* Header — matches Timeline detail panel */}
+      <div className="flex h-10 shrink-0 items-center justify-between border-b border-border-subtle px-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <MethodBadge method={route.httpMethod} />
+          <span className="truncate mono-sm text-foreground">{route.fullPath}</span>
+        </div>
+        <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Close panel">
           <X className="size-3.5" />
         </Button>
       </div>
 
-      {/* Body */}
-      <div className="flex-1 space-y-4 overflow-y-auto p-3">
-        <Section label="Group">
-          <span className="text-body-sm">{route.group}</span>
-        </Section>
-
-        <Section label="Endpoint">
-          <span className="text-body-sm font-medium">{route.endpoint}</span>
-        </Section>
-
-        <Section label="Source">
-          <Badge variant={route.source === "auto" ? "secondary" : route.source === "override" ? "amber" : "violet"}>
-            {route.source}
-          </Badge>
-        </Section>
-
-        <Section label="Hits">
-          <span className="text-h3 tabular-nums">{route.hits}</span>
-        </Section>
-
-        <Section label="cURL">
-          <div className="flex items-center gap-1 rounded-md bg-muted/30 px-2 py-1.5">
-            <code className="flex-1 truncate text-mono-xs">{curlCmd}</code>
-            <CopyButton value={curlCmd} label="Copy cURL" />
+      {/* Tabs — line variant like Timeline */}
+      <Tabs defaultValue="general" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="border-b border-border-subtle">
+          <div className="px-3">
+            <TabsList variant="line" className="h-9 w-max">
+              <TabsTrigger value="general" className="text-body-sm">General</TabsTrigger>
+              <TabsTrigger value="schema" className="text-body-sm" disabled={!hasSchema}>Schema</TabsTrigger>
+              <TabsTrigger value="example" className="text-body-sm" disabled={!hasExample}>Example</TabsTrigger>
+              <TabsTrigger value="handler" className="text-body-sm">Handler</TabsTrigger>
+            </TabsList>
           </div>
-        </Section>
-      </div>
-    </div>
-  );
-}
+        </div>
 
-function Section({ label, children }: { label: string; children: React.ReactNode }): React.ReactElement {
-  return (
-    <div>
-      <span className="text-caption text-muted-foreground/70">{label}</span>
-      <div className="mt-0.5">{children}</div>
+        <div className="flex flex-1 flex-col min-h-0">
+          <TabsContent value="general" className="mt-0 h-full overflow-auto">
+            <GeneralTab route={route} serverUrl={serverUrl} onPlayground={openInPlayground} />
+          </TabsContent>
+          <TabsContent value="schema" className="mt-0 h-full overflow-auto">
+            <SchemaTab schema={route.responseSchema} />
+          </TabsContent>
+          <TabsContent value="example" className="mt-0 h-full overflow-auto">
+            <ExampleTab data={route.exampleResponse} />
+          </TabsContent>
+          <TabsContent value="handler" className="mt-0 h-full overflow-auto">
+            <HandlerTab route={route} />
+          </TabsContent>
+        </div>
+      </Tabs>
     </div>
   );
 }

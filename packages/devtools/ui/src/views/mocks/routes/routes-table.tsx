@@ -1,14 +1,11 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { motion } from "motion/react";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { MethodBadge } from "@/components/shared/method-badge";
-import { AnimatedCounter } from "@/components/shared/animated-counter";
-import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
+import { Table, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 import type { MockRouteEntry } from "@/store/mock-slice";
 import type { RouteSortKey, SortDir } from "./use-routes-filter";
+import { RouteRow } from "./route-row";
 
 interface RoutesTableProps {
   routes: MockRouteEntry[];
@@ -37,55 +34,40 @@ export function RoutesTable({
             <SortCol label="Group" sortKey="group" current={sortKey} dir={sortDir} onSort={onSort} align="left" />
             <TableHead className="text-left">Endpoint</TableHead>
             <SortCol label="Source" sortKey="source" current={sortKey} dir={sortDir} onSort={onSort} align="left" />
+            <SortCol label="Avg Latency" sortKey="avgLatency" current={sortKey} dir={sortDir} onSort={onSort} align="right" />
             <SortCol label="Hits" sortKey="hits" current={sortKey} dir={sortDir} onSort={onSort} align="right" />
           </TableRow>
         </TableHeader>
-        <TableBody>
-          {routes.map((route) => (
-            <RouteRow
-              key={`${route.httpMethod}-${route.fullPath}`}
-              route={route}
-              selected={selectedRoute?.fullPath === route.fullPath && selectedRoute?.httpMethod === route.httpMethod}
-              onClick={() => onSelect(route)}
-            />
-          ))}
-        </TableBody>
+        <motion.tbody
+          initial="hidden"
+          animate="visible"
+          variants={{ visible: { transition: { staggerChildren: 0.02 } } }}
+          className="[&_tr:last-child]:border-0"
+        >
+          {routes.length === 0 ? (
+            <tr>
+              <td colSpan={7} className="py-12 text-center text-body-sm text-muted-foreground/50">
+                No routes match your filters.
+              </td>
+            </tr>
+          ) : (
+            routes.map((route) => (
+              <RouteRow
+                key={`${route.httpMethod}-${route.group}-${route.endpoint}`}
+                route={route}
+                selected={
+                  selectedRoute?.fullPath === route.fullPath &&
+                  selectedRoute?.httpMethod === route.httpMethod &&
+                  selectedRoute?.group === route.group &&
+                  selectedRoute?.endpoint === route.endpoint
+                }
+                onClick={() => onSelect(route)}
+              />
+            ))
+          )}
+        </motion.tbody>
       </Table>
     </div>
-  );
-}
-
-function RouteRow({
-  route,
-  selected,
-  onClick,
-}: {
-  route: MockRouteEntry;
-  selected: boolean;
-  onClick: () => void;
-}): React.ReactElement {
-  return (
-    <motion.tr
-      variants={STAGGER_ITEM_VARIANTS}
-      className={cn(
-        "cursor-pointer border-border-subtle transition-colors hover:bg-muted/50",
-        selected && "bg-accent-brand/5",
-      )}
-      onClick={onClick}
-    >
-      <TableCell><MethodBadge method={route.httpMethod} /></TableCell>
-      <TableCell className="font-mono text-body-sm">{route.fullPath}</TableCell>
-      <TableCell className="text-body-sm text-muted-foreground">{route.group}</TableCell>
-      <TableCell className="text-body-sm">{route.endpoint}</TableCell>
-      <TableCell>
-        <Badge variant={route.source === "auto" ? "secondary" : route.source === "override" ? "amber" : "violet"}>
-          {route.source}
-        </Badge>
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        <AnimatedCounter value={route.hits} className="text-body-sm" />
-      </TableCell>
-    </motion.tr>
   );
 }
 
@@ -111,6 +93,8 @@ function SortCol({
     <TableHead
       className={cn("cursor-pointer select-none whitespace-nowrap", align === "right" && "text-right")}
       onClick={() => onSort(sortKey)}
+      role="columnheader"
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
     >
       <span className={cn("inline-flex items-center gap-1 text-[11px]", active && "text-foreground")}>
         {label}

@@ -25,14 +25,24 @@ export function createUiEmitter(uiNamespace: Namespace) {
       recordCount: state.collections.reduce((sum, c) => sum + c.count, 0),
       requestsServed: 0,
       errorCount: 0,
-      activeScenario: "happy-path",
-      availableScenarios: ["happy-path", "empty", "server-error", "slow-network"],
-      collections: state.collections.map((c) => ({ name: c.name, count: c.count, records: [] })),
+      activeScenario: state.activeScenario ?? null,
+      availableScenarios: state.scenarios.map((s) => s.name),
+      scenarios: state.scenarios,
+      collections: state.collections.map((c) => ({
+        name: c.name,
+        count: c.count,
+        records: c.records ?? [],
+      })),
       routes: state.routes,
       managed: true,
       processStatus: state.status,
       origin: state.origin,
       filePath: state.relativePath,
+      networkConfig: state.networkConfig ?? null,
+      latencyPreset: state.latencyPreset ?? "none",
+      latencyStartedAt: state.latencyStartedAt ?? null,
+      chaosPreset: state.chaosPreset ?? "none",
+      chaosStartedAt: state.chaosStartedAt ?? null,
     });
   };
 

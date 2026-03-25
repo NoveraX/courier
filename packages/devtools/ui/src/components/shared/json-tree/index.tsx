@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 
 import { cn } from "@/lib/utils";
+import { safeStringify } from "@/lib/snippets";
 import { useDevToolsStore } from "@/store";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CopyButton } from "@/components/shared/copy-button";
@@ -97,14 +98,6 @@ function RootEntries({
 
 function isComplex(value: unknown): boolean {
   return value !== null && typeof value === "object";
-}
-
-function safeStringify(value: unknown, indent: number = 2): string {
-  try {
-    return JSON.stringify(value, null, indent);
-  } catch {
-    return String(value);
-  }
 }
 
 export { PathBreadcrumb } from "./path-breadcrumb";

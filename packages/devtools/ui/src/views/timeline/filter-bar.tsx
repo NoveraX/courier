@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 
 import { FilterBar as SharedFilterBar } from "@/components/shared/filter-bar";
+import { extractUniqueValues } from "@/lib/filter-utils";
+
 import type { FilterConfig } from "@/components/shared/filter-bar";
 import type { FilterOption } from "@/components/shared/filter-bar";
 import type { RequestEntry } from "@/store/types";
@@ -31,7 +33,7 @@ export function TimelineFilterBar({
   };
 
   return (
-    <div className="border-b border-border-subtle px-3 py-2">
+    <div className="flex h-11 shrink-0 items-center border-b border-border-subtle px-3">
       <SharedFilterBar
         filters={filterConfigs}
         values={values}
@@ -49,9 +51,9 @@ function buildFilterConfigs(requests: readonly RequestEntry[]): FilterConfig[] {
     { key: "status", label: "Status", options: STATUS_OPTIONS },
     { key: "mode", label: "Mode", options: MODE_OPTIONS },
     { key: "type", label: "Type", options: TYPE_OPTIONS },
-    { key: "httpMethod", label: "Method", options: extractMethods(requests), searchable: true },
-    { key: "source", label: "Source", options: extractUnique(requests, "source"), searchable: true },
-    { key: "group", label: "Group", options: extractGroups(requests), searchable: true },
+    { key: "httpMethod", label: "Method", options: extractUniqueValues(requests, (r) => r.httpMethod), searchable: true },
+    { key: "source", label: "Source", options: extractUniqueValues(requests, (r) => r.source), searchable: true },
+    { key: "group", label: "Group", options: extractUniqueValues(requests, (r) => r.group), searchable: true },
   ];
 }
 
@@ -72,33 +74,3 @@ const TYPE_OPTIONS: FilterOption[] = [
   { value: "query", label: "Query" },
   { value: "mutation", label: "Mutation" },
 ];
-
-function extractMethods(requests: readonly RequestEntry[]): FilterOption[] {
-  const methods = new Set<string>();
-  for (const r of requests) {
-    if (r.httpMethod) methods.add(r.httpMethod);
-  }
-  return Array.from(methods)
-    .sort()
-    .map((m) => ({ value: m, label: m }));
-}
-
-function extractUnique(requests: readonly RequestEntry[], field: "source"): FilterOption[] {
-  const values = new Set<string>();
-  for (const r of requests) {
-    values.add(r[field]);
-  }
-  return Array.from(values)
-    .sort()
-    .map((v) => ({ value: v, label: v }));
-}
-
-function extractGroups(requests: readonly RequestEntry[]): FilterOption[] {
-  const groups = new Set<string>();
-  for (const r of requests) {
-    if (r.group) groups.add(r.group);
-  }
-  return Array.from(groups)
-    .sort()
-    .map((g) => ({ value: g, label: g }));
-}

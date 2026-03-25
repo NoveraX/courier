@@ -12,7 +12,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Kbd } from "@/components/ui/kbd";
+import { KbdHint } from "@/components/shared/kbd-hint";
 
 import type { Theme } from "@/store";
 
@@ -62,9 +62,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
                 <span>
                   Go to&nbsp;<strong className="font-semibold">{item.label}</strong>
                 </span>
-                {item.kbd && (
-                  <Kbd className="ml-auto">{"\u2318"}{item.kbd}</Kbd>
-                )}
               </CommandItem>
             ))}
           </CommandGroup>
@@ -128,7 +125,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
           type="button"
         >
           <span>Close</span>
-          <Kbd className="ml-1">Esc</Kbd>
+          <KbdHint keys="escape" className="ml-1" />
         </button>
       </div>
     </CommandDialog>

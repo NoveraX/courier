@@ -18,6 +18,8 @@ interface SegmentedControlProps<TValue extends string = string> {
   className?: string;
   /** Icon size — default "size-3" */
   iconSize?: string;
+  /** Stretch buttons to fill container width evenly */
+  stretch?: boolean;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -28,14 +30,10 @@ export function SegmentedControl<TValue extends string = string>({
   onChange,
   className,
   iconSize = "size-3",
+  stretch,
 }: SegmentedControlProps<TValue>): React.ReactElement {
   return (
-    <div
-      className={cn(
-        "inline-flex items-center gap-px rounded-lg border border-border-subtle bg-muted/60 p-0.5",
-        className,
-      )}
-    >
+    <div className={cn("inline-flex items-center gap-0.5 rounded-lg bg-muted/80 p-1", className)}>
       {options.map((opt) => {
         const active = value === opt.value;
         return (
@@ -44,10 +42,11 @@ export function SegmentedControl<TValue extends string = string>({
             type="button"
             onClick={() => onChange(opt.value)}
             className={cn(
-              "flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-all",
+              "flex items-center justify-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
+              stretch && "flex-1",
               active
-                ? "bg-background text-foreground shadow-sm ring-1 ring-border-subtle"
-                : "text-muted-foreground hover:text-foreground hover:bg-background/50",
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             {opt.icon && <opt.icon className={cn(iconSize, "shrink-0")} />}

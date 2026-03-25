@@ -57,11 +57,12 @@ export function setupUiNamespace(
     socket.on("replay", handleReplay(appNamespace));
     socket.on("playground:send", handlePlayground(appNamespace));
 
-    // Forward mock commands from UI → all connected app sockets (mock servers)
+    // Forward mock commands from UI → app sockets (external) + managed servers (IPC)
     socket.on("mock:command", (command: unknown) => {
       for (const appSocket of appNamespace.sockets.values()) {
         appSocket.emit("mock:command", command);
       }
+      mockManager?.forwardStoreCommand(command as Record<string, unknown>);
     });
 
     // Managed mock server lifecycle commands

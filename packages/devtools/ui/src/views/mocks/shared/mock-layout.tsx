@@ -24,7 +24,7 @@ export function MockLayout(): React.ReactElement {
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {serverCount > 0 && (
         <div className="shrink-0 border-b border-border-subtle">
-          <nav className="flex items-center gap-0.5 px-3 h-9">
+          <nav className="flex items-center gap-1 px-3 h-9">
             {TABS.map((tab) => {
               const active = pathname.startsWith(tab.path);
               return (
@@ -32,14 +32,19 @@ export function MockLayout(): React.ReactElement {
                   key={tab.path}
                   to={tab.path}
                   className={cn(
-                    "relative flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors",
+                    "relative flex items-center gap-1.5 px-2.5 py-1 text-xs transition-all duration-200",
                     active
-                      ? "bg-muted/60 font-medium text-foreground"
-                      : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/30",
+                      ? "font-medium text-foreground"
+                      : "text-muted-foreground hover:text-foreground/90",
                   )}
                 >
-                  <tab.icon className="size-3" />
-                  {tab.label}
+                  <tab.icon className={cn("size-3 shrink-0", active && "text-primary")} />
+                  <span className="after:invisible after:block after:h-0 after:overflow-hidden after:font-medium after:content-[attr(data-label)]" data-label={tab.label}>
+                    {tab.label}
+                  </span>
+                  {active && (
+                    <span className="absolute inset-x-1 -bottom-1.25 h-px bg-primary" />
+                  )}
                 </Link>
               );
             })}

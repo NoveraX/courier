@@ -1,4 +1,4 @@
-import { Clock, RotateCw, Trash2 } from "lucide-react";
+import { Clock, RotateCw, Square, Trash2 } from "lucide-react";
 import { useElapsed } from "@/hooks/use-tick";
 import { SegmentedControl } from "@/components/shared/segmented-control";
 import { CopyButton } from "@/components/shared/copy-button";
@@ -11,41 +11,53 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { getSocket } from "@/socket";
 import { useMockStore } from "@/store/mock-slice";
+import { stopAllFaults } from "@/views/mocks/network/stop-all-faults";
 
-import type { MockServerInfo, NetworkPreset } from "@/store/mock-slice";
+import type { LatencyPreset, MockServerInfo } from "@/store/mock-slice";
 
 interface StatusBarProps {
   server: MockServerInfo;
 }
 
-const NETWORK_OPTIONS = [
-  { value: "none" as const, label: "None" },
+const LATENCY_OPTIONS = [
+  { value: "none" as const, label: "Off" },
   { value: "3g" as const, label: "3G" },
-  { value: "flaky" as const, label: "Flaky" },
-  { value: "down" as const, label: "Down" },
+  { value: "4g" as const, label: "4G" },
+  { value: "satellite" as const, label: "Satellite" },
 ];
 
-const NETWORK_CONFIGS: Record<NetworkPreset, Record<string, unknown>> = {
-  none: { latency: 0, errorRate: 0 },
-  "3g": { latency: { min: 300, max: 600, jitter: 100 }, errorRate: 0 },
-  flaky: { latency: { min: 50, max: 200 }, errorRate: 0.3, faultTypes: ["500", "503", "timeout"] },
-  down: { latency: 0, errorRate: 1, faultTypes: ["503"] },
+const LATENCY_CONFIGS: Record<string, { min: number; max: number; jitter: number }> = {
+  "3g": { min: 300, max: 600, jitter: 100 },
+  "4g": { min: 80, max: 160, jitter: 30 },
+  satellite: { min: 600, max: 800, jitter: 150 },
 };
 
 export function StatusBar({ server }: StatusBarProps): React.ReactElement {
   const serverUrl = server.url || `http://localhost:${server.port}`;
   const active = server.processStatus === "running";
   const elapsed = useElapsed(server.startedAt || null, active);
+  const anyFaultActive = server.latencyPreset !== "none" || server.chaosPreset !== "none";
 
   const sendCommand = (action: string, payload?: Record<string, unknown>) => {
     getSocket().emit("mock:command", { action, serverId: server.serverId, ...payload });
   };
 
-  const handleNetworkChange = (preset: NetworkPreset) => {
-    useMockStore.getState().updateServer(server.serverId, { networkPreset: preset });
-    sendCommand("mock:network:set", { config: NETWORK_CONFIGS[preset], preset });
+  // Latency preset value for segmented control — show "none" for custom (managed via Network page)
+  const latencyValue: LatencyPreset = server.latencyPreset === "custom" ? "none" : server.latencyPreset;
+
+  const handleLatencyChange = (preset: string) => {
+    if (preset === "none") {
+      useMockStore.getState().updateServer(server.serverId, { latencyPreset: "none", latencyStartedAt: null });
+      sendCommand("mock:network:set", { config: { latency: 0, bandwidth: 0 }, preset: "none" });
+      return;
+    }
+    const cfg = LATENCY_CONFIGS[preset];
+    if (!cfg) return;
+    useMockStore.getState().updateServer(server.serverId, { latencyPreset: preset as LatencyPreset, latencyStartedAt: Date.now() });
+    sendCommand("mock:network:set", { config: { latency: cfg }, preset });
   };
 
   return (
@@ -56,7 +68,7 @@ export function StatusBar({ server }: StatusBarProps): React.ReactElement {
         <CopyButton value={serverUrl} label="Copy URL" />
       </div>
 
-      {/* Uptime — computed on client from startedAt */}
+      {/* Uptime */}
       <div className="flex items-center gap-1 text-body-xs text-muted-foreground/50">
         <Clock className="size-3" />
         <span className="tabular-nums">{elapsed ?? "—"}</span>
@@ -64,59 +76,77 @@ export function StatusBar({ server }: StatusBarProps): React.ReactElement {
 
       <div className="flex-1" />
 
-      {/* Network preset */}
-      <SegmentedControl options={NETWORK_OPTIONS} value={server.networkPreset} onChange={handleNetworkChange} />
+      {/* Controls — disabled when server is not running */}
+      <div className={cn("flex items-center gap-2.5", !active && "pointer-events-none opacity-40")}>
+        {/* Latency preset — same values as /mocks/network (minus Custom) */}
+        <SegmentedControl options={LATENCY_OPTIONS} value={latencyValue} onChange={handleLatencyChange} />
 
-      {/* Separator */}
-      <div className="h-4 w-px bg-border-subtle" />
+        {/* Stop button — only when any fault is active */}
+        {anyFaultActive && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => stopAllFaults(server.serverId)}
+                className="flex size-6 items-center justify-center rounded-md bg-rose-600/80 text-white transition-colors hover:bg-rose-700 dark:bg-rose-500/80 dark:hover:bg-rose-600"
+              >
+                <Square className="size-2.5 fill-current" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Stop all faults</TooltipContent>
+          </Tooltip>
+        )}
 
-      {/* Scenario */}
-      <Select
-        key={server.activeScenario}
-        defaultValue={server.activeScenario ?? "happy-path"}
-        onValueChange={(v) => sendCommand("mock:scenario:apply", { scenario: v })}
-      >
-        <SelectTrigger size="sm" className="h-6 w-32 border-none bg-muted/40 text-[11px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {server.availableScenarios.map((name) => (
-            <SelectItem key={name} value={name} className="text-xs">{name}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        {/* Separator */}
+        <div className="h-4 w-px bg-border-subtle" />
 
-      {/* Actions */}
-      <div className="flex items-center gap-0.5">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-6 text-muted-foreground/60 hover:text-foreground"
-              onClick={() => sendCommand("mock:store:seed", { collection: "*", count: 20 })}
-            >
-              <RotateCw className="size-3" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Re-seed all collections</TooltipContent>
-        </Tooltip>
+        {/* Scenario */}
+        <Select
+          key={server.activeScenario}
+          defaultValue={server.activeScenario ?? "happy-path"}
+          onValueChange={(v) => sendCommand("mock:scenario:apply", { scenario: v })}
+        >
+          <SelectTrigger size="sm" className="h-6 w-32 border-none bg-muted/40 text-[11px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {server.availableScenarios.map((name) => (
+              <SelectItem key={name} value={name} className="text-xs">{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-6 text-muted-foreground/60 hover:text-rose-400"
-              onClick={() => sendCommand("mock:server:reset")}
-            >
-              <Trash2 className="size-3" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Reset store</TooltipContent>
-        </Tooltip>
+        {/* Actions */}
+        <div className="flex items-center gap-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 text-muted-foreground/60 hover:text-foreground"
+                onClick={() => sendCommand("mock:store:seed", { collection: "*", count: 20 })}
+              >
+                <RotateCw className="size-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Re-seed all collections</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 text-muted-foreground/60 hover:text-rose-400"
+                onClick={() => sendCommand("mock:server:reset")}
+              >
+                <Trash2 className="size-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Reset store</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
     </div>
   );
 }
-

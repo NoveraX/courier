@@ -6,6 +6,7 @@ import {
   createColumnHelper,
 } from "@tanstack/react-table";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EndpointRow } from "./endpoint-row";
@@ -73,7 +74,11 @@ export function EndpointsTable({
             </tr>
           ))}
         </thead>
-        <tbody>
+        <motion.tbody
+          initial="hidden"
+          animate="visible"
+          variants={{ visible: { transition: { staggerChildren: 0.02 } } }}
+        >
           {rows.map((row) => (
             <EndpointRow
               key={row.id}
@@ -82,7 +87,7 @@ export function EndpointsTable({
               onSelect={onSelect}
             />
           ))}
-        </tbody>
+        </motion.tbody>
       </table>
     </ScrollArea>
   );

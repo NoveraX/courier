@@ -6,8 +6,9 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Copy, Code, FileJson, Pin, PinOff, RotateCcw, Download } from "lucide-react";
-import { toast } from "sonner";
 
+import { copyToClipboard } from "@/lib/clipboard";
+import { downloadFile } from "@/lib/export";
 import type { RequestEntry } from "@/store/types";
 import { useDevToolsStore } from "@/store";
 import { buildCurl, buildFetchSnippet, buildRequestJson } from "@/components/shared/detail-panel";
@@ -71,18 +72,9 @@ export function RequestContextMenu({
   );
 }
 
-async function copyToClipboard(text: string, label: string): Promise<void> {
-  await navigator.clipboard.writeText(text);
-  toast.success(`Copied as ${label}`);
-}
-
 function downloadJson(request: RequestEntry): void {
-  const json = buildRequestJson(request);
-  const blob = new Blob([json], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${request.source}-${request.method}-${request.id.slice(0, 8)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadFile(
+    buildRequestJson(request),
+    `${request.source}-${request.method}-${request.id.slice(0, 8)}.json`,
+  );
 }

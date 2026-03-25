@@ -7,6 +7,7 @@
  *   ),
  */
 
+import { normalizeHttpMethod } from "@noverax/nexus";
 import { extractBalancedBlock } from "./parse-utils";
 import type { EndpointAnalysis, ScannedEndpoint } from "./types";
 
@@ -40,7 +41,7 @@ function parseEndpointCall(generics: string | undefined, rest: string): Endpoint
     hasResponseType: config.hasResponseType,
     hasVariablesType: config.hasVariablesType,
     hasValidation: config.hasValidation,
-    httpMethod: (method === "del" ? "delete" : method) as EndpointAnalysis["httpMethod"],
+    httpMethod: normalizeHttpMethod(method).toLowerCase() as EndpointAnalysis["httpMethod"],
     path,
     type: config.type,
   };

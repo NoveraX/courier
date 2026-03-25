@@ -58,12 +58,51 @@ export type LatencyProfile =
   | "fiber"
   | { min: number; max: number; jitter?: number };
 
+/** Weighted fault entry — weight is 0–100, normalized at selection time */
+export interface FaultWeight {
+  type: string;
+  weight: number;
+}
+
+/** Per-route network override */
+export interface RouteNetworkOverride {
+  /** "group:endpoint" key */
+  routeId: string;
+  enabled: boolean;
+  latency?: { min: number; max: number; jitter?: number };
+  errorRate?: number;
+  faultTypes?: string[];
+}
+
+/** Latency distribution model */
+export type LatencyDistribution = "uniform" | "normal" | "log-normal";
+
+/** Stop condition for auto-halting fault injection */
+export interface StopCondition {
+  enabled: boolean;
+  errorRateThreshold: number;
+  errorRateDurationSecs: number;
+  p99Threshold: number;
+  p99DurationSecs: number;
+  maxDurationMins: number;
+}
+
 /** Network simulation configuration */
 export interface NetworkConfig {
   latency?: number | LatencyProfile;
   errorRate?: number;
   timeout?: number;
   faultTypes?: Array<"500" | "502" | "503" | "timeout" | "reset">;
+  /** Weighted fault distribution — overrides faultTypes when present */
+  faultWeights?: FaultWeight[];
+  /** Per-route overrides — checked before global config */
+  routeOverrides?: RouteNetworkOverride[];
+  /** Latency distribution model (default: "uniform") */
+  distribution?: LatencyDistribution;
+  /** Bandwidth cap in Kbps (0 = unlimited) — reserved for future use */
+  bandwidth?: number;
+  /** Stop conditions for auto-halting */
+  stopConditions?: StopCondition;
 }
 
 // ---------------------------------------------------------------------------
@@ -89,6 +128,21 @@ export interface MockHistoryEntry {
 /** Named scenario that configures multiple mocks at once */
 export interface MockScenario<TApi extends DefinedApi<any> = DefinedApi<any>> {
   name: string;
+  /** Short description shown in DevTools Scenarios panel */
+  description?: string;
+  /** Tags for categorization in DevTools (e.g. ["error", "latency", "auth"]) */
+  tags?: string[];
+  /**
+   * Initial scenario state when this scenario is applied.
+   * Defaults to "Started" if omitted.
+   * Use for state-machine scenarios (WireMock-style).
+   *
+   * @example
+   * ```ts
+   * { name: "auth-flow", initialState: "unauthorized", apply(mock) { ... } }
+   * ```
+   */
+  initialState?: string;
   apply(mock: TypedMockFn<TApi>): void;
 }
 
@@ -107,6 +161,25 @@ export type TypedMockFn<TApi extends DefinedApi<any>> = <
 // ---------------------------------------------------------------------------
 // Builder (interface — implementation in builder/)
 // ---------------------------------------------------------------------------
+
+/**
+ * A single entry in a mock response sequence.
+ *
+ * - Plain value or `{ data }` → successful 200 response
+ * - `{ error: true, status, data? }` → error response with given status
+ *
+ * @example
+ * ```ts
+ * mock("pets", "listPets").sequence([
+ *   { data: [{ id: "1", name: "Buddy" }] },
+ *   { error: true, status: 500, data: { message: "Connection reset" } },
+ * ]);
+ * ```
+ */
+export type SequenceEntry<TResponse> =
+  | TResponse
+  | { data: TResponse; status?: number; delay?: number }
+  | { error: true; status: number; data?: unknown };
 
 /** Fluent builder for configuring endpoint mocks */
 export interface EnhancedMockBuilder<TResponse = unknown, TVariables = unknown> {
@@ -132,8 +205,9 @@ export interface EnhancedMockBuilder<TResponse = unknown, TVariables = unknown> 
   inState(state: string): EnhancedMockBuilder<TResponse, TVariables>;
   /** Transition scenario to new state after response (WireMock-style) */
   transitionTo(state: string): EnhancedMockBuilder<TResponse, TVariables>;
-  /** Ordered sequence of responses */
-  sequence(
-    responses: Array<TResponse | { data: TResponse; status?: number; delay?: number }>,
-  ): EnhancedMockBuilder<TResponse, TVariables>;
+  /**
+   * Ordered sequence of responses — success, error, or mixed.
+   * Last entry repeats indefinitely once reached.
+   */
+  sequence(responses: Array<SequenceEntry<TResponse>>): EnhancedMockBuilder<TResponse, TVariables>;
 }

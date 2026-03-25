@@ -29,6 +29,8 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
         startedAt: Date.now(),
         routes: data.routes,
         collections: data.collections,
+        scenarios: data.scenarios ?? [],
+        activeScenario: null,
       });
     },
     onError(serverId, message, fatal) {
@@ -46,6 +48,36 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
     },
     onEvent(serverId, event) {
       emit(event.type as string, { ...event, serverId });
+
+      const state = servers.get(serverId);
+      if (!state) return;
+
+      if (event.type === "mock:store:snapshot") {
+        state.collections = (event.collections as ServerState["collections"]) ?? state.collections;
+      }
+
+      // Keep activeScenario in sync so sendSnapshot() reflects the current state
+      if (event.type === "mock:scenario:active") {
+        state.activeScenario = (event.scenario as string) ?? state.activeScenario;
+        if (Array.isArray(event.scenarios)) {
+          state.scenarios = event.scenarios as ServerState["scenarios"];
+        }
+        if (Array.isArray(event.routes)) {
+          state.routes = event.routes as ServerState["routes"];
+        }
+      }
+
+      // Keep network presets in sync so sendSnapshot() restores them on UI reconnect
+      if (event.type === "mock:network:config") {
+        const cfg = event.config as Record<string, unknown> | undefined;
+        if (cfg) {
+          state.latencyPreset = cfg.latencyPreset as string | undefined;
+          state.latencyStartedAt = cfg.latencyStartedAt as number | null | undefined;
+          state.chaosPreset = cfg.chaosPreset as string | undefined;
+          state.chaosStartedAt = cfg.chaosStartedAt as number | null | undefined;
+          state.networkConfig = cfg;
+        }
+      }
     },
   });
 
@@ -69,6 +101,17 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
 
   // ── Server Management ────────────────────────────────────────────────────
 
+  /** Find the next port that isn't already assigned to a tracked server */
+  function allocateNextPort(): number {
+    const usedPorts = new Set<number>();
+    for (const s of servers.values()) {
+      usedPorts.add(s.configuredPort);
+      if (s.actualPort) usedPorts.add(s.actualPort);
+    }
+    while (usedPorts.has(nextPort)) nextPort++;
+    return nextPort++;
+  }
+
   function registerDeclared(declared: DeclaredServer): void {
     if (servers.has(declared.id)) return;
     const state: ServerState = {
@@ -76,11 +119,13 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
       name: declared.name,
       filePath: declared.filePath,
       relativePath: declared.relativePath,
-      configuredPort: nextPort++,
+      configuredPort: allocateNextPort(),
       status: "declared",
       origin: "devtools",
       routes: declared.routes.map((r) => ({ ...r })),
-      collections: declared.collections.map((name) => ({ name, count: 0 })),
+      collections: declared.collections.map((name) => ({ name, count: 0, records: [] })),
+      scenarios: declared.scenarios,
+      activeScenario: null,
     };
     servers.set(declared.id, state);
     emitServerState(state);
@@ -138,6 +183,14 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
     }
   }
 
+  /** Forward a mock:command (store/scenario) to the managed child process */
+  function forwardStoreCommand(command: Record<string, unknown>): void {
+    const serverId = command.serverId as string;
+    if (servers.has(serverId)) {
+      processManager.sendCommand(serverId, command);
+    }
+  }
+
   function sendSnapshot(): void {
     for (const state of servers.values()) {
       emitServerState(state);
@@ -152,6 +205,7 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
       servers.clear();
     },
     handleCommand,
+    forwardStoreCommand,
     sendSnapshot,
   };
 }

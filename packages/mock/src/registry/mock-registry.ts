@@ -6,57 +6,121 @@ function handlerKey(group: string, method: string): string {
 }
 
 export interface MockRegistry {
-  /** Register a handler for an endpoint */
+  /** Register a handler in the scenario layer (cleared on every scenario switch) */
   set(group: string, method: string, handler: ResolvedHandler): void;
-  /** Resolve the best matching handler for an endpoint */
+  /** Register a handler in the base layer (never cleared — overrides, auto-CRUD) */
+  setBase(group: string, method: string, handler: ResolvedHandler): void;
+  /** Resolve the best matching handler: scenario layer first, then base layer */
   get(group: string, method: string, scenarioState: string): ResolvedHandler | undefined;
-  /** Remove all handlers for an endpoint */
+  /** Read the latest handler without side effects — scenario layer first, then base */
+  peek(group: string, method: string): ResolvedHandler | undefined;
+  /** Remove all handlers for an endpoint in both layers */
   remove(group: string, method: string): void;
-  /** Clear all handlers */
+  /** Clear the scenario layer only (base layer is preserved) */
   clear(): void;
-  /** Check if any handlers exist for an endpoint */
+  /** Clear both layers entirely */
+  clearAll(): void;
+  /** Check if any handlers exist for an endpoint in either layer */
   has(group: string, method: string): boolean;
-  /** List all registered endpoints with handler counts */
+  /** Check if a handler exists in the scenario layer for an endpoint */
+  hasScenario(group: string, method: string): boolean;
+  /** Count base layer handlers for an endpoint (>1 means overrides on top of auto) */
+  baseCount(group: string, method: string): number;
+  /** List all registered endpoints with handler counts across both layers */
   list(): Array<{ group: string; method: string; count: number }>;
 }
 
-/** Create a mock registry with LIFO stack + state matching */
+/** Create a mock registry with scenario + base layers and LIFO stacks per layer */
 export function createMockRegistry(): MockRegistry {
-  const handlers = new Map<string, ResolvedHandler[]>();
+  // scenario layer: cleared on every applyScenario()
+  const scenarioHandlers = new Map<string, ResolvedHandler[]>();
+  // base layer: auto-CRUD + user overrides, never cleared
+  const baseHandlers = new Map<string, ResolvedHandler[]>();
 
   return {
     set(group, method, handler) {
       const key = handlerKey(group, method);
-      if (!handlers.has(key)) handlers.set(key, []);
-      handlers.get(key)?.push(handler);
+      if (!scenarioHandlers.has(key)) scenarioHandlers.set(key, []);
+      scenarioHandlers.get(key)?.push(handler);
+    },
+
+    setBase(group, method, handler) {
+      const key = handlerKey(group, method);
+      if (!baseHandlers.has(key)) baseHandlers.set(key, []);
+      baseHandlers.get(key)?.push(handler);
     },
 
     get(group, method, scenarioState) {
       const key = handlerKey(group, method);
-      const stack = handlers.get(key);
-      if (!stack?.length) return undefined;
 
-      return resolveHandler(stack, scenarioState);
+      // Scenario layer has priority
+      const scenarioStack = scenarioHandlers.get(key);
+      if (scenarioStack?.length) {
+        const resolved = resolveHandler(scenarioStack, scenarioState);
+        if (resolved) return resolved;
+      }
+
+      // Fallback to base layer
+      const baseStack = baseHandlers.get(key);
+      if (baseStack?.length) {
+        return resolveHandler(baseStack, scenarioState);
+      }
+
+      return undefined;
+    },
+
+    peek(group, method) {
+      const key = handlerKey(group, method);
+      const scenarioStack = scenarioHandlers.get(key);
+      if (scenarioStack?.length) return scenarioStack[scenarioStack.length - 1];
+      const baseStack = baseHandlers.get(key);
+      return baseStack?.length ? baseStack[baseStack.length - 1] : undefined;
     },
 
     remove(group, method) {
-      handlers.delete(handlerKey(group, method));
+      const key = handlerKey(group, method);
+      scenarioHandlers.delete(key);
+      baseHandlers.delete(key);
     },
 
     clear() {
-      handlers.clear();
+      scenarioHandlers.clear();
+    },
+
+    clearAll() {
+      scenarioHandlers.clear();
+      baseHandlers.clear();
     },
 
     has(group, method) {
-      const stack = handlers.get(handlerKey(group, method));
-      return !!stack?.length;
+      const key = handlerKey(group, method);
+      const sStack = scenarioHandlers.get(key);
+      const bStack = baseHandlers.get(key);
+      return !!(sStack?.length || bStack?.length);
+    },
+
+    hasScenario(group, method) {
+      return (scenarioHandlers.get(handlerKey(group, method))?.length ?? 0) > 0;
+    },
+
+    baseCount(group, method) {
+      return baseHandlers.get(handlerKey(group, method))?.length ?? 0;
     },
 
     list() {
+      const counts = new Map<string, number>();
+
+      for (const [key, stack] of scenarioHandlers) {
+        counts.set(key, (counts.get(key) ?? 0) + stack.length);
+      }
+      for (const [key, stack] of baseHandlers) {
+        counts.set(key, (counts.get(key) ?? 0) + stack.length);
+      }
+
       const result: Array<{ group: string; method: string; count: number }> = [];
-      for (const [key, stack] of handlers) {
+      for (const [key, count] of counts) {
         const [group = "", method = ""] = key.split("/");
-        result.push({ group, method, count: stack.length });
+        result.push({ group, method, count });
       }
       return result;
     },
@@ -68,17 +132,14 @@ function resolveHandler(
   stack: ResolvedHandler[],
   scenarioState: string,
 ): ResolvedHandler | undefined {
-  // Walk stack from top (latest) to bottom, find first state-matching handler
   for (let i = stack.length - 1; i >= 0; i--) {
     const handler = stack[i];
     if (!handler) continue;
 
-    // Skip if handler requires a different scenario state
     if (handler.requiredState && handler.requiredState !== scenarioState) {
       continue;
     }
 
-    // Consume if handler has remaining count
     if (handler.remaining !== undefined) {
       handler.remaining--;
       if (handler.remaining <= 0) stack.splice(i, 1);

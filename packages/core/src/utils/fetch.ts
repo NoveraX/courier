@@ -1,3 +1,5 @@
+import { normalizeHttpMethod } from "./helpers";
+
 export type CoreFetchInit = Omit<RequestInit, "method"> & {
   json?: unknown;
   searchParams?: string | URLSearchParams | Record<string, string>;
@@ -43,7 +45,7 @@ export function coreFetch(
 
   return fetch(fullUrl, {
     ...rest,
-    method: method === "del" ? "DELETE" : method.toUpperCase(),
+    method: normalizeHttpMethod(method),
     headers: requestHeaders,
     body: requestBody,
     ...(finalSignal != null && { signal: finalSignal }),

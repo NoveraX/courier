@@ -69,6 +69,8 @@ export { createMockRegistry } from "./registry";
 // Scenario
 export type { HandlerGroup } from "./scenario";
 export { defineHandlers, defineScenario, mergeHandlers } from "./scenario";
+// Server errors
+export { isMockHttpError, MockHttpError } from "./server/errors";
 // Store
 export type {
   Collection,

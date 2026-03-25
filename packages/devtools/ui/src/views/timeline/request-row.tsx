@@ -3,11 +3,13 @@ import { Pin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { MethodBadge } from "@/components/shared/method-badge";
-import { formatDuration, formatTimestamp } from "@/components/shared/formatters";
-import type { RequestEntry } from "@/store/types";
+import { formatTimestamp } from "@/components/shared/formatters";
+import { MetricsPill } from "@/components/shared/metrics-cells";
 import { useDevToolsStore } from "@/store";
 import { useNow } from "@/hooks/use-tick";
 import { STATUS_CONFIG } from "./constants";
+
+import type { RequestEntry } from "@/store/types";
 
 interface RequestRowProps {
   request: RequestEntry;
@@ -25,7 +27,6 @@ export function RequestRow({
   const now = useNow();
   const status = STATUS_CONFIG[request.status];
   const path = buildPath(request);
-  const hasMetrics = Boolean(request.statusCode) || request.timing?.total != null;
 
   return (
     <button
@@ -40,20 +41,16 @@ export function RequestRow({
       onClick={() => onSelect(request.id)}
       data-request-id={request.id}
     >
-      {/* Status dot */}
       <span className={cn("size-2 shrink-0 rounded-full", status.dot)} />
 
-      {/* Method — fixed-width cell for column alignment */}
       <span className="inline-flex w-[4.25rem] shrink-0 items-center">
         <MethodBadge method={request.httpMethod ?? "GET"} />
       </span>
 
-      {/* Full path: source.group.method */}
       <span className="min-w-0 flex-1 truncate mono-sm text-foreground">
         {path}
       </span>
 
-      {/* Mode + Metrics — hidden when showRequestPreview is off */}
       {showPreview && (
         <>
           <Badge
@@ -63,26 +60,14 @@ export function RequestRow({
             {request.mode}
           </Badge>
 
-          {hasMetrics && (
-            <span className="inline-flex shrink-0 items-center gap-2 rounded-md bg-muted/50 px-2 py-0.5">
-              {request.statusCode && <StatusCode code={request.statusCode} />}
-              {request.statusCode && request.timing?.total != null && (
-                <span className="h-3 w-px bg-border" />
-              )}
-              {request.timing?.total != null && (
-                <DurationCell duration={request.timing.total} />
-              )}
-            </span>
-          )}
+          <MetricsPill statusCode={request.statusCode} duration={request.timing?.total} />
         </>
       )}
 
-      {/* Time */}
       <span className="inline-flex w-24 shrink-0 items-center justify-end mono-sm tabular-nums text-muted-foreground">
         {formatTimestamp(request.startedAt, timestampFormat, now)}
       </span>
 
-      {/* Pin indicator */}
       {request.pinned && (
         <Pin className="size-3 shrink-0 text-violet-400" />
       )}
@@ -96,34 +81,4 @@ function buildPath(r: RequestEntry): string {
   if (r.group) parts.push(r.group);
   parts.push(r.method);
   return parts.join(".");
-}
-
-function StatusCode({ code }: { code: number }): React.ReactElement {
-  const color = code >= 500
-    ? "text-fuchsia-400"
-    : code >= 400
-      ? "text-rose-400"
-      : code >= 300
-        ? "text-amber-400"
-        : "text-emerald-400";
-
-  return (
-    <span className={cn("mono-sm tabular-nums", color)}>
-      {code}
-    </span>
-  );
-}
-
-function DurationCell({ duration }: { duration: number }): React.ReactElement {
-  const color = duration > 1000
-    ? "text-rose-400"
-    : duration > 300
-      ? "text-amber-400"
-      : "text-muted-foreground";
-
-  return (
-    <span className={cn("mono-sm tabular-nums", color)}>
-      {formatDuration(duration)}
-    </span>
-  );
 }

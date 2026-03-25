@@ -10,7 +10,11 @@ interface AdminConfig {
   scenarios: Map<string, MockScenario>;
   getScenarioState: () => string;
   setScenarioState: (state: string) => void;
+  getActiveScenario: () => string | null;
+  setActiveScenario: (name: string | null) => void;
   applyScenario: (scenario: MockScenario) => void;
+  /** Re-seed all collections after reset — provided by createAutoMockServer */
+  reseed?: () => void;
 }
 
 /** Register admin API routes under /__admin/ */
@@ -23,7 +27,11 @@ export function registerAdminRoutes(app: Hono, config: AdminConfig): void {
   // List available scenarios
   app.get("/__admin/scenarios", (c) => {
     const names = [...config.scenarios.keys()];
-    return c.json({ scenarios: names, current: config.getScenarioState() });
+    return c.json({
+      scenarios: names,
+      current: config.getActiveScenario(),
+      state: config.getScenarioState(),
+    });
   });
 
   // Activate a scenario
@@ -34,6 +42,7 @@ export function registerAdminRoutes(app: Hono, config: AdminConfig): void {
       return c.json({ error: `Unknown scenario "${name}"` }, 404);
     }
     config.applyScenario(scenario);
+    config.setActiveScenario(name);
     return c.json({ applied: name });
   });
 
@@ -49,11 +58,12 @@ export function registerAdminRoutes(app: Hono, config: AdminConfig): void {
     return c.json(config.history.slice(-limit));
   });
 
-  // Reset everything
+  // Reset everything — clears registry, history, store, then re-seeds
   app.post("/__admin/reset", (c) => {
     config.registry.clear();
     config.history.length = 0;
     config.store.reset();
+    config.reseed?.();
     config.setScenarioState("Started");
     return c.json({ reset: true });
   });

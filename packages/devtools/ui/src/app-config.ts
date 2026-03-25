@@ -21,7 +21,6 @@ export interface NavItem {
   label: string;
   path: string;
   icon: LucideIcon;
-  kbd?: string;
   badge?: "requests" | "errors" | "sessions" | "audit-score";
 }
 
@@ -34,26 +33,26 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Inspect",
     items: [
-      { label: "Timeline", path: "/timeline", icon: Activity, kbd: "1", badge: "requests" },
-      { label: "Waterfall", path: "/waterfall", icon: Timer, kbd: "2" },
-      { label: "Analytics", path: "/analytics", icon: BarChart3, kbd: "3" },
+      { label: "Timeline", path: "/timeline", icon: Activity, badge: "requests" },
+      { label: "Waterfall", path: "/waterfall", icon: Timer },
+      { label: "Analytics", path: "/analytics", icon: BarChart3 },
     ],
   },
   {
     label: "Build",
     items: [
-      { label: "Explorer", path: "/explorer", icon: Network, kbd: "4" },
-      { label: "Playground", path: "/playground", icon: Play, kbd: "5" },
-      { label: "APIs", path: "/apis", icon: Globe, kbd: "6" },
+      { label: "Explorer", path: "/explorer", icon: Network },
+      { label: "Playground", path: "/playground", icon: Play },
+      { label: "APIs", path: "/apis", icon: Globe },
       { label: "Mocks", path: "/mocks", icon: Server },
     ],
   },
   {
     label: "Quality",
     items: [
-      { label: "Audit", path: "/audit", icon: Shield, kbd: "7", badge: "audit-score" },
-      { label: "Middleware", path: "/middleware", icon: Workflow, kbd: "8" },
-      { label: "Compare", path: "/compare", icon: GitCompare, kbd: "9" },
+      { label: "Audit", path: "/audit", icon: Shield, badge: "audit-score" },
+      { label: "Middleware", path: "/middleware", icon: Workflow },
+      { label: "Compare", path: "/compare", icon: GitCompare },
     ],
   },
   {

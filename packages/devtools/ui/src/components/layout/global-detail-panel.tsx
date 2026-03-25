@@ -3,6 +3,7 @@ import { GripVerticalIcon } from "lucide-react";
 
 import { useDevToolsStore } from "@/store";
 import { useRequestDetail } from "@/hooks/use-request-detail";
+import { useEscapeClose } from "@/hooks/use-escape-close";
 import { DetailPanel } from "@/components/shared/detail-panel";
 import type { DetailTabKey } from "@/components/shared/detail-panel/constants";
 import { cn } from "@/lib/utils";
@@ -48,15 +49,7 @@ export function GlobalDetailPanel({ children }: GlobalDetailPanelProps): React.R
     }
   }, [isOpen]);
 
-  // Close on Escape
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") { e.preventDefault(); closePanel(); }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [isOpen, closePanel]);
+  useEscapeClose(isOpen, closePanel);
 
   return (
     <div className="relative flex min-h-0 flex-1 overflow-hidden">

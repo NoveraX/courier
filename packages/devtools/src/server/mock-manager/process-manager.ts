@@ -1,18 +1,30 @@
 import type { ChildProcess } from "node:child_process";
 import { fork } from "node:child_process";
-import { resolve } from "node:path";
-
 import { allocatePort } from "./port-allocator";
 
 const GRACEFUL_TIMEOUT = 3000;
 const FORCE_TIMEOUT = 2000;
+
+export interface ChildScenarioMeta {
+  name: string;
+  endpointCount: number;
+  isActive: boolean;
+  endpoints: Array<{
+    group: string;
+    endpoint: string;
+    httpMethod: string;
+    behavior: "resolves" | "returns" | "rejects" | "custom";
+    latency?: number;
+  }>;
+}
 
 /** IPC ready payload from child */
 export interface ChildReadyData {
   port: number;
   url: string;
   routes: Array<Record<string, unknown>>;
-  collections: Array<{ name: string; count: number }>;
+  collections: Array<{ name: string; count: number; records: unknown[] }>;
+  scenarios: ChildScenarioMeta[];
 }
 
 export interface SpawnedServer {
@@ -30,17 +42,10 @@ export interface ProcessManagerEvents {
   onEvent: (serverId: string, event: Record<string, unknown>) => void;
 }
 
-/** Resolves path to the bundled worker entry script */
+/** Resolves path to the bundled worker entry script via standard ESM resolution */
 function resolveWorkerPath(): string {
-  // import.meta.resolve is the ESM equivalent of require.resolve
-  try {
-    const resolved = import.meta.resolve("@noverax/nexus-mock/managed/worker-entry");
-    return resolved.startsWith("file://") ? resolved.slice(7) : resolved;
-  } catch {
-    // Monorepo fallback: resolve relative to this file
-    const thisDir = new URL(".", import.meta.url).pathname;
-    return resolve(thisDir, "../../../../mock/lib/managed/worker-entry.js");
-  }
+  const resolved = import.meta.resolve("@noverax/nexus-mock/managed/worker-entry");
+  return resolved.startsWith("file://") ? resolved.slice(7) : resolved;
 }
 
 export function createProcessManager(events: ProcessManagerEvents) {
@@ -57,7 +62,6 @@ export function createProcessManager(events: ProcessManagerEvents) {
     const child = fork(workerPath, [], {
       execArgv: ["--import", "tsx/esm"],
       stdio: ["pipe", "pipe", "pipe", "ipc"],
-      env: { ...process.env, NEXUS_MOCK_PORT: String(port) },
     });
 
     children.set(serverId, child);
@@ -87,7 +91,7 @@ export function createProcessManager(events: ProcessManagerEvents) {
       }
     });
 
-    child.send({ type: "start", configPath });
+    child.send({ type: "start", configPath, port });
 
     return { child, serverId, configPath, pid: child.pid ?? 0 };
   }
@@ -143,7 +147,14 @@ export function createProcessManager(events: ProcessManagerEvents) {
     });
   }
 
-  return { spawn, kill, killAll, killAllSync, has };
+  /** Send a store command to a managed child process via IPC */
+  function sendCommand(serverId: string, command: Record<string, unknown>): void {
+    const child = children.get(serverId);
+    if (!child?.connected) return;
+    child.send({ type: "command", command, requestId: `cmd_${Date.now().toString(36)}` });
+  }
+
+  return { spawn, kill, killAll, killAllSync, has, sendCommand };
 }
 
 export type ProcessManager = ReturnType<typeof createProcessManager>;

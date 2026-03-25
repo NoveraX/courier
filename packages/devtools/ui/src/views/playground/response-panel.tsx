@@ -120,7 +120,7 @@ function StatusBar({ entry }: { entry: PlaygroundHistoryEntry }): React.ReactEle
         {isPending ? "Pending..." : entry.statusCode ?? (isError ? "Error" : "OK")}
       </Badge>
       {entry.duration !== undefined && (
-        <div className="flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground">
+        <div className="flex items-center gap-1 text-caption tabular-nums text-muted-foreground">
           <Clock className="size-3" />
           {formatDuration(entry.duration)}
         </div>

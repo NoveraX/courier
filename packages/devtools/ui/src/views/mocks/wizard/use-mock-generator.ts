@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { post } from "@/lib/api-client";
 import { useDevToolsStore } from "@/store";
+import { useMockStore } from "@/store/mock-slice";
 
 import type {
   EndpointSelection,
@@ -19,22 +20,33 @@ export function openMockWizard(): void {
   wizardBus.dispatchEvent(new Event("open"));
 }
 
-const DEFAULT_OPTIONS: MockGeneratorOptions = {
-  outputDir: "mock-servers",
-  port: 7001,
-  seedCount: 20,
-};
+const BASE_PORT = 7001;
 
-const INITIAL_STATE: MockGeneratorState = {
-  step: "source",
-  selectedSources: [],
-  standalone: false,
-  options: DEFAULT_OPTIONS,
-  endpoints: {},
-  sourceFilePaths: {},
-  generatedFiles: [],
-  writing: false,
-};
+/** Find next available port by checking existing mock servers in the store */
+function getNextAvailablePort(): number {
+  const { servers } = useMockStore.getState();
+  const usedPorts = new Set(Object.values(servers).map((s) => s.port));
+  let port = BASE_PORT;
+  while (usedPorts.has(port)) port++;
+  return port;
+}
+
+function buildDefaultOptions(): MockGeneratorOptions {
+  return { outputDir: "mock-servers", port: getNextAvailablePort(), seedCount: 20 };
+}
+
+function buildInitialState(): MockGeneratorState {
+  return {
+    step: "source",
+    selectedSources: [],
+    standalone: false,
+    options: buildDefaultOptions(),
+    endpoints: {},
+    sourceFilePaths: {},
+    generatedFiles: [],
+    writing: false,
+  };
+}
 
 export interface UseMockGeneratorReturn {
   state: MockGeneratorState;
@@ -55,13 +67,13 @@ export interface UseMockGeneratorReturn {
 }
 
 export function useMockGenerator(onSuccess?: () => void): UseMockGeneratorReturn {
-  const [state, setState] = useState<MockGeneratorState>(INITIAL_STATE);
+  const [state, setState] = useState<MockGeneratorState>(buildInitialState());
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const openWizard = useCallback(() => {
-    setState(INITIAL_STATE);
+    setState(buildInitialState());
     setError(null);
     setOpen(true);
   }, []);

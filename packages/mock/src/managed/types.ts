@@ -1,3 +1,4 @@
+import type { MockStore } from "../store";
 import type { MockScenario, NetworkConfig, TypedMockFn } from "../types";
 
 /** Configuration returned by defineMockServer() */
@@ -18,8 +19,8 @@ export interface MockServerDefinition {
   seed?: MockServerSeedConfig;
   /** Start automatically when DevTools launches (default: false) */
   autoStart: boolean;
-  /** Endpoint overrides applied after auto-generation */
-  overrides?: (mock: TypedMockFn<any>) => void;
+  /** Endpoint overrides applied after auto-generation — persist across all scenario switches */
+  overrides?: (mock: TypedMockFn<any>, store: MockStore) => void;
   /** Named scenarios (happy-path is auto-generated from source) */
   scenarios?: Record<string, MockScenario>;
   /** Default network simulation */
@@ -51,9 +52,30 @@ export type MockServerConfig = Omit<MockServerDefinition, "__type" | "port" | "a
 
 /** Messages from DevTools (parent) → mock server (child) */
 export type ParentMessage =
-  | { type: "start"; configPath: string }
+  | { type: "start"; configPath: string; port: number }
   | { type: "stop" }
   | { type: "command"; command: Record<string, unknown>; requestId: string };
+
+/** Scenario metadata sent from worker to parent on ready */
+export interface ChildScenarioMeta {
+  name: string;
+  description?: string;
+  tags?: string[];
+  endpointCount: number;
+  isActive: boolean;
+  hasStateMachine: boolean;
+  stateTransitions: Array<{ from: string; to: string; trigger: string }>;
+  endpoints: Array<{
+    group: string;
+    endpoint: string;
+    httpMethod: string;
+    behavior: "resolves" | "returns" | "rejects" | "custom" | "sequence";
+    latency?: number;
+    statusCode?: number;
+    sequenceLength?: number;
+    stateCondition?: string;
+  }>;
+}
 
 /** Messages from mock server (child) → DevTools (parent) */
 export type ChildMessage =
@@ -62,7 +84,8 @@ export type ChildMessage =
       port: number;
       url: string;
       routes: Array<Record<string, unknown>>;
-      collections: Array<{ name: string; count: number }>;
+      collections: Array<{ name: string; count: number; records: unknown[] }>;
+      scenarios: ChildScenarioMeta[];
     }
   | { type: "error"; message: string; fatal: boolean }
   | { type: "stopped" }

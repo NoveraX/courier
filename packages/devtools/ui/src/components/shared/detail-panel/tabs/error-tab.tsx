@@ -1,7 +1,6 @@
 import { AlertTriangle, ShieldAlert, XCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { CopyButton } from "@/components/shared/copy-button";
 import type { RequestEntry } from "@/store/types";
 
@@ -22,14 +21,12 @@ export function ErrorTab({ request }: ErrorTabProps): React.ReactElement {
   const isCritical = status != null && status >= 500;
 
   return (
-    <ScrollArea className="h-full">
-      <div className="space-y-5 p-4">
-        <ErrorCard type={type} message={message} status={status} critical={isCritical} />
-        {validationIssues && validationIssues.length > 0 && (
-          <ValidationIssues issues={validationIssues} />
-        )}
-      </div>
-    </ScrollArea>
+    <div className="space-y-5 p-4">
+      <ErrorCard type={type} message={message} status={status} critical={isCritical} />
+      {validationIssues && validationIssues.length > 0 && (
+        <ValidationIssues issues={validationIssues} />
+      )}
+    </div>
   );
 }
 
@@ -66,7 +63,7 @@ function ErrorCard({ type, message, status, critical }: {
               {type}
             </span>
             <div className="flex items-center gap-1.5">
-              {status && (
+              {status != null && status > 0 && (
                 <span className={cn(
                   "mono-sm rounded-md px-1.5 py-0.5 font-medium tabular-nums",
                   critical

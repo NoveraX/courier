@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import { CountDisplay } from "@/components/shared/count-display";
 import { SearchInput } from "@/components/shared/search-input";
 import { FilterBar as SharedFilterBar } from "@/components/shared/filter-bar";
 import { SingleSelect } from "@/components/shared/single-select";
@@ -59,7 +60,7 @@ export function HeatmapToolbar({
   };
 
   return (
-    <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-3">
+    <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border-subtle px-3">
       <SearchInput
         value={filters.search}
         onChange={(v) => onFilterChange("search", v)}
@@ -83,9 +84,7 @@ export function HeatmapToolbar({
 
       <div className="flex-1" />
 
-      <span className="shrink-0 text-caption tabular-nums text-muted-foreground/60">
-        {filtered === total ? `${total} endpoints` : `${filtered} of ${total}`}
-      </span>
+      <CountDisplay filtered={filtered} total={total} label="endpoints" />
     </div>
   );
 }

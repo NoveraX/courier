@@ -6,7 +6,7 @@ export class HTTPError<TData = unknown> extends Error {
   data: TData;
 
   constructor(response: HttpResponse<TData>) {
-    super(`HTTP ${response.status}`);
+    super(response.status > 0 ? `HTTP ${response.status}` : "Network request failed");
     this.name = "HTTPError";
 
     this.status = response.status;

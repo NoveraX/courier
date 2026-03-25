@@ -2,12 +2,13 @@ import { useMemo, useState } from "react";
 
 import type { MockRouteEntry } from "@/store/mock-slice";
 
-export type RouteSortKey = "fullPath" | "group" | "hits" | "source";
+export type RouteSortKey = "fullPath" | "group" | "hits" | "avgLatency" | "source";
 export type SortDir = "asc" | "desc";
 
 interface RoutesFilterState {
   search: string;
   method: string[];
+  group: string[];
   source: string[];
   sortKey: RouteSortKey;
   sortDir: SortDir;
@@ -16,6 +17,7 @@ interface RoutesFilterState {
 const INITIAL: RoutesFilterState = {
   search: "",
   method: [],
+  group: [],
   source: [],
   sortKey: "fullPath",
   sortDir: "asc",
@@ -46,6 +48,10 @@ export function useRoutesFilter(routes: MockRouteEntry[]): RoutesFilter {
 
     if (state.method.length > 0) {
       result = result.filter((r) => state.method.includes(r.httpMethod));
+    }
+
+    if (state.group.length > 0) {
+      result = result.filter((r) => state.group.includes(r.group));
     }
 
     if (state.source.length > 0) {

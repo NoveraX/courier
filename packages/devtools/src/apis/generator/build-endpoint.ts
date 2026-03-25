@@ -2,6 +2,7 @@
  * Builds endpoint() call expressions for group generation.
  */
 
+import { toInternalMethod } from "@noverax/nexus";
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointCall, resolveBodyInterfaceType } from "./build-endpoint-helpers";
 import { resolveResponseType, resolveVariablesType } from "./schema-types";
@@ -96,7 +97,7 @@ function toPascalCase(name: string): string {
 }
 
 function buildFnBody(ep: ParsedEndpoint): string {
-  const httpMethod = ep.httpMethod === "delete" ? "del" : ep.httpMethod;
+  const httpMethod = toInternalMethod(ep.httpMethod);
   const path = ep.path === "/" ? "" : ep.path.replace(/^\//, "");
   const hasVars =
     ep.parameters.some((p) => p.in === "path" || p.in === "query") || ep.requestBody !== null;

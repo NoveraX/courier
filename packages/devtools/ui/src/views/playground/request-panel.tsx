@@ -134,7 +134,7 @@ function EditorLabel({ icon: Icon, label, hint }: {
 }): React.ReactElement {
   return (
     <div className="flex items-center gap-1.5">
-      <Icon className="size-3.5 text-muted-foreground" />
+      <Icon className="size-3 text-muted-foreground" />
       <span className="text-caption text-muted-foreground">{label}</span>
       {hint && <span className="text-[10px] text-emerald-400/70">{hint}</span>}
     </div>

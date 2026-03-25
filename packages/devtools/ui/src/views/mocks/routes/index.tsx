@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Globe } from "lucide-react";
 import { PageShell } from "@/components/shared/page-shell";
 import { EmptyState } from "@/components/shared/empty-state";
+import { useEscapeClose } from "@/hooks/use-escape-close";
 import { useActiveServer } from "@/store/mock-slice";
 
 import type { MockRouteEntry } from "@/store/mock-slice";
@@ -16,6 +17,13 @@ export function MockRoutesView(): React.ReactElement {
   const routes = server?.routes ?? [];
   const filter = useRoutesFilter(routes);
   const [selected, setSelected] = useState<MockRouteEntry | null>(null);
+  const closeDetail = useCallback(() => setSelected(null), []);
+
+  // Close detail panel when server changes
+  const serverId = server?.serverId;
+  useEffect(() => setSelected(null), [serverId]);
+
+  useEscapeClose(selected !== null, closeDetail);
 
   if (!server) {
     return (
@@ -27,7 +35,7 @@ export function MockRoutesView(): React.ReactElement {
 
   if (routes.length === 0) {
     return (
-      <PageShell toolbar={<RoutesToolbar filter={filter} />} center>
+      <PageShell toolbar={<RoutesToolbar filter={filter} routes={routes} />} center>
         <EmptyState icon={Globe} heading="No routes" description="This server has no registered routes yet." />
       </PageShell>
     );
@@ -36,7 +44,7 @@ export function MockRoutesView(): React.ReactElement {
   const serverUrl = server.url || `http://localhost:${server.port}`;
 
   return (
-    <PageShell toolbar={<RoutesToolbar filter={filter} />} noScroll>
+    <PageShell toolbar={<RoutesToolbar filter={filter} routes={routes} />} noScroll>
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="flex-1 overflow-y-auto">
           <RoutesTable
@@ -49,7 +57,12 @@ export function MockRoutesView(): React.ReactElement {
           />
         </div>
         {selected && (
-          <RouteDetail route={selected} serverUrl={serverUrl} onClose={() => setSelected(null)} />
+          <RouteDetail
+            route={selected}
+            serverUrl={serverUrl}
+            sourceName={server.name}
+            onClose={closeDetail}
+          />
         )}
       </div>
     </PageShell>

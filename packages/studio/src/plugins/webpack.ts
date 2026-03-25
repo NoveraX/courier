@@ -1,3 +1,4 @@
+import { createLogger } from "@noverax/nexus";
 import { createDataUri } from "./core/data-uri";
 import { resolveOptions } from "./core/options";
 import { generateConnectSnippet } from "./core/snippet";
@@ -17,8 +18,10 @@ import type { StudioPluginOptions } from "./core/types";
  * }
  * ```
  */
+const log = createLogger("WebpackPlugin");
+
 export function nexusStudio(options?: StudioPluginOptions): WebpackPluginLike {
-  const resolved = resolveOptions(options);
+  const resolved = { ...resolveOptions(options), framework: "webpack" };
 
   return {
     apply(compiler) {
@@ -40,9 +43,7 @@ export function nexusStudio(options?: StudioPluginOptions): WebpackPluginLike {
         let main = entries["main-app"] ?? entries["main"];
         if (!main) {
           main = Object.values(entries)[0];
-          console.warn(
-            "[nexus-studio] No 'main-app' or 'main' entry found, falling back to first entry",
-          );
+          log.warn("No 'main-app' or 'main' entry found, falling back to first entry");
         }
         if (main?.import && !main.import.includes(dataUri)) {
           main.import.unshift(dataUri);

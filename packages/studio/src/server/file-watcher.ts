@@ -9,8 +9,8 @@
 import type { FSWatcher } from "node:fs";
 import { existsSync, watch as fsWatch } from "node:fs";
 import { relative } from "node:path";
+import { createLogger } from "@noverax/nexus";
 import type { Namespace } from "socket.io";
-
 import type { FingerprintCache } from "../apis/registry/cache";
 import { loadCache } from "../apis/registry/cache";
 import { listSources, loadRegistry } from "../apis/registry/registry";
@@ -28,6 +28,7 @@ export interface FileChangeEvent {
   timestamp: number;
 }
 
+const log = createLogger("FileWatcher");
 const DEBOUNCE_MS = 300;
 const REGISTRY_FILE = "registry.nexus.json";
 const TS_EXTENSIONS = /\.(ts|tsx|js|jsx)$/;
@@ -85,7 +86,7 @@ export function startFileWatcher(
           lastChangedFile = "";
         }
       } catch (err) {
-        console.warn("Failed to emit scan update:", err);
+        log.warn("Failed to emit scan update", err);
       }
     });
   };
@@ -98,7 +99,7 @@ export function startFileWatcher(
         uiNamespace.emit("registry:updated", { sources: listSources(config) });
         watcherStatus?.emitChange("api", [REGISTRY_FILE]);
       } catch (err) {
-        console.warn("Failed to emit registry update:", err);
+        log.warn("Failed to emit registry update", err);
       }
     });
   };

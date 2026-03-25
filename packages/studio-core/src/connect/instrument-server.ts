@@ -1,9 +1,11 @@
+import { createLogger } from "@noverax/nexus";
+
 import { extractSourceMap } from "../source-map";
 import { registerSources } from "../sources-registry";
 import { connectStudio } from "./connect-studio";
 import type { InstrumentServerOptions, StudioConnection } from "./types";
 
-const PREFIX = "[nexus-studio]";
+const log = createLogger("Studio");
 
 const NOOP_CONNECTION: StudioConnection = {
   bus: { on: () => () => {}, emit: () => {}, clear: () => {}, getBuffer: () => [] } as never,
@@ -48,21 +50,19 @@ function detectFramework(): string {
 export function instrumentServer(options: InstrumentServerOptions): StudioConnection {
   // No-op in production
   if (typeof process !== "undefined" && process.env.NODE_ENV === "production") {
-    console.debug(`${PREFIX} Skipped — production environment.`);
+    log.debug("Skipped — production environment.");
     return NOOP_CONNECTION;
   }
 
   // Warn if accidentally called in browser
   if (typeof window !== "undefined") {
-    console.warn(`${PREFIX} instrumentServer() is for server use. Use connectStudio() in browser.`);
+    log.warn("instrumentServer() is for server use. Use connectStudio() in browser.");
     return NOOP_CONNECTION;
   }
 
   // Skip in Edge runtime — Socket.IO requires Node.js net/tls APIs
   if (typeof process !== "undefined" && process.env.NEXT_RUNTIME === "edge") {
-    console.debug(
-      `${PREFIX} Skipped — Edge runtime does not support Socket.IO. Use Node.js runtime.`,
-    );
+    log.debug("Skipped — Edge runtime does not support Socket.IO. Use Node.js runtime.");
     return NOOP_CONNECTION;
   }
 

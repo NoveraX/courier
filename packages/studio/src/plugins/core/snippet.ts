@@ -9,6 +9,6 @@ export function generateConnectSnippet(options: ResolvedOptions): string {
 
   return [
     `import { connectStudio } from "@noverax/nexus-studio-core"`,
-    `connectStudio({ port: ${options.port}, host: ${JSON.stringify(options.host)}${filterArg} })`,
+    `connectStudio({ port: ${options.port}, host: ${JSON.stringify(options.host)}, framework: ${JSON.stringify(options.framework)}${filterArg} })`,
   ].join("\n");
 }

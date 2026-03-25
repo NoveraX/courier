@@ -5,7 +5,10 @@
 
 import { existsSync, lstatSync, readdirSync, rmdirSync, unlinkSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { createLogger } from "@noverax/nexus";
 import { resolveProjectSafe } from "../context";
+
+const log = createLogger("Cleanup");
 
 export function cleanupOrphanFiles(outputDir: string, newPaths: Set<string>): number {
   const absDir = resolveProjectSafe(outputDir);
@@ -14,7 +17,7 @@ export function cleanupOrphanFiles(outputDir: string, newPaths: Set<string>): nu
   try {
     return removeOrphansRecursive(absDir, newPaths, absDir);
   } catch (err) {
-    console.warn("Orphan cleanup failed:", err);
+    log.warn("Orphan cleanup failed", err);
     return 0;
   }
 }

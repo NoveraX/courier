@@ -1,10 +1,13 @@
 import { HTTPError } from "../error";
 import type { UploadProgress } from "../http-client/types";
+import { createLogger } from "../logger";
 import { studioHooks } from "../studio";
 import { isFormData } from "../utils/helpers";
 import type { RequestPayload } from "../utils/request-payload";
 import { buildHttpError, readErrorResponse } from "./send-fetch";
 import { xhrUpload } from "./xhr-upload";
+
+const log = createLogger("XhrHandler");
 
 export type XhrHandlerCtx = {
   url: string;
@@ -28,16 +31,12 @@ export type XhrHandlerCtx = {
 export async function handleXhrUpload(ctx: XhrHandlerCtx): Promise<unknown> {
   if (process.env.NODE_ENV !== "production") {
     if (ctx.cache)
-      console.warn(
-        "[nexus] 'cache' option is ignored when 'onUploadProgress' is set (XHR transport)",
-      );
+      log.warn("'cache' option is ignored when 'onUploadProgress' is set (XHR transport)");
     if (ctx.next)
-      console.warn(
-        "[nexus] 'next' option is ignored when 'onUploadProgress' is set (XHR transport)",
-      );
+      log.warn("'next' option is ignored when 'onUploadProgress' is set (XHR transport)");
     if (ctx.onDownloadProgress)
-      console.warn(
-        "[nexus] 'onDownloadProgress' option is ignored when 'onUploadProgress' is set (XHR transport)",
+      log.warn(
+        "'onDownloadProgress' option is ignored when 'onUploadProgress' is set (XHR transport)",
       );
   }
 

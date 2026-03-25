@@ -3,12 +3,15 @@
  */
 
 import { readFileSync } from "node:fs";
+import { createLogger } from "@noverax/nexus";
 import { generateFingerprints } from "../apis/merge/fingerprint";
 import type { FingerprintCache } from "../apis/registry/cache";
 import { getCachedFingerprints } from "../apis/registry/cache";
 import { saveRegistry } from "../apis/registry/registry";
 import type { RegistryConfig, RegistrySource } from "../apis/registry/types";
 import { resolveProjectSafe } from "../context";
+
+const log = createLogger("Sync");
 
 interface Snapshot {
   invalidate: () => void;
@@ -68,6 +71,6 @@ export function syncUserModified(filePath: string, snapshot: Snapshot): void {
       snapshot.invalidate();
     }
   } catch (err) {
-    console.warn("Failed to sync user-modified:", err);
+    log.warn("Failed to sync user-modified", err);
   }
 }

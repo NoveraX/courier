@@ -24,7 +24,7 @@ import type { StudioPluginOptions } from "./core/types";
  * ```
  */
 export function withNexusStudio(pluginOptions?: StudioPluginOptions) {
-  const resolved = resolveOptions(pluginOptions);
+  const resolved = { ...resolveOptions(pluginOptions), framework: "next-client" };
 
   return (nextConfig: NextConfig): NextConfig => {
     if (!resolved.enabled) return nextConfig;

@@ -19,7 +19,7 @@ import { nexusStudioUnplugin } from "./unplugin";
  * ```
  */
 export function nexusStudio(options?: StudioPluginOptions): Plugin[] {
-  const resolved = resolveOptions(options);
+  const resolved = { ...resolveOptions(options), framework: "vite" };
   if (!resolved.enabled) return [];
 
   /* Pass raw options to unplugin — it calls resolveOptions internally */

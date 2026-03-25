@@ -6,6 +6,7 @@ import { existsSync } from "node:fs";
 import { createServer } from "node:http";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createLogger } from "@noverax/nexus";
 import compression from "compression";
 import express from "express";
 import type { RequestHandler } from "express-serve-static-core";
@@ -21,6 +22,8 @@ import { registerSessionRoutes } from "./session-routes";
 import { setupAppNamespace, setupUiNamespace } from "./socket-handlers";
 import type { SessionInfo, StudioServer, StudioServerOptions } from "./types";
 import { createWatcherStatus } from "./watcher-status";
+
+const log = createLogger("Studio");
 
 export function createStudioServer(options: StudioServerOptions = {}): StudioServer {
   const { port = 4380, host = "localhost", projectRoot = process.cwd(), onReady } = options;
@@ -119,7 +122,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   httpServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
-      console.log(`  ✦ Nexus Studio already running on ${url}`);
+      log.info(`Nexus Studio already running on ${url}`);
       return;
     }
     throw err;

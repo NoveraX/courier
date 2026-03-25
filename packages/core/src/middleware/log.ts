@@ -1,5 +1,8 @@
+import { createLogger } from "../logger";
 import { defineMiddleware } from "./compose";
 import type { Middleware } from "./types";
+
+const defaultLogger = createLogger("Middleware");
 
 /**
  * Logging middleware — logs endpoint, status, and duration.
@@ -11,10 +14,10 @@ import type { Middleware } from "./types";
  * })
  */
 export function logMiddleware(options?: {
-  /** Custom logger function (default: console.log) */
+  /** Custom logger function (default: nexus logger) */
   logger?: (message: string) => void;
 }): Middleware {
-  const { logger = console.log } = options ?? {};
+  const { logger = (msg: string) => defaultLogger.info(msg) } = options ?? {};
 
   return defineMiddleware("log", "wrap", async (ctx, next) => {
     const label = [ctx.source, ctx.group, ctx.method].filter(Boolean).join(":");

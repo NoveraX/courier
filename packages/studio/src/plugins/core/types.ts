@@ -16,5 +16,6 @@ export interface ResolvedOptions {
   port: number;
   host: string;
   enabled: boolean;
+  framework: string;
   filter?: StudioPluginOptions["filter"];
 }

@@ -21,7 +21,7 @@ const VIRTUAL_ID = "nexus-studio-init";
  * ```
  */
 export function nexusStudio(options?: StudioPluginOptions): EsbuildPluginLike {
-  const resolved = resolveOptions(options);
+  const resolved = { ...resolveOptions(options), framework: "esbuild" };
 
   return {
     name: "nexus-studio",

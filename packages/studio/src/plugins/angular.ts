@@ -26,6 +26,7 @@ export function setupNexusStudio(options?: StudioPluginOptions): void {
     connectStudio({
       port: resolved.port,
       host: resolved.host,
+      framework: "angular",
       filter: resolved.filter,
     });
   });

@@ -17,7 +17,7 @@ import type { StudioPluginOptions } from "./core/types";
  * ```
  */
 export function nexusStudio(options?: StudioPluginOptions): AstroIntegrationLike {
-  const resolved = resolveOptions(options);
+  const resolved = { ...resolveOptions(options), framework: "astro" };
 
   return {
     name: "nexus-studio",

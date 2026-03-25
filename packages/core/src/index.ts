@@ -18,6 +18,7 @@ export type {
   HttpResponse,
   UploadProgress,
 } from "./http-client/types";
+export { createLogger, type Logger, type LogLevel, logger } from "./logger";
 export { defineMiddleware } from "./middleware/compose";
 export type {
   AfterHandler,

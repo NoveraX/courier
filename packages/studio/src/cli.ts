@@ -1,8 +1,12 @@
 #!/usr/bin/env node
+import { createLogger } from "@noverax/nexus";
 import { defineCommand, runMain } from "citty";
 import { setProjectRoot } from "./context";
 import { createStudioServer } from "./server";
+import { printBanner } from "./server/banner";
 import { initProject } from "./server/init";
+
+const log = createLogger("CLI");
 
 const init = defineCommand({
   meta: {
@@ -12,9 +16,9 @@ const init = defineCommand({
   run() {
     setProjectRoot(process.cwd());
     const { registryCreated, gitignoreUpdated } = initProject();
-    if (registryCreated) console.log("  ✓ registry.nexus.json created");
-    if (gitignoreUpdated) console.log("  ✓ .gitignore updated with cache files");
-    if (!registryCreated && !gitignoreUpdated) console.log("  ✓ project already initialized");
+    if (registryCreated) log.info("registry.nexus.json created");
+    if (gitignoreUpdated) log.info(".gitignore updated with cache files");
+    if (!registryCreated && !gitignoreUpdated) log.info("project already initialized");
   },
 });
 
@@ -49,7 +53,7 @@ const main = defineCommand({
   async run({ args }) {
     const port = Number.parseInt(args.port, 10);
     if (Number.isNaN(port) || port < 1 || port > 65535) {
-      console.error(`Invalid port: "${args.port}". Must be a number between 1 and 65535.`);
+      log.error(`Invalid port: "${args.port}". Must be a number between 1 and 65535.`);
       process.exit(1);
     }
     const host = args.host;
@@ -60,8 +64,7 @@ const main = defineCommand({
       host,
       projectRoot,
       onReady: async (url) => {
-        console.log(`\n  Nexus Studio running at ${url}\n`);
-        console.log("  Waiting for app connections on /app namespace...\n");
+        printBanner(host, port);
 
         if (args.open) {
           const { default: openBrowser } = await import("open");

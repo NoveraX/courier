@@ -1,8 +1,11 @@
+import { createLogger } from "@noverax/nexus";
 import type { MiddlewareHandler } from "hono";
+
+const log = createLogger("MockServer");
 
 export type LogLevel = "silent" | "normal" | "verbose";
 
-/** Create a Hono middleware that logs requests to console */
+/** Create a Hono middleware that logs requests with status color coding */
 export function createRequestLogger(level: LogLevel): MiddlewareHandler {
   if (level === "silent") {
     return async (_c, next) => next();
@@ -20,11 +23,11 @@ export function createRequestLogger(level: LogLevel): MiddlewareHandler {
     const reset = "\x1b[0m";
 
     if (level === "verbose") {
-      console.log(`${statusColor}${status}${reset} ${method} ${path} ${duration}ms`);
+      log.info(`${statusColor}${status}${reset} ${method} ${path} ${duration}ms`);
     } else {
       // Normal: skip admin routes
       if (!path.startsWith("/__admin")) {
-        console.log(`${statusColor}${status}${reset} ${method} ${path} ${duration}ms`);
+        log.info(`${statusColor}${status}${reset} ${method} ${path} ${duration}ms`);
       }
     }
   };

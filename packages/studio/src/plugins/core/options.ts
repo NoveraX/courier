@@ -19,6 +19,7 @@ export function resolveOptions(options: StudioPluginOptions = {}): ResolvedOptio
     port,
     host,
     enabled: options.enabled ?? process.env.NODE_ENV !== "production",
+    framework: "browser",
     filter: options.filter,
   };
 }

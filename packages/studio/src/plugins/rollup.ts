@@ -17,7 +17,7 @@ import type { StudioPluginOptions } from "./core/types";
  * ```
  */
 export function nexusStudio(options?: StudioPluginOptions): RollupPluginLike {
-  const resolved = resolveOptions(options);
+  const resolved = { ...resolveOptions(options), framework: "rollup" };
   let injected = false;
 
   return {

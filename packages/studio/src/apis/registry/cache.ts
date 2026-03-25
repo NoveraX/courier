@@ -8,6 +8,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { createLogger } from "@noverax/nexus";
 import { resolveProject } from "../../context";
 
 import type { SpecDigest } from "../merge/types";
@@ -22,6 +23,7 @@ export interface DigestCache {
   [sourceName: string]: SpecDigest;
 }
 
+const log = createLogger("RegistryCache");
 const CACHE_PATH = ".nexus/cache.json";
 const DIGEST_PATH = ".nexus/digests.json";
 
@@ -38,7 +40,7 @@ function readJson<T>(path: string): T | null {
   try {
     return JSON.parse(readFileSync(filePath, "utf-8")) as T;
   } catch (err) {
-    console.warn(`Failed to parse ${path}:`, err);
+    log.warn(`Failed to parse ${path}`, err);
     return null;
   }
 }

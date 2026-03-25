@@ -46,7 +46,7 @@ export async function nexusStudioModule(
 ): Promise<void> {
   if (!nuxt.options.dev) return;
 
-  const resolved = resolveOptions(options);
+  const resolved = { ...resolveOptions(options), framework: "nuxt-client" };
   if (!resolved.enabled) return;
 
   const snippet = generateConnectSnippet(resolved);

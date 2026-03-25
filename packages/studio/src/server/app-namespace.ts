@@ -9,6 +9,7 @@
 import type { SourceMap } from "@noverax/nexus-studio-core";
 import type { Namespace } from "socket.io";
 import { removeSessionEnv, setSessionEnv } from "../runtime-env";
+import { logAppConnect, logAppDisconnect } from "./banner";
 import type { CatalogStore } from "./catalog";
 import { bufferEvent } from "./session-buffer";
 import type { SessionInfo } from "./types";
@@ -60,6 +61,10 @@ export function setupAppNamespace(
         if (env) setSessionEnv(sessionId, env);
 
         uiNamespace.emit("session:connect", sessions.get(sessionId));
+
+        const fw = (event.framework as string) ?? "unknown";
+        const origin = socket.handshake.headers.origin ?? socket.handshake.address;
+        logAppConnect(fw, origin);
       }
 
       // HMR: runtime source update → catalog
@@ -114,6 +119,10 @@ export function setupAppNamespace(
     socket.on("disconnect", () => {
       // App session cleanup
       if (sessionId) {
+        const fw = (socket.data.framework as string) ?? "unknown";
+        const origin = socket.handshake.headers.origin ?? socket.handshake.address;
+        logAppDisconnect(fw, origin);
+
         catalogStore.removeRuntimeLayer(sessionId);
         removeSessionEnv(sessionId);
         sessions.delete(sessionId);

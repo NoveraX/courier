@@ -1,3 +1,4 @@
+import { logMockServerStart, logMockServerStop } from "../banner";
 import { createProcessManager } from "./process-manager";
 import type { DeclaredServer } from "./scanner";
 import { createScanner } from "./scanner";
@@ -21,7 +22,7 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
   const processManager = createProcessManager({
     onReady(serverId, data) {
       const name = servers.get(serverId)?.name ?? serverId;
-      console.log(`  ✦ Mock server "${name}" running at ${data.url}`);
+      logMockServerStart(name, data.url);
       updateAndEmit(serverId, {
         status: "running",
         actualPort: data.port,
@@ -37,6 +38,8 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
       if (fatal) updateAndEmit(serverId, { status: "crashed", lastError: message });
     },
     onStopped(serverId) {
+      const name = servers.get(serverId)?.name ?? serverId;
+      logMockServerStop(name);
       updateAndEmit(serverId, { status: "stopped", pid: undefined });
     },
     onCrashed(serverId, code) {

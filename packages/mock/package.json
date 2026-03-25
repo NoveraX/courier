@@ -14,37 +14,21 @@
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
+    "./testing": {
+      "types": "./lib/testing.d.ts",
+      "import": "./lib/testing.js"
+    },
     "./server": {
       "types": "./lib/server.d.ts",
       "import": "./lib/server.js"
-    },
-    "./browser": {
-      "types": "./lib/browser.d.ts",
-      "import": "./lib/browser.js"
     },
     "./contract": {
       "types": "./lib/contract/index.d.ts",
       "import": "./lib/contract/index.js"
     },
-    "./middleware": {
-      "types": "./lib/middleware/index.d.ts",
-      "import": "./lib/middleware/index.js"
-    },
     "./managed/worker-entry": {
       "types": "./lib/managed/worker-entry.d.ts",
       "import": "./lib/managed/worker-entry.js"
-    },
-    "./route-analyzer": {
-      "types": "./lib/auto/route-analyzer.d.ts",
-      "import": "./lib/auto/route-analyzer.js"
-    },
-    "./schema-introspect": {
-      "types": "./lib/auto/schema-introspect.d.ts",
-      "import": "./lib/auto/schema-introspect.js"
-    },
-    "./data-generator": {
-      "types": "./lib/auto/data-generator.d.ts",
-      "import": "./lib/auto/data-generator.js"
     },
     "./meta-worker": {
       "types": "./lib/auto/meta-worker.d.ts",

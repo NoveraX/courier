@@ -109,13 +109,22 @@ export function SourceStep({ wizard }: SourceStepProps): React.ReactElement {
         </div>
       )}
 
-      {/* Standalone info */}
+      {/* Standalone — coming soon */}
       {state.standalone && (
-        <div className="rounded-lg border border-border-subtle bg-muted/20 px-4 py-3">
-          <p className="text-body-sm text-muted-foreground">
-            Standalone mode creates a mock server without a source API definition.
-            Routes will be inferred from endpoint names using REST conventions.
-          </p>
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-border-subtle bg-muted/20 px-4 py-8 text-center">
+          <Server className="size-8 text-muted-foreground/40" />
+          <div className="space-y-1">
+            <p className="text-body-sm font-medium text-foreground">
+              Standalone Mock Server
+            </p>
+            <p className="text-body-sm text-muted-foreground max-w-sm">
+              Design mock APIs without a source definition — with a visual drag-and-drop builder,
+              schema-based data generation, and OpenAPI export.
+            </p>
+          </div>
+          <Badge variant="secondary" className="text-caption">
+            Coming soon
+          </Badge>
         </div>
       )}
     </div>

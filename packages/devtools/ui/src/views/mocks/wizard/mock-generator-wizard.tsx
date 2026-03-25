@@ -131,7 +131,7 @@ function WizardFooter({
   currentIdx: number;
 }): React.ReactElement {
   const { state, loading } = wizard;
-  const canProceed = state.selectedSources.length > 0 || state.standalone;
+  const canProceed = state.selectedSources.length > 0 && !state.standalone;
 
   const prevStep = (): MockWizardStep => {
     if (state.step === "configure") return "source";

@@ -51,7 +51,7 @@ export function HeatmapPage(): React.ReactElement {
         <EmptyState
           icon={Flame}
           heading="No performance data"
-          description="Connect your app and make requests to see timing breakdowns."
+          description="Define API sources and make requests to see timing breakdowns."
         />
       </PageShell>
     );

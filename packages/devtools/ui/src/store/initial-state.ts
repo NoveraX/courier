@@ -22,5 +22,8 @@ export function createInitialState(savedTheme: DevToolsState["theme"]) {
     registrySources: [] as DevToolsState["registrySources"],
     clientTick: 0,
     droppedRequests: 0,
+    watcherApiPaths: 0,
+    watcherMockFiles: 0,
+    watcherLastChange: null,
   }
 }

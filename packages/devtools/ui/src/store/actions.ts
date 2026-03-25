@@ -1,7 +1,6 @@
 import type { StateCreator } from "zustand"
-import { toast } from "sonner"
 
-import type { Catalog, CatalogSnapshot, DevToolsEvent } from "./types"
+import type { CatalogSnapshot, DevToolsEvent } from "./types"
 import type { DevToolsState } from "./store-types"
 import { PLAYGROUND_MAX_HISTORY, DEFAULT_SETTINGS, saveSettings, saveSessionStartedAt } from "./constants"
 import { applyTheme } from "./theme"
@@ -12,20 +11,6 @@ import { createInitialState } from "./initial-state"
 
 type Setter = Parameters<StateCreator<DevToolsState>>[0]
 type Getter = Parameters<StateCreator<DevToolsState>>[1]
-
-/** Toast on catalog change — debounced to avoid spam */
-let lastCatalogHash = ""
-let catalogToastTimer: ReturnType<typeof setTimeout> | undefined
-function catalogChangedToast(catalog: CatalogSnapshot["catalog"]): void {
-  const hash = JSON.stringify(catalog)
-  if (!lastCatalogHash || lastCatalogHash === hash) {
-    lastCatalogHash = hash
-    return
-  }
-  lastCatalogHash = hash
-  clearTimeout(catalogToastTimer)
-  catalogToastTimer = setTimeout(() => toast.info("Sources updated"), 300)
-}
 
 /**
  * Normalize event source name against catalog keys (case-insensitive).
@@ -127,10 +112,7 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
       }),
 
     // Catalog (server-authoritative — NOT gated by paused flag)
-    setCatalog: (snapshot) => {
-      catalogChangedToast(snapshot.catalog)
-      set({ catalog: snapshot.catalog })
-    },
+    setCatalog: (snapshot) => set({ catalog: snapshot.catalog }),
 
     // APIs — live scan + registry (pushed via socket, no HTTP round-trip)
     setScanSources: (sources) => set({ scanSources: sources }),
@@ -200,6 +182,10 @@ export function createActions(set: Setter, get: Getter): Omit<DevToolsState, key
       })
       notifyOnEvent(normalized, get)
     },
+
+    // Watcher
+    setWatcherStatus: (apiPaths, mockFiles) => set({ watcherApiPaths: apiPaths, watcherMockFiles: mockFiles }),
+    setWatcherChange: (change) => set({ watcherLastChange: change }),
 
     // Settings
     updateSettings: (patch) => {

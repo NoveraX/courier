@@ -49,6 +49,11 @@ export interface DevToolsState {
   // Request buffer overflow tracking
   droppedRequests: number
 
+  // Watcher (unified hot reload indicator)
+  watcherApiPaths: number
+  watcherMockFiles: number
+  watcherLastChange: { source: "api" | "mock"; files: string[]; timestamp: number } | null
+
   // Actions — UI
   setTheme: (theme: Theme) => void
 
@@ -81,6 +86,10 @@ export interface DevToolsState {
   updatePlaygroundEntry: (id: string, patch: Partial<PlaygroundHistoryEntry>) => void
   setPlaygroundActiveResponse: (entry: PlaygroundHistoryEntry | null) => void
   clearPlaygroundHistory: () => void
+
+  // Actions — Watcher
+  setWatcherStatus: (apiPaths: number, mockFiles: number) => void
+  setWatcherChange: (change: DevToolsState["watcherLastChange"]) => void
 
   // Actions — Settings
   updateSettings: (patch: Partial<Settings>) => void

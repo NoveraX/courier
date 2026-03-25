@@ -94,7 +94,7 @@ export function ExplorerGraph(): React.ReactElement {
         <EmptyState
           icon={Network}
           heading="No API sources"
-          description="Connect your app to see the API topology graph"
+          description="Define API sources in your project to see the topology graph."
         />
       </div>
     );

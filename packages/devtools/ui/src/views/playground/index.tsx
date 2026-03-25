@@ -18,9 +18,11 @@ import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 
 export function PlaygroundView(): React.ReactElement {
   const connected = useDevToolsStore((s) => s.connected);
+  const sessions = useDevToolsStore((s) => s.sessions);
   const activeResponse = useDevToolsStore((s) => s.playgroundActiveResponse);
   const setActiveResponse = useDevToolsStore((s) => s.setPlaygroundActiveResponse);
   const search = useSearch({ from: "/playground" });
+  const hasApp = sessions.some((s) => s.framework !== "unknown");
 
   const pg = usePlayground(search);
   const { send, sending } = useSendRequest();
@@ -59,7 +61,7 @@ export function PlaygroundView(): React.ReactElement {
     pg.setResponseTab("body");
   };
 
-  if (!connected || pg.sources.length === 0) {
+  if (!connected || !hasApp) {
     return (
       <PageShell center>
         <EmptyState

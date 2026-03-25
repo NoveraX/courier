@@ -33,7 +33,7 @@ export function EndpointsCatalog(): React.ReactElement {
         <EmptyState
           icon={List}
           heading="No endpoints discovered"
-          description="Connect your app to see the full endpoint catalog with types, paths, and live performance metrics."
+          description="Define API sources in your project to see the endpoint catalog with types, paths, and performance metrics."
         />
       </div>
     );

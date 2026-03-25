@@ -1,6 +1,9 @@
+import { Eye } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import { useDevToolsStore } from "@/store";
 import { useElapsed } from "@/hooks/use-tick";
+import { useMockStore } from "@/store/mock-slice";
 
 export function StatusBar(): React.ReactNode {
   const requests = useDevToolsStore((s) => s.requests);
@@ -9,7 +12,14 @@ export function StatusBar(): React.ReactNode {
   const sessions = useDevToolsStore((s) => s.sessions);
   const droppedRequests = useDevToolsStore((s) => s.droppedRequests);
   const sessionStartedAt = useDevToolsStore((s) => s.sessionStartedAt);
+  const watcherApiPaths = useDevToolsStore((s) => s.watcherApiPaths);
+  const watcherMockFiles = useDevToolsStore((s) => s.watcherMockFiles);
   const elapsed = useElapsed(sessionStartedAt, connectionStatus === "connected");
+
+  const totalWatched = watcherApiPaths + watcherMockFiles;
+  const isRestarting = useMockStore((s) =>
+    Object.values(s.servers).some((srv) => srv.processStatus === "restarting"),
+  );
 
   const connected = connectionStatus === "connected";
   const reconnecting = connectionStatus === "reconnecting";
@@ -51,6 +61,14 @@ export function StatusBar(): React.ReactNode {
           <span className="opacity-60">{elapsed}</span>
         )}
       </div>
+
+      {/* Watcher indicator */}
+      {totalWatched > 0 && (
+        <div className="flex h-full items-center gap-1.5 border-l border-border-subtle px-2.5 text-muted-foreground">
+          <Eye className={cn("size-2.5", isRestarting ? "animate-pulse-dot text-amber-400" : "text-emerald-400")} />
+          <span>{isRestarting ? "Reloading\u2026" : `Watching ${totalWatched}`}</span>
+        </div>
+      )}
 
       {/* Center: request telemetry */}
       <div className="flex h-full flex-1 items-center gap-3 px-3 text-muted-foreground">

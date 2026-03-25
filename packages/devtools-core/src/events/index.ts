@@ -59,6 +59,7 @@ export type {
   ValidationPassEvent,
   ValidationStartEvent,
 } from "./validation";
+export type { WatcherChangeEvent, WatcherStatusEvent } from "./watcher";
 
 // ── Union type ─────────────────────────────────────────────────────────────────
 

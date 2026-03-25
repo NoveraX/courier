@@ -8,6 +8,7 @@ import type { ScannedSource, SourceSummary } from "@/views/apis/types"
 
 import { useDevToolsStore } from "./store"
 import { handleMockEvent, isMockEvent } from "./store/handle-mock-events"
+import { notifyFileChange } from "./store/watcher-notifications"
 
 function isDevToolsEvent(value: unknown): value is DevToolsEvent & Record<string, unknown> {
   if (typeof value !== "object" || value === null) return false
@@ -80,6 +81,8 @@ interface Bindings {
   onCatalogSnapshot: (data: unknown) => void
   onScanUpdated: (data: unknown) => void
   onRegistryUpdated: (data: unknown) => void
+  onWatcherStatus: (data: unknown) => void
+  onWatcherChange: (data: unknown) => void
 }
 
 function buildBindings(
@@ -122,6 +125,19 @@ function buildBindings(
         store().setRegistrySources((data as { sources: SourceSummary[] }).sources)
       }
     },
+    onWatcherStatus: (data) => {
+      if (data && typeof data === "object" && "apiPaths" in data) {
+        const d = data as { apiPaths: number; mockFiles: number }
+        store().setWatcherStatus(d.apiPaths, d.mockFiles)
+      }
+    },
+    onWatcherChange: (data) => {
+      if (data && typeof data === "object" && "source" in data) {
+        const d = data as { source: "api" | "mock"; files: string[]; timestamp: number }
+        store().setWatcherChange(d)
+        notifyFileChange(d.source, d.files, store)
+      }
+    },
   }
 
   s.on("connect", b.onConnect)
@@ -136,6 +152,8 @@ function buildBindings(
   s.on("catalog:snapshot", b.onCatalogSnapshot)
   s.on("scan:updated", b.onScanUpdated)
   s.on("registry:updated", b.onRegistryUpdated)
+  s.on("watcher:status", b.onWatcherStatus)
+  s.on("watcher:change", b.onWatcherChange)
 
   return b
 }
@@ -153,4 +171,6 @@ function unbind(s: Socket, b: Bindings): void {
   s.off("catalog:snapshot", b.onCatalogSnapshot)
   s.off("scan:updated", b.onScanUpdated)
   s.off("registry:updated", b.onRegistryUpdated)
+  s.off("watcher:status", b.onWatcherStatus)
+  s.off("watcher:change", b.onWatcherChange)
 }

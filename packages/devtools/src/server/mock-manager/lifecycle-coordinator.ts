@@ -87,8 +87,10 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
     onDeclared(declared) {
       registerDeclared(declared);
       if (declared.autoStart) void startServer(declared.id);
+      config.watcherStatus?.setMockFileCount(servers.size);
     },
     onChanged(declared) {
+      config.watcherStatus?.emitChange("mock", [declared.relativePath]);
       const state = servers.get(declared.id);
       if (state && state.status === "running") void restartServer(declared.id);
     },
@@ -96,6 +98,7 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
       void stopServer(serverId);
       servers.delete(serverId);
       emit("mock:server:disconnect", { serverId });
+      config.watcherStatus?.setMockFileCount(servers.size);
     },
   });
 

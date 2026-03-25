@@ -20,6 +20,7 @@ import { clearBuffer } from "./session-buffer";
 import { registerSessionRoutes } from "./session-routes";
 import { setupAppNamespace, setupUiNamespace } from "./socket-handlers";
 import type { DevToolsServer, DevToolsServerOptions, SessionInfo } from "./types";
+import { createWatcherStatus } from "./watcher-status";
 
 export function createDevToolsServer(options: DevToolsServerOptions = {}): DevToolsServer {
   const { port = 4380, host = "localhost", projectRoot = process.cwd(), onReady } = options;
@@ -50,9 +51,13 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
 
   initProject();
 
+  // ── Watcher Status (unified hot reload indicator) ──────────────────────────
+
+  const watcherStatus = createWatcherStatus(uiNamespace);
+
   // ── File Watcher (hot reload) ──────────────────────────────────────────────
 
-  const stopWatcher = startFileWatcher(uiNamespace, catalogStore);
+  const stopWatcher = startFileWatcher(uiNamespace, catalogStore, watcherStatus);
 
   // ── Mock Server Manager ──────────────────────────────────────────────────
 
@@ -61,10 +66,11 @@ export function createDevToolsServer(options: DevToolsServerOptions = {}): DevTo
     mocksDir,
     uiNamespace,
     basePort: 7001,
+    watcherStatus,
   });
   mockManager.start();
 
-  setupUiNamespace(appNamespace, uiNamespace, sessions, catalogStore, mockManager);
+  setupUiNamespace(appNamespace, uiNamespace, sessions, catalogStore, mockManager, watcherStatus);
 
   // ── REST API ─────────────────────────────────────────────────────────────────
 

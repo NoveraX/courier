@@ -13,6 +13,7 @@ import type { LifecycleCoordinator } from "./mock-manager";
 import type { SessionInfo } from "./types";
 import { handlePlayground } from "./ui-playground-handler";
 import { handleReplay } from "./ui-replay-handler";
+import type { WatcherStatus } from "./watcher-status";
 
 export function setupUiNamespace(
   appNamespace: Namespace,
@@ -20,6 +21,7 @@ export function setupUiNamespace(
   sessions: Map<string, SessionInfo>,
   catalogStore: CatalogStore,
   mockManager?: LifecycleCoordinator,
+  watcherStatus?: WatcherStatus,
 ): void {
   // Broadcast catalog changes to all connected UI clients
   catalogStore.onChange((snapshot) => {
@@ -48,6 +50,9 @@ export function setupUiNamespace(
 
     // Send managed mock server states
     mockManager?.sendSnapshot();
+
+    // Send current watcher status (watching N files indicator)
+    watcherStatus?.sendSnapshot(socket);
 
     // Handle explicit catalog requests (reconnection, gap recovery)
     socket.on("catalog:request", () => {

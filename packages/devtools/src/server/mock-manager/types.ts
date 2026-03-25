@@ -1,5 +1,7 @@
 import type { Namespace } from "socket.io";
 
+import type { WatcherStatus } from "../watcher-status";
+
 export type ServerStatus =
   | "declared"
   | "starting"
@@ -51,4 +53,5 @@ export interface CoordinatorConfig {
   mocksDir: string;
   uiNamespace: Namespace;
   basePort: number;
+  watcherStatus?: WatcherStatus;
 }

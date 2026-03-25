@@ -30,6 +30,7 @@ export const DEFAULT_SETTINGS: Settings = {
   toastOnError: true,
   toastOnSlowRequest: true,
   slowRequestThreshold: 500,
+  toastOnFileChange: true,
   autoReconnect: true,
   reconnectDelay: 1000,
   defaultExportFormat: "har",

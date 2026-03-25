@@ -130,6 +130,7 @@ export interface Settings {
   toastOnError: boolean
   toastOnSlowRequest: boolean
   slowRequestThreshold: number
+  toastOnFileChange: boolean
 
   // Connection
   autoReconnect: boolean

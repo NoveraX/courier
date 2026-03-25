@@ -57,8 +57,8 @@ export function OverviewDashboard(): React.ReactElement {
       <div className="flex flex-1 items-center justify-center p-8">
         <EmptyState
           icon={LayoutDashboard}
-          heading="No API sources connected"
-          description="Connect your app to see the API overview dashboard with health metrics and live activity."
+          heading="No API sources"
+          description="Define API sources in your project to see the overview dashboard with health metrics and live activity."
         />
       </div>
     );

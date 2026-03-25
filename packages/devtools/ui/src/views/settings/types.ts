@@ -16,6 +16,7 @@ export const settingsSchema: z.ZodType<Settings> = z.object({
   toastOnError: z.boolean(),
   toastOnSlowRequest: z.boolean(),
   slowRequestThreshold: z.number().min(100).max(30000),
+  toastOnFileChange: z.boolean(),
   autoReconnect: z.boolean(),
   reconnectDelay: z.number().min(500).max(30000),
   defaultExportFormat: z.enum(["har", "json", "postman"]),

@@ -84,6 +84,24 @@ export function NotificationsSection({
           )}
         />
       </SettingRow>
+
+      <SettingRow
+        label="Toast on file change"
+        description="Show a notification when watched files are modified"
+        htmlFor="toastOnFileChange"
+      >
+        <Controller
+          control={form.control}
+          name="toastOnFileChange"
+          render={({ field }) => (
+            <Switch
+              id="toastOnFileChange"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
+      </SettingRow>
     </>
   );
 }

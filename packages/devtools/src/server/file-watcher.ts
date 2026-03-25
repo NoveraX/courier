@@ -21,6 +21,7 @@ import { resolveProject } from "../context";
 import { onEnvChange } from "../runtime-env";
 import type { CatalogStore } from "./catalog";
 import { syncUserModified } from "./sync-user-modified";
+import type { WatcherStatus } from "./watcher-status";
 
 export interface FileChangeEvent {
   type: "scan" | "registry";
@@ -48,7 +49,11 @@ function createSnapshot() {
 }
 
 /** Start watching project files, push scan results into CatalogStore */
-export function startFileWatcher(uiNamespace: Namespace, catalogStore: CatalogStore): () => void {
+export function startFileWatcher(
+  uiNamespace: Namespace,
+  catalogStore: CatalogStore,
+  watcherStatus?: WatcherStatus,
+): () => void {
   const initialRegistry = loadRegistry();
   const scanPaths = initialRegistry.scanPaths ?? ["src/api"];
   const snapshot = createSnapshot();
@@ -58,6 +63,7 @@ export function startFileWatcher(uiNamespace: Namespace, catalogStore: CatalogSt
   let scanTimer: ReturnType<typeof setTimeout> | null = null;
   let registryTimer: ReturnType<typeof setTimeout> | null = null;
   let modifiedTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastChangedFile = "";
 
   const debounce = (timer: ReturnType<typeof setTimeout> | null, ms: number, fn: () => void) => {
     if (timer) clearTimeout(timer);
@@ -74,6 +80,10 @@ export function startFileWatcher(uiNamespace: Namespace, catalogStore: CatalogSt
         if (Object.keys(freshMap).length > 0) {
           catalogStore.setScanLayer(freshMap);
         }
+        if (lastChangedFile) {
+          watcherStatus?.emitChange("api", [lastChangedFile]);
+          lastChangedFile = "";
+        }
       } catch (err) {
         console.warn("Failed to emit scan update:", err);
       }
@@ -86,6 +96,7 @@ export function startFileWatcher(uiNamespace: Namespace, catalogStore: CatalogSt
       try {
         const config = loadRegistry();
         uiNamespace.emit("registry:updated", { sources: listSources(config) });
+        watcherStatus?.emitChange("api", [REGISTRY_FILE]);
       } catch (err) {
         console.warn("Failed to emit registry update:", err);
       }
@@ -102,6 +113,7 @@ export function startFileWatcher(uiNamespace: Namespace, catalogStore: CatalogSt
     if (!filename || IGNORED.test(filename)) return;
 
     const filePath = resolveProject(`${relative(resolveProject("."), basePath)}/${filename}`);
+    lastChangedFile = filename;
 
     if (filename.endsWith(REGISTRY_FILE) || filename === REGISTRY_FILE) {
       emitRegistryUpdate();
@@ -131,6 +143,19 @@ export function startFileWatcher(uiNamespace: Namespace, catalogStore: CatalogSt
       emitRegistryUpdate();
     });
     watchers.push(w);
+  }
+
+  watcherStatus?.setApiPathCount(watchers.length);
+
+  // Initial scan — populate catalog immediately so Explorer works without app
+  try {
+    const initialScan = scanProject();
+    const initialMap = scanToSourceMap(initialScan);
+    if (Object.keys(initialMap).length > 0) {
+      catalogStore.setScanLayer(initialMap);
+    }
+  } catch {
+    // Scanner may not be configured — non-critical
   }
 
   // Re-scan when app sends updated process.env

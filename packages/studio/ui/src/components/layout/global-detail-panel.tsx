@@ -57,9 +57,9 @@ export function GlobalDetailPanel({ children }: GlobalDetailPanelProps): React.R
         {children}
       </div>
 
-      {visible && cachedRequest.current && (
+      {visible && (selectedRequest ?? cachedRequest.current) && (
         <DetailSidebar
-          request={cachedRequest.current}
+          request={(selectedRequest ?? cachedRequest.current)!}
           activeTab={detailTab}
           onTabChange={setDetailTab}
           onClose={closePanel}

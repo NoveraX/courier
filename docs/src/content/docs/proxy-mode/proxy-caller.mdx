@@ -23,9 +23,23 @@ The generic parameter `typeof api` provides full type inference for group names,
 Pass a `ProxyCallerDefaults` object to configure global behavior for all requests created by this factory:
 
 ```typescript
+type ProxyPath = {
+  // HTTP proxy endpoint — default: "/api/request"
+  http?: string
+  // SSE proxy endpoint — default: "/api/sse"
+  sse?: string
+  // WS proxy endpoint — NO default. Required for WS endpoints; use absolute
+  // wss:// URL on Next.js / serverless platforms.
+  ws?: string
+}
+
 type ProxyCallerDefaults = {
-  // Full URL path to the proxy endpoint — default: "/api/request"
-  proxyUrl?: string
+  // Per-transport proxy endpoint paths. Caller-level fields are merged
+  // per-transport over `source.options.proxyPath` (caller wins).
+  proxyPath?: ProxyPath
+
+  // The defineApi() result. Required for SSE/WS transport detection.
+  source?: object
 
   // Request timeout in milliseconds
   timeout?: number
@@ -52,7 +66,8 @@ A typical setup creates a single caller instance and exports it for use across a
 import { createProxyCaller } from "@noverax/nexus"
 import { api } from "@/api"
 
-export const caller = createProxyCaller<typeof api>({
+export const caller = createProxyCaller<typeof api>("api", {
+  source: api,
   timeout: 30_000,
   credentials: "include",
   headers: {
@@ -154,17 +169,64 @@ const caller = createProxyCaller<typeof api>({
 
 ## Custom proxy endpoint
 
-By default, requests are sent to `/api/request`. Change it by passing `proxyUrl` in the defaults:
+By default, HTTP requests are sent to `/api/request`. Override it via `proxyPath.http`:
 
 ```ts title="lib/caller.ts"
-export const caller = createProxyCaller<typeof api>({
-  proxyUrl: "/api/my-proxy",
+export const caller = createProxyCaller<typeof api>("api", {
+  source: api,
+  proxyPath: { http: "/api/my-proxy" },
 })
 ```
 
 <Callout variant="warning" title="Match your server handler">
-If you change the proxy URL, make sure your server handler is mounted at the same path. For example, `proxyUrl: "/api/my-proxy"` requires the server handler at `/api/my-proxy`.
+If you change the proxy URL, make sure your server handler is mounted at the same path. For example, `proxyPath: { http: "/api/my-proxy" }` requires the server handler at `/api/my-proxy`.
 </Callout>
+
+## Realtime: SSE and WS proxy paths
+
+`proxyPath` carries per-transport configuration. SSE has a sensible default; WS does not — you must point it at a WebSocket-capable server explicitly.
+
+```ts title="lib/caller.ts"
+export const caller = createProxyCaller<typeof api>("api", {
+  source: api,
+  proxyPath: {
+    http: "/api/request",
+    sse: "/api/sse",
+    // Required for WS endpoints. On Next.js / Cloudflare / Vercel Edge,
+    // run @noverax/nexus-server separately and point this at it.
+    ws: "wss://realtime.example.com",
+  },
+})
+```
+
+<Callout variant="warn" title="WS has no built-in default">
+Calling a WS endpoint without `proxyPath.ws` throws `ConfigurationError("WS_PATH_NOT_CONFIGURED")`. See [standalone server deployment](/docs/deployment/standalone-server) for the runtime matrix.
+</Callout>
+
+## Per-transport merge precedence
+
+You can declare `proxyPath` once on `defineApi`, then override individual transports per-environment:
+
+```ts title="api/sources.ts (server)"
+export const api = defineApi({
+  baseURL: "https://api.example.com",
+  proxyPath: {
+    http: "/api/request",
+    sse: "/api/sse",
+    ws: "wss://realtime.example.com",  // prod
+  },
+  groups: { /* ... */ },
+})
+```
+
+```ts title="lib/caller.dev.ts (browser)"
+// Override only the WS endpoint for local dev — http and sse stay as
+// defined on the source.
+export const caller = createProxyCaller<typeof api>("api", {
+  source: api,
+  proxyPath: { ws: "ws://localhost:3001" },
+})
+```
 
 ## Next Steps
 

@@ -8,11 +8,19 @@
 
 const MAX_EVENTS = 5000;
 
+const REQUEST_EVENTS_KEY = Symbol.for("nexus.studio.session-request-events");
+const ACTIVE_SESSIONS_KEY = Symbol.for("nexus.studio.session-active-sessions");
+
+const g = globalThis as Record<symbol, unknown>;
+
+if (!g[REQUEST_EVENTS_KEY]) g[REQUEST_EVENTS_KEY] = new Map<string, Record<string, unknown>>();
+if (!g[ACTIVE_SESSIONS_KEY]) g[ACTIVE_SESSIONS_KEY] = new Set<string>();
+
 /** Raw events received from app namespace, keyed by request ID */
-const requestEvents = new Map<string, Record<string, unknown>>();
+const requestEvents = g[REQUEST_EVENTS_KEY] as Map<string, Record<string, unknown>>;
 
 /** Track which sessions contributed events */
-const activeSessions = new Set<string>();
+const activeSessions = g[ACTIVE_SESSIONS_KEY] as Set<string>;
 
 /** Process an incoming event from an app */
 export function bufferEvent(event: Record<string, unknown>): void {

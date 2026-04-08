@@ -1,3 +1,5 @@
+import type { ProxyPath } from "@noverax/nexus";
+
 /** All Studio event types */
 export type EventType =
   // Connection
@@ -38,6 +40,11 @@ export type EventType =
   // Upload
   | "upload:progress"
   | "upload:complete"
+  // Stream (SSE/WS)
+  | "stream:open"
+  | "stream:message"
+  | "stream:close"
+  | "stream:error"
   // Mock server
   | "mock:server:connect"
   | "mock:server:disconnect"
@@ -64,6 +71,22 @@ export interface StudioEvent {
 export interface SourceMap {
   [sourceName: string]: {
     baseURL: string;
+    /**
+     * The user-app's own HTTP origin (e.g. `http://localhost:3000`) — set
+     * via `instrumentServer({ appOrigin })` / `connectStudio({ appOrigin })`
+     * or auto-detected from `NEXUS_APP_URL` / `APP_URL`. Stamped onto each
+     * source so the Studio Playground UI can resolve relative `proxyPath`
+     * values into full clickable URLs (e.g. `/api/sse` → `http://localhost:3000/api/sse`).
+     * Omitted when the connecting process never declared one.
+     */
+    appOrigin?: string;
+    /**
+     * Per-transport proxy endpoint configuration carried from the source's
+     * `defineApi({ proxyPath })`. Studio reads this to display the
+     * configured proxy path in the playground without requiring user input.
+     * Omitted entirely when the source has no `proxyPath` configured.
+     */
+    proxyPath?: ProxyPath;
     groups: {
       [groupName: string]: {
         prefix: string;
@@ -78,6 +101,10 @@ export interface SourceMap {
             httpMethod?: string;
             /** Default variables stub generated from schema shape */
             variablesStub?: Record<string, unknown>;
+            /** Transport mode — only present for non-HTTP endpoints */
+            transport?: "sse" | "ws";
+            /** True when WS channel has a receive schema (bidirectional) */
+            hasReceiveSchema?: boolean;
           };
         };
       };

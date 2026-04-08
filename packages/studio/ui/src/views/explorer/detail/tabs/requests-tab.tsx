@@ -47,8 +47,9 @@ function RequestRow({
   request: RequestEntry;
   onClick?: () => void;
 }): React.ReactElement {
-  const health = statusToHealth(request.status);
-  const duration = request.timing?.total;
+  const isStreaming = request.streamStatus === "streaming";
+  const health = isStreaming ? "healthy" : statusToHealth(request.status);
+  const duration = request.timing?.total ?? request.streamDuration;
 
   return (
     <button
@@ -56,7 +57,7 @@ function RequestRow({
       onClick={onClick}
       className="group flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-card/80"
     >
-      <HealthIndicator level={health} size="sm" />
+      <HealthIndicator level={health} size="sm" pulse={isStreaming} />
 
       <span className="text-[11px] text-muted-foreground/50 tabular-nums shrink-0">
         {formatTimestamp(request.startedAt)}
@@ -68,8 +69,11 @@ function RequestRow({
         </span>
       )}
 
-      <span className="ml-auto text-[11px] text-muted-foreground/40 tabular-nums shrink-0">
-        {duration != null ? formatDuration(duration) : "pending"}
+      <span className={cn(
+        "ml-auto text-[11px] tabular-nums shrink-0",
+        isStreaming ? "text-emerald-400" : "text-muted-foreground/40",
+      )}>
+        {isStreaming ? "streaming" : duration != null ? formatDuration(duration) : "pending"}
       </span>
     </button>
   );

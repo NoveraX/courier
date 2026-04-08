@@ -10,13 +10,13 @@ Without the singleton pattern, you need to pass the API type as a generic parame
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller, createCaller } from "@noverax/nexus"
-import { createQueryCaller } from "@noverax/nexus-query"
+import { createProxyQueryCaller } from "@noverax/nexus-react"
 import { api } from "@/api"
 
 // You have to pass the type everywhere:
 const caller = createProxyCaller<typeof api>("api")
 const directCaller = createCaller(api)
-const q = createQueryCaller<typeof api>("api")
+const q = createProxyQueryCaller<typeof api>("api")
 ```
 
 ## The solution
@@ -78,13 +78,13 @@ Now all factory functions infer your API type from the augmented interface. Type
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller, createCaller } from "@noverax/nexus"
-import { createQueryCaller } from "@noverax/nexus-query"
+import { createProxyQueryCaller } from "@noverax/nexus-react"
 import { api } from "@/api"
 
 // No generic parameter needed — TypeScript infers from module augmentation
 const caller = createProxyCaller("api")
 const directCaller = createCaller(api)
-const q = createQueryCaller("api")
+const q = createProxyQueryCaller("api")
 
 // Full autocomplete: group names, method names, variable types
 q.users.useQuery("getById", { variables: { id: 1 } })
@@ -93,7 +93,7 @@ q.users.useQuery("getById", { variables: { id: 1 } })
 
 ## Using with React Query
 
-The singleton pattern is especially useful with `createQueryCaller`, where you access hooks throughout your app. Every call site gets full type inference without importing or passing types:
+The singleton pattern is especially useful with `createProxyQueryCaller`, where you access hooks throughout your app. Every call site gets full type inference without importing or passing types:
 
 ```tsx title="components/user-list.tsx"
 "use client"
@@ -141,8 +141,8 @@ declare module "@noverax/nexus/define" {
 
 ```ts
 // Create separate query callers for each source:
-const mainQ = createQueryCaller("mainApi")
-const paymentQ = createQueryCaller("paymentApi")
+const mainQ = createProxyQueryCaller("mainApi")
+const paymentQ = createProxyQueryCaller("paymentApi")
 
 mainQ.users.useQuery("getAll")        // ← knows mainApi groups
 paymentQ.products.useQuery("list")    // ← knows paymentApi groups

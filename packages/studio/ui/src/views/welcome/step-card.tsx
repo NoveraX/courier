@@ -1,12 +1,25 @@
+/**
+ * StepCard — single step in the welcome walkthrough.
+ *
+ * Renders the indicator, header, optional code block (with variant tabs),
+ * and an action button. Sub-components live in `./step-card-parts`.
+ */
+
 import { useState } from "react";
-import { CircleCheck, FileCode2 } from "lucide-react";
 import { toast } from "sonner";
 
-import type { SetupStep, CodeVariant } from "./frameworks";
-
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { CodeBlock } from "@/components/shared/code-block";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+import type { SetupStep } from "./frameworks";
+
+import {
+  FilePathHint,
+  StepHeader,
+  StepIndicator,
+  VariantTabs,
+} from "./step-card-parts";
 
 interface StepCardProps {
   step: SetupStep;
@@ -18,7 +31,12 @@ interface StepCardProps {
 }
 
 export function StepCard({
-  step, index, isCompleted, isActive, onAction, onUndo,
+  step,
+  index,
+  isCompleted,
+  isActive,
+  onAction,
+  onUndo,
 }: StepCardProps): React.ReactElement {
   const Icon = step.icon;
   const [variantIdx, setVariantIdx] = useState(0);
@@ -94,90 +112,6 @@ export function StepCard({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ── Sub-components ──────────────────────────────────────────────────────────
-
-function StepHeader({ step, isCompleted, isActive }: {
-  step: SetupStep;
-  isCompleted: boolean;
-  isActive: boolean;
-}): React.ReactElement {
-  return (
-    <>
-      <p className={cn(
-        "text-body-sm font-medium leading-6",
-        isCompleted && "text-muted-foreground/50 line-through",
-        isActive && "text-foreground",
-        !isCompleted && !isActive && "text-muted-foreground",
-      )}>
-        {step.title}
-      </p>
-      <p className={cn(
-        "mt-0.5 text-body-xs leading-5",
-        isActive ? "text-muted-foreground" : "text-muted-foreground/60",
-      )}>
-        {step.description}
-      </p>
-    </>
-  );
-}
-
-function VariantTabs({ variants, activeIdx, onChange }: {
-  variants: CodeVariant[];
-  activeIdx: number;
-  onChange: (idx: number) => void;
-}): React.ReactElement {
-  return (
-    <div className="mt-3 flex gap-1 rounded-lg bg-muted/50 p-0.5">
-      {variants.map((v, i) => (
-        <button
-          key={v.label}
-          type="button"
-          onClick={() => onChange(i)}
-          className={cn(
-            "flex-1 rounded-md px-3 py-1 text-body-xs font-medium transition-colors",
-            i === activeIdx
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {v.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function FilePathHint({ path }: { path: string }): React.ReactElement {
-  return (
-    <div className="flex items-center gap-1.5 text-body-xs text-muted-foreground/70">
-      <FileCode2 className="size-3" />
-      <code className="mono-sm">{path}</code>
-    </div>
-  );
-}
-
-function StepIndicator({ index, isCompleted, isActive }: {
-  index: number;
-  isCompleted: boolean;
-  isActive: boolean;
-}): React.ReactElement {
-  if (isCompleted) {
-    return (
-      <div className="flex size-7 items-center justify-center">
-        <CircleCheck className="size-7 text-success-foreground" />
-      </div>
-    );
-  }
-  return (
-    <div className={cn(
-      "flex size-7 items-center justify-center rounded-full text-xs font-semibold",
-      isActive ? "bg-accent-brand text-white" : "bg-muted text-muted-foreground",
-    )}>
-      {index + 1}
     </div>
   );
 }

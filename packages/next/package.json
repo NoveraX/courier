@@ -4,7 +4,15 @@
   "description": "Next.js adapter for @noverax/nexus — API route handler and Server Actions",
   "author": "NoveraX",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noverax/nexus.git",
+    "directory": "packages/next"
+  },
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "sideEffects": false,
   "main": "./lib/index.js",
   "module": "./lib/index.js",
@@ -26,6 +34,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "dev": "tsup --watch"
   },

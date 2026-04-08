@@ -153,6 +153,48 @@ describe("extractSourceMap", () => {
     });
   });
 
+  it("stamps appOrigin onto every source entry when provided", () => {
+    const api = defineApi({
+      baseURL: "https://api.test.com",
+      groups: {
+        users: defineGroup({
+          prefix: "users",
+          endpoints: { list: endpoint<unknown[]>()((http) => http.get()) },
+        }),
+      },
+    });
+    const cms = defineApi({
+      baseURL: "https://cms.test.com",
+      groups: {
+        posts: defineGroup({
+          prefix: "posts",
+          endpoints: { list: endpoint<unknown[]>()((http) => http.get()) },
+        }),
+      },
+    });
+
+    const result = extractSourceMap({ api, cms }, "http://localhost:3000");
+
+    expect(result.api!.appOrigin).toBe("http://localhost:3000");
+    expect(result.cms!.appOrigin).toBe("http://localhost:3000");
+  });
+
+  it("omits appOrigin when not provided", () => {
+    const api = defineApi({
+      baseURL: "https://api.test.com",
+      groups: {
+        users: defineGroup({
+          prefix: "users",
+          endpoints: { list: endpoint<unknown[]>()((http) => http.get()) },
+        }),
+      },
+    });
+
+    const result = extractSourceMap({ api });
+
+    expect(result.api!.appOrigin).toBeUndefined();
+  });
+
   it("extracts mixed API (groups + flat endpoints)", () => {
     const api = defineApi({
       baseURL: "https://mixed.api",

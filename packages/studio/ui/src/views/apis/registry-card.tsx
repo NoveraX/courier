@@ -1,28 +1,24 @@
+/**
+ * Registry card — primary display for an imported API source.
+ *
+ * Renders header, stats row, quality pills, and status. The dropdown menu
+ * and quality pill live in sibling files; status/icon maps live in
+ * `registry-card-constants.ts`.
+ */
+
 import {
-  Globe,
-  FileUp,
-  FileText,
-  MoreHorizontal,
-  Trash2,
-  RefreshCw,
-  Loader2,
   ExternalLink,
   Eye,
-  Zap,
-  ShieldCheck,
-  ShieldAlert,
+  Globe,
+  Loader2,
   Settings2,
+  ShieldAlert,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -33,8 +29,9 @@ import { cn } from "@/lib/utils";
 import type { SourceStatusInfo } from "./types";
 import type { EnrichedSource } from "./use-registry";
 import { computeAnalysisStats, countScannedEndpoints } from "./helpers";
-
-// ── Types ───────────────────────────────────────────────────────────────────
+import { IMPORT_ICON, STATUS_CONFIG } from "./registry-card-constants";
+import { CardMenu } from "./registry-card-menu";
+import { QualityPill } from "./registry-card-quality";
 
 interface RegistryCardProps {
   source: EnrichedSource;
@@ -43,26 +40,6 @@ interface RegistryCardProps {
   onManage: () => void;
   onRemove: () => void;
 }
-
-// ── Constants ───────────────────────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<string, {
-  label: string;
-  variant: "emerald" | "amber" | "rose" | "secondary";
-}> = {
-  "up-to-date": { label: "Up to date", variant: "emerald" },
-  "updates-available": { label: "Update available", variant: "amber" },
-  checking: { label: "Checking…", variant: "secondary" },
-  error: { label: "Error", variant: "rose" },
-};
-
-const IMPORT_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
-  url: Globe,
-  file: FileUp,
-  raw: FileText,
-};
-
-// ── Component ───────────────────────────────────────────────────────────────
 
 export function RegistryCard({
   source,
@@ -93,7 +70,6 @@ export function RegistryCard({
           : "border-border-subtle hover:border-border",
       )}
     >
-      {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 ring-1 ring-indigo-500/20">
@@ -114,7 +90,6 @@ export function RegistryCard({
         />
       </div>
 
-      {/* Stats row */}
       <div className="flex items-center gap-3 text-[11px] text-muted-foreground truncate">
         <span className="shrink-0">{endpointCount} {endpointCount === 1 ? "endpoint" : "endpoints"}</span>
         <span className="shrink-0">·</span>
@@ -129,7 +104,6 @@ export function RegistryCard({
         )}
       </div>
 
-      {/* Quality + status row */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <QualityPill icon={Eye} label="R" count={stats.responseType.count} total={stats.responseType.total} tooltip="Response types" />
@@ -179,76 +153,5 @@ export function RegistryCard({
         )}
       </div>
     </div>
-  );
-}
-
-// ── Card menu ───────────────────────────────────────────────────────────────
-
-function CardMenu({ isUrl, isChecking, onCheckUpdates, onManage, onRemove }: {
-  isUrl: boolean;
-  isChecking?: boolean;
-  onCheckUpdates: () => void;
-  onManage: () => void;
-  onRemove: () => void;
-}): React.ReactElement {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="size-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <MoreHorizontal className="size-3.5" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={onManage}>
-          <Settings2 className="size-3.5" />
-          Manage endpoints
-        </DropdownMenuItem>
-        {isUrl && (
-          <DropdownMenuItem onClick={onCheckUpdates} disabled={isChecking}>
-            <RefreshCw className="size-3.5" />
-            Check updates
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={onRemove}>
-          <Trash2 className="size-3.5" />
-          Remove
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-// ── Quality pill ────────────────────────────────────────────────────────────
-
-function QualityPill({ icon: PillIcon, label, count, total, tooltip }: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  count: number;
-  total: number;
-  tooltip: string;
-}): React.ReactElement {
-  const allCovered = total > 0 && count === total;
-  const showFraction = total > 0 && count !== total;
-  const color = allCovered
-    ? "text-emerald-400 bg-emerald-500/10"
-    : count > 0
-      ? "text-amber-400 bg-amber-500/10"
-      : "text-zinc-500 bg-zinc-500/10";
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${color}`}>
-          <PillIcon className="size-2.5" />
-          {label}{showFraction ? ` ${count}/${total}` : ""}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{tooltip}: {count} of {total}</TooltipContent>
-    </Tooltip>
   );
 }

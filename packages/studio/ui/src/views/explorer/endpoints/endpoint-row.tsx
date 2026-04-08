@@ -10,6 +10,7 @@ import {
 import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
 import { HealthIndicator } from "../shared/health-indicator";
 import { TypeBadge } from "@/components/shared/type-badge";
+import { TransportBadge } from "@/views/playground/transport-badge";
 import { PathDisplay } from "../shared/path-display";
 import { getHealthLevel } from "../compute-metrics";
 import { formatEndpointKey } from "../helpers";
@@ -76,7 +77,10 @@ export const EndpointRow = memo(function EndpointRow({
 
       {/* Type */}
       <td className="px-2 py-2.5 text-center">
-        <TypeBadge type={endpoint.endpointType} className="text-[9px]" />
+        {endpoint.transport
+          ? <TransportBadge transport={endpoint.transport} />
+          : <TypeBadge type={endpoint.endpointType} className="text-[9px]" />
+        }
       </td>
 
       {/* HTTP Method */}

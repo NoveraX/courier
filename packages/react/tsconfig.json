@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@noverax/nexus": ["../core/src/index.ts"],
+      "@noverax/nexus/define": ["../core/src/define/index.ts"],
+      "@noverax/nexus/realtime": ["../core/src/realtime/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*", "tsup.config.ts"]
+}

@@ -4,9 +4,9 @@ import { docsMetadata } from "@/lib/metadata"
 
 const singletonCode = `// lib/query.ts — Single typed instance for the entire app
 import type { api } from "@/api"
-import { createQueryCaller } from "@noverax/nexus-query"
+import { createProxyQueryCaller } from "@noverax/nexus-react"
 
-export const q = createQueryCaller<typeof api>("api")
+export const q = createProxyQueryCaller<typeof api>("api")
 
 // typeof api carries full type information:
 // - Group names and endpoint names
@@ -49,7 +49,7 @@ const users = defineGroup({
 })
 
 // These types flow through the entire chain:
-// endpoint → defineGroup → defineApi → createQueryCaller
+// endpoint → defineGroup → defineApi → createProxyQueryCaller
 // → q.group.useQuery("endpoint") → call site`
 
 const inferenceCode = `// Full type inference at call site — no manual types needed
@@ -71,16 +71,16 @@ const user = await caller.users.getById({ id: 1 })
 //    ^? User`
 
 const multiInstanceCode = `// Multiple instances for different backends
-import { createQueryCaller } from "@noverax/nexus-query"
+import { createProxyQueryCaller } from "@noverax/nexus-react"
 
 // Internal API
-export const internalQ = createQueryCaller<typeof internalApi>("internalApi", {
+export const internalQ = createProxyQueryCaller<typeof internalApi>("internalApi", {
   timeout: 5000,
   headers: { "X-Internal": "true" },
 })
 
 // External API
-export const externalQ = createQueryCaller<typeof externalApi>("externalApi", {
+export const externalQ = createProxyQueryCaller<typeof externalApi>("externalApi", {
   timeout: 15000,
   onError: (error) => Sentry.captureException(error),
 })
@@ -116,7 +116,7 @@ export default function SingletonExamplesPage() {
       <div className="space-y-8">
         <ExampleBlock
           title="The Singleton Pattern"
-          description="One createQueryCaller call exports typed hooks for the entire app."
+          description="One createProxyQueryCaller call exports typed hooks for the entire app."
           code={singletonCode}
           learnMoreHref="/docs/advanced/singleton"
           learnMoreLabel="Singleton docs"
@@ -147,7 +147,7 @@ export default function SingletonExamplesPage() {
         >
           <p className="text-sm text-muted-foreground">
             Each endpoint declares its response and variables types. These flow through the chain:
-            endpoint → defineGroup → defineApi → createQueryCaller → q.group.useQuery.
+            endpoint → defineGroup → defineApi → createProxyQueryCaller → q.group.useQuery.
           </p>
         </ExampleBlock>
 

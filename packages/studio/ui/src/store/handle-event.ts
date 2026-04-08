@@ -1,7 +1,8 @@
 import type { StudioEvent, RequestEntry, ValidationIssue } from "./types"
 import { str, optStr } from "./event-helpers"
-import { handleRequestStart, handleRequestEnd, handleRequestError, handleProxyClientTiming } from "./handle-request-events"
 import { handleMiddlewareEnter, handleMiddlewareExit, handleMiddlewareError } from "./handle-middleware-events"
+import { handleRequestStart, handleRequestEnd, handleRequestError, handleProxyClientTiming } from "./handle-request-events"
+import { handleStreamOpen, handleStreamMessage, handleStreamClose, handleStreamError } from "./handle-stream-events"
 
 type EventPayload = StudioEvent & Record<string, unknown>
 
@@ -69,6 +70,15 @@ export function handleEventReducer(
 
     case "proxy:client-timing":
       return handleProxyClientTiming(state, event)
+
+    case "stream:open":
+      return handleStreamOpen(state, event, maxRequests)
+    case "stream:message":
+      return handleStreamMessage(state, event)
+    case "stream:close":
+      return handleStreamClose(state, event)
+    case "stream:error":
+      return handleStreamError(state, event)
 
     case "http:fetch:end":
     case "validation:start":

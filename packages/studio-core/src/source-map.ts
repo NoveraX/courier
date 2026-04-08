@@ -9,10 +9,19 @@ interface SchemaMetadata {
   response?: unknown;
   variables?: unknown;
   type?: "query" | "mutation";
+  transport?: "http" | "sse" | "ws";
+  receive?: unknown;
 }
 
-/** Extract a SourceMap from Sources for Studio connection:init */
-export function extractSourceMap(sources: Sources): SourceMap {
+/**
+ * Extract a SourceMap from Sources for Studio connection:init.
+ *
+ * `appOrigin` (when provided) is stamped onto every source entry so the
+ * Studio UI can resolve relative `proxyPath` values (e.g. `/api/sse`) into
+ * full clickable URLs against the user-app's own origin. The Playground
+ * proxy executor uses the same value at runtime via `getAppOriginParsed()`.
+ */
+export function extractSourceMap(sources: Sources, appOrigin?: string): SourceMap {
   const result: SourceMap = {};
 
   for (const [sourceName, source] of Object.entries(sources)) {
@@ -39,8 +48,11 @@ export function extractSourceMap(sources: Sources): SourceMap {
       groups[""] = { prefix: "", endpoints: flatEndpoints };
     }
 
+    const proxyPath = options?.proxyPath;
     result[sourceName] = {
       baseURL: options?.baseURL ?? "",
+      ...(appOrigin && { appOrigin }),
+      ...(proxyPath && { proxyPath }),
       groups,
     };
   }
@@ -72,6 +84,8 @@ export function extractEndpoints(
 
     const variablesStub = schema?.variables ? extractSchemaStub(schema.variables) : undefined;
 
+    const transport = schema?.transport;
+
     endpoints[name] = {
       type: schema?.type,
       hasVariablesSchema: !!schema?.variables,
@@ -80,6 +94,8 @@ export function extractEndpoints(
       ...(probed.path && { path: probed.path }),
       ...(httpMethod && { httpMethod }),
       ...(variablesStub && { variablesStub }),
+      ...(transport && transport !== "http" && { transport }),
+      ...(transport === "ws" && schema?.receive ? { hasReceiveSchema: true } : {}),
     };
   }
 

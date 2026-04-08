@@ -1,4 +1,5 @@
 import type { DefinedApi, Endpoint } from "@noverax/nexus/define";
+import type { ChannelHandlers, SSEEvent } from "@noverax/nexus/realtime";
 
 /** Extract response type from an endpoint */
 export type ExtractResponse<TEndpoint> =
@@ -33,6 +34,16 @@ export type MockHandlerFn<TResponse = unknown, TVariables = unknown> = (
   ctx: MockRequestContext<TVariables>,
 ) => TResponse | Promise<TResponse>;
 
+/** SSE stream generator stored in a handler */
+export type MockStreamFn<TResponse = unknown, TVariables = unknown> = (
+  ctx: MockRequestContext<TVariables>,
+) => AsyncGenerator<SSEEvent<TResponse>, void, unknown>;
+
+/** WS channel handler factory stored in a handler */
+export type MockChannelFn<TResponse = unknown, TVariables = unknown> = (
+  ctx: MockRequestContext<TVariables>,
+) => ChannelHandlers<unknown, TResponse>;
+
 /** Resolved handler stored in the registry */
 export interface ResolvedHandler {
   fn: MockHandlerFn;
@@ -44,6 +55,12 @@ export interface ResolvedHandler {
   remaining?: number;
   requiredState?: string;
   newState?: string;
+  /** Transport type — undefined means standard HTTP */
+  transport?: "sse" | "ws";
+  /** SSE stream generator (set by .stream() / .emits()) */
+  streamFn?: MockStreamFn;
+  /** WS channel handler factory (set by .channel()) */
+  channelFn?: MockChannelFn;
 }
 
 // ---------------------------------------------------------------------------
@@ -119,6 +136,10 @@ export interface MockHistoryEntry {
   duration: number;
   timestamp: number;
   mocked: boolean;
+  /** Whether this was a stream (SSE) request */
+  stream?: boolean;
+  /** Whether this was a channel (WS) request */
+  channel?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -210,4 +231,10 @@ export interface EnhancedMockBuilder<TResponse = unknown, TVariables = unknown> 
    * Last entry repeats indefinitely once reached.
    */
   sequence(responses: Array<SequenceEntry<TResponse>>): EnhancedMockBuilder<TResponse, TVariables>;
+  /** Mock as SSE stream — provide async generator yielding SSEEvent<T> */
+  stream(fn: MockStreamFn<TResponse, TVariables>): EnhancedMockBuilder<TResponse, TVariables>;
+  /** Convenience: emit fixed SSE events in sequence, then close */
+  emits(events: Array<SSEEvent<TResponse>>): EnhancedMockBuilder<TResponse, TVariables>;
+  /** Mock as WS channel — provide channel handler factory */
+  channel(fn: MockChannelFn<TResponse, TVariables>): EnhancedMockBuilder<TResponse, TVariables>;
 }

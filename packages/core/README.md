@@ -139,7 +139,7 @@ const user = await caller.users.getById({ id: "1" })
 import { createProxyCaller } from "@noverax/nexus"
 import type { api } from "./api/sources"
 
-const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
+const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })
 
 const users = await caller.users.getAll()
 ```

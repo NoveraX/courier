@@ -1,0 +1,450 @@
+export const metadata = {
+  title: "Replication Guide",
+  description: "Production-ready multi-replica setup for every supported framework — Next.js, Express, Fastify, Hono, NestJS, and Standalone Server.",
+}
+
+This guide shows a complete, production-ready realtime setup with Redis adapters for each supported framework.
+
+<Callout variant="info" title="Prerequisites">
+  All examples assume you have created shared adapters as shown in the [Redis Adapters](/docs/deployment/redis) page. The `adapters.ts` file is reused across all frameworks.
+</Callout>
+
+## Shared Adapters
+
+Every framework uses the same adapter setup:
+
+```ts title="lib/adapters.ts"
+import Redis from "ioredis"
+import { createRedisPubSub, createRedisStream, createRedisPresence } from "@noverax/nexus-redis"
+
+const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379"
+
+export const pubsub = createRedisPubSub({
+  publisher: new Redis(redisUrl),
+  subscriber: new Redis(redisUrl),
+  prefix: "nexus:",
+  origin: process.env.HOSTNAME,
+})
+
+export const stream = createRedisStream({
+  redis: new Redis(redisUrl),
+  prefix: "nexus:stream:",
+  maxLen: 5000,
+})
+
+export const presence = createRedisPresence({
+  redis: new Redis(redisUrl),
+  prefix: "nexus:presence:",
+})
+
+export async function connectAdapters(): Promise<void> {
+  await Promise.all([pubsub.connect(), stream.connect(), presence.connect()])
+}
+
+export async function disconnectAdapters(): Promise<void> {
+  await Promise.all([pubsub.disconnect(), stream.disconnect(), presence.disconnect()])
+}
+```
+
+## Standalone Server
+
+The simplest setup — one process handles HTTP, SSE, and WebSocket.
+
+```ts title="server.ts"
+import { createNexusServer } from "@noverax/nexus-server"
+import { sources } from "./api/sources"
+import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
+
+await connectAdapters()
+
+const server = await createNexusServer({
+  sources,
+  port: Number(process.env.PORT) || 3001,
+  host: "0.0.0.0",
+  allowedOrigins: [process.env.ALLOWED_ORIGIN!],
+  pubsub,
+
+  // SSE
+  maxSSEConnections: 10_000,
+  sseMaxLifetimeMs: 300_000,
+  onSSEConnect: ({ connectionId, request, source, group, method }) => {
+    return { userId: extractUser(request) }
+  },
+  onSSEDisconnect: ({ meta, reason, eventCount, duration }) => {
+    console.log(`SSE closed: user=${meta.userId} reason=${reason} events=${eventCount}`)
+  },
+
+  // WebSocket
+  heartbeatIntervalMs: 25_000,
+  onConnect: ({ connectionId, request }) => {
+    const userId = extractUser(request)
+    if (!userId) throw new Error("Unauthorized")
+    return { userId }
+  },
+  onDisconnect: ({ meta, code }) => {
+    console.log(`WS closed: user=${meta.userId} code=${code}`)
+  },
+
+  onReady: (url) => console.log(`Nexus ready at ${url}`),
+})
+
+process.on("SIGTERM", async () => {
+  await server.stop()
+  await disconnectAdapters()
+})
+```
+
+## Next.js
+
+Next.js App Router supports SSE natively via `sseRoute()`. WebSocket requires a separate Nexus server process.
+
+### SSE Route
+
+```ts title="app/api/sse/route.ts"
+import { sseRoute } from "@noverax/nexus-next"
+import { sources } from "@/api/sources"
+
+export const { GET } = sseRoute(sources, {
+  maxSSEConnections: 5000,
+  sseMaxLifetimeMs: 300_000,
+  sseHeaders: {
+    "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_APP_URL!,
+  },
+  onSSEConnect: ({ connectionId, request }) => {
+    return { userId: extractUser(request) }
+  },
+})
+```
+
+### HTTP Proxy Route
+
+```ts title="app/api/request/route.ts"
+import { apiRoute } from "@noverax/nexus-next"
+import { sources } from "@/api/sources"
+
+export const { GET, POST } = apiRoute(sources)
+```
+
+### Separate WS Server
+
+```ts title="ws-server.ts"
+import { createNexusServer } from "@noverax/nexus-server"
+import { sources } from "./api/sources"
+import { pubsub, connectAdapters } from "./lib/adapters"
+
+await connectAdapters()
+
+const server = await createNexusServer({
+  sources,
+  port: Number(process.env.WS_PORT) || 3001,
+  host: "0.0.0.0",
+  pubsub,
+  allowedOrigins: [process.env.NEXT_PUBLIC_APP_URL!],
+  onConnect: ({ request }) => {
+    const userId = extractUser(request)
+    if (!userId) throw new Error("Unauthorized")
+    return { userId }
+  },
+})
+```
+
+### Project Structure
+
+```
+├── app/
+│   ├── api/
+│   │   ├── request/route.ts    ← HTTP proxy
+│   │   └── sse/route.ts        ← SSE streaming
+│   └── page.tsx
+├── ws-server.ts                ← separate WS process
+├── lib/
+│   └── adapters.ts             ← shared Redis adapters
+└── api/
+    └── sources.ts
+```
+
+<Callout variant="warning" title="Two processes">
+  Next.js runs SSE via its Edge/Node runtime. WebSocket runs as a separate `ws-server.ts` process. Deploy them independently — they share state via Redis.
+</Callout>
+
+## Express
+
+```ts title="server.ts"
+import http from "node:http"
+import express from "express"
+import { nexusHandler, nexusSSEHandler, nexusWSAttach } from "@noverax/nexus-express"
+import { sources } from "./api/sources"
+import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
+
+await connectAdapters()
+
+const app = express()
+const server = http.createServer(app)
+
+// HTTP proxy
+app.all("/api/request", nexusHandler(sources))
+
+// SSE streaming — do NOT apply compression middleware to this route
+app.get("/api/sse", nexusSSEHandler(sources, {
+  maxSSEConnections: 10_000,
+  sseMaxLifetimeMs: 300_000,
+  onSSEConnect: ({ connectionId, request }) => {
+    return { userId: extractUser(request) }
+  },
+  onSSEDisconnect: ({ meta, reason, eventCount }) => {
+    console.log(`SSE closed: ${meta.userId}, ${reason}, ${eventCount} events`)
+  },
+}))
+
+// WebSocket — attaches to HTTP server upgrade event
+const cleanupWS = nexusWSAttach(server, sources, {
+  pubsub,
+  heartbeatIntervalMs: 25_000,
+  allowedOrigins: [process.env.ALLOWED_ORIGIN!],
+  maxSubscriptionsPerConnection: 100,
+  maxMessageSize: 65_536,
+  onConnect: ({ request }) => {
+    const userId = extractUser(request)
+    if (!userId) throw new Error("Unauthorized")
+    return { userId }
+  },
+  onDisconnect: ({ meta, code }) => {
+    console.log(`WS closed: ${meta.userId}, code ${code}`)
+  },
+})
+
+// Health checks
+app.get("/health", (req, res) => res.json({ status: "ok" }))
+app.get("/readyz", (req, res) => {
+  res.status(shuttingDown ? 503 : 200).send(shuttingDown ? "draining" : "ready")
+})
+
+let shuttingDown = false
+server.listen(Number(process.env.PORT) || 3001, "0.0.0.0")
+
+process.on("SIGTERM", async () => {
+  shuttingDown = true
+  cleanupWS()
+  server.close()
+  await disconnectAdapters()
+})
+```
+
+<Callout variant="warning" title="SSE and compression">
+  Do **not** apply compression middleware (like `compression()`) to the SSE route. Compression buffers the response, breaking the streaming behavior.
+</Callout>
+
+## Fastify
+
+```ts title="server.ts"
+import Fastify from "fastify"
+import fastifyWebsocket from "@fastify/websocket"
+import { nexusPlugin, nexusSSEHandler, nexusWSHandler } from "@noverax/nexus-fastify"
+import { sources } from "./api/sources"
+import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
+
+await connectAdapters()
+
+const fastify = Fastify({ logger: true })
+
+// WebSocket plugin (must register before WS routes)
+await fastify.register(fastifyWebsocket)
+
+// HTTP proxy
+await fastify.register(nexusPlugin, { sources, prefix: "/api/request" })
+
+// SSE streaming
+fastify.get("/api/sse", nexusSSEHandler(sources, {
+  maxSSEConnections: 10_000,
+  sseMaxLifetimeMs: 300_000,
+  onSSEConnect: ({ connectionId, request }) => {
+    return { userId: extractUser(request) }
+  },
+  onSSEDisconnect: ({ meta, reason, eventCount }) => {
+    console.log(`SSE closed: ${meta.userId}, ${reason}, ${eventCount} events`)
+  },
+}))
+
+// WebSocket
+fastify.get("/ws", { websocket: true }, nexusWSHandler(sources, {
+  pubsub,
+  heartbeatIntervalMs: 25_000,
+  allowedOrigins: [process.env.ALLOWED_ORIGIN!],
+  maxSubscriptionsPerConnection: 100,
+  onConnect: ({ request }) => {
+    const userId = extractUser(request)
+    if (!userId) throw new Error("Unauthorized")
+    return { userId }
+  },
+  onDisconnect: ({ meta, code }) => {
+    console.log(`WS closed: ${meta.userId}, code ${code}`)
+  },
+}))
+
+// Health checks
+fastify.get("/health", async () => ({ status: "ok" }))
+fastify.get("/readyz", async (req, reply) => {
+  reply.status(shuttingDown ? 503 : 200).send(shuttingDown ? "draining" : "ready")
+})
+
+let shuttingDown = false
+await fastify.listen({ port: Number(process.env.PORT) || 3001, host: "0.0.0.0" })
+
+process.on("SIGTERM", async () => {
+  shuttingDown = true
+  await fastify.close()
+  await disconnectAdapters()
+})
+```
+
+## Hono
+
+Hono is runtime-agnostic — this example uses Node.js with `@hono/node-server` and `@hono/node-ws`.
+
+```ts title="server.ts"
+import { Hono } from "hono"
+import { serve } from "@hono/node-server"
+import { createNodeWebSocket } from "@hono/node-ws"
+import { nexusHandler, nexusSSEHandler, nexusWSHandler } from "@noverax/nexus-hono"
+import { sources } from "./api/sources"
+import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
+
+await connectAdapters()
+
+const app = new Hono()
+const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app })
+
+// HTTP proxy
+app.all("/api/request", nexusHandler(sources))
+
+// SSE streaming
+app.get("/api/sse", nexusSSEHandler(sources, {
+  maxSSEConnections: 10_000,
+  sseMaxLifetimeMs: 300_000,
+  onSSEConnect: ({ connectionId, request }) => {
+    return { userId: extractUser(request) }
+  },
+}))
+
+// WebSocket
+const ws = nexusWSHandler(sources, {
+  pubsub,
+  heartbeatIntervalMs: 25_000,
+  allowedOrigins: [process.env.ALLOWED_ORIGIN!],
+  onConnect: ({ request }) => {
+    const userId = extractUser(request)
+    if (!userId) throw new Error("Unauthorized")
+    return { userId }
+  },
+  onDisconnect: ({ meta, code }) => {
+    console.log(`WS closed: ${meta.userId}, code ${code}`)
+  },
+})
+app.get("/ws", upgradeWebSocket((c) => ws(c)))
+
+// Health checks
+app.get("/health", (c) => c.json({ status: "ok" }))
+
+const server = serve({ fetch: app.fetch, port: Number(process.env.PORT) || 3001, hostname: "0.0.0.0" })
+injectWebSocket(server)
+
+process.on("SIGTERM", async () => {
+  server.close()
+  await disconnectAdapters()
+})
+```
+
+<Callout variant="tip" title="Other runtimes">
+  For Bun, Deno, or Cloudflare Workers, replace `@hono/node-server` and `@hono/node-ws` with the runtime-specific WebSocket API. See the [Cloudflare](/docs/deployment/cloudflare) page for Workers setup.
+</Callout>
+
+## NestJS
+
+```ts title="main.ts"
+import { NestFactory } from "@nestjs/core"
+import { nexusWSAttach } from "@noverax/nexus-nestjs"
+import { AppModule } from "./app.module"
+import { sources } from "./api/sources"
+import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
+
+async function bootstrap(): Promise<void> {
+  await connectAdapters()
+
+  const app = await NestFactory.create(AppModule)
+
+  // WebSocket — attaches to NestJS HTTP server
+  const cleanupWS = nexusWSAttach(app.getHttpServer(), sources, {
+    pubsub,
+    heartbeatIntervalMs: 25_000,
+    allowedOrigins: [process.env.ALLOWED_ORIGIN!],
+    onConnect: ({ request }) => {
+      const userId = extractUser(request)
+      if (!userId) throw new Error("Unauthorized")
+      return { userId }
+    },
+    onDisconnect: ({ meta, code }) => {
+      console.log(`WS closed: ${meta.userId}, code ${code}`)
+    },
+  })
+
+  await app.listen(Number(process.env.PORT) || 3001, "0.0.0.0")
+
+  process.on("SIGTERM", async () => {
+    cleanupWS()
+    await app.close()
+    await disconnectAdapters()
+  })
+}
+
+bootstrap()
+```
+
+```ts title="app.module.ts"
+import { Module, type NestModule, type MiddlewareConsumer } from "@nestjs/common"
+import { nexusMiddleware, nexusSSEMiddleware } from "@noverax/nexus-nestjs"
+import { sources } from "./api/sources"
+
+@Module({})
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    // HTTP proxy
+    consumer.apply(nexusMiddleware(sources)).forRoutes("/api/request")
+
+    // SSE streaming
+    consumer.apply(nexusSSEMiddleware(sources, {
+      maxSSEConnections: 10_000,
+      sseMaxLifetimeMs: 300_000,
+      onSSEConnect: ({ connectionId, request }) => {
+        return { userId: extractUser(request) }
+      },
+      onSSEDisconnect: ({ meta, reason, eventCount }) => {
+        console.log(`SSE closed: ${meta.userId}, ${reason}, ${eventCount} events`)
+      },
+    })).forRoutes("/api/sse")
+  }
+}
+```
+
+## Framework Comparison
+
+| Feature | Standalone | Next.js | Express | Fastify | Hono | NestJS |
+|---------|-----------|---------|---------|---------|------|--------|
+| HTTP proxy | Built-in | `apiRoute()` | `nexusHandler()` | `nexusPlugin` | `nexusHandler()` | `nexusMiddleware()` |
+| SSE | Built-in | `sseRoute()` | `nexusSSEHandler()` | `nexusSSEHandler()` | `nexusSSEHandler()` | `nexusSSEMiddleware()` |
+| WebSocket | Built-in | Separate server | `nexusWSAttach()` | `nexusWSHandler()` | `nexusWSHandler()` | `nexusWSAttach()` |
+| WS library | Built-in | N/A | `ws` (peer) | `@fastify/websocket` | `@hono/node-ws` | `ws` (peer) |
+| Processes | 1 | 2 (Next + WS) | 1 | 1 | 1 | 1 |
+| PubSub wiring | `pubsub` config | On WS server | `nexusWSAttach` opts | `nexusWSHandler` opts | `nexusWSHandler` opts | `nexusWSAttach` opts |
+
+## Sticky Sessions
+
+Multi-replica deployments **require sticky sessions** for both SSE and WebSocket. The load balancer must route all requests from the same client to the same replica for the duration of a connection.
+
+Configure this at the infrastructure level:
+
+- **nginx**: `upstream` with `ip_hash` or cookie-based affinity
+- **Traefik**: `sticky.cookie` in service definition
+- **K8s Ingress**: `nginx.ingress.kubernetes.io/affinity: cookie`
+- **Cloudflare**: Enabled by default for WebSocket
+
+See the [Docker](/docs/deployment/docker) and [Kubernetes](/docs/deployment/kubernetes) pages for specific configuration.

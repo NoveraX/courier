@@ -17,13 +17,13 @@ export { api }
 // executeRequest → middleware chain → schema validation → HttpClient → fetch
 
 // Layer 4 — Integration (optional)
-// createQueryCaller wraps createProxyCaller with React Query hooks
+// createProxyQueryCaller wraps createProxyCaller with React Query hooks
 ```
 
 1. **Definition** — `defineApi`, `defineGroup`, `endpoint` define your API structure, types, and validation. Shared between all modes and frameworks.
 2. **Transport** — determines *how* the request reaches the backend. Direct calls it immediately; proxy goes through your server.
 3. **Execution** — `executeRequest` is the single orchestrator that runs middleware, validates schemas, and delegates to the HTTP client.
-4. **Integration** — optional wrappers like `createQueryCaller` that add React Query hooks on top.
+4. **Integration** — optional wrappers like `createProxyQueryCaller` that add React Query hooks on top.
 
 ## Request Flow
 
@@ -178,7 +178,7 @@ The universal adapter interface. All server framework adapters use it internally
 | --- | --- | --- | --- |
 | `createCaller(api)` | Direct | Any runtime | `TypedClient<typeof api>` |
 | `createProxyCaller<typeof api>()` | Proxy | Browser | `TypedClient<typeof api>` |
-| `createQueryCaller<typeof api>()` | Proxy + hooks | Browser (React) | `{ useQuery, useMutation, caller, ... }` |
+| `createProxyQueryCaller<typeof api>()` | Proxy + hooks | Browser (React) | `{ useQuery, useMutation, caller, ... }` |
 
 All return the same `TypedClient<typeof api>` type (or wrap it), giving you identical type inference regardless of which factory you use.
 

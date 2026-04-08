@@ -2,7 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "paths": {
-      "@noverax/nexus-studio-core": ["../studio-core/src/index.ts"]
+      "@noverax/nexus-studio-core": ["../studio-core/src/index.ts"],
+      "@/*": ["./ui/src/*"]
     }
   },
   "include": ["src/**/*", "tests/**/*"]

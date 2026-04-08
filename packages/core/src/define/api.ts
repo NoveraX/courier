@@ -55,6 +55,20 @@ export function getSourceName(source: unknown): string | undefined {
  *     healthCheck: endpoint()((http) => http.get("/health")),
  *   },
  * })
+ *
+ * // With proxyPath (per-transport proxy endpoints, used by createProxyCaller
+ * // and read by Studio Playground via the source map):
+ * const api = defineApi({
+ *   baseURL: "https://api.example.com",
+ *   proxyPath: {
+ *     http: "/api/request",
+ *     sse: "/api/sse",
+ *     // Required for WS endpoints. On Next.js / Cloudflare / Vercel Edge,
+ *     // run @noverax/nexus-server separately and point this at it.
+ *     ws: "wss://realtime.example.com",
+ *   },
+ *   groups: { chat: chatGroup },
+ * })
  */
 export function defineApi<TGroups extends GroupRecord, TEndpoints extends EndpointRecord>(
   config: BaseOptions & {

@@ -47,7 +47,7 @@ Use `createProxyCaller` in a composable:
 import { createProxyCaller } from "@noverax/nexus"
 import type { api } from "~/api/sources"
 
-export const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
+export const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })
 ```
 
 ```vue

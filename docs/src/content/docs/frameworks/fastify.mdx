@@ -146,13 +146,51 @@ start()
 Fastify's schema-based validation and serialization make it one of the fastest Node.js frameworks. The Nexus plugin benefits from Fastify's built-in JSON parsing, so no additional body parser setup is needed.
 </Callout>
 
+## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
+
+If you wire your Fastify server into Studio via `instrumentServer`, pass `appOrigin` so the Playground proxy executor can resolve relative `proxyPath.{sse,ws}` values into absolute URLs. Node `fetch` and `WebSocket` reject relative URLs, so this is required for Studio Playground proxy mode whenever your `proxyPath` does not already include a full `http(s)://...` prefix.
+
+```ts title="server.ts"
+import Fastify from "fastify"
+import { nexusPlugin } from "@noverax/nexus-fastify"
+import { instrumentServer } from "@noverax/nexus-studio-core"
+import { sources } from "./lib/sources"
+
+const app = Fastify()
+
+async function start() {
+  await app.register(nexusPlugin, { sources, prefix: "/api/request" })
+
+  if (process.env.NODE_ENV !== "production") {
+    instrumentServer({
+      sources,
+      appOrigin: "http://localhost:3001",  // this server's own URL
+    })
+  }
+
+  await app.listen({ port: 3001 })
+}
+
+start()
+```
+
+Alternatively, set `NEXUS_APP_URL` instead of passing `appOrigin` explicitly:
+
+```bash
+NEXUS_APP_URL=http://localhost:3001 node server.js
+```
+
+<Callout variant="warn" title="No magic default">
+There is no `localhost:3001` auto-fallback. If `appOrigin` is missing, clicking "Subscribe" on an SSE/WS endpoint in Studio Playground proxy mode throws `ConfigurationError("APP_ORIGIN_NOT_CONFIGURED")` with a pointer back to this section. The correct value depends on your runtime — custom port, Docker host, HTTPS, reverse proxy — and a wrong guess would silently route requests to nowhere.
+</Callout>
+
 ## Client-side setup
 
 On the client, point your caller to this server's proxy URL. Choose the guide for your frontend:
 
-- [React (Vite / CRA)](/docs/frameworks/react) — `createQueryCaller` with React Query hooks
+- [React (Vite / CRA)](/docs/frameworks/react) — `createProxyQueryCaller` with React Query hooks
 - [Vue](/docs/frameworks/vue) — `createProxyCaller` with composables
-- [Next.js](/docs/frameworks/nextjs) — full-stack with `apiRoute` and `createQueryCaller`
+- [Next.js](/docs/frameworks/nextjs) — full-stack with `apiRoute` and `createProxyQueryCaller`
 - [Nuxt](/docs/frameworks/nuxt) — full-stack with `nexusHandler` and `createProxyCaller`
 
 ```ts title="lib/caller.ts"
@@ -160,6 +198,6 @@ import { createProxyCaller } from "@noverax/nexus"
 import type { api } from "../shared/sources"
 
 export const caller = createProxyCaller<typeof api>({
-  proxyUrl: "http://localhost:3001/api/request",
+  proxyPath: { http: "http://localhost:3001/api/request" },
 })
 ```

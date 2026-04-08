@@ -40,6 +40,11 @@ export class CatalogStore {
     this.scheduleEmit();
   }
 
+  /** Read a single session's runtime layer (used by playground:stream routing) */
+  getRuntimeLayer(sessionId: string): SourceMap | undefined {
+    return this.runtimeLayers.get(sessionId);
+  }
+
   /** Remove a runtime layer (session disconnected) */
   removeRuntimeLayer(sessionId: string): void {
     if (!this.runtimeLayers.delete(sessionId)) return;
@@ -78,6 +83,27 @@ export class CatalogStore {
       clearTimeout(this.debounceTimer);
       this.debounceTimer = null;
     }
+    this.recompute();
+  }
+
+  /**
+   * Drop every runtime layer and reset the merged catalog to scan-only state.
+   *
+   * Intended for full server shutdown and test isolation. Listeners are
+   * preserved (they are owned by external subscribers), and the scan layer
+   * is left intact (it is owned by the file watcher). The pending debounce
+   * timer is cancelled and a synchronous final emit is fired so subscribers
+   * observe the cleared state immediately.
+   *
+   * MUST NOT be called from per-socket disconnect handlers — use
+   * `removeRuntimeLayer(sessionId)` for single-session cleanup.
+   */
+  clear(): void {
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
+    this.runtimeLayers.clear();
     this.recompute();
   }
 

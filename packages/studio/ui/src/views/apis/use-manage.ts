@@ -2,6 +2,8 @@
  * State management hook for the unified manage dialog.
  *
  * Handles inventory loading, endpoint selection, preview, and apply.
+ * Inventory loaders live in `./use-manage-loaders` and pure helpers in
+ * `./use-manage-helpers`.
  */
 
 import { useCallback, useState } from "react";
@@ -13,8 +15,10 @@ import type {
   ParsedSpec,
   SourceSummary,
 } from "./types";
-import { applyManage, fetchInventory, parseSpecFromUrl, previewManage } from "./client";
+import { applyManage, previewManage } from "./client";
 import { computeAllToggle, computeGroupToggle, toggleInSet } from "./manage-toggle";
+import { serializeSets } from "./use-manage-helpers";
+import { useInventoryLoaders } from "./use-manage-loaders";
 
 export interface UseManageReturn {
   open: boolean;
@@ -62,32 +66,12 @@ export function useManage(onSuccess?: () => void): UseManageReturn {
   const hasChanges = Object.values(toAdd).some((s) => s.size > 0)
     || Object.values(toRemove).some((s) => s.size > 0);
 
-  const loadInventory = useCallback(async (name: string, parsedSpec: ParsedSpec) => {
-    setStep("loading");
-    setError(null);
-    try {
-      const inv = await fetchInventory(name, parsedSpec);
-      setInventory(inv);
-      setStep("inventory");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load inventory");
-    }
-  }, []);
-
-  const fetchSpecAndLoadInventory = useCallback(async (name: string, specUrl: string) => {
-    setStep("loading");
-    setError(null);
-    try {
-      const parsedSpec = await parseSpecFromUrl(specUrl);
-      setSpec(parsedSpec);
-      const inv = await fetchInventory(name, parsedSpec);
-      setInventory(inv);
-      setStep("inventory");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch spec");
-      setStep("reupload");
-    }
-  }, []);
+  const { loadInventory, fetchSpecAndLoadInventory } = useInventoryLoaders({
+    setStep,
+    setError,
+    setInventory,
+    setSpec,
+  });
 
   const start = useCallback((source: SourceSummary, newSpec?: ParsedSpec) => {
     setSourceName(source.name);
@@ -143,9 +127,12 @@ export function useManage(onSuccess?: () => void): UseManageReturn {
     setStep("preview");
     setError(null);
     try {
-      const addMap = serializeSets(toAdd);
-      const removeMap = serializeSets(toRemove);
-      const result = await previewManage(sourceName, spec, addMap, removeMap);
+      const result = await previewManage(
+        sourceName,
+        spec,
+        serializeSets(toAdd),
+        serializeSets(toRemove),
+      );
       setPreview(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Preview failed");
@@ -158,9 +145,12 @@ export function useManage(onSuccess?: () => void): UseManageReturn {
     setStep("applying");
     setError(null);
     try {
-      const addMap = serializeSets(toAdd);
-      const removeMap = serializeSets(toRemove);
-      await applyManage(sourceName, spec, addMap, removeMap);
+      await applyManage(
+        sourceName,
+        spec,
+        serializeSets(toAdd),
+        serializeSets(toRemove),
+      );
       setStep("done");
       setOpen(false);
       onSuccess?.();
@@ -187,12 +177,3 @@ export function useManage(onSuccess?: () => void): UseManageReturn {
     requestPreview, apply, back, close, hasChanges,
   };
 }
-
-function serializeSets(map: Record<string, Set<string>>): Record<string, string[]> {
-  const result: Record<string, string[]> = {};
-  for (const [key, set] of Object.entries(map)) {
-    if (set.size > 0) result[key] = [...set];
-  }
-  return result;
-}
-

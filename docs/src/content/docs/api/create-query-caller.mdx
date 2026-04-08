@@ -1,52 +1,73 @@
-export const metadata = { title: "createQueryCaller", description: "Creates a type-safe query client with dot-notation access to React Query hooks for every endpoint group.", mode: "proxy" }
+export const metadata = { title: "createQueryCaller", description: "Creates a direct-mode React Query client that connects straight to the backend, no proxy adapter required.", mode: "direct" }
 
 ## Import
 
 ```ts
-import { createQueryCaller } from "@noverax/nexus-query"
+import { createQueryCaller } from "@noverax/nexus-react"
 ```
 
-<Callout variant="info" title="Peer dependency">
-`@noverax/nexus-query` requires `@tanstack/react-query` as a peer dependency. It re-exports `QueryClient`, `QueryClientProvider`, `useQueryClient`, `HydrationBoundary`, and `dehydrate` for convenience.
+<Callout variant="info" title="Direct vs Proxy mode">
+This is the **direct-mode** query caller — it accepts the API definition object and connects straight to `api.options.baseURL`. For proxy mode (browser → server adapter → backend), use [`createProxyQueryCaller`](/docs/api/create-proxy-query-caller).
 </Callout>
+
+## When to use direct mode
+
+Use `createQueryCaller(api)` when:
+
+- You're building an **SPA** (Vite, Create React App) that talks to a separate backend
+- You're building a **React Native** app
+- You're building an **internal tool** where bundle size doesn't matter
+- The API definition can safely ship to the client (no secrets, no auth tokens hard-coded)
+
+Use [`createProxyQueryCaller`](/docs/api/create-proxy-query-caller) instead when:
+
+- You need to **hide secrets** (auth headers, API keys) from the browser
+- You need **CORS bypass** (browser → your server → third-party API)
+- You want to keep the API definition **server-only** to reduce client bundle size
+- You want **request logging / observability** through a single proxy endpoint
 
 ## Signature
 
-Accepts a source name and optional `ProxyCallerDefaults` (same as `createProxyCaller`). Returns a Proxy-based client with dot-notation access to hooks for each group.
-
 ```ts
-const q = createQueryCaller<typeof api>(source, defaults?)
+function createQueryCaller<TApi extends DefinedApi>(
+  api: TApi,
+  defaults?: QueryCallerDefaults,
+): QueryCallerClient<TApi>
 ```
 
-## Return Type
+The first argument is the **API definition object** itself (returned by `defineApi()`). No string source name, no generic parameter — TypeScript infers everything from the api object.
 
-The returned object provides dot-notation access to every group defined in your API. Each group exposes:
+## Defaults
 
 ```ts
-type QueryGroupClient<G> = {
-  useQuery(method, options?): UseQueryResult<R, HTTPError>
-  useSuspenseQuery(method, options?): UseSuspenseQueryResult<R, HTTPError>
-  useInfiniteQuery(method, options): UseInfiniteQueryResult<R, HTTPError>
-  useMutation(method, options?): UseMutationResult<R, HTTPError, V>
-  prefetchQuery(queryClient, method, options?): Promise<void>
+type QueryCallerDefaults = {
+  timeout?: number
+  headers?: Record<string, string>
+  context?: RequestContext
+  onError?: (error: HTTPError) => void | Promise<void>
+  onSuccess?: (data: unknown) => void | Promise<void>
 }
 ```
+
+No `proxyPath` or `credentials` — all transports use the `baseURL` from the API definition directly.
 
 ## Setup
 
 ```ts title="lib/query.ts"
-import { createQueryCaller } from "@noverax/nexus-query"
-import type { api } from "@/api"
+import { createQueryCaller, createQueryKeys } from "@noverax/nexus-react"
+import { api } from "@/shared/api"
 
-export const q = createQueryCaller<typeof api>("api", {
+export const q = createQueryCaller(api, {
   timeout: 10000,
-  credentials: "include",
+  headers: { "X-Client": "web-spa" },
 })
+
+export const queryKeys = createQueryKeys(api)
 ```
 
-## useQuery
+## Hooks
 
-Wraps `@tanstack/react-query`'s `useQuery`. All standard options are supported.
+All hooks are identical to [`createProxyQueryCaller`](/docs/api/create-proxy-query-caller). The only difference is that requests bypass the proxy adapter and connect directly to `api.options.baseURL`.
 
 ```tsx title="components/user-list.tsx"
 "use client"
@@ -54,134 +75,90 @@ Wraps `@tanstack/react-query`'s `useQuery`. All standard options are supported.
 import { q } from "@/lib/query"
 
 export function UserList() {
-  const { data, isLoading, error } = q.users.useQuery("getAll", {
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-  })
+  const { data, isLoading } = q.users.useQuery("getAll")
 
   if (isLoading) return <p>Loading...</p>
-  if (error) return <p>Error: {error.message}</p>
 
-  return (
-    <ul>
-      {data?.map((user) => (
-        <li key={user.id}>{user.name}</li>
-      ))}
-    </ul>
-  )
+  return <ul>{data?.map((u) => <li key={u.id}>{u.name}</li>)}</ul>
 }
 ```
 
-### Variables
-
-When an endpoint expects variables, the `variables` option becomes required — enforced by TypeScript.
+### Variables, mutations, infinite queries
 
 ```ts
-const { data } = q.users.useQuery("getById", {
-  variables: { id: "123" },
-  enabled: !!id,
+// Query with variables
+const { data } = q.users.useQuery("getById", { variables: { id: "1" } })
+
+// Mutation
+const { mutate } = q.users.useMutation("create")
+mutate({ name: "Alice" })
+
+// Infinite query
+const { data, fetchNextPage } = q.posts.useInfiniteQuery("list", {
+  variables: (cursor) => ({ cursor }),
+  initialPageParam: 0,
+  getNextPageParam: (page) => page.nextCursor,
 })
 ```
 
-## useMutation
+### SSE subscriptions
 
-Variables are passed to the `mutate` function, not to the hook.
-
-```tsx title="components/create-user.tsx"
-"use client"
-
-import { q } from "@/lib/query"
-import { useQueryClient } from "@noverax/nexus-query"
-
-export function CreateUserForm() {
-  const queryClient = useQueryClient()
-
-  const { mutate, isPending } = q.users.useMutation("create", {
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["api", "users", "getAll"] })
-    },
-  })
-
-  return (
-    <form onSubmit={(e) => {
-      e.preventDefault()
-      const formData = new FormData(e.currentTarget)
-      mutate({ name: formData.get("name") as string })
-    }}>
-      <input name="name" required />
-      <button disabled={isPending}>
-        {isPending ? "Creating..." : "Create"}
-      </button>
-    </form>
-  )
-}
+```tsx
+const { data, status, events } = q.notifications.useSubscription("feed", {
+  variables: { userId: "user-1" },
+})
 ```
+
+The SSE connection goes directly to `${api.options.baseURL}/${groupPrefix}/${method}` — no proxy hop.
+
+### WS channels
+
+```tsx
+const { send, lastMessage, status } = q.chat.useChannel("room", {
+  variables: { roomId: "general" },
+})
+
+send({ text: "Hello" })
+```
+
+The WebSocket connection goes directly to `${baseURL with ws:// scheme}/${groupPrefix}/${method}` — no proxy hop.
 
 ## Query Keys
 
-Query keys are auto-generated with a hierarchical format: `[source, group, method, variables?]`:
+Query keys are auto-generated as `[sourceName, group, method, variables?]` where `sourceName` comes from `defineApi({ name })` (or is derived from the baseURL hostname when omitted).
+
+```ts title="lib/query.ts"
+import { createQueryKeys } from "@noverax/nexus-react"
+import { api } from "@/shared/api"
+
+export const queryKeys = createQueryKeys(api)
+```
 
 ```ts
-// Without variables: [source, group, method]
-// With variables:    [source, group, method, variables]
+queryKeys("users")                          // ["api", "users"]
+queryKeys("users", "getAll")                // ["api", "users", "getAll"]
+queryKeys("users", "getById", { id: 1 })    // ["api", "users", "getById", { id: 1 }]
 
-q.users.useQuery("getAll")          // → ["api", "users", "getAll"]
-q.users.useQuery("getById", {
-  variables: { id: "123" }
-})                                   // → ["api", "users", "getById", { id: "123" }]
-
-// Cache invalidation
-queryClient.invalidateQueries({ queryKey: ["api", "users", "getAll"] })
-queryClient.invalidateQueries({ queryKey: ["api", "users"] })  // entire group
-queryClient.invalidateQueries({ queryKey: ["api"] })            // entire source
+queryClient.invalidateQueries({ queryKey: queryKeys("users") })
 ```
 
-## Per-Request Options
+See [`createQueryKeys`](/docs/api/create-query-keys) for details.
 
-Use `requestOptions` to pass `CallOptions` alongside React Query options:
+## Comparison
 
-```ts
-const { data } = q.users.useQuery("getAll", {
-  requestOptions: {
-    timeout: 5000,
-    method: "GET",  // cacheable GET proxy
-  },
-  staleTime: 30_000,
-})
-
-const { mutate } = q.files.useMutation("upload", {
-  requestOptions: {
-    onUploadProgress: (progress) => {
-      setProgress(progress.percent)
-    },
-  },
-})
-```
-
-## prefetchQuery
-
-Prefetch data in Server Components for instant hydration on the client:
-
-```ts title="app/users/page.tsx"
-import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/nexus-query"
-import { q } from "@/lib/query"
-
-export default async function UsersPage() {
-  const queryClient = new QueryClient()
-
-  await q.users.prefetchQuery(queryClient, "getAll")
-
-  return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <UserList />
-    </HydrationBoundary>
-  )
-}
-```
+| Feature | `createQueryCaller(api)` | `createProxyQueryCaller<T>("name")` |
+| --- | --- | --- |
+| Mode | Direct | Proxy |
+| Argument | API object | Source name string + generic |
+| Server adapter required | No | Yes (`apiRoute`, `sseRoute`, WS handler) |
+| Ships API definition to client | Yes | No |
+| Hides secrets in API definition | No | Yes |
+| CORS bypass | No | Yes (proxy lives on your origin) |
+| Best for | SPA, React Native, internal tools | Next.js / SSR / multi-tenant apps |
 
 ## Related
 
+- [`createCaller`](/docs/api/create-caller) — direct-mode caller without React Query hooks
+- [`createProxyQueryCaller`](/docs/api/create-proxy-query-caller) — proxy-mode equivalent
+- [`createQueryKeys`](/docs/api/create-query-keys) — type-safe query key factory for direct mode
 - [React Query Setup](/docs/react-query/setup) — full setup guide with QueryClientProvider
-- [useQuery Guide](/docs/react-query/use-query) — in-depth usage patterns
-- [useMutation Guide](/docs/react-query/use-mutation) — mutations with optimistic updates
-- [createProxyCaller](/docs/api/create-proxy-caller) — the underlying proxy caller

@@ -1,0 +1,95 @@
+import type { Sources } from "../define/types";
+import type { PubSubAdapter, WebSocketLike } from "../realtime/adapters";
+import type { ConnectionRegistry } from "./ws-registry";
+
+/** Configuration for the server-side WebSocket handler */
+export interface WSHandlerConfig {
+  /** Registered API sources */
+  sources: Sources;
+  /** Optional pub/sub adapter for horizontal scaling (e.g. Redis) */
+  pubsub?: PubSubAdapter;
+  /** Heartbeat interval in ms (default 25000) */
+  heartbeatIntervalMs?: number;
+  /** Pong timeout in ms (default 10000) */
+  heartbeatTimeoutMs?: number;
+  /** Max buffered bytes before dropping messages (default 1MB) */
+  maxBufferedAmount?: number;
+  /** Allowed origins for CSWSH prevention (prod: rejects all if unset, dev: allows all) */
+  allowedOrigins?: string[];
+  /** Max subscriptions per connection (default 100) */
+  maxSubscriptionsPerConnection?: number;
+  /** Max inbound message size in bytes (default 65536 = 64KB) */
+  maxMessageSize?: number;
+  /** Middleware execution timeout in ms (default 30000) */
+  middlewareTimeoutMs?: number;
+  /** Max inbound messages per second per connection — token bucket (default 100) */
+  maxMessagesPerSecond?: number;
+  /** Max concurrent connections from a single IP address (default 50) */
+  maxConnectionsPerIP?: number;
+  /** Per-subscription authorization — throw or return false to reject */
+  authorize?: (info: {
+    connectionId: string;
+    meta: unknown;
+    source: string;
+    group: string | undefined;
+    method: string;
+    topic: string;
+    variables: unknown;
+  }) => boolean | Promise<boolean>;
+  /** Called after upgrade, before subscriptions. Return metadata or throw to reject. */
+  onConnect?: (info: { connectionId: string; request: Request }) => unknown | Promise<unknown>;
+  /** Called after socket close + topic cleanup */
+  onDisconnect?: (info: {
+    connectionId: string;
+    meta: unknown;
+    code: number;
+  }) => void | Promise<void>;
+  /** Called on connection-level error */
+  onError?: (info: { connectionId: string; meta: unknown; error: unknown }) => void;
+  /** Called when an outbound message is dropped due to buffer overflow */
+  onMessageDrop?: (info: {
+    connectionId: string;
+    topic: string | undefined;
+    bufferedAmount: number;
+  }) => void;
+  /** Max consecutive message drops before force-closing a slow connection (default 50, 0 = disabled) */
+  maxConsecutiveDrops?: number;
+  /** Called when client sends a token refresh message. Return new meta or throw to disconnect. */
+  onTokenRefresh?: (info: {
+    connectionId: string;
+    token: string;
+    meta: Record<string, unknown>;
+  }) => Record<string, unknown> | Promise<Record<string, unknown>>;
+  /** Per-message authorization — return false or throw to reject with 4403 */
+  authorizeMessage?: (info: {
+    connectionId: string;
+    meta: Record<string, unknown>;
+    topic: string;
+    payload: unknown;
+  }) => boolean | Promise<boolean>;
+  /** Timeout in ms for token refresh after sending auth_required (default 30000) */
+  authRequiredTimeoutMs?: number;
+}
+
+/** Active subscription entry tracked per connection */
+export interface WSSubscriptionEntry {
+  /** Topic string (e.g. "chat.messages") */
+  topic: string;
+  /** Cleanup function — calls onLeave or cancels generator */
+  cleanup: () => void | Promise<void>;
+  /** Channel message handler — called on incoming "message" for this topic */
+  onMessage?: (payload: unknown) => void | Promise<void>;
+}
+
+/** WS options for framework adapters (sources provided separately) */
+export type NexusWSOptions = Omit<WSHandlerConfig, "sources">;
+
+/** Server-side WS handler returned by createWSHandler */
+export interface WSHandler {
+  /** Handle an upgraded WebSocket connection */
+  handleSocket(ws: WebSocketLike, request: Request): void;
+  /** Registry of active connections with send/broadcast/disconnect API */
+  readonly connections: ConnectionRegistry;
+  /** Clean up pubsub subscriptions and internal state (call on server shutdown) */
+  destroy(): Promise<void>;
+}

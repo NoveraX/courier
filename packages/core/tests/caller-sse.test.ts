@@ -1,0 +1,143 @@
+import { describe, expect, it, vi } from "vitest";
+import { createCaller } from "../src/caller";
+import { defineApi, defineGroup } from "../src/define";
+import { endpoint } from "../src/define/endpoint";
+import { buildDirectSSEUrl, buildProxySSEUrl } from "../src/realtime/caller-sse";
+import { subscribeSSE } from "../src/realtime/sse/sse-client";
+
+describe("buildDirectSSEUrl", () => {
+  it("builds URL with baseURL, prefix and method", () => {
+    const url = buildDirectSSEUrl("https://api.example.com", "notifications", "feed");
+    expect(url).toBe("https://api.example.com/notifications/feed");
+  });
+
+  it("appends variables as query params", () => {
+    const url = buildDirectSSEUrl("https://api.example.com", "notifications", "feed", {
+      userId: "42",
+      channel: "news",
+    });
+    expect(url).toBe("https://api.example.com/notifications/feed?userId=42&channel=news");
+  });
+
+  it("handles empty prefix (flat endpoints)", () => {
+    const url = buildDirectSSEUrl("https://api.example.com", "", "healthStream");
+    expect(url).toBe("https://api.example.com/healthStream");
+  });
+
+  it("strips trailing slash from baseURL", () => {
+    const url = buildDirectSSEUrl("https://api.example.com/", "events", "stream");
+    expect(url).toBe("https://api.example.com/events/stream");
+  });
+
+  it("strips leading slash from prefix", () => {
+    const url = buildDirectSSEUrl("https://api.example.com", "/events", "stream");
+    expect(url).toBe("https://api.example.com/events/stream");
+  });
+
+  it("omits undefined and null variables", () => {
+    const url = buildDirectSSEUrl("https://api.example.com", "events", "stream", {
+      active: "true",
+      filter: undefined,
+      tag: null,
+    });
+    expect(url).toBe("https://api.example.com/events/stream?active=true");
+  });
+
+  it("encodes special characters in variable values", () => {
+    const url = buildDirectSSEUrl("https://api.example.com", "search", "stream", {
+      q: "hello world",
+    });
+    expect(url).toBe("https://api.example.com/search/stream?q=hello%20world");
+  });
+});
+
+describe("buildProxySSEUrl", () => {
+  it("builds URL with source, group and method", () => {
+    const url = buildProxySSEUrl("/api/sse", "myApi", "notifications", "feed");
+    expect(url).toBe("/api/sse?_s=myApi&_m=feed&_g=notifications");
+  });
+
+  it("omits _g when group is empty", () => {
+    const url = buildProxySSEUrl("/api/sse", "myApi", "", "healthStream");
+    expect(url).toBe("/api/sse?_s=myApi&_m=healthStream");
+  });
+
+  it("appends variables after meta params", () => {
+    const url = buildProxySSEUrl("/api/sse", "api", "users", "activity", {
+      userId: "1",
+    });
+    expect(url).toBe("/api/sse?_s=api&_m=activity&_g=users&userId=1");
+  });
+
+  it("uses custom SSE URL", () => {
+    const url = buildProxySSEUrl("/custom/sse", "api", "events", "stream");
+    expect(url).toBe("/custom/sse?_s=api&_m=stream&_g=events");
+  });
+});
+
+vi.mock("../src/realtime/sse/sse-client", () => ({
+  subscribeSSE: vi.fn(() => ({
+    [Symbol.asyncIterator]: () => ({ next: () => Promise.resolve({ done: true, value: undefined }) }),
+    close: vi.fn(),
+    status: "connecting" as const,
+    on: vi.fn(),
+  })),
+}));
+
+const mockedSubscribeSSE = vi.mocked(subscribeSSE);
+
+describe("SSE transport detection — createCaller", () => {
+  it("detects SSE endpoint and calls subscribeSSE", () => {
+    const api = defineApi({
+      baseURL: "https://api.example.com",
+      groups: {
+        notifications: defineGroup({
+          prefix: "notifications",
+          endpoints: {
+            feed: endpoint<{ msg: string }, { userId: string }>({ transport: "sse" })(
+              async function* () { yield { data: { msg: "test" } }; },
+            ),
+          },
+        }),
+      },
+    });
+
+    const client = createCaller(api);
+    const result = (client as unknown as Record<string, Record<string, (v: unknown) => unknown>>)
+      .notifications!.feed!({ userId: "42" });
+
+    expect(result).toHaveProperty("close");
+    expect(result).toHaveProperty("status", "connecting");
+    expect(mockedSubscribeSSE).toHaveBeenCalledWith(
+      "https://api.example.com/notifications/feed?userId=42",
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+  });
+
+  it("falls through to HTTP for non-SSE endpoints", () => {
+    mockedSubscribeSSE.mockClear();
+
+    const api = defineApi({
+      baseURL: "https://api.example.com",
+      groups: {
+        users: defineGroup({
+          prefix: "users",
+          endpoints: {
+            getAll: endpoint<string[]>()((http) => http.get()),
+          },
+        }),
+      },
+    });
+
+    const client = createCaller(api);
+    const result = (client as unknown as Record<string, Record<string, () => unknown>>)
+      .users!.getAll!();
+
+    // HTTP returns a Promise, SSE was not called
+    expect(result).toBeInstanceOf(Promise);
+    expect(mockedSubscribeSSE).not.toHaveBeenCalled();
+
+    // Suppress unhandled rejection (no real server)
+    (result as Promise<unknown>).catch(() => {});
+  });
+});

@@ -41,7 +41,7 @@ Nexus uses TypeScript's type inference to propagate types through dot-notation a
 export const api = defineApi({ baseURL: "...", groups: { users } })
 
 // 2. You create a typed query caller
-const q = createQueryCaller<typeof api>("api")
+const q = createProxyQueryCaller<typeof api>("api")
 
 // 3. TypeScript infers everything at the call site
 const { data } = q.users.useQuery("getAll")

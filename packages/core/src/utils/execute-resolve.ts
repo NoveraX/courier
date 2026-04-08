@@ -43,6 +43,7 @@ export function buildMiddlewareContext(
   context: Context | undefined,
   dataSource: Record<string, unknown>,
   requestId: string,
+  transport?: "http" | "sse" | "ws",
 ): MiddlewareContext {
   const { req: nextRequest, headers: nextHeaders } = context || {};
   const mergedNextHeaders = {
@@ -63,6 +64,7 @@ export function buildMiddlewareContext(
     method: String(method),
     variables,
     headers: newHeaders,
+    transport,
     _requestId: requestId || undefined,
   };
 }

@@ -4,7 +4,15 @@
   "description": "Standalone Studio server and UI for @noverax/nexus",
   "author": "NoveraX",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noverax/nexus.git",
+    "directory": "packages/studio"
+  },
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "bin": {
     "nexus-studio": "./lib/cli.js"
   },
@@ -98,6 +106,7 @@
   ],
   "scripts": {
     "build": "tsup && npm run build:ui",
+    "test": "vitest run && npm run --prefix ui test",
     "build:server": "tsup",
     "build:ui": "cd ui && npx vite build",
     "dev": "tsup --watch",

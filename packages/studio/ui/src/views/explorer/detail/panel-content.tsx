@@ -11,6 +11,7 @@ import { OverviewTab } from "./tabs/overview-tab";
 import { RequestsTab } from "./tabs/requests-tab";
 import { SchemaTab } from "./tabs/schema-tab";
 import { ConfigTab } from "./tabs/config-tab";
+import { StreamTab } from "@/components/shared/detail-panel/tabs/stream-tab";
 
 import { useEndpointMetrics } from "../use-endpoint-metrics";
 import { useExplorerData } from "../use-explorer-data";
@@ -38,6 +39,11 @@ export function PanelContent({
   const detail = useEndpointMetrics(source, group, method);
   const data = useExplorerData();
   const endpoint = findEndpoint(data.endpoints, source, group, method);
+  const transport = endpoint?.transport as "sse" | "ws" | undefined;
+  const isRealtime = transport === "sse" || transport === "ws";
+  const latestStream = isRealtime
+    ? detail.recentRequests.find((r) => r.transport === transport && r.streamEvents?.length)
+    : undefined;
 
   if (!endpoint) {
     return (
@@ -80,12 +86,13 @@ export function PanelContent({
               </span>
             )}
           </TabsTrigger>
+          {isRealtime && <TabsTrigger value="stream">Stream</TabsTrigger>}
           <TabsTrigger value="schema">Schema</TabsTrigger>
           <TabsTrigger value="config">Config</TabsTrigger>
         </TabsList>
 
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="p-5">
+        <ScrollArea className="min-h-0 flex-1 [&_[data-slot=scroll-area-viewport]>div]:block!">
+          <div className="min-w-0 overflow-hidden p-5">
             <TabsContent value="overview">
               <OverviewTab detail={detail} />
             </TabsContent>
@@ -95,6 +102,16 @@ export function PanelContent({
                 onNavigateToTimeline={onNavigateToTimeline}
               />
             </TabsContent>
+            {isRealtime && (
+              <TabsContent value="stream">
+                {latestStream
+                  ? <StreamTab request={latestStream} />
+                  : <p className="py-8 text-center text-body-sm text-muted-foreground/50">
+                      No stream data yet — subscribe in Playground to capture events
+                    </p>
+                }
+              </TabsContent>
+            )}
             <TabsContent value="schema">
               <SchemaTab endpoint={endpoint} />
             </TabsContent>

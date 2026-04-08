@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HTTPError } from "@noverax/nexus";
+import type * as NexusModule from "@noverax/nexus";
 
 vi.mock("@noverax/nexus", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@noverax/nexus")>();
+  const actual = await importOriginal<typeof NexusModule>();
   return {
     ...actual,
     executeRequest: vi.fn(),

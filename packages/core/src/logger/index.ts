@@ -6,6 +6,20 @@ const isBrowser = typeof window !== "undefined" && typeof document !== "undefine
 const impl: Logger = isBrowser ? browserLogger : serverLogger;
 
 /**
+ * Scoped logger returned by {@link createLogger}.
+ *
+ * Unlike {@link Logger}, the context is bound at construction time so the
+ * call site only passes a message (and optional cause). Useful when a module
+ * wants to namespace every log line under the same prefix.
+ */
+export interface ScopedLogger {
+  debug(message: string, cause?: unknown): void;
+  info(message: string, cause?: unknown): void;
+  warn(message: string, cause?: unknown): void;
+  error(message: string, cause?: unknown): void;
+}
+
+/**
  * Scoped logger — binds a context name so every call includes it.
  *
  * @example
@@ -14,12 +28,7 @@ const impl: Logger = isBrowser ? browserLogger : serverLogger;
  * log.warn("Cache option ignored with upload progress");
  * ```
  */
-export function createLogger(context: string): {
-  debug(message: string, cause?: unknown): void;
-  info(message: string, cause?: unknown): void;
-  warn(message: string, cause?: unknown): void;
-  error(message: string, cause?: unknown): void;
-} {
+export function createLogger(context: string): ScopedLogger {
   return {
     debug: (msg, cause) => impl.debug(context, msg, cause),
     info: (msg, cause) => impl.info(context, msg, cause),

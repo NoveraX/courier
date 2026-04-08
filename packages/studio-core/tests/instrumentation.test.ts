@@ -569,4 +569,32 @@ describe("Studio Instrumentation", () => {
 
     expect(second).toBe(connection);
   });
+
+  it("warns when re-entered with drifted options (HMR scenario)", () => {
+    // The Nexus server-side logger writes directly to process.stdout.write
+    // (see packages/core/src/logger/server.ts), bypassing console.warn —
+    // spy on stdout instead.
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    connection = connectStudio({ port: 4380, framework: "next" });
+    connectStudio({ port: 4381, framework: "next" });
+
+    const warnedAboutDrift = stdoutSpy.mock.calls.some(([chunk]) =>
+      typeof chunk === "string" && chunk.includes("different options"),
+    );
+    expect(warnedAboutDrift).toBe(true);
+    stdoutSpy.mockRestore();
+  });
+
+  it("does not warn when re-entered with identical options", () => {
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    connection = connectStudio({ port: 4380, framework: "next" });
+    stdoutSpy.mockClear();
+    connectStudio({ port: 4380, framework: "next" });
+
+    const warnedAboutDrift = stdoutSpy.mock.calls.some(([chunk]) =>
+      typeof chunk === "string" && chunk.includes("different options"),
+    );
+    expect(warnedAboutDrift).toBe(false);
+    stdoutSpy.mockRestore();
+  });
 });

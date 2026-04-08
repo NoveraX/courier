@@ -77,7 +77,7 @@ import { createProxyCaller } from "@noverax/nexus"
 import type { api } from "../../shared/sources"
 
 export const caller = createProxyCaller<typeof api>({
-  proxyUrl: import.meta.env.VITE_PROXY_URL ?? "http://localhost:3001/api/request",
+  proxyPath: { http: import.meta.env.VITE_PROXY_URL ?? "http://localhost:3001/api/request" },
 })
 ```
 
@@ -179,8 +179,10 @@ For reusable data fetching, create a generic composable:
 import { ref, onMounted, type Ref } from "vue"
 import { caller } from "./useCaller"
 
+type Caller = typeof caller
+
 export function useNexusQuery<T>(
-  fn: (caller: typeof import("./useCaller").caller) => Promise<T>
+  fn: (c: Caller) => Promise<T>
 ) {
   const data = ref<T | null>(null) as Ref<T | null>
   const isLoading = ref(true)

@@ -10,6 +10,8 @@ export type MiddlewareContext = {
   variables?: unknown;
   /** Request headers — can be modified by middleware */
   headers: Headers;
+  /** Transport type — "http" for standard requests, "sse"/"ws" for realtime */
+  transport?: "http" | "sse" | "ws";
   /** Internal: Studio request ID for event correlation */
   _requestId?: string;
 };

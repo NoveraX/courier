@@ -1,0 +1,354 @@
+export const metadata = {
+  title: "Docker",
+  description: "Deploy Nexus with Docker — multi-stage Dockerfile, Docker Compose with Redis, and Docker Swarm with Traefik for horizontal scaling.",
+}
+
+## Dockerfile
+
+Multi-stage build optimized for production:
+
+```dockerfile title="Dockerfile"
+# Stage 1: Install dependencies
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+# Stage 2: Build
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Stage 3: Production
+FROM node:22-alpine AS production
+WORKDIR /app
+
+RUN addgroup -g 1001 -S nexus && adduser -S nexus -u 1001
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/package.json ./
+
+USER nexus
+EXPOSE 3001
+
+ENV NODE_ENV=production
+ENV PORT=3001
+ENV HOST=0.0.0.0
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1
+
+CMD ["node", "dist/server.js"]
+```
+
+```text title=".dockerignore"
+node_modules
+.git
+.env
+*.md
+tests
+coverage
+.turbo
+```
+
+<Callout variant="tip" title="Non-root user">
+  The `nexus` user (UID 1001) runs the process without root privileges. This is a security best practice for production containers.
+</Callout>
+
+## Docker Compose
+
+Single-command development and staging setup with Redis:
+
+```yaml title="docker-compose.yml"
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  nexus:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - HOST=0.0.0.0
+      - REDIS_URL=redis://redis:6379
+      - ALLOWED_ORIGIN=http://localhost:3000
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+```
+
+```bash
+docker compose up -d
+```
+
+### Multi-Replica with Compose
+
+Scale to multiple replicas with nginx as a load balancer:
+
+```yaml title="docker-compose.prod.yml"
+services:
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  nexus:
+    build: .
+    deploy:
+      replicas: 3
+    environment:
+      - PORT=3001
+      - HOST=0.0.0.0
+      - REDIS_URL=redis://redis:6379
+      - ALLOWED_ORIGIN=https://app.example.com
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - nexus
+
+volumes:
+  redis-data:
+```
+
+```nginx title="nginx.conf"
+events {
+  worker_connections 4096;
+}
+
+http {
+  upstream nexus {
+    ip_hash;  # sticky sessions for SSE/WS
+    server nexus:3001;
+  }
+
+  map $http_upgrade $connection_upgrade {
+    default upgrade;
+    "" close;
+  }
+
+  server {
+    listen 80;
+
+    location / {
+      proxy_pass http://nexus;
+      proxy_http_version 1.1;
+
+      # WebSocket upgrade
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection $connection_upgrade;
+
+      # SSE — disable buffering
+      proxy_buffering off;
+      proxy_cache off;
+      proxy_set_header X-Accel-Buffering no;
+
+      # Long-lived connections
+      proxy_read_timeout 86400s;
+      proxy_send_timeout 86400s;
+
+      # Pass client info
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+  }
+}
+```
+
+## Docker Swarm
+
+For production deployments with Docker Swarm (including [Dokploy](https://docs.dokploy.com/docs/core/applications/advanced)):
+
+```yaml title="docker-compose.swarm.yml"
+version: "3.8"
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - nexus-net
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: 512M
+
+  nexus:
+    image: your-registry/nexus-server:latest
+    environment:
+      - PORT=3001
+      - HOST=0.0.0.0
+      - REDIS_URL=redis://redis:6379
+      - ALLOWED_ORIGIN=https://app.example.com
+    networks:
+      - nexus-net
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 30s
+        order: start-first        # zero-downtime: new replica starts before old stops
+        failure_action: rollback
+      rollback_config:
+        parallelism: 0
+        order: stop-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+      labels:
+        # Traefik labels for automatic routing
+        - "traefik.enable=true"
+        - "traefik.http.routers.nexus.rule=Host(`api.example.com`)"
+        - "traefik.http.routers.nexus.entrypoints=websecure"
+        - "traefik.http.routers.nexus.tls.certresolver=letsencrypt"
+        - "traefik.http.services.nexus.loadbalancer.server.port=3001"
+
+        # Sticky sessions (required for SSE/WS)
+        - "traefik.http.services.nexus.loadbalancer.sticky.cookie=true"
+        - "traefik.http.services.nexus.loadbalancer.sticky.cookie.name=nexus_affinity"
+        - "traefik.http.services.nexus.loadbalancer.sticky.cookie.httponly=true"
+        - "traefik.http.services.nexus.loadbalancer.sticky.cookie.secure=true"
+        - "traefik.http.services.nexus.loadbalancer.sticky.cookie.samesite=strict"
+
+        # Timeouts for long-lived connections
+        - "traefik.http.services.nexus.loadbalancer.responseforwarding.flushinterval=1ms"
+        - "traefik.http.middlewares.nexus-timeout.headers.customrequestheaders.X-Accel-Buffering=no"
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  traefik:
+    image: traefik:v3
+    command:
+      - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
+      - "--providers.swarm.exposedbydefault=false"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@example.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--serversTransport.forwardingTimeouts.dialTimeout=30s"
+      - "--serversTransport.forwardingTimeouts.responseHeaderTimeout=0s"
+      - "--serversTransport.forwardingTimeouts.idleConnTimeout=90s"
+    ports:
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    networks:
+      - nexus-net
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+networks:
+  nexus-net:
+    driver: overlay
+    attachable: true
+
+volumes:
+  redis-data:
+  letsencrypt:
+```
+
+Deploy to Swarm:
+
+```bash
+docker stack deploy -c docker-compose.swarm.yml nexus
+```
+
+### Swarm Key Points
+
+| Setting | Value | Why |
+|---------|-------|-----|
+| `update_config.order: start-first` | Zero-downtime | New replica accepts traffic before old one stops |
+| `update_config.delay: 30s` | Connection drain | Time for existing connections to gracefully close |
+| `sticky.cookie` | Session affinity | SSE/WS connections must stay on the same replica |
+| `flushinterval: 1ms` | SSE streaming | Traefik flushes response immediately (no buffering) |
+| `responseHeaderTimeout: 0s` | Long-lived | Traefik never times out SSE/WS connections |
+
+### Dokploy Configuration
+
+If using Dokploy, configure these settings in the application dashboard:
+
+1. **Replicas**: Set to 3+ in the deployment section
+2. **Environment variables**: Add `REDIS_URL`, `ALLOWED_ORIGIN`, `PORT`, `HOST`
+3. **Health check**: Path `/readyz`, interval 15s
+4. **Traefik labels**: Dokploy auto-generates basic Traefik labels. Add sticky session labels manually in the "Advanced" tab:
+
+```
+traefik.http.services.${SERVICE}.loadbalancer.sticky.cookie=true
+traefik.http.services.${SERVICE}.loadbalancer.sticky.cookie.name=nexus_affinity
+traefik.http.services.${SERVICE}.loadbalancer.responseforwarding.flushinterval=1ms
+```
+
+<Callout variant="warning" title="Drain timeout">
+  Set `update_config.delay` to at least 30 seconds. This gives existing SSE/WS connections time to gracefully reconnect to a new replica during rolling updates.
+</Callout>
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `3001` | Server port |
+| `HOST` | `0.0.0.0` | Bind address |
+| `REDIS_URL` | — | Redis connection string |
+| `ALLOWED_ORIGIN` | — | CORS allowed origin |
+| `NODE_ENV` | — | Set to `production` |
+| `HOSTNAME` | — | Auto-set by Docker/K8s, used as PubSub origin |

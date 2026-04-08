@@ -2,25 +2,28 @@
  * Socket.IO playground handler — forwards requests to connected apps.
  */
 
-import type { Namespace } from "socket.io";
-
-interface PlaygroundPayload {
-  sessionId?: string;
-  source: string;
-  group: string;
-  method: string;
-  variables: unknown;
-  headers: Record<string, string>;
-  mode: "direct" | "proxy";
-}
+import { listAppSockets, pickExecutionSocket } from "./resolve-target-socket";
+import { sanitizeUiPlaygroundPayload } from "./sanitize-ui-events";
+import type { AppNamespace } from "./socket-data";
 
 type PlaygroundCallback = (result: Record<string, unknown>) => void;
 
 export function handlePlayground(
-  appNamespace: Namespace,
-): (payload: PlaygroundPayload, callback: PlaygroundCallback) => void {
-  return (payload, callback) => {
-    const appSockets = Array.from(appNamespace.sockets.values());
+  appNamespace: AppNamespace,
+): (payload: unknown, callback: PlaygroundCallback) => void {
+  return (raw, callback) => {
+    const payload = sanitizeUiPlaygroundPayload(raw);
+    if (!payload) {
+      callback({
+        error: "Invalid playground payload",
+        status: 0,
+        headers: {},
+        duration: 0,
+      });
+      return;
+    }
+
+    const appSockets = listAppSockets(appNamespace);
     if (appSockets.length === 0) {
       callback({
         error: "No application connected. Start your app with the Nexus studio plugin enabled.",
@@ -31,13 +34,22 @@ export function handlePlayground(
       return;
     }
 
-    // Direct: prefer server socket (has runtime sources)
-    // Proxy: prefer browser socket (will fetch through /api/request like a real user)
-    const targetSocket = resolveTargetSocket(
-      appSockets,
-      payload.sessionId,
-      payload.mode === "direct",
-    );
+    // Direct: prefer server socket (has runtime sources).
+    // Proxy: prefer browser socket (will fetch through /api/request like a real user).
+    const targetSocket = pickExecutionSocket(appSockets, {
+      sessionId: payload.sessionId,
+      preferServer: payload.mode === "direct",
+    });
+    if (!targetSocket) {
+      callback({
+        error: "No application connected. Start your app with the Nexus studio plugin enabled.",
+        status: 0,
+        headers: {},
+        duration: 0,
+      });
+      return;
+    }
+
     const startTime = Date.now();
     let responded = false;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -73,31 +85,4 @@ export function handlePlayground(
       });
     }, 30_000);
   };
-}
-
-function resolveTargetSocket(
-  appSockets: ReturnType<Namespace["sockets"]["values"]> extends IterableIterator<infer T>
-    ? T[]
-    : never,
-  sessionId?: string,
-  preferServer?: boolean,
-): (typeof appSockets)[number] {
-  if (sessionId) {
-    const found = appSockets.find((s) => s.data?.sessionId === sessionId);
-    if (found) return found;
-  }
-
-  if (preferServer) {
-    // Proxy mode: prefer server session (instrumentServer).
-    // Server sessions have a real framework name; browser has "unknown".
-    const serverSocket = appSockets.find(
-      (s) => s.data?.framework && s.data.framework !== "unknown",
-    );
-    if (serverSocket) return serverSocket;
-    // Fallback: first connected socket (server starts before browser)
-    if (appSockets.length > 1) return appSockets[0] as (typeof appSockets)[number];
-  }
-
-  // Direct mode: use the LAST connected socket (browser session with HMR)
-  return appSockets[appSockets.length - 1] as (typeof appSockets)[number];
 }

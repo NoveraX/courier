@@ -1,26 +1,26 @@
-import {
-  buildClientProxy,
-  type ExecuteBackend,
-  type FlatClient,
-  type MixedClient,
-  type TypedClient,
-} from "./client";
-import { getSourceName } from "./define";
+import type { FlatClient, MixedClient, TypedClient } from "./client";
+import { buildClientProxy } from "./client";
 import type {
   DefinedApi,
   DefinedFlatApi,
   DefinedMixedApi,
   EndpointRecord,
   GroupRecord,
-} from "./define/types";
-import { HTTPError } from "./error";
-import type { Context } from "./http-client/types";
-import { executeRequest } from "./utils/execute";
+} from "./define";
+import type { HTTPError } from "./error";
+import type { RequestContext } from "./http-client/types";
+import { composeBackend } from "./transport/compose-backend";
+import {
+  createDirectHTTPExecutor,
+  createDirectSSEFactory,
+  createDirectWSChannelFactory,
+  createDirectWSPushFactory,
+} from "./transport/direct";
 
 export type CallerDefaults = {
   timeout?: number;
   headers?: Record<string, string>;
-  context?: Context;
+  context?: RequestContext;
   onError?: (error: HTTPError) => void | Promise<void>;
   onSuccess?: (data: unknown) => void | Promise<void>;
 };
@@ -64,54 +64,12 @@ export function createCaller(
   source: DefinedApi | DefinedFlatApi | DefinedMixedApi,
   defaults: CallerDefaults = {},
 ): unknown {
-  const {
-    timeout: defaultTimeout,
-    headers: defaultHeaders,
-    context: defaultContext,
-    onError: globalOnError,
-    onSuccess: globalOnSuccess,
-  } = defaults;
-
-  const sourceName = getSourceName(source) ?? "_";
-  const sources = { [sourceName]: source };
-
-  const backend: ExecuteBackend = async (group, method, variables, options, raw) => {
-    const mergedOptions: Record<string, unknown> = { ...options };
-
-    if (raw) mergedOptions.rawData = true;
-
-    if (mergedOptions.timeout === undefined && defaultTimeout !== undefined) {
-      mergedOptions.timeout = defaultTimeout;
-    }
-
-    if (defaultHeaders) {
-      mergedOptions.headers = options.headers
-        ? {
-            ...defaultHeaders,
-            ...Object.fromEntries(new Headers(options.headers as HeadersInit)),
-          }
-        : defaultHeaders;
-    }
-
-    const requestPayload = {
-      source: sourceName,
-      group,
-      method,
-      variables: variables as Record<string, unknown> | undefined,
-      options: mergedOptions,
-    };
-
-    try {
-      const result = await executeRequest(sources, requestPayload, defaultContext);
-      await globalOnSuccess?.(result);
-      return result;
-    } catch (error) {
-      if (error instanceof HTTPError) {
-        await globalOnError?.(error);
-      }
-      throw error;
-    }
-  };
+  const http = createDirectHTTPExecutor(source, defaults);
+  const backend = composeBackend(source as Record<string, unknown>, http, {
+    sse: createDirectSSEFactory(source, { headers: defaults.headers }),
+    wsChannel: createDirectWSChannelFactory(source),
+    wsPush: createDirectWSPushFactory(source),
+  });
 
   return buildClientProxy(backend);
 }

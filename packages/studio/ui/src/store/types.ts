@@ -11,6 +11,7 @@ export type {
 export type {
   RequestStatus,
   RequestEntry,
+  StreamEventRecord,
 } from "./types-request"
 
 export type {

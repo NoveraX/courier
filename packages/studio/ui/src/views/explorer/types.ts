@@ -37,6 +37,7 @@ export interface EndpointNodeData {
   fullPath: string;
   httpMethod: string;
   endpointType: "query" | "mutation" | "untyped";
+  transport?: "sse" | "ws";
   hasVariablesSchema: boolean;
   hasResponseSchema: boolean;
   middleware: string[];

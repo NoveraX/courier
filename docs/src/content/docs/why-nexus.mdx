@@ -45,7 +45,7 @@ You define your API structure **once** using `defineApi`, `defineGroup`, and `en
 
 - **Direct mode** — server calls via `createCaller(api)`
 - **Proxy mode** — browser calls via `createProxyCaller("api")`
-- **React Query** — hooks via `createQueryCaller("api")`
+- **React Query** — hooks via `createProxyQueryCaller("api")`
 - **Server Actions** — form handling via `createAction(sources)`
 
 All share the same types and autocomplete:

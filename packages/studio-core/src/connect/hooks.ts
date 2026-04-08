@@ -1,6 +1,7 @@
 import type { EventBus } from "../event-bus";
 import { wireMiddlewareHooks } from "./hooks-middleware";
 import { wireRequestHooks } from "./hooks-request";
+import { wireStreamHooks } from "./hooks-stream";
 import { wireValidationHooks } from "./hooks-validation";
 
 /** Wire all core studio hooks to emit events on the bus */
@@ -13,4 +14,5 @@ export function wireHooks(
   wireRequestHooks(bus, sessionId, resolveSourceName, shouldFilter);
   wireMiddlewareHooks(bus, sessionId);
   wireValidationHooks(bus, sessionId);
+  wireStreamHooks(bus, sessionId, resolveSourceName, shouldFilter);
 }

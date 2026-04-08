@@ -25,6 +25,11 @@ export type EventType =
   | "dedup:reuse"
   | "upload:progress"
   | "upload:complete"
+  // Stream (SSE/WS)
+  | "stream:open"
+  | "stream:message"
+  | "stream:close"
+  | "stream:error"
 
 export interface StudioEvent {
   id: string

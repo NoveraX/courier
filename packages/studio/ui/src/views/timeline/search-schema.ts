@@ -13,6 +13,9 @@ export interface TimelineSearchParams {
   group?: string;
   minDuration?: number;
   filters?: boolean;
+  /** Global detail panel params (read by GlobalDetailPanel on any page) */
+  selectedReq?: string;
+  detailTab?: string;
 }
 
 /** Parse raw URL search into typed params */
@@ -27,6 +30,8 @@ export function validateTimelineSearch(raw: Record<string, unknown>): TimelineSe
     group: parseString(raw.group),
     minDuration: parseNumber(raw.minDuration),
     filters: parseBoolean(raw.filters),
+    selectedReq: parseString(raw.selectedReq),
+    detailTab: parseString(raw.detailTab),
   };
 }
 

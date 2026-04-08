@@ -1,26 +1,50 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createServer } from "node:http";
+import type * as NexusModule from "@noverax/nexus";
 
 vi.mock("@noverax/nexus", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@noverax/nexus")>();
+  const actual = await importOriginal<typeof NexusModule>();
   return {
     ...actual,
     createHandler: vi.fn(() => ({
       handle: vi.fn(),
       handleGet: vi.fn(),
       handlePost: vi.fn(),
+      handleSSE: vi.fn(),
+      sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+      shutdownSSE: vi.fn(),
+    })),
+    createWSHandler: vi.fn(() => ({
+      handleSocket: vi.fn(),
+      connections: { count: 0, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), send: vi.fn(), broadcast: vi.fn(), broadcastToTopic: vi.fn(), broadcastToBaseTopic: vi.fn(), sendToConnection: vi.fn(), disconnect: vi.fn(), disconnectByMeta: vi.fn() },
+      destroy: vi.fn(),
     })),
   };
 });
 
-import { createHandler } from "@noverax/nexus";
-import { nexusMiddleware } from "../src/index";
+import { createHandler, createWSHandler } from "@noverax/nexus";
+import { nexusMiddleware, nexusSSEMiddleware, nexusWSAttach } from "../src/index";
 
 const mockCreateHandler = vi.mocked(createHandler);
+const mockCreateWSHandler = vi.mocked(createWSHandler);
 
 afterEach(() => {
   vi.clearAllMocks();
 });
+
+function createMockHandlerResult(overrides: Record<string, unknown> = {}) {
+  return {
+    handle: vi.fn(),
+    handleGet: vi.fn(),
+    handlePost: vi.fn(),
+    handleSSE: vi.fn(),
+    sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+    shutdownSSE: vi.fn(),
+    ...overrides,
+  };
+}
+
+
 
 describe("nexusMiddleware", () => {
   it("returns a function", () => {
@@ -31,7 +55,14 @@ describe("nexusMiddleware", () => {
   it("calls createHandler with sources", () => {
     const sources = { api: {} } as any;
     nexusMiddleware(sources);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources);
+    expect(mockCreateHandler).toHaveBeenCalledWith(sources, undefined);
+  });
+
+  it("forwards HandlerConfig to createHandler", () => {
+    const sources = { api: {} } as any;
+    const config = { allowedOrigins: ["https://app.example.com"] };
+    nexusMiddleware(sources, config);
+    expect(mockCreateHandler).toHaveBeenCalledWith(sources, config);
   });
 
   it("converts Node.js request to Web Standard Request and handles it", async () => {
@@ -42,11 +73,7 @@ describe("nexusMiddleware", () => {
         headers: { "content-type": "application/json" },
       }),
     );
-    mockCreateHandler.mockReturnValue({
-      handle: mockHandle,
-      handleGet: vi.fn(),
-      handlePost: vi.fn(),
-    });
+    mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
     const middleware = nexusMiddleware({} as any);
 
@@ -64,11 +91,7 @@ describe("nexusMiddleware", () => {
   it("calls next(error) on failure", async () => {
     const error = new Error("test error");
     const mockHandle = vi.fn().mockRejectedValue(error);
-    mockCreateHandler.mockReturnValue({
-      handle: mockHandle,
-      handleGet: vi.fn(),
-      handlePost: vi.fn(),
-    });
+    mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
     const middleware = nexusMiddleware({} as any);
     const next = vi.fn();
@@ -91,6 +114,100 @@ describe("nexusMiddleware", () => {
     const middleware = nexusMiddleware({} as any);
 
     // Verify the middleware has the correct arity for NestJS
+    expect(middleware.length).toBe(3);
+  });
+});
+
+describe("nexusSSEMiddleware", () => {
+  it("returns a function", () => {
+    const middleware = nexusSSEMiddleware({} as any);
+    expect(typeof middleware).toBe("function");
+  });
+
+  it("calls createHandler with sources", () => {
+    const sources = { api: {} } as any;
+    nexusSSEMiddleware(sources);
+    expect(mockCreateHandler).toHaveBeenCalledWith(sources, undefined);
+  });
+
+  it("forwards HandlerConfig to createHandler", () => {
+    const sources = { api: {} } as any;
+    const config = { sseHeaders: { "Access-Control-Allow-Origin": "*" }, sseMaxLifetimeMs: 60_000 };
+    nexusSSEMiddleware(sources, config);
+    expect(mockCreateHandler).toHaveBeenCalledWith(sources, config);
+  });
+
+  it("converts request and delegates to handleSSE", async () => {
+    const mockHandleSSE = vi.fn().mockResolvedValue(
+      new Response("data: hello\n\n", {
+        status: 200,
+        headers: { "content-type": "text/event-stream" },
+      }),
+    );
+    mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
+
+    const middleware = nexusSSEMiddleware({} as any);
+
+    const { status, headers } = await makeNodeRequest(middleware, {
+      method: "GET",
+      path: "/api/sse?_s=api&_m=feed",
+    });
+
+    expect(status).toBe(200);
+    expect(headers?.["content-type"]).toBe("text/event-stream");
+    expect(mockHandleSSE).toHaveBeenCalledWith(expect.any(Request));
+  });
+
+  it("preserves all SSE response headers through the adapter", async () => {
+    const mockHandleSSE = vi.fn().mockResolvedValue(
+      new Response("data: hello\n\n", {
+        status: 200,
+        headers: {
+          "content-type": "text/event-stream",
+          "cache-control": "no-cache, no-transform",
+          "connection": "keep-alive",
+          "x-accel-buffering": "no",
+        },
+      }),
+    );
+    mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
+
+    const middleware = nexusSSEMiddleware({} as any);
+    const { status, headers } = await makeNodeRequest(middleware, {
+      method: "GET",
+      path: "/api/sse?_s=api&_m=feed",
+    });
+
+    expect(status).toBe(200);
+    expect(headers?.["content-type"]).toBe("text/event-stream");
+    expect(headers?.["cache-control"]).toBe("no-cache, no-transform");
+    expect(headers?.["x-accel-buffering"]).toBe("no");
+  });
+
+  it("calls next(error) on failure", async () => {
+    const error = new Error("sse error");
+    const mockHandleSSE = vi.fn().mockRejectedValue(error);
+    mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
+
+    const middleware = nexusSSEMiddleware({} as any);
+    const next = vi.fn();
+
+    const { Readable } = require("node:stream");
+    const raw = new Readable({ read() { this.push(null); } });
+    raw.method = "GET";
+    raw.url = "/api/sse?_s=api&_m=feed";
+    raw.headers = { host: "localhost" };
+    raw.socket = { encrypted: false };
+
+    const { ServerResponse } = require("node:http");
+    const res = new ServerResponse(raw);
+
+    await middleware(raw, res, next);
+    expect(next).toHaveBeenCalledWith(error);
+  });
+
+  it("has correct arity for NestJS (3 params)", () => {
+    const middleware = nexusSSEMiddleware({} as any);
     expect(middleware.length).toBe(3);
   });
 });
@@ -151,3 +268,41 @@ function makeNodeRequest(
     });
   });
 }
+
+describe("nexusWSAttach", () => {
+  it("returns a cleanup function", () => {
+    const server = createServer();
+    const cleanup = nexusWSAttach(server, {} as any);
+    expect(typeof cleanup).toBe("function");
+    cleanup();
+  });
+
+  it("calls createWSHandler with sources and options", () => {
+    const sources = { api: {} } as any;
+    const options = { heartbeatIntervalMs: 5000 };
+    const server = createServer();
+    const cleanup = nexusWSAttach(server, sources, options);
+    expect(mockCreateWSHandler).toHaveBeenCalledWith({ sources, ...options });
+    cleanup();
+  });
+
+  it("attaches upgrade listener to server", () => {
+    const server = createServer();
+    const onSpy = vi.spyOn(server, "on");
+    const cleanup = nexusWSAttach(server, {} as any);
+
+    expect(onSpy).toHaveBeenCalledWith("upgrade", expect.any(Function));
+    cleanup();
+    onSpy.mockRestore();
+  });
+
+  it("cleanup removes upgrade listener", () => {
+    const server = createServer();
+    const offSpy = vi.spyOn(server, "off");
+    const cleanup = nexusWSAttach(server, {} as any);
+
+    cleanup();
+    expect(offSpy).toHaveBeenCalledWith("upgrade", expect.any(Function));
+    offSpy.mockRestore();
+  });
+});

@@ -1,5 +1,6 @@
 import type { TypedClient } from "../client";
-import type { DefinedApi, Endpoint } from "../define/types";
+import type { DefinedApi, Endpoint, SSEEndpoint, WSChannelEndpoint } from "../define/types";
+import type { ChannelHandlers, SSEEvent } from "../realtime/types";
 
 /** A recorded request in the test client history */
 export type HistoryEntry = {
@@ -8,8 +9,18 @@ export type HistoryEntry = {
   variables?: unknown;
   result?: { status: number; data: unknown };
   error?: Error;
+  /** Whether this was a stream (SSE) request */
+  stream?: boolean;
+  /** Whether this was a channel (WS) request */
+  channel?: boolean;
   timestamp: number;
 };
+
+/** Generator factory for SSE stream mocks */
+export type StreamGenerator<TResponse> = () => AsyncGenerator<SSEEvent<TResponse>, void, unknown>;
+
+/** Channel handler factory for WS channel mocks */
+export type ChannelFactory<TResponse> = () => ChannelHandlers<unknown, TResponse>;
 
 /** Fluent builder for configuring endpoint mocks */
 export type MockBuilder<TResponse = unknown> = {
@@ -19,6 +30,10 @@ export type MockBuilder<TResponse = unknown> = {
   returns(fn: (variables?: unknown) => TResponse | Promise<TResponse>): MockBuilder<TResponse>;
   /** Throw HTTPError with given status and optional data */
   rejects(status: number, data?: unknown): MockBuilder<TResponse>;
+  /** Mock as SSE stream — provide async generator yielding SSEEvent<T> */
+  stream(fn: StreamGenerator<TResponse>): MockBuilder<TResponse>;
+  /** Mock as WS channel — provide ChannelHandlers or a factory */
+  channel(handlers: ChannelHandlers<unknown, TResponse>): MockBuilder<TResponse>;
   /** Limit mock to a single invocation */
   once(): MockBuilder<TResponse>;
   /** Limit mock to N invocations */
@@ -28,7 +43,13 @@ export type MockBuilder<TResponse = unknown> = {
 };
 
 export type ExtractEndpointResponse<TEndpoint> =
-  TEndpoint extends Endpoint<infer TResponse, any> ? TResponse : unknown;
+  TEndpoint extends SSEEndpoint<infer TResponse, any>
+    ? TResponse
+    : TEndpoint extends WSChannelEndpoint<infer TResponse, any, any>
+      ? TResponse
+      : TEndpoint extends Endpoint<infer TResponse, any>
+        ? TResponse
+        : unknown;
 
 export type ApiGroups<TApi extends DefinedApi<any>> = TApi["options"]["groups"];
 

@@ -54,11 +54,18 @@ type CallerDefaults = {
 
 ### ProxyCallerDefaults
 
-Options for `createProxyCaller` and `createQueryCaller`.
+Options for `createProxyCaller` and `createProxyQueryCaller`.
 
 ```ts
+type ProxyPath = {
+  http?: string  // default: "/api/request"
+  sse?: string   // default: "/api/sse"
+  ws?: string    // no default — throws if WS endpoint invoked without it
+}
+
 type ProxyCallerDefaults = {
-  proxyUrl?: string
+  proxyPath?: ProxyPath
+  source?: object
   timeout?: number
   credentials?: RequestCredentials
   headers?: Record<string, string>

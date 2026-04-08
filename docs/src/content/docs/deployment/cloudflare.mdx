@@ -1,0 +1,157 @@
+export const metadata = {
+  title: "Cloudflare Workers",
+  description: "Deploy Nexus on Cloudflare Workers — SSE with 100s idle timeout, heartbeat tuning, and WebSocket via Durable Objects.",
+}
+
+## Overview
+
+Cloudflare Workers run at the edge with specific constraints for long-lived connections:
+
+| Feature | Support | Limit |
+|---------|---------|-------|
+| HTTP | Full | Standard request limits |
+| SSE | Supported | **100 second idle timeout** |
+| WebSocket | Via Durable Objects | Requires paid plan |
+
+## SSE on Workers
+
+Nexus SSE works on Workers because it uses the Web Standard `fetch` + `ReadableStream` API — no Node.js dependencies.
+
+### Hono on Workers
+
+```ts title="src/index.ts"
+import { Hono } from "hono"
+import { nexusHandler, nexusSSEHandler } from "@noverax/nexus-hono"
+import { sources } from "./api/sources"
+
+const app = new Hono()
+
+app.all("/api/request", nexusHandler(sources))
+
+app.get("/api/sse", nexusSSEHandler(sources, {
+  sseMaxLifetimeMs: 90_000,      // close before 100s idle timeout
+  sseHeaders: {
+    "Access-Control-Allow-Origin": "https://app.example.com",
+  },
+}))
+
+app.get("/health", (c) => c.json({ status: "ok" }))
+
+export default app
+```
+
+### Heartbeat Configuration
+
+Cloudflare terminates connections after **100 seconds of inactivity**. The Nexus SSE server sends heartbeat pings every 25 seconds by default, which keeps the connection alive.
+
+```
+Timeline: 0s ───── 25s (ping) ───── 50s (ping) ───── 75s (ping) ───── 100s limit
+                ✓ alive          ✓ alive          ✓ alive          ✓ reset
+```
+
+<Callout variant="tip" title="Default heartbeat is sufficient">
+  The built-in 25-second heartbeat interval is well within Cloudflare's 100-second timeout. No additional configuration needed.
+</Callout>
+
+### Max Lifetime
+
+Even with heartbeats, set `sseMaxLifetimeMs` to force periodic reconnection. This prevents zombie connections and ensures clean resource rotation:
+
+```ts
+nexusSSEHandler(sources, {
+  sseMaxLifetimeMs: 300_000,  // reconnect every 5 minutes
+})
+```
+
+The client automatically reconnects with `Last-Event-ID` — no events are lost.
+
+## WebSocket on Workers
+
+Standard Cloudflare Workers do **not** support WebSocket server-side handling (only client-side WebSocket connections). For WebSocket support, you need **Durable Objects**.
+
+### Option A: Separate WS Server (Recommended)
+
+Run WebSocket on a separate Node.js server and keep Workers for HTTP + SSE:
+
+```
+Workers (Edge):     HTTP proxy + SSE streaming
+Node.js Server:     WebSocket (via @noverax/nexus-server)
+```
+
+This gives you the best of both — edge latency for SSE, full WS support on a dedicated server.
+
+### Option B: Durable Objects
+
+<Callout variant="warning" title="Advanced setup">
+  Durable Objects require a Cloudflare paid plan and a custom WebSocket handler. This is not a standard Nexus adapter — you need to bridge the Durable Object WebSocket API to Nexus manually.
+</Callout>
+
+```ts title="src/durable-object.ts"
+import { DurableObject } from "cloudflare:workers"
+
+export class NexusWSObject extends DurableObject {
+  async fetch(request: Request): Promise<Response> {
+    const upgradeHeader = request.headers.get("Upgrade")
+    if (upgradeHeader !== "websocket") {
+      return new Response("Expected WebSocket", { status: 426 })
+    }
+
+    const pair = new WebSocketPair()
+    const [client, server] = Object.values(pair)
+    this.ctx.acceptWebSocket(server)
+
+    return new Response(null, { status: 101, webSocket: client })
+  }
+
+  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
+    // Bridge to Nexus WS protocol here
+  }
+
+  async webSocketClose(ws: WebSocket, code: number): Promise<void> {
+    // Cleanup
+  }
+}
+```
+
+## Wrangler Configuration
+
+```toml title="wrangler.toml"
+name = "nexus-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ALLOWED_ORIGIN = "https://app.example.com"
+```
+
+## Limitations
+
+| Limitation | Impact | Workaround |
+|-----------|--------|------------|
+| 100s idle timeout | SSE must keep-alive | Built-in heartbeat (25s) handles this |
+| No native WS server | Cannot use `nexusWSHandler` directly | Use Durable Objects or separate server |
+| No persistent connections across deploys | Connections drop on new deployment | Client auto-reconnects via `Last-Event-ID` |
+| CPU time limits (10ms free / 30s paid) | Long SSE generators may hit limits | Keep event generation lightweight |
+| No `node:http` module | Express/Fastify won't work | Use Hono (Web Standard APIs) |
+
+## Multi-Region
+
+Cloudflare Workers run in 300+ data centers automatically. No replica configuration needed — Workers scale horizontally by design.
+
+For shared state across regions, use:
+- **Cloudflare KV** — eventually consistent key-value store
+- **Durable Objects** — strongly consistent, single-region per object
+- **External Redis** (Upstash) — serverless Redis with global replication
+
+```ts title="src/index.ts"
+import { createRedisPubSub, createRedisStream } from "@noverax/nexus-redis"
+import { Redis } from "@upstash/redis"
+
+// Upstash Redis works in Workers (HTTP-based, not TCP)
+// Note: requires @upstash/redis, not ioredis
+```
+
+<Callout variant="warning" title="ioredis compatibility">
+  `ioredis` uses TCP connections and does **not** work in Cloudflare Workers. Use [Upstash Redis](https://upstash.com/) with its HTTP-based client, or connect to Redis from a separate Node.js server.
+</Callout>

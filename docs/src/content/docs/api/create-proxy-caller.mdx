@@ -21,8 +21,15 @@ const caller = createProxyCaller<typeof api>(defaults?)
 All fields are optional.
 
 ```ts
+type ProxyPath = {
+  http?: string  // default: "/api/request"
+  sse?: string   // default: "/api/sse"
+  ws?: string    // no default — required for WS endpoints
+}
+
 type ProxyCallerDefaults = {
-  proxyUrl?: string
+  proxyPath?: ProxyPath
+  source?: object
   timeout?: number
   credentials?: RequestCredentials
   headers?: Record<string, string>
@@ -31,12 +38,17 @@ type ProxyCallerDefaults = {
 }
 ```
 
-- `proxyUrl` — full URL path to the proxy endpoint. Defaults to `"/api/request"`.
+- `proxyPath` — per-transport proxy endpoint configuration. Each field accepts either a relative path (resolved against `location.origin`) or an absolute URL. Caller-level fields are merged per-transport over `source.options.proxyPath` from `defineApi`.
+- `source` — the result of `defineApi()`. Required for SSE/WS transport detection. The caller reads `source.options.proxyPath` as the source-level defaults.
 - `timeout` — request timeout in milliseconds.
 - `credentials` — cookie handling policy. Defaults to `"include"`.
 - `headers` — default headers merged into every request.
 - `onError` — global error handler invoked on every `HTTPError`.
 - `onSuccess` — global success handler invoked on every successful response.
+
+<Callout variant="warn" title="WS has no default path">
+`proxyPath.ws` has **no built-in default**. Calling a WS endpoint without it throws `ConfigurationError("WS_PATH_NOT_CONFIGURED", ...)`. In runtimes that cannot host WebSocket upgrades in-process (Next.js App Router, Cloudflare Workers, Vercel Edge, AWS Lambda), point this at a running [`@noverax/nexus-server`](/docs/deployment/standalone-server) instance.
+</Callout>
 
 ## Return Type
 
@@ -60,9 +72,10 @@ type TypedClient<T> = {
 
 ```ts title="lib/query.ts"
 import { createProxyCaller } from "@noverax/nexus"
-import type { api } from "@/api"
+import { api } from "@/api"
 
-const caller = createProxyCaller<typeof api>({
+const caller = createProxyCaller<typeof api>("api", {
+  source: api,
   timeout: 10000,
   credentials: "include",
 })
@@ -75,9 +88,17 @@ const user = await caller.users.getById({ id: "123" })
 ## Configuring Defaults
 
 ```ts title="lib/query.ts"
-const caller = createProxyCaller<typeof api>({
-  // Proxy endpoint URL (default: "/api/request")
-  proxyUrl: "/api/nexus",
+const caller = createProxyCaller<typeof api>("api", {
+  source: api,
+
+  // Per-transport proxy endpoint paths.
+  // Either side may be partial — missing transports fall back to
+  // source.options.proxyPath, then to built-in defaults.
+  proxyPath: {
+    http: "/api/nexus",                           // override default /api/request
+    sse: "/api/sse",                              // default
+    ws: "wss://realtime.example.com",             // required for WS endpoints
+  },
 
   // Request timeout in milliseconds
   timeout: 15000,
@@ -149,5 +170,5 @@ const user = await caller.users.create({ name: "Jane" })
 
 - [Proxy Mode](/docs/proxy-mode/overview) — architecture and security model
 - [Server Handler](/docs/proxy-mode/api-route) — the server-side handler that processes proxy requests
-- [createQueryCaller](/docs/api/create-query-caller) — React Query wrapper built on top of createProxyCaller
+- [createProxyQueryCaller](/docs/api/create-proxy-query-caller) — React Query wrapper built on top of createProxyCaller
 - [Types](/docs/api/types) — full type definitions

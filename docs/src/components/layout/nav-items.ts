@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react"
 import {
   BookOpen,
   Box,
+  Cloud,
   Code2,
   Globe,
   Layers,
@@ -147,6 +148,19 @@ export const docsNav: NavSection[] = [
     ],
   },
   {
+    label: "Deployment",
+    icon: Cloud,
+    items: [
+      { title: "Overview", href: "/docs/deployment/overview" },
+      { title: "Standalone Server", href: "/docs/deployment/standalone-server" },
+      { title: "Redis Adapters", href: "/docs/deployment/redis" },
+      { title: "Replication Guide", href: "/docs/deployment/replication" },
+      { title: "Docker", href: "/docs/deployment/docker" },
+      { title: "Kubernetes", href: "/docs/deployment/kubernetes" },
+      { title: "Cloudflare Workers", href: "/docs/deployment/cloudflare" },
+    ],
+  },
+  {
     label: "API Reference",
     icon: Code2,
     items: [
@@ -155,6 +169,7 @@ export const docsNav: NavSection[] = [
       { title: "createCaller", href: "/docs/api/create-caller" },
       { title: "createProxyCaller", href: "/docs/api/create-proxy-caller" },
       { title: "createQueryCaller", href: "/docs/api/create-query-caller" },
+      { title: "createProxyQueryCaller", href: "/docs/api/create-proxy-query-caller" },
       { title: "createHandler", href: "/docs/api/api-route" },
       { title: "HttpClient", href: "/docs/api/instance" },
       { title: "HTTPError", href: "/docs/api/http-error" },

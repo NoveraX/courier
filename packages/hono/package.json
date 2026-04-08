@@ -4,7 +4,15 @@
   "description": "Hono adapter for @noverax/nexus — Web Standard proxy handler",
   "author": "NoveraX",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noverax/nexus.git",
+    "directory": "packages/hono"
+  },
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "sideEffects": false,
   "main": "./lib/index.js",
   "module": "./lib/index.js",
@@ -22,6 +30,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "dev": "tsup --watch"
   },

@@ -66,7 +66,7 @@ import { createProxyCaller } from "@noverax/nexus"
 import type { api } from "~/lib/sources"
 
 export const caller = createProxyCaller<typeof api>({
-  proxyUrl: "/api/request",
+  proxyPath: { http: "/api/request" },
 })
 ```
 
@@ -190,6 +190,55 @@ async function handleSubmit() {
 
 <Callout variant="tip" title="@tanstack/vue-query">
 For advanced caching and mutation management, consider using `@tanstack/vue-query` alongside `createProxyCaller`. Nexus proxy callers return standard promises, so they work seamlessly with any data-fetching library.
+</Callout>
+
+## Realtime (SSE & WebSocket)
+
+The Nuxt adapter currently exposes **HTTP only**. There is no `nexusSSEHandler` or `nexusWSAttach` export, on purpose: Nitro/H3's WebSocket layer (`crossws`) is still flagged experimental and its production behavior across deployment targets (`node-server`, `bun`, `cloudflare`, `vercel-edge`) is not yet stable enough to ship as a first-class adapter API. SSE through Nitro works in Node, but pinning the public API to it before WS lands would create a split contract we'd then have to deprecate.
+
+**Once Nitro/H3 ship a production-grade WebSocket API**, `nexusSSEHandler` and `nexusWSAttach` will be added to `@noverax/nexus-nuxt` in parallel with the other 5 framework adapters (`express`, `hono`, `fastify`, `nestjs`, `next`).
+
+In the meantime, run a [standalone Nexus server](/docs/deployment/standalone-server) alongside Nuxt for any SSE or WebSocket endpoints, and point `proxyPath.{sse,ws}` at it:
+
+```ts title="composables/useCaller.ts"
+import { createProxyCaller } from "@noverax/nexus"
+import type { api } from "~/lib/sources"
+
+export const caller = createProxyCaller<typeof api>({
+  proxyPath: {
+    http: "/api/request",                          // handled by Nuxt
+    sse:  "http://localhost:4400/api/stream",      // handled by standalone server
+    ws:   "ws://localhost:4400/api/ws",            // handled by standalone server
+  },
+})
+```
+
+## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
+
+To wire your Nuxt server into Studio, call `connectStudio` from a Nitro plugin so it runs once on server boot. Pass `appOrigin` so the Studio Playground proxy executor can resolve relative `proxyPath.{sse,ws}` values into absolute URLs — Node `fetch` and `WebSocket` reject relative URLs, so this is required whenever your `proxyPath` does not already include a full `http(s)://...` prefix.
+
+```ts title="server/plugins/nexus-studio.ts"
+import { connectStudio } from "@noverax/nexus-studio-core"
+import "~/lib/sources"  // side-effect import — registers sources via defineApi()
+
+export default defineNitroPlugin(() => {
+  if (process.env.NODE_ENV === "production") return
+
+  connectStudio({
+    framework: "nuxt",
+    appOrigin: "http://localhost:3000",  // your Nuxt dev server URL
+  })
+})
+```
+
+Alternatively, set `NEXUS_APP_URL` instead of passing `appOrigin` explicitly:
+
+```bash
+NEXUS_APP_URL=http://localhost:3000 nuxt dev
+```
+
+<Callout variant="warn" title="No magic default">
+There is no `localhost:3000` auto-fallback. If `appOrigin` is missing, clicking "Subscribe" on an SSE/WS endpoint in Studio Playground proxy mode throws `ConfigurationError("APP_ORIGIN_NOT_CONFIGURED")` with a pointer back to this section. The correct value depends on your runtime — custom port, Docker host, HTTPS, reverse proxy — and a wrong guess would silently route requests to nowhere.
 </Callout>
 
 ## Project structure

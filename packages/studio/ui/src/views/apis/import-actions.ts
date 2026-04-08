@@ -1,6 +1,5 @@
 /**
  * Async operations and selection reducers for the import wizard.
- * Extracted from use-import.ts to keep hook file under 150 lines.
  */
 
 import type {

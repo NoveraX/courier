@@ -4,7 +4,15 @@
   "description": "NestJS adapter for @noverax/nexus — module + middleware handler",
   "author": "NoveraX",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noverax/nexus.git",
+    "directory": "packages/nestjs"
+  },
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "sideEffects": false,
   "main": "./lib/index.js",
   "module": "./lib/index.js",
@@ -22,6 +30,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "dev": "tsup --watch"
   },
@@ -32,10 +41,14 @@
     "@noverax/nexus": "*"
   },
   "peerDependencies": {
-    "@nestjs/common": ">=10"
+    "@nestjs/common": ">=10",
+    "ws": ">=8"
   },
   "peerDependenciesMeta": {
     "@nestjs/common": {
+      "optional": true
+    },
+    "ws": {
       "optional": true
     }
   }

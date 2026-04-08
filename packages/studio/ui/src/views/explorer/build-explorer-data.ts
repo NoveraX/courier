@@ -119,6 +119,7 @@ function buildEndpoint(
       fullPath: resolveFullPath(srcName, grpName, epName, sourceMap, requests),
       httpMethod: realMethod ?? inferHttpMethod(epInfo.type ?? "untyped", epName),
       endpointType: epInfo.type ?? "untyped",
+      transport: epInfo.transport,
       hasVariablesSchema: epInfo.hasVariablesSchema,
       hasResponseSchema: epInfo.hasResponseSchema,
       middleware: epInfo.middleware ?? [],

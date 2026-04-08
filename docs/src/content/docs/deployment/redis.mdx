@@ -1,0 +1,228 @@
+export const metadata = {
+  title: "Redis Adapters",
+  description: "Scale Nexus realtime across multiple replicas with Redis Pub/Sub, Streams, and Presence adapters.",
+}
+
+## When You Need Redis
+
+Memory adapters work perfectly for single-process deployments. Switch to Redis when:
+
+- Running **multiple replicas** (K8s, Docker Swarm, PM2 cluster)
+- A WS message published on replica A must reach clients on replica B
+- SSE clients reconnect to a **different replica** and need event history
+- Presence tracking must be **consistent** across all replicas
+
+## Installation
+
+```bash
+npm install @noverax/nexus-redis ioredis
+```
+
+`ioredis` is a peer dependency — you manage the Redis connection yourself.
+
+## Pub/Sub Adapter
+
+Routes WebSocket broadcast messages across replicas via Redis Pub/Sub.
+
+```ts title="adapters.ts"
+import Redis from "ioredis"
+import { createRedisPubSub } from "@noverax/nexus-redis"
+
+const pubsub = createRedisPubSub({
+  publisher: new Redis(process.env.REDIS_URL),    // dedicated connection for PUBLISH
+  subscriber: new Redis(process.env.REDIS_URL),   // dedicated connection for SUBSCRIBE
+  prefix: "nexus:",                                // channel key prefix (default: "")
+})
+
+await pubsub.connect()
+```
+
+<Callout variant="warning" title="Two connections required">
+  Redis enters subscriber mode on `SUBSCRIBE`, blocking other commands. You **must** provide separate `publisher` and `subscriber` connections.
+</Callout>
+
+### Echo Prevention
+
+Each adapter instance generates a unique `origin` UUID. Messages are tagged with this origin, and the adapter skips messages from itself — preventing echo loops in multi-replica setups.
+
+```ts
+const pubsub = createRedisPubSub({
+  publisher: new Redis(process.env.REDIS_URL),
+  subscriber: new Redis(process.env.REDIS_URL),
+  origin: process.env.HOSTNAME,  // optional: use pod name as origin
+})
+```
+
+## Stream Adapter
+
+Persists SSE events in Redis Streams for `Last-Event-ID` resume across replicas.
+
+```ts title="adapters.ts"
+import Redis from "ioredis"
+import { createRedisStream } from "@noverax/nexus-redis"
+
+const stream = createRedisStream({
+  redis: new Redis(process.env.REDIS_URL),
+  prefix: "nexus:stream:",      // stream key prefix (default: "")
+  maxLen: 1000,                  // auto-trim MAXLEN per stream (default: 1000, 0 = no trim)
+})
+
+await stream.connect()
+```
+
+### How Resume Works
+
+1. Client connects with `Last-Event-ID: 1711234567890-0`
+2. Server calls `stream.getHistory(topic, lastEventId, limit)`
+3. Redis `XRANGE` returns events **after** the given ID (exclusive start)
+4. Server replays missed events, then switches to live streaming
+
+### Auto-Trim
+
+Streams are trimmed on every `append()` using Redis approximate `MAXLEN ~`. This keeps memory bounded while allowing minor overallocation for performance.
+
+## Presence Adapter
+
+Tracks online users across replicas using Redis ZSET (scores) + HASH (metadata).
+
+```ts title="adapters.ts"
+import Redis from "ioredis"
+import { createRedisPresence } from "@noverax/nexus-redis"
+
+const presence = createRedisPresence({
+  redis: new Redis(process.env.REDIS_URL),
+  prefix: "nexus:presence:",    // key prefix (default: "presence:")
+})
+
+await presence.connect()
+```
+
+### Data Structure
+
+Each topic creates two Redis keys:
+
+| Key | Type | Purpose |
+|-----|------|---------|
+| `{prefix}score:{topic}` | ZSET | member = connectionId, score = lastSeenAt (ms) |
+| `{prefix}meta:{topic}` | HASH | field = connectionId, value = packed JSON |
+
+### Heartbeat & Sweep
+
+```ts title="presence-loop.ts"
+// Client sends heartbeat — updates ZSET score
+await presence.heartbeat("room:general", connectionId)
+
+// Periodic sweep removes stale entries (atomic Lua script)
+const stale = await presence.sweep("room:general", Date.now() - 30_000)
+// stale = [{ connectionId, userId, metadata, joinedAt }]
+```
+
+### Diff Events
+
+Subscribe to join/leave events per topic:
+
+```ts
+const unsubscribe = presence.onDiff("room:general", (diff) => {
+  for (const entry of diff.joins) {
+    console.log(`${entry.userId} joined`)
+  }
+  for (const entry of diff.leaves) {
+    console.log(`${entry.userId} left`)
+  }
+})
+```
+
+## Full Setup Example
+
+Wire all three adapters together:
+
+```ts title="adapters.ts"
+import Redis from "ioredis"
+import { createRedisPubSub, createRedisStream, createRedisPresence } from "@noverax/nexus-redis"
+
+const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379"
+
+export const pubsub = createRedisPubSub({
+  publisher: new Redis(redisUrl),
+  subscriber: new Redis(redisUrl),
+  prefix: "nexus:",
+})
+
+export const stream = createRedisStream({
+  redis: new Redis(redisUrl),
+  prefix: "nexus:stream:",
+  maxLen: 5000,
+})
+
+export const presence = createRedisPresence({
+  redis: new Redis(redisUrl),
+  prefix: "nexus:presence:",
+})
+
+export async function connectAdapters(): Promise<void> {
+  await Promise.all([pubsub.connect(), stream.connect(), presence.connect()])
+}
+
+export async function disconnectAdapters(): Promise<void> {
+  await Promise.all([pubsub.disconnect(), stream.disconnect(), presence.disconnect()])
+}
+```
+
+## Health Monitoring
+
+Each adapter exposes `isHealthy()`:
+
+```ts title="health-check.ts"
+app.get("/health/redis", (req, res) => {
+  const healthy = pubsub.isHealthy() && stream.isHealthy() && presence.isHealthy()
+  res.status(healthy ? 200 : 503).json({
+    pubsub: pubsub.isHealthy(),
+    stream: stream.isHealthy(),
+    presence: presence.isHealthy(),
+  })
+})
+```
+
+Health is tracked automatically via Redis connection events (`ready`, `close`, `end`).
+
+## Error Handling
+
+All adapters expose `onError()` for observability:
+
+```ts title="error-handling.ts"
+const unsubPubSub = pubsub.onError((error) => {
+  console.error("[PubSub]", error)
+})
+
+const unsubStream = stream.onError((error) => {
+  console.error("[Stream]", error)
+})
+
+const unsubPresence = presence.onError((error) => {
+  console.error("[Presence]", error)
+})
+```
+
+## Failover Behavior
+
+Redis adapters degrade gracefully — they never kill active client connections:
+
+| Scenario | Behavior |
+|----------|----------|
+| Redis temporarily down | PubSub messages are lost (ephemeral). Stream append fails silently. Presence heartbeat skipped. |
+| Redis reconnects | Adapters resume automatically (ioredis handles reconnection) |
+| Subscriber connection lost | New subscriptions re-established on reconnect |
+| `isHealthy()` returns false | Your load balancer should stop sending new connections |
+
+<Callout variant="tip" title="ioredis reconnection">
+  ioredis reconnects automatically by default with exponential backoff. Configure via `retryStrategy` in the Redis constructor.
+</Callout>
+
+## Redis Key Reference
+
+| Adapter | Key Pattern | TTL |
+|---------|------------|-----|
+| PubSub | `{prefix}{topic}` | None (Pub/Sub channels) |
+| Stream | `{prefix}{topic}` | Auto-trim via MAXLEN |
+| Presence (score) | `{prefix}score:{topic}` | Managed by sweep |
+| Presence (meta) | `{prefix}meta:{topic}` | Managed by sweep |

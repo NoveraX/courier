@@ -1,29 +1,46 @@
-import { useRef, useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { WandSparkles } from "lucide-react";
 
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 
-// ── Types ──────────────────────────────────────────────────────────────────
+import { isValidJsonc, stripComments, toggleComment } from "./jsonc-helpers";
+import { highlightJsonc } from "./jsonc-highlight";
+
+// Re-export for existing consumers (request-panel, ws-compose-panel, playground-utils)
+export { stripComments };
 
 interface JsonEditorProps {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   className?: string;
+  onSubmit?: () => void;
 }
 
-// ── Component ──────────────────────────────────────────────────────────────
-
-export function JsonEditor({ value, onChange, placeholder, className }: JsonEditorProps): React.ReactElement {
+export function JsonEditor({
+  value,
+  onChange,
+  placeholder,
+  className,
+  onSubmit,
+}: JsonEditorProps): React.ReactElement {
   const jsonIndent = useStudioStore((s) => s.settings.jsonIndent);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isValid = isValidJsonc(value);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const ta = e.currentTarget;
+
+    // Cmd+Enter or Ctrl+Enter → submit
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && onSubmit) {
+      e.preventDefault();
+      e.stopPropagation();
+      onSubmit();
+      return;
+    }
 
     // Cmd+/ or Ctrl+/ → toggle line comment
     if ((e.metaKey || e.ctrlKey) && e.key === "/") {
@@ -54,7 +71,15 @@ export function JsonEditor({ value, onChange, placeholder, className }: JsonEdit
       onChange(next);
       requestAnimationFrame(() => { ta.selectionStart = start + 2; ta.selectionEnd = start + 2; });
     }
-  }, [value, onChange]);
+  }, [value, onChange, onSubmit]);
+
+  const handlePrettify = useCallback(() => {
+    try {
+      onChange(JSON.stringify(JSON.parse(stripComments(value)), null, jsonIndent));
+    } catch {
+      /* skip — invalid JSON */
+    }
+  }, [value, onChange, jsonIndent]);
 
   return (
     <div className={cn("relative flex flex-col", className)}>
@@ -101,7 +126,7 @@ export function JsonEditor({ value, onChange, placeholder, className }: JsonEdit
               size="icon"
               aria-label="Prettify JSON"
               className="size-5 text-muted-foreground/40 hover:text-foreground"
-              onClick={() => { try { onChange(JSON.stringify(JSON.parse(stripComments(value)), null, jsonIndent)); } catch { /* skip */ } }}
+              onClick={handlePrettify}
             >
               <WandSparkles className="size-3" />
             </Button>
@@ -111,85 +136,4 @@ export function JsonEditor({ value, onChange, placeholder, className }: JsonEdit
       </div>
     </div>
   );
-}
-
-// ── JSONC helpers (JSON with comments) ──────────────────────────────────────
-
-/** Strip // comments from JSONC text */
-export function stripComments(text: string): string {
-  return text.replace(/^\s*\/\/.*$/gm, "").replace(/,(\s*[}\]])/g, "$1");
-}
-
-/** Validate JSONC — strips comments before parsing */
-function isValidJsonc(str: string): boolean {
-  try { JSON.parse(stripComments(str)); return true; } catch { return false; }
-}
-
-// ── Toggle comment ──────────────────────────────────────────────────────────
-
-function toggleComment(
-  text: string, selStart: number, selEnd: number,
-): { text: string; start: number; end: number } {
-  const lines = text.split("\n");
-  const startLine = text.slice(0, selStart).split("\n").length - 1;
-  const endLine = text.slice(0, selEnd).split("\n").length - 1;
-
-  const allCommented = lines.slice(startLine, endLine + 1)
-    .every((l) => l.trimStart().startsWith("//"));
-
-  let offset = 0;
-  for (let i = startLine; i <= endLine; i++) {
-    if (allCommented) {
-      // Uncomment: remove `// ` or `//`
-      const idx = lines[i].indexOf("//");
-      if (idx === -1) continue;
-      const hasSpace = lines[i][idx + 2] === " ";
-      const removed = hasSpace ? 3 : 2;
-      lines[i] = lines[i].slice(0, idx) + lines[i].slice(idx + removed);
-      if (i === startLine) offset -= removed;
-    } else {
-      const indent = lines[i].match(/^(\s*)/)?.[1] ?? "";
-      lines[i] = `${indent}// ${lines[i].slice(indent.length)}`;
-      if (i === startLine) offset += 3;
-    }
-  }
-
-  return { text: lines.join("\n"), start: selStart + offset, end: selEnd + offset };
-}
-
-// ── JSONC syntax highlighting ───────────────────────────────────────────────
-
-const JSONC_PATTERNS: [RegExp, string][] = [
-  [/\/\/.*$/gm, "text-zinc-600 italic"],                // comments (dimmed)
-  [/"(?:[^"\\]|\\.)*"\s*(?=:)/g, "text-cyan-400"],      // property keys
-  [/"(?:[^"\\]|\\.)*"/g, "text-emerald-400"],            // string values
-  [/\b-?\d+\.?\d*(?:[eE][+-]?\d+)?\b/g, "text-sky-400"], // numbers
-  [/\b(?:true|false|null)\b/g, "text-amber-400"],        // keywords
-];
-
-function highlightJsonc(code: string): React.ReactNode[] {
-  const matches: { start: number; end: number; cls: string }[] = [];
-
-  for (const [regex, cls] of JSONC_PATTERNS) {
-    regex.lastIndex = 0;
-    for (const m of code.matchAll(regex)) {
-      matches.push({ start: m.index, end: m.index + m[0].length, cls });
-    }
-  }
-
-  matches.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
-
-  const nodes: React.ReactNode[] = [];
-  let pos = 0;
-  let key = 0;
-
-  for (const m of matches) {
-    if (m.start < pos) continue;
-    if (m.start > pos) nodes.push(code.slice(pos, m.start));
-    nodes.push(<span key={key++} className={m.cls}>{code.slice(m.start, m.end)}</span>);
-    pos = m.end;
-  }
-
-  if (pos < code.length) nodes.push(code.slice(pos));
-  return nodes;
 }

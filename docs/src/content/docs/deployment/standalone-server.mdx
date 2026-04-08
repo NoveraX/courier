@@ -1,0 +1,251 @@
+export const metadata = {
+  title: "Standalone Server",
+  description: "Run a dedicated Nexus HTTP + WebSocket server with createNexusServer — health checks, CORS, graceful shutdown, and connection registries.",
+}
+
+## Installation
+
+```bash
+npm install @noverax/nexus-server
+```
+
+## Quick Start
+
+```ts title="server.ts"
+import { createNexusServer } from "@noverax/nexus-server"
+import { sources } from "./api/sources"
+
+const server = await createNexusServer({
+  sources,
+  port: 3001,
+  host: "0.0.0.0",
+  onReady: (url) => console.log(`Nexus ready at ${url}`),
+})
+```
+
+The server handles HTTP (GET/POST), SSE streaming, and WebSocket upgrades on a single port.
+
+## When you need a standalone server for WebSockets
+
+Some runtimes can't host WebSocket upgrades in-process. In those cases the standalone server is the canonical answer for the WS transport — your app continues to handle HTTP/SSE, and `proxyPath.ws` points the browser at this server.
+
+| Runtime | HTTP | SSE | WS |
+|---|---|---|---|
+| Express, Hono, Fastify, NestJS | in-process | in-process | in-process |
+| **Next.js App Router** | in-process | in-process | **standalone server (required)** |
+| **Cloudflare Workers** | in-process | in-process | **standalone server or Durable Objects** |
+| **Vercel Edge / AWS Lambda** | in-process | in-process | **standalone server (required)** |
+| Standalone `@noverax/nexus-server` | in-process | in-process | in-process |
+
+For runtimes in the bottom half of the table, run `@noverax/nexus-server` alongside your app and configure the browser client like this:
+
+```ts title="lib/caller.ts"
+import { createProxyCaller } from "@noverax/nexus"
+import { api } from "@/api/sources"
+
+export const caller = createProxyCaller<typeof api>("api", {
+  source: api,
+  proxyPath: {
+    http: "/api/request",                // hosted by your Next.js / Cloudflare app
+    sse: "/api/sse",                     // hosted by your app
+    ws: process.env.NODE_ENV === "production"
+      ? "wss://realtime.example.com"     // standalone nexus-server
+      : "ws://localhost:3001",
+  },
+})
+```
+
+<Callout variant="warn" title="proxyPath.ws is mandatory for WS endpoints">
+There is no built-in WS default. Calling a WS endpoint without `proxyPath.ws` throws `ConfigurationError("WS_PATH_NOT_CONFIGURED")` with a pointer back to this page. Earlier versions silently fell back to `ws://localhost:3001/api/ws`, which produced dev-only success and prod-only failures — gone in v2.
+</Callout>
+
+In dev you can run the standalone server alongside your Next.js dev server with [`concurrently`](https://www.npmjs.com/package/concurrently) or two terminals. In production, deploy it to any host that supports persistent TCP connections (Fly.io, Railway, Render, EC2, k8s).
+
+## Studio integration & `appOrigin`
+
+If you wire the standalone server into Studio via `instrumentServer`, pass `appOrigin` so the Playground proxy executor knows the server's own URL. This is the URL Studio will hit when a Playground user clicks "Subscribe" on an endpoint hosted by *this* server (typically WS endpoints in a split-host setup).
+
+```ts title="server.ts"
+import { createNexusServer } from "@noverax/nexus-server"
+import { instrumentServer } from "@noverax/nexus-studio-core"
+import { sources } from "./api/sources"
+
+instrumentServer({
+  sources,
+  appOrigin: "http://localhost:3001",  // standalone server's own URL
+})
+
+createNexusServer({ sources, port: 3001 })
+```
+
+In a split-host topology (Next.js hosts HTTP/SSE on 3000, standalone server hosts WS on 3001), each app calls `instrumentServer` with **its own** `appOrigin`. Studio's smart routing then forwards each Playground subscribe to the app whose runtime layer actually hosts the requested endpoint.
+
+## Configuration
+
+```ts title="server.ts"
+import type { PubSubAdapter } from "@noverax/nexus/realtime"
+
+const server = await createNexusServer({
+  // Required
+  sources,
+
+  // Network
+  port: 3001,                        // default: 3001
+  host: "0.0.0.0",                   // default: "localhost"
+  allowedOrigins: ["https://app.example.com"], // CORS + CSWSH (undefined = allow all)
+
+  // SSE
+  sseHeaders: { "X-Accel-Buffering": "no" },  // custom response headers
+  sseMaxLifetimeMs: 300_000,         // 5 min TTL, then client reconnects
+  maxSSEConnections: 10_000,         // 503 when exceeded
+
+  // WebSocket
+  pubsub: redisPubSub,              // for multi-replica (see Redis page)
+  heartbeatIntervalMs: 25_000,       // ping interval (default: 25s)
+  heartbeatTimeoutMs: 10_000,        // pong timeout (default: 10s)
+  maxPayload: 65_536,                // max WS message size (default: 64KB)
+
+  // Lifecycle
+  signals: true,                     // handle SIGTERM/SIGINT (default: true)
+  onReady: (url) => console.log(`Ready: ${url}`),
+})
+```
+
+## Lifecycle Hooks
+
+### SSE Hooks
+
+```ts title="server.ts"
+const server = await createNexusServer({
+  sources,
+  onSSEConnect: ({ connectionId, request, source, group, method }) => {
+    const userId = extractUser(request)
+    return { userId }  // stored as connection metadata
+  },
+  onSSEDisconnect: ({ connectionId, meta, reason, eventCount, totalBytes, duration }) => {
+    console.log(`SSE ${connectionId} closed: ${reason}, ${eventCount} events in ${duration}ms`)
+  },
+  onSSEError: ({ connectionId, meta, error }) => {
+    console.error(`SSE error for ${meta.userId}:`, error)
+  },
+})
+```
+
+The `reason` field is one of: `"complete"`, `"error"`, `"disconnect"`, `"shutdown"`, `"max_lifetime"`.
+
+### WebSocket Hooks
+
+```ts title="server.ts"
+const server = await createNexusServer({
+  sources,
+  onConnect: ({ connectionId, request }) => {
+    const userId = extractUser(request)
+    if (!userId) throw new Error("Unauthorized")  // rejects connection
+    return { userId }  // stored as connection metadata
+  },
+  onDisconnect: ({ connectionId, meta, code }) => {
+    console.log(`WS ${connectionId} (${meta.userId}) closed with code ${code}`)
+  },
+  onError: ({ connectionId, meta, error }) => {
+    console.error(`WS error:`, error)
+  },
+})
+```
+
+<Callout variant="tip" title="Reject connections">
+  Throw from `onConnect` or `onSSEConnect` to reject the connection. The error message is sent to the client.
+</Callout>
+
+## Connection Registries
+
+The server exposes registries for monitoring and managing active connections:
+
+```ts title="monitoring.ts"
+// SSE connections
+console.log(`Active SSE streams: ${server.sseConnections.count}`)
+const userStreams = server.sseConnections.getByMeta((meta) => meta.userId === "user-1")
+server.sseConnections.disconnect(userStreams[0].connectionId)
+
+// WebSocket connections
+console.log(`Active WS connections: ${server.wsConnections.count}`)
+server.wsConnections.broadcast({ type: "announcement", text: "Maintenance in 5 min" })
+server.wsConnections.broadcastToTopic("chat:general", { type: "message", text: "Hello" })
+```
+
+### SSE Registry API
+
+| Method | Description |
+|--------|-------------|
+| `count` | Number of active streams |
+| `get(id)` | Get connection info by ID |
+| `has(id)` | Check if connection exists |
+| `list()` | All active connections |
+| `getByMeta(fn)` | Filter by metadata predicate |
+| `getByEndpoint(source, group?, method?)` | Filter by endpoint |
+| `disconnect(id, reason?)` | Force-close a stream |
+| `disconnectAll(reason?)` | Force-close all streams |
+
+### WebSocket Registry API
+
+| Method | Description |
+|--------|-------------|
+| `count` | Number of active connections |
+| `get(id)` | Get connection info by ID |
+| `list()` | All active connections |
+| `getByMeta(fn)` | Filter by metadata predicate |
+| `send(id, data)` | Send to specific connection |
+| `broadcast(data, exclude?)` | Broadcast to all |
+| `broadcastToTopic(topic, data, exclude?)` | Broadcast to topic subscribers |
+| `disconnect(id, code?, reason?)` | Force-close connection |
+
+## Health Checks
+
+Two built-in endpoints, no configuration needed:
+
+```bash
+# Liveness — always 200
+curl http://localhost:3001/health
+# {"status":"ok"}
+
+# Readiness — 503 during shutdown
+curl http://localhost:3001/readyz
+# "ready" (200) or "draining" (503)
+```
+
+## Graceful Shutdown
+
+When `signals: true` (default), the server handles `SIGTERM` and `SIGINT`:
+
+1. **Readiness probe** flips to `503` immediately
+2. **SSE streams** receive a retry hint and close gracefully (3s window)
+3. **WebSocket connections** receive close frame with code `1012` (5s window)
+4. **HTTP server** stops accepting new connections
+5. Second signal forces immediate exit
+
+Programmatic shutdown:
+
+```ts
+await server.stop()
+```
+
+## CLI
+
+Run a server directly from the command line:
+
+```bash
+npx nexus-server --config ./nexus.config.ts --port 3001 --host 0.0.0.0
+```
+
+The config file must export `sources`:
+
+```ts title="nexus.config.ts"
+import { sources } from "./api/sources"
+
+export { sources }
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--config` | (required) | Path to config file |
+| `--port` | `3001` | Server port |
+| `--host` | `localhost` | Server host |

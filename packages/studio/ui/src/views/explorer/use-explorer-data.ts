@@ -69,6 +69,7 @@ function augmentFromRequests(catalog: Catalog, requests: RequestEntry[]): Catalo
         hasVariablesSchema: req.hasValidation?.variables ?? false,
         hasResponseSchema: req.hasValidation?.response ?? false,
         origin: "runtime",
+        ...(req.transport && req.transport !== "http" && { transport: req.transport as "sse" | "ws" }),
       };
     }
   }

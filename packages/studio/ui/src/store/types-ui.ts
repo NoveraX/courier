@@ -1,3 +1,5 @@
+import type { ProxyPath } from "@noverax/nexus"
+
 import type { ProxyTiming, RequestStatus, RequestTiming } from "./types"
 
 // ── Theme ───────────────────────────────────────────────────────────────────
@@ -20,6 +22,10 @@ export interface CatalogEndpoint {
   /** Default variables stub from schema introspection */
   variablesStub?: Record<string, unknown>
   origin: "scan" | "runtime" | "both"
+  /** Transport mode — only present for SSE/WS endpoints */
+  transport?: "sse" | "ws"
+  /** True when WS channel has a receive schema (bidirectional) */
+  hasReceiveSchema?: boolean
 }
 
 export interface CatalogGroup {
@@ -29,6 +35,21 @@ export interface CatalogGroup {
 
 export interface CatalogEntry {
   baseURL: string
+  /**
+   * The user-app's own HTTP origin (e.g. `http://localhost:3000`) declared
+   * via `instrumentServer({ appOrigin })`. Used by the Playground to
+   * resolve relative `proxyPath` values into full clickable URLs. Omitted
+   * when the connecting process never declared one (e.g. browser-only
+   * `connectStudio` flow).
+   */
+  appOrigin?: string
+  /**
+   * Per-transport proxy endpoint configuration carried from the source's
+   * `defineApi({ proxyPath })`. Used by the Playground to display the
+   * configured proxy URL as read-only metadata. Omitted when the source
+   * has no `proxyPath` configured.
+   */
+  proxyPath?: ProxyPath
   groups: Record<string, CatalogGroup>
 }
 
@@ -81,6 +102,16 @@ export interface PlaygroundHistoryEntry {
   timing?: RequestTiming
   proxyTiming?: ProxyTiming
   requestHeaders?: Record<string, string>
+  /** Transport used — undefined = HTTP */
+  transport?: "sse" | "ws"
+  /** Streaming lifecycle state */
+  streamStatus?: "connecting" | "streaming" | "complete" | "error"
+  /** Server-assigned requestId for stream tracking (maps to RequestEntry.id) */
+  serverRequestId?: string
+  /** Total event count (synced from RequestEntry) */
+  streamEventCount?: number
+  /** Total bytes received (synced from RequestEntry) */
+  streamTotalBytes?: number
 }
 
 // ── Timeline filters ────────────────────────────────────────────────────────

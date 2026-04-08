@@ -29,7 +29,6 @@ type InnerResult = {
 
 /**
  * Run the endpoint function, measure fetch timing, validate response.
- * Extracted from executeRequest to keep the orchestrator lean.
  */
 export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult> {
   const vars = deps.variables;

@@ -7,6 +7,8 @@
  * - Runtime layers (HMR) — enriched metadata (middleware, paths)
  */
 
+import type { ProxyPath } from "@noverax/nexus";
+
 export interface CatalogEndpoint {
   type: "query" | "mutation" | undefined;
   hasVariablesSchema: boolean;
@@ -16,6 +18,10 @@ export interface CatalogEndpoint {
   middleware?: string[];
   /** Default variables stub from schema introspection */
   variablesStub?: Record<string, unknown>;
+  /** Transport mode for realtime endpoints */
+  transport?: "sse" | "ws";
+  /** Whether the WS endpoint has a receive schema (bidirectional channel) */
+  hasReceiveSchema?: boolean;
   origin: "scan" | "runtime" | "both";
 }
 
@@ -26,6 +32,23 @@ export interface CatalogGroup {
 
 export interface CatalogEntry {
   baseURL: string;
+  /**
+   * The user-app's own HTTP origin (e.g. `http://localhost:3000`) declared
+   * via `instrumentServer({ appOrigin })`. Lets the Playground UI resolve
+   * relative `proxyPath` values into full clickable URLs (e.g. `/api/sse`
+   * → `http://localhost:3000/api/sse`). Runtime-only — the AST scanner
+   * cannot detect this field, and it has no meaningful value in the
+   * browser-only `connectStudio` flow.
+   */
+  appOrigin?: string;
+  /**
+   * Per-transport proxy endpoint configuration carried from the source's
+   * `defineApi({ proxyPath })`. Used by the Playground to display the
+   * configured proxy URL as read-only metadata. Omitted when the source
+   * has no `proxyPath` configured. Only the runtime layer carries this —
+   * the AST scanner cannot statically resolve `proxyPath` values.
+   */
+  proxyPath?: ProxyPath;
   groups: Record<string, CatalogGroup>;
 }
 

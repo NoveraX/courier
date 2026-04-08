@@ -1,0 +1,46 @@
+{
+  "name": "@noverax/nexus-redis",
+  "version": "0.0.0",
+  "description": "Redis adapters for @noverax/nexus realtime — Pub/Sub broadcast + Streams persistence",
+  "author": "NoveraX",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noverax/nexus.git",
+    "directory": "packages/redis"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "@noverax/nexus": "*"
+  },
+  "peerDependencies": {
+    "ioredis": ">=5"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

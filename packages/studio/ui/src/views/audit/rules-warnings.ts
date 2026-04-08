@@ -66,7 +66,7 @@ function unusedProxyMode(stats: Map<string, EndpointStats>): AuditItem[] {
     title: "All requests use direct mode",
     description: "No requests use proxy mode — secrets may be exposed client-side.",
     suggestion: "Use createProxyCaller() for endpoints that require server-side secrets.",
-    codeSuggestion: `const client = createProxyCaller<typeof api>("api", {\n  proxyUrl: "/api/request",\n});`,
+    codeSuggestion: `const client = createProxyCaller<typeof api>("api", {\n  source: api,\n  proxyPath: { http: "/api/request" },\n});`,
   }];
 }
 

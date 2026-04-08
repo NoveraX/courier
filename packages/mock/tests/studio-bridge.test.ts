@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createMockStore } from "../src/store/mock-store";
 import { createNetworkState } from "../src/network/state";
 import { createEventEmitter } from "../src/studio/event-emitter";

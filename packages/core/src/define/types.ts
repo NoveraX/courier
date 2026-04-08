@@ -1,13 +1,45 @@
 import type { BaseOptions, GroupOptions, HttpMethods, HttpResponse } from "../http-client/types";
+import type { ChannelHandlers, SSEHandler, WSPushHandler } from "../realtime/types";
 
-/** Typed endpoint function — the core building block */
+/** Typed HTTP endpoint function — the core building block */
 export type Endpoint<TResponse, TVariables = undefined> = (
   methods: HttpMethods,
   variables: TVariables,
 ) => HttpResponse<TResponse> | Promise<HttpResponse<TResponse>>;
 
+// ---------------------------------------------------------------------------
+// Branded realtime endpoint types (phantom __transport — type-level only)
+// ---------------------------------------------------------------------------
+
+/** SSE endpoint — client receives `SSESubscription<R>` instead of `Promise<R>` */
+export type SSEEndpoint<TResponse, TVariables = undefined> = SSEHandler<TResponse, TVariables> & {
+  readonly __transport: "sse";
+};
+
+/** WS push-only endpoint — server→client streaming via async generator */
+export type WSEndpoint<TResponse, TVariables = undefined> = WSPushHandler<TResponse, TVariables> & {
+  readonly __transport: "ws";
+};
+
+/** WS bidirectional channel — client gets `WSChannel<TSend, TReceive>` */
+export type WSChannelEndpoint<TResponse, TReceive = unknown, TVariables = undefined> = ((
+  variables: TVariables,
+) => ChannelHandlers<TReceive, TResponse, TVariables>) & {
+  readonly __transport: "ws";
+  readonly __receive: TReceive;
+};
+
+// ---------------------------------------------------------------------------
+
+/** Any endpoint function (HTTP, SSE, or WS) — `any` required for contravariant type constraints */
+export type AnyEndpointFn =
+  | Endpoint<any, any>
+  | SSEEndpoint<any, any>
+  | WSEndpoint<any, any>
+  | WSChannelEndpoint<any, any, any>;
+
 /** Record of endpoint functions keyed by method name */
-export type EndpointRecord = Record<string, Endpoint<any, any>>;
+export type EndpointRecord = Record<string, AnyEndpointFn>;
 
 /** Configuration for defineGroup() */
 export type DefineGroupConfig<TEndpoints extends EndpointRecord> = GroupOptions & {
@@ -23,7 +55,7 @@ export type DefinedGroup<TEndpoints extends EndpointRecord = EndpointRecord> = T
 /** Constraint for groups parameter in defineApi() */
 export type GroupRecord = Record<
   string,
-  { options: GroupOptions; [key: string]: Endpoint<any, any> | GroupOptions }
+  { options: GroupOptions; [key: string]: AnyEndpointFn | GroupOptions }
 >;
 
 /** Result of defineApi() with groups */

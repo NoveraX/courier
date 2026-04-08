@@ -76,7 +76,7 @@ export default async function UserPage({ params }: { params: { id: string } }) {
 
 ### Proxy mode — React Query <ModeBadge mode="proxy" />
 
-When using `createQueryCaller`, React Query catches errors automatically and exposes them via the `error` property:
+When using `createProxyQueryCaller`, React Query catches errors automatically and exposes them via the `error` property:
 
 ```ts title="components/users.tsx"
 "use client"

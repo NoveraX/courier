@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { useElapsed } from "@/hooks/use-tick";
 import { useMockStore } from "@/store/mock-slice";
+import { StreamBadge } from "@/components/stream-badge";
+import { WsBadge } from "@/components/ws-badge";
 
 export function StatusBar(): React.ReactNode {
   const requests = useStudioStore((s) => s.requests);
@@ -80,6 +82,8 @@ export function StatusBar(): React.ReactNode {
             {droppedRequests} dropped
           </span>
         )}
+        <StreamBadge />
+        <WsBadge />
         {paused && <span className="font-medium text-warning-foreground">REC PAUSED</span>}
       </div>
 

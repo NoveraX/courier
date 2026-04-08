@@ -25,7 +25,8 @@ export function PlaygroundView(): React.ReactElement {
   const hasApp = sessions.some((s) => s.framework !== "unknown");
 
   const pg = usePlayground(search);
-  const { send, sending } = useSendRequest();
+  const { send, sending, streaming, unsubscribe } = useSendRequest();
+  const isRealtime = pg.endpointInfo?.transport === "sse" || pg.endpointInfo?.transport === "ws";
 
   const handleSend = useCallback(() => {
     if (!pg.canSend || sending) return;
@@ -36,9 +37,10 @@ export function PlaygroundView(): React.ReactElement {
       variables: pg.variables,
       headers: pg.headers,
       mode: pg.mode,
+      transport: pg.endpointInfo?.transport,
     });
-    pg.setResponseTab("body");
-  }, [send, sending, pg]);
+    pg.setResponseTab(isRealtime ? "stream" : "body");
+  }, [send, sending, pg, isRealtime]);
 
   // Cmd+Enter to send
   useEffect(() => {
@@ -58,7 +60,7 @@ export function PlaygroundView(): React.ReactElement {
     pg.setVariables(entry.variables);
     pg.setHeaders(entry.headers);
     pg.setMode(entry.mode);
-    pg.setResponseTab("body");
+    pg.setResponseTab(entry.transport ? "stream" : "body");
   };
 
   if (!connected || !hasApp) {
@@ -85,14 +87,17 @@ export function PlaygroundView(): React.ReactElement {
           group={pg.group}
           method={pg.method}
           mode={pg.mode}
+          sourceInfo={pg.sourceInfo}
           endpointInfo={pg.endpointInfo}
           sending={sending}
           canSend={pg.canSend}
+          streaming={streaming}
           onSourceChange={pg.setSource}
           onGroupChange={pg.setGroup}
           onMethodChange={pg.setMethod}
           onModeChange={pg.setMode}
           onSend={handleSend}
+          onUnsubscribe={unsubscribe}
           historySlot={
             <HistoryBar
               activeId={activeResponse?.id ?? null}

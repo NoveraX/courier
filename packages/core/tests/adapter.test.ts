@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type * as ExecuteModule from "../src/utils/execute";
 
 vi.mock("../src/utils/execute", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/utils/execute")>();
+  const actual = await importOriginal<typeof ExecuteModule>();
   return {
     ...actual,
     executeRequest: vi.fn(),

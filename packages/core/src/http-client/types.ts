@@ -1,4 +1,5 @@
 import type { Middleware } from "../middleware/types";
+import type { ProxyPath } from "../proxy-caller/proxy-path";
 
 export type HttpMethod = "get" | "post" | "put" | "patch" | "del" | "head";
 
@@ -107,6 +108,15 @@ export type BaseOptions = MergeOptions &
     deduplicate?: boolean;
     /** Middleware pipeline applied to every request in order */
     middleware?: Middleware[];
+    /**
+     * Proxy endpoint paths for HTTP / SSE / WS transports. Carried as
+     * deployment metadata on the source so Studio and `createProxyCaller`
+     * can resolve concrete URLs without hard-coded conventions. Each
+     * field accepts either a relative path (resolved against the runtime
+     * origin) or an absolute URL. See `ProxyPath` for the per-transport
+     * defaults and the rationale for the WS field having no default.
+     */
+    proxyPath?: ProxyPath;
   };
 
 export type MergeOptions = {
@@ -123,10 +133,24 @@ export type PathOptions = (request?: Request) => PathOptionsResult | Promise<Pat
 
 type PathOptionsResult = Record<string, boolean | number | string | null | undefined> | undefined;
 
-export type Context = {
+/**
+ * Public request context — passed by users via createCaller defaults or per-call.
+ * Carries the original Request/Response and forwarded headers for SSR scenarios
+ * (cookie propagation, header forwarding, etc.).
+ */
+export type RequestContext = {
   req?: Request;
   res?: Response;
   headers?: Headers;
+};
+
+/**
+ * Internal execution context — extends RequestContext with adapter-only metadata.
+ * Set by framework adapters (apiRoute, sseRoute, ws handler) and read by
+ * executeRequest, middleware, and studio instrumentation. Not part of the
+ * public API for direct callers.
+ */
+export type Context = RequestContext & {
   /** HTTP method of the proxy request (set by apiRoute) */
   proxyMethod?: "GET" | "POST";
   /** Override mode for studio events (e.g. playground replay preserving original mode) */

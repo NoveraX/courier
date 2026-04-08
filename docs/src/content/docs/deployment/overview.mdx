@@ -1,0 +1,62 @@
+export const metadata = {
+  title: "Deployment Overview",
+  description: "Choose the right deployment strategy for your Nexus application — standalone server, framework adapter, single or multi-replica.",
+}
+
+## Deployment Models
+
+Nexus supports two deployment models for realtime features (SSE and WebSocket):
+
+| Model | Best For | Packages |
+|-------|----------|----------|
+| **Framework adapter** | Apps already using Express, Fastify, Hono, or NestJS | `@noverax/nexus-express`, `-fastify`, `-hono`, `-nestjs` |
+| **Standalone server** | Next.js (WS needs separate process), dedicated realtime service | `@noverax/nexus-server` |
+
+<Callout variant="info" title="Next.js limitation">
+  Next.js App Router cannot handle WebSocket upgrades. Use `sseRoute()` for SSE, and run a separate `@noverax/nexus-server` for WebSocket support.
+</Callout>
+
+## Single vs Multi-Replica
+
+| | Single Replica | Multi-Replica |
+|---|---|---|
+| **Adapters** | Memory (built-in, zero config) | Redis (`@noverax/nexus-redis`) |
+| **SSE resume** | `createMemoryStream()` | `createRedisStream()` |
+| **WS broadcast** | `createMemoryPubSub()` | `createRedisPubSub()` |
+| **Presence** | `createMemoryPresence()` | `createRedisPresence()` |
+| **Use case** | Development, single-process prod | K8s, Docker Swarm, any horizontal scaling |
+
+Memory adapters are the default — they work out of the box with zero configuration. Switch to Redis adapters when you need multiple server instances sharing state.
+
+## Decision Tree
+
+1. **Do you need realtime?** (SSE or WebSocket)
+   - No → standard `apiRoute()` / `nexusHandler()` is enough
+   - Yes → continue
+
+2. **Which framework?**
+   - Next.js → `sseRoute()` for SSE + `@noverax/nexus-server` for WS
+   - Express / Fastify / Hono / NestJS → framework adapters handle both SSE and WS natively
+   - No framework → `@noverax/nexus-server` standalone
+
+3. **How many replicas?**
+   - Single → memory adapters (default)
+   - Multiple → Redis adapters + sticky sessions
+
+## Health Checks
+
+Every Nexus server (standalone or framework adapter) provides two health endpoints:
+
+- **`GET /health`** — always returns `200 { "status": "ok" }` (liveness probe)
+- **`GET /readyz`** — returns `200` when ready, `503` during shutdown (readiness probe)
+
+Use these with Kubernetes, Docker health checks, or load balancer configuration.
+
+## Next Steps
+
+- [Standalone Server](/docs/deployment/standalone-server) — full API and CLI reference
+- [Redis Adapters](/docs/deployment/redis) — multi-replica setup
+- [Replication Guide](/docs/deployment/replication) — per-framework examples
+- [Docker](/docs/deployment/docker) — Dockerfile, Compose, and Swarm
+- [Kubernetes](/docs/deployment/kubernetes) — manifests, ingress, HPA
+- [Cloudflare Workers](/docs/deployment/cloudflare) — edge deployment

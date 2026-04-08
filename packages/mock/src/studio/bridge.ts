@@ -1,3 +1,7 @@
+import { randomUUID } from "node:crypto";
+
+import { logger } from "@noverax/nexus";
+
 import type { MockServer } from "../server/create-mock-server";
 import { createCommandHandler } from "./command-handler";
 import { createEventEmitter } from "./event-emitter";
@@ -34,7 +38,7 @@ export async function connectMockToStudio(
       reconnectionAttempts: 10,
     });
 
-    const sessionId = `mock_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const sessionId = `mock_${randomUUID()}`;
     const serverId = name ?? `mock-server-${sessionId}`;
 
     const ctx: BridgeContext = {
@@ -96,7 +100,11 @@ export async function connectMockToStudio(
         socket.disconnect();
       },
     };
-  } catch {
+  } catch (err) {
+    logger.warn(
+      "MockBridge",
+      `Failed to connect to Studio at ${host}:${port}: ${err instanceof Error ? err.message : "unknown"}`,
+    );
     return undefined;
   }
 }

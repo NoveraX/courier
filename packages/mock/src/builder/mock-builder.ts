@@ -1,4 +1,12 @@
-import type { EnhancedMockBuilder, MockHandlerFn, ResolvedHandler, SequenceEntry } from "../types";
+import type { SSEEvent } from "@noverax/nexus/realtime";
+import type {
+  EnhancedMockBuilder,
+  MockChannelFn,
+  MockHandlerFn,
+  MockStreamFn,
+  ResolvedHandler,
+  SequenceEntry,
+} from "../types";
 
 /** Callback invoked when a NEW handler needs to be pushed onto the stack */
 export type OnRegister = (handler: ResolvedHandler) => void;
@@ -133,6 +141,31 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
         handler.status = 200;
         return current;
       };
+      handler.isError = false;
+      return builder;
+    },
+
+    stream(fn) {
+      ensureOwnHandler();
+      handler.transport = "sse";
+      handler.streamFn = fn as MockStreamFn;
+      handler.fn = () => undefined;
+      handler.isError = false;
+      return builder;
+    },
+
+    emits(events) {
+      const gen: MockStreamFn = async function* () {
+        for (const event of events) yield event as SSEEvent;
+      };
+      return builder.stream(gen as MockStreamFn<TResponse, TVariables>);
+    },
+
+    channel(fn) {
+      ensureOwnHandler();
+      handler.transport = "ws";
+      handler.channelFn = fn as MockChannelFn;
+      handler.fn = () => undefined;
       handler.isError = false;
       return builder;
     },

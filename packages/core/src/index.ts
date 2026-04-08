@@ -1,4 +1,22 @@
-export { type AdapterHandler, createHandler } from "./adapter";
+export {
+  type AdapterHandler,
+  type ConnectionInfo,
+  type ConnectionRegistry,
+  createHandler,
+  createWSHandler,
+  type HandlerConfig,
+  type NexusWSOptions,
+  type SSEBroadcastEvent,
+  type SSEBroadcastResult,
+  type SSECloseReason,
+  type SSEConnectionInfo,
+  type SSEConnectionRegistry,
+  type SSELifecycleConfig,
+  sendAuthRequired,
+  type WebSocketLike,
+  type WSHandler,
+  type WSHandlerConfig,
+} from "./adapter";
 export { type CallerDefaults, createCaller } from "./caller";
 export {
   buildClientProxy,
@@ -10,12 +28,24 @@ export {
   type TypedClient,
   type WithOptions,
 } from "./client";
-export { HTTPError, isHTTPError } from "./error";
+export type {
+  SSEEndpoint,
+  WSChannelEndpoint,
+  WSEndpoint,
+} from "./define/types";
+export {
+  ConfigurationError,
+  type ConfigurationErrorCode,
+  HTTPError,
+  isConfigurationError,
+  isHTTPError,
+} from "./error";
 export { createFetch, type FetchClient, type FetchClientOptions } from "./fetch";
 export type {
   CallOptions,
   Context,
   HttpResponse,
+  RequestContext,
   UploadProgress,
 } from "./http-client/types";
 export { createLogger, type Logger, type LogLevel, logger } from "./logger";
@@ -36,10 +66,49 @@ export type {
 export {
   createProxyCaller,
   createProxyCallerFn,
+  mergeProxyPath,
   type ProxyCallerDefaults,
+  type ProxyPath,
+  type ResolveOrigin,
+  resolveProxyPath,
   type UntypedCallerFn,
 } from "./proxy-caller";
-export { type StudioHooks, studioHooks } from "./studio";
+export {
+  AuthError,
+  ConnectionError,
+  ForbiddenError,
+  fromErrorCode,
+  isRealtimeError,
+  RateLimitError,
+  RealtimeError,
+  TimeoutError,
+} from "./realtime";
+export {
+  abortPlayground,
+  registerPlaygroundAbort,
+  type StudioHooks,
+  studioHooks,
+} from "./studio";
+export {
+  composeBackend,
+  createDirectHTTPExecutor,
+  createDirectSSEFactory,
+  createDirectWSChannelFactory,
+  createDirectWSPushFactory,
+  createProxyHTTPExecutor,
+  createProxySSEFactory,
+  createProxyWSChannelFactory,
+  createProxyWSPushFactory,
+  type DirectHTTPDefaults,
+  type DirectSSEDefaults,
+  type HTTPExecutor,
+  type ProxySSEDefaults,
+  type ProxyWSDefaults,
+  type SSEFactory,
+  type StreamingFactories,
+  type WSChannelFactory,
+  type WSPushFactory,
+} from "./transport";
 export type { CallerFn, EndpointKey, ResolveEndpoint, SuccessResponse } from "./types";
 export { executeRequest } from "./utils/execute";
 export {
@@ -48,5 +117,5 @@ export {
   type RequestPayloadInput,
   toInternalMethod,
 } from "./utils/helpers";
-export type { CacheConfig, ValidationIssue } from "./validation";
+export type { CacheConfig, Transport, ValidationIssue } from "./validation";
 export { isValidationError, ValidationError } from "./validation";

@@ -1,0 +1,79 @@
+import type { SSEEvent } from "../realtime/types";
+
+/** Standard SSE response headers */
+export const SSE_HEADERS: Record<string, string> = {
+  "Content-Type": "text/event-stream",
+  "Cache-Control": "no-cache, no-transform",
+  Connection: "keep-alive",
+  "X-Accel-Buffering": "no",
+};
+
+/**
+ * Build CORS headers for cross-origin SSE responses.
+ * Pass the result as `sseHeaders` in HandlerConfig.
+ *
+ * Includes `Vary: Origin` (required by CORS spec when origin is not `*`),
+ * and `Access-Control-Allow-Credentials` for cookie/auth forwarding.
+ *
+ * For multiple allowed origins, dynamically pick the requesting origin:
+ * ```ts
+ * const origin = request.headers.get("Origin") ?? "";
+ * const allowed = ["https://app.example.com", "https://admin.example.com"];
+ * if (allowed.includes(origin)) {
+ *   config.sseHeaders = buildSSECorsHeaders(origin);
+ * }
+ * ```
+ *
+ * @param origin - Allowed origin (e.g. "https://app.example.com")
+ * @param credentials - Include credentials header (default: true)
+ * @returns CORS header record to spread into sseHeaders config
+ *
+ * @example
+ * createHandler(sources, {
+ *   sseHeaders: buildSSECorsHeaders("https://app.example.com"),
+ * });
+ */
+export function buildSSECorsHeaders(origin: string, credentials = true): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Origin": origin,
+    Vary: "Origin",
+  };
+  if (credentials) {
+    headers["Access-Control-Allow-Credentials"] = "true";
+  }
+  return headers;
+}
+
+/** Format an SSE event into wire format (text/event-stream) */
+export function formatSSEEvent<TData>(event: SSEEvent<TData>, seq?: number): string {
+  const lines: string[] = [];
+
+  const id = event.id ?? (seq !== undefined ? String(seq) : undefined);
+  if (id !== undefined) lines.push(`id: ${sanitizeField(id)}`);
+  if (event.event) lines.push(`event: ${sanitizeField(event.event)}`);
+  if (event.retry !== undefined) lines.push(`retry: ${event.retry}`);
+
+  const data =
+    event.data === undefined
+      ? ""
+      : typeof event.data === "string"
+        ? event.data
+        : JSON.stringify(event.data);
+
+  // Multi-line data: each line gets its own `data:` prefix
+  for (const line of data.split("\n")) {
+    lines.push(`data: ${line}`);
+  }
+
+  return lines.join("\n") + "\n\n";
+}
+
+/** SSE heartbeat comment — keeps connection alive through proxies */
+export const SSE_HEARTBEAT = ": ping\n\n";
+
+const NEWLINE_RE = /[\n\r]/g;
+
+/** Strip newlines from SSE field values to prevent injection */
+function sanitizeField(value: string): string {
+  return value.replace(NEWLINE_RE, "");
+}

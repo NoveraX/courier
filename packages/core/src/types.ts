@@ -1,7 +1,7 @@
 import type { Endpoint } from "./define/types";
-import type { CallOptions, Context, HttpResponse } from "./http-client/types";
+import type { CallOptions, HttpResponse } from "./http-client/types";
 
-export type CallerFn<TSources extends Record<string, any>, TDirect extends boolean = false> = <
+export type CallerFn<TSources extends Record<string, any>> = <
   TKey extends keyof TSources,
   TRaw extends boolean = false,
 >(
@@ -12,21 +12,16 @@ export type CallerFn<TSources extends Record<string, any>, TDirect extends boole
   TEndpoint extends ResolveEndpoint<TSources[TKey], TEndpointKey>,
   TResponse = ExtractResponse<TEndpoint extends Endpoint<any, any> ? TEndpoint : unknown>,
 >(
-  ...arguments_: EndpointArguments<TEndpointKey, TEndpoint, TDirect>
+  ...arguments_: EndpointArguments<TEndpointKey, TEndpoint>
 ) => EndpointResult<TRaw, TResponse>;
 
 type EndpointArguments<
   TEndpointKey,
   TEndpoint extends Endpoint<any, any>,
-  TDirect extends boolean = false,
   TVariables = ExtractVariables<TEndpoint>,
-> = TDirect extends false
-  ? TVariables extends undefined
-    ? [endpoint: TEndpointKey]
-    : [endpoint: TEndpointKey, variables: TVariables]
-  : TVariables extends undefined
-    ? [endpoint: TEndpointKey, context?: Context]
-    : [endpoint: TEndpointKey, variables: TVariables, context?: Context];
+> = TVariables extends undefined
+  ? [endpoint: TEndpointKey]
+  : [endpoint: TEndpointKey, variables: TVariables];
 
 type ExtractResponse<TCandidate extends Endpoint<any, any>> =
   TCandidate extends Endpoint<infer TResponse, any> ? TResponse : unknown;

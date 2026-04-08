@@ -1,0 +1,198 @@
+export const metadata = { title: "createProxyQueryCaller", description: "Creates a proxy-mode React Query client with dot-notation hooks for every endpoint group, routed through the server adapter.", mode: "proxy" }
+
+## Import
+
+```ts
+import { createProxyQueryCaller } from "@noverax/nexus-react"
+```
+
+<Callout variant="info" title="Peer dependency">
+`@noverax/nexus-react` requires `@tanstack/react-query` as a peer dependency. It re-exports `QueryClient`, `QueryClientProvider`, `useQueryClient`, `HydrationBoundary`, and `dehydrate` for convenience.
+</Callout>
+
+## Signature
+
+Accepts a source name and optional `ProxyCallerDefaults` (same as `createProxyCaller`). Returns a Proxy-based client with dot-notation access to hooks for each group.
+
+```ts
+const q = createProxyQueryCaller<typeof api>(source, defaults?)
+```
+
+## Return Type
+
+The returned object provides dot-notation access to every group defined in your API. Each group exposes:
+
+```ts
+type QueryGroupClient<G> = {
+  useQuery(method, options?): UseQueryResult<R, HTTPError>
+  useSuspenseQuery(method, options?): UseSuspenseQueryResult<R, HTTPError>
+  useInfiniteQuery(method, options): UseInfiniteQueryResult<R, HTTPError>
+  useMutation(method, options?): UseMutationResult<R, HTTPError, V>
+  prefetchQuery(queryClient, method, options?): Promise<void>
+}
+```
+
+## Setup
+
+```ts title="lib/query.ts"
+import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { api } from "@/api"
+
+export const q = createProxyQueryCaller<typeof api>("api", {
+  source: api,
+  proxyPath: { http: "/api/request" },  // optional, defaults to /api/request
+  timeout: 10000,
+  credentials: "include",
+})
+```
+
+The `defaults` argument is a `ProxyCallerDefaults` (same shape as [`createProxyCaller`](/docs/api/create-proxy-caller)). Notable fields:
+
+- `proxyPath` — per-transport endpoint paths. `http` and `sse` have built-in defaults; `ws` is mandatory for `useChannel` and has no default. Caller-level fields are merged per-transport over `source.options.proxyPath`.
+- `source` — the actual `defineApi()` result. Required so the React hooks can resolve SSE/WS metadata and inherit `source.options.proxyPath`.
+
+<Callout variant="warn" title="useChannel requires proxyPath.ws">
+On runtimes that cannot host WebSockets in-process (Next.js App Router, Cloudflare Workers, Vercel Edge, AWS Lambda) you must point `proxyPath.ws` at a [standalone `@noverax/nexus-server`](/docs/deployment/standalone-server). Calling `useChannel` without `proxyPath.ws` configured throws `ConfigurationError("WS_PATH_NOT_CONFIGURED")` at the first subscribe.
+</Callout>
+
+## useQuery
+
+Wraps `@tanstack/react-query`'s `useQuery`. All standard options are supported.
+
+```tsx title="components/user-list.tsx"
+"use client"
+
+import { q } from "@/lib/query"
+
+export function UserList() {
+  const { data, isLoading, error } = q.users.useQuery("getAll", {
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  })
+
+  if (isLoading) return <p>Loading...</p>
+  if (error) return <p>Error: {error.message}</p>
+
+  return (
+    <ul>
+      {data?.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+### Variables
+
+When an endpoint expects variables, the `variables` option becomes required — enforced by TypeScript.
+
+```ts
+const { data } = q.users.useQuery("getById", {
+  variables: { id: "123" },
+  enabled: !!id,
+})
+```
+
+## useMutation
+
+Variables are passed to the `mutate` function, not to the hook.
+
+```tsx title="components/create-user.tsx"
+"use client"
+
+import { q } from "@/lib/query"
+import { useQueryClient } from "@noverax/nexus-react"
+
+export function CreateUserForm() {
+  const queryClient = useQueryClient()
+
+  const { mutate, isPending } = q.users.useMutation("create", {
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["api", "users", "getAll"] })
+    },
+  })
+
+  return (
+    <form onSubmit={(e) => {
+      e.preventDefault()
+      const formData = new FormData(e.currentTarget)
+      mutate({ name: formData.get("name") as string })
+    }}>
+      <input name="name" required />
+      <button disabled={isPending}>
+        {isPending ? "Creating..." : "Create"}
+      </button>
+    </form>
+  )
+}
+```
+
+## Query Keys
+
+Query keys are auto-generated with a hierarchical format: `[source, group, method, variables?]`:
+
+```ts
+// Without variables: [source, group, method]
+// With variables:    [source, group, method, variables]
+
+q.users.useQuery("getAll")          // → ["api", "users", "getAll"]
+q.users.useQuery("getById", {
+  variables: { id: "123" }
+})                                   // → ["api", "users", "getById", { id: "123" }]
+
+// Cache invalidation
+queryClient.invalidateQueries({ queryKey: ["api", "users", "getAll"] })
+queryClient.invalidateQueries({ queryKey: ["api", "users"] })  // entire group
+queryClient.invalidateQueries({ queryKey: ["api"] })            // entire source
+```
+
+## Per-Request Options
+
+Use `requestOptions` to pass `CallOptions` alongside React Query options:
+
+```ts
+const { data } = q.users.useQuery("getAll", {
+  requestOptions: {
+    timeout: 5000,
+    method: "GET",  // cacheable GET proxy
+  },
+  staleTime: 30_000,
+})
+
+const { mutate } = q.files.useMutation("upload", {
+  requestOptions: {
+    onUploadProgress: (progress) => {
+      setProgress(progress.percent)
+    },
+  },
+})
+```
+
+## prefetchQuery
+
+Prefetch data in Server Components for instant hydration on the client:
+
+```ts title="app/users/page.tsx"
+import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/nexus-react"
+import { q } from "@/lib/query"
+
+export default async function UsersPage() {
+  const queryClient = new QueryClient()
+
+  await q.users.prefetchQuery(queryClient, "getAll")
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <UserList />
+    </HydrationBoundary>
+  )
+}
+```
+
+## Related
+
+- [React Query Setup](/docs/react-query/setup) — full setup guide with QueryClientProvider
+- [useQuery Guide](/docs/react-query/use-query) — in-depth usage patterns
+- [useMutation Guide](/docs/react-query/use-mutation) — mutations with optimistic updates
+- [createProxyCaller](/docs/api/create-proxy-caller) — the underlying proxy caller

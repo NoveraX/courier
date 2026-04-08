@@ -4,7 +4,15 @@
   "description": "SvelteKit adapter for @noverax/nexus — Web Standard proxy handler",
   "author": "NoveraX",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noverax/nexus.git",
+    "directory": "packages/sveltekit"
+  },
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "sideEffects": false,
   "main": "./lib/index.js",
   "module": "./lib/index.js",

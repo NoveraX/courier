@@ -12,7 +12,7 @@ src/
 │   ├── posts.ts          # posts group
 │   └── files.ts          # files group
 ├── lib/
-│   └── caller.ts         # createCaller / createProxyCaller / createQueryCaller
+│   └── caller.ts         # createCaller / createProxyCaller / createProxyQueryCaller
 ├── app/                  # (Next.js) or pages/ (Nuxt) or routes/ (SvelteKit)
 │   ├── api/
 │   │   └── request/
@@ -68,17 +68,17 @@ Keeping each group in its own file makes it easy to find and modify endpoints. T
 Create the appropriate caller for your use case:
 
 ```ts title="lib/caller.ts (React Query)"
-import { createQueryCaller } from "@noverax/nexus-query"
+import { createProxyQueryCaller } from "@noverax/nexus-react"
 import { api } from "@/api"
 
-export const { useQuery, useMutation, useSuspenseQuery, caller } = createQueryCaller<typeof api>()
+export const { useQuery, useMutation, useSuspenseQuery, caller } = createProxyQueryCaller<typeof api>()
 ```
 
 ```ts title="lib/caller.ts (Vanilla / Vue / Svelte)"
 import { createProxyCaller } from "@noverax/nexus"
 import { api } from "@/api"
 
-export const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
+export const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
 ```
 
 ```ts title="lib/server-caller.ts (Server-side)"

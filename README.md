@@ -75,7 +75,7 @@ npm install @noverax/nexus
 
 ```bash
 # React Query integration
-npm install @noverax/nexus-query @tanstack/react-query
+npm install @noverax/nexus-react @tanstack/react-query
 
 # Next.js (API routes + Server Actions)
 npm install @noverax/nexus-next
@@ -151,10 +151,10 @@ export const { GET, POST } = apiRoute(sources)
 
 ```ts
 // lib/query.ts
-import { createQueryCaller } from "@noverax/nexus-query"
+import { createProxyQueryCaller } from "@noverax/nexus-react"
 import type { api } from "@/api/sources"
 
-export const q = createQueryCaller<typeof api>("api")
+export const q = createProxyQueryCaller<typeof api>("api")
 ```
 
 **3. Client Components:**
@@ -257,9 +257,9 @@ export default nexusHandler(sources)
 ```ts
 // composables/useCaller.ts
 import { createProxyCaller } from "@noverax/nexus"
-import type { api } from "~/api/sources"
+import { api } from "~/api/sources"
 
-export const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
+export const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })
 ```
 
 **3. Components:**
@@ -311,11 +311,12 @@ Works with any React setup. Pair with Express, Hono, or Fastify on the server si
 
 ```ts
 // lib/query.ts
-import { createQueryCaller } from "@noverax/nexus-query"
+import { createProxyQueryCaller } from "@noverax/nexus-react"
 import type { api } from "./api/sources"
 
-export const q = createQueryCaller<typeof api>("api", {
-  proxyUrl: "/api/request", // points to your backend proxy route
+export const q = createProxyQueryCaller<typeof api>("api", {
+  source: api,
+  proxyPath: { http: "/api/request" }, // points to your backend proxy route
 })
 ```
 
@@ -323,7 +324,7 @@ export const q = createQueryCaller<typeof api>("api", {
 
 ```tsx
 import { q } from "./lib/query"
-import { QueryClient, QueryClientProvider } from "@noverax/nexus-query"
+import { QueryClient, QueryClientProvider } from "@noverax/nexus-react"
 
 const queryClient = new QueryClient()
 
@@ -359,9 +360,9 @@ The core caller is framework-agnostic — use it with `ref`, `reactive`, or any 
 ```ts
 // composables/useCaller.ts
 import { createProxyCaller } from "@noverax/nexus"
-import type { api } from "@/api/sources"
+import { api } from "@/api/sources"
 
-export const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
+export const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })
 ```
 
 ```vue
@@ -402,9 +403,9 @@ async function createUser(name: string, email: string) {
 ```ts
 // lib/caller.ts
 import { createProxyCaller } from "@noverax/nexus"
-import type { api } from "./api/sources"
+import { api } from "./api/sources"
 
-export const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
+export const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })
 ```
 
 ```svelte
@@ -675,7 +676,7 @@ Both modes share the same API definition, the same middleware chain, and the sam
 | Package | Description | |
 | --- | --- | --- |
 | [`@noverax/nexus`](./packages/core) | Core — caller factories, HTTP client, middleware, validation, testing | [![npm](https://img.shields.io/npm/v/@noverax/nexus?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus) |
-| [`@noverax/nexus-query`](./packages/query) | React Query hooks — `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery` | [![npm](https://img.shields.io/npm/v/@noverax/nexus-query?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-query) |
+| [`@noverax/nexus-react`](./packages/react) | React hooks — `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery`, `useSubscription` | [![npm](https://img.shields.io/npm/v/@noverax/nexus-react?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-react) |
 | [`@noverax/nexus-next`](./packages/next) | Next.js — `apiRoute` handler + `createAction` for Server Actions | [![npm](https://img.shields.io/npm/v/@noverax/nexus-next?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-next) |
 | [`@noverax/nexus-express`](./packages/express) | Express middleware adapter | [![npm](https://img.shields.io/npm/v/@noverax/nexus-express?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-express) |
 | [`@noverax/nexus-fastify`](./packages/fastify) | Fastify plugin adapter | [![npm](https://img.shields.io/npm/v/@noverax/nexus-fastify?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-fastify) |

@@ -4,7 +4,15 @@
   "description": "Express adapter for @noverax/nexus — proxy middleware handler",
   "author": "NoveraX",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noverax/nexus.git",
+    "directory": "packages/express"
+  },
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "sideEffects": false,
   "main": "./lib/index.js",
   "module": "./lib/index.js",
@@ -22,6 +30,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "dev": "tsup --watch"
   },
@@ -32,6 +41,12 @@
     "@noverax/nexus": "*"
   },
   "peerDependencies": {
-    "express": ">=4"
+    "express": ">=4",
+    "ws": ">=8"
+  },
+  "peerDependenciesMeta": {
+    "ws": {
+      "optional": true
+    }
   }
 }

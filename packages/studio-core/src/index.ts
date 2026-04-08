@@ -1,11 +1,25 @@
 export {
   type ConnectStudioOptions,
   connectStudio,
+  detectAppOrigin,
+  getAppOrigin,
+  getAppOriginParsed,
   getStudioConnection,
   type InstrumentServerOptions,
   instrumentServer,
   type StudioConnection,
+  setAppOrigin,
 } from "./connect";
+export {
+  cancelAllPlaygroundStreams,
+  cancelPlaygroundStream,
+  handlePlaygroundStream,
+  type StreamPayload,
+} from "./connect/playground-stream";
+export {
+  trackWSStream,
+  untrackWSStream,
+} from "./connect/playground-ws-send";
 export { EventBus } from "./event-bus";
 export type {
   AnyStudioEvent,
@@ -42,6 +56,7 @@ export type {
   ValidationPassEvent,
   ValidationStartEvent,
 } from "./events";
+export { isSafeHttpOrigin } from "./lib/is-safe-http-origin";
 export { extractSourceMap } from "./source-map";
 export {
   getSources,

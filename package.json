@@ -10,7 +10,7 @@
     "packages/*"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "repository": {
     "type": "git",
@@ -43,6 +43,7 @@
     "h3": "^2.0.1-rc.16",
     "hono": "^4.12.5",
     "husky": "^9.1.7",
+    "ioredis": "^5.10.1",
     "jsdom": "^28.1.0",
     "lint-staged": "^16.3.2",
     "next": "^16.1.6",
@@ -68,6 +69,8 @@
     "typecheck": "turbo run typecheck",
     "format": "biome format --write packages/",
     "check": "biome check packages/",
+    "check:names": "node scripts/check-name-conflicts.mjs",
+    "check:names:test": "vitest run scripts/check-name-conflicts.test.mjs",
     "release": "HUSKY=0 semantic-release",
     "prepare": "husky"
   },

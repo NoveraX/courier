@@ -12,7 +12,9 @@ import {
 /** Computes aggregated metrics from a filtered set of requests */
 export function computeNodeMetrics(requests: RequestEntry[]): NodeMetrics {
   const completed = requests.filter((r) => r.status !== "pending");
-  if (completed.length === 0) return emptyMetrics();
+  const streaming = requests.some((r) => r.streamStatus === "streaming");
+
+  if (completed.length === 0 && !streaming) return emptyMetrics();
 
   const successes = completed.filter((r) => r.status === "success").length;
   const errors = completed.filter(
@@ -28,13 +30,13 @@ export function computeNodeMetrics(requests: RequestEntry[]): NodeMetrics {
 
   return {
     totalRequests: completed.length,
-    successRate: (successes / completed.length) * 100,
+    successRate: completed.length > 0 ? (successes / completed.length) * 100 : 100,
     avgResponseTime: avg(durations),
     p95ResponseTime: percentile(durations, 95),
     errorCount: errors,
     avgSize: avg(sizes),
     lastRequestAt: lastRequest?.startedAt ?? null,
-    isActive: isRecentlyActive(lastRequest?.startedAt ?? null),
+    isActive: streaming || isRecentlyActive(lastRequest?.startedAt ?? null),
   };
 }
 

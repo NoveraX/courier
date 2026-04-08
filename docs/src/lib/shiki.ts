@@ -18,6 +18,10 @@ const LANGUAGES: BundledLanguage[] = [
   "css",
   "html",
   "vue",
+  "yaml",
+  "dockerfile",
+  "nginx",
+  "toml",
 ]
 
 // Use globalThis to persist the highlighter across Next.js HMR / workers

@@ -94,7 +94,7 @@ describe("createProxyCaller", () => {
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
       const url = fetchSpy.mock.calls[0]![0];
-      expect(url).toBe("/api/request");
+      expect(url).toMatch(/\/api\/request$/);
 
       const body = fetchSpy.mock.calls[0]![1].body as FormData;
       expect(body).toBeInstanceOf(FormData);
@@ -105,13 +105,17 @@ describe("createProxyCaller", () => {
   });
 
   describe("defaults", () => {
-    it("uses custom proxyUrl", async () => {
+    it("uses custom proxyPath.http", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api", { proxyUrl: "/api/custom-route" }) as any;
+      const client = createProxyCaller("api", {
+        proxyPath: { http: "/api/custom-route" },
+      }) as any;
       await client.users.list();
 
-      expect(fetchSpy.mock.calls[0]![0]).toBe("/api/custom-route");
+      // resolveProxyPath returns an absolute URL — assert by suffix so the
+      // test is independent of the test runner's location.host.
+      expect(fetchSpy.mock.calls[0]![0]).toMatch(/\/api\/custom-route$/);
     });
 
     it("applies default timeout via AbortSignal", async () => {

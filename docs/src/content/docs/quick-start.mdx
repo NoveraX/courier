@@ -49,16 +49,16 @@ export const caller = createCaller(api)
 import { createProxyCaller } from "@noverax/nexus"
 import type { api } from "@/api/sources"
 
-export const caller = createProxyCaller<typeof api>({ proxyUrl: "/api/request" })
+export const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
 ```
 
 **React Query** — hooks with full type inference:
 
 ```ts title="lib/query.ts"
-import { createQueryCaller } from "@noverax/nexus-query"
+import { createProxyQueryCaller } from "@noverax/nexus-react"
 import type { api } from "@/api/sources"
 
-export const q = createQueryCaller<typeof api>("api")
+export const q = createProxyQueryCaller<typeof api>("api")
 ```
 
 <Callout variant="tip" title="Use both modes together">

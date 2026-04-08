@@ -5,6 +5,7 @@ import type { EndpointNodeData } from "../../types";
 import { getHealthLevel } from "../../compute-metrics";
 import { HealthIndicator } from "../../shared/health-indicator";
 import { TypeBadge } from "@/components/shared/type-badge";
+import { TransportBadge } from "@/views/playground/transport-badge";
 import { PathDisplay } from "../../shared/path-display";
 import { SchemaIndicators } from "./schema-indicators";
 import { cn } from "@/lib/utils";
@@ -39,7 +40,7 @@ function EndpointNodeComponent({ data, selected }: NodeProps): React.ReactElemen
         <span className="text-body-sm font-semibold text-foreground truncate flex-1">
           {d.method}
         </span>
-        <TypeBadge type={d.endpointType} />
+        {d.transport ? <TransportBadge transport={d.transport} /> : <TypeBadge type={d.endpointType} />}
         <HealthIndicator level={health} pulse={d.metrics.isActive} />
       </div>
 

@@ -1,8 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 
-import { useRequestDetail } from "@/hooks/use-request-detail";
-
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface ExplorerNavigation {
@@ -15,17 +13,15 @@ interface ExplorerNavigation {
 
 export function useExplorerNavigation(): ExplorerNavigation {
   const navigate = useNavigate();
-  const { selectRequest } = useRequestDetail();
 
   const navigateToTimeline = useCallback(
     (requestId?: string) => {
-      if (requestId) {
-        selectRequest(requestId);
-      } else {
-        void navigate({ to: "/timeline" });
-      }
+      void navigate({
+        to: "/timeline",
+        search: requestId ? { selectedReq: requestId, detailTab: "general" } : {},
+      });
     },
-    [navigate, selectRequest],
+    [navigate],
   );
 
   const openPlayground = useCallback(

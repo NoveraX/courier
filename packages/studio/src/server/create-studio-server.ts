@@ -10,23 +10,35 @@ import { createLogger } from "@noverax/nexus";
 import compression from "compression";
 import express from "express";
 import type { RequestHandler } from "express-serve-static-core";
+import type { DefaultEventsMap } from "socket.io";
 import { Server as SocketIOServer } from "socket.io";
 import { setProjectRoot } from "../context";
 import { registerApisRoutes } from "./apis-routes";
+import { clearAppNamespaceState } from "./app-namespace-state";
 import { CatalogStore } from "./catalog";
 import { startFileWatcher } from "./file-watcher";
 import { initProject } from "./init";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { clearBuffer } from "./session-buffer";
 import { registerSessionRoutes } from "./session-routes";
+import type { AppSocketData } from "./socket-data";
 import { setupAppNamespace, setupUiNamespace } from "./socket-handlers";
 import type { SessionInfo, StudioServer, StudioServerOptions } from "./types";
 import { createWatcherStatus } from "./watcher-status";
 
 const log = createLogger("Studio");
 
+/** Vite dev-server origin used by the Studio UI during local development */
+const STUDIO_UI_DEV_ORIGIN = "http://localhost:4382";
+
 export function createStudioServer(options: StudioServerOptions = {}): StudioServer {
-  const { port = 4380, host = "localhost", projectRoot = process.cwd(), onReady } = options;
+  const {
+    port = 4380,
+    host = "localhost",
+    projectRoot = process.cwd(),
+    onReady,
+    extraCorsOrigins = [],
+  } = options;
 
   setProjectRoot(projectRoot);
 
@@ -35,9 +47,25 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   const sessions = new Map<string, SessionInfo>();
   const catalogStore = new CatalogStore();
 
-  const io = new SocketIOServer(httpServer, {
+  const corsOrigins = [
+    `http://${host}:${port}`,
+    `http://localhost:${port}`,
+    STUDIO_UI_DEV_ORIGIN,
+    ...extraCorsOrigins,
+  ];
+
+  // Type the Server with `AppSocketData` as the SocketData shape so
+  // every namespace it creates inherits the typed `socket.data` contract.
+  // The fields are all optional, so the UI namespace (which never writes
+  // them) satisfies the type vacuously — no per-namespace casts needed.
+  const io = new SocketIOServer<
+    DefaultEventsMap,
+    DefaultEventsMap,
+    DefaultEventsMap,
+    AppSocketData
+  >(httpServer, {
     cors: {
-      origin: [`http://${host}:${port}`, `http://localhost:${port}`, "http://localhost:4382"],
+      origin: corsOrigins,
       methods: ["GET", "POST"],
     },
     serveClient: false,
@@ -136,6 +164,8 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     await mockManager.stop();
     stopWatcher();
     clearBuffer();
+    catalogStore.clear();
+    clearAppNamespaceState();
     sessions.clear();
     io.close();
     return new Promise<void>((resolve, reject) => {

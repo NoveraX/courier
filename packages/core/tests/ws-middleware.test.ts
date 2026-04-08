@@ -1,0 +1,143 @@
+import { describe, expect, it, vi } from "vitest";
+
+import {
+  VALIDATION_FAILED,
+  validateVariablesSafe,
+  runMiddleware,
+} from "../src/adapter/ws-middleware";
+import type { WSSocketContext } from "../src/adapter/ws-context";
+import type { WSMessage } from "../src/realtime/ws/ws-protocol";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
+  ctx: WSSocketContext;
+  sent: WSMessage[];
+} {
+  const sent: WSMessage[] = [];
+  const ctx = {
+    connectionId: "conn-1",
+    requestId: "req-1",
+    sources: {},
+    sendMessage: (msg: WSMessage) => sent.push(msg),
+    request: new Request("http://localhost/ws"),
+    middlewareTimeoutMs: 30000,
+    ...overrides,
+  } as unknown as WSSocketContext;
+  return { ctx, sent };
+}
+
+// ---------------------------------------------------------------------------
+// validateVariablesSafe
+// ---------------------------------------------------------------------------
+
+describe("validateVariablesSafe", () => {
+  it("returns payload when schema has no variables", async () => {
+    const { ctx } = createMockCtx();
+    const msg: WSMessage = { type: "subscribe", id: "1", payload: { name: "test" } };
+    const schema = {};
+
+    const result = await validateVariablesSafe(ctx, msg, schema);
+
+    expect(result).toEqual({ name: "test" });
+  });
+
+  it("returns validated value on success", async () => {
+    const { ctx, sent } = createMockCtx();
+    const msg: WSMessage = { type: "subscribe", id: "2", payload: { id: 42 } };
+    const schema = {
+      variables: {
+        "~standard": {
+          version: 1,
+          vendor: "test",
+          validate: (v: unknown) => ({ value: v }),
+        },
+      },
+    };
+
+    const result = await validateVariablesSafe(ctx, msg, schema);
+
+    expect(result).toEqual({ id: 42 });
+    expect(sent).toHaveLength(0);
+  });
+
+  it("returns VALIDATION_FAILED and sends error on validation failure", async () => {
+    const { ctx, sent } = createMockCtx();
+    const msg: WSMessage = { type: "subscribe", id: "3", payload: "bad" };
+    const schema = {
+      variables: {
+        "~standard": {
+          version: 1,
+          vendor: "test",
+          validate: () => ({ issues: [{ message: "invalid" }] }),
+        },
+      },
+    };
+
+    const result = await validateVariablesSafe(ctx, msg, schema);
+
+    expect(result).toBe(VALIDATION_FAILED);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.error?.code).toBe(4422);
+    expect(sent[0]!.error?.message).toBe("Invalid variables");
+    expect(sent[0]!.id).toBe("3");
+  });
+
+  it("VALIDATION_FAILED is a unique symbol", () => {
+    expect(typeof VALIDATION_FAILED).toBe("symbol");
+    expect(VALIDATION_FAILED).not.toBe(Symbol("validation_failed"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// runMiddleware
+// ---------------------------------------------------------------------------
+
+describe("runMiddleware", () => {
+  it("does nothing when source has no middleware", async () => {
+    const source = { options: {} };
+    const { ctx } = createMockCtx({ sources: { api: source } as never });
+
+    // Should not throw
+    await runMiddleware(ctx, "api", "users", "getAll", {});
+  });
+
+  it("does nothing when middleware array is empty", async () => {
+    const source = { options: { middleware: [] } };
+    const { ctx } = createMockCtx({ sources: { api: source } as never });
+
+    await runMiddleware(ctx, "api", "users", "getAll", {});
+  });
+
+  it("executes middleware chain", async () => {
+    const calls: string[] = [];
+    const middleware = {
+      phase: "before" as const,
+      handler: vi.fn(async () => { calls.push("middleware"); }),
+    };
+    const source = { options: { middleware: [middleware] } };
+    const { ctx } = createMockCtx({ sources: { api: source } as never });
+
+    await runMiddleware(ctx, "api", "users", "getAll", { id: 1 });
+
+    expect(middleware.handler).toHaveBeenCalledOnce();
+  });
+
+  it("rejects on middleware timeout", async () => {
+    const slowMiddleware = {
+      phase: "before" as const,
+      handler: vi.fn(() => new Promise(() => {})), // Never resolves
+    };
+    const source = { options: { middleware: [slowMiddleware] } };
+    const { ctx } = createMockCtx({
+      sources: { api: source } as never,
+      middlewareTimeoutMs: 50,
+    });
+
+    await expect(
+      runMiddleware(ctx, "api", "users", "getAll", {}),
+    ).rejects.toThrow("Middleware timeout (50ms)");
+  });
+});

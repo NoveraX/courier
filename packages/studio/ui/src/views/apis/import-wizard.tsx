@@ -1,22 +1,26 @@
-import { Loader2 } from "lucide-react";
+/**
+ * Multi-step API import wizard dialog.
+ *
+ * The footer (`./import-wizard-footer`) and step indicator dots
+ * (`./import-wizard-step-dot`) are extracted to sibling files so this
+ * shell focuses on routing between the four step views.
+ */
 
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 
 import type { UseImportReturn } from "./use-import";
+import type { ImportStep } from "./types";
 import { ImportStepView } from "./import-step";
-import { SelectStepView } from "./select-step";
 import { OptionsStepView } from "./options-step";
 import { PreviewStepView } from "./preview-step";
-import { countSelectedEndpoints } from "./helpers";
-
-import type { ImportStep } from "./types";
+import { SelectStepView } from "./select-step";
+import { StepDot } from "./import-wizard-step-dot";
+import { WizardFooter } from "./import-wizard-footer";
 
 interface ImportWizardProps {
   wizard: UseImportReturn;
@@ -52,7 +56,6 @@ export function ImportWizard({ wizard }: ImportWizardProps): React.ReactElement 
           </div>
         </DialogHeader>
 
-        {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 pb-4">
           {state.step === "import" && (
             <ImportStepView
@@ -91,110 +94,8 @@ export function ImportWizard({ wizard }: ImportWizardProps): React.ReactElement 
           )}
         </div>
 
-        {/* Fixed footer */}
         <WizardFooter wizard={wizard} />
       </DialogContent>
     </Dialog>
-  );
-}
-
-// ── Wizard footer ────────────────────────────────────────────────────────────
-
-function WizardFooter({ wizard }: { wizard: UseImportReturn }): React.ReactElement {
-  const { state, parsing } = wizard;
-  const selectedCount = countSelectedEndpoints(state.selectedEndpoints);
-
-  return (
-    <div className="flex items-center justify-between border-t bg-muted rounded-b-lg px-6 py-4">
-      {state.step === "import" ? (
-        <span />
-      ) : (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            const prev = state.step === "select" ? "import"
-              : state.step === "options" ? "select"
-              : "options";
-            wizard.goToStep(prev as ImportStep);
-          }}
-        >
-          Back
-        </Button>
-      )}
-
-      {state.step === "import" && (
-        <Button size="sm" disabled={!state.content.trim() || parsing} onClick={wizard.parse}>
-          {parsing && <Loader2 className="mr-1.5 size-3 animate-spin" />}
-          Parse Spec
-        </Button>
-      )}
-
-      {state.step === "select" && (
-        <Button size="sm" disabled={selectedCount === 0} onClick={() => wizard.goToStep("options")}>
-          Configure ({selectedCount})
-        </Button>
-      )}
-
-      {state.step === "options" && (
-        <Button
-          size="sm"
-          disabled={parsing || !state.options.sourceName.trim()}
-          onClick={wizard.preview}
-        >
-          {parsing && <Loader2 className="mr-1.5 size-3 animate-spin" />}
-          Generate Preview
-        </Button>
-      )}
-
-      {state.step === "preview" && (
-        <Button size="sm" disabled={state.writing} onClick={wizard.write}>
-          {state.writing && <Loader2 className="mr-1.5 size-3 animate-spin" />}
-          Write to Disk
-        </Button>
-      )}
-    </div>
-  );
-}
-
-// ── Step dot ────────────────────────────────────────────────────────────────
-
-function StepDot({ label, index, active, completed, onClick }: {
-  label: string;
-  index: number;
-  active: boolean;
-  completed: boolean;
-  onClick?: () => void;
-}): React.ReactElement {
-  return (
-    <>
-      {index > 0 && (
-        <div className={cn(
-          "h-px flex-1 transition-colors",
-          completed ? "bg-accent-brand" : "bg-border-subtle",
-        )} />
-      )}
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={!onClick}
-        className={cn(
-          "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium transition-all",
-          active && "bg-accent-brand/15 text-accent-brand ring-1 ring-accent-brand/30",
-          completed && "text-accent-brand cursor-pointer hover:bg-accent-brand/10",
-          !active && !completed && "text-muted-foreground",
-        )}
-      >
-        <span className={cn(
-          "flex size-4 items-center justify-center rounded-full text-[9px] font-bold",
-          active && "bg-accent-brand text-white",
-          completed && "bg-accent-brand/20 text-accent-brand",
-          !active && !completed && "bg-muted/60 text-muted-foreground",
-        )}>
-          {completed ? "✓" : index + 1}
-        </span>
-        {label}
-      </button>
-    </>
   );
 }

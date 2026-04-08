@@ -1,3 +1,5 @@
 export { createProxyCaller } from "./create-proxy-caller";
 export { createProxyCallerFn, type ProxyCallerDefaults } from "./create-proxy-caller-fn";
+export { mergeProxyPath, type ProxyPath } from "./proxy-path";
+export { type ResolveOrigin, resolveProxyPath } from "./resolve-path";
 export type { UntypedCallerFn } from "./types";

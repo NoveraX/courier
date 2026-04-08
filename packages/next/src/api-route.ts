@@ -1,3 +1,4 @@
+import type { HandlerConfig } from "@noverax/nexus";
 import { createHandler } from "@noverax/nexus";
 import type { Sources } from "@noverax/nexus/define";
 import type { NextRequest } from "next/server";
@@ -12,11 +13,14 @@ import type { NextRequest } from "next/server";
  * export const { GET, POST } = apiRoute(sources);
  * ```
  */
-export function apiRoute(sources: Sources): {
+export function apiRoute(
+  sources: Sources,
+  config?: HandlerConfig,
+): {
   GET: (request: NextRequest) => Promise<Response>;
   POST: (request: NextRequest) => Promise<Response>;
 } {
-  const { handleGet, handlePost } = createHandler(sources);
+  const { handleGet, handlePost } = createHandler(sources, config);
 
   return {
     GET: (request: NextRequest) => handleGet(request),

@@ -46,9 +46,12 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
     });
   }
 
+  const httpStatus =
+    error instanceof HTTPError && error.status >= 200 && error.status <= 599 ? error.status : 502;
+
   const responseResult =
     error instanceof HTTPError
-      ? { status: error.status, headers: error.headers, data: error.data }
+      ? { status: httpStatus, headers: error.headers, data: error.data }
       : {
           status: 500,
           headers: new Headers(),

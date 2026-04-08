@@ -126,7 +126,7 @@ After a mutation succeeds, invalidate related queries to trigger a refetch. Use 
 ```ts title="components/create-user-form.tsx"
 "use client"
 
-import { useQueryClient } from "@noverax/nexus-query"
+import { useQueryClient } from "@noverax/nexus-react"
 import { q } from "@/lib/query"
 
 export function CreateUserForm() {
@@ -161,7 +161,7 @@ For instant UI feedback, update the cache optimistically before the server respo
 ```ts title="components/user-manager.tsx"
 "use client"
 
-import { useQueryClient } from "@noverax/nexus-query"
+import { useQueryClient } from "@noverax/nexus-react"
 import { q } from "@/lib/query"
 
 type User = { id: number; name: string; email: string }

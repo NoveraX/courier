@@ -1,5 +1,15 @@
-import type { DefinedApi, Endpoint, EndpointRecord, GroupRecord } from "../define/types";
+import type {
+  AnyEndpointFn,
+  DefinedApi,
+  Endpoint,
+  EndpointRecord,
+  GroupRecord,
+  SSEEndpoint,
+  WSChannelEndpoint,
+  WSEndpoint,
+} from "../define/types";
 import type { CallOptions, HttpResponse } from "../http-client/types";
+import type { SSESubscription, WSChannel } from "../realtime/types";
 
 /** Options for .with() — all CallOptions except rawData (controlled via .raw) */
 export type WithOptions = Omit<CallOptions, "rawData">;
@@ -16,13 +26,36 @@ type EndpointMethod<TResponse, TVariables, TRaw extends boolean> = [TVariables] 
     ? (variables?: TVariables) => EndpointReturn<TResponse, TRaw>
     : (variables: TVariables) => EndpointReturn<TResponse, TRaw>;
 
+/** SSE subscription method — returns SSESubscription (not Promise) */
+type SSEMethod<TResponse, TVariables> = [TVariables] extends [undefined]
+  ? () => SSESubscription<TResponse>
+  : {} extends TVariables
+    ? (variables?: TVariables) => SSESubscription<TResponse>
+    : (variables: TVariables) => SSESubscription<TResponse>;
+
+/** WS channel method — returns WSChannel (not Promise) */
+type WSChannelMethod<TResponse, TReceive, TVariables> = [TVariables] extends [undefined]
+  ? () => WSChannel<TReceive, TResponse>
+  : {} extends TVariables
+    ? (variables?: TVariables) => WSChannel<TReceive, TResponse>
+    : (variables: TVariables) => WSChannel<TReceive, TResponse>;
+
+/** Resolve the correct method type based on endpoint transport brand */
+type ResolveMethod<TEndpoint, TRaw extends boolean> =
+  TEndpoint extends SSEEndpoint<infer TResp, infer TVars>
+    ? SSEMethod<TResp, TVars>
+    : TEndpoint extends WSChannelEndpoint<infer TResp, infer TRecv, infer TVars>
+      ? WSChannelMethod<TResp, TRecv, TVars>
+      : TEndpoint extends WSEndpoint<infer TResp, infer TVars>
+        ? SSEMethod<TResp, TVars> // push-only WS uses same iterable API as SSE
+        : TEndpoint extends Endpoint<infer TResp, infer TVars>
+          ? EndpointMethod<TResp, TVars, TRaw>
+          : never;
+
 /** Methods exposed on a group client (excludes 'options' from the group) */
 type GroupMethods<TGroup, TRaw extends boolean> = {
-  [K in keyof TGroup as K extends "options" ? never : K]: TGroup[K] extends Endpoint<
-    infer TResponse,
-    infer TVariables
-  >
-    ? EndpointMethod<TResponse, TVariables, TRaw>
+  [K in keyof TGroup as K extends "options" ? never : K]: TGroup[K] extends AnyEndpointFn
+    ? ResolveMethod<TGroup[K], TRaw>
     : never;
 };
 
@@ -48,13 +81,22 @@ type FlatEndpointMethod<TResponse, TVariables, TRaw extends boolean> = EndpointM
     with(options: WithOptions): FlatEndpointMethod<TResponse, TVariables, TRaw>;
   };
 
+/** Resolve flat method — HTTP gets .raw/.with(), realtime stays plain */
+type ResolveFlatMethod<TEndpoint, TRaw extends boolean> =
+  TEndpoint extends SSEEndpoint<infer TResp, infer TVars>
+    ? SSEMethod<TResp, TVars>
+    : TEndpoint extends WSChannelEndpoint<infer TResp, infer TRecv, infer TVars>
+      ? WSChannelMethod<TResp, TRecv, TVars>
+      : TEndpoint extends WSEndpoint<infer TResp, infer TVars>
+        ? SSEMethod<TResp, TVars>
+        : TEndpoint extends Endpoint<infer TResp, infer TVars>
+          ? FlatEndpointMethod<TResp, TVars, TRaw>
+          : never;
+
 /** Flat endpoint methods at root level */
 type FlatMethods<TEndpoints, TRaw extends boolean> = {
-  [K in keyof TEndpoints as K extends "options" ? never : K]: TEndpoints[K] extends Endpoint<
-    infer TResponse,
-    infer TVariables
-  >
-    ? FlatEndpointMethod<TResponse, TVariables, TRaw>
+  [K in keyof TEndpoints as K extends "options" ? never : K]: TEndpoints[K] extends AnyEndpointFn
+    ? ResolveFlatMethod<TEndpoints[K], TRaw>
     : never;
 };
 
@@ -109,4 +151,4 @@ export type ExecuteBackend = (
   variables: unknown,
   options: Record<string, unknown>,
   raw: boolean,
-) => Promise<unknown>;
+) => unknown;

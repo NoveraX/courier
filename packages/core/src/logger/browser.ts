@@ -31,15 +31,14 @@ const CONSOLE_METHOD: Record<LogLevel, "debug" | "log" | "warn" | "error"> = {
 
 function log(level: LogLevel, context: string, message: string, cause?: unknown): void {
   const method = CONSOLE_METHOD[level];
-  const args = [
+  const args: unknown[] = [
     `%c Nexus %c %c${context}%c ${message}`,
     BADGE_STYLE,
     "",
     CONTEXT_STYLES[level],
     MSG_STYLE,
   ];
-  if (cause != null) args.push(cause as string);
-  // eslint-disable-next-line no-console
+  if (cause != null) args.push(cause);
   console[method](...args);
 }
 

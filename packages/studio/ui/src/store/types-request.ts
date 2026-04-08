@@ -44,4 +44,22 @@ export interface RequestEntry {
   url?: string
   pinned?: boolean
   sessionId: string
+  // Stream (SSE/WS) fields
+  transport?: "http" | "sse" | "ws"
+  streamStatus?: "streaming" | "complete" | "error"
+  streamEventCount?: number
+  streamTotalBytes?: number
+  streamDuration?: number
+  /** Captured stream events with metadata (capped to last 200) */
+  streamEvents?: StreamEventRecord[]
+}
+
+/** A captured stream event in the request timeline */
+export interface StreamEventRecord {
+  seq: number
+  eventType?: string
+  dataSize: number
+  /** Truncated JSON preview of the event data */
+  dataPreview?: string
+  timestamp: number
 }

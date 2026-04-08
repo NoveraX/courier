@@ -1,17 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import type * as NexusModule from "@noverax/nexus";
 
 const mockHandleGet = vi.fn();
 const mockHandlePost = vi.fn();
 
 vi.mock("@noverax/nexus", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@noverax/nexus")>();
+  const actual = await importOriginal<typeof NexusModule>();
   return {
     ...actual,
     createHandler: vi.fn(() => ({
       handle: vi.fn(),
       handleGet: mockHandleGet,
       handlePost: mockHandlePost,
+      handleSSE: vi.fn(),
+      sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+      shutdownSSE: vi.fn(),
     })),
   };
 });
@@ -59,7 +63,14 @@ describe("apiRoute", () => {
     it("calls createHandler with sources", () => {
       const sources = { users: {}, auth: {} } as any;
       apiRoute(sources);
-      expect(mockCreateHandler).toHaveBeenCalledWith(sources);
+      expect(mockCreateHandler).toHaveBeenCalledWith(sources, undefined);
+    });
+
+    it("forwards HandlerConfig to createHandler", () => {
+      const sources = { users: {} } as any;
+      const config = { allowedOrigins: ["https://app.example.com"] };
+      apiRoute(sources, config);
+      expect(mockCreateHandler).toHaveBeenCalledWith(sources, config);
     });
   });
 

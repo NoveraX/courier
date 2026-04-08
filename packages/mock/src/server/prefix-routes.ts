@@ -1,48 +1,33 @@
-import type { Hono, Context as HonoContext } from "hono";
+/**
+ * Prefix-based REST route registration — public entry point.
+ *
+ * Registers catch-all routes that map real HTTP paths to mock endpoints
+ * based on a list of `PrefixMapping` entries. Wires up CRUD routes;
+ * supporting pieces live in siblings:
+ *
+ * - `prefix-route-types`  — `MappedEndpoint`, `PrefixMapping`, `PrefixRouteConfig`
+ * - `route-helpers`       — pure resolvers (`resolveMethod`, `parseId`, ...)
+ * - `prefix-static-routes` — SSE + static sub-path registration
+ */
 
-/** CRUD operation type for an endpoint */
-export type EndpointOperation =
-  | "list"
-  | "get"
-  | "create"
-  | "update"
-  | "replace"
-  | "upsert"
-  | "delete"
-  | "deleteAll"
-  | "custom";
+import type { Hono } from "hono";
 
-/** Endpoint metadata within a prefix mapping */
-export interface MappedEndpoint {
-  name: string;
-  operation: EndpointOperation;
-  /** Relative path within the group (e.g. "", ":petId", "browse", "categories") */
-  path: string;
-  /** HTTP method for this endpoint (e.g. "GET", "POST") */
-  httpMethod?: string;
-}
+import type { PrefixMapping, PrefixRouteConfig } from "./prefix-route-types";
+import { registerSSERoutes, registerStaticSubPaths } from "./prefix-static-routes";
+import {
+  buildIdVars,
+  parseId,
+  parseQueryParams,
+  resolveByOperation,
+  resolveGetMethod,
+  resolveMethod,
+} from "./route-helpers";
 
-/** Mapping from URL path prefix to group name + endpoint resolver */
-export interface PrefixMapping {
-  /** Group prefix (e.g. "/products") */
-  prefix: string;
-  /** Group name (e.g. "products") */
-  group: string;
-  /** Endpoint names in this group */
-  methods: string[];
-  /** Analyzed endpoints with operation + path info */
-  endpoints?: MappedEndpoint[];
-}
-
-/** Route config needed by prefix routes */
-interface PrefixRouteConfig {
-  handleRequest: (
-    c: HonoContext,
-    group: string,
-    method: string,
-    variables: unknown,
-  ) => Promise<Response>;
-}
+export type {
+  EndpointOperation,
+  MappedEndpoint,
+  PrefixMapping,
+} from "./prefix-route-types";
 
 /**
  * Register catch-all routes that map real HTTP paths to mock endpoints.
@@ -73,6 +58,10 @@ export function registerPrefixRoutes(
         : (resolveByOperation(eps, "list")?.name ?? resolveGetMethod(mapping.methods, variables));
       return config.handleRequest(c, mapping.group, method, variables);
     });
+
+    // SSE endpoints are registered as explicit GET routes at /{prefix}/{name}.
+    // They MUST be registered before /:id to avoid being shadowed by the catch-all.
+    registerSSERoutes(app, prefix, eps ?? [], mapping.group, config);
 
     // Static sub-path endpoints MUST be registered before /:id to avoid being shadowed.
     // These are endpoints with a fixed path segment (e.g. "browse", "categories") that
@@ -149,109 +138,4 @@ export function registerPrefixRoutes(
       return config.handleRequest(c, mapping.group, method, buildIdVars(ep, id));
     });
   }
-}
-
-/**
- * Register explicit routes for endpoints that have a fixed sub-path (not a param).
- * E.g. `GET /adoptions/browse` for an endpoint with path="browse".
- *
- * Must be called before registering `/:id` to prevent the catch-all from matching first.
- */
-function registerStaticSubPaths(
-  app: Hono,
-  prefix: string,
-  endpoints: MappedEndpoint[],
-  group: string,
-  config: PrefixRouteConfig,
-): void {
-  for (const ep of endpoints) {
-    if (!ep.path || ep.path.startsWith(":")) continue;
-
-    const httpMethod = (ep.httpMethod ?? "GET").toUpperCase();
-    const routePath = `/${prefix}/${ep.path}`;
-
-    if (httpMethod === "GET") {
-      app.get(routePath, (c) => {
-        const variables = parseQueryParams(new URL(c.req.url).searchParams);
-        return config.handleRequest(c, group, ep.name, variables);
-      });
-    } else if (httpMethod === "POST") {
-      app.post(routePath, async (c) => {
-        const body = await c.req.json().catch(() => ({}));
-        return config.handleRequest(c, group, ep.name, body);
-      });
-    } else if (httpMethod === "PUT") {
-      app.put(routePath, async (c) => {
-        const body = await c.req.json().catch(() => ({}));
-        return config.handleRequest(c, group, ep.name, body);
-      });
-    } else if (httpMethod === "PATCH") {
-      app.patch(routePath, async (c) => {
-        const body = await c.req.json().catch(() => ({}));
-        return config.handleRequest(c, group, ep.name, body);
-      });
-    } else if (httpMethod === "DELETE") {
-      app.delete(routePath, (c) => config.handleRequest(c, group, ep.name, {}));
-    }
-  }
-}
-
-/** Resolve endpoint by analyzed operation type — the source of truth */
-function resolveByOperation(
-  endpoints: MappedEndpoint[] | undefined,
-  operation: EndpointOperation,
-): MappedEndpoint | undefined {
-  if (!endpoints) return undefined;
-  return (
-    endpoints.find((e) => e.operation === operation && !e.path) ??
-    endpoints.find((e) => e.operation === operation)
-  );
-}
-
-/** Build variables with the correct param name from endpoint path (e.g. ":petId" → { petId: val }) */
-function buildIdVars(ep: MappedEndpoint | undefined, id: string | number): Record<string, unknown> {
-  if (!ep?.path) return { id };
-  const match = ep.path.match(/^:(\w+)/);
-  const paramName = match?.[1];
-  return paramName ? { [paramName]: id, id } : { id };
-}
-
-/** Resolve GET method: if variables have known filter keys, use specific method */
-function resolveGetMethod(methods: string[], variables: Record<string, unknown>): string {
-  for (const [key] of Object.entries(variables)) {
-    const capitalized = key.charAt(0).toUpperCase() + key.slice(1);
-    const exact = `getBy${capitalized}`;
-    if (methods.includes(exact)) return exact;
-    const withoutId = exact.replace(/Id$/, "");
-    if (withoutId !== exact && methods.includes(withoutId)) return withoutId;
-    const stripped = `getBy${capitalized.replace(/Id$/, "")}`;
-    if (stripped !== exact && methods.includes(stripped)) return stripped;
-  }
-  const listMethod = methods.find((m) => /^(list|getAll|findAll|findMany)/.test(m));
-  return listMethod ?? "getAll";
-}
-
-/** Resolve method name: try exact matches first, then regex pattern on available methods */
-function resolveMethod(methods: string[], exact: string[], pattern: RegExp): string {
-  for (const name of exact) {
-    if (methods.includes(name)) return name;
-  }
-  const match = methods.find((m) => pattern.test(m));
-  return match ?? exact[0] ?? "unknown";
-}
-
-/** Parse ID — return number if numeric, string otherwise */
-function parseId(raw: string): string | number {
-  const num = Number(raw);
-  return Number.isNaN(num) ? raw : num;
-}
-
-/** Parse query params, auto-coercing numeric strings to numbers */
-function parseQueryParams(params: URLSearchParams): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of params) {
-    const num = Number(value);
-    result[key] = Number.isNaN(num) ? value : num;
-  }
-  return result;
 }

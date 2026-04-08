@@ -12,4 +12,7 @@ export type {
   EndpointRecord,
   GroupRecord,
   Sources,
+  SSEEndpoint,
+  WSChannelEndpoint,
+  WSEndpoint,
 } from "./types";

@@ -1,54 +1,28 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { AlertTriangle, ChevronDown, ChevronRight, Flame, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
+
 import { SegmentedControl } from "@/components/shared/segmented-control";
 import { cn } from "@/lib/utils";
 import { getSocket } from "@/socket";
 import { useMockStore } from "@/store/mock-slice";
 import { FaultConfigPanel } from "./fault-config";
 import { StopConditionsPanel } from "./stop-conditions";
+import { ChaosPresetPreview } from "./chaos-preset-preview";
+import {
+  CHAOS_PRESETS,
+  DEFAULT_STOP,
+  FORM_DEFAULTS,
+  PRESET_CONFIG,
+  type ChaosFormValues,
+  type ChaosMode,
+} from "./chaos-presets";
 
 import type { ChaosPreset, FaultWeight, MockServerInfo, StopCondition } from "@/store/mock-slice";
 
 interface ChaosControlsProps {
   server: MockServerInfo;
 }
-
-type ChaosMode = "stable" | "degraded" | "unstable" | "down" | "custom";
-
-interface ChaosFormValues {
-  errorRate: number;
-  faultWeights: FaultWeight[];
-}
-
-const CHAOS_PRESETS = [
-  { value: "stable" as const, label: "Stable" },
-  { value: "degraded" as const, label: "Degraded" },
-  { value: "unstable" as const, label: "Unstable" },
-  { value: "down" as const, label: "Down", icon: Flame },
-  { value: "custom" as const, label: "Custom", icon: SlidersHorizontal },
-];
-
-const PRESET_CONFIG: Record<string, { errorRate: number; faultWeights: FaultWeight[] }> = {
-  stable: { errorRate: 0, faultWeights: [] },
-  degraded: { errorRate: 10, faultWeights: [{ type: "500", weight: 60 }, { type: "timeout", weight: 40 }] },
-  unstable: { errorRate: 40, faultWeights: [{ type: "500", weight: 40 }, { type: "503", weight: 30 }, { type: "timeout", weight: 20 }, { type: "reset", weight: 10 }] },
-  down: { errorRate: 100, faultWeights: [{ type: "503", weight: 100 }] },
-};
-
-const DEFAULT_STOP: StopCondition = {
-  enabled: false,
-  errorRateThreshold: 30,
-  errorRateDurationSecs: 30,
-  p99Threshold: 2000,
-  p99DurationSecs: 60,
-  maxDurationMins: 0,
-};
-
-const FORM_DEFAULTS: ChaosFormValues = {
-  errorRate: 30,
-  faultWeights: [{ type: "500", weight: 50 }, { type: "503", weight: 30 }, { type: "timeout", weight: 20 }],
-};
 
 export function ChaosControls({ server }: ChaosControlsProps): React.ReactElement {
   const storePreset = server.chaosPreset;
@@ -66,11 +40,10 @@ export function ChaosControls({ server }: ChaosControlsProps): React.ReactElemen
     defaultValues: FORM_DEFAULTS,
   });
   const showApply = mode === "custom" && (isDirty || customDraft);
-  const rawVals = useWatch({ control });
   // useWatch returns DeepPartial — cast back since defaults are always present
-  const vals = rawVals as ChaosFormValues;
+  const vals = useWatch({ control }) as ChaosFormValues;
 
-  const sendConfig = (rate: number, weights: FaultWeight[], preset: ChaosMode) => {
+  const sendConfig = (rate: number, weights: FaultWeight[], preset: ChaosMode): void => {
     const resolved: ChaosPreset = rate === 0 || preset === "stable" ? "none" : preset;
     useMockStore.getState().updateServer(server.serverId, {
       chaosPreset: resolved,
@@ -84,7 +57,7 @@ export function ChaosControls({ server }: ChaosControlsProps): React.ReactElemen
     });
   };
 
-  const handlePresetChange = (next: ChaosMode) => {
+  const handlePresetChange = (next: ChaosMode): void => {
     if (next === "custom") {
       setCustomDraft(true);
       return;
@@ -94,15 +67,15 @@ export function ChaosControls({ server }: ChaosControlsProps): React.ReactElemen
     sendConfig(cfg.errorRate, cfg.faultWeights, next);
   };
 
-  const handleApplyCustom = () => {
+  const handleApplyCustom = (): void => {
     const rate = vals.errorRate ?? FORM_DEFAULTS.errorRate;
     const weights = vals.faultWeights ?? FORM_DEFAULTS.faultWeights;
     sendConfig(rate, weights, "custom");
-    reset(vals as ChaosFormValues, { keepValues: true });
+    reset(vals, { keepValues: true });
     setCustomDraft(false);
   };
 
-  const handleToggleFault = (type: string) => {
+  const handleToggleFault = (type: string): void => {
     const prev = vals.faultWeights ?? FORM_DEFAULTS.faultWeights;
     const next = prev.find((f) => f.type === type)
       ? prev.filter((f) => f.type !== type)
@@ -110,7 +83,7 @@ export function ChaosControls({ server }: ChaosControlsProps): React.ReactElemen
     setValue("faultWeights", next, { shouldDirty: true });
   };
 
-  const handleAdjustWeight = (type: string, weight: number) => {
+  const handleAdjustWeight = (type: string, weight: number): void => {
     const prev = vals.faultWeights ?? FORM_DEFAULTS.faultWeights;
     const existing = prev.find((f) => f.type === type);
     const next = existing
@@ -151,12 +124,10 @@ export function ChaosControls({ server }: ChaosControlsProps): React.ReactElemen
       <div className="space-y-4 p-4">
         <SegmentedControl options={CHAOS_PRESETS} value={mode} onChange={handlePresetChange} className="w-full" stretch />
 
-        {/* Read-only preset preview */}
         {mode !== "stable" && mode !== "custom" && activeCfg && (
-          <PresetPreview errorRate={activeCfg.errorRate} faultWeights={activeCfg.faultWeights} />
+          <ChaosPresetPreview errorRate={activeCfg.errorRate} faultWeights={activeCfg.faultWeights} />
         )}
 
-        {/* Editable panel for custom mode */}
         {mode === "custom" && (
           <FaultConfigPanel
             errorRate={vals.errorRate ?? FORM_DEFAULTS.errorRate}
@@ -169,7 +140,6 @@ export function ChaosControls({ server }: ChaosControlsProps): React.ReactElemen
           />
         )}
 
-        {/* Stop conditions */}
         <button
           type="button"
           onClick={() => setStopOpen((v) => !v)}
@@ -186,30 +156,6 @@ export function ChaosControls({ server }: ChaosControlsProps): React.ReactElemen
         {stopOpen && (
           <StopConditionsPanel value={stopConditions} onChange={setStopConditions} />
         )}
-      </div>
-    </div>
-  );
-}
-
-// ── Preset Preview ────────────────────────────────────────────────────────────
-
-function PresetPreview({ errorRate, faultWeights }: { errorRate: number; faultWeights: FaultWeight[] }): React.ReactElement {
-  const total = faultWeights.reduce((s, f) => s + f.weight, 0) || 1;
-  return (
-    <div className="space-y-2 rounded-lg border border-border-subtle bg-muted/10 p-3">
-      <div className="flex items-center justify-between">
-        <span className="text-body-xs text-muted-foreground/70">Error Rate</span>
-        <span className="text-mono-xs tabular-nums text-foreground/70">{errorRate}%</span>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {faultWeights.map((fw) => (
-          <span
-            key={fw.type}
-            className="rounded-md bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-medium text-rose-400 ring-1 ring-rose-500/25"
-          >
-            {fw.type} {Math.round((fw.weight / total) * 100)}%
-          </span>
-        ))}
       </div>
     </div>
   );

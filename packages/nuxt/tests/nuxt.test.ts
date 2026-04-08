@@ -1,13 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type * as NexusModule from "@noverax/nexus";
 
 vi.mock("@noverax/nexus", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@noverax/nexus")>();
+  const actual = await importOriginal<typeof NexusModule>();
   return {
     ...actual,
     createHandler: vi.fn(() => ({
       handle: vi.fn(),
       handleGet: vi.fn(),
       handlePost: vi.fn(),
+      handleSSE: vi.fn(),
+      sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+      shutdownSSE: vi.fn(),
     })),
   };
 });
@@ -41,7 +45,14 @@ describe("nexusHandler", () => {
   it("calls createHandler with sources", () => {
     const sources = { api: {} } as Sources;
     nexusHandler(sources);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources);
+    expect(mockCreateHandler).toHaveBeenCalledWith(sources, undefined);
+  });
+
+  it("forwards HandlerConfig (allowedOrigins) to createHandler", () => {
+    const sources = { api: {} } as Sources;
+    const config = { allowedOrigins: ["https://app.example.com"] };
+    nexusHandler(sources, config);
+    expect(mockCreateHandler).toHaveBeenCalledWith(sources, config);
   });
 
   it("wraps handler with fromWebHandler", () => {
@@ -72,5 +83,30 @@ describe("nexusHandler", () => {
     const request = new Request("http://localhost/api/request?_s=api&_m=list");
     const result = await handler(request);
     expect(result).toBe(expectedResponse);
+  });
+
+  it("preserves all response headers (incl. SSE proxy-busters) through the adapter", async () => {
+    // Nuxt adapter is HTTP-only today (see frameworks/nuxt.mdx → "Realtime").
+    // This test still asserts the HTTP path doesn't strip the SSE-class
+    // proxy-buster headers, so when nexusSSEHandler ships for Nuxt the
+    // existing transport stays honest. Note: fromWebHandler is mocked to
+    // passthrough, so this exercises the adapter wiring, not h3 itself —
+    // a real h3 integration test requires booting Nitro and is out of scope.
+    const sseHeaders = {
+      "content-type": "text/event-stream",
+      "cache-control": "no-cache, no-transform",
+      "connection": "keep-alive",
+      "x-accel-buffering": "no",
+    };
+    const handler = nexusHandler({} as Sources) as unknown as (req: Request) => Promise<Response>;
+    const mockHandle = getMockHandle();
+    mockHandle.mockResolvedValue(new Response("data: hello\n\n", { status: 200, headers: sseHeaders }));
+
+    const result = await handler(new Request("http://localhost/api/request?_s=api&_m=feed"));
+
+    expect(result.headers.get("content-type")).toBe("text/event-stream");
+    expect(result.headers.get("cache-control")).toBe("no-cache, no-transform");
+    expect(result.headers.get("connection")).toBe("keep-alive");
+    expect(result.headers.get("x-accel-buffering")).toBe("no");
   });
 });

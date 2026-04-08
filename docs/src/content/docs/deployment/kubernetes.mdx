@@ -1,0 +1,353 @@
+export const metadata = {
+  title: "Kubernetes",
+  description: "Deploy Nexus on Kubernetes with nginx-ingress, sticky sessions, PodDisruptionBudget, and HPA scaling on connection count.",
+}
+
+## Deployment
+
+```yaml title="k8s/deployment.yaml"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexus-server
+  labels:
+    app: nexus-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nexus-server
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0        # never kill a pod before replacement is ready
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: nexus-server
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3001"
+        prometheus.io/path: "/metrics"
+    spec:
+      terminationGracePeriodSeconds: 60   # time for SSE/WS drain
+      containers:
+        - name: nexus
+          image: your-registry/nexus-server:latest
+          ports:
+            - containerPort: 3001
+              name: http
+          env:
+            - name: PORT
+              value: "3001"
+            - name: HOST
+              value: "0.0.0.0"
+            - name: NODE_ENV
+              value: "production"
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: nexus-config
+                  key: redis-url
+            - name: ALLOWED_ORIGIN
+              valueFrom:
+                configMapKeyRef:
+                  name: nexus-config
+                  key: allowed-origin
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 2
+          resources:
+            requests:
+              cpu: 250m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 5"]   # wait for LB to deregister
+```
+
+<Callout variant="info" title="terminationGracePeriodSeconds">
+  Set this to at least 60 seconds. During shutdown, the Nexus server drains SSE streams (3s retry + 2s drain) and WebSocket connections (5s timeout). The extra margin accounts for in-flight requests and load balancer deregistration.
+</Callout>
+
+## Service
+
+```yaml title="k8s/service.yaml"
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus-server
+spec:
+  type: ClusterIP
+  selector:
+    app: nexus-server
+  ports:
+    - port: 3001
+      targetPort: http
+      protocol: TCP
+      name: http
+```
+
+## ConfigMap
+
+```yaml title="k8s/configmap.yaml"
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexus-config
+data:
+  redis-url: "redis://redis-master.default.svc.cluster.local:6379"
+  allowed-origin: "https://app.example.com"
+```
+
+## Ingress (nginx-ingress)
+
+```yaml title="k8s/ingress.yaml"
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nexus-ingress
+  annotations:
+    # Sticky sessions — required for SSE/WS
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+    nginx.ingress.kubernetes.io/session-cookie-name: "nexus_affinity"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "86400"
+    nginx.ingress.kubernetes.io/session-cookie-path: "/"
+    nginx.ingress.kubernetes.io/session-cookie-secure: "true"
+    nginx.ingress.kubernetes.io/session-cookie-samesite: "Strict"
+
+    # Long-lived connection timeouts
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "86400"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "86400"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+
+    # SSE — disable buffering
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+
+    # WebSocket support
+    nginx.ingress.kubernetes.io/enable-websockets: "true"
+
+    # Connection limits
+    nginx.ingress.kubernetes.io/proxy-body-size: "1m"
+
+    # TLS
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.example.com
+      secretName: nexus-tls
+  rules:
+    - host: api.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nexus-server
+                port:
+                  number: 3001
+```
+
+### Ingress Annotations Explained
+
+| Annotation | Value | Purpose |
+|-----------|-------|---------|
+| `affinity: cookie` | Sticky sessions | Routes same client to same pod for SSE/WS |
+| `session-cookie-max-age: 86400` | 24h | Cookie lifetime — clients stick for a day |
+| `proxy-read-timeout: 86400` | 24h | SSE/WS connections can live up to 24 hours |
+| `proxy-buffering: off` | Disable | SSE events must not be buffered |
+| `enable-websockets: true` | Enable | Allow WebSocket upgrade |
+
+## PodDisruptionBudget
+
+Ensures at least 2 pods are always available during voluntary disruptions (node drain, upgrades):
+
+```yaml title="k8s/pdb.yaml"
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nexus-server-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: nexus-server
+```
+
+<Callout variant="warning" title="Minimum replicas">
+  With `minAvailable: 2`, you need at least 3 replicas. Adjust based on your deployment size. For 2-replica setups, use `maxUnavailable: 1` instead.
+</Callout>
+
+## HPA (Horizontal Pod Autoscaler)
+
+### CPU-based (simple)
+
+```yaml title="k8s/hpa-cpu.yaml"
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nexus-server-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nexus-server
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300    # wait 5 min before scaling down
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120
+```
+
+### Connection-based (recommended)
+
+Scale based on active connections using a custom metric exported to Prometheus:
+
+```ts title="metrics.ts"
+import { createNexusServer } from "@noverax/nexus-server"
+
+const server = await createNexusServer({ sources, port: 3001 })
+
+// Export metrics endpoint for Prometheus
+app.get("/metrics", (req, res) => {
+  const sseCount = server.sseConnections.count
+  const wsCount = server.wsConnections.count
+
+  res.set("Content-Type", "text/plain")
+  res.send([
+    `# HELP nexus_sse_connections Active SSE connections`,
+    `# TYPE nexus_sse_connections gauge`,
+    `nexus_sse_connections ${sseCount}`,
+    `# HELP nexus_ws_connections Active WebSocket connections`,
+    `# TYPE nexus_ws_connections gauge`,
+    `nexus_ws_connections ${wsCount}`,
+    `# HELP nexus_total_connections Total active connections`,
+    `# TYPE nexus_total_connections gauge`,
+    `nexus_total_connections ${sseCount + wsCount}`,
+  ].join("\n"))
+})
+```
+
+```yaml title="k8s/hpa-connections.yaml"
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nexus-server-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nexus-server
+  minReplicas: 3
+  maxReplicas: 50
+  metrics:
+    - type: Pods
+      pods:
+        metric:
+          name: nexus_total_connections
+        target:
+          type: AverageValue
+          averageValue: "1000"       # scale when avg connections per pod > 1000
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Pods
+          value: 3
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 600   # 10 min — connections are long-lived
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 180
+```
+
+<Callout variant="info" title="Prometheus Adapter">
+  Connection-based HPA requires the [Prometheus Adapter](https://github.com/kubernetes-sigs/prometheus-adapter) installed in your cluster. It bridges Prometheus metrics to the K8s metrics API.
+</Callout>
+
+### Scale-Down Strategy
+
+Long-lived connections make scale-down tricky. The configuration above uses:
+
+- **10 minute stabilization** — prevents flapping
+- **1 pod per 3 minutes** — slow ramp-down
+- **Graceful shutdown** — SIGTERM triggers SSE/WS drain, clients reconnect to remaining pods
+
+## Redis in Kubernetes
+
+Use a Redis operator or Helm chart for production:
+
+```bash
+# Bitnami Redis (simple)
+helm install redis oci://registry-1.docker.io/bitnamicharts/redis \
+  --set auth.enabled=false \
+  --set master.persistence.size=1Gi
+
+# Redis URL for Nexus
+# redis://redis-master.default.svc.cluster.local:6379
+```
+
+For high availability, use Redis Sentinel or Redis Cluster:
+
+```bash
+helm install redis oci://registry-1.docker.io/bitnamicharts/redis \
+  --set sentinel.enabled=true \
+  --set replica.replicaCount=3
+```
+
+## Complete Checklist
+
+- [ ] Deployment with 3+ replicas and `maxUnavailable: 0`
+- [ ] `terminationGracePeriodSeconds: 60` for connection drain
+- [ ] `preStop` hook with `sleep 5` for LB deregistration
+- [ ] Liveness probe on `/health`, readiness on `/readyz`
+- [ ] Ingress with sticky sessions (`affinity: cookie`)
+- [ ] Ingress with `proxy-read-timeout: 86400` and `proxy-buffering: off`
+- [ ] PodDisruptionBudget with `minAvailable: 2`
+- [ ] HPA on CPU or custom connection metric
+- [ ] Redis deployed with persistence
+- [ ] ConfigMap for REDIS_URL and ALLOWED_ORIGIN
+- [ ] TLS via cert-manager

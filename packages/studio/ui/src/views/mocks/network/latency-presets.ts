@@ -1,0 +1,56 @@
+/**
+ * Static option tables and form defaults for the latency simulator.
+ *
+ * Extracted from `latency-controls.tsx` so the React component file holds
+ * only the wiring code while these constants live alongside the chaos preset
+ * tables. Keeps the data easy to tweak without diffing JSX noise.
+ */
+
+import { Clock, Gauge } from "lucide-react";
+
+import type { LatencyDistribution, LatencyPreset } from "@/store/mock-slice";
+
+export interface LatencyFormValues {
+  min: number;
+  max: number;
+  jitter: number;
+  distribution: LatencyDistribution;
+  bandwidth: number;
+}
+
+export const LATENCY_PRESETS = [
+  { value: "none" as const, label: "Off", icon: Gauge },
+  { value: "3g" as const, label: "3G · 450ms" },
+  { value: "4g" as const, label: "4G · 120ms" },
+  { value: "satellite" as const, label: "Satellite · 700ms" },
+  { value: "custom" as const, label: "Custom", icon: Clock },
+];
+
+export const PRESET_VALUES: Record<LatencyPreset, { min: number; max: number; jitter: number }> = {
+  none: { min: 0, max: 0, jitter: 0 },
+  "3g": { min: 300, max: 600, jitter: 100 },
+  "4g": { min: 80, max: 160, jitter: 30 },
+  satellite: { min: 600, max: 800, jitter: 150 },
+  custom: { min: 300, max: 600, jitter: 50 },
+};
+
+export const DISTRIBUTION_OPTIONS = [
+  { value: "uniform" as const, label: "Uniform" },
+  { value: "normal" as const, label: "Normal" },
+  { value: "log-normal" as const, label: "Log-Normal" },
+];
+
+export const BANDWIDTH_OPTIONS = [
+  { value: "0" as const, label: "∞ Unlimited" },
+  { value: "512" as const, label: "512 Kbps" },
+  { value: "1500" as const, label: "1.5 Mbps" },
+  { value: "10000" as const, label: "10 Mbps" },
+];
+
+export const LATENCY_DEFAULTS: LatencyFormValues = {
+  min: 300,
+  max: 600,
+  jitter: 50,
+  distribution: "log-normal",
+  bandwidth: 0,
+};

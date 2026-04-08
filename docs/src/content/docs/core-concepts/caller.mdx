@@ -39,12 +39,13 @@ Sends requests through your server's proxy route. The browser never sees your ba
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/nexus"
-import type { api } from "@/api/sources"
+import { api } from "@/api/sources"
 
-export const caller = createProxyCaller<typeof api>({
-  proxyUrl: "/api/request",   // default
+export const caller = createProxyCaller<typeof api>("api", {
+  source: api,
+  proxyPath: { http: "/api/request" },  // optional, defaults to /api/request
   timeout: 10000,
-  credentials: "include",     // forward cookies
+  credentials: "include",               // forward cookies
   headers: { "X-Custom": "value" },
   onError: (error) => console.error(error),
   onSuccess: (data) => console.log(data),
@@ -56,20 +57,29 @@ export const caller = createProxyCaller<typeof api>({
 const users = await caller.users.getAll()
 ```
 
-<Callout variant="tip" title="Type-only import">
-Notice that proxy mode imports `type { api }` — the actual `api` object stays on the server. Only the type information is used for inference.
+<Callout variant="tip" title="Source object passed in">
+Pass the actual `api` object to `createProxyCaller` (not just `typeof api`). The caller reads `api.options.proxyPath` as source-level defaults and uses the embedded endpoint metadata for SSE/WS transport detection.
 </Callout>
 
 ### ProxyCallerDefaults
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `proxyUrl` | `string` | `"/api/request"` | Proxy endpoint URL |
+| `proxyPath` | `ProxyPath` | per-transport defaults | Per-transport proxy endpoint paths (`http` / `sse` / `ws`) |
+| `source` | `object` | — | The `defineApi()` result. Required for SSE/WS detection |
 | `timeout` | `number` | — | Request timeout in ms |
 | `credentials` | `RequestCredentials` | `"include"` | Cookie forwarding mode |
 | `headers` | `Record<string, string>` | — | Default headers |
 | `onError` | `(error: HTTPError) => void` | — | Global error callback |
 | `onSuccess` | `(data: unknown) => void` | — | Global success callback |
+
+`ProxyPath` shape:
+
+| Field | Default | Notes |
+|---|---|---|
+| `proxyPath.http` | `"/api/request"` | HTTP proxy endpoint |
+| `proxyPath.sse` | `"/api/sse"` | SSE proxy endpoint |
+| `proxyPath.ws` | **none** — required for WS endpoints | Use absolute `wss://` URL for Next.js / serverless. See [standalone server](/docs/deployment/standalone-server). |
 
 ## The Dot-Notation Interface
 

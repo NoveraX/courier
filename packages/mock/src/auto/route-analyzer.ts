@@ -1,48 +1,10 @@
 import { normalizeHttpMethod } from "@noverax/nexus";
-import type { StandardSchemaV1 } from "@standard-schema/spec";
+import { extractSchema, normalizePrefix, probeEndpoint } from "./endpoint-probe";
+import { detectOperation } from "./operation-detect";
+import type { RouteInfo, SourceGroup } from "./route-types";
 
-const ENDPOINT_SCHEMA = Symbol.for("nexus.endpoint.schema");
-
-/** Analyzed route information from a source endpoint */
-export interface RouteInfo {
-  /** Group/collection name (e.g. "products", or derived from path for top-level endpoints) */
-  group: string;
-  /** Endpoint name (e.g. "getAll") */
-  endpoint: string;
-  /** HTTP method (e.g. "GET") */
-  httpMethod: string;
-  /** Relative path within group (e.g. "", ":id") */
-  path: string;
-  /** Full path including prefix (e.g. "/products/:id") */
-  fullPath: string;
-  /** Whether path contains an :id parameter */
-  hasIdParam: boolean;
-  /** Detected CRUD operation */
-  operation: CrudOperation;
-  /** Response schema if available */
-  responseSchema?: StandardSchemaV1;
-  /** Variables schema if available */
-  variablesSchema?: StandardSchemaV1;
-  /** Endpoint type (query/mutation) */
-  type?: "query" | "mutation";
-}
-
-export type CrudOperation =
-  | "list"
-  | "get"
-  | "create"
-  | "update"
-  | "replace"
-  | "upsert"
-  | "delete"
-  | "deleteAll"
-  | "custom";
-
-/** Shape of a group within source.options.groups */
-interface SourceGroup {
-  options?: { prefix?: string };
-  [endpointName: string]: unknown;
-}
+// Re-export types so external imports keep working unchanged.
+export type { CrudOperation, RouteInfo } from "./route-types";
 
 /**
  * Analyze all endpoints in an API source and extract route information.
@@ -66,25 +28,7 @@ export function analyzeRoutes(source: Record<string, unknown>): RouteInfo[] {
   // Top-level endpoints (functions at source root, not inside groups)
   for (const [name, fn] of Object.entries(source)) {
     if (name === "options" || typeof fn !== "function") continue;
-    const probed = probeEndpoint(fn as (...args: unknown[]) => unknown);
-    const rawPath = probed.path ?? name;
-    const collection = rawPath.split("/")[0]?.replace(/^:/, "") || name;
-    // Normalize path relative to the derived group prefix so detectOperation
-    // treats the collection root ("users") as "" (list), not a static sub-path.
-    const normalizedPath =
-      rawPath === collection
-        ? ""
-        : rawPath.startsWith(`${collection}/`)
-          ? rawPath.slice(collection.length + 1)
-          : rawPath;
-    analyzeEndpoint(
-      routes,
-      collection,
-      name,
-      fn as (...args: unknown[]) => unknown,
-      `/${collection}`,
-      { ...probed, path: normalizedPath },
-    );
+    analyzeTopLevelEndpoint(routes, name, fn as (...args: unknown[]) => unknown);
   }
 
   return routes;
@@ -98,6 +42,28 @@ export function getSourceGroupNames(source: Record<string, unknown>): Set<string
   const opts = source.options as { groups?: Record<string, unknown> } | undefined;
   if (!opts?.groups) return new Set();
   return new Set(Object.keys(opts.groups).filter((k) => k !== "options"));
+}
+
+function analyzeTopLevelEndpoint(
+  routes: RouteInfo[],
+  name: string,
+  fn: (...args: unknown[]) => unknown,
+): void {
+  const probed = probeEndpoint(fn);
+  const rawPath = probed.path ?? name;
+  const collection = rawPath.split("/")[0]?.replace(/^:/, "") || name;
+  // Normalize path relative to the derived group prefix so detectOperation
+  // treats the collection root ("users") as "" (list), not a static sub-path.
+  const normalizedPath =
+    rawPath === collection
+      ? ""
+      : rawPath.startsWith(`${collection}/`)
+        ? rawPath.slice(collection.length + 1)
+        : rawPath;
+  analyzeEndpoint(routes, collection, name, fn, `/${collection}`, {
+    ...probed,
+    path: normalizedPath,
+  });
 }
 
 function analyzeGroup(routes: RouteInfo[], groupName: string, group: SourceGroup): void {
@@ -122,9 +88,32 @@ function analyzeEndpoint(
   prefix: string,
   preProbed?: { method?: string; path?: string },
 ): void {
-  const probed = preProbed ?? probeEndpoint(endpointFn);
   const schema = extractSchema(endpointFn);
+  const transport = schema?.transport;
 
+  // SSE/WS endpoints don't accept an http argument — skip probing to avoid
+  // calling the generator/channel factory with garbage. They live at a
+  // path equal to the endpoint name (e.g. "feed" → /notifications/feed).
+  if (transport === "sse" || transport === "ws") {
+    const fullPath = `${prefix}/${endpointName}`.replace(/\/+/g, "/");
+    routes.push({
+      group: groupName,
+      endpoint: endpointName,
+      httpMethod: "GET",
+      path: endpointName,
+      fullPath,
+      hasIdParam: false,
+      operation: "custom",
+      responseSchema: schema?.response,
+      variablesSchema: schema?.variables,
+      type: schema?.type,
+      transport,
+      isChannel: transport === "ws" && !!schema?.receive,
+    });
+    return;
+  }
+
+  const probed = preProbed ?? probeEndpoint(endpointFn);
   const httpMethod = normalizeHttpMethod(probed.method ?? "GET");
   const path = probed.path ?? "";
   const fullPath = path ? `${prefix}/${path}`.replace(/\/+/g, "/") : prefix;
@@ -142,72 +131,6 @@ function analyzeEndpoint(
     responseSchema: schema?.response,
     variablesSchema: schema?.variables,
     type: schema?.type,
+    transport: "http",
   });
-}
-
-/** Probe endpoint to capture HTTP method and path */
-function probeEndpoint(fn: (...args: unknown[]) => unknown): { method?: string; path?: string } {
-  let method: string | undefined;
-  let path: string | undefined;
-
-  const handler: ProxyHandler<object> = {
-    get: (_target, prop) => {
-      if (typeof prop === "string") {
-        method = prop;
-      }
-      return (...args: unknown[]) => {
-        if (typeof args[0] === "string") path = args[0];
-        return Promise.resolve({});
-      };
-    },
-  };
-
-  const mockHttp = new Proxy({}, handler);
-
-  try {
-    fn(mockHttp, {});
-  } catch {
-    // Endpoint may throw during probing — path/method already captured
-  }
-
-  return { method, path: path || undefined };
-}
-
-/** Detect CRUD operation from HTTP method + path pattern */
-function detectOperation(httpMethod: string, hasIdParam: boolean, path: string): CrudOperation {
-  const isStaticSubPath = !!path && !path.startsWith(":");
-
-  switch (httpMethod) {
-    case "GET":
-      if (hasIdParam) return "get";
-      // Static sub-paths (e.g. "browse", "categories") are custom endpoints, not list
-      if (isStaticSubPath) return "custom";
-      return "list";
-    case "POST":
-      return isStaticSubPath ? "custom" : "create";
-    case "PUT":
-      return hasIdParam ? "replace" : "upsert";
-    case "PATCH":
-      return hasIdParam ? "update" : "custom";
-    case "DELETE":
-      return hasIdParam || path ? "delete" : "deleteAll";
-    default:
-      return "custom";
-  }
-}
-
-function normalizePrefix(prefix: string): string {
-  const trimmed = prefix.startsWith("/") ? prefix : `/${prefix}`;
-  return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
-}
-
-interface SchemaMetadata {
-  response?: StandardSchemaV1;
-  variables?: StandardSchemaV1;
-  type?: "query" | "mutation";
-}
-
-function extractSchema(fn: unknown): SchemaMetadata | undefined {
-  if (typeof fn !== "function") return undefined;
-  return (fn as unknown as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
 }

@@ -60,6 +60,7 @@ export const DETAIL_TABS = [
   { key: "general", label: "General" },
   { key: "snippets", label: "Snippets" },
   { key: "headers", label: "Headers" },
+  { key: "stream", label: "Stream" },
   { key: "payload", label: "Payload" },
   { key: "response", label: "Response" },
   { key: "timing", label: "Timing" },

@@ -135,7 +135,7 @@ export default function OptionsExamplesPage() {
 
         <ExampleBlock
           title="Global Defaults"
-          description="Set defaults for all requests via createProxyCaller or createQueryCaller."
+          description="Set defaults for all requests via createProxyCaller or createProxyQueryCaller."
           code={globalDefaultsCode}
         >
           <p className="text-sm text-muted-foreground">

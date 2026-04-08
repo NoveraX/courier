@@ -67,5 +67,6 @@ export type {
   ExtractVariables,
   MockHandlerFn,
   MockHistoryEntry,
+  MockStreamFn,
   ResolvedHandler,
 } from "./types";

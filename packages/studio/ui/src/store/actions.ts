@@ -1,76 +1,17 @@
 import type { StateCreator } from "zustand"
 
-import type { CatalogSnapshot, StudioEvent } from "./types"
 import type { StudioState } from "./store-types"
+import type { createInitialState } from "./initial-state"
+
 import { PLAYGROUND_MAX_HISTORY, DEFAULT_SETTINGS, saveSettings, saveSessionStartedAt } from "./constants"
 import { applyTheme } from "./theme"
 import { applyDensity } from "./density"
 import { handleEventReducer } from "./handle-event"
 import { notifyOnEvent } from "./event-notifications"
-import { createInitialState } from "./initial-state"
+import { normalizeEventSource, shouldIgnoreRequest } from "./actions-event-utils"
 
 type Setter = Parameters<StateCreator<StudioState>>[0]
 type Getter = Parameters<StateCreator<StudioState>>[1]
-
-/**
- * Normalize event source name against catalog keys (case-insensitive).
- * Runtime emits lowercase names (from URL hostname), catalog uses
- * scanner-derived names (PascalCase). This is the single reconciliation
- * point — all views read from the store and never see the mismatch.
- */
-let canonMap: Map<string, string> | null = null
-let canonMapCatalog: Catalog | null = null
-
-type EventPayload = StudioEvent & Record<string, unknown>
-
-// ── Ignore patterns — cached regex compilation ──────────────────────────────
-
-let cachedPatterns: string[] = []
-let cachedRegexes: RegExp[] = []
-
-function shouldIgnoreRequest(event: EventPayload, patterns: string[]): boolean {
-  if (patterns.length === 0) return false
-  const url = typeof event.url === "string" ? event.url : ""
-  const method = typeof event.method === "string" ? event.method : ""
-  const target = url || method
-  if (!target) return false
-
-  // Re-compile only when patterns array changes
-  if (patterns !== cachedPatterns) {
-    cachedPatterns = patterns
-    cachedRegexes = patterns
-      .filter((p) => p.length > 0)
-      .map((p) => {
-        try { return new RegExp(p, "i") }
-        catch { return null }
-      })
-      .filter((r): r is RegExp => r !== null)
-  }
-
-  return cachedRegexes.some((re) => re.test(target))
-}
-
-function normalizeEventSource(
-  event: EventPayload,
-  catalog: Catalog,
-): EventPayload {
-  if (!event.source || typeof event.source !== "string") return event
-
-  // Rebuild lookup only when catalog reference changes
-  if (catalog !== canonMapCatalog) {
-    canonMap = new Map()
-    for (const key of Object.keys(catalog)) {
-      canonMap.set(key.toLowerCase(), key)
-    }
-    canonMapCatalog = catalog
-  }
-
-  const canonical = canonMap!.get((event.source as string).toLowerCase())
-  if (canonical && canonical !== event.source) {
-    return { ...event, source: canonical }
-  }
-  return event
-}
 
 export function createActions(set: Setter, get: Getter): Omit<StudioState, keyof ReturnType<typeof createInitialState>> {
   return {
@@ -102,13 +43,15 @@ export function createActions(set: Setter, get: Getter): Omit<StudioState, keyof
         const sessions = s.sessions.filter((ss) => ss.sessionId !== sessionId)
         const sessionStartedAt = sessions.length === 0 ? null : s.sessionStartedAt
         if (sessions.length === 0) saveSessionStartedAt(null)
-        return {
-          sessions,
-          sessionStartedAt,
-          requests: s.settings.preserveLog
-            ? s.requests
-            : s.requests.filter((r) => r.sessionId !== sessionId || r.pinned),
-        }
+        // Requests are NOT cleared on session disconnect. Browser-tab Studio
+        // sessions can churn from HMR / Turbopack rebuilds / hard reloads,
+        // and the studio dev server can have multiple cooperating sessions
+        // (browser direct + Next.js server proxy) — losing one side's
+        // request history when its session lifecycle blips is both
+        // surprising and asymmetric (the surviving session keeps showing
+        // its entries). DevTools-style retention: use clearRequests() for
+        // an explicit wipe.
+        return { sessions, sessionStartedAt }
       }),
 
     // Catalog (server-authoritative — NOT gated by paused flag)

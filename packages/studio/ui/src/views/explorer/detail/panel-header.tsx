@@ -6,6 +6,7 @@ import { HTTP_METHOD_COLORS } from "../constants";
 import { HealthIndicator } from "../shared/health-indicator";
 import { PathDisplay } from "../shared/path-display";
 import { TypeBadge } from "@/components/shared/type-badge";
+import { TransportBadge } from "@/views/playground/transport-badge";
 import type { EndpointNodeData } from "../types";
 
 // ── Props ────────────────────────────────────────────────────────────────────
@@ -33,7 +34,10 @@ export function PanelHeader({
       {/* Title row: health + badges + name */}
       <div className="flex items-center gap-2">
         <HealthIndicator level={health} pulse={endpoint.metrics.isActive} />
-        <TypeBadge type={endpoint.endpointType} />
+        {endpoint.transport
+          ? <TransportBadge transport={endpoint.transport} />
+          : <TypeBadge type={endpoint.endpointType} />
+        }
         <Badge className={cn("text-[10px] font-bold px-1.5 py-0 rounded-md", methodColor)}>
           {endpoint.httpMethod}
         </Badge>

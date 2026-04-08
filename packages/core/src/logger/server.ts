@@ -40,13 +40,22 @@ function ts(): string {
   return `${h}:${m}:${s}`;
 }
 
+/** Whether full ANSI output is available (Node.js with stdout) */
+const hasStdout = typeof globalThis.process?.stdout?.write === "function";
+
 function log(level: LogLevel, context: string, message: string, cause?: unknown): void {
+  if (!hasStdout) {
+    // Edge Runtime / environments without process.stdout — use console
+    const fn = level === "error" ? console.error : level === "warn" ? console.warn : console.log;
+    fn(`[Nexus] [${context}] ${message}`, ...(cause != null ? [cause] : []));
+    return;
+  }
   const color = LEVEL_COLORS[level];
   const label = LEVEL_LABELS[level];
-  const pid = process.pid;
+  const pid = globalThis.process.pid;
   const suffix = cause != null ? `${DIM} ${cause}${R}` : "";
   const line = `${BRAND}[Nexus]${R} ${WHITE}${pid}${R}  ${DARK}–${R} ${DIM}${ts()}${R}   ${color}${BOLD}${label}${R}  ${PURPLE}[${context}]${R} ${WHITE}${message}${R}${suffix}`;
-  process.stdout.write(`${line}\n`);
+  globalThis.process.stdout.write(`${line}\n`);
 }
 
 export const serverLogger: Logger = {

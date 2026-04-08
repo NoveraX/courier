@@ -1,17 +1,16 @@
-import { getSourceName } from "@noverax/nexus/define";
 import type { MockServer, MockServerConfig } from "../server/create-mock-server";
 import { createMockServer } from "../server/create-mock-server";
-import type { PrefixMapping } from "../server/prefix-routes";
 import type { MockStore } from "../store";
-import { connectMockToStudio } from "../studio/bridge";
-import type { MockRouteInfo } from "../studio/types";
 import type { MockScenario, NetworkConfig, TypedMockFn } from "../types";
 import { buildAutoHandlers, seedAllCollections } from "./auto-scenario";
-import { generateRecords } from "./data-generator";
+import type { SeedConfig } from "./prefix-mappings";
+import { buildPrefixMappings, parseSeedConfig } from "./prefix-mappings";
 import { buildPresetScenarios } from "./preset-scenarios";
-import type { RouteInfo } from "./route-analyzer";
 import { analyzeRoutes, getSourceGroupNames } from "./route-analyzer";
-import { analyzeField, extractShape, unwrapArraySchema } from "./schema-introspect";
+import { toRouteInfo, wrapStartWithStudio } from "./studio-bridge-wrap";
+
+// Re-export SeedConfig so external imports keep working unchanged.
+export type { SeedConfig } from "./prefix-mappings";
 
 /** Configuration for the auto-generated mock server */
 export interface AutoMockServerConfig {
@@ -45,14 +44,6 @@ export interface AutoMockServerConfig {
   studio?: boolean | { host?: string; port?: number; name?: string };
 }
 
-/** Seed data configuration */
-export interface SeedConfig {
-  /** Default records per collection (default: 20) */
-  count?: number;
-  /** Per-group overrides: `{ products: { count: 100 } }` */
-  [groupName: string]: { count: number } | number | undefined;
-}
-
 /**
  * Create a mock server with auto-generated routes and data from an API source.
  *
@@ -77,7 +68,8 @@ export interface SeedConfig {
  *   seed: { count: 20, products: { count: 100 } },
  *   overrides: (mock, store) => {
  *     mock("orders", "create").returns((ctx) => {
- *       if ((ctx.variables as any).quantity > 100) throw new Error("Max 100");
+ *       const vars = ctx.variables as { quantity?: number };
+ *       if ((vars.quantity ?? 0) > 100) throw new Error("Max 100");
  *       return { ...ctx.variables, id: store.collection("orders").count() + 1 };
  *     });
  *   },
@@ -96,19 +88,7 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
   const getStore = () => storeRef;
 
   const presets = buildPresetScenarios(routes, getStore);
-
-  // happy-path = no-op: clearing the scenario layer reveals the base auto-CRUD
-  const happyPath: MockScenario = { name: "happy-path", apply: () => {} };
-
-  // happy-path is always the canonical "reset to defaults" — user config cannot override it
-  const userScenarios = { ...config.scenarios };
-  delete userScenarios["happy-path"];
-
-  const allScenarios: Record<string, MockScenario> = {
-    "happy-path": happyPath,
-    ...presets,
-    ...userScenarios,
-  };
+  const allScenarios = composeScenarios(presets, config.scenarios);
 
   // reseed closure — storeRef is shared with the getStore getter above
   const reseed = () => {
@@ -153,147 +133,21 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
   return server;
 }
 
-/** Wrap server.start() to auto-connect to Studio after listening */
-function wrapStartWithStudio(
-  server: MockServer,
-  config: AutoMockServerConfig,
-  routeEntries: MockRouteInfo[],
-  analyzedRoutes: RouteInfo[],
-  allScenarios: Record<string, MockScenario>,
-  reseed: () => void,
-): void {
-  const originalStart = server.start.bind(server);
-
-  server.start = async () => {
-    const info = await originalStart();
-
-    const studioOpts = typeof config.studio === "object" ? config.studio : {};
-    const sourceName = getSourceName(config.source) ?? "mock";
-    void connectMockToStudio(server, {
-      name: studioOpts.name ?? sourceName,
-      host: studioOpts.host,
-      port: studioOpts.port,
-      serverPort: info.port,
-      serverUrl: info.url,
-      routeCount: routeEntries.length,
-      routes: routeEntries,
-      analyzedRoutes,
-      scenarios: Object.keys(allScenarios),
-      scenarioMap: allScenarios,
-      reseed,
-    });
-
-    return info;
-  };
-}
-
-/** Convert analyzed RouteInfo → serializable MockRouteInfo with schema + example */
-function toRouteInfo(r: RouteInfo, groupNames: Set<string>): MockRouteInfo {
-  const entry: MockRouteInfo = {
-    group: groupNames.has(r.group) ? r.group : "",
-    endpoint: r.endpoint,
-    httpMethod: r.httpMethod,
-    path: r.path,
-    fullPath: r.fullPath,
-    source: "auto",
-    hits: 0,
-  };
-
-  if (r.responseSchema) {
-    entry.responseSchema = serializeSchema(r.responseSchema);
-    try {
-      const records = generateRecords(r.responseSchema, 1);
-      entry.exampleResponse = r.operation === "list" ? records : records[0];
-    } catch {
-      // Schema may not be introspectable — skip example
-    }
-  }
-
-  return entry;
-}
-
-/** Serialize Standard Schema shape → simple { field: type } map for UI display */
-function serializeSchema(schema: unknown): Record<string, string> | undefined {
-  const itemSchema = unwrapArraySchema(schema) ?? schema;
-  const shape = extractShape(itemSchema);
-  if (!shape) return undefined;
-
-  const result: Record<string, string> = {};
-  for (const [key, field] of Object.entries(shape)) {
-    const meta = analyzeField(field);
-    result[key] =
-      meta.type === "optional" || meta.type === "nullable"
-        ? `${meta.innerField?.type ?? "unknown"}?`
-        : meta.type;
-  }
-  return result;
-}
-
-// ── Prefix Mappings ─────────────────────────────────────────────────────────
-
 /**
- * Build PrefixMappings from analyzed routes and source structure.
- * Includes httpMethod on each MappedEndpoint so static sub-paths
- * can be registered with the correct HTTP verb.
+ * Merge built-in presets and user scenarios under a canonical "happy-path".
+ * happy-path is a no-op that clears the scenario layer, revealing base auto-CRUD;
+ * user config cannot override it.
  */
-function buildPrefixMappings(
-  source: Record<string, unknown>,
-  routes: RouteInfo[],
-): PrefixMapping[] {
-  const opts = source.options as
-    | { groups?: Record<string, { options?: { prefix?: string } }> }
-    | undefined;
-  const groups = opts?.groups ?? {};
-  const groupNames = new Set(Object.keys(groups).filter((k) => k !== "options"));
-
-  const mappings: PrefixMapping[] = [];
-  const byGroup = new Map<string, PrefixMapping>();
-
-  for (const route of routes) {
-    const ep = {
-      name: route.endpoint,
-      operation: route.operation,
-      path: route.path,
-      httpMethod: route.httpMethod,
-    };
-    const existing = byGroup.get(route.group);
-    if (existing) {
-      existing.methods.push(route.endpoint);
-      existing.endpoints?.push(ep);
-      continue;
-    }
-
-    const isGrouped = groupNames.has(route.group);
-    const prefix = isGrouped
-      ? (groups[route.group]?.options?.prefix ?? `/${route.group}`)
-      : `/${route.group}`;
-
-    const mapping: PrefixMapping = {
-      prefix,
-      group: route.group,
-      methods: [route.endpoint],
-      endpoints: [ep],
-    };
-    byGroup.set(route.group, mapping);
-    mappings.push(mapping);
-  }
-
-  return mappings;
-}
-
-// ── Seed Config ─────────────────────────────────────────────────────────────
-
-function parseSeedConfig(seed?: SeedConfig): Record<string, number> {
-  if (!seed) return {};
-
-  const overrides: Record<string, number> = {};
-  for (const [key, value] of Object.entries(seed)) {
-    if (key === "count") continue;
-    if (typeof value === "number") {
-      overrides[key] = value;
-    } else if (value && typeof value === "object" && "count" in value) {
-      overrides[key] = value.count;
-    }
-  }
-  return overrides;
+function composeScenarios(
+  presets: Record<string, MockScenario>,
+  userScenarios?: Record<string, MockScenario>,
+): Record<string, MockScenario> {
+  const happyPath: MockScenario = { name: "happy-path", apply: () => {} };
+  const merged = { ...userScenarios };
+  delete merged["happy-path"];
+  return {
+    "happy-path": happyPath,
+    ...presets,
+    ...merged,
+  };
 }

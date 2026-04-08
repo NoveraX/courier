@@ -3,6 +3,8 @@ import type { ExecuteBackend } from "../client/types";
 import type { DefinedApi } from "../define/types";
 import { HTTPError } from "../error";
 import { createMockBuilder, type MockHandler } from "./mock-builder";
+import { createMockSSESubscription } from "./mock-sse";
+import { createMockWSChannel } from "./mock-ws";
 import type { HistoryEntry, MockBuilder, TestClient } from "./types";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -27,38 +29,22 @@ export function createTestClient<T extends DefinedApi<any> = DefinedApi<any>>():
   const history: HistoryEntry[] = [];
   const mockKey = (group: string, method: string) => `${group}/${method}`;
 
-  const backend: ExecuteBackend = async (group, method, variables, _options, _raw) => {
-    const handler = getMock(mocks, mockKey(group, method));
-    const entry: HistoryEntry = { group, method, variables, timestamp: Date.now() };
+  // Backend returns synchronously for SSE (SSESubscription) or async for HTTP
+  const backend: ExecuteBackend = (group, method, variables, _options, _raw) => {
+    const key = mockKey(group, method);
+    const handler = getMock(mocks, key);
 
-    if (!handler) {
-      const error = new Error(
-        `[nexus/testing] No mock for "${group}.${method}". ` +
-          `Call mock("${group}", "${method}").resolves(data) first.`,
-      );
-      entry.error = error;
-      history.push(entry);
-      throw error;
+    // SSE stream mock — return SSESubscription synchronously
+    if (handler?.streamFn) {
+      return handleStream(handler, group, method, variables, history);
+    }
+    // WS channel mock — return WSChannel synchronously
+    if (handler?.channelHandlers) {
+      return handleWSChannel(handler, group, method, variables, history);
     }
 
-    if (handler.delayMs) await sleep(handler.delayMs);
-
-    if (handler.isError) {
-      const httpError = new HTTPError({
-        status: handler.status,
-        headers: new Headers(),
-        data: handler.data,
-      });
-      entry.error = httpError;
-      entry.result = { status: handler.status, data: handler.data };
-      history.push(entry);
-      throw httpError;
-    }
-
-    const data = handler.resolver ? await handler.resolver(variables) : handler.data;
-    entry.result = { status: handler.status, data };
-    history.push(entry);
-    return data;
+    // HTTP mock (or unmocked) — async flow, errors thrown as rejected Promise
+    return handleHTTP(handler, group, method, variables, history);
   };
 
   function mock(group: string, method: string): MockBuilder<unknown> {
@@ -86,11 +72,75 @@ export function createTestClient<T extends DefinedApi<any> = DefinedApi<any>>():
   };
 }
 
+function handleStream(
+  handler: MockHandler,
+  group: string,
+  method: string,
+  variables: unknown,
+  history: HistoryEntry[],
+): unknown {
+  const { streamFn, delayMs } = handler;
+  if (!streamFn) return undefined;
+  history.push({ group, method, variables, stream: true, timestamp: Date.now() });
+  return createMockSSESubscription(streamFn, delayMs);
+}
+
+function handleWSChannel(
+  handler: MockHandler,
+  group: string,
+  method: string,
+  variables: unknown,
+  history: HistoryEntry[],
+): unknown {
+  const { channelHandlers, delayMs } = handler;
+  if (!channelHandlers) return undefined;
+  history.push({ group, method, variables, channel: true, timestamp: Date.now() });
+  return createMockWSChannel(channelHandlers, variables, delayMs);
+}
+
+async function handleHTTP(
+  handler: MockHandler | undefined,
+  group: string,
+  method: string,
+  variables: unknown,
+  history: HistoryEntry[],
+): Promise<unknown> {
+  const entry: HistoryEntry = { group, method, variables, timestamp: Date.now() };
+
+  if (!handler) {
+    const error = new Error(
+      `[nexus/testing] No mock for "${group}.${method}". ` +
+        `Call mock("${group}", "${method}").resolves(data) first.`,
+    );
+    entry.error = error;
+    history.push(entry);
+    throw error;
+  }
+
+  if (handler.delayMs) await sleep(handler.delayMs);
+
+  if (handler.isError) {
+    const httpError = new HTTPError({
+      status: handler.status,
+      headers: new Headers(),
+      data: handler.data,
+    });
+    entry.error = httpError;
+    entry.result = { status: handler.status, data: handler.data };
+    history.push(entry);
+    throw httpError;
+  }
+
+  const data = handler.resolver ? await handler.resolver(variables) : handler.data;
+  entry.result = { status: handler.status, data };
+  history.push(entry);
+  return data;
+}
+
 function getMock(mocks: Map<string, MockHandler[]>, key: string): MockHandler | undefined {
   const handlers = mocks.get(key);
   if (!handlers?.length) return undefined;
 
-  // Stack: latest mock wins, consumed mocks are popped
   const handler = handlers[handlers.length - 1]!;
 
   if (handler.remaining !== undefined) {

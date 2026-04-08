@@ -1,4 +1,8 @@
-const META_KEYS = new Set(["_s", "_g", "_m", "_o"]);
+import { createLogger } from "../logger";
+
+const log = createLogger("Adapter");
+
+const META_KEYS = new Set(["_s", "_g", "_m", "_o", "_transport"]);
 
 export { META_KEYS };
 
@@ -15,6 +19,7 @@ export function parseOptions(raw: string | null): Record<string, unknown> | unde
       return value;
     });
   } catch {
+    log.warn("Failed to parse options header");
     return undefined;
   }
 }

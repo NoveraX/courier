@@ -61,9 +61,10 @@ export function createPostHandler(execute: ExecuteFn, dt: StudioHooks) {
 
 async function parseBody(request: Request): Promise<RequestPayloadInput | Response> {
   const contentType = request.headers.get("content-type");
+  const mediaType = contentType?.split(";")[0]?.trim();
 
-  if (contentType?.includes("multipart/form-data")) return request.formData();
-  if (contentType?.includes("application/json")) {
+  if (mediaType === "multipart/form-data") return request.formData();
+  if (mediaType === "application/json") {
     try {
       return await request.json();
     } catch {

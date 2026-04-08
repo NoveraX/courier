@@ -1,11 +1,11 @@
-export const metadata = { title: "React (Vite / CRA)", description: "Use Nexus with React and Vite or Create React App via createQueryCaller and a separate backend proxy.", mode: "proxy" }
+export const metadata = { title: "React (Vite / CRA)", description: "Use Nexus with React and Vite or Create React App via createProxyQueryCaller and a separate backend proxy.", mode: "proxy" }
 
-For React apps built with Vite or Create React App, Nexus provides `createQueryCaller` for type-safe data fetching with React Query. Since these apps don't have a built-in server, you need a separate backend (Express, Hono, or Fastify) to host the proxy route.
+For React apps built with Vite or Create React App, Nexus provides `createProxyQueryCaller` for type-safe data fetching with React Query. Since these apps don't have a built-in server, you need a separate backend (Express, Hono, or Fastify) to host the proxy route.
 
 ## Installation
 
 ```bash
-npm install @noverax/nexus @noverax/nexus-query @tanstack/react-query
+npm install @noverax/nexus @noverax/nexus-react @tanstack/react-query
 ```
 
 ## Define your API sources
@@ -70,11 +70,11 @@ You can use any supported adapter: [Express](/docs/frameworks/express), [Hono](/
 ## Step 2: Create the query caller
 
 ```ts title="src/lib/query.ts"
-import { createQueryCaller } from "@noverax/nexus-query"
+import { createProxyQueryCaller } from "@noverax/nexus-react"
 import type { api } from "../../shared/sources"
 
-export const q = createQueryCaller<typeof api>("myApi", {
-  proxyUrl: "http://localhost:3001/api/request",
+export const q = createProxyQueryCaller<typeof api>("myApi", {
+  proxyPath: { http: "http://localhost:3001/api/request" },
 })
 ```
 
@@ -85,7 +85,7 @@ Wrap your app with the React Query provider:
 ```tsx title="src/main.tsx"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { QueryClient, QueryClientProvider } from "@noverax/nexus-query"
+import { QueryClient, QueryClientProvider } from "@noverax/nexus-react"
 import App from "./App"
 
 const queryClient = new QueryClient()
@@ -130,7 +130,7 @@ export function ProductList() {
 ```tsx title="src/components/CreateProduct.tsx"
 import { q } from "@/lib/query"
 import { useState } from "react"
-import { useQueryClient } from "@noverax/nexus-query"
+import { useQueryClient } from "@noverax/nexus-react"
 
 export function CreateProduct() {
   const queryClient = useQueryClient()
@@ -185,7 +185,7 @@ shared/
 server/
   index.ts                  # Express/Hono/Fastify with nexusHandler
 src/
-  lib/query.ts              # createQueryCaller<typeof api>("myApi")
+  lib/query.ts              # createProxyQueryCaller<typeof api>("myApi")
   components/
     ProductList.tsx          # q.products.useQuery usage
     CreateProduct.tsx        # q.products.useMutation usage
@@ -201,10 +201,10 @@ VITE_PROXY_URL=http://localhost:3001/api/request
 ```
 
 ```ts title="src/lib/query.ts"
-import { createQueryCaller } from "@noverax/nexus-query"
+import { createProxyQueryCaller } from "@noverax/nexus-react"
 import type { api } from "../../shared/sources"
 
-export const q = createQueryCaller<typeof api>("myApi", {
-  proxyUrl: import.meta.env.VITE_PROXY_URL,
+export const q = createProxyQueryCaller<typeof api>("myApi", {
+  proxyPath: { http: import.meta.env.VITE_PROXY_URL },
 })
 ```

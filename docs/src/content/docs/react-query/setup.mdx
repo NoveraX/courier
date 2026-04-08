@@ -2,7 +2,7 @@ export const metadata = { title: "React Query Setup", description: "Integrate Ne
 
 ## Overview
 
-`createQueryCaller` creates a type-safe query client with dot-notation access to all your endpoint groups. Each group exposes `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery`, and `prefetchQuery`.
+`createProxyQueryCaller` creates a type-safe query client with dot-notation access to all your endpoint groups. Each group exposes `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery`, and `prefetchQuery`.
 
 ### Step 1: Install @tanstack/react-query
 
@@ -18,7 +18,7 @@ React Query requires a `QueryClientProvider` at the root of your app. Create a c
 // app/providers.tsx
 "use client"
 
-import { QueryClient, QueryClientProvider } from "@noverax/nexus-query"
+import { QueryClient, QueryClientProvider } from "@noverax/nexus-react"
 import { useState, type ReactNode } from "react"
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -59,14 +59,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ### Step 3: Create the Nexus query caller
 
-Call `createQueryCaller` with your API type and a source name. Export the query client from a single file so every component imports from the same place:
+Call `createProxyQueryCaller` with your API type and a source name. Export the query client from a single file so every component imports from the same place:
 
 ```ts title="lib/query.ts"
 // lib/query.ts
-import { createQueryCaller } from "@noverax/nexus-query"
+import { createProxyQueryCaller } from "@noverax/nexus-react"
 import type { api } from "@/api"
 
-export const q = createQueryCaller<typeof api>("api")
+export const q = createProxyQueryCaller<typeof api>("api")
 ```
 
 Then use it in your components with dot-notation:
@@ -88,16 +88,16 @@ Keep the query caller in one file. This ensures all components share the same cl
 
 ## Configuring defaults
 
-`createQueryCaller` accepts an optional defaults object to configure the underlying proxy caller. These defaults apply to every request:
+`createProxyQueryCaller` accepts an optional defaults object to configure the underlying proxy caller. These defaults apply to every request:
 
 ```ts title="lib/query.ts"
 // lib/query.ts
-import { createQueryCaller } from "@noverax/nexus-query"
+import { createProxyQueryCaller } from "@noverax/nexus-react"
 import type { api } from "@/api"
 
-export const q = createQueryCaller<typeof api>("api", {
+export const q = createProxyQueryCaller<typeof api>("api", {
   // Custom proxy route URL (default: "/api/request")
-  proxyUrl: "/api/my-proxy",
+  proxyPath: { http: "/api/my-proxy" },
 
   // Request timeout in milliseconds
   timeout: 10000,

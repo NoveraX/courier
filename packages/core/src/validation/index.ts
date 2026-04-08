@@ -11,6 +11,9 @@ export interface CacheConfig {
   tags?: string[];
 }
 
+/** Transport mode for an endpoint */
+export type Transport = "http" | "sse" | "ws";
+
 /** Schema metadata attached to an endpoint function */
 export interface SchemaMetadata {
   response?: StandardSchemaV1;
@@ -19,6 +22,10 @@ export interface SchemaMetadata {
   type?: "query" | "mutation";
   /** Cache hints for proxy GET responses */
   cache?: CacheConfig;
+  /** Transport mode — "http" (default), "sse" for streaming, "ws" for WebSocket */
+  transport?: Transport;
+  /** Standard Schema for incoming WS messages (bidirectional channels only) */
+  receive?: StandardSchemaV1;
 }
 
 /** A single validation issue from Standard Schema */
@@ -30,9 +37,9 @@ export interface ValidationIssue {
 /** Error thrown when schema validation fails */
 export class ValidationError extends Error {
   readonly issues: readonly ValidationIssue[];
-  readonly target: "response" | "variables";
+  readonly target: "response" | "variables" | "receive";
 
-  constructor(target: "response" | "variables", issues: readonly ValidationIssue[]) {
+  constructor(target: "response" | "variables" | "receive", issues: readonly ValidationIssue[]) {
     const messages = issues.map((i) => i.message).join("; ");
     super(`Validation failed (${target}): ${messages}`);
     this.name = "ValidationError";
@@ -50,7 +57,7 @@ export function isValidationError(error: unknown): error is ValidationError {
 export async function validateSchema<TOutput>(
   schema: StandardSchemaV1<unknown, TOutput>,
   value: unknown,
-  target: "response" | "variables",
+  target: "response" | "variables" | "receive",
 ): Promise<TOutput> {
   const result = await schema["~standard"].validate(value);
 

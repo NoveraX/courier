@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 
-import { isHTTPError } from "@noverax/nexus"
+import { isHTTPError } from "@noverax/courier"
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
 import { middlewareCaller } from "@/lib/caller"

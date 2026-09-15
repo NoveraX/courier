@@ -1,7 +1,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-/** Symbol used by Nexus core to attach schema metadata to endpoints */
-const ENDPOINT_SCHEMA = Symbol.for("nexus.endpoint.schema");
+/** Symbol used by Courier core to attach schema metadata to endpoints */
+const ENDPOINT_SCHEMA = Symbol.for("courier.endpoint.schema");
 
 interface SchemaMetadata {
   response?: StandardSchemaV1;
@@ -60,7 +60,7 @@ export async function validateEndpoint(
 
 /**
  * Extract schema metadata from an endpoint function.
- * Uses the same Symbol.for("nexus.endpoint.schema") as core.
+ * Uses the same Symbol.for("courier.endpoint.schema") as core.
  */
 export function getEndpointSchema(endpointFn: unknown): SchemaMetadata | undefined {
   if (typeof endpointFn !== "function") return undefined;

@@ -20,12 +20,12 @@ export function generateIndexFile(
   const hasProxy = options.generateClient === "proxy" || options.generateClient === "both";
 
   // Imports
-  const nexusImports: string[] = [];
-  if (hasDirect) nexusImports.push("createCaller");
-  if (hasProxy) nexusImports.push("createProxyCaller");
+  const courierImports: string[] = [];
+  if (hasDirect) courierImports.push("createCaller");
+  if (hasProxy) courierImports.push("createProxyCaller");
 
-  if (nexusImports.length > 0) {
-    lines.push(`import { ${nexusImports.join(", ")} } from "@noverax/nexus";`);
+  if (courierImports.length > 0) {
+    lines.push(`import { ${courierImports.join(", ")} } from "@noverax/courier";`);
   }
   lines.push(`import { ${name} } from "./source";`);
   lines.push("");

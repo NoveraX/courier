@@ -8,8 +8,8 @@
 
 const MAX_EVENTS = 5000;
 
-const REQUEST_EVENTS_KEY = Symbol.for("nexus.studio.session-request-events");
-const ACTIVE_SESSIONS_KEY = Symbol.for("nexus.studio.session-active-sessions");
+const REQUEST_EVENTS_KEY = Symbol.for("courier.studio.session-request-events");
+const ACTIVE_SESSIONS_KEY = Symbol.for("courier.studio.session-active-sessions");
 
 const g = globalThis as Record<symbol, unknown>;
 

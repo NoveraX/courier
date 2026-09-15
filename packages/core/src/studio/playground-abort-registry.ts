@@ -29,7 +29,7 @@
  * This registry side-steps the loopback issue by giving the executor a
  * **direct in-process handle** to the server-side handler's force-abort
  * callback. When `createSSEHandler` (or the WS context builder) sees a
- * `x-nexus-playground-rid` header / `_playground_rid` query param, it
+ * `x-courier-playground-rid` header / `_playground_rid` query param, it
  * registers its `forceAbort.abort` here keyed by the playground rid. On
  * cancel, the executor looks up the rid and calls the abort directly —
  * deterministic, no TCP dependency.
@@ -49,7 +49,7 @@
  * `studioHooks` and the active connection.
  */
 
-const REGISTRY_KEY = Symbol.for("nexus.studio.playground-abort-registry");
+const REGISTRY_KEY = Symbol.for("courier.studio.playground-abort-registry");
 const g = globalThis as Record<symbol, unknown>;
 
 if (!g[REGISTRY_KEY]) g[REGISTRY_KEY] = new Map<string, () => void>();

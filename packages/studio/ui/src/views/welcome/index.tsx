@@ -70,7 +70,7 @@ export function WelcomeView(): React.ReactNode {
     <div className="flex flex-1 justify-center overflow-y-auto p-6">
       <div className="my-auto w-full max-w-2xl">
         <div className="mb-6">
-          <h3 className="text-h2 text-foreground">Set up Nexus Studio</h3>
+          <h3 className="text-h2 text-foreground">Set up Courier Studio</h3>
           <p className="mt-1 text-body-sm text-muted-foreground">
             {framework
               ? `Follow the steps below to connect your ${framework.name} app`

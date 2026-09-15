@@ -1,4 +1,4 @@
-import type { ProxyPath } from "@noverax/nexus"
+import type { ProxyPath } from "@noverax/courier"
 
 import type { ProxyTiming, RequestStatus, RequestTiming } from "./types"
 

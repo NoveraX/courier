@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { createLogger } from "@noverax/nexus";
+import { createLogger } from "@noverax/courier";
 import { writeFileAtomic } from "../server/fs-helpers";
 import type { SpecDigest } from "./merge/types";
 
@@ -12,7 +12,7 @@ const log = createLogger("Studio");
 export const IMPORTS_STATE_VERSION = 1 as const;
 
 /** Default location relative to the project root */
-export const IMPORTS_STATE_FILENAME = ".nexus/imports-state.json";
+export const IMPORTS_STATE_FILENAME = ".courier/imports-state.json";
 
 /** Per-import auto-managed cache entry */
 export interface ImportStateEntry {
@@ -32,7 +32,7 @@ export interface ImportStateEntry {
   fileFingerprints: Record<string, string>;
 }
 
-/** Top-level shape of `.nexus/imports-state.json` */
+/** Top-level shape of `.courier/imports-state.json` */
 export interface ImportsState {
   version: typeof IMPORTS_STATE_VERSION;
   imports: Record<string, ImportStateEntry>;

@@ -1,13 +1,13 @@
 <div align="center">
   <br />
 
-  # @noverax/nexus-nestjs
+  # @noverax/courier-nestjs
 
-  **NestJS adapter for Nexus.**
+  **NestJS adapter for Courier.**
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus-nestjs"><img src="https://img.shields.io/npm/v/@noverax/nexus-nestjs?color=7c3aed&style=flat-square" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier-nestjs"><img src="https://img.shields.io/npm/v/@noverax/courier-nestjs?color=7c3aed&style=flat-square" alt="npm" /></a>
 
   <br />
 </div>
@@ -17,7 +17,7 @@
 ## Install
 
 ```bash
-npm install @noverax/nexus-nestjs @noverax/nexus @nestjs/common
+npm install @noverax/courier-nestjs @noverax/courier @nestjs/common
 ```
 
 ## Usage
@@ -26,8 +26,8 @@ Register as NestJS middleware:
 
 ```ts
 import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
-import { registerSources } from "@noverax/nexus"
-import { nexusMiddleware } from "@noverax/nexus-nestjs"
+import { registerSources } from "@noverax/courier"
+import { courierMiddleware } from "@noverax/courier-nestjs"
 import { sources } from "./api/sources"
 
 registerSources(sources)
@@ -36,13 +36,13 @@ registerSources(sources)
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(nexusMiddleware())
+      .apply(courierMiddleware())
       .forRoutes("/api/request")
   }
 }
 ```
 
-`nexusMiddleware()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` at module load.
+`courierMiddleware()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` at module load.
 
 ## How It Works
 
@@ -54,7 +54,7 @@ export class AppModule implements NestModule {
 ## With Frontend
 
 ```ts
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import { api } from "./api/sources"
 
 const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })

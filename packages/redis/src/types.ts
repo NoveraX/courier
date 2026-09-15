@@ -5,7 +5,7 @@ export interface RedisPresenceConfig {
   /** Redis instance for ZADD / HSET / ZRANGEBYSCORE commands */
   redis: Redis;
   /**
-   * Key prefix for presence data (e.g. `"nexus:presence:"`).
+   * Key prefix for presence data (e.g. `"courier:presence:"`).
    * Two keys per topic: `{prefix}score:{topic}` (ZSET) and `{prefix}meta:{topic}` (HASH).
    * @default "presence:"
    */
@@ -30,7 +30,7 @@ export interface RedisPubSubConfig {
    */
   origin?: string;
   /**
-   * Channel key prefix (e.g. `"nexus:"`).
+   * Channel key prefix (e.g. `"courier:"`).
    * Applied to all topic names: `prefix + topic`.
    * @default ""
    */
@@ -42,7 +42,7 @@ export interface RedisStreamConfig {
   /** Redis instance for XADD / XRANGE / XTRIM commands */
   redis: Redis;
   /**
-   * Stream key prefix (e.g. `"nexus:stream:"`).
+   * Stream key prefix (e.g. `"courier:stream:"`).
    * Applied to all topic names: `prefix + topic`.
    * @default ""
    */

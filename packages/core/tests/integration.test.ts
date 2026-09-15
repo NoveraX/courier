@@ -442,7 +442,7 @@ describe("integration: HTTP-semantic proxy", () => {
 		expect(response.headers.get("cache-control")).toBe("s-maxage=60, stale-while-revalidate");
 	});
 
-	it("adds x-nexus-tags header for GET proxy with cache tags", async () => {
+	it("adds x-courier-tags header for GET proxy with cache tags", async () => {
 		fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
 		const { NextResponse } = await import("next/server");
@@ -468,7 +468,7 @@ describe("integration: HTTP-semantic proxy", () => {
 			method: "getAll",
 		}, { res: new NextResponse(), proxyMethod: "GET" }) as Response;
 
-		expect(response.headers.get("x-nexus-tags")).toBe("users,list");
+		expect(response.headers.get("x-courier-tags")).toBe("users,list");
 		expect(response.headers.get("cache-control")).toBe("s-maxage=30, stale-while-revalidate");
 	});
 

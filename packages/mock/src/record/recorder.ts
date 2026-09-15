@@ -1,6 +1,6 @@
-import type { ExecuteBackend, TypedClient } from "@noverax/nexus";
-import { buildClientProxy } from "@noverax/nexus";
-import type { DefinedApi } from "@noverax/nexus/define";
+import type { ExecuteBackend, TypedClient } from "@noverax/courier";
+import { buildClientProxy } from "@noverax/courier";
+import type { DefinedApi } from "@noverax/courier/define";
 
 import type { Fixture } from "./fixture";
 import { sanitizeFixture } from "./fixture";
@@ -56,7 +56,7 @@ export function createRecorder<TApi extends DefinedApi<any>>(
 
   const backend: ExecuteBackend = async (group, method, variables) => {
     if (config.filter && !config.filter(group, method)) {
-      throw new Error(`[nexus-mock/recorder] Endpoint "${group}.${method}" excluded by filter`);
+      throw new Error(`[courier-mock/recorder] Endpoint "${group}.${method}" excluded by filter`);
     }
 
     const start = performance.now();
@@ -98,7 +98,7 @@ export function createRecorder<TApi extends DefinedApi<any>>(
     fixtures.push(fixture);
 
     if (!response.ok) {
-      throw new Error(`[nexus-mock/recorder] ${group}.${method} returned ${response.status}`);
+      throw new Error(`[courier-mock/recorder] ${group}.${method} returned ${response.status}`);
     }
 
     return data;

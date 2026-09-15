@@ -1,5 +1,5 @@
-import { defineApi } from "@noverax/nexus/define"
-import { logMiddleware } from "@noverax/nexus/middleware"
+import { defineApi } from "@noverax/courier/define"
+import { logMiddleware } from "@noverax/courier/middleware"
 import { echo } from "./echo"
 import { files } from "./files"
 import { misc } from "./misc"

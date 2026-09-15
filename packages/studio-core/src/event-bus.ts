@@ -4,7 +4,7 @@ type EventListener = (event: AnyStudioEvent) => void;
 
 /**
  * Central event bus for Studio instrumentation.
- * Collects events from the Nexus core hooks and forwards them to listeners
+ * Collects events from the Courier core hooks and forwards them to listeners
  * (Socket.IO transport, in-memory store, custom handlers).
  *
  * Supports buffering events before a listener connects,

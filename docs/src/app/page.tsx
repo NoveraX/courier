@@ -4,7 +4,7 @@ import { FeaturesGrid } from "@/components/landing/features-grid"
 import { Footer } from "@/components/landing/footer"
 import { Hero } from "@/components/landing/hero"
 import { QuickStart } from "@/components/landing/quick-start"
-import { WhyNexus } from "@/components/landing/why-nexus"
+import { WhyCourier } from "@/components/landing/why-courier"
 
 export default function LandingPage() {
   return (
@@ -13,7 +13,7 @@ export default function LandingPage() {
       <Architecture />
       <FeaturesGrid />
       <CodeComparison />
-      <WhyNexus />
+      <WhyCourier />
       <QuickStart />
       <Footer />
     </div>

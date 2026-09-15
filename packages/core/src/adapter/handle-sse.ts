@@ -35,7 +35,7 @@ function unavailable(message: string, retrySec: string): Response {
  * TTL-based stream lifetime, graceful shutdown support, variable schema validation.
  *
  * Sources are read lazily from the core global registry at request time via
- * `requireSources()`, so a single `nexusHandler()` expression in user code
+ * `requireSources()`, so a single `courierHandler()` expression in user code
  * works regardless of which framework owns the listen socket.
  *
  * @param config - Optional handler config (origins, headers, TTL, lifecycle hooks)
@@ -73,12 +73,12 @@ export function createSSEHandler(
 
     const connectionId = crypto.randomUUID();
     // Studio Playground proxy mode forwards its own pre-allocated requestId
-    // via the `x-nexus-playground-rid` header so the events emitted by this
+    // via the `x-courier-playground-rid` header so the events emitted by this
     // handler correlate back to the playground tab that initiated the
     // Subscribe. Without this, the playground tab would silently receive
     // nothing — events would still flow through `studioHooks` but under a
     // server-generated id the UI cannot match.
-    const playgroundRid = request.headers.get("x-nexus-playground-rid");
+    const playgroundRid = request.headers.get("x-courier-playground-rid");
     const requestId = playgroundRid ?? (studioHooks.onStreamOpen ? generateRequestId() : "");
     const dt = studioHooks;
 

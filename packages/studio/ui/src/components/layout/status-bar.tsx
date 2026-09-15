@@ -103,7 +103,7 @@ export function StatusBar(): React.ReactNode {
 
       {/* Right: branding */}
       <div className="flex h-full items-center px-2.5 text-muted-foreground/40">
-        nexus
+        courier
       </div>
     </footer>
   );

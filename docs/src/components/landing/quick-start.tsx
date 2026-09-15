@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button"
 
 import { AnimatedSection } from "./section-animate"
 
-const installCode = `npm install @noverax/nexus`
+const installCode = `npm install @noverax/courier`
 
-const defineCode = `import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+const defineCode = `import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 const users = defineGroup({
   prefix: "users",
@@ -21,7 +21,7 @@ const users = defineGroup({
 
 export const api = defineApi({ baseURL: "...", groups: { users } })`
 
-const useCode = `import { createProxyCaller } from "@noverax/nexus"
+const useCode = `import { createProxyCaller } from "@noverax/courier"
 
 const caller = createProxyCaller<typeof api>("api")
 

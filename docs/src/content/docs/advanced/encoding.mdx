@@ -2,10 +2,10 @@ export const metadata = { title: "Encoding", description: "Control how request b
 
 ## Default behavior
 
-By default, Nexus serializes variables based on the HTTP method. GET and DELETE methods send variables as URL search params. POST, PUT, and PATCH send them as a JSON body:
+By default, Courier serializes variables based on the HTTP method. GET and DELETE methods send variables as URL search params. POST, PUT, and PATCH send them as a JSON body:
 
 ```ts title="Default encoding"
-import { defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: number; name: string; email: string }
 
@@ -38,7 +38,7 @@ await caller.users.create({ name: "Jane", email: "jane@test.com" })
 Override the default JSON serialization for request bodies. This is useful when your backend expects a different format like `application/x-www-form-urlencoded`, Protocol Buffers, or any custom encoding:
 
 ```ts title="api/index.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 const auth = defineGroup({
   prefix: "auth",
@@ -85,7 +85,7 @@ Unified serializer for query parameters. Handles both encoding (object to string
 You can pass any library with `stringify` and `parse` methods (e.g., `qs`):
 
 ```ts title="api/index.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 import qs from "qs"
 
 type Product = { id: number; name: string; category: string }

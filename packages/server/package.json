@@ -1,12 +1,12 @@
 {
-  "name": "@noverax/nexus-server",
+  "name": "@noverax/courier-server",
   "version": "0.0.0",
-  "description": "Standalone HTTP + WebSocket server for @noverax/nexus — proxy handler for Next.js and serverless environments",
+  "description": "Standalone HTTP + WebSocket server for @noverax/courier — proxy handler for Next.js and serverless environments",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noverax/nexus.git",
+    "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/server"
   },
   "type": "module",
@@ -15,7 +15,7 @@
   },
   "sideEffects": false,
   "bin": {
-    "nexus-server": "./lib/cli.js"
+    "courier-server": "./lib/cli.js"
   },
   "main": "./lib/index.js",
   "module": "./lib/index.js",
@@ -41,7 +41,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/nexus": "*",
+    "@noverax/courier": "*",
     "citty": "^0.1.6"
   },
   "peerDependencies": {

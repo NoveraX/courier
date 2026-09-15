@@ -3,7 +3,7 @@
  *
  * @example
  * ```ts
- * import { createFetch } from "@noverax/nexus/fetch";
+ * import { createFetch } from "@noverax/courier/fetch";
  *
  * const api = createFetch({ baseURL: "https://api.example.com" });
  *

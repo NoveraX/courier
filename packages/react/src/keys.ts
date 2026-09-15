@@ -1,5 +1,5 @@
-import type { DefinedApi } from "@noverax/nexus/define";
-import { getSourceName } from "@noverax/nexus/define";
+import type { DefinedApi } from "@noverax/courier/define";
+import { getSourceName } from "@noverax/courier/define";
 
 type Groups<TApi extends DefinedApi<any>> = TApi["options"]["groups"];
 type GroupKey<TApi extends DefinedApi<any>> = keyof Groups<TApi> & string;
@@ -46,7 +46,7 @@ function buildKeyFactory<TApi extends DefinedApi<any>>(source: string): QueryKey
  *
  * @example
  * ```ts
- * import { createQueryCaller, createQueryKeys } from "@noverax/nexus-react";
+ * import { createQueryCaller, createQueryKeys } from "@noverax/courier-react";
  * import { api } from "@/shared/api";
  *
  * export const q = createQueryCaller(api);
@@ -73,7 +73,7 @@ export function createQueryKeys<TApi extends DefinedApi<any>>(api: TApi): QueryK
  *
  * @example
  * ```ts
- * import { createProxyQueryCaller, createProxyQueryKeys } from "@noverax/nexus-react";
+ * import { createProxyQueryCaller, createProxyQueryKeys } from "@noverax/courier-react";
  * import type { Api } from "@/shared/api";
  *
  * export const q = createProxyQueryCaller<Api>("api");

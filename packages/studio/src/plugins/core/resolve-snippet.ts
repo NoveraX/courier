@@ -7,7 +7,7 @@ import type { StudioPluginOptions } from "./types";
  * One-shot snippet resolver shared by every build plugin.
  *
  * Every plugin needs the same three steps before injecting: load the Studio
- * URL from `nexus.config.ts`, resolve plugin options, and (if enabled)
+ * URL from `courier.config.ts`, resolve plugin options, and (if enabled)
  * render the connect snippet. This helper collapses them so each bundler
  * adapter only owns its injection mechanism, not the resolution logic.
  *

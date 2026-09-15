@@ -5,9 +5,9 @@ import {
   createDirectHTTPExecutor,
   createDirectSSEFactory,
   createDirectWSChannelFactory,
-} from "@noverax/nexus";
-import type { DefinedApi } from "@noverax/nexus/define";
-import { getSourceName } from "@noverax/nexus/define";
+} from "@noverax/courier";
+import type { DefinedApi } from "@noverax/courier/define";
+import { getSourceName } from "@noverax/courier/define";
 
 import { createGroupHooks } from "./group-hooks";
 import type { ChannelFn } from "./hooks/use-channel";
@@ -37,7 +37,7 @@ export type QueryCallerDefaults = CallerDefaults;
  *
  * @example
  * ```ts
- * import { createQueryCaller } from "@noverax/nexus-react";
+ * import { createQueryCaller } from "@noverax/courier-react";
  * import { api } from "@/shared/api";
  *
  * export const q = createQueryCaller(api, { timeout: 10_000 });

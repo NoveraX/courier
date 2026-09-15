@@ -2,10 +2,10 @@ export const metadata = { title: "HttpClient", description: "Internal HTTP clien
 
 ## Overview
 
-`HttpClient` is the low-level HTTP client at the core of Nexus. It wraps the native `fetch` API and provides typed HTTP method functions (`get`, `post`, `put`, `patch`, `del`, `head`). You never create an `HttpClient` directly — it is created internally by `executeRequest`.
+`HttpClient` is the low-level HTTP client at the core of Courier. It wraps the native `fetch` API and provides typed HTTP method functions (`get`, `post`, `put`, `patch`, `del`, `head`). You never create an `HttpClient` directly — it is created internally by `executeRequest`.
 
 <Callout variant="info" title="Internal class">
-`HttpClient` is used internally by Nexus. Understanding it helps with debugging and writing endpoint definitions, but you don't instantiate it yourself.
+`HttpClient` is used internally by Courier. Understanding it helps with debugging and writing endpoint definitions, but you don't instantiate it yourself.
 </Callout>
 
 ## HTTP Methods

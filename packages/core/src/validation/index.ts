@@ -1,8 +1,8 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import { NexusError } from "../errors";
+import { CourierError } from "../errors";
 
 /** Symbol key for attaching schema metadata to endpoint functions */
-export const ENDPOINT_SCHEMA: unique symbol = Symbol.for("nexus.endpoint.schema");
+export const ENDPOINT_SCHEMA: unique symbol = Symbol.for("courier.endpoint.schema");
 
 /** Cache configuration for proxy GET responses */
 export interface CacheConfig {
@@ -36,7 +36,7 @@ export interface ValidationIssue {
 }
 
 /** Error thrown when schema validation fails */
-export class ValidationError extends NexusError<"VALIDATION_ERROR"> {
+export class ValidationError extends CourierError<"VALIDATION_ERROR"> {
   readonly issues: readonly ValidationIssue[];
   readonly target: "response" | "variables" | "receive";
 

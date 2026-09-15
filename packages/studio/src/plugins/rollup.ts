@@ -5,25 +5,25 @@ import type { StudioPluginOptions } from "./core/types";
 const FRAMEWORK = "rollup";
 
 /**
- * Rollup plugin for Nexus Studio.
+ * Rollup plugin for Courier Studio.
  * Injects `attachRuntime("rollup-browser")` into entry modules in dev/watch mode.
  *
  * @example
  * ```ts
- * import { nexusStudio } from "@noverax/nexus-studio/rollup"
+ * import { courierStudio } from "@noverax/courier-studio/rollup"
  *
  * export default {
- *   plugins: [nexusStudio()],
+ *   plugins: [courierStudio()],
  * }
  * ```
  */
-export function nexusStudio(options?: StudioPluginOptions): RollupPluginLike {
+export function courierStudio(options?: StudioPluginOptions): RollupPluginLike {
   let injected = false;
   let pending: Promise<string | null> | null = null;
   const ensure = (): Promise<string | null> => (pending ??= resolveSnippet(FRAMEWORK, options));
 
   return {
-    name: "nexus-studio",
+    name: "courier-studio",
 
     buildStart() {
       injected = false;

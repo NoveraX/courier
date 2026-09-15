@@ -74,7 +74,7 @@ function requestToPostmanItem(req: SavedRequest): PostmanItem {
 export function exportAsPostman(session: SavedSession): PostmanCollection {
   return {
     info: {
-      name: `Nexus Studio — ${session.name}`,
+      name: `Courier Studio — ${session.name}`,
       schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     },
     item: session.requests.map(requestToPostmanItem),

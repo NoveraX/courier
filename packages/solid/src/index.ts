@@ -1,7 +1,7 @@
-import { createHandler } from "@noverax/nexus";
+import { createHandler } from "@noverax/courier";
 
 /**
- * Create a Solid Start API route handler for the nexus proxy.
+ * Create a Solid Start API route handler for the courier proxy.
  *
  * Sources are read from the core global registry populated by
  * `attachRuntime()` — call `await attachRuntime()` in your server
@@ -10,14 +10,14 @@ import { createHandler } from "@noverax/nexus";
  * @example
  * ```ts
  * // src/routes/api/request.ts
- * import { nexusHandler } from "@noverax/nexus-solid";
+ * import { courierHandler } from "@noverax/courier-solid";
  *
- * const handler = nexusHandler();
+ * const handler = courierHandler();
  * export const GET = handler;
  * export const POST = handler;
  * ```
  */
-export function nexusHandler() {
+export function courierHandler() {
   const { handle } = createHandler();
   return ({ request }: { request: Request }) => handle(request);
 }

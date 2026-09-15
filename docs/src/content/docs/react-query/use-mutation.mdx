@@ -65,7 +65,7 @@ export function CreateUserForm() {
 
 ## Update mutation
 
-For updates, pass all required fields (including the ID for path parameters) to `mutate()`. Nexus extracts path parameters automatically:
+For updates, pass all required fields (including the ID for path parameters) to `mutate()`. Courier extracts path parameters automatically:
 
 ```ts title="components/edit-user-form.tsx"
 "use client"
@@ -126,7 +126,7 @@ After a mutation succeeds, invalidate related queries to trigger a refetch. Use 
 ```ts title="components/create-user-form.tsx"
 "use client"
 
-import { useQueryClient } from "@noverax/nexus-react"
+import { useQueryClient } from "@noverax/courier-react"
 import { q } from "@/lib/query"
 
 export function CreateUserForm() {
@@ -161,7 +161,7 @@ For instant UI feedback, update the cache optimistically before the server respo
 ```ts title="components/user-manager.tsx"
 "use client"
 
-import { useQueryClient } from "@noverax/nexus-react"
+import { useQueryClient } from "@noverax/courier-react"
 import { q } from "@/lib/query"
 
 type User = { id: number; name: string; email: string }

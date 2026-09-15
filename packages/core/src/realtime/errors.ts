@@ -13,10 +13,10 @@
  * - 5000: server internal error
  */
 
-import { NexusError } from "../errors";
+import { CourierError } from "../errors";
 
 /** Base error for all realtime transport errors */
-export class RealtimeError extends NexusError<number> {
+export class RealtimeError extends CourierError<number> {
   constructor(code: number, message: string) {
     super(message, { code });
   }

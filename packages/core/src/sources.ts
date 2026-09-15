@@ -4,16 +4,16 @@
  *
  * # Why this lives in core
  *
- * Framework adapter handlers (`nexusHandler()`, `apiRoute()`, …) read
+ * Framework adapter handlers (`courierHandler()`, `apiRoute()`, …) read
  * sources at request time via `getSources()` instead of taking an
  * explicit `sources` argument. Core ships with the registry so the
- * adapter packages don't need to depend on `@noverax/nexus-studio-core`
+ * adapter packages don't need to depend on `@noverax/courier-studio-core`
  * in production just to read a dictionary.
  *
  * # Who writes to it
  *
- * `attachRuntime()` from `@noverax/nexus-studio-core/runtime` populates
- * the registry on startup from `nexus.config.ts.sources`. The same
+ * `attachRuntime()` from `@noverax/courier-studio-core/runtime` populates
+ * the registry on startup from `courier.config.ts.sources`. The same
  * function installs a `studioHooks.onSourceDefined` listener so that
  * hot-reloaded `defineApi()` calls land here too without user-code
  * intervention.
@@ -28,7 +28,7 @@
 import { setSourceName } from "./define/api";
 import type { Sources } from "./define/types";
 
-const SOURCES_KEY = Symbol.for("nexus.sources");
+const SOURCES_KEY = Symbol.for("courier.sources");
 
 type SourcesListener = (sources: Sources) => void;
 

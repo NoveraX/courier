@@ -44,9 +44,9 @@ export const DEFAULT_SETTINGS: Settings = {
 
 // ── Safe localStorage reads (v2 prefix to avoid conflicts) ──────────────────
 
-export const THEME_STORAGE_KEY = "nexus-studio-v2-theme"
-export const SETTINGS_STORAGE_KEY = "nexus-studio-v2-settings"
-export const SESSION_STARTED_KEY = "nexus-studio-v2-session-started"
+export const THEME_STORAGE_KEY = "courier-studio-v2-theme"
+export const SETTINGS_STORAGE_KEY = "courier-studio-v2-settings"
+export const SESSION_STARTED_KEY = "courier-studio-v2-session-started"
 
 const VALID_THEMES: ReadonlySet<string> = new Set<Theme>(["dark", "light", "system"])
 export function loadTheme(): Theme {

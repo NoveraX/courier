@@ -7,8 +7,8 @@ import {
   mergeProxyPath,
   type ProxyCallerDefaults,
   type ProxyPath,
-} from "@noverax/nexus";
-import type { DefinedApi } from "@noverax/nexus/define";
+} from "@noverax/courier";
+import type { DefinedApi } from "@noverax/courier/define";
 
 import { createGroupHooks } from "./group-hooks";
 import type { ChannelFn } from "./hooks/use-channel";

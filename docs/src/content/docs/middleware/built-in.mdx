@@ -1,6 +1,6 @@
-export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, and caching middleware shipped with Nexus.", mode: "both" }
+export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, and caching middleware shipped with Courier.", mode: "both" }
 
-Nexus ships five production-ready middleware functions. Import them from `@noverax/nexus/middleware`:
+Courier ships five production-ready middleware functions. Import them from `@noverax/courier/middleware`:
 
 ```ts
 import {
@@ -9,7 +9,7 @@ import {
   logMiddleware,
   rateLimitMiddleware,
   cacheMiddleware,
-} from "@noverax/nexus/middleware"
+} from "@noverax/courier/middleware"
 ```
 
 ---
@@ -249,14 +249,14 @@ Two requests to the same endpoint with different variables produce different cac
 Order matters. Place middleware in the array from outermost to innermost:
 
 ```ts title="lib/sources.ts"
-import { defineApi } from "@noverax/nexus/define"
+import { defineApi } from "@noverax/courier/define"
 import {
   authMiddleware,
   cacheMiddleware,
   logMiddleware,
   rateLimitMiddleware,
   retryMiddleware,
-} from "@noverax/nexus/middleware"
+} from "@noverax/courier/middleware"
 
 const api = defineApi({
   baseURL: "https://api.example.com",

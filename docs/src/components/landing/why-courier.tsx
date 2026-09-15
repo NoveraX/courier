@@ -36,7 +36,7 @@ const cards = [
   },
 ]
 
-export function WhyNexus() {
+export function WhyCourier() {
   return (
     <section className="px-6 py-16 sm:py-24 lg:px-8">
       <div className="mx-auto max-w-6xl">
@@ -48,7 +48,7 @@ export function WhyNexus() {
           className="text-center"
         >
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Why <span className="gradient-brand-text">Nexus</span>?
+            Why <span className="gradient-brand-text">Courier</span>?
           </h2>
           <p className="mt-3 text-muted-foreground">
             Built from the ground up for the way modern Next.js apps consume APIs.

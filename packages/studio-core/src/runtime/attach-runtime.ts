@@ -1,11 +1,11 @@
 /**
  * `attachRuntime()` — the single public entry point for connecting any
- * Nexus runtime process (browser bundle or server instrumentation) to a
+ * Courier runtime process (browser bundle or server instrumentation) to a
  * Studio dev server.
  *
  * # Vision
  *
- * One function. Works on browser AND server. Auto-loads `nexus.config.ts`
+ * One function. Works on browser AND server. Auto-loads `courier.config.ts`
  * from disk on the server side. Wires `studioHooks` → EventBus → Studio
  * `/runtime` socket. Populates the global sources registry. Idempotent
  * per `runtimeId`.
@@ -29,13 +29,13 @@
  *
  * Server side (Next.js instrumentation, Express startup, etc.):
  * ```ts
- * import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
+ * import { attachRuntime } from "@noverax/courier-studio-core/runtime";
  * await attachRuntime();
  * ```
  *
  * Browser side (build-plugin-injected snippet):
  * ```ts
- * globalThis[Symbol.for("nexus.studio.url")] = "http://127.0.0.1:6280";
+ * globalThis[Symbol.for("courier.studio.url")] = "http://127.0.0.1:6280";
  * await attachRuntime("next-browser");
  * ```
  *
@@ -53,14 +53,14 @@ import {
   registerSources,
   setAppOrigin,
   studioHooks,
-} from "@noverax/nexus";
-import type { AnySource } from "@noverax/nexus/define";
+} from "@noverax/courier";
+import type { AnySource } from "@noverax/courier/define";
 import { EventBus } from "../event-bus";
 import { type BufferedAnnouncement, consumeAnnouncements } from "./announce-hosting";
 import type { RuntimeHandle, RuntimeKind } from "./attach-runtime-types";
 import { connectRuntimeSocket } from "./connect-runtime-socket";
 import { wireHooks, wireHttpHooks } from "./hooks";
-import { loadNexusConfig } from "./load-config";
+import { loadCourierConfig } from "./load-config";
 import { installSourceRegistry } from "./runtime-source-registry";
 import {
   createSourceNameResolver,
@@ -74,10 +74,10 @@ interface InternalHandle extends RuntimeHandle {
 
 const handles = new Map<string, InternalHandle>();
 
-const STUDIO_URL_KEY = Symbol.for("nexus.studio.url");
+const STUDIO_URL_KEY = Symbol.for("courier.studio.url");
 const DEFAULT_STUDIO_URL = "http://127.0.0.1:6280";
 
-const HOOKS_INSTALLED_KEY = Symbol.for("nexus.studio.attach-runtime-source-defined-installed");
+const HOOKS_INSTALLED_KEY = Symbol.for("courier.studio.attach-runtime-source-defined-installed");
 
 /** True when running inside a real DOM (browser, jsdom, etc.). */
 function detectBrowser(): boolean {
@@ -104,7 +104,7 @@ function detectDefaultRuntimeId(isBrowser: boolean): string {
 function resolveStudioUrl(): string {
   const slot = (globalThis as Record<symbol, unknown>)[STUDIO_URL_KEY];
   if (typeof slot === "string" && slot.length > 0) return slot;
-  const env = typeof process !== "undefined" ? process.env?.NEXUS_STUDIO_URL : undefined;
+  const env = typeof process !== "undefined" ? process.env?.COURIER_STUDIO_URL : undefined;
   return env ?? DEFAULT_STUDIO_URL;
 }
 
@@ -164,7 +164,7 @@ export async function attachRuntime(id?: string): Promise<RuntimeHandle> {
   installSourceDefinedHook();
 
   if (!isBrowser) {
-    const loaded = await loadNexusConfig();
+    const loaded = await loadCourierConfig();
     if (loaded) {
       registerSources(loaded.config.sources);
       setAppOrigin(loaded.config.runtime?.appOrigin ?? detectAppOrigin());

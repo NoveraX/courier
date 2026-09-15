@@ -1,4 +1,4 @@
-import type { DefinedApi } from "@noverax/nexus/define";
+import type { DefinedApi } from "@noverax/courier/define";
 import type { MockScenario, TypedMockFn } from "../types";
 
 /** Define a named scenario that configures multiple mocks at once */

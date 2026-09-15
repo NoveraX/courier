@@ -5,7 +5,7 @@ export const metadata = { title: "Test Client", description: "In-memory test cli
 `createTestClient` creates an in-memory client that replaces real HTTP calls with configurable mocks. It records every request in a history array, making it straightforward to assert what your code called and with which arguments.
 
 ```ts title="install"
-import { createTestClient } from "@noverax/nexus/testing"
+import { createTestClient } from "@noverax/courier/testing"
 ```
 
 ## Creating a Test Client
@@ -13,7 +13,7 @@ import { createTestClient } from "@noverax/nexus/testing"
 Pass your API type as a generic parameter. The test client exposes the same dot-notation API as `createCaller` / `createProxyCaller`:
 
 ```ts title="tests/users.test.ts"
-import { createTestClient } from "@noverax/nexus/testing"
+import { createTestClient } from "@noverax/courier/testing"
 import type { api } from "../lib/api"
 
 const { client, mock, history, reset } = createTestClient<typeof api>()
@@ -49,7 +49,7 @@ Set up a mock, call the endpoint through the client, and assert the result:
 
 ```ts title="tests/users.test.ts"
 import { describe, it, expect, beforeEach } from "vitest"
-import { createTestClient } from "@noverax/nexus/testing"
+import { createTestClient } from "@noverax/courier/testing"
 import type { api } from "../lib/api"
 
 describe("users", () => {
@@ -142,7 +142,7 @@ type HistoryEntry = {
 Use the `findRequests` helper to filter history entries by group and method:
 
 ```ts title="tests/users.test.ts"
-import { createTestClient, findRequests } from "@noverax/nexus/testing"
+import { createTestClient, findRequests } from "@noverax/courier/testing"
 
 const { client, mock, history } = createTestClient<typeof api>()
 
@@ -167,7 +167,7 @@ expect(getAllCalls).toHaveLength(2)
 Mock a failing endpoint with `.rejects()` and verify your error handling code works:
 
 ```ts title="tests/error-handling.test.ts"
-import { isHTTPError } from "@noverax/nexus"
+import { isHTTPError } from "@noverax/courier"
 
 it("handles 404 errors", async () => {
   mock("users", "getById").rejects(404, { message: "User not found" })

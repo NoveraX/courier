@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
-import { createLogger } from "@noverax/nexus";
-import type { Sources } from "@noverax/nexus/define";
+import { createLogger } from "@noverax/courier";
+import type { Sources } from "@noverax/courier/define";
 import { defineCommand, runMain } from "citty";
 
 const log = createLogger("CLI");
 
 const main = defineCommand({
   meta: {
-    name: "nexus-server",
-    description: "Standalone HTTP + WebSocket server for @noverax/nexus",
+    name: "courier-server",
+    description: "Standalone HTTP + WebSocket server for @noverax/courier",
   },
   args: {
     port: {
@@ -24,7 +24,7 @@ const main = defineCommand({
     },
     config: {
       type: "string",
-      description: "Path to Nexus config file (e.g. nexus.config.ts)",
+      description: "Path to Courier config file (e.g. courier.config.ts)",
       required: true,
     },
   },
@@ -40,7 +40,7 @@ const main = defineCommand({
       const mod = await import(args.config);
       sources = mod.sources ?? mod.default?.sources;
       if (!sources || typeof sources !== "object") {
-        log.error("Config must export `sources` — a record of Nexus API sources.");
+        log.error("Config must export `sources` — a record of Courier API sources.");
         process.exit(1);
       }
     } catch (err) {
@@ -48,14 +48,14 @@ const main = defineCommand({
       process.exit(1);
     }
 
-    const { createNexusServer } = await import("./create-server");
+    const { createCourierServer } = await import("./create-server");
 
-    createNexusServer({
+    createCourierServer({
       sources: sources as Sources,
       port,
       host: args.host,
       onReady: (url) => {
-        log.info(`Nexus Server ready at ${url}`);
+        log.info(`Courier Server ready at ${url}`);
       },
     });
   },

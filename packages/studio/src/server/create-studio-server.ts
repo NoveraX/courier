@@ -6,7 +6,7 @@ import { existsSync } from "node:fs";
 import { createServer } from "node:http";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createLogger } from "@noverax/nexus";
+import { createLogger } from "@noverax/courier";
 import compression from "compression";
 import express from "express";
 import type { RequestHandler } from "express-serve-static-core";
@@ -115,7 +115,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
       configWatcher = watcher;
     })
     .catch((err) => {
-      log.warn("nexus.config initialization failed", err);
+      log.warn("courier.config initialization failed", err);
     });
 
   setupUiNamespace({
@@ -165,7 +165,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   httpServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
-      log.info(`Nexus Studio already running on ${url}`);
+      log.info(`Courier Studio already running on ${url}`);
       return;
     }
     throw err;

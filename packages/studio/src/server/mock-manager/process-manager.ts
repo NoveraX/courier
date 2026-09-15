@@ -45,7 +45,7 @@ export interface ProcessManagerEvents {
 
 /** Resolves path to the bundled worker entry script via standard ESM resolution */
 function resolveWorkerPath(): string {
-  const resolved = import.meta.resolve("@noverax/nexus-mock/managed/worker-entry");
+  const resolved = import.meta.resolve("@noverax/courier-mock/managed/worker-entry");
   return resolved.startsWith("file://") ? resolved.slice(7) : resolved;
 }
 

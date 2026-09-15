@@ -2,7 +2,7 @@ export const metadata = { title: "Options", description: "Full reference of sour
 
 ## Overview
 
-Nexus options are split into two layers: **BaseOptions** for source-level configuration (applies to all endpoints in a source) and **CallOptions** for per-request overrides. Nexus uses native `fetch` under the hood — no third-party HTTP clients.
+Courier options are split into two layers: **BaseOptions** for source-level configuration (applies to all endpoints in a source) and **CallOptions** for per-request overrides. Courier uses native `fetch` under the hood — no third-party HTTP clients.
 
 ## BaseOptions
 
@@ -63,8 +63,8 @@ type CallOptions = {
 Configure request timeouts at the source level and automatic retry behavior via middleware:
 
 ```ts title="api/index.ts"
-import { defineApi } from "@noverax/nexus/define"
-import { retryMiddleware } from "@noverax/nexus/middleware"
+import { defineApi } from "@noverax/courier/define"
+import { retryMiddleware } from "@noverax/courier/middleware"
 
 const api = defineApi({
   baseURL: process.env.API_URL ?? "http://localhost:4000",
@@ -85,7 +85,7 @@ const api = defineApi({
 ```
 
 <Callout variant="info" title="Retry via middleware">
-Retry logic is handled by `retryMiddleware` from `@noverax/nexus/middleware`. It supports exponential backoff with a configurable base delay and custom retry conditions. See [Middleware](/docs/advanced/middleware) for details.
+Retry logic is handled by `retryMiddleware` from `@noverax/courier/middleware`. It supports exponential backoff with a configurable base delay and custom retry conditions. See [Middleware](/docs/advanced/middleware) for details.
 </Callout>
 
 ## Caching
@@ -140,7 +140,7 @@ Proxy caching only works with `method: "GET"`. Endpoints must be marked with `ty
 Set static headers at the source level or override them per-request. Source-level headers apply to all requests; per-request headers are merged on top:
 
 ```ts title="api/index.ts"
-import { defineApi } from "@noverax/nexus/define"
+import { defineApi } from "@noverax/courier/define"
 
 // Static headers on the source (apply to all requests)
 const api = defineApi({
@@ -163,7 +163,7 @@ const data = await caller.users.getAll(undefined, {
 When the same option is set at multiple levels, per-request options take the highest priority:
 
 ```ts title="api/index.ts"
-import { defineApi } from "@noverax/nexus/define"
+import { defineApi } from "@noverax/courier/define"
 
 // Options are merged with this precedence (highest wins):
 // 1. Per-request options  → caller.reports.generate(vars, { timeout: 5000 })

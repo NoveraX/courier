@@ -8,7 +8,7 @@
  * so that external imports keep working unchanged.
  */
 
-import type { Transport } from "@noverax/nexus";
+import type { Transport } from "@noverax/courier";
 import type { Context as HonoContext } from "hono";
 
 /** CRUD operation type for an endpoint */

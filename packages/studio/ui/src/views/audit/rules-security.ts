@@ -45,7 +45,7 @@ function mutationWithoutAuth(requests: RequestEntry[]): AuditItem[] {
     title: "Mutations without authentication",
     description: "Mutation endpoints called without any auth header (Authorization, X-API-Key, etc.).",
     suggestion: "Add auth middleware or include authentication headers.",
-    codeSuggestion: `import { auth } from "@noverax/nexus/middleware";\n\ndefineApi({\n  middleware: [auth({ getToken: () => localStorage.getItem("token") })],\n});`,
+    codeSuggestion: `import { auth } from "@noverax/courier/middleware";\n\ndefineApi({\n  middleware: [auth({ getToken: () => localStorage.getItem("token") })],\n});`,
     endpoints: [...endpoints].map(([label, ids]) => ({
       key: label,
       label,

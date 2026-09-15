@@ -81,13 +81,13 @@ export function resolveProxyPath(
     if (configured === "") {
       throw new ConfigurationError(
         "PROXY_PATH_INVALID",
-        `[nexus] proxyPath.${transport} cannot be an empty string. Omit the field to use defaults, or pass a path / absolute URL.`,
+        `[courier] proxyPath.${transport} cannot be an empty string. Omit the field to use defaults, or pass a path / absolute URL.`,
       );
     }
     if (PROTOCOL_RELATIVE_RE.test(configured) && !WS_SCHEME_RE.test(configured)) {
       throw new ConfigurationError(
         "PROXY_PATH_INVALID",
-        `[nexus] proxyPath.${transport}="${configured}" — protocol-relative URLs are not supported. Use an absolute URL ("https://..." / "wss://...") or a path starting with "/".`,
+        `[courier] proxyPath.${transport}="${configured}" — protocol-relative URLs are not supported. Use an absolute URL ("https://..." / "wss://...") or a path starting with "/".`,
       );
     }
     if (isAbsoluteUrl(configured)) {
@@ -97,7 +97,7 @@ export function resolveProxyPath(
     if (!configured.startsWith("/")) {
       throw new ConfigurationError(
         "PROXY_PATH_INVALID",
-        `[nexus] proxyPath.${transport}="${configured}" must start with "/" for relative paths or with a scheme for absolute URLs.`,
+        `[courier] proxyPath.${transport}="${configured}" must start with "/" for relative paths or with a scheme for absolute URLs.`,
       );
     }
     return joinOriginWithPath(transport, configured, origin);
@@ -111,15 +111,15 @@ export function resolveProxyPath(
   throw new ConfigurationError(
     "WS_PATH_NOT_CONFIGURED",
     [
-      "[nexus] WS endpoint requires `proxyPath.ws` to be configured.",
+      "[courier] WS endpoint requires `proxyPath.ws` to be configured.",
       "",
-      "In Next.js / Cloudflare / serverless apps, run @noverax/nexus-server",
+      "In Next.js / Cloudflare / serverless apps, run @noverax/courier-server",
       "separately and point `proxyPath.ws` at it, e.g.:",
       '  proxyPath: { ws: "ws://localhost:3001" }      // dev',
       '  proxyPath: { ws: "wss://realtime.example.com" } // prod',
       "",
       "See the deployment guide for the full runtime matrix:",
-      "  https://nexus.noverax.com/docs/deployment/standalone-server",
+      "  https://courier.noverax.cloud/docs/deployment/standalone-server",
     ].join("\n"),
   );
 }
@@ -129,7 +129,7 @@ function assertTransportScheme(transport: Transport, value: string): void {
     if (!WS_SCHEME_RE.test(value)) {
       throw new ConfigurationError(
         "PROXY_PATH_INVALID",
-        `[nexus] proxyPath.ws="${value}" must use the ws:// or wss:// scheme.`,
+        `[courier] proxyPath.ws="${value}" must use the ws:// or wss:// scheme.`,
       );
     }
     return;
@@ -137,7 +137,7 @@ function assertTransportScheme(transport: Transport, value: string): void {
   if (!HTTP_SCHEME_RE.test(value)) {
     throw new ConfigurationError(
       "PROXY_PATH_INVALID",
-      `[nexus] proxyPath.${transport}="${value}" must use the http:// or https:// scheme.`,
+      `[courier] proxyPath.${transport}="${value}" must use the http:// or https:// scheme.`,
     );
   }
 }
@@ -151,7 +151,7 @@ function joinOriginWithPath(
   if (!loc) {
     throw new ConfigurationError(
       "PROXY_PATH_NO_ORIGIN",
-      `[nexus] cannot resolve relative ${transport} path "${path}" — no origin available. Pass an absolute URL in proxyPath.${transport}, or run inside a browser/SSR context with location.`,
+      `[courier] cannot resolve relative ${transport} path "${path}" — no origin available. Pass an absolute URL in proxyPath.${transport}, or run inside a browser/SSR context with location.`,
     );
   }
   if (transport === "ws") {

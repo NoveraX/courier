@@ -1,13 +1,13 @@
 <div align="center">
   <br />
 
-  # @noverax/nexus-solid
+  # @noverax/courier-solid
 
-  **Solid Start adapter for Nexus.**
+  **Solid Start adapter for Courier.**
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus-solid"><img src="https://img.shields.io/npm/v/@noverax/nexus-solid?color=7c3aed&style=flat-square" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier-solid"><img src="https://img.shields.io/npm/v/@noverax/courier-solid?color=7c3aed&style=flat-square" alt="npm" /></a>
 
   <br />
 </div>
@@ -17,14 +17,14 @@
 ## Install
 
 ```bash
-npm install @noverax/nexus-solid @noverax/nexus @solidjs/start
+npm install @noverax/courier-solid @noverax/courier @solidjs/start
 ```
 
 ## Usage
 
 ```ts
 // src/entry-server.tsx
-import { registerSources } from "@noverax/nexus"
+import { registerSources } from "@noverax/courier"
 import { sources } from "~/api"
 
 registerSources(sources)
@@ -32,21 +32,21 @@ registerSources(sources)
 
 ```ts
 // src/routes/api/request.ts
-import { nexusHandler } from "@noverax/nexus-solid"
+import { courierHandler } from "@noverax/courier-solid"
 
-const handler = nexusHandler()
+const handler = courierHandler()
 export const GET = handler
 export const POST = handler
 ```
 
-`nexusHandler()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` at server startup. The handler uses Web Standard `Request`/`Response` natively. GET requests are routed to query-type endpoints, POST requests handle mutations.
+`courierHandler()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` at server startup. The handler uses Web Standard `Request`/`Response` natively. GET requests are routed to query-type endpoints, POST requests handle mutations.
 
 ## With Frontend
 
 Pair with `createProxyCaller` on the client:
 
 ```ts
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 
 const caller = createProxyCaller({ proxyPath: { http: "/api/request" } })
 const users = await caller.users.getAll()
@@ -54,7 +54,7 @@ const users = await caller.users.getAll()
 
 ## API
 
-### `nexusHandler()`
+### `courierHandler()`
 
 Creates a Solid Start API route handler. Returns a function compatible with Solid Start's `GET`/`POST` exports.
 

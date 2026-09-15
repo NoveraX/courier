@@ -1,8 +1,8 @@
-export const metadata = { title: "Zod Examples", description: "Practical examples of using Zod schemas for request validation and type inference in Nexus endpoints.", mode: "both" }
+export const metadata = { title: "Zod Examples", description: "Practical examples of using Zod schemas for request validation and type inference in Courier endpoints.", mode: "both" }
 
 ## Why Zod?
 
-[Zod](https://zod.dev/) is the most popular Standard Schema-compatible validation library. When you pass Zod schemas to `endpoint()`, Nexus automatically infers TypeScript types from the schema -- no manual generics needed.
+[Zod](https://zod.dev/) is the most popular Standard Schema-compatible validation library. When you pass Zod schemas to `endpoint()`, Courier automatically infers TypeScript types from the schema -- no manual generics needed.
 
 <Callout variant="info" title="Not just Zod">
 Everything on this page works identically with **Valibot** and **ArkType** (or any library implementing the Standard Schema spec). The examples use Zod for familiarity, but the patterns apply universally.
@@ -22,7 +22,7 @@ endpoint<User[], { status: "active" | "inactive" }>()(
 With Zod schemas, types are inferred automatically:
 
 ```ts title="lib/sources.ts"
-import { endpoint } from "@noverax/nexus/define"
+import { endpoint } from "@noverax/courier/define"
 import { z } from "zod"
 
 const UserSchema = z.object({
@@ -135,7 +135,7 @@ const users = defineGroup({
 Here is a complete source definition using Zod schemas for every endpoint:
 
 ```ts title="lib/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 import { z } from "zod"
 
 // --- Schemas ---
@@ -234,7 +234,7 @@ const EventSchema = z.object({
 ## Handling Validation Errors
 
 ```ts title="components/create-user-form.tsx"
-import { isValidationError } from "@noverax/nexus"
+import { isValidationError } from "@noverax/courier"
 
 async function handleSubmit(formData: FormData) {
   try {

@@ -92,4 +92,4 @@ export const TOUR_STEPS: TourStep[] = [
   },
 ];
 
-export const TOUR_STORAGE_KEY = "nexus-studio-v2:tour-completed";
+export const TOUR_STORAGE_KEY = "courier-studio-v2:tour-completed";

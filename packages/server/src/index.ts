@@ -1,2 +1,2 @@
-export { createNexusServer } from "./create-server";
-export type { NexusServer, NexusServerConfig } from "./types";
+export { createCourierServer } from "./create-server";
+export type { CourierServer, CourierServerConfig } from "./types";

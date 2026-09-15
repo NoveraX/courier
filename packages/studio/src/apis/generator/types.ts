@@ -2,25 +2,25 @@
  * Generator options and output types.
  */
 
-import type { NexusImportBase } from "@noverax/nexus/config";
+import type { CourierImportBase } from "@noverax/courier/config";
 
 // ── Options ──────────────────────────────────────────────────────────────────
 
 /**
  * Input shape accepted by `generateCode`. Mirrors the user-authored
- * `nexus.config.ts` import declaration so codegen consumes the same object
+ * `courier.config.ts` import declaration so codegen consumes the same object
  * written by the user. Codegen-required fields are optional here and filled in
  * by `applyImportDefaults` at the start of the pipeline.
  *
  * `selectedEndpoints` is transient UI state — never persisted to config.
  */
-export type GenerateOptions = NexusImportBase & {
+export type GenerateOptions = CourierImportBase & {
   selectedEndpoints?: Record<string, string[]> | null;
 };
 
 /** Normalized shape used internally by codegen — every option has a value. */
 export interface ResolvedGenerateOptions {
-  type: NexusImportBase["type"];
+  type: CourierImportBase["type"];
   sourceName: string;
   outputDir: string;
   validation: "zod" | "valibot" | "arktype" | "none";
@@ -31,9 +31,9 @@ export interface ResolvedGenerateOptions {
   includeComments: boolean;
   generateClient: "direct" | "proxy" | "both" | "none";
   selectedEndpoints: Record<string, string[]> | null;
-  include?: NexusImportBase["include"];
-  exclude?: NexusImportBase["exclude"];
-  transform?: NexusImportBase["transform"];
+  include?: CourierImportBase["include"];
+  exclude?: CourierImportBase["exclude"];
+  transform?: CourierImportBase["transform"];
 }
 
 export const DEFAULT_OPTIONS: ResolvedGenerateOptions = {

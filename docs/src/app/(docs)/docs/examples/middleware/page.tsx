@@ -4,8 +4,8 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { MiddlewareDemo, OnErrorDemo } from "./_components"
 
-const middlewareConfigCode = `import { defineApi } from "@noverax/nexus/define"
-import { logMiddleware, authMiddleware } from "@noverax/nexus/middleware"
+const middlewareConfigCode = `import { defineApi } from "@noverax/courier/define"
+import { logMiddleware, authMiddleware } from "@noverax/courier/middleware"
 
 const api = defineApi({
   baseURL: "http://localhost:4000",
@@ -53,7 +53,7 @@ async (ctx, next) => {
 }`
 
 const logCode = `// Built-in logMiddleware logs every request
-import { logMiddleware } from "@noverax/nexus/middleware"
+import { logMiddleware } from "@noverax/courier/middleware"
 
 const api = defineApi({
   baseURL: "...",
@@ -61,7 +61,7 @@ const api = defineApi({
   groups: { ... },
 })
 
-// Logs: [nexus] api users:getAll 200 45ms`
+// Logs: [courier] api users:getAll 200 45ms`
 
 export const metadata = docsMetadata(
   "Middleware",

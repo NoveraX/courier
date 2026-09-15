@@ -7,8 +7,8 @@ import { Readable } from "node:stream";
  * the socket's TLS state for the scheme.
  *
  * Trust boundary: `x-forwarded-proto` / `x-forwarded-host` are **NOT**
- * honored. Reverse-proxy users must set `nexus.config.ts.runtime.appOrigin`
- * or the `NEXUS_APP_URL` environment variable explicitly, because
+ * honored. Reverse-proxy users must set `courier.config.ts.runtime.appOrigin`
+ * or the `COURIER_APP_URL` environment variable explicitly, because
  * accepting forwarded headers from an untrusted hop is a
  * trust-on-first-use vulnerability.
  *

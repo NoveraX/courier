@@ -6,7 +6,7 @@
  * (track, update, list, sweep, etc.).
  */
 
-import type { PresenceDiff } from "@noverax/nexus/realtime";
+import type { PresenceDiff } from "@noverax/courier/realtime";
 import type { Redis } from "ioredis";
 
 export type DiffHandler = (diff: PresenceDiff) => void;

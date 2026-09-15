@@ -4,8 +4,8 @@ export const metadata = { title: "createCaller", description: "Factory function 
 
 `createCaller` accepts your API definition and optional defaults. It returns a typed client with dot-notation access to all endpoint groups:
 
-```ts title="@noverax/nexus"
-import { createCaller } from "@noverax/nexus"
+```ts title="@noverax/courier"
+import { createCaller } from "@noverax/courier"
 
 // Full signature
 function createCaller<T extends DefinedApi>(
@@ -36,7 +36,7 @@ type CallerDefaults = {
 These defaults are merged with per-request options. Per-request headers are merged (not replaced), while `timeout` is overridden if specified per-request.
 
 ```ts title="lib/caller.ts"
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api"
 
 export const caller = createCaller(api, {
@@ -105,7 +105,7 @@ await caller.users.create({ name: "Jane" }, { headers: await headers() })
 The `Context` parameter is what makes direct mode different from proxy mode. In proxy mode, cookies are forwarded automatically through the handler. In direct mode, you must pass them explicitly as the second argument:
 
 ```ts
-import type { Context } from "@noverax/nexus"
+import type { Context } from "@noverax/courier"
 
 type Context = {
   req?: Request      // Web Standard request object
@@ -135,7 +135,7 @@ export default async function ProfilePage() {
 
 ### In API routes
 
-In route handlers, pass the `Request` object directly. Nexus extracts the headers from it:
+In route handlers, pass the `Request` object directly. Courier extracts the headers from it:
 
 ```ts title="app/api/dashboard/route.ts"
 import { NextResponse } from "next/server"
@@ -153,7 +153,7 @@ export async function GET(req: Request) {
 ```
 
 <Callout variant="info" title="Header whitelist">
-When you pass context headers, Nexus only forwards a safe subset: `authorization`, `cookie`, `user-agent`, `x-forwarded-for`, `x-forwarded-host`, `x-forwarded-proto`, `x-real-ip`, and a few others. This prevents accidentally forwarding headers like `host` or `content-length` that would break the backend request.
+When you pass context headers, Courier only forwards a safe subset: `authorization`, `cookie`, `user-agent`, `x-forwarded-for`, `x-forwarded-host`, `x-forwarded-proto`, `x-real-ip`, and a few others. This prevents accidentally forwarding headers like `host` or `content-length` that would break the backend request.
 </Callout>
 
 ## Raw data mode

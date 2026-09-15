@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import type * as NexusModule from "@noverax/nexus";
+import type * as CourierModule from "@noverax/courier";
 
 const mockHandleGet = vi.fn();
 const mockHandlePost = vi.fn();
 
-vi.mock("@noverax/nexus", async (importOriginal) => {
-  const actual = await importOriginal<typeof NexusModule>();
+vi.mock("@noverax/courier", async (importOriginal) => {
+  const actual = await importOriginal<typeof CourierModule>();
   return {
     ...actual,
     createHandler: vi.fn(() => ({
@@ -20,7 +20,7 @@ vi.mock("@noverax/nexus", async (importOriginal) => {
   };
 });
 
-import { createHandler, registerSources } from "@noverax/nexus";
+import { createHandler, registerSources } from "@noverax/courier";
 import { apiRoute } from "../src/api-route";
 
 const mockCreateHandler = vi.mocked(createHandler);

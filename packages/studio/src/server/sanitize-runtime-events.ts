@@ -48,7 +48,7 @@ export interface SanitizedRuntimeHello {
   kind: "browser" | "server";
   /**
    * Canonical HTTP(S) origin the runtime listens on (e.g. `http://localhost:3000`).
-   * Server-side runtimes know this from their `apiRoute`/`createNexusServer` config;
+   * Server-side runtimes know this from their `apiRoute`/`createCourierServer` config;
    * browser runtimes omit it. The Studio falls back to `socket.handshake.headers.host`
    * when absent.
    */
@@ -67,7 +67,7 @@ export interface SanitizedRuntimeAnnounce {
   sources: string[];
   /**
    * Canonical HTTP(S) origin where the runtime serves these transports.
-   * Adapter-supplied (e.g. via `apiRoute({ listenOrigin })` or `createNexusServer`'s
+   * Adapter-supplied (e.g. via `apiRoute({ listenOrigin })` or `createCourierServer`'s
    * `.listen()` callback). Studio uses it for the playground "resolved URL" badge
    * and for any future server-side proxy that needs to reach the runtime.
    */

@@ -1,6 +1,6 @@
 /**
  * Premium startup banner and structured runtime logger.
- * Inspired by NestJS console output with Nexus branding.
+ * Inspired by NestJS console output with Courier branding.
  */
 
 import { createRequire } from "node:module";
@@ -103,7 +103,7 @@ function cleanOrigin(raw: string): string {
 const pid = process.pid;
 
 function prefix(): string {
-  return `${BRAND}[Nexus]${R} ${WHITE}${pid}${R}  ${DARK}–${R} ${DIM}${shortTime()}${R}`;
+  return `${BRAND}[Courier]${R} ${WHITE}${pid}${R}  ${DARK}–${R} ${DIM}${shortTime()}${R}`;
 }
 
 // ── Box ──────────────────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ export function printBanner(host: string, port: number): void {
   const network = net ? `http://${net}:${port}` : "";
 
   const content = [
-    `${gradient("Nexus Studio")}  ${DIM}${ITALIC}v${ver}${R}`,
+    `${gradient("Courier Studio")}  ${DIM}${ITALIC}v${ver}${R}`,
     "",
     `${GRAY}Local${R}     ${WHITE}${local}${R}`,
   ];

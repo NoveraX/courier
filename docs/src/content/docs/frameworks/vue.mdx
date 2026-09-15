@@ -1,17 +1,17 @@
-export const metadata = { title: "Vue", description: "Use Nexus with Vue via createProxyCaller in composables with ref/reactive patterns.", mode: "proxy" }
+export const metadata = { title: "Vue", description: "Use Courier with Vue via createProxyCaller in composables with ref/reactive patterns.", mode: "proxy" }
 
-For Vue apps (with Vite), Nexus provides `createProxyCaller` for type-safe API calls. Since Vue apps don't have a built-in server, you need a separate backend (Express, Hono, or Fastify) to host the proxy route.
+For Vue apps (with Vite), Courier provides `createProxyCaller` for type-safe API calls. Since Vue apps don't have a built-in server, you need a separate backend (Express, Hono, or Fastify) to host the proxy route.
 
 ## Installation
 
 ```bash
-npm install @noverax/nexus
+npm install @noverax/courier
 ```
 
 ## Define your API sources
 
 ```ts title="shared/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 type Task = { id: number; title: string; completed: boolean }
 
@@ -46,13 +46,13 @@ export const sources = { myApi: api }
 
 ## Step 1: Set up the proxy backend
 
-You need a backend server to host the Nexus proxy route. Here is an example using Express:
+You need a backend server to host the Courier proxy route. Here is an example using Express:
 
 ```ts title="server/index.ts"
 import express from "express"
 import cors from "cors"
-import { registerSources } from "@noverax/nexus"
-import { nexusHandler } from "@noverax/nexus-express"
+import { registerSources } from "@noverax/courier"
+import { courierHandler } from "@noverax/courier-express"
 import { sources } from "../shared/sources"
 
 registerSources(sources)
@@ -62,7 +62,7 @@ const app = express()
 app.use(cors({ origin: "http://localhost:5173", credentials: true }))
 app.use(express.json())
 
-app.all("/api/request", nexusHandler())
+app.all("/api/request", courierHandler())
 
 app.listen(3001, () => {
   console.log("Proxy server running on http://localhost:3001")
@@ -76,7 +76,7 @@ You can use any supported adapter: [Express](/docs/frameworks/express), [Hono](/
 ## Step 2: Create a composable
 
 ```ts title="src/composables/useCaller.ts"
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import type { api } from "../../shared/sources"
 
 export const caller = createProxyCaller<typeof api>({
@@ -178,13 +178,13 @@ async function handleSubmit() {
 
 For reusable data fetching, create a generic composable:
 
-```ts title="src/composables/useNexusQuery.ts"
+```ts title="src/composables/useCourierQuery.ts"
 import { ref, onMounted, type Ref } from "vue"
 import { caller } from "./useCaller"
 
 type Caller = typeof caller
 
-export function useNexusQuery<T>(
+export function useCourierQuery<T>(
   fn: (c: Caller) => Promise<T>
 ) {
   const data = ref<T | null>(null) as Ref<T | null>
@@ -210,7 +210,7 @@ export function useNexusQuery<T>(
 ```
 
 <Callout variant="tip" title="@tanstack/vue-query">
-For production apps with advanced caching, background refetching, and optimistic updates, use `@tanstack/vue-query`. Nexus callers return standard promises, so they integrate directly:
+For production apps with advanced caching, background refetching, and optimistic updates, use `@tanstack/vue-query`. Courier callers return standard promises, so they integrate directly:
 
 ```ts
 import { useQuery } from "@tanstack/vue-query"
@@ -233,7 +233,7 @@ server/
 src/
   composables/
     useCaller.ts              # createProxyCaller<typeof api>()
-    useNexusQuery.ts          # optional generic fetch composable
+    useCourierQuery.ts          # optional generic fetch composable
   components/
     TaskList.vue              # data fetching with ref
     CreateTask.vue            # mutations with reactive

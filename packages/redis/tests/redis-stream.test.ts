@@ -184,13 +184,13 @@ describe("createRedisStream", () => {
   });
 
   it("applies prefix to stream keys", async () => {
-    const s = createRedisStream(createConfig(redis, { prefix: "nexus:stream:" }));
+    const s = createRedisStream(createConfig(redis, { prefix: "courier:stream:" }));
     await s.connect();
 
     await s.append("chat", { data: "msg", timestamp: 1 });
 
     const call = redis.xadd.mock.calls[0]!;
-    expect(call[0]).toBe("nexus:stream:chat");
+    expect(call[0]).toBe("courier:stream:chat");
   });
 
   it("uses approximate MAXLEN on append", async () => {

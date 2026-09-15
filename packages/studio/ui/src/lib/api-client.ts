@@ -3,7 +3,7 @@
  * All requests go through the Vite dev server proxy → Express backend.
  */
 
-import { createFetch } from "@noverax/nexus/fetch";
+import { createFetch } from "@noverax/courier/fetch";
 
 export const apiClient = createFetch({ baseURL: "" });
 

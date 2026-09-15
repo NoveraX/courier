@@ -1,5 +1,5 @@
-import { registerSources } from "@noverax/nexus"
-import { apiRoute } from "@noverax/nexus-next"
+import { registerSources } from "@noverax/courier"
+import { apiRoute } from "@noverax/courier-next"
 import { sources } from "@/api"
 
 registerSources(sources)

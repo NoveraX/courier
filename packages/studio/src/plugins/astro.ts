@@ -4,22 +4,22 @@ import type { StudioPluginOptions } from "./core/types";
 const FRAMEWORK = "astro";
 
 /**
- * Astro integration for Nexus Studio.
+ * Astro integration for Courier Studio.
  * Auto-injects `attachRuntime("astro-browser")` into pages in dev mode.
  *
  * @example
  * ```ts
  * // astro.config.mjs
- * import { nexusStudio } from "@noverax/nexus-studio/astro"
+ * import { courierStudio } from "@noverax/courier-studio/astro"
  *
  * export default defineConfig({
- *   integrations: [nexusStudio()],
+ *   integrations: [courierStudio()],
  * })
  * ```
  */
-export function nexusStudio(options?: StudioPluginOptions): AstroIntegrationLike {
+export function courierStudio(options?: StudioPluginOptions): AstroIntegrationLike {
   return {
-    name: "nexus-studio",
+    name: "courier-studio",
     hooks: {
       async "astro:config:setup"(ctx: AstroSetupContext) {
         if (ctx.command !== "dev") return;

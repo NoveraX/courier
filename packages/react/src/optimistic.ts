@@ -1,4 +1,4 @@
-import type { HTTPError } from "@noverax/nexus";
+import type { HTTPError } from "@noverax/courier";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
 // ---------------------------------------------------------------------------

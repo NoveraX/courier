@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
-import { createConnectionState } from "@noverax/nexus/realtime";
+import { createConnectionState } from "@noverax/courier/realtime";
 
 import { useConnectionStatus } from "../src/hooks/use-connection-status";
 import type { ConnectionStatusSource } from "../src/hooks/use-connection-status";

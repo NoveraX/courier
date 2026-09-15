@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createShutdown, setupSignalHandlers } from "../src/shutdown";
 
 // Mock createLogger to avoid side effects
-vi.mock("@noverax/nexus", () => ({
+vi.mock("@noverax/courier", () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),

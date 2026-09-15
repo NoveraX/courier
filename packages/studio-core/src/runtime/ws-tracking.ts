@@ -23,8 +23,8 @@
  * a global playground channel registry.
  */
 
-const CONNECTION_MAP_KEY = Symbol.for("nexus.studio.playground-ws-connection-map");
-const SUBSCRIPTION_SET_KEY = Symbol.for("nexus.studio.playground-ws-subscription-set");
+const CONNECTION_MAP_KEY = Symbol.for("courier.studio.playground-ws-connection-map");
+const SUBSCRIPTION_SET_KEY = Symbol.for("courier.studio.playground-ws-subscription-set");
 const g = globalThis as Record<symbol, unknown>;
 
 if (!g[CONNECTION_MAP_KEY]) g[CONNECTION_MAP_KEY] = new Map<string, string>();

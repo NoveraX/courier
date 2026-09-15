@@ -15,8 +15,8 @@ const res = await fetch("/api/proxy", {
 if (!res.ok) throw new Error(res.statusText)
 const user: unknown = await res.json()`
 
-const afterCode = `// Nexus — typed, zero boilerplate
-import { createProxyCaller } from "@noverax/nexus"
+const afterCode = `// Courier — typed, zero boilerplate
+import { createProxyCaller } from "@noverax/courier"
 
 const caller = createProxyCaller<typeof api>("api")
 
@@ -32,17 +32,17 @@ export function CodeComparison() {
             Before & <span className="gradient-brand-text">After</span>
           </h2>
           <p className="mt-3 text-muted-foreground">
-            See how much boilerplate Nexus eliminates while adding full type safety.
+            See how much boilerplate Courier eliminates while adding full type safety.
           </p>
         </AnimatedSection>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-2">
           <AnimatedSection delay={0.1} className="min-w-0">
-            <div className="mb-3 text-sm font-medium text-muted-foreground">Without Nexus</div>
+            <div className="mb-3 text-sm font-medium text-muted-foreground">Without Courier</div>
             <CodeBlock code={beforeCode} language="typescript" />
           </AnimatedSection>
           <AnimatedSection delay={0.2} className="min-w-0">
-            <div className="mb-3 text-sm font-medium text-brand">With Nexus</div>
+            <div className="mb-3 text-sm font-medium text-brand">With Courier</div>
             <CodeBlock code={afterCode} language="typescript" />
           </AnimatedSection>
         </div>

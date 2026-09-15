@@ -1,4 +1,4 @@
-import { createLogger } from "@noverax/nexus";
+import { createLogger } from "@noverax/courier";
 
 const MIN_MAJOR = 22;
 

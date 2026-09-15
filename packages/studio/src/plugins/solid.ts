@@ -1,16 +1,16 @@
 /**
- * Solid Start plugin for Nexus Studio.
+ * Solid Start plugin for Courier Studio.
  * Re-exports the Vite plugin — Solid Start uses Vite under the hood.
  *
  * @example
  * ```ts
  * // vite.config.ts (or app.config.ts)
  * import { defineConfig } from "@solidjs/start/config"
- * import { nexusStudio } from "@noverax/nexus-studio/solid"
+ * import { courierStudio } from "@noverax/courier-studio/solid"
  *
  * export default defineConfig({
- *   vite: { plugins: [nexusStudio()] },
+ *   vite: { plugins: [courierStudio()] },
  * })
  * ```
  */
-export { nexusStudio } from "./vite";
+export { courierStudio } from "./vite";

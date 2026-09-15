@@ -1,5 +1,5 @@
-import { createLogger } from "@noverax/nexus";
-import { loadNexusConfig } from "../../server/config-loader";
+import { createLogger } from "@noverax/courier";
+import { loadCourierConfig } from "../../server/config-loader";
 
 const log = createLogger("StudioPlugin");
 
@@ -12,7 +12,7 @@ const cache = new Map<string, Promise<string>>();
 
 /**
  * Resolve the Studio dev-server URL for a given project root by reading
- * `studio.host` and `studio.port` from `nexus.config.ts`.
+ * `studio.host` and `studio.port` from `courier.config.ts`.
  *
  * Falls back to `http://127.0.0.1:6280` (and warns) when no config file
  * exists or the config cannot be parsed — build plugins must always be
@@ -20,14 +20,14 @@ const cache = new Map<string, Promise<string>>();
  * config file.
  *
  * The cache is keyed by `projectRoot`, so changing `studio.port` in
- * `nexus.config.ts` requires restarting the bundler (consistent with how
+ * `courier.config.ts` requires restarting the bundler (consistent with how
  * every other build-plugin option behaves).
  */
 export function loadStudioUrl(projectRoot: string = process.cwd()): Promise<string> {
   const cached = cache.get(projectRoot);
   if (cached) return cached;
 
-  const promise = loadNexusConfig(projectRoot)
+  const promise = loadCourierConfig(projectRoot)
     .then(({ config }) => {
       const studio = config.studio ?? {};
       const host = studio.host ?? DEFAULT_HOST;
@@ -36,7 +36,7 @@ export function loadStudioUrl(projectRoot: string = process.cwd()): Promise<stri
     })
     .catch((err) => {
       log.debug(
-        `No nexus.config found at ${projectRoot}, using default Studio URL — ${describe(err)}`,
+        `No courier.config found at ${projectRoot}, using default Studio URL — ${describe(err)}`,
       );
       return DEFAULT_URL;
     });

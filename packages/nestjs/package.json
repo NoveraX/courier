@@ -1,12 +1,12 @@
 {
-  "name": "@noverax/nexus-nestjs",
+  "name": "@noverax/courier-nestjs",
   "version": "0.0.0",
-  "description": "NestJS adapter for @noverax/nexus — module + middleware handler",
+  "description": "NestJS adapter for @noverax/courier — module + middleware handler",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noverax/nexus.git",
+    "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/nestjs"
   },
   "type": "module",
@@ -38,7 +38,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/nexus": "*"
+    "@noverax/courier": "*"
   },
   "peerDependencies": {
     "@nestjs/common": ">=10",

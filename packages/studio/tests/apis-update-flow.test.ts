@@ -5,7 +5,7 @@ import { previewUpdate } from "../src/apis/merge/update-flow"
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-const GROUP_CONTENT = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+const GROUP_CONTENT = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",

@@ -1,4 +1,4 @@
-import { createMockWSChannel } from "@noverax/nexus/testing";
+import { createMockWSChannel } from "@noverax/courier/testing";
 import type { MockHistoryEntry, MockRequestContext } from "../types";
 import type { ResolvedHandler } from "./types";
 
@@ -14,7 +14,7 @@ export function handleChannel(
 ): unknown {
   const channelFn = handler.channelFn;
   if (!channelFn) {
-    throw new Error(`[nexus-mock] WS handler missing channelFn for "${group}.${method}"`);
+    throw new Error(`[courier-mock] WS handler missing channelFn for "${group}.${method}"`);
   }
 
   const ctx: MockRequestContext = {

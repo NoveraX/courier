@@ -4,7 +4,7 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { CatchDemo, GuardDemo } from "./_components"
 
-const catchCode = `import { HTTPError } from "@noverax/nexus"
+const catchCode = `import { HTTPError } from "@noverax/courier"
 import { caller } from "@/lib/caller"
 
 try {
@@ -17,7 +17,7 @@ try {
   }
 }`
 
-const guardCode = `import { isHTTPError } from "@noverax/nexus"
+const guardCode = `import { isHTTPError } from "@noverax/courier"
 import { caller } from "@/lib/caller"
 
 try {
@@ -32,7 +32,7 @@ try {
   }
 }`
 
-const globalCode = `import { createProxyCaller } from "@noverax/nexus"
+const globalCode = `import { createProxyCaller } from "@noverax/courier"
 
 const caller = createProxyCaller<typeof api>("api", {
   // Called for every failed request

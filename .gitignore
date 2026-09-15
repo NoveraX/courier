@@ -38,8 +38,8 @@ coverage/
 # TanStack Router (auto-generated)
 routeTree.gen.ts
 
-# Nexus studio cache
-.nexus/
+# Courier studio cache
+.courier/
 
 # Temporary
 tmp/

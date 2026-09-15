@@ -5,7 +5,7 @@
 
 import { existsSync, lstatSync, readdirSync, rmdirSync, unlinkSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { createLogger } from "@noverax/nexus";
+import { createLogger } from "@noverax/courier";
 import { resolveProjectSafe } from "../context";
 
 const log = createLogger("Cleanup");

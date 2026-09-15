@@ -94,7 +94,7 @@ export function UserProfile({ userId }: { userId: number | null }) {
 
 ## React Query options
 
-All standard React Query options are supported alongside Nexus-specific options. Configure caching, refetching, and data transformation:
+All standard React Query options are supported alongside Courier-specific options. Configure caching, refetching, and data transformation:
 
 ```ts
 const { data } = q.users.useQuery("getAll", {
@@ -107,7 +107,7 @@ const { data } = q.users.useQuery("getAll", {
   placeholderData: previousData,   // Keep previous data while refetching
   select: (data) => data.data,     // Transform response before caching
 
-  // Nexus-specific options
+  // Courier-specific options
   requestOptions: {
     rawData: true,   // Get { data, status, headers } instead of just data
     stream: true,    // Handle streaming responses
@@ -117,7 +117,7 @@ const { data } = q.users.useQuery("getAll", {
 
 ## Auto-generated query keys
 
-Nexus automatically generates hierarchical query keys from the source, group, method, and variables. This enables cache invalidation at different levels of specificity:
+Courier automatically generates hierarchical query keys from the source, group, method, and variables. This enables cache invalidation at different levels of specificity:
 
 ```ts
 // Auto-generated query key: ["api", "users", "getAll"]
@@ -147,7 +147,7 @@ The `error` property is typed as `Error`. Use `isHTTPError` to check if it's an 
 ```ts title="components/user-list.tsx"
 "use client"
 
-import { isHTTPError } from "@noverax/nexus/error"
+import { isHTTPError } from "@noverax/courier/error"
 import { q } from "@/lib/query"
 
 export function UserList() {

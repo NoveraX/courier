@@ -1,28 +1,28 @@
 export const metadata = { title: "Next.js", description: "Full Next.js integration with apiRoute, createProxyQueryCaller, createCaller for RSC, and createAction for Server Actions.", mode: "both" }
 
-Nexus has first-class Next.js support through the `@noverax/nexus-next` package. It covers every Next.js pattern: API routes, client components with React Query, server components, and server actions.
+Courier has first-class Next.js support through the `@noverax/courier-next` package. It covers every Next.js pattern: API routes, client components with React Query, server components, and server actions.
 
 <Callout variant="warn" title="WebSockets require a standalone server">
-Next.js App Router cannot host WebSocket upgrades in-process — neither RSC nor route handlers expose the underlying TCP socket. If your API uses WS endpoints, run [`@noverax/nexus-server`](/docs/deployment/standalone-server) alongside Next.js and point `proxyPath.ws` at it (e.g. `ws://localhost:3001` in dev, `wss://realtime.example.com` in prod). HTTP and SSE continue to work in-process via the App Router.
+Next.js App Router cannot host WebSocket upgrades in-process — neither RSC nor route handlers expose the underlying TCP socket. If your API uses WS endpoints, run [`@noverax/courier-server`](/docs/deployment/standalone-server) alongside Next.js and point `proxyPath.ws` at it (e.g. `ws://localhost:3001` in dev, `wss://realtime.example.com` in prod). HTTP and SSE continue to work in-process via the App Router.
 </Callout>
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
-Wire your Next.js app into Studio with a single `attachRuntime()` call from `instrumentation.ts`. It auto-loads `nexus.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `nexus.config.ts.runtime.appOrigin` (or set the `NEXUS_APP_URL` env var to override per-environment).
+Wire your Next.js app into Studio with a single `attachRuntime()` call from `instrumentation.ts`. It auto-loads `courier.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `courier.config.ts.runtime.appOrigin` (or set the `COURIER_APP_URL` env var to override per-environment).
 
 ```ts title="instrumentation.ts"
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NODE_ENV !== "development") return;
-  const { attachRuntime } = await import("@noverax/nexus-studio-core/runtime");
+  const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
   await attachRuntime();
 }
 ```
 
-Alternatively, set the `NEXUS_APP_URL` environment variable instead of pinning `appOrigin` in the config:
+Alternatively, set the `COURIER_APP_URL` environment variable instead of pinning `appOrigin` in the config:
 
 ```bash
-NEXUS_APP_URL=http://localhost:3000 next dev
+COURIER_APP_URL=http://localhost:3000 next dev
 ```
 
 <Callout variant="warn" title="No magic default">
@@ -32,7 +32,7 @@ There is no `localhost:3000` auto-fallback. If `appOrigin` is missing, clicking 
 ## Installation
 
 ```bash
-npm install @noverax/nexus @noverax/nexus-next @noverax/nexus-react @tanstack/react-query
+npm install @noverax/courier @noverax/courier-next @noverax/courier-react @tanstack/react-query
 ```
 
 ## Define your API sources
@@ -40,7 +40,7 @@ npm install @noverax/nexus @noverax/nexus-next @noverax/nexus-react @tanstack/re
 Create a shared API definition used by all callers. This file can be imported on both server and client:
 
 ```ts title="lib/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: number; name: string; email: string }
 type UserList = { data: User[]; total: number }
@@ -79,7 +79,7 @@ export const sources = { myApi: api }
 Create a Next.js App Router route handler that proxies browser requests to your backend:
 
 ```ts title="instrumentation.ts"
-import { registerSources } from "@noverax/nexus"
+import { registerSources } from "@noverax/courier"
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
@@ -90,19 +90,19 @@ export async function register() {
 ```
 
 ```ts title="app/api/request/route.ts"
-import { apiRoute } from "@noverax/nexus-next"
+import { apiRoute } from "@noverax/courier-next"
 
 export const { POST } = apiRoute()
 ```
 
-Next.js runs `instrumentation.ts` once at server start, populating the core global registry that `apiRoute()` reads at request time. The route handles all Nexus proxy requests — parses the incoming POST body, resolves the correct endpoint, calls your backend, and returns the response.
+Next.js runs `instrumentation.ts` once at server start, populating the core global registry that `apiRoute()` reads at request time. The route handles all Courier proxy requests — parses the incoming POST body, resolves the correct endpoint, calls your backend, and returns the response.
 
 ## Step 2: Client-side caller (React Query)
 
 Create a query caller for use in client components:
 
 ```ts title="lib/query.ts"
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 import type { api } from "@/lib/sources"
 
 export const q = createProxyQueryCaller<typeof api>("myApi")
@@ -156,7 +156,7 @@ Wrap your app with `QueryClientProvider` in your root layout. See the [React Que
 For React Server Components, use `createCaller` to call your backend directly without the proxy hop:
 
 ```ts title="lib/server-caller.ts"
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/lib/sources"
 
 export const caller = createCaller(api)
@@ -193,7 +193,7 @@ export default async function DashboardPage() {
 Use `createAction` for type-safe server actions that automatically forward request headers:
 
 ```ts title="lib/actions.ts"
-import { createAction } from "@noverax/nexus-next"
+import { createAction } from "@noverax/courier-next"
 import { sources } from "@/lib/sources"
 
 export const action = createAction(sources, "myApi")

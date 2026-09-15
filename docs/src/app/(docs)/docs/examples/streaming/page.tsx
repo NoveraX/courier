@@ -71,7 +71,7 @@ export default function StreamingExamplesPage() {
           learnMoreLabel="Streaming docs"
         >
           <p className="text-sm text-muted-foreground">
-            The backend sends 5 chunks at 500ms intervals, then a [DONE] signal. The nexus proxy
+            The backend sends 5 chunks at 500ms intervals, then a [DONE] signal. The courier proxy
             passes the ReadableStream through transparently.
           </p>
         </ExampleBlock>

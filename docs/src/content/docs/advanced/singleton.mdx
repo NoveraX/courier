@@ -9,8 +9,8 @@ export const metadata = {
 Without the singleton pattern, you need to pass the API type as a generic parameter to every factory function. This is repetitive and creates multiple places to update when your API changes:
 
 ```ts title="lib/caller.ts"
-import { createProxyCaller, createCaller } from "@noverax/nexus"
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyCaller, createCaller } from "@noverax/courier"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 import { api } from "@/api"
 
 // You have to pass the type everywhere:
@@ -21,7 +21,7 @@ const q = createProxyQueryCaller<typeof api>("api")
 
 ## The solution
 
-TypeScript module augmentation lets you declare your API type once, and every Nexus factory function infers it automatically. No generic parameters needed.
+TypeScript module augmentation lets you declare your API type once, and every Courier factory function infers it automatically. No generic parameters needed.
 
 ## Step-by-step setup
 
@@ -30,7 +30,7 @@ TypeScript module augmentation lets you declare your API type once, and every Ne
 Create your groups and API definition using `defineGroup`, `endpoint`, and `defineApi`:
 
 ```ts title="api/users.ts"
-import { defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: number; name: string; email: string }
 
@@ -45,7 +45,7 @@ export const users = defineGroup({
 ```
 
 ```ts title="api/index.ts"
-import { defineApi } from "@noverax/nexus/define"
+import { defineApi } from "@noverax/courier/define"
 import { users } from "./users"
 
 export const api = defineApi({
@@ -56,12 +56,12 @@ export const api = defineApi({
 
 ### Step 2: Augment the module
 
-Create a `.d.ts` file that extends the Nexus `DefaultApi` interface:
+Create a `.d.ts` file that extends the Courier `DefaultApi` interface:
 
-```ts title="types/nexus.d.ts"
+```ts title="types/courier.d.ts"
 import type { api } from "@/api"
 
-declare module "@noverax/nexus/define" {
+declare module "@noverax/courier/define" {
   interface DefaultApi {
     api: typeof api
   }
@@ -77,8 +77,8 @@ You can put this declaration anywhere TypeScript can see it — a dedicated `typ
 Now all factory functions infer your API type from the augmented interface. TypeScript provides full autocomplete for group names, method names, and variable types:
 
 ```ts title="lib/caller.ts"
-import { createProxyCaller, createCaller } from "@noverax/nexus"
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyCaller, createCaller } from "@noverax/courier"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 import { api } from "@/api"
 
 // No generic parameter needed — TypeScript infers from module augmentation
@@ -128,10 +128,10 @@ export function UserList() {
 
 If your app connects to multiple backends, define multiple APIs and augment the interface for each:
 
-```ts title="types/nexus.d.ts"
+```ts title="types/courier.d.ts"
 import type { mainApi, paymentApi } from "@/api"
 
-declare module "@noverax/nexus/define" {
+declare module "@noverax/courier/define" {
   interface DefaultApi {
     mainApi: typeof mainApi
     paymentApi: typeof paymentApi

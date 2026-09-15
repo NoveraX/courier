@@ -1,4 +1,4 @@
-import { isSafeHttpOrigin } from "@noverax/nexus-studio-core";
+import { isSafeHttpOrigin } from "@noverax/courier-studio-core";
 import { Check, Copy, Globe, Radio, Wifi } from "lucide-react";
 import { useCallback, useState } from "react";
 

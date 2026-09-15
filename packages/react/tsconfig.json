@@ -2,9 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "paths": {
-      "@noverax/nexus": ["../core/src/index.ts"],
-      "@noverax/nexus/define": ["../core/src/define/index.ts"],
-      "@noverax/nexus/realtime": ["../core/src/realtime/index.ts"]
+      "@noverax/courier": ["../core/src/index.ts"],
+      "@noverax/courier/define": ["../core/src/define/index.ts"],
+      "@noverax/courier/realtime": ["../core/src/realtime/index.ts"]
     }
   },
   "include": ["src/**/*", "tests/**/*", "tsup.config.ts"]

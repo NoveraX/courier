@@ -32,7 +32,7 @@ export interface ProxyWSDefaults {
    *
    * **Why a query-string param** — browser `new WebSocket(...)` does NOT
    * support arbitrary HTTP headers in the upgrade handshake (only sub-
-   * protocols), so the conventional `x-nexus-*` header trick used for SSE
+   * protocols), so the conventional `x-courier-*` header trick used for SSE
    * is unavailable here. Query-string is the only escape hatch the WS
    * protocol gives us, and it survives every reverse proxy hop.
    *

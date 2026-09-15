@@ -4,7 +4,7 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { GroupInfo, GroupsDemo } from "./_components"
 
-const definitionCode = `import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+const definitionCode = `import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 // Each defineGroup has a prefix that maps to a backend path
 const users = defineGroup({

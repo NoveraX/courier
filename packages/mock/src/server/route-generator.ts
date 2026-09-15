@@ -26,7 +26,7 @@ export type { RequestHooks, RouteConfig } from "./route-types";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-/** Register the main nexus proxy route: POST /api/request */
+/** Register the main courier proxy route: POST /api/request */
 export function registerProxyRoute(app: Hono, config: RouteConfig): void {
   app.post("/api/request", async (c: HonoContext) => {
     const body = await c.req.json<{

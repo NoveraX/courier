@@ -1,5 +1,5 @@
 /**
- * Vitest global setup for `@noverax/nexus` tests.
+ * Vitest global setup for `@noverax/courier` tests.
  *
  * Vitest's default Node environment has no `globalThis.location`, but the
  * proxy-mode caller relies on it (via `resolveProxyPath`) to turn relative

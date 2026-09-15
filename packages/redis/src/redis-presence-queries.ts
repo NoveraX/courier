@@ -4,7 +4,7 @@
  * of stale entries via Lua script).
  */
 
-import type { PresenceEntry } from "@noverax/nexus/realtime";
+import type { PresenceEntry } from "@noverax/courier/realtime";
 import type { PresenceContext } from "./redis-presence-emitters";
 import { toError } from "./redis-presence-emitters";
 import { buildEntries, parseScorePairs, SWEEP_LUA, unpackMeta } from "./redis-presence-keys";

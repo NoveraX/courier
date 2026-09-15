@@ -18,7 +18,7 @@ import {
 let projectRoot: string;
 
 beforeEach(() => {
-  projectRoot = mkdtempSync(join(tmpdir(), "nexus-imports-state-"));
+  projectRoot = mkdtempSync(join(tmpdir(), "courier-imports-state-"));
 });
 
 afterEach(() => {
@@ -73,7 +73,7 @@ describe("saveImportsState (atomic)", () => {
 
   it("does not leave .tmp.* files behind on success", () => {
     saveImportsState(projectRoot, { version: IMPORTS_STATE_VERSION, imports: {} });
-    const dir = join(projectRoot, ".nexus");
+    const dir = join(projectRoot, ".courier");
     const files = readdirSync(dir);
     expect(files.some((f) => f.includes(".tmp."))).toBe(false);
   });

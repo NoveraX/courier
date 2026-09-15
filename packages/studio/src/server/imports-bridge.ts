@@ -1,13 +1,13 @@
 /**
  * Server-side facade for import persistence.
  *
- * Reads declarations from the user-authored `nexus.config.ts` and tracks
- * the auto-managed state in `.nexus/imports-state.json`. The single entry
+ * Reads declarations from the user-authored `courier.config.ts` and tracks
+ * the auto-managed state in `.courier/imports-state.json`. The single entry
  * point for every server route or helper that needs to read or mutate
  * import metadata.
  */
 
-import type { NexusImportEntry } from "@noverax/nexus/config";
+import type { CourierImportEntry } from "@noverax/courier/config";
 import {
   type ImportStateEntry,
   type ImportsState,
@@ -17,12 +17,12 @@ import {
   saveImportsState,
 } from "../apis/imports-state";
 import { getProjectRoot } from "../context";
-import { loadNexusConfig } from "./config-loader";
+import { loadCourierConfig } from "./config-loader";
 import { getEffectiveDir as joinEffectiveDir } from "./fs-helpers";
 import { withImportsLock } from "./imports-lock";
 
 export interface ImportsSnapshot {
-  declarations: Record<string, NexusImportEntry>;
+  declarations: Record<string, CourierImportEntry>;
   state: ImportsState;
 }
 
@@ -37,7 +37,7 @@ export interface ImportSummary {
 
 export async function loadImportsSnapshot(): Promise<ImportsSnapshot> {
   const root = getProjectRoot();
-  const loaded = await loadNexusConfig(root);
+  const loaded = await loadCourierConfig(root);
   return {
     declarations: loaded.config.imports ?? {},
     state: loadImportsState(root),
@@ -64,7 +64,7 @@ export function summarizeImports(snapshot: ImportsSnapshot): ImportSummary[] {
   return out;
 }
 
-function extractOptions(entry: NexusImportEntry): Record<string, unknown> {
+function extractOptions(entry: CourierImportEntry): Record<string, unknown> {
   return {
     sourceName: entry.sourceName,
     outputDir: entry.outputDir,
@@ -114,7 +114,7 @@ export function getEffectiveImportDir(
 export function getImportEntry(
   snapshot: ImportsSnapshot,
   name: string,
-): NexusImportEntry | undefined {
+): CourierImportEntry | undefined {
   return snapshot.declarations[name];
 }
 
@@ -126,11 +126,11 @@ export function getImportState(
 }
 
 /**
- * Format a `nexus.config.ts` snippet the user can paste under `imports:`.
+ * Format a `courier.config.ts` snippet the user can paste under `imports:`.
  * URL imports carry `from` / `auth` / `pinHash`; file and raw imports are
  * supplied through the UI each time and therefore have no `from`.
  */
-export function formatImportSnippet(name: string, entry: NexusImportEntry): string {
+export function formatImportSnippet(name: string, entry: CourierImportEntry): string {
   const lines: string[] = [`  ${JSON.stringify(name)}: {`];
   lines.push(`    importType: ${JSON.stringify(entry.importType)},`);
   lines.push(`    type: ${JSON.stringify(entry.type)},`);

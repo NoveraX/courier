@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: "/api/",
     },
-    sitemap: "https://nexus.noverax.cloud/sitemap.xml",
+    sitemap: "https://courier.noverax.cloud/sitemap.xml",
   }
 }

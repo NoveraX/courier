@@ -7,7 +7,7 @@ import { extractConfigDeps } from "../src/server/extract-config-deps";
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "nexus-extract-deps-"));
+  dir = mkdtempSync(join(tmpdir(), "courier-extract-deps-"));
 });
 
 afterEach(() => {
@@ -24,20 +24,20 @@ function file(rel: string, body: string): string {
 
 describe("extractConfigDeps", () => {
   it("returns just the entry file when no imports", () => {
-    const entry = file("nexus.config.ts", `export default { sources: {} };`);
+    const entry = file("courier.config.ts", `export default { sources: {} };`);
     expect(extractConfigDeps(entry)).toEqual([entry]);
   });
 
   it("follows one-level relative imports", () => {
     const dep = file("src/api.ts", `export const api = {};`);
-    const entry = file("nexus.config.ts", `import { api } from "./src/api";\nexport default { sources: { api } };`);
+    const entry = file("courier.config.ts", `import { api } from "./src/api";\nexport default { sources: { api } };`);
     expect(extractConfigDeps(entry)).toEqual([entry, dep]);
   });
 
   it("follows two-level transitive imports", () => {
     const inner = file("src/types.ts", `export type T = number;`);
     const dep = file("src/api.ts", `import type { T } from "./types";\nexport const api: T = 1;`);
-    const entry = file("nexus.config.ts", `import { api } from "./src/api";\nexport default { sources: { api } };`);
+    const entry = file("courier.config.ts", `import { api } from "./src/api";\nexport default { sources: { api } };`);
     expect(extractConfigDeps(entry)).toEqual([entry, dep, inner]);
   });
 
@@ -48,13 +48,13 @@ describe("extractConfigDeps", () => {
   });
 
   it("skips bare specifiers", () => {
-    const entry = file("nexus.config.ts", `import { defineConfig } from "@noverax/nexus/config";\nexport default defineConfig({ sources: {} });`);
+    const entry = file("courier.config.ts", `import { defineConfig } from "@noverax/courier/config";\nexport default defineConfig({ sources: {} });`);
     expect(extractConfigDeps(entry)).toEqual([entry]);
   });
 
   it("resolves directory imports via index.ts", () => {
     const inner = file("src/api/index.ts", `export const api = {};`);
-    const entry = file("nexus.config.ts", `import { api } from "./src/api";\nexport default { sources: { api } };`);
+    const entry = file("courier.config.ts", `import { api } from "./src/api";\nexport default { sources: { api } };`);
     expect(extractConfigDeps(entry)).toEqual([entry, inner]);
   });
 

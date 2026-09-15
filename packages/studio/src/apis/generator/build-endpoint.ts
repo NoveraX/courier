@@ -2,7 +2,7 @@
  * Builds endpoint() call expressions for group generation.
  */
 
-import { toInternalMethod } from "@noverax/nexus";
+import { toInternalMethod } from "@noverax/courier";
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointCall, resolveBodyInterfaceType } from "./build-endpoint-helpers";
 import { resolveResponseType, resolveVariablesType } from "./schema-types";

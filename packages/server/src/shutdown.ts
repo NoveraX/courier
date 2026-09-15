@@ -1,14 +1,14 @@
 import type { Server } from "node:http";
 
-import type { SSEConnectionRegistry } from "@noverax/nexus";
-import { createLogger } from "@noverax/nexus";
+import type { SSEConnectionRegistry } from "@noverax/courier";
+import { createLogger } from "@noverax/courier";
 import type { WebSocketServer } from "ws";
 
 const log = createLogger("Server");
 
 const WS_DRAIN_TIMEOUT_MS = 5_000;
 
-/** Create a graceful shutdown handler for the Nexus server */
+/** Create a graceful shutdown handler for the Courier server */
 export function createShutdown(
   httpServer: Server,
   getWss: () => WebSocketServer | undefined,

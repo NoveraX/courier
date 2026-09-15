@@ -14,7 +14,7 @@ try {
 }`
 
 const retryCode = `// Use retryMiddleware for automatic retries
-import { retryMiddleware } from "@noverax/nexus/middleware"
+import { retryMiddleware } from "@noverax/courier/middleware"
 
 const api = defineApi({
   baseURL: "...",
@@ -52,7 +52,7 @@ const data = await caller.users.with({
 import { revalidateTag } from "next/cache"
 revalidateTag("users")`
 
-const globalDefaultsCode = `import { createProxyCaller } from "@noverax/nexus"
+const globalDefaultsCode = `import { createProxyCaller } from "@noverax/courier"
 
 // Set defaults for all requests
 const caller = createProxyCaller<typeof api>("api", {
@@ -101,7 +101,7 @@ export default function OptionsExamplesPage() {
           code={retryCode}
         >
           <p className="text-sm text-muted-foreground">
-            Retry is handled via retryMiddleware from @noverax/nexus/middleware. It supports
+            Retry is handled via retryMiddleware from @noverax/courier/middleware. It supports
             exponential backoff and custom retry conditions.
           </p>
         </ExampleBlock>

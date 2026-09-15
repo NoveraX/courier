@@ -7,7 +7,7 @@
  * any state of its own.
  */
 
-import type { PresenceEntry } from "@noverax/nexus/realtime";
+import type { PresenceEntry } from "@noverax/courier/realtime";
 import type { PresenceContext } from "./redis-presence-emitters";
 import { toError } from "./redis-presence-emitters";
 import { packMeta, unpackMeta } from "./redis-presence-keys";

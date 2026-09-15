@@ -1,4 +1,4 @@
-import { normalizeHttpMethod } from "@noverax/nexus";
+import { normalizeHttpMethod } from "@noverax/courier";
 import { extractSchema, normalizePrefix, probeEndpoint } from "./endpoint-probe";
 import { detectOperation } from "./operation-detect";
 import type { RouteInfo, SourceGroup } from "./route-types";

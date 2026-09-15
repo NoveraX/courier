@@ -1,13 +1,13 @@
-export const metadata = { title: "Installation", description: "Add @noverax/nexus to your project — works with any JavaScript framework." }
+export const metadata = { title: "Installation", description: "Add @noverax/courier to your project — works with any JavaScript framework." }
 
 ## Install the core package
 
 <CodeGroup
   items={[
-    { label: "npm", code: "npm install @noverax/nexus", language: "bash" },
-    { label: "pnpm", code: "pnpm add @noverax/nexus", language: "bash" },
-    { label: "yarn", code: "yarn add @noverax/nexus", language: "bash" },
-    { label: "bun", code: "bun add @noverax/nexus", language: "bash" },
+    { label: "npm", code: "npm install @noverax/courier", language: "bash" },
+    { label: "pnpm", code: "pnpm add @noverax/courier", language: "bash" },
+    { label: "yarn", code: "yarn add @noverax/courier", language: "bash" },
+    { label: "bun", code: "bun add @noverax/courier", language: "bash" },
   ]}
 />
 
@@ -19,21 +19,21 @@ Install the adapter for your server framework. Each adapter is a thin wrapper ar
 
 | Framework | Package | Export |
 |-----------|---------|--------|
-| **Next.js** | `@noverax/nexus-next` | `apiRoute`, `createAction` |
-| **Nuxt / Nitro / h3** | `@noverax/nexus-nuxt` | `nexusHandler` |
-| **Express** | `@noverax/nexus-express` | `nexusHandler` |
-| **Hono** | `@noverax/nexus-hono` | `nexusHandler` |
-| **Fastify** | `@noverax/nexus-fastify` | `nexusPlugin` |
-| **NestJS** | `@noverax/nexus-nestjs` | `nexusMiddleware` |
+| **Next.js** | `@noverax/courier-next` | `apiRoute`, `createAction` |
+| **Nuxt / Nitro / h3** | `@noverax/courier-nuxt` | `courierHandler` |
+| **Express** | `@noverax/courier-express` | `courierHandler` |
+| **Hono** | `@noverax/courier-hono` | `courierHandler` |
+| **Fastify** | `@noverax/courier-fastify` | `courierPlugin` |
+| **NestJS** | `@noverax/courier-nestjs` | `courierMiddleware` |
 
 <CodeGroup
   items={[
-    { label: "Next.js", code: "npm install @noverax/nexus-next", language: "bash" },
-    { label: "Nuxt", code: "npm install @noverax/nexus-nuxt", language: "bash" },
-    { label: "Express", code: "npm install @noverax/nexus-express", language: "bash" },
-    { label: "Hono", code: "npm install @noverax/nexus-hono", language: "bash" },
-    { label: "Fastify", code: "npm install @noverax/nexus-fastify", language: "bash" },
-    { label: "NestJS", code: "npm install @noverax/nexus-nestjs", language: "bash" },
+    { label: "Next.js", code: "npm install @noverax/courier-next", language: "bash" },
+    { label: "Nuxt", code: "npm install @noverax/courier-nuxt", language: "bash" },
+    { label: "Express", code: "npm install @noverax/courier-express", language: "bash" },
+    { label: "Hono", code: "npm install @noverax/courier-hono", language: "bash" },
+    { label: "Fastify", code: "npm install @noverax/courier-fastify", language: "bash" },
+    { label: "NestJS", code: "npm install @noverax/courier-nestjs", language: "bash" },
   ]}
 />
 
@@ -42,16 +42,16 @@ Install the adapter for your server framework. Each adapter is a thin wrapper ar
 For React apps, add the query package for type-safe hooks (`useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery`):
 
 ```bash
-npm install @noverax/nexus-react @tanstack/react-query
+npm install @noverax/courier-react @tanstack/react-query
 ```
 
 <Callout variant="info" title="Install only what you use">
-All framework packages and integrations are optional. The core `@noverax/nexus` package works standalone for direct API calls from any runtime.
+All framework packages and integrations are optional. The core `@noverax/courier` package works standalone for direct API calls from any runtime.
 </Callout>
 
 ## TypeScript configuration
 
-Nexus ships type declarations. Enable strict mode for the best type inference:
+Courier ships type declarations. Enable strict mode for the best type inference:
 
 ```json title="tsconfig.json"
 {

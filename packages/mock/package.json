@@ -1,12 +1,12 @@
 {
-  "name": "@noverax/nexus-mock",
+  "name": "@noverax/courier-mock",
   "version": "0.0.0",
-  "description": "Type-safe mock server with stateful store, scenarios, chaos engineering, and visual builder for @noverax/nexus",
+  "description": "Type-safe mock server with stateful store, scenarios, chaos engineering, and visual builder for @noverax/courier",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noverax/nexus.git",
+    "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/mock"
   },
   "type": "module",
@@ -58,7 +58,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/nexus": "*"
+    "@noverax/courier": "*"
   },
   "peerDependencies": {
     "hono": ">=4",

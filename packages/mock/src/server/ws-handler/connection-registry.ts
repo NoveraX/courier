@@ -1,4 +1,4 @@
-import { encodeMessage } from "@noverax/nexus/realtime";
+import { encodeMessage } from "@noverax/courier/realtime";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 /**

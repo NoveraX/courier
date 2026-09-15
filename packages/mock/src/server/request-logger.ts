@@ -1,4 +1,4 @@
-import { createLogger } from "@noverax/nexus";
+import { createLogger } from "@noverax/courier";
 import type { MiddlewareHandler } from "hono";
 
 const log = createLogger("MockServer");

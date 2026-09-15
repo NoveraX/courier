@@ -1,4 +1,4 @@
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 import type { api, encodedApi, middlewareApi } from "@/api"
 
 export const q = createProxyQueryCaller<typeof api>("api")

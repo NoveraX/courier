@@ -1,6 +1,6 @@
 export const metadata = {
   title: "Kubernetes",
-  description: "Deploy Nexus on Kubernetes with nginx-ingress, sticky sessions, PodDisruptionBudget, and HPA scaling on connection count.",
+  description: "Deploy Courier on Kubernetes with nginx-ingress, sticky sessions, PodDisruptionBudget, and HPA scaling on connection count.",
 }
 
 ## Deployment
@@ -9,14 +9,14 @@ export const metadata = {
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nexus-server
+  name: courier-server
   labels:
-    app: nexus-server
+    app: courier-server
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: nexus-server
+      app: courier-server
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -25,7 +25,7 @@ spec:
   template:
     metadata:
       labels:
-        app: nexus-server
+        app: courier-server
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "3001"
@@ -33,8 +33,8 @@ spec:
     spec:
       terminationGracePeriodSeconds: 60   # time for SSE/WS drain
       containers:
-        - name: nexus
-          image: your-registry/nexus-server:latest
+        - name: courier
+          image: your-registry/courier-server:latest
           ports:
             - containerPort: 3001
               name: http
@@ -48,12 +48,12 @@ spec:
             - name: REDIS_URL
               valueFrom:
                 configMapKeyRef:
-                  name: nexus-config
+                  name: courier-config
                   key: redis-url
             - name: ALLOWED_ORIGIN
               valueFrom:
                 configMapKeyRef:
-                  name: nexus-config
+                  name: courier-config
                   key: allowed-origin
             - name: HOSTNAME
               valueFrom:
@@ -87,7 +87,7 @@ spec:
 ```
 
 <Callout variant="info" title="terminationGracePeriodSeconds">
-  Set this to at least 60 seconds. During shutdown, the Nexus server drains SSE streams (3s retry + 2s drain) and WebSocket connections (5s timeout). The extra margin accounts for in-flight requests and load balancer deregistration.
+  Set this to at least 60 seconds. During shutdown, the Courier server drains SSE streams (3s retry + 2s drain) and WebSocket connections (5s timeout). The extra margin accounts for in-flight requests and load balancer deregistration.
 </Callout>
 
 ## Service
@@ -96,11 +96,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: nexus-server
+  name: courier-server
 spec:
   type: ClusterIP
   selector:
-    app: nexus-server
+    app: courier-server
   ports:
     - port: 3001
       targetPort: http
@@ -114,7 +114,7 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: nexus-config
+  name: courier-config
 data:
   redis-url: "redis://redis-master.default.svc.cluster.local:6379"
   allowed-origin: "https://app.example.com"
@@ -126,12 +126,12 @@ data:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: nexus-ingress
+  name: courier-ingress
   annotations:
     # Sticky sessions — required for SSE/WS
     nginx.ingress.kubernetes.io/affinity: "cookie"
     nginx.ingress.kubernetes.io/affinity-mode: "persistent"
-    nginx.ingress.kubernetes.io/session-cookie-name: "nexus_affinity"
+    nginx.ingress.kubernetes.io/session-cookie-name: "courier_affinity"
     nginx.ingress.kubernetes.io/session-cookie-max-age: "86400"
     nginx.ingress.kubernetes.io/session-cookie-path: "/"
     nginx.ingress.kubernetes.io/session-cookie-secure: "true"
@@ -158,7 +158,7 @@ spec:
   tls:
     - hosts:
         - api.example.com
-      secretName: nexus-tls
+      secretName: courier-tls
   rules:
     - host: api.example.com
       http:
@@ -167,7 +167,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: nexus-server
+                name: courier-server
                 port:
                   number: 3001
 ```
@@ -190,12 +190,12 @@ Ensures at least 2 pods are always available during voluntary disruptions (node 
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: nexus-server-pdb
+  name: courier-server-pdb
 spec:
   minAvailable: 2
   selector:
     matchLabels:
-      app: nexus-server
+      app: courier-server
 ```
 
 <Callout variant="warning" title="Minimum replicas">
@@ -210,12 +210,12 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: nexus-server-hpa
+  name: courier-server-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: nexus-server
+    name: courier-server
   minReplicas: 3
   maxReplicas: 20
   metrics:
@@ -245,9 +245,9 @@ spec:
 Scale based on active connections using a custom metric exported to Prometheus:
 
 ```ts title="metrics.ts"
-import { createNexusServer } from "@noverax/nexus-server"
+import { createCourierServer } from "@noverax/courier-server"
 
-const server = await createNexusServer({ sources, port: 3001 })
+const server = await createCourierServer({ sources, port: 3001 })
 
 // Export metrics endpoint for Prometheus
 app.get("/metrics", (req, res) => {
@@ -256,15 +256,15 @@ app.get("/metrics", (req, res) => {
 
   res.set("Content-Type", "text/plain")
   res.send([
-    `# HELP nexus_sse_connections Active SSE connections`,
-    `# TYPE nexus_sse_connections gauge`,
-    `nexus_sse_connections ${sseCount}`,
-    `# HELP nexus_ws_connections Active WebSocket connections`,
-    `# TYPE nexus_ws_connections gauge`,
-    `nexus_ws_connections ${wsCount}`,
-    `# HELP nexus_total_connections Total active connections`,
-    `# TYPE nexus_total_connections gauge`,
-    `nexus_total_connections ${sseCount + wsCount}`,
+    `# HELP courier_sse_connections Active SSE connections`,
+    `# TYPE courier_sse_connections gauge`,
+    `courier_sse_connections ${sseCount}`,
+    `# HELP courier_ws_connections Active WebSocket connections`,
+    `# TYPE courier_ws_connections gauge`,
+    `courier_ws_connections ${wsCount}`,
+    `# HELP courier_total_connections Total active connections`,
+    `# TYPE courier_total_connections gauge`,
+    `courier_total_connections ${sseCount + wsCount}`,
   ].join("\n"))
 })
 ```
@@ -273,19 +273,19 @@ app.get("/metrics", (req, res) => {
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: nexus-server-hpa
+  name: courier-server-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: nexus-server
+    name: courier-server
   minReplicas: 3
   maxReplicas: 50
   metrics:
     - type: Pods
       pods:
         metric:
-          name: nexus_total_connections
+          name: courier_total_connections
         target:
           type: AverageValue
           averageValue: "1000"       # scale when avg connections per pod > 1000
@@ -326,7 +326,7 @@ helm install redis oci://registry-1.docker.io/bitnamicharts/redis \
   --set auth.enabled=false \
   --set master.persistence.size=1Gi
 
-# Redis URL for Nexus
+# Redis URL for Courier
 # redis://redis-master.default.svc.cluster.local:6379
 ```
 

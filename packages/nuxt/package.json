@@ -1,12 +1,12 @@
 {
-  "name": "@noverax/nexus-nuxt",
+  "name": "@noverax/courier-nuxt",
   "version": "0.0.0",
-  "description": "Nuxt adapter for @noverax/nexus — h3/Nitro event handler",
+  "description": "Nuxt adapter for @noverax/courier — h3/Nitro event handler",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noverax/nexus.git",
+    "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/nuxt"
   },
   "type": "module",
@@ -38,7 +38,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/nexus": "*"
+    "@noverax/courier": "*"
   },
   "peerDependencies": {
     "h3": ">=2.0.0-rc.0"

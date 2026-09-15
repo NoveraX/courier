@@ -8,7 +8,7 @@
  * — there is no longer a separate `/app` namespace.
  */
 
-import { logger } from "@noverax/nexus";
+import { logger } from "@noverax/courier";
 import type { Namespace } from "socket.io";
 import { buildBindingSnapshot } from "./binding-snapshot";
 import type { BindingTable } from "./catalog/binding-table";
@@ -62,7 +62,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
         socket.emit("registry:updated", { sources: summarizeImports(snapshot) });
       })
       .catch((err: unknown) => {
-        /* Fresh projects without nexus.config.ts are expected — stay quiet. */
+        /* Fresh projects without courier.config.ts are expected — stay quiet. */
         if (err instanceof ConfigNotFoundError) return;
         logger.warn(
           "Studio",

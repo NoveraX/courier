@@ -51,7 +51,7 @@ Use direct mode whenever your code runs on the server:
 Create a caller by passing your sources to `createCaller`:
 
 ```ts title="lib/caller.ts"
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api"
 
 export const caller = createCaller(api)
@@ -119,7 +119,7 @@ export default async function ProfilePage() {
 ```
 
 <Callout variant="tip" title="Header whitelist">
-Nexus only forwards safe headers from the context: `authorization`, `cookie`, `user-agent`, `x-forwarded-*`, `x-real-ip`, and others. Custom headers from `defaults.headers` are always included.
+Courier only forwards safe headers from the context: `authorization`, `cookie`, `user-agent`, `x-forwarded-*`, `x-real-ip`, and others. Custom headers from `defaults.headers` are always included.
 </Callout>
 
 ## Security considerations

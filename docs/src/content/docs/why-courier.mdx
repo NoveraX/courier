@@ -1,8 +1,8 @@
-export const metadata = { title: "Why Nexus?", description: "The problems Nexus solves: boilerplate, type safety, proxy complexity, and scattered API logic — across any framework." }
+export const metadata = { title: "Why Courier?", description: "The problems Courier solves: boilerplate, type safety, proxy complexity, and scattered API logic — across any framework." }
 
 Building a web app that talks to a REST API sounds simple — until you need type safety, a proxy layer, cookie forwarding, error handling, upload progress, middleware, validation, and framework integration. Each of these adds boilerplate, and without a unified approach, your API logic scatters across dozens of files.
 
-Nexus solves this by giving you a single, typed API definition that works across any framework — with zero code generation.
+Courier solves this by giving you a single, typed API definition that works across any framework — with zero code generation.
 
 ## The Problem
 
@@ -16,7 +16,7 @@ A typical frontend + REST API setup requires you to:
 
 This leads to fragile, repetitive code:
 
-```typescript title="Without Nexus"
+```typescript title="Without Courier"
 // Manual fetch — no type safety, lots of boilerplate
 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${id}`, {
   headers: { Authorization: `Bearer ${token}` },
@@ -27,21 +27,21 @@ const user = (await res.json()) as User // manual cast, no guarantee
 // Need a proxy? Write a route handler for every endpoint...
 ```
 
-With Nexus, the same functionality is type-safe and zero-boilerplate:
+With Courier, the same functionality is type-safe and zero-boilerplate:
 
-```typescript title="With Nexus"
+```typescript title="With Courier"
 // Type-safe, fully inferred
 const user = await caller.users.getById({ id: "5" })
 //    ^? User — inferred from endpoint<User, { id: string }>
 
 // Proxy? One line in your server:
-export const { GET, POST } = apiRoute() // or nexusHandler()
+export const { GET, POST } = apiRoute() // or courierHandler()
 // Done. Every endpoint works through this single route.
 ```
 
 ## Define Once, Use Everywhere
 
-You define your API structure **once** using `defineApi`, `defineGroup`, and `endpoint`. Each endpoint declares its response and variables types. From that single definition, Nexus gives you:
+You define your API structure **once** using `defineApi`, `defineGroup`, and `endpoint`. Each endpoint declares its response and variables types. From that single definition, Courier gives you:
 
 - **Direct mode** — server calls via `createCaller(api)`
 - **Proxy mode** — browser calls via `createProxyCaller("api")`
@@ -72,12 +72,12 @@ const { data } = q.users.useQuery("getById", { variables: { id: "5" } })
 ```
 
 <Callout variant="tip" title="No code generation">
-Unlike tRPC or GraphQL codegen, Nexus uses plain TypeScript functions as the source of truth. No generated files, no build steps. Rename a method and TypeScript catches every broken call site instantly.
+Unlike tRPC or GraphQL codegen, Courier uses plain TypeScript functions as the source of truth. No generated files, no build steps. Rename a method and TypeScript catches every broken call site instantly.
 </Callout>
 
 ## One Proxy Route for Everything
 
-Without Nexus, proxying requests means creating a route for every backend endpoint. With Nexus, a single handler covers all endpoints. It automatically:
+Without Courier, proxying requests means creating a route for every backend endpoint. With Courier, a single handler covers all endpoints. It automatically:
 
 - Validates the request origin (CSRF protection)
 - Forwards headers and cookies
@@ -98,7 +98,7 @@ const { data } = useQuery({
   },
 })
 
-// Nexus — one line, fully typed
+// Courier — one line, fully typed
 const { data } = q.users.useQuery("getById", { variables: { id } })
 //      ^? User
 ```
@@ -106,7 +106,7 @@ const { data } = q.users.useQuery("getById", { variables: { id } })
 ## Key Benefits
 
 <ComparisonTable
-  headers={["Problem", { label: "Nexus Solution", highlight: true }]}
+  headers={["Problem", { label: "Courier Solution", highlight: true }]}
   rows={[
     ["Manual type casting", "End-to-end inference from endpoint<R, V>"],
     ["Route per endpoint", "Single handler for all endpoints"],
@@ -121,7 +121,7 @@ const { data } = q.users.useQuery("getById", { variables: { id } })
 
 ## Who is it for?
 
-Nexus is designed for teams and projects that:
+Courier is designed for teams and projects that:
 
 - Use any modern framework (Next.js, Nuxt, React, Vue, Hono, Express, etc.)
 - Have a separate REST backend (Express, FastAPI, Rails, Go, Laravel — anything)
@@ -130,11 +130,11 @@ Nexus is designed for teams and projects that:
 - Value DX — autocomplete, compile-time errors, minimal boilerplate
 
 <Callout variant="info" title="Works with any REST backend">
-Nexus does not require a specific backend framework. It works with any HTTP API that returns JSON. Your backend needs zero Nexus-specific setup.
+Courier does not require a specific backend framework. It works with any HTTP API that returns JSON. Your backend needs zero Courier-specific setup.
 </Callout>
 
 ## Next Steps
 
-- [Architecture](/docs/architecture) — how Nexus works under the hood
-- [Installation](/docs/installation) — add Nexus to your project
+- [Architecture](/docs/architecture) — how Courier works under the hood
+- [Installation](/docs/installation) — add Courier to your project
 - [Quick Start](/docs/quick-start) — your first type-safe API call

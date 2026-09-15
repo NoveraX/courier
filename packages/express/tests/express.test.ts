@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createServer } from "node:http";
-import type * as NexusModule from "@noverax/nexus";
+import type * as CourierModule from "@noverax/courier";
 
-vi.mock("@noverax/nexus", async (importOriginal) => {
-  const actual = await importOriginal<typeof NexusModule>();
+vi.mock("@noverax/courier", async (importOriginal) => {
+  const actual = await importOriginal<typeof CourierModule>();
   return {
     ...actual,
     createHandler: vi.fn(() => ({
@@ -22,14 +22,14 @@ vi.mock("@noverax/nexus", async (importOriginal) => {
   };
 });
 
-import { createHandler, createWSHandler, registerSources } from "@noverax/nexus";
-import { nexusHandler, nexusSSEHandler, nexusWSAttach } from "../src/index";
+import { createHandler, createWSHandler, registerSources } from "@noverax/courier";
+import { courierHandler, courierSSEHandler, courierWSAttach } from "../src/index";
 
 const mockCreateHandler = vi.mocked(createHandler);
 const mockCreateWSHandler = vi.mocked(createWSHandler);
 
 /**
- * `nexusHandler()`/`nexusSSEHandler()`/`nexusWSAttach()` now read sources
+ * `courierHandler()`/`courierSSEHandler()`/`courierWSAttach()` now read sources
  * lazily from the core global registry via `requireSources()` at factory
  * time. Tests re-register a stub dict before each call so the factories
  * have something fresh to pass into `announceHosting` regardless of the
@@ -55,20 +55,20 @@ function createMockHandlerResult(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe("nexusHandler", () => {
+describe("courierHandler", () => {
   it("returns a function", () => {
-    const handler = nexusHandler();
+    const handler = courierHandler();
     expect(typeof handler).toBe("function");
   });
 
   it("calls createHandler with no sources arg (zero-arg)", () => {
-    nexusHandler();
+    courierHandler();
     expect(mockCreateHandler).toHaveBeenCalledWith(undefined);
   });
 
   it("forwards HandlerConfig to createHandler", () => {
     const config = { allowedOrigins: ["https://app.example.com"] };
-    nexusHandler(config);
+    courierHandler(config);
     expect(mockCreateHandler).toHaveBeenCalledWith(config);
   });
 
@@ -82,7 +82,7 @@ describe("nexusHandler", () => {
     );
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const handler = nexusHandler();
+    const handler = courierHandler();
 
     const { body, status, headers } = await makeNodeRequest(handler, {
       method: "GET",
@@ -99,7 +99,7 @@ describe("nexusHandler", () => {
     const mockHandle = vi.fn().mockResolvedValue(new Response("{}"));
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const handler = nexusHandler();
+    const handler = courierHandler();
 
     await makeNodeRequest(handler, {
       method: "GET",
@@ -117,7 +117,7 @@ describe("nexusHandler", () => {
     const mockHandle = vi.fn().mockResolvedValue(new Response("{}"));
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const handler = nexusHandler();
+    const handler = courierHandler();
     const payload = JSON.stringify({ source: "api", method: "list" });
 
     await makeNodeRequest(handler, {
@@ -140,7 +140,7 @@ describe("nexusHandler", () => {
     const mockHandle = vi.fn().mockRejectedValue(error);
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const handler = nexusHandler();
+    const handler = courierHandler();
     const next = vi.fn();
 
     const { req, res } = createMockNodeRequestResponse({
@@ -156,7 +156,7 @@ describe("nexusHandler", () => {
     const mockHandle = vi.fn().mockRejectedValue(new Error("fail"));
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const handler = nexusHandler();
+    const handler = courierHandler();
 
     const { status, body } = await makeNodeRequest(handler, {
       method: "GET",
@@ -171,20 +171,20 @@ describe("nexusHandler", () => {
   });
 });
 
-describe("nexusSSEHandler", () => {
+describe("courierSSEHandler", () => {
   it("returns a function", () => {
-    const handler = nexusSSEHandler();
+    const handler = courierSSEHandler();
     expect(typeof handler).toBe("function");
   });
 
   it("calls createHandler with no sources arg (zero-arg)", () => {
-    nexusSSEHandler();
+    courierSSEHandler();
     expect(mockCreateHandler).toHaveBeenCalledWith(undefined);
   });
 
   it("forwards HandlerConfig to createHandler", () => {
     const config = { sseHeaders: { "Access-Control-Allow-Origin": "*" }, sseMaxLifetimeMs: 60_000 };
-    nexusSSEHandler(config);
+    courierSSEHandler(config);
     expect(mockCreateHandler).toHaveBeenCalledWith(config);
   });
 
@@ -197,7 +197,7 @@ describe("nexusSSEHandler", () => {
     );
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const handler = nexusSSEHandler();
+    const handler = courierSSEHandler();
 
     const { status, headers } = await makeNodeRequest(handler, {
       method: "GET",
@@ -223,7 +223,7 @@ describe("nexusSSEHandler", () => {
     );
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const handler = nexusSSEHandler();
+    const handler = courierSSEHandler();
     const { status, headers } = await makeNodeRequest(handler, {
       method: "GET",
       path: "/api/sse?_s=api&_m=feed",
@@ -243,7 +243,7 @@ describe("nexusSSEHandler", () => {
     const mockHandleSSE = vi.fn().mockRejectedValue(error);
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const handler = nexusSSEHandler();
+    const handler = courierSSEHandler();
     const next = vi.fn();
 
     const { req, res } = createMockNodeRequestResponse({
@@ -325,10 +325,10 @@ function makeNodeRequest(
   });
 }
 
-describe("nexusWSAttach", () => {
+describe("courierWSAttach", () => {
   it("returns a cleanup function", () => {
     const server = createServer();
-    const cleanup = nexusWSAttach(server);
+    const cleanup = courierWSAttach(server);
     expect(typeof cleanup).toBe("function");
     cleanup();
   });
@@ -336,7 +336,7 @@ describe("nexusWSAttach", () => {
   it("calls createWSHandler with just the options (no sources)", () => {
     const options = { heartbeatIntervalMs: 5000 };
     const server = createServer();
-    const cleanup = nexusWSAttach(server, options);
+    const cleanup = courierWSAttach(server, options);
     expect(mockCreateWSHandler).toHaveBeenCalledWith(options);
     cleanup();
   });
@@ -344,7 +344,7 @@ describe("nexusWSAttach", () => {
   it("attaches upgrade listener to server", () => {
     const server = createServer();
     const onSpy = vi.spyOn(server, "on");
-    const cleanup = nexusWSAttach(server);
+    const cleanup = courierWSAttach(server);
 
     expect(onSpy).toHaveBeenCalledWith("upgrade", expect.any(Function));
     cleanup();
@@ -354,7 +354,7 @@ describe("nexusWSAttach", () => {
   it("cleanup removes upgrade listener", () => {
     const server = createServer();
     const offSpy = vi.spyOn(server, "off");
-    const cleanup = nexusWSAttach(server);
+    const cleanup = courierWSAttach(server);
 
     cleanup();
     expect(offSpy).toHaveBeenCalledWith("upgrade", expect.any(Function));
@@ -363,8 +363,8 @@ describe("nexusWSAttach", () => {
 
   it("shares a single WSHandler across connections", () => {
     const server = createServer();
-    nexusWSAttach(server);
-    nexusWSAttach(server);
+    courierWSAttach(server);
+    courierWSAttach(server);
 
     // Each call creates its own handler
     expect(mockCreateWSHandler).toHaveBeenCalledTimes(2);

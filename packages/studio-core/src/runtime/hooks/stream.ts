@@ -1,4 +1,4 @@
-import { studioHooks } from "@noverax/nexus";
+import { studioHooks } from "@noverax/courier";
 import type { EventBus } from "../../event-bus";
 import type {
   AnyStudioEvent,

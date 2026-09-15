@@ -31,7 +31,7 @@ function buildServerFile(
 ): string {
   const importPath = resolveRelativeImport(mockDir, sourceFilePaths[source] ?? `src/api/${source}`);
 
-  return `import { defineMockServer } from "@noverax/nexus-mock";
+  return `import { defineMockServer } from "@noverax/courier-mock";
 import { ${source} } from "${importPath}";
 
 export const mockServer = defineMockServer({

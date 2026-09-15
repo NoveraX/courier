@@ -1,13 +1,13 @@
 /**
- * Public type entry point for Nexus react-query integration.
+ * Public type entry point for Courier react-query integration.
  *
  * Defines `QueryGroupClient` (the dot-notation hook surface exposed per
  * API group) and `QueryCallerClient` (the top-level client keyed by group
  * name), and re-exports all option/result types from sibling modules.
  */
 
-import type { HTTPError } from "@noverax/nexus";
-import type { DefinedApi, Endpoint, SSEEndpoint, WSChannelEndpoint } from "@noverax/nexus/define";
+import type { HTTPError } from "@noverax/courier";
+import type { DefinedApi, Endpoint, SSEEndpoint, WSChannelEndpoint } from "@noverax/courier/define";
 import type {
   InfiniteData,
   QueryClient,
@@ -19,33 +19,33 @@ import type {
 
 import type { GroupMethodKeys, MutationVariables } from "./types-helpers";
 import type {
-  NexusComputedQueryOptions,
-  NexusInfiniteQueryOptions,
-  NexusMutationOptions,
-  NexusPrefetchOptions,
-  NexusQueryOptions,
-  NexusSuspenseQueryOptions,
+  CourierComputedQueryOptions,
+  CourierInfiniteQueryOptions,
+  CourierMutationOptions,
+  CourierPrefetchOptions,
+  CourierQueryOptions,
+  CourierSuspenseQueryOptions,
 } from "./types-options";
 import type {
   ChannelResult,
-  NexusChannelOptions,
-  NexusSubscriptionOptions,
+  CourierChannelOptions,
+  CourierSubscriptionOptions,
   SubscriptionResult,
 } from "./types-realtime";
 
 export type { GroupMethodKeys, MutationVariables, WithVariables } from "./types-helpers";
 export type {
-  NexusComputedQueryOptions,
-  NexusInfiniteQueryOptions,
-  NexusMutationOptions,
-  NexusPrefetchOptions,
-  NexusQueryOptions,
-  NexusSuspenseQueryOptions,
+  CourierComputedQueryOptions,
+  CourierInfiniteQueryOptions,
+  CourierMutationOptions,
+  CourierPrefetchOptions,
+  CourierQueryOptions,
+  CourierSuspenseQueryOptions,
 } from "./types-options";
 export type {
   ChannelResult,
-  NexusChannelOptions,
-  NexusSubscriptionOptions,
+  CourierChannelOptions,
+  CourierSubscriptionOptions,
   SubscriptionResult,
 } from "./types-realtime";
 
@@ -55,10 +55,10 @@ export type QueryGroupClient<TGroup> = {
     method: TMethod,
     ...args: TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
       ? [TVariables] extends [undefined]
-        ? [options?: NexusQueryOptions<TResponse, TVariables>]
+        ? [options?: CourierQueryOptions<TResponse, TVariables>]
         : {} extends TVariables
-          ? [options?: NexusQueryOptions<TResponse, TVariables>]
-          : [options: NexusQueryOptions<TResponse, TVariables>]
+          ? [options?: CourierQueryOptions<TResponse, TVariables>]
+          : [options: CourierQueryOptions<TResponse, TVariables>]
       : never
   ) => TGroup[TMethod] extends Endpoint<infer TResponse, any>
     ? UseQueryResult<TResponse, HTTPError>
@@ -68,10 +68,10 @@ export type QueryGroupClient<TGroup> = {
     method: TMethod,
     ...args: TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
       ? [TVariables] extends [undefined]
-        ? [options?: NexusSuspenseQueryOptions<TResponse, TVariables>]
+        ? [options?: CourierSuspenseQueryOptions<TResponse, TVariables>]
         : {} extends TVariables
-          ? [options?: NexusSuspenseQueryOptions<TResponse, TVariables>]
-          : [options: NexusSuspenseQueryOptions<TResponse, TVariables>]
+          ? [options?: CourierSuspenseQueryOptions<TResponse, TVariables>]
+          : [options: CourierSuspenseQueryOptions<TResponse, TVariables>]
       : never
   ) => TGroup[TMethod] extends Endpoint<infer TResponse, any>
     ? UseSuspenseQueryResult<TResponse, HTTPError>
@@ -80,7 +80,7 @@ export type QueryGroupClient<TGroup> = {
   useInfiniteQuery: <TMethod extends GroupMethodKeys<TGroup>, TPageParam>(
     method: TMethod,
     options: TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
-      ? NexusInfiniteQueryOptions<TResponse, TVariables, TPageParam>
+      ? CourierInfiniteQueryOptions<TResponse, TVariables, TPageParam>
       : never,
   ) => TGroup[TMethod] extends Endpoint<infer TResponse, any>
     ? UseInfiniteQueryResult<InfiniteData<TResponse, TPageParam>, HTTPError>
@@ -89,7 +89,7 @@ export type QueryGroupClient<TGroup> = {
   useMutation: <TMethod extends GroupMethodKeys<TGroup>>(
     method: TMethod,
     options?: TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
-      ? NexusMutationOptions<TResponse, TVariables>
+      ? CourierMutationOptions<TResponse, TVariables>
       : never,
   ) => TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
     ? UseMutationResult<TResponse, HTTPError, MutationVariables<TVariables>>
@@ -100,10 +100,10 @@ export type QueryGroupClient<TGroup> = {
     method: TMethod,
     ...args: TGroup[TMethod] extends Endpoint<any, infer TVariables>
       ? [TVariables] extends [undefined]
-        ? [options?: NexusPrefetchOptions<TVariables>]
+        ? [options?: CourierPrefetchOptions<TVariables>]
         : {} extends TVariables
-          ? [options?: NexusPrefetchOptions<TVariables>]
-          : [options: NexusPrefetchOptions<TVariables>]
+          ? [options?: CourierPrefetchOptions<TVariables>]
+          : [options: CourierPrefetchOptions<TVariables>]
       : never
   ) => Promise<void>;
 
@@ -111,10 +111,10 @@ export type QueryGroupClient<TGroup> = {
     method: TMethod,
     ...args: TGroup[TMethod] extends SSEEndpoint<infer TResponse, infer TVariables>
       ? [TVariables] extends [undefined]
-        ? [options?: NexusSubscriptionOptions<TResponse, TVariables>]
+        ? [options?: CourierSubscriptionOptions<TResponse, TVariables>]
         : {} extends TVariables
-          ? [options?: NexusSubscriptionOptions<TResponse, TVariables>]
-          : [options: NexusSubscriptionOptions<TResponse, TVariables>]
+          ? [options?: CourierSubscriptionOptions<TResponse, TVariables>]
+          : [options: CourierSubscriptionOptions<TResponse, TVariables>]
       : never
   ) => TGroup[TMethod] extends SSEEndpoint<infer TResponse, any>
     ? SubscriptionResult<TResponse>
@@ -124,10 +124,10 @@ export type QueryGroupClient<TGroup> = {
     method: TMethod,
     ...args: TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
       ? [TVariables] extends [undefined]
-        ? [options: NexusComputedQueryOptions<TResponse, unknown, TVariables>]
+        ? [options: CourierComputedQueryOptions<TResponse, unknown, TVariables>]
         : {} extends TVariables
-          ? [options: NexusComputedQueryOptions<TResponse, unknown, TVariables>]
-          : [options: NexusComputedQueryOptions<TResponse, unknown, TVariables>]
+          ? [options: CourierComputedQueryOptions<TResponse, unknown, TVariables>]
+          : [options: CourierComputedQueryOptions<TResponse, unknown, TVariables>]
       : never
   ) => TGroup[TMethod] extends Endpoint<infer TResponse, any>
     ? UseQueryResult<TResponse, HTTPError>
@@ -142,20 +142,20 @@ export type QueryGroupClient<TGroup> = {
     >
       ? [TVariables] extends [undefined]
         ? [
-            options?: NexusChannelOptions<
+            options?: CourierChannelOptions<
               TGroup[TMethod] extends WSChannelEndpoint<infer TRes, any, any> ? TRes : unknown,
               TVariables
             >,
           ]
         : {} extends TVariables
           ? [
-              options?: NexusChannelOptions<
+              options?: CourierChannelOptions<
                 TGroup[TMethod] extends WSChannelEndpoint<infer TRes, any, any> ? TRes : unknown,
                 TVariables
               >,
             ]
           : [
-              options: NexusChannelOptions<
+              options: CourierChannelOptions<
                 TGroup[TMethod] extends WSChannelEndpoint<infer TRes, any, any> ? TRes : unknown,
                 TVariables
               >,

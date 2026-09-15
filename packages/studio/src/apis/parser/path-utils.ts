@@ -2,7 +2,7 @@
  * Path manipulation utilities for OpenAPI/Postman parsers.
  */
 
-/** Convert OpenAPI path params `{id}` to Nexus-style `:id` */
+/** Convert OpenAPI path params `{id}` to Courier-style `:id` */
 export function convertPathParams(path: string): string {
   return path.replace(/\{([\w-]+)\}/g, (_, name) => `:${name.replace(/-/g, "_")}`);
 }

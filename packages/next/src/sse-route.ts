@@ -1,6 +1,6 @@
-import type { HandlerConfig } from "@noverax/nexus";
-import { createHandler, getAppOrigin, requireSources, setAppOrigin } from "@noverax/nexus";
-import { announceHosting } from "@noverax/nexus/announce";
+import type { HandlerConfig } from "@noverax/courier";
+import { createHandler, getAppOrigin, requireSources, setAppOrigin } from "@noverax/courier";
+import { announceHosting } from "@noverax/courier/announce";
 import type { NextRequest } from "next/server";
 
 /**
@@ -36,7 +36,7 @@ function tryDiscoverAppOrigin(request: Request): void {
  * @example
  * ```ts
  * // app/api/sse/route.ts
- * import { sseRoute } from "@noverax/nexus-next";
+ * import { sseRoute } from "@noverax/courier-next";
  * export const { GET } = sseRoute();
  * ```
  */

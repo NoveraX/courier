@@ -4,7 +4,7 @@ import { docsMetadata } from "@/lib/metadata"
 
 const singletonCode = `// lib/query.ts — Single typed instance for the entire app
 import type { api } from "@/api"
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 
 export const q = createProxyQueryCaller<typeof api>("api")
 
@@ -14,7 +14,7 @@ export const q = createProxyQueryCaller<typeof api>("api")
 // q.group.useQuery("endpoint") — full autocompletion`
 
 const sourcesCode = `// api/index.ts — Define and export the API source
-import { defineApi } from "@noverax/nexus/define"
+import { defineApi } from "@noverax/courier/define"
 
 export const api = defineApi({
   baseURL: "http://localhost:4000",
@@ -26,7 +26,7 @@ export const api = defineApi({
 })`
 
 const methodTypeCode = `// How endpoint<Response, Variables> drives the type system
-import { defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineGroup, endpoint } from "@noverax/courier/define"
 
 const users = defineGroup({
   prefix: "users",
@@ -71,7 +71,7 @@ const user = await caller.users.getById({ id: 1 })
 //    ^? User`
 
 const multiInstanceCode = `// Multiple instances for different backends
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 
 // Internal API
 export const internalQ = createProxyQueryCaller<typeof internalApi>("internalApi", {
@@ -90,7 +90,7 @@ const { data } = internalQ.users.useQuery("getAll")
 const { mutate } = externalQ.payments.useMutation("charge")`
 
 const directCode = `// Direct mode — same type system, no proxy
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api"
 
 export const caller = createCaller(api)

@@ -2,10 +2,10 @@ export const metadata = { title: "Path Parameters", description: "Dynamic URL se
 
 ## Basic syntax
 
-Use the `:paramName` syntax in URL paths to define dynamic segments. Nexus compiles these paths using an internal regex parser and substitutes values from variables or `pathOptions`:
+Use the `:paramName` syntax in URL paths to define dynamic segments. Courier compiles these paths using an internal regex parser and substitutes values from variables or `pathOptions`:
 
 ```ts title="api/users.ts"
-import { defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: number; name: string }
 type Comment = { id: number; body: string }
@@ -32,7 +32,7 @@ const users = defineGroup({
 
 ## Variables as path params
 
-When you pass variables to a request, Nexus first extracts any values that match path parameter names. The remaining variables are sent as query parameters (for GET/DELETE) or as the request body (for POST/PUT/PATCH):
+When you pass variables to a request, Courier first extracts any values that match path parameter names. The remaining variables are sent as query parameters (for GET/DELETE) or as the request body (for POST/PUT/PATCH):
 
 ```ts title="Variable consumption"
 // Path params are extracted from the variables object.
@@ -65,7 +65,7 @@ await caller.users.updateAvatar({ id: 5, name: "photo.jpg" })
 ```
 
 <Callout variant="tip" title="Automatic extraction">
-You do not need to separate path params from body/query params manually. Nexus handles this automatically based on the path definition. Just pass all variables in a single object.
+You do not need to separate path params from body/query params manually. Courier handles this automatically based on the path definition. Just pass all variables in a single object.
 </Callout>
 
 ## pathOptions function
@@ -73,7 +73,7 @@ You do not need to separate path params from body/query params manually. Nexus h
 For path parameters that come from server-side context (cookies, headers, session) rather than the caller, use the `pathOptions` function. It runs on the server before every request and provides values for path compilation:
 
 ```ts title="api/index.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: number; name: string }
 
@@ -111,7 +111,7 @@ The `pathOptions` function receives the Web Standard `Request` object and runs o
 Each group can define its own `pathOptions` that override the source-level values for the same keys. This is useful when different groups resolve the same parameter differently:
 
 ```ts title="api/groups.ts"
-import { defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineGroup, endpoint } from "@noverax/courier/define"
 
 type Project = { id: number; name: string }
 type Task = { id: number; title: string }
@@ -166,7 +166,7 @@ Understanding how variables are consumed is important. Here is the complete reso
 
 ## Path compilation caching
 
-Nexus caches compiled path functions for performance. Each unique path string is compiled once using an internal regex parser and reused across all subsequent requests:
+Courier caches compiled path functions for performance. Each unique path string is compiled once using an internal regex parser and reused across all subsequent requests:
 
 ```typescript
 // Path compilation functions are cached for performance.

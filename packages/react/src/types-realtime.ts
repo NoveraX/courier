@@ -5,11 +5,11 @@
  * `useChannel` (WebSocket) hooks exposed by `QueryGroupClient`.
  */
 
-import type { ConnectionStatus, SSEEvent } from "@noverax/nexus/realtime";
+import type { ConnectionStatus, SSEEvent } from "@noverax/courier/realtime";
 
 import type { WithVariables } from "./types-helpers";
 
-export type NexusSubscriptionOptions<TResponse, TVariables> = WithVariables<TVariables> & {
+export type CourierSubscriptionOptions<TResponse, TVariables> = WithVariables<TVariables> & {
   /** Disable the subscription (default: true) */
   enabled?: boolean;
   /** Data to show immediately while the connection is being established */
@@ -36,7 +36,7 @@ export interface SubscriptionResult<TData> {
   close: () => void;
 }
 
-export type NexusChannelOptions<TReceive, TVariables> = WithVariables<TVariables> & {
+export type CourierChannelOptions<TReceive, TVariables> = WithVariables<TVariables> & {
   /** Disable the channel (default: true) */
   enabled?: boolean;
   /** Called on each incoming message from the server */

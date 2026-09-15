@@ -3,7 +3,7 @@ import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
-  serverExternalPackages: ["@noverax/nexus"],
+  serverExternalPackages: ["@noverax/courier"],
 }
 
 const withMDX = createMDX({

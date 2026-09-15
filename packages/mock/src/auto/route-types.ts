@@ -1,4 +1,4 @@
-import type { Transport } from "@noverax/nexus";
+import type { Transport } from "@noverax/courier";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 /**

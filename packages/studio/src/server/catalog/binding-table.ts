@@ -1,6 +1,6 @@
-import { NexusError } from "@noverax/nexus";
-import type { NexusConfig } from "@noverax/nexus/config";
-import { getSourceName } from "@noverax/nexus/define";
+import { CourierError } from "@noverax/courier";
+import type { CourierConfig } from "@noverax/courier/config";
+import { getSourceName } from "@noverax/courier/define";
 
 /** Transports the binding table tracks */
 export type BindingTransport = "http" | "sse" | "ws";
@@ -34,7 +34,7 @@ export interface BindingStatus {
 }
 
 /** Thrown when two runtimes claim the same `(source, transport)` */
-export class BindingConflictError extends NexusError<"BINDING_CONFLICT"> {
+export class BindingConflictError extends CourierError<"BINDING_CONFLICT"> {
   constructor(sourceName: string, transport: BindingTransport, runtimeIds: string[]) {
     super(`Binding conflict on ${sourceName}/${transport}: claimed by ${runtimeIds.join(", ")}`, {
       code: "BINDING_CONFLICT",
@@ -50,7 +50,7 @@ interface ExpectedKey {
 
 /**
  * In-memory routing table that maps each `(source, transport)` pair declared
- * in `nexus.config.ts` to the runtime that announced ownership of it.
+ * in `courier.config.ts` to the runtime that announced ownership of it.
  *
  * Replaces the first-writer-wins layer merge in the legacy `CatalogStore` —
  * here, two runtimes claiming the same pair surface as a `conflict` status
@@ -62,7 +62,7 @@ export class BindingTable {
   private claims = new Map<string, string[]>();
 
   /** Replace the expected pair set after every config (re)load */
-  setConfig(config: NexusConfig): void {
+  setConfig(config: CourierConfig): void {
     this.expected = computeExpectedPairs(config);
   }
 
@@ -134,11 +134,11 @@ function pairKey(sourceName: string, transport: BindingTransport): string {
 
 /**
  * Walk `config.sources`, infer the canonical name (config key wins after
- * `loadNexusConfig` stamping), and emit one expected pair per declared
+ * `loadCourierConfig` stamping), and emit one expected pair per declared
  * `proxyPath` transport. Sources without `proxyPath` contribute zero pairs —
  * they exist for direct callers and never need a runtime binding.
  */
-function computeExpectedPairs(config: NexusConfig): ExpectedKey[] {
+function computeExpectedPairs(config: CourierConfig): ExpectedKey[] {
   const out: ExpectedKey[] = [];
   for (const [key, source] of Object.entries(config.sources)) {
     const sourceName = getSourceName(source) ?? key;

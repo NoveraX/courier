@@ -1,12 +1,12 @@
 {
-  "name": "@noverax/nexus-react",
+  "name": "@noverax/courier-react",
   "version": "0.0.0",
-  "description": "React integration for @noverax/nexus — hooks, query keys, SSE subscriptions, optimistic updates",
+  "description": "React integration for @noverax/courier — hooks, query keys, SSE subscriptions, optimistic updates",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noverax/nexus.git",
+    "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/react"
   },
   "type": "module",
@@ -38,7 +38,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/nexus": "*"
+    "@noverax/courier": "*"
   },
   "peerDependencies": {
     "@tanstack/react-query": ">=5",

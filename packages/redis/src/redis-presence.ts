@@ -1,4 +1,4 @@
-import type { PresenceAdapter } from "@noverax/nexus/realtime";
+import type { PresenceAdapter } from "@noverax/courier/realtime";
 
 import { trackHealth } from "./health";
 import {
@@ -23,7 +23,7 @@ const DEFAULT_PREFIX = "presence:";
  * @example
  * ```ts
  * import { Redis } from "ioredis";
- * import { createRedisPresence } from "@noverax/nexus-redis";
+ * import { createRedisPresence } from "@noverax/courier-redis";
  *
  * const presence = createRedisPresence({ redis: new Redis() });
  * await presence.connect();

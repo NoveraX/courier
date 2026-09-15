@@ -2,7 +2,7 @@ export const metadata = { title: "Request Lifecycle", description: "How requests
 
 ## Overview
 
-Every API call in Nexus follows a well-defined lifecycle. There are two transport modes — **Direct** and **Proxy** — but both converge on the same internal `executeRequest` function. Understanding this flow helps you debug issues, write middleware, and choose the right mode for your use case.
+Every API call in Courier follows a well-defined lifecycle. There are two transport modes — **Direct** and **Proxy** — but both converge on the same internal `executeRequest` function. Understanding this flow helps you debug issues, write middleware, and choose the right mode for your use case.
 
 ## Two Modes
 
@@ -26,7 +26,7 @@ In direct mode, the caller invokes `executeRequest` directly with the `api` obje
 ### Direct mode — server-side <ModeBadge mode="direct" />
 
 ```ts title="lib/caller.ts"
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api/sources"
 
 export const caller = createCaller(api)
@@ -48,7 +48,7 @@ Use direct mode whenever you have access to the `api` object: Server Components,
 ### Proxy mode — browser-side <ModeBadge mode="proxy" />
 
 ```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import type { api } from "@/api/sources"
 
 export const caller = createProxyCaller<typeof api>()
@@ -155,7 +155,7 @@ executeRequest
 In direct mode, you can pass an optional `Context` as the last argument to forward incoming request headers (useful in Server Components and API routes):
 
 ```ts
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api/sources"
 
 const caller = createCaller(api)

@@ -41,11 +41,11 @@ export type ProxyPath = {
    * - Relative path (`"/api/ws"`) → resolved against `location.origin`,
    *   protocol derived from `location.protocol` (`https:` → `wss:`,
    *   `http:` → `ws:`). Only valid in runtimes that natively host WS upgrades
-   *   (Hono, Fastify, Express, NestJS, standalone `@noverax/nexus-server`).
+   *   (Hono, Fastify, Express, NestJS, standalone `@noverax/courier-server`).
    * - Absolute URL (`"ws://localhost:3001"`, `"wss://realtime.example.com"`)
    *   → used as-is. Required for Next.js App Router, Cloudflare Workers,
    *   Vercel Edge, AWS Lambda — any runtime that cannot host WS in-process.
-   *   Point this at a running `@noverax/nexus-server` instance.
+   *   Point this at a running `@noverax/courier-server` instance.
    * - Omitted → no default. Invoking a WS endpoint without `proxyPath.ws`
    *   throws `ConfigurationError("WS_PATH_NOT_CONFIGURED", ...)` — silent
    *   `localhost` defaults caused production-only breakage in earlier versions.

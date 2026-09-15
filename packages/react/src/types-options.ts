@@ -1,13 +1,13 @@
 /**
- * Hook option types for Nexus react-query integration.
+ * Hook option types for Courier react-query integration.
  *
  * Describes the `options` argument shape for `useQuery`, `useSuspenseQuery`,
  * `useInfiniteQuery`, `useMutation`, `prefetchQuery` and `useComputedQuery`
  * hooks exposed by `QueryGroupClient`.
  */
 
-import type { CallOptions, HTTPError } from "@noverax/nexus";
-import type { SSEEvent } from "@noverax/nexus/realtime";
+import type { CallOptions, HTTPError } from "@noverax/courier";
+import type { SSEEvent } from "@noverax/courier/realtime";
 import type {
   InfiniteData,
   QueryKey,
@@ -19,12 +19,12 @@ import type {
 
 import type { MutationVariables, WithVariables } from "./types-helpers";
 
-export type NexusQueryOptions<TResponse, TVariables> = WithVariables<TVariables> &
+export type CourierQueryOptions<TResponse, TVariables> = WithVariables<TVariables> &
   Omit<UseQueryOptions<TResponse, HTTPError, TResponse, QueryKey>, "queryKey" | "queryFn"> & {
     requestOptions?: CallOptions;
   };
 
-export type NexusSuspenseQueryOptions<TResponse, TVariables> = WithVariables<TVariables> &
+export type CourierSuspenseQueryOptions<TResponse, TVariables> = WithVariables<TVariables> &
   Omit<
     UseSuspenseQueryOptions<TResponse, HTTPError, TResponse, QueryKey>,
     "queryKey" | "queryFn"
@@ -32,7 +32,7 @@ export type NexusSuspenseQueryOptions<TResponse, TVariables> = WithVariables<TVa
     requestOptions?: CallOptions;
   };
 
-export type NexusInfiniteQueryOptions<TResponse, TVariables, TPageParam> = {
+export type CourierInfiniteQueryOptions<TResponse, TVariables, TPageParam> = {
   requestOptions?: CallOptions;
   initialPageParam: TPageParam;
   getNextPageParam: (
@@ -63,7 +63,7 @@ export type NexusInfiniteQueryOptions<TResponse, TVariables, TPageParam> = {
     "queryKey" | "queryFn" | "initialPageParam" | "getNextPageParam" | "getPreviousPageParam"
   >;
 
-export type NexusMutationOptions<TResponse, TVariables> = Omit<
+export type CourierMutationOptions<TResponse, TVariables> = Omit<
   UseMutationOptions<TResponse, HTTPError, MutationVariables<TVariables>>,
   "mutationFn"
 > & {
@@ -72,13 +72,13 @@ export type NexusMutationOptions<TResponse, TVariables> = Omit<
   invalidate?: QueryKey[];
 };
 
-export type NexusPrefetchOptions<TVariables> = [TVariables] extends [undefined]
+export type CourierPrefetchOptions<TVariables> = [TVariables] extends [undefined]
   ? { variables?: undefined; requestOptions?: CallOptions; staleTime?: number }
   : {} extends TVariables
     ? { variables?: TVariables; requestOptions?: CallOptions; staleTime?: number }
     : { variables: TVariables; requestOptions?: CallOptions; staleTime?: number };
 
-export type NexusComputedQueryOptions<TQueryResponse, TStreamData, TVariables> =
+export type CourierComputedQueryOptions<TQueryResponse, TStreamData, TVariables> =
   WithVariables<TVariables> & {
     /** SSE endpoint method name (on the same group) that provides live updates */
     subscriptionMethod: string;

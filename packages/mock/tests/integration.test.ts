@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define";
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
 import { createMockClient } from "../src/create-mock-client";
 import { defineFactory } from "../src/factory";
 import { defineScenario } from "../src/scenario";
 
 // ---------------------------------------------------------------------------
-// Real Nexus API definition (same as a user would write)
+// Real Courier API definition (same as a user would write)
 // ---------------------------------------------------------------------------
 
 interface User {

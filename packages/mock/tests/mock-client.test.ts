@@ -18,7 +18,7 @@ describe("createMockClient", () => {
   it("throws descriptive error for unmocked endpoints", async () => {
     const { client } = createMockClient();
 
-    await expect((client as any).users.getAll()).rejects.toThrow("[nexus-mock] No mock");
+    await expect((client as any).users.getAll()).rejects.toThrow("[courier-mock] No mock");
   });
 
   it("records errors in history", async () => {

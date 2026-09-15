@@ -16,7 +16,7 @@ const RESOLVE_EXTENSIONS: ReadonlyArray<string> = [
 
 /**
  * Walk a config file and return every local TypeScript/JavaScript module it
- * transitively imports. Bare specifiers (`@noverax/nexus`, `node:fs`, …) are
+ * transitively imports. Bare specifiers (`@noverax/courier`, `node:fs`, …) are
  * skipped — only relative and absolute file paths are followed. Cycles are
  * tolerated via a visited set.
  *

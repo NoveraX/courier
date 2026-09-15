@@ -7,7 +7,7 @@ import { ValidationError } from "../src/validation";
 import { executeDirectWSChannel } from "../src/transport/in-process/ws-channel";
 import { createPlaygroundWSRegistry } from "../src/transport/in-process/ws-registry";
 
-const HOOKS_KEY = Symbol.for("nexus.studio.hooks");
+const HOOKS_KEY = Symbol.for("courier.studio.hooks");
 const hooks = (globalThis as Record<symbol, unknown>)[HOOKS_KEY] as StudioHooks;
 
 function installHooks(overrides: Partial<StudioHooks>): () => void {

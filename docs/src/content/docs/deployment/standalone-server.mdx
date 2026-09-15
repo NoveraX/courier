@@ -1,25 +1,25 @@
 export const metadata = {
   title: "Standalone Server",
-  description: "Run a dedicated Nexus HTTP + WebSocket server with createNexusServer — health checks, CORS, graceful shutdown, and connection registries.",
+  description: "Run a dedicated Courier HTTP + WebSocket server with createCourierServer — health checks, CORS, graceful shutdown, and connection registries.",
 }
 
 ## Installation
 
 ```bash
-npm install @noverax/nexus-server
+npm install @noverax/courier-server
 ```
 
 ## Quick Start
 
 ```ts title="server.ts"
-import { createNexusServer } from "@noverax/nexus-server"
+import { createCourierServer } from "@noverax/courier-server"
 import { sources } from "./api/sources"
 
-const server = await createNexusServer({
+const server = await createCourierServer({
   sources,
   port: 3001,
   host: "0.0.0.0",
-  onReady: (url) => console.log(`Nexus ready at ${url}`),
+  onReady: (url) => console.log(`Courier ready at ${url}`),
 })
 ```
 
@@ -35,12 +35,12 @@ Some runtimes can't host WebSocket upgrades in-process. In those cases the stand
 | **Next.js App Router** | in-process | in-process | **standalone server (required)** |
 | **Cloudflare Workers** | in-process | in-process | **standalone server or Durable Objects** |
 | **Vercel Edge / AWS Lambda** | in-process | in-process | **standalone server (required)** |
-| Standalone `@noverax/nexus-server` | in-process | in-process | in-process |
+| Standalone `@noverax/courier-server` | in-process | in-process | in-process |
 
-For runtimes in the bottom half of the table, run `@noverax/nexus-server` alongside your app and configure the browser client like this:
+For runtimes in the bottom half of the table, run `@noverax/courier-server` alongside your app and configure the browser client like this:
 
 ```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import { api } from "@/api/sources"
 
 export const caller = createProxyCaller<typeof api>("api", {
@@ -49,7 +49,7 @@ export const caller = createProxyCaller<typeof api>("api", {
     http: "/api/request",                // hosted by your Next.js / Cloudflare app
     sse: "/api/sse",                     // hosted by your app
     ws: process.env.NODE_ENV === "production"
-      ? "wss://realtime.example.com"     // standalone nexus-server
+      ? "wss://realtime.example.com"     // standalone courier-server
       : "ws://localhost:3001",
   },
 })
@@ -63,18 +63,18 @@ In dev you can run the standalone server alongside your Next.js dev server with 
 
 ## Studio integration & `appOrigin`
 
-Wire the standalone server into Studio with a single `attachRuntime()` call. It auto-loads `nexus.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The standalone server announces its own listen origin to Studio automatically once `httpServer.listen()` resolves — no manual `appOrigin` plumbing needed for the standalone path.
+Wire the standalone server into Studio with a single `attachRuntime()` call. It auto-loads `courier.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The standalone server announces its own listen origin to Studio automatically once `httpServer.listen()` resolves — no manual `appOrigin` plumbing needed for the standalone path.
 
 ```ts title="server.ts"
-import { createNexusServer } from "@noverax/nexus-server"
-import { attachRuntime } from "@noverax/nexus-studio-core/runtime"
+import { createCourierServer } from "@noverax/courier-server"
+import { attachRuntime } from "@noverax/courier-studio-core/runtime"
 import { sources } from "./api/sources"
 
 if (process.env.NODE_ENV !== "production") {
   await attachRuntime()
 }
 
-createNexusServer({ sources, port: 3001 })
+createCourierServer({ sources, port: 3001 })
 ```
 
 In a split-host topology (Next.js hosts HTTP/SSE on 3000, standalone server hosts WS on 3001), each process calls `attachRuntime()` once at startup. Studio's binding table routes each Playground subscribe to the runtime that actually hosts the requested source × transport pair.
@@ -82,9 +82,9 @@ In a split-host topology (Next.js hosts HTTP/SSE on 3000, standalone server host
 ## Configuration
 
 ```ts title="server.ts"
-import type { PubSubAdapter } from "@noverax/nexus/realtime"
+import type { PubSubAdapter } from "@noverax/courier/realtime"
 
-const server = await createNexusServer({
+const server = await createCourierServer({
   // Required
   sources,
 
@@ -115,7 +115,7 @@ const server = await createNexusServer({
 ### SSE Hooks
 
 ```ts title="server.ts"
-const server = await createNexusServer({
+const server = await createCourierServer({
   sources,
   onSSEConnect: ({ connectionId, request, source, group, method }) => {
     const userId = extractUser(request)
@@ -135,7 +135,7 @@ The `reason` field is one of: `"complete"`, `"error"`, `"disconnect"`, `"shutdow
 ### WebSocket Hooks
 
 ```ts title="server.ts"
-const server = await createNexusServer({
+const server = await createCourierServer({
   sources,
   onConnect: ({ connectionId, request }) => {
     const userId = extractUser(request)
@@ -232,12 +232,12 @@ await server.stop()
 Run a server directly from the command line:
 
 ```bash
-npx nexus-server --config ./nexus.config.ts --port 3001 --host 0.0.0.0
+npx courier-server --config ./courier.config.ts --port 3001 --host 0.0.0.0
 ```
 
 The config file must export `sources`:
 
-```ts title="nexus.config.ts"
+```ts title="courier.config.ts"
 import { sources } from "./api/sources"
 
 export { sources }

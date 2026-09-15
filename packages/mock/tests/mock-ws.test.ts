@@ -1,5 +1,5 @@
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define";
-import type { WSChannel } from "@noverax/nexus/realtime";
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
+import type { WSChannel } from "@noverax/courier/realtime";
 import { describe, expect, it, vi } from "vitest";
 import { createMockClient } from "../src/create-mock-client";
 

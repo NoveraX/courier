@@ -1,12 +1,12 @@
-import type { NexusConfig } from "@noverax/nexus/config";
-import { defineApi } from "@noverax/nexus/define";
+import type { CourierConfig } from "@noverax/courier/config";
+import { defineApi } from "@noverax/courier/define";
 import { describe, expect, it, vi } from "vitest";
 import { createMockRegistry } from "../src/server/mock-registry";
 
 const dummySource = defineApi({ baseURL: "https://api.example.com", groups: {} });
 
-function makeConfig(mocks: Record<string, unknown> | undefined): NexusConfig {
-  return { sources: { api: dummySource }, mocks } as unknown as NexusConfig;
+function makeConfig(mocks: Record<string, unknown> | undefined): CourierConfig {
+  return { sources: { api: dummySource }, mocks } as unknown as CourierConfig;
 }
 
 describe("createMockRegistry", () => {

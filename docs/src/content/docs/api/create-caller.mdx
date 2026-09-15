@@ -3,7 +3,7 @@ export const metadata = { title: "createCaller", description: "Factory function 
 ## Import
 
 ```ts
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 ```
 
 ## Signature
@@ -55,7 +55,7 @@ type HttpResponse<T> = {
 ## Basic Usage
 
 ```ts title="lib/caller.ts"
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api"
 
 export const caller = createCaller(api, {
@@ -136,7 +136,7 @@ export async function createUser(formData: FormData) {
 const caller = createCaller(api, {
   timeout: 15000,
   headers: {
-    "X-Internal-Service": "nexus-app",
+    "X-Internal-Service": "courier-app",
   },
   onError: (error) => {
     console.error(`[Direct] HTTP ${error.status}:`, error.data)

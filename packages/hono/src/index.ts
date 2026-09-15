@@ -1,12 +1,12 @@
-import type { HandlerConfig, NexusWSOptions } from "@noverax/nexus";
+import type { CourierWSOptions, HandlerConfig } from "@noverax/courier";
 import {
   createHandler,
   createWSHandler,
   getAppOrigin,
   requireSources,
   setAppOrigin,
-} from "@noverax/nexus";
-import { announceHosting } from "@noverax/nexus/announce";
+} from "@noverax/courier";
+import { announceHosting } from "@noverax/courier/announce";
 import type { Context } from "hono";
 import type { HonoWSContext } from "./ws-adapter";
 import { createSocketAdapter } from "./ws-adapter";
@@ -32,7 +32,7 @@ function tryDiscoverAppOrigin(request: Request): void {
 }
 
 /**
- * Create a Hono handler for the nexus proxy.
+ * Create a Hono handler for the courier proxy.
  *
  * Sources are read from the core global registry populated by
  * `attachRuntime()` — call `await attachRuntime()` in your server
@@ -41,15 +41,15 @@ function tryDiscoverAppOrigin(request: Request): void {
  * @example
  * ```ts
  * import { Hono } from "hono";
- * import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
- * import { nexusHandler } from "@noverax/nexus-hono";
+ * import { attachRuntime } from "@noverax/courier-studio-core/runtime";
+ * import { courierHandler } from "@noverax/courier-hono";
  *
  * const app = new Hono();
  * await attachRuntime();
- * app.all("/api/request", nexusHandler());
+ * app.all("/api/request", courierHandler());
  * ```
  */
-export function nexusHandler(config?: HandlerConfig) {
+export function courierHandler(config?: HandlerConfig) {
   const { handle } = createHandler(config);
   announceHosting({
     transports: ["http"],
@@ -67,10 +67,10 @@ export function nexusHandler(config?: HandlerConfig) {
  *
  * @example
  * ```ts
- * app.get("/api/sse", nexusSSEHandler());
+ * app.get("/api/sse", courierSSEHandler());
  * ```
  */
-export function nexusSSEHandler(config?: HandlerConfig) {
+export function courierSSEHandler(config?: HandlerConfig) {
   const { handleSSE } = createHandler(config);
   announceHosting({
     transports: ["sse"],
@@ -92,7 +92,7 @@ export type HonoWSEvents = {
 };
 
 /**
- * Create Hono WebSocket event handlers for Nexus realtime.
+ * Create Hono WebSocket event handlers for Courier realtime.
  * Use with your runtime's upgradeWebSocket helper.
  *
  * @param options - WS handler options (heartbeat, allowedOrigins, etc.)
@@ -103,11 +103,11 @@ export type HonoWSEvents = {
  * import { createNodeWebSocket } from "@hono/node-ws";
  * const { upgradeWebSocket } = createNodeWebSocket({ app });
  *
- * const ws = nexusWSHandler();
+ * const ws = courierWSHandler();
  * app.get("/ws", upgradeWebSocket((c) => ws(c)));
  * ```
  */
-export function nexusWSHandler(options?: NexusWSOptions): (c: Context) => HonoWSEvents {
+export function courierWSHandler(options?: CourierWSOptions): (c: Context) => HonoWSEvents {
   const wsHandler = createWSHandler(options);
   announceHosting({
     transports: ["ws"],

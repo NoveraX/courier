@@ -47,7 +47,7 @@ function AuditContent(): React.ReactNode {
   };
 
   const handleDownload = (): void => {
-    downloadFile(md, `nexus-audit-${Date.now()}.md`, "text/markdown");
+    downloadFile(md, `courier-audit-${Date.now()}.md`, "text/markdown");
     toast.success("Report downloaded");
   };
 

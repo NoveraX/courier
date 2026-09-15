@@ -1,26 +1,26 @@
 export const metadata = {
   title: "Deployment Overview",
-  description: "Choose the right deployment strategy for your Nexus application — standalone server, framework adapter, single or multi-replica.",
+  description: "Choose the right deployment strategy for your Courier application — standalone server, framework adapter, single or multi-replica.",
 }
 
 ## Deployment Models
 
-Nexus supports two deployment models for realtime features (SSE and WebSocket):
+Courier supports two deployment models for realtime features (SSE and WebSocket):
 
 | Model | Best For | Packages |
 |-------|----------|----------|
-| **Framework adapter** | Apps already using Express, Fastify, Hono, or NestJS | `@noverax/nexus-express`, `-fastify`, `-hono`, `-nestjs` |
-| **Standalone server** | Next.js (WS needs separate process), dedicated realtime service | `@noverax/nexus-server` |
+| **Framework adapter** | Apps already using Express, Fastify, Hono, or NestJS | `@noverax/courier-express`, `-fastify`, `-hono`, `-nestjs` |
+| **Standalone server** | Next.js (WS needs separate process), dedicated realtime service | `@noverax/courier-server` |
 
 <Callout variant="info" title="Next.js limitation">
-  Next.js App Router cannot handle WebSocket upgrades. Use `sseRoute()` for SSE, and run a separate `@noverax/nexus-server` for WebSocket support.
+  Next.js App Router cannot handle WebSocket upgrades. Use `sseRoute()` for SSE, and run a separate `@noverax/courier-server` for WebSocket support.
 </Callout>
 
 ## Single vs Multi-Replica
 
 | | Single Replica | Multi-Replica |
 |---|---|---|
-| **Adapters** | Memory (built-in, zero config) | Redis (`@noverax/nexus-redis`) |
+| **Adapters** | Memory (built-in, zero config) | Redis (`@noverax/courier-redis`) |
 | **SSE resume** | `createMemoryStream()` | `createRedisStream()` |
 | **WS broadcast** | `createMemoryPubSub()` | `createRedisPubSub()` |
 | **Presence** | `createMemoryPresence()` | `createRedisPresence()` |
@@ -31,13 +31,13 @@ Memory adapters are the default — they work out of the box with zero configura
 ## Decision Tree
 
 1. **Do you need realtime?** (SSE or WebSocket)
-   - No → standard `apiRoute()` / `nexusHandler()` is enough
+   - No → standard `apiRoute()` / `courierHandler()` is enough
    - Yes → continue
 
 2. **Which framework?**
-   - Next.js → `sseRoute()` for SSE + `@noverax/nexus-server` for WS
+   - Next.js → `sseRoute()` for SSE + `@noverax/courier-server` for WS
    - Express / Fastify / Hono / NestJS → framework adapters handle both SSE and WS natively
-   - No framework → `@noverax/nexus-server` standalone
+   - No framework → `@noverax/courier-server` standalone
 
 3. **How many replicas?**
    - Single → memory adapters (default)
@@ -45,7 +45,7 @@ Memory adapters are the default — they work out of the box with zero configura
 
 ## Health Checks
 
-Every Nexus server (standalone or framework adapter) provides two health endpoints:
+Every Courier server (standalone or framework adapter) provides two health endpoints:
 
 - **`GET /health`** — always returns `200 { "status": "ok" }` (liveness probe)
 - **`GET /readyz`** — returns `200` when ready, `503` during shutdown (readiness probe)

@@ -1,4 +1,4 @@
-import type { SSEEvent } from "@noverax/nexus/realtime";
+import type { SSEEvent } from "@noverax/courier/realtime";
 import type {
   EnhancedMockBuilder,
   MockChannelFn,

@@ -6,7 +6,7 @@ import type { ResolvedOptions } from "./types";
  * surface as a TypeScript error here, not as a silent runtime mismatch on
  * the browser side.
  */
-const STUDIO_URL_SYMBOL = Symbol.for("nexus.studio.url");
+const STUDIO_URL_SYMBOL = Symbol.for("courier.studio.url");
 const STUDIO_URL_KEY_LITERAL = `Symbol.for(${JSON.stringify(Symbol.keyFor(STUDIO_URL_SYMBOL))})`;
 
 /**
@@ -21,7 +21,7 @@ export function generateConnectSnippet(options: ResolvedOptions): string {
   const runtimeId = JSON.stringify(`${options.framework}-browser`);
   return [
     `globalThis[${STUDIO_URL_KEY_LITERAL}] = ${url};`,
-    `import { attachRuntime } from "@noverax/nexus-studio-core/runtime";`,
+    `import { attachRuntime } from "@noverax/courier-studio-core/runtime";`,
     `attachRuntime(${runtimeId});`,
   ].join("\n");
 }

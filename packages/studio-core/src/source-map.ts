@@ -1,9 +1,9 @@
-import type { Sources } from "@noverax/nexus/define";
+import type { Sources } from "@noverax/courier/define";
 import type { SourceMap } from "./events";
 import { probeEndpoint } from "./source-map-probe";
 import { extractSchemaStub } from "./source-map-schema";
 
-const ENDPOINT_SCHEMA = Symbol.for("nexus.endpoint.schema");
+const ENDPOINT_SCHEMA = Symbol.for("courier.endpoint.schema");
 
 interface SchemaMetadata {
   response?: unknown;

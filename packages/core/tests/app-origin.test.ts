@@ -6,7 +6,7 @@
  *  - Storage round-trip (`setAppOrigin` + `getAppOrigin` via globalThis)
  *  - Parsing semantics (`getAppOriginParsed` happy path + edge cases)
  *  - Strict APP_ORIGIN_NOT_CONFIGURED — no `localhost:3000` magic default
- *  - Env var auto-detect precedence (`NEXUS_APP_URL` > `APP_URL` > none)
+ *  - Env var auto-detect precedence (`COURIER_APP_URL` > `APP_URL` > none)
  *  - Malformed URL surfaces a clean error
  */
 
@@ -19,17 +19,17 @@ import {
 } from "../src/app-origin";
 import { isConfigurationError } from "../src/errors";
 
-const APP_ORIGIN_KEY = Symbol.for("nexus.app-origin");
+const APP_ORIGIN_KEY = Symbol.for("courier.app-origin");
 
 beforeEach(() => {
   delete (globalThis as Record<symbol, unknown>)[APP_ORIGIN_KEY];
-  delete process.env.NEXUS_APP_URL;
+  delete process.env.COURIER_APP_URL;
   delete process.env.APP_URL;
 });
 
 afterEach(() => {
   delete (globalThis as Record<symbol, unknown>)[APP_ORIGIN_KEY];
-  delete process.env.NEXUS_APP_URL;
+  delete process.env.COURIER_APP_URL;
   delete process.env.APP_URL;
 });
 
@@ -94,7 +94,7 @@ describe("getAppOriginParsed", () => {
 
   it("error message guides the user to fix it", () => {
     expect(() => getAppOriginParsed()).toThrow(/appOrigin/);
-    expect(() => getAppOriginParsed()).toThrow(/NEXUS_APP_URL/);
+    expect(() => getAppOriginParsed()).toThrow(/COURIER_APP_URL/);
     expect(() => getAppOriginParsed()).toThrow(/no auto-fallback/i);
   });
 
@@ -123,24 +123,24 @@ describe("detectAppOrigin", () => {
     expect(detectAppOrigin()).toBeUndefined();
   });
 
-  it("returns NEXUS_APP_URL when set", () => {
-    process.env.NEXUS_APP_URL = "http://app.example.com";
+  it("returns COURIER_APP_URL when set", () => {
+    process.env.COURIER_APP_URL = "http://app.example.com";
     expect(detectAppOrigin()).toBe("http://app.example.com");
   });
 
-  it("returns APP_URL when NEXUS_APP_URL is missing", () => {
+  it("returns APP_URL when COURIER_APP_URL is missing", () => {
     process.env.APP_URL = "http://fallback.example.com";
     expect(detectAppOrigin()).toBe("http://fallback.example.com");
   });
 
-  it("NEXUS_APP_URL wins over APP_URL when both set", () => {
-    process.env.NEXUS_APP_URL = "http://primary";
+  it("COURIER_APP_URL wins over APP_URL when both set", () => {
+    process.env.COURIER_APP_URL = "http://primary";
     process.env.APP_URL = "http://secondary";
     expect(detectAppOrigin()).toBe("http://primary");
   });
 
-  it("ignores empty NEXUS_APP_URL", () => {
-    process.env.NEXUS_APP_URL = "";
+  it("ignores empty COURIER_APP_URL", () => {
+    process.env.COURIER_APP_URL = "";
     process.env.APP_URL = "http://app.example.com";
     expect(detectAppOrigin()).toBe("http://app.example.com");
   });

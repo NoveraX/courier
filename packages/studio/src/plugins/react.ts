@@ -1,16 +1,16 @@
 /**
- * React (Vite) plugin for Nexus Studio.
+ * React (Vite) plugin for Courier Studio.
  * Re-exports the Vite plugin for a framework-specific import path.
  *
  * @example
  * ```ts
  * // vite.config.ts
  * import react from "@vitejs/plugin-react"
- * import { nexusStudio } from "@noverax/nexus-studio/react"
+ * import { courierStudio } from "@noverax/courier-studio/react"
  *
  * export default defineConfig({
- *   plugins: [react(), nexusStudio()],
+ *   plugins: [react(), courierStudio()],
  * })
  * ```
  */
-export { nexusStudio } from "./vite";
+export { courierStudio } from "./vite";

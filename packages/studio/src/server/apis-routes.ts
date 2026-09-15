@@ -3,7 +3,7 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { createFetch } from "@noverax/nexus/fetch";
+import { createFetch } from "@noverax/courier/fetch";
 import {
   diffSpecs,
   type FingerprintResult,

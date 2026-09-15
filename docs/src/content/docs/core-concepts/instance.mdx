@@ -1,15 +1,15 @@
-export const metadata = { title: "HTTP Client & Methods", description: "How Nexus wraps native fetch with typed methods, automatic serialization, and path parameter extraction.", mode: "both" }
+export const metadata = { title: "HTTP Client & Methods", description: "How Courier wraps native fetch with typed methods, automatic serialization, and path parameter extraction.", mode: "both" }
 
 ## Overview
 
-Under the hood, Nexus uses an `HttpClient` class that wraps the native `fetch` API — no external HTTP libraries. You never create an `HttpClient` directly — it is created internally when a request is executed. What you interact with are the **typed HTTP methods** that HttpClient provides to your endpoint definitions via the `http` object.
+Under the hood, Courier uses an `HttpClient` class that wraps the native `fetch` API — no external HTTP libraries. You never create an `HttpClient` directly — it is created internally when a request is executed. What you interact with are the **typed HTTP methods** that HttpClient provides to your endpoint definitions via the `http` object.
 
 ## HTTP Methods
 
 Every endpoint defined with `endpoint()` receives an `http` object with six HTTP helpers: `get`, `post`, `put`, `patch`, `del`, and `head`.
 
 ```ts title="api/users.ts"
-import { defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: string; name: string; email: string }
 type CreateUserVars = { name: string; email: string }
@@ -73,15 +73,15 @@ The key difference between methods is how they handle variables:
 ```
 
 <Callout variant="tip" title="Automatic serialization">
-You never need to call `JSON.stringify` or build query strings manually. Nexus handles encoding based on the HTTP method. You can customize this with `bodySerializer` and `searchParamsSerializer` in `defineApi` options.
+You never need to call `JSON.stringify` or build query strings manually. Courier handles encoding based on the HTTP method. You can customize this with `bodySerializer` and `searchParamsSerializer` in `defineApi` options.
 </Callout>
 
 ## Path Parameters
 
-Use the `:param` syntax in URLs to define path parameters. Nexus extracts matching keys from variables, inserts them into the URL, and sends the remaining variables as body or search params:
+Use the `:param` syntax in URLs to define path parameters. Courier extracts matching keys from variables, inserts them into the URL, and sends the remaining variables as body or search params:
 
 ```ts title="api/comments.ts"
-import { defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineGroup, endpoint } from "@noverax/courier/define"
 
 type Comment = { id: string; body: string; author: string }
 
@@ -114,7 +114,7 @@ Path parameter extraction uses an internal regex-based `:param` parser. Any patt
 
 ## Response Type
 
-Every HTTP method returns an `HttpResponse<T>` internally. By default, Nexus unwraps this and returns just the `data` property. If you need the full response (status code, headers), use the `rawData` option:
+Every HTTP method returns an `HttpResponse<T>` internally. By default, Courier unwraps this and returns just the `data` property. If you need the full response (status code, headers), use the `rawData` option:
 
 ```typescript
 // HttpResponse<T> — what every method returns internally
@@ -124,7 +124,7 @@ type HttpResponse<T> = {
   data: T          // Parsed response body, typed as T
 }
 
-// By default, Nexus returns just the data (unwrapped)
+// By default, Courier returns just the data (unwrapped)
 const users = await caller.users.getAll()
 //    ^? User[]
 
@@ -138,12 +138,12 @@ const response = await caller.users.raw.getAll()
 The `defineApi` function accepts `BaseOptions` — a comprehensive set of options that configure the underlying HttpClient. These options apply to every endpoint in every group under this source:
 
 ```ts title="api/sources.ts"
-import { defineApi } from "@noverax/nexus/define"
+import { defineApi } from "@noverax/courier/define"
 import {
   retryMiddleware,
   authMiddleware,
   logMiddleware,
-} from "@noverax/nexus/middleware"
+} from "@noverax/courier/middleware"
 import { users } from "./users"
 import { posts } from "./posts"
 
@@ -164,7 +164,7 @@ const api = defineApi({
   timeout: 30_000,
 
   // Default headers for all requests
-  headers: { "X-Client": "nexus" },
+  headers: { "X-Client": "courier" },
 
   // Cancel duplicate in-flight requests (default: false)
   deduplicate: true,

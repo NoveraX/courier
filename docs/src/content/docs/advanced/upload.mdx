@@ -2,7 +2,7 @@ export const metadata = { title: "File Upload", description: "Upload files with 
 
 ## Overview
 
-Nexus supports file uploads using FormData in both direct and proxy modes. When you provide an `onUploadProgress` callback, Nexus automatically switches from `fetch` to `XMLHttpRequest` for real network-level progress tracking.
+Courier supports file uploads using FormData in both direct and proxy modes. When you provide an `onUploadProgress` callback, Courier automatically switches from `fetch` to `XMLHttpRequest` for real network-level progress tracking.
 
 ## Basic file upload
 
@@ -53,7 +53,7 @@ export function AvatarUpload() {
 Define upload endpoints using `defineGroup` and `endpoint`:
 
 ```ts title="api/users.ts"
-import { defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: number; name: string; avatarUrl: string }
 
@@ -143,10 +143,10 @@ export function DocumentUpload() {
 
 ## FormData composition <ModeBadge mode="proxy" />
 
-When FormData is sent through the proxy, Nexus appends metadata fields with underscore prefixes. The server handler strips these before forwarding to your endpoint. In direct mode, FormData is sent as-is without any metadata fields:
+When FormData is sent through the proxy, Courier appends metadata fields with underscore prefixes. The server handler strips these before forwarding to your endpoint. In direct mode, FormData is sent as-is without any metadata fields:
 
 ```typescript
-// When sending FormData through the proxy, Nexus composes it like this:
+// When sending FormData through the proxy, Courier composes it like this:
 
 // Your FormData:
 formData.append("avatar", file)
@@ -166,10 +166,10 @@ formData.append("name", "profile-pic")
 
 ## Empty file handling
 
-Nexus automatically detects and removes empty files (0 bytes) from FormData before sending to the backend. This prevents common issues with optional file inputs that submit empty `File` objects:
+Courier automatically detects and removes empty files (0 bytes) from FormData before sending to the backend. This prevents common issues with optional file inputs that submit empty `File` objects:
 
 ```typescript
-// Nexus automatically removes empty files from FormData.
+// Courier automatically removes empty files from FormData.
 // This prevents sending 0-byte File objects that can cause backend errors.
 
 const formData = new FormData()
@@ -181,7 +181,7 @@ formData.append("thumbnail", emptyFile)  // File with size 0 -> removed
 
 ## Why XHR?
 
-Nexus uses `XMLHttpRequest` instead of `fetch` for uploads because the Fetch API does not support upload progress tracking. The switch is automatic and transparent:
+Courier uses `XMLHttpRequest` instead of `fetch` for uploads because the Fetch API does not support upload progress tracking. The switch is automatic and transparent:
 
 ```typescript
 // Why XHR instead of fetch?
@@ -193,7 +193,7 @@ Nexus uses `XMLHttpRequest` instead of `fetch` for uploads because the Fetch API
 // XMLHttpRequest provides real network-level progress via the
 // upload.onprogress event, which works on both HTTP/1.1 and HTTP/2.
 //
-// Nexus automatically switches from fetch to XHR when
+// Courier automatically switches from fetch to XHR when
 // onUploadProgress is provided. No configuration needed.
 
 // Standard request — uses fetch
@@ -229,12 +229,12 @@ await caller.files.upload(formData, {
   next: { revalidate: 0 },
 })
 
-// In development, Nexus logs warnings for each ignored option.
+// In development, Courier logs warnings for each ignored option.
 // In production, they are silently ignored.
 ```
 
 <Callout variant="warning" title="Development warnings">
-In development mode, Nexus logs a console warning for each ignored option so you can identify unintended usage early. In production, ignored options are silently skipped.
+In development mode, Courier logs a console warning for each ignored option so you can identify unintended usage early. In production, ignored options are silently skipped.
 </Callout>
 
 ## Next Steps

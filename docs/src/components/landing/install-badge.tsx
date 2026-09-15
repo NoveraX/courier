@@ -5,7 +5,7 @@ import { useCallback, useState } from "react"
 
 export function InstallBadge() {
   const [copied, setCopied] = useState(false)
-  const command = "npm install @noverax/nexus"
+  const command = "npm install @noverax/courier"
 
   const copy = useCallback(() => {
     navigator.clipboard.writeText(command)

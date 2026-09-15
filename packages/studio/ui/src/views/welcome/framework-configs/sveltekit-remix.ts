@@ -15,7 +15,7 @@ export const SVELTEKIT: FrameworkConfig = {
   name: "SvelteKit",
   description: "Svelte meta-framework with SSR",
   steps: [
-    installStep("@noverax/nexus-studio @noverax/nexus-studio-core"),
+    installStep("@noverax/courier-studio @noverax/courier-studio-core"),
     {
       id: "instrument-client",
       title: "Add Vite plugin",
@@ -25,10 +25,10 @@ export const SVELTEKIT: FrameworkConfig = {
       filePath: "vite.config.ts",
       lang: "ts",
       code: `import { sveltekit } from "@sveltejs/kit/vite";
-import { nexusStudio } from "@noverax/nexus-studio/sveltekit";
+import { courierStudio } from "@noverax/courier-studio/sveltekit";
 
 export default defineConfig({
-  plugins: [sveltekit(), nexusStudio()],
+  plugins: [sveltekit(), courierStudio()],
 });`,
     },
     {
@@ -39,7 +39,7 @@ export default defineConfig({
       actionLabel: "Copy snippet",
       filePath: "src/hooks.server.ts",
       lang: "ts",
-      code: `import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
+      code: `import { attachRuntime } from "@noverax/courier-studio-core/runtime";
 import { dev } from "$app/environment";
 
 if (dev) {
@@ -56,7 +56,7 @@ export const REMIX: FrameworkConfig = {
   name: "Remix",
   description: "React framework with Vite",
   steps: [
-    installStep("@noverax/nexus-studio @noverax/nexus-studio-core"),
+    installStep("@noverax/courier-studio @noverax/courier-studio-core"),
     {
       id: "instrument-client",
       title: "Add Vite plugin",
@@ -66,10 +66,10 @@ export const REMIX: FrameworkConfig = {
       filePath: "vite.config.ts",
       lang: "ts",
       code: `import { vitePlugin as remix } from "@remix-run/dev";
-import { nexusStudio } from "@noverax/nexus-studio/remix";
+import { courierStudio } from "@noverax/courier-studio/remix";
 
 export default defineConfig({
-  plugins: [remix(), nexusStudio()],
+  plugins: [remix(), courierStudio()],
 });`,
     },
     {
@@ -80,7 +80,7 @@ export default defineConfig({
       actionLabel: "Copy snippet",
       filePath: "app/entry.server.tsx",
       lang: "ts",
-      code: `import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
+      code: `import { attachRuntime } from "@noverax/courier-studio-core/runtime";
 
 if (process.env.NODE_ENV === "development") {
   await attachRuntime();

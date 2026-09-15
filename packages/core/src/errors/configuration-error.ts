@@ -1,4 +1,4 @@
-import { NexusError } from "./nexus-error";
+import { CourierError } from "./courier-error";
 
 /**
  * Discriminator string for configuration errors. New codes must be added here
@@ -14,7 +14,7 @@ export type ConfigurationErrorCode =
   /**
    * Studio Playground proxy mode tried to open a real network connection
    * from the user-app process, but `appOrigin` was not configured. Set it
-   * via `nexus.config.ts.runtime.appOrigin` or the `NEXUS_APP_URL` /
+   * via `courier.config.ts.runtime.appOrigin` or the `COURIER_APP_URL` /
    * `APP_URL` environment variables. Without an origin, relative
    * `proxyPath` values cannot be resolved into absolute URLs.
    */
@@ -26,7 +26,7 @@ export type ConfigurationErrorCode =
    */
   | "NODE_WEBSOCKET_UNAVAILABLE"
   /**
-   * A framework adapter handler (`nexusHandler`, `apiRoute`, …) was invoked
+   * A framework adapter handler (`courierHandler`, `apiRoute`, …) was invoked
    * before any sources had been registered. Indicates the user forgot to
    * `await attachRuntime()` in their instrumentation entry point — the
    * adapter reads sources lazily from the core global registry and has
@@ -35,14 +35,14 @@ export type ConfigurationErrorCode =
   | "SOURCES_NOT_REGISTERED";
 
 /**
- * Thrown when nexus is misconfigured at the boundary between user code and
+ * Thrown when courier is misconfigured at the boundary between user code and
  * the runtime — e.g. an endpoint requires a transport whose proxy path is
  * missing, or a relative path was given in an environment with no origin.
  *
  * The `code` field is the stable discriminator; the `message` is a
  * human-readable explanation that may include remediation hints.
  */
-export class ConfigurationError extends NexusError<ConfigurationErrorCode> {
+export class ConfigurationError extends CourierError<ConfigurationErrorCode> {
   constructor(code: ConfigurationErrorCode, message: string) {
     super(message, { code });
   }

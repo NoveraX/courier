@@ -1,13 +1,13 @@
 <div align="center">
   <br />
 
-  # @noverax/nexus-nuxt
+  # @noverax/courier-nuxt
 
-  **Nuxt / Nitro / h3 adapter for Nexus.**
+  **Nuxt / Nitro / h3 adapter for Courier.**
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus-nuxt"><img src="https://img.shields.io/npm/v/@noverax/nexus-nuxt?color=7c3aed&style=flat-square" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier-nuxt"><img src="https://img.shields.io/npm/v/@noverax/courier-nuxt?color=7c3aed&style=flat-square" alt="npm" /></a>
 
   <br />
 </div>
@@ -17,7 +17,7 @@
 ## Install
 
 ```bash
-npm install @noverax/nexus-nuxt @noverax/nexus h3
+npm install @noverax/courier-nuxt @noverax/courier h3
 ```
 
 ## Usage
@@ -25,8 +25,8 @@ npm install @noverax/nexus-nuxt @noverax/nexus h3
 Register sources in a Nitro server plugin, then create a server route:
 
 ```ts
-// server/plugins/nexus.ts
-import { registerSources } from "@noverax/nexus"
+// server/plugins/courier.ts
+import { registerSources } from "@noverax/courier"
 import { sources } from "~/api/sources"
 
 export default defineNitroPlugin(() => registerSources(sources))
@@ -34,12 +34,12 @@ export default defineNitroPlugin(() => registerSources(sources))
 
 ```ts
 // server/api/request.ts
-import { nexusHandler } from "@noverax/nexus-nuxt"
+import { courierHandler } from "@noverax/courier-nuxt"
 
-export default nexusHandler()
+export default courierHandler()
 ```
 
-`nexusHandler()` is zero-arg — sources are read at request time from the core global registry populated by the Nitro plugin at server start. Works with Nuxt 3, Nitro, and any h3-based server.
+`courierHandler()` is zero-arg — sources are read at request time from the core global registry populated by the Nitro plugin at server start. Works with Nuxt 3, Nitro, and any h3-based server.
 
 ## How It Works
 
@@ -51,7 +51,7 @@ Use `createProxyCaller` in a composable:
 
 ```ts
 // composables/useCaller.ts
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import type { api } from "~/api/sources"
 
 export const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })
@@ -79,7 +79,7 @@ Call endpoints directly in Nitro routes:
 
 ```ts
 // server/api/dashboard.ts
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "~/api/sources"
 
 const caller = createCaller(api)

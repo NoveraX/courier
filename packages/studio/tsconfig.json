@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "paths": {
-      "@noverax/nexus-studio-core": ["../studio-core/src/index.ts"],
+      "@noverax/courier-studio-core": ["../studio-core/src/index.ts"],
       "@/*": ["./ui/src/*"]
     }
   },

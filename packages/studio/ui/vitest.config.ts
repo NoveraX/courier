@@ -2,7 +2,7 @@ import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 /**
- * Vitest harness for `@noverax/nexus-studio-ui`.
+ * Vitest harness for `@noverax/courier-studio-ui`.
  *
  * Kept intentionally light: `node` environment is enough for the wire-
  * boundary type guards and toast helpers covered here. Component-level

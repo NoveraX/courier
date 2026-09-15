@@ -8,7 +8,7 @@ import {
   attachRuntime,
 } from "../src/runtime/attach-runtime";
 
-const STUDIO_URL_KEY = Symbol.for("nexus.studio.url");
+const STUDIO_URL_KEY = Symbol.for("courier.studio.url");
 
 afterEach(() => {
   _resetRuntimeHandlesForTests();

@@ -1,6 +1,6 @@
-export const metadata = { title: "Architecture", description: "How Nexus works under the hood — request flow, transport modes, middleware chain, and framework adapters.", mode: "both" }
+export const metadata = { title: "Architecture", description: "How Courier works under the hood — request flow, transport modes, middleware chain, and framework adapters.", mode: "both" }
 
-Nexus is built around a simple idea: **define your API once, call it from anywhere**. The architecture has four layers — definition, transport, execution, and integration — that work together across any JavaScript framework.
+Courier is built around a simple idea: **define your API once, call it from anywhere**. The architecture has four layers — definition, transport, execution, and integration — that work together across any JavaScript framework.
 
 ## The Four Layers
 
@@ -100,7 +100,7 @@ Proxy mode validates the `Origin` header, whitelists forwarded headers, and keep
 The functional API for defining your sources. No classes, no inheritance — just plain functions that produce typed objects:
 
 ```ts title="api/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: string; name: string; email: string }
 
@@ -167,11 +167,11 @@ The universal adapter interface. All server framework adapters use it internally
 // `createHandler()` for its framework:
 
 // Next.js:  apiRoute() → { GET, POST }
-// Hono:     nexusHandler() → (c) => Response
-// Express:  nexusHandler() → (req, res) => void
-// Fastify:  nexusPlugin → FastifyPluginAsync
-// NestJS:   nexusMiddleware() → (req, res, next) => void
-// Nuxt:     nexusHandler() → H3EventHandler
+// Hono:     courierHandler() → (c) => Response
+// Express:  courierHandler() → (req, res) => void
+// Fastify:  courierPlugin → FastifyPluginAsync
+// NestJS:   courierMiddleware() → (req, res, next) => void
+// Nuxt:     courierHandler() → H3EventHandler
 ```
 
 ## Factory Functions

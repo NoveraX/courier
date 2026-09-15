@@ -15,26 +15,26 @@ Every framework uses the same adapter setup:
 
 ```ts title="lib/adapters.ts"
 import Redis from "ioredis"
-import { createRedisPubSub, createRedisStream, createRedisPresence } from "@noverax/nexus-redis"
+import { createRedisPubSub, createRedisStream, createRedisPresence } from "@noverax/courier-redis"
 
 const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379"
 
 export const pubsub = createRedisPubSub({
   publisher: new Redis(redisUrl),
   subscriber: new Redis(redisUrl),
-  prefix: "nexus:",
+  prefix: "courier:",
   origin: process.env.HOSTNAME,
 })
 
 export const stream = createRedisStream({
   redis: new Redis(redisUrl),
-  prefix: "nexus:stream:",
+  prefix: "courier:stream:",
   maxLen: 5000,
 })
 
 export const presence = createRedisPresence({
   redis: new Redis(redisUrl),
-  prefix: "nexus:presence:",
+  prefix: "courier:presence:",
 })
 
 export async function connectAdapters(): Promise<void> {
@@ -51,13 +51,13 @@ export async function disconnectAdapters(): Promise<void> {
 The simplest setup — one process handles HTTP, SSE, and WebSocket.
 
 ```ts title="server.ts"
-import { createNexusServer } from "@noverax/nexus-server"
+import { createCourierServer } from "@noverax/courier-server"
 import { sources } from "./api/sources"
 import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
 
 await connectAdapters()
 
-const server = await createNexusServer({
+const server = await createCourierServer({
   sources,
   port: Number(process.env.PORT) || 3001,
   host: "0.0.0.0",
@@ -85,7 +85,7 @@ const server = await createNexusServer({
     console.log(`WS closed: user=${meta.userId} code=${code}`)
   },
 
-  onReady: (url) => console.log(`Nexus ready at ${url}`),
+  onReady: (url) => console.log(`Courier ready at ${url}`),
 })
 
 process.on("SIGTERM", async () => {
@@ -96,12 +96,12 @@ process.on("SIGTERM", async () => {
 
 ## Next.js
 
-Next.js App Router supports SSE natively via `sseRoute()`. WebSocket requires a separate Nexus server process.
+Next.js App Router supports SSE natively via `sseRoute()`. WebSocket requires a separate Courier server process.
 
 ### SSE Route
 
 ```ts title="app/api/sse/route.ts"
-import { sseRoute } from "@noverax/nexus-next"
+import { sseRoute } from "@noverax/courier-next"
 
 export const { GET } = sseRoute({
   maxSSEConnections: 5000,
@@ -118,7 +118,7 @@ export const { GET } = sseRoute({
 ### HTTP Proxy Route
 
 ```ts title="app/api/request/route.ts"
-import { apiRoute } from "@noverax/nexus-next"
+import { apiRoute } from "@noverax/courier-next"
 
 export const { GET, POST } = apiRoute()
 ```
@@ -128,13 +128,13 @@ Sources come from the core global registry populated in `instrumentation.ts` —
 ### Separate WS Server
 
 ```ts title="ws-server.ts"
-import { createNexusServer } from "@noverax/nexus-server"
+import { createCourierServer } from "@noverax/courier-server"
 import { sources } from "./api/sources"
 import { pubsub, connectAdapters } from "./lib/adapters"
 
 await connectAdapters()
 
-const server = await createNexusServer({
+const server = await createCourierServer({
   sources,
   port: Number(process.env.WS_PORT) || 3001,
   host: "0.0.0.0",
@@ -172,8 +172,8 @@ const server = await createNexusServer({
 ```ts title="server.ts"
 import http from "node:http"
 import express from "express"
-import { registerSources } from "@noverax/nexus"
-import { nexusHandler, nexusSSEHandler, nexusWSAttach } from "@noverax/nexus-express"
+import { registerSources } from "@noverax/courier"
+import { courierHandler, courierSSEHandler, courierWSAttach } from "@noverax/courier-express"
 import { sources } from "./api/sources"
 import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
 
@@ -184,10 +184,10 @@ const app = express()
 const server = http.createServer(app)
 
 // HTTP proxy
-app.all("/api/request", nexusHandler())
+app.all("/api/request", courierHandler())
 
 // SSE streaming — do NOT apply compression middleware to this route
-app.get("/api/sse", nexusSSEHandler({
+app.get("/api/sse", courierSSEHandler({
   maxSSEConnections: 10_000,
   sseMaxLifetimeMs: 300_000,
   onSSEConnect: ({ connectionId, request }) => {
@@ -199,7 +199,7 @@ app.get("/api/sse", nexusSSEHandler({
 }))
 
 // WebSocket — attaches to HTTP server upgrade event
-const cleanupWS = nexusWSAttach(server, {
+const cleanupWS = courierWSAttach(server, {
   pubsub,
   heartbeatIntervalMs: 25_000,
   allowedOrigins: [process.env.ALLOWED_ORIGIN!],
@@ -241,8 +241,8 @@ process.on("SIGTERM", async () => {
 ```ts title="server.ts"
 import Fastify from "fastify"
 import fastifyWebsocket from "@fastify/websocket"
-import { registerSources } from "@noverax/nexus"
-import { nexusPlugin, nexusSSEHandler, nexusWSHandler } from "@noverax/nexus-fastify"
+import { registerSources } from "@noverax/courier"
+import { courierPlugin, courierSSEHandler, courierWSHandler } from "@noverax/courier-fastify"
 import { sources } from "./api/sources"
 import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
 
@@ -255,10 +255,10 @@ const fastify = Fastify({ logger: true })
 await fastify.register(fastifyWebsocket)
 
 // HTTP proxy
-await fastify.register(nexusPlugin, { prefix: "/api/request" })
+await fastify.register(courierPlugin, { prefix: "/api/request" })
 
 // SSE streaming
-fastify.get("/api/sse", nexusSSEHandler({
+fastify.get("/api/sse", courierSSEHandler({
   maxSSEConnections: 10_000,
   sseMaxLifetimeMs: 300_000,
   onSSEConnect: ({ connectionId, request }) => {
@@ -270,7 +270,7 @@ fastify.get("/api/sse", nexusSSEHandler({
 }))
 
 // WebSocket
-fastify.get("/ws", { websocket: true }, nexusWSHandler({
+fastify.get("/ws", { websocket: true }, courierWSHandler({
   pubsub,
   heartbeatIntervalMs: 25_000,
   allowedOrigins: [process.env.ALLOWED_ORIGIN!],
@@ -309,8 +309,8 @@ Hono is runtime-agnostic — this example uses Node.js with `@hono/node-server` 
 import { Hono } from "hono"
 import { serve } from "@hono/node-server"
 import { createNodeWebSocket } from "@hono/node-ws"
-import { registerSources } from "@noverax/nexus"
-import { nexusHandler, nexusSSEHandler, nexusWSHandler } from "@noverax/nexus-hono"
+import { registerSources } from "@noverax/courier"
+import { courierHandler, courierSSEHandler, courierWSHandler } from "@noverax/courier-hono"
 import { sources } from "./api/sources"
 import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
 
@@ -321,10 +321,10 @@ const app = new Hono()
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app })
 
 // HTTP proxy
-app.all("/api/request", nexusHandler())
+app.all("/api/request", courierHandler())
 
 // SSE streaming
-app.get("/api/sse", nexusSSEHandler({
+app.get("/api/sse", courierSSEHandler({
   maxSSEConnections: 10_000,
   sseMaxLifetimeMs: 300_000,
   onSSEConnect: ({ connectionId, request }) => {
@@ -333,7 +333,7 @@ app.get("/api/sse", nexusSSEHandler({
 }))
 
 // WebSocket
-const ws = nexusWSHandler({
+const ws = courierWSHandler({
   pubsub,
   heartbeatIntervalMs: 25_000,
   allowedOrigins: [process.env.ALLOWED_ORIGIN!],
@@ -368,8 +368,8 @@ process.on("SIGTERM", async () => {
 
 ```ts title="main.ts"
 import { NestFactory } from "@nestjs/core"
-import { registerSources } from "@noverax/nexus"
-import { nexusWSAttach } from "@noverax/nexus-nestjs"
+import { registerSources } from "@noverax/courier"
+import { courierWSAttach } from "@noverax/courier-nestjs"
 import { AppModule } from "./app.module"
 import { sources } from "./api/sources"
 import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
@@ -381,7 +381,7 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule)
 
   // WebSocket — attaches to NestJS HTTP server
-  const cleanupWS = nexusWSAttach(app.getHttpServer(), {
+  const cleanupWS = courierWSAttach(app.getHttpServer(), {
     pubsub,
     heartbeatIntervalMs: 25_000,
     allowedOrigins: [process.env.ALLOWED_ORIGIN!],
@@ -409,16 +409,16 @@ bootstrap()
 
 ```ts title="app.module.ts"
 import { Module, type NestModule, type MiddlewareConsumer } from "@nestjs/common"
-import { nexusMiddleware, nexusSSEMiddleware } from "@noverax/nexus-nestjs"
+import { courierMiddleware, courierSSEMiddleware } from "@noverax/courier-nestjs"
 
 @Module({})
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
     // HTTP proxy
-    consumer.apply(nexusMiddleware()).forRoutes("/api/request")
+    consumer.apply(courierMiddleware()).forRoutes("/api/request")
 
     // SSE streaming
-    consumer.apply(nexusSSEMiddleware({
+    consumer.apply(courierSSEMiddleware({
       maxSSEConnections: 10_000,
       sseMaxLifetimeMs: 300_000,
       onSSEConnect: ({ connectionId, request }) => {
@@ -436,12 +436,12 @@ export class AppModule implements NestModule {
 
 | Feature | Standalone | Next.js | Express | Fastify | Hono | NestJS |
 |---------|-----------|---------|---------|---------|------|--------|
-| HTTP proxy | Built-in | `apiRoute()` | `nexusHandler()` | `nexusPlugin` | `nexusHandler()` | `nexusMiddleware()` |
-| SSE | Built-in | `sseRoute()` | `nexusSSEHandler()` | `nexusSSEHandler()` | `nexusSSEHandler()` | `nexusSSEMiddleware()` |
-| WebSocket | Built-in | Separate server | `nexusWSAttach()` | `nexusWSHandler()` | `nexusWSHandler()` | `nexusWSAttach()` |
+| HTTP proxy | Built-in | `apiRoute()` | `courierHandler()` | `courierPlugin` | `courierHandler()` | `courierMiddleware()` |
+| SSE | Built-in | `sseRoute()` | `courierSSEHandler()` | `courierSSEHandler()` | `courierSSEHandler()` | `courierSSEMiddleware()` |
+| WebSocket | Built-in | Separate server | `courierWSAttach()` | `courierWSHandler()` | `courierWSHandler()` | `courierWSAttach()` |
 | WS library | Built-in | N/A | `ws` (peer) | `@fastify/websocket` | `@hono/node-ws` | `ws` (peer) |
 | Processes | 1 | 2 (Next + WS) | 1 | 1 | 1 | 1 |
-| PubSub wiring | `pubsub` config | On WS server | `nexusWSAttach` opts | `nexusWSHandler` opts | `nexusWSHandler` opts | `nexusWSAttach` opts |
+| PubSub wiring | `pubsub` config | On WS server | `courierWSAttach` opts | `courierWSHandler` opts | `courierWSHandler` opts | `courierWSAttach` opts |
 
 ## Sticky Sessions
 

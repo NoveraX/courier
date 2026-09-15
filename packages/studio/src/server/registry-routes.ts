@@ -4,7 +4,7 @@
  * `imports-bridge.ts`.
  */
 
-import { logger } from "@noverax/nexus";
+import { logger } from "@noverax/courier";
 import {
   dropImportState,
   formatImportSnippet,
@@ -55,7 +55,7 @@ export function registerRegistryRoutes(app: RouteApp): void {
       await dropImportState(body.name);
 
       const configCleanupHint = entry
-        ? `Remove \`imports.${body.name}\` from nexus.config.ts to finalize the deletion.`
+        ? `Remove \`imports.${body.name}\` from courier.config.ts to finalize the deletion.`
         : undefined;
       const snippet = entry ? formatImportSnippet(body.name, entry) : undefined;
       res.json({ success: true, removedFiles, configCleanupHint, snippet });

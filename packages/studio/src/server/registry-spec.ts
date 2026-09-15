@@ -3,8 +3,8 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import type { NexusImportEntry } from "@noverax/nexus/config";
-import { createFetch } from "@noverax/nexus/fetch";
+import type { CourierImportEntry } from "@noverax/courier/config";
+import { createFetch } from "@noverax/courier/fetch";
 import { computeSpecHash, parseSpec } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import { resolveProjectSafe } from "../context";
@@ -34,7 +34,7 @@ export async function fetchSpecRaw(specUrl: string, res: JsonResponse): Promise<
 }
 
 export async function checkSingleSource(
-  entry: NexusImportEntry,
+  entry: CourierImportEntry,
   state: ImportStateEntry | undefined,
 ): Promise<{ changed: boolean; error?: string }> {
   if (entry.importType !== "url") return { changed: false };

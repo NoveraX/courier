@@ -1,16 +1,16 @@
 /**
- * SvelteKit plugin for Nexus Studio.
+ * SvelteKit plugin for Courier Studio.
  * Re-exports the Vite plugin — SvelteKit uses Vite under the hood.
  *
  * @example
  * ```ts
  * // vite.config.ts
  * import { sveltekit } from "@sveltejs/kit/vite"
- * import { nexusStudio } from "@noverax/nexus-studio/sveltekit"
+ * import { courierStudio } from "@noverax/courier-studio/sveltekit"
  *
  * export default defineConfig({
- *   plugins: [sveltekit(), nexusStudio()],
+ *   plugins: [sveltekit(), courierStudio()],
  * })
  * ```
  */
-export { nexusStudio } from "./vite";
+export { courierStudio } from "./vite";

@@ -5,8 +5,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { defineApi } from "@noverax/nexus/define";
-import { _resetAnnouncementsForTests, announceHosting } from "@noverax/nexus/announce";
+import { defineApi } from "@noverax/courier/define";
+import { _resetAnnouncementsForTests, announceHosting } from "@noverax/courier/announce";
 import {
   _resetSourceRegistryForTests,
   getRegisteredSource,

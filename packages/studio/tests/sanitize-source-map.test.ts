@@ -3,7 +3,7 @@
  * `connection:init` / `connection:sources` socket event.
  *
  * The sanitizer is the security boundary between connected user apps
- * (which may run any Nexus version) and the catalog merge pipeline. Every
+ * (which may run any Courier version) and the catalog merge pipeline. Every
  * field carried in `SourceMap[string]` must have an explicit positive
  * test here — otherwise a future field can silently regress through the
  * whitelist.

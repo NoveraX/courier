@@ -1,4 +1,4 @@
-import type { PubSubAdapter, PubSubEnvelope } from "@noverax/nexus/realtime";
+import type { PubSubAdapter, PubSubEnvelope } from "@noverax/courier/realtime";
 import { trackHealth } from "./health";
 import type { RedisPubSubConfig } from "./types";
 
@@ -9,7 +9,7 @@ import type { RedisPubSubConfig } from "./types";
  * @example
  * ```ts
  * import { Redis } from "ioredis";
- * import { createRedisPubSub } from "@noverax/nexus-redis";
+ * import { createRedisPubSub } from "@noverax/courier-redis";
  *
  * const pubsub = createRedisPubSub({
  *   publisher: new Redis(),

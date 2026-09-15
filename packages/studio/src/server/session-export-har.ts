@@ -97,7 +97,7 @@ export function exportAsHar(session: SavedSession): { log: HarLog } {
   return {
     log: {
       version: "1.2",
-      creator: { name: "Nexus Studio", version: "1.0.0" },
+      creator: { name: "Courier Studio", version: "1.0.0" },
       entries: session.requests.map(requestToHarEntry),
     },
   };

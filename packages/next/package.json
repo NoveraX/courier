@@ -1,12 +1,12 @@
 {
-  "name": "@noverax/nexus-next",
+  "name": "@noverax/courier-next",
   "version": "0.0.0",
-  "description": "Next.js adapter for @noverax/nexus — API route handler and Server Actions",
+  "description": "Next.js adapter for @noverax/courier — API route handler and Server Actions",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noverax/nexus.git",
+    "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/next"
   },
   "type": "module",
@@ -42,7 +42,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/nexus": "*"
+    "@noverax/courier": "*"
   },
   "peerDependencies": {
     "next": ">=14"

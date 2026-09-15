@@ -9,7 +9,7 @@ import type { SchemaMetadata } from "./route-types";
  * on traversal and assembly.
  */
 
-const ENDPOINT_SCHEMA = Symbol.for("nexus.endpoint.schema");
+const ENDPOINT_SCHEMA = Symbol.for("courier.endpoint.schema");
 
 /** Probe endpoint to capture HTTP method and path */
 export function probeEndpoint(fn: (...args: unknown[]) => unknown): {

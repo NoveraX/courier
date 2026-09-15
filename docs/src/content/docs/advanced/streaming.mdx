@@ -2,7 +2,7 @@ export const metadata = { title: "Streaming", description: "Receive responses as
 
 ## Overview
 
-By default, Nexus parses the response body as JSON or text. When you set `stream: true` in the method options, Nexus returns the raw `ReadableStream` from `response.body` instead of parsing it.
+By default, Courier parses the response body as JSON or text. When you set `stream: true` in the method options, Courier returns the raw `ReadableStream` from `response.body` instead of parsing it.
 
 This is useful for Server-Sent Events (SSE), large file downloads, and any scenario where you want to process data incrementally rather than buffering the entire response.
 
@@ -11,7 +11,7 @@ This is useful for Server-Sent Events (SSE), large file downloads, and any scena
 Enable streaming by passing `{ stream: true }` as an option to any HTTP method (`get`, `post`, etc.):
 
 ```ts title="api/events.ts"
-import { defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineGroup, endpoint } from "@noverax/courier/define"
 
 export const events = defineGroup({
   prefix: "events",

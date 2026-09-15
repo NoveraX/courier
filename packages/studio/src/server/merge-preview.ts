@@ -2,7 +2,7 @@
  * Merge preview and orphan cleanup helpers for write flow.
  */
 
-import type { NexusImportEntry } from "@noverax/nexus/config";
+import type { CourierImportEntry } from "@noverax/courier/config";
 import type { ParsedSpec } from "../apis";
 import { createSpecDigest } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
@@ -34,7 +34,7 @@ export function computeMergePreview(
 
 export function removeOrphanFiles(
   files: WriteBody["files"],
-  entry: NexusImportEntry,
+  entry: CourierImportEntry,
   name: string,
 ): number {
   const newPaths = new Set(files.map((f) => resolveProjectSafe(f.path)));

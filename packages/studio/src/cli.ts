@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createLogger } from "@noverax/nexus";
+import { createLogger } from "@noverax/courier";
 import { defineCommand, runMain } from "citty";
 import { setProjectRoot } from "./context";
 import { checkNodeVersion } from "./node-version";
@@ -14,12 +14,12 @@ const log = createLogger("CLI");
 const init = defineCommand({
   meta: {
     name: "init",
-    description: "Initialize project: create registry.nexus.json, update .gitignore",
+    description: "Initialize project: create registry.courier.json, update .gitignore",
   },
   run() {
     setProjectRoot(process.cwd());
     const { registryCreated, gitignoreUpdated } = initProject();
-    if (registryCreated) log.info("registry.nexus.json created");
+    if (registryCreated) log.info("registry.courier.json created");
     if (gitignoreUpdated) log.info(".gitignore updated with cache files");
     if (!registryCreated && !gitignoreUpdated) log.info("project already initialized");
   },
@@ -27,8 +27,8 @@ const init = defineCommand({
 
 const main = defineCommand({
   meta: {
-    name: "nexus-studio",
-    description: "Nexus Studio — standalone inspection & debugging server",
+    name: "courier-studio",
+    description: "Courier Studio — standalone inspection & debugging server",
   },
   subCommands: { init },
   args: {

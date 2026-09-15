@@ -31,7 +31,7 @@ export function buildAutoScenario(routes: RouteInfo[]): AutoMockScenario {
 
     apply(mock: TypedMockFn<any>) {
       if (!boundStore) {
-        throw new Error("[nexus-mock] Auto-scenario store not bound.");
+        throw new Error("[courier-mock] Auto-scenario store not bound.");
       }
       registerHandlers(routesByGroup, boundStore, mock);
     },

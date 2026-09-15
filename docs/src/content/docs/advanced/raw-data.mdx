@@ -2,7 +2,7 @@ export const metadata = { title: "Raw Data Mode", description: "Access response 
 
 ## Overview
 
-By default, Nexus returns only the parsed response body (JSON or text). When you need to inspect the HTTP status code or read response headers, enable raw data mode by passing `{ rawData: true }` in the call options.
+By default, Courier returns only the parsed response body (JSON or text). When you need to inspect the HTTP status code or read response headers, enable raw data mode by passing `{ rawData: true }` in the call options.
 
 Raw data mode changes the return type from `Promise<T>` to `Promise<HttpResponse<T>>`:
 

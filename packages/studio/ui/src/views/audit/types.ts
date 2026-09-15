@@ -21,7 +21,7 @@ export interface AuditItem {
   title: string;
   description: string;
   suggestion?: string;
-  /** Nexus code snippet for the fix */
+  /** Courier code snippet for the fix */
   codeSuggestion?: string;
   /** Single endpoint (ungrouped legacy) */
   endpoint?: string;

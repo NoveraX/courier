@@ -1,6 +1,6 @@
-export const metadata = { title: "What is Nexus?", description: "A type-safe, framework-agnostic HTTP client with middleware, runtime validation, and adapters for Next.js, Nuxt, Hono, Express, Fastify, and NestJS." }
+export const metadata = { title: "What is Courier?", description: "A type-safe, framework-agnostic HTTP client with middleware, runtime validation, and adapters for Next.js, Nuxt, Hono, Express, Fastify, and NestJS." }
 
-**@noverax/nexus** is a type-safe HTTP client that works with any JavaScript framework and any REST backend. Define your API once as plain TypeScript functions — get autocomplete, type inference, runtime validation, and middleware out of the box.
+**@noverax/courier** is a type-safe HTTP client that works with any JavaScript framework and any REST backend. Define your API once as plain TypeScript functions — get autocomplete, type inference, runtime validation, and middleware out of the box.
 
 No codegen. No schema files. No custom backend.
 
@@ -9,7 +9,7 @@ No codegen. No schema files. No custom backend.
 Define your API using `defineApi`, `defineGroup`, and `endpoint`. Each endpoint declares its response and variables types:
 
 ```ts title="api/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: string; name: string; email: string }
 
@@ -33,7 +33,7 @@ export { api }
 Create a caller and use it with full type inference:
 
 ```ts title="lib/caller.ts"
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api/sources"
 
 const caller = createCaller(api)
@@ -62,21 +62,21 @@ The core runs on any JavaScript runtime with `fetch`. Official adapters handle t
 
 | Framework | Server Package | Handler |
 |-----------|---------------|---------|
-| **Next.js** | `@noverax/nexus-next` | `apiRoute()` |
-| **Nuxt** | `@noverax/nexus-nuxt` | `nexusHandler()` |
-| **Hono** | `@noverax/nexus-hono` | `nexusHandler()` |
-| **Express** | `@noverax/nexus-express` | `nexusHandler()` |
-| **Fastify** | `@noverax/nexus-fastify` | `nexusPlugin` |
-| **NestJS** | `@noverax/nexus-nestjs` | `nexusMiddleware()` |
+| **Next.js** | `@noverax/courier-next` | `apiRoute()` |
+| **Nuxt** | `@noverax/courier-nuxt` | `courierHandler()` |
+| **Hono** | `@noverax/courier-hono` | `courierHandler()` |
+| **Express** | `@noverax/courier-express` | `courierHandler()` |
+| **Fastify** | `@noverax/courier-fastify` | `courierPlugin` |
+| **NestJS** | `@noverax/courier-nestjs` | `courierMiddleware()` |
 
-All adapter handlers are zero-arg — they read sources from the core global registry populated by `registerSources()` (manual) or `attachRuntime()` (auto-loads `nexus.config.ts`).
+All adapter handlers are zero-arg — they read sources from the core global registry populated by `registerSources()` (manual) or `attachRuntime()` (auto-loads `courier.config.ts`).
 
 On the client side, use `createProxyCaller` (vanilla) or `createProxyQueryCaller` (React Query hooks).
 
 ## Core Philosophy
 
 - **Type safety without codegen** — TypeScript functions are the source of truth. No generated files, no build steps.
-- **Zero boilerplate** — define a method signature and Nexus handles serialization, path parameters, headers, and error wrapping.
+- **Zero boilerplate** — define a method signature and Courier handles serialization, path parameters, headers, and error wrapping.
 - **Any backend** — works with Express, FastAPI, Rails, Go, Laravel, Django — anything that speaks HTTP.
 - **Composable middleware** — retry, auth, logging, rate-limiting, caching — or write your own.
 - **Standard Schema validation** — plug in Zod, Valibot, ArkType, or any Standard Schema library.
@@ -84,7 +84,7 @@ On the client side, use `createProxyCaller` (vanilla) or `createProxyQueryCaller
 ## Comparison
 
 <ComparisonTable
-  headers={["Feature", "fetch", "axios", "tRPC", { label: "Nexus", highlight: true }]}
+  headers={["Feature", "fetch", "axios", "tRPC", { label: "Courier", highlight: true }]}
   rows={[
     ["Type Safety", "Manual", "Manual", { label: "Full", highlight: true }, { label: "Full", highlight: true }],
     ["Framework Agnostic", { label: "Yes", highlight: true }, { label: "Yes", highlight: true }, "No", { label: "Yes", highlight: true }],
@@ -99,6 +99,6 @@ On the client side, use `createProxyCaller` (vanilla) or `createProxyQueryCaller
 
 ## Next Steps
 
-1. [Installation](/docs/installation) — add Nexus to your project
+1. [Installation](/docs/installation) — add Courier to your project
 2. [Quick Start](/docs/quick-start) — make your first type-safe API call
 3. [Framework Guides](/docs/frameworks/nextjs) — setup for your specific framework

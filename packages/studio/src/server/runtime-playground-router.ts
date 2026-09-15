@@ -21,7 +21,7 @@
  * in-flight rid owned by that UI socket, then clear the entries.
  */
 
-import { createLogger } from "@noverax/nexus";
+import { createLogger } from "@noverax/courier";
 import type { Namespace, Socket } from "socket.io";
 import type { BindingTable } from "./catalog/binding-table";
 import { getRuntimeEntry } from "./runtime-namespace-state";

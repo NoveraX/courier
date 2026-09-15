@@ -26,7 +26,7 @@ export interface SSEStreamOptions {
   onDisconnect?: SSELifecycleConfig["onSSEDisconnect"];
   onError?: SSELifecycleConfig["onSSEError"];
   /**
-   * Studio Playground requestId extracted from the `x-nexus-playground-rid`
+   * Studio Playground requestId extracted from the `x-courier-playground-rid`
    * request header. When set, the stream registers its `forceAbort.abort`
    * callback in the process-global playground abort registry so the
    * playground executor can force-close it deterministically (Node loopback
@@ -90,7 +90,7 @@ export function createSSEStream(
   let registered = false;
   let seq = 0;
   // In-process Studio Playground abort hook — populated only when the
-  // request carries a `x-nexus-playground-rid` header AND the caller passed
+  // request carries a `x-courier-playground-rid` header AND the caller passed
   // `registerPlaygroundAbort`. Cleared in the finally branch.
   let unregisterPlaygroundAbort: (() => void) | undefined;
 

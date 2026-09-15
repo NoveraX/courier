@@ -1,10 +1,10 @@
-import { logger } from "@noverax/nexus";
+import { logger } from "@noverax/courier";
 import {
   type ChannelHandlers,
   decodeMessage,
   encodeMessage,
   type WSMessage,
-} from "@noverax/nexus/realtime";
+} from "@noverax/courier/realtime";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 import type { WSConnectionRegistry } from "./connection-registry";
@@ -35,7 +35,7 @@ export function parseMessage(ws: NodeWebSocket, raw: Buffer | string): WSMessage
 /**
  * Dispatch a decoded WS message to the user's channel handlers.
  *
- * Implements the Nexus mock-server WS protocol subset:
+ * Implements the Courier mock-server WS protocol subset:
  * - `subscribe` → register in topic registry, fire `onJoin`
  * - `unsubscribe` → fire `onLeave` (idempotent), close 1000
  * - `message` → fire `onMessage` (rejected before subscribe)

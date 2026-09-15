@@ -3,7 +3,7 @@
  * Socket.IO `connection:init` / `connection:sources` events.
  *
  * The studio dev server is a long-lived process that accepts connections
- * from any locally-running app — including apps on different Nexus
+ * from any locally-running app — including apps on different Courier
  * versions, partially-initialized startups, and hand-rolled scripts. The
  * sanitizer enforces two guarantees:
  *
@@ -21,8 +21,8 @@
  * positive + malformed-input case.
  */
 
-import type { ProxyPath } from "@noverax/nexus";
-import type { SourceMap } from "@noverax/nexus-studio-core";
+import type { ProxyPath } from "@noverax/courier";
+import type { SourceMap } from "@noverax/courier-studio-core";
 
 /**
  * Validate a `proxyPath` payload field. Each transport string is accepted

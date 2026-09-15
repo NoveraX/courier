@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import type { Endpoint } from "@noverax/nexus/define";
+import type { Endpoint } from "@noverax/courier/define";
 import { createProxyQueryKeys } from "../src/keys";
 import { createProxyQueryCaller, optimisticOptions } from "../src/index";
 

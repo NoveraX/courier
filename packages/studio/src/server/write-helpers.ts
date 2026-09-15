@@ -2,7 +2,7 @@
  * Helpers for apis write routes — merge and raw write logic.
  */
 
-import type { NexusImportEntry } from "@noverax/nexus/config";
+import type { CourierImportEntry } from "@noverax/courier/config";
 import { createSpecDigest, type ParsedSpec } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import type { UpdateResult } from "../apis/registry/types";
@@ -18,7 +18,7 @@ import {
 import type { WriteBody, WriteResult } from "./write-types";
 
 interface ImportContext {
-  entry: NexusImportEntry | undefined;
+  entry: CourierImportEntry | undefined;
   state: ImportStateEntry | undefined;
 }
 
@@ -27,7 +27,7 @@ export async function handleMergeWrite(
   files: WriteBody["files"],
   sourceName: string,
   spec: ParsedSpec,
-  ctx: ImportContext & { entry: NexusImportEntry },
+  ctx: ImportContext & { entry: CourierImportEntry },
 ): Promise<WriteResult> {
   const preview = computeMergePreview(files, ctx.state);
 

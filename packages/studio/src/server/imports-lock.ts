@@ -1,5 +1,5 @@
 /**
- * In-process async mutex for `.nexus/imports-state.json` read-modify-write
+ * In-process async mutex for `.courier/imports-state.json` read-modify-write
  * operations. Serializes every mutation through a single queue so concurrent
  * HTTP requests cannot corrupt the state file.
  *
@@ -13,7 +13,7 @@
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
-import { logger } from "@noverax/nexus";
+import { logger } from "@noverax/courier";
 
 type Task<T> = () => Promise<T> | T;
 

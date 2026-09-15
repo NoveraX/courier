@@ -4,7 +4,7 @@ import type { StudioPluginOptions } from "./core/types";
 const FRAMEWORK = "nuxt";
 
 /**
- * Nuxt 3 raw module for Nexus Studio.
+ * Nuxt 3 raw module for Courier Studio.
  * Auto-injects `attachRuntime("nuxt-browser")` as a client-side plugin in dev mode.
  *
  * Uses the raw module signature `(inlineOptions, nuxt)` with a `.meta` property
@@ -14,11 +14,11 @@ const FRAMEWORK = "nuxt";
  * ```ts
  * // nuxt.config.ts
  * export default defineNuxtConfig({
- *   modules: ["@noverax/nexus-studio/nuxt"],
+ *   modules: ["@noverax/courier-studio/nuxt"],
  * })
  * ```
  */
-export async function nexusStudioModule(
+export async function courierStudioModule(
   options: StudioPluginOptions,
   nuxt: NuxtLike,
 ): Promise<void> {
@@ -30,15 +30,15 @@ export async function nexusStudioModule(
   nuxt.hook("app:templates", (...args: unknown[]) => {
     const app = args[0] as { templates: NuxtTemplate[] };
     app.templates.push({
-      filename: "nexus-studio-plugin.client.mjs",
+      filename: "courier-studio-plugin.client.mjs",
       getContents: () => [`export default function() {`, `  ${snippet}`, `}`].join("\n"),
     });
   });
 }
 
-nexusStudioModule.meta = {
-  name: "nexus-studio",
-  configKey: "nexusStudio",
+courierStudioModule.meta = {
+  name: "courier-studio",
+  configKey: "courierStudio",
 };
 
 interface NuxtLike {

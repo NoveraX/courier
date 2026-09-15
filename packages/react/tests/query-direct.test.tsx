@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define";
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
 import { createQueryCaller } from "../src/create-query-caller";
 import { createQueryKeys } from "../src/keys";
 

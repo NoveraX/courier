@@ -5,7 +5,7 @@ export const metadata = { title: "Server Handler", description: "The universal s
 `createHandler` creates a universal request handler that acts as the server-side half of proxy mode. It receives requests from `createProxyCaller`, validates them, and forwards them to your backend via `executeRequest`.
 
 ```typescript
-import { createHandler } from "@noverax/nexus"
+import { createHandler } from "@noverax/courier"
 
 const { handle, handleGet, handlePost } = createHandler(sources)
 // handle:     (request: Request) => Promise<Response>  — auto-routes GET/POST
@@ -22,8 +22,8 @@ The handler works with Web Standard `Request`/`Response` objects, making it comp
 The sources object maps source names to API definitions created with `defineApi`:
 
 ```ts title="api/index.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
-import type { Endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+import type { Endpoint } from "@noverax/courier/define"
 
 type User = { id: number; name: string; email: string }
 type Post = { id: number; title: string; body: string }
@@ -59,17 +59,17 @@ Choose the adapter that matches your framework:
 
 <CodeGroup
   items={[
-    { label: "Next.js", code: `// instrumentation.ts\nimport { registerSources } from "@noverax/nexus"\nexport async function register() {\n  if (process.env.NEXT_RUNTIME === "nodejs") {\n    const { sources } = await import("./api")\n    registerSources(sources)\n  }\n}\n\n// app/api/request/route.ts\nimport { apiRoute } from "@noverax/nexus-next"\nexport const { GET, POST } = apiRoute()`, language: "ts", meta: 'title="Next.js"' },
-    { label: "Express", code: `import express from "express"\nimport { registerSources } from "@noverax/nexus"\nimport { nexusHandler } from "@noverax/nexus-express"\nimport { sources } from "./api"\n\nregisterSources(sources)\nconst app = express()\napp.all("/api/request", nexusHandler())`, language: "ts", meta: 'title="server.ts"' },
-    { label: "Hono", code: `import { Hono } from "hono"\nimport { registerSources } from "@noverax/nexus"\nimport { nexusHandler } from "@noverax/nexus-hono"\nimport { sources } from "./api"\n\nregisterSources(sources)\nconst app = new Hono()\napp.all("/api/request", nexusHandler())`, language: "ts", meta: 'title="src/index.ts"' },
-    { label: "Fastify", code: `import Fastify from "fastify"\nimport { registerSources } from "@noverax/nexus"\nimport { nexusPlugin } from "@noverax/nexus-fastify"\nimport { sources } from "./api"\n\nregisterSources(sources)\nconst app = Fastify()\napp.register(nexusPlugin, { prefix: "/api/request" })`, language: "ts", meta: 'title="server.ts"' },
-    { label: "NestJS", code: `import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"\nimport { registerSources } from "@noverax/nexus"\nimport { nexusMiddleware } from "@noverax/nexus-nestjs"\nimport { sources } from "./api"\n\nregisterSources(sources)\n\n@Module({})\nexport class AppModule implements NestModule {\n  configure(consumer: MiddlewareConsumer) {\n    consumer.apply(nexusMiddleware()).forRoutes("/api/request")\n  }\n}`, language: "ts", meta: 'title="src/app.module.ts"' },
-    { label: "Nuxt", code: `// server/plugins/nexus.ts\nimport { registerSources } from "@noverax/nexus"\nimport { sources } from "~/api"\nexport default defineNitroPlugin(() => registerSources(sources))\n\n// server/api/request.ts\nimport { nexusHandler } from "@noverax/nexus-nuxt"\nexport default nexusHandler()`, language: "ts", meta: 'title="Nuxt"' },
+    { label: "Next.js", code: `// instrumentation.ts\nimport { registerSources } from "@noverax/courier"\nexport async function register() {\n  if (process.env.NEXT_RUNTIME === "nodejs") {\n    const { sources } = await import("./api")\n    registerSources(sources)\n  }\n}\n\n// app/api/request/route.ts\nimport { apiRoute } from "@noverax/courier-next"\nexport const { GET, POST } = apiRoute()`, language: "ts", meta: 'title="Next.js"' },
+    { label: "Express", code: `import express from "express"\nimport { registerSources } from "@noverax/courier"\nimport { courierHandler } from "@noverax/courier-express"\nimport { sources } from "./api"\n\nregisterSources(sources)\nconst app = express()\napp.all("/api/request", courierHandler())`, language: "ts", meta: 'title="server.ts"' },
+    { label: "Hono", code: `import { Hono } from "hono"\nimport { registerSources } from "@noverax/courier"\nimport { courierHandler } from "@noverax/courier-hono"\nimport { sources } from "./api"\n\nregisterSources(sources)\nconst app = new Hono()\napp.all("/api/request", courierHandler())`, language: "ts", meta: 'title="src/index.ts"' },
+    { label: "Fastify", code: `import Fastify from "fastify"\nimport { registerSources } from "@noverax/courier"\nimport { courierPlugin } from "@noverax/courier-fastify"\nimport { sources } from "./api"\n\nregisterSources(sources)\nconst app = Fastify()\napp.register(courierPlugin, { prefix: "/api/request" })`, language: "ts", meta: 'title="server.ts"' },
+    { label: "NestJS", code: `import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"\nimport { registerSources } from "@noverax/courier"\nimport { courierMiddleware } from "@noverax/courier-nestjs"\nimport { sources } from "./api"\n\nregisterSources(sources)\n\n@Module({})\nexport class AppModule implements NestModule {\n  configure(consumer: MiddlewareConsumer) {\n    consumer.apply(courierMiddleware()).forRoutes("/api/request")\n  }\n}`, language: "ts", meta: 'title="src/app.module.ts"' },
+    { label: "Nuxt", code: `// server/plugins/courier.ts\nimport { registerSources } from "@noverax/courier"\nimport { sources } from "~/api"\nexport default defineNitroPlugin(() => registerSources(sources))\n\n// server/api/request.ts\nimport { courierHandler } from "@noverax/courier-nuxt"\nexport default courierHandler()`, language: "ts", meta: 'title="Nuxt"' },
   ]}
 />
 
 <Callout variant="tip" title="All adapters use createHandler">
-Every framework adapter is a thin wrapper around `createHandler()` from `@noverax/nexus`. Sources are read lazily from the core global registry populated by `registerSources()` (or by `attachRuntime()` auto-loading `nexus.config.ts`). If your framework is not listed, use `createHandler` directly with Web Standard `Request`/`Response`.
+Every framework adapter is a thin wrapper around `createHandler()` from `@noverax/courier`. Sources are read lazily from the core global registry populated by `registerSources()` (or by `attachRuntime()` auto-loading `courier.config.ts`). If your framework is not listed, use `createHandler` directly with Web Standard `Request`/`Response`.
 </Callout>
 
 ## How it works
@@ -130,7 +130,7 @@ const caller = createProxyCaller<typeof api>()
 ```
 
 <Callout variant="info" title="set-cookie handling">
-Nexus uses `getSetCookie()` to correctly handle multiple `set-cookie` headers, avoiding the common bug of splitting cookie values on commas.
+Courier uses `getSetCookie()` to correctly handle multiple `set-cookie` headers, avoiding the common bug of splitting cookie values on commas.
 </Callout>
 
 ## Error responses

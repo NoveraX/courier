@@ -1,6 +1,6 @@
-import type { TypedClient } from "@noverax/nexus";
-import { buildClientProxy } from "@noverax/nexus";
-import type { DefinedApi } from "@noverax/nexus/define";
+import type { TypedClient } from "@noverax/courier";
+import { buildClientProxy } from "@noverax/courier";
+import type { DefinedApi } from "@noverax/courier/define";
 import { createMockBackend } from "./backend";
 import { createEnhancedMockBuilder } from "./builder";
 import { createMockRegistry } from "./registry";

@@ -164,7 +164,7 @@ describe("setupRuntimeNamespace", () => {
           options: { proxyPath: { http: "/api" } },
         },
       },
-    } as unknown as import("@noverax/nexus/config").NexusConfig);
+    } as unknown as import("@noverax/courier/config").CourierConfig);
     const ns = makeNamespace();
     const ui = { emit: vi.fn() } as unknown as import("socket.io").Namespace;
     setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, {
@@ -273,7 +273,7 @@ describe("setupRuntimeNamespace", () => {
         api: { options: { proxyPath: { http: "/api", sse: "/api/sse" } } },
         users: { options: { proxyPath: { http: "/users" } } },
       },
-    } as unknown as import("@noverax/nexus/config").NexusConfig);
+    } as unknown as import("@noverax/courier/config").CourierConfig);
     const ns = makeNamespace();
     const ui = { emit: vi.fn() } as unknown as import("socket.io").Namespace;
     setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, {

@@ -1,13 +1,13 @@
 <div align="center">
   <br />
 
-  # @noverax/nexus-server
+  # @noverax/courier-server
 
-  **Standalone HTTP + WebSocket server for Nexus.**
+  **Standalone HTTP + WebSocket server for Courier.**
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus-server"><img src="https://img.shields.io/npm/v/@noverax/nexus-server?color=7c3aed&style=flat-square" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier-server"><img src="https://img.shields.io/npm/v/@noverax/courier-server?color=7c3aed&style=flat-square" alt="npm" /></a>
 
   <br />
 </div>
@@ -23,7 +23,7 @@ A zero-config standalone server that handles HTTP (GET/POST), SSE streams, and W
 ## Install
 
 ```bash
-npm install @noverax/nexus-server @noverax/nexus ws
+npm install @noverax/courier-server @noverax/courier ws
 ```
 
 <br />
@@ -33,10 +33,10 @@ npm install @noverax/nexus-server @noverax/nexus ws
 ### Programmatic
 
 ```ts
-import { createNexusServer } from "@noverax/nexus-server"
+import { createCourierServer } from "@noverax/courier-server"
 import { sources } from "./api"
 
-const server = createNexusServer({
+const server = createCourierServer({
   sources,
   port: 3001,
   host: "localhost",
@@ -53,7 +53,7 @@ const server = createNexusServer({
 ### CLI
 
 ```bash
-nexus-server --config ./nexus.config.ts --port 3001
+courier-server --config ./courier.config.ts --port 3001
 ```
 
 The config file must export a `sources` object.
@@ -75,7 +75,7 @@ The config file must export a `sources` object.
 
 ## API
 
-### `createNexusServer(config: NexusServerConfig): NexusServer`
+### `createCourierServer(config: CourierServerConfig): CourierServer`
 
 Creates and starts the server. Returns an object with `url`, `stop()`, `sseConnections`, and `wsConnections`.
 

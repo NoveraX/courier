@@ -1,4 +1,4 @@
-/** Minimal HAR 1.2 types for Nexus fixtures */
+/** Minimal HAR 1.2 types for Courier fixtures */
 
 export interface HarLog {
   log: {
@@ -23,8 +23,8 @@ export interface HarEntry {
     headers: HarHeader[];
     content: { size: number; mimeType: string; text: string };
   };
-  /** Nexus-specific metadata */
-  _nexus: {
+  /** Courier-specific metadata */
+  _courier: {
     group: string;
     method: string;
     variables?: unknown;
@@ -41,7 +41,7 @@ export function createHarLog(): HarLog {
   return {
     log: {
       version: "1.2",
-      creator: { name: "@noverax/nexus-mock", version: "0.0.0" },
+      creator: { name: "@noverax/courier-mock", version: "0.0.0" },
       entries: [],
     },
   };
@@ -83,7 +83,7 @@ export function createHarEntry(params: {
         text: params.responseBody,
       },
     },
-    _nexus: {
+    _courier: {
       group: params.group,
       method: params.method,
       variables: params.variables,

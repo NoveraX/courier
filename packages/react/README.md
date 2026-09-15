@@ -1,14 +1,14 @@
 <div align="center">
   <br />
 
-  # @noverax/nexus-react
+  # @noverax/courier-react
 
-  **React integration for Nexus — hooks, SSE subscriptions, query keys, zero boilerplate.**
+  **React integration for Courier — hooks, SSE subscriptions, query keys, zero boilerplate.**
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus-react"><img src="https://img.shields.io/npm/v/@noverax/nexus-react?color=7c3aed&style=flat-square" alt="npm" /></a>
-  <a href="https://bundlephobia.com/package/@noverax/nexus-react"><img src="https://img.shields.io/bundlephobia/minzip/@noverax/nexus-react?color=f59e0b&label=size&style=flat-square" alt="size" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier-react"><img src="https://img.shields.io/npm/v/@noverax/courier-react?color=7c3aed&style=flat-square" alt="npm" /></a>
+  <a href="https://bundlephobia.com/package/@noverax/courier-react"><img src="https://img.shields.io/bundlephobia/minzip/@noverax/courier-react?color=f59e0b&label=size&style=flat-square" alt="size" /></a>
 
   <br />
 </div>
@@ -17,14 +17,14 @@
 
 ## Overview
 
-Wraps `@tanstack/react-query` with full Nexus type inference. Group names, method names, variables, and response types are inferred automatically — no manual generics.
+Wraps `@tanstack/react-query` with full Courier type inference. Group names, method names, variables, and response types are inferred automatically — no manual generics.
 
 <br />
 
 ## Install
 
 ```bash
-npm install @noverax/nexus-react @noverax/nexus @tanstack/react-query
+npm install @noverax/courier-react @noverax/courier @tanstack/react-query
 ```
 
 <br />
@@ -37,7 +37,7 @@ Two query callers are available — pick the one that matches your transport mod
 
 ```ts
 // lib/query.ts
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 import type { api } from "@/api/sources"
 
 export const q = createProxyQueryCaller<typeof api>("api", {
@@ -51,7 +51,7 @@ export const q = createProxyQueryCaller<typeof api>("api", {
 
 ```ts
 // lib/query.ts
-import { createQueryCaller } from "@noverax/nexus-react"
+import { createQueryCaller } from "@noverax/courier-react"
 import { api } from "@/shared/api"
 
 export const q = createQueryCaller(api, {
@@ -142,7 +142,7 @@ Server-side prefetching for Next.js or SSR:
 
 ```ts
 import { q } from "@/lib/query"
-import { QueryClient } from "@noverax/nexus-react"
+import { QueryClient } from "@noverax/courier-react"
 
 const queryClient = new QueryClient()
 
@@ -176,7 +176,7 @@ queryClient.invalidateQueries({ queryKey: ["api"] })
 For convenience, this package re-exports `QueryClient` and `QueryClientProvider` from `@tanstack/react-query`:
 
 ```tsx
-import { QueryClient, QueryClientProvider } from "@noverax/nexus-react"
+import { QueryClient, QueryClientProvider } from "@noverax/courier-react"
 ```
 
 <br />

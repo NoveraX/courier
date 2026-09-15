@@ -9,7 +9,7 @@ function mixedModeUsage(stats: Map<string, EndpointStats>): AuditItem[] {
   if (mixed.length === 0) return [];
 
   return [{
-    id: "nexus-mixed-mode",
+    id: "courier-mixed-mode",
     severity: "warning",
     category: "best-practices",
     title: "Mixed mode usage",
@@ -40,7 +40,7 @@ function missingTypeAnnotation(catalog: Catalog): AuditItem[] {
   if (missing.length === 0) return [];
 
   return [{
-    id: "nexus-missing-type",
+    id: "courier-missing-type",
     severity: "hint",
     category: "best-practices",
     title: "Missing endpoint type",
@@ -70,7 +70,7 @@ function retryWithoutIdempotency(catalog: Catalog): AuditItem[] {
   if (risky.length === 0) return [];
 
   return [{
-    id: "nexus-retry-mutation",
+    id: "courier-retry-mutation",
     severity: "warning",
     category: "reliability",
     title: "Retry on non-idempotent mutation",
@@ -80,8 +80,8 @@ function retryWithoutIdempotency(catalog: Catalog): AuditItem[] {
   }];
 }
 
-/** Collect Nexus-specific audit rules. */
-export function collectNexusRules(
+/** Collect Courier-specific audit rules. */
+export function collectCourierRules(
   stats: Map<string, EndpointStats>,
   catalog: Catalog,
 ): AuditItem[] {

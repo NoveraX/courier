@@ -14,7 +14,7 @@ function markTourCompleted(): void {
 /** Dispatch this event to start/restart the tour from anywhere. */
 export function restartTour(): void {
   try { localStorage.removeItem(TOUR_STORAGE_KEY); } catch { /* noop */ }
-  window.dispatchEvent(new CustomEvent("nexus:restart-tour"));
+  window.dispatchEvent(new CustomEvent("courier:restart-tour"));
 }
 
 export function TourProvider(): React.ReactNode {
@@ -27,8 +27,8 @@ export function TourProvider(): React.ReactNode {
   // Listen for start/restart event
   useEffect(() => {
     const handler = (): void => { setStep(0); setActive(true); };
-    window.addEventListener("nexus:restart-tour", handler);
-    return () => window.removeEventListener("nexus:restart-tour", handler);
+    window.addEventListener("courier:restart-tour", handler);
+    return () => window.removeEventListener("courier:restart-tour", handler);
   }, []);
 
   const currentStep: TourStep | undefined = TOUR_STEPS[step];

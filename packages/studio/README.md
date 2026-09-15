@@ -1,13 +1,13 @@
 <div align="center">
   <br />
 
-  # @noverax/nexus-studio
+  # @noverax/courier-studio
 
-  **Visual debugging studio for Nexus — inspect requests, explore endpoints, and monitor your API in real time.**
+  **Visual debugging studio for Courier — inspect requests, explore endpoints, and monitor your API in real time.**
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus-studio"><img src="https://img.shields.io/npm/v/@noverax/nexus-studio?color=7c3aed&style=flat-square" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier-studio"><img src="https://img.shields.io/npm/v/@noverax/courier-studio?color=7c3aed&style=flat-square" alt="npm" /></a>
 
   <br />
 </div>
@@ -16,14 +16,14 @@
 
 ## Overview
 
-Nexus Studio is a standalone web UI that connects to your running application via Socket.IO. It provides a request inspector, endpoint explorer, API playground, and more.
+Courier Studio is a standalone web UI that connects to your running application via Socket.IO. It provides a request inspector, endpoint explorer, API playground, and more.
 
 <br />
 
 ## Install
 
 ```bash
-npm install @noverax/nexus-studio
+npm install @noverax/courier-studio
 ```
 
 <br />
@@ -36,10 +36,10 @@ Automatically starts the Studio server during development:
 
 ```ts
 // vite.config.ts
-import { nexusStudio } from "@noverax/nexus-studio/vite"
+import { courierStudio } from "@noverax/courier-studio/vite"
 
 export default defineConfig({
-  plugins: [nexusStudio()],
+  plugins: [courierStudio()],
 })
 ```
 
@@ -47,24 +47,24 @@ Available for all major bundlers:
 
 | Import Path | Bundler |
 |---|---|
-| `@noverax/nexus-studio/vite` | Vite |
-| `@noverax/nexus-studio/next` | Next.js |
-| `@noverax/nexus-studio/nuxt` | Nuxt |
-| `@noverax/nexus-studio/webpack` | Webpack |
-| `@noverax/nexus-studio/esbuild` | esbuild |
-| `@noverax/nexus-studio/rollup` | Rollup |
-| `@noverax/nexus-studio/astro` | Astro |
+| `@noverax/courier-studio/vite` | Vite |
+| `@noverax/courier-studio/next` | Next.js |
+| `@noverax/courier-studio/nuxt` | Nuxt |
+| `@noverax/courier-studio/webpack` | Webpack |
+| `@noverax/courier-studio/esbuild` | esbuild |
+| `@noverax/courier-studio/rollup` | Rollup |
+| `@noverax/courier-studio/astro` | Astro |
 
 ### CLI
 
 ```bash
-npx nexus-studio --port 4380
+npx courier-studio --port 4380
 ```
 
 ### Programmatic
 
 ```ts
-import { createStudioServer } from "@noverax/nexus-studio"
+import { createStudioServer } from "@noverax/courier-studio"
 
 const studio = await createStudioServer({ port: 4380 })
 // studio.url → "http://localhost:4380"

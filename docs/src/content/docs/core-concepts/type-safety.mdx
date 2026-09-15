@@ -1,8 +1,8 @@
-export const metadata = { title: "Type Safety", description: "How Nexus achieves end-to-end type safety from API definitions to components — without code generation.", mode: "both" }
+export const metadata = { title: "Type Safety", description: "How Courier achieves end-to-end type safety from API definitions to components — without code generation.", mode: "both" }
 
 ## Overview
 
-Nexus provides full type safety across the entire request lifecycle: from your API definition to the data in your components. No code generation, no schema files, no build step. TypeScript functions are the single source of truth.
+Courier provides full type safety across the entire request lifecycle: from your API definition to the data in your components. No code generation, no schema files, no build step. TypeScript functions are the single source of truth.
 
 ## The endpoint Generic
 
@@ -12,7 +12,7 @@ Type safety starts with `endpoint<R, V>()`. Every endpoint declares two type par
 - `V` — the variables type (what the caller must pass). Defaults to `undefined`.
 
 ```ts title="api/users.ts"
-import { defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: string; name: string; email: string }
 type UserList = { data: User[]; total: number }
@@ -34,7 +34,7 @@ export const users = defineGroup({
 
 ## The Inference Chain
 
-Nexus uses TypeScript's type inference to propagate types through dot-notation access:
+Courier uses TypeScript's type inference to propagate types through dot-notation access:
 
 ```typescript
 // 1. You define the API
@@ -99,7 +99,7 @@ caller.users.getById({ id: "5" })              // valid
 For the best DX, define domain types explicitly and use utility types:
 
 ```ts title="api/products.ts"
-import { defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineGroup, endpoint } from "@noverax/courier/define"
 
 type Product = { id: string; name: string; price: number; category: string }
 

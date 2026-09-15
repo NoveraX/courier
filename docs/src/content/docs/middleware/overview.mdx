@@ -1,8 +1,8 @@
-export const metadata = { title: "Middleware Overview", description: "Koa-style onion model middleware for intercepting, transforming, and controlling every request in Nexus.", mode: "both" }
+export const metadata = { title: "Middleware Overview", description: "Koa-style onion model middleware for intercepting, transforming, and controlling every request in Courier.", mode: "both" }
 
 ## How Middleware Works
 
-Nexus uses a **Koa-style onion model** for middleware. Each middleware wraps around the next one (and ultimately the endpoint handler), giving you full control over both the request and response phases of every call.
+Courier uses a **Koa-style onion model** for middleware. Each middleware wraps around the next one (and ultimately the endpoint handler), giving you full control over both the request and response phases of every call.
 
 ```
 Request  ──▶  middleware A (before)  ──▶  middleware B (before)  ──▶  endpoint handler
@@ -48,7 +48,7 @@ type MiddlewareFn = (
 The `defineMiddleware` helper provides type inference for your middleware function. It returns the same function you pass in -- no wrapping, no overhead:
 
 ```ts title="lib/middleware.ts"
-import { defineMiddleware } from "@noverax/nexus/middleware"
+import { defineMiddleware } from "@noverax/courier/middleware"
 
 const timing = defineMiddleware(async (ctx, next) => {
   const start = performance.now()
@@ -65,7 +65,7 @@ const timing = defineMiddleware(async (ctx, next) => {
 `composeMiddleware` combines an array of middleware into a single `MiddlewareFn`. Middleware execute in array order -- the first element is the outermost layer:
 
 ```ts title="lib/middleware.ts"
-import { composeMiddleware, defineMiddleware } from "@noverax/nexus/middleware"
+import { composeMiddleware, defineMiddleware } from "@noverax/courier/middleware"
 
 const auth = defineMiddleware(async (ctx, next) => {
   ctx.headers.set("Authorization", "Bearer my-token")
@@ -88,12 +88,12 @@ const combined = composeMiddleware([auth, logger])
 Pass a `middleware` array in your `defineApi` configuration. The middleware wraps `executeRequest` and applies to every endpoint in that source:
 
 ```ts title="lib/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 import {
   authMiddleware,
   logMiddleware,
   retryMiddleware,
-} from "@noverax/nexus/middleware"
+} from "@noverax/courier/middleware"
 
 const api = defineApi({
   baseURL: "https://api.example.com",

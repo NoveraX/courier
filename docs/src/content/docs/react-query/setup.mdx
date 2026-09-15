@@ -1,4 +1,4 @@
-export const metadata = { title: "React Query Setup", description: "Integrate Nexus with @tanstack/react-query for automatic caching, refetching, and type-safe hooks.", mode: "proxy" }
+export const metadata = { title: "React Query Setup", description: "Integrate Courier with @tanstack/react-query for automatic caching, refetching, and type-safe hooks.", mode: "proxy" }
 
 ## Overview
 
@@ -6,7 +6,7 @@ export const metadata = { title: "React Query Setup", description: "Integrate Ne
 
 ### Step 1: Install @tanstack/react-query
 
-React Query is a peer dependency — install it alongside Nexus:
+React Query is a peer dependency — install it alongside Courier:
 
 <CodeGroup items={[{ label: "npm", code: "npm install @tanstack/react-query", language: "bash" }, { label: "pnpm", code: "pnpm add @tanstack/react-query", language: "bash" }, { label: "yarn", code: "yarn add @tanstack/react-query", language: "bash" }, { label: "bun", code: "bun add @tanstack/react-query", language: "bash" }]} />
 
@@ -18,7 +18,7 @@ React Query requires a `QueryClientProvider` at the root of your app. Create a c
 // app/providers.tsx
 "use client"
 
-import { QueryClient, QueryClientProvider } from "@noverax/nexus-react"
+import { QueryClient, QueryClientProvider } from "@noverax/courier-react"
 import { useState, type ReactNode } from "react"
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -57,13 +57,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-### Step 3: Create the Nexus query caller
+### Step 3: Create the Courier query caller
 
 Call `createProxyQueryCaller` with your API type and a source name. Export the query client from a single file so every component imports from the same place:
 
 ```ts title="lib/query.ts"
 // lib/query.ts
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 import type { api } from "@/api"
 
 export const q = createProxyQueryCaller<typeof api>("api")
@@ -92,7 +92,7 @@ Keep the query caller in one file. This ensures all components share the same cl
 
 ```ts title="lib/query.ts"
 // lib/query.ts
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 import type { api } from "@/api"
 
 export const q = createProxyQueryCaller<typeof api>("api", {

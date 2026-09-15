@@ -2,7 +2,7 @@ export const metadata = { title: "Standard Schema Validation", description: "Val
 
 ## Overview
 
-Nexus validates data using the [Standard Schema](https://github.com/standard-schema/standard-schema) specification. Any library that implements the `StandardSchemaV1` interface works out of the box -- including **Zod**, **Valibot**, and **ArkType**.
+Courier validates data using the [Standard Schema](https://github.com/standard-schema/standard-schema) specification. Any library that implements the `StandardSchemaV1` interface works out of the box -- including **Zod**, **Valibot**, and **ArkType**.
 
 Validation happens at two points:
 
@@ -14,7 +14,7 @@ Validation happens at two points:
 Pass `response` and/or `variables` schemas to the `endpoint()` helper:
 
 ```ts title="lib/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 import { z } from "zod"
 
 const UserSchema = z.object({
@@ -58,7 +58,7 @@ When you pass schemas to `endpoint()`, the return type and variables type are **
 
 ### Variables validation (pre-request)
 
-When a `variables` schema is attached, Nexus validates the variables **before** any middleware or HTTP call runs. If validation fails, `fetch` is never called:
+When a `variables` schema is attached, Courier validates the variables **before** any middleware or HTTP call runs. If validation fails, `fetch` is never called:
 
 ```ts
 // CreateUserSchema requires name (string) and email (string)
@@ -68,7 +68,7 @@ await caller.users.create({ name: 123 })
 
 ### Response validation (post-request)
 
-When a `response` schema is attached, Nexus validates the parsed response body **after** the fetch completes but before returning data to the caller:
+When a `response` schema is attached, Courier validates the parsed response body **after** the fetch completes but before returning data to the caller:
 
 ```ts
 // If the backend returns { id: 1, name: null } but the schema
@@ -78,7 +78,7 @@ const user = await caller.users.getAll()
 
 ### Schema transforms
 
-Standard Schema libraries often support transforms (e.g., `z.coerce.date()`). Nexus respects these -- the validated and transformed value is what you receive:
+Standard Schema libraries often support transforms (e.g., `z.coerce.date()`). Courier respects these -- the validated and transformed value is what you receive:
 
 ```ts title="lib/sources.ts"
 const EventSchema = z.object({
@@ -105,7 +105,7 @@ const event = await caller.events.get({ id: 1 })
 
 ## ValidationError
 
-When validation fails, Nexus throws a `ValidationError` with structured issue data:
+When validation fails, Courier throws a `ValidationError` with structured issue data:
 
 ```ts title="types"
 class ValidationError extends Error {
@@ -129,7 +129,7 @@ type ValidationIssue = {
 Use the `isValidationError` type guard to narrow the error type:
 
 ```ts title="app/actions.ts"
-import { isValidationError } from "@noverax/nexus"
+import { isValidationError } from "@noverax/courier"
 
 try {
   await caller.users.create(formData)

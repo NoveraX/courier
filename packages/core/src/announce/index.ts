@@ -2,7 +2,7 @@
  * Adapter capability announcement buffer.
  *
  * Lives in core (zero runtime deps) so any framework adapter — `apiRoute`,
- * `sseRoute`, `createNexusServer`, `nexusHonoHandler`, … — can call
+ * `sseRoute`, `createCourierServer`, `courierHonoHandler`, … — can call
  * `announceHosting()` without depending on `studio-core`.
  *
  * The buffer is pinned to a `globalThis` Symbol so module duplication caused
@@ -53,7 +53,7 @@ interface AnnounceState {
   listeners: Set<Listener>;
 }
 
-const ANNOUNCE_STATE_KEY = Symbol.for("nexus.runtime.announce-state");
+const ANNOUNCE_STATE_KEY = Symbol.for("courier.runtime.announce-state");
 const g = globalThis as Record<symbol, unknown>;
 
 if (!g[ANNOUNCE_STATE_KEY]) {
@@ -64,7 +64,7 @@ const state = g[ANNOUNCE_STATE_KEY] as AnnounceState;
 
 /**
  * Adapter-internal API. Framework adapters (`apiRoute`, `sseRoute`,
- * `createNexusServer`, …) call this once they know which transports they
+ * `createCourierServer`, …) call this once they know which transports they
  * expose. Studio drains the buffer asynchronously via `consumeAnnouncements`
  * so the order of operations between adapter init and Studio attach does not
  * matter.

@@ -14,7 +14,7 @@ export const REACT: FrameworkConfig = {
   name: "React",
   description: "React with Vite",
   steps: [
-    installStep("@noverax/nexus-studio"),
+    installStep("@noverax/courier-studio"),
     {
       id: "instrument",
       title: "Add Vite plugin",
@@ -24,10 +24,10 @@ export const REACT: FrameworkConfig = {
       filePath: "vite.config.ts",
       lang: "ts",
       code: `import react from "@vitejs/plugin-react";
-import { nexusStudio } from "@noverax/nexus-studio/react";
+import { courierStudio } from "@noverax/courier-studio/react";
 
 export default defineConfig({
-  plugins: [react(), nexusStudio()],
+  plugins: [react(), courierStudio()],
 });`,
     },
     VERIFY_STEP,
@@ -40,7 +40,7 @@ export const VUE: FrameworkConfig = {
   name: "Vue",
   description: "Vue with Vite",
   steps: [
-    installStep("@noverax/nexus-studio"),
+    installStep("@noverax/courier-studio"),
     {
       id: "instrument",
       title: "Add Vite plugin",
@@ -50,10 +50,10 @@ export const VUE: FrameworkConfig = {
       filePath: "vite.config.ts",
       lang: "ts",
       code: `import vue from "@vitejs/plugin-vue";
-import { nexusStudio } from "@noverax/nexus-studio/vue";
+import { courierStudio } from "@noverax/courier-studio/vue";
 
 export default defineConfig({
-  plugins: [vue(), nexusStudio()],
+  plugins: [vue(), courierStudio()],
 });`,
     },
     VERIFY_STEP,

@@ -1,17 +1,17 @@
-export const metadata = { title: "Fastify", description: "Fastify server adapter using nexusPlugin for hosting the Nexus proxy route.", mode: "proxy" }
+export const metadata = { title: "Fastify", description: "Fastify server adapter using courierPlugin for hosting the Courier proxy route.", mode: "proxy" }
 
-The `@noverax/nexus-fastify` adapter provides a Fastify plugin that registers the Nexus proxy route.
+The `@noverax/courier-fastify` adapter provides a Fastify plugin that registers the Courier proxy route.
 
 ## Installation
 
 ```bash
-npm install @noverax/nexus @noverax/nexus-fastify fastify @fastify/cors
+npm install @noverax/courier @noverax/courier-fastify fastify @fastify/cors
 ```
 
 ## Define your API sources
 
 ```ts title="lib/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: number; name: string; email: string }
 
@@ -37,13 +37,13 @@ export const sources = { myApi: api }
 
 ## Setup
 
-Create a Fastify server with the Nexus plugin:
+Create a Fastify server with the Courier plugin:
 
 ```ts title="server.ts"
 import Fastify from "fastify"
 import cors from "@fastify/cors"
-import { registerSources } from "@noverax/nexus"
-import { nexusPlugin } from "@noverax/nexus-fastify"
+import { registerSources } from "@noverax/courier"
+import { courierPlugin } from "@noverax/courier-fastify"
 import { sources } from "./lib/sources"
 
 registerSources(sources)
@@ -56,8 +56,8 @@ async function start() {
     credentials: true,
   })
 
-  // Register the Nexus proxy plugin
-  await app.register(nexusPlugin, {
+  // Register the Courier proxy plugin
+  await app.register(courierPlugin, {
     prefix: "/api/request",
   })
 
@@ -67,17 +67,17 @@ async function start() {
 start()
 ```
 
-The `nexusPlugin` registers a route handler at the specified prefix that reads sources from the core global registry populated by `registerSources()` at module load.
+The `courierPlugin` registers a route handler at the specified prefix that reads sources from the core global registry populated by `registerSources()` at module load.
 
 ## With existing Fastify app
 
-Add the Nexus plugin alongside your existing routes and plugins:
+Add the Courier plugin alongside your existing routes and plugins:
 
 ```ts title="server.ts"
 import Fastify from "fastify"
 import cors from "@fastify/cors"
-import { registerSources } from "@noverax/nexus"
-import { nexusPlugin } from "@noverax/nexus-fastify"
+import { registerSources } from "@noverax/courier"
+import { courierPlugin } from "@noverax/courier-fastify"
 import { sources } from "./lib/sources"
 
 registerSources(sources)
@@ -99,8 +99,8 @@ async function start() {
     return { uptime: process.uptime() }
   })
 
-  // Register Nexus proxy plugin
-  await app.register(nexusPlugin, {
+  // Register Courier proxy plugin
+  await app.register(courierPlugin, {
     prefix: "/api/request",
   })
 
@@ -111,7 +111,7 @@ start()
 ```
 
 <Callout variant="info" title="Plugin encapsulation">
-The `nexusPlugin` follows Fastify's plugin system. It encapsulates its routes under the given prefix without interfering with your other routes or plugins.
+The `courierPlugin` follows Fastify's plugin system. It encapsulates its routes under the given prefix without interfering with your other routes or plugins.
 </Callout>
 
 ## CORS configuration
@@ -121,8 +121,8 @@ For production, restrict the allowed origins:
 ```ts title="server.ts"
 import Fastify from "fastify"
 import cors from "@fastify/cors"
-import { registerSources } from "@noverax/nexus"
-import { nexusPlugin } from "@noverax/nexus-fastify"
+import { registerSources } from "@noverax/courier"
+import { courierPlugin } from "@noverax/courier-fastify"
 import { sources } from "./lib/sources"
 
 registerSources(sources)
@@ -135,7 +135,7 @@ async function start() {
     credentials: true,
   })
 
-  await app.register(nexusPlugin, {
+  await app.register(courierPlugin, {
     prefix: "/api/request",
   })
 
@@ -149,17 +149,17 @@ start()
 ```
 
 <Callout variant="tip" title="Fastify performance">
-Fastify's schema-based validation and serialization make it one of the fastest Node.js frameworks. The Nexus plugin benefits from Fastify's built-in JSON parsing, so no additional body parser setup is needed.
+Fastify's schema-based validation and serialization make it one of the fastest Node.js frameworks. The Courier plugin benefits from Fastify's built-in JSON parsing, so no additional body parser setup is needed.
 </Callout>
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
-Wire your Fastify server into Studio with a single `attachRuntime()` call. It auto-loads `nexus.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `nexus.config.ts.runtime.appOrigin` (or set the `NEXUS_APP_URL` env var to override per-environment).
+Wire your Fastify server into Studio with a single `attachRuntime()` call. It auto-loads `courier.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `courier.config.ts.runtime.appOrigin` (or set the `COURIER_APP_URL` env var to override per-environment).
 
 ```ts title="server.ts"
 import Fastify from "fastify"
-import { nexusPlugin } from "@noverax/nexus-fastify"
-import { attachRuntime } from "@noverax/nexus-studio-core/runtime"
+import { courierPlugin } from "@noverax/courier-fastify"
+import { attachRuntime } from "@noverax/courier-studio-core/runtime"
 
 const app = Fastify()
 
@@ -168,7 +168,7 @@ async function start() {
     await attachRuntime()
   }
 
-  await app.register(nexusPlugin, { prefix: "/api/request" })
+  await app.register(courierPlugin, { prefix: "/api/request" })
 
   await app.listen({ port: 3001 })
 }
@@ -176,10 +176,10 @@ async function start() {
 start()
 ```
 
-Alternatively, set `NEXUS_APP_URL` instead of passing `appOrigin` explicitly:
+Alternatively, set `COURIER_APP_URL` instead of passing `appOrigin` explicitly:
 
 ```bash
-NEXUS_APP_URL=http://localhost:3001 node server.js
+COURIER_APP_URL=http://localhost:3001 node server.js
 ```
 
 <Callout variant="warn" title="No magic default">
@@ -193,10 +193,10 @@ On the client, point your caller to this server's proxy URL. Choose the guide fo
 - [React (Vite / CRA)](/docs/frameworks/react) — `createProxyQueryCaller` with React Query hooks
 - [Vue](/docs/frameworks/vue) — `createProxyCaller` with composables
 - [Next.js](/docs/frameworks/nextjs) — full-stack with `apiRoute` and `createProxyQueryCaller`
-- [Nuxt](/docs/frameworks/nuxt) — full-stack with `nexusHandler` and `createProxyCaller`
+- [Nuxt](/docs/frameworks/nuxt) — full-stack with `courierHandler` and `createProxyCaller`
 
 ```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import type { api } from "../shared/sources"
 
 export const caller = createProxyCaller<typeof api>({

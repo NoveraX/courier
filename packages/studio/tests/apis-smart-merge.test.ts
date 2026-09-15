@@ -48,7 +48,7 @@ describe("splitEndpoint", () => {
 // ── parseExistingGroup ─────────────────────────────────────────────────────
 
 describe("parseExistingGroup", () => {
-  const sampleFile = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+  const sampleFile = `import { defineGroup, endpoint } from "@noverax/courier/define";
 import { z } from "zod";
 import { UserSchema, type User } from "./schemas";
 
@@ -102,7 +102,7 @@ export const users = defineGroup({
   })
 
   it("extracts trailing code after defineGroup", () => {
-    const file = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const file = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -124,11 +124,11 @@ export function customHelper() {
 describe("mergeImports", () => {
   it("unions imports from same source", () => {
     const existing = [
-      { raw: "", source: "@noverax/nexus/define", names: ["defineGroup", "endpoint"], typeNames: [] },
+      { raw: "", source: "@noverax/courier/define", names: ["defineGroup", "endpoint"], typeNames: [] },
       { raw: "", source: "./schemas", names: ["UserSchema"], typeNames: ["User"] },
     ]
     const generated = [
-      { raw: "", source: "@noverax/nexus/define", names: ["defineGroup", "endpoint"], typeNames: [] },
+      { raw: "", source: "@noverax/courier/define", names: ["defineGroup", "endpoint"], typeNames: [] },
       { raw: "", source: "./schemas", names: ["UserSchema", "PostSchema"], typeNames: ["User", "Post"] },
     ]
     const changes: MergeChange[] = []
@@ -143,11 +143,11 @@ describe("mergeImports", () => {
 
   it("preserves user-added imports", () => {
     const existing = [
-      { raw: "", source: "@noverax/nexus/define", names: ["defineGroup", "endpoint"], typeNames: [] },
+      { raw: "", source: "@noverax/courier/define", names: ["defineGroup", "endpoint"], typeNames: [] },
       { raw: "", source: "lodash", names: ["debounce"], typeNames: [] },
     ]
     const generated = [
-      { raw: "", source: "@noverax/nexus/define", names: ["defineGroup", "endpoint"], typeNames: [] },
+      { raw: "", source: "@noverax/courier/define", names: ["defineGroup", "endpoint"], typeNames: [] },
     ]
     const changes: MergeChange[] = []
     const result = mergeImports(existing, generated, changes)
@@ -158,10 +158,10 @@ describe("mergeImports", () => {
 
   it("adds new generated imports", () => {
     const existing = [
-      { raw: "", source: "@noverax/nexus/define", names: ["defineGroup", "endpoint"], typeNames: [] },
+      { raw: "", source: "@noverax/courier/define", names: ["defineGroup", "endpoint"], typeNames: [] },
     ]
     const generated = [
-      { raw: "", source: "@noverax/nexus/define", names: ["defineGroup", "endpoint"], typeNames: [] },
+      { raw: "", source: "@noverax/courier/define", names: ["defineGroup", "endpoint"], typeNames: [] },
       { raw: "", source: "zod", names: ["z"], typeNames: [] },
     ]
     const changes: MergeChange[] = []
@@ -174,7 +174,7 @@ describe("mergeImports", () => {
 // ── mergeGroupFile ─────────────────────────────────────────────────────────
 
 describe("mergeGroupFile", () => {
-  const baseGenerated = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+  const baseGenerated = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -197,7 +197,7 @@ export const users = defineGroup({
   })
 
   it("preserves user body for modified endpoints", () => {
-    const existingWithUserCode = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const existingWithUserCode = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -207,7 +207,7 @@ export const users = defineGroup({
   },
 });
 `
-    const newGenerated = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const newGenerated = `import { defineGroup, endpoint } from "@noverax/courier/define";
 import { z } from "zod";
 import { UserSchema } from "./schemas";
 
@@ -233,7 +233,7 @@ export const users = defineGroup({
   })
 
   it("adds new endpoints from spec", () => {
-    const existing = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const existing = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -242,7 +242,7 @@ export const users = defineGroup({
   },
 });
 `
-    const generated = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const generated = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -263,7 +263,7 @@ export const users = defineGroup({
   })
 
   it("preserves user-added endpoints not in spec", () => {
-    const existingWithCustom = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const existingWithCustom = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -273,7 +273,7 @@ export const users = defineGroup({
   },
 });
 `
-    const generated = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const generated = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -293,7 +293,7 @@ export const users = defineGroup({
   })
 
   it("preserves user imports during merge", () => {
-    const existingWithExtraImport = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const existingWithExtraImport = `import { defineGroup, endpoint } from "@noverax/courier/define";
 import { debounce } from "lodash";
 
 export const users = defineGroup({
@@ -303,7 +303,7 @@ export const users = defineGroup({
   },
 });
 `
-    const generated = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const generated = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -321,7 +321,7 @@ export const users = defineGroup({
   })
 
   it("preserves trailing user code after defineGroup", () => {
-    const existingWithHelper = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const existingWithHelper = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -334,7 +334,7 @@ export function transformUsers(users: User[]) {
   return users.filter(u => u.active);
 }
 `
-    const generated = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const generated = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -352,7 +352,7 @@ export const users = defineGroup({
   })
 
   it("updates JSDoc comments from new spec", () => {
-    const existing = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const existing = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -362,7 +362,7 @@ export const users = defineGroup({
   },
 });
 `
-    const generated = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const generated = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -382,7 +382,7 @@ export const users = defineGroup({
   })
 
   it("preserves removed-from-spec endpoint when it exists in user file", () => {
-    const existing = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const existing = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -393,7 +393,7 @@ export const users = defineGroup({
 });
 `
     /* New spec removed getById — generated only has getAll */
-    const generated = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const generated = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -414,7 +414,7 @@ export const users = defineGroup({
   })
 
   it("produces consistent output format with 2-space indent", () => {
-    const existing = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const existing = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -437,7 +437,7 @@ export const users = defineGroup({
   })
 
   it("handles endpoint with complex multi-line body as modified", () => {
-    const existing = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const existing = `import { defineGroup, endpoint } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
@@ -449,7 +449,7 @@ export const users = defineGroup({
   },
 });
 `
-    const generated = `import { defineGroup, endpoint } from "@noverax/nexus/define";
+    const generated = `import { defineGroup, endpoint } from "@noverax/courier/define";
 import { z } from "zod";
 
 export const users = defineGroup({

@@ -42,7 +42,7 @@ export function composeBackend(
       if (schema?.transport === "sse") {
         if (!sse) {
           throw new Error(
-            `[nexus] SSE factory not configured but endpoint "${formatEndpoint(group, method)}" is declared as transport: "sse".`,
+            `[courier] SSE factory not configured but endpoint "${formatEndpoint(group, method)}" is declared as transport: "sse".`,
           );
         }
         return sse(group, method, variables, options);
@@ -53,14 +53,14 @@ export function composeBackend(
         if (isBidirectional) {
           if (!wsChannel) {
             throw new Error(
-              `[nexus] WS channel factory not configured but endpoint "${formatEndpoint(group, method)}" is declared as a bidirectional WS channel.`,
+              `[courier] WS channel factory not configured but endpoint "${formatEndpoint(group, method)}" is declared as a bidirectional WS channel.`,
             );
           }
           return wsChannel(group, method, variables, options);
         }
         if (!wsPush) {
           throw new Error(
-            `[nexus] WS push factory not configured but endpoint "${formatEndpoint(group, method)}" is declared as a server-push WS endpoint.`,
+            `[courier] WS push factory not configured but endpoint "${formatEndpoint(group, method)}" is declared as a server-push WS endpoint.`,
           );
         }
         return wsPush(group, method, variables, options);

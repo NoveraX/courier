@@ -1,9 +1,13 @@
-import type { ConnectionRegistry, SSEConnectionRegistry, SSELifecycleConfig } from "@noverax/nexus";
-import type { Sources } from "@noverax/nexus/define";
-import type { PubSubAdapter } from "@noverax/nexus/realtime";
+import type {
+  ConnectionRegistry,
+  SSEConnectionRegistry,
+  SSELifecycleConfig,
+} from "@noverax/courier";
+import type { Sources } from "@noverax/courier/define";
+import type { PubSubAdapter } from "@noverax/courier/realtime";
 
-/** Configuration for the standalone Nexus server */
-export interface NexusServerConfig extends SSELifecycleConfig {
+/** Configuration for the standalone Courier server */
+export interface CourierServerConfig extends SSELifecycleConfig {
   /** Registered API sources (same as framework adapters) */
   sources: Sources;
   /** Server port (default 3001) */
@@ -40,8 +44,8 @@ export interface NexusServerConfig extends SSELifecycleConfig {
   onError?: (info: { connectionId: string; meta: unknown; error: unknown }) => void;
 }
 
-/** Handle returned by createNexusServer for lifecycle control */
-export interface NexusServer {
+/** Handle returned by createCourierServer for lifecycle control */
+export interface CourierServer {
   /** Base URL of the running server */
   url: string;
   /** Gracefully shut down the server */

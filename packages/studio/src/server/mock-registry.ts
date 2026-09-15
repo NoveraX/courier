@@ -1,24 +1,24 @@
 /**
  * Config-driven mock-server registry.
  *
- * Mock definitions live inline in `nexus.config.ts.mocks` as imported values.
+ * Mock definitions live inline in `courier.config.ts.mocks` as imported values.
  * The registry diffs the previous config snapshot against a fresh one and
  * emits add / change / remove events that the lifecycle coordinator consumes
  * to start, stop, or restart the corresponding child processes.
  *
  * Mock definition values are typed as `unknown` here because the canonical
- * `MockServerDefinition` type lives in `@noverax/nexus-mock` and pulling it
- * through `@noverax/nexus-studio` would invert the package dependency
+ * `MockServerDefinition` type lives in `@noverax/courier-mock` and pulling it
+ * through `@noverax/courier-studio` would invert the package dependency
  * direction (studio depends on mock, never the reverse). Callers narrow at
  * the consumption site.
  */
 
-import type { NexusConfig } from "@noverax/nexus/config";
+import type { CourierConfig } from "@noverax/courier/config";
 
-/** Stable identity + raw definition for one mock declared in `nexus.config.ts.mocks` */
+/** Stable identity + raw definition for one mock declared in `courier.config.ts.mocks` */
 export interface MockEntry {
   key: string;
-  /** Reference to the value the user passed in `nexus.config.ts.mocks[key]` */
+  /** Reference to the value the user passed in `courier.config.ts.mocks[key]` */
   definition: unknown;
 }
 
@@ -30,7 +30,7 @@ export interface MockRegistryEvents {
 
 export interface MockRegistry {
   /** Apply a freshly loaded config — diffs against the previous snapshot. */
-  syncFromConfig(config: NexusConfig): void;
+  syncFromConfig(config: CourierConfig): void;
   /** Read the current snapshot — used by tests and the UI initial state. */
   getEntries(): MockEntry[];
   /**
@@ -46,7 +46,7 @@ export interface MockRegistry {
  *
  * The registry is empty until the first `syncFromConfig` call so the caller
  * controls when discovery begins (typically right after the initial
- * `loadNexusConfig` succeeds).
+ * `loadCourierConfig` succeeds).
  */
 export function createMockRegistry(initialEvents?: MockRegistryEvents): MockRegistry {
   const current = new Map<string, MockEntry>();
@@ -62,7 +62,7 @@ export function createMockRegistry(initialEvents?: MockRegistryEvents): MockRegi
   };
 
   return {
-    syncFromConfig(config: NexusConfig): void {
+    syncFromConfig(config: CourierConfig): void {
       const next = extractMocks(config);
       const seen = new Set<string>();
 
@@ -97,7 +97,7 @@ export function createMockRegistry(initialEvents?: MockRegistryEvents): MockRegi
   };
 }
 
-function extractMocks(config: NexusConfig): MockEntry[] {
+function extractMocks(config: CourierConfig): MockEntry[] {
   const mocks = config.mocks;
   if (!mocks || typeof mocks !== "object") return [];
   const out: MockEntry[] = [];

@@ -16,7 +16,7 @@ import type { MockServerConfig, MockServerDefinition } from "./types";
  * @example
  * ```ts
  * // mock-servers/jsonPlaceholder.server.ts
- * import { defineMockServer } from "@noverax/nexus-mock";
+ * import { defineMockServer } from "@noverax/courier-mock";
  * import { jsonPlaceholder } from "../src/api/jsonPlaceholder";
  *
  * export const mockServer = defineMockServer({
@@ -29,7 +29,7 @@ import type { MockServerConfig, MockServerDefinition } from "./types";
  */
 export function defineMockServer(config: MockServerConfig): MockServerDefinition {
   return {
-    __type: "nexus-mock-server",
+    __type: "courier-mock-server",
     port: config.port ?? 0,
     autoStart: config.autoStart ?? false,
     ...config,
@@ -41,6 +41,6 @@ export function isMockServerDefinition(value: unknown): value is MockServerDefin
   return (
     typeof value === "object" &&
     value !== null &&
-    (value as Record<string, unknown>).__type === "nexus-mock-server"
+    (value as Record<string, unknown>).__type === "courier-mock-server"
   );
 }

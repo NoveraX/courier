@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define";
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
 import { createAutoMockServer } from "../src/auto/create-auto-server";
 
 const products = defineGroup({

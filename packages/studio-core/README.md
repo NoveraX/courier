@@ -1,13 +1,13 @@
 <div align="center">
   <br />
 
-  # @noverax/nexus-studio-core
+  # @noverax/courier-studio-core
 
-  **Instrumentation core for Nexus Studio — `attachRuntime`, EventBus, event types, and Socket.IO connector.**
+  **Instrumentation core for Courier Studio — `attachRuntime`, EventBus, event types, and Socket.IO connector.**
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus-studio-core"><img src="https://img.shields.io/npm/v/@noverax/nexus-studio-core?color=7c3aed&style=flat-square" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier-studio-core"><img src="https://img.shields.io/npm/v/@noverax/courier-studio-core?color=7c3aed&style=flat-square" alt="npm" /></a>
 
   <br />
 </div>
@@ -16,14 +16,14 @@
 
 ## Overview
 
-This package instruments your Nexus application and streams events (requests, responses, cache hits, validation, etc.) to the Studio UI over Socket.IO. It is automatically integrated by the Studio build plugins — you typically do not install it manually.
+This package instruments your Courier application and streams events (requests, responses, cache hits, validation, etc.) to the Studio UI over Socket.IO. It is automatically integrated by the Studio build plugins — you typically do not install it manually.
 
 <br />
 
 ## Install
 
 ```bash
-npm install @noverax/nexus-studio-core @noverax/nexus
+npm install @noverax/courier-studio-core @noverax/courier
 ```
 
 Optional peer dependency for live streaming to Studio:
@@ -39,18 +39,18 @@ npm install socket.io-client
 ### Attach a runtime (server-side)
 
 ```ts
-import { attachRuntime } from "@noverax/nexus-studio-core/runtime"
+import { attachRuntime } from "@noverax/courier-studio-core/runtime"
 
 await attachRuntime()
-// Auto-loads nexus.config.ts, registers sources, opens /runtime socket
+// Auto-loads courier.config.ts, registers sources, opens /runtime socket
 ```
 
-`attachRuntime()` reads `nexus.config.ts` from disk (walking up from `process.cwd()`), populates the core sources registry, and opens a `/runtime` Socket.IO connection to Studio in dev.
+`attachRuntime()` reads `courier.config.ts` from disk (walking up from `process.cwd()`), populates the core sources registry, and opens a `/runtime` Socket.IO connection to Studio in dev.
 
 ### Attach a runtime (browser build-plugin injected)
 
 ```ts
-globalThis[Symbol.for("nexus.studio.url")] = "http://127.0.0.1:6280"
+globalThis[Symbol.for("courier.studio.url")] = "http://127.0.0.1:6280"
 await attachRuntime("next-browser")
 ```
 
@@ -59,7 +59,7 @@ await attachRuntime("next-browser")
 ## API
 
 ### `attachRuntime(id?)` — Single entry point for server + browser runtimes
-### `loadNexusConfig()` — Walk-up + c12 config loader
+### `loadCourierConfig()` — Walk-up + c12 config loader
 ### `announceHosting(input)` — Announce transport capabilities to Studio
 ### `setAppOrigin(origin)` / `getAppOrigin()` / `detectAppOrigin()` — App origin registry
 ### `EventBus` — In-process Studio telemetry bus

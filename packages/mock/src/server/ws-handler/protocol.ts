@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import { encodeMessage } from "@noverax/nexus/realtime";
+import { encodeMessage } from "@noverax/courier/realtime";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 /** Send a typed error frame to a client if the socket is still open */

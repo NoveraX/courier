@@ -47,7 +47,7 @@ describe("extractOriginFromNodeRequest", () => {
     // Trust boundary: even if the request carries x-forwarded-proto: https,
     // extractOriginFromNodeRequest only looks at socket.encrypted. This is a
     // deliberate conservative choice — reverse-proxy users must set
-    // appOrigin via nexus.config.ts or NEXUS_APP_URL explicitly.
+    // appOrigin via courier.config.ts or COURIER_APP_URL explicitly.
     const req = {
       headers: { host: "internal-service:8080", "x-forwarded-proto": "https" },
       socket: { encrypted: false },

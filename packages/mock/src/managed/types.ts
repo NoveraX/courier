@@ -4,7 +4,7 @@ import type { MockScenario, NetworkConfig, TypedMockFn } from "../types";
 /** Configuration returned by defineMockServer() */
 export interface MockServerDefinition {
   /** Marker for runtime type detection */
-  __type: "nexus-mock-server";
+  __type: "courier-mock-server";
   /** API source — enables auto-generated CRUD routes */
   source?: {
     options: {

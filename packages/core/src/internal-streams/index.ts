@@ -1,16 +1,16 @@
 /**
- * `@noverax/nexus/internal-streams` — in-process direct stream executors.
+ * `@noverax/courier/internal-streams` — in-process direct stream executors.
  *
  * **Internal subpath.** Public consumers must NOT depend on this module —
- * it exists exclusively for `@noverax/nexus-studio` Playground to execute
+ * it exists exclusively for `@noverax/courier-studio` Playground to execute
  * SSE/WS endpoints in-process via the canonical pipeline (resolve → validate
  * → middleware → handler → instrument), so that Playground never
  * diverges from production behavior (auth, validation, broadcast, etc.).
  *
  * Stability: tracked alongside studio-core releases. No semver guarantees
  * for external consumers. Production realtime should use the canonical
- * adapter handlers from `@noverax/nexus/realtime` and the per-framework
- * adapters from `@noverax/nexus-{next,hono,express,fastify,nestjs}`.
+ * adapter handlers from `@noverax/courier/realtime` and the per-framework
+ * adapters from `@noverax/courier-{next,hono,express,fastify,nestjs}`.
  */
 
 export { executeDirectSSE } from "../transport/in-process/sse";

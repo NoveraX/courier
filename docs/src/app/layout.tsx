@@ -19,22 +19,22 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Nexus — Type-Safe HTTP for Next.js",
-    template: "%s — Nexus Docs",
+    default: "Courier — Type-Safe HTTP for Next.js",
+    template: "%s — Courier Docs",
   },
   description:
     "Type-safe HTTP client with request grouping, path parameters, and full Next.js integration. Proxy & direct modes, React Query, streaming, uploads.",
-  metadataBase: new URL("https://nexus.noverax.cloud"),
+  metadataBase: new URL("https://courier.noverax.cloud"),
   openGraph: {
     type: "website",
     locale: "en_US",
-    siteName: "Nexus Docs",
+    siteName: "Courier Docs",
     images: [
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Nexus — Type-Safe HTTP for Next.js",
+        alt: "Courier — Type-Safe HTTP for Next.js",
       },
     ],
   },
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
   },
   other: {
-    "apple-mobile-web-app-title": "Nexus",
+    "apple-mobile-web-app-title": "Courier",
   },
 }
 

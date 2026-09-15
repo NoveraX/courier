@@ -1,12 +1,12 @@
 {
-  "name": "@noverax/nexus-express",
+  "name": "@noverax/courier-express",
   "version": "0.0.0",
-  "description": "Express adapter for @noverax/nexus — proxy middleware handler",
+  "description": "Express adapter for @noverax/courier — proxy middleware handler",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noverax/nexus.git",
+    "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/express"
   },
   "type": "module",
@@ -38,7 +38,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/nexus": "*"
+    "@noverax/courier": "*"
   },
   "peerDependencies": {
     "express": ">=4",

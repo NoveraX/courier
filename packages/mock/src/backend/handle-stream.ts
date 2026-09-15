@@ -1,4 +1,4 @@
-import { createMockSSESubscription } from "@noverax/nexus/testing";
+import { createMockSSESubscription } from "@noverax/courier/testing";
 import type { MockHistoryEntry, MockRequestContext } from "../types";
 import type { ResolvedHandler } from "./types";
 
@@ -14,7 +14,7 @@ export function handleStream(
 ): unknown {
   const streamFn = handler.streamFn;
   if (!streamFn) {
-    throw new Error(`[nexus-mock] SSE handler missing streamFn for "${group}.${method}"`);
+    throw new Error(`[courier-mock] SSE handler missing streamFn for "${group}.${method}"`);
   }
 
   const ctx: MockRequestContext = {

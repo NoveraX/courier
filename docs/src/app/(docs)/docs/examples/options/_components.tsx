@@ -1,6 +1,6 @@
 "use client"
 
-import { isHTTPError } from "@noverax/nexus"
+import { isHTTPError } from "@noverax/courier"
 import { useState } from "react"
 
 import { ResponseViewer } from "@/components/docs/response-viewer"

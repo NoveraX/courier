@@ -1,6 +1,6 @@
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { Duplex } from "node:stream";
-import type { HandlerConfig, NexusWSOptions } from "@noverax/nexus";
+import type { CourierWSOptions, HandlerConfig } from "@noverax/courier";
 import {
   createHandler,
   createLogger,
@@ -8,9 +8,9 @@ import {
   getAppOrigin,
   requireSources,
   setAppOrigin,
-} from "@noverax/nexus";
-import { announceHosting } from "@noverax/nexus/announce";
-import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "@noverax/nexus/node";
+} from "@noverax/courier";
+import { announceHosting } from "@noverax/courier/announce";
+import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 import type { WebSocketServer } from "ws";
 
 const log = createLogger("NestJS");
@@ -32,7 +32,7 @@ function tryDiscoverAppOrigin(req: IncomingMessage): void {
 }
 
 /**
- * Create a NestJS-compatible middleware function for the nexus proxy.
+ * Create a NestJS-compatible middleware function for the courier proxy.
  *
  * Sources are read from the core global registry populated by
  * `attachRuntime()` — call `await attachRuntime()` in your bootstrap
@@ -41,17 +41,17 @@ function tryDiscoverAppOrigin(req: IncomingMessage): void {
  * @example
  * ```ts
  * import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common";
- * import { nexusMiddleware } from "@noverax/nexus-nestjs";
+ * import { courierMiddleware } from "@noverax/courier-nestjs";
  *
  * @Module({})
  * export class AppModule implements NestModule {
  *   configure(consumer: MiddlewareConsumer) {
- *     consumer.apply(nexusMiddleware()).forRoutes("/api/request");
+ *     consumer.apply(courierMiddleware()).forRoutes("/api/request");
  *   }
  * }
  * ```
  */
-export function nexusMiddleware(config?: HandlerConfig) {
+export function courierMiddleware(config?: HandlerConfig) {
   const { handle } = createHandler(config);
   announceHosting({
     transports: ["http"],
@@ -76,10 +76,10 @@ export function nexusMiddleware(config?: HandlerConfig) {
  *
  * @example
  * ```ts
- * consumer.apply(nexusSSEMiddleware()).forRoutes("/api/sse");
+ * consumer.apply(courierSSEMiddleware()).forRoutes("/api/sse");
  * ```
  */
-export function nexusSSEMiddleware(config?: HandlerConfig) {
+export function courierSSEMiddleware(config?: HandlerConfig) {
   const { handleSSE } = createHandler(config);
   announceHosting({
     transports: ["sse"],
@@ -100,7 +100,7 @@ export function nexusSSEMiddleware(config?: HandlerConfig) {
 }
 
 /**
- * Attach Nexus WebSocket handler to a NestJS application's HTTP server.
+ * Attach Courier WebSocket handler to a NestJS application's HTTP server.
  * Requires `ws` package as peer dependency.
  *
  * @param server - HTTP server from `app.getHttpServer()`
@@ -109,16 +109,16 @@ export function nexusSSEMiddleware(config?: HandlerConfig) {
  *
  * @example
  * ```ts
- * import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
- * import { nexusWSAttach } from "@noverax/nexus-nestjs";
+ * import { attachRuntime } from "@noverax/courier-studio-core/runtime";
+ * import { courierWSAttach } from "@noverax/courier-nestjs";
  *
  * const app = await NestFactory.create(AppModule);
  * await attachRuntime();
- * const cleanup = nexusWSAttach(app.getHttpServer());
+ * const cleanup = courierWSAttach(app.getHttpServer());
  * await app.listen(3000);
  * ```
  */
-export function nexusWSAttach(server: Server, options?: NexusWSOptions): () => void {
+export function courierWSAttach(server: Server, options?: CourierWSOptions): () => void {
   const wsHandler = createWSHandler(options);
   announceHosting({
     transports: ["ws"],

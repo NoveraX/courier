@@ -2,8 +2,8 @@
  * Studio dev-server config loader.
  *
  * Delegates the "find + load" step to the canonical shared loader in
- * `@noverax/nexus-studio-core/runtime` so the Studio dev server and the
- * user-app runtime resolve `nexus.config.*` through exactly the same code
+ * `@noverax/courier-studio-core/runtime` so the Studio dev server and the
+ * user-app runtime resolve `courier.config.*` through exactly the same code
  * path. This module layers dev-server-only concerns on top of the base
  * loader:
  *
@@ -15,21 +15,21 @@
  *  - `extractConfigDeps` — walks the transitive import graph for the
  *    `fs.watch` registration used by `config-watcher.ts`
  *
- * The base loader returns `LoadedNexusConfig` (`{ config, configFile }`);
+ * The base loader returns `LoadedCourierConfig` (`{ config, configFile }`);
  * this wrapper returns the same shape plus the `deps` field.
  */
 
-import type { NexusConfig } from "@noverax/nexus/config";
-import { type AnySource, getSourceName, setSourceName } from "@noverax/nexus/define";
-import { loadNexusConfig as loadBase } from "@noverax/nexus-studio-core/runtime";
+import type { CourierConfig } from "@noverax/courier/config";
+import { type AnySource, getSourceName, setSourceName } from "@noverax/courier/define";
+import { loadCourierConfig as loadBase } from "@noverax/courier-studio-core/runtime";
 import { ConfigLoaderError, ConfigNotFoundError } from "./config-loader-errors";
 import { extractConfigDeps } from "./extract-config-deps";
 
-/** Result returned by `loadNexusConfig` */
-export interface LoadedNexusConfig {
+/** Result returned by `loadCourierConfig` */
+export interface LoadedCourierConfig {
   /** Resolved config object after defaults/overrides */
-  config: NexusConfig;
-  /** Absolute path of the loaded `nexus.config.*` file */
+  config: CourierConfig;
+  /** Absolute path of the loaded `courier.config.*` file */
   configFile: string;
   /**
    * Every TypeScript/JavaScript module the config transitively imports,
@@ -39,7 +39,7 @@ export interface LoadedNexusConfig {
 }
 
 /**
- * Load `nexus.config.{ts,js,mjs}` from `projectRoot`.
+ * Load `courier.config.{ts,js,mjs}` from `projectRoot`.
  *
  * Validates that `sources` is a non-empty record, stamps each source with its
  * config key (so the key acts as the canonical source name), and rejects
@@ -49,15 +49,19 @@ export interface LoadedNexusConfig {
  * Throws `ConfigNotFoundError` when no config file is found at `projectRoot`,
  * and `ConfigLoaderError` for every other validation failure.
  */
-export async function loadNexusConfig(projectRoot: string): Promise<LoadedNexusConfig> {
+export async function loadCourierConfig(projectRoot: string): Promise<LoadedCourierConfig> {
   let loaded: Awaited<ReturnType<typeof loadBase>>;
   try {
     loaded = await loadBase({ cwd: projectRoot, requireAtCwd: true });
   } catch (err) {
-    throw new ConfigLoaderError("CONFIG_INVALID", `Failed to load nexus.config: ${describe(err)}`, {
-      cause: err,
-      context: { cwd: projectRoot },
-    });
+    throw new ConfigLoaderError(
+      "CONFIG_INVALID",
+      `Failed to load courier.config: ${describe(err)}`,
+      {
+        cause: err,
+        context: { cwd: projectRoot },
+      },
+    );
   }
 
   if (!loaded) throw new ConfigNotFoundError(projectRoot);
@@ -75,24 +79,24 @@ export async function loadNexusConfig(projectRoot: string): Promise<LoadedNexusC
 
 /** Reject configs missing `sources` or with malformed entries */
 function validateConfig(
-  config: NexusConfig | undefined | null,
+  config: CourierConfig | undefined | null,
   configFile: string,
-): asserts config is NexusConfig {
+): asserts config is CourierConfig {
   if (!config || typeof config !== "object") {
-    throw new ConfigLoaderError("CONFIG_INVALID", `nexus.config must export an object`, {
+    throw new ConfigLoaderError("CONFIG_INVALID", `courier.config must export an object`, {
       context: { configFile },
     });
   }
-  const sources = (config as NexusConfig).sources;
+  const sources = (config as CourierConfig).sources;
   if (!sources || typeof sources !== "object") {
-    throw new ConfigLoaderError("CONFIG_INVALID", `nexus.config.sources is required`, {
+    throw new ConfigLoaderError("CONFIG_INVALID", `courier.config.sources is required`, {
       context: { configFile },
     });
   }
   if (Object.keys(sources).length === 0) {
     throw new ConfigLoaderError(
       "CONFIG_INVALID",
-      `nexus.config.sources must contain at least one entry`,
+      `courier.config.sources must contain at least one entry`,
       {
         context: { configFile },
       },

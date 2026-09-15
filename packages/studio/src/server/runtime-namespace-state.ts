@@ -18,10 +18,10 @@
 import type { Socket } from "socket.io";
 import type { BindingTransport } from "./catalog/binding-table";
 
-const RUNTIME_REGISTRY_KEY = Symbol.for("nexus.studio.runtime-registry");
-const MOCK_SERVERS_KEY = Symbol.for("nexus.studio.mock-servers");
-const SOCKET_MOCK_SERVERS_KEY = Symbol.for("nexus.studio.socket-mock-servers");
-const SESSION_VERSION_REGISTRY_KEY = Symbol.for("nexus.studio.session-version-registry");
+const RUNTIME_REGISTRY_KEY = Symbol.for("courier.studio.runtime-registry");
+const MOCK_SERVERS_KEY = Symbol.for("courier.studio.mock-servers");
+const SOCKET_MOCK_SERVERS_KEY = Symbol.for("courier.studio.socket-mock-servers");
+const SESSION_VERSION_REGISTRY_KEY = Symbol.for("courier.studio.session-version-registry");
 
 /** Snapshot of the latest `runtime:announce` payload for a connected runtime */
 export interface RuntimeRegistryEntry {

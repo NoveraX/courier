@@ -2,10 +2,10 @@ export const metadata = { title: "Server Actions", description: "Type-safe serve
 
 ## Overview
 
-`createAction` from `@noverax/nexus-next` creates a dot-notation client for use in Next.js Server Actions. It works like `createCaller`, but automatically forwards the incoming request headers (cookies, authorization) via `next/headers`.
+`createAction` from `@noverax/courier-next` creates a dot-notation client for use in Next.js Server Actions. It works like `createCaller`, but automatically forwards the incoming request headers (cookies, authorization) via `next/headers`.
 
 ```ts title="lib/actions.ts"
-import { createAction } from "@noverax/nexus-next"
+import { createAction } from "@noverax/courier-next"
 import { sources } from "@/api"
 
 export const action = createAction(sources, "api")
@@ -27,7 +27,7 @@ export async function createUser(data: { name: string; email: string }) {
 ## API signature
 
 ```ts
-import { createAction } from "@noverax/nexus-next"
+import { createAction } from "@noverax/courier-next"
 
 function createAction<T extends DefinedApi>(
   sources: Sources,
@@ -60,7 +60,7 @@ By default, `createAction` forwards the incoming request headers (including cook
 Create the action client once and use it across your server action files:
 
 ```ts title="lib/actions.ts"
-import { createAction } from "@noverax/nexus-next"
+import { createAction } from "@noverax/courier-next"
 import { sources } from "@/api"
 
 export const action = createAction(sources, "api")
@@ -92,7 +92,7 @@ export async function deleteUser(id: number) {
 
 ## ActionState
 
-`ActionState` is a convenience type exported from `@noverax/nexus-next` for structuring server action return values with `useActionState`:
+`ActionState` is a convenience type exported from `@noverax/courier-next` for structuring server action return values with `useActionState`:
 
 ```ts
 type ActionState<T = unknown> = {
@@ -110,9 +110,9 @@ You can use it to wrap your server actions with consistent error handling:
 ```ts title="app/actions/users.ts"
 "use server"
 
-import type { ActionState } from "@noverax/nexus-next"
+import type { ActionState } from "@noverax/courier-next"
 import { revalidatePath } from "next/cache"
-import { HTTPError } from "@noverax/nexus"
+import { HTTPError } from "@noverax/courier"
 import { action } from "@/lib/actions"
 
 export async function createUser(

@@ -1,12 +1,12 @@
 {
-  "name": "@noverax/nexus-fastify",
+  "name": "@noverax/courier-fastify",
   "version": "0.0.0",
-  "description": "Fastify adapter for @noverax/nexus — proxy plugin handler",
+  "description": "Fastify adapter for @noverax/courier — proxy plugin handler",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noverax/nexus.git",
+    "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/fastify"
   },
   "type": "module",
@@ -38,7 +38,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/nexus": "*"
+    "@noverax/courier": "*"
   },
   "peerDependencies": {
     "fastify": ">=4"

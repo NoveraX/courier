@@ -4,25 +4,25 @@ import { resolveSnippet } from "./core/resolve-snippet";
 import type { StudioPluginOptions } from "./core/types";
 
 const FRAMEWORK = "esbuild";
-const VIRTUAL_NS = "nexus-studio";
-const VIRTUAL_ID = "nexus-studio-init";
+const VIRTUAL_NS = "courier-studio";
+const VIRTUAL_ID = "courier-studio-init";
 
 /**
- * esbuild plugin for Nexus Studio.
+ * esbuild plugin for Courier Studio.
  * Injects `attachRuntime("esbuild-browser")` into entry points in dev mode.
  *
  * @example
  * ```ts
- * import { nexusStudio } from "@noverax/nexus-studio/esbuild"
+ * import { courierStudio } from "@noverax/courier-studio/esbuild"
  *
  * await esbuild.build({
- *   plugins: [nexusStudio()],
+ *   plugins: [courierStudio()],
  * })
  * ```
  */
-export function nexusStudio(options?: StudioPluginOptions): EsbuildPluginLike {
+export function courierStudio(options?: StudioPluginOptions): EsbuildPluginLike {
   return {
-    name: "nexus-studio",
+    name: "courier-studio",
     setup(build) {
       let pending: Promise<string | null> | null = null;
       const ensure = (): Promise<string | null> => (pending ??= resolveSnippet(FRAMEWORK, options));

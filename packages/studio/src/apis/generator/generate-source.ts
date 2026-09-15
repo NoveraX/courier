@@ -12,7 +12,7 @@ export function generateSourceFile(
 ): GeneratedFile {
   const lines: string[] = [];
 
-  lines.push(`import { defineApi } from "@noverax/nexus/define";`);
+  lines.push(`import { defineApi } from "@noverax/courier/define";`);
 
   for (const group of groups) {
     lines.push(`import { ${group.name} } from "./${group.name}";`);

@@ -1,8 +1,8 @@
 /**
- * @noverax/nexus-mock — Public API
+ * @noverax/courier-mock — Public API
  *
  * For test utilities (createMockClient, createMockStore, record/replay, etc.)
- * import from "@noverax/nexus-mock/testing" instead.
+ * import from "@noverax/courier-mock/testing" instead.
  */
 
 // Factory (test data generation helpers)

@@ -1,14 +1,14 @@
-import type { HandlerConfig, NexusWSOptions, WebSocketLike } from "@noverax/nexus";
+import type { CourierWSOptions, HandlerConfig, WebSocketLike } from "@noverax/courier";
 import {
   createHandler,
   createWSHandler,
   getAppOrigin,
   requireSources,
   setAppOrigin,
-} from "@noverax/nexus";
-import { announceHosting } from "@noverax/nexus/announce";
+} from "@noverax/courier";
+import { announceHosting } from "@noverax/courier/announce";
 
-import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "@noverax/nexus/node";
+import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 
 /**
@@ -27,13 +27,13 @@ function tryDiscoverAppOrigin(request: FastifyRequest): void {
   if (origin) setAppOrigin(origin);
 }
 
-export type NexusPluginOptions = {
+export type CourierPluginOptions = {
   prefix?: string;
   config?: HandlerConfig;
 };
 
 /**
- * Fastify plugin for the nexus proxy.
+ * Fastify plugin for the courier proxy.
  *
  * Sources are read from the core global registry populated by
  * `attachRuntime()` — call `await attachRuntime()` in your server
@@ -42,17 +42,17 @@ export type NexusPluginOptions = {
  * @example
  * ```ts
  * import Fastify from "fastify";
- * import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
- * import { nexusPlugin } from "@noverax/nexus-fastify";
+ * import { attachRuntime } from "@noverax/courier-studio-core/runtime";
+ * import { courierPlugin } from "@noverax/courier-fastify";
  *
  * const app = Fastify();
  * await attachRuntime();
- * app.register(nexusPlugin, { prefix: "/api/request" });
+ * app.register(courierPlugin, { prefix: "/api/request" });
  * ```
  */
-export const nexusPlugin: FastifyPluginAsync<NexusPluginOptions> = async (
+export const courierPlugin: FastifyPluginAsync<CourierPluginOptions> = async (
   fastify: FastifyInstance,
-  opts: NexusPluginOptions,
+  opts: CourierPluginOptions,
 ) => {
   const { handle } = createHandler(opts.config);
   announceHosting({
@@ -81,10 +81,10 @@ export const nexusPlugin: FastifyPluginAsync<NexusPluginOptions> = async (
  *
  * @example
  * ```ts
- * fastify.get("/api/sse", nexusSSEHandler());
+ * fastify.get("/api/sse", courierSSEHandler());
  * ```
  */
-export function nexusSSEHandler(config?: HandlerConfig) {
+export function courierSSEHandler(config?: HandlerConfig) {
   const { handleSSE } = createHandler(config);
   announceHosting({
     transports: ["sse"],
@@ -102,7 +102,7 @@ export function nexusSSEHandler(config?: HandlerConfig) {
 }
 
 /**
- * Create a Fastify WebSocket route handler for Nexus realtime.
+ * Create a Fastify WebSocket route handler for Courier realtime.
  * Requires `@fastify/websocket` plugin to be registered.
  *
  * @param options - WS handler options (heartbeat, allowedOrigins, etc.)
@@ -111,14 +111,14 @@ export function nexusSSEHandler(config?: HandlerConfig) {
  * @example
  * ```ts
  * import fastifyWebsocket from "@fastify/websocket";
- * import { nexusWSHandler } from "@noverax/nexus-fastify";
+ * import { courierWSHandler } from "@noverax/courier-fastify";
  *
  * await fastify.register(fastifyWebsocket);
- * fastify.get("/ws", { websocket: true }, nexusWSHandler());
+ * fastify.get("/ws", { websocket: true }, courierWSHandler());
  * ```
  */
-export function nexusWSHandler(
-  options?: NexusWSOptions,
+export function courierWSHandler(
+  options?: CourierWSOptions,
 ): (socket: WebSocketLike, request: FastifyRequest) => void {
   const wsHandler = createWSHandler(options);
   announceHosting({

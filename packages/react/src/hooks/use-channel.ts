@@ -1,6 +1,6 @@
 "use client";
 
-import type { ConnectionStatus, WSChannel } from "@noverax/nexus/realtime";
+import type { ConnectionStatus, WSChannel } from "@noverax/courier/realtime";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ChannelResult } from "../types";

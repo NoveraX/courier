@@ -2,16 +2,16 @@ export const metadata = { title: "Abort & Deduplication", description: "Automati
 
 ## Overview
 
-When users interact quickly — typing in a search box, clicking pagination rapidly, or switching filters — multiple requests for the same endpoint can be in flight simultaneously. Nexus can automatically abort the previous request when a new one starts for the same endpoint.
+When users interact quickly — typing in a search box, clicking pagination rapidly, or switching filters — multiple requests for the same endpoint can be in flight simultaneously. Courier can automatically abort the previous request when a new one starts for the same endpoint.
 
-Enable this by setting `deduplicate: true` in your source options. Nexus will track active requests and cancel duplicates before they complete.
+Enable this by setting `deduplicate: true` in your source options. Courier will track active requests and cancel duplicates before they complete.
 
 ## Enabling deduplication
 
 Set `deduplicate: true` in `defineApi` options. This applies to all endpoints in the source:
 
 ```ts title="api/index.ts"
-import { defineApi } from "@noverax/nexus/define"
+import { defineApi } from "@noverax/courier/define"
 
 const api = defineApi({
   baseURL: process.env.API_URL ?? "http://localhost:4000",
@@ -135,7 +135,7 @@ export function CancellableRequest() {
 ```
 
 <Callout variant="tip" title="Signal merging">
-If you use both `deduplicate: true` and a manual `signal`, Nexus combines them using `AbortSignal.any()`. The request aborts if either signal fires.
+If you use both `deduplicate: true` and a manual `signal`, Courier combines them using `AbortSignal.any()`. The request aborts if either signal fires.
 </Callout>
 
 ## How it works internally

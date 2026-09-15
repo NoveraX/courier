@@ -1,12 +1,12 @@
 {
-  "name": "@noverax/nexus-hono",
+  "name": "@noverax/courier-hono",
   "version": "0.0.0",
-  "description": "Hono adapter for @noverax/nexus — Web Standard proxy handler",
+  "description": "Hono adapter for @noverax/courier — Web Standard proxy handler",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noverax/nexus.git",
+    "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/hono"
   },
   "type": "module",
@@ -38,7 +38,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/nexus": "*"
+    "@noverax/courier": "*"
   },
   "peerDependencies": {
     "hono": ">=4"

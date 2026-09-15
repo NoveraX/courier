@@ -34,18 +34,18 @@
  * # When set
  *
  * `attachRuntime()` sets this during startup, reading from
- * `nexus.config.ts.runtime.appOrigin` or an env var fallback.
+ * `courier.config.ts.runtime.appOrigin` or an env var fallback.
  * Framework adapters may also discover it from the first incoming
  * request's `Host` header when nothing more explicit is available.
  * User code should not call `setAppOrigin` directly — set
- * `runtime.appOrigin` in `nexus.config.ts` or set the `NEXUS_APP_URL`
+ * `runtime.appOrigin` in `courier.config.ts` or set the `COURIER_APP_URL`
  * environment variable.
  */
 
 import { ConfigurationError } from "./errors";
 import type { ResolveOrigin } from "./proxy-caller";
 
-const APP_ORIGIN_KEY = Symbol.for("nexus.app-origin");
+const APP_ORIGIN_KEY = Symbol.for("courier.app-origin");
 const g = globalThis as Record<symbol, unknown>;
 
 /** Set the user-app's HTTP origin. Called by `attachRuntime()`. */
@@ -77,22 +77,22 @@ export function getAppOriginParsed(): ResolveOrigin {
     throw new ConfigurationError(
       "APP_ORIGIN_NOT_CONFIGURED",
       [
-        "[nexus] Studio Playground proxy mode requires `appOrigin` to be set.",
+        "[courier] Studio Playground proxy mode requires `appOrigin` to be set.",
         "",
-        "Add it to nexus.config.ts:",
+        "Add it to courier.config.ts:",
         "  export default defineConfig({",
         "    sources: { ... },",
         '    runtime: { appOrigin: "http://localhost:3000" },',
         "  })",
         "",
-        "Or set the NEXUS_APP_URL environment variable:",
-        "  NEXUS_APP_URL=http://localhost:3000 npm run dev",
+        "Or set the COURIER_APP_URL environment variable:",
+        "  COURIER_APP_URL=http://localhost:3000 npm run dev",
         "",
         "There is no auto-fallback because the correct value depends on your",
         "runtime (custom port, Docker host, HTTPS in dev, reverse proxy, etc.)",
         "and a wrong guess would silently route requests to nowhere.",
         "",
-        "See https://nexus.noverax.com/docs/frameworks/nextjs#studio-app-origin",
+        "See https://courier.noverax.cloud/docs/frameworks/nextjs#studio-app-origin",
       ].join("\n"),
     );
   }
@@ -101,7 +101,7 @@ export function getAppOriginParsed(): ResolveOrigin {
     if (!parsed.host) {
       throw new ConfigurationError(
         "APP_ORIGIN_NOT_CONFIGURED",
-        `[nexus] appOrigin="${raw}" has no host component. Use a full URL like "http://localhost:3000".`,
+        `[courier] appOrigin="${raw}" has no host component. Use a full URL like "http://localhost:3000".`,
       );
     }
     return { protocol: parsed.protocol, host: parsed.host };
@@ -109,7 +109,7 @@ export function getAppOriginParsed(): ResolveOrigin {
     if (err instanceof ConfigurationError) throw err;
     throw new ConfigurationError(
       "APP_ORIGIN_NOT_CONFIGURED",
-      `[nexus] appOrigin="${raw}" is not a valid URL: ${err instanceof Error ? err.message : String(err)}`,
+      `[courier] appOrigin="${raw}" is not a valid URL: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
 }
@@ -121,10 +121,10 @@ export function getAppOriginParsed(): ResolveOrigin {
  *
  * # Precedence (most explicit → least)
  *
- *  1. `NEXUS_APP_URL` — purpose-built, namespace-prefixed env var for this
+ *  1. `COURIER_APP_URL` — purpose-built, namespace-prefixed env var for this
  *     exact field. The recommended primary value.
  *  2. `APP_URL` — generic convention used by Laravel, many Node boilerplates,
- *     and `dotenv` templates. Picked up only when `NEXUS_APP_URL` is unset so
+ *     and `dotenv` templates. Picked up only when `COURIER_APP_URL` is unset so
  *     existing project conventions don't require duplicate config.
  *
  * # Explicitly rejected sources (and why)
@@ -133,7 +133,7 @@ export function getAppOriginParsed(): ResolveOrigin {
  * convention (variables with this prefix are inlined into the browser
  * bundle). Reading it for *server-side* Studio config would import the wrong
  * semantic into a framework-agnostic package. Next.js users who want
- * auto-detect should set `NEXUS_APP_URL` explicitly.
+ * auto-detect should set `COURIER_APP_URL` explicitly.
  *
  * **Composed `PROTOCOL` + `HOST` + `PORT`** — three independent variables
  * cannot be combined safely:
@@ -158,8 +158,8 @@ export function detectAppOrigin(): string | undefined {
   if (typeof process === "undefined" || !process.env) return undefined;
   const env = process.env;
 
-  if (typeof env.NEXUS_APP_URL === "string" && env.NEXUS_APP_URL.length > 0) {
-    return env.NEXUS_APP_URL;
+  if (typeof env.COURIER_APP_URL === "string" && env.COURIER_APP_URL.length > 0) {
+    return env.COURIER_APP_URL;
   }
   if (typeof env.APP_URL === "string" && env.APP_URL.length > 0) {
     return env.APP_URL;

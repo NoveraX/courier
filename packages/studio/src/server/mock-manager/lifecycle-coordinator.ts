@@ -1,7 +1,7 @@
 /**
  * Mock lifecycle coordinator — public entry point for the studio server.
  *
- * Subscribes to the `MockRegistry` events (driven from `nexus.config.ts.mocks`
+ * Subscribes to the `MockRegistry` events (driven from `courier.config.ts.mocks`
  * by the config-watcher) and translates them into `ServerState` registrations,
  * managed child-process spawns and UI emissions. Route/collection/scenario
  * metadata for the UI is extracted before spawn via the persistent meta-pool
@@ -10,7 +10,7 @@
  */
 
 import { basename } from "node:path";
-import { createLogger } from "@noverax/nexus";
+import { createLogger } from "@noverax/courier";
 import type { MockEntry } from "../mock-registry";
 import { createProcessEvents } from "./lifecycle-process-events";
 import { createServerOps } from "./lifecycle-server-ops";
@@ -66,7 +66,7 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
   async function materializeAndRegister(entry: MockEntry): Promise<void> {
     const configPath = config.getConfigPath();
     if (!configPath) {
-      log.warn(`Cannot register mock "${entry.key}": nexus.config.ts not loaded`);
+      log.warn(`Cannot register mock "${entry.key}": courier.config.ts not loaded`);
       return;
     }
     const meta = (await metaPool.analyze(configPath, entry.key)) ?? emptyMeta();

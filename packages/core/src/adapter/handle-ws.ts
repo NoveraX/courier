@@ -17,7 +17,7 @@ export type { WSSocketContext } from "./ws-context";
 const log = createLogger("WS");
 
 /**
- * Create a server-side WebSocket handler for Nexus endpoints.
+ * Create a server-side WebSocket handler for Courier endpoints.
  *
  * Sources are read lazily from the core global registry at request time
  * via `requireSources()`. Pass only the behavioral options here; call

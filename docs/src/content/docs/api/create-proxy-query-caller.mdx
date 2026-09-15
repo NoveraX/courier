@@ -3,11 +3,11 @@ export const metadata = { title: "createProxyQueryCaller", description: "Creates
 ## Import
 
 ```ts
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 ```
 
 <Callout variant="info" title="Peer dependency">
-`@noverax/nexus-react` requires `@tanstack/react-query` as a peer dependency. It re-exports `QueryClient`, `QueryClientProvider`, `useQueryClient`, `HydrationBoundary`, and `dehydrate` for convenience.
+`@noverax/courier-react` requires `@tanstack/react-query` as a peer dependency. It re-exports `QueryClient`, `QueryClientProvider`, `useQueryClient`, `HydrationBoundary`, and `dehydrate` for convenience.
 </Callout>
 
 ## Signature
@@ -35,7 +35,7 @@ type QueryGroupClient<G> = {
 ## Setup
 
 ```ts title="lib/query.ts"
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 import { api } from "@/api"
 
 export const q = createProxyQueryCaller<typeof api>("api", {
@@ -52,7 +52,7 @@ The `defaults` argument is a `ProxyCallerDefaults` (same shape as [`createProxyC
 - `source` — the actual `defineApi()` result. Required so the React hooks can resolve SSE/WS metadata and inherit `source.options.proxyPath`.
 
 <Callout variant="warn" title="useChannel requires proxyPath.ws">
-On runtimes that cannot host WebSockets in-process (Next.js App Router, Cloudflare Workers, Vercel Edge, AWS Lambda) you must point `proxyPath.ws` at a [standalone `@noverax/nexus-server`](/docs/deployment/standalone-server). Calling `useChannel` without `proxyPath.ws` configured throws `ConfigurationError("WS_PATH_NOT_CONFIGURED")` at the first subscribe.
+On runtimes that cannot host WebSockets in-process (Next.js App Router, Cloudflare Workers, Vercel Edge, AWS Lambda) you must point `proxyPath.ws` at a [standalone `@noverax/courier-server`](/docs/deployment/standalone-server). Calling `useChannel` without `proxyPath.ws` configured throws `ConfigurationError("WS_PATH_NOT_CONFIGURED")` at the first subscribe.
 </Callout>
 
 ## useQuery
@@ -102,7 +102,7 @@ Variables are passed to the `mutate` function, not to the hook.
 "use client"
 
 import { q } from "@/lib/query"
-import { useQueryClient } from "@noverax/nexus-react"
+import { useQueryClient } from "@noverax/courier-react"
 
 export function CreateUserForm() {
   const queryClient = useQueryClient()
@@ -174,7 +174,7 @@ const { mutate } = q.files.useMutation("upload", {
 Prefetch data in Server Components for instant hydration on the client:
 
 ```ts title="app/users/page.tsx"
-import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/nexus-react"
+import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/courier-react"
 import { q } from "@/lib/query"
 
 export default async function UsersPage() {

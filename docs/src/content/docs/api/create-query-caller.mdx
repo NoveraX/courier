@@ -3,7 +3,7 @@ export const metadata = { title: "createQueryCaller", description: "Creates a di
 ## Import
 
 ```ts
-import { createQueryCaller } from "@noverax/nexus-react"
+import { createQueryCaller } from "@noverax/courier-react"
 ```
 
 <Callout variant="info" title="Direct vs Proxy mode">
@@ -54,7 +54,7 @@ No `proxyPath` or `credentials` — all transports use the `baseURL` from the AP
 ## Setup
 
 ```ts title="lib/query.ts"
-import { createQueryCaller, createQueryKeys } from "@noverax/nexus-react"
+import { createQueryCaller, createQueryKeys } from "@noverax/courier-react"
 import { api } from "@/shared/api"
 
 export const q = createQueryCaller(api, {
@@ -128,7 +128,7 @@ The WebSocket connection goes directly to `${baseURL with ws:// scheme}/${groupP
 Query keys are auto-generated as `[sourceName, group, method, variables?]` where `sourceName` comes from `defineApi({ name })` (or is derived from the baseURL hostname when omitted).
 
 ```ts title="lib/query.ts"
-import { createQueryKeys } from "@noverax/nexus-react"
+import { createQueryKeys } from "@noverax/courier-react"
 import { api } from "@/shared/api"
 
 export const queryKeys = createQueryKeys(api)

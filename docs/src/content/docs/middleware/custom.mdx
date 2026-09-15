@@ -5,7 +5,7 @@ export const metadata = { title: "Custom Middleware", description: "Write your o
 A middleware function receives a `MiddlewareContext` and a `NextFn`, and must return a `Promise<MiddlewareResponse>`. Use `defineMiddleware` for full type inference:
 
 ```ts title="lib/middleware/timing.ts"
-import { defineMiddleware } from "@noverax/nexus/middleware"
+import { defineMiddleware } from "@noverax/courier/middleware"
 
 export const timingMiddleware = defineMiddleware(async (ctx, next) => {
   const start = performance.now()
@@ -34,7 +34,7 @@ type MiddlewareContext = {
 You can read or modify any of these properties before calling `next()`:
 
 ```ts title="lib/middleware/enrich.ts"
-import { defineMiddleware } from "@noverax/nexus/middleware"
+import { defineMiddleware } from "@noverax/courier/middleware"
 
 export const enrichMiddleware = defineMiddleware(async (ctx, next) => {
   // Add a custom header
@@ -68,7 +68,7 @@ const passthrough = defineMiddleware(async (_ctx, next) => {
 Await `next()`, then modify the response before returning:
 
 ```ts title="lib/middleware/unwrap.ts"
-import { defineMiddleware } from "@noverax/nexus/middleware"
+import { defineMiddleware } from "@noverax/courier/middleware"
 
 // Unwrap a { data, meta } API envelope
 export const unwrapMiddleware = defineMiddleware(async (_ctx, next) => {
@@ -91,7 +91,7 @@ export const unwrapMiddleware = defineMiddleware(async (_ctx, next) => {
 Return a `MiddlewareResponse` without calling `next()` to prevent the request from executing:
 
 ```ts title="lib/middleware/maintenance.ts"
-import { defineMiddleware } from "@noverax/nexus/middleware"
+import { defineMiddleware } from "@noverax/courier/middleware"
 
 export const maintenanceMiddleware = defineMiddleware(async (_ctx, _next) => {
   if (isMaintenanceMode()) {
@@ -111,7 +111,7 @@ export const maintenanceMiddleware = defineMiddleware(async (_ctx, _next) => {
 Call `next()` multiple times to implement retry logic:
 
 ```ts title="lib/middleware/retry-on-stale.ts"
-import { defineMiddleware } from "@noverax/nexus/middleware"
+import { defineMiddleware } from "@noverax/courier/middleware"
 
 export const retryOnStale = defineMiddleware(async (ctx, next) => {
   const response = await next()
@@ -131,7 +131,7 @@ export const retryOnStale = defineMiddleware(async (ctx, next) => {
 Wrap `next()` in a try/catch to intercept errors from downstream middleware or the endpoint handler:
 
 ```ts title="lib/middleware/error-reporter.ts"
-import { defineMiddleware } from "@noverax/nexus/middleware"
+import { defineMiddleware } from "@noverax/courier/middleware"
 import * as Sentry from "@sentry/node"
 
 export const errorReporter = defineMiddleware(async (ctx, next) => {
@@ -159,8 +159,8 @@ If you catch an error, either re-throw it or return a valid `MiddlewareResponse`
 For configurable middleware, write a factory function that returns a `MiddlewareFn`:
 
 ```ts title="lib/middleware/timeout.ts"
-import { defineMiddleware } from "@noverax/nexus/middleware"
-import type { MiddlewareFn } from "@noverax/nexus"
+import { defineMiddleware } from "@noverax/courier/middleware"
+import type { MiddlewareFn } from "@noverax/courier"
 
 export function timeoutMiddleware(ms: number): MiddlewareFn {
   return defineMiddleware(async (_ctx, next) => {
@@ -203,7 +203,7 @@ const api = defineApi({
 Use `composeMiddleware` to bundle multiple middleware into a reusable unit:
 
 ```ts title="lib/middleware/production.ts"
-import { composeMiddleware } from "@noverax/nexus/middleware"
+import { composeMiddleware } from "@noverax/courier/middleware"
 import { errorReporter } from "./error-reporter"
 import { timingMiddleware } from "./timing"
 import { unwrapMiddleware } from "./unwrap"
@@ -219,7 +219,7 @@ export const productionMiddleware = composeMiddleware([
 Then use the composed middleware in your source definition:
 
 ```ts title="lib/sources.ts"
-import { defineApi } from "@noverax/nexus/define"
+import { defineApi } from "@noverax/courier/define"
 import { productionMiddleware } from "./middleware/production"
 
 const api = defineApi({
@@ -234,7 +234,7 @@ const api = defineApi({
 Apply middleware only for specific sources, groups, or methods by checking `ctx`:
 
 ```ts title="lib/middleware/admin-only.ts"
-import { defineMiddleware } from "@noverax/nexus/middleware"
+import { defineMiddleware } from "@noverax/courier/middleware"
 
 export const adminGuard = defineMiddleware(async (ctx, next) => {
   // Only enforce on admin endpoints

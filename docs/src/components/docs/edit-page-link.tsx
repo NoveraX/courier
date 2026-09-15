@@ -3,7 +3,7 @@
 import { SquarePen } from "lucide-react"
 import { usePathname } from "next/navigation"
 
-const EDIT_BASE = "https://github.com/NoveraX/nexus/edit/master/docs"
+const EDIT_BASE = "https://github.com/NoveraX/courier/edit/master/docs"
 
 export function EditPageLink() {
   const pathname = usePathname()

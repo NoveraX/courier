@@ -55,7 +55,7 @@ function sseRequest(params: string, headers?: Record<string, string>): Request {
   });
 }
 
-const HOOKS_KEY = Symbol.for("nexus.studio.hooks");
+const HOOKS_KEY = Symbol.for("courier.studio.hooks");
 const hooks = (globalThis as Record<symbol, unknown>)[HOOKS_KEY] as StudioHooks;
 
 /** Install mock studio hooks on the shared singleton, returns cleanup fn */
@@ -233,7 +233,7 @@ describe("handleSSE — studio hooks", () => {
     cleanup();
   });
 
-  it("uses x-nexus-playground-rid header as requestId when present (Studio Playground correlation)", async () => {
+  it("uses x-courier-playground-rid header as requestId when present (Studio Playground correlation)", async () => {
     const onStreamOpen = vi.fn();
     const onStreamMessage = vi.fn();
     const onStreamClose = vi.fn();
@@ -248,7 +248,7 @@ describe("handleSSE — studio hooks", () => {
     const PLAYGROUND_RID = "playground-rid-abc-123";
     const res = await handleSSE(
       sseRequest("_s=testSource&_g=notifications&_m=feed", {
-        "x-nexus-playground-rid": PLAYGROUND_RID,
+        "x-courier-playground-rid": PLAYGROUND_RID,
       }),
     );
     await collectSSEText(res);
@@ -264,7 +264,7 @@ describe("handleSSE — studio hooks", () => {
     cleanup();
   });
 
-  it("falls back to generated requestId when x-nexus-playground-rid is absent", async () => {
+  it("falls back to generated requestId when x-courier-playground-rid is absent", async () => {
     const onStreamOpen = vi.fn();
     const cleanup = installHooks({ onStreamOpen });
 
@@ -284,7 +284,7 @@ describe("handleSSE — studio hooks", () => {
     cleanup();
   });
 
-  it("registers in playground abort registry when x-nexus-playground-rid is set, and abortPlayground force-closes the stream", async () => {
+  it("registers in playground abort registry when x-courier-playground-rid is set, and abortPlayground force-closes the stream", async () => {
     const { abortPlayground, playgroundAbortRegistrySize, clearPlaygroundAbortRegistry } =
       await import("../src/studio");
     clearPlaygroundAbortRegistry();
@@ -313,7 +313,7 @@ describe("handleSSE — studio hooks", () => {
     // Start the SSE stream — do NOT await collectSSEText (it would hang).
     const responsePromise = handleSSE(
       sseRequest("_s=testSource&_g=notifications&_m=feed", {
-        "x-nexus-playground-rid": PLAYGROUND_RID,
+        "x-courier-playground-rid": PLAYGROUND_RID,
       }),
     );
 

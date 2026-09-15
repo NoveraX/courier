@@ -2,7 +2,7 @@
  * Browser logger — CSS-styled console output with brand colors.
  *
  * Output format:
- *   [Nexus] [Context] message
+ *   [Courier] [Context] message
  *   with purple badge, colored context, and styled message
  */
 
@@ -32,7 +32,7 @@ const CONSOLE_METHOD: Record<LogLevel, "debug" | "log" | "warn" | "error"> = {
 function log(level: LogLevel, context: string, message: string, cause?: unknown): void {
   const method = CONSOLE_METHOD[level];
   const args: unknown[] = [
-    `%c Nexus %c %c${context}%c ${message}`,
+    `%c Courier %c %c${context}%c ${message}`,
     BADGE_STYLE,
     "",
     CONTEXT_STYLES[level],

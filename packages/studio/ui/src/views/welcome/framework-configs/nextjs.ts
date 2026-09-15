@@ -14,7 +14,7 @@ export const NEXTJS: FrameworkConfig = {
   name: "Next.js",
   description: "App Router v14+ (Turbopack & Webpack)",
   steps: [
-    installStep("@noverax/nexus-studio @noverax/nexus-studio-core"),
+    installStep("@noverax/courier-studio @noverax/courier-studio-core"),
     {
       id: "instrument-client",
       title: "Add client instrumentation",
@@ -25,7 +25,7 @@ export const NEXTJS: FrameworkConfig = {
         {
           label: "Turbopack (v15.3+)",
           filePath: "instrumentation-client.ts",
-          code: `import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
+          code: `import { attachRuntime } from "@noverax/courier-studio-core/runtime";
 
 if (process.env.NODE_ENV === "development") {
   attachRuntime("next-browser");
@@ -34,21 +34,21 @@ if (process.env.NODE_ENV === "development") {
         {
           label: "Webpack / v14",
           filePath: "next.config.ts",
-          code: `import { withNexusStudio } from "@noverax/nexus-studio/next";
+          code: `import { withCourierStudio } from "@noverax/courier-studio/next";
 
 const nextConfig = {
   // Next.js 14 only — remove for v15+
   experimental: { instrumentationHook: true },
 };
 
-export default withNexusStudio()(nextConfig);`,
+export default withCourierStudio()(nextConfig);`,
         },
       ],
     },
     {
       id: "instrument-server",
       title: "Add server instrumentation",
-      description: "Tracks server-side requests. Runs once on server startup in the Node.js runtime. Auto-loads sources from nexus.config.ts.",
+      description: "Tracks server-side requests. Runs once on server startup in the Node.js runtime. Auto-loads sources from courier.config.ts.",
       icon: Server,
       actionLabel: "Copy snippet",
       filePath: "instrumentation.ts",
@@ -56,7 +56,7 @@ export default withNexusStudio()(nextConfig);`,
       code: `export async function register() {
   // Only instrument in Node.js runtime (not Edge)
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { attachRuntime } = await import("@noverax/nexus-studio-core/runtime");
+    const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
     await attachRuntime();
   }
 }`,

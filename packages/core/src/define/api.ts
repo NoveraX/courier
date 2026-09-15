@@ -9,7 +9,7 @@ import type {
 } from "./types";
 
 /** Symbol for storing source name on the source object — survives module duplication */
-const SOURCE_NAME_KEY = Symbol.for("nexus.source.name");
+const SOURCE_NAME_KEY = Symbol.for("courier.source.name");
 
 /** Derive a human-readable name from baseURL hostname */
 function deriveSourceName(baseURL?: string): string {
@@ -32,7 +32,7 @@ export function getSourceName(source: unknown): string | undefined {
 /**
  * Forcibly stamp `name` onto `source` as its canonical source name.
  *
- * Use when an explicit identifier (e.g. a `nexus.config.ts` `sources` key)
+ * Use when an explicit identifier (e.g. a `courier.config.ts` `sources` key)
  * must override the value derived inside `defineApi`. The internal symbol
  * stays private — call this helper instead of touching it directly.
  */
@@ -76,7 +76,7 @@ export function setSourceName(source: unknown, name: string): void {
  *     http: "/api/request",
  *     sse: "/api/sse",
  *     // Required for WS endpoints. On Next.js / Cloudflare / Vercel Edge,
- *     // run @noverax/nexus-server separately and point this at it.
+ *     // run @noverax/courier-server separately and point this at it.
  *     ws: "wss://realtime.example.com",
  *   },
  *   groups: { chat: chatGroup },

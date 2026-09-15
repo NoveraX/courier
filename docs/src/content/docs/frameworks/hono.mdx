@@ -1,17 +1,17 @@
-export const metadata = { title: "Hono", description: "Hono server adapter using nexusHandler — works on Node.js, Bun, Deno, and Cloudflare Workers.", mode: "proxy" }
+export const metadata = { title: "Hono", description: "Hono server adapter using courierHandler — works on Node.js, Bun, Deno, and Cloudflare Workers.", mode: "proxy" }
 
-The `@noverax/nexus-hono` adapter lets you host the Nexus proxy route on any Hono-supported runtime: Node.js, Bun, Deno, and Cloudflare Workers.
+The `@noverax/courier-hono` adapter lets you host the Courier proxy route on any Hono-supported runtime: Node.js, Bun, Deno, and Cloudflare Workers.
 
 ## Installation
 
 ```bash
-npm install @noverax/nexus @noverax/nexus-hono hono
+npm install @noverax/courier @noverax/courier-hono hono
 ```
 
 ## Define your API sources
 
 ```ts title="lib/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: number; name: string; email: string }
 
@@ -36,13 +36,13 @@ export const sources = { myApi: api }
 
 ## Setup
 
-Create a Hono app with the Nexus handler:
+Create a Hono app with the Courier handler:
 
 ```ts title="src/index.ts"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { registerSources } from "@noverax/nexus"
-import { nexusHandler } from "@noverax/nexus-hono"
+import { registerSources } from "@noverax/courier"
+import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./lib/sources"
 
 registerSources(sources)
@@ -51,12 +51,12 @@ const app = new Hono()
 
 app.use("/api/*", cors())
 
-app.all("/api/request", nexusHandler())
+app.all("/api/request", courierHandler())
 
 export default app
 ```
 
-That is all you need. The `nexusHandler` function returns a standard Hono handler that processes incoming Nexus proxy requests and forwards them to your backend.
+That is all you need. The `courierHandler` function returns a standard Hono handler that processes incoming Courier proxy requests and forwards them to your backend.
 
 ## Runtime-specific entry points
 
@@ -66,8 +66,8 @@ That is all you need. The `nexusHandler` function returns a standard Hono handle
 import { serve } from "@hono/node-server"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { registerSources } from "@noverax/nexus"
-import { nexusHandler } from "@noverax/nexus-hono"
+import { registerSources } from "@noverax/courier"
+import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./lib/sources"
 
 registerSources(sources)
@@ -75,7 +75,7 @@ registerSources(sources)
 const app = new Hono()
 
 app.use("/api/*", cors())
-app.all("/api/request", nexusHandler())
+app.all("/api/request", courierHandler())
 
 serve({ fetch: app.fetch, port: 3001 }, (info) => {
   console.log(`Server running on http://localhost:${info.port}`)
@@ -87,8 +87,8 @@ serve({ fetch: app.fetch, port: 3001 }, (info) => {
 ```ts title="src/index.ts"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { registerSources } from "@noverax/nexus"
-import { nexusHandler } from "@noverax/nexus-hono"
+import { registerSources } from "@noverax/courier"
+import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./lib/sources"
 
 registerSources(sources)
@@ -96,7 +96,7 @@ registerSources(sources)
 const app = new Hono()
 
 app.use("/api/*", cors())
-app.all("/api/request", nexusHandler())
+app.all("/api/request", courierHandler())
 
 export default {
   port: 3001,
@@ -109,8 +109,8 @@ export default {
 ```ts title="src/index.ts"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { registerSources } from "@noverax/nexus"
-import { nexusHandler } from "@noverax/nexus-hono"
+import { registerSources } from "@noverax/courier"
+import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./lib/sources.ts"
 
 registerSources(sources)
@@ -118,7 +118,7 @@ registerSources(sources)
 const app = new Hono()
 
 app.use("/api/*", cors())
-app.all("/api/request", nexusHandler())
+app.all("/api/request", courierHandler())
 
 Deno.serve({ port: 3001 }, app.fetch)
 ```
@@ -128,8 +128,8 @@ Deno.serve({ port: 3001 }, app.fetch)
 ```ts title="src/index.ts"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { registerSources } from "@noverax/nexus"
-import { nexusHandler } from "@noverax/nexus-hono"
+import { registerSources } from "@noverax/courier"
+import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./lib/sources"
 
 registerSources(sources)
@@ -137,24 +137,24 @@ registerSources(sources)
 const app = new Hono()
 
 app.use("/api/*", cors())
-app.all("/api/request", nexusHandler())
+app.all("/api/request", courierHandler())
 
 export default app
 ```
 
 <Callout variant="info" title="Same handler, any runtime">
-The `nexusHandler` function uses the standard Web API `Request`/`Response` objects, so it works identically across all Hono-supported runtimes with zero configuration changes.
+The `courierHandler` function uses the standard Web API `Request`/`Response` objects, so it works identically across all Hono-supported runtimes with zero configuration changes.
 </Callout>
 
 ## Adding other routes
 
-The Nexus handler only handles the proxy route. You can add any other Hono routes alongside it:
+The Courier handler only handles the proxy route. You can add any other Hono routes alongside it:
 
 ```ts title="src/index.ts"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { registerSources } from "@noverax/nexus"
-import { nexusHandler } from "@noverax/nexus-hono"
+import { registerSources } from "@noverax/courier"
+import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./lib/sources"
 
 registerSources(sources)
@@ -163,8 +163,8 @@ const app = new Hono()
 
 app.use("/api/*", cors())
 
-// Nexus proxy route
-app.all("/api/request", nexusHandler())
+// Courier proxy route
+app.all("/api/request", courierHandler())
 
 // Your own routes
 app.get("/health", (c) => c.json({ status: "ok" }))
@@ -178,28 +178,28 @@ export default app
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
-Wire your Hono app into Studio with a single `attachRuntime()` call. It auto-loads `nexus.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `nexus.config.ts.runtime.appOrigin` (or set the `NEXUS_APP_URL` env var to override per-environment).
+Wire your Hono app into Studio with a single `attachRuntime()` call. It auto-loads `courier.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `courier.config.ts.runtime.appOrigin` (or set the `COURIER_APP_URL` env var to override per-environment).
 
 ```ts title="src/index.ts"
 import { serve } from "@hono/node-server"
 import { Hono } from "hono"
-import { nexusHandler } from "@noverax/nexus-hono"
-import { attachRuntime } from "@noverax/nexus-studio-core/runtime"
+import { courierHandler } from "@noverax/courier-hono"
+import { attachRuntime } from "@noverax/courier-studio-core/runtime"
 
 if (process.env.NODE_ENV !== "production") {
   await attachRuntime()
 }
 
 const app = new Hono()
-app.all("/api/request", nexusHandler())
+app.all("/api/request", courierHandler())
 
 serve({ fetch: app.fetch, port: 3001 })
 ```
 
-Alternatively, set `NEXUS_APP_URL` instead of pinning `appOrigin` in the config:
+Alternatively, set `COURIER_APP_URL` instead of pinning `appOrigin` in the config:
 
 ```bash
-NEXUS_APP_URL=http://localhost:3001 node src/index.js
+COURIER_APP_URL=http://localhost:3001 node src/index.js
 ```
 
 <Callout variant="warn" title="Edge runtimes">
@@ -217,10 +217,10 @@ On the client, point your caller to this server's proxy URL. Choose the guide fo
 - [React (Vite / CRA)](/docs/frameworks/react) — `createProxyQueryCaller` with React Query hooks
 - [Vue](/docs/frameworks/vue) — `createProxyCaller` with composables
 - [Next.js](/docs/frameworks/nextjs) — full-stack with `apiRoute` and `createProxyQueryCaller`
-- [Nuxt](/docs/frameworks/nuxt) — full-stack with `nexusHandler` and `createProxyCaller`
+- [Nuxt](/docs/frameworks/nuxt) — full-stack with `courierHandler` and `createProxyCaller`
 
 ```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import type { api } from "../shared/sources"
 
 export const caller = createProxyCaller<typeof api>({

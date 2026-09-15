@@ -19,8 +19,8 @@
  * propagates up to the user-app's startup path.
  */
 
-import { getSources } from "@noverax/nexus";
-import { getSourceName } from "@noverax/nexus/define";
+import { getSources } from "@noverax/courier";
+import { getSourceName } from "@noverax/courier/define";
 import type { io as ioFn } from "socket.io-client";
 import type { EventBus } from "../event-bus";
 import type { BufferedAnnouncement } from "./announce-hosting";

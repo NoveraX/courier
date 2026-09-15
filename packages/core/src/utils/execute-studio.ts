@@ -105,6 +105,6 @@ export function attachFetchHook(
 /** Inject timing headers for browser-side network measurement */
 export function injectTimingHeaders(response: Response, requestId: string, t0: number): void {
   const tTotal = performance.now() - t0;
-  response.headers.set("Server-Timing", `nexus;dur=${tTotal.toFixed(1)}`);
-  response.headers.set("X-Nexus-Rid", requestId);
+  response.headers.set("Server-Timing", `courier;dur=${tTotal.toFixed(1)}`);
+  response.headers.set("X-Courier-Rid", requestId);
 }

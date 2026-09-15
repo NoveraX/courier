@@ -1,13 +1,13 @@
 <div align="center">
   <br />
 
-  # @noverax/nexus-astro
+  # @noverax/courier-astro
 
-  **Astro adapter for Nexus.**
+  **Astro adapter for Courier.**
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus-astro"><img src="https://img.shields.io/npm/v/@noverax/nexus-astro?color=7c3aed&style=flat-square" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier-astro"><img src="https://img.shields.io/npm/v/@noverax/courier-astro?color=7c3aed&style=flat-square" alt="npm" /></a>
 
   <br />
 </div>
@@ -17,14 +17,14 @@
 ## Install
 
 ```bash
-npm install @noverax/nexus-astro @noverax/nexus astro
+npm install @noverax/courier-astro @noverax/courier astro
 ```
 
 ## Usage
 
 ```ts
 // src/middleware.ts
-import { registerSources } from "@noverax/nexus"
+import { registerSources } from "@noverax/courier"
 import { sources } from "./api"
 
 registerSources(sources)
@@ -32,21 +32,21 @@ registerSources(sources)
 
 ```ts
 // src/pages/api/request.ts
-import { nexusHandler } from "@noverax/nexus-astro"
+import { courierHandler } from "@noverax/courier-astro"
 
-const handler = nexusHandler()
+const handler = courierHandler()
 export const GET = handler
 export const POST = handler
 ```
 
-`nexusHandler()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` at module load. Works with both static and SSR output modes.
+`courierHandler()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` at module load. Works with both static and SSR output modes.
 
 ## With Frontend
 
 Pair with `createProxyCaller` on the client:
 
 ```ts
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 
 const caller = createProxyCaller({ proxyPath: { http: "/api/request" } })
 const users = await caller.users.getAll()
@@ -54,7 +54,7 @@ const users = await caller.users.getAll()
 
 ## API
 
-### `nexusHandler()`
+### `courierHandler()`
 
 Creates an Astro API endpoint handler. Returns a function compatible with Astro's `GET`/`POST` exports.
 

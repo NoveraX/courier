@@ -2,8 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "paths": {
-      "@noverax/nexus": ["../core/src/index.ts"],
-      "@noverax/nexus/define": ["../core/src/define/index.ts"]
+      "@noverax/courier": ["../core/src/index.ts"],
+      "@noverax/courier/define": ["../core/src/define/index.ts"]
     }
   },
   "include": ["src/**/*", "tsup.config.ts"]

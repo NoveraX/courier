@@ -1,4 +1,4 @@
-import type { DefinedApi } from "@noverax/nexus/define";
+import type { DefinedApi } from "@noverax/courier/define";
 import type { TypedMockFn } from "../types";
 
 /** A group of handlers scoped to a domain (MSW-style organization) */

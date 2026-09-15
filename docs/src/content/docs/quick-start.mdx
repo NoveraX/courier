@@ -5,7 +5,7 @@ export const metadata = { title: "Quick Start", description: "Define your API, s
 Create a file with your API definition using `defineApi`, `defineGroup`, and `endpoint`:
 
 ```ts title="api/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: string; name: string; email: string }
 
@@ -37,7 +37,7 @@ Choose the mode that fits your use case:
 **Direct mode** — call your backend from any runtime:
 
 ```ts title="lib/caller.ts"
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api/sources"
 
 export const caller = createCaller(api)
@@ -46,7 +46,7 @@ export const caller = createCaller(api)
 **Proxy mode** — browser requests go through your server (hides API keys, bypasses CORS):
 
 ```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import type { api } from "@/api/sources"
 
 export const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
@@ -55,7 +55,7 @@ export const caller = createProxyCaller<typeof api>("api", { source: api, proxyP
 **React Query** — hooks with full type inference:
 
 ```ts title="lib/query.ts"
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 import type { api } from "@/api/sources"
 
 export const q = createProxyQueryCaller<typeof api>("api")
@@ -113,7 +113,7 @@ export default async function DashboardPage() {
 **Vanilla TypeScript (no framework):**
 
 ```ts
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "./api/sources"
 
 const caller = createCaller(api)
@@ -126,7 +126,7 @@ const user = await caller.users.getById({ id: "1" })
 
 When you call `caller.users.getById({ id: "5" })`:
 
-1. Nexus resolves the `users` group and `getById` method
+1. Courier resolves the `users` group and `getById` method
 2. The `:id` path parameter is extracted from variables → `GET /users/5`
 3. Middleware chain runs (retry, auth, logging, etc.)
 4. Schema validation runs (if configured)

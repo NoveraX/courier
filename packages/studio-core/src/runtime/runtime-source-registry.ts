@@ -9,12 +9,12 @@
  * `core/src/announce` is pinned.
  */
 
-import type { AnySource, Sources } from "@noverax/nexus/define";
-import { getSourceName } from "@noverax/nexus/define";
+import type { AnySource, Sources } from "@noverax/courier/define";
+import { getSourceName } from "@noverax/courier/define";
 import { consumeAnnouncements } from "./announce-hosting";
 
-const REGISTRY_KEY = Symbol.for("nexus.studio.runtime-source-registry");
-const INSTALLED_KEY = Symbol.for("nexus.studio.runtime-source-registry-installed");
+const REGISTRY_KEY = Symbol.for("courier.studio.runtime-source-registry");
+const INSTALLED_KEY = Symbol.for("courier.studio.runtime-source-registry-installed");
 
 const g = globalThis as Record<symbol, unknown>;
 

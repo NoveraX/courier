@@ -6,8 +6,8 @@ import type { StudioHooks } from "./hooks";
  * (e.g. instrumentation context vs route handler context). Using `globalThis`
  * ensures a single hooks object across all instances.
  */
-const HOOKS_KEY = Symbol.for("nexus.studio.hooks");
-const COUNTER_KEY = Symbol.for("nexus.studio.counter");
+const HOOKS_KEY = Symbol.for("courier.studio.hooks");
+const COUNTER_KEY = Symbol.for("courier.studio.counter");
 
 const g = globalThis as Record<symbol, unknown>;
 

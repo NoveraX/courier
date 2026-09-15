@@ -13,7 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { loadNexusConfig } from "../src/runtime/load-config";
+import { loadCourierConfig } from "../src/runtime/load-config";
 
 /**
  * The loader delegates to c12, which uses jiti to transpile TS configs.
@@ -27,7 +27,7 @@ const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../node_modules");
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "nexus-load-config-"));
+  dir = mkdtempSync(join(tmpdir(), "courier-load-config-"));
 });
 
 afterEach(() => {
@@ -40,30 +40,30 @@ function writeConfig(relPath: string, body: string): void {
   writeFileSync(full, body, "utf-8");
 }
 
-describe("loadNexusConfig — base loader", () => {
+describe("loadCourierConfig — base loader", () => {
   it("returns null when no config file exists in the walk-up chain", async () => {
     const nested = join(dir, "a", "b", "c");
     mkdirSync(nested, { recursive: true });
-    const result = await loadNexusConfig({ cwd: nested });
+    const result = await loadCourierConfig({ cwd: nested });
     expect(result).toBeNull();
   });
 
   it("loads a minimal config from the starting directory", async () => {
     writeConfig(
-      "nexus.config.ts",
+      "courier.config.ts",
       `export default { sources: { api: { options: { baseURL: "http://x" } } } };`,
     );
-    const result = await loadNexusConfig({ cwd: dir });
+    const result = await loadCourierConfig({ cwd: dir });
     expect(result).not.toBeNull();
-    expect(result?.configFile).toBe(realpathSync(resolve(join(dir, "nexus.config.ts"))));
+    expect(result?.configFile).toBe(realpathSync(resolve(join(dir, "courier.config.ts"))));
     expect(Object.keys(result?.config.sources ?? {})).toEqual(["api"]);
   });
 
   it("walks up multiple levels by default to find config at an ancestor", async () => {
     const deep = join(dir, "src", "app", "api");
     mkdirSync(deep, { recursive: true });
-    writeConfig("nexus.config.ts", `export default { sources: { walked: {} } };`);
-    const result = await loadNexusConfig({ cwd: deep });
+    writeConfig("courier.config.ts", `export default { sources: { walked: {} } };`);
+    const result = await loadCourierConfig({ cwd: deep });
     expect(result).not.toBeNull();
     expect(Object.keys(result?.config.sources ?? {})).toEqual(["walked"]);
   });
@@ -72,51 +72,51 @@ describe("loadNexusConfig — base loader", () => {
     const deep = join(dir, "src", "app");
     mkdirSync(deep, { recursive: true });
     // Config only exists at the root — walk-up would find it, requireAtCwd must not.
-    writeConfig("nexus.config.ts", `export default { sources: { root: {} } };`);
-    const result = await loadNexusConfig({ cwd: deep, requireAtCwd: true });
+    writeConfig("courier.config.ts", `export default { sources: { root: {} } };`);
+    const result = await loadCourierConfig({ cwd: deep, requireAtCwd: true });
     expect(result).toBeNull();
   });
 
   it("returns the config when requireAtCwd is true and a local file exists", async () => {
-    writeConfig("nexus.config.ts", `export default { sources: { local: {} } };`);
-    const result = await loadNexusConfig({ cwd: dir, requireAtCwd: true });
+    writeConfig("courier.config.ts", `export default { sources: { local: {} } };`);
+    const result = await loadCourierConfig({ cwd: dir, requireAtCwd: true });
     expect(result).not.toBeNull();
     expect(Object.keys(result?.config.sources ?? {})).toEqual(["local"]);
   });
 
   it("returns null on a config that throws at import time", async () => {
-    writeConfig("nexus.config.ts", `throw new Error("boom during import");`);
-    const result = await loadNexusConfig({ cwd: dir });
+    writeConfig("courier.config.ts", `throw new Error("boom during import");`);
+    const result = await loadCourierConfig({ cwd: dir });
     expect(result).toBeNull();
   });
 
   it("loads runtime.appOrigin field when present", async () => {
     writeConfig(
-      "nexus.config.ts",
+      "courier.config.ts",
       `export default {
         sources: { api: {} },
         runtime: { appOrigin: "http://localhost:3000" },
       };`,
     );
-    const result = await loadNexusConfig({ cwd: dir });
+    const result = await loadCourierConfig({ cwd: dir });
     expect(result?.config.runtime?.appOrigin).toBe("http://localhost:3000");
   });
 
   it("resolves bare imports inside the config (defineApi integration)", async () => {
     // This test exercises the full jiti/c12 pipeline including node_modules
-    // resolution — symmetric to how a user's real nexus.config.ts would
-    // import from @noverax/nexus/define.
+    // resolution — symmetric to how a user's real courier.config.ts would
+    // import from @noverax/courier/define.
     symlinkSync(REPO_NODE_MODULES, join(dir, "node_modules"), "dir");
     writeConfig(
-      "nexus.config.ts",
-      `import { defineApi } from "@noverax/nexus/define";
+      "courier.config.ts",
+      `import { defineApi } from "@noverax/courier/define";
        export default {
          sources: {
            stripe: defineApi({ baseURL: "https://api.example.com", endpoints: {} }),
          },
        };`,
     );
-    const result = await loadNexusConfig({ cwd: dir });
+    const result = await loadCourierConfig({ cwd: dir });
     expect(result).not.toBeNull();
     expect(Object.keys(result?.config.sources ?? {})).toEqual(["stripe"]);
   });

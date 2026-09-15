@@ -76,9 +76,9 @@ export async function sendFetch(
   }
 }
 
-/** Parse Server-Timing header to extract nexus duration (ms) */
+/** Parse Server-Timing header to extract courier duration (ms) */
 function parseServerTimingDur(header: string): number {
-  const match = /nexus;dur=([\d.]+)/.exec(header);
+  const match = /courier;dur=([\d.]+)/.exec(header);
   return match?.[1] ? parseFloat(match[1]) : 0;
 }
 
@@ -86,7 +86,7 @@ function parseServerTimingDur(header: string): number {
 function emitClientTiming(response: Response, t0: number, tHeaders: number): void {
   if (t0 === 0) return;
   const tEnd = performance.now();
-  const rid = response.headers.get("x-nexus-rid");
+  const rid = response.headers.get("x-courier-rid");
   const stHeader = response.headers.get("server-timing");
   if (!rid || !stHeader) return;
 

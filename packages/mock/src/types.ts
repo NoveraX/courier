@@ -1,5 +1,5 @@
-import type { DefinedApi, Endpoint } from "@noverax/nexus/define";
-import type { ChannelHandlers, SSEEvent } from "@noverax/nexus/realtime";
+import type { DefinedApi, Endpoint } from "@noverax/courier/define";
+import type { ChannelHandlers, SSEEvent } from "@noverax/courier/realtime";
 
 /** Extract response type from an endpoint */
 export type ExtractResponse<TEndpoint> =

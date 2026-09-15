@@ -56,7 +56,7 @@ describe("Record & Replay", () => {
       const har = recorder.toHar();
       expect(har.log.version).toBe("1.2");
       expect(har.log.entries).toHaveLength(1);
-      expect(har.log.entries[0]?._nexus.group).toBe("users");
+      expect(har.log.entries[0]?._courier.group).toBe("users");
       expect(har.log.entries[0]?.response.status).toBe(200);
     });
 

@@ -1,14 +1,14 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 
-import { createHandler, createLogger, createWSHandler, registerSources } from "@noverax/nexus";
-import { announceHosting } from "@noverax/nexus/announce";
-import { sendWebResponse, toWebRequest } from "@noverax/nexus/node";
+import { createHandler, createLogger, createWSHandler, registerSources } from "@noverax/courier";
+import { announceHosting } from "@noverax/courier/announce";
+import { sendWebResponse, toWebRequest } from "@noverax/courier/node";
 import type { WebSocketServer } from "ws";
 
 import { handleCors, handleHealth } from "./http-handlers";
 import { createShutdown, setupSignalHandlers } from "./shutdown";
-import type { NexusServer, NexusServerConfig } from "./types";
+import type { CourierServer, CourierServerConfig } from "./types";
 
 const log = createLogger("Server");
 
@@ -17,21 +17,21 @@ const DEFAULT_HOST = "localhost";
 const DEFAULT_MAX_PAYLOAD = 65_536;
 
 /**
- * Create a standalone HTTP + WebSocket server for Nexus.
+ * Create a standalone HTTP + WebSocket server for Courier.
  * Handles GET/POST/SSE via createHandler and WS upgrades via createWSHandler.
  *
  * @param config — server configuration with sources, port, CORS, WS options
- * @returns NexusServer with `url`, `stop()`, and connection registries
+ * @returns CourierServer with `url`, `stop()`, and connection registries
  *
  * @example
  * ```ts
- * const server = createNexusServer({ sources: { api }, port: 3001 });
+ * const server = createCourierServer({ sources: { api }, port: 3001 });
  * // server.url → "http://localhost:3001"
  * // server.sseConnections.count → active SSE streams
  * // await server.stop() — graceful shutdown
  * ```
  */
-export function createNexusServer(config: NexusServerConfig): NexusServer {
+export function createCourierServer(config: CourierServerConfig): CourierServer {
   const {
     sources,
     port = DEFAULT_PORT,
@@ -51,7 +51,7 @@ export function createNexusServer(config: NexusServerConfig): NexusServer {
   // Standalone server publishes sources into the core global registry so
   // `createHandler()` and `createWSHandler()` read them lazily via
   // `requireSources()` at request time. This matches the zero-arg adapter
-  // handler convention (`nexusHandler()` / `apiRoute()`) — the registry is
+  // handler convention (`courierHandler()` / `apiRoute()`) — the registry is
   // the single source of truth for in-process source lookup.
   registerSources(sources);
 
@@ -76,7 +76,7 @@ export function createNexusServer(config: NexusServerConfig): NexusServer {
   let wss: WebSocketServer | undefined;
   let shuttingDown = false;
 
-  const result: NexusServer = {
+  const result: CourierServer = {
     url: `http://${host}:${port}`,
     stop: wrappedStop,
     sseConnections: handler.sseConnections,

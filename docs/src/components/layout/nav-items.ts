@@ -37,8 +37,8 @@ export const docsNav: NavSection[] = [
     icon: BookOpen,
     defaultOpen: true,
     items: [
-      { title: "What is Nexus?", href: "/docs/introduction" },
-      { title: "Why Nexus?", href: "/docs/why-nexus" },
+      { title: "What is Courier?", href: "/docs/introduction" },
+      { title: "Why Courier?", href: "/docs/why-courier" },
       { title: "Architecture", href: "/docs/architecture" },
     ],
   },

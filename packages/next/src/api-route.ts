@@ -1,6 +1,6 @@
-import type { HandlerConfig } from "@noverax/nexus";
-import { createHandler, getAppOrigin, requireSources, setAppOrigin } from "@noverax/nexus";
-import { announceHosting } from "@noverax/nexus/announce";
+import type { HandlerConfig } from "@noverax/courier";
+import { createHandler, getAppOrigin, requireSources, setAppOrigin } from "@noverax/courier";
+import { announceHosting } from "@noverax/courier/announce";
 import type { NextRequest } from "next/server";
 
 /**
@@ -24,7 +24,7 @@ function tryDiscoverAppOrigin(request: Request): void {
 }
 
 /**
- * Create Next.js App Router handlers for the nexus proxy.
+ * Create Next.js App Router handlers for the courier proxy.
  *
  * Announces `transports: ["http"]` to Studio so the binding table knows the
  * Next.js runtime owns HTTP delivery for these sources. Next.js App Router
@@ -38,13 +38,13 @@ function tryDiscoverAppOrigin(request: Request): void {
  * // instrumentation.ts
  * export async function register() {
  *   if (process.env.NEXT_RUNTIME === "nodejs") {
- *     const { attachRuntime } = await import("@noverax/nexus-studio-core/runtime");
+ *     const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
  *     await attachRuntime();
  *   }
  * }
  *
  * // app/api/request/route.ts
- * import { apiRoute } from "@noverax/nexus-next";
+ * import { apiRoute } from "@noverax/courier-next";
  * export const { GET, POST } = apiRoute();
  * ```
  */

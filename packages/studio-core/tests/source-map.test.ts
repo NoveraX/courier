@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define";
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
 import { z } from "zod";
 import { extractSourceMap } from "../src/source-map";
 

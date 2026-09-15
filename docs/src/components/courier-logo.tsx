@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 
 type Variant = "icon" | "horizontal" | "vertical" | "wordmark"
 
-interface NexusLogoProps {
+interface CourierLogoProps {
   variant?: Variant
   className?: string
   width?: number
@@ -14,41 +14,41 @@ interface NexusLogoProps {
 
 const logos: Record<Variant, { dark: string; light: string; gradient: string }> = {
   icon: {
-    dark: "/logos/nexus-icon-dark.png",
-    light: "/logos/nexus-icon-light.png",
-    gradient: "/logos/nexus-icon-gradient-2.png",
+    dark: "/logos/courier-icon-dark.png",
+    light: "/logos/courier-icon-light.png",
+    gradient: "/logos/courier-icon-gradient-2.png",
   },
   horizontal: {
-    dark: "/logos/nexus-logo-horizontal-dark.png",
-    light: "/logos/nexus-logo-horizontal-light.png",
-    gradient: "/logos/nexus-logo-horizontal-gradient.png",
+    dark: "/logos/courier-logo-horizontal-dark.png",
+    light: "/logos/courier-logo-horizontal-light.png",
+    gradient: "/logos/courier-logo-horizontal-gradient.png",
   },
   vertical: {
-    dark: "/logos/nexus-logo-vertical-dark.png",
-    light: "/logos/nexus-logo-vertical-light.png",
-    gradient: "/logos/nexus-logo-vertical-gradient.png",
+    dark: "/logos/courier-logo-vertical-dark.png",
+    light: "/logos/courier-logo-vertical-light.png",
+    gradient: "/logos/courier-logo-vertical-gradient.png",
   },
   wordmark: {
-    dark: "/logos/nexus-dark.png",
-    light: "/logos/nexus-light.png",
-    gradient: "/logos/nexus-dark.png",
+    dark: "/logos/courier-dark.png",
+    light: "/logos/courier-light.png",
+    gradient: "/logos/courier-dark.png",
   },
 }
 
-export function NexusLogo({
+export function CourierLogo({
   variant = "icon",
   className,
   width,
   height,
   gradient = false,
-}: NexusLogoProps) {
+}: CourierLogoProps) {
   const paths = logos[variant]
   const w = width ?? 24
   const h = height ?? 24
 
   if (gradient) {
     return (
-      <Image src={paths.gradient} alt="Nexus" width={w} height={h} className={className} priority />
+      <Image src={paths.gradient} alt="Courier" width={w} height={h} className={className} priority />
     )
   }
 
@@ -56,7 +56,7 @@ export function NexusLogo({
     <>
       <Image
         src={paths.light}
-        alt="Nexus"
+        alt="Courier"
         width={w}
         height={h}
         className={cn("hidden dark:block", className)}
@@ -64,7 +64,7 @@ export function NexusLogo({
       />
       <Image
         src={paths.dark}
-        alt="Nexus"
+        alt="Courier"
         width={w}
         height={h}
         className={cn("dark:hidden", className)}

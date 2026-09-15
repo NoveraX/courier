@@ -69,7 +69,7 @@ export function PlaygroundView(): React.ReactElement {
         <EmptyState
           icon={Play}
           heading="No app connected"
-          description="Start your app with Nexus Studio enabled to use the playground."
+          description="Start your app with Courier Studio enabled to use the playground."
         />
       </PageShell>
     );

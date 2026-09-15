@@ -1,5 +1,5 @@
 {
-  "name": "@noverax/nexus-monorepo",
+  "name": "@noverax/courier-monorepo",
   "private": true,
   "description": "Type-safe HTTP client with dual-mode transport, middleware chain, and runtime validation",
   "author": "NoveraX",
@@ -15,12 +15,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NoveraX/nexus.git"
+    "url": "git+https://github.com/NoveraX/courier.git"
   },
   "bugs": {
-    "url": "https://github.com/NoveraX/nexus/issues"
+    "url": "https://github.com/NoveraX/courier/issues"
   },
-  "homepage": "https://nexus.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud",
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@biomejs/biome": "^2.4.6",

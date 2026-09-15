@@ -1,12 +1,12 @@
 {
-  "name": "@noverax/nexus-studio-core",
+  "name": "@noverax/courier-studio-core",
   "version": "0.0.0",
-  "description": "Studio instrumentation core — EventBus, event types, and Socket.IO connector for @noverax/nexus",
+  "description": "Studio instrumentation core — EventBus, event types, and Socket.IO connector for @noverax/courier",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noverax/nexus.git",
+    "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/studio-core"
   },
   "type": "module",
@@ -42,7 +42,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/nexus": "*",
+    "@noverax/courier": "*",
     "c12": "^4.0.0-beta.4"
   },
   "peerDependencies": {

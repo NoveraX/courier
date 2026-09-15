@@ -1,4 +1,4 @@
-import type { StoredEvent, StreamAdapter } from "@noverax/nexus/realtime";
+import type { StoredEvent, StreamAdapter } from "@noverax/courier/realtime";
 import { trackHealth } from "./health";
 import type { RedisStreamConfig } from "./types";
 
@@ -12,11 +12,11 @@ const DEFAULT_HISTORY_LIMIT = 100;
  * @example
  * ```ts
  * import { Redis } from "ioredis";
- * import { createRedisStream } from "@noverax/nexus-redis";
+ * import { createRedisStream } from "@noverax/courier-redis";
  *
  * const stream = createRedisStream({
  *   redis: new Redis(),
- *   prefix: "nexus:stream:",
+ *   prefix: "courier:stream:",
  *   maxLen: 1000,
  * });
  *

@@ -1,5 +1,5 @@
 /**
- * Internal type helpers shared by Nexus react-query option types.
+ * Internal type helpers shared by Courier react-query option types.
  *
  * Not part of the public API and should not be re-exported from the
  * package entry point.

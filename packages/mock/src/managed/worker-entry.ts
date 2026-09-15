@@ -29,7 +29,7 @@ async function startServer(
 
   if (!isMockServerDefinition(config)) {
     return sendError(
-      `nexus.config.ts at ${configPath} has no valid mockServer at mocks["${mockKey}"]. Use defineMockServer().`,
+      `courier.config.ts at ${configPath} has no valid mockServer at mocks["${mockKey}"]. Use defineMockServer().`,
       true,
     );
   }

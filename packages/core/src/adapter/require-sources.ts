@@ -15,11 +15,11 @@ export function requireSources(): Sources {
     throw new ConfigurationError(
       "SOURCES_NOT_REGISTERED",
       [
-        "[nexus] No API sources are registered.",
+        "[courier] No API sources are registered.",
         "",
-        "Call `await attachRuntime()` from `@noverax/nexus-studio-core/runtime`",
+        "Call `await attachRuntime()` from `@noverax/courier-studio-core/runtime`",
         "in your server instrumentation BEFORE mounting adapter handlers.",
-        "`attachRuntime()` auto-loads `nexus.config.ts` and populates the",
+        "`attachRuntime()` auto-loads `courier.config.ts` and populates the",
         "global sources registry that adapter handlers read at request time.",
       ].join("\n"),
     );

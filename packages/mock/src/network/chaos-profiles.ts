@@ -33,7 +33,7 @@ export function resolveChaosProfile(profile: string | NetworkConfig): NetworkCon
     const resolved = CHAOS_PROFILES[profile];
     if (!resolved) {
       throw new Error(
-        `[nexus-mock] Unknown chaos profile "${profile}". Available: ${Object.keys(CHAOS_PROFILES).join(", ")}`,
+        `[courier-mock] Unknown chaos profile "${profile}". Available: ${Object.keys(CHAOS_PROFILES).join(", ")}`,
       );
     }
     return resolved;

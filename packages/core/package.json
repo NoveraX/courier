@@ -1,12 +1,12 @@
 {
-  "name": "@noverax/nexus",
+  "name": "@noverax/courier",
   "version": "0.0.0",
   "description": "Type-safe HTTP client with dual-mode transport, middleware chain, and runtime validation",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noverax/nexus.git",
+    "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/core"
   },
   "type": "module",

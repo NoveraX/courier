@@ -1,4 +1,4 @@
-import { HTTPError } from "@noverax/nexus";
+import { HTTPError } from "@noverax/courier";
 import { createFaultError, pickFault, shouldFail } from "../network/failure";
 import type { MockHistoryEntry, MockRequestContext, NetworkConfig } from "../types";
 import { resolveHandlerDelay, sleep } from "./resolve-delay";
@@ -78,7 +78,7 @@ function throwMissingHandler(
   start: number,
 ): never {
   const error = new Error(
-    `[nexus-mock] No mock for "${group}.${method}" in state "${scenarioState}". ` +
+    `[courier-mock] No mock for "${group}.${method}" in state "${scenarioState}". ` +
       `Call mock("${group}", "${method}").resolves(data) first.`,
   );
   history.push({

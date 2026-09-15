@@ -1,4 +1,4 @@
-import { createLogger } from "@noverax/nexus";
+import { createLogger } from "@noverax/courier";
 import { createDataUri } from "./core/data-uri";
 import { resolveSnippet } from "./core/resolve-snippet";
 import type { StudioPluginOptions } from "./core/types";
@@ -7,20 +7,20 @@ const FRAMEWORK = "webpack";
 const log = createLogger("WebpackPlugin");
 
 /**
- * Webpack plugin for Nexus Studio.
+ * Webpack plugin for Courier Studio.
  * Injects `attachRuntime("webpack-browser")` into the client entry in dev mode.
  *
  * @example
  * ```ts
  * // webpack.config.js
- * const { nexusStudio } = require("@noverax/nexus-studio/webpack")
+ * const { courierStudio } = require("@noverax/courier-studio/webpack")
  *
  * module.exports = {
- *   plugins: [nexusStudio()],
+ *   plugins: [courierStudio()],
  * }
  * ```
  */
-export function nexusStudio(options?: StudioPluginOptions): WebpackPluginLike {
+export function courierStudio(options?: StudioPluginOptions): WebpackPluginLike {
   return {
     apply(compiler) {
       if (compiler.options?.target === "node") return;

@@ -77,6 +77,6 @@ export function applyCacheHeaders(response: Response, schema: SchemaMetadata): v
     );
   }
   if (schema.cache?.tags?.length) {
-    response.headers.set("x-nexus-tags", schema.cache.tags.join(","));
+    response.headers.set("x-courier-tags", schema.cache.tags.join(","));
   }
 }

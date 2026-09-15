@@ -1,4 +1,4 @@
-import { defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineGroup, endpoint } from "@noverax/courier/define"
 
 type SlowResponse = {
   success: boolean

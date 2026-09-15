@@ -1,4 +1,4 @@
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api"
 import { ExampleBlock } from "@/components/docs/example-block"
 import { ResponseViewer } from "@/components/docs/response-viewer"
@@ -8,7 +8,7 @@ import { docsMetadata } from "@/lib/metadata"
 const caller = createCaller(api)
 
 const setupCode = `// Direct mode — import source and create caller inline
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api"
 
 const caller = createCaller(api)`

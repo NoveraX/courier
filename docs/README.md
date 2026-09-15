@@ -1,6 +1,6 @@
-# @noverax/nexus — Documentation
+# @noverax/courier — Documentation
 
-Documentation site and interactive examples for `@noverax/nexus`, built with Next.js and a live Express mock backend.
+Documentation site and interactive examples for `@noverax/courier`, built with Next.js and a live Express mock backend.
 
 ## Architecture
 
@@ -80,8 +80,8 @@ docs/
 │
 └── src/
     ├── app/                   # Next.js pages (docs + examples)
-    │   └── api/request/       # nexus apiRoute (proxy endpoint)
-    ├── api/                   # nexus source definitions
+    │   └── api/request/       # courier apiRoute (proxy endpoint)
+    ├── api/                   # courier source definitions
     ├── lib/                   # request instances, utils
     └── components/            # UI components, layout, shared
 ```

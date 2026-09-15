@@ -5,14 +5,14 @@ export function docsMetadata(title: string, description: string): Metadata {
     title,
     description,
     openGraph: {
-      title: `${title} — Nexus Docs`,
+      title: `${title} — Courier Docs`,
       description,
       images: [
         {
           url: "/opengraph-image",
           width: 1200,
           height: 630,
-          alt: "Nexus — Type-Safe HTTP for Next.js",
+          alt: "Courier — Type-Safe HTTP for Next.js",
         },
       ],
     },

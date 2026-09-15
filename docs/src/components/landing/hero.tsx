@@ -3,11 +3,11 @@ import Link from "next/link"
 import { CodeBlock } from "@/components/docs/code-block"
 import { GithubIcon } from "@/components/icons/github"
 import { Button } from "@/components/ui/button"
-import { NexusLogo } from "../nexus-logo"
+import { CourierLogo } from "../courier-logo"
 import { InstallBadge } from "./install-badge"
 import { AnimatedSection } from "./section-animate"
 
-const heroCode = `import { createProxyCaller } from "@noverax/nexus"
+const heroCode = `import { createProxyCaller } from "@noverax/courier"
 
 const caller = createProxyCaller<typeof api>("api")
 
@@ -37,7 +37,7 @@ export function Hero() {
           {/* Left: text */}
           <AnimatedSection className="max-w-xl">
             <div className="mb-6 flex items-center gap-4">
-              <NexusLogo
+              <CourierLogo
                 variant="icon"
                 width={52}
                 height={52}
@@ -62,7 +62,7 @@ export function Hero() {
               </Button>
               <Button asChild variant="outline" size="lg">
                 <a
-                  href="https://github.com/NoveraX/nexus"
+                  href="https://github.com/NoveraX/courier"
                   target="_blank"
                   rel="noopener noreferrer"
                 >

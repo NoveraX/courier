@@ -62,9 +62,9 @@ describe("resolveProxyPath — built-in defaults", () => {
     expect((caught as ConfigurationError).code).toBe("WS_PATH_NOT_CONFIGURED");
   });
 
-  it("WS error message guides users to nexus-server and proxyPath.ws", () => {
+  it("WS error message guides users to courier-server and proxyPath.ws", () => {
     expect(() => resolveProxyPath("ws", undefined)).toThrow(/proxyPath\.ws/);
-    expect(() => resolveProxyPath("ws", undefined)).toThrow(/nexus-server/);
+    expect(() => resolveProxyPath("ws", undefined)).toThrow(/courier-server/);
   });
 });
 

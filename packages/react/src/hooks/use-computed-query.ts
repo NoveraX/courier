@@ -1,7 +1,7 @@
 "use client";
 
-import type { HTTPError } from "@noverax/nexus";
-import type { SSEEvent } from "@noverax/nexus/realtime";
+import type { HTTPError } from "@noverax/courier";
+import type { SSEEvent } from "@noverax/courier/realtime";
 import type { QueryKey, UseQueryResult } from "@tanstack/react-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SubscribeFn } from "./use-subscription";

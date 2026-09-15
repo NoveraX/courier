@@ -49,7 +49,7 @@ interface PendingRequest {
 
 /** Resolve the compiled meta-worker entry point via standard ESM resolution */
 function resolveWorkerPath(): string {
-  const resolved = import.meta.resolve("@noverax/nexus-mock/meta-worker");
+  const resolved = import.meta.resolve("@noverax/courier-mock/meta-worker");
   return resolved.startsWith("file://") ? resolved.slice(7) : resolved;
 }
 

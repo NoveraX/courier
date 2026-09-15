@@ -5,10 +5,10 @@
  * which translates them into `playground:error`.
  */
 
-import type { executeRequest } from "@noverax/nexus";
-import type { Sources } from "@noverax/nexus/define";
-import type { executeDirectSSE, executeDirectWSChannel } from "@noverax/nexus/internal-streams";
-import type { WSChannel } from "@noverax/nexus/realtime";
+import type { executeRequest } from "@noverax/courier";
+import type { Sources } from "@noverax/courier/define";
+import type { executeDirectSSE, executeDirectWSChannel } from "@noverax/courier/internal-streams";
+import type { WSChannel } from "@noverax/courier/realtime";
 import type { PlaygroundExecutePayload, ResponderSocket } from "./playground-responder";
 
 export async function dispatchHttp(

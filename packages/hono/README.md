@@ -1,13 +1,13 @@
 <div align="center">
   <br />
 
-  # @noverax/nexus-hono
+  # @noverax/courier-hono
 
-  **Hono adapter for Nexus.**
+  **Hono adapter for Courier.**
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus-hono"><img src="https://img.shields.io/npm/v/@noverax/nexus-hono?color=7c3aed&style=flat-square" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier-hono"><img src="https://img.shields.io/npm/v/@noverax/courier-hono?color=7c3aed&style=flat-square" alt="npm" /></a>
 
   <br />
 </div>
@@ -17,32 +17,32 @@
 ## Install
 
 ```bash
-npm install @noverax/nexus-hono @noverax/nexus hono
+npm install @noverax/courier-hono @noverax/courier hono
 ```
 
 ## Usage
 
 ```ts
 import { Hono } from "hono"
-import { registerSources } from "@noverax/nexus"
-import { nexusHandler } from "@noverax/nexus-hono"
+import { registerSources } from "@noverax/courier"
+import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./api/sources"
 
 registerSources(sources)
 
 const app = new Hono()
 
-app.all("/api/request", nexusHandler())
+app.all("/api/request", courierHandler())
 
 export default app
 ```
 
-`nexusHandler()` is zero-arg — sources are read at request time from the core global registry. Works on any Hono runtime — Node.js, Bun, Deno, Cloudflare Workers, Vercel Edge, AWS Lambda.
+`courierHandler()` is zero-arg — sources are read at request time from the core global registry. Works on any Hono runtime — Node.js, Bun, Deno, Cloudflare Workers, Vercel Edge, AWS Lambda.
 
 ## Options
 
 ```ts
-nexusHandler({
+courierHandler({
   validateOrigin: (origin, request) => {
     // Custom origin validation (POST requests check origin by default)
     return origin === "https://myapp.com"
@@ -57,7 +57,7 @@ Hono uses Web Standard `Request`/`Response` natively, so the adapter simply pass
 ## With Frontend
 
 ```ts
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import { api } from "./api/sources"
 
 const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })

@@ -24,7 +24,7 @@ export interface SavedSession {
 export interface SavedSessionApp {
   sessionId: string;
   framework: string;
-  nexusVersion: string;
+  courierVersion: string;
   connectedAt: number;
 }
 

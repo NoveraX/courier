@@ -1,14 +1,14 @@
 <div align="center">
   <br />
 
-  # @noverax/nexus
+  # @noverax/courier
 
   **Core package — type-safe API client with zero runtime dependencies.**
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus"><img src="https://img.shields.io/npm/v/@noverax/nexus?color=7c3aed&style=flat-square" alt="npm" /></a>
-  <a href="https://bundlephobia.com/package/@noverax/nexus"><img src="https://img.shields.io/bundlephobia/minzip/@noverax/nexus?color=f59e0b&label=size&style=flat-square" alt="size" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier"><img src="https://img.shields.io/npm/v/@noverax/courier?color=7c3aed&style=flat-square" alt="npm" /></a>
+  <a href="https://bundlephobia.com/package/@noverax/courier"><img src="https://img.shields.io/bundlephobia/minzip/@noverax/courier?color=f59e0b&label=size&style=flat-square" alt="size" /></a>
 
   <br />
 </div>
@@ -26,7 +26,7 @@ The core package provides everything you need to define, call, and test your API
 ## Install
 
 ```bash
-npm install @noverax/nexus
+npm install @noverax/courier
 ```
 
 <br />
@@ -35,7 +35,7 @@ npm install @noverax/nexus
 
 The core package exposes five entry points:
 
-### `@noverax/nexus` — Main
+### `@noverax/courier` — Main
 
 ```ts
 import {
@@ -45,20 +45,20 @@ import {
   HTTPError,             // Typed HTTP error with status, headers, data
   isHTTPError,           // Type guard for HTTPError
   executeRequest,        // Core request orchestrator (used by adapters internally)
-} from "@noverax/nexus"
+} from "@noverax/courier"
 ```
 
-### `@noverax/nexus/define` — API Definition
+### `@noverax/courier/define` — API Definition
 
 ```ts
 import {
   defineApi,       // Create an API source with base URL and groups
   defineGroup,     // Create an endpoint group with prefix and typed endpoints
   endpoint,        // Type-safe endpoint factory with optional schema validation
-} from "@noverax/nexus/define"
+} from "@noverax/courier/define"
 ```
 
-### `@noverax/nexus/middleware` — Middleware Chain
+### `@noverax/courier/middleware` — Middleware Chain
 
 ```ts
 import {
@@ -69,25 +69,25 @@ import {
   logMiddleware,         // Request/response logging
   rateLimitMiddleware,   // Client-side rate limiting
   cacheMiddleware,       // In-memory response caching
-} from "@noverax/nexus/middleware"
+} from "@noverax/courier/middleware"
 ```
 
-### `@noverax/nexus/testing` — Test Utilities
+### `@noverax/courier/testing` — Test Utilities
 
 ```ts
 import {
   createTestClient,  // In-memory mock client with history tracking
   findRequests,      // Filter request history by group/method
-} from "@noverax/nexus/testing"
+} from "@noverax/courier/testing"
 ```
 
-### `@noverax/nexus/node` — Node.js Helpers
+### `@noverax/courier/node` — Node.js Helpers
 
 ```ts
 import {
   toWebRequest,      // Convert Node.js IncomingMessage → Web Request
   sendWebResponse,   // Send Web Response → Node.js ServerResponse
-} from "@noverax/nexus/node"
+} from "@noverax/courier/node"
 ```
 
 <br />
@@ -97,7 +97,7 @@ import {
 ### 1. Define your API
 
 ```ts
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: string; name: string; email: string }
 
@@ -121,7 +121,7 @@ export const api = defineApi({
 **Direct mode** — works anywhere with `fetch`:
 
 ```ts
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "./api/sources"
 
 const caller = createCaller(api)
@@ -136,7 +136,7 @@ const user = await caller.users.getById({ id: "1" })
 **Proxy mode** — browser → server → backend:
 
 ```ts
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import type { api } from "./api/sources"
 
 const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })
@@ -179,7 +179,7 @@ const users = defineGroup({
 ## Testing
 
 ```ts
-import { createTestClient } from "@noverax/nexus/testing"
+import { createTestClient } from "@noverax/courier/testing"
 import type { api } from "./api/sources"
 
 const { client, mock, history, reset } = createTestClient<typeof api>()
@@ -206,7 +206,7 @@ mock("users", "getById").rejects(500, { message: "Error" })  // mock errors
 The `createHandler` function returns a Web Standard handler. All official adapters use it internally:
 
 ```ts
-import { createHandler } from "@noverax/nexus"
+import { createHandler } from "@noverax/courier"
 import { sources } from "./api/sources"
 
 const handler = createHandler(sources)

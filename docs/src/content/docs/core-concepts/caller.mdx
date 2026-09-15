@@ -2,7 +2,7 @@ export const metadata = { title: "Caller & Proxy", description: "Two transport m
 
 ## Overview
 
-Nexus provides two ways to call your API endpoints. Both share the same `TypedClient` interface and the same type inference:
+Courier provides two ways to call your API endpoints. Both share the same `TypedClient` interface and the same type inference:
 
 | Factory | Mode | Use Case |
 |---------|------|----------|
@@ -14,7 +14,7 @@ Nexus provides two ways to call your API endpoints. Both share the same `TypedCl
 Calls your backend directly. Works in any JavaScript runtime with `fetch`.
 
 ```ts title="lib/caller.ts"
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api/sources"
 
 export const caller = createCaller(api)
@@ -38,7 +38,7 @@ Use direct mode for server-side code where you have access to the `api` object: 
 Sends requests through your server's proxy route. The browser never sees your backend URL.
 
 ```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import { api } from "@/api/sources"
 
 export const caller = createProxyCaller<typeof api>("api", {
@@ -119,7 +119,7 @@ await caller.users.getAll(undefined, { signal: controller.signal })
 Most apps use both modes — proxy for the browser, direct for the server:
 
 ```ts title="lib/caller.ts"
-import { createCaller, createProxyCaller } from "@noverax/nexus"
+import { createCaller, createProxyCaller } from "@noverax/courier"
 import { api } from "@/api/sources"
 
 // Server-side (RSC, Server Actions, API routes)

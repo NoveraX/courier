@@ -1,12 +1,12 @@
 {
-  "name": "@noverax/nexus-studio",
+  "name": "@noverax/courier-studio",
   "version": "0.0.0",
-  "description": "Standalone Studio server and UI for @noverax/nexus",
+  "description": "Standalone Studio server and UI for @noverax/courier",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noverax/nexus.git",
+    "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/studio"
   },
   "type": "module",
@@ -14,7 +14,7 @@
     "node": ">=22"
   },
   "bin": {
-    "nexus-studio": "./lib/cli.js"
+    "courier-studio": "./lib/cli.js"
   },
   "main": "./lib/index.js",
   "module": "./lib/index.js",
@@ -117,8 +117,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/nexus": "*",
-    "@noverax/nexus-studio-core": "*",
+    "@noverax/courier": "*",
+    "@noverax/courier-studio-core": "*",
     "citty": "^0.1.6",
     "compression": "^1.8.1",
     "express": "^5.1.0",

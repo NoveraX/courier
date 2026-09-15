@@ -1,6 +1,6 @@
-import type { AnySource } from "@noverax/nexus/define";
+import type { AnySource } from "@noverax/courier/define";
 
-const SOURCE_NAME_KEY = Symbol.for("nexus.source.name");
+const SOURCE_NAME_KEY = Symbol.for("courier.source.name");
 
 /**
  * Find the registry key for the source that best matches the new one.

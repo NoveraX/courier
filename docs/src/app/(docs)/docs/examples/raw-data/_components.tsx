@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import type { HttpResponse } from "@noverax/nexus"
+import type { HttpResponse } from "@noverax/courier"
 
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"

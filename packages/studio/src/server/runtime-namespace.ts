@@ -3,7 +3,7 @@
  *
  * Each connected runtime (Next.js server entry, browser bundle, standalone
  * Hono server, …) opens one socket here via `attachRuntime` from
- * `@noverax/nexus-studio-core/runtime`. The runtime then sends:
+ * `@noverax/courier-studio-core/runtime`. The runtime then sends:
  *
  *   - `runtime:hello`    — once on connect, identifies the runtime
  *   - `runtime:announce` — possibly many times, declares which sources it
@@ -15,7 +15,7 @@
  * given playground request.
  */
 
-import { createLogger } from "@noverax/nexus";
+import { createLogger } from "@noverax/courier";
 import type { Namespace, Socket } from "socket.io";
 import {
   handleMockNetworkConfig,

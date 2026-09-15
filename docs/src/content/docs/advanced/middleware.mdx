@@ -2,7 +2,7 @@ export const metadata = { title: "Middleware", description: "Intercept, transfor
 
 ## Overview
 
-Nexus uses a middleware chain to intercept requests at any stage. Middleware replaces the old `onRequest`, `onResponse`, and `onError` hooks with a single, composable pattern inspired by Koa and Express.
+Courier uses a middleware chain to intercept requests at any stage. Middleware replaces the old `onRequest`, `onResponse`, and `onError` hooks with a single, composable pattern inspired by Koa and Express.
 
 Each middleware wraps around the next one, forming an onion-like execution model:
 
@@ -15,7 +15,7 @@ Each middleware wraps around the next one, forming an onion-like execution model
 Use `defineMiddleware` to create a typed middleware function. Every middleware receives a context object and a `next` function:
 
 ```ts title="middleware/logger.ts"
-import { defineMiddleware } from "@noverax/nexus/middleware"
+import { defineMiddleware } from "@noverax/courier/middleware"
 
 const logger = defineMiddleware(async (ctx, next) => {
   const label = [ctx.source, ctx.group, ctx.method].filter(Boolean).join(":")
@@ -62,8 +62,8 @@ type MiddlewareFn = (ctx: MiddlewareContext, next: NextFn) => Promise<Middleware
 Pass middleware as an array to `defineApi`. They execute in array order — the first middleware is the outermost (runs first on request, last on response):
 
 ```ts title="api/index.ts"
-import { defineApi } from "@noverax/nexus/define"
-import { logMiddleware, authMiddleware } from "@noverax/nexus/middleware"
+import { defineApi } from "@noverax/courier/define"
+import { logMiddleware, authMiddleware } from "@noverax/courier/middleware"
 
 const api = defineApi({
   baseURL: process.env.API_URL ?? "http://localhost:4000",
@@ -77,14 +77,14 @@ const api = defineApi({
 
 ## Built-in middleware
 
-Nexus ships with five built-in middleware functions ready to use:
+Courier ships with five built-in middleware functions ready to use:
 
 ### logMiddleware
 
 Logs every request with endpoint name, status code, and duration:
 
 ```ts
-import { logMiddleware } from "@noverax/nexus/middleware"
+import { logMiddleware } from "@noverax/courier/middleware"
 
 logMiddleware()                                    // Uses console.log
 logMiddleware({ logger: (msg) => myLogger(msg) })  // Custom logger
@@ -95,7 +95,7 @@ logMiddleware({ logger: (msg) => myLogger(msg) })  // Custom logger
 Attaches an auth token to every request. Optionally refreshes the token on 401:
 
 ```ts
-import { authMiddleware } from "@noverax/nexus/middleware"
+import { authMiddleware } from "@noverax/courier/middleware"
 
 authMiddleware({
   getToken: () => localStorage.getItem("token")!,
@@ -110,7 +110,7 @@ authMiddleware({
 Retries failed requests with exponential backoff:
 
 ```ts
-import { retryMiddleware } from "@noverax/nexus/middleware"
+import { retryMiddleware } from "@noverax/courier/middleware"
 
 retryMiddleware({
   limit: 3,                                        // Max retries (default: 3)
@@ -124,7 +124,7 @@ retryMiddleware({
 Delays requests to stay within a rate limit window:
 
 ```ts
-import { rateLimitMiddleware } from "@noverax/nexus/middleware"
+import { rateLimitMiddleware } from "@noverax/courier/middleware"
 
 rateLimitMiddleware({
   maxRequests: 10,  // Max requests in the window
@@ -137,7 +137,7 @@ rateLimitMiddleware({
 Caches successful responses with a configurable TTL:
 
 ```ts
-import { cacheMiddleware } from "@noverax/nexus/middleware"
+import { cacheMiddleware } from "@noverax/courier/middleware"
 
 cacheMiddleware({
   ttl: 30_000,   // Time-to-live in ms (default: 60000)
@@ -150,8 +150,8 @@ cacheMiddleware({
 Use `composeMiddleware` to combine multiple middleware into a single function. This is useful when you want to create reusable middleware stacks:
 
 ```ts title="middleware/index.ts"
-import { composeMiddleware } from "@noverax/nexus/middleware"
-import { logMiddleware, authMiddleware, retryMiddleware } from "@noverax/nexus/middleware"
+import { composeMiddleware } from "@noverax/courier/middleware"
+import { logMiddleware, authMiddleware, retryMiddleware } from "@noverax/courier/middleware"
 
 // Combine into a single middleware
 const defaultStack = composeMiddleware([
@@ -173,7 +173,7 @@ const api = defineApi({
 ### Auth token injection
 
 ```ts title="middleware/auth.ts"
-import { defineMiddleware } from "@noverax/nexus/middleware"
+import { defineMiddleware } from "@noverax/courier/middleware"
 
 const auth = defineMiddleware(async (ctx, next) => {
   const token = await getAuthToken()
@@ -187,7 +187,7 @@ const auth = defineMiddleware(async (ctx, next) => {
 Unwrap API envelopes so your components receive clean data:
 
 ```ts title="middleware/unwrap.ts"
-import { defineMiddleware } from "@noverax/nexus/middleware"
+import { defineMiddleware } from "@noverax/courier/middleware"
 
 const unwrapEnvelope = defineMiddleware(async (_ctx, next) => {
   const response = await next()
@@ -208,7 +208,7 @@ const unwrapEnvelope = defineMiddleware(async (_ctx, next) => {
 
 ```ts title="middleware/sentry.ts"
 import * as Sentry from "@sentry/nextjs"
-import { defineMiddleware } from "@noverax/nexus/middleware"
+import { defineMiddleware } from "@noverax/courier/middleware"
 
 const sentryMiddleware = defineMiddleware(async (ctx, next) => {
   try {
@@ -228,8 +228,8 @@ const sentryMiddleware = defineMiddleware(async (ctx, next) => {
 Combine built-in and custom middleware for a complete request logging pipeline:
 
 ```ts title="api/index.ts"
-import { defineApi } from "@noverax/nexus/define"
-import { logMiddleware, authMiddleware, retryMiddleware } from "@noverax/nexus/middleware"
+import { defineApi } from "@noverax/courier/define"
+import { logMiddleware, authMiddleware, retryMiddleware } from "@noverax/courier/middleware"
 
 const api = defineApi({
   baseURL: process.env.API_URL ?? "http://localhost:4000",
@@ -243,7 +243,7 @@ const api = defineApi({
 ```
 
 <Callout variant="tip" title="Middleware is async-compatible">
-All middleware functions are `async` by default. Nexus awaits the return value before proceeding through the chain.
+All middleware functions are `async` by default. Courier awaits the return value before proceeding through the chain.
 </Callout>
 
 ## Next steps

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { createMockSSESubscription } from "@noverax/nexus/testing";
+import { createMockSSESubscription } from "@noverax/courier/testing";
 
 import { useComputedQuery } from "../src/hooks/use-computed-query";
 import type { SubscribeFn } from "../src/hooks/use-subscription";

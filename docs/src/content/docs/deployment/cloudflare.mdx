@@ -1,6 +1,6 @@
 export const metadata = {
   title: "Cloudflare Workers",
-  description: "Deploy Nexus on Cloudflare Workers — SSE with 100s idle timeout, heartbeat tuning, and WebSocket via Durable Objects.",
+  description: "Deploy Courier on Cloudflare Workers — SSE with 100s idle timeout, heartbeat tuning, and WebSocket via Durable Objects.",
 }
 
 ## Overview
@@ -15,23 +15,23 @@ Cloudflare Workers run at the edge with specific constraints for long-lived conn
 
 ## SSE on Workers
 
-Nexus SSE works on Workers because it uses the Web Standard `fetch` + `ReadableStream` API — no Node.js dependencies.
+Courier SSE works on Workers because it uses the Web Standard `fetch` + `ReadableStream` API — no Node.js dependencies.
 
 ### Hono on Workers
 
 ```ts title="src/index.ts"
 import { Hono } from "hono"
-import { registerSources } from "@noverax/nexus"
-import { nexusHandler, nexusSSEHandler } from "@noverax/nexus-hono"
+import { registerSources } from "@noverax/courier"
+import { courierHandler, courierSSEHandler } from "@noverax/courier-hono"
 import { sources } from "./api/sources"
 
 registerSources(sources)
 
 const app = new Hono()
 
-app.all("/api/request", nexusHandler())
+app.all("/api/request", courierHandler())
 
-app.get("/api/sse", nexusSSEHandler({
+app.get("/api/sse", courierSSEHandler({
   sseMaxLifetimeMs: 90_000,      // close before 100s idle timeout
   sseHeaders: {
     "Access-Control-Allow-Origin": "https://app.example.com",
@@ -45,7 +45,7 @@ export default app
 
 ### Heartbeat Configuration
 
-Cloudflare terminates connections after **100 seconds of inactivity**. The Nexus SSE server sends heartbeat pings every 25 seconds by default, which keeps the connection alive.
+Cloudflare terminates connections after **100 seconds of inactivity**. The Courier SSE server sends heartbeat pings every 25 seconds by default, which keeps the connection alive.
 
 ```
 Timeline: 0s ───── 25s (ping) ───── 50s (ping) ───── 75s (ping) ───── 100s limit
@@ -61,7 +61,7 @@ Timeline: 0s ───── 25s (ping) ───── 50s (ping) ────�
 Even with heartbeats, set `sseMaxLifetimeMs` to force periodic reconnection. This prevents zombie connections and ensures clean resource rotation:
 
 ```ts
-nexusSSEHandler({
+courierSSEHandler({
   sseMaxLifetimeMs: 300_000,  // reconnect every 5 minutes
 })
 ```
@@ -78,7 +78,7 @@ Run WebSocket on a separate Node.js server and keep Workers for HTTP + SSE:
 
 ```
 Workers (Edge):     HTTP proxy + SSE streaming
-Node.js Server:     WebSocket (via @noverax/nexus-server)
+Node.js Server:     WebSocket (via @noverax/courier-server)
 ```
 
 This gives you the best of both — edge latency for SSE, full WS support on a dedicated server.
@@ -86,13 +86,13 @@ This gives you the best of both — edge latency for SSE, full WS support on a d
 ### Option B: Durable Objects
 
 <Callout variant="warning" title="Advanced setup">
-  Durable Objects require a Cloudflare paid plan and a custom WebSocket handler. This is not a standard Nexus adapter — you need to bridge the Durable Object WebSocket API to Nexus manually.
+  Durable Objects require a Cloudflare paid plan and a custom WebSocket handler. This is not a standard Courier adapter — you need to bridge the Durable Object WebSocket API to Courier manually.
 </Callout>
 
 ```ts title="src/durable-object.ts"
 import { DurableObject } from "cloudflare:workers"
 
-export class NexusWSObject extends DurableObject {
+export class CourierWSObject extends DurableObject {
   async fetch(request: Request): Promise<Response> {
     const upgradeHeader = request.headers.get("Upgrade")
     if (upgradeHeader !== "websocket") {
@@ -107,7 +107,7 @@ export class NexusWSObject extends DurableObject {
   }
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
-    // Bridge to Nexus WS protocol here
+    // Bridge to Courier WS protocol here
   }
 
   async webSocketClose(ws: WebSocket, code: number): Promise<void> {
@@ -119,7 +119,7 @@ export class NexusWSObject extends DurableObject {
 ## Wrangler Configuration
 
 ```toml title="wrangler.toml"
-name = "nexus-api"
+name = "courier-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
@@ -133,7 +133,7 @@ ALLOWED_ORIGIN = "https://app.example.com"
 | Limitation | Impact | Workaround |
 |-----------|--------|------------|
 | 100s idle timeout | SSE must keep-alive | Built-in heartbeat (25s) handles this |
-| No native WS server | Cannot use `nexusWSHandler` directly | Use Durable Objects or separate server |
+| No native WS server | Cannot use `courierWSHandler` directly | Use Durable Objects or separate server |
 | No persistent connections across deploys | Connections drop on new deployment | Client auto-reconnects via `Last-Event-ID` |
 | CPU time limits (10ms free / 30s paid) | Long SSE generators may hit limits | Keep event generation lightweight |
 | No `node:http` module | Express/Fastify won't work | Use Hono (Web Standard APIs) |
@@ -148,7 +148,7 @@ For shared state across regions, use:
 - **External Redis** (Upstash) — serverless Redis with global replication
 
 ```ts title="src/index.ts"
-import { createRedisPubSub, createRedisStream } from "@noverax/nexus-redis"
+import { createRedisPubSub, createRedisStream } from "@noverax/courier-redis"
 import { Redis } from "@upstash/redis"
 
 // Upstash Redis works in Workers (HTTP-based, not TCP)

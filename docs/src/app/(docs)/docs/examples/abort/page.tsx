@@ -24,7 +24,7 @@ function handleClick() {
   caller.users.with({ signal: controller.signal }).getAll()
 }`
 
-const deduplicateCode = `import { defineApi } from "@noverax/nexus/define"
+const deduplicateCode = `import { defineApi } from "@noverax/courier/define"
 
 // deduplicate: true enables automatic deduplication
 // at the HttpClient level — if the same path+method is called

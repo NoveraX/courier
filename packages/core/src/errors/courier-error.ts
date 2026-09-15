@@ -1,5 +1,5 @@
 /**
- * Base error class for every error thrown from `@noverax/nexus` packages.
+ * Base error class for every error thrown from `@noverax/courier` packages.
  *
  * `TCode` is the type of the discriminator stored on `.code`. Subclasses pick
  * a literal string union (e.g. `ConfigurationErrorCode`) or a numeric union
@@ -9,15 +9,15 @@
  * @example
  * ```ts
  * try {
- *   loadNexusConfig(cwd);
+ *   loadCourierConfig(cwd);
  * } catch (err) {
- *   if (err instanceof NexusError && err.code === "CONFIG_NOT_FOUND") {
+ *   if (err instanceof CourierError && err.code === "CONFIG_NOT_FOUND") {
  *     // ...remediation
  *   }
  * }
  * ```
  */
-export interface NexusErrorOptions<TCode> {
+export interface CourierErrorOptions<TCode> {
   /** Stable discriminator string or number for programmatic handling */
   code: TCode;
   /** Underlying cause — chained via the standard `Error.cause` property (Node 16+) */
@@ -26,11 +26,11 @@ export interface NexusErrorOptions<TCode> {
   context?: Record<string, unknown>;
 }
 
-export class NexusError<TCode = string> extends Error {
+export class CourierError<TCode = string> extends Error {
   readonly code: TCode;
   readonly context?: Record<string, unknown>;
 
-  constructor(message: string, options: NexusErrorOptions<TCode>) {
+  constructor(message: string, options: CourierErrorOptions<TCode>) {
     super(message, options.cause !== undefined ? { cause: options.cause } : undefined);
     this.name = new.target.name;
     this.code = options.code;
@@ -38,7 +38,7 @@ export class NexusError<TCode = string> extends Error {
   }
 }
 
-/** Type guard for `NexusError` and any subclass */
-export function isNexusError(error: unknown): error is NexusError {
-  return error instanceof NexusError;
+/** Type guard for `CourierError` and any subclass */
+export function isCourierError(error: unknown): error is CourierError {
+  return error instanceof CourierError;
 }

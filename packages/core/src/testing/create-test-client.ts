@@ -109,7 +109,7 @@ async function handleHTTP(
 
   if (!handler) {
     const error = new Error(
-      `[nexus/testing] No mock for "${group}.${method}". ` +
+      `[courier/testing] No mock for "${group}.${method}". ` +
         `Call mock("${group}", "${method}").resolves(data) first.`,
     );
     entry.error = error;

@@ -85,7 +85,7 @@ export interface WSSubscriptionEntry {
 }
 
 /** WS options for framework adapters (alias for clarity in adapter signatures) */
-export type NexusWSOptions = WSHandlerConfig;
+export type CourierWSOptions = WSHandlerConfig;
 
 /** Server-side WS handler returned by createWSHandler */
 export interface WSHandler {

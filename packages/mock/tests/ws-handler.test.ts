@@ -2,7 +2,7 @@
  * Real HTTP-upgrade tests for the mock server WS handler.
  *
  * These tests boot a real `createMockServer` on an ephemeral port, connect
- * with the `ws` package as a client, and exchange Nexus WS protocol frames.
+ * with the `ws` package as a client, and exchange Courier WS protocol frames.
  * They cover the following lifecycle invariants:
  * - duration recording in history
  * - single onLeave invocation per connection
@@ -16,7 +16,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 
-import { decodeMessage, encodeMessage, type WSMessage } from "@noverax/nexus/realtime";
+import { decodeMessage, encodeMessage, type WSMessage } from "@noverax/courier/realtime";
 
 import { createMockServer, type MockServer, type MockServerConfig } from "../src/server/create-mock-server";
 import type { PrefixMapping } from "../src/server/prefix-routes";
@@ -398,7 +398,7 @@ describe("mock ws-handler — real broadcast", () => {
   });
 
   it("preserves the client-supplied qualified topic in outbound data frames", async () => {
-    // Real Nexus clients subscribe with `{source}.{group}.{method}#{varsHash}`
+    // Real Courier clients subscribe with `{source}.{group}.{method}#{varsHash}`
     // The mock server must echo that exact topic in `subscribed` and outbound
     // `data` frames so the client topic dispatcher resolves them. Without
     // this, browser-side handlers silently drop every server message.

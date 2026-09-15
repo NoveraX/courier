@@ -15,7 +15,7 @@ export const ASTRO: FrameworkConfig = {
   name: "Astro",
   description: "Content-driven framework with SSR",
   steps: [
-    installStep("@noverax/nexus-studio @noverax/nexus-studio-core"),
+    installStep("@noverax/courier-studio @noverax/courier-studio-core"),
     {
       id: "instrument-client",
       title: "Add Astro integration",
@@ -25,10 +25,10 @@ export const ASTRO: FrameworkConfig = {
       filePath: "astro.config.mjs",
       lang: "ts",
       code: `import { defineConfig } from "astro/config";
-import { nexusStudio } from "@noverax/nexus-studio/astro";
+import { courierStudio } from "@noverax/courier-studio/astro";
 
 export default defineConfig({
-  integrations: [nexusStudio()],
+  integrations: [courierStudio()],
 });`,
     },
     {
@@ -39,7 +39,7 @@ export default defineConfig({
       actionLabel: "Copy snippet",
       filePath: "src/middleware.ts",
       lang: "ts",
-      code: `import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
+      code: `import { attachRuntime } from "@noverax/courier-studio-core/runtime";
 
 if (import.meta.env.DEV) {
   await attachRuntime();
@@ -55,7 +55,7 @@ export const ANGULAR: FrameworkConfig = {
   name: "Angular",
   description: "Full-featured platform by Google",
   steps: [
-    installStep("@noverax/nexus-studio"),
+    installStep("@noverax/courier-studio"),
     {
       id: "instrument",
       title: "Initialize Studio",
@@ -64,12 +64,12 @@ export const ANGULAR: FrameworkConfig = {
       actionLabel: "Copy snippet",
       filePath: "src/main.ts",
       lang: "ts",
-      code: `import { setupNexusStudio } from "@noverax/nexus-studio/angular";
+      code: `import { setupCourierStudio } from "@noverax/courier-studio/angular";
 import { bootstrapApplication } from "@angular/platform-browser";
 import { AppComponent } from "./app/app.component";
 import { appConfig } from "./app/app.config";
 
-setupNexusStudio();
+setupCourierStudio();
 
 bootstrapApplication(AppComponent, appConfig);`,
     },
@@ -83,7 +83,7 @@ export const SOLID: FrameworkConfig = {
   name: "Solid Start",
   description: "Solid.js meta-framework",
   steps: [
-    installStep("@noverax/nexus-studio @noverax/nexus-studio-core"),
+    installStep("@noverax/courier-studio @noverax/courier-studio-core"),
     {
       id: "instrument-client",
       title: "Add Vite plugin",
@@ -93,10 +93,10 @@ export const SOLID: FrameworkConfig = {
       filePath: "app.config.ts",
       lang: "ts",
       code: `import { defineConfig } from "@solidjs/start/config";
-import { nexusStudio } from "@noverax/nexus-studio/solid";
+import { courierStudio } from "@noverax/courier-studio/solid";
 
 export default defineConfig({
-  vite: { plugins: [nexusStudio()] },
+  vite: { plugins: [courierStudio()] },
 });`,
     },
     {
@@ -107,7 +107,7 @@ export default defineConfig({
       actionLabel: "Copy snippet",
       filePath: "src/entry-server.tsx",
       lang: "ts",
-      code: `import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
+      code: `import { attachRuntime } from "@noverax/courier-studio-core/runtime";
 
 if (import.meta.env.DEV) {
   await attachRuntime();

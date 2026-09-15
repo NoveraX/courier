@@ -6,25 +6,25 @@ import type { StudioPluginOptions } from "./core/types";
 const FRAMEWORK = "next";
 
 /**
- * Next.js config wrapper for Nexus Studio (webpack mode only).
+ * Next.js config wrapper for Courier Studio (webpack mode only).
  * Injects `attachRuntime("next-browser")` into the client webpack bundle in dev mode.
  *
  * **Turbopack** ignores `webpack()` config — create `instrumentation-client.ts` instead:
  * ```ts
- * import { attachRuntime } from "@noverax/nexus-studio-core/runtime"
+ * import { attachRuntime } from "@noverax/courier-studio-core/runtime"
  * attachRuntime("next-browser")
  * ```
  *
- * **Server** — run separately: `npx nexus-studio` or `npm run studio`
+ * **Server** — run separately: `npx courier-studio` or `npm run studio`
  *
  * @example
  * ```ts
  * // next.config.ts (webpack mode)
- * import { withNexusStudio } from "@noverax/nexus-studio/next"
- * export default withNexusStudio()({ ... })
+ * import { withCourierStudio } from "@noverax/courier-studio/next"
+ * export default withCourierStudio()({ ... })
  * ```
  */
-export function withNexusStudio(pluginOptions?: StudioPluginOptions) {
+export function withCourierStudio(pluginOptions?: StudioPluginOptions) {
   return (nextConfig: NextConfig): NextConfig => {
     return {
       ...nextConfig,

@@ -1,4 +1,4 @@
-import type { SSEEvent, SSESubscription } from "@noverax/nexus/realtime";
+import type { SSEEvent, SSESubscription } from "@noverax/courier/realtime";
 import { describe, expect, it } from "vitest";
 import { createMockClient } from "../src/create-mock-client";
 
@@ -196,6 +196,6 @@ describe("mock client — SSE lifecycle", () => {
         }
         return sub;
       })(),
-    ).rejects.toThrow("[nexus-mock] No mock");
+    ).rejects.toThrow("[courier-mock] No mock");
   });
 });

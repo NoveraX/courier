@@ -14,7 +14,7 @@ export const NUXT: FrameworkConfig = {
   name: "Nuxt",
   description: "Vue meta-framework with SSR",
   steps: [
-    installStep("@noverax/nexus-studio @noverax/nexus-studio-core"),
+    installStep("@noverax/courier-studio @noverax/courier-studio-core"),
     {
       id: "instrument-client",
       title: "Add Nuxt module",
@@ -23,10 +23,10 @@ export const NUXT: FrameworkConfig = {
       actionLabel: "Copy snippet",
       filePath: "nuxt.config.ts",
       lang: "ts",
-      code: `import { nexusStudioModule } from "@noverax/nexus-studio/nuxt";
+      code: `import { courierStudioModule } from "@noverax/courier-studio/nuxt";
 
 export default defineNuxtConfig({
-  modules: [nexusStudioModule],
+  modules: [courierStudioModule],
 });`,
     },
     {
@@ -37,7 +37,7 @@ export default defineNuxtConfig({
       actionLabel: "Copy snippet",
       filePath: "server/plugins/studio.ts",
       lang: "ts",
-      code: `import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
+      code: `import { attachRuntime } from "@noverax/courier-studio-core/runtime";
 
 export default defineNitroPlugin(async () => {
   if (import.meta.dev) {

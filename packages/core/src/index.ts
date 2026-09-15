@@ -2,10 +2,10 @@ export {
   type AdapterHandler,
   type ConnectionInfo,
   type ConnectionRegistry,
+  type CourierWSOptions,
   createHandler,
   createWSHandler,
   type HandlerConfig,
-  type NexusWSOptions,
   requireSources,
   type SSEBroadcastEvent,
   type SSEBroadcastResult,
@@ -43,12 +43,12 @@ export type {
 export {
   ConfigurationError,
   type ConfigurationErrorCode,
+  CourierError,
+  type CourierErrorOptions,
   HTTPError,
   isConfigurationError,
+  isCourierError,
   isHTTPError,
-  isNexusError,
-  NexusError,
-  type NexusErrorOptions,
 } from "./errors";
 export { createFetch, type FetchClient, type FetchClientOptions } from "./fetch";
 export type {

@@ -1,9 +1,9 @@
 <div align="center">
   <br />
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/nexus/master/docs/public/logos/nexus-logo-horizontal-light.png" />
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/NoveraX/nexus/master/docs/public/logos/nexus-logo-horizontal-dark.png" />
-    <img alt="Nexus" src="https://raw.githubusercontent.com/NoveraX/nexus/master/docs/public/logos/nexus-logo-horizontal-dark.png" height="48" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-logo-horizontal-light.png" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-logo-horizontal-dark.png" />
+    <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-logo-horizontal-dark.png" height="48" />
   </picture>
 
   <br />
@@ -14,10 +14,10 @@
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus"><img src="https://img.shields.io/npm/v/@noverax/nexus?color=7c3aed&label=npm&style=flat-square" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier"><img src="https://img.shields.io/npm/v/@noverax/courier?color=7c3aed&label=npm&style=flat-square" alt="npm version" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white&style=flat-square" alt="TypeScript" /></a>
-  <a href="https://github.com/NoveraX/nexus/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT-22c55e?style=flat-square" alt="License: MIT" /></a>
-  <a href="https://bundlephobia.com/package/@noverax/nexus"><img src="https://img.shields.io/bundlephobia/minzip/@noverax/nexus?color=f59e0b&label=size&style=flat-square" alt="Bundle Size" /></a>
+  <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT-22c55e?style=flat-square" alt="License: MIT" /></a>
+  <a href="https://bundlephobia.com/package/@noverax/courier"><img src="https://img.shields.io/bundlephobia/minzip/@noverax/courier?color=f59e0b&label=size&style=flat-square" alt="Bundle Size" /></a>
 
   <br />
   <br />
@@ -27,7 +27,7 @@
   <br />
   <br />
 
-  <a href="https://nexus.noverax.cloud">Documentation</a> &nbsp;&nbsp;|&nbsp;&nbsp; <a href="https://nexus.noverax.cloud/docs/examples/basic">Examples</a> &nbsp;&nbsp;|&nbsp;&nbsp; <a href="https://github.com/NoveraX/nexus">GitHub</a>
+  <a href="https://courier.noverax.cloud">Documentation</a> &nbsp;&nbsp;|&nbsp;&nbsp; <a href="https://courier.noverax.cloud/docs/examples/basic">Examples</a> &nbsp;&nbsp;|&nbsp;&nbsp; <a href="https://github.com/NoveraX/courier">GitHub</a>
 </div>
 
 <br />
@@ -36,11 +36,11 @@
 
 <br />
 
-## Why Nexus
+## Why Courier
 
 Most HTTP clients stop at "send a request, get a response." You still write boilerplate for every endpoint, duplicate types between client and server, and glue together validation, caching, and error handling yourself.
 
-Nexus takes a different approach. You **define your API once** as plain TypeScript functions — and get autocomplete, type inference, runtime validation, middleware, and framework adapters out of the box. It works with **any REST backend** (Express, FastAPI, Rails, Go, Laravel — anything that speaks HTTP).
+Courier takes a different approach. You **define your API once** as plain TypeScript functions — and get autocomplete, type inference, runtime validation, middleware, and framework adapters out of the box. It works with **any REST backend** (Express, FastAPI, Rails, Go, Laravel — anything that speaks HTTP).
 
 <br />
 
@@ -66,7 +66,7 @@ Nexus takes a different approach. You **define your API once** as plain TypeScri
 ## Install
 
 ```bash
-npm install @noverax/nexus
+npm install @noverax/courier
 ```
 
 <details>
@@ -75,17 +75,17 @@ npm install @noverax/nexus
 
 ```bash
 # React Query integration
-npm install @noverax/nexus-react @tanstack/react-query
+npm install @noverax/courier-react @tanstack/react-query
 
 # Next.js (API routes + Server Actions)
-npm install @noverax/nexus-next
+npm install @noverax/courier-next
 
 # Server adapters — install only what you use
-npm install @noverax/nexus-express    # Express
-npm install @noverax/nexus-fastify    # Fastify
-npm install @noverax/nexus-hono       # Hono
-npm install @noverax/nexus-nestjs     # NestJS
-npm install @noverax/nexus-nuxt       # Nuxt / Nitro / h3
+npm install @noverax/courier-express    # Express
+npm install @noverax/courier-fastify    # Fastify
+npm install @noverax/courier-hono       # Hono
+npm install @noverax/courier-nestjs     # NestJS
+npm install @noverax/courier-nuxt       # Nuxt / Nitro / h3
 ```
 
 </details>
@@ -102,7 +102,7 @@ This is shared across all frameworks. Define once — use everywhere.
 
 ```ts
 // api/sources.ts
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: string; name: string; email: string }
 
@@ -141,7 +141,7 @@ Full-stack setup with proxy route, React Query hooks, Server Components, and Ser
 
 ```ts
 // app/api/request/route.ts
-import { apiRoute } from "@noverax/nexus-next"
+import { apiRoute } from "@noverax/courier-next"
 import { sources } from "@/api/sources"
 
 export const { GET, POST } = apiRoute(sources)
@@ -151,7 +151,7 @@ export const { GET, POST } = apiRoute(sources)
 
 ```ts
 // lib/query.ts
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 import type { api } from "@/api/sources"
 
 export const q = createProxyQueryCaller<typeof api>("api")
@@ -189,7 +189,7 @@ export default function UsersPage() {
 
 ```tsx
 // app/users/page.tsx
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api/sources"
 
 const caller = createCaller(api)
@@ -207,7 +207,7 @@ export default async function UsersPage() {
 ```ts
 // app/users/actions.ts
 "use server"
-import { createAction } from "@noverax/nexus-next"
+import { createAction } from "@noverax/courier-next"
 import { sources } from "@/api/sources"
 
 const action = createAction(sources)
@@ -246,17 +246,17 @@ export function CreateUserForm() {
 
 ```ts
 // server/api/request.ts
-import { nexusHandler } from "@noverax/nexus-nuxt"
+import { courierHandler } from "@noverax/courier-nuxt"
 import { sources } from "~/api/sources"
 
-export default nexusHandler(sources)
+export default courierHandler(sources)
 ```
 
 **2. Composable** — use with any state management:
 
 ```ts
 // composables/useCaller.ts
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import { api } from "~/api/sources"
 
 export const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })
@@ -288,7 +288,7 @@ const { data: users, status } = useAsyncData("users", () =>
 
 ```ts
 // server/api/dashboard.ts
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "~/api/sources"
 
 const caller = createCaller(api)
@@ -311,7 +311,7 @@ Works with any React setup. Pair with Express, Hono, or Fastify on the server si
 
 ```ts
 // lib/query.ts
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 import type { api } from "./api/sources"
 
 export const q = createProxyQueryCaller<typeof api>("api", {
@@ -324,7 +324,7 @@ export const q = createProxyQueryCaller<typeof api>("api", {
 
 ```tsx
 import { q } from "./lib/query"
-import { QueryClient, QueryClientProvider } from "@noverax/nexus-react"
+import { QueryClient, QueryClientProvider } from "@noverax/courier-react"
 
 const queryClient = new QueryClient()
 
@@ -359,7 +359,7 @@ The core caller is framework-agnostic — use it with `ref`, `reactive`, or any 
 
 ```ts
 // composables/useCaller.ts
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import { api } from "@/api/sources"
 
 export const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })
@@ -402,7 +402,7 @@ async function createUser(name: string, email: string) {
 
 ```ts
 // lib/caller.ts
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import { api } from "./api/sources"
 
 export const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })
@@ -440,12 +440,12 @@ Each adapter exposes a single handler that plugs into your server framework. All
 
 ```ts
 import { Hono } from "hono"
-import { nexusHandler } from "@noverax/nexus-hono"
+import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./api/sources"
 
 const app = new Hono()
 
-app.all("/api/request", nexusHandler(sources))
+app.all("/api/request", courierHandler(sources))
 
 export default app
 ```
@@ -454,12 +454,12 @@ export default app
 
 ```ts
 import express from "express"
-import { nexusHandler } from "@noverax/nexus-express"
+import { courierHandler } from "@noverax/courier-express"
 import { sources } from "./api/sources"
 
 const app = express()
 
-app.all("/api/request", nexusHandler(sources))
+app.all("/api/request", courierHandler(sources))
 
 app.listen(3000)
 ```
@@ -468,12 +468,12 @@ app.listen(3000)
 
 ```ts
 import Fastify from "fastify"
-import { nexusPlugin } from "@noverax/nexus-fastify"
+import { courierPlugin } from "@noverax/courier-fastify"
 import { sources } from "./api/sources"
 
 const app = Fastify()
 
-app.register(nexusPlugin, { sources, prefix: "/api/request" })
+app.register(courierPlugin, { sources, prefix: "/api/request" })
 
 app.listen({ port: 3000 })
 ```
@@ -482,13 +482,13 @@ app.listen({ port: 3000 })
 
 ```ts
 import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
-import { nexusMiddleware } from "@noverax/nexus-nestjs"
+import { courierMiddleware } from "@noverax/courier-nestjs"
 import { sources } from "./api/sources"
 
 @Module({})
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(nexusMiddleware(sources)).forRoutes("/api/request")
+    consumer.apply(courierMiddleware(sources)).forRoutes("/api/request")
   }
 }
 ```
@@ -500,7 +500,7 @@ export class AppModule implements NestModule {
 The core caller works in any JavaScript runtime — no framework required.
 
 ```ts
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "./api/sources"
 
 const caller = createCaller(api)
@@ -523,12 +523,12 @@ const user = await caller.users.getById({ id: "1" })
 Composable middleware chain with built-in utilities.
 
 ```ts
-import { defineApi } from "@noverax/nexus/define"
+import { defineApi } from "@noverax/courier/define"
 import {
   retryMiddleware,
   authMiddleware,
   logMiddleware,
-} from "@noverax/nexus/middleware"
+} from "@noverax/courier/middleware"
 
 const api = defineApi({
   baseURL: "https://api.example.com",
@@ -549,7 +549,7 @@ const api = defineApi({
 Works with any [Standard Schema](https://github.com/standard-schema/standard-schema) library — Zod, Valibot, ArkType.
 
 ```ts
-import { endpoint } from "@noverax/nexus/define"
+import { endpoint } from "@noverax/courier/define"
 import { z } from "zod"
 
 const UserSchema = z.object({ id: z.string(), name: z.string(), email: z.email() })
@@ -571,7 +571,7 @@ const users = defineGroup({
 In-memory test client with mock builder — no network, no setup.
 
 ```ts
-import { createTestClient } from "@noverax/nexus/testing"
+import { createTestClient } from "@noverax/courier/testing"
 import type { api } from "./api/sources"
 
 const { client, mock, history } = createTestClient<typeof api>()
@@ -649,7 +649,7 @@ Both modes share the same API definition, the same middleware chain, and the sam
 
 ## Comparison
 
-| Feature | fetch | axios | tRPC | **Nexus** |
+| Feature | fetch | axios | tRPC | **Courier** |
 | --- | :---: | :---: | :---: | :---: |
 | End-to-end type safety | - | - | Yes | **Yes** |
 | No custom backend required | Yes | Yes | - | **Yes** |
@@ -675,14 +675,14 @@ Both modes share the same API definition, the same middleware chain, and the sam
 
 | Package | Description | |
 | --- | --- | --- |
-| [`@noverax/nexus`](./packages/core) | Core — caller factories, HTTP client, middleware, validation, testing | [![npm](https://img.shields.io/npm/v/@noverax/nexus?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus) |
-| [`@noverax/nexus-react`](./packages/react) | React hooks — `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery`, `useSubscription` | [![npm](https://img.shields.io/npm/v/@noverax/nexus-react?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-react) |
-| [`@noverax/nexus-next`](./packages/next) | Next.js — `apiRoute` handler + `createAction` for Server Actions | [![npm](https://img.shields.io/npm/v/@noverax/nexus-next?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-next) |
-| [`@noverax/nexus-express`](./packages/express) | Express middleware adapter | [![npm](https://img.shields.io/npm/v/@noverax/nexus-express?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-express) |
-| [`@noverax/nexus-fastify`](./packages/fastify) | Fastify plugin adapter | [![npm](https://img.shields.io/npm/v/@noverax/nexus-fastify?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-fastify) |
-| [`@noverax/nexus-hono`](./packages/hono) | Hono Web Standard adapter | [![npm](https://img.shields.io/npm/v/@noverax/nexus-hono?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-hono) |
-| [`@noverax/nexus-nestjs`](./packages/nestjs) | NestJS middleware adapter | [![npm](https://img.shields.io/npm/v/@noverax/nexus-nestjs?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-nestjs) |
-| [`@noverax/nexus-nuxt`](./packages/nuxt) | Nuxt / Nitro / h3 event handler adapter | [![npm](https://img.shields.io/npm/v/@noverax/nexus-nuxt?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/nexus-nuxt) |
+| [`@noverax/courier`](./packages/core) | Core — caller factories, HTTP client, middleware, validation, testing | [![npm](https://img.shields.io/npm/v/@noverax/courier?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier) |
+| [`@noverax/courier-react`](./packages/react) | React hooks — `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery`, `useSubscription` | [![npm](https://img.shields.io/npm/v/@noverax/courier-react?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-react) |
+| [`@noverax/courier-next`](./packages/next) | Next.js — `apiRoute` handler + `createAction` for Server Actions | [![npm](https://img.shields.io/npm/v/@noverax/courier-next?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-next) |
+| [`@noverax/courier-express`](./packages/express) | Express middleware adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-express?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-express) |
+| [`@noverax/courier-fastify`](./packages/fastify) | Fastify plugin adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-fastify?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-fastify) |
+| [`@noverax/courier-hono`](./packages/hono) | Hono Web Standard adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-hono?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-hono) |
+| [`@noverax/courier-nestjs`](./packages/nestjs) | NestJS middleware adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-nestjs?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-nestjs) |
+| [`@noverax/courier-nuxt`](./packages/nuxt) | Nuxt / Nitro / h3 event handler adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-nuxt?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-nuxt) |
 
 <br />
 
@@ -692,7 +692,7 @@ Both modes share the same API definition, the same middleware chain, and the sam
 
 ## Documentation
 
-Full documentation with interactive examples at **[nexus.noverax.cloud](https://nexus.noverax.cloud)**.
+Full documentation with interactive examples at **[courier.noverax.cloud](https://courier.noverax.cloud)**.
 
 <br />
 

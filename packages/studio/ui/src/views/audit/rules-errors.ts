@@ -27,7 +27,7 @@ function highErrorRate(stats: Map<string, EndpointStats>): AuditItem[] {
     title: "High error rate",
     description: "These endpoints fail more than 20% of the time.",
     suggestion: "Add retry middleware or investigate the root cause of failures.",
-    codeSuggestion: `import { retry } from "@noverax/nexus/middleware";\n\ndefineApi({\n  middleware: [retry({ attempts: 3, delay: 1000 })],\n  // ...\n});`,
+    codeSuggestion: `import { retry } from "@noverax/courier/middleware";\n\ndefineApi({\n  middleware: [retry({ attempts: 3, delay: 1000 })],\n  // ...\n});`,
     endpoints: matched.map((s) => ({
       ...formatEp(s),
       detail: `${(s.errorRate * 100).toFixed(0)}% errors (${s.count} calls)`,

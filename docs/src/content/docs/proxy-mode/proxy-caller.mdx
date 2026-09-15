@@ -5,7 +5,7 @@ export const metadata = { title: "createProxyCaller", description: "The browser-
 `createProxyCaller` creates a typed client with dot-notation access that POSTs to your server proxy endpoint. It is the primary way to make requests from client components in proxy mode.
 
 ```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import { api } from "@/api"
 
 // createProxyCaller<T>(defaults?) returns TypedClient<T>
@@ -63,7 +63,7 @@ type ProxyCallerDefaults = {
 A typical setup creates a single caller instance and exports it for use across all client components:
 
 ```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import { api } from "@/api"
 
 export const caller = createProxyCaller<typeof api>("api", {
@@ -125,7 +125,7 @@ await caller.users.create(formData)
 ```
 
 <Callout variant="info" title="FormData meta fields">
-When sending FormData, Nexus appends metadata as special fields: `_source`, `_group`, `_method`, and `_options`. Your actual variables are appended alongside them. The server handler strips these meta fields before passing variables to your endpoint.
+When sending FormData, Courier appends metadata as special fields: `_source`, `_group`, `_method`, and `_options`. Your actual variables are appended alongside them. The server handler strips these meta fields before passing variables to your endpoint.
 </Callout>
 
 ## Per-request options
@@ -193,7 +193,7 @@ export const caller = createProxyCaller<typeof api>("api", {
     http: "/api/request",
     sse: "/api/sse",
     // Required for WS endpoints. On Next.js / Cloudflare / Vercel Edge,
-    // run @noverax/nexus-server separately and point this at it.
+    // run @noverax/courier-server separately and point this at it.
     ws: "wss://realtime.example.com",
   },
 })

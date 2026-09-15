@@ -1,17 +1,17 @@
-export const metadata = { title: "NestJS", description: "NestJS adapter using nexusMiddleware applied via MiddlewareConsumer for the Nexus proxy route.", mode: "proxy" }
+export const metadata = { title: "NestJS", description: "NestJS adapter using courierMiddleware applied via MiddlewareConsumer for the Courier proxy route.", mode: "proxy" }
 
-The `@noverax/nexus-nestjs` adapter provides a middleware that integrates Nexus into your NestJS application using the standard `MiddlewareConsumer`.
+The `@noverax/courier-nestjs` adapter provides a middleware that integrates Courier into your NestJS application using the standard `MiddlewareConsumer`.
 
 ## Installation
 
 ```bash
-npm install @noverax/nexus @noverax/nexus-nestjs
+npm install @noverax/courier @noverax/courier-nestjs
 ```
 
 ## Define your API sources
 
 ```ts title="src/lib/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: number; name: string; email: string }
 
@@ -37,12 +37,12 @@ export const sources = { myApi: api }
 
 ## Setup
 
-Apply the `nexusMiddleware` in your root `AppModule` using the `MiddlewareConsumer`:
+Apply the `courierMiddleware` in your root `AppModule` using the `MiddlewareConsumer`:
 
 ```ts title="src/app.module.ts"
 import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
-import { registerSources } from "@noverax/nexus"
-import { nexusMiddleware } from "@noverax/nexus-nestjs"
+import { registerSources } from "@noverax/courier"
+import { courierMiddleware } from "@noverax/courier-nestjs"
 import { sources } from "./lib/sources"
 
 registerSources(sources)
@@ -55,13 +55,13 @@ registerSources(sources)
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(nexusMiddleware())
+      .apply(courierMiddleware())
       .forRoutes("api/request")
   }
 }
 ```
 
-The `nexusMiddleware` function returns a NestJS-compatible middleware that reads sources from the core global registry populated by `registerSources()` at module load.
+The `courierMiddleware` function returns a NestJS-compatible middleware that reads sources from the core global registry populated by `registerSources()` at module load.
 
 ## With CORS
 
@@ -87,12 +87,12 @@ bootstrap()
 
 ## With existing modules
 
-The Nexus middleware sits alongside your existing NestJS controllers and modules:
+The Courier middleware sits alongside your existing NestJS controllers and modules:
 
 ```ts title="src/app.module.ts"
 import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
-import { registerSources } from "@noverax/nexus"
-import { nexusMiddleware } from "@noverax/nexus-nestjs"
+import { registerSources } from "@noverax/courier"
+import { courierMiddleware } from "@noverax/courier-nestjs"
 import { sources } from "./lib/sources"
 import { HealthModule } from "./health/health.module"
 import { StatsModule } from "./stats/stats.module"
@@ -107,7 +107,7 @@ registerSources(sources)
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(nexusMiddleware())
+      .apply(courierMiddleware())
       .forRoutes("api/request")
   }
 }
@@ -119,21 +119,21 @@ The `forRoutes("api/request")` call limits the middleware to the proxy path only
 
 ## Using with a dedicated module
 
-For larger applications, you can isolate the Nexus setup into its own module:
+For larger applications, you can isolate the Courier setup into its own module:
 
-```ts title="src/nexus/nexus.module.ts"
+```ts title="src/courier/courier.module.ts"
 import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
-import { registerSources } from "@noverax/nexus"
-import { nexusMiddleware } from "@noverax/nexus-nestjs"
+import { registerSources } from "@noverax/courier"
+import { courierMiddleware } from "@noverax/courier-nestjs"
 import { sources } from "../lib/sources"
 
 registerSources(sources)
 
 @Module({})
-export class NexusModule implements NestModule {
+export class CourierModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(nexusMiddleware())
+      .apply(courierMiddleware())
       .forRoutes("api/request")
   }
 }
@@ -141,28 +141,28 @@ export class NexusModule implements NestModule {
 
 ```ts title="src/app.module.ts"
 import { Module } from "@nestjs/common"
-import { NexusModule } from "./nexus/nexus.module"
+import { CourierModule } from "./courier/courier.module"
 import { HealthModule } from "./health/health.module"
 
 @Module({
-  imports: [NexusModule, HealthModule],
+  imports: [CourierModule, HealthModule],
 })
 export class AppModule {}
 ```
 
 <Callout variant="tip" title="Guards and interceptors">
-NestJS guards and interceptors applied globally or to the `api/request` route will execute before the Nexus middleware. This lets you add authentication or logging on top of the proxy route using standard NestJS patterns.
+NestJS guards and interceptors applied globally or to the `api/request` route will execute before the Courier middleware. This lets you add authentication or logging on top of the proxy route using standard NestJS patterns.
 </Callout>
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
-Wire your NestJS app into Studio with a single `attachRuntime()` call. It auto-loads `nexus.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `nexus.config.ts.runtime.appOrigin` (or set the `NEXUS_APP_URL` env var to override per-environment).
+Wire your NestJS app into Studio with a single `attachRuntime()` call. It auto-loads `courier.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `courier.config.ts.runtime.appOrigin` (or set the `COURIER_APP_URL` env var to override per-environment).
 
 The natural place to call `attachRuntime` is in `main.ts`, alongside `bootstrap()`:
 
 ```ts title="src/main.ts"
 import { NestFactory } from "@nestjs/core"
-import { attachRuntime } from "@noverax/nexus-studio-core/runtime"
+import { attachRuntime } from "@noverax/courier-studio-core/runtime"
 import { AppModule } from "./app.module"
 
 async function bootstrap() {
@@ -177,10 +177,10 @@ async function bootstrap() {
 bootstrap()
 ```
 
-Alternatively, set `NEXUS_APP_URL` instead of pinning `appOrigin` in the config:
+Alternatively, set `COURIER_APP_URL` instead of pinning `appOrigin` in the config:
 
 ```bash
-NEXUS_APP_URL=http://localhost:3001 nest start
+COURIER_APP_URL=http://localhost:3001 nest start
 ```
 
 <Callout variant="warn" title="No magic default">
@@ -194,10 +194,10 @@ On the client, point your caller to this server's proxy URL. Choose the guide fo
 - [React (Vite / CRA)](/docs/frameworks/react) — `createProxyQueryCaller` with React Query hooks
 - [Vue](/docs/frameworks/vue) — `createProxyCaller` with composables
 - [Next.js](/docs/frameworks/nextjs) — full-stack with `apiRoute` and `createProxyQueryCaller`
-- [Nuxt](/docs/frameworks/nuxt) — full-stack with `nexusHandler` and `createProxyCaller`
+- [Nuxt](/docs/frameworks/nuxt) — full-stack with `courierHandler` and `createProxyCaller`
 
 ```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import type { api } from "../shared/sources"
 
 export const caller = createProxyCaller<typeof api>({

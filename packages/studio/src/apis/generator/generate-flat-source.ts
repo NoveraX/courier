@@ -27,7 +27,7 @@ export function generateFlatSourceFile(
   const typeImports = collectTypeImports(endpoints, spec, options, schemaImports, extracted);
   const needsValidation = checkNeedsValidation(endpoints, options, schemaImports);
 
-  lines.push(`import { defineApi, endpoint } from "@noverax/nexus/define";`);
+  lines.push(`import { defineApi, endpoint } from "@noverax/courier/define";`);
 
   if (needsValidation) {
     if (options.validation === "zod") lines.push(`import { z } from "zod";`);

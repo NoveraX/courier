@@ -6,7 +6,7 @@ For the best user experience, prefetch data in Server Components and pass it to 
 
 ```ts title="app/users/page.tsx"
 // app/users/page.tsx — React Server Component
-import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/nexus-react"
+import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/courier-react"
 import { q } from "@/lib/query"
 import { UserList } from "./user-list"
 
@@ -51,7 +51,7 @@ export function UserList() {
 ## Prefetching with variables
 
 ```ts title="app/users/[id]/page.tsx"
-import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/nexus-react"
+import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/courier-react"
 import { q } from "@/lib/query"
 import { UserProfile } from "./user-profile"
 
@@ -75,7 +75,7 @@ export default async function UserPage({ params }: { params: { id: string } }) {
 React Query uses partial key matching for invalidation. Hierarchical keys enable invalidation at different levels:
 
 ```ts
-import { useQueryClient } from "@noverax/nexus-react"
+import { useQueryClient } from "@noverax/courier-react"
 
 const queryClient = useQueryClient()
 

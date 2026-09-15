@@ -1,14 +1,14 @@
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { NexusConfig } from "@noverax/nexus/config";
+import type { CourierConfig } from "@noverax/courier/config";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BindingTable } from "../src/server/catalog/binding-table";
-import type { LoadedNexusConfig } from "../src/server/config-loader";
+import type { LoadedCourierConfig } from "../src/server/config-loader";
 import { startConfigWatcher } from "../src/server/config-watcher";
 
-function makeLoaded(deps: string[]): LoadedNexusConfig {
-  const config = { sources: {} } as unknown as NexusConfig;
+function makeLoaded(deps: string[]): LoadedCourierConfig {
+  const config = { sources: {} } as unknown as CourierConfig;
   return { config, configFile: deps[0] ?? "", deps };
 }
 
@@ -22,7 +22,7 @@ afterEach(() => {
 describe("startConfigWatcher", () => {
   it("returns the initial loaded config from getCurrent()", () => {
     const dir = mkdtempSync(join(tmpdir(), "config-watcher-"));
-    const file = join(dir, "nexus.config.ts");
+    const file = join(dir, "courier.config.ts");
     writeFileSync(file, "");
     const initial = makeLoaded([file]);
     const watcher = startConfigWatcher(initial, {
@@ -35,7 +35,7 @@ describe("startConfigWatcher", () => {
 
   it("stop() is idempotent", () => {
     const dir = mkdtempSync(join(tmpdir(), "config-watcher-"));
-    const file = join(dir, "nexus.config.ts");
+    const file = join(dir, "courier.config.ts");
     writeFileSync(file, "");
     const watcher = startConfigWatcher(makeLoaded([file]), {
       projectRoot: dir,
@@ -60,7 +60,7 @@ describe("startConfigWatcher", () => {
 
   it("does not invoke onReload synchronously", () => {
     const dir = mkdtempSync(join(tmpdir(), "config-watcher-"));
-    const file = join(dir, "nexus.config.ts");
+    const file = join(dir, "courier.config.ts");
     writeFileSync(file, "");
     const onReload = vi.fn();
     const watcher = startConfigWatcher(makeLoaded([file]), {

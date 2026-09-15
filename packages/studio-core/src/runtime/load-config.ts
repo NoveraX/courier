@@ -1,11 +1,11 @@
 /**
- * Unified `nexus.config.{ts,mts,cts,js,mjs,cjs}` loader — the single
+ * Unified `courier.config.{ts,mts,cts,js,mjs,cjs}` loader — the single
  * canonical way to resolve and load a user's config file.
  *
  * Two-stage design:
  *
  *  1. **File discovery** — walk up from `cwd` looking for a
- *     `nexus.config.*` file. c12's own `loadConfig` does NOT walk up by
+ *     `courier.config.*` file. c12's own `loadConfig` does NOT walk up by
  *     default, so we implement the discovery layer ourselves in ~20 LOC
  *     of pure Node builtins.
  *
@@ -14,10 +14,10 @@
  *     TypeScript configs transparently across Node / Next.js dev / tsx /
  *     bun / deno.
  *
- * This module lives in `@noverax/nexus-studio-core` so BOTH consumers
+ * This module lives in `@noverax/courier-studio-core` so BOTH consumers
  * resolve config through the same code path:
  *
- *  - The Studio dev server (`@noverax/nexus-studio`) wraps this loader in
+ *  - The Studio dev server (`@noverax/courier-studio`) wraps this loader in
  *    `packages/studio/src/server/config-loader.ts` and adds dev-only
  *    concerns on top (validation, source-key stamping, dependency
  *    extraction for the fs watcher, rich error reporting).
@@ -34,34 +34,34 @@
 
 import { existsSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import type { NexusConfig } from "@noverax/nexus/config";
+import type { CourierConfig } from "@noverax/courier/config";
 import { loadConfig } from "c12";
 
 const CONFIG_BASENAMES: ReadonlyArray<string> = [
-  "nexus.config.ts",
-  "nexus.config.mts",
-  "nexus.config.cts",
-  "nexus.config.js",
-  "nexus.config.mjs",
-  "nexus.config.cjs",
+  "courier.config.ts",
+  "courier.config.mts",
+  "courier.config.cts",
+  "courier.config.js",
+  "courier.config.mjs",
+  "courier.config.cjs",
 ];
 
 /**
- * Result of a successful `loadNexusConfig` call.
+ * Result of a successful `loadCourierConfig` call.
  *
  * `configFile` is the absolute, symlink-resolved path of the file that
  * was loaded — the dev-server side uses it for the `fs.watch` dep tracker;
  * the runtime side uses it only for log/debug output.
  */
-export interface LoadedNexusConfig {
-  config: NexusConfig;
+export interface LoadedCourierConfig {
+  config: CourierConfig;
   configFile: string;
 }
 
 /**
- * Options for `loadNexusConfig`.
+ * Options for `loadCourierConfig`.
  */
-export interface LoadNexusConfigOptions {
+export interface LoadCourierConfigOptions {
   /**
    * Starting directory for the config search. Defaults to `process.cwd()`.
    * The dev-server passes the explicit project root; the runtime path
@@ -83,7 +83,7 @@ export interface LoadNexusConfigOptions {
 }
 
 /**
- * Walk up from `startDir` looking for a `nexus.config.*` file. Returns the
+ * Walk up from `startDir` looking for a `courier.config.*` file. Returns the
  * absolute directory containing the first match, or `null` if the walk
  * reaches the filesystem root without finding one.
  */
@@ -107,7 +107,7 @@ function hasConfigAt(cwd: string): boolean {
 }
 
 /**
- * Find and load a `nexus.config.*` file.
+ * Find and load a `courier.config.*` file.
  *
  * Returns `null` on any failure mode (file not found, c12 throws, the
  * resolved config is empty). Callers that need loud failure check for
@@ -115,9 +115,9 @@ function hasConfigAt(cwd: string): boolean {
  * stays neutral so the dev-server and runtime paths can pick their own
  * error surfaces.
  */
-export async function loadNexusConfig(
-  options: LoadNexusConfigOptions = {},
-): Promise<LoadedNexusConfig | null> {
+export async function loadCourierConfig(
+  options: LoadCourierConfigOptions = {},
+): Promise<LoadedCourierConfig | null> {
   const startDir = resolve(options.cwd ?? process.cwd());
 
   const configDir = options.requireAtCwd
@@ -128,10 +128,10 @@ export async function loadNexusConfig(
 
   if (!configDir) return null;
 
-  let loaded: Awaited<ReturnType<typeof loadConfig<NexusConfig>>>;
+  let loaded: Awaited<ReturnType<typeof loadConfig<CourierConfig>>>;
   try {
-    loaded = await loadConfig<NexusConfig>({
-      name: "nexus",
+    loaded = await loadConfig<CourierConfig>({
+      name: "courier",
       cwd: configDir,
       rcFile: false,
       packageJson: false,
@@ -145,7 +145,7 @@ export async function loadNexusConfig(
   const configFile = loaded.configFile;
   if (!configFile || !loaded.config) return null;
 
-  // c12 occasionally returns a placeholder `configFile: "nexus.config"`
+  // c12 occasionally returns a placeholder `configFile: "courier.config"`
   // when nothing was actually loaded. Treat that as a null result so the
   // caller's fallback path runs cleanly.
   if (!existsSync(configFile)) return null;

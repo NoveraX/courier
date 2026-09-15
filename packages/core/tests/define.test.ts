@@ -56,13 +56,13 @@ describe("endpoint", () => {
 	});
 
 	it("attaches type metadata to endpoint function", () => {
-		const SCHEMA = Symbol.for("nexus.endpoint.schema");
+		const SCHEMA = Symbol.for("courier.endpoint.schema");
 		const fn = endpoint<string[]>({ type: "query" })(({ get }) => get());
 		expect((fn as any)[SCHEMA].type).toBe("query");
 	});
 
 	it("attaches cache metadata to endpoint function", () => {
-		const SCHEMA = Symbol.for("nexus.endpoint.schema");
+		const SCHEMA = Symbol.for("courier.endpoint.schema");
 		const fn = endpoint<string[]>({ type: "query", cache: { revalidate: 60, tags: ["users"] } })(
 			({ get }) => get(),
 		);
@@ -70,7 +70,7 @@ describe("endpoint", () => {
 	});
 
 	it("supports type+cache without schema (EndpointOptions overload)", () => {
-		const SCHEMA = Symbol.for("nexus.endpoint.schema");
+		const SCHEMA = Symbol.for("courier.endpoint.schema");
 		const fn = endpoint<string[]>({ type: "query", cache: { revalidate: 30 } })(
 			({ get }) => get(),
 		);
@@ -78,7 +78,7 @@ describe("endpoint", () => {
 	});
 
 	it("supports type: mutation", () => {
-		const SCHEMA = Symbol.for("nexus.endpoint.schema");
+		const SCHEMA = Symbol.for("courier.endpoint.schema");
 		const fn = endpoint<void, { id: string }>({ type: "mutation" })(
 			({ del }, vars) => del(":id", vars),
 		);

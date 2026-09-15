@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og"
 
 export const runtime = "edge"
-export const alt = "Nexus — Type-Safe HTTP for Next.js"
+export const alt = "Courier — Type-Safe HTTP for Next.js"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
@@ -57,7 +57,7 @@ export default async function OGImage() {
       >
         {/* biome-ignore lint/performance/noImgElement: ImageResponse requires native img */}
         <img
-          src="https://nexus.noverax.cloud/logos/nexus-icon-gradient.png"
+          src="https://courier.noverax.cloud/logos/courier-icon-gradient.png"
           alt=""
           width={120}
           height={120}
@@ -74,7 +74,7 @@ export default async function OGImage() {
           marginBottom: 16,
         }}
       >
-        nexus
+        courier
       </div>
 
       {/* Subtitle */}
@@ -102,9 +102,9 @@ export default async function OGImage() {
           color: "rgba(255,255,255,0.35)",
         }}
       >
-        <span>@noverax/nexus</span>
+        <span>@noverax/courier</span>
         <span style={{ color: "rgba(255,255,255,0.15)" }}>|</span>
-        <span>nexus.noverax.cloud</span>
+        <span>courier.noverax.cloud</span>
       </div>
     </div>,
     { ...size }

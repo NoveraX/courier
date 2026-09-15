@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { PresenceAdapter, PresenceDiff } from "@noverax/nexus/realtime";
+import type { PresenceAdapter, PresenceDiff } from "@noverax/courier/realtime";
 import { createRedisPresence } from "../src/redis-presence";
 
 // ---------------------------------------------------------------------------
@@ -412,7 +412,7 @@ describe("createRedisPresence", () => {
     it("applies custom prefix to keys", async () => {
       const prefixed = createRedisPresence({
         redis: redis as any,
-        prefix: "nexus:",
+        prefix: "courier:",
       });
       await prefixed.connect();
       await prefixed.track("room", alice);

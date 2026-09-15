@@ -1,7 +1,7 @@
 "use client";
 
-import type { ConnectionStatus } from "@noverax/nexus/realtime";
-import { createConnectionState } from "@noverax/nexus/realtime";
+import type { ConnectionStatus } from "@noverax/courier/realtime";
+import { createConnectionState } from "@noverax/courier/realtime";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 // ---------------------------------------------------------------------------

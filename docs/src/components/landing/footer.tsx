@@ -1,14 +1,14 @@
 import { BookOpen, Package } from "lucide-react"
 
 import { GithubIcon } from "@/components/icons/github"
-import { NexusLogo } from "@/components/nexus-logo"
+import { CourierLogo } from "@/components/courier-logo"
 
 const links = [
   { label: "Documentation", href: "/docs/introduction", icon: BookOpen },
-  { label: "GitHub", href: "https://github.com/NoveraX/nexus", icon: GithubIcon, external: true },
+  { label: "GitHub", href: "https://github.com/NoveraX/courier", icon: GithubIcon, external: true },
   {
     label: "npm",
-    href: "https://www.npmjs.com/package/@noverax/nexus",
+    href: "https://www.npmjs.com/package/@noverax/courier",
     icon: Package,
     external: true,
   },
@@ -19,8 +19,8 @@ export function Footer() {
     <footer className="border-t px-6 py-12 lg:px-8">
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 sm:flex-row sm:justify-between">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <NexusLogo variant="icon" width={18} height={18} />
-          <span className="font-semibold text-foreground">@noverax/nexus</span>
+          <CourierLogo variant="icon" width={18} height={18} />
+          <span className="font-semibold text-foreground">@noverax/courier</span>
           {" · "}
           MIT License
         </div>

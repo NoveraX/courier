@@ -1,5 +1,5 @@
 /**
- * Load `nexus.config.ts` if present and start the config watcher.
+ * Load `courier.config.ts` if present and start the config watcher.
  *
  * A missing config is treated as a no-op so the studio dev server can still
  * come up with an empty binding table. Other load errors are logged so they
@@ -8,10 +8,10 @@
  * `onReload` callback so subsequent file changes flow through the same path.
  */
 
-import { createLogger } from "@noverax/nexus";
+import { createLogger } from "@noverax/courier";
 import type { Namespace } from "socket.io";
 import type { BindingTable } from "./catalog/binding-table";
-import { type LoadedNexusConfig, loadNexusConfig } from "./config-loader";
+import { type LoadedCourierConfig, loadCourierConfig } from "./config-loader";
 import { ConfigNotFoundError } from "./config-loader-errors";
 import { type ConfigWatcher, startConfigWatcher } from "./config-watcher";
 import type { MockRegistry } from "./mock-registry";
@@ -29,12 +29,12 @@ export interface InitConfigDrivenDeps {
 export async function initConfigDriven(deps: InitConfigDrivenDeps): Promise<ConfigWatcher | null> {
   const { projectRoot, bindingTable, mockRegistry, uiNamespace, setConfigPath } = deps;
 
-  let loaded: LoadedNexusConfig;
+  let loaded: LoadedCourierConfig;
   try {
-    loaded = await loadNexusConfig(projectRoot);
+    loaded = await loadCourierConfig(projectRoot);
   } catch (err) {
     if (err instanceof ConfigNotFoundError) return null;
-    log.warn("nexus.config load failed", err);
+    log.warn("courier.config load failed", err);
     return null;
   }
 

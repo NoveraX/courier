@@ -1,12 +1,12 @@
 import type { HttpResponse } from "../http-client/types";
-import { NexusError } from "./nexus-error";
+import { CourierError } from "./courier-error";
 
 /**
  * Thrown when an HTTP response has a non-2xx status, or when the underlying
  * fetch fails entirely (network error, status === 0). Carries the full
  * response so callers can inspect headers and body without re-fetching.
  */
-export class HTTPError<TData = unknown> extends NexusError<"HTTP_ERROR"> {
+export class HTTPError<TData = unknown> extends CourierError<"HTTP_ERROR"> {
   readonly status: number;
   readonly headers: Headers;
   readonly data: TData;

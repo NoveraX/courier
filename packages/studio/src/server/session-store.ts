@@ -1,7 +1,7 @@
 /**
  * Session persistence — save/load/delete/list sessions on disk.
  *
- * Sessions are stored as individual JSON files in `.nexus/sessions/`.
+ * Sessions are stored as individual JSON files in `.courier/sessions/`.
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { resolveProject } from "../context";
 import type { SavedSession, SessionSummary } from "./session-types";
 
-const SESSIONS_DIR = ".nexus/sessions";
+const SESSIONS_DIR = ".courier/sessions";
 
 /** Resolve sessions directory path */
 function sessionsDir(): string {

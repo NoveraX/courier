@@ -1,7 +1,7 @@
 /**
- * Test utilities for @noverax/nexus-mock.
+ * Test utilities for @noverax/courier-mock.
  *
- * Import from "@noverax/nexus-mock/testing" when writing tests.
+ * Import from "@noverax/courier-mock/testing" when writing tests.
  * These are NOT included in the main entry point to keep production bundles lean.
  */
 

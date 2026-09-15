@@ -5,15 +5,15 @@ import Link from "next/link"
 import { useTheme } from "next-themes"
 import { useState } from "react"
 
-import { NexusLogo } from "@/components/nexus-logo"
+import { CourierLogo } from "@/components/courier-logo"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { MobileNav } from "./mobile-nav"
 
 const ANNOUNCEMENT = {
-  id: "nexus-v1-release",
-  href: "https://github.com/NoveraX/nexus",
+  id: "courier-v1-release",
+  href: "https://github.com/NoveraX/courier",
 }
 
 const PKG_VERSION = "0.0.0"
@@ -65,7 +65,7 @@ export function Header() {
 
         {/* Mobile logo */}
         <Link href="/" className="flex items-center gap-2 md:hidden">
-          <NexusLogo variant="horizontal" width={75} height={20} />
+          <CourierLogo variant="horizontal" width={75} height={20} />
           <span className="rounded-md bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-brand">
             docs
           </span>
@@ -120,7 +120,7 @@ export function Header() {
             asChild
           >
             <a
-              href="https://www.npmjs.com/package/@noverax/nexus"
+              href="https://www.npmjs.com/package/@noverax/courier"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -131,7 +131,7 @@ export function Header() {
 
           <Button variant="ghost" size="icon" className="text-muted-foreground" asChild>
             <a
-              href="https://github.com/NoveraX/nexus"
+              href="https://github.com/NoveraX/courier"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="GitHub repository"

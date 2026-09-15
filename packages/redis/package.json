@@ -1,12 +1,12 @@
 {
-  "name": "@noverax/nexus-redis",
+  "name": "@noverax/courier-redis",
   "version": "0.0.0",
-  "description": "Redis adapters for @noverax/nexus realtime — Pub/Sub broadcast + Streams persistence",
+  "description": "Redis adapters for @noverax/courier realtime — Pub/Sub broadcast + Streams persistence",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noverax/nexus.git",
+    "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/redis"
   },
   "type": "module",
@@ -35,7 +35,7 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
-    "@noverax/nexus": "*"
+    "@noverax/courier": "*"
   },
   "peerDependencies": {
     "ioredis": ">=5"

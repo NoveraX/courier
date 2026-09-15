@@ -3,7 +3,7 @@ export const metadata = { title: "createHandler", description: "Universal adapte
 ## Import
 
 ```ts
-import { createHandler } from "@noverax/nexus"
+import { createHandler } from "@noverax/courier"
 ```
 
 ## Signature
@@ -37,12 +37,12 @@ type AdapterHandler = {
 
 ## Framework Adapters
 
-Each framework has a dedicated adapter package that wraps `createHandler()`. Every adapter is **zero-arg** — sources are read at request time from the core global registry populated by `registerSources()` (manual) or `attachRuntime()` (auto-loads `nexus.config.ts`).
+Each framework has a dedicated adapter package that wraps `createHandler()`. Every adapter is **zero-arg** — sources are read at request time from the core global registry populated by `registerSources()` (manual) or `attachRuntime()` (auto-loads `courier.config.ts`).
 
 ### Next.js
 
 ```ts title="instrumentation.ts"
-import { registerSources } from "@noverax/nexus"
+import { registerSources } from "@noverax/courier"
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
@@ -53,7 +53,7 @@ export async function register() {
 ```
 
 ```ts title="app/api/request/route.ts"
-import { apiRoute } from "@noverax/nexus-next"
+import { apiRoute } from "@noverax/courier-next"
 
 export const { GET, POST } = apiRoute()
 ```
@@ -61,63 +61,63 @@ export const { GET, POST } = apiRoute()
 ### Express
 
 ```ts title="server.ts"
-import { registerSources } from "@noverax/nexus"
-import { nexusHandler } from "@noverax/nexus-express"
+import { registerSources } from "@noverax/courier"
+import { courierHandler } from "@noverax/courier-express"
 import { sources } from "./api"
 
 registerSources(sources)
-app.use("/api/request", nexusHandler())
+app.use("/api/request", courierHandler())
 ```
 
 ### Hono
 
 ```ts title="server.ts"
-import { registerSources } from "@noverax/nexus"
-import { nexusHandler } from "@noverax/nexus-hono"
+import { registerSources } from "@noverax/courier"
+import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./api"
 
 registerSources(sources)
-app.all("/api/request/*", nexusHandler())
+app.all("/api/request/*", courierHandler())
 ```
 
 ### Fastify
 
 ```ts title="server.ts"
-import { registerSources } from "@noverax/nexus"
-import { nexusPlugin } from "@noverax/nexus-fastify"
+import { registerSources } from "@noverax/courier"
+import { courierPlugin } from "@noverax/courier-fastify"
 import { sources } from "./api"
 
 registerSources(sources)
-fastify.register(nexusPlugin, { prefix: "/api/request" })
+fastify.register(courierPlugin, { prefix: "/api/request" })
 ```
 
 ### NestJS
 
-```ts title="nexus.middleware.ts"
-import { registerSources } from "@noverax/nexus"
-import { nexusMiddleware } from "@noverax/nexus-nestjs"
+```ts title="courier.middleware.ts"
+import { registerSources } from "@noverax/courier"
+import { courierMiddleware } from "@noverax/courier-nestjs"
 import { sources } from "./api"
 
 registerSources(sources)
 
-export class NexusMiddleware {
-  use = nexusMiddleware()
+export class CourierMiddleware {
+  use = courierMiddleware()
 }
 ```
 
 ### Nuxt
 
-```ts title="server/plugins/nexus.ts"
-import { registerSources } from "@noverax/nexus"
+```ts title="server/plugins/courier.ts"
+import { registerSources } from "@noverax/courier"
 import { sources } from "~/api"
 
 export default defineNitroPlugin(() => registerSources(sources))
 ```
 
 ```ts title="server/api/request/[...].ts"
-import { nexusHandler } from "@noverax/nexus-nuxt"
+import { courierHandler } from "@noverax/courier-nuxt"
 
-export default nexusHandler()
+export default courierHandler()
 ```
 
 ## Request Flow

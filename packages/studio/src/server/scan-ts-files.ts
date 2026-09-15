@@ -4,7 +4,7 @@
 
 import { existsSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
-import type { NexusImportEntry } from "@noverax/nexus/config";
+import type { CourierImportEntry } from "@noverax/courier/config";
 import { getProjectRoot, resolveProjectSafe } from "../context";
 
 /**
@@ -13,7 +13,7 @@ import { getProjectRoot, resolveProjectSafe } from "../context";
  * name fallback when the entry omits an explicit `sourceName`.
  */
 export function scanTsFiles(
-  entry: NexusImportEntry,
+  entry: CourierImportEntry,
   name: string,
   generated: { path: string }[],
 ): string[] {

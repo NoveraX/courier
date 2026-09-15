@@ -2,7 +2,7 @@
  * Shared types for apis write routes.
  */
 
-import type { NexusImportType } from "@noverax/nexus/config";
+import type { CourierImportType } from "@noverax/courier/config";
 import type { GenerateOptions, ParsedSpec } from "../apis";
 
 export interface WriteBody {
@@ -10,7 +10,7 @@ export interface WriteBody {
   sourceName?: string;
   spec?: ParsedSpec;
   specUrl?: string;
-  importType?: NexusImportType;
+  importType?: CourierImportType;
   options?: GenerateOptions;
 }
 

@@ -1,4 +1,4 @@
-import { createAction } from "@noverax/nexus-next"
+import { createAction } from "@noverax/courier-next"
 import { sources } from "@/api"
 import { ExampleBlock } from "@/components/docs/example-block"
 import { PageHeader } from "@/components/layout/page-header"
@@ -12,7 +12,7 @@ const action = createAction(sources, "api")
 const actionCode = `// app/actions/actions.ts
 "use server"
 
-import { createAction } from "@noverax/nexus-next"
+import { createAction } from "@noverax/courier-next"
 import { revalidatePath } from "next/cache"
 import { sources } from "@/api"
 

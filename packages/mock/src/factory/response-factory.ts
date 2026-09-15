@@ -36,7 +36,7 @@ export function defineFactory<TResponse>(
     const trait = config.traits?.[traitName];
     if (!trait) {
       throw new Error(
-        `[nexus-mock] Unknown trait "${traitName}". Available: ${Object.keys(config.traits ?? {}).join(", ")}`,
+        `[courier-mock] Unknown trait "${traitName}". Available: ${Object.keys(config.traits ?? {}).join(", ")}`,
       );
     }
     if (typeof trait === "function") return trait(base);

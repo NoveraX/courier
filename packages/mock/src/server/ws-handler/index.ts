@@ -1,7 +1,7 @@
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 
-import { logger } from "@noverax/nexus";
+import { logger } from "@noverax/courier";
 import type { WebSocketServer as WSServerType } from "ws";
 import type { MockRegistry } from "../../registry";
 import type { MockChannelFn, MockHistoryEntry } from "../../types";
@@ -46,7 +46,7 @@ export interface WSHandlerConfig {
  * connections to mock channel handlers via path → registry lookup.
  *
  * Path pattern: `/{groupPrefix}/{methodName}` (matches `buildDirectWSUrl`).
- * Protocol: subset of Nexus WS protocol — `subscribe` (auto-fired by client
+ * Protocol: subset of Courier WS protocol — `subscribe` (auto-fired by client
  * on connect), `message` (client→server), `data` (server→client),
  * `unsubscribe`, `ping`/`pong`.
  *

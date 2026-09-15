@@ -4,7 +4,7 @@
  * - `allocateNextPort` — find the next free port not already assigned to a
  *   tracked server.
  * - `registerDeclared` — turn a `RegisteredMock` (key + meta extracted by the
- *   meta-pool from `nexus.config.ts.mocks[key]`) into a tracked `ServerState`
+ *   meta-pool from `courier.config.ts.mocks[key]`) into a tracked `ServerState`
  *   and emit it to the UI.
  * - `startServer` / `stopServer` / `restartServer` — drive the
  *   `processManager` while keeping the local `ServerState` in sync.
@@ -22,7 +22,7 @@ import type { ServerState } from "./types";
 export interface RegisteredMock {
   key: string;
   configPath: string;
-  /** Display path shown in the UI (e.g. `nexus.config.ts:mocks.users`). */
+  /** Display path shown in the UI (e.g. `courier.config.ts:mocks.users`). */
   relativePath: string;
   /** Extracted via the meta-pool from the user's mock definition. */
   meta: MetaResult;

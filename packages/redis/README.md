@@ -1,13 +1,13 @@
 <div align="center">
   <br />
 
-  # @noverax/nexus-redis
+  # @noverax/courier-redis
 
-  **Redis adapters for Nexus realtime — Pub/Sub broadcast + Streams persistence.**
+  **Redis adapters for Courier realtime — Pub/Sub broadcast + Streams persistence.**
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus-redis"><img src="https://img.shields.io/npm/v/@noverax/nexus-redis?color=7c3aed&style=flat-square" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier-redis"><img src="https://img.shields.io/npm/v/@noverax/courier-redis?color=7c3aed&style=flat-square" alt="npm" /></a>
 
   <br />
 </div>
@@ -17,7 +17,7 @@
 ## Install
 
 ```bash
-npm install @noverax/nexus-redis @noverax/nexus ioredis
+npm install @noverax/courier-redis @noverax/courier ioredis
 ```
 
 <br />
@@ -30,23 +30,23 @@ Broadcasts WebSocket messages across multiple server instances using Redis Pub/S
 
 ```ts
 import { Redis } from "ioredis"
-import { createRedisPubSub } from "@noverax/nexus-redis"
+import { createRedisPubSub } from "@noverax/courier-redis"
 
 const pubsub = createRedisPubSub({
   publisher: new Redis(),
   subscriber: new Redis(),
-  prefix: "nexus:",
+  prefix: "courier:",
 })
 
 await pubsub.connect()
 ```
 
-Pass it to `createNexusServer` or `createWSHandler`:
+Pass it to `createCourierServer` or `createWSHandler`:
 
 ```ts
-import { createNexusServer } from "@noverax/nexus-server"
+import { createCourierServer } from "@noverax/courier-server"
 
-createNexusServer({ sources, pubsub, port: 3001 })
+createCourierServer({ sources, pubsub, port: 3001 })
 ```
 
 ### Streams — SSE Event Persistence
@@ -55,11 +55,11 @@ Stores SSE events in Redis Streams for `Last-Event-ID` resume support:
 
 ```ts
 import { Redis } from "ioredis"
-import { createRedisStream } from "@noverax/nexus-redis"
+import { createRedisStream } from "@noverax/courier-redis"
 
 const stream = createRedisStream({
   redis: new Redis(),
-  prefix: "nexus:stream:",
+  prefix: "courier:stream:",
   maxLen: 1000,
 })
 

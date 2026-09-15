@@ -1,11 +1,11 @@
-export const metadata = { title: "Nuxt", description: "Nuxt integration with nexusHandler for server routes, createProxyCaller for client-side, and createCaller for server-side data fetching.", mode: "both" }
+export const metadata = { title: "Nuxt", description: "Nuxt integration with courierHandler for server routes, createProxyCaller for client-side, and createCaller for server-side data fetching.", mode: "both" }
 
-Nexus works with Nuxt through the `@noverax/nexus-nuxt` adapter. Use `nexusHandler` for the server proxy route, `createProxyCaller` for client-side requests, and `createCaller` for server-side data fetching.
+Courier works with Nuxt through the `@noverax/courier-nuxt` adapter. Use `courierHandler` for the server proxy route, `createProxyCaller` for client-side requests, and `createCaller` for server-side data fetching.
 
 ## Installation
 
 ```bash
-npm install @noverax/nexus @noverax/nexus-nuxt
+npm install @noverax/courier @noverax/courier-nuxt
 ```
 
 ## Define your API sources
@@ -13,7 +13,7 @@ npm install @noverax/nexus @noverax/nexus-nuxt
 Create a shared API definition:
 
 ```ts title="lib/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
 
 type Post = { id: number; title: string; body: string }
 type PostList = { data: Post[]; total: number }
@@ -48,8 +48,8 @@ export const sources = { myApi: api }
 
 Create a Nuxt server route that proxies client requests to your backend:
 
-```ts title="server/plugins/nexus.ts"
-import { registerSources } from "@noverax/nexus"
+```ts title="server/plugins/courier.ts"
+import { registerSources } from "@noverax/courier"
 import { sources } from "~/lib/sources"
 
 export default defineNitroPlugin(() => {
@@ -58,19 +58,19 @@ export default defineNitroPlugin(() => {
 ```
 
 ```ts title="server/api/request.post.ts"
-import { nexusHandler } from "@noverax/nexus-nuxt"
+import { courierHandler } from "@noverax/courier-nuxt"
 
-export default nexusHandler()
+export default courierHandler()
 ```
 
-The `server/plugins/nexus.ts` Nitro plugin runs once at server start, populating the in-process registry that `nexusHandler()` reads at request time. The route then proxies incoming `POST /api/request` requests that Nexus clients use as the proxy target.
+The `server/plugins/courier.ts` Nitro plugin runs once at server start, populating the in-process registry that `courierHandler()` reads at request time. The route then proxies incoming `POST /api/request` requests that Courier clients use as the proxy target.
 
 ## Step 2: Client-side composable
 
 Create a composable using `createProxyCaller` for client-side requests:
 
 ```ts title="composables/useCaller.ts"
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import type { api } from "~/lib/sources"
 
 export const caller = createProxyCaller<typeof api>({
@@ -109,7 +109,7 @@ const { data: posts, status } = useAsyncData("posts", () =>
 For server-side data fetching in event handlers, use `createCaller` directly:
 
 ```ts title="lib/server-caller.ts"
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "~/lib/sources"
 
 export const caller = createCaller(api)
@@ -197,19 +197,19 @@ async function handleSubmit() {
 ```
 
 <Callout variant="tip" title="@tanstack/vue-query">
-For advanced caching and mutation management, consider using `@tanstack/vue-query` alongside `createProxyCaller`. Nexus proxy callers return standard promises, so they work seamlessly with any data-fetching library.
+For advanced caching and mutation management, consider using `@tanstack/vue-query` alongside `createProxyCaller`. Courier proxy callers return standard promises, so they work seamlessly with any data-fetching library.
 </Callout>
 
 ## Realtime (SSE & WebSocket)
 
-The Nuxt adapter currently exposes **HTTP only**. There is no `nexusSSEHandler` or `nexusWSAttach` export, on purpose: Nitro/H3's WebSocket layer (`crossws`) is still flagged experimental and its production behavior across deployment targets (`node-server`, `bun`, `cloudflare`, `vercel-edge`) is not yet stable enough to ship as a first-class adapter API. SSE through Nitro works in Node, but pinning the public API to it before WS lands would create a split contract we'd then have to deprecate.
+The Nuxt adapter currently exposes **HTTP only**. There is no `courierSSEHandler` or `courierWSAttach` export, on purpose: Nitro/H3's WebSocket layer (`crossws`) is still flagged experimental and its production behavior across deployment targets (`node-server`, `bun`, `cloudflare`, `vercel-edge`) is not yet stable enough to ship as a first-class adapter API. SSE through Nitro works in Node, but pinning the public API to it before WS lands would create a split contract we'd then have to deprecate.
 
-**Once Nitro/H3 ship a production-grade WebSocket API**, `nexusSSEHandler` and `nexusWSAttach` will be added to `@noverax/nexus-nuxt` in parallel with the other 5 framework adapters (`express`, `hono`, `fastify`, `nestjs`, `next`).
+**Once Nitro/H3 ship a production-grade WebSocket API**, `courierSSEHandler` and `courierWSAttach` will be added to `@noverax/courier-nuxt` in parallel with the other 5 framework adapters (`express`, `hono`, `fastify`, `nestjs`, `next`).
 
-In the meantime, run a [standalone Nexus server](/docs/deployment/standalone-server) alongside Nuxt for any SSE or WebSocket endpoints, and point `proxyPath.{sse,ws}` at it:
+In the meantime, run a [standalone Courier server](/docs/deployment/standalone-server) alongside Nuxt for any SSE or WebSocket endpoints, and point `proxyPath.{sse,ws}` at it:
 
 ```ts title="composables/useCaller.ts"
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import type { api } from "~/lib/sources"
 
 export const caller = createProxyCaller<typeof api>({
@@ -223,10 +223,10 @@ export const caller = createProxyCaller<typeof api>({
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
-Wire your Nuxt server into Studio with a single `attachRuntime()` call from a Nitro plugin. It auto-loads `nexus.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `nexus.config.ts.runtime.appOrigin` (or set the `NEXUS_APP_URL` env var to override per-environment).
+Wire your Nuxt server into Studio with a single `attachRuntime()` call from a Nitro plugin. It auto-loads `courier.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `courier.config.ts.runtime.appOrigin` (or set the `COURIER_APP_URL` env var to override per-environment).
 
-```ts title="server/plugins/nexus-studio.ts"
-import { attachRuntime } from "@noverax/nexus-studio-core/runtime"
+```ts title="server/plugins/courier-studio.ts"
+import { attachRuntime } from "@noverax/courier-studio-core/runtime"
 
 export default defineNitroPlugin(async () => {
   if (process.env.NODE_ENV === "production") return
@@ -234,10 +234,10 @@ export default defineNitroPlugin(async () => {
 })
 ```
 
-Alternatively, set `NEXUS_APP_URL` instead of pinning `appOrigin` in the config:
+Alternatively, set `COURIER_APP_URL` instead of pinning `appOrigin` in the config:
 
 ```bash
-NEXUS_APP_URL=http://localhost:3000 nuxt dev
+COURIER_APP_URL=http://localhost:3000 nuxt dev
 ```
 
 <Callout variant="warn" title="No magic default">
@@ -254,7 +254,7 @@ lib/
   server-caller.ts          # createCaller(api)
 server/
   api/
-    request.post.ts         # nexusHandler()
+    request.post.ts         # courierHandler()
     dashboard.get.ts        # server-side with createCaller
     posts/[id].get.ts       # dynamic server route
 pages/

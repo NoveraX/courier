@@ -3,7 +3,7 @@ export const metadata = { title: "createProxyCaller", description: "Factory func
 ## Import
 
 ```ts
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 ```
 
 ## Signature
@@ -47,7 +47,7 @@ type ProxyCallerDefaults = {
 - `onSuccess` — global success handler invoked on every successful response.
 
 <Callout variant="warn" title="WS has no default path">
-`proxyPath.ws` has **no built-in default**. Calling a WS endpoint without it throws `ConfigurationError("WS_PATH_NOT_CONFIGURED", ...)`. In runtimes that cannot host WebSocket upgrades in-process (Next.js App Router, Cloudflare Workers, Vercel Edge, AWS Lambda), point this at a running [`@noverax/nexus-server`](/docs/deployment/standalone-server) instance.
+`proxyPath.ws` has **no built-in default**. Calling a WS endpoint without it throws `ConfigurationError("WS_PATH_NOT_CONFIGURED", ...)`. In runtimes that cannot host WebSocket upgrades in-process (Next.js App Router, Cloudflare Workers, Vercel Edge, AWS Lambda), point this at a running [`@noverax/courier-server`](/docs/deployment/standalone-server) instance.
 </Callout>
 
 ## Return Type
@@ -71,7 +71,7 @@ type TypedClient<T> = {
 ## Basic Usage
 
 ```ts title="lib/query.ts"
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import { api } from "@/api"
 
 const caller = createProxyCaller<typeof api>("api", {
@@ -95,7 +95,7 @@ const caller = createProxyCaller<typeof api>("api", {
   // Either side may be partial — missing transports fall back to
   // source.options.proxyPath, then to built-in defaults.
   proxyPath: {
-    http: "/api/nexus",                           // override default /api/request
+    http: "/api/courier",                           // override default /api/request
     sse: "/api/sse",                              // default
     ws: "wss://realtime.example.com",             // required for WS endpoints
   },
@@ -140,7 +140,7 @@ const user = await caller.users.getById({ id: "123" }, {
 
 ## Upload Progress
 
-Pass `onUploadProgress` to track file upload progress. When set, Nexus uses `XMLHttpRequest` for real network-level progress tracking.
+Pass `onUploadProgress` to track file upload progress. When set, Courier uses `XMLHttpRequest` for real network-level progress tracking.
 
 ```ts
 const result = await caller.files.upload(formData, {
@@ -151,7 +151,7 @@ const result = await caller.files.upload(formData, {
 ```
 
 <Callout variant="info" title="XHR Transport">
-When `onUploadProgress` is set, Nexus uses `XMLHttpRequest` instead of `fetch` to provide real network-level progress tracking on both HTTP/1.1 and HTTP/2.
+When `onUploadProgress` is set, Courier uses `XMLHttpRequest` instead of `fetch` to provide real network-level progress tracking on both HTTP/1.1 and HTTP/2.
 </Callout>
 
 ## GET Proxy Mode

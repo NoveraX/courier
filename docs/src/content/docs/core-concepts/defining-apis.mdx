@@ -2,20 +2,20 @@ export const metadata = { title: "Defining APIs", description: "Define your API 
 
 ## Overview
 
-Every API in Nexus is described by three building blocks:
+Every API in Courier is described by three building blocks:
 
 - **`defineApi`** — creates an API source with a base URL, groups, and shared options (middleware, headers, etc.)
 - **`defineGroup`** — organizes related endpoints under a common URL prefix
 - **`endpoint`** — declares a single endpoint with its response type, variables type, and HTTP logic
 
-All three are imported from `@noverax/nexus/define`.
+All three are imported from `@noverax/courier/define`.
 
 ## defineGroup
 
 Groups related endpoints under a URL prefix:
 
 ```ts title="api/users.ts"
-import { defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: string; name: string; email: string }
 
@@ -77,7 +77,7 @@ endpoint<UserPost, { id: string; postId: string }>()(
 Creates an API source by combining groups with a base URL and shared options:
 
 ```ts title="api/sources.ts"
-import { defineApi } from "@noverax/nexus/define"
+import { defineApi } from "@noverax/courier/define"
 import { users } from "./users"
 import { posts } from "./posts"
 

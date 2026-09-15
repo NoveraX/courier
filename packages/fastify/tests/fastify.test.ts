@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type * as NexusModule from "@noverax/nexus";
+import type * as CourierModule from "@noverax/courier";
 
-vi.mock("@noverax/nexus", async (importOriginal) => {
-  const actual = await importOriginal<typeof NexusModule>();
+vi.mock("@noverax/courier", async (importOriginal) => {
+  const actual = await importOriginal<typeof CourierModule>();
   return {
     ...actual,
     createHandler: vi.fn(() => ({
@@ -21,8 +21,8 @@ vi.mock("@noverax/nexus", async (importOriginal) => {
   };
 });
 
-import { createHandler, createWSHandler, registerSources } from "@noverax/nexus";
-import { nexusPlugin, nexusSSEHandler, nexusWSHandler } from "../src/index";
+import { createHandler, createWSHandler, registerSources } from "@noverax/courier";
+import { courierPlugin, courierSSEHandler, courierWSHandler } from "../src/index";
 
 const mockCreateHandler = vi.mocked(createHandler);
 const mockCreateWSHandler = vi.mocked(createWSHandler);
@@ -55,41 +55,41 @@ function createMockWSResult(handleSocket = vi.fn()) {
   };
 }
 
-describe("nexusPlugin", () => {
+describe("courierPlugin", () => {
   it("is an async function (Fastify plugin)", () => {
-    expect(typeof nexusPlugin).toBe("function");
+    expect(typeof courierPlugin).toBe("function");
   });
 
   it("calls createHandler with no sources arg (zero-arg)", async () => {
     const fastify = createMockFastify();
-    await nexusPlugin(fastify, {});
+    await courierPlugin(fastify, {});
     expect(mockCreateHandler).toHaveBeenCalledWith(undefined);
   });
 
   it("forwards HandlerConfig to createHandler", async () => {
     const config = { allowedOrigins: ["https://app.example.com"] };
     const fastify = createMockFastify();
-    await nexusPlugin(fastify, { config });
+    await courierPlugin(fastify, { config });
     expect(mockCreateHandler).toHaveBeenCalledWith(config);
   });
 
   it("registers a catch-all route", async () => {
     const fastify = createMockFastify();
-    await nexusPlugin(fastify, {});
+    await courierPlugin(fastify, {});
 
     expect(fastify.all).toHaveBeenCalledWith("/*", expect.any(Function));
   });
 
   it("registers a prefixed route when prefix is provided", async () => {
     const fastify = createMockFastify();
-    await nexusPlugin(fastify, { prefix: "/api/request" });
+    await courierPlugin(fastify, { prefix: "/api/request" });
 
     expect(fastify.all).toHaveBeenCalledWith("/api/request/*", expect.any(Function));
   });
 
   it("removes default content type parsers", async () => {
     const fastify = createMockFastify();
-    await nexusPlugin(fastify, {});
+    await courierPlugin(fastify, {});
 
     expect(fastify.removeAllContentTypeParsers).toHaveBeenCalled();
     expect(fastify.addContentTypeParser).toHaveBeenCalledWith(
@@ -108,7 +108,7 @@ describe("nexusPlugin", () => {
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
     const fastify = createMockFastify();
-    await nexusPlugin(fastify, {});
+    await courierPlugin(fastify, {});
 
     const routeHandler = (fastify.all as any).mock.calls[0][1];
 
@@ -126,20 +126,20 @@ describe("nexusPlugin", () => {
   });
 });
 
-describe("nexusSSEHandler", () => {
+describe("courierSSEHandler", () => {
   it("returns a function", () => {
-    const handler = nexusSSEHandler();
+    const handler = courierSSEHandler();
     expect(typeof handler).toBe("function");
   });
 
   it("calls createHandler with no sources arg (zero-arg)", () => {
-    nexusSSEHandler();
+    courierSSEHandler();
     expect(mockCreateHandler).toHaveBeenCalledWith(undefined);
   });
 
   it("forwards HandlerConfig to createHandler", () => {
     const config = { sseHeaders: { "Access-Control-Allow-Origin": "*" }, sseMaxLifetimeMs: 60_000 };
-    nexusSSEHandler(config);
+    courierSSEHandler(config);
     expect(mockCreateHandler).toHaveBeenCalledWith(config);
   });
 
@@ -152,7 +152,7 @@ describe("nexusSSEHandler", () => {
     );
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const handler = nexusSSEHandler();
+    const handler = courierSSEHandler();
     const mockReq = createMockFastifyRequest({
       method: "GET",
       url: "/api/sse?_s=api&_m=feed",
@@ -179,7 +179,7 @@ describe("nexusSSEHandler", () => {
     );
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const handler = nexusSSEHandler();
+    const handler = courierSSEHandler();
     const mockReq = createMockFastifyRequest({ method: "GET", url: "/api/sse?_s=api&_m=feed" });
     const { raw, hijack } = createMockFastifyReply();
 
@@ -200,7 +200,7 @@ describe("nexusSSEHandler", () => {
     const mockHandleSSE = vi.fn().mockResolvedValue(new Response(""));
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const handler = nexusSSEHandler();
+    const handler = courierSSEHandler();
     const mockReq = createMockFastifyRequest({ method: "GET", url: "/api/sse?_s=api&_m=feed" });
     const hijack = vi.fn(() => callOrder.push("hijack"));
     const raw = {
@@ -252,15 +252,15 @@ function createMockFastifyReply() {
 
 // --- WebSocket tests ---
 
-describe("nexusWSHandler", () => {
+describe("courierWSHandler", () => {
   it("returns a handler function", () => {
-    const handler = nexusWSHandler();
+    const handler = courierWSHandler();
     expect(typeof handler).toBe("function");
   });
 
   it("calls createWSHandler with just the options (no sources)", () => {
     const options = { heartbeatIntervalMs: 5000, allowedOrigins: ["http://localhost"] };
-    nexusWSHandler(options);
+    courierWSHandler(options);
     expect(mockCreateWSHandler).toHaveBeenCalledWith(options);
   });
 
@@ -268,7 +268,7 @@ describe("nexusWSHandler", () => {
     const mockHandleSocket = vi.fn();
     mockCreateWSHandler.mockReturnValue(createMockWSResult(mockHandleSocket));
 
-    const handler = nexusWSHandler();
+    const handler = courierWSHandler();
     const mockSocket = { send: vi.fn(), close: vi.fn(), readyState: 1, bufferedAmount: 0 } as any;
     const request = createMockFastifyRequest({ method: "GET", url: "/ws" });
 
@@ -284,7 +284,7 @@ describe("nexusWSHandler", () => {
     const mockHandleSocket = vi.fn();
     mockCreateWSHandler.mockReturnValue(createMockWSResult(mockHandleSocket));
 
-    const handler = nexusWSHandler();
+    const handler = courierWSHandler();
     const socket1 = { send: vi.fn(), close: vi.fn(), readyState: 1, bufferedAmount: 0 } as any;
     const socket2 = { send: vi.fn(), close: vi.fn(), readyState: 1, bufferedAmount: 0 } as any;
     const req = createMockFastifyRequest({ method: "GET", url: "/ws" });

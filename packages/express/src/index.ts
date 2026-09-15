@@ -1,6 +1,6 @@
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { Duplex } from "node:stream";
-import type { HandlerConfig, NexusWSOptions } from "@noverax/nexus";
+import type { CourierWSOptions, HandlerConfig } from "@noverax/courier";
 import {
   createHandler,
   createLogger,
@@ -8,9 +8,9 @@ import {
   getAppOrigin,
   requireSources,
   setAppOrigin,
-} from "@noverax/nexus";
-import { announceHosting } from "@noverax/nexus/announce";
-import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "@noverax/nexus/node";
+} from "@noverax/courier";
+import { announceHosting } from "@noverax/courier/announce";
+import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 import type { WebSocketServer } from "ws";
 
 const log = createLogger("Express");
@@ -34,7 +34,7 @@ function tryDiscoverAppOrigin(req: IncomingMessage): void {
 }
 
 /**
- * Create an Express middleware handler for the nexus proxy.
+ * Create an Express middleware handler for the courier proxy.
  *
  * Sources are read from the core global registry populated by
  * `attachRuntime()` — call `await attachRuntime()` in your server
@@ -43,18 +43,18 @@ function tryDiscoverAppOrigin(req: IncomingMessage): void {
  * @example
  * ```ts
  * import express from "express";
- * import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
- * import { nexusHandler } from "@noverax/nexus-express";
+ * import { attachRuntime } from "@noverax/courier-studio-core/runtime";
+ * import { courierHandler } from "@noverax/courier-express";
  *
  * const app = express();
  * await attachRuntime();
- * app.all("/api/request", nexusHandler());
+ * app.all("/api/request", courierHandler());
  * ```
  *
  * Note: Do NOT apply body-parsing middleware (express.json(), multer)
  * to this route — the handler reads the raw request body itself.
  */
-export function nexusHandler(config?: HandlerConfig) {
+export function courierHandler(config?: HandlerConfig) {
   const { handle } = createHandler(config);
   announceHosting({
     transports: ["http"],
@@ -84,13 +84,13 @@ export function nexusHandler(config?: HandlerConfig) {
  *
  * @example
  * ```ts
- * app.get("/api/sse", nexusSSEHandler());
+ * app.get("/api/sse", courierSSEHandler());
  * ```
  *
  * Note: Do NOT apply compression middleware to this route —
  * SSE requires unbuffered streaming.
  */
-export function nexusSSEHandler(config?: HandlerConfig) {
+export function courierSSEHandler(config?: HandlerConfig) {
   const { handleSSE } = createHandler(config);
   announceHosting({
     transports: ["sse"],
@@ -116,7 +116,7 @@ export function nexusSSEHandler(config?: HandlerConfig) {
 }
 
 /**
- * Attach Nexus WebSocket handler to an HTTP server.
+ * Attach Courier WebSocket handler to an HTTP server.
  * Requires `ws` package as peer dependency.
  *
  * @param server - Node.js HTTP server (e.g. `http.createServer(app)`)
@@ -127,18 +127,18 @@ export function nexusSSEHandler(config?: HandlerConfig) {
  * ```ts
  * import http from "node:http";
  * import express from "express";
- * import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
- * import { nexusHandler, nexusWSAttach } from "@noverax/nexus-express";
+ * import { attachRuntime } from "@noverax/courier-studio-core/runtime";
+ * import { courierHandler, courierWSAttach } from "@noverax/courier-express";
  *
  * const app = express();
  * const server = http.createServer(app);
  * await attachRuntime();
- * app.all("/api/request", nexusHandler());
- * const cleanup = nexusWSAttach(server);
+ * app.all("/api/request", courierHandler());
+ * const cleanup = courierWSAttach(server);
  * server.listen(3000);
  * ```
  */
-export function nexusWSAttach(server: Server, options?: NexusWSOptions): () => void {
+export function courierWSAttach(server: Server, options?: CourierWSOptions): () => void {
   const wsHandler = createWSHandler(options);
   announceHosting({
     transports: ["ws"],

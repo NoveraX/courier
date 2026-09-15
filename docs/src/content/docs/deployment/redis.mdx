@@ -1,6 +1,6 @@
 export const metadata = {
   title: "Redis Adapters",
-  description: "Scale Nexus realtime across multiple replicas with Redis Pub/Sub, Streams, and Presence adapters.",
+  description: "Scale Courier realtime across multiple replicas with Redis Pub/Sub, Streams, and Presence adapters.",
 }
 
 ## When You Need Redis
@@ -15,7 +15,7 @@ Memory adapters work perfectly for single-process deployments. Switch to Redis w
 ## Installation
 
 ```bash
-npm install @noverax/nexus-redis ioredis
+npm install @noverax/courier-redis ioredis
 ```
 
 `ioredis` is a peer dependency — you manage the Redis connection yourself.
@@ -26,12 +26,12 @@ Routes WebSocket broadcast messages across replicas via Redis Pub/Sub.
 
 ```ts title="adapters.ts"
 import Redis from "ioredis"
-import { createRedisPubSub } from "@noverax/nexus-redis"
+import { createRedisPubSub } from "@noverax/courier-redis"
 
 const pubsub = createRedisPubSub({
   publisher: new Redis(process.env.REDIS_URL),    // dedicated connection for PUBLISH
   subscriber: new Redis(process.env.REDIS_URL),   // dedicated connection for SUBSCRIBE
-  prefix: "nexus:",                                // channel key prefix (default: "")
+  prefix: "courier:",                                // channel key prefix (default: "")
 })
 
 await pubsub.connect()
@@ -59,11 +59,11 @@ Persists SSE events in Redis Streams for `Last-Event-ID` resume across replicas.
 
 ```ts title="adapters.ts"
 import Redis from "ioredis"
-import { createRedisStream } from "@noverax/nexus-redis"
+import { createRedisStream } from "@noverax/courier-redis"
 
 const stream = createRedisStream({
   redis: new Redis(process.env.REDIS_URL),
-  prefix: "nexus:stream:",      // stream key prefix (default: "")
+  prefix: "courier:stream:",      // stream key prefix (default: "")
   maxLen: 1000,                  // auto-trim MAXLEN per stream (default: 1000, 0 = no trim)
 })
 
@@ -87,11 +87,11 @@ Tracks online users across replicas using Redis ZSET (scores) + HASH (metadata).
 
 ```ts title="adapters.ts"
 import Redis from "ioredis"
-import { createRedisPresence } from "@noverax/nexus-redis"
+import { createRedisPresence } from "@noverax/courier-redis"
 
 const presence = createRedisPresence({
   redis: new Redis(process.env.REDIS_URL),
-  prefix: "nexus:presence:",    // key prefix (default: "presence:")
+  prefix: "courier:presence:",    // key prefix (default: "presence:")
 })
 
 await presence.connect()
@@ -138,25 +138,25 @@ Wire all three adapters together:
 
 ```ts title="adapters.ts"
 import Redis from "ioredis"
-import { createRedisPubSub, createRedisStream, createRedisPresence } from "@noverax/nexus-redis"
+import { createRedisPubSub, createRedisStream, createRedisPresence } from "@noverax/courier-redis"
 
 const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379"
 
 export const pubsub = createRedisPubSub({
   publisher: new Redis(redisUrl),
   subscriber: new Redis(redisUrl),
-  prefix: "nexus:",
+  prefix: "courier:",
 })
 
 export const stream = createRedisStream({
   redis: new Redis(redisUrl),
-  prefix: "nexus:stream:",
+  prefix: "courier:stream:",
   maxLen: 5000,
 })
 
 export const presence = createRedisPresence({
   redis: new Redis(redisUrl),
-  prefix: "nexus:presence:",
+  prefix: "courier:presence:",
 })
 
 export async function connectAdapters(): Promise<void> {

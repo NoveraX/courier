@@ -53,7 +53,7 @@ export interface ServerState {
 
 export interface CoordinatorConfig {
   mockRegistry: MockRegistry;
-  /** Returns the absolute path to the loaded `nexus.config.ts`, or `null` when none is loaded. */
+  /** Returns the absolute path to the loaded `courier.config.ts`, or `null` when none is loaded. */
   getConfigPath: () => string | null;
   uiNamespace: Namespace;
   basePort: number;

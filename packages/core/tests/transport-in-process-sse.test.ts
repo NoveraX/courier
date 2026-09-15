@@ -7,7 +7,7 @@ import type { StudioHooks } from "../src/studio/hooks";
 import { ValidationError } from "../src/validation";
 import { executeDirectSSE } from "../src/transport/in-process/sse";
 
-const HOOKS_KEY = Symbol.for("nexus.studio.hooks");
+const HOOKS_KEY = Symbol.for("courier.studio.hooks");
 const hooks = (globalThis as Record<symbol, unknown>)[HOOKS_KEY] as StudioHooks;
 
 function installHooks(overrides: Partial<StudioHooks>): () => void {

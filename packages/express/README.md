@@ -1,13 +1,13 @@
 <div align="center">
   <br />
 
-  # @noverax/nexus-express
+  # @noverax/courier-express
 
-  **Express adapter for Nexus.**
+  **Express adapter for Courier.**
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus-express"><img src="https://img.shields.io/npm/v/@noverax/nexus-express?color=7c3aed&style=flat-square" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier-express"><img src="https://img.shields.io/npm/v/@noverax/courier-express?color=7c3aed&style=flat-square" alt="npm" /></a>
 
   <br />
 </div>
@@ -17,29 +17,29 @@
 ## Install
 
 ```bash
-npm install @noverax/nexus-express @noverax/nexus express
+npm install @noverax/courier-express @noverax/courier express
 ```
 
 ## Usage
 
 ```ts
 import express from "express"
-import { registerSources } from "@noverax/nexus"
-import { nexusHandler } from "@noverax/nexus-express"
+import { registerSources } from "@noverax/courier"
+import { courierHandler } from "@noverax/courier-express"
 import { sources } from "./api/sources"
 
 registerSources(sources)
 
 const app = express()
 
-app.all("/api/request", nexusHandler())
+app.all("/api/request", courierHandler())
 
 app.listen(3000, () => {
   console.log("Server running on http://localhost:3000")
 })
 ```
 
-`nexusHandler()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` (or by `attachRuntime()` auto-loading `nexus.config.ts` in Studio-instrumented projects). The handler accepts any HTTP method. GET requests are routed to query-type endpoints, POST requests handle mutations and data payloads.
+`courierHandler()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` (or by `attachRuntime()` auto-loading `courier.config.ts` in Studio-instrumented projects). The handler accepts any HTTP method. GET requests are routed to query-type endpoints, POST requests handle mutations and data payloads.
 
 ## How It Works
 
@@ -52,7 +52,7 @@ app.listen(3000, () => {
 Pair with `createProxyCaller` on the client:
 
 ```ts
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 
 const caller = createProxyCaller({ proxyPath: { http: "/api/request" } })
 const users = await caller.users.getAll()
@@ -61,7 +61,7 @@ const users = await caller.users.getAll()
 Or with React Query:
 
 ```ts
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 
 const q = createProxyQueryCaller("api", { proxyPath: { http: "/api/request" } })
 ```

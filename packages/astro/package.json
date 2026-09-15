@@ -1,12 +1,12 @@
 {
-  "name": "@noverax/nexus-astro",
+  "name": "@noverax/courier-astro",
   "version": "0.0.0",
-  "description": "Astro adapter for @noverax/nexus — Web Standard proxy handler",
+  "description": "Astro adapter for @noverax/courier — Web Standard proxy handler",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noverax/nexus.git",
+    "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/astro"
   },
   "type": "module",
@@ -37,7 +37,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/nexus": "*"
+    "@noverax/courier": "*"
   },
   "peerDependencies": {
     "astro": ">=4"

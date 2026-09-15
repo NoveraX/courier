@@ -23,7 +23,7 @@ export function noCachingDetected(stats: Map<string, EndpointStats>): AuditItem[
     title: "No caching detected",
     description: "None of the frequently called endpoints show caching behavior.",
     suggestion: "Add cache middleware or set cache headers for read-only endpoints.",
-    codeSuggestion: `import { cache } from "@noverax/nexus/middleware";\n\ndefineApi({\n  middleware: [cache({ ttl: 60_000 })],\n});`,
+    codeSuggestion: `import { cache } from "@noverax/courier/middleware";\n\ndefineApi({\n  middleware: [cache({ ttl: 60_000 })],\n});`,
   }];
 }
 

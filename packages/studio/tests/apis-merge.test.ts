@@ -91,7 +91,7 @@ describe("extractEndpoints", () => {
   })
 
   it("returns empty map for file without endpoints", () => {
-    const file = `import { defineGroup } from "@noverax/nexus/define"`
+    const file = `import { defineGroup } from "@noverax/courier/define"`
     expect(extractEndpoints(file)).toEqual({})
   })
 })

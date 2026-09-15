@@ -2,7 +2,7 @@
  * Server logger — ANSI escape codes with structured prefix.
  *
  * Output format:
- *   [Nexus] PID – HH:MM:SS   LEVEL  [Context] message
+ *   [Courier] PID – HH:MM:SS   LEVEL  [Context] message
  */
 
 import type { Logger, LogLevel } from "./types";
@@ -47,14 +47,14 @@ function log(level: LogLevel, context: string, message: string, cause?: unknown)
   if (!hasStdout) {
     // Edge Runtime / environments without process.stdout — use console
     const fn = level === "error" ? console.error : level === "warn" ? console.warn : console.log;
-    fn(`[Nexus] [${context}] ${message}`, ...(cause != null ? [cause] : []));
+    fn(`[Courier] [${context}] ${message}`, ...(cause != null ? [cause] : []));
     return;
   }
   const color = LEVEL_COLORS[level];
   const label = LEVEL_LABELS[level];
   const pid = globalThis.process.pid;
   const suffix = cause != null ? `${DIM} ${cause}${R}` : "";
-  const line = `${BRAND}[Nexus]${R} ${WHITE}${pid}${R}  ${DARK}–${R} ${DIM}${ts()}${R}   ${color}${BOLD}${label}${R}  ${PURPLE}[${context}]${R} ${WHITE}${message}${R}${suffix}`;
+  const line = `${BRAND}[Courier]${R} ${WHITE}${pid}${R}  ${DARK}–${R} ${DIM}${ts()}${R}   ${color}${BOLD}${label}${R}  ${PURPLE}[${context}]${R} ${WHITE}${message}${R}${suffix}`;
   globalThis.process.stdout.write(`${line}\n`);
 }
 

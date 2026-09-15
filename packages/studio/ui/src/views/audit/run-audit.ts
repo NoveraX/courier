@@ -3,7 +3,7 @@ import type { Catalog } from "../../store/types-ui";
 import { computeEndpointStats } from "./compute-stats";
 import { MAX_SCORE, SEVERITY_CONFIG } from "./constants";
 import { collectDeepPerformance } from "./rules-deep";
-import { collectNexusRules } from "./rules-nexus";
+import { collectCourierRules } from "./rules-courier";
 import { collectErrors } from "./rules-errors";
 import { collectHints, collectPasses } from "./rules-hints";
 import { detectDuplicates, detectNPlusOne, detectWaterfall } from "./rules-patterns";
@@ -76,8 +76,8 @@ export function runAudit(
     ...collectSecurityRules(completed, catalog),
     // Deep performance rules
     ...collectDeepPerformance(completed),
-    // Nexus-specific rules
-    ...collectNexusRules(stats, catalog),
+    // Courier-specific rules
+    ...collectCourierRules(stats, catalog),
   ];
 
   const items = sortBySeverity(deduplicateItems(raw));

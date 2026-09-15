@@ -4,7 +4,7 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { BodyEncodingDemo, DefaultsDemo, SearchParamsDemo } from "./_components"
 
-const sourceConfigCode = `import { defineApi } from "@noverax/nexus/define"
+const sourceConfigCode = `import { defineApi } from "@noverax/courier/define"
 
 const encodedApi = defineApi({
   baseURL: "http://localhost:4000",

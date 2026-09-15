@@ -27,7 +27,7 @@ src/
 The `api/` directory contains your API structure. Each group lives in its own file:
 
 ```ts title="api/users.ts"
-import { defineGroup, endpoint } from "@noverax/nexus/define"
+import { defineGroup, endpoint } from "@noverax/courier/define"
 
 type User = { id: string; name: string; email: string }
 
@@ -46,7 +46,7 @@ export const users = defineGroup({
 The main file combines groups into an API source:
 
 ```ts title="api/index.ts"
-import { defineApi } from "@noverax/nexus/define"
+import { defineApi } from "@noverax/courier/define"
 import { users } from "./users"
 import { posts } from "./posts"
 import { files } from "./files"
@@ -68,21 +68,21 @@ Keeping each group in its own file makes it easy to find and modify endpoints. T
 Create the appropriate caller for your use case:
 
 ```ts title="lib/caller.ts (React Query)"
-import { createProxyQueryCaller } from "@noverax/nexus-react"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 import { api } from "@/api"
 
 export const { useQuery, useMutation, useSuspenseQuery, caller } = createProxyQueryCaller<typeof api>()
 ```
 
 ```ts title="lib/caller.ts (Vanilla / Vue / Svelte)"
-import { createProxyCaller } from "@noverax/nexus"
+import { createProxyCaller } from "@noverax/courier"
 import { api } from "@/api"
 
 export const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
 ```
 
 ```ts title="lib/server-caller.ts (Server-side)"
-import { createCaller } from "@noverax/nexus"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api"
 
 export const caller = createCaller(api)
@@ -93,7 +93,7 @@ export const caller = createCaller(api)
 Define a separate `defineApi` for each backend service:
 
 ```ts title="api/index.ts"
-import { defineApi } from "@noverax/nexus/define"
+import { defineApi } from "@noverax/courier/define"
 import { users, posts } from "./groups"
 import { auth } from "./auth"
 

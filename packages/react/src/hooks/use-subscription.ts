@@ -1,6 +1,6 @@
 "use client";
 
-import type { ConnectionStatus, SSEEvent, SSESubscription } from "@noverax/nexus/realtime";
+import type { ConnectionStatus, SSEEvent, SSESubscription } from "@noverax/courier/realtime";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { SubscriptionResult } from "../types";

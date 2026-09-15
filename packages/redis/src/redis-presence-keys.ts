@@ -1,4 +1,4 @@
-import type { PresenceEntry } from "@noverax/nexus/realtime";
+import type { PresenceEntry } from "@noverax/courier/realtime";
 
 /** Packed metadata stored in Redis HASH — userId + joinedAt + user metadata */
 export interface PackedMeta {

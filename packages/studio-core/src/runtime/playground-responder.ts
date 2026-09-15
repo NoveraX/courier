@@ -24,13 +24,13 @@
  * registry the runtime populates (the announce-driven
  * `runtime-source-registry` for `attachRuntime`-attached adapters,
  * or the core global registry for the in-process auto-registration
- * path populated by `attachRuntime()` from `nexus.config.ts`).
+ * path populated by `attachRuntime()` from `courier.config.ts`).
  */
 
-import { executeRequest } from "@noverax/nexus";
-import type { Sources } from "@noverax/nexus/define";
-import { executeDirectSSE, executeDirectWSChannel } from "@noverax/nexus/internal-streams";
-import type { WSChannel } from "@noverax/nexus/realtime";
+import { executeRequest } from "@noverax/courier";
+import type { Sources } from "@noverax/courier/define";
+import { executeDirectSSE, executeDirectWSChannel } from "@noverax/courier/internal-streams";
+import type { WSChannel } from "@noverax/courier/realtime";
 import { dispatchHttp, dispatchSSE, dispatchWS } from "./responder-dispatch";
 
 /** Minimal Socket.IO socket surface the responder needs. */

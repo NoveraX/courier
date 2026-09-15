@@ -27,4 +27,4 @@ export const FRAMEWORKS: FrameworkConfig[] = [
   SOLID,
 ];
 
-export const WELCOME_STORAGE_KEY = "nexus-studio-v2:welcome-completed";
+export const WELCOME_STORAGE_KEY = "courier-studio-v2:welcome-completed";

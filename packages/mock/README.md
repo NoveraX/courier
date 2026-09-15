@@ -1,13 +1,13 @@
 <div align="center">
   <br />
 
-  # @noverax/nexus-mock
+  # @noverax/courier-mock
 
-  **Type-safe mock server with stateful store, scenarios, and test utilities for Nexus.**
+  **Type-safe mock server with stateful store, scenarios, and test utilities for Courier.**
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus-mock"><img src="https://img.shields.io/npm/v/@noverax/nexus-mock?color=7c3aed&style=flat-square" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier-mock"><img src="https://img.shields.io/npm/v/@noverax/courier-mock?color=7c3aed&style=flat-square" alt="npm" /></a>
 
   <br />
 </div>
@@ -17,7 +17,7 @@
 ## Install
 
 ```bash
-npm install @noverax/nexus-mock @noverax/nexus
+npm install @noverax/courier-mock @noverax/courier
 ```
 
 Optional peer dependencies for the standalone mock server:
@@ -33,7 +33,7 @@ npm install hono @hono/node-server
 ### Define a Mock Server
 
 ```ts
-import { defineMockServer, defineFactory, defineScenario } from "@noverax/nexus-mock"
+import { defineMockServer, defineFactory, defineScenario } from "@noverax/courier-mock"
 import type { api } from "./api"
 
 const userFactory = defineFactory<User>({
@@ -55,7 +55,7 @@ export const mockServer = defineMockServer<typeof api>({
 
 ```ts
 // Import from /testing for test-only utilities
-import { createMockClient, createMockStore } from "@noverax/nexus-mock/testing"
+import { createMockClient, createMockStore } from "@noverax/courier-mock/testing"
 
 const { client, history } = createMockClient<typeof api>(mockServer)
 const users = await client.users.getAll()
@@ -67,10 +67,10 @@ const users = await client.users.getAll()
 
 | Entry Point | Description |
 |---|---|
-| `@noverax/nexus-mock` | `defineMockServer`, `defineFactory`, `defineScenario`, `MockHttpError` |
-| `@noverax/nexus-mock/testing` | `createMockClient`, `createMockStore`, `createRecorder`, `replayFixtures` |
-| `@noverax/nexus-mock/server` | Standalone Hono-based mock server |
-| `@noverax/nexus-mock/contract` | Contract testing utilities |
+| `@noverax/courier-mock` | `defineMockServer`, `defineFactory`, `defineScenario`, `MockHttpError` |
+| `@noverax/courier-mock/testing` | `createMockClient`, `createMockStore`, `createRecorder`, `replayFixtures` |
+| `@noverax/courier-mock/server` | Standalone Hono-based mock server |
+| `@noverax/courier-mock/contract` | Contract testing utilities |
 
 <br />
 

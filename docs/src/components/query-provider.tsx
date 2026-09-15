@@ -1,6 +1,6 @@
 "use client"
 
-import { QueryClient, QueryClientProvider } from "@noverax/nexus-react"
+import { QueryClient, QueryClientProvider } from "@noverax/courier-react"
 import { type ReactNode, useState } from "react"
 
 export function QueryProvider({ children }: { children: ReactNode }) {

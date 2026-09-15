@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { logger } from "@noverax/nexus";
+import { logger } from "@noverax/courier";
 
 import type { MockServer } from "../server/create-mock-server";
 import { createCommandHandler } from "./command-handler";

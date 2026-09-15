@@ -3,7 +3,7 @@
  */
 
 import { basename } from "node:path";
-import type { NexusImportEntry } from "@noverax/nexus/config";
+import type { CourierImportEntry } from "@noverax/courier/config";
 import type { ParsedSpec } from "../apis";
 import { computeSpecHash } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
@@ -111,7 +111,7 @@ function loadSourceFingerprints(
   return buildFallbackFingerprints(existingFiles, state?.userModified ?? []);
 }
 
-function readSourceFiles(entry: NexusImportEntry, name: string): Record<string, string> {
+function readSourceFiles(entry: CourierImportEntry, name: string): Record<string, string> {
   const generated = [{ path: "dummy", content: "" }];
   const diskPaths = scanTsFiles(entry, name, generated);
   return readFilesFromDisk(diskPaths);
@@ -125,7 +125,7 @@ function readSourceFiles(entry: NexusImportEntry, name: string): Record<string, 
  * `extractEndpoints()` parser the merge layer uses.
  */
 function scanSourceGroups(
-  entry: NexusImportEntry,
+  entry: CourierImportEntry,
   name: string,
   existingFiles: Record<string, string>,
 ): DiskGroupListing[] {

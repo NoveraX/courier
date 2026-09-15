@@ -29,7 +29,7 @@ const userSchema = createSchema<{ id: string; name: string; email: string }>((va
   return issues.length ? { issues } : { value: value as { id: string; name: string; email: string } };
 });
 
-const ENDPOINT_SCHEMA = Symbol.for("nexus.endpoint.schema");
+const ENDPOINT_SCHEMA = Symbol.for("courier.endpoint.schema");
 
 describe("getEndpointSchema", () => {
   it("extracts schema from endpoint function", () => {

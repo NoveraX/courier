@@ -24,7 +24,7 @@ export type {
 } from "./adapter/sse-types";
 export type { ConnectionInfo, ConnectionRegistry } from "./adapter/ws-registry";
 export { sendAuthRequired } from "./adapter/ws-token-refresh";
-export type { NexusWSOptions, WSHandler, WSHandlerConfig } from "./adapter/ws-types";
+export type { CourierWSOptions, WSHandler, WSHandlerConfig } from "./adapter/ws-types";
 export type { WebSocketLike } from "./realtime/adapters";
 
 export type AdapterHandler = {
@@ -45,7 +45,7 @@ export type AdapterHandler = {
 /**
  * Create a framework-agnostic HTTP adapter handler. Zero-arg callable —
  * sources are read lazily from the core global registry (populated by
- * `attachRuntime()` at startup), so a single `nexusHandler()` expression
+ * `attachRuntime()` at startup), so a single `courierHandler()` expression
  * in user code works regardless of which framework owns the listen socket.
  */
 export function createHandler(config?: HandlerConfig): AdapterHandler {

@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { HTTPError } from "@noverax/nexus";
-import type * as NexusModule from "@noverax/nexus";
+import { HTTPError } from "@noverax/courier";
+import type * as CourierModule from "@noverax/courier";
 
-vi.mock("@noverax/nexus", async (importOriginal) => {
-  const actual = await importOriginal<typeof NexusModule>();
+vi.mock("@noverax/courier", async (importOriginal) => {
+  const actual = await importOriginal<typeof CourierModule>();
   return {
     ...actual,
     executeRequest: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock("next/headers", () => ({
   headers: vi.fn().mockResolvedValue(new Headers({ authorization: "Bearer test-token" })),
 }));
 
-import { executeRequest } from "@noverax/nexus";
+import { executeRequest } from "@noverax/courier";
 import { createAction } from "../src/actions";
 
 const mockExecuteRequest = vi.mocked(executeRequest);

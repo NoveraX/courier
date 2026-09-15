@@ -69,7 +69,7 @@ export function SimpleUploadDemo() {
     try {
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("description", "Uploaded via nexus demo")
+      formData.append("description", "Uploaded via courier demo")
 
       const response = await caller.files.upload(formData)
       setResult(response)
@@ -127,7 +127,7 @@ export function ProgressUploadDemo() {
     try {
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("description", "Uploaded via nexus demo")
+      formData.append("description", "Uploaded via courier demo")
 
       const response = await caller.files
         .with({

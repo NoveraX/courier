@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createNexusServer } from "../src/create-server";
-import type { NexusServer, NexusServerConfig } from "../src/types";
+import { createCourierServer } from "../src/create-server";
+import type { CourierServer, CourierServerConfig } from "../src/types";
 
 // --- Minimal source fixture ---
 
 function mockEndpoint() {
   const fn = (_http: unknown, _vars: unknown) => ({ status: 200, data: { ok: true } });
-  Object.defineProperty(fn, Symbol.for("nexus.endpoint.schema"), {
+  Object.defineProperty(fn, Symbol.for("courier.endpoint.schema"), {
     value: { type: "query" },
   });
   return fn;
@@ -28,7 +28,7 @@ function createSources() {
   };
 }
 
-function buildConfig(overrides?: Partial<NexusServerConfig>): NexusServerConfig {
+function buildConfig(overrides?: Partial<CourierServerConfig>): CourierServerConfig {
   return {
     sources: createSources(),
     port: 0,
@@ -41,10 +41,10 @@ function buildConfig(overrides?: Partial<NexusServerConfig>): NexusServerConfig 
 // --- Helpers ---
 
 function startServer(
-  overrides?: Partial<NexusServerConfig>,
-): Promise<NexusServer> {
+  overrides?: Partial<CourierServerConfig>,
+): Promise<CourierServer> {
   return new Promise((resolve) => {
-    const server = createNexusServer(
+    const server = createCourierServer(
       buildConfig({ ...overrides, onReady: () => resolve(server) }),
     );
   });
@@ -52,8 +52,8 @@ function startServer(
 
 // --- Tests ---
 
-describe("createNexusServer", () => {
-  let server: NexusServer | undefined;
+describe("createCourierServer", () => {
+  let server: CourierServer | undefined;
 
   afterEach(async () => {
     await server?.stop();

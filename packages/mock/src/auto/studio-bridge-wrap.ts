@@ -1,4 +1,4 @@
-import { getSourceName } from "@noverax/nexus/define";
+import { getSourceName } from "@noverax/courier/define";
 
 import type { MockServer } from "../server/create-mock-server";
 import { connectMockToStudio } from "../studio/bridge";

@@ -1,61 +1,61 @@
 import type { AnySource } from "../define/types";
 
 /** Spec format for an OpenAPI/GraphQL/etc. import entry */
-export type NexusImportSpecType = "openapi" | "swagger" | "graphql" | "asyncapi" | "postman";
+export type CourierImportSpecType = "openapi" | "swagger" | "graphql" | "asyncapi" | "postman";
 
 /** Validation library produced by codegen */
-export type NexusImportValidation = "zod" | "valibot" | "arktype" | "none";
+export type CourierImportValidation = "zod" | "valibot" | "arktype" | "none";
 
 /** Endpoint grouping strategy for codegen */
-export type NexusImportGroupBy = "tag" | "path" | "single";
+export type CourierImportGroupBy = "tag" | "path" | "single";
 
 /** Generated client mode */
-export type NexusImportGenerateClient = "direct" | "proxy" | "both" | "none";
+export type CourierImportGenerateClient = "direct" | "proxy" | "both" | "none";
 
 /** Auth payload used to fetch private specs */
-export type NexusImportAuth =
+export type CourierImportAuth =
   | { type: "bearer"; token: string }
   | { type: "basic"; username: string; password: string }
   | { type: "header"; headers: Record<string, string> };
 
 /** Subset filter applied at codegen time */
-export interface NexusImportSelector {
+export interface CourierImportSelector {
   tags?: string[];
   paths?: string[];
   operationIds?: string[];
 }
 
 /** Discriminator for how a spec was imported */
-export type NexusImportType = "url" | "file" | "raw";
+export type CourierImportType = "url" | "file" | "raw";
 
 /**
  * Fields shared by every import declaration. Codegen options are flat (not
- * nested in an `options` object) so user-authored `nexus.config.ts` reads
+ * nested in an `options` object) so user-authored `courier.config.ts` reads
  * naturally.
  *
  * `transform` accepts and returns `unknown` rather than `ParsedSpec` because
- * the parsed-spec type lives in `@noverax/nexus-studio` and `core` must not
+ * the parsed-spec type lives in `@noverax/courier-studio` and `core` must not
  * depend on Studio. Studio's import runner narrows back to `ParsedSpec` at
  * the call site where it controls both ends of the type contract.
  */
-export interface NexusImportBase {
+export interface CourierImportBase {
   /** Spec format — determines the parser used at codegen time */
-  type: NexusImportSpecType;
+  type: CourierImportSpecType;
   /** Where generated TS code is written */
   outputDir: string;
   /** Source name for the generated `defineApi` call (default: import key) */
   sourceName?: string;
-  validation?: NexusImportValidation;
-  groupBy?: NexusImportGroupBy;
+  validation?: CourierImportValidation;
+  groupBy?: CourierImportGroupBy;
   generateTypes?: boolean;
   generateSchemas?: boolean;
-  generateClient?: NexusImportGenerateClient;
+  generateClient?: CourierImportGenerateClient;
   addAuthMiddleware?: boolean;
   includeComments?: boolean;
   /** Whitelist filter applied first */
-  include?: NexusImportSelector;
+  include?: CourierImportSelector;
   /** Blacklist filter applied after `include` */
-  exclude?: NexusImportSelector;
+  exclude?: CourierImportSelector;
   /** Custom transform run between parse and codegen */
   transform?: (spec: unknown) => unknown | Promise<unknown>;
 }
@@ -65,12 +65,12 @@ export interface NexusImportBase {
  * checks. Only this variant carries `from`/`auth`/`pinHash` because they are
  * meaningless for one-shot file/raw imports.
  */
-export interface NexusUrlImport extends NexusImportBase {
+export interface CourierUrlImport extends CourierImportBase {
   importType: "url";
   /** HTTP(S) URL Studio fetches at import + re-sync time */
   from: string;
   /** Optional auth for fetching private specs */
-  auth?: NexusImportAuth;
+  auth?: CourierImportAuth;
   /** Pinned spec hash for reproducible builds; mismatch aborts the import */
   pinHash?: string;
 }
@@ -80,7 +80,7 @@ export interface NexusUrlImport extends NexusImportBase {
  * import and at every re-sync — Studio never reaches back to disk on its
  * own, so no path is persisted in config.
  */
-export interface NexusFileImport extends NexusImportBase {
+export interface CourierFileImport extends CourierImportBase {
   importType: "file";
 }
 
@@ -88,15 +88,15 @@ export interface NexusFileImport extends NexusImportBase {
  * Inline-string import. The raw spec is supplied through the Studio UI at
  * import and at every re-sync.
  */
-export interface NexusRawImport extends NexusImportBase {
+export interface CourierRawImport extends CourierImportBase {
   importType: "raw";
 }
 
 /** Declaration of a single API spec import */
-export type NexusImportEntry = NexusUrlImport | NexusFileImport | NexusRawImport;
+export type CourierImportEntry = CourierUrlImport | CourierFileImport | CourierRawImport;
 
 /** Studio dev-server configuration */
-export interface NexusStudioConfig {
+export interface CourierStudioConfig {
   /** Studio HTTP/Socket.IO port — default 6280 */
   port?: number;
   /** Bind host — default "127.0.0.1" */
@@ -108,7 +108,7 @@ export interface NexusStudioConfig {
 }
 
 /** Standalone proxy server configuration */
-export interface NexusServerConfig {
+export interface CourierServerConfig {
   port?: number;
   host?: string;
   /** Transports the standalone server should expose — default all three */
@@ -119,12 +119,12 @@ export interface NexusServerConfig {
  * Runtime configuration — metadata the user-app process needs at startup
  * that cannot be auto-discovered reliably across every deployment target.
  *
- * Consumed by `attachRuntime()` when it loads `nexus.config.ts` from disk.
+ * Consumed by `attachRuntime()` when it loads `courier.config.ts` from disk.
  * Every field is optional; omit the whole `runtime` block for the common
  * dev case where Express/Fastify/Hono/NestJS adapters auto-discover the
  * listen origin from the first incoming request.
  */
-export interface NexusRuntimeConfig {
+export interface CourierRuntimeConfig {
   /**
    * Canonical HTTP(S) origin the user-app listens on (e.g. `http://localhost:3000`).
    *
@@ -135,7 +135,7 @@ export interface NexusRuntimeConfig {
    *
    * Resolution order inside `attachRuntime()`:
    *   1. This field (`config.runtime.appOrigin`)
-   *   2. `NEXUS_APP_URL` environment variable
+   *   2. `COURIER_APP_URL` environment variable
    *   3. `APP_URL` environment variable
    *   4. Framework adapter auto-discovery (Express/Fastify/Hono/NestJS on
    *      first request; standalone server from `.listen()` callback)
@@ -150,7 +150,7 @@ export interface NexusRuntimeConfig {
 }
 
 /**
- * Top-level shape of `nexus.config.ts`.
+ * Top-level shape of `courier.config.ts`.
  *
  * `TSources` is generic so per-source endpoint types survive into config-aware
  * tooling (codegen, type-checking against runtime values). Loose `AnySource`
@@ -158,20 +158,20 @@ export interface NexusRuntimeConfig {
  * pass a typed object literal to `defineConfig`.
  *
  * `mocks` values use a structural shape rather than the concrete
- * `MockServerDefinition` from `@noverax/nexus-mock` to preserve the
+ * `MockServerDefinition` from `@noverax/courier-mock` to preserve the
  * `core → mock` dependency direction (mock depends on core, never the
  * reverse). Studio's mock-registry narrows back at the consumption site.
  */
-export interface NexusConfig<
+export interface CourierConfig<
   TSources extends Record<string, AnySource> = Record<string, AnySource>,
 > {
   /** Map of named API sources */
   sources: TSources;
   /** OpenAPI/GraphQL/etc. import declarations */
-  imports?: Record<string, NexusImportEntry>;
+  imports?: Record<string, CourierImportEntry>;
   /** Managed mock-server definitions */
   mocks?: Record<string, unknown>;
-  studio?: NexusStudioConfig;
-  server?: NexusServerConfig;
-  runtime?: NexusRuntimeConfig;
+  studio?: CourierStudioConfig;
+  server?: CourierServerConfig;
+  runtime?: CourierRuntimeConfig;
 }

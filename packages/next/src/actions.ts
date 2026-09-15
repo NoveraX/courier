@@ -5,8 +5,8 @@ import {
   executeRequest,
   type TypedClient,
   type ValidationIssue,
-} from "@noverax/nexus";
-import type { DefinedApi } from "@noverax/nexus/define";
+} from "@noverax/courier";
+import type { DefinedApi } from "@noverax/courier/define";
 
 /** State returned by server actions for useActionState */
 export type ActionState<TData = unknown> = {
@@ -44,7 +44,7 @@ async function getRequestHeaders(): Promise<Headers | undefined> {
  * @example
  * ```ts
  * // lib/actions.ts
- * import { createAction } from "@noverax/nexus-next"
+ * import { createAction } from "@noverax/courier-next"
  * import { sources } from "@/api"
  *
  * export const action = createAction(sources, "api")

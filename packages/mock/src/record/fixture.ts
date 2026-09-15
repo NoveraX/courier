@@ -1,7 +1,7 @@
 import type { HarEntry, HarLog } from "./har-format";
 import { createHarLog } from "./har-format";
 
-/** A single fixture entry with nexus metadata */
+/** A single fixture entry with courier metadata */
 export interface Fixture {
   group: string;
   method: string;
@@ -15,12 +15,12 @@ export interface Fixture {
   recordedAt: string;
 }
 
-/** Convert HAR entries to Nexus fixtures */
+/** Convert HAR entries to Courier fixtures */
 export function harToFixtures(har: HarLog): Fixture[] {
   return har.log.entries.map((entry) => ({
-    group: entry._nexus.group,
-    method: entry._nexus.method,
-    variables: entry._nexus.variables,
+    group: entry._courier.group,
+    method: entry._courier.method,
+    variables: entry._courier.variables,
     response: {
       status: entry.response.status,
       data: safeJsonParse(entry.response.content.text),
@@ -31,7 +31,7 @@ export function harToFixtures(har: HarLog): Fixture[] {
   }));
 }
 
-/** Convert Nexus fixtures back to HAR format */
+/** Convert Courier fixtures back to HAR format */
 export function fixturesToHar(fixtures: Fixture[]): HarLog {
   const har = createHarLog();
   for (const fixture of fixtures) {
@@ -61,7 +61,7 @@ export function fixturesToHar(fixtures: Fixture[]): HarLog {
           text: JSON.stringify(fixture.response.data),
         },
       },
-      _nexus: {
+      _courier: {
         group: fixture.group,
         method: fixture.method,
         variables: fixture.variables,

@@ -1,4 +1,4 @@
-import type { ProxyPath } from "@noverax/nexus";
+import type { ProxyPath } from "@noverax/courier";
 
 /** All Studio event types */
 export type EventType =
@@ -73,8 +73,8 @@ export interface SourceMap {
     baseURL: string;
     /**
      * The user-app's own HTTP origin (e.g. `http://localhost:3000`) — set
-     * via `nexus.config.ts.runtime.appOrigin` or auto-detected from
-     * `NEXUS_APP_URL` / `APP_URL`. Stamped onto each source so the Studio
+     * via `courier.config.ts.runtime.appOrigin` or auto-detected from
+     * `COURIER_APP_URL` / `APP_URL`. Stamped onto each source so the Studio
      * Playground UI can resolve relative `proxyPath` values into full
      * clickable URLs (e.g. `/api/sse` → `http://localhost:3000/api/sse`).
      * Omitted when the connecting process never declared one.

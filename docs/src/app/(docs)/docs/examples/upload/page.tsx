@@ -10,7 +10,7 @@ const formData = new FormData()
 formData.append("file", file)
 formData.append("description", "My upload")
 
-// FormData is auto-detected — nexus sends multipart/form-data
+// FormData is auto-detected — courier sends multipart/form-data
 const result = await caller.files.upload(formData)`
 
 const progressCode = `import { caller } from "@/lib/caller"
@@ -25,7 +25,7 @@ const result = await caller.files.with({
   },
 }).upload(formData)`
 
-const sourceCode = `import { defineGroup, endpoint } from "@noverax/nexus/define"
+const sourceCode = `import { defineGroup, endpoint } from "@noverax/courier/define"
 
 const files = defineGroup({
   prefix: "upload",
@@ -38,7 +38,7 @@ const files = defineGroup({
 
 export const metadata = docsMetadata(
   "File Upload",
-  "FormData file upload with progress tracking. Nexus auto-detects FormData and handles encoding."
+  "FormData file upload with progress tracking. Courier auto-detects FormData and handles encoding."
 )
 
 export default function UploadExamplesPage() {
@@ -46,14 +46,14 @@ export default function UploadExamplesPage() {
     <>
       <PageHeader
         title="File Upload"
-        description="FormData file upload with progress tracking. Nexus auto-detects FormData and handles encoding."
+        description="FormData file upload with progress tracking. Courier auto-detects FormData and handles encoding."
         mode="both"
       />
 
       <div className="space-y-8">
         <ExampleBlock
           title="Simple Upload"
-          description="Single-request file upload. FormData is auto-detected by nexus."
+          description="Single-request file upload. FormData is auto-detected by courier."
           code={simpleCode}
           learnMoreHref="/docs/advanced/upload"
           learnMoreLabel="Upload docs"
@@ -75,7 +75,7 @@ export default function UploadExamplesPage() {
           code={sourceCode}
         >
           <p className="text-sm text-muted-foreground">
-            When variables is FormData, nexus skips JSON encoding and sends it as
+            When variables is FormData, courier skips JSON encoding and sends it as
             multipart/form-data. Empty files are automatically removed before sending.
           </p>
         </ExampleBlock>

@@ -5,24 +5,24 @@ import type { StudioPluginOptions } from "./core/types";
 const FRAMEWORK = "vite";
 
 /**
- * Vite plugin for Nexus Studio.
+ * Vite plugin for Courier Studio.
  * Auto-injects `attachRuntime("vite-browser")` into the client bundle in dev mode.
  *
  * @example
  * ```ts
  * // vite.config.ts
- * import { nexusStudio } from "@noverax/nexus-studio/vite"
+ * import { courierStudio } from "@noverax/courier-studio/vite"
  *
  * export default defineConfig({
- *   plugins: [nexusStudio()],
+ *   plugins: [courierStudio()],
  * })
  * ```
  */
-export function nexusStudio(options?: StudioPluginOptions): Plugin {
+export function courierStudio(options?: StudioPluginOptions): Plugin {
   let pending: Promise<string | null> | null = null;
 
   return {
-    name: "nexus-studio:inject-html",
+    name: "courier-studio:inject-html",
     apply: "serve",
     async transformIndexHtml() {
       pending ??= resolveSnippet(FRAMEWORK, options);

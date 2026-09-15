@@ -14,7 +14,7 @@ const defaultLogger = createLogger("Middleware");
  * })
  */
 export function logMiddleware(options?: {
-  /** Custom logger function (default: nexus logger) */
+  /** Custom logger function (default: courier logger) */
   logger?: (message: string) => void;
 }): Middleware {
   const { logger = (msg: string) => defaultLogger.info(msg) } = options ?? {};

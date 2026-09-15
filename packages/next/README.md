@@ -1,14 +1,14 @@
 <div align="center">
   <br />
 
-  # @noverax/nexus-next
+  # @noverax/courier-next
 
   **Next.js adapter — API route handler + Server Actions.**
 
   <br />
 
-  <a href="https://www.npmjs.com/package/@noverax/nexus-next"><img src="https://img.shields.io/npm/v/@noverax/nexus-next?color=7c3aed&style=flat-square" alt="npm" /></a>
-  <a href="https://bundlephobia.com/package/@noverax/nexus-next"><img src="https://img.shields.io/bundlephobia/minzip/@noverax/nexus-next?color=f59e0b&label=size&style=flat-square" alt="size" /></a>
+  <a href="https://www.npmjs.com/package/@noverax/courier-next"><img src="https://img.shields.io/npm/v/@noverax/courier-next?color=7c3aed&style=flat-square" alt="npm" /></a>
+  <a href="https://bundlephobia.com/package/@noverax/courier-next"><img src="https://img.shields.io/bundlephobia/minzip/@noverax/courier-next?color=f59e0b&label=size&style=flat-square" alt="size" /></a>
 
   <br />
 </div>
@@ -27,18 +27,18 @@ Next.js App Router integration with two features:
 ## Install
 
 ```bash
-npm install @noverax/nexus-next @noverax/nexus next
+npm install @noverax/courier-next @noverax/courier next
 ```
 
 <br />
 
 ## API Route
 
-Register sources in `instrumentation.ts`, then create a single catch-all route that handles all Nexus endpoints:
+Register sources in `instrumentation.ts`, then create a single catch-all route that handles all Courier endpoints:
 
 ```ts
 // instrumentation.ts
-import { registerSources } from "@noverax/nexus"
+import { registerSources } from "@noverax/courier"
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
@@ -50,7 +50,7 @@ export async function register() {
 
 ```ts
 // app/api/request/route.ts
-import { apiRoute } from "@noverax/nexus-next"
+import { apiRoute } from "@noverax/courier-next"
 
 export const { GET, POST } = apiRoute()
 ```
@@ -65,7 +65,7 @@ That's it. `apiRoute()` is zero-arg — sources are read at request time from th
 
 ```ts
 // lib/actions.ts
-import { createAction } from "@noverax/nexus-next"
+import { createAction } from "@noverax/courier-next"
 import { sources } from "@/api/sources"
 
 export const action = createAction(sources, "api")
@@ -118,10 +118,10 @@ type ActionState<T> = {
 
 ```ts
 // Main entry
-import { apiRoute, createAction } from "@noverax/nexus-next"
+import { apiRoute, createAction } from "@noverax/courier-next"
 
 // Actions-only entry (for "use server" files)
-import { createAction } from "@noverax/nexus-next/actions"
+import { createAction } from "@noverax/courier-next/actions"
 ```
 
 <br />

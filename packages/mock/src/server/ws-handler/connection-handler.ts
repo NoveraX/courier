@@ -1,5 +1,5 @@
-import { logger } from "@noverax/nexus";
-import { type ChannelHandlers, encodeMessage } from "@noverax/nexus/realtime";
+import { logger } from "@noverax/courier";
+import { type ChannelHandlers, encodeMessage } from "@noverax/courier/realtime";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 import type { MockChannelFn, MockHistoryEntry, MockRequestContext } from "../../types";

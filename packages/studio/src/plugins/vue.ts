@@ -1,16 +1,16 @@
 /**
- * Vue (Vite) plugin for Nexus Studio.
+ * Vue (Vite) plugin for Courier Studio.
  * Re-exports the Vite plugin for a framework-specific import path.
  *
  * @example
  * ```ts
  * // vite.config.ts
  * import vue from "@vitejs/plugin-vue"
- * import { nexusStudio } from "@noverax/nexus-studio/vue"
+ * import { courierStudio } from "@noverax/courier-studio/vue"
  *
  * export default defineConfig({
- *   plugins: [vue(), nexusStudio()],
+ *   plugins: [vue(), courierStudio()],
  * })
  * ```
  */
-export { nexusStudio } from "./vite";
+export { courierStudio } from "./vite";

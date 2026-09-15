@@ -4,6 +4,7 @@ import { createCaller } from "../src/caller";
 import { courier } from "../src/define/courier";
 import { defineApi } from "../src/define/api";
 import { defineGroup } from "../src/define/group";
+import { executeRequest } from "../src/utils/execute";
 
 const UserSchema = z.object({ id: z.string(), email: z.string() });
 const ById = z.object({ id: z.string() });
@@ -109,5 +110,61 @@ describe("endpoints defined with the builder", () => {
     await client.users.getAll();
 
     expect(calledUrl()).toBe("https://api.example.com/users");
+  });
+});
+
+describe("proxy routing follows the head", () => {
+  beforeEach(() => {
+    fetchSpy = vi.fn().mockResolvedValue(jsonResponse([{ id: "1", email: "a@b.c" }]));
+    vi.stubGlobal("fetch", fetchSpy);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("serves a query over a GET proxy request", async () => {
+    const result = await executeRequest(
+      { api },
+      { source: "api", group: "users", method: "getAll" },
+      { proxyMethod: "GET" },
+    );
+
+    expect(result).toEqual([{ id: "1", email: "a@b.c" }]);
+  });
+
+  it("refuses a mutation over a GET proxy request", async () => {
+    await expect(
+      executeRequest(
+        { api },
+        { source: "api", group: "users", method: "create", variables: { email: "a@b.c" } },
+        { proxyMethod: "GET" },
+      ),
+    ).rejects.toMatchObject({ status: 405 });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("serves a mutation over a POST proxy request", async () => {
+    fetchSpy.mockResolvedValue(jsonResponse({ id: "1", email: "a@b.c" }));
+
+    const result = await executeRequest(
+      { api },
+      { source: "api", group: "users", method: "create", variables: { email: "a@b.c" } },
+      { proxyMethod: "POST" },
+    );
+
+    expect(result).toEqual({ id: "1", email: "a@b.c" });
+  });
+
+  it("serves a query over GET even when the vendor requires a POST upstream", async () => {
+    const result = await executeRequest(
+      { api },
+      { source: "api", group: "users", method: "search", variables: { q: "a" } },
+      { proxyMethod: "GET" },
+    );
+
+    expect(result).toEqual([{ id: "1", email: "a@b.c" }]);
+    expect(calledInit().method).toBe("POST");
   });
 });

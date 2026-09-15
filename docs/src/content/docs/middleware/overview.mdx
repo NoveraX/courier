@@ -90,12 +90,12 @@ Pass a `middleware` array in your `defineApi` configuration. The middleware wrap
 ```ts title="lib/sources.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 import {
-
-const { query, mutation } = courier()
   authMiddleware,
   logMiddleware,
   retryMiddleware,
 } from "@noverax/courier/middleware"
+
+const { query, mutation } = courier()
 
 const api = defineApi({
   baseURL: "https://api.example.com",

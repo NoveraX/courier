@@ -177,6 +177,63 @@ describe("generateCode", () => {
     expect(sourceFile?.content).toContain("users")
   })
 
+  it("declares every builder head a group addresses", () => {
+    const files = generateCode(MOCK_SPEC, DEFAULT_OPTIONS)
+
+    const petsFile = files.find((f) => f.path.includes("pets/index.ts"))
+    expect(petsFile?.content).toContain("const { mutation, query } = courier();")
+
+    for (const head of usedHeads(petsFile?.content ?? "")) {
+      expect(declaredHeads(petsFile?.content ?? "")).toContain(head)
+    }
+  })
+
+  it("declares every builder head a flat source addresses", () => {
+    const files = generateCode(MOCK_SPEC, { ...DEFAULT_OPTIONS, groupBy: "single" })
+
+    const sourceFile = files.find((f) => f.path.includes("source.ts"))
+    for (const head of usedHeads(sourceFile?.content ?? "")) {
+      expect(declaredHeads(sourceFile?.content ?? "")).toContain(head)
+    }
+  })
+
+  it("names only the heads a group actually uses", () => {
+    const readsOnly: ParsedSpec = {
+      ...MOCK_SPEC,
+      groups: [
+        {
+          ...MOCK_SPEC.groups[0]!,
+          endpoints: MOCK_SPEC.groups[0]!.endpoints.filter((ep) => ep.httpMethod === "get"),
+        },
+      ],
+    }
+    const files = generateCode(readsOnly, DEFAULT_OPTIONS)
+
+    const petsFile = files.find((f) => f.path.includes("pets/index.ts"))
+    expect(petsFile?.content).toContain("const { query } = courier();")
+    expect(petsFile?.content).not.toContain("mutation")
+  })
+
+  it("imports no type for a response a schema already describes", () => {
+    const files = generateCode(MOCK_SPEC, DEFAULT_OPTIONS)
+
+    const petsFile = files.find((f) => f.path.includes("pets/index.ts"))
+    expect(petsFile?.content).toContain(".response(z.array(PetSchema))")
+    expect(petsFile?.content).not.toContain("type Pet")
+  })
+
+  it("imports the response type when no schema is generated", () => {
+    const files = generateCode(MOCK_SPEC, {
+      ...DEFAULT_OPTIONS,
+      generateSchemas: false,
+      validation: "none",
+    })
+
+    const petsFile = files.find((f) => f.path.includes("pets/index.ts"))
+    expect(petsFile?.content).toContain(".response<Pet[]>()")
+    expect(petsFile?.content).toContain("Pet")
+  })
+
   it("generates barrel index with re-exports", () => {
     const files = generateCode(MOCK_SPEC, DEFAULT_OPTIONS)
 
@@ -239,3 +296,16 @@ describe("generateCode", () => {
     }
   })
 })
+
+/** Heads an endpoint definition addresses, e.g. `getAll: query.response<Pet[]>()`. */
+function usedHeads(content: string): string[] {
+  const used = new Set<string>()
+  for (const match of content.matchAll(/^\s+\w+: (query|mutation)\b/gm)) used.add(match[1]!)
+  return [...used]
+}
+
+/** Heads the file destructures from `courier()`. */
+function declaredHeads(content: string): string[] {
+  const match = content.match(/const \{ ([^}]+) \} = courier\(\);/)
+  return match ? match[1]!.split(",").map((name) => name.trim()) : []
+}

@@ -59,6 +59,8 @@ describe("parseExistingGroup", () => {
 import { z } from "zod";
 import { UserSchema, type User } from "./schemas";
 
+const { query } = courier();
+
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
@@ -110,6 +112,8 @@ export const users = defineGroup({
 
   it("extracts trailing code after defineGroup", () => {
     const file = `import { courier, defineGroup } from "@noverax/courier/define";
+
+const { query } = courier();
 
 export const users = defineGroup({
   prefix: "/users",
@@ -183,6 +187,8 @@ describe("mergeImports", () => {
 describe("mergeGroupFile", () => {
   const baseGenerated = `import { courier, defineGroup } from "@noverax/courier/define";
 
+const { query } = courier();
+
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
@@ -191,6 +197,58 @@ export const users = defineGroup({
   },
 });
 `
+
+  it("keeps the builder heads the file declares", () => {
+    const fingerprints: FingerprintResult = {
+      endpoints: { getAll: "safe", getById: "safe" },
+      existingCode: {},
+    }
+    const result = mergeGroupFile(baseGenerated, baseGenerated, fingerprints)
+    expect(result.content).toContain("const { query } = courier();")
+  })
+
+  it("declares a head the spec has newly introduced", () => {
+    const withMutation = `import { courier, defineGroup } from "@noverax/courier/define";
+
+const { mutation, query } = courier();
+
+export const users = defineGroup({
+  prefix: "/users",
+  endpoints: {
+    getAll: query.response<User[]>().via((http) => http.get("")),
+    getById: query.variables<{ id: string }>().response<User>().via((http, vars) => http.get(":id", vars)),
+    create: mutation.response<User>().via((http, vars) => http.post("", vars)),
+  },
+});
+`
+    const fingerprints: FingerprintResult = {
+      endpoints: { getAll: "safe", getById: "safe", create: "new" },
+      existingCode: {},
+    }
+    const result = mergeGroupFile(baseGenerated, withMutation, fingerprints)
+    expect(result.content).toContain("const { mutation, query } = courier();")
+  })
+
+  it("keeps a base the user renamed or configured", () => {
+    const userBase = `import { courier, defineGroup } from "@noverax/courier/define";
+
+const { query } = courier({ timeout: 10_000 });
+
+export const users = defineGroup({
+  prefix: "/users",
+  endpoints: {
+    getAll: query.response<User[]>().via((http) => http.get("")),
+    getById: query.variables<{ id: string }>().response<User>().via((http, vars) => http.get(":id", vars)),
+  },
+});
+`
+    const fingerprints: FingerprintResult = {
+      endpoints: { getAll: "safe", getById: "safe" },
+      existingCode: {},
+    }
+    const result = mergeGroupFile(userBase, baseGenerated, fingerprints)
+    expect(result.content).toContain("const { query } = courier({ timeout: 10_000 });")
+  })
 
   it("safe overwrite when no user changes", () => {
     const fingerprints: FingerprintResult = {
@@ -206,6 +264,8 @@ export const users = defineGroup({
   it("preserves user body for modified endpoints", () => {
     const existingWithUserCode = `import { courier, defineGroup } from "@noverax/courier/define";
 
+const { query } = courier();
+
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
@@ -217,6 +277,8 @@ export const users = defineGroup({
     const newGenerated = `import { courier, defineGroup } from "@noverax/courier/define";
 import { z } from "zod";
 import { UserSchema } from "./schemas";
+
+const { query } = courier();
 
 export const users = defineGroup({
   prefix: "/users",
@@ -242,6 +304,8 @@ export const users = defineGroup({
   it("adds new endpoints from spec", () => {
     const existing = `import { courier, defineGroup } from "@noverax/courier/define";
 
+const { query } = courier();
+
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
@@ -250,6 +314,8 @@ export const users = defineGroup({
 });
 `
     const generated = `import { courier, defineGroup } from "@noverax/courier/define";
+
+const { query } = courier();
 
 export const users = defineGroup({
   prefix: "/users",
@@ -272,6 +338,8 @@ export const users = defineGroup({
   it("preserves user-added endpoints not in spec", () => {
     const existingWithCustom = `import { courier, defineGroup } from "@noverax/courier/define";
 
+const { query } = courier();
+
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
@@ -281,6 +349,8 @@ export const users = defineGroup({
 });
 `
     const generated = `import { courier, defineGroup } from "@noverax/courier/define";
+
+const { query } = courier();
 
 export const users = defineGroup({
   prefix: "/users",
@@ -303,6 +373,8 @@ export const users = defineGroup({
     const existingWithExtraImport = `import { courier, defineGroup } from "@noverax/courier/define";
 import { debounce } from "lodash";
 
+const { query } = courier();
+
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
@@ -311,6 +383,8 @@ export const users = defineGroup({
 });
 `
     const generated = `import { courier, defineGroup } from "@noverax/courier/define";
+
+const { query } = courier();
 
 export const users = defineGroup({
   prefix: "/users",
@@ -330,6 +404,8 @@ export const users = defineGroup({
   it("preserves trailing user code after defineGroup", () => {
     const existingWithHelper = `import { courier, defineGroup } from "@noverax/courier/define";
 
+const { query } = courier();
+
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
@@ -342,6 +418,8 @@ export function transformUsers(users: User[]) {
 }
 `
     const generated = `import { courier, defineGroup } from "@noverax/courier/define";
+
+const { query } = courier();
 
 export const users = defineGroup({
   prefix: "/users",
@@ -361,6 +439,8 @@ export const users = defineGroup({
   it("updates JSDoc comments from new spec", () => {
     const existing = `import { courier, defineGroup } from "@noverax/courier/define";
 
+const { query } = courier();
+
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
@@ -370,6 +450,8 @@ export const users = defineGroup({
 });
 `
     const generated = `import { courier, defineGroup } from "@noverax/courier/define";
+
+const { query } = courier();
 
 export const users = defineGroup({
   prefix: "/users",
@@ -391,6 +473,8 @@ export const users = defineGroup({
   it("preserves removed-from-spec endpoint when it exists in user file", () => {
     const existing = `import { courier, defineGroup } from "@noverax/courier/define";
 
+const { query } = courier();
+
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
@@ -401,6 +485,8 @@ export const users = defineGroup({
 `
     /* New spec removed getById — generated only has getAll */
     const generated = `import { courier, defineGroup } from "@noverax/courier/define";
+
+const { query } = courier();
 
 export const users = defineGroup({
   prefix: "/users",
@@ -422,6 +508,8 @@ export const users = defineGroup({
 
   it("produces consistent output format with 2-space indent", () => {
     const existing = `import { courier, defineGroup } from "@noverax/courier/define";
+
+const { query } = courier();
 
 export const users = defineGroup({
   prefix: "/users",
@@ -446,6 +534,8 @@ export const users = defineGroup({
   it("handles endpoint with complex multi-line body as modified", () => {
     const existing = `import { courier, defineGroup } from "@noverax/courier/define";
 
+const { query } = courier();
+
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
@@ -458,6 +548,8 @@ export const users = defineGroup({
 `
     const generated = `import { courier, defineGroup } from "@noverax/courier/define";
 import { z } from "zod";
+
+const { query } = courier();
 
 export const users = defineGroup({
   prefix: "/users",

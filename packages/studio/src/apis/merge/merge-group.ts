@@ -15,6 +15,9 @@ import { parseExistingGroup } from "./parse-existing";
 import { splitEndpoint } from "./split-endpoint";
 import type { FingerprintResult, MergeChange, MergeResult, MergeStatus } from "./types";
 
+/** Destructuring that names the builder heads, e.g. `const { query } = courier();`. */
+const DESTRUCTURED_HEADS_RE = /const \{([^}]+)\} = courier\(/;
+
 export function mergeGroupFile(
   existingContent: string,
   generatedContent: string,
@@ -26,7 +29,8 @@ export function mergeGroupFile(
 
   const importLines = mergeImports(existing.imports, generated.imports, changes);
   const endpointLines = mergeEndpoints(existing, generated, fingerprints, changes);
-  const content = buildFile(importLines, generated, endpointLines, existing.trailingCode);
+  const preamble = mergePreamble(existing.preamble, generated.preamble, endpointLines);
+  const content = buildFile(importLines, preamble, generated, endpointLines, existing.trailingCode);
   const status = resolveStatus(changes);
 
   return { content, status, changes };
@@ -101,8 +105,44 @@ function appendEndpoint(lines: string[], comment: string | undefined, code: stri
   lines.push(code);
 }
 
+/**
+ * Carry the builder heads across a merge.
+ *
+ * The existing file wins so a hand-renamed or reconfigured base survives, but a
+ * head the merged endpoints now address is added to its destructuring — a spec
+ * that grew its first write would otherwise leave `mutation` undeclared.
+ */
+function mergePreamble(existing: string[], generated: string[], endpointLines: string[]): string[] {
+  const preamble = existing.length > 0 ? [...existing] : [...generated];
+
+  const used = new Set<string>();
+  for (const line of endpointLines) {
+    const match = line.match(/^\s{4}\w+:\s*(query|mutation|stream|channel)\b/);
+    if (match?.[1]) used.add(match[1]);
+  }
+  if (used.size === 0) return preamble;
+
+  const index = preamble.findIndex((line) => DESTRUCTURED_HEADS_RE.test(line));
+  if (index === -1) return preamble;
+
+  const match = preamble[index]?.match(DESTRUCTURED_HEADS_RE);
+  const declared = (match?.[1] ?? "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  const merged = [...new Set([...declared, ...used])].sort();
+  if (merged.length === declared.length) return preamble;
+
+  preamble[index] = (preamble[index] ?? "").replace(
+    DESTRUCTURED_HEADS_RE,
+    `const { ${merged.join(", ")} } = courier(`,
+  );
+  return preamble;
+}
+
 function buildFile(
   importLines: string[],
+  preamble: string[],
   generated: ReturnType<typeof parseExistingGroup>,
   endpointLines: string[],
   trailingCode: string[],
@@ -110,6 +150,7 @@ function buildFile(
   const lines = [
     ...importLines,
     "",
+    ...(preamble.length > 0 ? [...preamble, ""] : []),
     `export const ${generated.groupName} = defineGroup({`,
     `  prefix: "${generated.prefix}",`,
     "  endpoints: {",

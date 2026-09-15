@@ -4,6 +4,7 @@
 
 import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointDefinition } from "./build-endpoint";
+import { collectHeads, describesResponseWithSchema } from "./build-endpoint-helpers";
 import { collectSchemaRefs } from "./schema-refs";
 import { resolveResponseType } from "./schema-types";
 import { getSchemaRefName } from "./schema-utils";
@@ -36,6 +37,8 @@ export function generateGroupFile(
   const importLine = buildImportLine(schemaImports, typeImports, options);
   if (importLine) lines.push(importLine);
 
+  lines.push("");
+  lines.push(`const { ${collectHeads(group.endpoints).join(", ")} } = courier();`);
   lines.push("");
   lines.push(`export const ${group.name} = defineGroup({`);
   lines.push(`  prefix: "${group.prefix}",`);
@@ -98,10 +101,12 @@ function collectTypeImports(
   if (!options.generateTypes) return typeImports;
 
   for (const ep of group.endpoints) {
-    const responseType = resolveResponseType(ep, spec, options);
-    for (const ref of schemaImports) {
-      if (responseType === ref || responseType === `${ref}[]`) {
-        typeImports.add(ref);
+    if (!describesResponseWithSchema(ep, options, schemaImports)) {
+      const responseType = resolveResponseType(ep, spec, options);
+      for (const ref of schemaImports) {
+        if (responseType === ref || responseType === `${ref}[]`) {
+          typeImports.add(ref);
+        }
       }
     }
     if (options.includeComments) {

@@ -5,6 +5,7 @@
 
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointDefinition } from "./build-endpoint";
+import { collectHeads, describesResponseWithSchema } from "./build-endpoint-helpers";
 import { collectSchemaRefs } from "./schema-refs";
 import { resolveResponseType } from "./schema-types";
 import { getSchemaRefName } from "./schema-utils";
@@ -54,6 +55,8 @@ export function generateFlatSourceFile(
   }
 
   lines.push("");
+  lines.push(`const { ${collectHeads(endpoints).join(", ")} } = courier();`);
+  lines.push("");
   lines.push(`export const ${options.sourceName} = defineApi({`);
   lines.push(`  baseURL: "${spec.baseURL}",`);
   lines.push(`  endpoints: {`);
@@ -89,10 +92,12 @@ function collectTypeImports(
   if (!options.generateTypes) return typeImports;
 
   for (const ep of endpoints) {
-    const responseType = resolveResponseType(ep, spec, options);
-    for (const ref of schemaImports) {
-      if (responseType === ref || responseType === `${ref}[]`) {
-        typeImports.add(ref);
+    if (!describesResponseWithSchema(ep, options, schemaImports)) {
+      const responseType = resolveResponseType(ep, spec, options);
+      for (const ref of schemaImports) {
+        if (responseType === ref || responseType === `${ref}[]`) {
+          typeImports.add(ref);
+        }
       }
     }
     const bodyRef = getSchemaRefName(ep.requestBody);

@@ -10,6 +10,8 @@ import type { ExistingEndpointInfo, ExistingGroupInfo, ParsedImport } from "./ty
 const NAMED_IMPORT_RE = /^import\s+\{([^}]+)\}\s+from\s+["']([^"']+)["'];?\s*$/;
 const NS_IMPORT_RE = /^import\s+\*\s+as\s+(\w+)\s+from\s+["']([^"']+)["'];?\s*$/;
 const GROUP_RE = /^export\s+const\s+(\w+)\s*=\s*defineGroup\(\{/;
+/** Opening line of the generated source, whichever shape it takes. */
+const SOURCE_RE = /^export\s+const\s+\w+\s*=\s*define(?:Group|Api)\(\{/;
 const PREFIX_RE = /prefix:\s*["']([^"']*)["']/;
 /** Head a generated endpoint starts with, optionally qualified by its base. */
 const ENDPOINT_RE = /^\s{4}(\w+):\s*(?:\w+\.)?(?:query|mutation|stream|channel)\b/;
@@ -21,9 +23,10 @@ export function parseExistingGroup(content: string): ExistingGroupInfo {
   const imports = parseImports(lines);
   const { groupName, prefix } = parseGroupMeta(lines);
   const endpoints = parseEndpointsWithComments(lines);
+  const preamble = extractPreamble(lines);
   const trailingCode = extractTrailingCode(lines);
 
-  return { groupName, prefix, imports, endpoints, trailingCode };
+  return { groupName, prefix, imports, endpoints, preamble, trailingCode };
 }
 
 function parseImports(lines: string[]): ParsedImport[] {
@@ -133,6 +136,24 @@ function findEndpointEnd(lines: string[], startLine: number): number {
   }
 
   return lines.length - 1;
+}
+
+/**
+ * Extract the code between the imports and the source declaration.
+ *
+ * This is where the builder heads are named, so a file that was hand-edited to
+ * rename or configure its base keeps that line through a merge.
+ */
+function extractPreamble(lines: string[]): string[] {
+  const declarationIdx = lines.findIndex((l) => SOURCE_RE.test(l));
+  if (declarationIdx === -1) return [];
+
+  let lastImportIdx = -1;
+  for (let i = 0; i < declarationIdx; i++) {
+    if ((lines[i] ?? "").startsWith("import")) lastImportIdx = i;
+  }
+
+  return lines.slice(lastImportIdx + 1, declarationIdx).filter((line) => line.trim() !== "");
 }
 
 /** Extract code after the closing `});` of defineGroup */

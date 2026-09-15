@@ -3,6 +3,7 @@
  */
 
 import type { ParsedEndpoint, ParsedSpec } from "../parser/types";
+import { getSchemaRefName } from "./schema-utils";
 import type { GenerateOptions } from "./types";
 
 /** Check if body schema has an explicit interface with documented properties */
@@ -69,4 +70,31 @@ export function buildEndpointChain(
 function findConfig(config: string[], key: string): string | null {
   const entry = config.find((c) => c.startsWith(`${key}:`));
   return entry ? entry.slice(key.length + 1).trim() : null;
+}
+
+/**
+ * Name the heads a generated file addresses.
+ *
+ * A file declares only the heads its endpoints use, so a source of reads alone
+ * never names `mutation`.
+ */
+export function collectHeads(endpoints: ParsedEndpoint[]): string[] {
+  const heads = new Set(endpoints.map((ep) => (ep.httpMethod === "get" ? "query" : "mutation")));
+  return [...heads].sort();
+}
+
+/**
+ * Does the chain describe the response with a schema rather than a type?
+ *
+ * The two are exclusive: a slot given a schema takes it directly and names no
+ * type, so a type imported for a schema-described response would go unused.
+ */
+export function describesResponseWithSchema(
+  ep: ParsedEndpoint,
+  options: GenerateOptions,
+  schemaImports: Set<string>,
+): boolean {
+  if (!options.generateSchemas || options.validation === "none") return false;
+  const responseRef = getSchemaRefName(ep.responseSchema);
+  return responseRef !== null && schemaImports.has(responseRef);
 }

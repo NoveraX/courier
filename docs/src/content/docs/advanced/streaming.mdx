@@ -11,12 +11,14 @@ This is useful for Server-Sent Events (SSE), large file downloads, and any scena
 Enable streaming by passing `{ stream: true }` as an option to any HTTP method (`get`, `post`, etc.):
 
 ```ts title="api/events.ts"
-import { defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { query } = courier()
 
 export const events = defineGroup({
   prefix: "events",
   endpoints: {
-    subscribe: endpoint<ReadableStream, { channel: string }>()((http, vars) =>
+    subscribe: query.variables<{ channel: string }>().response<ReadableStream>().via((http, vars) =>
       http.get(":channel/stream", vars, { stream: true })
     ),
   },
@@ -25,7 +27,7 @@ export const events = defineGroup({
 export const exports = defineGroup({
   prefix: "exports",
   endpoints: {
-    download: endpoint<ReadableStream, { id: string }>()((http, vars) =>
+    download: query.variables<{ id: string }>().response<ReadableStream>().via((http, vars) =>
       http.get(":id/download", vars, { stream: true })
     ),
   },

@@ -22,7 +22,7 @@ export type WithVariables<TVariables> = [TVariables] extends [undefined]
  * so `mutate()` may be called without arguments.
  */
 // biome-ignore lint/suspicious/noConfusingVoidType: void is required for react-query's mutate() to accept zero arguments
-export type MutationVariables<TVariables> = [TVariables] extends [undefined]
+export type MutationVariables<TVariables> = [TVariables] extends [undefined | void]
   ? void
   : {} extends TVariables
     ? void | TVariables

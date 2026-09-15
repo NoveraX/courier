@@ -1,8 +1,9 @@
 /**
- * Helper functions for building endpoint() call expressions.
+ * Helper functions for building the builder chain that describes an endpoint.
  */
 
 import type { ParsedEndpoint, ParsedSpec } from "../parser/types";
+import { getSchemaRefName } from "./schema-utils";
 import type { GenerateOptions } from "./types";
 
 /** Check if body schema has an explicit interface with documented properties */
@@ -30,32 +31,70 @@ export function resolveBodyInterfaceType(
   return `${bodyRef} & { ${paramParts.join("; ")} }`;
 }
 
-/** Build the endpoint<R, V>({ config }) expression */
-export function buildEndpointCall(
-  configParts: string[],
+/**
+ * Build the builder chain that describes an endpoint, up to but excluding the
+ * terminal.
+ *
+ * A slot carrying a schema takes it directly; one carrying only a type takes a
+ * type argument, which is how an endpoint of an API that publishes no usable
+ * schema is described.
+ */
+export function buildEndpointChain(
+  head: "query" | "mutation",
   schemaConfig: string[],
   bodyInterfaceType: string | null,
   varsType: string | null,
   responseType: string,
 ): string {
-  if (configParts.length > 0) {
-    const hasSchemaVars = schemaConfig.some((s) => s.startsWith("variables:"));
-    const effectiveVarsType = bodyInterfaceType ?? varsType;
-    const needsVarsGeneric =
-      effectiveVarsType &&
-      effectiveVarsType !== "undefined" &&
-      (!hasSchemaVars || bodyInterfaceType);
-    if (needsVarsGeneric) {
-      return `endpoint<${responseType}, ${effectiveVarsType}>({ ${configParts.join(", ")} })`;
-    }
-    if (responseType !== "unknown") {
-      return `endpoint<${responseType}>({ ${configParts.join(", ")} })`;
-    }
-    return `endpoint({ ${configParts.join(", ")} })`;
+  const responseSchema = findConfig(schemaConfig, "response");
+  const variablesSchema = findConfig(schemaConfig, "variables");
+  const effectiveVarsType = bodyInterfaceType ?? varsType;
+
+  let chain = head;
+
+  if (variablesSchema && !bodyInterfaceType) {
+    chain += `.variables(${variablesSchema})`;
+  } else if (effectiveVarsType && effectiveVarsType !== "undefined") {
+    chain += `.variables<${effectiveVarsType}>()`;
   }
 
-  if (varsType && varsType !== "undefined") {
-    return `endpoint<${responseType}, ${varsType}>()`;
+  if (responseSchema) {
+    chain += `.response(${responseSchema})`;
+  } else if (responseType !== "unknown") {
+    chain += `.response<${responseType}>()`;
   }
-  return `endpoint<${responseType}>()`;
+
+  return chain;
+}
+
+function findConfig(config: string[], key: string): string | null {
+  const entry = config.find((c) => c.startsWith(`${key}:`));
+  return entry ? entry.slice(key.length + 1).trim() : null;
+}
+
+/**
+ * Name the heads a generated file addresses.
+ *
+ * A file declares only the heads its endpoints use, so a source of reads alone
+ * never names `mutation`.
+ */
+export function collectHeads(endpoints: ParsedEndpoint[]): string[] {
+  const heads = new Set(endpoints.map((ep) => (ep.httpMethod === "get" ? "query" : "mutation")));
+  return [...heads].sort();
+}
+
+/**
+ * Does the chain describe the response with a schema rather than a type?
+ *
+ * The two are exclusive: a slot given a schema takes it directly and names no
+ * type, so a type imported for a schema-described response would go unused.
+ */
+export function describesResponseWithSchema(
+  ep: ParsedEndpoint,
+  options: GenerateOptions,
+  schemaImports: Set<string>,
+): boolean {
+  if (!options.generateSchemas || options.validation === "none") return false;
+  const responseRef = getSchemaRefName(ep.responseSchema);
+  return responseRef !== null && schemaImports.has(responseRef);
 }

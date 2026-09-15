@@ -6,10 +6,12 @@ Under the hood, Courier uses an `HttpClient` class that wraps the native `fetch`
 
 ## HTTP Methods
 
-Every endpoint defined with `endpoint()` receives an `http` object with six HTTP helpers: `get`, `post`, `put`, `patch`, `del`, and `head`.
+Every endpoint passes `.via()` a closure that receives an `http` object with six HTTP helpers: `get`, `post`, `put`, `patch`, `del`, and `head`.
 
 ```ts title="api/users.ts"
-import { defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type User = { id: string; name: string; email: string }
 type CreateUserVars = { name: string; email: string }
@@ -19,32 +21,32 @@ export const users = defineGroup({
   prefix: "users",
   endpoints: {
     // GET /users — variables become search params
-    getAll: endpoint<User[], { page?: number; limit?: number }>()(
+    getAll: query.variables<{ page?: number; limit?: number }>().response<User[]>().via(
       (http) => http.get()
     ),
 
     // GET /users/:id — :id is extracted from variables
-    getById: endpoint<User, { id: string }>()(
+    getById: query.variables<{ id: string }>().response<User>().via(
       (http, vars) => http.get(":id", vars)
     ),
 
     // POST /users — variables become JSON body
-    create: endpoint<User, CreateUserVars>()(
+    create: mutation.variables<CreateUserVars>().response<User>().via(
       (http, vars) => http.post("", vars)
     ),
 
     // PUT /users/:id — :id extracted, rest becomes JSON body
-    update: endpoint<User, UpdateUserVars>()(
+    update: mutation.variables<UpdateUserVars>().response<User>().via(
       (http, vars) => http.put(":id", vars)
     ),
 
     // PATCH /users/:id — partial update
-    patch: endpoint<User, { id: string; email: string }>()(
+    patch: mutation.variables<{ id: string; email: string }>().response<User>().via(
       (http, vars) => http.patch(":id", vars)
     ),
 
     // DELETE /users/:id
-    remove: endpoint<null, { id: string }>()(
+    remove: mutation.variables<{ id: string }>().response<null>().via(
       (http, vars) => http.del(":id", vars)
     ),
   },
@@ -81,7 +83,9 @@ You never need to call `JSON.stringify` or build query strings manually. Courier
 Use the `:param` syntax in URLs to define path parameters. Courier extracts matching keys from variables, inserts them into the URL, and sends the remaining variables as body or search params:
 
 ```ts title="api/comments.ts"
-import { defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type Comment = { id: string; body: string; author: string }
 
@@ -89,12 +93,12 @@ export const comments = defineGroup({
   prefix: "posts",
   endpoints: {
     // Multiple path params: /posts/:postId/comments/:commentId
-    getOne: endpoint<Comment, { postId: string; commentId: string }>()(
+    getOne: query.variables<{ postId: string; commentId: string }>().response<Comment>().via(
       (http, vars) => http.get(":postId/comments/:commentId", vars)
     ),
 
     // Path params + body: :postId is extracted, rest becomes body
-    create: endpoint<Comment, { postId: string; body: string }>()(
+    create: mutation.variables<{ postId: string; body: string }>().response<Comment>().via(
       (http, vars) => http.post(":postId/comments", vars)
     ),
   },

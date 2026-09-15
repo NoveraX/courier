@@ -88,12 +88,14 @@ const combined = composeMiddleware([auth, logger])
 Pass a `middleware` array in your `defineApi` configuration. The middleware wraps `executeRequest` and applies to every endpoint in that source:
 
 ```ts title="lib/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 import {
   authMiddleware,
   logMiddleware,
   retryMiddleware,
 } from "@noverax/courier/middleware"
+
+const { query, mutation } = courier()
 
 const api = defineApi({
   baseURL: "https://api.example.com",
@@ -106,8 +108,8 @@ const api = defineApi({
     users: defineGroup({
       prefix: "users",
       endpoints: {
-        getAll: endpoint<User[]>()(({ get }) => get()),
-        create: endpoint<User, CreateUserInput>()(({ post }, vars) =>
+        getAll: query.response<User[]>().via(({ get }) => get()),
+        create: mutation.variables<CreateUserInput>().response<User>().via(({ post }, vars) =>
           post("", vars),
         ),
       },

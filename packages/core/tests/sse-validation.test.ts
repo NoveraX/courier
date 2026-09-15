@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createHandler } from "../src/adapter";
-import { endpoint } from "../src/define/endpoint";
+import { courier } from "../src/define/courier";
 import type { SSEContext, SSEEvent } from "../src/realtime/types";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
+
+const { stream } = courier();
 
 function setupHandler(sources: unknown) {
   registerSources(sources as Parameters<typeof registerSources>[0]);
@@ -35,7 +37,7 @@ async function collectSSEText(response: Response): Promise<string> {
 describe("SSE variable validation", () => {
   it("validates variables against endpoint schema", async () => {
     const vars = z.object({ userId: z.string() });
-    const feed = endpoint({ transport: "sse", variables: vars })(async function* (ctx) {
+    const feed = stream.variables(vars).response<unknown>().implement(async function* (ctx) {
       yield { data: ctx.variables };
     });
 
@@ -53,7 +55,7 @@ describe("SSE variable validation", () => {
 
   it("coerces string query params to numbers via z.coerce", async () => {
     const schema = z.object({ limit: z.coerce.number() });
-    const feed = endpoint({ transport: "sse", variables: schema })(async function* (ctx) {
+    const feed = stream.variables(schema).response<unknown>().implement(async function* (ctx) {
       yield { data: ctx.variables };
     });
 
@@ -69,7 +71,7 @@ describe("SSE variable validation", () => {
 
   it("coerces string query params to booleans via z.coerce", async () => {
     const schema = z.object({ active: z.coerce.boolean() });
-    const feed = endpoint({ transport: "sse", variables: schema })(async function* (ctx) {
+    const feed = stream.variables(schema).response<unknown>().implement(async function* (ctx) {
       yield { data: ctx.variables };
     });
 
@@ -84,7 +86,7 @@ describe("SSE variable validation", () => {
   });
 
   it("passes raw variables when no schema defined", async () => {
-    const feed = endpoint<unknown>({ transport: "sse" })(async function* (ctx: SSEContext) {
+    const feed = stream.response<unknown>().implement(async function* (ctx: SSEContext) {
       yield { data: ctx.variables } as SSEEvent;
     });
     const sources = { api: { options: {}, feed } };
@@ -99,7 +101,7 @@ describe("SSE variable validation", () => {
 
   it("returns 400 for invalid coercion", async () => {
     const schema = z.object({ count: z.coerce.number().min(1) });
-    const feed = endpoint({ transport: "sse", variables: schema })(async function* (ctx) {
+    const feed = stream.variables(schema).response<unknown>().implement(async function* (ctx) {
       yield { data: ctx.variables };
     });
 

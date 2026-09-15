@@ -5,22 +5,23 @@ export const metadata = { title: "HttpClient", description: "Internal HTTP clien
 `HttpClient` is the low-level HTTP client at the core of Courier. It wraps the native `fetch` API and provides typed HTTP method functions (`get`, `post`, `put`, `patch`, `del`, `head`). You never create an `HttpClient` directly — it is created internally by `executeRequest`.
 
 <Callout variant="info" title="Internal class">
-`HttpClient` is used internally by Courier. Understanding it helps with debugging and writing endpoint definitions, but you don't instantiate it yourself.
+`HttpClient` is used internally by Courier. Understanding it helps with debugging and writing the closure an endpoint passes to `.via()`, but you don't instantiate it yourself.
 </Callout>
 
 ## HTTP Methods
 
-Every endpoint definition receives an `HttpMethods` object with six method functions:
+At definition time `.via()` hands its closure an `HttpWire` — a recorder that
+captures which method and path the endpoint addresses. At request time the same
+closure runs against an `HttpClient` bound to the source, whose six methods carry
+the call out:
 
 ```ts
-type HttpMethods = {
-  get: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
-  post: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
-  put: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
-  patch: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
-  del: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
-  head: <T>(url?, options?) => Promise<HttpResponse<T>>
-}
+get: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
+post: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
+put: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
+patch: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
+del: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
+head: <T>(url?, options?) => Promise<HttpResponse<T>>
 ```
 
 ## HttpResponse
@@ -76,7 +77,7 @@ http.get(":userId/posts/:postId", { userId: "1", postId: "42" })
 When `stream: true` is set in the endpoint options, the response `data` is a `ReadableStream`:
 
 ```ts
-endpoint<ReadableStream, { channel: string }>()((http, vars) =>
+query.variables<{ channel: string }>().response<ReadableStream>().via((http, vars) =>
   http.get(":channel/stream", vars, { stream: true })
 )
 ```
@@ -100,6 +101,6 @@ type Context = {
 ## Related
 
 - [HTTP Client Guide](/docs/core-concepts/instance) — in-depth usage patterns
-- [defineGroup](/docs/api/define-group) — where endpoint definitions use HttpMethods
+- [defineGroup](/docs/api/define-group) — where endpoints describe the call they make
 - [HTTPError](/docs/api/http-error) — error class thrown by HttpClient
 - [Types](/docs/api/types) — all type definitions

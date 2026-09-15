@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as v from "valibot";
 import { z } from "zod";
-import { defineApi, defineGroup, endpoint } from "../src/define/index";
+import { defineApi, defineGroup, courier } from "../src/define/index";
 import { ENDPOINT_SCHEMA, ValidationError, isValidationError, validateSchema } from "../src/validation";
 import { executeRequest } from "../src/utils/execute";
+
+const { query, mutation } = courier();
 
 // ---- mock fetch ----
 
@@ -119,12 +121,12 @@ describe("validateSchema", () => {
 	});
 });
 
-// ---- endpoint() with schema ----
+// ---- endpoints with schemas ----
 
 describe("endpoint with schema config", () => {
 	it("attaches schema metadata to endpoint function (Zod)", () => {
 		const responseSchema = z.object({ id: z.number(), name: z.string() });
-		const fn = endpoint({ response: responseSchema })(({ get }) => get());
+		const fn = query.response(responseSchema).via(({ get }) => get());
 
 		const meta = (fn as any)[ENDPOINT_SCHEMA];
 		expect(meta).toBeDefined();
@@ -135,7 +137,7 @@ describe("endpoint with schema config", () => {
 	it("attaches both response and variables schemas", () => {
 		const responseSchema = z.object({ id: z.number() });
 		const varsSchema = z.object({ name: z.string() });
-		const fn = endpoint({ response: responseSchema, variables: varsSchema })(
+		const fn = mutation.variables(varsSchema).response(responseSchema).via(
 			({ post }, vars) => post("", vars),
 		);
 
@@ -146,22 +148,24 @@ describe("endpoint with schema config", () => {
 
 	it("attaches variables schema only", () => {
 		const varsSchema = z.object({ email: z.string() });
-		const fn = endpoint({ variables: varsSchema })(({ post }, vars) => post("", vars));
+		const fn = mutation.variables(varsSchema).via(({ post }, vars) => post("", vars));
 
 		const meta = (fn as any)[ENDPOINT_SCHEMA];
 		expect(meta.response).toBeUndefined();
 		expect(meta.variables).toBe(varsSchema);
 	});
 
-	it("does not attach metadata when called without config", () => {
-		const fn = endpoint<string>()(({ get }) => get());
+	it("attaches no schemas when the endpoint declared only types", () => {
+		const fn = query.response<string>().via(({ get }) => get());
 		const meta = (fn as any)[ENDPOINT_SCHEMA];
-		expect(meta).toBeUndefined();
+		expect(meta.response).toBeUndefined();
+		expect(meta.variables).toBeUndefined();
+		expect(meta.type).toBe("query");
 	});
 
 	it("works with Valibot schemas", () => {
 		const responseSchema = v.object({ id: v.number(), name: v.string() });
-		const fn = endpoint({ response: responseSchema })(({ get }) => get());
+		const fn = query.response(responseSchema).via(({ get }) => get());
 
 		const meta = (fn as any)[ENDPOINT_SCHEMA];
 		expect(meta.response).toBe(responseSchema);
@@ -180,7 +184,7 @@ describe("integration: response validation", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint({ response: z.array(UserSchema) })(({ get }) => get()),
+						getAll: query.response(z.array(UserSchema)).via(({ get }) => get()),
 					},
 				}),
 			},
@@ -207,7 +211,7 @@ describe("integration: response validation", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint({ response: z.array(UserSchema) })(({ get }) => get()),
+						getAll: query.response(z.array(UserSchema)).via(({ get }) => get()),
 					},
 				}),
 			},
@@ -238,7 +242,7 @@ describe("integration: response validation", () => {
 				posts: defineGroup({
 					prefix: "posts",
 					endpoints: {
-						list: endpoint({ response: v.array(PostSchema) })(({ get }) => get()),
+						list: query.response(v.array(PostSchema)).via(({ get }) => get()),
 					},
 				}),
 			},
@@ -268,7 +272,7 @@ describe("integration: variables validation", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						create: endpoint({ response: UserSchema, variables: CreateUserSchema })(
+						create: mutation.variables(CreateUserSchema).response(UserSchema).via(
 							({ post }, vars) => post("", vars),
 						),
 					},
@@ -298,7 +302,7 @@ describe("integration: variables validation", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						create: endpoint({ variables: CreateUserSchema })(
+						create: mutation.variables(CreateUserSchema).via(
 							({ post }, vars) => post("", vars),
 						),
 					},
@@ -329,7 +333,7 @@ describe("integration: variables validation", () => {
 				items: defineGroup({
 					prefix: "items",
 					endpoints: {
-						get: endpoint({ variables: VarsSchema })(({ get }, vars) => get(":id", vars)),
+						get: query.variables(VarsSchema).via(({ get }, vars) => get(":id", vars)),
 					},
 				}),
 			},
@@ -358,7 +362,7 @@ describe("integration: endpoints without schema", () => {
 				misc: defineGroup({
 					prefix: "misc",
 					endpoints: {
-						ping: endpoint<string>()(({ get }) => get("ping")),
+						ping: query.response<string>().via(({ get }) => get("ping")),
 					},
 				}),
 			},
@@ -388,7 +392,7 @@ describe("integration: schema transforms", () => {
 				items: defineGroup({
 					prefix: "items",
 					endpoints: {
-						get: endpoint({ response: DateSchema })(({ get }) => get()),
+						get: query.response(DateSchema).via(({ get }) => get()),
 					},
 				}),
 			},

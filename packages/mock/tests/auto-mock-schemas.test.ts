@@ -1,10 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
+import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { z } from "zod";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
 import { generateRecords } from "../src/auto/data-generator";
 import { extractPaginatedItemSchema } from "../src/auto/schema-introspect";
+
+const { query } = courier();
 
 // ── Schema edge cases (unit tests) ──────────────────────────────────────────
 
@@ -147,7 +149,7 @@ describe("auto-mock with mixed schema endpoints", () => {
       feed: defineGroup({
         prefix: "/feed",
         endpoints: {
-          paginated: endpoint({ response: WrapperSchema, type: "query" })((http) =>
+          paginated: query.response(WrapperSchema).via((http) =>
             http.get(""),
           ),
         },
@@ -156,8 +158,8 @@ describe("auto-mock with mixed schema endpoints", () => {
       legacy: defineGroup({
         prefix: "/legacy",
         endpoints: {
-          list: endpoint()((http) => http.get("")),
-          getById: endpoint()((http, v) => http.get(":id", v)),
+          list: query.via((http) => http.get("")),
+          getById: query.via((http, v) => http.get(":id", v)),
         },
       }),
     },

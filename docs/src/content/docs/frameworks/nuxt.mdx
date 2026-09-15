@@ -13,7 +13,9 @@ npm install @noverax/courier @noverax/courier-nuxt
 Create a shared API definition:
 
 ```ts title="lib/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type Post = { id: number; title: string; body: string }
 type PostList = { data: Post[]; total: number }
@@ -21,16 +23,16 @@ type PostList = { data: Post[]; total: number }
 const posts = defineGroup({
   prefix: "posts",
   endpoints: {
-    getAll: endpoint<PostList, { page?: number }>()(
+    getAll: query.variables<{ page?: number }>().response<PostList>().via(
       ({ get }) => get()
     ),
-    getById: endpoint<Post, { id: number }>()(
+    getById: query.variables<{ id: number }>().response<Post>().via(
       ({ get }) => get(":id")
     ),
-    create: endpoint<Post, { title: string; body: string }>()(
+    create: mutation.variables<{ title: string; body: string }>().response<Post>().via(
       ({ post }) => post()
     ),
-    remove: endpoint<null, { id: number }>()(
+    remove: mutation.variables<{ id: number }>().response<null>().via(
       ({ del }) => del(":id")
     ),
   },

@@ -102,6 +102,8 @@ export interface ExistingGroupInfo {
   prefix: string;
   imports: ParsedImport[];
   endpoints: ExistingEndpointInfo[];
+  /** Code lines between the imports and the defineGroup block (builder heads) */
+  preamble: string[];
   /** Code lines after the defineGroup block (user's helpers, constants) */
   trailingCode: string[];
 }

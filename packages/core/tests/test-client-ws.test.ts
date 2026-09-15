@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { defineApi, defineGroup, endpoint } from "../src/define";
+import { defineApi, defineGroup, courier } from "../src/define";
 import type { WSChannel } from "../src/realtime/types";
 import { createTestClient } from "../src/testing/create-test-client";
+
+const { query } = courier();
 
 type ChatMessage = Record<string, unknown>;
 
@@ -10,7 +12,7 @@ const noop = () => {};
 const chat = defineGroup({
   prefix: "chat",
   endpoints: {
-    room: endpoint<ChatMessage, { roomId?: string }>()((http, vars) => http.get("room", vars)),
+    room: query.variables<{ roomId?: string }>().response<ChatMessage>().via((http, vars) => http.get("room", vars)),
   },
 });
 

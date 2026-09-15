@@ -8,9 +8,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
+import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { createQueryCaller } from "../src/create-query-caller";
 import { createQueryKeys } from "../src/keys";
+
+const { query, mutation } = courier();
 
 let fetchSpy: ReturnType<typeof vi.fn>;
 
@@ -25,11 +27,11 @@ function mockFetchResponse(data: unknown, status = 200) {
 const usersGroup = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint<{ id: number; name: string }[]>()((http) => http.get()),
-    getById: endpoint<{ id: number; name: string }, { id: number }>()((http, vars) =>
+    getAll: query.response<{ id: number; name: string }[]>().via((http) => http.get()),
+    getById: query.variables<{ id: number }>().response<{ id: number; name: string }>().via((http, vars) =>
       http.get(`${vars.id}`),
     ),
-    create: endpoint<{ id: number; name: string }, { name: string }>()((http, vars) =>
+    create: mutation.variables<{ name: string }>().response<{ id: number; name: string }>().via((http, vars) =>
       http.post("", vars),
     ),
   },
@@ -38,7 +40,7 @@ const usersGroup = defineGroup({
 const postsGroup = defineGroup({
   prefix: "posts",
   endpoints: {
-    list: endpoint<{ id: number; title: string }[]>()((http) => http.get()),
+    list: query.response<{ id: number; title: string }[]>().via((http) => http.get()),
   },
 });
 

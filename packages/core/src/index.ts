@@ -35,11 +35,7 @@ export {
   type TypedClient,
   type WithOptions,
 } from "./client";
-export type {
-  SSEEndpoint,
-  WSChannelEndpoint,
-  WSEndpoint,
-} from "./define/types";
+export type {} from "./define/types";
 export {
   ConfigurationError,
   type ConfigurationErrorCode,

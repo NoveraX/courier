@@ -11,26 +11,28 @@ npm install @noverax/courier
 ## Define your API sources
 
 ```ts title="shared/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type Task = { id: number; title: string; completed: boolean }
 
 const tasks = defineGroup({
   prefix: "tasks",
   endpoints: {
-    getAll: endpoint<Task[], { status?: "all" | "active" | "completed" }>()(
+    getAll: query.variables<{ status?: "all" | "active" | "completed" }>().response<Task[]>().via(
       ({ get }) => get()
     ),
-    getById: endpoint<Task, { id: number }>()(
+    getById: query.variables<{ id: number }>().response<Task>().via(
       ({ get }) => get(":id")
     ),
-    create: endpoint<Task, { title: string }>()(
+    create: mutation.variables<{ title: string }>().response<Task>().via(
       ({ post }) => post()
     ),
-    toggle: endpoint<Task, { id: number; completed: boolean }>()(
+    toggle: mutation.variables<{ id: number; completed: boolean }>().response<Task>().via(
       ({ patch }) => patch(":id")
     ),
-    remove: endpoint<null, { id: number }>()(
+    remove: mutation.variables<{ id: number }>().response<null>().via(
       ({ del }) => del(":id")
     ),
   },

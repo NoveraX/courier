@@ -5,7 +5,9 @@ export const metadata = { title: "Encoding", description: "Control how request b
 By default, Courier serializes variables based on the HTTP method. GET and DELETE methods send variables as URL search params. POST, PUT, and PATCH send them as a JSON body:
 
 ```ts title="Default encoding"
-import { defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type User = { id: number; name: string; email: string }
 
@@ -14,18 +16,24 @@ const users = defineGroup({
   endpoints: {
     // GET, DELETE -> variables go to URLSearchParams
     // GET /users?page=1&limit=10
-    getAll: endpoint<User[], { page: number; limit: number }>()((http, vars) =>
+    getAll: query
+      .variables<{ page: number; limit: number }>()
+      .response<User[]>()
+      .via((http, vars) =>
       http.get("", vars)
     ),
 
     // POST, PUT, PATCH -> variables go to JSON body
     // POST /users  Body: { "name": "Jane", "email": "jane@test.com" }
-    create: endpoint<User, { name: string; email: string }>()((http, vars) =>
+    create: mutation
+      .variables<{ name: string; email: string }>()
+      .response<User>()
+      .via((http, vars) =>
       http.post("", vars)
     ),
 
     // HEAD -> no variables sent
-    check: endpoint<void>()((http) => http.head()),
+    check: query.response<void>().via((http) => http.head()),
   },
 })
 
@@ -38,16 +46,18 @@ await caller.users.create({ name: "Jane", email: "jane@test.com" })
 Override the default JSON serialization for request bodies. This is useful when your backend expects a different format like `application/x-www-form-urlencoded`, Protocol Buffers, or any custom encoding:
 
 ```ts title="api/index.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { mutation } = courier()
 
 const auth = defineGroup({
   prefix: "auth",
   endpoints: {
-    login: endpoint<{ token: string }, {
+    login: mutation.variables<{
       grant_type: string
       username: string
       password: string
-    }>()((http, vars) => http.post("token", vars)),
+    }>().response<{ token: string }>().via((http, vars) => http.post("token", vars)),
   },
 })
 
@@ -85,18 +95,20 @@ Unified serializer for query parameters. Handles both encoding (object to string
 You can pass any library with `stringify` and `parse` methods (e.g., `qs`):
 
 ```ts title="api/index.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 import qs from "qs"
+
+const { query } = courier()
 
 type Product = { id: number; name: string; category: string }
 
 const products = defineGroup({
   prefix: "products",
   endpoints: {
-    search: endpoint<Product[], {
+    search: query.variables<{
       category: string
       tags: string[]
-    }>()((http, vars) => http.get("", vars)),
+    }>().response<Product[]>().via((http, vars) => http.get("", vars)),
   },
 })
 

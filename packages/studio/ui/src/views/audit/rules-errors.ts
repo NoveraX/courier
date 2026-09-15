@@ -47,7 +47,7 @@ function timeoutPatterns(stats: Map<string, EndpointStats>): AuditItem[] {
     title: "Timeout risk",
     description: "P95 response time exceeds 5 seconds.",
     suggestion: "Add a timeout option or optimize the backend endpoint.",
-    codeSuggestion: `endpoint<Response>({ timeout: 5000 })(\n  (http) => http.get("slow-endpoint")\n);`,
+    codeSuggestion: `api.query.timeout(5000).via((http) => http.get("slow-endpoint"));`,
     endpoints: matched.map((s) => ({
       ...formatEp(s),
       detail: `P95 = ${(s.p95 / 1000).toFixed(1)}s`,
@@ -91,7 +91,7 @@ function missingErrorHandling(
     title: "Errors without response validation",
     description: "Endpoints with errors but no response schema to validate them.",
     suggestion: "Add a response schema to catch malformed error responses early.",
-    codeSuggestion: `endpoint<Response>({\n  response: z.object({ /* your schema */ }),\n})((http) => http.get("endpoint"));`,
+    codeSuggestion: `api.query\n  .response(z.object({ /* your schema */ }))\n  .via((http) => http.get("endpoint"));`,
     endpoints: matched.map(formatEp),
   }];
 }

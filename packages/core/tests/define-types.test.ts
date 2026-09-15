@@ -6,11 +6,13 @@
  * Each test uses `expectTypeOf` for compile-time assertions.
  */
 import { describe, expectTypeOf, it } from "vitest";
-import { defineApi, defineGroup, endpoint } from "../src/define/index";
-import type { Endpoint } from "../src/define/types";
+import { defineApi, defineGroup, courier } from "../src/define/index";
+import type { InferResponse, InferVariables } from "../src/define/marker";
 import type { HttpResponse } from "../src/http-client/types";
 import type { FlatClient, GroupClient, InferClient, MixedClient, TypedClient } from "../src/client";
 import type { EndpointKey, ResolveEndpoint } from "../src/types";
+
+const { query, mutation } = courier();
 
 // ---- test fixtures ----
 
@@ -21,16 +23,16 @@ type CreateUserInput = { name: string; email: string };
 const usersGroup = defineGroup({
 	prefix: "users",
 	endpoints: {
-		getAll: endpoint<User[]>()(({ get }) => get()),
-		getById: endpoint<User, { id: number }>()(({ get }, vars) => get(":id", vars)),
-		create: endpoint<User, CreateUserInput>()(({ post }, vars) => post("", vars)),
+		getAll: query.response<User[]>().via(({ get }) => get()),
+		getById: query.variables<{ id: number }>().response<User>().via(({ get }, vars) => get(":id", vars)),
+		create: mutation.variables<CreateUserInput>().response<User>().via(({ post }, vars) => post("", vars)),
 	},
 });
 
 const postsGroup = defineGroup({
 	prefix: "posts",
 	endpoints: {
-		list: endpoint<Post[]>()(({ get }) => get()),
+		list: query.response<Post[]>().via(({ get }) => get()),
 	},
 });
 
@@ -41,20 +43,23 @@ const api = defineApi({
 
 // ---- endpoint() type inference ----
 
-describe("endpoint() type inference", () => {
-	it("returns Endpoint<R, V> type", () => {
-		const fn = endpoint<User[]>()(({ get }) => get());
-		expectTypeOf(fn).toMatchTypeOf<Endpoint<User[], undefined>>();
+describe("builder type inference", () => {
+	it("infers the declared response", () => {
+		const fn = query.response<User[]>().via(({ get }) => get());
+		expectTypeOf<InferResponse<typeof fn>>().toEqualTypeOf<User[]>();
+		expectTypeOf<InferVariables<typeof fn>>().toEqualTypeOf<void>();
 	});
 
 	it("preserves variables type", () => {
-		const fn = endpoint<User, { id: number }>()(({ get }, vars) => get(":id", vars));
-		expectTypeOf(fn).toMatchTypeOf<Endpoint<User, { id: number }>>();
+		const fn = query.variables<{ id: number }>().response<User>().via(({ get }, vars) => get(":id", vars));
+		expectTypeOf<InferResponse<typeof fn>>().toEqualTypeOf<User>();
+		expectTypeOf<InferVariables<typeof fn>>().toEqualTypeOf<{ id: number }>();
 	});
 
-	it("defaults V to undefined when omitted", () => {
-		const fn = endpoint<string>()(({ get }) => get());
-		expectTypeOf(fn).toMatchTypeOf<Endpoint<string, undefined>>();
+	it("carries no variables when none were declared", () => {
+		const fn = query.response<string>().via(({ get }) => get());
+		expectTypeOf<InferResponse<typeof fn>>().toEqualTypeOf<string>();
+		expectTypeOf<InferVariables<typeof fn>>().toEqualTypeOf<void>();
 	});
 });
 
@@ -62,9 +67,12 @@ describe("endpoint() type inference", () => {
 
 describe("defineGroup() type inference", () => {
 	it("exposes endpoint functions as typed properties", () => {
-		expectTypeOf(usersGroup.getAll).toMatchTypeOf<Endpoint<User[], undefined>>();
-		expectTypeOf(usersGroup.getById).toMatchTypeOf<Endpoint<User, { id: number }>>();
-		expectTypeOf(usersGroup.create).toMatchTypeOf<Endpoint<User, CreateUserInput>>();
+		expectTypeOf<InferResponse<typeof usersGroup.getAll>>().toEqualTypeOf<User[]>();
+		expectTypeOf<InferVariables<typeof usersGroup.getAll>>().toEqualTypeOf<void>();
+		expectTypeOf<InferResponse<typeof usersGroup.getById>>().toEqualTypeOf<User>();
+		expectTypeOf<InferVariables<typeof usersGroup.getById>>().toEqualTypeOf<{ id: number }>();
+		expectTypeOf<InferResponse<typeof usersGroup.create>>().toEqualTypeOf<User>();
+		expectTypeOf<InferVariables<typeof usersGroup.create>>().toEqualTypeOf<CreateUserInput>();
 	});
 
 	it("has options with prefix", () => {
@@ -111,24 +119,28 @@ describe("EndpointKey type resolution", () => {
 describe("ResolveEndpoint type resolution", () => {
 	type ApiType = typeof api;
 
-	it("resolves users:getAll to Endpoint<User[], undefined>", () => {
+	it("resolves users:getAll", () => {
 		type Resolved = ResolveEndpoint<ApiType, "users:getAll">;
-		expectTypeOf<Resolved>().toMatchTypeOf<Endpoint<User[], undefined>>();
+		expectTypeOf<InferResponse<Resolved>>().toEqualTypeOf<User[]>();
+		expectTypeOf<InferVariables<Resolved>>().toEqualTypeOf<void>();
 	});
 
-	it("resolves users:getById to Endpoint<User, { id: number }>", () => {
+	it("resolves users:getById", () => {
 		type Resolved = ResolveEndpoint<ApiType, "users:getById">;
-		expectTypeOf<Resolved>().toMatchTypeOf<Endpoint<User, { id: number }>>();
+		expectTypeOf<InferResponse<Resolved>>().toEqualTypeOf<User>();
+		expectTypeOf<InferVariables<Resolved>>().toEqualTypeOf<{ id: number }>();
 	});
 
-	it("resolves users:create to Endpoint<User, CreateUserInput>", () => {
+	it("resolves users:create", () => {
 		type Resolved = ResolveEndpoint<ApiType, "users:create">;
-		expectTypeOf<Resolved>().toMatchTypeOf<Endpoint<User, CreateUserInput>>();
+		expectTypeOf<InferResponse<Resolved>>().toEqualTypeOf<User>();
+		expectTypeOf<InferVariables<Resolved>>().toEqualTypeOf<CreateUserInput>();
 	});
 
-	it("resolves posts:list to Endpoint<Post[], undefined>", () => {
+	it("resolves posts:list", () => {
 		type Resolved = ResolveEndpoint<ApiType, "posts:list">;
-		expectTypeOf<Resolved>().toMatchTypeOf<Endpoint<Post[], undefined>>();
+		expectTypeOf<InferResponse<Resolved>>().toEqualTypeOf<Post[]>();
+		expectTypeOf<InferVariables<Resolved>>().toEqualTypeOf<void>();
 	});
 });
 
@@ -224,7 +236,7 @@ describe("structural compatibility", () => {
 		const group = usersGroup;
 		expectTypeOf(group).toHaveProperty("options");
 		expectTypeOf(group).toHaveProperty("getAll");
-		expectTypeOf(group.getAll).toBeFunction();
+		expectTypeOf(group.getAll).toHaveProperty("probe");
 	});
 
 	it("defineApi result satisfies source shape expected by executeRequest", () => {
@@ -234,22 +246,27 @@ describe("structural compatibility", () => {
 		expectTypeOf(api.options).toHaveProperty("baseURL");
 	});
 
-	it("endpoint return matches HttpResponse shape", async () => {
-		const fn = endpoint<User>()(({ get }) => get());
-		// Endpoint<R, V> returns HttpResponse<R> | Promise<HttpResponse<R>>
-		type FnReturn = Awaited<ReturnType<typeof fn>>;
-		expectTypeOf<FnReturn>().toMatchTypeOf<HttpResponse<User>>();
+	it("a descriptor carries what the endpoint was declared to answer", () => {
+		const fn = query.response<User>().via(({ get }) => get());
+		expectTypeOf<InferResponse<typeof fn>>().toEqualTypeOf<User>();
+		expectTypeOf(fn).toHaveProperty("method");
+		expectTypeOf(fn).toHaveProperty("path");
 	});
 });
 
 // ---- FlatClient type inference ----
 
 describe("FlatClient type inference", () => {
-	type FlatEndpoints = {
-		healthCheck: Endpoint<{ ok: boolean }, undefined>;
-		getUsers: Endpoint<User[], undefined>;
-		createUser: Endpoint<User, CreateUserInput>;
+	const flatEndpoints = {
+		healthCheck: query.response<{ ok: boolean }>().via(({ get }) => get("health")),
+		getUsers: query.response<User[]>().via(({ get }) => get("users")),
+		createUser: mutation
+			.variables<CreateUserInput>()
+			.response<User>()
+			.via(({ post }, vars) => post("users", vars)),
 	};
+
+	type FlatEndpoints = typeof flatEndpoints;
 
 	type Client = FlatClient<FlatEndpoints>;
 
@@ -306,9 +323,13 @@ describe("FlatClient type inference", () => {
 // ---- MixedClient type inference ----
 
 describe("MixedClient type inference", () => {
+	const rootEndpoints = {
+		healthCheck: query.response<{ ok: boolean }>().via(({ get }) => get("health")),
+	};
+
 	type Groups = { users: typeof usersGroup };
-	type FlatEndpoints = { healthCheck: Endpoint<{ ok: boolean }, undefined> };
-	type Client = MixedClient<Groups, FlatEndpoints>;
+	type RootEndpoints = typeof rootEndpoints;
+	type Client = MixedClient<Groups, RootEndpoints>;
 
 	it("exposes groups as properties", () => {
 		expectTypeOf<Client>().toHaveProperty("users");
@@ -366,7 +387,7 @@ describe("InferClient type mapping", () => {
 		const flatApi = defineApi({
 			baseURL: "https://api.example.com",
 			endpoints: {
-				healthCheck: endpoint<{ ok: boolean }>()(({ get }) => get("health")),
+				healthCheck: query.response<{ ok: boolean }>().via(({ get }) => get("health")),
 			},
 		});
 		type Result = InferClient<typeof flatApi>;
@@ -380,7 +401,7 @@ describe("InferClient type mapping", () => {
 			baseURL: "https://api.example.com",
 			groups: { users: usersGroup },
 			endpoints: {
-				healthCheck: endpoint<{ ok: boolean }>()(({ get }) => get("health")),
+				healthCheck: query.response<{ ok: boolean }>().via(({ get }) => get("health")),
 			},
 		});
 		type Result = InferClient<typeof mixedApi>;

@@ -2,21 +2,35 @@ export const metadata = { title: "Quick Start", description: "Define your API, s
 
 ## Step 1: Define your API
 
-Create a file with your API definition using `defineApi`, `defineGroup`, and `endpoint`:
+Create a file with your API definition using `courier`, `defineGroup`, and `defineApi`:
 
 ```ts title="api/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type User = { id: string; name: string; email: string }
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll:  endpoint<User[]>()((http) => http.get()),
-    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
-    create:  endpoint<User, { name: string; email: string }>()((http, vars) => http.post("", vars)),
-    update:  endpoint<User, { id: string; name: string }>()((http, vars) => http.put(":id", vars)),
-    remove:  endpoint<null, { id: string }>()((http, vars) => http.del(":id", vars)),
+    getAll: query.response<User[]>().via((http) => http.get()),
+    getById: query
+      .variables<{ id: string }>()
+      .response<User>()
+      .via((http, vars) => http.get(":id", vars)),
+    create: mutation
+      .variables<{ name: string; email: string }>()
+      .response<User>()
+      .via((http, vars) => http.post("", vars)),
+    update: mutation
+      .variables<{ id: string; name: string }>()
+      .response<User>()
+      .via((http, vars) => http.put(":id", vars)),
+    remove: mutation
+      .variables<{ id: string }>()
+      .response<null>()
+      .via((http, vars) => http.del(":id", vars)),
   },
 })
 

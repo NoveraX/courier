@@ -102,18 +102,32 @@ This is shared across all frameworks. Define once — use everywhere.
 
 ```ts
 // api/sources.ts
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type User = { id: string; name: string; email: string }
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll:  endpoint<User[]>()((http) => http.get()),
-    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
-    create:  endpoint<User, { name: string; email: string }>()((http, vars) => http.post("", vars)),
-    update:  endpoint<User, { id: string; name: string }>()((http, vars) => http.put(":id", vars)),
-    remove:  endpoint<null, { id: string }>()((http, vars) => http.del(":id", vars)),
+    getAll: query.response<User[]>().via((http) => http.get()),
+    getById: query
+      .variables<{ id: string }>()
+      .response<User>()
+      .via((http, vars) => http.get(":id", vars)),
+    create: mutation
+      .variables<{ name: string; email: string }>()
+      .response<User>()
+      .via((http, vars) => http.post("", vars)),
+    update: mutation
+      .variables<{ id: string; name: string }>()
+      .response<User>()
+      .via((http, vars) => http.put(":id", vars)),
+    remove: mutation
+      .variables<{ id: string }>()
+      .response<null>()
+      .via((http, vars) => http.del(":id", vars)),
   },
 })
 
@@ -549,8 +563,10 @@ const api = defineApi({
 Works with any [Standard Schema](https://github.com/standard-schema/standard-schema) library — Zod, Valibot, ArkType.
 
 ```ts
-import { endpoint } from "@noverax/courier/define"
+import { courier } from "@noverax/courier/define"
 import { z } from "zod"
+
+const { query, mutation } = courier()
 
 const UserSchema = z.object({ id: z.string(), name: z.string(), email: z.email() })
 const CreateUserSchema = z.object({ name: z.string().min(1), email: z.email() })
@@ -558,8 +574,8 @@ const CreateUserSchema = z.object({ name: z.string().min(1), email: z.email() })
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint({ response: z.array(UserSchema) })((http) => http.get()),
-    create: endpoint({ response: UserSchema, variables: CreateUserSchema })((http, vars) =>
+    getAll: query.response(z.array(UserSchema)).via((http) => http.get()),
+    create: mutation.variables(CreateUserSchema).response(UserSchema).via((http, vars) =>
       http.post("", vars)
     ),
   },

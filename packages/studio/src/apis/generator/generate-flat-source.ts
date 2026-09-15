@@ -5,6 +5,7 @@
 
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointDefinition } from "./build-endpoint";
+import { collectHeads, describesResponseWithSchema } from "./build-endpoint-helpers";
 import { collectSchemaRefs } from "./schema-refs";
 import { resolveResponseType } from "./schema-types";
 import { getSchemaRefName } from "./schema-utils";
@@ -27,7 +28,7 @@ export function generateFlatSourceFile(
   const typeImports = collectTypeImports(endpoints, spec, options, schemaImports, extracted);
   const needsValidation = checkNeedsValidation(endpoints, options, schemaImports);
 
-  lines.push(`import { defineApi, endpoint } from "@noverax/courier/define";`);
+  lines.push(`import { courier, defineApi } from "@noverax/courier/define";`);
 
   if (needsValidation) {
     if (options.validation === "zod") lines.push(`import { z } from "zod";`);
@@ -53,6 +54,8 @@ export function generateFlatSourceFile(
     if (parts.length > 0) lines.push(`import { ${parts.join(", ")} } from "${schemaFile}";`);
   }
 
+  lines.push("");
+  lines.push(`const { ${collectHeads(endpoints).join(", ")} } = courier();`);
   lines.push("");
   lines.push(`export const ${options.sourceName} = defineApi({`);
   lines.push(`  baseURL: "${spec.baseURL}",`);
@@ -89,10 +92,12 @@ function collectTypeImports(
   if (!options.generateTypes) return typeImports;
 
   for (const ep of endpoints) {
-    const responseType = resolveResponseType(ep, spec, options);
-    for (const ref of schemaImports) {
-      if (responseType === ref || responseType === `${ref}[]`) {
-        typeImports.add(ref);
+    if (!describesResponseWithSchema(ep, options, schemaImports)) {
+      const responseType = resolveResponseType(ep, spec, options);
+      for (const ref of schemaImports) {
+        if (responseType === ref || responseType === `${ref}[]`) {
+          typeImports.add(ref);
+        }
       }
     }
     const bodyRef = getSchemaRefName(ep.requestBody);

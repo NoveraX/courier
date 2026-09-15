@@ -1,13 +1,20 @@
-import type { DefinedApi, Endpoint } from "@noverax/courier/define";
+import type {
+  AnyEndpoint,
+  DefinedApi,
+  InferResponse,
+  InferVariables,
+} from "@noverax/courier/define";
 import type { ChannelHandlers, SSEEvent } from "@noverax/courier/realtime";
 
 /** Extract response type from an endpoint */
-export type ExtractResponse<TEndpoint> =
-  TEndpoint extends Endpoint<infer TResponse, any> ? TResponse : unknown;
+export type ExtractResponse<TEndpoint> = TEndpoint extends AnyEndpoint
+  ? InferResponse<TEndpoint>
+  : unknown;
 
 /** Extract variables type from an endpoint */
-export type ExtractVariables<TEndpoint> =
-  TEndpoint extends Endpoint<any, infer TVariables> ? TVariables : unknown;
+export type ExtractVariables<TEndpoint> = TEndpoint extends AnyEndpoint
+  ? InferVariables<TEndpoint>
+  : unknown;
 
 /** Extract groups from a DefinedApi */
 export type ApiGroups<TApi extends DefinedApi<any>> = TApi["options"]["groups"];

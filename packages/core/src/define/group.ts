@@ -4,11 +4,16 @@ import type { DefinedGroup, DefineGroupConfig, EndpointRecord } from "./types";
  * Define an endpoint group with a prefix and typed endpoints.
  *
  * @example
+ * const api = courier()
+ *
  * const users = defineGroup({
  *   prefix: "users",
  *   endpoints: {
- *     getAll: endpoint<User[]>()((http) => http.get()),
- *     getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
+ *     getAll: api.query.response(UserListSchema).via((http) => http.get()),
+ *     getById: api.query
+ *       .variables(ByIdSchema)
+ *       .response(UserSchema)
+ *       .via((http, vars) => http.get(":id", vars)),
  *   },
  * })
  */

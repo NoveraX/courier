@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 import type { HttpMethods } from "../src/http-client/types";
 import { executeRequest } from "../src/utils/execute";
+import { asEndpoint } from "./helpers/as-endpoint";
 
 const fetchSpy = vi.fn();
 
@@ -14,8 +15,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+function wrapAll(methods: Record<string, Function>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(methods).map(([name, fn]) => [name, asEndpoint(fn as never)]),
+  );
+}
+
 function createTestSource(methods: Record<string, Function>, options = {}) {
-  return { options, ...methods };
+  return { options, ...wrapAll(methods) };
 }
 
 function makeResponseWithCookies(data: unknown, cookies: string[]) {

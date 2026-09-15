@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
+import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { z } from "zod";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
+
+const { query, mutation } = courier();
 
 const ItemSchema = z.object({ id: z.string(), name: z.string(), price: z.number() });
 
@@ -12,20 +14,16 @@ const api = defineApi({
     items: defineGroup({
       prefix: "/items",
       endpoints: {
-        list: endpoint({ response: z.array(ItemSchema), type: "query" })((http) => http.get("")),
-        get: endpoint({ response: ItemSchema, type: "query" })((http, v) => http.get(":itemId", v)),
-        create: endpoint({
-          response: ItemSchema,
-          variables: z.object({ name: z.string(), price: z.number() }),
-          type: "mutation",
-        })((http, v) => http.post("", v)),
-        update: endpoint({ response: ItemSchema, type: "mutation" })((http, v) =>
+        list: query.response(z.array(ItemSchema)).via((http) => http.get("")),
+        get: query.response(ItemSchema).via((http, v) => http.get(":itemId", v)),
+        create: mutation.variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema).via((http, v) => http.post("", v)),
+        update: mutation.response(ItemSchema).via((http, v) =>
           http.patch(":itemId", v),
         ),
-        replace: endpoint({ response: ItemSchema, type: "mutation" })((http, v) =>
+        replace: mutation.response(ItemSchema).via((http, v) =>
           http.put(":itemId", v),
         ),
-        delete: endpoint({ type: "mutation" })((http, v) => http.del(":itemId", v)),
+        delete: mutation.via((http, v) => http.del(":itemId", v)),
       },
     }),
   },
@@ -321,10 +319,10 @@ describe("query params routing", () => {
       products: defineGroup({
         prefix: "/products",
         endpoints: {
-          list: endpoint({ response: z.array(ItemSchema), type: "query" })((http) =>
+          list: query.response(z.array(ItemSchema)).via((http) =>
             http.get(""),
           ),
-          getByCategory: endpoint({ response: z.array(ItemSchema), type: "query" })((http, v) =>
+          getByCategory: query.response(z.array(ItemSchema)).via((http, v) =>
             http.get("", v),
           ),
         },

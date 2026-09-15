@@ -11,11 +11,13 @@ Validation happens at two points:
 
 ## Adding Schemas to Endpoints
 
-Pass `response` and/or `variables` schemas to the `endpoint()` helper:
+Pass schemas to the `.response()` and `.variables()` steps of the chain:
 
 ```ts title="lib/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 import { z } from "zod"
+
+const { query, mutation } = courier()
 
 const UserSchema = z.object({
   id: z.number(),
@@ -35,15 +37,15 @@ const api = defineApi({
       prefix: "users",
       endpoints: {
         // Response-only validation
-        getAll: endpoint({ response: z.array(UserSchema) })(
+        getAll: query.response(z.array(UserSchema)).via(
           ({ get }) => get(),
         ),
 
         // Both response and variables validation
-        create: endpoint({
-          response: UserSchema,
-          variables: CreateUserSchema,
-        })(({ post }, vars) => post("", vars)),
+        create: mutation
+          .variables(CreateUserSchema)
+          .response(UserSchema)
+          .via(({ post }, vars) => post("", vars)),
       },
     }),
   },
@@ -51,7 +53,7 @@ const api = defineApi({
 ```
 
 <Callout variant="tip" title="Types are inferred from schemas">
-When you pass schemas to `endpoint()`, the return type and variables type are **automatically inferred** from the schema output types. You do not need to write `endpoint<User, CreateUserInput>()` -- the generics are derived from the schema.
+When you pass schemas to `.response()` and `.variables()`, the return type and variables type are **automatically inferred** from the schema output types. You do not need to write `.response<User>()` or `.variables<CreateUserInput>()` -- the types are derived from the schema.
 </Callout>
 
 ## How Validation Works
@@ -93,7 +95,7 @@ const api = defineApi({
     events: defineGroup({
       prefix: "events",
       endpoints: {
-        get: endpoint({ response: EventSchema })(({ get }) => get(":id")),
+        get: query.response(EventSchema).via(({ get }) => get(":id")),
       },
     }),
   },
@@ -159,14 +161,14 @@ When validation fails inside an adapter (e.g., `apiRoute`), the error is returne
 
 ## Endpoints Without Schemas
 
-When `endpoint()` is called without schemas (using explicit generics or plain options), no validation runs. This is the default behavior and incurs zero overhead:
+When a slot is given a type argument instead of a schema, no validation runs. This is the default behavior and incurs zero overhead:
 
 ```ts
 // No validation -- types are manual
-endpoint<User[]>()(({ get }) => get())
+query.response<User[]>().via(({ get }) => get())
 
 // No validation -- only proxy hints
-endpoint<User[]>({ type: "query" })(({ get }) => get())
+query.response<User[]>().via(({ get }) => get())
 ```
 
 ## Next Steps

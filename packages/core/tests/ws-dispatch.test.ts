@@ -10,9 +10,18 @@ import { ENDPOINT_SCHEMA } from "../src/validation";
 // ---------------------------------------------------------------------------
 
 function createEndpoint(transport: string, receive?: unknown): unknown {
-  const fn = async function* () { yield "data"; };
-  (fn as unknown as Record<symbol, unknown>)[ENDPOINT_SCHEMA] = { transport, ...(receive ? { receive } : {}) };
-  return fn;
+  const fn = async function* () {
+    yield "data";
+  };
+  const schema = { transport, ...(receive ? { receive } : {}) };
+  return {
+    [ENDPOINT_SCHEMA]: schema,
+    kind: "channel",
+    method: "get",
+    path: "",
+    probe: fn,
+    options: { middleware: [], allowedHeaders: [], meta: {}, tags: [], inherit: true },
+  };
 }
 
 function createSource(group: string, method: string, endpoint: unknown): unknown {
@@ -204,11 +213,19 @@ describe("handleSubscribe", () => {
       ctxRef.closed = true;
     });
     const factory = () => ({ onJoin, onMessage: vi.fn() });
-    (factory as unknown as Record<symbol, unknown>)[ENDPOINT_SCHEMA] = {
+    const schema = {
       transport: "ws",
       receive: receiveSchema,
     };
-    const source = createSource("chat", "room", factory);
+    const wsEndpoint = {
+      [ENDPOINT_SCHEMA]: schema,
+      kind: "channel",
+      method: "get",
+      path: "",
+      probe: factory,
+      options: { middleware: [], allowedHeaders: [], meta: {}, tags: [], inherit: true },
+    };
+    const source = createSource("chat", "room", wsEndpoint);
     const { ctx, sent } = createMockCtx({ sources: { api: source } as never });
     ctxRef = ctx;
 
@@ -229,11 +246,19 @@ describe("handleSubscribe", () => {
       onJoin: () => { throw new Error("Auth failed"); },
       onMessage: vi.fn(),
     });
-    (factory as unknown as Record<symbol, unknown>)[ENDPOINT_SCHEMA] = {
+    const schema = {
       transport: "ws",
       receive: receiveSchema,
     };
-    const source = createSource("chat", "room", factory);
+    const wsEndpoint = {
+      [ENDPOINT_SCHEMA]: schema,
+      kind: "channel",
+      method: "get",
+      path: "",
+      probe: factory,
+      options: { middleware: [], allowedHeaders: [], meta: {}, tags: [], inherit: true },
+    };
+    const source = createSource("chat", "room", wsEndpoint);
     const onStreamClose = vi.fn();
     const onWSUntrack = vi.fn();
     const { ctx, sent } = createMockCtx({

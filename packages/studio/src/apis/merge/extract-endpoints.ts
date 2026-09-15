@@ -4,11 +4,14 @@
  * Uses regex + bracket-depth tracking to find endpoint boundaries.
  */
 
+/** Head a generated endpoint starts with, optionally qualified by its base. */
+const ENDPOINT_START = /^\s{4}(\w+):\s*(?:\w+\.)?(?:query|mutation|stream|channel)\b/;
+
 /**
  * Extract endpoint code blocks from a group file.
  *
  * Looks for patterns like:
- *   endpointName: endpoint<...>(...)(...)
+ *   endpointName: query.response(Schema).via((http) => http.get(""))
  *
  * @returns Map of endpointName → full code block (including the name).
  */
@@ -18,7 +21,7 @@ export function extractEndpoints(fileContent: string): Record<string, string> {
   let i = 0;
 
   while (i < lines.length) {
-    const match = lines[i]?.match(/^\s{4}(\w+):\s*endpoint/);
+    const match = lines[i]?.match(ENDPOINT_START);
     if (!match?.[1]) {
       i++;
       continue;

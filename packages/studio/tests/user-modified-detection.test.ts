@@ -10,14 +10,14 @@ import { detectUserModified } from "../src/server/registry-fingerprints";
  */
 describe("detectUserModified — prev-state vs current-disk comparison", () => {
   const pristine = `export const users = {
-    getAll: endpoint<void, User[]>()({
+    getAll: query.response<User[]>().via({
       method: "GET",
       path: "/users",
     }),
 };`;
 
   const edited = `export const users = {
-    getAll: endpoint<void, User[]>()({
+    getAll: query.response<User[]>().via({
       method: "GET",
       path: "/users?cache=1",
     }),

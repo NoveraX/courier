@@ -1,4 +1,6 @@
-import { defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type Post = {
   id: number
@@ -17,11 +19,18 @@ type PostsListResponse = {
 export const posts = defineGroup({
   prefix: "posts",
   endpoints: {
-    getAll: endpoint<PostsListResponse, { userId?: number }>()((http) => http.get()),
-    getById: endpoint<Post, { id: number }>()((http) => http.get(":id")),
-    create: endpoint<Post, { userId?: number; title: string; body: string; tags?: string[] }>()(
-      (http, vars) => http.post("", vars)
-    ),
+    getAll: query
+      .variables<{ userId?: number }>()
+      .response<PostsListResponse>()
+      .via((http) => http.get()),
+    getById: query
+      .variables<{ id: number }>()
+      .response<Post>()
+      .via((http) => http.get(":id")),
+    create: mutation
+      .variables<{ userId?: number; title: string; body: string; tags?: string[] }>()
+      .response<Post>()
+      .via((http, vars) => http.post("", vars)),
   },
 })
 

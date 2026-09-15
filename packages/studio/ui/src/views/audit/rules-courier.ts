@@ -24,33 +24,6 @@ function mixedModeUsage(stats: Map<string, EndpointStats>): AuditItem[] {
   }];
 }
 
-/** Endpoints without type: "query" | "mutation". */
-function missingTypeAnnotation(catalog: Catalog): AuditItem[] {
-  const missing: { key: string; label: string }[] = [];
-  for (const [src, entry] of Object.entries(catalog)) {
-    for (const [grp, group] of Object.entries(entry.groups)) {
-      for (const [ep, cfg] of Object.entries(group.endpoints)) {
-        if (!cfg.type) {
-          const label = grp ? `${src}.${grp}.${ep}` : `${src}.${ep}`;
-          missing.push({ key: `${src}:${grp}:${ep}`, label });
-        }
-      }
-    }
-  }
-  if (missing.length === 0) return [];
-
-  return [{
-    id: "courier-missing-type",
-    severity: "hint",
-    category: "best-practices",
-    title: "Missing endpoint type",
-    description: "Endpoints without type: 'query' | 'mutation'. GET caching won't work in proxy mode.",
-    suggestion: "Add type to enable HTTP-semantic proxy routing.",
-    codeSuggestion: `endpoint<Response>({\n  type: "query", // or "mutation"\n})((http) => http.get("endpoint"));`,
-    endpoints: missing,
-  }];
-}
-
 /** Mutation with retry middleware — dangerous without idempotency. */
 function retryWithoutIdempotency(catalog: Catalog): AuditItem[] {
   const risky: { key: string; label: string }[] = [];
@@ -87,7 +60,6 @@ export function collectCourierRules(
 ): AuditItem[] {
   return [
     ...mixedModeUsage(stats),
-    ...missingTypeAnnotation(catalog),
     ...retryWithoutIdempotency(catalog),
   ];
 }

@@ -45,32 +45,34 @@ export function setSourceName(source: unknown, name: string): void {
  * Define an API source with groups of typed endpoints.
  *
  * @example
+ * const api = courier({ baseURL: "https://api.example.com" })
+ *
  * // With groups:
- * const api = defineApi({
+ * const source = defineApi({
  *   baseURL: "https://api.example.com",
  *   groups: { users: usersGroup, posts: postsGroup },
  * })
  *
  * // Flat (no groups):
- * const api = defineApi({
+ * const source = defineApi({
  *   baseURL: "https://api.example.com",
  *   endpoints: {
- *     getUsers: endpoint<User[]>()((http) => http.get("/users")),
+ *     getUsers: api.query.response(UserListSchema).via((http) => http.get("/users")),
  *   },
  * })
  *
  * // Mixed (groups + flat endpoints):
- * const api = defineApi({
+ * const source = defineApi({
  *   baseURL: "https://api.example.com",
  *   groups: { users: usersGroup },
  *   endpoints: {
- *     healthCheck: endpoint()((http) => http.get("/health")),
+ *     healthCheck: api.query.via((http) => http.get("/health")),
  *   },
  * })
  *
  * // With proxyPath (per-transport proxy endpoints, used by createProxyCaller
  * // and read by Studio Playground via the source map):
- * const api = defineApi({
+ * const source = defineApi({
  *   baseURL: "https://api.example.com",
  *   proxyPath: {
  *     http: "/api/request",

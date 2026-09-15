@@ -4,6 +4,7 @@ import { HTTPError } from "../src/errors";
 import { defineMiddleware } from "../src/middleware/compose";
 import type { HttpMethods } from "../src/http-client/types";
 import { executeRequest } from "../src/utils/execute";
+import { asEndpoint } from "./helpers/as-endpoint";
 
 let fetchSpy: ReturnType<typeof vi.fn>;
 
@@ -20,8 +21,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+function wrapAll(methods: Record<string, Function>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(methods).map(([name, fn]) => [name, asEndpoint(fn as never)]),
+  );
+}
+
 function createTestSource(methods: Record<string, Function>, options = {}) {
-  const source = { options, ...methods };
+  const source = { options, ...wrapAll(methods) };
   return source;
 }
 
@@ -220,7 +227,7 @@ describe("executeRequest", () => {
         groups: {
           auth: defineGroup({
             prefix: "auth",
-            endpoints: { login: loginFn as any },
+            endpoints: { login: asEndpoint(loginFn as never) as never },
           }),
         },
       });
@@ -245,7 +252,7 @@ describe("executeRequest", () => {
       const emptyGroup = defineGroup({ endpoints: {} });
       const source = {
         options: { groups: { misc: emptyGroup } },
-        health: healthFn,
+        health: asEndpoint(healthFn as never),
       };
       const sources = { api: source };
 

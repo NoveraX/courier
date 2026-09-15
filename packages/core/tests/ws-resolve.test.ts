@@ -22,8 +22,15 @@ function createMockCtx(
 
 function createEndpoint(transport: string, receive?: unknown): unknown {
   const fn = vi.fn();
-  (fn as unknown as Record<symbol, unknown>)[ENDPOINT_SCHEMA] = { transport, ...(receive ? { receive } : {}) };
-  return fn;
+  const schema = { transport, ...(receive ? { receive } : {}) };
+  return {
+    [ENDPOINT_SCHEMA]: schema,
+    kind: "channel",
+    method: "get",
+    path: "",
+    probe: fn,
+    options: { middleware: [], allowedHeaders: [], meta: {}, tags: [], inherit: true },
+  };
 }
 
 function createSource(group: string, method: string, endpoint: unknown): unknown {
@@ -139,7 +146,7 @@ describe("resolveSubscribeTopic", () => {
     expect(result!.source).toBe("api");
     expect(result!.group).toBe("chat");
     expect(result!.method).toBe("feed");
-    expect(result!.endpoint).toBe(endpoint);
+    expect(result!.endpoint).toBe((endpoint as { probe: unknown }).probe);
     expect(sent).toHaveLength(0);
   });
 

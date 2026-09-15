@@ -20,7 +20,7 @@ export { api }
 // createProxyQueryCaller wraps createProxyCaller with React Query hooks
 ```
 
-1. **Definition** — `defineApi`, `defineGroup`, `endpoint` define your API structure, types, and validation. Shared between all modes and frameworks.
+1. **Definition** — `courier`, `defineGroup`, `defineApi` define your API structure, types, and validation. Shared between all modes and frameworks.
 2. **Transport** — determines *how* the request reaches the backend. Direct calls it immediately; proxy goes through your server.
 3. **Execution** — `executeRequest` is the single orchestrator that runs middleware, validates schemas, and delegates to the HTTP client.
 4. **Integration** — optional wrappers like `createProxyQueryCaller` that add React Query hooks on top.
@@ -100,16 +100,24 @@ Proxy mode validates the `Origin` header, whitelists forwarded headers, and keep
 The functional API for defining your sources. No classes, no inheritance — just plain functions that produce typed objects:
 
 ```ts title="api/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type User = { id: string; name: string; email: string }
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll:  endpoint<User[]>()((http) => http.get()),
-    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
-    create:  endpoint<User, { name: string; email: string }>()((http, vars) => http.post("", vars)),
+    getAll: query.response<User[]>().via((http) => http.get()),
+    getById: query
+      .variables<{ id: string }>()
+      .response<User>()
+      .via((http, vars) => http.get(":id", vars)),
+    create: mutation
+      .variables<{ name: string; email: string }>()
+      .response<User>()
+      .via((http, vars) => http.post("", vars)),
   },
 })
 

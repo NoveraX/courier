@@ -22,8 +22,9 @@ The handler works with Web Standard `Request`/`Response` objects, making it comp
 The sources object maps source names to API definitions created with `defineApi`:
 
 ```ts title="api/index.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
-import type { Endpoint } from "@noverax/courier/define"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type User = { id: number; name: string; email: string }
 type Post = { id: number; title: string; body: string }
@@ -31,16 +32,22 @@ type Post = { id: number; title: string; body: string }
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint<User[]>()((http) => http.get()),
-    getById: endpoint<User, { id: number }>()((http, vars) => http.get(":id", vars)),
+    getAll: query.response<User[]>().via((http) => http.get()),
+    getById: query
+      .variables<{ id: number }>()
+      .response<User>()
+      .via((http, vars) => http.get(":id", vars)),
   },
 })
 
 const posts = defineGroup({
   prefix: "posts",
   endpoints: {
-    list: endpoint<Post[]>()((http) => http.get()),
-    create: endpoint<Post, { title: string }>()((http, vars) => http.post("", vars)),
+    list: query.response<Post[]>().via((http) => http.get()),
+    create: mutation
+      .variables<{ title: string }>()
+      .response<Post>()
+      .via((http, vars) => http.post("", vars)),
   },
 })
 

@@ -32,7 +32,7 @@ With Courier, the same functionality is type-safe and zero-boilerplate:
 ```typescript title="With Courier"
 // Type-safe, fully inferred
 const user = await caller.users.getById({ id: "5" })
-//    ^? User — inferred from endpoint<User, { id: string }>
+//    ^? User — inferred from .response<User>()
 
 // Proxy? One line in your server:
 export const { GET, POST } = apiRoute() // or courierHandler()
@@ -41,7 +41,7 @@ export const { GET, POST } = apiRoute() // or courierHandler()
 
 ## Define Once, Use Everywhere
 
-You define your API structure **once** using `defineApi`, `defineGroup`, and `endpoint`. Each endpoint declares its response and variables types. From that single definition, Courier gives you:
+You define your API structure **once** using `courier`, `defineGroup`, and `defineApi`. Each endpoint declares its response and variables types. From that single definition, Courier gives you:
 
 - **Direct mode** — server calls via `createCaller(api)`
 - **Proxy mode** — browser calls via `createProxyCaller("api")`
@@ -55,9 +55,15 @@ All share the same types and autocomplete:
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll:  endpoint<User[]>()((http) => http.get()),
-    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
-    create:  endpoint<User, CreateUserVars>()((http, vars) => http.post("", vars)),
+    getAll: query.response<User[]>().via((http) => http.get()),
+    getById: query
+      .variables<{ id: string }>()
+      .response<User>()
+      .via((http, vars) => http.get(":id", vars)),
+    create: mutation
+      .variables<CreateUserVars>()
+      .response<User>()
+      .via((http, vars) => http.post("", vars)),
   },
 })
 
@@ -108,7 +114,7 @@ const { data } = q.users.useQuery("getById", { variables: { id } })
 <ComparisonTable
   headers={["Problem", { label: "Courier Solution", highlight: true }]}
   rows={[
-    ["Manual type casting", "End-to-end inference from endpoint<R, V>"],
+    ["Manual type casting", "End-to-end inference from the builder chain"],
     ["Route per endpoint", "Single handler for all endpoints"],
     ["Scattered fetch logic", "Centralized in defineApi/defineGroup"],
     ["Framework lock-in", "Core works everywhere, adapters for 6+ frameworks"],

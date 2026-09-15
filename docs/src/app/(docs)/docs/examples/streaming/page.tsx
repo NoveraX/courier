@@ -8,7 +8,7 @@ const streamConfigCode = `// Endpoint definition — return type is ReadableStre
 const misc = defineGroup({
   prefix: "misc",
   endpoints: {
-    stream: endpoint<ReadableStream>()((http) => http.get("stream")),
+    stream: query.response<ReadableStream>().via((http) => http.get("stream")),
   },
 })
 

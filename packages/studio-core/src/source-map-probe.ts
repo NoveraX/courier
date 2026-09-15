@@ -7,10 +7,31 @@ export interface ProbeResult {
 }
 
 /**
- * Probes an endpoint function with a mock http client to capture
- * the HTTP method and path template (e.g. ":id") passed to http.get/post/etc.
+ * Recognise a value held by a source or group as an endpoint.
+ *
+ * A descriptor is identified by the wire closure it carries rather than by
+ * being callable itself.
  */
-export function probeEndpoint(fn: (...args: unknown[]) => unknown): ProbeResult {
+export function isEndpoint(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  return typeof (value as { probe?: unknown }).probe === "function";
+}
+
+/**
+ * Recover an endpoint's HTTP method and path template.
+ *
+ * A descriptor captured both when it was defined, so it answers directly
+ * instead of running user code a second time.
+ */
+export function probeEndpoint(fn: unknown): ProbeResult {
+  if (typeof fn === "object" && fn !== null) {
+    const { method, path } = fn as { method?: string; path?: string };
+    if (typeof method === "string") return { method, path: path || undefined };
+  }
+  return probeCallable(fn as (...args: unknown[]) => unknown);
+}
+
+function probeCallable(fn: (...args: unknown[]) => unknown): ProbeResult {
   let method: string | undefined;
   let path: string | undefined;
 

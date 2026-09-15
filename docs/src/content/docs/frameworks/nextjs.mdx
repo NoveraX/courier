@@ -40,7 +40,9 @@ npm install @noverax/courier @noverax/courier-next @noverax/courier-react @tanst
 Create a shared API definition used by all callers. This file can be imported on both server and client:
 
 ```ts title="lib/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type User = { id: number; name: string; email: string }
 type UserList = { data: User[]; total: number }
@@ -48,19 +50,19 @@ type UserList = { data: User[]; total: number }
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint<UserList, { page?: number; limit?: number }>()(
+    getAll: query.variables<{ page?: number; limit?: number }>().response<UserList>().via(
       ({ get }) => get()
     ),
-    getById: endpoint<User, { id: number }>()(
+    getById: query.variables<{ id: number }>().response<User>().via(
       ({ get }) => get(":id")
     ),
-    create: endpoint<User, { name: string; email: string }>()(
+    create: mutation.variables<{ name: string; email: string }>().response<User>().via(
       ({ post }) => post()
     ),
-    update: endpoint<User, { id: number; name: string; email: string }>()(
+    update: mutation.variables<{ id: number; name: string; email: string }>().response<User>().via(
       ({ put }) => put(":id")
     ),
-    remove: endpoint<null, { id: number }>()(
+    remove: mutation.variables<{ id: number }>().response<null>().via(
       ({ del }) => del(":id")
     ),
   },

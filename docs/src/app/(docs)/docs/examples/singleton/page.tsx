@@ -25,24 +25,26 @@ export const api = defineApi({
   },
 })`
 
-const methodTypeCode = `// How endpoint<Response, Variables> drives the type system
-import { defineGroup, endpoint } from "@noverax/courier/define"
+const methodTypeCode = `// How the builder chain drives the type system
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    // endpoint<ResponseType, VariablesType>()
-    getAll: endpoint<UserListResponse>()((http) => http.get()),
+    // .variables() and .response() carry the types forward
+    getAll: query.response<UserListResponse>().via((http) => http.get()),
 
-    getById: endpoint<User, { id: number }>()((http) => http.get(":id")),
+    getById: query.variables<{ id: number }>().response<User>().via((http) => http.get(":id")),
 
-    create: endpoint<User, CreateUserInput>()((http) => http.post()),
+    create: mutation.variables<CreateUserInput>().response<User>().via((http) => http.post()),
 
-    update: endpoint<User, { id: number } & Partial<CreateUserInput>>()(
+    update: mutation.variables<{ id: number } & Partial<CreateUserInput>>().response<User>().via(
       (http) => http.put(":id")
     ),
 
-    delete: endpoint<{ success: boolean }, { id: number }>()(
+    delete: mutation.variables<{ id: number }>().response<{ success: boolean }>().via(
       (http) => http.del(":id")
     ),
   },
@@ -142,12 +144,12 @@ export default function SingletonExamplesPage() {
 
         <ExampleBlock
           title="Method Types"
-          description="endpoint<Response, Variables>() is the foundation of the type system."
+          description="The builder chain is the foundation of the type system."
           code={methodTypeCode}
         >
           <p className="text-sm text-muted-foreground">
             Each endpoint declares its response and variables types. These flow through the chain:
-            endpoint → defineGroup → defineApi → createProxyQueryCaller → q.group.useQuery.
+            courier → defineGroup → defineApi → createProxyQueryCaller → q.group.useQuery.
           </p>
         </ExampleBlock>
 

@@ -7,7 +7,7 @@ import type { WSConnectionConfig } from "./ws/ws-types";
 
 /**
  * Execute a WS push-only subscription — returns SSESubscription (async iterable).
- * Used for WSEndpoint (server→client only).
+ * Used for a channel that only pushes.
  */
 export function executeWSPush<TData>(
   url: string,
@@ -100,7 +100,7 @@ export function executeWSPush<TData>(
 
 /**
  * Execute a WS bidirectional channel — returns WSChannel.
- * Used for WSChannelEndpoint (client↔server).
+ * Used for a channel the caller can send on.
  */
 export function executeWSChannel<TSend, TReceive>(
   url: string,

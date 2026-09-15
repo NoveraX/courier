@@ -11,8 +11,24 @@ import type { SchemaMetadata } from "./route-types";
 
 const ENDPOINT_SCHEMA = Symbol.for("courier.endpoint.schema");
 
-/** Probe endpoint to capture HTTP method and path */
-export function probeEndpoint(fn: (...args: unknown[]) => unknown): {
+/**
+ * Recover an endpoint's HTTP method and path.
+ *
+ * A descriptor already captured both when it was defined, so it answers
+ * directly rather than running user code a second time.
+ */
+export function probeEndpoint(fn: unknown): {
+  method?: string;
+  path?: string;
+} {
+  if (typeof fn === "object" && fn !== null) {
+    const { method, path } = fn as { method?: string; path?: string };
+    if (typeof method === "string") return { method, path };
+  }
+  return probeCallable(fn as (...args: unknown[]) => unknown);
+}
+
+function probeCallable(fn: (...args: unknown[]) => unknown): {
   method?: string;
   path?: string;
 } {
@@ -44,8 +60,19 @@ export function probeEndpoint(fn: (...args: unknown[]) => unknown): {
 
 /** Read the schema metadata symbol attached to an endpoint function */
 export function extractSchema(fn: unknown): SchemaMetadata | undefined {
-  if (typeof fn !== "function") return undefined;
-  return (fn as unknown as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
+  if (fn === null || (typeof fn !== "function" && typeof fn !== "object")) return undefined;
+  return (fn as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
+}
+
+/**
+ * Recognise a value held by a source or group as an endpoint.
+ *
+ * A descriptor is identified by the wire closure it carries rather than by
+ * being callable itself.
+ */
+export function isEndpoint(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  return typeof (value as { probe?: unknown }).probe === "function";
 }
 
 /** Normalize a group prefix string: ensure leading "/" and no trailing "/" */

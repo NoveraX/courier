@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { createCaller } from "../src/caller";
 import { defineApi, defineGroup } from "../src/define";
-import { endpoint } from "../src/define/endpoint";
+import { courier } from "../src/define/courier";
 import { buildDirectSSEUrl, buildProxySSEUrl } from "../src/realtime/caller-sse";
 import { subscribeSSE } from "../src/realtime/sse/sse-client";
+
+const { query, stream } = courier();
 
 describe("buildDirectSSEUrl", () => {
   it("builds URL with baseURL, prefix and method", () => {
@@ -94,7 +96,7 @@ describe("SSE transport detection — createCaller", () => {
         notifications: defineGroup({
           prefix: "notifications",
           endpoints: {
-            feed: endpoint<{ msg: string }, { userId: string }>({ transport: "sse" })(
+            feed: stream.variables<{ userId: string }>().response<{ msg: string }>().implement(
               async function* () { yield { data: { msg: "test" } }; },
             ),
           },
@@ -123,7 +125,7 @@ describe("SSE transport detection — createCaller", () => {
         users: defineGroup({
           prefix: "users",
           endpoints: {
-            getAll: endpoint<string[]>()((http) => http.get()),
+            getAll: query.response<string[]>().via((http) => http.get()),
           },
         }),
       },

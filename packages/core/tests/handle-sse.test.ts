@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createHandler } from "../src/adapter";
-import { endpoint } from "../src/define/endpoint";
+import { courier } from "../src/define/courier";
 import type { SSEContext, SSEEvent } from "../src/realtime/types";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import type { StudioHooks } from "../src/studio/hooks";
+
+const { query, stream } = courier();
 
 /**
  * Zero-arg `createHandler()` reads sources lazily from the core global
@@ -19,7 +21,7 @@ function setupHandler(sources: unknown, config?: Parameters<typeof createHandler
 function createSSESource(
   handler: (ctx: SSEContext) => AsyncGenerator<SSEEvent, void, unknown>,
 ) {
-  const feed = endpoint<unknown, unknown>({ transport: "sse" })(handler);
+  const feed = stream.variables<unknown>().response<unknown>().implement(handler);
   return {
     testSource: {
       options: {
@@ -95,7 +97,7 @@ describe("handleSSE", () => {
   });
 
   it("returns 400 for non-SSE endpoint", async () => {
-    const httpEndpoint = endpoint<string>()((http) => http.get("/test"));
+    const httpEndpoint = query.response<string>().via((http) => http.get("/test"));
     const sources = {
       api: { options: { groups: {} }, health: httpEndpoint },
     };

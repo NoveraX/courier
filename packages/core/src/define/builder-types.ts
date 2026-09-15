@@ -1,5 +1,6 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { Middleware } from "../middleware/types";
+import type { ChannelHandlers, SSEContext, SSEEvent, WSPushHandler } from "../realtime/types";
 import type { ChannelEndpoint, HttpEndpoint, StreamEndpoint } from "./call-shapes";
 import type {
   CacheArg,
@@ -9,6 +10,21 @@ import type {
   StreamEndpointOptions,
 } from "./options";
 import type { ChannelProbe, HttpProbe, StreamProbe } from "./probe";
+
+/** Generator serving a stream from the defining process. */
+export type StreamHandler<TResponse, TVariables> = (
+  context: SSEContext<TVariables>,
+) => AsyncGenerator<SSEEvent<TResponse>, void, unknown>;
+
+/**
+ * Implementation serving a channel from the defining process.
+ *
+ * A channel the caller can send on supplies handlers for each direction; one
+ * that only pushes supplies the generator producing what it pushes.
+ */
+export type ChannelHandler<TResponse, TVariables, TSend> =
+  | ((variables: TVariables) => ChannelHandlers<TSend, TResponse, TVariables>)
+  | WSPushHandler<TResponse, TVariables>;
 
 /**
  * Methods every builder carries that do not move its types.
@@ -62,6 +78,16 @@ export interface StreamBuilder<TResponse, TVariables>
     probe: StreamProbe<TVariables>,
     options?: StreamEndpointOptions,
   ): StreamEndpoint<TResponse, TVariables>;
+  /**
+   * Serve this stream from the process that defines it.
+   *
+   * Finishes the chain the same way `via` does, but carries the generator
+   * producing the events instead of the address of a remote stream.
+   */
+  implement(
+    handler: StreamHandler<TResponse, TVariables>,
+    options?: StreamEndpointOptions,
+  ): StreamEndpoint<TResponse, TVariables>;
 }
 
 /**
@@ -79,6 +105,11 @@ export interface ChannelBuilder<TResponse, TVariables, TSend>
   send<T>(schema?: StandardSchemaV1<unknown, T>): ChannelBuilder<TResponse, TVariables, T>;
   via(
     probe: ChannelProbe<TVariables>,
+    options?: ChannelEndpointOptions,
+  ): ChannelEndpoint<TResponse, TVariables, TSend>;
+  /** Serve this channel from the process that defines it. */
+  implement(
+    handler: ChannelHandler<TResponse, TVariables, TSend>,
     options?: ChannelEndpointOptions,
   ): ChannelEndpoint<TResponse, TVariables, TSend>;
 }

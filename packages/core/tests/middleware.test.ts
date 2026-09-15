@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineApi, defineGroup, endpoint } from "../src/define/index";
+import { defineApi, defineGroup, courier } from "../src/define/index";
 import {
 	authMiddleware,
 	cacheMiddleware,
@@ -11,6 +11,8 @@ import {
 } from "../src/middleware/index";
 import type { BeforeHandler, Middleware, MiddlewareResponse, WrapHandler } from "../src/middleware/types";
 import { executeRequest } from "../src/utils/execute";
+
+const { query, mutation } = courier();
 
 // ---- mock fetch ----
 
@@ -39,10 +41,10 @@ function createApi(middleware?: Middleware[]) {
 			users: defineGroup({
 				prefix: "users",
 				endpoints: {
-					getAll: endpoint<{ id: number; name: string }[]>()(({ get }) =>
+					getAll: query.response<{ id: number; name: string }[]>().via(({ get }) =>
 						get(),
 					),
-					create: endpoint<{ id: number; name: string }, { name: string }>()(
+					create: mutation.variables<{ name: string }>().response<{ id: number; name: string }>().via(
 						({ post }, vars) => post("", vars),
 					),
 				},

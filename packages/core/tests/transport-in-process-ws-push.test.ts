@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { endpoint } from "../src/define/endpoint";
+import { courier } from "../src/define/courier";
 import type { WSContext } from "../src/realtime/types";
 import type { StudioHooks } from "../src/studio/hooks";
 import { ValidationError } from "../src/validation";
 import { executeDirectWSPush } from "../src/transport/in-process/ws-push";
+
+const { query, channel } = courier();
 
 const HOOKS_KEY = Symbol.for("courier.studio.hooks");
 const hooks = (globalThis as Record<symbol, unknown>)[HOOKS_KEY] as StudioHooks;
@@ -22,10 +24,7 @@ function makePushSources(
   handler: (ctx: WSContext) => AsyncGenerator<unknown, void, unknown>,
   variablesSchema?: z.ZodTypeAny,
 ) {
-  const feed = endpoint<unknown, unknown>({
-    transport: "ws",
-    ...(variablesSchema ? { variables: variablesSchema } : {}),
-  })(handler as never);
+  const feed = channel.variables(variablesSchema).response<unknown>().implement(handler as never);
   return {
     api: {
       options: { groups: { chat: { options: {}, feed } } },
@@ -58,7 +57,7 @@ describe("executeDirectWSPush", () => {
   });
 
   it("throws when endpoint is not WS transport", async () => {
-    const httpEndpoint = endpoint<string>()((http) => http.get("/x"));
+    const httpEndpoint = query.response<string>().via((http) => http.get("/x"));
     const sources = { api: { options: { groups: {} }, health: httpEndpoint } };
     await expect(
       executeDirectWSPush(sources as any, { source: "api", method: "health" }),
@@ -119,7 +118,7 @@ describe("executeDirectWSPush", () => {
           groups: {
             chat: {
               options: {},
-              feed: endpoint<unknown, unknown>({ transport: "ws" })(async function* () {
+              feed: channel.variables<unknown>().response<unknown>().implement(async function* () {
                 yield "ok";
               } as never),
             },

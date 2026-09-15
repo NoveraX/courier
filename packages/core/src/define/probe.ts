@@ -16,22 +16,22 @@ export interface WireCall {
 
 /** Wire surface offered to an HTTP endpoint's closure. */
 export interface HttpWire {
-  get(path: string, variables?: unknown): WireCall;
-  post(path: string, body?: unknown): WireCall;
-  put(path: string, body?: unknown): WireCall;
-  patch(path: string, body?: unknown): WireCall;
-  del(path: string, variables?: unknown): WireCall;
-  head(path: string, variables?: unknown): WireCall;
+  get(path?: string, variables?: unknown): WireCall;
+  post(path?: string, body?: unknown): WireCall;
+  put(path?: string, body?: unknown): WireCall;
+  patch(path?: string, body?: unknown): WireCall;
+  del(path?: string, variables?: unknown): WireCall;
+  head(path?: string, variables?: unknown): WireCall;
 }
 
 /** Wire surface offered to a server-sent-events endpoint's closure. */
 export interface StreamWire {
-  get(path: string, variables?: unknown): WireCall;
+  get(path?: string, variables?: unknown): WireCall;
 }
 
 /** Wire surface offered to a channel endpoint's closure. */
 export interface ChannelWire {
-  connect(path: string, variables?: unknown): WireCall;
+  connect(path?: string, variables?: unknown): WireCall;
 }
 
 export type HttpProbe<TVariables> = (http: HttpWire, variables: TVariables) => WireCall;

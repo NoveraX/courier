@@ -133,6 +133,29 @@ export function resolveSchemas(state: BuilderState): SchemaMetadata {
 }
 
 /**
+ * Produce the descriptor for an endpoint whose implementation lives here.
+ *
+ * A stream or channel is served by the process that defines it, so the
+ * function it carries produces events rather than addressing a remote one.
+ * Its location comes from the group prefix and the endpoint name, so there is
+ * no wire shape to probe.
+ */
+export function sealHandler(
+  state: BuilderState,
+  handler: AnyProbe,
+  options: AnyEndpointOptions,
+): Record<string | symbol, unknown> {
+  return {
+    [ENDPOINT_SCHEMA]: resolveSchemas(state),
+    kind: state.kind,
+    method: "get" as const,
+    path: "",
+    probe: handler,
+    options: resolveOptions(state, options),
+  };
+}
+
+/**
  * Produce the descriptor a builder terminal returns.
  *
  * The wire closure is probed once here, so every later consumer reads a

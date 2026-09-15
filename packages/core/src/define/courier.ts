@@ -5,6 +5,7 @@ import type { BuilderState } from "./builder";
 import {
   initialState,
   sealEndpoint,
+  sealHandler,
   withHeaders,
   withMeta,
   withMiddleware,
@@ -45,6 +46,8 @@ function makeBuilder(state: BuilderState): AnyBuilder {
     cache: (config: CacheConfig) => next(withValue(state, "cache", config)),
     meta: (values: Record<string, unknown>) => next(withMeta(state, values)),
     via: (probe: AnyProbe, options: AnyEndpointOptions = {}) => sealEndpoint(state, probe, options),
+    implement: (handler: AnyProbe, options: AnyEndpointOptions = {}) =>
+      sealHandler(state, handler, options),
   };
 }
 

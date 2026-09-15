@@ -116,8 +116,7 @@ describe("courier", () => {
     it("records a channel send schema", () => {
       const presence = base.channel
         .response(UserSchema)
-        .send(CommandSchema)
-        .via((ws) => ws.connect("presence"));
+        .send(CommandSchema).via((ws) => ws.connect("presence"));
 
       // recorded as `receive`, which names the same messages from the server side
       expect(meta(presence).receive).toBe(CommandSchema);
@@ -212,8 +211,7 @@ describe("courier", () => {
     it("keeps kind specific options on the descriptor", () => {
       const feed = base.stream
         .variables(ById)
-        .response(UserSchema)
-        .via((sse, vars) => sse.get(":id/events", vars), {
+        .response(UserSchema).via((sse, vars) => sse.get(":id/events", vars), {
           reconnect: { maxAttempts: 5, backoff: "exponential" },
           tags: ["activity"],
         });

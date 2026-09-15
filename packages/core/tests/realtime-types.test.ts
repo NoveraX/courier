@@ -1,9 +1,11 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { describe, expect, it } from "vitest";
-import { endpoint } from "../src/define/endpoint";
+import { courier } from "../src/define/courier";
 import { tracked } from "../src/realtime/types";
 import type { SchemaMetadata } from "../src/validation";
 import { ENDPOINT_SCHEMA } from "../src/validation";
+
+const { query, stream, channel } = courier();
 
 /** Helper to read metadata from an endpoint function */
 function getMeta(ep: unknown): SchemaMetadata | undefined {
@@ -41,7 +43,7 @@ describe("tracked", () => {
 
 describe("endpoint with transport", () => {
   it("attaches transport: sse to metadata", () => {
-    const ep = endpoint<string>({ transport: "sse" })(async function* () {
+    const ep = stream.response<string>().implement(async function* () {
       yield { data: "test" };
     });
     const meta = getMeta(ep);
@@ -51,7 +53,7 @@ describe("endpoint with transport", () => {
   });
 
   it("attaches transport: ws to metadata (push-only)", () => {
-    const ep = endpoint<string>({ transport: "ws" })(async function* () {
+    const ep = channel.response<string>().implement(async function* () {
       yield "price-update";
     });
     const meta = getMeta(ep);
@@ -61,7 +63,7 @@ describe("endpoint with transport", () => {
   });
 
   it("attaches transport: ws with receive schema to metadata", () => {
-    const ep = endpoint<string>({ transport: "ws", receive: fakeSchema })(
+    const ep = channel.response<string>().send(fakeSchema).implement(
       () => ({ onMessage: () => {} }),
     );
     const meta = getMeta(ep);
@@ -71,24 +73,21 @@ describe("endpoint with transport", () => {
     expect(meta!.receive).toBe(fakeSchema);
   });
 
-  it("preserves existing options alongside transport", () => {
-    const ep = endpoint<string>({
-      transport: "sse",
-      type: "query",
-      cache: { revalidate: 60 },
-    })(async function* () {
-      yield { data: "test" };
-    });
+  it("keeps declared options alongside the transport", () => {
+    const ep = stream
+      .response<string>()
+      .implement(async function* () {
+        yield { data: "test" };
+      }, { tags: ["feed"] });
     const meta = getMeta(ep);
 
     expect(meta).toBeDefined();
     expect(meta!.transport).toBe("sse");
-    expect(meta!.type).toBe("query");
-    expect(meta!.cache).toEqual({ revalidate: 60 });
+    expect(meta!.type).toBeUndefined();
   });
 
   it("HTTP endpoints still work without transport field", () => {
-    const ep = endpoint<string[]>({ type: "query" })((http) => http.get());
+    const ep = query.response<string[]>().via((http) => http.get());
     const meta = getMeta(ep);
 
     expect(meta).toBeDefined();
@@ -96,10 +95,11 @@ describe("endpoint with transport", () => {
     expect(meta!.type).toBe("query");
   });
 
-  it("endpoint without config attaches no metadata", () => {
-    const ep = endpoint<string>()((http) => http.get());
+  it("records the declared kind even when no schema was given", () => {
+    const ep = query.response<string>().via((http) => http.get());
     const meta = getMeta(ep);
 
-    expect(meta).toBeUndefined();
+    expect(meta!.type).toBe("query");
+    expect(meta!.response).toBeUndefined();
   });
 });

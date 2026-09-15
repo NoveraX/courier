@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { endpoint } from "../src/define/endpoint";
+import { courier } from "../src/define/courier";
 import type { WrapMiddleware } from "../src/middleware/types";
 import type { SSEContext, SSEEvent } from "../src/realtime/types";
 import type { StudioHooks } from "../src/studio/hooks";
 import { ValidationError } from "../src/validation";
 import { executeDirectSSE } from "../src/transport/in-process/sse";
+
+const { query, stream } = courier();
 
 const HOOKS_KEY = Symbol.for("courier.studio.hooks");
 const hooks = (globalThis as Record<symbol, unknown>)[HOOKS_KEY] as StudioHooks;
@@ -26,10 +28,7 @@ function makeSources(
     middleware?: WrapMiddleware[];
   } = {},
 ) {
-  const feed = endpoint<unknown, unknown>({
-    transport: "sse",
-    ...(opts.variablesSchema ? { variables: opts.variablesSchema } : {}),
-  })(handler);
+  const feed = stream.variables(opts.variablesSchema).response<unknown>().implement(handler);
   // Use a plain object source so we can attach middleware via options.
   return {
     api: {
@@ -66,7 +65,7 @@ describe("executeDirectSSE — resolution", () => {
   });
 
   it("throws when endpoint is not SSE transport", async () => {
-    const httpEndpoint = endpoint<string>()((http) => http.get("/x"));
+    const httpEndpoint = query.response<string>().via((http) => http.get("/x"));
     const sources = { api: { options: { groups: {} }, health: httpEndpoint } };
     await expect(
       executeDirectSSE(sources as any, { source: "api", method: "health" }),
@@ -228,7 +227,7 @@ describe("executeDirectSSE — headers + middleware", () => {
           groups: {
             chat: {
               options: {},
-              feed: endpoint<unknown, unknown>({ transport: "sse" })(async function* (ctx) {
+              feed: stream.variables<unknown>().response<unknown>().implement(async function* (ctx) {
                 receivedHeaders = ctx.headers;
                 yield { data: "ok" };
               }),

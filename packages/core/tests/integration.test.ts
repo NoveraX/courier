@@ -4,9 +4,11 @@
  * defineApi/defineGroup/endpoint → executeRequest → HttpClient → fetch (mocked) → response
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineApi, defineGroup, endpoint } from "../src/define/index";
+import { defineApi, defineGroup, courier } from "../src/define/index";
 import { HTTPError } from "../src/errors";
 import { executeRequest } from "../src/utils/execute";
+
+const { query, mutation } = courier();
 
 const fetchSpy = vi.fn();
 
@@ -31,19 +33,19 @@ type Post = { id: number; title: string; body: string };
 const usersGroup = defineGroup({
 	prefix: "users",
 	endpoints: {
-		getAll: endpoint<User[]>()(({ get }) => get()),
-		getById: endpoint<User, { id: number }>()(({ get }, vars) => get(":id", vars)),
-		create: endpoint<User, { name: string; email: string }>()(({ post }, vars) => post("", vars)),
-		update: endpoint<User, { id: number; name: string }>()(({ put }, vars) => put(":id", vars)),
-		remove: endpoint<void, { id: number }>()(({ del }, vars) => del(":id", vars)),
+		getAll: query.response<User[]>().via(({ get }) => get()),
+		getById: query.variables<{ id: number }>().response<User>().via(({ get }, vars) => get(":id", vars)),
+		create: mutation.variables<{ name: string; email: string }>().response<User>().via(({ post }, vars) => post("", vars)),
+		update: mutation.variables<{ id: number; name: string }>().response<User>().via(({ put }, vars) => put(":id", vars)),
+		remove: mutation.variables<{ id: number }>().via(({ del }, vars) => del(":id", vars)),
 	},
 });
 
 const postsGroup = defineGroup({
 	prefix: "posts",
 	endpoints: {
-		list: endpoint<Post[]>()(({ get }) => get()),
-		getById: endpoint<Post, { id: number }>()(({ get }, vars) => get(":id", vars)),
+		list: query.response<Post[]>().via(({ get }) => get()),
+		getById: query.variables<{ id: number }>().response<Post>().via(({ get }, vars) => get(":id", vars)),
 	},
 });
 
@@ -194,7 +196,7 @@ describe("integration: middleware with functional API", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint<User[]>()(({ get }) => get()),
+						getAll: query.response<User[]>().via(({ get }) => get()),
 					},
 				}),
 			},
@@ -232,7 +234,7 @@ describe("integration: middleware with functional API", () => {
 				data: defineGroup({
 					prefix: "data",
 					endpoints: {
-						fetch: endpoint<unknown>()(({ get }) => get()),
+						fetch: query.via(({ get }) => get()),
 					},
 				}),
 			},
@@ -268,7 +270,9 @@ describe("integration: middleware with functional API", () => {
 				ops: defineGroup({
 					prefix: "ops",
 					endpoints: {
-						fail: endpoint<never>()((_methods) => {
+						fail: query.response<never>().via(({ get }) => {
+							// addresses the endpoint, then fails the way a refused upstream does
+							get("fail");
 							throw new HTTPError({
 								status: 500,
 								headers: new Headers(),
@@ -304,7 +308,7 @@ describe("integration: multiple sources", () => {
 				session: defineGroup({
 					prefix: "session",
 					endpoints: {
-						me: endpoint<{ token: string }>()(({ get }) => get("me")),
+						me: query.response<{ token: string }>().via(({ get }) => get("me")),
 					},
 				}),
 			},
@@ -351,13 +355,13 @@ describe("integration: multiple sources", () => {
 });
 
 describe("integration: HTTP-semantic proxy", () => {
-	it("rejects GET proxy for endpoints without type: query", async () => {
-		// usersGroup endpoints have no type metadata → should be rejected via GET
+	it("rejects GET proxy for a write", async () => {
+		// `create` is a mutation, so it must not be reachable over a cacheable GET
 		try {
 			await executeRequest(sources, {
 				source: "api",
 				group: "users",
-				method: "getAll",
+				method: "create",
 			}, { proxyMethod: "GET" } as any);
 			expect.fail("should have thrown");
 		} catch (error) {
@@ -375,7 +379,7 @@ describe("integration: HTTP-semantic proxy", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint<User[]>({ type: "query" })(({ get }) => get()),
+						getAll: query.response<User[]>().via(({ get }) => get()),
 					},
 				}),
 			},
@@ -399,7 +403,7 @@ describe("integration: HTTP-semantic proxy", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint<User[]>({ type: "query" })(({ get }) => get()),
+						getAll: query.response<User[]>().via(({ get }) => get()),
 					},
 				}),
 			},
@@ -425,7 +429,7 @@ describe("integration: HTTP-semantic proxy", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint<User[]>({ type: "query", cache: { revalidate: 60 } })(
+						getAll: query.response<User[]>().cache({ revalidate: 60 }).via(
 							({ get }) => get(),
 						),
 					},
@@ -453,10 +457,7 @@ describe("integration: HTTP-semantic proxy", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint<User[]>({
-							type: "query",
-							cache: { revalidate: 30, tags: ["users", "list"] },
-						})(({ get }) => get()),
+						getAll: query.response<User[]>().cache({ revalidate: 30, tags: ["users", "list"] }).via(({ get }) => get()),
 					},
 				}),
 			},
@@ -483,7 +484,7 @@ describe("integration: HTTP-semantic proxy", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint<User[]>({ type: "query", cache: { revalidate: 60 } })(
+						getAll: query.response<User[]>().cache({ revalidate: 60 }).via(
 							({ get }) => get(),
 						),
 					},
@@ -509,7 +510,7 @@ describe("integration: HTTP-semantic proxy", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						create: endpoint<User, { name: string; email: string }>({ type: "mutation" })(
+						create: mutation.variables<{ name: string; email: string }>().response<User>().via(
 							({ post }, vars) => post("", vars),
 						),
 					},

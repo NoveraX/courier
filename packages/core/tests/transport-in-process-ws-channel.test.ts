@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { endpoint } from "../src/define/endpoint";
+import { courier } from "../src/define/courier";
 import type { ChannelHandlers, WSChannelContext } from "../src/realtime/types";
 import type { StudioHooks } from "../src/studio/hooks";
 import { ValidationError } from "../src/validation";
 import { executeDirectWSChannel } from "../src/transport/in-process/ws-channel";
 import { createPlaygroundWSRegistry } from "../src/transport/in-process/ws-registry";
+
+const { query, channel } = courier();
 
 const HOOKS_KEY = Symbol.for("courier.studio.hooks");
 const hooks = (globalThis as Record<symbol, unknown>)[HOOKS_KEY] as StudioHooks;
@@ -23,11 +25,7 @@ function makeChannelSources(
   factory: (variables: any) => ChannelHandlers,
   opts: { variablesSchema?: z.ZodTypeAny; receiveSchema?: z.ZodTypeAny } = {},
 ) {
-  const room = endpoint<unknown, unknown>({
-    transport: "ws",
-    ...(opts.variablesSchema ? { variables: opts.variablesSchema } : {}),
-    ...(opts.receiveSchema ? { receive: opts.receiveSchema } : {}),
-  })(factory as never);
+  const room = channel.variables(opts.variablesSchema).send(opts.receiveSchema).response<unknown>().implement(factory as never);
   return {
     api: {
       options: { groups: { chat: { options: {}, room } } },
@@ -49,7 +47,7 @@ describe("executeDirectWSChannel — resolution + validation", () => {
   });
 
   it("throws when endpoint is not WS transport", async () => {
-    const httpEndpoint = endpoint<string>()((http) => http.get("/x"));
+    const httpEndpoint = query.response<string>().via((http) => http.get("/x"));
     const sources = { api: { options: { groups: {} }, health: httpEndpoint } };
     await expect(
       executeDirectWSChannel(sources as any, { source: "api", method: "health" }),

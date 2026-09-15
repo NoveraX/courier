@@ -70,22 +70,29 @@ function createMockSocket(): MockSocket {
 // ---------------------------------------------------------------------------
 
 function createWSSource(handler: unknown, transport: "ws" = "ws", receive?: unknown): Sources {
-  const fn = handler as Record<symbol, unknown>;
-  fn[ENDPOINT_SCHEMA] = { transport, ...(receive ? { receive } : {}) };
+  const schema = { transport, ...(receive ? { receive } : {}) };
+  const fn = {
+    [ENDPOINT_SCHEMA]: schema,
+    kind: "channel",
+    method: "get",
+    path: "",
+    probe: handler,
+    options: { middleware: [], allowedHeaders: [], meta: {}, tags: [], inherit: true },
+  } as unknown as Record<symbol, unknown>;
 
   return {
     testSource: {
       options: {
         groups: {
           chat: {
-            endpoints: { feed: handler },
+            endpoints: { feed: fn },
             options: {},
-            feed: handler,
+            feed: fn,
           },
         },
       },
       chat: { feed: handler },
-      feed: handler,
+      feed: fn,
     },
   } as unknown as Sources;
 }

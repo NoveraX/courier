@@ -1,5 +1,7 @@
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
+import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { describe, expect, it } from "vitest";
+
+const { query } = courier();
 import {
   BindingConflictError,
   BindingTable,
@@ -9,7 +11,7 @@ function makeConfig() {
   const usersGroup = defineGroup({
     prefix: "/users",
     endpoints: {
-      list: endpoint<unknown[]>()((http) => http.get("")),
+      list: query.response<unknown[]>().via((http) => http.get("")),
     },
   });
   const api = defineApi({

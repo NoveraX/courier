@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type Endpoint, defineApi, defineGroup, endpoint } from "../src/define/index";
-import type { HttpMethods } from "../src/http-client/types";
+import { courier, defineApi, defineGroup } from "../src/define/index";
 import { defineMiddleware } from "../src/middleware/index";
 
 vi.mock("../src/utils/execute", () => ({
@@ -8,6 +7,8 @@ vi.mock("../src/utils/execute", () => ({
 }));
 
 import { executeRequest } from "../src/utils/execute";
+
+const { query, mutation } = courier();
 
 const mockExecuteRequest = vi.mocked(executeRequest);
 
@@ -17,83 +18,15 @@ afterEach(() => {
 
 // ---- helpers ----
 
-function mockMethods(): HttpMethods {
-	const makeMethod =
-		() =>
-		<T>(_url?: string, _vars?: Record<string, unknown>) =>
-			Promise.resolve({ status: 200, headers: new Headers(), data: {} as T });
 
-	return {
-		get: makeMethod(),
-		post: makeMethod(),
-		put: makeMethod(),
-		patch: makeMethod(),
-		del: makeMethod(),
-		head: makeMethod(),
-	} as HttpMethods;
-}
-
-// ---- endpoint() ----
-
-describe("endpoint", () => {
-	it("returns identity function that preserves the implementation", () => {
-		const impl: Endpoint<string> = ({ get }) => get();
-		const result = endpoint<string>()(impl);
-		expect(result).toBe(impl);
-	});
-
-	it("works with variables", () => {
-		const impl: Endpoint<{ id: string }, { id: string }> = ({ get }, vars) =>
-			get(":id", vars);
-		const result = endpoint<{ id: string }, { id: string }>()(impl);
-		expect(result).toBe(impl);
-	});
-
-	it("returned function is callable", async () => {
-		const fn = endpoint<{ ok: boolean }>()(({ get }) => get());
-		const response = await fn(mockMethods(), undefined);
-		expect(response).toEqual({ status: 200, headers: expect.any(Headers), data: {} });
-	});
-
-	it("attaches type metadata to endpoint function", () => {
-		const SCHEMA = Symbol.for("courier.endpoint.schema");
-		const fn = endpoint<string[]>({ type: "query" })(({ get }) => get());
-		expect((fn as any)[SCHEMA].type).toBe("query");
-	});
-
-	it("attaches cache metadata to endpoint function", () => {
-		const SCHEMA = Symbol.for("courier.endpoint.schema");
-		const fn = endpoint<string[]>({ type: "query", cache: { revalidate: 60, tags: ["users"] } })(
-			({ get }) => get(),
-		);
-		expect((fn as any)[SCHEMA].cache).toEqual({ revalidate: 60, tags: ["users"] });
-	});
-
-	it("supports type+cache without schema (EndpointOptions overload)", () => {
-		const SCHEMA = Symbol.for("courier.endpoint.schema");
-		const fn = endpoint<string[]>({ type: "query", cache: { revalidate: 30 } })(
-			({ get }) => get(),
-		);
-		expect((fn as any)[SCHEMA]).toEqual({ type: "query", cache: { revalidate: 30 } });
-	});
-
-	it("supports type: mutation", () => {
-		const SCHEMA = Symbol.for("courier.endpoint.schema");
-		const fn = endpoint<void, { id: string }>({ type: "mutation" })(
-			({ del }, vars) => del(":id", vars),
-		);
-		expect((fn as any)[SCHEMA].type).toBe("mutation");
-	});
-});
-
-// ---- defineGroup() ----
+// ---- collection helpers ----
 
 describe("defineGroup", () => {
 	it("produces object with options.prefix", () => {
 		const group = defineGroup({
 			prefix: "users",
 			endpoints: {
-				getAll: endpoint<string[]>()(({ get }) => get()),
+				getAll: query.response<string[]>().via(({ get }) => get()),
 			},
 		});
 
@@ -103,7 +36,7 @@ describe("defineGroup", () => {
 	it("produces object with options.prefix undefined when omitted", () => {
 		const group = defineGroup({
 			endpoints: {
-				health: endpoint<boolean>()(({ get }) => get("health")),
+				health: query.response<boolean>().via(({ get }) => get("health")),
 			},
 		});
 
@@ -111,8 +44,8 @@ describe("defineGroup", () => {
 	});
 
 	it("spreads endpoint functions onto the result object", () => {
-		const getAll = endpoint<string[]>()(({ get }) => get());
-		const create = endpoint<string, { name: string }>()(({ post }) => post());
+		const getAll = query.response<string[]>().via(({ get }) => get());
+		const create = mutation.variables<{ name: string }>().response<string>().via(({ post }) => post());
 
 		const group = defineGroup({
 			prefix: "users",
@@ -123,16 +56,16 @@ describe("defineGroup", () => {
 		expect(group.create).toBe(create);
 	});
 
-	it("endpoint functions are callable from the group", async () => {
+	it("keeps the wire shape of each endpoint it holds", () => {
 		const group = defineGroup({
 			prefix: "items",
 			endpoints: {
-				list: endpoint<number[]>()(({ get }) => get()),
+				list: query.response<number[]>().via(({ get }) => get()),
 			},
 		});
 
-		const response = await group.list(mockMethods(), undefined);
-		expect(response.status).toBe(200);
+		expect(group.list.method).toBe("get");
+		expect(group.list.path).toBe("");
 	});
 
 	it("supports pathOptions", () => {
@@ -141,7 +74,7 @@ describe("defineGroup", () => {
 			prefix: "tenants",
 			pathOptions,
 			endpoints: {
-				list: endpoint<unknown[]>()(({ get }) => get()),
+				list: query.response<unknown[]>().via(({ get }) => get()),
 			},
 		});
 
@@ -156,7 +89,7 @@ describe("defineApi", () => {
 		const usersGroup = defineGroup({
 			prefix: "users",
 			endpoints: {
-				getAll: endpoint<string[]>()(({ get }) => get()),
+				getAll: query.response<string[]>().via(({ get }) => get()),
 			},
 		});
 
@@ -182,7 +115,7 @@ describe("defineApi", () => {
 				items: defineGroup({
 					prefix: "items",
 					endpoints: {
-						list: endpoint<unknown>()(({ get }) => get()),
+						list: query.via(({ get }) => get()),
 					},
 				}),
 			},
@@ -195,7 +128,7 @@ describe("defineApi", () => {
 	});
 
 	it("groups are accessible with correct structure", () => {
-		const getAll = endpoint<string[]>()(({ get }) => get());
+		const getAll = query.response<string[]>().via(({ get }) => get());
 
 		const api = defineApi({
 			baseURL: "https://api.example.com",
@@ -207,8 +140,8 @@ describe("defineApi", () => {
 
 		expect(api.options.groups.users.options.prefix).toBe("users");
 		expect(api.options.groups.posts.options.prefix).toBe("posts");
-		expect(typeof api.options.groups.users.getAll).toBe("function");
-		expect(typeof api.options.groups.posts.getAll).toBe("function");
+		expect(typeof api.options.groups.users.getAll).toBe("object");
+		expect(typeof api.options.groups.posts.getAll).toBe("object");
 	});
 });
 
@@ -216,16 +149,16 @@ describe("defineApi", () => {
 
 describe("defineApi flat (no groups)", () => {
 	it("spreads endpoints onto the result object", () => {
-		const getAll = endpoint<string[]>()(({ get }) => get());
-		const create = endpoint<string, { name: string }>()(({ post }) => post());
+		const getAll = query.response<string[]>().via(({ get }) => get());
+		const create = mutation.variables<{ name: string }>().response<string>().via(({ post }) => post());
 
 		const api = defineApi({
 			baseURL: "https://api.example.com",
 			endpoints: { getAll, create },
 		});
 
-		expect(typeof api.getAll).toBe("function");
-		expect(typeof api.create).toBe("function");
+		expect(typeof api.getAll).toBe("object");
+		expect(typeof api.create).toBe("object");
 		expect(api.options.baseURL).toBe("https://api.example.com");
 	});
 
@@ -233,7 +166,7 @@ describe("defineApi flat (no groups)", () => {
 		const api = defineApi({
 			baseURL: "https://flat.api",
 			endpoints: {
-				health: endpoint<boolean>()(({ get }) => get("health")),
+				health: query.response<boolean>().via(({ get }) => get("health")),
 			},
 		});
 
@@ -248,7 +181,7 @@ describe("defineApi mixed (groups + flat endpoints)", () => {
 		const usersGroup = defineGroup({
 			prefix: "users",
 			endpoints: {
-				getAll: endpoint<string[]>()(({ get }) => get()),
+				getAll: query.response<string[]>().via(({ get }) => get()),
 			},
 		});
 
@@ -256,16 +189,16 @@ describe("defineApi mixed (groups + flat endpoints)", () => {
 			baseURL: "https://api.example.com",
 			groups: { users: usersGroup },
 			endpoints: {
-				healthCheck: endpoint<{ ok: boolean }>()(({ get }) => get("health")),
+				healthCheck: query.response<{ ok: boolean }>().via(({ get }) => get("health")),
 			},
 		});
 
 		// Groups accessible via options
 		expect(api.options.groups.users).toBe(usersGroup);
-		expect(typeof api.options.groups.users.getAll).toBe("function");
+		expect(typeof api.options.groups.users.getAll).toBe("object");
 
 		// Flat endpoints on source object
-		expect(typeof api.healthCheck).toBe("function");
+		expect(typeof api.healthCheck).toBe("object");
 		expect(api.options.baseURL).toBe("https://api.example.com");
 	});
 
@@ -275,16 +208,16 @@ describe("defineApi mixed (groups + flat endpoints)", () => {
 			groups: {
 				items: defineGroup({
 					prefix: "items",
-					endpoints: { list: endpoint<number[]>()(({ get }) => get()) },
+					endpoints: { list: query.response<number[]>().via(({ get }) => get()) },
 				}),
 			},
 			endpoints: {
-				ping: endpoint<string>()(({ get }) => get("ping")),
+				ping: query.response<string>().via(({ get }) => get("ping")),
 			},
 		});
 
-		const response = await api.ping(mockMethods(), undefined);
-		expect(response.status).toBe(200);
+		expect(api.ping.method).toBe("get");
+		expect(api.ping.path).toBe("ping");
 	});
 });
 
@@ -300,7 +233,7 @@ describe("executeRequest compatibility", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint<{ id: number; name: string }[]>()(({ get }) => get()),
+						getAll: query.response<{ id: number; name: string }[]>().via(({ get }) => get()),
 					},
 				}),
 			},
@@ -331,7 +264,7 @@ describe("executeRequest compatibility", () => {
 				auth: defineGroup({
 					prefix: "auth",
 					endpoints: {
-						login: endpoint<{ token: string }, { email: string; password: string }>()(
+						login: mutation.variables<{ email: string; password: string }>().response<{ token: string }>().via(
 							({ post }) => post(),
 						),
 					},
@@ -345,16 +278,16 @@ describe("executeRequest compatibility", () => {
 		// 1. group.options exists with prefix
 		expect(group.options.prefix).toBe("auth");
 		// 2. endpoint is a function on the group object
-		expect(typeof group.login).toBe("function");
+		expect(typeof group.login).toBe("object");
 	});
 
 	it("endpoint functions have correct arity", () => {
-		const fn = endpoint<string, { id: number }>()(({ get }, vars) =>
+		const fn = query.variables<{ id: number }>().response<string>().via(({ get }, vars) =>
 			get(":id", vars),
 		);
 
-		// Endpoint<R, V> = (methods: HttpMethods, variables: V) => ...
-		expect(fn.length).toBe(2);
+		expect(fn.method).toBe("get");
+		expect(fn.path).toBe(":id");
 	});
 });
 
@@ -371,17 +304,17 @@ describe("complex API definitions", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint<User[]>()(({ get }) => get()),
-						getById: endpoint<User, { id: string }>()(({ get }, vars) =>
+						getAll: query.response<User[]>().via(({ get }) => get()),
+						getById: query.variables<{ id: string }>().response<User>().via(({ get }, vars) =>
 							get(":id", vars),
 						),
-						create: endpoint<User, { name: string }>()(({ post }, vars) =>
+						create: mutation.variables<{ name: string }>().response<User>().via(({ post }, vars) =>
 							post("", vars),
 						),
-						update: endpoint<User, { id: string; name: string }>()(
+						update: mutation.variables<{ id: string; name: string }>().response<User>().via(
 							({ put }, vars) => put(":id", vars),
 						),
-						remove: endpoint<void, { id: string }>()(({ del }, vars) =>
+						remove: mutation.variables<{ id: string }>().via(({ del }, vars) =>
 							del(":id", vars),
 						),
 					},
@@ -389,8 +322,8 @@ describe("complex API definitions", () => {
 				posts: defineGroup({
 					prefix: "posts",
 					endpoints: {
-						list: endpoint<Post[]>()(({ get }) => get()),
-						getById: endpoint<Post, { id: string }>()(({ get }, vars) =>
+						list: query.response<Post[]>().via(({ get }) => get()),
+						getById: query.variables<{ id: string }>().response<Post>().via(({ get }, vars) =>
 							get(":id", vars),
 						),
 					},
@@ -399,13 +332,13 @@ describe("complex API definitions", () => {
 		});
 
 		// Verify all endpoints exist
-		expect(typeof api.options.groups.users.getAll).toBe("function");
-		expect(typeof api.options.groups.users.getById).toBe("function");
-		expect(typeof api.options.groups.users.create).toBe("function");
-		expect(typeof api.options.groups.users.update).toBe("function");
-		expect(typeof api.options.groups.users.remove).toBe("function");
-		expect(typeof api.options.groups.posts.list).toBe("function");
-		expect(typeof api.options.groups.posts.getById).toBe("function");
+		expect(typeof api.options.groups.users.getAll).toBe("object");
+		expect(typeof api.options.groups.users.getById).toBe("object");
+		expect(typeof api.options.groups.users.create).toBe("object");
+		expect(typeof api.options.groups.users.update).toBe("object");
+		expect(typeof api.options.groups.users.remove).toBe("object");
+		expect(typeof api.options.groups.posts.list).toBe("object");
+		expect(typeof api.options.groups.posts.getById).toBe("object");
 
 		// Verify group prefixes
 		expect(api.options.groups.users.options.prefix).toBe("users");

@@ -5,16 +5,7 @@ import type {
   InferSend,
   InferVariables,
 } from "../define/marker";
-import type {
-  AnyEndpointFn,
-  DefinedApi,
-  Endpoint,
-  EndpointRecord,
-  GroupRecord,
-  SSEEndpoint,
-  WSChannelEndpoint,
-  WSEndpoint,
-} from "../define/types";
+import type { AnyEndpointFn, DefinedApi, EndpointRecord, GroupRecord } from "../define/types";
 import type { CallOptions, HttpResponse } from "../http-client/types";
 import type { SSESubscription, WSChannel } from "../realtime/types";
 
@@ -62,18 +53,10 @@ type DescriptorMethod<TEndpoint extends AnyEndpoint, TRaw extends boolean> =
       ? WSChannelMethod<InferResponse<TEndpoint>, InferSend<TEndpoint>, InferVariables<TEndpoint>>
       : EndpointMethod<InferResponse<TEndpoint>, InferVariables<TEndpoint>, TRaw>;
 
-/** Resolve the correct method type based on endpoint transport brand */
+/** Resolve the method type an endpoint exposes on a group client. */
 type ResolveMethod<TEndpoint, TRaw extends boolean> = TEndpoint extends AnyEndpoint
   ? DescriptorMethod<TEndpoint, TRaw>
-  : TEndpoint extends SSEEndpoint<infer TResp, infer TVars>
-    ? SSEMethod<TResp, TVars>
-    : TEndpoint extends WSChannelEndpoint<infer TResp, infer TRecv, infer TVars>
-      ? WSChannelMethod<TResp, TRecv, TVars>
-      : TEndpoint extends WSEndpoint<infer TResp, infer TVars>
-        ? SSEMethod<TResp, TVars> // push-only WS uses same iterable API as SSE
-        : TEndpoint extends Endpoint<infer TResp, infer TVars>
-          ? EndpointMethod<TResp, TVars, TRaw>
-          : never;
+  : never;
 
 /** Methods exposed on a group client (excludes 'options' from the group) */
 type GroupMethods<TGroup, TRaw extends boolean> = {
@@ -104,17 +87,23 @@ type FlatEndpointMethod<TResponse, TVariables, TRaw extends boolean> = EndpointM
     with(options: WithOptions): FlatEndpointMethod<TResponse, TVariables, TRaw>;
   };
 
-/** Resolve flat method — HTTP gets .raw/.with(), realtime stays plain */
-type ResolveFlatMethod<TEndpoint, TRaw extends boolean> =
-  TEndpoint extends SSEEndpoint<infer TResp, infer TVars>
-    ? SSEMethod<TResp, TVars>
-    : TEndpoint extends WSChannelEndpoint<infer TResp, infer TRecv, infer TVars>
-      ? WSChannelMethod<TResp, TRecv, TVars>
-      : TEndpoint extends WSEndpoint<infer TResp, infer TVars>
-        ? SSEMethod<TResp, TVars>
-        : TEndpoint extends Endpoint<infer TResp, infer TVars>
-          ? FlatEndpointMethod<TResp, TVars, TRaw>
-          : never;
+/**
+ * Method type for a flat endpoint descriptor.
+ *
+ * Mirrors the grouped resolution, with the addition that an HTTP endpoint
+ * reached at the root also carries `.raw` and `.with()`.
+ */
+type FlatDescriptorMethod<TEndpoint extends AnyEndpoint, TRaw extends boolean> =
+  InferKind<TEndpoint> extends "stream"
+    ? SSEMethod<InferResponse<TEndpoint>, InferVariables<TEndpoint>>
+    : InferKind<TEndpoint> extends "channel"
+      ? WSChannelMethod<InferResponse<TEndpoint>, InferSend<TEndpoint>, InferVariables<TEndpoint>>
+      : FlatEndpointMethod<InferResponse<TEndpoint>, InferVariables<TEndpoint>, TRaw>;
+
+/** Resolve the method type an endpoint exposes at the root of a client. */
+type ResolveFlatMethod<TEndpoint, TRaw extends boolean> = TEndpoint extends AnyEndpoint
+  ? FlatDescriptorMethod<TEndpoint, TRaw>
+  : never;
 
 /** Flat endpoint methods at root level */
 type FlatMethods<TEndpoints, TRaw extends boolean> = {

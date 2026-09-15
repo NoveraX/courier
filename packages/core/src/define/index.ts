@@ -8,7 +8,6 @@ export type {
 } from "./builder-types";
 export type { ChannelEndpoint, HttpEndpoint, StreamEndpoint } from "./call-shapes";
 export { courier } from "./courier";
-export { endpoint } from "./endpoint";
 export { defineGroup } from "./group";
 export type {
   AnyEndpoint,
@@ -25,11 +24,7 @@ export type {
   DefinedGroup,
   DefinedMixedApi,
   DefineGroupConfig,
-  Endpoint,
   EndpointRecord,
   GroupRecord,
   Sources,
-  SSEEndpoint,
-  WSChannelEndpoint,
-  WSEndpoint,
 } from "./types";

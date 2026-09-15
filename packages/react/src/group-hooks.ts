@@ -156,5 +156,5 @@ export function createGroupHooks(
     useChannel(method: string, options?: Record<string, unknown>) {
       return useChannelHook(channelFn, groupName, method, options);
     },
-  };
+  } as QueryGroupClient<any>;
 }

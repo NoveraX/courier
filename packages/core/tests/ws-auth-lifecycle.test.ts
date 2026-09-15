@@ -100,11 +100,18 @@ function createMsgCtx(overrides: Partial<WSSocketContext> = {}): {
 
   const wsEndpoint = (() => {
     const fn = () => ({ onMessage: vi.fn() });
-    (fn as unknown as Record<symbol, unknown>)[ENDPOINT_SCHEMA] = {
+    const schema = {
       transport: "ws",
       receive: { "~standard": { validate: async (v: unknown) => ({ value: v }) } },
     };
-    return fn;
+    return {
+      [ENDPOINT_SCHEMA]: schema,
+      kind: "channel",
+      method: "get",
+      path: "",
+      probe: fn,
+      options: { middleware: [], allowedHeaders: [], meta: {}, tags: [], inherit: true },
+    };
   })();
 
   const ctx = {

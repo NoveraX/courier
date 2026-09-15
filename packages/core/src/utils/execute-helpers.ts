@@ -11,7 +11,6 @@ export const createHttpClient = (baseOption?: BaseOptions, context?: Context): H
  * carrying one rather than by being callable itself.
  */
 export const isEndpointFn = (value: unknown): value is AnyEndpoints[string] => {
-  if (typeof value === "function") return true;
   if (typeof value !== "object" || value === null) return false;
   return typeof (value as { probe?: unknown }).probe === "function";
 };

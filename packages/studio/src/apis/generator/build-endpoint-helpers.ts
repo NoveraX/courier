@@ -1,5 +1,5 @@
 /**
- * Helper functions for building endpoint() call expressions.
+ * Helper functions for building the builder chain that describes an endpoint.
  */
 
 import type { ParsedEndpoint, ParsedSpec } from "../parser/types";
@@ -30,7 +30,6 @@ export function resolveBodyInterfaceType(
   return `${bodyRef} & { ${paramParts.join("; ")} }`;
 }
 
-/** Build the endpoint<R, V>({ config }) expression */
 /**
  * Build the builder chain that describes an endpoint, up to but excluding the
  * terminal.

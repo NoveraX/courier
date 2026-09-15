@@ -121,7 +121,7 @@ describe("validateSchema", () => {
 	});
 });
 
-// ---- endpoint() with schema ----
+// ---- endpoints with schemas ----
 
 describe("endpoint with schema config", () => {
 	it("attaches schema metadata to endpoint function (Zod)", () => {

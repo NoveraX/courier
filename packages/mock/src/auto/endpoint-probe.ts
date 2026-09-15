@@ -71,7 +71,6 @@ export function extractSchema(fn: unknown): SchemaMetadata | undefined {
  * being callable itself.
  */
 export function isEndpoint(value: unknown): boolean {
-  if (typeof value === "function") return true;
   if (typeof value !== "object" || value === null) return false;
   return typeof (value as { probe?: unknown }).probe === "function";
 }

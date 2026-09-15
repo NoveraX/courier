@@ -39,7 +39,7 @@ describe("tracked", () => {
   });
 });
 
-// ---- endpoint() with transport metadata ----
+// ---- transport metadata ----
 
 describe("endpoint with transport", () => {
   it("attaches transport: sse to metadata", () => {

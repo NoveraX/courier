@@ -1,4 +1,4 @@
-import type { Endpoint } from "./define/types";
+import type { AnyEndpoint, InferResponse, InferVariables } from "./define/marker";
 import type { CallOptions, HttpResponse } from "./http-client/types";
 
 export type CallerFn<TSources extends Record<string, any>> = <
@@ -10,24 +10,24 @@ export type CallerFn<TSources extends Record<string, any>> = <
 ) => <
   TEndpointKey extends EndpointKey<TSources[TKey]>,
   TEndpoint extends ResolveEndpoint<TSources[TKey], TEndpointKey>,
-  TResponse = ExtractResponse<TEndpoint extends Endpoint<any, any> ? TEndpoint : unknown>,
+  TResponse = ExtractResponse<TEndpoint>,
 >(
   ...arguments_: EndpointArguments<TEndpointKey, TEndpoint>
 ) => EndpointResult<TRaw, TResponse>;
 
-type EndpointArguments<
-  TEndpointKey,
-  TEndpoint extends Endpoint<any, any>,
-  TVariables = ExtractVariables<TEndpoint>,
-> = TVariables extends undefined
+type EndpointArguments<TEndpointKey, TEndpoint, TVariables = ExtractVariables<TEndpoint>> = [
+  TVariables,
+] extends [undefined | void]
   ? [endpoint: TEndpointKey]
   : [endpoint: TEndpointKey, variables: TVariables];
 
-type ExtractResponse<TCandidate extends Endpoint<any, any>> =
-  TCandidate extends Endpoint<infer TResponse, any> ? TResponse : unknown;
+type ExtractResponse<TCandidate> = TCandidate extends AnyEndpoint
+  ? InferResponse<TCandidate>
+  : unknown;
 
-type ExtractVariables<TCandidate extends Endpoint<any, any>> =
-  TCandidate extends Endpoint<any, infer TVariables> ? TVariables : unknown;
+type ExtractVariables<TCandidate> = TCandidate extends AnyEndpoint
+  ? InferVariables<TCandidate>
+  : unknown;
 
 type SplitEndpointKey<TKey extends string> = TKey extends `${infer TGroup}:${infer TMethod}`
   ? { group: TGroup; method: TMethod }
@@ -53,9 +53,10 @@ export type EndpointKey<
     ? FunctionKeys<TSource> | GroupedEndpoints<TGroupMap>
     : FunctionKeys<TSource>;
 
+/** Names of the endpoints a source or group holds, ignoring its options. */
 type FunctionKeys<TObj extends Record<string, any>> = NonNullable<
   {
-    [TKey in keyof TObj]: TObj[TKey] extends (...args: never[]) => unknown
+    [TKey in keyof TObj]: TObj[TKey] extends AnyEndpoint
       ? TKey extends string
         ? TKey
         : never

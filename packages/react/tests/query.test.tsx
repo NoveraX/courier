@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import type { Endpoint } from "@noverax/courier/define";
+import type { HttpEndpoint } from "@noverax/courier/define";
 import { createProxyQueryKeys } from "../src/keys";
 import { createProxyQueryCaller, optimisticOptions } from "../src/index";
 
@@ -25,14 +25,14 @@ type TestApi = {
 		groups: {
 			users: {
 				options: { prefix?: string };
-				getAll: Endpoint<{ id: number; name: string }[]>;
-				getById: Endpoint<{ id: number; name: string }, { id: number }>;
-				create: Endpoint<{ id: number; name: string }, { name: string }>;
-				list: Endpoint<{ items: { id: number }[]; nextCursor: number | null }, { cursor: number }>;
+				getAll: HttpEndpoint<{ id: number; name: string }[], void, "query">;
+				getById: HttpEndpoint<{ id: number; name: string }, { id: number }, "query">;
+				create: HttpEndpoint<{ id: number; name: string }, { name: string }, "query">;
+				list: HttpEndpoint<{ items: { id: number }[]; nextCursor: number | null }, { cursor: number }, "query">;
 			};
 			cache: {
 				options: { prefix?: string };
-				clear: Endpoint<{ ok: boolean }>;
+				clear: HttpEndpoint<{ ok: boolean }, void, "query">;
 			};
 		};
 	};

@@ -32,7 +32,7 @@ export type SSEFactory = (
 /**
  * Uniform shape for **bidirectional** WS channel primitives.
  *
- * Used for endpoints declared with a `receive` schema (`WSChannelEndpoint`).
+ * Used for endpoints declared with a `receive` schema (a send slot).
  * The returned channel exposes both `send()` and incoming `data` events.
  *
  * Kept separate from {@link WSPushFactory} so callers don't need a runtime
@@ -49,7 +49,7 @@ export type WSChannelFactory = (
 /**
  * Uniform shape for **server-push** WS primitives.
  *
- * Used for endpoints declared without a `receive` schema (`WSEndpoint`).
+ * Used for endpoints declared without a `receive` schema (no send slot).
  * The returned subscription is iterable like an SSE subscription — server
  * pushes events to the client over a WebSocket transport.
  */

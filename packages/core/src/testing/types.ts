@@ -1,5 +1,6 @@
 import type { TypedClient } from "../client";
-import type { DefinedApi, Endpoint, SSEEndpoint, WSChannelEndpoint } from "../define/types";
+import type { AnyEndpoint, InferResponse } from "../define/marker";
+import type { DefinedApi } from "../define/types";
 import type { ChannelHandlers, SSEEvent } from "../realtime/types";
 
 /** A recorded request in the test client history */
@@ -42,14 +43,9 @@ export type MockBuilder<TResponse = unknown> = {
   delay(ms: number): MockBuilder<TResponse>;
 };
 
-export type ExtractEndpointResponse<TEndpoint> =
-  TEndpoint extends SSEEndpoint<infer TResponse, any>
-    ? TResponse
-    : TEndpoint extends WSChannelEndpoint<infer TResponse, any, any>
-      ? TResponse
-      : TEndpoint extends Endpoint<infer TResponse, any>
-        ? TResponse
-        : unknown;
+export type ExtractEndpointResponse<TEndpoint> = TEndpoint extends AnyEndpoint
+  ? InferResponse<TEndpoint>
+  : unknown;
 
 export type ApiGroups<TApi extends DefinedApi<any>> = TApi["options"]["groups"];
 

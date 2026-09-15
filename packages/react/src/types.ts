@@ -7,7 +7,21 @@
  */
 
 import type { HTTPError } from "@noverax/courier";
-import type { DefinedApi, Endpoint, SSEEndpoint, WSChannelEndpoint } from "@noverax/courier/define";
+import type {
+  AnyEndpoint,
+  DefinedApi,
+  InferResponse,
+  InferSend,
+  InferVariables,
+} from "@noverax/courier/define";
+
+/** What an endpoint answers, or never when the value is not one. */
+type Res<T> = T extends AnyEndpoint ? InferResponse<T> : never;
+/** What an endpoint is called with, or never when the value is not one. */
+type Vars<T> = T extends AnyEndpoint ? InferVariables<T> : never;
+/** What may be sent on an endpoint holding an open channel. */
+type Sent<T> = T extends AnyEndpoint ? InferSend<T> : never;
+
 import type {
   InfiniteData,
   QueryClient,
@@ -53,116 +67,128 @@ export type {
 export type QueryGroupClient<TGroup> = {
   useQuery: <TMethod extends GroupMethodKeys<TGroup>>(
     method: TMethod,
-    ...args: TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
-      ? [TVariables] extends [undefined]
-        ? [options?: CourierQueryOptions<TResponse, TVariables>]
-        : {} extends TVariables
-          ? [options?: CourierQueryOptions<TResponse, TVariables>]
-          : [options: CourierQueryOptions<TResponse, TVariables>]
+    ...args: TGroup[TMethod] extends AnyEndpoint
+      ? [Vars<TGroup[TMethod]>] extends [undefined | void]
+        ? [options?: CourierQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
+        : {} extends Vars<TGroup[TMethod]>
+          ? [options?: CourierQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
+          : [options: CourierQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
       : never
-  ) => TGroup[TMethod] extends Endpoint<infer TResponse, any>
-    ? UseQueryResult<TResponse, HTTPError>
+  ) => TGroup[TMethod] extends AnyEndpoint
+    ? UseQueryResult<Res<TGroup[TMethod]>, HTTPError>
     : never;
 
   useSuspenseQuery: <TMethod extends GroupMethodKeys<TGroup>>(
     method: TMethod,
-    ...args: TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
-      ? [TVariables] extends [undefined]
-        ? [options?: CourierSuspenseQueryOptions<TResponse, TVariables>]
-        : {} extends TVariables
-          ? [options?: CourierSuspenseQueryOptions<TResponse, TVariables>]
-          : [options: CourierSuspenseQueryOptions<TResponse, TVariables>]
+    ...args: TGroup[TMethod] extends AnyEndpoint
+      ? [Vars<TGroup[TMethod]>] extends [undefined | void]
+        ? [options?: CourierSuspenseQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
+        : {} extends Vars<TGroup[TMethod]>
+          ? [options?: CourierSuspenseQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
+          : [options: CourierSuspenseQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
       : never
-  ) => TGroup[TMethod] extends Endpoint<infer TResponse, any>
-    ? UseSuspenseQueryResult<TResponse, HTTPError>
+  ) => TGroup[TMethod] extends AnyEndpoint
+    ? UseSuspenseQueryResult<Res<TGroup[TMethod]>, HTTPError>
     : never;
 
   useInfiniteQuery: <TMethod extends GroupMethodKeys<TGroup>, TPageParam>(
     method: TMethod,
-    options: TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
-      ? CourierInfiniteQueryOptions<TResponse, TVariables, TPageParam>
+    options: TGroup[TMethod] extends AnyEndpoint
+      ? CourierInfiniteQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>, TPageParam>
       : never,
-  ) => TGroup[TMethod] extends Endpoint<infer TResponse, any>
-    ? UseInfiniteQueryResult<InfiniteData<TResponse, TPageParam>, HTTPError>
+  ) => TGroup[TMethod] extends AnyEndpoint
+    ? UseInfiniteQueryResult<InfiniteData<Res<TGroup[TMethod]>, TPageParam>, HTTPError>
     : never;
 
   useMutation: <TMethod extends GroupMethodKeys<TGroup>>(
     method: TMethod,
-    options?: TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
-      ? CourierMutationOptions<TResponse, TVariables>
+    options?: TGroup[TMethod] extends AnyEndpoint
+      ? CourierMutationOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>
       : never,
-  ) => TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
-    ? UseMutationResult<TResponse, HTTPError, MutationVariables<TVariables>>
+  ) => TGroup[TMethod] extends AnyEndpoint
+    ? UseMutationResult<Res<TGroup[TMethod]>, HTTPError, MutationVariables<Vars<TGroup[TMethod]>>>
     : never;
 
   prefetchQuery: <TMethod extends GroupMethodKeys<TGroup>>(
     queryClient: QueryClient,
     method: TMethod,
-    ...args: TGroup[TMethod] extends Endpoint<any, infer TVariables>
-      ? [TVariables] extends [undefined]
-        ? [options?: CourierPrefetchOptions<TVariables>]
-        : {} extends TVariables
-          ? [options?: CourierPrefetchOptions<TVariables>]
-          : [options: CourierPrefetchOptions<TVariables>]
+    ...args: TGroup[TMethod] extends AnyEndpoint
+      ? [Vars<TGroup[TMethod]>] extends [undefined | void]
+        ? [options?: CourierPrefetchOptions<Vars<TGroup[TMethod]>>]
+        : {} extends Vars<TGroup[TMethod]>
+          ? [options?: CourierPrefetchOptions<Vars<TGroup[TMethod]>>]
+          : [options: CourierPrefetchOptions<Vars<TGroup[TMethod]>>]
       : never
   ) => Promise<void>;
 
   useSubscription: <TMethod extends GroupMethodKeys<TGroup>>(
     method: TMethod,
-    ...args: TGroup[TMethod] extends SSEEndpoint<infer TResponse, infer TVariables>
-      ? [TVariables] extends [undefined]
-        ? [options?: CourierSubscriptionOptions<TResponse, TVariables>]
-        : {} extends TVariables
-          ? [options?: CourierSubscriptionOptions<TResponse, TVariables>]
-          : [options: CourierSubscriptionOptions<TResponse, TVariables>]
+    ...args: TGroup[TMethod] extends AnyEndpoint
+      ? [Vars<TGroup[TMethod]>] extends [undefined | void]
+        ? [options?: CourierSubscriptionOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
+        : {} extends Vars<TGroup[TMethod]>
+          ? [options?: CourierSubscriptionOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
+          : [options: CourierSubscriptionOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
       : never
-  ) => TGroup[TMethod] extends SSEEndpoint<infer TResponse, any>
-    ? SubscriptionResult<TResponse>
-    : never;
+  ) => TGroup[TMethod] extends AnyEndpoint ? SubscriptionResult<Res<TGroup[TMethod]>> : never;
 
   useComputedQuery: <TMethod extends GroupMethodKeys<TGroup>>(
     method: TMethod,
-    ...args: TGroup[TMethod] extends Endpoint<infer TResponse, infer TVariables>
-      ? [TVariables] extends [undefined]
-        ? [options: CourierComputedQueryOptions<TResponse, unknown, TVariables>]
-        : {} extends TVariables
-          ? [options: CourierComputedQueryOptions<TResponse, unknown, TVariables>]
-          : [options: CourierComputedQueryOptions<TResponse, unknown, TVariables>]
+    ...args: TGroup[TMethod] extends AnyEndpoint
+      ? [Vars<TGroup[TMethod]>] extends [undefined | void]
+        ? [
+            options: CourierComputedQueryOptions<
+              Res<TGroup[TMethod]>,
+              unknown,
+              Vars<TGroup[TMethod]>
+            >,
+          ]
+        : {} extends Vars<TGroup[TMethod]>
+          ? [
+              options: CourierComputedQueryOptions<
+                Res<TGroup[TMethod]>,
+                unknown,
+                Vars<TGroup[TMethod]>
+              >,
+            ]
+          : [
+              options: CourierComputedQueryOptions<
+                Res<TGroup[TMethod]>,
+                unknown,
+                Vars<TGroup[TMethod]>
+              >,
+            ]
       : never
-  ) => TGroup[TMethod] extends Endpoint<infer TResponse, any>
-    ? UseQueryResult<TResponse, HTTPError>
+  ) => TGroup[TMethod] extends AnyEndpoint
+    ? UseQueryResult<Res<TGroup[TMethod]>, HTTPError>
     : never;
 
   useChannel: <TMethod extends GroupMethodKeys<TGroup>>(
     method: TMethod,
-    ...args: TGroup[TMethod] extends WSChannelEndpoint<
-      infer _TResponse,
-      infer _TReceive,
-      infer TVariables
-    >
-      ? [TVariables] extends [undefined]
+    ...args: TGroup[TMethod] extends AnyEndpoint
+      ? [Vars<TGroup[TMethod]>] extends [undefined | void]
         ? [
             options?: CourierChannelOptions<
-              TGroup[TMethod] extends WSChannelEndpoint<infer TRes, any, any> ? TRes : unknown,
-              TVariables
+              TGroup[TMethod] extends AnyEndpoint ? Res<TGroup[TMethod]> : unknown,
+              Vars<TGroup[TMethod]>
             >,
           ]
-        : {} extends TVariables
+        : {} extends Vars<TGroup[TMethod]>
           ? [
               options?: CourierChannelOptions<
-                TGroup[TMethod] extends WSChannelEndpoint<infer TRes, any, any> ? TRes : unknown,
-                TVariables
+                TGroup[TMethod] extends AnyEndpoint ? Res<TGroup[TMethod]> : unknown,
+                Vars<TGroup[TMethod]>
               >,
             ]
           : [
               options: CourierChannelOptions<
-                TGroup[TMethod] extends WSChannelEndpoint<infer TRes, any, any> ? TRes : unknown,
-                TVariables
+                TGroup[TMethod] extends AnyEndpoint ? Res<TGroup[TMethod]> : unknown,
+                Vars<TGroup[TMethod]>
               >,
             ]
       : never
-  ) => TGroup[TMethod] extends WSChannelEndpoint<infer TResponse, infer TReceive, any>
-    ? ChannelResult<TReceive, TResponse>
+  ) => TGroup[TMethod] extends AnyEndpoint
+    ? ChannelResult<Sent<TGroup[TMethod]>, Res<TGroup[TMethod]>>
     : never;
 };
 

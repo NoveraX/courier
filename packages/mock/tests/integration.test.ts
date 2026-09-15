@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
+import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { createMockClient } from "../src/create-mock-client";
 import { defineFactory } from "../src/factory";
 import { defineScenario } from "../src/scenario";
+
+const { query, mutation } = courier();
 
 // ---------------------------------------------------------------------------
 // Real Courier API definition (same as a user would write)
@@ -23,9 +25,9 @@ interface Post {
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint<User[]>()((http) => http.get()),
-    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
-    create: endpoint<User, { name: string; role: "user" | "admin" }>()((http, vars) =>
+    getAll: query.response<User[]>().via((http) => http.get()),
+    getById: query.variables<{ id: string }>().response<User>().via((http, vars) => http.get(":id", vars)),
+    create: mutation.variables<{ name: string; role: "user" | "admin" }>().response<User>().via((http, vars) =>
       http.post("", vars),
     ),
   },
@@ -34,8 +36,8 @@ const users = defineGroup({
 const posts = defineGroup({
   prefix: "posts",
   endpoints: {
-    getAll: endpoint<Post[]>()((http) => http.get()),
-    getByAuthor: endpoint<Post[], { authorId: string }>()((http, vars) =>
+    getAll: query.response<Post[]>().via((http) => http.get()),
+    getByAuthor: query.variables<{ authorId: string }>().response<Post[]>().via((http, vars) =>
       http.get("", vars),
     ),
   },

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
+import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { z } from "zod";
 
 import { analyzeRoutes, getSourceGroupNames } from "../src/auto/route-analyzer";
 import type { CrudOperation, RouteInfo } from "../src/auto/route-analyzer";
+
+const { query, mutation } = courier();
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -23,28 +25,22 @@ const api = defineApi({
     users: defineGroup({
       prefix: "/users",
       endpoints: {
-        getAll: endpoint<z.infer<typeof UserSchema>[]>({
-          response: z.array(UserSchema),
-          type: "query",
-        })((http) => http.get("")),
-        getById: endpoint<z.infer<typeof UserSchema>, { id: string }>({
-          response: UserSchema,
-          type: "query",
-        })((http, vars) => http.get(":id", vars)),
-        create: endpoint({ type: "mutation" })((http, vars) => http.post("", vars)),
-        update: endpoint({ type: "mutation" })((http, vars) => http.patch(":id", vars)),
-        replace: endpoint({ type: "mutation" })((http, vars) => http.put(":id", vars)),
-        remove: endpoint({ type: "mutation" })((http, vars) => http.del(":id", vars)),
-        removeAll: endpoint({ type: "mutation" })((http) => http.del("")),
+        getAll: query.response(z.array(UserSchema)).via((http) => http.get("")),
+        getById: query.variables<{ id: string }>().response(UserSchema).via((http, vars) => http.get(":id", vars)),
+        create: mutation.via((http, vars) => http.post("", vars)),
+        update: mutation.via((http, vars) => http.patch(":id", vars)),
+        replace: mutation.via((http, vars) => http.put(":id", vars)),
+        remove: mutation.via((http, vars) => http.del(":id", vars)),
+        removeAll: mutation.via((http) => http.del("")),
       },
     }),
     products: defineGroup({
       prefix: "/products",
       endpoints: {
-        list: endpoint({ type: "query" })((http) => http.get("")),
-        browse: endpoint({ type: "query" })((http) => http.get("browse")),
-        upload: endpoint({ type: "mutation" })((http, vars) => http.post("import", vars)),
-        upsert: endpoint({ type: "mutation" })((http, vars) => http.put("", vars)),
+        list: query.via((http) => http.get("")),
+        browse: query.via((http) => http.get("browse")),
+        upload: mutation.via((http, vars) => http.post("import", vars)),
+        upsert: mutation.via((http, vars) => http.put("", vars)),
       },
     }),
   },
@@ -158,7 +154,7 @@ describe("analyzeRoutes — default prefix from group name", () => {
     groups: {
       status: defineGroup({
         endpoints: {
-          ping: endpoint({ type: "query" })((http) => http.get("")),
+          ping: query.via((http) => http.get("")),
         },
       }),
     },

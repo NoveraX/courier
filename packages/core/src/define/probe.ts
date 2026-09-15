@@ -88,8 +88,19 @@ export function probeWire(probe: AnyProbe): WireShape {
     },
   );
 
+  // Variables are stand-ins during probing. Answering every property keeps a
+  // closure that branches on one, or guards against a missing one, on the path
+  // that addresses the endpoint.
+  const variables: unknown = new Proxy(
+    {},
+    {
+      get: (_target, property) => (property === Symbol.toPrimitive ? () => "" : ""),
+      has: () => true,
+    },
+  );
+
   try {
-    (probe as (wire: unknown, variables: unknown) => unknown)(recorder, {});
+    (probe as (wire: unknown, variables: unknown) => unknown)(recorder, variables);
   } catch {
     // Variables are absent while probing, so a closure that reads them throws
     // after the addressing call has already been recorded.

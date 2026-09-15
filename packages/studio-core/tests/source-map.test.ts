@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
+import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { z } from "zod";
 import { extractSourceMap } from "../src/source-map";
+
+const { query, mutation } = courier();
 
 describe("extractSourceMap", () => {
   it("extracts source map from sources", () => {
@@ -11,8 +13,8 @@ describe("extractSourceMap", () => {
         users: defineGroup({
           prefix: "users",
           endpoints: {
-            getAll: endpoint<{ id: number }[]>()((http) => http.get()),
-            getById: endpoint<{ id: number }, { id: number }>()((http, vars) =>
+            getAll: query.response<{ id: number }[]>().via((http) => http.get()),
+            getById: query.variables<{ id: number }>().response<{ id: number }>().via((http, vars) =>
               http.get(":id", vars),
             ),
           },
@@ -30,13 +32,13 @@ describe("extractSourceMap", () => {
             prefix: "users",
             endpoints: {
               getAll: {
-                type: undefined,
+                type: "query",
                 hasVariablesSchema: false,
                 hasResponseSchema: false,
                 httpMethod: "GET",
               },
               getById: {
-                type: undefined,
+                type: "query",
                 hasVariablesSchema: false,
                 hasResponseSchema: false,
                 httpMethod: "GET",
@@ -59,10 +61,10 @@ describe("extractSourceMap", () => {
         users: defineGroup({
           prefix: "users",
           endpoints: {
-            getAll: endpoint({ response: z.array(UserSchema), type: "query" })((http) =>
+            getAll: query.response(z.array(UserSchema)).via((http) =>
               http.get(),
             ),
-            create: endpoint({ variables: CreateSchema, response: UserSchema, type: "mutation" })(
+            create: mutation.variables(CreateSchema).response(UserSchema).via(
               (http, vars) => http.post("", vars),
             ),
           },
@@ -96,7 +98,7 @@ describe("extractSourceMap", () => {
         users: defineGroup({
           prefix: "users",
           endpoints: {
-            getAll: endpoint<unknown[]>()((http) => http.get()),
+            getAll: query.response<unknown[]>().via((http) => http.get()),
           },
         }),
       },
@@ -108,7 +110,7 @@ describe("extractSourceMap", () => {
         posts: defineGroup({
           prefix: "posts",
           endpoints: {
-            list: endpoint<unknown[]>()((http) => http.get()),
+            list: query.response<unknown[]>().via((http) => http.get()),
           },
         }),
       },
@@ -131,8 +133,8 @@ describe("extractSourceMap", () => {
     const api = defineApi({
       baseURL: "https://flat.api",
       endpoints: {
-        healthCheck: endpoint<{ ok: boolean }>({ type: "query" })((http) => http.get("health")),
-        search: endpoint<string[], { q: string }>()((http, vars) => http.get("search", vars)),
+        healthCheck: query.response<{ ok: boolean }>().via((http) => http.get("health")),
+        search: query.variables<{ q: string }>().response<string[]>().via((http, vars) => http.get("search", vars)),
       },
     });
 
@@ -159,7 +161,7 @@ describe("extractSourceMap", () => {
       groups: {
         users: defineGroup({
           prefix: "users",
-          endpoints: { list: endpoint<unknown[]>()((http) => http.get()) },
+          endpoints: { list: query.response<unknown[]>().via((http) => http.get()) },
         }),
       },
     });
@@ -168,7 +170,7 @@ describe("extractSourceMap", () => {
       groups: {
         posts: defineGroup({
           prefix: "posts",
-          endpoints: { list: endpoint<unknown[]>()((http) => http.get()) },
+          endpoints: { list: query.response<unknown[]>().via((http) => http.get()) },
         }),
       },
     });
@@ -185,7 +187,7 @@ describe("extractSourceMap", () => {
       groups: {
         users: defineGroup({
           prefix: "users",
-          endpoints: { list: endpoint<unknown[]>()((http) => http.get()) },
+          endpoints: { list: query.response<unknown[]>().via((http) => http.get()) },
         }),
       },
     });
@@ -202,12 +204,12 @@ describe("extractSourceMap", () => {
         users: defineGroup({
           prefix: "users",
           endpoints: {
-            getAll: endpoint<unknown[]>()((http) => http.get()),
+            getAll: query.response<unknown[]>().via((http) => http.get()),
           },
         }),
       },
       endpoints: {
-        healthCheck: endpoint<boolean>()((http) => http.get("health")),
+        healthCheck: query.response<boolean>().via((http) => http.get("health")),
       },
     });
 

@@ -270,19 +270,18 @@ describe("integration: middleware with functional API", () => {
 				ops: defineGroup({
 					prefix: "ops",
 					endpoints: {
-						fail: query.response<never>().via(({ get }) => {
-							// addresses the endpoint, then fails the way a refused upstream does
-							get("fail");
-							throw new HTTPError({
-								status: 500,
-								headers: new Headers(),
-								data: { message: "boom" },
-							});
-						}),
+						fail: query.response<never>().via(({ get }) => get("fail")),
 					},
 				}),
 			},
 		});
+
+		fetchSpy.mockResolvedValueOnce(
+			new Response(JSON.stringify({ message: "boom" }), {
+				status: 500,
+				headers: new Headers({ "content-type": "application/json" }),
+			}),
+		);
 
 		try {
 			await executeRequest({ api }, {

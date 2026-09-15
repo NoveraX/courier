@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
+import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { z } from "zod";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
+
+const { query, mutation } = courier();
 
 const ItemSchema = z.object({ id: z.string(), name: z.string(), price: z.number() });
 
@@ -12,15 +14,11 @@ const api = defineApi({
     items: defineGroup({
       prefix: "/items",
       endpoints: {
-        list: endpoint({ response: z.array(ItemSchema), type: "query" })((http) => http.get("")),
-        get: endpoint({ response: ItemSchema, type: "query" })((http, v) => http.get(":id", v)),
-        create: endpoint({
-          response: ItemSchema,
-          variables: z.object({ name: z.string(), price: z.number() }),
-          type: "mutation",
-        })((http, v) => http.post("", v)),
-        delete: endpoint({ type: "mutation" })((http, v) => http.del(":id", v)),
-        deleteAll: endpoint({ type: "mutation" })((http) => http.del("")),
+        list: query.response(z.array(ItemSchema)).via((http) => http.get("")),
+        get: query.response(ItemSchema).via((http, v) => http.get(":id", v)),
+        create: mutation.variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema).via((http, v) => http.post("", v)),
+        delete: mutation.via((http, v) => http.del(":id", v)),
+        deleteAll: mutation.via((http) => http.del("")),
       },
     }),
   },
@@ -402,13 +400,13 @@ describe("top-level endpoints (no group)", () => {
   const flatApi = defineApi({
     baseURL: "https://test.api",
     endpoints: {
-      listUsers: endpoint({ response: z.array(UserSchema), type: "query" })((http) =>
+      listUsers: query.response(z.array(UserSchema)).via((http) =>
         http.get("users"),
       ),
-      getUser: endpoint({ response: UserSchema, type: "query" })((http, v) =>
+      getUser: query.response(UserSchema).via((http, v) =>
         http.get("users/:id", v),
       ),
-      healthCheck: endpoint({ response: z.object({ ok: z.boolean() }), type: "query" })((http) =>
+      healthCheck: query.response(z.object({ ok: z.boolean() })).via((http) =>
         http.get("health"),
       ),
     },
@@ -453,17 +451,17 @@ describe("mixed groups + top-level endpoints", () => {
       products: defineGroup({
         prefix: "/products",
         endpoints: {
-          list: endpoint({ response: z.array(ItemSchema), type: "query" })((http) =>
+          list: query.response(z.array(ItemSchema)).via((http) =>
             http.get(""),
           ),
         },
       }),
     },
     endpoints: {
-      healthCheck: endpoint({ response: z.object({ status: z.string() }), type: "query" })(
+      healthCheck: query.response(z.object({ status: z.string() })).via(
         (http) => http.get("health"),
       ),
-      listTags: endpoint({ response: z.array(z.object({ id: z.string(), label: z.string() })), type: "query" })(
+      listTags: query.response(z.array(z.object({ id: z.string(), label: z.string() }))).via(
         (http) => http.get("tags"),
       ),
     },

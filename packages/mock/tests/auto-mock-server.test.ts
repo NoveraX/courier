@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
+import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { z } from "zod";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
+
+const { query, mutation } = courier();
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -56,46 +58,24 @@ const api = defineApi({
     owners: defineGroup({
       prefix: "/owners",
       endpoints: {
-        listOwners: endpoint<z.infer<typeof OwnerSchema>[]>({
-          response: z.array(OwnerSchema),
-          type: "query",
-        })((http) => http.get("")),
-        getOwner: endpoint<z.infer<typeof OwnerSchema>, { ownerId: string }>({
-          response: OwnerSchema,
-          type: "query",
-        })((http, vars) => http.get(":ownerId", vars)),
-        createOwner: endpoint({
-          response: OwnerSchema,
-          variables: z.object({ name: z.string(), email: z.string() }),
-          type: "mutation",
-        })((http, vars) => http.post("", vars)),
-        deleteOwner: endpoint({ type: "mutation" })((http, vars) => http.del(":ownerId", vars)),
+        listOwners: query.response(z.array(OwnerSchema)).via((http) => http.get("")),
+        getOwner: query.variables<{ ownerId: string }>().response(OwnerSchema).via((http, vars) => http.get(":ownerId", vars)),
+        createOwner: mutation.variables(z.object({ name: z.string(), email: z.string() })).response(OwnerSchema).via((http, vars) => http.post("", vars)),
+        deleteOwner: mutation.via((http, vars) => http.del(":ownerId", vars)),
       },
     }),
     pets: defineGroup({
       prefix: "/pets",
       endpoints: {
-        listPets: endpoint<z.infer<typeof PetSchema>[]>({
-          response: z.array(PetSchema),
-          type: "query",
-        })((http) => http.get("")),
-        getPet: endpoint<z.infer<typeof PetSchema>, { petId: string }>({
-          response: PetSchema,
-          type: "query",
-        })((http, vars) => http.get(":petId", vars)),
+        listPets: query.response(z.array(PetSchema)).via((http) => http.get("")),
+        getPet: query.variables<{ petId: string }>().response(PetSchema).via((http, vars) => http.get(":petId", vars)),
       },
     }),
     catalog: defineGroup({
       prefix: "/catalog",
       endpoints: {
-        browse: endpoint<z.infer<typeof PaginatedSchema>>({
-          response: PaginatedSchema,
-          type: "query",
-        })((http) => http.get("browse")),
-        listItems: endpoint({
-          response: z.array(z.object({ id: z.string(), title: z.string(), price: z.number() })),
-          type: "query",
-        })((http) => http.get("")),
+        browse: query.response(PaginatedSchema).via((http) => http.get("browse")),
+        listItems: query.response(z.array(z.object({ id: z.string(), title: z.string(), price: z.number() }))).via((http) => http.get("")),
       },
     }),
   },

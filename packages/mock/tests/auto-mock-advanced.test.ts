@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
+import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { z } from "zod";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
+
+const { query, mutation } = courier();
 
 const ItemSchema = z.object({ id: z.string(), name: z.string(), price: z.number() });
 
@@ -12,17 +14,13 @@ const api = defineApi({
     items: defineGroup({
       prefix: "/items",
       endpoints: {
-        list: endpoint({ response: z.array(ItemSchema), type: "query" })((http) => http.get("")),
-        get: endpoint({ response: ItemSchema, type: "query" })((http, v) => http.get(":id", v)),
-        create: endpoint({
-          response: ItemSchema,
-          variables: z.object({ name: z.string(), price: z.number() }),
-          type: "mutation",
-        })((http, v) => http.post("", v)),
-        update: endpoint({ response: ItemSchema, type: "mutation" })((http, v) =>
+        list: query.response(z.array(ItemSchema)).via((http) => http.get("")),
+        get: query.response(ItemSchema).via((http, v) => http.get(":id", v)),
+        create: mutation.variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema).via((http, v) => http.post("", v)),
+        update: mutation.response(ItemSchema).via((http, v) =>
           http.patch(":id", v),
         ),
-        delete: endpoint({ type: "mutation" })((http, v) => http.del(":id", v)),
+        delete: mutation.via((http, v) => http.del(":id", v)),
       },
     }),
   },

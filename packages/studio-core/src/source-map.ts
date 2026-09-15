@@ -1,6 +1,6 @@
 import type { Sources } from "@noverax/courier/define";
 import type { SourceMap } from "./events";
-import { probeEndpoint } from "./source-map-probe";
+import { isEndpoint, probeEndpoint } from "./source-map-probe";
 import { extractSchemaStub } from "./source-map-schema";
 
 const ENDPOINT_SCHEMA = Symbol.for("courier.endpoint.schema");
@@ -76,10 +76,10 @@ export function extractEndpoints(
   const endpoints: SourceMap[string]["groups"][string]["endpoints"] = {};
 
   for (const [name, fn] of Object.entries(obj)) {
-    if (name === "options" || typeof fn !== "function") continue;
+    if (name === "options" || !isEndpoint(fn)) continue;
 
-    const schema = (fn as unknown as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
-    const probed = probeEndpoint(fn as (...args: unknown[]) => unknown);
+    const schema = (fn as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
+    const probed = probeEndpoint(fn);
     const httpMethod = normalizeHttpMethod(probed.method);
 
     const variablesStub = schema?.variables ? extractSchemaStub(schema.variables) : undefined;

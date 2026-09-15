@@ -1,5 +1,5 @@
 import { normalizeHttpMethod } from "@noverax/courier";
-import { extractSchema, normalizePrefix, probeEndpoint } from "./endpoint-probe";
+import { extractSchema, isEndpoint, normalizePrefix, probeEndpoint } from "./endpoint-probe";
 import { detectOperation } from "./operation-detect";
 import type { RouteInfo, SourceGroup } from "./route-types";
 
@@ -27,7 +27,7 @@ export function analyzeRoutes(source: Record<string, unknown>): RouteInfo[] {
 
   // Top-level endpoints (functions at source root, not inside groups)
   for (const [name, fn] of Object.entries(source)) {
-    if (name === "options" || typeof fn !== "function") continue;
+    if (name === "options" || !isEndpoint(fn)) continue;
     analyzeTopLevelEndpoint(routes, name, fn as (...args: unknown[]) => unknown);
   }
 
@@ -69,7 +69,7 @@ function analyzeTopLevelEndpoint(
 function analyzeGroup(routes: RouteInfo[], groupName: string, group: SourceGroup): void {
   const prefix = normalizePrefix(group.options?.prefix ?? `/${groupName}`);
   for (const [endpointName, endpointFn] of Object.entries(group)) {
-    if (endpointName === "options" || typeof endpointFn !== "function") continue;
+    if (endpointName === "options" || !isEndpoint(endpointFn)) continue;
     analyzeEndpoint(
       routes,
       groupName,

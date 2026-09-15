@@ -1,13 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
+import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { createAutoMockServer } from "../src/auto/create-auto-server";
+
+const { query, mutation } = courier();
 
 const products = defineGroup({
   prefix: "products",
   endpoints: {
-    getAll: endpoint()((http) => http.get()),
-    getById: endpoint()((http, vars) => http.get(":id", vars)),
-    create: endpoint()((http, vars) => http.post("", vars)),
+    getAll: query.via((http) => http.get()),
+    getById: query.via((http, vars) => http.get(":id", vars)),
+    create: mutation.via((http, vars) => http.post("", vars)),
   },
 });
 

@@ -1,7 +1,9 @@
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define";
+import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import type { WSChannel } from "@noverax/courier/realtime";
 import { describe, expect, it, vi } from "vitest";
 import { createMockClient } from "../src/create-mock-client";
+
+const { query } = courier();
 
 type ChatMessage = Record<string, unknown>;
 
@@ -10,7 +12,7 @@ const noop = () => {};
 const chat = defineGroup({
   prefix: "chat",
   endpoints: {
-    room: endpoint<ChatMessage, { roomId?: string }>()((http, vars) => http.get("room", vars)),
+    room: query.variables<{ roomId?: string }>().response<ChatMessage>().via((http, vars) => http.get("room", vars)),
   },
 });
 

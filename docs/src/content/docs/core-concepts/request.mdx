@@ -132,7 +132,7 @@ When `executeRequest` receives a request payload, it goes through these steps:
 
 1. **Resolve source** — looks up the source object in the `sources` map
 2. **Resolve endpoint** — finds the group and endpoint function by parsing the `"group:method"` key
-3. **Validate variables** — if the endpoint has a schema attached (via `endpoint({ variables: schema })`), validates the input
+3. **Validate variables** — if the endpoint has a schema attached (via `.variables(schema)`), validates the input
 4. **Run middleware chain** — executes middleware in array order, each wrapping the next
 5. **Execute endpoint** — creates `HttpClient`, calls the endpoint function with `http` methods and variables
 6. **Validate response** — if the endpoint has a response schema, validates the output
@@ -145,7 +145,7 @@ executeRequest
   ├─ middleware[0]
   │   └─ middleware[1]
   │       └─ middleware[n]
-  │           └─ endpoint(http, vars) → HttpClient.fetch → backend
+  │           └─ via(http, vars) → HttpClient.fetch → backend
   ├─ validate response (if schema)
   └─ return data (or Response for proxy)
 ```

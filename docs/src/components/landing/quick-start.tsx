@@ -8,14 +8,19 @@ import { AnimatedSection } from "./section-animate"
 
 const installCode = `npm install @noverax/courier`
 
-const defineCode = `import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+const defineCode = `import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint<User[]>()((http) => http.get()),
-    getById: endpoint<User, { id: number }>()((http, v) => http.get(":id", v)),
-    create: endpoint<User, CreateUser>()((http, v) => http.post("", v)),
+    getAll: query.response<User[]>().via((http) => http.get()),
+    getById: query
+      .variables<{ id: number }>()
+      .response<User>()
+      .via((http, v) => http.get(":id", v)),
+    create: mutation.variables<CreateUser>().response<User>().via((http, v) => http.post("", v)),
   },
 })
 

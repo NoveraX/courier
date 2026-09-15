@@ -27,19 +27,27 @@ TypeScript module augmentation lets you declare your API type once, and every Co
 
 ### Step 1: Define your API with the functional API
 
-Create your groups and API definition using `defineGroup`, `endpoint`, and `defineApi`:
+Create your groups and API definition using `courier`, `defineGroup`, and `defineApi`:
 
 ```ts title="api/users.ts"
-import { defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type User = { id: number; name: string; email: string }
 
 export const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint<User[]>()((http) => http.get()),
-    getById: endpoint<User, { id: number }>()((http, vars) => http.get(":id", vars)),
-    create: endpoint<User, { name: string; email: string }>()((http, vars) => http.post("", vars)),
+    getAll: query.response<User[]>().via((http) => http.get()),
+    getById: query
+      .variables<{ id: number }>()
+      .response<User>()
+      .via((http, vars) => http.get(":id", vars)),
+    create: mutation
+      .variables<{ name: string; email: string }>()
+      .response<User>()
+      .via((http, vars) => http.post("", vars)),
   },
 })
 ```

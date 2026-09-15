@@ -1,4 +1,6 @@
-import { defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type User = {
   id: number
@@ -30,23 +32,34 @@ type UserPostResponse = {
 export const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint<UsersListResponse, { page?: number; limit?: number; search?: string }>()(
-      (http) => http.get()
-    ),
-    getById: endpoint<User, { id: number }>()((http) => http.get(":id")),
-    create: endpoint<User, { name: string; email: string; role?: string }>()((http, vars) =>
-      http.post("", vars)
-    ),
-    update: endpoint<User, { id: number; name: string; email: string; role: string }>()(
-      (http, vars) => http.put(":id", vars)
-    ),
-    patch: endpoint<User, { id: number } & Partial<Omit<User, "id" | "createdAt">>>()(
-      (http, vars) => http.patch(":id", vars)
-    ),
-    remove: endpoint<null, { id: number }>()((http, vars) => http.del(":id", vars)),
-    getUserPost: endpoint<UserPostResponse, { id: number; postId: number }>()((http) =>
-      http.get(":id/posts/:postId")
-    ),
+    getAll: query
+      .variables<{ page?: number; limit?: number; search?: string }>()
+      .response<UsersListResponse>()
+      .via((http) => http.get()),
+    getById: query
+      .variables<{ id: number }>()
+      .response<User>()
+      .via((http) => http.get(":id")),
+    create: mutation
+      .variables<{ name: string; email: string; role?: string }>()
+      .response<User>()
+      .via((http, vars) => http.post("", vars)),
+    update: mutation
+      .variables<{ id: number; name: string; email: string; role: string }>()
+      .response<User>()
+      .via((http, vars) => http.put(":id", vars)),
+    patch: mutation
+      .variables<{ id: number } & Partial<Omit<User, "id" | "createdAt">>>()
+      .response<User>()
+      .via((http, vars) => http.patch(":id", vars)),
+    remove: mutation
+      .variables<{ id: number }>()
+      .response<null>()
+      .via((http, vars) => http.del(":id", vars)),
+    getUserPost: query
+      .variables<{ id: number; postId: number }>()
+      .response<UserPostResponse>()
+      .via((http) => http.get(":id/posts/:postId")),
   },
 })
 

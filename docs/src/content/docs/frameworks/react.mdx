@@ -13,7 +13,9 @@ npm install @noverax/courier @noverax/courier-react @tanstack/react-query
 Create a shared API definition. This file is used by both the React app and the backend proxy:
 
 ```ts title="shared/sources.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type Product = { id: number; name: string; price: number }
 type ProductList = { data: Product[]; total: number }
@@ -21,13 +23,13 @@ type ProductList = { data: Product[]; total: number }
 const products = defineGroup({
   prefix: "products",
   endpoints: {
-    getAll: endpoint<ProductList, { page?: number; category?: string }>()(
+    getAll: query.variables<{ page?: number; category?: string }>().response<ProductList>().via(
       ({ get }) => get()
     ),
-    getById: endpoint<Product, { id: number }>()(
+    getById: query.variables<{ id: number }>().response<Product>().via(
       ({ get }) => get(":id")
     ),
-    create: endpoint<Product, { name: string; price: number }>()(
+    create: mutation.variables<{ name: string; price: number }>().response<Product>().via(
       ({ post }) => post()
     ),
   },
@@ -184,7 +186,7 @@ Make sure your proxy backend has CORS configured to allow requests from your Rea
 
 ```
 shared/
-  sources.ts                # defineApi + defineGroup + endpoint (shared)
+  sources.ts                # courier + defineGroup + defineApi (shared)
 server/
   index.ts                  # Express/Hono/Fastify with courierHandler
 src/

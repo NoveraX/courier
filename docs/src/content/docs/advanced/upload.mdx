@@ -50,20 +50,22 @@ export function AvatarUpload() {
 
 ## Endpoint definition
 
-Define upload endpoints using `defineGroup` and `endpoint`:
+Define upload endpoints using `courier` and `defineGroup`:
 
 ```ts title="api/users.ts"
-import { defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { mutation } = courier()
 
 type User = { id: number; name: string; avatarUrl: string }
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    uploadAvatar: endpoint<User, FormData>()((http, vars) =>
+    uploadAvatar: mutation.variables<FormData>().response<User>().via((http, vars) =>
       http.post("avatar", vars)
     ),
-    uploadDocument: endpoint<{ url: string }, FormData>()((http, vars) =>
+    uploadDocument: mutation.variables<FormData>().response<{ url: string }>().via((http, vars) =>
       http.post("documents", vars)
     ),
   },

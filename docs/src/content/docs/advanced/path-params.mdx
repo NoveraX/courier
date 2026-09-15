@@ -5,7 +5,9 @@ export const metadata = { title: "Path Parameters", description: "Dynamic URL se
 Use the `:paramName` syntax in URL paths to define dynamic segments. Courier compiles these paths using an internal regex parser and substitutes values from variables or `pathOptions`:
 
 ```ts title="api/users.ts"
-import { defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { query } = courier()
 
 type User = { id: number; name: string }
 type Comment = { id: number; body: string }
@@ -14,16 +16,16 @@ const users = defineGroup({
   prefix: "users",
   endpoints: {
     // GET /users/:id -> compiled to GET /users/5
-    getById: endpoint<User, { id: number }>()((http, vars) =>
+    getById: query.variables<{ id: number }>().response<User>().via((http, vars) =>
       http.get(":id", vars)
     ),
 
     // GET /users/:userId/posts/:postId/comments/:commentId
-    getComment: endpoint<Comment, {
+    getComment: query.variables<{
       userId: number
       postId: number
       commentId: number
-    }>()((http, vars) =>
+    }>().response<Comment>().via((http, vars) =>
       http.get(":userId/posts/:postId/comments/:commentId", vars)
     ),
   },
@@ -45,7 +47,10 @@ await caller.users.getById({ id: 5 })
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getWithDetails: endpoint<User, { id: number; include?: string }>()((http, vars) =>
+    getWithDetails: query
+      .variables<{ id: number; include?: string }>()
+      .response<User>()
+      .via((http, vars) =>
       http.get(":id", vars)
     ),
   },
@@ -56,7 +61,10 @@ await caller.users.getWithDetails({ id: 5, include: "posts" })
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    updateAvatar: endpoint<void, { id: number; name: string }>()((http, vars) =>
+    updateAvatar: mutation
+      .variables<{ id: number; name: string }>()
+      .response<void>()
+      .via((http, vars) =>
       http.post(":id/avatar", vars)
     ),
   },
@@ -73,15 +81,20 @@ You do not need to separate path params from body/query params manually. Courier
 For path parameters that come from server-side context (cookies, headers, session) rather than the caller, use the `pathOptions` function. It runs on the server before every request and provides values for path compilation:
 
 ```ts title="api/index.ts"
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { query } = courier()
 
 type User = { id: number; name: string }
 
 const users = defineGroup({
   prefix: "orgs/:orgId/users",
   endpoints: {
-    getAll: endpoint<User[]>()((http) => http.get()),
-    getById: endpoint<User, { id: number }>()((http, vars) => http.get(":id", vars)),
+    getAll: query.response<User[]>().via((http) => http.get()),
+    getById: query
+      .variables<{ id: number }>()
+      .response<User>()
+      .via((http, vars) => http.get(":id", vars)),
   },
 })
 
@@ -111,7 +124,9 @@ The `pathOptions` function receives the Web Standard `Request` object and runs o
 Each group can define its own `pathOptions` that override the source-level values for the same keys. This is useful when different groups resolve the same parameter differently:
 
 ```ts title="api/groups.ts"
-import { defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { query } = courier()
 
 type Project = { id: number; name: string }
 type Task = { id: number; title: string }
@@ -125,8 +140,11 @@ const projects = defineGroup({
     return { workspaceId }
   },
   endpoints: {
-    getAll: endpoint<Project[]>()((http) => http.get()),
-    getById: endpoint<Project, { id: number }>()((http, vars) => http.get(":id", vars)),
+    getAll: query.response<Project[]>().via((http) => http.get()),
+    getById: query
+      .variables<{ id: number }>()
+      .response<Project>()
+      .via((http, vars) => http.get(":id", vars)),
   },
 })
 
@@ -134,7 +152,7 @@ const tasks = defineGroup({
   // No group pathOptions — uses the source-level pathOptions if any
   prefix: "tasks",
   endpoints: {
-    getAll: endpoint<Task[]>()((http) => http.get()),
+    getAll: query.response<Task[]>().via((http) => http.get()),
   },
 })
 ```

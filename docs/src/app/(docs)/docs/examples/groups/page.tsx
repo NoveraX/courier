@@ -4,23 +4,34 @@ import { docsMetadata } from "@/lib/metadata"
 
 import { GroupInfo, GroupsDemo } from "./_components"
 
-const definitionCode = `import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+const definitionCode = `import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 // Each defineGroup has a prefix that maps to a backend path
 const users = defineGroup({
   prefix: "users", // → /users/*
   endpoints: {
-    getAll: endpoint<UsersListResponse>()((http) => http.get()),          // GET /users
-    getById: endpoint<User, { id: number }>()((http) => http.get(":id")), // GET /users/:id
-    create: endpoint<User, CreateBody>()((http) => http.post()),          // POST /users
+    getAll: query.response<UsersListResponse>().via((http) => http.get()),          // GET /users
+    getById: query
+      .variables<{ id: number }>()
+      .response<User>()
+      .via((http) => http.get(":id")), // GET /users/:id
+    create: mutation
+      .variables<CreateBody>()
+      .response<User>()
+      .via((http) => http.post()),          // POST /users
   },
 })
 
 const posts = defineGroup({
   prefix: "posts", // → /posts/*
   endpoints: {
-    getAll: endpoint<PostsListResponse>()((http) => http.get()),    // GET /posts
-    create: endpoint<Post, CreateBody>()((http) => http.post()),    // POST /posts
+    getAll: query.response<PostsListResponse>().via((http) => http.get()),    // GET /posts
+    create: mutation
+      .variables<CreateBody>()
+      .response<Post>()
+      .via((http) => http.post()),    // POST /posts
   },
 })
 

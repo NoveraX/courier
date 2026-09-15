@@ -1,4 +1,6 @@
-import { defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type EchoResponse = {
   method: string
@@ -12,8 +14,14 @@ type EchoResponse = {
 export const echo = defineGroup({
   prefix: "echo",
   endpoints: {
-    send: endpoint<EchoResponse, Record<string, unknown>>()((http, vars) => http.post("", vars)),
-    retrieve: endpoint<EchoResponse, Record<string, unknown>>()((http) => http.get()),
+    send: mutation
+      .variables<Record<string, unknown>>()
+      .response<EchoResponse>()
+      .via((http, vars) => http.post("", vars)),
+    retrieve: query
+      .variables<Record<string, unknown>>()
+      .response<EchoResponse>()
+      .via((http) => http.get()),
   },
 })
 

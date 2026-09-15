@@ -3,7 +3,7 @@ export const metadata = { title: "defineGroup", description: "Creates a typed en
 ## Import
 
 ```ts
-import { defineGroup, endpoint } from "@noverax/courier/define"
+import { defineGroup } from "@noverax/courier/define"
 ```
 
 ## Signature
@@ -36,18 +36,32 @@ type GroupOptions = {
 ## Basic Usage
 
 ```ts title="api/users.ts"
-import { defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type User = { id: string; name: string; email: string }
 
 export const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint<User[]>()((http) => http.get()),
-    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
-    create: endpoint<User, { name: string; email: string }>()((http, vars) => http.post("", vars)),
-    update: endpoint<User, { id: string; name: string }>()((http, vars) => http.put(":id", vars)),
-    remove: endpoint<null, { id: string }>()((http, vars) => http.del(":id", vars)),
+    getAll: query.response<User[]>().via((http) => http.get()),
+    getById: query
+      .variables<{ id: string }>()
+      .response<User>()
+      .via((http, vars) => http.get(":id", vars)),
+    create: mutation
+      .variables<{ name: string; email: string }>()
+      .response<User>()
+      .via((http, vars) => http.post("", vars)),
+    update: mutation
+      .variables<{ id: string; name: string }>()
+      .response<User>()
+      .via((http, vars) => http.put(":id", vars)),
+    remove: mutation
+      .variables<{ id: string }>()
+      .response<null>()
+      .via((http, vars) => http.del(":id", vars)),
   },
 })
 ```
@@ -60,10 +74,13 @@ The prefix is prepended to all endpoint URLs within the group:
 const products = defineGroup({
   prefix: "api/v2/products",
   endpoints: {
-    list: endpoint<Product[]>()((http) => http.get()),
+    list: query.response<Product[]>().via((http) => http.get()),
     // → GET {baseURL}/api/v2/products
 
-    getById: endpoint<Product, { id: string }>()((http, vars) => http.get(":id", vars)),
+    getById: query
+      .variables<{ id: string }>()
+      .response<Product>()
+      .via((http, vars) => http.get(":id", vars)),
     // → GET {baseURL}/api/v2/products/:id
   },
 })
@@ -81,7 +98,7 @@ const tenantUsers = defineGroup({
     return { tenantId }
   },
   endpoints: {
-    list: endpoint<User[]>()((http) => http.get()),
+    list: query.response<User[]>().via((http) => http.get()),
     // When tenantId = "acme": GET {baseURL}/acme/users
   },
 })
@@ -91,30 +108,45 @@ const tenantUsers = defineGroup({
 Path options from `defineApi()` are resolved first, then group-level `pathOptions` are merged on top. Group options take precedence for overlapping keys.
 </Callout>
 
-## The endpoint() Helper
+## Describing an Endpoint
 
-`endpoint<R, V>()` creates a typed endpoint function with a curried API:
+Each endpoint is built from one of the heads `courier()` returns, and closed with `.via()`:
 
 ```ts
-// endpoint<Response, Variables>()((http, vars) => ...)
-// R = response type, V = variables type (defaults to undefined)
+const { query } = courier()
 
-endpoint<User[]>()((http) => http.get())
-// No variables — V defaults to undefined
+query.response<User[]>().via((http) => http.get())
+// No variables — the caller passes nothing
 
-endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars))
+query.variables<{ id: string }>().response<User>().via((http, vars) => http.get(":id", vars))
 // Variables required — caller must pass { id: string }
 ```
 
-## Endpoint Type
+## Endpoint Types
 
-The `Endpoint<R, V>` type is the function signature for endpoint definitions:
+An endpoint is an inert descriptor, not a callable. Three types name one:
 
 ```ts
-type Endpoint<R, V = undefined> = (
-  methods: HttpMethods,
-  variables: V,
-) => HttpResponse<R> | Promise<HttpResponse<R>>
+type HttpEndpoint<Response, Variables, Kind extends "query" | "mutation">
+type StreamEndpoint<Response, Variables>
+type ChannelEndpoint<Response, Variables, Send>
+```
+
+Read the types back off an endpoint with the inference helpers, which is how a
+caller knows what a method takes and returns:
+
+```ts
+import { courier } from "@noverax/courier/define"
+import type { InferResponse, InferVariables } from "@noverax/courier/define"
+
+const { query } = courier()
+
+const getById = query.variables<{ id: string }>().response<User>().via(
+  (http, vars) => http.get(":id", vars),
+)
+
+type Response = InferResponse<typeof getById>   // User
+type Variables = InferVariables<typeof getById> // { id: string }
 ```
 
 ## Related

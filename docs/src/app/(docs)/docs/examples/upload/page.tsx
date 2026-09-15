@@ -25,14 +25,16 @@ const result = await caller.files.with({
   },
 }).upload(formData)`
 
-const sourceCode = `import { defineGroup, endpoint } from "@noverax/courier/define"
+const sourceCode = `import { courier, defineGroup } from "@noverax/courier/define"
+
+const { mutation } = courier()
 
 const files = defineGroup({
   prefix: "upload",
   endpoints: {
     // FormData auto-detected — no bodySerializer needed
     // Empty files are automatically removed before sending
-    upload: endpoint<UploadResponse, FormData>()((http) => http.post()),
+    upload: mutation.variables<FormData>().response<UploadResponse>().via((http) => http.post()),
   },
 })`
 

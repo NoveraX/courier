@@ -76,7 +76,7 @@ describe("courier", () => {
 
       expect(meta(createUser).response).toBe(UserSchema);
       expect(meta(createUser).variables).toBe(ById);
-      expect(meta(createUser).kind).toBe("mutation");
+      expect(meta(createUser).type).toBe("mutation");
     });
 
     it("produces the same descriptor whichever order the slots are filled", () => {
@@ -119,7 +119,8 @@ describe("courier", () => {
         .send(CommandSchema)
         .via((ws) => ws.connect("presence"));
 
-      expect(meta(presence).send).toBe(CommandSchema);
+      // recorded as `receive`, which names the same messages from the server side
+      expect(meta(presence).receive).toBe(CommandSchema);
     });
 
     it("refuses a slot that was already filled", () => {

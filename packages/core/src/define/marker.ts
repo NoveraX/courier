@@ -1,5 +1,6 @@
 import type { HttpMethod } from "../http-client/types";
-import type { EndpointSchemas, ResolvedEndpointOptions } from "./options";
+import type { SchemaMetadata } from "../validation";
+import type { ResolvedEndpointOptions } from "./options";
 import type { AnyProbe } from "./probe";
 
 /**
@@ -68,7 +69,7 @@ export interface AnyEndpointTypes {
  */
 export interface Endpoint<T extends AnyEndpointTypes> {
   readonly [ENDPOINT]: T;
-  readonly [ENDPOINT_SCHEMA]: EndpointSchemas;
+  readonly [ENDPOINT_SCHEMA]: SchemaMetadata;
   readonly kind: T["kind"];
   /** Captured by probing the wire closure when the endpoint was defined. */
   readonly method: HttpMethod;

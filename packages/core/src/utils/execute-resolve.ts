@@ -26,12 +26,32 @@ export function resolveEndpoint(
       ? (endpointGroup && getEndpoint(endpointGroup, method)) || getEndpoint(dataSource, method)
       : undefined;
 
-  const schema =
-    typeof endpoint === "function"
-      ? (endpoint as unknown as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA]
-      : undefined;
+  return { endpoint: toCallable(endpoint), endpointGroup, schema: readSchema(endpoint) };
+}
 
-  return { endpoint, endpointGroup, schema };
+type WireFn = (...args: unknown[]) => unknown;
+
+/**
+ * Recover the closure that performs the request.
+ *
+ * A descriptor keeps it under `probe`; nothing else about resolution depends
+ * on which of the two an endpoint is.
+ */
+function toCallable(endpoint: unknown): WireFn | undefined {
+  if (typeof endpoint === "function") return endpoint as WireFn;
+  if (typeof endpoint === "object" && endpoint !== null) {
+    const { probe } = endpoint as { probe?: unknown };
+    if (typeof probe === "function") return probe as WireFn;
+  }
+  return undefined;
+}
+
+/** Read the metadata stamped on an endpoint, whichever shape it has. */
+function readSchema(endpoint: unknown): SchemaMetadata | undefined {
+  if (endpoint === null || (typeof endpoint !== "function" && typeof endpoint !== "object")) {
+    return undefined;
+  }
+  return (endpoint as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
 }
 
 export function buildMiddlewareContext(

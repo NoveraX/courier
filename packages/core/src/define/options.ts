@@ -1,4 +1,3 @@
-import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { Middleware } from "../middleware/types";
 import type { CacheConfig } from "../validation";
 import type { EndpointKind } from "./marker";
@@ -82,14 +81,6 @@ export interface RetryOptions {
   backoff?: "fixed" | "exponential";
   /** Response statuses worth retrying. */
   on?: readonly number[];
-}
-
-/** Schemas captured by the builder slots, kept in a non-generic shape. */
-export interface EndpointSchemas {
-  response?: StandardSchemaV1;
-  variables?: StandardSchemaV1;
-  send?: StandardSchemaV1;
-  readonly kind: EndpointKind;
 }
 
 /** Everything the runtime needs about an endpoint, flattened at definition. */

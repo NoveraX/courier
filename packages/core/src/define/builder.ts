@@ -1,15 +1,10 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { ConfigurationError } from "../errors/configuration-error";
 import type { Middleware } from "../middleware/types";
-import type { CacheConfig } from "../validation";
+import type { CacheConfig, SchemaMetadata, Transport } from "../validation";
 import type { EndpointKind } from "./marker";
 import { ENDPOINT_SCHEMA } from "./marker";
-import type {
-  AnyEndpointOptions,
-  EndpointSchemas,
-  ResolvedEndpointOptions,
-  RetryOptions,
-} from "./options";
+import type { AnyEndpointOptions, ResolvedEndpointOptions, RetryOptions } from "./options";
 import type { AnyProbe } from "./probe";
 import { probeWire } from "./probe";
 
@@ -109,9 +104,32 @@ export function resolveOptions(
   } as ResolvedEndpointOptions;
 }
 
-/** Build the schema record stamped on a descriptor for tooling to read. */
-export function resolveSchemas(state: BuilderState): EndpointSchemas {
-  return { ...state.schemas, kind: state.kind };
+const TRANSPORT_BY_KIND: Record<EndpointKind, Transport> = {
+  query: "http",
+  mutation: "http",
+  stream: "sse",
+  channel: "ws",
+};
+
+/**
+ * Build the metadata stamped on a descriptor.
+ *
+ * Kept in the shape every consumer already reads, so the mock generator, the
+ * studio codegen and the request executor need no knowledge of how an endpoint
+ * was authored. The channel send slot is recorded as `receive` because that
+ * field names the same messages from the server's side.
+ */
+export function resolveSchemas(state: BuilderState): SchemaMetadata {
+  const { response, variables, send } = state.schemas;
+  const transport = TRANSPORT_BY_KIND[state.kind];
+  return {
+    ...(response !== undefined && { response }),
+    ...(variables !== undefined && { variables }),
+    ...(send !== undefined && { receive: send }),
+    ...((state.kind === "query" || state.kind === "mutation") && { type: state.kind }),
+    ...(transport !== "http" && { transport }),
+    ...(state.cache !== undefined && { cache: state.cache }),
+  };
 }
 
 /**

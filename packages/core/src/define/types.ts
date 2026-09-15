@@ -1,5 +1,6 @@
 import type { BaseOptions, GroupOptions, HttpMethods, HttpResponse } from "../http-client/types";
 import type { ChannelHandlers, SSEHandler, WSPushHandler } from "../realtime/types";
+import type { AnyEndpoint } from "./marker";
 
 /** Typed HTTP endpoint function — the core building block */
 export type Endpoint<TResponse, TVariables = undefined> = (
@@ -36,7 +37,8 @@ export type AnyEndpointFn =
   | Endpoint<any, any>
   | SSEEndpoint<any, any>
   | WSEndpoint<any, any>
-  | WSChannelEndpoint<any, any, any>;
+  | WSChannelEndpoint<any, any, any>
+  | AnyEndpoint;
 
 /** Record of endpoint functions keyed by method name */
 export type EndpointRecord = Record<string, AnyEndpointFn>;

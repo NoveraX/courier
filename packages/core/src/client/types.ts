@@ -1,4 +1,11 @@
 import type {
+  AnyEndpoint,
+  InferKind,
+  InferResponse,
+  InferSend,
+  InferVariables,
+} from "../define/marker";
+import type {
   AnyEndpointFn,
   DefinedApi,
   Endpoint,
@@ -20,29 +27,45 @@ type EndpointReturn<TResponse, TRaw extends boolean> = Promise<
 >;
 
 /** Typed method signature — adapts based on whether variables are required */
-type EndpointMethod<TResponse, TVariables, TRaw extends boolean> = [TVariables] extends [undefined]
+type EndpointMethod<TResponse, TVariables, TRaw extends boolean> = [TVariables] extends [
+  undefined | void,
+]
   ? () => EndpointReturn<TResponse, TRaw>
   : {} extends TVariables
     ? (variables?: TVariables) => EndpointReturn<TResponse, TRaw>
     : (variables: TVariables) => EndpointReturn<TResponse, TRaw>;
 
 /** SSE subscription method — returns SSESubscription (not Promise) */
-type SSEMethod<TResponse, TVariables> = [TVariables] extends [undefined]
+type SSEMethod<TResponse, TVariables> = [TVariables] extends [undefined | void]
   ? () => SSESubscription<TResponse>
   : {} extends TVariables
     ? (variables?: TVariables) => SSESubscription<TResponse>
     : (variables: TVariables) => SSESubscription<TResponse>;
 
 /** WS channel method — returns WSChannel (not Promise) */
-type WSChannelMethod<TResponse, TReceive, TVariables> = [TVariables] extends [undefined]
+type WSChannelMethod<TResponse, TReceive, TVariables> = [TVariables] extends [undefined | void]
   ? () => WSChannel<TReceive, TResponse>
   : {} extends TVariables
     ? (variables?: TVariables) => WSChannel<TReceive, TResponse>
     : (variables: TVariables) => WSChannel<TReceive, TResponse>;
 
+/**
+ * Method type for an endpoint descriptor.
+ *
+ * Dispatches on the declared kind through indexed access, so adding a slot to
+ * an endpoint never changes how its call signature is resolved.
+ */
+type DescriptorMethod<TEndpoint extends AnyEndpoint, TRaw extends boolean> =
+  InferKind<TEndpoint> extends "stream"
+    ? SSEMethod<InferResponse<TEndpoint>, InferVariables<TEndpoint>>
+    : InferKind<TEndpoint> extends "channel"
+      ? WSChannelMethod<InferResponse<TEndpoint>, InferSend<TEndpoint>, InferVariables<TEndpoint>>
+      : EndpointMethod<InferResponse<TEndpoint>, InferVariables<TEndpoint>, TRaw>;
+
 /** Resolve the correct method type based on endpoint transport brand */
-type ResolveMethod<TEndpoint, TRaw extends boolean> =
-  TEndpoint extends SSEEndpoint<infer TResp, infer TVars>
+type ResolveMethod<TEndpoint, TRaw extends boolean> = TEndpoint extends AnyEndpoint
+  ? DescriptorMethod<TEndpoint, TRaw>
+  : TEndpoint extends SSEEndpoint<infer TResp, infer TVars>
     ? SSEMethod<TResp, TVars>
     : TEndpoint extends WSChannelEndpoint<infer TResp, infer TRecv, infer TVars>
       ? WSChannelMethod<TResp, TRecv, TVars>

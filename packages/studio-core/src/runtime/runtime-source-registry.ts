@@ -9,8 +9,8 @@
  * `core/src/announce` is pinned.
  */
 
-import { getSourceName } from "@noverax/nexus/define";
 import type { AnySource, Sources } from "@noverax/nexus/define";
+import { getSourceName } from "@noverax/nexus/define";
 import { consumeAnnouncements } from "./announce-hosting";
 
 const REGISTRY_KEY = Symbol.for("nexus.studio.runtime-source-registry");

@@ -3,10 +3,10 @@
  */
 
 import type { ParsedSpec } from "../apis";
+import { withImportsLock } from "./imports-lock";
 import { handleManageApply } from "./manage-apply";
 import { handleInventory, handleManagePreview } from "./manage-helpers";
 import { errMsg } from "./registry-helpers";
-import { withImportsLock } from "./imports-lock";
 import type { JsonResponse, RouteApp } from "./route-types";
 import { isObject, isString } from "./validate-body";
 

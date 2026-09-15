@@ -17,7 +17,11 @@ import { loadImportsSnapshot, summarizeImports } from "./imports-bridge";
 import type { LifecycleCoordinator } from "./mock-manager";
 import { mockServers, runtimeRegistry } from "./runtime-namespace-state";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
-import { sanitizeMockCommand, sanitizeMockManaged, sanitizeMockServerEvent } from "./sanitize-mock-events";
+import {
+  sanitizeMockCommand,
+  sanitizeMockManaged,
+  sanitizeMockServerEvent,
+} from "./sanitize-mock-events";
 import type { WatcherStatus } from "./watcher-status";
 
 export interface SetupUiNamespaceDeps {

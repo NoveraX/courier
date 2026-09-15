@@ -35,7 +35,9 @@ export function loadStudioUrl(projectRoot: string = process.cwd()): Promise<stri
       return `http://${host}:${port}`;
     })
     .catch((err) => {
-      log.debug(`No nexus.config found at ${projectRoot}, using default Studio URL — ${describe(err)}`);
+      log.debug(
+        `No nexus.config found at ${projectRoot}, using default Studio URL — ${describe(err)}`,
+      );
       return DEFAULT_URL;
     });
 

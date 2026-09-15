@@ -22,9 +22,7 @@ export function buildGroupEndpoints(
   // custom or removed-from-spec endpoints.
   if (diskGroup) {
     for (const name of diskGroup.endpoints) {
-      endpoints.push(
-        classifyDiskEndpoint(groupName, name, specGroup, fingerprints, diskHashes),
-      );
+      endpoints.push(classifyDiskEndpoint(groupName, name, specGroup, fingerprints, diskHashes));
     }
   }
 

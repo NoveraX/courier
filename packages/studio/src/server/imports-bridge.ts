@@ -9,8 +9,8 @@
 
 import type { NexusImportEntry } from "@noverax/nexus/config";
 import {
-  type ImportsState,
   type ImportStateEntry,
+  type ImportsState,
   loadImportsState,
   recordImport,
   removeImport,
@@ -84,10 +84,7 @@ function extractOptions(entry: NexusImportEntry): Record<string, unknown> {
  * route-level lock composes cleanly and still serializes against other
  * top-level writers.
  */
-export async function persistImportState(
-  name: string,
-  entry: ImportStateEntry,
-): Promise<void> {
+export async function persistImportState(name: string, entry: ImportStateEntry): Promise<void> {
   await withImportsLock(() => {
     const root = getProjectRoot();
     saveImportsState(root, recordImport(loadImportsState(root), name, entry));

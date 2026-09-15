@@ -1,12 +1,7 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 
-import {
-  createHandler,
-  createLogger,
-  createWSHandler,
-  registerSources,
-} from "@noverax/nexus";
+import { createHandler, createLogger, createWSHandler, registerSources } from "@noverax/nexus";
 import { announceHosting } from "@noverax/nexus/announce";
 import { sendWebResponse, toWebRequest } from "@noverax/nexus/node";
 import type { WebSocketServer } from "ws";

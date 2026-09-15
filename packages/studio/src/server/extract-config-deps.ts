@@ -69,10 +69,7 @@ function collectImportSpecifiers(source: ts.SourceFile): string[] {
       ts.isStringLiteral(node.moduleSpecifier)
     ) {
       out.push(node.moduleSpecifier.text);
-    } else if (
-      ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword
-    ) {
+    } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
       const arg = node.arguments[0];
       if (arg && ts.isStringLiteral(arg)) out.push(arg.text);
     }

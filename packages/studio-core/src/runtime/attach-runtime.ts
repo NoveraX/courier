@@ -55,6 +55,7 @@ import {
   studioHooks,
 } from "@noverax/nexus";
 import type { AnySource } from "@noverax/nexus/define";
+import { EventBus } from "../event-bus";
 import { type BufferedAnnouncement, consumeAnnouncements } from "./announce-hosting";
 import type { RuntimeHandle, RuntimeKind } from "./attach-runtime-types";
 import { connectRuntimeSocket } from "./connect-runtime-socket";
@@ -66,7 +67,6 @@ import {
   findMatchingSourceKey,
   resolveNewSourceKey,
 } from "./source-resolution";
-import { EventBus } from "../event-bus";
 
 interface InternalHandle extends RuntimeHandle {
   setDisposer(fn: () => void): void;
@@ -214,11 +214,7 @@ export async function attachRuntime(id?: string): Promise<RuntimeHandle> {
     wireHttpHooks(bus, runtimeId, resolveSourceName);
 
     const studioUrl = resolveStudioUrl();
-    void connectRuntimeSocket(
-      { runtimeId, kind: handle.kind, studioUrl, bus },
-      pending,
-      handle,
-    );
+    void connectRuntimeSocket({ runtimeId, kind: handle.kind, studioUrl, bus }, pending, handle);
   }
 
   return handle;

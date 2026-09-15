@@ -34,8 +34,8 @@
 
 import { existsSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { loadConfig } from "c12";
 import type { NexusConfig } from "@noverax/nexus/config";
+import { loadConfig } from "c12";
 
 const CONFIG_BASENAMES: ReadonlyArray<string> = [
   "nexus.config.ts",

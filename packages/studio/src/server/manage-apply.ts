@@ -9,7 +9,12 @@ import { computeSpecHash, createSpecDigest } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import type { AddResult, RemoveResult } from "../apis/manage/types";
 import { resolveProjectSafe } from "../context";
-import { getImportEntry, getImportState, loadImportsSnapshot, persistImportState } from "./imports-bridge";
+import {
+  getImportEntry,
+  getImportState,
+  loadImportsSnapshot,
+  persistImportState,
+} from "./imports-bridge";
 import { handleManagePreview } from "./manage-helpers";
 import { writeFileWithDirs } from "./registry-helpers";
 
@@ -22,7 +27,9 @@ interface ManageApplyRequest {
 
 export async function handleManageApply(
   body: ManageApplyRequest,
-): Promise<{ success: true; written: number; deleted: number } | { error: string; status: number }> {
+): Promise<
+  { success: true; written: number; deleted: number } | { error: string; status: number }
+> {
   const snapshot = await loadImportsSnapshot();
   const entry = getImportEntry(snapshot, body.name);
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };

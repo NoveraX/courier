@@ -35,7 +35,11 @@ export interface PlaygroundExecPayload {
 export function sanitizeExec(raw: unknown): PlaygroundExecPayload | null {
   if (!isPlainObject(raw)) return null;
   if (typeof raw.rid !== "string" || raw.rid.length === 0) return null;
-  if (typeof raw.source !== "string" || typeof raw.group !== "string" || typeof raw.method !== "string") {
+  if (
+    typeof raw.source !== "string" ||
+    typeof raw.group !== "string" ||
+    typeof raw.method !== "string"
+  ) {
     return null;
   }
   if (raw.transport !== "http" && raw.transport !== "sse" && raw.transport !== "ws") return null;
@@ -48,7 +52,9 @@ export function sanitizeExec(raw: unknown): PlaygroundExecPayload | null {
     transport: raw.transport,
     variables: raw.variables,
     headers:
-      raw.headers && typeof raw.headers === "object" ? (raw.headers as Record<string, string>) : undefined,
+      raw.headers && typeof raw.headers === "object"
+        ? (raw.headers as Record<string, string>)
+        : undefined,
   };
 }
 

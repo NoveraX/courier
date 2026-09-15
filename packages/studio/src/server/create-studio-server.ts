@@ -15,12 +15,12 @@ import { setProjectRoot } from "../context";
 import { registerApisRoutes } from "./apis-routes";
 import { BindingTable } from "./catalog/binding-table";
 import type { ConfigWatcher } from "./config-watcher";
-import { initConfigDriven } from "./init-config-driven";
 import { initProject } from "./init";
+import { initConfigDriven } from "./init-config-driven";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
-import { clearStudioServerState } from "./runtime-namespace-state";
 import { setupRuntimeNamespace } from "./runtime-namespace";
+import { clearStudioServerState } from "./runtime-namespace-state";
 import { createRuntimePlaygroundRouter } from "./runtime-playground-router";
 import { clearBuffer } from "./session-buffer";
 import { registerSessionRoutes } from "./session-routes";
@@ -190,4 +190,3 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   return { url, close };
 }
-

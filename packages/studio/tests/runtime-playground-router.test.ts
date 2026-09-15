@@ -227,8 +227,10 @@ describe("createRuntimePlaygroundRouter", () => {
 
     expect(router._inFlightSize()).toBe(0);
     const errorCalls = ui.emit.mock.calls.filter(
-      ([event, payload]: [string, { error?: { message?: string } }]) =>
-        event === "playground:error" && payload.error?.message === "Runtime disconnected mid-request",
+      (call) =>
+        call[0] === "playground:error" &&
+        (call[1] as { error?: { message?: string } })?.error?.message ===
+          "Runtime disconnected mid-request",
     );
     expect(errorCalls.length).toBe(2);
   });

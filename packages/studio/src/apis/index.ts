@@ -4,7 +4,7 @@ export type {
   ResolvedGenerateOptions,
 } from "./generator";
 export { applyImportDefaults, DEFAULT_OPTIONS, deriveSourceName, generateCode } from "./generator";
-export type { ImportsState, ImportStateEntry } from "./imports-state";
+export type { ImportStateEntry, ImportsState } from "./imports-state";
 export {
   hasSpecChanged,
   IMPORTS_STATE_FILENAME,

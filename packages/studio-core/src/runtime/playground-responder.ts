@@ -174,7 +174,9 @@ function sanitizeExecute(raw: unknown): PlaygroundExecutePayload | null {
     transport: r.transport,
     variables: r.variables,
     headers:
-      r.headers && typeof r.headers === "object" ? (r.headers as Record<string, string>) : undefined,
+      r.headers && typeof r.headers === "object"
+        ? (r.headers as Record<string, string>)
+        : undefined,
   };
 }
 

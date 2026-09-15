@@ -44,13 +44,7 @@ export async function handleMergeWrite(
   }
 
   const deleted = removeOrphanFiles(files, ctx.entry, sourceName);
-  const result = await finalizeImportState(
-    preview,
-    sourceName,
-    spec,
-    ctx.state,
-    userModified,
-  );
+  const result = await finalizeImportState(preview, sourceName, spec, ctx.state, userModified);
 
   return { ...result, deleted };
 }

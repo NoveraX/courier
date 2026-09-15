@@ -2,8 +2,8 @@
  * Express routes for update flow: preview and apply spec updates.
  */
 
-import { errMsg } from "./registry-helpers";
 import { withImportsLock } from "./imports-lock";
+import { errMsg } from "./registry-helpers";
 import type { RouteApp } from "./route-types";
 import { handleApplyUpdate, handlePreviewUpdate } from "./update-helpers";
 import { validateUpdateApplyBody, validateUpdatePreviewBody } from "./validate-body-registry";

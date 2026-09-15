@@ -3,12 +3,7 @@
  */
 
 import type { ParsedSpec } from "../apis";
-import {
-  computeSpecHash,
-  createSpecDigest,
-  diffSpecs,
-  generateCode,
-} from "../apis";
+import { computeSpecHash, createSpecDigest, diffSpecs, generateCode } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import type { BreakingChange, MergeChange, SpecDiff } from "../apis/merge/types";
 import { previewUpdate } from "../apis/merge/update-flow";
@@ -75,7 +70,9 @@ export async function handlePreviewUpdate(
 /** Apply a previewed update — write files and update state */
 export async function handleApplyUpdate(
   body: ApplyRequest,
-): Promise<{ success: boolean; written: number; deleted: number } | { error: string; status: number }> {
+): Promise<
+  { success: boolean; written: number; deleted: number } | { error: string; status: number }
+> {
   const snapshot = await loadImportsSnapshot();
   const entry = getImportEntry(snapshot, body.name);
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };

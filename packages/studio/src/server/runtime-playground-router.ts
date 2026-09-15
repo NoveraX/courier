@@ -102,7 +102,11 @@ export function createRuntimePlaygroundRouter(
     try {
       binding = deps.bindingTable.resolveBinding(payload.source, payload.transport);
     } catch (err) {
-      emitErrorToUi(uiSocket.id, payload.rid, err instanceof Error ? err.message : "Internal error");
+      emitErrorToUi(
+        uiSocket.id,
+        payload.rid,
+        err instanceof Error ? err.message : "Internal error",
+      );
       log.error(`dispatch: binding resolution failed — rid=${payload.rid}`, err);
       return;
     }

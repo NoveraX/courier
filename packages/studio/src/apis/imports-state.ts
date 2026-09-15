@@ -73,12 +73,16 @@ export function loadImportsState(projectRoot: string): ImportsState {
     try {
       writeFileSync(`${path}.corrupt`, raw, "utf-8");
       log.warn(`Corrupt imports-state JSON — backup saved to ${path}.corrupt`);
-    } catch { /* best-effort backup */ }
+    } catch {
+      /* best-effort backup */
+    }
     return emptyState();
   }
   if (!isPlainObject(parsed)) return emptyState();
   if (parsed.version !== IMPORTS_STATE_VERSION) {
-    log.warn(`imports-state version mismatch: expected ${IMPORTS_STATE_VERSION}, got ${String(parsed.version)}`);
+    log.warn(
+      `imports-state version mismatch: expected ${IMPORTS_STATE_VERSION}, got ${String(parsed.version)}`,
+    );
     return emptyState();
   }
   const imports = parsed.imports;

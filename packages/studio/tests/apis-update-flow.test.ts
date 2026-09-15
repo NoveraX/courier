@@ -5,13 +5,13 @@ import { previewUpdate } from "../src/apis/merge/update-flow"
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-const GROUP_CONTENT = `import { defineGroup, endpoint } from "@noverax/courier/define";
+const GROUP_CONTENT = `import { courier, defineGroup } from "@noverax/courier/define";
 
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint<User[]>()((http) => http.get("")),
-    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
+    getAll: query.response<User[]>().via((http) => http.get("")),
+    getById: query.variables<{ id: string }>().response<User>().via((http, vars) => http.get(":id", vars)),
   },
 });
 `
@@ -21,7 +21,7 @@ const INDEX_CONTENT = `export { users } from "./users";
 
 function makeFingerprints(content: string): Record<string, string> {
   const result: Record<string, string> = {}
-  const re = /^\s{4}(\w+):\s*endpoint/gm
+  const re = /^\s{4}(\w+):\s*(?:\w+\.)?(?:query|mutation|stream|channel)\b/gm
   let match: RegExpExecArray | null = re.exec(content)
   while (match) {
     const name = match[1]!
@@ -34,7 +34,8 @@ function makeFingerprints(content: string): Record<string, string> {
 function getEndpointLine(content: string, name: string): string {
   const lines = content.split("\n")
   for (const line of lines) {
-    if (line.match(new RegExp(`^\\s+${name}:\\s*endpoint`))) return line
+    if (line.match(new RegExp(`^\\s+${name}:\\s*(?:\\w+\\.)?(?:query|mutation|stream|channel)\\b`)))
+      return line
   }
   throw new Error(`Endpoint "${name}" not found in test fixture`)
 }
@@ -78,8 +79,8 @@ describe("previewUpdate", () => {
     )
     const fingerprints = makeFingerprints(GROUP_CONTENT)
     const newGenerated = GROUP_CONTENT.replace(
-      "getAll: endpoint<User[]>()((",
-      "getAll: endpoint<User[]>({ response: z.array(UserSchema) })((",
+      "getAll: query.response<User[]>().via(((",
+      "getAll: query.response(z.array(UserSchema)).via(((",
     )
     const generated: GeneratedFile[] = [
       { path: "src/api/test/users.ts", content: newGenerated },
@@ -96,7 +97,7 @@ describe("previewUpdate", () => {
     const fingerprints = makeFingerprints(GROUP_CONTENT)
     const newGenerated = GROUP_CONTENT.replace(
       "  },\n});",
-      '    create: endpoint<User, CreateVars>()((http, vars) => http.post("", vars)),\n  },\n});',
+      '    create: mutation.variables<CreateVars>().response<User>().via((http, vars) => http.post("", vars)),\n  },\n});',
     )
     const generated: GeneratedFile[] = [
       { path: "src/api/test/users.ts", content: newGenerated },
@@ -152,7 +153,7 @@ describe("previewUpdate", () => {
   it("preserves user-added endpoints not in new spec", () => {
     const existingWithCustom = GROUP_CONTENT.replace(
       "  },\n});",
-      '    myCustom: endpoint<void>()((http) => http.post("custom")),\n  },\n});',
+      '    myCustom: mutation.via((http) => http.post("custom")),\n  },\n});',
     )
     const fingerprints = makeFingerprints(GROUP_CONTENT)
     /* Generated has only getAll, getById — no myCustom */

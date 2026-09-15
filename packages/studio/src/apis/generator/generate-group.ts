@@ -26,7 +26,7 @@ export function generateGroupFile(
   const typeImports = collectTypeImports(group, spec, options, schemaImports, extracted);
   const needsValidation = checkNeedsValidationImport(group, options, schemaImports);
 
-  lines.push(`import { defineGroup, endpoint } from "@noverax/courier/define";`);
+  lines.push(`import { courier, defineGroup } from "@noverax/courier/define";`);
 
   if (needsValidation) {
     if (options.validation === "zod") lines.push(`import { z } from "zod";`);

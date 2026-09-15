@@ -28,10 +28,10 @@ describe("normalizeCode", () => {
   })
 
   it("produces same result for differently formatted code", () => {
-    const compact = `endpoint<User[]>({response:z.array(UserSchema)})((http)=>http.get(""))`
-    const expanded = `endpoint<User[]>({
-      response: z.array(UserSchema),
-    })(
+    const compact = `query.response(z.array(UserSchema)).via((http)=>http.get(""))`
+    const expanded = `query
+      .response(z.array(UserSchema))
+      .via(
       (http) => http.get(""),
     )`
     expect(normalizeCode(compact)).toBe(normalizeCode(expanded))
@@ -66,22 +66,22 @@ describe("extractEndpoints", () => {
     const file = `export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint<User[]>()(http => http.get("")),
+    getAll: query.response<User[]>().via((http) => http.get("")),
   },
 })`
     const result = extractEndpoints(file)
     expect(Object.keys(result)).toEqual(["getAll"])
-    expect(result.getAll).toContain("endpoint<User[]>")
+    expect(result.getAll).toContain("query.response")
   })
 
   it("extracts multi-line endpoints", () => {
     const file = `export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint<User[]>({
-      response: z.array(UserSchema),
-    })((http) => http.get("")),
-    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
+    getAll: query
+      .response(z.array(UserSchema))
+      .via((http) => http.get("")),
+    getById: query.variables<{ id: string }>().response<User>().via((http, vars) => http.get(":id", vars)),
   },
 })`
     const result = extractEndpoints(file)
@@ -103,8 +103,8 @@ describe("generateFingerprints", () => {
     const file = `export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint<User[]>()(http => http.get("")),
-    create: endpoint<User, CreateUserVars>()((http, vars) => http.post("", vars)),
+    getAll: query.response<User[]>().via((http) => http.get("")),
+    create: mutation.variables<CreateUserVars>().response<User>().via((http, vars) => http.post("", vars)),
   },
 })`
     const fps = generateFingerprints(file)
@@ -118,8 +118,8 @@ describe("generateFingerprints", () => {
 
 describe("classifyEndpoints", () => {
   const baseCode = {
-    getAll: `    getAll: endpoint<User[]>()(http => http.get(""))`,
-    getById: `    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars))`,
+    getAll: `    getAll: query.response<User[]>().via((http => http.get(""))`,
+    getById: `    getById: query.variables<{ id: string }>().response<User>().via((http, vars) => http.get(":id", vars))`,
   }
 
   function makeFingerprints(code: Record<string, string>): Record<string, string> {
@@ -141,7 +141,7 @@ describe("classifyEndpoints", () => {
     const stored = makeFingerprints(baseCode)
     const currentCode = {
       ...baseCode,
-      getAll: `    getAll: endpoint<User[]>()(http => http.get("", { headers: { "X-Custom": "1" } }))`,
+      getAll: `    getAll: query.response<User[]>().via((http => http.get("", { headers: { "X-Custom": "1" } }))`,
     }
     const result = classifyEndpoints(currentCode, stored, ["getAll", "getById"])
     expect(result.endpoints.getAll).toBe("modified")
@@ -164,7 +164,7 @@ describe("classifyEndpoints", () => {
     const stored = makeFingerprints({ getAll: baseCode.getAll! })
     const codeWithExtra = {
       ...baseCode,
-      custom: `    custom: endpoint<void>()(http => http.post("custom"))`,
+      custom: `    custom: mutation.via(http => http.post("custom"))`,
     }
     const result = classifyEndpoints(codeWithExtra, stored, ["getAll"])
     expect(result.endpoints.custom).toBe("modified")
@@ -174,7 +174,7 @@ describe("classifyEndpoints", () => {
     const stored = makeFingerprints(baseCode)
     const modifiedCode = {
       ...baseCode,
-      getById: `    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", { ...vars, extra: true }))`,
+      getById: `    getById: query.variables<{ id: string }>().response<User>().via(((http, vars) => http.get(":id", { ...vars, extra: true }))`,
     }
     const result = classifyEndpoints(modifiedCode, stored, ["getAll"])
     expect(result.endpoints.getById).toBe("removed")

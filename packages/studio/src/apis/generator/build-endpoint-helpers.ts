@@ -31,31 +31,43 @@ export function resolveBodyInterfaceType(
 }
 
 /** Build the endpoint<R, V>({ config }) expression */
-export function buildEndpointCall(
-  configParts: string[],
+/**
+ * Build the builder chain that describes an endpoint, up to but excluding the
+ * terminal.
+ *
+ * A slot carrying a schema takes it directly; one carrying only a type takes a
+ * type argument, which is how an endpoint of an API that publishes no usable
+ * schema is described.
+ */
+export function buildEndpointChain(
+  head: "query" | "mutation",
   schemaConfig: string[],
   bodyInterfaceType: string | null,
   varsType: string | null,
   responseType: string,
 ): string {
-  if (configParts.length > 0) {
-    const hasSchemaVars = schemaConfig.some((s) => s.startsWith("variables:"));
-    const effectiveVarsType = bodyInterfaceType ?? varsType;
-    const needsVarsGeneric =
-      effectiveVarsType &&
-      effectiveVarsType !== "undefined" &&
-      (!hasSchemaVars || bodyInterfaceType);
-    if (needsVarsGeneric) {
-      return `endpoint<${responseType}, ${effectiveVarsType}>({ ${configParts.join(", ")} })`;
-    }
-    if (responseType !== "unknown") {
-      return `endpoint<${responseType}>({ ${configParts.join(", ")} })`;
-    }
-    return `endpoint({ ${configParts.join(", ")} })`;
+  const responseSchema = findConfig(schemaConfig, "response");
+  const variablesSchema = findConfig(schemaConfig, "variables");
+  const effectiveVarsType = bodyInterfaceType ?? varsType;
+
+  let chain = head;
+
+  if (variablesSchema && !bodyInterfaceType) {
+    chain += `.variables(${variablesSchema})`;
+  } else if (effectiveVarsType && effectiveVarsType !== "undefined") {
+    chain += `.variables<${effectiveVarsType}>()`;
   }
 
-  if (varsType && varsType !== "undefined") {
-    return `endpoint<${responseType}, ${varsType}>()`;
+  if (responseSchema) {
+    chain += `.response(${responseSchema})`;
+  } else if (responseType !== "unknown") {
+    chain += `.response<${responseType}>()`;
   }
-  return `endpoint<${responseType}>()`;
+
+  return chain;
+}
+
+function findConfig(config: string[], key: string): string | null {
+  const entry = config.find((c) => c.startsWith(`${key}:`));
+  return entry ? entry.slice(key.length + 1).trim() : null;
 }

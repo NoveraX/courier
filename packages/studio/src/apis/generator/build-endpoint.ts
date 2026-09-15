@@ -1,10 +1,10 @@
 /**
- * Builds endpoint() call expressions for group generation.
+ * Builds the builder chain describing each endpoint of a generated group.
  */
 
 import { toInternalMethod } from "@noverax/courier";
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
-import { buildEndpointCall, resolveBodyInterfaceType } from "./build-endpoint-helpers";
+import { buildEndpointChain, resolveBodyInterfaceType } from "./build-endpoint-helpers";
 import { resolveResponseType, resolveVariablesType } from "./schema-types";
 import { extendSchemaWithParams, getSchemaRefName } from "./schema-utils";
 import type { ResolvedGenerateOptions } from "./types";
@@ -18,7 +18,7 @@ export function buildEndpointDefinition(
 ): string {
   const hasSchema = options.generateSchemas && options.validation !== "none";
   const schemaConfig = buildSchemaConfig(ep, options, hasSchema, schemaImports);
-  const typeConfig: string[] = ep.httpMethod === "get" ? [`type: "query"`] : [];
+  const head = ep.httpMethod === "get" ? "query" : "mutation";
 
   const responseType = resolveResponseType(ep, spec, options);
   const paramsName = `${toPascalCase(ep.name)}Params`;
@@ -34,17 +34,9 @@ export function buildEndpointDefinition(
     pathParams,
   );
 
-  const configParts = [...schemaConfig, ...typeConfig];
-  const epCall = buildEndpointCall(
-    configParts,
-    schemaConfig,
-    bodyInterfaceType,
-    varsType,
-    responseType,
-  );
-  const fnBody = buildFnBody(ep);
+  const chain = buildEndpointChain(head, schemaConfig, bodyInterfaceType, varsType, responseType);
 
-  return `${epCall}(${fnBody})`;
+  return `${chain}.via(${buildFnBody(ep)})`;
 }
 
 function buildSchemaConfig(

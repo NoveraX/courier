@@ -11,7 +11,8 @@ const NAMED_IMPORT_RE = /^import\s+\{([^}]+)\}\s+from\s+["']([^"']+)["'];?\s*$/;
 const NS_IMPORT_RE = /^import\s+\*\s+as\s+(\w+)\s+from\s+["']([^"']+)["'];?\s*$/;
 const GROUP_RE = /^export\s+const\s+(\w+)\s*=\s*defineGroup\(\{/;
 const PREFIX_RE = /prefix:\s*["']([^"']*)["']/;
-const ENDPOINT_RE = /^\s{4}(\w+):\s*endpoint/;
+/** Head a generated endpoint starts with, optionally qualified by its base. */
+const ENDPOINT_RE = /^\s{4}(\w+):\s*(?:\w+\.)?(?:query|mutation|stream|channel)\b/;
 const JSDOC_RE = /^\s{4}\/\*\*/;
 
 export function parseExistingGroup(content: string): ExistingGroupInfo {

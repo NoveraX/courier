@@ -1,53 +1,37 @@
 /**
- * Splits an endpoint definition into head (config) and body (callback).
+ * Splits an endpoint definition into the part the generator owns and the part
+ * a person may edit.
  *
- * Given: `    getAll: endpoint<User[]>({ response: ... })((http) => http.get("")),`
- * Head:  `    getAll: endpoint<User[]>({ response: ... })`
- * Body:  `((http) => http.get("")),`
+ * Given: `    getAll: query.response(UserSchema).via((http) => http.get("")),`
+ * Head:  `    getAll: query.response(UserSchema).via(`
+ * Body:  `(http) => http.get("")),`
  */
 
+const TERMINAL = /\.\s*(?:via|implement)\s*\(/;
+
 export interface EndpointParts {
-  /** Everything up to and including the config call: `name: endpoint<R, V>({ config })` */
+  /** The declaration up to and including the terminal's opening bracket. */
   head: string;
-  /** The callback call with trailing comma: `((http, vars) => ...),` */
+  /** The closure and everything after it, including the trailing comma. */
   body: string;
 }
 
 /**
- * Split an endpoint code block into head (config) and body (callback).
+ * Split an endpoint code block into its declaration and its closure.
  *
- * Uses bracket-depth tracking to find where the first call `(config)` ends.
- * Returns null if the code doesn't match expected endpoint structure.
+ * The declaration is regenerated from the specification; the closure is
+ * preserved so hand edits survive regeneration.
+ *
+ * @param code - one endpoint's source, including its property name
+ * @returns the two parts, or null when the code is not an endpoint definition
  */
 export function splitEndpoint(code: string): EndpointParts | null {
-  const epIdx = code.indexOf("endpoint");
-  if (epIdx === -1) return null;
+  const match = TERMINAL.exec(code);
+  if (!match) return null;
 
-  let i = epIdx;
-  /* Skip past `endpoint` keyword and generic params `<...>` */
-  while (i < code.length && code[i] !== "(") i++;
-  if (i >= code.length) return null;
-
-  /* Track first balanced paren group (the config call) */
-  const splitIdx = findBalancedClose(code, i);
-  if (splitIdx === -1) return null;
-
+  const splitIdx = match.index + match[0].length;
   return {
-    head: code.slice(0, splitIdx + 1),
-    body: code.slice(splitIdx + 1),
+    head: code.slice(0, splitIdx),
+    body: code.slice(splitIdx),
   };
-}
-
-/** Find the index of the closing bracket that balances the opening at `start` */
-function findBalancedClose(code: string, start: number): number {
-  let depth = 0;
-
-  for (let i = start; i < code.length; i++) {
-    const ch = code[i];
-    if (ch === "(" || ch === "{" || ch === "[") depth++;
-    if (ch === ")" || ch === "}" || ch === "]") depth--;
-    if (depth === 0) return i;
-  }
-
-  return -1;
 }

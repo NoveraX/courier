@@ -32,7 +32,19 @@ export type ConfigurationErrorCode =
    * adapter reads sources lazily from the core global registry and has
    * nothing to resolve against.
    */
-  | "SOURCES_NOT_REGISTERED";
+  | "SOURCES_NOT_REGISTERED"
+  /**
+   * An endpoint's wire closure recorded no call, so its method and path could
+   * not be determined. The closure must address the endpoint exactly once,
+   * for example `(http, vars) => http.get(":id", vars)`.
+   */
+  | "ENDPOINT_NO_WIRE_CALL"
+  /**
+   * A builder slot was filled twice. Slots replace rather than merge, so a
+   * second call is a mistake rather than a refinement and is reported at the
+   * definition site instead of silently discarding one of the two values.
+   */
+  | "SLOT_ALREADY_SET";
 
 /**
  * Thrown when courier is misconfigured at the boundary between user code and

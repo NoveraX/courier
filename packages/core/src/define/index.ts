@@ -18,6 +18,15 @@ export type {
   InferVariables,
 } from "./marker";
 export type {
+  ChannelProbe,
+  ChannelWire,
+  HttpProbe,
+  HttpWire,
+  StreamProbe,
+  StreamWire,
+  WireCall,
+} from "./probe";
+export type {
   AnySource,
   DefinedApi,
   DefinedFlatApi,

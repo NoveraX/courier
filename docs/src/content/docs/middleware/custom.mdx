@@ -156,13 +156,13 @@ If you catch an error, either re-throw it or return a valid `MiddlewareResponse`
 
 ## Middleware Factories
 
-For configurable middleware, write a factory function that returns a `MiddlewareFn`:
+For configurable middleware, write a factory function that returns a `Middleware`:
 
 ```ts title="lib/middleware/timeout.ts"
 import { defineMiddleware } from "@noverax/courier/middleware"
-import type { MiddlewareFn } from "@noverax/courier"
+import type { Middleware } from "@noverax/courier/middleware"
 
-export function timeoutMiddleware(ms: number): MiddlewareFn {
+export function timeoutMiddleware(ms: number): Middleware {
   return defineMiddleware(async (_ctx, next) => {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), ms)

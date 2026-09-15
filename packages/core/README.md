@@ -52,9 +52,9 @@ import {
 
 ```ts
 import {
-  defineApi,       // Create an API source with base URL and groups
+  courier,         // Builder heads carrying whatever settings endpoints share
   defineGroup,     // Create an endpoint group with prefix and typed endpoints
-  endpoint,        // Type-safe endpoint factory with optional schema validation
+  defineApi,       // Create an API source with base URL and groups
 } from "@noverax/courier/define"
 ```
 
@@ -97,16 +97,24 @@ import {
 ### 1. Define your API
 
 ```ts
-import { defineApi, defineGroup, endpoint } from "@noverax/courier/define"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { query, mutation } = courier()
 
 type User = { id: string; name: string; email: string }
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll:  endpoint<User[]>()((http) => http.get()),
-    getById: endpoint<User, { id: string }>()((http, vars) => http.get(":id", vars)),
-    create:  endpoint<User, { name: string; email: string }>()((http, vars) => http.post("", vars)),
+    getAll: query.response<User[]>().via((http) => http.get()),
+    getById: query
+      .variables<{ id: string }>()
+      .response<User>()
+      .via((http, vars) => http.get(":id", vars)),
+    create: mutation
+      .variables<{ name: string; email: string }>()
+      .response<User>()
+      .via((http, vars) => http.post("", vars)),
   },
 })
 
@@ -165,11 +173,11 @@ import { z } from "zod"
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint({ response: z.array(UserSchema) })((http) => http.get()),
-    create: endpoint({
-      response: UserSchema,
-      variables: z.object({ name: z.string().min(1), email: z.email() }),
-    })((http, vars) => http.post("", vars)),
+    getAll: query.response(z.array(UserSchema)).via((http) => http.get()),
+    create: mutation
+      .variables(z.object({ name: z.string().min(1), email: z.email() }))
+      .response(UserSchema)
+      .via((http, vars) => http.post("", vars)),
   },
 })
 ```

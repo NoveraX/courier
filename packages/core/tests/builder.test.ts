@@ -3,6 +3,7 @@ import { z } from "zod";
 import { courier } from "../src/define/courier";
 import type { InferResponse } from "../src/define/marker";
 import { ENDPOINT_SCHEMA } from "../src/define/marker";
+import type { ChannelProbe, HttpProbe, StreamProbe } from "../src/define/probe";
 import type { Middleware } from "../src/middleware/types";
 
 const UserSchema = z.object({ id: z.string(), email: z.string() });
@@ -283,5 +284,35 @@ describe("type level guarantees", () => {
 
     const sample: InferResponse<typeof listAudit> = [{ id: "1" }];
     expect(sample[0]?.id).toBe("1");
+  });
+});
+
+describe("wire surfaces", () => {
+  const api = courier();
+
+  it("types a closure lifted out of the chain", () => {
+    interface Vars {
+      readonly id: string;
+    }
+
+    const byId: HttpProbe<Vars> = (http, vars) => http.get(":id", vars);
+    const getUser = api.query.variables<Vars>().response(UserSchema).via(byId);
+
+    expect(getUser.method).toBe("get");
+    expect(getUser.path).toBe(":id");
+  });
+
+  it("types a stream closure lifted out of the chain", () => {
+    const feed: StreamProbe<void> = (sse) => sse.get("feed");
+    const events = api.stream.response(UserSchema).via(feed);
+
+    expect(events.path).toBe("feed");
+  });
+
+  it("types a channel closure lifted out of the chain", () => {
+    const room: ChannelProbe<void> = (ws) => ws.connect("room");
+    const chat = api.channel.response(UserSchema).via(room);
+
+    expect(chat.path).toBe("room");
   });
 });

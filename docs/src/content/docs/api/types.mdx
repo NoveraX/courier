@@ -76,29 +76,66 @@ type ProxyCallerDefaults = {
 
 ## Endpoint Definition Types
 
-### Endpoint
+### Endpoint Types
 
-The type of an endpoint function. Generic over response type `R` and variables type `V`.
+An endpoint is an inert descriptor, not a callable. One of three types names it,
+according to the head it was built from:
 
 ```ts
-type Endpoint<R, V = undefined> = (
-  methods: HttpMethods,
-  variables: V,
-) => HttpResponse<R> | Promise<HttpResponse<R>>
+type HttpEndpoint<Response, Variables, Kind extends "query" | "mutation">
+type StreamEndpoint<Response, Variables>
+type ChannelEndpoint<Response, Variables, Send>
+
+// Any of the three, when the kind does not matter
+type AnyEndpoint
 ```
 
-### HttpMethods
+### Inference Helpers
 
-The object your endpoint definitions receive with HTTP method functions.
+Read the types back off an endpoint. This is how a caller knows what a method
+takes and returns:
 
 ```ts
-type HttpMethods = {
-  [K in HttpMethod]: <T = unknown>(
-    ...arguments_: MethodParameters<K>
-  ) => Promise<HttpResponse<T>>
+type InferResponse<E extends AnyEndpoint>   // what the endpoint resolves to
+type InferVariables<E extends AnyEndpoint>  // what the caller must pass
+type InferSend<E extends AnyEndpoint>       // what a channel accepts from the client
+type InferKind<E extends AnyEndpoint>       // "query" | "mutation" | "stream" | "channel"
+```
+
+### Wire Surfaces
+
+The object `.via()` hands the closure. Name these to lift a closure out of the
+chain into a function of its own:
+
+```ts
+interface HttpWire {
+  get(path?: string, variables?: unknown): WireCall
+  post(path?: string, body?: unknown): WireCall
+  put(path?: string, body?: unknown): WireCall
+  patch(path?: string, body?: unknown): WireCall
+  del(path?: string, variables?: unknown): WireCall
+  head(path?: string, variables?: unknown): WireCall
 }
 
-type HttpMethod = "get" | "post" | "put" | "patch" | "del" | "head"
+interface StreamWire {
+  get(path?: string, variables?: unknown): WireCall
+}
+
+interface ChannelWire {
+  connect(path?: string, variables?: unknown): WireCall
+}
+
+type HttpProbe<Variables> = (http: HttpWire, variables: Variables) => WireCall
+type StreamProbe<Variables> = (sse: StreamWire, variables: Variables) => WireCall
+type ChannelProbe<Variables> = (ws: ChannelWire, variables: Variables) => WireCall
+```
+
+```ts
+import type { HttpProbe } from "@noverax/courier/define"
+
+const byId: HttpProbe<{ id: string }> = (http, vars) => http.get(":id", vars)
+
+const getById = query.variables<{ id: string }>().response<User>().via(byId)
 ```
 
 ## Response Types
@@ -264,16 +301,14 @@ Internal utility types that power the type inference engine:
 type EndpointKey<T> = FunctionKeys<T> | GroupedEndpoints<Groups<T>>
 // Result: "methodName" | "group:methodName"
 
-// Resolves the Endpoint type from an endpoint key
-type ResolveEndpoint<T, Q> = /* resolves to Endpoint<R, V> */
+// Resolves the endpoint an endpoint key names
+type ResolveEndpoint<T, Q> = /* resolves to the endpoint descriptor */
 
-// Extracts response type from an Endpoint
-type ExtractResponse<M extends Endpoint<any, any>> =
-  M extends Endpoint<infer R, any> ? R : unknown
+// Extracts response type from an endpoint
+type ExtractResponse<E> = E extends AnyEndpoint ? InferResponse<E> : unknown
 
-// Extracts variables type from an Endpoint
-type ExtractVariables<M extends Endpoint<any, any>> =
-  M extends Endpoint<any, infer V> ? V : unknown
+// Extracts variables type from an endpoint
+type ExtractVariables<E> = E extends AnyEndpoint ? InferVariables<E> : unknown
 ```
 
 <Callout variant="info" title="Type inference">
@@ -311,4 +346,4 @@ type WithVariables<V> = [V] extends [undefined]
 - [Type Safety Guide](/docs/core-concepts/type-safety) — how type inference works
 - [createProxyCaller](/docs/api/create-proxy-caller) — uses TypedClient and ProxyCallerDefaults
 - [defineApi](/docs/api/define) — uses BaseOptions
-- [HttpClient](/docs/api/instance) — uses HttpMethods and HttpResponse
+- [HttpClient](/docs/api/instance) — the runtime that carries out a wire call

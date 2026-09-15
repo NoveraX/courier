@@ -10,6 +10,11 @@ export function StatusBar({ entry }: { entry: PlaygroundHistoryEntry }): React.R
   const isStream = entry.transport === "sse" || entry.transport === "ws";
   const isStreaming = entry.streamStatus === "streaming";
   const isComplete = entry.streamStatus === "complete";
+  // Derive the live event count from the accumulated chunks array — the
+  // rid-keyed wire populates `entry.chunks` per SSE event / WS message,
+  // so the length is the same number the legacy wire used to stamp as
+  // `streamEventCount` via the event channel.
+  const streamEventCount = entry.chunks?.length ?? 0;
 
   return (
     <div className="flex h-8 items-center gap-2 border-b border-border-subtle px-3">
@@ -52,10 +57,10 @@ export function StatusBar({ entry }: { entry: PlaygroundHistoryEntry }): React.R
       <div className="flex-1" />
 
       {/* Event counter for streams */}
-      {isStream && entry.streamEventCount != null && entry.streamEventCount > 0 && (
+      {isStream && streamEventCount > 0 && (
         <div className="flex items-center gap-1 text-caption tabular-nums text-muted-foreground/50">
           <Activity className="size-2.5" />
-          {entry.streamEventCount}
+          {streamEventCount}
         </div>
       )}
 

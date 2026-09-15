@@ -21,7 +21,6 @@ vi.mock("h3", () => ({
 }));
 
 import { createHandler } from "@noverax/nexus";
-import type { Sources } from "@noverax/nexus/define";
 import { fromWebHandler } from "h3";
 import { nexusHandler } from "../src/index";
 
@@ -38,25 +37,23 @@ function getMockHandle() {
 
 describe("nexusHandler", () => {
   it("returns a function", () => {
-    const handler = nexusHandler({} as Sources);
+    const handler = nexusHandler();
     expect(typeof handler).toBe("function");
   });
 
-  it("calls createHandler with sources", () => {
-    const sources = { api: {} } as Sources;
-    nexusHandler(sources);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, undefined);
+  it("calls createHandler with no sources arg (zero-arg)", () => {
+    nexusHandler();
+    expect(mockCreateHandler).toHaveBeenCalledWith(undefined);
   });
 
   it("forwards HandlerConfig (allowedOrigins) to createHandler", () => {
-    const sources = { api: {} } as Sources;
     const config = { allowedOrigins: ["https://app.example.com"] };
-    nexusHandler(sources, config);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, config);
+    nexusHandler(config);
+    expect(mockCreateHandler).toHaveBeenCalledWith(config);
   });
 
   it("wraps handler with fromWebHandler", () => {
-    nexusHandler({} as Sources);
+    nexusHandler();
     expect(mockFromWebHandler).toHaveBeenCalledWith(expect.any(Function));
   });
 
@@ -64,7 +61,7 @@ describe("nexusHandler", () => {
     const webRequest = new Request("http://localhost/api/request?_s=api&_m=list");
 
     // fromWebHandler is mocked to passthrough — handler accepts Request at runtime
-    const handler = nexusHandler({} as Sources) as unknown as (req: Request) => Promise<Response>;
+    const handler = nexusHandler() as unknown as (req: Request) => Promise<Response>;
     const mockHandle = getMockHandle();
     mockHandle.mockResolvedValue(new Response("{}"));
 
@@ -76,7 +73,7 @@ describe("nexusHandler", () => {
   it("returns the Response from handle", async () => {
     const expectedResponse = new Response(JSON.stringify({ data: "test" }));
 
-    const handler = nexusHandler({} as Sources) as unknown as (req: Request) => Promise<Response>;
+    const handler = nexusHandler() as unknown as (req: Request) => Promise<Response>;
     const mockHandle = getMockHandle();
     mockHandle.mockResolvedValue(expectedResponse);
 
@@ -98,7 +95,7 @@ describe("nexusHandler", () => {
       "connection": "keep-alive",
       "x-accel-buffering": "no",
     };
-    const handler = nexusHandler({} as Sources) as unknown as (req: Request) => Promise<Response>;
+    const handler = nexusHandler() as unknown as (req: Request) => Promise<Response>;
     const mockHandle = getMockHandle();
     mockHandle.mockResolvedValue(new Response("data: hello\n\n", { status: 200, headers: sseHeaders }));
 

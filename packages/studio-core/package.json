@@ -21,6 +21,10 @@
     ".": {
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
+    },
+    "./runtime": {
+      "types": "./lib/runtime/index.d.ts",
+      "import": "./lib/runtime/index.js"
     }
   },
   "files": [
@@ -38,7 +42,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/nexus": "*"
+    "@noverax/nexus": "*",
+    "c12": "^4.0.0-beta.4"
   },
   "peerDependencies": {
     "socket.io-client": ">=4.0.0"

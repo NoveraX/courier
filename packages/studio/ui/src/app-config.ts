@@ -21,7 +21,7 @@ export interface NavItem {
   label: string;
   path: string;
   icon: LucideIcon;
-  badge?: "requests" | "errors" | "sessions" | "audit-score";
+  badge?: "requests" | "errors" | "runtimes" | "audit-score";
 }
 
 export interface NavGroup {

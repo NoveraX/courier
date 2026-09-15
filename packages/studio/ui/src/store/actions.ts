@@ -4,6 +4,7 @@ import type { StudioState } from "./store-types"
 import type { createInitialState } from "./initial-state"
 
 import { PLAYGROUND_MAX_HISTORY, DEFAULT_SETTINGS, saveSettings, saveSessionStartedAt } from "./constants"
+import type { BindingSnapshot, PlaygroundHistoryEntry } from "./types-ui"
 import { applyTheme } from "./theme"
 import { applyDensity } from "./density"
 import { handleEventReducer } from "./handle-event"
@@ -29,33 +30,46 @@ export function createActions(set: Setter, get: Getter): Omit<StudioState, keyof
       if (status === "connected") set({ reconnectAttempt: 0 })
     },
     setReconnectAttempt: (attempt) => set({ reconnectAttempt: attempt }),
-    setSessions: (sessions) => set({ sessions }),
-    addSession: (session) => set((s) => {
-      const sessionStartedAt = s.sessionStartedAt ?? Date.now()
-      if (!s.sessionStartedAt) saveSessionStartedAt(sessionStartedAt)
-      return {
-        sessions: [...s.sessions, session],
-        sessionStartedAt,
-      }
-    }),
-    removeSession: (sessionId) =>
-      set((s) => {
-        const sessions = s.sessions.filter((ss) => ss.sessionId !== sessionId)
-        const sessionStartedAt = sessions.length === 0 ? null : s.sessionStartedAt
-        if (sessions.length === 0) saveSessionStartedAt(null)
-        // Requests are NOT cleared on session disconnect. Browser-tab Studio
-        // sessions can churn from HMR / Turbopack rebuilds / hard reloads,
-        // and the studio dev server can have multiple cooperating sessions
-        // (browser direct + Next.js server proxy) — losing one side's
-        // request history when its session lifecycle blips is both
-        // surprising and asymmetric (the surviving session keeps showing
-        // its entries). DevTools-style retention: use clearRequests() for
-        // an explicit wipe.
-        return { sessions, sessionStartedAt }
-      }),
 
-    // Catalog (server-authoritative — NOT gated by paused flag)
-    setCatalog: (snapshot) => set({ catalog: snapshot.catalog }),
+    // Binding snapshot: server-authoritative replacement for the legacy
+    // sessions[] slice. The session timer (`sessionStartedAt`) tracks the
+    // first runtime arrival and clears when the last runtime leaves —
+    // requests are NOT cleared on transitions because the studio dev server
+    // can have several cooperating runtimes (browser direct + Next.js server
+    // proxy) and HMR/Turbopack rebuilds blip them constantly; losing one
+    // side's request history on a lifecycle blip is surprising and
+    // asymmetric. Use clearRequests() for an explicit wipe.
+    setBindingSnapshot: (snapshot: BindingSnapshot) =>
+      set((s) => {
+        const wasIdle = s.bindingSnapshot.runtimeCount === 0
+        const isActive = snapshot.runtimeCount > 0
+        let sessionStartedAt = s.sessionStartedAt
+        if (wasIdle && isActive) {
+          sessionStartedAt = sessionStartedAt ?? Date.now()
+          if (!s.sessionStartedAt) saveSessionStartedAt(sessionStartedAt)
+        } else if (!isActive && s.sessionStartedAt) {
+          sessionStartedAt = null
+          saveSessionStartedAt(null)
+        }
+        // Auto-clear a stale binding error when the underlying conflict row
+        // is no longer present in the snapshot. The server only emits
+        // binding:error on the moment of conflict; the corresponding "all
+        // good now" signal is the next clean snapshot. Without this, a
+        // resolved conflict leaves a permanent red badge in the status bar
+        // until the user reloads — a UX lie.
+        let lastBindingError = s.lastBindingError
+        if (lastBindingError) {
+          const stillConflicting = snapshot.rows.some(
+            (r) =>
+              r.status === "conflict" &&
+              r.sourceName === lastBindingError?.details.sourceName &&
+              r.transport === lastBindingError?.details.transport,
+          )
+          if (!stillConflicting) lastBindingError = null
+        }
+        return { bindingSnapshot: snapshot, sessionStartedAt, lastBindingError }
+      }),
+    setBindingError: (error) => set({ lastBindingError: error }),
 
     // APIs — live scan + registry (pushed via socket, no HTTP round-trip)
     setScanSources: (sources) => set({ scanSources: sources }),
@@ -109,13 +123,77 @@ export function createActions(set: Setter, get: Getter): Omit<StudioState, keyof
     setPlaygroundActiveResponse: (entry) => set({ playgroundActiveResponse: entry }),
     clearPlaygroundHistory: () => set({ playgroundHistory: [], playgroundActiveResponse: null }),
 
+    // Rid-keyed playground wire reducers. Called from UI socket listeners
+    // for `playground:chunk` / `playground:end` / `playground:error`. Routed
+    // by the `rid` stamped on the entry at send time so the playground
+    // history stays decoupled from any server-assigned correlation id.
+    //
+    // Orphan handling: if the target entry has been cleared from history
+    // (user hit "Clear"), the reducer is a silent no-op. The server-side
+    // inFlight entry is drained via `onUiDisconnect` on the next socket
+    // teardown, so dropping orphans here does not leak state.
+    appendPlaygroundChunk: (rid, chunk) =>
+      set((s) => {
+        const patch = (entry: PlaygroundHistoryEntry): PlaygroundHistoryEntry => {
+          const nextChunks = [...(entry.chunks ?? []), chunk]
+          const next: PlaygroundHistoryEntry = { ...entry, chunks: nextChunks }
+          if (chunk.kind === "http-result") {
+            next.statusCode = chunk.status
+            next.response = chunk.error ?? chunk.data
+          } else if (entry.streamStatus === "connecting") {
+            next.streamStatus = "streaming"
+          }
+          return next
+        }
+        const updated = s.playgroundHistory.map((h) => (h.rid === rid ? patch(h) : h))
+        const active =
+          s.playgroundActiveResponse?.rid === rid ? patch(s.playgroundActiveResponse) : s.playgroundActiveResponse
+        return { playgroundHistory: updated, playgroundActiveResponse: active }
+      }),
+    endPlayground: (rid, summary) =>
+      set((s) => {
+        const patch = (entry: PlaygroundHistoryEntry): PlaygroundHistoryEntry => {
+          // A failing http-result keeps the "error" status rather than
+          // flipping to success on the terminal end event.
+          const errored =
+            entry.status === "error" ||
+            (entry.chunks?.some((c) => c.kind === "http-result" && c.error !== undefined) ?? false)
+          return {
+            ...entry,
+            status: errored ? "error" : "success",
+            duration: summary.durationMs,
+            streamStatus: entry.transport ? (errored ? "error" : "complete") : entry.streamStatus,
+          }
+        }
+        const updated = s.playgroundHistory.map((h) => (h.rid === rid ? patch(h) : h))
+        const active =
+          s.playgroundActiveResponse?.rid === rid ? patch(s.playgroundActiveResponse) : s.playgroundActiveResponse
+        return { playgroundHistory: updated, playgroundActiveResponse: active }
+      }),
+    errorPlayground: (rid, error) =>
+      set((s) => {
+        const patch = (entry: PlaygroundHistoryEntry): PlaygroundHistoryEntry => ({
+          ...entry,
+          status: "error",
+          response: error.message,
+          streamStatus: entry.transport ? "error" : entry.streamStatus,
+        })
+        const updated = s.playgroundHistory.map((h) => (h.rid === rid ? patch(h) : h))
+        const active =
+          s.playgroundActiveResponse?.rid === rid ? patch(s.playgroundActiveResponse) : s.playgroundActiveResponse
+        return { playgroundHistory: updated, playgroundActiveResponse: active }
+      }),
+
     handleEvent: (event) => {
       if (get().paused) return
       // Skip requests matching ignore patterns
       if (event.type === "request:start" && shouldIgnoreRequest(event, get().settings.ignorePatterns)) return
-      // Normalize event source name against catalog (case-insensitive).
-      // Runtime emits lowercase (from URL hostname), catalog uses scanner names (PascalCase).
-      const normalized = normalizeEventSource(event, get().catalog)
+      // Normalize event source name (case-insensitive). Was originally
+      // reconciled against the server-side CatalogStore which was populated
+      // by the AST scanner; the scanner was removed in 6.1.4b so the
+      // normalization is now a no-op. Kept for future use if a source name
+      // registry is re-introduced.
+      const normalized = normalizeEventSource(event, {})
       set((state) => {
         const result = handleEventReducer(state, normalized, get().settings.maxRequests)
         if ("droppedCount" in result && result.droppedCount) {

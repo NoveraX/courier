@@ -3,11 +3,6 @@
  */
 
 import type { CacheHitEvent, CacheInvalidateEvent, CacheMissEvent, CacheStoreEvent } from "./cache";
-import type {
-  ConnectionHeartbeatEvent,
-  ConnectionInitEvent,
-  ConnectionSourcesEvent,
-} from "./connection";
 import type { DedupAbortEvent, DedupReuseEvent } from "./dedup";
 import type { HttpFetchEndEvent, HttpFetchErrorEvent, HttpFetchStartEvent } from "./http";
 import type { MiddlewareEnterEvent, MiddlewareErrorEvent, MiddlewareExitEvent } from "./middleware";
@@ -48,9 +43,6 @@ import type { UploadCompleteEvent, UploadProgressEvent } from "./upload";
 import type { ValidationFailEvent, ValidationPassEvent, ValidationStartEvent } from "./validation";
 
 export type AnyStudioEvent =
-  | ConnectionInitEvent
-  | ConnectionHeartbeatEvent
-  | ConnectionSourcesEvent
   | RequestStartEvent
   | RequestEndEvent
   | RequestErrorEvent

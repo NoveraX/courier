@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineApi, defineGroup } from "../src/define/index";
-import { HTTPError } from "../src/error";
+import { HTTPError } from "../src/errors";
 import { defineMiddleware } from "../src/middleware/compose";
 import type { HttpMethods } from "../src/http-client/types";
 import { executeRequest } from "../src/utils/execute";

@@ -1,4 +1,4 @@
-import { HTTPError } from "../error";
+import { HTTPError } from "../errors";
 import type { Context } from "../http-client/types";
 import { filterHeaders } from "./merge-headers";
 

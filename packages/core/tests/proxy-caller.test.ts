@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createProxyCaller } from "../src/proxy-caller";
-import { HTTPError } from "../src/error";
+import { HTTPError } from "../src/errors";
 
 let fetchSpy: ReturnType<typeof vi.fn>;
 

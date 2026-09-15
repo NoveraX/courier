@@ -1,11 +1,12 @@
 /**
- * Spec fetching and single-source update checking helpers.
+ * Spec fetching and single-import update checking helpers.
  */
 
 import { existsSync, readFileSync } from "node:fs";
+import type { NexusImportEntry } from "@noverax/nexus/config";
 import { createFetch } from "@noverax/nexus/fetch";
 import { computeSpecHash, parseSpec } from "../apis";
-import type { RegistrySource } from "../apis/registry/types";
+import type { ImportStateEntry } from "../apis/imports-state";
 import { resolveProjectSafe } from "../context";
 import { isUrl } from "./fs-helpers";
 import type { JsonResponse } from "./route-types";
@@ -33,15 +34,18 @@ export async function fetchSpecRaw(specUrl: string, res: JsonResponse): Promise<
 }
 
 export async function checkSingleSource(
-  source: Pick<RegistrySource, "specUrl" | "importType" | "specHash">,
+  entry: NexusImportEntry,
+  state: ImportStateEntry | undefined,
 ): Promise<{ changed: boolean; error?: string }> {
-  if (source.importType !== "url" || !source.specUrl) return { changed: false };
+  if (entry.importType !== "url") return { changed: false };
+  const specUrl = entry.from;
+  if (!specUrl) return { changed: false };
 
   try {
-    const raw = await fetchRemoteSpec(source.specUrl);
+    const raw = await fetchRemoteSpec(specUrl);
     if (!raw) return { changed: false, error: "Failed to fetch spec" };
     const newSpec = parseSpec(raw);
-    return { changed: computeSpecHash(newSpec) !== source.specHash };
+    return { changed: computeSpecHash(newSpec) !== state?.specHash };
   } catch (err) {
     return { changed: false, error: err instanceof Error ? err.message : "Check failed" };
   }

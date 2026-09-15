@@ -22,7 +22,7 @@
  * be safely called from both browser code and Node-side studio executors.
  */
 
-import { ConfigurationError } from "../error";
+import { ConfigurationError } from "../errors";
 import type { ProxyPath } from "./proxy-path";
 
 /** Discriminator for the three supported transports. */

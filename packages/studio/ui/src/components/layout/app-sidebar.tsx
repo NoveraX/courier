@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
+import { buildCatalogFromRequests } from "@/store/build-catalog-from-requests";
 import { runAudit } from "@/views/audit/run-audit";
 import { SidebarFooterSection } from "./sidebar-footer";
 
@@ -29,7 +30,7 @@ function NavBadge({ item }: { item: NavItem }): React.ReactNode {
   let count = 0;
   if (item.badge === "requests") count = requests.length;
   if (item.badge === "errors") count = requests.filter((r) => r.status === "error").length;
-  if (item.badge === "sessions") count = useStudioStore.getState().sessions.length;
+  if (item.badge === "runtimes") count = useStudioStore.getState().bindingSnapshot.runtimeCount;
 
   if (count === 0) return null;
 
@@ -54,12 +55,11 @@ function NavBadge({ item }: { item: NavItem }): React.ReactNode {
 
 function AuditScoreBadge(): React.ReactNode {
   const requests = useStudioStore((s) => s.requests);
-  const catalog = useStudioStore((s) => s.catalog);
 
   const score = useMemo(() => {
     if (requests.length === 0) return null;
-    return runAudit(requests, catalog).score;
-  }, [requests, catalog]);
+    return runAudit(requests, buildCatalogFromRequests(requests)).score;
+  }, [requests]);
 
   if (score === null) return null;
 

@@ -59,22 +59,22 @@ Choose the adapter that matches your framework:
 
 <CodeGroup
   items={[
-    { label: "Next.js", code: `import { apiRoute } from "@noverax/nexus-next"\nimport { sources } from "@/api"\n\nexport const { GET, POST } = apiRoute(sources)`, language: "ts", meta: 'title="app/api/request/route.ts"' },
-    { label: "Express", code: `import express from "express"\nimport { nexusHandler } from "@noverax/nexus-express"\nimport { sources } from "./api"\n\nconst app = express()\napp.all("/api/request", nexusHandler(sources))`, language: "ts", meta: 'title="server.ts"' },
-    { label: "Hono", code: `import { Hono } from "hono"\nimport { nexusHandler } from "@noverax/nexus-hono"\nimport { sources } from "./api"\n\nconst app = new Hono()\napp.all("/api/request", nexusHandler(sources))`, language: "ts", meta: 'title="src/index.ts"' },
-    { label: "Fastify", code: `import Fastify from "fastify"\nimport { nexusPlugin } from "@noverax/nexus-fastify"\nimport { sources } from "./api"\n\nconst app = Fastify()\napp.register(nexusPlugin, { sources, prefix: "/api/request" })`, language: "ts", meta: 'title="server.ts"' },
-    { label: "NestJS", code: `import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"\nimport { nexusMiddleware } from "@noverax/nexus-nestjs"\nimport { sources } from "./api"\n\n@Module({})\nexport class AppModule implements NestModule {\n  configure(consumer: MiddlewareConsumer) {\n    consumer.apply(nexusMiddleware(sources)).forRoutes("/api/request")\n  }\n}`, language: "ts", meta: 'title="src/app.module.ts"' },
-    { label: "Nuxt", code: `import { nexusHandler } from "@noverax/nexus-nuxt"\nimport { sources } from "../api"\n\nexport default nexusHandler(sources)`, language: "ts", meta: 'title="server/api/request.ts"' },
+    { label: "Next.js", code: `// instrumentation.ts\nimport { registerSources } from "@noverax/nexus"\nexport async function register() {\n  if (process.env.NEXT_RUNTIME === "nodejs") {\n    const { sources } = await import("./api")\n    registerSources(sources)\n  }\n}\n\n// app/api/request/route.ts\nimport { apiRoute } from "@noverax/nexus-next"\nexport const { GET, POST } = apiRoute()`, language: "ts", meta: 'title="Next.js"' },
+    { label: "Express", code: `import express from "express"\nimport { registerSources } from "@noverax/nexus"\nimport { nexusHandler } from "@noverax/nexus-express"\nimport { sources } from "./api"\n\nregisterSources(sources)\nconst app = express()\napp.all("/api/request", nexusHandler())`, language: "ts", meta: 'title="server.ts"' },
+    { label: "Hono", code: `import { Hono } from "hono"\nimport { registerSources } from "@noverax/nexus"\nimport { nexusHandler } from "@noverax/nexus-hono"\nimport { sources } from "./api"\n\nregisterSources(sources)\nconst app = new Hono()\napp.all("/api/request", nexusHandler())`, language: "ts", meta: 'title="src/index.ts"' },
+    { label: "Fastify", code: `import Fastify from "fastify"\nimport { registerSources } from "@noverax/nexus"\nimport { nexusPlugin } from "@noverax/nexus-fastify"\nimport { sources } from "./api"\n\nregisterSources(sources)\nconst app = Fastify()\napp.register(nexusPlugin, { prefix: "/api/request" })`, language: "ts", meta: 'title="server.ts"' },
+    { label: "NestJS", code: `import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"\nimport { registerSources } from "@noverax/nexus"\nimport { nexusMiddleware } from "@noverax/nexus-nestjs"\nimport { sources } from "./api"\n\nregisterSources(sources)\n\n@Module({})\nexport class AppModule implements NestModule {\n  configure(consumer: MiddlewareConsumer) {\n    consumer.apply(nexusMiddleware()).forRoutes("/api/request")\n  }\n}`, language: "ts", meta: 'title="src/app.module.ts"' },
+    { label: "Nuxt", code: `// server/plugins/nexus.ts\nimport { registerSources } from "@noverax/nexus"\nimport { sources } from "~/api"\nexport default defineNitroPlugin(() => registerSources(sources))\n\n// server/api/request.ts\nimport { nexusHandler } from "@noverax/nexus-nuxt"\nexport default nexusHandler()`, language: "ts", meta: 'title="Nuxt"' },
   ]}
 />
 
 <Callout variant="tip" title="All adapters use createHandler">
-Every framework adapter is a thin wrapper around `createHandler(sources)` from `@noverax/nexus`. If your framework is not listed, use `createHandler` directly with Web Standard `Request`/`Response`.
+Every framework adapter is a thin wrapper around `createHandler()` from `@noverax/nexus`. Sources are read lazily from the core global registry populated by `registerSources()` (or by `attachRuntime()` auto-loading `nexus.config.ts`). If your framework is not listed, use `createHandler` directly with Web Standard `Request`/`Response`.
 </Callout>
 
 ## How it works
 
-All adapters delegate to `createHandler(sources)`, which returns three methods:
+All adapters delegate to `createHandler()`, which returns three methods:
 
 - **`handle(request)`** — auto-routes GET and POST, returns 405 for other methods
 - **`handleGet(request)`** — parses query parameters (`_s`, `_g`, `_m` + variables) for cacheable read endpoints

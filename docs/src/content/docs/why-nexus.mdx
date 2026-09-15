@@ -35,7 +35,7 @@ const user = await caller.users.getById({ id: "5" })
 //    ^? User — inferred from endpoint<User, { id: string }>
 
 // Proxy? One line in your server:
-export const { GET, POST } = apiRoute(sources) // or nexusHandler(sources)
+export const { GET, POST } = apiRoute() // or nexusHandler()
 // Done. Every endpoint works through this single route.
 ```
 

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createServer } from "node:http";
 import type * as NexusModule from "@noverax/nexus";
 
@@ -22,11 +22,22 @@ vi.mock("@noverax/nexus", async (importOriginal) => {
   };
 });
 
-import { createHandler, createWSHandler } from "@noverax/nexus";
+import { createHandler, createWSHandler, registerSources } from "@noverax/nexus";
 import { nexusHandler, nexusSSEHandler, nexusWSAttach } from "../src/index";
 
 const mockCreateHandler = vi.mocked(createHandler);
 const mockCreateWSHandler = vi.mocked(createWSHandler);
+
+/**
+ * `nexusHandler()`/`nexusSSEHandler()`/`nexusWSAttach()` now read sources
+ * lazily from the core global registry via `requireSources()` at factory
+ * time. Tests re-register a stub dict before each call so the factories
+ * have something fresh to pass into `announceHosting` regardless of the
+ * state left behind by other test files running in the same process.
+ */
+beforeEach(() => {
+  registerSources({ api: {} } as Parameters<typeof registerSources>[0]);
+});
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -46,21 +57,19 @@ function createMockHandlerResult(overrides: Record<string, unknown> = {}) {
 
 describe("nexusHandler", () => {
   it("returns a function", () => {
-    const handler = nexusHandler({} as any);
+    const handler = nexusHandler();
     expect(typeof handler).toBe("function");
   });
 
-  it("calls createHandler with sources", () => {
-    const sources = { api: {} } as any;
-    nexusHandler(sources);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, undefined);
+  it("calls createHandler with no sources arg (zero-arg)", () => {
+    nexusHandler();
+    expect(mockCreateHandler).toHaveBeenCalledWith(undefined);
   });
 
   it("forwards HandlerConfig to createHandler", () => {
-    const sources = { api: {} } as any;
     const config = { allowedOrigins: ["https://app.example.com"] };
-    nexusHandler(sources, config);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, config);
+    nexusHandler(config);
+    expect(mockCreateHandler).toHaveBeenCalledWith(config);
   });
 
   it("converts Node.js request and sends Web Standard response", async () => {
@@ -73,7 +82,7 @@ describe("nexusHandler", () => {
     );
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const handler = nexusHandler({} as any);
+    const handler = nexusHandler();
 
     const { body, status, headers } = await makeNodeRequest(handler, {
       method: "GET",
@@ -90,7 +99,7 @@ describe("nexusHandler", () => {
     const mockHandle = vi.fn().mockResolvedValue(new Response("{}"));
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const handler = nexusHandler({} as any);
+    const handler = nexusHandler();
 
     await makeNodeRequest(handler, {
       method: "GET",
@@ -108,7 +117,7 @@ describe("nexusHandler", () => {
     const mockHandle = vi.fn().mockResolvedValue(new Response("{}"));
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const handler = nexusHandler({} as any);
+    const handler = nexusHandler();
     const payload = JSON.stringify({ source: "api", method: "list" });
 
     await makeNodeRequest(handler, {
@@ -131,7 +140,7 @@ describe("nexusHandler", () => {
     const mockHandle = vi.fn().mockRejectedValue(error);
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const handler = nexusHandler({} as any);
+    const handler = nexusHandler();
     const next = vi.fn();
 
     const { req, res } = createMockNodeRequestResponse({
@@ -147,7 +156,7 @@ describe("nexusHandler", () => {
     const mockHandle = vi.fn().mockRejectedValue(new Error("fail"));
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const handler = nexusHandler({} as any);
+    const handler = nexusHandler();
 
     const { status, body } = await makeNodeRequest(handler, {
       method: "GET",
@@ -164,21 +173,19 @@ describe("nexusHandler", () => {
 
 describe("nexusSSEHandler", () => {
   it("returns a function", () => {
-    const handler = nexusSSEHandler({} as any);
+    const handler = nexusSSEHandler();
     expect(typeof handler).toBe("function");
   });
 
-  it("calls createHandler with sources", () => {
-    const sources = { api: {} } as any;
-    nexusSSEHandler(sources);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, undefined);
+  it("calls createHandler with no sources arg (zero-arg)", () => {
+    nexusSSEHandler();
+    expect(mockCreateHandler).toHaveBeenCalledWith(undefined);
   });
 
   it("forwards HandlerConfig to createHandler", () => {
-    const sources = { api: {} } as any;
     const config = { sseHeaders: { "Access-Control-Allow-Origin": "*" }, sseMaxLifetimeMs: 60_000 };
-    nexusSSEHandler(sources, config);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, config);
+    nexusSSEHandler(config);
+    expect(mockCreateHandler).toHaveBeenCalledWith(config);
   });
 
   it("converts request and delegates to handleSSE", async () => {
@@ -190,7 +197,7 @@ describe("nexusSSEHandler", () => {
     );
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const handler = nexusSSEHandler({} as any);
+    const handler = nexusSSEHandler();
 
     const { status, headers } = await makeNodeRequest(handler, {
       method: "GET",
@@ -216,7 +223,7 @@ describe("nexusSSEHandler", () => {
     );
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const handler = nexusSSEHandler({} as any);
+    const handler = nexusSSEHandler();
     const { status, headers } = await makeNodeRequest(handler, {
       method: "GET",
       path: "/api/sse?_s=api&_m=feed",
@@ -236,7 +243,7 @@ describe("nexusSSEHandler", () => {
     const mockHandleSSE = vi.fn().mockRejectedValue(error);
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const handler = nexusSSEHandler({} as any);
+    const handler = nexusSSEHandler();
     const next = vi.fn();
 
     const { req, res } = createMockNodeRequestResponse({
@@ -321,24 +328,23 @@ function makeNodeRequest(
 describe("nexusWSAttach", () => {
   it("returns a cleanup function", () => {
     const server = createServer();
-    const cleanup = nexusWSAttach(server, {} as any);
+    const cleanup = nexusWSAttach(server);
     expect(typeof cleanup).toBe("function");
     cleanup();
   });
 
-  it("calls createWSHandler with sources and options", () => {
-    const sources = { api: {} } as any;
+  it("calls createWSHandler with just the options (no sources)", () => {
     const options = { heartbeatIntervalMs: 5000 };
     const server = createServer();
-    const cleanup = nexusWSAttach(server, sources, options);
-    expect(mockCreateWSHandler).toHaveBeenCalledWith({ sources, ...options });
+    const cleanup = nexusWSAttach(server, options);
+    expect(mockCreateWSHandler).toHaveBeenCalledWith(options);
     cleanup();
   });
 
   it("attaches upgrade listener to server", () => {
     const server = createServer();
     const onSpy = vi.spyOn(server, "on");
-    const cleanup = nexusWSAttach(server, {} as any);
+    const cleanup = nexusWSAttach(server);
 
     expect(onSpy).toHaveBeenCalledWith("upgrade", expect.any(Function));
     cleanup();
@@ -348,7 +354,7 @@ describe("nexusWSAttach", () => {
   it("cleanup removes upgrade listener", () => {
     const server = createServer();
     const offSpy = vi.spyOn(server, "off");
-    const cleanup = nexusWSAttach(server, {} as any);
+    const cleanup = nexusWSAttach(server);
 
     cleanup();
     expect(offSpy).toHaveBeenCalledWith("upgrade", expect.any(Function));
@@ -357,8 +363,8 @@ describe("nexusWSAttach", () => {
 
   it("shares a single WSHandler across connections", () => {
     const server = createServer();
-    nexusWSAttach(server, {} as any);
-    nexusWSAttach(server, {} as any);
+    nexusWSAttach(server);
+    nexusWSAttach(server);
 
     // Each call creates its own handler
     expect(mockCreateWSHandler).toHaveBeenCalledTimes(2);

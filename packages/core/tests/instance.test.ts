@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { HTTPError } from "../src/error";
+import { HTTPError } from "../src/errors";
 import { HttpClient } from "../src/http-client/index";
 
 let fetchSpy: ReturnType<typeof vi.fn>;

@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useRef } from "react";
 
 import { useStudioStore } from "@/store";
 import type { CatalogEndpoint, CatalogEntry } from "@/store/types-ui";
+import { buildCatalogFromRequests } from "@/store/build-catalog-from-requests";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -38,8 +39,9 @@ export interface PlaygroundInitParams {
 }
 
 export function usePlayground(init?: PlaygroundInitParams) {
-  const sourceMap = useStudioStore((s) => s.catalog);
+  const requests = useStudioStore((s) => s.requests);
   const jsonIndent = useStudioStore((s) => s.settings.jsonIndent);
+  const sourceMap = useMemo(() => buildCatalogFromRequests(requests), [requests]);
   const sourceKeys = useMemo(() => Object.keys(sourceMap), [sourceMap]);
 
   const [source, setSource] = useState<string | null>(init?.source ?? null);

@@ -2,7 +2,7 @@
  * Preview removing endpoints — computes file changes without touching disk.
  */
 
-import type { PersistedGenerateOptions } from "../registry/types";
+import type { GenerateOptions } from "../generator/types";
 import { removeEndpointsFromGroup } from "./remove-from-group";
 import { collectGroupDeletions, collectModifiedWarnings, findGroupFile } from "./remove-helpers";
 import { processOrphanSchemas } from "./remove-orphans";
@@ -20,11 +20,11 @@ import { removeGroupsFromSourceFile } from "./update-source-file";
  */
 export function previewRemoveEndpoints(
   endpointsToRemove: Record<string, string[]>,
-  options: PersistedGenerateOptions,
+  options: GenerateOptions,
   existingFiles: Record<string, string>,
   fingerprints: Record<string, string>,
 ): RemoveResult {
-  const baseDir = `${options.outputDir.replace(/\/+$/, "")}/${options.sourceName}`;
+  const baseDir = `${options.outputDir.replace(/\/+$/, "")}/${options.sourceName ?? "api"}`;
   const modifiedFiles: Array<{ path: string; content: string }> = [];
   const deletedFiles: string[] = [];
   const removedFingerprints: string[] = [];

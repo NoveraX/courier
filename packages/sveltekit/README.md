@@ -23,16 +23,23 @@ npm install @noverax/nexus-sveltekit @noverax/nexus @sveltejs/kit
 ## Usage
 
 ```ts
-// src/routes/api/request/+server.ts
-import { nexusHandler } from "@noverax/nexus-sveltekit"
+// src/hooks.server.ts
+import { registerSources } from "@noverax/nexus"
 import { sources } from "$lib/api"
 
-const handler = nexusHandler(sources)
+registerSources(sources)
+```
+
+```ts
+// src/routes/api/request/+server.ts
+import { nexusHandler } from "@noverax/nexus-sveltekit"
+
+const handler = nexusHandler()
 export const GET = handler
 export const POST = handler
 ```
 
-The handler uses Web Standard `Request`/`Response` natively. GET requests are routed to query-type endpoints, POST requests handle mutations.
+`nexusHandler()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` in `hooks.server.ts`. The handler uses Web Standard `Request`/`Response` natively. GET requests are routed to query-type endpoints, POST requests handle mutations.
 
 ## With Frontend
 
@@ -47,9 +54,9 @@ const users = await caller.users.getAll()
 
 ## API
 
-### `nexusHandler(sources)`
+### `nexusHandler()`
 
-Creates a SvelteKit request handler. Takes a `Sources` object and returns a function compatible with SvelteKit's `GET`/`POST` server exports.
+Creates a SvelteKit request handler. Returns a function compatible with SvelteKit's `GET`/`POST` server exports.
 
 ## License
 

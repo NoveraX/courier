@@ -18,7 +18,7 @@ export function WelcomeView(): React.ReactNode {
   const navigate = useNavigate();
   const { framework: frameworkId } = useSearch({ from: "/" });
   const connected = useStudioStore((s) => s.connected);
-  const sessions = useStudioStore((s) => s.sessions);
+  const runtimeCount = useStudioStore((s) => s.bindingSnapshot.runtimeCount);
 
   const [completed, setCompleted] = useState<Set<string>>(() => new Set());
   const framework = FRAMEWORKS.find((f) => f.id === frameworkId) ?? null;
@@ -26,12 +26,12 @@ export function WelcomeView(): React.ReactNode {
   // Reset completed steps when framework changes
   useEffect(() => { setCompleted(new Set()); }, [frameworkId]);
 
-  // Auto-complete "connect" step when socket connects with app session
+  // Auto-complete "connect" step when socket connects and a runtime announces
   useEffect(() => {
-    if (connected && sessions.length > 0 && !completed.has("connect")) {
+    if (connected && runtimeCount > 0 && !completed.has("connect")) {
       setCompleted((prev) => new Set(prev).add("connect"));
     }
-  }, [connected, sessions.length, completed]);
+  }, [connected, runtimeCount, completed]);
 
   const currentId = framework?.steps.find((s) => !completed.has(s.id))?.id ?? null;
 

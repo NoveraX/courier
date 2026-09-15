@@ -1,21 +1,23 @@
 import { createHandler } from "@noverax/nexus";
-import type { Sources } from "@noverax/nexus/define";
 
 /**
  * Create a SvelteKit request handler for the nexus proxy.
+ *
+ * Sources are read from the core global registry populated by
+ * `attachRuntime()` — call `await attachRuntime()` in your server
+ * bootstrap before the first request.
  *
  * @example
  * ```ts
  * // src/routes/api/request/+server.ts
  * import { nexusHandler } from "@noverax/nexus-sveltekit";
- * import { sources } from "$lib/api";
  *
- * const handler = nexusHandler(sources);
+ * const handler = nexusHandler();
  * export const GET = handler;
  * export const POST = handler;
  * ```
  */
-export function nexusHandler(sources: Sources) {
-  const { handle } = createHandler(sources);
+export function nexusHandler() {
+  const { handle } = createHandler();
   return ({ request }: { request: Request }) => handle(request);
 }

@@ -3,9 +3,9 @@ import { createPostHandler } from "./adapter/handle-post";
 import { createSSEHandler } from "./adapter/handle-sse";
 import type { HandlerConfig } from "./adapter/handler-config";
 import { errorResponse } from "./adapter/parse";
+import { requireSources } from "./adapter/require-sources";
 import { createSSEConnectionRegistry } from "./adapter/sse-registry";
 import type { SSEConnectionRegistry } from "./adapter/sse-types";
-import type { Sources } from "./define/types";
 import { studioHooks } from "./studio";
 import { executeRequest } from "./utils/execute";
 import type { RequestPayloadInput } from "./utils/helpers";
@@ -13,6 +13,7 @@ import type { RequestPayloadInput } from "./utils/helpers";
 export { buildSSECorsHeaders } from "./adapter/format-sse";
 export { createWSHandler } from "./adapter/handle-ws";
 export type { HandlerConfig } from "./adapter/handler-config";
+export { requireSources } from "./adapter/require-sources";
 export type {
   SSEBroadcastEvent,
   SSEBroadcastResult,
@@ -41,14 +42,20 @@ export type AdapterHandler = {
   shutdownSSE: (options?: { retryMs?: number; drainMs?: number }) => Promise<void>;
 };
 
-export function createHandler(sources: Sources, config?: HandlerConfig): AdapterHandler {
+/**
+ * Create a framework-agnostic HTTP adapter handler. Zero-arg callable —
+ * sources are read lazily from the core global registry (populated by
+ * `attachRuntime()` at startup), so a single `nexusHandler()` expression
+ * in user code works regardless of which framework owns the listen socket.
+ */
+export function createHandler(config?: HandlerConfig): AdapterHandler {
   const execute = (
     request: Request,
     payload: RequestPayloadInput,
     proxyMethod: "GET" | "POST",
     proxyReceiveAt: number,
   ) =>
-    executeRequest(sources, payload, {
+    executeRequest(requireSources(), payload, {
       req: request,
       res: new Response(),
       proxyMethod,
@@ -61,7 +68,7 @@ export function createHandler(sources: Sources, config?: HandlerConfig): Adapter
   const handlePost = createPostHandler(execute, dt);
 
   const sseRegistry = createSSEConnectionRegistry();
-  const handleSSE = createSSEHandler(sources, config, sseRegistry);
+  const handleSSE = createSSEHandler(config, sseRegistry);
 
   const handle = async (request: Request): Promise<Response> => {
     if (isSSERequest(request)) return handleSSE(request);

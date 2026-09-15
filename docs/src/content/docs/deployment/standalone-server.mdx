@@ -63,22 +63,21 @@ In dev you can run the standalone server alongside your Next.js dev server with 
 
 ## Studio integration & `appOrigin`
 
-If you wire the standalone server into Studio via `instrumentServer`, pass `appOrigin` so the Playground proxy executor knows the server's own URL. This is the URL Studio will hit when a Playground user clicks "Subscribe" on an endpoint hosted by *this* server (typically WS endpoints in a split-host setup).
+Wire the standalone server into Studio with a single `attachRuntime()` call. It auto-loads `nexus.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The standalone server announces its own listen origin to Studio automatically once `httpServer.listen()` resolves — no manual `appOrigin` plumbing needed for the standalone path.
 
 ```ts title="server.ts"
 import { createNexusServer } from "@noverax/nexus-server"
-import { instrumentServer } from "@noverax/nexus-studio-core"
+import { attachRuntime } from "@noverax/nexus-studio-core/runtime"
 import { sources } from "./api/sources"
 
-instrumentServer({
-  sources,
-  appOrigin: "http://localhost:3001",  // standalone server's own URL
-})
+if (process.env.NODE_ENV !== "production") {
+  await attachRuntime()
+}
 
 createNexusServer({ sources, port: 3001 })
 ```
 
-In a split-host topology (Next.js hosts HTTP/SSE on 3000, standalone server hosts WS on 3001), each app calls `instrumentServer` with **its own** `appOrigin`. Studio's smart routing then forwards each Playground subscribe to the app whose runtime layer actually hosts the requested endpoint.
+In a split-host topology (Next.js hosts HTTP/SSE on 3000, standalone server hosts WS on 3001), each process calls `attachRuntime()` once at startup. Studio's binding table routes each Playground subscribe to the runtime that actually hosts the requested source × transport pair.
 
 ## Configuration
 

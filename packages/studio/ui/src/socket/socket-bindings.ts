@@ -1,11 +1,18 @@
 import type { Socket } from "socket.io-client"
-import type { ScannedSource, SourceSummary } from "@/views/apis/types"
-import type { CatalogSnapshot, SessionInfo, useStudioStore } from "@/store"
+import type { SourceSummary } from "@/views/apis/types"
+import type { useStudioStore } from "@/store"
 import type { StudioEvent } from "@/store/types-events"
 
 import { handleMockEvent, isMockEvent } from "@/store/handle-mock-events"
 import { notifyFileChange } from "@/store/watcher-notifications"
+import { showBindingErrorToast } from "@/store/binding-error-toast"
+import { isBindingErrorPayload, isBindingSnapshot } from "./binding-guards"
 import { isStudioEvent } from "./event-guards"
+import {
+  isPlaygroundChunkPayload,
+  isPlaygroundEndPayload,
+  isPlaygroundErrorPayload,
+} from "./playground-guards"
 
 export interface Bindings {
   onConnect: () => void
@@ -13,15 +20,15 @@ export interface Bindings {
   onReconnectAttempt: (attempt: number) => void
   onReconnect: () => void
   onConnectError: () => void
-  onSessions: (sessions: SessionInfo[]) => void
-  onSessionConnect: (session: SessionInfo) => void
-  onSessionDisconnect: (data: { sessionId: string }) => void
   onEvent: (event: unknown) => void
-  onCatalogSnapshot: (data: unknown) => void
-  onScanUpdated: (data: unknown) => void
+  onBindingSnapshot: (data: unknown) => void
+  onBindingError: (data: unknown) => void
   onRegistryUpdated: (data: unknown) => void
   onWatcherStatus: (data: unknown) => void
   onWatcherChange: (data: unknown) => void
+  onPlaygroundChunk: (data: unknown) => void
+  onPlaygroundEnd: (data: unknown) => void
+  onPlaygroundError: (data: unknown) => void
 }
 
 export function buildBindings(
@@ -37,9 +44,6 @@ export function buildBindings(
     },
     onReconnect: () => store().setConnectionStatus("connected"),
     onConnectError: () => store().setConnectionStatus("disconnected"),
-    onSessions: (sessions) => store().setSessions(sessions),
-    onSessionConnect: (session) => store().addSession(session),
-    onSessionDisconnect: ({ sessionId }) => store().removeSession(sessionId),
     onEvent: (event) => {
       if (!isStudioEvent(event)) return
       const e = event as StudioEvent & Record<string, unknown>
@@ -49,15 +53,14 @@ export function buildBindings(
         store().handleEvent(e)
       }
     },
-    onCatalogSnapshot: (data) => {
-      if (data && typeof data === "object" && "catalog" in data) {
-        store().setCatalog(data as CatalogSnapshot)
-      }
+    onBindingSnapshot: (data) => {
+      if (!isBindingSnapshot(data)) return
+      store().setBindingSnapshot(data)
     },
-    onScanUpdated: (data) => {
-      if (data && typeof data === "object" && "sources" in data) {
-        store().setScanSources((data as { sources: ScannedSource[] }).sources)
-      }
+    onBindingError: (data) => {
+      if (!isBindingErrorPayload(data)) return
+      store().setBindingError(data)
+      showBindingErrorToast(data)
     },
     onRegistryUpdated: (data) => {
       if (data && typeof data === "object" && "sources" in data) {
@@ -83,6 +86,18 @@ export function buildBindings(
         notifyFileChange(d.source, d.files, store)
       }
     },
+    onPlaygroundChunk: (data) => {
+      if (!isPlaygroundChunkPayload(data)) return
+      store().appendPlaygroundChunk(data.rid, data.chunk)
+    },
+    onPlaygroundEnd: (data) => {
+      if (!isPlaygroundEndPayload(data)) return
+      store().endPlayground(data.rid, data.summary)
+    },
+    onPlaygroundError: (data) => {
+      if (!isPlaygroundErrorPayload(data)) return
+      store().errorPlayground(data.rid, data.error)
+    },
   }
 
   s.on("connect", b.onConnect)
@@ -90,15 +105,15 @@ export function buildBindings(
   s.io.on("reconnect_attempt", b.onReconnectAttempt)
   s.io.on("reconnect", b.onReconnect)
   s.on("connect_error", b.onConnectError)
-  s.on("sessions", b.onSessions)
-  s.on("session:connect", b.onSessionConnect)
-  s.on("session:disconnect", b.onSessionDisconnect)
   s.on("event", b.onEvent)
-  s.on("catalog:snapshot", b.onCatalogSnapshot)
-  s.on("scan:updated", b.onScanUpdated)
+  s.on("binding:snapshot", b.onBindingSnapshot)
+  s.on("binding:error", b.onBindingError)
   s.on("registry:updated", b.onRegistryUpdated)
   s.on("watcher:status", b.onWatcherStatus)
   s.on("watcher:change", b.onWatcherChange)
+  s.on("playground:chunk", b.onPlaygroundChunk)
+  s.on("playground:end", b.onPlaygroundEnd)
+  s.on("playground:error", b.onPlaygroundError)
 
   return b
 }
@@ -109,13 +124,14 @@ export function unbind(s: Socket, b: Bindings): void {
   s.io.off("reconnect_attempt", b.onReconnectAttempt)
   s.io.off("reconnect", b.onReconnect)
   s.off("connect_error", b.onConnectError)
-  s.off("sessions", b.onSessions)
-  s.off("session:connect", b.onSessionConnect)
-  s.off("session:disconnect", b.onSessionDisconnect)
   s.off("event", b.onEvent)
-  s.off("catalog:snapshot", b.onCatalogSnapshot)
-  s.off("scan:updated", b.onScanUpdated)
+  s.off("binding:snapshot", b.onBindingSnapshot)
+  s.off("binding:error", b.onBindingError)
   s.off("registry:updated", b.onRegistryUpdated)
   s.off("watcher:status", b.onWatcherStatus)
   s.off("watcher:change", b.onWatcherChange)
+  s.off("playground:chunk", b.onPlaygroundChunk)
+  s.off("playground:end", b.onPlaygroundEnd)
+  s.off("playground:error", b.onPlaygroundError)
 }
+

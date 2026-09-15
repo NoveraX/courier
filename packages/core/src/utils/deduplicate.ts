@@ -1,4 +1,4 @@
-import { HTTPError } from "../error";
+import { HTTPError } from "../errors";
 import { studioHooks } from "../studio";
 
 export type DedupeHost = {

@@ -8,12 +8,12 @@ import { buildEndpointDefinition } from "./build-endpoint";
 import { collectSchemaRefs } from "./schema-refs";
 import { resolveResponseType } from "./schema-types";
 import { getSchemaRefName } from "./schema-utils";
-import type { GeneratedFile, GenerateOptions } from "./types";
+import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
 export function generateFlatSourceFile(
   endpoints: ParsedEndpoint[],
   spec: ParsedSpec,
-  options: GenerateOptions,
+  options: ResolvedGenerateOptions,
   extracted?: Record<string, ParsedSchema>,
 ): GeneratedFile {
   const lines: string[] = [];
@@ -81,7 +81,7 @@ export function generateFlatSourceFile(
 function collectTypeImports(
   endpoints: ParsedEndpoint[],
   spec: ParsedSpec,
-  options: GenerateOptions,
+  options: ResolvedGenerateOptions,
   schemaImports: Set<string>,
   extracted?: Record<string, ParsedSchema>,
 ): Set<string> {
@@ -118,7 +118,7 @@ function collectTypeImports(
 
 function checkNeedsValidation(
   endpoints: ParsedEndpoint[],
-  options: GenerateOptions,
+  options: ResolvedGenerateOptions,
   schemaImports: Set<string>,
 ): boolean {
   if (!options.generateSchemas || options.validation === "none") return false;

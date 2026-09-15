@@ -6,7 +6,7 @@ import type { ParsedSpec } from "../apis";
 import { handleManageApply } from "./manage-apply";
 import { handleInventory, handleManagePreview } from "./manage-helpers";
 import { errMsg } from "./registry-helpers";
-import { withRegistryLock } from "./registry-lock";
+import { withImportsLock } from "./imports-lock";
 import type { JsonResponse, RouteApp } from "./route-types";
 import { isObject, isString } from "./validate-body";
 
@@ -24,7 +24,7 @@ async function handleInventoryRoute(
     const body = validateInventoryBody(req.body, res);
     if (!body) return;
 
-    const result = handleInventory(body);
+    const result = await handleInventory(body);
     if ("error" in result) {
       res.status(result.status).json({ error: result.error });
       return;
@@ -35,12 +35,15 @@ async function handleInventoryRoute(
   }
 }
 
-function handlePreviewRoute(req: { body: Record<string, unknown> }, res: JsonResponse): void {
+async function handlePreviewRoute(
+  req: { body: Record<string, unknown> },
+  res: JsonResponse,
+): Promise<void> {
   try {
     const body = validateManageBody(req.body, res);
     if (!body) return;
 
-    const result = handleManagePreview(body);
+    const result = await handleManagePreview(body);
     if ("error" in result) {
       res.status(result.status).json({ error: result.error });
       return;
@@ -55,8 +58,8 @@ function handleApplyRoute(req: { body: Record<string, unknown> }, res: JsonRespo
   const body = validateManageBody(req.body, res);
   if (!body) return;
 
-  void withRegistryLock(() => {
-    const result = handleManageApply(body);
+  void withImportsLock(async () => {
+    const result = await handleManageApply(body);
     if ("error" in result) {
       res.status(result.status).json({ error: result.error });
       return;

@@ -62,12 +62,14 @@ The core runs on any JavaScript runtime with `fetch`. Official adapters handle t
 
 | Framework | Server Package | Handler |
 |-----------|---------------|---------|
-| **Next.js** | `@noverax/nexus-next` | `apiRoute(sources)` |
-| **Nuxt** | `@noverax/nexus-nuxt` | `nexusHandler(sources)` |
-| **Hono** | `@noverax/nexus-hono` | `nexusHandler(sources)` |
-| **Express** | `@noverax/nexus-express` | `nexusHandler(sources)` |
+| **Next.js** | `@noverax/nexus-next` | `apiRoute()` |
+| **Nuxt** | `@noverax/nexus-nuxt` | `nexusHandler()` |
+| **Hono** | `@noverax/nexus-hono` | `nexusHandler()` |
+| **Express** | `@noverax/nexus-express` | `nexusHandler()` |
 | **Fastify** | `@noverax/nexus-fastify` | `nexusPlugin` |
-| **NestJS** | `@noverax/nexus-nestjs` | `nexusMiddleware(sources)` |
+| **NestJS** | `@noverax/nexus-nestjs` | `nexusMiddleware()` |
+
+All adapter handlers are zero-arg — they read sources from the core global registry populated by `registerSources()` (manual) or `attachRuntime()` (auto-loads `nexus.config.ts`).
 
 On the client side, use `createProxyCaller` (vanilla) or `createProxyQueryCaller` (React Query hooks).
 

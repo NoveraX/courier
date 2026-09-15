@@ -22,6 +22,10 @@
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
+    "./config": {
+      "types": "./lib/config/index.d.ts",
+      "import": "./lib/config/index.js"
+    },
     "./define": {
       "types": "./lib/define/index.d.ts",
       "import": "./lib/define/index.js"
@@ -49,6 +53,10 @@
     "./internal-streams": {
       "types": "./lib/internal-streams/index.d.ts",
       "import": "./lib/internal-streams/index.js"
+    },
+    "./announce": {
+      "types": "./lib/announce/index.d.ts",
+      "import": "./lib/announce/index.js"
     }
   },
   "files": [

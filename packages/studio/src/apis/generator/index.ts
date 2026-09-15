@@ -1,4 +1,4 @@
 export { deriveSourceName } from "./derive-source-name";
 export { generateCode } from "./generate-code";
-export type { GeneratedFile, GenerateOptions } from "./types";
-export { DEFAULT_OPTIONS } from "./types";
+export type { GeneratedFile, GenerateOptions, ResolvedGenerateOptions } from "./types";
+export { applyImportDefaults, DEFAULT_OPTIONS } from "./types";

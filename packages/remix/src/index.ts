@@ -1,21 +1,23 @@
 import { createHandler } from "@noverax/nexus";
-import type { Sources } from "@noverax/nexus/define";
 
 /**
  * Create a Remix resource route handler for the nexus proxy.
+ *
+ * Sources are read from the core global registry populated by
+ * `attachRuntime()` — call `await attachRuntime()` in your server
+ * bootstrap before the first request.
  *
  * @example
  * ```ts
  * // app/routes/api.request.ts
  * import { nexusHandler } from "@noverax/nexus-remix";
- * import { sources } from "~/api";
  *
- * const handler = nexusHandler(sources);
+ * const handler = nexusHandler();
  * export const loader = handler;
  * export const action = handler;
  * ```
  */
-export function nexusHandler(sources: Sources) {
-  const { handle } = createHandler(sources);
+export function nexusHandler() {
+  const { handle } = createHandler();
   return ({ request }: { request: Request }) => handle(request);
 }

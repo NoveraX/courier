@@ -2,72 +2,72 @@
  * Helpers for apis write routes — merge and raw write logic.
  */
 
-import type { GenerateOptions, ParsedSpec } from "../apis";
-import { addSource, removeSource, saveRegistry } from "../apis";
-import type {
-  RegistryConfig,
-  RegistrySource,
-  SpecImportType,
-  UpdateResult,
-} from "../apis/registry/types";
+import type { NexusImportEntry } from "@noverax/nexus/config";
+import { createSpecDigest, type ParsedSpec } from "../apis";
+import type { ImportStateEntry } from "../apis/imports-state";
+import type { UpdateResult } from "../apis/registry/types";
 import { resolveProjectSafe } from "../context";
+import { persistImportState } from "./imports-bridge";
 import { computeMergePreview, persistRawSource, removeOrphanFiles } from "./merge-preview";
 import {
   collectFingerprints,
   detectUserModified,
-  persistCaches,
+  readFilesFromDisk,
   writeFileWithDirs,
 } from "./registry-helpers";
 import type { WriteBody, WriteResult } from "./write-types";
 
+interface ImportContext {
+  entry: NexusImportEntry | undefined;
+  state: ImportStateEntry | undefined;
+}
+
 /** Merge write: preserves user edits via fingerprint diffing */
-export function handleMergeWrite(
+export async function handleMergeWrite(
   files: WriteBody["files"],
   sourceName: string,
   spec: ParsedSpec,
-  specUrl: string | undefined,
-  importType: SpecImportType | undefined,
-  options: GenerateOptions,
-  config: RegistryConfig,
-  source: RegistrySource,
-): WriteResult {
-  const preview = computeMergePreview(files, sourceName, source);
+  ctx: ImportContext & { entry: NexusImportEntry },
+): Promise<WriteResult> {
+  const preview = computeMergePreview(files, ctx.state);
+
+  /* Snapshot user-modified endpoints BEFORE overwriting disk. Compare the
+   * current on-disk fingerprints of the files we're about to touch against
+   * the fingerprints Studio recorded after the previous sync — any
+   * divergence means the user hand-edited between syncs. */
+  const prevFingerprints = ctx.state?.fileFingerprints ?? {};
+  const preWriteDisk = readFilesFromDisk(preview.files.map((f) => f.path));
+  const userModified = detectUserModified(prevFingerprints, preWriteDisk);
 
   for (const file of preview.files) {
     writeFileWithDirs(resolveProjectSafe(file.path), file.content);
   }
 
-  const deleted = removeOrphanFiles(files, source, options);
-  const result = finalizeRegistry(
-    files,
+  const deleted = removeOrphanFiles(files, ctx.entry, sourceName);
+  const result = await finalizeImportState(
     preview,
     sourceName,
     spec,
-    specUrl,
-    importType,
-    options,
-    config,
+    ctx.state,
+    userModified,
   );
 
   return { ...result, deleted };
 }
 
 /** Raw write: no merge, just write files to disk */
-export function handleRawWrite(
+export async function handleRawWrite(
   files: WriteBody["files"],
   sourceName: string | undefined,
   spec: ParsedSpec | undefined,
-  specUrl: string | undefined,
-  importType: SpecImportType | undefined,
-  options: GenerateOptions | undefined,
-  config: RegistryConfig,
-): WriteResult {
+  ctx: ImportContext,
+): Promise<WriteResult> {
   for (const file of files) {
     writeFileWithDirs(resolveProjectSafe(file.path), file.content);
   }
 
-  if (sourceName && spec && options) {
-    persistRawSource(files, sourceName, spec, specUrl, importType, options, config);
+  if (sourceName && spec) {
+    await persistRawSource(files, sourceName, spec, ctx.state);
   }
 
   return {
@@ -79,30 +79,27 @@ export function handleRawWrite(
 
 // ── Internal helpers ─────────────────────────────────────────────────────────
 
-function finalizeRegistry(
-  files: WriteBody["files"],
+async function finalizeImportState(
   preview: UpdateResult,
   sourceName: string,
   spec: ParsedSpec,
-  specUrl: string | undefined,
-  importType: SpecImportType | undefined,
-  options: GenerateOptions,
-  config: RegistryConfig,
-): WriteResult {
-  const newFingerprints = collectFingerprints(files);
-  persistCaches(sourceName, newFingerprints, spec);
+  prevState: ImportStateEntry | undefined,
+  userModified: string[],
+): Promise<WriteResult> {
+  /* Recompute fingerprints from the just-written merged files — these
+   * become the baseline for the next sync's user-modification detection. */
+  const newFingerprints = collectFingerprints(preview.files);
+  const now = new Date().toISOString();
 
-  const updated = buildSourceEntry(
-    config,
-    sourceName,
-    spec,
-    specUrl,
-    importType,
-    options,
-    newFingerprints,
-    preview,
-  );
-  saveRegistry(updated);
+  await persistImportState(sourceName, {
+    specHash: prevState?.specHash ?? "",
+    digest: createSpecDigest(spec),
+    fetchedAt: prevState?.fetchedAt ?? now,
+    lastSyncedAt: now,
+    userModified,
+    generatedFiles: preview.files.map((f) => f.path),
+    fileFingerprints: newFingerprints,
+  });
 
   const mergedCount = preview.files.filter((f) => f.status === "merged").length;
   return {
@@ -110,30 +107,4 @@ function finalizeRegistry(
     merged: mergedCount,
     files: preview.files.map((f) => ({ path: f.path, status: f.status })),
   };
-}
-
-function buildSourceEntry(
-  config: RegistryConfig,
-  sourceName: string,
-  spec: ParsedSpec,
-  specUrl: string | undefined,
-  importType: SpecImportType | undefined,
-  options: GenerateOptions,
-  fingerprints: Record<string, string>,
-  preview: UpdateResult,
-): RegistryConfig {
-  const mergedFiles = Object.fromEntries(preview.files.map((f) => [f.path, f.content]));
-  const userModified = detectUserModified(fingerprints, mergedFiles);
-
-  return Object.keys(fingerprints).length === 0
-    ? removeSource(config, sourceName)
-    : addSource(
-        config,
-        sourceName,
-        spec,
-        specUrl ?? "",
-        importType ?? "url",
-        options,
-        userModified,
-      );
 }

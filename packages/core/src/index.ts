@@ -6,6 +6,7 @@ export {
   createWSHandler,
   type HandlerConfig,
   type NexusWSOptions,
+  requireSources,
   type SSEBroadcastEvent,
   type SSEBroadcastResult,
   type SSECloseReason,
@@ -17,6 +18,12 @@ export {
   type WSHandler,
   type WSHandlerConfig,
 } from "./adapter";
+export {
+  detectAppOrigin,
+  getAppOrigin,
+  getAppOriginParsed,
+  setAppOrigin,
+} from "./app-origin";
 export { type CallerDefaults, createCaller } from "./caller";
 export {
   buildClientProxy,
@@ -39,7 +46,10 @@ export {
   HTTPError,
   isConfigurationError,
   isHTTPError,
-} from "./error";
+  isNexusError,
+  NexusError,
+  type NexusErrorOptions,
+} from "./errors";
 export { createFetch, type FetchClient, type FetchClientOptions } from "./fetch";
 export type {
   CallOptions,
@@ -83,6 +93,12 @@ export {
   RealtimeError,
   TimeoutError,
 } from "./realtime";
+export {
+  getSources,
+  getSourcesGeneration,
+  onSourcesChange,
+  registerSources,
+} from "./sources";
 export {
   abortPlayground,
   registerPlaygroundAbort,

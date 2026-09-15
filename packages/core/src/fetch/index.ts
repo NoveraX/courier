@@ -12,7 +12,7 @@
  * ```
  */
 
-import { HTTPError } from "../error";
+import { HTTPError } from "../errors";
 import { coreFetch } from "../utils/fetch";
 import type { FetchClient, FetchClientOptions, RequestOptions } from "./types";
 

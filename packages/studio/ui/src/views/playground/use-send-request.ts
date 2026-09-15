@@ -5,49 +5,66 @@ import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 
 import { cancelServerStream } from "./playground-utils";
 import { initiateHttpRequest, type SendPayload } from "./send-http-request";
-import { initiateStreamRequest, type StreamHandle } from "./send-stream-request";
+import { initiateStreamRequest } from "./send-stream-request";
 
 export type { SendPayload };
 
+/**
+ * React hook driving playground request dispatch over the rid-keyed wire.
+ *
+ * Every entry carries its own `rid` (generated here as a UUID) that the
+ * `playground:exec` emit and the matching `playground:chunk` /
+ * `playground:end` / `playground:error` listeners use to route response
+ * state back through the store reducers. The hook itself holds no stream
+ * state — `sending` and `streaming` flags are cosmetic gates for the
+ * toolbar spinner / unsubscribe button and are cleared by watching the
+ * store's active entry transitions.
+ */
 export function useSendRequest() {
   const addEntry = useStudioStore((s) => s.addPlaygroundEntry);
   const updateEntry = useStudioStore((s) => s.updatePlaygroundEntry);
   const [sending, setSending] = useState(false);
   const [streaming, setStreaming] = useState(false);
-  const streamRef = useRef<StreamHandle | null>(null);
-  const unmountedRef = useRef(false);
+  const activeRidRef = useRef<string | null>(null);
 
-  // Cleanup on unmount — cancel active stream on server
+  // Cleanup on unmount — cancel the active stream on the server so the
+  // runtime responder drops its in-flight channel / subscription. The
+  // terminal event still flows back through the router's `inFlight` map,
+  // which keys on rid not hook instance.
   useEffect(() => {
-    unmountedRef.current = false;
     return () => {
-      unmountedRef.current = true;
-      if (!streamRef.current) return;
-      const { requestId, unsub } = streamRef.current;
-      streamRef.current = null;
-      unsub();
-      cancelServerStream(requestId);
-
-      // Mark playground entry as complete (subscription already unsubscribed)
-      const entry = useStudioStore.getState().playgroundHistory.find(
-        (e) => e.serverRequestId === requestId,
-      );
-      if (entry && entry.streamStatus !== "complete" && entry.streamStatus !== "error") {
-        useStudioStore.getState().updatePlaygroundEntry(entry.id, {
-          status: "success",
-          streamStatus: "complete",
-        });
-      }
+      if (!activeRidRef.current) return;
+      cancelServerStream(activeRidRef.current);
+      activeRidRef.current = null;
     };
+  }, []);
+
+  // Flip `streaming` off when the active entry reaches a terminal state.
+  // Watching `playgroundActiveResponse` keeps the subscription cheap and
+  // lets the reducers (`endPlayground` / `errorPlayground`) remain the
+  // single source of truth for lifecycle transitions.
+  useEffect(() => {
+    return useStudioStore.subscribe((state) => {
+      const rid = activeRidRef.current;
+      if (!rid) return;
+      const entry = state.playgroundActiveResponse;
+      if (!entry || entry.rid !== rid) return;
+      if (entry.streamStatus === "complete" || entry.streamStatus === "error") {
+        activeRidRef.current = null;
+        setStreaming(false);
+      }
+    });
   }, []);
 
   const send = useCallback((payload: SendPayload): string => {
     const id = crypto.randomUUID();
+    const rid = id;
     const sentAt = Date.now();
     const isRealtime = payload.transport === "sse" || payload.transport === "ws";
 
     const entry: PlaygroundHistoryEntry = {
       id,
+      rid,
       ...payload,
       timestamp: sentAt,
       status: "pending",
@@ -63,37 +80,34 @@ export function useSendRequest() {
     if (isRealtime) {
       setSending(false);
       setStreaming(true);
-      initiateStreamRequest({
-        playgroundId: id,
-        payload,
-        updateEntry,
-        setStreaming,
-        unmountedRef,
-        streamRef,
-      });
+      activeRidRef.current = rid;
+      initiateStreamRequest({ playgroundId: id, rid, payload, updateEntry });
     } else {
-      initiateHttpRequest({ id, payload, sentAt, updateEntry, setSending });
+      initiateHttpRequest({ id, rid, payload, sentAt, updateEntry, setSending });
     }
 
     return id;
   }, [addEntry, updateEntry]);
 
   const unsubscribe = useCallback(() => {
-    if (!streamRef.current) return;
-    const { requestId, unsub } = streamRef.current;
-    unsub();
+    const rid = activeRidRef.current;
+    if (!rid) return;
+    activeRidRef.current = null;
     setStreaming(false);
-    streamRef.current = null;
-    cancelServerStream(requestId);
-
-    // Mark the playground entry as complete
-    const entry = useStudioStore.getState().playgroundHistory.find(
-      (e) => e.serverRequestId === requestId,
-    );
-    if (entry) {
-      updateEntry(entry.id, { status: "success", streamStatus: "complete" });
+    cancelServerStream(rid);
+    // The runtime responder answers the cancel with its own terminal
+    // event — `playground:end` on clean abort, `playground:error` on
+    // forced close — which drives `streamStatus` through the store
+    // reducers. We finalize the entry here only when the cancel can't
+    // reach a runtime (e.g. orphaned rid on a cleared history); the
+    // `updatePlaygroundEntry` call is idempotent either way.
+    const entry = useStudioStore.getState().playgroundHistory.find((e) => e.rid === rid);
+    if (entry && entry.streamStatus !== "complete" && entry.streamStatus !== "error") {
+      useStudioStore
+        .getState()
+        .updatePlaygroundEntry(entry.id, { status: "success", streamStatus: "complete" });
     }
-  }, [updateEntry]);
+  }, []);
 
   return { send, sending, streaming, unsubscribe };
 }

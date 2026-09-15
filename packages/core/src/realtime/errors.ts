@@ -13,14 +13,12 @@
  * - 5000: server internal error
  */
 
+import { NexusError } from "../errors";
+
 /** Base error for all realtime transport errors */
-export class RealtimeError extends Error {
-  constructor(
-    readonly code: number,
-    message: string,
-  ) {
-    super(message);
-    this.name = "RealtimeError";
+export class RealtimeError extends NexusError<number> {
+  constructor(code: number, message: string) {
+    super(message, { code });
   }
 }
 

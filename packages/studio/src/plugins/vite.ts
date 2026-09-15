@@ -1,12 +1,12 @@
 import type { Plugin } from "vite";
-import { resolveOptions } from "./core/options";
-import { generateConnectSnippet } from "./core/snippet";
+import { resolveSnippet } from "./core/resolve-snippet";
 import type { StudioPluginOptions } from "./core/types";
-import { nexusStudioUnplugin } from "./unplugin";
+
+const FRAMEWORK = "vite";
 
 /**
  * Vite plugin for Nexus Studio.
- * Auto-injects `connectStudio()` into the client bundle in dev mode.
+ * Auto-injects `attachRuntime("vite-browser")` into the client bundle in dev mode.
  *
  * @example
  * ```ts
@@ -18,27 +18,24 @@ import { nexusStudioUnplugin } from "./unplugin";
  * })
  * ```
  */
-export function nexusStudio(options?: StudioPluginOptions): Plugin[] {
-  const resolved = { ...resolveOptions(options), framework: "vite" };
-  if (!resolved.enabled) return [];
+export function nexusStudio(options?: StudioPluginOptions): Plugin {
+  let pending: Promise<string | null> | null = null;
 
-  /* Pass raw options to unplugin — it calls resolveOptions internally */
-  const base = nexusStudioUnplugin.vite(options) as Plugin;
-
-  const htmlPlugin: Plugin = {
+  return {
     name: "nexus-studio:inject-html",
     apply: "serve",
-    transformIndexHtml() {
+    async transformIndexHtml() {
+      pending ??= resolveSnippet(FRAMEWORK, options);
+      const snippet = await pending;
+      if (!snippet) return [];
       return [
         {
           tag: "script",
           attrs: { type: "module" },
-          children: generateConnectSnippet(resolved),
+          children: snippet,
           injectTo: "head-prepend",
         },
       ];
     },
   };
-
-  return [base, htmlPlugin];
 }

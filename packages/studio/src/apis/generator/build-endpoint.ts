@@ -7,12 +7,12 @@ import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointCall, resolveBodyInterfaceType } from "./build-endpoint-helpers";
 import { resolveResponseType, resolveVariablesType } from "./schema-types";
 import { extendSchemaWithParams, getSchemaRefName } from "./schema-utils";
-import type { GenerateOptions } from "./types";
+import type { ResolvedGenerateOptions } from "./types";
 
 export function buildEndpointDefinition(
   ep: ParsedEndpoint,
   spec: ParsedSpec,
-  options: GenerateOptions,
+  options: ResolvedGenerateOptions,
   schemaImports: Set<string>,
   extracted?: Record<string, ParsedSchema>,
 ): string {
@@ -49,7 +49,7 @@ export function buildEndpointDefinition(
 
 function buildSchemaConfig(
   ep: ParsedEndpoint,
-  options: GenerateOptions,
+  options: ResolvedGenerateOptions,
   hasSchema: boolean,
   schemaImports: Set<string>,
 ): string[] {
@@ -81,7 +81,7 @@ function buildSchemaConfig(
 function buildResponseExpr(
   responseRef: string,
   ep: ParsedEndpoint,
-  options: GenerateOptions,
+  options: ResolvedGenerateOptions,
 ): string {
   let expr = `${responseRef}Schema`;
   if (ep.responseSchema?.type === "array") {

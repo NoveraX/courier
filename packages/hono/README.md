@@ -24,22 +24,25 @@ npm install @noverax/nexus-hono @noverax/nexus hono
 
 ```ts
 import { Hono } from "hono"
+import { registerSources } from "@noverax/nexus"
 import { nexusHandler } from "@noverax/nexus-hono"
 import { sources } from "./api/sources"
 
+registerSources(sources)
+
 const app = new Hono()
 
-app.all("/api/request", nexusHandler(sources))
+app.all("/api/request", nexusHandler())
 
 export default app
 ```
 
-Works on any Hono runtime — Node.js, Bun, Deno, Cloudflare Workers, Vercel Edge, AWS Lambda.
+`nexusHandler()` is zero-arg — sources are read at request time from the core global registry. Works on any Hono runtime — Node.js, Bun, Deno, Cloudflare Workers, Vercel Edge, AWS Lambda.
 
 ## Options
 
 ```ts
-nexusHandler(sources, {
+nexusHandler({
   validateOrigin: (origin, request) => {
     // Custom origin validation (POST requests check origin by default)
     return origin === "https://myapp.com"

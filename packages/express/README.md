@@ -24,24 +24,27 @@ npm install @noverax/nexus-express @noverax/nexus express
 
 ```ts
 import express from "express"
+import { registerSources } from "@noverax/nexus"
 import { nexusHandler } from "@noverax/nexus-express"
 import { sources } from "./api/sources"
 
+registerSources(sources)
+
 const app = express()
 
-app.all("/api/request", nexusHandler(sources))
+app.all("/api/request", nexusHandler())
 
 app.listen(3000, () => {
   console.log("Server running on http://localhost:3000")
 })
 ```
 
-The handler accepts any HTTP method. GET requests are routed to query-type endpoints, POST requests handle mutations and data payloads.
+`nexusHandler()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` (or by `attachRuntime()` auto-loading `nexus.config.ts` in Studio-instrumented projects). The handler accepts any HTTP method. GET requests are routed to query-type endpoints, POST requests handle mutations and data payloads.
 
 ## How It Works
 
 1. Converts the Node.js `IncomingMessage` to a Web Standard `Request`
-2. Passes it to the core `createHandler(sources).handle()`
+2. Passes it to the core `createHandler().handle()`
 3. Converts the Web `Response` back to Node.js `ServerResponse`
 
 ## With Frontend

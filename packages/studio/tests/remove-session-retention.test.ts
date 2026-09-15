@@ -1,20 +1,23 @@
 /**
- * Regression test: removing a Studio session must NOT wipe its requests.
+ * Regression test: a runtime leaving the binding table must NOT wipe the
+ * requests it produced.
  *
  * Scenario:
  * 1. Browser opens direct SSE/WS — emits stream:open with sessionId=A
  * 2. User triggers a proxy SSE/WS — server emits stream:open with sessionId=B
- * 3. Browser tab Fast Refresh / hard reload → session A disconnects
+ * 3. Browser tab Fast Refresh / hard reload → runtime A drops out of the
+ *    binding snapshot
  *
- * Before the fix: removeSession(A) filtered all of A's requests out → only
- * proxy entry survived in Studio Timeline. Asymmetric and surprising.
- *
- * After the fix: removeSession(A) only updates the sessions list. The
- * direct entry stays so the user can still inspect it.
+ * The Studio dev server can have several cooperating runtimes (browser
+ * direct + server proxy) and HMR/Turbopack rebuilds blip them constantly;
+ * losing one side's request history on a lifecycle blip would be surprising
+ * and asymmetric. The store must keep the request log intact across binding
+ * transitions; only an explicit `clearRequests()` should wipe it.
  */
 import { describe, expect, it, beforeEach, vi } from "vitest"
 
 import type { StudioState } from "../ui/src/store/store-types"
+import type { BindingSnapshot } from "../ui/src/store/types-ui"
 import { createInitialState } from "../ui/src/store/initial-state"
 import { createActions } from "../ui/src/store/actions"
 import { DEFAULT_SETTINGS } from "../ui/src/store/constants"
@@ -52,6 +55,21 @@ function freshStore() {
   return get
 }
 
+function snapshot(runtimes: string[], sources: string[]): BindingSnapshot {
+  return {
+    rows: runtimes.flatMap((runtimeId) =>
+      sources.map((sourceName) => ({
+        sourceName,
+        transport: "http" as const,
+        status: "bound" as const,
+        runtimeId,
+      })),
+    ),
+    runtimeCount: runtimes.length,
+    sourceCount: sources.length,
+  }
+}
+
 function emitStreamOpen(
   get: () => StudioState,
   args: { requestId: string; sessionId: string; mode: "direct" | "proxy" },
@@ -70,81 +88,58 @@ function emitStreamOpen(
   } as never)
 }
 
-describe("removeSession — request retention", () => {
-  it("keeps direct requests when browser session disconnects", () => {
+describe("binding snapshot transitions — request retention", () => {
+  it("keeps direct requests when one runtime drops out", () => {
     const get = freshStore()
 
-    get().addSession({
-      sessionId: "session_browser",
-      framework: "next-client",
-      nexusVersion: "0.0.0",
-      connectedAt: Date.now(),
-    })
+    get().setBindingSnapshot(snapshot(["rt_browser", "rt_server"], ["api"]))
     emitStreamOpen(get, {
       requestId: "req_direct_1",
-      sessionId: "session_browser",
+      sessionId: "rt_browser",
       mode: "direct",
-    })
-
-    get().addSession({
-      sessionId: "session_server",
-      framework: "next-server",
-      nexusVersion: "0.0.0",
-      connectedAt: Date.now(),
     })
     emitStreamOpen(get, {
       requestId: "req_proxy_1",
-      sessionId: "session_server",
+      sessionId: "rt_server",
       mode: "proxy",
     })
 
     expect(get().requests).toHaveLength(2)
 
-    // Browser session blip — Fast Refresh / Turbopack rebuild / hard reload
-    get().removeSession("session_browser")
+    // Browser runtime blip — Fast Refresh / Turbopack rebuild / hard reload
+    get().setBindingSnapshot(snapshot(["rt_server"], ["api"]))
 
     // Direct entry survives the blip
     expect(get().requests).toHaveLength(2)
     expect(get().requests.map((r) => r.mode).sort()).toEqual(["direct", "proxy"])
 
-    // sessions list does drop the disconnected one
-    expect(get().sessions).toHaveLength(1)
-    expect(get().sessions[0]?.sessionId).toBe("session_server")
+    // Binding snapshot does drop the disconnected runtime
+    expect(get().bindingSnapshot.runtimeCount).toBe(1)
   })
 
-  it("keeps requests even when ALL sessions disconnect", () => {
+  it("keeps requests even when ALL runtimes drop out", () => {
     const get = freshStore()
 
-    get().addSession({
-      sessionId: "session_browser",
-      framework: "next-client",
-      nexusVersion: "0.0.0",
-      connectedAt: Date.now(),
-    })
+    get().setBindingSnapshot(snapshot(["rt_browser"], ["api"]))
     emitStreamOpen(get, {
       requestId: "req_direct_1",
-      sessionId: "session_browser",
+      sessionId: "rt_browser",
       mode: "direct",
     })
 
-    get().removeSession("session_browser")
+    get().setBindingSnapshot(snapshot([], []))
 
-    // No active sessions, but the request log is intact
-    expect(get().sessions).toHaveLength(0)
+    // No active runtimes, but the request log is intact
+    expect(get().bindingSnapshot.runtimeCount).toBe(0)
     expect(get().requests).toHaveLength(1)
   })
 
   it("clearRequests still wipes everything (explicit user action)", () => {
     const get = freshStore()
 
-    get().addSession({
-      sessionId: "s1",
-      framework: "x",
-      nexusVersion: "0",
-      connectedAt: 0,
-    })
-    emitStreamOpen(get, { requestId: "r1", sessionId: "s1", mode: "direct" })
-    emitStreamOpen(get, { requestId: "r2", sessionId: "s1", mode: "proxy" })
+    get().setBindingSnapshot(snapshot(["rt_a"], ["api"]))
+    emitStreamOpen(get, { requestId: "r1", sessionId: "rt_a", mode: "direct" })
+    emitStreamOpen(get, { requestId: "r2", sessionId: "rt_a", mode: "proxy" })
 
     expect(get().requests).toHaveLength(2)
 
@@ -157,19 +152,84 @@ describe("removeSession — request retention", () => {
     const get = freshStore()
     get().updateSettings({ preserveLog: true })
 
-    get().addSession({
-      sessionId: "s1",
-      framework: "x",
-      nexusVersion: "0",
-      connectedAt: 0,
-    })
-    emitStreamOpen(get, { requestId: "r1", sessionId: "s1", mode: "direct" })
-    emitStreamOpen(get, { requestId: "r2", sessionId: "s1", mode: "proxy" })
+    get().setBindingSnapshot(snapshot(["rt_a"], ["api"]))
+    emitStreamOpen(get, { requestId: "r1", sessionId: "rt_a", mode: "direct" })
+    emitStreamOpen(get, { requestId: "r2", sessionId: "rt_a", mode: "proxy" })
 
     get().togglePin("r1")
     get().clearRequests()
 
     expect(get().requests).toHaveLength(1)
     expect(get().requests[0]?.id).toBe("r1")
+  })
+
+  it("starts the session timer when the first runtime arrives", () => {
+    const get = freshStore()
+    expect(get().sessionStartedAt).toBeNull()
+
+    get().setBindingSnapshot(snapshot(["rt_a"], ["api"]))
+    expect(get().sessionStartedAt).not.toBeNull()
+
+    const startedAt = get().sessionStartedAt
+    // A second snapshot with more runtimes does not reset the timer
+    get().setBindingSnapshot(snapshot(["rt_a", "rt_b"], ["api", "users"]))
+    expect(get().sessionStartedAt).toBe(startedAt)
+
+    // Dropping all runtimes clears the timer
+    get().setBindingSnapshot(snapshot([], []))
+    expect(get().sessionStartedAt).toBeNull()
+  })
+
+  it("auto-clears lastBindingError when the conflict row is no longer present", () => {
+    const get = freshStore()
+    get().setBindingError({
+      kind: "conflict",
+      details: { sourceName: "api", transport: "http", runtimeIds: ["a", "b"] },
+    })
+    expect(get().lastBindingError).not.toBeNull()
+
+    // Conflict resolves: new snapshot has the source bound to a single runtime
+    get().setBindingSnapshot({
+      rows: [{ sourceName: "api", transport: "http", status: "bound", runtimeId: "a" }],
+      runtimeCount: 1,
+      sourceCount: 1,
+    })
+
+    expect(get().lastBindingError).toBeNull()
+  })
+
+  it("preserves lastBindingError when the same conflict row is still present", () => {
+    const get = freshStore()
+    get().setBindingError({
+      kind: "conflict",
+      details: { sourceName: "api", transport: "http", runtimeIds: ["a", "b"] },
+    })
+
+    // Snapshot still shows the conflict
+    get().setBindingSnapshot({
+      rows: [
+        { sourceName: "api", transport: "http", status: "conflict", conflicting: ["a", "b"] },
+      ],
+      runtimeCount: 0,
+      sourceCount: 0,
+    })
+
+    expect(get().lastBindingError).not.toBeNull()
+    expect(get().lastBindingError?.details.sourceName).toBe("api")
+  })
+
+  it("setBindingError stores and clears the latest binding error", () => {
+    const get = freshStore()
+    expect(get().lastBindingError).toBeNull()
+
+    get().setBindingError({
+      kind: "conflict",
+      details: { sourceName: "api", transport: "http", runtimeIds: ["a", "b"] },
+    })
+    expect(get().lastBindingError?.kind).toBe("conflict")
+    expect(get().lastBindingError?.details.runtimeIds).toEqual(["a", "b"])
+
+    get().setBindingError(null)
+    expect(get().lastBindingError).toBeNull()
   })
 })

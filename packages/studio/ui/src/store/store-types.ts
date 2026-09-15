@@ -1,11 +1,12 @@
 import type {
   Theme,
   ConnectionStatus,
-  Catalog,
-  CatalogSnapshot,
-  SessionInfo,
+  BindingSnapshot,
+  BindingErrorPayload,
   RequestEntry,
   StudioEvent,
+  PlaygroundChunk,
+  PlaygroundEndSummary,
   PlaygroundHistoryEntry,
   Settings,
 } from "./types"
@@ -19,10 +20,11 @@ export interface StudioState {
   connectionStatus: ConnectionStatus
   reconnectAttempt: number
   connected: boolean
-  sessions: SessionInfo[]
 
-  // Catalog (server-authoritative merged source map)
-  catalog: Catalog
+  // Binding-table snapshot (server-authoritative runtime/source ownership)
+  bindingSnapshot: BindingSnapshot
+  /** Latest binding error surfaced by the server (e.g. conflict). */
+  lastBindingError: BindingErrorPayload | null
 
   // Requests
   requests: RequestEntry[]
@@ -60,12 +62,10 @@ export interface StudioState {
   // Actions — Connection
   setConnectionStatus: (status: ConnectionStatus) => void
   setReconnectAttempt: (attempt: number) => void
-  setSessions: (sessions: SessionInfo[]) => void
-  addSession: (session: SessionInfo) => void
-  removeSession: (sessionId: string) => void
 
-  // Actions — Catalog
-  setCatalog: (snapshot: CatalogSnapshot) => void
+  // Actions — Binding snapshot
+  setBindingSnapshot: (snapshot: BindingSnapshot) => void
+  setBindingError: (error: BindingErrorPayload | null) => void
 
   // Actions — APIs
   setScanSources: (sources: ScannedSource[]) => void
@@ -86,6 +86,25 @@ export interface StudioState {
   updatePlaygroundEntry: (id: string, patch: Partial<PlaygroundHistoryEntry>) => void
   setPlaygroundActiveResponse: (entry: PlaygroundHistoryEntry | null) => void
   clearPlaygroundHistory: () => void
+  /**
+   * Append a `playground:chunk` payload to the entry matching `rid`. Called
+   * from the UI socket listener; marks the entry's `streamStatus` as
+   * `"streaming"` on the first chunk for SSE/WS transports so the UI can
+   * transition out of the "connecting" state.
+   */
+  appendPlaygroundChunk: (rid: string, chunk: PlaygroundChunk) => void
+  /**
+   * Mark the rid-keyed entry as successfully complete. Uses `summary.durationMs`
+   * to stamp the final `duration` so the status bar shows the runtime-side
+   * wall-clock instead of the client roundtrip.
+   */
+  endPlayground: (rid: string, summary: PlaygroundEndSummary) => void
+  /**
+   * Mark the rid-keyed entry as errored. The error `message` becomes the
+   * entry's `response` so the existing response panel renders it under the
+   * error tab without special-casing.
+   */
+  errorPlayground: (rid: string, error: { message: string }) => void
 
   // Actions — Watcher
   setWatcherStatus: (apiPaths: number, mockFiles: number) => void

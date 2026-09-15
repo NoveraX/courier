@@ -1,21 +1,22 @@
 /**
  * Mock lifecycle coordinator — public entry point for the studio server.
  *
- * Wires together the scanner, process manager, server-ops factory and
- * UI emitter into a single object the studio server uses to manage all
- * declared mock servers. The heavy logic lives in two siblings:
- *
- * - `lifecycle-process-events.ts` — `createProcessEvents()` builds the
- *   `ProcessManagerEvents` callbacks (onReady/onError/onStopped/...).
- * - `lifecycle-server-ops.ts` — `createServerOps()` provides
- *   start/stop/restart/registerDeclared and the port allocator.
+ * Subscribes to the `MockRegistry` events (driven from `nexus.config.ts.mocks`
+ * by the config-watcher) and translates them into `ServerState` registrations,
+ * managed child-process spawns and UI emissions. Route/collection/scenario
+ * metadata for the UI is extracted before spawn via the persistent meta-pool
+ * worker so the Explorer renders immediately, even when the mock is not yet
+ * `autoStart`-ed.
  */
 
+import { basename } from "node:path";
 import { createLogger } from "@noverax/nexus";
+import type { MockEntry } from "../mock-registry";
 import { createProcessEvents } from "./lifecycle-process-events";
 import { createServerOps } from "./lifecycle-server-ops";
+import type { MetaResult } from "./meta-pool";
+import { createMetaPool } from "./meta-pool";
 import { createProcessManager } from "./process-manager";
-import { createScanner } from "./scanner";
 import type { CoordinatorConfig, ServerState } from "./types";
 import { createUiEmitter } from "./ui-emitter";
 
@@ -29,6 +30,10 @@ const log = createLogger("Studio");
  */
 function runVoid(label: string, promise: Promise<unknown>): void {
   void promise.catch((err) => log.warn(`${label} failed`, err));
+}
+
+function emptyMeta(): MetaResult {
+  return { autoStart: false, routes: [], collections: [], scenarios: [] };
 }
 
 export function createLifecycleCoordinator(config: CoordinatorConfig) {
@@ -54,25 +59,38 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
     emitServerState,
   });
 
-  // ── Scanner ──────────────────────────────────────────────────────────────
+  const metaPool = createMetaPool();
 
-  const scanner = createScanner(config.mocksDir, {
-    onDeclared(declared) {
-      registerDeclared(declared);
-      if (declared.autoStart) void startServer(declared.id);
-      config.watcherStatus?.setMockFileCount(servers.size);
+  // ── Registry → Coordinator wiring ────────────────────────────────────────
+
+  async function materializeAndRegister(entry: MockEntry): Promise<void> {
+    const configPath = config.getConfigPath();
+    if (!configPath) {
+      log.warn(`Cannot register mock "${entry.key}": nexus.config.ts not loaded`);
+      return;
+    }
+    const meta = (await metaPool.analyze(configPath, entry.key)) ?? emptyMeta();
+    const relativePath = `${basename(configPath)}:mocks.${entry.key}`;
+    registerDeclared({ key: entry.key, configPath, relativePath, meta });
+    if (meta.autoStart) void startServer(entry.key);
+    config.watcherStatus?.setMockFileCount(servers.size);
+  }
+
+  config.mockRegistry.attach({
+    onAdded(entry) {
+      runVoid(`materializeAndRegister(${entry.key})`, materializeAndRegister(entry));
     },
-    onChanged(declared) {
-      config.watcherStatus?.emitChange("mock", [declared.relativePath]);
-      const state = servers.get(declared.id);
+    onChanged(entry) {
+      config.watcherStatus?.emitChange("mock", [entry.key]);
+      const state = servers.get(entry.key);
       if (state && state.status === "running") {
-        runVoid(`restartServer(${declared.id})`, restartServer(declared.id));
+        runVoid(`restartServer(${entry.key})`, restartServer(entry.key));
       }
     },
-    onRemoved(serverId) {
-      runVoid(`stopServer(${serverId})`, stopServer(serverId));
-      servers.delete(serverId);
-      emit("mock:server:disconnect", { serverId });
+    onRemoved(key) {
+      runVoid(`stopServer(${key})`, stopServer(key));
+      servers.delete(key);
+      emit("mock:server:disconnect", { serverId: key });
       config.watcherStatus?.setMockFileCount(servers.size);
     },
   });
@@ -100,7 +118,6 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
     }
   }
 
-  /** Forward a mock:command (store/scenario) to the managed child process */
   function forwardStoreCommand(command: Record<string, unknown>): void {
     const serverId = command.serverId as string;
     if (servers.has(serverId)) {
@@ -115,9 +132,10 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
   }
 
   return {
-    start: () => scanner.start(),
+    /** No-op kept for API compatibility — registry events drive registration now. */
+    start: () => {},
     stop: async () => {
-      scanner.stop();
+      metaPool.shutdown();
       await processManager.killAll();
       servers.clear();
     },

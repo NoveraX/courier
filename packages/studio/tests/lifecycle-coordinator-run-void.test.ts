@@ -29,8 +29,11 @@ vi.mock("../src/server/mock-manager/lifecycle-server-ops", () => ({
   createServerOps: () => ({ registerDeclared, startServer, stopServer, restartServer }),
 }));
 
-vi.mock("../src/server/mock-manager/scanner", () => ({
-  createScanner: () => ({ start: vi.fn(), stop: vi.fn() }),
+vi.mock("../src/server/mock-manager/meta-pool", () => ({
+  createMetaPool: () => ({
+    analyze: vi.fn(async () => null),
+    shutdown: vi.fn(),
+  }),
 }));
 
 vi.mock("../src/server/mock-manager/process-manager", () => ({
@@ -55,11 +58,18 @@ vi.mock("../src/server/mock-manager/ui-emitter", () => ({
   }),
 }));
 
+const mockRegistry = {
+  syncFromConfig: vi.fn(),
+  getEntries: vi.fn(() => []),
+  attach: vi.fn(),
+};
+
 const config = {
-  mocksDir: "/tmp",
+  mockRegistry,
+  getConfigPath: () => null,
   basePort: 7001,
   uiNamespace: { sockets: new Map() } as never,
-} as CoordinatorConfig;
+} as unknown as CoordinatorConfig;
 
 describe("lifecycle-coordinator runVoid wrappers", () => {
   let unhandled: Array<unknown>;

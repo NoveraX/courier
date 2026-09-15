@@ -1,12 +1,33 @@
 import type { HandlerConfig, NexusWSOptions, WebSocketLike } from "@noverax/nexus";
-import { createHandler, createWSHandler } from "@noverax/nexus";
-import type { Sources } from "@noverax/nexus/define";
+import {
+  createHandler,
+  createWSHandler,
+  getAppOrigin,
+  requireSources,
+  setAppOrigin,
+} from "@noverax/nexus";
+import { announceHosting } from "@noverax/nexus/announce";
 
-import { sendWebResponse, toWebRequest } from "@noverax/nexus/node";
+import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "@noverax/nexus/node";
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 
+/**
+ * Module-level first-request flag for `listenOrigin` auto-discovery.
+ * Fastify adapters stamp `appOrigin` from the first request's `Host`
+ * header when no config/env value is present. Config-supplied or
+ * env-var values take precedence and are never overwritten.
+ */
+let firstRequestHandled = false;
+
+function tryDiscoverAppOrigin(request: FastifyRequest): void {
+  if (firstRequestHandled) return;
+  firstRequestHandled = true;
+  if (getAppOrigin()) return;
+  const origin = extractOriginFromNodeRequest(request.raw);
+  if (origin) setAppOrigin(origin);
+}
+
 export type NexusPluginOptions = {
-  sources: Sources;
   prefix?: string;
   config?: HandlerConfig;
 };
@@ -14,20 +35,31 @@ export type NexusPluginOptions = {
 /**
  * Fastify plugin for the nexus proxy.
  *
+ * Sources are read from the core global registry populated by
+ * `attachRuntime()` — call `await attachRuntime()` in your server
+ * instrumentation before registering the plugin.
+ *
  * @example
  * ```ts
  * import Fastify from "fastify";
+ * import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
  * import { nexusPlugin } from "@noverax/nexus-fastify";
  *
  * const app = Fastify();
- * app.register(nexusPlugin, { sources, prefix: "/api/request" });
+ * await attachRuntime();
+ * app.register(nexusPlugin, { prefix: "/api/request" });
  * ```
  */
 export const nexusPlugin: FastifyPluginAsync<NexusPluginOptions> = async (
   fastify: FastifyInstance,
   opts: NexusPluginOptions,
 ) => {
-  const { handle } = createHandler(opts.sources, opts.config);
+  const { handle } = createHandler(opts.config);
+  announceHosting({
+    transports: ["http"],
+    sources: Object.values(requireSources()),
+    framework: "fastify",
+  });
 
   // Prevent Fastify from consuming the request body
   fastify.removeAllContentTypeParsers();
@@ -36,6 +68,7 @@ export const nexusPlugin: FastifyPluginAsync<NexusPluginOptions> = async (
   });
 
   fastify.all(opts.prefix ? `${opts.prefix}/*` : "/*", async (request, reply) => {
+    tryDiscoverAppOrigin(request);
     const webReq = toWebRequest(request.raw);
     const webRes = await handle(webReq);
     await sendWebResponse(webRes, reply.raw);
@@ -48,13 +81,19 @@ export const nexusPlugin: FastifyPluginAsync<NexusPluginOptions> = async (
  *
  * @example
  * ```ts
- * fastify.get("/api/sse", nexusSSEHandler(sources));
+ * fastify.get("/api/sse", nexusSSEHandler());
  * ```
  */
-export function nexusSSEHandler(sources: Sources, config?: HandlerConfig) {
-  const { handleSSE } = createHandler(sources, config);
+export function nexusSSEHandler(config?: HandlerConfig) {
+  const { handleSSE } = createHandler(config);
+  announceHosting({
+    transports: ["sse"],
+    sources: Object.values(requireSources()),
+    framework: "fastify",
+  });
 
   return async (request: FastifyRequest, reply: FastifyReply) => {
+    tryDiscoverAppOrigin(request);
     reply.hijack();
     const webReq = toWebRequest(request.raw);
     const webRes = await handleSSE(webReq);
@@ -66,7 +105,6 @@ export function nexusSSEHandler(sources: Sources, config?: HandlerConfig) {
  * Create a Fastify WebSocket route handler for Nexus realtime.
  * Requires `@fastify/websocket` plugin to be registered.
  *
- * @param sources - Registered API sources
  * @param options - WS handler options (heartbeat, allowedOrigins, etc.)
  * @returns Route handler for `{ websocket: true }` routes
  *
@@ -76,16 +114,21 @@ export function nexusSSEHandler(sources: Sources, config?: HandlerConfig) {
  * import { nexusWSHandler } from "@noverax/nexus-fastify";
  *
  * await fastify.register(fastifyWebsocket);
- * fastify.get("/ws", { websocket: true }, nexusWSHandler(sources));
+ * fastify.get("/ws", { websocket: true }, nexusWSHandler());
  * ```
  */
 export function nexusWSHandler(
-  sources: Sources,
   options?: NexusWSOptions,
 ): (socket: WebSocketLike, request: FastifyRequest) => void {
-  const wsHandler = createWSHandler({ sources, ...options });
+  const wsHandler = createWSHandler(options);
+  announceHosting({
+    transports: ["ws"],
+    sources: Object.values(requireSources()),
+    framework: "fastify",
+  });
 
   return (socket: WebSocketLike, request: FastifyRequest) => {
+    tryDiscoverAppOrigin(request);
     const webReq = toWebRequest(request.raw);
     wsHandler.handleSocket(socket, webReq);
   };

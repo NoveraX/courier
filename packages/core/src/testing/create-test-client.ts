@@ -1,7 +1,7 @@
 import { buildClientProxy } from "../client/proxy";
 import type { ExecuteBackend } from "../client/types";
 import type { DefinedApi } from "../define/types";
-import { HTTPError } from "../error";
+import { HTTPError } from "../errors";
 import { createMockBuilder, type MockHandler } from "./mock-builder";
 import { createMockSSESubscription } from "./mock-sse";
 import { createMockWSChannel } from "./mock-ws";

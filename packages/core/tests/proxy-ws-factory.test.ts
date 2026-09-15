@@ -29,7 +29,7 @@ vi.mock("../src/realtime/ws-subscription", () => ({
   })),
 }));
 
-import { isConfigurationError } from "../src/error";
+import { isConfigurationError } from "../src/errors";
 import { executeWSChannel, executeWSPush } from "../src/realtime/ws-subscription";
 import {
   createProxyWSChannelFactory,

@@ -39,11 +39,10 @@ export default defineConfig({
       actionLabel: "Copy snippet",
       filePath: "src/middleware.ts",
       lang: "ts",
-      code: `import { instrumentServer } from "@noverax/nexus-studio-core";
-import { sources } from "./api";
+      code: `import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
 
 if (import.meta.env.DEV) {
-  instrumentServer({ sources });
+  await attachRuntime();
 }`,
     },
     VERIFY_STEP,
@@ -108,11 +107,10 @@ export default defineConfig({
       actionLabel: "Copy snippet",
       filePath: "src/entry-server.tsx",
       lang: "ts",
-      code: `import { instrumentServer } from "@noverax/nexus-studio-core";
-import { sources } from "./api";
+      code: `import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
 
 if (import.meta.env.DEV) {
-  instrumentServer({ sources });
+  await attachRuntime();
 }`,
     },
     VERIFY_STEP,

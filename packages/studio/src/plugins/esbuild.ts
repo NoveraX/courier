@@ -1,15 +1,15 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { resolveOptions } from "./core/options";
-import { generateConnectSnippet } from "./core/snippet";
+import { resolveSnippet } from "./core/resolve-snippet";
 import type { StudioPluginOptions } from "./core/types";
 
+const FRAMEWORK = "esbuild";
 const VIRTUAL_NS = "nexus-studio";
 const VIRTUAL_ID = "nexus-studio-init";
 
 /**
  * esbuild plugin for Nexus Studio.
- * Injects `connectStudio()` into entry points in dev mode.
+ * Injects `attachRuntime("esbuild-browser")` into entry points in dev mode.
  *
  * @example
  * ```ts
@@ -21,35 +21,35 @@ const VIRTUAL_ID = "nexus-studio-init";
  * ```
  */
 export function nexusStudio(options?: StudioPluginOptions): EsbuildPluginLike {
-  const resolved = { ...resolveOptions(options), framework: "esbuild" };
-
   return {
     name: "nexus-studio",
     setup(build) {
-      if (!resolved.enabled) return;
+      let pending: Promise<string | null> | null = null;
+      const ensure = (): Promise<string | null> => (pending ??= resolveSnippet(FRAMEWORK, options));
 
       build.onResolve({ filter: new RegExp(`^${VIRTUAL_ID}$`) }, () => ({
         path: VIRTUAL_ID,
         namespace: VIRTUAL_NS,
       }));
 
-      build.onLoad({ filter: /.*/, namespace: VIRTUAL_NS }, () => ({
-        contents: generateConnectSnippet(resolved),
+      build.onLoad({ filter: /.*/, namespace: VIRTUAL_NS }, async () => ({
+        contents: (await ensure()) ?? "",
         loader: "js" as const,
       }));
 
       const entryPaths = resolveEntryPaths(build.initialOptions.entryPoints);
+      if (entryPaths.size === 0) return;
 
-      if (entryPaths.size > 0) {
-        build.onLoad({ filter: /\.[jt]sx?$/ }, async (args) => {
-          if (!entryPaths.has(args.path)) return undefined;
-          const source = await readFile(args.path, "utf-8");
-          return {
-            contents: `import "${VIRTUAL_ID}"\n${source}`,
-            loader: inferLoader(args.path),
-          };
-        });
-      }
+      build.onLoad({ filter: /\.[jt]sx?$/ }, async (args) => {
+        if (!entryPaths.has(args.path)) return undefined;
+        const snippet = await ensure();
+        if (!snippet) return undefined;
+        const source = await readFile(args.path, "utf-8");
+        return {
+          contents: `import "${VIRTUAL_ID}"\n${source}`,
+          loader: inferLoader(args.path),
+        };
+      });
     },
   };
 }

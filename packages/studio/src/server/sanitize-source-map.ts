@@ -41,28 +41,6 @@ export function sanitizeProxyPath(raw: unknown): ProxyPath | undefined {
 }
 
 /**
- * Validate a `connection:init` / `connection:sources` `env` payload field.
- * Accepts a plain object with string-only values; drops any non-string entry.
- * Returns `undefined` when the result would be empty so callers can skip the
- * `setSessionEnv` call entirely.
- *
- * Same whitelist class as `proxyPath` — every wire field reaching the studio
- * runtime registry must pass through an explicit guard so a malicious or
- * corrupt app session cannot smuggle non-string values into
- * `getRuntimeEnvVar()` and cause downstream string-template surprises.
- */
-export function sanitizeEnv(raw: unknown): Record<string, string> | undefined {
-  if (!raw || typeof raw !== "object") return undefined;
-  const result: Record<string, string> = {};
-  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-    if (typeof key === "string" && typeof value === "string") {
-      result[key] = value;
-    }
-  }
-  return Object.keys(result).length > 0 ? result : undefined;
-}
-
-/**
  * Validate the `appOrigin` field. Accepts only non-empty strings — anything
  * else (including the empty string) collapses to undefined so the UI knows
  * to fall back to relative-path display.

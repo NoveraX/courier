@@ -1,4 +1,4 @@
-/** Virtual module ID used by Vite/Rollup/unplugin to inject the Studio connect snippet */
+/** Virtual module ID used by Rollup to inject the Studio connect snippet */
 export const VIRTUAL_ID = "virtual:nexus-studio-init";
 
 /** Resolved (internal) module ID — prefixed with \0 to mark as virtual */

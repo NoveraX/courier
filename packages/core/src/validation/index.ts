@@ -1,4 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import { NexusError } from "../errors";
 
 /** Symbol key for attaching schema metadata to endpoint functions */
 export const ENDPOINT_SCHEMA: unique symbol = Symbol.for("nexus.endpoint.schema");
@@ -35,14 +36,16 @@ export interface ValidationIssue {
 }
 
 /** Error thrown when schema validation fails */
-export class ValidationError extends Error {
+export class ValidationError extends NexusError<"VALIDATION_ERROR"> {
   readonly issues: readonly ValidationIssue[];
   readonly target: "response" | "variables" | "receive";
 
   constructor(target: "response" | "variables" | "receive", issues: readonly ValidationIssue[]) {
     const messages = issues.map((i) => i.message).join("; ");
-    super(`Validation failed (${target}): ${messages}`);
-    this.name = "ValidationError";
+    super(`Validation failed (${target}): ${messages}`, {
+      code: "VALIDATION_ERROR",
+      context: { target, issueCount: issues.length },
+    });
     this.issues = issues;
     this.target = target;
   }

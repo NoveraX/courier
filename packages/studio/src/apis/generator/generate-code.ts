@@ -11,11 +11,13 @@ import { generateSchemasFile, generateTypesFile } from "./generate-schemas";
 import { generateSourceFile } from "./generate-source";
 import { collectGroupSchemas } from "./schema-refs";
 import { transformSpec } from "./transform-spec";
-import type { GeneratedFile, GenerateOptions } from "./types";
+import type { GeneratedFile, GenerateOptions, ResolvedGenerateOptions } from "./types";
+import { applyImportDefaults } from "./types";
 
 export function generateCode(spec: ParsedSpec, options: GenerateOptions): GeneratedFile[] {
-  const effectiveDir = `${options.outputDir.replace(/\/+$/, "")}/${options.sourceName}`;
-  const opts = { ...options, outputDir: effectiveDir };
+  const resolved = applyImportDefaults(options);
+  const effectiveDir = `${resolved.outputDir.replace(/\/+$/, "")}/${resolved.sourceName}`;
+  const opts: ResolvedGenerateOptions = { ...resolved, outputDir: effectiveDir };
 
   /* Filter by selection BEFORE regrouping (selectedEndpoints uses original group names) */
   const filtered = filterGroups(spec.groups, opts);
@@ -28,7 +30,7 @@ export function generateCode(spec: ParsedSpec, options: GenerateOptions): Genera
   return generateGrouped(transformed, opts);
 }
 
-function generateFlat(spec: ParsedSpec, opts: GenerateOptions): GeneratedFile[] {
+function generateFlat(spec: ParsedSpec, opts: ResolvedGenerateOptions): GeneratedFile[] {
   const files: GeneratedFile[] = [];
   const flatGroup: ParsedGroup = {
     name: "api",
@@ -54,7 +56,7 @@ function generateFlat(spec: ParsedSpec, opts: GenerateOptions): GeneratedFile[] 
   return files;
 }
 
-function generateGrouped(spec: ParsedSpec, opts: GenerateOptions): GeneratedFile[] {
+function generateGrouped(spec: ParsedSpec, opts: ResolvedGenerateOptions): GeneratedFile[] {
   const files: GeneratedFile[] = [];
   const groupSchemaMap = new Map<string, Set<string>>();
 
@@ -124,7 +126,7 @@ function collectDeepRefs(schema: ParsedSchema, spec: ParsedSpec, refs: Set<strin
 
 // ── Filter by selection ──────────────────────────────────────────────────────
 
-function filterGroups(groups: ParsedGroup[], options: GenerateOptions): ParsedGroup[] {
+function filterGroups(groups: ParsedGroup[], options: ResolvedGenerateOptions): ParsedGroup[] {
   if (!options.selectedEndpoints) return groups;
 
   return groups

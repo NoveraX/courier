@@ -1,9 +1,11 @@
+import type { Sources } from "../define/types";
 import { createLogger } from "../logger";
 import type { WebSocketLike } from "../realtime/adapters";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { encodeMessage } from "../realtime/ws/ws-protocol";
 import { generateRequestId, studioHooks } from "../studio";
 import { LIMITS } from "./limits";
+import { requireSources } from "./require-sources";
 import type { PubSubBridge } from "./ws-pubsub-bridge";
 import type { RateLimitBucket } from "./ws-rate-limit";
 import { createBucket } from "./ws-rate-limit";
@@ -47,7 +49,7 @@ export interface WSSocketContext {
   closed: boolean;
   /** Per-subscription Studio tracking (topic → tracker) */
   subscriptionIds: Map<string, SubscriptionTracker>;
-  sources: WSHandlerConfig["sources"];
+  sources: Sources;
   pubsub: WSHandlerConfig["pubsub"];
   registry: InternalConnectionRegistry;
   bridge: PubSubBridge | undefined;
@@ -138,7 +140,7 @@ export function buildContext(
     playgroundRequestId,
     closed: false,
     subscriptionIds,
-    sources: config.sources,
+    sources: requireSources(),
     pubsub: config.pubsub,
     registry,
     bridge,

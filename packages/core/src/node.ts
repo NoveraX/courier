@@ -2,6 +2,29 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 
 /**
+ * Extract a canonical `http(s)://host[:port]` origin from a Node.js
+ * `IncomingMessage`. Reads the `Host` header (required by HTTP/1.1) and
+ * the socket's TLS state for the scheme.
+ *
+ * Trust boundary: `x-forwarded-proto` / `x-forwarded-host` are **NOT**
+ * honored. Reverse-proxy users must set `nexus.config.ts.runtime.appOrigin`
+ * or the `NEXUS_APP_URL` environment variable explicitly, because
+ * accepting forwarded headers from an untrusted hop is a
+ * trust-on-first-use vulnerability.
+ *
+ * Returns `undefined` when the request has no `Host` header (malformed
+ * HTTP/1.0 clients, crafted payloads) so callers can fall back to env
+ * vars or leave `appOrigin` unset rather than store a bogus value.
+ */
+export function extractOriginFromNodeRequest(nodeReq: IncomingMessage): string | undefined {
+  const host = nodeReq.headers.host;
+  if (!host || typeof host !== "string") return undefined;
+  const encrypted = "encrypted" in nodeReq.socket && nodeReq.socket.encrypted;
+  const protocol = encrypted ? "https" : "http";
+  return `${protocol}://${host}`;
+}
+
+/**
  * Convert a Node.js IncomingMessage to a Web Standard Request.
  * Works with Express, Fastify, NestJS, and any Node.js HTTP framework.
  */

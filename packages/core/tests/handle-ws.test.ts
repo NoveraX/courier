@@ -1,12 +1,29 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createWSHandler } from "../src/adapter/handle-ws";
+import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import { parseTopic } from "../src/adapter/ws-resolve";
 import type { Sources } from "../src/define/types";
 import type { WebSocketLike } from "../src/realtime/adapters";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { encodeMessage } from "../src/realtime/ws/ws-protocol";
+import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { ENDPOINT_SCHEMA } from "../src/validation";
+
+afterEach(() => {
+  _resetSourcesForTests();
+});
+
+/**
+ * Zero-arg `createWSHandler()` reads sources lazily from the core global
+ * registry. Tests register sources first, then create the handler with
+ * just the behavioral options, so the request-time `requireSources()`
+ * lookup inside `buildContext()` returns the expected dict.
+ */
+function setupWSHandler(sources: Sources, options?: WSHandlerConfig) {
+  registerSources(sources);
+  return createWSHandler(options);
+}
 
 // ---------------------------------------------------------------------------
 // Mock WebSocket
@@ -80,8 +97,7 @@ function createWSSource(handler: unknown, transport: "ws" = "ws", receive?: unkn
 describe("createWSHandler", () => {
   it("rejects connections with invalid origin", () => {
     const sources = createWSSource(vi.fn());
-    const { handleSocket } = createWSHandler({
-      sources,
+    const { handleSocket } = setupWSHandler(sources, {
       allowedOrigins: ["http://localhost:3000"],
     });
 
@@ -96,8 +112,7 @@ describe("createWSHandler", () => {
 
   it("allows connections with valid origin", () => {
     const sources = createWSSource(vi.fn());
-    const { handleSocket } = createWSHandler({
-      sources,
+    const { handleSocket } = setupWSHandler(sources, {
       allowedOrigins: ["http://localhost:3000"],
     });
 
@@ -122,8 +137,7 @@ describe("createWSHandler", () => {
     clearPlaygroundAbortRegistry();
 
     const sources = createWSSource(vi.fn());
-    const { handleSocket } = createWSHandler({
-      sources,
+    const { handleSocket } = setupWSHandler(sources, {
       allowedOrigins: ["http://localhost:3000"],
     });
 
@@ -139,8 +153,7 @@ describe("createWSHandler", () => {
     // browser will ALWAYS carry an Origin header (browser spec requirement),
     // so the bypass must NOT apply when Origin is set. Validate normally.
     const sources = createWSSource(vi.fn());
-    const { handleSocket } = createWSHandler({
-      sources,
+    const { handleSocket } = setupWSHandler(sources, {
       allowedOrigins: ["http://localhost:3000"],
     });
 
@@ -163,7 +176,7 @@ describe("createWSHandler", () => {
     clearPlaygroundAbortRegistry();
 
     const sources = createWSSource(vi.fn());
-    const { handleSocket } = createWSHandler({ sources });
+    const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
     const req = new Request("http://localhost/ws?_playground_rid=rid-ws-cancel-1");
@@ -195,7 +208,7 @@ describe("createWSHandler", () => {
     clearPlaygroundAbortRegistry();
 
     const sources = createWSSource(vi.fn());
-    const { handleSocket } = createWSHandler({ sources });
+    const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
     handleSocket(ws, new Request("http://localhost/ws"));
@@ -209,7 +222,7 @@ describe("createWSHandler", () => {
     clearPlaygroundAbortRegistry();
 
     const sources = createWSSource(vi.fn());
-    const { handleSocket } = createWSHandler({ sources });
+    const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
     handleSocket(ws, new Request("http://localhost/ws?_playground_rid=rid-ws-natural-close"));
@@ -228,8 +241,7 @@ describe("createWSHandler", () => {
   it("sends ping messages for heartbeat", async () => {
     vi.useFakeTimers();
     const sources = createWSSource(vi.fn());
-    const { handleSocket } = createWSHandler({
-      sources,
+    const { handleSocket } = setupWSHandler(sources, {
       heartbeatIntervalMs: 100,
       heartbeatTimeoutMs: 50,
     });
@@ -249,8 +261,7 @@ describe("createWSHandler", () => {
   it("handles pong messages to reset heartbeat", () => {
     vi.useFakeTimers();
     const sources = createWSSource(vi.fn());
-    const { handleSocket } = createWSHandler({
-      sources,
+    const { handleSocket } = setupWSHandler(sources, {
       heartbeatIntervalMs: 100,
       heartbeatTimeoutMs: 50,
     });
@@ -272,8 +283,7 @@ describe("createWSHandler", () => {
   it("closes connection on heartbeat timeout", () => {
     vi.useFakeTimers();
     const sources = createWSSource(vi.fn());
-    const { handleSocket } = createWSHandler({
-      sources,
+    const { handleSocket } = setupWSHandler(sources, {
       heartbeatIntervalMs: 100,
       heartbeatTimeoutMs: 50,
     });
@@ -299,7 +309,7 @@ describe("createWSHandler", () => {
     };
 
     const sources = createWSSource(pushHandler);
-    const { handleSocket } = createWSHandler({ sources });
+    const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
     handleSocket(ws, new Request("http://localhost/ws"));
@@ -324,7 +334,7 @@ describe("createWSHandler", () => {
   it("rejects subscribe to non-WS endpoint", () => {
     const httpHandler = vi.fn();
     const sources = createWSSource(httpHandler, "http" as "ws");
-    const { handleSocket } = createWSHandler({ sources });
+    const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
     handleSocket(ws, new Request("http://localhost/ws"));
@@ -345,7 +355,7 @@ describe("createWSHandler", () => {
     };
 
     const sources = createWSSource(pushHandler);
-    const { handleSocket } = createWSHandler({ sources });
+    const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
     handleSocket(ws, new Request("http://localhost/ws"));
@@ -372,7 +382,7 @@ describe("createWSHandler", () => {
     };
 
     const sources = createWSSource(pushHandler);
-    const { handleSocket } = createWSHandler({ sources });
+    const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
     handleSocket(ws, new Request("http://localhost/ws"));
@@ -394,7 +404,7 @@ describe("createWSHandler", () => {
 
   it("rejects invalid JSON messages", () => {
     const sources = createWSSource(vi.fn());
-    const { handleSocket } = createWSHandler({ sources });
+    const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
     handleSocket(ws, new Request("http://localhost/ws"));
@@ -412,8 +422,7 @@ describe("createWSHandler", () => {
     };
 
     const sources = createWSSource(pushHandler);
-    const { handleSocket } = createWSHandler({
-      sources,
+    const { handleSocket } = setupWSHandler(sources, {
       heartbeatIntervalMs: 100,
     });
 
@@ -440,14 +449,14 @@ describe("createWSHandler", () => {
 describe("createWSHandler — connections registry", () => {
   it("exposes connections property", () => {
     const sources = createWSSource(vi.fn());
-    const handler = createWSHandler({ sources });
+    const handler = setupWSHandler(sources);
     expect(handler.connections).toBeDefined();
     expect(handler.connections.count).toBe(0);
   });
 
   it("tracks connections after handleSocket", () => {
     const sources = createWSSource(vi.fn());
-    const handler = createWSHandler({ sources });
+    const handler = setupWSHandler(sources);
 
     handler.handleSocket(createMockSocket(), new Request("http://localhost/ws"));
     handler.handleSocket(createMockSocket(), new Request("http://localhost/ws"));
@@ -458,7 +467,7 @@ describe("createWSHandler — connections registry", () => {
 
   it("removes connection on close", async () => {
     const sources = createWSSource(vi.fn());
-    const handler = createWSHandler({ sources });
+    const handler = setupWSHandler(sources);
 
     const ws = createMockSocket();
     handler.handleSocket(ws, new Request("http://localhost/ws"));
@@ -472,8 +481,7 @@ describe("createWSHandler — connections registry", () => {
 
   it("does not register rejected connections", () => {
     const sources = createWSSource(vi.fn());
-    const handler = createWSHandler({
-      sources,
+    const handler = setupWSHandler(sources, {
       allowedOrigins: ["http://allowed.com"],
     });
 
@@ -487,8 +495,7 @@ describe("createWSHandler — connections registry", () => {
 
   it("does not register connections rejected by onConnect", async () => {
     const sources = createWSSource(vi.fn());
-    const handler = createWSHandler({
-      sources,
+    const handler = setupWSHandler(sources, {
       onConnect: () => { throw new Error("rejected"); },
     });
 
@@ -501,8 +508,7 @@ describe("createWSHandler — connections registry", () => {
 
   it("stores meta from onConnect", async () => {
     const sources = createWSSource(vi.fn());
-    const handler = createWSHandler({
-      sources,
+    const handler = setupWSHandler(sources, {
       onConnect: () => ({ userId: "u42", role: "admin" }),
     });
 
@@ -517,7 +523,7 @@ describe("createWSHandler — connections registry", () => {
 
   it("generates UUID connection IDs", () => {
     const sources = createWSSource(vi.fn());
-    const handler = createWSHandler({ sources });
+    const handler = setupWSHandler(sources);
 
     handler.handleSocket(createMockSocket(), new Request("http://localhost/ws"));
     handler.handleSocket(createMockSocket(), new Request("http://localhost/ws"));
@@ -533,7 +539,7 @@ describe("createWSHandler — connections registry", () => {
 
   it("can send to a specific connection", () => {
     const sources = createWSSource(vi.fn());
-    const handler = createWSHandler({ sources });
+    const handler = setupWSHandler(sources);
 
     const ws = createMockSocket();
     handler.handleSocket(ws, new Request("http://localhost/ws"));
@@ -547,7 +553,7 @@ describe("createWSHandler — connections registry", () => {
 
   it("can broadcast to all connections", async () => {
     const sources = createWSSource(vi.fn());
-    const handler = createWSHandler({ sources });
+    const handler = setupWSHandler(sources);
 
     const ws1 = createMockSocket();
     const ws2 = createMockSocket();
@@ -562,7 +568,7 @@ describe("createWSHandler — connections registry", () => {
 
   it("can force-disconnect a connection", async () => {
     const sources = createWSSource(vi.fn());
-    const handler = createWSHandler({ sources });
+    const handler = setupWSHandler(sources);
 
     const ws = createMockSocket();
     handler.handleSocket(ws, new Request("http://localhost/ws"));

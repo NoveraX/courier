@@ -3,12 +3,12 @@
  */
 
 import type { ParsedGroup, ParsedSecurityScheme, ParsedSpec } from "../parser/types";
-import type { GeneratedFile, GenerateOptions } from "./types";
+import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
 export function generateSourceFile(
   groups: ParsedGroup[],
   spec: ParsedSpec,
-  options: GenerateOptions,
+  options: ResolvedGenerateOptions,
 ): GeneratedFile {
   const lines: string[] = [];
 

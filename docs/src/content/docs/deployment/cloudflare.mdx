@@ -21,14 +21,17 @@ Nexus SSE works on Workers because it uses the Web Standard `fetch` + `ReadableS
 
 ```ts title="src/index.ts"
 import { Hono } from "hono"
+import { registerSources } from "@noverax/nexus"
 import { nexusHandler, nexusSSEHandler } from "@noverax/nexus-hono"
 import { sources } from "./api/sources"
 
+registerSources(sources)
+
 const app = new Hono()
 
-app.all("/api/request", nexusHandler(sources))
+app.all("/api/request", nexusHandler())
 
-app.get("/api/sse", nexusSSEHandler(sources, {
+app.get("/api/sse", nexusSSEHandler({
   sseMaxLifetimeMs: 90_000,      // close before 100s idle timeout
   sseHeaders: {
     "Access-Control-Allow-Origin": "https://app.example.com",
@@ -58,7 +61,7 @@ Timeline: 0s ───── 25s (ping) ───── 50s (ping) ────�
 Even with heartbeats, set `sseMaxLifetimeMs` to force periodic reconnection. This prevents zombie connections and ensures clean resource rotation:
 
 ```ts
-nexusSSEHandler(sources, {
+nexusSSEHandler({
   sseMaxLifetimeMs: 300_000,  // reconnect every 5 minutes
 })
 ```

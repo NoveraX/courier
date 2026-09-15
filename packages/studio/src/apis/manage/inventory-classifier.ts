@@ -16,26 +16,21 @@ export function buildGroupEndpoints(
 ): InventoryEndpoint[] {
   const endpoints: InventoryEndpoint[] = [];
 
-  // Disk endpoints: classify against spec + fingerprints
+  // Disk endpoints: classify against spec + fingerprints. The disk listing only
+  // carries endpoint names — the canonical `httpMethod`/`path` is read from the
+  // matching spec entry when present (active endpoints) and left empty for
+  // custom or removed-from-spec endpoints.
   if (diskGroup) {
-    for (const ep of diskGroup.endpoints) {
+    for (const name of diskGroup.endpoints) {
       endpoints.push(
-        classifyDiskEndpoint(
-          groupName,
-          ep.name,
-          ep.httpMethod,
-          ep.path,
-          specGroup,
-          fingerprints,
-          diskHashes,
-        ),
+        classifyDiskEndpoint(groupName, name, specGroup, fingerprints, diskHashes),
       );
     }
   }
 
   // Spec endpoints not on disk -> available
   if (specGroup) {
-    const diskNames = new Set(diskGroup?.endpoints.map((e) => e.name) ?? []);
+    const diskNames = new Set(diskGroup?.endpoints ?? []);
     for (const ep of specGroup.endpoints) {
       if (diskNames.has(ep.name)) continue;
       endpoints.push({

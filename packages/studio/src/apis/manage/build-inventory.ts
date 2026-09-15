@@ -5,15 +5,14 @@
  */
 
 import type { ParsedSpec } from "../parser/types";
-import type { ScannedGroup } from "../scanner/types";
 
 import { buildGroupEndpoints } from "./inventory-classifier";
 import { buildDiskHashes, buildDiskMap, buildSpecMap } from "./inventory-indexers";
-import type { EndpointInventory, InventoryGroup } from "./types";
+import type { DiskGroupListing, EndpointInventory, InventoryGroup } from "./types";
 
 export function buildEndpointInventory(
   spec: ParsedSpec,
-  diskGroups: ScannedGroup[],
+  diskGroups: DiskGroupListing[],
   fingerprints: Record<string, string>,
   existingFiles: Record<string, string>,
 ): EndpointInventory {

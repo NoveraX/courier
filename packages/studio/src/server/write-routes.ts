@@ -2,9 +2,9 @@
  * Express route for apis write — merges with existing files or writes raw.
  */
 
-import { getSource, loadRegistry } from "../apis";
+import { getImportEntry, getImportState, loadImportsSnapshot } from "./imports-bridge";
+import { withImportsLock } from "./imports-lock";
 import { errMsg } from "./registry-helpers";
-import { withRegistryLock } from "./registry-lock";
 import type { RouteApp } from "./route-types";
 import { validateWriteBody } from "./validate-body";
 import { handleMergeWrite, handleRawWrite } from "./write-helpers";
@@ -15,29 +15,20 @@ export function registerWriteRoutes(app: RouteApp): void {
     const validated = validateWriteBody(req.body, res);
     if (!validated) return;
 
-    void withRegistryLock(() => {
-      const { files, sourceName, spec, specUrl, importType, options } =
-        validated as unknown as WriteBody;
+    void withImportsLock(async () => {
+      const { files, sourceName, spec, options } = validated as unknown as WriteBody;
 
-      const config = loadRegistry();
-      const source = sourceName ? getSource(config, sourceName) : undefined;
+      const snapshot = await loadImportsSnapshot();
+      const entry = sourceName ? getImportEntry(snapshot, sourceName) : undefined;
+      const state = sourceName ? getImportState(snapshot, sourceName) : undefined;
 
-      if (source && sourceName && spec && options) {
-        const result = handleMergeWrite(
-          files,
-          sourceName,
-          spec,
-          specUrl,
-          importType,
-          options,
-          config,
-          source,
-        );
+      if (entry && sourceName && spec && options) {
+        const result = await handleMergeWrite(files, sourceName, spec, { entry, state });
         res.json(result);
         return;
       }
 
-      const result = handleRawWrite(files, sourceName, spec, specUrl, importType, options, config);
+      const result = await handleRawWrite(files, sourceName, spec, { entry, state });
       res.json(result);
     }).catch((err) => {
       res.status(500).json({ error: errMsg(err, "Failed to write files") });

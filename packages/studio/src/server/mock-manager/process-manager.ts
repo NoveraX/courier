@@ -31,6 +31,7 @@ export interface SpawnedServer {
   child: ChildProcess;
   serverId: string;
   configPath: string;
+  mockKey: string;
   pid: number;
 }
 
@@ -54,6 +55,7 @@ export function createProcessManager(events: ProcessManagerEvents) {
   async function spawn(
     serverId: string,
     configPath: string,
+    mockKey: string,
     preferredPort: number,
   ): Promise<SpawnedServer> {
     const port = preferredPort > 0 ? await allocatePort(preferredPort) : 0;
@@ -91,9 +93,9 @@ export function createProcessManager(events: ProcessManagerEvents) {
       }
     });
 
-    child.send({ type: "start", configPath, port });
+    child.send({ type: "start", configPath, mockKey, port });
 
-    return { child, serverId, configPath, pid: child.pid ?? 0 };
+    return { child, serverId, configPath, mockKey, pid: child.pid ?? 0 };
   }
 
   async function kill(serverId: string): Promise<void> {

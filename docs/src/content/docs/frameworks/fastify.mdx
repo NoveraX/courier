@@ -42,8 +42,11 @@ Create a Fastify server with the Nexus plugin:
 ```ts title="server.ts"
 import Fastify from "fastify"
 import cors from "@fastify/cors"
+import { registerSources } from "@noverax/nexus"
 import { nexusPlugin } from "@noverax/nexus-fastify"
 import { sources } from "./lib/sources"
+
+registerSources(sources)
 
 const app = Fastify({ logger: true })
 
@@ -55,7 +58,6 @@ async function start() {
 
   // Register the Nexus proxy plugin
   await app.register(nexusPlugin, {
-    sources,
     prefix: "/api/request",
   })
 
@@ -65,7 +67,7 @@ async function start() {
 start()
 ```
 
-The `nexusPlugin` registers a route handler at the specified prefix that processes Nexus proxy requests and forwards them to your backend.
+The `nexusPlugin` registers a route handler at the specified prefix that reads sources from the core global registry populated by `registerSources()` at module load.
 
 ## With existing Fastify app
 
@@ -74,8 +76,11 @@ Add the Nexus plugin alongside your existing routes and plugins:
 ```ts title="server.ts"
 import Fastify from "fastify"
 import cors from "@fastify/cors"
+import { registerSources } from "@noverax/nexus"
 import { nexusPlugin } from "@noverax/nexus-fastify"
 import { sources } from "./lib/sources"
+
+registerSources(sources)
 
 const app = Fastify({ logger: true })
 
@@ -96,7 +101,6 @@ async function start() {
 
   // Register Nexus proxy plugin
   await app.register(nexusPlugin, {
-    sources,
     prefix: "/api/request",
   })
 
@@ -117,8 +121,11 @@ For production, restrict the allowed origins:
 ```ts title="server.ts"
 import Fastify from "fastify"
 import cors from "@fastify/cors"
+import { registerSources } from "@noverax/nexus"
 import { nexusPlugin } from "@noverax/nexus-fastify"
 import { sources } from "./lib/sources"
+
+registerSources(sources)
 
 const app = Fastify({ logger: true })
 
@@ -129,7 +136,6 @@ async function start() {
   })
 
   await app.register(nexusPlugin, {
-    sources,
     prefix: "/api/request",
   })
 
@@ -148,25 +154,21 @@ Fastify's schema-based validation and serialization make it one of the fastest N
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
-If you wire your Fastify server into Studio via `instrumentServer`, pass `appOrigin` so the Playground proxy executor can resolve relative `proxyPath.{sse,ws}` values into absolute URLs. Node `fetch` and `WebSocket` reject relative URLs, so this is required for Studio Playground proxy mode whenever your `proxyPath` does not already include a full `http(s)://...` prefix.
+Wire your Fastify server into Studio with a single `attachRuntime()` call. It auto-loads `nexus.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `nexus.config.ts.runtime.appOrigin` (or set the `NEXUS_APP_URL` env var to override per-environment).
 
 ```ts title="server.ts"
 import Fastify from "fastify"
 import { nexusPlugin } from "@noverax/nexus-fastify"
-import { instrumentServer } from "@noverax/nexus-studio-core"
-import { sources } from "./lib/sources"
+import { attachRuntime } from "@noverax/nexus-studio-core/runtime"
 
 const app = Fastify()
 
 async function start() {
-  await app.register(nexusPlugin, { sources, prefix: "/api/request" })
-
   if (process.env.NODE_ENV !== "production") {
-    instrumentServer({
-      sources,
-      appOrigin: "http://localhost:3001",  // this server's own URL
-    })
+    await attachRuntime()
   }
+
+  await app.register(nexusPlugin, { prefix: "/api/request" })
 
   await app.listen({ port: 3001 })
 }

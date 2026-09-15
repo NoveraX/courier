@@ -9,7 +9,6 @@ import type {
 } from "./types";
 import {
   fetchRegistrySources,
-  scanProject,
   checkSourceUpdates,
   checkAllUpdates,
   removeRegistrySource,
@@ -61,15 +60,12 @@ export function useRegistry(): UseRegistryReturn {
     return { imported: enriched, handWritten: handW };
   }, [scanSources, registrySources]);
 
-  // Manual refresh — re-fetches from server (for post-import, post-update)
+  // Manual refresh — re-fetches the registry from the server (for post-import,
+  // post-update flows). Hand-written sources are picked up from the runtime
+  // `binding:snapshot` push.
   const refresh = useCallback(async () => {
     try {
-      const [reg, scan] = await Promise.all([
-        fetchRegistrySources(),
-        scanProject(),
-      ]);
-
-      useStudioStore.getState().setScanSources(scan.sources);
+      const reg = await fetchRegistrySources();
       useStudioStore.getState().setRegistrySources(reg.sources);
     } catch {
       // Silently fail — server may not be ready

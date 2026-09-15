@@ -14,7 +14,7 @@
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { ConfigurationError, isConfigurationError } from "../src/error";
+import { ConfigurationError, isConfigurationError } from "../src/errors";
 import { mergeProxyPath } from "../src/proxy-caller/proxy-path";
 import { resolveProxyPath } from "../src/proxy-caller/resolve-path";
 

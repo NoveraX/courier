@@ -5,29 +5,7 @@
 import type { JsonResponse } from "./route-types";
 import { isFileArray, isObject, isString, reject } from "./validate-body";
 
-// ── Registry add ────────────────────────────────────────────────────────────
-
-interface RegistryAddBody {
-  name: string;
-  spec: Record<string, unknown>;
-  specUrl: string;
-  options: Record<string, unknown>;
-  generatedFiles: { path: string; content: string }[];
-  importType?: string;
-  configPath?: string;
-}
-
-export function validateRegistryAddBody(body: unknown, res: JsonResponse): RegistryAddBody | null {
-  if (!isObject(body)) return reject(res, "body");
-  if (!isString(body.name) || body.name.length === 0) return reject(res, "name");
-  if (!isObject(body.spec)) return reject(res, "spec");
-  if (!isString(body.specUrl)) return reject(res, "specUrl");
-  if (!isObject(body.options)) return reject(res, "options");
-  if (!isFileArray(body.generatedFiles)) return reject(res, "generatedFiles");
-  return body as unknown as RegistryAddBody;
-}
-
-// ── Registry name (remove, check-updates) ───────────────────────────────────
+// ── Imports name (remove, check-updates) ────────────────────────────────────
 
 interface NameBody {
   name: string;

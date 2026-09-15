@@ -1,12 +1,14 @@
 import { createLogger } from "@noverax/nexus";
 import { createDataUri } from "./core/data-uri";
-import { resolveOptions } from "./core/options";
-import { generateConnectSnippet } from "./core/snippet";
+import { resolveSnippet } from "./core/resolve-snippet";
 import type { StudioPluginOptions } from "./core/types";
+
+const FRAMEWORK = "webpack";
+const log = createLogger("WebpackPlugin");
 
 /**
  * Webpack plugin for Nexus Studio.
- * Injects `connectStudio()` into the client entry in dev mode.
+ * Injects `attachRuntime("webpack-browser")` into the client entry in dev mode.
  *
  * @example
  * ```ts
@@ -18,20 +20,10 @@ import type { StudioPluginOptions } from "./core/types";
  * }
  * ```
  */
-const log = createLogger("WebpackPlugin");
-
 export function nexusStudio(options?: StudioPluginOptions): WebpackPluginLike {
-  const resolved = { ...resolveOptions(options), framework: "webpack" };
-
   return {
     apply(compiler) {
-      if (!resolved.enabled) return;
-
-      // Skip server-side bundles
       if (compiler.options?.target === "node") return;
-
-      const snippet = generateConnectSnippet(resolved);
-      const dataUri = createDataUri(snippet);
 
       const originalEntry = compiler.options.entry;
       compiler.options.entry = async () => {
@@ -40,6 +32,10 @@ export function nexusStudio(options?: StudioPluginOptions): WebpackPluginLike {
             ? await originalEntry()
             : (originalEntry as Record<string, WebpackEntryItem>);
 
+        const snippet = await resolveSnippet(FRAMEWORK, options);
+        if (!snippet) return entries;
+
+        const dataUri = createDataUri(snippet);
         let main = entries["main-app"] ?? entries["main"];
         if (!main) {
           main = Object.values(entries)[0];

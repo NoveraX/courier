@@ -2,15 +2,15 @@
  * Shared types for apis write routes.
  */
 
+import type { NexusImportType } from "@noverax/nexus/config";
 import type { GenerateOptions, ParsedSpec } from "../apis";
-import type { SpecImportType } from "../apis/registry/types";
 
 export interface WriteBody {
   files: { path: string; content: string }[];
   sourceName?: string;
   spec?: ParsedSpec;
   specUrl?: string;
-  importType?: SpecImportType;
+  importType?: NexusImportType;
   options?: GenerateOptions;
 }
 

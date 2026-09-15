@@ -1,11 +1,12 @@
 import { RESOLVED_ID, VIRTUAL_ID } from "./core/constants";
-import { resolveOptions } from "./core/options";
-import { generateConnectSnippet } from "./core/snippet";
+import { resolveSnippet } from "./core/resolve-snippet";
 import type { StudioPluginOptions } from "./core/types";
+
+const FRAMEWORK = "rollup";
 
 /**
  * Rollup plugin for Nexus Studio.
- * Injects `connectStudio()` into entry modules in dev/watch mode.
+ * Injects `attachRuntime("rollup-browser")` into entry modules in dev/watch mode.
  *
  * @example
  * ```ts
@@ -17,8 +18,9 @@ import type { StudioPluginOptions } from "./core/types";
  * ```
  */
 export function nexusStudio(options?: StudioPluginOptions): RollupPluginLike {
-  const resolved = { ...resolveOptions(options), framework: "rollup" };
   let injected = false;
+  let pending: Promise<string | null> | null = null;
+  const ensure = (): Promise<string | null> => (pending ??= resolveSnippet(FRAMEWORK, options));
 
   return {
     name: "nexus-studio",
@@ -28,23 +30,24 @@ export function nexusStudio(options?: StudioPluginOptions): RollupPluginLike {
     },
 
     resolveId(id: string) {
-      if (!resolved.enabled) return undefined;
       if (id === VIRTUAL_ID) return RESOLVED_ID;
       return undefined;
     },
 
-    load(id: string) {
-      if (!resolved.enabled) return undefined;
-      if (id === RESOLVED_ID) return generateConnectSnippet(resolved);
-      return undefined;
+    async load(id: string) {
+      if (id !== RESOLVED_ID) return undefined;
+      return (await ensure()) ?? "";
     },
 
-    transform(this: RollupTransformContext, code: string, id: string) {
-      if (!resolved.enabled || injected) return undefined;
+    async transform(this: RollupTransformContext, code: string, id: string) {
+      if (injected) return undefined;
       if (id.startsWith("\0") || id.includes("node_modules")) return undefined;
 
       const info = this.getModuleInfo(id);
       if (!info?.isEntry) return undefined;
+
+      const snippet = await ensure();
+      if (!snippet) return undefined;
 
       injected = true;
       return { code: `import "${VIRTUAL_ID}"\n${code}`, map: null };
@@ -60,10 +63,10 @@ interface RollupPluginLike {
   name: string;
   buildStart(): void;
   resolveId(id: string): string | undefined;
-  load(id: string): string | undefined;
+  load(id: string): Promise<string | undefined>;
   transform(
     this: RollupTransformContext,
     code: string,
     id: string,
-  ): { code: string; map: null } | undefined;
+  ): Promise<{ code: string; map: null } | undefined>;
 }

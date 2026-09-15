@@ -1,48 +1,41 @@
 /**
- * Apply logic for manage routes — writes files to disk and updates caches.
+ * Apply logic for manage routes — writes files to disk and updates state.
  */
 
 import { unlinkSync } from "node:fs";
 
 import type { ParsedSpec } from "../apis";
-import {
-  computeSpecHash,
-  getCachedFingerprints,
-  getSource,
-  loadCache,
-  loadRegistry,
-  saveRegistry,
-  updateSource,
-} from "../apis";
+import { computeSpecHash, createSpecDigest } from "../apis";
+import type { ImportStateEntry } from "../apis/imports-state";
 import type { AddResult, RemoveResult } from "../apis/manage/types";
-import type { RegistrySource } from "../apis/registry/types";
 import { resolveProjectSafe } from "../context";
+import { getImportEntry, getImportState, loadImportsSnapshot, persistImportState } from "./imports-bridge";
 import { handleManagePreview } from "./manage-helpers";
-import { persistCaches, writeFileWithDirs } from "./registry-helpers";
+import { writeFileWithDirs } from "./registry-helpers";
 
 interface ManageApplyRequest {
   name: string;
   spec: ParsedSpec;
   toAdd: Record<string, string[]>;
   toRemove: Record<string, string[]>;
-  configPath?: string;
 }
 
-export function handleManageApply(
+export async function handleManageApply(
   body: ManageApplyRequest,
-): { success: true; written: number; deleted: number } | { error: string; status: number } {
-  const config = loadRegistry(body.configPath);
-  const source = getSource(config, body.name);
-  if (!source) return { error: `Source "${body.name}" not found`, status: 404 };
+): Promise<{ success: true; written: number; deleted: number } | { error: string; status: number }> {
+  const snapshot = await loadImportsSnapshot();
+  const entry = getImportEntry(snapshot, body.name);
+  if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
+  const prevState = getImportState(snapshot, body.name);
 
-  const preview = handleManagePreview(body);
+  const preview = await handleManagePreview(body);
   if ("error" in preview) return preview;
 
   const { addResult, removeResult } = preview;
   const written = writeAddedFiles(addResult) + writeModifiedFiles(removeResult);
   const deleted = deleteRemovedFiles(removeResult);
 
-  updateCachesAndRegistry(body, source, addResult, removeResult);
+  await updateImportStateAfterApply(body, prevState, addResult, removeResult);
   return { success: true, written, deleted };
 }
 
@@ -100,18 +93,18 @@ function deleteRemovedFiles(removeResult?: RemoveResult): number {
   return removeResult.deletedFiles.length;
 }
 
-// ── Registry update ──────────────────────────────────────────────────────────
+// ── State update ─────────────────────────────────────────────────────────────
 
-function updateCachesAndRegistry(
+async function updateImportStateAfterApply(
   body: ManageApplyRequest,
-  source: RegistrySource,
+  prevState: ImportStateEntry | undefined,
   addResult?: AddResult,
   removeResult?: RemoveResult,
-): void {
-  const currentCache = loadCache();
-  const currentFps = getCachedFingerprints(currentCache, body.name);
-  const mergedFps = { ...currentFps };
-
+): Promise<void> {
+  /* fileFingerprints is keyed by ENDPOINT NAME (from generateFingerprints).
+   * generatedFiles is a list of FILE PATHS Studio has written — they are
+   * two different axes and must be tracked independently. */
+  const mergedFps: Record<string, string> = { ...(prevState?.fileFingerprints ?? {}) };
   if (addResult) Object.assign(mergedFps, addResult.newFingerprints);
   if (removeResult) {
     for (const name of removeResult.removedFingerprints) {
@@ -119,9 +112,38 @@ function updateCachesAndRegistry(
     }
   }
 
-  persistCaches(body.name, mergedFps, body.spec);
+  const generatedFiles = mergeGeneratedFilePaths(
+    prevState?.generatedFiles ?? [],
+    addResult,
+    removeResult,
+  );
 
-  let config = loadRegistry(body.configPath);
-  config = updateSource(config, body.name, computeSpecHash(body.spec), source.userModified);
-  saveRegistry(config, body.configPath);
+  const now = new Date().toISOString();
+  await persistImportState(body.name, {
+    specHash: computeSpecHash(body.spec),
+    digest: createSpecDigest(body.spec),
+    fetchedAt: prevState?.fetchedAt ?? now,
+    lastSyncedAt: now,
+    userModified: prevState?.userModified ?? [],
+    generatedFiles,
+    fileFingerprints: mergedFps,
+  });
+}
+
+function mergeGeneratedFilePaths(
+  previous: string[],
+  addResult: AddResult | undefined,
+  removeResult: RemoveResult | undefined,
+): string[] {
+  const paths = new Set(previous);
+  if (addResult) {
+    for (const f of addResult.files) paths.add(f.path);
+    if (addResult.sourceFileUpdate) paths.add(addResult.sourceFileUpdate.path);
+  }
+  if (removeResult) {
+    for (const f of removeResult.modifiedFiles) paths.add(f.path);
+    if (removeResult.sourceFileUpdate) paths.add(removeResult.sourceFileUpdate.path);
+    for (const deleted of removeResult.deletedFiles) paths.delete(deleted);
+  }
+  return Array.from(paths);
 }

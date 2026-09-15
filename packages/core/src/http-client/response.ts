@@ -1,4 +1,4 @@
-import { HTTPError } from "../error";
+import { HTTPError } from "../errors";
 import type { ResponseType } from "./types";
 
 export async function getResponseData(

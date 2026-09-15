@@ -2,6 +2,21 @@
  * Types for endpoint management — inventory, add, and remove operations.
  */
 
+// ── Disk inventory ──────────────────────────────────────────────────────────
+
+/**
+ * Per-group endpoint listing derived from generated files on disk.
+ *
+ * Replaces the AST-scanner-driven `ScannedGroup[]` shape used previously —
+ * inventory only needs the endpoint names + group identity, since spec data
+ * is the canonical source for `httpMethod` / `path` of active endpoints.
+ */
+export interface DiskGroupListing {
+  name: string;
+  prefix: string;
+  endpoints: string[];
+}
+
 // ── Endpoint Classification ──────────────────────────────────────────────────
 
 /** Where an endpoint lives relative to spec and disk */

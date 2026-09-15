@@ -1,21 +1,12 @@
 /**
- * Helpers for registry routes: spec fetching, fingerprint collection, update checks.
+ * Helpers for imports routes: spec fetching, fingerprint collection, and
+ * on-disk cleanup of generated files.
  *
  * Re-exports from focused modules so existing imports remain valid.
  */
 
-import { existsSync, readdirSync, rmSync, statSync } from "node:fs";
-import { join } from "node:path";
-import type { ParsedSpec } from "../apis";
-import {
-  createSpecDigest,
-  loadCache,
-  loadDigestCache,
-  saveCache,
-  saveDigestCache,
-  updateCachedDigest,
-  updateCachedFingerprints,
-} from "../apis";
+import { existsSync, rmdirSync, unlinkSync } from "node:fs";
+import { dirname } from "node:path";
 import { resolveProjectSafe } from "../context";
 
 export { errMsg, readFilesFromDisk, writeFileWithDirs } from "./fs-helpers";
@@ -26,32 +17,35 @@ export {
 } from "./registry-fingerprints";
 export { checkSingleSource, fetchSpecRaw } from "./registry-spec";
 
-/** Persist fingerprint and digest caches for a source in one call */
-export function persistCaches(
-  sourceName: string,
-  fingerprints: Record<string, string>,
-  spec: ParsedSpec,
-): void {
-  const cache = loadCache();
-  saveCache(updateCachedFingerprints(cache, sourceName, fingerprints));
-
-  const digestCache = loadDigestCache();
-  saveDigestCache(updateCachedDigest(digestCache, sourceName, createSpecDigest(spec)));
-}
-
-/** Remove generated files from disk for a source. */
-export function removeGeneratedFiles(outputDir: string, name: string): void {
-  const dir = resolveProjectSafe(join(outputDir, name));
-  if (existsSync(dir)) {
-    rmSync(dir, { recursive: true, force: true });
+/**
+ * Delete every file Studio recorded in an import's `generatedFiles` list.
+ * Paths are project-relative — each is resolved safely before unlink. A
+ * missing file is a no-op; any other filesystem error propagates so the
+ * caller can decide whether to compensate or surface it.
+ *
+ * After each delete the parent directory is pruned if it became empty, so
+ * orphaned `<outputDir>/<sourceName>/` trees clean themselves up.
+ */
+export function removeGeneratedFiles(paths: string[]): void {
+  const parents = new Set<string>();
+  for (const relPath of paths) {
+    const abs = resolveProjectSafe(relPath);
+    try {
+      unlinkSync(abs);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    }
+    parents.add(dirname(abs));
   }
-}
 
-/** Count group subdirectories on disk for a source. */
-export function countGroupsOnDisk(outputDir: string, name: string): number {
-  const dir = resolveProjectSafe(join(outputDir, name));
-  if (!existsSync(dir)) return 0;
-  return readdirSync(dir).filter((entry) => {
-    return statSync(join(dir, entry)).isDirectory();
-  }).length;
+  /* Walk parents from deepest to shallowest, removing each if empty. */
+  const sorted = Array.from(parents).sort((a, b) => b.length - a.length);
+  for (const dir of sorted) {
+    if (!existsSync(dir)) continue;
+    try {
+      rmdirSync(dir);
+    } catch {
+      /* Directory not empty — leave it alone. */
+    }
+  }
 }

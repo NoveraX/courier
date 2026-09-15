@@ -1,13 +1,2 @@
-export { CatalogStore } from "./catalog-store";
-export { mergeOverlay } from "./merge-overlay";
-export { canonicalKey, deduplicateKeys, stripNumericSuffix } from "./normalize";
-export type {
-  Catalog,
-  CatalogEndpoint,
-  CatalogEntry,
-  CatalogGroup,
-  CatalogMeta,
-  CatalogSnapshot,
-  MergeResult,
-  NameMapping,
-} from "./types";
+export { BindingTable, BindingConflictError } from "./binding-table";
+export type { BindingTransport } from "./binding-table";

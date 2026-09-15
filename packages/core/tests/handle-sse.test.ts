@@ -2,7 +2,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createHandler } from "../src/adapter";
 import { endpoint } from "../src/define/endpoint";
 import type { SSEContext, SSEEvent } from "../src/realtime/types";
+import { _resetSourcesForTests, registerSources } from "../src/sources";
 import type { StudioHooks } from "../src/studio/hooks";
+
+/**
+ * Zero-arg `createHandler()` reads sources lazily from the core global
+ * registry. Tests register the sources first and then create the handler
+ * so the request-time `requireSources()` lookup returns the expected dict.
+ */
+function setupHandler(sources: unknown, config?: Parameters<typeof createHandler>[0]) {
+  registerSources((sources ?? {}) as Parameters<typeof registerSources>[0]);
+  return createHandler(config);
+}
 
 /** Helper: create a source with an SSE endpoint */
 function createSSESource(
@@ -59,23 +70,24 @@ function installHooks(overrides: Partial<StudioHooks>): () => void {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  _resetSourcesForTests();
 });
 
 describe("handleSSE", () => {
   it("returns 400 when _s is missing", async () => {
-    const { handleSSE } = createHandler({});
+    const { handleSSE } = setupHandler({});
     const res = await handleSSE(sseRequest("_m=feed"));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 when _m is missing", async () => {
-    const { handleSSE } = createHandler({});
+    const { handleSSE } = setupHandler({});
     const res = await handleSSE(sseRequest("_s=testSource"));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 for unknown source", async () => {
-    const { handleSSE } = createHandler({});
+    const { handleSSE } = setupHandler({});
     const res = await handleSSE(sseRequest("_s=unknown&_m=feed"));
     expect(res.status).toBe(400);
     const body = await res.json();
@@ -87,7 +99,7 @@ describe("handleSSE", () => {
     const sources = {
       api: { options: { groups: {} }, health: httpEndpoint },
     };
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     const res = await handleSSE(sseRequest("_s=api&_m=health"));
     expect(res.status).toBe(400);
     expect((await res.json()).message).toContain("not an SSE transport");
@@ -99,7 +111,7 @@ describe("handleSSE", () => {
       yield { data: { msg: "world" } };
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     const res = await handleSSE(sseRequest("_s=testSource&_m=feed"));
 
     expect(res.status).toBe(200);
@@ -116,7 +128,7 @@ describe("handleSSE", () => {
       yield { data: "b" };
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     const res = await handleSSE(sseRequest("_s=testSource&_m=feed"));
     const text = await collectSSEText(res);
 
@@ -129,7 +141,7 @@ describe("handleSSE", () => {
       yield { id: "custom-42", data: "test" };
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     const res = await handleSSE(sseRequest("_s=testSource&_m=feed"));
     const text = await collectSSEText(res);
 
@@ -144,7 +156,7 @@ describe("handleSSE", () => {
       yield { data: "ok" };
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     await collectSSEText(
       await handleSSE(sseRequest("_s=testSource&_m=feed", { "Last-Event-ID": "99" })),
     );
@@ -160,7 +172,7 @@ describe("handleSSE", () => {
       yield { data: "ok" };
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     await collectSSEText(
       await handleSSE(sseRequest("_s=testSource&_m=feed&userId=123&channel=news")),
     );
@@ -174,7 +186,7 @@ describe("handleSSE", () => {
       throw new Error("stream broke");
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     const res = await handleSSE(sseRequest("_s=testSource&_m=feed"));
     const text = await collectSSEText(res);
 
@@ -187,7 +199,7 @@ describe("handleSSE", () => {
       yield { data: "x" };
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     const res = await handleSSE(sseRequest("_s=testSource&_m=feed"));
 
     expect(res.headers.get("Content-Type")).toBe("text/event-stream");
@@ -205,7 +217,7 @@ describe("handleSSE — studio hooks", () => {
       yield { data: "x" };
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     const res = await handleSSE(sseRequest("_s=testSource&_g=notifications&_m=feed"));
     await collectSSEText(res);
 
@@ -232,7 +244,7 @@ describe("handleSSE — studio hooks", () => {
       yield { data: "second" };
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     const PLAYGROUND_RID = "playground-rid-abc-123";
     const res = await handleSSE(
       sseRequest("_s=testSource&_g=notifications&_m=feed", {
@@ -260,7 +272,7 @@ describe("handleSSE — studio hooks", () => {
       yield { data: "x" };
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     const res = await handleSSE(sseRequest("_s=testSource&_m=feed"));
     await collectSSEText(res);
 
@@ -296,7 +308,7 @@ describe("handleSSE — studio hooks", () => {
     });
 
     const PLAYGROUND_RID = "rid-end-to-end-cancel";
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
 
     // Start the SSE stream — do NOT await collectSSEText (it would hang).
     const responsePromise = handleSSE(
@@ -345,7 +357,7 @@ describe("handleSSE — studio hooks", () => {
       yield { event: "update", data: "b" };
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     const res = await handleSSE(sseRequest("_s=testSource&_m=feed"));
     await collectSSEText(res);
 
@@ -365,7 +377,7 @@ describe("handleSSE — studio hooks", () => {
       yield { data: "done" };
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     const res = await handleSSE(sseRequest("_s=testSource&_m=feed"));
     await collectSSEText(res);
 
@@ -389,7 +401,7 @@ describe("handleSSE — studio hooks", () => {
       throw new Error("boom");
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     const res = await handleSSE(sseRequest("_s=testSource&_m=feed"));
     await collectSSEText(res);
 
@@ -409,7 +421,7 @@ describe("handleSSE — variable extraction", () => {
       yield { data: "ok" };
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     await collectSSEText(
       await handleSSE(
         sseRequest("_s=testSource&_m=feed&_g=notifications&_transport=sse&_o={}&userId=42"),
@@ -427,7 +439,7 @@ describe("handleSSE — variable extraction", () => {
       yield { data: "ok" };
     });
 
-    const { handleSSE } = createHandler(sources as any);
+    const { handleSSE } = setupHandler(sources);
     await collectSSEText(await handleSSE(sseRequest("_s=testSource&_m=feed")));
 
     expect(receivedVars).toEqual({});
@@ -436,7 +448,7 @@ describe("handleSSE — variable extraction", () => {
 
 describe("handleSSE — connection registry", () => {
   it("exposes sseConnections on handler", () => {
-    const { sseConnections } = createHandler({});
+    const { sseConnections } = setupHandler({});
     expect(sseConnections).toBeDefined();
     expect(sseConnections.count).toBe(0);
     expect(typeof sseConnections.list).toBe("function");
@@ -451,7 +463,7 @@ describe("handleSSE — connection registry", () => {
       await blocker;
     });
 
-    const handler = createHandler(sources as any);
+    const handler = setupHandler(sources);
     const res = await handler.handleSSE(sseRequest("_s=testSource&_m=feed"));
 
     // Start reading without consuming all
@@ -481,7 +493,7 @@ describe("handleSSE — connection registry", () => {
       await blocker;
     });
 
-    const handler = createHandler(sources as any, { maxSSEConnections: 1 });
+    const handler = setupHandler(sources, { maxSSEConnections: 1 });
 
     // First connection succeeds
     const res1 = await handler.handleSSE(sseRequest("_s=testSource&_m=feed"));
@@ -505,7 +517,7 @@ describe("handleSSE — connection registry", () => {
       yield { data: "x" };
     });
 
-    const handler = createHandler(sources as any);
+    const handler = setupHandler(sources);
     await handler.shutdownSSE({ drainMs: 10 });
 
     const res = await handler.handleSSE(sseRequest("_s=testSource&_m=feed"));
@@ -522,7 +534,7 @@ describe("handleSSE — lifecycle hooks", () => {
       yield { data: "x" };
     });
 
-    const handler = createHandler(sources as any, { onSSEConnect });
+    const handler = setupHandler(sources, { onSSEConnect });
     const res = await handler.handleSSE(sseRequest("_s=testSource&_m=feed"));
     await collectSSEText(res);
 
@@ -541,7 +553,7 @@ describe("handleSSE — lifecycle hooks", () => {
       yield { data: "x" };
     });
 
-    const handler = createHandler(sources as any, { onSSEConnect });
+    const handler = setupHandler(sources, { onSSEConnect });
     const res = await handler.handleSSE(sseRequest("_s=testSource&_m=feed"));
     expect(res.status).toBe(403);
   });
@@ -553,7 +565,7 @@ describe("handleSSE — lifecycle hooks", () => {
       yield { data: "x" };
     });
 
-    const handler = createHandler(sources as any, { onSSEDisconnect });
+    const handler = setupHandler(sources, { onSSEDisconnect });
     const res = await handler.handleSSE(sseRequest("_s=testSource&_m=feed"));
     await collectSSEText(res);
 
@@ -573,7 +585,7 @@ describe("handleSSE — lifecycle hooks", () => {
       throw new Error("boom");
     });
 
-    const handler = createHandler(sources as any, { onSSEError });
+    const handler = setupHandler(sources, { onSSEError });
     const res = await handler.handleSSE(sseRequest("_s=testSource&_m=feed"));
     await collectSSEText(res);
 
@@ -592,7 +604,7 @@ describe("handleSSE — getByEndpoint", () => {
       await blocker;
     });
 
-    const handler = createHandler(sources as any);
+    const handler = setupHandler(sources);
     const res = await handler.handleSSE(sseRequest("_s=testSource&_m=feed"));
     const reader = res.body!.getReader();
     await reader.read();
@@ -614,7 +626,7 @@ describe("handle (auto-routing)", () => {
       yield { data: "routed" };
     });
 
-    const { handle } = createHandler(sources as any);
+    const { handle } = setupHandler(sources);
     const req = new Request("http://localhost/api/sse?_s=testSource&_m=feed", {
       headers: { Accept: "text/event-stream" },
     });
@@ -628,7 +640,7 @@ describe("handle (auto-routing)", () => {
       yield { data: "routed" };
     });
 
-    const { handle } = createHandler(sources as any);
+    const { handle } = setupHandler(sources);
     const req = new Request(
       "http://localhost/api/sse?_s=testSource&_m=feed&_transport=sse",
     );

@@ -1,6 +1,5 @@
 import type { HandlerConfig } from "@noverax/nexus";
 import { createHandler } from "@noverax/nexus";
-import type { Sources } from "@noverax/nexus/define";
 import { fromWebHandler } from "h3";
 
 /**
@@ -17,24 +16,18 @@ import { fromWebHandler } from "h3";
  * In the meantime, run a standalone Nexus server alongside Nuxt for any
  * SSE/WS endpoints — see the deployment docs for the standalone server.
  *
+ * Sources are read from the core global registry populated by
+ * `attachRuntime()` — call `await attachRuntime()` in a Nuxt server
+ * plugin (`server/plugins/nexus.ts`) before the first request.
+ *
  * @example
  * ```ts
  * // server/api/request.ts (Nuxt 3+)
  * import { nexusHandler } from "@noverax/nexus-nuxt";
- * export default nexusHandler(sources);
- * ```
- *
- * @example
- * ```ts
- * // Using with h3 directly
- * import { createApp } from "h3";
- * import { nexusHandler } from "@noverax/nexus-nuxt";
- *
- * const app = createApp();
- * app.use("/api/request", nexusHandler(sources));
+ * export default nexusHandler();
  * ```
  */
-export function nexusHandler(sources: Sources, config?: HandlerConfig) {
-  const { handle } = createHandler(sources, config);
+export function nexusHandler(config?: HandlerConfig) {
+  const { handle } = createHandler(config);
   return fromWebHandler((request) => handle(request));
 }

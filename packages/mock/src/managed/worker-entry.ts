@@ -13,18 +13,23 @@ import { buildScenarioMeta } from "./scenario-meta";
 import type { ParentMessage } from "./types";
 import { parentCheck, send, sendError } from "./worker-ipc";
 
-async function loadConfig(configPath: string): Promise<unknown> {
+async function loadMock(configPath: string, mockKey: string): Promise<unknown> {
   const url = `${configPath}?t=${Date.now()}`;
   const mod = await import(url);
-  return mod.mockServer ?? mod.default;
+  const root = (mod.default ?? mod) as { mocks?: Record<string, unknown> } | undefined;
+  return root?.mocks?.[mockKey];
 }
 
-async function startServer(configPath: string, allocatedPort: number): Promise<void> {
-  const config = await loadConfig(configPath);
+async function startServer(
+  configPath: string,
+  mockKey: string,
+  allocatedPort: number,
+): Promise<void> {
+  const config = await loadMock(configPath, mockKey);
 
   if (!isMockServerDefinition(config)) {
     return sendError(
-      `File ${configPath} does not export a valid mockServer. Use defineMockServer().`,
+      `nexus.config.ts at ${configPath} has no valid mockServer at mocks["${mockKey}"]. Use defineMockServer().`,
       true,
     );
   }
@@ -98,7 +103,7 @@ async function startServer(configPath: string, allocatedPort: number): Promise<v
 // Wait for start command from parent
 process.on("message", (msg: ParentMessage) => {
   if (msg.type === "start") {
-    startServer(msg.configPath, msg.port).catch((err) => {
+    startServer(msg.configPath, msg.mockKey, msg.port).catch((err) => {
       sendError(err instanceof Error ? err.message : String(err), true);
     });
   }

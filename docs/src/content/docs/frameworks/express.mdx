@@ -43,8 +43,11 @@ Create an Express server with the Nexus handler:
 ```ts title="server.ts"
 import express from "express"
 import cors from "cors"
+import { registerSources } from "@noverax/nexus"
 import { nexusHandler } from "@noverax/nexus-express"
 import { sources } from "./lib/sources"
+
+registerSources(sources)
 
 const app = express()
 
@@ -52,14 +55,14 @@ app.use(cors({ origin: "http://localhost:5173", credentials: true }))
 app.use(express.json())
 
 // Mount the Nexus proxy route
-app.all("/api/request", nexusHandler(sources))
+app.all("/api/request", nexusHandler())
 
 app.listen(3001, () => {
   console.log("Server running on http://localhost:3001")
 })
 ```
 
-The `nexusHandler` returns a standard Express middleware that handles incoming Nexus proxy requests and forwards them to your backend.
+`registerSources(sources)` populates the in-process registry that `nexusHandler()` reads at request time. The adapter is zero-arg — pass only behavioral options like `allowedOrigins` or `sseHeaders`. When you wire Studio on top (see below), `attachRuntime()` auto-loads `nexus.config.ts` and calls `registerSources()` for you, so you can drop the manual call.
 
 ## With existing Express app
 
@@ -68,8 +71,11 @@ If you already have an Express server, add the Nexus handler alongside your exis
 ```ts title="server.ts"
 import express from "express"
 import cors from "cors"
+import { registerSources } from "@noverax/nexus"
 import { nexusHandler } from "@noverax/nexus-express"
 import { sources } from "./lib/sources"
+
+registerSources(sources)
 
 const app = express()
 
@@ -86,7 +92,7 @@ app.get("/api/stats", (req, res) => {
 })
 
 // Add Nexus proxy route
-app.all("/api/request", nexusHandler(sources))
+app.all("/api/request", nexusHandler())
 
 app.listen(3001)
 ```
@@ -102,8 +108,11 @@ For production, restrict the allowed origins:
 ```ts title="server.ts"
 import express from "express"
 import cors from "cors"
+import { registerSources } from "@noverax/nexus"
 import { nexusHandler } from "@noverax/nexus-express"
 import { sources } from "./lib/sources"
+
+registerSources(sources)
 
 const app = express()
 
@@ -115,7 +124,7 @@ app.use(
 )
 app.use(express.json())
 
-app.all("/api/request", nexusHandler(sources))
+app.all("/api/request", nexusHandler())
 
 app.listen(Number(process.env.PORT) || 3001)
 ```
@@ -126,29 +135,25 @@ Set `credentials: true` in your CORS config if your backend uses cookies for aut
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
-If you wire your Express server into Studio via `instrumentServer`, pass `appOrigin` so the Playground proxy executor can resolve relative `proxyPath.{sse,ws}` values into absolute URLs. Node `fetch` and `WebSocket` reject relative URLs, so this is required for Studio Playground proxy mode whenever your `proxyPath` does not already include a full `http(s)://...` prefix.
+Wire your Express server into Studio with a single `attachRuntime()` call. It auto-loads `nexus.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `nexus.config.ts.runtime.appOrigin` (or set the `NEXUS_APP_URL` env var to override per-environment).
 
 ```ts title="server.ts"
 import express from "express"
 import { nexusHandler } from "@noverax/nexus-express"
-import { instrumentServer } from "@noverax/nexus-studio-core"
-import { sources } from "./lib/sources"
+import { attachRuntime } from "@noverax/nexus-studio-core/runtime"
+
+if (process.env.NODE_ENV !== "production") {
+  await attachRuntime()
+}
 
 const app = express()
 app.use(express.json())
-app.all("/api/request", nexusHandler(sources))
-
-if (process.env.NODE_ENV !== "production") {
-  instrumentServer({
-    sources,
-    appOrigin: "http://localhost:3001",  // this server's own URL
-  })
-}
+app.all("/api/request", nexusHandler())
 
 app.listen(3001)
 ```
 
-Alternatively, set `NEXUS_APP_URL` instead of passing `appOrigin` explicitly:
+Alternatively, set `NEXUS_APP_URL` instead of pinning `appOrigin` in the config:
 
 ```bash
 NEXUS_APP_URL=http://localhost:3001 node server.js

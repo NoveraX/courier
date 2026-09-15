@@ -8,22 +8,18 @@ Next.js App Router cannot host WebSocket upgrades in-process — neither RSC nor
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
-If you use `@noverax/nexus-studio-core` to wire your app into Studio, you must pass `appOrigin` so the Playground proxy executor can resolve relative `proxyPath` values into absolute URLs that Node `fetch` and `WebSocket` accept.
+Wire your Next.js app into Studio with a single `attachRuntime()` call from `instrumentation.ts`. It auto-loads `nexus.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `nexus.config.ts.runtime.appOrigin` (or set the `NEXUS_APP_URL` env var to override per-environment).
 
 ```ts title="instrumentation.ts"
 export async function register() {
+  if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NODE_ENV !== "development") return;
-  const { instrumentServer } = await import("@noverax/nexus-studio-core");
-  const { sources } = await import("@/lib/sources");
-
-  instrumentServer({
-    sources,
-    appOrigin: "http://localhost:3000",  // Next.js dev server origin
-  });
+  const { attachRuntime } = await import("@noverax/nexus-studio-core/runtime");
+  await attachRuntime();
 }
 ```
 
-Alternatively, set the `NEXUS_APP_URL` environment variable instead of passing `appOrigin` explicitly:
+Alternatively, set the `NEXUS_APP_URL` environment variable instead of pinning `appOrigin` in the config:
 
 ```bash
 NEXUS_APP_URL=http://localhost:3000 next dev
@@ -82,14 +78,24 @@ export const sources = { myApi: api }
 
 Create a Next.js App Router route handler that proxies browser requests to your backend:
 
-```ts title="app/api/request/route.ts"
-import { apiRoute } from "@noverax/nexus-next"
-import { sources } from "@/lib/sources"
+```ts title="instrumentation.ts"
+import { registerSources } from "@noverax/nexus"
 
-export const { POST } = apiRoute(sources)
+export async function register() {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { sources } = await import("./lib/sources")
+    registerSources(sources)
+  }
+}
 ```
 
-This single route handles all Nexus proxy requests. It parses the incoming POST body, resolves the correct endpoint, calls your backend, and returns the response.
+```ts title="app/api/request/route.ts"
+import { apiRoute } from "@noverax/nexus-next"
+
+export const { POST } = apiRoute()
+```
+
+Next.js runs `instrumentation.ts` once at server start, populating the core global registry that `apiRoute()` reads at request time. The route handles all Nexus proxy requests — parses the incoming POST body, resolves the correct endpoint, calls your backend, and returns the response.
 
 ## Step 2: Client-side caller (React Query)
 
@@ -249,7 +255,7 @@ export function CreateUserForm() {
 
 ```
 app/
-  api/request/route.ts    # apiRoute(sources)
+  api/request/route.ts    # apiRoute()
   actions/users.ts        # server actions with createAction
   users/page.tsx          # client component with useQuery
   dashboard/page.tsx      # server component with createCaller

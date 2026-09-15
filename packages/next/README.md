@@ -34,17 +34,28 @@ npm install @noverax/nexus-next @noverax/nexus next
 
 ## API Route
 
-Create a single catch-all route that handles all Nexus endpoints:
+Register sources in `instrumentation.ts`, then create a single catch-all route that handles all Nexus endpoints:
+
+```ts
+// instrumentation.ts
+import { registerSources } from "@noverax/nexus"
+
+export async function register() {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { sources } = await import("@/api/sources")
+    registerSources(sources)
+  }
+}
+```
 
 ```ts
 // app/api/request/route.ts
 import { apiRoute } from "@noverax/nexus-next"
-import { sources } from "@/api/sources"
 
-export const { GET, POST } = apiRoute(sources)
+export const { GET, POST } = apiRoute()
 ```
 
-That's it. The proxy caller on the client will POST to this route, and query-type endpoints can also use GET for caching.
+That's it. `apiRoute()` is zero-arg — sources are read at request time from the core global registry. The proxy caller on the client will POST to this route, and query-type endpoints can also use GET for caching.
 
 <br />
 

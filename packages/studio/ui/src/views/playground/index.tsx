@@ -18,11 +18,11 @@ import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 
 export function PlaygroundView(): React.ReactElement {
   const connected = useStudioStore((s) => s.connected);
-  const sessions = useStudioStore((s) => s.sessions);
+  const runtimeCount = useStudioStore((s) => s.bindingSnapshot.runtimeCount);
   const activeResponse = useStudioStore((s) => s.playgroundActiveResponse);
   const setActiveResponse = useStudioStore((s) => s.setPlaygroundActiveResponse);
   const search = useSearch({ from: "/playground" });
-  const hasApp = sessions.some((s) => s.framework !== "unknown");
+  const hasApp = runtimeCount > 0;
 
   const pg = usePlayground(search);
   const { send, sending, streaming, unsubscribe } = useSendRequest();

@@ -1,6 +1,6 @@
 import { getSourceName } from "../../define/api";
 import type { DefinedApi, DefinedFlatApi, DefinedMixedApi } from "../../define/types";
-import { HTTPError } from "../../error";
+import { HTTPError } from "../../errors";
 import type { RequestContext } from "../../http-client/types";
 import { executeRequest } from "../../utils/execute";
 import type { HTTPExecutor } from "../types";

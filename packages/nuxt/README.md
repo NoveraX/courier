@@ -22,17 +22,24 @@ npm install @noverax/nexus-nuxt @noverax/nexus h3
 
 ## Usage
 
-Create a server route in your Nuxt app:
+Register sources in a Nitro server plugin, then create a server route:
+
+```ts
+// server/plugins/nexus.ts
+import { registerSources } from "@noverax/nexus"
+import { sources } from "~/api/sources"
+
+export default defineNitroPlugin(() => registerSources(sources))
+```
 
 ```ts
 // server/api/request.ts
 import { nexusHandler } from "@noverax/nexus-nuxt"
-import { sources } from "~/api/sources"
 
-export default nexusHandler(sources)
+export default nexusHandler()
 ```
 
-Works with Nuxt 3, Nitro, and any h3-based server.
+`nexusHandler()` is zero-arg — sources are read at request time from the core global registry populated by the Nitro plugin at server start. Works with Nuxt 3, Nitro, and any h3-based server.
 
 ## How It Works
 

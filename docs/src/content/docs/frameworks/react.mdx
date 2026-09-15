@@ -48,15 +48,18 @@ You need a backend server to host the Nexus proxy route. Here is an example usin
 ```ts title="server/index.ts"
 import express from "express"
 import cors from "cors"
+import { registerSources } from "@noverax/nexus"
 import { nexusHandler } from "@noverax/nexus-express"
 import { sources } from "../shared/sources"
+
+registerSources(sources)
 
 const app = express()
 
 app.use(cors({ origin: "http://localhost:5173", credentials: true }))
 app.use(express.json())
 
-app.all("/api/request", nexusHandler(sources))
+app.all("/api/request", nexusHandler())
 
 app.listen(3001, () => {
   console.log("Proxy server running on http://localhost:3001")

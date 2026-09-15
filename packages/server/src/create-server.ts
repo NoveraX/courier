@@ -1,7 +1,13 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 
-import { createHandler, createLogger, createWSHandler } from "@noverax/nexus";
+import {
+  createHandler,
+  createLogger,
+  createWSHandler,
+  registerSources,
+} from "@noverax/nexus";
+import { announceHosting } from "@noverax/nexus/announce";
 import { sendWebResponse, toWebRequest } from "@noverax/nexus/node";
 import type { WebSocketServer } from "ws";
 
@@ -47,7 +53,14 @@ export function createNexusServer(config: NexusServerConfig): NexusServer {
     onError,
   } = config;
 
-  const handler = createHandler(sources, {
+  // Standalone server publishes sources into the core global registry so
+  // `createHandler()` and `createWSHandler()` read them lazily via
+  // `requireSources()` at request time. This matches the zero-arg adapter
+  // handler convention (`nexusHandler()` / `apiRoute()`) — the registry is
+  // the single source of truth for in-process source lookup.
+  registerSources(sources);
+
+  const handler = createHandler({
     sseHeaders: config.sseHeaders,
     sseMaxLifetimeMs: config.sseMaxLifetimeMs,
     maxSSEConnections: config.maxSSEConnections,
@@ -56,7 +69,6 @@ export function createNexusServer(config: NexusServerConfig): NexusServer {
     onSSEError: config.onSSEError,
   });
   const wsHandler = createWSHandler({
-    sources,
     pubsub,
     heartbeatIntervalMs,
     heartbeatTimeoutMs,
@@ -129,6 +141,12 @@ export function createNexusServer(config: NexusServerConfig): NexusServer {
     const addr = httpServer.address() as AddressInfo;
     result.url = `http://${host}:${addr.port}`;
     log.info(`Listening on ${result.url}`);
+    announceHosting({
+      transports: ["http", "sse", "ws"],
+      sources: Object.values(sources),
+      listenOrigin: result.url,
+      framework: "standalone",
+    });
     onReady?.(result.url);
   });
 

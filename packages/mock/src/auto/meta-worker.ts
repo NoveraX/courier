@@ -3,7 +3,7 @@
  * Spawned once by studio scanner, handles N requests via IPC — no cold start per file.
  *
  * IPC protocol:
- *   Parent → Worker: { type: "analyze", id, filePath }
+ *   Parent → Worker: { type: "analyze", id, configPath, mockKey }
  *   Worker → Parent: { type: "result", id, meta }
  *   Parent → Worker: { type: "shutdown" }
  *   Worker → Parent: { type: "ready" }
@@ -57,10 +57,20 @@ function buildRouteEntry(route: RouteInfo, groupNames: Set<string>): Record<stri
   return entry;
 }
 
-async function analyze(filePath: string): Promise<Record<string, unknown> | null> {
+async function analyze(
+  configPath: string,
+  mockKey: string,
+): Promise<Record<string, unknown> | null> {
   // Timestamp query busts ESM cache on file changes
-  const mod = await import(`${filePath}?t=${Date.now()}`);
-  const config = mod.mockServer ?? mod.default;
+  const mod = await import(`${configPath}?t=${Date.now()}`);
+  const root = (mod.default ?? mod) as { mocks?: Record<string, unknown> } | undefined;
+  const config = root?.mocks?.[mockKey] as
+    | {
+        source?: Record<string, unknown>;
+        autoStart?: boolean;
+        scenarios?: Record<string, unknown>;
+      }
+    | undefined;
   const source = config?.source;
   if (!source) return null;
 
@@ -105,8 +115,13 @@ process.on("message", (msg: unknown) => {
   const req = msg as { type: string };
 
   if (req.type === "analyze") {
-    const { id, filePath } = msg as { type: "analyze"; id: string; filePath: string };
-    analyze(filePath)
+    const { id, configPath, mockKey } = msg as {
+      type: "analyze";
+      id: string;
+      configPath: string;
+      mockKey: string;
+    };
+    analyze(configPath, mockKey)
       .then((meta) => {
         process.send?.({ type: "result", id, meta });
       })

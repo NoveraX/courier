@@ -1,17 +1,18 @@
 import type { NextConfig } from "next";
 import { createDataUri } from "./core/data-uri";
-import { resolveOptions } from "./core/options";
-import { generateConnectSnippet } from "./core/snippet";
+import { resolveSnippet } from "./core/resolve-snippet";
 import type { StudioPluginOptions } from "./core/types";
+
+const FRAMEWORK = "next";
 
 /**
  * Next.js config wrapper for Nexus Studio (webpack mode only).
- * Injects `connectStudio()` into the client webpack bundle in dev mode.
+ * Injects `attachRuntime("next-browser")` into the client webpack bundle in dev mode.
  *
- * **Turbopack** ignores `webpack()` config — use `instrumentation-client.ts` instead:
+ * **Turbopack** ignores `webpack()` config — create `instrumentation-client.ts` instead:
  * ```ts
- * import { connectStudio } from "@noverax/nexus-studio-core"
- * connectStudio()
+ * import { attachRuntime } from "@noverax/nexus-studio-core/runtime"
+ * attachRuntime("next-browser")
  * ```
  *
  * **Server** — run separately: `npx nexus-studio` or `npm run studio`
@@ -24,23 +25,20 @@ import type { StudioPluginOptions } from "./core/types";
  * ```
  */
 export function withNexusStudio(pluginOptions?: StudioPluginOptions) {
-  const resolved = { ...resolveOptions(pluginOptions), framework: "next-client" };
-
   return (nextConfig: NextConfig): NextConfig => {
-    if (!resolved.enabled) return nextConfig;
-
-    const snippet = generateConnectSnippet(resolved);
-    const dataUri = createDataUri(snippet);
-
     return {
       ...nextConfig,
       webpack(webpackConfig, context) {
-        // Only inject into client bundle
         if (!context.isServer) {
           const originalEntry = webpackConfig.entry as WebpackEntries;
           webpackConfig.entry = async () => {
             const entries =
               typeof originalEntry === "function" ? await originalEntry() : originalEntry;
+
+            const snippet = await resolveSnippet(FRAMEWORK, pluginOptions);
+            if (!snippet) return entries;
+
+            const dataUri = createDataUri(snippet);
             const main = entries["main-app"] ?? entries["main"];
             if (main && Array.isArray(main.import) && !main.import.includes(dataUri)) {
               main.import.unshift(dataUri);

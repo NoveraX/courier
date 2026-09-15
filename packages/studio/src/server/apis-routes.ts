@@ -19,7 +19,6 @@ import { registerManageRoutes } from "./manage-routes";
 import { errMsg } from "./registry-helpers";
 import { registerRegistryRoutes } from "./registry-routes";
 import type { RouteApp } from "./route-types";
-import { registerScannerRoutes } from "./scanner-routes";
 import { registerUpdateFlowRoutes } from "./update-routes";
 import {
   validateDiffBody,
@@ -106,7 +105,6 @@ export function registerApisRoutes(app: RouteApp): void {
 
   registerRegistryRoutes(app);
   registerManageRoutes(app);
-  registerScannerRoutes(app);
   registerUpdateFlowRoutes(app);
 }
 

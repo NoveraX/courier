@@ -8,26 +8,23 @@ import {
   createSpecDigest,
   diffSpecs,
   generateCode,
-  getCachedDigest,
-  getCachedFingerprints,
-  getSource,
-  loadCache,
-  loadDigestCache,
-  loadRegistry,
-  saveRegistry,
-  updateSource,
 } from "../apis";
+import type { ImportStateEntry } from "../apis/imports-state";
 import type { BreakingChange, MergeChange, SpecDiff } from "../apis/merge/types";
 import { previewUpdate } from "../apis/merge/update-flow";
-import type { RegistryConfig } from "../apis/registry/types";
 import { resolveProjectSafe } from "../context";
 import { cleanupOrphanFiles } from "./cleanup-orphans";
-import { getEffectiveDir } from "./fs-helpers";
+import {
+  getEffectiveImportDir,
+  getImportEntry,
+  getImportState,
+  loadImportsSnapshot,
+  persistImportState,
+} from "./imports-bridge";
 import {
   buildFallbackFingerprints,
   collectFingerprints,
   detectUserModified,
-  persistCaches,
   readFilesFromDisk,
   writeFileWithDirs,
 } from "./registry-helpers";
@@ -36,14 +33,12 @@ import { scanTsFiles } from "./scan-ts-files";
 interface PreviewRequest {
   name: string;
   newSpec: ParsedSpec;
-  configPath?: string;
 }
 
 interface ApplyRequest {
   name: string;
   newSpec: ParsedSpec;
   files: { path: string; content: string }[];
-  configPath?: string;
 }
 
 interface PreviewResponse {
@@ -54,20 +49,21 @@ interface PreviewResponse {
 }
 
 /** Compute a preview of what an update would change */
-export function handlePreviewUpdate(
+export async function handlePreviewUpdate(
   body: PreviewRequest,
-): PreviewResponse | { error: string; status: number } {
-  const config = loadRegistry(body.configPath);
-  const source = getSource(config, body.name);
-  if (!source) return { error: `Source "${body.name}" not found`, status: 404 };
+): Promise<PreviewResponse | { error: string; status: number }> {
+  const snapshot = await loadImportsSnapshot();
+  const entry = getImportEntry(snapshot, body.name);
+  if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
+  const state = getImportState(snapshot, body.name);
 
-  const generated = generateCode(body.newSpec, { ...source.options, selectedEndpoints: null });
-  const diskPaths = scanTsFiles(source, generated);
+  const generated = generateCode(body.newSpec, { ...entry, selectedEndpoints: null });
+  const diskPaths = scanTsFiles(entry, body.name, generated);
   const existingFiles = readFilesFromDisk(diskPaths);
-  const fingerprints = loadFingerprints(body.name, existingFiles, source);
+  const fingerprints = loadFingerprints(existingFiles, state);
   const result = previewUpdate(fingerprints, generated, existingFiles);
 
-  const specDiff = computeSpecDiff(body.name, body.newSpec);
+  const specDiff = computeSpecDiff(state, body.newSpec);
 
   return {
     ...result,
@@ -76,26 +72,35 @@ export function handlePreviewUpdate(
   };
 }
 
-/** Apply a previewed update — write files and update caches */
-export function handleApplyUpdate(
+/** Apply a previewed update — write files and update state */
+export async function handleApplyUpdate(
   body: ApplyRequest,
-): { success: boolean; written: number; deleted: number } | { error: string; status: number } {
-  let config = loadRegistry(body.configPath);
-  const source = getSource(config, body.name);
-  if (!source) return { error: `Source "${body.name}" not found`, status: 404 };
+): Promise<{ success: boolean; written: number; deleted: number } | { error: string; status: number }> {
+  const snapshot = await loadImportsSnapshot();
+  const entry = getImportEntry(snapshot, body.name);
+  if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
+  const prevState = getImportState(snapshot, body.name);
+
+  /* Detect user-modified endpoints BEFORE overwriting — compare the disk
+   * state of the files the user just approved against the fingerprints
+   * Studio recorded after the previous sync. Any divergence is an edit
+   * the user made after the preview was generated. */
+  const prevFingerprints = prevState?.fileFingerprints ?? {};
+  const preWriteDisk = readFilesFromDisk(body.files.map((f) => f.path));
+  const userModified = detectUserModified(prevFingerprints, preWriteDisk);
 
   writeUpdateFiles(body.files);
 
-  const generated = generateCode(body.newSpec, { ...source.options, selectedEndpoints: null });
-  const newFingerprints = collectFingerprints(generated);
+  const generated = generateCode(body.newSpec, { ...entry, selectedEndpoints: null });
   const deleted = cleanupOrphanFiles(
-    getEffectiveDir(source.options.outputDir, source.options.sourceName),
+    getEffectiveImportDir(entry, body.name),
     new Set(generated.map((f) => resolveProjectSafe(f.path))),
   );
 
-  persistCaches(body.name, newFingerprints, body.newSpec);
-  config = buildUpdateState(config, body, newFingerprints);
-  saveRegistry(config, body.configPath);
+  /* Recompute fingerprints from the files now on disk — they become the
+   * baseline for the next sync's edit detection. */
+  const newFingerprints = collectFingerprints(body.files);
+  await persistUpdateState(body, prevState, newFingerprints, userModified);
 
   return { success: true, written: body.files.length, deleted };
 }
@@ -106,34 +111,41 @@ function writeUpdateFiles(files: { path: string; content: string }[]): void {
   }
 }
 
-function buildUpdateState(
-  config: RegistryConfig,
+async function persistUpdateState(
   body: ApplyRequest,
+  prevState: ImportStateEntry | undefined,
   fingerprints: Record<string, string>,
-): RegistryConfig {
-  const mergedFiles: Record<string, string> = {};
-  for (const f of body.files) mergedFiles[f.path] = f.content;
+  userModified: string[],
+): Promise<void> {
+  const now = new Date().toISOString();
 
-  const userModified = detectUserModified(fingerprints, mergedFiles);
-  return updateSource(config, body.name, computeSpecHash(body.newSpec), userModified);
+  await persistImportState(body.name, {
+    specHash: computeSpecHash(body.newSpec),
+    digest: createSpecDigest(body.newSpec),
+    fetchedAt: prevState?.fetchedAt ?? now,
+    lastSyncedAt: now,
+    userModified,
+    generatedFiles: body.files.map((f) => f.path),
+    fileFingerprints: fingerprints,
+  });
 }
 
 // ── Internal helpers ─────────────────────────────────────────────────────────
 
 function loadFingerprints(
-  name: string,
   existingFiles: Record<string, string>,
-  source: NonNullable<ReturnType<typeof getSource>>,
+  state: ImportStateEntry | undefined,
 ): Record<string, string> {
-  const cache = loadCache();
-  const cached = getCachedFingerprints(cache, name);
+  const cached = state?.fileFingerprints ?? {};
   return Object.keys(cached).length > 0
     ? cached
-    : buildFallbackFingerprints(existingFiles, source.userModified);
+    : buildFallbackFingerprints(existingFiles, state?.userModified ?? []);
 }
 
-function computeSpecDiff(name: string, newSpec: ParsedSpec) {
-  const digestCache = loadDigestCache();
-  const oldDigest = getCachedDigest(digestCache, name);
+function computeSpecDiff(
+  state: ImportStateEntry | undefined,
+  newSpec: ParsedSpec,
+): SpecDiff | undefined {
+  const oldDigest = state?.digest;
   return oldDigest ? diffSpecs(oldDigest, createSpecDigest(newSpec)) : undefined;
 }

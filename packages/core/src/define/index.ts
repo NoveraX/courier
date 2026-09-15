@@ -1,4 +1,4 @@
-export { defineApi, getSourceName } from "./api";
+export { defineApi, getSourceName, setSourceName } from "./api";
 export { endpoint } from "./endpoint";
 export { defineGroup } from "./group";
 export type {

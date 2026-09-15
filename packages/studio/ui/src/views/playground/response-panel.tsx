@@ -10,7 +10,6 @@ import { FlowDiagram } from "@/components/shared/detail-panel/tabs/proxy-tab";
 import { DroppedHeadersSection, HeadersSection } from "@/components/shared/headers-section";
 import { StreamTimingSummary } from "@/components/shared/stream-timing-summary";
 import { BreakdownCard, buildProxySegments, buildRequestSegments, computeProxyTotal } from "@/components/shared/timing-breakdown";
-import { useStudioStore } from "@/store";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 import { BodyMeta } from "./response-body-meta";
 import { StatusBar } from "./response-status-bar";
@@ -41,10 +40,6 @@ const STREAM_TABS = [
 export function ResponsePanel({
   entry, activeTab, onTabChange,
 }: ResponsePanelProps): React.ReactElement {
-  const storeEntry = useStudioStore((s) =>
-    entry?.serverRequestId ? s.requests.find((r) => r.id === entry.serverRequestId) : undefined,
-  );
-
   if (!entry) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2">
@@ -59,11 +54,16 @@ export function ResponsePanel({
   const validKeys = tabs.map((t) => t.key);
   const safeTab = validKeys.includes(activeTab) ? activeTab : validKeys[0];
 
-  const requestHeaders = storeEntry?.requestHeaders ?? entry.requestHeaders;
-  const responseHeaders = storeEntry?.headers ?? entry.responseHeaders;
-  const timing = storeEntry?.timing ?? entry.timing;
-  const proxyTiming = storeEntry?.proxyTiming ?? entry.proxyTiming;
-  const duration = entry.duration ?? storeEntry?.streamDuration;
+  // Every field reads from the playground entry directly — the rid-keyed
+  // wire folds chunk/end/error reducers into the same entry slice, so
+  // there is no secondary RequestEntry lookup tied to a separate
+  // server-assigned correlation id.
+  const requestHeaders = entry.requestHeaders;
+  const responseHeaders = entry.responseHeaders;
+  const timing = entry.timing;
+  const proxyTiming = entry.proxyTiming;
+  const duration = entry.duration;
+  const streamEventCount = entry.chunks?.length ?? 0;
 
   return (
     <div className="flex h-full flex-col">
@@ -119,8 +119,8 @@ export function ResponsePanel({
               ) : isStream && entry.streamStatus === "complete" ? (
                 <StreamTimingSummary data={{
                   duration,
-                  eventCount: entry.streamEventCount,
-                  totalBytes: entry.streamTotalBytes,
+                  eventCount: streamEventCount,
+                  totalBytes: undefined,
                   transport: entry.transport,
                 }} />
               ) : (

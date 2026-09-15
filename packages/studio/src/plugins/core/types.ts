@@ -1,21 +1,12 @@
+/** Public options accepted by every Nexus Studio build plugin */
 export interface StudioPluginOptions {
-  /** Studio server port (default: 4380) */
-  port?: number;
-  /** Studio server host (default: "localhost") */
-  host?: string;
-  /** Enable plugin (default: true in development) */
+  /** Force-enable or force-disable injection. Default: enabled when `NODE_ENV !== "production"` */
   enabled?: boolean;
-  /** Event filtering */
-  filter?: {
-    sources?: string[];
-    minDuration?: number;
-  };
 }
 
+/** Internal context computed by `resolveOptions` and consumed by snippet generation */
 export interface ResolvedOptions {
-  port: number;
-  host: string;
   enabled: boolean;
   framework: string;
-  filter?: StudioPluginOptions["filter"];
+  studioUrl: string;
 }

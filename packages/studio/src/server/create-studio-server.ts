@@ -10,20 +10,22 @@ import { createLogger } from "@noverax/nexus";
 import compression from "compression";
 import express from "express";
 import type { RequestHandler } from "express-serve-static-core";
-import type { DefaultEventsMap } from "socket.io";
 import { Server as SocketIOServer } from "socket.io";
 import { setProjectRoot } from "../context";
 import { registerApisRoutes } from "./apis-routes";
-import { clearAppNamespaceState } from "./app-namespace-state";
-import { CatalogStore } from "./catalog";
-import { startFileWatcher } from "./file-watcher";
+import { BindingTable } from "./catalog/binding-table";
+import type { ConfigWatcher } from "./config-watcher";
+import { initConfigDriven } from "./init-config-driven";
 import { initProject } from "./init";
 import { createLifecycleCoordinator } from "./mock-manager";
+import { createMockRegistry, type MockRegistry } from "./mock-registry";
+import { clearStudioServerState } from "./runtime-namespace-state";
+import { setupRuntimeNamespace } from "./runtime-namespace";
+import { createRuntimePlaygroundRouter } from "./runtime-playground-router";
 import { clearBuffer } from "./session-buffer";
 import { registerSessionRoutes } from "./session-routes";
-import type { AppSocketData } from "./socket-data";
-import { setupAppNamespace, setupUiNamespace } from "./socket-handlers";
-import type { SessionInfo, StudioServer, StudioServerOptions } from "./types";
+import { setupUiNamespace } from "./socket-handlers";
+import type { StudioServer, StudioServerOptions } from "./types";
 import { createWatcherStatus } from "./watcher-status";
 
 const log = createLogger("Studio");
@@ -44,9 +46,6 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   const app = express();
   const httpServer = createServer(app);
-  const sessions = new Map<string, SessionInfo>();
-  const catalogStore = new CatalogStore();
-
   const corsOrigins = [
     `http://${host}:${port}`,
     `http://localhost:${port}`,
@@ -54,16 +53,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     ...extraCorsOrigins,
   ];
 
-  // Type the Server with `AppSocketData` as the SocketData shape so
-  // every namespace it creates inherits the typed `socket.data` contract.
-  // The fields are all optional, so the UI namespace (which never writes
-  // them) satisfies the type vacuously — no per-namespace casts needed.
-  const io = new SocketIOServer<
-    DefaultEventsMap,
-    DefaultEventsMap,
-    DefaultEventsMap,
-    AppSocketData
-  >(httpServer, {
+  const io = new SocketIOServer(httpServer, {
     cors: {
       origin: corsOrigins,
       methods: ["GET", "POST"],
@@ -73,10 +63,14 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   // ── Namespaces ───────────────────────────────────────────────────────────────
 
-  const appNamespace = io.of("/app");
   const uiNamespace = io.of("/ui");
+  const runtimeNamespace = io.of("/runtime");
 
-  setupAppNamespace(appNamespace, uiNamespace, sessions, catalogStore);
+  // ── Binding table + /runtime namespace (config-driven routing) ─────────────
+
+  const bindingTable = new BindingTable();
+  const playgroundRouter = createRuntimePlaygroundRouter({ bindingTable, uiNamespace });
+  setupRuntimeNamespace(runtimeNamespace, { bindingTable, uiNamespace, playgroundRouter });
 
   // ── Init (registry + .gitignore) ────────────────────────────────────────────
 
@@ -86,38 +80,59 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   const watcherStatus = createWatcherStatus(uiNamespace);
 
-  // ── File Watcher (hot reload) ──────────────────────────────────────────────
-
-  const stopWatcher = startFileWatcher(uiNamespace, catalogStore, watcherStatus);
-
   // ── Mock Server Manager ──────────────────────────────────────────────────
 
-  const mocksDir = join(projectRoot, "mock-servers");
+  let loadedConfigPath: string | null = null;
+  const mockRegistry: MockRegistry = createMockRegistry();
   const mockManager = createLifecycleCoordinator({
-    mocksDir,
+    mockRegistry,
+    getConfigPath: () => loadedConfigPath,
     uiNamespace,
     basePort: 7001,
     watcherStatus,
   });
   mockManager.start();
 
-  setupUiNamespace(appNamespace, uiNamespace, sessions, catalogStore, mockManager, watcherStatus);
+  let configWatcher: ConfigWatcher | null = null;
+  let closed = false;
+  void initConfigDriven({
+    projectRoot,
+    bindingTable,
+    mockRegistry,
+    uiNamespace,
+    setConfigPath: (path) => {
+      loadedConfigPath = path;
+    },
+  })
+    .then((watcher) => {
+      if (!watcher) return;
+      // If close() ran before the async load resolved, stop the freshly
+      // attached watcher immediately so its fs.watch handles do not leak.
+      if (closed) {
+        watcher.stop();
+        return;
+      }
+      configWatcher = watcher;
+    })
+    .catch((err) => {
+      log.warn("nexus.config initialization failed", err);
+    });
+
+  setupUiNamespace({
+    uiNamespace,
+    bindingTable,
+    mockManager,
+    watcherStatus,
+    playgroundRouter,
+  });
 
   // ── REST API ─────────────────────────────────────────────────────────────────
 
   app.use(compression());
   app.use(express.json({ limit: "5mb" }));
 
-  app.get("/api/sessions", (_req, res) => {
-    res.json(Array.from(sessions.values()));
-  });
-
-  app.get("/api/catalog", (_req, res) => {
-    res.json(catalogStore.getSnapshot());
-  });
-
   app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok", sessions: sessions.size });
+    res.json({ status: "ok" });
   });
 
   registerApisRoutes(app);
@@ -161,17 +176,18 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   });
 
   const close = async () => {
+    closed = true;
     await mockManager.stop();
-    stopWatcher();
+    configWatcher?.stop();
     clearBuffer();
-    catalogStore.clear();
-    clearAppNamespaceState();
-    sessions.clear();
+    playgroundRouter.dispose();
+    clearStudioServerState();
     io.close();
     return new Promise<void>((resolve, reject) => {
       httpServer.close((err) => (err ? reject(err) : resolve()));
     });
   };
 
-  return { url, sessions, close };
+  return { url, close };
 }
+

@@ -6,9 +6,9 @@
 
 import type { ParsedEndpoint, ParsedGroup, ParsedSpec } from "../parser/types";
 import { convertPathParams, findCommonPrefix, toCamelCase } from "../parser/utils";
-import type { GenerateOptions } from "./types";
+import type { ResolvedGenerateOptions } from "./types";
 
-export function transformSpec(spec: ParsedSpec, options: GenerateOptions): ParsedSpec {
+export function transformSpec(spec: ParsedSpec, options: ResolvedGenerateOptions): ParsedSpec {
   if (options.groupBy === "tag") return spec;
 
   const groups = regroupEndpoints(spec, options.groupBy);

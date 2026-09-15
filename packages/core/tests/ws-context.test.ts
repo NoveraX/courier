@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { buildContext } from "../src/adapter/ws-context";
 import { LIMITS } from "../src/adapter/limits";
@@ -7,6 +7,15 @@ import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import { createServerTopicManager } from "../src/adapter/ws-topics";
 import { createConnectionRegistry } from "../src/adapter/ws-registry";
+import { _resetSourcesForTests, registerSources } from "../src/sources";
+
+beforeEach(() => {
+  registerSources({} as Parameters<typeof registerSources>[0]);
+});
+
+afterEach(() => {
+  _resetSourcesForTests();
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -24,7 +33,7 @@ function createMockWs(overrides: Partial<WebSocketLike> = {}): WebSocketLike {
 }
 
 function createConfig(overrides: Partial<WSHandlerConfig> = {}): WSHandlerConfig {
-  return { sources: {}, ...overrides } as WSHandlerConfig;
+  return { ...overrides } as WSHandlerConfig;
 }
 
 function buildTestContext(
@@ -150,8 +159,9 @@ describe("buildContext", () => {
 
   it("passes through sources, registry, topicManager, and bridge", () => {
     const { ws, topicManager, registry, request } = buildTestContext();
-    const sources = { api: {} } as WSHandlerConfig["sources"];
-    const config = createConfig({ sources });
+    const sources = { api: {} };
+    registerSources(sources as Parameters<typeof registerSources>[0]);
+    const config = createConfig();
     const bridge = { onTopicSubscribe: vi.fn(), onTopicUnsubscribe: vi.fn(), destroy: vi.fn() };
 
     const ctx = buildContext(ws, config, topicManager, registry, bridge, request);

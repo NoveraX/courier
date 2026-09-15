@@ -1,9 +1,9 @@
-import type { Sources } from "../define/types";
 import type { SSEContext, SSEHandler } from "../realtime/types";
 import { generateRequestId, registerPlaygroundAbort, studioHooks } from "../studio";
 import { SSE_HEADERS } from "./format-sse";
 import type { HandlerConfig } from "./handler-config";
 import { errorResponse } from "./parse";
+import { requireSources } from "./require-sources";
 import type { InternalSSERegistry } from "./sse-registry";
 import { resolveSSEEndpoint, resolveSSEVariables, runSSEMiddleware } from "./sse-resolve";
 import { createSSEStream } from "./sse-stream";
@@ -34,20 +34,15 @@ function unavailable(message: string, retrySec: string): Response {
  * Includes: origin validation, middleware execution (with timeout), lifecycle hooks,
  * TTL-based stream lifetime, graceful shutdown support, variable schema validation.
  *
- * @param sources - Registered API sources map
+ * Sources are read lazily from the core global registry at request time via
+ * `requireSources()`, so a single `nexusHandler()` expression in user code
+ * works regardless of which framework owns the listen socket.
+ *
  * @param config - Optional handler config (origins, headers, TTL, lifecycle hooks)
  * @param registry - SSE connection registry for tracking/limiting active streams
  * @returns Async request handler `(request: Request) => Promise<Response>`
- *
- * @example
- * const handler = createSSEHandler(sources, {
- *   allowedOrigins: ["https://app.example.com"],
- *   sseMaxLifetimeMs: 30 * 60_000,
- *   onSSEConnect: ({ connectionId }) => ({ userId: "user-1" }),
- * }, registry);
  */
 export function createSSEHandler(
-  sources: Sources,
   config: HandlerConfig | undefined,
   registry: InternalSSERegistry,
 ): (request: Request) => Promise<Response> {
@@ -69,6 +64,7 @@ export function createSSEHandler(
 
     if (!source || !method) return errorResponse(400, "Missing required params: _s, _m");
 
+    const sources = requireSources();
     const resolved = resolveSSEEndpoint(sources, source, group, method);
     if (resolved instanceof Response) return resolved;
 

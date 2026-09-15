@@ -41,8 +41,11 @@ Apply the `nexusMiddleware` in your root `AppModule` using the `MiddlewareConsum
 
 ```ts title="src/app.module.ts"
 import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
+import { registerSources } from "@noverax/nexus"
 import { nexusMiddleware } from "@noverax/nexus-nestjs"
 import { sources } from "./lib/sources"
+
+registerSources(sources)
 
 @Module({
   imports: [],
@@ -52,13 +55,13 @@ import { sources } from "./lib/sources"
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(nexusMiddleware(sources))
+      .apply(nexusMiddleware())
       .forRoutes("api/request")
   }
 }
 ```
 
-The `nexusMiddleware` function returns a NestJS-compatible middleware that handles incoming Nexus proxy requests and forwards them to your backend.
+The `nexusMiddleware` function returns a NestJS-compatible middleware that reads sources from the core global registry populated by `registerSources()` at module load.
 
 ## With CORS
 
@@ -88,10 +91,13 @@ The Nexus middleware sits alongside your existing NestJS controllers and modules
 
 ```ts title="src/app.module.ts"
 import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
+import { registerSources } from "@noverax/nexus"
 import { nexusMiddleware } from "@noverax/nexus-nestjs"
 import { sources } from "./lib/sources"
 import { HealthModule } from "./health/health.module"
 import { StatsModule } from "./stats/stats.module"
+
+registerSources(sources)
 
 @Module({
   imports: [HealthModule, StatsModule],
@@ -101,7 +107,7 @@ import { StatsModule } from "./stats/stats.module"
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(nexusMiddleware(sources))
+      .apply(nexusMiddleware())
       .forRoutes("api/request")
   }
 }
@@ -117,14 +123,17 @@ For larger applications, you can isolate the Nexus setup into its own module:
 
 ```ts title="src/nexus/nexus.module.ts"
 import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
+import { registerSources } from "@noverax/nexus"
 import { nexusMiddleware } from "@noverax/nexus-nestjs"
 import { sources } from "../lib/sources"
+
+registerSources(sources)
 
 @Module({})
 export class NexusModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(nexusMiddleware(sources))
+      .apply(nexusMiddleware())
       .forRoutes("api/request")
   }
 }
@@ -147,33 +156,28 @@ NestJS guards and interceptors applied globally or to the `api/request` route wi
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
-If you wire your NestJS app into Studio via `instrumentServer`, pass `appOrigin` so the Playground proxy executor can resolve relative `proxyPath.{sse,ws}` values into absolute URLs. Node `fetch` and `WebSocket` reject relative URLs, so this is required for Studio Playground proxy mode whenever your `proxyPath` does not already include a full `http(s)://...` prefix.
+Wire your NestJS app into Studio with a single `attachRuntime()` call. It auto-loads `nexus.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `nexus.config.ts.runtime.appOrigin` (or set the `NEXUS_APP_URL` env var to override per-environment).
 
-The natural place to call `instrumentServer` is in `main.ts`, alongside `bootstrap()`:
+The natural place to call `attachRuntime` is in `main.ts`, alongside `bootstrap()`:
 
 ```ts title="src/main.ts"
 import { NestFactory } from "@nestjs/core"
-import { instrumentServer } from "@noverax/nexus-studio-core"
+import { attachRuntime } from "@noverax/nexus-studio-core/runtime"
 import { AppModule } from "./app.module"
-import { sources } from "./lib/sources"
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
-
   if (process.env.NODE_ENV !== "production") {
-    instrumentServer({
-      sources,
-      appOrigin: "http://localhost:3001",  // this server's own URL
-    })
+    await attachRuntime()
   }
 
+  const app = await NestFactory.create(AppModule)
   await app.listen(3001)
 }
 
 bootstrap()
 ```
 
-Alternatively, set `NEXUS_APP_URL` instead of passing `appOrigin` explicitly:
+Alternatively, set `NEXUS_APP_URL` instead of pinning `appOrigin` in the config:
 
 ```bash
 NEXUS_APP_URL=http://localhost:3001 nest start

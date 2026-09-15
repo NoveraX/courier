@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as NexusModule from "@noverax/nexus";
 
 vi.mock("@noverax/nexus", async (importOriginal) => {
@@ -21,11 +21,15 @@ vi.mock("@noverax/nexus", async (importOriginal) => {
   };
 });
 
-import { createHandler, createWSHandler } from "@noverax/nexus";
+import { createHandler, createWSHandler, registerSources } from "@noverax/nexus";
 import { nexusHandler, nexusSSEHandler, nexusWSHandler } from "../src/index";
 
 const mockCreateHandler = vi.mocked(createHandler);
 const mockCreateWSHandler = vi.mocked(createWSHandler);
+
+beforeEach(() => {
+  registerSources({ api: {} } as Parameters<typeof registerSources>[0]);
+});
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -59,28 +63,26 @@ function createHonoContext(request: Request) {
 
 describe("nexusHandler", () => {
   it("returns a function", () => {
-    const handler = nexusHandler({} as any);
+    const handler = nexusHandler();
     expect(typeof handler).toBe("function");
   });
 
-  it("calls createHandler with sources", () => {
-    const sources = { api: {} } as any;
-    nexusHandler(sources);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, undefined);
+  it("calls createHandler with no sources arg (zero-arg)", () => {
+    nexusHandler();
+    expect(mockCreateHandler).toHaveBeenCalledWith(undefined);
   });
 
   it("forwards HandlerConfig to createHandler", () => {
-    const sources = { api: {} } as any;
     const config = { allowedOrigins: ["https://app.example.com"] };
-    nexusHandler(sources, config);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, config);
+    nexusHandler(config);
+    expect(mockCreateHandler).toHaveBeenCalledWith(config);
   });
 
   it("passes c.req.raw to handle", async () => {
     const mockHandle = vi.fn().mockResolvedValue(new Response("{}"));
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const handler = nexusHandler({} as any);
+    const handler = nexusHandler();
     const request = new Request("http://localhost/api/request?_s=api&_m=list");
     const ctx = createHonoContext(request);
 
@@ -94,7 +96,7 @@ describe("nexusHandler", () => {
     const mockHandle = vi.fn().mockResolvedValue(expectedResponse);
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const handler = nexusHandler({} as any);
+    const handler = nexusHandler();
     const request = new Request("http://localhost/api/request?_s=api&_m=list");
     const ctx = createHonoContext(request);
 
@@ -106,7 +108,7 @@ describe("nexusHandler", () => {
     const mockHandle = vi.fn().mockResolvedValue(new Response("{}"));
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const handler = nexusHandler({} as any);
+    const handler = nexusHandler();
     const request = new Request("http://localhost/api/request", {
       method: "POST",
       headers: {
@@ -125,21 +127,19 @@ describe("nexusHandler", () => {
 
 describe("nexusSSEHandler", () => {
   it("returns a function", () => {
-    const handler = nexusSSEHandler({} as any);
+    const handler = nexusSSEHandler();
     expect(typeof handler).toBe("function");
   });
 
-  it("calls createHandler with sources", () => {
-    const sources = { api: {} } as any;
-    nexusSSEHandler(sources);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, undefined);
+  it("calls createHandler with no sources arg (zero-arg)", () => {
+    nexusSSEHandler();
+    expect(mockCreateHandler).toHaveBeenCalledWith(undefined);
   });
 
   it("forwards HandlerConfig to createHandler", () => {
-    const sources = { api: {} } as any;
     const config = { sseHeaders: { "Access-Control-Allow-Origin": "*" }, sseMaxLifetimeMs: 60_000 };
-    nexusSSEHandler(sources, config);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, config);
+    nexusSSEHandler(config);
+    expect(mockCreateHandler).toHaveBeenCalledWith(config);
   });
 
   it("passes c.req.raw to handleSSE", async () => {
@@ -150,7 +150,7 @@ describe("nexusSSEHandler", () => {
     );
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const handler = nexusSSEHandler({} as any);
+    const handler = nexusSSEHandler();
     const request = new Request("http://localhost/api/sse?_s=api&_m=feed");
     const ctx = createHonoContext(request);
 
@@ -172,7 +172,7 @@ describe("nexusSSEHandler", () => {
     const mockHandleSSE = vi.fn().mockResolvedValue(sseResponse);
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const handler = nexusSSEHandler({} as any);
+    const handler = nexusSSEHandler();
     const request = new Request("http://localhost/api/sse?_s=api&_m=feed");
     const ctx = createHonoContext(request);
 
@@ -191,7 +191,7 @@ describe("nexusSSEHandler", () => {
     const mockHandleSSE = vi.fn().mockResolvedValue(sseResponse);
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const handler = nexusSSEHandler({} as any);
+    const handler = nexusSSEHandler();
     const request = new Request("http://localhost/api/sse?_s=api&_m=feed");
     const ctx = createHonoContext(request);
 
@@ -202,19 +202,18 @@ describe("nexusSSEHandler", () => {
 
 describe("nexusWSHandler", () => {
   it("returns a factory function", () => {
-    const factory = nexusWSHandler({} as any);
+    const factory = nexusWSHandler();
     expect(typeof factory).toBe("function");
   });
 
-  it("calls createWSHandler with sources and options", () => {
-    const sources = { api: {} } as any;
+  it("calls createWSHandler with just the options (no sources)", () => {
     const options = { heartbeatIntervalMs: 5000 };
-    nexusWSHandler(sources, options);
-    expect(mockCreateWSHandler).toHaveBeenCalledWith({ sources, ...options });
+    nexusWSHandler(options);
+    expect(mockCreateWSHandler).toHaveBeenCalledWith(options);
   });
 
   it("factory returns WSEvents object", () => {
-    const factory = nexusWSHandler({} as any);
+    const factory = nexusWSHandler();
     const ctx = createHonoContext(new Request("http://localhost/ws"));
     const events = factory(ctx);
 
@@ -228,7 +227,7 @@ describe("nexusWSHandler", () => {
     const mockHandleSocket = vi.fn();
     mockCreateWSHandler.mockReturnValue(createMockWSResult(mockHandleSocket));
 
-    const factory = nexusWSHandler({} as any);
+    const factory = nexusWSHandler();
     const request = new Request("http://localhost/ws");
     const ctx = createHonoContext(request);
     const events = factory(ctx);
@@ -247,7 +246,7 @@ describe("nexusWSHandler", () => {
     const mockHandleSocket = vi.fn();
     mockCreateWSHandler.mockReturnValue(createMockWSResult(mockHandleSocket));
 
-    const factory = nexusWSHandler({} as any);
+    const factory = nexusWSHandler();
     const ctx = createHonoContext(new Request("http://localhost/ws"));
     const events = factory(ctx);
 
@@ -267,7 +266,7 @@ describe("nexusWSHandler", () => {
     const mockHandleSocket = vi.fn();
     mockCreateWSHandler.mockReturnValue(createMockWSResult(mockHandleSocket));
 
-    const factory = nexusWSHandler({} as any);
+    const factory = nexusWSHandler();
     const ctx = createHonoContext(new Request("http://localhost/ws"));
     const events = factory(ctx);
 
@@ -286,7 +285,7 @@ describe("nexusWSHandler", () => {
     const mockHandleSocket = vi.fn();
     mockCreateWSHandler.mockReturnValue(createMockWSResult(mockHandleSocket));
 
-    const factory = nexusWSHandler({} as any);
+    const factory = nexusWSHandler();
     const ctx = createHonoContext(new Request("http://localhost/ws"));
     const events = factory(ctx);
 

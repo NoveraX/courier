@@ -3,7 +3,7 @@
 
   # @noverax/nexus-studio-core
 
-  **Instrumentation core for Nexus Studio — EventBus, event types, and Socket.IO connector.**
+  **Instrumentation core for Nexus Studio — `attachRuntime`, EventBus, event types, and Socket.IO connector.**
 
   <br />
 
@@ -36,49 +36,33 @@ npm install socket.io-client
 
 ## Usage
 
-### Connect to Studio (client-side)
+### Attach a runtime (server-side)
 
 ```ts
-import { connectStudio } from "@noverax/nexus-studio-core"
+import { attachRuntime } from "@noverax/nexus-studio-core/runtime"
 
-const connection = connectStudio({
-  url: "http://localhost:4380",
-  framework: "next",
-})
-
-// connection.disconnect()
+await attachRuntime()
+// Auto-loads nexus.config.ts, registers sources, opens /runtime socket
 ```
 
-### Instrument a Server
+`attachRuntime()` reads `nexus.config.ts` from disk (walking up from `process.cwd()`), populates the core sources registry, and opens a `/runtime` Socket.IO connection to Studio in dev.
+
+### Attach a runtime (browser build-plugin injected)
 
 ```ts
-import { instrumentServer } from "@noverax/nexus-studio-core"
-
-instrumentServer({
-  url: "http://localhost:4380",
-  framework: "next",
-  sources,
-})
-```
-
-### Register Sources
-
-```ts
-import { registerSources, getSources } from "@noverax/nexus-studio-core"
-
-registerSources({ api })
-const sources = getSources() // → { api }
+globalThis[Symbol.for("nexus.studio.url")] = "http://127.0.0.1:6280"
+await attachRuntime("next-browser")
 ```
 
 <br />
 
 ## API
 
-### `connectStudio(options)` — Connect to Studio server from client
-### `instrumentServer(options)` — Instrument server-side requests and stream to Studio
-### `getStudioConnection()` — Get the current active connection
-### `EventBus` — Global event bus for Studio events
-### `registerSources(sources)` — Register API sources for Studio introspection
+### `attachRuntime(id?)` — Single entry point for server + browser runtimes
+### `loadNexusConfig()` — Walk-up + c12 config loader
+### `announceHosting(input)` — Announce transport capabilities to Studio
+### `setAppOrigin(origin)` / `getAppOrigin()` / `detectAppOrigin()` — App origin registry
+### `EventBus` — In-process Studio telemetry bus
 ### `extractSourceMap(sources)` — Extract endpoint metadata for the Studio UI
 
 <br />

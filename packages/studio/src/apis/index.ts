@@ -1,5 +1,20 @@
-export type { GeneratedFile, GenerateOptions } from "./generator";
-export { DEFAULT_OPTIONS, deriveSourceName, generateCode } from "./generator";
+export type {
+  GeneratedFile,
+  GenerateOptions,
+  ResolvedGenerateOptions,
+} from "./generator";
+export { applyImportDefaults, DEFAULT_OPTIONS, deriveSourceName, generateCode } from "./generator";
+export type { ImportsState, ImportStateEntry } from "./imports-state";
+export {
+  hasSpecChanged,
+  IMPORTS_STATE_FILENAME,
+  IMPORTS_STATE_VERSION,
+  loadImportsState,
+  recordImport,
+  removeImport,
+  resolveImportsStatePath,
+  saveImportsState,
+} from "./imports-state";
 export type {
   BreakingChange,
   BreakingSeverity,
@@ -42,45 +57,9 @@ export type {
 } from "./parser";
 export { detectFormat, parseSpec } from "./parser";
 export type {
-  DigestCache,
-  FingerprintCache,
-  PersistedGenerateOptions,
-  RegistryConfig,
-  RegistrySource,
   RemovedEndpointAction,
-  SourceSummary,
-  SpecImportType,
   UpdateChoices,
   UpdateFileResult,
   UpdateResult,
 } from "./registry";
-export {
-  addSource,
-  computeSpecHash,
-  getCachedDigest,
-  getCachedFingerprints,
-  getSource,
-  hasSpecChanged,
-  listSources,
-  loadCache,
-  loadDigestCache,
-  loadRegistry,
-  removeCachedDigest,
-  removeCachedSource,
-  removeSource,
-  saveCache,
-  saveDigestCache,
-  saveRegistry,
-  updateCachedDigest,
-  updateCachedFingerprints,
-  updateSource,
-} from "./registry";
-export type {
-  EndpointAnalysis,
-  ScanConfig,
-  ScannedEndpoint,
-  ScannedGroup,
-  ScannedSource,
-  ScanResult,
-} from "./scanner";
-export { scanProject } from "./scanner";
+export { computeSpecHash } from "./registry";

@@ -1,4 +1,4 @@
-import type { HTTPError } from "../error";
+import type { HTTPError } from "../errors";
 import { sendFetch } from "./send-fetch";
 
 export type GetProxyCtx = {

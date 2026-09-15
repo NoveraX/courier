@@ -9,7 +9,6 @@ import type {
   GeneratedFile,
   ManagePreviewResult,
   ParsedSpec,
-  ScanResult,
   SourceSummary,
   SpecDiff,
 } from "./types";
@@ -51,32 +50,26 @@ export function writeFiles(payload: {
   return post("/api/apis/write", payload);
 }
 
-// ── Registry ────────────────────────────────────────────────────────────────
+// ── Imports ─────────────────────────────────────────────────────────────────
 
 export function fetchRegistrySources(): Promise<{ sources: SourceSummary[] }> {
-  return post("/api/apis/registry/list");
+  return post("/api/apis/imports/list");
 }
 
 export function removeRegistrySource(name: string): Promise<{ success: boolean }> {
-  return post("/api/apis/registry/remove", { name });
+  return post("/api/apis/imports/remove", { name });
 }
 
 export function checkSourceUpdates(
   name: string,
 ): Promise<{ changed: boolean; newSpec?: ParsedSpec }> {
-  return post("/api/apis/registry/check-updates", { name });
+  return post("/api/apis/imports/check-updates", { name });
 }
 
 export function checkAllUpdates(): Promise<{
   results: Record<string, { changed: boolean; error?: string }>;
 }> {
-  return post("/api/apis/registry/check-all");
-}
-
-// ── Scanner ─────────────────────────────────────────────────────────────────
-
-export function scanProject(): Promise<ScanResult> {
-  return post("/api/apis/scan");
+  return post("/api/apis/imports/check-all");
 }
 
 // ── Diff ────────────────────────────────────────────────────────────────────

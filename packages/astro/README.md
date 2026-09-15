@@ -23,16 +23,23 @@ npm install @noverax/nexus-astro @noverax/nexus astro
 ## Usage
 
 ```ts
+// src/middleware.ts
+import { registerSources } from "@noverax/nexus"
+import { sources } from "./api"
+
+registerSources(sources)
+```
+
+```ts
 // src/pages/api/request.ts
 import { nexusHandler } from "@noverax/nexus-astro"
-import { sources } from "../../api"
 
-const handler = nexusHandler(sources)
+const handler = nexusHandler()
 export const GET = handler
 export const POST = handler
 ```
 
-The handler wraps Astro's Web Standard `Request` and passes it to the core Nexus handler. Works with both static and SSR output modes.
+`nexusHandler()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` at module load. Works with both static and SSR output modes.
 
 ## With Frontend
 
@@ -47,9 +54,9 @@ const users = await caller.users.getAll()
 
 ## API
 
-### `nexusHandler(sources)`
+### `nexusHandler()`
 
-Creates an Astro API endpoint handler. Takes a `Sources` object and returns a function compatible with Astro's `GET`/`POST` exports.
+Creates an Astro API endpoint handler. Returns a function compatible with Astro's `GET`/`POST` exports.
 
 ## License
 

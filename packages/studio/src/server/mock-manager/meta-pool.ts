@@ -99,7 +99,7 @@ export function createMetaPool() {
     return new Promise((r) => waitQueue.push(r));
   }
 
-  async function analyze(filePath: string): Promise<MetaResult | null> {
+  async function analyze(configPath: string, mockKey: string): Promise<MetaResult | null> {
     await ensureWorker();
 
     const id = `req_${++idCounter}`;
@@ -110,7 +110,7 @@ export function createMetaPool() {
       }, REQUEST_TIMEOUT);
 
       pending.set(id, { resolve: resolveReq, timer });
-      worker?.send({ type: "analyze", id, filePath });
+      worker?.send({ type: "analyze", id, configPath, mockKey });
     });
   }
 

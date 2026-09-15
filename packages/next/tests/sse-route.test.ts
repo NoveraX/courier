@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type * as NexusModule from "@noverax/nexus";
 
@@ -19,10 +19,14 @@ vi.mock("@noverax/nexus", async (importOriginal) => {
   };
 });
 
-import { createHandler } from "@noverax/nexus";
+import { createHandler, registerSources } from "@noverax/nexus";
 import { sseRoute } from "../src/sse-route";
 
 const mockCreateHandler = vi.mocked(createHandler);
+
+beforeEach(() => {
+  registerSources({ api: {} } as Parameters<typeof registerSources>[0]);
+});
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -30,27 +34,25 @@ afterEach(() => {
 
 describe("sseRoute", () => {
   it("returns { GET } handler", () => {
-    const route = sseRoute({});
+    const route = sseRoute();
     expect(route.GET).toBeDefined();
     expect(typeof route.GET).toBe("function");
   });
 
   it("does not expose POST handler", () => {
-    const route = sseRoute({}) as Record<string, unknown>;
+    const route = sseRoute() as Record<string, unknown>;
     expect(route.POST).toBeUndefined();
   });
 
-  it("calls createHandler with sources", () => {
-    const sources = { api: {} } as any;
-    sseRoute(sources);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, undefined);
+  it("calls createHandler with no sources arg (zero-arg)", () => {
+    sseRoute();
+    expect(mockCreateHandler).toHaveBeenCalledWith(undefined);
   });
 
   it("forwards HandlerConfig to createHandler", () => {
-    const sources = { api: {} } as any;
     const config = { sseHeaders: { "Access-Control-Allow-Origin": "*" }, sseMaxLifetimeMs: 60_000 };
-    sseRoute(sources, config);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, config);
+    sseRoute(config);
+    expect(mockCreateHandler).toHaveBeenCalledWith(config);
   });
 
   it("delegates GET to handleSSE", async () => {
@@ -59,7 +61,7 @@ describe("sseRoute", () => {
     });
     mockHandleSSE.mockResolvedValue(sseResponse);
 
-    const { GET } = sseRoute({ api: {} } as any);
+    const { GET } = sseRoute();
     const req = new NextRequest(
       "http://localhost:3000/api/sse?_s=api&_g=notifications&_m=feed",
     );
@@ -83,7 +85,7 @@ describe("sseRoute", () => {
       }),
     );
 
-    const { GET } = sseRoute({});
+    const { GET } = sseRoute();
     const req = new NextRequest("http://localhost:3000/api/sse?_s=api&_m=feed");
     const res = await GET(req);
 
@@ -100,7 +102,7 @@ describe("sseRoute", () => {
       }),
     );
 
-    const { GET } = sseRoute({});
+    const { GET } = sseRoute();
     const req = new NextRequest("http://localhost:3000/api/sse?_s=api&_m=feed");
     const res = await GET(req);
 
@@ -110,7 +112,7 @@ describe("sseRoute", () => {
   it("passes NextRequest which extends Request", async () => {
     mockHandleSSE.mockResolvedValue(new Response(""));
 
-    const { GET } = sseRoute({});
+    const { GET } = sseRoute();
     const req = new NextRequest("http://localhost:3000/api/sse?_s=api&_m=feed");
     await GET(req);
 

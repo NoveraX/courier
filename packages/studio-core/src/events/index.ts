@@ -11,11 +11,6 @@ export type {
   CacheMissEvent,
   CacheStoreEvent,
 } from "./cache";
-export type {
-  ConnectionHeartbeatEvent,
-  ConnectionInitEvent,
-  ConnectionSourcesEvent,
-} from "./connection";
 export type { DedupAbortEvent, DedupReuseEvent } from "./dedup";
 export type {
   HttpFetchEndEvent,

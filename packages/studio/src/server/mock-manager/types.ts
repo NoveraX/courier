@@ -1,5 +1,6 @@
 import type { Namespace } from "socket.io";
 
+import type { MockRegistry } from "../mock-registry";
 import type { WatcherStatus } from "../watcher-status";
 
 export type ServerStatus =
@@ -27,7 +28,8 @@ export interface ScenarioMeta {
 export interface ServerState {
   serverId: string;
   name: string;
-  filePath: string;
+  configPath: string;
+  mockKey: string;
   relativePath: string;
   configuredPort: number;
   status: ServerStatus;
@@ -50,7 +52,9 @@ export interface ServerState {
 }
 
 export interface CoordinatorConfig {
-  mocksDir: string;
+  mockRegistry: MockRegistry;
+  /** Returns the absolute path to the loaded `nexus.config.ts`, or `null` when none is loaded. */
+  getConfigPath: () => string | null;
   uiNamespace: Namespace;
   basePort: number;
   watcherStatus?: WatcherStatus;

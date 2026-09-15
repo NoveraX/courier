@@ -19,18 +19,22 @@ const log = createLogger("WS");
 /**
  * Create a server-side WebSocket handler for Nexus endpoints.
  *
- * @param config - Handler configuration (sources, pubsub, heartbeat, lifecycle hooks, etc.)
+ * Sources are read lazily from the core global registry at request time
+ * via `requireSources()`. Pass only the behavioral options here; call
+ * `await attachRuntime()` in your server instrumentation to populate
+ * the sources registry before the first request.
+ *
+ * @param config - Handler configuration (pubsub, heartbeat, lifecycle hooks, etc.)
  * @returns WSHandler with handleSocket and connections registry
  * @example
  * const ws = createWSHandler({
- *   sources,
  *   onConnect: ({ connectionId, request }) => ({ userId: extractUser(request) }),
  *   onDisconnect: ({ connectionId, meta }) => removePresence(meta.userId),
  * });
  * ws.handleSocket(socket, request);
  * ws.connections.broadcast({ type: "system", text: "Welcome!" });
  */
-export function createWSHandler(config: WSHandlerConfig): WSHandler {
+export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   const registry = createConnectionRegistry();
   const maxPerIP = config.maxConnectionsPerIP ?? LIMITS.MAX_CONNECTIONS_PER_IP;
   const ipTracker = createIPTracker(maxPerIP);

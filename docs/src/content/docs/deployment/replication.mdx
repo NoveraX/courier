@@ -102,9 +102,8 @@ Next.js App Router supports SSE natively via `sseRoute()`. WebSocket requires a 
 
 ```ts title="app/api/sse/route.ts"
 import { sseRoute } from "@noverax/nexus-next"
-import { sources } from "@/api/sources"
 
-export const { GET } = sseRoute(sources, {
+export const { GET } = sseRoute({
   maxSSEConnections: 5000,
   sseMaxLifetimeMs: 300_000,
   sseHeaders: {
@@ -120,10 +119,11 @@ export const { GET } = sseRoute(sources, {
 
 ```ts title="app/api/request/route.ts"
 import { apiRoute } from "@noverax/nexus-next"
-import { sources } from "@/api/sources"
 
-export const { GET, POST } = apiRoute(sources)
+export const { GET, POST } = apiRoute()
 ```
+
+Sources come from the core global registry populated in `instrumentation.ts` — see the [Next.js guide](/docs/frameworks/nextjs).
 
 ### Separate WS Server
 
@@ -172,20 +172,22 @@ const server = await createNexusServer({
 ```ts title="server.ts"
 import http from "node:http"
 import express from "express"
+import { registerSources } from "@noverax/nexus"
 import { nexusHandler, nexusSSEHandler, nexusWSAttach } from "@noverax/nexus-express"
 import { sources } from "./api/sources"
 import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
 
+registerSources(sources)
 await connectAdapters()
 
 const app = express()
 const server = http.createServer(app)
 
 // HTTP proxy
-app.all("/api/request", nexusHandler(sources))
+app.all("/api/request", nexusHandler())
 
 // SSE streaming — do NOT apply compression middleware to this route
-app.get("/api/sse", nexusSSEHandler(sources, {
+app.get("/api/sse", nexusSSEHandler({
   maxSSEConnections: 10_000,
   sseMaxLifetimeMs: 300_000,
   onSSEConnect: ({ connectionId, request }) => {
@@ -197,7 +199,7 @@ app.get("/api/sse", nexusSSEHandler(sources, {
 }))
 
 // WebSocket — attaches to HTTP server upgrade event
-const cleanupWS = nexusWSAttach(server, sources, {
+const cleanupWS = nexusWSAttach(server, {
   pubsub,
   heartbeatIntervalMs: 25_000,
   allowedOrigins: [process.env.ALLOWED_ORIGIN!],
@@ -239,10 +241,12 @@ process.on("SIGTERM", async () => {
 ```ts title="server.ts"
 import Fastify from "fastify"
 import fastifyWebsocket from "@fastify/websocket"
+import { registerSources } from "@noverax/nexus"
 import { nexusPlugin, nexusSSEHandler, nexusWSHandler } from "@noverax/nexus-fastify"
 import { sources } from "./api/sources"
 import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
 
+registerSources(sources)
 await connectAdapters()
 
 const fastify = Fastify({ logger: true })
@@ -251,10 +255,10 @@ const fastify = Fastify({ logger: true })
 await fastify.register(fastifyWebsocket)
 
 // HTTP proxy
-await fastify.register(nexusPlugin, { sources, prefix: "/api/request" })
+await fastify.register(nexusPlugin, { prefix: "/api/request" })
 
 // SSE streaming
-fastify.get("/api/sse", nexusSSEHandler(sources, {
+fastify.get("/api/sse", nexusSSEHandler({
   maxSSEConnections: 10_000,
   sseMaxLifetimeMs: 300_000,
   onSSEConnect: ({ connectionId, request }) => {
@@ -266,7 +270,7 @@ fastify.get("/api/sse", nexusSSEHandler(sources, {
 }))
 
 // WebSocket
-fastify.get("/ws", { websocket: true }, nexusWSHandler(sources, {
+fastify.get("/ws", { websocket: true }, nexusWSHandler({
   pubsub,
   heartbeatIntervalMs: 25_000,
   allowedOrigins: [process.env.ALLOWED_ORIGIN!],
@@ -305,20 +309,22 @@ Hono is runtime-agnostic — this example uses Node.js with `@hono/node-server` 
 import { Hono } from "hono"
 import { serve } from "@hono/node-server"
 import { createNodeWebSocket } from "@hono/node-ws"
+import { registerSources } from "@noverax/nexus"
 import { nexusHandler, nexusSSEHandler, nexusWSHandler } from "@noverax/nexus-hono"
 import { sources } from "./api/sources"
 import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
 
+registerSources(sources)
 await connectAdapters()
 
 const app = new Hono()
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app })
 
 // HTTP proxy
-app.all("/api/request", nexusHandler(sources))
+app.all("/api/request", nexusHandler())
 
 // SSE streaming
-app.get("/api/sse", nexusSSEHandler(sources, {
+app.get("/api/sse", nexusSSEHandler({
   maxSSEConnections: 10_000,
   sseMaxLifetimeMs: 300_000,
   onSSEConnect: ({ connectionId, request }) => {
@@ -327,7 +333,7 @@ app.get("/api/sse", nexusSSEHandler(sources, {
 }))
 
 // WebSocket
-const ws = nexusWSHandler(sources, {
+const ws = nexusWSHandler({
   pubsub,
   heartbeatIntervalMs: 25_000,
   allowedOrigins: [process.env.ALLOWED_ORIGIN!],
@@ -362,18 +368,20 @@ process.on("SIGTERM", async () => {
 
 ```ts title="main.ts"
 import { NestFactory } from "@nestjs/core"
+import { registerSources } from "@noverax/nexus"
 import { nexusWSAttach } from "@noverax/nexus-nestjs"
 import { AppModule } from "./app.module"
 import { sources } from "./api/sources"
 import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
 
 async function bootstrap(): Promise<void> {
+  registerSources(sources)
   await connectAdapters()
 
   const app = await NestFactory.create(AppModule)
 
   // WebSocket — attaches to NestJS HTTP server
-  const cleanupWS = nexusWSAttach(app.getHttpServer(), sources, {
+  const cleanupWS = nexusWSAttach(app.getHttpServer(), {
     pubsub,
     heartbeatIntervalMs: 25_000,
     allowedOrigins: [process.env.ALLOWED_ORIGIN!],
@@ -402,16 +410,15 @@ bootstrap()
 ```ts title="app.module.ts"
 import { Module, type NestModule, type MiddlewareConsumer } from "@nestjs/common"
 import { nexusMiddleware, nexusSSEMiddleware } from "@noverax/nexus-nestjs"
-import { sources } from "./api/sources"
 
 @Module({})
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
     // HTTP proxy
-    consumer.apply(nexusMiddleware(sources)).forRoutes("/api/request")
+    consumer.apply(nexusMiddleware()).forRoutes("/api/request")
 
     // SSE streaming
-    consumer.apply(nexusSSEMiddleware(sources, {
+    consumer.apply(nexusSSEMiddleware({
       maxSSEConnections: 10_000,
       sseMaxLifetimeMs: 300_000,
       onSSEConnect: ({ connectionId, request }) => {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { HTTPError } from "../src/error";
+import { HTTPError } from "../src/errors";
 import { createTestClient, findRequests } from "../src/testing/index";
 
 const testClient = createTestClient();

@@ -7,7 +7,7 @@ import type {
   EndpointRecord,
   GroupRecord,
 } from "./define";
-import type { HTTPError } from "./error";
+import type { HTTPError } from "./errors";
 import type { RequestContext } from "./http-client/types";
 import { composeBackend } from "./transport/compose-backend";
 import {

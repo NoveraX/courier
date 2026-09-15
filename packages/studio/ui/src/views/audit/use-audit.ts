@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useStudioStore } from "../../store";
+import { buildCatalogFromRequests } from "@/store/build-catalog-from-requests";
 import { runAudit } from "./run-audit";
 import type { AuditCategory, AuditResult } from "./types";
 
@@ -16,7 +17,7 @@ export interface AuditState {
 
 export function useAudit(): AuditState {
   const requests = useStudioStore((s) => s.requests);
-  const catalog = useStudioStore((s) => s.catalog);
+  const catalog = useMemo(() => buildCatalogFromRequests(requests), [requests]);
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<AuditCategory | "all">("all");
 

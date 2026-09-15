@@ -9,22 +9,36 @@ interface SpecGroupInfo {
   endpoints: Array<{ name: string; httpMethod: string; path: string }>;
 }
 
-/** Classify a single disk endpoint against spec and fingerprints */
+/**
+ * Classify a single disk endpoint against spec and fingerprints.
+ *
+ * `httpMethod`/`path` are looked up from the matching spec entry when present
+ * — disk listings only carry endpoint names, and spec data is the canonical
+ * source for HTTP method + path of any endpoint that still exists upstream.
+ * Endpoints with no matching spec entry (custom or removed-from-spec) get
+ * empty strings; UI consumers degrade gracefully on those rows.
+ */
 export function classifyDiskEndpoint(
   group: string,
   name: string,
-  httpMethod: string,
-  path: string,
   specGroup: SpecGroupInfo | undefined,
   fingerprints: Record<string, string>,
   diskHashes: Record<string, string>,
 ): InventoryEndpoint {
-  const inSpec = specGroup?.endpoints.some((e) => e.name === name) ?? false;
+  const specEntry = specGroup?.endpoints.find((e) => e.name === name);
+  const inSpec = !!specEntry;
   const storedHash = fingerprints[name];
   const diskHash = diskHashes[name];
 
   const { status, modificationStatus } = resolveStatus(inSpec, storedHash, diskHash);
-  return { group, name, httpMethod, path, status, modificationStatus };
+  return {
+    group,
+    name,
+    httpMethod: specEntry?.httpMethod ?? "",
+    path: specEntry?.path ?? "",
+    status,
+    modificationStatus,
+  };
 }
 
 function resolveStatus(

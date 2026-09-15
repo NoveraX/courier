@@ -52,7 +52,7 @@ export type MockServerConfig = Omit<MockServerDefinition, "__type" | "port" | "a
 
 /** Messages from Studio (parent) → mock server (child) */
 export type ParentMessage =
-  | { type: "start"; configPath: string; port: number }
+  | { type: "start"; configPath: string; mockKey: string; port: number }
   | { type: "stop" }
   | { type: "command"; command: Record<string, unknown>; requestId: string };
 

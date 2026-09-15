@@ -1,10 +1,11 @@
-import { resolveOptions } from "./core/options";
-import { generateConnectSnippet } from "./core/snippet";
+import { resolveSnippet } from "./core/resolve-snippet";
 import type { StudioPluginOptions } from "./core/types";
+
+const FRAMEWORK = "astro";
 
 /**
  * Astro integration for Nexus Studio.
- * Auto-injects `connectStudio()` into pages in dev mode.
+ * Auto-injects `attachRuntime("astro-browser")` into pages in dev mode.
  *
  * @example
  * ```ts
@@ -17,20 +18,19 @@ import type { StudioPluginOptions } from "./core/types";
  * ```
  */
 export function nexusStudio(options?: StudioPluginOptions): AstroIntegrationLike {
-  const resolved = { ...resolveOptions(options), framework: "astro" };
-
   return {
     name: "nexus-studio",
     hooks: {
-      "astro:config:setup"(ctx: AstroSetupContext) {
-        if (ctx.command !== "dev" || !resolved.enabled) return;
-        ctx.injectScript("page-init", generateConnectSnippet(resolved));
+      async "astro:config:setup"(ctx: AstroSetupContext) {
+        if (ctx.command !== "dev") return;
+        const snippet = await resolveSnippet(FRAMEWORK, options);
+        if (!snippet) return;
+        ctx.injectScript("page-init", snippet);
       },
     },
   };
 }
 
-// Minimal Astro types to avoid astro dependency
 interface AstroSetupContext {
   command: "dev" | "build" | "preview";
   injectScript: (stage: string, content: string) => void;
@@ -38,5 +38,5 @@ interface AstroSetupContext {
 
 interface AstroIntegrationLike {
   name: string;
-  hooks: Record<string, (ctx: AstroSetupContext) => void>;
+  hooks: Record<string, (ctx: AstroSetupContext) => void | Promise<void>>;
 }

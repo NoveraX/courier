@@ -1,12 +1,11 @@
 /**
  * Server start/stop/restart helpers for the mock lifecycle coordinator.
  *
- * Provides:
- *
  * - `allocateNextPort` — find the next free port not already assigned to a
  *   tracked server.
- * - `registerDeclared` — turn a `DeclaredServer` from the scanner into a
- *   tracked `ServerState` and emit it to the UI.
+ * - `registerDeclared` — turn a `RegisteredMock` (key + meta extracted by the
+ *   meta-pool from `nexus.config.ts.mocks[key]`) into a tracked `ServerState`
+ *   and emit it to the UI.
  * - `startServer` / `stopServer` / `restartServer` — drive the
  *   `processManager` while keeping the local `ServerState` in sync.
  *
@@ -15,9 +14,19 @@
  * inside the coordinator's closure.
  */
 
+import type { MetaResult } from "./meta-pool";
 import type { ProcessManager } from "./process-manager";
-import type { DeclaredServer } from "./scanner";
 import type { ServerState } from "./types";
+
+/** Input to `registerDeclared` — a config-driven mock entry plus extracted metadata. */
+export interface RegisteredMock {
+  key: string;
+  configPath: string;
+  /** Display path shown in the UI (e.g. `nexus.config.ts:mocks.users`). */
+  relativePath: string;
+  /** Extracted via the meta-pool from the user's mock definition. */
+  meta: MetaResult;
+}
 
 export interface ServerOpsContext {
   servers: Map<string, ServerState>;
@@ -28,7 +37,7 @@ export interface ServerOpsContext {
 }
 
 export interface ServerOps {
-  registerDeclared: (declared: DeclaredServer) => void;
+  registerDeclared: (declared: RegisteredMock) => void;
   startServer: (serverId: string) => Promise<void>;
   stopServer: (serverId: string) => Promise<void>;
   restartServer: (serverId: string) => Promise<void>;
@@ -38,7 +47,6 @@ export function createServerOps(ctx: ServerOpsContext): ServerOps {
   const { servers, processManager, updateAndEmit, emitServerState } = ctx;
   let nextPort = ctx.basePort;
 
-  /** Find the next port that isn't already assigned to a tracked server */
   function allocateNextPort(): number {
     const usedPorts = new Set<number>();
     for (const s of servers.values()) {
@@ -49,22 +57,24 @@ export function createServerOps(ctx: ServerOpsContext): ServerOps {
     return nextPort++;
   }
 
-  function registerDeclared(declared: DeclaredServer): void {
-    if (servers.has(declared.id)) return;
+  function registerDeclared(declared: RegisteredMock): void {
+    if (servers.has(declared.key)) return;
+    const { meta } = declared;
     const state: ServerState = {
-      serverId: declared.id,
-      name: declared.name,
-      filePath: declared.filePath,
+      serverId: declared.key,
+      name: declared.key,
+      configPath: declared.configPath,
+      mockKey: declared.key,
       relativePath: declared.relativePath,
       configuredPort: allocateNextPort(),
       status: "declared",
       origin: "studio",
-      routes: declared.routes.map((r) => ({ ...r })),
-      collections: declared.collections.map((name) => ({ name, count: 0, records: [] })),
-      scenarios: declared.scenarios,
+      routes: meta.routes.map((r) => ({ ...r })),
+      collections: meta.collections.map((name) => ({ name, count: 0, records: [] })),
+      scenarios: meta.scenarios,
       activeScenario: null,
     };
-    servers.set(declared.id, state);
+    servers.set(declared.key, state);
     emitServerState(state);
   }
 
@@ -74,7 +84,12 @@ export function createServerOps(ctx: ServerOpsContext): ServerOps {
 
     updateAndEmit(serverId, { status: "starting", origin: "studio" });
     try {
-      const spawned = await processManager.spawn(serverId, state.filePath, state.configuredPort);
+      const spawned = await processManager.spawn(
+        serverId,
+        state.configPath,
+        state.mockKey,
+        state.configuredPort,
+      );
       state.pid = spawned.pid;
     } catch (err) {
       updateAndEmit(serverId, {

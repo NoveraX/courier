@@ -30,6 +30,18 @@ export function getSourceName(source: unknown): string | undefined {
 }
 
 /**
+ * Forcibly stamp `name` onto `source` as its canonical source name.
+ *
+ * Use when an explicit identifier (e.g. a `nexus.config.ts` `sources` key)
+ * must override the value derived inside `defineApi`. The internal symbol
+ * stays private — call this helper instead of touching it directly.
+ */
+export function setSourceName(source: unknown, name: string): void {
+  if (!source || typeof source !== "object") return;
+  (source as Record<symbol, unknown>)[SOURCE_NAME_KEY] = name;
+}
+
+/**
  * Define an API source with groups of typed endpoints.
  *
  * @example

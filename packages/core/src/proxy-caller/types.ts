@@ -1,10 +1,9 @@
-import type { HTTPError } from "../error";
+import type { HTTPError } from "../errors";
 import type { ProxyPath } from "./proxy-path";
 
 export type ProxyCallerDefaults = {
   /**
-   * Per-transport proxy endpoint configuration. Replaces the legacy flat
-   * `proxyUrl` / `sseUrl` / `wsUrl` fields. Each field is optional and
+   * Per-transport proxy endpoint configuration. Each field is optional and
    * accepts either a relative path or an absolute URL. When the caller
    * provides `source`, missing fields fall back to `source.options.proxyPath`
    * (per-transport merge), then to built-in defaults at resolution time.

@@ -25,10 +25,10 @@ export const NEXTJS: FrameworkConfig = {
         {
           label: "Turbopack (v15.3+)",
           filePath: "instrumentation-client.ts",
-          code: `import { connectStudio } from "@noverax/nexus-studio-core";
+          code: `import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
 
 if (process.env.NODE_ENV === "development") {
-  connectStudio();
+  attachRuntime("next-browser");
 }`,
         },
         {
@@ -48,7 +48,7 @@ export default withNexusStudio()(nextConfig);`,
     {
       id: "instrument-server",
       title: "Add server instrumentation",
-      description: "Tracks server-side requests. Runs once on server startup in the Node.js runtime.",
+      description: "Tracks server-side requests. Runs once on server startup in the Node.js runtime. Auto-loads sources from nexus.config.ts.",
       icon: Server,
       actionLabel: "Copy snippet",
       filePath: "instrumentation.ts",
@@ -56,9 +56,8 @@ export default withNexusStudio()(nextConfig);`,
       code: `export async function register() {
   // Only instrument in Node.js runtime (not Edge)
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { instrumentServer } = await import("@noverax/nexus-studio-core");
-    const { sources } = await import("@/api");
-    instrumentServer({ sources });
+    const { attachRuntime } = await import("@noverax/nexus-studio-core/runtime");
+    await attachRuntime();
   }
 }`,
     },

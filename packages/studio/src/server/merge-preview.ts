@@ -2,71 +2,61 @@
  * Merge preview and orphan cleanup helpers for write flow.
  */
 
-import type { GenerateOptions, ParsedSpec } from "../apis";
-import { addSource, getCachedFingerprints, loadCache, saveRegistry } from "../apis";
+import type { NexusImportEntry } from "@noverax/nexus/config";
+import type { ParsedSpec } from "../apis";
+import { createSpecDigest } from "../apis";
+import type { ImportStateEntry } from "../apis/imports-state";
 import { previewUpdate } from "../apis/merge/update-flow";
-import type {
-  RegistryConfig,
-  RegistrySource,
-  SpecImportType,
-  UpdateResult,
-} from "../apis/registry/types";
+import type { UpdateResult } from "../apis/registry/types";
 import { resolveProjectSafe } from "../context";
 import { cleanupOrphanFiles } from "./cleanup-orphans";
+import { getEffectiveImportDir, persistImportState } from "./imports-bridge";
 import {
   buildFallbackFingerprints,
   collectFingerprints,
-  persistCaches,
   readFilesFromDisk,
 } from "./registry-helpers";
 import type { WriteBody } from "./write-types";
 
 export function computeMergePreview(
   files: WriteBody["files"],
-  sourceName: string,
-  source: RegistrySource,
+  state: ImportStateEntry | undefined,
 ): UpdateResult {
   const existingFiles = readFilesFromDisk(files.map((f) => f.path));
-  const cache = loadCache();
-  const cached = getCachedFingerprints(cache, sourceName);
+  const cached = state?.fileFingerprints ?? {};
   const fingerprints =
     Object.keys(cached).length > 0
       ? cached
-      : buildFallbackFingerprints(existingFiles, source.userModified);
+      : buildFallbackFingerprints(existingFiles, state?.userModified ?? []);
 
   return previewUpdate(fingerprints, files, existingFiles);
 }
 
 export function removeOrphanFiles(
   files: WriteBody["files"],
-  source: RegistrySource,
-  options: GenerateOptions,
+  entry: NexusImportEntry,
+  name: string,
 ): number {
   const newPaths = new Set(files.map((f) => resolveProjectSafe(f.path)));
-  const effectiveDir = `${source.options.outputDir.replace(/\/+$/, "")}/${options.sourceName}`;
-  return cleanupOrphanFiles(effectiveDir, newPaths);
+  return cleanupOrphanFiles(getEffectiveImportDir(entry, name), newPaths);
 }
 
-export function persistRawSource(
+export async function persistRawSource(
   files: WriteBody["files"],
   sourceName: string,
   spec: ParsedSpec,
-  specUrl: string | undefined,
-  importType: SpecImportType | undefined,
-  options: GenerateOptions,
-  config: RegistryConfig,
-): void {
+  prevState: ImportStateEntry | undefined,
+): Promise<void> {
   const newFingerprints = collectFingerprints(files);
-  if (Object.keys(newFingerprints).length > 0) {
-    const updated = addSource(
-      config,
-      sourceName,
-      spec,
-      specUrl ?? "",
-      importType ?? "url",
-      options,
-    );
-    saveRegistry(updated);
-    persistCaches(sourceName, newFingerprints, spec);
-  }
+  if (Object.keys(newFingerprints).length === 0) return;
+  const now = new Date().toISOString();
+  await persistImportState(sourceName, {
+    specHash: prevState?.specHash ?? "",
+    digest: createSpecDigest(spec),
+    fetchedAt: prevState?.fetchedAt ?? now,
+    lastSyncedAt: now,
+    userModified: prevState?.userModified ?? [],
+    generatedFiles: files.map((f) => f.path),
+    fileFingerprints: newFingerprints,
+  });
 }

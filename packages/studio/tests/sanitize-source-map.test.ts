@@ -13,52 +13,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   sanitizeAppOrigin,
-  sanitizeEnv,
   sanitizeProxyPath,
   sanitizeSourceMap,
 } from "../src/server/sanitize-source-map";
-
-// ── sanitizeEnv ─────────────────────────────────────────────────────────────
-
-describe("sanitizeEnv", () => {
-  it("returns undefined for null / undefined / non-object", () => {
-    expect(sanitizeEnv(null)).toBeUndefined();
-    expect(sanitizeEnv(undefined)).toBeUndefined();
-    expect(sanitizeEnv("KEY=val")).toBeUndefined();
-    expect(sanitizeEnv(42)).toBeUndefined();
-  });
-
-  it("returns undefined for empty object", () => {
-    expect(sanitizeEnv({})).toBeUndefined();
-  });
-
-  it("forwards a fully string-valued env map", () => {
-    expect(sanitizeEnv({ NODE_ENV: "production", PORT: "3000" })).toEqual({
-      NODE_ENV: "production",
-      PORT: "3000",
-    });
-  });
-
-  it("drops non-string values silently", () => {
-    expect(
-      sanitizeEnv({
-        OK: "yes",
-        NUMERIC: 42,
-        BOOL: true,
-        NESTED: { x: 1 },
-        NULLISH: null,
-      }),
-    ).toEqual({ OK: "yes" });
-  });
-
-  it("returns undefined when every value is non-string", () => {
-    expect(sanitizeEnv({ A: 1, B: false, C: null })).toBeUndefined();
-  });
-
-  it("preserves empty-string env values (a valid setting)", () => {
-    expect(sanitizeEnv({ EMPTY: "", FILLED: "x" })).toEqual({ EMPTY: "", FILLED: "x" });
-  });
-});
 
 // ── sanitizeProxyPath ───────────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createServer } from "node:http";
 import type * as NexusModule from "@noverax/nexus";
 
@@ -22,11 +22,15 @@ vi.mock("@noverax/nexus", async (importOriginal) => {
   };
 });
 
-import { createHandler, createWSHandler } from "@noverax/nexus";
+import { createHandler, createWSHandler, registerSources } from "@noverax/nexus";
 import { nexusMiddleware, nexusSSEMiddleware, nexusWSAttach } from "../src/index";
 
 const mockCreateHandler = vi.mocked(createHandler);
 const mockCreateWSHandler = vi.mocked(createWSHandler);
+
+beforeEach(() => {
+  registerSources({ api: {} } as Parameters<typeof registerSources>[0]);
+});
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -48,21 +52,19 @@ function createMockHandlerResult(overrides: Record<string, unknown> = {}) {
 
 describe("nexusMiddleware", () => {
   it("returns a function", () => {
-    const middleware = nexusMiddleware({} as any);
+    const middleware = nexusMiddleware();
     expect(typeof middleware).toBe("function");
   });
 
-  it("calls createHandler with sources", () => {
-    const sources = { api: {} } as any;
-    nexusMiddleware(sources);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, undefined);
+  it("calls createHandler with no sources arg (zero-arg)", () => {
+    nexusMiddleware();
+    expect(mockCreateHandler).toHaveBeenCalledWith(undefined);
   });
 
   it("forwards HandlerConfig to createHandler", () => {
-    const sources = { api: {} } as any;
     const config = { allowedOrigins: ["https://app.example.com"] };
-    nexusMiddleware(sources, config);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, config);
+    nexusMiddleware(config);
+    expect(mockCreateHandler).toHaveBeenCalledWith(config);
   });
 
   it("converts Node.js request to Web Standard Request and handles it", async () => {
@@ -75,7 +77,7 @@ describe("nexusMiddleware", () => {
     );
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const middleware = nexusMiddleware({} as any);
+    const middleware = nexusMiddleware();
 
     const { body, status, headers } = await makeNodeRequest(middleware, {
       method: "GET",
@@ -93,7 +95,7 @@ describe("nexusMiddleware", () => {
     const mockHandle = vi.fn().mockRejectedValue(error);
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
-    const middleware = nexusMiddleware({} as any);
+    const middleware = nexusMiddleware();
     const next = vi.fn();
 
     const { Readable } = require("node:stream");
@@ -111,7 +113,7 @@ describe("nexusMiddleware", () => {
   });
 
   it("works as NestJS-compatible middleware (req, res, next signature)", () => {
-    const middleware = nexusMiddleware({} as any);
+    const middleware = nexusMiddleware();
 
     // Verify the middleware has the correct arity for NestJS
     expect(middleware.length).toBe(3);
@@ -120,21 +122,19 @@ describe("nexusMiddleware", () => {
 
 describe("nexusSSEMiddleware", () => {
   it("returns a function", () => {
-    const middleware = nexusSSEMiddleware({} as any);
+    const middleware = nexusSSEMiddleware();
     expect(typeof middleware).toBe("function");
   });
 
-  it("calls createHandler with sources", () => {
-    const sources = { api: {} } as any;
-    nexusSSEMiddleware(sources);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, undefined);
+  it("calls createHandler with no sources arg (zero-arg)", () => {
+    nexusSSEMiddleware();
+    expect(mockCreateHandler).toHaveBeenCalledWith(undefined);
   });
 
   it("forwards HandlerConfig to createHandler", () => {
-    const sources = { api: {} } as any;
     const config = { sseHeaders: { "Access-Control-Allow-Origin": "*" }, sseMaxLifetimeMs: 60_000 };
-    nexusSSEMiddleware(sources, config);
-    expect(mockCreateHandler).toHaveBeenCalledWith(sources, config);
+    nexusSSEMiddleware(config);
+    expect(mockCreateHandler).toHaveBeenCalledWith(config);
   });
 
   it("converts request and delegates to handleSSE", async () => {
@@ -146,7 +146,7 @@ describe("nexusSSEMiddleware", () => {
     );
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const middleware = nexusSSEMiddleware({} as any);
+    const middleware = nexusSSEMiddleware();
 
     const { status, headers } = await makeNodeRequest(middleware, {
       method: "GET",
@@ -172,7 +172,7 @@ describe("nexusSSEMiddleware", () => {
     );
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const middleware = nexusSSEMiddleware({} as any);
+    const middleware = nexusSSEMiddleware();
     const { status, headers } = await makeNodeRequest(middleware, {
       method: "GET",
       path: "/api/sse?_s=api&_m=feed",
@@ -189,7 +189,7 @@ describe("nexusSSEMiddleware", () => {
     const mockHandleSSE = vi.fn().mockRejectedValue(error);
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handleSSE: mockHandleSSE }));
 
-    const middleware = nexusSSEMiddleware({} as any);
+    const middleware = nexusSSEMiddleware();
     const next = vi.fn();
 
     const { Readable } = require("node:stream");
@@ -207,7 +207,7 @@ describe("nexusSSEMiddleware", () => {
   });
 
   it("has correct arity for NestJS (3 params)", () => {
-    const middleware = nexusSSEMiddleware({} as any);
+    const middleware = nexusSSEMiddleware();
     expect(middleware.length).toBe(3);
   });
 });
@@ -272,24 +272,23 @@ function makeNodeRequest(
 describe("nexusWSAttach", () => {
   it("returns a cleanup function", () => {
     const server = createServer();
-    const cleanup = nexusWSAttach(server, {} as any);
+    const cleanup = nexusWSAttach(server);
     expect(typeof cleanup).toBe("function");
     cleanup();
   });
 
-  it("calls createWSHandler with sources and options", () => {
-    const sources = { api: {} } as any;
+  it("calls createWSHandler with just the options (no sources)", () => {
     const options = { heartbeatIntervalMs: 5000 };
     const server = createServer();
-    const cleanup = nexusWSAttach(server, sources, options);
-    expect(mockCreateWSHandler).toHaveBeenCalledWith({ sources, ...options });
+    const cleanup = nexusWSAttach(server, options);
+    expect(mockCreateWSHandler).toHaveBeenCalledWith(options);
     cleanup();
   });
 
   it("attaches upgrade listener to server", () => {
     const server = createServer();
     const onSpy = vi.spyOn(server, "on");
-    const cleanup = nexusWSAttach(server, {} as any);
+    const cleanup = nexusWSAttach(server);
 
     expect(onSpy).toHaveBeenCalledWith("upgrade", expect.any(Function));
     cleanup();
@@ -299,7 +298,7 @@ describe("nexusWSAttach", () => {
   it("cleanup removes upgrade listener", () => {
     const server = createServer();
     const offSpy = vi.spyOn(server, "off");
-    const cleanup = nexusWSAttach(server, {} as any);
+    const cleanup = nexusWSAttach(server);
 
     cleanup();
     expect(offSpy).toHaveBeenCalledWith("upgrade", expect.any(Function));

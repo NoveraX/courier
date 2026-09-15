@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HTTPError, isHTTPError } from "../src/error";
+import { HTTPError, isHTTPError } from "../src/errors";
 
 describe("HTTPError", () => {
   it("creates error with status, headers, data", () => {

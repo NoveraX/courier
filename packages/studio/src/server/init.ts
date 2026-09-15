@@ -1,26 +1,20 @@
 /**
- * Project initialization — ensures registry.nexus.json exists
- * and `.nexus/` directory is in .gitignore.
+ * Project initialization — ensures `.nexus/` is in `.gitignore`.
+ *
+ * The imports-state file materializes itself on first write, so no registry
+ * bootstrap step is required anymore.
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { loadRegistry, saveRegistry } from "../apis";
 import { resolveProject } from "../context";
 
 const NEXUS_DIR = ".nexus/";
 const GITIGNORE = ".gitignore";
 
-/** Initialize project: create registry if missing, update .gitignore */
+/** Initialize project: ensure `.nexus/` is ignored by git. */
 export function initProject(): { registryCreated: boolean; gitignoreUpdated: boolean } {
-  const registryCreated = ensureRegistry();
   const gitignoreUpdated = ensureGitignore();
-  return { registryCreated, gitignoreUpdated };
-}
-
-function ensureRegistry(): boolean {
-  if (existsSync(resolveProject("registry.nexus.json"))) return false;
-  saveRegistry(loadRegistry());
-  return true;
+  return { registryCreated: false, gitignoreUpdated };
 }
 
 function ensureGitignore(): boolean {

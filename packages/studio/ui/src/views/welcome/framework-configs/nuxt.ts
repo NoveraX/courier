@@ -37,12 +37,11 @@ export default defineNuxtConfig({
       actionLabel: "Copy snippet",
       filePath: "server/plugins/studio.ts",
       lang: "ts",
-      code: `import { instrumentServer } from "@noverax/nexus-studio-core";
-import { sources } from "~/api";
+      code: `import { attachRuntime } from "@noverax/nexus-studio-core/runtime";
 
-export default defineNitroPlugin(() => {
+export default defineNitroPlugin(async () => {
   if (import.meta.dev) {
-    instrumentServer({ sources });
+    await attachRuntime();
   }
 });`,
     },

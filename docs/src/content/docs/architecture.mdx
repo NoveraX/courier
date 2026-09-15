@@ -161,15 +161,17 @@ A thin wrapper around native `fetch`. Zero dependencies. Handles URL params, bod
 The universal adapter interface. All server framework adapters use it internally:
 
 ```typescript title="Adapter architecture"
-// Core provides createHandler(sources) → { handle, handleGet, handlePost }
-// Each adapter wraps it for its framework:
+// Core provides createHandler() → { handle, handleGet, handlePost }
+// Sources come from the core global registry populated by
+// `registerSources()` or `attachRuntime()`. Each adapter wraps
+// `createHandler()` for its framework:
 
-// Next.js:  apiRoute(sources) → { GET, POST }
-// Hono:     nexusHandler(sources) → (c) => Response
-// Express:  nexusHandler(sources) → (req, res) => void
+// Next.js:  apiRoute() → { GET, POST }
+// Hono:     nexusHandler() → (c) => Response
+// Express:  nexusHandler() → (req, res) => void
 // Fastify:  nexusPlugin → FastifyPluginAsync
-// NestJS:   nexusMiddleware(sources) → (req, res, next) => void
-// Nuxt:     nexusHandler(sources) → H3EventHandler
+// NestJS:   nexusMiddleware() → (req, res, next) => void
+// Nuxt:     nexusHandler() → H3EventHandler
 ```
 
 ## Factory Functions

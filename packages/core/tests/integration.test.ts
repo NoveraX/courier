@@ -5,7 +5,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineApi, defineGroup, endpoint } from "../src/define/index";
-import { HTTPError } from "../src/error";
+import { HTTPError } from "../src/errors";
 import { executeRequest } from "../src/utils/execute";
 
 const fetchSpy = vi.fn();

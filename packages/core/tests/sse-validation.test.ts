@@ -1,8 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createHandler } from "../src/adapter";
 import { endpoint } from "../src/define/endpoint";
 import type { SSEContext, SSEEvent } from "../src/realtime/types";
+import { _resetSourcesForTests, registerSources } from "../src/sources";
+
+function setupHandler(sources: unknown) {
+  registerSources(sources as Parameters<typeof registerSources>[0]);
+  return createHandler();
+}
+
+afterEach(() => {
+  _resetSourcesForTests();
+});
 
 function sseRequest(params: string): Request {
   return new Request(`http://localhost/api/sse?${params}`, {
@@ -30,7 +40,7 @@ describe("SSE variable validation", () => {
     });
 
     const sources = { api: { options: {}, feed } };
-    const handler = createHandler(sources);
+    const handler = setupHandler(sources);
 
     const valid = await handler.handleSSE(sseRequest("_s=api&_m=feed&userId=abc"));
     expect(valid.status).toBe(200);
@@ -48,7 +58,7 @@ describe("SSE variable validation", () => {
     });
 
     const sources = { api: { options: {}, feed } };
-    const handler = createHandler(sources);
+    const handler = setupHandler(sources);
 
     const response = await handler.handleSSE(sseRequest("_s=api&_m=feed&limit=42"));
     expect(response.status).toBe(200);
@@ -64,7 +74,7 @@ describe("SSE variable validation", () => {
     });
 
     const sources = { api: { options: {}, feed } };
-    const handler = createHandler(sources);
+    const handler = setupHandler(sources);
 
     const response = await handler.handleSSE(sseRequest("_s=api&_m=feed&active=true"));
     expect(response.status).toBe(200);
@@ -78,7 +88,7 @@ describe("SSE variable validation", () => {
       yield { data: ctx.variables } as SSEEvent;
     });
     const sources = { api: { options: {}, feed } };
-    const handler = createHandler(sources);
+    const handler = setupHandler(sources);
 
     const response = await handler.handleSSE(sseRequest("_s=api&_m=feed&foo=bar"));
     expect(response.status).toBe(200);
@@ -94,7 +104,7 @@ describe("SSE variable validation", () => {
     });
 
     const sources = { api: { options: {}, feed } };
-    const handler = createHandler(sources);
+    const handler = setupHandler(sources);
 
     const response = await handler.handleSSE(sseRequest("_s=api&_m=feed&count=abc"));
     expect(response.status).toBe(400);

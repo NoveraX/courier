@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { HTTPError } from "../src/error";
+import { HTTPError } from "../src/errors";
 import { createCaller } from "../src/caller";
 
 vi.mock("../src/utils/execute", () => ({

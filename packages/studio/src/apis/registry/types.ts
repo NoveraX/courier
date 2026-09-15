@@ -1,38 +1,8 @@
 /**
- * Registry types — persisted config, source metadata, and update flow.
+ * Registry types — update-flow results consumed by the manage/update routes.
  */
 
-import type { GenerateOptions } from "../generator/types";
 import type { BreakingChange, MergeChange, MergeStatus, SpecDiff } from "../merge/types";
-
-// ── Persisted Options ────────────────────────────────────────────────────────
-
-/** Options stored in registry — transient fields (selectedEndpoints) are excluded */
-export type PersistedGenerateOptions = Omit<GenerateOptions, "selectedEndpoints">;
-
-/** How the spec was originally imported */
-export type SpecImportType = "url" | "file" | "raw";
-
-export interface RegistrySource {
-  /** Remote URL (only for url imports, empty for file/raw) */
-  specUrl: string;
-  /** How the spec was imported — determines update check behavior */
-  importType: SpecImportType;
-  specHash: string;
-  options: PersistedGenerateOptions;
-  /** Endpoint names that were user-modified at last sync */
-  userModified: string[];
-}
-
-export interface RegistryConfig {
-  sources: Record<string, RegistrySource>;
-  /** Directories to scan for hand-written APIs (default: ["src/api"]) */
-  scanPaths?: string[];
-  /** Glob patterns to ignore when scanning */
-  scanIgnore?: string[];
-}
-
-// ── Update Flow ─────────────────────────────────────────────────────────────
 
 export type RemovedEndpointAction = "remove" | "keep" | "deprecate";
 

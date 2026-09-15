@@ -1,4 +1,4 @@
-import { HTTPError } from "../error";
+import { HTTPError } from "../errors";
 import type { UploadProgress } from "../http-client/types";
 import { createLogger } from "../logger";
 import { studioHooks } from "../studio";

@@ -6,7 +6,7 @@
 import { extractEndpoints } from "../merge/extract-endpoints";
 import { computeHash } from "../merge/hash";
 import type { ParsedGroup } from "../parser/types";
-import type { ScannedGroup } from "../scanner/types";
+import type { DiskGroupListing } from "./types";
 
 export interface SpecGroupInfo {
   prefix: string;
@@ -15,7 +15,7 @@ export interface SpecGroupInfo {
 
 export interface DiskGroupInfo {
   prefix: string;
-  endpoints: Array<{ name: string; httpMethod: string; path: string }>;
+  endpoints: string[];
 }
 
 export function buildSpecMap(groups: ParsedGroup[]): Map<string, SpecGroupInfo> {
@@ -33,17 +33,10 @@ export function buildSpecMap(groups: ParsedGroup[]): Map<string, SpecGroupInfo> 
   return map;
 }
 
-export function buildDiskMap(groups: ScannedGroup[]): Map<string, DiskGroupInfo> {
+export function buildDiskMap(groups: DiskGroupListing[]): Map<string, DiskGroupInfo> {
   const map = new Map<string, DiskGroupInfo>();
   for (const g of groups) {
-    map.set(g.name, {
-      prefix: g.prefix,
-      endpoints: g.endpoints.map((e) => ({
-        name: e.name,
-        httpMethod: e.analysis.httpMethod,
-        path: e.analysis.path,
-      })),
-    });
+    map.set(g.name, { prefix: g.prefix, endpoints: g.endpoints });
   }
   return map;
 }

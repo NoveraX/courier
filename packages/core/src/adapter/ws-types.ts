@@ -1,11 +1,14 @@
-import type { Sources } from "../define/types";
 import type { PubSubAdapter, WebSocketLike } from "../realtime/adapters";
 import type { ConnectionRegistry } from "./ws-registry";
 
-/** Configuration for the server-side WebSocket handler */
+/**
+ * Configuration for the server-side WebSocket handler.
+ *
+ * Sources are read lazily from the core global registry at request time
+ * via `requireSources()`, so there is no `sources` field here — framework
+ * adapters call `createWSHandler()` with just the behavioral options.
+ */
 export interface WSHandlerConfig {
-  /** Registered API sources */
-  sources: Sources;
   /** Optional pub/sub adapter for horizontal scaling (e.g. Redis) */
   pubsub?: PubSubAdapter;
   /** Heartbeat interval in ms (default 25000) */
@@ -81,8 +84,8 @@ export interface WSSubscriptionEntry {
   onMessage?: (payload: unknown) => void | Promise<void>;
 }
 
-/** WS options for framework adapters (sources provided separately) */
-export type NexusWSOptions = Omit<WSHandlerConfig, "sources">;
+/** WS options for framework adapters (alias for clarity in adapter signatures) */
+export type NexusWSOptions = WSHandlerConfig;
 
 /** Server-side WS handler returned by createWSHandler */
 export interface WSHandler {

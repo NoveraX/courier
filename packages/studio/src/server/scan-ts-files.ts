@@ -4,15 +4,21 @@
 
 import { existsSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
-import type { getSource } from "../apis";
+import type { NexusImportEntry } from "@noverax/nexus/config";
 import { getProjectRoot, resolveProjectSafe } from "../context";
 
-/** Collect all .ts file paths (relative) from a source's output dir + generated list */
+/**
+ * Collect all .ts file paths (relative) from an import's output dir + the
+ * generated file list. `name` is the import key and doubles as the source
+ * name fallback when the entry omits an explicit `sourceName`.
+ */
 export function scanTsFiles(
-  source: NonNullable<ReturnType<typeof getSource>>,
+  entry: NexusImportEntry,
+  name: string,
   generated: { path: string }[],
 ): string[] {
-  const effectiveDir = `${source.options.outputDir.replace(/\/+$/, "")}/${source.options.sourceName}`;
+  const sourceName = entry.sourceName ?? name;
+  const effectiveDir = `${entry.outputDir.replace(/\/+$/, "")}/${sourceName}`;
   const absDir = resolveProjectSafe(effectiveDir);
   const diskPaths = existsSync(absDir) ? collectTsFilesRecursive(absDir) : [];
   return [...new Set([...generated.map((g) => g.path), ...diskPaths])];

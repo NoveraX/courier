@@ -1,4 +1,4 @@
-import { HTTPError } from "../error";
+import { HTTPError } from "../errors";
 import type { Context } from "../http-client/types";
 import type { StudioHooks } from "../studio";
 import { ValidationError } from "../validation";

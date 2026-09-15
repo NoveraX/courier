@@ -1,4 +1,4 @@
-import { Eye } from "lucide-react";
+import { AlertTriangle, Eye } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
@@ -11,7 +11,8 @@ export function StatusBar(): React.ReactNode {
   const requests = useStudioStore((s) => s.requests);
   const paused = useStudioStore((s) => s.paused);
   const connectionStatus = useStudioStore((s) => s.connectionStatus);
-  const sessions = useStudioStore((s) => s.sessions);
+  const bindingSnapshot = useStudioStore((s) => s.bindingSnapshot);
+  const lastBindingError = useStudioStore((s) => s.lastBindingError);
   const droppedRequests = useStudioStore((s) => s.droppedRequests);
   const sessionStartedAt = useStudioStore((s) => s.sessionStartedAt);
   const watcherApiPaths = useStudioStore((s) => s.watcherApiPaths);
@@ -29,9 +30,10 @@ export function StatusBar(): React.ReactNode {
   const errors = requests.filter((r) => r.status === "error").length;
   const pending = requests.filter((r) => r.status === "pending").length;
 
-  // Browser companion sessions (framework "unknown") are not separate apps
-  const appCount = sessions.filter((s) => s.framework !== "unknown").length
-    || (sessions.length > 0 ? 1 : 0);
+  // Server-authoritative counts derived from the binding table — distinct
+  // runtimes and distinct sources covered by `bound` rows.
+  const runtimeCount = bindingSnapshot.runtimeCount;
+  const sourceCount = bindingSnapshot.sourceCount;
 
   return (
     <footer className="flex h-6 shrink-0 items-center border-t border-border bg-background-inset text-[10px] tabular-nums select-none">
@@ -54,7 +56,7 @@ export function StatusBar(): React.ReactNode {
         />
         <span className="font-medium">
           {connected
-            ? `${appCount} ${appCount === 1 ? "app" : "apps"}`
+            ? `${runtimeCount} ${runtimeCount === 1 ? "runtime" : "runtimes"} · ${sourceCount} ${sourceCount === 1 ? "source" : "sources"}`
             : reconnecting
               ? "reconnecting..."
               : "disconnected"}
@@ -80,6 +82,18 @@ export function StatusBar(): React.ReactNode {
         {droppedRequests > 0 && (
           <span className="text-amber-400" title={`${droppedRequests} older requests dropped — increase limit in Settings`}>
             {droppedRequests} dropped
+          </span>
+        )}
+        {lastBindingError && (
+          <span
+            role="status"
+            aria-live="polite"
+            aria-label={`Binding conflict on ${lastBindingError.details.sourceName} (${lastBindingError.details.transport}) — claimed by ${lastBindingError.details.runtimeIds.join(", ")}. Stop all but one runtime to resolve.`}
+            title={`Binding conflict on ${lastBindingError.details.sourceName} (${lastBindingError.details.transport}) — claimed by ${lastBindingError.details.runtimeIds.join(", ")}`}
+            className="inline-flex items-center gap-1 text-rose-400"
+          >
+            <AlertTriangle className="size-2.5" aria-hidden="true" />
+            <span>binding conflict</span>
           </span>
         )}
         <StreamBadge />

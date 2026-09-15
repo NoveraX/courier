@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type * as NexusModule from "@noverax/nexus";
 
@@ -20,10 +20,14 @@ vi.mock("@noverax/nexus", async (importOriginal) => {
   };
 });
 
-import { createHandler } from "@noverax/nexus";
+import { createHandler, registerSources } from "@noverax/nexus";
 import { apiRoute } from "../src/api-route";
 
 const mockCreateHandler = vi.mocked(createHandler);
+
+beforeEach(() => {
+  registerSources({ api: {} } as Parameters<typeof registerSources>[0]);
+});
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -53,24 +57,22 @@ function createPostRequest(
 describe("apiRoute", () => {
   describe("structure", () => {
     it("returns { GET, POST } handlers", () => {
-      const route = apiRoute({});
+      const route = apiRoute();
       expect(route.GET).toBeDefined();
       expect(route.POST).toBeDefined();
       expect(typeof route.GET).toBe("function");
       expect(typeof route.POST).toBe("function");
     });
 
-    it("calls createHandler with sources", () => {
-      const sources = { users: {}, auth: {} } as any;
-      apiRoute(sources);
-      expect(mockCreateHandler).toHaveBeenCalledWith(sources, undefined);
+    it("calls createHandler with no sources arg (zero-arg)", () => {
+      apiRoute();
+      expect(mockCreateHandler).toHaveBeenCalledWith(undefined);
     });
 
     it("forwards HandlerConfig to createHandler", () => {
-      const sources = { users: {} } as any;
       const config = { allowedOrigins: ["https://app.example.com"] };
-      apiRoute(sources, config);
-      expect(mockCreateHandler).toHaveBeenCalledWith(sources, config);
+      apiRoute(config);
+      expect(mockCreateHandler).toHaveBeenCalledWith(config);
     });
   });
 
@@ -78,7 +80,7 @@ describe("apiRoute", () => {
     it("delegates to handleGet with the NextRequest", async () => {
       mockHandleGet.mockResolvedValue(new Response("{}"));
 
-      const { GET } = apiRoute({ api: {} } as any);
+      const { GET } = apiRoute();
       const req = new NextRequest(
         "http://localhost:3000/api/request?_s=api&_g=users&_m=getAll",
       );
@@ -92,7 +94,7 @@ describe("apiRoute", () => {
       const expectedResponse = new Response(JSON.stringify({ data: "test" }));
       mockHandleGet.mockResolvedValue(expectedResponse);
 
-      const { GET } = apiRoute({ api: {} } as any);
+      const { GET } = apiRoute();
       const req = new NextRequest("http://localhost:3000/api/request?_s=api&_m=list");
 
       const result = await GET(req);
@@ -104,7 +106,7 @@ describe("apiRoute", () => {
         Response.json({ success: false, message: "Missing required params: _s, _m" }, { status: 400 }),
       );
 
-      const { GET } = apiRoute({});
+      const { GET } = apiRoute();
       const req = new NextRequest("http://localhost:3000/api/request?_m=getAll");
 
       const res = await GET(req);
@@ -116,7 +118,7 @@ describe("apiRoute", () => {
     it("delegates to handlePost with the NextRequest", async () => {
       mockHandlePost.mockResolvedValue(new Response("{}"));
 
-      const { POST } = apiRoute({ api: {} } as any);
+      const { POST } = apiRoute();
       const req = createPostRequest(JSON.stringify({ source: "api", method: "list" }));
 
       await POST(req);
@@ -128,7 +130,7 @@ describe("apiRoute", () => {
       const expectedResponse = new Response(JSON.stringify({ ok: true }));
       mockHandlePost.mockResolvedValue(expectedResponse);
 
-      const { POST } = apiRoute({});
+      const { POST } = apiRoute();
       const req = createPostRequest(JSON.stringify({ source: "api", method: "list" }));
 
       const result = await POST(req);
@@ -140,7 +142,7 @@ describe("apiRoute", () => {
         Response.json({ success: false, message: "Origin mismatch" }, { status: 403 }),
       );
 
-      const { POST } = apiRoute({});
+      const { POST } = apiRoute();
       const req = createPostRequest(JSON.stringify({}), { origin: "http://evil.com" });
 
       const res = await POST(req);
@@ -150,7 +152,7 @@ describe("apiRoute", () => {
     it("passes NextRequest which extends Request", async () => {
       mockHandlePost.mockResolvedValue(new Response("{}"));
 
-      const { POST } = apiRoute({});
+      const { POST } = apiRoute();
       const req = createPostRequest(JSON.stringify({ source: "api", method: "list" }));
 
       await POST(req);

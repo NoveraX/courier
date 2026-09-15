@@ -23,22 +23,6 @@ export interface StudioServerOptions {
 export interface StudioServer {
   /** Server URL */
   url: string;
-  /** Connected app sessions */
-  sessions: Map<string, SessionInfo>;
   /** Close the server */
   close: () => Promise<void>;
-}
-
-export interface SessionInfo {
-  sessionId: string;
-  framework: string;
-  nexusVersion: string;
-  connectedAt: number;
-  /**
-   * Monotonic generation counter for this sessionId. Incremented in
-   * `app-namespace.ts` whenever a new `connection:init` arrives reusing a
-   * sessionId we have already seen. Lets future consumers reject stale
-   * buffered events from a previous generation.
-   */
-  sessionVersion: number;
 }

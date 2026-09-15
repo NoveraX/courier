@@ -48,14 +48,22 @@ export const sources = { myApi: api }
 
 Create a Nuxt server route that proxies client requests to your backend:
 
-```ts title="server/api/request.post.ts"
-import { nexusHandler } from "@noverax/nexus-nuxt"
+```ts title="server/plugins/nexus.ts"
+import { registerSources } from "@noverax/nexus"
 import { sources } from "~/lib/sources"
 
-export default nexusHandler(sources)
+export default defineNitroPlugin(() => {
+  registerSources(sources)
+})
 ```
 
-This creates a `POST /api/request` endpoint that Nexus clients use as the proxy target.
+```ts title="server/api/request.post.ts"
+import { nexusHandler } from "@noverax/nexus-nuxt"
+
+export default nexusHandler()
+```
+
+The `server/plugins/nexus.ts` Nitro plugin runs once at server start, populating the in-process registry that `nexusHandler()` reads at request time. The route then proxies incoming `POST /api/request` requests that Nexus clients use as the proxy target.
 
 ## Step 2: Client-side composable
 
@@ -215,23 +223,18 @@ export const caller = createProxyCaller<typeof api>({
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
-To wire your Nuxt server into Studio, call `connectStudio` from a Nitro plugin so it runs once on server boot. Pass `appOrigin` so the Studio Playground proxy executor can resolve relative `proxyPath.{sse,ws}` values into absolute URLs — Node `fetch` and `WebSocket` reject relative URLs, so this is required whenever your `proxyPath` does not already include a full `http(s)://...` prefix.
+Wire your Nuxt server into Studio with a single `attachRuntime()` call from a Nitro plugin. It auto-loads `nexus.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `nexus.config.ts.runtime.appOrigin` (or set the `NEXUS_APP_URL` env var to override per-environment).
 
 ```ts title="server/plugins/nexus-studio.ts"
-import { connectStudio } from "@noverax/nexus-studio-core"
-import "~/lib/sources"  // side-effect import — registers sources via defineApi()
+import { attachRuntime } from "@noverax/nexus-studio-core/runtime"
 
-export default defineNitroPlugin(() => {
+export default defineNitroPlugin(async () => {
   if (process.env.NODE_ENV === "production") return
-
-  connectStudio({
-    framework: "nuxt",
-    appOrigin: "http://localhost:3000",  // your Nuxt dev server URL
-  })
+  await attachRuntime()
 })
 ```
 
-Alternatively, set `NEXUS_APP_URL` instead of passing `appOrigin` explicitly:
+Alternatively, set `NEXUS_APP_URL` instead of pinning `appOrigin` in the config:
 
 ```bash
 NEXUS_APP_URL=http://localhost:3000 nuxt dev
@@ -251,7 +254,7 @@ lib/
   server-caller.ts          # createCaller(api)
 server/
   api/
-    request.post.ts         # nexusHandler(sources)
+    request.post.ts         # nexusHandler()
     dashboard.get.ts        # server-side with createCaller
     posts/[id].get.ts       # dynamic server route
 pages/

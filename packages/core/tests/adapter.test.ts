@@ -10,12 +10,44 @@ vi.mock("../src/utils/execute", async (importOriginal) => {
 });
 
 import { executeRequest } from "../src/utils/execute";
-import { createHandler } from "../src/adapter";
+import { createHandler, requireSources } from "../src/adapter";
+import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { isConfigurationError } from "../src/errors";
 
 const mockExecuteRequest = vi.mocked(executeRequest);
 
+/** Seed the global sources registry and create a zero-arg handler. */
+function setupHandler(sources: unknown = {}) {
+  registerSources(sources as Parameters<typeof registerSources>[0]);
+  return createHandler();
+}
+
 afterEach(() => {
   vi.clearAllMocks();
+  _resetSourcesForTests();
+});
+
+describe("requireSources", () => {
+  it("throws SOURCES_NOT_REGISTERED when no sources registered", () => {
+    _resetSourcesForTests();
+    let caught: unknown;
+    try {
+      requireSources();
+    } catch (err) {
+      caught = err;
+    }
+    expect(isConfigurationError(caught)).toBe(true);
+    if (isConfigurationError(caught)) {
+      expect(caught.code).toBe("SOURCES_NOT_REGISTERED");
+      expect(caught.message).toContain("attachRuntime");
+    }
+  });
+
+  it("returns the registered sources after registerSources call", () => {
+    const sources = { api: {} } as Parameters<typeof registerSources>[0];
+    registerSources(sources);
+    expect(requireSources()).toBe(sources);
+  });
 });
 
 describe("createHandler", () => {
@@ -23,7 +55,7 @@ describe("createHandler", () => {
     it("routes GET requests to handleGet", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
-      const { handle } = createHandler({ api: {} } as any);
+      const { handle } = setupHandler({ api: {} });
       const req = new Request("http://localhost/api/request?_s=api&_m=list");
 
       await handle(req);
@@ -35,7 +67,7 @@ describe("createHandler", () => {
     it("routes POST requests to handlePost", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
-      const { handle } = createHandler({ api: {} } as any);
+      const { handle } = setupHandler({ api: {} });
       const req = new Request("http://localhost/api/request", {
         method: "POST",
         headers: {
@@ -52,7 +84,7 @@ describe("createHandler", () => {
     });
 
     it("returns 405 for unsupported methods", async () => {
-      const { handle } = createHandler({});
+      const { handle } = setupHandler({});
       const req = new Request("http://localhost/api/request", { method: "DELETE" });
 
       const res = await handle(req);
@@ -63,7 +95,7 @@ describe("createHandler", () => {
     });
 
     it("returns 405 for PUT", async () => {
-      const { handle } = createHandler({});
+      const { handle } = setupHandler({});
       const req = new Request("http://localhost/api/request", { method: "PUT" });
 
       const res = await handle(req);
@@ -73,7 +105,7 @@ describe("createHandler", () => {
 
   describe("handleGet", () => {
     it("returns 400 when _s is missing", async () => {
-      const { handleGet } = createHandler({});
+      const { handleGet } = setupHandler({});
       const req = new Request("http://localhost/api/request?_m=list");
 
       const res = await handleGet(req);
@@ -84,7 +116,7 @@ describe("createHandler", () => {
     });
 
     it("returns 400 when _m is missing", async () => {
-      const { handleGet } = createHandler({});
+      const { handleGet } = setupHandler({});
       const req = new Request("http://localhost/api/request?_s=api");
 
       const res = await handleGet(req);
@@ -97,15 +129,17 @@ describe("createHandler", () => {
     it("parses _s, _g, _m from query params", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
-      const { handleGet } = createHandler({ api: {} } as any);
+      const { handleGet } = setupHandler({ api: {} });
       const req = new Request(
         "http://localhost/api/request?_s=api&_g=users&_m=getAll",
       );
 
       await handleGet(req);
 
+      // `registerSources` stamps a Symbol on each source for name lookup,
+      // so equality matchers must tolerate the presence of that symbol key.
       expect(mockExecuteRequest).toHaveBeenCalledWith(
-        { api: {} },
+        expect.objectContaining({ api: expect.any(Object) }),
         {
           source: "api",
           group: "users",
@@ -120,7 +154,7 @@ describe("createHandler", () => {
     it("collects non-meta params as variables", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
-      const { handleGet } = createHandler({ api: {} } as any);
+      const { handleGet } = setupHandler({ api: {} });
       const req = new Request(
         "http://localhost/api/request?_s=api&_m=list&page=2&limit=10",
       );
@@ -134,7 +168,7 @@ describe("createHandler", () => {
     it("parses _o as JSON options", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
-      const { handleGet } = createHandler({ api: {} } as any);
+      const { handleGet } = setupHandler({ api: {} });
       const opts = JSON.stringify({ rawData: true });
       const req = new Request(
         `http://localhost/api/request?_s=api&_m=list&_o=${encodeURIComponent(opts)}`,
@@ -149,7 +183,7 @@ describe("createHandler", () => {
     it("ignores invalid _o JSON", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
-      const { handleGet } = createHandler({ api: {} } as any);
+      const { handleGet } = setupHandler({ api: {} });
       const req = new Request(
         "http://localhost/api/request?_s=api&_m=list&_o=invalid",
       );
@@ -163,7 +197,7 @@ describe("createHandler", () => {
     it("sanitizes __proto__ in _o JSON", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
-      const { handleGet } = createHandler({ api: {} } as any);
+      const { handleGet } = setupHandler({ api: {} });
       const opts = JSON.stringify({ __proto__: { polluted: true }, rawData: true });
       const req = new Request(
         `http://localhost/api/request?_s=api&_m=list&_o=${encodeURIComponent(opts)}`,
@@ -178,7 +212,7 @@ describe("createHandler", () => {
     it("handles group-less endpoints", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
-      const { handleGet } = createHandler({ api: {} } as any);
+      const { handleGet } = setupHandler({ api: {} });
       const req = new Request("http://localhost/api/request?_s=api&_m=health");
 
       await handleGet(req);
@@ -190,7 +224,7 @@ describe("createHandler", () => {
     it("provides context with res to executeRequest", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
-      const { handleGet } = createHandler({ api: {} } as any);
+      const { handleGet } = setupHandler({ api: {} });
       const req = new Request("http://localhost/api/request?_s=api&_m=list");
 
       await handleGet(req);
@@ -204,7 +238,7 @@ describe("createHandler", () => {
 
   describe("handlePost", () => {
     it("returns 403 when origin is missing", async () => {
-      const { handlePost } = createHandler({});
+      const { handlePost } = setupHandler({});
       const req = new Request("http://localhost/api/request", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -219,7 +253,7 @@ describe("createHandler", () => {
     });
 
     it("returns 403 when origin does not match", async () => {
-      const { handlePost } = createHandler({});
+      const { handlePost } = setupHandler({});
       const req = new Request("http://localhost/api/request", {
         method: "POST",
         headers: {
@@ -236,7 +270,7 @@ describe("createHandler", () => {
     it("allows request when origin matches", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
-      const { handlePost } = createHandler({});
+      const { handlePost } = setupHandler({});
       const req = new Request("http://localhost/api/request", {
         method: "POST",
         headers: {
@@ -251,7 +285,7 @@ describe("createHandler", () => {
     });
 
     it("returns 415 for unsupported content type", async () => {
-      const { handlePost } = createHandler({});
+      const { handlePost } = setupHandler({});
       const req = new Request("http://localhost/api/request", {
         method: "POST",
         headers: {
@@ -271,7 +305,7 @@ describe("createHandler", () => {
     it("parses JSON body", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
-      const { handlePost } = createHandler({ api: {} } as any);
+      const { handlePost } = setupHandler({ api: {} });
       const payload = { source: "api", method: "list", variables: { page: 1 } };
       const req = new Request("http://localhost/api/request", {
         method: "POST",
@@ -285,14 +319,14 @@ describe("createHandler", () => {
       await handlePost(req);
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
-        { api: {} },
+        expect.objectContaining({ api: expect.any(Object) }),
         payload,
         expect.objectContaining({ proxyMethod: "POST" }),
       );
     });
 
     it("returns 400 for invalid JSON", async () => {
-      const { handlePost } = createHandler({});
+      const { handlePost } = setupHandler({});
       const req = new Request("http://localhost/api/request", {
         method: "POST",
         headers: {
@@ -312,7 +346,7 @@ describe("createHandler", () => {
     it("parses multipart/form-data body", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
-      const { handlePost } = createHandler({ api: {} } as any);
+      const { handlePost } = setupHandler({ api: {} });
 
       const fd = new FormData();
       fd.append("_source", "api");
@@ -328,7 +362,7 @@ describe("createHandler", () => {
       await handlePost(req);
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
-        { api: {} },
+        expect.objectContaining({ api: expect.any(Object) }),
         expect.any(FormData),
         expect.objectContaining({ proxyMethod: "POST" }),
       );
@@ -337,7 +371,7 @@ describe("createHandler", () => {
     it("sets proxyMethod: POST in context", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
-      const { handlePost } = createHandler({});
+      const { handlePost } = setupHandler({});
       const req = new Request("http://localhost/api/request", {
         method: "POST",
         headers: {

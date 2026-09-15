@@ -5,7 +5,7 @@
  */
 
 import type { Socket } from "socket.io";
-import { mockServers, socketMockServers } from "./app-namespace-state";
+import { mockServers, socketMockServers } from "./runtime-namespace-state";
 import { sanitizeMockNetworkConfig, sanitizeMockServerEvent } from "./sanitize-mock-events";
 
 export function handleMockServerConnect(event: Record<string, unknown>, socket: Socket): void {

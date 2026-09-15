@@ -26,23 +26,28 @@ Register as NestJS middleware:
 
 ```ts
 import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
+import { registerSources } from "@noverax/nexus"
 import { nexusMiddleware } from "@noverax/nexus-nestjs"
 import { sources } from "./api/sources"
+
+registerSources(sources)
 
 @Module({})
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(nexusMiddleware(sources))
+      .apply(nexusMiddleware())
       .forRoutes("/api/request")
   }
 }
 ```
 
+`nexusMiddleware()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` at module load.
+
 ## How It Works
 
 1. Converts the Node.js `IncomingMessage` to a Web Standard `Request`
-2. Passes it to the core `createHandler(sources).handle()`
+2. Passes it to the core `createHandler().handle()` (sources read lazily via the global registry)
 3. Converts the Web `Response` back to Node.js `ServerResponse`
 4. Errors are forwarded to NestJS error handling via `next(error)`
 

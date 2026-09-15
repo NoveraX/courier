@@ -7,12 +7,12 @@ import { buildEndpointDefinition } from "./build-endpoint";
 import { collectSchemaRefs } from "./schema-refs";
 import { resolveResponseType } from "./schema-types";
 import { getSchemaRefName } from "./schema-utils";
-import type { GeneratedFile, GenerateOptions } from "./types";
+import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
 export function generateGroupFile(
   group: ParsedGroup,
   spec: ParsedSpec,
-  options: GenerateOptions,
+  options: ResolvedGenerateOptions,
   extracted?: Record<string, ParsedSchema>,
 ): GeneratedFile {
   const lines: string[] = [];
@@ -64,7 +64,7 @@ export function generateGroupFile(
 function buildImportLine(
   schemaImports: Set<string>,
   typeImports: Set<string>,
-  options: GenerateOptions,
+  options: ResolvedGenerateOptions,
 ): string | null {
   if (schemaImports.size === 0 && typeImports.size === 0) return null;
   if (!options.generateSchemas && !options.generateTypes) return null;
@@ -90,7 +90,7 @@ function buildImportLine(
 function collectTypeImports(
   group: ParsedGroup,
   spec: ParsedSpec,
-  options: GenerateOptions,
+  options: ResolvedGenerateOptions,
   schemaImports: Set<string>,
   extracted?: Record<string, ParsedSchema>,
 ): Set<string> {
@@ -130,7 +130,7 @@ function collectTypeImports(
 
 function checkNeedsValidationImport(
   group: ParsedGroup,
-  options: GenerateOptions,
+  options: ResolvedGenerateOptions,
   schemaImports: Set<string>,
 ): boolean {
   if (!options.generateSchemas || options.validation === "none") return false;

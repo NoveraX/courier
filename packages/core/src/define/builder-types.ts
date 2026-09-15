@@ -84,7 +84,7 @@ export interface ChannelBuilder<TResponse, TVariables, TSend>
 }
 
 /** Configuration shared by every endpoint built from a base. */
-export interface BaseConfig {
+export interface CourierConfig {
   /** Identifier used by tooling to attribute endpoints to their source. */
   id?: string;
   middleware?: readonly Middleware[];
@@ -100,7 +100,7 @@ export interface BaseConfig {
  * The head declares an endpoint's semantics in the leftmost position, which is
  * what decides the verb the proxy uses on the wire.
  */
-export interface Base {
+export interface Courier {
   /** A read. Travels over GET through the proxy and stays cacheable. */
   readonly query: HttpBuilder<void, void, "query">;
   /** A write. Travels over POST through the proxy. */
@@ -115,5 +115,5 @@ export interface Base {
    * Middleware and header lists are concatenated with this base's first;
    * every other value is replaced.
    */
-  extend(config: BaseConfig): Base;
+  extend(config: CourierConfig): Courier;
 }

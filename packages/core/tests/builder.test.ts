@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { defineBase } from "../src/define/base";
+import { courier } from "../src/define/courier";
 import type { InferResponse } from "../src/define/marker";
 import { ENDPOINT_SCHEMA } from "../src/define/marker";
 import type { Middleware } from "../src/middleware/types";
@@ -21,8 +21,8 @@ function options(endpoint: unknown): Record<string, unknown> {
   return (endpoint as { options: Record<string, unknown> }).options;
 }
 
-describe("defineBase", () => {
-  const base = defineBase();
+describe("courier", () => {
+  const base = courier();
 
   describe("wire probing", () => {
     it("captures method and path from the closure", () => {
@@ -159,7 +159,7 @@ describe("defineBase", () => {
     const third: Middleware = { name: "third", phase: "before", handler: () => {} };
 
     it("applies base middleware to every endpoint built from it", () => {
-      const vendor = defineBase({ middleware: [first], timeout: 10_000 });
+      const vendor = courier({ middleware: [first], timeout: 10_000 });
       const endpoint = vendor.query.response(UserSchema).via((http) => http.get(""));
 
       expect(options(endpoint).middleware).toEqual([first]);
@@ -167,14 +167,14 @@ describe("defineBase", () => {
     });
 
     it("appends endpoint middleware after the inherited list", () => {
-      const vendor = defineBase({ middleware: [first] });
+      const vendor = courier({ middleware: [first] });
       const endpoint = vendor.query.use(second).response(UserSchema).via((http) => http.get(""));
 
       expect(options(endpoint).middleware).toEqual([first, second]);
     });
 
     it("concatenates parent middleware first when extending", () => {
-      const vendor = defineBase({ middleware: [first] });
+      const vendor = courier({ middleware: [first] });
       const admin = vendor.extend({ middleware: [second] });
       const endpoint = admin.query.use(third).response(UserSchema).via((http) => http.get(""));
 
@@ -182,7 +182,7 @@ describe("defineBase", () => {
     });
 
     it("replaces scalars rather than merging them when extending", () => {
-      const vendor = defineBase({ timeout: 10_000 });
+      const vendor = courier({ timeout: 10_000 });
       const slow = vendor.extend({ timeout: 60_000 });
       const endpoint = slow.query.response(UserSchema).via((http) => http.get(""));
 
@@ -190,7 +190,7 @@ describe("defineBase", () => {
     });
 
     it("drops the inherited middleware when the endpoint opts out", () => {
-      const vendor = defineBase({ middleware: [first] });
+      const vendor = courier({ middleware: [first] });
       const endpoint = vendor.query
         .response(UserSchema)
         .via((http) => http.get(""), { inherit: false });
@@ -199,7 +199,7 @@ describe("defineBase", () => {
     });
 
     it("leaves the parent base untouched when it is extended", () => {
-      const vendor = defineBase({ middleware: [first] });
+      const vendor = courier({ middleware: [first] });
       vendor.extend({ middleware: [second] });
       const endpoint = vendor.query.response(UserSchema).via((http) => http.get(""));
 
@@ -233,7 +233,7 @@ describe("defineBase", () => {
 });
 
 describe("type level guarantees", () => {
-  const base = defineBase();
+  const base = courier();
 
   it("finishes the chain at the terminal", () => {
     const endpoint = base.query.response(UserSchema).via((http) => http.get(""));

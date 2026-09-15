@@ -11,7 +11,13 @@ import {
   withSlot,
   withValue,
 } from "./builder";
-import type { Base, BaseConfig, ChannelBuilder, HttpBuilder, StreamBuilder } from "./builder-types";
+import type {
+  ChannelBuilder,
+  Courier,
+  CourierConfig,
+  HttpBuilder,
+  StreamBuilder,
+} from "./builder-types";
 import type { EndpointKind } from "./marker";
 import type { AnyEndpointOptions, RetryOptions } from "./options";
 import type { AnyProbe } from "./probe";
@@ -46,7 +52,10 @@ function head(kind: EndpointKind, inherited: Partial<BuilderState>): AnyBuilder 
   return makeBuilder(initialState(kind, inherited));
 }
 
-function inheritedFrom(config: BaseConfig, parent?: Partial<BuilderState>): Partial<BuilderState> {
+function inheritedFrom(
+  config: CourierConfig,
+  parent?: Partial<BuilderState>,
+): Partial<BuilderState> {
   return {
     middleware: [...(parent?.middleware ?? []), ...(config.middleware ?? [])],
     allowedHeaders: [...(parent?.allowedHeaders ?? []), ...(config.allowedHeaders ?? [])],
@@ -58,13 +67,13 @@ function inheritedFrom(config: BaseConfig, parent?: Partial<BuilderState>): Part
   };
 }
 
-function makeBase(inherited: Partial<BuilderState>): Base {
+function makeBase(inherited: Partial<BuilderState>): Courier {
   return {
     query: head("query", inherited) as unknown as HttpBuilder<void, void, "query">,
     mutation: head("mutation", inherited) as unknown as HttpBuilder<void, void, "mutation">,
     stream: head("stream", inherited) as unknown as StreamBuilder<void, void>,
     channel: head("channel", inherited) as unknown as ChannelBuilder<void, void, never>,
-    extend: (config: BaseConfig): Base => makeBase(inheritedFrom(config, inherited)),
+    extend: (config: CourierConfig): Courier => makeBase(inheritedFrom(config, inherited)),
   };
 }
 
@@ -79,7 +88,7 @@ function makeBase(inherited: Partial<BuilderState>): Base {
  *
  * @example
  * ```ts
- * const vendor = defineBase({
+ * const vendor = courier({
  *   id: "vendor",
  *   middleware: [bearer],
  *   timeout: 10_000,
@@ -94,6 +103,6 @@ function makeBase(inherited: Partial<BuilderState>): Base {
  *   .via((http, vars) => http.get(":id", vars));
  * ```
  */
-export function defineBase(config: BaseConfig = {}): Base {
+export function courier(config: CourierConfig = {}): Courier {
   return makeBase(inheritedFrom(config));
 }

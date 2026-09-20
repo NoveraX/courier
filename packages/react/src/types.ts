@@ -31,7 +31,7 @@ import type {
   UseSuspenseQueryResult,
 } from "@tanstack/react-query";
 
-import type { GroupMethodKeys, MutationVariables } from "./types-helpers";
+import type { MethodsOfKind, MutationVariables } from "./types-helpers";
 import type {
   CourierComputedQueryOptions,
   CourierInfiniteQueryOptions,
@@ -47,7 +47,12 @@ import type {
   SubscriptionResult,
 } from "./types-realtime";
 
-export type { GroupMethodKeys, MutationVariables, WithVariables } from "./types-helpers";
+export type {
+  GroupMethodKeys,
+  MethodsOfKind,
+  MutationVariables,
+  WithVariables,
+} from "./types-helpers";
 export type {
   CourierComputedQueryOptions,
   CourierInfiniteQueryOptions,
@@ -65,7 +70,7 @@ export type {
 
 /** Hooks and utilities exposed per API group */
 export type QueryGroupClient<TGroup> = {
-  useQuery: <TMethod extends GroupMethodKeys<TGroup>>(
+  useQuery: <TMethod extends MethodsOfKind<TGroup, "query">>(
     method: TMethod,
     ...args: TGroup[TMethod] extends AnyEndpoint
       ? [Vars<TGroup[TMethod]>] extends [undefined | void]
@@ -78,7 +83,7 @@ export type QueryGroupClient<TGroup> = {
     ? UseQueryResult<Res<TGroup[TMethod]>, HTTPError>
     : never;
 
-  useSuspenseQuery: <TMethod extends GroupMethodKeys<TGroup>>(
+  useSuspenseQuery: <TMethod extends MethodsOfKind<TGroup, "query">>(
     method: TMethod,
     ...args: TGroup[TMethod] extends AnyEndpoint
       ? [Vars<TGroup[TMethod]>] extends [undefined | void]
@@ -91,7 +96,7 @@ export type QueryGroupClient<TGroup> = {
     ? UseSuspenseQueryResult<Res<TGroup[TMethod]>, HTTPError>
     : never;
 
-  useInfiniteQuery: <TMethod extends GroupMethodKeys<TGroup>, TPageParam>(
+  useInfiniteQuery: <TMethod extends MethodsOfKind<TGroup, "query">, TPageParam>(
     method: TMethod,
     options: TGroup[TMethod] extends AnyEndpoint
       ? CourierInfiniteQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>, TPageParam>
@@ -100,7 +105,7 @@ export type QueryGroupClient<TGroup> = {
     ? UseInfiniteQueryResult<InfiniteData<Res<TGroup[TMethod]>, TPageParam>, HTTPError>
     : never;
 
-  useMutation: <TMethod extends GroupMethodKeys<TGroup>>(
+  useMutation: <TMethod extends MethodsOfKind<TGroup, "mutation">>(
     method: TMethod,
     options?: TGroup[TMethod] extends AnyEndpoint
       ? CourierMutationOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>
@@ -109,7 +114,7 @@ export type QueryGroupClient<TGroup> = {
     ? UseMutationResult<Res<TGroup[TMethod]>, HTTPError, MutationVariables<Vars<TGroup[TMethod]>>>
     : never;
 
-  prefetchQuery: <TMethod extends GroupMethodKeys<TGroup>>(
+  prefetchQuery: <TMethod extends MethodsOfKind<TGroup, "query">>(
     queryClient: QueryClient,
     method: TMethod,
     ...args: TGroup[TMethod] extends AnyEndpoint
@@ -121,7 +126,7 @@ export type QueryGroupClient<TGroup> = {
       : never
   ) => Promise<void>;
 
-  useSubscription: <TMethod extends GroupMethodKeys<TGroup>>(
+  useSubscription: <TMethod extends MethodsOfKind<TGroup, "stream">>(
     method: TMethod,
     ...args: TGroup[TMethod] extends AnyEndpoint
       ? [Vars<TGroup[TMethod]>] extends [undefined | void]
@@ -132,7 +137,7 @@ export type QueryGroupClient<TGroup> = {
       : never
   ) => TGroup[TMethod] extends AnyEndpoint ? SubscriptionResult<Res<TGroup[TMethod]>> : never;
 
-  useComputedQuery: <TMethod extends GroupMethodKeys<TGroup>>(
+  useComputedQuery: <TMethod extends MethodsOfKind<TGroup, "query">>(
     method: TMethod,
     ...args: TGroup[TMethod] extends AnyEndpoint
       ? [Vars<TGroup[TMethod]>] extends [undefined | void]
@@ -163,7 +168,7 @@ export type QueryGroupClient<TGroup> = {
     ? UseQueryResult<Res<TGroup[TMethod]>, HTTPError>
     : never;
 
-  useChannel: <TMethod extends GroupMethodKeys<TGroup>>(
+  useChannel: <TMethod extends MethodsOfKind<TGroup, "channel">>(
     method: TMethod,
     ...args: TGroup[TMethod] extends AnyEndpoint
       ? [Vars<TGroup[TMethod]>] extends [undefined | void]

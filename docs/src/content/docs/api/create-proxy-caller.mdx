@@ -46,7 +46,7 @@ type ProxyCallerDefaults = {
 - `onError` — global error handler invoked on every `HTTPError`.
 - `onSuccess` — global success handler invoked on every successful response.
 
-<Callout variant="warn" title="WS has no default path">
+<Callout variant="warning" title="WS has no default path">
 `proxyPath.ws` has **no built-in default**. Calling a WS endpoint without it throws `ConfigurationError("WS_PATH_NOT_CONFIGURED", ...)`. In runtimes that cannot host WebSocket upgrades in-process (Next.js App Router, Cloudflare Workers, Vercel Edge, AWS Lambda), point this at a running [`@noverax/courier-server`](/docs/deployment/standalone-server) instance.
 </Callout>
 

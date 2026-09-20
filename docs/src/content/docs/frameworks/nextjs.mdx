@@ -2,7 +2,7 @@ export const metadata = { title: "Next.js", description: "Full Next.js integrati
 
 Courier has first-class Next.js support through the `@noverax/courier-next` package. It covers every Next.js pattern: API routes, client components with React Query, server components, and server actions.
 
-<Callout variant="warn" title="WebSockets require a standalone server">
+<Callout variant="warning" title="WebSockets require a standalone server">
 Next.js App Router cannot host WebSocket upgrades in-process — neither RSC nor route handlers expose the underlying TCP socket. If your API uses WS endpoints, run [`@noverax/courier-server`](/docs/deployment/standalone-server) alongside Next.js and point `proxyPath.ws` at it (e.g. `ws://localhost:3001` in dev, `wss://realtime.example.com` in prod). HTTP and SSE continue to work in-process via the App Router.
 </Callout>
 
@@ -25,7 +25,7 @@ Alternatively, set the `COURIER_APP_URL` environment variable instead of pinning
 COURIER_APP_URL=http://localhost:3000 next dev
 ```
 
-<Callout variant="warn" title="No magic default">
+<Callout variant="warning" title="No magic default">
 There is no `localhost:3000` auto-fallback. If `appOrigin` is missing, clicking "Subscribe" on an SSE/WS endpoint in Studio Playground proxy mode throws `ConfigurationError("APP_ORIGIN_NOT_CONFIGURED")` with a pointer back to this section. The correct value depends on your runtime — custom port, Docker host, HTTPS in dev, reverse proxy — and a wrong guess would silently route requests to nowhere.
 </Callout>
 

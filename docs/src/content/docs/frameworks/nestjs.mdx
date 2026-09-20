@@ -183,7 +183,7 @@ Alternatively, set `COURIER_APP_URL` instead of pinning `appOrigin` in the confi
 COURIER_APP_URL=http://localhost:3001 nest start
 ```
 
-<Callout variant="warn" title="No magic default">
+<Callout variant="warning" title="No magic default">
 There is no `localhost:3001` auto-fallback. If `appOrigin` is missing, clicking "Subscribe" on an SSE/WS endpoint in Studio Playground proxy mode throws `ConfigurationError("APP_ORIGIN_NOT_CONFIGURED")` with a pointer back to this section. The correct value depends on your runtime — custom port, Docker host, HTTPS, reverse proxy — and a wrong guess would silently route requests to nowhere.
 </Callout>
 

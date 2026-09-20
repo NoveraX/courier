@@ -55,7 +55,7 @@ export const caller = createProxyCaller<typeof api>("api", {
 })
 ```
 
-<Callout variant="warn" title="proxyPath.ws is mandatory for WS endpoints">
+<Callout variant="warning" title="proxyPath.ws is mandatory for WS endpoints">
 There is no built-in WS default. Calling a WS endpoint without `proxyPath.ws` throws `ConfigurationError("WS_PATH_NOT_CONFIGURED")` with a pointer back to this page. Earlier versions silently fell back to `ws://localhost:3001/api/ws`, which produced dev-only success and prod-only failures — gone in v2.
 </Callout>
 

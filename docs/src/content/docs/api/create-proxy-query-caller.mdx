@@ -51,7 +51,7 @@ The `defaults` argument is a `ProxyCallerDefaults` (same shape as [`createProxyC
 - `proxyPath` — per-transport endpoint paths. `http` and `sse` have built-in defaults; `ws` is mandatory for `useChannel` and has no default. Caller-level fields are merged per-transport over `source.options.proxyPath`.
 - `source` — the actual `defineApi()` result. Required so the React hooks can resolve SSE/WS metadata and inherit `source.options.proxyPath`.
 
-<Callout variant="warn" title="useChannel requires proxyPath.ws">
+<Callout variant="warning" title="useChannel requires proxyPath.ws">
 On runtimes that cannot host WebSockets in-process (Next.js App Router, Cloudflare Workers, Vercel Edge, AWS Lambda) you must point `proxyPath.ws` at a [standalone `@noverax/courier-server`](/docs/deployment/standalone-server). Calling `useChannel` without `proxyPath.ws` configured throws `ConfigurationError("WS_PATH_NOT_CONFIGURED")` at the first subscribe.
 </Callout>
 

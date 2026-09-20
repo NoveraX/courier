@@ -201,7 +201,7 @@ export const caller = createProxyCaller<typeof api>("api", {
 })
 ```
 
-<Callout variant="warn" title="WS has no built-in default">
+<Callout variant="warning" title="WS has no built-in default">
 Calling a WS endpoint without `proxyPath.ws` throws `ConfigurationError("WS_PATH_NOT_CONFIGURED")`. See [standalone server deployment](/docs/deployment/standalone-server) for the runtime matrix.
 </Callout>
 

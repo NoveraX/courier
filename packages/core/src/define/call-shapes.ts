@@ -30,13 +30,25 @@ export type ChannelCall<TResponse, TVariables, TSend> = (
  * fetched over GET and cached, a mutation only over POST. Which verb a call
  * actually uses is the caller's to choose.
  */
-export type HttpEndpoint<TResponse, TVariables, TKind extends "query" | "mutation"> = Endpoint<
-  EndpointTypes<TResponse, TVariables, never, HttpCall<TResponse, TVariables>, TKind>
+export type HttpEndpoint<
+  TResponse,
+  TVariables,
+  TKind extends "query" | "mutation",
+  TVariablesOut = TVariables,
+> = Endpoint<
+  EndpointTypes<TResponse, TVariables, TVariablesOut, never, HttpCall<TResponse, TVariables>, TKind>
 >;
 
 /** An endpoint delivering server-sent events. */
-export type StreamEndpoint<TResponse, TVariables> = Endpoint<
-  EndpointTypes<TResponse, TVariables, never, StreamCall<TResponse, TVariables>, "stream">
+export type StreamEndpoint<TResponse, TVariables, TVariablesOut = TVariables> = Endpoint<
+  EndpointTypes<
+    TResponse,
+    TVariables,
+    TVariablesOut,
+    never,
+    StreamCall<TResponse, TVariables>,
+    "stream"
+  >
 >;
 
 /**
@@ -45,6 +57,13 @@ export type StreamEndpoint<TResponse, TVariables> = Endpoint<
  * A push-only endpoint is this with `TSend` left as `never`, which makes
  * `send` uncallable rather than requiring a separate kind.
  */
-export type ChannelEndpoint<TResponse, TVariables, TSend> = Endpoint<
-  EndpointTypes<TResponse, TVariables, TSend, ChannelCall<TResponse, TVariables, TSend>, "channel">
+export type ChannelEndpoint<TResponse, TVariables, TSend, TVariablesOut = TVariables> = Endpoint<
+  EndpointTypes<
+    TResponse,
+    TVariables,
+    TVariablesOut,
+    TSend,
+    ChannelCall<TResponse, TVariables, TSend>,
+    "channel"
+  >
 >;

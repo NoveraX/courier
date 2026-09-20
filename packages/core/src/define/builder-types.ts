@@ -62,14 +62,28 @@ export interface NeutralMethods<TSelf> {
  * Slots replace a single type parameter each, so `.variables(A).response(B)`
  * and `.response(B).variables(A)` describe the same endpoint.
  */
-export interface HttpBuilder<TResponse, TVariables, TKind extends "query" | "mutation">
-  extends NeutralMethods<HttpBuilder<TResponse, TVariables, TKind>> {
+export interface HttpBuilder<
+  TResponse,
+  TVariables,
+  TVariablesOut,
+  TKind extends "query" | "mutation",
+> extends NeutralMethods<HttpBuilder<TResponse, TVariables, TVariablesOut, TKind>> {
   /** What the caller receives. Pass a schema to validate, or a type argument alone. */
-  response<T>(schema?: StandardSchemaV1<unknown, T>): HttpBuilder<T, TVariables, TKind>;
-  /** What the caller passes. Pass a schema to validate, or a type argument alone. */
-  variables<T>(schema?: StandardSchemaV1<unknown, T>): HttpBuilder<TResponse, T, TKind>;
+  response<T>(
+    schema?: StandardSchemaV1<unknown, T>,
+  ): HttpBuilder<T, TVariables, TVariablesOut, TKind>;
+  /**
+   * What the caller passes. Pass a schema to validate, or a type argument alone.
+   *
+   * A schema may accept less than it produces — a field it defaults, a value it
+   * coerces — so the caller satisfies its input while the closure receives its
+   * output.
+   */
+  variables<TIn, TOut = TIn>(
+    schema?: StandardSchemaV1<TIn, TOut>,
+  ): HttpBuilder<TResponse, TIn, TOut, TKind>;
   /** Accepted under the `query` head only; its argument is `never` elsewhere. */
-  cache(config: CacheArg<TKind>): HttpBuilder<TResponse, TVariables, TKind>;
+  cache(config: CacheArg<TKind>): HttpBuilder<TResponse, TVariables, TVariablesOut, TKind>;
   /**
    * Address the endpoint and finish it.
    *
@@ -77,20 +91,22 @@ export interface HttpBuilder<TResponse, TVariables, TKind extends "query" | "mut
    * its value.
    */
   via(
-    probe: HttpProbe<TVariables>,
+    probe: HttpProbe<TVariablesOut>,
     options?: HttpEndpointOptions,
-  ): HttpEndpoint<TResponse, TVariables, TKind>;
+  ): HttpEndpoint<TResponse, TVariables, TKind, TVariablesOut>;
 }
 
 /** Builder for an endpoint delivering server-sent events. */
-export interface StreamBuilder<TResponse, TVariables>
-  extends NeutralMethods<StreamBuilder<TResponse, TVariables>> {
-  response<T>(schema?: StandardSchemaV1<unknown, T>): StreamBuilder<T, TVariables>;
-  variables<T>(schema?: StandardSchemaV1<unknown, T>): StreamBuilder<TResponse, T>;
+export interface StreamBuilder<TResponse, TVariables, TVariablesOut>
+  extends NeutralMethods<StreamBuilder<TResponse, TVariables, TVariablesOut>> {
+  response<T>(schema?: StandardSchemaV1<unknown, T>): StreamBuilder<T, TVariables, TVariablesOut>;
+  variables<TIn, TOut = TIn>(
+    schema?: StandardSchemaV1<TIn, TOut>,
+  ): StreamBuilder<TResponse, TIn, TOut>;
   via(
-    probe: StreamProbe<TVariables>,
+    probe: StreamProbe<TVariablesOut>,
     options?: StreamEndpointOptions,
-  ): StreamEndpoint<TResponse, TVariables>;
+  ): StreamEndpoint<TResponse, TVariables, TVariablesOut>;
   /**
    * Serve this stream from the process that defines it.
    *
@@ -98,9 +114,9 @@ export interface StreamBuilder<TResponse, TVariables>
    * producing the events instead of the address of a remote stream.
    */
   implement(
-    handler: StreamHandler<TResponse, TVariables>,
+    handler: StreamHandler<TResponse, TVariablesOut>,
     options?: StreamEndpointOptions,
-  ): StreamEndpoint<TResponse, TVariables>;
+  ): StreamEndpoint<TResponse, TVariables, TVariablesOut>;
 }
 
 /**
@@ -109,17 +125,23 @@ export interface StreamBuilder<TResponse, TVariables>
  * Leaving `.send()` unused keeps `TSend` as `never`, which makes the resulting
  * channel receive-only without needing a separate kind.
  */
-export interface ChannelBuilder<TResponse, TVariables, TSend>
-  extends NeutralMethods<ChannelBuilder<TResponse, TVariables, TSend>> {
+export interface ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>
+  extends NeutralMethods<ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>> {
   /** What the caller receives on the channel. */
-  response<T>(schema?: StandardSchemaV1<unknown, T>): ChannelBuilder<T, TVariables, TSend>;
-  variables<T>(schema?: StandardSchemaV1<unknown, T>): ChannelBuilder<TResponse, T, TSend>;
+  response<T>(
+    schema?: StandardSchemaV1<unknown, T>,
+  ): ChannelBuilder<T, TVariables, TVariablesOut, TSend>;
+  variables<TIn, TOut = TIn>(
+    schema?: StandardSchemaV1<TIn, TOut>,
+  ): ChannelBuilder<TResponse, TIn, TOut, TSend>;
   /** What the caller may send on the channel. */
-  send<T>(schema?: StandardSchemaV1<unknown, T>): ChannelBuilder<TResponse, TVariables, T>;
+  send<T>(
+    schema?: StandardSchemaV1<unknown, T>,
+  ): ChannelBuilder<TResponse, TVariables, TVariablesOut, T>;
   via(
-    probe: ChannelProbe<TVariables>,
+    probe: ChannelProbe<TVariablesOut>,
     options?: ChannelEndpointOptions,
-  ): ChannelEndpoint<TResponse, TVariables, TSend>;
+  ): ChannelEndpoint<TResponse, TVariables, TSend, TVariablesOut>;
   /**
    * Serve this channel from the process that defines it.
    *
@@ -133,9 +155,9 @@ export interface ChannelBuilder<TResponse, TVariables, TSend>
    * to `any`.
    */
   implement(
-    handler: ChannelImplementation<TResponse, TVariables, TSend>,
+    handler: ChannelImplementation<TResponse, TVariablesOut, TSend>,
     options?: ChannelEndpointOptions,
-  ): ChannelEndpoint<TResponse, TVariables, TSend>;
+  ): ChannelEndpoint<TResponse, TVariables, TSend, TVariablesOut>;
 }
 
 /** Configuration shared by every endpoint built from a base. */
@@ -160,13 +182,13 @@ export interface Courier {
    * A read. It is the only kind the proxy will serve over GET, which is what
    * makes it cacheable — a call asks for that verb with `method: "GET"`.
    */
-  readonly query: HttpBuilder<void, void, "query">;
+  readonly query: HttpBuilder<void, void, void, "query">;
   /** A write. The proxy serves it over POST alone, and refuses a GET. */
-  readonly mutation: HttpBuilder<void, void, "mutation">;
+  readonly mutation: HttpBuilder<void, void, void, "mutation">;
   /** A one-way stream of server-sent events. */
-  readonly stream: StreamBuilder<void, void>;
+  readonly stream: StreamBuilder<void, void, void>;
   /** A socket the caller can also send on. */
-  readonly channel: ChannelBuilder<void, void, never>;
+  readonly channel: ChannelBuilder<void, void, void, never>;
   /**
    * Derive a base from this one.
    *

@@ -16,6 +16,7 @@ export type {
   InferResponse,
   InferSend,
   InferVariables,
+  InferVariablesOut,
 } from "./marker";
 export type {
   ChannelProbe,

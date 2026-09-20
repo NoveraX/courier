@@ -33,12 +33,19 @@ export type EndpointKind = "query" | "mutation" | "stream" | "channel";
  * finished call signature, which keeps client access independent of how many
  * slots the endpoint declared.
  */
-export interface EndpointTypes<TResponse, TVariables, TSend, TCall, TKind extends EndpointKind> {
+export interface EndpointTypes<
+  TResponse,
+  TVariables,
+  TVariablesOut,
+  TSend,
+  TCall,
+  TKind extends EndpointKind,
+> {
   readonly response: TResponse;
   /** What the caller passes. */
   readonly variables: TVariables;
-  /** What reaches the wire, which a future server projection implements. */
-  readonly variablesOut: TVariables;
+  /** What the closure receives, once a schema has validated what was passed. */
+  readonly variablesOut: TVariablesOut;
   /** What the caller may send inside an open channel. */
   readonly send: TSend;
   readonly call: TCall;
@@ -93,6 +100,8 @@ export type AnyEndpoint = Endpoint<AnyEndpointTypes>;
 
 export type InferResponse<E extends AnyEndpoint> = E[EndpointMarker]["response"];
 export type InferVariables<E extends AnyEndpoint> = E[EndpointMarker]["variables"];
+/** What the endpoint's closure receives, after a schema has validated the call. */
+export type InferVariablesOut<E extends AnyEndpoint> = E[EndpointMarker]["variablesOut"];
 export type InferSend<E extends AnyEndpoint> = E[EndpointMarker]["send"];
 export type InferKind<E extends AnyEndpoint> = E[EndpointMarker]["kind"];
 export type InferCall<E extends AnyEndpoint> = E[EndpointMarker]["call"];

@@ -72,10 +72,10 @@ function inheritedFrom(
 
 function makeBase(inherited: Partial<BuilderState>): Courier {
   return {
-    query: head("query", inherited) as unknown as HttpBuilder<void, void, "query">,
-    mutation: head("mutation", inherited) as unknown as HttpBuilder<void, void, "mutation">,
-    stream: head("stream", inherited) as unknown as StreamBuilder<void, void>,
-    channel: head("channel", inherited) as unknown as ChannelBuilder<void, void, never>,
+    query: head("query", inherited) as unknown as HttpBuilder<void, void, void, "query">,
+    mutation: head("mutation", inherited) as unknown as HttpBuilder<void, void, void, "mutation">,
+    stream: head("stream", inherited) as unknown as StreamBuilder<void, void, void>,
+    channel: head("channel", inherited) as unknown as ChannelBuilder<void, void, void, never>,
     extend: (config: CourierConfig): Courier => makeBase(inheritedFrom(config, inherited)),
   };
 }

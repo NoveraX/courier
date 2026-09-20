@@ -13,18 +13,16 @@ npm install @noverax/courier @noverax/courier-hono hono
 ```ts title="lib/sources.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type User = { id: number; name: string; email: string }
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.response<User[]>().via(({ get }) => get()),
-    getById: query.variables<{ id: number }>().response<User>().via(({ get }) => get(":id")),
-    create: mutation.variables<{ name: string; email: string }>().response<User>().via(
-      ({ post }) => post()
-    ),
+    getAll: endpoint.response<User[]>().get(""),
+    getById: endpoint.variables<{ id: number }>().response<User>().get(":id"),
+    create: endpoint.variables<{ name: string; email: string }>().response<User>().post(""),
   },
 })
 

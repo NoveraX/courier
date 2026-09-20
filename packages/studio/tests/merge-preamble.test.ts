@@ -5,12 +5,12 @@ import type { FingerprintResult } from "../src/apis/merge/types"
 
 const GENERATED = `import { courier, defineGroup } from "@noverax/courier/define";
 
-const { query } = courier();
+const { endpoint } = courier();
 
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get("")),
+    getAll: endpoint.response<User[]>().get(""),
   },
 });
 `
@@ -18,14 +18,14 @@ export const users = defineGroup({
 /** A base configured across several lines closes a bracket of its own. */
 const MULTILINE_BASE = `import { courier, defineGroup } from "@noverax/courier/define";
 
-const { query } = courier({
+const { endpoint } = courier({
   timeout: 10_000,
 });
 
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get("", { page: 1 })),
+    getAll: endpoint.response<User[]>().via((http) => http.get("", { page: 1 })).reads(),
   },
 });
 
@@ -60,13 +60,13 @@ describe("a base configured across several lines", () => {
 describe("a file whose endpoint bodies are untouched", () => {
   const SPEC_GREW = `import { courier, defineGroup } from "@noverax/courier/define";
 
-const { mutation, query } = courier();
+const { endpoint } = courier();
 
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get("")),
-    create: mutation.response<User>().via((http, vars) => http.post("", vars)),
+    getAll: endpoint.response<User[]>().get(""),
+    create: endpoint.response<User>().post(""),
   },
 });
 `
@@ -75,12 +75,12 @@ export const users = defineGroup({
     const USER_EDITED = `import { courier, defineGroup } from "@noverax/courier/define";
 import { logger } from "../logger";
 
-const { query } = courier({ timeout: 10_000 });
+const { endpoint } = courier({ timeout: 10_000 });
 
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get("")),
+    getAll: endpoint.response<User[]>().get(""),
   },
 });
 
@@ -98,21 +98,21 @@ export function byId(users: User[], id: string): User | undefined {
     expect(content).toContain("timeout: 10_000")
     expect(content).toContain('from "../logger"')
     expect(content).toContain("export function byId")
-    expect(content).toContain("create: mutation")
-    expect(content).toContain("const { mutation, query } = courier({ timeout: 10_000 });")
+    expect(content).toContain('create: endpoint.response<User>().post("")')
+    expect(content).toContain("const { endpoint } = courier({ timeout: 10_000 });")
   })
 
   it("drops an endpoint the spec no longer describes", () => {
     const HAS_RETIRED = `import { courier, defineGroup } from "@noverax/courier/define";
 
-const { query } = courier();
+const { endpoint } = courier();
 
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get("")),
-    retired: query.response<User>().via((http) => http.get("retired")),
-    mine: query.response<User>().via((http) => http.get("mine")),
+    getAll: endpoint.response<User[]>().get(""),
+    retired: endpoint.response<User>().get("retired"),
+    mine: endpoint.response<User>().get("mine"),
   },
 });
 `

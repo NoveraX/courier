@@ -13,19 +13,17 @@ npm install @noverax/courier @noverax/courier-nestjs
 ```ts title="src/lib/sources.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type User = { id: number; name: string; email: string }
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.response<User[]>().via(({ get }) => get()),
-    getById: query.variables<{ id: number }>().response<User>().via(({ get }) => get(":id")),
-    create: mutation.variables<{ name: string; email: string }>().response<User>().via(
-      ({ post }) => post()
-    ),
-    remove: mutation.variables<{ id: number }>().response<null>().via(({ del }) => del(":id")),
+    getAll: endpoint.response<User[]>().get(""),
+    getById: endpoint.variables<{ id: number }>().response<User>().get(":id"),
+    create: endpoint.variables<{ name: string; email: string }>().response<User>().post(""),
+    remove: endpoint.variables<{ id: number }>().response<null>().del(":id"),
   },
 })
 

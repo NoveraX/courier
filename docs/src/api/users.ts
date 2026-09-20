@@ -1,6 +1,6 @@
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type User = {
   id: number
@@ -32,34 +32,34 @@ type UserPostResponse = {
 export const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query
+    getAll: endpoint
       .variables<{ page?: number; limit?: number; search?: string }>()
       .response<UsersListResponse>()
-      .via((http) => http.get()),
-    getById: query
+      .get(""),
+    getById: endpoint
       .variables<{ id: number }>()
       .response<User>()
-      .via((http) => http.get(":id")),
-    create: mutation
+      .get(":id"),
+    create: endpoint
       .variables<{ name: string; email: string; role?: string }>()
       .response<User>()
-      .via((http, vars) => http.post("", vars)),
-    update: mutation
+      .post(""),
+    update: endpoint
       .variables<{ id: number; name: string; email: string; role: string }>()
       .response<User>()
-      .via((http, vars) => http.put(":id", vars)),
-    patch: mutation
+      .put(":id"),
+    patch: endpoint
       .variables<{ id: number } & Partial<Omit<User, "id" | "createdAt">>>()
       .response<User>()
-      .via((http, vars) => http.patch(":id", vars)),
-    remove: mutation
+      .patch(":id"),
+    remove: endpoint
       .variables<{ id: number }>()
       .response<null>()
-      .via((http, vars) => http.del(":id", vars)),
-    getUserPost: query
+      .del(":id"),
+    getUserPost: endpoint
       .variables<{ id: number; postId: number }>()
       .response<UserPostResponse>()
-      .via((http) => http.get(":id/posts/:postId")),
+      .get(":id/posts/:postId"),
   },
 })
 

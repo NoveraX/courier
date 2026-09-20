@@ -7,7 +7,7 @@ By default, Courier serializes variables based on the HTTP method. GET and DELET
 ```ts title="Default encoding"
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type User = { id: number; name: string; email: string }
 
@@ -16,24 +16,20 @@ const users = defineGroup({
   endpoints: {
     // GET, DELETE -> variables go to URLSearchParams
     // GET /users?page=1&limit=10
-    getAll: query
+    getAll: endpoint
       .variables<{ page: number; limit: number }>()
       .response<User[]>()
-      .via((http, vars) =>
-      http.get("", vars)
-    ),
+      .get(""),
 
     // POST, PUT, PATCH -> variables go to JSON body
     // POST /users  Body: { "name": "Jane", "email": "jane@test.com" }
-    create: mutation
+    create: endpoint
       .variables<{ name: string; email: string }>()
       .response<User>()
-      .via((http, vars) =>
-      http.post("", vars)
-    ),
+      .post(""),
 
     // HEAD -> no variables sent
-    check: query.response<void>().via((http) => http.head()),
+    check: endpoint.response<void>().head(""),
   },
 })
 
@@ -48,16 +44,16 @@ Override the default JSON serialization for request bodies. This is useful when 
 ```ts title="api/index.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
-const { mutation } = courier()
+const { endpoint } = courier()
 
 const auth = defineGroup({
   prefix: "auth",
   endpoints: {
-    login: mutation.variables<{
+    login: endpoint.variables<{
       grant_type: string
       username: string
       password: string
-    }>().response<{ token: string }>().via((http, vars) => http.post("token", vars)),
+    }>().response<{ token: string }>().post("token"),
   },
 })
 
@@ -98,17 +94,17 @@ You can pass any library with `stringify` and `parse` methods (e.g., `qs`):
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 import qs from "qs"
 
-const { query } = courier()
+const { endpoint } = courier()
 
 type Product = { id: number; name: string; category: string }
 
 const products = defineGroup({
   prefix: "products",
   endpoints: {
-    search: query.variables<{
+    search: endpoint.variables<{
       category: string
       tags: string[]
-    }>().response<Product[]>().via((http, vars) => http.get("", vars)),
+    }>().response<Product[]>().get(""),
   },
 })
 

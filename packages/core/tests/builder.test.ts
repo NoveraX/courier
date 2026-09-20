@@ -27,26 +27,24 @@ describe("courier", () => {
 
   describe("wire probing", () => {
     it("captures method and path from the closure", () => {
-      const getUser = base.query.variables(ById).response(UserSchema).via((http, vars) =>
-        http.get(":id", vars),
-      );
+      const getUser = base.endpoint.variables(ById).response(UserSchema).get(":id");
 
       expect(getUser.method).toBe("get");
       expect(getUser.path).toBe(":id");
     });
 
     it("captures a bare path when the closure passes no variables", () => {
-      const listUsers = base.query.response(UserSchema).via((http) => http.get(""));
+      const listUsers = base.endpoint.response(UserSchema).get("");
 
       expect(listUsers.method).toBe("get");
       expect(listUsers.path).toBe("");
     });
 
     it("records the verb the vendor requires, not the declared semantics", () => {
-      const search = base.query
+      const search = base.endpoint
         .variables(z.object({ q: z.string() }))
         .response(UserSchema)
-        .via((http, vars) => http.post("search", vars));
+        .post("search").reads();
 
       expect(search.method).toBe("post");
       expect(search.kind).toBe("query");
@@ -56,14 +54,14 @@ describe("courier", () => {
       const presence = base.channel
         .variables(z.object({ room: z.string() }))
         .response(UserSchema)
-        .via((ws, vars) => ws.connect(":room/presence", vars));
+        .connect(":room/presence");
 
       expect(presence.path).toBe(":room/presence");
       expect(presence.kind).toBe("channel");
     });
 
     it("rejects a closure that addresses nothing", () => {
-      expect(() => base.query.response(UserSchema).via((() => ({})) as never)).toThrow(
+      expect(() => base.endpoint.response(UserSchema).via((() => ({})) as never)).toThrow(
         /made no wire call/,
       );
     });
@@ -71,9 +69,7 @@ describe("courier", () => {
 
   describe("slots", () => {
     it("records the schemas it was given", () => {
-      const createUser = base.mutation.variables(ById).response(UserSchema).via((http, vars) =>
-        http.post("", vars),
-      );
+      const createUser = base.endpoint.variables(ById).response(UserSchema).post("");
 
       expect(meta(createUser).response).toBe(UserSchema);
       expect(meta(createUser).variables).toBe(ById);
@@ -81,12 +77,8 @@ describe("courier", () => {
     });
 
     it("produces the same descriptor whichever order the slots are filled", () => {
-      const a = base.query.variables(ById).response(UserSchema).via((http, vars) =>
-        http.get(":id", vars),
-      );
-      const b = base.query.response(UserSchema).variables(ById).via((http, vars) =>
-        http.get(":id", vars),
-      );
+      const a = base.endpoint.variables(ById).response(UserSchema).get(":id");
+      const b = base.endpoint.response(UserSchema).variables(ById).get(":id");
 
       expect(meta(a)).toEqual(meta(b));
       expect(a.method).toBe(b.method);
@@ -94,10 +86,10 @@ describe("courier", () => {
     });
 
     it("carries no schema when only a type argument was given", () => {
-      const listAudit = base.query
+      const listAudit = base.endpoint
         .variables<{ since: string }>()
         .response<readonly Audit[]>()
-        .via((http, vars) => http.get("audit", vars));
+        .get("audit");
 
       expect(meta(listAudit).response).toBeUndefined();
       expect(meta(listAudit).variables).toBeUndefined();
@@ -105,10 +97,10 @@ describe("courier", () => {
     });
 
     it("validates what is sent while leaving what is received untyped at runtime", () => {
-      const impersonate = base.mutation
+      const impersonate = base.endpoint
         .variables(ById)
         .response<{ token: string }>()
-        .via((http, vars) => http.post(":id/impersonate", vars));
+        .post(":id/impersonate");
 
       expect(meta(impersonate).variables).toBe(ById);
       expect(meta(impersonate).response).toBeUndefined();
@@ -117,14 +109,14 @@ describe("courier", () => {
     it("records a channel send schema", () => {
       const presence = base.channel
         .response(UserSchema)
-        .send(CommandSchema).via((ws) => ws.connect("presence"));
+        .send(CommandSchema).connect("presence");
 
       // recorded as `receive`, which names the same messages from the server side
       expect(meta(presence).receive).toBe(CommandSchema);
     });
 
     it("refuses a slot that was already filled", () => {
-      expect(() => base.query.response(UserSchema).response(UserSchema)).toThrow(
+      expect(() => base.endpoint.response(UserSchema).response(UserSchema)).toThrow(
         /\.response\(\) was called twice/,
       );
     });
@@ -132,22 +124,20 @@ describe("courier", () => {
 
   describe("reuse", () => {
     it("lets a partially applied builder serve several endpoints", () => {
-      const byId = base.query.variables(ById);
+      const byId = base.endpoint.variables(ById);
 
-      const profile = byId.response(UserSchema).via((http, vars) => http.get(":id/profile", vars));
-      const settings = byId.response(UserSchema).via((http, vars) => http.get(":id/settings", vars));
+      const profile = byId.response(UserSchema).get(":id/profile");
+      const settings = byId.response(UserSchema).get(":id/settings");
 
       expect(profile.path).toBe(":id/profile");
       expect(settings.path).toBe(":id/settings");
     });
 
     it("does not leak a setting from one endpoint into its sibling", () => {
-      const shared = base.query.variables(ById);
+      const shared = base.endpoint.variables(ById);
 
-      const slow = shared.timeout(30_000).response(UserSchema).via((http, vars) =>
-        http.get(":id", vars),
-      );
-      const plain = shared.response(UserSchema).via((http, vars) => http.get(":id", vars));
+      const slow = shared.timeout(30_000).response(UserSchema).get(":id");
+      const plain = shared.response(UserSchema).get(":id");
 
       expect(options(slow).timeout).toBe(30_000);
       expect(options(plain).timeout).toBeUndefined();
@@ -161,7 +151,7 @@ describe("courier", () => {
 
     it("applies base middleware to every endpoint built from it", () => {
       const vendor = courier({ middleware: [first], timeout: 10_000 });
-      const endpoint = vendor.query.response(UserSchema).via((http) => http.get(""));
+      const endpoint = vendor.endpoint.response(UserSchema).get("");
 
       expect(options(endpoint).middleware).toEqual([first]);
       expect(options(endpoint).timeout).toBe(10_000);
@@ -169,7 +159,7 @@ describe("courier", () => {
 
     it("appends endpoint middleware after the inherited list", () => {
       const vendor = courier({ middleware: [first] });
-      const endpoint = vendor.query.use(second).response(UserSchema).via((http) => http.get(""));
+      const endpoint = vendor.endpoint.use(second).response(UserSchema).get("");
 
       expect(options(endpoint).middleware).toEqual([first, second]);
     });
@@ -177,7 +167,7 @@ describe("courier", () => {
     it("concatenates parent middleware first when extending", () => {
       const vendor = courier({ middleware: [first] });
       const admin = vendor.extend({ middleware: [second] });
-      const endpoint = admin.query.use(third).response(UserSchema).via((http) => http.get(""));
+      const endpoint = admin.endpoint.use(third).response(UserSchema).get("");
 
       expect(options(endpoint).middleware).toEqual([first, second, third]);
     });
@@ -185,16 +175,16 @@ describe("courier", () => {
     it("replaces scalars rather than merging them when extending", () => {
       const vendor = courier({ timeout: 10_000 });
       const slow = vendor.extend({ timeout: 60_000 });
-      const endpoint = slow.query.response(UserSchema).via((http) => http.get(""));
+      const endpoint = slow.endpoint.response(UserSchema).get("");
 
       expect(options(endpoint).timeout).toBe(60_000);
     });
 
     it("drops the inherited middleware when the endpoint opts out", () => {
       const vendor = courier({ middleware: [first] });
-      const endpoint = vendor.query
+      const endpoint = vendor.endpoint
         .response(UserSchema)
-        .via((http) => http.get(""), { inherit: false });
+        .get("", { inherit: false });
 
       expect(options(endpoint).middleware).toEqual([]);
     });
@@ -202,7 +192,7 @@ describe("courier", () => {
     it("leaves the parent base untouched when it is extended", () => {
       const vendor = courier({ middleware: [first] });
       vendor.extend({ middleware: [second] });
-      const endpoint = vendor.query.response(UserSchema).via((http) => http.get(""));
+      const endpoint = vendor.endpoint.response(UserSchema).get("");
 
       expect(options(endpoint).middleware).toEqual([first]);
     });
@@ -212,7 +202,7 @@ describe("courier", () => {
     it("keeps kind specific options on the descriptor", () => {
       const feed = base.stream
         .variables(ById)
-        .response(UserSchema).via((sse, vars) => sse.get(":id/events", vars), {
+        .response(UserSchema).get(":id/events", {
           reconnect: { maxAttempts: 5, backoff: "exponential" },
           tags: ["activity"],
         });
@@ -222,10 +212,9 @@ describe("courier", () => {
     });
 
     it("carries a cache config declared on a query", () => {
-      const listUsers = base.query
+      const listUsers = base.endpoint
         .response(UserSchema)
-        .cache({ revalidate: 60 })
-        .via((http) => http.get(""));
+        .get("").cache({ revalidate: 60 });
 
       expect(options(listUsers).cache).toEqual({ revalidate: 60 });
     });
@@ -235,25 +224,37 @@ describe("courier", () => {
 describe("type level guarantees", () => {
   const base = courier();
 
-  it("finishes the chain at the terminal", () => {
-    const endpoint = base.query.response(UserSchema).via((http) => http.get(""));
+  it("describes the same endpoint whichever side of the verb a slot is named", () => {
+    const before = base.endpoint.variables(ById).response(UserSchema).get(":id");
+    const after = base.endpoint.get(":id").variables(ById).response(UserSchema);
 
-    function rejected(): void {
-      // @ts-expect-error the terminal returns a descriptor, which carries no builder methods
-      endpoint.response(UserSchema);
-    }
-
-    expect(rejected).toBeTypeOf("function");
-    expect(endpoint.kind).toBe("query");
+    expect(after.method).toBe(before.method);
+    expect(after.path).toBe(before.path);
+    expect(after.kind).toBe(before.kind);
+    expect(meta(after)).toEqual(meta(before));
   });
 
-  it("accepts a cache config on a query only", () => {
-    const cached = base.query.response(UserSchema).cache({ revalidate: 60 });
-    expect(cached).toBeDefined();
+  it("stays readable as a descriptor once addressed", () => {
+    const endpoint = base.endpoint.get("").response(UserSchema);
+
+    expect(endpoint.kind).toBe("query");
+    expect(Object.keys(endpoint)).toEqual(["kind", "method", "path", "probe", "served", "options"]);
+  });
+
+  it("keeps a cached answer only for an endpoint that reads", () => {
+    const cached = base.endpoint.response(UserSchema).get("").cache({ revalidate: 60 });
+    expect(cached.kind).toBe("query");
+
+    const overPost = base.endpoint
+      .response(UserSchema)
+      .post("search")
+      .reads()
+      .cache({ revalidate: 60 });
+    expect(overPost.kind).toBe("query");
 
     function rejected(): void {
-      // @ts-expect-error caching a write is rejected at the call site that wrote it
-      base.mutation.response(UserSchema).cache({ revalidate: 60 });
+      // @ts-expect-error an endpoint that writes has no answer worth keeping
+      base.endpoint.response(UserSchema).post("").cache({ revalidate: 60 });
     }
 
     expect(rejected).toBeTypeOf("function");
@@ -272,15 +273,13 @@ describe("type level guarantees", () => {
   });
 
   it("infers the response type from the schema", () => {
-    const getUser = base.query.variables(ById).response(UserSchema).via((http, vars) =>
-      http.get(":id", vars),
-    );
+    const getUser = base.endpoint.variables(ById).response(UserSchema).get(":id");
     const sample: InferResponse<typeof getUser> = { id: "1", email: "a@b.c" };
     expect(sample.email).toBe("a@b.c");
   });
 
   it("infers a declared type when no schema was given", () => {
-    const listAudit = base.query.response<readonly Audit[]>().via((http) => http.get("audit"));
+    const listAudit = base.endpoint.response<readonly Audit[]>().get("audit");
 
     const sample: InferResponse<typeof listAudit> = [{ id: "1" }];
     expect(sample[0]?.id).toBe("1");
@@ -296,7 +295,7 @@ describe("wire surfaces", () => {
     }
 
     const byId: HttpProbe<Vars> = (http, vars) => http.get(":id", vars);
-    const getUser = api.query.variables<Vars>().response(UserSchema).via(byId);
+    const getUser = api.endpoint.variables<Vars>().response(UserSchema).via(byId);
 
     expect(getUser.method).toBe("get");
     expect(getUser.path).toBe(":id");

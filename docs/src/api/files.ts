@@ -1,6 +1,6 @@
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { mutation } = courier()
+const { endpoint } = courier()
 
 type UploadResponse = {
   success: boolean
@@ -15,10 +15,10 @@ type UploadResponse = {
 export const files = defineGroup({
   prefix: "upload",
   endpoints: {
-    upload: mutation
+    upload: endpoint
       .variables<FormData>()
       .response<UploadResponse>()
-      .via((http, vars) => http.post("", vars)),
+      .post(""),
   },
 })
 

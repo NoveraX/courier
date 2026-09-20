@@ -38,30 +38,30 @@ type GroupOptions = {
 ```ts title="api/users.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type User = { id: string; name: string; email: string }
 
 export const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get()),
-    getById: query
+    getAll: endpoint.response<User[]>().get(""),
+    getById: endpoint
       .variables<{ id: string }>()
       .response<User>()
-      .via((http, vars) => http.get(":id", vars)),
-    create: mutation
+      .get(":id"),
+    create: endpoint
       .variables<{ name: string; email: string }>()
       .response<User>()
-      .via((http, vars) => http.post("", vars)),
-    update: mutation
+      .post(""),
+    update: endpoint
       .variables<{ id: string; name: string }>()
       .response<User>()
-      .via((http, vars) => http.put(":id", vars)),
-    remove: mutation
+      .put(":id"),
+    remove: endpoint
       .variables<{ id: string }>()
       .response<null>()
-      .via((http, vars) => http.del(":id", vars)),
+      .del(":id"),
   },
 })
 ```
@@ -74,13 +74,13 @@ The prefix is prepended to all endpoint URLs within the group:
 const products = defineGroup({
   prefix: "api/v2/products",
   endpoints: {
-    list: query.response<Product[]>().via((http) => http.get()),
+    list: endpoint.response<Product[]>().get(""),
     // → GET {baseURL}/api/v2/products
 
-    getById: query
+    getById: endpoint
       .variables<{ id: string }>()
       .response<Product>()
-      .via((http, vars) => http.get(":id", vars)),
+      .get(":id"),
     // → GET {baseURL}/api/v2/products/:id
   },
 })
@@ -98,7 +98,7 @@ const tenantUsers = defineGroup({
     return { tenantId }
   },
   endpoints: {
-    list: query.response<User[]>().via((http) => http.get()),
+    list: endpoint.response<User[]>().get(""),
     // When tenantId = "acme": GET {baseURL}/acme/users
   },
 })
@@ -113,12 +113,12 @@ Path options from `defineApi()` are resolved first, then group-level `pathOption
 Each endpoint is built from one of the heads `courier()` returns, and closed with `.via()`:
 
 ```ts
-const { query } = courier()
+const { endpoint } = courier()
 
-query.response<User[]>().via((http) => http.get())
+endpoint.response<User[]>().get("")
 // No variables — the caller passes nothing
 
-query.variables<{ id: string }>().response<User>().via((http, vars) => http.get(":id", vars))
+endpoint.variables<{ id: string }>().response<User>().get(":id")
 // Variables required — caller must pass { id: string }
 ```
 
@@ -139,11 +139,9 @@ caller knows what a method takes and returns:
 import { courier } from "@noverax/courier/define"
 import type { InferResponse, InferVariables } from "@noverax/courier/define"
 
-const { query } = courier()
+const { endpoint } = courier()
 
-const getById = query.variables<{ id: string }>().response<User>().via(
-  (http, vars) => http.get(":id", vars),
-)
+const getById = endpoint.variables<{ id: string }>().response<User>().get(":id")
 
 type Response = InferResponse<typeof getById>   // User
 type Variables = InferVariables<typeof getById> // { id: string }

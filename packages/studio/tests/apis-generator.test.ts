@@ -177,41 +177,24 @@ describe("generateCode", () => {
     expect(sourceFile?.content).toContain("users")
   })
 
-  it("declares every builder head a group addresses", () => {
+  it("opens each endpoint with the verb the spec names", () => {
     const files = generateCode(MOCK_SPEC, DEFAULT_OPTIONS)
-
     const petsFile = files.find((f) => f.path.includes("pets/index.ts"))
-    expect(petsFile?.content).toContain("const { mutation, query } = courier();")
 
-    for (const head of usedHeads(petsFile?.content ?? "")) {
-      expect(declaredHeads(petsFile?.content ?? "")).toContain(head)
-    }
+    expect(petsFile?.content).toContain("const { endpoint } = courier();")
+    expect(petsFile?.content).toContain('getAll: endpoint.get("")')
+    expect(petsFile?.content).toContain('create: endpoint.post("")')
+    expect(petsFile?.content).toContain('getById: endpoint.get(":petId")')
   })
 
-  it("declares every builder head a flat source addresses", () => {
+  it("declares the base a flat source addresses", () => {
     const files = generateCode(MOCK_SPEC, { ...DEFAULT_OPTIONS, groupBy: "single" })
-
     const sourceFile = files.find((f) => f.path.includes("source.ts"))
-    for (const head of usedHeads(sourceFile?.content ?? "")) {
-      expect(declaredHeads(sourceFile?.content ?? "")).toContain(head)
-    }
-  })
 
-  it("names only the heads a group actually uses", () => {
-    const readsOnly: ParsedSpec = {
-      ...MOCK_SPEC,
-      groups: [
-        {
-          ...MOCK_SPEC.groups[0]!,
-          endpoints: MOCK_SPEC.groups[0]!.endpoints.filter((ep) => ep.httpMethod === "get"),
-        },
-      ],
+    expect(sourceFile?.content).toContain("const { endpoint } = courier();")
+    for (const opened of openings(sourceFile?.content ?? "")) {
+      expect(opened).toMatch(/^endpoint\.(get|head|post|put|patch|del)\(/)
     }
-    const files = generateCode(readsOnly, DEFAULT_OPTIONS)
-
-    const petsFile = files.find((f) => f.path.includes("pets/index.ts"))
-    expect(petsFile?.content).toContain("const { query } = courier();")
-    expect(petsFile?.content).not.toContain("mutation")
   })
 
   it("imports no type for a response a schema already describes", () => {
@@ -297,15 +280,7 @@ describe("generateCode", () => {
   })
 })
 
-/** Heads an endpoint definition addresses, e.g. `getAll: query.response<Pet[]>()`. */
-function usedHeads(content: string): string[] {
-  const used = new Set<string>()
-  for (const match of content.matchAll(/^\s+\w+: (query|mutation)\b/gm)) used.add(match[1]!)
-  return [...used]
-}
-
-/** Heads the file destructures from `courier()`. */
-function declaredHeads(content: string): string[] {
-  const match = content.match(/const \{ ([^}]+) \} = courier\(\);/)
-  return match ? match[1]!.split(",").map((name) => name.trim()) : []
+/** How each generated endpoint opens, e.g. `endpoint.get("")`. */
+function openings(content: string): string[] {
+  return [...content.matchAll(/^\s+\w+: (endpoint\.\w+\()/gm)].map((m) => m[1]!)
 }

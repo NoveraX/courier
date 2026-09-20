@@ -99,22 +99,22 @@ import {
 ```ts
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type User = { id: string; name: string; email: string }
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get()),
-    getById: query
+    getAll: endpoint.response<User[]>().get(""),
+    getById: endpoint
       .variables<{ id: string }>()
       .response<User>()
-      .via((http, vars) => http.get(":id", vars)),
-    create: mutation
+      .get(":id"),
+    create: endpoint
       .variables<{ name: string; email: string }>()
       .response<User>()
-      .via((http, vars) => http.post("", vars)),
+      .post(""),
   },
 })
 
@@ -173,11 +173,11 @@ import { z } from "zod"
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.response(z.array(UserSchema)).via((http) => http.get()),
-    create: mutation
+    getAll: endpoint.response(z.array(UserSchema)).get(""),
+    create: endpoint
       .variables(z.object({ name: z.string().min(1), email: z.email() }))
       .response(UserSchema)
-      .via((http, vars) => http.post("", vars)),
+      .post(""),
   },
 })
 ```

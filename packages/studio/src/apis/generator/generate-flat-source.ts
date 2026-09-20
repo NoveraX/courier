@@ -5,7 +5,7 @@
 
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointDefinition } from "./build-endpoint";
-import { collectHeads, describesResponseWithSchema } from "./build-endpoint-helpers";
+import { describesResponseWithSchema } from "./build-endpoint-helpers";
 import { collectSchemaRefs } from "./schema-refs";
 import { resolveResponseType } from "./schema-types";
 import { getSchemaRefName } from "./schema-utils";
@@ -55,7 +55,7 @@ export function generateFlatSourceFile(
   }
 
   lines.push("");
-  lines.push(`const { ${collectHeads(endpoints).join(", ")} } = courier();`);
+  lines.push("const { endpoint } = courier();");
   lines.push("");
   lines.push(`export const ${options.sourceName} = defineApi({`);
   lines.push(`  baseURL: "${spec.baseURL}",`);

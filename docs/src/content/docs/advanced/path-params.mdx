@@ -7,7 +7,7 @@ Use the `:paramName` syntax in URL paths to define dynamic segments. Courier com
 ```ts title="api/users.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { query } = courier()
+const { endpoint } = courier()
 
 type User = { id: number; name: string }
 type Comment = { id: number; body: string }
@@ -16,18 +16,14 @@ const users = defineGroup({
   prefix: "users",
   endpoints: {
     // GET /users/:id -> compiled to GET /users/5
-    getById: query.variables<{ id: number }>().response<User>().via((http, vars) =>
-      http.get(":id", vars)
-    ),
+    getById: endpoint.variables<{ id: number }>().response<User>().get(":id"),
 
     // GET /users/:userId/posts/:postId/comments/:commentId
-    getComment: query.variables<{
+    getComment: endpoint.variables<{
       userId: number
       postId: number
       commentId: number
-    }>().response<Comment>().via((http, vars) =>
-      http.get(":userId/posts/:postId/comments/:commentId", vars)
-    ),
+    }>().response<Comment>().get(":userId/posts/:postId/comments/:commentId"),
   },
 })
 ```
@@ -47,12 +43,10 @@ await caller.users.getById({ id: 5 })
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getWithDetails: query
+    getWithDetails: endpoint
       .variables<{ id: number; include?: string }>()
       .response<User>()
-      .via((http, vars) =>
-      http.get(":id", vars)
-    ),
+      .get(":id"),
   },
 })
 await caller.users.getWithDetails({ id: 5, include: "posts" })
@@ -61,12 +55,10 @@ await caller.users.getWithDetails({ id: 5, include: "posts" })
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    updateAvatar: mutation
+    updateAvatar: endpoint
       .variables<{ id: number; name: string }>()
       .response<void>()
-      .via((http, vars) =>
-      http.post(":id/avatar", vars)
-    ),
+      .post(":id/avatar"),
   },
 })
 await caller.users.updateAvatar({ id: 5, name: "photo.jpg" })
@@ -83,18 +75,18 @@ For path parameters that come from server-side context (cookies, headers, sessio
 ```ts title="api/index.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
-const { query } = courier()
+const { endpoint } = courier()
 
 type User = { id: number; name: string }
 
 const users = defineGroup({
   prefix: "orgs/:orgId/users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get()),
-    getById: query
+    getAll: endpoint.response<User[]>().get(""),
+    getById: endpoint
       .variables<{ id: number }>()
       .response<User>()
-      .via((http, vars) => http.get(":id", vars)),
+      .get(":id"),
   },
 })
 
@@ -126,7 +118,7 @@ Each group can define its own `pathOptions` that override the source-level value
 ```ts title="api/groups.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { query } = courier()
+const { endpoint } = courier()
 
 type Project = { id: number; name: string }
 type Task = { id: number; title: string }
@@ -140,11 +132,11 @@ const projects = defineGroup({
     return { workspaceId }
   },
   endpoints: {
-    getAll: query.response<Project[]>().via((http) => http.get()),
-    getById: query
+    getAll: endpoint.response<Project[]>().get(""),
+    getById: endpoint
       .variables<{ id: number }>()
       .response<Project>()
-      .via((http, vars) => http.get(":id", vars)),
+      .get(":id"),
   },
 })
 
@@ -152,7 +144,7 @@ const tasks = defineGroup({
   // No group pathOptions — uses the source-level pathOptions if any
   prefix: "tasks",
   endpoints: {
-    getAll: query.response<Task[]>().via((http) => http.get()),
+    getAll: endpoint.response<Task[]>().get(""),
   },
 })
 ```

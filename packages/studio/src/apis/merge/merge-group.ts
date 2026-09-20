@@ -12,10 +12,9 @@
 
 import { mergeImports } from "./merge-imports";
 import { parseExistingGroup } from "./parse-existing";
-import { splitEndpoint } from "./split-endpoint";
 import type { FingerprintResult, MergeChange, MergeResult, MergeStatus } from "./types";
 
-/** Destructuring that names the builder heads, e.g. `const { query } = courier();`. */
+/** Destructuring that names the base, e.g. `const { endpoint } = courier();`. */
 const DESTRUCTURED_HEADS_RE = /const \{([^}]+)\} = courier\(/;
 
 export function mergeGroupFile(
@@ -59,12 +58,14 @@ function mergeEndpoints(
     }
 
     if (status === "modified") {
-      const merged = mergeEndpointCode(existEp.code, genEp.code);
-      appendEndpoint(result, genEp.comment ?? existEp.comment, merged);
+      /* An endpoint is one declarative expression now, with no closure to
+         graft a regenerated head onto. What the user wrote is what they meant,
+         so it stays whole; the change list says the spec moved under it. */
+      appendEndpoint(result, existEp.comment ?? genEp.comment, existEp.code);
       changes.push({
         type: "preserved",
         target: `endpoint:${genEp.name}`,
-        detail: "user body preserved, config updated",
+        detail: "edited by hand; the spec changed under it",
       });
       continue;
     }
@@ -100,17 +101,6 @@ function mergeEndpoints(
   return result;
 }
 
-/** Merge a modified endpoint: new config head + existing user body */
-function mergeEndpointCode(existingCode: string, generatedCode: string): string {
-  const existParts = splitEndpoint(existingCode);
-  const genParts = splitEndpoint(generatedCode);
-
-  /* If we can't split either, fall back to existing (preserve user code) */
-  if (!existParts || !genParts) return existingCode;
-
-  return genParts.head + existParts.body;
-}
-
 function appendEndpoint(lines: string[], comment: string | undefined, code: string): void {
   if (comment) lines.push(comment);
   lines.push(code);
@@ -128,7 +118,7 @@ function mergePreamble(existing: string[], generated: string[], endpointLines: s
 
   const used = new Set<string>();
   for (const line of endpointLines) {
-    const match = line.match(/^\s{4}\w+:\s*(query|mutation|stream|channel)\b/);
+    const match = line.match(/^\s{4}\w+:\s*(endpoint|stream|channel)\b/);
     if (match?.[1]) used.add(match[1]);
   }
   if (used.size === 0) return preamble;

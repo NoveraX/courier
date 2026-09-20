@@ -6,7 +6,7 @@ import { createAutoMockServer } from "../src/auto/create-auto-server";
 import { generateRecords } from "../src/auto/data-generator";
 import { extractPaginatedItemSchema } from "../src/auto/schema-introspect";
 
-const { query } = courier();
+const { endpoint } = courier();
 
 // ── Schema edge cases (unit tests) ──────────────────────────────────────────
 
@@ -149,17 +149,15 @@ describe("auto-mock with mixed schema endpoints", () => {
       feed: defineGroup({
         prefix: "/feed",
         endpoints: {
-          paginated: query.response(WrapperSchema).via((http) =>
-            http.get(""),
-          ),
+          paginated: endpoint.response(WrapperSchema).get(""),
         },
       }),
       // Group with no schema at all
       legacy: defineGroup({
         prefix: "/legacy",
         endpoints: {
-          list: query.via((http) => http.get("")),
-          getById: query.via((http, v) => http.get(":id", v)),
+          list: endpoint.get(""),
+          getById: endpoint.get(":id"),
         },
       }),
     },

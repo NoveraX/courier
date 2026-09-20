@@ -1,6 +1,5 @@
 import type { Middleware } from "../middleware/types";
 import type { CacheConfig } from "../validation";
-import type { EndpointKind } from "./marker";
 
 /** How an endpoint reads against a collection, used by mocks and codegen. */
 export type OperationKind =
@@ -70,10 +69,12 @@ export interface AnyEndpointOptions
 /**
  * Argument accepted by `.cache()`.
  *
- * Resolves to `never` outside the `query` head, so caching a mutation fails at
- * the call site that wrote it rather than somewhere downstream.
+ * Resolves to `never` once the verb writes, so caching a write fails at the
+ * call site that wrote it rather than somewhere downstream.
  */
-export type CacheArg<TKind extends EndpointKind> = TKind extends "query" ? CacheConfig : never;
+export type CacheArg<TKind extends "query" | "mutation"> = TKind extends "query"
+  ? CacheConfig
+  : never;
 
 /** Retry policy applied to an endpoint or inherited from its base. */
 export interface RetryOptions {

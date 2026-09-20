@@ -77,9 +77,7 @@ http.get(":userId/posts/:postId", { userId: "1", postId: "42" })
 When `stream: true` is set in the endpoint options, the response `data` is a `ReadableStream`:
 
 ```ts
-query.variables<{ channel: string }>().response<ReadableStream>().via((http, vars) =>
-  http.get(":channel/stream", vars)
-)
+endpoint.variables<{ channel: string }>().response<ReadableStream>().get(":channel/stream")
 ```
 
 ## Context

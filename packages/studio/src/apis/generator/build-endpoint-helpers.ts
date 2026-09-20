@@ -32,15 +32,15 @@ export function resolveBodyInterfaceType(
 }
 
 /**
- * Build the builder chain that describes an endpoint, up to but excluding the
- * terminal.
+ * Build the chain describing an endpoint.
  *
- * A slot carrying a schema takes it directly; one carrying only a type takes a
- * type argument, which is how an endpoint of an API that publishes no usable
- * schema is described.
+ * It opens with the verb that reaches the endpoint, which is what says whether
+ * it reads or writes. A slot carrying a schema takes it directly; one carrying
+ * only a type takes a type argument, which is how an endpoint of an API that
+ * publishes no usable schema is described.
  */
 export function buildEndpointChain(
-  head: "query" | "mutation",
+  address: string,
   schemaConfig: string[],
   bodyInterfaceType: string | null,
   varsType: string | null,
@@ -50,7 +50,7 @@ export function buildEndpointChain(
   const variablesSchema = findConfig(schemaConfig, "variables");
   const effectiveVarsType = bodyInterfaceType ?? varsType;
 
-  let chain = head;
+  let chain = address;
 
   if (variablesSchema && !bodyInterfaceType) {
     chain += `.variables(${variablesSchema})`;
@@ -70,17 +70,6 @@ export function buildEndpointChain(
 function findConfig(config: string[], key: string): string | null {
   const entry = config.find((c) => c.startsWith(`${key}:`));
   return entry ? entry.slice(key.length + 1).trim() : null;
-}
-
-/**
- * Name the heads a generated file addresses.
- *
- * A file declares only the heads its endpoints use, so a source of reads alone
- * never names `mutation`.
- */
-export function collectHeads(endpoints: ParsedEndpoint[]): string[] {
-  const heads = new Set(endpoints.map((ep) => (ep.httpMethod === "get" ? "query" : "mutation")));
-  return [...heads].sort();
 }
 
 /**

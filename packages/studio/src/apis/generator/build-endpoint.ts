@@ -18,7 +18,6 @@ export function buildEndpointDefinition(
 ): string {
   const hasSchema = options.generateSchemas && options.validation !== "none";
   const schemaConfig = buildSchemaConfig(ep, options, hasSchema, schemaImports);
-  const head = ep.httpMethod === "get" ? "query" : "mutation";
 
   const responseType = resolveResponseType(ep, spec, options);
   const paramsName = `${toPascalCase(ep.name)}Params`;
@@ -34,9 +33,14 @@ export function buildEndpointDefinition(
     pathParams,
   );
 
-  const chain = buildEndpointChain(head, schemaConfig, bodyInterfaceType, varsType, responseType);
+  return buildEndpointChain(address(ep), schemaConfig, bodyInterfaceType, varsType, responseType);
+}
 
-  return `${chain}.via(${buildFnBody(ep)})`;
+/** Where the endpoint is, named by the verb that reaches it. */
+function address(ep: ParsedEndpoint): string {
+  const method = toInternalMethod(ep.httpMethod);
+  const path = ep.path === "/" ? "" : ep.path.replace(/^\//, "");
+  return `endpoint.${method}("${path}")`;
 }
 
 function buildSchemaConfig(
@@ -86,16 +90,4 @@ function buildResponseExpr(
 
 function toPascalCase(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
-}
-
-function buildFnBody(ep: ParsedEndpoint): string {
-  const httpMethod = toInternalMethod(ep.httpMethod);
-  const path = ep.path === "/" ? "" : ep.path.replace(/^\//, "");
-  const hasVars =
-    ep.parameters.some((p) => p.in === "path" || p.in === "query") || ep.requestBody !== null;
-
-  if (hasVars) {
-    return `(http, vars) => http.${httpMethod}("${path}"${path || hasVars ? ", vars" : ""})`;
-  }
-  return `(http) => http.${httpMethod}("${path}")`;
 }

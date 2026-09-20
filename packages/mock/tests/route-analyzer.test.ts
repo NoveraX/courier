@@ -5,7 +5,7 @@ import { z } from "zod";
 import { analyzeRoutes, getSourceGroupNames } from "../src/auto/route-analyzer";
 import type { CrudOperation, RouteInfo } from "../src/auto/route-analyzer";
 
-const { query, mutation } = courier();
+const { endpoint } = courier();
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -25,22 +25,22 @@ const api = defineApi({
     users: defineGroup({
       prefix: "/users",
       endpoints: {
-        getAll: query.response(z.array(UserSchema)).via((http) => http.get("")),
-        getById: query.variables<{ id: string }>().response(UserSchema).via((http, vars) => http.get(":id", vars)),
-        create: mutation.via((http, vars) => http.post("", vars)),
-        update: mutation.via((http, vars) => http.patch(":id", vars)),
-        replace: mutation.via((http, vars) => http.put(":id", vars)),
-        remove: mutation.via((http, vars) => http.del(":id", vars)),
-        removeAll: mutation.via((http) => http.del("")),
+        getAll: endpoint.response(z.array(UserSchema)).get(""),
+        getById: endpoint.variables<{ id: string }>().response(UserSchema).get(":id"),
+        create: endpoint.post(""),
+        update: endpoint.patch(":id"),
+        replace: endpoint.put(":id"),
+        remove: endpoint.del(":id"),
+        removeAll: endpoint.del(""),
       },
     }),
     products: defineGroup({
       prefix: "/products",
       endpoints: {
-        list: query.via((http) => http.get("")),
-        browse: query.via((http) => http.get("browse")),
-        upload: mutation.via((http, vars) => http.post("import", vars)),
-        upsert: mutation.via((http, vars) => http.put("", vars)),
+        list: endpoint.get(""),
+        browse: endpoint.get("browse"),
+        upload: endpoint.post("import"),
+        upsert: endpoint.put(""),
       },
     }),
   },
@@ -154,7 +154,7 @@ describe("analyzeRoutes — default prefix from group name", () => {
     groups: {
       status: defineGroup({
         endpoints: {
-          ping: query.via((http) => http.get("")),
+          ping: endpoint.get(""),
         },
       }),
     },

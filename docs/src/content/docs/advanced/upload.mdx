@@ -57,19 +57,15 @@ Define upload endpoints using `courier` and `defineGroup`:
 ```ts title="api/users.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { mutation } = courier()
+const { endpoint } = courier()
 
 type User = { id: number; name: string; avatarUrl: string }
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    uploadAvatar: mutation.variables<FormData>().response<User>().via((http, vars) =>
-      http.post("avatar", vars)
-    ),
-    uploadDocument: mutation.variables<FormData>().response<{ url: string }>().via((http, vars) =>
-      http.post("documents", vars)
-    ),
+    uploadAvatar: endpoint.variables<FormData>().response<User>().post("avatar"),
+    uploadDocument: endpoint.variables<FormData>().response<{ url: string }>().post("documents"),
   },
 })
 ```

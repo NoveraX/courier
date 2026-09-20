@@ -44,7 +44,6 @@ export {
   normalizeCode,
   parseExistingGroup,
   previewUpdate,
-  splitEndpoint,
 } from "./merge";
 export type {
   ParsedEndpoint,

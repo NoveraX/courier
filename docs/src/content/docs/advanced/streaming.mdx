@@ -13,23 +13,19 @@ Streaming is chosen by the caller, not by the endpoint: the endpoint says where 
 ```ts title="api/events.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { query } = courier()
+const { endpoint } = courier()
 
 export const events = defineGroup({
   prefix: "events",
   endpoints: {
-    subscribe: query.variables<{ channel: string }>().response<ReadableStream>().via((http, vars) =>
-      http.get(":channel/stream", vars)
-    ),
+    subscribe: endpoint.variables<{ channel: string }>().response<ReadableStream>().get(":channel/stream"),
   },
 })
 
 export const exports = defineGroup({
   prefix: "exports",
   endpoints: {
-    download: query.variables<{ id: string }>().response<ReadableStream>().via((http, vars) =>
-      http.get(":id/download", vars)
-    ),
+    download: endpoint.variables<{ id: string }>().response<ReadableStream>().get(":id/download"),
   },
 })
 ```

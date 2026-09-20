@@ -5,7 +5,7 @@ import type { SSEContext, SSEEvent } from "../src/realtime/types";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import type { StudioHooks } from "../src/studio/hooks";
 
-const { query, stream } = courier();
+const { endpoint, stream } = courier();
 
 /**
  * Zero-arg `createHandler()` reads sources lazily from the core global
@@ -97,7 +97,7 @@ describe("handleSSE", () => {
   });
 
   it("returns 400 for non-SSE endpoint", async () => {
-    const httpEndpoint = query.response<string>().via((http) => http.get("/test"));
+    const httpEndpoint = endpoint.response<string>().get("/test");
     const sources = {
       api: { options: { groups: {} }, health: httpEndpoint },
     };

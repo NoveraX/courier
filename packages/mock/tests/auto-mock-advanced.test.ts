@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
 
-const { query, mutation } = courier();
+const { endpoint } = courier();
 
 const ItemSchema = z.object({ id: z.string(), name: z.string(), price: z.number() });
 
@@ -14,13 +14,11 @@ const api = defineApi({
     items: defineGroup({
       prefix: "/items",
       endpoints: {
-        list: query.response(z.array(ItemSchema)).via((http) => http.get("")),
-        get: query.response(ItemSchema).via((http, v) => http.get(":id", v)),
-        create: mutation.variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema).via((http, v) => http.post("", v)),
-        update: mutation.response(ItemSchema).via((http, v) =>
-          http.patch(":id", v),
-        ),
-        delete: mutation.via((http, v) => http.del(":id", v)),
+        list: endpoint.response(z.array(ItemSchema)).get(""),
+        get: endpoint.response(ItemSchema).get(":id"),
+        create: endpoint.variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema).post(""),
+        update: endpoint.response(ItemSchema).patch(":id"),
+        delete: endpoint.del(":id"),
       },
     }),
   },

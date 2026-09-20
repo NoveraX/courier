@@ -15,7 +15,7 @@ Create a shared API definition:
 ```ts title="lib/sources.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type Post = { id: number; title: string; body: string }
 type PostList = { data: Post[]; total: number }
@@ -23,18 +23,10 @@ type PostList = { data: Post[]; total: number }
 const posts = defineGroup({
   prefix: "posts",
   endpoints: {
-    getAll: query.variables<{ page?: number }>().response<PostList>().via(
-      ({ get }) => get()
-    ),
-    getById: query.variables<{ id: number }>().response<Post>().via(
-      ({ get }) => get(":id")
-    ),
-    create: mutation.variables<{ title: string; body: string }>().response<Post>().via(
-      ({ post }) => post()
-    ),
-    remove: mutation.variables<{ id: number }>().response<null>().via(
-      ({ del }) => del(":id")
-    ),
+    getAll: endpoint.variables<{ page?: number }>().response<PostList>().get(""),
+    getById: endpoint.variables<{ id: number }>().response<Post>().get(":id"),
+    create: endpoint.variables<{ title: string; body: string }>().response<Post>().post(""),
+    remove: endpoint.variables<{ id: number }>().response<null>().del(":id"),
   },
 })
 

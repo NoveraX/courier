@@ -8,7 +8,7 @@ vi.mock("../src/utils/execute", () => ({
 
 import { executeRequest } from "../src/utils/execute";
 
-const { query, mutation } = courier();
+const { endpoint } = courier();
 
 const mockExecuteRequest = vi.mocked(executeRequest);
 
@@ -26,7 +26,7 @@ describe("defineGroup", () => {
 		const group = defineGroup({
 			prefix: "users",
 			endpoints: {
-				getAll: query.response<string[]>().via(({ get }) => get()),
+				getAll: endpoint.response<string[]>().get(""),
 			},
 		});
 
@@ -36,7 +36,7 @@ describe("defineGroup", () => {
 	it("produces object with options.prefix undefined when omitted", () => {
 		const group = defineGroup({
 			endpoints: {
-				health: query.response<boolean>().via(({ get }) => get("health")),
+				health: endpoint.response<boolean>().get("health"),
 			},
 		});
 
@@ -44,8 +44,8 @@ describe("defineGroup", () => {
 	});
 
 	it("spreads endpoint functions onto the result object", () => {
-		const getAll = query.response<string[]>().via(({ get }) => get());
-		const create = mutation.variables<{ name: string }>().response<string>().via(({ post }) => post());
+		const getAll = endpoint.response<string[]>().get("");
+		const create = endpoint.variables<{ name: string }>().response<string>().post("");
 
 		const group = defineGroup({
 			prefix: "users",
@@ -60,7 +60,7 @@ describe("defineGroup", () => {
 		const group = defineGroup({
 			prefix: "items",
 			endpoints: {
-				list: query.response<number[]>().via(({ get }) => get()),
+				list: endpoint.response<number[]>().get(""),
 			},
 		});
 
@@ -74,7 +74,7 @@ describe("defineGroup", () => {
 			prefix: "tenants",
 			pathOptions,
 			endpoints: {
-				list: query.response<unknown[]>().via(({ get }) => get()),
+				list: endpoint.response<unknown[]>().get(""),
 			},
 		});
 
@@ -89,7 +89,7 @@ describe("defineApi", () => {
 		const usersGroup = defineGroup({
 			prefix: "users",
 			endpoints: {
-				getAll: query.response<string[]>().via(({ get }) => get()),
+				getAll: endpoint.response<string[]>().get(""),
 			},
 		});
 
@@ -115,7 +115,7 @@ describe("defineApi", () => {
 				items: defineGroup({
 					prefix: "items",
 					endpoints: {
-						list: query.via(({ get }) => get()),
+						list: endpoint.get(""),
 					},
 				}),
 			},
@@ -128,7 +128,7 @@ describe("defineApi", () => {
 	});
 
 	it("groups are accessible with correct structure", () => {
-		const getAll = query.response<string[]>().via(({ get }) => get());
+		const getAll = endpoint.response<string[]>().get("");
 
 		const api = defineApi({
 			baseURL: "https://api.example.com",
@@ -149,8 +149,8 @@ describe("defineApi", () => {
 
 describe("defineApi flat (no groups)", () => {
 	it("spreads endpoints onto the result object", () => {
-		const getAll = query.response<string[]>().via(({ get }) => get());
-		const create = mutation.variables<{ name: string }>().response<string>().via(({ post }) => post());
+		const getAll = endpoint.response<string[]>().get("");
+		const create = endpoint.variables<{ name: string }>().response<string>().post("");
 
 		const api = defineApi({
 			baseURL: "https://api.example.com",
@@ -166,7 +166,7 @@ describe("defineApi flat (no groups)", () => {
 		const api = defineApi({
 			baseURL: "https://flat.api",
 			endpoints: {
-				health: query.response<boolean>().via(({ get }) => get("health")),
+				health: endpoint.response<boolean>().get("health"),
 			},
 		});
 
@@ -181,7 +181,7 @@ describe("defineApi mixed (groups + flat endpoints)", () => {
 		const usersGroup = defineGroup({
 			prefix: "users",
 			endpoints: {
-				getAll: query.response<string[]>().via(({ get }) => get()),
+				getAll: endpoint.response<string[]>().get(""),
 			},
 		});
 
@@ -189,7 +189,7 @@ describe("defineApi mixed (groups + flat endpoints)", () => {
 			baseURL: "https://api.example.com",
 			groups: { users: usersGroup },
 			endpoints: {
-				healthCheck: query.response<{ ok: boolean }>().via(({ get }) => get("health")),
+				healthCheck: endpoint.response<{ ok: boolean }>().get("health"),
 			},
 		});
 
@@ -208,11 +208,11 @@ describe("defineApi mixed (groups + flat endpoints)", () => {
 			groups: {
 				items: defineGroup({
 					prefix: "items",
-					endpoints: { list: query.response<number[]>().via(({ get }) => get()) },
+					endpoints: { list: endpoint.response<number[]>().get("") },
 				}),
 			},
 			endpoints: {
-				ping: query.response<string>().via(({ get }) => get("ping")),
+				ping: endpoint.response<string>().get("ping"),
 			},
 		});
 
@@ -233,7 +233,7 @@ describe("executeRequest compatibility", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: query.response<{ id: number; name: string }[]>().via(({ get }) => get()),
+						getAll: endpoint.response<{ id: number; name: string }[]>().get(""),
 					},
 				}),
 			},
@@ -264,9 +264,7 @@ describe("executeRequest compatibility", () => {
 				auth: defineGroup({
 					prefix: "auth",
 					endpoints: {
-						login: mutation.variables<{ email: string; password: string }>().response<{ token: string }>().via(
-							({ post }) => post(),
-						),
+						login: endpoint.variables<{ email: string; password: string }>().response<{ token: string }>().post(""),
 					},
 				}),
 			},
@@ -282,9 +280,7 @@ describe("executeRequest compatibility", () => {
 	});
 
 	it("endpoint functions have correct arity", () => {
-		const fn = query.variables<{ id: number }>().response<string>().via(({ get }, vars) =>
-			get(":id", vars),
-		);
+		const fn = endpoint.variables<{ id: number }>().response<string>().get(":id");
 
 		expect(fn.method).toBe("get");
 		expect(fn.path).toBe(":id");
@@ -304,28 +300,18 @@ describe("complex API definitions", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: query.response<User[]>().via(({ get }) => get()),
-						getById: query.variables<{ id: string }>().response<User>().via(({ get }, vars) =>
-							get(":id", vars),
-						),
-						create: mutation.variables<{ name: string }>().response<User>().via(({ post }, vars) =>
-							post("", vars),
-						),
-						update: mutation.variables<{ id: string; name: string }>().response<User>().via(
-							({ put }, vars) => put(":id", vars),
-						),
-						remove: mutation.variables<{ id: string }>().via(({ del }, vars) =>
-							del(":id", vars),
-						),
+						getAll: endpoint.response<User[]>().get(""),
+						getById: endpoint.variables<{ id: string }>().response<User>().get(":id"),
+						create: endpoint.variables<{ name: string }>().response<User>().post(""),
+						update: endpoint.variables<{ id: string; name: string }>().response<User>().put(":id"),
+						remove: endpoint.variables<{ id: string }>().del(":id"),
 					},
 				}),
 				posts: defineGroup({
 					prefix: "posts",
 					endpoints: {
-						list: query.response<Post[]>().via(({ get }) => get()),
-						getById: query.variables<{ id: string }>().response<Post>().via(({ get }, vars) =>
-							get(":id", vars),
-						),
+						list: endpoint.response<Post[]>().get(""),
+						getById: endpoint.variables<{ id: string }>().response<Post>().get(":id"),
 					},
 				}),
 			},

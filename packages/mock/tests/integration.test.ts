@@ -4,7 +4,7 @@ import { createMockClient } from "../src/create-mock-client";
 import { defineFactory } from "../src/factory";
 import { defineScenario } from "../src/scenario";
 
-const { query, mutation } = courier();
+const { endpoint } = courier();
 
 // ---------------------------------------------------------------------------
 // Real Courier API definition (same as a user would write)
@@ -25,21 +25,17 @@ interface Post {
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get()),
-    getById: query.variables<{ id: string }>().response<User>().via((http, vars) => http.get(":id", vars)),
-    create: mutation.variables<{ name: string; role: "user" | "admin" }>().response<User>().via((http, vars) =>
-      http.post("", vars),
-    ),
+    getAll: endpoint.response<User[]>().get(""),
+    getById: endpoint.variables<{ id: string }>().response<User>().get(":id"),
+    create: endpoint.variables<{ name: string; role: "user" | "admin" }>().response<User>().post(""),
   },
 });
 
 const posts = defineGroup({
   prefix: "posts",
   endpoints: {
-    getAll: query.response<Post[]>().via((http) => http.get()),
-    getByAuthor: query.variables<{ authorId: string }>().response<Post[]>().via((http, vars) =>
-      http.get("", vars),
-    ),
+    getAll: endpoint.response<Post[]>().get(""),
+    getByAuthor: endpoint.variables<{ authorId: string }>().response<Post[]>().get(""),
   },
 });
 

@@ -7,7 +7,7 @@ import { ValidationError } from "../src/validation";
 import { executeDirectWSChannel } from "../src/transport/in-process/ws-channel";
 import { createPlaygroundWSRegistry } from "../src/transport/in-process/ws-registry";
 
-const { query, channel } = courier();
+const { endpoint, channel } = courier();
 
 const HOOKS_KEY = Symbol.for("courier.studio.hooks");
 const hooks = (globalThis as Record<symbol, unknown>)[HOOKS_KEY] as StudioHooks;
@@ -47,7 +47,7 @@ describe("executeDirectWSChannel — resolution + validation", () => {
   });
 
   it("throws when endpoint is not WS transport", async () => {
-    const httpEndpoint = query.response<string>().via((http) => http.get("/x"));
+    const httpEndpoint = endpoint.response<string>().get("/x");
     const sources = { api: { options: { groups: {} }, health: httpEndpoint } };
     await expect(
       executeDirectWSChannel(sources as any, { source: "api", method: "health" }),

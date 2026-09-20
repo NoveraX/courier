@@ -1,6 +1,6 @@
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { query } = courier()
+const { endpoint } = courier()
 
 type SlowResponse = {
   success: boolean
@@ -16,12 +16,12 @@ type ErrorResponse = {
 export const misc = defineGroup({
   prefix: "",
   endpoints: {
-    stream: query.response<ReadableStream>().via((http) => http.get("stream")),
-    slow: query.response<SlowResponse>().via((http) => http.get("slow")),
-    error: query
+    stream: endpoint.response<ReadableStream>().get("stream"),
+    slow: endpoint.response<SlowResponse>().get("slow"),
+    error: endpoint
       .variables<{ code: number }>()
       .response<ErrorResponse>()
-      .via((http) => http.get("error/:code")),
+      .get("error/:code"),
   },
 })
 

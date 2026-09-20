@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
 
-const { query, mutation } = courier();
+const { endpoint } = courier();
 
 const ItemSchema = z.object({ id: z.string(), name: z.string(), price: z.number() });
 
@@ -14,16 +14,12 @@ const api = defineApi({
     items: defineGroup({
       prefix: "/items",
       endpoints: {
-        list: query.response(z.array(ItemSchema)).via((http) => http.get("")),
-        get: query.response(ItemSchema).via((http, v) => http.get(":itemId", v)),
-        create: mutation.variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema).via((http, v) => http.post("", v)),
-        update: mutation.response(ItemSchema).via((http, v) =>
-          http.patch(":itemId", v),
-        ),
-        replace: mutation.response(ItemSchema).via((http, v) =>
-          http.put(":itemId", v),
-        ),
-        delete: mutation.via((http, v) => http.del(":itemId", v)),
+        list: endpoint.response(z.array(ItemSchema)).get(""),
+        get: endpoint.response(ItemSchema).get(":itemId"),
+        create: endpoint.variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema).post(""),
+        update: endpoint.response(ItemSchema).patch(":itemId"),
+        replace: endpoint.response(ItemSchema).put(":itemId"),
+        delete: endpoint.del(":itemId"),
       },
     }),
   },
@@ -319,12 +315,8 @@ describe("query params routing", () => {
       products: defineGroup({
         prefix: "/products",
         endpoints: {
-          list: query.response(z.array(ItemSchema)).via((http) =>
-            http.get(""),
-          ),
-          getByCategory: query.response(z.array(ItemSchema)).via((http, v) =>
-            http.get("", v),
-          ),
+          list: endpoint.response(z.array(ItemSchema)).get(""),
+          getByCategory: endpoint.response(z.array(ItemSchema)).get(""),
         },
       }),
     },

@@ -12,7 +12,7 @@ import type { HttpResponse } from "../src/http-client/types";
 import type { FlatClient, GroupClient, InferClient, MixedClient, TypedClient } from "../src/client";
 import type { EndpointKey, ResolveEndpoint } from "../src/types";
 
-const { query, mutation } = courier();
+const { endpoint } = courier();
 
 // ---- test fixtures ----
 
@@ -23,16 +23,16 @@ type CreateUserInput = { name: string; email: string };
 const usersGroup = defineGroup({
 	prefix: "users",
 	endpoints: {
-		getAll: query.response<User[]>().via(({ get }) => get()),
-		getById: query.variables<{ id: number }>().response<User>().via(({ get }, vars) => get(":id", vars)),
-		create: mutation.variables<CreateUserInput>().response<User>().via(({ post }, vars) => post("", vars)),
+		getAll: endpoint.response<User[]>().get(""),
+		getById: endpoint.variables<{ id: number }>().response<User>().get(":id"),
+		create: endpoint.variables<CreateUserInput>().response<User>().post(""),
 	},
 });
 
 const postsGroup = defineGroup({
 	prefix: "posts",
 	endpoints: {
-		list: query.response<Post[]>().via(({ get }) => get()),
+		list: endpoint.response<Post[]>().get(""),
 	},
 });
 
@@ -45,19 +45,19 @@ const api = defineApi({
 
 describe("builder type inference", () => {
 	it("infers the declared response", () => {
-		const fn = query.response<User[]>().via(({ get }) => get());
+		const fn = endpoint.response<User[]>().get("");
 		expectTypeOf<InferResponse<typeof fn>>().toEqualTypeOf<User[]>();
 		expectTypeOf<InferVariables<typeof fn>>().toEqualTypeOf<void>();
 	});
 
 	it("preserves variables type", () => {
-		const fn = query.variables<{ id: number }>().response<User>().via(({ get }, vars) => get(":id", vars));
+		const fn = endpoint.variables<{ id: number }>().response<User>().get(":id");
 		expectTypeOf<InferResponse<typeof fn>>().toEqualTypeOf<User>();
 		expectTypeOf<InferVariables<typeof fn>>().toEqualTypeOf<{ id: number }>();
 	});
 
 	it("carries no variables when none were declared", () => {
-		const fn = query.response<string>().via(({ get }) => get());
+		const fn = endpoint.response<string>().get("");
 		expectTypeOf<InferResponse<typeof fn>>().toEqualTypeOf<string>();
 		expectTypeOf<InferVariables<typeof fn>>().toEqualTypeOf<void>();
 	});
@@ -247,7 +247,7 @@ describe("structural compatibility", () => {
 	});
 
 	it("a descriptor carries what the endpoint was declared to answer", () => {
-		const fn = query.response<User>().via(({ get }) => get());
+		const fn = endpoint.response<User>().get("");
 		expectTypeOf<InferResponse<typeof fn>>().toEqualTypeOf<User>();
 		expectTypeOf(fn).toHaveProperty("method");
 		expectTypeOf(fn).toHaveProperty("path");
@@ -258,12 +258,12 @@ describe("structural compatibility", () => {
 
 describe("FlatClient type inference", () => {
 	const flatEndpoints = {
-		healthCheck: query.response<{ ok: boolean }>().via(({ get }) => get("health")),
-		getUsers: query.response<User[]>().via(({ get }) => get("users")),
-		createUser: mutation
+		healthCheck: endpoint.response<{ ok: boolean }>().get("health"),
+		getUsers: endpoint.response<User[]>().get("users"),
+		createUser: endpoint
 			.variables<CreateUserInput>()
 			.response<User>()
-			.via(({ post }, vars) => post("users", vars)),
+			.post("users"),
 	};
 
 	type FlatEndpoints = typeof flatEndpoints;
@@ -324,7 +324,7 @@ describe("FlatClient type inference", () => {
 
 describe("MixedClient type inference", () => {
 	const rootEndpoints = {
-		healthCheck: query.response<{ ok: boolean }>().via(({ get }) => get("health")),
+		healthCheck: endpoint.response<{ ok: boolean }>().get("health"),
 	};
 
 	type Groups = { users: typeof usersGroup };
@@ -387,7 +387,7 @@ describe("InferClient type mapping", () => {
 		const flatApi = defineApi({
 			baseURL: "https://api.example.com",
 			endpoints: {
-				healthCheck: query.response<{ ok: boolean }>().via(({ get }) => get("health")),
+				healthCheck: endpoint.response<{ ok: boolean }>().get("health"),
 			},
 		});
 		type Result = InferClient<typeof flatApi>;
@@ -401,7 +401,7 @@ describe("InferClient type mapping", () => {
 			baseURL: "https://api.example.com",
 			groups: { users: usersGroup },
 			endpoints: {
-				healthCheck: query.response<{ ok: boolean }>().via(({ get }) => get("health")),
+				healthCheck: endpoint.response<{ ok: boolean }>().get("health"),
 			},
 		});
 		type Result = InferClient<typeof mixedApi>;

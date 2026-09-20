@@ -7,30 +7,30 @@ Create a file with your API definition using `courier`, `defineGroup`, and `defi
 ```ts title="api/sources.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type User = { id: string; name: string; email: string }
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get()),
-    getById: query
+    getAll: endpoint.response<User[]>().get(""),
+    getById: endpoint
       .variables<{ id: string }>()
       .response<User>()
-      .via((http, vars) => http.get(":id", vars)),
-    create: mutation
+      .get(":id"),
+    create: endpoint
       .variables<{ name: string; email: string }>()
       .response<User>()
-      .via((http, vars) => http.post("", vars)),
-    update: mutation
+      .post(""),
+    update: endpoint
       .variables<{ id: string; name: string }>()
       .response<User>()
-      .via((http, vars) => http.put(":id", vars)),
-    remove: mutation
+      .put(":id"),
+    remove: endpoint
       .variables<{ id: string }>()
       .response<null>()
-      .via((http, vars) => http.del(":id", vars)),
+      .del(":id"),
   },
 })
 

@@ -57,43 +57,107 @@ export interface NeutralMethods<TSelf> {
 }
 
 /**
- * Builder for an endpoint reached over HTTP.
+ * An HTTP endpoint that has not yet said where it is.
  *
- * Slots replace a single type parameter each, so `.variables(A).response(B)`
- * and `.response(B).variables(A)` describe the same endpoint.
+ * Naming a verb says so and moves the chain to its addressed half; every other
+ * method returns another of these. Slots may therefore be named on either side
+ * of the verb — `.get(":id").response(S)` and `.response(S).get(":id")`
+ * describe the same endpoint.
  */
-export interface HttpBuilder<
-  TResponse,
-  TVariables,
-  TVariablesOut,
-  TKind extends "query" | "mutation",
-> extends NeutralMethods<HttpBuilder<TResponse, TVariables, TVariablesOut, TKind>> {
+export interface HttpBuilder<TResponse, TVariables, TVariablesOut>
+  extends NeutralMethods<HttpBuilder<TResponse, TVariables, TVariablesOut>> {
   /** What the caller receives. Pass a schema to validate, or a type argument alone. */
-  response<T>(
-    schema?: StandardSchemaV1<unknown, T>,
-  ): HttpBuilder<T, TVariables, TVariablesOut, TKind>;
+  response<T>(schema?: StandardSchemaV1<unknown, T>): HttpBuilder<T, TVariables, TVariablesOut>;
   /**
    * What the caller passes. Pass a schema to validate, or a type argument alone.
    *
    * A schema may accept less than it produces — a field it defaults, a value it
-   * coerces — so the caller satisfies its input while the closure receives its
+   * coerces — so the caller satisfies its input while the endpoint receives its
    * output.
    */
   variables<TIn, TOut = TIn>(
     schema?: StandardSchemaV1<TIn, TOut>,
-  ): HttpBuilder<TResponse, TIn, TOut, TKind>;
-  /** Accepted under the `query` head only; its argument is `never` elsewhere. */
-  cache(config: CacheArg<TKind>): HttpBuilder<TResponse, TVariables, TVariablesOut, TKind>;
+  ): HttpBuilder<TResponse, TIn, TOut>;
+
+  /** Read it. */
+  get(
+    path?: string,
+    options?: HttpEndpointOptions,
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, "query">;
+  /** Read its headers alone. */
+  head(
+    path?: string,
+    options?: HttpEndpointOptions,
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, "query">;
+  /** Create it. */
+  post(
+    path?: string,
+    options?: HttpEndpointOptions,
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, "mutation">;
+  /** Replace it. */
+  put(
+    path?: string,
+    options?: HttpEndpointOptions,
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, "mutation">;
+  /** Change part of it. */
+  patch(
+    path?: string,
+    options?: HttpEndpointOptions,
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, "mutation">;
+  /** Remove it. */
+  del(
+    path?: string,
+    options?: HttpEndpointOptions,
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, "mutation">;
+
   /**
-   * Address the endpoint and finish it.
+   * Address it with a closure, for a path or a body the variables have to be
+   * worked into.
    *
-   * The closure is probed once for its method and path and never executed for
-   * its value.
+   * The closure hides which verb it calls, so the endpoint is taken to write;
+   * `.reads()` says otherwise. It is invoked once for its method and path and
+   * never executed for its value.
    */
   via(
     probe: HttpProbe<TVariablesOut>,
     options?: HttpEndpointOptions,
-  ): HttpEndpoint<TResponse, TVariables, TKind, TVariablesOut>;
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, "mutation">;
+}
+
+/**
+ * An HTTP endpoint that has said where it is.
+ *
+ * It is a finished endpoint and a builder at once: every consumer may read it
+ * as it stands, and naming a schema or an option returns another one.
+ */
+export interface HttpAddressed<
+  TResponse,
+  TVariables,
+  TVariablesOut,
+  TKind extends "query" | "mutation",
+> extends HttpEndpoint<TResponse, TVariables, TKind, TVariablesOut>,
+    NeutralMethods<HttpAddressed<TResponse, TVariables, TVariablesOut, TKind>> {
+  response<T>(
+    schema?: StandardSchemaV1<unknown, T>,
+  ): HttpAddressed<T, TVariables, TVariablesOut, TKind>;
+  variables<TIn, TOut = TIn>(
+    schema?: StandardSchemaV1<TIn, TOut>,
+  ): HttpAddressed<TResponse, TIn, TOut, TKind>;
+  /**
+   * How long the answer keeps.
+   *
+   * Offered on a read alone: its argument is `never` once the verb writes, so
+   * caching a write fails where it was written.
+   */
+  cache(config: CacheArg<TKind>): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind>;
+  /**
+   * Declare a write-shaped call to be a read.
+   *
+   * Some APIs answer a search or a report over POST. Saying so makes the
+   * endpoint a query: it may be cached, the query hooks accept it, and the
+   * proxy will serve it over GET.
+   */
+  reads(): HttpAddressed<TResponse, TVariables, TVariablesOut, "query">;
 }
 
 /** Builder for an endpoint delivering server-sent events. */
@@ -103,10 +167,16 @@ export interface StreamBuilder<TResponse, TVariables, TVariablesOut>
   variables<TIn, TOut = TIn>(
     schema?: StandardSchemaV1<TIn, TOut>,
   ): StreamBuilder<TResponse, TIn, TOut>;
+  /** Where the stream is, when another process serves it. */
+  get(
+    path?: string,
+    options?: StreamEndpointOptions,
+  ): StreamAddressed<TResponse, TVariables, TVariablesOut>;
+  /** Address it with a closure, for a path the variables have to be worked into. */
   via(
     probe: StreamProbe<TVariablesOut>,
     options?: StreamEndpointOptions,
-  ): StreamEndpoint<TResponse, TVariables, TVariablesOut>;
+  ): StreamAddressed<TResponse, TVariables, TVariablesOut>;
   /**
    * Serve this stream from the process that defines it.
    *
@@ -138,10 +208,16 @@ export interface ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>
   send<T>(
     schema?: StandardSchemaV1<unknown, T>,
   ): ChannelBuilder<TResponse, TVariables, TVariablesOut, T>;
+  /** Where the channel is, when another process serves it. */
+  connect(
+    path?: string,
+    options?: ChannelEndpointOptions,
+  ): ChannelAddressed<TResponse, TVariables, TVariablesOut, TSend>;
+  /** Address it with a closure, for a path the variables have to be worked into. */
   via(
     probe: ChannelProbe<TVariablesOut>,
     options?: ChannelEndpointOptions,
-  ): ChannelEndpoint<TResponse, TVariables, TSend, TVariablesOut>;
+  ): ChannelAddressed<TResponse, TVariables, TVariablesOut, TSend>;
   /**
    * Serve this channel from the process that defines it.
    *
@@ -160,6 +236,31 @@ export interface ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>
   ): ChannelEndpoint<TResponse, TVariables, TSend, TVariablesOut>;
 }
 
+/** A stream that has said where it is, and may still be refined. */
+export interface StreamAddressed<TResponse, TVariables, TVariablesOut>
+  extends StreamEndpoint<TResponse, TVariables, TVariablesOut>,
+    NeutralMethods<StreamAddressed<TResponse, TVariables, TVariablesOut>> {
+  response<T>(schema?: StandardSchemaV1<unknown, T>): StreamAddressed<T, TVariables, TVariablesOut>;
+  variables<TIn, TOut = TIn>(
+    schema?: StandardSchemaV1<TIn, TOut>,
+  ): StreamAddressed<TResponse, TIn, TOut>;
+}
+
+/** A channel that has said where it is, and may still be refined. */
+export interface ChannelAddressed<TResponse, TVariables, TVariablesOut, TSend>
+  extends ChannelEndpoint<TResponse, TVariables, TSend, TVariablesOut>,
+    NeutralMethods<ChannelAddressed<TResponse, TVariables, TVariablesOut, TSend>> {
+  response<T>(
+    schema?: StandardSchemaV1<unknown, T>,
+  ): ChannelAddressed<T, TVariables, TVariablesOut, TSend>;
+  variables<TIn, TOut = TIn>(
+    schema?: StandardSchemaV1<TIn, TOut>,
+  ): ChannelAddressed<TResponse, TIn, TOut, TSend>;
+  send<T>(
+    schema?: StandardSchemaV1<unknown, T>,
+  ): ChannelAddressed<TResponse, TVariables, TVariablesOut, T>;
+}
+
 /** Configuration shared by every endpoint built from a base. */
 export interface CourierConfig {
   /** Identifier used by tooling to attribute endpoints to their source. */
@@ -174,17 +275,16 @@ export interface CourierConfig {
 /**
  * The four builder heads plus the means to derive a narrower base.
  *
- * The head declares an endpoint's semantics in the leftmost position, which is
- * what decides the verbs the proxy will serve it over.
+ * An HTTP endpoint is finished by its verb, which is what says whether it reads
+ * or writes; a stream and a channel are their own kinds, because their
+ * transport is what sets them apart rather than a verb.
  */
 export interface Courier {
   /**
-   * A read. It is the only kind the proxy will serve over GET, which is what
-   * makes it cacheable — a call asks for that verb with `method: "GET"`.
+   * An endpoint reached over HTTP. The verb that finishes the chain decides
+   * whether it reads or writes.
    */
-  readonly query: HttpBuilder<void, void, void, "query">;
-  /** A write. The proxy serves it over POST alone, and refuses a GET. */
-  readonly mutation: HttpBuilder<void, void, void, "mutation">;
+  readonly endpoint: HttpBuilder<void, void, void>;
   /** A one-way stream of server-sent events. */
   readonly stream: StreamBuilder<void, void, void>;
   /** A socket the caller can also send on. */

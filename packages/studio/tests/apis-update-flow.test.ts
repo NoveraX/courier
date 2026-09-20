@@ -10,8 +10,8 @@ const GROUP_CONTENT = `import { courier, defineGroup } from "@noverax/courier/de
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get("")),
-    getById: query.variables<{ id: string }>().response<User>().via((http, vars) => http.get(":id", vars)),
+    getAll: endpoint.response<User[]>().get(""),
+    getById: endpoint.variables<{ id: string }>().response<User>().get(":id"),
   },
 });
 `
@@ -21,7 +21,7 @@ const INDEX_CONTENT = `export { users } from "./users";
 
 function makeFingerprints(content: string): Record<string, string> {
   const result: Record<string, string> = {}
-  const re = /^\s{4}(\w+):\s*(?:\w+\.)?(?:query|mutation|stream|channel)\b/gm
+  const re = /^\s{4}(\w+):\s*(?:\w+\.)?(?:endpoint|stream|channel)\b/gm
   let match: RegExpExecArray | null = re.exec(content)
   while (match) {
     const name = match[1]!
@@ -34,7 +34,7 @@ function makeFingerprints(content: string): Record<string, string> {
 function getEndpointLine(content: string, name: string): string {
   const lines = content.split("\n")
   for (const line of lines) {
-    if (line.match(new RegExp(`^\\s+${name}:\\s*(?:\\w+\\.)?(?:query|mutation|stream|channel)\\b`)))
+    if (line.match(new RegExp(`^\\s+${name}:\\s*(?:\\w+\\.)?(?:endpoint|stream|channel)\\b`)))
       return line
   }
   throw new Error(`Endpoint "${name}" not found in test fixture`)
@@ -73,31 +73,26 @@ describe("previewUpdate", () => {
   })
 
   it("preserves user modifications in group files", () => {
-    const userModified = GROUP_CONTENT.replace(
-      'http.get("")',
-      'http.get("", { headers: { "X-Custom": "true" } })',
-    )
+    const userModified = GROUP_CONTENT.replace('.get("")', '.get("archive")')
     const fingerprints = makeFingerprints(GROUP_CONTENT)
     const newGenerated = GROUP_CONTENT.replace(
-      "getAll: query.response<User[]>().via(((",
-      "getAll: query.response(z.array(UserSchema)).via(((",
+      "endpoint.response<User[]>()",
+      "endpoint.response(z.array(UserSchema))",
     )
-    const generated: GeneratedFile[] = [
-      { path: "src/api/test/users.ts", content: newGenerated },
-    ]
+    const generated: GeneratedFile[] = [{ path: "src/api/test/users.ts", content: newGenerated }]
     const existing = { "src/api/test/users.ts": userModified }
 
     const result = previewUpdate(fingerprints, generated, existing)
 
     expect(result.files[0]!.status).toBe("merged")
-    expect(result.files[0]!.content).toContain("X-Custom")
+    expect(result.files[0]!.content).toContain('.get("archive")')
   })
 
   it("adds new endpoints from updated spec", () => {
     const fingerprints = makeFingerprints(GROUP_CONTENT)
     const newGenerated = GROUP_CONTENT.replace(
       "  },\n});",
-      '    create: mutation.variables<CreateVars>().response<User>().via((http, vars) => http.post("", vars)),\n  },\n});',
+      '    create: endpoint.variables<CreateVars>().response<User>().via((http, vars) => http.post("", vars)),\n  },\n});',
     )
     const generated: GeneratedFile[] = [
       { path: "src/api/test/users.ts", content: newGenerated },
@@ -153,7 +148,7 @@ describe("previewUpdate", () => {
   it("preserves user-added endpoints not in new spec", () => {
     const existingWithCustom = GROUP_CONTENT.replace(
       "  },\n});",
-      '    myCustom: mutation.via((http) => http.post("custom")),\n  },\n});',
+      '    myCustom: endpoint.post("custom"),\n  },\n});',
     )
     const fingerprints = makeFingerprints(GROUP_CONTENT)
     /* Generated has only getAll, getById — no myCustom */
@@ -165,7 +160,7 @@ describe("previewUpdate", () => {
     const result = previewUpdate(fingerprints, generated, existing)
 
     expect(result.files[0]!.content).toContain("myCustom")
-    expect(result.files[0]!.content).toContain('http.post("custom")')
+    expect(result.files[0]!.content).toContain('endpoint.post("custom")')
   })
 
   it("handles multiple files with mixed statuses", () => {

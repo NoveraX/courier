@@ -7,7 +7,7 @@ import type { StudioHooks } from "../src/studio/hooks";
 import { ValidationError } from "../src/validation";
 import { executeDirectSSE } from "../src/transport/in-process/sse";
 
-const { query, stream } = courier();
+const { endpoint, stream } = courier();
 
 const HOOKS_KEY = Symbol.for("courier.studio.hooks");
 const hooks = (globalThis as Record<symbol, unknown>)[HOOKS_KEY] as StudioHooks;
@@ -65,7 +65,7 @@ describe("executeDirectSSE — resolution", () => {
   });
 
   it("throws when endpoint is not SSE transport", async () => {
-    const httpEndpoint = query.response<string>().via((http) => http.get("/x"));
+    const httpEndpoint = endpoint.response<string>().get("/x");
     const sources = { api: { options: { groups: {} }, health: httpEndpoint } };
     await expect(
       executeDirectSSE(sources as any, { source: "api", method: "health" }),

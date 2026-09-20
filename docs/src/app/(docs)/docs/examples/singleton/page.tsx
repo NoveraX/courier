@@ -28,25 +28,21 @@ export const api = defineApi({
 const methodTypeCode = `// How the builder chain drives the type system
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
     // .variables() and .response() carry the types forward
-    getAll: query.response<UserListResponse>().via((http) => http.get()),
+    getAll: endpoint.response<UserListResponse>().get(""),
 
-    getById: query.variables<{ id: number }>().response<User>().via((http) => http.get(":id")),
+    getById: endpoint.variables<{ id: number }>().response<User>().get(":id"),
 
-    create: mutation.variables<CreateUserInput>().response<User>().via((http) => http.post()),
+    create: endpoint.variables<CreateUserInput>().response<User>().post(""),
 
-    update: mutation.variables<{ id: number } & Partial<CreateUserInput>>().response<User>().via(
-      (http) => http.put(":id")
-    ),
+    update: endpoint.variables<{ id: number } & Partial<CreateUserInput>>().response<User>().put(":id"),
 
-    delete: mutation.variables<{ id: number }>().response<{ success: boolean }>().via(
-      (http) => http.del(":id")
-    ),
+    delete: endpoint.variables<{ id: number }>().response<{ success: boolean }>().del(":id"),
   },
 })
 

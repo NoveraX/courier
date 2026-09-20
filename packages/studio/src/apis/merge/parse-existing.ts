@@ -14,7 +14,7 @@ const GROUP_RE = /^export\s+const\s+(\w+)\s*=\s*defineGroup\(\{/;
 const SOURCE_RE = /^export\s+const\s+\w+\s*=\s*define(?:Group|Api)\(\{/;
 const PREFIX_RE = /prefix:\s*["']([^"']*)["']/;
 /** Head a generated endpoint starts with, optionally qualified by its base. */
-const ENDPOINT_RE = /^\s{4}(\w+):\s*(?:\w+\.)?(?:query|mutation|stream|channel)\b/;
+const ENDPOINT_RE = /^\s{4}(\w+):\s*(?:\w+\.)?(?:endpoint|stream|channel)\b/;
 const JSDOC_RE = /^\s{4}\/\*\*/;
 
 export function parseExistingGroup(content: string): ExistingGroupInfo {

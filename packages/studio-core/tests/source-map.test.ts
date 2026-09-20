@@ -3,7 +3,7 @@ import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { z } from "zod";
 import { extractSourceMap } from "../src/source-map";
 
-const { query, mutation } = courier();
+const { endpoint } = courier();
 
 describe("extractSourceMap", () => {
   it("extracts source map from sources", () => {
@@ -13,10 +13,8 @@ describe("extractSourceMap", () => {
         users: defineGroup({
           prefix: "users",
           endpoints: {
-            getAll: query.response<{ id: number }[]>().via((http) => http.get()),
-            getById: query.variables<{ id: number }>().response<{ id: number }>().via((http, vars) =>
-              http.get(":id", vars),
-            ),
+            getAll: endpoint.response<{ id: number }[]>().get(""),
+            getById: endpoint.variables<{ id: number }>().response<{ id: number }>().get(":id"),
           },
         }),
       },
@@ -61,12 +59,8 @@ describe("extractSourceMap", () => {
         users: defineGroup({
           prefix: "users",
           endpoints: {
-            getAll: query.response(z.array(UserSchema)).via((http) =>
-              http.get(),
-            ),
-            create: mutation.variables(CreateSchema).response(UserSchema).via(
-              (http, vars) => http.post("", vars),
-            ),
+            getAll: endpoint.response(z.array(UserSchema)).get(""),
+            create: endpoint.variables(CreateSchema).response(UserSchema).post(""),
           },
         }),
       },
@@ -98,7 +92,7 @@ describe("extractSourceMap", () => {
         users: defineGroup({
           prefix: "users",
           endpoints: {
-            getAll: query.response<unknown[]>().via((http) => http.get()),
+            getAll: endpoint.response<unknown[]>().get(""),
           },
         }),
       },
@@ -110,7 +104,7 @@ describe("extractSourceMap", () => {
         posts: defineGroup({
           prefix: "posts",
           endpoints: {
-            list: query.response<unknown[]>().via((http) => http.get()),
+            list: endpoint.response<unknown[]>().get(""),
           },
         }),
       },
@@ -133,8 +127,8 @@ describe("extractSourceMap", () => {
     const api = defineApi({
       baseURL: "https://flat.api",
       endpoints: {
-        healthCheck: query.response<{ ok: boolean }>().via((http) => http.get("health")),
-        search: query.variables<{ q: string }>().response<string[]>().via((http, vars) => http.get("search", vars)),
+        healthCheck: endpoint.response<{ ok: boolean }>().get("health"),
+        search: endpoint.variables<{ q: string }>().response<string[]>().get("search"),
       },
     });
 
@@ -161,7 +155,7 @@ describe("extractSourceMap", () => {
       groups: {
         users: defineGroup({
           prefix: "users",
-          endpoints: { list: query.response<unknown[]>().via((http) => http.get()) },
+          endpoints: { list: endpoint.response<unknown[]>().get("") },
         }),
       },
     });
@@ -170,7 +164,7 @@ describe("extractSourceMap", () => {
       groups: {
         posts: defineGroup({
           prefix: "posts",
-          endpoints: { list: query.response<unknown[]>().via((http) => http.get()) },
+          endpoints: { list: endpoint.response<unknown[]>().get("") },
         }),
       },
     });
@@ -187,7 +181,7 @@ describe("extractSourceMap", () => {
       groups: {
         users: defineGroup({
           prefix: "users",
-          endpoints: { list: query.response<unknown[]>().via((http) => http.get()) },
+          endpoints: { list: endpoint.response<unknown[]>().get("") },
         }),
       },
     });
@@ -204,12 +198,12 @@ describe("extractSourceMap", () => {
         users: defineGroup({
           prefix: "users",
           endpoints: {
-            getAll: query.response<unknown[]>().via((http) => http.get()),
+            getAll: endpoint.response<unknown[]>().get(""),
           },
         }),
       },
       endpoints: {
-        healthCheck: query.response<boolean>().via((http) => http.get("health")),
+        healthCheck: endpoint.response<boolean>().get("health"),
       },
     });
 

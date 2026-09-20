@@ -30,11 +30,11 @@ const userSchema = createSchema<{ id: string; name: string; email: string }>((va
   return issues.length ? { issues } : { value: value as { id: string; name: string; email: string } };
 });
 
-const { query } = courier();
+const { endpoint } = courier();
 
 describe("getEndpointSchema", () => {
   it("reads the schema an endpoint carries", () => {
-    const fn = query.response(userSchema).via((http) => http.get(""));
+    const fn = endpoint.response(userSchema).get("");
 
     const schema = getEndpointSchema(fn);
     expect(schema).toBeDefined();
@@ -83,9 +83,9 @@ describe("validateSource", () => {
     const users = defineGroup({
       prefix: "users",
       endpoints: {
-        getAll: query.response(userSchema).via((http) => http.get("")),
+        getAll: endpoint.response(userSchema).get(""),
         // No response schema — must be skipped, not silently passed
-        create: query.via((http) => http.post("")),
+        create: endpoint.post(""),
       },
     });
 
@@ -174,8 +174,8 @@ describe("validateSource reports every endpoint", () => {
     const users = defineGroup({
       prefix: "users",
       endpoints: {
-        withSchema: query.response(userSchema).via((http) => http.get("")),
-        noSchema: query.via((http) => http.get("bare")),
+        withSchema: endpoint.response(userSchema).get(""),
+        noSchema: endpoint.get("bare"),
       },
     });
 
@@ -190,7 +190,7 @@ describe("validateSource reports every endpoint", () => {
     const source = {
       users: {
         options: {},
-        getAll: query.response(userSchema).via((http) => http.get("")),
+        getAll: endpoint.response(userSchema).get(""),
         helper: () => "not an endpoint",
       },
     };

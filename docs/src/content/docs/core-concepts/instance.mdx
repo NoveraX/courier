@@ -11,7 +11,7 @@ Every endpoint passes `.via()` a closure that receives an `http` object with six
 ```ts title="api/users.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type User = { id: string; name: string; email: string }
 type CreateUserVars = { name: string; email: string }
@@ -21,34 +21,22 @@ export const users = defineGroup({
   prefix: "users",
   endpoints: {
     // GET /users — variables become search params
-    getAll: query.variables<{ page?: number; limit?: number }>().response<User[]>().via(
-      (http) => http.get()
-    ),
+    getAll: endpoint.variables<{ page?: number; limit?: number }>().response<User[]>().get(""),
 
     // GET /users/:id — :id is extracted from variables
-    getById: query.variables<{ id: string }>().response<User>().via(
-      (http, vars) => http.get(":id", vars)
-    ),
+    getById: endpoint.variables<{ id: string }>().response<User>().get(":id"),
 
     // POST /users — variables become JSON body
-    create: mutation.variables<CreateUserVars>().response<User>().via(
-      (http, vars) => http.post("", vars)
-    ),
+    create: endpoint.variables<CreateUserVars>().response<User>().post(""),
 
     // PUT /users/:id — :id extracted, rest becomes JSON body
-    update: mutation.variables<UpdateUserVars>().response<User>().via(
-      (http, vars) => http.put(":id", vars)
-    ),
+    update: endpoint.variables<UpdateUserVars>().response<User>().put(":id"),
 
     // PATCH /users/:id — partial update
-    patch: mutation.variables<{ id: string; email: string }>().response<User>().via(
-      (http, vars) => http.patch(":id", vars)
-    ),
+    patch: endpoint.variables<{ id: string; email: string }>().response<User>().patch(":id"),
 
     // DELETE /users/:id
-    remove: mutation.variables<{ id: string }>().response<null>().via(
-      (http, vars) => http.del(":id", vars)
-    ),
+    remove: endpoint.variables<{ id: string }>().response<null>().del(":id"),
   },
 })
 ```
@@ -85,7 +73,7 @@ Use the `:param` syntax in URLs to define path parameters. Courier extracts matc
 ```ts title="api/comments.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type Comment = { id: string; body: string; author: string }
 
@@ -93,14 +81,10 @@ export const comments = defineGroup({
   prefix: "posts",
   endpoints: {
     // Multiple path params: /posts/:postId/comments/:commentId
-    getOne: query.variables<{ postId: string; commentId: string }>().response<Comment>().via(
-      (http, vars) => http.get(":postId/comments/:commentId", vars)
-    ),
+    getOne: endpoint.variables<{ postId: string; commentId: string }>().response<Comment>().get(":postId/comments/:commentId"),
 
     // Path params + body: :postId is extracted, rest becomes body
-    create: mutation.variables<{ postId: string; body: string }>().response<Comment>().via(
-      (http, vars) => http.post(":postId/comments", vars)
-    ),
+    create: endpoint.variables<{ postId: string; body: string }>().response<Comment>().post(":postId/comments"),
   },
 })
 

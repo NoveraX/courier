@@ -32,22 +32,22 @@ Create your groups and API definition using `courier`, `defineGroup`, and `defin
 ```ts title="api/users.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type User = { id: number; name: string; email: string }
 
 export const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get()),
-    getById: query
+    getAll: endpoint.response<User[]>().get(""),
+    getById: endpoint
       .variables<{ id: number }>()
       .response<User>()
-      .via((http, vars) => http.get(":id", vars)),
-    create: mutation
+      .get(":id"),
+    create: endpoint
       .variables<{ name: string; email: string }>()
       .response<User>()
-      .via((http, vars) => http.post("", vars)),
+      .post(""),
   },
 })
 ```

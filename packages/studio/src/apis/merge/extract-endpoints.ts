@@ -5,13 +5,13 @@
  */
 
 /** Head a generated endpoint starts with, optionally qualified by its base. */
-const ENDPOINT_START = /^\s{4}(\w+):\s*(?:\w+\.)?(?:query|mutation|stream|channel)\b/;
+const ENDPOINT_START = /^\s{4}(\w+):\s*(?:\w+\.)?(?:endpoint|stream|channel)\b/;
 
 /**
  * Extract endpoint code blocks from a group file.
  *
  * Looks for patterns like:
- *   endpointName: query.response(Schema).via((http) => http.get(""))
+ *   endpointName: endpoint.response(Schema).get("")
  *
  * @returns Map of endpointName → full code block (including the name).
  */

@@ -8,7 +8,7 @@ import { defineGroup } from "../src/define/group";
 /** The caller may omit `limit`; the closure always sees one. */
 const SearchQuery = z.object({ q: z.string(), limit: z.number().default(20) });
 
-const { query } = courier();
+const { endpoint } = courier();
 let seen: unknown;
 
 const api = defineApi({
@@ -18,10 +18,10 @@ const api = defineApi({
     search: defineGroup({
       prefix: "/search",
       endpoints: {
-        run: query.variables(SearchQuery).via((http, vars) => {
+        run: endpoint.variables(SearchQuery).via((http, vars) => {
           seen = vars;
           return http.get("", vars);
-        }),
+        }).reads(),
       },
     }),
   },

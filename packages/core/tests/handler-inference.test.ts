@@ -80,12 +80,12 @@ describe("handler inference", () => {
 });
 
 describe("per-call options in a wire closure", () => {
-  const { query, stream } = courier();
+  const { endpoint, stream } = courier();
 
   it("accepts the options the client carries out at request time", () => {
-    const download = query
+    const download = endpoint
       .variables<{ id: string }>()
-      .via((http) => http.get(":id/download", vars(), { timeout: 30_000 }));
+      .via((http) => http.get(":id/download", vars(), { timeout: 30_000 })).reads();
 
     expect(download.method).toBe("get");
     expect(download.path).toBe(":id/download");
@@ -98,7 +98,7 @@ describe("per-call options in a wire closure", () => {
   });
 
   it("gives head its options in the second position, having no body", () => {
-    const ping = query.via((http) => http.head("ping", { timeout: 100 }));
+    const ping = endpoint.via((http) => http.head("ping", { timeout: 100 })).reads();
 
     expect(ping.method).toBe("head");
   });

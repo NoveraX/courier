@@ -42,7 +42,7 @@ Create a shared API definition used by all callers. This file can be imported on
 ```ts title="lib/sources.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type User = { id: number; name: string; email: string }
 type UserList = { data: User[]; total: number }
@@ -50,21 +50,11 @@ type UserList = { data: User[]; total: number }
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.variables<{ page?: number; limit?: number }>().response<UserList>().via(
-      ({ get }) => get()
-    ),
-    getById: query.variables<{ id: number }>().response<User>().via(
-      ({ get }) => get(":id")
-    ),
-    create: mutation.variables<{ name: string; email: string }>().response<User>().via(
-      ({ post }) => post()
-    ),
-    update: mutation.variables<{ id: number; name: string; email: string }>().response<User>().via(
-      ({ put }) => put(":id")
-    ),
-    remove: mutation.variables<{ id: number }>().response<null>().via(
-      ({ del }) => del(":id")
-    ),
+    getAll: endpoint.variables<{ page?: number; limit?: number }>().response<UserList>().get(""),
+    getById: endpoint.variables<{ id: number }>().response<User>().get(":id"),
+    create: endpoint.variables<{ name: string; email: string }>().response<User>().post(""),
+    update: endpoint.variables<{ id: number; name: string; email: string }>().response<User>().put(":id"),
+    remove: endpoint.variables<{ id: number }>().response<null>().del(":id"),
   },
 })
 
@@ -263,7 +253,7 @@ app/
   dashboard/page.tsx      # server component with createCaller
 lib/
   sources.ts              # defineApi + defineGroup + endpoint
-  query.ts                # createProxyQueryCaller<typeof api>("myApi")
+  endpoint.ts                # createProxyQueryCaller<typeof api>("myApi")
   server-caller.ts        # createCaller(api)
   actions.ts              # createAction(sources, "myApi")
 ```

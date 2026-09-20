@@ -55,15 +55,15 @@ All share the same types and autocomplete:
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get()),
-    getById: query
+    getAll: endpoint.response<User[]>().get(""),
+    getById: endpoint
       .variables<{ id: string }>()
       .response<User>()
-      .via((http, vars) => http.get(":id", vars)),
-    create: mutation
+      .get(":id"),
+    create: endpoint
       .variables<CreateUserVars>()
       .response<User>()
-      .via((http, vars) => http.post("", vars)),
+      .post(""),
   },
 })
 

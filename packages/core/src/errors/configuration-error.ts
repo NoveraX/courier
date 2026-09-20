@@ -44,7 +44,8 @@ export type ConfigurationErrorCode =
    * second call is a mistake rather than a refinement and is reported at the
    * definition site instead of silently discarding one of the two values.
    */
-  | "SLOT_ALREADY_SET";
+  | "SLOT_ALREADY_SET"
+  | "CACHE_ON_WRITE";
 
 /**
  * Thrown when courier is misconfigured at the boundary between user code and

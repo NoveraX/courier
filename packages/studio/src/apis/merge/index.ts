@@ -6,7 +6,6 @@ export { mergeImports } from "./merge-imports";
 export { parseExistingGroup } from "./parse-existing";
 export { diffSpecs } from "./spec-diff";
 export { createSpecDigest } from "./spec-digest";
-export { splitEndpoint } from "./split-endpoint";
 export type {
   BreakingChange,
   BreakingSeverity,

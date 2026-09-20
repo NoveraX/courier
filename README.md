@@ -104,30 +104,30 @@ This is shared across all frameworks. Define once — use everywhere.
 // api/sources.ts
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type User = { id: string; name: string; email: string }
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get()),
-    getById: query
+    getAll: endpoint.response<User[]>().get(""),
+    getById: endpoint
       .variables<{ id: string }>()
       .response<User>()
-      .via((http, vars) => http.get(":id", vars)),
-    create: mutation
+      .get(":id"),
+    create: endpoint
       .variables<{ name: string; email: string }>()
       .response<User>()
-      .via((http, vars) => http.post("", vars)),
-    update: mutation
+      .post(""),
+    update: endpoint
       .variables<{ id: string; name: string }>()
       .response<User>()
-      .via((http, vars) => http.put(":id", vars)),
-    remove: mutation
+      .put(":id"),
+    remove: endpoint
       .variables<{ id: string }>()
       .response<null>()
-      .via((http, vars) => http.del(":id", vars)),
+      .del(":id"),
   },
 })
 
@@ -566,7 +566,7 @@ Works with any [Standard Schema](https://github.com/standard-schema/standard-sch
 import { courier } from "@noverax/courier/define"
 import { z } from "zod"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 const UserSchema = z.object({ id: z.string(), name: z.string(), email: z.email() })
 const CreateUserSchema = z.object({ name: z.string().min(1), email: z.email() })
@@ -574,10 +574,8 @@ const CreateUserSchema = z.object({ name: z.string().min(1), email: z.email() })
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.response(z.array(UserSchema)).via((http) => http.get()),
-    create: mutation.variables(CreateUserSchema).response(UserSchema).via((http, vars) =>
-      http.post("", vars)
-    ),
+    getAll: endpoint.response(z.array(UserSchema)).get(""),
+    create: endpoint.variables(CreateUserSchema).response(UserSchema).post(""),
   },
 })
 ```

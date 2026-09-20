@@ -5,7 +5,7 @@ import { tracked } from "../src/realtime/types";
 import type { SchemaMetadata } from "../src/validation";
 import { ENDPOINT_SCHEMA } from "../src/validation";
 
-const { query, stream, channel } = courier();
+const { endpoint, channel, stream } = courier();
 
 /** Helper to read metadata from an endpoint function */
 function getMeta(ep: unknown): SchemaMetadata | undefined {
@@ -87,7 +87,7 @@ describe("endpoint with transport", () => {
   });
 
   it("HTTP endpoints still work without transport field", () => {
-    const ep = query.response<string[]>().via((http) => http.get());
+    const ep = endpoint.response<string[]>().get("");
     const meta = getMeta(ep);
 
     expect(meta).toBeDefined();
@@ -96,7 +96,7 @@ describe("endpoint with transport", () => {
   });
 
   it("records the declared kind even when no schema was given", () => {
-    const ep = query.response<string>().via((http) => http.get());
+    const ep = endpoint.response<string>().get("");
     const meta = getMeta(ep);
 
     expect(meta!.type).toBe("query");

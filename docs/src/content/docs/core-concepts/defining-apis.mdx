@@ -17,30 +17,30 @@ Groups related endpoints under a URL prefix:
 ```ts title="api/users.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type User = { id: string; name: string; email: string }
 
 export const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get()),
-    getById: query
+    getAll: endpoint.response<User[]>().get(""),
+    getById: endpoint
       .variables<{ id: string }>()
       .response<User>()
-      .via((http, vars) => http.get(":id", vars)),
-    create: mutation
+      .get(":id"),
+    create: endpoint
       .variables<{ name: string; email: string }>()
       .response<User>()
-      .via((http, vars) => http.post("", vars)),
-    update: mutation
+      .post(""),
+    update: endpoint
       .variables<{ id: string; name: string }>()
       .response<User>()
-      .via((http, vars) => http.put(":id", vars)),
-    remove: mutation
+      .put(":id"),
+    remove: endpoint
       .variables<{ id: string }>()
       .response<null>()
-      .via((http, vars) => http.del(":id", vars)),
+      .del(":id"),
   },
 })
 ```
@@ -57,16 +57,16 @@ export const users = defineGroup({
 From a head you chain the steps that shape the endpoint, and close with `.via()`:
 
 ```ts
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 // Explicit types — for an API that publishes no usable schema
-query.variables<{ id: string }>().response<User>().via((http, vars) => http.get(":id", vars))
+endpoint.variables<{ id: string }>().response<User>().get(":id")
 
 // Response only — the caller passes nothing
-query.response<User[]>().via((http) => http.get())
+endpoint.response<User[]>().get("")
 
 // With schema — types inferred from Zod/Valibot/ArkType, and validated at runtime
-mutation.variables(CreateUserSchema).response(UserSchema).via((http, vars) => http.post("", vars))
+endpoint.variables(CreateUserSchema).response(UserSchema).post("")
 ```
 
 `.via()` receives `http` — an object with typed HTTP methods (`get`, `post`, `put`, `patch`, `del`, `head`) — and optionally `vars` (the variables).
@@ -75,11 +75,11 @@ A base can carry what a whole vendor surface shares, so no endpoint repeats it:
 
 ```ts
 const vendor = courier({ timeout: 10_000, middleware: [bearer] })
-const { query, mutation } = vendor
+const { endpoint } = vendor
 
 // Both inherit the timeout and the middleware
-query.response<User[]>().via((http) => http.get())
-mutation.response<User>().via((http, vars) => http.post("", vars))
+endpoint.response<User[]>().get("")
+endpoint.response<User>().post("")
 ```
 
 ### HTTP Methods
@@ -98,9 +98,7 @@ http.del(":id", vars)         // DELETE /users/5
 The `:param` syntax extracts values from variables automatically:
 
 ```ts
-query.variables<{ id: string; postId: string }>().response<UserPost>().via(
-  (http) => http.get(":id/posts/:postId")
-)
+endpoint.variables<{ id: string; postId: string }>().response<UserPost>().get(":id/posts/:postId")
 
 // caller.users.getUserPost({ id: "1", postId: "42" })
 // → GET /users/1/posts/42

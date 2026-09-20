@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
 
-const { query, mutation } = courier();
+const { endpoint } = courier();
 
 const ItemSchema = z.object({ id: z.string(), name: z.string(), price: z.number() });
 
@@ -14,11 +14,11 @@ const api = defineApi({
     items: defineGroup({
       prefix: "/items",
       endpoints: {
-        list: query.response(z.array(ItemSchema)).via((http) => http.get("")),
-        get: query.response(ItemSchema).via((http, v) => http.get(":id", v)),
-        create: mutation.variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema).via((http, v) => http.post("", v)),
-        delete: mutation.via((http, v) => http.del(":id", v)),
-        deleteAll: mutation.via((http) => http.del("")),
+        list: endpoint.response(z.array(ItemSchema)).get(""),
+        get: endpoint.response(ItemSchema).get(":id"),
+        create: endpoint.variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema).post(""),
+        delete: endpoint.del(":id"),
+        deleteAll: endpoint.del(""),
       },
     }),
   },
@@ -400,15 +400,9 @@ describe("top-level endpoints (no group)", () => {
   const flatApi = defineApi({
     baseURL: "https://test.api",
     endpoints: {
-      listUsers: query.response(z.array(UserSchema)).via((http) =>
-        http.get("users"),
-      ),
-      getUser: query.response(UserSchema).via((http, v) =>
-        http.get("users/:id", v),
-      ),
-      healthCheck: query.response(z.object({ ok: z.boolean() })).via((http) =>
-        http.get("health"),
-      ),
+      listUsers: endpoint.response(z.array(UserSchema)).get("users"),
+      getUser: endpoint.response(UserSchema).get("users/:id"),
+      healthCheck: endpoint.response(z.object({ ok: z.boolean() })).get("health"),
     },
   });
 
@@ -451,19 +445,13 @@ describe("mixed groups + top-level endpoints", () => {
       products: defineGroup({
         prefix: "/products",
         endpoints: {
-          list: query.response(z.array(ItemSchema)).via((http) =>
-            http.get(""),
-          ),
+          list: endpoint.response(z.array(ItemSchema)).get(""),
         },
       }),
     },
     endpoints: {
-      healthCheck: query.response(z.object({ status: z.string() })).via(
-        (http) => http.get("health"),
-      ),
-      listTags: query.response(z.array(z.object({ id: z.string(), label: z.string() }))).via(
-        (http) => http.get("tags"),
-      ),
+      healthCheck: endpoint.response(z.object({ status: z.string() })).get("health"),
+      listTags: endpoint.response(z.array(z.object({ id: z.string(), label: z.string() }))).get("tags"),
     },
   });
 

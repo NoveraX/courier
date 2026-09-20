@@ -47,14 +47,14 @@ describe("options an endpoint carries", () => {
       return next();
     });
 
-    const { query } = courier({ middleware: [stamp] });
+    const { endpoint } = courier({ middleware: [stamp] });
     const api = defineApi({
       name: "api",
       baseURL: "https://api.example.com",
       groups: {
         users: defineGroup({
           prefix: "/users",
-          endpoints: { getAll: query.response(z.array(UserSchema)).via((http) => http.get("")) },
+          endpoints: { getAll: endpoint.response(z.array(UserSchema)).get("") },
         }),
       },
     });
@@ -73,7 +73,7 @@ describe("options an endpoint carries", () => {
       return next();
     });
 
-    const { query } = courier();
+    const { endpoint } = courier();
     const api = defineApi({
       name: "api",
       baseURL: "https://api.example.com",
@@ -81,8 +81,8 @@ describe("options an endpoint carries", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            getAll: query.use(stamp).response(z.array(UserSchema)).via((http) => http.get("")),
-            other: query.response(z.array(UserSchema)).via((http) => http.get("other")),
+            getAll: endpoint.use(stamp).response(z.array(UserSchema)).get(""),
+            other: endpoint.response(z.array(UserSchema)).get("other"),
           },
         }),
       },
@@ -98,7 +98,7 @@ describe("options an endpoint carries", () => {
   });
 
   it("applies a timeout declared on the endpoint", async () => {
-    const { query } = courier();
+    const { endpoint } = courier();
     const api = defineApi({
       name: "api",
       baseURL: "https://api.example.com",
@@ -106,10 +106,10 @@ describe("options an endpoint carries", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            slow: query
+            slow: endpoint
               .timeout(1234)
               .response(z.array(UserSchema))
-              .via((http) => http.get("slow")),
+              .get("slow"),
           },
         }),
       },
@@ -136,7 +136,7 @@ describe("policies an endpoint declares", () => {
       .mockResolvedValueOnce(jsonResponse({ error: "busy" }, 503))
       .mockResolvedValueOnce(jsonResponse({ id: "1" }));
 
-    const { query } = courier();
+    const { endpoint } = courier();
     const api = defineApi({
       name: "api",
       baseURL: "https://api.example.com",
@@ -144,10 +144,10 @@ describe("policies an endpoint declares", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            flaky: query
+            flaky: endpoint
               .retry({ attempts: 3, backoff: "fixed", on: [503] })
               .response(UserSchema)
-              .via((http) => http.get("flaky")),
+              .get("flaky"),
           },
         }),
       },
@@ -160,7 +160,7 @@ describe("policies an endpoint declares", () => {
   it("does not retry a status the endpoint did not name", async () => {
     fetchSpy.mockResolvedValue(jsonResponse({ error: "gone" }, 500));
 
-    const { query } = courier();
+    const { endpoint } = courier();
     const api = defineApi({
       name: "api",
       baseURL: "https://api.example.com",
@@ -168,10 +168,10 @@ describe("policies an endpoint declares", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            flaky: query
+            flaky: endpoint
               .retry({ attempts: 3, backoff: "fixed", on: [503] })
               .response(UserSchema)
-              .via((http) => http.get("flaky")),
+              .get("flaky"),
           },
         }),
       },
@@ -184,7 +184,7 @@ describe("policies an endpoint declares", () => {
   it("forwards a header the endpoint allows but the source does not", async () => {
     fetchSpy.mockImplementation(() => Promise.resolve(jsonResponse({ id: "1" })));
 
-    const { query } = courier();
+    const { endpoint } = courier();
     const api = defineApi({
       name: "api",
       baseURL: "https://api.example.com",
@@ -193,7 +193,7 @@ describe("policies an endpoint declares", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            me: query.headers(["x-tenant"]).response(UserSchema).via((http) => http.get("me")),
+            me: endpoint.headers(["x-tenant"]).response(UserSchema).get("me"),
           },
         }),
       },
@@ -223,7 +223,7 @@ describe("policies an endpoint declares", () => {
       return next();
     });
 
-    const { query } = courier({ middleware: [stamp] });
+    const { endpoint } = courier({ middleware: [stamp] });
     const api = defineApi({
       name: "api",
       baseURL: "https://api.example.com",
@@ -231,8 +231,8 @@ describe("policies an endpoint declares", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            inherits: query.response(UserSchema).via((http) => http.get("a")),
-            opted: query.response(UserSchema).via((http) => http.get("b"), { inherit: false }),
+            inherits: endpoint.response(UserSchema).get("a"),
+            opted: endpoint.response(UserSchema).get("b", { inherit: false }),
           },
         }),
       },

@@ -10,17 +10,17 @@ const installCode = `npm install @noverax/courier`
 
 const defineCode = `import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get()),
-    getById: query
+    getAll: endpoint.response<User[]>().get(""),
+    getById: endpoint
       .variables<{ id: number }>()
       .response<User>()
-      .via((http, v) => http.get(":id", v)),
-    create: mutation.variables<CreateUser>().response<User>().via((http, v) => http.post("", v)),
+      .get(":id"),
+    create: endpoint.variables<CreateUser>().response<User>().post(""),
   },
 })
 

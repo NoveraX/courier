@@ -8,7 +8,7 @@ const UserSchema = z.object({ id: z.string() });
 const EventSchema = z.object({ n: z.number() });
 const Incoming = z.object({ text: z.string() });
 
-const { query, mutation, stream, channel } = courier();
+const { endpoint, channel, stream } = courier();
 
 const api = defineApi({
   name: "api",
@@ -17,13 +17,13 @@ const api = defineApi({
     users: defineGroup({
       prefix: "/users",
       endpoints: {
-        getAll: query.response(z.array(UserSchema)).via((http) => http.get("")),
-        create: mutation
+        getAll: endpoint.response(z.array(UserSchema)).get(""),
+        create: endpoint
           .variables(UserSchema)
           .response(UserSchema)
-          .via((http, vars) => http.post("", vars)),
-        feed: stream.response(EventSchema).via((sse) => sse.get("feed")),
-        room: channel.send(Incoming).response(EventSchema).via((ws) => ws.connect("room")),
+          .post(""),
+        feed: stream.response(EventSchema).get("feed"),
+        room: channel.send(Incoming).response(EventSchema).connect("room"),
       },
     }),
   },

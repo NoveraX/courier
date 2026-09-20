@@ -18,7 +18,7 @@ const api = defineApi({
         served: stream.response(EventSchema).implement(async function* () {
           yield { data: { n: 1 } };
         }),
-        remote: stream.response(EventSchema).via((sse) => sse.get("live")),
+        remote: stream.response(EventSchema).get("live"),
       },
     }),
   },

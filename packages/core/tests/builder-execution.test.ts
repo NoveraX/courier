@@ -28,24 +28,24 @@ function calledInit(index = 0): RequestInit {
 
 const api = (() => {
   const base = courier();
-  const { query, mutation } = base;
+  const { endpoint } = base;
 
   const users = defineGroup({
     prefix: "/users",
     endpoints: {
-      getAll: query.response(z.array(UserSchema)).via((http) => http.get("")),
-      getById: query
+      getAll: endpoint.response(z.array(UserSchema)).get(""),
+      getById: endpoint
         .variables(ById)
         .response(UserSchema)
-        .via((http, vars) => http.get(":id", vars)),
-      create: mutation
+        .get(":id"),
+      create: endpoint
         .variables(z.object({ email: z.string() }))
         .response(UserSchema)
-        .via((http, vars) => http.post("", vars)),
-      search: query
+        .post(""),
+      search: endpoint
         .variables(z.object({ q: z.string() }))
         .response(z.array(UserSchema))
-        .via((http, vars) => http.post("search", vars)),
+        .post("search").reads(),
     },
   });
 

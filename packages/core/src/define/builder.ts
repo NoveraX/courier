@@ -1,12 +1,12 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { ConfigurationError } from "../errors/configuration-error";
+import type { HttpMethod } from "../http-client/types";
 import type { Middleware } from "../middleware/types";
 import type { CacheConfig, SchemaMetadata, Transport } from "../validation";
 import type { EndpointKind } from "./marker";
 import { ENDPOINT_SCHEMA } from "./marker";
 import type { AnyEndpointOptions, ResolvedEndpointOptions, RetryOptions } from "./options";
 import type { AnyProbe } from "./probe";
-import { probeWire } from "./probe";
 
 type SlotName = "response" | "variables" | "send";
 
@@ -160,24 +160,36 @@ export function sealHandler(
 }
 
 /**
- * Produce the descriptor a builder terminal returns.
+ * Produce the descriptor a verb terminal returns.
  *
- * The wire closure is probed once here, so every later consumer reads a
- * memoised method and path rather than re-running user code.
+ * The verb and the path are given rather than discovered, so nothing is probed
+ * and the closure that carries out the call is synthesised from them.
  */
-export function sealEndpoint(
+export function sealAt(
   state: BuilderState,
-  probe: AnyProbe,
+  wire: { method: HttpMethod; path: string; probe: AnyProbe; served: boolean },
   options: AnyEndpointOptions,
 ): Record<string | symbol, unknown> {
-  const { method, path } = probeWire(probe);
   return {
     [ENDPOINT_SCHEMA]: resolveSchemas(state),
     kind: state.kind,
-    method,
-    path,
-    probe,
-    served: false,
+    method: wire.method,
+    path: wire.path,
+    probe: wire.probe,
+    served: wire.served,
     options: resolveOptions(state, options),
   };
 }
+
+/**
+ * Which kind an endpoint addressed this way is.
+ *
+ * A stream or a channel is its own kind whatever the verb underneath. An HTTP
+ * endpoint reads when its verb reads; `.reads()` says so for the rest.
+ */
+export function kindFor(head: EndpointKind, method: HttpMethod): EndpointKind {
+  if (head !== "query" && head !== "mutation") return head;
+  return READING_METHODS.has(method) ? "query" : "mutation";
+}
+
+const READING_METHODS: ReadonlySet<HttpMethod> = new Set<HttpMethod>(["get", "head"]);

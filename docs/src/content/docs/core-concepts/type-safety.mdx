@@ -16,7 +16,7 @@ Both take a schema, or a type argument when the API publishes no schema worth va
 ```ts title="api/users.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type User = { id: string; name: string; email: string }
 type UserList = { data: User[]; total: number }
@@ -25,19 +25,19 @@ export const users = defineGroup({
   prefix: "users",
   endpoints: {
     // Response only — the caller passes nothing
-    getAll: query.response<UserList>().via((http) => http.get()),
+    getAll: endpoint.response<UserList>().get(""),
 
     // Variables the caller must pass, and the response they get back
-    getById: query
+    getById: endpoint
       .variables<{ id: string }>()
       .response<User>()
-      .via((http, vars) => http.get(":id", vars)),
+      .get(":id"),
 
     // A write addresses the same wire through the mutation head
-    create: mutation
+    create: endpoint
       .variables<{ name: string; email: string }>()
       .response<User>()
-      .via((http, vars) => http.post("", vars)),
+      .post(""),
   },
 })
 ```
@@ -91,13 +91,13 @@ TypeScript enforces whether variables are required, optional, or forbidden:
 
 ```typescript
 // No variables — V defaults to undefined
-query.response<User[]>().via((http) => http.get())
+endpoint.response<User[]>().get("")
 
 caller.users.getAll()                          // valid
 caller.users.getAll({ page: 1 })               // Type error — no variables expected
 
 // Required variables
-query.variables<{ id: string }>().response<User>().via((http, vars) => http.get(":id", vars))
+endpoint.variables<{ id: string }>().response<User>().get(":id")
 
 caller.users.getById()                         // Type error — variables required
 caller.users.getById({ id: 123 })              // Type error — id must be string
@@ -111,7 +111,7 @@ For the best DX, define domain types explicitly and use utility types:
 ```ts title="api/products.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type Product = { id: string; name: string; price: number; category: string }
 
@@ -128,23 +128,23 @@ type UpdateProductVars = { id: string } & Partial<CreateProductVars>
 export const products = defineGroup({
   prefix: "products",
   endpoints: {
-    list: query.variables<ProductFilters>().response<Product[]>().via((http) => http.get()),
-    getById: query
+    list: endpoint.variables<ProductFilters>().response<Product[]>().get(""),
+    getById: endpoint
       .variables<{ id: string }>()
       .response<Product>()
-      .via((http, vars) => http.get(":id", vars)),
-    create: mutation
+      .get(":id"),
+    create: endpoint
       .variables<CreateProductVars>()
       .response<Product>()
-      .via((http, vars) => http.post("", vars)),
-    update: mutation
+      .post(""),
+    update: endpoint
       .variables<UpdateProductVars>()
       .response<Product>()
-      .via((http, vars) => http.patch(":id", vars)),
-    remove: mutation
+      .patch(":id"),
+    remove: endpoint
       .variables<{ id: string }>()
       .response<null>()
-      .via((http, vars) => http.del(":id", vars)),
+      .del(":id"),
   },
 })
 
@@ -164,7 +164,7 @@ import { z } from "zod"
 const UserSchema = z.object({ id: z.string(), name: z.string(), email: z.string() })
 
 // Types inferred from the schema — no type argument needed
-query.response(z.array(UserSchema)).via((http) => http.get())
+endpoint.response(z.array(UserSchema)).get("")
 // → response type is { id: string; name: string; email: string }[]
 ```
 

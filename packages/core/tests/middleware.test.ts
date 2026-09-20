@@ -12,7 +12,7 @@ import {
 import type { BeforeHandler, Middleware, MiddlewareResponse, WrapHandler } from "../src/middleware/types";
 import { executeRequest } from "../src/utils/execute";
 
-const { query, mutation } = courier();
+const { endpoint } = courier();
 
 // ---- mock fetch ----
 
@@ -41,12 +41,8 @@ function createApi(middleware?: Middleware[]) {
 			users: defineGroup({
 				prefix: "users",
 				endpoints: {
-					getAll: query.response<{ id: number; name: string }[]>().via(({ get }) =>
-						get(),
-					),
-					create: mutation.variables<{ name: string }>().response<{ id: number; name: string }>().via(
-						({ post }, vars) => post("", vars),
-					),
+					getAll: endpoint.response<{ id: number; name: string }[]>().get(""),
+					create: endpoint.variables<{ name: string }>().response<{ id: number; name: string }>().post(""),
 				},
 			}),
 		},

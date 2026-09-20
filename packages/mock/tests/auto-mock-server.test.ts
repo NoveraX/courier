@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
 
-const { query, mutation } = courier();
+const { endpoint } = courier();
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -58,24 +58,24 @@ const api = defineApi({
     owners: defineGroup({
       prefix: "/owners",
       endpoints: {
-        listOwners: query.response(z.array(OwnerSchema)).via((http) => http.get("")),
-        getOwner: query.variables<{ ownerId: string }>().response(OwnerSchema).via((http, vars) => http.get(":ownerId", vars)),
-        createOwner: mutation.variables(z.object({ name: z.string(), email: z.string() })).response(OwnerSchema).via((http, vars) => http.post("", vars)),
-        deleteOwner: mutation.via((http, vars) => http.del(":ownerId", vars)),
+        listOwners: endpoint.response(z.array(OwnerSchema)).get(""),
+        getOwner: endpoint.variables<{ ownerId: string }>().response(OwnerSchema).get(":ownerId"),
+        createOwner: endpoint.variables(z.object({ name: z.string(), email: z.string() })).response(OwnerSchema).post(""),
+        deleteOwner: endpoint.del(":ownerId"),
       },
     }),
     pets: defineGroup({
       prefix: "/pets",
       endpoints: {
-        listPets: query.response(z.array(PetSchema)).via((http) => http.get("")),
-        getPet: query.variables<{ petId: string }>().response(PetSchema).via((http, vars) => http.get(":petId", vars)),
+        listPets: endpoint.response(z.array(PetSchema)).get(""),
+        getPet: endpoint.variables<{ petId: string }>().response(PetSchema).get(":petId"),
       },
     }),
     catalog: defineGroup({
       prefix: "/catalog",
       endpoints: {
-        browse: query.response(PaginatedSchema).via((http) => http.get("browse")),
-        listItems: query.response(z.array(z.object({ id: z.string(), title: z.string(), price: z.number() }))).via((http) => http.get("")),
+        browse: endpoint.response(PaginatedSchema).get("browse"),
+        listItems: endpoint.response(z.array(z.object({ id: z.string(), title: z.string(), price: z.number() }))).get(""),
       },
     }),
   },

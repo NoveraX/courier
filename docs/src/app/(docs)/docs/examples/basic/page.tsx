@@ -39,7 +39,7 @@ export default function BasicExamplesPage() {
       <div className="space-y-8">
         <ExampleBlock
           title="GET — Fetch Users"
-          description="useQuery auto-fetches on mount. Data is cached and refetched by react-query."
+          description="useQuery auto-fetches on mount. Data is cached and refetched by react-endpoint."
           code={getCode}
           learnMoreHref="/docs/react-query/use-query"
           learnMoreLabel="useQuery docs"

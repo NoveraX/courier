@@ -21,7 +21,7 @@ export function noResponseValidation(stats: Map<string, EndpointStats>): AuditIt
     title: "No response validation",
     description: "Endpoints without a response schema — malformed data may slip through.",
     suggestion: "Add a response schema with Zod, Valibot, or ArkType.",
-    codeSuggestion: `api.query\n  .response(z.object({\n    id: z.number(),\n    name: z.string(),\n  }))\n  .via((http) => http.get("users/1"));`,
+    codeSuggestion: `api.endpoint\n  .response(z.object({\n    id: z.number(),\n    name: z.string(),\n  }))\n  .get("users/1");`,
     endpoints: matched.map(formatEndpoint),
   }];
 }
@@ -36,7 +36,7 @@ export function noVariablesValidation(stats: Map<string, EndpointStats>): AuditI
     title: "No input validation",
     description: "Endpoints send unvalidated variables to the server.",
     suggestion: "Add a variables schema to validate inputs before sending.",
-    codeSuggestion: `api.query\n  .variables(z.object({ id: z.number() }))\n  .via((http, vars) => http.get(\`users/\${vars.id}\`));`,
+    codeSuggestion: `api.endpoint\n  .get("users/:id")\n  .variables(z.object({ id: z.number() }));`,
     endpoints: matched.map(formatEndpoint),
   }];
 }

@@ -17,7 +17,7 @@ Pass schemas to the `.response()` and `.variables()` steps of the chain:
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 import { z } from "zod"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 const UserSchema = z.object({
   id: z.number(),
@@ -37,15 +37,13 @@ const api = defineApi({
       prefix: "users",
       endpoints: {
         // Response-only validation
-        getAll: query.response(z.array(UserSchema)).via(
-          ({ get }) => get(),
-        ),
+        getAll: endpoint.response(z.array(UserSchema)).get(""),
 
         // Both response and variables validation
-        create: mutation
+        create: endpoint
           .variables(CreateUserSchema)
           .response(UserSchema)
-          .via(({ post }, vars) => post("", vars)),
+          .post(""),
       },
     }),
   },
@@ -95,7 +93,7 @@ const api = defineApi({
     events: defineGroup({
       prefix: "events",
       endpoints: {
-        get: query.response(EventSchema).via(({ get }) => get(":id")),
+        get: endpoint.response(EventSchema).get(":id"),
       },
     }),
   },
@@ -165,10 +163,10 @@ When a slot is given a type argument instead of a schema, no validation runs. Th
 
 ```ts
 // No validation -- types are manual
-query.response<User[]>().via(({ get }) => get())
+endpoint.response<User[]>().get("")
 
 // No validation -- only proxy hints
-query.response<User[]>().via(({ get }) => get())
+endpoint.response<User[]>().get("")
 ```
 
 ## Next Steps

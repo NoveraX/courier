@@ -13,28 +13,18 @@ npm install @noverax/courier
 ```ts title="shared/sources.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type Task = { id: number; title: string; completed: boolean }
 
 const tasks = defineGroup({
   prefix: "tasks",
   endpoints: {
-    getAll: query.variables<{ status?: "all" | "active" | "completed" }>().response<Task[]>().via(
-      ({ get }) => get()
-    ),
-    getById: query.variables<{ id: number }>().response<Task>().via(
-      ({ get }) => get(":id")
-    ),
-    create: mutation.variables<{ title: string }>().response<Task>().via(
-      ({ post }) => post()
-    ),
-    toggle: mutation.variables<{ id: number; completed: boolean }>().response<Task>().via(
-      ({ patch }) => patch(":id")
-    ),
-    remove: mutation.variables<{ id: number }>().response<null>().via(
-      ({ del }) => del(":id")
-    ),
+    getAll: endpoint.variables<{ status?: "all" | "active" | "completed" }>().response<Task[]>().get(""),
+    getById: endpoint.variables<{ id: number }>().response<Task>().get(":id"),
+    create: endpoint.variables<{ title: string }>().response<Task>().post(""),
+    toggle: endpoint.variables<{ id: number; completed: boolean }>().response<Task>().patch(":id"),
+    remove: endpoint.variables<{ id: number }>().response<null>().del(":id"),
   },
 })
 

@@ -9,7 +9,7 @@ interface SearchFilterResult {
 }
 
 /**
- * Dims non-matching nodes based on search query.
+ * Dims non-matching nodes based on search endpoint.
  * Matches against endpoint method name, full path, group name, and source name.
  * Non-matching nodes get reduced opacity via className.
  */

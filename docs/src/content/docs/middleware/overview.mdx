@@ -95,7 +95,7 @@ import {
   retryMiddleware,
 } from "@noverax/courier/middleware"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 const api = defineApi({
   baseURL: "https://api.example.com",
@@ -108,10 +108,8 @@ const api = defineApi({
     users: defineGroup({
       prefix: "users",
       endpoints: {
-        getAll: query.response<User[]>().via(({ get }) => get()),
-        create: mutation.variables<CreateUserInput>().response<User>().via(({ post }, vars) =>
-          post("", vars),
-        ),
+        getAll: endpoint.response<User[]>().get(""),
+        create: endpoint.variables<CreateUserInput>().response<User>().post(""),
       },
     }),
   },

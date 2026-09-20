@@ -6,32 +6,32 @@ import { GroupInfo, GroupsDemo } from "./_components"
 
 const definitionCode = `import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 // Each defineGroup has a prefix that maps to a backend path
 const users = defineGroup({
   prefix: "users", // → /users/*
   endpoints: {
-    getAll: query.response<UsersListResponse>().via((http) => http.get()),          // GET /users
-    getById: query
+    getAll: endpoint.response<UsersListResponse>().get(""),          // GET /users
+    getById: endpoint
       .variables<{ id: number }>()
       .response<User>()
-      .via((http) => http.get(":id")), // GET /users/:id
-    create: mutation
+      .get(":id"), // GET /users/:id
+    create: endpoint
       .variables<CreateBody>()
       .response<User>()
-      .via((http) => http.post()),          // POST /users
+      .post(""),          // POST /users
   },
 })
 
 const posts = defineGroup({
   prefix: "posts", // → /posts/*
   endpoints: {
-    getAll: query.response<PostsListResponse>().via((http) => http.get()),    // GET /posts
-    create: mutation
+    getAll: endpoint.response<PostsListResponse>().get(""),    // GET /posts
+    create: endpoint
       .variables<CreateBody>()
       .response<Post>()
-      .via((http) => http.post()),    // POST /posts
+      .post(""),    // POST /posts
   },
 })
 

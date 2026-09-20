@@ -3,7 +3,7 @@ import type { WSChannel } from "@noverax/courier/realtime";
 import { describe, expect, it, vi } from "vitest";
 import { createMockClient } from "../src/create-mock-client";
 
-const { query } = courier();
+const { endpoint } = courier();
 
 type ChatMessage = Record<string, unknown>;
 
@@ -12,7 +12,7 @@ const noop = () => {};
 const chat = defineGroup({
   prefix: "chat",
   endpoints: {
-    room: query.variables<{ roomId?: string }>().response<ChatMessage>().via((http, vars) => http.get("room", vars)),
+    room: endpoint.variables<{ roomId?: string }>().response<ChatMessage>().get("room"),
   },
 });
 

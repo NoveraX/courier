@@ -24,7 +24,7 @@ The sources object maps source names to API definitions created with `defineApi`
 ```ts title="api/index.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
-const { query, mutation } = courier()
+const { endpoint } = courier()
 
 type User = { id: number; name: string; email: string }
 type Post = { id: number; title: string; body: string }
@@ -32,22 +32,22 @@ type Post = { id: number; title: string; body: string }
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: query.response<User[]>().via((http) => http.get()),
-    getById: query
+    getAll: endpoint.response<User[]>().get(""),
+    getById: endpoint
       .variables<{ id: number }>()
       .response<User>()
-      .via((http, vars) => http.get(":id", vars)),
+      .get(":id"),
   },
 })
 
 const posts = defineGroup({
   prefix: "posts",
   endpoints: {
-    list: query.response<Post[]>().via((http) => http.get()),
-    create: mutation
+    list: endpoint.response<Post[]>().get(""),
+    create: endpoint
       .variables<{ title: string }>()
       .response<Post>()
-      .via((http, vars) => http.post("", vars)),
+      .post(""),
   },
 })
 

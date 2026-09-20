@@ -35,12 +35,12 @@ export function ComparisonTable({ headers, rows }: ComparisonTableProps) {
         <tbody className="text-muted-foreground">
           {rows.map((row, rowIdx) => (
             <tr
-              key={rowIdx}
+              key={getCellLabel(row[0] ?? String(rowIdx))}
               className={cn(rowIdx < rows.length - 1 && "border-b border-border/50")}
             >
               {row.map((cell, colIdx) => (
                 <td
-                  key={colIdx}
+                  key={getCellLabel(headers[colIdx] ?? String(colIdx))}
                   className={cn("py-3", colIdx === 0 ? "pr-4 font-medium" : "px-4")}
                   style={{
                     color: isCellHighlighted(cell)

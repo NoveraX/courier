@@ -22,4 +22,4 @@ export const misc = defineGroup({
   },
 })
 
-export type { SlowResponse, ErrorResponse }
+export type { ErrorResponse, SlowResponse }

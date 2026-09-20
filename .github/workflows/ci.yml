@@ -41,6 +41,35 @@ jobs:
       - name: Test
         run: npm test
 
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # The site installs the workspace packages by path, so it resolves them
+      # through their built entry points.
+      - name: Build packages
+        run: npm run build
+
+      - name: Install site
+        run: npm ci
+        working-directory: docs
+
+      - name: Lint and typecheck site
+        run: npm run check
+        working-directory: docs
+
+      - name: Build site
+        run: npm run build
+        working-directory: docs
+
   release:
     needs: ci
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'

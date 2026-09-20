@@ -1,5 +1,7 @@
 import { defineConfig } from "tsup";
 
+import { dtsCompilerOptions } from "../../tsup.shared";
+
 export default defineConfig({
   entry: {
     index: "src/index.ts",
@@ -11,7 +13,7 @@ export default defineConfig({
   },
   outDir: "lib",
   format: ["esm"],
-  dts: true,
+  dts: { compilerOptions: dtsCompilerOptions },
   clean: true,
   splitting: true,
   /* Loaded lazily and declared as an optional peer, so it must stay a real

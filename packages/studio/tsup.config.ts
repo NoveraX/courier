@@ -1,5 +1,7 @@
 import { defineConfig } from "tsup";
 
+import { dtsCompilerOptions } from "../../tsup.shared";
+
 export default defineConfig({
   entry: {
     index: "src/index.ts",
@@ -22,6 +24,7 @@ export default defineConfig({
   outDir: "lib",
   format: ["esm"],
   dts: {
+    compilerOptions: dtsCompilerOptions,
     entry: {
       index: "src/index.ts",
       server: "src/server/index.ts",

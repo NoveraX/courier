@@ -12,9 +12,6 @@
     "noUnusedParameters": true,
     "noUncheckedIndexedAccess": true,
     "moduleResolution": "bundler",
-    /* tsup's declaration build hardcodes baseUrl, which TypeScript 6 deprecates.
-       Removable once the declaration build stops setting it. */
-    "ignoreDeprecations": "6.0",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,

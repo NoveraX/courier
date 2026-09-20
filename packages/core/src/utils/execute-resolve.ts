@@ -112,12 +112,38 @@ export function buildMiddlewareContext(
   };
 }
 
-export function applyCacheHeaders(response: Response, schema: SchemaMetadata): void {
+/** Headers that make a response belong to one caller rather than to everyone. */
+const CREDENTIAL_HEADERS = ["authorization", "cookie", "proxy-authorization"] as const;
+
+/**
+ * Describe to caches how long this response keeps, and to whom it belongs.
+ *
+ * A response produced from a request carrying credentials is that caller's
+ * alone, so it is kept privately in their own client rather than offered to a
+ * shared cache. Otherwise it may be shared, and `Vary` names every forwarded
+ * header that could have changed it so a shared cache keys on them instead of
+ * handing one caller's response to another.
+ */
+export function applyCacheHeaders(
+  response: Response,
+  schema: SchemaMetadata,
+  forwarded?: Headers,
+): void {
   if (schema.cache?.revalidate !== undefined) {
+    const varyOn = forwarded ? [...forwarded.keys()].sort() : [];
+    const credentialed = varyOn.some((name) =>
+      CREDENTIAL_HEADERS.includes(name as (typeof CREDENTIAL_HEADERS)[number]),
+    );
+
     response.headers.set(
       "Cache-Control",
-      `s-maxage=${schema.cache.revalidate}, stale-while-revalidate`,
+      credentialed
+        ? `private, max-age=${schema.cache.revalidate}`
+        : `s-maxage=${schema.cache.revalidate}, stale-while-revalidate`,
     );
+    if (!credentialed && varyOn.length > 0) {
+      response.headers.set("Vary", varyOn.join(", "));
+    }
   }
   if (schema.cache?.tags?.length) {
     response.headers.set("x-courier-tags", schema.cache.tags.join(","));

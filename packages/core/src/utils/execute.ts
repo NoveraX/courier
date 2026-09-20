@@ -152,7 +152,7 @@ export async function executeRequest(
       injectTimingHeaders(response, requestId, timing.t0);
     }
     if (context?.proxyMethod === "GET" && schema?.cache && response instanceof Response) {
-      applyCacheHeaders(response, schema);
+      applyCacheHeaders(response, schema, middlewareCtx.headers);
     }
 
     return response;

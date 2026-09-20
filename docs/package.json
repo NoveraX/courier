@@ -2,6 +2,9 @@
   "name": "courier-docs",
   "version": "0.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22.22.2"
+  },
   "type": "module",
   "scripts": {
     "dev": "concurrently -n next,express -c blue,green \"next dev\" \"tsx watch server/index.ts\"",

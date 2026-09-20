@@ -10,6 +10,13 @@
       "dependsOn": ["^build", "@noverax/courier-studio-ui#build"],
       "outputs": ["lib/**", "ui/dist/**"]
     },
+    "@noverax/courier-studio-ui#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "src/routeTree.gen.ts"]
+    },
+    "@noverax/courier-studio-ui#typecheck": {
+      "dependsOn": ["^build", "build"]
+    },
     "test": {
       "dependsOn": ["^build"]
     },

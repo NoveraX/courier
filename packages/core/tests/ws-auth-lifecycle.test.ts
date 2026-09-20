@@ -110,6 +110,7 @@ function createMsgCtx(overrides: Partial<WSSocketContext> = {}): {
       method: "get",
       path: "",
       probe: fn,
+      served: true,
       options: { middleware: [], allowedHeaders: [], meta: {}, tags: [], inherit: true },
     };
   })();

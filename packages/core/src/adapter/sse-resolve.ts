@@ -17,12 +17,19 @@ export function resolveSSEEndpoint(
   const dataSource = Object.hasOwn(sources, source) ? sources[source] : undefined;
   if (!dataSource) return errorResponse(400, `[${source}]: source not found`);
 
-  const { endpoint, schema } = resolveEndpoint(dataSource, group, method);
+  const { endpoint, schema, served } = resolveEndpoint(dataSource, group, method);
   if (typeof endpoint !== "function") {
     return errorResponse(400, `[${source}][${group ?? ""}][${method}]: method not found`);
   }
   if (schema?.transport !== "sse") {
     return errorResponse(400, `[${method}]: endpoint is not an SSE transport`);
+  }
+  if (!served) {
+    return errorResponse(
+      400,
+      `[${method}]: endpoint describes where to connect rather than serving the stream — ` +
+        "define it with .implement() to serve it from this process",
+    );
   }
   return { endpoint, schema };
 }

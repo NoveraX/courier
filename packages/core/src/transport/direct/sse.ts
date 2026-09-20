@@ -1,3 +1,4 @@
+import { endpointPath } from "../../define/address";
 import { getSourceName } from "../../define/api";
 import type { DefinedApi, DefinedFlatApi, DefinedMixedApi } from "../../define/types";
 import { buildDirectSSEUrl, executeSSE } from "../../realtime/caller-sse";
@@ -53,7 +54,12 @@ export function createDirectSSEFactory(
       ...(options.headers as Record<string, string> | undefined),
     };
 
-    const url = buildDirectSSEUrl(baseURL, prefix, method, variables as Record<string, unknown>);
+    const url = buildDirectSSEUrl(
+      baseURL,
+      prefix,
+      endpointPath(groups?.[group]?.[method], method),
+      variables as Record<string, unknown>,
+    );
 
     // Open the studio stream up-front so we have an `instr` handle whose
     // `updateMeta` can be called from the `onResponse` callback when the

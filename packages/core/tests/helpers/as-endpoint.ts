@@ -17,6 +17,9 @@ export function asEndpoint(
     method: "get",
     path: "",
     probe,
+    /* A stream or channel written in a test is its own implementation, the
+       same as one written with `.implement()`. */
+    served: schema.transport === "sse" || schema.transport === "ws",
     options: { middleware: [], allowedHeaders: [], meta: {}, tags: [], inherit: true },
   };
 }

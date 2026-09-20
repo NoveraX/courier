@@ -20,6 +20,7 @@ function createEndpoint(transport: string, receive?: unknown): unknown {
     method: "get",
     path: "",
     probe: fn,
+    served: true,
     options: { middleware: [], allowedHeaders: [], meta: {}, tags: [], inherit: true },
   };
 }
@@ -223,6 +224,7 @@ describe("handleSubscribe", () => {
       method: "get",
       path: "",
       probe: factory,
+      served: true,
       options: { middleware: [], allowedHeaders: [], meta: {}, tags: [], inherit: true },
     };
     const source = createSource("chat", "room", wsEndpoint);
@@ -256,6 +258,7 @@ describe("handleSubscribe", () => {
       method: "get",
       path: "",
       probe: factory,
+      served: true,
       options: { middleware: [], allowedHeaders: [], meta: {}, tags: [], inherit: true },
     };
     const source = createSource("chat", "room", wsEndpoint);

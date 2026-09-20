@@ -77,6 +77,7 @@ function createWSSource(handler: unknown, transport: "ws" = "ws", receive?: unkn
     method: "get",
     path: "",
     probe: handler,
+    served: true,
     options: { middleware: [], allowedHeaders: [], meta: {}, tags: [], inherit: true },
   } as unknown as Record<symbol, unknown>;
 

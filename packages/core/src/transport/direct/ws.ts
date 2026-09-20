@@ -1,3 +1,4 @@
+import { endpointPath } from "../../define/address";
 import { getSourceName } from "../../define/api";
 import type { DefinedApi, DefinedFlatApi, DefinedMixedApi } from "../../define/types";
 import { buildDirectWSUrl, buildWSTopic } from "../../realtime/caller-ws";
@@ -27,7 +28,13 @@ export function createDirectWSChannelFactory(api: AnyDefinedApi): WSChannelFacto
   const ctx = readApiContext(api);
 
   return function connectChannel(group, method, variables) {
-    const url = buildDirectWSUrl(ctx.baseURL, prefixOf(ctx.groups, group), method);
+    /* The URL follows the path the closure addressed; the topic stays keyed
+       on the endpoint's name, which is how the server resolves it. */
+    const url = buildDirectWSUrl(
+      ctx.baseURL,
+      prefixOf(ctx.groups, group),
+      pathOf(ctx.groups, group, method),
+    );
     const topic = buildWSTopic(ctx.sourceName, group, method);
     return instrumentWSChannel(executeWSChannel(url, topic, variables), {
       source: ctx.sourceName,
@@ -52,7 +59,11 @@ export function createDirectWSPushFactory(api: AnyDefinedApi): WSPushFactory {
   const ctx = readApiContext(api);
 
   return function connectPush(group, method, variables) {
-    const url = buildDirectWSUrl(ctx.baseURL, prefixOf(ctx.groups, group), method);
+    const url = buildDirectWSUrl(
+      ctx.baseURL,
+      prefixOf(ctx.groups, group),
+      pathOf(ctx.groups, group, method),
+    );
     const topic = buildWSTopic(ctx.sourceName, group, method);
     return instrumentWSPush(executeWSPush(url, topic, variables), {
       source: ctx.sourceName,
@@ -79,4 +90,13 @@ function prefixOf(
   return (
     ((groups?.[group]?.options as Record<string, unknown> | undefined)?.prefix as string) ?? ""
   );
+}
+
+/** Where the endpoint's closure addressed, falling back to its name. */
+function pathOf(
+  groups: Record<string, Record<string, unknown>> | undefined,
+  group: string,
+  method: string,
+): string {
+  return endpointPath(groups?.[group]?.[method], method);
 }

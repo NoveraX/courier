@@ -151,6 +151,7 @@ export function sealHandler(
     method: "get" as const,
     path: "",
     probe: handler,
+    served: true,
     options: resolveOptions(state, options),
   };
 }
@@ -173,6 +174,7 @@ export function sealEndpoint(
     method,
     path,
     probe,
+    served: false,
     options: resolveOptions(state, options),
   };
 }

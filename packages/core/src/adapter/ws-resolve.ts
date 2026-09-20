@@ -46,12 +46,15 @@ export function resolveSubscribeTopic(
     return undefined;
   }
 
-  const { endpoint, schema } = resolveEndpoint(
+  const { endpoint, schema, served } = resolveEndpoint(
     dataSource as Record<string, unknown>,
     group,
     method,
   );
-  if (typeof endpoint !== "function" || schema?.transport !== "ws") {
+  /* A channel that only describes where to connect has no implementation to
+     run here; invoking its closure would yield a wire description, not
+     messages. */
+  if (typeof endpoint !== "function" || schema?.transport !== "ws" || !served) {
     ctx.sendMessage({
       type: "error",
       id: msg.id,

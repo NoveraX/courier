@@ -32,7 +32,14 @@ export function resolveEndpoint(
     endpointGroup,
     schema: readSchema(endpoint),
     options: readOptions(endpoint),
+    served: isServed(endpoint),
   };
+}
+
+/** Is the endpoint's closure its implementation rather than a wire description? */
+function isServed(endpoint: unknown): boolean {
+  if (typeof endpoint !== "object" || endpoint === null) return false;
+  return (endpoint as { served?: unknown }).served === true;
 }
 
 /**

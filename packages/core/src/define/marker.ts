@@ -77,6 +77,14 @@ export interface Endpoint<T extends AnyEndpointTypes> {
   readonly path: string;
   /** Retained so the wire shape can be re-derived without a definition site. */
   readonly probe: AnyProbe;
+  /**
+   * Is the closure the implementation, rather than a description of a wire?
+   *
+   * `.implement()` sets it; `.via()` clears it. A stream or channel server can
+   * then refuse an endpoint that only describes where to connect, instead of
+   * invoking its closure as a generator and failing on the result.
+   */
+  readonly served: boolean;
   readonly options: ResolvedEndpointOptions;
 }
 

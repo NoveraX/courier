@@ -6,6 +6,8 @@ type CodeGroupItem = {
   label: string
   code: string
   language?: string
+  /** Shown above the snippet, for tabs whose code belongs in one named file */
+  filename?: string
 }
 
 type CodeGroupProps = {
@@ -22,6 +24,7 @@ export async function CodeGroup({ items, className }: CodeGroupProps) {
     <CodeGroupTabs
       labels={items.map((item) => item.label)}
       codes={items.map((item) => item.code)}
+      filenames={items.map((item) => item.filename)}
       highlighted={highlighted}
       className={className}
     />

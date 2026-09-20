@@ -10,6 +10,10 @@ import type { UserWorkspaceConfig } from "vitest/config";
  * or from inside a package. `globals` is what puts `afterEach` on
  * `globalThis`, which is the condition React Testing Library checks before
  * it registers automatic cleanup between tests.
+ *
+ * Config files carry the `.ts` extension on their import of this module,
+ * against the rule that relative imports have none: Vite's native config
+ * loader resolves them through Node, which requires it.
  */
 export const sharedTestOptions = {
   globals: true,

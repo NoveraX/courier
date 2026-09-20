@@ -7,7 +7,7 @@
  *   tsx scripts/release.ts publish <version>
  */
 import { execSync } from "node:child_process";
-import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const [, , command, version] = process.argv;
@@ -72,6 +72,7 @@ const packages = discoverPackages();
 
 if (command === "prepare") {
 	for (const dir of packages) updateVersion(dir, version);
+	for (const dir of packages) copyFileSync("LICENSE", join(dir, "LICENSE"));
 	execSync("npx turbo run build", { stdio: "inherit" });
 	console.log(`Prepared v${version} (${packages.length} packages)`);
 }

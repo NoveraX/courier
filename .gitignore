@@ -48,3 +48,6 @@ temp/
 # Test apps
 /playground
 /output
+
+# Copied from the root at release time so each tarball carries one
+packages/*/LICENSE

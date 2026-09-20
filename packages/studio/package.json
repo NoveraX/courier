@@ -100,7 +100,6 @@
   "files": [
     "lib",
     "ui/dist",
-    "registry.schema.json",
     "README.md",
     "LICENSE"
   ],

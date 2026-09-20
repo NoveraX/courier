@@ -56,6 +56,29 @@ export interface WireShape {
 const CHANNEL_METHOD: HttpMethod = "get";
 
 /**
+ * A stand-in for the variables a closure will receive at request time.
+ *
+ * Probing has no real ones, so this answers every read with another stand-in.
+ * Because each is callable and reads as an empty string, a closure may walk
+ * into its variables, call methods on them or interpolate them and still reach
+ * the call that addresses the endpoint. `then` is left absent so the stand-in
+ * is never mistaken for a promise.
+ */
+function standIn(): unknown {
+  const proxy: unknown = new Proxy(() => proxy, {
+    get: (_target, property) => {
+      if (property === Symbol.toPrimitive) return () => "";
+      if (property === "then") return undefined;
+      if (property === Symbol.iterator) return function* (): Generator<unknown> {};
+      return proxy;
+    },
+    has: () => true,
+    apply: () => proxy,
+  });
+  return proxy;
+}
+
+/**
  * Recover the wire shape of an endpoint by running its closure once against a
  * recording proxy.
  *
@@ -94,25 +117,17 @@ export function probeWire(probe: AnyProbe): WireShape {
     },
   );
 
-  // Variables are stand-ins during probing. Answering every property keeps a
-  // closure that branches on one, or guards against a missing one, on the path
-  // that addresses the endpoint.
-  const variables: unknown = new Proxy(
-    {},
-    {
-      get: (_target, property) => (property === Symbol.toPrimitive ? () => "" : ""),
-      has: () => true,
-    },
-  );
-
+  let thrown: unknown;
   try {
-    (probe as (wire: unknown, variables: unknown) => unknown)(recorder, variables);
-  } catch {
-    // Variables are absent while probing, so a closure that reads them throws
-    // after the addressing call has already been recorded.
+    (probe as (wire: unknown, variables: unknown) => unknown)(recorder, standIn());
+  } catch (error) {
+    // Real variables are absent while probing, so a closure may still fail
+    // after the addressing call has been recorded. Kept in case it was not.
+    thrown = error;
   }
 
   if (method === undefined || path === undefined) {
+    if (thrown !== undefined) throw thrown;
     throw new ConfigurationError(
       "ENDPOINT_NO_WIRE_CALL",
       '[courier] endpoint closure made no wire call — it must call exactly one of the wire methods, for example (http, vars) => http.get(":id", vars)',

@@ -38,6 +38,11 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      # The root program's include stops at packages/*/src, so the Studio UI —
+      # one directory deeper — needs its own pass.
+      - name: Typecheck Studio UI
+        run: npx turbo run typecheck --filter=@noverax/courier-studio-ui
+
       - name: Test
         run: npm test
 

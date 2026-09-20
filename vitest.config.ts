@@ -15,6 +15,11 @@ export default defineConfig({
     ],
     coverage: {
       provider: "v8",
+      /* Anchored at the repository root, which is where a full run resolves
+         them. A run narrowed with --project resolves against that project
+         instead and reports nothing; the only glob that covers both also
+         sweeps in the playground, the docs site and untracked scratch apps,
+         which is the worse trade. */
       include: ["packages/*/src/**/*.ts"],
       exclude: ["packages/*/src/index.ts", "packages/*/src/**/types.ts"],
     },

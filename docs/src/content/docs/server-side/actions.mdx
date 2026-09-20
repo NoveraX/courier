@@ -185,7 +185,7 @@ Both `createAction` and `createCaller` return a `TypedClient` with dot-notation 
 ```ts
 // createCaller — manual header forwarding
 import { headers } from "next/headers"
-const user = await caller.users.create(data, { headers: await headers() })
+const user = await caller.users.with({ headers: await headers() }).create(data)
 
 // createAction — automatic header forwarding
 const user = await action.users.create(data)

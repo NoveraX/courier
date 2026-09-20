@@ -94,15 +94,15 @@ await caller.users.getAll()
 await caller.users.getById({ id: 5 })
 
 // No variables, with context
-await caller.users.me(undefined, { headers: await headers() })
+await caller.users.with({ headers: await headers() }).me()
 
 // With variables and context
-await caller.users.create({ name: "Jane" }, { headers: await headers() })
+await caller.users.with({ headers: await headers() }).create({ name: "Jane" })
 ```
 
 ## Context parameter
 
-The `Context` parameter is what makes direct mode different from proxy mode. In proxy mode, cookies are forwarded automatically through the handler. In direct mode, you must pass them explicitly as the second argument:
+The `Context` parameter is what makes direct mode different from proxy mode. In proxy mode, cookies are forwarded automatically through the handler. In direct mode, you must pass them explicitly through `.with()`:
 
 ```ts
 import type { Context } from "@noverax/courier"
@@ -171,7 +171,7 @@ console.log(result.data)     // User — still fully typed
 
 ## Difference from createProxyCaller
 
-The key difference is the `Context` parameter. In proxy mode, cookies are forwarded automatically through the browser request. In direct mode, you pass them explicitly as the second argument:
+The key difference is the `Context` parameter. In proxy mode, cookies are forwarded automatically through the browser request. In direct mode, you pass them explicitly through `.with()`:
 
 ```ts
 // Proxy mode (client components) — no context parameter
@@ -179,10 +179,10 @@ const caller = createProxyCaller<typeof api>()
 await caller.users.getAll({ page: 1 })
 //                          ^ variables only
 
-// Direct mode (server components) — context as second argument
+// Direct mode (server components) — context named with .with()
 const caller = createCaller(api)
-await caller.users.getAll({ page: 1 }, { headers: await headers() })
-//                          ^ variables    ^ context (optional)
+await caller.users.with({ headers: await headers() }).getAll({ page: 1 })
+//                  ^ per-call options      ^ variables
 ```
 
 Both functions use the same `executeRequest` core under the hood.

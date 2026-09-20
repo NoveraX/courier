@@ -94,22 +94,26 @@ const response = await caller.users.raw.getAll()
 const response = await caller.events.with({ stream: true }).subscribe({ channel: "builds" })
 
 // GET proxy — encodes as query params instead of POST body (cacheable)
-const users = await caller.users.getAll(undefined, { method: "GET" })
+const users = await caller.users.with({ method: "GET" }).getAll()
 
 // Upload with progress tracking
-await caller.files.upload(formData, {
-  onUploadProgress: ({ percent }) => console.log(`${Math.round(percent * 100)}%`),
-})
+await caller.files
+  .with({
+    onUploadProgress: ({ percent }) => console.log(`${Math.round(percent * 100)}%`),
+  })
+  .upload(formData)
 
 // Abort signal
 const controller = new AbortController()
-await caller.users.getAll(undefined, { signal: controller.signal })
+await caller.users.with({ signal: controller.signal }).getAll()
 
 // Custom headers and timeout per call
-await caller.users.getAll(undefined, {
-  headers: { "X-Request-Id": crypto.randomUUID() },
-  timeout: 5000,
-})
+await caller.users
+  .with({
+    headers: { "X-Request-Id": crypto.randomUUID() },
+    timeout: 5000,
+  })
+  .getAll()
 ```
 
 ### CallOptions Reference

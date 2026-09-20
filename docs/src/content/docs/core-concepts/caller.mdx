@@ -95,23 +95,25 @@ const user = await caller.users.getById({ id: "1" })
 
 ### Call Options
 
-Pass runtime options as the second argument after variables:
+Per-call options are named with `.with()`, which returns a caller carrying them:
 
 ```ts
 // Stream mode — the body arrives as a ReadableStream instead of parsed
 const response = await caller.events.with({ stream: true }).subscribe({ channel: "builds" })
 
 // GET proxy — encodes as query params instead of POST body
-const users = await caller.users.getAll({ page: 1 }, { method: "GET" })
+const users = await caller.users.with({ method: "GET" }).getAll({ page: 1 })
 
 // Upload progress tracking
-await caller.files.upload(formData, {
-  onUploadProgress: ({ percent }) => console.log(`${Math.round(percent * 100)}%`),
-})
+await caller.files
+  .with({
+    onUploadProgress: ({ percent }) => console.log(`${Math.round(percent * 100)}%`),
+  })
+  .upload(formData)
 
 // Abort signal
 const controller = new AbortController()
-await caller.users.getAll(undefined, { signal: controller.signal })
+await caller.users.with({ signal: controller.signal }).getAll()
 ```
 
 ## Using Both Modes Together

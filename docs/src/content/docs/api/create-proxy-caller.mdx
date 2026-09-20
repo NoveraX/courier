@@ -128,14 +128,16 @@ const caller = createProxyCaller<typeof api>("api", {
 
 ## Per-Request Options
 
-Pass `CallOptions` as the second argument after variables:
+Name `CallOptions` with `.with()`, then call the endpoint:
 
 ```ts
-const user = await caller.users.getById({ id: "123" }, {
-  timeout: 5000,
-  signal: controller.signal,
-  method: "GET",  // Use GET for cacheable reads
-})
+const user = await caller.users
+  .with({
+    timeout: 5000,
+    signal: controller.signal,
+    method: "GET", // Use GET for cacheable reads
+  })
+  .getById({ id: "123" })
 ```
 
 ## Upload Progress
@@ -143,11 +145,13 @@ const user = await caller.users.getById({ id: "123" }, {
 Pass `onUploadProgress` to track file upload progress. When set, Courier uses `XMLHttpRequest` for real network-level progress tracking.
 
 ```ts
-const result = await caller.files.upload(formData, {
-  onUploadProgress: (progress) => {
-    console.log(`${Math.round(progress.percent * 100)}%`)
-  },
-})
+const result = await caller.files
+  .with({
+    onUploadProgress: (progress) => {
+      console.log(`${Math.round(progress.percent * 100)}%`)
+    },
+  })
+  .upload(formData)
 ```
 
 <Callout variant="info" title="XHR Transport">
@@ -160,7 +164,7 @@ By default, proxy requests use POST. Set `method: "GET"` for cacheable reads —
 
 ```ts
 // GET proxy: cacheable, works with CDN and browser cache
-const users = await caller.users.getAll(undefined, { method: "GET" })
+const users = await caller.users.with({ method: "GET" }).getAll()
 
 // POST proxy: default, used for mutations and complex payloads
 const user = await caller.users.create({ name: "Jane" })

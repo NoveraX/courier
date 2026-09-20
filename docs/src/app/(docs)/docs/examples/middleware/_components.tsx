@@ -1,22 +1,23 @@
 "use client"
 
-import { useState } from "react"
-
 import { isHTTPError } from "@noverax/courier"
+import { useState } from "react"
 import { ResponseViewer } from "@/components/docs/response-viewer"
 import { RunButton } from "@/components/run-button"
 import { middlewareCaller } from "@/lib/caller"
 import { middlewareQ } from "@/lib/query"
 
 export function MiddlewareDemo() {
-  const { mutate, data, isPending, error } = middlewareQ.users.useMutation("getAll")
+  const { data, isFetching, error, refetch } = middlewareQ.users.useQuery("getAll", {
+    enabled: false,
+  })
 
   return (
     <>
       <RunButton
-        loading={isPending}
+        loading={isFetching}
         label="Fetch Users (with middleware)"
-        onClick={() => mutate()}
+        onClick={() => void refetch()}
       />
       {error && <ResponseViewer error={error.message} />}
       {data && <ResponseViewer data={data} status={200} />}

@@ -130,14 +130,16 @@ When sending FormData, Courier appends metadata as special fields: `_source`, `_
 
 ## Per-request options
 
-You can pass options as the second argument to any endpoint call to override defaults for a specific request:
+`.with()` returns a caller carrying options for the calls made through it, overriding the defaults for a specific request:
 
 ```ts title="Per-request options"
-const user = await caller.users.getById({ id: 5 }, {
-  timeout: 5000,
-  signal: abortController.signal,
-  cache: "no-store",
-})
+const user = await caller.users
+  .with({
+    timeout: 5000,
+    signal: abortController.signal,
+    cache: "no-store",
+  })
+  .getById({ id: 5 })
 ```
 
 ## Global callbacks

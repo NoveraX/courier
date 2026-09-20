@@ -33,11 +33,14 @@ export function PostDemo() {
 }
 
 export function ManualDemo() {
-  const { mutate, data, isPending, error } = q.users.useMutation("getById")
+  const { data, isFetching, error, refetch } = q.users.useQuery("getById", {
+    variables: { id: 1 },
+    enabled: false,
+  })
 
   return (
     <>
-      <RunButton loading={isPending} label="Get User #1" onClick={() => mutate({ id: 1 })} />
+      <RunButton loading={isFetching} label="Get User #1" onClick={() => void refetch()} />
       {error && <ResponseViewer error={error.message} />}
       {data && <ResponseViewer data={data} status={200} />}
     </>

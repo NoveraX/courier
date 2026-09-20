@@ -1,27 +1,4 @@
-import type { CallOptions } from "../http-client/types";
-import type { SSESubscription, WSChannel } from "../realtime/types";
 import type { Endpoint, EndpointTypes } from "./marker";
-
-/**
- * Leading parameters of a call.
- *
- * An endpoint that declared no variables takes none, so `getAll()` stays
- * shorter than `getAll(undefined)`. Evaluated once when the terminal stamps
- * the call shape rather than on every access through a caller.
- */
-export type Arg<TVariables> = [TVariables] extends [void] ? [] : [variables: TVariables];
-
-export type HttpCall<TResponse, TVariables> = (
-  ...args: [...Arg<TVariables>, options?: CallOptions]
-) => Promise<TResponse>;
-
-export type StreamCall<TResponse, TVariables> = (
-  ...args: [...Arg<TVariables>, options?: CallOptions]
-) => SSESubscription<TResponse>;
-
-export type ChannelCall<TResponse, TVariables, TSend> = (
-  ...args: [...Arg<TVariables>, options?: CallOptions]
-) => WSChannel<TSend, TResponse>;
 
 /**
  * An endpoint reached over HTTP.
@@ -35,20 +12,11 @@ export type HttpEndpoint<
   TVariables,
   TKind extends "query" | "mutation",
   TVariablesOut = TVariables,
-> = Endpoint<
-  EndpointTypes<TResponse, TVariables, TVariablesOut, never, HttpCall<TResponse, TVariables>, TKind>
->;
+> = Endpoint<EndpointTypes<TResponse, TVariables, TVariablesOut, never, TKind>>;
 
 /** An endpoint delivering server-sent events. */
 export type StreamEndpoint<TResponse, TVariables, TVariablesOut = TVariables> = Endpoint<
-  EndpointTypes<
-    TResponse,
-    TVariables,
-    TVariablesOut,
-    never,
-    StreamCall<TResponse, TVariables>,
-    "stream"
-  >
+  EndpointTypes<TResponse, TVariables, TVariablesOut, never, "stream">
 >;
 
 /**
@@ -58,12 +26,5 @@ export type StreamEndpoint<TResponse, TVariables, TVariablesOut = TVariables> = 
  * `send` uncallable rather than requiring a separate kind.
  */
 export type ChannelEndpoint<TResponse, TVariables, TSend, TVariablesOut = TVariables> = Endpoint<
-  EndpointTypes<
-    TResponse,
-    TVariables,
-    TVariablesOut,
-    TSend,
-    ChannelCall<TResponse, TVariables, TSend>,
-    "channel"
-  >
+  EndpointTypes<TResponse, TVariables, TVariablesOut, TSend, "channel">
 >;

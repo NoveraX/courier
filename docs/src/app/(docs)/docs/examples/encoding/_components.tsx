@@ -44,15 +44,14 @@ export function BodyEncodingDemo() {
 }
 
 export function SearchParamsDemo() {
-  const { mutate, data, isPending } = encodedQ.echo.useMutation("retrieve")
+  const { data, isFetching, refetch } = encodedQ.echo.useQuery("retrieve", {
+    variables: { tags: ["javascript", "react"], page: 1 },
+    enabled: false,
+  })
 
   return (
     <>
-      <RunButton
-        loading={isPending}
-        label="Fetch with Arrays"
-        onClick={() => mutate({ tags: ["javascript", "react"], page: 1 })}
-      />
+      <RunButton loading={isFetching} label="Fetch with Arrays" onClick={() => void refetch()} />
       {data && <ResponseViewer data={data} status={200} />}
     </>
   )
@@ -60,7 +59,10 @@ export function SearchParamsDemo() {
 
 export function DefaultsDemo() {
   const postMutation = encodedQ.echo.useMutation("send")
-  const getMutation = encodedQ.echo.useMutation("retrieve")
+  const getQuery = encodedQ.echo.useQuery("retrieve", {
+    variables: { page: 1 },
+    enabled: false,
+  })
 
   return (
     <>
@@ -71,12 +73,12 @@ export function DefaultsDemo() {
           onClick={() => postMutation.mutate({ name: "John" })}
         />
         <RunButton
-          loading={getMutation.isPending}
+          loading={getQuery.isFetching}
           label="GET (see defaultQueryParams)"
-          onClick={() => getMutation.mutate({ page: 1 })}
+          onClick={() => void getQuery.refetch()}
         />
       </div>
-      {(postMutation.data || getMutation.data) && (
+      {(postMutation.data || getQuery.data) && (
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {postMutation.data && (
             <div>
@@ -86,12 +88,12 @@ export function DefaultsDemo() {
               <ResponseViewer data={postMutation.data} status={200} />
             </div>
           )}
-          {getMutation.data && (
+          {getQuery.data && (
             <div>
               <p className="mb-2 text-xs font-medium text-muted-foreground">
                 GET query includes format:
               </p>
-              <ResponseViewer data={getMutation.data} status={200} />
+              <ResponseViewer data={getQuery.data} status={200} />
             </div>
           )}
         </div>

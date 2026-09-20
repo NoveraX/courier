@@ -78,7 +78,7 @@ When `stream: true` is set in the endpoint options, the response `data` is a `Re
 
 ```ts
 query.variables<{ channel: string }>().response<ReadableStream>().via((http, vars) =>
-  http.get(":channel/stream", vars, { stream: true })
+  http.get(":channel/stream", vars)
 )
 ```
 

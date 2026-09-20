@@ -38,7 +38,6 @@ export interface EndpointTypes<
   TVariables,
   TVariablesOut,
   TSend,
-  TCall,
   TKind extends EndpointKind,
 > {
   readonly response: TResponse;
@@ -48,7 +47,6 @@ export interface EndpointTypes<
   readonly variablesOut: TVariablesOut;
   /** What the caller may send inside an open channel. */
   readonly send: TSend;
-  readonly call: TCall;
   readonly kind: TKind;
 }
 
@@ -63,7 +61,6 @@ export interface AnyEndpointTypes {
   readonly variables: unknown;
   readonly variablesOut: unknown;
   readonly send: unknown;
-  readonly call: unknown;
   readonly kind: EndpointKind;
 }
 
@@ -104,4 +101,3 @@ export type InferVariables<E extends AnyEndpoint> = E[EndpointMarker]["variables
 export type InferVariablesOut<E extends AnyEndpoint> = E[EndpointMarker]["variablesOut"];
 export type InferSend<E extends AnyEndpoint> = E[EndpointMarker]["send"];
 export type InferKind<E extends AnyEndpoint> = E[EndpointMarker]["kind"];
-export type InferCall<E extends AnyEndpoint> = E[EndpointMarker]["call"];

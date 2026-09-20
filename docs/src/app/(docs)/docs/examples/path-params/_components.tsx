@@ -8,7 +8,10 @@ import { q } from "@/lib/query"
 
 export function SimpleParamDemo() {
   const [userId, setUserId] = useState(1)
-  const { mutate, data, isPending, error } = q.users.useMutation("getById")
+  const { data, isFetching, error, refetch } = q.users.useQuery("getById", {
+    variables: { id: userId },
+    enabled: false,
+  })
 
   return (
     <>
@@ -28,9 +31,9 @@ export function SimpleParamDemo() {
           </select>
         </label>
         <RunButton
-          loading={isPending}
+          loading={isFetching}
           label={`GET /users/${userId}`}
-          onClick={() => mutate({ id: userId })}
+          onClick={() => void refetch()}
         />
       </div>
       {error ? (
@@ -45,7 +48,10 @@ export function SimpleParamDemo() {
 export function NestedParamsDemo() {
   const [userId, setUserId] = useState(1)
   const [postId, setPostId] = useState(1)
-  const { mutate, data, isPending, error } = q.users.useMutation("getUserPost")
+  const { data, isFetching, error, refetch } = q.users.useQuery("getUserPost", {
+    variables: { id: userId, postId },
+    enabled: false,
+  })
 
   return (
     <>
@@ -79,9 +85,9 @@ export function NestedParamsDemo() {
           </select>
         </label>
         <RunButton
-          loading={isPending}
+          loading={isFetching}
           label={`GET /users/${userId}/posts/${postId}`}
-          onClick={() => mutate({ id: userId, postId })}
+          onClick={() => void refetch()}
         />
       </div>
       {error ? (
@@ -96,7 +102,10 @@ export function NestedParamsDemo() {
 export function MixedParamsDemo() {
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(2)
-  const { mutate, data, isPending } = q.users.useMutation("getAll")
+  const { data, isFetching, refetch } = q.users.useQuery("getAll", {
+    variables: { page, limit },
+    enabled: false,
+  })
 
   return (
     <>
@@ -130,9 +139,9 @@ export function MixedParamsDemo() {
           </select>
         </label>
         <RunButton
-          loading={isPending}
+          loading={isFetching}
           label={`GET /users?page=${page}&limit=${limit}`}
-          onClick={() => mutate({ page, limit })}
+          onClick={() => void refetch()}
         />
       </div>
       {data && <ResponseViewer data={data} status={200} />}

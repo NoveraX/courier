@@ -33,7 +33,7 @@ type BaseOptions = {
 
 ## CallOptions
 
-Passed as the second argument to a caller method. These are per-request options that control how a single request behaves:
+Named with `.with()`, which returns a caller carrying them. These control how a single request behaves:
 
 ```ts title="types"
 type CallOptions = {
@@ -100,19 +100,15 @@ Options are forwarded directly to the server-side `fetch` call:
 import { caller } from "@/lib/caller"
 
 // Per-request caching with Next.js ISR
-const users = await caller.users.getAll(undefined, {
-  next: { revalidate: 60 },
-})
+const users = await caller.users.with({ next: { revalidate: 60 } }).getAll()
 
 // Tag-based revalidation
-const post = await caller.posts.getById({ id }, {
-  next: { tags: ["posts", `post-${id}`] },
-})
+const post = await caller.posts
+  .with({ next: { tags: ["posts", `post-${id}`] } })
+  .getById({ id })
 
 // Force no caching
-const live = await caller.stats.realtime(undefined, {
-  cache: "no-store",
-})
+const live = await caller.stats.with({ cache: "no-store" }).realtime()
 ```
 
 ### Proxy mode <ModeBadge mode="proxy" />
@@ -120,11 +116,13 @@ const live = await caller.stats.realtime(undefined, {
 In proxy mode with `method: "GET"`, caching works at two levels:
 
 ```ts title="components/users.tsx"
-const users = await caller.users.getAll(undefined, {
-  method: "GET",
-  next: { revalidate: 60 },
-  cache: "force-cache",
-})
+const users = await caller.users
+  .with({
+    method: "GET",
+    next: { revalidate: 60 },
+    cache: "force-cache",
+  })
+  .getAll()
 ```
 
 **Level 1 — Browser/CDN cache**: The `cache` option controls the browser's HTTP cache for the `GET /api/request` response. Combined with `Cache-Control` headers from the server (set via `schema.cache` in endpoint definitions), this enables edge and CDN caching.
@@ -132,7 +130,7 @@ const users = await caller.users.getAll(undefined, {
 **Level 2 — Server-side data cache**: Both `next` and `cache` options are forwarded through the proxy to the server handler's `fetch` call to the backend. Next.js Data Cache caches this fetch result, so subsequent requests skip the backend entirely.
 
 <Callout variant="info" title="Requires GET proxy">
-Proxy caching only works with `method: "GET"`. Endpoints must be marked with `type: "query"` to accept GET requests. POST requests are never cached.
+Proxy caching only works with `method: "GET"`, and only an endpoint built from the `query` head is served over GET. A mutation asked for over GET is refused 405.
 </Callout>
 
 ## Headers
@@ -153,9 +151,11 @@ const api = defineApi({
 })
 
 // Per-request headers
-const data = await caller.users.getAll(undefined, {
-  headers: { "X-Custom-Header": "value" },
-})
+const data = await caller.users
+  .with({
+    headers: { "X-Custom-Header": "value" },
+  })
+  .getAll()
 ```
 
 ## Option precedence
@@ -166,7 +166,7 @@ When the same option is set at multiple levels, per-request options take the hig
 import { defineApi } from "@noverax/courier/define"
 
 // Options are merged with this precedence (highest wins):
-// 1. Per-request options  → caller.reports.generate(vars, { timeout: 5000 })
+// 1. Per-request options  → caller.reports.with({ timeout: 5000 }).generate(vars)
 // 2. Source-level options → defineApi({ timeout: 10000, ... })
 // 3. fetch defaults       → native fetch defaults
 
@@ -177,9 +177,7 @@ const api = defineApi({
 })
 
 // Override timeout for a slow endpoint
-const report = await caller.reports.generate({ type: "annual" }, {
-  timeout: 30_000,
-})
+const report = await caller.reports.with({ timeout: 30_000 }).generate({ type: "annual" })
 ```
 
 ## Credentials

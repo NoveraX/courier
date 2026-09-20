@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["packages/*/src/**", "packages/*/tsup.config.ts"]
+    "includes": ["packages/*/src/**", "packages/*/tsdown.config.ts"]
   },
   "formatter": {
     "indentStyle": "space",

@@ -1,8 +1,9 @@
-import { defineConfig } from "tsup";
+import { defineConfig } from "tsdown";
 
-import { dtsCompilerOptions } from "../../tsup.shared";
+import { sharedBuild } from "../../tsdown.shared.ts";
 
 export default defineConfig({
+  ...sharedBuild,
   entry: {
     index: "src/index.ts",
     testing: "src/testing.ts",
@@ -11,12 +12,7 @@ export default defineConfig({
     "managed/worker-entry": "src/managed/worker-entry.ts",
     "auto/meta-worker": "src/auto/meta-worker.ts",
   },
-  outDir: "lib",
-  format: ["esm"],
-  dts: { compilerOptions: dtsCompilerOptions },
-  clean: true,
-  splitting: true,
   /* Loaded lazily and declared as an optional peer, so it must stay a real
      import rather than being inlined into the bundle. */
-  external: ["socket.io-client"],
+  deps: { neverBundle: ["socket.io-client"] },
 });

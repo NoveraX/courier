@@ -8,5 +8,5 @@
       "@noverax/courier/realtime": ["../core/src/realtime/index.ts"]
     }
   },
-  "include": ["src/**/*", "tests/**/*", "tsup.config.ts"]
+  "include": ["src/**/*", "tests/**/*", "tsdown.config.ts"]
 }

@@ -49,10 +49,10 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "dev": "tsup --watch"
+    "dev": "tsdown --watch"
   },
   "publishConfig": {
     "access": "public"

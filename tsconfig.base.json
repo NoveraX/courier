@@ -12,6 +12,10 @@
     "noUnusedParameters": true,
     "noUncheckedIndexedAccess": true,
     "moduleResolution": "bundler",
+    /* Build and test config files are loaded by Vite and tsdown through
+       Node, which resolves a relative TypeScript import only with its
+       extension. Source files keep none — see the import rules. */
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,

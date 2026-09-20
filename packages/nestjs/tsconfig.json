@@ -9,5 +9,5 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true
   },
-  "include": ["src/**/*", "tests/**/*", "tsup.config.ts"]
+  "include": ["src/**/*", "tests/**/*", "tsdown.config.ts"]
 }

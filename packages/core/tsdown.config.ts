@@ -1,8 +1,9 @@
-import { defineConfig } from "tsup";
+import { defineConfig } from "tsdown";
 
-import { dtsCompilerOptions } from "../../tsup.shared";
+import { sharedBuild } from "../../tsdown.shared.ts";
 
 export default defineConfig({
+  ...sharedBuild,
   entry: {
     index: "src/index.ts",
     "config/index": "src/config/index.ts",
@@ -15,9 +16,4 @@ export default defineConfig({
     "internal-streams/index": "src/internal-streams/index.ts",
     "announce/index": "src/announce/index.ts",
   },
-  outDir: "lib",
-  format: ["esm"],
-  dts: { compilerOptions: dtsCompilerOptions },
-  clean: true,
-  splitting: true,
 });

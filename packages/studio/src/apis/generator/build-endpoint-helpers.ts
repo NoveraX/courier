@@ -2,34 +2,9 @@
  * Helper functions for building the builder chain that describes an endpoint.
  */
 
-import type { ParsedEndpoint, ParsedSpec } from "../parser/types";
+import type { ParsedEndpoint } from "../parser/types";
 import { getSchemaRefName } from "./schema-utils";
 import type { GenerateOptions } from "./types";
-
-/** Check if body schema has an explicit interface with documented properties */
-export function resolveBodyInterfaceType(
-  spec: ParsedSpec,
-  options: GenerateOptions,
-  hasSchema: boolean,
-  bodyRef: string | null,
-  schemaImports: Set<string>,
-  pathParams: ParsedEndpoint["parameters"],
-): string | null {
-  if (!hasSchema || !bodyRef || !schemaImports.has(bodyRef)) return null;
-  if (!options.includeComments || !options.generateTypes) return null;
-
-  const bodySchema = spec.schemas[bodyRef];
-  if (!bodySchema?.properties) return null;
-  if (!Object.values(bodySchema.properties).some((p) => p.description)) return null;
-
-  if (pathParams.length === 0) return bodyRef;
-
-  const paramParts = pathParams.map((p) => {
-    const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(p.name) ? p.name : `"${p.name}"`;
-    return `${key}: string`;
-  });
-  return `${bodyRef} & { ${paramParts.join("; ")} }`;
-}
 
 /**
  * Build the chain describing an endpoint.
@@ -42,20 +17,20 @@ export function resolveBodyInterfaceType(
 export function buildEndpointChain(
   address: string,
   schemaConfig: string[],
-  bodyInterfaceType: string | null,
   varsType: string | null,
   responseType: string,
 ): string {
   const responseSchema = findConfig(schemaConfig, "response");
   const variablesSchema = findConfig(schemaConfig, "variables");
-  const effectiveVarsType = bodyInterfaceType ?? varsType;
 
   let chain = address;
 
-  if (variablesSchema && !bodyInterfaceType) {
+  /* A schema is preferred wherever there is one: it carries the type and
+     validates the call, where a type argument only carries the type. */
+  if (variablesSchema) {
     chain += `.variables(${variablesSchema})`;
-  } else if (effectiveVarsType && effectiveVarsType !== "undefined") {
-    chain += `.variables<${effectiveVarsType}>()`;
+  } else if (varsType && varsType !== "undefined") {
+    chain += `.variables<${varsType}>()`;
   }
 
   if (responseSchema) {
@@ -86,4 +61,15 @@ export function describesResponseWithSchema(
   if (!options.generateSchemas || options.validation === "none") return false;
   const responseRef = getSchemaRefName(ep.responseSchema);
   return responseRef !== null && schemaImports.has(responseRef);
+}
+
+/**
+ * Is a runtime schema actually emitted for this source?
+ *
+ * `generateSchemas` asks for a schemas file; `validation: "none"` makes that
+ * file hold types instead. Only both together produce something a chain can
+ * validate against, and only then is a `XSchema` symbol importable.
+ */
+export function emitsSchemas(options: GenerateOptions): boolean {
+  return options.generateSchemas === true && options.validation !== "none";
 }

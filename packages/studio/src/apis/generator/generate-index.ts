@@ -3,6 +3,7 @@
  */
 
 import type { ParsedGroup, ParsedSpec } from "../parser/types";
+import { emitsSchemas } from "./build-endpoint-helpers";
 import type { GeneratedFile, GenerateOptions } from "./types";
 
 export function generateIndexFile(
@@ -80,12 +81,12 @@ export function generateIndexFile(
 
   // Re-export schemas/types
   if (flat) {
-    const file = options.generateSchemas ? "schemas" : "types";
+    const file = emitsSchemas(options) ? "schemas" : "types";
     if (options.generateSchemas || options.generateTypes) {
       lines.push(`export * from "./${file}";`);
     }
   } else if (groupSchemaMap && groupSchemaMap.size > 0) {
-    const file = options.generateSchemas ? "schemas" : "types";
+    const file = emitsSchemas(options) ? "schemas" : "types";
     const exported = new Set<string>();
 
     for (const group of groups) {

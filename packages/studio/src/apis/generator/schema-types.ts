@@ -53,7 +53,7 @@ export function resolveResponseType(
 
 export function resolveVariablesType(
   ep: ParsedEndpoint,
-  _spec: ParsedSpec,
+  spec: ParsedSpec,
   options: GenerateOptions,
 ): string | null {
   const parts: string[] = [];
@@ -88,11 +88,15 @@ export function resolveVariablesType(
       // Schema handles everything (body + path params via extend)
       return null;
     }
-    // No schema validation — use intersection type
+    /* Without a types file there is no name to refer to, so the body's shape
+       is written out where it is used. */
+    const body = options.generateTypes
+      ? ep.requestBody.refName
+      : inlineShape(spec, ep.requestBody.refName, options);
     if (parts.length > 0) {
-      return `${ep.requestBody.refName} & { ${parts.join("; ")} }`;
+      return `${body} & { ${parts.join("; ")} }`;
     }
-    return ep.requestBody.refName;
+    return body;
   }
 
   // Body inline
@@ -107,4 +111,24 @@ export function resolveVariablesType(
 
   if (parts.length === 0) return null;
   return `{ ${parts.join("; ")} }`;
+}
+
+/**
+ * Write a referenced schema out as an object type.
+ *
+ * Used where no types file is generated, so there is no name to refer to.
+ */
+function inlineShape(spec: ParsedSpec, refName: string, options: GenerateOptions): string {
+  const schema = spec.schemas[refName];
+  if (!schema?.properties) return "Record<string, unknown>";
+
+  const parts: string[] = [];
+  for (const [name, prop] of Object.entries(schema.properties)) {
+    if (!name) continue;
+    const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : `"${name}"`;
+    const optional = prop.required ? "" : "?";
+    const doc = options.includeComments && prop.description ? `/** ${prop.description} */ ` : "";
+    parts.push(`${doc}${key}${optional}: ${tsType(prop.type)}`);
+  }
+  return parts.length > 0 ? `{ ${parts.join("; ")} }` : "Record<string, unknown>";
 }

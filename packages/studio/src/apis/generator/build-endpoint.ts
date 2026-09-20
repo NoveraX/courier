@@ -4,7 +4,7 @@
 
 import { toInternalMethod } from "@noverax/courier";
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
-import { buildEndpointChain, resolveBodyInterfaceType } from "./build-endpoint-helpers";
+import { buildEndpointChain } from "./build-endpoint-helpers";
 import { resolveResponseType, resolveVariablesType } from "./schema-types";
 import { extendSchemaWithParams, getSchemaRefName } from "./schema-utils";
 import type { ResolvedGenerateOptions } from "./types";
@@ -21,19 +21,12 @@ export function buildEndpointDefinition(
 
   const responseType = resolveResponseType(ep, spec, options);
   const paramsName = `${toPascalCase(ep.name)}Params`;
-  const varsType = extracted?.[paramsName] ? paramsName : resolveVariablesType(ep, spec, options);
-  const pathParams = ep.parameters.filter((p) => p.in === "path");
+  /* An extracted params type is only written to disk when a types file is
+     generated; without one, the shape is named where it is used. */
+  const named = options.generateTypes && extracted?.[paramsName] ? paramsName : null;
+  const varsType = named ?? resolveVariablesType(ep, spec, options);
 
-  const bodyInterfaceType = resolveBodyInterfaceType(
-    spec,
-    options,
-    hasSchema,
-    getSchemaRefName(ep.requestBody),
-    schemaImports,
-    pathParams,
-  );
-
-  return buildEndpointChain(address(ep), schemaConfig, bodyInterfaceType, varsType, responseType);
+  return buildEndpointChain(address(ep), schemaConfig, varsType, responseType);
 }
 
 /** Where the endpoint is, named by the verb that reaches it. */

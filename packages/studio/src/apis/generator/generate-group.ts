@@ -4,7 +4,7 @@
 
 import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointDefinition } from "./build-endpoint";
-import { describesResponseWithSchema } from "./build-endpoint-helpers";
+import { describesResponseWithSchema, emitsSchemas } from "./build-endpoint-helpers";
 import { collectSchemaRefs } from "./schema-refs";
 import { resolveResponseType } from "./schema-types";
 import { getSchemaRefName } from "./schema-utils";
@@ -72,14 +72,15 @@ function buildImportLine(
   if (schemaImports.size === 0 && typeImports.size === 0) return null;
   if (!options.generateSchemas && !options.generateTypes) return null;
 
+  const schemas = emitsSchemas(options);
   const parts: string[] = [];
   const schemaFile = options.generateSchemas ? "./schemas" : "./types";
 
   for (const name of schemaImports) {
-    parts.push(options.generateSchemas ? `${name}Schema` : name);
+    parts.push(schemas ? `${name}Schema` : name);
   }
   for (const name of typeImports) {
-    if (options.generateSchemas) {
+    if (schemas) {
       parts.push(`type ${name}`);
     } else if (!schemaImports.has(name)) {
       parts.push(name);

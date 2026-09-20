@@ -5,7 +5,7 @@
 
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointDefinition } from "./build-endpoint";
-import { describesResponseWithSchema } from "./build-endpoint-helpers";
+import { describesResponseWithSchema, emitsSchemas } from "./build-endpoint-helpers";
 import { collectSchemaRefs } from "./schema-refs";
 import { resolveResponseType } from "./schema-types";
 import { getSchemaRefName } from "./schema-utils";
@@ -39,13 +39,14 @@ export function generateFlatSourceFile(
     (schemaImports.size > 0 || typeImports.size > 0) &&
     (options.generateSchemas || options.generateTypes)
   ) {
+    const schemas = emitsSchemas(options);
     const schemaFile = options.generateSchemas ? "./schemas" : "./types";
     const parts: string[] = [];
     for (const name of schemaImports) {
-      parts.push(options.generateSchemas ? `${name}Schema` : name);
+      parts.push(schemas ? `${name}Schema` : name);
     }
     for (const name of typeImports) {
-      if (options.generateSchemas) {
+      if (schemas) {
         parts.push(`type ${name}`);
       } else if (!schemaImports.has(name)) {
         parts.push(name);

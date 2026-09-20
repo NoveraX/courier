@@ -9,7 +9,8 @@ import { extractEndpoints } from "./extract-endpoints";
 import { classifyEndpoints } from "./fingerprint";
 import { mergeGroupFile } from "./merge-group";
 
-const GROUP_MARKER = "defineGroup(";
+/** Either shape a generated source takes: a group, or a flat API. */
+const SOURCE_MARKERS = ["defineGroup(", "defineApi("] as const;
 
 /**
  * Preview the result of updating a source to a new spec.
@@ -45,8 +46,8 @@ function mergeOrOverwrite(
   existing: string | undefined,
   fingerprints: Record<string, string>,
 ): UpdateFileResult {
-  /* No existing file or non-group file → safe overwrite */
-  if (!existing || !existing.includes(GROUP_MARKER)) {
+  /* No existing file, or one that declares no source → safe overwrite */
+  if (!existing || !SOURCE_MARKERS.some((marker) => existing.includes(marker))) {
     return { path: gen.path, content: gen.content, status: "safe", changes: [] };
   }
 

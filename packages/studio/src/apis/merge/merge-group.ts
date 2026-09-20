@@ -148,16 +148,26 @@ function buildFile(
   endpointLines: string[],
   trailingCode: string[],
 ): string {
+  /* The declaration is taken from the freshly generated file — that is where a
+     changed baseURL or prefix arrives — and only the endpoints between are
+     merged. A group and a flat source differ only in what that shell says. */
+  const header =
+    generated.header.length > 0
+      ? generated.header
+      : [
+          `export const ${generated.groupName} = defineGroup({`,
+          `  prefix: "${generated.prefix}",`,
+          "  endpoints: {",
+        ];
+  const footer = generated.footer.length > 0 ? generated.footer : ["  },", "});"];
+
   const lines = [
     ...importLines,
     "",
     ...(preamble.length > 0 ? [...preamble, ""] : []),
-    `export const ${generated.groupName} = defineGroup({`,
-    `  prefix: "${generated.prefix}",`,
-    "  endpoints: {",
+    ...header,
     ...endpointLines,
-    "  },",
-    "});",
+    ...footer,
     "",
   ];
 

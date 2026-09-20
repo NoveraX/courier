@@ -100,6 +100,15 @@ export interface ExistingEndpointInfo {
 export interface ExistingGroupInfo {
   groupName: string;
   prefix: string;
+  /**
+   * The declaration down to and including the line opening `endpoints`.
+   *
+   * Kept verbatim rather than rebuilt, so a flat source keeps its baseURL and
+   * everything else it configures, and a group keeps its prefix.
+   */
+  header: string[];
+  /** The lines closing the declaration, after the endpoints. */
+  footer: string[];
   imports: ParsedImport[];
   endpoints: ExistingEndpointInfo[];
   /** Code lines between the imports and the defineGroup block (builder heads) */

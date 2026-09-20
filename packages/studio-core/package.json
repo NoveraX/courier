@@ -43,7 +43,8 @@
   },
   "dependencies": {
     "@noverax/courier": "*",
-    "c12": "^4.0.0-rc.1"
+    "c12": "^4.0.0-rc.1",
+    "jiti": "^2.6.1"
   },
   "peerDependencies": {
     "socket.io-client": ">=4.0.0"

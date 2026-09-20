@@ -303,12 +303,12 @@ process.on("SIGTERM", async () => {
 
 ## Hono
 
-Hono is runtime-agnostic — this example uses Node.js with `@hono/node-server` and `@hono/node-ws`.
+Hono is runtime-agnostic — this example uses Node.js with `@hono/node-server`, which carries its own WebSocket upgrade helper.
 
 ```ts title="server.ts"
 import { Hono } from "hono"
-import { serve } from "@hono/node-server"
-import { createNodeWebSocket } from "@hono/node-ws"
+import { serve, upgradeWebSocket } from "@hono/node-server"
+import { WebSocketServer } from "ws"
 import { registerSources } from "@noverax/courier"
 import { courierHandler, courierSSEHandler, courierWSHandler } from "@noverax/courier-hono"
 import { sources } from "./api/sources"
@@ -318,7 +318,7 @@ registerSources(sources)
 await connectAdapters()
 
 const app = new Hono()
-const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app })
+const wss = new WebSocketServer({ noServer: true })
 
 // HTTP proxy
 app.all("/api/request", courierHandler())
@@ -351,8 +351,12 @@ app.get("/ws", upgradeWebSocket((c) => ws(c)))
 // Health checks
 app.get("/health", (c) => c.json({ status: "ok" }))
 
-const server = serve({ fetch: app.fetch, port: Number(process.env.PORT) || 3001, hostname: "0.0.0.0" })
-injectWebSocket(server)
+const server = serve({
+  fetch: app.fetch,
+  port: Number(process.env.PORT) || 3001,
+  hostname: "0.0.0.0",
+  websocket: { server: wss },
+})
 
 process.on("SIGTERM", async () => {
   server.close()
@@ -361,7 +365,7 @@ process.on("SIGTERM", async () => {
 ```
 
 <Callout variant="tip" title="Other runtimes">
-  For Bun, Deno, or Cloudflare Workers, replace `@hono/node-server` and `@hono/node-ws` with the runtime-specific WebSocket API. See the [Cloudflare](/docs/deployment/cloudflare) page for Workers setup.
+  For Bun, Deno, or Cloudflare Workers, replace `@hono/node-server` with the runtime-specific WebSocket API. See the [Cloudflare](/docs/deployment/cloudflare) page for Workers setup.
 </Callout>
 
 ## NestJS
@@ -439,7 +443,7 @@ export class AppModule implements NestModule {
 | HTTP proxy | Built-in | `apiRoute()` | `courierHandler()` | `courierPlugin` | `courierHandler()` | `courierMiddleware()` |
 | SSE | Built-in | `sseRoute()` | `courierSSEHandler()` | `courierSSEHandler()` | `courierSSEHandler()` | `courierSSEMiddleware()` |
 | WebSocket | Built-in | Separate server | `courierWSAttach()` | `courierWSHandler()` | `courierWSHandler()` | `courierWSAttach()` |
-| WS library | Built-in | N/A | `ws` (peer) | `@fastify/websocket` | `@hono/node-ws` | `ws` (peer) |
+| WS library | Built-in | N/A | `ws` (peer) | `@fastify/websocket` | `ws` (peer) | `ws` (peer) |
 | Processes | 1 | 2 (Next + WS) | 1 | 1 | 1 | 1 |
 | PubSub wiring | `pubsub` config | On WS server | `courierWSAttach` opts | `courierWSHandler` opts | `courierWSHandler` opts | `courierWSAttach` opts |
 

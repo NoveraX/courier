@@ -100,11 +100,14 @@ export type HonoWSEvents = {
  *
  * @example Node.js
  * ```ts
- * import { createNodeWebSocket } from "@hono/node-ws";
- * const { upgradeWebSocket } = createNodeWebSocket({ app });
+ * import { serve, upgradeWebSocket } from "@hono/node-server";
+ * import { WebSocketServer } from "ws";
  *
+ * const wss = new WebSocketServer({ noServer: true });
  * const ws = courierWSHandler();
  * app.get("/ws", upgradeWebSocket((c) => ws(c)));
+ *
+ * serve({ fetch: app.fetch, port: 3001, websocket: { server: wss } });
  * ```
  */
 export function courierWSHandler(options?: CourierWSOptions): (c: Context) => HonoWSEvents {

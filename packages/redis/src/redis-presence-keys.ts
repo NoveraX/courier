@@ -53,19 +53,41 @@ export function unpackMeta(raw: string): PackedMeta {
   return JSON.parse(raw) as PackedMeta;
 }
 
-/** Parse ZRANGEBYSCORE WITHSCORES flat array into id/score pairs */
-export function parseScorePairs(raw: string[]): {
+/** One ZRANGEBYSCORE WITHSCORES reply element, in either protocol's shape */
+export type ScoreReplyElement = string | readonly [string, string | number];
+
+/**
+ * Parse a ZRANGEBYSCORE WITHSCORES reply into id/score pairs.
+ *
+ * RESP2 answers with a flat `[member, score, member, score, …]` array; RESP3
+ * answers with `[[member, score], …]`. A client speaking either protocol
+ * reaches this function, so both shapes are read rather than one being
+ * assumed — under the wrong assumption every entry is silently dropped and
+ * a populated topic reports nobody present.
+ */
+export function parseScorePairs(raw: readonly ScoreReplyElement[]): {
   connectionIds: string[];
   scores: Map<string, number>;
 } {
   const connectionIds: string[] = [];
   const scores = new Map<string, number>();
-  for (let i = 0; i < raw.length; i += 2) {
-    const connId = raw[i];
-    const score = raw[i + 1];
-    if (!connId || !score) continue;
+
+  const record = (connId: string | undefined, score: string | number | undefined): void => {
+    if (!connId || score === undefined || score === "") return;
     connectionIds.push(connId);
     scores.set(connId, Number(score));
+  };
+
+  if (Array.isArray(raw[0])) {
+    for (const pair of raw as readonly (readonly [string, string | number])[]) {
+      record(pair[0], pair[1]);
+    }
+    return { connectionIds, scores };
+  }
+
+  const flat = raw as readonly string[];
+  for (let i = 0; i < flat.length; i += 2) {
+    record(flat[i], flat[i + 1]);
   }
   return { connectionIds, scores };
 }

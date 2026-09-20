@@ -5,7 +5,7 @@ export type HonoWSContext = {
   send(data: string): void;
   close(code?: number, reason?: string): void;
   readonly readyState: number;
-  /** Platform-native socket (available in @hono/node-ws, Deno, Bun) */
+  /** Platform-native socket (available on Node, Deno and Bun adapters) */
   readonly raw?: { readonly bufferedAmount: number };
 };
 

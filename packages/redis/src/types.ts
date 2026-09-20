@@ -2,7 +2,14 @@ import type { Redis } from "ioredis";
 
 /** Configuration for {@link createRedisPresence} */
 export interface RedisPresenceConfig {
-  /** Redis instance for ZADD / HSET / ZRANGEBYSCORE commands */
+  /**
+   * Redis instance for ZADD / HSET / ZRANGEBYSCORE commands.
+   *
+   * Typed against ioredis's default `legacy` reply mapping, which is what
+   * both v5 and v6 give you unless `replyMapping: "resp3"` is asked for. A
+   * client configured that way still works — the presence reader accepts
+   * either reply shape — but it is not what this type describes.
+   */
   redis: Redis;
   /**
    * Key prefix for presence data (e.g. `"courier:presence:"`).
@@ -21,7 +28,9 @@ export interface RedisPubSubConfig {
   publisher: Redis;
   /**
    * Redis instance used for SUBSCRIBE commands.
-   * ioredis enters subscriber mode — this connection cannot run other commands.
+   * Kept dedicated to subscriptions: RESP2 forbids other commands on a
+   * subscribed connection outright, and RESP3 allows them but still delivers
+   * every message for this connection through the same handler.
    */
   subscriber: Redis;
   /**

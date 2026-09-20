@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { defineProject } from "vitest/config";
 
-import { sharedTestOptions } from "../../../vitest.shared";
+import { sharedTestOptions } from "../../../vitest.shared.ts";
 
 /**
  * Vitest harness for `@noverax/courier-studio-ui`.
@@ -26,7 +26,7 @@ export default defineProject({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
 });

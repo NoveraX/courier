@@ -13,6 +13,24 @@ export type HonoWSContext = {
   readonly raw?: unknown;
 };
 
+/**
+ * Decode one WebSocket frame to text.
+ *
+ * Every runtime hands binary frames over in its own shape: `@hono/node-server`
+ * gives an ArrayBuffer, Deno and Bun a Uint8Array, and the Web type admits a
+ * Blob. Coercing any of those with `String()` yields `"[object ArrayBuffer]"`
+ * or a comma-separated byte list, not the message — so each is decoded.
+ * A Blob can only be read asynchronously, which is why this returns a promise
+ * for that one case; no server runtime this package supports delivers one.
+ */
+export function frameText(data: unknown): string | Promise<string> {
+  if (typeof data === "string") return data;
+  if (data instanceof ArrayBuffer) return new TextDecoder().decode(data);
+  if (ArrayBuffer.isView(data)) return new TextDecoder().decode(data);
+  if (data instanceof Blob) return data.text();
+  return String(data);
+}
+
 /** Back-pressure in bytes, for sockets that report it; 0 for those that do not. */
 function bufferedBytes(raw: unknown): number {
   if (typeof raw !== "object" || raw === null || !("bufferedAmount" in raw)) return 0;

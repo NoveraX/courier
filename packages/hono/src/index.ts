@@ -9,7 +9,7 @@ import {
 import { announceHosting } from "@noverax/courier/announce";
 import type { Context } from "hono";
 import type { HonoWSContext } from "./ws-adapter";
-import { createSocketAdapter } from "./ws-adapter";
+import { createSocketAdapter, frameText } from "./ws-adapter";
 
 /**
  * Module-level first-request flag for `listenOrigin` auto-discovery.
@@ -128,8 +128,12 @@ export function courierWSHandler(options?: CourierWSOptions): (c: Context) => Ho
         wsHandler.handleSocket(adapter, c.req.raw);
       },
       onMessage(event) {
-        const data = typeof event.data === "string" ? event.data : String(event.data);
-        adapter?.emit("message", { data });
+        const decoded = frameText(event.data);
+        if (typeof decoded === "string") {
+          adapter?.emit("message", { data: decoded });
+          return;
+        }
+        decoded.then((data) => adapter?.emit("message", { data }));
       },
       onClose(event) {
         adapter?.emit("close", { code: event.code });

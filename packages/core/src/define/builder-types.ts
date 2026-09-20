@@ -17,14 +17,27 @@ export type StreamHandler<TResponse, TVariables> = (
 ) => AsyncGenerator<SSEEvent<TResponse>, void, unknown>;
 
 /**
- * Implementation serving a channel from the defining process.
+ * Implementation serving a channel the caller can send on.
  *
- * A channel the caller can send on supplies handlers for each direction; one
- * that only pushes supplies the generator producing what it pushes.
+ * It receives the variables the subscription carried and returns a handler for
+ * each direction.
  */
-export type ChannelHandler<TResponse, TVariables, TSend> =
-  | ((variables: TVariables) => ChannelHandlers<TSend, TResponse, TVariables>)
-  | WSPushHandler<TResponse, TVariables>;
+export type ChannelDuplexHandler<TResponse, TVariables, TSend> = (
+  variables: TVariables,
+) => ChannelHandlers<TSend, TResponse, TVariables>;
+
+/** Implementation serving a channel that only pushes. */
+export type ChannelPushHandler<TResponse, TVariables> = WSPushHandler<TResponse, TVariables>;
+
+/**
+ * The implementation a channel takes, decided by whether it can be sent on.
+ *
+ * `TSend` is `never` until `.send()` names what the caller may send, so the
+ * two shapes never have to be told apart from the handler itself.
+ */
+export type ChannelImplementation<TResponse, TVariables, TSend> = [TSend] extends [never]
+  ? ChannelPushHandler<TResponse, TVariables>
+  : ChannelDuplexHandler<TResponse, TVariables, TSend>;
 
 /**
  * Methods every builder carries that do not move its types.
@@ -107,9 +120,20 @@ export interface ChannelBuilder<TResponse, TVariables, TSend>
     probe: ChannelProbe<TVariables>,
     options?: ChannelEndpointOptions,
   ): ChannelEndpoint<TResponse, TVariables, TSend>;
-  /** Serve this channel from the process that defines it. */
+  /**
+   * Serve this channel from the process that defines it.
+   *
+   * Which implementation it takes follows from `.send()`: a channel nothing
+   * can send on is served by the generator producing what it pushes, and one
+   * that accepts messages is served by a handler for each direction.
+   *
+   * The two are selected by a conditional type rather than offered as a union
+   * or as overloads. Both of those leave an inline handler without a
+   * contextual type, which would silently widen every one of its parameters
+   * to `any`.
+   */
   implement(
-    handler: ChannelHandler<TResponse, TVariables, TSend>,
+    handler: ChannelImplementation<TResponse, TVariables, TSend>,
     options?: ChannelEndpointOptions,
   ): ChannelEndpoint<TResponse, TVariables, TSend>;
 }

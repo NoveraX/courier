@@ -14,14 +14,12 @@ const log = createLogger("CLI");
 const init = defineCommand({
   meta: {
     name: "init",
-    description: "Initialize project: create registry.courier.json, update .gitignore",
+    description: "Initialize project: ignore the Courier Studio cache directory",
   },
   run() {
     setProjectRoot(process.cwd());
-    const { registryCreated, gitignoreUpdated } = initProject();
-    if (registryCreated) log.info("registry.courier.json created");
-    if (gitignoreUpdated) log.info(".gitignore updated with cache files");
-    if (!registryCreated && !gitignoreUpdated) log.info("project already initialized");
+    const { gitignoreUpdated } = initProject();
+    log.info(gitignoreUpdated ? ".gitignore now ignores .courier/" : "project already initialized");
   },
 });
 

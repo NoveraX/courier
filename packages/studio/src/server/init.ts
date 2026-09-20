@@ -12,9 +12,8 @@ const COURIER_DIR = ".courier/";
 const GITIGNORE = ".gitignore";
 
 /** Initialize project: ensure `.courier/` is ignored by git. */
-export function initProject(): { registryCreated: boolean; gitignoreUpdated: boolean } {
-  const gitignoreUpdated = ensureGitignore();
-  return { registryCreated: false, gitignoreUpdated };
+export function initProject(): { gitignoreUpdated: boolean } {
+  return { gitignoreUpdated: ensureGitignore() };
 }
 
 function ensureGitignore(): boolean {

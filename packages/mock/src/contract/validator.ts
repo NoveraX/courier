@@ -59,12 +59,14 @@ export async function validateEndpoint(
 }
 
 /**
- * Extract schema metadata from an endpoint function.
- * Uses the same Symbol.for("courier.endpoint.schema") as core.
+ * Read the schema metadata an endpoint carries.
+ *
+ * An endpoint is a descriptor stamped with the same
+ * `Symbol.for("courier.endpoint.schema")` key core reads.
  */
-export function getEndpointSchema(endpointFn: unknown): SchemaMetadata | undefined {
-  if (typeof endpointFn !== "function") return undefined;
-  return (endpointFn as unknown as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
+export function getEndpointSchema(endpoint: unknown): SchemaMetadata | undefined {
+  if (typeof endpoint !== "object" || endpoint === null) return undefined;
+  return (endpoint as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
 }
 
 /**
@@ -90,28 +92,34 @@ export async function validateSource(
       const data = mockData.get(key);
 
       if (!schema) {
-        results.push({ group: groupName, method: methodName, status: "skip" });
+        /* Not an endpoint — a helper a user put in the group alongside them. */
         continue;
       }
 
+      /* Every endpoint reports once per requested direction. An endpoint that
+         cannot be checked is reported as skipped rather than omitted, so the
+         report never reads as though it covered more than it did. */
       if (direction === "response" || direction === "both") {
         if (schema.response && data !== undefined) {
           const result = await validateEndpoint(schema.response, data, "response");
           results.push({ ...result, group: groupName, method: methodName });
-        } else if (schema.response) {
-          results.push({ group: groupName, method: methodName, status: "skip" });
-        }
-      }
-
-      if (direction === "variables" || direction === "both") {
-        if (schema.variables) {
+        } else {
           results.push({
             group: groupName,
             method: methodName,
             status: "skip",
-            target: "variables",
+            target: "response",
           });
         }
+      }
+
+      if (direction === "variables" || direction === "both") {
+        results.push({
+          group: groupName,
+          method: methodName,
+          status: "skip",
+          target: "variables",
+        });
       }
     }
   }

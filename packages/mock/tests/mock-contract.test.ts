@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { courier, defineGroup } from "@noverax/courier/define";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import { describe, expect, it } from "vitest";
 import { getEndpointSchema, validateEndpoint, validateSource } from "../src/contract/validator";
 import { createContractReport } from "../src/contract/report";
 
@@ -29,19 +30,18 @@ const userSchema = createSchema<{ id: string; name: string; email: string }>((va
   return issues.length ? { issues } : { value: value as { id: string; name: string; email: string } };
 });
 
-const ENDPOINT_SCHEMA = Symbol.for("courier.endpoint.schema");
+const { query } = courier();
 
 describe("getEndpointSchema", () => {
-  it("extracts schema from endpoint function", () => {
-    const fn = () => {};
-    (fn as unknown as Record<symbol, unknown>)[ENDPOINT_SCHEMA] = { response: userSchema };
+  it("reads the schema an endpoint carries", () => {
+    const fn = query.response(userSchema).via((http) => http.get(""));
 
     const schema = getEndpointSchema(fn);
     expect(schema).toBeDefined();
     expect(schema?.response).toBe(userSchema);
   });
 
-  it("returns undefined for plain functions", () => {
+  it("returns undefined for a plain function", () => {
     expect(getEndpointSchema(() => {})).toBeUndefined();
   });
 
@@ -79,17 +79,17 @@ describe("validateEndpoint", () => {
 });
 
 describe("validateSource", () => {
-  it("validates all endpoints in a source", async () => {
-    // Simulate a source with schema-annotated endpoints
-    const getAll = () => {};
-    (getAll as unknown as Record<symbol, unknown>)[ENDPOINT_SCHEMA] = { response: userSchema };
+  it("validates every endpoint a source defines", async () => {
+    const users = defineGroup({
+      prefix: "users",
+      endpoints: {
+        getAll: query.response(userSchema).via((http) => http.get("")),
+        // No response schema — must be skipped, not silently passed
+        create: query.via((http) => http.post("")),
+      },
+    });
 
-    const create = () => {};
-    // No schema — should be skipped
-
-    const source = {
-      users: { options: {}, getAll, create },
-    };
+    const source = { users };
 
     const mockData = new Map<string, unknown>();
     mockData.set("users/getAll", { id: "1", name: "Alice", email: "a@t.com" });
@@ -166,5 +166,42 @@ describe("ContractReport", () => {
     expect(json.passed).toBe(1);
     expect(json.failed).toBe(1);
     expect(json.results).toHaveLength(3);
+  });
+});
+
+describe("validateSource reports every endpoint", () => {
+  it("skips rather than omits an endpoint it cannot check", async () => {
+    const users = defineGroup({
+      prefix: "users",
+      endpoints: {
+        withSchema: query.response(userSchema).via((http) => http.get("")),
+        noSchema: query.via((http) => http.get("bare")),
+      },
+    });
+
+    const results = await validateSource({ users }, new Map());
+
+    expect(results).toHaveLength(2);
+    expect(results.every((r) => r.status === "skip")).toBe(true);
+    expect(results.map((r) => r.method)).toEqual(["withSchema", "noSchema"]);
+  });
+
+  it("ignores a helper sitting in the group beside the endpoints", async () => {
+    const source = {
+      users: {
+        options: {},
+        getAll: query.response(userSchema).via((http) => http.get("")),
+        helper: () => "not an endpoint",
+      },
+    };
+
+    const results = await validateSource(
+      source as unknown as Record<string, Record<string, unknown>>,
+      new Map([["users/getAll", { id: "1", name: "Alice", email: "a@t.com" }]]),
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.method).toBe("getAll");
+    expect(results[0]?.status).toBe("pass");
   });
 });

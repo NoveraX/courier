@@ -108,8 +108,8 @@ const api = defineApi({
     users: defineGroup({
       prefix: "users",
       endpoints: {
-        getAll: endpoint.response<User[]>().get(""),
-        create: endpoint.variables<CreateUserInput>().response<User>().post(""),
+        getAll: endpoint.get("").response<User[]>(),
+        create: endpoint.post("").variables<CreateUserInput>().response<User>(),
       },
     }),
   },

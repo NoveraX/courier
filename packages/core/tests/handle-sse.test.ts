@@ -97,7 +97,7 @@ describe("handleSSE", () => {
   });
 
   it("returns 400 for non-SSE endpoint", async () => {
-    const httpEndpoint = endpoint.response<string>().get("/test");
+    const httpEndpoint = endpoint.get("/test").response<string>();
     const sources = {
       api: { options: { groups: {} }, health: httpEndpoint },
     };

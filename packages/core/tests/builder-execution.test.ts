@@ -33,19 +33,10 @@ const api = (() => {
   const users = defineGroup({
     prefix: "/users",
     endpoints: {
-      getAll: endpoint.response(z.array(UserSchema)).get(""),
-      getById: endpoint
-        .variables(ById)
-        .response(UserSchema)
-        .get(":id"),
-      create: endpoint
-        .variables(z.object({ email: z.string() }))
-        .response(UserSchema)
-        .post(""),
-      search: endpoint
-        .variables(z.object({ q: z.string() }))
-        .response(z.array(UserSchema))
-        .post("search").reads(),
+      getAll: endpoint.get("").response(z.array(UserSchema)),
+      getById: endpoint.get(":id").variables(ById).response(UserSchema),
+      create: endpoint.post("").variables(z.object({ email: z.string() })).response(UserSchema),
+      search: endpoint.post("search").variables(z.object({ q: z.string() })).response(z.array(UserSchema)).reads(),
     },
   });
 

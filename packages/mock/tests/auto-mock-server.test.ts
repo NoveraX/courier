@@ -58,24 +58,24 @@ const api = defineApi({
     owners: defineGroup({
       prefix: "/owners",
       endpoints: {
-        listOwners: endpoint.response(z.array(OwnerSchema)).get(""),
-        getOwner: endpoint.variables<{ ownerId: string }>().response(OwnerSchema).get(":ownerId"),
-        createOwner: endpoint.variables(z.object({ name: z.string(), email: z.string() })).response(OwnerSchema).post(""),
+        listOwners: endpoint.get("").response(z.array(OwnerSchema)),
+        getOwner: endpoint.get(":ownerId").variables<{ ownerId: string }>().response(OwnerSchema),
+        createOwner: endpoint.post("").variables(z.object({ name: z.string(), email: z.string() })).response(OwnerSchema),
         deleteOwner: endpoint.del(":ownerId"),
       },
     }),
     pets: defineGroup({
       prefix: "/pets",
       endpoints: {
-        listPets: endpoint.response(z.array(PetSchema)).get(""),
-        getPet: endpoint.variables<{ petId: string }>().response(PetSchema).get(":petId"),
+        listPets: endpoint.get("").response(z.array(PetSchema)),
+        getPet: endpoint.get(":petId").variables<{ petId: string }>().response(PetSchema),
       },
     }),
     catalog: defineGroup({
       prefix: "/catalog",
       endpoints: {
-        browse: endpoint.response(PaginatedSchema).get("browse"),
-        listItems: endpoint.response(z.array(z.object({ id: z.string(), title: z.string(), price: z.number() }))).get(""),
+        browse: endpoint.get("browse").response(PaginatedSchema),
+        listItems: endpoint.get("").response(z.array(z.object({ id: z.string(), title: z.string(), price: z.number() }))),
       },
     }),
   },

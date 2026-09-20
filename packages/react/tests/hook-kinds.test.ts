@@ -17,13 +17,10 @@ const api = defineApi({
     users: defineGroup({
       prefix: "/users",
       endpoints: {
-        getAll: endpoint.response(z.array(UserSchema)).get(""),
-        create: endpoint
-          .variables(UserSchema)
-          .response(UserSchema)
-          .post(""),
-        feed: stream.response(EventSchema).get("feed"),
-        room: channel.send(Incoming).response(EventSchema).connect("room"),
+        getAll: endpoint.get("").response(z.array(UserSchema)),
+        create: endpoint.post("").variables(UserSchema).response(UserSchema),
+        feed: stream.get("feed").response(EventSchema),
+        room: channel.connect("room").send(Incoming).response(EventSchema),
       },
     }),
   },

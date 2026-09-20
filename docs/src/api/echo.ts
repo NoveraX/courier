@@ -14,14 +14,8 @@ type EchoResponse = {
 export const echo = defineGroup({
   prefix: "echo",
   endpoints: {
-    send: endpoint
-      .variables<Record<string, unknown>>()
-      .response<EchoResponse>()
-      .post(""),
-    retrieve: endpoint
-      .variables<Record<string, unknown>>()
-      .response<EchoResponse>()
-      .get(""),
+    send: endpoint.post("").variables<Record<string, unknown>>().response<EchoResponse>(),
+    retrieve: endpoint.get("").variables<Record<string, unknown>>().response<EchoResponse>(),
   },
 })
 

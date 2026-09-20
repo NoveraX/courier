@@ -15,20 +15,20 @@ describe("where a realtime endpoint sits", () => {
   const { stream, channel } = courier();
 
   it("follows the path a stream's closure addressed", () => {
-    const feed = stream.response(EventSchema).get("events/live");
+    const feed = stream.get("events/live").response(EventSchema);
 
     expect(feed.path).toBe("events/live");
     expect(endpointPath(feed, "feed")).toBe("events/live");
   });
 
   it("follows the path a channel's closure addressed", () => {
-    const room = channel.response(EventSchema).connect("rooms/general");
+    const room = channel.connect("rooms/general").response(EventSchema);
 
     expect(endpointPath(room, "room")).toBe("rooms/general");
   });
 
   it("falls back to the endpoint's name when the closure addressed nothing", () => {
-    const feed = stream.response(EventSchema).get("");
+    const feed = stream.get("").response(EventSchema);
 
     expect(endpointPath(feed, "feed")).toBe("feed");
   });
@@ -63,7 +63,7 @@ describe("what a realtime server will serve", () => {
   });
 
   it("marks an endpoint that only describes its wire as served elsewhere", () => {
-    const feed = stream.response(EventSchema).get("feed");
+    const feed = stream.get("feed").response(EventSchema);
 
     expect((feed as unknown as { served: boolean }).served).toBe(false);
   });
@@ -78,24 +78,21 @@ describe("what makes a channel bidirectional", () => {
   }
 
   it("counts a send slot declared with only a type", () => {
-    const room = channel
-      .send<{ text: string }>()
-      .response(EventSchema)
-      .connect("room");
+    const room = channel.connect("room").send<{ text: string }>().response(EventSchema);
 
     expect(metadata(room).bidirectional).toBe(true);
     expect(metadata(room).receive).toBeUndefined();
   });
 
   it("counts a send slot declared with a schema, and validates against it", () => {
-    const room = channel.send(Incoming).response(EventSchema).connect("room");
+    const room = channel.connect("room").send(Incoming).response(EventSchema);
 
     expect(metadata(room).bidirectional).toBe(true);
     expect(metadata(room).receive).toBe(Incoming);
   });
 
   it("leaves a channel that named no send slot one-way", () => {
-    const ticker = channel.response(EventSchema).connect("ticker");
+    const ticker = channel.connect("ticker").response(EventSchema);
 
     expect(metadata(ticker).bidirectional).toBeUndefined();
     expect(metadata(ticker).receive).toBeUndefined();

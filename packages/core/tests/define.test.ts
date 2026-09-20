@@ -26,7 +26,7 @@ describe("defineGroup", () => {
 		const group = defineGroup({
 			prefix: "users",
 			endpoints: {
-				getAll: endpoint.response<string[]>().get(""),
+				getAll: endpoint.get("").response<string[]>(),
 			},
 		});
 
@@ -36,7 +36,7 @@ describe("defineGroup", () => {
 	it("produces object with options.prefix undefined when omitted", () => {
 		const group = defineGroup({
 			endpoints: {
-				health: endpoint.response<boolean>().get("health"),
+				health: endpoint.get("health").response<boolean>(),
 			},
 		});
 
@@ -44,8 +44,8 @@ describe("defineGroup", () => {
 	});
 
 	it("spreads endpoint functions onto the result object", () => {
-		const getAll = endpoint.response<string[]>().get("");
-		const create = endpoint.variables<{ name: string }>().response<string>().post("");
+		const getAll = endpoint.get("").response<string[]>();
+		const create = endpoint.post("").variables<{ name: string }>().response<string>();
 
 		const group = defineGroup({
 			prefix: "users",
@@ -60,7 +60,7 @@ describe("defineGroup", () => {
 		const group = defineGroup({
 			prefix: "items",
 			endpoints: {
-				list: endpoint.response<number[]>().get(""),
+				list: endpoint.get("").response<number[]>(),
 			},
 		});
 
@@ -74,7 +74,7 @@ describe("defineGroup", () => {
 			prefix: "tenants",
 			pathOptions,
 			endpoints: {
-				list: endpoint.response<unknown[]>().get(""),
+				list: endpoint.get("").response<unknown[]>(),
 			},
 		});
 
@@ -89,7 +89,7 @@ describe("defineApi", () => {
 		const usersGroup = defineGroup({
 			prefix: "users",
 			endpoints: {
-				getAll: endpoint.response<string[]>().get(""),
+				getAll: endpoint.get("").response<string[]>(),
 			},
 		});
 
@@ -128,7 +128,7 @@ describe("defineApi", () => {
 	});
 
 	it("groups are accessible with correct structure", () => {
-		const getAll = endpoint.response<string[]>().get("");
+		const getAll = endpoint.get("").response<string[]>();
 
 		const api = defineApi({
 			baseURL: "https://api.example.com",
@@ -149,8 +149,8 @@ describe("defineApi", () => {
 
 describe("defineApi flat (no groups)", () => {
 	it("spreads endpoints onto the result object", () => {
-		const getAll = endpoint.response<string[]>().get("");
-		const create = endpoint.variables<{ name: string }>().response<string>().post("");
+		const getAll = endpoint.get("").response<string[]>();
+		const create = endpoint.post("").variables<{ name: string }>().response<string>();
 
 		const api = defineApi({
 			baseURL: "https://api.example.com",
@@ -166,7 +166,7 @@ describe("defineApi flat (no groups)", () => {
 		const api = defineApi({
 			baseURL: "https://flat.api",
 			endpoints: {
-				health: endpoint.response<boolean>().get("health"),
+				health: endpoint.get("health").response<boolean>(),
 			},
 		});
 
@@ -181,7 +181,7 @@ describe("defineApi mixed (groups + flat endpoints)", () => {
 		const usersGroup = defineGroup({
 			prefix: "users",
 			endpoints: {
-				getAll: endpoint.response<string[]>().get(""),
+				getAll: endpoint.get("").response<string[]>(),
 			},
 		});
 
@@ -189,7 +189,7 @@ describe("defineApi mixed (groups + flat endpoints)", () => {
 			baseURL: "https://api.example.com",
 			groups: { users: usersGroup },
 			endpoints: {
-				healthCheck: endpoint.response<{ ok: boolean }>().get("health"),
+				healthCheck: endpoint.get("health").response<{ ok: boolean }>(),
 			},
 		});
 
@@ -208,11 +208,11 @@ describe("defineApi mixed (groups + flat endpoints)", () => {
 			groups: {
 				items: defineGroup({
 					prefix: "items",
-					endpoints: { list: endpoint.response<number[]>().get("") },
+					endpoints: { list: endpoint.get("").response<number[]>() },
 				}),
 			},
 			endpoints: {
-				ping: endpoint.response<string>().get("ping"),
+				ping: endpoint.get("ping").response<string>(),
 			},
 		});
 
@@ -233,7 +233,7 @@ describe("executeRequest compatibility", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint.response<{ id: number; name: string }[]>().get(""),
+						getAll: endpoint.get("").response<{ id: number; name: string }[]>(),
 					},
 				}),
 			},
@@ -264,7 +264,7 @@ describe("executeRequest compatibility", () => {
 				auth: defineGroup({
 					prefix: "auth",
 					endpoints: {
-						login: endpoint.variables<{ email: string; password: string }>().response<{ token: string }>().post(""),
+						login: endpoint.post("").variables<{ email: string; password: string }>().response<{ token: string }>(),
 					},
 				}),
 			},
@@ -280,7 +280,7 @@ describe("executeRequest compatibility", () => {
 	});
 
 	it("endpoint functions have correct arity", () => {
-		const fn = endpoint.variables<{ id: number }>().response<string>().get(":id");
+		const fn = endpoint.get(":id").variables<{ id: number }>().response<string>();
 
 		expect(fn.method).toBe("get");
 		expect(fn.path).toBe(":id");
@@ -300,18 +300,18 @@ describe("complex API definitions", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint.response<User[]>().get(""),
-						getById: endpoint.variables<{ id: string }>().response<User>().get(":id"),
-						create: endpoint.variables<{ name: string }>().response<User>().post(""),
-						update: endpoint.variables<{ id: string; name: string }>().response<User>().put(":id"),
-						remove: endpoint.variables<{ id: string }>().del(":id"),
+						getAll: endpoint.get("").response<User[]>(),
+						getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
+						create: endpoint.post("").variables<{ name: string }>().response<User>(),
+						update: endpoint.put(":id").variables<{ id: string; name: string }>().response<User>(),
+						remove: endpoint.del(":id").variables<{ id: string }>(),
 					},
 				}),
 				posts: defineGroup({
 					prefix: "posts",
 					endpoints: {
-						list: endpoint.response<Post[]>().get(""),
-						getById: endpoint.variables<{ id: string }>().response<Post>().get(":id"),
+						list: endpoint.get("").response<Post[]>(),
+						getById: endpoint.get(":id").variables<{ id: string }>().response<Post>(),
 					},
 				}),
 			},

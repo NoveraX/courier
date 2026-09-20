@@ -25,17 +25,17 @@ interface Post {
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    getById: endpoint.variables<{ id: string }>().response<User>().get(":id"),
-    create: endpoint.variables<{ name: string; role: "user" | "admin" }>().response<User>().post(""),
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
+    create: endpoint.post("").variables<{ name: string; role: "user" | "admin" }>().response<User>(),
   },
 });
 
 const posts = defineGroup({
   prefix: "posts",
   endpoints: {
-    getAll: endpoint.response<Post[]>().get(""),
-    getByAuthor: endpoint.variables<{ authorId: string }>().response<Post[]>().get(""),
+    getAll: endpoint.get("").response<Post[]>(),
+    getByAuthor: endpoint.get("").variables<{ authorId: string }>().response<Post[]>(),
   },
 });
 

@@ -65,7 +65,7 @@ describe("executeDirectSSE — resolution", () => {
   });
 
   it("throws when endpoint is not SSE transport", async () => {
-    const httpEndpoint = endpoint.response<string>().get("/x");
+    const httpEndpoint = endpoint.get("/x").response<string>();
     const sources = { api: { options: { groups: {} }, health: httpEndpoint } };
     await expect(
       executeDirectSSE(sources as any, { source: "api", method: "health" }),

@@ -118,8 +118,19 @@ function makeBuilder(state: BuilderState): AnyBuilder {
   }
   verbs.connect = (path = "", options: AnyEndpointOptions = {}) => address("get", path, options);
 
+  /* An HTTP endpoint describes its answer only once a verb has said there is
+     one, so nothing but `.variables()` — which a closure has to be written
+     against — is offered before it. A stream or a channel has no verb to
+     choose, so it keeps every slot. */
+  const all = refinements(state, next);
+  const { variables, use, headers, timeout, retry, meta } = all;
+  const available =
+    state.kind === "query" || state.kind === "mutation"
+      ? { variables, use, headers, timeout, retry, meta }
+      : all;
+
   return {
-    ...refinements(state, next),
+    ...available,
     ...verbs,
     via: (probe: AnyProbe, options: AnyEndpointOptions = {}) => {
       const shape = probeWire(probe);
@@ -158,7 +169,7 @@ function inheritedFrom(
 
 function makeBase(inherited: Partial<BuilderState>): Courier {
   return {
-    endpoint: head("query", inherited) as unknown as HttpBuilder<void, void, void>,
+    endpoint: head("query", inherited) as unknown as HttpBuilder<void, void>,
     stream: head("stream", inherited) as unknown as StreamBuilder<void, void, void>,
     channel: head("channel", inherited) as unknown as ChannelBuilder<void, void, void, never>,
     extend: (config: CourierConfig): Courier => makeBase(inheritedFrom(config, inherited)),

@@ -45,23 +45,11 @@ type User = { id: string; name: string; email: string }
 export const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    getById: endpoint
-      .variables<{ id: string }>()
-      .response<User>()
-      .get(":id"),
-    create: endpoint
-      .variables<{ name: string; email: string }>()
-      .response<User>()
-      .post(""),
-    update: endpoint
-      .variables<{ id: string; name: string }>()
-      .response<User>()
-      .put(":id"),
-    remove: endpoint
-      .variables<{ id: string }>()
-      .response<null>()
-      .del(":id"),
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
+    create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
+    update: endpoint.put(":id").variables<{ id: string; name: string }>().response<User>(),
+    remove: endpoint.del(":id").variables<{ id: string }>().response<null>(),
   },
 })
 ```
@@ -74,13 +62,10 @@ The prefix is prepended to all endpoint URLs within the group:
 const products = defineGroup({
   prefix: "api/v2/products",
   endpoints: {
-    list: endpoint.response<Product[]>().get(""),
+    list: endpoint.get("").response<Product[]>(),
     // → GET {baseURL}/api/v2/products
 
-    getById: endpoint
-      .variables<{ id: string }>()
-      .response<Product>()
-      .get(":id"),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<Product>(),
     // → GET {baseURL}/api/v2/products/:id
   },
 })
@@ -98,7 +83,7 @@ const tenantUsers = defineGroup({
     return { tenantId }
   },
   endpoints: {
-    list: endpoint.response<User[]>().get(""),
+    list: endpoint.get("").response<User[]>(),
     // When tenantId = "acme": GET {baseURL}/acme/users
   },
 })
@@ -115,10 +100,10 @@ Each endpoint is built from one of the heads `courier()` returns, and closed wit
 ```ts
 const { endpoint } = courier()
 
-endpoint.response<User[]>().get("")
+endpoint.get("").response<User[]>()
 // No variables — the caller passes nothing
 
-endpoint.variables<{ id: string }>().response<User>().get(":id")
+endpoint.get(":id").variables<{ id: string }>().response<User>()
 // Variables required — caller must pass { id: string }
 ```
 
@@ -141,7 +126,7 @@ import type { InferResponse, InferVariables } from "@noverax/courier/define"
 
 const { endpoint } = courier()
 
-const getById = endpoint.variables<{ id: string }>().response<User>().get(":id")
+const getById = endpoint.get(":id").variables<{ id: string }>().response<User>()
 
 type Response = InferResponse<typeof getById>   // User
 type Variables = InferVariables<typeof getById> // { id: string }

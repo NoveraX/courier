@@ -12,7 +12,7 @@ const noop = () => {};
 const chat = defineGroup({
   prefix: "chat",
   endpoints: {
-    room: endpoint.variables<{ roomId?: string }>().response<ChatMessage>().get("room"),
+    room: endpoint.get("room").variables<{ roomId?: string }>().response<ChatMessage>(),
   },
 });
 

@@ -18,14 +18,14 @@ const { endpoint } = courier()
 export const events = defineGroup({
   prefix: "events",
   endpoints: {
-    subscribe: endpoint.variables<{ channel: string }>().response<ReadableStream>().get(":channel/stream"),
+    subscribe: endpoint.get(":channel/stream").variables<{ channel: string }>().response<ReadableStream>(),
   },
 })
 
 export const exports = defineGroup({
   prefix: "exports",
   endpoints: {
-    download: endpoint.variables<{ id: string }>().response<ReadableStream>().get(":id/download"),
+    download: endpoint.get(":id/download").variables<{ id: string }>().response<ReadableStream>(),
   },
 })
 ```

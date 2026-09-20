@@ -13,8 +13,8 @@ describe("extractSourceMap", () => {
         users: defineGroup({
           prefix: "users",
           endpoints: {
-            getAll: endpoint.response<{ id: number }[]>().get(""),
-            getById: endpoint.variables<{ id: number }>().response<{ id: number }>().get(":id"),
+            getAll: endpoint.get("").response<{ id: number }[]>(),
+            getById: endpoint.get(":id").variables<{ id: number }>().response<{ id: number }>(),
           },
         }),
       },
@@ -59,8 +59,8 @@ describe("extractSourceMap", () => {
         users: defineGroup({
           prefix: "users",
           endpoints: {
-            getAll: endpoint.response(z.array(UserSchema)).get(""),
-            create: endpoint.variables(CreateSchema).response(UserSchema).post(""),
+            getAll: endpoint.get("").response(z.array(UserSchema)),
+            create: endpoint.post("").variables(CreateSchema).response(UserSchema),
           },
         }),
       },
@@ -92,7 +92,7 @@ describe("extractSourceMap", () => {
         users: defineGroup({
           prefix: "users",
           endpoints: {
-            getAll: endpoint.response<unknown[]>().get(""),
+            getAll: endpoint.get("").response<unknown[]>(),
           },
         }),
       },
@@ -104,7 +104,7 @@ describe("extractSourceMap", () => {
         posts: defineGroup({
           prefix: "posts",
           endpoints: {
-            list: endpoint.response<unknown[]>().get(""),
+            list: endpoint.get("").response<unknown[]>(),
           },
         }),
       },
@@ -127,8 +127,8 @@ describe("extractSourceMap", () => {
     const api = defineApi({
       baseURL: "https://flat.api",
       endpoints: {
-        healthCheck: endpoint.response<{ ok: boolean }>().get("health"),
-        search: endpoint.variables<{ q: string }>().response<string[]>().get("search"),
+        healthCheck: endpoint.get("health").response<{ ok: boolean }>(),
+        search: endpoint.get("search").variables<{ q: string }>().response<string[]>(),
       },
     });
 
@@ -155,7 +155,7 @@ describe("extractSourceMap", () => {
       groups: {
         users: defineGroup({
           prefix: "users",
-          endpoints: { list: endpoint.response<unknown[]>().get("") },
+          endpoints: { list: endpoint.get("").response<unknown[]>() },
         }),
       },
     });
@@ -164,7 +164,7 @@ describe("extractSourceMap", () => {
       groups: {
         posts: defineGroup({
           prefix: "posts",
-          endpoints: { list: endpoint.response<unknown[]>().get("") },
+          endpoints: { list: endpoint.get("").response<unknown[]>() },
         }),
       },
     });
@@ -181,7 +181,7 @@ describe("extractSourceMap", () => {
       groups: {
         users: defineGroup({
           prefix: "users",
-          endpoints: { list: endpoint.response<unknown[]>().get("") },
+          endpoints: { list: endpoint.get("").response<unknown[]>() },
         }),
       },
     });
@@ -198,12 +198,12 @@ describe("extractSourceMap", () => {
         users: defineGroup({
           prefix: "users",
           endpoints: {
-            getAll: endpoint.response<unknown[]>().get(""),
+            getAll: endpoint.get("").response<unknown[]>(),
           },
         }),
       },
       endpoints: {
-        healthCheck: endpoint.response<boolean>().get("health"),
+        healthCheck: endpoint.get("health").response<boolean>(),
       },
     });
 

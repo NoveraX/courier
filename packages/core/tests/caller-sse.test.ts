@@ -125,7 +125,7 @@ describe("SSE transport detection — createCaller", () => {
         users: defineGroup({
           prefix: "users",
           endpoints: {
-            getAll: endpoint.response<string[]>().get(""),
+            getAll: endpoint.get("").response<string[]>(),
           },
         }),
       },

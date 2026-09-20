@@ -15,10 +15,7 @@ type UploadResponse = {
 export const files = defineGroup({
   prefix: "upload",
   endpoints: {
-    upload: endpoint
-      .variables<FormData>()
-      .response<UploadResponse>()
-      .post(""),
+    upload: endpoint.post("").variables<FormData>().response<UploadResponse>(),
   },
 })
 

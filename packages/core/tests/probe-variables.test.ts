@@ -11,41 +11,31 @@ describe("probing a closure that reads its variables", () => {
   const { endpoint } = courier();
 
   it("survives a method call on a variable", () => {
-    const byIds = endpoint
-      .variables<{ ids: string[] }>()
-      .via((http, vars) => http.get(`items/${vars.ids.join(",")}`)).reads();
+    const byIds = endpoint.variables<{ ids: string[] }>().via((http, vars) => http.get(`items/${vars.ids.join(",")}`)).reads();
 
     expect(byIds.method).toBe("get");
   });
 
   it("survives walking into a nested variable", () => {
-    const nested = endpoint
-      .variables<{ page: { size: number } }>()
-      .via((http, vars) => http.get(`items?size=${vars.page.size}`)).reads();
+    const nested = endpoint.variables<{ page: { size: number } }>().via((http, vars) => http.get(`items?size=${vars.page.size}`)).reads();
 
     expect(nested.method).toBe("get");
   });
 
   it("survives iterating a variable", () => {
-    const many = endpoint
-      .variables<{ items: string[] }>()
-      .via((http, vars) => http.post("items", [...vars.items]));
+    const many = endpoint.variables<{ items: string[] }>().via((http, vars) => http.post("items", [...vars.items]));
 
     expect(many.method).toBe("post");
   });
 
   it("survives a variable used in arithmetic", () => {
-    const paged = endpoint
-      .variables<{ page: number }>()
-      .via((http, vars) => http.get(`items?offset=${vars.page * 20}`)).reads();
+    const paged = endpoint.variables<{ page: number }>().via((http, vars) => http.get(`items?offset=${vars.page * 20}`)).reads();
 
     expect(paged.method).toBe("get");
   });
 
   it("survives a closure that guards against a missing variable", () => {
-    const guarded = endpoint
-      .variables<{ id?: string }>()
-      .via((http, vars) => (vars.id ? http.get(":id", vars) : http.get(""))).reads();
+    const guarded = endpoint.variables<{ id?: string }>().via((http, vars) => (vars.id ? http.get(":id", vars) : http.get(""))).reads();
 
     expect(guarded.method).toBe("get");
   });

@@ -16,20 +16,14 @@ const users = defineGroup({
   endpoints: {
     // GET, DELETE -> variables go to URLSearchParams
     // GET /users?page=1&limit=10
-    getAll: endpoint
-      .variables<{ page: number; limit: number }>()
-      .response<User[]>()
-      .get(""),
+    getAll: endpoint.get("").variables<{ page: number; limit: number }>().response<User[]>(),
 
     // POST, PUT, PATCH -> variables go to JSON body
     // POST /users  Body: { "name": "Jane", "email": "jane@test.com" }
-    create: endpoint
-      .variables<{ name: string; email: string }>()
-      .response<User>()
-      .post(""),
+    create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
 
     // HEAD -> no variables sent
-    check: endpoint.response<void>().head(""),
+    check: endpoint.head("").response<void>(),
   },
 })
 
@@ -49,11 +43,11 @@ const { endpoint } = courier()
 const auth = defineGroup({
   prefix: "auth",
   endpoints: {
-    login: endpoint.variables<{
+    login: endpoint.post("token").variables<{
       grant_type: string
       username: string
       password: string
-    }>().response<{ token: string }>().post("token"),
+    }>().response<{ token: string }>(),
   },
 })
 
@@ -101,10 +95,10 @@ type Product = { id: number; name: string; category: string }
 const products = defineGroup({
   prefix: "products",
   endpoints: {
-    search: endpoint.variables<{
+    search: endpoint.get("").variables<{
       category: string
       tags: string[]
-    }>().response<Product[]>().get(""),
+    }>().response<Product[]>(),
   },
 })
 

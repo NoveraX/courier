@@ -14,7 +14,7 @@ Without schemas, you write explicit generics:
 
 ```ts
 // Manual types -- you maintain the generic parameters yourself
-endpoint.variables<{ status: "active" | "inactive" }>().response<User[]>().get("")
+endpoint.get("").variables<{ status: "active" | "inactive" }>().response<User[]>()
 ```
 
 With Zod schemas, types are inferred automatically:
@@ -39,7 +39,7 @@ const FilterSchema = z.object({
 // Return type is z.infer<typeof UserSchema>[]
 // Variables type is z.infer<typeof FilterSchema>
 // No generics needed -- everything is inferred
-endpoint.variables(FilterSchema).response(z.array(UserSchema)).get("")
+endpoint.get("").variables(FilterSchema).response(z.array(UserSchema))
 ```
 
 ## Common Schema Patterns
@@ -71,7 +71,7 @@ export const UpdateUserSchema = CreateUserSchema.partial()
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint.response(z.array(UserSchema)).get(""),
+    getAll: endpoint.get("").response(z.array(UserSchema)),
   },
 })
 ```
@@ -118,10 +118,7 @@ const GetByIdSchema = z.object({
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getById: endpoint
-      .variables(GetByIdSchema)
-      .response(UserSchema)
-      .get(":id"),
+    getById: endpoint.get(":id").variables(GetByIdSchema).response(UserSchema),
   },
 })
 ```
@@ -167,24 +164,15 @@ export const api = defineApi({
     users: defineGroup({
       prefix: "users",
       endpoints: {
-        getAll: endpoint.response(z.array(UserSchema)).get(""),
+        getAll: endpoint.get("").response(z.array(UserSchema)),
 
-        getById: endpoint
-          .variables(z.object({ id: z.number() }))
-          .response(UserSchema)
-          .get(":id"),
+        getById: endpoint.get(":id").variables(z.object({ id: z.number() })).response(UserSchema),
 
-        create: endpoint
-          .variables(CreateUserSchema)
-          .response(UserSchema)
-          .post(""),
+        create: endpoint.post("").variables(CreateUserSchema).response(UserSchema),
 
-        update: endpoint
-          .variables(UpdateUserSchema)
-          .response(UserSchema)
-          .put(":id"),
+        update: endpoint.put(":id").variables(UpdateUserSchema).response(UserSchema),
 
-        delete: endpoint.variables(DeleteSchema).del(":id"),
+        delete: endpoint.del(":id").variables(DeleteSchema),
       },
     }),
   },
@@ -197,13 +185,13 @@ You can attach a schema to just one side:
 
 ```ts title="lib/sources.ts"
 // Response-only: validate what the backend returns, no variables validation
-endpoint.response(z.array(UserSchema)).get("")
+endpoint.get("").response(z.array(UserSchema))
 
 // Variables-only: validate what the caller sends, no response validation
-endpoint.variables(CreateUserSchema).post("")
+endpoint.post("").variables(CreateUserSchema)
 
 // Both: full bidirectional validation
-endpoint.variables(CreateUserSchema).response(UserSchema).post("")
+endpoint.post("").variables(CreateUserSchema).response(UserSchema)
 ```
 
 ## Transforms and Coercion
@@ -263,7 +251,7 @@ const UserSchema = v.object({
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint.response(v.array(UserSchema)).get(""),
+    getAll: endpoint.get("").response(v.array(UserSchema)),
   },
 })
 ```

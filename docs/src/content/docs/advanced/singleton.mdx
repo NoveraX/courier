@@ -39,15 +39,9 @@ type User = { id: number; name: string; email: string }
 export const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    getById: endpoint
-      .variables<{ id: number }>()
-      .response<User>()
-      .get(":id"),
-    create: endpoint
-      .variables<{ name: string; email: string }>()
-      .response<User>()
-      .post(""),
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
+    create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
   },
 })
 ```

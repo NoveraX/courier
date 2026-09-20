@@ -10,17 +10,17 @@ import { detectUserModified } from "../src/server/registry-fingerprints";
  */
 describe("detectUserModified — prev-state vs current-disk comparison", () => {
   const pristine = `export const users = {
-    getAll: endpoint.response<User[]>().via({
+    getAll: endpoint.via({
       method: "GET",
       path: "/users",
-    }),
+    }).response<User[]>(),
 };`;
 
   const edited = `export const users = {
-    getAll: endpoint.response<User[]>().via({
+    getAll: endpoint.via({
       method: "GET",
       path: "/users?cache=1",
-    }),
+    }).response<User[]>(),
 };`;
 
   it("flags an endpoint whose disk content changed since the last sync", () => {

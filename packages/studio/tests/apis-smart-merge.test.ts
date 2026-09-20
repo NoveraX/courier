@@ -67,8 +67,8 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    getById: endpoint.variables<{ id: string }>().response<User>().get(":id"),
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
   },
 });
 `
@@ -90,9 +90,9 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    getById: endpoint.variables<{ id: string }>().response<User>().get(":id"),
-    create: endpoint.response<User>().post(""),
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
+    create: endpoint.post("").response<User>(),
   },
 });
 `
@@ -112,8 +112,8 @@ const { endpoint } = courier({ timeout: 10_000 });
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    getById: endpoint.variables<{ id: string }>().response<User>().get(":id"),
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
   },
 });
 `
@@ -188,7 +188,7 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
+    getAll: endpoint.get("").response<User[]>(),
   },
 });
 `
@@ -199,8 +199,8 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    create: endpoint.variables<CreateUserVars>().response<User>().post(""),
+    getAll: endpoint.get("").response<User[]>(),
+    create: endpoint.post("").variables<CreateUserVars>().response<User>(),
   },
 });
 `
@@ -210,7 +210,7 @@ export const users = defineGroup({
     }
     const result = mergeGroupFile(existing, generated, fingerprints)
     expect(result.content).toContain("create:")
-    expect(result.content).toContain('create: endpoint.variables<CreateUserVars>()')
+    expect(result.content).toContain('create: endpoint.post("")')
     expect(result.changes.some((c) => c.type === "added" && c.target === "endpoint:create")).toBe(true)
   })
 
@@ -222,7 +222,7 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
+    getAll: endpoint.get("").response<User[]>(),
     myCustom: endpoint.post("custom"),
   },
 });
@@ -234,7 +234,7 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
+    getAll: endpoint.get("").response<User[]>(),
   },
 });
 `
@@ -257,7 +257,7 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
+    getAll: endpoint.get("").response<User[]>(),
   },
 });
 `
@@ -268,7 +268,7 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
+    getAll: endpoint.get("").response<User[]>(),
   },
 });
 `
@@ -288,7 +288,7 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
+    getAll: endpoint.get("").response<User[]>(),
   },
 });
 
@@ -303,7 +303,7 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
+    getAll: endpoint.get("").response<User[]>(),
   },
 });
 `
@@ -324,7 +324,7 @@ export const users = defineGroup({
   prefix: "/users",
   endpoints: {
     /** Old description */
-    getAll: endpoint.response<User[]>().get(""),
+    getAll: endpoint.get("").response<User[]>(),
   },
 });
 `
@@ -336,7 +336,7 @@ export const users = defineGroup({
   prefix: "/users",
   endpoints: {
     /** New updated description */
-    getAll: endpoint.response<User[]>().get(""),
+    getAll: endpoint.get("").response<User[]>(),
   },
 });
 `
@@ -357,8 +357,8 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    getById: endpoint.variables<{ id: string }>().response<User>().get(":id"),
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
   },
 });
 `
@@ -370,7 +370,7 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
+    getAll: endpoint.get("").response<User[]>(),
   },
 });
 `
@@ -393,7 +393,7 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
+    getAll: endpoint.get("").response<User[]>(),
   },
 });
 `
@@ -418,10 +418,10 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().via(((http) => {
+    getAll: endpoint.via(((http) => {
       const res = http.get("")
       return res
-    })).reads(),
+    })).response<User[]>().reads(),
 });
 `
     const generated = `import { courier, defineGroup } from "@noverax/courier/define";
@@ -432,7 +432,7 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response(z.array(z.object({}))).get(""),
+    getAll: endpoint.get("").response(z.array(z.object({}))),
   },
 });
 `

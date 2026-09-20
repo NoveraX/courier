@@ -24,23 +24,11 @@ type User = { id: string; name: string; email: string }
 export const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    getById: endpoint
-      .variables<{ id: string }>()
-      .response<User>()
-      .get(":id"),
-    create: endpoint
-      .variables<{ name: string; email: string }>()
-      .response<User>()
-      .post(""),
-    update: endpoint
-      .variables<{ id: string; name: string }>()
-      .response<User>()
-      .put(":id"),
-    remove: endpoint
-      .variables<{ id: string }>()
-      .response<null>()
-      .del(":id"),
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
+    create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
+    update: endpoint.put(":id").variables<{ id: string; name: string }>().response<User>(),
+    remove: endpoint.del(":id").variables<{ id: string }>().response<null>(),
   },
 })
 ```
@@ -60,13 +48,13 @@ From a head you chain the steps that shape the endpoint, and close with `.via()`
 const { endpoint } = courier()
 
 // Explicit types — for an API that publishes no usable schema
-endpoint.variables<{ id: string }>().response<User>().get(":id")
+endpoint.get(":id").variables<{ id: string }>().response<User>()
 
 // Response only — the caller passes nothing
-endpoint.response<User[]>().get("")
+endpoint.get("").response<User[]>()
 
 // With schema — types inferred from Zod/Valibot/ArkType, and validated at runtime
-endpoint.variables(CreateUserSchema).response(UserSchema).post("")
+endpoint.post("").variables(CreateUserSchema).response(UserSchema)
 ```
 
 `.via()` receives `http` — an object with typed HTTP methods (`get`, `post`, `put`, `patch`, `del`, `head`) — and optionally `vars` (the variables).
@@ -78,8 +66,8 @@ const vendor = courier({ timeout: 10_000, middleware: [bearer] })
 const { endpoint } = vendor
 
 // Both inherit the timeout and the middleware
-endpoint.response<User[]>().get("")
-endpoint.response<User>().post("")
+endpoint.get("").response<User[]>()
+endpoint.post("").response<User>()
 ```
 
 ### HTTP Methods
@@ -98,7 +86,7 @@ http.del(":id", vars)         // DELETE /users/5
 The `:param` syntax extracts values from variables automatically:
 
 ```ts
-endpoint.variables<{ id: string; postId: string }>().response<UserPost>().get(":id/posts/:postId")
+endpoint.get(":id/posts/:postId").variables<{ id: string; postId: string }>().response<UserPost>()
 
 // caller.users.getUserPost({ id: "1", postId: "42" })
 // → GET /users/1/posts/42

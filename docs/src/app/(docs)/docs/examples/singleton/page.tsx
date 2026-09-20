@@ -34,15 +34,15 @@ const users = defineGroup({
   prefix: "users",
   endpoints: {
     // .variables() and .response() carry the types forward
-    getAll: endpoint.response<UserListResponse>().get(""),
+    getAll: endpoint.get("").response<UserListResponse>(),
 
-    getById: endpoint.variables<{ id: number }>().response<User>().get(":id"),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
 
-    create: endpoint.variables<CreateUserInput>().response<User>().post(""),
+    create: endpoint.post("").variables<CreateUserInput>().response<User>(),
 
-    update: endpoint.variables<{ id: number } & Partial<CreateUserInput>>().response<User>().put(":id"),
+    update: endpoint.put(":id").variables<{ id: number } & Partial<CreateUserInput>>().response<User>(),
 
-    delete: endpoint.variables<{ id: number }>().response<{ success: boolean }>().del(":id"),
+    delete: endpoint.del(":id").variables<{ id: number }>().response<{ success: boolean }>(),
   },
 })
 

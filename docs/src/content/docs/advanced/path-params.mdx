@@ -16,14 +16,14 @@ const users = defineGroup({
   prefix: "users",
   endpoints: {
     // GET /users/:id -> compiled to GET /users/5
-    getById: endpoint.variables<{ id: number }>().response<User>().get(":id"),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
 
     // GET /users/:userId/posts/:postId/comments/:commentId
-    getComment: endpoint.variables<{
+    getComment: endpoint.get(":userId/posts/:postId/comments/:commentId").variables<{
       userId: number
       postId: number
       commentId: number
-    }>().response<Comment>().get(":userId/posts/:postId/comments/:commentId"),
+    }>().response<Comment>(),
   },
 })
 ```
@@ -43,10 +43,7 @@ await caller.users.getById({ id: 5 })
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getWithDetails: endpoint
-      .variables<{ id: number; include?: string }>()
-      .response<User>()
-      .get(":id"),
+    getWithDetails: endpoint.get(":id").variables<{ id: number; include?: string }>().response<User>(),
   },
 })
 await caller.users.getWithDetails({ id: 5, include: "posts" })
@@ -55,10 +52,7 @@ await caller.users.getWithDetails({ id: 5, include: "posts" })
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    updateAvatar: endpoint
-      .variables<{ id: number; name: string }>()
-      .response<void>()
-      .post(":id/avatar"),
+    updateAvatar: endpoint.post(":id/avatar").variables<{ id: number; name: string }>().response<void>(),
   },
 })
 await caller.users.updateAvatar({ id: 5, name: "photo.jpg" })
@@ -82,11 +76,8 @@ type User = { id: number; name: string }
 const users = defineGroup({
   prefix: "orgs/:orgId/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    getById: endpoint
-      .variables<{ id: number }>()
-      .response<User>()
-      .get(":id"),
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
   },
 })
 
@@ -132,11 +123,8 @@ const projects = defineGroup({
     return { workspaceId }
   },
   endpoints: {
-    getAll: endpoint.response<Project[]>().get(""),
-    getById: endpoint
-      .variables<{ id: number }>()
-      .response<Project>()
-      .get(":id"),
+    getAll: endpoint.get("").response<Project[]>(),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<Project>(),
   },
 })
 
@@ -144,7 +132,7 @@ const tasks = defineGroup({
   // No group pathOptions — uses the source-level pathOptions if any
   prefix: "tasks",
   endpoints: {
-    getAll: endpoint.response<Task[]>().get(""),
+    getAll: endpoint.get("").response<Task[]>(),
   },
 })
 ```

@@ -14,9 +14,9 @@ const api = defineApi({
     items: defineGroup({
       prefix: "/items",
       endpoints: {
-        list: endpoint.response(z.array(ItemSchema)).get(""),
-        get: endpoint.response(ItemSchema).get(":id"),
-        create: endpoint.variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema).post(""),
+        list: endpoint.get("").response(z.array(ItemSchema)),
+        get: endpoint.get(":id").response(ItemSchema),
+        create: endpoint.post("").variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema),
         delete: endpoint.del(":id"),
         deleteAll: endpoint.del(""),
       },
@@ -400,9 +400,9 @@ describe("top-level endpoints (no group)", () => {
   const flatApi = defineApi({
     baseURL: "https://test.api",
     endpoints: {
-      listUsers: endpoint.response(z.array(UserSchema)).get("users"),
-      getUser: endpoint.response(UserSchema).get("users/:id"),
-      healthCheck: endpoint.response(z.object({ ok: z.boolean() })).get("health"),
+      listUsers: endpoint.get("users").response(z.array(UserSchema)),
+      getUser: endpoint.get("users/:id").response(UserSchema),
+      healthCheck: endpoint.get("health").response(z.object({ ok: z.boolean() })),
     },
   });
 
@@ -445,13 +445,13 @@ describe("mixed groups + top-level endpoints", () => {
       products: defineGroup({
         prefix: "/products",
         endpoints: {
-          list: endpoint.response(z.array(ItemSchema)).get(""),
+          list: endpoint.get("").response(z.array(ItemSchema)),
         },
       }),
     },
     endpoints: {
-      healthCheck: endpoint.response(z.object({ status: z.string() })).get("health"),
-      listTags: endpoint.response(z.array(z.object({ id: z.string(), label: z.string() }))).get("tags"),
+      healthCheck: endpoint.get("health").response(z.object({ status: z.string() })),
+      listTags: endpoint.get("tags").response(z.array(z.object({ id: z.string(), label: z.string() }))),
     },
   });
 

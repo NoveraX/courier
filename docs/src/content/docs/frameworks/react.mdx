@@ -23,9 +23,9 @@ type ProductList = { data: Product[]; total: number }
 const products = defineGroup({
   prefix: "products",
   endpoints: {
-    getAll: endpoint.variables<{ page?: number; category?: string }>().response<ProductList>().get(""),
-    getById: endpoint.variables<{ id: number }>().response<Product>().get(":id"),
-    create: endpoint.variables<{ name: string; price: number }>().response<Product>().post(""),
+    getAll: endpoint.get("").variables<{ page?: number; category?: string }>().response<ProductList>(),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<Product>(),
+    create: endpoint.post("").variables<{ name: string; price: number }>().response<Product>(),
   },
 })
 

@@ -11,7 +11,7 @@ function makeConfig() {
   const usersGroup = defineGroup({
     prefix: "/users",
     endpoints: {
-      list: endpoint.response<unknown[]>().get(""),
+      list: endpoint.get("").response<unknown[]>(),
     },
   });
   const api = defineApi({

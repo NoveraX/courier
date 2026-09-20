@@ -32,22 +32,16 @@ type Post = { id: number; title: string; body: string }
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    getById: endpoint
-      .variables<{ id: number }>()
-      .response<User>()
-      .get(":id"),
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
   },
 })
 
 const posts = defineGroup({
   prefix: "posts",
   endpoints: {
-    list: endpoint.response<Post[]>().get(""),
-    create: endpoint
-      .variables<{ title: string }>()
-      .response<Post>()
-      .post(""),
+    list: endpoint.get("").response<Post[]>(),
+    create: endpoint.post("").variables<{ title: string }>().response<Post>(),
   },
 })
 

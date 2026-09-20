@@ -27,16 +27,16 @@ function mockFetchResponse(data: unknown, status = 200) {
 const usersGroup = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint.response<{ id: number; name: string }[]>().get(""),
-    getById: endpoint.variables<{ id: number }>().response<{ id: number; name: string }>().via((http, vars) => http.get(`${vars.id}`)).reads(),
-    create: endpoint.variables<{ name: string }>().response<{ id: number; name: string }>().post(""),
+    getAll: endpoint.get("").response<{ id: number; name: string }[]>(),
+    getById: endpoint.variables<{ id: number }>().via((http, vars) => http.get(`${vars.id}`)).reads().response<{ id: number; name: string }>(),
+    create: endpoint.post("").variables<{ name: string }>().response<{ id: number; name: string }>(),
   },
 });
 
 const postsGroup = defineGroup({
   prefix: "posts",
   endpoints: {
-    list: endpoint.response<{ id: number; title: string }[]>().get(""),
+    list: endpoint.get("").response<{ id: number; title: string }[]>(),
   },
 });
 

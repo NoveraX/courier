@@ -37,13 +37,10 @@ const api = defineApi({
       prefix: "users",
       endpoints: {
         // Response-only validation
-        getAll: endpoint.response(z.array(UserSchema)).get(""),
+        getAll: endpoint.get("").response(z.array(UserSchema)),
 
         // Both response and variables validation
-        create: endpoint
-          .variables(CreateUserSchema)
-          .response(UserSchema)
-          .post(""),
+        create: endpoint.post("").variables(CreateUserSchema).response(UserSchema),
       },
     }),
   },
@@ -93,7 +90,7 @@ const api = defineApi({
     events: defineGroup({
       prefix: "events",
       endpoints: {
-        get: endpoint.response(EventSchema).get(":id"),
+        get: endpoint.get(":id").response(EventSchema),
       },
     }),
   },
@@ -163,10 +160,10 @@ When a slot is given a type argument instead of a schema, no validation runs. Th
 
 ```ts
 // No validation -- types are manual
-endpoint.response<User[]>().get("")
+endpoint.get("").response<User[]>()
 
 // No validation -- only proxy hints
-endpoint.response<User[]>().get("")
+endpoint.get("").response<User[]>()
 ```
 
 ## Next Steps

@@ -19,18 +19,9 @@ type PostsListResponse = {
 export const posts = defineGroup({
   prefix: "posts",
   endpoints: {
-    getAll: endpoint
-      .variables<{ userId?: number }>()
-      .response<PostsListResponse>()
-      .get(""),
-    getById: endpoint
-      .variables<{ id: number }>()
-      .response<Post>()
-      .get(":id"),
-    create: endpoint
-      .variables<{ userId?: number; title: string; body: string; tags?: string[] }>()
-      .response<Post>()
-      .post(""),
+    getAll: endpoint.get("").variables<{ userId?: number }>().response<PostsListResponse>(),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<Post>(),
+    create: endpoint.post("").variables<{ userId?: number; title: string; body: string; tags?: string[] }>().response<Post>(),
   },
 })
 

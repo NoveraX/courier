@@ -111,23 +111,11 @@ type User = { id: string; name: string; email: string }
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    getById: endpoint
-      .variables<{ id: string }>()
-      .response<User>()
-      .get(":id"),
-    create: endpoint
-      .variables<{ name: string; email: string }>()
-      .response<User>()
-      .post(""),
-    update: endpoint
-      .variables<{ id: string; name: string }>()
-      .response<User>()
-      .put(":id"),
-    remove: endpoint
-      .variables<{ id: string }>()
-      .response<null>()
-      .del(":id"),
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
+    create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
+    update: endpoint.put(":id").variables<{ id: string; name: string }>().response<User>(),
+    remove: endpoint.del(":id").variables<{ id: string }>().response<null>(),
   },
 })
 
@@ -574,8 +562,8 @@ const CreateUserSchema = z.object({ name: z.string().min(1), email: z.email() })
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint.response(z.array(UserSchema)).get(""),
-    create: endpoint.variables(CreateUserSchema).response(UserSchema).post(""),
+    getAll: endpoint.get("").response(z.array(UserSchema)),
+    create: endpoint.post("").variables(CreateUserSchema).response(UserSchema),
   },
 })
 ```

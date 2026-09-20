@@ -30,7 +30,7 @@ describe("the verb that addresses an endpoint", () => {
 
   it("describes the same endpoint from either side", () => {
     const first = endpoint.get(":id").variables(ById).response(UserSchema);
-    const last = endpoint.variables(ById).response(UserSchema).get(":id");
+    const last = endpoint.get(":id").variables(ById).response(UserSchema);
 
     expect(first.method).toBe(last.method);
     expect(first.path).toBe(last.path);
@@ -57,9 +57,7 @@ describe("the verb that addresses an endpoint", () => {
   });
 
   it("assumes a closure writes, since a cacheable write is the dangerous mistake", () => {
-    const computed = endpoint
-      .variables<{ ids: string[] }>()
-      .via((http, vars) => http.get(`items/${vars.ids.join(",")}`));
+    const computed = endpoint.variables<{ ids: string[] }>().via((http, vars) => http.get(`items/${vars.ids.join(",")}`));
 
     expect(computed.kind).toBe("mutation");
     expect(computed.reads().kind).toBe("query");

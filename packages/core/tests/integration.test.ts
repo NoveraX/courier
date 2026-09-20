@@ -33,19 +33,19 @@ type Post = { id: number; title: string; body: string };
 const usersGroup = defineGroup({
 	prefix: "users",
 	endpoints: {
-		getAll: endpoint.response<User[]>().get(""),
-		getById: endpoint.variables<{ id: number }>().response<User>().get(":id"),
-		create: endpoint.variables<{ name: string; email: string }>().response<User>().post(""),
-		update: endpoint.variables<{ id: number; name: string }>().response<User>().put(":id"),
-		remove: endpoint.variables<{ id: number }>().del(":id"),
+		getAll: endpoint.get("").response<User[]>(),
+		getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
+		create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
+		update: endpoint.put(":id").variables<{ id: number; name: string }>().response<User>(),
+		remove: endpoint.del(":id").variables<{ id: number }>(),
 	},
 });
 
 const postsGroup = defineGroup({
 	prefix: "posts",
 	endpoints: {
-		list: endpoint.response<Post[]>().get(""),
-		getById: endpoint.variables<{ id: number }>().response<Post>().get(":id"),
+		list: endpoint.get("").response<Post[]>(),
+		getById: endpoint.get(":id").variables<{ id: number }>().response<Post>(),
 	},
 });
 
@@ -196,7 +196,7 @@ describe("integration: middleware with functional API", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint.response<User[]>().get(""),
+						getAll: endpoint.get("").response<User[]>(),
 					},
 				}),
 			},
@@ -270,7 +270,7 @@ describe("integration: middleware with functional API", () => {
 				ops: defineGroup({
 					prefix: "ops",
 					endpoints: {
-						fail: endpoint.response<never>().get("fail"),
+						fail: endpoint.get("fail").response<never>(),
 					},
 				}),
 			},
@@ -307,7 +307,7 @@ describe("integration: multiple sources", () => {
 				session: defineGroup({
 					prefix: "session",
 					endpoints: {
-						me: endpoint.response<{ token: string }>().get("me"),
+						me: endpoint.get("me").response<{ token: string }>(),
 					},
 				}),
 			},
@@ -378,7 +378,7 @@ describe("integration: HTTP-semantic proxy", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint.response<User[]>().get(""),
+						getAll: endpoint.get("").response<User[]>(),
 					},
 				}),
 			},
@@ -402,7 +402,7 @@ describe("integration: HTTP-semantic proxy", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint.response<User[]>().get(""),
+						getAll: endpoint.get("").response<User[]>(),
 					},
 				}),
 			},
@@ -428,7 +428,7 @@ describe("integration: HTTP-semantic proxy", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint.response<User[]>().get("").cache({ revalidate: 60 }),
+						getAll: endpoint.get("").response<User[]>().cache({ revalidate: 60 }),
 					},
 				}),
 			},
@@ -454,7 +454,7 @@ describe("integration: HTTP-semantic proxy", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint.response<User[]>().get("").cache({ revalidate: 30, tags: ["users", "list"] }),
+						getAll: endpoint.get("").response<User[]>().cache({ revalidate: 30, tags: ["users", "list"] }),
 					},
 				}),
 			},
@@ -481,7 +481,7 @@ describe("integration: HTTP-semantic proxy", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint.response<User[]>().get("").cache({ revalidate: 60 }),
+						getAll: endpoint.get("").response<User[]>().cache({ revalidate: 60 }),
 					},
 				}),
 			},
@@ -505,7 +505,7 @@ describe("integration: HTTP-semantic proxy", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						create: endpoint.variables<{ name: string; email: string }>().response<User>().post(""),
+						create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
 					},
 				}),
 			},

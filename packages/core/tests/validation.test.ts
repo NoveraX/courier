@@ -126,7 +126,7 @@ describe("validateSchema", () => {
 describe("endpoint with schema config", () => {
 	it("attaches schema metadata to endpoint function (Zod)", () => {
 		const responseSchema = z.object({ id: z.number(), name: z.string() });
-		const fn = endpoint.response(responseSchema).get("");
+		const fn = endpoint.get("").response(responseSchema);
 
 		const meta = (fn as any)[ENDPOINT_SCHEMA];
 		expect(meta).toBeDefined();
@@ -137,7 +137,7 @@ describe("endpoint with schema config", () => {
 	it("attaches both response and variables schemas", () => {
 		const responseSchema = z.object({ id: z.number() });
 		const varsSchema = z.object({ name: z.string() });
-		const fn = endpoint.variables(varsSchema).response(responseSchema).post("");
+		const fn = endpoint.post("").variables(varsSchema).response(responseSchema);
 
 		const meta = (fn as any)[ENDPOINT_SCHEMA];
 		expect(meta.response).toBe(responseSchema);
@@ -146,7 +146,7 @@ describe("endpoint with schema config", () => {
 
 	it("attaches variables schema only", () => {
 		const varsSchema = z.object({ email: z.string() });
-		const fn = endpoint.variables(varsSchema).post("");
+		const fn = endpoint.post("").variables(varsSchema);
 
 		const meta = (fn as any)[ENDPOINT_SCHEMA];
 		expect(meta.response).toBeUndefined();
@@ -154,7 +154,7 @@ describe("endpoint with schema config", () => {
 	});
 
 	it("attaches no schemas when the endpoint declared only types", () => {
-		const fn = endpoint.response<string>().get("");
+		const fn = endpoint.get("").response<string>();
 		const meta = (fn as any)[ENDPOINT_SCHEMA];
 		expect(meta.response).toBeUndefined();
 		expect(meta.variables).toBeUndefined();
@@ -163,7 +163,7 @@ describe("endpoint with schema config", () => {
 
 	it("works with Valibot schemas", () => {
 		const responseSchema = v.object({ id: v.number(), name: v.string() });
-		const fn = endpoint.response(responseSchema).get("");
+		const fn = endpoint.get("").response(responseSchema);
 
 		const meta = (fn as any)[ENDPOINT_SCHEMA];
 		expect(meta.response).toBe(responseSchema);
@@ -182,7 +182,7 @@ describe("integration: response validation", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint.response(z.array(UserSchema)).get(""),
+						getAll: endpoint.get("").response(z.array(UserSchema)),
 					},
 				}),
 			},
@@ -209,7 +209,7 @@ describe("integration: response validation", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						getAll: endpoint.response(z.array(UserSchema)).get(""),
+						getAll: endpoint.get("").response(z.array(UserSchema)),
 					},
 				}),
 			},
@@ -240,7 +240,7 @@ describe("integration: response validation", () => {
 				posts: defineGroup({
 					prefix: "posts",
 					endpoints: {
-						list: endpoint.response(v.array(PostSchema)).get(""),
+						list: endpoint.get("").response(v.array(PostSchema)),
 					},
 				}),
 			},
@@ -270,7 +270,7 @@ describe("integration: variables validation", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						create: endpoint.variables(CreateUserSchema).response(UserSchema).post(""),
+						create: endpoint.post("").variables(CreateUserSchema).response(UserSchema),
 					},
 				}),
 			},
@@ -298,7 +298,7 @@ describe("integration: variables validation", () => {
 				users: defineGroup({
 					prefix: "users",
 					endpoints: {
-						create: endpoint.variables(CreateUserSchema).post(""),
+						create: endpoint.post("").variables(CreateUserSchema),
 					},
 				}),
 			},
@@ -327,7 +327,7 @@ describe("integration: variables validation", () => {
 				items: defineGroup({
 					prefix: "items",
 					endpoints: {
-						get: endpoint.variables(VarsSchema).get(":id"),
+						get: endpoint.get(":id").variables(VarsSchema),
 					},
 				}),
 			},
@@ -356,7 +356,7 @@ describe("integration: endpoints without schema", () => {
 				misc: defineGroup({
 					prefix: "misc",
 					endpoints: {
-						ping: endpoint.response<string>().get("ping"),
+						ping: endpoint.get("ping").response<string>(),
 					},
 				}),
 			},
@@ -386,7 +386,7 @@ describe("integration: schema transforms", () => {
 				items: defineGroup({
 					prefix: "items",
 					endpoints: {
-						get: endpoint.response(DateSchema).get(""),
+						get: endpoint.get("").response(DateSchema),
 					},
 				}),
 			},

@@ -10,8 +10,8 @@ const GROUP_CONTENT = `import { courier, defineGroup } from "@noverax/courier/de
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    getById: endpoint.variables<{ id: string }>().response<User>().get(":id"),
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
   },
 });
 `
@@ -92,7 +92,7 @@ describe("previewUpdate", () => {
     const fingerprints = makeFingerprints(GROUP_CONTENT)
     const newGenerated = GROUP_CONTENT.replace(
       "  },\n});",
-      '    create: endpoint.variables<CreateVars>().response<User>().via((http, vars) => http.post("", vars)),\n  },\n});',
+      '    create: endpoint.variables<CreateVars>().via((http, vars) => http.post("", vars)).response<User>(),\n  },\n});',
     )
     const generated: GeneratedFile[] = [
       { path: "src/api/test/users.ts", content: newGenerated },

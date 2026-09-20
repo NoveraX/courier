@@ -54,7 +54,7 @@ describe("options an endpoint carries", () => {
       groups: {
         users: defineGroup({
           prefix: "/users",
-          endpoints: { getAll: endpoint.response(z.array(UserSchema)).get("") },
+          endpoints: { getAll: endpoint.get("").response(z.array(UserSchema)) },
         }),
       },
     });
@@ -81,8 +81,8 @@ describe("options an endpoint carries", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            getAll: endpoint.use(stamp).response(z.array(UserSchema)).get(""),
-            other: endpoint.response(z.array(UserSchema)).get("other"),
+            getAll: endpoint.get("").use(stamp).response(z.array(UserSchema)),
+            other: endpoint.get("other").response(z.array(UserSchema)),
           },
         }),
       },
@@ -106,10 +106,7 @@ describe("options an endpoint carries", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            slow: endpoint
-              .timeout(1234)
-              .response(z.array(UserSchema))
-              .get("slow"),
+            slow: endpoint.get("slow").timeout(1234).response(z.array(UserSchema)),
           },
         }),
       },
@@ -144,10 +141,7 @@ describe("policies an endpoint declares", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            flaky: endpoint
-              .retry({ attempts: 3, backoff: "fixed", on: [503] })
-              .response(UserSchema)
-              .get("flaky"),
+            flaky: endpoint.get("flaky").retry({ attempts: 3, backoff: "fixed", on: [503] }).response(UserSchema),
           },
         }),
       },
@@ -168,10 +162,7 @@ describe("policies an endpoint declares", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            flaky: endpoint
-              .retry({ attempts: 3, backoff: "fixed", on: [503] })
-              .response(UserSchema)
-              .get("flaky"),
+            flaky: endpoint.get("flaky").retry({ attempts: 3, backoff: "fixed", on: [503] }).response(UserSchema),
           },
         }),
       },
@@ -193,7 +184,7 @@ describe("policies an endpoint declares", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            me: endpoint.headers(["x-tenant"]).response(UserSchema).get("me"),
+            me: endpoint.get("me").headers(["x-tenant"]).response(UserSchema),
           },
         }),
       },
@@ -231,8 +222,8 @@ describe("policies an endpoint declares", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            inherits: endpoint.response(UserSchema).get("a"),
-            opted: endpoint.response(UserSchema).get("b", { inherit: false }),
+            inherits: endpoint.get("a").response(UserSchema),
+            opted: endpoint.get("b", { inherit: false }).response(UserSchema),
           },
         }),
       },

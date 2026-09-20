@@ -50,11 +50,11 @@ type UserList = { data: User[]; total: number }
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint.variables<{ page?: number; limit?: number }>().response<UserList>().get(""),
-    getById: endpoint.variables<{ id: number }>().response<User>().get(":id"),
-    create: endpoint.variables<{ name: string; email: string }>().response<User>().post(""),
-    update: endpoint.variables<{ id: number; name: string; email: string }>().response<User>().put(":id"),
-    remove: endpoint.variables<{ id: number }>().response<null>().del(":id"),
+    getAll: endpoint.get("").variables<{ page?: number; limit?: number }>().response<UserList>(),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
+    create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
+    update: endpoint.put(":id").variables<{ id: number; name: string; email: string }>().response<User>(),
+    remove: endpoint.del(":id").variables<{ id: number }>().response<null>(),
   },
 })
 

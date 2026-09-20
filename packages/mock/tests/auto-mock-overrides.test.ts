@@ -14,11 +14,11 @@ const api = defineApi({
     items: defineGroup({
       prefix: "/items",
       endpoints: {
-        list: endpoint.response(z.array(ItemSchema)).get(""),
-        get: endpoint.response(ItemSchema).get(":itemId"),
-        create: endpoint.variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema).post(""),
-        update: endpoint.response(ItemSchema).patch(":itemId"),
-        replace: endpoint.response(ItemSchema).put(":itemId"),
+        list: endpoint.get("").response(z.array(ItemSchema)),
+        get: endpoint.get(":itemId").response(ItemSchema),
+        create: endpoint.post("").variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema),
+        update: endpoint.patch(":itemId").response(ItemSchema),
+        replace: endpoint.put(":itemId").response(ItemSchema),
         delete: endpoint.del(":itemId"),
       },
     }),
@@ -315,8 +315,8 @@ describe("query params routing", () => {
       products: defineGroup({
         prefix: "/products",
         endpoints: {
-          list: endpoint.response(z.array(ItemSchema)).get(""),
-          getByCategory: endpoint.response(z.array(ItemSchema)).get(""),
+          list: endpoint.get("").response(z.array(ItemSchema)),
+          getByCategory: endpoint.get("").response(z.array(ItemSchema)),
         },
       }),
     },

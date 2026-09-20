@@ -135,7 +135,7 @@ import type { HttpProbe } from "@noverax/courier/define"
 
 const byId: HttpProbe<{ id: string }> = (http, vars) => http.get(":id", vars)
 
-const getById = endpoint.variables<{ id: string }>().response<User>().via(byId)
+const getById = endpoint.variables<{ id: string }>().via(byId).response<User>()
 ```
 
 ## Response Types

@@ -12,26 +12,17 @@ const { endpoint } = courier()
 const users = defineGroup({
   prefix: "users", // → /users/*
   endpoints: {
-    getAll: endpoint.response<UsersListResponse>().get(""),          // GET /users
-    getById: endpoint
-      .variables<{ id: number }>()
-      .response<User>()
-      .get(":id"), // GET /users/:id
-    create: endpoint
-      .variables<CreateBody>()
-      .response<User>()
-      .post(""),          // POST /users
+    getAll: endpoint.get("").response<UsersListResponse>(),          // GET /users
+    getById: endpoint.get(":id").variables<{ id: number }>().response<User>(), // GET /users/:id
+    create: endpoint.post("").variables<CreateBody>().response<User>(),          // POST /users
   },
 })
 
 const posts = defineGroup({
   prefix: "posts", // → /posts/*
   endpoints: {
-    getAll: endpoint.response<PostsListResponse>().get(""),    // GET /posts
-    create: endpoint
-      .variables<CreateBody>()
-      .response<Post>()
-      .post(""),    // POST /posts
+    getAll: endpoint.get("").response<PostsListResponse>(),    // GET /posts
+    create: endpoint.post("").variables<CreateBody>().response<Post>(),    // POST /posts
   },
 })
 

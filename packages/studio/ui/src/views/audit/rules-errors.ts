@@ -47,7 +47,7 @@ function timeoutPatterns(stats: Map<string, EndpointStats>): AuditItem[] {
     title: "Timeout risk",
     description: "P95 response time exceeds 5 seconds.",
     suggestion: "Add a timeout option or optimize the backend endpoint.",
-    codeSuggestion: `api.endpoint.timeout(5000).get("slow-endpoint");`,
+    codeSuggestion: `api.endpoint.get("slow-endpoint").timeout(5000);`,
     endpoints: matched.map((s) => ({
       ...formatEp(s),
       detail: `P95 = ${(s.p95 / 1000).toFixed(1)}s`,

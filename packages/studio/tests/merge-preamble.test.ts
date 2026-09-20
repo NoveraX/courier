@@ -10,7 +10,7 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
+    getAll: endpoint.get("").response<User[]>(),
   },
 });
 `
@@ -25,7 +25,7 @@ const { endpoint } = courier({
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().via((http) => http.get("", { page: 1 })).reads(),
+    getAll: endpoint.via((http) => http.get("", { page: 1 })).response<User[]>().reads(),
   },
 });
 
@@ -65,8 +65,8 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    create: endpoint.response<User>().post(""),
+    getAll: endpoint.get("").response<User[]>(),
+    create: endpoint.post("").response<User>(),
   },
 });
 `
@@ -80,7 +80,7 @@ const { endpoint } = courier({ timeout: 10_000 });
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
+    getAll: endpoint.get("").response<User[]>(),
   },
 });
 
@@ -98,7 +98,7 @@ export function byId(users: User[], id: string): User | undefined {
     expect(content).toContain("timeout: 10_000")
     expect(content).toContain('from "../logger"')
     expect(content).toContain("export function byId")
-    expect(content).toContain('create: endpoint.response<User>().post("")')
+    expect(content).toContain('create: endpoint.post("").response<User>()')
     expect(content).toContain("const { endpoint } = courier({ timeout: 10_000 });")
   })
 
@@ -110,9 +110,9 @@ const { endpoint } = courier();
 export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    retired: endpoint.response<User>().get("retired"),
-    mine: endpoint.response<User>().get("mine"),
+    getAll: endpoint.get("").response<User[]>(),
+    retired: endpoint.get("retired").response<User>(),
+    mine: endpoint.get("mine").response<User>(),
   },
 });
 `

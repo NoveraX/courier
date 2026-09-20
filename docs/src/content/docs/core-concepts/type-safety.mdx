@@ -25,19 +25,13 @@ export const users = defineGroup({
   prefix: "users",
   endpoints: {
     // Response only — the caller passes nothing
-    getAll: endpoint.response<UserList>().get(""),
+    getAll: endpoint.get("").response<UserList>(),
 
     // Variables the caller must pass, and the response they get back
-    getById: endpoint
-      .variables<{ id: string }>()
-      .response<User>()
-      .get(":id"),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
 
     // A write addresses the same wire through the mutation head
-    create: endpoint
-      .variables<{ name: string; email: string }>()
-      .response<User>()
-      .post(""),
+    create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
   },
 })
 ```
@@ -91,13 +85,13 @@ TypeScript enforces whether variables are required, optional, or forbidden:
 
 ```typescript
 // No variables — V defaults to undefined
-endpoint.response<User[]>().get("")
+endpoint.get("").response<User[]>()
 
 caller.users.getAll()                          // valid
 caller.users.getAll({ page: 1 })               // Type error — no variables expected
 
 // Required variables
-endpoint.variables<{ id: string }>().response<User>().get(":id")
+endpoint.get(":id").variables<{ id: string }>().response<User>()
 
 caller.users.getById()                         // Type error — variables required
 caller.users.getById({ id: 123 })              // Type error — id must be string
@@ -128,23 +122,11 @@ type UpdateProductVars = { id: string } & Partial<CreateProductVars>
 export const products = defineGroup({
   prefix: "products",
   endpoints: {
-    list: endpoint.variables<ProductFilters>().response<Product[]>().get(""),
-    getById: endpoint
-      .variables<{ id: string }>()
-      .response<Product>()
-      .get(":id"),
-    create: endpoint
-      .variables<CreateProductVars>()
-      .response<Product>()
-      .post(""),
-    update: endpoint
-      .variables<UpdateProductVars>()
-      .response<Product>()
-      .patch(":id"),
-    remove: endpoint
-      .variables<{ id: string }>()
-      .response<null>()
-      .del(":id"),
+    list: endpoint.get("").variables<ProductFilters>().response<Product[]>(),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<Product>(),
+    create: endpoint.post("").variables<CreateProductVars>().response<Product>(),
+    update: endpoint.patch(":id").variables<UpdateProductVars>().response<Product>(),
+    remove: endpoint.del(":id").variables<{ id: string }>().response<null>(),
   },
 })
 
@@ -164,7 +146,7 @@ import { z } from "zod"
 const UserSchema = z.object({ id: z.string(), name: z.string(), email: z.string() })
 
 // Types inferred from the schema — no type argument needed
-endpoint.response(z.array(UserSchema)).get("")
+endpoint.get("").response(z.array(UserSchema))
 // → response type is { id: string; name: string; email: string }[]
 ```
 

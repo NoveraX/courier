@@ -64,8 +64,8 @@ type User = { id: number; name: string; avatarUrl: string }
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    uploadAvatar: endpoint.variables<FormData>().response<User>().post("avatar"),
-    uploadDocument: endpoint.variables<FormData>().response<{ url: string }>().post("documents"),
+    uploadAvatar: endpoint.post("avatar").variables<FormData>().response<User>(),
+    uploadDocument: endpoint.post("documents").variables<FormData>().response<{ url: string }>(),
   },
 })
 ```

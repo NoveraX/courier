@@ -34,7 +34,7 @@ const files = defineGroup({
   endpoints: {
     // FormData auto-detected — no bodySerializer needed
     // Empty files are automatically removed before sending
-    upload: endpoint.variables<FormData>().response<UploadResponse>().post(""),
+    upload: endpoint.post("").variables<FormData>().response<UploadResponse>(),
   },
 })`
 

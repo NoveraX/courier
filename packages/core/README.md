@@ -106,15 +106,9 @@ type User = { id: string; name: string; email: string }
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    getById: endpoint
-      .variables<{ id: string }>()
-      .response<User>()
-      .get(":id"),
-    create: endpoint
-      .variables<{ name: string; email: string }>()
-      .response<User>()
-      .post(""),
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
+    create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
   },
 })
 
@@ -173,11 +167,8 @@ import { z } from "zod"
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint.response(z.array(UserSchema)).get(""),
-    create: endpoint
-      .variables(z.object({ name: z.string().min(1), email: z.email() }))
-      .response(UserSchema)
-      .post(""),
+    getAll: endpoint.get("").response(z.array(UserSchema)),
+    create: endpoint.post("").variables(z.object({ name: z.string().min(1), email: z.email() })).response(UserSchema),
   },
 })
 ```

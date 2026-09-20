@@ -28,12 +28,10 @@ describe("normalizeCode", () => {
   })
 
   it("produces same result for differently formatted code", () => {
-    const compact = `endpoint.response(z.array(UserSchema)).via((http)=>http.get(""))`
-    const expanded = `endpoint
-      .response(z.array(UserSchema))
-      .via(
+    const compact = `endpoint.via((http)=>http.get("")).response(z.array(UserSchema))`
+    const expanded = `endpoint.via(
       (http) => http.get(""),
-    )`
+    ).response(z.array(UserSchema))`
     expect(normalizeCode(compact)).toBe(normalizeCode(expanded))
   })
 })
@@ -66,22 +64,20 @@ describe("extractEndpoints", () => {
     const file = `export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().via((http) => http.get("")),
+    getAll: endpoint.via((http) => http.get("")).response<User[]>(),
   },
 })`
     const result = extractEndpoints(file)
     expect(Object.keys(result)).toEqual(["getAll"])
-    expect(result.getAll).toContain("endpoint.response")
+    expect(result.getAll).toContain("endpoint.via")
   })
 
   it("extracts multi-line endpoints", () => {
     const file = `export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint
-      .response(z.array(UserSchema))
-      .via((http) => http.get("")),
-    getById: endpoint.variables<{ id: string }>().response<User>().via((http, vars) => http.get(":id", vars)),
+    getAll: endpoint.via((http) => http.get("")).response(z.array(UserSchema)),
+    getById: endpoint.variables<{ id: string }>().via((http, vars) => http.get(":id", vars)).response<User>(),
   },
 })`
     const result = extractEndpoints(file)
@@ -103,8 +99,8 @@ describe("generateFingerprints", () => {
     const file = `export const users = defineGroup({
   prefix: "/users",
   endpoints: {
-    getAll: endpoint.response<User[]>().via((http) => http.get("")),
-    create: endpoint.variables<CreateUserVars>().response<User>().via((http, vars) => http.post("", vars)),
+    getAll: endpoint.via((http) => http.get("")).response<User[]>(),
+    create: endpoint.variables<CreateUserVars>().via((http, vars) => http.post("", vars)).response<User>(),
   },
 })`
     const fps = generateFingerprints(file)
@@ -119,7 +115,7 @@ describe("generateFingerprints", () => {
 describe("classifyEndpoints", () => {
   const baseCode = {
     getAll: `    getAll: endpoint.response<User[]>().via((http => http.get(""))`,
-    getById: `    getById: endpoint.variables<{ id: string }>().response<User>().via((http, vars) => http.get(":id", vars))`,
+    getById: `    getById: endpoint.variables<{ id: string }>().via((http, vars) => http.get(":id", vars)).response<User>()`,
   }
 
   function makeFingerprints(code: Record<string, string>): Record<string, string> {
@@ -141,7 +137,7 @@ describe("classifyEndpoints", () => {
     const stored = makeFingerprints(baseCode)
     const currentCode = {
       ...baseCode,
-      getAll: `    getAll: endpoint.response<User[]>().via((http => http.get("", { headers: { "X-Custom": "1" } }))`,
+      getAll: `    getAll: endpoint.via((http) => http.get("", { headers: { "X-Custom": "1" } })).response<User[]>()`,
     }
     const result = classifyEndpoints(currentCode, stored, ["getAll", "getById"])
     expect(result.endpoints.getAll).toBe("modified")
@@ -174,7 +170,7 @@ describe("classifyEndpoints", () => {
     const stored = makeFingerprints(baseCode)
     const modifiedCode = {
       ...baseCode,
-      getById: `    getById: endpoint.variables<{ id: string }>().response<User>().via(((http, vars) => http.get(":id", { ...vars, extra: true }))`,
+      getById: `    getById: endpoint.variables<{ id: string }>().via((http, vars) => http.get(":id", { ...vars, extra: true })).response<User>()`,
     }
     const result = classifyEndpoints(modifiedCode, stored, ["getAll"])
     expect(result.endpoints.getById).toBe("removed")

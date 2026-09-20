@@ -59,56 +59,54 @@ export interface NeutralMethods<TSelf> {
 /**
  * An HTTP endpoint that has not yet said where it is.
  *
- * Naming a verb says so and moves the chain to its addressed half; every other
- * method returns another of these. Slots may therefore be named on either side
- * of the verb — `.get(":id").response(S)` and `.response(S).get(":id")`
- * describe the same endpoint.
+ * It offers the verbs and nothing that describes an answer, because until a
+ * verb has been named there is no telling whether the endpoint has one. Naming
+ * a verb moves the chain to its addressed half, where the rest is described.
+ *
+ * `.variables()` is the one exception, and only for `.via()`: a closure has to
+ * know what it will be handed.
  */
-export interface HttpBuilder<TResponse, TVariables, TVariablesOut>
-  extends NeutralMethods<HttpBuilder<TResponse, TVariables, TVariablesOut>> {
-  /** What the caller receives. Pass a schema to validate, or a type argument alone. */
-  response<T>(schema?: StandardSchemaV1<unknown, T>): HttpBuilder<T, TVariables, TVariablesOut>;
+export interface HttpBuilder<TVariables, TVariablesOut>
+  extends NeutralMethods<HttpBuilder<TVariables, TVariablesOut>> {
   /**
-   * What the caller passes. Pass a schema to validate, or a type argument alone.
+   * What the caller passes, for a closure that has to work it into the call.
    *
-   * A schema may accept less than it produces — a field it defaults, a value it
-   * coerces — so the caller satisfies its input while the endpoint receives its
-   * output.
+   * A schema may accept less than it produces — a field it defaults, a value
+   * it coerces — so the caller satisfies its input while the endpoint receives
+   * its output.
    */
-  variables<TIn, TOut = TIn>(
-    schema?: StandardSchemaV1<TIn, TOut>,
-  ): HttpBuilder<TResponse, TIn, TOut>;
+  variables<TIn, TOut = TIn>(schema?: StandardSchemaV1<TIn, TOut>): HttpBuilder<TIn, TOut>;
 
   /** Read it. */
   get(
     path?: string,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<TResponse, TVariables, TVariablesOut, "query">;
+  ): HttpAddressed<void, TVariables, TVariablesOut, "query">;
   /** Read its headers alone. */
   head(
     path?: string,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<TResponse, TVariables, TVariablesOut, "query">;
+  ): HttpAddressed<void, TVariables, TVariablesOut, "query">;
   /** Create it. */
   post(
     path?: string,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<TResponse, TVariables, TVariablesOut, "mutation">;
+  ): HttpAddressed<void, TVariables, TVariablesOut, "mutation">;
   /** Replace it. */
   put(
     path?: string,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<TResponse, TVariables, TVariablesOut, "mutation">;
+  ): HttpAddressed<void, TVariables, TVariablesOut, "mutation">;
   /** Change part of it. */
   patch(
     path?: string,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<TResponse, TVariables, TVariablesOut, "mutation">;
+  ): HttpAddressed<void, TVariables, TVariablesOut, "mutation">;
   /** Remove it. */
   del(
     path?: string,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<TResponse, TVariables, TVariablesOut, "mutation">;
+  ): HttpAddressed<void, TVariables, TVariablesOut, "mutation">;
 
   /**
    * Address it with a closure, for a path or a body the variables have to be
@@ -121,7 +119,7 @@ export interface HttpBuilder<TResponse, TVariables, TVariablesOut>
   via(
     probe: HttpProbe<TVariablesOut>,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<TResponse, TVariables, TVariablesOut, "mutation">;
+  ): HttpAddressed<void, TVariables, TVariablesOut, "mutation">;
 }
 
 /**
@@ -284,7 +282,7 @@ export interface Courier {
    * An endpoint reached over HTTP. The verb that finishes the chain decides
    * whether it reads or writes.
    */
-  readonly endpoint: HttpBuilder<void, void, void>;
+  readonly endpoint: HttpBuilder<void, void>;
   /** A one-way stream of server-sent events. */
   readonly stream: StreamBuilder<void, void, void>;
   /** A socket the caller can also send on. */

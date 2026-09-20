@@ -21,22 +21,22 @@ export const users = defineGroup({
   prefix: "users",
   endpoints: {
     // GET /users — variables become search params
-    getAll: endpoint.variables<{ page?: number; limit?: number }>().response<User[]>().get(""),
+    getAll: endpoint.get("").variables<{ page?: number; limit?: number }>().response<User[]>(),
 
     // GET /users/:id — :id is extracted from variables
-    getById: endpoint.variables<{ id: string }>().response<User>().get(":id"),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
 
     // POST /users — variables become JSON body
-    create: endpoint.variables<CreateUserVars>().response<User>().post(""),
+    create: endpoint.post("").variables<CreateUserVars>().response<User>(),
 
     // PUT /users/:id — :id extracted, rest becomes JSON body
-    update: endpoint.variables<UpdateUserVars>().response<User>().put(":id"),
+    update: endpoint.put(":id").variables<UpdateUserVars>().response<User>(),
 
     // PATCH /users/:id — partial update
-    patch: endpoint.variables<{ id: string; email: string }>().response<User>().patch(":id"),
+    patch: endpoint.patch(":id").variables<{ id: string; email: string }>().response<User>(),
 
     // DELETE /users/:id
-    remove: endpoint.variables<{ id: string }>().response<null>().del(":id"),
+    remove: endpoint.del(":id").variables<{ id: string }>().response<null>(),
   },
 })
 ```
@@ -81,10 +81,10 @@ export const comments = defineGroup({
   prefix: "posts",
   endpoints: {
     // Multiple path params: /posts/:postId/comments/:commentId
-    getOne: endpoint.variables<{ postId: string; commentId: string }>().response<Comment>().get(":postId/comments/:commentId"),
+    getOne: endpoint.get(":postId/comments/:commentId").variables<{ postId: string; commentId: string }>().response<Comment>(),
 
     // Path params + body: :postId is extracted, rest becomes body
-    create: endpoint.variables<{ postId: string; body: string }>().response<Comment>().post(":postId/comments"),
+    create: endpoint.post(":postId/comments").variables<{ postId: string; body: string }>().response<Comment>(),
   },
 })
 

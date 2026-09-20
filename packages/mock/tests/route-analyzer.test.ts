@@ -25,8 +25,8 @@ const api = defineApi({
     users: defineGroup({
       prefix: "/users",
       endpoints: {
-        getAll: endpoint.response(z.array(UserSchema)).get(""),
-        getById: endpoint.variables<{ id: string }>().response(UserSchema).get(":id"),
+        getAll: endpoint.get("").response(z.array(UserSchema)),
+        getById: endpoint.get(":id").variables<{ id: string }>().response(UserSchema),
         create: endpoint.post(""),
         update: endpoint.patch(":id"),
         replace: endpoint.put(":id"),

@@ -23,10 +23,10 @@ type PostList = { data: Post[]; total: number }
 const posts = defineGroup({
   prefix: "posts",
   endpoints: {
-    getAll: endpoint.variables<{ page?: number }>().response<PostList>().get(""),
-    getById: endpoint.variables<{ id: number }>().response<Post>().get(":id"),
-    create: endpoint.variables<{ title: string; body: string }>().response<Post>().post(""),
-    remove: endpoint.variables<{ id: number }>().response<null>().del(":id"),
+    getAll: endpoint.get("").variables<{ page?: number }>().response<PostList>(),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<Post>(),
+    create: endpoint.post("").variables<{ title: string; body: string }>().response<Post>(),
+    remove: endpoint.del(":id").variables<{ id: number }>().response<null>(),
   },
 })
 

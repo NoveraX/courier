@@ -16,12 +16,9 @@ type ErrorResponse = {
 export const misc = defineGroup({
   prefix: "",
   endpoints: {
-    stream: endpoint.response<ReadableStream>().get("stream"),
-    slow: endpoint.response<SlowResponse>().get("slow"),
-    error: endpoint
-      .variables<{ code: number }>()
-      .response<ErrorResponse>()
-      .get("error/:code"),
+    stream: endpoint.get("stream").response<ReadableStream>(),
+    slow: endpoint.get("slow").response<SlowResponse>(),
+    error: endpoint.get("error/:code").variables<{ code: number }>().response<ErrorResponse>(),
   },
 })
 

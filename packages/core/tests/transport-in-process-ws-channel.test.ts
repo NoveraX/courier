@@ -47,7 +47,7 @@ describe("executeDirectWSChannel — resolution + validation", () => {
   });
 
   it("throws when endpoint is not WS transport", async () => {
-    const httpEndpoint = endpoint.response<string>().get("/x");
+    const httpEndpoint = endpoint.get("/x").response<string>();
     const sources = { api: { options: { groups: {} }, health: httpEndpoint } };
     await expect(
       executeDirectWSChannel(sources as any, { source: "api", method: "health" }),

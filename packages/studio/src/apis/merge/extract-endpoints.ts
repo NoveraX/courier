@@ -11,7 +11,7 @@ const ENDPOINT_START = /^\s{4}(\w+):\s*(?:\w+\.)?(?:endpoint|stream|channel)\b/;
  * Extract endpoint code blocks from a group file.
  *
  * Looks for patterns like:
- *   endpointName: endpoint.response(Schema).get("")
+ *   endpointName: endpoint.get("").response(Schema)
  *
  * @returns Map of endpointName → full code block (including the name).
  */

@@ -15,12 +15,9 @@ const { endpoint } = courier()
 const users = defineGroup({
   prefix: "users",
   endpoints: {
-    getAll: endpoint.response<User[]>().get(""),
-    getById: endpoint
-      .variables<{ id: number }>()
-      .response<User>()
-      .get(":id"),
-    create: endpoint.variables<CreateUser>().response<User>().post(""),
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
+    create: endpoint.post("").variables<CreateUser>().response<User>(),
   },
 })
 

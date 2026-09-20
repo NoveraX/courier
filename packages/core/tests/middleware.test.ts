@@ -41,8 +41,8 @@ function createApi(middleware?: Middleware[]) {
 			users: defineGroup({
 				prefix: "users",
 				endpoints: {
-					getAll: endpoint.response<{ id: number; name: string }[]>().get(""),
-					create: endpoint.variables<{ name: string }>().response<{ id: number; name: string }>().post(""),
+					getAll: endpoint.get("").response<{ id: number; name: string }[]>(),
+					create: endpoint.post("").variables<{ name: string }>().response<{ id: number; name: string }>(),
 				},
 			}),
 		},

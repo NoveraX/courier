@@ -14,10 +14,10 @@ const api = defineApi({
     items: defineGroup({
       prefix: "/items",
       endpoints: {
-        list: endpoint.response(z.array(ItemSchema)).get(""),
-        get: endpoint.response(ItemSchema).get(":id"),
-        create: endpoint.variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema).post(""),
-        update: endpoint.response(ItemSchema).patch(":id"),
+        list: endpoint.get("").response(z.array(ItemSchema)),
+        get: endpoint.get(":id").response(ItemSchema),
+        create: endpoint.post("").variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema),
+        update: endpoint.patch(":id").response(ItemSchema),
         delete: endpoint.del(":id"),
       },
     }),

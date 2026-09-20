@@ -149,7 +149,7 @@ describe("auto-mock with mixed schema endpoints", () => {
       feed: defineGroup({
         prefix: "/feed",
         endpoints: {
-          paginated: endpoint.response(WrapperSchema).get(""),
+          paginated: endpoint.get("").response(WrapperSchema),
         },
       }),
       // Group with no schema at all

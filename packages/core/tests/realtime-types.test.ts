@@ -74,9 +74,7 @@ describe("endpoint with transport", () => {
   });
 
   it("keeps declared options alongside the transport", () => {
-    const ep = stream
-      .response<string>()
-      .implement(async function* () {
+    const ep = stream.response<string>().implement(async function* () {
         yield { data: "test" };
       }, { tags: ["feed"] });
     const meta = getMeta(ep);
@@ -87,7 +85,7 @@ describe("endpoint with transport", () => {
   });
 
   it("HTTP endpoints still work without transport field", () => {
-    const ep = endpoint.response<string[]>().get("");
+    const ep = endpoint.get("").response<string[]>();
     const meta = getMeta(ep);
 
     expect(meta).toBeDefined();
@@ -96,7 +94,7 @@ describe("endpoint with transport", () => {
   });
 
   it("records the declared kind even when no schema was given", () => {
-    const ep = endpoint.response<string>().get("");
+    const ep = endpoint.get("").response<string>();
     const meta = getMeta(ep);
 
     expect(meta!.type).toBe("query");

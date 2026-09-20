@@ -47,7 +47,8 @@ export type CourierInfiniteQueryOptions<TResponse, TVariables, TPageParam> = {
     firstPageParam: TPageParam,
     allPageParams: TPageParam[],
   ) => TPageParam | undefined | null;
-} & ([TVariables] extends [undefined]
+  // biome-ignore lint/suspicious/noConfusingVoidType: void is the builder's sentinel for an endpoint that takes no variables
+} & ([TVariables] extends [undefined | void]
   ? { variables?: (pageParam: TPageParam) => TVariables }
   : {} extends TVariables
     ? { variables?: (pageParam: TPageParam) => TVariables }
@@ -72,7 +73,8 @@ export type CourierMutationOptions<TResponse, TVariables> = Omit<
   invalidate?: QueryKey[];
 };
 
-export type CourierPrefetchOptions<TVariables> = [TVariables] extends [undefined]
+// biome-ignore lint/suspicious/noConfusingVoidType: void is the builder's sentinel for an endpoint that takes no variables
+export type CourierPrefetchOptions<TVariables> = [TVariables] extends [undefined | void]
   ? { variables?: undefined; requestOptions?: CallOptions; staleTime?: number }
   : {} extends TVariables
     ? { variables?: TVariables; requestOptions?: CallOptions; staleTime?: number }

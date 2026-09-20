@@ -7,11 +7,16 @@
 
 /**
  * Resolve the `variables` field for hook option objects:
- *  - `undefined` variables → optional, must be `undefined`
+ *  - no variables → optional, must be absent
  *  - empty-object variables → optional
  *  - required variables → mandatory
+ *
+ * An endpoint that never named its variables carries `void`, so the first
+ * branch admits it alongside `undefined`; otherwise every option object for
+ * such an endpoint would still demand a `variables` field.
  */
-export type WithVariables<TVariables> = [TVariables] extends [undefined]
+// biome-ignore lint/suspicious/noConfusingVoidType: void is the builder's sentinel for an endpoint that takes no variables
+export type WithVariables<TVariables> = [TVariables] extends [undefined | void]
   ? { variables?: undefined }
   : {} extends TVariables
     ? { variables?: TVariables }

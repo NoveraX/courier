@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-express",
   "version": "0.0.0",
-  "description": "Express adapter for @noverax/courier — proxy middleware handler",
+  "description": "Express adapter for @noverax/courier \u2014 proxy middleware handler",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
@@ -41,7 +41,6 @@
     "@noverax/courier": "*"
   },
   "peerDependencies": {
-    "express": ">=4",
     "ws": ">=8"
   },
   "peerDependenciesMeta": {

@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-nestjs",
   "version": "0.0.0",
-  "description": "NestJS adapter for @noverax/courier — module + middleware handler",
+  "description": "NestJS adapter for @noverax/courier \u2014 module + middleware handler",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
@@ -41,13 +41,9 @@
     "@noverax/courier": "*"
   },
   "peerDependencies": {
-    "@nestjs/common": ">=10",
     "ws": ">=8"
   },
   "peerDependenciesMeta": {
-    "@nestjs/common": {
-      "optional": true
-    },
     "ws": {
       "optional": true
     }

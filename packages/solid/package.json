@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-solid",
   "version": "0.0.0",
-  "description": "Solid Start adapter for @noverax/courier — Web Standard proxy handler",
+  "description": "Solid Start adapter for @noverax/courier \u2014 Web Standard proxy handler",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
@@ -38,8 +38,5 @@
   },
   "dependencies": {
     "@noverax/courier": "*"
-  },
-  "peerDependencies": {
-    "@solidjs/start": ">=1"
   }
 }

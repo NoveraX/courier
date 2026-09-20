@@ -1,17 +1,22 @@
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  flexRender,
+  columnSizingFeature,
   createColumnHelper,
+  createSortedRowModel,
+  flexRender,
+  rowSortingFeature,
+  sortFn_alphanumeric,
+  sortFn_basic,
+  sortFn_text,
+  tableFeatures,
+  useTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { motion } from "motion/react";
-import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 import { EndpointRow } from "./endpoint-row";
 
-import type { SortingState } from "@tanstack/react-table";
+import type { Header, SortingState } from "@tanstack/react-table";
 import type { EndpointNodeData } from "../types";
 
 // ── Props ──────────────────────────────────────────────────────────────────
@@ -24,11 +29,20 @@ interface EndpointsTableProps {
   onSelect: (key: string) => void;
 }
 
+// ── Table features ─────────────────────────────────────────────────────────
+
+const features = tableFeatures({
+  columnSizingFeature,
+  rowSortingFeature,
+  sortedRowModel: createSortedRowModel(),
+  sortFns: { alphanumeric: sortFn_alphanumeric, basic: sortFn_basic, text: sortFn_text },
+});
+
 // ── Column definitions ─────────────────────────────────────────────────────
 
-const col = createColumnHelper<EndpointNodeData>();
+const col = createColumnHelper<typeof features, EndpointNodeData>();
 
-const columns = [
+const columns = col.columns([
   col.display({ id: "health", header: "", size: 40 }),
   col.accessor("method", { header: "Endpoint", size: 180 }),
   col.accessor("fullPath", { header: "Path", size: 200 }),
@@ -39,7 +53,9 @@ const columns = [
   col.accessor((r) => r.metrics.p95ResponseTime, { id: "p95", header: "P95", size: 70 }),
   col.accessor((r) => r.metrics.successRate, { id: "health_pct", header: "Health", size: 70 }),
   col.accessor((r) => r.metrics.avgSize, { id: "size", header: "Size", size: 70 }),
-];
+]);
+
+type EndpointHeader = Header<typeof features, EndpointNodeData, unknown>;
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -50,13 +66,12 @@ export function EndpointsTable({
   selectedKey,
   onSelect,
 }: EndpointsTableProps): React.ReactElement {
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data,
     columns,
     state: { sorting },
     onSortingChange,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
   });
 
   const headerGroups = table.getHeaderGroups();
@@ -95,11 +110,7 @@ export function EndpointsTable({
 
 // ── Sortable header cell ───────────────────────────────────────────────────
 
-function SortableHeader({
-  header,
-}: {
-  header: ReturnType<ReturnType<typeof useReactTable<EndpointNodeData>>["getHeaderGroups"]>[0]["headers"][0];
-}): React.ReactElement {
+function SortableHeader({ header }: { header: EndpointHeader }): React.ReactElement {
   const canSort = header.column.getCanSort();
   const sorted = header.column.getIsSorted();
 

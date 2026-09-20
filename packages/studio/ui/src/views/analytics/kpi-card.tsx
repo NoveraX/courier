@@ -84,7 +84,7 @@ function Sparkline({ data, color }: {
   color: string;
 }): React.ReactElement {
   return (
-    <LineChart width={48} height={20} data={data}>
+    <LineChart width={48} height={20} data={data} accessibilityLayer={false}>
       <Line
         type="monotone"
         dataKey="value"

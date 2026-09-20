@@ -68,7 +68,7 @@ export function RequestsOverTimeChart({ data }: RequestsOverTimeProps): React.Re
           animationDuration={800}
           animationEasing="ease-out"
         />
-        <ChartLegend content={<ChartLegendContent />} />
+        <ChartLegend content={<ChartLegendContent />} itemSorter={null} />
       </AreaChart>
     </ChartContainer>
   );

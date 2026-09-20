@@ -57,7 +57,7 @@ export function ResponseTimeChart({ data }: ResponseTimeChartProps): React.React
           animationDuration={800}
           animationEasing="ease-out"
         />
-        <ChartLegend content={<ChartLegendContent />} />
+        <ChartLegend content={<ChartLegendContent />} itemSorter={null} />
       </BarChart>
     </ChartContainer>
   );

@@ -21,7 +21,7 @@ export function MiniSparkline({
   if (data.length < 2) return null;
 
   return (
-    <LineChart width={width} height={height} data={data}>
+    <LineChart width={width} height={height} data={data} accessibilityLayer={false}>
       <Line
         type="monotone"
         dataKey="value"

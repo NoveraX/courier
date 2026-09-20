@@ -1,3 +1,4 @@
+import { CourierMark } from "@/components/courier-mark";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useMemo } from "react";
 
@@ -92,14 +93,10 @@ export function AppSidebar(): React.ReactNode {
       <SidebarHeader className="px-3 py-4 group-data-[collapsible=icon]:p-2">
         <Link to="/timeline" className="flex items-center gap-3 px-1 group-data-[collapsible=icon]:px-0">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-sidebar-accent ring-1 ring-sidebar-border">
-            <img src="/courier-icon.png" alt="" className="when-dark size-[18px]" />
-            <img src="/courier-icon-dark.png" alt="" className="when-light size-[18px]" />
+            <CourierMark size={16} />
           </div>
           <div className="flex flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
-            <div className="flex items-start gap-1">
-              <img src="/courier-wordmark-light.png" alt="Courier" className="when-dark mt-0.5 h-3.5" />
-              <img src="/courier-wordmark-dark.png" alt="Courier" className="when-light mt-0.5 h-3.5" />
-            </div>
+            <span className="font-black text-[15px] leading-none tracking-[-0.04em]">courier</span>
             <span className="text-[9px] tracking-[1em] uppercase text-muted-foreground">
               Studio
             </span>

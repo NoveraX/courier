@@ -1,10 +1,12 @@
 <div align="center">
   <br />
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-logo-horizontal-light.png" />
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-logo-horizontal-dark.png" />
-    <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-logo-horizontal-dark.png" height="48" />
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/logos/courier-mark-light.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="docs/public/logos/courier-mark-dark.svg" />
+    <img alt="Courier" src="docs/public/logos/courier-mark-dark.svg" height="44" />
   </picture>
+
+  <h1>courier</h1>
 
   <br />
   <br />

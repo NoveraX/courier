@@ -135,7 +135,7 @@ export function MobileNav() {
       <SheetContent side="left" className="w-72 p-0">
         <SheetHeader className="mobile-nav-header border-b px-4 py-3">
           <SheetTitle className="flex items-center gap-2 text-left">
-            <CourierLogo variant="horizontal" width={82} height={22} />
+            <CourierLogo size={20} />
             <span className="rounded-md bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-brand">
               docs
             </span>

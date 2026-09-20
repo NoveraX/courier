@@ -183,8 +183,8 @@ export function ProgressUploadDemo() {
           )}
           <RunButton loading={loading} label="Upload with Progress" onClick={handleUpload} />
           <p className="text-xs text-muted-foreground">
-            Tip: On localhost uploads are nearly instant. Use browser DevTools Network throttling (e.g.
-            &quot;Slow 3G&quot;) to see gradual progress.
+            Tip: On localhost uploads are nearly instant. Use browser DevTools Network throttling
+            (e.g. &quot;Slow 3G&quot;) to see gradual progress.
           </p>
         </div>
       )}

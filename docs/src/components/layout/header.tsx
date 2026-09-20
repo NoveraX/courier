@@ -65,7 +65,7 @@ export function Header() {
 
         {/* Mobile logo */}
         <Link href="/" className="flex items-center gap-2 md:hidden">
-          <CourierLogo variant="horizontal" width={75} height={20} />
+          <CourierLogo size={18} />
           <span className="rounded-md bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-brand">
             docs
           </span>

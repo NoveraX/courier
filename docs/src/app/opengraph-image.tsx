@@ -55,13 +55,9 @@ export default async function OGImage() {
           marginBottom: 32,
         }}
       >
-        {/* biome-ignore lint/performance/noImgElement: ImageResponse requires native img */}
-        <img
-          src="https://courier.noverax.cloud/logos/courier-icon-gradient.png"
-          alt=""
-          width={120}
-          height={120}
-        />
+        <svg viewBox="0 0 212 180" width={142} height={120} aria-label="Courier">
+          <path fill="#ffffff" d="M212 0H90a90 90 0 0 0 0 180h122l-52-50H90a40 40 0 0 1 0-80h70Z" />
+        </svg>
       </div>
 
       {/* Title */}

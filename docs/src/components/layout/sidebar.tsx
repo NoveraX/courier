@@ -112,7 +112,7 @@ export function Sidebar() {
     >
       <div className="flex h-14 items-center gap-2 border-b px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <CourierLogo variant="horizontal" width={82} height={22} />
+          <CourierLogo size={20} />
           <span className="rounded-md bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-brand">
             docs
           </span>

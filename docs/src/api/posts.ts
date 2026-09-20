@@ -21,7 +21,10 @@ export const posts = defineGroup({
   endpoints: {
     getAll: endpoint.get("").variables<{ userId?: number }>().response<PostsListResponse>(),
     getById: endpoint.get(":id").variables<{ id: number }>().response<Post>(),
-    create: endpoint.post("").variables<{ userId?: number; title: string; body: string; tags?: string[] }>().response<Post>(),
+    create: endpoint
+      .post("")
+      .variables<{ userId?: number; title: string; body: string; tags?: string[] }>()
+      .response<Post>(),
   },
 })
 

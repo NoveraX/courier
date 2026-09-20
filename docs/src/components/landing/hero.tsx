@@ -3,7 +3,7 @@ import Link from "next/link"
 import { CodeBlock } from "@/components/docs/code-block"
 import { GithubIcon } from "@/components/icons/github"
 import { Button } from "@/components/ui/button"
-import { CourierLogo } from "../courier-logo"
+import { CourierMark } from "../courier-logo"
 import { InstallBadge } from "./install-badge"
 import { AnimatedSection } from "./section-animate"
 
@@ -37,13 +37,7 @@ export function Hero() {
           {/* Left: text */}
           <AnimatedSection className="max-w-xl">
             <div className="mb-6 flex items-center gap-4">
-              <CourierLogo
-                variant="icon"
-                width={52}
-                height={52}
-                gradient
-                className="drop-shadow-[0_0_24px_oklch(0.65_0.25_270/0.5)]"
-              />
+              <CourierMark size={52} className="drop-shadow-[0_0_24px_oklch(0.65_0.25_270/0.5)]" />
               <InstallBadge />
             </div>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">

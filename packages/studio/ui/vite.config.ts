@@ -1,15 +1,15 @@
 import path from "node:path";
 import { defineConfig } from "vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import react, { reactCompilerPreset } from "@vitejs/plugin-react";
-import babel from "@rolldown/plugin-babel";
+import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [
     tanstackRouter({ target: "react", autoCodeSplitting: true }),
-    react(),
-    babel({ presets: [reactCompilerPreset()] }),
+    /* The React Compiler runs natively through oxc-transform-react, in the
+       same pass that strips types and transforms JSX. */
+    react({ compiler: true }),
     tailwindcss(),
   ],
   resolve: {

@@ -5,9 +5,20 @@ export type HonoWSContext = {
   send(data: string): void;
   close(code?: number, reason?: string): void;
   readonly readyState: number;
-  /** Platform-native socket (available on Node, Deno and Bun adapters) */
-  readonly raw?: { readonly bufferedAmount: number };
+  /**
+   * Platform-native socket. Every runtime hands over a different one — the
+   * Node adapter's exposes no `bufferedAmount` at all — so nothing is promised
+   * about its shape and the one field we want is read through a guard.
+   */
+  readonly raw?: unknown;
 };
+
+/** Back-pressure in bytes, for sockets that report it; 0 for those that do not. */
+function bufferedBytes(raw: unknown): number {
+  if (typeof raw !== "object" || raw === null || !("bufferedAmount" in raw)) return 0;
+  const { bufferedAmount } = raw as { bufferedAmount: unknown };
+  return typeof bufferedAmount === "number" ? bufferedAmount : 0;
+}
 
 type MsgHandler = (event: { data: unknown }) => void;
 type CloseHandler = (event: { code: number }) => void;
@@ -49,7 +60,7 @@ export function createSocketAdapter(
       return ws.readyState;
     },
     get bufferedAmount() {
-      return ws.raw?.bufferedAmount ?? 0;
+      return bufferedBytes(ws.raw);
     },
     addEventListener,
     emit(type: string, event: unknown) {

@@ -41,6 +41,12 @@
     "@noverax/courier": "*"
   },
   "peerDependencies": {
-    "hono": ">=4"
+    "hono": ">=4",
+    "ws": ">=8"
+  },
+  "peerDependenciesMeta": {
+    "ws": {
+      "optional": true
+    }
   }
 }

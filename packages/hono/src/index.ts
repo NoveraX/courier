@@ -86,7 +86,7 @@ export function courierSSEHandler(config?: HandlerConfig) {
 /** Hono WS event handlers — structurally compatible with upgradeWebSocket() */
 export type HonoWSEvents = {
   onOpen?(event: unknown, ws: HonoWSContext): void;
-  onMessage?(event: { data: string | ArrayBuffer }, ws: HonoWSContext): void;
+  onMessage?(event: { data: unknown }, ws: HonoWSContext): void;
   onClose?(event: { code: number }, ws: HonoWSContext): void;
   onError?(event: unknown, ws: HonoWSContext): void;
 };

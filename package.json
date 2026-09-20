@@ -67,6 +67,7 @@
     "format": "biome format --write packages/",
     "check": "biome check packages/",
     "check:names": "node scripts/check-name-conflicts.mjs",
+    "check:exports": "node scripts/check-exports.mjs",
     "check:names:test": "vitest run scripts/check-name-conflicts.test.mjs",
     "release": "HUSKY=0 semantic-release",
     "prepare": "husky"

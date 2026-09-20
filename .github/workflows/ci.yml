@@ -46,6 +46,11 @@ jobs:
       - name: Test
         run: npm test
 
+      # The only gate that reads the declarations the packages publish; every
+      # other one resolves sibling packages through their sources.
+      - name: Check published entry points
+        run: npm run check:exports
+
   docs:
     runs-on: ubuntu-latest
     steps:

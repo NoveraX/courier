@@ -41,6 +41,6 @@
     "@noverax/courier": "*"
   },
   "peerDependencies": {
-    "h3": ">=2.0.0-rc.0"
+    "h3": "^2.0.0-rc.0 || ^2.0.1-rc.0"
   }
 }

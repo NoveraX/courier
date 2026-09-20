@@ -14,9 +14,6 @@ import { mergeImports } from "./merge-imports";
 import { parseExistingGroup } from "./parse-existing";
 import type { FingerprintResult, MergeChange, MergeResult, MergeStatus } from "./types";
 
-/** Destructuring that names the base, e.g. `const { endpoint } = courier();`. */
-const DESTRUCTURED_HEADS_RE = /const \{([^}]+)\} = courier\(/;
-
 export function mergeGroupFile(
   existingContent: string,
   generatedContent: string,
@@ -27,8 +24,10 @@ export function mergeGroupFile(
   const changes: MergeChange[] = [];
 
   const importLines = mergeImports(existing.imports, generated.imports, changes);
-  const endpointLines = mergeEndpoints(existing, generated, fingerprints, changes);
-  const preamble = mergePreamble(existing.preamble, generated.preamble, endpointLines);
+  const endpointLines = mergeEndpoints(existing, generated, fingerprints, changes).map((line) =>
+    renameBase(line, generated.baseName, existing.baseName),
+  );
+  const preamble = mergePreamble(existing.preamble, generated.preamble);
   const content = buildFile(importLines, preamble, generated, endpointLines, existing.trailingCode);
   const status = resolveStatus(changes);
 
@@ -107,38 +106,26 @@ function appendEndpoint(lines: string[], comment: string | undefined, code: stri
 }
 
 /**
- * Carry the builder heads across a merge.
+ * Say what a generated endpoint says, in the name this file uses for the base.
  *
- * The existing file wins so a hand-renamed or reconfigured base survives, but a
- * head the merged endpoints now address is added to its destructuring — a spec
- * that grew its first write would otherwise leave `mutation` undeclared.
+ * A person may have renamed the destructuring, or kept the base whole and
+ * reached through it. Their name is the one that resolves in their file.
  */
-function mergePreamble(existing: string[], generated: string[], endpointLines: string[]): string[] {
-  const preamble = existing.length > 0 ? [...existing] : [...generated];
+function renameBase(line: string, from: string, to: string): string {
+  if (from === to) return line;
+  const base = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return line.replace(new RegExp(`(^\\s*\\w+:\\s*)${base}\\b`), `$1${to}`);
+}
 
-  const used = new Set<string>();
-  for (const line of endpointLines) {
-    const match = line.match(/^\s{4}\w+:\s*(endpoint|stream|channel)\b/);
-    if (match?.[1]) used.add(match[1]);
-  }
-  if (used.size === 0) return preamble;
-
-  const index = preamble.findIndex((line) => DESTRUCTURED_HEADS_RE.test(line));
-  if (index === -1) return preamble;
-
-  const match = preamble[index]?.match(DESTRUCTURED_HEADS_RE);
-  const declared = (match?.[1] ?? "")
-    .split(",")
-    .map((name) => name.trim())
-    .filter(Boolean);
-  const merged = [...new Set([...declared, ...used])].sort();
-  if (merged.length === declared.length) return preamble;
-
-  preamble[index] = (preamble[index] ?? "").replace(
-    DESTRUCTURED_HEADS_RE,
-    `const { ${merged.join(", ")} } = courier(`,
-  );
-  return preamble;
+/**
+ * Carry the base across a merge.
+ *
+ * What the file already declares wins, so a base someone renamed or configured
+ * survives regeneration; the generated one is used only for a file that had
+ * none.
+ */
+function mergePreamble(existing: string[], generated: string[]): string[] {
+  return existing.length > 0 ? [...existing] : [...generated];
 }
 
 function buildFile(

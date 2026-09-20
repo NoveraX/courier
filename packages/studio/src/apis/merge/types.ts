@@ -109,6 +109,14 @@ export interface ExistingGroupInfo {
   header: string[];
   /** The lines closing the declaration, after the endpoints. */
   footer: string[];
+  /**
+   * How this file names the base its endpoints are built from.
+   *
+   * `endpoint` as generated, but a person may have renamed the destructuring
+   * or kept the base whole — `ep`, or `api.endpoint`. Endpoints are recognised
+   * and rewritten in whichever name the file already uses.
+   */
+  baseName: string;
   imports: ParsedImport[];
   endpoints: ExistingEndpointInfo[];
   /** Code lines between the imports and the defineGroup block (builder heads) */

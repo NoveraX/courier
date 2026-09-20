@@ -14,7 +14,18 @@ const GROUP_RE = /^export\s+const\s+(\w+)\s*=\s*defineGroup\(\{/;
 const SOURCE_RE = /^export\s+const\s+\w+\s*=\s*define(?:Group|Api)\(\{/;
 const PREFIX_RE = /prefix:\s*["']([^"']*)["']/;
 /** Head a generated endpoint starts with, optionally qualified by its base. */
-const ENDPOINT_RE = /^\s{4}(\w+):\s*(?:\w+\.)?(?:endpoint|stream|channel)\b/;
+const DEFAULT_BASE = "endpoint";
+
+/**
+ * Line opening an endpoint, in whichever name this file gives the base.
+ *
+ * `stream` and `channel` are always recognised: a person may have added one by
+ * hand even though nothing generates them.
+ */
+function endpointStart(baseName: string): RegExp {
+  const base = baseName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^\\s{4}(\\w+):\\s*(?:${base}|(?:\\w+\\.)?(?:endpoint|stream|channel))\\b`);
+}
 const JSDOC_RE = /^\s{4}\/\*\*/;
 
 export function parseExistingGroup(content: string): ExistingGroupInfo {
@@ -22,12 +33,23 @@ export function parseExistingGroup(content: string): ExistingGroupInfo {
 
   const imports = parseImports(lines);
   const { groupName, prefix } = parseGroupMeta(lines);
-  const endpoints = parseEndpointsWithComments(lines);
+  const endpoints = parseEndpointsWithComments(lines, readBaseName(extractPreamble(lines)));
   const preamble = extractPreamble(lines);
   const trailingCode = extractTrailingCode(lines);
   const { header, footer } = extractShell(lines);
+  const baseName = readBaseName(preamble);
 
-  return { groupName, prefix, header, footer, imports, endpoints, preamble, trailingCode };
+  return {
+    groupName,
+    prefix,
+    header,
+    footer,
+    baseName,
+    imports,
+    endpoints,
+    preamble,
+    trailingCode,
+  };
 }
 
 function parseImports(lines: string[]): ParsedImport[] {
@@ -132,7 +154,8 @@ function parseGroupMeta(lines: string[]): { groupName: string; prefix: string } 
   return { groupName, prefix };
 }
 
-function parseEndpointsWithComments(lines: string[]): ExistingEndpointInfo[] {
+function parseEndpointsWithComments(lines: string[], baseName: string): ExistingEndpointInfo[] {
+  const startsEndpoint = endpointStart(baseName);
   const result: ExistingEndpointInfo[] = [];
   let i = 0;
 
@@ -146,7 +169,7 @@ function parseEndpointsWithComments(lines: string[]): ExistingEndpointInfo[] {
       i++;
     }
 
-    const match = lines[i]?.match(ENDPOINT_RE);
+    const match = lines[i]?.match(startsEndpoint);
     if (!match?.[1]) {
       if (comment) comment = undefined;
       i++;
@@ -179,6 +202,28 @@ function findEndpointEnd(lines: string[], startLine: number): number {
   }
 
   return lines.length - 1;
+}
+
+/**
+ * Read how the file names the base its endpoints are built from.
+ *
+ * A destructuring may have been renamed, or the base kept whole and reached
+ * through — either way, that name is what the merged endpoints must use.
+ */
+function readBaseName(preamble: string[]): string {
+  for (const line of preamble) {
+    const destructured = line.match(/const\s*\{([^}]*)\}\s*=\s*\w*courier/i);
+    if (destructured?.[1]) {
+      for (const part of destructured[1].split(",")) {
+        const [name, alias] = part.split(":").map((x) => x.trim());
+        if (name === "endpoint") return alias || name;
+      }
+      continue;
+    }
+    const whole = line.match(/const\s+(\w+)\s*=\s*courier\(/);
+    if (whole?.[1]) return `${whole[1]}.endpoint`;
+  }
+  return DEFAULT_BASE;
 }
 
 /**

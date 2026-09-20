@@ -74,9 +74,20 @@ function mergeEndpoints(
     changes.push({ type: "updated", target: `endpoint:${genEp.name}`, detail: "from spec" });
   }
 
-  /* Preserve user-added endpoints not in spec */
+  /* Keep what the user wrote, drop what the spec dropped. An endpoint we
+     generated before and the spec no longer describes is removed; one we never
+     generated is the user's own and stays. */
   for (const existEp of existing.endpoints) {
     if (generatedNames.has(existEp.name)) continue;
+
+    if (fingerprints.endpoints[existEp.name] === "removed") {
+      changes.push({
+        type: "removed",
+        target: `endpoint:${existEp.name}`,
+        detail: "no longer in spec",
+      });
+      continue;
+    }
 
     appendEndpoint(result, existEp.comment, existEp.code);
     changes.push({

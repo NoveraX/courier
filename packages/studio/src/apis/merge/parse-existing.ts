@@ -156,11 +156,28 @@ function extractPreamble(lines: string[]): string[] {
   return lines.slice(lastImportIdx + 1, declarationIdx).filter((line) => line.trim() !== "");
 }
 
-/** Extract code after the closing `});` of defineGroup */
+/**
+ * Extract the code that follows the source declaration.
+ *
+ * The end of the declaration is found by balancing brackets from where it
+ * opens rather than by looking for the first line that closes one: a base
+ * configured across several lines closes one of its own above it.
+ */
 function extractTrailingCode(lines: string[]): string[] {
-  const groupEndIdx = lines.findIndex((l) => /^\}\);?\s*$/.test(l));
-  if (groupEndIdx === -1) return [];
+  const start = lines.findIndex((l) => SOURCE_RE.test(l));
+  if (start === -1) return [];
 
-  const trailing = lines.slice(groupEndIdx + 1).filter((l) => l.trim() !== "");
-  return trailing;
+  let depth = 0;
+  for (let i = start; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    for (const ch of line) {
+      if (ch === "(" || ch === "{" || ch === "[") depth++;
+      else if (ch === ")" || ch === "}" || ch === "]") depth--;
+    }
+    if (depth <= 0) {
+      return lines.slice(i + 1).filter((l) => l.trim() !== "");
+    }
+  }
+
+  return [];
 }

@@ -54,14 +54,10 @@ function mergeOrOverwrite(
   const specNames = Object.keys(extractEndpoints(gen.content));
   const fp = classifyEndpoints(existingCode, fingerprints, specNames);
 
-  /* If no endpoints were user-modified, overwrite entirely.
-   * This ensures import changes (zod→arktype), naming convention
-   * changes, and removed endpoints all apply cleanly. */
-  const hasUserModifications = Object.values(fp.endpoints).some((s) => s === "modified");
-  if (!hasUserModifications) {
-    return { path: gen.path, content: gen.content, status: "safe", changes: [] };
-  }
-
+  /* Always merge. Overwriting when no endpoint body had changed threw away
+     everything else the file carried — the base it configures, imports the
+     user added, helpers below the group — none of which the endpoint
+     classification says anything about. */
   const result = mergeGroupFile(existing, gen.content, fp);
 
   return {

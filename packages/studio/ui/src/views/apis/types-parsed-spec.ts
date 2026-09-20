@@ -45,7 +45,7 @@ export interface ParsedParameter {
 export interface ParsedEndpoint {
   name: string;
   operationId: string | null;
-  httpMethod: "get" | "post" | "put" | "patch" | "delete";
+  httpMethod: "get" | "head" | "post" | "put" | "patch" | "delete";
   path: string;
   fullPath: string;
   description: string;
@@ -63,6 +63,13 @@ export interface ParsedGroup {
   endpoints: ParsedEndpoint[];
 }
 
+/** An operation the spec declares that the endpoint builder cannot express. */
+export interface SkippedOperation {
+  method: string;
+  path: string;
+  reason: string;
+}
+
 export interface ParsedSpec {
   title: string;
   version: string;
@@ -72,4 +79,5 @@ export interface ParsedSpec {
   groups: ParsedGroup[];
   schemas: Record<string, ParsedSchema>;
   securitySchemes: ParsedSecurityScheme[];
+  skipped: SkippedOperation[];
 }

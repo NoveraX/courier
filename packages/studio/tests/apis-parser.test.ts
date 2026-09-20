@@ -351,6 +351,90 @@ describe("parseSpec — Postman", () => {
   })
 })
 
+const METHOD_COVERAGE_SPEC = JSON.stringify({
+  openapi: "3.0.0",
+  info: { title: "Coverage", version: "1.0.0" },
+  paths: {
+    "/things": {
+      parameters: [{ name: "trace", in: "query", schema: { type: "string" } }],
+      summary: "Path-level metadata, not an operation",
+      get: { tags: ["things"], operationId: "listThings", responses: { "200": {} } },
+      head: { tags: ["things"], operationId: "headThings", responses: { "200": {} } },
+      options: { tags: ["things"], operationId: "optionsThings", responses: { "200": {} } },
+      trace: { tags: ["things"], operationId: "traceThings", responses: { "200": {} } },
+    },
+  },
+})
+
+const SWAGGER2_HEAD_SPEC = JSON.stringify({
+  swagger: "2.0",
+  info: { title: "Legacy", version: "1.0.0" },
+  basePath: "/api",
+  paths: {
+    "/items": {
+      head: { tags: ["items"], operationId: "headItems", responses: { "200": {} } },
+      options: { tags: ["items"], operationId: "optionsItems", responses: { "200": {} } },
+    },
+  },
+})
+
+const POSTMAN_UNSUPPORTED_SPEC = JSON.stringify({
+  info: { name: "Odd methods", schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  item: [
+    {
+      name: "things",
+      item: [
+        { name: "Head thing", request: { method: "HEAD", url: { raw: "https://api.example.com/things" } } },
+        { name: "Purge thing", request: { method: "PURGE", url: { raw: "https://api.example.com/things" } } },
+      ],
+    },
+  ],
+})
+
+describe("parseSpec — HTTP methods", () => {
+  it("keeps HEAD, which the builder can express", () => {
+    const spec = parseSpec(METHOD_COVERAGE_SPEC)
+    const things = spec.groups.find((g) => g.name === "things")!
+
+    expect(things.endpoints.map((e) => e.httpMethod).sort()).toEqual(["get", "head"])
+  })
+
+  it("reports OPTIONS and TRACE as skipped instead of dropping them", () => {
+    const spec = parseSpec(METHOD_COVERAGE_SPEC)
+
+    expect(spec.skipped.map((o) => o.method).sort()).toEqual(["OPTIONS", "TRACE"])
+    expect(spec.skipped[0]!.path).toBe("/things")
+    expect(spec.skipped[0]!.reason).toContain("builder")
+  })
+
+  it("does not mistake path-level metadata for a lost operation", () => {
+    const spec = parseSpec(METHOD_COVERAGE_SPEC)
+
+    expect(spec.skipped.map((o) => o.method)).not.toContain("PARAMETERS")
+    expect(spec.skipped.map((o) => o.method)).not.toContain("SUMMARY")
+  })
+
+  it("carries HEAD and the skipped list through the Swagger 2.0 conversion", () => {
+    const spec = parseSpec(SWAGGER2_HEAD_SPEC)
+    const items = spec.groups.find((g) => g.name === "items")!
+
+    expect(items.endpoints[0]!.httpMethod).toBe("head")
+    expect(spec.skipped).toEqual([
+      { method: "OPTIONS", path: "/items", reason: expect.stringContaining("OPTIONS") },
+    ])
+  })
+
+  it("reports a Postman request whose method has no builder verb", () => {
+    const spec = parseSpec(POSTMAN_UNSUPPORTED_SPEC)
+    const things = spec.groups.find((g) => g.name === "things")!
+
+    expect(things.endpoints.map((e) => e.httpMethod)).toEqual(["head"])
+    expect(spec.skipped).toEqual([
+      { method: "PURGE", path: "/things", reason: expect.stringContaining("PURGE") },
+    ])
+  })
+})
+
 describe("parseSpec — errors", () => {
   it("throws on unknown format", () => {
     expect(() => parseSpec("random text")).toThrow("Unable to detect spec format")

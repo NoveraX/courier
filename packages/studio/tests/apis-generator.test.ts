@@ -105,6 +105,7 @@ const MOCK_SPEC: ParsedSpec = {
     },
   },
   securitySchemes: [{ name: "bearerAuth", type: "bearer" }],
+  skipped: [],
 }
 
 describe("generateCode", () => {

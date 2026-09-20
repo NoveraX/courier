@@ -1,10 +1,9 @@
+import { MethodBadge } from "@/components/shared/method-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MethodBadge } from "@/components/shared/method-badge";
-
-import type { ParsedSpec } from "./types";
 import { countSelectedEndpoints } from "./helpers";
+import type { ParsedSpec, SkippedOperation } from "./types";
 
 interface SelectStepProps {
   spec: ParsedSpec;
@@ -40,6 +39,8 @@ export function SelectStepView({
         </Button>
       </div>
 
+      <SkippedNotice skipped={spec.skipped} />
+
       {/* Groups */}
       <div className="space-y-3">
         {spec.groups.map((group) => {
@@ -48,7 +49,10 @@ export function SelectStepView({
           const isPartial = groupSelected.length > 0 && !isAllGroupSelected;
 
           return (
-            <div key={group.name} className="rounded-lg border border-border-subtle overflow-hidden">
+            <div
+              key={group.name}
+              className="rounded-lg border border-border-subtle overflow-hidden"
+            >
               {/* Group header */}
               <label className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors">
                 <Checkbox
@@ -58,7 +62,9 @@ export function SelectStepView({
                 />
                 <span className="text-xs font-semibold text-foreground">{group.name}</span>
                 {group.prefix && (
-                  <span className="text-[10px] text-muted-foreground font-mono">{group.prefix}</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {group.prefix}
+                  </span>
                 )}
                 <Badge variant="secondary" className="ml-auto text-[10px]">
                   {groupSelected.length}/{group.endpoints.length}
@@ -92,6 +98,26 @@ export function SelectStepView({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/** Names the operations the spec declares that no builder verb can express. */
+function SkippedNotice({ skipped }: { skipped: SkippedOperation[] }): React.ReactElement | null {
+  if (skipped.length === 0) return null;
+
+  return (
+    <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2">
+      <p className="text-body-sm text-amber-500">
+        {skipped.length} operation{skipped.length === 1 ? "" : "s"} left out of this import
+      </p>
+      <ul className="mt-1 space-y-0.5">
+        {skipped.map((op) => (
+          <li key={`${op.method} ${op.path}`} className="mono-xs text-muted-foreground">
+            {op.method} {op.path}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

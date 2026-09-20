@@ -1,9 +1,8 @@
-import { CourierMark } from "@/components/courier-mark";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useMemo } from "react";
-
 import type { NavItem } from "@/app-config";
 import { NAV_GROUPS } from "@/app-config";
+import { CourierMark } from "@/components/courier-mark";
 import {
   Sidebar,
   SidebarContent,
@@ -91,7 +90,10 @@ export function AppSidebar(): React.ReactNode {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border" data-tour="sidebar">
       <SidebarHeader className="px-3 py-4 group-data-[collapsible=icon]:p-2">
-        <Link to="/timeline" className="flex items-center gap-3 px-1 group-data-[collapsible=icon]:px-0">
+        <Link
+          to="/timeline"
+          className="flex items-center gap-3 px-1 group-data-[collapsible=icon]:px-0"
+        >
           <div className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-sidebar-accent ring-1 ring-sidebar-border">
             <CourierMark size={16} />
           </div>
@@ -123,7 +125,8 @@ export function AppSidebar(): React.ReactNode {
                         className={cn(
                           "relative h-8 gap-2.5 rounded-md px-2.5 transition-colors",
                           isActive && "bg-sidebar-accent font-medium",
-                          isActive && "before:absolute before:inset-y-1 before:left-0 before:w-[2px] before:rounded-full before:bg-accent-brand",
+                          isActive &&
+                            "before:absolute before:inset-y-1 before:left-0 before:w-[2px] before:rounded-full before:bg-accent-brand",
                         )}
                       >
                         <Link to={item.path} data-tour={item.path.slice(1)}>

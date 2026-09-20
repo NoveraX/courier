@@ -9,16 +9,6 @@
  */
 
 export type {
-  ParsedEndpoint,
-  ParsedGroup,
-  ParsedParameter,
-  ParsedSchema,
-  ParsedSchemaProperty,
-  ParsedSecurityScheme,
-  ParsedSpec,
-} from "./types-parsed-spec";
-
-export type {
   BreakingChange,
   BreakingSeverity,
   DiffEndpoint,
@@ -29,10 +19,10 @@ export type {
   ImportState,
   ImportStep,
   PersistedGenerateOptions,
-  ScanResult,
   ScannedEndpoint,
   ScannedGroup,
   ScannedSource,
+  ScanResult,
   SchemaDiff,
   SourceStatus,
   SourceStatusInfo,
@@ -40,7 +30,6 @@ export type {
   SpecDiff,
   SpecImportType,
 } from "./types-generate";
-
 export type {
   EndpointInventory,
   FileChange,
@@ -53,3 +42,13 @@ export type {
   ManageRemoveResult,
   ManageStep,
 } from "./types-manage";
+export type {
+  ParsedEndpoint,
+  ParsedGroup,
+  ParsedParameter,
+  ParsedSchema,
+  ParsedSchemaProperty,
+  ParsedSecurityScheme,
+  ParsedSpec,
+  SkippedOperation,
+} from "./types-parsed-spec";

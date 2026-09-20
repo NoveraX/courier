@@ -52,6 +52,7 @@ export type {
   ParsedSchemaProperty,
   ParsedSecurityScheme,
   ParsedSpec,
+  SkippedOperation,
   SpecFormat,
 } from "./parser";
 export { detectFormat, parseSpec } from "./parser";

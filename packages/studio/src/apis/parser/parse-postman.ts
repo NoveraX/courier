@@ -2,7 +2,15 @@
  * Postman Collection parser.
  */
 
-import type { ParsedEndpoint, ParsedGroup, ParsedSchema, ParsedSpec, SpecNode } from "./types";
+import { isSupportedMethod } from "./http-methods";
+import type {
+  ParsedEndpoint,
+  ParsedGroup,
+  ParsedSchema,
+  ParsedSpec,
+  SkippedOperation,
+  SpecNode,
+} from "./types";
 import {
   convertPathParams,
   extractPostmanPath,
@@ -16,6 +24,7 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
   const version = collection.info?.version ?? "1.0.0";
 
   const groups: ParsedGroup[] = [];
+  const skipped: SkippedOperation[] = [];
 
   function processItems(items: SpecNode[], groupName: string) {
     const endpoints: ParsedEndpoint[] = [];
@@ -30,10 +39,17 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
       if (!request) continue;
 
       const method = (request.method ?? "GET").toLowerCase();
-      if (!["get", "post", "put", "patch", "delete"].includes(method)) continue;
-
       const url = typeof request.url === "string" ? request.url : (request.url?.raw ?? "");
       const path = extractPostmanPath(url);
+
+      if (!isSupportedMethod(method)) {
+        skipped.push({
+          method: method.toUpperCase(),
+          path,
+          reason: `${method.toUpperCase()} has no counterpart in the endpoint builder`,
+        });
+        continue;
+      }
 
       let requestBody: ParsedSchema | null = null;
       if (request.body?.mode === "raw" && request.body.raw) {
@@ -48,7 +64,7 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
       endpoints.push({
         name: toCamelCase(item.name ?? `${method}${path}`),
         operationId: null,
-        httpMethod: method as ParsedEndpoint["httpMethod"],
+        httpMethod: method,
         path: convertPathParams(path),
         fullPath: path,
         description: item.name ?? "",
@@ -85,5 +101,6 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
     groups,
     schemas: {},
     securitySchemes: [],
+    skipped,
   };
 }

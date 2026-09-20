@@ -3,6 +3,7 @@
  * Converts to OpenAPI 3.x-like structure, then delegates to parseOpenApi3.
  */
 
+import { isOperationKey } from "./http-methods";
 import { parseOpenApi3 } from "./parse-openapi3";
 import type { ParsedSpec, SpecNode } from "./types";
 
@@ -18,7 +19,7 @@ export function parseSwagger2(spec: SpecNode): ParsedSpec {
   for (const [path, methods] of Object.entries(spec.paths ?? {})) {
     converted.paths[path] = {};
     for (const [method, operation] of Object.entries(methods as SpecNode)) {
-      if (!["get", "post", "put", "patch", "delete"].includes(method)) continue;
+      if (!isOperationKey(method)) continue;
 
       const op = { ...(operation as SpecNode) };
 

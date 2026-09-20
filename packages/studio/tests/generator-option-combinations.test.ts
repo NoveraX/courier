@@ -11,6 +11,7 @@ const SPEC: ParsedSpec = {
   baseURL: "https://api.petstore.com/v1",
   format: "openapi3",
   securitySchemes: [],
+  skipped: [],
   groups: [
     {
       name: "pets",

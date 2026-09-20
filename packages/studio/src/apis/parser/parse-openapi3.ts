@@ -2,8 +2,9 @@
  * OpenAPI 3.x specification parser.
  */
 
+import { isOperationKey, isSupportedMethod } from "./http-methods";
 import { parseOpenApi3Operation } from "./parse-openapi3-operation";
-import type { ParsedEndpoint, ParsedGroup, ParsedSpec, SpecNode } from "./types";
+import type { ParsedEndpoint, ParsedGroup, ParsedSpec, SkippedOperation, SpecNode } from "./types";
 import {
   convertPathParams,
   convertSchema,
@@ -28,7 +29,7 @@ export function parseOpenApi3(spec: SpecNode): ParsedSpec {
   }
 
   const schemas = parseSchemas(spec);
-  const endpointsByTag = groupEndpointsByTag(spec);
+  const { endpointsByTag, skipped } = groupEndpointsByTag(spec);
   const tagDescriptions = parseTagDescriptions(spec);
   const groups = buildGroups(endpointsByTag, tagDescriptions);
   const securitySchemes = parseSecuritySchemes(spec);
@@ -42,6 +43,7 @@ export function parseOpenApi3(spec: SpecNode): ParsedSpec {
     groups,
     schemas,
     securitySchemes,
+    skipped,
   };
 }
 
@@ -57,12 +59,24 @@ function parseSchemas(spec: SpecNode): Record<string, ReturnType<typeof convertS
   return schemas;
 }
 
-function groupEndpointsByTag(spec: SpecNode): Map<string, ParsedEndpoint[]> {
+function groupEndpointsByTag(spec: SpecNode): {
+  endpointsByTag: Map<string, ParsedEndpoint[]>;
+  skipped: SkippedOperation[];
+} {
   const endpointsByTag = new Map<string, ParsedEndpoint[]>();
+  const skipped: SkippedOperation[] = [];
 
   for (const [path, methods] of Object.entries(spec.paths ?? {})) {
     for (const [method, operation] of Object.entries(methods as SpecNode)) {
-      if (!["get", "post", "put", "patch", "delete"].includes(method)) continue;
+      if (!isOperationKey(method)) continue;
+      if (!isSupportedMethod(method)) {
+        skipped.push({
+          method: method.toUpperCase(),
+          path,
+          reason: `${method.toUpperCase()} has no counterpart in the endpoint builder`,
+        });
+        continue;
+      }
 
       const op = operation as SpecNode;
       const tags = op.tags?.length > 0 ? op.tags : ["default"];
@@ -74,7 +88,7 @@ function groupEndpointsByTag(spec: SpecNode): Map<string, ParsedEndpoint[]> {
       endpointsByTag.get(tag)?.push(endpoint);
     }
   }
-  return endpointsByTag;
+  return { endpointsByTag, skipped };
 }
 
 function parseTagDescriptions(spec: SpecNode): Map<string, string> {

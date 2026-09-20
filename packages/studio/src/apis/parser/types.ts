@@ -2,6 +2,8 @@
  * Normalized types for parsed API specifications.
  */
 
+import type { SupportedHttpMethod } from "./http-methods";
+
 /** Loose type for raw spec JSON nodes — external specs are untyped by nature */
 // biome-ignore lint/suspicious/noExplicitAny: external spec objects have arbitrary nested shapes
 export type SpecNode = Record<string, any>;
@@ -15,6 +17,20 @@ export interface ParsedSpec {
   groups: ParsedGroup[];
   schemas: Record<string, ParsedSchema>;
   securitySchemes: ParsedSecurityScheme[];
+  /** Operations the spec declares that the builder API cannot express */
+  skipped: SkippedOperation[];
+}
+
+/**
+ * An operation dropped during parsing, kept so an import can say what it left
+ * behind instead of silently reporting a smaller endpoint count.
+ */
+export interface SkippedOperation {
+  /** Uppercased HTTP method, e.g. "OPTIONS" */
+  method: string;
+  /** Path as written in the spec */
+  path: string;
+  reason: string;
 }
 
 export interface ParsedSecurityScheme {
@@ -40,7 +56,7 @@ export interface ParsedEndpoint {
   /** Original operation ID from spec */
   operationId: string | null;
   /** HTTP method */
-  httpMethod: "get" | "post" | "put" | "patch" | "delete";
+  httpMethod: SupportedHttpMethod;
   /** Path relative to group prefix, e.g. "/:id" */
   path: string;
   /** Full original path, e.g. "/users/{id}" */

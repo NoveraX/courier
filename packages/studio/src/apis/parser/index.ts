@@ -7,5 +7,6 @@ export type {
   ParsedSchemaProperty,
   ParsedSecurityScheme,
   ParsedSpec,
+  SkippedOperation,
   SpecFormat,
 } from "./types";

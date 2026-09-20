@@ -11,6 +11,7 @@ export function makeSpec(overrides: Partial<ParsedSpec> = {}): ParsedSpec {
     groups: [],
     schemas: {},
     securitySchemes: [],
+    skipped: [],
     ...overrides,
   };
 }

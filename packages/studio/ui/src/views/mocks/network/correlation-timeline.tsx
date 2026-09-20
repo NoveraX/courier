@@ -32,7 +32,7 @@ export function CorrelationTimeline({ timeline, eventTimestamps = [] }: Correlat
   return (
     <ResponsiveContainer width="100%" height={120}>
       <ComposedChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 7%)" vertical={false} />
+        <CartesianGrid yAxisId="lat" strokeDasharray="3 3" stroke="oklch(1 0 0 / 7%)" vertical={false} />
         <XAxis dataKey="idx" hide />
         <YAxis yAxisId="lat" orientation="left" tickCount={3} domain={[0, "auto"]}
           tick={{ fontSize: 9, fill: "oklch(0.58 0.015 264 / 0.5)" }}

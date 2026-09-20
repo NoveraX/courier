@@ -5,6 +5,7 @@ import { generateRequestId, studioHooks } from "../studio";
 import { handleExecuteError } from "./execute-error";
 import { createHttpClient } from "./execute-helpers";
 import { executeInner } from "./execute-inner";
+import { resolveMiddlewareChain, withEndpointTimeout } from "./execute-options";
 import { applyCacheHeaders, buildMiddlewareContext, resolveEndpoint } from "./execute-resolve";
 import { buildErrorResponse, buildResponse } from "./execute-response";
 import {
@@ -52,7 +53,12 @@ export async function executeRequest(
     return buildErrorResponse(context, 400, "[variables] must be an object");
   }
 
-  const { endpoint, endpointGroup, schema } = resolveEndpoint(dataSource, group, method);
+  const {
+    endpoint,
+    endpointGroup,
+    schema,
+    options: endpointOptions,
+  } = resolveEndpoint(dataSource, group, method);
 
   if (typeof endpoint !== "function") {
     const methodPath = group ? `[${group}][${method}]` : `[${method}]`;
@@ -83,19 +89,17 @@ export async function executeRequest(
     context,
     dataSource,
     requestId,
+    undefined,
+    endpointOptions?.allowedHeaders,
   );
   const mode = context?.mode ?? (context?.proxyMethod ? "proxy" : "direct");
 
-  emitRequestStart(
-    dCtx,
-    source,
-    group,
-    method,
-    variables,
-    mode,
-    dataSource.options?.middleware?.length ?? 0,
-    schema,
-  );
+  /* Source-level middleware wraps endpoint-level, so a concern declared once
+     for the whole API still sees a request an endpoint also decorated. A
+     retry policy is the outermost of the endpoint's own, so it re-runs them. */
+  const middlewares = resolveMiddlewareChain(dataSource.options?.middleware, endpointOptions);
+
+  emitRequestStart(dCtx, source, group, method, variables, mode, middlewares.length, schema);
 
   try {
     if (schema?.variables) {
@@ -114,7 +118,7 @@ export async function executeRequest(
         middlewareHeaders: middlewareCtx.headers,
         variables: middlewareCtx.variables as FormData | Record<string, unknown> | undefined,
         forwardVariables,
-        baseOptions,
+        baseOptions: withEndpointTimeout(baseOptions, endpointOptions),
         stream,
         schema,
         hasStudio,
@@ -126,12 +130,11 @@ export async function executeRequest(
       return innerResult.response;
     };
 
-    const middlewares = dataSource.options?.middleware;
     const mt0 = hasStudio ? performance.now() : 0;
-    const result = middlewares?.length
+    const result = middlewares.length
       ? await composeMiddleware(middlewares)(middlewareCtx, execute)
       : await execute();
-    const tMiddlewareTotal = hasStudio && middlewares?.length ? performance.now() - mt0 : 0;
+    const tMiddlewareTotal = hasStudio && middlewares.length ? performance.now() - mt0 : 0;
 
     if (hasStudio) {
       emitRequestEnd(dCtx, result, middlewareCtx.headers, timing, tMiddlewareTotal, context);

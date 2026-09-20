@@ -1,3 +1,4 @@
+import type { ResolvedEndpointOptions } from "../define/options";
 import type { Context, GroupOptions } from "../http-client/types";
 import type { MiddlewareContext } from "../middleware/types";
 import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../validation";
@@ -26,7 +27,27 @@ export function resolveEndpoint(
       ? (endpointGroup && getEndpoint(endpointGroup, method)) || getEndpoint(dataSource, method)
       : undefined;
 
-  return { endpoint: toCallable(endpoint), endpointGroup, schema: readSchema(endpoint) };
+  return {
+    endpoint: toCallable(endpoint),
+    endpointGroup,
+    schema: readSchema(endpoint),
+    options: readOptions(endpoint),
+  };
+}
+
+/**
+ * Read the options an endpoint resolved at definition time.
+ *
+ * Everything the builder accumulated — middleware, forwarded headers, timeout,
+ * retry — is flattened onto the descriptor, so the request path reads it from
+ * one place rather than re-deriving it.
+ */
+function readOptions(endpoint: unknown): ResolvedEndpointOptions | undefined {
+  if (typeof endpoint !== "object" || endpoint === null) return undefined;
+  const { options } = endpoint as { options?: unknown };
+  return typeof options === "object" && options !== null
+    ? (options as ResolvedEndpointOptions)
+    : undefined;
 }
 
 type WireFn = (...args: unknown[]) => unknown;
@@ -59,6 +80,7 @@ export function buildMiddlewareContext(
   dataSource: Record<string, unknown>,
   requestId: string,
   transport?: "http" | "sse" | "ws",
+  endpointAllowedHeaders?: readonly string[],
 ): MiddlewareContext {
   const { req: nextRequest, headers: nextHeaders } = context || {};
   const mergedNextHeaders = {
@@ -66,7 +88,13 @@ export function buildMiddlewareContext(
     ...headersToObject(nextHeaders),
   };
   const opts = dataSource.options as Record<string, unknown> | undefined;
-  const allowedHeaders = opts?.allowedHeaders as string[] | undefined;
+  const sourceAllowed = opts?.allowedHeaders as string[] | undefined;
+  /* An endpoint may forward headers beyond what the source allows; neither
+     list narrows the other. */
+  const allowedHeaders =
+    endpointAllowedHeaders?.length || sourceAllowed?.length
+      ? [...new Set([...(sourceAllowed ?? []), ...(endpointAllowedHeaders ?? [])])]
+      : undefined;
   const newHeaders = mergeHeaders(
     baseHeaders as HeadersInit | Record<string, string | undefined> | undefined,
     mergedNextHeaders,

@@ -54,7 +54,9 @@ function tryDiscoverAppOrigin(req: IncomingMessage): void {
  * Note: Do NOT apply body-parsing middleware (express.json(), multer)
  * to this route — the handler reads the raw request body itself.
  */
-export function courierHandler(config?: HandlerConfig) {
+export function courierHandler(
+  config?: HandlerConfig,
+): (req: IncomingMessage, res: ServerResponse, next?: (err?: unknown) => void) => Promise<void> {
   const { handle } = createHandler(config);
   announceHosting({
     transports: ["http"],
@@ -90,7 +92,9 @@ export function courierHandler(config?: HandlerConfig) {
  * Note: Do NOT apply compression middleware to this route —
  * SSE requires unbuffered streaming.
  */
-export function courierSSEHandler(config?: HandlerConfig) {
+export function courierSSEHandler(
+  config?: HandlerConfig,
+): (req: IncomingMessage, res: ServerResponse, next?: (err?: unknown) => void) => Promise<void> {
   const { handleSSE } = createHandler(config);
   announceHosting({
     transports: ["sse"],

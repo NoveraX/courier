@@ -51,7 +51,9 @@ function tryDiscoverAppOrigin(req: IncomingMessage): void {
  * }
  * ```
  */
-export function courierMiddleware(config?: HandlerConfig) {
+export function courierMiddleware(
+  config?: HandlerConfig,
+): (req: IncomingMessage, res: ServerResponse, next: (err?: unknown) => void) => Promise<void> {
   const { handle } = createHandler(config);
   announceHosting({
     transports: ["http"],
@@ -79,7 +81,9 @@ export function courierMiddleware(config?: HandlerConfig) {
  * consumer.apply(courierSSEMiddleware()).forRoutes("/api/sse");
  * ```
  */
-export function courierSSEMiddleware(config?: HandlerConfig) {
+export function courierSSEMiddleware(
+  config?: HandlerConfig,
+): (req: IncomingMessage, res: ServerResponse, next: (err?: unknown) => void) => Promise<void> {
   const { handleSSE } = createHandler(config);
   announceHosting({
     transports: ["sse"],

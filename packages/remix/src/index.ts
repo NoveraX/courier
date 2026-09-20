@@ -17,7 +17,7 @@ import { createHandler } from "@noverax/courier";
  * export const action = handler;
  * ```
  */
-export function courierHandler() {
+export function courierHandler(): (args: { request: Request }) => Promise<Response> {
   const { handle } = createHandler();
   return ({ request }: { request: Request }) => handle(request);
 }

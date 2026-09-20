@@ -18,10 +18,7 @@ const FRAMEWORK = "nuxt";
  * })
  * ```
  */
-export async function courierStudioModule(
-  options: StudioPluginOptions,
-  nuxt: NuxtLike,
-): Promise<void> {
+async function attachStudio(options: StudioPluginOptions, nuxt: NuxtLike): Promise<void> {
   if (!nuxt.options.dev) return;
 
   const snippet = await resolveSnippet(FRAMEWORK, options);
@@ -36,10 +33,15 @@ export async function courierStudioModule(
   });
 }
 
-courierStudioModule.meta = {
-  name: "courier-studio",
-  configKey: "courierStudio",
-};
+/** What Nuxt reads off a raw module to register it. */
+interface NuxtRawModule {
+  (options: StudioPluginOptions, nuxt: NuxtLike): Promise<void>;
+  meta: { name: string; configKey: string };
+}
+
+export const courierStudioModule: NuxtRawModule = Object.assign(attachStudio, {
+  meta: { name: "courier-studio", configKey: "courierStudio" },
+});
 
 interface NuxtLike {
   options: { dev: boolean };

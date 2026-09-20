@@ -84,7 +84,9 @@ export const courierPlugin: FastifyPluginAsync<CourierPluginOptions> = async (
  * fastify.get("/api/sse", courierSSEHandler());
  * ```
  */
-export function courierSSEHandler(config?: HandlerConfig) {
+export function courierSSEHandler(
+  config?: HandlerConfig,
+): (request: FastifyRequest, reply: FastifyReply) => Promise<void> {
   const { handleSSE } = createHandler(config);
   announceHosting({
     transports: ["sse"],

@@ -1,5 +1,6 @@
 import type { HandlerConfig } from "@noverax/courier";
 import { createHandler } from "@noverax/courier";
+import type { EventHandler } from "h3";
 import { fromWebHandler } from "h3";
 
 /**
@@ -27,7 +28,7 @@ import { fromWebHandler } from "h3";
  * export default courierHandler();
  * ```
  */
-export function courierHandler(config?: HandlerConfig) {
+export function courierHandler(config?: HandlerConfig): EventHandler {
   const { handle } = createHandler(config);
   return fromWebHandler((request) => handle(request));
 }

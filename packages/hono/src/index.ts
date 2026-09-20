@@ -49,7 +49,7 @@ function tryDiscoverAppOrigin(request: Request): void {
  * app.all("/api/request", courierHandler());
  * ```
  */
-export function courierHandler(config?: HandlerConfig) {
+export function courierHandler(config?: HandlerConfig): (c: Context) => Promise<Response> {
   const { handle } = createHandler(config);
   announceHosting({
     transports: ["http"],
@@ -70,7 +70,7 @@ export function courierHandler(config?: HandlerConfig) {
  * app.get("/api/sse", courierSSEHandler());
  * ```
  */
-export function courierSSEHandler(config?: HandlerConfig) {
+export function courierSSEHandler(config?: HandlerConfig): (c: Context) => Promise<Response> {
   const { handleSSE } = createHandler(config);
   announceHosting({
     transports: ["sse"],

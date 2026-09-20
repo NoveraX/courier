@@ -78,3 +78,32 @@ describe("handler inference", () => {
     expect(rejected).toBeTypeOf("function");
   });
 });
+
+describe("per-call options in a wire closure", () => {
+  const { query, stream } = courier();
+
+  it("accepts the options the client carries out at request time", () => {
+    const download = query
+      .variables<{ id: string }>()
+      .via((http) => http.get(":id/download", vars(), { timeout: 30_000 }));
+
+    expect(download.method).toBe("get");
+    expect(download.path).toBe(":id/download");
+  });
+
+  it("accepts options on a stream closure too", () => {
+    const feed = stream.via((sse) => sse.get("feed", undefined, { timeout: 0 }));
+
+    expect(feed.path).toBe("feed");
+  });
+
+  it("gives head its options in the second position, having no body", () => {
+    const ping = query.via((http) => http.head("ping", { timeout: 100 }));
+
+    expect(ping.method).toBe("head");
+  });
+});
+
+function vars(): Record<string, unknown> {
+  return {};
+}

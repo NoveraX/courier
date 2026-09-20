@@ -1,5 +1,5 @@
 import { ConfigurationError } from "../errors/configuration-error";
-import type { HttpMethod } from "../http-client/types";
+import type { HttpMethod, MethodOptions } from "../http-client/types";
 
 /**
  * Opaque result of a wire call.
@@ -14,24 +14,30 @@ export interface WireCall {
   readonly [WIRE]: true;
 }
 
-/** Wire surface offered to an HTTP endpoint's closure. */
+/**
+ * Wire surface offered to an HTTP endpoint's closure.
+ *
+ * Each method mirrors what the client carries out at request time, including
+ * the per-call options that follow the variables — `head` takes none, since it
+ * sends no body.
+ */
 export interface HttpWire {
-  get(path?: string, variables?: unknown): WireCall;
-  post(path?: string, body?: unknown): WireCall;
-  put(path?: string, body?: unknown): WireCall;
-  patch(path?: string, body?: unknown): WireCall;
-  del(path?: string, variables?: unknown): WireCall;
-  head(path?: string, variables?: unknown): WireCall;
+  get(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall;
+  post(path?: string, body?: unknown, options?: MethodOptions<"post">): WireCall;
+  put(path?: string, body?: unknown, options?: MethodOptions<"put">): WireCall;
+  patch(path?: string, body?: unknown, options?: MethodOptions<"patch">): WireCall;
+  del(path?: string, variables?: unknown, options?: MethodOptions<"del">): WireCall;
+  head(path?: string, options?: MethodOptions<"head">): WireCall;
 }
 
 /** Wire surface offered to a server-sent-events endpoint's closure. */
 export interface StreamWire {
-  get(path?: string, variables?: unknown): WireCall;
+  get(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall;
 }
 
 /** Wire surface offered to a channel endpoint's closure. */
 export interface ChannelWire {
-  connect(path?: string, variables?: unknown): WireCall;
+  connect(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall;
 }
 
 export type HttpProbe<TVariables> = (http: HttpWire, variables: TVariables) => WireCall;

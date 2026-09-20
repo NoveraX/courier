@@ -3,7 +3,7 @@ export const metadata = { title: "HTTPError", description: "Custom error class f
 ## Import
 
 ```ts
-import { HTTPError, isHTTPError } from "@noverax/courier/error"
+import { HTTPError, isHTTPError } from "@noverax/courier"
 ```
 
 ## HTTPError Class
@@ -49,7 +49,7 @@ Use `isHTTPError(error)` instead of `error instanceof HTTPError`. The type guard
 ## Basic Usage
 
 ```ts
-import { isHTTPError } from "@noverax/courier/error"
+import { isHTTPError } from "@noverax/courier"
 
 try {
   const user = await caller.users.getById({ id: "999" })
@@ -107,7 +107,7 @@ Use middleware to handle errors globally across all requests:
 
 ```ts
 import { defineMiddleware } from "@noverax/courier/middleware"
-import { isHTTPError } from "@noverax/courier/error"
+import { isHTTPError } from "@noverax/courier"
 
 const errorMiddleware = defineMiddleware(async (ctx, next) => {
   try {

@@ -153,12 +153,15 @@ export interface CourierConfig {
  * The four builder heads plus the means to derive a narrower base.
  *
  * The head declares an endpoint's semantics in the leftmost position, which is
- * what decides the verb the proxy uses on the wire.
+ * what decides the verbs the proxy will serve it over.
  */
 export interface Courier {
-  /** A read. Travels over GET through the proxy and stays cacheable. */
+  /**
+   * A read. It is the only kind the proxy will serve over GET, which is what
+   * makes it cacheable — a call asks for that verb with `method: "GET"`.
+   */
   readonly query: HttpBuilder<void, void, "query">;
-  /** A write. Travels over POST through the proxy. */
+  /** A write. The proxy serves it over POST alone, and refuses a GET. */
   readonly mutation: HttpBuilder<void, void, "mutation">;
   /** A one-way stream of server-sent events. */
   readonly stream: StreamBuilder<void, void>;

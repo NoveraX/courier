@@ -2,13 +2,13 @@ export const metadata = { title: "Streaming", description: "Receive responses as
 
 ## Overview
 
-By default, Courier parses the response body as JSON or text. When you set `stream: true` in the method options, Courier returns the raw `ReadableStream` from `response.body` instead of parsing it.
+By default, Courier parses the response body as JSON or text. When a call asks for `stream: true`, Courier returns the raw `ReadableStream` from `response.body` instead of parsing it.
 
 This is useful for Server-Sent Events (SSE), large file downloads, and any scenario where you want to process data incrementally rather than buffering the entire response.
 
 ## Defining stream endpoints
 
-Enable streaming by passing `{ stream: true }` as an option to any HTTP method (`get`, `post`, etc.):
+Streaming is chosen by the caller, not by the endpoint: the endpoint says where to go, the call says how the body should arrive. Declare the response as a `ReadableStream` and let callers ask for it:
 
 ```ts title="api/events.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
@@ -19,7 +19,7 @@ export const events = defineGroup({
   prefix: "events",
   endpoints: {
     subscribe: query.variables<{ channel: string }>().response<ReadableStream>().via((http, vars) =>
-      http.get(":channel/stream", vars, { stream: true })
+      http.get(":channel/stream", vars)
     ),
   },
 })
@@ -28,10 +28,16 @@ export const exports = defineGroup({
   prefix: "exports",
   endpoints: {
     download: query.variables<{ id: string }>().response<ReadableStream>().via((http, vars) =>
-      http.get(":id/download", vars, { stream: true })
+      http.get(":id/download", vars)
     ),
   },
 })
+```
+
+Ask for the stream at the call site:
+
+```ts
+const response = await caller.events.with({ stream: true }).subscribe({ channel: "builds" })
 ```
 
 ## Proxy mode behavior <ModeBadge mode="proxy" />

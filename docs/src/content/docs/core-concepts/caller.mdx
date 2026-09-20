@@ -98,8 +98,8 @@ const user = await caller.users.getById({ id: "1" })
 Pass runtime options as the second argument after variables:
 
 ```ts
-// Stream mode — returns raw Response
-const response = await caller.events.stream.stream()
+// Stream mode — the body arrives as a ReadableStream instead of parsed
+const response = await caller.events.with({ stream: true }).subscribe({ channel: "builds" })
 
 // GET proxy — encodes as query params instead of POST body
 const users = await caller.users.getAll({ page: 1 }, { method: "GET" })

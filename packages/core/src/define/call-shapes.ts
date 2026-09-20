@@ -26,8 +26,9 @@ export type ChannelCall<TResponse, TVariables, TSend> = (
 /**
  * An endpoint reached over HTTP.
  *
- * `TKind` decides the proxy verb: a query travels over GET and stays
- * cacheable, a mutation travels over POST.
+ * `TKind` decides which proxy verbs the endpoint will answer: a query may be
+ * fetched over GET and cached, a mutation only over POST. Which verb a call
+ * actually uses is the caller's to choose.
  */
 export type HttpEndpoint<TResponse, TVariables, TKind extends "query" | "mutation"> = Endpoint<
   EndpointTypes<TResponse, TVariables, never, HttpCall<TResponse, TVariables>, TKind>

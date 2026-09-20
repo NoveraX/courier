@@ -106,7 +106,7 @@
   ],
   "scripts": {
     "build": "tsup && npm run build:ui",
-    "test": "vitest run && npm run --prefix ui test",
+    "test": "vitest run",
     "build:server": "tsup",
     "build:ui": "cd ui && npx vite build",
     "dev": "tsup --watch",

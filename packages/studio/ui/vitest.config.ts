@@ -1,5 +1,8 @@
 import path from "node:path";
-import { defineConfig } from "vitest/config";
+
+import { defineProject } from "vitest/config";
+
+import { sharedTestOptions } from "../../../vitest.shared";
 
 /**
  * Vitest harness for `@noverax/courier-studio-ui`.
@@ -15,8 +18,9 @@ import { defineConfig } from "vitest/config";
  * The `@/*` alias mirrors `vite.config.ts` so test files can import from
  * `@/socket/...` exactly like production code.
  */
-export default defineConfig({
+export default defineProject({
   test: {
+    ...sharedTestOptions,
     include: ["__tests__/**/*.test.{ts,tsx}"],
     environment: "node",
   },

@@ -1,17 +1,18 @@
-import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 /**
- * Resolved against this file rather than the working directory, so the same
- * setup applies whether the suite is run from the repository root or from
- * inside a package directory.
+ * Root harness. Every package carries its own project config, and this file
+ * only names them, so `vitest run` here and `vitest run` inside a package
+ * resolve the same options — and nothing outside the listed projects, such
+ * as an untracked scratch directory, is ever picked up.
  */
-const coreSetup = fileURLToPath(new URL("./packages/core/vitest.setup.ts", import.meta.url));
-
 export default defineConfig({
   test: {
-    globals: true,
-    setupFiles: [coreSetup],
+    projects: [
+      "packages/*",
+      "packages/studio/ui",
+      { test: { name: "scripts", include: ["scripts/**/*.test.mjs"] } },
+    ],
     coverage: {
       provider: "v8",
       include: ["packages/*/src/**/*.ts"],

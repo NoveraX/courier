@@ -91,7 +91,7 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
   });
 
   try {
-    if (resolved.schema.receive) {
+    if (resolved.schema.bidirectional === true || resolved.schema.receive) {
       await startChannel(ctx, topic, resolved.endpoint, variables);
     } else {
       startPush(ctx, topic, resolved.endpoint, variables);

@@ -27,6 +27,13 @@ export interface SchemaMetadata {
   transport?: Transport;
   /** Standard Schema for incoming WS messages (bidirectional channels only) */
   receive?: StandardSchemaV1;
+  /**
+   * May the caller send on this channel?
+   *
+   * Set by declaring the send slot, with or without a schema — a channel whose
+   * inbound messages are typed but not validated is still bidirectional.
+   */
+  bidirectional?: true;
 }
 
 /** A single validation issue from Standard Schema */

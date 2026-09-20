@@ -126,6 +126,9 @@ export function resolveSchemas(state: BuilderState): SchemaMetadata {
     ...(response !== undefined && { response }),
     ...(variables !== undefined && { variables }),
     ...(send !== undefined && { receive: send }),
+    /* Declaring the slot is what makes a channel bidirectional; a schema on it
+       only decides whether inbound messages are validated. */
+    ...(state.filled.includes("send") && { bidirectional: true as const }),
     ...((state.kind === "query" || state.kind === "mutation") && { type: state.kind }),
     ...(transport !== "http" && { transport }),
     ...(state.cache !== undefined && { cache: state.cache }),

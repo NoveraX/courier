@@ -49,7 +49,7 @@ export function composeBackend(
       }
 
       if (schema?.transport === "ws") {
-        const isBidirectional = !!schema.receive;
+        const isBidirectional = schema.bidirectional === true || !!schema.receive;
         if (isBidirectional) {
           if (!wsChannel) {
             throw new Error(

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { endpointPath } from "../src/define/address";
 import { courier } from "../src/define/courier";
+import { ENDPOINT_SCHEMA } from "../src/define/marker";
 
 const EventSchema = z.object({ n: z.number() });
 
@@ -65,5 +66,38 @@ describe("what a realtime server will serve", () => {
     const feed = stream.response(EventSchema).via((sse) => sse.get("feed"));
 
     expect((feed as unknown as { served: boolean }).served).toBe(false);
+  });
+});
+
+describe("what makes a channel bidirectional", () => {
+  const { channel } = courier();
+  const Incoming = z.object({ text: z.string() });
+
+  function metadata(endpoint: unknown): Record<string, unknown> {
+    return (endpoint as { [ENDPOINT_SCHEMA]: Record<string, unknown> })[ENDPOINT_SCHEMA];
+  }
+
+  it("counts a send slot declared with only a type", () => {
+    const room = channel
+      .send<{ text: string }>()
+      .response(EventSchema)
+      .via((ws) => ws.connect("room"));
+
+    expect(metadata(room).bidirectional).toBe(true);
+    expect(metadata(room).receive).toBeUndefined();
+  });
+
+  it("counts a send slot declared with a schema, and validates against it", () => {
+    const room = channel.send(Incoming).response(EventSchema).via((ws) => ws.connect("room"));
+
+    expect(metadata(room).bidirectional).toBe(true);
+    expect(metadata(room).receive).toBe(Incoming);
+  });
+
+  it("leaves a channel that named no send slot one-way", () => {
+    const ticker = channel.response(EventSchema).via((ws) => ws.connect("ticker"));
+
+    expect(metadata(ticker).bidirectional).toBeUndefined();
+    expect(metadata(ticker).receive).toBeUndefined();
   });
 });

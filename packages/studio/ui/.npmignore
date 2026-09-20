@@ -1,0 +1,6 @@
+# The built UI is what makes the Studio package worth installing, so `dist`
+# is deliberately absent here: an .npmignore overrides the .gitignore beside
+# it, and without this file npm prunes `dist` even though the package's
+# `files` field whitelists it.
+node_modules
+.tanstack

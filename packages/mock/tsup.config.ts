@@ -14,4 +14,7 @@ export default defineConfig({
   dts: true,
   clean: true,
   splitting: true,
+  /* Loaded lazily and declared as an optional peer, so it must stay a real
+     import rather than being inlined into the bundle. */
+  external: ["socket.io-client"],
 });

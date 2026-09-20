@@ -124,7 +124,6 @@
     "express": "^5.1.0",
     "open": "^10.2.0",
     "socket.io": "^4.8.3",
-    "typescript": "^5.9.3",
     "yaml": "^2.8.2"
   },
   "peerDependencies": {
@@ -133,6 +132,7 @@
     "next": ">=14.0.0",
     "nuxt": ">=3.0.0",
     "rollup": ">=3.0.0",
+    "typescript": ">=5.0.0",
     "vite": ">=5.0.0",
     "webpack": ">=5.0.0"
   },
@@ -150,6 +150,9 @@
       "optional": true
     },
     "rollup": {
+      "optional": true
+    },
+    "typescript": {
       "optional": true
     },
     "vite": {

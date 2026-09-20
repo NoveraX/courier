@@ -37,6 +37,7 @@
     "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.0",
     "@rolldown/plugin-babel": "^0.2.0",
     "@tailwindcss/vite": "^4.1.10",
     "@types/dagre": "^0.7.54",

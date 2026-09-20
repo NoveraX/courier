@@ -1,6 +1,42 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, isAbsolute, resolve } from "node:path";
-import ts from "typescript";
+
+import { createLogger } from "@noverax/courier";
+
+import type ts from "typescript";
+
+const log = createLogger("Studio");
+const requireFrom = createRequire(import.meta.url);
+
+/** Resolved once: the compiler if the project has one, `null` if it does not. */
+let compiler: typeof ts | null | undefined;
+
+/**
+ * TypeScript is an optional peer — a JavaScript-only project is entitled not to
+ * have it — so it is resolved at first use rather than imported at module load,
+ * where its absence would take down every Studio entry point.
+ */
+function loadCompiler(): typeof ts | null {
+  if (compiler !== undefined) return compiler;
+
+  let loaded: typeof ts | null = null;
+  try {
+    loaded = requireFrom("typescript") as typeof ts;
+  } catch {
+    /* Resolved below with the same message as an unusable compiler. */
+  }
+
+  /* TypeScript 7 publishes no parser under the package root. */
+  compiler = typeof loaded?.createSourceFile === "function" ? loaded : null;
+  if (!compiler) {
+    log.warn(
+      "No usable TypeScript parser, so only the config file itself is watched — " +
+        "edits to the modules it imports will not reload it.",
+    );
+  }
+  return compiler;
+}
 
 /** Extensions resolved when an import has none — TS-first, then bundler outputs */
 const RESOLVE_EXTENSIONS: ReadonlyArray<string> = [
@@ -56,24 +92,32 @@ function readSourceFile(file: string): ts.SourceFile | null {
   } catch {
     return null;
   }
-  return ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const api = loadCompiler();
+  if (!api) return null;
+  return api.createSourceFile(file, text, api.ScriptTarget.Latest, true, api.ScriptKind.TS);
 }
 
 /** Collect every static import/export specifier (string literal) from a SourceFile */
 function collectImportSpecifiers(source: ts.SourceFile): string[] {
   const out: string[] = [];
+  const api = loadCompiler();
+  if (!api) return out;
+
   const visit = (node: ts.Node): void => {
     if (
-      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      (api.isImportDeclaration(node) || api.isExportDeclaration(node)) &&
       node.moduleSpecifier &&
-      ts.isStringLiteral(node.moduleSpecifier)
+      api.isStringLiteral(node.moduleSpecifier)
     ) {
       out.push(node.moduleSpecifier.text);
-    } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+    } else if (
+      api.isCallExpression(node) &&
+      node.expression.kind === api.SyntaxKind.ImportKeyword
+    ) {
       const arg = node.arguments[0];
-      if (arg && ts.isStringLiteral(arg)) out.push(arg.text);
+      if (arg && api.isStringLiteral(arg)) out.push(arg.text);
     }
-    ts.forEachChild(node, visit);
+    api.forEachChild(node, visit);
   };
   visit(source);
   return out;

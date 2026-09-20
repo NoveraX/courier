@@ -6,6 +6,10 @@
       "dependsOn": ["^build"],
       "outputs": ["lib/**", "dist/**"]
     },
+    "@noverax/courier-studio#build": {
+      "dependsOn": ["^build", "@noverax/courier-studio-ui#build"],
+      "outputs": ["lib/**", "ui/dist/**"]
+    },
     "test": {
       "dependsOn": ["^build"]
     },

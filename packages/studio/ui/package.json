@@ -5,10 +5,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "test": "vitest run"
   },
   "dependencies": {
+    "@noverax/courier": "*",
+    "@noverax/courier-studio-core": "*",
     "@tanstack/react-router": "^1.170.38",
     "@tanstack/react-table": "^9.2.4",
     "@tanstack/react-virtual": "^3.14.13",

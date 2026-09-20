@@ -105,12 +105,9 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup && npm run build:ui",
+    "build": "tsup",
     "test": "vitest run",
-    "build:server": "tsup",
-    "build:ui": "cd ui && npx vite build",
     "dev": "tsup --watch",
-    "dev:ui": "cd ui && npx vite",
     "typecheck": "tsc --noEmit"
   },
   "publishConfig": {

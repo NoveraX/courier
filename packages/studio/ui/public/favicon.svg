@@ -1,4 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Courier">
-  <rect width="256" height="256" fill="#05060A"/>
-  <path fill="#FAFAFA" transform="translate(128 128) scale(.76) translate(-128 -128)" d="M234 38H112a90 90 0 0 0 0 180h122l-52-50h-70a40 40 0 0 1 0-80h70Z"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Courier"><metadata><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"><rdf:Description><dc:creator>RealFaviconGenerator</dc:creator><dc:source>https://realfavicongenerator.net</dc:source></rdf:Description></rdf:RDF></metadata><path fill="currentColor" d="M234 38H112a90 90 0 0 0 0 180h122l-52-50h-70a40 40 0 0 1 0-80h70Z"></path></svg>

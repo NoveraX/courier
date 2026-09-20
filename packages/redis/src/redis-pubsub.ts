@@ -55,16 +55,21 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
     }
   }
 
+  /* Named rather than inline so disconnect can remove them; an anonymous
+     closure would accumulate one listener per connect/disconnect cycle. */
+  const handleError = (err: Error): void => emitError(err);
+
   return {
     async connect() {
-      // Shared error listeners — register once, dispatch to all handlers via emitError
-      publisher.on("error", (err: Error) => emitError(err));
-      subscriber.on("error", (err: Error) => emitError(err));
+      publisher.on("error", handleError);
+      subscriber.on("error", handleError);
       subscriber.on("message", handleMessage);
       connected = true;
     },
 
     async disconnect() {
+      publisher.off("error", handleError);
+      subscriber.off("error", handleError);
       subscriber.off("message", handleMessage);
 
       // Unsubscribe from all active Redis channels

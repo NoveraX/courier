@@ -12,6 +12,28 @@ import type { PresenceContext } from "./redis-presence-emitters";
 import { toError } from "./redis-presence-emitters";
 import { packMeta, unpackMeta } from "./redis-presence-keys";
 
+/**
+ * Run a pipeline and report the first command that failed.
+ *
+ * ioredis resolves `exec()` with `[error, result]` tuples and only rejects for
+ * transport-level problems, so a rejected ZADD or HSET never reaches a
+ * `catch`. Without this, a write that Redis refused would still be announced
+ * as a join that no later `list()` can show.
+ */
+async function runPipeline(
+  ctx: PresenceContext,
+  pipeline: ReturnType<PresenceContext["redis"]["pipeline"]>,
+): Promise<boolean> {
+  const results = await pipeline.exec();
+  for (const [err] of results ?? []) {
+    if (err) {
+      ctx.emitError(toError(err));
+      return false;
+    }
+  }
+  return true;
+}
+
 /** Add a connection to a topic and emit a `joins` diff. */
 export async function trackEntry(
   ctx: PresenceContext,
@@ -28,7 +50,7 @@ export async function trackEntry(
       entry.connectionId,
       packMeta({ userId: entry.userId, joinedAt: now, metadata: entry.metadata }),
     );
-    await p.exec();
+    if (!(await runPipeline(ctx, p))) return;
     const full: PresenceEntry = { ...entry, joinedAt: now, lastSeenAt: now };
     ctx.emitDiff(topic, { joins: [full], leaves: [] });
   } catch (err) {
@@ -56,7 +78,7 @@ export async function updateEntry(
       connectionId,
       packMeta({ userId: existing.userId, joinedAt: existing.joinedAt, metadata }),
     );
-    await p.exec();
+    await runPipeline(ctx, p);
   } catch (err) {
     ctx.emitError(toError(err));
   }
@@ -76,7 +98,7 @@ export async function untrackEntry(
     const p = ctx.redis.pipeline();
     p.zrem(ctx.sk(topic), connectionId);
     p.hdel(ctx.mk(topic), connectionId);
-    await p.exec();
+    if (!(await runPipeline(ctx, p))) return;
     const entry: PresenceEntry = {
       userId: meta.userId,
       connectionId,

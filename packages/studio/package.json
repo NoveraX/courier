@@ -119,12 +119,12 @@
   "dependencies": {
     "@noverax/courier": "*",
     "@noverax/courier-studio-core": "*",
-    "citty": "^0.1.6",
-    "compression": "^1.8.1",
+    "citty": "^0.2.2",
+    "compression": "^1.8.2",
     "express": "^5.1.0",
     "open": "^10.2.0",
     "socket.io": "^4.8.3",
-    "yaml": "^2.8.2"
+    "yaml": "^2.9.1"
   },
   "peerDependencies": {
     "next": ">=14.0.0",

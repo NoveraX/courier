@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-server",
   "version": "0.0.0",
-  "description": "Standalone HTTP + WebSocket server for @noverax/courier — proxy handler for Next.js and serverless environments",
+  "description": "Standalone HTTP + WebSocket server for @noverax/courier \u2014 proxy handler for Next.js and serverless environments",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@noverax/courier": "*",
-    "citty": "^0.1.6"
+    "citty": "^0.2.2"
   },
   "peerDependencies": {
     "ws": ">=8"

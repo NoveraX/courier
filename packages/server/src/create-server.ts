@@ -46,6 +46,7 @@ export function createCourierServer(config: CourierServerConfig): CourierServer 
     onConnect,
     onDisconnect,
     onError,
+    onServerError,
   } = config;
 
   // Standalone server publishes sources into the core global registry so
@@ -77,8 +78,20 @@ export function createCourierServer(config: CourierServerConfig): CourierServer 
   let wss: WebSocketServer | undefined;
   let shuttingDown = false;
 
+  let markListening: (url: string) => void = () => {};
+  let markFailed: (error: Error) => void = () => {};
+  const ready = new Promise<string>((resolve, reject) => {
+    markListening = resolve;
+    markFailed = reject;
+  });
+  /* A caller that never inspects `ready` must not bring the process down with
+     an unhandled rejection. Attaching a handler here marks it handled; anyone
+     who does await it still receives the error. */
+  ready.catch(() => {});
+
   const result: CourierServer = {
     url: `http://${host}:${port}`,
+    ready,
     stop: wrappedStop,
     sseConnections: handler.sseConnections,
     wsConnections: wsHandler.connections,
@@ -119,12 +132,17 @@ export function createCourierServer(config: CourierServerConfig): CourierServer 
     });
   });
 
+  /* A library does not decide that the host process should end. A failed
+     listen is reported through `ready` and `onServerError`; the caller picks
+     another port, retries, or gives up, and nothing else in the process dies
+     because this server could not start. */
   httpServer.on("error", (err: NodeJS.ErrnoException) => {
-    if (err.code === "EADDRINUSE") {
-      log.error(`Port ${port} is already in use`);
-      process.exit(1);
-    }
-    throw err;
+    const error =
+      err.code === "EADDRINUSE" ? new Error(`Port ${port} is already in use`, { cause: err }) : err;
+
+    log.error(error.message);
+    onServerError?.(error);
+    markFailed(error);
   });
 
   const stop = createShutdown(
@@ -143,6 +161,7 @@ export function createCourierServer(config: CourierServerConfig): CourierServer 
       listenOrigin: result.url,
       framework: "standalone",
     });
+    markListening(result.url);
     onReady?.(result.url);
   });
 

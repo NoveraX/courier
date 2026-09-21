@@ -42,12 +42,34 @@ export interface CourierServerConfig extends SSELifecycleConfig {
   }) => void | Promise<void>;
   /** Called on WS connection-level error */
   onError?: (info: { connectionId: string; meta: unknown; error: unknown }) => void;
+  /**
+   * Called when the server itself fails — a port already in use, a socket
+   * error after start. Without it such a failure is only logged; the process
+   * is never ended on the host's behalf.
+   */
+  onServerError?: (error: Error) => void;
 }
 
 /** Handle returned by createCourierServer for lifecycle control */
 export interface CourierServer {
   /** Base URL of the running server */
   url: string;
+  /**
+   * Resolves with the base URL once the server is listening, and rejects if
+   * it never gets there. Await it to find out whether startup succeeded —
+   * a failed listen is reported here rather than by ending the process.
+   *
+   * @example
+   * ```ts
+   * const server = createCourierServer({ sources, port: 3001 });
+   * try {
+   *   await server.ready;
+   * } catch {
+   *   // pick another port, or report it — the host is still running
+   * }
+   * ```
+   */
+  readonly ready: Promise<string>;
   /** Gracefully shut down the server */
   stop(): Promise<void>;
   /** Active SSE connection registry */

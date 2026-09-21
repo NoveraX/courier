@@ -1,9 +1,7 @@
 import type { Sources } from "../define/types";
-import { composeMiddleware } from "../middleware";
-import { buildMiddlewareContext, resolveEndpoint } from "../utils/execute-resolve";
+import { resolveEndpoint } from "../utils/execute-resolve";
 import type { SchemaMetadata } from "../validation";
 import { validateSchema } from "../validation";
-import { LIMITS } from "./limits";
 import { errorResponse } from "./parse";
 import { extractVariables } from "./sse-utils";
 
@@ -50,46 +48,4 @@ export async function resolveSSEVariables(
   } catch {
     return errorResponse(400, "Invalid SSE variables");
   }
-}
-
-/** Run middleware chain with timeout for SSE requests */
-export async function runSSEMiddleware(
-  sources: Sources,
-  source: string,
-  group: string | undefined,
-  method: string,
-  variables: Record<string, unknown> | undefined,
-  request: Request,
-  requestId: string,
-): Promise<Headers> {
-  const dataSource = sources[source] as Record<string, unknown>;
-  const middlewareCtx = buildMiddlewareContext(
-    source,
-    group,
-    method,
-    variables,
-    undefined,
-    { req: request, mode: "proxy" as const },
-    dataSource,
-    requestId,
-    "sse",
-  );
-
-  const opts = dataSource.options as Record<string, unknown> | undefined;
-  const middlewares = opts?.middleware as Parameters<typeof composeMiddleware>[0] | undefined;
-
-  if (middlewares?.length) {
-    await Promise.race([
-      composeMiddleware(middlewares)(middlewareCtx, async () => ({
-        status: 200,
-        data: undefined,
-        headers: new Headers(),
-      })),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("SSE middleware timeout")), LIMITS.MIDDLEWARE_TIMEOUT_MS),
-      ),
-    ]);
-  }
-
-  return middlewareCtx.headers;
 }

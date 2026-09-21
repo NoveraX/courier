@@ -1,9 +1,10 @@
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { generateRequestId } from "../studio";
+import { runTransportMiddleware } from "../utils/transport-middleware";
 import type { WSSocketContext } from "./ws-context";
 import { closeSubscriptionEntry, extractHeaders } from "./ws-dispatch-helpers";
 import { startChannel, startPush } from "./ws-endpoints";
-import { runMiddleware, VALIDATION_FAILED, validateVariablesSafe } from "./ws-middleware";
+import { VALIDATION_FAILED, validateVariablesSafe } from "./ws-middleware";
 import { resolveSubscribeTopic } from "./ws-resolve";
 
 /**
@@ -48,7 +49,17 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
   if (variables === VALIDATION_FAILED) return;
 
   try {
-    await runMiddleware(ctx, resolved.source, resolved.group, resolved.method, variables);
+    await runTransportMiddleware({
+      transport: "ws",
+      sources: ctx.sources,
+      source: resolved.source,
+      group: resolved.group,
+      method: resolved.method,
+      variables,
+      request: ctx.request,
+      requestId: ctx.requestId,
+      timeoutMs: ctx.middlewareTimeoutMs,
+    });
   } catch {
     if (ctx.closed) return;
     ctx.sendMessage({

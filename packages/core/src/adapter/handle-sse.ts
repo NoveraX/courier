@@ -1,14 +1,18 @@
+import { createLogger } from "../logger";
 import type { SSEContext, SSEHandler } from "../realtime/types";
 import { generateRequestId, registerPlaygroundAbort, studioHooks } from "../studio";
+import { runTransportMiddleware } from "../utils/transport-middleware";
 import { SSE_HEADERS } from "./format-sse";
 import type { HandlerConfig } from "./handler-config";
 import { isOriginAllowed } from "./origin-policy";
 import { errorResponse } from "./parse";
 import { requireSources } from "./require-sources";
 import type { InternalSSERegistry } from "./sse-registry";
-import { resolveSSEEndpoint, resolveSSEVariables, runSSEMiddleware } from "./sse-resolve";
+import { resolveSSEEndpoint, resolveSSEVariables } from "./sse-resolve";
 import { createSSEStream } from "./sse-stream";
 import { createLifetimeSignal } from "./sse-utils";
+
+const log = createLogger("SSE");
 
 function headersToRecord(h: Headers): Record<string, string> {
   const rec: Record<string, string> = {};
@@ -84,7 +88,8 @@ export function createSSEHandler(
 
     let headers: Headers;
     try {
-      headers = await runSSEMiddleware(
+      headers = await runTransportMiddleware({
+        transport: "sse",
         sources,
         source,
         group,
@@ -92,8 +97,9 @@ export function createSSEHandler(
         variables,
         request,
         requestId,
-      );
-    } catch {
+      });
+    } catch (err) {
+      log.warn(`Middleware refused the SSE stream for [${source}][${method}]`, err);
       return errorResponse(500, "Middleware error");
     }
 

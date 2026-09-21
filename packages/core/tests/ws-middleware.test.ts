@@ -1,9 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   VALIDATION_FAILED,
   validateVariablesSafe,
-  runMiddleware,
 } from "../src/adapter/ws-middleware";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
@@ -88,56 +87,5 @@ describe("validateVariablesSafe", () => {
   it("VALIDATION_FAILED is a unique symbol", () => {
     expect(typeof VALIDATION_FAILED).toBe("symbol");
     expect(VALIDATION_FAILED).not.toBe(Symbol("validation_failed"));
-  });
-});
-
-// ---------------------------------------------------------------------------
-// runMiddleware
-// ---------------------------------------------------------------------------
-
-describe("runMiddleware", () => {
-  it("does nothing when source has no middleware", async () => {
-    const source = { options: {} };
-    const { ctx } = createMockCtx({ sources: { api: source } as never });
-
-    // Should not throw
-    await runMiddleware(ctx, "api", "users", "getAll", {});
-  });
-
-  it("does nothing when middleware array is empty", async () => {
-    const source = { options: { middleware: [] } };
-    const { ctx } = createMockCtx({ sources: { api: source } as never });
-
-    await runMiddleware(ctx, "api", "users", "getAll", {});
-  });
-
-  it("executes middleware chain", async () => {
-    const calls: string[] = [];
-    const middleware = {
-      phase: "before" as const,
-      handler: vi.fn(async () => { calls.push("middleware"); }),
-    };
-    const source = { options: { middleware: [middleware] } };
-    const { ctx } = createMockCtx({ sources: { api: source } as never });
-
-    await runMiddleware(ctx, "api", "users", "getAll", { id: 1 });
-
-    expect(middleware.handler).toHaveBeenCalledOnce();
-  });
-
-  it("rejects on middleware timeout", async () => {
-    const slowMiddleware = {
-      phase: "before" as const,
-      handler: vi.fn(() => new Promise(() => {})), // Never resolves
-    };
-    const source = { options: { middleware: [slowMiddleware] } };
-    const { ctx } = createMockCtx({
-      sources: { api: source } as never,
-      middlewareTimeoutMs: 50,
-    });
-
-    await expect(
-      runMiddleware(ctx, "api", "users", "getAll", {}),
-    ).rejects.toThrow("Middleware timeout (50ms)");
   });
 });

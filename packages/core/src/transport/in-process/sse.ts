@@ -1,8 +1,8 @@
 import type { Sources } from "../../define/types";
 import type { SSEContext, SSEEvent, SSEHandler, SSESubscription } from "../../realtime/types";
 import { generateRequestId } from "../../studio";
+import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { beginStream, instrumentSSE } from "../instrument";
-import { runInProcessMiddleware } from "./middleware";
 import {
   buildSyntheticRequest,
   headersToRecord,
@@ -56,16 +56,16 @@ export async function executeDirectSSE(
   const variables = await validateStreamVariables(payload.variables, schema);
 
   const requestId = generateRequestId();
-  const headers = await runInProcessMiddleware(
-    "sse",
+  const headers = await runTransportMiddleware({
+    transport: "sse",
     sources,
-    payload.source,
-    payload.group,
-    payload.method,
+    source: payload.source,
+    group: payload.group,
+    method: payload.method,
     variables,
-    buildSyntheticRequest(payload.headers),
+    request: buildSyntheticRequest(payload.headers),
     requestId,
-  );
+  });
 
   // Compose external + internal abort: the external signal lets the caller
   // cancel from outside, while the internal AbortController lets `.close()`

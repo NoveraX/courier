@@ -2,8 +2,8 @@ import type { Sources } from "../../define/types";
 import type { SSEEvent, SSESubscription, WSContext, WSPushHandler } from "../../realtime/types";
 import { qualifyTopic } from "../../realtime/ws/topic-hash";
 import { generateRequestId } from "../../studio";
+import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { beginStream, instrumentSSE } from "../instrument";
-import { runInProcessMiddleware } from "./middleware";
 import {
   buildSyntheticRequest,
   headersToRecord,
@@ -34,16 +34,16 @@ export async function executeDirectWSPush(
   const variables = await validateStreamVariables(payload.variables, schema);
 
   const requestId = generateRequestId();
-  const headers = await runInProcessMiddleware(
-    "ws",
+  const headers = await runTransportMiddleware({
+    transport: "ws",
     sources,
-    payload.source,
-    payload.group,
-    payload.method,
+    source: payload.source,
+    group: payload.group,
+    method: payload.method,
     variables,
-    buildSyntheticRequest(payload.headers),
+    request: buildSyntheticRequest(payload.headers),
     requestId,
-  );
+  });
 
   const ownAC = new AbortController();
   if (options.signal) {

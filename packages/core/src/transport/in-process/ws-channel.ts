@@ -2,8 +2,8 @@ import type { Sources } from "../../define/types";
 import type { ChannelHandlers, WSChannel } from "../../realtime/types";
 import { qualifyTopic } from "../../realtime/ws/topic-hash";
 import { generateRequestId } from "../../studio";
+import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { instrumentWSChannel } from "../instrument";
-import { runInProcessMiddleware } from "./middleware";
 import {
   buildSyntheticRequest,
   resolveStreamEndpoint,
@@ -40,16 +40,16 @@ export async function executeDirectWSChannel(
   const variables = await validateStreamVariables(payload.variables, schema);
 
   const requestId = generateRequestId();
-  await runInProcessMiddleware(
-    "ws",
+  await runTransportMiddleware({
+    transport: "ws",
     sources,
-    payload.source,
-    payload.group,
-    payload.method,
+    source: payload.source,
+    group: payload.group,
+    method: payload.method,
     variables,
-    buildSyntheticRequest(payload.headers),
+    request: buildSyntheticRequest(payload.headers),
     requestId,
-  );
+  });
 
   let handlers: ChannelHandlers;
   try {

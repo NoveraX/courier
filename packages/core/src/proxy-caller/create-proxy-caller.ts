@@ -80,7 +80,9 @@ export function createProxyCaller(source: string, defaults: ProxyCallerDefaults 
     streaming.wsPush = createProxyWSPushFactory(source, { proxyPath: mergedProxyPath });
   }
 
-  const backend = composeBackend(apiSource, http, streaming);
+  const backend = composeBackend(apiSource, http, streaming, {
+    exhaustive: defaults.boundary !== undefined,
+  });
   return buildClientProxy(backend);
 }
 

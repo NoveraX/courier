@@ -8,6 +8,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createProxyCaller } from "../src/proxy-caller";
 import { defineBoundary } from "../src/define/boundary";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import type { Context } from "../src/http-client/types";
@@ -191,5 +192,35 @@ describe("defineBoundary — in-process calls are untouched", () => {
     } as never);
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * Forgetting to expose an endpoint used to surface as a type error deep in
+ * user code — a stream fell through to the HTTP executor and failed later as
+ * "sub is not async iterable", naming neither the endpoint nor the reason.
+ */
+describe("defineBoundary — a client says what it cannot call", () => {
+  function clientFor(exposed: Record<string, string>) {
+    return createProxyCaller("api", {
+      boundary: defineBoundary<typeof api>({
+        source: "api",
+        proxyPath: { http: "/api/request" },
+        expose: exposed as never,
+      }),
+    }) as unknown as Record<string, Record<string, (...args: unknown[]) => unknown>>;
+  }
+
+  it("names the endpoint and what to do about it", () => {
+    const client = clientFor({ "posts.list": "request" });
+
+    expect(() => client.posts!.feed!({})).toThrow(/posts\.feed.*boundary/s);
+    expect(() => client.posts!.feed!({})).toThrow(/expose/);
+  });
+
+  it("still calls what the boundary does name", () => {
+    const client = clientFor({ "posts.list": "request" });
+
+    expect(() => client.posts!.list!({})).not.toThrow(/boundary/);
   });
 });

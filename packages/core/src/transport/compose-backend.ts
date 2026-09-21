@@ -28,16 +28,35 @@ export interface StreamingFactories {
  * @param http - HTTP executor primitive
  * @param streaming - SSE / WS channel / WS push factories (optional)
  */
+/** How exhaustively the descriptor describes what may be called. */
+export interface ComposeOptions {
+  /** True when the descriptor lists every callable endpoint — a boundary does. */
+  exhaustive?: boolean;
+}
+
 export function composeBackend(
   apiSource: Record<string, unknown> | undefined,
   http: HTTPExecutor,
   streaming: StreamingFactories = {},
+  options?: ComposeOptions,
 ): ExecuteBackend {
   const { sse, wsChannel, wsPush } = streaming;
 
-  return function backend(group, method, variables, options, raw) {
+  return function backend(group, method, variables, callOptions, raw) {
     if (apiSource) {
-      const { schema } = resolveEndpoint(apiSource, group, method);
+      const { endpoint, schema } = resolveEndpoint(apiSource, group, method);
+
+      /* A boundary lists every endpoint this client may call, so one it does
+         not name is a mistake rather than an HTTP call waiting to happen.
+         Left to fall through, a stream would reach the HTTP executor and fail
+         later as "sub is not async iterable", which names neither the
+         endpoint nor the reason. */
+      if (options?.exhaustive && typeof endpoint !== "function") {
+        throw new Error(
+          `[courier] "${formatEndpoint(group, method)}" is not in this client's boundary. ` +
+            "Add it to `expose` to call it from the browser.",
+        );
+      }
 
       if (schema?.transport === "sse") {
         if (!sse) {
@@ -45,7 +64,7 @@ export function composeBackend(
             `[courier] SSE factory not configured but endpoint "${formatEndpoint(group, method)}" is declared as transport: "sse".`,
           );
         }
-        return sse(group, method, variables, options);
+        return sse(group, method, variables, callOptions);
       }
 
       if (schema?.transport === "ws") {
@@ -56,17 +75,17 @@ export function composeBackend(
               `[courier] WS channel factory not configured but endpoint "${formatEndpoint(group, method)}" is declared as a bidirectional WS channel.`,
             );
           }
-          return wsChannel(group, method, variables, options);
+          return wsChannel(group, method, variables, callOptions);
         }
         if (!wsPush) {
           throw new Error(
             `[courier] WS push factory not configured but endpoint "${formatEndpoint(group, method)}" is declared as a server-push WS endpoint.`,
           );
         }
-        return wsPush(group, method, variables, options);
+        return wsPush(group, method, variables, callOptions);
       }
     }
-    return http(group, method, variables, options, raw);
+    return http(group, method, variables, callOptions, raw);
   };
 }
 

@@ -55,7 +55,7 @@ export function createProxyCaller(source: string, defaults: ProxyCallerDefaults 
   // own `options.proxyPath` on a field-by-field basis. Either side may
   // be partial or undefined; missing transports fall back to built-in
   // defaults inside `resolveProxyPath` at request time.
-  const sourceProxyPath = readSourceProxyPath(apiSource);
+  const sourceProxyPath = defaults.boundary?.proxyPath ?? readSourceProxyPath(apiSource);
   const mergedProxyPath = mergeProxyPath(defaults.proxyPath, sourceProxyPath);
   const effectiveDefaults: ProxyCallerDefaults = { ...defaults, proxyPath: mergedProxyPath };
 

@@ -20,6 +20,7 @@
  * the value, and naming the wrong one does not compile.
  */
 
+import type { ProxyPath } from "../proxy-caller/proxy-path";
 import type { ExposedEndpoint, ExposureMap, ProxyBoundary } from "./boundary-types";
 
 export interface BoundaryConfig<TApi> {
@@ -27,6 +28,8 @@ export interface BoundaryConfig<TApi> {
   source: string;
   /** Every endpoint the browser may call, with its shape. Absent means refused. */
   expose: ExposureMap<TApi>;
+  /** Where the app serves its proxy routes, so the client needs nothing else. */
+  proxyPath?: ProxyPath;
 }
 
 /** How each declared shape reaches the wire. */
@@ -67,5 +70,9 @@ export function defineBoundary<TApi>(config: BoundaryConfig<TApi>): ProxyBoundar
     if (wire) endpoints[path] = { ...wire };
   }
 
-  return { source: config.source, endpoints };
+  return {
+    source: config.source,
+    endpoints,
+    ...(config.proxyPath === undefined ? {} : { proxyPath: config.proxyPath }),
+  };
 }

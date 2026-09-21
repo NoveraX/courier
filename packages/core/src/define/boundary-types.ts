@@ -12,6 +12,7 @@
  * already knows.
  */
 
+import type { ProxyPath } from "../proxy-caller/proxy-path";
 import type { AnyEndpoint, InferKind, InferSend } from "./marker";
 
 /** The groups an API declares, or never for one that declares none. */
@@ -84,6 +85,12 @@ export interface ExposedEndpoint {
 export interface ProxyBoundary {
   /** Source this boundary belongs to, as the registry names it. */
   source: string;
+  /**
+   * Where the app serves its own proxy routes. Carried here so the browser
+   * needs one artifact rather than two, and discloses nothing — these are the
+   * application's own paths, not the upstream's.
+   */
+  proxyPath?: ProxyPath;
   /** Endpoint path to its kind, for every endpoint the browser may call. */
   endpoints: Readonly<Record<string, ExposedEndpoint>>;
 }

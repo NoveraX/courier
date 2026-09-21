@@ -113,6 +113,12 @@ export function createProxyQueryCaller<TApi extends DefinedApi<any>>(
 function readDefaultsSourceProxyPath(
   defaults: ProxyCallerDefaults | undefined,
 ): ProxyPath | undefined {
+  /* A boundary carries the app's own proxy paths and nothing about the
+     server, so it is the one to prefer where both were given. These hooks
+     never needed the source itself: `useQuery`, `useSubscription` and
+     `useChannel` each name their transport, so nothing is detected here. */
+  if (defaults?.boundary?.proxyPath) return defaults.boundary.proxyPath;
+
   const apiSource = defaults?.source as { options?: { proxyPath?: ProxyPath } } | undefined;
   return apiSource?.options?.proxyPath;
 }

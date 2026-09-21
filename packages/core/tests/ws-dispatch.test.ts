@@ -10,11 +10,20 @@ import { ENDPOINT_SCHEMA } from "../src/validation";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function createEndpoint(transport: string, receive?: unknown): unknown {
+/** A variables schema that supplies a default, so validation changes the shape. */
+const DEFAULTING_SCHEMA = {
+  "~standard": {
+    version: 1 as const,
+    vendor: "test",
+    validate: (value: unknown) => ({ value: { limit: 50, ...(value as object) } }),
+  },
+};
+
+function createEndpoint(transport: string, receive?: unknown, variables?: unknown): unknown {
   const fn = async function* () {
     yield "data";
   };
-  const schema = { transport, ...(receive ? { receive } : {}) };
+  const schema = { transport, ...(receive ? { receive } : {}), ...(variables ? { variables } : {}) };
   return {
     [ENDPOINT_SCHEMA]: schema,
     kind: "channel",
@@ -155,6 +164,30 @@ describe("handleSubscribe", () => {
     });
 
     expect(sent.find((m) => m.type === "subscribed")!.topic).toBe(honest);
+  });
+
+  /**
+   * The publisher qualifies its topic from the variables *after* validation
+   * (`ws-push.ts:56`). A subscription registered under the caller's own hash
+   * therefore missed every message whenever a schema changed the shape — a
+   * default, an added field. Deriving the qualifier server-side lines the two
+   * up, and this pins that they agree.
+   */
+  it("subscribes under the qualifier the publisher will use, not the caller's", async () => {
+    const endpoint = createEndpoint("ws", undefined, DEFAULTING_SCHEMA);
+    const source = createSource("chat", "feed", endpoint);
+    const { ctx, sent } = createMockCtx({ sources: { api: source } as never });
+
+    await handleSubscribe(ctx, {
+      type: "subscribe",
+      id: "1",
+      topic: qualifyTopic("api.chat.feed", { room: "a" }),
+      payload: { room: "a" },
+    });
+
+    const subscribed = sent.find((m) => m.type === "subscribed");
+    /* What the publisher computes, from the variables validation produced. */
+    expect(subscribed!.topic).toBe(qualifyTopic("api.chat.feed", { limit: 50, room: "a" }));
   });
 
   it("sends error when max subscriptions reached", async () => {
@@ -463,5 +496,74 @@ describe("handleUnsubscribe", () => {
     await handleUnsubscribe(ctx, { type: "unsubscribe", id: "u1", topic: "api.chat.feed" });
 
     expect(sent).toHaveLength(0);
+  });
+});
+
+/**
+ * A channel typed with `.send<T>()` alone carries `bidirectional` but no
+ * runtime schema. Requiring one meant every message it received vanished —
+ * no handler, no error, nothing to see from either side.
+ */
+describe("handleMessage — a channel with no payload schema", () => {
+  function channelCtx(schema: Record<string, unknown>) {
+    const endpoint = {
+      [ENDPOINT_SCHEMA]: schema,
+      kind: "channel",
+      method: "get",
+      path: "",
+      probe: async function* () {
+        yield "x";
+      },
+      served: true,
+      options: { middleware: [], allowedHeaders: [], meta: {}, tags: [], inherit: true },
+    };
+    const source = createSource("chat", "feed", endpoint as never);
+    const made = createMockCtx({ sources: { api: source } as never });
+    const delivered: unknown[] = [];
+    made.ctx.topicManager.subscribe("conn-1", {
+      topic: "api.chat.feed",
+      cleanup: vi.fn(),
+      onMessage: async (p: unknown) => void delivered.push(p),
+    } as never);
+    return { ...made, delivered };
+  }
+
+  const message = { type: "message" as const, id: "1", topic: "api.chat.feed", payload: { text: "hi" } };
+
+  it("delivers to a channel that declared its shape in types only", async () => {
+    const { ctx, delivered } = channelCtx({ transport: "ws", bidirectional: true });
+
+    await handleMessage(ctx, message);
+
+    expect(delivered).toEqual([{ text: "hi" }]);
+  });
+
+  it("still validates when a runtime schema was given", async () => {
+    const refusing = {
+      "~standard": {
+        version: 1 as const,
+        vendor: "test",
+        validate: () => ({ issues: [{ message: "no" }] }),
+      },
+    };
+    const { ctx, sent, delivered } = channelCtx({
+      transport: "ws",
+      bidirectional: true,
+      receive: refusing,
+    });
+
+    await handleMessage(ctx, message);
+
+    expect(delivered).toEqual([]);
+    expect(sent.find((m) => m.error?.code === 4422)).toBeDefined();
+  });
+
+  it("tells a caller that sent to an endpoint which accepts nothing", async () => {
+    const { ctx, sent, delivered } = channelCtx({ transport: "ws" });
+
+    await handleMessage(ctx, message);
+
+    expect(delivered).toEqual([]);
+    expect(sent.find((m) => m.error?.code === 4400)).toBeDefined();
   });
 });

@@ -29,18 +29,33 @@ export async function handleMessage(ctx: WSSocketContext, msg: WSMessage): Promi
   if (!dataSource) return;
 
   const { schema } = resolveEndpoint(dataSource as Record<string, unknown>, group, method);
-  if (!schema?.receive) return;
 
-  try {
-    await validateSchema(schema.receive, msg.payload, "receive");
-  } catch {
+  /* A channel the caller may send on says so with `bidirectional`, whether or
+     not it also declared a schema to check the payload against. Requiring the
+     schema meant a channel typed with `.send<T>()` alone dropped every message
+     in silence — no handler, no error, nothing to see. */
+  if (!schema?.bidirectional && !schema?.receive) {
     if (ctx.closed) return;
     ctx.sendMessage({
       type: "error",
       id: msg.id,
-      error: { code: 4422, message: "Invalid message payload" },
+      error: { code: 4400, message: "Endpoint does not accept messages" },
     });
     return;
+  }
+
+  if (schema.receive) {
+    try {
+      await validateSchema(schema.receive, msg.payload, "receive");
+    } catch {
+      if (ctx.closed) return;
+      ctx.sendMessage({
+        type: "error",
+        id: msg.id,
+        error: { code: 4422, message: "Invalid message payload" },
+      });
+      return;
+    }
   }
   if (ctx.closed) return;
 

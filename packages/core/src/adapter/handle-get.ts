@@ -1,6 +1,7 @@
 import type { StudioHooks } from "../studio/hooks";
 import type { RequestPayloadInput } from "../utils/helpers";
-import { errorResponse, META_KEYS, parseOptions } from "./parse";
+import { errorResponse, META_KEYS } from "./parse";
+import { parseWireOptionsJson } from "./wire-options";
 
 type ExecuteFn = (
   request: Request,
@@ -30,6 +31,9 @@ export function createGetHandler(execute: ExecuteFn, dt: StudioHooks) {
 
     const parsedVars = Object.keys(variables).length > 0 ? variables : undefined;
 
+    const accepted = parseWireOptionsJson(url.searchParams.get("_o"));
+    if (!accepted.ok) return errorResponse(400, accepted.reason);
+
     dt.onProxyParse?.({ source, group, method, variables: parsedVars, timestamp: Date.now() });
 
     const response = await execute(
@@ -39,7 +43,7 @@ export function createGetHandler(execute: ExecuteFn, dt: StudioHooks) {
         group,
         method,
         variables: parsedVars,
-        options: parseOptions(url.searchParams.get("_o")),
+        options: accepted.options,
       },
       "GET",
       proxyReceiveAt,

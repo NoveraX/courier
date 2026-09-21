@@ -1,3 +1,4 @@
+import { parseWireOptions } from "../adapter/wire-options";
 import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
 import { composeMiddleware } from "../middleware/index";
@@ -33,7 +34,19 @@ export async function executeRequest(
   requestPayload: RequestPayloadInput,
   context?: Context,
 ): Promise<unknown> {
-  const { source, group, method, variables, options } = parseRequestPayload(requestPayload);
+  const { source, group, method, variables, options: given } = parseRequestPayload(requestPayload);
+
+  /* A request that arrived over the proxy is untrusted, so it keeps only the
+     options `parseWireOptions` names. A server-side caller runs in this
+     process, already chose the destination, and keeps the full set. */
+  const fromWire = context?.proxyMethod !== undefined;
+  let options = given;
+  if (fromWire) {
+    const accepted = parseWireOptions(given);
+    if (!accepted.ok) return buildErrorResponse(context, 400, accepted.reason);
+    options = accepted.options;
+  }
+
   const dt = studioHooks;
   const hasStudio = dt.onRequestStart !== undefined;
   const requestId = hasStudio ? generateRequestId() : "";

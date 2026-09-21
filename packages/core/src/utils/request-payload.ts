@@ -1,3 +1,4 @@
+import { parseWireOptionsJson } from "../adapter/wire-options";
 import type { CallOptions } from "../http-client/types";
 import { isFormData } from "./helpers";
 
@@ -35,16 +36,10 @@ export const parseRequestPayload = (
 
     const rawOptions = requestPayload.get("_options");
     if (typeof rawOptions === "string") {
-      try {
-        options = JSON.parse(rawOptions, (key, value) => {
-          if (key === "__proto__" || key === "constructor" || key === "prototype") {
-            return undefined;
-          }
-          return value;
-        });
-      } catch {
-        // options stays undefined
-      }
+      /* Validation belongs to the caller, which knows whether this payload
+         came off the wire; a malformed field simply carries no options. */
+      const accepted = parseWireOptionsJson(rawOptions);
+      options = accepted.ok ? accepted.options : undefined;
     }
 
     const formData = new FormData();

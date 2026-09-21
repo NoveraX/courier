@@ -138,14 +138,14 @@ describe("createGetHandler", () => {
       expect(payload.options).toBeUndefined();
     });
 
-    it("sets options to undefined for invalid _o JSON", async () => {
+    it("refuses invalid _o JSON instead of ignoring it", async () => {
       const execute = createMockExecute();
       const handler = createGetHandler(execute, createHooks());
 
-      await handler(getRequest("_s=api&_m=list&_o=not-json"));
+      const response = await handler(getRequest("_s=api&_m=list&_o=not-json"));
 
-      const payload = execute.mock.calls[0]![1];
-      expect(payload.options).toBeUndefined();
+      expect(response.status).toBe(400);
+      expect(execute).not.toHaveBeenCalled();
     });
   });
 

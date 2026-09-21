@@ -32,4 +32,7 @@ export const LIMITS = {
 
   /** Default SSE max connection lifetime in ms (30 minutes) */
   SSE_MAX_LIFETIME_MS: 30 * 60_000,
+
+  /** Longest per-call deadline a proxy client may ask for in ms (2 minutes) */
+  MAX_PROXY_TIMEOUT_MS: 120_000,
 } as const;

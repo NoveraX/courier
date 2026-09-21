@@ -180,7 +180,7 @@ describe("createHandler", () => {
       expect(payload.options).toEqual({ rawData: true });
     });
 
-    it("ignores invalid _o JSON", async () => {
+    it("refuses invalid _o JSON instead of ignoring it", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
       const { handleGet } = setupHandler({ api: {} });
@@ -188,10 +188,10 @@ describe("createHandler", () => {
         "http://localhost/api/request?_s=api&_m=list&_o=invalid",
       );
 
-      await handleGet(req);
+      const response = await handleGet(req);
 
-      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
-      expect(payload.options).toBeUndefined();
+      expect(response.status).toBe(400);
+      expect(mockExecuteRequest).not.toHaveBeenCalled();
     });
 
     it("sanitizes __proto__ in _o JSON", async () => {

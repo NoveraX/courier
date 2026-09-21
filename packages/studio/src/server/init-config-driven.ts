@@ -15,6 +15,7 @@ import { type LoadedCourierConfig, loadCourierConfig } from "./config-loader";
 import { ConfigNotFoundError } from "./config-loader-errors";
 import { type ConfigWatcher, startConfigWatcher } from "./config-watcher";
 import type { MockRegistry } from "./mock-registry";
+import { recordStartupIssue } from "./startup-issues";
 import type { WatcherStatus } from "./watcher-status";
 
 const log = createLogger("Studio");
@@ -37,7 +38,11 @@ export async function initConfigDriven(deps: InitConfigDrivenDeps): Promise<Conf
     loaded = await loadCourierConfig(projectRoot);
   } catch (err) {
     if (err instanceof ConfigNotFoundError) return null;
+    /* Recorded as well as logged: without a config there is no binding table
+       and no watcher, and the banner that follows would otherwise present
+       that as a normal start. */
     log.warn("courier.config load failed", err);
+    recordStartupIssue("courier.config did not load, so no sources are bound", err);
     return null;
   }
 

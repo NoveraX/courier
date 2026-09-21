@@ -5,6 +5,7 @@
 
 import { createRequire } from "node:module";
 import { networkInterfaces } from "node:os";
+import { startupIssues } from "./startup-issues";
 
 // ── ANSI palette ─────────────────────────────────────────────────────────────
 
@@ -123,7 +124,12 @@ function box(lines: string[], widths: number[]): string[] {
 // ── Banner ───────────────────────────────────────────────────────────────────
 
 export function printBanner(host: string, port: number): void {
-  process.stdout.write("\x1bc\x1b[3J\x1b[2J\x1b[H");
+  const issues = startupIssues();
+
+  /* Clearing wipes the scrollback too, so anything already reported would be
+     unrecoverable rather than merely scrolled away. A clean start earns a
+     clean screen; a start with problems keeps its history. */
+  if (issues.length === 0) process.stdout.write("\x1bc\x1b[3J\x1b[2J\x1b[H");
 
   const ver = getVersion();
   const net = getNetworkAddress();
@@ -144,6 +150,14 @@ export function printBanner(host: string, port: number): void {
 
   const lines = box(content, widths);
   console.log(["", ...lines.map((l) => `  ${l}`), ""].join("\n"));
+
+  /* Restated under the banner: a problem reported during startup was printed
+     before this point, where it is easy to miss, and a banner over a clean
+     screen otherwise reads as everything being fine. */
+  for (const issue of issues) {
+    console.log(`  ${AMBER}!${R} ${issue}`);
+  }
+  if (issues.length > 0) console.log("");
 }
 
 // ── Runtime logs ─────────────────────────────────────────────────────────────

@@ -9,15 +9,8 @@ function request(origin?: string, url = `${APP}/api/request`): Request {
   return new Request(url, { headers: origin ? { Origin: origin } : {} });
 }
 
-let nodeEnv: string | undefined;
-
-beforeEach(() => {
-  nodeEnv = process.env.NODE_ENV;
-});
-
 afterEach(() => {
-  if (nodeEnv === undefined) delete process.env.NODE_ENV;
-  else process.env.NODE_ENV = nodeEnv;
+  vi.unstubAllEnvs();
 });
 
 describe("isOriginAllowed", () => {
@@ -64,7 +57,7 @@ describe("isOriginAllowed", () => {
  */
 describe("isOriginAllowed — production", () => {
   beforeEach(() => {
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
   });
 
   it("serves the application's own pages when nothing is configured", () => {
@@ -92,7 +85,7 @@ describe("isOriginAllowed — production", () => {
  */
 describe("isOriginAllowed — development", () => {
   beforeEach(() => {
-    process.env.NODE_ENV = "development";
+    vi.stubEnv("NODE_ENV", "development");
   });
 
   it("admits another local port when nothing is configured", () => {
@@ -116,7 +109,7 @@ describe("isOriginAllowed — development", () => {
  */
 describe("isOriginAllowed — the playground sigil is not a credential", () => {
   beforeEach(() => {
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
   });
 
   it("does not admit a foreign origin that carries the sigil", () => {

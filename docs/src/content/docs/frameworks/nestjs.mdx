@@ -200,7 +200,7 @@ On the client, point your caller to this server's proxy URL. Choose the guide fo
 import { createProxyCaller } from "@noverax/courier"
 import type { api } from "../shared/sources"
 
-export const caller = createProxyCaller<typeof api>({
+export const caller = createProxyCaller<typeof api>("api", {
   proxyPath: { http: "http://localhost:3001/api/request" },
 })
 ```

@@ -53,8 +53,13 @@ Pair with `createProxyCaller` on the client:
 
 ```ts
 import { createProxyCaller } from "@noverax/courier"
+import type { api } from "./api"
 
-const caller = createProxyCaller({ proxyPath: { http: "/api/request" } })
+// The first argument is the key this source has in your `sources` map —
+// it is what the proxy addresses, and it travels as `?_s=<name>`.
+const caller = createProxyCaller<typeof api>("api", {
+  proxyPath: { http: "/api/request" },
+})
 const users = await caller.users.getAll()
 ```
 

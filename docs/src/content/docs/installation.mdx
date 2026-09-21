@@ -45,6 +45,16 @@ For React apps, add the query package for type-safe hooks (`useQuery`, `useMutat
 npm install @noverax/courier-react @tanstack/react-query
 ```
 
+## Studio
+
+Studio inspects requests in development. Its runtime registers your sources
+from `courier.config.ts`, and every framework's instrumentation snippet imports
+it directly — so it is a dependency of your app, not only of the dev server:
+
+```bash
+npm install --save-dev @noverax/courier-studio @noverax/courier-studio-core
+```
+
 <Callout variant="info" title="Install only what you use">
 All framework packages and integrations are optional. The core `@noverax/courier` package works standalone for direct API calls from any runtime.
 </Callout>

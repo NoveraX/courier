@@ -6,17 +6,20 @@ export const metadata = { title: "createProxyCaller", description: "The browser-
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { api } from "@/api"
+import type { api } from "@/api"
 
-// createProxyCaller<T>(defaults?) returns TypedClient<T>
-const caller = createProxyCaller<typeof api>()
+// createProxyCaller<T>(source, defaults?) returns TypedClient<T>.
+// `source` is the key this API has in your `sources` map — the proxy
+// addresses it by that name. Importing `api` as a *type* keeps the
+// definition out of the browser bundle.
+const caller = createProxyCaller<typeof api>("api")
 
 // Dot-notation usage:
 const result = await caller.users.getById({ id: 5 })
 //                         ^? group ^? endpoint  ^? variables
 ```
 
-The generic parameter `typeof api` provides full type inference for group names, endpoint names, variables, and response types.
+The first argument names the source; the generic parameter `typeof api` provides full type inference for group names, endpoint names, variables, and response types.
 
 ## Defaults
 
@@ -148,7 +151,7 @@ const user = await caller.users
 The `onError` and `onSuccess` callbacks run for every request made by this factory. Use them for cross-cutting concerns like authentication redirects or logging:
 
 ```ts title="Global error handling"
-const caller = createProxyCaller<typeof api>({
+const caller = createProxyCaller<typeof api>("api", {
   onSuccess: (data) => {
     // Called after every successful response
     console.log("Response:", data)

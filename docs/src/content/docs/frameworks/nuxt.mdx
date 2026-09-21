@@ -67,7 +67,7 @@ Create a composable using `createProxyCaller` for client-side requests:
 import { createProxyCaller } from "@noverax/courier"
 import type { api } from "~/lib/sources"
 
-export const caller = createProxyCaller<typeof api>({
+export const caller = createProxyCaller<typeof api>("api", {
   proxyPath: { http: "/api/request" },
 })
 ```
@@ -206,7 +206,7 @@ In the meantime, run a [standalone Courier server](/docs/deployment/standalone-s
 import { createProxyCaller } from "@noverax/courier"
 import type { api } from "~/lib/sources"
 
-export const caller = createProxyCaller<typeof api>({
+export const caller = createProxyCaller<typeof api>("api", {
   proxyPath: {
     http: "/api/request",                          // handled by Nuxt
     sse:  "http://localhost:4400/api/stream",      // handled by standalone server

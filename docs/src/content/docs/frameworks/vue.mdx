@@ -71,7 +71,7 @@ You can use any supported adapter: [Express](/docs/frameworks/express), [Hono](/
 import { createProxyCaller } from "@noverax/courier"
 import type { api } from "../../shared/sources"
 
-export const caller = createProxyCaller<typeof api>({
+export const caller = createProxyCaller<typeof api>("api", {
   proxyPath: { http: import.meta.env.VITE_PROXY_URL ?? "http://localhost:3001/api/request" },
 })
 ```

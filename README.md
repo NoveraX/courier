@@ -144,11 +144,18 @@ Full-stack setup with proxy route, React Query hooks, Server Components, and Ser
 **1. Proxy route** — single route handles all endpoints:
 
 ```ts
+// instrumentation.ts — registers your sources once, at startup
+export async function register() {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { attachRuntime } = await import("@noverax/courier-studio-core/runtime")
+    await attachRuntime()
+  }
+}
+
 // app/api/request/route.ts
 import { apiRoute } from "@noverax/courier-next"
-import { sources } from "@/api/sources"
 
-export const { GET, POST } = apiRoute(sources)
+export const { GET, POST } = apiRoute()
 ```
 
 **2. Client caller** — React Query hooks with full type inference:
@@ -251,9 +258,8 @@ export function CreateUserForm() {
 ```ts
 // server/api/request.ts
 import { courierHandler } from "@noverax/courier-nuxt"
-import { sources } from "~/api/sources"
 
-export default courierHandler(sources)
+export default courierHandler()
 ```
 
 **2. Composable** — use with any state management:
@@ -263,7 +269,7 @@ export default courierHandler(sources)
 import { createProxyCaller } from "@noverax/courier"
 import { api } from "~/api/sources"
 
-export const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })
+export const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
 ```
 
 **3. Components:**
@@ -366,7 +372,7 @@ The core caller is framework-agnostic — use it with `ref`, `reactive`, or any 
 import { createProxyCaller } from "@noverax/courier"
 import { api } from "@/api/sources"
 
-export const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })
+export const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
 ```
 
 ```vue
@@ -409,7 +415,7 @@ async function createUser(name: string, email: string) {
 import { createProxyCaller } from "@noverax/courier"
 import { api } from "./api/sources"
 
-export const caller = createProxyCaller<typeof api>({ source: api, proxyPath: { http: "/api/request" } })
+export const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
 ```
 
 ```svelte
@@ -445,11 +451,10 @@ Each adapter exposes a single handler that plugs into your server framework. All
 ```ts
 import { Hono } from "hono"
 import { courierHandler } from "@noverax/courier-hono"
-import { sources } from "./api/sources"
 
 const app = new Hono()
 
-app.all("/api/request", courierHandler(sources))
+app.all("/api/request", courierHandler())
 
 export default app
 ```
@@ -459,11 +464,10 @@ export default app
 ```ts
 import express from "express"
 import { courierHandler } from "@noverax/courier-express"
-import { sources } from "./api/sources"
 
 const app = express()
 
-app.all("/api/request", courierHandler(sources))
+app.all("/api/request", courierHandler())
 
 app.listen(3000)
 ```
@@ -687,6 +691,15 @@ Both modes share the same API definition, the same middleware chain, and the sam
 | [`@noverax/courier-hono`](./packages/hono) | Hono Web Standard adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-hono?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-hono) |
 | [`@noverax/courier-nestjs`](./packages/nestjs) | NestJS middleware adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-nestjs?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-nestjs) |
 | [`@noverax/courier-nuxt`](./packages/nuxt) | Nuxt / Nitro / h3 event handler adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-nuxt?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-nuxt) |
+| [`@noverax/courier-astro`](./packages/astro) | Astro API endpoint adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-astro?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-astro) |
+| [`@noverax/courier-remix`](./packages/remix) | Remix / React Router loader and action adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-remix?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-remix) |
+| [`@noverax/courier-solid`](./packages/solid) | SolidStart adapter and Solid primitives | [![npm](https://img.shields.io/npm/v/@noverax/courier-solid?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-solid) |
+| [`@noverax/courier-sveltekit`](./packages/sveltekit) | SvelteKit endpoint adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-sveltekit?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-sveltekit) |
+| [`@noverax/courier-server`](./packages/server) | Standalone HTTP + SSE + WebSocket server | [![npm](https://img.shields.io/npm/v/@noverax/courier-server?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-server) |
+| [`@noverax/courier-mock`](./packages/mock) | Mock server, contract testing and fixtures | [![npm](https://img.shields.io/npm/v/@noverax/courier-mock?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-mock) |
+| [`@noverax/courier-redis`](./packages/redis) | Redis pub/sub adapter for scaling WebSocket across replicas | [![npm](https://img.shields.io/npm/v/@noverax/courier-redis?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-redis) |
+| [`@noverax/courier-studio`](./packages/studio) | Studio dev server — request inspector and playground | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-studio) |
+| [`@noverax/courier-studio-core`](./packages/studio-core) | Studio runtime — `attachRuntime` for your instrumentation | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio-core?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-studio-core) |
 
 <br />
 

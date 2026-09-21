@@ -42,8 +42,9 @@ afterEach(() => {
 
 describe("createPostHandler", () => {
   describe("origin check", () => {
-    it("returns 403 when origin header is missing", async () => {
-      const handler = createPostHandler(createMockExecute(), createHooks());
+    it("serves a caller that sends no Origin, which no hostile page can be", async () => {
+      const execute = createMockExecute();
+      const handler = createPostHandler(execute, createHooks());
       const req = new Request("http://localhost/api/request", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -52,9 +53,8 @@ describe("createPostHandler", () => {
 
       const res = await handler(req);
 
-      expect(res.status).toBe(403);
-      const body = await res.json();
-      expect(body.message).toContain("Origin mismatch");
+      expect(res.status).not.toBe(403);
+      expect(execute).toHaveBeenCalledOnce();
     });
 
     it("returns 403 when origin does not match request URL", async () => {
@@ -69,7 +69,7 @@ describe("createPostHandler", () => {
       expect(res.status).toBe(403);
     });
 
-    it("emits onProxyOriginReject when origin is missing", async () => {
+    it("does not report a rejection for a caller that sends no Origin", async () => {
       const hooks = createHooks();
       const handler = createPostHandler(createMockExecute(), hooks);
       const req = new Request("http://localhost/api/request", {
@@ -80,10 +80,7 @@ describe("createPostHandler", () => {
 
       await handler(req);
 
-      expect(hooks.onProxyOriginReject).toHaveBeenCalledOnce();
-      expect(hooks.onProxyOriginReject).toHaveBeenCalledWith(
-        expect.objectContaining({ origin: "" }),
-      );
+      expect(hooks.onProxyOriginReject).not.toHaveBeenCalled();
     });
 
     it("emits onProxyOriginReject with mismatched origin", async () => {

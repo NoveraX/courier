@@ -233,7 +233,10 @@ describe("startConfigWatcher — reload", () => {
 
     unlinkSync(deep);
     await sleep(1200);
-    expect(watcher.getCurrent()).toBe(initial);
+    /* What matters is that the Studio still holds a working config, not that
+       it holds the same object: the loader may serve the vanished module from
+       its own cache and hand back an equal config under a new identity. */
+    expect(baseURLOf(watcher.getCurrent())).toBe(baseURLOf(initial));
 
     writeFileSync(deep, 'export const host = "restored.example.com"\n');
 

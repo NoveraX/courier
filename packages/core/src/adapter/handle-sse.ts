@@ -2,13 +2,13 @@ import type { SSEContext, SSEHandler } from "../realtime/types";
 import { generateRequestId, registerPlaygroundAbort, studioHooks } from "../studio";
 import { SSE_HEADERS } from "./format-sse";
 import type { HandlerConfig } from "./handler-config";
+import { isOriginAllowed } from "./origin-policy";
 import { errorResponse } from "./parse";
 import { requireSources } from "./require-sources";
 import type { InternalSSERegistry } from "./sse-registry";
 import { resolveSSEEndpoint, resolveSSEVariables, runSSEMiddleware } from "./sse-resolve";
 import { createSSEStream } from "./sse-stream";
 import { createLifetimeSignal } from "./sse-utils";
-import { validateOrigin } from "./ws-auth";
 
 function headersToRecord(h: Headers): Record<string, string> {
   const rec: Record<string, string> = {};
@@ -49,7 +49,7 @@ export function createSSEHandler(
   const responseHeaders = { ...SSE_HEADERS, ...config?.sseHeaders };
 
   return async (request: Request): Promise<Response> => {
-    if (!validateOrigin(request, config?.allowedOrigins)) {
+    if (!isOriginAllowed(request, config?.allowedOrigins)) {
       return errorResponse(403, "Origin not allowed");
     }
     if (registry.isShuttingDown) return unavailable("Service shutting down", "3");

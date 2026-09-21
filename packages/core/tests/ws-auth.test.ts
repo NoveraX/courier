@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { extractWSAuth, validateOrigin } from "../src/adapter/ws-auth";
+import { extractWSAuth } from "../src/adapter/ws-auth";
 
 function makeRequest(headers: Record<string, string> = {}, url = "http://localhost/ws"): Request {
   return new Request(url, { headers });
@@ -51,38 +51,5 @@ describe("extractWSAuth", () => {
       "http://localhost/ws?token=query-val",
     );
     expect(extractWSAuth(req)).toBe("query-val");
-  });
-});
-
-describe("validateOrigin", () => {
-  it("allows all origins when allowedOrigins is undefined", () => {
-    const req = makeRequest({ Origin: "http://evil.com" });
-    expect(validateOrigin(req)).toBe(true);
-  });
-
-  it("allows all origins when allowedOrigins is empty", () => {
-    const req = makeRequest({ Origin: "http://evil.com" });
-    expect(validateOrigin(req, [])).toBe(true);
-  });
-
-  it("allows matching origin", () => {
-    const req = makeRequest({ Origin: "http://localhost:3000" });
-    expect(validateOrigin(req, ["http://localhost:3000"])).toBe(true);
-  });
-
-  it("rejects non-matching origin", () => {
-    const req = makeRequest({ Origin: "http://evil.com" });
-    expect(validateOrigin(req, ["http://localhost:3000"])).toBe(false);
-  });
-
-  it("rejects missing origin header when origins are restricted", () => {
-    const req = makeRequest();
-    expect(validateOrigin(req, ["http://localhost:3000"])).toBe(false);
-  });
-
-  it("supports multiple allowed origins", () => {
-    const allowed = ["http://localhost:3000", "https://app.example.com"];
-    const req = makeRequest({ Origin: "https://app.example.com" });
-    expect(validateOrigin(req, allowed)).toBe(true);
   });
 });

@@ -1,5 +1,7 @@
 import type { StudioHooks } from "../studio/hooks";
 import type { RequestPayloadInput } from "../utils/helpers";
+import type { HandlerConfig } from "./handler-config";
+import { isOriginAllowed } from "./origin-policy";
 import { errorResponse } from "./parse";
 
 type ExecuteFn = (
@@ -9,14 +11,14 @@ type ExecuteFn = (
   proxyReceiveAt: number,
 ) => Promise<Response>;
 
-export function createPostHandler(execute: ExecuteFn, dt: StudioHooks) {
+export function createPostHandler(execute: ExecuteFn, dt: StudioHooks, config?: HandlerConfig) {
   return async (request: Request): Promise<Response> => {
     const proxyReceiveAt = performance.now();
     const origin = request.headers.get("origin");
 
-    if (!origin || new URL(request.url).origin !== origin) {
+    if (!isOriginAllowed(request, config?.allowedOrigins)) {
       dt.onProxyOriginReject?.({ origin: origin ?? "", timestamp: Date.now() });
-      return errorResponse(403, "Origin mismatch");
+      return errorResponse(403, "Origin not allowed");
     }
 
     const body = await parseBody(request);

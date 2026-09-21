@@ -3,7 +3,7 @@ import type { WebSocketLike } from "../realtime/adapters";
 import { createHeartbeat } from "../realtime/ws/heartbeat";
 import { studioHooks } from "../studio";
 import { LIMITS } from "./limits";
-import { validateOrigin } from "./ws-auth";
+import { isOriginAllowed } from "./origin-policy";
 import { buildContext, type WSSocketContext } from "./ws-context";
 import { createIPTracker, extractClientIP } from "./ws-ip-tracker";
 import { wireEvents } from "./ws-lifecycle";
@@ -50,7 +50,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   registry.setTopicManager(topicManager);
 
   function handleSocket(ws: WebSocketLike, request: Request): void {
-    if (!validateOrigin(request, config.allowedOrigins)) {
+    if (!isOriginAllowed(request, config.allowedOrigins)) {
       ws.close(4403, "Origin not allowed");
       return;
     }

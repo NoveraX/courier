@@ -65,7 +65,7 @@ export function createHandler(config?: HandlerConfig): AdapterHandler {
 
   const dt = studioHooks;
   const handleGet = createGetHandler(execute, dt);
-  const handlePost = createPostHandler(execute, dt);
+  const handlePost = createPostHandler(execute, dt, config);
 
   const sseRegistry = createSSEConnectionRegistry();
   const handleSSE = createSSEHandler(config, sseRegistry);

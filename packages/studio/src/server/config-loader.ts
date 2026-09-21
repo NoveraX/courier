@@ -21,7 +21,7 @@
 
 import type { CourierConfig } from "@noverax/courier/config";
 import { type AnySource, getSourceName, setSourceName } from "@noverax/courier/define";
-import { loadCourierConfig as loadBase } from "@noverax/courier-studio-core/runtime";
+import { loadCourierConfig as loadBase } from "@noverax/courier-studio-core/config";
 import { ConfigLoaderError, ConfigNotFoundError } from "./config-loader-errors";
 import { extractConfigDeps } from "./extract-config-deps";
 

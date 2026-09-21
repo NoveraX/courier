@@ -61,7 +61,7 @@ import { type BufferedAnnouncement, consumeAnnouncements } from "./announce-host
 import type { RuntimeHandle, RuntimeKind } from "./attach-runtime-types";
 import { connectRuntimeSocket } from "./connect-runtime-socket";
 import { wireHooks, wireHttpHooks } from "./hooks";
-import { loadCourierConfig } from "./load-config";
+import type { LoadedCourierConfig } from "./load-config";
 import { installSourceRegistry } from "./runtime-source-registry";
 import {
   createSourceNameResolver,
@@ -167,8 +167,11 @@ export async function attachRuntime(id?: string): Promise<RuntimeHandle> {
   installSourceDefinedHook();
 
   if (!isBrowser) {
-    let loaded: Awaited<ReturnType<typeof loadCourierConfig>> = null;
+    let loaded: LoadedCourierConfig | null = null;
     try {
+      /* Imported here rather than at the top so the client bundle, which also
+         reaches this module, never has the disk loader in its graph. */
+      const { loadCourierConfig } = await import("./load-config");
       loaded = await loadCourierConfig();
     } catch (err) {
       /* Attaching must not take down the host application, but a config that

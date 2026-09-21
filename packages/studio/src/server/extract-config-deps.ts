@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
-import { readPathAliases } from "@noverax/courier-studio-core/runtime";
+import { readPathAliases } from "@noverax/courier-studio-core/config";
 
 import { readImportSpecifiers } from "./read-import-specifiers";
 import { resolveConfigImport } from "./resolve-config-import";

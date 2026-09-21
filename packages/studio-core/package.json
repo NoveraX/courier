@@ -1,13 +1,27 @@
 {
   "name": "@noverax/courier-studio-core",
   "version": "0.0.0",
-  "description": "Studio instrumentation core — EventBus, event types, and Socket.IO connector for @noverax/courier",
+  "description": "Studio instrumentation core \u2014 EventBus, event types, and Socket.IO connector for @noverax/courier",
+  "keywords": [
+    "courier",
+    "typescript",
+    "type-safe",
+    "api-client",
+    "devtools",
+    "studio",
+    "instrumentation",
+    "runtime"
+  ],
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/studio-core"
+  },
+  "homepage": "https://courier.noverax.cloud",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
   },
   "type": "module",
   "engines": {
@@ -25,7 +39,14 @@
     "./runtime": {
       "types": "./lib/runtime/index.d.ts",
       "import": "./lib/runtime/index.js"
+    },
+    "./config": {
+      "types": "./lib/runtime/load-config.d.ts",
+      "import": "./lib/runtime/load-config.js"
     }
+  },
+  "browser": {
+    "./lib/runtime/load-config.js": false
   },
   "files": [
     "lib",
@@ -43,7 +64,6 @@
   },
   "dependencies": {
     "@noverax/courier": "*",
-    "c12": "^4.0.0-rc.1",
     "confbox": "^0.3.1",
     "jiti": "^2.6.1"
   },

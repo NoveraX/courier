@@ -11,7 +11,7 @@
 import { existsSync, statSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 
-import type { PathAliases } from "@noverax/courier-studio-core/runtime";
+import type { PathAliases } from "@noverax/courier-studio-core/config";
 
 /** Extensions tried when an import has none — TS first, then bundler outputs. */
 const RESOLVE_EXTENSIONS: ReadonlyArray<string> = [

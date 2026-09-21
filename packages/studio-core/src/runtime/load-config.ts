@@ -5,14 +5,11 @@
  * Two-stage design:
  *
  *  1. **File discovery** — walk up from `cwd` looking for a
- *     `courier.config.*` file. c12's own `loadConfig` does NOT walk up by
- *     default, so we implement the discovery layer ourselves in ~20 LOC
- *     of pure Node builtins.
+ *     `courier.config.*` file, using nothing but Node builtins.
  *
- *  2. **File loading** — once a file is found, hand its directory to
- *     `c12.loadConfig` which uses `jiti` under the hood to transpile
- *     TypeScript configs transparently across Node / Next.js dev / tsx /
- *     bun / deno.
+ *  2. **File loading** — `jiti` imports the file, transpiling a TypeScript
+ *     config transparently across Node / Next.js dev / tsx / bun / deno and
+ *     resolving the project's `tsconfig` path aliases.
  *
  * This module lives in `@noverax/courier-studio-core` so BOTH consumers
  * resolve config through the same code path:
@@ -35,8 +32,9 @@
 import { existsSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { CourierConfig } from "@noverax/courier/config";
-import { loadConfig } from "c12";
 import { readPathAliases } from "./path-aliases";
+
+export { type PathAliases, readPathAliases } from "./path-aliases";
 
 const CONFIG_BASENAMES: ReadonlyArray<string> = [
   "courier.config.ts",
@@ -88,11 +86,12 @@ export interface LoadCourierConfigOptions {
  * absolute directory containing the first match, or `null` if the walk
  * reaches the filesystem root without finding one.
  */
-function findConfigDir(startDir: string): string | null {
+function findConfigFile(startDir: string): string | null {
   let dir = resolve(startDir);
   while (true) {
     for (const basename of CONFIG_BASENAMES) {
-      if (existsSync(resolve(dir, basename))) return dir;
+      const candidate = resolve(dir, basename);
+      if (existsSync(candidate)) return candidate;
     }
     const parent = dirname(dir);
     if (parent === dir) return null;
@@ -103,8 +102,12 @@ function findConfigDir(startDir: string): string | null {
 /**
  * Check that `cwd` itself contains a config file, without walking up.
  */
-function hasConfigAt(cwd: string): boolean {
-  return CONFIG_BASENAMES.some((name) => existsSync(resolve(cwd, name)));
+function configFileAt(cwd: string): string | null {
+  for (const basename of CONFIG_BASENAMES) {
+    const candidate = resolve(cwd, basename);
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
 }
 
 /**
@@ -119,38 +122,32 @@ export async function loadCourierConfig(
 ): Promise<LoadedCourierConfig | null> {
   const startDir = resolve(options.cwd ?? process.cwd());
 
-  const configDir = options.requireAtCwd
-    ? hasConfigAt(startDir)
-      ? startDir
-      : null
-    : findConfigDir(startDir);
+  const found = options.requireAtCwd ? configFileAt(startDir) : findConfigFile(startDir);
+  if (!found) return null;
 
-  if (!configDir) return null;
+  /* Resolve symlinks so downstream consumers — the dev server's dependency
+     watcher above all — observe the canonical path. */
+  const configFile = realpathSync(found);
 
-  /* A throw here is the loader reporting why a config it found will not load —
-     usually an import it could not resolve. It carries the only useful detail,
-     so it propagates as-is rather than being re-wrapped in a vaguer message. */
-  const loaded = await loadConfig<CourierConfig>({
-    name: "courier",
-    cwd: configDir,
-    rcFile: false,
-    packageJson: false,
-    dotenv: false,
-    globalRc: false,
-    jitiOptions: { alias: readPathAliases(configDir).loader },
+  /* jiti is loaded here rather than at the top of the file so a bundler that
+     merely reaches this module does not pull a TypeScript transpiler into its
+     graph; only a process that actually reads a config pays for it. */
+  const { createJiti } = await import("jiti");
+
+  /* Both caches are off because this loader is also the reload path: the dev
+     server calls it again on every edit, and a cached module would hand back
+     the config as it was before the user changed it. */
+  const jiti = createJiti(configFile, {
+    alias: readPathAliases(dirname(configFile)).loader,
+    interopDefault: true,
+    moduleCache: false,
+    fsCache: false,
   });
 
-  const configFile = loaded.configFile;
+  /* A throw here is jiti reporting why a config it found will not load —
+     usually an import it could not resolve. It carries the only useful
+     detail, so it propagates as-is rather than being re-wrapped. */
+  const config = await jiti.import<CourierConfig>(configFile, { default: true });
 
-  // c12 reports a placeholder `configFile: "courier.config"` when it resolved
-  // nothing, which is the same outcome as finding no file.
-  if (!configFile || !existsSync(configFile)) return null;
-
-  return {
-    config: loaded.config,
-    // Resolve symlinks so tests (and downstream consumers like
-    // `extractConfigDeps`) observe the canonical path — avoids the
-    // macOS `/var` → `/private/var` discrepancy.
-    configFile: realpathSync(configFile),
-  };
+  return { config, configFile };
 }

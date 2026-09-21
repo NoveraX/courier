@@ -13,11 +13,14 @@ export function resolveSSEEndpoint(
   group: string | undefined,
   method: string,
 ): { endpoint: unknown; schema: SchemaMetadata | undefined } | Response {
+  const notFound = `[${source}][${group ?? ""}][${method}]: method not found`;
+
   const dataSource = Object.hasOwn(sources, source) ? sources[source] : undefined;
-  if (!dataSource) return errorResponse(400, `[${source}]: source not found`);
+  /* Every SSE resolution comes off the wire, so an unknown source is answered
+     as an unknown method is — see the same rule in `executeRequest`. */
+  if (!dataSource) return errorResponse(400, notFound);
 
   const { endpoint, schema, served } = resolveEndpoint(dataSource, group, method);
-  const notFound = `[${source}][${group ?? ""}][${method}]: method not found`;
 
   if (typeof endpoint !== "function") {
     return errorResponse(400, notFound);

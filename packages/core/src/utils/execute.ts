@@ -62,7 +62,21 @@ export async function executeRequest(
   const dataSource =
     typeof source === "string" && Object.hasOwn(sources, source) ? sources[source] : undefined;
 
-  if (!dataSource) return buildErrorResponse(context, 400, `[${String(source)}]: source not found`);
+  const methodPath = group ? `[${String(group)}][${String(method)}]` : `[${String(method)}]`;
+  const notFound = `[${String(source)}]${methodPath}: method not found`;
+
+  /* A name that resolves to nothing is answered the same way whether the
+     source or the method is the missing half. Saying which lets a caller
+     enumerate the registry, and the sources worth finding that way are
+     exactly the ones `expose: false` was meant to hide. A server-side caller
+     is not guessing, so it keeps the message that names the real mistake. */
+  if (!dataSource) {
+    return buildErrorResponse(
+      context,
+      400,
+      fromWire ? notFound : `[${String(source)}]: source not found`,
+    );
+  }
   if (variables && typeof variables !== "object") {
     return buildErrorResponse(context, 400, "[variables] must be an object");
   }
@@ -73,9 +87,6 @@ export async function executeRequest(
     schema,
     options: endpointOptions,
   } = resolveEndpoint(dataSource, group, method);
-
-  const methodPath = group ? `[${group}][${method}]` : `[${method}]`;
-  const notFound = `[${String(source)}][${methodPath}]: method not found`;
 
   if (typeof endpoint !== "function") {
     return buildErrorResponse(context, 400, notFound);

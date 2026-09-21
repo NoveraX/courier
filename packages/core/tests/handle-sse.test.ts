@@ -88,12 +88,14 @@ describe("handleSSE", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 400 for unknown source", async () => {
+  /** Refusing an unknown source by name would let a caller enumerate the
+      registry; it is answered as an unknown method instead. */
+  it("refuses an unknown source without confirming it is the source", async () => {
     const { handleSSE } = setupHandler({});
     const res = await handleSSE(sseRequest("_s=unknown&_m=feed"));
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.message).toContain("source not found");
+    expect(body.message).toBe("[unknown][][feed]: method not found");
   });
 
   it("returns 400 for non-SSE endpoint", async () => {

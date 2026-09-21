@@ -2,12 +2,29 @@
   "name": "@noverax/courier",
   "version": "0.0.0",
   "description": "Type-safe HTTP client with dual-mode transport, middleware chain, and runtime validation",
+  "keywords": [
+    "courier",
+    "typescript",
+    "type-safe",
+    "api-client",
+    "http-client",
+    "fetch",
+    "rpc",
+    "middleware",
+    "validation",
+    "sse",
+    "websocket"
+  ],
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/core"
+  },
+  "homepage": "https://courier.noverax.cloud",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
   },
   "type": "module",
   "engines": {

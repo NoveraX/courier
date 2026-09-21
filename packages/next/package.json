@@ -2,12 +2,27 @@
   "name": "@noverax/courier-next",
   "version": "0.0.0",
   "description": "Next.js adapter for @noverax/courier — API route handler and Server Actions",
+  "keywords": [
+    "courier",
+    "typescript",
+    "type-safe",
+    "api-client",
+    "nextjs",
+    "next",
+    "app-router",
+    "server-actions",
+    "adapter"
+  ],
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/next"
+  },
+  "homepage": "https://courier.noverax.cloud",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
   },
   "type": "module",
   "engines": {

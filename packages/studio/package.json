@@ -2,12 +2,26 @@
   "name": "@noverax/courier-studio",
   "version": "0.0.0",
   "description": "Standalone Studio server and UI for @noverax/courier",
+  "keywords": [
+    "courier",
+    "typescript",
+    "type-safe",
+    "api-client",
+    "devtools",
+    "studio",
+    "debugging",
+    "inspector"
+  ],
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/studio"
+  },
+  "homepage": "https://courier.noverax.cloud",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
   },
   "type": "module",
   "engines": {

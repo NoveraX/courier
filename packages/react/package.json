@@ -2,12 +2,26 @@
   "name": "@noverax/courier-react",
   "version": "0.0.0",
   "description": "React integration for @noverax/courier — hooks, query keys, SSE subscriptions, optimistic updates",
+  "keywords": [
+    "courier",
+    "typescript",
+    "type-safe",
+    "api-client",
+    "react",
+    "hooks",
+    "suspense",
+    "data-fetching"
+  ],
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/react"
+  },
+  "homepage": "https://courier.noverax.cloud",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
   },
   "type": "module",
   "engines": {

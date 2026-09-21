@@ -1,13 +1,27 @@
 {
   "name": "@noverax/courier-express",
   "version": "0.0.0",
-  "description": "Express adapter for @noverax/courier \u2014 proxy middleware handler",
+  "description": "Express adapter for @noverax/courier — proxy middleware handler",
+  "keywords": [
+    "courier",
+    "typescript",
+    "type-safe",
+    "api-client",
+    "express",
+    "nodejs",
+    "adapter",
+    "middleware"
+  ],
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/express"
+  },
+  "homepage": "https://courier.noverax.cloud",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
   },
   "type": "module",
   "engines": {

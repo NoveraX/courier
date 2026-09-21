@@ -1,13 +1,27 @@
 {
   "name": "@noverax/courier-server",
   "version": "0.0.0",
-  "description": "Standalone HTTP + WebSocket server for @noverax/courier \u2014 proxy handler for Next.js and serverless environments",
+  "description": "Standalone HTTP + WebSocket server for @noverax/courier — proxy handler for Next.js and serverless environments",
+  "keywords": [
+    "courier",
+    "typescript",
+    "type-safe",
+    "api-client",
+    "server",
+    "nodejs",
+    "standalone",
+    "http-server"
+  ],
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/NoveraX/courier.git",
     "directory": "packages/server"
+  },
+  "homepage": "https://courier.noverax.cloud",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
   },
   "type": "module",
   "engines": {

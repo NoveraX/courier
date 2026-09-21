@@ -23,6 +23,10 @@ function createMockRes(): ServerResponse & { _status: number; _headers: Record<s
       if (headers) Object.assign(res._headers, headers);
       return res;
     },
+    setHeader(name: string, value: string) {
+      res._headers[name] = value;
+      return res;
+    },
     end(body?: string) {
       if (body) res._body = body;
     },
@@ -80,113 +84,98 @@ describe("handleHealth", () => {
 
 // --- handleCors ---
 
-describe("handleCors", () => {
-  describe("OPTIONS preflight", () => {
-    it("returns 204 for allowed origin", () => {
-      const req = createMockReq({
-        method: "OPTIONS",
-        headers: { origin: "http://example.com" },
-      });
-      const res = createMockRes();
+describe("handleCors — preflight", () => {
+  const preflight = (origin: string) =>
+    createMockReq({ method: "OPTIONS", headers: { origin, host: "api.example.com" } });
 
-      const handled = handleCors(req, res, ["http://example.com"]);
+  it("answers a configured origin with permission to proceed", () => {
+    const res = createMockRes();
 
-      expect(handled).toBe(true);
-      expect(res._status).toBe(204);
-      expect(res._headers["Access-Control-Allow-Origin"]).toBe("http://example.com");
-      expect(res._headers["Access-Control-Allow-Methods"]).toBe("GET, POST, OPTIONS");
-      expect(res._headers["Access-Control-Max-Age"]).toBe("86400");
-    });
+    const handled = handleCors(preflight("http://example.com"), res, ["http://example.com"]);
 
-    it("returns 403 for disallowed origin", () => {
-      const req = createMockReq({
-        method: "OPTIONS",
-        headers: { origin: "http://evil.com" },
-      });
-      const res = createMockRes();
-
-      const handled = handleCors(req, res, ["http://trusted.com"]);
-
-      expect(handled).toBe(true);
-      expect(res._status).toBe(403);
-      expect(res._headers["Access-Control-Allow-Origin"]).toBe("");
-    });
-
-    it("returns 204 when no allowedOrigins configured", () => {
-      const req = createMockReq({
-        method: "OPTIONS",
-        headers: { origin: "http://any-origin.com" },
-      });
-      const res = createMockRes();
-
-      const handled = handleCors(req, res, undefined);
-
-      expect(handled).toBe(true);
-      expect(res._status).toBe(204);
-      expect(res._headers["Access-Control-Allow-Origin"]).toBe("http://any-origin.com");
-    });
-
-    it("returns 204 when allowedOrigins is empty array", () => {
-      const req = createMockReq({
-        method: "OPTIONS",
-        headers: { origin: "http://any-origin.com" },
-      });
-      const res = createMockRes();
-
-      const handled = handleCors(req, res, []);
-
-      expect(handled).toBe(true);
-      expect(res._status).toBe(204);
-      expect(res._headers["Access-Control-Allow-Origin"]).toBe("http://any-origin.com");
-    });
+    expect(handled).toBe(true);
+    expect(res._status).toBe(204);
+    expect(res._headers["Access-Control-Allow-Origin"]).toBe("http://example.com");
+    expect(res._headers["Access-Control-Allow-Credentials"]).toBe("true");
+    expect(res._headers.Vary).toBe("Origin");
+    expect(res._headers["Access-Control-Max-Age"]).toBe("86400");
   });
 
-  describe("non-OPTIONS requests", () => {
-    it("blocks request from disallowed origin", () => {
-      const req = createMockReq({
-        method: "POST",
-        headers: { origin: "http://evil.com" },
-      });
-      const res = createMockRes();
+  it("matches a wildcard the way the rest of the project does", () => {
+    const res = createMockRes();
 
-      const handled = handleCors(req, res, ["http://trusted.com"]);
+    handleCors(preflight("https://api.example.com"), res, ["*.example.com"]);
 
-      expect(handled).toBe(true);
-      expect(res._status).toBe(403);
-      expect(JSON.parse(res._body)).toEqual({ error: "Origin not allowed" });
-    });
+    expect(res._status).toBe(204);
+  });
 
-    it("returns false when origin is allowed", () => {
-      const req = createMockReq({
-        method: "POST",
-        headers: { origin: "http://trusted.com" },
-      });
-      const res = createMockRes();
+  it("refuses an origin that is not configured, granting nothing", () => {
+    const res = createMockRes();
 
-      const handled = handleCors(req, res, ["http://trusted.com"]);
+    const handled = handleCors(preflight("http://evil.com"), res, ["http://trusted.com"]);
 
-      expect(handled).toBe(false);
-    });
+    expect(handled).toBe(true);
+    expect(res._status).toBe(403);
+    expect(res._headers["Access-Control-Allow-Origin"]).toBeUndefined();
+  });
 
-    it("returns false when no origin header present", () => {
-      const req = createMockReq({ method: "GET", headers: {} });
-      const res = createMockRes();
+  /** Accepting every origin because none was configured is the bug, not the default. */
+  it("refuses a foreign origin when nothing is configured", () => {
+    const res = createMockRes();
 
-      const handled = handleCors(req, res, ["http://trusted.com"]);
+    handleCors(preflight("http://any-origin.com"), res, undefined);
 
-      expect(handled).toBe(false);
-    });
+    expect(res._status).toBe(403);
+  });
 
-    it("returns false when no allowedOrigins configured", () => {
-      const req = createMockReq({
-        method: "POST",
-        headers: { origin: "http://any.com" },
-      });
-      const res = createMockRes();
+  it("serves the server's own origin when nothing is configured", () => {
+    const res = createMockRes();
 
-      const handled = handleCors(req, res, undefined);
+    handleCors(preflight("http://api.example.com"), res, []);
 
-      expect(handled).toBe(false);
-    });
+    expect(res._status).toBe(204);
+  });
+});
+
+describe("handleCors — the request itself", () => {
+  const request = (origin?: string) =>
+    createMockReq({ headers: { host: "api.example.com", ...(origin ? { origin } : {}) } });
+
+  it("lets a request with no Origin through untouched", () => {
+    const res = createMockRes();
+
+    expect(handleCors(request(), res, ["http://example.com"])).toBe(false);
+    expect(res._headers["Access-Control-Allow-Origin"]).toBeUndefined();
+  });
+
+  /**
+   * Only the preflight used to carry this, so a configured caller passed the
+   * check and then could not read the answer.
+   */
+  it("grants a configured origin permission on the answer, not only the preflight", () => {
+    const res = createMockRes();
+
+    const handled = handleCors(request("http://example.com"), res, ["http://example.com"]);
+
+    expect(handled).toBe(false);
+    expect(res._headers["Access-Control-Allow-Origin"]).toBe("http://example.com");
+    expect(res._headers["Access-Control-Allow-Credentials"]).toBe("true");
+    expect(res._headers.Vary).toBe("Origin");
+  });
+
+  it("blocks a request from an origin that is not configured", () => {
+    const res = createMockRes();
+
+    const handled = handleCors(request("http://evil.com"), res, ["http://trusted.com"]);
+
+    expect(handled).toBe(true);
+    expect(res._status).toBe(403);
+    expect(JSON.parse(res._body).error).toContain("Origin");
+  });
+
+  it("serves the server's own origin without needing configuration", () => {
+    const res = createMockRes();
+
+    expect(handleCors(request("http://api.example.com"), res, undefined)).toBe(false);
   });
 });

@@ -18,6 +18,7 @@ export {
   type WSHandler,
   type WSHandlerConfig,
 } from "./adapter";
+export { isOriginAccepted, isOriginAllowed } from "./adapter/origin-policy";
 export {
   detectAppOrigin,
   getAppOrigin,

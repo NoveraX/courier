@@ -39,10 +39,24 @@
  * ```
  */
 export function isOriginAllowed(request: Request, allowedOrigins?: string[]): boolean {
-  const origin = request.headers.get("Origin");
-  if (!origin) return true;
+  return isOriginAccepted(request.headers.get("Origin"), selfOrigin(request), allowedOrigins);
+}
 
-  if (origin === selfOrigin(request)) return true;
+/**
+ * The same rule, for a server that speaks in parts rather than in `Request`.
+ *
+ * @param origin - The `Origin` header, or null when absent
+ * @param self - The origin the request was addressed to
+ * @param allowedOrigins - Extra origins to accept, `*.example.com` supported
+ * @returns Whether the request may proceed
+ */
+export function isOriginAccepted(
+  origin: string | null | undefined,
+  self: string | null,
+  allowedOrigins?: string[],
+): boolean {
+  if (!origin) return true;
+  if (origin === self) return true;
 
   if (allowedOrigins?.length) {
     return allowedOrigins.some((pattern) => matchesOrigin(origin, pattern));

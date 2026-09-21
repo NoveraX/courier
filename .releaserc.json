@@ -1,7 +1,10 @@
 {
   "branches": [
     "master",
-    { "name": "beta", "prerelease": true }
+    {
+      "name": "beta",
+      "prerelease": true
+    }
   ],
   "plugins": [
     "@semantic-release/commit-analyzer",
@@ -16,15 +19,18 @@
       "@semantic-release/exec",
       {
         "prepareCmd": "npx tsx scripts/release.ts prepare ${nextRelease.version}",
-        "publishCmd": "npx tsx scripts/release.ts publish ${nextRelease.version}"
+        "publishCmd": "npx tsx scripts/release.ts publish ${nextRelease.version} ${nextRelease.channel || 'latest'}"
       }
     ],
     "@semantic-release/github",
     [
       "@semantic-release/git",
       {
-        "assets": ["CHANGELOG.md", "packages/*/package.json"],
-        "message": "chore(release): 🔖 v${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+        "assets": [
+          "CHANGELOG.md",
+          "packages/*/package.json"
+        ],
+        "message": "chore(release): \ud83d\udd16 v${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ]
   ]

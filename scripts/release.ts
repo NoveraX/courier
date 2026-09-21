@@ -3,7 +3,7 @@
  *
  * Usage:
  *   tsx scripts/release.ts prepare <version>
- *   tsx scripts/release.ts publish <version>
+ *   tsx scripts/release.ts publish <version> [dist-tag]
  *
  * Publishing a workspace is not a loop over a directory listing. A package
  * must reach the registry after everything it depends on, or there is a window
@@ -26,6 +26,13 @@ export function updateVersion(pkgDir: string, ver: string): void {
 
   for (const dep of Object.keys(pkg.dependencies ?? {})) {
     if (dep.startsWith(SCOPE)) (pkg.dependencies as Record<string, string>)[dep] = ver;
+  }
+
+  /* A peer asks the consumer to provide it, so it takes a range rather than a
+     pin: every package in this workspace releases at the same version, and a
+     later patch of core must still satisfy an adapter published today. */
+  for (const dep of Object.keys(pkg.peerDependencies ?? {})) {
+    if (dep.startsWith(SCOPE)) (pkg.peerDependencies as Record<string, string>)[dep] = `^${ver}`;
   }
 
   writeFileSync(join(pkgDir, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
@@ -59,7 +66,16 @@ function prepare(version: string, dirs: readonly string[]): void {
  * A failure is recorded rather than thrown, because the operator's next
  * decision depends on the state of all of them, not on the first one to break.
  */
-function publish(version: string, dirs: readonly string[]): void {
+function publish(version: string, tag: string, dirs: readonly string[]): void {
+  /* Without an explicit tag npm writes `latest`, so a release cut from the
+     beta branch would hand every one of these packages to every consumer who
+     asked for the stable one. */
+  const args = ["--access", "public", "--tag", tag];
+
+  /* Provenance needs an OIDC token, which only the release workflow has.
+     Asking for it anywhere else fails the publish rather than the check. */
+  if (process.env.GITHUB_ACTIONS === "true") args.push("--provenance");
+
   const published: string[] = [];
   const skipped: string[] = [];
   const failed: string[] = [];
@@ -74,7 +90,7 @@ function publish(version: string, dirs: readonly string[]): void {
     }
 
     try {
-      execFileSync("npm", ["publish", dir, "--access", "public"], { stdio: "inherit" });
+      execFileSync("npm", ["publish", dir, ...args], { stdio: "inherit" });
       published.push(name);
     } catch (error) {
       failed.push(name);
@@ -83,7 +99,8 @@ function publish(version: string, dirs: readonly string[]): void {
   }
 
   console.log(
-    `v${version}: ${published.length} published, ${skipped.length} already there, ${failed.length} failed`,
+    `v${version} (${tag}): ${published.length} published, ${skipped.length} already there, ` +
+      `${failed.length} failed`,
   );
 
   if (failed.length > 0) {
@@ -96,7 +113,7 @@ function publish(version: string, dirs: readonly string[]): void {
 }
 
 function main(argv: readonly string[]): void {
-  const [command, version] = argv;
+  const [command, version, tag = "latest"] = argv;
 
   if (command !== "prepare" && command !== "publish") {
     console.error("Usage: tsx scripts/release.ts <prepare|publish> <version>");
@@ -109,7 +126,7 @@ function main(argv: readonly string[]): void {
 
   const dirs = publishOrder(packageDirs());
   if (command === "prepare") prepare(version, dirs);
-  else publish(version, dirs);
+  else publish(version, tag, dirs);
 }
 
 /* Importing this module must not release anything — the ordering is covered

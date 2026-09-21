@@ -91,6 +91,8 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      # npm mints the provenance attestation from this token
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:

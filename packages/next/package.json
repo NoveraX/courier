@@ -58,10 +58,11 @@
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
-    "@noverax/courier": "*"
-  },
   "peerDependencies": {
+    "@noverax/courier": "*",
     "next": ">=14"
+  },
+  "devDependencies": {
+    "@noverax/courier": "*"
   }
 }

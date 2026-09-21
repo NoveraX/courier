@@ -52,15 +52,16 @@
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
-    "@noverax/courier": "*"
-  },
   "peerDependencies": {
+    "@noverax/courier": "*",
     "ws": ">=8"
   },
   "peerDependenciesMeta": {
     "ws": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@noverax/courier": "*"
   }
 }

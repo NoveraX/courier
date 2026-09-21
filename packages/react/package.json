@@ -52,11 +52,12 @@
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
-    "@noverax/courier": "*"
-  },
   "peerDependencies": {
+    "@noverax/courier": "*",
     "@tanstack/react-query": ">=5",
     "react": ">=18"
+  },
+  "devDependencies": {
+    "@noverax/courier": "*"
   }
 }

@@ -15,6 +15,7 @@ interface PackageJson {
   version: string;
   private?: boolean;
   dependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
 }
 
 /** Packages under this scope are the ones published together. */
@@ -84,11 +85,13 @@ export function dependencyGraph(dirs: readonly string[]): Map<string, readonly s
 
   for (const dir of dirs) {
     const pkg = readPkg(dir);
+    /* A peer is an ordering edge too: a consumer installing the adapter has
+       to be able to resolve the core version it asks for, so core must be on
+       the registry first even though npm will not install it for them. */
+    const internal = [...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.peerDependencies ?? {})];
     needs.set(
       pkg.name,
-      Object.keys(pkg.dependencies ?? {})
-        .filter((dep) => dep.startsWith(SCOPE) && names.has(dep))
-        .sort(),
+      [...new Set(internal.filter((dep) => dep.startsWith(SCOPE) && names.has(dep)))].sort(),
     );
   }
 

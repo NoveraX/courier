@@ -49,7 +49,10 @@
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
+  "peerDependencies": {
+    "@noverax/courier": "*"
+  },
+  "devDependencies": {
     "@noverax/courier": "*"
   }
 }

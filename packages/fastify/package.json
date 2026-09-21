@@ -52,10 +52,11 @@
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
-    "@noverax/courier": "*"
-  },
   "peerDependencies": {
+    "@noverax/courier": "*",
     "fastify": ">=4"
+  },
+  "devDependencies": {
+    "@noverax/courier": "*"
   }
 }

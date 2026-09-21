@@ -66,16 +66,19 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/courier": "*",
     "confbox": "^0.3.1",
     "jiti": "^2.6.1"
   },
   "peerDependencies": {
+    "@noverax/courier": "*",
     "socket.io-client": ">=4.0.0"
   },
   "peerDependenciesMeta": {
     "socket.io-client": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@noverax/courier": "*"
   }
 }

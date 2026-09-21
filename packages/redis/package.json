@@ -49,13 +49,14 @@
     "typecheck": "tsc --noEmit",
     "dev": "tsdown --watch"
   },
-  "dependencies": {
-    "@noverax/courier": "*"
-  },
   "peerDependencies": {
+    "@noverax/courier": "*",
     "ioredis": "^5.0.0 || ^6.0.0"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@noverax/courier": "*"
   }
 }

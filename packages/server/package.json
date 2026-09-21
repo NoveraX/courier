@@ -56,10 +56,13 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/courier": "*",
     "citty": "^0.2.2"
   },
   "peerDependencies": {
+    "@noverax/courier": "*",
     "ws": ">=8"
+  },
+  "devDependencies": {
+    "@noverax/courier": "*"
   }
 }

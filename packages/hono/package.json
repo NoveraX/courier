@@ -51,10 +51,8 @@
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
-    "@noverax/courier": "*"
-  },
   "peerDependencies": {
+    "@noverax/courier": "*",
     "hono": ">=4",
     "ws": ">=8"
   },
@@ -62,5 +60,8 @@
     "ws": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@noverax/courier": "*"
   }
 }

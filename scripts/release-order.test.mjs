@@ -89,6 +89,15 @@ describe("the real workspace", () => {
     );
   });
 
+  /* Core is a peer of every adapter, not a dependency. A consumer still has
+     to be able to resolve the version the adapter asks for. */
+  it("treats a peer on a workspace package as an ordering edge", () => {
+    const graph = dependencyGraph(dirs);
+
+    expect(graph.get("@noverax/courier-next")).toContain("@noverax/courier");
+    expect(graph.get("@noverax/courier")).toEqual([]);
+  });
+
   it("publishes the core package first", () => {
     expect(readPkg(publishOrder(dirs)[0]).name).toBe("@noverax/courier");
   });

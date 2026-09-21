@@ -26,10 +26,10 @@
  *    loader directly to discover + register sources without requiring the
  *    user to import the config file manually.
  *
- * Returning a nullable result (instead of throwing a dedicated error)
- * lets the runtime caller treat "no config found" as a soft-fail and
- * fall back to adapter auto-discovery. Dev-server callers that need
- * loud failure wrap the result and throw explicitly.
+ * A missing config is not an error: `null` lets the runtime caller fall back
+ * to adapter auto-discovery. A config that exists and cannot be loaded is a
+ * different thing entirely and throws, because reporting it as "no config"
+ * sends the reader looking for a file that is right where they left it.
  */
 
 import { existsSync, realpathSync } from "node:fs";
@@ -109,11 +109,9 @@ function hasConfigAt(cwd: string): boolean {
 /**
  * Find and load a `courier.config.*` file.
  *
- * Returns `null` on any failure mode (file not found, c12 throws, the
- * resolved config is empty). Callers that need loud failure check for
- * `null` and throw their own domain-specific error — this function
- * stays neutral so the dev-server and runtime paths can pick their own
- * error surfaces.
+ * Returns `null` when no config file exists, so a caller can fall back.
+ * Throws when a file was found and loading it failed, reporting what the
+ * loader reported — for a TypeScript config, usually an unresolvable import.
  */
 export async function loadCourierConfig(
   options: LoadCourierConfigOptions = {},
@@ -128,27 +126,23 @@ export async function loadCourierConfig(
 
   if (!configDir) return null;
 
-  let loaded: Awaited<ReturnType<typeof loadConfig<CourierConfig>>>;
-  try {
-    loaded = await loadConfig<CourierConfig>({
-      name: "courier",
-      cwd: configDir,
-      rcFile: false,
-      packageJson: false,
-      dotenv: false,
-      globalRc: false,
-    });
-  } catch {
-    return null;
-  }
+  /* A throw here is the loader reporting why a config it found will not load —
+     usually an import it could not resolve. It carries the only useful detail,
+     so it propagates as-is rather than being re-wrapped in a vaguer message. */
+  const loaded = await loadConfig<CourierConfig>({
+    name: "courier",
+    cwd: configDir,
+    rcFile: false,
+    packageJson: false,
+    dotenv: false,
+    globalRc: false,
+  });
 
   const configFile = loaded.configFile;
-  if (!configFile || !loaded.config) return null;
 
-  // c12 occasionally returns a placeholder `configFile: "courier.config"`
-  // when nothing was actually loaded. Treat that as a null result so the
-  // caller's fallback path runs cleanly.
-  if (!existsSync(configFile)) return null;
+  // c12 reports a placeholder `configFile: "courier.config"` when it resolved
+  // nothing, which is the same outcome as finding no file.
+  if (!configFile || !existsSync(configFile)) return null;
 
   return {
     config: loaded.config,

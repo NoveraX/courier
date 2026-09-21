@@ -84,10 +84,9 @@ describe("loadCourierConfig — base loader", () => {
     expect(Object.keys(result?.config.sources ?? {})).toEqual(["local"]);
   });
 
-  it("returns null on a config that throws at import time", async () => {
+  it("throws, naming the cause, when a config that exists fails to load", async () => {
     writeConfig("courier.config.ts", `throw new Error("boom during import");`);
-    const result = await loadCourierConfig({ cwd: dir });
-    expect(result).toBeNull();
+    await expect(loadCourierConfig({ cwd: dir })).rejects.toThrow("boom during import");
   });
 
   it("loads runtime.appOrigin field when present", async () => {

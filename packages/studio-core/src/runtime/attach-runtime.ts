@@ -48,6 +48,7 @@
  */
 
 import {
+  createLogger,
   detectAppOrigin,
   getSources,
   registerSources,
@@ -67,6 +68,8 @@ import {
   findMatchingSourceKey,
   resolveNewSourceKey,
 } from "./source-resolution";
+
+const log = createLogger("Runtime");
 
 interface InternalHandle extends RuntimeHandle {
   setDisposer(fn: () => void): void;
@@ -164,7 +167,14 @@ export async function attachRuntime(id?: string): Promise<RuntimeHandle> {
   installSourceDefinedHook();
 
   if (!isBrowser) {
-    const loaded = await loadCourierConfig();
+    let loaded: Awaited<ReturnType<typeof loadCourierConfig>> = null;
+    try {
+      loaded = await loadCourierConfig();
+    } catch (err) {
+      /* Attaching must not take down the host application, but a config that
+         exists and will not load leaves it with no sources at all — say why. */
+      log.error("courier.config could not be loaded; no sources were registered", err);
+    }
     if (loaded) {
       registerSources(loaded.config.sources);
       setAppOrigin(loaded.config.runtime?.appOrigin ?? detectAppOrigin());

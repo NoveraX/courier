@@ -1,7 +1,6 @@
+import { bufferedAnnouncementCount, resetAnnouncements } from "../src/announce/test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  _getBufferedCountForTests,
-  _resetAnnouncementsForTests,
   announceHosting,
   consumeAnnouncements,
 } from "../src/announce";
@@ -10,13 +9,13 @@ import { defineApi } from "../src/define";
 const fakeApi = defineApi({ baseURL: "http://example.com", groups: {} });
 
 afterEach(() => {
-  _resetAnnouncementsForTests();
+  resetAnnouncements();
 });
 
 describe("announceHosting", () => {
   it("buffers entries until a consumer subscribes", () => {
     announceHosting({ transports: ["http"], sources: [fakeApi] });
-    expect(_getBufferedCountForTests()).toBe(1);
+    expect(bufferedAnnouncementCount()).toBe(1);
   });
 
   it("preserves listenOrigin when supplied", () => {

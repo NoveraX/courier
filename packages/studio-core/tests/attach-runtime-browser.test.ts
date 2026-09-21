@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
+import { resetAnnouncements } from "../../core/src/announce/test-support";
 import { afterEach, describe, expect, it } from "vitest";
-import { _resetAnnouncementsForTests } from "../src/runtime/announce-hosting";
 import {
   _resetRuntimeHandlesForTests,
   attachRuntime,
@@ -12,7 +12,7 @@ const STUDIO_URL_KEY = Symbol.for("courier.studio.url");
 
 afterEach(() => {
   _resetRuntimeHandlesForTests();
-  _resetAnnouncementsForTests();
+  resetAnnouncements();
   delete (globalThis as Record<symbol, unknown>)[STUDIO_URL_KEY];
 });
 

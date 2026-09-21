@@ -1,8 +1,8 @@
 /**
  * @vitest-environment node
  */
+import { resetAnnouncements } from "../../core/src/announce/test-support";
 import { afterEach, describe, expect, it } from "vitest";
-import { _resetAnnouncementsForTests } from "../src/runtime/announce-hosting";
 import {
   _resetRuntimeHandlesForTests,
   attachRuntime,
@@ -10,7 +10,7 @@ import {
 
 afterEach(() => {
   _resetRuntimeHandlesForTests();
-  _resetAnnouncementsForTests();
+  resetAnnouncements();
 });
 
 describe("attachRuntime (server context)", () => {

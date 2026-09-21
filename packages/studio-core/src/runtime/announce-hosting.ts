@@ -9,8 +9,6 @@
  */
 
 export {
-  _getBufferedCountForTests,
-  _resetAnnouncementsForTests,
   type AnnounceHostingInput,
   announceHosting,
   type BufferedAnnouncement,

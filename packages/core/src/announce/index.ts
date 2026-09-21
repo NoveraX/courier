@@ -97,14 +97,3 @@ export function consumeAnnouncements(listener: Listener): () => void {
     state.listeners.delete(listener);
   };
 }
-
-/** Drop every buffered announcement and listener — for tests only */
-export function _resetAnnouncementsForTests(): void {
-  state.buffer.length = 0;
-  state.listeners.clear();
-}
-
-/** Inspect the current buffer length — for tests only */
-export function _getBufferedCountForTests(): number {
-  return state.buffer.length;
-}

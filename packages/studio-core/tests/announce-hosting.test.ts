@@ -1,20 +1,19 @@
+import { bufferedAnnouncementCount, resetAnnouncements } from "../../core/src/announce/test-support";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  _getBufferedCountForTests,
-  _resetAnnouncementsForTests,
   announceHosting,
   consumeAnnouncements,
 } from "../src/runtime/announce-hosting";
 
 beforeEach(() => {
-  _resetAnnouncementsForTests();
+  resetAnnouncements();
 });
 
 describe("announceHosting", () => {
   it("buffers entries before any consumer subscribes", () => {
     announceHosting({ transports: ["http"], sources: [] });
     announceHosting({ transports: ["sse"], sources: [] });
-    expect(_getBufferedCountForTests()).toBe(2);
+    expect(bufferedAnnouncementCount()).toBe(2);
   });
 
   it("replays buffered entries to a new consumer synchronously", () => {

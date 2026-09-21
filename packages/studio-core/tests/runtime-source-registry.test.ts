@@ -6,7 +6,8 @@
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { defineApi } from "@noverax/courier/define";
-import { _resetAnnouncementsForTests, announceHosting } from "@noverax/courier/announce";
+import { announceHosting } from "@noverax/courier/announce";
+import { resetAnnouncements } from "../../core/src/announce/test-support";
 import {
   _resetSourceRegistryForTests,
   getRegisteredSource,
@@ -15,12 +16,12 @@ import {
 } from "../src/runtime/runtime-source-registry";
 
 beforeEach(() => {
-  _resetAnnouncementsForTests();
+  resetAnnouncements();
   _resetSourceRegistryForTests();
 });
 
 afterEach(() => {
-  _resetAnnouncementsForTests();
+  resetAnnouncements();
   _resetSourceRegistryForTests();
 });
 

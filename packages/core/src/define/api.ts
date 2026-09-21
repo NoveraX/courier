@@ -86,7 +86,15 @@ export function setSourceName(source: unknown, name: string): void {
  */
 export function defineApi<TGroups extends GroupRecord, TEndpoints extends EndpointRecord>(
   config: BaseOptions & {
-    /** Human-readable source name for studio and logging (derived from baseURL if omitted) */
+    /**
+     * The identifier the proxy addresses this source by — `?_s=<name>`.
+     *
+     * It must equal the key this source has in the `sources` map, because a
+     * browser client reads it off its own copy of the definition while the
+     * server resolves it against the registry, and the two have to agree.
+     * Omitted, it is derived from the `baseURL` hostname. It is not a display
+     * string: a label with spaces in it produces a source nothing can reach.
+     */
     name?: string;
     /** Map of named endpoint groups created with defineGroup() */
     groups: TGroups;
@@ -97,7 +105,15 @@ export function defineApi<TGroups extends GroupRecord, TEndpoints extends Endpoi
 
 export function defineApi<TGroups extends GroupRecord>(
   config: BaseOptions & {
-    /** Human-readable source name for studio and logging (derived from baseURL if omitted) */
+    /**
+     * The identifier the proxy addresses this source by — `?_s=<name>`.
+     *
+     * It must equal the key this source has in the `sources` map, because a
+     * browser client reads it off its own copy of the definition while the
+     * server resolves it against the registry, and the two have to agree.
+     * Omitted, it is derived from the `baseURL` hostname. It is not a display
+     * string: a label with spaces in it produces a source nothing can reach.
+     */
     name?: string;
     /** Map of named endpoint groups created with defineGroup() */
     groups: TGroups;
@@ -106,7 +122,15 @@ export function defineApi<TGroups extends GroupRecord>(
 
 export function defineApi<TEndpoints extends EndpointRecord>(
   config: BaseOptions & {
-    /** Human-readable source name for studio and logging (derived from baseURL if omitted) */
+    /**
+     * The identifier the proxy addresses this source by — `?_s=<name>`.
+     *
+     * It must equal the key this source has in the `sources` map, because a
+     * browser client reads it off its own copy of the definition while the
+     * server resolves it against the registry, and the two have to agree.
+     * Omitted, it is derived from the `baseURL` hostname. It is not a display
+     * string: a label with spaces in it produces a source nothing can reach.
+     */
     name?: string;
     /** Map of flat endpoint functions (not in any group) */
     endpoints: TEndpoints;

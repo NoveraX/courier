@@ -115,7 +115,11 @@ function stampSourceKeys(sources: Record<string, AnySource>): void {
     if (existing && existing !== key && wasExplicit(source, existing)) {
       throw new ConfigLoaderError(
         "CONFIG_SOURCE_KEY_MISMATCH",
-        `Source key "${key}" conflicts with explicit defineApi name "${existing}". Use the same string in both places, or remove the explicit \`name\` from defineApi.`,
+        `Source key "${key}" conflicts with the name given to defineApi, "${existing}".\n\n` +
+          "`name` is the identifier the proxy addresses this source by, not a display\n" +
+          "string: a browser client reads it off its own copy of the definition while\n" +
+          "the server resolves it against this key, so the two must be the same.\n\n" +
+          `Use "${key}" in both places, or drop \`name\` and let the key decide.`,
         { context: { key, explicitName: existing } },
       );
     }

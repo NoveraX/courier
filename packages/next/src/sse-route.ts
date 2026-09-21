@@ -1,6 +1,6 @@
 import type { HandlerConfig } from "@noverax/courier";
 import { createHandler, getAppOrigin, requireSources, setAppOrigin } from "@noverax/courier";
-import { announceHosting } from "@noverax/courier/announce";
+import { announceHosting, deferAnnounce } from "@noverax/courier/announce";
 import type { NextRequest } from "next/server";
 
 /**
@@ -44,14 +44,20 @@ export function sseRoute(config?: HandlerConfig): {
   GET: (request: NextRequest) => Promise<Response>;
 } {
   const { handleSSE } = createHandler(config);
-  announceHosting({
-    transports: ["sse"],
-    sources: Object.values(requireSources()),
-    framework: "next",
-  });
+
+  /* Deferred for the same reason as `apiRoute`: this module is evaluated by
+     `next build` before the registry exists. */
+  const announce = deferAnnounce(() =>
+    announceHosting({
+      transports: ["sse"],
+      sources: Object.values(requireSources()),
+      framework: "next",
+    }),
+  );
 
   return {
     GET: (request: NextRequest) => {
+      announce();
       tryDiscoverAppOrigin(request);
       return handleSSE(request);
     },

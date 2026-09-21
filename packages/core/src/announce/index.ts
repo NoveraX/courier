@@ -13,6 +13,8 @@
 
 import type { AnySource } from "../define";
 
+export { deferAnnounce } from "./defer";
+
 /** Transports a runtime claims it can serve for the listed sources */
 export type RuntimeTransport = "http" | "sse" | "ws";
 

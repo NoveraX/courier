@@ -35,4 +35,10 @@ export const LIMITS = {
 
   /** Longest per-call deadline a proxy client may ask for in ms (2 minutes) */
   MAX_PROXY_TIMEOUT_MS: 120_000,
+
+  /** Largest JSON envelope the proxy will read from a caller (1 MB) */
+  MAX_PROXY_BODY_BYTES: 1_048_576,
+
+  /** Largest multipart upload the proxy will read from a caller (10 MB) */
+  MAX_PROXY_UPLOAD_BYTES: 10_485_760,
 } as const;

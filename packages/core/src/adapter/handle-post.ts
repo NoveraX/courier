@@ -1,8 +1,10 @@
 import type { StudioHooks } from "../studio/hooks";
 import type { RequestPayloadInput } from "../utils/helpers";
 import type { HandlerConfig } from "./handler-config";
+import { LIMITS } from "./limits";
 import { isOriginAllowed } from "./origin-policy";
 import { errorResponse } from "./parse";
+import { readBoundedBody } from "./read-body";
 
 type ExecuteFn = (
   request: Request,
@@ -21,7 +23,7 @@ export function createPostHandler(execute: ExecuteFn, dt: StudioHooks, config?: 
       return errorResponse(403, "Origin not allowed");
     }
 
-    const body = await parseBody(request);
+    const body = await parseBody(request, config);
     if (body instanceof Response) return body;
 
     const proxySource = extractField(body, "_source", "source", "unknown");
@@ -61,19 +63,50 @@ export function createPostHandler(execute: ExecuteFn, dt: StudioHooks, config?: 
   };
 }
 
-async function parseBody(request: Request): Promise<RequestPayloadInput | Response> {
+/**
+ * Read the envelope, spending a bounded amount of memory on it.
+ *
+ * The limit is chosen by media type before anything is read, because an
+ * upload and a JSON envelope differ by orders of magnitude and one number
+ * cannot be right for both. Parsing happens from the bytes already held, so
+ * a body that passed the bound is never read twice.
+ */
+async function parseBody(
+  request: Request,
+  config?: HandlerConfig,
+): Promise<RequestPayloadInput | Response> {
   const contentType = request.headers.get("content-type");
   const mediaType = contentType?.split(";")[0]?.trim();
 
-  if (mediaType === "multipart/form-data") return request.formData();
-  if (mediaType === "application/json") {
+  const isUpload = mediaType === "multipart/form-data";
+  if (!isUpload && mediaType !== "application/json") {
+    return errorResponse(415, "Unsupported Content-Type");
+  }
+
+  const limit = isUpload
+    ? (config?.maxUploadBytes ?? LIMITS.MAX_PROXY_UPLOAD_BYTES)
+    : (config?.maxBodyBytes ?? LIMITS.MAX_PROXY_BODY_BYTES);
+
+  const body = await readBoundedBody(request, limit);
+  if (!body.ok) return errorResponse(413, `Request body exceeds ${body.limit} bytes`);
+
+  /* Re-presenting the bytes lets the platform do the multipart parsing; the
+     content type carries the boundary the parser needs. */
+  if (isUpload) {
     try {
-      return await request.json();
+      return await new Response(body.bytes, {
+        headers: { "content-type": contentType as string },
+      }).formData();
     } catch {
-      return errorResponse(400, "Invalid JSON body");
+      return errorResponse(400, "Invalid multipart body");
     }
   }
-  return errorResponse(415, "Unsupported Content-Type");
+
+  try {
+    return JSON.parse(new TextDecoder().decode(body.bytes));
+  } catch {
+    return errorResponse(400, "Invalid JSON body");
+  }
 }
 
 function extractField(

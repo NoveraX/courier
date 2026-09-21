@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { handleSubscribe, handleMessage, handleUnsubscribe } from "../src/adapter/ws-dispatch";
+import { qualifyTopic } from "../src/realtime/ws/topic-hash";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { ENDPOINT_SCHEMA } from "../src/validation";
@@ -115,6 +116,45 @@ describe("handleSubscribe", () => {
     await handleSubscribe(ctx, { type: "subscribe", id: "2", topic: "api.chat.feed" });
     expect(sent.filter((m) => m.type === "subscribed")).toHaveLength(2);
     expect(sent.filter((m) => m.type === "error")).toHaveLength(0);
+  });
+
+  /**
+   * The client qualifies a topic with a hash of its own variables and sends
+   * both. They were never checked against each other, so a caller could pass
+   * validation with variables of its own while subscribing under someone
+   * else's qualifier — and receive what was published for them.
+   */
+  it("subscribes under the qualifier its own variables produce, not the one it sent", async () => {
+    const endpoint = createEndpoint("ws");
+    const source = createSource("chat", "feed", endpoint);
+    const { ctx, sent } = createMockCtx({ sources: { api: source } as never });
+
+    await handleSubscribe(ctx, {
+      type: "subscribe",
+      id: "1",
+      topic: "api.chat.feed#deadbeef",
+      payload: { room: "mine" },
+    });
+
+    const subscribed = sent.find((m) => m.type === "subscribed");
+    expect(subscribed!.topic).toBe(qualifyTopic("api.chat.feed", { room: "mine" }));
+    expect(subscribed!.topic).not.toContain("deadbeef");
+  });
+
+  it("leaves an honest client's topic exactly as it sent it", async () => {
+    const endpoint = createEndpoint("ws");
+    const source = createSource("chat", "feed", endpoint);
+    const { ctx, sent } = createMockCtx({ sources: { api: source } as never });
+    const honest = qualifyTopic("api.chat.feed", { room: "mine" });
+
+    await handleSubscribe(ctx, {
+      type: "subscribe",
+      id: "1",
+      topic: honest,
+      payload: { room: "mine" },
+    });
+
+    expect(sent.find((m) => m.type === "subscribed")!.topic).toBe(honest);
   });
 
   it("sends error when max subscriptions reached", async () => {

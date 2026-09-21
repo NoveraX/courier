@@ -1,3 +1,4 @@
+import { qualifyTopic, unqualifyTopic } from "../realtime/ws/topic-hash";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { generateRequestId } from "../studio";
 import { runTransportMiddleware } from "../utils/transport-middleware";
@@ -27,12 +28,6 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
     return;
   }
 
-  // Reconnect dedup: tear down old subscription (+ close its stream entry)
-  if (ctx.topicManager.has(ctx.connectionId, topic)) {
-    await ctx.topicManager.unsubscribe(ctx.connectionId, topic);
-    closeSubscriptionEntry(ctx, topic);
-  }
-
   if (ctx.topicManager.topicCount(ctx.connectionId) >= ctx.maxSubscriptions) {
     ctx.sendMessage({
       type: "error",
@@ -47,6 +42,15 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
 
   const variables = await validateVariablesSafe(ctx, msg, resolved.schema);
   if (variables === VALIDATION_FAILED) return;
+
+  /* The client sends the topic already qualified with a hash of its own
+     variables, and the two were never checked against each other: a caller
+     could pass validation and authorization with variables of its own while
+     subscribing under the qualifier of someone else's. Derive the qualifier
+     from what was validated instead of comparing — an honest client sends
+     exactly this, and a dishonest one gets its own data. */
+  const { baseTopic } = unqualifyTopic(topic);
+  const subscribedTopic = qualifyTopic(baseTopic, variables);
 
   try {
     await runTransportMiddleware({
@@ -71,7 +75,11 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
   }
   if (ctx.closed) return;
 
-  if (ctx.authorize && !(await authorizeSubscription(ctx, msg, resolved, topic, variables))) return;
+  if (
+    ctx.authorize &&
+    !(await authorizeSubscription(ctx, msg, resolved, subscribedTopic, variables))
+  )
+    return;
   if (ctx.closed) return;
 
   // Set up per-subscription Studio tracking BEFORE channel/push init
@@ -83,8 +91,17 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
   // `instrumentSSE` correlate back to the playground tab. Production
   // browser connections never set this param and fall through to a fresh
   // server-generated id.
+  /* Reconnect dedup: replace an existing subscription to the same topic, and
+     only once this one is cleared to take its place — tearing it down before
+     authorization would cost a working subscription to a failed re-subscribe. */
+  if (ctx.topicManager.has(ctx.connectionId, subscribedTopic)) {
+    await ctx.topicManager.unsubscribe(ctx.connectionId, subscribedTopic);
+    closeSubscriptionEntry(ctx, subscribedTopic);
+    if (ctx.closed) return;
+  }
+
   const subRequestId = ctx.playgroundRequestId ?? generateRequestId();
-  ctx.subscriptionIds.set(topic, {
+  ctx.subscriptionIds.set(subscribedTopic, {
     requestId: subRequestId,
     seq: { value: 0 },
     t0: performance.now(),
@@ -103,13 +120,13 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
 
   try {
     if (resolved.schema.bidirectional === true || resolved.schema.receive) {
-      await startChannel(ctx, topic, resolved.endpoint, variables);
+      await startChannel(ctx, subscribedTopic, resolved.endpoint, variables);
     } else {
-      startPush(ctx, topic, resolved.endpoint, variables);
+      startPush(ctx, subscribedTopic, resolved.endpoint, variables);
     }
   } catch {
     // Rollback tracking on init failure
-    closeSubscriptionEntry(ctx, topic);
+    closeSubscriptionEntry(ctx, subscribedTopic);
     if (ctx.closed) return;
     ctx.sendMessage({
       type: "error",
@@ -119,13 +136,17 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
     return;
   }
   if (ctx.closed) {
-    closeSubscriptionEntry(ctx, topic);
+    closeSubscriptionEntry(ctx, subscribedTopic);
     return;
   }
 
   // Send "subscribed" AFTER channel/push init to prevent race
-  ctx.sendMessage({ type: "subscribed", id: msg.id, topic });
-  ctx.dt.onWSTrack?.({ requestId: subRequestId, connectionId: ctx.connectionId, topic });
+  ctx.sendMessage({ type: "subscribed", id: msg.id, topic: subscribedTopic });
+  ctx.dt.onWSTrack?.({
+    requestId: subRequestId,
+    connectionId: ctx.connectionId,
+    topic: subscribedTopic,
+  });
 }
 
 /**

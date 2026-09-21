@@ -22,4 +22,5 @@ export {
 } from "./announce-hosting";
 export { attachRuntime, type RuntimeHandle, type RuntimeKind } from "./attach-runtime";
 export { type LoadedCourierConfig, loadCourierConfig } from "./load-config";
+export { type PathAliases, readPathAliases } from "./path-aliases";
 export { trackWSStream, untrackWSStream } from "./ws-tracking";

@@ -180,11 +180,51 @@ describe("startConfigWatcher — reload", () => {
     expect(setApiPathCount).toHaveBeenCalledWith(initial.deps.length);
 
     writeFileSync(project.deep, 'export const host = "counted.example.com"\n');
-    for (let waited = 0; waited < 4000 && emitChange.mock.calls.length === 0; waited += 50) {
+    /* Waiting for the first call alone would be hostage to a late notification
+       about the fixture's own creation arriving ahead of the edit. */
+    const reported = () =>
+      emitChange.mock.calls.some(
+        ([kind, paths]) => kind === "api" && (paths as string[]).includes(project.deep),
+      );
+    for (let waited = 0; waited < 4000 && !reported(); waited += 50) {
       await sleep(50);
     }
 
-    expect(emitChange).toHaveBeenCalledWith("api", [project.deep]);
+    expect(reported()).toBe(true);
+  });
+
+  /** The demo shape: the config lives in one package, its modules in a sibling. */
+  it("reloads when a module reached through a tsconfig alias changes", async () => {
+    const workspace = realpathSync(mkdtempSync(join(tmpdir(), "config-watcher-alias-")));
+    roots.push(workspace);
+    const project = join(workspace, "app");
+    mkdirSync(join(workspace, "shared"), { recursive: true });
+    mkdirSync(project, { recursive: true });
+    const shared = join(workspace, "shared", "api.ts");
+    writeFileSync(shared, 'export const api = { baseURL: "v1.example.com" }\n');
+    writeFileSync(
+      join(project, "tsconfig.json"),
+      JSON.stringify({ compilerOptions: { paths: { "@shared/*": ["../shared/*"] } } }),
+    );
+    writeFileSync(
+      join(project, "courier.config.ts"),
+      'import { api } from "@shared/api"\nexport default { sources: { demo: api } }\n',
+    );
+
+    const initial = await loadCourierConfig(project);
+    expect(initial.deps).toContain(shared);
+
+    const reloads: LoadedCourierConfig[] = [];
+    start(initial, {
+      projectRoot: project,
+      bindingTable: new BindingTable(),
+      onReload: (loaded) => reloads.push(loaded),
+    });
+    await sleep(SETTLE_MS);
+
+    writeFileSync(shared, 'export const api = { baseURL: "v2.example.com" }\n');
+
+    expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe("v2.example.com");
   });
 
   it("keeps the last good config when a dep is deleted, and recovers when it returns", async () => {

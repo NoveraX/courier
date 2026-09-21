@@ -1,10 +1,13 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 
 import { createLogger } from "@noverax/courier";
+import { readPathAliases } from "@noverax/courier-studio-core/runtime";
 
 import type ts from "typescript";
+
+import { resolveConfigImport } from "./resolve-config-import";
 
 const log = createLogger("Studio");
 const requireFrom = createRequire(import.meta.url);
@@ -38,23 +41,15 @@ function loadCompiler(): typeof ts | null {
   return compiler;
 }
 
-/** Extensions resolved when an import has none — TS-first, then bundler outputs */
-const RESOLVE_EXTENSIONS: ReadonlyArray<string> = [
-  ".ts",
-  ".tsx",
-  ".mts",
-  ".cts",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".cjs",
-];
-
 /**
  * Walk a config file and return every local TypeScript/JavaScript module it
- * transitively imports. Bare specifiers (`@noverax/courier`, `node:fs`, …) are
- * skipped — only relative and absolute file paths are followed. Cycles are
- * tolerated via a visited set.
+ * transitively imports.
+ *
+ * Relative and absolute specifiers are followed directly; a bare one is
+ * followed only when the project's tsconfig `paths` maps it to a file of its
+ * own, which is how a config that imports `@/lib/sources` or `@shared/api`
+ * still yields the modules behind those names. Everything else — a package, a
+ * node builtin — is left alone. Cycles are tolerated via a visited set.
  *
  * The result always contains `entryFile` as the first element so callers can
  * pass it directly to a watcher without an extra concat.
@@ -62,6 +57,7 @@ const RESOLVE_EXTENSIONS: ReadonlyArray<string> = [
 export function extractConfigDeps(entryFile: string): string[] {
   const visited = new Set<string>();
   const order: string[] = [];
+  const aliases = readPathAliases(dirname(resolve(entryFile)));
 
   const walk = (file: string): void => {
     const normalized = resolve(file);
@@ -74,8 +70,7 @@ export function extractConfigDeps(entryFile: string): string[] {
     if (!source) return;
 
     for (const specifier of collectImportSpecifiers(source)) {
-      if (!isLocalSpecifier(specifier)) continue;
-      const resolved = resolveLocalImport(dirname(normalized), specifier);
+      const resolved = resolveConfigImport(dirname(normalized), specifier, aliases);
       if (resolved) walk(resolved);
     }
   };
@@ -121,35 +116,4 @@ function collectImportSpecifiers(source: ts.SourceFile): string[] {
   };
   visit(source);
   return out;
-}
-
-/** True for relative or absolute file specifiers — false for bare/package specifiers */
-function isLocalSpecifier(specifier: string): boolean {
-  return specifier.startsWith("./") || specifier.startsWith("../") || isAbsolute(specifier);
-}
-
-/**
- * Resolve a local import specifier against a base directory by trying:
- * the literal path, then each known extension, then `index.{ext}` for
- * directories. Returns the absolute resolved path or null on miss.
- */
-function resolveLocalImport(baseDir: string, specifier: string): string | null {
-  const candidate = isAbsolute(specifier) ? specifier : resolve(baseDir, specifier);
-  const direct = tryExtensions(candidate);
-  if (direct) return direct;
-  if (existsSync(candidate) && statSync(candidate).isDirectory()) {
-    const indexed = tryExtensions(resolve(candidate, "index"));
-    if (indexed) return indexed;
-  }
-  return null;
-}
-
-/** Try each known extension on `pathWithoutExt`, returning the first hit */
-function tryExtensions(pathWithoutExt: string): string | null {
-  if (existsSync(pathWithoutExt) && statSync(pathWithoutExt).isFile()) return pathWithoutExt;
-  for (const ext of RESOLVE_EXTENSIONS) {
-    const candidate = pathWithoutExt + ext;
-    if (existsSync(candidate)) return candidate;
-  }
-  return null;
 }

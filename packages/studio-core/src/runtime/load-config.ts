@@ -36,6 +36,7 @@ import { existsSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { CourierConfig } from "@noverax/courier/config";
 import { loadConfig } from "c12";
+import { readPathAliases } from "./path-aliases";
 
 const CONFIG_BASENAMES: ReadonlyArray<string> = [
   "courier.config.ts",
@@ -136,6 +137,7 @@ export async function loadCourierConfig(
     packageJson: false,
     dotenv: false,
     globalRc: false,
+    jitiOptions: { alias: readPathAliases(configDir).loader },
   });
 
   const configFile = loaded.configFile;

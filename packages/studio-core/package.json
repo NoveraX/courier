@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-studio-core",
   "version": "0.0.0",
-  "description": "Studio instrumentation core \u2014 EventBus, event types, and Socket.IO connector for @noverax/courier",
+  "description": "Studio instrumentation core — EventBus, event types, and Socket.IO connector for @noverax/courier",
   "author": "NoveraX",
   "license": "MIT",
   "repository": {
@@ -44,6 +44,7 @@
   "dependencies": {
     "@noverax/courier": "*",
     "c12": "^4.0.0-rc.1",
+    "confbox": "^0.3.1",
     "jiti": "^2.6.1"
   },
   "peerDependencies": {

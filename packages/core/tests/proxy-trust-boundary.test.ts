@@ -13,7 +13,7 @@ import { HTTPError } from "../src/errors";
 import type { Context } from "../src/http-client/types";
 import { executeRequest } from "../src/utils/execute";
 
-const { endpoint } = courier();
+const { channel, endpoint, stream } = courier();
 
 const UPSTREAM = "https://legit.example";
 const ATTACKER = "https://attacker.example";
@@ -24,6 +24,8 @@ const api = defineApi({
   baseURL: UPSTREAM,
   endpoints: {
     getById: endpoint.get("users/:id").variables<{ id: string }>().response<unknown>(),
+    feed: stream.get("events").response<unknown>(),
+    presence: channel.connect("presence").response<unknown>(),
   },
 });
 
@@ -129,5 +131,55 @@ describe("proxy boundary — a server-side caller keeps the full option set", ()
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(requestedUrls()[0]).toContain("attacker.example");
+  });
+});
+
+/**
+ * A stream or a channel is reached by opening one. An ordinary POST used to
+ * run a channel's implementation factory, which expects a socket it has not
+ * been given.
+ */
+describe("proxy boundary — a transport is not a verb", () => {
+  function callOverHttp(method: string) {
+    return executeRequest(
+      sources,
+      { source: "api", method, variables: {} } as never,
+      { proxyMethod: "POST" } as Context,
+    );
+  }
+
+  /** The reason travels in the error's payload, not in its message. */
+  async function reasonOfRefusal(method: string): Promise<string> {
+    try {
+      await callOverHttp(method);
+    } catch (error) {
+      expect(error).toBeInstanceOf(HTTPError);
+      expect((error as HTTPError).status).toBe(400);
+      const payload = (error as HTTPError).data as { message?: string } | undefined;
+      return String(payload?.message ?? "");
+    }
+    expect.fail(`${method} should have been refused`);
+  }
+
+  it("refuses an SSE endpoint asked for over HTTP", async () => {
+    expect(await reasonOfRefusal("feed")).toContain("served over sse");
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("refuses a channel asked for over HTTP", async () => {
+    expect(await reasonOfRefusal("presence")).toContain("served over ws");
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("still serves an ordinary HTTP endpoint", async () => {
+    await executeRequest(
+      sources,
+      { source: "api", method: "getById", variables: { id: "7" } } as never,
+      { proxyMethod: "GET" } as Context,
+    );
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });

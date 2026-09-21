@@ -82,6 +82,17 @@ export async function executeRequest(
     return buildErrorResponse(context, 405, "This endpoint does not support GET requests");
   }
 
+  /* A stream or a channel is reached by opening one, not by asking for it
+     over HTTP. Without this an ordinary POST ran a channel's implementation
+     factory, which expects a socket to talk to and has none. */
+  if (schema?.transport && schema.transport !== "http") {
+    return buildErrorResponse(
+      context,
+      400,
+      `[${String(method)}]: endpoint is served over ${schema.transport}, not HTTP`,
+    );
+  }
+
   const instance = createHttpClient(dataSource.options, context);
   if (hasStudio) attachFetchHook(instance, dCtx);
 

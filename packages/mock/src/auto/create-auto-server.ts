@@ -1,4 +1,4 @@
-import type { MockServer, MockServerConfig } from "../server/create-mock-server";
+import type { MockServer, MockServerOptions } from "../server/create-mock-server";
 import { createMockServer } from "../server/create-mock-server";
 import type { MockStore } from "../store";
 import type { MockScenario, NetworkConfig, TypedMockFn } from "../types";
@@ -21,11 +21,11 @@ export interface AutoMockServerConfig {
   /** Hostname (default: "localhost") */
   hostname?: string;
   /** Enable CORS (default: true) */
-  cors?: MockServerConfig["cors"];
+  cors?: MockServerOptions["cors"];
   /** Enable admin API (default: true) */
   admin?: boolean;
   /** Request logging level (default: "normal") */
-  log?: MockServerConfig["log"];
+  log?: MockServerOptions["log"];
   /** Seed configuration */
   seed?: SeedConfig;
   /**

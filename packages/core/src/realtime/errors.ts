@@ -65,11 +65,18 @@ export class RateLimitError extends RealtimeError {
   }
 }
 
-/** Payload validation failed */
-export class ValidationError extends RealtimeError {
+/**
+ * Payload validation failed on a live connection.
+ *
+ * Named apart from the `ValidationError` on the package root, which reports a
+ * schema failure on an HTTP response and is a different class — catching one
+ * would never catch the other, and a shared name made that look like a bug in
+ * the caller's code rather than two distinct errors.
+ */
+export class RealtimeValidationError extends RealtimeError {
   constructor(message = "Validation failed") {
     super(4422, message);
-    this.name = "ValidationError";
+    this.name = "RealtimeValidationError";
   }
 }
 
@@ -95,7 +102,7 @@ export function fromErrorCode(code: number, message: string): RealtimeError {
     case 4408:
       return new TimeoutError(message);
     case 4422:
-      return new ValidationError(message);
+      return new RealtimeValidationError(message);
     case 4429:
       return new RateLimitError(message);
     default:

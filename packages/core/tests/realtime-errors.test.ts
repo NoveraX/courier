@@ -8,7 +8,7 @@ import {
   RateLimitError,
   RealtimeError,
   TimeoutError,
-  ValidationError,
+  RealtimeValidationError,
 } from "../src/realtime/errors";
 
 describe("RealtimeError hierarchy", () => {
@@ -56,8 +56,8 @@ describe("RealtimeError hierarchy", () => {
     expect(err.code).toBe(4429);
   });
 
-  it("ValidationError has code 4422", () => {
-    const err = new ValidationError("Invalid payload");
+  it("RealtimeValidationError has code 4422", () => {
+    const err = new RealtimeValidationError("Invalid payload");
     expect(err.code).toBe(4422);
   });
 });
@@ -92,8 +92,8 @@ describe("fromErrorCode", () => {
     expect(fromErrorCode(4408, "Timeout")).toBeInstanceOf(TimeoutError);
   });
 
-  it("maps 4422 to ValidationError", () => {
-    expect(fromErrorCode(4422, "Bad")).toBeInstanceOf(ValidationError);
+  it("maps 4422 to RealtimeValidationError", () => {
+    expect(fromErrorCode(4422, "Bad")).toBeInstanceOf(RealtimeValidationError);
   });
 
   it("maps 4429 to RateLimitError", () => {

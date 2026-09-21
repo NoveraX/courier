@@ -18,7 +18,7 @@ import {
 import type {
   ChannelBuilder,
   Courier,
-  CourierConfig,
+  CourierBaseConfig,
   HttpBuilder,
   StreamBuilder,
 } from "./builder-types";
@@ -153,7 +153,7 @@ function head(kind: EndpointKind, inherited: Partial<BuilderState>): AnyBuilder 
 }
 
 function inheritedFrom(
-  config: CourierConfig,
+  config: CourierBaseConfig,
   parent?: Partial<BuilderState>,
 ): Partial<BuilderState> {
   return {
@@ -172,7 +172,7 @@ function makeBase(inherited: Partial<BuilderState>): Courier {
     endpoint: head("query", inherited) as unknown as HttpBuilder<void, void>,
     stream: head("stream", inherited) as unknown as StreamBuilder<void, void, void>,
     channel: head("channel", inherited) as unknown as ChannelBuilder<void, void, void, never>,
-    extend: (config: CourierConfig): Courier => makeBase(inheritedFrom(config, inherited)),
+    extend: (config: CourierBaseConfig): Courier => makeBase(inheritedFrom(config, inherited)),
   };
 }
 
@@ -199,6 +199,6 @@ function makeBase(inherited: Partial<BuilderState>): Courier {
  * export const getUser = endpoint.get(":id").variables(ById).response(UserSchema);
  * ```
  */
-export function courier(config: CourierConfig = {}): Courier {
+export function courier(config: CourierBaseConfig = {}): Courier {
   return makeBase(inheritedFrom(config));
 }

@@ -8,7 +8,7 @@
  *
  * Supporting pieces live in siblings:
  *
- * - `mock-server-types` — `MockServer`, `MockServerConfig` (re-exported below)
+ * - `mock-server-types` — `MockServer`, `MockServerOptions` (re-exported below)
  * - `ws-attach`         — lazy WS upgrade handler creation + attachment
  */
 
@@ -20,7 +20,7 @@ import { createMockRegistry } from "../registry";
 import { createMockStore } from "../store";
 import type { MockHistoryEntry, MockScenario, TypedMockFn } from "../types";
 import { registerAdminRoutes } from "./admin-api";
-import type { MockServer, MockServerConfig } from "./mock-server-types";
+import type { MockServer, MockServerOptions } from "./mock-server-types";
 import { registerPrefixRoutes } from "./prefix-routes";
 import type { LogLevel } from "./request-logger";
 import { createRequestLogger } from "./request-logger";
@@ -30,10 +30,10 @@ import { createScenarioControls } from "./scenario-controls";
 import { tryListen } from "./try-listen";
 import { attachWSUpgrade, createWSUpgrade } from "./ws-attach";
 
-export type { MockServer, MockServerConfig } from "./mock-server-types";
+export type { MockServer, MockServerOptions } from "./mock-server-types";
 
-/** @see {@link MockServerConfig} for full documentation */
-export function createMockServer(config?: MockServerConfig): MockServer {
+/** @see {@link MockServerOptions} for full documentation */
+export function createMockServer(config?: MockServerOptions): MockServer {
   const registry = createMockRegistry();
   const store = createMockStore();
   const history: MockHistoryEntry[] = [];

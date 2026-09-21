@@ -23,8 +23,8 @@ export {
   isRealtimeError,
   RateLimitError,
   RealtimeError,
+  RealtimeValidationError,
   TimeoutError,
-  ValidationError,
 } from "./errors";
 export { createMemoryPresence } from "./memory-presence";
 export { createMemoryPubSub } from "./memory-pubsub";

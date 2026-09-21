@@ -18,7 +18,7 @@ import WebSocket from "ws";
 
 import { decodeMessage, encodeMessage, type WSMessage } from "@noverax/courier/realtime";
 
-import { createMockServer, type MockServer, type MockServerConfig } from "../src/server/create-mock-server";
+import { createMockServer, type MockServer, type MockServerOptions } from "../src/server/create-mock-server";
 import type { PrefixMapping } from "../src/server/prefix-routes";
 
 // ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ const chatMappings: PrefixMapping[] = [
   },
 ];
 
-async function bootServer(extra?: Partial<MockServerConfig>): Promise<{
+async function bootServer(extra?: Partial<MockServerOptions>): Promise<{
   server: MockServer;
   url: string;
 }> {

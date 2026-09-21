@@ -260,7 +260,7 @@ export interface ChannelAddressed<TResponse, TVariables, TVariablesOut, TSend>
 }
 
 /** Configuration shared by every endpoint built from a base. */
-export interface CourierConfig {
+export interface CourierBaseConfig {
   /** Identifier used by tooling to attribute endpoints to their source. */
   id?: string;
   middleware?: readonly Middleware[];
@@ -293,5 +293,5 @@ export interface Courier {
    * Middleware and header lists are concatenated with this base's first;
    * every other value is replaced.
    */
-  extend(config: CourierConfig): Courier;
+  extend(config: CourierBaseConfig): Courier;
 }

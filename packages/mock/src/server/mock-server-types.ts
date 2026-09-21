@@ -2,7 +2,7 @@
  * Public configuration and server interface types for `createMockServer`.
  *
  * Re-exported from `create-mock-server.ts` so consumers continue to import
- * `MockServer` and `MockServerConfig` from there.
+ * `MockServer` and `MockServerOptions` from there.
  */
 
 import type { Hono } from "hono";
@@ -15,7 +15,7 @@ import type { LogLevel } from "./request-logger";
 import type { RequestHooks } from "./route-generator";
 
 /** Configuration for the mock HTTP server */
-export interface MockServerConfig {
+export interface MockServerOptions {
   /** Port to listen on (default: 7001) */
   port?: number;
   /** Hostname (default: "localhost") */

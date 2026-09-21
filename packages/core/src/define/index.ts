@@ -11,7 +11,7 @@ export type {
 export type {
   ChannelBuilder,
   Courier,
-  CourierConfig,
+  CourierBaseConfig,
   HttpBuilder,
   StreamBuilder,
 } from "./builder-types";

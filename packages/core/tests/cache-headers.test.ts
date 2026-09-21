@@ -4,9 +4,23 @@ import type { SchemaMetadata } from "../src/validation";
 
 const cached: SchemaMetadata = { type: "query", cache: { revalidate: 60 } };
 
-function headersOf(forwarded?: Headers, schema: SchemaMetadata = cached): Headers {
+/**
+ * `forwarded` is what reached the upstream; `incoming` is what the caller
+ * actually sent. They differ whenever the allowlist drops something, and the
+ * private-versus-shared decision has to follow the second.
+ */
+function headersOf(
+  forwarded?: Headers,
+  schema: SchemaMetadata = cached,
+  incoming: Headers = new Headers(forwarded),
+): Headers {
   const response = new Response(null, { status: 200 });
-  applyCacheHeaders(response, schema, forwarded);
+  applyCacheHeaders(
+    response,
+    schema,
+    forwarded,
+    new Request("https://app.example.com/api", { headers: incoming }),
+  );
   return response.headers;
 }
 
@@ -34,9 +48,38 @@ describe("cache directives", () => {
   });
 
   it("names every forwarded header a shared cache must key on", () => {
+    const headers = headersOf(new Headers({ "accept-language": "en", accept: "application/json" }));
+
+    expect(headers.get("Vary")).toBe("accept, accept-language");
+  });
+
+  it("keeps a response private when a tenant header says who is asking", () => {
     const headers = headersOf(new Headers({ "x-tenant": "acme", "accept-language": "en" }));
 
-    expect(headers.get("Vary")).toBe("accept-language, x-tenant");
+    expect(headers.get("Cache-Control")).toBe("private, max-age=60");
+    expect(headers.get("Vary")).toBeNull();
+  });
+
+  /**
+   * The decision used to read the forwarded set, so a credential the allowlist
+   * does not carry upstream was invisible to it — and the answer went out
+   * marked cacheable by every CDN in between.
+   */
+  it("keeps a response private when the credential never reached the upstream", () => {
+    const headers = headersOf(
+      new Headers({ accept: "application/json" }),
+      cached,
+      new Headers({ accept: "application/json", "x-api-key": "secret" }),
+    );
+
+    expect(headers.get("Cache-Control")).toBe("private, max-age=60");
+  });
+
+  it("treats a request it cannot see as personal", () => {
+    const response = new Response(null, { status: 200 });
+    applyCacheHeaders(response, cached, new Headers({ accept: "application/json" }));
+
+    expect(response.headers.get("Cache-Control")).toBe("private, max-age=60");
   });
 
   it("still carries the tags the endpoint declared", () => {

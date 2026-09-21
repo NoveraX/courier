@@ -1,6 +1,6 @@
 import { HTTPError } from "../errors";
 import type { Context } from "../http-client/types";
-import { filterHeaders } from "./merge-headers";
+import { filterResponseHeaders } from "./merge-headers";
 
 export type InternalResponse = {
   status: number;
@@ -17,9 +17,12 @@ export const buildResponse = (
 ): unknown => {
   if (response.stream) {
     if (context?.res instanceof Response && response.data instanceof ReadableStream) {
+      /* The upstream's own headers went straight to the browser here, so a
+         streamed answer disclosed whatever the upstream attached to it. The
+         body passes through unchanged, so its content type travels with it. */
       return new Response(response.data, {
         status: response.status,
-        headers: response.headers,
+        headers: filterResponseHeaders(response.headers, { streamed: true }),
       });
     }
 
@@ -32,7 +35,7 @@ export const buildResponse = (
 
   const baseResult = {
     status: response.status,
-    headers: filterHeaders(response.headers),
+    headers: filterResponseHeaders(response.headers),
   };
 
   const data = response.rawData ? { ...baseResult, data: response.data } : response.data;

@@ -1,4 +1,4 @@
-import { ALLOWED_HEADERS } from "./allowed-headers";
+import { ALLOWED_HEADERS, RESPONSE_HEADERS, STREAMED_RESPONSE_HEADERS } from "./allowed-headers";
 
 type HeadersInput = HeadersInit | Record<string, string | undefined>;
 
@@ -53,4 +53,35 @@ export const mergeHeaders = (
   });
 
   return merged;
+};
+
+/**
+ * Keep only the upstream response headers the browser may see.
+ *
+ * @param headers - Headers as the upstream sent them
+ * @param options - `streamed` when the body passes through unchanged
+ * @returns A new Headers carrying only what is allowed back
+ *
+ * @example
+ * ```ts
+ * filterResponseHeaders(upstream.headers); // buffered answer
+ * filterResponseHeaders(upstream.headers, { streamed: true });
+ * ```
+ */
+export const filterResponseHeaders = (
+  headers?: HeadersInput,
+  options?: { streamed?: boolean },
+): Headers => {
+  const allowed = new Set<string>([
+    ...RESPONSE_HEADERS,
+    ...(options?.streamed ? STREAMED_RESPONSE_HEADERS : []),
+  ]);
+  const source = headers ? toHeaders(headers) : new Headers();
+  const result = new Headers();
+
+  source.forEach((value, key) => {
+    if (allowed.has(key.toLowerCase())) result.set(key, value);
+  });
+
+  return result;
 };

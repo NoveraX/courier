@@ -139,8 +139,44 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
   };
 }
 
-/** Headers that make a response belong to one caller rather than to everyone. */
-const CREDENTIAL_HEADERS = ["authorization", "cookie", "proxy-authorization"] as const;
+/**
+ * Request headers that do not say who is asking.
+ *
+ * The decision used to run the other way, naming the credentials it knew —
+ * and a caller authenticating with anything else, an `X-Api-Key` say, got a
+ * response marked cacheable by every CDN between them and the server. Listing
+ * what is safe instead means an unfamiliar header makes the answer private
+ * rather than public.
+ */
+const IMPERSONAL_REQUEST_HEADERS: ReadonlySet<string> = new Set([
+  "accept",
+  "accept-encoding",
+  "accept-language",
+  "cache-control",
+  "connection",
+  "content-length",
+  "content-type",
+  "dnt",
+  "host",
+  "origin",
+  "pragma",
+  "referer",
+  "te",
+  "upgrade-insecure-requests",
+  "user-agent",
+]);
+
+/** Whether anything in the request ties the answer to one caller. */
+function identifiesCaller(request: Request | undefined): boolean {
+  if (!request) return true;
+  for (const name of request.headers.keys()) {
+    const header = name.toLowerCase();
+    if (IMPERSONAL_REQUEST_HEADERS.has(header)) continue;
+    if (header.startsWith("sec-fetch-") || header.startsWith("sec-ch-")) continue;
+    return true;
+  }
+  return false;
+}
 
 /**
  * Describe to caches how long this response keeps, and to whom it belongs.
@@ -155,20 +191,22 @@ export function applyCacheHeaders(
   response: Response,
   schema: SchemaMetadata,
   forwarded?: Headers,
+  request?: Request,
 ): void {
   if (schema.cache?.revalidate !== undefined) {
+    /* Read the request as it arrived: the forwarded set has already dropped
+       whatever the allowlist does not carry upstream, so a credential can be
+       missing from it while the answer still belongs to one caller. */
+    const personal = identifiesCaller(request);
     const varyOn = forwarded ? [...forwarded.keys()].sort() : [];
-    const credentialed = varyOn.some((name) =>
-      CREDENTIAL_HEADERS.includes(name as (typeof CREDENTIAL_HEADERS)[number]),
-    );
 
     response.headers.set(
       "Cache-Control",
-      credentialed
+      personal
         ? `private, max-age=${schema.cache.revalidate}`
         : `s-maxage=${schema.cache.revalidate}, stale-while-revalidate`,
     );
-    if (!credentialed && varyOn.length > 0) {
+    if (!personal && varyOn.length > 0) {
       response.headers.set("Vary", varyOn.join(", "));
     }
   }

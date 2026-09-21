@@ -438,7 +438,11 @@ describe("integration: HTTP-semantic proxy", () => {
 			source: "api",
 			group: "users",
 			method: "getAll",
-		}, { res: new NextResponse(), proxyMethod: "GET" }) as Response;
+		}, {
+			res: new NextResponse(),
+			proxyMethod: "GET",
+			req: new Request("https://app.example.com/api/request"),
+		}) as Response;
 
 		expect(response.headers.get("cache-control")).toBe("s-maxage=60, stale-while-revalidate");
 	});
@@ -464,7 +468,11 @@ describe("integration: HTTP-semantic proxy", () => {
 			source: "api",
 			group: "users",
 			method: "getAll",
-		}, { res: new NextResponse(), proxyMethod: "GET" }) as Response;
+		}, {
+			res: new NextResponse(),
+			proxyMethod: "GET",
+			req: new Request("https://app.example.com/api/request"),
+		}) as Response;
 
 		expect(response.headers.get("x-courier-tags")).toBe("users,list");
 		expect(response.headers.get("cache-control")).toBe("s-maxage=30, stale-while-revalidate");

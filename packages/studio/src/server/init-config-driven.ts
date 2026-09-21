@@ -15,6 +15,7 @@ import { type LoadedCourierConfig, loadCourierConfig } from "./config-loader";
 import { ConfigNotFoundError } from "./config-loader-errors";
 import { type ConfigWatcher, startConfigWatcher } from "./config-watcher";
 import type { MockRegistry } from "./mock-registry";
+import type { WatcherStatus } from "./watcher-status";
 
 const log = createLogger("Studio");
 
@@ -23,11 +24,13 @@ export interface InitConfigDrivenDeps {
   bindingTable: BindingTable;
   mockRegistry: MockRegistry;
   uiNamespace: Namespace;
+  watcherStatus: WatcherStatus;
   setConfigPath: (path: string) => void;
 }
 
 export async function initConfigDriven(deps: InitConfigDrivenDeps): Promise<ConfigWatcher | null> {
-  const { projectRoot, bindingTable, mockRegistry, uiNamespace, setConfigPath } = deps;
+  const { projectRoot, bindingTable, mockRegistry, uiNamespace, watcherStatus, setConfigPath } =
+    deps;
 
   let loaded: LoadedCourierConfig;
   try {
@@ -48,6 +51,7 @@ export async function initConfigDriven(deps: InitConfigDrivenDeps): Promise<Conf
     projectRoot,
     bindingTable,
     uiNamespace,
+    watcherStatus,
     onReload: (next) => {
       setConfigPath(next.configFile);
       mockRegistry.syncFromConfig(next.config);

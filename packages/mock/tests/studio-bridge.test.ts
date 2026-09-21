@@ -3,7 +3,6 @@ import { createMockStore } from "../src/store/mock-store";
 import { createNetworkState } from "../src/network/state";
 import { createEventEmitter } from "../src/studio/event-emitter";
 import { createCommandHandler } from "../src/studio/command-handler";
-import { createFileWatcher } from "../src/studio/file-watcher";
 import type { BridgeContext, MockCommand } from "../src/studio/types";
 import type { MockServer } from "../src/server/create-mock-server";
 
@@ -534,51 +533,5 @@ describe("createCommandHandler", () => {
     await vi.waitFor(() => expect(cb).toHaveBeenCalled());
 
     expect(cb).toHaveBeenCalledWith(expect.objectContaining({ ok: false }));
-  });
-});
-
-// ── FileWatcher tests ────────────────────────────────────────────────────────
-
-describe("createFileWatcher", () => {
-  it("returns handle with stop method and watchCount", () => {
-    const watcher = createFileWatcher({
-      paths: ["/tmp/nonexistent-path-xyz"],
-      onChange: () => {},
-    });
-    // Non-existent path → 0 watchers
-    expect(watcher.watchCount).toBe(0);
-    watcher.stop();
-  });
-
-  it("silently skips non-existent paths", () => {
-    const onChange = vi.fn();
-    const watcher = createFileWatcher({
-      paths: ["/tmp/definitely-does-not-exist-12345"],
-      onChange,
-    });
-    expect(watcher.watchCount).toBe(0);
-    watcher.stop();
-  });
-
-  it("watches existing directories", () => {
-    const onChange = vi.fn();
-    const watcher = createFileWatcher({
-      paths: ["/tmp"],
-      onChange,
-      debounce: 50,
-    });
-    expect(watcher.watchCount).toBe(1);
-    watcher.stop();
-    expect(watcher.watchCount).toBe(0);
-  });
-
-  it("stop clears all watchers", () => {
-    const watcher = createFileWatcher({
-      paths: ["/tmp"],
-      onChange: () => {},
-    });
-    expect(watcher.watchCount).toBe(1);
-    watcher.stop();
-    expect(watcher.watchCount).toBe(0);
   });
 });

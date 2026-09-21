@@ -100,6 +100,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     bindingTable,
     mockRegistry,
     uiNamespace,
+    watcherStatus,
     setConfigPath: (path) => {
       loadedConfigPath = path;
     },

@@ -1,74 +1,204 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CourierConfig } from "@noverax/courier/config";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BindingTable } from "../src/server/catalog/binding-table";
-import type { LoadedCourierConfig } from "../src/server/config-loader";
-import { startConfigWatcher } from "../src/server/config-watcher";
+import { type LoadedCourierConfig, loadCourierConfig } from "../src/server/config-loader";
+import { type ConfigWatcher, startConfigWatcher } from "../src/server/config-watcher";
 
 function makeLoaded(deps: string[]): LoadedCourierConfig {
   const config = { sources: {} } as unknown as CourierConfig;
   return { config, configFile: deps[0] ?? "", deps };
 }
 
-let stops: Array<() => void> = [];
+let watchers: ConfigWatcher[] = [];
+let roots: string[] = [];
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** Long enough for a native notification to arrive and a reload to run. */
+const SETTLE_MS = 250;
+
+function start(initial: LoadedCourierConfig, deps: Parameters<typeof startConfigWatcher>[1]) {
+  const watcher = startConfigWatcher(initial, deps);
+  watchers.push(watcher);
+  return watcher;
+}
+
+/** A project whose config imports one module, which imports another. */
+function makeProject(): { root: string; config: string; direct: string; deep: string } {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "config-watcher-")));
+  roots.push(root);
+  mkdirSync(join(root, "src"));
+  const deep = join(root, "src", "deep.ts");
+  const direct = join(root, "src", "api.ts");
+  const config = join(root, "courier.config.ts");
+  writeFileSync(deep, 'export const host = "v1.example.com"\n');
+  writeFileSync(direct, 'import { host } from "./deep"\nexport const api = { baseURL: host }\n');
+  writeFileSync(config, 'import { api } from "./src/api"\nexport default { sources: { demo: api } }\n');
+  return { root, config, direct, deep };
+}
+
+function baseURLOf(loaded: LoadedCourierConfig): unknown {
+  return (loaded.config.sources as Record<string, { baseURL?: unknown }>).demo?.baseURL;
+}
 
 afterEach(() => {
-  for (const stop of stops) stop();
-  stops = [];
+  for (const watcher of watchers) watcher.stop();
+  watchers = [];
+  for (const root of roots) rmSync(root, { recursive: true, force: true });
+  roots = [];
 });
 
 describe("startConfigWatcher", () => {
   it("returns the initial loaded config from getCurrent()", () => {
-    const dir = mkdtempSync(join(tmpdir(), "config-watcher-"));
-    const file = join(dir, "courier.config.ts");
-    writeFileSync(file, "");
-    const initial = makeLoaded([file]);
-    const watcher = startConfigWatcher(initial, {
-      projectRoot: dir,
-      bindingTable: new BindingTable(),
-    });
-    stops.push(() => watcher.stop());
+    const { root, config } = makeProject();
+    const initial = makeLoaded([config]);
+    const watcher = start(initial, { projectRoot: root, bindingTable: new BindingTable() });
+
     expect(watcher.getCurrent()).toBe(initial);
   });
 
   it("stop() is idempotent", () => {
-    const dir = mkdtempSync(join(tmpdir(), "config-watcher-"));
-    const file = join(dir, "courier.config.ts");
-    writeFileSync(file, "");
-    const watcher = startConfigWatcher(makeLoaded([file]), {
-      projectRoot: dir,
+    const { root, config } = makeProject();
+    const watcher = startConfigWatcher(makeLoaded([config]), {
+      projectRoot: root,
       bindingTable: new BindingTable(),
     });
+
     expect(() => {
       watcher.stop();
       watcher.stop();
     }).not.toThrow();
   });
 
-  it("ignores deps that do not exist on disk", () => {
-    const dir = mkdtempSync(join(tmpdir(), "config-watcher-"));
-    const missing = join(dir, "ghost.ts");
-    const watcher = startConfigWatcher(makeLoaded([missing]), {
-      projectRoot: dir,
-      bindingTable: new BindingTable(),
-    });
-    stops.push(() => watcher.stop());
-    expect(watcher.getCurrent().deps).toEqual([missing]);
-  });
-
   it("does not invoke onReload synchronously", () => {
-    const dir = mkdtempSync(join(tmpdir(), "config-watcher-"));
-    const file = join(dir, "courier.config.ts");
-    writeFileSync(file, "");
+    const { root, config } = makeProject();
     const onReload = vi.fn();
-    const watcher = startConfigWatcher(makeLoaded([file]), {
-      projectRoot: dir,
+    start(makeLoaded([config]), {
+      projectRoot: root,
       bindingTable: new BindingTable(),
       onReload,
     });
-    stops.push(() => watcher.stop());
+
     expect(onReload).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The behaviour the watcher exists for. Each case drives the real filesystem
+ * and the real loader — a change that does not reach `onReload` here is a
+ * change a developer would not see in the Studio.
+ */
+describe("startConfigWatcher — reload", () => {
+  async function watchProject() {
+    const project = makeProject();
+    const initial = await loadCourierConfig(project.root);
+    const reloads: LoadedCourierConfig[] = [];
+    start(initial, {
+      projectRoot: project.root,
+      bindingTable: new BindingTable(),
+      onReload: (loaded) => reloads.push(loaded),
+    });
+    await sleep(SETTLE_MS);
+    return { ...project, initial, reloads };
+  }
+
+  async function nextReload(reloads: LoadedCourierConfig[], budgetMs = 4000) {
+    const before = reloads.length;
+    for (let waited = 0; waited < budgetMs; waited += 50) {
+      if (reloads.length > before) return reloads[reloads.length - 1];
+      await sleep(50);
+    }
+    return null;
+  }
+
+  it("picks up an edit to a module the config imports transitively", async () => {
+    const { deep, reloads } = await watchProject();
+
+    writeFileSync(deep, 'export const host = "v2.example.com"\n');
+
+    expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe("v2.example.com");
+  });
+
+  it("keeps working after an editor replaces a file rather than writing it", async () => {
+    const { root, deep, reloads } = await watchProject();
+
+    const temp = join(root, "src", "deep.tmp");
+    writeFileSync(temp, 'export const host = "atomic.example.com"\n');
+    renameSync(temp, deep);
+    expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe("atomic.example.com");
+
+    writeFileSync(deep, 'export const host = "after-atomic.example.com"\n');
+
+    expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe(
+      "after-atomic.example.com",
+    );
+  });
+
+  it("watches a module the config has only just started importing", async () => {
+    const { root, config, reloads } = await watchProject();
+
+    const added = join(root, "src", "added.ts");
+    writeFileSync(added, 'export const host = "added.example.com"\n');
+    writeFileSync(config, 'import { host } from "./src/added"\nexport default { sources: { demo: { baseURL: host } } }\n');
+    const afterImport = await nextReload(reloads);
+    expect(baseURLOf(afterImport as LoadedCourierConfig)).toBe("added.example.com");
+    expect((afterImport as LoadedCourierConfig).deps).toContain(added);
+
+    writeFileSync(added, 'export const host = "added-edited.example.com"\n');
+
+    expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe(
+      "added-edited.example.com",
+    );
+  });
+
+  it("reports the tracked count and each change to the watcher status", async () => {
+    const project = makeProject();
+    const initial = await loadCourierConfig(project.root);
+    const setApiPathCount = vi.fn();
+    const emitChange = vi.fn();
+    start(initial, {
+      projectRoot: project.root,
+      bindingTable: new BindingTable(),
+      watcherStatus: {
+        setApiPathCount,
+        emitChange,
+        setMockFileCount: vi.fn(),
+        sendSnapshot: vi.fn(),
+      },
+    });
+    await sleep(SETTLE_MS);
+    expect(setApiPathCount).toHaveBeenCalledWith(initial.deps.length);
+
+    writeFileSync(project.deep, 'export const host = "counted.example.com"\n');
+    for (let waited = 0; waited < 4000 && emitChange.mock.calls.length === 0; waited += 50) {
+      await sleep(50);
+    }
+
+    expect(emitChange).toHaveBeenCalledWith("api", [project.deep]);
+  });
+
+  it("keeps the last good config when a dep is deleted, and recovers when it returns", async () => {
+    const { deep, initial, reloads } = await watchProject();
+    const watcher = watchers[watchers.length - 1] as ConfigWatcher;
+
+    unlinkSync(deep);
+    await sleep(1200);
+    expect(watcher.getCurrent()).toBe(initial);
+
+    writeFileSync(deep, 'export const host = "restored.example.com"\n');
+
+    expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe(
+      "restored.example.com",
+    );
   });
 });

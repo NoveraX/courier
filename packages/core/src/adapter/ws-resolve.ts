@@ -59,7 +59,7 @@ export function resolveSubscribeTopic(
     typeof endpoint !== "function" ||
     schema?.transport !== "ws" ||
     !served ||
-    !isExposedToWire(dataSource, group)
+    !isExposedToWire(dataSource, group, method)
   ) {
     ctx.sendMessage({
       type: "error",

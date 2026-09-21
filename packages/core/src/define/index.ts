@@ -1,4 +1,6 @@
 export { defineApi, getSourceName, setSourceName } from "./api";
+export { type BoundaryConfig, defineBoundary } from "./boundary";
+export type { ExposablePath, ExposedEndpoint, KindAt, ProxyBoundary } from "./boundary-types";
 export type {
   ChannelBuilder,
   Courier,

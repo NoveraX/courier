@@ -83,7 +83,10 @@ export async function executeRequest(
 
   /* Answered as an unknown name is: telling a caller that guessing names is
      forbidden confirms that the name it guessed exists. */
-  if (fromWire && !isExposedToWire(dataSource, typeof group === "string" ? group : undefined)) {
+  if (
+    fromWire &&
+    !isExposedToWire(dataSource, typeof group === "string" ? group : undefined, String(method))
+  ) {
     return buildErrorResponse(context, 400, notFound);
   }
 

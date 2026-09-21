@@ -106,6 +106,11 @@ export type BaseOptions = MergeOptions &
      * re-open individual groups with their own `expose`.
      */
     expose?: boolean;
+    /**
+     * The endpoints a browser may call, named one by one. Takes precedence
+     * over `expose`; see `defineBoundary`.
+     */
+    boundary?: { source: string; endpoints: Readonly<Record<string, unknown>> };
     /** Custom body serializer replacing JSON.stringify (e.g. for FormData or XML) */
     bodySerializer?: (data: Record<string, unknown>) => BodyInit;
     /** Custom search params serializer with stringify/parse methods */

@@ -8,7 +8,12 @@
  * endpoint written for a cron job is reachable from a page, and reachable
  * *with the server's credentials*, which is the whole point of the proxy.
  *
- * `expose` is where that is said. It lives on the source and on the group
+ * A source may answer this in two ways. `defineBoundary` names the endpoints
+ * that are open, which is the precise form and the one a reviewer can read;
+ * where it is declared, it is the whole answer. `expose` is the coarse form
+ * for shutting a source or a group off wholesale.
+ *
+ * `expose` lives on the source and on the group
  * rather than on each endpoint, so shutting a whole API off from the browser
  * is one line in the config and no change to any declaration. An endpoint that
  * needs its own answer gets it by living in its own group.
@@ -18,9 +23,10 @@
  * guessing names is trying to learn.
  */
 
-/** The shape this reads; both levels are optional and default to exposed. */
+/** The shape this reads; every level is optional. */
 interface ExposableOptions {
   expose?: boolean;
+  boundary?: { endpoints?: Record<string, unknown> };
   groups?: Record<string, { options?: { expose?: boolean } }>;
 }
 
@@ -36,9 +42,21 @@ interface ExposableOptions {
  * defineApi({ expose: false, groups: { public: defineGroup({ expose: true, … }) } });
  * ```
  */
-export function isExposedToWire(dataSource: unknown, group: string | undefined): boolean {
+export function isExposedToWire(
+  dataSource: unknown,
+  group: string | undefined,
+  method?: string,
+): boolean {
   const options = (dataSource as { options?: ExposableOptions } | undefined)?.options;
   if (!options) return true;
+
+  /* A declared boundary is the whole answer: it lists what may be called, so
+     anything it does not name is refused however the coarser flags read. */
+  const listed = options.boundary?.endpoints;
+  if (listed && method !== undefined) {
+    const path = group === undefined ? method : `${group}.${method}`;
+    return Object.hasOwn(listed, path);
+  }
 
   if (group !== undefined) {
     const groupExpose = options.groups?.[group]?.options?.expose;

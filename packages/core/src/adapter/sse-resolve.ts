@@ -24,7 +24,7 @@ export function resolveSSEEndpoint(
   }
 
   /* Same answer as an unknown name, for the same reason. */
-  if (!isExposedToWire(dataSource, group)) {
+  if (!isExposedToWire(dataSource, group, method)) {
     return errorResponse(400, notFound);
   }
   if (schema?.transport !== "sse") {

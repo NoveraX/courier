@@ -1,3 +1,4 @@
+import type { ProxyBoundary } from "../define/boundary-types";
 import type { HTTPError } from "../errors";
 import type { ProxyPath } from "./proxy-path";
 
@@ -19,6 +20,12 @@ export type ProxyCallerDefaults = {
   proxyPath?: ProxyPath;
   /** API source object for transport detection — pass the defineApi() result */
   source?: Record<string, unknown>;
+  /**
+   * The endpoints this client may call, from `defineBoundary`. Pass this
+   * instead of `source` to keep the API's definition out of the bundle —
+   * a boundary carries the transports and nothing about the server.
+   */
+  boundary?: ProxyBoundary;
   timeout?: number;
   credentials?: RequestCredentials;
   headers?: Record<string, string>;

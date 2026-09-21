@@ -12,7 +12,7 @@
  * already knows.
  */
 
-import type { AnyEndpoint, InferKind } from "./marker";
+import type { AnyEndpoint, InferKind, InferSend } from "./marker";
 
 /** The groups an API declares, or never for one that declares none. */
 type GroupsOf<TApi> = TApi extends { options: { groups: infer TGroups } } ? TGroups : never;
@@ -87,3 +87,27 @@ export interface ProxyBoundary {
   /** Endpoint path to its kind, for every endpoint the browser may call. */
   endpoints: Readonly<Record<string, ExposedEndpoint>>;
 }
+
+/**
+ * How the browser must reach one endpoint, read from the API's own type.
+ *
+ * A boundary is written by hand so that the API itself never becomes a runtime
+ * value in the browser — the moment it does, the whole definition follows it
+ * into the bundle. What the developer writes is therefore checked rather than
+ * derived: naming the wrong shape does not compile.
+ */
+export type WireShapeAt<TApi, TPath extends string> =
+  EndpointAt<TApi, TPath> extends AnyEndpoint
+    ? InferKind<EndpointAt<TApi, TPath>> extends "stream"
+      ? "stream"
+      : InferKind<EndpointAt<TApi, TPath>> extends "channel"
+        ? [InferSend<EndpointAt<TApi, TPath>>] extends [never]
+          ? "channel"
+          : "duplex"
+        : "request"
+    : never;
+
+/** What a boundary declares: every endpoint the browser may call, and its shape. */
+export type ExposureMap<TApi> = {
+  [P in ExposablePath<TApi>]?: WireShapeAt<TApi, P>;
+};

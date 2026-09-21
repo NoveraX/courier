@@ -37,9 +37,14 @@ const api = defineApi({
   },
 });
 
-const boundary = defineBoundary(api, {
+const boundary = defineBoundary<typeof api>({
   source: "api",
-  expose: ["posts.list", "posts.feed", "posts.room", "posts.chat"],
+  expose: {
+    "posts.list": "request",
+    "posts.feed": "stream",
+    "posts.room": "channel",
+    "posts.chat": "duplex",
+  },
 });
 
 const fetchSpy = vi.fn();
@@ -128,7 +133,10 @@ describe("defineBoundary — what it refuses", () => {
   });
 
   it("refuses a sibling in an otherwise open group", async () => {
-    const narrow = defineBoundary(api, { source: "api", expose: ["posts.list"] });
+    const narrow = defineBoundary<typeof api>({
+      source: "api",
+      expose: { "posts.list": "request" },
+    });
     const options = (api as unknown as { options: Record<string, unknown> }).options;
     const source = { ...(api as object), options: { ...options, boundary: narrow } };
 

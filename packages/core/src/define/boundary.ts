@@ -12,83 +12,60 @@
  * carries the names that were opened and nothing else — no upstream host, no
  * middleware, no path of an endpoint that was kept back.
  *
- * It is checked by the compiler rather than generated, so there is no build
- * step to run and nothing to drift: renaming an endpoint breaks the boundary
- * that still names the old one.
+ * The API is named in type position only. That is the point rather than a
+ * detail: taking the source as a runtime argument would pull the whole
+ * definition into whatever module declares the boundary, and from there into
+ * the bundle — which is the leak this exists to close. So the shape of each
+ * endpoint is written out and checked against the type instead of read off
+ * the value, and naming the wrong one does not compile.
  */
 
-import type { ExposablePath, ExposedEndpoint, ProxyBoundary } from "./boundary-types";
-import { ENDPOINT_SCHEMA } from "./marker";
+import type { ExposedEndpoint, ExposureMap, ProxyBoundary } from "./boundary-types";
 
 export interface BoundaryConfig<TApi> {
   /** The source's name in the registry, as `courier.config.ts` keys it. */
   source: string;
-  /** Every endpoint the browser may call. Anything absent is refused. */
-  expose: ReadonlyArray<ExposablePath<TApi>>;
+  /** Every endpoint the browser may call, with its shape. Absent means refused. */
+  expose: ExposureMap<TApi>;
 }
+
+/** How each declared shape reaches the wire. */
+const SHAPES: Readonly<Record<string, ExposedEndpoint>> = {
+  request: {},
+  stream: { transport: "sse" },
+  channel: { transport: "ws" },
+  duplex: { transport: "ws", bidirectional: true },
+};
 
 /**
  * Declare the proxy boundary for one source.
  *
- * @param api - The source itself, for the compiler to check names against
  * @param config - The source's registry name and the endpoints to expose
  * @returns The descriptor the server gates on and the browser receives
  *
  * @example
  * ```ts
- * export const boundary = defineBoundary(api, {
+ * import type { api } from "./api";
+ *
+ * export const boundary = defineBoundary<typeof api>({
  *   source: "api",
- *   expose: ["posts.list", "posts.feed"],
+ *   expose: {
+ *     "posts.list": "request",
+ *     "posts.feed": "stream",
+ *     "chat.room": "duplex",
+ *   },
  * });
- * // "posts.lsit" — compile error. "admin.purge" — refused at runtime.
+ * // "posts.lsit" — does not compile. "posts.feed": "request" — does not compile.
+ * // "admin.purge" — absent, so refused at runtime and unknown to the browser.
  * ```
  */
-export function defineBoundary<TApi extends object>(
-  api: TApi,
-  config: BoundaryConfig<TApi>,
-): ProxyBoundary {
+export function defineBoundary<TApi>(config: BoundaryConfig<TApi>): ProxyBoundary {
   const endpoints: Record<string, ExposedEndpoint> = {};
 
-  for (const path of config.expose) {
-    const shape = wireShapeOf(api, String(path));
-    if (shape) endpoints[String(path)] = shape;
+  for (const [path, shape] of Object.entries(config.expose)) {
+    const wire = typeof shape === "string" ? SHAPES[shape] : undefined;
+    if (wire) endpoints[path] = { ...wire };
   }
 
   return { source: config.source, endpoints };
-}
-
-/**
- * Read what the client needs to reach an endpoint, off the source at runtime.
- *
- * The compiler already proved the path exists, so a miss here means the value
- * did not match its own type — a hand-written object, a stale build. It is
- * dropped rather than guessed at: an endpoint the boundary cannot describe is
- * one the browser should not be told how to call.
- */
-function wireShapeOf(api: object, path: string): ExposedEndpoint | undefined {
-  const [head, tail] = path.split(".");
-  if (!head) return undefined;
-
-  const options = (api as { options?: { groups?: Record<string, unknown> } }).options;
-  const holder = tail === undefined ? api : options?.groups?.[head];
-  const name = tail ?? head;
-  const endpoint = (holder as Record<string, unknown> | undefined)?.[name];
-  if (!endpoint || typeof endpoint !== "object") return undefined;
-
-  const schema = (endpoint as Record<symbol, WireSchema | undefined>)[ENDPOINT_SCHEMA];
-  if (!schema) return undefined;
-
-  if (schema.transport === "sse") return { transport: "sse" };
-  if (schema.transport === "ws") {
-    const bidirectional = schema.bidirectional === true || schema.receive !== undefined;
-    return bidirectional ? { transport: "ws", bidirectional: true } : { transport: "ws" };
-  }
-  return {};
-}
-
-/** The parts of an endpoint's stamped metadata a boundary reads. */
-interface WireSchema {
-  transport?: "sse" | "ws";
-  bidirectional?: boolean;
-  receive?: unknown;
 }

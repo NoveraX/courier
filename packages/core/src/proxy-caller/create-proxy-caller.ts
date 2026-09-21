@@ -7,6 +7,7 @@ import {
   createProxyWSChannelFactory,
   createProxyWSPushFactory,
 } from "../transport/proxy";
+import { sourceFromBoundary } from "./from-boundary";
 import { mergeProxyPath, type ProxyPath } from "./proxy-path";
 import type { ProxyCallerDefaults } from "./types";
 
@@ -47,7 +48,9 @@ export function createProxyCaller<TApi>(
 ): InferClient<TApi>;
 
 export function createProxyCaller(source: string, defaults: ProxyCallerDefaults = {}): unknown {
-  const apiSource = defaults.source;
+  /* A boundary is the narrow form of the same thing, and the one that keeps
+     the definition out of the browser, so it wins where both are given. */
+  const apiSource = defaults.boundary ? sourceFromBoundary(defaults.boundary) : defaults.source;
   // Per-transport merge: caller-level `proxyPath` wins over the source's
   // own `options.proxyPath` on a field-by-field basis. Either side may
   // be partial or undefined; missing transports fall back to built-in

@@ -167,23 +167,28 @@ export async function attachRuntime(id?: string): Promise<RuntimeHandle> {
   installSourceDefinedHook();
 
   if (!isBrowser) {
-    let loaded: LoadedCourierConfig | null = null;
+    let registered = false;
     try {
       /* Imported here rather than at the top so the client bundle, which also
          reaches this module, never has the disk loader in its graph. */
       const { loadCourierConfig } = await import("./load-config");
-      loaded = await loadCourierConfig();
+      const loaded: LoadedCourierConfig | null = await loadCourierConfig();
+      if (loaded) {
+        /* Registration is inside the same try: a config that loads but
+           declares no usable `sources` is the same kind of failure as one
+           that will not load, and neither may end the host's startup. */
+        registerSources(loaded.config.sources);
+        setAppOrigin(loaded.config.runtime?.appOrigin ?? detectAppOrigin());
+        registered = true;
+      }
     } catch (err) {
       /* Attaching must not take down the host application, but a config that
-         exists and will not load leaves it with no sources at all — say why. */
+         exists and will not load leaves it with no sources at all — say why.
+         The first request then fails with SOURCES_NOT_REGISTERED, which names
+         the remedy. */
       log.error("courier.config could not be loaded; no sources were registered", err);
     }
-    if (loaded) {
-      registerSources(loaded.config.sources);
-      setAppOrigin(loaded.config.runtime?.appOrigin ?? detectAppOrigin());
-    } else {
-      setAppOrigin(detectAppOrigin());
-    }
+    if (!registered) setAppOrigin(detectAppOrigin());
   }
 
   // Install the announce-driven runtime source registry BEFORE consuming

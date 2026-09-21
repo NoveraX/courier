@@ -27,6 +27,7 @@
 
 import { setSourceName } from "./define/api";
 import type { Sources } from "./define/types";
+import { ConfigurationError } from "./errors/configuration-error";
 
 const SOURCES_KEY = Symbol.for("courier.sources");
 
@@ -47,6 +48,13 @@ function getRegistry(): SourcesRegistry {
   return g[SOURCES_KEY] as SourcesRegistry;
 }
 
+/** What the caller actually passed, for an error message that names it. */
+function describe(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "an array";
+  return typeof value;
+}
+
 /**
  * Replace the current sources and notify every listener.
  *
@@ -56,6 +64,22 @@ function getRegistry(): SourcesRegistry {
  * intend to replace the whole dictionary (HMR does this).
  */
 export function registerSources(sources: Sources): void {
+  /* The registry is process-global and read much later, by adapters, at
+     request time. Accepting a wrong value here reports the mistake as a
+     missing endpoint somewhere else entirely — or, for null, as a bare
+     TypeError thrown from inside the library. */
+  if (sources === null || typeof sources !== "object" || Array.isArray(sources)) {
+    throw new ConfigurationError(
+      "SOURCES_NOT_A_RECORD",
+      [
+        `[courier] registerSources() expects an object of named sources, received ${describe(sources)}.`,
+        "",
+        "Each key is the name the proxy addresses the source by:",
+        "  registerSources({ api, billing })",
+      ].join("\n"),
+    );
+  }
+
   for (const [key, src] of Object.entries(sources)) {
     setSourceName(src, key);
   }

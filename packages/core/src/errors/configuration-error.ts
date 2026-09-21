@@ -34,6 +34,12 @@ export type ConfigurationErrorCode =
    */
   | "SOURCES_NOT_REGISTERED"
   /**
+   * `registerSources` was handed something that is not a dictionary of
+   * sources. Registering it would leave every later `requireSources()` call
+   * answering with a value no adapter can address, far from the mistake.
+   */
+  | "SOURCES_NOT_A_RECORD"
+  /**
    * An endpoint's wire closure recorded no call, so its method and path could
    * not be determined. The closure must address the endpoint exactly once,
    * for example `(http, vars) => http.get(":id", vars)`.

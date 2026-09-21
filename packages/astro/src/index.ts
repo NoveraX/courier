@@ -1,4 +1,4 @@
-import { createHandler } from "@noverax/courier";
+import { createHandler, type HandlerConfig } from "@noverax/courier";
 
 /**
  * Create an Astro API endpoint handler for the courier proxy.
@@ -6,6 +6,9 @@ import { createHandler } from "@noverax/courier";
  * Sources are read from the core global registry populated by
  * `attachRuntime()` — call `await attachRuntime()` in your server
  * bootstrap before the first request.
+ *
+ * @param config - Handler options, including the `allowedOrigins` the SSE
+ *   transport checks against. Omit it to accept the defaults.
  *
  * @example
  * ```ts
@@ -17,7 +20,9 @@ import { createHandler } from "@noverax/courier";
  * export const POST = handler;
  * ```
  */
-export function courierHandler(): (context: { request: Request }) => Promise<Response> {
-  const { handle } = createHandler();
+export function courierHandler(
+  config?: HandlerConfig,
+): (context: { request: Request }) => Promise<Response> {
+  const { handle } = createHandler(config);
   return ({ request }: { request: Request }) => handle(request);
 }

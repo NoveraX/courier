@@ -56,6 +56,7 @@ export function createCourierServer(config: CourierServerConfig): CourierServer 
   registerSources(sources);
 
   const handler = createHandler({
+    allowedOrigins,
     sseHeaders: config.sseHeaders,
     sseMaxLifetimeMs: config.sseMaxLifetimeMs,
     maxSSEConnections: config.maxSSEConnections,

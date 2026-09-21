@@ -93,7 +93,7 @@ export async function executeRequest(
     ...baseOptions
   } = options ?? {};
 
-  const middlewareCtx = buildMiddlewareContext(
+  const middlewareCtx = buildMiddlewareContext({
     source,
     group,
     method,
@@ -102,9 +102,9 @@ export async function executeRequest(
     context,
     dataSource,
     requestId,
-    undefined,
-    endpointOptions?.allowedHeaders,
-  );
+    endpointAllowedHeaders: endpointOptions?.allowedHeaders,
+    kind: schema?.type,
+  });
   const mode = context?.mode ?? (context?.proxyMethod ? "proxy" : "direct");
 
   /* Source-level middleware wraps endpoint-level, so a concern declared once

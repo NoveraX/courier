@@ -540,7 +540,7 @@ describe("rateLimitMiddleware", () => {
 describe("cacheMiddleware", () => {
 	it("caches successful responses", async () => {
 		let calls = 0;
-		const handler = cacheMiddleware({ ttl: 5000 }).handler as WrapHandler;
+		const handler = cacheMiddleware({ scope: "public", ttl: 5000 }).handler as WrapHandler;
 		const ctx = { source: "api", group: "users", method: "getAll", headers: new Headers() };
 
 		const next = () => {
@@ -557,7 +557,7 @@ describe("cacheMiddleware", () => {
 
 	it("does not cache error responses", async () => {
 		let calls = 0;
-		const handler = cacheMiddleware({ ttl: 5000 }).handler as WrapHandler;
+		const handler = cacheMiddleware({ scope: "public", ttl: 5000 }).handler as WrapHandler;
 		const ctx = { source: "api", method: "test", headers: new Headers() };
 
 		const next = () => {
@@ -576,7 +576,7 @@ describe("cacheMiddleware", () => {
 		vi.useFakeTimers();
 
 		let calls = 0;
-		const handler = cacheMiddleware({ ttl: 100 }).handler as WrapHandler;
+		const handler = cacheMiddleware({ scope: "public", ttl: 100 }).handler as WrapHandler;
 		const ctx = { source: "api", method: "test", headers: new Headers() };
 
 		const next = () => {
@@ -598,7 +598,7 @@ describe("cacheMiddleware", () => {
 
 	it("caches separately per variables", async () => {
 		let calls = 0;
-		const handler = cacheMiddleware({ ttl: 5000 }).handler as WrapHandler;
+		const handler = cacheMiddleware({ scope: "public", ttl: 5000 }).handler as WrapHandler;
 
 		const next = () => {
 			calls++;
@@ -619,7 +619,7 @@ describe("cacheMiddleware", () => {
 
 	it("accepts custom storage", async () => {
 		const storage = new Map<string, { data: MiddlewareResponse; expiry: number }>();
-		const handler = cacheMiddleware({ ttl: 5000, storage }).handler as WrapHandler;
+		const handler = cacheMiddleware({ scope: "public", ttl: 5000, storage }).handler as WrapHandler;
 		const ctx = { source: "api", method: "test", headers: new Headers() };
 
 		await handler(ctx, () => Promise.resolve(ok("data")));

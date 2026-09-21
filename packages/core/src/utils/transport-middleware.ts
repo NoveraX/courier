@@ -50,20 +50,20 @@ export async function runTransportMiddleware(input: TransportMiddlewareInput): P
   const { transport, sources, source, group, method, variables, request, requestId } = input;
 
   const dataSource = sources[source] as unknown as Record<string, unknown>;
-  const { options: endpointOptions } = resolveEndpoint(dataSource, group, method);
+  const { options: endpointOptions, schema } = resolveEndpoint(dataSource, group, method);
 
-  const middlewareCtx = buildMiddlewareContext(
+  const middlewareCtx = buildMiddlewareContext({
     source,
     group,
     method,
     variables,
-    undefined,
-    { req: request, mode: "proxy" } as Context,
+    context: { req: request, mode: "proxy" } as Context,
     dataSource,
     requestId,
     transport,
-    endpointOptions?.allowedHeaders,
-  );
+    endpointAllowedHeaders: endpointOptions?.allowedHeaders,
+    kind: schema?.type,
+  });
 
   const sourceMiddleware = (dataSource.options as { middleware?: unknown } | undefined)
     ?.middleware as Parameters<typeof composeMiddleware>[0] | undefined;

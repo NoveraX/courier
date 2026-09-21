@@ -77,18 +77,36 @@ function readSchema(endpoint: unknown): SchemaMetadata | undefined {
   return (endpoint as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
 }
 
-export function buildMiddlewareContext(
-  source: unknown,
-  group: unknown,
-  method: unknown,
-  variables: unknown,
-  baseHeaders: unknown,
-  context: Context | undefined,
-  dataSource: Record<string, unknown>,
-  requestId: string,
-  transport?: "http" | "sse" | "ws",
-  endpointAllowedHeaders?: readonly string[],
-): MiddlewareContext {
+export interface MiddlewareContextInput {
+  source: unknown;
+  group: unknown;
+  method: unknown;
+  variables: unknown;
+  /** Headers the caller passed explicitly, if any. */
+  baseHeaders?: unknown;
+  context?: Context;
+  dataSource: Record<string, unknown>;
+  requestId: string;
+  transport?: "http" | "sse" | "ws";
+  endpointAllowedHeaders?: readonly string[];
+  /** Whether the endpoint reads or writes, from its schema. */
+  kind?: "query" | "mutation";
+}
+
+export function buildMiddlewareContext(input: MiddlewareContextInput): MiddlewareContext {
+  const {
+    source,
+    group,
+    method,
+    variables,
+    baseHeaders,
+    context,
+    dataSource,
+    requestId,
+    transport,
+    endpointAllowedHeaders,
+    kind,
+  } = input;
   const { req: nextRequest, headers: nextHeaders } = context || {};
   const mergedNextHeaders = {
     ...headersToObject(nextRequest?.headers),
@@ -115,6 +133,8 @@ export function buildMiddlewareContext(
     variables,
     headers: newHeaders,
     transport,
+    request: nextRequest,
+    kind,
     _requestId: requestId || undefined,
   };
 }

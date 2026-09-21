@@ -12,6 +12,16 @@ export type MiddlewareContext = {
   headers: Headers;
   /** Transport type — "http" for standard requests, "sse"/"ws" for realtime */
   transport?: "http" | "sse" | "ws";
+  /**
+   * The request as it arrived, before `allowedHeaders` narrowed it.
+   *
+   * `headers` above is the outbound set: a credential the allowlist does not
+   * forward is absent from it. Anything deciding who is asking — a cache
+   * partition, an audit line — has to read the request itself.
+   */
+  request?: Request;
+  /** Whether the endpoint reads or writes, when its schema says. */
+  kind?: "query" | "mutation";
   /** Internal: Studio request ID for event correlation */
   _requestId?: string;
 };

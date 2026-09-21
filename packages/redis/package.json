@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-redis",
   "version": "0.0.0",
-  "description": "Redis adapters for @noverax/courier realtime — Pub/Sub broadcast + Streams persistence",
+  "description": "Redis adapters for @noverax/courier realtime \u2014 Pub/Sub broadcast + Streams persistence",
   "keywords": [
     "courier",
     "typescript",
@@ -34,7 +34,8 @@
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
-      "import": "./lib/index.js"
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
     }
   },
   "files": [

@@ -37,43 +37,53 @@
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
-      "import": "./lib/index.js"
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
     },
     "./config": {
       "types": "./lib/config/index.d.ts",
-      "import": "./lib/config/index.js"
+      "import": "./lib/config/index.js",
+      "default": "./lib/config/index.js"
     },
     "./define": {
       "types": "./lib/define/index.d.ts",
-      "import": "./lib/define/index.js"
+      "import": "./lib/define/index.js",
+      "default": "./lib/define/index.js"
     },
     "./middleware": {
       "types": "./lib/middleware/index.d.ts",
-      "import": "./lib/middleware/index.js"
+      "import": "./lib/middleware/index.js",
+      "default": "./lib/middleware/index.js"
     },
     "./node": {
       "types": "./lib/node.d.ts",
-      "import": "./lib/node.js"
+      "import": "./lib/node.js",
+      "default": "./lib/node.js"
     },
     "./fetch": {
       "types": "./lib/fetch/index.d.ts",
-      "import": "./lib/fetch/index.js"
+      "import": "./lib/fetch/index.js",
+      "default": "./lib/fetch/index.js"
     },
     "./testing": {
       "types": "./lib/testing/index.d.ts",
-      "import": "./lib/testing/index.js"
+      "import": "./lib/testing/index.js",
+      "default": "./lib/testing/index.js"
     },
     "./realtime": {
       "types": "./lib/realtime/index.d.ts",
-      "import": "./lib/realtime/index.js"
+      "import": "./lib/realtime/index.js",
+      "default": "./lib/realtime/index.js"
     },
     "./internal-streams": {
       "types": "./lib/internal-streams/index.d.ts",
-      "import": "./lib/internal-streams/index.js"
+      "import": "./lib/internal-streams/index.js",
+      "default": "./lib/internal-streams/index.js"
     },
     "./announce": {
       "types": "./lib/announce/index.d.ts",
-      "import": "./lib/announce/index.js"
+      "import": "./lib/announce/index.js",
+      "default": "./lib/announce/index.js"
     }
   },
   "files": [

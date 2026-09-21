@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-solid",
   "version": "0.0.0",
-  "description": "Solid Start adapter for @noverax/courier — Web Standard proxy handler",
+  "description": "Solid Start adapter for @noverax/courier \u2014 Web Standard proxy handler",
   "keywords": [
     "courier",
     "typescript",
@@ -34,7 +34,8 @@
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
-      "import": "./lib/index.js"
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
     }
   },
   "files": [

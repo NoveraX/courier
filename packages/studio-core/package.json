@@ -34,15 +34,18 @@
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
-      "import": "./lib/index.js"
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
     },
     "./runtime": {
       "types": "./lib/runtime/index.d.ts",
-      "import": "./lib/runtime/index.js"
+      "import": "./lib/runtime/index.js",
+      "default": "./lib/runtime/index.js"
     },
     "./config": {
       "types": "./lib/runtime/load-config.d.ts",
-      "import": "./lib/runtime/load-config.js"
+      "import": "./lib/runtime/load-config.js",
+      "default": "./lib/runtime/load-config.js"
     }
   },
   "browser": {

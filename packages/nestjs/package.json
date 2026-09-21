@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-nestjs",
   "version": "0.0.0",
-  "description": "NestJS adapter for @noverax/courier — module + middleware handler",
+  "description": "NestJS adapter for @noverax/courier \u2014 module + middleware handler",
   "keywords": [
     "courier",
     "typescript",
@@ -34,7 +34,8 @@
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
-      "import": "./lib/index.js"
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
     }
   },
   "files": [

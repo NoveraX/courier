@@ -108,8 +108,7 @@
       "types": "./lib/angular.d.ts",
       "import": "./lib/angular.js",
       "default": "./lib/angular.js"
-    },
-    "./cli": "./lib/cli.js"
+    }
   },
   "files": [
     "lib",

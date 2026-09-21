@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-remix",
   "version": "0.0.0",
-  "description": "Remix adapter for @noverax/courier — Web Standard proxy handler",
+  "description": "Remix adapter for @noverax/courier \u2014 Web Standard proxy handler",
   "keywords": [
     "courier",
     "typescript",
@@ -33,7 +33,8 @@
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
-      "import": "./lib/index.js"
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
     }
   },
   "files": [

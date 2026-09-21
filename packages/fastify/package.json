@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-fastify",
   "version": "0.0.0",
-  "description": "Fastify adapter for @noverax/courier — proxy plugin handler",
+  "description": "Fastify adapter for @noverax/courier \u2014 proxy plugin handler",
   "keywords": [
     "courier",
     "typescript",
@@ -34,7 +34,8 @@
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
-      "import": "./lib/index.js"
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
     }
   },
   "files": [

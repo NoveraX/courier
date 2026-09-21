@@ -1,5 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createGetHandler } from "../src/adapter/handle-get";
 import { isOriginAllowed } from "../src/adapter/origin-policy";
 
 const APP = "https://app.example.com";
@@ -128,5 +129,52 @@ describe("isOriginAllowed — the playground sigil is not a credential", () => {
     const req = request(undefined, `${APP}/api/ws?_playground_rid=abc`);
 
     expect(isOriginAllowed(req)).toBe(true);
+  });
+});
+
+/**
+ * POST, SSE and WebSocket all checked this and GET did not, so a third-party
+ * page could drive every readable endpoint with the user's cookies.
+ */
+describe("the GET proxy applies the same rule", () => {
+  const hooks = () => ({ onProxyOriginReject: vi.fn(), onProxyReceive: vi.fn() });
+
+  function get(origin?: string) {
+    return new Request(`${APP}/api/request?_s=api&_m=list`, {
+      headers: origin ? { Origin: origin } : {},
+    });
+  }
+
+  it("refuses a page on another origin", async () => {
+    const execute = vi.fn();
+    const dt = hooks();
+    const handler = createGetHandler(execute, dt as never, { allowedOrigins: [APP] });
+
+    const response = await handler(get("https://evil.example"));
+
+    expect(response.status).toBe(403);
+    expect(execute).not.toHaveBeenCalled();
+    expect(dt.onProxyOriginReject).toHaveBeenCalledOnce();
+  });
+
+  it("serves the application's own pages", async () => {
+    const execute = vi.fn().mockResolvedValue(new Response("{}"));
+    const handler = createGetHandler(execute, hooks() as never);
+
+    const response = await handler(get(APP));
+
+    expect(response.status).not.toBe(403);
+    expect(execute).toHaveBeenCalledOnce();
+  });
+
+  /** A CDN or a server-to-server caller sends none, and this route exists for them. */
+  it("serves a caller that sends no Origin at all", async () => {
+    const execute = vi.fn().mockResolvedValue(new Response("{}"));
+    const handler = createGetHandler(execute, hooks() as never, { allowedOrigins: [APP] });
+
+    const response = await handler(get());
+
+    expect(response.status).not.toBe(403);
+    expect(execute).toHaveBeenCalledOnce();
   });
 });

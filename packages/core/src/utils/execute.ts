@@ -1,3 +1,4 @@
+import { isExposedToWire } from "../adapter/exposure";
 import { parseWireOptions } from "../adapter/wire-options";
 import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
@@ -73,9 +74,17 @@ export async function executeRequest(
     options: endpointOptions,
   } = resolveEndpoint(dataSource, group, method);
 
+  const methodPath = group ? `[${group}][${method}]` : `[${method}]`;
+  const notFound = `[${String(source)}][${methodPath}]: method not found`;
+
   if (typeof endpoint !== "function") {
-    const methodPath = group ? `[${group}][${method}]` : `[${method}]`;
-    return buildErrorResponse(context, 400, `[${String(source)}][${methodPath}]: method not found`);
+    return buildErrorResponse(context, 400, notFound);
+  }
+
+  /* Answered as an unknown name is: telling a caller that guessing names is
+     forbidden confirms that the name it guessed exists. */
+  if (fromWire && !isExposedToWire(dataSource, typeof group === "string" ? group : undefined)) {
+    return buildErrorResponse(context, 400, notFound);
   }
 
   if (context?.proxyMethod === "GET" && schema?.type !== "query") {

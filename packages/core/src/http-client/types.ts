@@ -100,6 +100,12 @@ export type BaseOptions = MergeOptions &
     defaultQueryParams?: Record<string, unknown>;
     /** Whitelist of headers forwarded through the proxy (e.g. ["Authorization", "X-Custom"]) */
     allowedHeaders?: string[];
+    /**
+     * Whether the browser may call this source through the proxy — defaults
+     * to true. Set false for a source only server code should reach, and
+     * re-open individual groups with their own `expose`.
+     */
+    expose?: boolean;
     /** Custom body serializer replacing JSON.stringify (e.g. for FormData or XML) */
     bodySerializer?: (data: Record<string, unknown>) => BodyInit;
     /** Custom search params serializer with stringify/parse methods */
@@ -127,6 +133,11 @@ export type MergeOptions = {
 export type GroupOptions = MergeOptions & {
   /** URL prefix prepended to all endpoint paths in this group (e.g. "users" → "/users/:path") */
   prefix?: string;
+  /**
+   * Whether the browser may call this group through the proxy. Overrides the
+   * source's own setting; unset means the source decides.
+   */
+  expose?: boolean;
 };
 
 export type PathOptions = (request?: Request) => PathOptionsResult | Promise<PathOptionsResult>;

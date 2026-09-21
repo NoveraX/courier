@@ -2,6 +2,7 @@ import type { Sources } from "../define/types";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import type { SchemaMetadata } from "../validation";
 import { validateSchema } from "../validation";
+import { isExposedToWire } from "./exposure";
 import { errorResponse } from "./parse";
 import { extractVariables } from "./sse-utils";
 
@@ -16,8 +17,15 @@ export function resolveSSEEndpoint(
   if (!dataSource) return errorResponse(400, `[${source}]: source not found`);
 
   const { endpoint, schema, served } = resolveEndpoint(dataSource, group, method);
+  const notFound = `[${source}][${group ?? ""}][${method}]: method not found`;
+
   if (typeof endpoint !== "function") {
-    return errorResponse(400, `[${source}][${group ?? ""}][${method}]: method not found`);
+    return errorResponse(400, notFound);
+  }
+
+  /* Same answer as an unknown name, for the same reason. */
+  if (!isExposedToWire(dataSource, group)) {
+    return errorResponse(400, notFound);
   }
   if (schema?.transport !== "sse") {
     return errorResponse(400, `[${method}]: endpoint is not an SSE transport`);

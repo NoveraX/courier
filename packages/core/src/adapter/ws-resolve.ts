@@ -1,6 +1,7 @@
 import { unqualifyTopic } from "../realtime/ws/topic-hash";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { resolveEndpoint } from "../utils/execute-resolve";
+import { isExposedToWire } from "./exposure";
 import type { WSSocketContext } from "./ws-context";
 
 /** Parse "source.group.method" or "source.group.method#hash" topic format */
@@ -54,7 +55,12 @@ export function resolveSubscribeTopic(
   /* A channel that only describes where to connect has no implementation to
      run here; invoking its closure would yield a wire description, not
      messages. */
-  if (typeof endpoint !== "function" || schema?.transport !== "ws" || !served) {
+  if (
+    typeof endpoint !== "function" ||
+    schema?.transport !== "ws" ||
+    !served ||
+    !isExposedToWire(dataSource, group)
+  ) {
     ctx.sendMessage({
       type: "error",
       id: msg.id,

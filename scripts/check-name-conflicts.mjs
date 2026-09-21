@@ -110,7 +110,7 @@ function main() {
     console.error(`  ${rel}/${c.file}  ⚠  conflicts with  ${rel}/${c.conflictingDir}/`);
   }
   console.error(
-    "\nUse the directory form only (delete the .ts file and move its contents into the directory's index.ts).\n",
+    "\nUse the directory form only: delete the .ts file and move its contents into the directory's index.ts.\n",
   );
   process.exit(1);
 }

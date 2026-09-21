@@ -14,6 +14,11 @@
  * package name, and typechecks it. Resolution goes through each manifest's
  * `exports` exactly as a consumer's would.
  *
+ * It runs twice, because the two resolvers disagree about real things: a
+ * `bundler` consumer and a `node16` consumer follow different rules for
+ * conditions and for subpaths into dependencies, so a declaration can resolve
+ * under one and silently widen to `any` under the other.
+ *
  * Requires a build first. Exits 1 with tsc's output when anything fails.
  */
 
@@ -56,41 +61,52 @@ if (entries.length === 0) {
    node_modules exactly as they would for an installed consumer. */
 const probeDir = join(ROOT, "node_modules", ".cache", "courier-check-exports");
 mkdirSync(probeDir, { recursive: true });
-const probe = join(probeDir, "probe.ts");
-writeFileSync(
-  probe,
-  entries
-    .map((spec, i) => `import type * as m${i} from "${spec}";\nexport type T${i} = keyof typeof m${i};`)
-    .join("\n"),
-);
+const probeSource = entries
+  .map((spec, i) => `import type * as m${i} from "${spec}";\nexport type T${i} = keyof typeof m${i};`)
+  .join("\n");
 
-try {
-  execFileSync(
-    "npx",
-    [
-      "tsc",
-      "--noEmit",
-      "--strict",
-      "--skipLibCheck",
-      "--module",
-      "esnext",
-      "--moduleResolution",
-      "bundler",
-      "--target",
-      "esnext",
-      "--types",
-      "node",
-      "--ignoreConfig",
-      probe,
-    ],
-    { cwd: ROOT, stdio: "pipe", encoding: "utf8" },
-  );
-} catch (error) {
-  console.error(`check-exports: ${entries.length} published entry points, and some do not typecheck\n`);
-  console.error(error.stdout || error.message);
-  process.exit(1);
-} finally {
-  rmSync(probeDir, { recursive: true, force: true });
+/** How a consumer resolves us. Both are real; neither subsumes the other. */
+const RESOLUTIONS = [
+  { name: "bundler", module: "esnext", moduleResolution: "bundler", ext: "ts" },
+  { name: "node16", module: "node16", moduleResolution: "node16", ext: "mts" },
+];
+
+let failed = false;
+
+for (const resolution of RESOLUTIONS) {
+  const probe = join(probeDir, `probe.${resolution.ext}`);
+  writeFileSync(probe, probeSource);
+
+  try {
+    execFileSync(
+      "npx",
+      [
+        "tsc",
+        "--noEmit",
+        "--strict",
+        "--skipLibCheck",
+        "--module",
+        resolution.module,
+        "--moduleResolution",
+        resolution.moduleResolution,
+        "--target",
+        "esnext",
+        "--types",
+        "node",
+        "--ignoreConfig",
+        probe,
+      ],
+      { cwd: ROOT, stdio: "pipe", encoding: "utf8" },
+    );
+    console.log(`check-exports: ${entries.length} entry points typecheck under ${resolution.name}`);
+  } catch (error) {
+    failed = true;
+    console.error(`\ncheck-exports: entry points fail to resolve under ${resolution.name}\n`);
+    console.error(error.stdout || error.message);
+  }
 }
 
-console.log(`check-exports: ${entries.length} published entry points typecheck`);
+rmSync(probeDir, { recursive: true, force: true });
+
+if (failed) process.exit(1);
+

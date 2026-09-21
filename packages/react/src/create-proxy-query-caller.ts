@@ -22,15 +22,16 @@ import type { QueryCallerClient, QueryGroupClient } from "./types";
  * Use this when the API definition cannot ship to the browser (secrets, bundle size, CORS bypass).
  * For direct mode (browser → backend without proxy), use `createQueryCaller(api)` instead.
  *
+ * Pass a `boundary` rather than the API object: these hooks each name their
+ * own transport, so nothing is read off the source, and handing it over puts
+ * the upstream host, the middleware and every endpoint path in the bundle.
+ *
  * @param source - Source name matching the key in server-side apiRoute({ [source]: ... })
- * @param defaults - Proxy configuration (proxyPath, timeout, credentials, etc.)
+ * @param defaults - Proxy configuration (boundary, proxyPath, timeout, credentials, etc.)
  *
  * @example
  * ```ts
- * const q = createProxyQueryCaller<typeof api>("api", {
- *   source: api,
- *   proxyPath: { http: "/api/request", sse: "/api/sse", ws: "wss://realtime.example.com" },
- * });
+ * const q = createProxyQueryCaller<typeof api>("api", { boundary });
  *
  * // In components:
  * const { data } = q.users.useQuery("getAll");

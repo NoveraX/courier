@@ -72,10 +72,11 @@ type TypedClient<T> = {
 
 ```ts title="lib/query.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { api } from "@/api"
+import type { api } from "@/api"
+import { boundary } from "@/api/boundary"
 
 const caller = createProxyCaller<typeof api>("api", {
-  source: api,
+  boundary,
   timeout: 10000,
   credentials: "include",
 })
@@ -89,7 +90,7 @@ const user = await caller.users.getById({ id: "123" })
 
 ```ts title="lib/query.ts"
 const caller = createProxyCaller<typeof api>("api", {
-  source: api,
+  boundary,
 
   // Per-transport proxy endpoint paths.
   // Either side may be partial — missing transports fall back to

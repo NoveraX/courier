@@ -36,10 +36,11 @@ type QueryGroupClient<G> = {
 
 ```ts title="lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { api } from "@/api"
+import type { api } from "@/api"
+import { boundary } from "@/api/boundary"
 
 export const q = createProxyQueryCaller<typeof api>("api", {
-  source: api,
+  boundary,
   proxyPath: { http: "/api/request" },  // optional, defaults to /api/request
   timeout: 10000,
   credentials: "include",

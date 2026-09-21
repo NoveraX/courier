@@ -112,6 +112,7 @@ export const docsNav: NavSection[] = [
     items: [
       { title: "Overview", href: "/docs/proxy-mode/overview" },
       { title: "createProxyCaller", href: "/docs/proxy-mode/proxy-caller" },
+      { title: "defineBoundary", href: "/docs/proxy-mode/boundary" },
       { title: "Server Handler", href: "/docs/proxy-mode/api-route" },
     ],
   },

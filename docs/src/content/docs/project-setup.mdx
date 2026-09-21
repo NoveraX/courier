@@ -78,9 +78,10 @@ export const { useQuery, useMutation, useSuspenseQuery, caller } = createProxyQu
 
 ```ts title="lib/caller.ts (Vanilla / Vue / Svelte)"
 import { createProxyCaller } from "@noverax/courier"
-import { api } from "@/api"
+import type { api } from "@/api"
+import { boundary } from "@/api/boundary"
 
-export const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
+export const caller = createProxyCaller<typeof api>("api", { boundary })
 ```
 
 ```ts title="lib/server-caller.ts (Server-side)"

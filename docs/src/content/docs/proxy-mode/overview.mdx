@@ -44,7 +44,8 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 
 ## Why use proxy mode?
 
-- **Hide API secrets** — your backend URL, API keys, and tokens stay on the server. The browser only sees `/api/request`.
+- **Hide API secrets** — your backend URL, API keys, and tokens stay on the server. The browser only sees `/api/request`. Declare a [boundary](/docs/proxy-mode/boundary) to keep the API definition itself off the wire: pass it in place of the API object, and the bundle carries the endpoint names you opened and nothing else.
+- **Refuse what you did not open** — the proxy addresses endpoints by name, so without a boundary every endpoint your app registered is callable from a page, including the ones only server code was meant to reach.
 - **Bypass CORS** — the proxy handler runs on the same origin as your frontend, so there are no cross-origin restrictions.
 - **Forward cookies** — credentials are included automatically (`credentials: "include"` by default), and `set-cookie` headers from the backend are passed through.
 - **Centralized error handling** — the handler catches errors and returns consistent JSON responses with proper HTTP status codes.

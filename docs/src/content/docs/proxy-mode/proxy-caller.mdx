@@ -64,10 +64,11 @@ A typical setup creates a single caller instance and exports it for use across a
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { api } from "@/api"
+import type { api } from "@/api"
+import { boundary } from "@/api/boundary"
 
 export const caller = createProxyCaller<typeof api>("api", {
-  source: api,
+  boundary,
   timeout: 30_000,
   credentials: "include",
   headers: {
@@ -175,7 +176,7 @@ By default, HTTP requests are sent to `/api/request`. Override it via `proxyPath
 
 ```ts title="lib/caller.ts"
 export const caller = createProxyCaller<typeof api>("api", {
-  source: api,
+  boundary,
   proxyPath: { http: "/api/my-proxy" },
 })
 ```
@@ -190,7 +191,7 @@ If you change the proxy URL, make sure your server handler is mounted at the sam
 
 ```ts title="lib/caller.ts"
 export const caller = createProxyCaller<typeof api>("api", {
-  source: api,
+  boundary,
   proxyPath: {
     http: "/api/request",
     sse: "/api/sse",
@@ -225,7 +226,7 @@ export const api = defineApi({
 // Override only the WS endpoint for local dev — http and sse stay as
 // defined on the source.
 export const caller = createProxyCaller<typeof api>("api", {
-  source: api,
+  boundary,
   proxyPath: { ws: "ws://localhost:3001" },
 })
 ```

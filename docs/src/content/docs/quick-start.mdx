@@ -50,8 +50,9 @@ export const caller = createCaller(api)
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
 import type { api } from "@/api/sources"
+import { boundary } from "@/api/boundary"
 
-export const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
+export const caller = createProxyCaller<typeof api>("api", { boundary })
 ```
 
 **React Query** — hooks with full type inference:

@@ -1,0 +1,110 @@
+export const metadata = { title: "defineBoundary", description: "Declare which endpoints the browser may call, and keep everything else off the wire and out of the bundle.", mode: "proxy" }
+
+## Overview
+
+The proxy addresses endpoints by name. A browser call carries `?_s=api&_g=users&_m=getAll`, and the server resolves those names against the sources your application registered — all of them, including the ones only server code was ever meant to call.
+
+Nothing in that mechanism can tell the two apart. An endpoint written for a cron job is reachable from a page, and reachable *with the server's credentials*, which is the point of proxy mode.
+
+`defineBoundary` is where you say which endpoints the browser may reach. The same declaration does both halves of the job: the server refuses anything it does not name, and the browser receives it instead of your API definition.
+
+```ts title="lib/boundary.ts"
+import { defineBoundary } from "@noverax/courier/define"
+import type { api } from "@/api"
+
+export const boundary = defineBoundary<typeof api>({
+  source: "api",
+  proxyPath: { http: "/api/request", sse: "/api/sse", ws: "wss://realtime.example.com" },
+  expose: {
+    "users.getAll": "request",
+    "users.getById": "request",
+    "notifications.feed": "stream",
+    "chat.room": "duplex",
+  },
+})
+```
+
+Anything absent is refused. `admin.exportPayouts` above is not named, so the server answers it exactly as it answers a name that does not exist.
+
+## Wiring the client
+
+Pass the boundary where you would have passed the API object.
+
+```ts title="lib/caller.ts"
+import { createProxyCaller } from "@noverax/courier"
+import type { api } from "@/api"
+import { boundary } from "./boundary"
+
+export const client = createProxyCaller<typeof api>("api", { boundary })
+```
+
+```ts title="lib/query.ts"
+import { createProxyQueryCaller } from "@noverax/courier-react"
+import type { Api } from "@/api"
+import { boundary } from "./boundary"
+
+export const q = createProxyQueryCaller<Api>("api", { boundary })
+```
+
+The API is imported **as a type**. That is the whole trick, and it is load-bearing rather than stylistic: a value import pulls your `defineApi` call into the module, and from there into the bundle — the upstream host, your middleware bodies and whatever literal sits inside them, and the path of every endpoint including the ones you held back.
+
+## The shapes
+
+Each endpoint says how the client reaches it. The compiler checks the answer against your API, so a wrong one does not build.
+
+| shape | the endpoint it describes |
+| --- | --- |
+| `"request"` | an ordinary HTTP endpoint |
+| `"stream"` | a server-sent event stream |
+| `"channel"` | a socket the server pushes on |
+| `"duplex"` | a socket the caller may also send on — a channel with `.send()` |
+
+```ts
+expose: {
+  "posts.lsit": "request",   // does not compile — no such endpoint
+  "posts.feed": "request",   // does not compile — it is a stream
+}
+```
+
+Renaming an endpoint breaks the boundary that still names the old one, so the two cannot drift apart. There is no build step and nothing to generate.
+
+## What the browser learns
+
+A boundary is plain data, and it is all the client gets:
+
+```json
+{
+  "source": "api",
+  "proxyPath": { "http": "/api/request", "sse": "/api/sse" },
+  "endpoints": {
+    "users.getAll": {},
+    "notifications.feed": { "transport": "sse" },
+    "chat.room": { "transport": "ws", "bidirectional": true }
+  }
+}
+```
+
+No upstream host. No middleware. No endpoint you did not name. That makes it something you can read in review and diff in CI: it is the answer to "what could the browser call in this release", in one file.
+
+<Callout variant="tip" title="Server-side callers are unaffected">
+A boundary gates calls that arrive over the proxy. Code running in your own process holds the API object and never addresses anything by name, so `createCaller(api)` reaches every endpoint as before.
+</Callout>
+
+## Without a boundary
+
+A source that declares none behaves as it always has: everything it holds is reachable through the proxy. For shutting an API off wholesale there is a coarser switch that needs no list.
+
+```ts
+defineApi({
+  expose: false,
+  groups: {
+    public: defineGroup({ expose: true, prefix: "public", endpoints: { … } }),
+  },
+})
+```
+
+A boundary takes precedence wherever it is declared.
+
+<Callout variant="warning" title="Direct mode is a different trade">
+In direct mode the browser calls your backend itself, so it must hold the API definition — the URL and the endpoint paths are in the bundle by construction. A boundary cannot change that, and is not meant to. Proxy mode is the one that keeps them on the server.
+</Callout>

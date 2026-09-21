@@ -39,10 +39,11 @@ Sends requests through your server's proxy route. The browser never sees your ba
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { api } from "@/api/sources"
+import type { api } from "@/api/sources"
+import { boundary } from "@/api/boundary"
 
 export const caller = createProxyCaller<typeof api>("api", {
-  source: api,
+  boundary,
   proxyPath: { http: "/api/request" },  // optional, defaults to /api/request
   timeout: 10000,
   credentials: "include",               // forward cookies

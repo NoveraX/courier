@@ -55,7 +55,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
       return;
     }
 
-    const ip = extractClientIP(request);
+    const ip = extractClientIP(request, config.clientIp);
     if (!ipTracker.acquire(ip)) {
       ws.close(4429, "Too many connections");
       return;

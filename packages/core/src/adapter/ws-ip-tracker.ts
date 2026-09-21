@@ -6,22 +6,50 @@ export interface IPTracker {
   release(ip: string): void;
 }
 
+/** Names the caller's address when the application can do better than a header. */
+export type ClientIPResolver = (request: Request) => string | undefined;
+
 /**
- * Extract client IP from request headers (proxy-aware).
- * Checks headers in order: X-Forwarded-For → CF-Connecting-IP → X-Real-IP → "0.0.0.0".
+ * Work out which address a connection should be counted against.
  *
- * ⚠️ Trusts proxy headers — only use behind a trusted reverse proxy.
- * Direct clients can spoof these headers.
+ * A `Request` carries no peer address, so without help this can only read
+ * headers — and a header is written by whoever is talking to us. The chain
+ * matters: a proxy *appends*, so in `1.2.3.4, 203.0.113.7` the left entry is
+ * whatever the caller sent and the right one is what the nearest proxy
+ * observed. Reading from the right therefore costs a forger the proxy
+ * itself, while reading from the left costs nothing at all.
  *
- * @param request - WebSocket upgrade request
- * @returns Client IP address string
+ * That still only holds for one proxy deep. Behind two, the rightmost entry
+ * is the inner proxy and every caller collapses into one bucket. An
+ * application that knows its own topology should say so with `resolve`,
+ * which is then the whole answer; everything else here is a default that
+ * degrades honestly rather than a guarantee.
+ *
+ * @param request - The upgrade request
+ * @param resolve - Supplied by the application when it knows the real address
+ * @returns The address to count this connection against
  *
  * @example
- * const ip = extractClientIP(request); // "192.168.1.1"
+ * ```ts
+ * // Node, where the socket knows who is calling:
+ * createWSHandler({ clientIp: (req) => socketOf(req)?.remoteAddress });
+ * ```
  */
-export function extractClientIP(request: Request): string {
+export function extractClientIP(request: Request, resolve?: ClientIPResolver): string {
+  const named = resolve?.(request);
+  if (named) return named;
+
   const forwarded = request.headers.get("X-Forwarded-For");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
+  if (forwarded) {
+    /* Walking past empty entries keeps a chain with a trailing separator from
+       collapsing into the unknown bucket, where it would share a quota with
+       every caller that sends no address at all. */
+    const hops = forwarded.split(",");
+    for (let i = hops.length - 1; i >= 0; i -= 1) {
+      const hop = hops[i]?.trim();
+      if (hop) return hop;
+    }
+  }
 
   const cfIP = request.headers.get("CF-Connecting-IP");
   if (cfIP) return cfIP;

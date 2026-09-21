@@ -1,4 +1,5 @@
 import type { PubSubAdapter, WebSocketLike } from "../realtime/adapters";
+import type { ClientIPResolver } from "./ws-ip-tracker";
 import type { ConnectionRegistry } from "./ws-registry";
 
 /**
@@ -29,6 +30,13 @@ export interface WSHandlerConfig {
   maxMessagesPerSecond?: number;
   /** Max concurrent connections from a single IP address (default 50) */
   maxConnectionsPerIP?: number;
+  /**
+   * Names the address a connection is counted against. A `Request` carries no
+   * peer address, so without this the cap falls back to forwarding headers —
+   * which the caller writes. Supply this wherever the runtime knows the real
+   * address, and the cap becomes a guarantee instead of a default.
+   */
+  clientIp?: ClientIPResolver;
   /** Per-subscription authorization — throw or return false to reject */
   authorize?: (info: {
     connectionId: string;

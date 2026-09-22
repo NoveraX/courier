@@ -137,11 +137,17 @@ export function toBindingName(name: string): string {
   return /^\d/.test(camel) ? `_${camel}` : camel;
 }
 
-/** Normalize a schema/type name into a valid JS identifier (PascalCase). */
+/**
+ * Normalize a schema/type name into a valid JS identifier (PascalCase).
+ *
+ * A specification is free to name a schema `3DModel`; `export type 3DModel`
+ * does not parse, so a leading digit is moved behind an underscore.
+ */
 export function toSafeIdentifier(name: string): string {
   const camel = toCamelCase(name);
   if (!camel) return "Unknown";
-  return camel.charAt(0).toUpperCase() + camel.slice(1);
+  const pascal = camel.charAt(0).toUpperCase() + camel.slice(1);
+  return /^\d/.test(pascal) ? `_${pascal}` : pascal;
 }
 
 function toPascal(str: string): string {

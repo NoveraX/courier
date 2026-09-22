@@ -6,6 +6,7 @@ import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointDefinition } from "./build-endpoint";
 import { describesResponseWithSchema, emitsSchemas } from "./build-endpoint-helpers";
 import { jsdocText } from "./jsdoc-text";
+import { objectKey } from "./literals";
 import { collectSchemaRefs } from "./schema-refs";
 import { resolveResponseType } from "./schema-types";
 import { getSchemaRefName } from "./schema-utils";
@@ -50,7 +51,7 @@ export function generateGroupFile(
       lines.push(`    /** ${jsdocText(ep.description)} */`);
     }
     const def = buildEndpointDefinition(ep, spec, options, schemaImports, extracted);
-    lines.push(`    ${ep.name}: ${def},`);
+    lines.push(`    ${objectKey(ep.name)}: ${def},`);
   }
 
   lines.push(`  },`);
@@ -71,7 +72,10 @@ function buildImportLine(
   options: ResolvedGenerateOptions,
 ): string | null {
   if (schemaImports.size === 0 && typeImports.size === 0) return null;
-  if (!options.generateSchemas && !options.generateTypes) return null;
+  /* Nothing is written into the schemas file unless a validator emits into
+     it or types are being generated — importing from it then named a module
+     that does not exist. */
+  if (!emitsSchemas(options) && !options.generateTypes) return null;
 
   const schemas = emitsSchemas(options);
   const parts: string[] = [];

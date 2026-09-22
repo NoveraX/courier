@@ -26,6 +26,7 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
   const version = collection.info?.version ?? "1.0.0";
 
   const groups: ParsedGroup[] = [];
+  const takenGroupNames = new Set<string>();
   const skipped: SkippedOperation[] = [];
 
   function processItems(items: SpecNode[], groupName: string) {
@@ -81,7 +82,9 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
     if (endpoints.length > 0) {
       const prefix = findCommonPrefix(endpoints.map((e) => e.fullPath));
       groups.push({
-        name: toBindingName(groupName),
+        /* Two folders may carry the same name; one group file would have
+           overwritten the other. */
+        name: claimGroupName(toBindingName(groupName), takenGroupNames),
         description: "",
         prefix,
         endpoints: uniqueEndpointNames(endpoints, prefix).map((e) => ({
@@ -105,4 +108,16 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
     securitySchemes: [],
     skipped,
   };
+}
+
+/** Take a group name, or the first numbered variant still free. */
+function claimGroupName(name: string, taken: Set<string>): string {
+  let candidate = name;
+  let n = 2;
+  while (taken.has(candidate)) {
+    candidate = `${name}${n}`;
+    n += 1;
+  }
+  taken.add(candidate);
+  return candidate;
 }

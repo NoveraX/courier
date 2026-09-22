@@ -5,7 +5,8 @@
  */
 
 import type { ParsedEndpoint, ParsedGroup, ParsedSpec } from "../parser/types";
-import { convertPathParams, findCommonPrefix, toCamelCase } from "../parser/utils";
+import { uniqueEndpointNames } from "../parser/unique-endpoint-names";
+import { convertPathParams, findCommonPrefix, toBindingName } from "../parser/utils";
 import type { ResolvedGenerateOptions } from "./types";
 
 export function transformSpec(spec: ParsedSpec, options: ResolvedGenerateOptions): ParsedSpec {
@@ -34,7 +35,7 @@ function buildSingleGroup(endpoints: ParsedEndpoint[]): ParsedGroup[] {
       name: "api",
       description: "",
       prefix: "/",
-      endpoints: endpoints.map((e) => ({
+      endpoints: uniqueEndpointNames(endpoints).map((e) => ({
         ...e,
         path: convertPathParams(e.fullPath),
       })),
@@ -52,13 +53,16 @@ function buildPathGroups(endpoints: ParsedEndpoint[]): ParsedGroup[] {
   }
 
   const groups: ParsedGroup[] = [];
+  const taken = new Set<string>();
   for (const [segment, eps] of bySegment) {
     const prefix = findCommonPrefix(eps.map((e) => e.fullPath));
+    /* A URL segment is not an identifier: Twilio's `2010-04-01` became
+       `20100401`, and `export const 20100401` does not parse. */
     groups.push({
-      name: toCamelCase(segment) || segment,
+      name: claim(toBindingName(segment), taken),
       description: "",
       prefix,
-      endpoints: eps.map((e) => ({
+      endpoints: uniqueEndpointNames(eps, prefix).map((e) => ({
         ...e,
         path: convertPathParams(e.fullPath.slice(prefix.length) || "/"),
       })),
@@ -75,4 +79,16 @@ function extractFirstSegment(path: string): string {
     return segments[1] ?? "default";
   }
   return first;
+}
+
+/** Take a name, or the first numbered variant of it that is still free. */
+function claim(name: string, taken: Set<string>): string {
+  let candidate = name;
+  let n = 2;
+  while (taken.has(candidate)) {
+    candidate = `${name}${n}`;
+    n += 1;
+  }
+  taken.add(candidate);
+  return candidate;
 }

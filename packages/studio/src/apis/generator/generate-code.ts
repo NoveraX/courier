@@ -42,16 +42,20 @@ function generateFlat(spec: ParsedSpec, opts: ResolvedGenerateOptions): Generate
   const { group: processed, schemas: extracted } = extractEndpointTypes(flatGroup);
   const groupSchemas = buildSchemaRecord(processed, spec, extracted);
 
+  const schemaMap = new Map<string, Set<string>>();
   if (Object.keys(groupSchemas).length > 0 && (opts.generateSchemas || opts.generateTypes)) {
-    if (opts.generateSchemas) {
-      files.push(generateSchemasFile(groupSchemas, opts));
-    } else {
-      files.push(generateTypesFile(groupSchemas, opts));
+    const file = opts.generateSchemas
+      ? generateSchemasFile(groupSchemas, opts)
+      : generateTypesFile(groupSchemas, opts);
+    if (file.content.trim() !== "") {
+      schemaMap.set("", new Set(Object.keys(groupSchemas)));
+      files.push(file);
     }
   }
 
   files.push(generateFlatSourceFile(processed.endpoints, spec, opts, extracted));
-  files.push(generateIndexFile(spec, [], opts, new Map(), true));
+  /* The barrel re-exports the schemas file only when one was written. */
+  files.push(generateIndexFile(spec, [], opts, schemaMap, true));
 
   return files;
 }
@@ -65,11 +69,16 @@ function generateGrouped(spec: ParsedSpec, opts: ResolvedGenerateOptions): Gener
     const groupSchemas = buildSchemaRecord(processed, spec, extracted);
 
     if (Object.keys(groupSchemas).length > 0 && (opts.generateSchemas || opts.generateTypes)) {
-      groupSchemaMap.set(group.name, new Set(Object.keys(groupSchemas)));
-      if (opts.generateSchemas) {
-        files.push(generateSchemasFile(groupSchemas, opts, group.name));
-      } else {
-        files.push(generateTypesFile(groupSchemas, opts, group.name));
+      const file = opts.generateSchemas
+        ? generateSchemasFile(groupSchemas, opts, group.name)
+        : generateTypesFile(groupSchemas, opts, group.name);
+
+      /* With both a validator and types turned off there is nothing to
+         declare. Writing the file anyway left an empty module the barrel
+         then re-exported, which TypeScript rejects. */
+      if (file.content.trim() !== "") {
+        groupSchemaMap.set(group.name, new Set(Object.keys(groupSchemas)));
+        files.push(file);
       }
     }
 

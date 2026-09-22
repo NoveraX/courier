@@ -53,8 +53,15 @@ function parseSchemas(spec: SpecNode): Record<string, ReturnType<typeof convertS
   if (!spec.components?.schemas) return schemas;
 
   for (const [name, schema] of Object.entries(spec.components.schemas)) {
-    const safeName = toSafeIdentifier(name);
-    if (schemas[safeName]) continue;
+    /* Two spec names can normalise to one identifier — `user-id` and `user.id`
+       both become `UserId`. Dropping the second lost a definition every
+       reference to it still named. */
+    let safeName = toSafeIdentifier(name);
+    if (schemas[safeName]) {
+      let n = 2;
+      while (schemas[`${safeName}${n}`]) n += 1;
+      safeName = `${safeName}${n}`;
+    }
     schemas[safeName] = convertSchema(safeName, schema as SpecNode);
   }
   return schemas;

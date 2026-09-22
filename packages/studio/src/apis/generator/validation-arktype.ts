@@ -16,17 +16,31 @@ function arkType(expression: string): string {
   return `type(${jsLiteral(expression)})`;
 }
 
-export function schemaToArkType(schema: ParsedSchema): string {
-  if (schema.type === "ref" && schema.refName) return `${schema.refName}Schema`;
+/**
+ * How a reference to another schema is written.
+ *
+ * Normally it names the exported constant. Inside a `type.module` it names the
+ * member instead, which is the only way ArkType lets two definitions refer to
+ * each other — a constant cannot be read before it exists, and ArkType
+ * evaluates a thunk immediately rather than deferring it.
+ */
+export type ArkRefStyle = "binding" | "member";
+
+function reference(name: string, style: ArkRefStyle): string {
+  return style === "member" ? jsLiteral(name) : `${name}Schema`;
+}
+
+export function schemaToArkType(schema: ParsedSchema, style: ArkRefStyle = "binding"): string {
+  if (schema.type === "ref" && schema.refName) return reference(schema.refName, style);
 
   if (schema.type === "array") {
     /* Always a type object, so `.array()` has something to be called on. */
-    const items = schema.items ? schemaToArkType(schema.items) : arkType("unknown");
-    return `${items}.array()`;
+    const items = schema.items ? schemaToArkType(schema.items, style) : arkType("unknown");
+    return style === "member" ? `[${items}, "[]"]` : `${items}.array()`;
   }
 
   if (schema.type === "enum" && schema.enum) {
-    return arkType(enumExpression(schema.enum) ?? "string");
+    return wrap(enumExpression(schema.enum) ?? "string", style);
   }
 
   if (schema.type === "object" && schema.properties) {
@@ -35,32 +49,41 @@ export function schemaToArkType(schema: ParsedSchema): string {
     for (const [name, prop] of Object.entries(schema.properties)) {
       if (!name) continue;
       const key = required.has(name) ? name : `${name}?`;
-      propLines.push(`  ${jsLiteral(key)}: ${propToArkType(prop)}`);
+      propLines.push(`  ${jsLiteral(key)}: ${propToArkType(prop, style)}`);
     }
     if (propLines.length === 0) return arkType("Record<string, unknown>");
-    return `type({\n${propLines.join(",\n")},\n})`;
+    const body = `{\n${propLines.join(",\n")},\n}`;
+    return style === "member" ? body : `type(${body})`;
   }
 
-  return primitiveToArkType(schema.type);
+  return wrap(arkExpression(schema.type), style);
 }
 
-export function propToArkType(prop: ParsedSchemaProperty): string {
-  if (prop.refName) return `${prop.refName}Schema`;
+export function propToArkType(prop: ParsedSchemaProperty, style: ArkRefStyle = "binding"): string {
+  if (prop.refName) return reference(prop.refName, style);
 
   if (prop.enum) {
     const members = enumExpression(prop.enum) ?? arkExpression(prop.type, prop.format);
-    return arkType(prop.nullable ? `${members} | null` : members);
+    return wrap(prop.nullable ? `${members} | null` : members, style);
   }
 
-  if (prop.type === "array" && prop.items) return `${schemaToArkType(prop.items)}.array()`;
-  if (prop.type === "object") return arkType("Record<string, unknown>");
+  if (prop.type === "array" && prop.items) {
+    const items = schemaToArkType(prop.items, style);
+    return style === "member" ? `[${items}, "[]"]` : `${items}.array()`;
+  }
+  if (prop.type === "object") return wrap("Record<string, unknown>", style);
 
   const base = arkExpression(prop.type, prop.format);
-  return arkType(prop.nullable ? `${base} | null` : base);
+  return wrap(prop.nullable ? `${base} | null` : base, style);
 }
 
 export function primitiveToArkType(type: string, format?: string): string {
   return arkType(arkExpression(type, format));
+}
+
+/** Inside a module an expression is written bare; outside it needs the call. */
+function wrap(expression: string, style: ArkRefStyle): string {
+  return style === "member" ? jsLiteral(expression) : arkType(expression);
 }
 
 /** The ArkType text for a primitive, without the surrounding call. */

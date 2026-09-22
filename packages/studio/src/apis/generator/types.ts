@@ -3,6 +3,7 @@
  */
 
 import type { CourierImportBase } from "@noverax/courier/config";
+import { toBindingName } from "../parser/naming-utils";
 
 // ── Options ──────────────────────────────────────────────────────────────────
 
@@ -57,7 +58,8 @@ export const DEFAULT_OPTIONS: ResolvedGenerateOptions = {
 export function applyImportDefaults(options: GenerateOptions): ResolvedGenerateOptions {
   return {
     type: options.type ?? DEFAULT_OPTIONS.type,
-    sourceName: options.sourceName ?? DEFAULT_OPTIONS.sourceName,
+    /* Emitted as `export const <name>`, so it has to be one. */
+    sourceName: toBindingName(options.sourceName ?? DEFAULT_OPTIONS.sourceName),
     outputDir: options.outputDir,
     validation: options.validation ?? DEFAULT_OPTIONS.validation,
     groupBy: options.groupBy ?? DEFAULT_OPTIONS.groupBy,

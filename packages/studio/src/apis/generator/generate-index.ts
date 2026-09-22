@@ -82,12 +82,18 @@ export function generateIndexFile(
 
   // Re-export schemas/types
   if (flat) {
-    const file = emitsSchemas(options) ? "schemas" : "types";
-    if (options.generateSchemas || options.generateTypes) {
+    /* Must match the name the file was written under, which follows
+       `generateSchemas` alone — `validation: "none"` still writes schemas.ts,
+       and the barrel used to re-export a `types` file nobody generated. */
+    const file = options.generateSchemas ? "schemas" : "types";
+    if (groupSchemaMap && groupSchemaMap.size > 0) {
       lines.push(`export * from "./${file}";`);
     }
   } else if (groupSchemaMap && groupSchemaMap.size > 0) {
-    const file = emitsSchemas(options) ? "schemas" : "types";
+    /* Must match the name the file was written under, which follows
+       `generateSchemas` alone — `validation: "none"` still writes schemas.ts,
+       and the barrel used to re-export a `types` file nobody generated. */
+    const file = options.generateSchemas ? "schemas" : "types";
     const exported = new Set<string>();
 
     for (const group of groups) {
@@ -102,7 +108,8 @@ export function generateIndexFile(
       } else {
         const imports: string[] = [];
         for (const n of unique) {
-          if (options.generateSchemas) imports.push(`${n}Schema`);
+          /* A `XSchema` binding exists only when a validator wrote one. */
+          if (emitsSchemas(options)) imports.push(`${n}Schema`);
           if (options.generateTypes) imports.push(`type ${n}`);
         }
         if (imports.length > 0) {

@@ -6,7 +6,7 @@ import type { ParsedSchema } from "../parser/types";
 import { typeUnion, zodEnum } from "./enum-literals";
 import { jsdocText } from "./jsdoc-text";
 import { schemaToInterface } from "./schema-types";
-import { satisfiesExpr, schemaToValidation } from "./schema-utils";
+import { lazyDeclaration, satisfiesExpr, schemaToValidation } from "./schema-utils";
 import type { GenerateOptions } from "./types";
 
 export function generateObjectSchema(
@@ -14,13 +14,14 @@ export function generateObjectSchema(
   name: string,
   schema: ParsedSchema,
   options: GenerateOptions,
+  refersToItself = false,
 ): void {
   if (options.includeComments && schema.description) {
     lines.push(`/** ${jsdocText(schema.description)} */`);
   }
 
   if (options.generateSchemas && options.validation !== "none") {
-    generateObjectWithValidation(lines, name, schema, options);
+    generateObjectWithValidation(lines, name, schema, options, refersToItself);
   } else if (options.generateTypes) {
     lines.push(`export type ${name} = ${schemaToInterface(schema)}`);
     lines.push("");
@@ -32,15 +33,23 @@ function generateObjectWithValidation(
   name: string,
   schema: ParsedSchema,
   options: GenerateOptions,
+  refersToItself: boolean,
 ): void {
   /* Always emit explicit type when generateTypes is on — preserves JSDoc on ref fields */
-  if (options.generateTypes) {
+  const typeName = options.generateTypes ? name : undefined;
+  if (typeName) {
     lines.push(`export type ${name} = ${schemaToInterface(schema)}`);
     lines.push("");
-    const satisfies = satisfiesExpr(name, options);
-    lines.push(`export const ${name}Schema = ${schemaToValidation(schema, options)}${satisfies};`);
+  }
+
+  const body = schemaToValidation(schema, options);
+  const lazy = refersToItself ? lazyDeclaration(name, body, typeName, options) : undefined;
+  if (lazy) {
+    lines.push(lazy);
+  } else if (typeName) {
+    lines.push(`export const ${name}Schema = ${body}${satisfiesExpr(name, options)};`);
   } else {
-    lines.push(`export const ${name}Schema = ${schemaToValidation(schema, options)};`);
+    lines.push(`export const ${name}Schema = ${body};`);
   }
   lines.push("");
 }

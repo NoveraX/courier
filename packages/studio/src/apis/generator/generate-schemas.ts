@@ -3,6 +3,8 @@
  */
 
 import type { ParsedSchema } from "../parser/types";
+import { findCyclicSchemas } from "./cyclic-schemas";
+import { typeUnion } from "./enum-literals";
 import {
   generateArraySchema,
   generateEnumSchema,
@@ -32,10 +34,12 @@ export function generateSchemasFile(
 
   // Topological sort: schemas must be defined before they are referenced
   const sortedEntries = topoSortSchemas(schemas);
+  /* A cycle cannot be sorted that way, so its members are written lazily. */
+  const cyclic = findCyclicSchemas(schemas);
 
   for (const [name, schema] of sortedEntries) {
     if (schema.type === "object" && schema.properties) {
-      generateObjectSchema(lines, name, schema, options);
+      generateObjectSchema(lines, name, schema, options, cyclic.has(name));
     } else if (schema.type === "enum" && schema.enum) {
       generateEnumSchema(lines, name, schema, options);
     } else if (schema.type === "ref" && schema.refName) {
@@ -71,9 +75,7 @@ export function generateTypesFile(
       lines.push(`export type ${name} = ${schemaToInterface(schema)}`);
       lines.push("");
     } else if (schema.type === "enum" && schema.enum) {
-      const filtered = schema.enum.filter((v) => v !== null && v !== undefined);
-      const values = filtered.map((v) => (typeof v === "string" ? `"${v}"` : v));
-      lines.push(`export type ${name} = ${values.join(" | ")};`);
+      lines.push(`export type ${name} = ${typeUnion(schema.enum)};`);
       lines.push("");
     }
   }

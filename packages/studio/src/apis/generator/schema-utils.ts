@@ -16,6 +16,38 @@ export function satisfiesExpr(typeName: string, options: GenerateOptions): strin
   return "";
 }
 
+/**
+ * Write a schema whose definition refers back to itself.
+ *
+ * A value cannot read a constant declared below it, so a schema on a
+ * reference cycle is wrapped in the validator's `lazy` and given an explicit
+ * annotation — without one the compiler cannot infer a type that mentions
+ * itself. Stripe's treasury objects need this in both directions.
+ *
+ * @param name - Schema name, without the `Schema` suffix
+ * @param body - The validator expression as it would be written eagerly
+ * @param typeName - Type the schema produces, when one is being generated
+ * @param options - Generation options, read for the validation library
+ * @returns The full `export const` line, or `undefined` when the library has
+ *   no lazy form and the eager declaration must be used instead
+ */
+export function lazyDeclaration(
+  name: string,
+  body: string,
+  typeName: string | undefined,
+  options: GenerateOptions,
+): string | undefined {
+  if (options.validation === "zod") {
+    const annotation = typeName ? `z.ZodType<${typeName}>` : "z.ZodType<unknown>";
+    return `export const ${name}Schema: ${annotation} = z.lazy(() => ${body});`;
+  }
+  if (options.validation === "valibot") {
+    const annotation = typeName ? `v.GenericSchema<any, ${typeName}>` : "v.GenericSchema";
+    return `export const ${name}Schema: ${annotation} = v.lazy(() => ${body});`;
+  }
+  return undefined;
+}
+
 export function getSchemaRefName(schema: ParsedSchema | null): string | null {
   if (!schema) return null;
   if (schema.type === "ref") return schema.refName ?? null;

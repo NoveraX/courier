@@ -3,6 +3,7 @@
  */
 
 import type { ParsedSchema } from "../parser/types";
+import { typeUnion, zodEnum } from "./enum-literals";
 import { jsdocText } from "./jsdoc-text";
 import { schemaToInterface } from "./schema-types";
 import { satisfiesExpr, schemaToValidation } from "./schema-utils";
@@ -57,8 +58,7 @@ export function generateEnumSchema(
   const filtered = (schema.enum ?? []).filter((v) => v !== null && v !== undefined);
 
   if (options.generateSchemas && options.validation === "zod") {
-    const values = filtered.map((v) => (typeof v === "string" ? `"${v}"` : v));
-    lines.push(`export const ${name}Schema = z.enum([${values.join(", ")}]);`);
+    lines.push(`export const ${name}Schema = ${zodEnum(filtered)};`);
     lines.push(`export type ${name} = z.infer<typeof ${name}Schema>;`);
     lines.push("");
   } else if (options.generateSchemas && options.validation === "valibot") {
@@ -74,8 +74,7 @@ export function generateEnumSchema(
     lines.push(`export type ${name} = typeof ${name}Schema.infer;`);
     lines.push("");
   } else if (options.generateTypes) {
-    const values = filtered.map((val) => (typeof val === "string" ? `"${val}"` : val));
-    lines.push(`export type ${name} = ${values.join(" | ")};`);
+    lines.push(`export type ${name} = ${typeUnion(filtered)};`);
     lines.push("");
   }
 }

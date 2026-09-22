@@ -11,22 +11,9 @@ export function topoSortSchemas(schemas: Record<string, ParsedSchema>): [string,
   const result: [string, ParsedSchema][] = [];
 
   function getDeps(schema: ParsedSchema): string[] {
-    const deps: string[] = [];
-    if (schema.type === "ref" && schema.refName && names.has(schema.refName)) {
-      deps.push(schema.refName);
-    }
-    if (schema.properties) {
-      for (const prop of Object.values(schema.properties)) {
-        if (prop.refName && names.has(prop.refName)) deps.push(prop.refName);
-        if (prop.items?.type === "ref" && prop.items.refName && names.has(prop.items.refName)) {
-          deps.push(prop.items.refName);
-        }
-      }
-    }
-    if (schema.items?.type === "ref" && schema.items.refName && names.has(schema.items.refName)) {
-      deps.push(schema.items.refName);
-    }
-    return deps;
+    const refs = new Set<string>();
+    collectRefsDeep(schema, refs);
+    return [...refs].filter((ref) => names.has(ref));
   }
 
   function visit(name: string) {
@@ -47,13 +34,39 @@ export function topoSortSchemas(schemas: Record<string, ParsedSchema>): [string,
 }
 
 export function collectSchemaRefs(schema: ParsedSchema | null, refs: Set<string>): void {
-  if (!schema) return;
-  if (schema.type === "ref" && schema.refName) {
-    refs.add(schema.refName);
-    return;
-  }
-  if (schema.type === "array" && schema.items) {
-    collectSchemaRefs(schema.items, refs);
+  collectRefsDeep(schema, refs);
+}
+
+/**
+ * Every schema name referenced anywhere inside `schema`, however deep.
+ *
+ * A `$ref` can sit inside an inline object nested inside an array inside a
+ * property. Box's AI request does exactly that, and a walk that stopped one
+ * level down emitted the referenced type name without ever emitting the type:
+ * the generated module named `AiExtractSubField` and nothing declared it.
+ *
+ * @param schema - Schema to walk; `null` and `undefined` are ignored
+ * @param into - Set the names are added to
+ */
+export function collectRefsDeep(schema: ParsedSchema | null | undefined, into: Set<string>): void {
+  walk(schema, into, new Set());
+}
+
+function walk(
+  schema: ParsedSchema | null | undefined,
+  into: Set<string>,
+  seen: Set<ParsedSchema>,
+): void {
+  /* A recursive schema refers to itself; identity is what stops the walk. */
+  if (!schema || seen.has(schema)) return;
+  seen.add(schema);
+
+  if (schema.refName) into.add(schema.refName);
+  walk(schema.items, into, seen);
+
+  for (const prop of Object.values(schema.properties ?? {})) {
+    if (prop.refName) into.add(prop.refName);
+    walk(prop.items, into, seen);
   }
 }
 
@@ -75,22 +88,11 @@ export function collectGroupSchemas(group: ParsedGroup, spec: ParsedSpec): Set<s
     all.add(name);
     const schema = spec.schemas[name];
     if (!schema) continue;
-    // Object properties can reference other schemas
-    if (schema.properties) {
-      for (const prop of Object.values(schema.properties)) {
-        if (prop.refName && !all.has(prop.refName)) queue.push(prop.refName);
-        if (prop.items?.type === "ref" && prop.items.refName && !all.has(prop.items.refName)) {
-          queue.push(prop.items.refName);
-        }
-      }
-    }
-    // Array items
-    if (schema.items?.type === "ref" && schema.items.refName && !all.has(schema.items.refName)) {
-      queue.push(schema.items.refName);
-    }
-    // Ref alias
-    if (schema.type === "ref" && schema.refName && !all.has(schema.refName)) {
-      queue.push(schema.refName);
+
+    const nested = new Set<string>();
+    collectRefsDeep(schema, nested);
+    for (const ref of nested) {
+      if (!all.has(ref)) queue.push(ref);
     }
   }
   return all;

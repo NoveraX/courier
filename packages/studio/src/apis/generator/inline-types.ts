@@ -3,6 +3,7 @@
  */
 
 import type { ParsedSchema, ParsedSchemaProperty } from "../parser/types";
+import { typeUnion } from "./enum-literals";
 
 /** Convert a ParsedSchema to an inline TypeScript type string */
 export function schemaToTsType(schema: ParsedSchema): string {
@@ -13,7 +14,7 @@ export function schemaToTsType(schema: ParsedSchema): string {
     return inner.includes("|") ? `(${inner})[]` : `${inner}[]`;
   }
   if (schema.type === "enum" && schema.enum) {
-    return schema.enum.map((v) => (typeof v === "string" ? `"${v}"` : String(v))).join(" | ");
+    return typeUnion(schema.enum);
   }
   if (schema.type === "object" && schema.properties) {
     return objectToTsType(schema);
@@ -38,7 +39,7 @@ function objectToTsType(schema: ParsedSchema): string {
 export function propToTsType(prop: ParsedSchemaProperty): string {
   if (prop.refName) return prop.refName;
   if (prop.enum) {
-    return prop.enum.map((v) => (typeof v === "string" ? `"${v}"` : String(v))).join(" | ");
+    return typeUnion(prop.enum);
   }
   if (prop.type === "array" && prop.items) {
     const inner = schemaToTsType(prop.items);

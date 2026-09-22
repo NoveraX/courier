@@ -12,7 +12,9 @@ export function convertSchema(name: string, schema: SpecNode): ParsedSchema {
     return { name, type: "ref", refName, description: schema.description };
   }
   if (schema.allOf) return convertAllOf(name, schema);
-  if (schema.oneOf || schema.anyOf) return convertUnion(name, schema);
+  if ((schema.oneOf || schema.anyOf) && !constrainsAnObject(schema)) {
+    return convertUnion(name, schema);
+  }
   if (schema.enum)
     return { name, type: "enum", enum: schema.enum, description: schema.description };
   if (schema.type === "array") {
@@ -28,6 +30,39 @@ export function convertSchema(name: string, schema: SpecNode): ParsedSchema {
     return { name, type: schema.type, description: schema.description };
   }
   return { name, type: "any", description: schema.description };
+}
+
+/**
+ * Does this schema describe an object and merely use `anyOf` to say which of
+ * its own properties are required?
+ *
+ * OpenAI's `ImageRefParam` declares `type: object` with two properties and
+ * then `anyOf: [{required: [a]}, {required: [b]}]` to demand exactly one of
+ * them. Treating that as a union threw the properties away and left the type
+ * as `any` — and since nothing was left to emit, every reference to it named
+ * a type no file declared.
+ */
+function constrainsAnObject(schema: SpecNode): boolean {
+  if (!schema.properties && schema.type !== "object") return false;
+  const variants = schema.oneOf ?? schema.anyOf;
+  if (!Array.isArray(variants) || variants.length === 0) return false;
+  return variants.every((variant: SpecNode) => !carriesShape(variant));
+}
+
+/** A variant carries shape when it says anything about the type itself. */
+function carriesShape(variant: SpecNode): boolean {
+  if (!variant || typeof variant !== "object") return false;
+  return Boolean(
+    variant.$ref ||
+      variant.type ||
+      variant.properties ||
+      variant.items ||
+      variant.enum ||
+      variant.const !== undefined ||
+      variant.allOf ||
+      variant.oneOf ||
+      variant.anyOf,
+  );
 }
 
 function convertUnion(name: string, schema: SpecNode): ParsedSchema {

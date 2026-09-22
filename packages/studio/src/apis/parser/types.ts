@@ -88,7 +88,7 @@ export interface ParsedSchema {
   type: "object" | "array" | "string" | "number" | "integer" | "boolean" | "enum" | "ref" | "any";
   properties?: Record<string, ParsedSchemaProperty>;
   items?: ParsedSchema;
-  enum?: (string | number)[];
+  enum?: (string | number | boolean)[];
   required?: string[];
   /** Reference name for $ref schemas */
   refName?: string;
@@ -100,7 +100,7 @@ export interface ParsedSchemaProperty {
   format?: string;
   required: boolean;
   description?: string;
-  enum?: (string | number)[];
+  enum?: (string | number | boolean)[];
   items?: ParsedSchema;
   refName?: string;
   nullable?: boolean;

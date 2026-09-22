@@ -3,6 +3,7 @@
  */
 
 import type { ParsedSchema, ParsedSchemaProperty } from "../parser/types";
+import { zodEnum } from "./enum-literals";
 
 export function schemaToZod(schema: ParsedSchema): string {
   if (schema.type === "ref" && schema.refName) return `${schema.refName}Schema`;
@@ -13,9 +14,7 @@ export function schemaToZod(schema: ParsedSchema): string {
   }
 
   if (schema.type === "enum" && schema.enum) {
-    const filtered = schema.enum.filter((v) => v !== null && v !== undefined);
-    const values = filtered.map((v) => (typeof v === "string" ? `"${v}"` : String(v)));
-    return `z.enum([${values.join(", ")}])`;
+    return zodEnum(schema.enum);
   }
 
   if (schema.type === "object" && schema.properties) {
@@ -39,9 +38,7 @@ export function schemaToZod(schema: ParsedSchema): string {
 export function propToZod(prop: ParsedSchemaProperty): string {
   if (prop.refName) return `${prop.refName}Schema`;
   if (prop.enum) {
-    const filtered = prop.enum.filter((v) => v !== null && v !== undefined);
-    const values = filtered.map((v) => (typeof v === "string" ? `"${v}"` : String(v)));
-    return `z.enum([${values.join(", ")}])`;
+    return zodEnum(prop.enum);
   }
   if (prop.type === "array" && prop.items) return `z.array(${schemaToZod(prop.items)})`;
   if (prop.type === "object") return "z.record(z.string(), z.unknown())";

@@ -6,7 +6,7 @@ import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointDefinition } from "./build-endpoint";
 import { describesResponseWithSchema, emitsSchemas } from "./build-endpoint-helpers";
 import { jsdocText } from "./jsdoc-text";
-import { objectKey } from "./literals";
+import { jsLiteral, objectKey } from "./literals";
 import { collectSchemaRefs } from "./schema-refs";
 import { resolveResponseType } from "./schema-types";
 import { getSchemaRefName } from "./schema-utils";
@@ -43,7 +43,7 @@ export function generateGroupFile(
   lines.push("const { endpoint } = courier();");
   lines.push("");
   lines.push(`export const ${group.name} = defineGroup({`);
-  lines.push(`  prefix: "${group.prefix}",`);
+  lines.push(`  prefix: ${jsLiteral(group.prefix)},`);
   lines.push(`  endpoints: {`);
 
   for (const ep of group.endpoints) {

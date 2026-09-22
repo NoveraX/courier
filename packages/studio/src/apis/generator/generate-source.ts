@@ -4,6 +4,7 @@
 
 import type { ParsedGroup, ParsedSecurityScheme, ParsedSpec } from "../parser/types";
 import { jsdocText } from "./jsdoc-text";
+import { jsLiteral, objectKey } from "./literals";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
 export function generateSourceFile(
@@ -21,7 +22,7 @@ export function generateSourceFile(
 
   lines.push("");
   lines.push(`export const ${options.sourceName} = defineApi({`);
-  lines.push(`  baseURL: "${spec.baseURL}",`);
+  lines.push(`  baseURL: ${jsLiteral(spec.baseURL)},`);
 
   // Generate auth headers from security schemes
   if (options.addAuthMiddleware && spec.securitySchemes.length > 0) {
@@ -70,7 +71,7 @@ function generateAuthHeaders(schemes: ParsedSecurityScheme[], sourceName: string
         break;
       case "apiKey":
         if (scheme.in === "header" && scheme.paramName) {
-          headers.push(`"${scheme.paramName}": process.env.${envPrefix}_API_KEY ?? ""`);
+          headers.push(`${objectKey(scheme.paramName)}: process.env.${envPrefix}_API_KEY ?? ""`);
         }
         break;
       case "oauth2":

@@ -61,7 +61,9 @@ function buildPathGroups(endpoints: ParsedEndpoint[]): ParsedGroup[] {
     groups.push({
       name: claim(toBindingName(segment), taken),
       description: "",
-      prefix,
+      /* The URL the caller builds uses `:name`; leaving the specification's
+         braces in put a literal `{AccountSid}` into the request. */
+      prefix: convertPathParams(prefix),
       endpoints: uniqueEndpointNames(eps, prefix).map((e) => ({
         ...e,
         path: convertPathParams(e.fullPath.slice(prefix.length) || "/"),

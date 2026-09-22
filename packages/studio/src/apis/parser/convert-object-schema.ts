@@ -3,11 +3,11 @@
  */
 
 import { toSafeIdentifier } from "./naming-utils";
-import { convertSchema } from "./schema-conversion";
+import { convertSchema, normalizeTypeArray } from "./schema-conversion";
 import type { ParsedSchema, ParsedSchemaProperty, SpecNode } from "./types";
 
-export function convertObjectSchema(name: string, schema: SpecNode): ParsedSchema {
-  const properties = extractProperties(schema);
+export function convertObjectSchema(name: string, schema: SpecNode, spec?: SpecNode): ParsedSchema {
+  const properties = extractProperties(schema, spec);
   const requiredFields = new Set(schema.required ?? []);
 
   return {
@@ -19,13 +19,16 @@ export function convertObjectSchema(name: string, schema: SpecNode): ParsedSchem
   };
 }
 
-function extractProperties(schema: SpecNode): Record<string, ParsedSchemaProperty> {
+function extractProperties(
+  schema: SpecNode,
+  spec?: SpecNode,
+): Record<string, ParsedSchemaProperty> {
   const properties: Record<string, ParsedSchemaProperty> = {};
   const requiredFields = new Set(schema.required ?? []);
 
   for (const [propName, propSchema] of Object.entries(schema.properties ?? {})) {
     const prop = propSchema as SpecNode;
-    const resolvedProp = resolvePropertySchema(prop);
+    const resolvedProp = normalizeTypeArray(resolvePropertySchema(prop, spec));
 
     properties[propName] = {
       type: resolvedProp.$ref ? "ref" : (resolvedProp.type ?? "any"),
@@ -35,15 +38,17 @@ function extractProperties(schema: SpecNode): Record<string, ParsedSchemaPropert
       enum: resolvedProp.enum,
       refName: resolvedProp.$ref ? toSafeIdentifier(resolvedProp.$ref.split("/").pop()) : undefined,
       nullable: resolvedProp.nullable ?? prop.nullable,
-      items: resolvedProp.items ? convertSchema(`${propName}Item`, resolvedProp.items) : undefined,
+      items: resolvedProp.items
+        ? convertSchema(`${propName}Item`, resolvedProp.items, spec)
+        : undefined,
     };
   }
   return properties;
 }
 
-function resolvePropertySchema(prop: SpecNode): SpecNode {
+function resolvePropertySchema(prop: SpecNode, spec?: SpecNode): SpecNode {
   if (prop.allOf) {
-    return resolveAllOfProperty(prop);
+    return resolveAllOfProperty(prop, spec);
   }
   if ((prop.oneOf || prop.anyOf) && !prop.type) {
     const variants = prop.oneOf || prop.anyOf;
@@ -55,7 +60,7 @@ function resolvePropertySchema(prop: SpecNode): SpecNode {
   return prop;
 }
 
-function resolveAllOfProperty(prop: SpecNode): SpecNode {
+function resolveAllOfProperty(prop: SpecNode, _spec?: SpecNode): SpecNode {
   const firstRef = prop.allOf.find((s: SpecNode) => s.$ref);
   if (firstRef) {
     return { ...firstRef, description: prop.description, nullable: prop.nullable };

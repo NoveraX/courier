@@ -86,7 +86,7 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
            overwritten the other. */
         name: claimGroupName(toBindingName(groupName), takenGroupNames),
         description: "",
-        prefix,
+        prefix: convertPathParams(prefix),
         endpoints: uniqueEndpointNames(endpoints, prefix).map((e) => ({
           ...e,
           path: convertPathParams(e.fullPath.slice(prefix.length) || "/"),

@@ -62,7 +62,7 @@ function parseSchemas(spec: SpecNode): Record<string, ReturnType<typeof convertS
       while (schemas[`${safeName}${n}`]) n += 1;
       safeName = `${safeName}${n}`;
     }
-    schemas[safeName] = convertSchema(safeName, schema as SpecNode);
+    schemas[safeName] = convertSchema(safeName, schema as SpecNode, spec);
   }
   return schemas;
 }
@@ -143,7 +143,9 @@ function buildGroups(
     groups.push({
       name,
       description: tagDescriptions.get(tag) ?? "",
-      prefix,
+      /* The URL the caller builds uses `:name`; leaving the specification's
+         braces in put a literal `{AccountSid}` into the request. */
+      prefix: convertPathParams(prefix),
       endpoints: uniqueEndpointNames(endpoints, prefix).map((e) => ({
         ...e,
         path: convertPathParams(e.fullPath.slice(prefix.length) || "/"),

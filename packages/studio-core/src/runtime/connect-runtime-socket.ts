@@ -86,17 +86,18 @@ export async function connectRuntimeSocket(
   try {
     mod = await import("socket.io-client");
   } catch {
-    /* An optional peer, so npm does not install it and says nothing. Without
-       it Studio renders its whole UI, watches the config, and never sees the
-       application — every source sits at "orphan" with no reason given
-       anywhere. Saying so here is the only place a developer can learn it. */
+    /* A dependency of this package, so reaching here means the install is
+       damaged rather than incomplete. Silence would leave Studio rendering its
+       whole UI, watching the config, and never seeing the application, with
+       every source sitting at "orphan" and no reason given anywhere. */
     log.warn(
       [
-        "Studio cannot connect: socket.io-client is not installed.",
-        "It is an optional peer of @noverax/courier-studio-core, so nothing",
-        "installed it for you and Studio will show your sources as orphaned.",
+        "Studio cannot connect: socket.io-client failed to load.",
+        "It ships as a dependency of @noverax/courier-studio-core, so this",
+        "usually means a damaged install. Studio will show your sources as",
+        "orphaned until it resolves.",
         "",
-        "  npm install --save-dev socket.io-client",
+        "  npm install",
       ].join("\n"),
     );
     return;

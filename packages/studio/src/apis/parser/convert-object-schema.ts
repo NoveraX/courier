@@ -14,7 +14,9 @@ export function convertObjectSchema(name: string, schema: SpecNode, spec?: SpecN
     name,
     type: "object",
     properties,
-    required: [...requiredFields] as string[],
+    required: ([...requiredFields] as string[]).filter(
+      (field) => properties[field]?.required !== false,
+    ),
     description: schema.description,
     /* A schema that names no properties but declares what its values look
        like is a map; without this it was emitted as an empty type nothing
@@ -44,7 +46,10 @@ function extractProperties(
     properties[propName] = {
       type: resolvedProp.$ref ? "ref" : (resolvedProp.type ?? "any"),
       format: resolvedProp.format,
-      required: requiredFields.has(propName),
+      /* A `readOnly` property is produced by the server. Demanding it made a
+         request body impossible to construct, while leaving it optional still
+         lets a response carry it. */
+      required: requiredFields.has(propName) && resolvedProp.readOnly !== true,
       description: resolvedProp.description ?? prop.description,
       enum: resolvedProp.enum,
       refName: resolvedProp.$ref ? toSafeIdentifier(resolvedProp.$ref.split("/").pop()) : undefined,

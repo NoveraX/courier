@@ -67,3 +67,21 @@ describe("generateTypes: false", () => {
     expect(out).toMatch(/export const StatusSchema/);
   });
 });
+
+describe("a property the server generates", () => {
+  it("is not demanded of a request", () => {
+    /* GitHub marks 59 properties `readOnly` and Box 4; demanding them made a
+       request body impossible to construct. */
+    const spec = parse({}, {
+      Thing: {
+        type: "object",
+        properties: { id: { type: "string", readOnly: true }, name: { type: "string" } },
+        required: ["id", "name"],
+      },
+    });
+
+    expect(spec.schemas.Thing?.properties?.id?.required).toBe(false);
+    expect(spec.schemas.Thing?.properties?.name?.required).toBe(true);
+    expect(spec.schemas.Thing?.required).toEqual(["name"]);
+  });
+});

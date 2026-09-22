@@ -623,7 +623,7 @@ mock("users", "getAll").resolves("done").delay(100)
               │  (server)  │          │  (browser) │                   │
               └─────┬──────┘          └─────┬──────┘                   │
                     │                       │                          │
-           createCaller(api)      createProxyCaller()                │
+           createCaller(api)      createProxyCaller()                  │
                     │                       │                          │
                     │                  POST /api/request               │
                     │                       │                          │

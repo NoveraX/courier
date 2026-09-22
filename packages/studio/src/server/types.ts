@@ -3,6 +3,8 @@
  */
 
 export interface StudioServerOptions {
+  /** First port handed to a managed mock that named none (default 7001) */
+  mockBasePort?: number;
   /** Server port (default: the shared Studio default, 6280) */
   port?: number;
   /** Server host (default: "localhost") */

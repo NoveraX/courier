@@ -73,6 +73,7 @@ const main = defineCommand({
     createStudioServer({
       port,
       host,
+      ...(configured.mockBasePort === undefined ? {} : { mockBasePort: configured.mockBasePort }),
       projectRoot,
       onReady: async (url) => {
         printBanner(host, port);

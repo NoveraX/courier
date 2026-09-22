@@ -34,11 +34,15 @@ const log = createLogger("Studio");
 /** Vite dev-server origin used by the Studio UI during local development */
 const STUDIO_UI_DEV_ORIGIN = "http://localhost:4382";
 
+/** Where mock-server port allocation starts when nothing says otherwise. */
+const DEFAULT_MOCK_BASE_PORT = 7001;
+
 export function createStudioServer(options: StudioServerOptions = {}): StudioServer {
   const {
     port = STUDIO_DEFAULT_PORT,
     host = "localhost",
     projectRoot = process.cwd(),
+    mockBasePort = DEFAULT_MOCK_BASE_PORT,
     onReady,
     extraCorsOrigins = [],
   } = options;
@@ -89,7 +93,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     mockRegistry,
     getConfigPath: () => loadedConfigPath,
     uiNamespace,
-    basePort: 7001,
+    basePort: mockBasePort,
     watcherStatus,
   });
   mockManager.start();

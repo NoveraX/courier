@@ -8,10 +8,12 @@
  * no address and the defaults apply.
  */
 
-/** Host and port a project asks Studio to bind, when it asks at all. */
+/** What a project asks of Studio, when it asks at all. */
 export interface StudioAddress {
   host?: string;
   port?: number;
+  /** First port handed to a managed mock server that named none itself. */
+  mockBasePort?: number;
 }
 
 export async function readStudioAddress(projectRoot: string): Promise<StudioAddress> {
@@ -19,7 +21,7 @@ export async function readStudioAddress(projectRoot: string): Promise<StudioAddr
     const { loadCourierConfig } = await import("@noverax/courier-studio-core/config");
     const loaded = await loadCourierConfig({ cwd: projectRoot, requireAtCwd: true });
     const studio = loaded?.config.studio;
-    return { host: studio?.host, port: studio?.port };
+    return { host: studio?.host, port: studio?.port, mockBasePort: studio?.mockBasePort };
   } catch {
     /* Reported where the config is loaded for real; here it only means the
        flags and the built-in defaults decide. */

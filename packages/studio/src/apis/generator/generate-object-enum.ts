@@ -8,6 +8,8 @@ import { jsdocText } from "./jsdoc-text";
 import { schemaToInterface } from "./schema-types";
 import { lazyDeclaration, satisfiesExpr, schemaToValidation } from "./schema-utils";
 import type { GenerateOptions } from "./types";
+import { schemaToArkType } from "./validation-arktype";
+import { valibotEnum } from "./validation-valibot";
 
 export function generateObjectSchema(
   lines: string[],
@@ -71,15 +73,13 @@ export function generateEnumSchema(
     lines.push(`export type ${name} = z.infer<typeof ${name}Schema>;`);
     lines.push("");
   } else if (options.generateSchemas && options.validation === "valibot") {
-    const values = filtered.map((val) =>
-      typeof val === "string" ? `v.literal("${val}")` : `v.literal(${val})`,
-    );
-    lines.push(`export const ${name}Schema = v.union([${values.join(", ")}]);`);
+    lines.push(`export const ${name}Schema = ${valibotEnum(filtered)};`);
     lines.push(`export type ${name} = v.InferOutput<typeof ${name}Schema>;`);
     lines.push("");
   } else if (options.generateSchemas && options.validation === "arktype") {
-    const values = filtered.map((val) => (typeof val === "string" ? `"'${val}'"` : `"${val}"`));
-    lines.push(`export const ${name}Schema = type(${values.join(" | ")});`);
+    lines.push(
+      `export const ${name}Schema = ${schemaToArkType({ ...schema, type: "enum", enum: filtered })};`,
+    );
     lines.push(`export type ${name} = typeof ${name}Schema.infer;`);
     lines.push("");
   } else if (options.generateTypes) {

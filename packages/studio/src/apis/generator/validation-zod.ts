@@ -4,6 +4,7 @@
 
 import type { ParsedSchema, ParsedSchemaProperty } from "../parser/types";
 import { zodEnum } from "./enum-literals";
+import { objectKey } from "./literals";
 
 export function schemaToZod(schema: ParsedSchema): string {
   if (schema.type === "ref" && schema.refName) return `${schema.refName}Schema`;
@@ -25,7 +26,7 @@ export function schemaToZod(schema: ParsedSchema): string {
       let zodType = propToZod(prop);
       if (!required.has(name)) zodType += ".optional()";
       if (prop.nullable) zodType += ".nullable()";
-      const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : `"${name}"`;
+      const key = objectKey(name);
       propLines.push(`  ${key}: ${zodType}`);
     }
     if (propLines.length === 0) return "z.record(z.string(), z.unknown())";

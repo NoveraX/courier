@@ -13,8 +13,10 @@
  * by the same JSON encoder that has to read them back.
  */
 
+import { jsLiteral, type SpecValue } from "./literals";
+
 /** Values a specification may list in an `enum`. */
-export type EnumValue = string | number | boolean;
+export type EnumValue = SpecValue;
 
 /** Drop the members that describe absence rather than a value. */
 function usableValues(values: readonly (EnumValue | null | undefined)[]): EnumValue[] {
@@ -38,10 +40,10 @@ export function zodEnum(values: readonly (EnumValue | null | undefined)[]): stri
   if (usable.length === 0) return "z.unknown()";
 
   if (usable.every((value) => typeof value === "string")) {
-    return `z.enum([${usable.map((value) => JSON.stringify(value)).join(", ")}])`;
+    return `z.enum([${usable.map((value) => jsLiteral(value)).join(", ")}])`;
   }
 
-  const literals = usable.map((value) => `z.literal(${JSON.stringify(value)})`);
+  const literals = usable.map((value) => `z.literal(${jsLiteral(value)})`);
   return literals.length === 1 ? (literals[0] as string) : `z.union([${literals.join(", ")}])`;
 }
 
@@ -59,5 +61,5 @@ export function zodEnum(values: readonly (EnumValue | null | undefined)[]): stri
 export function typeUnion(values: readonly (EnumValue | null | undefined)[]): string {
   const usable = usableValues(values);
   if (usable.length === 0) return "never";
-  return usable.map((value) => JSON.stringify(value)).join(" | ");
+  return usable.map((value) => jsLiteral(value)).join(" | ");
 }

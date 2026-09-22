@@ -10,7 +10,7 @@ const COMMENT_CLOSE = `*${"/"}`;
 function generate(spec: object): { path: string; content: string }[] {
   return generateCode(
     parseSpec(JSON.stringify(spec)),
-    applyImportDefaults({ sourceName: "api", outputDir: "src/api" }),
+    applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src/api" }),
   );
 }
 

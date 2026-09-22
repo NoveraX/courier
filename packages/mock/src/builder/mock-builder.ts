@@ -54,6 +54,16 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
     },
 
     returns(fn) {
+      /* `returns` takes a function of the request; static data goes to
+         `resolves`. Mixing them up used to survive until the endpoint was
+         called and then answer 500 with "handler.fn is not a function",
+         which names nothing the caller can act on. */
+      if (typeof fn !== "function") {
+        throw new TypeError(
+          `returns() expects a function of the request context, received ${describeValue(fn)}. ` +
+            "Use resolves() to answer with static data.",
+        );
+      }
       ensureOwnHandler();
       handler.fn = fn as MockHandlerFn;
       handler.status = 200;
@@ -172,4 +182,11 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
   };
 
   return builder;
+}
+
+/** Name what arrived, so a wrong argument reads as itself in the message. */
+function describeValue(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "an array";
+  return typeof value;
 }

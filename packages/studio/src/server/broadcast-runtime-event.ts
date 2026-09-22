@@ -6,15 +6,19 @@
  * server-side caller goes through it so the wire format and downstream
  * filtering live in exactly one place.
  *
- * Only events whose `type` is in `RUNTIME_EVENT_WHITELIST` are forwarded;
- * unknown types are silently dropped with a warning log so a compromised
- * runtime cannot inject arbitrary event shapes into the UI store.
+ * Only known types are forwarded, so a compromised runtime cannot inject
+ * arbitrary event shapes into the UI store. There are two families, and they
+ * carry different fields: a mock-server lifecycle event names the server it
+ * came from, while a request-lifecycle event does not. Requiring `serverId` of
+ * both is what silently dropped every request event a runtime ever sent, which
+ * left Studio's Timeline, Waterfall, Analytics and Playground catalogue empty
+ * while the application was plainly serving traffic.
  */
 
 import type { Namespace } from "socket.io";
 
-/** Every event type the UI `handleMockEvent` dispatcher recognizes. */
-const RUNTIME_EVENT_WHITELIST = new Set([
+/** Mock-server lifecycle. Each names the server it came from. */
+const MOCK_EVENTS = new Set([
   "mock:server:connect",
   "mock:server:disconnect",
   "mock:route:list",
@@ -27,6 +31,38 @@ const RUNTIME_EVENT_WHITELIST = new Set([
   "mock:request:error",
   "mock:network:config",
   "mock:experiment:event",
+]);
+
+/** What a runtime reports about the requests it serves. */
+const RUNTIME_EVENTS = new Set([
+  "request:start",
+  "request:end",
+  "request:error",
+  "request:abort",
+  "http:fetch:start",
+  "http:fetch:end",
+  "http:fetch:error",
+  "proxy:receive",
+  "proxy:parse",
+  "proxy:respond",
+  "middleware:enter",
+  "middleware:exit",
+  "middleware:error",
+  "validation:start",
+  "validation:pass",
+  "validation:fail",
+  "stream:open",
+  "stream:message",
+  "stream:close",
+  "stream:error",
+  "cache:hit",
+  "cache:miss",
+  "cache:store",
+  "cache:invalidate",
+  "dedup:reuse",
+  "dedup:abort",
+  "upload:progress",
+  "upload:complete",
 ]);
 
 function isPlainObject(raw: unknown): raw is Record<string, unknown> {
@@ -42,8 +78,16 @@ function isPlainObject(raw: unknown): raw is Record<string, unknown> {
  */
 export function sanitizeRuntimeEvent(raw: unknown): Record<string, unknown> | undefined {
   if (!isPlainObject(raw)) return undefined;
-  if (typeof raw.type !== "string" || !RUNTIME_EVENT_WHITELIST.has(raw.type)) return undefined;
-  if (typeof raw.serverId !== "string" || raw.serverId.length === 0) return undefined;
+  if (typeof raw.type !== "string") return undefined;
+
+  const isMock = MOCK_EVENTS.has(raw.type);
+  if (!isMock && !RUNTIME_EVENTS.has(raw.type)) return undefined;
+
+  /* Only a mock event names a server; asking a request event for one rejects
+     every request event there is. */
+  if (isMock && (typeof raw.serverId !== "string" || raw.serverId.length === 0)) {
+    return undefined;
+  }
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(raw)) {
     if (key === "__proto__" || key === "constructor" || key === "prototype") continue;

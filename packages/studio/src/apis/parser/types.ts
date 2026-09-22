@@ -81,6 +81,12 @@ export interface ParsedParameter {
   required: boolean;
   type: string;
   description: string;
+  /** Allowed values, when the specification lists them. */
+  enum?: (string | number | boolean)[];
+  /** Element type of an array-valued parameter. */
+  items?: ParsedSchema;
+  /** `date-time`, `uuid`, and the rest. */
+  format?: string;
 }
 
 export interface ParsedSchema {

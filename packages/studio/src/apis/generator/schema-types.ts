@@ -2,7 +2,8 @@
  * TypeScript type generation from parsed schemas.
  */
 
-import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
+import type { ParsedEndpoint, ParsedParameter, ParsedSchema, ParsedSpec } from "../parser/types";
+import { typeUnion } from "./enum-literals";
 import { propToTsType, schemaToTsType } from "./inline-types";
 import { jsdocText } from "./jsdoc-text";
 import { objectKey } from "./literals";
@@ -65,10 +66,11 @@ export function resolveVariablesType(
   // Path params — normalize hyphenated names to valid identifiers
   for (const param of ep.parameters.filter((p) => p.in === "path")) {
     const key = objectKey(param.name);
+    const type = parameterTsType(param);
     if (options.includeComments && param.description) {
-      parts.push(`/** ${jsdocText(param.description)} */ ${key}: string`);
+      parts.push(`/** ${jsdocText(param.description)} */ ${key}: ${type}`);
     } else {
-      parts.push(`${key}: string`);
+      parts.push(`${key}: ${type}`);
     }
   }
 
@@ -76,10 +78,11 @@ export function resolveVariablesType(
   for (const param of ep.parameters.filter((p) => p.in === "query")) {
     const key = objectKey(param.name);
     const optional = !param.required ? "?" : "";
+    const type = parameterTsType(param);
     if (options.includeComments && param.description) {
-      parts.push(`/** ${jsdocText(param.description)} */ ${key}${optional}: ${tsType(param.type)}`);
+      parts.push(`/** ${jsdocText(param.description)} */ ${key}${optional}: ${type}`);
     } else {
-      parts.push(`${key}${optional}: ${tsType(param.type)}`);
+      parts.push(`${key}${optional}: ${type}`);
     }
   }
 
@@ -136,4 +139,20 @@ function inlineShape(spec: ParsedSpec, refName: string, options: GenerateOptions
     parts.push(`${doc}${key}${optional}: ${tsType(prop.type)}`);
   }
   return parts.length > 0 ? `{ ${parts.join("; ")} }` : "Record<string, unknown>";
+}
+
+/**
+ * The type a parameter accepts.
+ *
+ * Reduced to a bare type name, a parameter lost the values it allows and the
+ * element type of an array — every `status` that accepts three words was
+ * typed `string`, and every repeated query value was typed as one.
+ */
+function parameterTsType(param: ParsedParameter): string {
+  if (param.enum?.length) return typeUnion(param.enum);
+  if (param.type === "array") {
+    const item = param.items ? schemaToTsType(param.items) : "string";
+    return item.includes("|") ? `(${item})[]` : `${item}[]`;
+  }
+  return tsType(param.type);
 }

@@ -7,6 +7,7 @@ import {
   convertPathParams,
   convertSchemaInline,
   generateEndpointName,
+  normalizeTypeArray,
   resolveRef,
   toCamelCase,
 } from "./utils";
@@ -57,14 +58,20 @@ function parseParameters(op: SpecNode, spec: SpecNode): ParsedParameter[] {
     if (seen.has(key)) continue;
     seen.add(key);
 
+    /* Swagger 2.0 writes the shape on the parameter itself; OpenAPI 3 puts
+       it in a schema. */
+    const shape = normalizeTypeArray(resolved.schema ?? resolved);
     parameters.push({
       name,
       in: resolved.in,
       required: resolved.required ?? false,
-      /* Swagger 2.0 writes the type on the parameter itself; OpenAPI 3 puts
-         it in a schema. */
-      type: resolved.schema?.type ?? resolved.type ?? "string",
+      type: shape.type ?? "string",
       description: resolved.description ?? "",
+      /* Reduced to a bare type name, a parameter lost the values it accepts
+         and the element type of an array. */
+      ...(shape.enum && { enum: shape.enum }),
+      ...(shape.format && { format: shape.format }),
+      ...(shape.items && { items: convertSchemaInline(shape.items, spec) }),
     });
   }
   return parameters;

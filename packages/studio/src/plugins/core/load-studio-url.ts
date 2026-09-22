@@ -1,11 +1,14 @@
 import { createLogger } from "@noverax/courier";
+import {
+  STUDIO_DEFAULT_HOST,
+  STUDIO_DEFAULT_PORT,
+  STUDIO_DEFAULT_URL,
+} from "@noverax/courier/config";
 import { loadCourierConfig } from "../../server/config-loader";
 
 const log = createLogger("StudioPlugin");
 
-const DEFAULT_HOST = "127.0.0.1";
-const DEFAULT_PORT = 6280;
-const DEFAULT_URL = `http://${DEFAULT_HOST}:${DEFAULT_PORT}`;
+const DEFAULT_URL = STUDIO_DEFAULT_URL;
 
 /** Per-cwd cache so each plugin instance only walks the filesystem once */
 const cache = new Map<string, Promise<string>>();
@@ -14,7 +17,7 @@ const cache = new Map<string, Promise<string>>();
  * Resolve the Studio dev-server URL for a given project root by reading
  * `studio.host` and `studio.port` from `courier.config.ts`.
  *
- * Falls back to `http://127.0.0.1:6280` (and warns) when no config file
+ * Falls back to the shared default address (and warns) when no config file
  * exists or the config cannot be parsed — build plugins must always be
  * able to emit a snippet so the dev experience never blocks on a missing
  * config file.
@@ -30,8 +33,8 @@ export function loadStudioUrl(projectRoot: string = process.cwd()): Promise<stri
   const promise = loadCourierConfig(projectRoot)
     .then(({ config }) => {
       const studio = config.studio ?? {};
-      const host = studio.host ?? DEFAULT_HOST;
-      const port = studio.port ?? DEFAULT_PORT;
+      const host = studio.host ?? STUDIO_DEFAULT_HOST;
+      const port = studio.port ?? STUDIO_DEFAULT_PORT;
       return `http://${host}:${port}`;
     })
     .catch((err) => {

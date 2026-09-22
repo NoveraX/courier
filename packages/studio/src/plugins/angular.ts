@@ -4,7 +4,7 @@
  *
  * Angular abstracts Vite config, so this uses a runtime approach instead
  * of a build plugin. Set `globalThis[Symbol.for("courier.studio.url")]` (or
- * the `COURIER_STUDIO_URL` env var) to override the default `127.0.0.1:6280`.
+ * the `COURIER_STUDIO_URL` env var) to override the default `localhost:6280`.
  *
  * @example
  * ```ts

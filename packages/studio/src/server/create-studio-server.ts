@@ -7,6 +7,7 @@ import { createServer } from "node:http";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createLogger } from "@noverax/courier";
+import { STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
 import compression from "compression";
 import express from "express";
 import type { RequestHandler } from "express-serve-static-core";
@@ -35,7 +36,7 @@ const STUDIO_UI_DEV_ORIGIN = "http://localhost:4382";
 
 export function createStudioServer(options: StudioServerOptions = {}): StudioServer {
   const {
-    port = 4380,
+    port = STUDIO_DEFAULT_PORT,
     host = "localhost",
     projectRoot = process.cwd(),
     onReady,

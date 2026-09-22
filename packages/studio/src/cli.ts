@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 import { createLogger } from "@noverax/courier";
+import { STUDIO_DEFAULT_HOST, STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
 import { defineCommand, runMain } from "citty";
 import { setProjectRoot } from "./context";
 import { checkNodeVersion } from "./node-version";
 import { createStudioServer } from "./server";
 import { printBanner } from "./server/banner";
 import { initProject } from "./server/init";
+import { readStudioAddress } from "./server/studio-address";
 
 checkNodeVersion();
 
@@ -32,13 +34,13 @@ const main = defineCommand({
   args: {
     port: {
       type: "string",
-      description: "Server port",
-      default: "4380",
+      description: `Server port (falls back to studio.port, then ${STUDIO_DEFAULT_PORT})`,
+      default: "",
     },
     host: {
       type: "string",
-      description: "Server host",
-      default: "localhost",
+      description: `Server host (falls back to studio.host, then ${STUDIO_DEFAULT_HOST})`,
+      default: "",
     },
     cwd: {
       type: "string",
@@ -52,13 +54,21 @@ const main = defineCommand({
     },
   },
   async run({ args }) {
-    const port = Number.parseInt(args.port, 10);
+    const projectRoot = args.cwd || process.cwd();
+
+    /* `studio.port` and `studio.host` are documented, typed, and read by every
+       client that dials Studio. The server used to ignore them, so configuring
+       them moved the clients and left the server where it was. */
+    const configured = await readStudioAddress(projectRoot);
+
+    const port = args.port
+      ? Number.parseInt(args.port, 10)
+      : (configured.port ?? STUDIO_DEFAULT_PORT);
     if (Number.isNaN(port) || port < 1 || port > 65535) {
       log.error(`Invalid port: "${args.port}". Must be a number between 1 and 65535.`);
       process.exit(1);
     }
-    const host = args.host;
-    const projectRoot = args.cwd || process.cwd();
+    const host = args.host || configured.host || STUDIO_DEFAULT_HOST;
 
     createStudioServer({
       port,

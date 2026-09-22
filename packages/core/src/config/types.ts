@@ -99,7 +99,7 @@ export type CourierImportEntry = CourierUrlImport | CourierFileImport | CourierR
 export interface CourierStudioConfig {
   /** Studio HTTP/Socket.IO port — default 6280 */
   port?: number;
-  /** Bind host — default "127.0.0.1" */
+  /** Bind host — default "localhost" */
   host?: string;
   /** First port assigned to managed mock servers — default 7001 */
   mockBasePort?: number;

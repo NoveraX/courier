@@ -19,6 +19,12 @@ import type { CourierConfig } from "./types";
  * });
  * ```
  */
+export {
+  STUDIO_DEFAULT_HOST,
+  STUDIO_DEFAULT_PORT,
+  STUDIO_DEFAULT_URL,
+} from "./studio-address";
+
 export function defineConfig<TSources extends Record<string, AnySource>>(
   config: CourierConfig<TSources>,
 ): CourierConfig<TSources> {

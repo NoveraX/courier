@@ -35,7 +35,7 @@
  *
  * Browser side (build-plugin-injected snippet):
  * ```ts
- * globalThis[Symbol.for("courier.studio.url")] = "http://127.0.0.1:6280";
+ * globalThis[Symbol.for("courier.studio.url")] = "http://localhost:6280";
  * await attachRuntime("next-browser");
  * ```
  *
@@ -55,6 +55,7 @@ import {
   setAppOrigin,
   studioHooks,
 } from "@noverax/courier";
+import { STUDIO_DEFAULT_URL } from "@noverax/courier/config";
 import type { AnySource } from "@noverax/courier/define";
 import { EventBus } from "../event-bus";
 import { type BufferedAnnouncement, consumeAnnouncements } from "./announce-hosting";
@@ -78,7 +79,7 @@ interface InternalHandle extends RuntimeHandle {
 const handles = new Map<string, InternalHandle>();
 
 const STUDIO_URL_KEY = Symbol.for("courier.studio.url");
-const DEFAULT_STUDIO_URL = "http://127.0.0.1:6280";
+const DEFAULT_STUDIO_URL = STUDIO_DEFAULT_URL;
 
 const HOOKS_INSTALLED_KEY = Symbol.for("courier.studio.attach-runtime-source-defined-installed");
 

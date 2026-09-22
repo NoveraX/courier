@@ -3,7 +3,7 @@
  */
 
 export interface StudioServerOptions {
-  /** Server port (default: 4380) */
+  /** Server port (default: the shared Studio default, 6280) */
   port?: number;
   /** Server host (default: "localhost") */
   host?: string;

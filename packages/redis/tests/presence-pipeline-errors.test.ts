@@ -22,6 +22,7 @@ function createFailingRedis(failure: Error) {
 
   return {
     status: "ready",
+    ping: async () => "PONG",
     on: () => undefined,
     off: () => undefined,
     pipeline: () => pipe,

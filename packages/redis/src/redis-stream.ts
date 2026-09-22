@@ -68,7 +68,9 @@ export function createRedisStream(config: RedisStreamConfig): StreamAdapter {
   }
 
   return {
+    /* Verifying beats reporting success against a Redis that is not there. */
     async connect() {
+      await redis.ping();
       connected = true;
     },
 

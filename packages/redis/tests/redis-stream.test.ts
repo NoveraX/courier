@@ -15,6 +15,9 @@ function createMockRedis() {
 
   const mock = {
     status: "ready" as string,
+    async ping(): Promise<string> {
+      return "PONG";
+    },
 
     xadd: vi.fn(async (...args: unknown[]) => {
       idCounter++;

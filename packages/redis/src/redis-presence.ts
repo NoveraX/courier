@@ -1,6 +1,6 @@
-import type { PresenceAdapter } from "@noverax/courier/realtime";
-
+import type { PresenceAdapter, PresenceDiff } from "@noverax/courier/realtime";
 import { trackHealth } from "./health";
+import { createDiffBroadcast } from "./redis-presence-broadcast";
 import {
   createDiffEmitter,
   createErrorEmitter,
@@ -36,14 +36,31 @@ const DEFAULT_PREFIX = "presence:";
  * ```
  */
 export function createRedisPresence(config: RedisPresenceConfig): PresenceAdapter {
-  const { redis, prefix = DEFAULT_PREFIX } = config;
+  const { redis, subscriber, prefix = DEFAULT_PREFIX } = config;
   const errorHandlers = new Set<(error: Error) => void>();
   const diffHandlers = new Map<string, Set<DiffHandler>>();
   const health = trackHealth(redis);
+  const origin = config.origin ?? crypto.randomUUID();
   let connected = false;
 
   const emitError = createErrorEmitter(errorHandlers);
-  const emitDiff = createDiffEmitter(diffHandlers, emitError);
+  const deliverLocally = createDiffEmitter(diffHandlers, emitError);
+
+  const broadcast = createDiffBroadcast({
+    redis,
+    subscriber,
+    prefix,
+    origin,
+    deliver: deliverLocally,
+    onError: emitError,
+  });
+
+  /* Local handlers run first — this replica already knows what it did — and
+     the other replicas learn about it over the channel. */
+  const emitDiff = (topic: string, diff: PresenceDiff): void => {
+    deliverLocally(topic, diff);
+    broadcast.publish(topic, diff);
+  };
 
   const ctx: PresenceContext = {
     redis,
@@ -58,12 +75,17 @@ export function createRedisPresence(config: RedisPresenceConfig): PresenceAdapte
   };
 
   return {
+    /* A `connect` that only set a flag reported success against a Redis that
+       was not there, and the caller learned otherwise at the first command. */
     async connect() {
+      await redis.ping();
+      if (subscriber) await subscriber.ping();
       connected = true;
     },
 
     async disconnect() {
       connected = false;
+      await broadcast.close();
       errorHandlers.clear();
       diffHandlers.clear();
       health.cleanup();
@@ -96,9 +118,17 @@ export function createRedisPresence(config: RedisPresenceConfig): PresenceAdapte
       }
       set.add(handler);
       const captured = set;
+
+      /* Subscribing is what makes this replica hear the others; without a
+         subscriber client it only ever hears itself. */
+      broadcast.listen(topic).catch(emitError);
+
       return () => {
         captured.delete(handler);
-        if (captured.size === 0) diffHandlers.delete(topic);
+        if (captured.size === 0) {
+          diffHandlers.delete(topic);
+          broadcast.stopListening(topic).catch(emitError);
+        }
       };
     },
   };

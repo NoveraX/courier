@@ -60,7 +60,11 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
   const handleError = (err: Error): void => emitError(err);
 
   return {
+    /* Both connections are verified, because a publisher that works and a
+       subscriber that does not looks like silence rather than a failure. */
     async connect() {
+      await publisher.ping();
+      await subscriber.ping();
       publisher.on("error", handleError);
       subscriber.on("error", handleError);
       subscriber.on("message", handleMessage);

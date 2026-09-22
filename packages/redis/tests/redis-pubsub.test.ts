@@ -11,6 +11,7 @@ function createMockRedis() {
 
   const mock = {
     status: "ready" as string,
+    ping: vi.fn().mockResolvedValue("PONG"),
     publish: vi.fn().mockResolvedValue(1),
     subscribe: vi.fn().mockResolvedValue(undefined),
     unsubscribe: vi.fn().mockResolvedValue(undefined),

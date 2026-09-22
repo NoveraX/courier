@@ -3,6 +3,21 @@ import type { Redis } from "ioredis";
 /** Configuration for {@link createRedisPresence} */
 export interface RedisPresenceConfig {
   /**
+   * A second connection, used only to hear the other replicas' presence diffs.
+   *
+   * Redis puts a subscribed connection into a mode that accepts almost nothing
+   * else, so this cannot be the client above. Without it the ZSET and HASH are
+   * still shared — every replica can `list()` the same topic — but `onDiff`
+   * reports only what this replica did itself, and a presence UI misses every
+   * join and leave that happened elsewhere.
+   */
+  subscriber?: Redis;
+  /**
+   * Identifier stamped on this replica's diffs so it ignores their echo.
+   * Generated when omitted.
+   */
+  origin?: string;
+  /**
    * Redis instance for ZADD / HSET / ZRANGEBYSCORE commands.
    *
    * Typed against ioredis's default `legacy` reply mapping, which is what

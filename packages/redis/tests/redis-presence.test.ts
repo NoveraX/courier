@@ -31,6 +31,9 @@ function createRedisMock() {
 
   const redis = {
     status: "ready" as string,
+    async ping(): Promise<string> {
+      return "PONG";
+    },
 
     on(event: string, handler: (...args: unknown[]) => void) {
       let set = listeners.get(event);

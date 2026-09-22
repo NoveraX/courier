@@ -124,6 +124,13 @@ export async function connectRuntimeSocket(
     return;
   }
 
+  /* Every announcement this runtime has ever made, kept rather than consumed.
+     Studio drops a runtime's claims when its socket disconnects, so whatever
+     was announced over the dead connection has to be stated again over the new
+     one. Draining destructively left nothing to restate: the runtime came back,
+     said hello, and sat there bound to nothing. */
+  const announced: BufferedAnnouncement[] = [];
+
   /* Adapters announce as they are constructed, which is whenever the
      application happens to wire its routes — before this socket opens for
      some, after it for others. Draining only on connect left the later ones
@@ -133,6 +140,7 @@ export async function connectRuntimeSocket(
     while (pending.length > 0) {
       const entry = pending.shift();
       if (!entry) continue;
+      announced.push(entry);
       socket.emit("runtime:announce", buildAnnouncePayload(entry));
     }
   };
@@ -143,6 +151,11 @@ export async function connectRuntimeSocket(
       kind: input.kind,
       ...(input.listenOrigin && { listenOrigin: input.listenOrigin }),
     });
+    /* Empty on the first connect, so this replays nothing until there is
+       genuinely a previous session's worth of claims to restore. */
+    for (const entry of announced) {
+      socket.emit("runtime:announce", buildAnnouncePayload(entry));
+    }
     drain();
   });
 

@@ -17,7 +17,7 @@ export function buildEndpointDefinition(
   extracted?: Record<string, ParsedSchema>,
 ): string {
   const hasSchema = options.generateSchemas && options.validation !== "none";
-  const schemaConfig = buildSchemaConfig(ep, options, hasSchema, schemaImports);
+  const schemaConfig = buildSchemaConfig(ep, spec, options, hasSchema, schemaImports);
 
   const responseType = resolveResponseType(ep, spec, options);
   const paramsName = `${toPascalCase(ep.name)}Params`;
@@ -38,6 +38,7 @@ function address(ep: ParsedEndpoint): string {
 
 function buildSchemaConfig(
   ep: ParsedEndpoint,
+  spec: ParsedSpec,
   options: ResolvedGenerateOptions,
   hasSchema: boolean,
   schemaImports: Set<string>,
@@ -57,6 +58,7 @@ function buildSchemaConfig(
         `${bodyRef}Schema`,
         pathParams.map((p) => p.name),
         options,
+        spec.schemas[bodyRef]?.type !== "union",
       );
       config.push(`variables: ${varsExpr}`);
     } else {

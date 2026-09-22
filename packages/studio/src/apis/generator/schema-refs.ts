@@ -63,6 +63,7 @@ function walk(
 
   if (schema.refName) into.add(schema.refName);
   walk(schema.items, into, seen);
+  for (const variant of schema.variants ?? []) walk(variant, into, seen);
 
   for (const prop of Object.values(schema.properties ?? {})) {
     if (prop.refName) into.add(prop.refName);

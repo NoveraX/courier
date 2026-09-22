@@ -5,10 +5,13 @@
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
 import { propToTsType, schemaToTsType } from "./inline-types";
 import { jsdocText } from "./jsdoc-text";
+import { objectKey } from "./literals";
 import type { GenerateOptions } from "./types";
 
 export function schemaToInterface(schema: ParsedSchema): string {
-  if (schema.type !== "object" || !schema.properties) return "{}";
+  /* A schema that is not an object still has a type — a union of alternatives,
+     an array, an enum — and answering `{}` described it as an empty one. */
+  if (schema.type !== "object" || !schema.properties) return `${schemaToTsType(schema)};`;
 
   const required = new Set(schema.required ?? []);
   const lines: string[] = [];
@@ -16,7 +19,7 @@ export function schemaToInterface(schema: ParsedSchema): string {
     if (!name) continue;
     const optional = !required.has(name) ? "?" : "";
     const nullable = prop.nullable ? " | null" : "";
-    const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : `"${name}"`;
+    const key = objectKey(name);
     if (prop.description) lines.push(`  /** ${jsdocText(prop.description)} */`);
     lines.push(`  ${key}${optional}: ${propToTsType(prop)}${nullable};`);
   }
@@ -61,7 +64,7 @@ export function resolveVariablesType(
 
   // Path params — normalize hyphenated names to valid identifiers
   for (const param of ep.parameters.filter((p) => p.in === "path")) {
-    const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(param.name) ? param.name : `"${param.name}"`;
+    const key = objectKey(param.name);
     if (options.includeComments && param.description) {
       parts.push(`/** ${jsdocText(param.description)} */ ${key}: string`);
     } else {
@@ -71,7 +74,7 @@ export function resolveVariablesType(
 
   // Query params
   for (const param of ep.parameters.filter((p) => p.in === "query")) {
-    const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(param.name) ? param.name : `"${param.name}"`;
+    const key = objectKey(param.name);
     const optional = !param.required ? "?" : "";
     if (options.includeComments && param.description) {
       parts.push(`/** ${jsdocText(param.description)} */ ${key}${optional}: ${tsType(param.type)}`);

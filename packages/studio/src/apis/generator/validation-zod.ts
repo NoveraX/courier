@@ -18,6 +18,11 @@ export function schemaToZod(schema: ParsedSchema): string {
     return zodEnum(schema.enum);
   }
 
+  if (schema.type === "union" && schema.variants?.length) {
+    const variants = schema.variants.map((variant) => schemaToZod(variant));
+    return variants.length === 1 ? (variants[0] as string) : `z.union([${variants.join(", ")}])`;
+  }
+
   if (schema.type === "object" && schema.properties) {
     const required = new Set(schema.required ?? []);
     const propLines: string[] = [];

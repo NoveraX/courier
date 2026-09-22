@@ -85,7 +85,24 @@ export interface ParsedParameter {
 
 export interface ParsedSchema {
   name: string;
-  type: "object" | "array" | "string" | "number" | "integer" | "boolean" | "enum" | "ref" | "any";
+  type:
+    | "object"
+    | "array"
+    | "string"
+    | "number"
+    | "integer"
+    | "boolean"
+    | "enum"
+    | "ref"
+    | "union"
+    | "any";
+  /**
+   * Alternatives of a `oneOf` / `anyOf`.
+   *
+   * Keeping only the first silently narrowed 28 GitHub request bodies and 14
+   * Stripe responses to one of their shapes.
+   */
+  variants?: ParsedSchema[];
   properties?: Record<string, ParsedSchemaProperty>;
   items?: ParsedSchema;
   enum?: (string | number | boolean)[];

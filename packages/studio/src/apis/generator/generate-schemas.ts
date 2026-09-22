@@ -15,6 +15,7 @@ import {
 import { jsdocText } from "./jsdoc-text";
 import { topoSortSchemas } from "./schema-refs";
 import { schemaToInterface } from "./schema-types";
+import { schemaToValidation } from "./schema-utils";
 import type { GeneratedFile, GenerateOptions } from "./types";
 import { schemaToArkType } from "./validation-arktype";
 
@@ -54,6 +55,8 @@ export function generateSchemasFile(
       generateEnumSchema(lines, name, schema, options);
     } else if (schema.type === "ref" && schema.refName) {
       generateRefSchema(lines, name, schema, options);
+    } else if (schema.type === "union" && schema.variants?.length) {
+      generateUnionSchema(lines, name, schema, options);
     } else if (schema.type === "array") {
       generateArraySchema(lines, name, schema, options);
     } else {
@@ -70,6 +73,25 @@ export function generateSchemasFile(
       : `${options.outputDir}/schemas.ts`,
     content: lines.join("\n"),
   };
+}
+
+/** Declare a schema that is one of several alternatives. */
+function generateUnionSchema(
+  lines: string[],
+  name: string,
+  schema: ParsedSchema,
+  options: GenerateOptions,
+): void {
+  if (options.includeComments && schema.description) {
+    lines.push(`/** ${jsdocText(schema.description)} */`);
+  }
+  if (options.generateTypes) {
+    lines.push(`export type ${name} = ${schemaToInterface(schema)}`);
+  }
+  if (options.generateSchemas && options.validation !== "none") {
+    lines.push(`export const ${name}Schema = ${schemaToValidation(schema, options)};`);
+  }
+  lines.push("");
 }
 
 /**

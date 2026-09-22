@@ -67,16 +67,23 @@ export function extendSchemaWithParams(
   schemaExpr: string,
   paramNames: string[],
   options: GenerateOptions,
+  isObject = true,
 ): string {
   if (paramNames.length === 0) return schemaExpr;
 
   if (options.validation === "zod") {
     const fields = paramNames.map((n) => `${n}: z.string()`).join(", ");
-    return `${schemaExpr}.extend({ ${fields} })`;
+    /* `.extend` belongs to an object schema; a body that is one of several
+       shapes has to be intersected instead. */
+    return isObject
+      ? `${schemaExpr}.extend({ ${fields} })`
+      : `z.intersection(${schemaExpr}, z.object({ ${fields} }))`;
   }
   if (options.validation === "valibot") {
     const fields = paramNames.map((n) => `${n}: v.string()`).join(", ");
-    return `v.object({ ...${schemaExpr}.entries, ${fields} })`;
+    return isObject
+      ? `v.object({ ...${schemaExpr}.entries, ${fields} })`
+      : `v.intersect([${schemaExpr}, v.object({ ${fields} })])`;
   }
   if (options.validation === "arktype") {
     const fields = paramNames.map((n) => `${n}: "string"`).join(", ");

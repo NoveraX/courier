@@ -109,10 +109,11 @@ function collectTypeImports(
   for (const ep of group.endpoints) {
     if (!describesResponseWithSchema(ep, options, schemaImports)) {
       const responseType = resolveResponseType(ep, spec, options);
+      /* A response type may name several schemas — `SimpleUser[] | Stargazer[]`
+         — so each one is looked for inside it rather than compared to the
+         whole of it. */
       for (const ref of schemaImports) {
-        if (responseType === ref || responseType === `${ref}[]`) {
-          typeImports.add(ref);
-        }
+        if (namesType(responseType, ref)) typeImports.add(ref);
       }
     }
     if (options.includeComments) {
@@ -154,4 +155,10 @@ function checkNeedsValidationImport(
     if (bodyRef && schemaImports.has(bodyRef) && hasPathParams) return true;
   }
   return false;
+}
+
+/** Does this type expression name `ref` as an identifier of its own? */
+function namesType(expression: string | null, ref: string): boolean {
+  if (!expression) return false;
+  return new RegExp(`(^|[^A-Za-z0-9_$])${ref}([^A-Za-z0-9_$]|$)`).test(expression);
 }

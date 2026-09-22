@@ -16,6 +16,9 @@ export function schemaToTsType(schema: ParsedSchema): string {
   if (schema.type === "enum" && schema.enum) {
     return typeUnion(schema.enum);
   }
+  if (schema.type === "union" && schema.variants?.length) {
+    return schema.variants.map((variant) => schemaToTsType(variant)).join(" | ");
+  }
   if (schema.type === "object" && schema.properties) {
     return objectToTsType(schema);
   }

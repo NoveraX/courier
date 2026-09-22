@@ -15,6 +15,11 @@ export function schemaToValibot(schema: ParsedSchema): string {
 
   if (schema.type === "enum" && schema.enum) return valibotEnum(schema.enum);
 
+  if (schema.type === "union" && schema.variants?.length) {
+    const variants = schema.variants.map((variant) => schemaToValibot(variant));
+    return variants.length === 1 ? (variants[0] as string) : `v.union([${variants.join(", ")}])`;
+  }
+
   if (schema.type === "object" && schema.properties) {
     const required = new Set(schema.required ?? []);
     const propLines: string[] = [];

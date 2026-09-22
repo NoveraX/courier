@@ -33,7 +33,7 @@ export function convertSchema(name: string, raw: SpecNode, spec?: SpecNode): Par
   }
   if (schema.allOf) return convertAllOf(name, schema, spec);
   if ((schema.oneOf || schema.anyOf) && !constrainsAnObject(schema)) {
-    return convertUnion(name, schema);
+    return convertUnion(name, schema, spec);
   }
   if (schema.enum)
     return { name, type: "enum", enum: schema.enum, description: schema.description };
@@ -85,7 +85,7 @@ function carriesShape(variant: SpecNode): boolean {
   );
 }
 
-function convertUnion(name: string, schema: SpecNode): ParsedSchema {
+function convertUnion(name: string, schema: SpecNode, spec?: SpecNode): ParsedSchema {
   const variants = schema.oneOf || schema.anyOf;
   const allEnums = variants.every((v: SpecNode) => v.enum || v.const !== undefined);
   if (allEnums) {
@@ -96,8 +96,15 @@ function convertUnion(name: string, schema: SpecNode): ParsedSchema {
     }
     return { name, type: "enum", enum: values, description: schema.description };
   }
-  if (variants[0]) return convertSchema(name, variants[0]);
-  return { name, type: "any", description: schema.description };
+  const parsed = variants
+    .filter((variant: SpecNode) => variant && typeof variant === "object")
+    .map((variant: SpecNode, index: number) =>
+      convertSchema(`${name}Variant${index + 1}`, variant, spec),
+    );
+
+  if (parsed.length === 0) return { name, type: "any", description: schema.description };
+  if (parsed.length === 1) return { ...(parsed[0] as ParsedSchema), name };
+  return { name, type: "union", variants: parsed, description: schema.description };
 }
 
 function convertAllOf(name: string, schema: SpecNode, spec?: SpecNode): ParsedSchema {

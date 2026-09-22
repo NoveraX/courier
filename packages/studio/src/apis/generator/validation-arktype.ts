@@ -43,6 +43,14 @@ export function schemaToArkType(schema: ParsedSchema, style: ArkRefStyle = "bind
     return wrap(enumExpression(schema.enum) ?? "string", style);
   }
 
+  if (schema.type === "union" && schema.variants?.length) {
+    /* ArkType joins type objects with a tuple, not with a string operator. */
+    const variants = schema.variants.map((variant) => schemaToArkType(variant, style));
+    if (variants.length === 1) return variants[0] as string;
+    const joined = variants.join(', "|", ');
+    return style === "member" ? `[${joined}]` : `type([${joined}])`;
+  }
+
   if (schema.type === "object" && schema.properties) {
     const required = new Set(schema.required ?? []);
     const propLines: string[] = [];

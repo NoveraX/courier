@@ -77,7 +77,21 @@ function groupEndpointsByTag(spec: SpecNode): {
   for (const [path, methods] of Object.entries(spec.paths ?? {})) {
     /* A path item may be null in YAML, or a reference this file cannot
        resolve; either used to take the whole import down. */
-    if (!methods || typeof methods !== "object") continue;
+    if (!methods || typeof methods !== "object") {
+      skipped.push({ method: "ALL", path, reason: "path item is empty" });
+      continue;
+    }
+
+    /* A path item written as a reference points into another document, which
+       a single-file parse cannot follow — say so rather than lose it. */
+    if (typeof (methods as SpecNode).$ref === "string") {
+      skipped.push({
+        method: "ALL",
+        path,
+        reason: `path item references ${(methods as SpecNode).$ref}, which is not in this document`,
+      });
+      continue;
+    }
 
     /* Parameters declared once on the path item apply to every operation
        under it — Kubernetes and Asana declare their path parameters there,

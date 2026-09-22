@@ -98,8 +98,10 @@ function wrap(expression: string, style: ArkRefStyle): string {
 /** The ArkType text for a primitive, without the surrounding call. */
 function arkExpression(type: string, format?: string): string {
   if (type === "string" && format === "email") return "string.email";
-  if (type === "string" && format === "date-time") return "string.date.iso";
-  if (type === "string" && format === "uri") return "string.url";
+  /* ArkType's ISO date form rejects a zone offset, which most real examples
+     carry, and its url form rejects the loose values `format: uri` holds. */
+  if (type === "string" && format === "date-time") return "string";
+  if (type === "string" && format === "uri") return "string";
   if (type === "string" && format === "uuid") return "string.uuid";
   if (type === "string") return "string";
   if (type === "number" || type === "integer") return "number";

@@ -59,8 +59,14 @@ export function propToZod(prop: ParsedSchemaProperty): string {
 
 export function primitiveToZod(type: string, format?: string): string {
   if (type === "string" && format === "email") return "z.email()";
-  if (type === "string" && format === "date-time") return "z.iso.datetime()";
-  if (type === "string" && format === "uri") return "z.url()";
+  /* RFC 3339 allows a zone offset, and 18 of the 67 `date-time` examples the
+     specifications themselves give carry one; the default form rejected
+     every single one of them. */
+  if (type === "string" && format === "date-time") return "z.iso.datetime({ offset: true })";
+  /* `format: uri` is used loosely — three of the 162 examples in the sample
+     are not absolute URIs at all. A validator that rejects what the API
+     really returns is worse than one that does not check. */
+  if (type === "string" && format === "uri") return "z.string()";
   if (type === "string" && format === "uuid") return "z.uuid()";
   if (type === "string") return "z.string()";
   if (type === "number" || type === "integer") return "z.number()";

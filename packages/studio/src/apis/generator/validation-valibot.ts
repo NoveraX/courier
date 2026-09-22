@@ -55,7 +55,9 @@ export function propToValibot(prop: ParsedSchemaProperty): string {
 
 export function primitiveToValibot(type: string, format?: string): string {
   if (type === "string" && format === "email") return `v.pipe(v.string(), v.email())`;
-  if (type === "string" && format === "uri") return `v.pipe(v.string(), v.url())`;
+  /* See the note in the zod emitter: `format: uri` is used loosely enough
+     that checking it rejects values the API really returns. */
+  if (type === "string" && format === "uri") return "v.string()";
   if (type === "string" && format === "uuid") return `v.pipe(v.string(), v.uuid())`;
   if (type === "string") return "v.string()";
   if (type === "number" || type === "integer") return "v.number()";

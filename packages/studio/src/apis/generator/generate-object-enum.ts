@@ -70,17 +70,18 @@ export function generateEnumSchema(
 
   if (options.generateSchemas && options.validation === "zod") {
     lines.push(`export const ${name}Schema = ${zodEnum(filtered)};`);
-    lines.push(`export type ${name} = z.infer<typeof ${name}Schema>;`);
+    if (options.generateTypes) lines.push(`export type ${name} = z.infer<typeof ${name}Schema>;`);
     lines.push("");
   } else if (options.generateSchemas && options.validation === "valibot") {
     lines.push(`export const ${name}Schema = ${valibotEnum(filtered)};`);
-    lines.push(`export type ${name} = v.InferOutput<typeof ${name}Schema>;`);
+    if (options.generateTypes)
+      lines.push(`export type ${name} = v.InferOutput<typeof ${name}Schema>;`);
     lines.push("");
   } else if (options.generateSchemas && options.validation === "arktype") {
     lines.push(
       `export const ${name}Schema = ${schemaToArkType({ ...schema, type: "enum", enum: filtered })};`,
     );
-    lines.push(`export type ${name} = typeof ${name}Schema.infer;`);
+    if (options.generateTypes) lines.push(`export type ${name} = typeof ${name}Schema.infer;`);
     lines.push("");
   } else if (options.generateTypes) {
     lines.push(`export type ${name} = ${typeUnion(filtered)};`);

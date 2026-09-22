@@ -37,9 +37,9 @@ export function buildEndpointSelections(selectedSources: string[]): BuildResult 
     if (!scanned) continue;
 
     endpoints[sourceName] = {};
-    for (const group of scanned.groups) {
-      endpoints[sourceName][group.name] = group.endpoints.map((ep) => ({
-        group: group.name,
+    const described = (groupName: string, list: typeof scanned.groups[number]["endpoints"]) =>
+      list.map((ep) => ({
+        group: groupName,
         endpoint: ep.name,
         httpMethod:
           ep.analysis.httpMethod ??
@@ -47,6 +47,14 @@ export function buildEndpointSelections(selectedSources: string[]): BuildResult 
         path: ep.analysis.path ?? "",
         selected: true,
       }));
+
+    for (const group of scanned.groups) {
+      endpoints[sourceName][group.name] = described(group.name, group.endpoints);
+    }
+    /* Ungrouped endpoints are addressed with no group name, the same way the
+       proxy addresses them. */
+    if (scanned.inlineEndpoints?.length) {
+      endpoints[sourceName][""] = described("", scanned.inlineEndpoints);
     }
   }
 

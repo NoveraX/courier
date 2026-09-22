@@ -1,5 +1,5 @@
 import type { Socket } from "socket.io-client"
-import type { SourceSummary } from "@/views/apis/types"
+import type { ScannedSource, SourceSummary } from "@/views/apis/types"
 import type { useStudioStore } from "@/store"
 import type { StudioEvent } from "@/store/types-events"
 
@@ -24,6 +24,7 @@ export interface Bindings {
   onBindingSnapshot: (data: unknown) => void
   onBindingError: (data: unknown) => void
   onRegistryUpdated: (data: unknown) => void
+  onScanSources: (data: unknown) => void
   onWatcherStatus: (data: unknown) => void
   onWatcherChange: (data: unknown) => void
   onPlaygroundChunk: (data: unknown) => void
@@ -69,6 +70,12 @@ export function buildBindings(
         )
       }
     },
+    onScanSources: (data) => {
+      if (!data || typeof data !== "object" || !("sources" in data)) return
+      const sources = (data as { sources: unknown }).sources
+      if (!Array.isArray(sources)) return
+      store().setScanSources(sources as ScannedSource[])
+    },
     onWatcherStatus: (data) => {
       if (data && typeof data === "object" && "apiPaths" in data) {
         const d = data as { apiPaths: number; mockFiles: number }
@@ -109,6 +116,7 @@ export function buildBindings(
   s.on("binding:snapshot", b.onBindingSnapshot)
   s.on("binding:error", b.onBindingError)
   s.on("registry:updated", b.onRegistryUpdated)
+  s.on("scan:sources", b.onScanSources)
   s.on("watcher:status", b.onWatcherStatus)
   s.on("watcher:change", b.onWatcherChange)
   s.on("playground:chunk", b.onPlaygroundChunk)
@@ -128,6 +136,7 @@ export function unbind(s: Socket, b: Bindings): void {
   s.off("binding:snapshot", b.onBindingSnapshot)
   s.off("binding:error", b.onBindingError)
   s.off("registry:updated", b.onRegistryUpdated)
+  s.off("scan:sources", b.onScanSources)
   s.off("watcher:status", b.onWatcherStatus)
   s.off("watcher:change", b.onWatcherChange)
   s.off("playground:chunk", b.onPlaygroundChunk)

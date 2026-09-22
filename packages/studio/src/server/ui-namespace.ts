@@ -22,6 +22,7 @@ import {
   sanitizeMockManaged,
   sanitizeMockServerEvent,
 } from "./sanitize-mock-events";
+import { scanProjectSources } from "./scan-project-sources";
 import type { WatcherStatus } from "./watcher-status";
 
 export interface SetupUiNamespaceDeps {
@@ -67,6 +68,23 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
         logger.warn(
           "Studio",
           `Failed to emit imports snapshot on socket connect: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      });
+
+    /* The APIs page and the mock wizard both list the project's own sources;
+       without this they render as though the project declared none. */
+    scanProjectSources()
+      .then((scan) => {
+        socket.emit("scan:sources", scan);
+      })
+      .catch((err: unknown) => {
+        /* Fresh projects without courier.config.ts are expected — stay quiet. */
+        if (err instanceof ConfigNotFoundError) return;
+        logger.warn(
+          "Studio",
+          `Failed to emit source scan on socket connect: ${
             err instanceof Error ? err.message : String(err)
           }`,
         );

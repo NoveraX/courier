@@ -62,8 +62,12 @@ export function SourceStep({ wizard }: SourceStepProps): React.ReactElement {
             </p>
           ) : (
             scanSources.map((source) => {
-              const endpointCount = source.groups
-                .reduce((sum, g) => sum + g.endpoints.length, 0);
+              /* A source may declare its endpoints without a group at all —
+                 counting only grouped ones reported the simplest sources as
+                 having nothing to mock. */
+              const endpointCount =
+                source.groups.reduce((sum, g) => sum + g.endpoints.length, 0) +
+                (source.inlineEndpoints?.length ?? 0);
               const selected = state.selectedSources.includes(source.name);
 
               return (

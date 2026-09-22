@@ -16,6 +16,7 @@ import { createLogger } from "@noverax/courier";
 import type { Namespace } from "socket.io";
 import type { BindingTable } from "./catalog/binding-table";
 import { type LoadedCourierConfig, loadCourierConfig } from "./config-loader";
+import { scanProjectSources } from "./scan-project-sources";
 import { createWatchSet, type WatchDegradation } from "./watch-set";
 import type { WatcherStatus } from "./watcher-status";
 
@@ -80,7 +81,18 @@ export function startConfigWatcher(
       deps.bindingTable.setConfig(loaded.config);
       deps.onReload?.(loaded);
       if (deps.uiNamespace) {
-        deps.uiNamespace.emit("config:update", { configFile: loaded.configFile });
+        const ui = deps.uiNamespace;
+        ui.emit("config:update", { configFile: loaded.configFile });
+        /* Sources may have been added, renamed or removed by that edit. */
+        scanProjectSources()
+          .then((scan) => ui.emit("scan:sources", scan))
+          .catch((err: unknown) => {
+            log.warn(
+              `Failed to rescan sources after config change: ${
+                err instanceof Error ? err.message : String(err)
+              }`,
+            );
+          });
         deps.uiNamespace.emit("binding:snapshot", deps.bindingTable.getStatus());
       }
     } catch (err) {

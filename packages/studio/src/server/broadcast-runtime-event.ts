@@ -15,6 +15,7 @@
  * while the application was plainly serving traffic.
  */
 
+import { RUNTIME_EVENT_TYPES } from "@noverax/courier-studio-core/runtime";
 import type { Namespace } from "socket.io";
 
 /** Mock-server lifecycle. Each names the server it came from. */
@@ -33,37 +34,9 @@ const MOCK_EVENTS = new Set([
   "mock:experiment:event",
 ]);
 
-/** What a runtime reports about the requests it serves. */
-const RUNTIME_EVENTS = new Set([
-  "request:start",
-  "request:end",
-  "request:error",
-  "request:abort",
-  "http:fetch:start",
-  "http:fetch:end",
-  "http:fetch:error",
-  "proxy:receive",
-  "proxy:parse",
-  "proxy:respond",
-  "middleware:enter",
-  "middleware:exit",
-  "middleware:error",
-  "validation:start",
-  "validation:pass",
-  "validation:fail",
-  "stream:open",
-  "stream:message",
-  "stream:close",
-  "stream:error",
-  "cache:hit",
-  "cache:miss",
-  "cache:store",
-  "cache:invalidate",
-  "dedup:reuse",
-  "dedup:abort",
-  "upload:progress",
-  "upload:complete",
-]);
+/* Read from the package that emits them, so adding an event type in one
+   place cannot silently start dropping it in the other. */
+const RUNTIME_EVENTS = new Set(RUNTIME_EVENT_TYPES);
 
 function isPlainObject(raw: unknown): raw is Record<string, unknown> {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return false;

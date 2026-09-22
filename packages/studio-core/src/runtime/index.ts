@@ -21,6 +21,7 @@ export {
   type RuntimeTransport,
 } from "./announce-hosting";
 export { attachRuntime, type RuntimeHandle, type RuntimeKind } from "./attach-runtime";
+export { RUNTIME_EVENT_TYPES } from "./event-types";
 /* Reading the config file, and the tsconfig aliases needed to read it, are a
    server's job. This barrel is injected into client bundles, so both live at
    `@noverax/courier-studio-core/config` instead — a browser build has no disk

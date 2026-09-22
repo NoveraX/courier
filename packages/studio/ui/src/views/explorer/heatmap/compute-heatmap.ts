@@ -75,13 +75,17 @@ function buildPhases(
 ): PhaseValue[] {
   const values: Record<string, number> = { setup, validation, middleware, fetch };
 
+  /* Slivers are dropped by their share of the bar, not by an absolute
+     duration: a millisecond threshold erased every phase of an endpoint that
+     answers in microseconds, and a row with no phases left renders as though
+     it had never been called. */
   return TIMING_PHASES
     .map((phase) => ({
       ...phase,
       avg: values[phase.key] ?? 0,
       pct: total > 0 ? ((values[phase.key] ?? 0) / total) * 100 : 0,
     }))
-    .filter((p) => p.avg > 0.5);
+    .filter((p) => p.pct >= 1);
 }
 
 function emptyRow(ep: EndpointNodeData): TimingRow {

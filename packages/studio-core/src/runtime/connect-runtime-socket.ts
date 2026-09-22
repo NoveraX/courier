@@ -109,7 +109,13 @@ export async function connectRuntimeSocket(
       transports: ["websocket"],
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 10,
+      /* Studio is restarted constantly in development, and ten attempts a
+         second apart gave up long before it came back — every running app was
+         then orphaned until it too was restarted. Backing off to five seconds
+         and never giving up costs an idle socket a ping now and then. */
+      reconnectionDelayMax: 5000,
+      randomizationFactor: 0.3,
+      reconnectionAttempts: Number.POSITIVE_INFINITY,
     });
   } catch (err) {
     /* A synchronous throw from io() must not take the host application down,

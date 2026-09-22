@@ -127,6 +127,11 @@ export function parseEndpointKey(
  * Filters requests for a specific source/group/method combination.
  * Source matching is case-insensitive because server and client sessions
  * may register the same API under different-cased keys.
+ *
+ * An omitted `group` matches every group. A `""` group means the ungrouped
+ * endpoints of a source, which the catalogue keys as `""` while their requests
+ * carry no group at all — comparing the two directly matched nothing, so every
+ * per-endpoint metric for a source without groups read zero.
  */
 export function filterRequests(
   requests: RequestEntry[],
@@ -137,7 +142,7 @@ export function filterRequests(
   const srcLower = source.toLowerCase();
   return requests.filter((r) => {
     if (r.source.toLowerCase() !== srcLower) return false;
-    if (group !== undefined && r.group !== group) return false;
+    if (group !== undefined && (r.group ?? "") !== group) return false;
     if (method !== undefined && r.method !== method) return false;
     return true;
   });

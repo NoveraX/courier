@@ -105,6 +105,17 @@ export interface CourierStudioConfig {
   mockBasePort?: number;
   /** Open the Studio UI in the default browser on startup — default false */
   open?: boolean;
+  /**
+   * Hosts on a private network that Studio may fetch an API specification
+   * from, beyond this machine.
+   *
+   * Studio reads a specification by URL on the developer's behalf, so it will
+   * not walk into a network the developer cannot see from their own browser.
+   * Loopback needs no entry here — a specification served by the project's own
+   * dev server is the ordinary case. Name a private host explicitly to reach
+   * it, for example `["gitlab.internal", "10.0.0.7:8080"]`.
+   */
+  allowedSpecHosts?: readonly string[];
 }
 
 /** Standalone proxy server configuration */

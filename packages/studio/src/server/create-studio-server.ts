@@ -20,6 +20,7 @@ import { initProject } from "./init";
 import { initConfigDriven } from "./init-config-driven";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
+import { createOriginGuard } from "./origin-guard";
 import { setupRuntimeNamespace } from "./runtime-namespace";
 import { clearStudioServerState } from "./runtime-namespace-state";
 import { createRuntimePlaygroundRouter } from "./runtime-playground-router";
@@ -135,6 +136,9 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   // ── REST API ─────────────────────────────────────────────────────────────────
 
   app.use(compression());
+  /* Before anything reads a body: the API is for the Studio UI, not for every
+     page the developer happens to have open. */
+  app.use("/api", createOriginGuard(corsOrigins));
   app.use(express.json({ limit: "5mb" }));
 
   app.get("/api/health", (_req, res) => {

@@ -15,6 +15,7 @@ import {
   parseSpec,
 } from "../apis";
 import { resolveProjectSafe } from "../context";
+import { allowedSpecHosts } from "./allowed-spec-hosts";
 import { registerManageRoutes } from "./manage-routes";
 import { errMsg } from "./registry-helpers";
 import { registerRegistryRoutes } from "./registry-routes";
@@ -115,7 +116,7 @@ async function resolveSpecContent(
   content: string,
 ): Promise<string> {
   if (source === "url") {
-    await validateSpecUrl(content);
+    await validateSpecUrl(content, await allowedSpecHosts());
     return specClient.get<string>(content, { responseType: "text" });
   }
   if (source === "file") {

@@ -8,6 +8,7 @@ import { createFetch } from "@noverax/courier/fetch";
 import { computeSpecHash, parseSpec } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import { resolveProjectSafe } from "../context";
+import { allowedSpecHosts } from "./allowed-spec-hosts";
 import { isUrl } from "./fs-helpers";
 import type { JsonResponse } from "./route-types";
 import { validateSpecUrl } from "./validate-url";
@@ -16,7 +17,7 @@ const specClient = createFetch();
 
 export async function fetchSpecRaw(specUrl: string, res: JsonResponse): Promise<string | null> {
   if (isUrl(specUrl)) {
-    await validateSpecUrl(specUrl);
+    await validateSpecUrl(specUrl, await allowedSpecHosts());
     try {
       return await specClient.get<string>(specUrl, { responseType: "text" });
     } catch {
@@ -52,7 +53,7 @@ export async function checkSingleSource(
 }
 
 async function fetchRemoteSpec(specUrl: string): Promise<string | null> {
-  await validateSpecUrl(specUrl);
+  await validateSpecUrl(specUrl, await allowedSpecHosts());
   try {
     return await specClient.get<string>(specUrl, { responseType: "text" });
   } catch {

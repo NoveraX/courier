@@ -77,14 +77,24 @@ describe("courierPlugin", () => {
     const fastify = createMockFastify();
     await courierPlugin(fastify, {});
 
+    expect(fastify.all).toHaveBeenCalledWith("/", expect.any(Function));
     expect(fastify.all).toHaveBeenCalledWith("/*", expect.any(Function));
   });
 
-  it("registers a prefixed route when prefix is provided", async () => {
+  /* Fastify applies `prefix` to everything a plugin registers, so the paths
+     the plugin asks for are relative and must not repeat it. Asserting the
+     prefixed string here is what let the proxy sit at
+     `/api/request/api/request/*` while this file stayed green. */
+  it("registers the same relative paths when a prefix is provided", async () => {
     const fastify = createMockFastify();
     await courierPlugin(fastify, { prefix: "/api/request" });
 
-    expect(fastify.all).toHaveBeenCalledWith("/api/request/*", expect.any(Function));
+    expect(fastify.all).toHaveBeenCalledWith("/", expect.any(Function));
+    expect(fastify.all).toHaveBeenCalledWith("/*", expect.any(Function));
+    expect(fastify.all).not.toHaveBeenCalledWith(
+      expect.stringContaining("/api/request"),
+      expect.any(Function),
+    );
   });
 
   it("removes default content type parsers", async () => {

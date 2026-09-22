@@ -28,6 +28,14 @@ function tryDiscoverAppOrigin(request: FastifyRequest): void {
 }
 
 export type CourierPluginOptions = {
+  /**
+   * Where the plugin's routes are mounted.
+   *
+   * Declared so the type documents it, but Fastify is what applies it: every
+   * route a plugin registers is already scoped by the `prefix` passed to
+   * `register`. The plugin must not apply it a second time — doing so put the
+   * proxy at `/api/request/api/request/*`.
+   */
   prefix?: string;
   config?: HandlerConfig;
 };
@@ -67,13 +75,19 @@ export const courierPlugin: FastifyPluginAsync<CourierPluginOptions> = async (
     done(null);
   });
 
-  fastify.all(opts.prefix ? `${opts.prefix}/*` : "/*", async (request, reply) => {
+  const proxy = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     tryDiscoverAppOrigin(request);
     const webReq = toWebRequest(request.raw);
     const webRes = await handle(webReq);
     await sendWebResponse(webRes, reply.raw);
     reply.hijack();
-  });
+  };
+
+  /* Both, because the proxy addresses endpoints by name rather than by path:
+     `/api/request` is the call, and `/api/request/anything` must reach it too
+     for a host that mounts the plugin under a wider route. */
+  fastify.all("/", proxy);
+  fastify.all("/*", proxy);
 };
 
 /**

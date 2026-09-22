@@ -34,7 +34,11 @@ export function schemaToZod(schema: ParsedSchema): string {
       const key = objectKey(name);
       propLines.push(`  ${key}: ${zodType}`);
     }
-    if (propLines.length === 0) return "z.record(z.string(), z.unknown())";
+    if (propLines.length === 0) {
+      return schema.valueType
+        ? `z.record(z.string(), ${schemaToZod(schema.valueType)})`
+        : "z.record(z.string(), z.unknown())";
+    }
     return `z.object({\n${propLines.join(",\n")},\n})`;
   }
 
@@ -47,6 +51,8 @@ export function propToZod(prop: ParsedSchemaProperty): string {
     return zodEnum(prop.enum);
   }
   if (prop.type === "array" && prop.items) return `z.array(${schemaToZod(prop.items)})`;
+  if (prop.object) return schemaToZod(prop.object);
+  if (prop.valueType) return `z.record(z.string(), ${schemaToZod(prop.valueType)})`;
   if (prop.type === "object") return "z.record(z.string(), z.unknown())";
   return primitiveToZod(prop.type, prop.format);
 }

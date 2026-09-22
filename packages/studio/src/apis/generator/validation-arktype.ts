@@ -79,6 +79,7 @@ export function propToArkType(prop: ParsedSchemaProperty, style: ArkRefStyle = "
     const items = schemaToArkType(prop.items, style);
     return style === "member" ? `[${items}, "[]"]` : `${items}.array()`;
   }
+  if (prop.object) return schemaToArkType(prop.object, style);
   if (prop.type === "object") return wrap("Record<string, unknown>", style);
 
   const base = arkExpression(prop.type, prop.format);

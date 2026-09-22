@@ -16,7 +16,18 @@ export function convertObjectSchema(name: string, schema: SpecNode, spec?: SpecN
     properties,
     required: [...requiredFields] as string[],
     description: schema.description,
+    /* A schema that names no properties but declares what its values look
+       like is a map; without this it was emitted as an empty type nothing
+       could be read from. */
+    valueType: mapValueType(schema, name, spec),
   };
+}
+
+/** The value type of `additionalProperties`, when it describes one. */
+function mapValueType(node: SpecNode, name: string, spec?: SpecNode): ParsedSchema | undefined {
+  const additional = node?.additionalProperties;
+  if (!additional || typeof additional !== "object") return undefined;
+  return convertSchema(`${name}Value`, additional, spec);
 }
 
 function extractProperties(
@@ -41,6 +52,11 @@ function extractProperties(
       items: resolvedProp.items
         ? convertSchema(`${propName}Item`, resolvedProp.items, spec)
         : undefined,
+      /* An inline object keeps its own shape rather than flattening. */
+      object: resolvedProp.properties
+        ? convertSchema(`${propName}Object`, resolvedProp, spec)
+        : undefined,
+      valueType: mapValueType(resolvedProp, propName, spec),
     };
   }
   return properties;

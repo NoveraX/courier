@@ -48,39 +48,49 @@ function buildSchemaConfig(
   const bodyRef = getSchemaRefName(ep.requestBody);
 
   if (hasSchema && responseRef && schemaImports.has(responseRef)) {
-    config.push(`response: ${buildResponseExpr(responseRef, ep, options)}`);
+    config.push(`response: ${schemaExpr(responseRef, ep.responseSchema, options)}`);
   }
 
   if (hasSchema && bodyRef && schemaImports.has(bodyRef)) {
+    const body = schemaExpr(bodyRef, ep.requestBody, options);
     const pathParams = ep.parameters.filter((p) => p.in === "path");
     if (pathParams.length > 0) {
-      const varsExpr = extendSchemaWithParams(
-        `${bodyRef}Schema`,
-        pathParams.map((p) => p.name),
-        options,
-        spec.schemas[bodyRef]?.type !== "union",
+      /* Only an object can be extended; a list or a set of alternatives has
+         to be intersected with the path parameters instead. */
+      const isObject = ep.requestBody?.type !== "array" && spec.schemas[bodyRef]?.type !== "union";
+      config.push(
+        `variables: ${extendSchemaWithParams(
+          body,
+          pathParams.map((p) => p.name),
+          options,
+          isObject,
+        )}`,
       );
-      config.push(`variables: ${varsExpr}`);
     } else {
-      config.push(`variables: ${bodyRef}Schema`);
+      config.push(`variables: ${body}`);
     }
   }
 
   return config;
 }
 
-function buildResponseExpr(
-  responseRef: string,
-  ep: ParsedEndpoint,
+/**
+ * The validator for a named schema, wrapped when the payload is a list.
+ *
+ * A request body that is an array was expressed as the schema of one element,
+ * so the validator rejected the very payload the endpoint requires.
+ */
+function schemaExpr(
+  ref: string,
+  schema: ParsedSchema | null,
   options: ResolvedGenerateOptions,
 ): string {
-  let expr = `${responseRef}Schema`;
-  if (ep.responseSchema?.type === "array") {
-    if (options.validation === "zod") expr = `z.array(${responseRef}Schema)`;
-    else if (options.validation === "valibot") expr = `v.array(${responseRef}Schema)`;
-    else if (options.validation === "arktype") expr = `${responseRef}Schema.array()`;
-  }
-  return expr;
+  const named = `${ref}Schema`;
+  if (schema?.type !== "array") return named;
+  if (options.validation === "zod") return `z.array(${named})`;
+  if (options.validation === "valibot") return `v.array(${named})`;
+  if (options.validation === "arktype") return `${named}.array()`;
+  return named;
 }
 
 function toPascalCase(name: string): string {

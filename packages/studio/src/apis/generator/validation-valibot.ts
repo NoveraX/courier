@@ -30,7 +30,11 @@ export function schemaToValibot(schema: ParsedSchema): string {
       if (prop.nullable) valType = `v.nullable(${valType})`;
       propLines.push(`  ${objectKey(name)}: ${valType}`);
     }
-    if (propLines.length === 0) return "v.record(v.string(), v.unknown())";
+    if (propLines.length === 0) {
+      return schema.valueType
+        ? `v.record(v.string(), ${schemaToValibot(schema.valueType)})`
+        : "v.record(v.string(), v.unknown())";
+    }
     return `v.object({\n${propLines.join(",\n")},\n})`;
   }
 
@@ -43,6 +47,8 @@ export function propToValibot(prop: ParsedSchemaProperty): string {
      string, which then failed the `satisfies` assertion written beside it. */
   if (prop.enum) return valibotEnum(prop.enum);
   if (prop.type === "array" && prop.items) return `v.array(${schemaToValibot(prop.items)})`;
+  if (prop.object) return schemaToValibot(prop.object);
+  if (prop.valueType) return `v.record(v.string(), ${schemaToValibot(prop.valueType)})`;
   if (prop.type === "object") return "v.record(v.string(), v.unknown())";
   return primitiveToValibot(prop.type, prop.format);
 }

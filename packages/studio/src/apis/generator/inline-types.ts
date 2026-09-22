@@ -22,6 +22,7 @@ export function schemaToTsType(schema: ParsedSchema): string {
   if (schema.type === "object" && schema.properties) {
     return objectToTsType(schema);
   }
+  if (schema.valueType) return `Record<string, ${schemaToTsType(schema.valueType)}>`;
   return primitiveToTsType(schema.type);
 }
 
@@ -41,6 +42,8 @@ function objectToTsType(schema: ParsedSchema): string {
 
 export function propToTsType(prop: ParsedSchemaProperty): string {
   if (prop.refName) return prop.refName;
+  if (prop.object) return schemaToTsType(prop.object);
+  if (prop.valueType) return `Record<string, ${schemaToTsType(prop.valueType)}>`;
   if (prop.enum) {
     return typeUnion(prop.enum);
   }

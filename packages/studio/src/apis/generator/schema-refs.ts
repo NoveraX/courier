@@ -64,10 +64,13 @@ function walk(
   if (schema.refName) into.add(schema.refName);
   walk(schema.items, into, seen);
   for (const variant of schema.variants ?? []) walk(variant, into, seen);
+  walk(schema.valueType, into, seen);
 
   for (const prop of Object.values(schema.properties ?? {})) {
     if (prop.refName) into.add(prop.refName);
     walk(prop.items, into, seen);
+    walk(prop.object, into, seen);
+    walk(prop.valueType, into, seen);
   }
 }
 

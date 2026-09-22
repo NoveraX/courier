@@ -116,6 +116,8 @@ export interface ParsedSchema {
   /** Reference name for $ref schemas */
   refName?: string;
   description?: string;
+  /** Value type of a map, from `additionalProperties`. */
+  valueType?: ParsedSchema;
 }
 
 export interface ParsedSchemaProperty {
@@ -127,6 +129,15 @@ export interface ParsedSchemaProperty {
   items?: ParsedSchema;
   refName?: string;
   nullable?: boolean;
+  /**
+   * Shape of an inline object property.
+   *
+   * Without it such a property flattened to `Record<string, unknown>` and its
+   * whole shape was thrown away.
+   */
+  object?: ParsedSchema;
+  /** Value type of a map, from `additionalProperties`. */
+  valueType?: ParsedSchema;
 }
 
 export type SpecFormat =

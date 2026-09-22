@@ -52,8 +52,13 @@ from `courier.config.ts`, and every framework's instrumentation snippet imports
 it directly — so it is a dependency of your app, not only of the dev server:
 
 ```bash
-npm install --save-dev @noverax/courier-studio @noverax/courier-studio-core
+npm install --save-dev @noverax/courier-studio @noverax/courier-studio-core socket.io-client
 ```
+
+`socket.io-client` is how your application reaches the Studio dev server. It is
+an optional peer, so npm will not install it for you — and without it Studio
+starts, watches your config, renders its whole interface, and never sees your
+app: every source shows as orphaned.
 
 <Callout variant="info" title="Install only what you use">
 All framework packages and integrations are optional. The core `@noverax/courier` package works standalone for direct API calls from any runtime.

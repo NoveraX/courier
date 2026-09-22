@@ -19,13 +19,15 @@
  * propagates up to the user-app's startup path.
  */
 
-import { getSources } from "@noverax/courier";
+import { createLogger, getSources } from "@noverax/courier";
 import { getSourceName } from "@noverax/courier/define";
 import type { io as ioFn } from "socket.io-client";
 import type { EventBus } from "../event-bus";
 import type { BufferedAnnouncement } from "./announce-hosting";
 import type { RuntimeKind } from "./attach-runtime-types";
 import { setupPlaygroundResponder } from "./playground-responder";
+
+const log = createLogger("Studio");
 
 type SocketIOClientModule = { io: typeof ioFn };
 
@@ -52,6 +54,8 @@ interface ConnectInput {
 /** Hook that lets `attachRuntime` install the real socket disposer once ready. */
 export interface RuntimeSocketHandle {
   setDisposer(fn: () => void): void;
+  /** Called with a function that flushes queued announcements when connected. */
+  setAnnouncer(fn: () => void): void;
 }
 
 interface AnnouncePayload {
@@ -82,7 +86,19 @@ export async function connectRuntimeSocket(
   try {
     mod = await import("socket.io-client");
   } catch {
-    // socket.io-client not installed — best-effort, stay locally attached.
+    /* An optional peer, so npm does not install it and says nothing. Without
+       it Studio renders its whole UI, watches the config, and never sees the
+       application — every source sits at "orphan" with no reason given
+       anywhere. Saying so here is the only place a developer can learn it. */
+    log.warn(
+      [
+        "Studio cannot connect: socket.io-client is not installed.",
+        "It is an optional peer of @noverax/courier-studio-core, so nothing",
+        "installed it for you and Studio will show your sources as orphaned.",
+        "",
+        "  npm install --save-dev socket.io-client",
+      ].join("\n"),
+    );
     return;
   }
 
@@ -94,11 +110,25 @@ export async function connectRuntimeSocket(
       reconnectionDelay: 1000,
       reconnectionAttempts: 10,
     });
-  } catch {
-    // Synchronous io() throw — local catch so the user-app's startup path
-    // is unaffected. The runtime stays attached locally without a socket.
+  } catch (err) {
+    /* A synchronous throw from io() must not take the host application down,
+       but it must not vanish either. */
+    log.warn(`Studio connection could not be opened at ${input.studioUrl}`, err);
     return;
   }
+
+  /* Adapters announce as they are constructed, which is whenever the
+     application happens to wire its routes — before this socket opens for
+     some, after it for others. Draining only on connect left the later ones
+     queued forever, so Studio never learned about those transports. */
+  const drain = (): void => {
+    if (!socket.connected) return;
+    while (pending.length > 0) {
+      const entry = pending.shift();
+      if (!entry) continue;
+      socket.emit("runtime:announce", buildAnnouncePayload(entry));
+    }
+  };
 
   socket.on("connect", () => {
     socket.emit("runtime:hello", {
@@ -106,12 +136,10 @@ export async function connectRuntimeSocket(
       kind: input.kind,
       ...(input.listenOrigin && { listenOrigin: input.listenOrigin }),
     });
-    while (pending.length > 0) {
-      const entry = pending.shift();
-      if (!entry) continue;
-      socket.emit("runtime:announce", buildAnnouncePayload(entry));
-    }
+    drain();
   });
+
+  handle.setAnnouncer(drain);
 
   // Forward bus events into the socket as `"event"` packets. The Studio
   // `/runtime` namespace handler dispatches mock-server lifecycle events

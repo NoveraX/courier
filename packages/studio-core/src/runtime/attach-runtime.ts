@@ -74,6 +74,7 @@ const log = createLogger("Runtime");
 
 interface InternalHandle extends RuntimeHandle {
   setDisposer(fn: () => void): void;
+  setAnnouncer(fn: () => void): void;
 }
 
 const handles = new Map<string, InternalHandle>();
@@ -201,6 +202,7 @@ export async function attachRuntime(id?: string): Promise<RuntimeHandle> {
   let detached = false;
   let unsubscribeAnnouncements: (() => void) | null = null;
   let socketDisposer: (() => void) | null = null;
+  let flushAnnouncements: (() => void) | undefined;
   const pending: BufferedAnnouncement[] = [];
 
   const handle: InternalHandle = {
@@ -216,11 +218,17 @@ export async function attachRuntime(id?: string): Promise<RuntimeHandle> {
     setDisposer(fn) {
       socketDisposer = fn;
     },
+    setAnnouncer(fn) {
+      flushAnnouncements = fn;
+    },
   };
   handles.set(runtimeId, handle);
 
   unsubscribeAnnouncements = consumeAnnouncements((entry) => {
     pending.push(entry);
+    /* An adapter constructed after the socket opened would otherwise sit in
+       the queue until the process ended. */
+    flushAnnouncements?.();
   });
 
   // ── Dev-only: studio observability + Studio /runtime socket ───────────

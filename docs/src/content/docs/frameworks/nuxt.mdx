@@ -242,7 +242,7 @@ There is no `localhost:3000` auto-fallback. If `appOrigin` is missing, clicking 
 
 ```
 composables/
-  useCaller.ts              # createProxyCaller<typeof api>()
+  useCaller.ts              # createProxyCaller<typeof api>("api")
 lib/
   sources.ts                # defineApi + defineGroup + endpoint
   server-caller.ts          # createCaller(api)

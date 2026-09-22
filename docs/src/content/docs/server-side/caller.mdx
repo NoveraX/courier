@@ -175,7 +175,7 @@ The key difference is the `Context` parameter. In proxy mode, cookies are forwar
 
 ```ts
 // Proxy mode (client components) — no context parameter
-const caller = createProxyCaller<typeof api>()
+const caller = createProxyCaller<typeof api>("api")
 await caller.users.getAll({ page: 1 })
 //                          ^ variables only
 

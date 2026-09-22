@@ -7,7 +7,7 @@ Courier provides two ways to call your API endpoints. Both share the same `Typed
 | Factory | Mode | Use Case |
 |---------|------|----------|
 | `createCaller(api)` | Direct | Server-side, Node.js, Bun, Deno, scripts |
-| `createProxyCaller<typeof api>()` | Proxy | Browser → your server → backend |
+| `createProxyCaller<typeof api>("api")` | Proxy | Browser → your server → backend |
 
 ## createCaller (Direct Mode) <ModeBadge mode="direct" />
 
@@ -129,7 +129,7 @@ import { api } from "@/api/sources"
 export const serverCaller = createCaller(api)
 
 // Client-side (React components)
-export const clientCaller = createProxyCaller<typeof api>()
+export const clientCaller = createProxyCaller<typeof api>("api")
 ```
 
 ## Next Steps

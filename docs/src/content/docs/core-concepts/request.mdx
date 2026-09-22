@@ -51,7 +51,7 @@ Use direct mode whenever you have access to the `api` object: Server Components,
 import { createProxyCaller } from "@noverax/courier"
 import type { api } from "@/api/sources"
 
-export const caller = createProxyCaller<typeof api>()
+export const caller = createProxyCaller<typeof api>("api")
 ```
 
 ```ts

@@ -11,7 +11,7 @@ export { api }
 
 // Layer 2 — Transport (mode-specific)
 // Direct: createCaller(api) → executeRequest → fetch → backend
-// Proxy:  createProxyCaller<typeof api>() → POST /api/request → adapter → executeRequest → fetch → backend
+// Proxy:  createProxyCaller<typeof api>("api") → POST /api/request → adapter → executeRequest → fetch → backend
 
 // Layer 3 — Execution (shared core engine)
 // executeRequest → middleware chain → schema validation → HttpClient → fetch
@@ -59,7 +59,7 @@ The browser sends requests through your server, which hides API keys and bypasse
 ┌──────────────────────────────────────────────────────────────┐
 │  Browser                                                     │
 │                                                              │
-│  createProxyCaller<typeof api>()                              │
+│  createProxyCaller<typeof api>("api")                        │
 │       │                                                      │
 │       ▼                                                      │
 │  fetch("/api/request", {                                     │
@@ -181,7 +181,7 @@ The universal adapter interface. All server framework adapters use it internally
 | Factory | Mode | Environment | Returns |
 | --- | --- | --- | --- |
 | `createCaller(api)` | Direct | Any runtime | `TypedClient<typeof api>` |
-| `createProxyCaller<typeof api>()` | Proxy | Browser | `TypedClient<typeof api>` |
+| `createProxyCaller<typeof api>("api")` | Proxy | Browser | `TypedClient<typeof api>` |
 | `createProxyQueryCaller<typeof api>()` | Proxy + hooks | Browser (React) | `{ useQuery, useMutation, caller, ... }` |
 
 All return the same `TypedClient<typeof api>` type (or wrap it), giving you identical type inference regardless of which factory you use.

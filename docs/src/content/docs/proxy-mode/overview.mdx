@@ -13,7 +13,7 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 ┌──────────────────────────────────────────────────────────────┐
 │  Browser (Client Component)                                  │
 │                                                              │
-│  createProxyCaller<typeof api>()                             │
+│  createProxyCaller<typeof api>("api")                        │
 │       │                                                      │
 │       ▼                                                      │
 │  fetch POST "/api/request"                                   │
@@ -57,7 +57,7 @@ Here is the complete flow from a browser call to the backend response:
 
 ```ts title="Request lifecycle"
 // 1. Browser — call a typed endpoint
-const caller = createProxyCaller<typeof api>()
+const caller = createProxyCaller<typeof api>("api")
 const user = await caller.users.getById({ id: 5 })
 
 // 2. Under the hood, Courier sends:
@@ -121,7 +121,7 @@ Use **proxy mode** for client components where the browser initiates the request
 ```ts title="Comparison"
 // Proxy mode — browser cannot see API_URL or secrets
 // Browser → POST /api/request → Server → GET https://internal-api.company.com/users
-const caller = createProxyCaller<typeof api>()
+const caller = createProxyCaller<typeof api>("api")
 const users = await caller.users.getAll()
 
 // Direct mode — server calls backend directly, no proxy hop

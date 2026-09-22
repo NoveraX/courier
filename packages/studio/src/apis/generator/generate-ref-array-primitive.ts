@@ -62,7 +62,11 @@ export function generatePrimitiveSchema(
   if (options.includeComments && schema.description) {
     lines.push(`/** ${jsdocText(schema.description)} */`);
   }
-  const tsTypeName = schema.type === "integer" ? "number" : schema.type;
+  /* A definition that says only what it means — Kubernetes writes two of them
+     — carries no type at all. It still has to be declared: other schemas name
+     it, and a name nothing declares does not compile. */
+  const tsTypeName =
+    schema.type === "integer" ? "number" : schema.type === "any" ? "unknown" : schema.type;
   if (options.generateSchemas && options.validation !== "none") {
     appendPrimitiveValidation(lines, name, schema, options);
     lines.push("");

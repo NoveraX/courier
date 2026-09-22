@@ -68,8 +68,21 @@ function groupEndpointsByTag(spec: SpecNode): {
   const skipped: SkippedOperation[] = [];
 
   for (const [path, methods] of Object.entries(spec.paths ?? {})) {
+    /* A path item may be null in YAML, or a reference this file cannot
+       resolve; either used to take the whole import down. */
+    if (!methods || typeof methods !== "object") continue;
+
+    /* Parameters declared once on the path item apply to every operation
+       under it — Kubernetes and Asana declare their path parameters there,
+       and ignoring them left 191 of Asana's 249 endpoints with a placeholder
+       no caller could fill. */
+    const shared = Array.isArray((methods as SpecNode).parameters)
+      ? ((methods as SpecNode).parameters as SpecNode[])
+      : [];
+
     for (const [method, operation] of Object.entries(methods as SpecNode)) {
       if (!isOperationKey(method)) continue;
+      if (!operation || typeof operation !== "object") continue;
       if (!isSupportedMethod(method)) {
         skipped.push({
           method: method.toUpperCase(),
@@ -79,7 +92,9 @@ function groupEndpointsByTag(spec: SpecNode): {
         continue;
       }
 
-      const op = operation as SpecNode;
+      const own = operation as SpecNode;
+      const op: SpecNode =
+        shared.length > 0 ? { ...own, parameters: [...(own.parameters ?? []), ...shared] } : own;
       const tags = op.tags?.length > 0 ? op.tags : ["default"];
       const tag = tags[0] as string;
       const endpoint = parseOpenApi3Operation(path, method, op, spec);

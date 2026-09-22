@@ -46,7 +46,10 @@ export function generateSchemasFile(
       generateRefSchema(lines, name, schema, options);
     } else if (schema.type === "array") {
       generateArraySchema(lines, name, schema, options);
-    } else if (["string", "number", "integer", "boolean"].includes(schema.type)) {
+    } else {
+      /* Anything left — including a schema with no type of its own — still
+         gets a declaration, because the schemas that reference it will name
+         it either way. */
       generatePrimitiveSchema(lines, name, schema, options);
     }
   }

@@ -12,7 +12,7 @@ import {
   parseSecuritySchemes,
   stripHtml,
   stripHtmlPreserveNewlines,
-  toCamelCase,
+  toBindingName,
   toSafeIdentifier,
 } from "./utils";
 
@@ -129,10 +129,10 @@ function buildGroups(
 }
 
 function resolveGroupName(tag: string, prefix: string): string {
-  const name = toCamelCase(tag);
+  const name = toBindingName(tag);
   if (name) return name;
   const lastSegment = prefix.split("/").filter(Boolean).pop();
-  return lastSegment ? toCamelCase(lastSegment) : "default";
+  return lastSegment ? toBindingName(lastSegment) : "defaultGroup";
 }
 
 function deduplicateName(name: string, usedNames: Set<string>): string {

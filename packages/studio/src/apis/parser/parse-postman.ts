@@ -16,6 +16,7 @@ import {
   extractPostmanPath,
   findCommonPrefix,
   inferSchemaFromValue,
+  toBindingName,
   toCamelCase,
 } from "./utils";
 
@@ -79,7 +80,7 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
     if (endpoints.length > 0) {
       const prefix = findCommonPrefix(endpoints.map((e) => e.fullPath));
       groups.push({
-        name: toCamelCase(groupName),
+        name: toBindingName(groupName),
         description: "",
         prefix,
         endpoints: endpoints.map((e) => ({

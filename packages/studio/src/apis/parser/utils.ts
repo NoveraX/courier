@@ -3,7 +3,7 @@
  */
 
 export { inferSchemaFromValue } from "./infer-schema";
-export { generateEndpointName, toCamelCase, toSafeIdentifier } from "./naming-utils";
+export { generateEndpointName, toBindingName, toCamelCase, toSafeIdentifier } from "./naming-utils";
 export { convertPathParams, extractPostmanPath, findCommonPrefix } from "./path-utils";
 export { parseSecuritySchemes, resolveRef } from "./ref-utils";
 export { convertSchema, convertSchemaInline } from "./schema-conversion";

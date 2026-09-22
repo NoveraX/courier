@@ -37,6 +37,29 @@ export function createMockRegistry(): MockRegistry {
   // base layer: auto-CRUD + user overrides, never cleared
   const baseHandlers = new Map<string, ResolvedHandler[]>();
 
+  /** Resolve one key through the scenario layer, then the base layer. */
+  function resolveAt(key: string, scenarioState: string): ResolvedHandler | undefined {
+    const scenarioStack = scenarioHandlers.get(key);
+    if (scenarioStack?.length) {
+      const resolved = resolveHandler(scenarioStack, scenarioState);
+      if (resolved) return resolved;
+    }
+    const baseStack = baseHandlers.get(key);
+    return baseStack?.length ? resolveHandler(baseStack, scenarioState) : undefined;
+  }
+
+  /** The only key registered for this method name, if there is exactly one. */
+  function soleKeyFor(method: string): string | undefined {
+    const suffix = `/${method}`;
+    let found: string | undefined;
+    for (const key of [...scenarioHandlers.keys(), ...baseHandlers.keys()]) {
+      if (!key.endsWith(suffix)) continue;
+      if (found !== undefined && found !== key) return undefined;
+      found = key;
+    }
+    return found;
+  }
+
   return {
     set(group, method, handler) {
       const key = handlerKey(group, method);
@@ -51,22 +74,16 @@ export function createMockRegistry(): MockRegistry {
     },
 
     get(group, method, scenarioState) {
-      const key = handlerKey(group, method);
+      const direct = resolveAt(handlerKey(group, method), scenarioState);
+      if (direct) return direct;
 
-      // Scenario layer has priority
-      const scenarioStack = scenarioHandlers.get(key);
-      if (scenarioStack?.length) {
-        const resolved = resolveHandler(scenarioStack, scenarioState);
-        if (resolved) return resolved;
-      }
-
-      // Fallback to base layer
-      const baseStack = baseHandlers.get(key);
-      if (baseStack?.length) {
-        return resolveHandler(baseStack, scenarioState);
-      }
-
-      return undefined;
+      /* A source that declares its endpoints without groups is addressed with
+         no group, while auto-generated mocks are filed under the collection
+         their records live in. Answer by name when the caller named no group
+         and exactly one collection offers that name — two would be a guess. */
+      if (group !== "") return undefined;
+      const sole = soleKeyFor(method);
+      return sole ? resolveAt(sole, scenarioState) : undefined;
     },
 
     peek(group, method) {

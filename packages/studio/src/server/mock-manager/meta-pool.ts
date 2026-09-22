@@ -37,6 +37,8 @@ export interface MetaScenario {
 
 export interface MetaResult {
   autoStart: boolean;
+  /** Port the definition asked for, when it asked for one. */
+  port?: number;
   routes: MetaRoute[];
   collections: string[];
   scenarios: MetaScenario[];

@@ -68,6 +68,7 @@ async function analyze(
     | {
         source?: Record<string, unknown>;
         autoStart?: boolean;
+        port?: number;
         scenarios?: Record<string, unknown>;
       }
     | undefined;
@@ -105,6 +106,9 @@ async function analyze(
 
   return {
     autoStart: config?.autoStart === true,
+    /* `defineMockServer` documents `port` in its own example; reading only
+       `autoStart` here is what made the declared one disappear. */
+    ...(typeof config?.port === "number" ? { port: config.port } : {}),
     routes: routes.map((r) => buildRouteEntry(r, groupNames)),
     collections,
     scenarios,

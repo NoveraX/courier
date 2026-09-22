@@ -66,7 +66,9 @@ export function createServerOps(ctx: ServerOpsContext): ServerOps {
       configPath: declared.configPath,
       mockKey: declared.key,
       relativePath: declared.relativePath,
-      configuredPort: allocateNextPort(),
+      /* A port the developer wrote down is a decision, not a preference;
+         allocation is for the definitions that named none. */
+      configuredPort: meta.port ?? allocateNextPort(),
       status: "declared",
       origin: "studio",
       routes: meta.routes.map((r) => ({ ...r })),

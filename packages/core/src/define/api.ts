@@ -11,8 +11,15 @@ import type {
 /** Symbol for storing source name on the source object — survives module duplication */
 const SOURCE_NAME_KEY = Symbol.for("courier.source.name");
 
-/** Derive a human-readable name from baseURL hostname */
-function deriveSourceName(baseURL?: string): string {
+/**
+ * Derive a human-readable name from baseURL hostname.
+ *
+ * Exported because a caller that needs to know whether a source's name was
+ * chosen by its author has to ask this function rather than reimplement it —
+ * a second copy disagreed on relative URLs and rejected configurations nobody
+ * had named at all.
+ */
+export function deriveSourceName(baseURL?: string): string {
   if (!baseURL) return "api";
   try {
     const host = new URL(baseURL).hostname.split(".")[0] || "api";

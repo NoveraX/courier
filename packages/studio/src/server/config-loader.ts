@@ -20,7 +20,12 @@
  */
 
 import type { CourierConfig } from "@noverax/courier/config";
-import { type AnySource, getSourceName, setSourceName } from "@noverax/courier/define";
+import {
+  type AnySource,
+  deriveSourceName,
+  getSourceName,
+  setSourceName,
+} from "@noverax/courier/define";
 import { loadCourierConfig as loadBase } from "@noverax/courier-studio-core/config";
 import { ConfigLoaderError, ConfigNotFoundError } from "./config-loader-errors";
 import { extractConfigDeps } from "./extract-config-deps";
@@ -128,20 +133,17 @@ function stampSourceKeys(sources: Record<string, AnySource>): void {
 }
 
 /**
- * Heuristic: a stamped name was "explicit" iff it cannot be derived from the
- * source's `baseURL` hostname. Auto-derived names are silently overridden;
- * user-supplied names raise the mismatch error above.
+ * A stamped name was "explicit" iff `defineApi` would not have arrived at it on
+ * its own. Auto-derived names are silently overridden by the config key;
+ * user-supplied ones raise the mismatch error above.
+ *
+ * This asks the same function `defineApi` used. A separate copy of the rule
+ * drifted from it on any relative `baseURL`: both fell back to "api", but only
+ * one of them admitted it, so a source the author never named was reported as
+ * conflicting with a name they were told to remove.
  */
 function wasExplicit(source: AnySource, name: string): boolean {
-  const baseURL = source.options?.baseURL;
-  if (!baseURL) return true;
-  try {
-    const host = new URL(baseURL).hostname.split(".")[0] || "api";
-    const derived = host.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
-    return derived !== name;
-  } catch {
-    return true;
-  }
+  return deriveSourceName(source.options?.baseURL) !== name;
 }
 
 function describe(err: unknown): string {

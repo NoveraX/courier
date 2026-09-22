@@ -1,4 +1,4 @@
-export { defineApi, getSourceName, setSourceName } from "./api";
+export { defineApi, deriveSourceName, getSourceName, setSourceName } from "./api";
 export { type BoundaryConfig, defineBoundary } from "./boundary";
 export type {
   ExposablePath,

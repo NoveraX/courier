@@ -49,7 +49,7 @@ const INITIAL_STATE: ImportState = {
     groupBy: "tag",
     generateTypes: true,
     generateSchemas: true,
-    addAuthMiddleware: true,
+    addAuthMiddleware: false,
     includeComments: true,
     generateClient: "direct",
     selectedEndpoints: null,

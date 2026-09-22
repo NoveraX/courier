@@ -45,7 +45,9 @@ export const DEFAULT_OPTIONS: ResolvedGenerateOptions = {
   groupBy: "tag",
   generateTypes: true,
   generateSchemas: true,
-  addAuthMiddleware: true,
+  /* Off by default: it reads the environment, so the module it lands in
+     belongs on a server, not in a browser bundle. */
+  addAuthMiddleware: false,
   includeComments: true,
   generateClient: "direct",
   selectedEndpoints: null,

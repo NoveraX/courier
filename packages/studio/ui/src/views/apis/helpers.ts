@@ -127,7 +127,7 @@ export function buildDefaultOptions(
     groupBy: settings.apisGroupBy as GenerateOptions["groupBy"],
     generateTypes: settings.apisGenerateTypes,
     generateSchemas: settings.apisGenerateSchemas,
-    addAuthMiddleware: true,
+    addAuthMiddleware: false,
     includeComments: settings.apisIncludeComments,
     generateClient: settings.apisClient as GenerateOptions["generateClient"],
     selectedEndpoints: null,

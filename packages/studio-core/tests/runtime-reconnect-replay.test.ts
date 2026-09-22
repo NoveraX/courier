@@ -81,7 +81,7 @@ describe("runtime socket across a Studio restart", () => {
   it("states its claims again on the second connect", async () => {
     const pending = [{ ...HTTP_CLAIM }];
     await connectRuntimeSocket(
-      { runtimeId: "app", kind: "node", studioUrl: "http://localhost:6280" },
+      { runtimeId: "app", kind: "server", studioUrl: "http://localhost:6280" },
       pending as never,
       makeHandle(),
     );
@@ -103,7 +103,7 @@ describe("runtime socket across a Studio restart", () => {
   it("announces nothing twice on a first connect", async () => {
     const pending = [{ ...HTTP_CLAIM }, { ...HTTP_CLAIM, transports: ["sse"] as const }];
     await connectRuntimeSocket(
-      { runtimeId: "app", kind: "node", studioUrl: "http://localhost:6280" },
+      { runtimeId: "app", kind: "server", studioUrl: "http://localhost:6280" },
       pending as never,
       makeHandle(),
     );
@@ -117,7 +117,7 @@ describe("runtime socket across a Studio restart", () => {
     const pending: unknown[] = [];
     let announcer: () => void = () => {};
     await connectRuntimeSocket(
-      { runtimeId: "app", kind: "node", studioUrl: "http://localhost:6280" },
+      { runtimeId: "app", kind: "server", studioUrl: "http://localhost:6280" },
       pending as never,
       { setDisposer: () => {}, setAnnouncer: (fn: () => void) => (announcer = fn) },
     );

@@ -11,6 +11,7 @@ import type {
   SkippedOperation,
   SpecNode,
 } from "./types";
+import { uniqueEndpointNames } from "./unique-endpoint-names";
 import {
   convertPathParams,
   extractPostmanPath,
@@ -83,7 +84,7 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
         name: toBindingName(groupName),
         description: "",
         prefix,
-        endpoints: endpoints.map((e) => ({
+        endpoints: uniqueEndpointNames(endpoints, prefix).map((e) => ({
           ...e,
           path: convertPathParams(e.fullPath.slice(prefix.length) || "/"),
         })),

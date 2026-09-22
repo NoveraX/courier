@@ -4,6 +4,7 @@
 
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
 import { propToTsType, schemaToTsType } from "./inline-types";
+import { jsdocText } from "./jsdoc-text";
 import type { GenerateOptions } from "./types";
 
 export function schemaToInterface(schema: ParsedSchema): string {
@@ -16,7 +17,7 @@ export function schemaToInterface(schema: ParsedSchema): string {
     const optional = !required.has(name) ? "?" : "";
     const nullable = prop.nullable ? " | null" : "";
     const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : `"${name}"`;
-    if (prop.description) lines.push(`  /** ${prop.description} */`);
+    if (prop.description) lines.push(`  /** ${jsdocText(prop.description)} */`);
     lines.push(`  ${key}${optional}: ${propToTsType(prop)}${nullable};`);
   }
 
@@ -62,7 +63,7 @@ export function resolveVariablesType(
   for (const param of ep.parameters.filter((p) => p.in === "path")) {
     const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(param.name) ? param.name : `"${param.name}"`;
     if (options.includeComments && param.description) {
-      parts.push(`/** ${param.description} */ ${key}: string`);
+      parts.push(`/** ${jsdocText(param.description)} */ ${key}: string`);
     } else {
       parts.push(`${key}: string`);
     }
@@ -73,7 +74,7 @@ export function resolveVariablesType(
     const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(param.name) ? param.name : `"${param.name}"`;
     const optional = !param.required ? "?" : "";
     if (options.includeComments && param.description) {
-      parts.push(`/** ${param.description} */ ${key}${optional}: ${tsType(param.type)}`);
+      parts.push(`/** ${jsdocText(param.description)} */ ${key}${optional}: ${tsType(param.type)}`);
     } else {
       parts.push(`${key}${optional}: ${tsType(param.type)}`);
     }
@@ -127,7 +128,8 @@ function inlineShape(spec: ParsedSpec, refName: string, options: GenerateOptions
     if (!name) continue;
     const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : `"${name}"`;
     const optional = prop.required ? "" : "?";
-    const doc = options.includeComments && prop.description ? `/** ${prop.description} */ ` : "";
+    const doc =
+      options.includeComments && prop.description ? `/** ${jsdocText(prop.description)} */ ` : "";
     parts.push(`${doc}${key}${optional}: ${tsType(prop.type)}`);
   }
   return parts.length > 0 ? `{ ${parts.join("; ")} }` : "Record<string, unknown>";

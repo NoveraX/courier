@@ -4,6 +4,7 @@
 
 import type { ParsedGroup, ParsedSpec } from "../parser/types";
 import { emitsSchemas } from "./build-endpoint-helpers";
+import { jsdocText } from "./jsdoc-text";
 import type { GeneratedFile, GenerateOptions } from "./types";
 
 export function generateIndexFile(
@@ -38,14 +39,14 @@ export function generateIndexFile(
   const buildJsDoc = (mode: string, modeHint: string) => {
     const jsDocLines: string[] = [];
     jsDocLines.push("/**");
-    jsDocLines.push(` * \`${mode}\` — ${spec.title} v${spec.version}`);
+    jsDocLines.push(` * \`${mode}\` — ${jsdocText(spec.title)} v${jsdocText(spec.version)}`);
     jsDocLines.push(` *`);
     jsDocLines.push(` * ${modeHint}`);
     if (shortDescription) {
       jsDocLines.push(` *`);
       jsDocLines.push(` * ---`);
       jsDocLines.push(` *`);
-      jsDocLines.push(` * ${shortDescription}`);
+      jsDocLines.push(` * ${jsdocText(shortDescription)}`);
     }
     jsDocLines.push(" */");
     return jsDocLines;

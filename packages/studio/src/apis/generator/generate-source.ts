@@ -3,6 +3,7 @@
  */
 
 import type { ParsedGroup, ParsedSecurityScheme, ParsedSpec } from "../parser/types";
+import { jsdocText } from "./jsdoc-text";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
 export function generateSourceFile(
@@ -38,7 +39,7 @@ export function generateSourceFile(
     lines.push(`  groups: {`);
     for (const group of groups) {
       if (options.includeComments && group.description) {
-        lines.push(`    /** ${group.description} */`);
+        lines.push(`    /** ${jsdocText(group.description)} */`);
       }
       lines.push(`    ${group.name},`);
     }

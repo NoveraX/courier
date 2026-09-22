@@ -27,3 +27,18 @@ export function stripHtmlPreserveNewlines(html: string): string {
     .replace(/[^\S\n]+/g, " ")
     .trim();
 }
+
+/**
+ * Read a specification field that is meant to hold prose.
+ *
+ * A specification may put anything where prose is expected — DigitalOcean
+ * writes tag descriptions as an external `$ref`, so the value arrives as an
+ * object and every string operation on it throws. Fields like this are
+ * documentation: an unusable one is skipped, never fatal.
+ *
+ * @param value - Whatever the specification had at that key
+ * @returns The text when there is usable text, otherwise `undefined`
+ */
+export function specText(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() !== "" ? value : undefined;
+}

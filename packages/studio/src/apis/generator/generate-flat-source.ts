@@ -6,6 +6,7 @@
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointDefinition } from "./build-endpoint";
 import { describesResponseWithSchema, emitsSchemas } from "./build-endpoint-helpers";
+import { jsdocText } from "./jsdoc-text";
 import { collectSchemaRefs } from "./schema-refs";
 import { resolveResponseType } from "./schema-types";
 import { getSchemaRefName } from "./schema-utils";
@@ -64,7 +65,7 @@ export function generateFlatSourceFile(
 
   for (const ep of endpoints) {
     if (options.includeComments && ep.description) {
-      lines.push(`    /** ${ep.description} */`);
+      lines.push(`    /** ${jsdocText(ep.description)} */`);
     }
     const def = buildEndpointDefinition(ep, spec, options, schemaImports, extracted);
     lines.push(`    ${ep.name}: ${def},`);

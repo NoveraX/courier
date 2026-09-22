@@ -10,6 +10,7 @@ import {
   generatePrimitiveSchema,
   generateRefSchema,
 } from "./generate-schema-entries";
+import { jsdocText } from "./jsdoc-text";
 import { topoSortSchemas } from "./schema-refs";
 import { schemaToInterface } from "./schema-types";
 import type { GeneratedFile, GenerateOptions } from "./types";
@@ -63,7 +64,7 @@ export function generateTypesFile(
 
   for (const [name, schema] of Object.entries(schemas)) {
     if (options.includeComments && schema.description) {
-      lines.push(`/** ${schema.description} */`);
+      lines.push(`/** ${jsdocText(schema.description)} */`);
     }
 
     if (schema.type === "object") {

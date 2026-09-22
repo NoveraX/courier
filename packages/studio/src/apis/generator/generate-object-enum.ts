@@ -3,6 +3,7 @@
  */
 
 import type { ParsedSchema } from "../parser/types";
+import { jsdocText } from "./jsdoc-text";
 import { schemaToInterface } from "./schema-types";
 import { satisfiesExpr, schemaToValidation } from "./schema-utils";
 import type { GenerateOptions } from "./types";
@@ -14,7 +15,7 @@ export function generateObjectSchema(
   options: GenerateOptions,
 ): void {
   if (options.includeComments && schema.description) {
-    lines.push(`/** ${schema.description} */`);
+    lines.push(`/** ${jsdocText(schema.description)} */`);
   }
 
   if (options.generateSchemas && options.validation !== "none") {
@@ -50,7 +51,7 @@ export function generateEnumSchema(
   options: GenerateOptions,
 ): void {
   if (options.includeComments && schema.description) {
-    lines.push(`/** ${schema.description} */`);
+    lines.push(`/** ${jsdocText(schema.description)} */`);
   }
 
   const filtered = (schema.enum ?? []).filter((v) => v !== null && v !== undefined);

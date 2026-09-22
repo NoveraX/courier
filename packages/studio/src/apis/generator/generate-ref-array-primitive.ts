@@ -3,6 +3,7 @@
  */
 
 import type { ParsedSchema } from "../parser/types";
+import { jsdocText } from "./jsdoc-text";
 import { schemaToValidation } from "./schema-utils";
 import type { GenerateOptions } from "./types";
 import { primitiveToArkType } from "./validation-arktype";
@@ -16,7 +17,7 @@ export function generateRefSchema(
   options: GenerateOptions,
 ): void {
   if (options.includeComments && schema.description) {
-    lines.push(`/** ${schema.description} */`);
+    lines.push(`/** ${jsdocText(schema.description)} */`);
   }
   if (options.generateSchemas && options.validation !== "none") {
     lines.push(`export const ${name}Schema = ${schema.refName}Schema;`);
@@ -37,7 +38,7 @@ export function generateArraySchema(
   options: GenerateOptions,
 ): void {
   if (options.includeComments && schema.description) {
-    lines.push(`/** ${schema.description} */`);
+    lines.push(`/** ${jsdocText(schema.description)} */`);
   }
   if (options.generateSchemas && options.validation !== "none") {
     lines.push(`export const ${name}Schema = ${schemaToValidation(schema, options)};`);
@@ -59,7 +60,7 @@ export function generatePrimitiveSchema(
   options: GenerateOptions,
 ): void {
   if (options.includeComments && schema.description) {
-    lines.push(`/** ${schema.description} */`);
+    lines.push(`/** ${jsdocText(schema.description)} */`);
   }
   const tsTypeName = schema.type === "integer" ? "number" : schema.type;
   if (options.generateSchemas && options.validation !== "none") {

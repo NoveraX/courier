@@ -5,11 +5,13 @@
 import { isOperationKey, isSupportedMethod } from "./http-methods";
 import { parseOpenApi3Operation } from "./parse-openapi3-operation";
 import type { ParsedEndpoint, ParsedGroup, ParsedSpec, SkippedOperation, SpecNode } from "./types";
+import { uniqueEndpointNames } from "./unique-endpoint-names";
 import {
   convertPathParams,
   convertSchema,
   findCommonPrefix,
   parseSecuritySchemes,
+  specText,
   stripHtml,
   stripHtmlPreserveNewlines,
   toBindingName,
@@ -19,9 +21,8 @@ import {
 export function parseOpenApi3(spec: SpecNode): ParsedSpec {
   const title = spec.info?.title ?? "API";
   const version = spec.info?.version ?? "1.0.0";
-  const description = spec.info?.description
-    ? stripHtmlPreserveNewlines(spec.info.description)
-    : "";
+  const rawDescription = specText(spec.info?.description);
+  const description = rawDescription ? stripHtmlPreserveNewlines(rawDescription) : "";
 
   let baseURL = "/";
   if (spec.servers?.length > 0) {
@@ -96,8 +97,10 @@ function parseTagDescriptions(spec: SpecNode): Map<string, string> {
   if (!Array.isArray(spec.tags)) return tagDescriptions;
 
   for (const tag of spec.tags) {
-    if (tag.name && tag.description) {
-      tagDescriptions.set(tag.name, stripHtml(tag.description));
+    const name = specText(tag?.name);
+    const description = specText(tag?.description);
+    if (name && description) {
+      tagDescriptions.set(name, stripHtml(description));
     }
   }
   return tagDescriptions;
@@ -119,7 +122,7 @@ function buildGroups(
       name,
       description: tagDescriptions.get(tag) ?? "",
       prefix,
-      endpoints: endpoints.map((e) => ({
+      endpoints: uniqueEndpointNames(endpoints, prefix).map((e) => ({
         ...e,
         path: convertPathParams(e.fullPath.slice(prefix.length) || "/"),
       })),

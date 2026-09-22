@@ -7,4 +7,4 @@ export { generateEndpointName, toBindingName, toCamelCase, toSafeIdentifier } fr
 export { convertPathParams, extractPostmanPath, findCommonPrefix } from "./path-utils";
 export { parseSecuritySchemes, resolveRef } from "./ref-utils";
 export { convertSchema, convertSchemaInline } from "./schema-conversion";
-export { stripHtml, stripHtmlPreserveNewlines } from "./string-utils";
+export { specText, stripHtml, stripHtmlPreserveNewlines } from "./string-utils";

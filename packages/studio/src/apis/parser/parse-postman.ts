@@ -3,23 +3,23 @@
  */
 
 import { isSupportedMethod } from "./http-methods";
+import {
+  authScheme,
+  requestBody,
+  requestOrigin,
+  requestParameters,
+  requestPath,
+} from "./postman-request";
 import type {
   ParsedEndpoint,
   ParsedGroup,
-  ParsedSchema,
+  ParsedSecurityScheme,
   ParsedSpec,
   SkippedOperation,
   SpecNode,
 } from "./types";
 import { uniqueEndpointNames } from "./unique-endpoint-names";
-import {
-  convertPathParams,
-  extractPostmanPath,
-  findCommonPrefix,
-  inferSchemaFromValue,
-  toBindingName,
-  toCamelCase,
-} from "./utils";
+import { convertPathParams, findCommonPrefix, toBindingName, toCamelCase } from "./utils";
 
 export function parsePostman(collection: SpecNode): ParsedSpec {
   const title = collection.info?.name ?? "Postman Collection";
@@ -28,6 +28,10 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
   const groups: ParsedGroup[] = [];
   const takenGroupNames = new Set<string>();
   const skipped: SkippedOperation[] = [];
+  const securitySchemes: ParsedSecurityScheme[] = [];
+  const collectionAuth = authScheme(collection.auth);
+  if (collectionAuth) securitySchemes.push(collectionAuth);
+  let origin: string | undefined;
 
   function processItems(items: SpecNode[], groupName: string) {
     const endpoints: ParsedEndpoint[] = [];
@@ -42,8 +46,8 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
       if (!request) continue;
 
       const method = (request.method ?? "GET").toLowerCase();
-      const url = typeof request.url === "string" ? request.url : (request.url?.raw ?? "");
-      const path = extractPostmanPath(url);
+      const path = requestPath(request.url);
+      origin ??= requestOrigin(request.url);
 
       if (!isSupportedMethod(method)) {
         skipped.push({
@@ -54,14 +58,9 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
         continue;
       }
 
-      let requestBody: ParsedSchema | null = null;
-      if (request.body?.mode === "raw" && request.body.raw) {
-        try {
-          const bodyObj = JSON.parse(request.body.raw);
-          requestBody = inferSchemaFromValue("RequestBody", bodyObj);
-        } catch {
-          /* not JSON */
-        }
+      const ownAuth = authScheme(request.auth);
+      if (ownAuth && !securitySchemes.some((s) => s.name === ownAuth.name)) {
+        securitySchemes.push(ownAuth);
       }
 
       endpoints.push({
@@ -71,9 +70,9 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
         path: convertPathParams(path),
         fullPath: path,
         description: item.name ?? "",
-        secured: false,
-        requestBody,
-        parameters: [],
+        secured: Boolean(ownAuth ?? collectionAuth),
+        requestBody: requestBody(request.body),
+        parameters: requestParameters(request.url),
         responseSchema: null,
         tags: [groupName],
       });
@@ -101,11 +100,13 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
     title,
     version,
     description: "",
-    baseURL: "/",
+    /* Every request URL carries the host; hardcoding "/" pointed the client
+       at the caller's own origin. */
+    baseURL: origin ?? "/",
     format: "postman",
     groups,
     schemas: {},
-    securitySchemes: [],
+    securitySchemes,
     skipped,
   };
 }

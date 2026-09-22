@@ -40,6 +40,13 @@ export type ConfigurationErrorCode =
    */
   | "SOURCES_NOT_A_RECORD"
   /**
+   * Something read the request body before the proxy route did — almost
+   * always a body-parsing middleware mounted across the whole application.
+   * The stream is gone by then, and the platform's own error says only that
+   * it is "disturbed or locked".
+   */
+  | "REQUEST_BODY_ALREADY_READ"
+  /**
    * An endpoint's wire closure recorded no call, so its method and path could
    * not be determined. The closure must address the endpoint exactly once,
    * for example `(http, vars) => http.get(":id", vars)`.

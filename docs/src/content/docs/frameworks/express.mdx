@@ -52,7 +52,9 @@ registerSources(sources)
 const app = express()
 
 app.use(cors({ origin: "http://localhost:5173", credentials: true }))
-app.use(express.json())
+
+// No body parser before this line: Courier reads the raw body itself, and a
+// global `express.json()` would consume it first.
 
 // Mount the Courier proxy route
 app.all("/api/request", courierHandler())
@@ -80,9 +82,14 @@ registerSources(sources)
 const app = express()
 
 app.use(cors({ origin: "http://localhost:5173", credentials: true }))
+
+// Courier reads the raw body itself, so the proxy route must come before any
+// body parser — or the parser must be scoped to the routes that need it.
+app.all("/api/request", courierHandler())
+
+// Your existing routes, with body parsing where you want it
 app.use(express.json())
 
-// Your existing routes
 app.get("/health", (req, res) => {
   res.json({ status: "ok" })
 })
@@ -91,14 +98,13 @@ app.get("/api/stats", (req, res) => {
   res.json({ uptime: process.uptime() })
 })
 
-// Add Courier proxy route
-app.all("/api/request", courierHandler())
-
 app.listen(3001)
 ```
 
 <Callout variant="warning" title="Body parsing">
-Do **not** apply `express.json()` (or any other body-parsing middleware like `express.urlencoded()` or `multer`) to the `/api/request` route — the Courier handler reads the raw request body itself, and a pre-parsed body will be consumed before it gets there. Apply body parsers only to your other application routes.
+A body parser mounted with a bare `app.use(express.json())` applies to **every** route, `/api/request` included. The Courier handler reads the raw request body itself, so a parser that ran first leaves it nothing — the request fails with `REQUEST_BODY_ALREADY_READ`, which names this as the cause.
+
+Either register the proxy route before the parser, as above, or scope the parser to the paths that need it: `app.use("/api/users", express.json())`. The same applies to `express.urlencoded()` and `multer`.
 </Callout>
 
 ## CORS configuration
@@ -122,8 +128,8 @@ app.use(
     credentials: true,
   })
 )
-app.use(express.json())
 
+// Before any body parser — Courier reads the raw body itself.
 app.all("/api/request", courierHandler())
 
 app.listen(Number(process.env.PORT) || 3001)
@@ -147,7 +153,6 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 const app = express()
-app.use(express.json())
 app.all("/api/request", courierHandler())
 
 app.listen(3001)

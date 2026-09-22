@@ -53,7 +53,9 @@ registerSources(sources)
 const app = express()
 
 app.use(cors({ origin: "http://localhost:5173", credentials: true }))
-app.use(express.json())
+
+// No body parser before this line: Courier reads the raw body itself, and a
+// global `express.json()` would consume it first.
 
 app.all("/api/request", courierHandler())
 

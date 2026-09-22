@@ -127,7 +127,10 @@ describe("setupRuntimeNamespace", () => {
     expect(getRuntimeEntry("next-server")).toBeUndefined();
   });
 
-  it("re-attaches with the new claim when announce arrives twice", () => {
+  /* Adapters announce one transport each, so a second message adds to the
+     first rather than replacing it. Asserting the opposite here is what let
+     Studio show every transport but the last one as orphaned. */
+  it("adds to the claim when announce arrives twice", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
     setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, { bindingTable });
@@ -137,7 +140,7 @@ describe("setupRuntimeNamespace", () => {
     socket.emit("runtime:hello", { runtimeId: "x", kind: "server" });
     socket.emit("runtime:announce", { transports: ["http"], sources: ["api"] });
     socket.emit("runtime:announce", { transports: ["sse"], sources: ["api"] });
-    expect(bindingTable.resolveBinding("api", "http")).toBeNull();
+    expect(bindingTable.resolveBinding("api", "http")?.runtimeId).toBe("x");
     expect(bindingTable.resolveBinding("api", "sse")?.runtimeId).toBe("x");
   });
 

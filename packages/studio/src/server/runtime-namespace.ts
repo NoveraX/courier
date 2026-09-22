@@ -159,9 +159,12 @@ function handleAnnounce(
     log.warn("Rejected malformed runtime:announce payload");
     return;
   }
-  // Re-attach with the new claim — detach first so a runtime that drops a
-  // source between announces does not keep stale ownership in the table.
-  deps.bindingTable.detachRuntime(ref.runtimeId);
+  /* An announce adds a claim; it does not restate everything the runtime
+     serves. Adapters send one per transport — `courierHandler` announces
+     http, `courierSSEHandler` sse, `courierWSAttach` ws — so detaching first
+     made each message erase the ones before it, and only the last transport
+     a runtime announced was ever bound. Ownership is released on disconnect,
+     which is where a runtime that goes away is actually handled. */
   deps.bindingTable.attachRuntime(ref.runtimeId, announce.transports, announce.sources);
   updateRuntimeClaim(ref.runtimeId, announce.transports, announce.sources, {
     listenOrigin: announce.listenOrigin,

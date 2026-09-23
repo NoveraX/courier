@@ -67,9 +67,12 @@ await app.listen(3000)
 
 ```ts
 import { createProxyCaller } from "@noverax/courier"
-import { api } from "./api/sources"
+import type { api } from "./api/sources"
 
-const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
+// Imported as a type: the API definition — upstream URL, endpoint paths,
+// middleware — stays on the server. An API with streams or channels passes a
+// `boundary` from `defineBoundary` instead (see the proxy-mode docs).
+const caller = createProxyCaller<typeof api>("api", { proxyPath: { http: "/api/request" } })
 const users = await caller.users.getAll()
 ```
 

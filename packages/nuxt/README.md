@@ -54,7 +54,10 @@ Use `createProxyCaller` in a composable:
 import { createProxyCaller } from "@noverax/courier"
 import type { api } from "~/api/sources"
 
-export const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
+// Imported as a type: the API definition — upstream URL, endpoint paths,
+// middleware — stays on the server. An API with streams or channels passes a
+// `boundary` from `defineBoundary` instead (see the proxy-mode docs).
+export const caller = createProxyCaller<typeof api>("api", { proxyPath: { http: "/api/request" } })
 ```
 
 ```vue

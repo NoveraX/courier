@@ -43,12 +43,20 @@ export default app
 
 ```ts
 courierHandler({
-  validateOrigin: (origin, request) => {
-    // Custom origin validation (POST requests check origin by default)
-    return origin === "https://myapp.com"
-  },
+  // Pages on other origins that may call the proxy. Same-origin pages and
+  // non-browser callers are always accepted; `*.example.com` covers
+  // sub-domains.
+  allowedOrigins: ["https://admin.example.com"],
 })
 ```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `allowedOrigins` | `string[]` | — | Extra origins whose pages may call the proxy |
+| `maxBodyBytes` | `number` | 1 MiB | Largest JSON or form body accepted |
+| `maxUploadBytes` | `number` | 10 MiB | Largest multipart upload accepted |
+| `sseHeaders` | `Record<string, string>` | — | Extra headers on SSE responses (CORS, for instance) |
+| `sseMaxLifetimeMs` | `number` | 30 min | How long one SSE connection may live before the client reconnects and resumes |
 
 ## How It Works
 
@@ -58,9 +66,12 @@ Hono uses Web Standard `Request`/`Response` natively, so the adapter simply pass
 
 ```ts
 import { createProxyCaller } from "@noverax/courier"
-import { api } from "./api/sources"
+import type { api } from "./api/sources"
 
-const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
+// Imported as a type: the API definition — upstream URL, endpoint paths,
+// middleware — stays on the server. An API with streams or channels passes a
+// `boundary` from `defineBoundary` instead (see the proxy-mode docs).
+const caller = createProxyCaller<typeof api>("api", { proxyPath: { http: "/api/request" } })
 const users = await caller.users.getAll()
 ```
 

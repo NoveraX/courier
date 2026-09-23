@@ -40,8 +40,10 @@ Two query callers are available — pick the one that matches your transport mod
 import { createProxyQueryCaller } from "@noverax/courier-react"
 import type { api } from "@/api/sources"
 
+// Imported as a type: the API definition stays on the server. For
+// useSubscription / useChannel, pass `boundary` from `defineBoundary`
+// to name the streams and channels the browser may reach.
 export const q = createProxyQueryCaller<typeof api>("api", {
-  source: api,
   proxyPath: { http: "/api/request" },  // optional, defaults to /api/request
   timeout: 10000,                       // optional default timeout
 })

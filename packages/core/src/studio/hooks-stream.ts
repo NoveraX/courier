@@ -32,7 +32,7 @@ export interface StreamHooks {
 
   onStreamClose?: (event: {
     requestId: string;
-    reason: "complete" | "error" | "disconnect" | "shutdown" | "max_lifetime";
+    reason: "complete" | "error" | "disconnect" | "shutdown" | "max_lifetime" | "slow_consumer";
     eventCount: number;
     totalBytes: number;
     duration: number;

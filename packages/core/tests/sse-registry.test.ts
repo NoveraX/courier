@@ -14,7 +14,7 @@ function createEntry(overrides?: Partial<SSERegistryEntry>): SSERegistryEntry {
     totalBytes: 0,
     lastEventAt: 0,
     abort: vi.fn(),
-    enqueue: vi.fn(() => true),
+    send: vi.fn(() => true),
     ...overrides,
   };
 }
@@ -211,16 +211,10 @@ describe("SSEConnectionRegistry", () => {
 
       await registry.shutdown({ retryMs: 5000, drainMs: 10 });
 
-      // Both should have received the shutdown event via enqueue
-      expect(a.enqueue).toHaveBeenCalled();
-      expect(b.enqueue).toHaveBeenCalled();
-
-      // Verify the shutdown event format
-      const chunk = vi.mocked(a.enqueue).mock.calls[0]![0] as Uint8Array;
-      const text = new TextDecoder().decode(chunk);
-      expect(text).toContain("event: shutdown");
-      expect(text).toContain("retry: 5000");
-      expect(text).toContain('"reason":"shutdown"');
+      const shutdown = { event: "shutdown", data: { reason: "shutdown" }, retry: 5000 };
+      /* Queued even into a full buffer: it is the last thing the stream says. */
+      expect(a.send).toHaveBeenCalledWith(shutdown, false);
+      expect(b.send).toHaveBeenCalledWith(shutdown, false);
     });
 
     it("aborts the shutdown signal", async () => {
@@ -240,8 +234,7 @@ describe("SSEConnectionRegistry", () => {
       await registry.shutdown({ drainMs: 10 });
       await registry.shutdown({ drainMs: 10 });
 
-      // enqueue should be called only once (first shutdown)
-      expect(entry.enqueue).toHaveBeenCalledTimes(1);
+      expect(entry.send).toHaveBeenCalledTimes(1);
     });
 
     it("clears all entries after drain", async () => {

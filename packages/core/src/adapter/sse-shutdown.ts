@@ -1,28 +1,24 @@
-import { formatSSEEvent } from "./format-sse";
 import type { SSERegistryEntry } from "./sse-registry";
-
-const ENCODER = new TextEncoder();
+import type { SSEBroadcastEvent } from "./sse-types";
 
 /** Send shutdown event to all entries, abort signal, wait for drain, force-close stragglers */
 export async function executeSSEShutdown(
   entries: Map<string, SSERegistryEntry>,
   shutdownController: AbortController,
-  safeSend: (entry: SSERegistryEntry, chunk: Uint8Array) => boolean,
+  sendTo: (entry: SSERegistryEntry, event: SSEBroadcastEvent, mayDrop: boolean) => boolean,
   options?: { retryMs?: number; drainMs?: number },
 ): Promise<void> {
   const retryMs = options?.retryMs ?? 3000;
   const drainMs = options?.drainMs ?? 2000;
 
-  const shutdownEvent = ENCODER.encode(
-    formatSSEEvent({ event: "shutdown", data: { reason: "shutdown" }, retry: retryMs }),
-  );
+  const shutdownEvent = { event: "shutdown", data: { reason: "shutdown" }, retry: retryMs };
 
   // Snapshot to avoid concurrent modification
   const snapshot = [...entries.values()];
 
   // Best-effort: send shutdown event to all active streams
   for (const entry of snapshot) {
-    safeSend(entry, shutdownEvent);
+    sendTo(entry, shutdownEvent, false);
   }
 
   // Brief pause to let TCP flush the event

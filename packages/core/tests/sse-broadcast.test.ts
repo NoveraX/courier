@@ -14,7 +14,7 @@ function createEntry(overrides?: Partial<SSERegistryEntry>): SSERegistryEntry {
     totalBytes: 0,
     lastEventAt: 0,
     abort: vi.fn(),
-    enqueue: vi.fn(() => true),
+    send: vi.fn(() => true),
     ...overrides,
   };
 }
@@ -28,12 +28,8 @@ describe("SSE Broadcast", () => {
 
       const ok = registry.send(entry.connectionId, { data: "hello" });
       expect(ok).toBe(true);
-      expect(entry.enqueue).toHaveBeenCalledOnce();
-
-      const chunk = vi.mocked(entry.enqueue).mock.calls[0]![0];
-      const text = new TextDecoder().decode(chunk);
-      expect(text).toContain("data: hello");
-      expect(text).toContain("id: 1");
+      /* The stream numbers and encodes it, so the ids stay in one sequence. */
+      expect(entry.send).toHaveBeenCalledWith({ data: "hello" }, true);
     });
 
     it("returns false for unknown connection", () => {
@@ -41,26 +37,23 @@ describe("SSE Broadcast", () => {
       expect(registry.send("nonexistent", { data: "test" })).toBe(false);
     });
 
-    it("returns false when enqueue fails", () => {
+    it("returns false when the stream refuses the event", () => {
       const registry = createSSEConnectionRegistry();
-      const entry = createEntry({ enqueue: vi.fn(() => false) });
+      const entry = createEntry({ send: vi.fn(() => false) });
       registry.add(entry);
 
       expect(registry.send(entry.connectionId, { data: "test" })).toBe(false);
     });
 
-    it("formats event with custom event type and id", () => {
+    it("hands the stream the event as given, custom id included", () => {
       const registry = createSSEConnectionRegistry();
       const entry = createEntry();
       registry.add(entry);
 
-      registry.send(entry.connectionId, { event: "update", data: { x: 1 }, id: "custom-42" });
+      const event = { event: "update", data: { x: 1 }, id: "custom-42" };
+      registry.send(entry.connectionId, event);
 
-      const chunk = vi.mocked(entry.enqueue).mock.calls[0]![0];
-      const text = new TextDecoder().decode(chunk);
-      expect(text).toContain("event: update");
-      expect(text).toContain("id: custom-42");
-      expect(text).toContain('"x":1');
+      expect(entry.send).toHaveBeenCalledWith(event, true);
     });
   });
 
@@ -78,7 +71,7 @@ describe("SSE Broadcast", () => {
       expect(result.size).toBe(2);
       expect(result.get(a.connectionId)).toBe(true);
       expect(result.get(b.connectionId)).toBe(true);
-      expect(c.enqueue).not.toHaveBeenCalled();
+      expect(c.send).not.toHaveBeenCalled();
     });
 
     it("broadcasts to all when only source specified", () => {
@@ -92,7 +85,7 @@ describe("SSE Broadcast", () => {
 
       const result = registry.broadcastToEndpoint("api", { data: "msg" });
       expect(result.size).toBe(2);
-      expect(c.enqueue).not.toHaveBeenCalled();
+      expect(c.send).not.toHaveBeenCalled();
     });
 
     it("returns empty map when no matches", () => {
@@ -105,8 +98,8 @@ describe("SSE Broadcast", () => {
 
     it("tracks failed deliveries in result", () => {
       const registry = createSSEConnectionRegistry();
-      const ok = createEntry({ enqueue: vi.fn(() => true) });
-      const fail = createEntry({ enqueue: vi.fn(() => false) });
+      const ok = createEntry({ send: vi.fn(() => true) });
+      const fail = createEntry({ send: vi.fn(() => false) });
       registry.add(ok);
       registry.add(fail);
 
@@ -130,7 +123,7 @@ describe("SSE Broadcast", () => {
       );
       expect(result.size).toBe(1);
       expect(result.get(admin.connectionId)).toBe(true);
-      expect(user.enqueue).not.toHaveBeenCalled();
+      expect(user.send).not.toHaveBeenCalled();
     });
   });
 
@@ -143,7 +136,7 @@ describe("SSE Broadcast", () => {
       const result = registry.broadcastAll({ data: "global" });
       expect(result.size).toBe(5);
       for (const e of entries) {
-        expect(e.enqueue).toHaveBeenCalledOnce();
+        expect(e.send).toHaveBeenCalledOnce();
       }
     });
 
@@ -151,36 +144,6 @@ describe("SSE Broadcast", () => {
       const registry = createSSEConnectionRegistry();
       const result = registry.broadcastAll({ data: "empty" });
       expect(result.size).toBe(0);
-    });
-  });
-
-  describe("broadcast sequence numbers", () => {
-    it("assigns incrementing seq IDs across broadcasts", () => {
-      const registry = createSSEConnectionRegistry();
-      const entry = createEntry();
-      registry.add(entry);
-
-      registry.send(entry.connectionId, { data: "first" });
-      registry.send(entry.connectionId, { data: "second" });
-      registry.broadcastAll({ data: "third" });
-
-      const calls = vi.mocked(entry.enqueue).mock.calls;
-      const texts = calls.map((c) => new TextDecoder().decode(c[0]));
-
-      expect(texts[0]).toContain("id: 1");
-      expect(texts[1]).toContain("id: 2");
-      expect(texts[2]).toContain("id: 3");
-    });
-
-    it("custom id overrides seq", () => {
-      const registry = createSSEConnectionRegistry();
-      const entry = createEntry();
-      registry.add(entry);
-
-      registry.send(entry.connectionId, { data: "x", id: "custom" });
-
-      const text = new TextDecoder().decode(vi.mocked(entry.enqueue).mock.calls[0]![0]);
-      expect(text).toContain("id: custom");
     });
   });
 });

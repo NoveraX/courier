@@ -15,8 +15,8 @@ export interface SSERegistryEntry {
   lastEventAt: number;
   /** Abort the stream (triggers signal → finally block → cleanup) */
   abort: () => void;
-  /** Direct write to the stream controller (bypasses generator) */
-  enqueue: (chunk: Uint8Array) => boolean;
+  /** Write an event to the stream; `mayDrop` lets a full buffer refuse it. */
+  send: (event: SSEBroadcastEvent, mayDrop: boolean) => boolean;
 }
 
 /** @internal Registry with mutation methods for handler integration */
@@ -56,9 +56,9 @@ export function createSSEConnectionRegistry(): InternalSSERegistry {
   const broadcast = createBroadcastEngine(entries);
   let isShuttingDown = false;
 
-  function safeSendChunk(entry: SSERegistryEntry, chunk: Uint8Array): boolean {
+  function sendTo(entry: SSERegistryEntry, event: SSEBroadcastEvent, mayDrop: boolean): boolean {
     if (!entries.has(entry.connectionId)) return false;
-    return entry.enqueue(chunk);
+    return entry.send(event, mayDrop);
   }
 
   function* matchEndpoint(source: string, group?: string, method?: string) {
@@ -112,22 +112,22 @@ export function createSSEConnectionRegistry(): InternalSSERegistry {
     send(id, event) {
       const entry = entries.get(id);
       if (!entry) return false;
-      return safeSendChunk(entry, broadcast.encode(event));
+      return sendTo(entry, event, true);
     },
 
     broadcastToEndpoint(source, event: SSEBroadcastEvent, group, method) {
-      return broadcast.deliver(matchEndpoint(source, group, method), broadcast.encode(event));
+      return broadcast.deliver(matchEndpoint(source, group, method), event);
     },
 
     broadcastToMeta(predicate, event) {
       const matching = function* () {
         for (const e of entries.values()) if (predicate(e.meta)) yield e;
       };
-      return broadcast.deliver(matching(), broadcast.encode(event));
+      return broadcast.deliver(matching(), event);
     },
 
     broadcastAll(event) {
-      return broadcast.deliver(entries.values(), broadcast.encode(event));
+      return broadcast.deliver(entries.values(), event);
     },
 
     add(entry) {
@@ -154,7 +154,7 @@ export function createSSEConnectionRegistry(): InternalSSERegistry {
     async shutdown(options) {
       if (isShuttingDown) return;
       isShuttingDown = true;
-      await executeSSEShutdown(entries, shutdownController, safeSendChunk, options);
+      await executeSSEShutdown(entries, shutdownController, sendTo, options);
     },
   };
 }

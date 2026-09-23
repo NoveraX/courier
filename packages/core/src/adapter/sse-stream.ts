@@ -1,8 +1,11 @@
 import { createLogger } from "../logger";
-import type { SSEContext, SSEHandler } from "../realtime/types";
+import type { SSEContext, SSEEvent, SSEHandler } from "../realtime/types";
 import type { StudioHooks } from "../studio/hooks";
-import { formatSSEEvent, SSE_HEARTBEAT } from "./format-sse";
+import { SSE_HEARTBEAT } from "./format-sse";
+import { LIMITS } from "./limits";
+import { pumpEvents } from "./sse-pump";
 import type { InternalSSERegistry } from "./sse-registry";
+import { createSSESender, type SSESender } from "./sse-sender";
 import { cleanupSSEStream, formatErrorEvent, safeSend } from "./sse-stream-lifecycle";
 import type { SSECloseReason, SSELifecycleConfig } from "./sse-types";
 
@@ -88,113 +91,121 @@ export function createSSEStream(
   let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
   let closeReason: SSECloseReason = "disconnect";
   let registered = false;
-  let seq = 0;
   // In-process Studio Playground abort hook — populated only when the
   // request carries a `x-courier-playground-rid` header AND the caller passed
   // `registerPlaygroundAbort`. Cleared in the finally branch.
   let unregisterPlaygroundAbort: (() => void) | undefined;
 
-  return new ReadableStream({
-    async start(controller) {
-      const accepted = opts.registry.add({
-        connectionId: opts.connectionId,
-        connectedAt: Date.now(),
-        meta: opts.meta,
-        source: opts.source,
-        group: opts.group,
-        method: opts.method,
-        eventCount: 0,
-        totalBytes: 0,
-        lastEventAt: 0,
-        abort: () => forceAbort.abort(),
-        enqueue: (chunk) => safeSend(controller, chunk),
-      });
+  const writeEvent = (sender: SSESender, event: SSEEvent<unknown>, mayDrop: boolean): boolean => {
+    const bytes = sender.send(event, mayDrop);
+    if (bytes === false) return false;
+    opts.registry.recordEvent(opts.connectionId, bytes);
+    return true;
+  };
 
-      if (!accepted) {
-        controller.close();
-        return;
-      }
-      registered = true;
+  return new ReadableStream(
+    {
+      async start(controller) {
+        const sender = createSSESender(controller, () => {
+          closeReason = "slow_consumer";
+          forceAbort.abort();
+        });
+        const accepted = opts.registry.add({
+          connectionId: opts.connectionId,
+          connectedAt: Date.now(),
+          meta: opts.meta,
+          source: opts.source,
+          group: opts.group,
+          method: opts.method,
+          eventCount: 0,
+          totalBytes: 0,
+          lastEventAt: 0,
+          abort: () => forceAbort.abort(),
+          send: (event, mayDrop) => writeEvent(sender, event, mayDrop),
+        });
 
-      // Register the playground abort hook AFTER the registry add succeeds
-      // — so a rejected connection (over-limit) doesn't leave a dangling
-      // entry in the playground registry.
-      if (opts.playgroundRid && opts.registerPlaygroundAbort) {
-        unregisterPlaygroundAbort = opts.registerPlaygroundAbort(opts.playgroundRid, () =>
-          forceAbort.abort(),
-        );
-      }
+        if (!accepted) {
+          controller.close();
+          return;
+        }
+        registered = true;
 
-      combinedSignal.addEventListener("abort", () => clearInterval(heartbeatTimer), { once: true });
+        // Register the playground abort hook AFTER the registry add succeeds
+        // — so a rejected connection (over-limit) doesn't leave a dangling
+        // entry in the playground registry.
+        if (opts.playgroundRid && opts.registerPlaygroundAbort) {
+          unregisterPlaygroundAbort = opts.registerPlaygroundAbort(opts.playgroundRid, () =>
+            forceAbort.abort(),
+          );
+        }
 
-      heartbeatTimer = setInterval(() => {
-        safeSend(controller, SSE_ENCODER.encode(SSE_HEARTBEAT));
-      }, HEARTBEAT_INTERVAL);
+        combinedSignal.addEventListener("abort", () => clearInterval(heartbeatTimer), {
+          once: true,
+        });
+        heartbeatTimer = setInterval(() => sender.comment(SSE_HEARTBEAT), HEARTBEAT_INTERVAL);
 
-      try {
-        const generator = handler({ ...ctx, signal: combinedSignal });
-        for await (const event of generator) {
-          if (combinedSignal.aborted) break;
-
-          while ((controller.desiredSize ?? 1) <= 0 && !combinedSignal.aborted) {
-            // Wait up to 50ms for backpressure to clear, but resolve early if
-            // the stream is aborted — otherwise an in-flight cancel waits the
-            // full tick before the loop condition is rechecked.
-            await new Promise<void>((resolve) => {
-              const timer = setTimeout(resolve, 50);
-              combinedSignal.addEventListener(
-                "abort",
-                () => {
-                  clearTimeout(timer);
-                  resolve();
-                },
-                { once: true },
-              );
+        try {
+          const generator = handler({ ...ctx, signal: combinedSignal });
+          const outcome = await pumpEvents(generator, combinedSignal, async (event) => {
+            await waitForRoom(sender, combinedSignal);
+            if (combinedSignal.aborted || !writeEvent(sender, event, false)) return;
+            opts.dt.onStreamMessage?.({
+              requestId: opts.requestId,
+              seq: opts.registry.get(opts.connectionId)?.eventCount ?? 0,
+              // Default to "data" (server→client) so the timeline UI renders
+              // a downward arrow even when the user did not set an explicit
+              // SSE `event:` field.
+              eventType: event.event ?? "data",
+              dataSize: opts.registry.get(opts.connectionId)?.totalBytes ?? 0,
+              dataPreview: truncatePreview(event.data),
+              timestamp: Date.now(),
             });
-          }
-          if (combinedSignal.aborted) break;
-
-          const formatted = formatSSEEvent(event, ++seq);
-          const chunk = SSE_ENCODER.encode(formatted);
-
-          safeSend(controller, chunk);
-          opts.registry.recordEvent(opts.connectionId, chunk.byteLength);
-
-          opts.dt.onStreamMessage?.({
-            requestId: opts.requestId,
-            seq: opts.registry.get(opts.connectionId)?.eventCount ?? 0,
-            // Default to "data" (server→client) so the timeline UI renders
-            // a downward arrow even when the user did not set an explicit
-            // SSE `event:` field.
-            eventType: event.event ?? "data",
-            dataSize: chunk.byteLength,
-            dataPreview: truncatePreview(event.data),
-            timestamp: Date.now(),
           });
+          if (outcome === "complete") closeReason = "complete";
+        } catch (error) {
+          closeReason = "error";
+          if (!combinedSignal.aborted) {
+            const msg = error instanceof Error ? error.message : "Unknown stream error";
+            safeSend(controller, SSE_ENCODER.encode(formatErrorEvent(msg)));
+            opts.onError?.({ connectionId: opts.connectionId, meta: opts.meta, error });
+          }
+        } finally {
+          runCleanupStep("unregisterPlaygroundAbort", unregisterPlaygroundAbort);
+          runCleanupStep("clearHeartbeat", () => clearInterval(heartbeatTimer));
+          runCleanupStep("cleanupSSEStream", () =>
+            cleanupSSEStream(controller, opts, closeReason, registered),
+          );
         }
-
-        if (!combinedSignal.aborted) closeReason = "complete";
-      } catch (error) {
-        closeReason = "error";
-        if (!combinedSignal.aborted) {
-          const msg = error instanceof Error ? error.message : "Unknown stream error";
-          safeSend(controller, SSE_ENCODER.encode(formatErrorEvent(msg)));
-          opts.onError?.({ connectionId: opts.connectionId, meta: opts.meta, error });
-        }
-      } finally {
+      },
+      cancel() {
         runCleanupStep("unregisterPlaygroundAbort", unregisterPlaygroundAbort);
         runCleanupStep("clearHeartbeat", () => clearInterval(heartbeatTimer));
         runCleanupStep("cleanupSSEStream", () =>
-          cleanupSSEStream(controller, opts, closeReason, registered),
+          cleanupSSEStream(undefined, opts, closeReason, registered),
         );
-      }
+      },
     },
-    cancel() {
-      runCleanupStep("unregisterPlaygroundAbort", unregisterPlaygroundAbort);
-      runCleanupStep("clearHeartbeat", () => clearInterval(heartbeatTimer));
-      runCleanupStep("cleanupSSEStream", () =>
-        cleanupSSEStream(undefined, opts, closeReason, registered),
+    /* Sized in bytes: a one-chunk queue would count a healthy client that
+       is a burst behind as one that stopped reading. */
+    new ByteLengthQueuingStrategy({
+      highWaterMark: LIMITS.SSE_MAX_BUFFERED_BYTES,
+    }) as QueuingStrategy<Uint8Array>,
+  );
+}
+
+/** Wait until the client has read enough for the next event, or the stream closes. */
+async function waitForRoom(sender: SSESender, signal: AbortSignal): Promise<void> {
+  while (!sender.hasRoom && !signal.aborted) {
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, 50);
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timer);
+          resolve();
+        },
+        { once: true },
       );
-    },
-  });
+    });
+  }
 }

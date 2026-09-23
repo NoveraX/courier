@@ -94,4 +94,14 @@ export interface SSELifecycleConfig {
 }
 
 /** Reason why an SSE connection was closed */
-export type SSECloseReason = "complete" | "error" | "disconnect" | "shutdown" | "max_lifetime";
+/**
+ * Why an SSE stream closed. `slow_consumer`: the client stopped reading and
+ * too many broadcasts in a row could not be queued for it.
+ */
+export type SSECloseReason =
+  | "complete"
+  | "error"
+  | "disconnect"
+  | "shutdown"
+  | "max_lifetime"
+  | "slow_consumer";

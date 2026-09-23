@@ -30,6 +30,9 @@ export const LIMITS = {
   /** Max consecutive message drops before force-closing a slow connection (0 = disabled) */
   MAX_CONSECUTIVE_DROPS: 50,
 
+  /** Bytes an SSE stream may hold for a client that is not reading before broadcasts are dropped (1 MB) */
+  SSE_MAX_BUFFERED_BYTES: 1_048_576,
+
   /** Default SSE max connection lifetime in ms (30 minutes) */
   SSE_MAX_LIFETIME_MS: 30 * 60_000,
 

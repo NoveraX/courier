@@ -27,7 +27,7 @@ export interface StreamMessageEvent extends StudioEvent {
 export interface StreamCloseEvent extends StudioEvent {
   type: "stream:close";
   requestId: string;
-  reason: "complete" | "error" | "disconnect" | "shutdown" | "max_lifetime";
+  reason: "complete" | "error" | "disconnect" | "shutdown" | "max_lifetime" | "slow_consumer";
   eventCount: number;
   totalBytes: number;
   duration: number;

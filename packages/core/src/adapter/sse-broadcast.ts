@@ -1,37 +1,30 @@
-import { formatSSEEvent } from "./format-sse";
 import type { SSERegistryEntry } from "./sse-registry";
 import type { SSEBroadcastEvent, SSEBroadcastResult } from "./sse-types";
 
-/** Shared broadcast state and helpers for SSE registry */
+/** Shared broadcast delivery for the SSE registry */
 export interface SSEBroadcastEngine {
-  /** Encode a broadcast event into SSE wire format bytes */
-  encode(event: SSEBroadcastEvent): Uint8Array;
-  /** Send encoded chunk to matching entries, returns delivery results */
-  deliver(iter: Iterable<SSERegistryEntry>, chunk: Uint8Array): SSEBroadcastResult;
+  /** Send an event to matching entries, returning whether each took it */
+  deliver(iter: Iterable<SSERegistryEntry>, event: SSEBroadcastEvent): SSEBroadcastResult;
 }
 
 /**
  * Create a broadcast engine for SSE server-initiated push.
- * Maintains a monotonic sequence counter for event IDs.
+ *
+ * Each stream numbers the event itself, from the counter its generator's
+ * events use, so one client never sees its ids go backwards; and a stream
+ * whose client is not reading refuses the event rather than queueing it.
  *
  * @param entries - Live registry entries map (read-only reference for liveness checks)
  */
 export function createBroadcastEngine(entries: Map<string, SSERegistryEntry>): SSEBroadcastEngine {
-  const encoder = new TextEncoder();
-  let broadcastSeq = 0;
-
-  function encode(event: SSEBroadcastEvent): Uint8Array {
-    return encoder.encode(formatSSEEvent(event, ++broadcastSeq));
-  }
-
-  function deliver(iter: Iterable<SSERegistryEntry>, chunk: Uint8Array): SSEBroadcastResult {
+  function deliver(iter: Iterable<SSERegistryEntry>, event: SSEBroadcastEvent): SSEBroadcastResult {
     const result: SSEBroadcastResult = new Map();
     for (const entry of iter) {
-      const ok = entries.has(entry.connectionId) && entry.enqueue(chunk);
+      const ok = entries.has(entry.connectionId) && entry.send(event, true);
       result.set(entry.connectionId, ok);
     }
     return result;
   }
 
-  return { encode, deliver };
+  return { deliver };
 }

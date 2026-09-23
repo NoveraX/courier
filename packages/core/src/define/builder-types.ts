@@ -180,6 +180,21 @@ export interface StreamBuilder<TResponse, TVariables, TVariablesOut>
    *
    * Finishes the chain the same way `via` does, but carries the generator
    * producing the events instead of the address of a remote stream.
+   *
+   * The stream closes when its client leaves, when it is disconnected and
+   * when the server shuts down, without waiting for the generator. A
+   * generator waiting on an event that may never come should release what it
+   * holds when `ctx.signal` fires; otherwise its `finally` runs only the next
+   * time it yields.
+   *
+   * @example
+   * ```ts
+   * stream.response<Tick>().implement(async function* (ctx) {
+   *   const feed = subscribe();
+   *   ctx.signal.addEventListener("abort", () => feed.close());
+   *   for await (const tick of feed) yield { data: tick };
+   * });
+   * ```
    */
   implement(
     handler: StreamHandler<TResponse, TVariablesOut>,

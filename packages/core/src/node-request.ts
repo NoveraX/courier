@@ -2,10 +2,15 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import { rememberPeerAddress } from "./adapter/peer-address";
 import { ConfigurationError } from "./errors/configuration-error";
+import { addressedTo } from "./node-origin";
 
 /**
  * Convert a Node.js IncomingMessage to a Web Standard Request.
  * Works with Express, Fastify, NestJS, and any Node.js HTTP framework.
+ *
+ * The URL is the one the client used, taken from a local proxy's
+ * `X-Forwarded-Proto` / `X-Forwarded-Host` when there is one — see
+ * {@link addressedTo}.
  *
  * Pass the response too wherever there is one: the request's `signal` then
  * fires when the client goes away before the response is done. Without it,
@@ -18,9 +23,7 @@ import { ConfigurationError } from "./errors/configuration-error";
  * @returns The equivalent Web Standard Request
  */
 export function toWebRequest(nodeReq: IncomingMessage, nodeRes?: ServerResponse): Request {
-  const encrypted = "encrypted" in nodeReq.socket && nodeReq.socket.encrypted;
-  const protocol = encrypted ? "https" : "http";
-  const host = nodeReq.headers.host ?? "localhost";
+  const { protocol, host = "localhost" } = addressedTo(nodeReq);
   const url = new URL(nodeReq.url ?? "/", `${protocol}://${host}`);
 
   const headers = new Headers();

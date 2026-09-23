@@ -43,14 +43,34 @@ describe("extractOriginFromNodeRequest", () => {
     expect(extractOriginFromNodeRequest(req)).toBeUndefined();
   });
 
-  it("does NOT honor x-forwarded-proto header (trust boundary)", () => {
-    // Trust boundary: even if the request carries x-forwarded-proto: https,
-    // extractOriginFromNodeRequest only looks at socket.encrypted. This is a
-    // deliberate conservative choice — reverse-proxy users must set
-    // appOrigin via courier.config.ts or COURIER_APP_URL explicitly.
+  it("takes the scheme and host a local proxy forwards, as its client used them", () => {
     const req = {
-      headers: { host: "internal-service:8080", "x-forwarded-proto": "https" },
-      socket: { encrypted: false },
+      headers: {
+        host: "127.0.0.1:3000",
+        "x-forwarded-proto": "https",
+        "x-forwarded-host": "app.example.com",
+      },
+      socket: { encrypted: false, remoteAddress: "10.0.3.7" },
+    } as unknown as IncomingMessage;
+    expect(extractOriginFromNodeRequest(req)).toBe("https://app.example.com");
+  });
+
+  it("takes the client-facing hop of a forwarded chain", () => {
+    const req = {
+      headers: { host: "app.example.com", "x-forwarded-proto": "https, http" },
+      socket: { encrypted: false, remoteAddress: "127.0.0.1" },
+    } as unknown as IncomingMessage;
+    expect(extractOriginFromNodeRequest(req)).toBe("https://app.example.com");
+  });
+
+  it("ignores forwarded headers from a caller on a public address", () => {
+    const req = {
+      headers: {
+        host: "internal-service:8080",
+        "x-forwarded-proto": "https",
+        "x-forwarded-host": "victim.example.com",
+      },
+      socket: { encrypted: false, remoteAddress: "203.0.113.9" },
     } as unknown as IncomingMessage;
     expect(extractOriginFromNodeRequest(req)).toBe("http://internal-service:8080");
   });

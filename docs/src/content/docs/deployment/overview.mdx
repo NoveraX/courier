@@ -52,6 +52,28 @@ Every Courier server (standalone or framework adapter) provides two health endpo
 
 Use these with Kubernetes, Docker health checks, or load balancer configuration.
 
+## Behind a Reverse Proxy
+
+The proxy route refuses a browser request whose `Origin` is not the site the request was sent to — the check that stops another site's page from calling your API with your users' cookies. Behind nginx, a cloud load balancer or a CDN that terminates TLS, the app itself sees plain HTTP, and often the upstream's name in `Host`, so it needs the proxy to say what the browser used.
+
+The Node adapters (Express, Fastify, NestJS and the standalone server) read `X-Forwarded-Proto` and `X-Forwarded-Host` — but only from a proxy on a loopback or private address (`127.0.0.1`, `::1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `fc00::/7`). A caller on a public address cannot claim another site's name with them. Next.js, SvelteKit and the other Web-standard adapters take the URL from their framework, which applies its own proxy settings.
+
+```nginx title="nginx.conf"
+location / {
+  proxy_pass http://127.0.0.1:3000;
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_set_header X-Forwarded-Host $host;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+When the proxy reaches the app from a public address, or pages on other origins call the API on purpose, list those origins instead:
+
+```ts
+courierHandler({ allowedOrigins: ["https://app.example.com", "https://*.example.com"] })
+```
+
 ## Next Steps
 
 - [Standalone Server](/docs/deployment/standalone-server) — full API and CLI reference

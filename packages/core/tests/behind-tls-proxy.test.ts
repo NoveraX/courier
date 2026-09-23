@@ -1,0 +1,73 @@
+/**
+ * A Node app behind a proxy that terminates TLS, as it runs in production.
+ *
+ * The socket is plain HTTP, so the request looked addressed to `http://…`
+ * while the browser's `Origin` said `https://…`: every POST and WebSocket
+ * from the app's own pages was refused with 403 "Origin not allowed".
+ */
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { createHandler } from "../src/adapter";
+import { defineApi } from "../src/define";
+import { sendWebResponse, toWebRequest } from "../src/node";
+import { _resetSourcesForTests, registerSources } from "../src/sources";
+
+let server: Server | undefined;
+
+afterEach(async () => {
+  _resetSourcesForTests();
+  server?.closeAllConnections();
+  await new Promise<void>((resolve) => server?.close(() => resolve()) ?? resolve());
+  server = undefined;
+});
+
+async function serveBehindProxy(): Promise<string> {
+  registerSources({ api: defineApi({ baseURL: "https://upstream.example", endpoints: {} }) });
+  const handler = createHandler();
+  server = createServer(async (req, res) => {
+    await sendWebResponse(await handler.handlePost(toWebRequest(req, res)), res);
+  });
+  await new Promise<void>((resolve) => server?.listen(0, "127.0.0.1", resolve));
+  return `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/request`;
+}
+
+/** A browser's POST from the app's own page, as the proxy hands it on. */
+function postFromPage(url: string, forwarded: Record<string, string>): Promise<Response> {
+  return fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: "https://app.example.com", ...forwarded },
+    body: JSON.stringify({ _s: "api", _m: "missing" }),
+  });
+}
+
+describe("an app behind a TLS-terminating proxy", () => {
+  it("accepts its own pages' POSTs", async () => {
+    const url = await serveBehindProxy();
+
+    const response = await postFromPage(url, {
+      "X-Forwarded-Proto": "https",
+      "X-Forwarded-Host": "app.example.com",
+    });
+
+    expect(response.status).not.toBe(403);
+  });
+
+  it("still refuses another site's page", async () => {
+    const url = await serveBehindProxy();
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "https://evil.example",
+        "X-Forwarded-Proto": "https",
+        "X-Forwarded-Host": "app.example.com",
+      },
+      body: JSON.stringify({ _s: "api", _m: "missing" }),
+    });
+
+    expect(response.status).toBe(403);
+  });
+});

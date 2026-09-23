@@ -1,21 +1,31 @@
 import { createLogger } from "@noverax/courier";
 import { createDataUri } from "./core/data-uri";
 import { resolveSnippet } from "./core/resolve-snippet";
+import { runtimeEntryPath } from "./core/runtime-importer";
 import type { StudioPluginOptions } from "./core/types";
+import { prependToEntry, type WebpackEntryValue } from "./core/webpack-entry";
 
 const FRAMEWORK = "webpack";
 const log = createLogger("WebpackPlugin");
 
 /**
  * Webpack plugin for Courier Studio.
- * Injects `attachRuntime("webpack-browser")` into the client entry in dev mode.
+ *
+ * Loads the Studio connection ahead of the app's main entry — `main-app` or
+ * `main`, else the first — as the `webpack-browser` runtime. Builds for
+ * `target: "node"` are left untouched, as are production builds unless
+ * `enabled` says otherwise.
+ *
+ * @param options - `enabled` forces injection on or off; by default it is on
+ *   unless `NODE_ENV` is `"production"`.
+ * @returns The webpack plugin.
  *
  * @example
  * ```ts
- * // webpack.config.js
- * const { courierStudio } = require("@noverax/courier-studio/webpack")
+ * // webpack.config.mjs
+ * import { courierStudio } from "@noverax/courier-studio/webpack"
  *
- * module.exports = {
+ * export default {
  *   plugins: [courierStudio()],
  * }
  * ```
@@ -30,34 +40,29 @@ export function courierStudio(options?: StudioPluginOptions): WebpackPluginLike 
         const entries =
           typeof originalEntry === "function"
             ? await originalEntry()
-            : (originalEntry as Record<string, WebpackEntryItem>);
+            : (originalEntry as Record<string, WebpackEntryValue>);
 
-        const snippet = await resolveSnippet(FRAMEWORK, options);
+        const snippet = await resolveSnippet(FRAMEWORK, options, runtimeEntryPath());
         if (!snippet) return entries;
 
-        const dataUri = createDataUri(snippet);
-        let main = entries["main-app"] ?? entries["main"];
-        if (!main) {
-          main = Object.values(entries)[0];
-          log.warn("No 'main-app' or 'main' entry found, falling back to first entry");
-        }
-        if (main?.import && !main.import.includes(dataUri)) {
-          main.import.unshift(dataUri);
-        }
+        const name = mainEntryName(entries);
+        if (name === undefined) return entries;
+        entries[name] = prependToEntry(entries[name] as WebpackEntryValue, createDataUri(snippet));
         return entries;
       };
     },
   };
 }
 
-interface WebpackEntryItem {
-  import?: string[];
-  [key: string]: unknown;
+function mainEntryName(entries: Record<string, WebpackEntryValue>): string | undefined {
+  if ("main-app" in entries) return "main-app";
+  if ("main" in entries) return "main";
+  const [first] = Object.keys(entries);
+  if (first !== undefined)
+    log.warn(`No 'main-app' or 'main' entry; Studio connects through '${first}'`);
+  return first;
 }
 
 interface WebpackPluginLike {
-  apply(compiler: {
-    options: { entry: unknown; target?: string };
-    hooks?: { shutdown?: { tap(name: string, fn: () => void): void } };
-  }): void;
+  apply(compiler: { options: { entry: unknown; target?: unknown } }): void;
 }

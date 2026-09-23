@@ -1,7 +1,7 @@
 /**
  * Next.js (App Router) setup walkthrough.
  *
- * Covers both Turbopack (v15.3+) and Webpack/v14 instrumentation paths.
+ * Covers both Turbopack (the default since Next.js 16) and webpack.
  */
 
 import { Cable, Server } from "lucide-react";
@@ -12,18 +12,19 @@ import { EXPLORE_STEP, VERIFY_STEP, installStep } from "./shared";
 export const NEXTJS: FrameworkConfig = {
   id: "nextjs",
   name: "Next.js",
-  description: "App Router v14+ (Turbopack & Webpack)",
+  description: "App Router v14+ (Turbopack & webpack)",
   steps: [
     installStep("@noverax/courier-studio @noverax/courier-studio-core"),
     {
       id: "instrument-client",
       title: "Add client instrumentation",
-      description: "Turbopack (v15.3+): convention file. Webpack / Next.js 14: config wrapper. Both connect the browser to Studio.",
+      description:
+        "Turbopack, the default since Next.js 16, runs no webpack plugins: connect the browser from instrumentation-client.ts (Next.js 15.3+). Under webpack the config wrapper does it for you. For a non-default Studio address, add env: { COURIER_STUDIO_URL } to next.config.",
       icon: Cable,
       actionLabel: "Copy snippet",
       variants: [
         {
-          label: "Turbopack (v15.3+)",
+          label: "Turbopack",
           filePath: "instrumentation-client.ts",
           code: `import { attachRuntime } from "@noverax/courier-studio-core/runtime";
 
@@ -32,7 +33,7 @@ if (process.env.NODE_ENV === "development") {
 }`,
         },
         {
-          label: "Webpack / v14",
+          label: "Webpack",
           filePath: "next.config.ts",
           code: `import { withCourierStudio } from "@noverax/courier-studio/next";
 

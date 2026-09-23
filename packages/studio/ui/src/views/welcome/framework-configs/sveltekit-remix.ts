@@ -54,7 +54,7 @@ if (dev) {
 export const REMIX: FrameworkConfig = {
   id: "remix",
   name: "Remix",
-  description: "React framework with Vite",
+  description: "React Router (Remix) with Vite",
   steps: [
     installStep("@noverax/courier-studio @noverax/courier-studio-core"),
     {
@@ -75,7 +75,8 @@ export default defineConfig({
     {
       id: "instrument-server",
       title: "Add server instrumentation",
-      description: "Tracks proxy-mode requests in Remix's server entry.",
+      description:
+        "Tracks proxy-mode requests in the server entry. Add it to the top of the file — on React Router 7, create it first with npx react-router reveal entry.server.",
       icon: Server,
       actionLabel: "Copy snippet",
       filePath: "app/entry.server.tsx",

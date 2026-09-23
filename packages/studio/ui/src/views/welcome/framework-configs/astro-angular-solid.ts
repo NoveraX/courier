@@ -34,16 +34,20 @@ export default defineConfig({
     {
       id: "instrument-server",
       title: "Add server instrumentation",
-      description: "Tracks proxy-mode requests in Astro's server middleware.",
+      description:
+        "Tracks proxy-mode requests in Astro's server middleware. Astro requires the file to export onRequest.",
       icon: Server,
       actionLabel: "Copy snippet",
       filePath: "src/middleware.ts",
       lang: "ts",
-      code: `import { attachRuntime } from "@noverax/courier-studio-core/runtime";
+      code: `import { defineMiddleware } from "astro:middleware";
+import { attachRuntime } from "@noverax/courier-studio-core/runtime";
 
 if (import.meta.env.DEV) {
   await attachRuntime();
-}`,
+}
+
+export const onRequest = defineMiddleware((_context, next) => next());`,
     },
     VERIFY_STEP,
     EXPLORE_STEP,
@@ -59,7 +63,8 @@ export const ANGULAR: FrameworkConfig = {
     {
       id: "instrument",
       title: "Initialize Studio",
-      description: "Call the setup function before bootstrapping your app.",
+      description:
+        "Call it before bootstrapping your app. For a non-default Studio address, pass { studioUrl }.",
       icon: Cable,
       actionLabel: "Copy snippet",
       filePath: "src/main.ts",
@@ -87,22 +92,23 @@ export const SOLID: FrameworkConfig = {
     {
       id: "instrument-client",
       title: "Add Vite plugin",
-      description: "Solid Start uses Vite — auto-injects client connection in dev mode.",
+      description: "Solid Start runs on Vite — the plugin connects the browser in dev mode.",
       icon: Cable,
       actionLabel: "Copy snippet",
-      filePath: "app.config.ts",
+      filePath: "vite.config.ts",
       lang: "ts",
-      code: `import { defineConfig } from "@solidjs/start/config";
+      code: `import { solidStart } from "@solidjs/start/config";
 import { courierStudio } from "@noverax/courier-studio/solid";
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  vite: { plugins: [courierStudio()] },
+  plugins: [solidStart(), courierStudio()],
 });`,
     },
     {
       id: "instrument-server",
       title: "Add server instrumentation",
-      description: "Tracks proxy-mode requests on the Solid Start server.",
+      description: "Tracks proxy-mode requests on the Solid Start server. Add it to the top of the file.",
       icon: Server,
       actionLabel: "Copy snippet",
       filePath: "src/entry-server.tsx",

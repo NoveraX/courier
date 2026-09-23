@@ -12,7 +12,9 @@
  * from that moment rather than from the next server start.
  */
 
+import { join } from "node:path";
 import { createLogger } from "@noverax/courier";
+import { CONFIG_BASENAMES } from "@noverax/courier-studio-core/config";
 import type { Namespace } from "socket.io";
 import type { BindingTable } from "./catalog/binding-table";
 import { type LoadedCourierConfig, loadCourierConfig } from "./config-loader";
@@ -36,7 +38,8 @@ export interface ConfigWatcher {
   /** Release every watch and cancel any pending debounce timer. */
   stop(): void;
   /** The most recent successfully loaded config — never null after construction. */
-  getCurrent(): LoadedCourierConfig;
+  /** The config last loaded — none while there has not been one that loads */
+  getCurrent(): LoadedCourierConfig | null;
 }
 
 /** A refused watch leaves the poll layer running, so say so rather than throw. */
@@ -55,18 +58,23 @@ function reportDegradation({ kind, path, message }: WatchDegradation): void {
  * synchronous side of `createStudioServer` where it can fail loud.
  */
 export function startConfigWatcher(
-  initial: LoadedCourierConfig,
+  initial: LoadedCourierConfig | null,
   deps: ConfigWatcherDeps,
 ): ConfigWatcher {
-  let current: LoadedCourierConfig = initial;
+  let current: LoadedCourierConfig | null = initial;
   let stopped = false;
 
+  /* With no config loaded — none yet, or one that failed — the names a config
+     may have are watched, so creating or fixing it is picked up. Studio used
+     to stop watching altogether, and the edit that fixed a typo did nothing
+     until it was restarted. */
+  const paths = initial?.deps ?? CONFIG_BASENAMES.map((name) => join(deps.projectRoot, name));
   const watchSet = createWatchSet({
-    paths: initial.deps,
+    paths,
     onChange: (changed) => void reload(changed),
     onDegraded: reportDegradation,
   });
-  deps.watcherStatus?.setApiPathCount(initial.deps.length);
+  deps.watcherStatus?.setApiPathCount(paths.length);
 
   async function reload(changed: string[]): Promise<void> {
     deps.watcherStatus?.emitChange("api", changed);
@@ -109,7 +117,7 @@ export function startConfigWatcher(
       stopped = true;
       watchSet.stop();
     },
-    getCurrent(): LoadedCourierConfig {
+    getCurrent(): LoadedCourierConfig | null {
       return current;
     },
   };

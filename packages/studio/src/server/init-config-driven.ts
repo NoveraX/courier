@@ -1,9 +1,9 @@
 /**
  * Load `courier.config.ts` if present and start the config watcher.
  *
- * A missing config is treated as a no-op so the studio dev server can still
- * come up with an empty binding table. Other load errors are logged so they
- * remain visible without crashing startup. The successful path pushes the
+ * A missing config leaves the binding table empty and other load errors are
+ * logged, without crashing startup — and the watcher starts either way, so
+ * creating or fixing the config is picked up without a restart. The successful path pushes the
  * loaded config into the binding table + mock registry, then attaches an
  * `onReload` callback so subsequent file changes flow through the same path.
  */
@@ -29,28 +29,31 @@ export interface InitConfigDrivenDeps {
   setConfigPath: (path: string) => void;
 }
 
-export async function initConfigDriven(deps: InitConfigDrivenDeps): Promise<ConfigWatcher | null> {
+export async function initConfigDriven(deps: InitConfigDrivenDeps): Promise<ConfigWatcher> {
   const { projectRoot, bindingTable, mockRegistry, uiNamespace, watcherStatus, setConfigPath } =
     deps;
 
-  let loaded: LoadedCourierConfig;
+  let loaded: LoadedCourierConfig | null = null;
   try {
     loaded = await loadCourierConfig(projectRoot);
   } catch (err) {
-    if (err instanceof ConfigNotFoundError) return null;
-    /* Recorded as well as logged: without a config there is no binding table
-       and no watcher, and the banner that follows would otherwise present
-       that as a normal start. */
-    log.warn("courier.config load failed", err);
-    recordStartupIssue("courier.config did not load, so no sources are bound", err);
-    return null;
+    if (!(err instanceof ConfigNotFoundError)) {
+      /* Recorded as well as logged: without a config there is no binding
+         table, and the banner that follows would otherwise present that as
+         a normal start. The watcher below still starts, so the fix is
+         picked up when it is saved. */
+      log.warn("courier.config load failed", err);
+      recordStartupIssue("courier.config did not load, so no sources are bound", err);
+    }
   }
 
-  setConfigPath(loaded.configFile);
-  bindingTable.setConfig(loaded.config);
-  mockRegistry.syncFromConfig(loaded.config);
-  uiNamespace.emit("config:update", { configFile: loaded.configFile });
-  uiNamespace.emit("binding:snapshot", bindingTable.getStatus());
+  if (loaded) {
+    setConfigPath(loaded.configFile);
+    bindingTable.setConfig(loaded.config);
+    mockRegistry.syncFromConfig(loaded.config);
+    uiNamespace.emit("config:update", { configFile: loaded.configFile });
+    uiNamespace.emit("binding:snapshot", bindingTable.getStatus());
+  }
 
   return startConfigWatcher(loaded, {
     projectRoot,

@@ -15,9 +15,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { setProjectRoot } from "../context";
 import { registerApisRoutes } from "./apis-routes";
 import { BindingTable } from "./catalog/binding-table";
-import type { ConfigWatcher } from "./config-watcher";
 import { initProject } from "./init";
-import { initConfigDriven } from "./init-config-driven";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
 import { createOriginGuard } from "./origin-guard";
@@ -28,6 +26,7 @@ import { clearBuffer } from "./session-buffer";
 import { registerSessionRoutes } from "./session-routes";
 import { setupUiNamespace } from "./socket-handlers";
 import type { StudioServer, StudioServerOptions } from "./types";
+import { watchConfigDriven } from "./watch-config-driven";
 import { createWatcherStatus } from "./watcher-status";
 
 const log = createLogger("Studio");
@@ -99,9 +98,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   });
   mockManager.start();
 
-  let configWatcher: ConfigWatcher | null = null;
-  let closed = false;
-  void initConfigDriven({
+  const config = watchConfigDriven({
     projectRoot,
     bindingTable,
     mockRegistry,
@@ -110,20 +107,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     setConfigPath: (path) => {
       loadedConfigPath = path;
     },
-  })
-    .then((watcher) => {
-      if (!watcher) return;
-      // If close() ran before the async load resolved, stop the freshly
-      // attached watcher immediately so its fs.watch handles do not leak.
-      if (closed) {
-        watcher.stop();
-        return;
-      }
-      configWatcher = watcher;
-    })
-    .catch((err) => {
-      log.warn("courier.config initialization failed", err);
-    });
+  });
 
   setupUiNamespace({
     uiNamespace,
@@ -186,9 +170,8 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   });
 
   const close = async () => {
-    closed = true;
     await mockManager.stop();
-    configWatcher?.stop();
+    config.stop();
     clearBuffer();
     playgroundRouter.dispose();
     clearStudioServerState();

@@ -36,7 +36,8 @@ import { readPathAliases } from "./path-aliases";
 
 export { type PathAliases, readPathAliases } from "./path-aliases";
 
-const CONFIG_BASENAMES: ReadonlyArray<string> = [
+/** The file names a Courier config may have, in the order they are looked for */
+export const CONFIG_BASENAMES: ReadonlyArray<string> = [
   "courier.config.ts",
   "courier.config.mts",
   "courier.config.cts",

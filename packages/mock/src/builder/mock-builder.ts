@@ -7,6 +7,8 @@ import type {
   ResolvedHandler,
   SequenceEntry,
 } from "../types";
+import { channelWith, streamOf, streamWith } from "./realtime-handlers";
+import { sequenceFn } from "./sequence-fn";
 
 /** Callback invoked when a NEW handler needs to be pushed onto the stack */
 export type OnRegister = (handler: ResolvedHandler) => void;
@@ -15,10 +17,16 @@ export type OnRegister = (handler: ResolvedHandler) => void;
  * Create a fluent EnhancedMockBuilder.
  *
  * Two modes of operation:
- * - **With existing handler**: decorator methods (withLatency, withHeaders, delay, withStatus)
- *   mutate the existing handler in-place — no new handler is pushed.
- *   Response-defining methods (resolves, returns, rejects, sequence) create a new handler.
- * - **Without existing**: a new handler is registered immediately (original behavior).
+ * - **With existing handler** (an auto-CRUD route, say): the first method
+ *   called pushes a copy of it — its response and decorations — and every
+ *   method then works on the copy, in any order. Decorators used to edit the
+ *   existing handler itself, so one written before the response method
+ *   (`.delay(400).resolves(x)`) was lost from the new handler and stamped
+ *   onto the auto-CRUD one for good.
+ * - **Without existing**: a new handler is registered immediately.
+ *
+ * A status set with `withStatus` holds whatever response method comes after
+ * it; `resolves`/`returns` used to reset it to 200.
  */
 export function createEnhancedMockBuilder<TResponse, TVariables>(
   onRegister: OnRegister,
@@ -36,10 +44,12 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
     onRegister(handler);
   }
 
-  /** Switch to a fresh handler, push it onto the stack, apply any pending decorators */
+  let explicitStatus: number | undefined;
+
+  /** Switch to a copy of the existing handler and push it onto the stack */
   function ensureOwnHandler(): void {
     if (handler === existing) {
-      handler = { fn: handler.fn, status: handler.status, isError: handler.isError };
+      handler = { ...existing, ...(existing.headers && { headers: { ...existing.headers } }) };
       onRegister(handler);
     }
   }
@@ -48,7 +58,7 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
     resolves(data) {
       ensureOwnHandler();
       handler.fn = () => data;
-      handler.status = 200;
+      handler.status = explicitStatus ?? 200;
       handler.isError = false;
       return builder;
     },
@@ -66,7 +76,7 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
       }
       ensureOwnHandler();
       handler.fn = fn as MockHandlerFn;
-      handler.status = 200;
+      handler.status = explicitStatus ?? 200;
       handler.isError = false;
       return builder;
     },
@@ -92,21 +102,26 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
     },
 
     delay(ms) {
+      ensureOwnHandler();
       handler.delayMs = ms;
       return builder;
     },
 
     withLatency(profile) {
+      ensureOwnHandler();
       handler.latency = profile;
       return builder;
     },
 
     withHeaders(headers) {
+      ensureOwnHandler();
       handler.headers = { ...handler.headers, ...headers };
       return builder;
     },
 
     withStatus(status) {
+      ensureOwnHandler();
+      explicitStatus = status;
       handler.status = status;
       return builder;
     },
@@ -118,65 +133,31 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
     },
 
     transitionTo(state) {
+      ensureOwnHandler();
       handler.newState = state;
       return builder;
     },
 
     sequence(responses) {
       ensureOwnHandler();
-      let index = 0;
-      handler.fn = () => {
-        const current: SequenceEntry<unknown> =
-          index < responses.length ? responses[index] : responses[responses.length - 1];
-        index++;
-
-        if (!current) return undefined;
-
-        if (typeof current === "object" && current !== null) {
-          if ("error" in current && current.error === true) {
-            const entry = current as { error: true; status: number; data?: unknown };
-            // Signal error by throwing — route-generator catches and returns error response
-            handler.isError = true;
-            handler.status = entry.status;
-            return entry.data ?? { success: false, message: `HTTP ${entry.status}` };
-          }
-          if ("data" in current) {
-            handler.isError = false;
-            handler.status = 200;
-            return (current as { data: unknown }).data;
-          }
-        }
-
-        handler.isError = false;
-        handler.status = 200;
-        return current;
-      };
+      handler.fn = sequenceFn(handler, responses as SequenceEntry<unknown>[]);
       handler.isError = false;
       return builder;
     },
 
     stream(fn) {
       ensureOwnHandler();
-      handler.transport = "sse";
-      handler.streamFn = fn as MockStreamFn;
-      handler.fn = () => undefined;
-      handler.isError = false;
+      streamWith(handler, fn as MockStreamFn);
       return builder;
     },
 
     emits(events) {
-      const gen: MockStreamFn = async function* () {
-        for (const event of events) yield event as SSEEvent;
-      };
-      return builder.stream(gen as MockStreamFn<TResponse, TVariables>);
+      return builder.stream(streamOf(events as SSEEvent[]) as MockStreamFn<TResponse, TVariables>);
     },
 
     channel(fn) {
       ensureOwnHandler();
-      handler.transport = "ws";
-      handler.channelFn = fn as MockChannelFn;
-      handler.fn = () => undefined;
-      handler.isError = false;
+      channelWith(handler, fn as MockChannelFn);
       return builder;
     },
   };

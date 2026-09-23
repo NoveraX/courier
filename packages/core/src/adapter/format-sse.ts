@@ -53,17 +53,10 @@ export function formatSSEEvent<TData>(event: SSEEvent<TData>, seq?: number): str
   if (event.event) lines.push(`event: ${sanitizeField(event.event)}`);
   if (event.retry !== undefined) lines.push(`retry: ${event.retry}`);
 
-  const data =
-    event.data === undefined
-      ? ""
-      : typeof event.data === "string"
-        ? event.data
-        : JSON.stringify(event.data);
-
-  // Multi-line data: each line gets its own `data:` prefix
-  for (const line of data.split("\n")) {
-    lines.push(`data: ${line}`);
-  }
+  /* Always JSON, strings included: the client reads every event as JSON,
+     so a string written raw was dropped ("hello") or came back as another
+     type ("42" as a number). JSON also keeps the payload on one line. */
+  lines.push(`data: ${JSON.stringify(event.data ?? null)}`);
 
   return lines.join("\n") + "\n\n";
 }

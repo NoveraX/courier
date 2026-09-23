@@ -9,37 +9,43 @@ describe("formatSSEEvent", () => {
 
   it("includes id from event", () => {
     const result = formatSSEEvent({ id: "42", data: "test" });
-    expect(result).toBe("id: 42\ndata: test\n\n");
+    expect(result).toBe('id: 42\ndata: "test"\n\n');
   });
 
   it("uses seq as id when event has no id", () => {
     const result = formatSSEEvent({ data: "test" }, 7);
-    expect(result).toBe("id: 7\ndata: test\n\n");
+    expect(result).toBe('id: 7\ndata: "test"\n\n');
   });
 
   it("prefers event id over seq", () => {
     const result = formatSSEEvent({ id: "custom", data: "test" }, 99);
-    expect(result).toBe("id: custom\ndata: test\n\n");
+    expect(result).toBe('id: custom\ndata: "test"\n\n');
   });
 
   it("includes event type", () => {
     const result = formatSSEEvent({ event: "update", data: "x" });
-    expect(result).toBe("event: update\ndata: x\n\n");
+    expect(result).toBe('event: update\ndata: "x"\n\n');
   });
 
   it("includes retry hint", () => {
     const result = formatSSEEvent({ data: "x", retry: 3000 });
-    expect(result).toBe("retry: 3000\ndata: x\n\n");
+    expect(result).toBe('retry: 3000\ndata: "x"\n\n');
   });
 
-  it("handles multi-line string data", () => {
+  it("keeps multi-line string data on one line", () => {
     const result = formatSSEEvent({ data: "line1\nline2\nline3" });
-    expect(result).toBe("data: line1\ndata: line2\ndata: line3\n\n");
+    expect(result).toBe('data: "line1\\nline2\\nline3"\n\n');
   });
 
-  it("passes string data as-is without JSON wrapping", () => {
-    const result = formatSSEEvent({ data: "plain" });
-    expect(result).toBe("data: plain\n\n");
+  it("encodes string data as JSON so the client reads back the same string", () => {
+    for (const text of ["plain", "42", "true", "null", '{"a":1}']) {
+      const line = formatSSEEvent({ data: text }).slice("data: ".length).trim();
+      expect(JSON.parse(line)).toBe(text);
+    }
+  });
+
+  it("sends an event without data as null", () => {
+    expect(formatSSEEvent({ event: "tick", data: undefined })).toBe("event: tick\ndata: null\n\n");
   });
 
   it("formats all fields together", () => {

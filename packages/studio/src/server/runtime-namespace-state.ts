@@ -69,9 +69,38 @@ export function nextSessionVersion(sessionId: string): number {
   return next;
 }
 
+/**
+ * Every live socket per runtime id, newest last. Processes can share an id —
+ * two services left on the default `"server"`, cluster workers, two instances
+ * of one app — and the registry entry speaks through the newest of them.
+ */
+const runtimeSockets = new Map<string, Socket[]>();
+
 /** Insert or replace the entry for a runtime that just sent `runtime:hello`. */
 export function registerRuntime(entry: RuntimeRegistryEntry): void {
+  const sockets = runtimeSockets.get(entry.runtimeId) ?? [];
+  runtimeSockets.set(entry.runtimeId, [...sockets.filter((s) => s !== entry.socket), entry.socket]);
   runtimeRegistry.set(entry.runtimeId, entry);
+}
+
+/**
+ * Release one socket of a runtime id; answers whether it was the last. While
+ * others remain, the entry moves to the newest of them and the runtime stays.
+ * The first of two processes sharing an id to disconnect used to remove the
+ * entry and the bindings of the one still running, orphaning its sources
+ * until it restarted.
+ */
+export function releaseRuntimeSocket(runtimeId: string, socket: Socket): "last" | "remaining" {
+  const remaining = (runtimeSockets.get(runtimeId) ?? []).filter((s) => s !== socket);
+  const newest = remaining.at(-1);
+  if (!newest) {
+    runtimeSockets.delete(runtimeId);
+    return "last";
+  }
+  runtimeSockets.set(runtimeId, remaining);
+  const entry = runtimeRegistry.get(runtimeId);
+  if (entry) runtimeRegistry.set(runtimeId, { ...entry, socket: newest });
+  return "remaining";
 }
 
 /** Update the `(transports, sourceNames)` claim of an already-registered runtime. */
@@ -120,6 +149,7 @@ export function getRuntimeEntry(runtimeId: string): RuntimeRegistryEntry | undef
  */
 export function clearStudioServerState(): void {
   runtimeRegistry.clear();
+  runtimeSockets.clear();
   mockServers.clear();
   socketMockServers.clear();
   sessionVersionRegistry.clear();

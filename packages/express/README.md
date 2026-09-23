@@ -41,6 +41,21 @@ app.listen(3000, () => {
 
 `courierHandler()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` (or by `attachRuntime()` auto-loading `courier.config.ts` in Studio-instrumented projects). The handler accepts any HTTP method. GET requests are routed to query-type endpoints, POST requests handle mutations and data payloads.
 
+## Streaming and WebSockets
+
+```ts
+import http from "node:http"
+import { courierSSEHandler, courierWSAttach } from "@noverax/courier-express"
+
+app.get("/api/sse", courierSSEHandler())
+
+const server = http.createServer(app)
+const detach = courierWSAttach(server) // answers upgrades on /api/ws
+server.listen(3000)
+```
+
+`courierWSAttach` answers WebSocket upgrades on one path — `/api/ws` unless you pass `path` — and leaves every other path to the application's own WebSocket handlers. Point the client at the same path with `proxyPath: { ws: "/api/ws" }`. Frames larger than `maxMessageSize` (64 KB by default) are refused before they are buffered. Requires the `ws` package.
+
 ## How It Works
 
 1. Converts the Node.js `IncomingMessage` to a Web Standard `Request`

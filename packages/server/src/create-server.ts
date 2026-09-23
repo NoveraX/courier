@@ -3,10 +3,11 @@ import type { AddressInfo } from "node:net";
 
 import { createHandler, createLogger, createWSHandler, registerSources } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
-import { sendWebResponse, toWebRequest } from "@noverax/courier/node";
+import { attachWebSocketUpgrade } from "@noverax/courier/node";
 import type { WebSocketServer } from "ws";
 
-import { handleCors, handleHealth } from "./http-handlers";
+import { createRequestListener } from "./http-handlers";
+import { createReadiness } from "./readiness";
 import { createShutdown, setupSignalHandlers } from "./shutdown";
 import type { CourierServer, CourierServerConfig } from "./types";
 
@@ -78,16 +79,7 @@ export function createCourierServer(config: CourierServerConfig): CourierServer 
   let wss: WebSocketServer | undefined;
   let shuttingDown = false;
 
-  let markListening: (url: string) => void = () => {};
-  let markFailed: (error: Error) => void = () => {};
-  const ready = new Promise<string>((resolve, reject) => {
-    markListening = resolve;
-    markFailed = reject;
-  });
-  /* A caller that never inspects `ready` must not bring the process down with
-     an unhandled rejection. Attaching a handler here marks it handled; anyone
-     who does await it still receives the error. */
-  ready.catch(() => {});
+  const { ready, markListening, markFailed } = createReadiness();
 
   const result: CourierServer = {
     url: `http://${host}:${port}`,
@@ -97,39 +89,20 @@ export function createCourierServer(config: CourierServerConfig): CourierServer 
     wsConnections: wsHandler.connections,
   };
 
-  const httpServer = createServer(async (req, res) => {
-    if (handleHealth(req, res, shuttingDown)) return;
-    if (handleCors(req, res, allowedOrigins)) return;
+  const httpServer = createServer(
+    createRequestListener(handler, allowedOrigins, () => shuttingDown),
+  );
 
-    try {
-      const webReq = toWebRequest(req);
-      const webRes = await handler.handle(webReq);
-      await sendWebResponse(webRes, res);
-    } catch (err) {
-      log.error("Request handler error", err);
-      if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Internal server error" }));
-    }
-  });
-
-  httpServer.on("upgrade", async (req, socket, head) => {
-    if (shuttingDown) {
-      socket.write("HTTP/1.1 503 Service Unavailable\r\n\r\n");
-      socket.destroy();
-      return;
-    }
-
-    socket.on("error", (err) => log.warn("Socket error during upgrade", err));
-
-    if (!wss) {
-      const { WebSocketServer } = await import("ws");
-      wss = new WebSocketServer({ noServer: true, maxPayload });
-    }
-
-    wss.handleUpgrade(req, socket, head, (ws) => {
-      const webReq = toWebRequest(req);
-      wsHandler.handleSocket(ws, webReq);
-    });
+  attachWebSocketUpgrade(httpServer, {
+    /* This server hosts nothing but Courier, so every path is its own. */
+    path: undefined,
+    maxPayload,
+    isAccepting: () => !shuttingDown,
+    createServer: async (serverOptions) => {
+      wss = new (await import("ws")).WebSocketServer(serverOptions);
+      return wss;
+    },
+    onSocket: (socket, request) => wsHandler.handleSocket(socket, request),
   });
 
   /* A library does not decide that the host process should end. A failed

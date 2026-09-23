@@ -198,8 +198,9 @@ app.get("/api/sse", courierSSEHandler({
   },
 }))
 
-// WebSocket — attaches to HTTP server upgrade event
+// WebSocket — answers upgrades on `path` only; set the client's proxyPath.ws to match
 const cleanupWS = courierWSAttach(server, {
+  path: "/api/ws",
   pubsub,
   heartbeatIntervalMs: 25_000,
   allowedOrigins: [process.env.ALLOWED_ORIGIN!],
@@ -384,8 +385,9 @@ async function bootstrap(): Promise<void> {
 
   const app = await NestFactory.create(AppModule)
 
-  // WebSocket — attaches to NestJS HTTP server
+  // WebSocket — answers upgrades on `path` only; set the client's proxyPath.ws to match
   const cleanupWS = courierWSAttach(app.getHttpServer(), {
+    path: "/api/ws",
     pubsub,
     heartbeatIntervalMs: 25_000,
     allowedOrigins: [process.env.ALLOWED_ORIGIN!],

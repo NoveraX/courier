@@ -44,6 +44,18 @@ export class AppModule implements NestModule {
 
 `courierMiddleware()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` at module load.
 
+## WebSockets
+
+```ts
+import { courierWSAttach } from "@noverax/courier-nestjs"
+
+const app = await NestFactory.create(AppModule)
+const detach = courierWSAttach(app.getHttpServer()) // answers upgrades on /api/ws
+await app.listen(3000)
+```
+
+`courierWSAttach` answers WebSocket upgrades on one path — `/api/ws` unless you pass `path` — and leaves every other path to NestJS gateways and any other WebSocket handler. Point the client at the same path with `proxyPath: { ws: "/api/ws" }`. Frames larger than `maxMessageSize` (64 KB by default) are refused before they are buffered. Requires the `ws` package.
+
 ## How It Works
 
 1. Converts the Node.js `IncomingMessage` to a Web Standard `Request`

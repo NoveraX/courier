@@ -1,6 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { isOriginAccepted } from "@noverax/courier";
+import type { AdapterHandler } from "@noverax/courier";
+import { createLogger, isOriginAccepted } from "@noverax/courier";
+import { sendWebResponse, toWebRequest } from "@noverax/courier/node";
+
+const log = createLogger("Server");
 
 /** Handle /health and /readyz endpoints. Returns true if handled. */
 export function handleHealth(
@@ -84,4 +88,32 @@ function selfOrigin(req: IncomingMessage): string | null {
   if (!host) return null;
   const socket = req.socket as { encrypted?: boolean } | undefined;
   return `${socket?.encrypted ? "https" : "http"}://${host}`;
+}
+
+/**
+ * Answer an HTTP request: health checks, CORS, then the Courier handler.
+ *
+ * @param handler - The Courier request handler
+ * @param allowedOrigins - Origins allowed to call cross-origin
+ * @param isShuttingDown - Whether the server is draining
+ * @returns A listener for `http.createServer`
+ */
+export function createRequestListener(
+  handler: AdapterHandler,
+  allowedOrigins: string[] | undefined,
+  isShuttingDown: () => boolean,
+): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
+  return async (req, res) => {
+    if (handleHealth(req, res, isShuttingDown())) return;
+    if (handleCors(req, res, allowedOrigins)) return;
+
+    try {
+      const webRes = await handler.handle(toWebRequest(req));
+      await sendWebResponse(webRes, res);
+    } catch (err) {
+      log.error("Request handler error", err);
+      if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Internal server error" }));
+    }
+  };
 }

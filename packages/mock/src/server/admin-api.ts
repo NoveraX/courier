@@ -1,3 +1,4 @@
+import { logger } from "@noverax/courier";
 import type { Hono } from "hono";
 import type { MockRegistry } from "../registry";
 import type { MockStore } from "../store";
@@ -17,8 +18,25 @@ interface AdminConfig {
   reseed?: () => void;
 }
 
-/** Register admin API routes under /__admin/ */
+/**
+ * Register admin API routes under /__admin/
+ *
+ * A request a browser sends from a page on another site is refused: the
+ * admin API has no authentication, and with the mock's open CORS any page
+ * the developer had open could read the store, wipe it or switch every
+ * endpoint to 500. Tools and scripts send no `Origin`; pages served from
+ * this machine (Studio, a local dashboard) are loopback origins.
+ */
 export function registerAdminRoutes(app: Hono, config: AdminConfig): void {
+  app.use("/__admin/*", async (c, next) => {
+    const origin = c.req.header("Origin");
+    if (origin && !isLoopbackOrigin(origin)) {
+      return c.json({ error: "The admin API only answers pages served from this machine" }, 403);
+    }
+    await next();
+    return undefined;
+  });
+
   // List active mocks
   app.get("/__admin/mocks", (c) => {
     return c.json(config.registry.list());
@@ -92,4 +110,20 @@ export function registerAdminRoutes(app: Hono, config: AdminConfig): void {
       collections: config.store.list().length,
     });
   });
+}
+
+/** An origin on this machine: `localhost`, a `*.localhost` name, or a loopback address */
+function isLoopbackOrigin(origin: string): boolean {
+  try {
+    const { hostname } = new URL(origin);
+    return (
+      hostname === "localhost" ||
+      hostname.endsWith(".localhost") ||
+      hostname === "127.0.0.1" ||
+      hostname === "[::1]"
+    );
+  } catch (error) {
+    logger.debug("MockAdmin", `Unreadable Origin "${origin}": ${String(error)}`);
+    return false;
+  }
 }

@@ -45,6 +45,7 @@ async function startServer(
   const server = createAutoMockServer({
     source: config.source,
     port,
+    ...(config.hostname && { hostname: config.hostname }),
     cors: config.cors,
     admin: config.admin,
     log: config.log,

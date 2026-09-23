@@ -13,6 +13,12 @@ export interface MockServerDefinition {
   };
   /** Preferred port (0 = auto-assign, default: 0) */
   port: number;
+  /**
+   * Where to listen (default: `"localhost"`, loopback only). Use `"0.0.0.0"`
+   * to reach the mock from another machine or a container — its admin API,
+   * which has no authentication, is then reachable there too.
+   */
+  hostname?: string;
   /** Human-readable server name (derived from source name or filename if omitted) */
   name?: string;
   /** Seed configuration */

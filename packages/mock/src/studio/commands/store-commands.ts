@@ -21,7 +21,7 @@ export function handleStoreUpdate(
   data: Record<string, unknown>,
 ): unknown {
   const col = ctx.server.store.collection(collectionName);
-  return col.update((q) => q.where({ id } as Record<string, unknown>), { data });
+  return col.updateById(id, data);
 }
 
 export function handleStoreDelete(
@@ -34,14 +34,7 @@ export function handleStoreDelete(
     col.clear();
     return true;
   }
-  const id = parseId(rawId);
-  return col.delete((q) => q.where({ id } as Record<string, unknown>));
-}
-
-function parseId(raw: string | number): string | number {
-  if (typeof raw === "number") return raw;
-  const num = Number(raw);
-  return Number.isNaN(num) ? raw : num;
+  return col.deleteById(rawId);
 }
 
 export function handleStoreSeed(

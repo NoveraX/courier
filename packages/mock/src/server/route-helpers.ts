@@ -62,18 +62,22 @@ export function resolveMethod(methods: string[], exact: string[], pattern: RegEx
   return match ?? exact[0] ?? "unknown";
 }
 
-/** Parse ID — return number if numeric, string otherwise */
+/**
+ * Parse a path or query value: a number when it is one written the way a
+ * number is written, the string otherwise.
+ *
+ * Any value `Number()` accepted used to become a number, so `"007"` became
+ * `7`, `""` became `0` and `"1e3"` became `1000` — a zip code or a
+ * zero-padded id lost what it was.
+ */
 export function parseId(raw: string): string | number {
   const num = Number(raw);
-  return Number.isNaN(num) ? raw : num;
+  return raw !== "" && Number.isFinite(num) && String(num) === raw ? num : raw;
 }
 
-/** Parse query params, auto-coercing numeric strings to numbers */
+/** Parse query params, turning values written as numbers into numbers */
 export function parseQueryParams(params: URLSearchParams): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  for (const [key, value] of params) {
-    const num = Number(value);
-    result[key] = Number.isNaN(num) ? value : num;
-  }
+  for (const [key, value] of params) result[key] = parseId(value);
   return result;
 }

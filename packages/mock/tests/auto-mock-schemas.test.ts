@@ -182,14 +182,15 @@ describe("auto-mock with mixed schema endpoints", () => {
     await server.stop();
   });
 
-  it("seeds from pagination wrapper (extracts item schema)", async () => {
+  it("seeds from pagination wrapper and answers in the wrapper it declares", async () => {
     const body = await fetch(`${url}/feed`).then((r) => r.json());
-    expect(Array.isArray(body)).toBe(true);
-    expect(body.length).toBe(5);
-    // Should be item objects, not wrapper objects
-    expect(body[0]).toHaveProperty("id");
-    expect(body[0]).toHaveProperty("title");
-    expect(body[0]).not.toHaveProperty("cursor");
+    // The response schema is the wrapper, so the answer is one too
+    expect(WrapperSchema.safeParse(body).success).toBe(true);
+    expect(body.results).toHaveLength(5);
+    expect(body.results[0]).toHaveProperty("id");
+    expect(body.results[0]).toHaveProperty("title");
+    expect(body.results[0]).not.toHaveProperty("cursor");
+    expect(body.hasMore).toBe(false);
   });
 
   it("seeds schemaless endpoints with fallback data", async () => {

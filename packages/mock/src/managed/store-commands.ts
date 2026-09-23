@@ -39,9 +39,7 @@ export async function handleStoreCommand(
       }
       case "mock:store:update": {
         const col = server.store.collection(collection);
-        col.update((q) => q.where({ id: cmd.id } as Record<string, unknown>), {
-          data: cmd.data as Record<string, unknown>,
-        });
+        col.updateById(cmd.id as string | number, cmd.data as Record<string, unknown>);
         return { ok: true };
       }
       case "mock:server:reset":
@@ -62,14 +60,6 @@ function handleDelete(server: MockServer, collection: string, rawId: string | nu
     server.store.collection(collection).clear();
     return { ok: true };
   }
-  const id = parseId(rawId);
-  server.store.collection(collection).delete((q) => q.where({ id } as Record<string, unknown>));
+  server.store.collection(collection).deleteById(rawId);
   return { ok: true };
-}
-
-/** Convert string id to number if numeric, for strict equality matching */
-function parseId(raw: string | number): string | number {
-  if (typeof raw === "number") return raw;
-  const num = Number(raw);
-  return Number.isNaN(num) ? raw : num;
 }

@@ -45,3 +45,24 @@ export function withEndpointTimeout<T extends Partial<BoundMethodOptions>>(
   }
   return { ...baseOptions, timeout: endpointOptions.timeout };
 }
+
+/**
+ * Stop the upstream call when the caller of the proxy goes away.
+ *
+ * A proxied request used to run to completion after its client had left —
+ * a closed tab, a cancelled query — so a busy page held upstream connections
+ * nobody was waiting for. The incoming request's signal now joins whatever
+ * signal the call already carries.
+ *
+ * @param baseOptions - Options for the upstream call
+ * @param request - The request that reached the proxy, when there is one
+ * @returns The options, cancelled when either signal fires
+ */
+export function withCallerSignal<T extends Partial<BoundMethodOptions>>(
+  baseOptions: T,
+  request: Request | undefined,
+): T {
+  if (!request) return baseOptions;
+  const own = baseOptions.signal;
+  return { ...baseOptions, signal: own ? AbortSignal.any([own, request.signal]) : request.signal };
+}

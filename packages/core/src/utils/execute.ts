@@ -7,7 +7,7 @@ import { generateRequestId, studioHooks } from "../studio";
 import { handleExecuteError } from "./execute-error";
 import { createHttpClient } from "./execute-helpers";
 import { executeInner } from "./execute-inner";
-import { resolveMiddlewareChain, withEndpointTimeout } from "./execute-options";
+import { resolveMiddlewareChain, withCallerSignal, withEndpointTimeout } from "./execute-options";
 import { applyCacheHeaders, buildMiddlewareContext, resolveEndpoint } from "./execute-resolve";
 import { buildErrorResponse, buildResponse } from "./execute-response";
 import {
@@ -165,7 +165,10 @@ export async function executeRequest(
         middlewareHeaders: middlewareCtx.headers,
         variables: middlewareCtx.variables as FormData | Record<string, unknown> | undefined,
         forwardVariables,
-        baseOptions: withEndpointTimeout(baseOptions, endpointOptions),
+        baseOptions: withCallerSignal(
+          withEndpointTimeout(baseOptions, endpointOptions),
+          context?.req,
+        ),
         stream,
         schema,
         hasStudio,

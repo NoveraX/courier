@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
+import { rememberPeerAddress } from "./adapter/peer-address";
 import { ConfigurationError } from "./errors/configuration-error";
 
 /**
@@ -72,7 +73,9 @@ export function toWebRequest(nodeReq: IncomingMessage): Request {
     init.duplex = "half";
   }
 
-  return new Request(url, init);
+  const request = new Request(url, init);
+  rememberPeerAddress(request, nodeReq.socket.remoteAddress);
+  return request;
 }
 
 /**

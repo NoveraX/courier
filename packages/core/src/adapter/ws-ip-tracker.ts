@@ -1,3 +1,5 @@
+import { isLocalAddress, peerAddressOf } from "./peer-address";
+
 /** Per-IP connection counter for DDoS/abuse protection */
 export interface IPTracker {
   /** Check limit and increment count. Returns true if allowed. */
@@ -12,18 +14,19 @@ export type ClientIPResolver = (request: Request) => string | undefined;
 /**
  * Work out which address a connection should be counted against.
  *
- * A `Request` carries no peer address, so without help this can only read
- * headers — and a header is written by whoever is talking to us. The chain
- * matters: a proxy *appends*, so in `1.2.3.4, 203.0.113.7` the left entry is
- * whatever the caller sent and the right one is what the nearest proxy
- * observed. Reading from the right therefore costs a forger the proxy
- * itself, while reading from the left costs nothing at all.
+ * Where the runtime recorded the socket's own address, that address is the
+ * answer — unless it is loopback or a private network, which is what a
+ * reverse proxy in front of the application looks like, and only then are
+ * forwarding headers believed. Reading them from any caller let a single
+ * forged `X-Forwarded-For` switch the cap off, and without the socket's
+ * address every direct caller shared one bucket: one client holding its
+ * quota locked every other user out.
  *
- * That still only holds for one proxy deep. Behind two, the rightmost entry
- * is the inner proxy and every caller collapses into one bucket. An
+ * A header chain is read from the right. A proxy *appends*, so in
+ * `1.2.3.4, 203.0.113.7` the left entry is whatever the caller sent and the
+ * right one is what the nearest proxy observed. That holds one proxy deep; an
  * application that knows its own topology should say so with `resolve`,
- * which is then the whole answer; everything else here is a default that
- * degrades honestly rather than a guarantee.
+ * which is then the whole answer.
  *
  * @param request - The upgrade request
  * @param resolve - Supplied by the application when it knows the real address
@@ -31,14 +34,21 @@ export type ClientIPResolver = (request: Request) => string | undefined;
  *
  * @example
  * ```ts
- * // Node, where the socket knows who is calling:
- * createWSHandler({ clientIp: (req) => socketOf(req)?.remoteAddress });
+ * // Behind two proxies that each append one hop:
+ * createWSHandler({ clientIp: (req) => req.headers.get("x-forwarded-for")?.split(",").at(-2)?.trim() });
  * ```
  */
 export function extractClientIP(request: Request, resolve?: ClientIPResolver): string {
   const named = resolve?.(request);
   if (named) return named;
 
+  const peer = peerAddressOf(request);
+  if (peer && !isLocalAddress(peer)) return peer;
+  return forwardedAddress(request) ?? peer ?? "0.0.0.0";
+}
+
+/** The caller's address as the nearest proxy reported it. */
+function forwardedAddress(request: Request): string | undefined {
   const forwarded = request.headers.get("X-Forwarded-For");
   if (forwarded) {
     /* Walking past empty entries keeps a chain with a trailing separator from
@@ -50,14 +60,7 @@ export function extractClientIP(request: Request, resolve?: ClientIPResolver): s
       if (hop) return hop;
     }
   }
-
-  const cfIP = request.headers.get("CF-Connecting-IP");
-  if (cfIP) return cfIP;
-
-  const realIP = request.headers.get("X-Real-IP");
-  if (realIP) return realIP;
-
-  return "0.0.0.0";
+  return request.headers.get("CF-Connecting-IP") ?? request.headers.get("X-Real-IP") ?? undefined;
 }
 
 /**

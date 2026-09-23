@@ -1,12 +1,18 @@
+import { createLogger } from "../logger";
+import { describeFailure } from "../realtime/describe-failure";
 import { qualifyTopic, unqualifyTopic } from "../realtime/ws/topic-hash";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { generateRequestId } from "../studio";
 import { runTransportMiddleware } from "../utils/transport-middleware";
+import { authorizeSubscription } from "./ws-authorize-subscription";
 import type { WSSocketContext } from "./ws-context";
 import { closeSubscriptionEntry, extractHeaders } from "./ws-dispatch-helpers";
 import { startChannel, startPush } from "./ws-endpoints";
 import { VALIDATION_FAILED, validateVariablesSafe } from "./ws-middleware";
 import { resolveSubscribeTopic } from "./ws-resolve";
+import { sendSubscriptionEnd } from "./ws-subscription-end";
+
+const log = createLogger("WS");
 
 /**
  * Handle a "subscribe" message from a WS client.
@@ -29,11 +35,7 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
   }
 
   if (ctx.topicManager.topicCount(ctx.connectionId) >= ctx.maxSubscriptions) {
-    ctx.sendMessage({
-      type: "error",
-      id: msg.id,
-      error: { code: 4429, message: "Too many subscriptions" },
-    });
+    sendSubscriptionEnd(ctx, topic, msg.id, { code: 4429, message: "Too many subscriptions" });
     return;
   }
 
@@ -64,13 +66,9 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
       requestId: ctx.requestId,
       timeoutMs: ctx.middlewareTimeoutMs,
     });
-  } catch {
-    if (ctx.closed) return;
-    ctx.sendMessage({
-      type: "error",
-      id: msg.id,
-      error: { code: 5000, message: "Subscription failed" },
-    });
+  } catch (error) {
+    log.warn("Subscription middleware failed", error);
+    sendSubscriptionEnd(ctx, topic, msg.id, describeFailure(error, "Subscription failed"));
     return;
   }
   if (ctx.closed) return;
@@ -120,19 +118,14 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
 
   try {
     if (resolved.schema.bidirectional === true || resolved.schema.receive) {
-      await startChannel(ctx, subscribedTopic, resolved.endpoint, variables);
+      await startChannel(ctx, subscribedTopic, resolved.endpoint, variables, msg.id);
     } else {
-      startPush(ctx, subscribedTopic, resolved.endpoint, variables);
+      startPush(ctx, subscribedTopic, resolved.endpoint, variables, msg.id);
     }
-  } catch {
-    // Rollback tracking on init failure
-    closeSubscriptionEntry(ctx, subscribedTopic);
-    if (ctx.closed) return;
-    ctx.sendMessage({
-      type: "error",
-      id: msg.id,
-      error: { code: 5000, message: "Subscription failed" },
-    });
+  } catch (error) {
+    // Rollback tracking on init failure; the endpoint logged the error.
+    closeSubscriptionEntry(ctx, subscribedTopic, "error");
+    sendSubscriptionEnd(ctx, topic, msg.id, describeFailure(error, "Subscription failed"));
     return;
   }
   if (ctx.closed) {
@@ -147,57 +140,4 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
     connectionId: ctx.connectionId,
     topic: subscribedTopic,
   });
-}
-
-/**
- * Run authorization check for a subscription.
- * Wraps `ctx.authorize` in a timeout race; sends a 4403 error to the client on
- * rejection or failure and returns `false` so the caller can short-circuit.
- */
-async function authorizeSubscription(
-  ctx: WSSocketContext,
-  msg: WSMessage,
-  resolved: { source: string; group?: string; method: string },
-  topic: string,
-  variables: unknown,
-): Promise<boolean> {
-  const authorize = ctx.authorize;
-  if (!authorize) return true;
-  try {
-    let authTimer: ReturnType<typeof setTimeout> | undefined;
-    const allowed = await Promise.race([
-      authorize({
-        connectionId: ctx.connectionId,
-        meta: ctx.meta,
-        source: resolved.source,
-        group: resolved.group,
-        method: resolved.method,
-        topic,
-        variables,
-      }),
-      new Promise<never>((_, reject) => {
-        authTimer = setTimeout(
-          () => reject(new Error("Authorize timeout")),
-          ctx.middlewareTimeoutMs,
-        );
-      }),
-    ]);
-    clearTimeout(authTimer);
-    if (allowed === false) {
-      ctx.sendMessage({
-        type: "error",
-        id: msg.id,
-        error: { code: 4403, message: "Subscription rejected" },
-      });
-      return false;
-    }
-    return true;
-  } catch {
-    ctx.sendMessage({
-      type: "error",
-      id: msg.id,
-      error: { code: 4403, message: "Subscription rejected" },
-    });
-    return false;
-  }
 }

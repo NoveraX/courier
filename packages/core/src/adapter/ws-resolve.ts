@@ -3,6 +3,7 @@ import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import { isExposedToWire } from "./exposure";
 import type { WSSocketContext } from "./ws-context";
+import { sendSubscriptionEnd } from "./ws-subscription-end";
 
 /** Parse "source.group.method" or "source.group.method#hash" topic format */
 export function parseTopic(topic: string): { source?: string; group?: string; method: string } {
@@ -13,7 +14,9 @@ export function parseTopic(topic: string): { source?: string; group?: string; me
   return { method: first ?? baseTopic };
 }
 
-/** Resolve topic → source + endpoint, sending errors on failure */
+const REJECTED = { code: 4403, message: "Subscription rejected" };
+
+/** Resolve topic → source + endpoint, ending the subscription on failure */
 export function resolveSubscribeTopic(
   ctx: WSSocketContext,
   msg: WSMessage,
@@ -29,21 +32,16 @@ export function resolveSubscribeTopic(
   | undefined {
   const { source, group, method } = parseTopic(topic);
   if (!source) {
-    ctx.sendMessage({
-      type: "error",
-      id: msg.id,
-      error: { code: 4400, message: "Topic must include source name" },
+    sendSubscriptionEnd(ctx, topic, msg.id, {
+      code: 4400,
+      message: "Topic must include source name",
     });
     return undefined;
   }
 
   const dataSource = ctx.sources[source];
   if (!dataSource) {
-    ctx.sendMessage({
-      type: "error",
-      id: msg.id,
-      error: { code: 4403, message: "Subscription rejected" },
-    });
+    sendSubscriptionEnd(ctx, topic, msg.id, REJECTED);
     return undefined;
   }
 
@@ -61,11 +59,7 @@ export function resolveSubscribeTopic(
     !served ||
     !isExposedToWire(dataSource, group, method)
   ) {
-    ctx.sendMessage({
-      type: "error",
-      id: msg.id,
-      error: { code: 4403, message: "Subscription rejected" },
-    });
+    sendSubscriptionEnd(ctx, topic, msg.id, REJECTED);
     return undefined;
   }
 

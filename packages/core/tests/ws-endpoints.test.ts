@@ -122,21 +122,49 @@ describe("startPush", () => {
     expect(countAfter).toBe(countBefore);
   });
 
-  it("sends error message when generator throws", async () => {
+  it("ends the subscription with a failure when the generator throws", async () => {
     const { ctx, sent } = createMockCtx();
     const handler = async function* () {
       yield "ok";
       throw new Error("Generator failed");
     };
 
-    startPush(ctx, "topic", handler, {});
+    startPush(ctx, "topic", handler, {}, "sub-1");
     await new Promise((r) => setTimeout(r, 50));
 
-    const error = sent.find((m) => m.type === "error");
-    expect(error).toBeDefined();
-    expect(error!.error?.code).toBe(5000);
-    expect(error!.error?.message).toBe("Subscription failed");
-    expect(error!.topic).toBe("topic");
+    expect(sent.at(-1)).toEqual({
+      type: "complete",
+      topic: "topic",
+      id: "sub-1",
+      error: { code: 5000, message: "Subscription failed" },
+    });
+  });
+
+  it("ends the subscription when the generator returns", async () => {
+    const { ctx, sent } = createMockCtx();
+    const handler = async function* () {
+      yield "only";
+    };
+
+    startPush(ctx, "topic", handler, {});
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(sent.at(-1)).toEqual({ type: "complete", topic: "topic" });
+  });
+
+  it("says nothing more once the client ended the subscription itself", async () => {
+    const { ctx, sent, subscriptions } = createMockCtx();
+    const handler = async function* () {
+      yield "first";
+      await new Promise(() => {});
+    };
+
+    startPush(ctx, "topic", handler, {});
+    await new Promise((r) => setTimeout(r, 10));
+    await subscriptions.get("topic")!.cleanup();
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(sent.some((m) => m.type === "complete")).toBe(false);
   });
 
   it("passes variables and connectionId to handler via WSContext", async () => {
@@ -169,16 +197,12 @@ describe("startPush", () => {
     expect(onStreamMessage.mock.calls[0]![0].eventType).toBe("data");
   });
 
-  it("sends error when handler init throws", () => {
+  it("throws on when handler init throws, for the subscribe flow to refuse once", () => {
     const handler = () => { throw new Error("Init boom"); };
     const { ctx, sent } = createMockCtx();
 
-    startPush(ctx, "topic", handler, {});
-
-    const error = sent.find((m) => m.type === "error");
-    expect(error).toBeDefined();
-    expect(error!.error?.code).toBe(5000);
-    expect(error!.error?.message).toBe("Subscription failed");
+    expect(() => startPush(ctx, "topic", handler, {})).toThrow("Init boom");
+    expect(sent).toEqual([]);
     expect(ctx.topicManager.subscribe).not.toHaveBeenCalled();
   });
 });
@@ -217,23 +241,26 @@ describe("startChannel", () => {
     expect(dataMsg!.topic).toBe("api.chat.room");
   });
 
-  it("provides close function that sends error message", async () => {
+  it("close with a code ends the subscription with it as the reason", async () => {
     const onJoin = vi.fn();
     const factory = () => ({ onJoin });
     const { ctx, sent } = createMockCtx();
 
-    await startChannel(ctx, "topic", factory, {});
+    await startChannel(ctx, "topic", factory, {}, "sub-1");
 
     const channelCtx = onJoin.mock.calls[0]![0];
     channelCtx.close(4001, "kicked");
 
-    const error = sent.find((m) => m.type === "error");
-    expect(error).toBeDefined();
-    expect(error!.error?.code).toBe(4001);
-    expect(error!.error?.message).toBe("kicked");
+    expect(sent.at(-1)).toEqual({
+      type: "complete",
+      topic: "topic",
+      id: "sub-1",
+      error: { code: 4001, message: "kicked" },
+    });
+    expect(ctx.topicManager.unsubscribe).toHaveBeenCalledWith("conn-1", "topic");
   });
 
-  it("close defaults to code 1000 and reason 'closed'", async () => {
+  it("close without a code ends the subscription as finished", async () => {
     const onJoin = vi.fn();
     const factory = () => ({ onJoin });
     const { ctx, sent } = createMockCtx();
@@ -243,9 +270,8 @@ describe("startChannel", () => {
     const channelCtx = onJoin.mock.calls[0]![0];
     channelCtx.close();
 
-    const error = sent.find((m) => m.type === "error");
-    expect(error!.error?.code).toBe(1000);
-    expect(error!.error?.message).toBe("closed");
+    expect(sent.at(-1)).toEqual({ type: "complete", topic: "topic" });
+    expect(ctx.topicManager.unsubscribe).toHaveBeenCalledWith("conn-1", "topic");
   });
 
   it("provides broadcast function that uses registry", async () => {
@@ -317,16 +343,12 @@ describe("startChannel", () => {
     expect(sent.find((m) => m.type === "error")).toBeUndefined();
   });
 
-  it("sends error when factory throws", async () => {
+  it("throws on when the factory throws, for the subscribe flow to refuse once", async () => {
     const factory = () => { throw new Error("Bad factory"); };
     const { ctx, sent } = createMockCtx();
 
-    await startChannel(ctx, "topic", factory, {});
-
-    const error = sent.find((m) => m.type === "error");
-    expect(error).toBeDefined();
-    expect(error!.error?.code).toBe(5000);
-    expect(error!.error?.message).toBe("Subscription failed");
+    await expect(startChannel(ctx, "topic", factory, {})).rejects.toThrow("Bad factory");
+    expect(sent).toEqual([]);
   });
 
   it("catches onLeave errors during cleanup without throwing", async () => {

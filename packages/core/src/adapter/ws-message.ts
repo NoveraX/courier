@@ -1,9 +1,14 @@
+import { createLogger } from "../logger";
+import { describeFailure, type StreamFailure } from "../realtime/describe-failure";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { resolveEndpoint } from "../utils/execute-resolve";
-import { validateSchema } from "../validation";
+import { ValidationError, validateSchema } from "../validation";
 import type { WSSocketContext } from "./ws-context";
 import { closeSubscriptionEntry } from "./ws-dispatch-helpers";
 import { parseTopic } from "./ws-resolve";
+
+const log = createLogger("WS");
+const MESSAGE_REJECTED = { code: 4403, message: "Message rejected" };
 
 /**
  * Inbound WS message + unsubscribe handlers.
@@ -16,11 +21,7 @@ import { parseTopic } from "./ws-resolve";
 export async function handleMessage(ctx: WSSocketContext, msg: WSMessage): Promise<void> {
   const topic = msg.topic;
   if (!topic || !ctx.topicManager.has(ctx.connectionId, topic)) {
-    ctx.sendMessage({
-      type: "error",
-      id: msg.id,
-      error: { code: 4404, message: "Not subscribed" },
-    });
+    refuseMessage(ctx, msg, { code: 4404, message: "Not subscribed" });
     return;
   }
 
@@ -35,25 +36,17 @@ export async function handleMessage(ctx: WSSocketContext, msg: WSMessage): Promi
      schema meant a channel typed with `.send<T>()` alone dropped every message
      in silence — no handler, no error, nothing to see. */
   if (!schema?.bidirectional && !schema?.receive) {
-    if (ctx.closed) return;
-    ctx.sendMessage({
-      type: "error",
-      id: msg.id,
-      error: { code: 4400, message: "Endpoint does not accept messages" },
-    });
+    refuseMessage(ctx, msg, { code: 4400, message: "Endpoint does not accept messages" });
     return;
   }
 
   if (schema.receive) {
     try {
       await validateSchema(schema.receive, msg.payload, "receive");
-    } catch {
-      if (ctx.closed) return;
-      ctx.sendMessage({
-        type: "error",
-        id: msg.id,
-        error: { code: 4422, message: "Invalid message payload" },
-      });
+    } catch (error) {
+      if (!(error instanceof ValidationError)) throw error;
+      const failure = { code: 4422, message: "Invalid message payload", issues: error.issues };
+      refuseMessage(ctx, msg, failure);
       return;
     }
   }
@@ -98,25 +91,30 @@ async function authorizeIncomingMessage(
       topic,
       payload: msg.payload,
     });
-    if (ctx.closed) return false;
     if (allowed === false) {
-      ctx.sendMessage({
-        type: "error",
-        id: msg.id,
-        error: { code: 4403, message: "Message rejected" },
-      });
+      refuseMessage(ctx, msg, MESSAGE_REJECTED);
       return false;
     }
     return true;
-  } catch {
-    if (ctx.closed) return false;
-    ctx.sendMessage({
-      type: "error",
-      id: msg.id,
-      error: { code: 4403, message: "Message rejected" },
-    });
+  } catch (error) {
+    log.warn("Message authorization failed", error);
+    refuseMessage(ctx, msg, describeFailure(error, MESSAGE_REJECTED.message, 4403));
     return false;
   }
+}
+
+/**
+ * Refuse one message on a subscription, which goes on. The error names the
+ * topic so the client's channel hears of it; it used to be logged only.
+ */
+function refuseMessage(ctx: WSSocketContext, msg: WSMessage, failure: StreamFailure): void {
+  if (ctx.closed) return;
+  ctx.sendMessage({
+    type: "error",
+    ...(msg.id !== undefined && { id: msg.id }),
+    ...(msg.topic !== undefined && { topic: msg.topic }),
+    error: failure,
+  });
 }
 
 /** Emit a Studio onStreamMessage event for an inbound WS message (if hooked) */

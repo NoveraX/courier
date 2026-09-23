@@ -123,9 +123,9 @@ describe("wireEvents", () => {
 
     await new Promise((r) => setTimeout(r, 10));
 
-    // handleSubscribe sends a 4403 error (anti-enumeration: source/endpoint hidden)
-    const error = sent.find((m) => m.type === "error" && m.error?.code === 4403);
-    expect(error).toBeDefined();
+    // handleSubscribe ends it with a 4403 (anti-enumeration: source/endpoint hidden)
+    const refused = sent.find((m) => m.type === "complete" && m.error?.code === 4403);
+    expect(refused).toMatchObject({ topic: "missing.feed", id: "s1" });
   });
 
   it("rejects messages exceeding maxMessageSize", () => {

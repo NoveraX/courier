@@ -351,9 +351,9 @@ describe("createWSHandler", () => {
       data: encodeMessage({ type: "subscribe", id: "sub-1", topic: "testSource.chat.feed" }),
     });
 
-    const error = ws._sent.find((m) => m.type === "error");
-    expect(error).toBeDefined();
-    expect(error!.error?.code).toBe(4403);
+    const refused = ws._sent.find((m) => m.type === "complete");
+    expect(refused).toMatchObject({ topic: "testSource.chat.feed", id: "sub-1" });
+    expect(refused!.error?.code).toBe(4403);
   });
 
   it("resubscribe to same topic succeeds (reconnect dedup)", async () => {

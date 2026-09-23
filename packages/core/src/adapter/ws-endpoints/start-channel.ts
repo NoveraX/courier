@@ -1,6 +1,9 @@
 import { createLogger } from "../../logger";
+import { describeFailure } from "../../realtime/describe-failure";
 import type { ChannelHandlers, WSChannelContext } from "../../realtime/types";
 import type { WSSocketContext } from "../ws-context";
+import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
+import { sendSubscriptionEnd } from "../ws-subscription-end";
 import { emitChannelMessage } from "./emit-channel-message";
 
 const log = createLogger("WS");
@@ -11,24 +14,26 @@ const log = createLogger("WS");
  * then awaits onJoin. If onJoin throws, the subscription is rolled back.
  *
  * Error handling:
- * - Factory init throws → code 5000, no subscription registered
+ * - Factory init throws → rethrown, no subscription registered
  * - onJoin throws → topicManager unsubscribed, error rethrown so the outer
  *   `handleSubscribe` catch can run `closeSubscriptionEntry` (Studio
  *   tracking teardown) and send the single error message to the client.
  *   Doing both here would leak the `subscriptionIds` entry.
- * - onMessage throws → code 5000, error sent to client
+ * - onMessage throws → error sent to client for this topic; the channel goes on
  * - onLeave throws → logged, does not block cleanup
  *
  * @param ctx - Per-connection socket context
  * @param topic - Qualified topic string (e.g. "api.chat.room#abc")
  * @param endpoint - Channel endpoint function (ChannelHandlers factory)
  * @param variables - Validated subscription variables
+ * @param subscribeId - The id of the client's subscribe message, if any
  */
 export async function startChannel(
   ctx: WSSocketContext,
   topic: string,
   endpoint: unknown,
   variables: unknown,
+  subscribeId?: string,
 ): Promise<void> {
   const factory = endpoint as (v: unknown) => ChannelHandlers;
 
@@ -36,13 +41,9 @@ export async function startChannel(
   try {
     handlers = factory(variables);
   } catch (error) {
+    // Thrown on so the subscribe flow refuses the subscription once.
     log.warn("Channel handler init failed", error);
-    ctx.sendMessage({
-      type: "error",
-      topic,
-      error: { code: 5000, message: "Subscription failed" },
-    });
-    return;
+    throw error;
   }
 
   const ended = new AbortController();
@@ -58,11 +59,14 @@ export async function startChannel(
     },
     broadcast: (t, data) => broadcastToTopic(ctx, t, data),
     close: (code, reason) => {
-      ctx.sendMessage({
-        type: "error",
-        topic,
-        error: { code: code ?? 1000, message: reason ?? "closed" },
-      });
+      /* Used to send an error frame and nothing else: the subscription
+         went on, and the client only logged "closed". */
+      if (ended.signal.aborted) return;
+      const failed = code !== undefined && code !== 1000;
+      const failure = failed ? { code, message: reason ?? "Channel closed" } : undefined;
+      sendSubscriptionEnd(ctx, topic, subscribeId, failure);
+      closeSubscriptionEntry(ctx, topic, failed ? "error" : "complete");
+      void ctx.topicManager.unsubscribe(ctx.connectionId, topic);
     },
   };
 
@@ -81,7 +85,7 @@ export async function startChannel(
         await handlers.onMessage(channelCtx, payload);
       } catch (error) {
         log.warn("onMessage handler failed", error);
-        ctx.sendMessage({ type: "error", topic, error: { code: 5000, message: "Handler error" } });
+        ctx.sendMessage({ type: "error", topic, error: describeFailure(error, "Handler error") });
       }
     },
   });

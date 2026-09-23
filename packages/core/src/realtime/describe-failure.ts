@@ -4,6 +4,8 @@ import { RealtimeError } from "./errors";
 export interface StreamFailure {
   code: number;
   message: string;
+  /** Schema issues, when the failure is a validation one */
+  issues?: readonly unknown[];
 }
 
 const INTERNAL_ERROR = 5000;
@@ -18,12 +20,17 @@ const INTERNAL_ERROR = 5000;
  *
  * @param error - What the handler threw
  * @param fallback - The message a client reads for any other error
+ * @param fallbackCode - The code it reads with it (default 5000)
  * @returns The code and message to put on the wire
  * @example
  * describeFailure(new ForbiddenError("Not a member"), "Stream failed");
  * // { code: 4403, message: "Not a member" }
  */
-export function describeFailure(error: unknown, fallback: string): StreamFailure {
+export function describeFailure(
+  error: unknown,
+  fallback: string,
+  fallbackCode = INTERNAL_ERROR,
+): StreamFailure {
   if (error instanceof RealtimeError) return { code: error.code, message: error.message };
-  return { code: INTERNAL_ERROR, message: fallback };
+  return { code: fallbackCode, message: fallback };
 }

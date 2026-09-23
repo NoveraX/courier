@@ -1,7 +1,10 @@
 import { createLogger } from "../../logger";
+import { describeFailure } from "../../realtime/describe-failure";
 import type { WSContext, WSPushHandler } from "../../realtime/types";
 import { abortableEvents } from "../../utils/abortable-events";
 import type { WSSocketContext } from "../ws-context";
+import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
+import { sendSubscriptionEnd } from "../ws-subscription-end";
 import { emitChannelMessage } from "./emit-channel-message";
 
 const log = createLogger("WS");
@@ -15,12 +18,14 @@ const log = createLogger("WS");
  * @param topic - Qualified topic string (e.g. "api.chat.feed#abc")
  * @param endpoint - Push endpoint function (async generator factory)
  * @param variables - Validated subscription variables
+ * @param subscribeId - The id of the client's subscribe message, if any
  */
 export function startPush(
   ctx: WSSocketContext,
   topic: string,
   endpoint: unknown,
   variables: unknown,
+  subscribeId?: string,
 ): void {
   const handler = endpoint as WSPushHandler<unknown, unknown>;
   const ended = new AbortController();
@@ -36,13 +41,10 @@ export function startPush(
   try {
     generator = handler(wsCtx);
   } catch (error) {
+    /* Thrown on so the subscribe flow refuses the subscription; answering
+       here as well left the client told both "failed" and "subscribed". */
     log.warn("Push handler init failed", error);
-    ctx.sendMessage({
-      type: "error",
-      topic,
-      error: { code: 5000, message: "Subscription failed" },
-    });
-    return;
+    throw error;
   }
 
   /* A generator waiting on an event that never came kept its timers and
@@ -56,13 +58,14 @@ export function startPush(
         ctx.sendMessage({ type: "data", topic, payload: value, seq: ctx.seq.value });
         emitChannelMessage(ctx, topic, value, "data");
       }
+      if (ended.signal.aborted) return;
+      sendSubscriptionEnd(ctx, topic, subscribeId);
+      closeSubscriptionEntry(ctx, topic, "complete");
     } catch (error) {
       log.warn("Push generator failed", error);
-      ctx.sendMessage({
-        type: "error",
-        topic,
-        error: { code: 5000, message: "Subscription failed" },
-      });
+      if (ended.signal.aborted) return;
+      sendSubscriptionEnd(ctx, topic, subscribeId, describeFailure(error, "Subscription failed"));
+      closeSubscriptionEntry(ctx, topic, "error");
     }
   };
 

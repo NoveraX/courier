@@ -13,6 +13,7 @@ export type WSMessageType =
   | "error"
   | "subscribed"
   | "unsubscribed"
+  | "complete"
   | "auth"
   | "auth_required";
 
@@ -26,6 +27,7 @@ const VALID_TYPES = new Set<WSMessageType>([
   "error",
   "subscribed",
   "unsubscribed",
+  "complete",
   "auth",
   "auth_required",
 ]);
@@ -37,7 +39,12 @@ export interface WSMessage {
   topic?: string;
   payload?: unknown;
   seq?: number;
-  error?: { code: number; message: string };
+  /**
+   * On `error`: what went wrong. With a `topic`, it concerns that
+   * subscription, which goes on. On `complete`: why the server ended the
+   * subscription; absent when it simply finished.
+   */
+  error?: { code: number; message: string; issues?: readonly unknown[] };
 }
 
 /**

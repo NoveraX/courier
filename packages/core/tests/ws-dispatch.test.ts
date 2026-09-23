@@ -315,7 +315,7 @@ describe("handleSubscribe", () => {
 
   // ── onJoin throw routes through outer catch → closeSubscriptionEntry ──
 
-  it("clears subscriptionIds and sends single error when channel onJoin throws", async () => {
+  it("clears subscriptionIds and ends the subscription once when channel onJoin throws", async () => {
     const receiveSchema = { "~standard": { validate: (v: unknown) => ({ value: v }) } };
     const factory = () => ({
       onJoin: () => { throw new Error("Auth failed"); },
@@ -349,10 +349,11 @@ describe("handleSubscribe", () => {
     expect(onWSUntrack).toHaveBeenCalledOnce();
     expect(onStreamClose).toHaveBeenCalledOnce();
 
-    // Exactly one error frame, code 5000
-    const errors = sent.filter((m) => m.type === "error");
-    expect(errors).toHaveLength(1);
-    expect(errors[0]!.error?.code).toBe(5000);
+    // Exactly one end-of-subscription frame, code 5000, and no "subscribed"
+    const ends = sent.filter((m) => m.type === "complete");
+    expect(ends).toHaveLength(1);
+    expect(ends[0]!.error?.code).toBe(5000);
+    expect(sent.some((m) => m.type === "subscribed")).toBe(false);
   });
 });
 

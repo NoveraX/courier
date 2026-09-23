@@ -10,7 +10,10 @@ export interface SubscribeSSEOptions {
   backoff?: BackoffConfig;
   /** Inactivity timeout — reconnect if no data/comments for this long (default 45000ms) */
   heartbeatTimeout?: number;
-  /** Maximum reconnection attempts before giving up (default Infinity) */
+  /**
+   * Reconnection attempts in a row that deliver nothing before giving up
+   * (default Infinity). A connection that delivers anything starts the count over.
+   */
   maxAttempts?: number;
   /** External cancellation signal */
   signal?: AbortSignal;

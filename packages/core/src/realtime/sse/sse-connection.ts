@@ -3,7 +3,7 @@ import { calculateBackoff } from "../backoff";
 import type { ConnectionState } from "../connection-state";
 import type { BackoffConfig } from "../types";
 import type { EventQueue } from "./event-queue";
-import { parseSSEStream } from "./parse-sse";
+import { parseSSEStream, type RawSSEEvent } from "./parse-sse";
 
 const log = createLogger("SSE");
 
@@ -32,28 +32,38 @@ export interface SSEConnectionCtx<TData> {
   serverRetryMs: number | undefined;
 }
 
-/** Run the reconnecting SSE connection loop until abort or maxAttempts */
+/**
+ * Run the reconnecting SSE connection loop until abort or `maxAttempts`
+ * attempts in a row fail to deliver anything.
+ *
+ * A connection that delivered anything resets the count and the backoff:
+ * counting every attempt over the subscription's life ended a long-lived
+ * stream after its Nth drop in a day, and left the first retry after hours
+ * of health at the longest delay.
+ */
 export async function runConnectionLoop<TData>(ctx: SSEConnectionCtx<TData>): Promise<void> {
-  let attempt = 0;
+  let failures = 0;
 
-  while (!ctx.controller.signal.aborted && attempt < ctx.config.maxAttempts) {
+  while (!ctx.controller.signal.aborted && failures < ctx.config.maxAttempts) {
+    const progress = { received: false };
     try {
       ctx.state.set("connecting");
-      await consumeStream(ctx);
+      await consumeStream(ctx, progress);
     } catch (err) {
       if (ctx.controller.signal.aborted) break;
       if (isFatalError(err)) {
         log.error("Fatal SSE error, not reconnecting", err);
         break;
       }
-      log.warn(`SSE connection lost (attempt ${attempt + 1}), will retry`, err);
+      log.warn("SSE connection lost, will retry", err);
     }
 
-    attempt++;
-    if (ctx.controller.signal.aborted || attempt >= ctx.config.maxAttempts) break;
+    failures = progress.received ? 0 : failures + 1;
+    if (ctx.controller.signal.aborted || failures >= ctx.config.maxAttempts) break;
 
     ctx.state.set("reconnecting");
-    const delay = ctx.serverRetryMs ?? calculateBackoff(attempt - 1, ctx.config.backoff);
+    const step = Math.max(0, failures - 1);
+    const delay = ctx.serverRetryMs ?? calculateBackoff(step, ctx.config.backoff);
     ctx.serverRetryMs = undefined;
     await sleep(delay, ctx.controller.signal);
   }
@@ -62,45 +72,68 @@ export async function runConnectionLoop<TData>(ctx: SSEConnectionCtx<TData>): Pr
   ctx.queue.finish();
 }
 
-async function consumeStream<TData>(ctx: SSEConnectionCtx<TData>): Promise<void> {
-  const reqHeaders: Record<string, string> = {
-    Accept: "text/event-stream",
-    ...ctx.config.headers,
+/**
+ * Read one connection until it ends.
+ *
+ * The connection has its own abort: a server that falls silent for longer
+ * than `heartbeatTimeout` is dropped and reconnected. The silence used to
+ * abort the whole subscription, which then ended as though the server had
+ * finished it.
+ */
+async function consumeStream<TData>(
+  ctx: SSEConnectionCtx<TData>,
+  progress: { received: boolean },
+): Promise<void> {
+  const connection = new AbortController();
+  const stop = () => connection.abort();
+  ctx.controller.signal.addEventListener("abort", stop, { once: true });
+  let silence: ReturnType<typeof setTimeout> | undefined;
+  const expectMore = () => {
+    clearTimeout(silence);
+    silence = setTimeout(stop, ctx.config.heartbeatTimeout);
   };
-  if (ctx.lastEventId) reqHeaders["Last-Event-ID"] = ctx.lastEventId;
-
-  const response = await fetch(ctx.url, {
-    headers: reqHeaders,
-    signal: ctx.controller.signal,
-  });
-
-  if (!response.ok || !response.body) {
-    await response.body?.cancel();
-    throw new SSEError(response.status, response.statusText);
-  }
-
-  ctx.config.onResponse?.(response);
-  ctx.state.set("connected");
-  let heartbeatTimer = setTimeout(() => ctx.controller.abort(), ctx.config.heartbeatTimeout);
 
   try {
+    const response = await fetch(ctx.url, {
+      headers: requestHeaders(ctx),
+      signal: connection.signal,
+    });
+
+    if (!response.ok || !response.body) {
+      await response.body?.cancel();
+      throw new SSEError(response.status, response.statusText);
+    }
+
+    ctx.config.onResponse?.(response);
+    ctx.state.set("connected");
+    expectMore();
+
     for await (const raw of parseSSEStream(response.body)) {
-      clearTimeout(heartbeatTimer);
-      heartbeatTimer = setTimeout(() => ctx.controller.abort(), ctx.config.heartbeatTimeout);
-
+      expectMore();
+      progress.received = true;
       if (raw === null) continue; // Comment/heartbeat — timer already reset
-      if (raw.id !== undefined) ctx.lastEventId = raw.id;
-      if (raw.retry !== undefined) ctx.serverRetryMs = raw.retry;
-
-      try {
-        const parsed = ctx.config.parse(raw.data) as TData;
-        ctx.queue.push({ ...raw, data: parsed });
-      } catch (parseErr) {
-        log.warn(`Failed to parse SSE event data: ${raw.data}`, parseErr);
-      }
+      deliver(ctx, raw);
     }
   } finally {
-    clearTimeout(heartbeatTimer);
+    clearTimeout(silence);
+    ctx.controller.signal.removeEventListener("abort", stop);
+  }
+}
+
+function requestHeaders<TData>(ctx: SSEConnectionCtx<TData>): Record<string, string> {
+  const headers: Record<string, string> = { Accept: "text/event-stream", ...ctx.config.headers };
+  if (ctx.lastEventId) headers["Last-Event-ID"] = ctx.lastEventId;
+  return headers;
+}
+
+function deliver<TData>(ctx: SSEConnectionCtx<TData>, raw: RawSSEEvent): void {
+  if (raw.id !== undefined) ctx.lastEventId = raw.id;
+  if (raw.retry !== undefined) ctx.serverRetryMs = raw.retry;
+  try {
+    const parsed = ctx.config.parse(raw.data) as TData;
+    ctx.queue.push({ ...raw, data: parsed });
+  } catch (parseErr) {
+    log.warn(`Failed to parse SSE event data: ${raw.data}`, parseErr);
   }
 }
 
@@ -120,14 +153,12 @@ function isFatalError(err: unknown): boolean {
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
-    const timer = setTimeout(resolve, ms);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        resolve();
-      },
-      { once: true },
-    );
+    const wake = () => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", wake);
+      resolve();
+    };
+    const timer = setTimeout(wake, ms);
+    signal.addEventListener("abort", wake, { once: true });
   });
 }

@@ -17,6 +17,21 @@ jobs:
       fail-fast: false
       matrix:
         node-version: [22, 24]
+    # The Redis adapters are tested against a real Redis: a mock of the
+    # client cannot show what Redis itself does with a Lua script or a
+    # command's flags. Those tests are skipped when no Redis answers.
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      REDIS_URL: redis://127.0.0.1:6379
     steps:
       - uses: actions/checkout@v4
 

@@ -187,7 +187,9 @@ describe("useQuery", () => {
 		const { result } = renderHook(() => (q as any).users.useQuery("getAll"), { wrapper });
 
 		await waitFor(() => expect(result.current.isError).toBe(true));
-		expect(result.current.error?.message).toBe("Network error");
+		/* A failure to reach the proxy is an HTTPError with status 0, the original as its cause. */
+		expect(result.current.error?.status).toBe(0);
+		expect((result.current.error?.cause as Error).message).toBe("Network error");
 	});
 
 	it("works with destructured useQuery", async () => {
@@ -416,7 +418,8 @@ describe("useMutation", () => {
 		result.current.mutate({ name: "Alice" });
 
 		await waitFor(() => expect(result.current.isError).toBe(true));
-		expect(result.current.error?.message).toBe("Server error");
+		expect(result.current.error?.status).toBe(0);
+		expect((result.current.error?.cause as Error).message).toBe("Server error");
 	});
 
 	it("mutates without variables for void endpoints", async () => {

@@ -85,11 +85,12 @@ export async function connectRuntimeSocket(
   let mod: SocketIOClientModule;
   try {
     mod = await import("socket.io-client");
-  } catch {
+  } catch (err) {
     /* A dependency of this package, so reaching here means the install is
        damaged rather than incomplete. Silence would leave Studio rendering its
        whole UI, watching the config, and never seeing the application, with
        every source sitting at "orphan" and no reason given anywhere. */
+    log.debug("socket.io-client import failed", err);
     log.warn(
       [
         "Studio cannot connect: socket.io-client failed to load.",
@@ -107,6 +108,10 @@ export async function connectRuntimeSocket(
   try {
     socket = mod.io(`${input.studioUrl}/runtime`, {
       transports: ["websocket"],
+      /* A dev-time side channel must never be what keeps a process alive: a
+         seed script, a CLI task or a test run that attached hung forever
+         when Studio was not running, retrying to connect. */
+      autoUnref: true,
       reconnection: true,
       reconnectionDelay: 1000,
       /* Studio is restarted constantly in development, and ten attempts a

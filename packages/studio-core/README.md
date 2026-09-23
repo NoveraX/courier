@@ -26,11 +26,7 @@ This package instruments your Courier application and streams events (requests, 
 npm install @noverax/courier-studio-core @noverax/courier
 ```
 
-Optional peer dependency for live streaming to Studio:
-
-```bash
-npm install socket.io-client
-```
+The Socket.IO client that streams to Studio comes with it. It is imported only outside production, and it never keeps a process alive on its own: a script or a test run that attaches exits when its work is done, whether Studio is running or not.
 
 <br />
 

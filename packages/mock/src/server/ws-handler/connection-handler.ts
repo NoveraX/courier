@@ -1,9 +1,10 @@
 import { logger } from "@noverax/courier";
-import { type ChannelHandlers, encodeMessage } from "@noverax/courier/realtime";
+import { type ChannelHandlers, describeFailure } from "@noverax/courier/realtime";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 import type { MockChannelFn, MockHistoryEntry, MockRequestContext } from "../../types";
 
+import { buildChannelContext, refuseOnSubscribe } from "./channel-context";
 import type { WSConnectionRegistry } from "./connection-registry";
 import {
   type ConnectionState,
@@ -11,7 +12,7 @@ import {
   dispatchMessage,
   parseMessage,
 } from "./message-router";
-import { errMessage, generateConnectionId, sendErrorAndClose } from "./protocol";
+import { errMessage, generateConnectionId } from "./protocol";
 import { parseVariablesFromUrl, type WSRoute } from "./route-resolver";
 
 /** Hooks for emitting WS lifecycle events to studio (set by studio bridge) */
@@ -72,19 +73,31 @@ export function activateConnection(params: ActivateConnectionParams): void {
     };
     handlers = channelFn(ctx);
   } catch (err) {
-    sendErrorAndClose(ws, 5000, errMessage(err, "channelFn factory threw"), 1011);
-    historyEntry.duration = performance.now() - startedAt;
-    hooks?.onDisconnect?.(connectionId);
+    logger.warn("MockWS", `channelFn threw (${connectionId}): ${errMessage(err, "unknown")}`);
+    refuseOnSubscribe(ws, topic, describeFailure(err, "Subscription failed"));
+    ws.on("close", () => {
+      historyEntry.duration = performance.now() - startedAt;
+      hooks?.onDisconnect?.(connectionId);
+    });
     return;
   }
 
-  const channelCtx = buildChannelContext(ws, topic, variables, connectionId, registry);
-  const state: ConnectionState = { subscribed: false, leaveCalled: false };
+  const state: ConnectionState = {
+    subscribed: false,
+    leaveCalled: false,
+    ended: new AbortController(),
+  };
+  const channelCtx = buildChannelContext(ws, topic, variables, connectionId, registry, state);
 
-  ws.on("message", async (raw: Buffer | string) => {
+  ws.on("message", (raw: Buffer | string) => {
     const msg = parseMessage(ws, raw);
     if (!msg) return;
-    await dispatchMessage(msg, ws, handlers, channelCtx, state, registry);
+    void dispatchMessage(msg, ws, handlers, channelCtx, state, registry).catch((error: unknown) =>
+      logger.warn(
+        "MockWS",
+        `Message handling failed (${connectionId}): ${errMessage(error, "unknown")}`,
+      ),
+    );
   });
 
   ws.on("close", async () => {
@@ -97,36 +110,4 @@ export function activateConnection(params: ActivateConnectionParams): void {
     logger.warn("MockWS", `Connection error (${connectionId}): ${err.message}`);
     // ws will fire "close" after "error" — cleanup happens there
   });
-}
-
-function buildChannelContext(
-  ws: NodeWebSocket,
-  initialTopic: string,
-  variables: Record<string, unknown>,
-  connectionId: string,
-  registry: WSConnectionRegistry,
-) {
-  // `topic` is mutable: when the client subscribes with a fully qualified
-  // topic (`{source}.{group}.{method}#{varsHash}`), the message router
-  // rewrites `ctx.topic` so outbound `data` frames echo the client's exact
-  // topic. Without this, clients dispatch frames by topic and would
-  // silently drop everything sent under the server-local short topic.
-  const ctx = {
-    topic: initialTopic,
-    variables,
-    connectionId,
-    meta: {} as Record<string, unknown>,
-    send(data: unknown) {
-      if (ws.readyState === ws.OPEN) {
-        ws.send(encodeMessage({ type: "data", topic: ctx.topic, payload: data }));
-      }
-    },
-    broadcast(targetTopic: string, data: unknown) {
-      registry.broadcast(targetTopic, data, ws);
-    },
-    close(code?: number, reason?: string) {
-      ws.close(code ?? 1000, reason);
-    },
-  };
-  return ctx;
 }

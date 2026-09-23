@@ -1,34 +1,35 @@
 import { randomBytes } from "node:crypto";
 
-import { encodeMessage } from "@noverax/courier/realtime";
+import { encodeMessage, type StreamFailure } from "@noverax/courier/realtime";
 import type { WebSocket as NodeWebSocket } from "ws";
 
-/** Send a typed error frame to a client if the socket is still open */
-export function sendError(ws: NodeWebSocket, code: number, message: string): void {
+/**
+ * Send an error frame if the socket is still open. With a `topic` it
+ * concerns that subscription, which goes on — the client's channel hears of
+ * it; without one it is the connection's, and the client only logs it.
+ */
+export function sendError(ws: NodeWebSocket, failure: StreamFailure, topic?: string): void {
   if (ws.readyState !== ws.OPEN) return;
-  ws.send(encodeMessage({ type: "error", error: { code, message } }));
+  ws.send(encodeMessage({ type: "error", ...(topic !== undefined && { topic }), error: failure }));
 }
 
 /**
- * Send an error frame, then close the socket — but only **after** the
- * error frame has been flushed to the wire. This prevents a race where
- * `ws.close()` discards the queued send buffer and the client never sees
- * the error reason.
+ * Tell the client the subscription to `topic` ended — failed with `failure`,
+ * or finished — then close the socket once that frame is on the wire.
+ *
+ * A mock channel has a socket of its own, so its end is the socket's. It
+ * used to send an error the client could not match to its channel and close
+ * with 1011, which the client retried — and the failure repeated — forever.
  */
-export function sendErrorAndClose(
+export function endSubscriptionAndClose(
   ws: NodeWebSocket,
-  errorCode: number,
-  message: string,
-  closeCode = 1011,
+  topic: string,
+  failure?: StreamFailure,
 ): void {
   if (ws.readyState !== ws.OPEN) return;
-  ws.send(encodeMessage({ type: "error", error: { code: errorCode, message } }), (err) => {
-    // Whether or not the send succeeded, proceed with the close — the
-    // connection is in a broken state and must not stay open.
-    void err;
-    if (ws.readyState === ws.OPEN) {
-      ws.close(closeCode, message);
-    }
+  const frame = encodeMessage({ type: "complete", topic, ...(failure && { error: failure }) });
+  ws.send(frame, () => {
+    if (ws.readyState === ws.OPEN) ws.close(1000, "subscription ended");
   });
 }
 

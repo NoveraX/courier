@@ -16,7 +16,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 
-import { decodeMessage, encodeMessage, type WSMessage } from "@noverax/courier/realtime";
+import {
+  decodeMessage,
+  encodeMessage,
+  ForbiddenError,
+  type WSMessage,
+} from "@noverax/courier/realtime";
 
 import { createMockServer, type MockServer, type MockServerOptions } from "../src/server/create-mock-server";
 import type { PrefixMapping } from "../src/server/prefix-routes";
@@ -256,17 +261,16 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     send(ws, { type: "message", topic: "chat.room", payload: { text: "early" } });
 
     const frame = await waitForFrame(ws);
-    expect(frame.type).toBe("error");
-    expect((frame as { error: { code: number } }).error.code).toBe(4401);
+    expect(frame).toMatchObject({ type: "error", topic: "chat.room", error: { code: 4404 } });
 
     ws.close();
     await waitForClose(ws);
   });
 
-  it("closes the socket when onJoin throws and emits an error frame", async () => {
+  it("ends the subscription, then closes normally, when onJoin throws", async () => {
     server.mock("chat", "room").channel(() => ({
       onJoin: () => {
-        throw new Error("boom");
+        throw new Error("connect ECONNREFUSED 10.0.0.5:5432");
       },
       onMessage: () => {},
     }));
@@ -277,33 +281,98 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
 
     const { frames, closeCode } = await collected;
-    expect(closeCode).toBe(1011);
-    expect(frames.some((f) => f.type === "subscribed")).toBe(true);
-    const errorFrame = frames.find((f) => f.type === "error") as
-      | { error: { message: string } }
-      | undefined;
-    expect(errorFrame).toBeDefined();
-    expect(errorFrame?.error.message).toContain("boom");
+    expect(closeCode).toBe(1000);
+    expect(frames.some((f) => f.type === "subscribed")).toBe(false);
+    expect(frames).toContainEqual({
+      type: "complete",
+      topic: "chat.room",
+      error: { code: 5000, message: "Subscription failed" },
+    });
   });
 
-  it("closes the socket when channelFn factory itself throws", async () => {
+  it("passes the RealtimeError onJoin threw to the client", async () => {
+    server.mock("chat", "room").channel(() => ({
+      onJoin: () => {
+        throw new ForbiddenError("Not a member of this room");
+      },
+      onMessage: () => {},
+    }));
+
+    const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
+    await waitForOpen(ws);
+    const collected = collectFramesUntilClose(ws);
+    send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
+
+    const { frames } = await collected;
+    expect(frames.find((f) => f.type === "complete")?.error).toEqual({
+      code: 4403,
+      message: "Not a member of this room",
+    });
+  });
+
+  it("refuses the subscription, then closes normally, when the channelFn factory throws", async () => {
     server.mock("chat", "room").channel(() => {
       throw new Error("factory exploded");
     });
 
-    // Attach the frame collector BEFORE waiting for open — the server may
-    // send the error frame and close immediately after the upgrade, so any
-    // post-open `await` would race the close event.
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
+    await waitForOpen(ws);
     const collected = collectFramesUntilClose(ws);
+    send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
 
     const { frames, closeCode } = await collected;
-    expect(closeCode).toBe(1011);
-    const errorFrame = frames.find((f) => f.type === "error") as
-      | { error: { message: string } }
-      | undefined;
-    expect(errorFrame).toBeDefined();
-    expect(errorFrame?.error.message).toContain("factory exploded");
+    expect(closeCode).toBe(1000);
+    expect(frames).toContainEqual({
+      type: "complete",
+      topic: "chat.room",
+      error: { code: 5000, message: "Subscription failed" },
+    });
+  });
+
+  it("reports a failed onMessage on the channel's topic, and the channel goes on", async () => {
+    server.mock("chat", "room").channel(() => ({
+      onMessage: (ctx: { send(data: unknown): void }, message: unknown) => {
+        if ((message as { text: string }).text === "boom") throw new Error("handler bug");
+        ctx.send({ echo: message });
+      },
+    }));
+
+    const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
+    await waitForOpen(ws);
+    send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
+    await waitForFrame(ws);
+    send(ws, { type: "message", topic: "chat.room", payload: { text: "boom" } });
+
+    const refused = await waitForFrame(ws);
+    expect(refused).toMatchObject({
+      type: "error",
+      topic: "chat.room",
+      error: { code: 5000, message: "Handler error" },
+    });
+    send(ws, { type: "message", topic: "chat.room", payload: { text: "fine" } });
+    expect(await waitForFrame(ws)).toMatchObject({ type: "data", payload: { echo: { text: "fine" } } });
+    ws.close();
+    await waitForClose(ws);
+  });
+
+  it("ends the subscription with the reason a handler gave when it closes the channel", async () => {
+    server.mock("chat", "room").channel(() => ({
+      onJoin: (ctx: { close(code?: number, reason?: string): void }) => ctx.close(4001, "kicked"),
+      onMessage: () => {},
+    }));
+
+    const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
+    await waitForOpen(ws);
+    const collected = collectFramesUntilClose(ws);
+    send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
+
+    const { frames, closeCode } = await collected;
+    expect(closeCode).toBe(1000);
+    expect(frames).toContainEqual({
+      type: "complete",
+      topic: "chat.room",
+      error: { code: 4001, message: "kicked" },
+    });
   });
 
   it("ignores duplicate subscribe frames (idempotent)", async () => {
@@ -432,11 +501,11 @@ describe("mock ws-handler — real broadcast", () => {
     // Wait until we've collected the subscribed ack + the onJoin data frame
     while (frames.length < 2) await tick();
 
-    const subscribed = frames[0]!;
-    expect(subscribed.type).toBe("subscribed");
+    // The onJoin frame comes first: a Courier server confirms a channel once joined.
+    const subscribed = frames.find((f) => f.type === "subscribed")!;
     expect((subscribed as { topic: string }).topic).toBe(clientTopic);
 
-    const greeting = frames[1]!;
+    const greeting = frames.find((f) => f.type === "data")!;
     expect(greeting.type).toBe("data");
     expect((greeting as { topic: string }).topic).toBe(clientTopic);
     expect((greeting as { payload: { topic: string } }).payload.topic).toBe(clientTopic);

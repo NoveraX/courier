@@ -2,18 +2,21 @@ import { logger } from "@noverax/courier";
 import {
   type ChannelHandlers,
   decodeMessage,
+  describeFailure,
   encodeMessage,
   type WSMessage,
 } from "@noverax/courier/realtime";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 import type { WSConnectionRegistry } from "./connection-registry";
-import { errMessage, sendError, sendErrorAndClose } from "./protocol";
+import { endSubscriptionAndClose, errMessage, sendError } from "./protocol";
 
 /** Mutable per-connection state shared between message and close handlers */
 export interface ConnectionState {
   subscribed: boolean;
   leaveCalled: boolean;
+  /** Fires when the subscription ends; handed to the handlers as `ctx.signal` */
+  ended: AbortController;
 }
 
 /** Minimal channel context shape used by the message router */
@@ -26,8 +29,9 @@ export interface MessageRouterContext {
 export function parseMessage(ws: NodeWebSocket, raw: Buffer | string): WSMessage | null {
   try {
     return decodeMessage(raw.toString());
-  } catch {
-    sendError(ws, 4400, "Invalid message");
+  } catch (error) {
+    logger.warn("MockWS", `Undecodable frame: ${errMessage(error, "unknown")}`);
+    sendError(ws, { code: 4400, message: "Invalid message" });
     return null;
   }
 }
@@ -59,11 +63,20 @@ export async function dispatchMessage<TChannelCtx extends MessageRouterContext>(
     const clientTopic = msg.topic ?? channelCtx.topic;
     channelCtx.topic = clientTopic;
     registry.register(clientTopic, ws);
-    ws.send(encodeMessage({ type: "subscribed", id: msg.id, topic: clientTopic }));
     try {
       await handlers.onJoin?.(channelCtx as never);
     } catch (err) {
-      sendErrorAndClose(ws, 5000, errMessage(err, "onJoin failed"), 1011);
+      logger.warn(
+        "MockWS",
+        `onJoin threw (${channelCtx.connectionId}): ${errMessage(err, "unknown")}`,
+      );
+      endSubscriptionAndClose(ws, clientTopic, describeFailure(err, "Subscription failed"));
+      return;
+    }
+    // Confirmed once joined, as a Courier server confirms it — unless the
+    // handler already ended it.
+    if (!state.ended.signal.aborted && ws.readyState === ws.OPEN) {
+      ws.send(encodeMessage({ type: "subscribed", id: msg.id, topic: clientTopic }));
     }
     return;
   }
@@ -77,13 +90,17 @@ export async function dispatchMessage<TChannelCtx extends MessageRouterContext>(
 
   if (msg.type === "message") {
     if (!state.subscribed) {
-      sendError(ws, 4401, "Send `subscribe` before `message`");
+      sendError(ws, { code: 4404, message: "Not subscribed" }, msg.topic);
       return;
     }
     try {
       await handlers.onMessage?.(channelCtx as never, msg.payload);
     } catch (err) {
-      sendError(ws, 5000, errMessage(err, "onMessage failed"));
+      logger.warn(
+        "MockWS",
+        `onMessage threw (${channelCtx.connectionId}): ${errMessage(err, "unknown")}`,
+      );
+      sendError(ws, describeFailure(err, "Handler error"), channelCtx.topic);
     }
     return;
   }
@@ -106,6 +123,7 @@ export async function callOnLeaveOnce<TChannelCtx extends MessageRouterContext>(
 ): Promise<void> {
   if (!state.subscribed || state.leaveCalled) return;
   state.leaveCalled = true;
+  state.ended.abort();
   registry.unregister(channelCtx.topic, ws);
   try {
     await handlers.onLeave?.(channelCtx as never);

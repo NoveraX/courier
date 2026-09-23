@@ -3,6 +3,7 @@ import { buildClientProxy } from "@noverax/courier";
 import type { DefinedApi } from "@noverax/courier/define";
 import { createMockBackend } from "./backend";
 import { createEnhancedMockBuilder } from "./builder";
+import { createHistory } from "./history";
 import { createMockRegistry } from "./registry";
 import type {
   EnhancedMockBuilder,
@@ -60,7 +61,7 @@ export function createMockClient<TApi extends DefinedApi<any>>(
   config?: MockClientConfig,
 ): MockClient<TApi> {
   const registry = createMockRegistry();
-  const history: MockHistoryEntry[] = [];
+  const history = createHistory();
   const callCounts = new Map<string, number>();
   let scenarioState = "Started";
 

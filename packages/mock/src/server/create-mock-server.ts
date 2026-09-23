@@ -15,10 +15,11 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
+import { createHistory } from "../history";
 import { createNetworkState } from "../network/state";
 import { createMockRegistry } from "../registry";
 import { createMockStore } from "../store";
-import type { MockHistoryEntry, MockScenario, TypedMockFn } from "../types";
+import type { MockScenario, TypedMockFn } from "../types";
 import { registerAdminRoutes } from "./admin-api";
 import type { MockServer, MockServerOptions } from "./mock-server-types";
 import { registerPrefixRoutes } from "./prefix-routes";
@@ -35,7 +36,7 @@ export type { MockServer, MockServerOptions } from "./mock-server-types";
 export function createMockServer(config?: MockServerOptions): MockServer {
   const registry = createMockRegistry();
   const store = createMockStore();
-  const history: MockHistoryEntry[] = [];
+  const history = createHistory(config?.historyLimit);
   const callCounts = new Map<string, number>();
   const scenariosRecord: Record<string, MockScenario> = { ...config?.scenarios };
   const networkState = createNetworkState(config?.network);

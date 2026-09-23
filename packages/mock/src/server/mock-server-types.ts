@@ -24,6 +24,8 @@ export interface MockServerOptions {
   cors?: boolean | { origin: string | string[] };
   /** Enable admin API at /__admin/ (default: true) */
   admin?: boolean;
+  /** Requests the history keeps, newest first to go last (default: 1000) */
+  historyLimit?: number;
   /** Request logging level (default: "normal") */
   log?: LogLevel | boolean;
   /** Default network simulation */

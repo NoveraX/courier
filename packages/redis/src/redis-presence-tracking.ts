@@ -120,7 +120,10 @@ export async function heartbeatEntry(
 ): Promise<void> {
   if (!ctx.isConnected()) return;
   try {
-    await ctx.redis.zadd(ctx.sk(topic), String(Date.now()), connectionId);
+    /* XX: refresh a member, never add one. A heartbeat that came after a
+       sweep used to put the connection back without its metadata, so it
+       vanished from every roster and could not be untracked. */
+    await ctx.redis.zadd(ctx.sk(topic), "XX", String(Date.now()), connectionId);
   } catch (err) {
     ctx.emitError(toError(err));
   }

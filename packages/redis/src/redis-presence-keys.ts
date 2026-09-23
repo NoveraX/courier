@@ -14,6 +14,10 @@ export interface PackedMeta {
  * ARGV[1] = cutoff timestamp (entries with score ≤ cutoff are stale)
  *
  * Returns flat array of [connectionId, jsonMeta, connectionId, jsonMeta, ...]
+ *
+ * Removes in batches: Lua's `unpack` stops at 8000 values, and one call for
+ * the whole set failed from then on — the topic could never be cleaned, and
+ * each sweep reported nothing to clean.
  */
 export const SWEEP_LUA = `
 local stale = redis.call('ZRANGEBYSCORE', KEYS[1], '-inf', ARGV[1])
@@ -24,8 +28,11 @@ for i, connId in ipairs(stale) do
   result[#result + 1] = connId
   result[#result + 1] = meta or '{}'
 end
-redis.call('ZREM', KEYS[1], unpack(stale))
-redis.call('HDEL', KEYS[2], unpack(stale))
+for i = 1, #stale, 5000 do
+  local batch = {unpack(stale, i, math.min(i + 4999, #stale))}
+  redis.call('ZREM', KEYS[1], unpack(batch))
+  redis.call('HDEL', KEYS[2], unpack(batch))
+end
 return result
 `;
 

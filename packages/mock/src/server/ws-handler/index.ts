@@ -56,7 +56,21 @@ export interface WSHandlerConfig {
  * Returns an async upgrade handler. The first call lazy-loads the `ws`
  * package so users who don't mock any WS endpoints don't pay the cost.
  */
-export function createMockWSHandler(config: WSHandlerConfig) {
+/** What `createMockWSHandler` hands the server: the upgrade route, and its shutdown */
+export interface MockWSHandler {
+  /** Accept an HTTP upgrade onto a mock channel, or refuse it */
+  handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): Promise<void>;
+  /**
+   * Close every open channel — each hears `onLeave` — and resolve once they
+   * are closed. Stopping the server used to leave them open and still served,
+   * holding the process open.
+   */
+  close(): Promise<void>;
+}
+
+const CLOSE_GRACE_MS = 1000;
+
+export function createMockWSHandler(config: WSHandlerConfig): MockWSHandler {
   const connections = new WSConnectionRegistry();
   const maxPayload = config.maxPayload ?? DEFAULT_MAX_PAYLOAD;
 
@@ -84,11 +98,14 @@ export function createMockWSHandler(config: WSHandlerConfig) {
     return wsServerPromise;
   };
 
-  return async function handleUpgrade(
-    req: IncomingMessage,
-    socket: Duplex,
-    head: Buffer,
-  ): Promise<void> {
+  async function close(): Promise<void> {
+    const wss = wsServerPromise ? await wsServerPromise : null;
+    const open = wss ? [...wss.clients] : [];
+    await Promise.all(open.map(closeGracefully));
+    connections.clear();
+  }
+
+  async function handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
     // Origin allowlist check — runs before route resolution so unauthorized
     // probes don't reveal which paths exist.
     if (!isOriginAllowed(req.headers.origin, config.allowedOrigins)) {
@@ -128,7 +145,21 @@ export function createMockWSHandler(config: WSHandlerConfig) {
         scenarioState: config.getScenarioState(),
       });
     });
-  };
+  }
+
+  return { handleUpgrade, close };
+}
+
+/** Close a socket with 1001, and cut it if the client does not answer in time. */
+function closeGracefully(
+  ws: WSServerType["clients"] extends Set<infer T> ? T : never,
+): Promise<void> {
+  return new Promise((resolve) => {
+    ws.once("close", () => resolve());
+    const cut = setTimeout(() => ws.terminate(), CLOSE_GRACE_MS);
+    cut.unref();
+    ws.close(1001, "Mock server stopping");
+  });
 }
 
 function reject(socket: Duplex, status: number): void {

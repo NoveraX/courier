@@ -27,8 +27,7 @@ import { createRequestLogger } from "./request-logger";
 import type { RequestHooks } from "./route-generator";
 import { handleMockRequest, registerProxyRoute, registerRestRoutes } from "./route-generator";
 import { createScenarioControls } from "./scenario-controls";
-import { tryListen } from "./try-listen";
-import { attachWSUpgrade, createWSUpgrade } from "./ws-attach";
+import { createServerLifecycle } from "./server-lifecycle";
 
 export type { MockServer, MockServerOptions } from "./mock-server-types";
 
@@ -42,7 +41,6 @@ export function createMockServer(config?: MockServerOptions): MockServer {
   const networkState = createNetworkState(config?.network);
   let scenarioState = "Started";
   let activeScenario: string | null = null;
-  let server: { close: () => void } | undefined;
 
   const app = new Hono();
 
@@ -117,6 +115,15 @@ export function createMockServer(config?: MockServerOptions): MockServer {
   const port = config?.port ?? 7001;
   const hostname = config?.hostname ?? "localhost";
 
+  const lifecycle = createServerLifecycle(app, port, hostname, {
+    registry,
+    mappings: config?.mappings,
+    history,
+    getScenarioState: () => scenarioState,
+    allowedOrigins: config?.ws?.allowedOrigins,
+    maxPayload: config?.ws?.maxPayload,
+  });
+
   const mockServer: MockServer = {
     app,
     mock: mock as TypedMockFn<any>,
@@ -137,33 +144,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
       return "auto";
     },
 
-    async start() {
-      const { serve } = await import("@hono/node-server");
-
-      // WS upgrade handler — only attached when prefix mappings exist (i.e.
-      // the server has any routable WS endpoints). Avoids importing `ws`
-      // when the user only mocks HTTP/SSE.
-      const wsUpgrade = createWSUpgrade({
-        registry,
-        mappings: config?.mappings,
-        history,
-        getScenarioState: () => scenarioState,
-        allowedOrigins: config?.ws?.allowedOrigins,
-        maxPayload: config?.ws?.maxPayload,
-      });
-
-      return tryListen(serve, app, port, hostname, (nodeServer) => {
-        server = nodeServer;
-        if (wsUpgrade) attachWSUpgrade(nodeServer, wsUpgrade);
-      });
-    },
-
-    async stop() {
-      if (server && "close" in server) {
-        server.close();
-      }
-      server = undefined;
-    },
+    ...lifecycle,
   };
 
   return mockServer;

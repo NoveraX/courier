@@ -12,7 +12,7 @@
 import type { MockRegistry } from "../registry";
 import type { MockHistoryEntry } from "../types";
 import type { PrefixMapping } from "./prefix-routes";
-import { createMockWSHandler } from "./ws-handler";
+import { createMockWSHandler, type MockWSHandler } from "./ws-handler";
 
 /** Options accepted by `createWSUpgrade` — mirror the WS bits of `MockServerConfig` */
 export interface WSUpgradeOptions {
@@ -24,14 +24,11 @@ export interface WSUpgradeOptions {
   maxPayload?: number;
 }
 
-/** Handler signature returned by `createMockWSHandler` */
-type WSUpgradeHandler = ReturnType<typeof createMockWSHandler>;
-
 /**
  * Build a WS upgrade handler if there are any prefix mappings — otherwise
  * return `undefined` so the bootstrap can skip importing the `ws` runtime.
  */
-export function createWSUpgrade(options: WSUpgradeOptions): WSUpgradeHandler | undefined {
+export function createWSUpgrade(options: WSUpgradeOptions): MockWSHandler | undefined {
   if (!options.mappings || options.mappings.length === 0) return undefined;
   return createMockWSHandler({
     registry: options.registry,
@@ -49,20 +46,14 @@ export function createWSUpgrade(options: WSUpgradeOptions): WSUpgradeHandler | u
  * Done via a generic `on("upgrade", ...)` listener — we cast to a minimal
  * interface to avoid pulling in `@types/node` HTTP types from the public API.
  */
-export function attachWSUpgrade(
-  nodeServer: { close: () => void },
-  wsUpgrade: WSUpgradeHandler,
-): void {
+export function attachWSUpgrade(nodeServer: { close: () => void }, wsUpgrade: MockWSHandler): void {
+  type UpgradeArgs = Parameters<MockWSHandler["handleUpgrade"]>;
   (
     nodeServer as unknown as {
       on(event: string, listener: (...args: unknown[]) => void): void;
     }
   ).on("upgrade", (...args: unknown[]) => {
-    const [req, socket, head] = args as [
-      Parameters<WSUpgradeHandler>[0],
-      Parameters<WSUpgradeHandler>[1],
-      Parameters<WSUpgradeHandler>[2],
-    ];
-    void wsUpgrade(req, socket, head);
+    const [req, socket, head] = args as UpgradeArgs;
+    void wsUpgrade.handleUpgrade(req, socket, head);
   });
 }

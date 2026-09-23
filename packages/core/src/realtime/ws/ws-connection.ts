@@ -108,7 +108,7 @@ function gracefulClose(lifecycleCtx: LifecycleContext, opsCtx: TopicOpsContext):
   lifecycleCtx.refs.closed = true;
   clearReconnectTimer(lifecycleCtx);
   lifecycleCtx.silence.stop();
-  opsCtx.topics.clear();
+  opsCtx.topics.endAll(undefined);
   opsCtx.pending.rejectAll("Connection closed");
   opsCtx.queue.clear();
   lifecycleCtx.refs.ws?.close(1000, "client close");

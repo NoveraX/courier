@@ -73,4 +73,5 @@ export {
   shouldReconnect,
   unqualifyTopic,
 } from "./ws";
-export { executeWSChannel, executeWSPush } from "./ws-subscription";
+export { executeWSChannel } from "./ws-channel-client";
+export { executeWSPush } from "./ws-subscription";

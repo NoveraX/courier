@@ -29,7 +29,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
-import { executeWSChannel, executeWSPush } from "../src/realtime/ws-subscription";
+import { executeWSChannel } from "../src/realtime/ws-channel-client";
+import { executeWSPush } from "../src/realtime/ws-subscription";
 import type { WSClientSocket } from "../src/realtime/ws/ws-types";
 
 class MockSocket implements WSClientSocket {

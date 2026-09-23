@@ -6,7 +6,7 @@
  * `"connecting"` forever.
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { createConnectionState } from "../src/realtime/connection-state";
 import { forwardConnectionStatus } from "../src/realtime/forward-status";
@@ -22,24 +22,5 @@ describe("forwardConnectionStatus", () => {
     expect(state.current).toBe("reconnecting");
     forwardConnectionStatus(state, "disconnected");
     expect(state.current).toBe("disconnected");
-  });
-
-  it("invokes onDisconnected AFTER setting state to disconnected", () => {
-    const state = createConnectionState("connected");
-    const seen: string[] = [];
-    state.subscribe((s) => seen.push(`state:${s}`));
-    const onDisconnected = vi.fn(() => seen.push("cb"));
-    forwardConnectionStatus(state, "disconnected", onDisconnected);
-    expect(onDisconnected).toHaveBeenCalledOnce();
-    expect(seen).toEqual(["state:disconnected", "cb"]);
-  });
-
-  it("does not invoke onDisconnected for non-disconnected statuses", () => {
-    const state = createConnectionState();
-    const onDisconnected = vi.fn();
-    forwardConnectionStatus(state, "connecting", onDisconnected);
-    forwardConnectionStatus(state, "connected", onDisconnected);
-    forwardConnectionStatus(state, "reconnecting", onDisconnected);
-    expect(onDisconnected).not.toHaveBeenCalled();
   });
 });

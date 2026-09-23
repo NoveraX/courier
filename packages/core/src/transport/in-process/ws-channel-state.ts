@@ -114,7 +114,10 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
         throw wrapStreamError(EXECUTOR, "onMessage failed", error);
       }
     },
-    on(event: "data" | "status", handler: (arg: never) => void) {
+    on(event: "data" | "status" | "error", handler: (arg: never) => void) {
+      /* Refusals reach an in-process caller as the rejection of its `send`,
+         so there is nothing to hear here. */
+      if (event === "error") return () => false;
       if (event === "data") {
         dataListeners.add(handler as (data: unknown) => void);
         return () => dataListeners.delete(handler as (data: unknown) => void);

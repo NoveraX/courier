@@ -5,6 +5,7 @@ import { unqualifyTopic } from "./topic-hash";
 import type { createPendingRegistry } from "./ws-pending";
 import { encodeMessage } from "./ws-protocol";
 import type { createTopicRegistry } from "./ws-topics";
+import type { TopicHandler, TopicSubscriber } from "./ws-types";
 
 /**
  * Shared context for the topic-level operations of a WS connection.
@@ -25,28 +26,29 @@ export interface TopicOpsContext {
 }
 
 /**
- * Subscribe a handler to a topic. The first time a topic is added at
- * `connected` state we send the `subscribe` frame immediately; otherwise
- * the topic registry queues it and the open handler replays subscriptions
- * on reconnect.
+ * Subscribe to a topic. The server hears of it when the topic gains its
+ * first subscriber and of its end when the last one leaves; a topic added
+ * while not connected is subscribed when the connection opens.
  *
- * The returned unsubscribe also fires an `unsubscribe` frame so the server
- * can drop its end of the routing table.
+ * Every subscriber used to send its own `subscribe`, and every one that left
+ * an `unsubscribe` — so of two components on the same feed, the first to
+ * unmount silenced the other.
  */
 export function subscribeToTopic(
   ctx: TopicOpsContext,
   topic: string,
-  handler: (p: unknown) => void,
+  subscriber: TopicHandler | TopicSubscriber,
   variables?: unknown,
 ): () => void {
   const { baseTopic } = unqualifyTopic(topic);
-  const unsub = ctx.topics.add(topic, handler, variables, baseTopic);
-  if (ctx.state.current === "connected") {
+  const first = !ctx.topics.has(topic);
+  const normalized = typeof subscriber === "function" ? { data: subscriber } : subscriber;
+  const remove = ctx.topics.add(topic, normalized, variables, baseTopic);
+  if (first && ctx.state.current === "connected") {
     ctx.sendRaw(encodeMessage({ type: "subscribe", topic, payload: variables }));
   }
   return () => {
-    unsub();
-    sendControl(ctx, encodeMessage({ type: "unsubscribe", topic }));
+    if (remove()) sendControl(ctx, encodeMessage({ type: "unsubscribe", topic }));
   };
 }
 

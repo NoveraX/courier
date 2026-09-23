@@ -1,3 +1,5 @@
+import type { RealtimeError } from "./errors";
+
 // ---------------------------------------------------------------------------
 // Connection
 // ---------------------------------------------------------------------------
@@ -120,11 +122,23 @@ export interface WSChannelContext<TResponse = unknown, TVariables = unknown>
   send(data: TResponse): void;
   /** Broadcast to all subscribers of a topic */
   broadcast(topic: string, data: TResponse): void;
-  /** Close this client's connection */
+  /**
+   * End this client's subscription to the channel: its `onLeave` runs, and
+   * the client's channel disconnects without rejoining. A `code` other than
+   * 1000 is the client's error event (`fromErrorCode(code, reason)`), so a
+   * kick can say why.
+   */
   close(code?: number, reason?: string): void;
 }
 
-/** Handlers for a bidirectional WS channel endpoint */
+/**
+ * Handlers for a bidirectional WS channel endpoint.
+ *
+ * A handler that throws a `RealtimeError` (such as `ForbiddenError("Not a
+ * member of this room")`) chooses what the client's `error` event reads;
+ * any other error reaches it as code 5000 and, in full, only the server's
+ * log. A failed `onJoin` ends the subscription; a failed `onMessage` does not.
+ */
 export interface ChannelHandlers<TReceive = unknown, TResponse = unknown, TVariables = unknown> {
   /** Called when a client subscribes to this channel */
   onJoin?(ctx: WSChannelContext<TResponse, TVariables>): void | Promise<void>;
@@ -134,7 +148,13 @@ export interface ChannelHandlers<TReceive = unknown, TResponse = unknown, TVaria
   onLeave?(ctx: WSChannelContext<TResponse, TVariables>): void | Promise<void>;
 }
 
-/** Server-side WS push handler — async generator (server→client only) */
+/**
+ * Server-side WS push handler — async generator (server→client only).
+ *
+ * Returning ends the subscription for the client, whose loop then ends.
+ * Throwing fails it: a `RealtimeError` reaches the client's loop as thrown;
+ * any other error as code 5000, and in full only the server's log.
+ */
 export type WSPushHandler<TResponse, TVariables = undefined> = (
   ctx: WSContext<TVariables>,
 ) => AsyncGenerator<TResponse, void, unknown>;
@@ -146,6 +166,13 @@ export interface WSChannel<TSend = unknown, TReceive = unknown> {
   /** Subscribe to incoming messages or status changes */
   on(event: "data", handler: (data: TReceive) => void): () => void;
   on(event: "status", handler: (status: ConnectionStatus) => void): () => void;
+  /**
+   * Hear what the server refused or failed: a message it would not take, or
+   * a handler that threw — the channel goes on — or the end of the channel
+   * itself (join rejected, closed by the server with a reason), which is
+   * followed by the `disconnected` status.
+   */
+  on(event: "error", handler: (error: RealtimeError) => void): () => void;
   /** Close the channel */
   close(): void;
   /** Current connection status */

@@ -15,16 +15,8 @@ import type { ConnectionStatus } from "./types";
  * `"reconnecting"` forwarding. Centralizing it here means a future case added
  * to {@link ConnectionStatus} will fail the `status satisfies never`
  * exhaustiveness check at compile time.
- *
- * @param onDisconnected Optional cleanup callback fired AFTER the state has
- *   been set to `"disconnected"`. Used by `executeWSPush` to flip its async
- *   iterator's `finished` flag and resolve the pending waiter.
  */
-export function forwardConnectionStatus(
-  state: ConnectionState,
-  status: ConnectionStatus,
-  onDisconnected?: () => void,
-): void {
+export function forwardConnectionStatus(state: ConnectionState, status: ConnectionStatus): void {
   switch (status) {
     case "connecting":
       state.set("connecting");
@@ -37,7 +29,6 @@ export function forwardConnectionStatus(
       return;
     case "disconnected":
       state.set("disconnected");
-      onDisconnected?.();
       return;
     default: {
       const _exhaustive: never = status;

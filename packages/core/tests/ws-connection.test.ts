@@ -96,7 +96,7 @@ describe("createWSConnection", () => {
     const conn = createWSConnection(createConfig());
     lastWs().simulateOpen();
 
-    conn.subscribe("chat:room", vi.fn());
+    conn.subscribe("chat:room", vi.fn<(payload: unknown) => void>());
 
     const sent = lastWs().sent;
     const subMsg = sent.find((s) => s.includes('"subscribe"'));
@@ -109,7 +109,7 @@ describe("createWSConnection", () => {
     const conn = createWSConnection(createConfig());
     lastWs().simulateOpen();
 
-    const handler = vi.fn();
+    const handler = vi.fn<(payload: unknown) => void>();
     conn.subscribe("chat:room", handler);
 
     lastWs().simulateMessage(encodeMessage({
@@ -126,7 +126,7 @@ describe("createWSConnection", () => {
     const conn = createWSConnection(createConfig());
     lastWs().simulateOpen();
 
-    const unsub = conn.subscribe("chat:room", vi.fn());
+    const unsub = conn.subscribe("chat:room", vi.fn<(payload: unknown) => void>());
     lastWs().sent.length = 0; // clear subscribe message
     unsub();
 
@@ -175,7 +175,7 @@ describe("createWSConnection", () => {
   it("re-subscribes to topics after reconnect", () => {
     const conn = createWSConnection(createConfig({ backoff: { initialMs: 50, jitter: false } }));
     lastWs().simulateOpen();
-    conn.subscribe("chat:room", vi.fn());
+    conn.subscribe("chat:room", vi.fn<(payload: unknown) => void>());
 
     lastWs().simulateClose(1006);
     vi.advanceTimersByTime(50);

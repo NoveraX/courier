@@ -1,3 +1,4 @@
+import type { RealtimeError } from "../../realtime/errors";
 import type { ConnectionStatus, SSESubscription, WSChannel } from "../../realtime/types";
 import { beginStream, type StreamMeta } from "./core";
 import { instrumentSSE } from "./sse";
@@ -60,18 +61,17 @@ export function instrumentWSChannel<TChannel extends WSChannel<never, unknown>>(
     }
   });
 
-  const wrapped: WSChannel<unknown, unknown> = {
-    send(data) {
+  const wrapped = {
+    send(data: unknown) {
       // Outbound (client→server) frames are tagged "message" so the
       // Stream tab can render an upward arrow distinct from inbound data.
       instr.emitMessage(data, "message");
       return inner.send(data);
     },
-    on(event, handler) {
+    on(event: "data" | "status" | "error", handler: (arg: never) => void) {
       // Pass-through with same overload signature as WSChannel.on
-      if (event === "data") {
-        return inner.on("data", handler as (data: unknown) => void);
-      }
+      if (event === "data") return inner.on("data", handler as (data: unknown) => void);
+      if (event === "error") return inner.on("error", handler as (error: RealtimeError) => void);
       return inner.on("status", handler as (status: ConnectionStatus) => void);
     },
     close() {
@@ -83,7 +83,7 @@ export function instrumentWSChannel<TChannel extends WSChannel<never, unknown>>(
       return inner.status;
     },
   };
-  return wrapped as TChannel;
+  return wrapped as WSChannel<unknown, unknown> as TChannel;
 }
 
 /**

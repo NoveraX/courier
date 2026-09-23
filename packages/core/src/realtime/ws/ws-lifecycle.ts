@@ -1,6 +1,7 @@
 import type { ScopedLogger } from "../../logger";
 import { calculateBackoff } from "../backoff";
 import type { ConnectionState } from "../connection-state";
+import { fromErrorCode, type RealtimeError } from "../errors";
 import { resolveAuthUrl } from "./auth-url";
 import type { createMessageQueue } from "./message-queue";
 import { shouldReconnect } from "./reconnect-classifier";
@@ -100,6 +101,9 @@ function handleClose(ctx: LifecycleContext, ev: CloseEvent): void {
   if (ctx.refs.closed || !shouldReconnect(ev.code)) {
     ctx.state.set("disconnected");
     ctx.pending.rejectAll("Connection lost");
+    /* Refused for good — too many connections, origin, auth: every
+       subscription hears why instead of waiting on a socket that is gone. */
+    if (!ctx.refs.closed) ctx.topics.endAll(closeFailure(ev));
     return;
   }
   ctx.state.set("reconnecting");
@@ -107,6 +111,12 @@ function handleClose(ctx: LifecycleContext, ev: CloseEvent): void {
   const delay = calculateBackoff(ctx.refs.attempt++, ctx.config.backoff);
   ctx.log.info(`Reconnecting in ${delay}ms (attempt ${ctx.refs.attempt})`);
   ctx.refs.reconnectTimer = setTimeout(() => connect(ctx), delay);
+}
+
+/** Why a socket closed for good, as its subscriptions read it; none for a normal close. */
+function closeFailure(ev: CloseEvent): RealtimeError | undefined {
+  if (ev.code === 1000) return undefined;
+  return fromErrorCode(ev.code, ev.reason || "Connection closed");
 }
 
 function handleAuthRequired(ctx: LifecycleContext): void {

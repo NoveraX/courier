@@ -1,3 +1,4 @@
+import type { RealtimeError } from "../errors";
 import type { BackoffConfig, ConnectionStatus } from "../types";
 import type { HeartbeatConfig } from "./heartbeat";
 import type { MessageQueueConfig } from "./message-queue";
@@ -55,13 +56,34 @@ export interface WSConnectionConfig {
 /** Callback for incoming messages on a topic */
 export type TopicHandler = (payload: unknown) => void;
 
+/** Receives everything the server says about one topic */
+export interface TopicSubscriber {
+  /** A payload the server sent on the topic */
+  data(payload: unknown): void;
+  /** A message on the topic was refused, or its handler failed; the subscription goes on */
+  error?(error: RealtimeError): void;
+  /**
+   * The subscription ended — the server finished or refused it, or the
+   * connection closed for good. `error` says why when it failed.
+   */
+  end?(error: RealtimeError | undefined): void;
+}
+
 // ---------------------------------------------------------------------------
 // Connection API
 // ---------------------------------------------------------------------------
 
 export interface WSConnection {
-  /** Subscribe to a topic. Returns unsubscribe function. */
-  subscribe(topic: string, handler: TopicHandler, variables?: unknown): () => void;
+  /**
+   * Subscribe to a topic. Returns unsubscribe function. A bare function
+   * receives the payloads only; a `TopicSubscriber` also hears of errors on
+   * the topic and of its end.
+   */
+  subscribe(
+    topic: string,
+    subscriber: TopicHandler | TopicSubscriber,
+    variables?: unknown,
+  ): () => void;
   /** Send a message to a topic. Queued if reconnecting. */
   send(topic: string, payload: unknown): void;
   /** Request-response over WS with correlation ID and timeout. */

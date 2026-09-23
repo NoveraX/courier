@@ -12,13 +12,16 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../src/realtime/ws-subscription", () => ({
+vi.mock("../src/realtime/ws-channel-client", () => ({
   executeWSChannel: vi.fn(() => ({
     send: vi.fn(),
     on: vi.fn(() => () => {}),
     close: vi.fn(),
     status: "connecting" as const,
   })),
+}));
+
+vi.mock("../src/realtime/ws-subscription", () => ({
   executeWSPush: vi.fn(() => ({
     [Symbol.asyncIterator]: () => ({
       next: () => Promise.resolve({ done: true, value: undefined }),
@@ -30,7 +33,8 @@ vi.mock("../src/realtime/ws-subscription", () => ({
 }));
 
 import { isConfigurationError } from "../src/errors";
-import { executeWSChannel, executeWSPush } from "../src/realtime/ws-subscription";
+import { executeWSChannel } from "../src/realtime/ws-channel-client";
+import { executeWSPush } from "../src/realtime/ws-subscription";
 import {
   createProxyWSChannelFactory,
   createProxyWSPushFactory,

@@ -256,7 +256,8 @@ describe("instrumentWSChannel", () => {
       get status() {
         return status;
       },
-      on(event: "data" | "status", handler: never) {
+      on(event: "data" | "status" | "error", handler: never) {
+        if (event === "error") return () => false;
         if (event === "data") {
           dataHandlers.add(handler as never);
           return () => dataHandlers.delete(handler as never);

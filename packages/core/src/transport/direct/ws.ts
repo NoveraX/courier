@@ -2,7 +2,8 @@ import { endpointPath } from "../../define/address";
 import { getSourceName } from "../../define/api";
 import type { DefinedApi, DefinedFlatApi, DefinedMixedApi } from "../../define/types";
 import { buildDirectWSUrl, buildWSTopic } from "../../realtime/caller-ws";
-import { executeWSChannel, executeWSPush } from "../../realtime/ws-subscription";
+import { executeWSChannel } from "../../realtime/ws-channel-client";
+import { executeWSPush } from "../../realtime/ws-subscription";
 import { instrumentWSChannel, instrumentWSPush } from "../instrument";
 import type { WSChannelFactory, WSPushFactory } from "../types";
 

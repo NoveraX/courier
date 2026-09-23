@@ -74,7 +74,14 @@ export class RateLimitError extends RealtimeError {
  * the caller's code rather than two distinct errors.
  */
 export class RealtimeValidationError extends RealtimeError {
-  constructor(message = "Validation failed") {
+  /**
+   * @param message - What failed
+   * @param issues - The schema's issues, as an HTTP call's 422 lists them
+   */
+  constructor(
+    message = "Validation failed",
+    readonly issues: readonly unknown[] = [],
+  ) {
     super(4422, message);
     this.name = "RealtimeValidationError";
   }
@@ -91,9 +98,14 @@ export function isRealtimeError(error: unknown): error is RealtimeError {
  *
  * @param code - WS error code from server
  * @param message - Error message from server
+ * @param issues - Schema issues, for a validation failure
  * @returns Typed RealtimeError subclass
  */
-export function fromErrorCode(code: number, message: string): RealtimeError {
+export function fromErrorCode(
+  code: number,
+  message: string,
+  issues?: readonly unknown[],
+): RealtimeError {
   switch (code) {
     case 4401:
       return new AuthError(message);
@@ -102,7 +114,7 @@ export function fromErrorCode(code: number, message: string): RealtimeError {
     case 4408:
       return new TimeoutError(message);
     case 4422:
-      return new RealtimeValidationError(message);
+      return new RealtimeValidationError(message, issues);
     case 4429:
       return new RateLimitError(message);
     default:

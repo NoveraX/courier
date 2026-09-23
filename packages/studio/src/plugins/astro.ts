@@ -1,11 +1,17 @@
-import { resolveSnippet } from "./core/resolve-snippet";
+import type { Plugin } from "vite";
 import type { StudioPluginOptions } from "./core/types";
-
-const FRAMEWORK = "astro";
+import { createStudioVitePlugin } from "./core/vite-plugin";
 
 /**
  * Astro integration for Courier Studio.
- * Auto-injects `attachRuntime("astro-browser")` into pages in dev mode.
+ *
+ * Connects every page of `astro dev` to Studio as the `astro-browser`
+ * runtime, through the same Vite plugin the Vite integration uses. Builds and
+ * previews are left untouched.
+ *
+ * @param options - `enabled` forces injection on or off; by default it is on
+ *   unless `NODE_ENV` is `"production"`.
+ * @returns The Astro integration.
  *
  * @example
  * ```ts
@@ -21,22 +27,20 @@ export function courierStudio(options?: StudioPluginOptions): AstroIntegrationLi
   return {
     name: "courier-studio",
     hooks: {
-      async "astro:config:setup"(ctx: AstroSetupContext) {
+      "astro:config:setup"(ctx: AstroSetupContext) {
         if (ctx.command !== "dev") return;
-        const snippet = await resolveSnippet(FRAMEWORK, options);
-        if (!snippet) return;
-        ctx.injectScript("page-init", snippet);
+        ctx.updateConfig({ vite: { plugins: [createStudioVitePlugin("astro", options)] } });
       },
     },
   };
 }
 
 interface AstroSetupContext {
-  command: "dev" | "build" | "preview";
-  injectScript: (stage: string, content: string) => void;
+  command: string;
+  updateConfig(config: { vite: { plugins: Plugin[] } }): unknown;
 }
 
 interface AstroIntegrationLike {
   name: string;
-  hooks: Record<string, (ctx: AstroSetupContext) => void | Promise<void>>;
+  hooks: { "astro:config:setup"(ctx: AstroSetupContext): void };
 }

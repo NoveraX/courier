@@ -1,3 +1,4 @@
+import { RUNTIME_SPECIFIER } from "./constants";
 import type { ResolvedOptions } from "./types";
 
 /**
@@ -10,18 +11,27 @@ const STUDIO_URL_SYMBOL = Symbol.for("courier.studio.url");
 const STUDIO_URL_KEY_LITERAL = `Symbol.for(${JSON.stringify(Symbol.keyFor(STUDIO_URL_SYMBOL))})`;
 
 /**
- * Generate the JS snippet that connects a browser bundle to Studio.
+ * Generate the JS module that connects a browser bundle to Studio.
  *
- * Two statements: pin the resolved Studio URL on globalThis (so the runtime
- * picks it up without bundler-specific env injection), then call
- * `attachRuntime` with the framework-suffixed runtime id.
+ * It pins the resolved Studio URL on globalThis (so the runtime picks it up
+ * without bundler-specific env injection), then calls `attachRuntime` with
+ * the framework-suffixed runtime id. The import is hoisted above the
+ * assignment, which is fine: the runtime reads the URL when called.
+ *
+ * @param options - The resolved plugin options.
+ * @param runtime - What to import the runtime from: its package name, or a
+ *   path for integrations that cannot resolve a package name from here.
+ * @returns The module source.
  */
-export function generateConnectSnippet(options: ResolvedOptions): string {
+export function generateConnectSnippet(
+  options: ResolvedOptions,
+  runtime: string = RUNTIME_SPECIFIER,
+): string {
   const url = JSON.stringify(options.studioUrl);
   const runtimeId = JSON.stringify(`${options.framework}-browser`);
   return [
     `globalThis[${STUDIO_URL_KEY_LITERAL}] = ${url};`,
-    `import { attachRuntime } from "@noverax/courier-studio-core/runtime";`,
+    `import { attachRuntime } from ${JSON.stringify(runtime)};`,
     `attachRuntime(${runtimeId});`,
   ].join("\n");
 }

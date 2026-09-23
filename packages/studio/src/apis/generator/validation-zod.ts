@@ -51,7 +51,7 @@ export function propToZod(prop: ParsedSchemaProperty): string {
     return zodEnum(prop.enum);
   }
   if (prop.type === "array" && prop.items) return `z.array(${schemaToZod(prop.items)})`;
-  if (prop.object) return schemaToZod(prop.object);
+  if (prop.shape) return schemaToZod(prop.shape);
   if (prop.valueType) return `z.record(z.string(), ${schemaToZod(prop.valueType)})`;
   if (prop.type === "object") return "z.record(z.string(), z.unknown())";
   return primitiveToZod(prop.type, prop.format);
@@ -71,5 +71,6 @@ export function primitiveToZod(type: string, format?: string): string {
   if (type === "string") return "z.string()";
   if (type === "number" || type === "integer") return "z.number()";
   if (type === "boolean") return "z.boolean()";
+  if (type === "null") return "z.null()";
   return "z.unknown()";
 }

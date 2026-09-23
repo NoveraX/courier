@@ -67,8 +67,16 @@ describe("arktype emission", () => {
     expect(emitted).toBe('type("string | null")');
   });
 
-  it("writes an enum as one expression", () => {
-    expect(propToArkType(prop({ enum: ["open", "fixed"] }))).toBe(`type("'open' | 'fixed'")`);
+  it("gives an enum's members to ArkType as values", () => {
+    expect(propToArkType(prop({ enum: ["open", "fixed"] }))).toBe(
+      'type.enumerated("open", "fixed")',
+    );
+  });
+
+  it("adds null to a nullable enum", () => {
+    expect(propToArkType(prop({ enum: ["open"], nullable: true }))).toBe(
+      'type.enumerated("open", null)',
+    );
   });
 
   it("gives a primitive array something to call .array() on", () => {
@@ -82,10 +90,12 @@ describe("arktype emission", () => {
     expect(emitted).not.toMatch(/^"string"\.array/);
   });
 
-  it("does not write a member it cannot express", () => {
+  it("keeps a member that holds both kinds of quote", () => {
+    /* ArkType's string syntax has no escape for such a member; as a value it
+       needs none. */
     const emitted = propToArkType(prop({ enum: [`it's "both"`] }));
 
-    expect(emitted).toBe('type("string")');
+    expect(emitted).toBe(`type.enumerated(${JSON.stringify(`it's "both"`)})`);
   });
 
   it("emits a named enum schema that is one expression", () => {

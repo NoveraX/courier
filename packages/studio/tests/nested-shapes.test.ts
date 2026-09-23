@@ -71,7 +71,7 @@ describe("an inline object property", () => {
       }),
     );
 
-    expect(Object.keys(parsed.schemas.Root?.properties?.owner?.object?.properties ?? {})).toEqual([
+    expect(Object.keys(parsed.schemas.Root?.properties?.owner?.shape?.properties ?? {})).toEqual([
       "login",
       "id",
     ]);
@@ -80,7 +80,7 @@ describe("an inline object property", () => {
   it("is written as an object type, not a record", () => {
     const out = build(NESTED);
 
-    expect(out).toMatch(/owner\?: \{ login: string; id\?: number \}/);
+    expect(out).toMatch(/owner\?: \{ login: string; id\?: number \| undefined \} \| undefined/);
     expect(out).not.toMatch(/owner\?: Record<string, unknown>/);
   });
 

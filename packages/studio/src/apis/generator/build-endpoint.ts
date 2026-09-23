@@ -5,7 +5,7 @@
 import { toInternalMethod } from "@noverax/courier";
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointChain } from "./build-endpoint-helpers";
-import { resolveResponseType, resolveVariablesType } from "./schema-types";
+import { resolveResponseType, resolveVariablesType } from "./endpoint-types";
 import { extendSchemaWithParams, getSchemaRefName } from "./schema-utils";
 import type { ResolvedGenerateOptions } from "./types";
 

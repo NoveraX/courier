@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { parseSpec } from "../src/apis/parser";
 import { generateCode, applyImportDefaults } from "../src/apis/generator";
 import { findCyclicSchemas } from "../src/apis/generator/cyclic-schemas";
+import { schemaComponents } from "../src/apis/generator/schema-components";
 import type { ParsedSchema } from "../src/apis/parser/types";
 
 function object(properties: Record<string, { refName?: string; type?: string }>): ParsedSchema {
@@ -81,6 +82,36 @@ describe("findCyclicSchemas", () => {
     });
 
     expect(found.size).toBe(0);
+  });
+
+  it("finds a member whose way back runs through a schema already visited", () => {
+    /* Y → Z → Y is found first; X closes Y → X → Z → Y only through Z, which
+       is finished by the time X is reached. */
+    const found = findCyclicSchemas({
+      Y: object({ z: { refName: "Z" }, x: { refName: "X" } }),
+      Z: object({ y: { refName: "Y" } }),
+      X: object({ z: { refName: "Z" } }),
+    });
+
+    expect(found).toEqual(new Set(["Y", "Z", "X"]));
+  });
+});
+
+describe("schemaComponents", () => {
+  it("lists every component after the ones it refers to", () => {
+    const components = schemaComponents({
+      Order: object({ customer: { refName: "Customer" } }),
+      Customer: object({ account: { refName: "Account" } }),
+      Account: object({ owner: { refName: "Customer" } }),
+      Note: object({ text: { type: "string" } }),
+    });
+
+    const position = (name: string): number =>
+      components.findIndex((component) => component.names.includes(name));
+    expect(position("Customer")).toBe(position("Account"));
+    expect(position("Customer")).toBeLessThan(position("Order"));
+    expect(components.find((c) => c.names.includes("Customer"))?.cyclic).toBe(true);
+    expect(components.find((c) => c.names.includes("Note"))?.cyclic).toBe(false);
   });
 });
 

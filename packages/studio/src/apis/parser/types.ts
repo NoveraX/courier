@@ -130,12 +130,13 @@ export interface ParsedSchemaProperty {
   refName?: string;
   nullable?: boolean;
   /**
-   * Shape of an inline object property.
+   * The property's own schema, when a primitive, a reference or a list
+   * cannot describe it: an inline object, or one of several alternatives.
    *
-   * Without it such a property flattened to `Record<string, unknown>` and its
-   * whole shape was thrown away.
+   * Without it an inline object flattened to `Record<string, unknown>`, and a
+   * property allowing several forms kept only the first reference among them.
    */
-  object?: ParsedSchema;
+  shape?: ParsedSchema;
   /** Value type of a map, from `additionalProperties`. */
   valueType?: ParsedSchema;
 }

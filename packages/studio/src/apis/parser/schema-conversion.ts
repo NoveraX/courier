@@ -46,7 +46,7 @@ export function convertSchema(name: string, raw: SpecNode, spec?: SpecNode): Par
     };
   }
   if (schema.type === "object" || schema.properties) return convertObjectSchema(name, schema, spec);
-  if (["string", "number", "integer", "boolean"].includes(schema.type)) {
+  if (["string", "number", "integer", "boolean", "null"].includes(schema.type)) {
     return { name, type: schema.type, description: schema.description };
   }
   return { name, type: "any", description: schema.description };

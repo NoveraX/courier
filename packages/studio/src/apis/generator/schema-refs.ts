@@ -69,7 +69,7 @@ function walk(
   for (const prop of Object.values(schema.properties ?? {})) {
     if (prop.refName) into.add(prop.refName);
     walk(prop.items, into, seen);
-    walk(prop.object, into, seen);
+    walk(prop.shape, into, seen);
     walk(prop.valueType, into, seen);
   }
 }

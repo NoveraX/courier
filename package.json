@@ -36,6 +36,7 @@
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@vitest/coverage-v8": "^5.0.1",
+    "arktype": "^2.2.3",
     "fastify": "^5.12.5",
     "h3": "^2.0.1-rc.32",
     "hono": "^4.13.8",

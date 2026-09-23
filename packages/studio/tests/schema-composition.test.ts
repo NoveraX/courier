@@ -134,7 +134,12 @@ describe("text a specification supplies to the source file", () => {
           security: [{ k: [] }],
         }),
       ),
-      applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src" }),
+      applyImportDefaults({
+        type: "openapi",
+        sourceName: "api",
+        outputDir: "src",
+        addAuthMiddleware: true,
+      }),
     );
     const source = generated.find((f) => f.path.endsWith("source.ts"))?.content ?? "";
 

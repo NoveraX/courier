@@ -5,8 +5,8 @@
 import type { ParsedSchema } from "../parser/types";
 import { typeUnion, zodEnum } from "./enum-literals";
 import { jsdocText } from "./jsdoc-text";
-import { schemaToInterface } from "./schema-types";
-import { lazyDeclaration, satisfiesExpr, schemaToValidation } from "./schema-utils";
+import { schemaToInterface, typeStyleFor } from "./schema-types";
+import { satisfiesExpr, schemaToValidation } from "./schema-utils";
 import type { GenerateOptions } from "./types";
 import { schemaToArkType } from "./validation-arktype";
 import { valibotEnum } from "./validation-valibot";
@@ -16,16 +16,15 @@ export function generateObjectSchema(
   name: string,
   schema: ParsedSchema,
   options: GenerateOptions,
-  refersToItself = false,
 ): void {
   if (options.includeComments && schema.description) {
     lines.push(`/** ${jsdocText(schema.description)} */`);
   }
 
   if (options.generateSchemas && options.validation !== "none") {
-    generateObjectWithValidation(lines, name, schema, options, refersToItself);
+    generateObjectWithValidation(lines, name, schema, options);
   } else if (options.generateTypes) {
-    lines.push(`export type ${name} = ${schemaToInterface(schema)}`);
+    lines.push(`export type ${name} = ${schemaToInterface(schema, typeStyleFor(options))}`);
     lines.push("");
   }
 }
@@ -35,20 +34,16 @@ function generateObjectWithValidation(
   name: string,
   schema: ParsedSchema,
   options: GenerateOptions,
-  refersToItself: boolean,
 ): void {
   /* Always emit explicit type when generateTypes is on — preserves JSDoc on ref fields */
   const typeName = options.generateTypes ? name : undefined;
   if (typeName) {
-    lines.push(`export type ${name} = ${schemaToInterface(schema)}`);
+    lines.push(`export type ${name} = ${schemaToInterface(schema, typeStyleFor(options))}`);
     lines.push("");
   }
 
   const body = schemaToValidation(schema, options);
-  const lazy = refersToItself ? lazyDeclaration(name, body, typeName, options) : undefined;
-  if (lazy) {
-    lines.push(lazy);
-  } else if (typeName) {
+  if (typeName) {
     lines.push(`export const ${name}Schema = ${body}${satisfiesExpr(name, options)};`);
   } else {
     lines.push(`export const ${name}Schema = ${body};`);

@@ -12,7 +12,7 @@
  */
 
 import type { ParsedSchema } from "../parser/types";
-import { collectRefsDeep } from "./schema-refs";
+import { schemaComponents } from "./schema-components";
 
 /**
  * Names that cannot be ordered so every reference points backwards.
@@ -26,40 +26,10 @@ import { collectRefsDeep } from "./schema-refs";
  * ```
  */
 export function findCyclicSchemas(schemas: Record<string, ParsedSchema>): Set<string> {
-  const known = new Set(Object.keys(schemas));
-  const edges = new Map<string, string[]>();
-  for (const [name, schema] of Object.entries(schemas)) {
-    const refs = new Set<string>();
-    collectRefsDeep(schema, refs);
-    edges.set(
-      name,
-      [...refs].filter((ref) => known.has(ref)),
-    );
-  }
-
   const cyclic = new Set<string>();
-  const settled = new Set<string>();
-  const onPath: string[] = [];
-  const pathIndex = new Map<string, number>();
-
-  function visit(name: string): void {
-    if (settled.has(name)) return;
-
-    const seenAt = pathIndex.get(name);
-    if (seenAt !== undefined) {
-      /* Everything from where this name first appeared is on the cycle. */
-      for (const member of onPath.slice(seenAt)) cyclic.add(member);
-      return;
-    }
-
-    pathIndex.set(name, onPath.length);
-    onPath.push(name);
-    for (const next of edges.get(name) ?? []) visit(next);
-    onPath.pop();
-    pathIndex.delete(name);
-    settled.add(name);
+  for (const component of schemaComponents(schemas)) {
+    if (!component.cyclic) continue;
+    for (const name of component.names) cyclic.add(name);
   }
-
-  for (const name of known) visit(name);
   return cyclic;
 }

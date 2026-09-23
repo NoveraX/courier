@@ -5,10 +5,10 @@
 import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildEndpointDefinition } from "./build-endpoint";
 import { describesResponseWithSchema, emitsSchemas } from "./build-endpoint-helpers";
+import { resolveResponseType } from "./endpoint-types";
 import { jsdocText } from "./jsdoc-text";
 import { jsLiteral, objectKey } from "./literals";
 import { collectSchemaRefs } from "./schema-refs";
-import { resolveResponseType } from "./schema-types";
 import { getSchemaRefName } from "./schema-utils";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 

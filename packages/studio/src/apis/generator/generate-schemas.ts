@@ -3,21 +3,23 @@
  */
 
 import type { ParsedSchema } from "../parser/types";
+import { ARKTYPE_CYCLE_HELPER, lazyTargets, writeArkTypeCycle } from "./arktype-cycles";
 import { findCyclicSchemas } from "./cyclic-schemas";
 import { typeUnion } from "./enum-literals";
+import { generateCyclicSchema } from "./generate-cyclic-schema";
 import {
   generateArraySchema,
   generateEnumSchema,
   generateObjectSchema,
   generatePrimitiveSchema,
   generateRefSchema,
+  generateUnionSchema,
 } from "./generate-schema-entries";
 import { jsdocText } from "./jsdoc-text";
+import { schemaComponents } from "./schema-components";
 import { topoSortSchemas } from "./schema-refs";
 import { schemaToInterface } from "./schema-types";
-import { schemaToValidation } from "./schema-utils";
 import type { GeneratedFile, GenerateOptions } from "./types";
-import { schemaToArkType } from "./validation-arktype";
 
 export function generateSchemasFile(
   schemas: Record<string, ParsedSchema>,
@@ -34,23 +36,66 @@ export function generateSchemasFile(
     lines.push(`import { type } from "arktype";`, "");
   }
 
-  // Topological sort: schemas must be defined before they are referenced
-  const sortedEntries = topoSortSchemas(schemas);
-  /* A cycle cannot be sorted that way, so its members are written lazily. */
-  const cyclic = findCyclicSchemas(schemas);
+  if (options.validation === "arktype") {
+    writeArkTypeFile(lines, schemas, options);
+  } else {
+    /* A cycle cannot be sorted so every reference points backwards; its
+       members are written lazily instead. */
+    writeEntries(lines, topoSortSchemas(schemas), options, findCyclicSchemas(schemas));
+  }
 
-  /* ArkType cannot read a constant that is declared later and evaluates a
-     thunk immediately, so schemas that refer to each other are declared
-     together in one module and re-exported from it. */
-  const inModule =
-    options.validation === "arktype" && cyclic.size > 0
-      ? emitArkTypeModule(lines, sortedEntries, options)
-      : new Set<string>();
+  return {
+    path: groupName
+      ? `${options.outputDir}/${groupName}/schemas.ts`
+      : `${options.outputDir}/schemas.ts`,
+    content: lines.join("\n"),
+  };
+}
 
-  for (const [name, schema] of sortedEntries) {
-    if (inModule.has(name)) continue;
-    if (schema.type === "object" && schema.properties) {
-      generateObjectSchema(lines, name, schema, options, cyclic.has(name));
+/**
+ * ArkType builds each schema as it is declared, so schemas are written in an
+ * order where every reference points backwards — except within a cycle, whose
+ * members name each other lazily.
+ */
+function writeArkTypeFile(
+  lines: string[],
+  schemas: Record<string, ParsedSchema>,
+  options: GenerateOptions,
+): void {
+  const components = schemaComponents(schemas);
+  const hasCycle = components.some((component) => component.cyclic);
+  if (hasCycle) lines.splice(1, 0, `import type * as ark from "arktype";`);
+  if (hasCycle) lines.push(ARKTYPE_CYCLE_HELPER);
+
+  for (const { names, cyclic } of components) {
+    const entries = names.map((name): [string, ParsedSchema] => [
+      name,
+      schemas[name] as ParsedSchema,
+    ]);
+    if (!cyclic) {
+      writeEntries(lines, entries, options, new Set());
+      continue;
+    }
+    const lazy = lazyTargets(names, schemas, options.generateTypes === true);
+    writeArkTypeCycle(lines, entries, lazy, options, schemaToInterface);
+  }
+
+  if (hasCycle) lines.push("declared = true;", "");
+}
+
+/** Write one declaration per schema, in the order given. */
+function writeEntries(
+  lines: string[],
+  entries: [string, ParsedSchema][],
+  options: GenerateOptions,
+  cyclic: Set<string>,
+): void {
+  const deferrable = options.generateSchemas && options.validation !== "none";
+  for (const [name, schema] of entries) {
+    if (deferrable && cyclic.has(name)) {
+      generateCyclicSchema(lines, name, schema, options);
+    } else if (schema.type === "object" && schema.properties) {
+      generateObjectSchema(lines, name, schema, options);
     } else if (schema.type === "enum" && schema.enum) {
       generateEnumSchema(lines, name, schema, options);
     } else if (schema.type === "ref" && schema.refName) {
@@ -66,65 +111,6 @@ export function generateSchemasFile(
       generatePrimitiveSchema(lines, name, schema, options);
     }
   }
-
-  return {
-    path: groupName
-      ? `${options.outputDir}/${groupName}/schemas.ts`
-      : `${options.outputDir}/schemas.ts`,
-    content: lines.join("\n"),
-  };
-}
-
-/** Declare a schema that is one of several alternatives. */
-function generateUnionSchema(
-  lines: string[],
-  name: string,
-  schema: ParsedSchema,
-  options: GenerateOptions,
-): void {
-  if (options.includeComments && schema.description) {
-    lines.push(`/** ${jsdocText(schema.description)} */`);
-  }
-  if (options.generateTypes) {
-    lines.push(`export type ${name} = ${schemaToInterface(schema)}`);
-  }
-  if (options.generateSchemas && options.validation !== "none") {
-    lines.push(`export const ${name}Schema = ${schemaToValidation(schema, options)};`);
-  }
-  lines.push("");
-}
-
-/**
- * Declare every schema on a reference cycle inside one ArkType module.
- *
- * @returns The names that were declared here and must not be declared again
- */
-function emitArkTypeModule(
-  lines: string[],
-  entries: [string, ParsedSchema][],
-  options: GenerateOptions,
-): Set<string> {
-  /* A schema outside the module cannot be named from inside it, and one
-     inside cannot be read from outside before the module exists — so once any
-     cycle is present the whole file is declared as one module. */
-  const members = entries;
-  if (members.length === 0) return new Set();
-
-  lines.push("const cyclic = type.module({");
-  for (const [name, schema] of members) {
-    lines.push(`  ${name}: ${schemaToArkType(schema, "member")},`);
-  }
-  lines.push("});");
-  lines.push("");
-
-  for (const [name, schema] of members) {
-    if (options.generateTypes) {
-      lines.push(`export type ${name} = ${schemaToInterface(schema)}`);
-    }
-    lines.push(`export const ${name}Schema = cyclic.${name};`);
-    lines.push("");
-  }
-  return new Set(members.map(([name]) => name));
 }
 
 export function generateTypesFile(

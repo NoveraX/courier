@@ -26,8 +26,10 @@ export function schemaToValibot(schema: ParsedSchema): string {
     for (const [name, prop] of Object.entries(schema.properties)) {
       if (!name) continue;
       let valType = propToValibot(prop);
-      if (!required.has(name)) valType = `v.optional(${valType})`;
+      /* valibot treats a key as optional only when the outermost schema says
+         so; `v.nullable(v.optional(…))` made an absent key an error. */
       if (prop.nullable) valType = `v.nullable(${valType})`;
+      if (!required.has(name)) valType = `v.optional(${valType})`;
       propLines.push(`  ${objectKey(name)}: ${valType}`);
     }
     if (propLines.length === 0) {
@@ -47,7 +49,7 @@ export function propToValibot(prop: ParsedSchemaProperty): string {
      string, which then failed the `satisfies` assertion written beside it. */
   if (prop.enum) return valibotEnum(prop.enum);
   if (prop.type === "array" && prop.items) return `v.array(${schemaToValibot(prop.items)})`;
-  if (prop.object) return schemaToValibot(prop.object);
+  if (prop.shape) return schemaToValibot(prop.shape);
   if (prop.valueType) return `v.record(v.string(), ${schemaToValibot(prop.valueType)})`;
   if (prop.type === "object") return "v.record(v.string(), v.unknown())";
   return primitiveToValibot(prop.type, prop.format);
@@ -62,6 +64,7 @@ export function primitiveToValibot(type: string, format?: string): string {
   if (type === "string") return "v.string()";
   if (type === "number" || type === "integer") return "v.number()";
   if (type === "boolean") return "v.boolean()";
+  if (type === "null") return "v.null()";
   return "v.unknown()";
 }
 

@@ -8,3 +8,4 @@ export {
   generatePrimitiveSchema,
   generateRefSchema,
 } from "./generate-ref-array-primitive";
+export { generateUnionSchema } from "./generate-union-schema";

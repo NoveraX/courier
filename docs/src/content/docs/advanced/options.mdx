@@ -113,7 +113,7 @@ const live = await caller.stats.with({ cache: "no-store" }).realtime()
 
 ### Proxy mode <ModeBadge mode="proxy" />
 
-In proxy mode with `method: "GET"`, caching works at two levels:
+In proxy mode with `method: "GET"`, the answer can be cached on the way back:
 
 ```ts title="components/users.tsx"
 const users = await caller.users
@@ -125,9 +125,9 @@ const users = await caller.users
   .getAll()
 ```
 
-**Level 1 — Browser/CDN cache**: The `cache` option controls the browser's HTTP cache for the `GET /api/request` response. Combined with `Cache-Control` headers from the server (set via `schema.cache` in endpoint definitions), this enables edge and CDN caching.
+The browser's own options — `cache`, `next`, `credentials`, `headers` and the rest of `RequestInit` — apply to the browser's request to `/api/request`. Combined with the `Cache-Control` the proxy answers with, this is what lets the browser, a CDN or the Next.js Data Cache on the page's side reuse the answer.
 
-**Level 2 — Server-side data cache**: Both `next` and `cache` options are forwarded through the proxy to the server handler's `fetch` call to the backend. Next.js Data Cache caches this fetch result, so subsequent requests skip the backend entirely.
+The proxy itself takes no caching instructions from the browser: a page could otherwise make the server cache one user's answer for everyone. How long an answer may be kept is declared on the endpoint with `.cache({ revalidate })`, and the proxy sets `Cache-Control` from it — `private` when the request carries a credential, shared with `Vary` on the forwarded headers otherwise.
 
 <Callout variant="info" title="Requires GET proxy">
 Proxy caching only works with `method: "GET"`, and only an endpoint built from the `query` head is served over GET. A mutation asked for over GET is refused 405.

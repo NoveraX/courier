@@ -12,6 +12,11 @@ export type ConfigurationErrorCode =
   /** A `proxyPath` value is malformed (empty string, protocol-relative `//host`, wrong scheme, etc.). */
   | "PROXY_PATH_INVALID"
   /**
+   * A proxy call set an option only the server may decide — `prefixUrl`,
+   * which would choose where the server's own request goes.
+   */
+  | "PROXY_OPTION_NOT_ALLOWED"
+  /**
    * Studio Playground proxy mode tried to open a real network connection
    * from the user-app process, but `appOrigin` was not configured. Set it
    * via `courier.config.ts.runtime.appOrigin` or the `COURIER_APP_URL` /

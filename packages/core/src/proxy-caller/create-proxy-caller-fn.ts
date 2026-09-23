@@ -6,6 +6,7 @@ import { buildPostPayload } from "./post-payload";
 import { createProxyDedupe } from "./proxy-dedupe";
 import { resolveProxyPath } from "./resolve-path";
 import { sendFetch } from "./send-fetch";
+import { splitProxyOptions } from "./split-options";
 import type { ProxyCallerDefaults, UntypedCallerFn } from "./types";
 import { handleXhrUpload } from "./xhr-handler";
 
@@ -58,66 +59,47 @@ export function createProxyCallerFn<
       // we read the live origin at the moment the request is actually sent.
       const url = resolveProxyPath("http", proxyPath);
 
-      const {
-        cache,
-        onDownloadProgress,
-        onUploadProgress,
-        signal: _replacedBySendSignal,
-        stream,
-        method: proxyMethod,
-        ...extraOptions
-      } = options || {};
+      const call = splitProxyOptions(options, {
+        headers: defaultHeaders,
+        credentials,
+        timeout: defaultTimeout,
+      });
+      const local = { ...call.init, cache: call.cache, next: call.next, signal };
 
-      const next = (options as Record<string, unknown> | undefined)?.next as
-        | Record<string, unknown>
-        | undefined;
-
-      if (extraOptions.timeout === undefined && defaultTimeout !== undefined) {
-        extraOptions.timeout = defaultTimeout;
-      }
-
-      const serverOptions = {
-        ...extraOptions,
-        ...(stream && { stream }),
-        ...(cache && { cache }),
-      };
-
-      if (proxyMethod === "GET" && !isFormData(variables) && !onUploadProgress) {
+      if (call.proxyMethod === "GET" && !isFormData(variables) && !call.onUploadProgress) {
         return handleGetProxy({
           url,
           source,
           group,
           method,
           variables,
-          serverOptions,
-          credentials,
-          defaultHeaders,
-          signal,
-          timeout: extraOptions.timeout,
-          cache,
-          next,
-          onDownloadProgress,
-          stream: !!stream,
+          serverOptions: call.server,
+          credentials: call.credentials,
+          defaultHeaders: call.headers,
+          init: local,
+          timeout: call.timeout,
+          onDownloadProgress: call.onDownloadProgress,
+          stream: call.stream,
           fetchCtx,
         });
       }
 
-      const requestPayload = buildPostPayload(source, group, method, variables, serverOptions);
+      const requestPayload = buildPostPayload(source, group, method, variables, call.server);
 
-      if (onUploadProgress) {
+      if (call.onUploadProgress) {
         return handleXhrUpload({
           url,
           requestPayload,
           variables,
-          defaultHeaders,
-          credentials,
-          timeout: extraOptions.timeout,
+          defaultHeaders: call.headers,
+          credentials: call.credentials,
+          timeout: call.timeout,
           signal,
-          onUploadProgress,
-          stream: !!stream,
-          cache,
-          next,
-          onDownloadProgress,
+          onUploadProgress: call.onUploadProgress,
+          stream: call.stream,
+          cache: call.cache,
+          next: call.next,
+          onDownloadProgress: call.onDownloadProgress,
           globalOnSuccess,
           globalOnError,
         });
@@ -128,19 +110,13 @@ export function createProxyCallerFn<
         url,
         {
           ...requestPayload,
-          credentials,
-          cache,
-          next,
-          onDownloadProgress,
-          signal,
-          timeout: extraOptions.timeout,
-          headers: defaultHeaders,
+          ...local,
+          credentials: call.credentials,
+          onDownloadProgress: call.onDownloadProgress,
+          timeout: call.timeout,
+          headers: call.headers,
         },
-        {
-          ...fetchCtx,
-          stream: !!stream,
-          requestPayload,
-        },
+        { ...fetchCtx, stream: call.stream, requestPayload },
       );
     }
     return execute;

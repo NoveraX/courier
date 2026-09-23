@@ -11,10 +11,9 @@ export type GetProxyCtx = {
   serverOptions: Record<string, unknown>;
   credentials: RequestCredentials;
   defaultHeaders?: Record<string, string>;
-  signal?: AbortSignal | null;
+  /** The rest of the browser request's init — signal, cache, next, mode, … */
+  init: Record<string, unknown>;
   timeout?: number;
-  cache?: unknown;
-  next?: Record<string, unknown>;
   onDownloadProgress?: unknown;
   stream: boolean;
   fetchCtx: {
@@ -40,12 +39,10 @@ export function handleGetProxy(ctx: GetProxyCtx): Promise<unknown> {
     ctx.url,
     {
       searchParams,
+      ...ctx.init,
       credentials: ctx.credentials,
       headers: ctx.defaultHeaders,
-      signal: ctx.signal,
       timeout: ctx.timeout,
-      cache: ctx.cache,
-      next: ctx.next,
       onDownloadProgress: ctx.onDownloadProgress,
     },
     {

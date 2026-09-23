@@ -76,7 +76,8 @@ async function parseBody(
   config?: HandlerConfig,
 ): Promise<RequestPayloadInput | Response> {
   const contentType = request.headers.get("content-type");
-  const mediaType = contentType?.split(";")[0]?.trim();
+  /* Media types are case-insensitive (RFC 9110). */
+  const mediaType = contentType?.split(";")[0]?.trim().toLowerCase();
 
   const isUpload = mediaType === "multipart/form-data";
   if (!isUpload && mediaType !== "application/json") {

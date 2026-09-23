@@ -32,7 +32,7 @@ function unavailable(message: string, retrySec: string): Response {
 /**
  * Create an SSE request handler for proxy mode.
  *
- * Routing: `GET /api/sse?_s=source&_g=group&_m=method&var1=val1`
+ * Routing: `GET /api/sse?_s=source&_g=group&_m=method&_v={"var1":"val1"}`
  * Client sends `Accept: text/event-stream` or uses `_transport=sse` query param.
  *
  * Includes: origin validation, middleware execution (with timeout), lifecycle hooks,

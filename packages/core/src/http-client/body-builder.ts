@@ -1,4 +1,5 @@
 import { isFormData } from "../utils/helpers";
+import { toQueryEntries } from "../utils/query-string";
 import type { FetchOptions, HttpMethod, SearchParamsSerializer } from "./types";
 
 export const toSearchParams = (
@@ -7,7 +8,7 @@ export const toSearchParams = (
 ): string | URLSearchParams | undefined => {
   if (!variables || Object.keys(variables).length === 0) return undefined;
   if (serializer) return serializer.stringify(variables);
-  return new URLSearchParams(Object.entries(variables).map(([k, v]) => [k, String(v)]));
+  return new URLSearchParams(toQueryEntries(variables));
 };
 
 export const stripUndefined = (

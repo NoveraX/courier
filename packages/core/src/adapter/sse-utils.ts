@@ -1,28 +1,4 @@
 import { LIMITS } from "./limits";
-import { META_KEYS } from "./parse";
-
-/**
- * Extract non-meta query params as endpoint variables.
- * Meta keys (_s, _g, _m, _transport) are excluded.
- *
- * @param params - URL search params from the SSE request
- * @returns Variable record or undefined if no variables present
- *
- * @example
- * // URL: /api/sse?_s=api&_g=chat&_m=feed&roomId=general
- * extractVariables(url.searchParams) // → { roomId: "general" }
- */
-export function extractVariables(params: URLSearchParams): Record<string, string> | undefined {
-  const vars: Record<string, string> = {};
-  let hasVars = false;
-  for (const [key, value] of params.entries()) {
-    if (!META_KEYS.has(key)) {
-      vars[key] = value;
-      hasVars = true;
-    }
-  }
-  return hasVars ? vars : undefined;
-}
 
 /**
  * Combine request abort signal + shutdown signal + optional TTL into a single AbortSignal.

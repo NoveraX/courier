@@ -1,10 +1,10 @@
 import type { Sources } from "../define/types";
 import { resolveEndpoint } from "../utils/execute-resolve";
+import { parseWireVariables, WIRE_VARIABLES_KEY } from "../utils/wire-variables";
 import type { SchemaMetadata } from "../validation";
 import { validateSchema } from "../validation";
 import { isExposedToWire } from "./exposure";
 import { errorResponse } from "./parse";
-import { extractVariables } from "./sse-utils";
 
 /** Resolve SSE endpoint from sources, validate transport type */
 export function resolveSSEEndpoint(
@@ -43,12 +43,14 @@ export function resolveSSEEndpoint(
   return { endpoint, schema };
 }
 
-/** Extract and validate SSE variables from query params against endpoint schema */
+/** Decode the SSE variables from the `_v` parameter and check them against the endpoint schema */
 export async function resolveSSEVariables(
   params: URLSearchParams,
   schema: SchemaMetadata | undefined,
 ): Promise<Record<string, unknown> | undefined | Response> {
-  const raw = extractVariables(params);
+  const decoded = parseWireVariables(params.get(WIRE_VARIABLES_KEY));
+  if (!decoded.ok) return errorResponse(400, decoded.reason);
+  const raw = decoded.variables;
   if (!schema?.variables) return raw;
 
   try {

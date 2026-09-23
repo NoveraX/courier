@@ -290,15 +290,15 @@ describe("createProxyCaller", () => {
       expect(url.searchParams.get("_m")).toBe("getAll");
     });
 
-    it("includes variables as query params in GET mode", async () => {
+    it("sends the variables as one JSON parameter in GET mode, keeping their types", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
       const client = createProxyCaller("api") as any;
-      await client.users.with({ method: "GET" }).list({ page: 2, limit: 10 });
+      await client.users.with({ method: "GET" }).list({ page: 2, tags: ["a", "b"] });
 
       const url = new URL(fetchSpy.mock.calls[0]![0], "http://localhost");
-      expect(url.searchParams.get("page")).toBe("2");
-      expect(url.searchParams.get("limit")).toBe("10");
+      expect(JSON.parse(url.searchParams.get("_v") ?? "")).toEqual({ page: 2, tags: ["a", "b"] });
+      expect(url.searchParams.has("page")).toBe(false);
     });
   });
 

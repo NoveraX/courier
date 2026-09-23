@@ -22,6 +22,12 @@ function sseRequest(params: string): Request {
   });
 }
 
+/** `_s=api&_m=feed` plus the variables, encoded the way the proxy client sends them. */
+function feedRequest(variables?: Record<string, unknown>): Request {
+  const vars = variables ? `&_v=${encodeURIComponent(JSON.stringify(variables))}` : "";
+  return sseRequest(`_s=api&_m=feed${vars}`);
+}
+
 async function collectSSEText(response: Response): Promise<string> {
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
@@ -44,17 +50,17 @@ describe("SSE variable validation", () => {
     const sources = { api: { options: {}, feed } };
     const handler = setupHandler(sources);
 
-    const valid = await handler.handleSSE(sseRequest("_s=api&_m=feed&userId=abc"));
+    const valid = await handler.handleSSE(feedRequest({ userId: "abc" }));
     expect(valid.status).toBe(200);
 
-    const invalid = await handler.handleSSE(sseRequest("_s=api&_m=feed"));
+    const invalid = await handler.handleSSE(feedRequest());
     expect(invalid.status).toBe(400);
     const body = await invalid.json();
     expect(body.message).toBe("Invalid SSE variables");
   });
 
-  it("coerces string query params to numbers via z.coerce", async () => {
-    const schema = z.object({ limit: z.coerce.number() });
+  it("receives a number as a number, with no coercion", async () => {
+    const schema = z.object({ limit: z.number() });
     const feed = stream.variables(schema).response<unknown>().implement(async function* (ctx) {
       yield { data: ctx.variables };
     });
@@ -62,15 +68,15 @@ describe("SSE variable validation", () => {
     const sources = { api: { options: {}, feed } };
     const handler = setupHandler(sources);
 
-    const response = await handler.handleSSE(sseRequest("_s=api&_m=feed&limit=42"));
+    const response = await handler.handleSSE(feedRequest({ limit: 42 }));
     expect(response.status).toBe(200);
 
     const text = await collectSSEText(response);
     expect(text).toContain('"limit":42');
   });
 
-  it("coerces string query params to booleans via z.coerce", async () => {
-    const schema = z.object({ active: z.coerce.boolean() });
+  it("receives a boolean as a boolean, with no coercion", async () => {
+    const schema = z.object({ active: z.boolean() });
     const feed = stream.variables(schema).response<unknown>().implement(async function* (ctx) {
       yield { data: ctx.variables };
     });
@@ -78,7 +84,7 @@ describe("SSE variable validation", () => {
     const sources = { api: { options: {}, feed } };
     const handler = setupHandler(sources);
 
-    const response = await handler.handleSSE(sseRequest("_s=api&_m=feed&active=true"));
+    const response = await handler.handleSSE(feedRequest({ active: true }));
     expect(response.status).toBe(200);
 
     const text = await collectSSEText(response);
@@ -92,15 +98,15 @@ describe("SSE variable validation", () => {
     const sources = { api: { options: {}, feed } };
     const handler = setupHandler(sources);
 
-    const response = await handler.handleSSE(sseRequest("_s=api&_m=feed&foo=bar"));
+    const response = await handler.handleSSE(feedRequest({ foo: "bar" }));
     expect(response.status).toBe(200);
 
     const text = await collectSSEText(response);
     expect(text).toContain('"foo":"bar"');
   });
 
-  it("returns 400 for invalid coercion", async () => {
-    const schema = z.object({ count: z.coerce.number().min(1) });
+  it("returns 400 for a value the schema rejects", async () => {
+    const schema = z.object({ count: z.number().min(1) });
     const feed = stream.variables(schema).response<unknown>().implement(async function* (ctx) {
       yield { data: ctx.variables };
     });
@@ -108,7 +114,7 @@ describe("SSE variable validation", () => {
     const sources = { api: { options: {}, feed } };
     const handler = setupHandler(sources);
 
-    const response = await handler.handleSSE(sseRequest("_s=api&_m=feed&count=abc"));
+    const response = await handler.handleSSE(feedRequest({ count: "abc" }));
     expect(response.status).toBe(400);
   });
 });

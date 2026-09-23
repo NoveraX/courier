@@ -16,6 +16,7 @@
  * process, already decides the destination, and keeps the full option set.
  */
 
+import { reviveWithoutPrototypeKeys } from "../utils/safe-json";
 import { LIMITS } from "./limits";
 
 /** Options a proxy client may set. Everything else is refused. */
@@ -103,10 +104,4 @@ export function parseWireOptionsJson(raw: string | null): WireOptionsResult {
     return { ok: false, reason: "options is not valid JSON" };
   }
   return parseWireOptions(decoded);
-}
-
-/** Drop the keys that let a crafted document reach `Object.prototype`. */
-function reviveWithoutPrototypeKeys(key: string, value: unknown): unknown {
-  if (key === "__proto__" || key === "constructor" || key === "prototype") return undefined;
-  return value;
 }

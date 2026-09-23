@@ -85,24 +85,47 @@ describe("createGetHandler", () => {
   });
 
   describe("variable forwarding", () => {
-    it("collects non-meta params as variables", async () => {
+    it("reads the variables from _v, keeping their types", async () => {
       const execute = createMockExecute();
       const handler = createGetHandler(execute, createHooks());
+      const vars = encodeURIComponent(JSON.stringify({ page: 2, active: true, ids: [1, 2] }));
 
-      await handler(getRequest("_s=api&_m=list&page=2&limit=10"));
+      await handler(getRequest(`_s=api&_m=list&_v=${vars}`));
 
       const payload = execute.mock.calls[0]![1];
-      expect(payload.variables).toEqual({ page: "2", limit: "10" });
+      expect(payload.variables).toEqual({ page: 2, active: true, ids: [1, 2] });
     });
 
-    it("excludes all meta keys from variables", async () => {
+    it("does not read loose query parameters as variables", async () => {
       const execute = createMockExecute();
       const handler = createGetHandler(execute, createHooks());
 
       await handler(getRequest("_s=api&_g=users&_m=list&_o={}&_transport=sse&name=test"));
 
       const payload = execute.mock.calls[0]![1];
-      expect(payload.variables).toEqual({ name: "test" });
+      expect(payload.variables).toBeUndefined();
+    });
+
+    it("refuses _v that is not a JSON object", async () => {
+      const execute = createMockExecute();
+      const handler = createGetHandler(execute, createHooks());
+
+      const response = await handler(getRequest("_s=api&_m=list&_v=%5B1%5D"));
+
+      expect(response.status).toBe(400);
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+    it("drops a key that would reach Object.prototype", async () => {
+      const execute = createMockExecute();
+      const handler = createGetHandler(execute, createHooks());
+      const vars = encodeURIComponent('{"__proto__":{"admin":true},"page":1}');
+
+      await handler(getRequest(`_s=api&_m=list&_v=${vars}`));
+
+      const payload = execute.mock.calls[0]![1];
+      expect(payload.variables).toEqual({ page: 1 });
+      expect(({} as Record<string, unknown>).admin).toBeUndefined();
     });
 
     it("sets variables to undefined when only meta keys present", async () => {
@@ -213,14 +236,14 @@ describe("createGetHandler", () => {
       const hooks = createHooks();
       const handler = createGetHandler(createMockExecute(), hooks);
 
-      await handler(getRequest("_s=api&_m=list&page=1"));
+      await handler(getRequest(`_s=api&_m=list&_v=${encodeURIComponent('{"page":1}')}`));
 
       expect(hooks.onProxyParse).toHaveBeenCalledOnce();
       expect(hooks.onProxyParse).toHaveBeenCalledWith(
         expect.objectContaining({
           source: "api",
           method: "list",
-          variables: { page: "1" },
+          variables: { page: 1 },
         }),
       );
     });

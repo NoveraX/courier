@@ -1,8 +1,9 @@
 import type { StudioHooks } from "../studio/hooks";
 import type { RequestPayloadInput } from "../utils/helpers";
+import { parseWireVariables, WIRE_VARIABLES_KEY } from "../utils/wire-variables";
 import type { HandlerConfig } from "./handler-config";
 import { isOriginAllowed } from "./origin-policy";
-import { errorResponse, META_KEYS } from "./parse";
+import { errorResponse } from "./parse";
 import { parseWireOptionsJson } from "./wire-options";
 
 type ExecuteFn = (
@@ -36,14 +37,11 @@ export function createGetHandler(execute: ExecuteFn, dt: StudioHooks, config?: H
       return errorResponse(400, "Missing required params: _s, _m");
     }
 
-    const variables: Record<string, string> = {};
-    for (const [key, value] of url.searchParams.entries()) {
-      if (!META_KEYS.has(key)) variables[key] = value;
-    }
+    const decoded = parseWireVariables(url.searchParams.get(WIRE_VARIABLES_KEY));
+    if (!decoded.ok) return errorResponse(400, decoded.reason);
+    const parsedVars = decoded.variables;
 
     dt.onProxyReceive?.({ proxyMethod: "GET", source, group, method, timestamp: Date.now() });
-
-    const parsedVars = Object.keys(variables).length > 0 ? variables : undefined;
 
     const accepted = parseWireOptionsJson(url.searchParams.get("_o"));
     if (!accepted.ok) return errorResponse(400, accepted.reason);

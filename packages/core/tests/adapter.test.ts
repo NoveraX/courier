@@ -151,18 +151,38 @@ describe("createHandler", () => {
       );
     });
 
-    it("collects non-meta params as variables", async () => {
+    it("reads the variables from _v, keeping their types", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
       const { handleGet } = setupHandler({ api: {} });
-      const req = new Request(
-        "http://localhost/api/request?_s=api&_m=list&page=2&limit=10",
-      );
+      const vars = encodeURIComponent(JSON.stringify({ page: 2, tags: ["a", "b"] }));
+      const req = new Request(`http://localhost/api/request?_s=api&_m=list&_v=${vars}`);
 
       await handleGet(req);
 
       const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
-      expect(payload.variables).toEqual({ page: "2", limit: "10" });
+      expect(payload.variables).toEqual({ page: 2, tags: ["a", "b"] });
+    });
+
+    it("ignores loose query parameters", async () => {
+      mockExecuteRequest.mockResolvedValue(new Response("{}"));
+
+      const { handleGet } = setupHandler({ api: {} });
+      await handleGet(new Request("http://localhost/api/request?_s=api&_m=list&page=2"));
+
+      const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
+      expect(payload.variables).toBeUndefined();
+    });
+
+    it("refuses _v that is not a JSON object", async () => {
+      const { handleGet } = setupHandler({ api: {} });
+
+      const notJson = await handleGet(new Request("http://localhost/api/request?_s=api&_m=list&_v=%7Bx"));
+      const list = await handleGet(new Request("http://localhost/api/request?_s=api&_m=list&_v=%5B1%5D"));
+
+      expect(notJson.status).toBe(400);
+      expect(list.status).toBe(400);
+      expect(mockExecuteRequest).not.toHaveBeenCalled();
     });
 
     it("parses _o as JSON options", async () => {

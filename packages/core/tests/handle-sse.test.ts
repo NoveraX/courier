@@ -178,10 +178,14 @@ describe("handleSSE", () => {
 
     const { handleSSE } = setupHandler(sources);
     await collectSSEText(
-      await handleSSE(sseRequest("_s=testSource&_m=feed&userId=123&channel=news")),
+      await handleSSE(
+        sseRequest(
+          `_s=testSource&_m=feed&_v=${encodeURIComponent('{"userId":123,"channel":"news"}')}`,
+        ),
+      ),
     );
 
-    expect(receivedVars).toEqual({ userId: "123", channel: "news" });
+    expect(receivedVars).toEqual({ userId: 123, channel: "news" });
   });
 
   it("sends error event on generator throw", async () => {
@@ -417,7 +421,7 @@ describe("handleSSE — studio hooks", () => {
 });
 
 describe("handleSSE — variable extraction", () => {
-  it("excludes meta keys (_s, _g, _m, _o, _transport) from variables", async () => {
+  it("does not read loose query parameters as variables", async () => {
     let receivedVars: unknown;
 
     const sources = createSSESource(async function* (ctx) {
@@ -432,7 +436,18 @@ describe("handleSSE — variable extraction", () => {
       ),
     );
 
-    expect(receivedVars).toEqual({ userId: "42" });
+    expect(receivedVars).toEqual({});
+  });
+
+  it("refuses _v that is not a JSON object", async () => {
+    const sources = createSSESource(async function* () {
+      yield { data: "ok" };
+    });
+
+    const { handleSSE } = setupHandler(sources);
+    const response = await handleSSE(sseRequest("_s=testSource&_m=feed&_v=%5B1%5D"));
+
+    expect(response.status).toBe(400);
   });
 
   it("returns empty object when only meta keys present", async () => {

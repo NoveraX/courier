@@ -31,7 +31,7 @@ export interface ProxySSEDefaults {
  * Create a proxy-mode SSE factory that connects to the server's SSE proxy
  * endpoint with source/group/method as query parameters.
  *
- * URL pattern: `{resolved sse path}?_s={source}&_g={group}&_m={method}&{variables}`
+ * URL pattern: `{resolved sse path}?_s={source}&_g={group}&_m={method}&_v={JSON variables}`
  *
  * Studio instrumentation lives on the server-side `createSSEHandler` —
  * it owns the canonical connectionId, upstream headers and full lifecycle.

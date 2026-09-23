@@ -1,3 +1,5 @@
+import { appendQuery } from "../utils/query-string";
+import { encodeWireVariables, WIRE_VARIABLES_KEY } from "../utils/wire-variables";
 import { subscribeSSE } from "./sse/sse-client";
 import type { SSESubscription } from "./types";
 
@@ -12,10 +14,10 @@ export function buildDirectSSEUrl(
   const groupPath = prefix ? `/${prefix.replace(/^\//, "")}` : "";
   const path = `${base}${groupPath}/${method}`;
 
-  return variables ? appendQueryParams(path, variables) : path;
+  return variables ? appendQuery(path, variables) : path;
 }
 
-/** Build a proxy SSE URL: sseUrl?_s=source&_g=group&_m=method&variables */
+/** Build a proxy SSE URL: `sseUrl?_s=source&_g=group&_m=method&_v={…}` */
 export function buildProxySSEUrl(
   sseUrl: string,
   source: string,
@@ -23,11 +25,12 @@ export function buildProxySSEUrl(
   method: string,
   variables?: Record<string, unknown>,
 ): string {
-  const params: Record<string, unknown> = { _s: source, _m: method };
-  if (group) params._g = group;
+  const params = new URLSearchParams({ _s: source, _m: method });
+  if (group) params.set("_g", group);
+  const encoded = encodeWireVariables(variables);
+  if (encoded) params.set(WIRE_VARIABLES_KEY, encoded);
 
-  const base = appendQueryParams(sseUrl, params);
-  return variables ? appendQueryParams(base, variables) : base;
+  return `${sseUrl}${sseUrl.includes("?") ? "&" : "?"}${params.toString()}`;
 }
 
 /** Execute SSE subscription with merged headers */
@@ -42,13 +45,4 @@ export function executeSSE<TData = unknown>(
     signal,
     ...(onResponse && { onResponse }),
   });
-}
-
-function appendQueryParams(url: string, params: Record<string, unknown>): string {
-  const separator = url.includes("?") ? "&" : "?";
-  const entries = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null)
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
-
-  return entries.length > 0 ? `${url}${separator}${entries.join("&")}` : url;
 }

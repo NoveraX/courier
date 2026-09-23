@@ -77,13 +77,13 @@ describe("createProxySSEFactory", () => {
     expect(url).toBe("https://app.example.com/api/sse?_s=api&_m=healthStream");
   });
 
-  it("appends variables to the URL after meta params", () => {
+  it("appends the variables as one JSON parameter after the meta params", () => {
     const factory = createProxySSEFactory("api");
-    factory("users", "activity", { userId: "42", channel: "news" }, {});
+    factory("users", "activity", { userId: 42, channel: "news" }, {});
 
     const url = mockedSubscribeSSE.mock.calls[0]![0];
     expect(url).toBe(
-      "https://app.example.com/api/sse?_s=api&_m=activity&_g=users&userId=42&channel=news",
+      `https://app.example.com/api/sse?_s=api&_m=activity&_g=users&_v=${encodeURIComponent('{"userId":42,"channel":"news"}')}`,
     );
   });
 
@@ -134,7 +134,8 @@ describe("createProxySSEFactory", () => {
     factory("search", "stream", { q: "hello world" }, {});
 
     const url = mockedSubscribeSSE.mock.calls[0]![0];
-    expect(url).toBe("https://app.example.com/api/sse?_s=api&_m=stream&_g=search&q=hello%20world");
+    const params = new URL(url).searchParams;
+    expect(JSON.parse(params.get("_v") ?? "")).toEqual({ q: "hello world" });
   });
 
   it("works with no defaults and no per-call headers (empty headers object)", () => {

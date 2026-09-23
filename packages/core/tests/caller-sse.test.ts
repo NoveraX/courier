@@ -51,6 +51,11 @@ describe("buildDirectSSEUrl", () => {
     });
     expect(url).toBe("https://api.example.com/search/stream?q=hello%20world");
   });
+
+  it("repeats the key for each item of a list, as OpenAPI does by default", () => {
+    const url = buildDirectSSEUrl("https://api.example.com", "", "stream", { tag: ["a", "b"] });
+    expect(url).toBe("https://api.example.com/stream?tag=a&tag=b");
+  });
 });
 
 describe("buildProxySSEUrl", () => {
@@ -64,11 +69,16 @@ describe("buildProxySSEUrl", () => {
     expect(url).toBe("/api/sse?_s=myApi&_m=healthStream");
   });
 
-  it("appends variables after meta params", () => {
+  it("sends the variables as one JSON parameter, keeping their types", () => {
     const url = buildProxySSEUrl("/api/sse", "api", "users", "activity", {
-      userId: "1",
+      userId: 1,
+      kinds: ["login", "logout"],
     });
-    expect(url).toBe("/api/sse?_s=api&_m=activity&_g=users&userId=1");
+    const params = new URL(url, "http://localhost").searchParams;
+
+    expect(params.get("_s")).toBe("api");
+    expect(JSON.parse(params.get("_v") ?? "")).toEqual({ userId: 1, kinds: ["login", "logout"] });
+    expect(params.has("userId")).toBe(false);
   });
 
   it("uses custom SSE URL", () => {

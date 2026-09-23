@@ -5,6 +5,21 @@ import type { ResponseType } from "./types";
 const BODILESS = new Set([204, 205, 304]);
 
 /**
+ * Does the HTTP specification forbid this status a body?
+ *
+ * Reading and writing have to agree on this. The proxy's writer knew only
+ * 204, so a 205 was turned into a 500 and a 304 — which any upstream
+ * honouring `If-None-Match` sends — threw out of the handler entirely,
+ * because `Response.json` refuses to attach a body to either.
+ *
+ * @param status - HTTP status code
+ * @returns `true` for 204, 205 and 304
+ */
+export function isBodilessStatus(status: number): boolean {
+  return BODILESS.has(status);
+}
+
+/**
  * Read a response body, treating "there is no body" as a value rather than
  * as a parse failure.
  *

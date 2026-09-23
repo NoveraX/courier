@@ -1,4 +1,5 @@
 import { HTTPError } from "../errors";
+import { isBodilessStatus } from "../http-client/response";
 import type { Context } from "../http-client/types";
 import { filterResponseHeaders } from "./merge-headers";
 
@@ -41,8 +42,9 @@ export const buildResponse = (
   const data = response.rawData ? { ...baseResult, data: response.data } : response.data;
 
   if (context?.res instanceof Response) {
-    const jsonResponse =
-      baseResult.status === 204 ? new Response(null, baseResult) : Response.json(data, baseResult);
+    const jsonResponse = isBodilessStatus(baseResult.status)
+      ? new Response(null, baseResult)
+      : Response.json(data, baseResult);
 
     if (response.headers?.has("set-cookie")) {
       for (const cookie of response.headers.getSetCookie()) {

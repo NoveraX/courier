@@ -1,4 +1,5 @@
 import { HTTPError } from "../errors";
+import { getResponseData } from "../http-client/response";
 import { studioHooks } from "../studio";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
@@ -66,7 +67,11 @@ export async function sendFetch(
       return response;
     }
 
-    const data = await response.json();
+    /* The proxy answers a bodiless upstream status with an empty body, which
+       `response.json()` reads as a syntax error — a raw SyntaxError that no
+       `isHTTPError` check recognises, for the most common shape a write
+       returns. Direct mode reads the same answer as `null`. */
+    const data = await getResponseData(response, "json");
     emitClientTiming(response, t0, tHeaders);
     await ctx.onSuccess?.(data);
     return data;

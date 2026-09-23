@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import type { WSChannel } from "@noverax/courier/realtime";
+import { ForbiddenError, type WSChannel } from "@noverax/courier/realtime";
 import { createMockWSChannel } from "@noverax/courier/testing";
 
 import { useChannel } from "../src/hooks/use-channel";
@@ -162,6 +162,62 @@ describe("useChannel", () => {
     });
 
     expect(onData).toHaveBeenCalledWith({ msg: "welcome" });
+  });
+
+  it("reports an error the server sends, and the channel goes on", async () => {
+    const onError = vi.fn();
+    const channelFn: ChannelFn = () =>
+      createMockWSChannel<unknown, unknown>({
+        onMessage(ctx, data) {
+          if (data === "forbidden") throw new ForbiddenError("Not allowed in this room");
+          ctx.send({ echo: data });
+        },
+      });
+
+    const { result } = renderHook(
+      () => useChannel<unknown, unknown>(channelFn, "chat", "room", { onError }),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.status).toBe("connected"));
+
+    act(() => result.current.send("forbidden"));
+    await waitFor(() => expect(result.current.error).toBeInstanceOf(ForbiddenError));
+    act(() => result.current.send("fine"));
+
+    await waitFor(() => expect(result.current.lastMessage).toEqual({ echo: "fine" }));
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: 4403 }));
+    expect(result.current.status).toBe("connected");
+  });
+
+  it("reports why the join was rejected, and shows the channel disconnected", async () => {
+    const channelFn: ChannelFn = () =>
+      createMockWSChannel<unknown, unknown>({
+        onJoin() {
+          throw new ForbiddenError("Not a member of this room");
+        },
+        onMessage() {},
+      });
+
+    const { result } = renderHook(() => useChannel(channelFn, "chat", "room"), { wrapper });
+
+    await waitFor(() => expect(result.current.status).toBe("disconnected"));
+    expect(result.current.error?.message).toBe("Not a member of this room");
+  });
+
+  it("keeps a message shaped like an error as data", async () => {
+    const channelFn: ChannelFn = () =>
+      createMockWSChannel<unknown, unknown>({
+        onJoin(ctx) {
+          ctx.send({ type: "error", message: "disk full on build 42" });
+        },
+        onMessage() {},
+      });
+
+    const { result } = renderHook(() => useChannel(channelFn, "builds", "log"), { wrapper });
+
+    await waitFor(() => expect(result.current.lastMessage).toBeDefined());
+    expect(result.current.lastMessage).toEqual({ type: "error", message: "disk full on build 42" });
+    expect(result.current.error).toBeUndefined();
   });
 
   it("closes channel on unmount", async () => {

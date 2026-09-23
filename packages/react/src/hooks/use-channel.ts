@@ -1,6 +1,6 @@
 "use client";
 
-import type { ConnectionStatus, WSChannel } from "@noverax/courier/realtime";
+import type { ConnectionStatus, RealtimeError, WSChannel } from "@noverax/courier/realtime";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ChannelResult } from "../types";
@@ -16,8 +16,12 @@ export interface UseChannelOptions<TReceive> {
   enabled?: boolean;
   /** Called on each incoming message from the server */
   onData?: (message: TReceive) => void;
-  /** Called when a connection error occurs */
-  onError?: (error: Error) => void;
+  /**
+   * Called when the server refuses a message, a handler fails, or the
+   * channel ends with a reason — with the `RealtimeError`, whose `code`
+   * tells them apart (4403 forbidden, 4422 invalid, …)
+   */
+  onError?: (error: RealtimeError) => void;
   /** Called on connection status changes */
   onStatusChange?: (status: ConnectionStatus) => void;
 }
@@ -52,7 +56,7 @@ export function useChannel<TSend, TReceive>(
 
   const [lastMessage, setLastMessage] = useState<TReceive | undefined>(undefined);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
-  const [error, setError] = useState<Error | undefined>(undefined);
+  const [error, setError] = useState<RealtimeError | undefined>(undefined);
 
   // Stable refs for callbacks — avoids re-connecting on handler identity change
   const callbacksRef = useRef({ onData, onError, onStatusChange });
@@ -88,6 +92,7 @@ export function useChannel<TSend, TReceive>(
     let ch: WSChannel<unknown, unknown> | null = null;
     let unsubStatus: (() => void) | undefined;
     let unsubData: (() => void) | undefined;
+    let unsubError: (() => void) | undefined;
 
     queueMicrotask(() => {
       if (cancelled) return;
@@ -101,17 +106,18 @@ export function useChannel<TSend, TReceive>(
       });
 
       unsubData = ch.on("data", (message: unknown) => {
-        if ((message as Record<string, unknown>)?.type === "error") {
-          const err = new Error(
-            String((message as Record<string, unknown>)?.message ?? "Channel error"),
-          );
-          setError(err);
-          callbacksRef.current.onError?.(err);
-          return;
-        }
         const typed = message as TReceive;
         setLastMessage(typed);
         callbacksRef.current.onData?.(typed);
+      });
+
+      /* The channel's own error event: a message the server refused, a
+         handler that failed, or the channel ending with a reason. A payload
+         shaped `{ type: "error" }` used to be taken for one — an app's own
+         data swallowed — while real errors never arrived at all. */
+      unsubError = ch.on("error", (error: RealtimeError) => {
+        setError(error);
+        callbacksRef.current.onError?.(error);
       });
     });
 
@@ -119,6 +125,7 @@ export function useChannel<TSend, TReceive>(
       cancelled = true;
       unsubStatus?.();
       unsubData?.();
+      unsubError?.();
       ch?.close();
       if (channelRef.current === ch) {
         channelRef.current = null;

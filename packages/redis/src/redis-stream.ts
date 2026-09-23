@@ -1,4 +1,5 @@
 import type { StoredEvent, StreamAdapter } from "@noverax/courier/realtime";
+import { createErrorForwarder } from "./error-forwarder";
 import { trackHealth } from "./health";
 import type { RedisStreamConfig } from "./types";
 
@@ -30,6 +31,7 @@ const DEFAULT_HISTORY_LIMIT = 100;
 export function createRedisStream(config: RedisStreamConfig): StreamAdapter {
   const { redis, prefix = "", maxLen = DEFAULT_MAX_LEN } = config;
   const errorHandlers = new Set<(error: Error) => void>();
+  const errors = createErrorForwarder(redis, errorHandlers);
   const health = trackHealth(redis);
   let connected = false;
 
@@ -71,11 +73,13 @@ export function createRedisStream(config: RedisStreamConfig): StreamAdapter {
     /* Verifying beats reporting success against a Redis that is not there. */
     async connect() {
       await redis.ping();
+      errors.start();
       connected = true;
     },
 
     async disconnect() {
       connected = false;
+      errors.stop();
       errorHandlers.clear();
       health.cleanup();
     },
@@ -86,13 +90,9 @@ export function createRedisStream(config: RedisStreamConfig): StreamAdapter {
 
     onError(handler) {
       errorHandlers.add(handler);
-
-      const onRedisError = (err: Error): void => handler(err);
-      redis.on("error", onRedisError);
-
+      errors.start();
       return () => {
         errorHandlers.delete(handler);
-        redis.off("error", onRedisError);
       };
     },
 

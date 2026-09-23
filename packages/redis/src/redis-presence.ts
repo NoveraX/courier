@@ -1,4 +1,5 @@
 import type { PresenceAdapter, PresenceDiff } from "@noverax/courier/realtime";
+import { createErrorForwarder } from "./error-forwarder";
 import { trackHealth } from "./health";
 import { createDiffBroadcast } from "./redis-presence-broadcast";
 import {
@@ -38,6 +39,7 @@ const DEFAULT_PREFIX = "presence:";
 export function createRedisPresence(config: RedisPresenceConfig): PresenceAdapter {
   const { redis, subscriber, prefix = DEFAULT_PREFIX } = config;
   const errorHandlers = new Set<(error: Error) => void>();
+  const errors = createErrorForwarder(redis, errorHandlers);
   const diffHandlers = new Map<string, Set<DiffHandler>>();
   const health = trackHealth(redis);
   const origin = config.origin ?? crypto.randomUUID();
@@ -80,12 +82,14 @@ export function createRedisPresence(config: RedisPresenceConfig): PresenceAdapte
     async connect() {
       await redis.ping();
       if (subscriber) await subscriber.ping();
+      errors.start();
       connected = true;
     },
 
     async disconnect() {
       connected = false;
       await broadcast.close();
+      errors.stop();
       errorHandlers.clear();
       diffHandlers.clear();
       health.cleanup();
@@ -95,11 +99,9 @@ export function createRedisPresence(config: RedisPresenceConfig): PresenceAdapte
 
     onError(handler) {
       errorHandlers.add(handler);
-      const onRedisError = (err: Error): void => handler(err);
-      redis.on("error", onRedisError);
+      errors.start();
       return () => {
         errorHandlers.delete(handler);
-        redis.off("error", onRedisError);
       };
     },
 

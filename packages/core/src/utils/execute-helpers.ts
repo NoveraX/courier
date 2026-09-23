@@ -1,8 +1,44 @@
 import { HttpClient } from "../http-client/index";
 import type { AnyEndpoints, BaseOptions, Context } from "../http-client/types";
 
-export const createHttpClient = (baseOption?: BaseOptions, context?: Context): HttpClient =>
-  new HttpClient(baseOption, context);
+const pendingBySource = new WeakMap<object, Record<string, AbortController>>();
+
+/**
+ * The HTTP client one call runs on.
+ *
+ * It is built per call, because a call's context decides its headers and
+ * path options — but a fresh client meant a fresh, empty in-flight table,
+ * so `deduplicate` never cancelled anything. The table now lives as long as
+ * the source.
+ *
+ * Deduplication only runs in a browser, for a call that did not come off the
+ * wire. On a server, requests from different users reach the same endpoint
+ * under the same key, and one user's request would cancel another's.
+ *
+ * @param dataSource - The source the call belongs to
+ * @param context - The call's context, when it has one
+ * @returns A client for this call
+ */
+export function clientForCall(
+  dataSource: { options?: BaseOptions },
+  context?: Context,
+): HttpClient {
+  const inBrowser = typeof (globalThis as { document?: unknown }).document !== "undefined";
+  const dedupes = inBrowser && context?.proxyMethod === undefined;
+  const options = dedupes ? dataSource.options : { ...dataSource.options, deduplicate: false };
+  const client = new HttpClient(options, context);
+  if (dedupes) client.pendingRequests = pendingRequestsOf(dataSource);
+  return client;
+}
+
+function pendingRequestsOf(dataSource: object): Record<string, AbortController> {
+  let pending = pendingBySource.get(dataSource);
+  if (!pending) {
+    pending = {};
+    pendingBySource.set(dataSource, pending);
+  }
+  return pending;
+}
 
 /**
  * Recognise a value stored in a group or source as an endpoint.

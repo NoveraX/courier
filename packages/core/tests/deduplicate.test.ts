@@ -49,16 +49,26 @@ describe("getDedupeKey", () => {
 });
 
 describe("cleanupDeduplication", () => {
-  it("removes pending request by key", () => {
+  it("removes the request's own entry", () => {
+    const own = new AbortController();
     const client = {
-      pendingRequests: {
-        "GET:https://api.com/users": new AbortController(),
-      },
+      pendingRequests: { "GET:https://api.com/users": own },
     } as unknown as HttpClient;
 
-    cleanupDeduplication(client, "GET:https://api.com/users");
+    cleanupDeduplication(client, "GET:https://api.com/users", own);
 
     expect(client.pendingRequests["GET:https://api.com/users"]).toBeUndefined();
+  });
+
+  it("leaves the entry of a newer request that took the key", () => {
+    const newer = new AbortController();
+    const client = {
+      pendingRequests: { "GET:https://api.com/users": newer },
+    } as unknown as HttpClient;
+
+    cleanupDeduplication(client, "GET:https://api.com/users", new AbortController());
+
+    expect(client.pendingRequests["GET:https://api.com/users"]).toBe(newer);
   });
 
   it("does nothing if no pending request exists", () => {
@@ -66,7 +76,7 @@ describe("cleanupDeduplication", () => {
       pendingRequests: {},
     } as unknown as HttpClient;
 
-    cleanupDeduplication(client, "GET:https://api.com/users");
+    cleanupDeduplication(client, "GET:https://api.com/users", new AbortController());
 
     expect(Object.keys(client.pendingRequests)).toHaveLength(0);
   });

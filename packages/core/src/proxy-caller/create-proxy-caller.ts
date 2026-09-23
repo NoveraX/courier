@@ -57,7 +57,11 @@ export function createProxyCaller(source: string, defaults: ProxyCallerDefaults 
   // defaults inside `resolveProxyPath` at request time.
   const sourceProxyPath = defaults.boundary?.proxyPath ?? readSourceProxyPath(apiSource);
   const mergedProxyPath = mergeProxyPath(defaults.proxyPath, sourceProxyPath);
-  const effectiveDefaults: ProxyCallerDefaults = { ...defaults, proxyPath: mergedProxyPath };
+  const effectiveDefaults: ProxyCallerDefaults = {
+    ...defaults,
+    proxyPath: mergedProxyPath,
+    deduplicate: defaults.deduplicate ?? readSourceOptions(apiSource)?.deduplicate,
+  };
 
   const http = createProxyHTTPExecutor(source, effectiveDefaults);
 
@@ -94,7 +98,13 @@ export function createProxyCaller(source: string, defaults: ProxyCallerDefaults 
 function readSourceProxyPath(
   apiSource: Record<string, unknown> | undefined,
 ): ProxyPath | undefined {
-  if (!apiSource) return undefined;
-  const options = (apiSource as { options?: { proxyPath?: ProxyPath } }).options;
-  return options?.proxyPath;
+  return readSourceOptions(apiSource)?.proxyPath;
+}
+
+/** The options a `defineApi` result carries, read without its generic chain. */
+function readSourceOptions(
+  apiSource: Record<string, unknown> | undefined,
+): { proxyPath?: ProxyPath; deduplicate?: boolean } | undefined {
+  return (apiSource as { options?: { proxyPath?: ProxyPath; deduplicate?: boolean } } | undefined)
+    ?.options;
 }

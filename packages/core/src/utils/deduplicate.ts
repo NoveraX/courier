@@ -44,8 +44,19 @@ export function deduplicateAndAbortPrevious(host: DedupeHost, dedupeKey: string)
   return controller;
 }
 
-export function cleanupDeduplication(host: DedupeHost, dedupeKey: string) {
-  if (host.pendingRequests[dedupeKey]) {
+/**
+ * Forget a finished request.
+ *
+ * Only its own entry is removed. By the time an aborted request settles, a
+ * newer one holds the key; deleting by key alone forgot the newer request,
+ * so a third call could no longer cancel it.
+ */
+export function cleanupDeduplication(
+  host: DedupeHost,
+  dedupeKey: string,
+  controller: AbortController,
+) {
+  if (host.pendingRequests[dedupeKey] === controller) {
     delete host.pendingRequests[dedupeKey];
   }
 }

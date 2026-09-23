@@ -5,7 +5,7 @@ import type { Context } from "../http-client/types";
 import { composeMiddleware } from "../middleware/index";
 import { generateRequestId, studioHooks } from "../studio";
 import { handleExecuteError } from "./execute-error";
-import { createHttpClient } from "./execute-helpers";
+import { clientForCall } from "./execute-helpers";
 import { executeInner } from "./execute-inner";
 import { resolveMiddlewareChain, withCallerSignal, withEndpointTimeout } from "./execute-options";
 import { applyCacheHeaders, buildMiddlewareContext, resolveEndpoint } from "./execute-resolve";
@@ -116,7 +116,7 @@ export async function executeRequest(
     );
   }
 
-  const instance = createHttpClient(dataSource.options, context);
+  const instance = clientForCall(dataSource, context);
   if (hasStudio) attachFetchHook(instance, dCtx);
 
   const {

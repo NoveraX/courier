@@ -3,6 +3,7 @@ import type { CallerFn } from "../types";
 import { isFormData, parseEndpointKey } from "../utils/helpers";
 import { handleGetProxy } from "./get-proxy";
 import { buildPostPayload } from "./post-payload";
+import { createProxyDedupe } from "./proxy-dedupe";
 import { resolveProxyPath } from "./resolve-path";
 import { sendFetch } from "./send-fetch";
 import type { ProxyCallerDefaults, UntypedCallerFn } from "./types";
@@ -36,9 +37,20 @@ export function createProxyCallerFn<
   } = defaults;
 
   const fetchCtx = { onSuccess: globalOnSuccess, onError: globalOnError };
+  const dedupe = defaults.deduplicate ? createProxyDedupe() : undefined;
 
   const selectSource = (source: string, options?: CallOptions<boolean>) => {
-    async function execute(...arguments_: [string] | [string, FormData | Record<string, unknown>]) {
+    type Arguments = [string] | [string, FormData | Record<string, unknown>];
+
+    function execute(...arguments_: Arguments): Promise<unknown> {
+      const callSignal = options?.signal;
+      if (!dedupe) return send(arguments_, callSignal);
+      return dedupe.run(`${source}:${arguments_[0]}`, callSignal, (signal) =>
+        send(arguments_, signal),
+      );
+    }
+
+    async function send(arguments_: Arguments, signal: AbortSignal | null | undefined) {
       const [endpoint, variables] = arguments_;
       const { group, method } = parseEndpointKey(endpoint);
       // Lazy resolution: in SSR contexts the caller may be constructed in
@@ -50,7 +62,7 @@ export function createProxyCallerFn<
         cache,
         onDownloadProgress,
         onUploadProgress,
-        signal,
+        signal: _replacedBySendSignal,
         stream,
         method: proxyMethod,
         ...extraOptions

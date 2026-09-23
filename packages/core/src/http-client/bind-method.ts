@@ -78,14 +78,21 @@ export function bindMethod(
       deps,
     );
 
-    if (deps.deduplicate) {
-      applyDeduplication(deps, url, method, options);
-    }
     const dedupeKey = deps.deduplicate ? getDedupeKey(url, method) : undefined;
+    const dedupeController = dedupeKey ? applyDeduplication(deps, dedupeKey, options) : undefined;
+    const forget = (): void => {
+      if (dedupeKey && dedupeController) {
+        cleanupDeduplication(
+          { pendingRequests: deps.pendingRequests },
+          dedupeKey,
+          dedupeController,
+        );
+      }
+    };
 
     try {
       const response = await deps.fetchRequest(method, url, options);
-      if (dedupeKey) cleanupDeduplication({ pendingRequests: deps.pendingRequests }, dedupeKey);
+      forget();
 
       if (!response.ok) {
         const errorResponse = await getResponse(
@@ -103,7 +110,7 @@ export function bindMethod(
 
       return result as HttpResponse<TResponse>;
     } catch (error) {
-      if (dedupeKey) cleanupDeduplication({ pendingRequests: deps.pendingRequests }, dedupeKey);
+      forget();
       if (error instanceof HTTPError) throw error;
 
       if (error instanceof Error) {
@@ -123,11 +130,9 @@ export function bindMethod(
 
 function applyDeduplication(
   deps: BindMethodDeps,
-  url: string,
-  method: HttpMethod,
+  dedupeKey: string,
   options: Partial<FetchOptions>,
-): void {
-  const dedupeKey = getDedupeKey(url, method);
+): AbortController {
   const controller = deduplicateAndAbortPrevious(
     { pendingRequests: deps.pendingRequests },
     dedupeKey,
@@ -135,4 +140,5 @@ function applyDeduplication(
   options.signal = options.signal
     ? AbortSignal.any([controller.signal, options.signal])
     : controller.signal;
+  return controller;
 }

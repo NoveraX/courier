@@ -27,6 +27,12 @@ export type ProxyCallerDefaults = {
    */
   boundary?: ProxyBoundary;
   timeout?: number;
+  /**
+   * Cancel a call still in flight when the same endpoint is called again; the
+   * cancelled call rejects with an `HTTPError` of status 499. Defaults to the
+   * source's own `deduplicate` when `source` is given.
+   */
+  deduplicate?: boolean;
   credentials?: RequestCredentials;
   headers?: Record<string, string>;
   onError?: (error: HTTPError) => void | Promise<void>;

@@ -21,10 +21,13 @@ export const buildResponse = (
       /* The upstream's own headers went straight to the browser here, so a
          streamed answer disclosed whatever the upstream attached to it. The
          body passes through unchanged, so its content type travels with it. */
-      return new Response(response.data, {
-        status: response.status,
-        headers: filterResponseHeaders(response.headers, { streamed: true }),
-      });
+      return withUpstreamCookies(
+        new Response(response.data, {
+          status: response.status,
+          headers: filterResponseHeaders(response.headers, { streamed: true }),
+        }),
+        response.headers,
+      );
     }
 
     if (response.throw) {
@@ -42,17 +45,15 @@ export const buildResponse = (
   const data = response.rawData ? { ...baseResult, data: response.data } : response.data;
 
   if (context?.res instanceof Response) {
+    /* JSON has no Headers, so the raw envelope carries them as a plain
+       object; serialized as they were, they arrived as `{}`. */
+    const body = response.rawData
+      ? { ...baseResult, headers: Object.fromEntries(baseResult.headers), data: response.data }
+      : response.data;
     const jsonResponse = isBodilessStatus(baseResult.status)
       ? new Response(null, baseResult)
-      : Response.json(data, baseResult);
-
-    if (response.headers?.has("set-cookie")) {
-      for (const cookie of response.headers.getSetCookie()) {
-        jsonResponse.headers.append("set-cookie", cookie);
-      }
-    }
-
-    return jsonResponse;
+      : Response.json(body, baseResult);
+    return withUpstreamCookies(jsonResponse, response.headers);
   }
 
   if (response.throw) {
@@ -83,3 +84,14 @@ export const buildErrorResponse = (
     rawData: false,
   });
 };
+
+/**
+ * Pass on the cookies the upstream set.
+ *
+ * The header allowlist leaves `set-cookie` out, so each answer appends them
+ * itself; a streamed answer did not, and lost every cookie the upstream set.
+ */
+function withUpstreamCookies(target: Response, upstream: Headers | undefined): Response {
+  for (const cookie of upstream?.getSetCookie() ?? []) target.headers.append("set-cookie", cookie);
+  return target;
+}

@@ -71,7 +71,8 @@ export async function sendFetch(
        `response.json()` reads as a syntax error — a raw SyntaxError that no
        `isHTTPError` check recognises, for the most common shape a write
        returns. Direct mode reads the same answer as `null`. */
-    const data = await getResponseData(response, "json");
+    const body = await getResponseData(response, "json");
+    const data = wantsRaw(ctx.requestPayload) ? withHeaders(body) : body;
     emitClientTiming(response, t0, tHeaders);
     await ctx.onSuccess?.(data);
     return data;
@@ -79,6 +80,23 @@ export async function sendFetch(
     if (error instanceof HTTPError) throw error;
     throw error;
   }
+}
+
+function wantsRaw(requestPayload: { body?: FormData; json?: Partial<RequestPayload> }): boolean {
+  const { options } = parseRequestPayload(requestPayload.body || requestPayload.json);
+  return options?.rawData === true;
+}
+
+/** `.raw` promises `Headers`; over the wire they travel as a plain object. */
+function withHeaders(envelope: unknown): unknown {
+  if (typeof envelope !== "object" || envelope === null || !("headers" in envelope)) {
+    return envelope;
+  }
+  const { headers } = envelope as { headers: unknown };
+  if (headers instanceof Headers || typeof headers !== "object" || headers === null) {
+    return envelope;
+  }
+  return { ...envelope, headers: new Headers(headers as Record<string, string>) };
 }
 
 /** Parse Server-Timing header to extract courier duration (ms) */

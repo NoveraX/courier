@@ -54,6 +54,21 @@ describe("buildResponse — a streamed answer", () => {
     expect(response.headers.get("content-type")).toBe("text/plain");
   });
 
+  it("passes on every cookie the upstream set, as a buffered answer does", () => {
+    const headers = new Headers({ "content-type": "text/plain" });
+    headers.append("set-cookie", "a=1; Path=/");
+    headers.append("set-cookie", "b=2; Path=/");
+    const response = buildResponse(PROXY, {
+      status: 200,
+      headers,
+      rawData: false,
+      stream: true,
+      data: new ReadableStream(),
+    }) as Response;
+
+    expect(response.headers.getSetCookie()).toEqual(["a=1; Path=/", "b=2; Path=/"]);
+  });
+
   it("carries the caching and rate-limit headers a client acts on", () => {
     const response = stream({
       "cache-control": "no-store",

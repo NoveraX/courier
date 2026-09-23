@@ -52,6 +52,13 @@ export function registerAdminRoutes(app: Hono, config: AdminConfig): void {
     });
   });
 
+  // Reset scenario state — registered before `:name`, which would otherwise
+  // take it as a scenario called "reset"
+  app.post("/__admin/scenarios/reset", (c) => {
+    config.setScenarioState("Started");
+    return c.json({ state: "Started" });
+  });
+
   // Activate a scenario
   app.post("/__admin/scenarios/:name", (c) => {
     const name = c.req.param("name");
@@ -62,12 +69,6 @@ export function registerAdminRoutes(app: Hono, config: AdminConfig): void {
     config.applyScenario(scenario);
     config.setActiveScenario(name);
     return c.json({ applied: name });
-  });
-
-  // Reset scenario state
-  app.post("/__admin/scenarios/reset", (c) => {
-    config.setScenarioState("Started");
-    return c.json({ state: "Started" });
   });
 
   // Request history
@@ -83,6 +84,8 @@ export function registerAdminRoutes(app: Hono, config: AdminConfig): void {
     config.store.reset();
     config.reseed?.();
     config.setScenarioState("Started");
+    // The scenario layer is gone with the registry, so none is active.
+    config.setActiveScenario(null);
     return c.json({ reset: true });
   });
 

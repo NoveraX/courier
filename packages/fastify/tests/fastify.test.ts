@@ -218,6 +218,7 @@ describe("courierSSEHandler", () => {
       write: vi.fn(),
       end: vi.fn(),
       once: vi.fn(),
+    off: vi.fn(),
       writableFinished: false,
     };
 
@@ -258,6 +259,7 @@ function createMockFastifyReply() {
     end: vi.fn(),
     /* A ServerResponse is an event emitter; the adapter listens for an early close. */
     once: vi.fn(),
+    off: vi.fn(),
     writableFinished: false,
   };
   const hijack = vi.fn();

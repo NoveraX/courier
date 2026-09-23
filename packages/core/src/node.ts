@@ -1,4 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { createLogger } from "./logger";
+
+const log = createLogger("Node");
 
 export { toWebRequest } from "./node-request";
 export {
@@ -54,10 +57,13 @@ export async function sendWebResponse(webRes: Response, nodeRes: ServerResponse)
 
   const reader = webRes.body.getReader();
   /* A client that leaves mid-stream stops the body too — a streamed upstream
-     response is then no longer downloaded for nobody. */
-  nodeRes.once("close", () => {
-    if (!nodeRes.writableFinished) void reader.cancel();
-  });
+     response is then no longer downloaded for nobody. The listener goes once
+     the body is written: a later close would cancel a reader already let go. */
+  const onClose = () => {
+    if (nodeRes.writableFinished) return;
+    reader.cancel().catch((error: unknown) => log.warn("Could not stop the response body", error));
+  };
+  nodeRes.once("close", onClose);
   try {
     for (;;) {
       const { done, value } = await reader.read();
@@ -65,6 +71,7 @@ export async function sendWebResponse(webRes: Response, nodeRes: ServerResponse)
       nodeRes.write(value);
     }
   } finally {
+    nodeRes.off("close", onClose);
     reader.releaseLock();
     nodeRes.end();
   }

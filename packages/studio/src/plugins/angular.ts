@@ -1,10 +1,23 @@
+/** Options for {@link setupCourierStudio}. */
+export interface AngularStudioOptions {
+  /**
+   * Where Studio listens, when not at the default `http://localhost:6280`.
+   * A browser bundle sees neither courier.config nor `COURIER_STUDIO_URL`, so
+   * a non-default address has to be named here.
+   */
+  studioUrl?: string;
+}
+
+const STUDIO_URL_KEY = Symbol.for("courier.studio.url");
+
 /**
  * Angular initializer for Courier Studio.
- * Call in `main.ts` to connect to Studio in development.
  *
- * Angular abstracts Vite config, so this uses a runtime approach instead
- * of a build plugin. Set `globalThis[Symbol.for("courier.studio.url")]` (or
- * the `COURIER_STUDIO_URL` env var) to override the default `localhost:6280`.
+ * Connects the app to Studio as the `angular-browser` runtime. Angular
+ * abstracts its Vite config, so this runs from `main.ts` instead of a build
+ * plugin. It does nothing in production builds.
+ *
+ * @param options - `studioUrl` names a non-default Studio address.
  *
  * @example
  * ```ts
@@ -16,10 +29,15 @@
  * bootstrapApplication(AppComponent, appConfig)
  * ```
  */
-export function setupCourierStudio(): void {
+export function setupCourierStudio(options: AngularStudioOptions = {}): void {
   if (process.env.NODE_ENV === "production") return;
-
-  import("@noverax/courier-studio-core/runtime").then(({ attachRuntime }) => {
-    attachRuntime("angular-browser");
-  });
+  if (options.studioUrl) {
+    (globalThis as Record<symbol, unknown>)[STUDIO_URL_KEY] = options.studioUrl;
+  }
+  /* A literal specifier, so the app's bundler can follow it. */
+  import("@noverax/courier-studio-core/runtime")
+    .then(({ attachRuntime }) => attachRuntime("angular-browser"))
+    .catch((error: unknown) => {
+      console.warn("[courier-studio] Could not connect this app to Studio", error);
+    });
 }

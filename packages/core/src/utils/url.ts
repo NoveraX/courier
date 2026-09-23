@@ -3,6 +3,7 @@ import type { SearchParamsSerializer } from "../http-client/types";
 import { isFormData } from "./helpers";
 
 const MULTIPLE_SLASHES = /\/+/g;
+const ABSOLUTE_URL = /^https?:\/\//i;
 const PARAM_RE = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
 
 type CompileFn = (params: Record<string, string>) => string;
@@ -44,7 +45,9 @@ export const resolveBasePath = (
     return { path: prefix };
   }
 
-  if (basePath.startsWith("http")) {
+  /* Only a scheme makes a path absolute; `httpbin/…` or `https-proxies` is an
+     ordinary path segment. */
+  if (ABSOLUTE_URL.test(basePath)) {
     const url = new URL(basePath);
     return { path: pathJoin([url.pathname]), baseUrl: url.origin };
   }

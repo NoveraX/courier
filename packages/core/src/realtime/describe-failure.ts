@@ -29,7 +29,7 @@ const INTERNAL_ERROR = 5000;
 export function describeFailure(
   error: unknown,
   fallback: string,
-  fallbackCode = INTERNAL_ERROR,
+  fallbackCode: number = INTERNAL_ERROR,
 ): StreamFailure {
   if (error instanceof RealtimeError) return { code: error.code, message: error.message };
   return { code: fallbackCode, message: fallback };

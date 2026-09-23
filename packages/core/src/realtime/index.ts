@@ -15,6 +15,7 @@ export { buildDirectWSUrl, buildWSTopic, clearWSConnectionPool } from "./caller-
 export type { ConnectionState } from "./connection-state";
 export { createConnectionState } from "./connection-state";
 export { deriveSSE } from "./derive-sse";
+export { describeFailure, type StreamFailure } from "./describe-failure";
 export {
   AuthError,
   ConnectionError,
@@ -32,6 +33,7 @@ export { createMemoryStream } from "./memory-stream";
 export type { PresenceConfig } from "./presence-types";
 export type { RawSSEEvent, SubscribeSSEOptions } from "./sse";
 export { parseSSEStream, subscribeSSE } from "./sse";
+export { SSE_CONTROL_EVENTS } from "./sse/control-events";
 export type {
   BackoffConfig,
   ChannelHandlers,

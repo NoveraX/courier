@@ -59,5 +59,8 @@ export const parseRequestPayload = (
     variables = requestPayload?.variables;
   }
 
-  return { source, group, method, options, variables };
+  /* The multipart body names the group even when there is none, as an empty
+     field; read as a group called "", it made every upload to an ungrouped
+     endpoint unreachable once a boundary was declared. */
+  return { source, group: group === "" ? undefined : group, method, options, variables };
 };

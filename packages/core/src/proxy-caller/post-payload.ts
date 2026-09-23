@@ -16,7 +16,7 @@ export function buildPostPayload(
     }
 
     body.append("_source", source);
-    body.append("_group", group || "");
+    if (group) body.append("_group", group);
     body.append("_method", method);
     body.append("_options", JSON.stringify(serverOptions));
 

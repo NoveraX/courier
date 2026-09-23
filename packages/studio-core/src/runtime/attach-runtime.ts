@@ -53,22 +53,17 @@ import {
   getSources,
   registerSources,
   setAppOrigin,
-  studioHooks,
 } from "@noverax/courier";
-import { STUDIO_DEFAULT_URL } from "@noverax/courier/config";
-import type { AnySource } from "@noverax/courier/define";
 import { EventBus } from "../event-bus";
 import { type BufferedAnnouncement, consumeAnnouncements } from "./announce-hosting";
 import type { RuntimeHandle, RuntimeKind } from "./attach-runtime-types";
 import { connectRuntimeSocket } from "./connect-runtime-socket";
 import { wireHooks, wireHttpHooks } from "./hooks";
 import type { LoadedCourierConfig } from "./load-config";
+import { detectBrowser, detectDefaultRuntimeId, resolveStudioUrl } from "./runtime-environment";
 import { installSourceRegistry } from "./runtime-source-registry";
-import {
-  createSourceNameResolver,
-  findMatchingSourceKey,
-  resolveNewSourceKey,
-} from "./source-resolution";
+import { installSourceDefinedHook, uninstallSourceDefinedHook } from "./source-defined-hook";
+import { createSourceNameResolver } from "./source-resolution";
 
 const log = createLogger("Runtime");
 
@@ -78,72 +73,7 @@ interface InternalHandle extends RuntimeHandle {
 }
 
 const handles = new Map<string, InternalHandle>();
-
-const STUDIO_URL_KEY = Symbol.for("courier.studio.url");
-const DEFAULT_STUDIO_URL = STUDIO_DEFAULT_URL;
-
-const HOOKS_INSTALLED_KEY = Symbol.for("courier.studio.attach-runtime-source-defined-installed");
-
-/** True when running inside a real DOM (browser, jsdom, etc.). */
-function detectBrowser(): boolean {
-  return typeof window !== "undefined" && typeof document !== "undefined";
-}
-
-/**
- * Detect a sensible default `runtimeId` from environment hints when the
- * caller passes no explicit id. Browser context falls back to `"browser"`;
- * server context inspects `process.env` for the canonical framework brands.
- */
-function detectDefaultRuntimeId(isBrowser: boolean): string {
-  if (isBrowser) return "browser";
-  if (typeof process === "undefined" || !process.env) return "server";
-  const env = process.env;
-  if (env.NEXT_RUNTIME === "nodejs") return "next-server";
-  if (env.NEXT_RUNTIME === "edge") return "next-edge";
-  if (env.NEXT_RUNTIME) return `next-${env.NEXT_RUNTIME}`;
-  if (env.__NUXT__) return "nuxt-server";
-  return "server";
-}
-
-/** Resolve the Studio URL from globalThis injection, env, or the canonical default. */
-function resolveStudioUrl(): string {
-  const slot = (globalThis as Record<symbol, unknown>)[STUDIO_URL_KEY];
-  if (typeof slot === "string" && slot.length > 0) return slot;
-  const env = typeof process !== "undefined" ? process.env?.COURIER_STUDIO_URL : undefined;
-  return env ?? DEFAULT_STUDIO_URL;
-}
-
-/**
- * Install the `studioHooks.onSourceDefined` listener exactly once per
- * process. The listener merges new `defineApi()` results into the global
- * sources registry on the fly — needed both in dev (HMR replays) and in
- * production (rare but valid for runtimes that build sources lazily).
- *
- * Pinned to `globalThis` via `Symbol.for` so module duplication across
- * Turbopack / webpack chunks does not split the install state.
- */
-function installSourceDefinedHook(): void {
-  const g = globalThis as Record<symbol, unknown>;
-  if (g[HOOKS_INSTALLED_KEY]) return;
-  g[HOOKS_INSTALLED_KEY] = true;
-
-  studioHooks.onSourceDefined = (newSource: unknown, baseURL: string) => {
-    const current = getSources() ?? {};
-    const src = newSource as AnySource;
-
-    if (baseURL) {
-      const key = findMatchingSourceKey(current, src, baseURL);
-      if (key) {
-        current[key] = src;
-        registerSources({ ...current });
-        return;
-      }
-    }
-
-    current[resolveNewSourceKey(current, src)] = src;
-    registerSources({ ...current });
-  };
-}
+const attaching = new Map<string, Promise<RuntimeHandle>>();
 
 /**
  * Connect this runtime to a Studio dev server.
@@ -164,6 +94,17 @@ export async function attachRuntime(id?: string): Promise<RuntimeHandle> {
   const existing = handles.get(runtimeId);
   if (existing) return existing;
 
+  /* A second call made while the first still loads the config shares its
+     attach. It used to pass the check above too, and open a second socket
+     under the same id that no handle could close. */
+  const inFlight = attaching.get(runtimeId);
+  if (inFlight) return inFlight;
+  const attach = attachFresh(runtimeId, isBrowser).finally(() => attaching.delete(runtimeId));
+  attaching.set(runtimeId, attach);
+  return attach;
+}
+
+async function attachFresh(runtimeId: string, isBrowser: boolean): Promise<RuntimeHandle> {
   // ── Production-relevant: source registry + appOrigin + onSourceDefined ──
 
   installSourceDefinedHook();
@@ -216,6 +157,12 @@ export async function attachRuntime(id?: string): Promise<RuntimeHandle> {
       handles.delete(runtimeId);
     },
     setDisposer(fn) {
+      /* A detach() made before the socket existed found nothing to close and
+         left it connected for good; the socket now closes as it arrives. */
+      if (detached) {
+        fn();
+        return;
+      }
       socketDisposer = fn;
     },
     setAnnouncer(fn) {
@@ -241,7 +188,9 @@ export async function attachRuntime(id?: string): Promise<RuntimeHandle> {
     wireHttpHooks(bus, runtimeId, resolveSourceName);
 
     const studioUrl = resolveStudioUrl();
-    void connectRuntimeSocket({ runtimeId, kind: handle.kind, studioUrl, bus }, pending, handle);
+    connectRuntimeSocket({ runtimeId, kind: handle.kind, studioUrl, bus }, pending, handle).catch(
+      (err: unknown) => log.warn("Studio connection failed to start", err),
+    );
   }
 
   return handle;
@@ -251,9 +200,8 @@ export async function attachRuntime(id?: string): Promise<RuntimeHandle> {
 export function _resetRuntimeHandlesForTests(): void {
   for (const handle of handles.values()) handle.detach();
   handles.clear();
-  const g = globalThis as Record<symbol, unknown>;
-  g[HOOKS_INSTALLED_KEY] = false;
-  studioHooks.onSourceDefined = undefined;
+  attaching.clear();
+  uninstallSourceDefinedHook();
 }
 
 export type { RuntimeHandle, RuntimeKind };

@@ -3,6 +3,7 @@ import type { Context } from "../http-client/types";
 import { createLogger } from "../logger";
 import type { StudioHooks } from "../studio";
 import { ValidationError } from "../validation";
+import { isAbortError } from "./abort";
 import { buildResponse } from "./execute-response";
 
 const log = createLogger("Proxy");
@@ -95,6 +96,14 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
       throw: error,
       rawData: ctx.rawData,
     });
+  }
+
+  const fromWire = ctx.context?.proxyMethod !== undefined;
+  /* A direct caller gets its failure as it happened: a cancellation it asked
+     for, or a network failure with status 0 and its cause, as documented.
+     Both used to arrive as a 502 from a gateway that was never there. */
+  if (!fromWire && (isAbortError(error) || (error instanceof HTTPError && error.status === 0))) {
+    throw error;
   }
 
   /* A 2xx error is an upstream answer the proxy could not use — a body that

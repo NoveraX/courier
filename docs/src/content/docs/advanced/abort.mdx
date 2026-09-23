@@ -111,10 +111,9 @@ export function CancellableRequest() {
     controllerRef.current = new AbortController()
 
     try {
-      const data = await caller.reports.generate(
-        { type: "monthly" },
-        { signal: controllerRef.current.signal },
-      )
+      const data = await caller.reports
+        .with({ signal: controllerRef.current.signal })
+        .generate({ type: "monthly" })
 
       console.log("Report:", data)
     } catch (error) {

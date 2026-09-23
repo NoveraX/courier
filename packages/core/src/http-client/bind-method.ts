@@ -1,4 +1,5 @@
 import { HTTPError } from "../errors";
+import { isAbortError } from "../utils/abort";
 import {
   cleanupDeduplication,
   deduplicateAndAbortPrevious,
@@ -111,16 +112,21 @@ export function bindMethod(
       return result as HttpResponse<TResponse>;
     } catch (error) {
       forget();
-      if (error instanceof HTTPError) throw error;
+      /* A cancellation the caller asked for is rethrown as fetch rejected it
+         — an AbortError unless they gave another reason. */
+      if (error instanceof HTTPError || isAbortError(error)) throw error;
 
       if (error instanceof Error) {
         const cause = error.cause instanceof Error ? error.cause : error;
         const code = "code" in cause ? String(cause.code) : undefined;
-        throw new HTTPError({
-          status: 0,
-          headers: new Headers(),
-          data: { success: false, message: cause.message, ...(code && { code }) },
-        });
+        throw new HTTPError(
+          {
+            status: 0,
+            headers: new Headers(),
+            data: { success: false, message: cause.message, ...(code && { code }) },
+          },
+          { cause: error },
+        );
       }
 
       throw error;

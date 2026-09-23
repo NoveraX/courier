@@ -278,12 +278,16 @@ describe("createProxyCaller", () => {
       }
     });
 
-    it("re-throws non-fetch errors unchanged", async () => {
-      fetchSpy.mockRejectedValue(new TypeError("network error"));
+    it("reports a failure to reach the proxy as an HTTPError with status 0", async () => {
+      const cause = new TypeError("network error");
+      fetchSpy.mockRejectedValue(cause);
 
       const client = createProxyCaller("api") as any;
+      const error = await client.users.fail().catch((e: unknown) => e);
 
-      await expect(client.users.fail()).rejects.toThrow("network error");
+      expect(error).toBeInstanceOf(HTTPError);
+      expect(error.status).toBe(0);
+      expect(error.cause).toBe(cause);
     });
   });
 

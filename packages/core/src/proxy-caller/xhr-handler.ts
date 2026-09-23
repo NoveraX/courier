@@ -4,7 +4,7 @@ import { createLogger } from "../logger";
 import { studioHooks } from "../studio";
 import { isFormData } from "../utils/helpers";
 import type { RequestPayload } from "../utils/request-payload";
-import { buildHttpError, readErrorResponse } from "./send-fetch";
+import { asProxyFailure, readProxyAnswer } from "./proxy-answer";
 import { xhrUpload } from "./xhr-upload";
 
 const log = createLogger("XhrHandler");
@@ -70,24 +70,12 @@ export async function handleXhrUpload(ctx: XhrHandlerCtx): Promise<unknown> {
       timestamp: Date.now(),
     });
 
-    if (!response.ok) {
-      const responseData = await readErrorResponse(response);
-      throw buildHttpError(response.status, response.headers, responseData, ctx.requestPayload);
-    }
-
-    if (ctx.stream) {
-      await ctx.globalOnSuccess?.(response);
-      return response;
-    }
-
-    const data = await response.json();
+    const data = await readProxyAnswer(response, ctx.requestPayload, ctx.stream);
     await ctx.globalOnSuccess?.(data);
     return data;
   } catch (error) {
-    if (error instanceof HTTPError) {
-      await ctx.globalOnError?.(error);
-      throw error;
-    }
-    throw error;
+    const failure = asProxyFailure(error);
+    if (failure instanceof HTTPError) await ctx.globalOnError?.(failure);
+    throw failure;
   }
 }

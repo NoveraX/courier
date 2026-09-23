@@ -11,10 +11,15 @@ export class HTTPError<TData = unknown> extends CourierError<"HTTP_ERROR"> {
   readonly headers: Headers;
   readonly data: TData;
 
-  constructor(response: HttpResponse<TData>) {
+  /**
+   * @param response - The answer, or status 0 with a description when there was none
+   * @param options - `cause`: the error the request failed with, for a network failure
+   */
+  constructor(response: HttpResponse<TData>, options?: { cause?: unknown }) {
     super(response.status > 0 ? `HTTP ${response.status}` : "Network request failed", {
       code: "HTTP_ERROR",
       context: { status: response.status },
+      cause: options?.cause,
     });
     this.status = response.status;
     this.headers = response.headers;

@@ -1,10 +1,24 @@
+import { createLogger } from "../logger";
 import { createConnectionState } from "../realtime/connection-state";
-import type { ConnectionStatus, SSEEvent, SSESubscription } from "../realtime/types";
+import { RealtimeError } from "../realtime/errors";
+import { createEventQueue } from "../realtime/sse/event-queue";
+import type { ConnectionStatus, SSESubscription } from "../realtime/types";
+import { abortableEvents } from "../utils/abortable-events";
 import type { StreamGenerator } from "./types";
+
+const log = createLogger("Testing");
+const INTERNAL_ERROR = 5000;
 
 /**
  * Create an in-memory SSESubscription from an async generator factory.
  * No real HTTP — the generator yields events directly.
+ *
+ * It ends as a real subscription does: iteration ends when the generator
+ * returns, and rejects when it throws — with the generator's own
+ * `RealtimeError`, or with code 5000 for any other error, as a client of a
+ * real server reads it. A throw used to reject with nobody listening, which
+ * failed the test run with an unhandled rejection. Leaving the loop early
+ * closes the subscription, and events are buffered as a real one buffers them.
  *
  * @param generatorFn - Factory that creates the async generator
  * @param delayMs - Optional delay before the stream starts producing events
@@ -24,75 +38,50 @@ export function createMockSSESubscription<TData>(
 ): SSESubscription<TData> {
   const state = createConnectionState();
   const controller = new AbortController();
-  const buffer: SSEEvent<TData>[] = [];
-  let finished = false;
-  let resolve: (() => void) | null = null;
+  const queue = createEventQueue<TData>();
 
-  void runStream();
+  function finish(error: RealtimeError | undefined): void {
+    state.set("disconnected");
+    if (error) queue.fail(error);
+    else queue.finish();
+  }
 
-  async function runStream(): Promise<void> {
+  void run();
+
+  async function run(): Promise<void> {
     // Defer to next microtask so callers can attach listeners first
     await Promise.resolve();
     state.set("connecting");
-
-    if (delayMs) {
-      await sleep(delayMs, controller.signal);
-      if (controller.signal.aborted) return void state.set("disconnected");
-    }
+    if (delayMs) await sleep(delayMs, controller.signal);
+    if (controller.signal.aborted) return finish(undefined);
 
     state.set("connected");
-    const gen = generatorFn();
-
     try {
-      for await (const event of gen) {
-        if (controller.signal.aborted) break;
-        buffer.push(event);
-        resolve?.();
-        resolve = null;
+      for await (const event of abortableEvents(generatorFn(), controller.signal)) {
+        queue.push(event);
       }
-    } finally {
-      // Ensure generator is closed if we broke out early
-      if (controller.signal.aborted) await gen.return(undefined);
-      finished = true;
-      resolve?.();
-      resolve = null;
-      state.set("disconnected");
+      finish(undefined);
+    } catch (error) {
+      log.warn("Stream handler failed", error);
+      const failure =
+        error instanceof RealtimeError ? error : new RealtimeError(INTERNAL_ERROR, "Stream failed");
+      finish(failure);
     }
   }
 
-  async function* iterate(): AsyncGenerator<SSEEvent<TData>, void, unknown> {
-    let cursor = 0;
-
-    while (true) {
-      if (controller.signal.aborted) return;
-      const event = buffer[cursor];
-      if (event) {
-        cursor++;
-        yield event;
-        continue;
-      }
-      if (finished) return;
-      await new Promise<void>((r) => {
-        resolve = r;
-        controller.signal.addEventListener("abort", () => r(), { once: true });
-      });
-    }
-  }
-
-  const iter = iterate();
+  const close = () => controller.abort();
+  const iter = queue.iterator(close);
 
   return {
     [Symbol.asyncIterator]() {
       return iter;
     },
-    close() {
-      controller.abort();
-    },
+    close,
     get status() {
       return state.current;
     },
     get dropped() {
-      return 0;
+      return queue.dropped;
     },
     on(_event: "status", handler: (status: ConnectionStatus) => void) {
       return state.subscribe(handler);
@@ -101,15 +90,13 @@ export function createMockSSESubscription<TData>(
 }
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((r) => {
-    const timer = setTimeout(r, ms);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        r();
-      },
-      { once: true },
-    );
+  return new Promise((resolve) => {
+    const wake = () => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", wake);
+      resolve();
+    };
+    const timer = setTimeout(wake, ms);
+    signal.addEventListener("abort", wake, { once: true });
   });
 }

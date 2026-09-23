@@ -1,4 +1,6 @@
 import { createLogger } from "../logger";
+import type { StreamFailure } from "../realtime/describe-failure";
+import { SSE_CONTROL_EVENTS } from "../realtime/sse/control-events";
 import type { StudioHooks } from "../studio/hooks";
 import type { SSESender } from "./sse-sender";
 import type { SSECloseReason, SSEStreamOptions } from "./sse-types";
@@ -87,8 +89,13 @@ export function emitClose(
   });
 }
 
-export function formatErrorEvent(message: string): string {
-  return `event: error\ndata: ${JSON.stringify({ message })}\n\n`;
+/**
+ * The event that tells the client how a stream ended: finished, or failed
+ * with what it may read about the failure. Either way it does not reconnect.
+ */
+export function formatStreamEnd(failure?: StreamFailure): string {
+  if (!failure) return `event: ${SSE_CONTROL_EVENTS.complete}\ndata: null\n\n`;
+  return `event: ${SSE_CONTROL_EVENTS.error}\ndata: ${JSON.stringify(failure)}\n\n`;
 }
 
 const PREVIEW_MAX = 512;

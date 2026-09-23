@@ -17,6 +17,11 @@ export type ConfigurationErrorCode =
    */
   | "PROXY_OPTION_NOT_ALLOWED"
   /**
+   * A stream endpoint sent an event whose name starts with `courier:` —
+   * reserved for the events that tell the client how the stream ended.
+   */
+  | "RESERVED_SSE_EVENT"
+  /**
    * Studio Playground proxy mode tried to open a real network connection
    * from the user-app process, but `appOrigin` was not configured. Set it
    * via `courier.config.ts.runtime.appOrigin` or the `COURIER_APP_URL` /

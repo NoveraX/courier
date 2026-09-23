@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ForbiddenError } from "../src/realtime/errors";
 import type { SSEContext, SSEEvent, SSEHandler } from "../src/realtime/types";
 import type { StudioHooks } from "../src/studio/hooks";
 import type { InternalSSERegistry } from "../src/adapter/sse-registry";
@@ -216,10 +217,10 @@ describe("createSSEStream", () => {
     expect(registry.remove).toHaveBeenCalledWith("conn-1");
   });
 
-  it("handles generator errors — formats error event", async () => {
+  it("ends a failed stream with a failure event that keeps the error's text on the server", async () => {
     const handler: SSEHandler<unknown, unknown> = async function* () {
       yield { data: "before" };
-      throw new Error("stream broke");
+      throw new Error("connect ECONNREFUSED 10.0.0.5:5432");
     };
     const { ctx } = createCtx();
     const opts = createOpts();
@@ -227,8 +228,42 @@ describe("createSSEStream", () => {
     const stream = createSSEStream(handler, ctx, opts);
     const text = await collectText(stream);
 
-    expect(text).toContain("event: error");
-    expect(text).toContain("stream broke");
+    expect(text).toContain('event: courier:error\ndata: {"code":5000,"message":"Stream failed"}');
+    expect(text).not.toContain("ECONNREFUSED");
+  });
+
+  it("passes a RealtimeError's code and message to the client", async () => {
+    const handler: SSEHandler<unknown, unknown> = async function* () {
+      throw new ForbiddenError("Not a member of this room");
+    };
+    const { ctx } = createCtx();
+
+    const text = await collectText(createSSEStream(handler, ctx, createOpts()));
+
+    expect(text).toContain('data: {"code":4403,"message":"Not a member of this room"}');
+  });
+
+  it("ends a finished stream with a completion event", async () => {
+    const handler: SSEHandler<unknown, unknown> = async function* () {
+      yield { data: "only" };
+    };
+    const { ctx } = createCtx();
+
+    const text = await collectText(createSSEStream(handler, ctx, createOpts()));
+
+    expect(text.endsWith("event: courier:complete\ndata: null\n\n")).toBe(true);
+  });
+
+  it("fails a stream whose handler sends a reserved event name", async () => {
+    const handler: SSEHandler<unknown, unknown> = async function* () {
+      yield { event: "courier:complete", data: null };
+    };
+    const { ctx } = createCtx();
+
+    const text = await collectText(createSSEStream(handler, ctx, createOpts()));
+
+    expect(text).toContain("event: courier:error");
+    expect(text).not.toContain("event: courier:complete");
   });
 
   it("respects abort signal", async () => {

@@ -1,3 +1,5 @@
+import { ConfigurationError } from "../errors";
+import { SSE_CONTROL_EVENTS } from "../realtime/sse/control-events";
 import type { SSEEvent } from "../realtime/types";
 
 /** Standard SSE response headers */
@@ -44,8 +46,19 @@ export function buildSSECorsHeaders(origin: string, credentials = true): Record<
   return headers;
 }
 
-/** Format an SSE event into wire format (text/event-stream) */
+/**
+ * Format an endpoint's SSE event into wire format (text/event-stream).
+ *
+ * @throws ConfigurationError when the event name is reserved for the
+ *   stream's own end-of-stream events
+ */
 export function formatSSEEvent<TData>(event: SSEEvent<TData>, seq?: number): string {
+  if (event.event?.startsWith(SSE_CONTROL_EVENTS.prefix)) {
+    throw new ConfigurationError(
+      "RESERVED_SSE_EVENT",
+      `SSE event name "${event.event}" is reserved: names starting with "${SSE_CONTROL_EVENTS.prefix}" tell the client how the stream ended`,
+    );
+  }
   const lines: string[] = [];
 
   const id = event.id ?? (seq !== undefined ? String(seq) : undefined);

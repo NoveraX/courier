@@ -1,3 +1,5 @@
+import { createLogger } from "../logger";
+import { describeFailure } from "../realtime/describe-failure";
 import type { SSEContext, SSEEvent, SSEHandler } from "../realtime/types";
 import { abortableEvents } from "../utils/abortable-events";
 import { SSE_HEARTBEAT } from "./format-sse";
@@ -5,7 +7,7 @@ import { LIMITS } from "./limits";
 import { createSSESender, type SSESender } from "./sse-sender";
 import {
   cleanupSSEStream,
-  formatErrorEvent,
+  formatStreamEnd,
   runCleanupStep,
   safeSend,
   truncatePreview,
@@ -13,6 +15,7 @@ import {
 } from "./sse-stream-lifecycle";
 import type { SSECloseReason, SSEStreamOptions } from "./sse-types";
 
+const log = createLogger("SSE");
 const HEARTBEAT_INTERVAL = 25_000;
 const SSE_ENCODER = new TextEncoder();
 
@@ -101,12 +104,16 @@ export function createSSEStream(
               timestamp: Date.now(),
             });
           }
-          if (!combinedSignal.aborted) closeReason = "complete";
+          if (!combinedSignal.aborted) {
+            closeReason = "complete";
+            safeSend(controller, SSE_ENCODER.encode(formatStreamEnd()));
+          }
         } catch (error) {
           closeReason = "error";
           if (!combinedSignal.aborted) {
-            const msg = error instanceof Error ? error.message : "Unknown stream error";
-            safeSend(controller, SSE_ENCODER.encode(formatErrorEvent(msg)));
+            log.warn("Stream handler failed", error);
+            const failure = describeFailure(error, "Stream failed");
+            safeSend(controller, SSE_ENCODER.encode(formatStreamEnd(failure)));
             opts.onError?.({ connectionId: opts.connectionId, meta: opts.meta, error });
           }
         } finally {

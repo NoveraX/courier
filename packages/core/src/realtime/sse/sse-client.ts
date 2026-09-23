@@ -46,7 +46,7 @@ export function subscribeSSE<TData = unknown>(
     serverRetryMs: undefined,
   });
 
-  const iter = queue.iterator();
+  const iter = queue.iterator(() => controller.abort());
 
   return {
     [Symbol.asyncIterator]() {

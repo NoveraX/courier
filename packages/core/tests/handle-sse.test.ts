@@ -188,7 +188,7 @@ describe("handleSSE", () => {
     expect(receivedVars).toEqual({ userId: 123, channel: "news" });
   });
 
-  it("sends error event on generator throw", async () => {
+  it("ends the stream with a failure event on generator throw, without the error's text", async () => {
     const sources = createSSESource(async function* () {
       yield { data: "before" };
       throw new Error("stream broke");
@@ -198,8 +198,8 @@ describe("handleSSE", () => {
     const res = await handleSSE(sseRequest("_s=testSource&_m=feed"));
     const text = await collectSSEText(res);
 
-    expect(text).toContain("event: error");
-    expect(text).toContain("stream broke");
+    expect(text).toContain("event: courier:error");
+    expect(text).not.toContain("stream broke");
   });
 
   it("has correct SSE response headers", async () => {

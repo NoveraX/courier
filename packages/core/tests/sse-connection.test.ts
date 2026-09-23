@@ -8,6 +8,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ConnectionError } from "../src/realtime/errors";
 import { subscribeSSE } from "../src/realtime/sse/sse-client";
 
 const encoder = new TextEncoder();
@@ -101,9 +102,13 @@ describe("maxAttempts", () => {
       }),
     );
     const sub = subscribeSSE<number>("/sse", { maxAttempts: 2, backoff: FAST });
+    const seen: number[] = [];
 
-    const seen = await readFor(sub, 200);
+    const reading = (async () => {
+      for await (const event of sub) seen.push(event.data);
+    })();
 
+    await expect(reading).rejects.toBeInstanceOf(ConnectionError);
     expect(seen).toEqual([1, 2, 3]);
     expect(served).toBe(5);
   });

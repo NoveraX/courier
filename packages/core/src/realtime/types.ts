@@ -25,7 +25,7 @@ export interface BackoffConfig {
 export interface SSEEvent<TData = unknown> {
   /** Event ID — used for Last-Event-ID on reconnect */
   id?: string;
-  /** Named event type (default: "message") */
+  /** Named event type (default: "message"). Names starting with `courier:` are reserved. */
   event?: string;
   /** Event payload */
   data: TData;
@@ -45,12 +45,29 @@ export interface SSEContext<TVariables = unknown> {
   headers: Headers;
 }
 
-/** Server-side SSE handler — async generator yielding events */
+/**
+ * Server-side SSE handler — async generator yielding events.
+ *
+ * Returning ends the stream for the client, which then stops reading and
+ * does not reconnect. Throwing fails it: throw a `RealtimeError` (such as
+ * `ForbiddenError("Not a member of this room")`) for its code and message
+ * to reach the client; any other error reaches it as code 5000 "Stream
+ * failed", and in full only the server's log.
+ */
 export type SSEHandler<TResponse, TVariables = undefined> = (
   ctx: SSEContext<TVariables>,
 ) => AsyncGenerator<SSEEvent<TResponse>, void, unknown>;
 
-/** Client-side SSE subscription — async iterable with lifecycle control */
+/**
+ * Client-side SSE subscription — async iterable with lifecycle control.
+ *
+ * Iteration ends when the server finished the stream, when `close()` is
+ * called, or when the loop is left early (`break` closes the subscription).
+ * It rejects with a `RealtimeError` when the server failed the stream or
+ * refused the request (`AuthError`, `ForbiddenError`, …), and with a
+ * `ConnectionError` once `maxAttempts` reconnections in a row came to
+ * nothing. A dropped connection is reconnected without ending it.
+ */
 export interface SSESubscription<TData = unknown> {
   [Symbol.asyncIterator](): AsyncIterableIterator<SSEEvent<TData>>;
   /** Terminate the subscription and close the connection */

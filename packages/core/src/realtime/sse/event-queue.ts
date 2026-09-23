@@ -17,8 +17,15 @@ export interface EventQueue<TData> {
   push(event: SSEEvent<TData>): void;
   /** Signal stream completion — resolves any waiting consumer */
   finish(): void;
-  /** Create async iterator that drains this queue */
-  iterator(): AsyncIterableIterator<SSEEvent<TData>>;
+  /** End the stream with an error — the consumer reads what is buffered, then it */
+  fail(error: Error): void;
+  /**
+   * Create async iterator that drains this queue.
+   *
+   * @param onReturn - Called when the consumer stops early (`break`, or a
+   *   throw in a `for await` body), so the stream behind it can be closed
+   */
+  iterator(onReturn?: () => void): AsyncIterableIterator<SSEEvent<TData>>;
   /** Number of dropped events due to overflow */
   readonly dropped: number;
   /** Current number of buffered events */
@@ -34,8 +41,14 @@ export interface EventQueue<TData> {
 export function createEventQueue<TData>(
   maxBufferSize = DEFAULT_MAX_BUFFER_SIZE,
 ): EventQueue<TData> {
-  let resolveNext: ((value: IteratorResult<SSEEvent<TData>>) => void) | undefined;
+  let waiter:
+    | {
+        resolve: (value: IteratorResult<SSEEvent<TData>>) => void;
+        reject: (error: Error) => void;
+      }
+    | undefined;
   let done = false;
+  let failure: Error | undefined;
   let droppedCount = 0;
   /** Pending overflow event — delivered out-of-band (never enters ring buffer) */
   let pendingOverflow: SSEEvent<TData> | undefined;
@@ -73,9 +86,9 @@ export function createEventQueue<TData>(
   }
 
   function push(event: SSEEvent<TData>): void {
-    if (resolveNext) {
-      const resolve = resolveNext;
-      resolveNext = undefined;
+    if (waiter) {
+      const { resolve } = waiter;
+      waiter = undefined;
       resolve({ value: event, done: false });
     } else {
       const prevDropped = droppedCount;
@@ -92,34 +105,48 @@ export function createEventQueue<TData>(
   }
 
   function finish(): void {
-    done = true;
-    if (resolveNext) {
-      const resolve = resolveNext;
-      resolveNext = undefined;
+    end(undefined);
+  }
 
-      // Deliver pending overflow before signalling done
-      if (pendingOverflow) {
-        const overflow = pendingOverflow;
-        pendingOverflow = undefined;
-        resolve({ value: overflow, done: false });
-      } else {
-        resolve({ value: undefined, done: true });
-      }
-    }
+  function fail(error: Error): void {
+    end(error);
+  }
+
+  function end(error: Error | undefined): void {
+    if (done) return;
+    done = true;
+    failure = error;
+    const waiting = waiter;
+    if (!waiting) return;
+    waiter = undefined;
+    next().then(waiting.resolve, waiting.reject);
   }
 
   function next(): Promise<IteratorResult<SSEEvent<TData>>> {
     const value = dequeue();
     if (value) return Promise.resolve({ value, done: false });
-    if (done) return Promise.resolve({ value: undefined, done: true });
-    return new Promise((resolve) => {
-      resolveNext = resolve;
-    });
+    if (!done) {
+      return new Promise((resolve, reject) => {
+        waiter = { resolve, reject };
+      });
+    }
+    const error = failure;
+    failure = undefined;
+    return error ? Promise.reject(error) : Promise.resolve({ value: undefined, done: true });
   }
 
-  function iterator(): AsyncIterableIterator<SSEEvent<TData>> {
+  function iterator(onReturn?: () => void): AsyncIterableIterator<SSEEvent<TData>> {
     return {
       next,
+      async return() {
+        /* Leaving a `for await` used to leave the connection open and
+           reconnecting until someone remembered to call close(). */
+        finish();
+        head = tail = count = 0;
+        pendingOverflow = undefined;
+        onReturn?.();
+        return { value: undefined, done: true };
+      },
       [Symbol.asyncIterator]() {
         return this;
       },
@@ -129,6 +156,7 @@ export function createEventQueue<TData>(
   return {
     push,
     finish,
+    fail,
     iterator,
     get dropped() {
       return droppedCount;

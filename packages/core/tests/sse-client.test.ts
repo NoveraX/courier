@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { AuthError, ConnectionError, ForbiddenError } from "../src/realtime/errors";
 import { subscribeSSE } from "../src/realtime/sse/sse-client";
 
 /** Helper: create a mock fetch response with SSE stream */
@@ -35,7 +36,7 @@ describe("subscribeSSE", () => {
 
   it("yields parsed SSE events as async iterable", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(
-      mockSSEResponse('data: {"msg":"hello"}\n\ndata: {"msg":"world"}\n\n'),
+      mockSSEResponse('data: {"msg":"hello"}\n\ndata: {"msg":"world"}\n\nevent: courier:complete\ndata: null\n\n'),
     ));
 
     const sub = subscribeSSE<{ msg: string }>("/sse", { maxAttempts: 1 });
@@ -48,7 +49,7 @@ describe("subscribeSSE", () => {
   });
 
   it("sends Accept and custom headers", async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(mockSSEResponse('data: "ok"\n\n'));
+    const fetchMock = vi.fn().mockResolvedValueOnce(mockSSEResponse('data: "ok"\n\nevent: courier:complete\ndata: null\n\n'));
     vi.stubGlobal("fetch", fetchMock);
 
     const sub = subscribeSSE("/sse", {
@@ -68,7 +69,7 @@ describe("subscribeSSE", () => {
   it("sends Last-Event-ID on reconnect", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(mockSSEResponse('id: evt-2\ndata: "a"\n\n'))
-      .mockResolvedValueOnce(mockSSEResponse('data: "b"\n\n'));
+      .mockResolvedValueOnce(mockSSEResponse('data: "b"\n\nevent: courier:complete\ndata: null\n\n'));
     vi.stubGlobal("fetch", fetchMock);
 
     const sub = subscribeSSE("/sse", {
@@ -78,13 +79,14 @@ describe("subscribeSSE", () => {
 
     await drain(sub);
 
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     const [, secondInit] = fetchMock.mock.calls[1] as [string, RequestInit & { headers: Record<string, string> }];
     expect(secondInit.headers["Last-Event-ID"]).toBe("evt-2");
   });
 
   it("transitions through connected → disconnected statuses", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(
-      mockSSEResponse('data: "x"\n\n'),
+      mockSSEResponse('data: "x"\n\nevent: courier:complete\ndata: null\n\n'),
     ));
 
     const sub = subscribeSSE("/sse", { maxAttempts: 1 });
@@ -113,32 +115,30 @@ describe("subscribeSSE", () => {
     expect(sub.status).toBe("disconnected");
   });
 
-  it("does not reconnect on 401 (fatal)", async () => {
+  it("does not reconnect on 401, and rejects with an AuthError", async () => {
     const fetchMock = vi.fn().mockResolvedValue(mockSSEResponse("", 401));
     vi.stubGlobal("fetch", fetchMock);
 
     const sub = subscribeSSE("/sse");
-    const events = await drain(sub);
 
+    await expect(drain(sub)).rejects.toBeInstanceOf(AuthError);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(events).toHaveLength(0);
     expect(sub.status).toBe("disconnected");
   });
 
-  it("does not reconnect on 403 (fatal)", async () => {
+  it("does not reconnect on 403, and rejects with a ForbiddenError", async () => {
     const fetchMock = vi.fn().mockResolvedValue(mockSSEResponse("", 403));
     vi.stubGlobal("fetch", fetchMock);
 
     const sub = subscribeSSE("/sse");
-    const events = await drain(sub);
 
+    await expect(drain(sub)).rejects.toBeInstanceOf(ForbiddenError);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(events).toHaveLength(0);
   });
 
   it("uses custom parse function", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(
-      mockSSEResponse('data: HELLO\n\n'),
+      mockSSEResponse('data: HELLO\n\nevent: courier:complete\ndata: null\n\n'),
     ));
 
     const sub = subscribeSSE<string>("/sse", {
@@ -159,16 +159,16 @@ describe("subscribeSSE", () => {
       backoff: { initialMs: 1, jitter: false },
     });
 
-    await drain(sub);
+    await expect(drain(sub)).rejects.toBeInstanceOf(ConnectionError);
 
-    expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(3);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(sub.status).toBe("disconnected");
   });
 
   it("reconnects on 500 (retriable)", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(mockSSEResponse("", 500))
-      .mockResolvedValueOnce(mockSSEResponse('data: "ok"\n\n'));
+      .mockResolvedValueOnce(mockSSEResponse('data: "ok"\n\nevent: courier:complete\ndata: null\n\n'));
     vi.stubGlobal("fetch", fetchMock);
 
     const sub = subscribeSSE("/sse", {
@@ -178,7 +178,7 @@ describe("subscribeSSE", () => {
 
     const events = await drain(sub);
 
-    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(events).toHaveLength(1);
   });
 
@@ -197,7 +197,7 @@ describe("subscribeSSE", () => {
 
   it("preserves event id and event type in yielded events", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(
-      mockSSEResponse('id: 42\nevent: notification\ndata: "payload"\n\n'),
+      mockSSEResponse('id: 42\nevent: notification\ndata: "payload"\n\nevent: courier:complete\ndata: null\n\n'),
     ));
 
     const sub = subscribeSSE("/sse", { maxAttempts: 1 });

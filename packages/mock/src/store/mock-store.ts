@@ -1,5 +1,5 @@
-import type { Collection, CollectionConfig } from "./collection";
 import { createCollection } from "./collection";
+import type { Collection, CollectionConfig } from "./collection-types";
 
 /** In-memory store with named collections */
 export interface MockStore {
@@ -14,7 +14,7 @@ export interface MockStore {
   list(): string[];
   /** Snapshot current state of all collections */
   snapshot(): Record<string, unknown[]>;
-  /** Restore all collections from a snapshot */
+  /** Make the store exactly the snapshot: its collections, and no others' records */
   restore(snap: Record<string, unknown[]>): void;
   /** Reset all collections (clear records, keep definitions) */
   reset(): void;
@@ -29,10 +29,17 @@ export function createMockStore(): MockStore {
       name: string,
       config?: CollectionConfig,
     ): Collection<TItem> {
-      if (!collections.has(name)) {
-        collections.set(name, createCollection(config));
+      const existing = collections.get(name);
+      /* The auto server creates every collection before the app's overrides
+         run, so a config given later used to be dropped in silence — and a
+         key other than `id` was impossible. */
+      if (existing) {
+        if (config) existing.configure(config);
+        return existing as Collection<TItem>;
       }
-      return collections.get(name) as Collection<TItem>;
+      const created = createCollection(config);
+      collections.set(name, created);
+      return created as Collection<TItem>;
     },
 
     has(name) {
@@ -44,17 +51,24 @@ export function createMockStore(): MockStore {
     },
 
     snapshot() {
+      /* Copies: handing out the live records let every later update edit
+         the snapshot too, so restore() could not undo it. */
       const snap: Record<string, unknown[]> = {};
       for (const [name, col] of collections) {
-        snap[name] = col.getAll();
+        snap[name] = structuredClone(col.getAll());
       }
       return snap;
     },
 
     restore(snap) {
+      /* The store becomes exactly the snapshot: a collection it did not know
+         is created, and one it does not mention is emptied. Restoring used
+         to touch only collections that already existed. */
+      for (const [name, col] of collections) {
+        if (!Object.hasOwn(snap, name)) col.clear();
+      }
       for (const [name, data] of Object.entries(snap)) {
-        const col = collections.get(name);
-        if (col) col.seed(data as Record<string, unknown>[]);
+        this.collection(name).seed(data as Record<string, unknown>[]);
       }
     },
 

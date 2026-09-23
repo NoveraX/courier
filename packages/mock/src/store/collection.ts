@@ -1,60 +1,17 @@
-import type { PaginatedResult, QueryOptions } from "./pagination";
+import type { Collection, CollectionConfig, QueryFn } from "./collection-types";
 import { applyPagination, applySorting } from "./pagination";
-import type { QueryBuilder } from "./query-builder";
 import { createQueryBuilder } from "./query-builder";
-
-/** Configuration for a collection */
-export interface CollectionConfig {
-  /** Field used as primary key (default: "id") */
-  idField?: string;
-}
-
-type QueryFn<TItem> = (q: QueryBuilder<TItem>) => QueryBuilder<TItem>;
-
-/** In-memory CRUD collection with querying, sorting, and pagination */
-export interface Collection<TItem extends Record<string, unknown>> {
-  /** Create a single record (auto-generates id if missing) */
-  create(item: Partial<TItem>): TItem;
-  /** Create N records with an index-based factory */
-  createMany(count: number, fn: (index: number) => Partial<TItem>): TItem[];
-  /** Find first matching record */
-  findFirst(query?: QueryFn<TItem> | null): TItem | undefined;
-  /** Find all matching records with optional pagination/sorting */
-  findMany(query?: QueryFn<TItem> | null, options?: QueryOptions<TItem>): PaginatedResult<TItem>;
-  /** Update first matching record */
-  update(
-    query: QueryFn<TItem>,
-    patch: { data: Partial<TItem> | ((item: TItem) => void) },
-  ): TItem | undefined;
-  /** Update all matching records */
-  updateMany(
-    query: QueryFn<TItem>,
-    patch: { data: Partial<TItem> | ((item: TItem) => void) },
-  ): number;
-  /** Delete first matching record */
-  delete(query: QueryFn<TItem>): boolean;
-  /** Delete all matching records */
-  deleteMany(query: QueryFn<TItem>): number;
-  /** Get total count of records (optionally filtered) */
-  count(query?: QueryFn<TItem> | null): number;
-  /** Seed collection with initial data (replaces all) */
-  seed(items: TItem[]): void;
-  /** Get all records (raw array) */
-  getAll(): TItem[];
-  /** Find by primary key */
-  getById(id: string | number): TItem | undefined;
-  /** Clear all records */
-  clear(): void;
-}
-
-let autoIdCounter = 0;
+import { sameId } from "./same-id";
 
 /** Create an in-memory collection */
 export function createCollection<TItem extends Record<string, unknown>>(
   config?: CollectionConfig,
 ): Collection<TItem> {
-  const idField = config?.idField ?? "id";
+  let idField = config?.idField ?? "id";
   let records: TItem[] = [];
+  /* Per collection, and reset with it: a counter shared by the whole process
+     made generated ids depend on what every other store had created. */
+  let autoIdCounter = 0;
 
   const filter = (query?: QueryFn<TItem> | null): TItem[] => {
     if (!query) return [...records];
@@ -64,11 +21,23 @@ export function createCollection<TItem extends Record<string, unknown>>(
   };
 
   const generateId = (): string => {
-    autoIdCounter++;
-    return `auto-${autoIdCounter}`;
+    let id: string;
+    do {
+      autoIdCounter++;
+      id = `auto-${autoIdCounter}`;
+    } while (collection.getById(id));
+    return id;
   };
 
   const collection: Collection<TItem> = {
+    get idField() {
+      return idField;
+    },
+
+    configure(next) {
+      idField = next.idField ?? idField;
+    },
+
     create(item) {
       const record = { ...item } as TItem;
       if (!(idField in record) || record[idField] === undefined) {
@@ -143,11 +112,34 @@ export function createCollection<TItem extends Record<string, unknown>>(
     },
 
     getById(id) {
-      return records.find((r) => r[idField] === id);
+      return records.find((r) => sameId(r[idField], id));
+    },
+
+    updateById(id, patch) {
+      const record = collection.getById(id);
+      if (record) applyPatch(record, patch);
+      return record;
+    },
+
+    deleteById(id) {
+      const record = collection.getById(id);
+      if (!record) return false;
+      records.splice(records.indexOf(record), 1);
+      return true;
+    },
+
+    replace(id, item) {
+      const record = collection.getById(id);
+      if (!record) return undefined;
+      const kept = record[idField];
+      for (const key of Object.keys(record)) delete record[key];
+      Object.assign(record, item, { [idField]: kept });
+      return record;
     },
 
     clear() {
       records = [];
+      autoIdCounter = 0;
     },
   };
 

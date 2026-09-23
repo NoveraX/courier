@@ -56,8 +56,11 @@ export function applyPagination<TItem>(
 
   const pageSize = options.take ?? total;
   const data = items.slice(startIndex, startIndex + pageSize);
+  /* No page holds anything when a page holds nothing — an empty set, or
+     `take: 0`. Both used to report one page, and whether `take` was given
+     changed the answer for the same empty set. */
   const page = pageSize > 0 ? Math.floor(startIndex / pageSize) + 1 : 1;
-  const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
+  const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
 
   return { data, total, page, pageSize, totalPages };
 }

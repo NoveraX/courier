@@ -1,4 +1,4 @@
-import type { Collection } from "./collection";
+import type { Collection } from "./collection-types";
 
 /** One-to-one or one-to-many relation config */
 interface OneRelation {

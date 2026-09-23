@@ -47,27 +47,9 @@
  * the DOM context). The auto-derived id is also idempotent across calls.
  */
 
-import { createLogger, getSources } from "@noverax/courier";
-import { EventBus } from "../event-bus";
-import { type BufferedAnnouncement, consumeAnnouncements } from "./announce-hosting";
+import { attachRuntimeUsing } from "./attach-runtime-core";
 import type { RuntimeHandle, RuntimeKind } from "./attach-runtime-types";
-import { connectRuntimeSocket } from "./connect-runtime-socket";
-import { wireHooks, wireHttpHooks } from "./hooks";
 import { registerFromConfig } from "./register-from-config";
-import { detectBrowser, detectDefaultRuntimeId, resolveStudioUrl } from "./runtime-environment";
-import { installSourceRegistry } from "./runtime-source-registry";
-import { installSourceDefinedHook, uninstallSourceDefinedHook } from "./source-defined-hook";
-import { createSourceNameResolver } from "./source-resolution";
-
-const log = createLogger("Runtime");
-
-interface InternalHandle extends RuntimeHandle {
-  setDisposer(fn: () => void): void;
-  setAnnouncer(fn: () => void): void;
-}
-
-const handles = new Map<string, InternalHandle>();
-const attaching = new Map<string, Promise<RuntimeHandle>>();
 
 /**
  * Connect this runtime to a Studio dev server.
@@ -81,98 +63,9 @@ const attaching = new Map<string, Promise<RuntimeHandle>>();
  *   server path await the disk-loaded config; the browser path resolves
  *   immediately.
  */
-export async function attachRuntime(id?: string): Promise<RuntimeHandle> {
-  const isBrowser = detectBrowser();
-  const runtimeId = id ?? detectDefaultRuntimeId(isBrowser);
-
-  const existing = handles.get(runtimeId);
-  if (existing) return existing;
-
-  /* A second call made while the first still loads the config shares its
-     attach. It used to pass the check above too, and open a second socket
-     under the same id that no handle could close. */
-  const inFlight = attaching.get(runtimeId);
-  if (inFlight) return inFlight;
-  const attach = attachFresh(runtimeId, isBrowser).finally(() => attaching.delete(runtimeId));
-  attaching.set(runtimeId, attach);
-  return attach;
+export function attachRuntime(id?: string): Promise<RuntimeHandle> {
+  return attachRuntimeUsing(registerFromConfig, id);
 }
 
-async function attachFresh(runtimeId: string, isBrowser: boolean): Promise<RuntimeHandle> {
-  // ── Production-relevant: source registry + appOrigin + onSourceDefined ──
-
-  installSourceDefinedHook();
-
-  const studioAddress = isBrowser ? undefined : await registerFromConfig();
-
-  // Install the announce-driven runtime source registry BEFORE consuming
-  // the announcements, so past announcements replay into both the wire
-  // pending buffer and the global registry that the playground responder
-  // reads from.
-  installSourceRegistry();
-
-  let detached = false;
-  let unsubscribeAnnouncements: (() => void) | null = null;
-  let socketDisposer: (() => void) | null = null;
-  let flushAnnouncements: (() => void) | undefined;
-  const pending: BufferedAnnouncement[] = [];
-
-  const handle: InternalHandle = {
-    runtimeId,
-    kind: isBrowser ? "browser" : "server",
-    detach() {
-      if (detached) return;
-      detached = true;
-      unsubscribeAnnouncements?.();
-      socketDisposer?.();
-      handles.delete(runtimeId);
-    },
-    setDisposer(fn) {
-      /* A detach() made before the socket existed found nothing to close and
-         left it connected for good; the socket now closes as it arrives. */
-      if (detached) {
-        fn();
-        return;
-      }
-      socketDisposer = fn;
-    },
-    setAnnouncer(fn) {
-      flushAnnouncements = fn;
-    },
-  };
-  handles.set(runtimeId, handle);
-
-  unsubscribeAnnouncements = consumeAnnouncements((entry) => {
-    pending.push(entry);
-    /* An adapter constructed after the socket opened would otherwise sit in
-       the queue until the process ended. */
-    flushAnnouncements?.();
-  });
-
-  // ── Dev-only: studio observability + Studio /runtime socket ───────────
-
-  const isProduction = typeof process !== "undefined" && process.env?.NODE_ENV === "production";
-  if (!isProduction) {
-    const bus = new EventBus();
-    const resolveSourceName = createSourceNameResolver(getSources);
-    wireHooks(bus, runtimeId, resolveSourceName);
-    wireHttpHooks(bus, runtimeId, resolveSourceName);
-
-    const studioUrl = resolveStudioUrl(studioAddress);
-    connectRuntimeSocket({ runtimeId, kind: handle.kind, studioUrl, bus }, pending, handle).catch(
-      (err: unknown) => log.warn("Studio connection failed to start", err),
-    );
-  }
-
-  return handle;
-}
-
-/** Reset all attached handles — for tests only. */
-export function _resetRuntimeHandlesForTests(): void {
-  for (const handle of handles.values()) handle.detach();
-  handles.clear();
-  attaching.clear();
-  uninstallSourceDefinedHook();
-}
-
+export { _resetRuntimeHandlesForTests } from "./attach-runtime-core";
 export type { RuntimeHandle, RuntimeKind };

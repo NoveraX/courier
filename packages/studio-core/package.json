@@ -39,6 +39,7 @@
     },
     "./runtime": {
       "types": "./lib/runtime/index.d.ts",
+      "browser": "./lib/runtime/browser.js",
       "import": "./lib/runtime/index.js",
       "default": "./lib/runtime/index.js"
     },

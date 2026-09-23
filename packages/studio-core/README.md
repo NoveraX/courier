@@ -16,50 +16,62 @@
 
 ## Overview
 
-This package instruments your Courier application and streams events (requests, responses, cache hits, validation, etc.) to the Studio UI over Socket.IO. It is automatically integrated by the Studio build plugins — you typically do not install it manually.
+This package connects a running Courier application to Courier Studio and streams what it does — requests, responses, cache hits, validation, streams — to the Studio UI over Socket.IO.
 
 <br />
 
 ## Install
 
 ```bash
-npm install @noverax/courier-studio-core @noverax/courier
+npm install --save-dev @noverax/courier-studio @noverax/courier-studio-core
 ```
 
-The Socket.IO client that streams to Studio comes with it. It is imported only outside production, and it never keeps a process alive on its own: a script or a test run that attaches exits when its work is done, whether Studio is running or not.
+Install it next to `@noverax/courier-studio` whenever your own code imports it — every server instrumentation snippet does. The build plugins of `@noverax/courier-studio` reach it through their own dependency, so an app that only uses a build plugin does not need it listed.
+
+The Socket.IO client that streams to Studio comes with it. It is loaded only outside production, and it never keeps a process alive on its own: a script or a test run that attaches exits when its work is done, whether Studio is running or not.
 
 <br />
 
 ## Usage
 
-### Attach a runtime (server-side)
+### Attach a server runtime
 
 ```ts
 import { attachRuntime } from "@noverax/courier-studio-core/runtime"
 
 await attachRuntime()
-// Auto-loads courier.config.ts, registers sources, opens /runtime socket
 ```
 
-`attachRuntime()` reads `courier.config.ts` from disk (walking up from `process.cwd()`), populates the core sources registry, and opens a `/runtime` Socket.IO connection to Studio in dev.
+`attachRuntime()` reads `courier.config.ts` from disk (walking up from `process.cwd()`), registers its sources, and — outside production — connects to Studio. It dials the address the config's `studio` block names, so `studio: { port: 7000 }` moves the Studio server and every runtime together. `COURIER_STUDIO_URL` overrides both.
 
-### Attach a runtime (browser build-plugin injected)
+### Attach a browser runtime
+
+The Studio build plugins do this for you. By hand:
 
 ```ts
-globalThis[Symbol.for("courier.studio.url")] = "http://127.0.0.1:6280"
-await attachRuntime("next-browser")
+import { attachRuntime } from "@noverax/courier-studio-core/runtime"
+
+attachRuntime("browser")
 ```
+
+Browser bundlers pick a build of `./runtime` without the config loader (the `browser` export condition), so importing it never pulls a TypeScript loader or Node built-ins into a client bundle. A browser sees neither `courier.config.ts` nor your environment: for a non-default Studio address, set `globalThis[Symbol.for("courier.studio.url")]` before attaching, or inline `COURIER_STUDIO_URL` with your bundler.
 
 <br />
 
 ## API
 
-### `attachRuntime(id?)` — Single entry point for server + browser runtimes
-### `loadCourierConfig()` — Walk-up + c12 config loader
-### `announceHosting(input)` — Announce transport capabilities to Studio
-### `setAppOrigin(origin)` / `getAppOrigin()` / `detectAppOrigin()` — App origin registry
-### `EventBus` — In-process Studio telemetry bus
-### `extractSourceMap(sources)` — Extract endpoint metadata for the Studio UI
+| Export | From | Purpose |
+|---|---|---|
+| `attachRuntime(id?)` | `/runtime` | Connect a server or browser runtime; idempotent per id |
+| `announceHosting(input)` | `/runtime` | Tell Studio which transports this runtime serves |
+| `trackWSStream()` / `untrackWSStream()` | `/runtime` | Report WebSocket subscriptions to Studio |
+| `loadCourierConfig(options?)` | `/config` | Find and load `courier.config.{ts,js,mjs}` |
+| `readPathAliases(projectRoot)` | `/config` | The tsconfig `paths` the loader resolves imports through |
+| `EventBus` | root | In-process Studio telemetry bus |
+| `extractSourceMap(sources)` | root | Endpoint metadata for the Studio UI |
+| `isSafeHttpOrigin(value)` | root | Whether a value is a plain HTTP(S) origin |
+
+The app origin registry (`setAppOrigin`, `getAppOrigin`, `detectAppOrigin`) lives in `@noverax/courier`.
 
 <br />
 

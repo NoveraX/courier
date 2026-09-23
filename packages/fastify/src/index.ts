@@ -1,31 +1,9 @@
 import type { CourierWSOptions, HandlerConfig, WebSocketLike } from "@noverax/courier";
-import {
-  createHandler,
-  createWSHandler,
-  getAppOrigin,
-  requireSources,
-  setAppOrigin,
-} from "@noverax/courier";
+import { createHandler, createWSHandler, requireSources } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
 
-import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "@noverax/courier/node";
+import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
-
-/**
- * Module-level first-request flag for `listenOrigin` auto-discovery.
- * Fastify adapters stamp `appOrigin` from the first request's `Host`
- * header when no config/env value is present. Config-supplied or
- * env-var values take precedence and are never overwritten.
- */
-let firstRequestHandled = false;
-
-function tryDiscoverAppOrigin(request: FastifyRequest): void {
-  if (firstRequestHandled) return;
-  firstRequestHandled = true;
-  if (getAppOrigin()) return;
-  const origin = extractOriginFromNodeRequest(request.raw);
-  if (origin) setAppOrigin(origin);
-}
 
 /** Where the proxy caller sends its calls unless told otherwise. */
 const DEFAULT_PROXY_PATH = "/api/request";
@@ -79,7 +57,7 @@ export const courierPlugin: FastifyPluginAsync<CourierPluginOptions> = async (
   });
 
   const proxy = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    tryDiscoverAppOrigin(request);
+    discoverNodeAppOrigin(request.raw);
     const webReq = toWebRequest(request.raw, reply.raw);
     const webRes = await handle(webReq);
     await sendWebResponse(webRes, reply.raw);
@@ -113,7 +91,7 @@ export function courierSSEHandler(
   });
 
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    tryDiscoverAppOrigin(request);
+    discoverNodeAppOrigin(request.raw);
     reply.hijack();
     const webReq = toWebRequest(request.raw, reply.raw);
     const webRes = await handleSSE(webReq);
@@ -148,7 +126,7 @@ export function courierWSHandler(
   });
 
   return (socket: WebSocketLike, request: FastifyRequest) => {
-    tryDiscoverAppOrigin(request);
+    discoverNodeAppOrigin(request.raw);
     const webReq = toWebRequest(request.raw);
     wsHandler.handleSocket(socket, webReq);
   };

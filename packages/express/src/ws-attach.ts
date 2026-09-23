@@ -2,8 +2,11 @@ import type { Server } from "node:http";
 import type { CourierWSOptions } from "@noverax/courier";
 import { createWSHandler, requireSources } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
-import { attachWebSocketUpgrade, DEFAULT_WS_PATH } from "@noverax/courier/node";
-import { tryDiscoverAppOrigin } from "./discover-origin";
+import {
+  attachWebSocketUpgrade,
+  DEFAULT_WS_PATH,
+  discoverNodeAppOrigin,
+} from "@noverax/courier/node";
 
 /** Options for `courierWSAttach`: the WebSocket handler's, plus where it listens. */
 export interface CourierWSAttachOptions extends CourierWSOptions {
@@ -51,7 +54,7 @@ export function courierWSAttach(server: Server, options: CourierWSAttachOptions 
     path,
     maxPayload: handlerOptions.maxMessageSize,
     createServer: async (serverOptions) => new (await import("ws")).WebSocketServer(serverOptions),
-    onRequest: tryDiscoverAppOrigin,
+    onRequest: discoverNodeAppOrigin,
     onSocket: (socket, request) => wsHandler.handleSocket(socket, request),
   });
 }

@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { discoverAppOrigin } from "./app-origin";
 import { createLogger } from "./logger";
 import { addressedTo } from "./node-origin";
 
@@ -27,6 +28,17 @@ export function extractOriginFromNodeRequest(nodeReq: IncomingMessage): string |
   const { protocol, host } = addressedTo(nodeReq);
   if (!host) return undefined;
   return `${protocol}://${host}`;
+}
+
+/**
+ * Adopt the origin a Node request was addressed to as the app's origin,
+ * unless one is set — see `discoverAppOrigin`. Node adapters call it on every
+ * request; it costs a header read until one request carries a host.
+ *
+ * @param nodeReq - The incoming request
+ */
+export function discoverNodeAppOrigin(nodeReq: IncomingMessage): void {
+  discoverAppOrigin(extractOriginFromNodeRequest(nodeReq));
 }
 
 /**

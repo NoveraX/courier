@@ -1,27 +1,7 @@
 import type { HandlerConfig } from "@noverax/courier";
-import { createHandler, getAppOrigin, requireSources, setAppOrigin } from "@noverax/courier";
+import { createHandler, discoverAppOrigin, requireSources } from "@noverax/courier";
 import { announceHosting, deferAnnounce } from "@noverax/courier/announce";
 import type { NextRequest } from "next/server";
-
-/**
- * Module-level first-request flag for `listenOrigin` auto-discovery.
- * Next.js route handlers stamp `appOrigin` from the first request URL's
- * origin when no config/env value is present. Config-supplied or
- * env-var values take precedence and are never overwritten.
- */
-let firstRequestHandled = false;
-
-function tryDiscoverAppOrigin(request: Request): void {
-  if (firstRequestHandled) return;
-  firstRequestHandled = true;
-  if (getAppOrigin()) return;
-  try {
-    const url = new URL(request.url);
-    if (url.origin && url.origin !== "null") setAppOrigin(url.origin);
-  } catch {
-    // Malformed URL in request — leave appOrigin unset.
-  }
-}
 
 /**
  * Create Next.js App Router handlers for the courier proxy.
@@ -68,12 +48,12 @@ export function apiRoute(config?: HandlerConfig): {
   return {
     GET: (request: NextRequest) => {
       announce();
-      tryDiscoverAppOrigin(request);
+      discoverAppOrigin(new URL(request.url).origin);
       return handleGet(request);
     },
     POST: (request: NextRequest) => {
       announce();
-      tryDiscoverAppOrigin(request);
+      discoverAppOrigin(new URL(request.url).origin);
       return handlePost(request);
     },
   };

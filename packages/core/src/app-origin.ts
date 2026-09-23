@@ -57,6 +57,24 @@ export function setAppOrigin(origin: string | undefined): void {
   g[APP_ORIGIN_KEY] = origin;
 }
 
+/**
+ * Adopt the origin a framework adapter saw a request addressed to as the
+ * app's origin, unless one is already set — config and environment win.
+ *
+ * Adapters call it on every request until one carries a host. They used to
+ * give up after the first request whatever it carried, so a host-less probe
+ * that arrived first left the origin unset for the life of the process, and
+ * Studio Playground proxy mode failed with `APP_ORIGIN_NOT_CONFIGURED`.
+ *
+ * @param origin - `scheme://host[:port]` the request was addressed to, if known
+ * @example
+ * discoverAppOrigin(new URL(request.url).origin);
+ */
+export function discoverAppOrigin(origin: string | undefined): void {
+  if (!origin || origin === "null" || getAppOrigin()) return;
+  setAppOrigin(origin);
+}
+
 /** Read the raw `appOrigin` string. Returns `undefined` if not configured. */
 export function getAppOrigin(): string | undefined {
   return g[APP_ORIGIN_KEY] as string | undefined;

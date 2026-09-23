@@ -2,34 +2,13 @@ import type { CourierWSOptions, HandlerConfig } from "@noverax/courier";
 import {
   createHandler,
   createWSHandler,
-  getAppOrigin,
+  discoverAppOrigin,
   requireSources,
-  setAppOrigin,
 } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
 import type { Context } from "hono";
 import type { HonoWSContext } from "./ws-adapter";
 import { createSocketAdapter, frameText } from "./ws-adapter";
-
-/**
- * Module-level first-request flag for `listenOrigin` auto-discovery.
- * Hono handlers stamp `appOrigin` from the first request URL's origin
- * when no config/env value is present. Config-supplied or env-var
- * values take precedence and are never overwritten.
- */
-let firstRequestHandled = false;
-
-function tryDiscoverAppOrigin(request: Request): void {
-  if (firstRequestHandled) return;
-  firstRequestHandled = true;
-  if (getAppOrigin()) return;
-  try {
-    const url = new URL(request.url);
-    if (url.origin && url.origin !== "null") setAppOrigin(url.origin);
-  } catch {
-    // Malformed URL in request — leave appOrigin unset.
-  }
-}
 
 /**
  * Create a Hono handler for the courier proxy.
@@ -57,7 +36,7 @@ export function courierHandler(config?: HandlerConfig): (c: Context) => Promise<
     framework: "hono",
   });
   return (c: Context) => {
-    tryDiscoverAppOrigin(c.req.raw);
+    discoverAppOrigin(new URL(c.req.raw.url).origin);
     return handle(c.req.raw);
   };
 }
@@ -78,7 +57,7 @@ export function courierSSEHandler(config?: HandlerConfig): (c: Context) => Promi
     framework: "hono",
   });
   return (c: Context) => {
-    tryDiscoverAppOrigin(c.req.raw);
+    discoverAppOrigin(new URL(c.req.raw.url).origin);
     return handleSSE(c.req.raw);
   };
 }
@@ -119,7 +98,7 @@ export function courierWSHandler(options?: CourierWSOptions): (c: Context) => Ho
   });
 
   return (c: Context): HonoWSEvents => {
-    tryDiscoverAppOrigin(c.req.raw);
+    discoverAppOrigin(new URL(c.req.raw.url).origin);
     let adapter: ReturnType<typeof createSocketAdapter>;
 
     return {

@@ -21,6 +21,7 @@ export {
 export { isOriginAccepted, isOriginAllowed } from "./adapter/origin-policy";
 export {
   detectAppOrigin,
+  discoverAppOrigin,
   getAppOrigin,
   getAppOriginParsed,
   setAppOrigin,

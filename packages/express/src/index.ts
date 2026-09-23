@@ -2,8 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { HandlerConfig } from "@noverax/courier";
 import { createHandler, requireSources } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
-import { sendWebResponse, toWebRequest } from "@noverax/courier/node";
-import { tryDiscoverAppOrigin } from "./discover-origin";
+import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 
 export { type CourierWSAttachOptions, courierWSAttach } from "./ws-attach";
 
@@ -39,7 +38,7 @@ export function courierHandler(
   });
 
   return async (req: IncomingMessage, res: ServerResponse, next?: (err?: unknown) => void) => {
-    tryDiscoverAppOrigin(req);
+    discoverNodeAppOrigin(req);
     try {
       const webReq = toWebRequest(req, res);
       const webRes = await handle(webReq);
@@ -77,7 +76,7 @@ export function courierSSEHandler(
   });
 
   return async (req: IncomingMessage, res: ServerResponse, next?: (err?: unknown) => void) => {
-    tryDiscoverAppOrigin(req);
+    discoverNodeAppOrigin(req);
     try {
       const webReq = toWebRequest(req, res);
       const webRes = await handleSSE(webReq);

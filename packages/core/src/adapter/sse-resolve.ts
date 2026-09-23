@@ -2,7 +2,7 @@ import type { Sources } from "../define/types";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import { parseWireVariables, WIRE_VARIABLES_KEY } from "../utils/wire-variables";
 import type { SchemaMetadata } from "../validation";
-import { validateSchema } from "../validation";
+import { ValidationError, validateSchema } from "../validation";
 import { isExposedToWire } from "./exposure";
 import { errorResponse } from "./parse";
 
@@ -58,7 +58,13 @@ export async function resolveSSEVariables(
       string,
       unknown
     >;
-  } catch {
-    return errorResponse(400, "Invalid SSE variables");
+  } catch (error) {
+    /* Answered as an HTTP call's invalid variables are, issues included;
+       anything else a schema throws is not the caller's fault. */
+    if (!(error instanceof ValidationError)) throw error;
+    return Response.json(
+      { success: false, message: error.message, target: error.target, issues: error.issues },
+      { status: 422 },
+    );
   }
 }

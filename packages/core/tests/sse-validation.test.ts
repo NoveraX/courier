@@ -54,9 +54,10 @@ describe("SSE variable validation", () => {
     expect(valid.status).toBe(200);
 
     const invalid = await handler.handleSSE(feedRequest());
-    expect(invalid.status).toBe(400);
+    expect(invalid.status).toBe(422);
     const body = await invalid.json();
-    expect(body.message).toBe("Invalid SSE variables");
+    expect(body).toMatchObject({ success: false, target: "variables" });
+    expect(body.issues.length).toBeGreaterThan(0);
   });
 
   it("receives a number as a number, with no coercion", async () => {
@@ -105,7 +106,7 @@ describe("SSE variable validation", () => {
     expect(text).toContain('"foo":"bar"');
   });
 
-  it("returns 400 for a value the schema rejects", async () => {
+  it("returns 422 for a value the schema rejects, as an HTTP call does", async () => {
     const schema = z.object({ count: z.number().min(1) });
     const feed = stream.variables(schema).response<unknown>().implement(async function* (ctx) {
       yield { data: ctx.variables };
@@ -115,6 +116,6 @@ describe("SSE variable validation", () => {
     const handler = setupHandler(sources);
 
     const response = await handler.handleSSE(feedRequest({ count: "abc" }));
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(422);
   });
 });

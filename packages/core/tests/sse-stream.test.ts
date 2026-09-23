@@ -4,7 +4,7 @@ import type { StudioHooks } from "../src/studio/hooks";
 import type { InternalSSERegistry } from "../src/adapter/sse-registry";
 import { createSSEStream } from "../src/adapter/sse-stream";
 import { emitClose } from "../src/adapter/sse-stream-lifecycle";
-import type { SSEStreamOptions } from "../src/adapter/sse-stream";
+import type { SSEStreamOptions } from "../src/adapter/sse-types";
 
 // ---------------------------------------------------------------------------
 // Helpers

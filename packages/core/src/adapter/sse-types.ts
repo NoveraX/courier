@@ -1,3 +1,5 @@
+import type { StudioHooks } from "../studio/hooks";
+import type { InternalSSERegistry } from "./sse-registry";
 /** Read-only SSE connection info exposed via public API */
 export interface SSEConnectionInfo {
   readonly connectionId: string;
@@ -105,3 +107,35 @@ export type SSECloseReason =
   | "shutdown"
   | "max_lifetime"
   | "slow_consumer";
+
+/** Options passed from createSSEHandler to createSSEStream */
+export interface SSEStreamOptions {
+  connectionId: string;
+  requestId: string;
+  source: string;
+  group: string | undefined;
+  method: string;
+  meta: Record<string, unknown>;
+  registry: InternalSSERegistry;
+  dt: StudioHooks;
+  t0: number;
+  /** Separate TTL signal to detect max_lifetime reason (undefined = no TTL) */
+  ttlSignal?: AbortSignal;
+  onDisconnect?: SSELifecycleConfig["onSSEDisconnect"];
+  onError?: SSELifecycleConfig["onSSEError"];
+  /**
+   * Studio Playground requestId extracted from the `x-courier-playground-rid`
+   * request header. When set, the stream registers its `forceAbort.abort`
+   * callback in the process-global playground abort registry so the
+   * playground executor can force-close it deterministically (Node loopback
+   * fetch abort does NOT propagate to `request.signal` synchronously).
+   * Undefined for production traffic — registry is a no-op.
+   */
+  playgroundRid?: string;
+  /**
+   * Injected `registerPlaygroundAbort` from `../studio` — accepted as a
+   * dependency to keep `createSSEStream` decoupled from the singleton import
+   * (testability + tree-shaking when Studio is not used).
+   */
+  registerPlaygroundAbort?: (requestId: string, abort: () => void) => () => void;
+}

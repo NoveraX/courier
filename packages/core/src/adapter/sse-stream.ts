@@ -1,85 +1,25 @@
-import { createLogger } from "../logger";
 import type { SSEContext, SSEEvent, SSEHandler } from "../realtime/types";
-import type { StudioHooks } from "../studio/hooks";
 import { SSE_HEARTBEAT } from "./format-sse";
 import { LIMITS } from "./limits";
 import { pumpEvents } from "./sse-pump";
-import type { InternalSSERegistry } from "./sse-registry";
 import { createSSESender, type SSESender } from "./sse-sender";
-import { cleanupSSEStream, formatErrorEvent, safeSend } from "./sse-stream-lifecycle";
-import type { SSECloseReason, SSELifecycleConfig } from "./sse-types";
+import {
+  cleanupSSEStream,
+  formatErrorEvent,
+  runCleanupStep,
+  safeSend,
+  truncatePreview,
+  waitForRoom,
+} from "./sse-stream-lifecycle";
+import type { SSECloseReason, SSEStreamOptions } from "./sse-types";
 
 const HEARTBEAT_INTERVAL = 25_000;
 const SSE_ENCODER = new TextEncoder();
-const log = createLogger("SSE");
-
-/** Options passed from createSSEHandler to createSSEStream */
-export interface SSEStreamOptions {
-  connectionId: string;
-  requestId: string;
-  source: string;
-  group: string | undefined;
-  method: string;
-  meta: Record<string, unknown>;
-  registry: InternalSSERegistry;
-  dt: StudioHooks;
-  t0: number;
-  /** Separate TTL signal to detect max_lifetime reason (undefined = no TTL) */
-  ttlSignal?: AbortSignal;
-  onDisconnect?: SSELifecycleConfig["onSSEDisconnect"];
-  onError?: SSELifecycleConfig["onSSEError"];
-  /**
-   * Studio Playground requestId extracted from the `x-courier-playground-rid`
-   * request header. When set, the stream registers its `forceAbort.abort`
-   * callback in the process-global playground abort registry so the
-   * playground executor can force-close it deterministically (Node loopback
-   * fetch abort does NOT propagate to `request.signal` synchronously).
-   * Undefined for production traffic — registry is a no-op.
-   */
-  playgroundRid?: string;
-  /**
-   * Injected `registerPlaygroundAbort` from `../studio` — accepted as a
-   * dependency to keep `createSSEStream` decoupled from the singleton import
-   * (testability + tree-shaking when Studio is not used).
-   */
-  registerPlaygroundAbort?: (requestId: string, abort: () => void) => () => void;
-}
 
 /**
  * Create a ReadableStream from an SSE async generator handler.
  * Registers with the SSE connection registry for lifecycle tracking.
  */
-const PREVIEW_MAX = 512;
-
-/** Produce a short JSON preview of stream event data */
-function truncatePreview(data: unknown): string | undefined {
-  if (data === undefined || data === null) return undefined;
-  const str = typeof data === "string" ? data : JSON.stringify(data);
-  return str.length <= PREVIEW_MAX ? str : `${str.slice(0, PREVIEW_MAX)}…`;
-}
-
-/**
- * Run a single cleanup step in isolation. Throws are swallowed so a failure
- * in one step (e.g. `unregisterPlaygroundAbort` blowing up because the
- * registry entry was already removed) cannot skip the remaining steps and
- * leak the heartbeat interval or the registry entry. The cleanup chain MUST
- * complete every link even when one of them throws.
- *
- * Cleanup callbacks must be synchronous — `runCleanupStep` does not await
- * returned promises, so an async failure would land in an unhandled
- * rejection rather than the warn-and-continue path. Failures are surfaced
- * via `log.warn` so a silently broken cleanup leaves a trace in the studio
- * log instead of vanishing.
- */
-function runCleanupStep(label: string, step: (() => void) | undefined): void {
-  if (!step) return;
-  try {
-    step();
-  } catch (error) {
-    log.warn(`SSE cleanup step "${label}" failed`, error);
-  }
-}
-
 export function createSSEStream(
   handler: SSEHandler<unknown, unknown>,
   ctx: SSEContext,
@@ -191,21 +131,4 @@ export function createSSEStream(
       highWaterMark: LIMITS.SSE_MAX_BUFFERED_BYTES,
     }) as QueuingStrategy<Uint8Array>,
   );
-}
-
-/** Wait until the client has read enough for the next event, or the stream closes. */
-async function waitForRoom(sender: SSESender, signal: AbortSignal): Promise<void> {
-  while (!sender.hasRoom && !signal.aborted) {
-    await new Promise<void>((resolve) => {
-      const timer = setTimeout(resolve, 50);
-      signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timer);
-          resolve();
-        },
-        { once: true },
-      );
-    });
-  }
 }

@@ -1,6 +1,9 @@
+import { createLogger } from "../logger";
 import type { StudioHooks } from "../studio/hooks";
-import type { SSEStreamOptions } from "./sse-stream";
-import type { SSECloseReason } from "./sse-types";
+import type { SSESender } from "./sse-sender";
+import type { SSECloseReason, SSEStreamOptions } from "./sse-types";
+
+const log = createLogger("SSE");
 
 /** Best-effort enqueue — returns false if stream already closed */
 export function safeSend(
@@ -86,4 +89,52 @@ export function emitClose(
 
 export function formatErrorEvent(message: string): string {
   return `event: error\ndata: ${JSON.stringify({ message })}\n\n`;
+}
+
+const PREVIEW_MAX = 512;
+
+/** Produce a short JSON preview of stream event data */
+export function truncatePreview(data: unknown): string | undefined {
+  if (data === undefined || data === null) return undefined;
+  const str = typeof data === "string" ? data : JSON.stringify(data);
+  return str.length <= PREVIEW_MAX ? str : `${str.slice(0, PREVIEW_MAX)}…`;
+}
+
+/**
+ * Run a single cleanup step in isolation. Throws are swallowed so a failure
+ * in one step (e.g. `unregisterPlaygroundAbort` blowing up because the
+ * registry entry was already removed) cannot skip the remaining steps and
+ * leak the heartbeat interval or the registry entry. The cleanup chain MUST
+ * complete every link even when one of them throws.
+ *
+ * Cleanup callbacks must be synchronous — `runCleanupStep` does not await
+ * returned promises, so an async failure would land in an unhandled
+ * rejection rather than the warn-and-continue path. Failures are surfaced
+ * via `log.warn` so a silently broken cleanup leaves a trace in the studio
+ * log instead of vanishing.
+ */
+export function runCleanupStep(label: string, step: (() => void) | undefined): void {
+  if (!step) return;
+  try {
+    step();
+  } catch (error) {
+    log.warn(`SSE cleanup step "${label}" failed`, error);
+  }
+}
+
+/** Wait until the client has read enough for the next event, or the stream closes. */
+export async function waitForRoom(sender: SSESender, signal: AbortSignal): Promise<void> {
+  while (!sender.hasRoom && !signal.aborted) {
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, 50);
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timer);
+          resolve();
+        },
+        { once: true },
+      );
+    });
+  }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { cleanupSSEStream } from "../src/adapter/sse-stream-lifecycle";
-import type { SSEStreamOptions } from "../src/adapter/sse-stream";
+import type { SSEStreamOptions } from "../src/adapter/sse-types";
 import type { InternalSSERegistry } from "../src/adapter/sse-registry";
 import type { SSEConnectionInfo } from "../src/adapter/sse-types";
 import type { StudioHooks } from "../src/studio/hooks";

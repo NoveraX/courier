@@ -29,13 +29,23 @@ export const stripUndefined = (
   return undefined;
 };
 
+/**
+ * Remove the empty files a form carries — an `<input type="file">` left blank
+ * still submits one.
+ *
+ * `FormData.delete` removes every entry under a name, so deleting the empty
+ * file's name used to throw away the real files uploaded beside it. The
+ * entries are rebuilt instead, in their original order.
+ */
 export const filterEmptyFiles = (formData: FormData): void => {
-  const emptyKeys = [...formData.entries()]
-    .filter(([, value]) => value instanceof File && value.size === 0)
-    .map(([key]) => key);
+  const entries = [...formData.entries()];
+  const isEmptyFile = (value: FormDataEntryValue): boolean =>
+    value instanceof File && value.size === 0;
+  if (!entries.some(([, value]) => isEmptyFile(value))) return;
 
-  for (const key of emptyKeys) {
-    formData.delete(key);
+  for (const key of new Set(entries.map(([key]) => key))) formData.delete(key);
+  for (const [key, value] of entries) {
+    if (!isEmptyFile(value)) formData.append(key, value);
   }
 };
 

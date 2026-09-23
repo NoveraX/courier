@@ -1,4 +1,8 @@
-import { STUDIO_DEFAULT_URL } from "@noverax/courier/config";
+import {
+  STUDIO_DEFAULT_HOST,
+  STUDIO_DEFAULT_PORT,
+  STUDIO_DEFAULT_URL,
+} from "@noverax/courier/config";
 
 const STUDIO_URL_KEY = Symbol.for("courier.studio.url");
 
@@ -35,10 +39,28 @@ export function timersCanUnref(): boolean {
   return typeof (timer as { unref?: unknown }).unref === "function";
 }
 
-/** Resolve the Studio URL from globalThis injection, env, or the canonical default. */
-export function resolveStudioUrl(): string {
+/** The `studio` block of courier.config, as far as the address goes. */
+export interface ConfiguredStudioAddress {
+  host?: string;
+  port?: number;
+}
+
+/**
+ * Resolve the Studio URL: the globalThis slot a build plugin pins, then
+ * `COURIER_STUDIO_URL`, then the `studio` block of courier.config, then the
+ * default.
+ *
+ * A server runtime passes the block it loaded. It used to be ignored, so with
+ * `studio.port` set, Studio and the browser moved to the configured port while
+ * every server runtime kept dialling the default one and never connected.
+ */
+export function resolveStudioUrl(configured?: ConfiguredStudioAddress): string {
   const slot = (globalThis as Record<symbol, unknown>)[STUDIO_URL_KEY];
   if (typeof slot === "string" && slot.length > 0) return slot;
-  const env = typeof process !== "undefined" ? process.env?.COURIER_STUDIO_URL : undefined;
-  return env ?? STUDIO_DEFAULT_URL;
+  /* A plain member access, so that bundlers inlining `process.env.X` into the
+     browser — Next.js's `env`, webpack's DefinePlugin — can replace it. */
+  const env = typeof process !== "undefined" ? process.env.COURIER_STUDIO_URL : undefined;
+  if (env) return env;
+  if (configured?.host === undefined && configured?.port === undefined) return STUDIO_DEFAULT_URL;
+  return `http://${configured.host ?? STUDIO_DEFAULT_HOST}:${configured.port ?? STUDIO_DEFAULT_PORT}`;
 }

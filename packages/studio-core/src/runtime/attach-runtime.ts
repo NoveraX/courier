@@ -47,19 +47,13 @@
  * the DOM context). The auto-derived id is also idempotent across calls.
  */
 
-import {
-  createLogger,
-  detectAppOrigin,
-  getSources,
-  registerSources,
-  setAppOrigin,
-} from "@noverax/courier";
+import { createLogger, getSources } from "@noverax/courier";
 import { EventBus } from "../event-bus";
 import { type BufferedAnnouncement, consumeAnnouncements } from "./announce-hosting";
 import type { RuntimeHandle, RuntimeKind } from "./attach-runtime-types";
 import { connectRuntimeSocket } from "./connect-runtime-socket";
 import { wireHooks, wireHttpHooks } from "./hooks";
-import type { LoadedCourierConfig } from "./load-config";
+import { registerFromConfig } from "./register-from-config";
 import { detectBrowser, detectDefaultRuntimeId, resolveStudioUrl } from "./runtime-environment";
 import { installSourceRegistry } from "./runtime-source-registry";
 import { installSourceDefinedHook, uninstallSourceDefinedHook } from "./source-defined-hook";
@@ -109,30 +103,7 @@ async function attachFresh(runtimeId: string, isBrowser: boolean): Promise<Runti
 
   installSourceDefinedHook();
 
-  if (!isBrowser) {
-    let registered = false;
-    try {
-      /* Imported here rather than at the top so the client bundle, which also
-         reaches this module, never has the disk loader in its graph. */
-      const { loadCourierConfig } = await import("./load-config");
-      const loaded: LoadedCourierConfig | null = await loadCourierConfig();
-      if (loaded) {
-        /* Registration is inside the same try: a config that loads but
-           declares no usable `sources` is the same kind of failure as one
-           that will not load, and neither may end the host's startup. */
-        registerSources(loaded.config.sources);
-        setAppOrigin(loaded.config.runtime?.appOrigin ?? detectAppOrigin());
-        registered = true;
-      }
-    } catch (err) {
-      /* Attaching must not take down the host application, but a config that
-         exists and will not load leaves it with no sources at all — say why.
-         The first request then fails with SOURCES_NOT_REGISTERED, which names
-         the remedy. */
-      log.error("courier.config could not be loaded; no sources were registered", err);
-    }
-    if (!registered) setAppOrigin(detectAppOrigin());
-  }
+  const studioAddress = isBrowser ? undefined : await registerFromConfig();
 
   // Install the announce-driven runtime source registry BEFORE consuming
   // the announcements, so past announcements replay into both the wire
@@ -187,7 +158,7 @@ async function attachFresh(runtimeId: string, isBrowser: boolean): Promise<Runti
     wireHooks(bus, runtimeId, resolveSourceName);
     wireHttpHooks(bus, runtimeId, resolveSourceName);
 
-    const studioUrl = resolveStudioUrl();
+    const studioUrl = resolveStudioUrl(studioAddress);
     connectRuntimeSocket({ runtimeId, kind: handle.kind, studioUrl, bus }, pending, handle).catch(
       (err: unknown) => log.warn("Studio connection failed to start", err),
     );

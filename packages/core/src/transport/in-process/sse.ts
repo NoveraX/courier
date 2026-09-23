@@ -1,6 +1,7 @@
 import type { Sources } from "../../define/types";
 import type { SSEContext, SSEEvent, SSEHandler, SSESubscription } from "../../realtime/types";
 import { generateRequestId } from "../../studio";
+import { abortableEvents } from "../../utils/abortable-events";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { beginStream, instrumentSSE } from "../instrument";
 import {
@@ -105,27 +106,28 @@ export async function executeDirectSSE(
 
   const sseHandler = endpoint as SSEHandler<unknown, unknown>;
   const generator = sseHandler(sseCtx);
-  const subscription = wrapGeneratorAsSubscription(generator, ownAC);
+  const subscription = wrapGeneratorAsSubscription(generator, ownAC, composedSignal);
   return instrumentSSE(subscription, meta, instr);
 }
 
-/** Wrap a generator as the minimal SSESubscription contract for in-process use. */
+/**
+ * Wrap a generator as the minimal SSESubscription contract for in-process use.
+ *
+ * Closing ends a reader waiting on the next event at once, even while the
+ * handler is parked on an await; the handler hears it through `ctx.signal`.
+ */
 function wrapGeneratorAsSubscription(
   generator: AsyncGenerator<SSEEvent<unknown>, void, unknown>,
   ownAC: AbortController,
+  signal: AbortSignal,
 ): SSESubscription {
-  let closed = false;
+  const events = abortableEvents(generator, signal);
   return {
     [Symbol.asyncIterator]() {
-      return generator as AsyncIterableIterator<SSEEvent<unknown>>;
+      return events;
     },
     close() {
-      if (closed) return;
-      closed = true;
       ownAC.abort();
-      // Best-effort: ask the generator to clean up. Errors are ignored —
-      // they will surface through the iterator if a consumer is still reading.
-      generator.return(undefined).catch(() => {});
     },
     status: "connected",
     dropped: 0,

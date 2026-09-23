@@ -2,6 +2,7 @@ import type { Sources } from "../../define/types";
 import type { SSEEvent, SSESubscription, WSContext, WSPushHandler } from "../../realtime/types";
 import { qualifyTopic } from "../../realtime/ws/topic-hash";
 import { generateRequestId } from "../../studio";
+import { abortableEvents } from "../../utils/abortable-events";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { beginStream, instrumentSSE } from "../instrument";
 import {
@@ -78,34 +79,23 @@ export async function executeDirectWSPush(
   return instrumentSSE(subscription, meta, instr);
 }
 
-/** Wrap a raw push generator as the minimal SSESubscription contract. */
+/**
+ * Wrap a raw push generator as the minimal SSESubscription contract.
+ *
+ * Closing ends a reader waiting on the next value at once, even while the
+ * handler is parked on an await; the handler hears it through `ctx.signal`.
+ */
 function wrapPushAsSubscription(
   generator: AsyncGenerator<unknown, void, unknown>,
   ownAC: AbortController,
 ): SSESubscription {
-  let closed = false;
-  // Push handlers yield raw values; lift them to SSEEvent shape so the
-  // client iterator receives `{data}` consistently with SSE.
-  const lifted = (async function* (): AsyncGenerator<SSEEvent<unknown>, void, unknown> {
-    try {
-      for await (const value of generator) {
-        if (ownAC.signal.aborted) break;
-        yield { data: value };
-      }
-    } finally {
-      generator.return(undefined).catch(() => {});
-    }
-  })();
-
+  const events = liftToEvents(abortableEvents(generator, ownAC.signal));
   return {
     [Symbol.asyncIterator]() {
-      return lifted as AsyncIterableIterator<SSEEvent<unknown>>;
+      return events;
     },
     close() {
-      if (closed) return;
-      closed = true;
       ownAC.abort();
-      lifted.return(undefined).catch(() => {});
     },
     status: "connected",
     dropped: 0,
@@ -113,4 +103,9 @@ function wrapPushAsSubscription(
       return () => {};
     },
   };
+}
+
+/** Push handlers yield bare values; the client reads `{ data }` as it does from SSE. */
+async function* liftToEvents(values: AsyncIterable<unknown>): AsyncGenerator<SSEEvent<unknown>> {
+  for await (const value of values) yield { data: value };
 }

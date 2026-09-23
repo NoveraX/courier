@@ -176,4 +176,39 @@ describe("executeDirectWSPush", () => {
     await new Promise((r) => setTimeout(r, 10));
     expect(observed).toBe(true);
   });
+
+  it("close() ends a read waiting on a handler parked on an await", async () => {
+    const sources = makePushSources(async function* () {
+      yield 1;
+      await new Promise(() => {});
+    });
+    const sub = await executeDirectWSPush(sources as any, { source: "api", group: "chat", method: "feed" });
+    const reading = collect(sub);
+    await new Promise((r) => setTimeout(r, 10));
+
+    sub.close();
+
+    await expect(reading).resolves.toEqual([1]);
+  });
+
+  it("close() lets a parked handler that watches its signal release what it holds", async () => {
+    let released = false;
+    const sources = makePushSources(async function* (ctx) {
+      try {
+        yield 1;
+        await new Promise((resolve) => ctx.signal.addEventListener("abort", resolve));
+      } finally {
+        released = true;
+      }
+    });
+    const sub = await executeDirectWSPush(sources as any, { source: "api", group: "chat", method: "feed" });
+    const reading = collect(sub);
+    await new Promise((r) => setTimeout(r, 10));
+
+    sub.close();
+    await reading;
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(released).toBe(true);
+  });
 });

@@ -395,4 +395,37 @@ describe("executeDirectSSE — cancellation", () => {
     sub.close();
     expect(observed).toBe(true);
   });
+
+  it("close() ends a read waiting on a handler parked on an await", async () => {
+    const sources = makeSources(async function* () {
+      yield { data: 1 };
+      await new Promise(() => {});
+    });
+    const sub = await executeDirectSSE(sources as any, { source: "api", group: "chat", method: "feed" });
+    const reading = collect(sub);
+    await new Promise((r) => setTimeout(r, 10));
+
+    sub.close();
+
+    await expect(reading).resolves.toEqual([{ data: 1 }]);
+  });
+
+  it("an external abort ends a read waiting on a handler parked on an await", async () => {
+    const ac = new AbortController();
+    const sources = makeSources(async function* () {
+      yield { data: 1 };
+      await new Promise(() => {});
+    });
+    const sub = await executeDirectSSE(
+      sources as any,
+      { source: "api", group: "chat", method: "feed" },
+      { signal: ac.signal },
+    );
+    const reading = collect(sub);
+    await new Promise((r) => setTimeout(r, 10));
+
+    ac.abort();
+
+    await expect(reading).resolves.toEqual([{ data: 1 }]);
+  });
 });

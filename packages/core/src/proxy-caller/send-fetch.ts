@@ -1,4 +1,5 @@
 import { HTTPError } from "../errors";
+import type { UploadProgress } from "../http-client/types";
 import { studioHooks } from "../studio";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
@@ -16,7 +17,7 @@ export async function sendFetch(
     onError?: (error: HTTPError) => void | Promise<void>;
   },
 ): Promise<unknown> {
-  const { onDownloadProgress: _dp, ...fetchOptions } = options;
+  const fetchOptions = withUploadInstrumentation(options);
   const hasTimingHook = studioHooks.onProxyClientTiming !== undefined;
   const t0 = hasTimingHook ? performance.now() : 0;
 
@@ -61,4 +62,30 @@ function emitClientTiming(response: Response, t0: number, tHeaders: number): voi
     totalRoundTrip: tEnd - t0,
     timestamp: Date.now(),
   });
+}
+
+/** Report an upload's progress to Studio as well as to the caller. */
+function withUploadInstrumentation(options: Record<string, unknown>): Record<string, unknown> {
+  const onUploadProgress = options.onUploadProgress as
+    | ((progress: UploadProgress) => void)
+    | undefined;
+  if (!onUploadProgress || !studioHooks.onUploadProgress) return options;
+
+  const requestId = `upload_${Date.now().toString(36)}`;
+  return {
+    ...options,
+    onUploadProgress: (progress: UploadProgress) => {
+      onUploadProgress(progress);
+      studioHooks.onUploadProgress?.({
+        requestId,
+        loaded: progress.transferredBytes,
+        total: progress.totalBytes,
+        percentage: progress.percent,
+        timestamp: Date.now(),
+      });
+      if (progress.transferredBytes === progress.totalBytes) {
+        studioHooks.onUploadComplete?.({ requestId, timestamp: Date.now() });
+      }
+    },
+  };
 }

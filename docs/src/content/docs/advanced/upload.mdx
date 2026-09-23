@@ -2,7 +2,7 @@ export const metadata = { title: "File Upload", description: "Upload files with 
 
 ## Overview
 
-Courier supports file uploads using FormData in both direct and proxy modes. When you provide an `onUploadProgress` callback, Courier automatically switches from `fetch` to `XMLHttpRequest` for real network-level progress tracking.
+Courier supports file uploads using FormData in both direct and proxy modes. When you provide an `onUploadProgress` callback in a browser, Courier sends the request with `XMLHttpRequest`, whose upload events `fetch` lacks, for real network-level progress. On a server — a direct call from Node — the body is encoded once to learn its size and sent as a stream, reported as the network takes each chunk.
 
 ## Basic file upload
 
@@ -226,17 +226,16 @@ await caller.files
   
     // Ignored — XHR does not support the fetch cache API
     cache: "no-store",
-  
-    // Ignored — XHR cannot track download progress simultaneously
-    onDownloadProgress: () => {},
-  
+
     // Ignored — Next.js-specific fetch option, not available in XHR
     next: { revalidate: 0 },
   })
   .upload(formData)
 
-// In development, Courier logs warnings for each ignored option.
-// In production, they are silently ignored.
+// Also ignored in a browser: mode, redirect, keepalive, priority, integrity.
+// In development, Courier logs a warning naming each ignored option.
+// onDownloadProgress still works, but over XHR it reports the answer only
+// once the whole of it has arrived.
 ```
 
 <Callout variant="warning" title="Development warnings">

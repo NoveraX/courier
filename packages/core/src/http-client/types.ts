@@ -65,8 +65,10 @@ export type FetchOptions = Omit<RequestInit, "method"> & {
   timeout?: number;
   /** URL prefix prepended to the request path */
   prefixUrl?: string;
-  /** Callback for tracking download progress (streamed responses) */
+  /** Called as the answer's body is read */
   onDownloadProgress?: (progress: DownloadProgress) => void;
+  /** Called as the request's body is sent */
+  onUploadProgress?: (progress: UploadProgress) => void;
 };
 
 export type OptionsWithSearchParams = Omit<FetchOptions, "searchParams"> & {

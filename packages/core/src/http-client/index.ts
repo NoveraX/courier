@@ -52,7 +52,6 @@ export class HttpClient {
       deduplicate,
       middleware: _middleware,
       timeout,
-      onDownloadProgress: _dp,
       ...baseFetchInit
     } = options || {};
 
@@ -78,7 +77,7 @@ export class HttpClient {
     url: string,
     options: Partial<FetchOptions> = {},
   ): Promise<Response> {
-    const { prefixUrl: overridePrefixUrl, onDownloadProgress: _dp, ...fetchOptions } = options;
+    const { prefixUrl: overridePrefixUrl, ...fetchOptions } = options;
 
     const effectivePrefixUrl = overridePrefixUrl !== undefined ? overridePrefixUrl : this.prefixUrl;
     let fullUrl = url;

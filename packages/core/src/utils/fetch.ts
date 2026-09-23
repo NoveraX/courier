@@ -1,17 +1,31 @@
+import type { DownloadProgress, UploadProgress } from "../http-client/types";
 import { normalizeHttpMethod } from "./helpers";
+import { sendWithUploadProgress, trackDownload } from "./progress";
 
 export type CoreFetchInit = Omit<RequestInit, "method"> & {
   json?: unknown;
   searchParams?: string | URLSearchParams | Record<string, string>;
   timeout?: number;
+  onUploadProgress?: (progress: UploadProgress) => void;
+  onDownloadProgress?: (progress: DownloadProgress) => void;
 };
 
-export function coreFetch(
+export async function coreFetch(
   method: string,
   url: string,
   options: CoreFetchInit = {},
 ): Promise<Response> {
-  const { json, searchParams, body, headers, timeout, signal, ...rest } = options;
+  const {
+    json,
+    searchParams,
+    body,
+    headers,
+    timeout,
+    signal,
+    onUploadProgress,
+    onDownloadProgress,
+    ...rest
+  } = options;
 
   let fullUrl = url;
   if (searchParams) {
@@ -43,11 +57,16 @@ export function coreFetch(
     finalSignal = finalSignal ? AbortSignal.any([finalSignal, timeoutSignal]) : timeoutSignal;
   }
 
-  return fetch(fullUrl, {
+  const init = {
     ...rest,
     method: normalizeHttpMethod(method),
     headers: requestHeaders,
     body: requestBody,
     ...(finalSignal != null && { signal: finalSignal }),
-  });
+  };
+  const response =
+    onUploadProgress && requestBody != null
+      ? await sendWithUploadProgress(fullUrl, init, onUploadProgress)
+      : await fetch(fullUrl, init);
+  return onDownloadProgress ? trackDownload(response, onDownloadProgress) : response;
 }

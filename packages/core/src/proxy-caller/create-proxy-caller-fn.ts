@@ -8,7 +8,6 @@ import { resolveProxyPath } from "./resolve-path";
 import { sendFetch } from "./send-fetch";
 import { splitProxyOptions } from "./split-options";
 import type { ProxyCallerDefaults, UntypedCallerFn } from "./types";
-import { handleXhrUpload } from "./xhr-handler";
 
 export type { ProxyCallerDefaults } from "./types";
 
@@ -86,25 +85,6 @@ export function createProxyCallerFn<
 
       const requestPayload = buildPostPayload(source, group, method, variables, call.server);
 
-      if (call.onUploadProgress) {
-        return handleXhrUpload({
-          url,
-          requestPayload,
-          variables,
-          defaultHeaders: call.headers,
-          credentials: call.credentials,
-          timeout: call.timeout,
-          signal,
-          onUploadProgress: call.onUploadProgress,
-          stream: call.stream,
-          cache: call.cache,
-          next: call.next,
-          onDownloadProgress: call.onDownloadProgress,
-          globalOnSuccess,
-          globalOnError,
-        });
-      }
-
       return sendFetch(
         "post",
         url,
@@ -112,6 +92,7 @@ export function createProxyCallerFn<
           ...requestPayload,
           ...local,
           credentials: call.credentials,
+          onUploadProgress: call.onUploadProgress,
           onDownloadProgress: call.onDownloadProgress,
           timeout: call.timeout,
           headers: call.headers,

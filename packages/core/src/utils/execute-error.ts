@@ -97,8 +97,11 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
     });
   }
 
+  /* A 2xx error is an upstream answer the proxy could not use — a body that
+     would not parse. Passed on as it was, a failure reached the browser as a
+     success carrying `{ success: false }` where the endpoint's data should be. */
   const httpStatus =
-    error instanceof HTTPError && error.status >= 200 && error.status <= 599 ? error.status : 502;
+    error instanceof HTTPError && error.status >= 300 && error.status <= 599 ? error.status : 502;
 
   const responseResult =
     error instanceof HTTPError

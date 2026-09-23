@@ -70,11 +70,18 @@ const main = defineCommand({
     }
     const host = args.host || configured.host || STUDIO_DEFAULT_HOST;
 
-    createStudioServer({
+    const server = createStudioServer({
       port,
       host,
       ...(configured.mockBasePort === undefined ? {} : { mockBasePort: configured.mockBasePort }),
       projectRoot,
+      /* Without this a second `courier studio` printed one line and then sat
+         in the foreground looking frozen, having started nothing. */
+      onError: async (err) => {
+        log.error(err.message);
+        await server.close();
+        process.exitCode = 1;
+      },
       onReady: async (url) => {
         printBanner(host, port);
 

@@ -14,6 +14,12 @@ export interface StudioServerOptions {
   /** Called when server is ready */
   onReady?: (url: string) => void;
   /**
+   * Called when the server cannot listen — the port is in use, or the host
+   * cannot be bound. Without it the failure is logged. Either way the
+   * returned handle's `close()` still releases what was started.
+   */
+  onError?: (error: Error) => void;
+  /**
    * Additional CORS origins permitted to connect to the Studio Socket.IO
    * server beyond the auto-generated `http://{host}:{port}` and Vite dev
    * server (`http://localhost:4382`). Use for cross-origin embeds or

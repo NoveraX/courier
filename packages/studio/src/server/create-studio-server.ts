@@ -2,28 +2,22 @@
  * Main Studio server setup.
  */
 
-import { existsSync } from "node:fs";
 import { createServer } from "node:http";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { createLogger } from "@noverax/courier";
 import { STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
-import compression from "compression";
 import express from "express";
-import type { RequestHandler } from "express-serve-static-core";
 import { Server as SocketIOServer } from "socket.io";
 import { setProjectRoot } from "../context";
-import { registerApisRoutes } from "./apis-routes";
 import { BindingTable } from "./catalog/binding-table";
 import { initProject } from "./init";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
-import { createOriginGuard } from "./origin-guard";
+import { registerRestApi } from "./rest-api";
 import { setupRuntimeNamespace } from "./runtime-namespace";
 import { clearStudioServerState } from "./runtime-namespace-state";
 import { createRuntimePlaygroundRouter } from "./runtime-playground-router";
+import { serveStudioUi } from "./serve-ui";
 import { clearBuffer } from "./session-buffer";
-import { registerSessionRoutes } from "./session-routes";
 import { setupUiNamespace } from "./socket-handlers";
 import type { StudioServer, StudioServerOptions } from "./types";
 import { watchConfigDriven } from "./watch-config-driven";
@@ -44,6 +38,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     projectRoot = process.cwd(),
     mockBasePort = DEFAULT_MOCK_BASE_PORT,
     onReady,
+    onError,
     extraCorsOrigins = [],
   } = options;
 
@@ -117,52 +112,27 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     playgroundRouter,
   });
 
-  // ── REST API ─────────────────────────────────────────────────────────────────
-
-  app.use(compression());
-  /* Before anything reads a body: the API is for the Studio UI, not for every
-     page the developer happens to have open. */
-  app.use("/api", createOriginGuard(corsOrigins));
-  app.use(express.json({ limit: "5mb" }));
-
-  app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok" });
-  });
-
-  registerApisRoutes(app);
-  registerSessionRoutes(app);
-
-  // ── Static UI serving ────────────────────────────────────────────────────────
-
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const uiDistPath = join(__dirname, "..", "ui", "dist");
-
-  if (existsSync(uiDistPath)) {
-    // Hashed assets — immutable cache (hash in filename = safe to cache forever)
-    const serveAssets = express.static(join(uiDistPath, "assets")) as RequestHandler;
-    const setCacheHeaders: RequestHandler = (_req, res, next) => {
-      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-      return serveAssets(_req, res, next);
-    };
-    app.use("/assets", setCacheHeaders);
-    app.use(express.static(uiDistPath));
-    // SPA fallback — Express 5 requires named param for catch-all
-    app.get("/{*splat}", (_req, res) => {
-      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      res.sendFile(join(uiDistPath, "index.html"));
-    });
-  }
+  registerRestApi(app, corsOrigins);
+  serveStudioUi(app);
 
   // ── Start ────────────────────────────────────────────────────────────────────
 
   const url = `http://${host}:${port}`;
 
-  httpServer.on("error", (err: NodeJS.ErrnoException) => {
-    if (err.code === "EADDRINUSE") {
-      log.info(`Courier Studio already running on ${url}`);
-      return;
-    }
-    throw err;
+  /* A port another process holds used to be reported as "Studio already
+     running" whoever held it, onReady never fired, and close() rejected
+     because the server had never listened; any other listen error was thrown
+     from the event handler and took the process down. */
+  httpServer.once("error", (err: NodeJS.ErrnoException) => {
+    const failure =
+      err.code === "EADDRINUSE"
+        ? new Error(
+            `Port ${port} on ${host} is in use — is Studio already running? Choose another with --port.`,
+            { cause: err },
+          )
+        : err;
+    if (onError) onError(failure);
+    else log.error("Courier Studio could not start", failure);
   });
 
   httpServer.listen(port, host, () => {
@@ -176,6 +146,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     playgroundRouter.dispose();
     clearStudioServerState();
     io.close();
+    if (!httpServer.listening) return;
     return new Promise<void>((resolve, reject) => {
       httpServer.close((err) => (err ? reject(err) : resolve()));
     });

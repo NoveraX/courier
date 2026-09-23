@@ -11,12 +11,10 @@
  *  - `playground-responder` setup so the Studio playground can dispatch
  *    `playground:execute` to this runtime via the rid-keyed wire
  *
- * Best-effort: if `socket.io-client` is not installed (it's an optional
- * peer dependency), this returns without throwing — the runtime stays
- * locally attached and a later install pulls it in via `attachRuntime`'s
- * idempotent re-entry. Synchronous throws inside `io()` (malformed URL,
- * options parse error) are caught locally so a sidecar failure never
- * propagates up to the user-app's startup path.
+ * Best-effort: if `socket.io-client` fails to load, this warns and returns
+ * without throwing — the runtime stays locally attached. Synchronous throws
+ * inside `io()` (malformed URL, options parse error) are caught locally so a
+ * sidecar failure never propagates up to the user-app's startup path.
  */
 
 import { createLogger, getSources } from "@noverax/courier";
@@ -26,6 +24,7 @@ import type { EventBus } from "../event-bus";
 import type { BufferedAnnouncement } from "./announce-hosting";
 import type { RuntimeKind } from "./attach-runtime-types";
 import { setupPlaygroundResponder } from "./playground-responder";
+import { timersCanUnref } from "./runtime-environment";
 
 const log = createLogger("Studio");
 
@@ -110,8 +109,11 @@ export async function connectRuntimeSocket(
       transports: ["websocket"],
       /* A dev-time side channel must never be what keeps a process alive: a
          seed script, a CLI task or a test run that attached hung forever
-         when Studio was not running, retrying to connect. */
-      autoUnref: true,
+         when Studio was not running, retrying to connect. Only where timers
+         support it, though: socket.io-client calls `.unref()` on its own, and
+         in a browser that threw during the handshake and the socket never
+         opened. */
+      autoUnref: timersCanUnref(),
       reconnection: true,
       reconnectionDelay: 1000,
       /* Studio is restarted constantly in development, and ten attempts a

@@ -23,6 +23,18 @@ export function detectDefaultRuntimeId(isBrowser: boolean): string {
   return "server";
 }
 
+/**
+ * Whether this platform's timers can be unref'd, so that a pending one does
+ * not keep the process alive. Node's and Bun's can; the numbers a browser,
+ * Deno or an edge worker hands out cannot, and calling `.unref()` on them
+ * throws.
+ */
+export function timersCanUnref(): boolean {
+  const timer = setTimeout(() => {}, 0);
+  clearTimeout(timer);
+  return typeof (timer as { unref?: unknown }).unref === "function";
+}
+
 /** Resolve the Studio URL from globalThis injection, env, or the canonical default. */
 export function resolveStudioUrl(): string {
   const slot = (globalThis as Record<symbol, unknown>)[STUDIO_URL_KEY];

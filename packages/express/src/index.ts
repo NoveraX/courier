@@ -41,7 +41,7 @@ export function courierHandler(
   return async (req: IncomingMessage, res: ServerResponse, next?: (err?: unknown) => void) => {
     tryDiscoverAppOrigin(req);
     try {
-      const webReq = toWebRequest(req);
+      const webReq = toWebRequest(req, res);
       const webRes = await handle(webReq);
       await sendWebResponse(webRes, res);
     } catch (error) {
@@ -79,7 +79,7 @@ export function courierSSEHandler(
   return async (req: IncomingMessage, res: ServerResponse, next?: (err?: unknown) => void) => {
     tryDiscoverAppOrigin(req);
     try {
-      const webReq = toWebRequest(req);
+      const webReq = toWebRequest(req, res);
       const webRes = await handleSSE(webReq);
       await sendWebResponse(webRes, res);
     } catch (error) {

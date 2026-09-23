@@ -1,4 +1,4 @@
-import type { IncomingMessage } from "node:http";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import { rememberPeerAddress } from "./adapter/peer-address";
 import { ConfigurationError } from "./errors/configuration-error";
@@ -6,8 +6,18 @@ import { ConfigurationError } from "./errors/configuration-error";
 /**
  * Convert a Node.js IncomingMessage to a Web Standard Request.
  * Works with Express, Fastify, NestJS, and any Node.js HTTP framework.
+ *
+ * Pass the response too wherever there is one: the request's `signal` then
+ * fires when the client goes away before the response is done. Without it,
+ * an SSE stream on a Node adapter never learned that its client had left,
+ * and kept its generator, its upstream subscription and its connection slot
+ * until the lifetime cap — 30 minutes by default.
+ *
+ * @param nodeReq - The incoming request
+ * @param nodeRes - Its response, whose early close aborts the request
+ * @returns The equivalent Web Standard Request
  */
-export function toWebRequest(nodeReq: IncomingMessage): Request {
+export function toWebRequest(nodeReq: IncomingMessage, nodeRes?: ServerResponse): Request {
   const encrypted = "encrypted" in nodeReq.socket && nodeReq.socket.encrypted;
   const protocol = encrypted ? "https" : "http";
   const host = nodeReq.headers.host ?? "localhost";
@@ -24,6 +34,7 @@ export function toWebRequest(nodeReq: IncomingMessage): Request {
   }
 
   const init: RequestInit & { duplex?: string } = { method: nodeReq.method, headers };
+  if (nodeRes) init.signal = abortedWhenClientLeaves(nodeRes);
 
   if (nodeReq.method !== "GET" && nodeReq.method !== "HEAD") {
     /* A body parser mounted across the whole application consumes this stream
@@ -53,4 +64,18 @@ export function toWebRequest(nodeReq: IncomingMessage): Request {
   const request = new Request(url, init);
   rememberPeerAddress(request, nodeReq.socket.remoteAddress);
   return request;
+}
+
+/**
+ * A signal that fires when the client goes away before the response is done.
+ *
+ * The response's `close` is the dependable event: a request's own `close`
+ * fires as soon as its body has been read, long before a stream ends.
+ */
+function abortedWhenClientLeaves(nodeRes: ServerResponse): AbortSignal {
+  const controller = new AbortController();
+  nodeRes.once("close", () => {
+    if (!nodeRes.writableFinished) controller.abort();
+  });
+  return controller.signal;
 }

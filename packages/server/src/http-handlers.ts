@@ -108,7 +108,7 @@ export function createRequestListener(
     if (handleCors(req, res, allowedOrigins)) return;
 
     try {
-      const webRes = await handler.handle(toWebRequest(req));
+      const webRes = await handler.handle(toWebRequest(req, res));
       await sendWebResponse(webRes, res);
     } catch (err) {
       log.error("Request handler error", err);

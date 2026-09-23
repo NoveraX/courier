@@ -53,6 +53,11 @@ export async function sendWebResponse(webRes: Response, nodeRes: ServerResponse)
   }
 
   const reader = webRes.body.getReader();
+  /* A client that leaves mid-stream stops the body too — a streamed upstream
+     response is then no longer downloaded for nobody. */
+  nodeRes.once("close", () => {
+    if (!nodeRes.writableFinished) void reader.cancel();
+  });
   try {
     for (;;) {
       const { done, value } = await reader.read();

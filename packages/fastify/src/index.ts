@@ -77,7 +77,7 @@ export const courierPlugin: FastifyPluginAsync<CourierPluginOptions> = async (
 
   const proxy = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     tryDiscoverAppOrigin(request);
-    const webReq = toWebRequest(request.raw);
+    const webReq = toWebRequest(request.raw, reply.raw);
     const webRes = await handle(webReq);
     await sendWebResponse(webRes, reply.raw);
     reply.hijack();
@@ -111,7 +111,7 @@ export function courierSSEHandler(
   return async (request: FastifyRequest, reply: FastifyReply) => {
     tryDiscoverAppOrigin(request);
     reply.hijack();
-    const webReq = toWebRequest(request.raw);
+    const webReq = toWebRequest(request.raw, reply.raw);
     const webRes = await handleSSE(webReq);
     await sendWebResponse(webRes, reply.raw);
   };

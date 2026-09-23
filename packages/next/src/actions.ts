@@ -1,12 +1,15 @@
 import {
   buildClientProxy,
   type Context,
+  createLogger,
   type ExecuteBackend,
   executeRequest,
   type TypedClient,
   type ValidationIssue,
 } from "@noverax/courier";
 import type { DefinedApi } from "@noverax/courier/define";
+
+const log = createLogger("Next");
 
 /** State returned by server actions for useActionState */
 export type ActionState<TData = unknown> = {
@@ -28,7 +31,10 @@ async function getRequestHeaders(): Promise<Headers | undefined> {
   try {
     const { headers } = await import("next/headers");
     return await headers();
-  } catch {
+  } catch (error) {
+    /* Called outside a request — a script, a build step — there are simply
+       no headers to forward. */
+    log.debug("No request headers to forward", error);
     return undefined;
   }
 }
@@ -67,15 +73,24 @@ export function createAction<
   TSources extends Record<string, DefinedApi<any>>,
   TKey extends string & keyof TSources,
 >(sources: TSources, source: TKey, defaults: ActionDefaults = {}): TypedClient<TSources[TKey]> {
-  const backend: ExecuteBackend = async (group, method, variables, _options, _raw) => {
+  const backend: ExecuteBackend = async (group, method, variables, options, raw) => {
     const context: Context | undefined =
       defaults.headers !== false
         ? { headers: (await getRequestHeaders()) ?? undefined }
         : undefined;
 
+    /* `.raw` and `.with({ ... })` compile here as on any caller, and used to
+       be dropped: `.raw` returned the bare body, and a per-call header or
+       timeout never reached the request. */
     return executeRequest(
       sources,
-      { source, group, method, variables: variables as Record<string, unknown> },
+      {
+        source,
+        group,
+        method,
+        variables: variables as Record<string, unknown>,
+        options: raw ? { ...options, rawData: true } : options,
+      },
       context,
     );
   };

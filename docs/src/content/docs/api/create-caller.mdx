@@ -42,7 +42,7 @@ type CallerDefaults = {
 
 ## Return Type
 
-Direct mode returns the full response by default — `Partial<HttpResponse<R>>` with `status`, `headers`, and `data`.
+A call resolves to the response data. Through `.raw` it resolves to the whole response, `HttpResponse<R>`, with `status`, `headers` and `data`; with `.with({ stream: true })` the data is the unread `ReadableStream`.
 
 ```ts
 type HttpResponse<T> = {

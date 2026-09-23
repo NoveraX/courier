@@ -34,7 +34,11 @@ export const buildResponse = (
       throw response.throw;
     }
 
-    return { status: response.status, headers: response.headers, data: response.data };
+    /* The unread body, or with `.raw` the response around it — the same two
+       shapes the proxy client resolves to. */
+    return response.rawData
+      ? { status: response.status, headers: response.headers, data: response.data }
+      : response.data;
   }
 
   const baseResult = {

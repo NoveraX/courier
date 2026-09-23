@@ -63,8 +63,13 @@ export async function sendFetch(
     }
 
     if (ctx.stream) {
-      await ctx.onSuccess?.(response);
-      return response;
+      /* The unread body, or with `.raw` the response around it — as in direct
+         mode, where handing back the whole Response was a third shape. */
+      const streamed = wantsRaw(ctx.requestPayload)
+        ? { status: response.status, headers: response.headers, data: response.body }
+        : response.body;
+      await ctx.onSuccess?.(streamed);
+      return streamed;
     }
 
     /* The proxy answers a bodiless upstream status with an empty body, which

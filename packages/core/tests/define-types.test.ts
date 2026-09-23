@@ -5,7 +5,7 @@
  * variable types, and endpoint keys through the entire type pipeline.
  * Each test uses `expectTypeOf` for compile-time assertions.
  */
-import { describe, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { defineApi, defineGroup, courier } from "../src/define/index";
 import type { InferResponse, InferVariables } from "../src/define/marker";
 import type { HttpResponse } from "../src/http-client/types";
@@ -179,20 +179,20 @@ describe("TypedClient type inference", () => {
 		expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<Promise<User>>();
 	});
 
-	it(".raw changes return type to Partial<HttpResponse<R>>", () => {
+	it(".raw changes return type to HttpResponse<R>", () => {
 		type RawResult = ReturnType<Client["users"]["raw"]["getAll"]>;
-		expectTypeOf<RawResult>().toEqualTypeOf<Promise<Partial<HttpResponse<User[]>>>>();
+		expectTypeOf<RawResult>().toEqualTypeOf<Promise<HttpResponse<User[]>>>();
 	});
 
 	it(".raw preserves variables requirement", () => {
 		type RawFn = Client["users"]["raw"]["getById"];
 		expectTypeOf<Parameters<RawFn>>().toEqualTypeOf<[{ id: number }]>();
-		expectTypeOf<ReturnType<RawFn>>().toEqualTypeOf<Promise<Partial<HttpResponse<User>>>>();
+		expectTypeOf<ReturnType<RawFn>>().toEqualTypeOf<Promise<HttpResponse<User>>>();
 	});
 
 	it("client.raw.group also switches return type", () => {
 		type RawResult = ReturnType<Client["raw"]["users"]["getAll"]>;
-		expectTypeOf<RawResult>().toEqualTypeOf<Promise<Partial<HttpResponse<User[]>>>>();
+		expectTypeOf<RawResult>().toEqualTypeOf<Promise<HttpResponse<User[]>>>();
 	});
 
 	it(".with() returns same typed client", () => {
@@ -205,7 +205,36 @@ describe("TypedClient type inference", () => {
 		type RawGroup = Client["users"]["raw"];
 		type WithRawGroup = ReturnType<RawGroup["with"]>;
 		type Result = ReturnType<WithRawGroup["getAll"]>;
-		expectTypeOf<Result>().toEqualTypeOf<Promise<Partial<HttpResponse<User[]>>>>();
+		expectTypeOf<Result>().toEqualTypeOf<Promise<HttpResponse<User[]>>>();
+	});
+
+	it(".with({ stream: true }) resolves to the unread body, or the response around it with .raw", () => {
+		/* Checked by the compiler; a streamed call used to keep the parsed body's type. */
+		const typeOnly = (client: Client) => {
+			expectTypeOf(client.with({ stream: true }).users.getAll).returns.toEqualTypeOf<
+				Promise<ReadableStream<Uint8Array>>
+			>();
+			expectTypeOf(client.raw.with({ stream: true }).users.getAll).returns.toEqualTypeOf<
+				Promise<HttpResponse<ReadableStream<Uint8Array>>>
+			>();
+			expectTypeOf(client.users.with({ stream: true }).getById).returns.toEqualTypeOf<
+				Promise<ReadableStream<Uint8Array>>
+			>();
+		};
+		expect(typeOnly).toBeTypeOf("function");
+	});
+
+	it(".with() keeps streaming until told otherwise", () => {
+		const typeOnly = (client: Client) => {
+			expectTypeOf(client.with({ stream: true }).with({ timeout: 1 }).users.getAll).returns.toEqualTypeOf<
+				Promise<ReadableStream<Uint8Array>>
+			>();
+			expectTypeOf(client.with({ stream: true }).with({ stream: false }).users.getAll).returns.toEqualTypeOf<
+				Promise<User[]>
+			>();
+			expectTypeOf(client.with({ timeout: 1 }).users.getAll).returns.toEqualTypeOf<Promise<User[]>>();
+		};
+		expect(typeOnly).toBeTypeOf("function");
 	});
 });
 
@@ -294,12 +323,12 @@ describe("FlatClient type inference", () => {
 
 	it(".raw changes return type", () => {
 		type RawResult = ReturnType<Client["raw"]["getUsers"]>;
-		expectTypeOf<RawResult>().toEqualTypeOf<Promise<Partial<HttpResponse<User[]>>>>();
+		expectTypeOf<RawResult>().toEqualTypeOf<Promise<HttpResponse<User[]>>>();
 	});
 
 	it("flat method has .raw accessor (method-level)", () => {
 		type RawResult = ReturnType<Client["healthCheck"]["raw"]>;
-		expectTypeOf<RawResult>().toEqualTypeOf<Promise<Partial<HttpResponse<{ ok: boolean }>>>>();
+		expectTypeOf<RawResult>().toEqualTypeOf<Promise<HttpResponse<{ ok: boolean }>>>();
 	});
 
 	it("flat method has .with() (method-level)", () => {
@@ -313,7 +342,7 @@ describe("FlatClient type inference", () => {
 		type RawWithMethod = ReturnType<Client["healthCheck"]["raw"]["with"]>;
 		expectTypeOf<RawWithMethod>().toBeFunction();
 		type Result = ReturnType<RawWithMethod>;
-		expectTypeOf<Result>().toEqualTypeOf<Promise<Partial<HttpResponse<{ ok: boolean }>>>>();
+		expectTypeOf<Result>().toEqualTypeOf<Promise<HttpResponse<{ ok: boolean }>>>();
 	});
 });
 
@@ -354,15 +383,15 @@ describe("MixedClient type inference", () => {
 
 	it(".raw works on both groups and flat", () => {
 		type RawGroupResult = ReturnType<Client["raw"]["users"]["getAll"]>;
-		expectTypeOf<RawGroupResult>().toEqualTypeOf<Promise<Partial<HttpResponse<User[]>>>>();
+		expectTypeOf<RawGroupResult>().toEqualTypeOf<Promise<HttpResponse<User[]>>>();
 
 		type RawFlatResult = ReturnType<Client["raw"]["healthCheck"]>;
-		expectTypeOf<RawFlatResult>().toEqualTypeOf<Promise<Partial<HttpResponse<{ ok: boolean }>>>>();
+		expectTypeOf<RawFlatResult>().toEqualTypeOf<Promise<HttpResponse<{ ok: boolean }>>>();
 	});
 
 	it("flat method has .raw and .with() at method level", () => {
 		type RawResult = ReturnType<Client["healthCheck"]["raw"]>;
-		expectTypeOf<RawResult>().toEqualTypeOf<Promise<Partial<HttpResponse<{ ok: boolean }>>>>();
+		expectTypeOf<RawResult>().toEqualTypeOf<Promise<HttpResponse<{ ok: boolean }>>>();
 
 		type WithMethod = ReturnType<Client["healthCheck"]["with"]>;
 		expectTypeOf<WithMethod>().toBeFunction();

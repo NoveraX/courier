@@ -36,35 +36,23 @@ Ask for the stream at the call site:
 const response = await caller.events.with({ stream: true }).subscribe({ channel: "builds" })
 ```
 
-## Proxy mode behavior <ModeBadge mode="proxy" />
+## What a streamed call resolves to
 
-In proxy mode, the `apiRoute` handler detects streaming responses and returns a `Response` with the stream body and forwarded headers. The stream is not buffered in memory — data flows directly from your backend through the proxy to the browser.
-
-```ts
-// In proxy mode, apiRoute returns the stream directly as a Response:
-// Browser ← ReadableStream ← apiRoute ← Backend
-
-// The proxy preserves the stream — no buffering in memory
-// Headers like Content-Type are forwarded automatically
-```
-
-## Direct mode behavior <ModeBadge mode="direct" />
-
-In direct mode, the stream is returned inside the response object. You typically combine `stream: true` with `rawData: true` in direct mode to access both the stream and the response headers:
+A streamed call resolves to the unread body — a `ReadableStream<Uint8Array>`. Ask for `.raw` as well and it resolves to the response around it, `{ status, headers, data }`, with the stream in `data`. Both shapes are the same in direct and proxy mode, and the types follow the option: `.with({ stream: true })` changes what the call is typed to return.
 
 ```ts title="app/exports/[id]/page.tsx"
-// In direct mode, the stream is returned in the response object:
-// { status: 200, headers: Headers, data: ReadableStream }
-
 import { caller } from "@/lib/caller"
 
 export default async function ExportPage({ params }: { params: { id: string } }) {
-  const response = await caller.exports.raw.download({ id: params.id })
+  const body = await caller.exports.with({ stream: true }).download({ id: params.id })
+  // body: ReadableStream<Uint8Array>
 
-  // response.data is a ReadableStream
-  // response.headers contains Content-Type, Content-Length, etc.
+  const response = await caller.exports.raw.with({ stream: true }).download({ id: params.id })
+  // response.status, response.headers.get("content-type"), response.data: ReadableStream<Uint8Array>
 }
 ```
+
+In proxy mode the stream is not buffered: data flows from your backend through the proxy to the browser as it arrives, with the content type and the cookies the backend set. A response schema on the endpoint is not applied to a streamed call — it describes the value the caller reads from the stream, not the bytes.
 
 ## Consuming streams in client components
 
@@ -84,8 +72,8 @@ export function EventStream({ channel }: { channel: string }) {
     let cancelled = false
 
     async function consume() {
-      const response = await caller.events.subscribe({ channel })
-      const reader = (response as ReadableStream).getReader()
+      const body = await caller.events.with({ stream: true }).subscribe({ channel })
+      const reader = body.getReader()
       const decoder = new TextDecoder()
 
       while (!cancelled) {
@@ -144,8 +132,8 @@ export function SSEConsumer({ channel }: { channel: string }) {
     let cancelled = false
 
     async function consume() {
-      const response = await caller.events.subscribe({ channel })
-      const reader = (response as ReadableStream).getReader()
+      const body = await caller.events.with({ stream: true }).subscribe({ channel })
+      const reader = body.getReader()
       const decoder = new TextDecoder()
 
       while (!cancelled) {

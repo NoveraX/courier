@@ -206,14 +206,27 @@ describe("createProxyCaller", () => {
   });
 
   describe("stream mode", () => {
-    it("returns raw response when stream is true", async () => {
-      const streamResponse = new Response(null, { status: 200, headers: new Headers() });
-      fetchSpy.mockResolvedValue(streamResponse);
+    it("resolves a streamed call to the unread body, as direct mode does", async () => {
+      const body = new ReadableStream();
+      fetchSpy.mockResolvedValue(new Response(body, { status: 200 }));
 
       const client = createProxyCaller("api") as any;
       const result = await client.events.with({ stream: true }).subscribe();
 
-      expect(result).toBe(streamResponse);
+      expect(result).toBe(body);
+    });
+
+    it("resolves a raw streamed call to the response around the body", async () => {
+      fetchSpy.mockResolvedValue(
+        new Response(new ReadableStream(), { status: 206, headers: { "content-type": "text/plain" } }),
+      );
+
+      const client = createProxyCaller("api") as any;
+      const result = await client.events.raw.with({ stream: true }).subscribe();
+
+      expect(result.status).toBe(206);
+      expect(result.headers.get("content-type")).toBe("text/plain");
+      expect(result.data).toBeInstanceOf(ReadableStream);
     });
 
     it("includes stream option in JSON payload", async () => {

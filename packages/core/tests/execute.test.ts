@@ -410,30 +410,40 @@ describe("executeRequest", () => {
   });
 
   describe("stream mode", () => {
-    it("returns stream data when stream option is true", async () => {
-      const stream = new ReadableStream();
-      fetchSpy.mockResolvedValue(new Response(stream, {
-        status: 200,
-        headers: new Headers(),
-      }));
+    it("resolves a streamed call to the unread body", async () => {
+      fetchSpy.mockResolvedValue(new Response(new ReadableStream(), { status: 200 }));
 
       const source = createTestSource({
         events: (methods: HttpMethods) => methods.get("events"),
       });
-      const sources = { api: source };
 
-      const result = await executeRequest(sources, {
+      const result = await executeRequest({ api: source }, {
         source: "api",
         method: "events",
         options: { stream: true },
       });
 
-      expect(result).toEqual(
-        expect.objectContaining({
-          status: 200,
-          data: expect.any(ReadableStream),
-        }),
+      expect(result).toBeInstanceOf(ReadableStream);
+    });
+
+    it("resolves a raw streamed call to the response around the body", async () => {
+      fetchSpy.mockResolvedValue(
+        new Response(new ReadableStream(), { status: 206, headers: { "content-type": "text/plain" } }),
       );
+
+      const source = createTestSource({
+        events: (methods: HttpMethods) => methods.get("events"),
+      });
+
+      const result = (await executeRequest({ api: source }, {
+        source: "api",
+        method: "events",
+        options: { stream: true, rawData: true },
+      })) as { status: number; headers: Headers; data: unknown };
+
+      expect(result.status).toBe(206);
+      expect(result.headers.get("content-type")).toBe("text/plain");
+      expect(result.data).toBeInstanceOf(ReadableStream);
     });
   });
 });

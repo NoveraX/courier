@@ -93,7 +93,7 @@ const response = await caller.users.raw.getAll()
 // Stream mode — the body arrives as a ReadableStream instead of parsed
 const response = await caller.events.with({ stream: true }).subscribe({ channel: "builds" })
 
-// GET proxy — encodes as query params instead of POST body (cacheable)
+// GET proxy — sends the variables in the URL instead of a POST body (cacheable)
 const users = await caller.users.with({ method: "GET" }).getAll()
 
 // Upload with progress tracking

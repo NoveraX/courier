@@ -71,7 +71,9 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
   const status = response?.status || 200;
   let tRespValidation = 0;
 
-  if (deps.schema?.response) {
+  /* A streamed answer is the upstream's bytes, not yet a value; the schema
+     describes the value the caller reads from them. */
+  if (deps.schema?.response && !deps.stream) {
     const validationCtx = {
       hasStudio: deps.hasStudio,
       requestId: deps.requestId,

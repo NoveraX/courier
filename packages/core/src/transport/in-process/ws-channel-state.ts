@@ -1,11 +1,10 @@
-import type {
-  ChannelHandlers,
-  ConnectionStatus,
-  WSChannel,
-  WSChannelContext,
-} from "../../realtime/types";
+import { createLogger } from "../../logger";
+import type { ChannelHandlers, ConnectionStatus, WSChannelContext } from "../../realtime/types";
 import { validateSchema } from "../../validation";
 import { type InProcessStreamSchema, wrapStreamError } from "./shared";
+import type { InProcessWSChannel } from "./types";
+
+const log = createLogger("WS");
 
 const EXECUTOR = "executeDirectWSChannel";
 
@@ -20,7 +19,7 @@ export interface ChannelState {
   /** Build the WSChannelContext object the server handlers receive. */
   channelCtx: WSChannelContext;
   /** Build the WSChannel object exposed to the playground client. */
-  client: WSChannel;
+  client: InProcessWSChannel;
   /** Mark the channel as connected (fires status listeners). */
   markConnected: () => void;
   /** Close the channel idempotently — runs onLeave + status disconnected. */
@@ -51,8 +50,9 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
     for (const fn of dataListeners) {
       try {
         fn(data);
-      } catch {
-        // Listener errors must not break delivery to other listeners.
+      } catch (error) {
+        /* One failing listener must not keep the message from the others. */
+        log.error("A channel data listener failed", error);
       }
     }
   };
@@ -62,8 +62,8 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
     for (const fn of statusListeners) {
       try {
         fn(next);
-      } catch {
-        // ignore
+      } catch (error) {
+        log.error("A channel status listener failed", error);
       }
     }
   };
@@ -89,13 +89,14 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
     unsubscribeFromRegistry();
     try {
       await handlers.onLeave?.(channelCtx);
-    } catch {
-      // onLeave errors are isolated — they must not block status emission.
+    } catch (error) {
+      /* Isolated so it cannot block the status change, but not hidden. */
+      log.warn("onLeave handler failed", error);
     }
     setStatus("disconnected");
   }
 
-  const client: WSChannel = {
+  const client: InProcessWSChannel = {
     async send(data) {
       if (closed) return;
       // Validate inbound (client→server) message against `schema.receive`.
@@ -122,8 +123,8 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
       // Emit current status immediately so late subscribers see "connected".
       try {
         (handler as (s: ConnectionStatus) => void)(status);
-      } catch {
-        // ignore
+      } catch (error) {
+        log.error("A channel status listener failed", error);
       }
       return () => statusListeners.delete(handler as (s: ConnectionStatus) => void);
     },
@@ -133,7 +134,7 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
     get status() {
       return status;
     },
-  } as WSChannel;
+  } as InProcessWSChannel;
 
   return {
     channelCtx,

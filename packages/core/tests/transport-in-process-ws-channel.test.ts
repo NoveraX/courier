@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 import { courier } from "../src/define/courier";
 import type { ChannelHandlers, WSChannelContext } from "../src/realtime/types";
@@ -115,6 +115,61 @@ describe("executeDirectWSChannel — bidirectional flow", () => {
       method: "room",
     });
     await expect(channel.send({ text: 99 })).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("rejects a refused message while Studio instruments the channel", async () => {
+    onTestFinished(installHooks({ onStreamOpen: vi.fn(), onStreamMessage: vi.fn() }));
+    const sources = makeChannelSources(() => ({ onMessage: vi.fn() }), {
+      receiveSchema: z.object({ text: z.string() }),
+    });
+    const channel = await executeDirectWSChannel(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "room",
+    });
+
+    await expect(channel.send({ text: 99 })).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("rejects when onMessage fails", async () => {
+    const sources = makeChannelSources(() => ({
+      onMessage: () => {
+        throw new Error("handler bug");
+      },
+    }));
+    const channel = await executeDirectWSChannel(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "room",
+    });
+
+    await expect(channel.send({ text: "hi" })).rejects.toThrow("handler bug");
+  });
+
+  it("keeps delivering to other listeners when one throws, and reports the failure", async () => {
+    const output = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    let serverCtx: WSChannelContext | undefined;
+    const sources = makeChannelSources(() => ({
+      onMessage: vi.fn(),
+      onJoin: (ctx) => {
+        serverCtx = ctx;
+      },
+    }));
+    const channel = await executeDirectWSChannel(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "room",
+    });
+    const received: unknown[] = [];
+    channel.on("data", () => {
+      throw new Error("listener bug");
+    });
+    channel.on("data", (d) => received.push(d));
+
+    serverCtx?.send({ from: "server" });
+
+    expect(received).toEqual([{ from: "server" }]);
+    expect(output.mock.calls.join("")).toContain("A channel data listener failed");
   });
 
   it("transitions status connecting→connected→disconnected", async () => {

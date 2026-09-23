@@ -10,6 +10,7 @@
  * request through this path so that what it shows is what production does.
  */
 
+import type { WSChannel } from "../../realtime/types";
 import type { PlaygroundWSRegistry } from "./ws-registry";
 
 /** Payload for direct in-process SSE execution */
@@ -58,6 +59,19 @@ export interface ExecuteDirectWSChannelPayload {
   method: string;
   variables?: Record<string, unknown> | undefined;
   headers?: Record<string, string> | undefined;
+}
+
+/**
+ * A WS channel run in-process, whose `send` settles with the result.
+ *
+ * Over the network a message the server refuses comes back as an error
+ * frame; in-process there is no frame, so `send` rejects instead — with the
+ * receive-schema failure or the `onMessage` error. It is typed as a promise
+ * so a caller cannot drop that rejection unnoticed: an unawaited one ended
+ * the process.
+ */
+export interface InProcessWSChannel extends WSChannel {
+  send(data: unknown): Promise<void>;
 }
 
 /** Optional execution-time controls for in-process WS channels */

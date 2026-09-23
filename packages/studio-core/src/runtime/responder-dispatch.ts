@@ -7,8 +7,11 @@
 
 import type { executeRequest } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
-import type { executeDirectSSE, executeDirectWSChannel } from "@noverax/courier/internal-streams";
-import type { WSChannel } from "@noverax/courier/realtime";
+import type {
+  executeDirectSSE,
+  executeDirectWSChannel,
+  InProcessWSChannel,
+} from "@noverax/courier/internal-streams";
 import type { PlaygroundExecutePayload, ResponderSocket } from "./playground-responder";
 
 export async function dispatchHttp(
@@ -94,7 +97,7 @@ export async function dispatchWS(
   sources: Sources,
   signal: AbortSignal,
   exec: typeof executeDirectWSChannel,
-  onChannelOpen?: (channel: WSChannel) => void,
+  onChannelOpen?: (channel: InProcessWSChannel) => void,
 ): Promise<void> {
   const startedAt = performance.now();
   const channel = await exec(

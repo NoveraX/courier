@@ -20,6 +20,7 @@ export type {
   ExecuteDirectWSChannelOptions,
   ExecuteDirectWSChannelPayload,
   ExecuteDirectWSPushPayload,
+  InProcessWSChannel,
 } from "../transport/in-process/types";
 export { executeDirectWSChannel } from "../transport/in-process/ws-channel";
 export { executeDirectWSPush } from "../transport/in-process/ws-push";

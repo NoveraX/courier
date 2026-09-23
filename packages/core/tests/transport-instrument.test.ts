@@ -344,6 +344,19 @@ describe("instrumentWSChannel", () => {
     expect(channel.close).toHaveBeenCalled();
   });
 
+  it("send() hands back what the underlying channel's send returned", async () => {
+    studioHooks.onStreamOpen = vi.fn();
+    const { channel } = createMockChannel();
+    const refused = Promise.reject(new Error("refused"));
+    vi.mocked(channel.send).mockReturnValue(refused as never);
+    const wrapped = instrumentWSChannel(channel, { ...META, transport: "ws" });
+
+    const returned = wrapped.send({ text: "outgoing" }) as unknown;
+
+    expect(returned).toBe(refused);
+    await expect(returned).rejects.toThrow("refused");
+  });
+
   it("send() forwards to underlying channel and emits outbound stream:message", () => {
     studioHooks.onStreamOpen = vi.fn();
     const onStreamMessage = vi.fn();

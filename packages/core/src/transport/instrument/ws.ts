@@ -14,25 +14,28 @@ import { instrumentSSE } from "./sse";
  *                (server-initiated close or natural EOF)
  * - `disconnect` — consumer called `.close()` directly on the wrapper
  *
- * Note: the underlying `WSChannel` contract has no error event. Errors
- * surface either as: (a) thrown rejections from `send()` (handled by the
- * caller's try/catch), or (b) data-listener exceptions (out of scope here
- * — the wrapper does not capture them). When the underlying transport
- * fails and transitions straight to `disconnected`, the close is reported
- * as `complete`. A future protocol revision may add an explicit error
- * channel; until then this behavior matches the WSChannel contract.
+ * Note: the underlying `WSChannel` contract has no error event. A channel
+ * whose `send` settles — the in-process one does — keeps doing so through
+ * the wrapper, which hands back whatever the channel returned: dropping it
+ * turned a refused message into an unhandled rejection that ended the
+ * process. Data-listener exceptions are out of scope here. When the
+ * underlying transport fails and transitions straight to `disconnected`,
+ * the close is reported as `complete`.
  *
  * Reconnect cycles (`connecting`/`reconnecting`) do NOT trigger close —
  * the lifecycle spans the entire WSChannel lifetime, not individual sockets.
  */
-export function instrumentWSChannel<TSend, TReceive>(
-  channel: WSChannel<TSend, TReceive>,
+export function instrumentWSChannel<TChannel extends WSChannel<never, unknown>>(
+  channel: TChannel,
   meta: StreamMeta,
   externalRequestId?: string,
-): WSChannel<TSend, TReceive> {
+): TChannel {
   const instr = beginStream(meta, externalRequestId);
   if (!instr) return channel;
 
+  /* Typed loosely only to be wrapped; the wrapper is handed back as the
+     caller's own channel type, whose members it mirrors one for one. */
+  const inner = channel as WSChannel<unknown, unknown>;
   let cleaned = false;
 
   const cleanup = () => {
@@ -43,11 +46,11 @@ export function instrumentWSChannel<TSend, TReceive>(
   };
 
   // Inbound (server→client) frames are tagged "data"
-  const unsubData = channel.on("data", (data: TReceive) => {
+  const unsubData = inner.on("data", (data) => {
     instr.emitMessage(data, "data");
   });
 
-  const unsubStatus = channel.on("status", (status: ConnectionStatus) => {
+  const unsubStatus = inner.on("status", (status: ConnectionStatus) => {
     if (status === "disconnected") {
       // The WSChannel contract has no error event — natural disconnects
       // are always reported as complete. User-initiated close goes through
@@ -57,31 +60,30 @@ export function instrumentWSChannel<TSend, TReceive>(
     }
   });
 
-  const originalClose = channel.close.bind(channel);
-
-  return {
-    send(data: TSend) {
+  const wrapped: WSChannel<unknown, unknown> = {
+    send(data) {
       // Outbound (client→server) frames are tagged "message" so the
       // Stream tab can render an upward arrow distinct from inbound data.
       instr.emitMessage(data, "message");
-      channel.send(data);
+      return inner.send(data);
     },
     on(event, handler) {
       // Pass-through with same overload signature as WSChannel.on
       if (event === "data") {
-        return channel.on("data", handler as (data: TReceive) => void);
+        return inner.on("data", handler as (data: unknown) => void);
       }
-      return channel.on("status", handler as (status: ConnectionStatus) => void);
+      return inner.on("status", handler as (status: ConnectionStatus) => void);
     },
     close() {
       instr.emitClose("disconnect");
       cleanup();
-      originalClose();
+      inner.close();
     },
     get status() {
-      return channel.status;
+      return inner.status;
     },
   };
+  return wrapped as TChannel;
 }
 
 /**

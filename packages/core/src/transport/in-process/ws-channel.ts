@@ -1,5 +1,5 @@
 import type { Sources } from "../../define/types";
-import type { ChannelHandlers, WSChannel } from "../../realtime/types";
+import type { ChannelHandlers } from "../../realtime/types";
 import { qualifyTopic } from "../../realtime/ws/topic-hash";
 import { generateRequestId } from "../../studio";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
@@ -10,7 +10,11 @@ import {
   validateStreamVariables,
   wrapStreamError,
 } from "./shared";
-import type { ExecuteDirectWSChannelOptions, ExecuteDirectWSChannelPayload } from "./types";
+import type {
+  ExecuteDirectWSChannelOptions,
+  ExecuteDirectWSChannelPayload,
+  InProcessWSChannel,
+} from "./types";
 import { createChannelState } from "./ws-channel-state";
 import { sharedPlaygroundWSRegistry } from "./ws-registry";
 
@@ -34,7 +38,7 @@ export async function executeDirectWSChannel(
   sources: Sources,
   payload: ExecuteDirectWSChannelPayload,
   options: ExecuteDirectWSChannelOptions = {},
-): Promise<WSChannel> {
+): Promise<InProcessWSChannel> {
   const registry = options.registry ?? sharedPlaygroundWSRegistry;
   const { endpoint, schema } = resolveStreamEndpoint(sources, payload, "ws", EXECUTOR);
   const variables = await validateStreamVariables(payload.variables, schema);

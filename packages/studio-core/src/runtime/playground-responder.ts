@@ -29,8 +29,11 @@
 
 import { executeRequest } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
-import { executeDirectSSE, executeDirectWSChannel } from "@noverax/courier/internal-streams";
-import type { WSChannel } from "@noverax/courier/realtime";
+import {
+  executeDirectSSE,
+  executeDirectWSChannel,
+  type InProcessWSChannel,
+} from "@noverax/courier/internal-streams";
 import { dispatchHttp, dispatchSSE, dispatchWS } from "./responder-dispatch";
 
 /** Minimal Socket.IO socket surface the responder needs. */
@@ -60,7 +63,7 @@ export interface PlaygroundWritePayload {
 
 interface InFlightEntry {
   ac: AbortController;
-  channel?: WSChannel;
+  channel?: InProcessWSChannel;
 }
 
 /**
@@ -100,7 +103,7 @@ export function setupPlaygroundResponder(
     if (!payload) return;
     const entry = inFlight.get(payload.rid);
     if (!entry?.channel) return;
-    void Promise.resolve(entry.channel.send(payload.data) as void | Promise<void>).catch((err) => {
+    entry.channel.send(payload.data).catch((err: unknown) => {
       socket.emit("playground:error", {
         rid: payload.rid,
         error: { message: err instanceof Error ? err.message : String(err) },

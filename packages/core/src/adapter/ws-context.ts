@@ -49,6 +49,11 @@ export interface WSSocketContext {
   closed: boolean;
   /** Per-subscription Studio tracking (topic → tracker) */
   subscriptionIds: Map<string, SubscriptionTracker>;
+  /**
+   * Topics whose subscribe is still on its way in — validation, middleware
+   * and authorization are awaited — counted against `maxSubscriptions`.
+   */
+  subscribing: Set<string>;
   sources: Sources;
   pubsub: WSHandlerConfig["pubsub"];
   registry: InternalConnectionRegistry;
@@ -140,6 +145,7 @@ export function buildContext(
     playgroundRequestId,
     closed: false,
     subscriptionIds,
+    subscribing: new Set(),
     sources: requireSources(),
     pubsub: config.pubsub,
     registry,

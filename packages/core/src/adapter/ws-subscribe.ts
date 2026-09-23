@@ -2,11 +2,10 @@ import { createLogger } from "../logger";
 import { describeFailure } from "../realtime/describe-failure";
 import { qualifyTopic, unqualifyTopic } from "../realtime/ws/topic-hash";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
-import { generateRequestId } from "../studio";
 import { runTransportMiddleware } from "../utils/transport-middleware";
 import { authorizeSubscription } from "./ws-authorize-subscription";
 import type { WSSocketContext } from "./ws-context";
-import { closeSubscriptionEntry, extractHeaders } from "./ws-dispatch-helpers";
+import { closeSubscriptionEntry, openSubscriptionEntry } from "./ws-dispatch-helpers";
 import { startChannel, startPush } from "./ws-endpoints";
 import { VALIDATION_FAILED, validateVariablesSafe } from "./ws-middleware";
 import { resolveSubscribeTopic } from "./ws-resolve";
@@ -34,11 +33,35 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
     return;
   }
 
-  if (ctx.topicManager.topicCount(ctx.connectionId) >= ctx.maxSubscriptions) {
+  /* A subscription takes its place when its subscribe arrives, not once it
+     has been validated and authorized: the count was read before those
+     awaits and updated after them, so every frame of a burst saw it as it
+     was before the burst. */
+  if (!claimPlace(ctx, topic)) {
     sendSubscriptionEnd(ctx, topic, msg.id, { code: 4429, message: "Too many subscriptions" });
     return;
   }
+  try {
+    await openSubscription(ctx, msg, topic);
+  } finally {
+    ctx.subscribing.delete(topic);
+  }
+}
 
+/** Renewing a subscription the connection holds, or is opening, takes no new place. */
+function claimPlace(ctx: WSSocketContext, topic: string): boolean {
+  const renewing = ctx.topicManager.has(ctx.connectionId, topic) || ctx.subscribing.has(topic);
+  const taken = ctx.topicManager.topicCount(ctx.connectionId) + ctx.subscribing.size;
+  if (!renewing && taken >= ctx.maxSubscriptions) return false;
+  ctx.subscribing.add(topic);
+  return true;
+}
+
+async function openSubscription(
+  ctx: WSSocketContext,
+  msg: WSMessage,
+  topic: string,
+): Promise<void> {
   const resolved = resolveSubscribeTopic(ctx, msg, topic);
   if (!resolved) return;
 
@@ -80,15 +103,6 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
     return;
   if (ctx.closed) return;
 
-  // Set up per-subscription Studio tracking BEFORE channel/push init
-  // so data emitted during onJoin is already tracked.
-  //
-  // Studio Playground proxy mode pre-allocates a requestId on the browser
-  // side and forwards it via `?_playground_rid=<id>` on the upgrade URL.
-  // Use it as the subscription requestId so events emitted by `dispatch`/
-  // `instrumentSSE` correlate back to the playground tab. Production
-  // browser connections never set this param and fall through to a fresh
-  // server-generated id.
   /* Reconnect dedup: replace an existing subscription to the same topic, and
      only once this one is cleared to take its place — tearing it down before
      authorization would cost a working subscription to a failed re-subscribe. */
@@ -98,23 +112,7 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
     if (ctx.closed) return;
   }
 
-  const subRequestId = ctx.playgroundRequestId ?? generateRequestId();
-  ctx.subscriptionIds.set(subscribedTopic, {
-    requestId: subRequestId,
-    seq: { value: 0 },
-    t0: performance.now(),
-  });
-
-  ctx.dt.onStreamOpen?.({
-    requestId: subRequestId,
-    source: resolved.source,
-    group: resolved.group,
-    method: resolved.method,
-    transport: "ws",
-    mode: "proxy",
-    timestamp: Date.now(),
-    requestHeaders: extractHeaders(ctx.request.headers),
-  });
+  const subRequestId = openSubscriptionEntry(ctx, subscribedTopic, resolved);
 
   try {
     if (resolved.schema.bidirectional === true || resolved.schema.receive) {

@@ -43,6 +43,7 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
     dt: {},
     seq: { value: 5 },
     subscriptionIds: new Map(),
+    subscribing: new Set(),
     t0: performance.now(),
     meta: {},
     maxMessageSize: 65536,

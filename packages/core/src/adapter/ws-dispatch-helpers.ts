@@ -1,3 +1,4 @@
+import { generateRequestId } from "../studio";
 import type { WSSocketContext } from "./ws-context";
 
 /**
@@ -54,4 +55,33 @@ export function closeSubscriptionEntry(
     duration: performance.now() - sub.t0,
     timestamp: Date.now(),
   });
+}
+
+/**
+ * Start Studio's tracking of a subscription, before its handler runs so the
+ * data it sends while joining is already tracked.
+ *
+ * Studio Playground proxy mode pre-allocates a requestId on the browser side
+ * and forwards it via `?_playground_rid=<id>` on the upgrade URL; it is used
+ * as the subscription's requestId so its events correlate back to the
+ * playground tab. Other connections get a fresh id.
+ */
+export function openSubscriptionEntry(
+  ctx: WSSocketContext,
+  topic: string,
+  endpoint: { source: string; group?: string; method: string },
+): string {
+  const requestId = ctx.playgroundRequestId ?? generateRequestId();
+  ctx.subscriptionIds.set(topic, { requestId, seq: { value: 0 }, t0: performance.now() });
+  ctx.dt.onStreamOpen?.({
+    requestId,
+    source: endpoint.source,
+    group: endpoint.group,
+    method: endpoint.method,
+    transport: "ws",
+    mode: "proxy",
+    timestamp: Date.now(),
+    requestHeaders: extractHeaders(ctx.request.headers),
+  });
+  return requestId;
 }

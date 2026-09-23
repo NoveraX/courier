@@ -21,7 +21,10 @@ export async function validateVariables(
   });
 
   try {
-    const validated = await validateSchema(schema, variables, "variables");
+    /* A schema whose fields are all optional makes the argument optional in
+       the call signature, so "no variables" has to mean an empty object —
+       handed `undefined`, every such schema rejected the call it invited. */
+    const validated = await validateSchema(schema, variables ?? {}, "variables");
     const duration = ctx.hasStudio ? performance.now() - vt0 : 0;
     ctx.dt.onValidationPass?.({
       requestId: ctx.requestId,

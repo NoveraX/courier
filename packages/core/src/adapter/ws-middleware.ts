@@ -12,9 +12,11 @@ export async function validateVariablesSafe(
 ): Promise<unknown> {
   if (!schema.variables) return msg.payload;
   try {
+    /* A subscription with no variables is one with none set, as on every
+       other transport. */
     return await validateSchema(
       schema.variables as Parameters<typeof validateSchema>[0],
-      msg.payload,
+      msg.payload ?? {},
       "variables",
     );
   } catch {

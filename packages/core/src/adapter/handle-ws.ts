@@ -72,6 +72,15 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   }
 
   async function initConnection(ws: WebSocketLike, ctx: WSSocketContext): Promise<void> {
+    /* The socket's own close listener is attached only once the connection
+       is activated, so a client that left while onConnect ran used to keep
+       its registry entry, a heartbeat timer and its per-address slot for
+       good — enough of them locked the address out. */
+    let closedWith: number | undefined;
+    ws.addEventListener("close", (event) => {
+      closedWith ??= event.code;
+    });
+
     try {
       const onConnect = config.onConnect;
       if (onConnect) {
@@ -84,7 +93,22 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
       ws.close(4401, "Connection rejected");
       return;
     }
+
+    if (closedWith !== undefined) {
+      ipTracker.release(ctx.clientIP);
+      await notifyDisconnect(ctx, closedWith);
+      return;
+    }
     registerAndActivate(ws, ctx);
+  }
+
+  /** Let the application undo what its onConnect set up. */
+  async function notifyDisconnect(ctx: WSSocketContext, code: number): Promise<void> {
+    try {
+      await config.onDisconnect?.({ connectionId: ctx.connectionId, meta: ctx.meta, code });
+    } catch (error) {
+      log.warn("onDisconnect hook failed", error);
+    }
   }
 
   function registerAndActivate(ws: WebSocketLike, ctx: WSSocketContext): void {

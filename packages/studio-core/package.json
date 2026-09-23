@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-studio-core",
   "version": "0.0.0",
-  "description": "Studio instrumentation core \u2014 EventBus, event types, and Socket.IO connector for @noverax/courier",
+  "description": "Studio instrumentation core — EventBus, event types, and Socket.IO connector for @noverax/courier",
   "keywords": [
     "courier",
     "typescript",
@@ -74,6 +74,7 @@
     "@noverax/courier": "*"
   },
   "devDependencies": {
-    "@noverax/courier": "*"
+    "@noverax/courier": "*",
+    "esbuild": "^0.28.2"
   }
 }

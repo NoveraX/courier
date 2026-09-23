@@ -150,6 +150,10 @@
   },
   "devDependencies": {
     "@noverax/courier": "*",
-    "@types/compression": "^1.8.1"
+    "@rollup/plugin-commonjs": "^29.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@types/compression": "^1.8.1",
+    "esbuild": "^0.28.2",
+    "rollup": "^4.63.4"
   }
 }

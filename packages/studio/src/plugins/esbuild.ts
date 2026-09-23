@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { entryPathsOf } from "./core/entry-paths";
 import { resolveSnippet } from "./core/resolve-snippet";
+import { RUNTIME_IMPORTER_DIR } from "./core/runtime-importer";
 import type { StudioPluginOptions } from "./core/types";
 
 const FRAMEWORK = "esbuild";
@@ -32,15 +33,20 @@ export function courierStudio(options?: StudioPluginOptions): EsbuildPluginLike 
         namespace: VIRTUAL_NS,
       }));
 
+      /* A module in a namespace of its own has no directory to resolve its
+         imports from, so esbuild could not find the runtime and failed the
+         whole build. */
       build.onLoad({ filter: /.*/, namespace: VIRTUAL_NS }, async () => ({
         contents: (await ensure()) ?? "",
         loader: "js" as const,
+        resolveDir: RUNTIME_IMPORTER_DIR,
       }));
 
-      const entryPaths = resolveEntryPaths(build.initialOptions.entryPoints);
+      const { entryPoints, absWorkingDir } = build.initialOptions;
+      const entryPaths = entryPathsOf(entryPoints, absWorkingDir);
       if (entryPaths.size === 0) return;
 
-      build.onLoad({ filter: /\.[jt]sx?$/ }, async (args) => {
+      build.onLoad({ filter: /\.[cm]?[jt]sx?$/ }, async (args) => {
         if (!entryPaths.has(args.path)) return undefined;
         const snippet = await ensure();
         if (!snippet) return undefined;
@@ -54,49 +60,33 @@ export function courierStudio(options?: StudioPluginOptions): EsbuildPluginLike 
   };
 }
 
-function resolveEntryPaths(entryPoints: unknown): Set<string> {
-  const paths: string[] = [];
+type EsbuildLoader = "ts" | "tsx" | "js" | "jsx";
 
-  if (Array.isArray(entryPoints)) {
-    for (const entry of entryPoints) {
-      if (typeof entry === "string") {
-        paths.push(entry);
-      } else if (typeof entry === "object" && entry !== null && "in" in entry) {
-        const obj = entry as { in: unknown };
-        if (typeof obj.in === "string") paths.push(obj.in);
-      }
-    }
-  } else if (typeof entryPoints === "object" && entryPoints !== null) {
-    for (const value of Object.values(entryPoints as Record<string, unknown>)) {
-      if (typeof value === "string") paths.push(value);
-    }
-  }
-
-  return new Set(paths.map((p) => resolve(p)));
-}
-
-function inferLoader(path: string): "ts" | "tsx" | "js" | "jsx" {
+function inferLoader(path: string): EsbuildLoader {
   if (path.endsWith(".tsx")) return "tsx";
-  if (path.endsWith(".ts")) return "ts";
+  if (/\.[cm]?ts$/.test(path)) return "ts";
   if (path.endsWith(".jsx")) return "jsx";
   return "js";
+}
+
+/** What an onLoad callback returns; the loader is a literal, as esbuild's `Plugin` type requires. */
+interface EsbuildLoadResult {
+  contents: string;
+  loader: EsbuildLoader;
+  resolveDir?: string;
 }
 
 interface EsbuildPluginLike {
   name: string;
   setup(build: {
-    initialOptions: { entryPoints?: unknown };
+    initialOptions: { entryPoints?: unknown; absWorkingDir?: string };
     onResolve(
       opts: { filter: RegExp },
       cb: (args: { path: string }) => { path: string; namespace: string },
     ): void;
     onLoad(
       opts: { filter: RegExp; namespace?: string },
-      cb: (args: {
-        path: string;
-      }) =>
-        | Promise<{ contents: string; loader: string } | undefined>
-        | { contents: string; loader: string },
+      cb: (args: { path: string }) => Promise<EsbuildLoadResult | undefined>,
     ): void;
   }): void;
 }

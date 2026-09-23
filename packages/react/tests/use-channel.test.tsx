@@ -200,8 +200,10 @@ describe("useChannel", () => {
 
     const { result } = renderHook(() => useChannel(channelFn, "chat", "room"), { wrapper });
 
-    await waitFor(() => expect(result.current.status).toBe("disconnected"));
+    // The hook starts out "disconnected", so wait on the error, not the status.
+    await waitFor(() => expect(result.current.error).toBeDefined());
     expect(result.current.error?.message).toBe("Not a member of this room");
+    await waitFor(() => expect(result.current.status).toBe("disconnected"));
   });
 
   it("keeps a message shaped like an error as data", async () => {

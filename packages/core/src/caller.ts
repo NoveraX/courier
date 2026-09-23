@@ -1,5 +1,6 @@
 import type { FlatClient, MixedClient, TypedClient } from "./client";
 import { buildClientProxy } from "./client";
+import { shapeOfSource } from "./client/shape";
 import type {
   DefinedApi,
   DefinedFlatApi,
@@ -71,5 +72,5 @@ export function createCaller(
     wsPush: createDirectWSPushFactory(source),
   });
 
-  return buildClientProxy(backend);
+  return buildClientProxy(backend, {}, false, shapeOfSource(source as Record<string, unknown>));
 }

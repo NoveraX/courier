@@ -1,5 +1,6 @@
 import type { InferClient } from "../client";
 import { buildClientProxy } from "../client";
+import { shapeOfSource } from "../client/shape";
 import { composeBackend, type StreamingFactories } from "../transport/compose-backend";
 import {
   createProxyHTTPExecutor,
@@ -87,7 +88,7 @@ export function createProxyCaller(source: string, defaults: ProxyCallerDefaults 
   const backend = composeBackend(apiSource, http, streaming, {
     exhaustive: defaults.boundary !== undefined,
   });
-  return buildClientProxy(backend);
+  return buildClientProxy(backend, {}, false, shapeOfSource(apiSource));
 }
 
 /**

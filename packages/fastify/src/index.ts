@@ -27,14 +27,17 @@ function tryDiscoverAppOrigin(request: FastifyRequest): void {
   if (origin) setAppOrigin(origin);
 }
 
+/** Where the proxy caller sends its calls unless told otherwise. */
+const DEFAULT_PROXY_PATH = "/api/request";
+
 export type CourierPluginOptions = {
   /**
-   * Where the plugin's routes are mounted.
+   * The path the proxy answers at — the caller's `proxyPath.http`. Without
+   * one it answers at `/api/request`, where the caller looks by default.
    *
-   * Declared so the type documents it, but Fastify is what applies it: every
-   * route a plugin registers is already scoped by the `prefix` passed to
-   * `register`. The plugin must not apply it a second time — doing so put the
-   * proxy at `/api/request/api/request/*`.
+   * Fastify is what applies it: every route a plugin registers is already
+   * scoped by the `prefix` passed to `register`. The plugin must not apply it
+   * a second time — doing so put the proxy at `/api/request/api/request/*`.
    */
   prefix?: string;
   config?: HandlerConfig;
@@ -83,11 +86,12 @@ export const courierPlugin: FastifyPluginAsync<CourierPluginOptions> = async (
     reply.hijack();
   };
 
-  /* Both, because the proxy addresses endpoints by name rather than by path:
-     `/api/request` is the call, and `/api/request/anything` must reach it too
-     for a host that mounts the plugin under a wider route. */
-  fastify.all("/", proxy);
-  fastify.all("/*", proxy);
+  /* The proxy caller calls exactly one path, so that path is all the plugin
+     takes. It used to take `/` and `/*` as well — with no prefix, the default
+     the README showed, that was every path the app did not route itself, and
+     its 404s answered 400 with a Courier error body. Without a prefix it now
+     sits where the caller looks by default. */
+  fastify.all(opts.prefix ? "/" : DEFAULT_PROXY_PATH, proxy);
 };
 
 /**

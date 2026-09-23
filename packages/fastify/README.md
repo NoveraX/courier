@@ -33,19 +33,19 @@ registerSources(sources)
 const app = Fastify()
 
 app.register(courierPlugin, {
-  prefix: "/api/request",  // optional, defaults to "/"
+  prefix: "/api/request",  // optional, defaults to "/api/request"
 })
 
 app.listen({ port: 3000 })
 ```
 
-The plugin is zero-sources — sources are read at request time from the core global registry populated by `registerSources()` (or by `attachRuntime()` auto-loading `courier.config.ts`). It registers a wildcard route under the given prefix and automatically disables Fastify's body parsing so Courier can handle multipart/json payloads directly.
+The plugin is zero-sources — sources are read at request time from the core global registry populated by `registerSources()` (or by `attachRuntime()` auto-loading `courier.config.ts`). It answers at the prefix alone — the caller's `proxyPath.http` — and leaves every other path, and the app's 404s, to the app. It disables Fastify's body parsing inside the plugin only, so Courier can handle multipart/json payloads directly.
 
 ## Options
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `prefix` | `string` | `"/"` | Route prefix for the handler |
+| `prefix` | `string` | `"/api/request"` | The path the proxy answers at — the caller's `proxyPath.http` |
 | `config` | `HandlerConfig` | — | Optional handler behavior options (origins, SSE headers, etc.) |
 
 ## With Frontend

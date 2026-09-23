@@ -4,6 +4,8 @@
  * `/api/request/api/request/*`, so the documented registration answered 404
  * to every request — which no test saw, because none of them registered the
  * plugin the way the documentation does and then asked it for anything.
+ * It also took `/` and `/*`: with no prefix, every path the app did not
+ * route itself answered 400 with a Courier error body instead of 404.
  */
 import Fastify from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
@@ -55,24 +57,34 @@ describe("where the plugin mounts", () => {
     expect(res.statusCode).not.toBe(404);
   });
 
-  it("answers below the prefix as well", async () => {
+  it("leaves paths below the prefix to the app", async () => {
     const app = await mounted({ prefix: "/api/request" });
 
     const res = await app.inject({ method: "POST", url: "/api/request/anything" });
 
-    expect(res.statusCode).not.toBe(404);
+    expect(res.statusCode).toBe(404);
   });
 
-  it("mounts at the root when no prefix is given", async () => {
+  it("answers where the caller looks by default when no prefix is given", async () => {
     const app = await mounted({});
 
     const res = await app.inject({
       method: "POST",
-      url: "/",
+      url: "/api/request",
       payload: { source: "api", method: "list", variables: {} },
     });
 
     expect(res.statusCode).not.toBe(404);
+  });
+
+  it("leaves the app's own 404s alone when no prefix is given", async () => {
+    const app = await mounted({});
+
+    const home = await app.inject({ method: "GET", url: "/" });
+    const missing = await app.inject({ method: "GET", url: "/does-not-exist" });
+
+    expect(home.statusCode).toBe(404);
+    expect(missing.statusCode).toBe(404);
   });
 
   it("leaves an unrelated path alone", async () => {

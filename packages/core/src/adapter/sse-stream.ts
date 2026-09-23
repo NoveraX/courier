@@ -1,7 +1,7 @@
 import type { SSEContext, SSEEvent, SSEHandler } from "../realtime/types";
+import { abortableEvents } from "../utils/abortable-events";
 import { SSE_HEARTBEAT } from "./format-sse";
 import { LIMITS } from "./limits";
-import { pumpEvents } from "./sse-pump";
 import { createSSESender, type SSESender } from "./sse-sender";
 import {
   cleanupSSEStream,
@@ -86,9 +86,9 @@ export function createSSEStream(
 
         try {
           const generator = handler({ ...ctx, signal: combinedSignal });
-          const outcome = await pumpEvents(generator, combinedSignal, async (event) => {
+          for await (const event of abortableEvents(generator, combinedSignal)) {
             await waitForRoom(sender, combinedSignal);
-            if (combinedSignal.aborted || !writeEvent(sender, event, false)) return;
+            if (combinedSignal.aborted || !writeEvent(sender, event, false)) continue;
             opts.dt.onStreamMessage?.({
               requestId: opts.requestId,
               seq: opts.registry.get(opts.connectionId)?.eventCount ?? 0,
@@ -100,8 +100,8 @@ export function createSSEStream(
               dataPreview: truncatePreview(event.data),
               timestamp: Date.now(),
             });
-          });
-          if (outcome === "complete") closeReason = "complete";
+          }
+          if (!combinedSignal.aborted) closeReason = "complete";
         } catch (error) {
           closeReason = "error";
           if (!combinedSignal.aborted) {

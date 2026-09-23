@@ -147,6 +147,26 @@ describe("executeDirectWSChannel — bidirectional flow", () => {
     expect(onLeave).toHaveBeenCalledOnce();
   });
 
+  it("fires the handler's signal on close", async () => {
+    let signal: AbortSignal | undefined;
+    const sources = makeChannelSources(() => ({
+      onMessage: vi.fn(),
+      onJoin: (ctx) => {
+        signal = ctx.signal;
+      },
+    }));
+    const channel = await executeDirectWSChannel(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "room",
+    });
+    expect(signal?.aborted).toBe(false);
+
+    channel.close();
+
+    expect(signal?.aborted).toBe(true);
+  });
+
   it("onLeave throwing does NOT block status transition to disconnected", async () => {
     const onLeave = vi.fn(() => {
       throw new Error("onLeave exploded");

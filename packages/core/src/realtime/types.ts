@@ -88,6 +88,12 @@ export interface WSContext<TVariables = unknown> {
   connectionId: string;
   /** Auth/metadata extracted during handshake */
   meta: Record<string, unknown>;
+  /**
+   * Fires when the subscription ends — the client unsubscribes or its socket
+   * closes. A handler waiting on an event that may never come releases what
+   * it holds here; otherwise its `finally` runs only the next time it yields.
+   */
+  readonly signal: AbortSignal;
 }
 
 /** Server-side context for bidirectional WS channels */

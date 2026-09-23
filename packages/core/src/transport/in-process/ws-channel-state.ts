@@ -68,11 +68,13 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
     }
   };
 
+  const ended = new AbortController();
   const channelCtx: WSChannelContext = {
     topic,
     variables: variables ?? {},
     connectionId,
     meta: {},
+    signal: ended.signal,
     send: (data) => emitData(data),
     broadcast: (t, data) => broadcast(t, data, connectionId),
     close: () => {
@@ -83,6 +85,7 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
   async function close(): Promise<void> {
     if (closed) return;
     closed = true;
+    ended.abort();
     unsubscribeFromRegistry();
     try {
       await handlers.onLeave?.(channelCtx);

@@ -19,11 +19,13 @@ export function createMockWSChannel<TSend, TReceive>(
   const dataHandlers = new Set<(data: TReceive) => void>();
   let closed = false;
 
+  const ended = new AbortController();
   const ctx: WSChannelContext<TReceive> = {
     topic: "mock.channel",
     variables,
     connectionId: `mock_${Date.now()}`,
     meta: {},
+    signal: ended.signal,
     send(data: TReceive) {
       if (closed) return;
       for (const handler of dataHandlers) handler(data);
@@ -66,6 +68,7 @@ export function createMockWSChannel<TSend, TReceive>(
     close() {
       if (closed) return;
       closed = true;
+      ended.abort();
       void Promise.resolve().then(() => handlers.onLeave?.(ctx));
       dataHandlers.clear();
       state.set("disconnected");

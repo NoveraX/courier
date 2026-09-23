@@ -57,6 +57,7 @@ export async function executeDirectWSPush(
     variables: variables ?? {},
     connectionId: crypto.randomUUID(),
     meta: {},
+    signal: ownAC.signal,
   };
 
   const meta = {

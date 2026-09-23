@@ -10,7 +10,7 @@ import {
 } from "../transport/proxy";
 import { sourceFromBoundary } from "./from-boundary";
 import { mergeProxyPath, type ProxyPath } from "./proxy-path";
-import type { ProxyCallerDefaults } from "./types";
+import type { ProxyCallerArguments, ProxyCallerDefaults } from "./types";
 
 /**
  * Create a typed proxy client for browser → server mode.
@@ -45,7 +45,7 @@ import type { ProxyCallerDefaults } from "./types";
  */
 export function createProxyCaller<TApi>(
   source: string,
-  defaults?: ProxyCallerDefaults,
+  ...defaults: ProxyCallerArguments<TApi>
 ): InferClient<TApi>;
 
 export function createProxyCaller(source: string, defaults: ProxyCallerDefaults = {}): unknown {

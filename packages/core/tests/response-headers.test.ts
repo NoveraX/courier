@@ -45,6 +45,15 @@ describe("buildResponse — a streamed answer", () => {
     expect(response.headers.get("content-type")).toBe("text/event-stream");
   });
 
+  it("does not repeat the encoding of a body fetch has already decompressed", () => {
+    /* The streamed bytes are decoded; `content-encoding: gzip` made the
+       browser try to gunzip plain text and fail. */
+    const response = stream({ "content-type": "text/plain", "content-encoding": "gzip" });
+
+    expect(response.headers.get("content-encoding")).toBeNull();
+    expect(response.headers.get("content-type")).toBe("text/plain");
+  });
+
   it("carries the caching and rate-limit headers a client acts on", () => {
     const response = stream({
       "cache-control": "no-store",

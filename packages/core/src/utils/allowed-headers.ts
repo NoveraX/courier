@@ -41,8 +41,10 @@ export const RESPONSE_HEADERS = [
 /**
  * Additionally passed back when the upstream body travels through untouched.
  *
- * A buffered response is re-serialized, so the upstream's own content type and
- * encoding would describe a body that no longer exists. A streamed one is the
- * upstream's bytes, and the browser needs them to read it.
+ * A buffered response is re-serialized, so the upstream's own content type
+ * would describe a body that no longer exists. A streamed one keeps the
+ * upstream's content type — but not its encoding: `fetch` has already
+ * decompressed the body, so repeating `content-encoding: gzip` made the
+ * browser try to decompress plain bytes and fail.
  */
-export const STREAMED_RESPONSE_HEADERS = ["content-type", "content-encoding"] as const;
+export const STREAMED_RESPONSE_HEADERS = ["content-type"] as const;

@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  renameSync,
+  rmSync,
+  unlinkSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -59,6 +67,28 @@ describe("createWatchSet", () => {
     await sleep(SETTLE_MS);
 
     writeFileSync(file, "2");
+
+    expect(await c.waitFor(file)).toBe(true);
+  });
+
+  it("reports a same-size edit saved within the same timestamp tick", async () => {
+    const file = join(root, "a.ts");
+    const tick = new Date("2026-01-01T00:00:00Z");
+    writeFileSync(file, 'export const a = "one"');
+    utimesSync(file, tick, tick);
+    const c = collector();
+    start({ paths: [file], onChange: c.onChange });
+    await sleep(SETTLE_MS);
+
+    writeFileSync(file, 'export const a = "two"');
+    utimesSync(file, tick, tick);
+    expect(await c.waitFor(file)).toBe(true);
+    c.seen.length = 0;
+
+    /* Coarse filesystems give both saves one timestamp; the length did not
+       change either, so only the content tells this save from the last. */
+    writeFileSync(file, 'export const a = "six"');
+    utimesSync(file, tick, tick);
 
     expect(await c.waitFor(file)).toBe(true);
   });

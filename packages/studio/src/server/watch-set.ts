@@ -17,8 +17,9 @@
  * that are still wanted so no event falls into a teardown gap.
  */
 
-import { statSync, unwatchFile, watchFile } from "node:fs";
+import { unwatchFile, watchFile } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
+import { signatureOf } from "./file-signature";
 import { createDirectoryWatchers, type WatchDegradation } from "./watch-set-directories";
 
 export type { WatchDegradation } from "./watch-set-directories";
@@ -51,12 +52,6 @@ export interface WatchSet {
   update(paths: readonly string[]): void;
   stop(): void;
   status(): WatchSetStatus;
-}
-
-/** Absent files get a distinct signature so a deletion is reported once. */
-function signatureOf(path: string): string {
-  const stats = statSync(path, { throwIfNoEntry: false });
-  return stats ? `${stats.mtimeMs}:${stats.size}` : "absent";
 }
 
 function groupByDirectory(paths: readonly string[]): Map<string, Set<string>> {

@@ -13,6 +13,8 @@
  */
 
 import { HTTPError } from "../errors";
+import { getResponseData } from "../http-client/response";
+import type { ResponseType } from "../http-client/types";
 import { coreFetch } from "../utils/fetch";
 import type { FetchClient, FetchClientOptions, RequestOptions } from "./types";
 
@@ -41,19 +43,13 @@ function mergeHeaders(
   return result;
 }
 
-async function parseResponse(response: Response, type?: string): Promise<unknown> {
-  if (response.status === 204) return null;
-  switch (type) {
-    case "text":
-      return response.text();
-    case "blob":
-      return response.blob();
-    case "arrayBuffer":
-      return response.arrayBuffer();
-    case "formData":
-      return response.formData();
-    default:
-      return response.json();
+/** The body of an error answer, or a stand-in when it cannot be read. */
+async function readErrorBody(response: Response, type: ResponseType): Promise<unknown> {
+  try {
+    return await getResponseData(response, type);
+  } catch {
+    /* The status is the answer; a body that will not parse only loses the detail. */
+    return { message: `HTTP ${response.status}` };
   }
 }
 
@@ -75,19 +71,18 @@ async function request<TResponse>(
     ...(headers && { headers }),
   });
 
-  if (method === "head") return response.headers as TResponse;
-
+  const type = options?.responseType ?? "json";
+  /* Checked before HEAD returns: a HEAD answered 404 or 401 used to resolve
+     as though the resource were there. */
   if (!response.ok) {
-    let data: unknown;
-    try {
-      data = await parseResponse(response, options?.responseType);
-    } catch {
-      data = { message: `HTTP ${response.status}` };
-    }
+    const data = method === "head" ? null : await readErrorBody(response, type);
     throw new HTTPError({ status: response.status, headers: response.headers, data });
   }
+  if (method === "head") return response.headers as TResponse;
 
-  return (await parseResponse(response, options?.responseType)) as TResponse;
+  /* The same reader as the endpoint client, so an empty 200 or 201 is `null`
+     rather than a SyntaxError that no isHTTPError check recognises. */
+  return (await getResponseData(response, type)) as TResponse;
 }
 
 /**

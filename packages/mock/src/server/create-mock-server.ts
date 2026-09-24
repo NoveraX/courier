@@ -116,14 +116,20 @@ export function createMockServer(config?: MockServerOptions): MockServer {
   const port = config?.port ?? 7001;
   const hostname = config?.hostname ?? "localhost";
 
-  const lifecycle = createServerLifecycle(app, port, hostname, {
-    registry,
-    mappings: config?.mappings,
-    history,
-    getScenarioState: () => scenarioState,
-    allowedOrigins: config?.ws?.allowedOrigins,
-    maxPayload: config?.ws?.maxPayload,
-  });
+  const lifecycle = createServerLifecycle(
+    app,
+    port,
+    hostname,
+    {
+      registry,
+      mappings: config?.mappings,
+      history,
+      getScenarioState: () => scenarioState,
+      allowedOrigins: config?.ws?.allowedOrigins,
+      maxPayload: config?.ws?.maxPayload,
+    },
+    config?.strictPort,
+  );
 
   const mockServer: MockServer = {
     app,

@@ -1,3 +1,4 @@
+import type { ServerType } from "@hono/node-server";
 import type { Hono } from "hono";
 
 import { tryListen } from "./try-listen";
@@ -23,6 +24,7 @@ export interface ServerLifecycle {
  * @param port - Preferred port; the next free one is taken if it is busy
  * @param hostname - Where to listen; `localhost` means loopback only
  * @param ws - What the WebSocket upgrade route needs
+ * @param strictPort - Fail when `port` is busy rather than take the next one
  * @returns `start` and `stop`
  */
 export function createServerLifecycle(
@@ -30,6 +32,7 @@ export function createServerLifecycle(
   port: number,
   hostname: string,
   ws: WSUpgradeOptions,
+  strictPort = false,
 ): ServerLifecycle {
   let server: ClosableServer | undefined;
   let wsUpgrade: MockWSHandler | undefined;
@@ -43,10 +46,11 @@ export function createServerLifecycle(
       // when the user only mocks HTTP/SSE.
       wsUpgrade = createWSUpgrade(ws);
 
-      return tryListen(serve, app, port, hostname, (nodeServer) => {
+      const onServer = (nodeServer: ServerType) => {
         server = nodeServer as unknown as ClosableServer;
         if (wsUpgrade) attachWSUpgrade(nodeServer, wsUpgrade);
-      });
+      };
+      return tryListen(serve, app, port, hostname, onServer, strictPort ? 0 : undefined);
     },
 
     /* Closes the channels — each hears onLeave — and every connection, then

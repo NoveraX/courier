@@ -18,6 +18,11 @@ import type { RequestHooks } from "./route-generator";
 export interface MockServerOptions {
   /** Port to listen on (default: 7001) */
   port?: number;
+  /**
+   * Fail to start when `port` is taken, instead of moving to the next free
+   * one (default: false). For a port something else was told to call.
+   */
+  strictPort?: boolean;
   /** Hostname (default: "localhost") */
   hostname?: string;
   /** Enable CORS (default: true) */

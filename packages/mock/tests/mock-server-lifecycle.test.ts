@@ -8,6 +8,8 @@
  * served. A reset kept reporting the scenario it had just dropped, the
  * scenario-state reset route was unreachable, and the history grew forever.
  */
+import type { AddressInfo } from "node:net";
+import { createServer } from "node:net";
 import { networkInterfaces } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
@@ -29,6 +31,12 @@ async function boot(options: Partial<MockServerOptions> = {}): Promise<{ server:
   return { server, url: (await server.start()).url };
 }
 
+const ipv6Loopback = await new Promise<boolean>((resolve) => {
+  const probe = createServer();
+  probe.once("error", () => resolve(false));
+  probe.listen({ port: 0, host: "::1", ipv6Only: true }, () => probe.close(() => resolve(true)));
+});
+
 function lanAddress(): string | undefined {
   for (const addresses of Object.values(networkInterfaces())) {
     const found = addresses?.find((a) => a.family === "IPv4" && !a.internal);
@@ -49,6 +57,38 @@ describe("where the mock server listens", () => {
 
     expect(local.status).toBe(200);
     expect(fromLan).toBeInstanceOf(Error);
+  });
+
+  it("moves to the next free port when its own is taken", async () => {
+    const { url } = await boot();
+    const taken = Number(new URL(url).port);
+
+    const { url: next } = await boot({ port: taken });
+
+    expect(Number(new URL(next).port)).toBeGreaterThan(taken);
+  });
+
+  it.skipIf(!ipv6Loopback)("counts a port another process holds on [::1] as taken", async () => {
+    const other = createServer();
+    await new Promise<void>((resolve) => other.listen({ port: 0, host: "::1", ipv6Only: true }, resolve));
+    const taken = (other.address() as AddressInfo).port;
+    const strict = createMockServer({ port: taken, strictPort: true, log: false });
+
+    try {
+      await expect(strict.start()).rejects.toMatchObject({ code: "EADDRINUSE" });
+      const { url } = await boot({ port: taken });
+      expect(Number(new URL(url).port)).not.toBe(taken);
+    } finally {
+      await new Promise((resolve) => other.close(resolve));
+    }
+  });
+
+  it("refuses to start on a taken port it must hold exactly", async () => {
+    const { url } = await boot();
+    const taken = Number(new URL(url).port);
+    const strict = createMockServer({ port: taken, strictPort: true, log: false });
+
+    await expect(strict.start()).rejects.toMatchObject({ code: "EADDRINUSE" });
   });
 });
 

@@ -18,6 +18,8 @@ export interface AutoMockServerConfig {
   source: Record<string, unknown>;
   /** Port to listen on (default: 7001) */
   port?: number;
+  /** Fail when `port` is taken instead of moving to the next free one (default: false) */
+  strictPort?: boolean;
   /** Hostname (default: "localhost") */
   hostname?: string;
   /** Enable CORS (default: true) */
@@ -97,6 +99,7 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
 
   const server = createMockServer({
     port: config.port,
+    strictPort: config.strictPort,
     hostname: config.hostname,
     cors: config.cors,
     admin: config.admin,

@@ -50,7 +50,7 @@ export function MockServerBar(): React.ReactElement {
 
           {activeServer && (
             <>
-              <ProcessStatusBadge status={activeServer.processStatus} />
+              <ProcessStatusBadge status={activeServer.processStatus} lastError={activeServer.lastError} />
               <ServerControls
                 serverId={activeServer.serverId}
                 processStatus={activeServer.processStatus}

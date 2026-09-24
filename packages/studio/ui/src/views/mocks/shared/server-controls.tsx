@@ -22,9 +22,29 @@ const STATUS_BADGE: Record<ProcessStatus, { label: string; variant: "emerald" | 
   restarting: { label: "Restarting", variant: "sky" },
 };
 
-export function ProcessStatusBadge({ status }: { status: ProcessStatus }): React.ReactElement {
+/**
+ * A managed mock's status. When something went wrong — it crashed, or it
+ * keeps serving an older definition because the latest one cannot be read —
+ * the reason opens on hover and on keyboard focus.
+ */
+export function ProcessStatusBadge({ status, lastError }: { status: ProcessStatus; lastError?: string }): React.ReactElement {
   const { label, variant } = STATUS_BADGE[status];
-  return <Badge variant={variant} className="text-[10px]">{label}</Badge>;
+  if (!lastError) return <Badge variant={variant} className="text-caption">{label}</Badge>;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge
+          variant={status === "crashed" ? variant : "amber"}
+          className="text-caption"
+          tabIndex={0}
+          aria-label={`${label}: ${lastError}`}
+        >
+          {label}
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-96 whitespace-pre-wrap font-mono text-xs">{lastError}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 export function ServerControls({ serverId, processStatus, managed }: ServerControlsProps): React.ReactElement | null {

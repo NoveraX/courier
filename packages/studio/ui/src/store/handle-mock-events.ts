@@ -37,8 +37,11 @@ export function handleMockEvent(event: MockEvent): void {
     case "mock:server:connect":
       handleServerConnect(serverId, event);
       break;
+    /* A managed mock goes away only when its config entry does; one Studio
+       did not start may come back on its own. */
     case "mock:server:disconnect":
-      store.updateServer(serverId, { status: "disconnected" });
+      if (store.servers[serverId]?.managed) store.removeServer(serverId);
+      else store.updateServer(serverId, { status: "disconnected" });
       break;
     case "mock:route:list":
       store.setServerRoutes(serverId, (event.routes as never[]) ?? []);

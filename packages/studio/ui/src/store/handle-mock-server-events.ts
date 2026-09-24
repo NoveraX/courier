@@ -19,6 +19,7 @@ import type {
 import type { MockEvent } from "./mock-event-types";
 
 import { useMockStore } from "./mock-slice";
+import { mergeRouteStats } from "./route-stats";
 
 type Store = MockSliceState;
 
@@ -50,14 +51,19 @@ function reconnectServer(
   const mergedRoutes = mergeRouteStats(existing.routes, incomingRoutes);
   store.updateServer(serverId, {
     status: "connected",
+    /* Each event says where the mock listens now — its own port and URL while
+       it runs, the one it will use and none while it does not. */
+    port: (event.port as number) ?? existing.port,
+    url: (event.url as string) ?? existing.url,
+    lastError: (event.lastError as string | null) ?? undefined,
     startedAt: (event.startedAt as number) ?? existing.startedAt,
     routeCount: (event.routeCount as number) ?? 0,
     collectionCount: (event.collectionCount as number) ?? 0,
     recordCount: (event.recordCount as number) ?? 0,
-    requestsServed: (event.requestsServed as number) ?? 0,
+    requestsServed: (event.requestsServed as number | undefined) ?? existing.requestsServed,
     scenarioRequestCount:
       (event.scenarioRequestCount as number) ?? existing.scenarioRequestCount,
-    errorCount: (event.errorCount as number) ?? 0,
+    errorCount: (event.errorCount as number | undefined) ?? existing.errorCount,
     activeScenario: (event.activeScenario as string) ?? null,
     availableScenarios: (event.availableScenarios as string[]) ?? [],
     scenarios: incomingScenarios?.length ? incomingScenarios : existing.scenarios,
@@ -88,6 +94,7 @@ function registerNewServer(store: Store, serverId: string, event: MockEvent): vo
     ...buildNetworkPatch(event),
     managed: (event.managed as boolean) ?? false,
     processStatus: (event.processStatus as ProcessStatus) ?? "running",
+    lastError: (event.lastError as string | null) ?? undefined,
     origin: (event.origin as "studio" | "external") ?? "external",
     filePath: (event.filePath as string) ?? undefined,
     collections: (event.collections as MockCollectionEntry[]) ?? [],
@@ -145,30 +152,3 @@ export function handleScenarioActive(serverId: string, event: MockEvent): void {
     store.setServerRoutes(serverId, incomingRoutes);
   }
 }
-
-/** Preserve client-side hits/avgLatency when incoming routes arrive with zeros */
-function mergeRouteStats(
-  existing: MockRouteEntry[],
-  incoming: MockRouteEntry[],
-): MockRouteEntry[] {
-  if (existing.length === 0) return incoming;
-
-  const statsMap = new Map<string, { hits: number; avgLatency: number }>();
-  for (const r of existing) {
-    if (r.hits > 0) {
-      statsMap.set(`${r.httpMethod}:${r.group}:${r.endpoint}`, {
-        hits: r.hits,
-        avgLatency: r.avgLatency,
-      });
-    }
-  }
-
-  if (statsMap.size === 0) return incoming;
-
-  return incoming.map((r) => {
-    const stats = statsMap.get(`${r.httpMethod}:${r.group}:${r.endpoint}`);
-    if (!stats || r.hits > 0) return r;
-    return { ...r, hits: stats.hits, avgLatency: stats.avgLatency };
-  });
-}
-

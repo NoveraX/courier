@@ -253,7 +253,7 @@ describe("inspectExistingMocks", () => {
 
       expect(error).toMatchObject({
         code: "MOCKS_JAVASCRIPT",
-        message: `${name} is JavaScript. Studio cannot reload a JavaScript mocks file after an edit, so it will not edit one.`,
+        message: `${name} is JavaScript. Studio writes ES imports named as TypeScript resolves them, which a CommonJS file cannot take and Node does not always resolve, so it edits TypeScript mocks files only.`,
       });
     },
   );

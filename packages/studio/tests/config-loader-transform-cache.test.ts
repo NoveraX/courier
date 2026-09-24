@@ -117,14 +117,14 @@ describe("loadCourierConfig through a transform cache", () => {
     expect(baseURLOf(edited)).toBe("v2.example.com");
   });
 
-  it("a config loaded alone after its mocks file fails is not transformed again", async () => {
+  it("a config whose mocks file does not load is transformed once", async () => {
     const project = makeProject({ mocks: 'import { missing } from "./missing";\nexport default { missing };\n' });
     const { cache: transformCache, asked, computed } = counting(createTransformCache());
 
     const loaded = await loadCourierConfig(project.root, { transformCache });
 
     expect(String(loaded.mocks.error)).toMatch(/missing/);
-    expect(asked.filter((file) => file === project.config)).toHaveLength(2);
+    expect(asked.filter((file) => file === project.config)).toHaveLength(1);
     expect(computed.filter((file) => file === project.config)).toHaveLength(1);
   });
 

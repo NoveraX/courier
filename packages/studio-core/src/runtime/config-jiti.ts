@@ -42,13 +42,22 @@ function jitiOwnTransform(createJiti: CreateJiti): Transform {
 /**
  * The module loader for Courier's project files — `courier.config.*` and
  * `courier.mocks.*` — with the options both need: the project's tsconfig path
- * aliases, default-export interop, and no module cache.
+ * aliases, default-export interop, no module cache, and no native import
+ * tried before the loader's own.
  *
  * The module cache is off because this is also the reload path: the dev
  * server loads the files again on every edit, and a cached module would hand
  * back the file as it was before the user changed it. Every load therefore
  * reads and evaluates every file again; a `transformCache` only spares the
  * transform of a file whose bytes are unchanged.
+ *
+ * jiti's native attempt, which imports every module natively before falling
+ * back to its own loader, stays off too, whatever `JITI_TRY_NATIVE` says and
+ * under Bun, where it defaults to on: a module imported natively is the
+ * runtime's first evaluation of it for the life of the process, so an edit to
+ * it would never be seen, and the attempt comes before the module cache
+ * `evalModule` is handed, so two files evaluated over one cache would each
+ * evaluate a module they both import.
  *
  * jiti's own file cache stays off, with or without a `transformCache`:
  * - it writes each entry in place, so concurrent writers can leave an entry
@@ -87,6 +96,7 @@ export async function createConfigJiti(
     interopDefault: true,
     moduleCache: false,
     fsCache: false,
+    tryNative: false,
   };
   if (!transformCache) return createJiti(file, options);
   const compute = jitiOwnTransform(createJiti);

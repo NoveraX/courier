@@ -36,7 +36,9 @@ npm install --save-dev @noverax/courier-studio @noverax/courier-studio-core
 npx courier-studio
 ```
 
-Studio listens on `http://localhost:6280`, or on the `studio.host` and `studio.port` of your `courier.config.ts`. Server runtimes and the build plugins read the same block, so moving Studio there moves them with it. Flags: `--port`, `--host`, `--cwd` (project root), `--open` (open a browser). `npx courier-studio init` adds Studio's `.courier/` cache directory to `.gitignore`.
+Studio listens on `http://localhost:6280`, or on the `studio.host` and `studio.port` of your `courier.config.ts`. Server runtimes and the build plugins read the same block, so moving Studio there moves them with it. Flags: `--port`, `--host`, `--cwd` (project root), `--open` (open a browser), `--version`. Studio keeps its working files — imported API state, saved sessions — in `.courier/`, which ignores itself in git.
+
+Studio has no authentication. It answers only its own page and the apps running on this machine, so on the default `localhost` nothing else can reach it; bound to the network (`--host 0.0.0.0`), anyone on that network can use it.
 
 The build integrations connect your app to Studio; they do not start it.
 
@@ -61,6 +63,7 @@ Every integration connects only outside production (`NODE_ENV !== "production"`)
 ```ts
 // vite.config.ts
 import { courierStudio } from "@noverax/courier-studio/vite"
+import { defineConfig } from "vite"
 
 export default defineConfig({
   plugins: [courierStudio()],
@@ -138,7 +141,7 @@ await studio.close()
 
 ### `createStudioServer(options?: StudioServerOptions): StudioServer`
 
-Starts Studio and returns at once with `url` and `close()`. `onReady` fires once it listens; `onError` fires instead when it cannot — the port is taken, or the host cannot be bound. Options: `port`, `host`, `projectRoot`, `mockBasePort`, `extraCorsOrigins`, `onReady`, `onError`.
+Starts Studio and returns at once with `url` and `close()`. `onReady` fires once it listens, with the URL a browser opens — a wildcard host reads as `localhost`, and with `port: 0` the URL carries the port the system picked; `onError` fires instead when it cannot listen — the port is taken, or the host cannot be bound. Options: `port`, `host`, `projectRoot`, `mockBasePort`, `extraCorsOrigins` (more origins that may act as the Studio UI), `onReady`, `onError`.
 
 <br />
 

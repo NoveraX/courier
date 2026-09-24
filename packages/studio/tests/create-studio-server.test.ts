@@ -1,11 +1,11 @@
 /**
- * Starting Studio where things are not ready yet: a port someone else holds,
- * and a project whose config does not exist until after Studio started.
+ * Starting Studio, and who it then answers.
  *
  * A held port was reported as "Studio already running" whoever held it,
  * onReady never fired and close() rejected; a config that was missing or
- * broken at start switched hot reload off for the whole session; and every
- * start appended to the project's .gitignore.
+ * broken at start switched hot reload off for the whole session. With port 0
+ * Studio reported `:0` and refused its own UI; its sockets took any page on
+ * any site; and every start appended to the project's .gitignore.
  */
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer as createNetServer, type Server } from "node:net";
@@ -96,6 +96,22 @@ describe("a config created after Studio started", () => {
   }, 15_000);
 });
 
+/** Connect a socket with the headers a browser page would send, and report whether Studio took it. */
+function connects(url: string, namespace: string, origin?: string): Promise<boolean> {
+  const socket = connect(`${url}${namespace}`, {
+    transports: ["websocket"],
+    reconnection: false,
+    ...(origin === undefined ? {} : { extraHeaders: { Origin: origin } }),
+  });
+  cleanups.push(() => {
+    socket.disconnect();
+  });
+  return new Promise((resolve) => {
+    socket.once("connect", () => resolve(true));
+    socket.once("connect_error", () => resolve(false));
+  });
+}
+
 function started(root: string, port = 0): Promise<{ url: string; server: StudioServer }> {
   return new Promise((resolve) => {
     const server = start({
@@ -106,6 +122,44 @@ function started(root: string, port = 0): Promise<{ url: string; server: StudioS
     });
   });
 }
+
+describe("Studio on a port the system picked", () => {
+  it("reports the port it listens on, and answers its own UI there", async () => {
+    const { url, server } = await started(project());
+
+    expect(url).not.toMatch(/:0$/);
+    expect(server.url).toBe(url);
+    const reply = await fetch(`${url}/api/sessions/list`, {
+      method: "POST",
+      headers: { Origin: url, "Content-Type": "application/json" },
+      body: "{}",
+    });
+    expect(reply.status).not.toBe(403);
+  });
+});
+
+describe("Studio's sockets", () => {
+  it("refuse a page on another site, on every namespace", async () => {
+    const { url } = await started(project(), await freePort());
+
+    expect(await connects(url, "/ui", "https://evil.example")).toBe(false);
+    expect(await connects(url, "/runtime", "https://evil.example")).toBe(false);
+  });
+
+  it("take the UI from Studio's own page only", async () => {
+    const { url } = await started(project(), await freePort());
+
+    expect(await connects(url, "/ui", url)).toBe(true);
+    expect(await connects(url, "/ui", "http://localhost:5173")).toBe(false);
+  });
+
+  it("take a runtime from an app page on this machine, or from a process", async () => {
+    const { url } = await started(project(), await freePort());
+
+    expect(await connects(url, "/runtime", "http://localhost:5173")).toBe(true);
+    expect(await connects(url, "/runtime")).toBe(true);
+  });
+});
 
 describe("Studio in a project", () => {
   it("leaves the project's .gitignore alone", async () => {

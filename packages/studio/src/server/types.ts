@@ -20,17 +20,21 @@ export interface StudioServerOptions {
    */
   onError?: (error: Error) => void;
   /**
-   * Additional CORS origins permitted to connect to the Studio Socket.IO
-   * server beyond the auto-generated `http://{host}:{port}` and Vite dev
-   * server (`http://localhost:4382`). Use for cross-origin embeds or
-   * remote development.
+   * Origins that may act as the Studio UI besides Studio's own page and the
+   * UI's development server (`http://localhost:4382`): cross-origin embeds,
+   * remote development. Pages served from this machine may connect as
+   * runtimes regardless.
    */
   extraCorsOrigins?: readonly string[];
 }
 
 export interface StudioServer {
-  /** Server URL */
-  url: string;
+  /**
+   * The URL a browser opens to reach Studio. A wildcard host reads as
+   * `localhost`; with `port: 0` it carries the real port once `onReady` has
+   * fired.
+   */
+  readonly url: string;
   /** Close the server */
   close: () => Promise<void>;
 }

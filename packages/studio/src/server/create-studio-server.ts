@@ -3,10 +3,10 @@
  */
 
 import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { createLogger } from "@noverax/courier";
-import { STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
+import { formatStudioUrl, STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
 import express from "express";
-import { Server as SocketIOServer } from "socket.io";
 import { setProjectRoot } from "../context";
 import { BindingTable } from "./catalog/binding-table";
 import { createLifecycleCoordinator } from "./mock-manager";
@@ -18,6 +18,8 @@ import { createRuntimePlaygroundRouter } from "./runtime-playground-router";
 import { serveStudioUi } from "./serve-ui";
 import { clearBuffer } from "./session-buffer";
 import { setupUiNamespace } from "./socket-handlers";
+import { createStudioSockets } from "./socket-server";
+import { createStudioOriginPolicy } from "./studio-origin";
 import type { StudioServer, StudioServerOptions } from "./types";
 import { watchConfigDriven } from "./watch-config-driven";
 import { createWatcherStatus } from "./watcher-status";
@@ -45,25 +47,11 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   const app = express();
   const httpServer = createServer(app);
-  const corsOrigins = [
-    `http://${host}:${port}`,
-    `http://localhost:${port}`,
-    STUDIO_UI_DEV_ORIGIN,
-    ...extraCorsOrigins,
-  ];
-
-  const io = new SocketIOServer(httpServer, {
-    cors: {
-      origin: corsOrigins,
-      methods: ["GET", "POST"],
-    },
-    serveClient: false,
+  const policy = createStudioOriginPolicy({
+    bindHost: host,
+    extraOrigins: [STUDIO_UI_DEV_ORIGIN, ...extraCorsOrigins],
   });
-
-  // ── Namespaces ───────────────────────────────────────────────────────────────
-
-  const uiNamespace = io.of("/ui");
-  const runtimeNamespace = io.of("/runtime");
+  const { io, uiNamespace, runtimeNamespace } = createStudioSockets(httpServer, policy);
 
   // ── Binding table + /runtime namespace (config-driven routing) ─────────────
 
@@ -107,12 +95,14 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     playgroundRouter,
   });
 
-  registerRestApi(app, corsOrigins);
+  registerRestApi(app, policy);
   serveStudioUi(app);
 
   // ── Start ────────────────────────────────────────────────────────────────────
 
-  const url = `http://${host}:${port}`;
+  /* Known for certain only once listening: with port 0 the system picks it,
+     and the requested one would name an address nothing answers at. */
+  let url = formatStudioUrl(host, port);
 
   /* A port another process holds used to be reported as "Studio already
      running" whoever held it, onReady never fired, and close() rejected
@@ -131,6 +121,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   });
 
   httpServer.listen(port, host, () => {
+    url = formatStudioUrl(host, (httpServer.address() as AddressInfo).port);
     onReady?.(url);
   });
 
@@ -147,5 +138,10 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     });
   };
 
-  return { url, close };
+  return {
+    get url() {
+      return url;
+    },
+    close,
+  };
 }

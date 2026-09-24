@@ -6,10 +6,9 @@ import {
   STUDIO_DEFAULT_URL,
 } from "@noverax/courier/config";
 import { loadCourierConfig } from "../../server/config-loader";
+import { ConfigNotFoundError } from "../../server/config-loader-errors";
 
 const log = createLogger("StudioPlugin");
-
-const DEFAULT_URL = STUDIO_DEFAULT_URL;
 
 /** Per-cwd cache so each plugin instance only walks the filesystem once */
 const cache = new Map<string, Promise<string>>();
@@ -18,10 +17,11 @@ const cache = new Map<string, Promise<string>>();
  * Resolve the Studio dev-server URL for a given project root by reading
  * `studio.host` and `studio.port` from `courier.config.ts`.
  *
- * Falls back to the shared default address (and warns) when no config file
- * exists or the config cannot be parsed — build plugins must always be
- * able to emit a snippet so the dev experience never blocks on a missing
- * config file.
+ * Falls back to the shared default address when the config cannot say —
+ * build plugins must always be able to emit a snippet so the dev experience
+ * never blocks on the config. A project without a config is normal and passes
+ * quietly; a config that exists and fails to load is worth a warning, since
+ * the fallback may then be the wrong address.
  *
  * The cache is keyed by `projectRoot`, so changing `studio.port` in
  * `courier.config.ts` requires restarting the bundler (consistent with how
@@ -39,17 +39,20 @@ export function loadStudioUrl(projectRoot: string = process.cwd()): Promise<stri
         studio.port ?? STUDIO_DEFAULT_PORT,
       );
     })
-    .catch((err) => {
-      log.debug(
-        `No courier.config found at ${projectRoot}, using default Studio URL — ${describe(err)}`,
-      );
-      return DEFAULT_URL;
+    .catch((err: unknown) => {
+      if (err instanceof ConfigNotFoundError) {
+        log.debug(
+          `No courier.config in ${projectRoot}; Studio is expected at ${STUDIO_DEFAULT_URL}`,
+        );
+      } else {
+        log.warn(
+          `courier.config could not be loaded, so Studio is expected at ${STUDIO_DEFAULT_URL}`,
+          err,
+        );
+      }
+      return STUDIO_DEFAULT_URL;
     });
 
   cache.set(projectRoot, promise);
   return promise;
-}
-
-function describe(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }

@@ -1,18 +1,31 @@
 /**
  * How the build plugins learn Studio's address from courier.config.
  *
- * The configured host went to the browser verbatim: `0.0.0.0`, which cannot
- * be dialled, or an unbracketed IPv6 address, which is not a URL.
+ * Every failure was logged at debug as "No courier.config found": a config
+ * that existed and would not load sent the browser to the default address
+ * with nothing on screen to say why.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadStudioUrl } from "../src/plugins/core/load-studio-url";
 
+let output: string[];
 const roots: string[] = [];
 
+beforeEach(() => {
+  output = [];
+  for (const stream of [process.stdout, process.stderr]) {
+    vi.spyOn(stream, "write").mockImplementation((chunk) => {
+      output.push(String(chunk));
+      return true;
+    });
+  }
+});
+
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
@@ -34,5 +47,19 @@ describe("loadStudioUrl", () => {
     );
 
     await expect(loadStudioUrl(root)).resolves.toBe("http://localhost:7123");
+  });
+
+  it("falls back quietly when the project has no config", async () => {
+    await expect(loadStudioUrl(project())).resolves.toBe("http://localhost:6280");
+
+    expect(output.join("")).not.toContain("WARN");
+  });
+
+  it("warns when the config exists and will not load", async () => {
+    const root = project("export default {");
+
+    await expect(loadStudioUrl(root)).resolves.toBe("http://localhost:6280");
+
+    expect(output.join("")).toMatch(/WARN[\s\S]*courier\.config could not be loaded/);
   });
 });

@@ -18,9 +18,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { setProjectRoot } from "../src/context";
-import { getImportEntry, getImportState } from "../src/server/imports-bridge";
+import { buildSourceScan } from "../src/server/build-source-scan";
+import { loadCourierConfig } from "../src/server/config-loader";
+import { getImportEntry, getImportState, importsSnapshotOf } from "../src/server/imports-bridge";
 import { registerRegistryRoutes } from "../src/server/registry-routes";
-import { scanProjectSources } from "../src/server/scan-project-sources";
 import type { JsonResponse, RouteApp } from "../src/server/route-types";
 import { registerWriteRoutes } from "../src/server/write-routes";
 
@@ -109,7 +110,8 @@ describe("imports looked up by an Object.prototype member's name", () => {
       'export default { sources: { constructor: { baseURL: "https://api.example" } } };\n',
     );
 
-    const { sources } = await scanProjectSources();
+    const loaded = await loadCourierConfig(root);
+    const { sources } = buildSourceScan(loaded, importsSnapshotOf(loaded.config.imports, root), root);
 
     expect(sources.map((source) => [source.name, source.isImported])).toEqual([
       ["constructor", false],

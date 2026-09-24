@@ -11,11 +11,9 @@
 
 import { relative } from "node:path";
 import { extractSourceMap } from "@noverax/courier-studio-core";
-
-import { getProjectRoot } from "../context";
-import { loadCourierConfig } from "./config-loader";
+import type { LoadedCourierConfig } from "./config-loader";
 import { findSourceDeclaration } from "./find-source-declaration";
-import { getImportEntry, getImportState, loadImportsSnapshot } from "./imports-bridge";
+import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
 
 /** How an endpoint is shaped, as the APIs page and mock wizard read it. */
 export interface ScannedEndpointAnalysis {
@@ -60,22 +58,29 @@ const HTTP_METHODS = new Set(["get", "post", "put", "patch", "delete"]);
 const FLAT_GROUP = "";
 
 /**
- * Build the source catalogue for the project Studio was started in.
+ * Build the source catalogue from the config Studio runs and the imports
+ * state. Nothing is loaded: a hand-written source's file is found among the
+ * modules that load already read.
  *
- * @returns Every declared source; empty when the project has no config yet
+ * @param loaded - The config Studio runs, or `null` when it runs none
+ * @param snapshot - Its import declarations, with the imports state as read now
+ * @param root - The project root, symlinks resolved, that paths are relative to
+ * @returns Every declared source; none when Studio runs no config
  *
  * @example
  * ```ts
- * const { sources } = await scanProjectSources();
+ * const { sources } = buildSourceScan(loaded, importsSnapshotOf(loaded.config.imports, root), root);
  * sources.map((s) => s.name); // → ["billing", "todoApi"]
  * ```
  */
-export async function scanProjectSources(): Promise<ScanResult> {
-  const root = getProjectRoot();
-  const { config, configFile, deps } = await loadCourierConfig(root);
+export function buildSourceScan(
+  loaded: LoadedCourierConfig | null,
+  snapshot: ImportsSnapshot,
+  root: string,
+): ScanResult {
+  if (!loaded) return { sources: [], scannedFiles: 0 };
+  const { config, configFile, deps } = loaded;
   const sourceMap = extractSourceMap(config.sources ?? {});
-
-  const snapshot = await loadImportsSnapshot();
 
   const sources: ScannedSource[] = [];
   for (const [name, source] of Object.entries(sourceMap)) {

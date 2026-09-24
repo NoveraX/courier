@@ -1,20 +1,20 @@
 /**
  * Socket.IO `/ui` namespace handler — manages Studio UI connections.
  *
- * Owns the UI side of every Studio↔runtime conversation: catalog +
- * binding-table snapshots on connect, mock-server lifecycle, watcher status,
- * imports snapshot, and the rid-keyed playground request flows. Routing to
- * the runtimes flows through the `/runtime` `BindingTable` + `runtimeRegistry`
- * — there is no longer a separate `/app` namespace.
+ * Owns the UI side of every Studio↔runtime conversation: on connect the
+ * binding-table snapshot and the project Studio runs (its imports, its
+ * sources and how the config loads), then mock-server lifecycle, watcher
+ * status, and the rid-keyed playground request flows. Routing to the
+ * runtimes flows through the `/runtime` `BindingTable` + `runtimeRegistry`.
  */
 
 import { logger } from "@noverax/courier";
 import type { Namespace } from "socket.io";
 import { buildBindingSnapshot } from "./binding-snapshot";
 import type { BindingTable } from "./catalog/binding-table";
-import { ConfigNotFoundError } from "./config-loader-errors";
-import { loadImportsSnapshot, summarizeImports } from "./imports-bridge";
 import type { LifecycleCoordinator } from "./mock-manager";
+import { sendProject } from "./project-state/send-project";
+import type { ProjectReads } from "./project-state/types";
 import { mockServers, runtimeRegistry } from "./runtime-namespace-state";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
 import {
@@ -22,19 +22,34 @@ import {
   sanitizeMockManaged,
   sanitizeMockServerEvent,
 } from "./sanitize-mock-events";
-import { scanProjectSources } from "./scan-project-sources";
 import type { WatcherStatus } from "./watcher-status";
 
 export interface SetupUiNamespaceDeps {
   uiNamespace: Namespace;
   bindingTable: BindingTable;
+  /** The project Studio runs, replayed to each UI that connects. */
+  project: ProjectReads;
+  /** The project root, symlinks resolved. */
+  projectRoot: string;
   mockManager?: LifecycleCoordinator;
   watcherStatus?: WatcherStatus;
   playgroundRouter?: RuntimePlaygroundRouter;
 }
 
+/**
+ * Serve each Studio UI that connects: replay the state it needs, then take
+ * its playground and mock commands.
+ *
+ * @param deps - The namespace, and what is replayed and commanded
+ *
+ * @example
+ * ```ts
+ * setupUiNamespace({ uiNamespace, bindingTable, project, projectRoot, mockManager, watcherStatus });
+ * ```
+ */
 export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
   const { uiNamespace, bindingTable, mockManager, watcherStatus, playgroundRouter } = deps;
+  const { project, projectRoot } = deps;
 
   uiNamespace.on("connection", (socket) => {
     // Send current binding-table snapshot so a UI client that joins after a
@@ -50,30 +65,15 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
       socket.emit("binding:snapshot", { rows: [], runtimeCount: 0, sourceCount: 0 });
     }
 
-    // Push the current imports snapshot so the APIs page renders without an
-    // extra HTTP round-trip. The Explorer still derives hand-written sources
-    // from `binding:snapshot` pushed by the `/runtime` namespace.
-    loadImportsSnapshot()
-      .then((snapshot) => {
-        socket.emit("registry:updated", { sources: summarizeImports(snapshot) });
-      })
-      .catch((err: unknown) => {
-        /* Fresh projects without courier.config.ts are expected — stay quiet. */
-        if (err instanceof ConfigNotFoundError) return;
-        logger.warn("Studio", "Failed to emit imports snapshot on socket connect", err);
-      });
-
-    /* The APIs page and the mock wizard both list the project's own sources;
-       without this they render as though the project declared none. */
-    scanProjectSources()
-      .then((scan) => {
-        socket.emit("scan:sources", scan);
-      })
-      .catch((err: unknown) => {
-        /* Fresh projects without courier.config.ts are expected — stay quiet. */
-        if (err instanceof ConfigNotFoundError) return;
-        logger.warn("Studio", "Failed to emit source scan on socket connect", err);
-      });
+    /* The imports, the sources and how the config loads, from what Studio
+       runs: never a load of its own. A UI that connects while Studio starts
+       is told so, and gets the lists with the first outcome. socket.io calls
+       this handler outside any promise, so a throw here would stop Studio. */
+    try {
+      sendProject(socket, project.snapshot(), projectRoot);
+    } catch (err) {
+      logger.warn("Studio", "Failed to send the project to a UI that connected", err);
+    }
 
     // Send current mock servers so UI restores state immediately.
     // Re-validate cached entries through sanitizeMockServerEvent for

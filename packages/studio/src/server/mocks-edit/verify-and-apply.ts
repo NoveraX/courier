@@ -1,8 +1,8 @@
 import { createLogger } from "@noverax/courier";
 import type { LoadedCourierConfig } from "../config-loader";
+import { describeError } from "../describe-error";
 import type { ExclusiveContext } from "../exclusive-reload";
 import { describeEntry } from "../mock-manager/describe-entry";
-import { describeError } from "./describe-error";
 import type { PreparedEdit } from "./prepare-edit";
 import { rejectionOf } from "./rejection-of";
 import type { DeclareApplyResult } from "./types";
@@ -13,7 +13,8 @@ const log = createLogger("Studio");
 
 /**
  * Load the written files and run them only if they are the edit Studio
- * meant; otherwise take the edit back.
+ * meant; otherwise take the edit back. So too when Studio cannot run the
+ * load: the files then go back to what it runs.
  *
  * @param tx - The edit's hold on the reload chain
  * @param prepared - The edit that was written
@@ -40,6 +41,10 @@ export async function verifyAndApply(
   const rejection = rejectionOf(prepared.loaded, loaded, input.requests, target.path, root);
   if (rejection) return undoEdit(tx, prepared, rejection, written.leftoverPath);
   tx.apply(loaded);
+  if (tx.current() !== loaded) {
+    const reason = "the edited files loaded, but Studio could not run them; the terminal says why";
+    return undoEdit(tx, prepared, reason, written.leftoverPath);
+  }
   const keys = input.requests.map((request) => request.key);
   log.info(`Studio added ${keys.join(", ")} to ${target.relative}`);
   const warnings = await describeProblems(loaded, keys);

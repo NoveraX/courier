@@ -8,11 +8,10 @@
  * passes the origin check, gets the snippet to add by hand instead.
  */
 
-import { realpathSync } from "node:fs";
 import type { IncomingMessage } from "node:http";
 import { createLogger } from "@noverax/courier";
+import { describeError } from "./describe-error";
 import { applyMocksEdit } from "./mocks-edit/apply-mocks-edit";
-import { describeError } from "./mocks-edit/describe-error";
 import { isLocalPeer } from "./mocks-edit/is-local-peer";
 import { manualOutcome } from "./mocks-edit/manual-outcome";
 import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
@@ -22,6 +21,7 @@ import { snippetInputUnread } from "./mocks-edit/snippet-input-unread";
 import type { ManualOutcome, MockDeclaration } from "./mocks-edit/types";
 import { validateDeclarations } from "./mocks-edit/validate-declarations";
 import { type DeclareBody, validateDeclareBody } from "./mocks-edit/validate-declare-body";
+import { resolvedRoot } from "./resolved-root";
 
 const log = createLogger("Studio");
 
@@ -105,17 +105,6 @@ async function perform(
     log.error(`Studio could not ${mode} adding mocks`, err);
     const reason = describeError(err, resolvedRoot(ctx.projectRoot));
     return { status: 500, body: { error: `Studio could not ${mode} adding the mocks: ${reason}` } };
-  }
-}
-
-/* The loader names files by their resolved path; a root that is itself gone
-   is shown as given. */
-function resolvedRoot(projectRoot: string): string {
-  try {
-    return realpathSync(projectRoot);
-  } catch (err) {
-    log.debug(`${projectRoot} could not be resolved`, err);
-    return projectRoot;
   }
 }
 

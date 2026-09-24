@@ -66,6 +66,14 @@ describe("applyLoadedMocks", () => {
     });
   });
 
+  it("passes on why a file that threw a value with no string form did not load", () => {
+    const target = consumers();
+
+    applyLoadedMocks(mocks({ error: Object.create(null) }), target);
+
+    expect(target.calls).toEqual([`status ${FILE} [Object: null prototype] {}`]);
+  });
+
   it("logs a file that did not load, with its error", () => {
     const target = consumers();
     const error = new SyntaxError("Unexpected token");

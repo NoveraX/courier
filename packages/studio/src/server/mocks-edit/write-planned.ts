@@ -1,6 +1,6 @@
 import { relative, sep } from "node:path";
 import { createLogger } from "@noverax/courier";
-import { describeError } from "./describe-error";
+import { describeError } from "../describe-error";
 import { manualOutcome } from "./manual-outcome";
 import { MocksEditRefusal } from "./mocks-edit-refusal";
 import { MocksFileChangedError } from "./mocks-file-changed-error";

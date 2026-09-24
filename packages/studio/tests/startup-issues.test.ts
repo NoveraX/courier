@@ -53,6 +53,12 @@ describe("recording a startup issue", () => {
     expect(startupIssues()[0]).toBe("config did not load: key mismatch");
   });
 
+  it("appends the reason from a thrown value that has no string form", () => {
+    recordStartupIssue("courier.mocks.ts did not load", Object.create(null));
+
+    expect(startupIssues()).toEqual(["courier.mocks.ts did not load: [Object: null prototype] {}"]);
+  });
+
   it("keeps every issue in order", () => {
     recordStartupIssue("first");
     recordStartupIssue("second");

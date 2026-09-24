@@ -35,13 +35,41 @@ export interface ImportSummary {
   options: Record<string, unknown>;
 }
 
+/**
+ * Pair the import declarations of a config with the imports state as it is
+ * on disk now.
+ *
+ * @param declarations - The `imports` of the config Studio runs; none when it runs no config
+ * @param root - The project root the state file lives under
+ * @returns The snapshot the imports lists and the source catalogue are built from
+ *
+ * @example
+ * ```ts
+ * summarizeImports(importsSnapshotOf(loaded.config.imports, root));
+ * ```
+ */
+export function importsSnapshotOf(
+  declarations: Record<string, CourierImportEntry> | undefined,
+  root: string,
+): ImportsSnapshot {
+  return { declarations: declarations ?? {}, state: loadImportsState(root) };
+}
+
+/**
+ * Load the config and pair its import declarations with the imports state.
+ *
+ * @returns The snapshot, from a load of its own
+ * @throws What `loadCourierConfig` throws
+ *
+ * @example
+ * ```ts
+ * const snapshot = await loadImportsSnapshot();
+ * ```
+ */
 export async function loadImportsSnapshot(): Promise<ImportsSnapshot> {
   const root = getProjectRoot();
   const loaded = await loadCourierConfig(root);
-  return {
-    declarations: loaded.config.imports ?? {},
-    state: loadImportsState(root),
-  };
+  return importsSnapshotOf(loaded.config.imports, root);
 }
 
 export function summarizeImports(snapshot: ImportsSnapshot): ImportSummary[] {

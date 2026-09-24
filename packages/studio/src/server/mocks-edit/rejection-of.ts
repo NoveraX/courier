@@ -1,6 +1,6 @@
 import { relative, sep } from "node:path";
 import type { LoadedCourierConfig } from "../config-loader";
-import { describeError } from "./describe-error";
+import { describeError } from "../describe-error";
 import { isRecord } from "./is-record";
 import type { MockDeclaration } from "./types";
 

@@ -31,6 +31,7 @@ import type { EvaluatedCourierFiles } from "./evaluate-courier-files";
 import { evaluateCourierFiles } from "./evaluate-courier-files";
 import { extractConfigDeps } from "./extract-config-deps";
 import { hashFile } from "./file-hash";
+import { messageOf } from "./message-of";
 import { studioTransformCache } from "./studio-transform-cache";
 
 const log = createLogger("Studio");
@@ -112,7 +113,7 @@ export async function loadCourierConfig(
   } catch (err) {
     throw new ConfigLoaderError(
       "CONFIG_INVALID",
-      `Failed to load courier.config: ${describe(err)}`,
+      `Failed to load courier.config: ${messageOf(err)}`,
       {
         cause: err,
         context: { cwd: projectRoot },
@@ -171,6 +172,16 @@ function validateConfig(config: unknown, configFile: string): asserts config is 
   if (Object.keys(sources).length === 0) {
     throw invalid("courier.config.sources must contain at least one entry");
   }
+  /* A named import misspelled, or one its module stopped exporting, is
+     `undefined` here rather than an error of the import itself. */
+  const entries: Array<[string, unknown]> = Object.entries(sources);
+  for (const [key, source] of entries) {
+    if (typeof source === "object" && source !== null) continue;
+    const found = source === undefined || source === null ? String(source) : `a ${typeof source}`;
+    throw invalid(
+      `courier.config.sources.${key} is ${found}, not a source; check that it is imported by the name its module exports`,
+    );
+  }
 }
 
 /**
@@ -188,10 +199,6 @@ function stampConfigSourceKeys(sources: Record<string, AnySource>, configFile: s
       context: { configFile },
     });
   }
-}
-
-function describe(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
 
 export type { ConfigLoaderErrorCode } from "./config-loader-errors";

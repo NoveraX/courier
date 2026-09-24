@@ -200,7 +200,7 @@ describe("createReloadQueue", () => {
     expect(runs).toEqual([]);
   });
 
-  it("no longer counts an edit dropped before it started", async () => {
+  it("stops counting an edit dropped before it started", async () => {
     const { reload } = recorder();
     const queue = createReloadQueue(reload);
     let release = () => {};
@@ -219,5 +219,52 @@ describe("createReloadQueue", () => {
     release();
 
     await expect(settled).resolves.toBeUndefined();
+  });
+
+  it("runs every request and edit only after the first load", async () => {
+    const { log, reload } = recorder();
+    const queue = createReloadQueue(reload, async () => {
+      log.push("first start");
+      await sleep(30);
+      log.push("first end");
+    });
+
+    queue.request(["a"]);
+    const edit = queue.exclusive(async () => {
+      log.push("edit");
+    });
+    await edit;
+    await queue.settled();
+
+    expect(log).toEqual(["first start", "first end", "start a", "end a", "edit"]);
+  });
+
+  it("keeps going after a first load that throws, and logs the failure", async () => {
+    const { runs, reload } = recorder();
+    const queue = createReloadQueue(reload, async () => {
+      throw new Error("the first outcome could not be applied");
+    });
+
+    queue.request(["after"]);
+    await queue.settled();
+
+    expect(runs).toEqual([["after"]]);
+    expect(console.error).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not count the first load as an edit", async () => {
+    const { reload } = recorder();
+    let release = () => {};
+    const queue = createReloadQueue(
+      reload,
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+    );
+
+    await expect(queue.exclusiveSettled()).resolves.toBeUndefined();
+    release();
+    await queue.settled();
   });
 });

@@ -21,7 +21,7 @@ function description(overrides: Partial<MockServerDescription> = {}): MockServer
   return { autoStart: false, routes: [], collections: [], scenarios: [], ...overrides };
 }
 
-const here: MockLocation = { configPath: "/p/courier.config.ts", relativePath: "courier.config.ts:mocks" };
+const here: MockLocation = { mocksFile: "/p/courier.mocks.ts", relativePath: "courier.mocks.ts:apiMock" };
 
 function registration(basePort = 7001, reserved: number[] = [], alive: string[] = []) {
   const servers = new Map<string, ServerState>();
@@ -135,7 +135,7 @@ describe("a config edit", () => {
     const { servers, ops } = registration();
     ops.registerDeclared("apiMock", here, description());
 
-    const renamed = { configPath: "/p/courier.config.mts", relativePath: "courier.config.mts:mocks.apiMock" };
+    const renamed = { mocksFile: "/p/courier.mocks.mts", relativePath: "courier.mocks.mts:apiMock" };
     ops.updateDeclared("apiMock", renamed, description());
 
     expect(servers.get("apiMock")).toMatchObject(renamed);

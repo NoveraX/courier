@@ -1,4 +1,3 @@
-import type { CourierMockEntry } from "@noverax/courier/config";
 import type { AnySource } from "@noverax/courier/define";
 import type { MockStore } from "../store";
 import type { TypedMockFn } from "../typed-mock-fn";
@@ -6,11 +5,22 @@ import type { MockScenario, NetworkConfig } from "../types";
 import type { DescribedRoute } from "./describe-route";
 
 /**
+ * What `defineMocks` accepts under each key: a `defineMockServer()` result,
+ * for any source. It names only what every definition shares, so definitions
+ * written for different APIs fit one record.
+ */
+export interface MockServerEntry {
+  readonly __type: "courier-mock-server";
+  /** The API the mock serves. */
+  readonly source: AnySource;
+}
+
+/**
  * What `defineMockServer()` returns: a mock server for `TSource`, which Studio
- * runs when it is declared under `mocks` in `courier.config.ts`.
+ * runs when it is declared in `courier.mocks.ts`.
  */
 export interface MockServerDefinition<TSource extends AnySource = AnySource>
-  extends CourierMockEntry {
+  extends MockServerEntry {
   /** Marker for runtime type detection */
   __type: "courier-mock-server";
   /** The API to mock — grouped or flat; its routes and data are generated from it */
@@ -73,7 +83,8 @@ export type MockServerConfig<TSource extends AnySource = AnySource> = Omit<
 export type ParentMessage =
   | {
       type: "start";
-      configPath: string;
+      /** The project's `courier.mocks.*`, which declares the mock. */
+      mocksFile: string;
       mockKey: string;
       /** The port to listen on, exactly: Studio chose it, and a taken one is reported. */
       port: number;

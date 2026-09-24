@@ -67,7 +67,7 @@ function manager() {
   return { events, pm: createProcessManager(events) };
 }
 
-const request = { serverId: "apiMock", configPath: "/work/courier.config.ts", mockKey: "apiMock", port: 7401 };
+const request = { serverId: "apiMock", mocksFile: "/work/courier.mocks.ts", mockKey: "apiMock", port: 7401 };
 
 afterEach(() => {
   forks.length = 0;
@@ -79,7 +79,7 @@ describe("starting a managed mock", () => {
   it("forks Studio's own worker with no loader flags, in the project, with its output visible", async () => {
     const { pm } = manager();
 
-    pm.spawn({ ...request, configPath: "/work/my app/courier.config.ts" });
+    pm.spawn({ ...request, mocksFile: "/work/my app/courier.mocks.ts" });
 
     const [{ script, options }] = forks as [(typeof forks)[number]];
     expect(script).toMatch(/[/\\]lib[/\\]mock-worker\.js$/);
@@ -96,7 +96,7 @@ describe("starting a managed mock", () => {
     pm.spawn(request);
 
     expect(forks[0]?.child.send).toHaveBeenCalledWith(
-      { type: "start", configPath: "/work/courier.config.ts", mockKey: "apiMock", port: 7401 },
+      { type: "start", mocksFile: "/work/courier.mocks.ts", mockKey: "apiMock", port: 7401 },
       expect.any(Function),
     );
     await pm.dispose();

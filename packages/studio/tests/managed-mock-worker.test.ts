@@ -1,11 +1,12 @@
 /**
  * A managed mock server, started the way Studio starts it: the real worker,
- * a TypeScript config with extensionless imports and a top-level await, in a
- * project path with a space, with nothing installed beyond Courier.
+ * a TypeScript courier.mocks.ts with extensionless imports and a top-level
+ * await, in a project path with a space, with nothing installed beyond
+ * Courier.
  *
  * It serves its routes, lists them as Studio described them, reports a bad
- * declaration or a taken port, and stops at once when asked while its config
- * is still loading.
+ * declaration, a mocks file without a default export or a taken port, and
+ * stops at once when asked while its mocks file is still loading.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
@@ -20,8 +21,8 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
 
-/** A project under the repository's node_modules, so its config resolves the workspace packages. */
-function project(mocks: string, { loadDelayMs = 0 } = {}): string {
+/** A project under the repository's node_modules, so its files resolve the workspace packages. */
+function project(mocks: string, { loadDelayMs = 0, exportLine = `export default defineMocks(${mocks});` } = {}): string {
   const cache = join(__dirname, "../../../node_modules/.cache/courier-studio-tests");
   mkdirSync(cache, { recursive: true });
   const root = mkdtempSync(join(cache, "my app "));
@@ -38,12 +39,16 @@ function project(mocks: string, { loadDelayMs = 0 } = {}): string {
   );
   writeFileSync(
     join(root, "courier.config.ts"),
-    'import { defineMockServer } from "@noverax/courier-mock";\n' +
+    'import { api } from "./src/api";\nexport default { sources: { api } };\n',
+  );
+  writeFileSync(
+    join(root, "courier.mocks.ts"),
+    'import { defineMocks, defineMockServer } from "@noverax/courier-mock";\n' +
       'import { api } from "./src/api";\n' +
       `await new Promise((resolve) => setTimeout(resolve, ${loadDelayMs}));\n` +
-      `export default { sources: { api }, mocks: ${mocks} };\n`,
+      `${exportLine}\n`,
   );
-  return join(root, "courier.config.ts");
+  return join(root, "courier.mocks.ts");
 }
 
 async function freePort(): Promise<number> {
@@ -68,12 +73,12 @@ function manager() {
 }
 
 describe("a managed mock server", () => {
-  it("starts from a TypeScript config in a path with a space, and serves its routes", async () => {
+  it("starts from a TypeScript mocks file in a path with a space, and serves its routes", async () => {
     const port = await freePort();
-    const config = project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`);
+    const mocksFile = project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`);
     const { events, pm } = manager();
 
-    pm.spawn({ serverId: "apiMock", configPath: config, mockKey: "apiMock", port });
+    pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port });
     await vi.waitFor(() => expect(events.onReady).toHaveBeenCalled(), { timeout: 15_000 });
 
     const reply = await fetch(`http://127.0.0.1:${port}/users`);
@@ -83,10 +88,10 @@ describe("a managed mock server", () => {
 
   it("lists its routes with their schema and example while it runs, as Studio described them", async () => {
     const port = await freePort();
-    const config = project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`);
+    const mocksFile = project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`);
     const { events, pm } = manager();
 
-    pm.spawn({ serverId: "apiMock", configPath: config, mockKey: "apiMock", port });
+    pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port });
     await vi.waitFor(() => expect(events.onReady).toHaveBeenCalled(), { timeout: 15_000 });
 
     const [route] = events.onReady.mock.calls[0]?.[1].routes ?? [];
@@ -100,12 +105,12 @@ describe("a managed mock server", () => {
     expect(Array.isArray(route?.exampleResponse)).toBe(true);
   }, 20_000);
 
-  it("stops at once when asked while its config is still loading", async () => {
+  it("stops at once when asked while its mocks file is still loading", async () => {
     const port = await freePort();
-    const config = project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`, { loadDelayMs: 2500 });
+    const mocksFile = project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`, { loadDelayMs: 2500 });
     const { events, pm } = manager();
 
-    pm.spawn({ serverId: "apiMock", configPath: config, mockKey: "apiMock", port });
+    pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port });
     await new Promise((resolve) => setTimeout(resolve, 300));
     const asked = Date.now();
     await pm.kill("apiMock");
@@ -116,10 +121,10 @@ describe("a managed mock server", () => {
   }, 20_000);
 
   it("reports a declaration that is not a mock server", async () => {
-    const config = project("{ broken: { autoStart: true } }");
+    const mocksFile = project("{ broken: { autoStart: true } }");
     const { events, pm } = manager();
 
-    pm.spawn({ serverId: "broken", configPath: config, mockKey: "broken", port: await freePort() });
+    pm.spawn({ serverId: "broken", mocksFile, mockKey: "broken", port: await freePort() });
 
     await vi.waitFor(
       () =>
@@ -137,14 +142,48 @@ describe("a managed mock server", () => {
     const port = await freePort();
     await new Promise<void>((resolve) => holder.listen(port, "127.0.0.1", resolve));
     cleanups.push(() => new Promise<void>((resolve) => holder.close(() => resolve())));
-    const config = project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`);
+    const mocksFile = project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`);
     const { events, pm } = manager();
 
-    pm.spawn({ serverId: "apiMock", configPath: config, mockKey: "apiMock", port });
+    pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port });
 
     await vi.waitFor(() => expect(events.onError).toHaveBeenCalledWith("apiMock", expect.stringContaining("EADDRINUSE"), true), {
       timeout: 15_000,
     });
     expect(events.onReady).not.toHaveBeenCalled();
+  }, 20_000);
+
+  it("reports a key the mocks file no longer declares", async () => {
+    const mocksFile = project("{ apiMock: defineMockServer({ source: api }) }");
+    const { events, pm } = manager();
+
+    pm.spawn({ serverId: "gone", mocksFile, mockKey: "gone", port: await freePort() });
+
+    await vi.waitFor(
+      () =>
+        expect(events.onError).toHaveBeenCalledWith(
+          "gone",
+          expect.stringContaining('Mock "gone" in'),
+          true,
+        ),
+      { timeout: 15_000 },
+    );
+  }, 20_000);
+
+  it("reports a mocks file with no default export", async () => {
+    const mocksFile = project("", { exportLine: "export const apiMock = defineMockServer({ source: api });" });
+    const { events, pm } = manager();
+
+    pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port: await freePort() });
+
+    await vi.waitFor(
+      () =>
+        expect(events.onError).toHaveBeenCalledWith(
+          "apiMock",
+          expect.stringContaining("has no default export; export default defineMocks({ ... })"),
+          true,
+        ),
+      { timeout: 15_000 },
+    );
   }, 20_000);
 });

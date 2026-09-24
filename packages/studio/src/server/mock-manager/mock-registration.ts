@@ -1,7 +1,7 @@
 /**
- * Registration of the mocks declared in `courier.config.ts.mocks`: turn each,
+ * Registration of the mocks declared in `courier.mocks.ts`: turn each,
  * described from its definition, into a tracked `ServerState`, keep it in
- * step with config edits, and track one that cannot run with the reason.
+ * step with edits, and track one that cannot run with the reason.
  */
 
 import type { MockServerDescription } from "@noverax/courier-mock/managed";
@@ -11,8 +11,8 @@ import type { ServerState } from "./types";
 
 /** Where a mock is declared. */
 export interface MockLocation {
-  configPath: string;
-  /** Display path shown in the UI (e.g. `courier.config.ts:mocks.users`). */
+  mocksFile: string;
+  /** Display path shown in the UI (e.g. `courier.mocks.ts:users`). */
   relativePath: string;
 }
 

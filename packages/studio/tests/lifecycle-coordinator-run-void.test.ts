@@ -62,16 +62,15 @@ vi.mock("../src/server/mock-manager/ui-emitter", () => ({
 }));
 
 const mockRegistry = {
-  syncFromConfig: vi.fn(),
+  syncFromMocks: vi.fn(),
   getEntries: vi.fn(() => []),
   attach: vi.fn(() => () => {}),
 };
 
 const config = {
   mockRegistry,
-  getConfigPath: () => null,
   basePort: 7001,
-  uiNamespace: { sockets: new Map() } as never,
+  uiNamespace: { sockets: new Map(), emit: vi.fn() } as never,
 } as unknown as CoordinatorConfig;
 
 describe("lifecycle-coordinator runVoid wrappers", () => {

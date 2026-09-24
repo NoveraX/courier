@@ -36,7 +36,8 @@ export interface ProcessManagerEvents {
 /** What a mock's worker is started with. */
 export interface SpawnRequest {
   serverId: string;
-  configPath: string;
+  /** The `courier.mocks.*` the worker loads the mock from. */
+  mocksFile: string;
   mockKey: string;
   /** Listened on exactly; a taken one is reported by the worker. */
   port: number;
@@ -62,11 +63,11 @@ export function createProcessManager(events: ProcessManagerEvents) {
   }
 
   /** Start the worker for a mock; it reports back once it listens. */
-  function spawn({ serverId, configPath, mockKey, port }: SpawnRequest): { pid: number } {
+  function spawn({ serverId, mocksFile, mockKey, port }: SpawnRequest): { pid: number } {
     /* Output is inherited, so request logs and crash stacks reach Studio's
        terminal, and no unread pipe can fill up and stall the worker. */
     const child = fork(WORKER, [], {
-      cwd: dirname(configPath),
+      cwd: dirname(mocksFile),
       execArgv: [],
       stdio: ["ignore", "inherit", "inherit", "ipc"],
     });
@@ -83,7 +84,7 @@ export function createProcessManager(events: ProcessManagerEvents) {
       events.onExited(serverId, signal ? `was stopped by ${signal}` : `exited with code ${code}`);
     });
 
-    send(serverId, child, { type: "start", configPath, mockKey, port });
+    send(serverId, child, { type: "start", mocksFile, mockKey, port });
     return { pid: child.pid ?? 0 };
   }
 

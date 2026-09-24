@@ -1,10 +1,10 @@
 /**
- * Config-driven mock-server registry.
+ * Mock-server registry.
  *
- * Mock definitions live inline in `courier.config.ts.mocks` as imported values.
- * The registry diffs the previous config snapshot against a fresh one and
- * emits add / change / remove events that the lifecycle coordinator consumes
- * to start, stop, or restart the corresponding child processes.
+ * Mock definitions are the default export of `courier.mocks.ts`, by key. The
+ * registry diffs the previous snapshot against a freshly loaded one and emits
+ * add / change / remove events that the lifecycle coordinator consumes to
+ * start, stop, or restart the corresponding child processes.
  *
  * Mock definition values are typed as `unknown` here because the canonical
  * `MockServerDefinition` type lives in `@noverax/courier-mock` and pulling it
@@ -13,12 +13,10 @@
  * the consumption site.
  */
 
-import type { CourierConfig } from "@noverax/courier/config";
-
-/** Stable identity + raw definition for one mock declared in `courier.config.ts.mocks` */
+/** Stable identity + raw definition for one mock declared in `courier.mocks.ts` */
 export interface MockEntry {
   key: string;
-  /** Reference to the value the user passed in `courier.config.ts.mocks[key]` */
+  /** Reference to the value the user declared under `key` */
   definition: unknown;
 }
 
@@ -29,13 +27,13 @@ export interface MockRegistryEvents {
 }
 
 export interface MockRegistry {
-  /** Apply a freshly loaded config — diffs against the previous snapshot. */
-  syncFromConfig(config: CourierConfig): void;
+  /** Apply freshly loaded mocks, by key — diffs against the previous snapshot. */
+  syncFromMocks(mocks: Record<string, unknown>): void;
   /** Read the current snapshot — used by tests and the UI initial state. */
   getEntries(): MockEntry[];
   /**
    * Attach a listener that receives diff events from subsequent
-   * `syncFromConfig` calls. Currently registered entries are replayed via
+   * `syncFromMocks` calls. Currently registered entries are replayed via
    * `onAdded` so a late-attaching consumer never misses them.
    *
    * @returns Detaches the listener; it hears nothing after that.
@@ -44,9 +42,9 @@ export interface MockRegistry {
 }
 
 /**
- * Build a registry that emits add/change/remove deltas as configs flow in.
+ * Build a registry that emits add/change/remove deltas as loads flow in.
  *
- * The registry is empty until the first `syncFromConfig` call so the caller
+ * The registry is empty until the first `syncFromMocks` call so the caller
  * controls when discovery begins (typically right after the initial
  * `loadCourierConfig` succeeds).
  */
@@ -64,8 +62,8 @@ export function createMockRegistry(initialEvents?: MockRegistryEvents): MockRegi
   };
 
   return {
-    syncFromConfig(config: CourierConfig): void {
-      const next = extractMocks(config);
+    syncFromMocks(mocks: Record<string, unknown>): void {
+      const next = declaredMocks(mocks);
       const seen = new Set<string>();
 
       for (const entry of next) {
@@ -103,9 +101,8 @@ export function createMockRegistry(initialEvents?: MockRegistryEvents): MockRegi
   };
 }
 
-function extractMocks(config: CourierConfig): MockEntry[] {
-  const mocks = config.mocks;
-  if (!mocks || typeof mocks !== "object") return [];
+/* A key left `undefined` or `null` declares no mock, so one can be switched off in place. */
+function declaredMocks(mocks: Record<string, unknown>): MockEntry[] {
   const out: MockEntry[] = [];
   for (const [key, definition] of Object.entries(mocks)) {
     if (definition === undefined || definition === null) continue;

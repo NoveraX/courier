@@ -1,29 +1,25 @@
 /**
  * Studio dev-server config loader.
  *
- * Delegates the "find + load" step to the canonical shared loader in
- * `@noverax/courier-studio-core/runtime` so the Studio dev server and the
- * user-app runtime resolve `courier.config.*` through exactly the same code
- * path. This module layers dev-server-only concerns on top of the base
- * loader:
- *
- *  - Loud `ConfigNotFoundError` when no file is found at `projectRoot`
- *    (the runtime caller would have returned `null` instead)
- *  - `validateConfig` — asserts `sources` is a non-empty record
- *  - `stampSourceKeys` — stamps the config key onto each source as its
- *    canonical name, rejecting silent collisions with `defineApi({ name })`
- *  - `extractConfigDeps` — walks the transitive import graph for the
- *    `fs.watch` registration used by `config-watcher.ts`
- *
- * The base loader returns `LoadedCourierConfig` (`{ config, configFile }`);
- * this wrapper returns the same shape plus the `deps` field.
+ * Finds `courier.config.*` in the project root with the shared loader of
+ * `@noverax/courier-studio-core`, so Studio and the app's runtime resolve the
+ * config the same way, and loads `courier.mocks.*` beside it, which only
+ * Studio reads. On top of that it reports a missing config loudly, checks the
+ * config's shape, stamps each source with its config key, and lists every
+ * module both files import for the dependency watcher.
  */
 
+import { realpathSync } from "node:fs";
+import { join } from "node:path";
 import { ConfigurationError } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
 import { type AnySource, stampSourceKeys } from "@noverax/courier/define";
-import { loadCourierConfig as loadBase } from "@noverax/courier-studio-core/config";
+import { findConfigFileAt, MOCKS_BASENAMES } from "@noverax/courier-studio-core/config";
 import { ConfigLoaderError, ConfigNotFoundError } from "./config-loader-errors";
+import type { LoadedCourierMocks } from "./courier-mocks-file";
+import { locateCourierMocks, readCourierMocks } from "./courier-mocks-file";
+import type { EvaluatedCourierFiles } from "./evaluate-courier-files";
+import { evaluateCourierFiles, hashFile } from "./evaluate-courier-files";
 import { extractConfigDeps } from "./extract-config-deps";
 
 /** Result returned by `loadCourierConfig` */
@@ -32,15 +28,20 @@ export interface LoadedCourierConfig {
   config: CourierConfig;
   /** Absolute path of the loaded `courier.config.*` file */
   configFile: string;
+  /** sha256 of the config bytes that were loaded; `null` when the file changed while loading. */
+  contentHash: string | null;
   /**
-   * Every TypeScript/JavaScript module the config transitively imports,
-   * including the config file itself. Suitable for `fs.watch` registration.
+   * Every module the config and the mocks file transitively import, both
+   * entries included — or, with no mocks file, every name one may take, so
+   * creating it is noticed. Suitable for `fs.watch` registration.
    */
   deps: string[];
+  /** The mocks Studio runs, from `courier.mocks.*` beside the config. */
+  mocks: LoadedCourierMocks;
 }
 
 /**
- * Load `courier.config.{ts,js,mjs}` from `projectRoot`.
+ * Load `courier.config.*` from `projectRoot`, and `courier.mocks.*` beside it.
  *
  * Validates that `sources` is a non-empty record, stamps each source with its
  * config key (so the key acts as the canonical source name), and rejects
@@ -51,9 +52,16 @@ export interface LoadedCourierConfig {
  * and `ConfigLoaderError` for every other validation failure.
  */
 export async function loadCourierConfig(projectRoot: string): Promise<LoadedCourierConfig> {
-  let loaded: Awaited<ReturnType<typeof loadBase>>;
+  const root = realpathSync(projectRoot);
+  const found = findConfigFileAt(root);
+  if (!found) throw new ConfigNotFoundError(projectRoot);
+  const configFile = realpathSync(found);
+  const mocks = locateCourierMocks(root);
+  const configHash = hashFile(configFile);
+
+  let evaluated: EvaluatedCourierFiles;
   try {
-    loaded = await loadBase({ cwd: projectRoot, requireAtCwd: true });
+    evaluated = await evaluateCourierFiles(root, found, mocks.file === null ? null : mocks.path);
   } catch (err) {
     throw new ConfigLoaderError(
       "CONFIG_INVALID",
@@ -64,44 +72,36 @@ export async function loadCourierConfig(projectRoot: string): Promise<LoadedCour
       },
     );
   }
-
-  if (!loaded) throw new ConfigNotFoundError(projectRoot);
-
-  const { config, configFile } = loaded;
+  const { config } = evaluated;
   validateConfig(config, configFile);
   stampConfigSourceKeys(config.sources, configFile);
 
   return {
     config,
     configFile,
-    deps: extractConfigDeps(configFile),
+    contentHash: configHash !== null && hashFile(configFile) === configHash ? configHash : null,
+    deps: dependenciesOf(root, configFile, mocks.file),
+    mocks: readCourierMocks(mocks, evaluated),
   };
 }
 
+function dependenciesOf(root: string, configFile: string, mocksFile: string | null): string[] {
+  const mocksDeps =
+    mocksFile === null
+      ? MOCKS_BASENAMES.map((name) => join(root, name))
+      : extractConfigDeps(mocksFile);
+  return [...new Set([...extractConfigDeps(configFile), ...mocksDeps])];
+}
+
 /** Reject configs missing `sources` or with malformed entries */
-function validateConfig(
-  config: CourierConfig | undefined | null,
-  configFile: string,
-): asserts config is CourierConfig {
-  if (!config || typeof config !== "object") {
-    throw new ConfigLoaderError("CONFIG_INVALID", `courier.config must export an object`, {
-      context: { configFile },
-    });
-  }
+function validateConfig(config: unknown, configFile: string): asserts config is CourierConfig {
+  const invalid = (message: string) =>
+    new ConfigLoaderError("CONFIG_INVALID", message, { context: { configFile } });
+  if (!config || typeof config !== "object") throw invalid("courier.config must export an object");
   const sources = (config as CourierConfig).sources;
-  if (!sources || typeof sources !== "object") {
-    throw new ConfigLoaderError("CONFIG_INVALID", `courier.config.sources is required`, {
-      context: { configFile },
-    });
-  }
+  if (!sources || typeof sources !== "object") throw invalid("courier.config.sources is required");
   if (Object.keys(sources).length === 0) {
-    throw new ConfigLoaderError(
-      "CONFIG_INVALID",
-      `courier.config.sources must contain at least one entry`,
-      {
-        context: { configFile },
-      },
-    );
+    throw invalid("courier.config.sources must contain at least one entry");
   }
 }
 
@@ -128,3 +128,4 @@ function describe(err: unknown): string {
 
 export type { ConfigLoaderErrorCode } from "./config-loader-errors";
 export { ConfigLoaderError, ConfigNotFoundError } from "./config-loader-errors";
+export type { LoadedCourierMocks } from "./courier-mocks-file";

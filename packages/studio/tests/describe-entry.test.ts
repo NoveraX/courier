@@ -1,5 +1,5 @@
 /**
- * Describing a mock declared in courier.config, before it runs, from the
+ * Describing a mock declared in courier.mocks, before it runs, from the
  * definition Studio already loaded. A definition that is wrong becomes a
  * problem reported on the mock, and a scenario that cannot be read to the end
  * is reported without failing the mock.
@@ -31,7 +31,7 @@ describe("describeEntry", () => {
 
   it("reports a value that is not a mock definition", async () => {
     await expect(describeEntry("broken", { autoStart: true })).resolves.toEqual({
-      problem: "mocks.broken in courier.config is not a defineMockServer() definition.",
+      problem: 'Mock "broken" in courier.mocks is not a defineMockServer() definition.',
     });
   });
 

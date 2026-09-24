@@ -3,17 +3,20 @@
  *
  * A missing config leaves the binding table empty and other load errors are
  * logged, without crashing startup — and the watcher starts either way, so
- * creating or fixing the config is picked up without a restart. The successful path pushes the
- * loaded config into the binding table + mock registry, then attaches an
+ * creating or fixing the config is picked up without a restart. The
+ * successful path pushes the loaded config into the binding table and the
+ * mocks from `courier.mocks.ts` into the mock manager, then attaches an
  * `onReload` callback so subsequent file changes flow through the same path.
  */
 
 import { createLogger } from "@noverax/courier";
 import type { Namespace } from "socket.io";
+import { applyLoadedMocks } from "./apply-loaded-mocks";
 import type { BindingTable } from "./catalog/binding-table";
 import { type LoadedCourierConfig, loadCourierConfig } from "./config-loader";
 import { ConfigNotFoundError } from "./config-loader-errors";
 import { type ConfigWatcher, startConfigWatcher } from "./config-watcher";
+import type { LifecycleCoordinator } from "./mock-manager";
 import type { MockRegistry } from "./mock-registry";
 import { recordStartupIssue } from "./startup-issues";
 import type { WatcherStatus } from "./watcher-status";
@@ -26,12 +29,11 @@ export interface InitConfigDrivenDeps {
   mockRegistry: MockRegistry;
   uiNamespace: Namespace;
   watcherStatus: WatcherStatus;
-  setConfigPath: (path: string) => void;
+  mockManager: Pick<LifecycleCoordinator, "setMocksFile">;
 }
 
 export async function initConfigDriven(deps: InitConfigDrivenDeps): Promise<ConfigWatcher> {
-  const { projectRoot, bindingTable, mockRegistry, uiNamespace, watcherStatus, setConfigPath } =
-    deps;
+  const { projectRoot, bindingTable, uiNamespace, watcherStatus } = deps;
 
   let loaded: LoadedCourierConfig | null = null;
   try {
@@ -48,9 +50,14 @@ export async function initConfigDriven(deps: InitConfigDrivenDeps): Promise<Conf
   }
 
   if (loaded) {
-    setConfigPath(loaded.configFile);
     bindingTable.setConfig(loaded.config);
-    mockRegistry.syncFromConfig(loaded.config);
+    applyLoadedMocks(loaded.mocks, deps);
+    if (loaded.mocks.error !== null) {
+      recordStartupIssue(
+        "courier.mocks.ts did not load, so no mocks are declared",
+        loaded.mocks.error,
+      );
+    }
     uiNamespace.emit("config:update", { configFile: loaded.configFile });
     uiNamespace.emit("binding:snapshot", bindingTable.getStatus());
   }
@@ -60,9 +67,6 @@ export async function initConfigDriven(deps: InitConfigDrivenDeps): Promise<Conf
     bindingTable,
     uiNamespace,
     watcherStatus,
-    onReload: (next) => {
-      setConfigPath(next.configFile);
-      mockRegistry.syncFromConfig(next.config);
-    },
+    onReload: (next) => applyLoadedMocks(next.mocks, deps),
   });
 }

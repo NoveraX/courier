@@ -1,9 +1,9 @@
 /**
- * The mock server process Studio starts for a mock declared in courier.config.
+ * The mock server process Studio starts for a mock declared in courier.mocks.
  *
  * Studio forks its own entry, which calls {@link runMockWorker} with the
- * loader Studio loads the config with, so the worker reads the config exactly
- * as Studio does — TypeScript, path aliases and all — with nothing else to
+ * loader Studio loads the mocks file with, so the worker reads it exactly as
+ * Studio does — TypeScript, path aliases and all — with nothing else to
  * install.
  */
 
@@ -20,8 +20,8 @@ import { buildScenarioMeta } from "./scenario-meta";
 import type { MockServerDefinition, ParentMessage } from "./types";
 import { send, sendError, watchParent } from "./worker-ipc";
 
-/** Reads `mocks[mockKey]` from the config file at `configFile`. */
-export type MockDefinitionLoader = (configFile: string, mockKey: string) => Promise<unknown>;
+/** Reads the mock declared under `mockKey` in the mocks file at `mocksFile`. */
+export type MockDefinitionLoader = (mocksFile: string, mockKey: string) => Promise<unknown>;
 
 type StartMessage = Extract<ParentMessage, { type: "start" }>;
 
@@ -30,16 +30,16 @@ type StartMessage = Extract<ParentMessage, { type: "start" }>;
  *
  * The worker listens on exactly the port Studio sends: Studio chose it, and
  * keeps the ports other mocks declared out of its way. A stop is honoured at
- * any point, also while the config is still loading.
+ * any point, also while the mocks file is still loading.
  *
- * @param loadDefinition - Loads a mock definition from the config file.
+ * @param loadDefinition - Loads a mock definition from the mocks file.
  *
  * @example
  * ```ts
  * // mock-worker.ts — the entry Studio forks
  * import { runMockWorker } from "@noverax/courier-mock/managed";
  *
- * runMockWorker(async (configFile, mockKey) => (await loadConfig(configFile)).mocks?.[mockKey]);
+ * runMockWorker(async (mocksFile, mockKey) => (await loadMocks(mocksFile))[mockKey]);
  * ```
  */
 export function runMockWorker(loadDefinition: MockDefinitionLoader): void {
@@ -78,17 +78,20 @@ async function start(
   msg: StartMessage,
   stopping: () => boolean,
 ): Promise<Served | undefined> {
-  const definition = await loadDefinition(msg.configPath, msg.mockKey);
+  const definition = await loadDefinition(msg.mocksFile, msg.mockKey);
   if (stopping()) return undefined;
   if (!isMockServerDefinition(definition)) {
     sendError(
-      `mocks.${msg.mockKey} in ${msg.configPath} is not a defineMockServer() definition.`,
+      `Mock "${msg.mockKey}" in ${msg.mocksFile} is not a defineMockServer() definition.`,
       true,
     );
     return undefined;
   }
   if (!definition.source) {
-    sendError(`mocks.${msg.mockKey} has no source. Pass one to defineMockServer().`, true);
+    sendError(
+      `Mock "${msg.mockKey}" in ${msg.mocksFile} has no source. Pass one to defineMockServer().`,
+      true,
+    );
     return undefined;
   }
   const served: Served = {

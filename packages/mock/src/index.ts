@@ -9,13 +9,14 @@
 export type { FactoryConfig, ResponseFactory } from "./factory";
 export { defineFactory } from "./factory";
 
-// Managed server definition (primary user-facing API)
+// Managed server definitions — the default export of courier.mocks.ts
 export type {
   MockServerConfig,
   MockServerDefinition,
+  MockServerEntry,
   MockServerSeedConfig,
 } from "./managed";
-export { defineMockServer, isMockServerDefinition } from "./managed";
+export { defineMockServer, defineMocks, isMockServerDefinition } from "./managed";
 
 // Scenarios
 export { defineScenario } from "./scenario";

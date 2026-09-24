@@ -19,7 +19,8 @@ export type ScenarioMeta = ChildScenarioMeta;
 export interface ServerState {
   serverId: string;
   name: string;
-  configPath: string;
+  /** The `courier.mocks.*` the mock's worker loads it from. */
+  mocksFile: string;
   mockKey: string;
   relativePath: string;
   configuredPort: number;
@@ -48,8 +49,6 @@ export interface ServerState {
 
 export interface CoordinatorConfig {
   mockRegistry: MockRegistry;
-  /** Returns the absolute path to the loaded `courier.config.ts`, or `null` when none is loaded. */
-  getConfigPath: () => string | null;
   uiNamespace: Namespace;
   basePort: number;
   watcherStatus?: WatcherStatus;

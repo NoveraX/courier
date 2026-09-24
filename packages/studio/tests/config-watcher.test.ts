@@ -17,7 +17,8 @@ import { type ConfigWatcher, startConfigWatcher } from "../src/server/config-wat
 
 function makeLoaded(deps: string[]): LoadedCourierConfig {
   const config = { sources: {} } as unknown as CourierConfig;
-  return { config, configFile: deps[0] ?? "", deps };
+  const mocks = { file: null, entries: {}, contentHash: null, error: null };
+  return { config, configFile: deps[0] ?? "", contentHash: null, deps, mocks };
 }
 
 let watchers: ConfigWatcher[] = [];

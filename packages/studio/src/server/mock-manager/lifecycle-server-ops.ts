@@ -67,8 +67,8 @@ export function createServerOps(ctx: ServerOpsContext): ServerOps {
     try {
       const port = await portToListenOn(state);
       if (ctx.isClosed()) return;
-      const { configPath, mockKey } = state;
-      state.pid = processManager.spawn({ serverId, configPath, mockKey, port }).pid;
+      const { mocksFile, mockKey } = state;
+      state.pid = processManager.spawn({ serverId, mocksFile, mockKey, port }).pid;
     } catch (err) {
       updateAndEmit(serverId, {
         status: "crashed",

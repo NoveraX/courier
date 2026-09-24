@@ -1,14 +1,15 @@
 /**
- * How Studio's managed mocks follow the config and the developer's commands.
+ * How Studio's managed mocks follow courier.mocks.ts and the developer's
+ * commands.
  *
  * `autoStart` starts a mock when its definition is first read, or when an edit
- * turns it on — never again because the config reloaded. A running mock
+ * turns it on — never again because the file reloaded. A running mock
  * restarts on an edit, and keeps serving through an edit that breaks its
- * definition. Commands for one mock take effect in the order they were given.
- * A mock removed from the config leaves the UI once it has stopped, and comes
- * back when it is declared again. After close, no mock starts.
+ * definition, or the whole file. Commands for one mock take effect in the
+ * order they were given. A mock removed from the file leaves the UI once it
+ * has stopped, and comes back when it is declared again. After close, no mock
+ * starts.
  */
-import type { CourierConfig } from "@noverax/courier/config";
 import { courier, defineApi } from "@noverax/courier/define";
 import { defineMockServer } from "@noverax/courier-mock/managed";
 import type { Namespace } from "socket.io";
@@ -62,25 +63,35 @@ const { createMockRegistry } = await import("../src/server/mock-registry");
 const { endpoint } = courier();
 const api = defineApi({ baseURL: "https://api.example", endpoints: { ping: endpoint.get("ping") } });
 
-type Emitted = { type: string; serverId: string; processStatus?: string; lastError?: string | null; port?: number };
+type Emitted = {
+  type: string;
+  serverId: string;
+  processStatus?: string;
+  lastError?: string | null;
+  port?: number;
+  filePath?: string;
+};
+
+const MOCKS_FILE = "/p/courier.mocks.ts";
 
 function studio() {
   const emit = vi.fn();
   const registry = createMockRegistry();
   const coordinator = createLifecycleCoordinator({
     mockRegistry: registry,
-    getConfigPath: () => "/p/courier.config.ts",
     basePort: 7001,
     uiNamespace: { emit } as unknown as Namespace,
   });
-  const emitted = (): Emitted[] => emit.mock.calls.map(([, event]) => event as Emitted);
+  coordinator.setMocksFile({ file: MOCKS_FILE, error: null });
+  const emitted = (): Emitted[] =>
+    emit.mock.calls.filter(([name]) => name === "event").map(([, event]) => event as Emitted);
+  const statuses = () => emit.mock.calls.filter(([name]) => name === "mocks:status").map(([, status]) => status);
   const last = (serverId: string) =>
     emitted()
       .filter((e) => e.serverId === serverId && e.type === "mock:server:connect")
       .at(-1);
-  const declare = (mocks: Record<string, unknown>) =>
-    registry.syncFromConfig({ mocks } as unknown as CourierConfig);
-  return { coordinator, registry, emitted, last, declare };
+  const declare = (mocks: Record<string, unknown>) => registry.syncFromMocks(mocks);
+  return { coordinator, registry, emitted, statuses, last, declare };
 }
 
 const settle = (ms = 30) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -122,7 +133,7 @@ describe("autoStart", () => {
   });
 });
 
-describe("a config edit", () => {
+describe("an edit", () => {
   it("restarts a running mock with the new definition", async () => {
     const { coordinator, declare, last } = studio();
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
@@ -199,7 +210,7 @@ describe("commands for one mock", () => {
   });
 });
 
-describe("a mock removed from the config", () => {
+describe("a mock removed from the mocks file", () => {
   it("leaves the UI once it has stopped", async () => {
     const { coordinator, declare, emitted } = studio();
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
@@ -232,7 +243,7 @@ describe("a mock removed from the config", () => {
 });
 
 describe("after Studio closes", () => {
-  it("starts no mock from a config that loads late", async () => {
+  it("starts no mock from a mocks file that loads late", async () => {
     const { coordinator, declare } = studio();
     await coordinator.stop();
 
@@ -290,5 +301,90 @@ describe("what the UI is told", () => {
 
     expect(last("a")).toMatchObject({ port: 7445, url: "" });
     await coordinator.stop();
+  });
+
+  it("names the mock by its file and key", async () => {
+    const { coordinator, declare, last } = studio();
+    declare({ a: defineMockServer({ source: api }) });
+    await settle();
+
+    expect(last("a")?.filePath).toBe("courier.mocks.ts:a");
+    await coordinator.stop();
+  });
+});
+
+describe("a mocks file that fails to load", () => {
+  it("keeps its mocks running, says why on each, and the next load that works clears it", async () => {
+    const { coordinator, declare, last } = studio();
+    declare({ a: defineMockServer({ source: api, autoStart: true }), b: defineMockServer({ source: api }) });
+    await settle();
+
+    coordinator.setMocksFile({ file: MOCKS_FILE, error: "Unexpected token" });
+    expect(last("a")).toMatchObject({ processStatus: "running" });
+    expect(last("a")?.lastError).toBe(
+      "courier.mocks.ts failed to load: Unexpected token. A running mock keeps serving its last working definition.",
+    );
+    expect(last("b")?.lastError).toMatch(/^courier\.mocks\.ts failed to load: Unexpected token\./);
+    expect(fake.children.has("a")).toBe(true);
+
+    coordinator.setMocksFile({ file: MOCKS_FILE, error: null });
+    expect(last("a")?.lastError).toBeNull();
+    expect(last("b")?.lastError).toBeNull();
+    expect(fake.spawned).toHaveLength(1);
+    await coordinator.stop();
+  });
+
+  it("leaves a reason of the mock's own in place when the file loads again", async () => {
+    const { coordinator, declare, last } = studio();
+    declare({ a: defineMockServer({ source: api, autoStart: true }) });
+    await settle();
+
+    coordinator.setMocksFile({ file: MOCKS_FILE, error: "Unexpected token" });
+    fake.children.delete("a");
+    fake.events?.onExited("a", "exited with code 1");
+    coordinator.setMocksFile({ file: MOCKS_FILE, error: null });
+
+    expect(last("a")).toMatchObject({ processStatus: "crashed", lastError: "exited with code 1" });
+    await coordinator.stop();
+  });
+
+  it("registers a mock declared meanwhile from the file that last loaded", async () => {
+    const { coordinator, declare, last } = studio();
+    coordinator.setMocksFile({ file: "/p/courier.mocks.mts", error: "Unexpected token" });
+
+    declare({ a: defineMockServer({ source: api }) });
+    await settle();
+    coordinator.handleCommand("mock:managed:start", { serverId: "a" });
+    await settle();
+
+    expect(last("a")?.filePath).toBe("courier.mocks.ts:a");
+    expect(fake.spawned.map((s) => s.mocksFile)).toEqual([MOCKS_FILE]);
+    await coordinator.stop();
+  });
+});
+
+describe("the mocks file's status", () => {
+  it("is sent when it changes, and not again when it has not", () => {
+    const { coordinator, statuses } = studio();
+
+    coordinator.setMocksFile({ file: MOCKS_FILE, error: "Unexpected token" });
+    coordinator.setMocksFile({ file: MOCKS_FILE, error: "Unexpected token" });
+    coordinator.setMocksFile({ file: null, error: null });
+
+    expect(statuses()).toEqual([
+      { file: MOCKS_FILE, error: null },
+      { file: MOCKS_FILE, error: "Unexpected token" },
+      { file: null, error: null },
+    ]);
+  });
+
+  it("is sent to a UI that connects", () => {
+    const { coordinator, statuses } = studio();
+    coordinator.setMocksFile({ file: MOCKS_FILE, error: "Unexpected token" });
+
+    coordinator.sendSnapshot();
+
+    expect(statuses().at(-1)).toEqual({ file: MOCKS_FILE, error: "Unexpected token" });
+    expect(statuses()).toHaveLength(3);
   });
 });

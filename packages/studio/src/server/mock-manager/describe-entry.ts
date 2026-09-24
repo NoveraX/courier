@@ -10,12 +10,12 @@ const log = createLogger("Mock");
 let managed: Promise<typeof ManagedMocks> | undefined;
 
 /**
- * Describe the mock declared under `mocks[key]` from the definition Studio
- * already loaded with the config, with no process of its own. Whatever keeps
- * it from being described is returned as a problem to report on the mock.
+ * Describe the mock declared under `key` in `courier.mocks.*` from the
+ * definition Studio already loaded, with no process of its own. Whatever
+ * keeps it from being described is returned as a problem to report on it.
  *
- * @param key - The key under `mocks`.
- * @param definition - The value the config declared there.
+ * @param key - The mock's key in the mocks file.
+ * @param definition - The value the mocks file declared there.
  * @returns The description, or the problem to report.
  */
 export async function describeEntry(key: string, definition: unknown): Promise<DescribedEntry> {
@@ -26,22 +26,22 @@ export async function describeEntry(key: string, definition: unknown): Promise<D
   } catch (err) {
     managed = undefined;
     return {
-      problem: `mocks.${key} needs @noverax/courier-mock, which could not be loaded: ${reason(err)}`,
+      problem: `Mock "${key}" needs @noverax/courier-mock, which could not be loaded: ${reason(err)}`,
     };
   }
   if (!mock.isMockServerDefinition(definition)) {
-    return { problem: `mocks.${key} in courier.config is not a defineMockServer() definition.` };
+    return { problem: `Mock "${key}" in courier.mocks is not a defineMockServer() definition.` };
   }
   let description: MockServerDescription;
   try {
     description = mock.describeMockServer(definition);
   } catch (err) {
-    return { problem: `mocks.${key} could not be described: ${reason(err)}` };
+    return { problem: `Mock "${key}" could not be described: ${reason(err)}` };
   }
   for (const scenario of description.scenarios) {
     if (scenario.introspectionError === undefined) continue;
     log.warn(
-      `mocks.${key}: scenario "${scenario.name}" was read only in part: ${scenario.introspectionError}`,
+      `Mock "${key}": scenario "${scenario.name}" was read only in part: ${scenario.introspectionError}`,
     );
   }
   return { description };

@@ -95,21 +95,6 @@ export interface CourierRawImport extends CourierImportBase {
 /** Declaration of a single API spec import */
 export type CourierImportEntry = CourierUrlImport | CourierFileImport | CourierRawImport;
 
-/**
- * A mock server declared under `mocks`: what `defineMockServer` from
- * `@noverax/courier-mock` returns.
- *
- * Core names it by shape because it does not depend on the mock package; the
- * mock package's definition extends it. A value that is not one — a source,
- * or options not passed through `defineMockServer` — is then rejected where
- * the config is written, instead of when Studio loads it.
- */
-export interface CourierMockEntry {
-  readonly __type: "courier-mock-server";
-  /** The API the mock serves. */
-  readonly source: AnySource;
-}
-
 /** Studio dev-server configuration */
 export interface CourierStudioConfig {
   /** Studio HTTP/Socket.IO port — default 6280 */
@@ -189,9 +174,10 @@ export interface CourierRuntimeConfig {
  * is the floor; concrete `DefinedApi<...>` types narrow upward when callers
  * pass a typed object literal to `defineConfig`.
  *
- * `mocks` holds {@link CourierMockEntry} values, the shape core knows of a
- * `defineMockServer` result without depending on the mock package. A key
- * left `undefined` declares no mock.
+ * Mock servers are not declared here: this file is also loaded in production
+ * (by the runtime and the standalone server), so it must not import
+ * development tools. They live in `courier.mocks.ts` beside it, which only
+ * Studio reads.
  */
 export interface CourierConfig<
   TSources extends Record<string, AnySource> = Record<string, AnySource>,
@@ -200,8 +186,6 @@ export interface CourierConfig<
   sources: TSources;
   /** OpenAPI/GraphQL/etc. import declarations */
   imports?: Record<string, CourierImportEntry>;
-  /** Mock servers Studio runs, by key — each one a `defineMockServer()` result */
-  mocks?: Record<string, CourierMockEntry | undefined>;
   studio?: CourierStudioConfig;
   server?: CourierServerConfig;
   runtime?: CourierRuntimeConfig;

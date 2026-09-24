@@ -12,7 +12,8 @@ export interface ApplyContext {
   servers: Map<string, ServerState>;
   registration: MockRegistration;
   ops: ServerOps;
-  getConfigPath: () => string | null;
+  /** The mocks file that last loaded, or `null` when none has. */
+  getMocksPath: () => string | null;
   isAlive: (serverId: string) => boolean;
   /** Whether the registry still holds this very entry, after an await. */
   isCurrent: (entry: MockEntry) => boolean;
@@ -20,13 +21,13 @@ export interface ApplyContext {
 }
 
 /**
- * Build the step that brings a mock in line with the definition the config
- * now declares for it.
+ * Build the step that brings a mock in line with the definition the mocks
+ * file now declares for it.
  *
  * A mock whose process is alive restarts, so it serves what the config now
  * says. `autoStart` starts a mock when its definition is first read, or when
- * an edit turns it on; every reload re-evaluates the config, so applying it
- * on each would start again a mock the developer stopped.
+ * an edit turns it on; every reload re-evaluates the mocks file, so applying
+ * it on each would start again a mock the developer stopped.
  *
  * @param ctx - The coordinator's state and operations
  * @returns Applies one registry entry
@@ -35,14 +36,14 @@ export function createDescriptionApplier(ctx: ApplyContext): (entry: MockEntry) 
   const { registration, ops } = ctx;
 
   return async function apply(entry: MockEntry): Promise<void> {
-    const configPath = ctx.getConfigPath();
-    if (!configPath) {
-      log.warn(`Cannot register mock "${entry.key}": courier.config.ts not loaded`);
+    const mocksFile = ctx.getMocksPath();
+    if (!mocksFile) {
+      log.warn(`Cannot register mock "${entry.key}": courier.mocks.ts has not loaded`);
       return;
     }
     const described = await describeEntry(entry.key, entry.definition);
     if (ctx.isClosed() || !ctx.isCurrent(entry)) return;
-    const location = { configPath, relativePath: `${basename(configPath)}:mocks.${entry.key}` };
+    const location = { mocksFile, relativePath: `${basename(mocksFile)}:${entry.key}` };
 
     if ("problem" in described) {
       log.error(

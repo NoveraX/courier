@@ -32,8 +32,16 @@
 import { existsSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { CourierConfig } from "@noverax/courier/config";
-import { readPathAliases } from "./path-aliases";
+import { createConfigJiti } from "./config-jiti";
 
+export { createConfigJiti } from "./config-jiti";
+export {
+  findMocksFile,
+  type LoadedCourierMocks,
+  loadCourierMocksFile,
+  MOCKS_BASENAMES,
+  readMocksExport,
+} from "./load-mocks";
 export { type PathAliases, readPathAliases } from "./path-aliases";
 
 /** The file names a Courier config may have, in the order they are looked for */
@@ -101,9 +109,12 @@ function findConfigFile(startDir: string): string | null {
 }
 
 /**
- * Check that `cwd` itself contains a config file, without walking up.
+ * Find a config file in `cwd` itself, without walking up.
+ *
+ * @param cwd - The directory to look in
+ * @returns The first of {@link CONFIG_BASENAMES} present there, or `null`
  */
-function configFileAt(cwd: string): string | null {
+export function findConfigFileAt(cwd: string): string | null {
   for (const basename of CONFIG_BASENAMES) {
     const candidate = resolve(cwd, basename);
     if (existsSync(candidate)) return candidate;
@@ -123,7 +134,7 @@ export async function loadCourierConfig(
 ): Promise<LoadedCourierConfig | null> {
   const startDir = resolve(options.cwd ?? process.cwd());
 
-  const found = options.requireAtCwd ? configFileAt(startDir) : findConfigFile(startDir);
+  const found = options.requireAtCwd ? findConfigFileAt(startDir) : findConfigFile(startDir);
   return found ? loadCourierConfigFile(found) : null;
 }
 
@@ -141,20 +152,7 @@ export async function loadCourierConfigFile(file: string): Promise<LoadedCourier
      watcher above all — observe the canonical path. */
   const configFile = realpathSync(file);
 
-  /* jiti is loaded here rather than at the top of the file so a bundler that
-     merely reaches this module does not pull a TypeScript transpiler into its
-     graph; only a process that actually reads a config pays for it. */
-  const { createJiti } = await import("jiti");
-
-  /* Both caches are off because this loader is also the reload path: the dev
-     server calls it again on every edit, and a cached module would hand back
-     the config as it was before the user changed it. */
-  const jiti = createJiti(configFile, {
-    alias: readPathAliases(dirname(configFile)).loader,
-    interopDefault: true,
-    moduleCache: false,
-    fsCache: false,
-  });
+  const jiti = await createConfigJiti(configFile);
 
   /* A throw here is jiti reporting why a config it found will not load —
      usually an import it could not resolve. It carries the only useful

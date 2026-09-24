@@ -65,11 +65,9 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   // ── Mock Server Manager ──────────────────────────────────────────────────
 
-  let loadedConfigPath: string | null = null;
   const mockRegistry: MockRegistry = createMockRegistry();
   const mockManager = createLifecycleCoordinator({
     mockRegistry,
-    getConfigPath: () => loadedConfigPath,
     uiNamespace,
     basePort: mockBasePort,
     watcherStatus,
@@ -81,9 +79,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     mockRegistry,
     uiNamespace,
     watcherStatus,
-    setConfigPath: (path) => {
-      loadedConfigPath = path;
-    },
+    mockManager,
   });
 
   setupUiNamespace({

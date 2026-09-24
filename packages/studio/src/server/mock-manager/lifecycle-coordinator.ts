@@ -1,8 +1,8 @@
 /**
  * Mock lifecycle coordinator — public entry point for the studio server.
  *
- * Subscribes to the `MockRegistry` events (driven from `courier.config.ts.mocks`
- * by the config-watcher) and translates them into `ServerState` registrations,
+ * Subscribes to the `MockRegistry` events (driven from `courier.mocks.ts` by
+ * the config watcher) and translates them into `ServerState` registrations,
  * managed child-process spawns and UI emissions. Each mock is described from
  * the definition Studio already loaded, so the Explorer lists its routes,
  * collections and scenarios before it runs.
@@ -15,6 +15,7 @@ import { createProcessEvents } from "./lifecycle-process-events";
 import { createServerOps } from "./lifecycle-server-ops";
 import { declaredPorts } from "./mock-ports";
 import { createMockRegistration } from "./mock-registration";
+import { createMocksFileState } from "./mocks-file-state";
 import { createProcessManager } from "./process-manager";
 import type { CoordinatorConfig, ServerState } from "./types";
 import { createUiEmitter } from "./ui-emitter";
@@ -46,6 +47,11 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
   );
   const reservedPorts = () => declaredPorts(config.mockRegistry.getEntries());
   const isClosed = () => closed;
+  const mocksFile = createMocksFileState({
+    servers,
+    updateAndEmit,
+    broadcast: (status) => config.uiNamespace.emit("mocks:status", status),
+  });
 
   const registration = createMockRegistration({
     servers,
@@ -60,7 +66,7 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
     servers,
     registration,
     ops,
-    getConfigPath: config.getConfigPath,
+    getMocksPath: mocksFile.path,
     isAlive: processManager.has,
     isCurrent: (entry: MockEntry) =>
       config.mockRegistry
@@ -122,6 +128,7 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
 
   function sendSnapshot(): void {
     for (const state of servers.values()) emitServerState(state);
+    config.uiNamespace.emit("mocks:status", mocksFile.status());
   }
 
   /**
@@ -137,7 +144,7 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
     servers.clear();
   }
 
-  return { stop, handleCommand, forwardStoreCommand, sendSnapshot };
+  return { stop, handleCommand, forwardStoreCommand, sendSnapshot, setMocksFile: mocksFile.set };
 }
 
 export type LifecycleCoordinator = ReturnType<typeof createLifecycleCoordinator>;

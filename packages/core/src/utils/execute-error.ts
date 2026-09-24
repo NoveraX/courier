@@ -26,8 +26,9 @@ function withoutUpstreamDetail(
   const fromWire = context?.proxyMethod !== undefined;
   if (!fromWire || error.status !== 0) return result;
 
-  const detail = error.data as { message?: string; code?: string } | undefined;
-  log.warn(`Upstream request failed: ${detail?.message ?? "unknown"}`);
+  /* The log may name the upstream: it is the server's own record. */
+  const { message } = (error.data as { message?: string } | undefined) ?? {};
+  log.warn(`Upstream request failed${message ? `: ${message}` : ""}`, error.cause ?? error);
 
   return {
     ...result,

@@ -458,7 +458,7 @@ describe("emitClose", () => {
 
 describe("runCleanupStep error logging", () => {
   it("logs a warning when a cleanup step throws and continues running siblings", async () => {
-    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const cleanupCalls: string[] = [];
 
     const handler = staticHandler([{ data: "x" }]);
@@ -479,9 +479,9 @@ describe("runCleanupStep error logging", () => {
     await collectText(stream);
 
     expect(cleanupCalls).toContain("unregister");
-    const writes = stdoutSpy.mock.calls.map((c) => String(c[0])).join("");
-    expect(writes).toContain("SSE cleanup step");
-    expect(writes).toContain("unregisterPlaygroundAbort");
-    expect(writes).toContain("boom");
+    const line = warnSpy.mock.calls.find((c) => String(c[1]).includes("SSE cleanup step"));
+    expect(String(line?.[1])).toContain("unregisterPlaygroundAbort");
+    expect(line?.[2]).toEqual(new Error("boom"));
+    warnSpy.mockRestore();
   });
 });

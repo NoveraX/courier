@@ -136,6 +136,23 @@ describe("subscribeSSE", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("skips an event whose data cannot be parsed, and logs only an excerpt of it", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const secret = `not json ${"x".repeat(5000)} %c`;
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(
+      mockSSEResponse(`data: ${secret}\n\ndata: {"ok":true}\n\nevent: courier:complete\ndata: null\n\n`),
+    ));
+
+    const events = await drain(subscribeSSE<{ ok: boolean }>("/sse", { maxAttempts: 1 }));
+
+    expect(events.map((e) => e.data)).toEqual([{ ok: true }]);
+    const skipped = warn.mock.calls.find((call) => String(call[1]).includes("could not be parsed"));
+    expect(String(skipped?.[1]).length).toBeLessThan(400);
+    expect(String(skipped?.[1])).toContain(`${secret.length} characters`);
+    expect(skipped?.[2]).toBeInstanceOf(SyntaxError);
+    warn.mockRestore();
+  });
+
   it("uses custom parse function", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(
       mockSSEResponse('data: HELLO\n\nevent: courier:complete\ndata: null\n\n'),

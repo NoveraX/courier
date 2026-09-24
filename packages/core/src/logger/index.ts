@@ -22,6 +22,17 @@ export interface ScopedLogger {
 /**
  * Scoped logger — binds a context name so every call includes it.
  *
+ * On a server, `debug` and `info` go to stdout and `warn` and `error` to
+ * stderr, each line prefixed with `[Courier]`, the process id and the time.
+ * A cause passed as the second argument is printed after the line with its
+ * stack and `cause` chain. `COURIER_LOG_LEVEL` — `debug`, `info` (default),
+ * `warn`, `error` or `silent` — sets the lowest level printed; colour
+ * follows the terminal, `NO_COLOR` and `FORCE_COLOR`. In a browser the lines
+ * go to the devtools console, whose level filter applies instead.
+ *
+ * @param context - The name every line is prefixed with
+ * @returns A logger for that context
+ *
  * @example
  * ```ts
  * const log = createLogger("HttpClient");
@@ -38,18 +49,19 @@ export function createLogger(context: string): ScopedLogger {
 }
 
 /**
- * Global logger — pass context as first argument.
+ * Global logger — pass context as first argument, and the error behind the
+ * line, if any, as the third.
  *
  * @example
  * ```ts
- * logger.warn("Studio", "File watcher failed to emit scan update");
+ * logger.warn("Studio", "File watcher failed to emit scan update", err);
  * ```
  */
 export const logger: Logger = {
-  debug: (ctx, msg) => impl.debug(ctx, msg),
-  info: (ctx, msg) => impl.info(ctx, msg),
-  warn: (ctx, msg) => impl.warn(ctx, msg),
-  error: (ctx, msg) => impl.error(ctx, msg),
+  debug: (ctx, msg, cause) => impl.debug(ctx, msg, cause),
+  info: (ctx, msg, cause) => impl.info(ctx, msg, cause),
+  warn: (ctx, msg, cause) => impl.warn(ctx, msg, cause),
+  error: (ctx, msg, cause) => impl.error(ctx, msg, cause),
 };
 
 export type { Logger, LogLevel } from "./types";

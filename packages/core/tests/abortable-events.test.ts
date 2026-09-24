@@ -3,14 +3,16 @@
  * up by the endpoint.
  *
  * `return()` on a generator parked on an await is queued behind the pending
- * step, so a handler waiting on an event that never came used to keep its
- * reader — and everything the reader held — for the life of the process.
+ * step, so the read never waits for it. A failure the abandoned step ends in
+ * later is logged; the abort that closed the stream is not a failure.
  */
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { abortableEvents } from "../src/utils/abortable-events";
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 5));
+
+afterEach(() => vi.restoreAllMocks());
 
 async function readAll<TEvent>(events: AsyncIterable<TEvent>): Promise<TEvent[]> {
   const out: TEvent[] = [];
@@ -147,5 +149,47 @@ describe("abortableEvents", () => {
     await settle();
 
     await expect(reading).resolves.toEqual([1]);
+  });
+
+  it("warns of a failure of an abandoned step, with the error", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const controller = new AbortController();
+    let fail: (error: Error) => void = () => {};
+    const source = (async function* () {
+      yield 1;
+      await new Promise((_resolve, reject) => {
+        fail = reject;
+      });
+    })();
+    const reading = readAll(abortableEvents(source, controller.signal));
+    await settle();
+    const failure = new Error("failed after the stream closed");
+
+    controller.abort();
+    await reading;
+    fail(failure);
+    await settle();
+
+    const line = warn.mock.calls.find((call) => String(call[1]).includes("Stream generator failed"));
+    expect(line?.at(-1)).toBe(failure);
+  });
+
+  it("does not report the abort that closed the stream as a failure", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const controller = new AbortController();
+    const source = (async function* (signal: AbortSignal) {
+      yield 1;
+      await new Promise((_resolve, reject) =>
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true }),
+      );
+    })(controller.signal);
+    const reading = readAll(abortableEvents(source, controller.signal));
+    await settle();
+
+    controller.abort();
+    await reading;
+    await settle();
+
+    expect(warn.mock.calls.some((call) => String(call[1]).includes("Stream generator"))).toBe(false);
   });
 });

@@ -52,6 +52,10 @@ Every Courier server (standalone or framework adapter) provides two health endpo
 
 Use these with Kubernetes, Docker health checks, or load balancer configuration.
 
+## Logs
+
+Courier writes `info` and `debug` lines to stdout and `warn` and `error` lines to stderr, so a log router that tells the two streams apart sees Courier's failures as errors. A failure carries the error's stack and `cause` chain. `COURIER_LOG_LEVEL` sets the lowest level printed — `debug`, `info` (the default), `warn`, `error` or `silent` — and a container's log gets plain text, since colour is written only to a terminal (`FORCE_COLOR=1` keeps it, `NO_COLOR` removes it everywhere).
+
 ## Behind a Reverse Proxy
 
 The proxy route refuses a browser request whose `Origin` is not the site the request was sent to — the check that stops another site's page from calling your API with your users' cookies. Behind nginx, a cloud load balancer or a CDN that terminates TLS, the app itself sees plain HTTP, and often the upstream's name in `Host`, so it needs the proxy to say what the browser used.

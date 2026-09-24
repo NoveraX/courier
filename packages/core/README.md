@@ -45,6 +45,8 @@ import {
   HTTPError,             // Typed HTTP error with status, headers, data
   isHTTPError,           // Type guard for HTTPError
   executeRequest,        // Core request orchestrator (used by adapters internally)
+  createLogger,          // Logger bound to a context — see Logging
+  logger,                // Logger that takes the context per call
 } from "@noverax/courier"
 ```
 
@@ -200,6 +202,31 @@ mock("users", "getAll").resolves("data").times(3)        // consumed after 3 cal
 mock("users", "getAll").resolves("done").delay(100)      // artificial delay
 mock("users", "getById").rejects(500, { message: "Error" })  // mock errors
 ```
+
+<br />
+
+## Logging
+
+Courier logs through `createLogger`, which your own server code can use too:
+
+```ts
+import { createLogger } from "@noverax/courier"
+
+const log = createLogger("Billing")
+
+log.info("Invoice sent")
+log.warn("Payment provider slow to answer", error) // the error prints with its stack and cause chain
+```
+
+On a server, `debug` and `info` go to **stdout** and `warn` and `error` to **stderr**, one line each, prefixed with `[Courier]`, the process id, the time, the level and the context. An error passed as the second argument is printed after the line the way the runtime's console prints errors — stack, `cause` chain, an AggregateError's errors, properties such as `code` — and the root of a chain too deep for the console to show is printed on its own.
+
+| Variable | Values | Default |
+|---|---|---|
+| `COURIER_LOG_LEVEL` | `debug`, `info`, `warn`, `error`, `silent` | `info` |
+| `NO_COLOR` | any non-empty value turns colour off | colour on a terminal only |
+| `FORCE_COLOR` | `1`, `2`, `3` or `true` turns colour on, also into a pipe | — |
+
+`COURIER_LOG_LEVEL` is read on every line, so setting it in your entry module takes effect. A log file or a pipe gets plain text. In a browser the lines go to the devtools console, whose own level filter applies.
 
 <br />
 

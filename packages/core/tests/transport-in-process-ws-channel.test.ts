@@ -147,7 +147,7 @@ describe("executeDirectWSChannel — bidirectional flow", () => {
   });
 
   it("keeps delivering to other listeners when one throws, and reports the failure", async () => {
-    const output = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const output = vi.spyOn(console, "error").mockImplementation(() => {});
     let serverCtx: WSChannelContext | undefined;
     const sources = makeChannelSources(() => ({
       onMessage: vi.fn(),
@@ -169,7 +169,9 @@ describe("executeDirectWSChannel — bidirectional flow", () => {
     serverCtx?.send({ from: "server" });
 
     expect(received).toEqual([{ from: "server" }]);
-    expect(output.mock.calls.join("")).toContain("A channel data listener failed");
+    const failure = output.mock.calls.find((call) => String(call[1]).includes("A channel data listener failed"));
+    expect(failure?.[2]).toEqual(new Error("listener bug"));
+    output.mockRestore();
   });
 
   it("transitions status connecting→connected→disconnected", async () => {

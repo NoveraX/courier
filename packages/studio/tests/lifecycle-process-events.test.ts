@@ -12,10 +12,9 @@ let output: string[];
 
 beforeEach(() => {
   output = [];
-  for (const stream of [process.stdout, process.stderr]) {
-    vi.spyOn(stream, "write").mockImplementation((chunk) => {
-      output.push(String(chunk));
-      return true;
+  for (const level of ["debug", "info", "warn", "error"] as const) {
+    vi.spyOn(console, level).mockImplementation((...args: unknown[]) => {
+      output.push(args.map(String).join(" "));
     });
   }
 });

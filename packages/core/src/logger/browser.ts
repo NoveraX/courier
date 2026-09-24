@@ -29,14 +29,19 @@ const CONSOLE_METHOD: Record<LogLevel, "debug" | "log" | "warn" | "error"> = {
   error: "error",
 };
 
+/* Context and message go in as `%s` arguments, never into the format
+   string: a `%c` or `%o` in text that came from a server would otherwise be
+   read as a directive and consume the cause. */
 function log(level: LogLevel, context: string, message: string, cause?: unknown): void {
   const method = CONSOLE_METHOD[level];
   const args: unknown[] = [
-    `%c Courier %c %c${context}%c ${message}`,
+    "%c Courier %c %c%s%c %s",
     BADGE_STYLE,
     "",
     CONTEXT_STYLES[level],
+    context,
     MSG_STYLE,
+    message,
   ];
   if (cause != null) args.push(cause);
   console[method](...args);

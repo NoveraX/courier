@@ -8,6 +8,11 @@ import { handleTokenRefresh } from "./ws-token-refresh";
 
 const log = createLogger("WS");
 
+/** Logs a rejected handler for one message type, with the error it rejected with. */
+function dispatchFailed(type: string): (err: unknown) => void {
+  return (err) => log.error(`WS "${type}" message could not be handled`, err);
+}
+
 /** Decode, validate, and route an inbound WS message */
 export function routeMessage(
   ctx: WSSocketContext,
@@ -39,24 +44,18 @@ export function routeMessage(
 
   // Control messages bypass rate limiting —
   // dropping them would leak subscriptions, block cleanup, or stall auth.
-  // Each handler is async; wrap with `void ... .catch(log.error)` so any
-  // unhandled rejection (auth throw, schema crash, registry race) is observed
-  // and logged instead of becoming an unhandledRejection on the process.
+  // Each handler is async; a rejection (auth throw, schema crash, registry
+  // race) is logged with the error itself instead of becoming an
+  // unhandledRejection on the process.
   switch (msg.type) {
     case "subscribe":
-      void handleSubscribe(ctx, msg).catch((err) =>
-        log.error("WS dispatch failed", { type: "subscribe", err }),
-      );
+      void handleSubscribe(ctx, msg).catch(dispatchFailed("subscribe"));
       return;
     case "unsubscribe":
-      void handleUnsubscribe(ctx, msg).catch((err) =>
-        log.error("WS dispatch failed", { type: "unsubscribe", err }),
-      );
+      void handleUnsubscribe(ctx, msg).catch(dispatchFailed("unsubscribe"));
       return;
     case "auth":
-      void handleTokenRefresh(ctx, msg).catch((err) =>
-        log.error("WS dispatch failed", { type: "auth", err }),
-      );
+      void handleTokenRefresh(ctx, msg).catch(dispatchFailed("auth"));
       return;
     default:
       break;
@@ -73,8 +72,6 @@ export function routeMessage(
   }
 
   if (msg.type === "message") {
-    void handleMessage(ctx, msg).catch((err) =>
-      log.error("WS dispatch failed", { type: "message", err }),
-    );
+    void handleMessage(ctx, msg).catch(dispatchFailed("message"));
   }
 }

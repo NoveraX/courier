@@ -1,15 +1,8 @@
 /**
- * Regression coverage for the floating-promise fix in `ws-lifecycle.ts`.
- *
- * Before the fix, `routeMessage` called `handleSubscribe` / `handleMessage`
- * / `handleTokenRefresh` / `handleUnsubscribe` without `await` and without
- * `.catch`. Any rejection from those async handlers (auth throw, schema
- * crash, registry race) became an `unhandledRejection` on the process
- * with no log line — making production diagnosis effectively impossible.
- *
- * The fix wraps each call as `void handleX(...).catch(log.error)`. This
- * test forces each handler to reject and verifies the rejection is
- * observed by the logger instead of escaping the dispatch frame.
+ * A WS message whose handler rejects — an auth throw, a schema crash, a
+ * registry race — is logged at error with the message type and the
+ * rejection itself, stack included, and never escapes as an
+ * unhandledRejection on the process.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -86,24 +79,22 @@ const topicManager = {
 };
 const registry = { remove: vi.fn(), add: vi.fn() };
 
-let writeSpy: ReturnType<typeof vi.spyOn>;
+let errorSpy: ReturnType<typeof vi.spyOn>;
 
-function errorLineWritten(): boolean {
-  return writeSpy.mock.calls.some((call: unknown[]) =>
-    String(call[0]).includes("WS dispatch failed"),
+/** Whether an error line named the message type and carried the rejection itself. */
+function loggedWith(type: string, error: Error): boolean {
+  return errorSpy.mock.calls.some(
+    (call: unknown[]) => String(call[1]).includes(`WS "${type}"`) && call.includes(error),
   );
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // The Node logger writes to process.stdout (see core/src/logger/server.ts).
-  writeSpy = vi
-    .spyOn(process.stdout, "write")
-    .mockImplementation(() => true);
+  errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {
-  writeSpy.mockRestore();
+  errorSpy.mockRestore();
 });
 
 async function flushMicrotasks(): Promise<void> {
@@ -133,7 +124,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     await flushMicrotasks();
 
     expect(handleSubscribe).toHaveBeenCalledOnce();
-    expect(errorLineWritten()).toBe(true);
+    expect(loggedWith("subscribe", boom)).toBe(true);
   });
 
   it("logs and swallows handleUnsubscribe rejection", async () => {
@@ -155,7 +146,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     await flushMicrotasks();
 
     expect(handleUnsubscribe).toHaveBeenCalledOnce();
-    expect(errorLineWritten()).toBe(true);
+    expect(loggedWith("unsubscribe", boom)).toBe(true);
   });
 
   it("logs and swallows handleTokenRefresh rejection", async () => {
@@ -177,7 +168,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     await flushMicrotasks();
 
     expect(handleTokenRefresh).toHaveBeenCalledOnce();
-    expect(errorLineWritten()).toBe(true);
+    expect(loggedWith("auth", boom)).toBe(true);
   });
 
   it("logs and swallows handleMessage rejection", async () => {
@@ -199,6 +190,6 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     await flushMicrotasks();
 
     expect(handleMessage).toHaveBeenCalledOnce();
-    expect(errorLineWritten()).toBe(true);
+    expect(loggedWith("message", boom)).toBe(true);
   });
 });

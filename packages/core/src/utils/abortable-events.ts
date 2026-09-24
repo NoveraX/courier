@@ -1,4 +1,5 @@
 import { createLogger } from "../logger";
+import { isAbortError } from "./abort";
 
 const log = createLogger("Stream");
 const ABORTED = Symbol("aborted");
@@ -6,10 +7,10 @@ const ABORTED = Symbol("aborted");
 /**
  * Read a stream endpoint's events until the source finishes or `signal` fires.
  *
- * Closing a stream used to wait for its generator: `return()` on a generator
+ * Closing a stream never waits for its generator: `return()` on a generator
  * parked on an await is queued behind the pending step, so a handler waiting
- * on an event that never came held the reader — and whatever it owned —
- * forever. Here the wait on each event ends the moment the signal fires, and
+ * on an event that never comes would hold the reader — and whatever it owns —
+ * forever. The wait on each event ends the moment the signal fires, and
  * the source is asked to return without waiting: at once when it sits at a
  * `yield`, the next time it yields when it is parked on an await — one that
  * may never yield again should watch its own `ctx.signal`. A reader that
@@ -67,9 +68,7 @@ async function closeSource<TEvent>(
     await returned;
     return;
   }
-  void returned.catch((error: unknown) =>
-    log.warn("Stream generator failed while being closed", error),
-  );
+  void returned.catch((error: unknown) => lateFailure("while being closed", error));
 }
 
 function nextOrAbort<TEvent>(
@@ -80,9 +79,7 @@ function nextOrAbort<TEvent>(
   return new Promise((resolve, reject) => {
     const onAbort = () => {
       /* The step is abandoned; a failure it ends in later still gets told. */
-      pending.catch((error: unknown) =>
-        log.warn("Stream generator failed after its stream closed", error),
-      );
+      pending.catch((error: unknown) => lateFailure("after its stream closed", error));
       resolve(ABORTED);
     };
     signal.addEventListener("abort", onAbort, { once: true });
@@ -97,4 +94,11 @@ function nextOrAbort<TEvent>(
       },
     );
   });
+}
+
+/* A handler that watches its ctx.signal, as it should, rejects with the
+   abort that closed the stream; that is the close working, not a failure. */
+function lateFailure(when: string, error: unknown): void {
+  if (isAbortError(error)) log.debug(`Stream generator ended by its abort ${when}`, error);
+  else log.warn(`Stream generator failed ${when}`, error);
 }

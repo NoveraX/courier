@@ -105,7 +105,7 @@ export function attachWebSocketUpgrade(
            with no listener that is an uncaught exception. The handler wires
            its own only after an async `onConnect`, so a frame sent before
            that finished could take the process down. */
-        ws.addEventListener("error", (event) => log.warn("WebSocket error", event));
+        ws.addEventListener("error", (event) => log.warn("WebSocket error", reasonOf(event)));
         options.onSocket(ws, toWebRequest(req));
       });
     } catch (error) {
@@ -132,4 +132,12 @@ function pathnameOf(req: IncomingMessage): string {
 
 function refuse(socket: Duplex, status: number, reason: string): void {
   socket.end(`HTTP/1.1 ${status} ${reason}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
+}
+
+/* `ws` reports a frame it refuses as an ErrorEvent, whose inspection is a
+   dump of the whole socket; the Error it carries says what was wrong with
+   the frame. */
+function reasonOf(event: unknown): unknown {
+  const { error, message } = event as { error?: unknown; message?: unknown };
+  return error ?? message ?? event;
 }

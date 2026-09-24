@@ -9,6 +9,7 @@ import { compileUrl, resolveBasePath } from "../utils/helpers";
 import { stripUndefined } from "./body-builder";
 import { buildRequestOptions } from "./request-builder";
 import { getResponse } from "./response";
+import { transportFailure } from "./transport-failure";
 import type {
   BoundMethodOptions,
   Context,
@@ -116,20 +117,7 @@ export function bindMethod(
          — an AbortError unless they gave another reason. */
       if (error instanceof HTTPError || isAbortError(error)) throw error;
 
-      if (error instanceof Error) {
-        const cause = error.cause instanceof Error ? error.cause : error;
-        const code = "code" in cause ? String(cause.code) : undefined;
-        throw new HTTPError(
-          {
-            status: 0,
-            headers: new Headers(),
-            data: { success: false, message: cause.message, ...(code && { code }) },
-          },
-          { cause: error },
-        );
-      }
-
-      throw error;
+      throw error instanceof Error ? transportFailure(error) : error;
     }
   };
 }

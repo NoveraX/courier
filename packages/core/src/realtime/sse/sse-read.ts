@@ -106,7 +106,7 @@ function deliver<TData>(ctx: SSEConnectionCtx<TData>, raw: RawSSEEvent): void {
     const parsed = ctx.config.parse(raw.data) as TData;
     ctx.queue.push({ ...raw, data: parsed });
   } catch (parseErr) {
-    log.warn(`Failed to parse SSE event data: ${raw.data}`, parseErr);
+    log.warn(`Skipped an SSE event whose data could not be parsed: ${excerpt(raw.data)}`, parseErr);
   }
 }
 
@@ -133,4 +133,13 @@ async function messageOf(response: Response): Promise<string | undefined> {
     log.warn("Could not read the refused SSE response", error);
   }
   return undefined;
+}
+
+const EXCERPT_LENGTH = 120;
+
+/* Event data is the server's, of any size and possibly sensitive; the log
+   gets enough of it to recognise, and its length. */
+function excerpt(data: string): string {
+  if (data.length <= EXCERPT_LENGTH) return JSON.stringify(data);
+  return `${JSON.stringify(data.slice(0, EXCERPT_LENGTH))}… (${data.length} characters)`;
 }

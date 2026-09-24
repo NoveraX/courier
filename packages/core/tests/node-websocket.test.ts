@@ -9,7 +9,7 @@
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";
 
 import { attachWebSocketUpgrade, type UpgradeServer } from "../src/node";
@@ -97,5 +97,23 @@ describe("the frame limit", () => {
     });
 
     expect(code).toBe(1009);
+  });
+
+  it("logs why the frame was refused, not [object Object]", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const url = await listen((s) => courier(s, { maxPayload: 1024 }));
+    const client = new WebSocket(`${url}/api/ws`);
+    clients.push(client);
+    await new Promise((resolve) => client.on("message", resolve));
+
+    await new Promise<number>((resolve) => {
+      client.on("close", resolve);
+      client.send("x".repeat(64 * 1024));
+    });
+    await vi.waitFor(() => expect(warn).toHaveBeenCalled());
+
+    const reason = warn.mock.calls.map((call) => call[2]).find((cause) => cause instanceof Error);
+    expect((reason as Error).message).toMatch(/Max payload size exceeded/);
+    warn.mockRestore();
   });
 });

@@ -18,3 +18,11 @@ if ((globalThis as { location?: unknown }).location === undefined) {
     origin: "http://localhost",
   };
 }
+
+/* The log settings of the shell a suite runs in are not the suite's: a
+   COURIER_LOG_LEVEL=error exported there would hide the warnings tests
+   assert, and a FORCE_COLOR would colour lines tests expect plain. Tests
+   that need one stub it themselves. */
+for (const name of ["COURIER_LOG_LEVEL", "FORCE_COLOR", "NO_COLOR"]) {
+  delete process.env[name];
+}

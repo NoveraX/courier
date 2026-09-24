@@ -11,7 +11,7 @@ export interface ReloadQueue {
   /**
    * Run `task` alone: after everything queued before it, and before every
    * reload requested while it runs. An edit whose `dropped` signal aborts
-   * before it starts no longer counts as under way; the task still runs and
+   * before it starts stops counting as under way; the task still runs and
    * must see for itself that it was dropped.
    */
   exclusive<TResult>(task: () => Promise<TResult>, dropped?: AbortSignal): Promise<TResult>;
@@ -30,11 +30,29 @@ export interface ReloadQueue {
  * before the previous one has finished: two loads in flight at once could
  * finish out of order, and the older result would then replace the newer.
  *
+ * The chain starts behind `first`, the first load. It is not an edit, so
+ * `exclusiveSettled` does not wait for it. A task that throws is logged and
+ * the chain goes on: a reload requested after it still runs.
+ *
  * @param reload - Loads the config and applies it; reports its own failures
+ * @param first - The first load, which everything else queues behind
  * @returns The queue
+ *
+ * @example
+ * ```ts
+ * const queue = createReloadQueue((changed) => reloadFor(changed), () => loadFirst());
+ * queue.request(["/app/courier.config.ts"]);
+ * ```
  */
-export function createReloadQueue(reload: (changed: string[]) => Promise<void>): ReloadQueue {
-  let tail: Promise<void> = Promise.resolve();
+export function createReloadQueue(
+  reload: (changed: string[]) => Promise<void>,
+  first?: () => Promise<void>,
+): ReloadQueue {
+  let tail: Promise<void> = first
+    ? Promise.resolve()
+        .then(first)
+        .catch((err: unknown) => log.error("Studio could not finish loading the project", err))
+    : Promise.resolve();
   /* The reload queued and not yet started, which new requests join. */
   let waiting: Set<string> | null = null;
   /* Every reload queued and not yet started: an edit's acknowledgement

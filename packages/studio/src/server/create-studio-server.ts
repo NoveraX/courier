@@ -12,6 +12,8 @@ import { listenStudio } from "./listen-studio";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
 import { EDIT_FINISH_BUDGET_MS } from "./mocks-edit/edit-timing";
+import { createProjectState } from "./project-state/create-project-state";
+import { resolvedRoot } from "./resolved-root";
 import { registerRestApi } from "./rest-api";
 import { setupRuntimeNamespace } from "./runtime-namespace";
 import { clearStudioServerState } from "./runtime-namespace-state";
@@ -22,7 +24,6 @@ import { setupUiNamespace } from "./socket-handlers";
 import { createStudioSockets } from "./socket-server";
 import { createStudioOriginPolicy } from "./studio-origin";
 import type { StudioServer, StudioServerOptions } from "./types";
-import { watchConfigDriven } from "./watch-config-driven";
 import { createWatcherStatus } from "./watcher-status";
 
 /** Vite dev-server origin used by the Studio UI during local development */
@@ -74,18 +75,23 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     transformCacheDirectory: () => findTransformCacheDirectory(projectRoot),
   });
 
-  const config = watchConfigDriven({
-    projectRoot,
+  // ── The project Studio runs: loaded, watched and told from one place ──────
+
+  /* The loader resolves links; every path shown is relative to the same root. */
+  const root = resolvedRoot(projectRoot);
+  const project = createProjectState({
+    projectRoot: root,
     bindingTable,
-    mockRegistry,
     uiNamespace,
     watcherStatus,
-    mockManager,
+    mocks: { mockRegistry, mockManager },
   });
 
   setupUiNamespace({
     uiNamespace,
     bindingTable,
+    project,
+    projectRoot: root,
     mockManager,
     watcherStatus,
     playgroundRouter,
@@ -94,7 +100,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   registerRestApi(app, policy, {
     projectRoot,
     mockBasePort,
-    watcher: config.watcher,
+    project,
     studioPort: () => address.port(),
     mockSummaries: mockManager.summarizeServers,
   });
@@ -105,9 +111,9 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   const address = listenStudio(httpServer, { port, host, onReady, onError });
 
   const close = async () => {
-    await config.finishEdits(EDIT_FINISH_BUDGET_MS);
+    await project.finishEdits(EDIT_FINISH_BUDGET_MS);
     await mockManager.stop();
-    config.stop();
+    project.stop();
     clearBuffer();
     playgroundRouter.dispose();
     clearStudioServerState();

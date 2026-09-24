@@ -1,5 +1,6 @@
 import { createLogger } from "@noverax/courier";
 import type { LoadedCourierMocks } from "./config-loader";
+import { describeError } from "./describe-error";
 import type { LifecycleCoordinator } from "./mock-manager";
 import type { MockRegistry } from "./mock-registry";
 
@@ -25,9 +26,7 @@ export function applyLoadedMocks(mocks: LoadedCourierMocks, consumers: MocksCons
   if (mocks.error !== null) {
     log.warn(`${mocks.file} failed to load`, mocks.error);
     /* The loader's message spans lines; the UI shows it on one, the terminal has it whole. */
-    const message = mocks.error instanceof Error ? mocks.error.message : String(mocks.error);
-    const reason = message.replace(/\s+/g, " ").trim();
-    consumers.mockManager.setMocksFile({ file: mocks.file, error: reason });
+    consumers.mockManager.setMocksFile({ file: mocks.file, error: describeError(mocks.error) });
     return;
   }
   consumers.mockManager.setMocksFile({ file: mocks.file, error: null });

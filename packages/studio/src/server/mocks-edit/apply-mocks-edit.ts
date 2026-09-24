@@ -6,7 +6,6 @@ import { manualOutcome } from "./manual-outcome";
 import type { MocksEditContext } from "./mocks-edit-context";
 import { MocksEditRefusal } from "./mocks-edit-refusal";
 import { snippetInputFromDisk } from "./snippet-input-from-disk";
-import { studioStarting } from "./studio-starting";
 import type { DeclareApplyResult } from "./types";
 import type { DeclareBody } from "./validate-declare-body";
 
@@ -17,26 +16,30 @@ import type { DeclareBody } from "./validate-declare-body";
  * files as they are now and must be the one previewed, the file is written
  * atomically, and the edited files are loaded and checked before Studio
  * runs them. An edit that does not check out is taken back, and Studio
- * keeps running what it ran. When the chain stays busy — a load that does
- * not finish — the edit is dropped before it starts and the wizard is told.
+ * keeps running what it ran. Right after Studio starts, the edit queues
+ * behind the first load. When the chain stays busy — a load that does not
+ * finish — the edit is dropped before it starts and the wizard is told.
  *
  * @param ctx - The running Studio
  * @param body - The mocks, and the hashes of the preview the user confirmed
  * @returns What happened
+ *
+ * @example
+ * ```ts
+ * const result = await applyMocksEdit(ctx, { mocks, baseHash: preview.baseHash, planDigest: preview.planDigest });
+ * ```
  */
 export async function applyMocksEdit(
   ctx: MocksEditContext,
   body: DeclareBody,
 ): Promise<DeclareApplyResult> {
-  const watcher = ctx.watcher();
-  if (!watcher) return studioStarting(ctx.projectRoot, body.mocks);
   let started = false;
   const dropped = new AbortController();
-  const edit = watcher.runExclusive(
+  const edit = ctx.project.runExclusive(
     async (tx): Promise<DeclareApplyResult | null> => {
       if (dropped.signal.aborted) return null;
       started = true;
-      return editAlone(ctx, watcher, tx, body);
+      return editAlone(ctx, tx, body);
     },
     LOAD_TIMEOUT_MS,
     dropped.signal,

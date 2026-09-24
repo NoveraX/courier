@@ -8,11 +8,13 @@
  * bindings, no watcher, and no visible reason.
  */
 
+import { messageOf } from "./message-of";
+
 const issues: string[] = [];
 
 /** Report something the user needs to see once the banner is up. */
 export function recordStartupIssue(summary: string, detail?: unknown): void {
-  const reason = detail instanceof Error ? detail.message : detail ? String(detail) : "";
+  const reason = detail ? messageOf(detail) : "";
   issues.push(reason ? `${summary}: ${reason}` : summary);
 }
 

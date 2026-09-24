@@ -13,7 +13,11 @@ export interface ExclusiveContext {
    *   `CONFIG_WATCHER_STOPPED` once Studio is stopping, or what the loader threw
    */
   load(): Promise<LoadedCourierConfig>;
-  /** Make a loaded result what Studio runs, exactly as a reload would. */
+  /**
+   * Make a loaded result what Studio runs, exactly as a reload would. A
+   * result Studio cannot run is reported as a failed load, and `current()`
+   * then still returns what Studio ran.
+   */
   apply(loaded: LoadedCourierConfig): void;
   /**
    * Take the watched files at these paths as already seen in their present

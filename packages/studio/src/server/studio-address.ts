@@ -1,11 +1,12 @@
 /**
  * The `studio` block of `courier.config.ts`, read before the server binds.
  *
- * The rest of the config is loaded later, once the server is up, by
- * `initConfigDriven`. The address cannot wait for that: it decides what to
- * bind. A config that will not load is not this function's problem — it is
- * reported properly by the later load — so an unreadable one yields no
- * address, the defaults apply, and why is logged at debug level only.
+ * The rest of the config is loaded as the server starts, on the reload
+ * chain `createProjectState` owns. The address cannot wait for that:
+ * it decides what to bind. A config that will not load is not this
+ * function's problem — it is reported properly by the later load — so an
+ * unreadable one yields no address, the defaults apply, and why is logged
+ * at debug level only.
  */
 
 import { createLogger } from "@noverax/courier";

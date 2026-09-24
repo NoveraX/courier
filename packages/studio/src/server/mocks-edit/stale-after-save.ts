@@ -2,8 +2,9 @@ import { realpathSync } from "node:fs";
 import { createLogger } from "@noverax/courier";
 import { findMocksFile } from "@noverax/courier-studio-core/config";
 import type { LoadedCourierConfig } from "../config-loader";
-import type { ConfigWatcher } from "../config-watcher";
 import type { ExclusiveContext } from "../exclusive-reload";
+import { failureOf } from "../project-state/failure-of";
+import type { ConfigFailure } from "../project-state/types";
 import { hashMocksFile } from "./hash-mocks-file";
 import type { MocksEditContext } from "./mocks-edit-context";
 import { prepareEdit } from "./prepare-edit";
@@ -22,21 +23,24 @@ const log = createLogger("Studio");
  * already runs it, nothing is loaded again: that would restart every running
  * mock a second time for one save.
  *
- * @param ctx - The running Studio
- * @param watcher - The config watcher, for the last load's failure
+ * @param ctx - The running Studio, and the latest load's failure
  * @param tx - The edit's hold on the reload chain
  * @param requests - The mocks asked for
  * @returns A stale result carrying the new plan
+ *
+ * @example
+ * ```ts
+ * if (written === "changed") return staleAfterSave(ctx, tx, body.mocks);
+ * ```
  */
 export async function staleAfterSave(
   ctx: MocksEditContext,
-  watcher: ConfigWatcher,
   tx: ExclusiveContext,
   requests: readonly MockDeclaration[],
 ): Promise<DeclareApplyResult> {
   const root = realpathSync(ctx.projectRoot);
-  const loadError = runsDisk(tx.current(), root) ? null : await reloadHere(tx);
-  const state = { current: tx.current(), lastLoadError: loadError ?? watcher.lastLoadError() };
+  const loadFailure = runsDisk(tx.current(), root) ? null : await reloadHere(tx, root);
+  const state = { running: tx.current(), failure: loadFailure ?? ctx.project.snapshot().failure };
   const fresh = await prepareEdit(ctx, state, requests);
   return {
     status: "stale",
@@ -59,14 +63,16 @@ function runsDisk(current: LoadedCourierConfig | null, root: string): boolean {
   }
 }
 
-async function reloadHere(tx: ExclusiveContext): Promise<unknown> {
+/* A load that fails here is not applied, so Studio's own record of the
+   latest failure does not have it: the plan is refused on it directly. */
+async function reloadHere(tx: ExclusiveContext, root: string): Promise<ConfigFailure | null> {
   try {
     const loaded = await tx.load();
     tx.apply(loaded);
     acknowledgeIfUnchanged(tx, loaded.mocks.file, loaded.mocks.contentHash);
     return null;
   } catch (err) {
-    return err;
+    return failureOf(err, root);
   }
 }
 

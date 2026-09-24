@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { describeError } from "../../src/server/mocks-edit/describe-error";
+import { describeError } from "../src/server/describe-error";
 
 describe("describeError", () => {
   it("folds a multi-line loader message onto one line, with paths relative to the root", () => {
@@ -12,6 +12,10 @@ describe("describeError", () => {
   it("keeps paths as they are without a root, and describes what is not an Error", () => {
     expect(describeError(new Error("open /app/x.ts"))).toBe("open /app/x.ts");
     expect(describeError("gone\nfor good")).toBe("gone for good");
+  });
+
+  it("describes a thrown value that has no string form by its contents", () => {
+    expect(describeError(Object.create(null))).toBe("[Object: null prototype] {}");
   });
 
   it("leaves a path outside the root whole", () => {

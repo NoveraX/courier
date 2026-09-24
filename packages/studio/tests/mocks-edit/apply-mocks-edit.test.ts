@@ -26,13 +26,13 @@ vi.mock("../../src/server/mocks-edit/replace-mocks-file", async (importOriginal)
 });
 
 import { type LoadedCourierConfig, loadCourierConfig } from "../../src/server/config-loader";
-import type { ConfigWatcher } from "../../src/server/config-watcher";
-import type { ExclusiveContext } from "../../src/server/exclusive-reload";
+import type { ExclusiveContext, ExclusiveTransaction } from "../../src/server/exclusive-reload";
 import { MocksFileChangedError } from "../../src/server/mocks-edit/mocks-file-changed-error";
 import { applyMocksEdit } from "../../src/server/mocks-edit/apply-mocks-edit";
 import type { MocksEditContext } from "../../src/server/mocks-edit/mocks-edit-context";
 import { previewMocksEdit } from "../../src/server/mocks-edit/preview-mocks-edit";
 import type { ReadyOutcome } from "../../src/server/mocks-edit/types";
+import type { ProjectState } from "../../src/server/project-state/types";
 
 const CACHE = join(__dirname, "../../../../node_modules/.cache/courier-studio-tests");
 const EXISTING =
@@ -79,7 +79,7 @@ interface Harness {
   reload(): Promise<void>;
 }
 
-/* A watcher that runs the transaction when its slot is free, with a load the test decides. */
+/* A project that runs the transaction when its slot is free, with a load the test decides. */
 async function harness(load: (real: () => Promise<LoadedCourierConfig>) => Promise<LoadedCourierConfig>): Promise<Harness> {
   let current = await loadCourierConfig(root);
   let slotFree: Promise<void> = Promise.resolve();
@@ -92,19 +92,20 @@ async function harness(load: (real: () => Promise<LoadedCourierConfig>) => Promi
     acknowledge: vi.fn(),
     reloadAfter: vi.fn(),
   };
-  const watcher = {
-    getCurrent: () => current,
-    lastLoadError: () => null,
+  const project: ProjectState = {
+    snapshot: () => ({ revision: 1, starting: false, running: current, loadedAt: 0, failure: null }),
     settled: async () => undefined,
-    runExclusive: async (transaction: (ctx: ExclusiveContext) => Promise<unknown>) => {
+    runExclusive: async <TResult>(transaction: ExclusiveTransaction<TResult>) => {
       await slotFree;
       return transaction(tx);
     },
-  } as unknown as ConfigWatcher;
+    finishEdits: async () => undefined,
+    stop: () => undefined,
+  };
   const ctx: MocksEditContext = {
     projectRoot: root,
     mockBasePort: 7001,
-    watcher: () => watcher,
+    project,
     studioPort: () => null,
     mockSummaries: () => [],
   };
@@ -173,6 +174,23 @@ describe("applyMocksEdit", () => {
     expect(result).toMatchObject({ status: "rolledBack", reason: "second is not declared after the edit" });
     expect(readFileSync(join(root, "courier.mocks.ts"), "utf8")).toBe(EXISTING);
     expect(tx.apply).not.toHaveBeenCalled();
+  });
+
+  it("takes back an edit whose load Studio could not run, restoring the file it ran", async () => {
+    const file = join(root, "courier.mocks.ts");
+    writeFileSync(file, EXISTING);
+    const { ctx, tx } = await harness((real) => real());
+    tx.apply.mockImplementationOnce(() => {});
+
+    const result = await applyMocksEdit(ctx, await confirmed(ctx));
+
+    expect(tx.apply).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({
+      status: "rolledBack",
+      target: "courier.mocks.ts",
+      reason: "the edited files loaded, but Studio could not run them; the terminal says why",
+    });
+    expect(readFileSync(file, "utf8")).toBe(EXISTING);
   });
 
   it("removes a file it created when the edit is taken back", async () => {

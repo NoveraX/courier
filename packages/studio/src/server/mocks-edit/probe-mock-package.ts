@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { createConfigJiti } from "@noverax/courier-studio-core/config";
-import { describeError } from "./describe-error";
+import { describeError } from "../describe-error";
 import { installCommand } from "./install-command";
 import { MOCK_PACKAGE } from "./mock-package";
 import { MocksEditRefusal } from "./mocks-edit-refusal";

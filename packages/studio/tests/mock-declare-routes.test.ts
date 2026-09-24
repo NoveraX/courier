@@ -9,6 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { registerMockDeclareRoutes } from "../src/server/mock-declare-routes";
 import type { MocksEditContext } from "../src/server/mocks-edit/mocks-edit-context";
+import type { ProjectState } from "../src/server/project-state/types";
 
 type Handler = (req: IncomingMessage & { body: unknown }, res: FakeResponse) => void;
 
@@ -47,11 +48,24 @@ async function call(handler: Handler | undefined, body: unknown, headers: Record
 const declaration = { key: "apiMock", source: "api", port: null, seedCount: 20, autoStart: false };
 const ORIGIN = { origin: "http://localhost:6280" };
 
+function project(overrides: Partial<ProjectState> = {}): ProjectState {
+  return {
+    snapshot: vi.fn(() => ({ revision: 0, starting: true, running: null, loadedAt: null, failure: null })),
+    settled: vi.fn(async () => undefined),
+    runExclusive: vi.fn(async () => {
+      throw new Error("no edit expected");
+    }),
+    finishEdits: vi.fn(async () => undefined),
+    stop: vi.fn(),
+    ...overrides,
+  };
+}
+
 function context(overrides: Partial<MocksEditContext> = {}): MocksEditContext {
   return {
     projectRoot: "/nonexistent-project",
     mockBasePort: 7001,
-    watcher: vi.fn(() => null),
+    project: project(),
     studioPort: () => 6280,
     mockSummaries: () => [],
     ...overrides,
@@ -95,22 +109,26 @@ describe("the mock wizard's routes", () => {
     expect(reply.body).toMatchObject({ status: "manual", target: null, creates: false, reasons: [{ code: "NOT_LOCAL_PEER" }] });
     expect(String(reply.body.snippet)).toContain("apiMock: defineMockServer({ source: courierConfig.sources.api })");
     expect(String(reply.body.snippet)).not.toContain("export default");
-    expect(ctx.watcher).not.toHaveBeenCalled();
+    expect(ctx.project.snapshot).not.toHaveBeenCalled();
+    expect(ctx.project.settled).not.toHaveBeenCalled();
+    expect(ctx.project.runExclusive).not.toHaveBeenCalled();
   });
 
   it("answer an unexpected failure with a JSON 500", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const apply = mount(
       context({
-        watcher: () => {
-          throw new Error("watcher gone");
-        },
+        project: project({
+          runExclusive: () => {
+            throw new Error("reload chain gone");
+          },
+        }),
       }),
     ).get("/api/mocks/declare/apply");
 
     const reply = await call(apply, { mocks: [declaration], baseHash: null, planDigest: "a".repeat(64) }, ORIGIN, "::1");
 
-    expect(reply).toEqual({ status: 500, body: { error: "Studio could not apply adding the mocks: watcher gone" } });
+    expect(reply).toEqual({ status: 500, body: { error: "Studio could not apply adding the mocks: reload chain gone" } });
     vi.restoreAllMocks();
   });
 });

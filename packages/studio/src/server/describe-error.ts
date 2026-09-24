@@ -1,4 +1,5 @@
 import { sep } from "node:path";
+import { messageOf } from "./message-of";
 
 /**
  * An error as one line a developer reads in the wizard: its message with the
@@ -17,7 +18,7 @@ import { sep } from "node:path";
  * ```
  */
 export function describeError(error: unknown, root?: string): string {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = messageOf(error);
   const relative = root ? withoutRoot(message, root) : message;
   return relative.replace(/\s+/g, " ").trim();
 }

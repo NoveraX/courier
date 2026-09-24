@@ -86,6 +86,25 @@ describe("loadCourierConfig", () => {
     await expect(loadCourierConfig(dir)).rejects.toMatchObject({ code: "CONFIG_INVALID" });
   });
 
+  it("throws CONFIG_INVALID naming a source that a misspelled import leaves undefined", async () => {
+    writeFileSync(join(dir, "api.ts"), "export const api = { options: { baseURL: \"https://api.example\" } };\n");
+    writeConfig(`import { apii } from "./api";\nexport default { sources: { api: apii } };\n`);
+
+    await expect(loadCourierConfig(dir)).rejects.toMatchObject({
+      code: "CONFIG_INVALID",
+      message: expect.stringContaining("courier.config.sources.api is undefined, not a source"),
+    });
+  });
+
+  it("throws CONFIG_INVALID for a source that is neither an object nor undefined", async () => {
+    writeConfig(`export default { sources: { api: "https://api.example", other: null } };`);
+
+    await expect(loadCourierConfig(dir)).rejects.toMatchObject({
+      code: "CONFIG_INVALID",
+      message: expect.stringContaining("courier.config.sources.api is a string, not a source"),
+    });
+  });
+
   it("ConfigLoaderError carries cwd context for missing files", async () => {
     try {
       await loadCourierConfig(dir);

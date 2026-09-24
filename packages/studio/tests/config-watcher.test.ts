@@ -10,19 +10,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CourierConfig } from "@noverax/courier/config";
-import type { Namespace } from "socket.io";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BindingTable } from "../src/server/catalog/binding-table";
-import { type LoadedCourierConfig, loadCourierConfig } from "../src/server/config-loader";
+import type { LoadedCourierConfig } from "../src/server/config-loader";
 import { type ConfigWatcher, startConfigWatcher } from "../src/server/config-watcher";
 import { studioTransformCache } from "../src/server/studio-transform-cache";
-
-function makeLoaded(deps: string[]): LoadedCourierConfig {
-  const config = { sources: {} } as unknown as CourierConfig;
-  const mocks = { file: null, entries: {}, contentHash: null, error: null };
-  return { config, configFile: deps[0] ?? "", contentHash: null, deps, mocks };
-}
+import type { WatcherStatus } from "../src/server/watcher-status";
 
 let watchers: ConfigWatcher[] = [];
 let roots: string[] = [];
@@ -31,10 +23,42 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** Long enough for a native notification to arrive and a reload to run. */
 const SETTLE_MS = 250;
 
-function start(initial: LoadedCourierConfig | null, deps: Parameters<typeof startConfigWatcher>[1]) {
-  const watcher = startConfigWatcher(initial, deps);
+/** The engine on a project, with every outcome it reports, in order. */
+interface Watched {
+  watcher: ConfigWatcher;
+  /** Every load that succeeded, the first one included. */
+  applied: LoadedCourierConfig[];
+  /** Every load that failed, with what it threw. */
+  failed: unknown[];
+  /** What the owner runs: the last load that succeeded. */
+  current(): LoadedCourierConfig | null;
+}
+
+function start(projectRoot: string, watcherStatus?: WatcherStatus): Watched {
+  let current: LoadedCourierConfig | null = null;
+  const applied: LoadedCourierConfig[] = [];
+  const failed: unknown[] = [];
+  const watcher = startConfigWatcher({
+    projectRoot,
+    watcherStatus,
+    current: () => current,
+    onApplied: (loaded) => {
+      current = loaded;
+      applied.push(loaded);
+    },
+    onFailed: (error) => failed.push(error),
+  });
   watchers.push(watcher);
-  return watcher;
+  return { watcher, applied, failed, current: () => current };
+}
+
+function fakeStatus() {
+  return {
+    setApiPathCount: vi.fn<WatcherStatus["setApiPathCount"]>(),
+    emitChange: vi.fn<WatcherStatus["emitChange"]>(),
+    setMockFileCount: vi.fn<WatcherStatus["setMockFileCount"]>(),
+    sendSnapshot: vi.fn<WatcherStatus["sendSnapshot"]>(),
+  };
 }
 
 /** A project whose config imports one module, which imports another. */
@@ -49,6 +73,21 @@ function makeProject(): { root: string; config: string; direct: string; deep: st
   writeFileSync(direct, 'import { host } from "./deep"\nexport const api = { baseURL: host }\n');
   writeFileSync(config, 'import { api } from "./src/api"\nexport default { sources: { demo: api } }\n');
   return { root, config, direct, deep };
+}
+
+let slowModules = 0;
+
+/**
+ * Make `file` a module that marks on `globalThis` that it started, waits
+ * 300 ms, then runs `tail`. Returns the marker's key.
+ */
+function slowModule(file: string, tail: string): string {
+  const marker = `__courierWatcherSlow${process.pid}_${++slowModules}`;
+  writeFileSync(
+    file,
+    `Reflect.set(globalThis, "${marker}", true)\nawait new Promise((r) => setTimeout(r, 300))\n${tail}\n`,
+  );
+  return marker;
 }
 
 function baseURLOf(loaded: LoadedCourierConfig | null | undefined): unknown {
@@ -68,20 +107,19 @@ afterEach(() => {
 });
 
 describe("startConfigWatcher", () => {
-  it("returns the initial loaded config from getCurrent()", () => {
-    const { root, config } = makeProject();
-    const initial = makeLoaded([config]);
-    const watcher = start(initial, { projectRoot: root, bindingTable: new BindingTable() });
+  it("makes the first load on its own and reports it once", async () => {
+    const { root } = makeProject();
+    const { watcher, applied, failed } = start(root);
 
-    expect(watcher.getCurrent()).toBe(initial);
+    await watcher.settled();
+
+    expect(applied.map(baseURLOf)).toEqual(["v1.example.com"]);
+    expect(failed).toEqual([]);
   });
 
   it("stop() is idempotent", () => {
-    const { root, config } = makeProject();
-    const watcher = startConfigWatcher(makeLoaded([config]), {
-      projectRoot: root,
-      bindingTable: new BindingTable(),
-    });
+    const { root } = makeProject();
+    const { watcher } = start(root);
 
     expect(() => {
       watcher.stop();
@@ -89,16 +127,66 @@ describe("startConfigWatcher", () => {
     }).not.toThrow();
   });
 
-  it("does not invoke onReload synchronously", () => {
-    const { root, config } = makeProject();
-    const onReload = vi.fn();
-    start(makeLoaded([config]), {
-      projectRoot: root,
-      bindingTable: new BindingTable(),
-      onReload,
-    });
+  it("does not report the first load synchronously", () => {
+    const { root } = makeProject();
+    const { applied, failed } = start(root);
 
-    expect(onReload).not.toHaveBeenCalled();
+    expect(applied).toEqual([]);
+    expect(failed).toEqual([]);
+  });
+
+  it("loads nothing when stopped before the first load starts", async () => {
+    const { root, deep } = makeProject();
+    const marker = slowModule(deep, 'export const host = "v1.example.com"');
+    const { watcher, applied, failed } = start(root);
+
+    watcher.stop();
+    await watcher.settled();
+
+    expect(Reflect.get(globalThis, marker)).toBeUndefined();
+    expect(applied).toEqual([]);
+    expect(failed).toEqual([]);
+  });
+
+  it("drops a first load that succeeds after a stop, and arms no watch", async () => {
+    const { root, deep } = makeProject();
+    const marker = slowModule(deep, 'export const host = "late.example.com"');
+    const status = fakeStatus();
+    const { watcher, applied, failed } = start(root, status);
+    await until(() => Reflect.get(globalThis, marker) === true);
+    expect(Reflect.get(globalThis, marker)).toBe(true);
+
+    watcher.stop();
+    await watcher.settled();
+
+    expect(applied).toEqual([]);
+    expect(failed).toEqual([]);
+    expect(status.setApiPathCount).not.toHaveBeenCalled();
+  });
+
+  it("drops a first load that fails after a stop, and arms no watch", async () => {
+    const { root, deep } = makeProject();
+    const marker = slowModule(deep, 'throw new Error("the deep module failed")');
+    const status = fakeStatus();
+    const { watcher, applied, failed } = start(root, status);
+    await until(() => Reflect.get(globalThis, marker) === true);
+    expect(Reflect.get(globalThis, marker)).toBe(true);
+
+    watcher.stop();
+    await watcher.settled();
+
+    expect(applied).toEqual([]);
+    expect(failed).toEqual([]);
+    expect(status.setApiPathCount).not.toHaveBeenCalled();
+  });
+
+  it("runs an edit only after the first load, with that load as what Studio runs", async () => {
+    const { root } = makeProject();
+    const { watcher } = start(root);
+
+    const seen = await watcher.runExclusive(async (ctx) => baseURLOf(ctx.current()), 5000);
+
+    expect(seen).toBe("v1.example.com");
   });
 });
 
@@ -108,17 +196,16 @@ describe("startConfigWatcher", () => {
  * change a developer would not see in the Studio.
  */
 describe("startConfigWatcher — reload", () => {
-  async function watchProject() {
+  /** The engine on a fresh project, past its first load; `reloads` holds each load after it. */
+  async function watchProject(watcherStatus?: WatcherStatus) {
     const project = makeProject();
-    const initial = await loadCourierConfig(project.root);
-    const reloads: LoadedCourierConfig[] = [];
-    start(initial, {
-      projectRoot: project.root,
-      bindingTable: new BindingTable(),
-      onReload: (loaded) => reloads.push(loaded),
-    });
+    const watched = start(project.root, watcherStatus);
+    await watched.watcher.settled();
+    const [initial] = watched.applied;
+    const reloads = watched.applied;
+    reloads.length = 0;
     await sleep(SETTLE_MS);
-    return { ...project, initial, reloads };
+    return { ...project, ...watched, initial, reloads };
   }
 
   async function nextReload(reloads: LoadedCourierConfig[], budgetMs = 4000) {
@@ -135,7 +222,7 @@ describe("startConfigWatcher — reload", () => {
 
     writeFileSync(deep, 'export const host = "v2.example.com"\n');
 
-    expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe("v2.example.com");
+    expect(baseURLOf(await nextReload(reloads))).toBe("v2.example.com");
   });
 
   it("sees an edited module although the transforms of the others are cached", async () => {
@@ -152,7 +239,7 @@ describe("startConfigWatcher — reload", () => {
 
     writeFileSync(deep, 'export const host = "v2.example.com"\n');
 
-    expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe("v2.example.com");
+    expect(baseURLOf(await nextReload(reloads))).toBe("v2.example.com");
     expect(computed).toEqual([deep]);
   });
 
@@ -162,13 +249,11 @@ describe("startConfigWatcher — reload", () => {
     const temp = join(root, "src", "deep.tmp");
     writeFileSync(temp, 'export const host = "atomic.example.com"\n');
     renameSync(temp, deep);
-    expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe("atomic.example.com");
+    expect(baseURLOf(await nextReload(reloads))).toBe("atomic.example.com");
 
     writeFileSync(deep, 'export const host = "after-atomic.example.com"\n');
 
-    expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe(
-      "after-atomic.example.com",
-    );
+    expect(baseURLOf(await nextReload(reloads))).toBe("after-atomic.example.com");
   });
 
   it("watches a module the config has only just started importing", async () => {
@@ -178,40 +263,26 @@ describe("startConfigWatcher — reload", () => {
     writeFileSync(added, 'export const host = "added.example.com"\n');
     writeFileSync(config, 'import { host } from "./src/added"\nexport default { sources: { demo: { baseURL: host } } }\n');
     const afterImport = await nextReload(reloads);
-    expect(baseURLOf(afterImport as LoadedCourierConfig)).toBe("added.example.com");
-    expect((afterImport as LoadedCourierConfig).deps).toContain(added);
+    expect(baseURLOf(afterImport)).toBe("added.example.com");
+    expect(afterImport?.deps).toContain(added);
 
     writeFileSync(added, 'export const host = "added-edited.example.com"\n');
 
-    expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe(
-      "added-edited.example.com",
-    );
+    expect(baseURLOf(await nextReload(reloads))).toBe("added-edited.example.com");
   });
 
   it("reports the tracked count and each change to the watcher status", async () => {
-    const project = makeProject();
-    const initial = await loadCourierConfig(project.root);
-    const setApiPathCount = vi.fn();
-    const emitChange = vi.fn();
-    start(initial, {
-      projectRoot: project.root,
-      bindingTable: new BindingTable(),
-      watcherStatus: {
-        setApiPathCount,
-        emitChange,
-        setMockFileCount: vi.fn(),
-        sendSnapshot: vi.fn(),
-      },
-    });
-    await sleep(SETTLE_MS);
-    expect(setApiPathCount).toHaveBeenCalledWith(initial.deps.length);
+    const status = fakeStatus();
+    const { deep, initial } = await watchProject(status);
+    expect(initial).toBeDefined();
+    expect(status.setApiPathCount).toHaveBeenCalledWith(initial?.deps.length);
 
-    writeFileSync(project.deep, 'export const host = "counted.example.com"\n');
+    writeFileSync(deep, 'export const host = "counted.example.com"\n');
     /* Waiting for the first call alone would be hostage to a late notification
        about the fixture's own creation arriving ahead of the edit. */
     const reported = () =>
-      emitChange.mock.calls.some(
-        ([kind, paths]) => kind === "api" && (paths as string[]).includes(project.deep),
+      status.emitChange.mock.calls.some(
+        ([kind, paths]) => kind === "api" && paths.includes(deep),
       );
     for (let waited = 0; waited < 4000 && !reported(); waited += 50) {
       await sleep(50);
@@ -238,65 +309,53 @@ describe("startConfigWatcher — reload", () => {
       'import { api } from "@shared/api"\nexport default { sources: { demo: api } }\n',
     );
 
-    const initial = await loadCourierConfig(project);
-    expect(initial.deps).toContain(shared);
-
-    const reloads: LoadedCourierConfig[] = [];
-    start(initial, {
-      projectRoot: project,
-      bindingTable: new BindingTable(),
-      onReload: (loaded) => reloads.push(loaded),
-    });
+    const { watcher, applied } = start(project);
+    await watcher.settled();
+    expect(applied[0]?.deps).toContain(shared);
     await sleep(SETTLE_MS);
 
     writeFileSync(shared, 'export const api = { baseURL: "v2.example.com" }\n');
 
-    expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe("v2.example.com");
+    expect(baseURLOf(await nextReload(applied))).toBe("v2.example.com");
   });
 
   it("keeps the last good config when a dep is deleted, and recovers when it returns", async () => {
-    const { deep, initial, reloads } = await watchProject();
-    const watcher = watchers[watchers.length - 1] as ConfigWatcher;
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { deep, initial, reloads, current } = await watchProject();
 
     unlinkSync(deep);
     await sleep(1200);
     /* What matters is that the Studio still holds a working config, not that
        it holds the same object: the loader may serve the vanished module from
        its own cache and hand back an equal config under a new identity. */
-    expect(baseURLOf(watcher.getCurrent() as LoadedCourierConfig)).toBe(baseURLOf(initial));
+    expect(baseURLOf(current())).toBe(baseURLOf(initial));
 
     writeFileSync(deep, 'export const host = "restored.example.com"\n');
 
-    expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe(
-      "restored.example.com",
-    );
+    expect(baseURLOf(await nextReload(reloads))).toBe("restored.example.com");
   });
 });
 
 const CANDIDATE = 'export default { sources: { demo: { baseURL: "candidate.example.com" } } }\n';
 
 describe("startConfigWatcher — one reload at a time, and edits", () => {
+  /** The engine past its first load; `reloads` and `failures` hold each outcome after it. */
   async function watched() {
     const project = makeProject();
-    const initial = await loadCourierConfig(project.root);
-    const reloads: LoadedCourierConfig[] = [];
-    const emit = vi.fn();
-    const emitChange = vi.fn();
-    const watcher = start(initial, {
-      projectRoot: project.root,
-      bindingTable: new BindingTable(),
-      uiNamespace: { emit } as unknown as Namespace,
-      watcherStatus: { setApiPathCount: vi.fn(), emitChange, setMockFileCount: vi.fn(), sendSnapshot: vi.fn() },
-      onReload: (loaded) => reloads.push(loaded),
-    });
+    const status = fakeStatus();
+    const engine = start(project.root, status);
+    await engine.watcher.settled();
+    const [initial] = engine.applied;
+    const reloads = engine.applied;
+    reloads.length = 0;
     await sleep(SETTLE_MS);
-    emitChange.mockClear();
-    return { ...project, initial, reloads, emit, emitChange, watcher };
+    status.emitChange.mockClear();
+    return { ...project, ...engine, initial, reloads, emitChange: status.emitChange };
   }
 
   it("never lets a slow reload replace the one after it", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { deep, watcher, reloads, emitChange } = await watched();
+    const { deep, watcher, reloads, emitChange, current } = await watched();
 
     writeFileSync(deep, 'await new Promise((r) => setTimeout(r, 900))\nexport const host = "slow.example.com"\n');
     await until(() => emitChange.mock.calls.length > 0);
@@ -307,11 +366,11 @@ describe("startConfigWatcher — one reload at a time, and edits", () => {
     await watcher.settled();
 
     expect(baseURLOf(reloads.at(-1))).toBe("fast.example.com");
-    expect(baseURLOf(watcher.getCurrent())).toBe("fast.example.com");
+    expect(baseURLOf(current())).toBe("fast.example.com");
   });
 
   it("leaves Studio as it was when an edit loads a candidate and does not apply it", async () => {
-    const { config, watcher, reloads, emit, initial } = await watched();
+    const { config, watcher, reloads, failed, initial, current } = await watched();
     const original = readFileSync(config, "utf8");
 
     const loadedHost = await watcher.runExclusive(async (ctx) => {
@@ -327,14 +386,13 @@ describe("startConfigWatcher — one reload at a time, and edits", () => {
 
     expect(loadedHost).toBe("candidate.example.com");
     expect(reloads).toEqual([]);
-    expect(watcher.getCurrent()).toBe(initial);
-    expect(watcher.lastLoadError()).toBeNull();
-    expect(emit).not.toHaveBeenCalled();
+    expect(failed).toEqual([]);
+    expect(current()).toBe(initial);
   });
 
   it("applies what an edit accepts as a reload would, and does not reload again for its write", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { config, watcher, reloads, emit } = await watched();
+    const { config, watcher, reloads, current } = await watched();
 
     await watcher.runExclusive(async (ctx) => {
       writeFileSync(config, CANDIDATE);
@@ -345,12 +403,11 @@ describe("startConfigWatcher — one reload at a time, and edits", () => {
     await watcher.settled();
 
     expect(reloads.map(baseURLOf)).toEqual(["candidate.example.com"]);
-    expect(baseURLOf(watcher.getCurrent())).toBe("candidate.example.com");
-    expect(emit).toHaveBeenCalledWith("config:update", expect.anything());
+    expect(baseURLOf(current())).toBe("candidate.example.com");
   });
 
   it("abandons a load that takes too long, so the edit can undo its write before any reload", async () => {
-    const { deep, watcher, reloads, initial } = await watched();
+    const { deep, watcher, reloads, initial, current } = await watched();
     const original = readFileSync(deep, "utf8");
 
     const failure = await watcher.runExclusive(async (ctx) => {
@@ -366,7 +423,7 @@ describe("startConfigWatcher — one reload at a time, and edits", () => {
 
     expect(failure).toMatchObject({ code: "CONFIG_LOAD_TIMEOUT" });
     expect(reloads).toEqual([]);
-    expect(watcher.getCurrent()).toBe(initial);
+    expect(current()).toBe(initial);
   });
 
   it("reloads a write the edit acknowledged and then asks to have reloaded, once the edit is done", async () => {
@@ -422,34 +479,64 @@ describe("startConfigWatcher — a file that takes precedence", () => {
   it("reloads when a mocks file is created under a name that wins over the one loaded", async () => {
     const project = makeProject();
     writeFileSync(join(project.root, "courier.mocks.mts"), "export default { fromMts: {} };\n");
-    const initial = await loadCourierConfig(project.root);
-    const reloads: LoadedCourierConfig[] = [];
-    start(initial, { projectRoot: project.root, bindingTable: new BindingTable(), onReload: (loaded) => reloads.push(loaded) });
+    const { watcher, applied } = start(project.root);
+    await watcher.settled();
+    expect(Object.keys(applied[0]?.mocks.entries ?? {})).toEqual(["fromMts"]);
     await sleep(SETTLE_MS);
 
     writeFileSync(join(project.root, "courier.mocks.ts"), "export default { fromTs: {} };\n");
-    await until(() => reloads.length > 0);
+    await until(() => applied.length > 1);
 
-    expect(Object.keys(reloads.at(-1)?.mocks.entries ?? {})).toEqual(["fromTs"]);
+    expect(Object.keys(applied.at(-1)?.mocks.entries ?? {})).toEqual(["fromTs"]);
   });
 });
 
-describe("startConfigWatcher — the last load's failure", () => {
-  it("reports why the config did not load until a load succeeds, and a later failure again", async () => {
+describe("startConfigWatcher — a load that fails", () => {
+  it("reports each failure in order, and keeps what it ran until a load succeeds", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const project = makeProject();
-    const initialError = new Error("did not load at launch");
-    const watcher = start(null, { projectRoot: project.root, bindingTable: new BindingTable(), initialError });
-    expect(watcher.lastLoadError()).toBe(initialError);
+    writeFileSync(project.config, "export default {}\n");
+    const { watcher, applied, failed, current } = start(project.root);
+    await watcher.settled();
+    expect(failed).toMatchObject([{ code: "CONFIG_INVALID" }]);
     await sleep(SETTLE_MS);
 
-    writeFileSync(project.config, 'import { api } from "./src/api"\nexport default { sources: { demo: api } }\n// saved\n');
-    await until(() => watcher.getCurrent() !== null);
-    expect(watcher.lastLoadError()).toBeNull();
+    writeFileSync(project.config, 'import { api } from "./src/api"\nexport default { sources: { demo: api } }\n');
+    await until(() => applied.length > 0);
+    expect(baseURLOf(current())).toBe("v1.example.com");
 
     writeFileSync(project.config, "export default {}\n");
-    await until(() => watcher.lastLoadError() !== null);
-    expect(watcher.lastLoadError()).toMatchObject({ code: "CONFIG_INVALID" });
-    expect(baseURLOf(watcher.getCurrent())).toBe("v1.example.com");
+    await until(() => failed.length > 1);
+    expect(failed[1]).toMatchObject({ code: "CONFIG_INVALID" });
+    expect(baseURLOf(current())).toBe("v1.example.com");
+  });
+
+  it("loads a config created after a first load found none", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "config-watcher-none-")));
+    roots.push(root);
+    const { watcher, applied, failed } = start(root);
+    await watcher.settled();
+    expect(failed).toMatchObject([{ code: "CONFIG_NOT_FOUND" }]);
+    await sleep(SETTLE_MS);
+
+    writeFileSync(join(root, "courier.config.ts"), CANDIDATE);
+    await until(() => applied.length > 0);
+
+    expect(baseURLOf(applied[0])).toBe("candidate.example.com");
+  });
+
+  it("tries again when a mocks file is created in a project whose first load failed", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "config-watcher-none-")));
+    roots.push(root);
+    const { watcher, failed } = start(root);
+    await watcher.settled();
+    await sleep(SETTLE_MS);
+
+    writeFileSync(join(root, "courier.mocks.ts"), "export default {};\n");
+    await until(() => failed.length > 1);
+
+    expect(failed).toMatchObject([{ code: "CONFIG_NOT_FOUND" }, { code: "CONFIG_NOT_FOUND" }]);
   });
 });

@@ -1,0 +1,65 @@
+import type { ConfigLoaderErrorCode, LoadedCourierConfig } from "../config-loader";
+import type { ExclusiveTransaction } from "../exclusive-reload";
+
+/** Why the latest load of the config failed. */
+export interface ConfigFailure {
+  /** The loader's code, or `UNKNOWN` for anything it did not raise itself. */
+  readonly code: ConfigLoaderErrorCode | "UNKNOWN";
+  /** One line, with paths relative to the project root. */
+  readonly message: string;
+  /** When the load failed, in epoch milliseconds. */
+  readonly at: number;
+  /** What was thrown, whole: the terminal log and the mock wizard keep it. */
+  readonly cause: unknown;
+}
+
+/**
+ * The project as Studio runs it, at one moment. Every outcome of a load
+ * replaces it, applied or failed; it is never changed in place.
+ */
+export interface ProjectSnapshot {
+  /** One more for each outcome; `0` while there has been none. */
+  readonly revision: number;
+  /** No load has had an outcome yet. */
+  readonly starting: boolean;
+  /** The last load that succeeded: what the binding table and the mocks run. */
+  readonly running: LoadedCourierConfig | null;
+  /** When `running` was applied, in epoch milliseconds. */
+  readonly loadedAt: number | null;
+  /** Why the latest load failed; `null` while `running` is the latest. */
+  readonly failure: ConfigFailure | null;
+}
+
+/** What a reader of the project may ask for. */
+export interface ProjectReads {
+  /** The project as Studio runs it now. Never loads, never waits. */
+  snapshot(): ProjectSnapshot;
+}
+
+/** The one owner of the project Studio runs: nothing else loads it for its own use. */
+export interface ProjectState extends ProjectReads {
+  /** Resolves once no load is queued or running, the first load included. */
+  settled(): Promise<void>;
+  /**
+   * Run an edit of the watched files alone on the reload chain, after the
+   * first load and every reload queued before it.
+   *
+   * @param transaction - The edit
+   * @param timeoutMs - How long one `load` inside it may take
+   * @param dropped - Aborted when the caller gave up before the edit started
+   */
+  runExclusive<TResult>(
+    transaction: ExclusiveTransaction<TResult>,
+    timeoutMs: number,
+    dropped?: AbortSignal,
+  ): Promise<TResult>;
+  /** Let an edit under way finish, for at most `budgetMs`. */
+  finishEdits(budgetMs: number): Promise<void>;
+  /** Stop watching; outcomes of loads still running are dropped. */
+  stop(): void;
+}
+
+/** Where the project is told: every UI through the namespace, or the one socket that connected. */
+export interface ProjectEventTarget {
+  emit(event: string, payload: unknown): unknown;
+}

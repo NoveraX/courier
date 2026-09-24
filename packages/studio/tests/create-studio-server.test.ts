@@ -87,7 +87,11 @@ describe("a config created after Studio started", () => {
       ui.disconnect();
     });
     await new Promise<void>((resolve) => ui.once("connect", () => resolve()));
-    const updated = new Promise<{ configFile: string }>((resolve) => ui.once("config:update", resolve));
+    const loaded = new Promise<{ state: string; configFile?: string }>((resolve) => {
+      ui.on("config:status", (status: { state: string; configFile?: string }) => {
+        if (status.state === "loaded") resolve(status);
+      });
+    });
 
     writeFileSync(
       join(root, "courier.config.ts"),
@@ -95,8 +99,8 @@ describe("a config created after Studio started", () => {
         'export default { sources: { api: defineApi({ baseURL: "https://api.example", endpoints: {} }) } };\n',
     );
 
-    const update = await updated;
-    expect(update.configFile).toContain("courier.config.ts");
+    const status = await loaded;
+    expect(status.configFile).toBe("courier.config.ts");
   }, 15_000);
 });
 

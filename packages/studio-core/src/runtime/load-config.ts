@@ -50,6 +50,7 @@ export {
   type TransformCache,
   type TransformCacheOptions,
 } from "./transform-cache";
+export { findTransformCacheDirectory } from "./transform-cache-directory";
 
 /** The file names a Courier config may have, in the order they are looked for */
 export const CONFIG_BASENAMES: ReadonlyArray<string> = [

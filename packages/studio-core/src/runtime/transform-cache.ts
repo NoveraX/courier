@@ -1,5 +1,7 @@
 import { isAbsolute } from "node:path";
 import type { TransformOptions, TransformResult } from "jiti";
+import type { TransformCacheDisk } from "./transform-cache-disk";
+import { createTransformCacheDisk } from "./transform-cache-disk";
 import { transformDigest } from "./transform-digest";
 
 /**
@@ -23,8 +25,14 @@ export interface TransformCache {
   ): TransformResult;
 }
 
-/** How much a {@link TransformCache} keeps. */
+/** Where a {@link TransformCache} keeps transforms, and how much in memory. */
 export interface TransformCacheOptions {
+  /**
+   * A directory to keep transforms in across processes, as
+   * `findTransformCacheDirectory` finds it. Without one, or with `null`,
+   * transforms are kept in memory only.
+   */
+  directory?: string | null;
   /**
    * Characters of transformed code kept in memory across all files; the file
    * used least recently is dropped first once they are exceeded.
@@ -50,13 +58,20 @@ function keyOf({ filename, async }: TransformOptions): string | null {
 
 /**
  * Create a {@link TransformCache} that keeps transforms in memory for the
- * life of the process.
+ * life of the process and, given a `directory`, on disk for the next one.
  *
  * Each file holds one entry per module system — required and imported are
  * transformed differently, and a module reached both ways keeps both. An
  * entry is reused only when the digest of jiti's version, the options and
  * the source matches, so an edited file is transformed again the first time
  * it is loaded.
+ *
+ * A transform is looked for in memory, then in the directory, where a hit
+ * is also kept in memory; only when both miss is it computed, and a success
+ * is then kept in both. The directory is shared with every process that
+ * names it, such as a mock worker loading the modules Studio loaded, and a
+ * directory that cannot be read or written only costs transforms; see
+ * `createTransformCacheDisk` for what an entry must be to be used.
  *
  * A failed transform, one whose result carries an `error`, is never kept:
  * babel can fail on bytes it transforms without complaint a moment later,
@@ -65,19 +80,24 @@ function keyOf({ filename, async }: TransformOptions): string | null {
  * failure reaches jiti with its error, as it does without a cache. A file
  * named by a relative path, or not named, is transformed every time.
  *
- * @param options - The memory bound (default: 128 Mi characters)
+ * @param options - The directory (default: none, memory only) and the memory
+ *   bound (default: 128 Mi characters)
  * @returns A cache to pass to `createConfigJiti` or `loadCourierConfig`
  * @example
  * ```ts
- * const transformCache = createTransformCache();
- * const first = await loadCourierConfig({ cwd, transformCache });
- * // Unchanged modules are not transformed again:
- * const second = await loadCourierConfig({ cwd, transformCache });
+ * const transformCache = createTransformCache({
+ *   directory: findTransformCacheDirectory(projectRoot),
+ * });
+ * const first = await loadCourierConfig({ cwd: projectRoot, transformCache });
+ * // Unchanged modules are not transformed again, here or in the next process:
+ * const second = await loadCourierConfig({ cwd: projectRoot, transformCache });
  * ```
  */
 export function createTransformCache({
+  directory,
   maxMemoryChars = DEFAULT_MAX_MEMORY_CHARS,
 }: TransformCacheOptions = {}): TransformCache {
+  const disk: TransformCacheDisk | null = directory ? createTransformCacheDisk(directory) : null;
   const memo = new Map<string, MemoEntry>();
   let memoryChars = 0;
 
@@ -112,8 +132,15 @@ export function createTransformCache({
         memo.set(key, hit);
         return { code: hit.code };
       }
+      const kept = disk === null ? null : disk.read(key, digest);
+      if (kept !== null) {
+        remember(key, { digest, code: kept });
+        return { code: kept };
+      }
       const result = compute(options);
-      if (result.error === undefined) remember(key, { digest, code: result.code });
+      if (result.error !== undefined) return result;
+      remember(key, { digest, code: result.code });
+      disk?.write(key, digest, result.code);
       return result;
     },
   };

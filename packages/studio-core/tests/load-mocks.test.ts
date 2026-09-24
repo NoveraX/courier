@@ -60,10 +60,45 @@ describe("readMocksExport", () => {
     expect(readMocksExport({}, file)).toEqual({});
   });
 
-  it("names the default export a file with only named exports is missing", () => {
-    expect(() => readMocksExport({ apiMock: {} }, file)).toThrow(
+  it("reads no mocks from a default export that is undefined", () => {
+    expect(readMocksExport({ default: undefined }, file)).toStrictEqual({});
+  });
+
+  it("reads the default as the module set it, not as an interop view hands it", () => {
+    const exports = { default: undefined };
+    const interop = new Proxy(exports, {
+      get: (target, key) => (key === "default" ? target : Reflect.get(target, key)),
+    });
+
+    expect(readMocksExport(interop, file)).toStrictEqual({});
+  });
+
+  it("reads a default export defined by a getter", () => {
+    const mocks = { api: { source: {} } };
+    const exports = Object.defineProperty({}, "default", { enumerable: true, get: () => mocks });
+
+    expect(readMocksExport(exports, file)).toBe(mocks);
+  });
+
+  it("names the default export a transpiled ES module with only named exports is missing", () => {
+    const exports = Object.defineProperty({ apiMock: {} }, "__esModule", { value: true });
+
+    expect(() => readMocksExport(exports, file)).toThrow(
       "/p/courier.mocks.ts has no default export; export default defineMocks({ ... })",
     );
+  });
+
+  it("names the default export an ES module namespace with only named exports is missing", async () => {
+    const source = "data:text/javascript,export const apiMock = {};";
+    const namespace: unknown = await import(source);
+
+    expect(() => readMocksExport(namespace, file)).toThrow("has no default export");
+  });
+
+  it("reads a CommonJS module's exports with no default whole, as Node's import makes them its default", () => {
+    const mocks = { apiMock: {} };
+
+    expect(readMocksExport(mocks, file)).toBe(mocks);
   });
 
   it.each([
@@ -86,6 +121,29 @@ describe("loadCourierMocksFile", () => {
     const loaded = await loadCourierMocksFile(join(dir, "courier.mocks.ts"));
 
     expect(loaded).toEqual({ mocks: { api: { port: 7001 } }, mocksFile: join(dir, "mocks.ts") });
+  });
+
+  it.each([
+    ["courier.mocks.ts", "const enabled: boolean = false;\nexport default enabled ? { api: { port: 1 } } : undefined;\n"],
+    ["courier.mocks.mjs", "export default undefined;\n"],
+    ["courier.mocks.cjs", "module.exports = undefined;\n"],
+  ])("reads no mocks from a %s whose default export is undefined", async (name, source) => {
+    writeFileSync(join(dir, name), source);
+
+    const loaded = await loadCourierMocksFile(join(dir, name));
+
+    expect(loaded.mocks).toStrictEqual({});
+  });
+
+  it("reads a courier.mocks.cjs Node cannot run, its module.exports its mocks", async () => {
+    writeFileSync(
+      join(dir, "courier.mocks.cjs"),
+      "const port = await Promise.resolve(7001);\nmodule.exports = { api: { port } };\n",
+    );
+
+    const loaded = await loadCourierMocksFile(join(dir, "courier.mocks.cjs"));
+
+    expect(loaded.mocks).toEqual({ api: { port: 7001 } });
   });
 
   it("reports a mocks file that does not load", async () => {

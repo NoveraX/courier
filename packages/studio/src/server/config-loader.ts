@@ -72,9 +72,16 @@ export interface LoadCourierConfigOptions {
  * silent name collisions where the user passed a `defineApi` whose
  * auto-derived name already differs from the config key.
  *
- * Every module is read and evaluated again on every load; only its
- * transform is reused, and only while its bytes are the same, so an edited
- * module is transformed again and its edit is seen.
+ * The config, the mocks file, every module they import that the loader
+ * transpiles, and every JSON module either one reads are read and evaluated
+ * again on every load; only a transform is reused, and only while its
+ * module's bytes are the same, so an edit to any of them is seen. What the
+ * loader hands to Node stays as Node first ran it until the process
+ * restarts: a JavaScript module they import — `.mjs`, `.cjs`, a `.js` one in
+ * a `"type": "module"` package, or a CommonJS `.js` one — and every module
+ * but JSON that a CommonJS config or mocks file requires, TypeScript and ES
+ * modules included. A CommonJS config or mocks file itself is run afresh;
+ * see `loadCourierEntry`.
  *
  * @param projectRoot - The directory holding `courier.config.*`
  * @param options - Where transforms are reused (default: Studio's cache for
@@ -96,11 +103,12 @@ export async function loadCourierConfig(
   if (!found) throw new ConfigNotFoundError(projectRoot);
   const configFile = realpathSync(found);
   const mocks = locateCourierMocks(root);
+  const mocksFile = loadable(mocks);
   const configHash = hashIfReadable(configFile);
 
   let evaluated: EvaluatedCourierFiles;
   try {
-    evaluated = await evaluateCourierFiles(root, found, loadable(mocks), transformCache);
+    evaluated = await evaluateCourierFiles(configFile, mocksFile, transformCache);
   } catch (err) {
     throw new ConfigLoaderError(
       "CONFIG_INVALID",
@@ -120,15 +128,17 @@ export async function loadCourierConfig(
     configFile,
     contentHash:
       configHash !== null && hashIfReadable(configFile) === configHash ? configHash : null,
-    deps: dependenciesOf(root, configFile, loadable(mocks) === null ? null : mocks.file),
+    deps: dependenciesOf(root, configFile, mocksFile),
     mocks: readCourierMocks(mocks, evaluated),
   };
 }
 
 /* A mocks file that is missing behind a link, or cannot be read, is not
-   loaded: the config loads alone, and the mocks part says why. */
+   loaded: the config loads alone, and the mocks part says why. One that is
+   loaded goes by its resolved path, as the config does, and so does the
+   walk of what it imports. */
 function loadable(mocks: LocatedCourierMocks): string | null {
-  return mocks.file === null || mocks.unreadable !== null ? null : mocks.path;
+  return mocks.unreadable !== null ? null : mocks.file;
 }
 
 /* An unreadable config fails its load with the loader's own message; its

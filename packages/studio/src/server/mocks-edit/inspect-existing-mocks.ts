@@ -16,8 +16,11 @@ const JAVASCRIPT_EXTENSIONS: ReadonlySet<string> = new Set([".js", ".mjs", ".cjs
  *
  * Studio saves an edit by replacing the file, so a file that replacing would
  * change in some other way — a link, a file with other names, one owned by
- * another user — is refused, as is one too large or in a language it cannot
- * reload after an edit.
+ * another user — is refused, as is one too large, or one in JavaScript: the
+ * ES imports Studio writes are named as TypeScript resolves them, such as
+ * `./courier.config` for a TypeScript config, which Node, when it runs a
+ * JavaScript file itself, does not resolve, and a CommonJS file cannot take
+ * an ES import at all.
  *
  * @param root - The project root, symlinks resolved
  * @param path - The mocks file as found in the root
@@ -138,6 +141,6 @@ function checkNotJavaScript(path: string, name: string): void {
   if (!JAVASCRIPT_EXTENSIONS.has(extname(path))) return;
   throw new MocksEditRefusal(
     "MOCKS_JAVASCRIPT",
-    `${name} is JavaScript. Studio cannot reload a JavaScript mocks file after an edit, so it will not edit one.`,
+    `${name} is JavaScript. Studio writes ES imports named as TypeScript resolves them, which a CommonJS file cannot take and Node does not always resolve, so it edits TypeScript mocks files only.`,
   );
 }

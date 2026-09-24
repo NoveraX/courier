@@ -244,3 +244,21 @@ describe("loadCourierConfigFile — path aliases", () => {
     expect(Object.keys(config.sources ?? {})).toEqual(["installed"]);
   });
 });
+
+describe("loadCourierConfigFile — native imports", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("sees an edit on the next load even when JITI_TRY_NATIVE asks for native imports first", async () => {
+    vi.stubEnv("JITI_TRY_NATIVE", "true");
+    writeConfig("courier.config.ts", 'export default { sources: { first: {} } };\n');
+    const first = await loadCourierConfigFile(join(dir, "courier.config.ts"));
+
+    writeConfig("courier.config.ts", 'export default { sources: { second: {} } };\n');
+    const second = await loadCourierConfigFile(join(dir, "courier.config.ts"));
+
+    expect(Object.keys(first.config.sources ?? {})).toEqual(["first"]);
+    expect(Object.keys(second.config.sources ?? {})).toEqual(["second"]);
+  });
+});

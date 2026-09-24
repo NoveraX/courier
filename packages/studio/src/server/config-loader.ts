@@ -19,13 +19,9 @@
  * this wrapper returns the same shape plus the `deps` field.
  */
 
+import { ConfigurationError } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
-import {
-  type AnySource,
-  deriveSourceName,
-  getSourceName,
-  setSourceName,
-} from "@noverax/courier/define";
+import { type AnySource, stampSourceKeys } from "@noverax/courier/define";
 import { loadCourierConfig as loadBase } from "@noverax/courier-studio-core/config";
 import { ConfigLoaderError, ConfigNotFoundError } from "./config-loader-errors";
 import { extractConfigDeps } from "./extract-config-deps";
@@ -73,7 +69,7 @@ export async function loadCourierConfig(projectRoot: string): Promise<LoadedCour
 
   const { config, configFile } = loaded;
   validateConfig(config, configFile);
-  stampSourceKeys(config.sources);
+  stampConfigSourceKeys(config.sources, configFile);
 
   return {
     config,
@@ -111,39 +107,19 @@ function validateConfig(
 
 /**
  * Stamp every `(key, source)` pair so the config key becomes the source's
- * canonical identifier. Throws if the source already had an explicit
- * different name baked in by `defineApi({ name: ... })`.
+ * canonical identifier, reporting a key that contradicts a name the author
+ * chose as a config error of its own.
  */
-function stampSourceKeys(sources: Record<string, AnySource>): void {
-  for (const [key, source] of Object.entries(sources)) {
-    const existing = getSourceName(source);
-    if (existing && existing !== key && wasExplicit(source, existing)) {
-      throw new ConfigLoaderError(
-        "CONFIG_SOURCE_KEY_MISMATCH",
-        `Source key "${key}" conflicts with the name given to defineApi, "${existing}".\n\n` +
-          "`name` is the identifier the proxy addresses this source by, not a display\n" +
-          "string: a browser client reads it off its own copy of the definition while\n" +
-          "the server resolves it against this key, so the two must be the same.\n\n" +
-          `Use "${key}" in both places, or drop \`name\` and let the key decide.`,
-        { context: { key, explicitName: existing } },
-      );
-    }
-    setSourceName(source, key);
+function stampConfigSourceKeys(sources: Record<string, AnySource>, configFile: string): void {
+  try {
+    stampSourceKeys(sources);
+  } catch (err) {
+    if (!(err instanceof ConfigurationError) || err.code !== "SOURCE_KEY_MISMATCH") throw err;
+    throw new ConfigLoaderError("CONFIG_SOURCE_KEY_MISMATCH", err.message, {
+      cause: err,
+      context: { configFile },
+    });
   }
-}
-
-/**
- * A stamped name was "explicit" iff `defineApi` would not have arrived at it on
- * its own. Auto-derived names are silently overridden by the config key;
- * user-supplied ones raise the mismatch error above.
- *
- * This asks the same function `defineApi` used. A separate copy of the rule
- * drifted from it on any relative `baseURL`: both fell back to "api", but only
- * one of them admitted it, so a source the author never named was reported as
- * conflicting with a name they were told to remove.
- */
-function wasExplicit(source: AnySource, name: string): boolean {
-  return deriveSourceName(source.options?.baseURL) !== name;
 }
 
 function describe(err: unknown): string {

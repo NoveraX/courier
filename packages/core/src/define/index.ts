@@ -36,6 +36,7 @@ export type {
   StreamWire,
   WireCall,
 } from "./probe";
+export { stampSourceKeys } from "./stamp-source-keys";
 export type {
   AnySource,
   DefinedApi,

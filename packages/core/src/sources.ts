@@ -25,7 +25,7 @@
  * as `studioHooks` and `app-origin`.
  */
 
-import { setSourceName } from "./define/api";
+import { stampSourceKeys } from "./define/stamp-source-keys";
 import type { Sources } from "./define/types";
 import { ConfigurationError } from "./errors/configuration-error";
 
@@ -59,8 +59,9 @@ function describe(value: unknown): string {
  * Replace the current sources and notify every listener.
  *
  * Stamps each source's registry key onto the source object via
- * `setSourceName` so `createCaller(api)` emits the same source name
- * as the registry. Call this exactly once per process unless you
+ * `stampSourceKeys` so `createCaller(api)` emits the same source name
+ * as the registry, and refuses a key that contradicts a name the author
+ * gave `defineApi`. Call this exactly once per process unless you
  * intend to replace the whole dictionary (HMR does this).
  */
 export function registerSources(sources: Sources): void {
@@ -80,9 +81,7 @@ export function registerSources(sources: Sources): void {
     );
   }
 
-  for (const [key, src] of Object.entries(sources)) {
-    setSourceName(src, key);
-  }
+  stampSourceKeys(sources);
 
   const registry = getRegistry();
   registry.current = sources;

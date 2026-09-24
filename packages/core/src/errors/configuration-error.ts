@@ -50,6 +50,13 @@ export type ConfigurationErrorCode =
    */
   | "SOURCES_NOT_A_RECORD"
   /**
+   * A source was registered under a key other than the name its author gave
+   * `defineApi`. A browser client addresses the source by the name on its own
+   * copy of the definition, while the server resolves the key, so every call
+   * by that name would be refused.
+   */
+  | "SOURCE_KEY_MISMATCH"
+  /**
    * Something read the request body before the proxy route did — almost
    * always a body-parsing middleware mounted across the whole application.
    * The stream is gone by then, and the platform's own error says only that

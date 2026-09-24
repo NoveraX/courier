@@ -5,7 +5,7 @@
  * that existed and would not load sent the browser to the default address
  * with nothing on screen to say why.
  */
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -57,6 +57,27 @@ describe("loadStudioUrl", () => {
     expect(output.join("")).not.toContain("WARN");
   });
 
+  it("reads the address from a config that declares no sources", async () => {
+    const root = project("export default { studio: { port: 7124 } };\n");
+
+    await expect(loadStudioUrl(root)).resolves.toBe("http://localhost:7124");
+
+    expect(output.join("")).not.toContain("WARN");
+  });
+
+  it("reads the address without evaluating courier.mocks.ts", async () => {
+    const root = project(CONFIG_ON_7123);
+    const marker = join(root, "mocks-evaluated");
+    writeFileSync(
+      join(root, "courier.mocks.ts"),
+      `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, "yes");\nexport default {};\n`,
+    );
+
+    await expect(loadStudioUrl(root)).resolves.toBe("http://localhost:7123");
+
+    expect(readdirSync(root)).not.toContain("mocks-evaluated");
+  });
+
   it("warns when the config exists and will not load", async () => {
     const root = project("export default {");
 
@@ -67,7 +88,7 @@ describe("loadStudioUrl", () => {
 });
 
 describe("loadStudioUrl's transforms of the project", () => {
-  it("writes nothing into the project's node_modules, so a production build leaves it as it was", async () => {
+  it("keeps them in the project's node_modules, where the next read and Studio find them", async () => {
     vi.stubEnv("COURIER_TRANSFORM_CACHE", "on");
     const root = project(CONFIG_ON_7123);
     mkdirSync(join(root, "node_modules"));
@@ -75,7 +96,9 @@ describe("loadStudioUrl's transforms of the project", () => {
     const url = await loadStudioUrl(root);
 
     expect(url).toBe("http://localhost:7123");
-    expect(existsSync(join(root, "node_modules", ".cache"))).toBe(false);
+    expect(
+      readdirSync(join(root, "node_modules", ".cache", "courier", "transform")).length,
+    ).toBeGreaterThan(0);
   });
 
   it("keeps none of them in the transform cache Studio holds for the process", async () => {
@@ -86,5 +109,23 @@ describe("loadStudioUrl's transforms of the project", () => {
 
     expect(url).toBe("http://localhost:7123");
     expect(studioTransform).not.toHaveBeenCalled();
+  });
+});
+
+describe("loadStudioUrl in a bundler", () => {
+  it("loads no parser, when the plugin is imported or when it reads the address", async () => {
+    vi.resetModules();
+    vi.doMock("oxc-parser", () => {
+      throw new Error("oxc-parser was loaded");
+    });
+    const root = project(CONFIG_ON_7123);
+
+    const { loadStudioUrl: fresh } = await import("../src/plugins/core/load-studio-url");
+    await import("../src/plugins/vite");
+    const url = await fresh(root);
+
+    expect(url).toBe("http://localhost:7123");
+    expect(output.join("")).not.toContain("oxc-parser was loaded");
+    vi.doUnmock("oxc-parser");
   });
 });

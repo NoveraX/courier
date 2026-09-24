@@ -70,6 +70,8 @@ export interface ChildScenarioMeta {
   endpointCount: number;
   isActive: boolean;
   hasStateMachine: boolean;
+  /** Why the scenario could not be read to the end; its `endpoints` are then partial. */
+  introspectionError?: string;
   stateTransitions: Array<{ from: string; to: string; trigger: string }>;
   endpoints: Array<{
     group: string;

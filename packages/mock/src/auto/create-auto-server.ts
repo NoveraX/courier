@@ -3,6 +3,7 @@ import { createMockServer } from "../server/create-mock-server";
 import type { MockStore } from "../store";
 import type { MockScenario, NetworkConfig, TypedMockFn } from "../types";
 import { buildAutoHandlers, seedAllCollections } from "./auto-scenario";
+import { composeScenarios } from "./compose-scenarios";
 import type { SeedConfig } from "./prefix-mappings";
 import { buildPrefixMappings, parseSeedConfig } from "./prefix-mappings";
 import { buildPresetScenarios } from "./preset-scenarios";
@@ -134,23 +135,4 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
   }
 
   return server;
-}
-
-/**
- * Merge built-in presets and user scenarios under a canonical "happy-path".
- * happy-path is a no-op that clears the scenario layer, revealing base auto-CRUD;
- * user config cannot override it.
- */
-function composeScenarios(
-  presets: Record<string, MockScenario>,
-  userScenarios?: Record<string, MockScenario>,
-): Record<string, MockScenario> {
-  const happyPath: MockScenario = { name: "happy-path", apply: () => {} };
-  const merged = { ...userScenarios };
-  delete merged["happy-path"];
-  return {
-    "happy-path": happyPath,
-    ...presets,
-    ...merged,
-  };
 }

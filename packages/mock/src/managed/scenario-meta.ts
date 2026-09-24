@@ -19,8 +19,8 @@ export function buildScenarioMeta(
     const result =
       scenario && typeof scenario.apply === "function"
         ? introspectScenario(scenario as Parameters<typeof introspectScenario>[0], routes)
-        : { endpoints: [], stateTransitions: [], hasStateMachine: false };
-    const { endpoints, stateTransitions, hasStateMachine } = result;
+        : { endpoints: [], stateTransitions: [], hasStateMachine: false, error: undefined };
+    const { endpoints, stateTransitions, hasStateMachine, error } = result;
     return {
       name,
       description: scenario?.description,
@@ -28,6 +28,7 @@ export function buildScenarioMeta(
       endpointCount: endpoints.length,
       isActive: false,
       hasStateMachine,
+      ...(error === undefined ? {} : { introspectionError: error }),
       stateTransitions,
       endpoints,
     };

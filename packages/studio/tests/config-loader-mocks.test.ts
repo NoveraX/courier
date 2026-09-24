@@ -5,7 +5,7 @@
  * says why; and one that is absent is watched for under every name it may take.
  */
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -113,6 +113,27 @@ describe("loadCourierConfig with a mocks file", () => {
     expect(loaded.mocks.entries).toEqual({});
     expect(loaded.mocks.error).toBeInstanceOf(Error);
     expect(String(loaded.mocks.error)).toContain("src/missing");
+  });
+
+  it.skipIf(process.getuid?.() === 0)("keeps the config working when the mocks file cannot be read", async () => {
+    const file = writeMocks("export default {};\n");
+    chmodSync(file, 0o000);
+
+    const loaded = await loadCourierConfig(dir);
+
+    chmodSync(file, 0o644);
+    expect(Object.keys(loaded.config.sources)).toEqual(["api"]);
+    expect(loaded.mocks).toMatchObject({ file, entries: {}, contentHash: null });
+    expect(String(loaded.mocks.error)).toContain("courier.mocks.ts cannot be read");
+  });
+
+  it("keeps the config working when a directory takes the mocks file's name", async () => {
+    mkdirSync(join(dir, "courier.mocks.ts"));
+
+    const loaded = await loadCourierConfig(dir);
+
+    expect(Object.keys(loaded.config.sources)).toEqual(["api"]);
+    expect(String(loaded.mocks.error)).toContain("cannot be read");
   });
 
   it("fails as a config error when the config itself does not load", async () => {

@@ -11,7 +11,7 @@
 
 import { realpathSync } from "node:fs";
 import { join } from "node:path";
-import { ConfigurationError } from "@noverax/courier";
+import { ConfigurationError, createLogger } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
 import { type AnySource, stampSourceKeys } from "@noverax/courier/define";
 import {
@@ -21,10 +21,17 @@ import {
 } from "@noverax/courier-studio-core/config";
 import { ConfigLoaderError, ConfigNotFoundError } from "./config-loader-errors";
 import type { LoadedCourierMocks } from "./courier-mocks-file";
-import { locateCourierMocks, readCourierMocks } from "./courier-mocks-file";
+import {
+  type LocatedCourierMocks,
+  locateCourierMocks,
+  readCourierMocks,
+} from "./courier-mocks-file";
 import type { EvaluatedCourierFiles } from "./evaluate-courier-files";
-import { evaluateCourierFiles, hashFile } from "./evaluate-courier-files";
+import { evaluateCourierFiles } from "./evaluate-courier-files";
 import { extractConfigDeps } from "./extract-config-deps";
+import { hashFile } from "./file-hash";
+
+const log = createLogger("Studio");
 
 /** Result returned by `loadCourierConfig` */
 export interface LoadedCourierConfig {
@@ -62,11 +69,11 @@ export async function loadCourierConfig(projectRoot: string): Promise<LoadedCour
   if (!found) throw new ConfigNotFoundError(projectRoot);
   const configFile = realpathSync(found);
   const mocks = locateCourierMocks(root);
-  const configHash = hashFile(configFile);
+  const configHash = hashIfReadable(configFile);
 
   let evaluated: EvaluatedCourierFiles;
   try {
-    evaluated = await evaluateCourierFiles(root, found, mocks.file === null ? null : mocks.path);
+    evaluated = await evaluateCourierFiles(root, found, loadable(mocks));
   } catch (err) {
     throw new ConfigLoaderError(
       "CONFIG_INVALID",
@@ -84,10 +91,28 @@ export async function loadCourierConfig(projectRoot: string): Promise<LoadedCour
   return {
     config,
     configFile,
-    contentHash: configHash !== null && hashFile(configFile) === configHash ? configHash : null,
-    deps: dependenciesOf(root, configFile, mocks.file),
+    contentHash:
+      configHash !== null && hashIfReadable(configFile) === configHash ? configHash : null,
+    deps: dependenciesOf(root, configFile, loadable(mocks) === null ? null : mocks.file),
     mocks: readCourierMocks(mocks, evaluated),
   };
+}
+
+/* A mocks file that is missing behind a link, or cannot be read, is not
+   loaded: the config loads alone, and the mocks part says why. */
+function loadable(mocks: LocatedCourierMocks): string | null {
+  return mocks.file === null || mocks.unreadable !== null ? null : mocks.path;
+}
+
+/* An unreadable config fails its load with the loader's own message; its
+   hash only tells a change during the load apart. */
+function hashIfReadable(file: string): string | null {
+  try {
+    return hashFile(file);
+  } catch (error) {
+    log.debug(`${file} could not be hashed`, error);
+    return null;
+  }
 }
 
 /* Every name either file may take in the root is watched too, present or

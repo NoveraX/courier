@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { createConfigJiti, loadCourierConfigFile } from "@noverax/courier-studio-core/config";
 
@@ -56,20 +54,5 @@ export async function evaluateCourierFiles(
   } catch (combinedError) {
     const { config } = await loadCourierConfigFile(configFile);
     return { config, mocksError: combinedError };
-  }
-}
-
-/**
- * The sha256 of a file's bytes, as hex.
- *
- * @param file - The file to hash
- * @returns Its content hash, or `null` when the file is gone
- */
-export function hashFile(file: string): string | null {
-  try {
-    return createHash("sha256").update(readFileSync(file)).digest("hex");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
   }
 }

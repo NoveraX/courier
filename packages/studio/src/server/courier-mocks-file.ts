@@ -1,7 +1,10 @@
 import { realpathSync } from "node:fs";
+import { createLogger } from "@noverax/courier";
 import { findMocksFile, readMocksExport } from "@noverax/courier-studio-core/config";
 import type { EvaluatedCourierFiles } from "./evaluate-courier-files";
-import { hashFile } from "./evaluate-courier-files";
+import { hashFile } from "./file-hash";
+
+const log = createLogger("Studio");
 
 /** The project's `courier.mocks.*`, as far as it loaded. */
 export interface LoadedCourierMocks {
@@ -23,6 +26,8 @@ export interface LocatedCourierMocks {
   file: string | null;
   /** sha256 of the bytes before loading, compared afterwards. */
   hashBefore: string | null;
+  /** Why the file cannot be read, when it cannot; it is then not loaded. */
+  unreadable: unknown | null;
 }
 
 /**
@@ -34,7 +39,12 @@ export interface LocatedCourierMocks {
 export function locateCourierMocks(root: string): LocatedCourierMocks {
   const path = findMocksFile(root);
   const file = path === null ? null : realpathIfPresent(path);
-  return { path, file, hashBefore: file === null ? null : hashFile(file) };
+  if (file === null) return { path, file, hashBefore: null, unreadable: null };
+  try {
+    return { path, file, hashBefore: hashFile(file), unreadable: null };
+  } catch (unreadable) {
+    return { path, file, hashBefore: null, unreadable };
+  }
 }
 
 /**
@@ -50,13 +60,23 @@ export function readCourierMocks(
   located: LocatedCourierMocks,
   evaluated: EvaluatedCourierFiles,
 ): LoadedCourierMocks {
-  const { path, file, hashBefore } = located;
+  const { path, file, hashBefore, unreadable } = located;
   if (path === null) return { file: null, entries: {}, contentHash: null, error: null };
   if (file === null) {
     const error = new Error(`${path} is a link to a file that does not exist`);
     return { file: path, entries: {}, contentHash: null, error };
   }
-  const contentHash = hashBefore !== null && hashFile(file) === hashBefore ? hashBefore : null;
+  if (unreadable !== null) {
+    const reason = unreadable instanceof Error ? unreadable.message : String(unreadable);
+    return {
+      file,
+      entries: {},
+      contentHash: null,
+      error: new Error(`${file} cannot be read: ${reason}`, { cause: unreadable }),
+    };
+  }
+  const contentHash =
+    hashBefore !== null && hashIfReadable(file) === hashBefore ? hashBefore : null;
   if (evaluated.mocksError !== null)
     return { file, entries: {}, contentHash, error: evaluated.mocksError };
   try {
@@ -68,6 +88,17 @@ export function readCourierMocks(
     };
   } catch (error) {
     return { file, entries: {}, contentHash, error };
+  }
+}
+
+/* Only compared with the hash taken before the load: a file that turned
+   unreadable meanwhile has changed, and its hash is then unknown. */
+function hashIfReadable(file: string): string | null {
+  try {
+    return hashFile(file);
+  } catch (error) {
+    log.debug(`${file} could not be read again after it loaded`, error);
+    return null;
   }
 }
 

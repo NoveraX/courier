@@ -100,23 +100,43 @@ describe("loadCourierMocksFile — loader options", () => {
     writeFileSync(join(dir, relative), contents);
   }
 
-  it("transforms through the cache it is given, once while the file is unchanged", async () => {
-    write("courier.mocks.ts", "const port: number = 7001;\nexport default { api: { port } };\n");
-    const inner = createTransformCache();
+  /** Wraps a cache to record the file of every transform it had to compute. */
+  function counting(inner: TransformCache): { cache: TransformCache; computed: string[] } {
     const computed: string[] = [];
-    const transformCache: TransformCache = {
+    const cache: TransformCache = {
       transform: (options, compute) =>
         inner.transform(options, (miss) => {
           computed.push(miss.filename ?? "");
           return compute(miss);
         }),
     };
+    return { cache, computed };
+  }
+
+  it("transforms through the cache it is given, once while the file is unchanged", async () => {
+    write("courier.mocks.ts", "const port: number = 7001;\nexport default { api: { port } };\n");
+    const { cache: transformCache, computed } = counting(createTransformCache());
 
     await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { transformCache });
     const second = await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { transformCache });
 
     expect(computed).toEqual([join(dir, "courier.mocks.ts")]);
     expect(second.mocks).toEqual({ api: { port: 7001 } });
+  });
+
+  it("a mocks file loaded through a new cache on the same directory transforms nothing, as in a mock worker", async () => {
+    write("port.ts", "export const port: number = 7001;\n");
+    write("courier.mocks.ts", 'import { port } from "./port";\nexport default { api: { port } };\n');
+    const directory = join(dir, "transforms");
+    const studio = counting(createTransformCache({ directory }));
+    const worker = counting(createTransformCache({ directory }));
+
+    await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { transformCache: studio.cache });
+    const loaded = await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { transformCache: worker.cache });
+
+    expect(studio.computed.sort()).toEqual([join(dir, "courier.mocks.ts"), join(dir, "port.ts")]);
+    expect(worker.computed).toEqual([]);
+    expect(loaded.mocks).toEqual({ api: { port: 7001 } });
   });
 
   it("resolves to the installed package when aliases are off", async () => {

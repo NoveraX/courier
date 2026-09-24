@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { HTTPError } from "../src/errors";
 import { defineApi, defineGroup, courier } from "../src/define/index";
 import {
 	authMiddleware,
@@ -429,6 +430,89 @@ describe("logMiddleware", () => {
 
 		expect(messages).toHaveLength(1);
 		expect(messages[0]).toMatch(/api:ping → ERROR \(\d+ms\)/);
+	});
+
+	it("hands the error of a failed request to the logger", async () => {
+		const errors: unknown[] = [];
+		const handler = logMiddleware({ logger: (_msg, error) => errors.push(error) }).handler as WrapHandler;
+		const boom = new Error("boom");
+
+		await expect(
+			handler({ source: "api", method: "ping", headers: new Headers() }, () => {
+				throw boom;
+			}),
+		).rejects.toThrow("boom");
+
+		expect(errors).toEqual([boom]);
+	});
+
+	it("logs a failure at warn, with the error, by default", async () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const boom = new Error("boom");
+		const handler = logMiddleware().handler as WrapHandler;
+
+		await expect(
+			handler({ source: "api", method: "ping", headers: new Headers() }, () => {
+				throw boom;
+			}),
+		).rejects.toThrow("boom");
+
+		const failure = warn.mock.calls.find((call) => String(call[1]).includes("api:ping → ERROR"));
+		expect(failure?.at(-1)).toBe(boom);
+		warn.mockRestore();
+	});
+
+	it("keeps an upstream's headers and body out of the default log, and states its status", async () => {
+		const info = vi.spyOn(console, "info").mockImplementation(() => {});
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const answer = new HTTPError({
+			status: 404,
+			headers: new Headers({ "set-cookie": "session=SECRET-SESSION-TOKEN" }),
+			data: { user: { email: "jane@example.com" } },
+		});
+		const handler = logMiddleware().handler as WrapHandler;
+
+		await expect(
+			handler({ source: "api", method: "ping", headers: new Headers() }, () => Promise.reject(answer)),
+		).rejects.toBe(answer);
+
+		const printed = [...info.mock.calls, ...warn.mock.calls].flat();
+		expect(printed.map(String).join(" ")).toMatch(/api:ping → 404 \(\d+ms\)/);
+		expect(printed).not.toContain(answer);
+		expect(JSON.stringify(printed.map(String))).not.toContain("SECRET-SESSION-TOKEN");
+		info.mockRestore();
+		warn.mockRestore();
+	});
+
+	it("logs a 5xx answer at warn, and a request that got none with its network error", async () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const refused = new Error("connect ECONNREFUSED 127.0.0.1:4000");
+		const handler = logMiddleware().handler as WrapHandler;
+
+		await handler({ source: "api", method: "a", headers: new Headers() }, () =>
+			Promise.reject(new HTTPError({ status: 503, headers: new Headers(), data: null })),
+		).catch(() => undefined);
+		await handler({ source: "api", method: "b", headers: new Headers() }, () =>
+			Promise.reject(new HTTPError({ status: 0, headers: new Headers(), data: null }, { cause: refused })),
+		).catch(() => undefined);
+
+		const lines = warn.mock.calls.map((call) => String(call[1]));
+		expect(lines.some((line) => /api:a → 503/.test(line))).toBe(true);
+		const network = warn.mock.calls.find((call) => String(call[1]).includes("api:b → ERROR"));
+		expect(network?.at(-1)).toBe(refused);
+		warn.mockRestore();
+	});
+
+	it("logs a request that rejected with nothing at warn, not as a success", async () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const handler = logMiddleware().handler as WrapHandler;
+
+		await handler({ source: "api", method: "ping", headers: new Headers() }, () => Promise.reject()).catch(
+			() => undefined,
+		);
+
+		expect(warn.mock.calls.some((call) => String(call[1]).includes("api:ping → ERROR"))).toBe(true);
+		warn.mockRestore();
 	});
 
 	it("omits group when undefined", async () => {

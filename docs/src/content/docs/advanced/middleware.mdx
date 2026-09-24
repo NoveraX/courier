@@ -86,8 +86,8 @@ Logs every request with endpoint name, status code, and duration:
 ```ts
 import { logMiddleware } from "@noverax/courier/middleware"
 
-logMiddleware()                                    // Uses console.log
-logMiddleware({ logger: (msg) => myLogger(msg) })  // Custom logger
+logMiddleware()                                            // Courier's logger: answers at info, 5xx and failures at warn
+logMiddleware({ logger: (msg, error) => myLogger(msg, error) })  // Custom logger; `error` is set for a failed request
 ```
 
 ### authMiddleware

@@ -125,12 +125,12 @@ Request/response logging with timing information.
 
 ```ts title="signature"
 function logMiddleware(options?: {
-  /** Custom logger function (default: console.log) */
-  logger?: (message: string) => void
+  /** Receives each line, and the error of a failed request (default: Courier's logger) */
+  logger?: (message: string, error?: unknown) => void
 }): MiddlewareFn
 ```
 
-Logs each request as `source:group:method -> status (duration)`. On errors, logs `source:group:method -> ERROR (duration)`.
+Logs each request as `source:group:method → status (duration)`. On errors, logs `source:group:method → ERROR (duration)` and passes the error along. By default the lines go to Courier's logger: a success at `info` on stdout, a failure at `warn` on stderr with the error's stack.
 
 ```ts title="lib/sources.ts"
 const api = defineApi({

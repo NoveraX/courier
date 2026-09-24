@@ -1,4 +1,5 @@
 import { CourierError } from "@noverax/courier";
+import { CONFIG_BASENAMES } from "@noverax/courier-studio-core/config";
 
 export type ConfigLoaderErrorCode =
   | "CONFIG_NOT_FOUND"
@@ -16,12 +17,14 @@ export class ConfigLoaderError extends CourierError<ConfigLoaderErrorCode> {
   }
 }
 
-/** Thrown specifically when no `courier.config.{ts,js,mjs}` exists in the project root */
+/** Thrown specifically when no `courier.config.*` exists in the project root */
 export class ConfigNotFoundError extends ConfigLoaderError {
   constructor(cwd: string) {
     super(
       "CONFIG_NOT_FOUND",
-      `No courier.config.{ts,js,mjs} found in ${cwd}. Run \`courier init\` to scaffold one.`,
+      `No ${CONFIG_BASENAMES.join(", ")} in ${cwd}. Create one there, or start Studio ` +
+        "from the project root (or with --cwd). Sources your app registers at runtime " +
+        "still show up without it.",
       { context: { cwd } },
     );
   }

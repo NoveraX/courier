@@ -59,6 +59,29 @@ afterEach(() => {
 });
 
 describe("createWatchSet", () => {
+  it("reports nothing for a tracked file that does not exist yet", async () => {
+    /* Studio started before its config existed watches every name the config
+       may take, and reported each of them as changed as soon as it started. */
+    const missing = join(root, "courier.config.ts");
+    const c = collector();
+    start({ paths: [missing], onChange: c.onChange, debounceMs: 20 });
+
+    await sleep(SETTLE_MS * 4);
+
+    expect(c.seen).toEqual([]);
+  });
+
+  it("reports a tracked file once it is created", async () => {
+    const created = join(root, "courier.config.ts");
+    const c = collector();
+    start({ paths: [created], onChange: c.onChange, debounceMs: 20 });
+    await sleep(SETTLE_MS);
+
+    writeFileSync(created, "export default {}");
+
+    expect(await c.waitFor(created)).toBe(true);
+  });
+
   it("reports a change to a tracked file", async () => {
     const file = join(root, "a.ts");
     writeFileSync(file, "1");

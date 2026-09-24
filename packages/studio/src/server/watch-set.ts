@@ -126,6 +126,11 @@ export function createWatchSet(options: WatchSetOptions): WatchSet {
     }
     for (const path of tracked) {
       if (polled.has(path)) continue;
+      /* The state it is watched from. `watchFile` calls back once at once for
+         a file that does not exist, and without a baseline that call read as
+         a change: a Studio started before its config existed reported a
+         failed reload on every start. */
+      if (!reportedAt.has(path)) reportedAt.set(path, signatureOf(path));
       watchFile(path, { persistent: true, interval: POLL_INTERVAL_MS }, () => record(path));
       polled.add(path);
     }

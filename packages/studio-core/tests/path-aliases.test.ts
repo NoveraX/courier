@@ -40,6 +40,26 @@ describe("readPathAliases", () => {
     expect(aliases.candidatesFor("@/anything")).toEqual([]);
   });
 
+  it("reads the tsconfig of the project a config below its root belongs to", () => {
+    /* A config kept in deploy/ lost every alias of the project it lives in,
+       and failed to load on its first aliased import. */
+    tsconfig({ compilerOptions: { paths: { "@/*": ["./src/*"] } } });
+    mkdirSync(join(root, "deploy"));
+
+    expect(readPathAliases(join(root, "deploy")).candidatesFor("@/api")).toEqual([
+      join(root, "src/api"),
+    ]);
+  });
+
+  it("prefers the nearest tsconfig", () => {
+    tsconfig({ compilerOptions: { paths: { "@/*": ["./src/*"] } } });
+    tsconfig({ compilerOptions: { paths: { "@/*": ["./lib/*"] } } }, "deploy/tsconfig.json");
+
+    expect(readPathAliases(join(root, "deploy")).candidatesFor("@/api")).toEqual([
+      join(root, "deploy/lib/api"),
+    ]);
+  });
+
   it("is empty when the tsconfig declares no paths", () => {
     tsconfig({ compilerOptions: { strict: true } });
 

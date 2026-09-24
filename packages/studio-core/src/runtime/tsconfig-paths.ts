@@ -40,19 +40,33 @@ interface RawTsconfig {
 }
 
 /**
- * Read the path mapping that applies to `projectRoot`.
+ * Read the path mapping that applies to files in `directory`: the one of the
+ * nearest `tsconfig.json` at or above it, as TypeScript finds it.
  *
- * @param projectRoot - Directory holding the project's `tsconfig.json`
- * @returns The mapping, or `null` when the project declares none
+ * Only the directory's own `tsconfig.json` used to be read, so a config file
+ * kept below the project root — `deploy/server.config.ts` — lost every alias
+ * the project declares and failed to load.
+ *
+ * @param directory - Directory of the file whose imports are resolved
+ * @returns The mapping, or `null` when no tsconfig declares one
  *
  * @example
  * ```ts
- * const mapping = readTsconfigPaths("/app");
+ * const mapping = readTsconfigPaths("/app/deploy");
  * // → { baseUrl: "/app", paths: { "@/*": ["./src/*"] } }
  * ```
  */
-export function readTsconfigPaths(projectRoot: string): TsconfigPaths | null {
-  return findPaths(resolve(projectRoot, "tsconfig.json"), new Set());
+export function readTsconfigPaths(directory: string): TsconfigPaths | null {
+  const tsconfig = nearestTsconfig(resolve(directory));
+  return tsconfig ? findPaths(tsconfig, new Set()) : null;
+}
+
+function nearestTsconfig(directory: string): string | null {
+  for (let dir = directory; ; dir = dirname(dir)) {
+    const candidate = resolve(dir, "tsconfig.json");
+    if (existsSync(candidate)) return candidate;
+    if (dirname(dir) === dir) return null;
+  }
 }
 
 /** Walk the `extends` chain depth-first, stopping at the first declared map. */

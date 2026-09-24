@@ -2,6 +2,9 @@
  * Studio prints its banner by resetting the terminal and clearing the
  * scrollback. Anything reported before that is not scrolled away — it is
  * gone, and a clean banner then reads as a clean start.
+ *
+ * The reset only ever happens on a terminal, so these tests present stdout as
+ * one.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,8 +16,12 @@ const WIPES_HISTORY = "\x1b[3J";
 
 let written: string[];
 let logged: string[];
+const wasTTY = process.stdout.isTTY;
+
+const URLS = { local: "http://localhost:6280", network: [] };
 
 beforeEach(() => {
+  process.stdout.isTTY = true;
   clearStartupIssues();
   written = [];
   logged = [];
@@ -28,6 +35,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  process.stdout.isTTY = wasTTY;
   vi.restoreAllMocks();
   clearStartupIssues();
 });
@@ -55,7 +63,7 @@ describe("recording a startup issue", () => {
 
 describe("the banner on a clean start", () => {
   it("clears the screen", () => {
-    printBanner("localhost", 6280);
+    printBanner("1.0.0", URLS);
 
     expect(written.join("")).toContain(WIPES_HISTORY);
   });
@@ -67,19 +75,19 @@ describe("the banner when something went wrong", () => {
   });
 
   it("leaves the scrollback alone", () => {
-    printBanner("localhost", 6280);
+    printBanner("1.0.0", URLS);
 
     expect(written.join("")).not.toContain(WIPES_HISTORY);
   });
 
   it("restates the problem under the banner", () => {
-    printBanner("localhost", 6280);
+    printBanner("1.0.0", URLS);
 
     expect(logged.join("\n")).toContain("courier.config did not load: key mismatch");
   });
 
   it("still prints the banner itself", () => {
-    printBanner("localhost", 6280);
+    printBanner("1.0.0", URLS);
 
     expect(logged.join("\n")).toContain("localhost:6280");
   });

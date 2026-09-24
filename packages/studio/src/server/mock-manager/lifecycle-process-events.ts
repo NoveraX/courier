@@ -7,9 +7,11 @@
  * emissions.
  */
 
-import { logMockServerStart, logMockServerStop } from "../banner";
+import { createLogger } from "@noverax/courier";
 import type { ProcessManagerEvents } from "./process-manager";
 import type { ServerState } from "./types";
+
+const log = createLogger("Mock");
 
 export interface ProcessEventsContext {
   servers: Map<string, ServerState>;
@@ -23,7 +25,7 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
   return {
     onReady(serverId, data) {
       const name = servers.get(serverId)?.name ?? serverId;
-      logMockServerStart(name, data.url);
+      log.info(`[${name}] ready at ${data.url}`);
       updateAndEmit(serverId, {
         status: "running",
         actualPort: data.port,
@@ -42,7 +44,7 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
 
     onStopped(serverId) {
       const name = servers.get(serverId)?.name ?? serverId;
-      logMockServerStop(name);
+      log.info(`[${name}] stopped`);
       updateAndEmit(serverId, { status: "stopped", pid: undefined });
     },
 

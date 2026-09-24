@@ -8,6 +8,8 @@ import { checkNodeVersion } from "./node-version";
 import { createStudioServer } from "./server";
 import { printBanner } from "./server/banner";
 import { readStudioAddress } from "./server/studio-address";
+import { studioUrls } from "./server/studio-urls";
+import { studioVersion } from "./server/studio-version";
 
 checkNodeVersion();
 
@@ -22,6 +24,7 @@ function fail(message: string): never {
 const main = defineCommand({
   meta: {
     name: "courier-studio",
+    version: studioVersion(),
     description: "Courier Studio — standalone inspection & debugging server",
   },
   args: {
@@ -82,7 +85,7 @@ const main = defineCommand({
         process.exitCode = 1;
       },
       onReady: async (url) => {
-        printBanner(host, port);
+        printBanner(studioVersion(), studioUrls(host, port));
 
         if (args.open) {
           try {

@@ -1,14 +1,17 @@
 /**
  * The `courier-studio` command, run as a user runs it.
  *
- * A mistyped `--cwd` crashed with a raw ENOENT stack, and `courier-studio
- * init` ran its own work and then started the whole server anyway.
+ * `--version` printed the usage and "No version specified"; a mistyped `--cwd`
+ * crashed with a raw ENOENT stack; and `courier-studio init` ran its own work
+ * and then started the whole server anyway.
  */
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
+
+import manifest from "../package.json" with { type: "json" };
 
 const CLI = join(__dirname, "../src/cli.ts");
 const TSX = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href;
@@ -22,6 +25,13 @@ function run(...args: string[]) {
 }
 
 describe("courier-studio", () => {
+  it("prints its version", () => {
+    const result = run("--version");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe(manifest.version);
+  });
+
   it("names a project root that does not exist, without a stack", () => {
     const result = run("--cwd", "/definitely/not/a/project");
 

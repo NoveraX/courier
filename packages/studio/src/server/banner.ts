@@ -1,189 +1,141 @@
 /**
- * Premium startup banner and structured runtime logger.
- * Inspired by NestJS console output with Courier branding.
+ * The startup banner: Studio's version and the addresses it answers at.
+ *
+ * Colour and the screen reset are for a terminal. Written into a pipe — a
+ * log file, CI, `concurrently`, turbo — the reset wiped the other processes'
+ * output and every line carried escape codes, so both now need a TTY, and
+ * colour also honours NO_COLOR and FORCE_COLOR.
  */
 
-import { createRequire } from "node:module";
-import { networkInterfaces } from "node:os";
 import { startupIssues } from "./startup-issues";
+import type { StudioUrls } from "./studio-urls";
 
-// ── ANSI palette ─────────────────────────────────────────────────────────────
+interface Palette {
+  reset: string;
+  dim: string;
+  label: string;
+  value: string;
+  frame: string;
+  warn: string;
+  title: (text: string) => string;
+}
 
-const R = "\x1b[0m";
-const BOLD = "\x1b[1m";
-const DIM = "\x1b[2m";
-const ITALIC = "\x1b[3m";
+const rgb = (r: number, g: number, b: number): string => `\x1b[38;2;${r};${g};${b}m`;
 
-const fg = (r: number, g: number, b: number): string => `\x1b[38;2;${r};${g};${b}m`;
-
-const WHITE = fg(229, 231, 235);
-const GRAY = fg(113, 113, 122);
-const DARK = fg(63, 63, 70);
-const GREEN = fg(52, 211, 153);
-const RED = fg(248, 113, 113);
-const AMBER = fg(251, 191, 36);
-const BRAND = fg(139, 92, 246);
-const BRAND_LIGHT = fg(167, 139, 250);
-
-// ── Gradient ─────────────────────────────────────────────────────────────────
-
-const STOPS: [number, number, number][] = [
+/** Brand violet to cyan, applied across the title. */
+const GRADIENT: ReadonlyArray<readonly [number, number, number]> = [
   [139, 92, 246],
-  [124, 104, 244],
   [109, 118, 240],
-  [94, 140, 234],
   [79, 162, 228],
-  [64, 184, 222],
-  [49, 196, 230],
   [34, 211, 238],
 ];
 
 function gradient(text: string): string {
-  const chars = text.split("");
-  const len = STOPS.length;
-  const fb: [number, number, number] = STOPS[0] ?? [139, 92, 246];
-  return (
-    chars
-      .map((ch, i) => {
-        if (ch === " ") return ch;
-        const t = chars.length > 1 ? i / (chars.length - 1) : 0;
-        const idx = t * (len - 1);
-        const a = STOPS[Math.floor(idx)] ?? fb;
-        const b = STOPS[Math.min(Math.floor(idx) + 1, len - 1)] ?? a;
-        const f = idx - Math.floor(idx);
-        return `${fg(
-          Math.round(a[0] + (b[0] - a[0]) * f),
-          Math.round(a[1] + (b[1] - a[1]) * f),
-          Math.round(a[2] + (b[2] - a[2]) * f),
-        )}${BOLD}${ch}`;
-      })
-      .join("") + R
-  );
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function getNetworkAddress(): string | undefined {
-  for (const interfaces of Object.values(networkInterfaces())) {
-    if (!interfaces) continue;
-    for (const net of interfaces) {
-      if (net.family === "IPv4" && !net.internal) return net.address;
-    }
-  }
-  return undefined;
-}
-
-function getVersion(): string {
-  try {
-    const req = createRequire(import.meta.url);
-    return (req("../../package.json") as { version: string }).version;
-  } catch {
-    return "0.0.0";
-  }
-}
-
-function shortTime(): string {
-  const d = new Date();
-  const h = d.getHours().toString().padStart(2, "0");
-  const m = d.getMinutes().toString().padStart(2, "0");
-  const s = d.getSeconds().toString().padStart(2, "0");
-  return `${h}:${m}:${s}`;
-}
-
-function cleanOrigin(raw: string): string {
-  if (raw === "::1" || raw === "::ffff:127.0.0.1" || raw === "127.0.0.1") return "localhost";
-  let cleaned = raw;
-  if (cleaned.startsWith("::ffff:")) cleaned = cleaned.slice(7);
-  if (cleaned.startsWith("http://")) cleaned = cleaned.slice(7);
-  if (cleaned.startsWith("https://")) cleaned = cleaned.slice(8);
-  return cleaned;
-}
-
-// ── Prefix ───────────────────────────────────────────────────────────────────
-
-const pid = process.pid;
-
-function prefix(): string {
-  return `${BRAND}[Courier]${R} ${WHITE}${pid}${R}  ${DARK}–${R} ${DIM}${shortTime()}${R}`;
-}
-
-// ── Box ──────────────────────────────────────────────────────────────────────
-
-function box(lines: string[], widths: number[]): string[] {
-  const inner = Math.max(...widths) + 4;
-  const t = `${DARK}╭${"─".repeat(inner)}╮${R}`;
-  const b = `${DARK}╰${"─".repeat(inner)}╯${R}`;
-  const e = `${DARK}│${R}${" ".repeat(inner)}${DARK}│${R}`;
-  const rows = lines.map((l, i) => {
-    const pad = inner - 2 - (widths[i] ?? 0);
-    return `${DARK}│${R}  ${l}${" ".repeat(Math.max(0, pad))}${DARK}│${R}`;
+  const last = Math.max(text.length - 1, 1);
+  const stops = GRADIENT.length - 1;
+  const painted = [...text].map((ch, i) => {
+    if (ch === " ") return ch;
+    const at = (i / last) * stops;
+    const from = GRADIENT[Math.floor(at)] ?? GRADIENT[0];
+    const to = GRADIENT[Math.min(Math.floor(at) + 1, stops)] ?? from;
+    const mix = (k: 0 | 1 | 2) =>
+      Math.round((from?.[k] ?? 0) + ((to?.[k] ?? 0) - (from?.[k] ?? 0)) * (at % 1));
+    return `\x1b[1m${rgb(mix(0), mix(1), mix(2))}${ch}`;
   });
-  return [t, e, ...rows, e, b];
+  return `${painted.join("")}\x1b[0m`;
 }
 
-// ── Banner ───────────────────────────────────────────────────────────────────
+const COLOURS: Palette = {
+  reset: "\x1b[0m",
+  dim: "\x1b[2m\x1b[3m",
+  label: rgb(113, 113, 122),
+  value: rgb(229, 231, 235),
+  frame: rgb(63, 63, 70),
+  warn: rgb(251, 191, 36),
+  title: gradient,
+};
 
-export function printBanner(host: string, port: number): void {
+const PLAIN: Palette = {
+  reset: "",
+  dim: "",
+  label: "",
+  value: "",
+  frame: "",
+  warn: "",
+  title: (text) => text,
+};
+
+/** Whether a stream should get colour: FORCE_COLOR wins, then NO_COLOR, then whether it is a terminal. */
+export function wantsColour(
+  stream: { isTTY?: boolean },
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): boolean {
+  if (env.FORCE_COLOR !== undefined && env.FORCE_COLOR !== "0") return true;
+  if (env.NO_COLOR !== undefined && env.NO_COLOR !== "") return false;
+  return stream.isTTY === true;
+}
+
+/** A row of the box, kept as plain and coloured text so its width is measured, not counted by hand. */
+interface Row {
+  plain: string;
+  styled: string;
+}
+
+function row(p: Palette, label: string, value: string): Row {
+  const gap = " ".repeat(10 - label.length);
+  return {
+    plain: `${label}${gap}${value}`,
+    styled: `${p.label}${label}${p.reset}${gap}${p.value}${value}${p.reset}`,
+  };
+}
+
+function box(p: Palette, rows: readonly Row[]): string[] {
+  const inner = Math.max(...rows.map((r) => r.plain.length)) + 4;
+  const line = (left: string, fill: string, right: string) =>
+    `${p.frame}${left}${fill.repeat(inner)}${right}${p.reset}`;
+  const body = rows.map(
+    (r) =>
+      `${p.frame}│${p.reset}  ${r.styled}${" ".repeat(inner - 2 - r.plain.length)}${p.frame}│${p.reset}`,
+  );
+  return [
+    line("╭", "─", "╮"),
+    line("│", " ", "│"),
+    ...body,
+    line("│", " ", "│"),
+    line("╰", "─", "╯"),
+  ];
+}
+
+/**
+ * Print the banner, and restate any problem already reported during startup.
+ *
+ * @param version - Studio's version.
+ * @param urls - Where Studio answers.
+ */
+export function printBanner(version: string, urls: StudioUrls): void {
   const issues = startupIssues();
+  const p = wantsColour(process.stdout) ? COLOURS : PLAIN;
 
   /* Clearing wipes the scrollback too, so anything already reported would be
      unrecoverable rather than merely scrolled away. A clean start earns a
      clean screen; a start with problems keeps its history. */
-  if (issues.length === 0) process.stdout.write("\x1bc\x1b[3J\x1b[2J\x1b[H");
-
-  const ver = getVersion();
-  const net = getNetworkAddress();
-  const local = `http://${host}:${port}`;
-  const network = net ? `http://${net}:${port}` : "";
-
-  const content = [
-    `${gradient("Courier Studio")}  ${DIM}${ITALIC}v${ver}${R}`,
-    "",
-    `${GRAY}Local${R}     ${WHITE}${local}${R}`,
-  ];
-  const widths = [12 + 2 + 1 + ver.length, 0, 5 + 5 + local.length];
-
-  if (network) {
-    content.push(`${GRAY}Network${R}   ${WHITE}${network}${R}`);
-    widths.push(7 + 3 + network.length);
+  if (issues.length === 0 && process.stdout.isTTY === true) {
+    process.stdout.write("\x1bc\x1b[3J\x1b[2J\x1b[H");
   }
 
-  const lines = box(content, widths);
-  console.log(["", ...lines.map((l) => `  ${l}`), ""].join("\n"));
+  const title = `Courier Studio  v${version}`;
+  const rows: Row[] = [
+    { plain: title, styled: `${p.title("Courier Studio")}  ${p.dim}v${version}${p.reset}` },
+    { plain: "", styled: "" },
+  ];
+  if (urls.local) rows.push(row(p, "Local", urls.local));
+  for (const url of urls.network) rows.push(row(p, "Network", url));
+
+  console.log(["", ...box(p, rows).map((l) => `  ${l}`), ""].join("\n"));
 
   /* Restated under the banner: a problem reported during startup was printed
      before this point, where it is easy to miss, and a banner over a clean
      screen otherwise reads as everything being fine. */
-  for (const issue of issues) {
-    console.log(`  ${AMBER}!${R} ${issue}`);
-  }
+  for (const issue of issues) console.log(`  ${p.warn}!${p.reset} ${issue}`);
   if (issues.length > 0) console.log("");
-}
-
-// ── Runtime logs ─────────────────────────────────────────────────────────────
-
-export function logAppConnect(framework: string, origin: string): void {
-  const host = cleanOrigin(origin);
-  console.log(
-    `${prefix()}   ${GREEN}${BOLD} CONN${R}  ${BRAND_LIGHT}[${framework}]${R} ${WHITE}connected${R} ${DIM}from ${host}${R}`,
-  );
-}
-
-export function logAppDisconnect(framework: string, origin: string): void {
-  const host = cleanOrigin(origin);
-  console.log(
-    `${prefix()}   ${RED}${BOLD} DROP${R}  ${BRAND_LIGHT}[${framework}]${R} ${WHITE}disconnected${R} ${DIM}from ${host}${R}`,
-  );
-}
-
-export function logMockServerStart(name: string, url: string): void {
-  console.log(
-    `${prefix()}   ${AMBER}${BOLD} MOCK${R}  ${BRAND_LIGHT}[${name}]${R} ${WHITE}ready${R} ${DIM}at ${url}${R}`,
-  );
-}
-
-export function logMockServerStop(name: string): void {
-  console.log(
-    `${prefix()}   ${RED}${BOLD} MOCK${R}  ${BRAND_LIGHT}[${name}]${R} ${WHITE}stopped${R}`,
-  );
 }

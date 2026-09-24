@@ -21,6 +21,12 @@ export interface ExclusiveContext {
    * write, having checked that the bytes are the ones written.
    */
   acknowledge(paths: readonly string[]): void;
+  /**
+   * Reload these files once the edit is done. For a write the edit took as
+   * seen and then could not take back: what is on disk is no longer what
+   * Studio runs, and nothing else would notice.
+   */
+  reloadAfter(paths: readonly string[]): void;
 }
 
 /** An edit of the watched files, run alone on the reload chain. */
@@ -32,6 +38,7 @@ export interface ExclusiveHost {
   load(): Promise<LoadedCourierConfig>;
   apply(loaded: LoadedCourierConfig): void;
   acknowledge(paths: readonly string[]): void;
+  reloadAfter(paths: readonly string[]): void;
   isStopped(): boolean;
 }
 
@@ -62,6 +69,7 @@ export function exclusiveContext(host: ExclusiveHost, timeoutMs: number): Exclus
       if (!host.isStopped()) host.apply(loaded);
     },
     acknowledge: host.acknowledge,
+    reloadAfter: host.reloadAfter,
   };
 }
 

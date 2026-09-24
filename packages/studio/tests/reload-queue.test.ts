@@ -145,4 +145,79 @@ describe("createReloadQueue", () => {
 
     expect(runs).toEqual([["a"], ["b"]]);
   });
+
+  it("lets edits settle without waiting for reloads still running", async () => {
+    const { log, reload } = recorder(200);
+    const queue = createReloadQueue(reload);
+    let editDone = false;
+
+    const edit = queue.exclusive(async () => {
+      editDone = true;
+    });
+    queue.request(["after"]);
+    await queue.exclusiveSettled();
+
+    expect(editDone).toBe(true);
+    expect(log).toEqual(["start after"]);
+    await edit;
+    await queue.settled();
+  });
+
+  it("waits for an edit requested while edits were settling", async () => {
+    const queue = createReloadQueue(async () => undefined);
+    const order: string[] = [];
+
+    queue.exclusive(async () => {
+      order.push("first");
+      queue.exclusive(async () => {
+        order.push("second");
+      });
+    });
+    await queue.exclusiveSettled();
+
+    expect(order).toEqual(["first", "second"]);
+  });
+
+  it("drops an acknowledged path from a reload queued between two edits", async () => {
+    const { runs, reload } = recorder();
+    const queue = createReloadQueue(reload);
+    let firstDone = () => {};
+    const first = queue.exclusive(
+      () =>
+        new Promise<void>((resolve) => {
+          firstDone = resolve;
+        }),
+    );
+    await sleep(5);
+    queue.request(["written"]);
+    const second = queue.exclusive(async () => undefined);
+    queue.forget(["written"]);
+    firstDone();
+    await first;
+    await second;
+    await queue.settled();
+
+    expect(runs).toEqual([]);
+  });
+
+  it("no longer counts an edit dropped before it started", async () => {
+    const { reload } = recorder();
+    const queue = createReloadQueue(reload);
+    let release = () => {};
+    queue.exclusive(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+    );
+    await sleep(5);
+    const dropped = new AbortController();
+    queue.exclusive(async () => undefined, dropped.signal);
+    const settled = queue.exclusiveSettled();
+
+    dropped.abort();
+    release();
+
+    await expect(settled).resolves.toBeUndefined();
+  });
 });

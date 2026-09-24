@@ -2,16 +2,27 @@ import { createLogger } from "@noverax/courier";
 
 import type { ConfigWatcher } from "./config-watcher";
 import { type InitConfigDrivenDeps, initConfigDriven } from "./init-config-driven";
+import { withinBudget } from "./within-budget";
 
 const log = createLogger("Studio");
+
+/** The config watch as the server holds it: the watcher may not have started yet. */
+export interface ConfigDrivenWatch {
+  /** Stop watching; a watcher that starts after this is stopped at once. */
+  stop(): void;
+  /** The watcher, or `null` while the first load is still under way. */
+  watcher(): ConfigWatcher | null;
+  /** Let an edit under way finish, for at most `budgetMs`. */
+  finishEdits(budgetMs: number): Promise<void>;
+}
 
 /**
  * Load the config and watch it, without making the server wait for either.
  *
  * @param deps - What loading and watching the config need
- * @returns `stop`, which also stops a watcher that arrives after it
+ * @returns The watch
  */
-export function watchConfigDriven(deps: InitConfigDrivenDeps): { stop(): void } {
+export function watchConfigDriven(deps: InitConfigDrivenDeps): ConfigDrivenWatch {
   let watcher: ConfigWatcher | null = null;
   let stopped = false;
   initConfigDriven(deps)
@@ -26,6 +37,10 @@ export function watchConfigDriven(deps: InitConfigDrivenDeps): { stop(): void } 
     stop() {
       stopped = true;
       watcher?.stop();
+    },
+    watcher: () => watcher,
+    finishEdits: async (budgetMs) => {
+      if (watcher) await withinBudget(watcher.editsSettled(), budgetMs);
     },
   };
 }

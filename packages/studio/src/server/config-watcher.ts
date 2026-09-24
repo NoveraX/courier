@@ -49,6 +49,8 @@ export interface ConfigWatcher {
   lastLoadError(): unknown;
   /** Resolves once no reload is queued or running. */
   settled(): Promise<void>;
+  /** Resolves once no edit run with `runExclusive` is queued or running. */
+  editsSettled(): Promise<void>;
   /**
    * Run an edit of the watched files alone on the reload chain: reloads
    * queued before it run first, and those its own writes or anyone else's
@@ -57,10 +59,12 @@ export interface ConfigWatcher {
    *
    * @param transaction - The edit
    * @param timeoutMs - How long one `load` inside it may take
+   * @param dropped - Aborted when the caller gave up before the edit started; it then no longer counts as under way
    */
   runExclusive<TResult>(
     transaction: ExclusiveTransaction<TResult>,
     timeoutMs: number,
+    dropped?: AbortSignal,
   ): Promise<TResult>;
 }
 
@@ -133,6 +137,7 @@ export function startConfigWatcher(
       watchSet.acknowledge(acknowledged);
       queue.forget(acknowledged);
     },
+    reloadAfter: (paths: readonly string[]) => queue.request(paths),
     isStopped: () => stopped,
   };
 
@@ -144,8 +149,9 @@ export function startConfigWatcher(
     getCurrent: () => current,
     lastLoadError: () => lastError,
     settled: queue.settled,
-    runExclusive: (transaction, timeoutMs) =>
-      queue.exclusive(() => transaction(exclusiveContext(host, timeoutMs))),
+    editsSettled: queue.exclusiveSettled,
+    runExclusive: (transaction, timeoutMs, dropped) =>
+      queue.exclusive(() => transaction(exclusiveContext(host, timeoutMs)), dropped),
   };
 }
 

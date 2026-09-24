@@ -349,6 +349,45 @@ describe("startConfigWatcher — one reload at a time, and edits", () => {
     expect(watcher.getCurrent()).toBe(initial);
   });
 
+  it("reloads a write the edit acknowledged and then asks to have reloaded, once the edit is done", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { config, watcher, reloads } = await watched();
+    let reloadsDuringEdit = -1;
+
+    await watcher.runExclusive(async (ctx) => {
+      writeFileSync(config, CANDIDATE);
+      ctx.acknowledge([config]);
+      ctx.reloadAfter([config]);
+      await sleep(300);
+      reloadsDuringEdit = reloads.length;
+    }, 5000);
+    await until(() => reloads.length > 0);
+    await watcher.settled();
+
+    expect(reloadsDuringEdit).toBe(0);
+    expect(reloads.map(baseURLOf)).toEqual(["candidate.example.com"]);
+  });
+
+  it("settles its edits without waiting for the reload queued behind them", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { deep, watcher, reloads } = await watched();
+    let editDone = false;
+
+    const edit = watcher.runExclusive(async (ctx) => {
+      writeFileSync(deep, 'await new Promise((r) => setTimeout(r, 1500))\nexport const host = "slow.example.com"\n');
+      ctx.acknowledge([deep]);
+      ctx.reloadAfter([deep]);
+      editDone = true;
+    }, 5000);
+    await edit;
+    await watcher.editsSettled();
+
+    expect(editDone).toBe(true);
+    expect(reloads).toEqual([]);
+    await watcher.settled();
+    expect(reloads.map(baseURLOf)).toEqual(["slow.example.com"]);
+  });
+
   it("refuses to load for an edit once Studio is stopping", async () => {
     const { watcher } = await watched();
     watcher.stop();

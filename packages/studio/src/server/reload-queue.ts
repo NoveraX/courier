@@ -10,13 +10,17 @@ export interface ReloadQueue {
   request(changed: readonly string[]): void;
   /**
    * Run `task` alone: after everything queued before it, and before every
-   * reload requested while it runs.
+   * reload requested while it runs. An edit whose `dropped` signal aborts
+   * before it starts no longer counts as under way; the task still runs and
+   * must see for itself that it was dropped.
    */
-  exclusive<TResult>(task: () => Promise<TResult>): Promise<TResult>;
-  /** Drop paths from the reload waiting to run, as already seen. */
+  exclusive<TResult>(task: () => Promise<TResult>, dropped?: AbortSignal): Promise<TResult>;
+  /** Drop paths from every reload waiting to run, as already seen. */
   forget(paths: readonly string[]): void;
   /** Resolves once nothing is queued or running. */
   settled(): Promise<void>;
+  /** Resolves once no task run with `exclusive` is queued or running; reloads may still be. */
+  exclusiveSettled(): Promise<void>;
 }
 
 /**
@@ -33,6 +37,18 @@ export function createReloadQueue(reload: (changed: string[]) => Promise<void>):
   let tail: Promise<void> = Promise.resolve();
   /* The reload queued and not yet started, which new requests join. */
   let waiting: Set<string> | null = null;
+  /* Every reload queued and not yet started: an edit's acknowledgement
+     reaches each, however many edits were queued in between. */
+  const notStarted = new Set<Set<string>>();
+  /* Edits queued or running, less those dropped before they started, and a
+     signal that wakes whoever waits for them when the set shrinks. */
+  const liveEdits = new Set<Promise<void>>();
+  let editsChanged = Promise.withResolvers<void>();
+  const dropEdit = (edit: Promise<void>) => {
+    if (!liveEdits.delete(edit)) return;
+    editsChanged.resolve();
+    editsChanged = Promise.withResolvers<void>();
+  };
 
   function request(changed: readonly string[]): void {
     if (waiting) {
@@ -41,26 +57,40 @@ export function createReloadQueue(reload: (changed: string[]) => Promise<void>):
     }
     const paths = new Set(changed);
     waiting = paths;
+    notStarted.add(paths);
     tail = tail.then(async () => {
       if (waiting === paths) waiting = null;
+      notStarted.delete(paths);
       if (paths.size === 0) return;
       await reload([...paths]).catch((err: unknown) => log.error("Studio could not reload", err));
     });
   }
 
-  function exclusive<TResult>(task: () => Promise<TResult>): Promise<TResult> {
+  function exclusive<TResult>(
+    task: () => Promise<TResult>,
+    dropped?: AbortSignal,
+  ): Promise<TResult> {
     waiting = null;
-    const result = tail.then(task);
-    tail = result.then(
+    let started = false;
+    const result = tail.then(() => {
+      started = true;
+      return task();
+    });
+    const settledEdit = result.then(
       () => undefined,
       () => undefined,
     );
+    tail = settledEdit;
+    liveEdits.add(settledEdit);
+    void settledEdit.then(() => dropEdit(settledEdit));
+    dropped?.addEventListener("abort", () => {
+      if (!started) dropEdit(settledEdit);
+    });
     return result;
   }
 
   function forget(paths: readonly string[]): void {
-    if (!waiting) return;
-    for (const path of paths) waiting.delete(path);
+    for (const run of notStarted) for (const path of paths) run.delete(path);
   }
 
   async function settled(): Promise<void> {
@@ -71,5 +101,9 @@ export function createReloadQueue(reload: (changed: string[]) => Promise<void>):
     } while (seen !== tail);
   }
 
-  return { request, exclusive, forget, settled };
+  async function exclusiveSettled(): Promise<void> {
+    while (liveEdits.size > 0) await Promise.race([...liveEdits, editsChanged.promise]);
+  }
+
+  return { request, exclusive, forget, settled, exclusiveSettled };
 }

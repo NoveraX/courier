@@ -15,7 +15,7 @@ import { extractSourceMap } from "@noverax/courier-studio-core";
 import { getProjectRoot } from "../context";
 import { loadCourierConfig } from "./config-loader";
 import { findSourceDeclaration } from "./find-source-declaration";
-import { loadImportsSnapshot } from "./imports-bridge";
+import { getImportEntry, getImportState, loadImportsSnapshot } from "./imports-bridge";
 
 /** How an endpoint is shaped, as the APIs page and mock wizard read it. */
 export interface ScannedEndpointAnalysis {
@@ -76,12 +76,12 @@ export async function scanProjectSources(): Promise<ScanResult> {
   const sourceMap = extractSourceMap(config.sources ?? {});
 
   const snapshot = await loadImportsSnapshot();
-  const imported = snapshot.state.imports;
 
   const sources: ScannedSource[] = [];
   for (const [name, source] of Object.entries(sourceMap)) {
-    const written = imported[name]?.generatedFiles ?? [];
-    const isImported = name in imported || name in snapshot.declarations;
+    const state = getImportState(snapshot, name);
+    const written = state?.generatedFiles ?? [];
+    const isImported = state !== undefined || getImportEntry(snapshot, name) !== undefined;
     const groups: ScannedGroup[] = [];
     let inlineEndpoints: ScannedEndpoint[] | undefined;
 

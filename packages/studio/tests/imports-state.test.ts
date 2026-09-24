@@ -192,7 +192,9 @@ describe("loadImportsState — backup and validation", () => {
     const lines = warn.mock.calls.map((call) => String(call[1]));
     expect(state.imports).toEqual({});
     expect(lines.some((line) => line.includes("Corrupt imports-state JSON"))).toBe(true);
-    expect(lines.some((line) => line.includes("Could not save the corrupt imports-state"))).toBe(true);
+    expect(lines.some((line) => line.includes("Could not save the corrupt imports-state"))).toBe(
+      true,
+    );
     warn.mockRestore();
   });
 
@@ -247,5 +249,31 @@ describe("computeSpecHash re-export", () => {
     const b = computeSpecHash(spec as never);
     expect(a).toBe(b);
     expect(a.length).toBeGreaterThan(0);
+  });
+});
+
+describe("imports named after Object.prototype members", () => {
+  it("keeps an import named __proto__ as an entry through a save and a load", () => {
+    const state = recordImport(
+      { version: IMPORTS_STATE_VERSION, imports: {} },
+      "__proto__",
+      makeEntry("h1"),
+    );
+
+    saveImportsState(projectRoot, state);
+    const loaded = loadImportsState(projectRoot);
+
+    expect(Object.keys(loaded.imports)).toEqual(["__proto__"]);
+    expect(Object.getPrototypeOf(loaded.imports)).toBe(Object.prototype);
+  });
+
+  it("finds no recorded import for a name only Object.prototype has", () => {
+    const state: ImportsState = {
+      version: IMPORTS_STATE_VERSION,
+      imports: { api: makeEntry("h1") },
+    };
+
+    expect(removeImport(state, "constructor")).toBe(state);
+    expect(hasSpecChanged(state, "toString", "h1")).toBe(true);
   });
 });

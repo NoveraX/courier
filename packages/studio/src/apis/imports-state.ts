@@ -91,15 +91,14 @@ export function loadImportsState(projectRoot: string): ImportsState {
   }
   const imports = parsed.imports;
   if (!isPlainObject(imports)) return emptyState();
-  const validated: Record<string, ImportStateEntry> = {};
-  for (const [key, value] of Object.entries(imports)) {
-    if (isImportStateEntry(value)) {
-      validated[key] = value;
-    } else {
-      log.warn(`Dropped invalid imports-state entry: ${key}`);
-    }
-  }
-  return { version: IMPORTS_STATE_VERSION, imports: validated };
+  const validated = Object.entries(imports).filter((pair): pair is [string, ImportStateEntry] => {
+    if (isImportStateEntry(pair[1])) return true;
+    log.warn(`Dropped invalid imports-state entry: ${pair[0]}`);
+    return false;
+  });
+  /* fromEntries defines each key as its own, so an import named "__proto__"
+     stays an entry instead of replacing the object's prototype. */
+  return { version: IMPORTS_STATE_VERSION, imports: Object.fromEntries(validated) };
 }
 
 /** Atomically persist the imports-state file */
@@ -124,7 +123,7 @@ export function recordImport(
 
 /** Drop a single import entry, returning the next state */
 export function removeImport(state: ImportsState, name: string): ImportsState {
-  if (!(name in state.imports)) return state;
+  if (!Object.hasOwn(state.imports, name)) return state;
   const { [name]: _removed, ...rest } = state.imports;
   void _removed;
   return { version: IMPORTS_STATE_VERSION, imports: rest };
@@ -132,6 +131,7 @@ export function removeImport(state: ImportsState, name: string): ImportsState {
 
 /** True when the recorded hash for `name` differs from `newHash` (or no record exists) */
 export function hasSpecChanged(state: ImportsState, name: string, newHash: string): boolean {
+  if (!Object.hasOwn(state.imports, name)) return true;
   const entry = state.imports[name];
   if (!entry) return true;
   return entry.specHash !== newHash;

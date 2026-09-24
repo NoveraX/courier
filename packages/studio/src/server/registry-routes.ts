@@ -8,6 +8,8 @@ import { logger } from "@noverax/courier";
 import {
   dropImportState,
   formatImportSnippet,
+  getImportEntry,
+  getImportState,
   loadImportsSnapshot,
   summarizeImports,
 } from "./imports-bridge";
@@ -33,8 +35,8 @@ export function registerRegistryRoutes(app: RouteApp): void {
 
     void withImportsLock(async () => {
       const snapshot = await loadImportsSnapshot();
-      const entry = snapshot.declarations[body.name];
-      const state = snapshot.state.imports[body.name];
+      const entry = getImportEntry(snapshot, body.name);
+      const state = getImportState(snapshot, body.name);
       if (!entry && !state) {
         res.status(404).json({ error: `Import "${body.name}" not found` });
         return;

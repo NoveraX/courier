@@ -115,14 +115,14 @@ export function getImportEntry(
   snapshot: ImportsSnapshot,
   name: string,
 ): CourierImportEntry | undefined {
-  return snapshot.declarations[name];
+  return Object.hasOwn(snapshot.declarations, name) ? snapshot.declarations[name] : undefined;
 }
 
 export function getImportState(
   snapshot: ImportsSnapshot,
   name: string,
 ): ImportStateEntry | undefined {
-  return snapshot.state.imports[name];
+  return Object.hasOwn(snapshot.state.imports, name) ? snapshot.state.imports[name] : undefined;
 }
 
 /**

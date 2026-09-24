@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-server",
   "version": "0.0.0",
-  "description": "Standalone HTTP + WebSocket server for @noverax/courier \u2014 proxy handler for Next.js and serverless environments",
+  "description": "Standalone HTTP + WebSocket server for @noverax/courier — proxy handler for Next.js and serverless environments",
   "keywords": [
     "courier",
     "typescript",
@@ -35,6 +35,7 @@
   "module": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "exports": {
+    "./package.json": "./package.json",
     ".": {
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js",
@@ -56,6 +57,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@noverax/courier-studio-core": "*",
     "citty": "^0.2.2"
   },
   "peerDependencies": {

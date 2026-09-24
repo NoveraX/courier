@@ -124,11 +124,22 @@ export async function loadCourierConfig(
   const startDir = resolve(options.cwd ?? process.cwd());
 
   const found = options.requireAtCwd ? configFileAt(startDir) : findConfigFile(startDir);
-  if (!found) return null;
+  return found ? loadCourierConfigFile(found) : null;
+}
 
+/**
+ * Load one config file, found by whatever means the caller chose — the
+ * standalone server takes it from `--config`.
+ *
+ * @param file - Absolute path of an existing config file
+ * @returns The config and the canonical path it was loaded from
+ * @throws What the loader reported when the file will not load — for a
+ *   TypeScript config, usually an unresolvable import
+ */
+export async function loadCourierConfigFile(file: string): Promise<LoadedCourierConfig> {
   /* Resolve symlinks so downstream consumers — the dev server's dependency
      watcher above all — observe the canonical path. */
-  const configFile = realpathSync(found);
+  const configFile = realpathSync(file);
 
   /* jiti is loaded here rather than at the top of the file so a bundler that
      merely reaches this module does not pull a TypeScript transpiler into its

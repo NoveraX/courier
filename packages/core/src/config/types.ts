@@ -118,12 +118,18 @@ export interface CourierStudioConfig {
   allowedSpecHosts?: readonly string[];
 }
 
-/** Standalone proxy server configuration */
+/** What the `courier-server` command reads when its flags say nothing. */
 export interface CourierServerConfig {
+  /** Port to listen on — default 3001; `--port` overrides it */
   port?: number;
+  /** Host to bind — default "localhost"; `--host` overrides it */
   host?: string;
-  /** Transports the standalone server should expose — default all three */
-  transports?: ReadonlyArray<"http" | "sse" | "ws">;
+  /**
+   * Origins of the browser apps that call the server. Left out, the server
+   * answers only its own origin, and loopback ones outside production;
+   * `--allowed-origins` overrides it.
+   */
+  allowedOrigins?: readonly string[];
 }
 
 /**

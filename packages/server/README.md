@@ -53,10 +53,24 @@ const server = createCourierServer({
 ### CLI
 
 ```bash
-courier-server --config ./courier.config.ts --port 3001
+npx courier-server
+npx courier-server --config ./deploy/courier.config.ts --port 3001 --allowed-origins https://app.example.com
 ```
 
-The config file must export a `sources` object.
+Without `--config` it serves the `courier.config.*` in the working directory; a `--config` path is relative to it. TypeScript configs load as they are, extensionless imports and tsconfig path aliases included. The config needs `sources`, and its `server` block supplies what the flags leave out:
+
+```ts
+// courier.config.ts
+import { defineConfig } from "@noverax/courier/config"
+import { api } from "./src/api"
+
+export default defineConfig({
+  sources: { api },
+  server: { port: 3001, allowedOrigins: ["https://app.example.com"] },
+})
+```
+
+The command exits with status 1 when the server cannot start — the port is taken, the config will not load — so a supervisor or a deploy script sees the failure. `--version` prints the installed version.
 
 <br />
 

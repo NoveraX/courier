@@ -1,36 +1,34 @@
 import type { MockServerConfig, MockServerDefinition } from "./types";
 
 /**
- * Define a mock server configuration.
+ * Define a mock server for Studio to run.
  *
- * Place in `mock-servers/` for Studio to auto-discover and manage.
- * Conventions: `mock-servers/*.server.ts` or `mock-servers/{name}/server.ts`.
- * Export as named `mockServer` for auto-detection.
- *
- * Servers are NOT auto-started by default — start manually from Studio UI
- * or set `autoStart: true` to launch when Studio starts.
+ * Declare it under `mocks` in `courier.config.ts`; Studio lists it, and
+ * starts it when `autoStart` is set or when you start it from the UI. A
+ * `port` is held exactly — Studio reports it when it is taken; without one,
+ * Studio assigns a port from `studio.mockBasePort` and keeps it for the key.
  *
  * @param config - Server configuration (source, port, seed, overrides, etc.)
- * @returns Typed definition object consumed by Studio lifecycle manager
+ * @returns Typed definition object consumed by Studio's mock manager
  *
  * @example
  * ```ts
- * // mock-servers/jsonPlaceholder.server.ts
+ * // courier.config.ts
+ * import { defineConfig } from "@noverax/courier/config";
  * import { defineMockServer } from "@noverax/courier-mock";
- * import { jsonPlaceholder } from "../src/api/jsonPlaceholder";
+ * import { api } from "./src/api";
  *
- * export const mockServer = defineMockServer({
- *   source: jsonPlaceholder,
- *   port: 7001,
- *   seed: { count: 20 },
- *   autoStart: true, // launch when Studio starts
+ * export default defineConfig({
+ *   sources: { api },
+ *   mocks: {
+ *     api: defineMockServer({ source: api, port: 7001, autoStart: true }),
+ *   },
  * });
  * ```
  */
 export function defineMockServer(config: MockServerConfig): MockServerDefinition {
   return {
     __type: "courier-mock-server",
-    port: config.port ?? 0,
     autoStart: config.autoStart ?? false,
     ...config,
   };

@@ -52,11 +52,10 @@
       "import": "./lib/contract/index.js",
       "default": "./lib/contract/index.js"
     },
-    "./managed/worker-entry": {
-      "import": "./lib/managed/worker-entry.js"
-    },
-    "./meta-worker": {
-      "import": "./lib/auto/meta-worker.js"
+    "./managed": {
+      "types": "./lib/managed/index.d.ts",
+      "import": "./lib/managed/index.js",
+      "default": "./lib/managed/index.js"
     }
   },
   "files": [

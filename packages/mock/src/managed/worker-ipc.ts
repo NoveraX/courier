@@ -6,17 +6,13 @@
 import type { MockServer } from "../server/create-mock-server";
 import type { ChildMessage } from "./types";
 
-const PARENT_CHECK_INTERVAL = 5000;
-
-/** Ensure child dies if parent dies */
-const parentPid = process.ppid;
-export const parentCheck = setInterval(() => {
-  try {
-    process.kill(parentPid, 0);
-  } catch {
-    process.exit(0);
-  }
-}, PARENT_CHECK_INTERVAL);
+/**
+ * End the worker when Studio goes away. The IPC channel closes the moment the
+ * parent dies, however it died, so the worker never outlives it.
+ */
+export function watchParent(): void {
+  process.once("disconnect", () => process.exit(0));
+}
 
 export function send(msg: ChildMessage): void {
   process.send?.(msg);
@@ -24,10 +20,7 @@ export function send(msg: ChildMessage): void {
 
 export function sendError(message: string, fatal: boolean): void {
   send({ type: "error", message, fatal });
-  if (fatal) {
-    clearInterval(parentCheck);
-    process.exit(1);
-  }
+  if (fatal) process.exit(1);
 }
 
 export function sendStoreSnapshot(server: MockServer): void {

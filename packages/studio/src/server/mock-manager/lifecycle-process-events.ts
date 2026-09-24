@@ -13,6 +13,9 @@ import type { ServerState } from "./types";
 
 const log = createLogger("Mock");
 
+/** A mock whose process is gone has no pid, and no port or URL of its own. */
+const GONE: Partial<ServerState> = { pid: undefined, actualPort: undefined, url: undefined };
+
 export interface ProcessEventsContext {
   servers: Map<string, ServerState>;
   emit: (type: string, payload: Record<string, unknown>) => void;
@@ -21,13 +24,15 @@ export interface ProcessEventsContext {
 
 export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEvents {
   const { servers, emit, updateAndEmit } = ctx;
+  const nameOf = (serverId: string): string => servers.get(serverId)?.name ?? serverId;
 
   return {
     onReady(serverId, data) {
-      const name = servers.get(serverId)?.name ?? serverId;
+      const name = nameOf(serverId);
       log.info(`[${name}] ready at ${data.url}`);
       updateAndEmit(serverId, {
         status: "running",
+        lastError: undefined,
         actualPort: data.port,
         url: data.url,
         startedAt: Date.now(),
@@ -38,22 +43,34 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
       });
     },
 
+    /* Every failure is said where the developer is looking — the terminal —
+       and kept on the mock for the UI, so a mock that could not start says
+       why. */
     onError(serverId, message, fatal) {
-      if (fatal) updateAndEmit(serverId, { status: "crashed", lastError: message });
+      const name = nameOf(serverId);
+      if (!fatal) {
+        log.warn(`[${name}] ${message}`);
+        return;
+      }
+      log.error(`[${name}] failed: ${message}`);
+      updateAndEmit(serverId, { status: "crashed", lastError: message });
     },
 
     onStopped(serverId) {
-      const name = servers.get(serverId)?.name ?? serverId;
-      log.info(`[${name}] stopped`);
-      updateAndEmit(serverId, { status: "stopped", pid: undefined });
+      log.info(`[${nameOf(serverId)}] stopped`);
+      updateAndEmit(serverId, { status: "stopped", ...GONE });
     },
 
-    onCrashed(serverId, code) {
-      updateAndEmit(serverId, {
-        status: "crashed",
-        lastError: `Process exited with code ${code}`,
-        pid: undefined,
-      });
+    /* A reason the worker reported before it died is the better one; the exit
+       itself only says how it ended. */
+    onExited(serverId, reason) {
+      const state = servers.get(serverId);
+      if (state?.status === "crashed" && state.lastError) {
+        updateAndEmit(serverId, GONE);
+        return;
+      }
+      log.error(`[${nameOf(serverId)}] ${reason}`);
+      updateAndEmit(serverId, { status: "crashed", lastError: reason, ...GONE });
     },
 
     onEvent(serverId, event) {

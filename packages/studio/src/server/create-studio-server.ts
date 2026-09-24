@@ -74,7 +74,6 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     basePort: mockBasePort,
     watcherStatus,
   });
-  mockManager.start();
 
   const config = watchConfigDriven({
     projectRoot,

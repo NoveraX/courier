@@ -1,162 +1,145 @@
 import type { ChildProcess } from "node:child_process";
 import { fork } from "node:child_process";
-import { allocatePort } from "./port-allocator";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { createLogger } from "@noverax/courier";
+import type { ChildMessage, ParentMessage } from "@noverax/courier-mock/managed";
 
 const GRACEFUL_TIMEOUT = 3000;
 const FORCE_TIMEOUT = 2000;
 
-export interface ChildScenarioMeta {
-  name: string;
-  endpointCount: number;
-  isActive: boolean;
-  endpoints: Array<{
-    group: string;
-    endpoint: string;
-    httpMethod: string;
-    behavior: "resolves" | "returns" | "rejects" | "custom";
-    latency?: number;
-  }>;
-}
+const log = createLogger("Mock");
 
-/** IPC ready payload from child */
-export interface ChildReadyData {
-  port: number;
-  url: string;
-  routes: Array<Record<string, unknown>>;
-  collections: Array<{ name: string; count: number; records: unknown[] }>;
-  scenarios: ChildScenarioMeta[];
-}
+/**
+ * Studio's own mock worker, found through the package itself, so the path is
+ * the same from source and from the published lib and holds in any project
+ * path.
+ */
+const WORKER = join(
+  dirname(createRequire(import.meta.url).resolve("@noverax/courier-studio/package.json")),
+  "lib",
+  "mock-worker.js",
+);
 
-export interface SpawnedServer {
-  child: ChildProcess;
-  serverId: string;
-  configPath: string;
-  mockKey: string;
-  pid: number;
-}
+/** What a mock server reports once it listens. */
+export type ChildReadyData = Omit<Extract<ChildMessage, { type: "ready" }>, "type">;
 
 export interface ProcessManagerEvents {
   onReady: (serverId: string, data: ChildReadyData) => void;
   onError: (serverId: string, message: string, fatal: boolean) => void;
   onStopped: (serverId: string) => void;
-  onCrashed: (serverId: string, code: number | null) => void;
+  /** The process ended without Studio asking it to — a crash, a signal, or an exit of its own. */
+  onExited: (serverId: string, reason: string) => void;
   onEvent: (serverId: string, event: Record<string, unknown>) => void;
 }
 
-/** Resolves path to the bundled worker entry script via standard ESM resolution */
-function resolveWorkerPath(): string {
-  const resolved = import.meta.resolve("@noverax/courier-mock/managed/worker-entry");
-  return resolved.startsWith("file://") ? resolved.slice(7) : resolved;
+/** What a mock's worker is started with. */
+export interface SpawnRequest {
+  serverId: string;
+  configPath: string;
+  mockKey: string;
+  /** Listened on exactly; a taken one is reported by the worker. */
+  port: number;
 }
 
 export function createProcessManager(events: ProcessManagerEvents) {
   const children = new Map<string, ChildProcess>();
+  /** Workers Studio asked to stop; their exit is expected. */
+  const stopping = new WeakSet<ChildProcess>();
 
-  async function spawn(
-    serverId: string,
-    configPath: string,
-    mockKey: string,
-    preferredPort: number,
-  ): Promise<SpawnedServer> {
-    const port = preferredPort > 0 ? await allocatePort(preferredPort) : 0;
-    const workerPath = resolveWorkerPath();
-
-    const child = fork(workerPath, [], {
-      execArgv: ["--import", "tsx/esm"],
-      stdio: ["pipe", "pipe", "pipe", "ipc"],
-    });
-
-    children.set(serverId, child);
-
-    child.on("message", (raw: unknown) => {
-      const msg = raw as Record<string, unknown>;
-      switch (msg.type) {
-        case "ready":
-          events.onReady(serverId, msg as unknown as ChildReadyData);
-          break;
-        case "error":
-          events.onError(serverId, msg.message as string, msg.fatal as boolean);
-          break;
-        case "stopped":
-          events.onStopped(serverId);
-          break;
-        case "event":
-          events.onEvent(serverId, msg.event as Record<string, unknown>);
-          break;
-      }
-    });
-
-    child.on("exit", (code) => {
-      children.delete(serverId);
-      if (code !== 0 && code !== null) {
-        events.onCrashed(serverId, code);
-      }
-    });
-
-    child.send({ type: "start", configPath, mockKey, port });
-
-    return { child, serverId, configPath, mockKey, pid: child.pid ?? 0 };
+  function route(serverId: string, msg: ChildMessage): void {
+    if (msg.type === "ready") events.onReady(serverId, msg);
+    else if (msg.type === "error") events.onError(serverId, msg.message, msg.fatal);
+    else if (msg.type === "stopped") events.onStopped(serverId);
+    else if (msg.type === "event") events.onEvent(serverId, msg.event);
   }
 
+  function send(serverId: string, child: ChildProcess, msg: ParentMessage): void {
+    if (!child.connected) return;
+    child.send(msg, (err) => {
+      if (err) log.debug(`Could not reach the worker of ${serverId}`, err);
+    });
+  }
+
+  /** Start the worker for a mock; it reports back once it listens. */
+  function spawn({ serverId, configPath, mockKey, port }: SpawnRequest): { pid: number } {
+    /* Output is inherited, so request logs and crash stacks reach Studio's
+       terminal, and no unread pipe can fill up and stall the worker. */
+    const child = fork(WORKER, [], {
+      cwd: dirname(configPath),
+      execArgv: [],
+      stdio: ["ignore", "inherit", "inherit", "ipc"],
+    });
+    children.set(serverId, child);
+
+    child.on("message", (msg: ChildMessage) => route(serverId, msg));
+    child.on("error", (err) => events.onError(serverId, err.message, true));
+    /* `close`, not `exit`: it follows the last IPC message, so an error the
+       worker reported before dying is handled before its death is. */
+    child.on("close", (code, signal) => {
+      const current = children.get(serverId) === child;
+      if (current) children.delete(serverId);
+      if (!current || stopping.has(child)) return;
+      events.onExited(serverId, signal ? `was stopped by ${signal}` : `exited with code ${code}`);
+    });
+
+    send(serverId, child, { type: "start", configPath, mockKey, port });
+    return { pid: child.pid ?? 0 };
+  }
+
+  /** Stop a mock's worker: asked first, then signalled; resolves once it has exited. */
   async function kill(serverId: string): Promise<void> {
     const child = children.get(serverId);
     if (!child) return;
-
-    return new Promise<void>((resolve) => {
-      let resolved = false;
-      const done = () => {
-        if (resolved) return;
-        resolved = true;
-        children.delete(serverId);
+    stopping.add(child);
+    await new Promise<void>((resolve) => {
+      if (child.exitCode !== null || child.signalCode !== null) return resolve();
+      const timers: NodeJS.Timeout[] = [];
+      child.once("exit", () => {
+        for (const timer of timers) clearTimeout(timer);
         resolve();
-      };
-
-      child.once("exit", done);
-      child.send({ type: "stop" });
-
-      setTimeout(() => {
-        if (resolved) return;
-        child.kill("SIGTERM");
+      });
+      send(serverId, child, { type: "stop" });
+      timers.push(
         setTimeout(() => {
-          if (resolved) return;
-          child.kill("SIGKILL");
-          done();
-        }, FORCE_TIMEOUT);
-      }, GRACEFUL_TIMEOUT);
+          child.kill("SIGTERM");
+          timers.push(setTimeout(() => child.kill("SIGKILL"), FORCE_TIMEOUT));
+        }, GRACEFUL_TIMEOUT),
+      );
     });
-  }
-
-  async function killAll(): Promise<void> {
-    await Promise.all([...children.keys()].map(kill));
+    if (children.get(serverId) === child) children.delete(serverId);
   }
 
   function killAllSync(): void {
-    for (const child of children.values()) {
-      child.kill("SIGKILL");
-    }
+    for (const child of children.values()) child.kill("SIGKILL");
     children.clear();
+  }
+
+  /* A last resort for a host that exits without closing Studio; removed on
+     close, so servers created one after another do not pile them up. */
+  process.on("exit", killAllSync);
+
+  async function dispose(): Promise<void> {
+    await Promise.all([...children.keys()].map(kill));
+    process.off("exit", killAllSync);
   }
 
   function has(serverId: string): boolean {
     return children.has(serverId);
   }
 
-  // Ensure children die with parent
-  process.on("exit", killAllSync);
-  for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
-    process.on(sig, () => {
-      killAll().then(() => process.exit(0));
-    });
-  }
-
   /** Send a store command to a managed child process via IPC */
   function sendCommand(serverId: string, command: Record<string, unknown>): void {
     const child = children.get(serverId);
-    if (!child?.connected) return;
-    child.send({ type: "command", command, requestId: `cmd_${Date.now().toString(36)}` });
+    if (!child) return;
+    send(serverId, child, {
+      type: "command",
+      command,
+      requestId: `cmd_${Date.now().toString(36)}`,
+    });
   }
 
-  return { spawn, kill, killAll, killAllSync, has, sendCommand };
+  return { spawn, kill, dispose, has, sendCommand };
 }
 
 export type ProcessManager = ReturnType<typeof createProcessManager>;

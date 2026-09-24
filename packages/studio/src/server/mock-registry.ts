@@ -37,8 +37,10 @@ export interface MockRegistry {
    * Attach a listener that receives diff events from subsequent
    * `syncFromConfig` calls. Currently registered entries are replayed via
    * `onAdded` so a late-attaching consumer never misses them.
+   *
+   * @returns Detaches the listener; it hears nothing after that.
    */
-  attach(events: MockRegistryEvents): void;
+  attach(events: MockRegistryEvents): () => void;
 }
 
 /**
@@ -90,9 +92,13 @@ export function createMockRegistry(initialEvents?: MockRegistryEvents): MockRegi
     getEntries(): MockEntry[] {
       return [...current.values()];
     },
-    attach(events: MockRegistryEvents): void {
+    attach(events: MockRegistryEvents): () => void {
       listeners.push(events);
       for (const entry of current.values()) events.onAdded(entry);
+      return () => {
+        const index = listeners.indexOf(events);
+        if (index !== -1) listeners.splice(index, 1);
+      };
     },
   };
 }

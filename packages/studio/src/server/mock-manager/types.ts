@@ -1,3 +1,4 @@
+import type { ChildScenarioMeta, DescribedRoute } from "@noverax/courier-mock/managed";
 import type { Namespace } from "socket.io";
 
 import type { MockRegistry } from "../mock-registry";
@@ -12,18 +13,8 @@ export type ServerStatus =
   | "crashed"
   | "restarting";
 
-export interface ScenarioMeta {
-  name: string;
-  endpointCount: number;
-  isActive: boolean;
-  endpoints: Array<{
-    group: string;
-    endpoint: string;
-    httpMethod: string;
-    behavior: "resolves" | "returns" | "rejects" | "custom";
-    latency?: number;
-  }>;
-}
+/** A scenario as the UI lists it. */
+export type ScenarioMeta = ChildScenarioMeta;
 
 export interface ServerState {
   serverId: string;
@@ -32,6 +23,10 @@ export interface ServerState {
   mockKey: string;
   relativePath: string;
   configuredPort: number;
+  /** Whether the config named `configuredPort`, which then holds exactly, or Studio assigned it. */
+  portDeclared: boolean;
+  /** Whether the last definition Studio could read asks to start at launch. */
+  autoStart: boolean;
   status: ServerStatus;
   origin: "studio" | "external";
   actualPort?: number;
@@ -39,7 +34,7 @@ export interface ServerState {
   pid?: number;
   startedAt?: number;
   lastError?: string;
-  routes: Array<Record<string, unknown>>;
+  routes: DescribedRoute[];
   collections: Array<{ name: string; count: number; records: unknown[] }>;
   scenarios: ScenarioMeta[];
   activeScenario: string | null;

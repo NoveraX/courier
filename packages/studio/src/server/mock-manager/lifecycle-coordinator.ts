@@ -3,19 +3,18 @@
  *
  * Subscribes to the `MockRegistry` events (driven from `courier.config.ts.mocks`
  * by the config-watcher) and translates them into `ServerState` registrations,
- * managed child-process spawns and UI emissions. Route/collection/scenario
- * metadata for the UI is extracted before spawn via the persistent meta-pool
- * worker so the Explorer renders immediately, even when the mock is not yet
- * `autoStart`-ed.
+ * managed child-process spawns and UI emissions. Each mock is described from
+ * the definition Studio already loaded, so the Explorer lists its routes,
+ * collections and scenarios before it runs.
  */
 
-import { basename } from "node:path";
 import { createLogger } from "@noverax/courier";
 import type { MockEntry } from "../mock-registry";
+import { createDescriptionApplier } from "./apply-description";
 import { createProcessEvents } from "./lifecycle-process-events";
 import { createServerOps } from "./lifecycle-server-ops";
-import type { MetaResult } from "./meta-pool";
-import { createMetaPool } from "./meta-pool";
+import { declaredPorts } from "./mock-ports";
+import { createMockRegistration } from "./mock-registration";
 import { createProcessManager } from "./process-manager";
 import type { CoordinatorConfig, ServerState } from "./types";
 import { createUiEmitter } from "./ui-emitter";
@@ -23,22 +22,17 @@ import { createUiEmitter } from "./ui-emitter";
 const log = createLogger("Studio");
 
 /**
- * Wrap a fire-and-forget mock lifecycle promise so an unexpected rejection
- * (e.g. a child process kill that throws) is observed and logged instead of
- * becoming an unhandledRejection on the server process. `startServer` has
- * its own internal try/catch and does not need this wrapper.
+ * Observe a fire-and-forget lifecycle promise, so a failure is logged rather
+ * than left as an unhandled rejection in Studio's process.
  */
 function runVoid(label: string, promise: Promise<unknown>): void {
   void promise.catch((err) => log.warn(`${label} failed`, err));
 }
 
-function emptyMeta(): MetaResult {
-  return { autoStart: false, routes: [], collections: [], scenarios: [] };
-}
-
 export function createLifecycleCoordinator(config: CoordinatorConfig) {
   const servers = new Map<string, ServerState>();
   const { emit, emitServerState } = createUiEmitter(config.uiNamespace);
+  let closed = false;
 
   const updateAndEmit = (serverId: string, patch: Partial<ServerState>) => {
     const state = servers.get(serverId);
@@ -50,99 +44,100 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
   const processManager = createProcessManager(
     createProcessEvents({ servers, emit, updateAndEmit }),
   );
+  const reservedPorts = () => declaredPorts(config.mockRegistry.getEntries());
+  const isClosed = () => closed;
 
-  const { registerDeclared, startServer, stopServer, restartServer } = createServerOps({
+  const registration = createMockRegistration({
     servers,
     basePort: config.basePort,
-    processManager,
+    reservedPorts,
+    isAlive: processManager.has,
     updateAndEmit,
     emitServerState,
   });
+  const ops = createServerOps({ servers, processManager, updateAndEmit, reservedPorts, isClosed });
+  const apply = createDescriptionApplier({
+    servers,
+    registration,
+    ops,
+    getConfigPath: config.getConfigPath,
+    isAlive: processManager.has,
+    isCurrent: (entry: MockEntry) =>
+      config.mockRegistry
+        .getEntries()
+        .some((e) => e.key === entry.key && e.definition === entry.definition),
+    isClosed,
+  });
 
-  const metaPool = createMetaPool();
+  const countMocks = () => config.watcherStatus?.setMockFileCount(servers.size);
 
-  // ── Registry → Coordinator wiring ────────────────────────────────────────
-
-  async function materializeAndRegister(entry: MockEntry): Promise<void> {
-    const configPath = config.getConfigPath();
-    if (!configPath) {
-      log.warn(`Cannot register mock "${entry.key}": courier.config.ts not loaded`);
-      return;
-    }
-    const meta = (await metaPool.analyze(configPath, entry.key)) ?? emptyMeta();
-    const relativePath = `${basename(configPath)}:mocks.${entry.key}`;
-    registerDeclared({ key: entry.key, configPath, relativePath, meta });
-    if (meta.autoStart) void startServer(entry.key);
-    config.watcherStatus?.setMockFileCount(servers.size);
-  }
-
-  config.mockRegistry.attach({
+  const detach = config.mockRegistry.attach({
     onAdded(entry) {
-      runVoid(`materializeAndRegister(${entry.key})`, materializeAndRegister(entry));
+      runVoid(`register(${entry.key})`, apply(entry).then(countMocks));
     },
     onChanged(entry) {
       config.watcherStatus?.emitChange("mock", [entry.key]);
-      const state = servers.get(entry.key);
-      if (state && state.status === "running") {
-        runVoid(`restartServer(${entry.key})`, restartServer(entry.key));
-      }
+      runVoid(`update(${entry.key})`, apply(entry));
     },
+    /* Removal waits for the mock to stop; one declared again meanwhile is
+       registered afresh once it is gone. */
     onRemoved(key) {
-      runVoid(`stopServer(${key})`, stopServer(key));
-      servers.delete(key);
-      emit("mock:server:disconnect", { serverId: key });
-      config.watcherStatus?.setMockFileCount(servers.size);
+      const gone = () => {
+        emit("mock:server:disconnect", { serverId: key });
+        countMocks();
+        const declaredAgain = config.mockRegistry.getEntries().find((e) => e.key === key);
+        if (declaredAgain && !closed) {
+          runVoid(`register(${key})`, apply(declaredAgain).then(countMocks));
+        }
+      };
+      runVoid(`remove(${key})`, ops.removeServer(key, gone));
     },
   });
-
-  // ── Public API ───────────────────────────────────────────────────────────
 
   function handleCommand(command: string, data: Record<string, unknown>): void {
     const serverId = data.serverId as string;
     switch (command) {
       case "mock:managed:start":
-        void startServer(serverId);
+        runVoid(`start(${serverId})`, ops.startServer(serverId));
         break;
       case "mock:managed:stop":
-        runVoid(`stopServer(${serverId})`, stopServer(serverId));
+        runVoid(`stop(${serverId})`, ops.stopServer(serverId));
         break;
       case "mock:managed:restart":
-        runVoid(`restartServer(${serverId})`, restartServer(serverId));
+        runVoid(`restart(${serverId})`, ops.restartServer(serverId));
         break;
       case "mock:managed:startAll":
-        for (const id of servers.keys()) void startServer(id);
+        for (const id of servers.keys()) runVoid(`start(${id})`, ops.startServer(id));
         break;
       case "mock:managed:stopAll":
-        for (const id of servers.keys()) runVoid(`stopServer(${id})`, stopServer(id));
+        for (const id of servers.keys()) runVoid(`stop(${id})`, ops.stopServer(id));
         break;
     }
   }
 
   function forwardStoreCommand(command: Record<string, unknown>): void {
     const serverId = command.serverId as string;
-    if (servers.has(serverId)) {
-      processManager.sendCommand(serverId, command);
-    }
+    if (servers.has(serverId)) processManager.sendCommand(serverId, command);
   }
 
   function sendSnapshot(): void {
-    for (const state of servers.values()) {
-      emitServerState(state);
-    }
+    for (const state of servers.values()) emitServerState(state);
   }
 
-  return {
-    /** No-op kept for API compatibility — registry events drive registration now. */
-    start: () => {},
-    stop: async () => {
-      metaPool.shutdown();
-      await processManager.killAll();
-      servers.clear();
-    },
-    handleCommand,
-    forwardStoreCommand,
-    sendSnapshot,
-  };
+  /**
+   * Stop every mock and start none again: config loads and commands that
+   * arrive later are ignored, and operations already underway finish first,
+   * so no worker is forked after this resolves.
+   */
+  async function stop(): Promise<void> {
+    closed = true;
+    detach();
+    await ops.settled();
+    await processManager.dispose();
+    servers.clear();
+  }
+
+  return { stop, handleCommand, forwardStoreCommand, sendSnapshot };
 }
 
 export type LifecycleCoordinator = ReturnType<typeof createLifecycleCoordinator>;

@@ -13,6 +13,8 @@ export function createUiEmitter(uiNamespace: Namespace) {
     });
   };
 
+  /* Request and error counts are the UI's own tally of the events it saw, so
+     a state update leaves them out rather than resetting them. */
   const emitServerState = (state: ServerState) => {
     emit("mock:server:connect", {
       serverId: state.serverId,
@@ -23,8 +25,6 @@ export function createUiEmitter(uiNamespace: Namespace) {
       routeCount: state.routes.length,
       collectionCount: state.collections.length,
       recordCount: state.collections.reduce((sum, c) => sum + c.count, 0),
-      requestsServed: 0,
-      errorCount: 0,
       activeScenario: state.activeScenario ?? null,
       availableScenarios: state.scenarios.map((s) => s.name),
       scenarios: state.scenarios,
@@ -36,6 +36,7 @@ export function createUiEmitter(uiNamespace: Namespace) {
       routes: state.routes,
       managed: true,
       processStatus: state.status,
+      lastError: state.lastError ?? null,
       origin: state.origin,
       filePath: state.relativePath,
       networkConfig: state.networkConfig ?? null,

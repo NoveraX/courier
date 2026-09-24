@@ -1,98 +1,74 @@
 /**
- * Server start/stop/restart helpers for the mock lifecycle coordinator.
+ * Start, stop, restart and removal of managed mocks, kept in step with their
+ * `ServerState`.
  *
- * - `allocateNextPort` — find the next free port not already assigned to a
- *   tracked server.
- * - `registerDeclared` — turn a `RegisteredMock` (key + meta extracted by the
- *   meta-pool from `courier.config.ts.mocks[key]`) into a tracked `ServerState`
- *   and emit it to the UI.
- * - `startServer` / `stopServer` / `restartServer` — drive the
- *   `processManager` while keeping the local `ServerState` in sync.
- *
- * The factory accepts the shared mutable state (servers map, port cursor,
- * processManager, emitter) by reference so the operations can run inline
- * inside the coordinator's closure.
+ * Operations on one mock run one after another, each seeing what the one
+ * before it left: a stop that arrives while a start or restart is still
+ * underway stops the worker that start forked, rather than racing it and
+ * leaving it running. Once Studio closes, nothing starts again.
  */
 
-import type { MetaResult } from "./meta-pool";
+import { allocatePort } from "./port-allocator";
 import type { ProcessManager } from "./process-manager";
 import type { ServerState } from "./types";
 
-/** Input to `registerDeclared` — a config-driven mock entry plus extracted metadata. */
-export interface RegisteredMock {
-  key: string;
-  configPath: string;
-  /** Display path shown in the UI (e.g. `courier.config.ts:mocks.users`). */
-  relativePath: string;
-  /** Extracted via the meta-pool from the user's mock definition. */
-  meta: MetaResult;
-}
-
 export interface ServerOpsContext {
   servers: Map<string, ServerState>;
-  basePort: number;
   processManager: ProcessManager;
   updateAndEmit: (serverId: string, patch: Partial<ServerState>) => void;
-  emitServerState: (state: ServerState) => void;
+  /** Ports the config declares; a port Studio assigns keeps clear of them. */
+  reservedPorts: () => Iterable<number>;
+  isClosed: () => boolean;
 }
 
 export interface ServerOps {
-  registerDeclared: (declared: RegisteredMock) => void;
   startServer: (serverId: string) => Promise<void>;
   stopServer: (serverId: string) => Promise<void>;
   restartServer: (serverId: string) => Promise<void>;
+  /** Stop a mock, then forget it; `onRemoved` runs once it is gone. */
+  removeServer: (serverId: string, onRemoved: () => void) => Promise<void>;
+  /** Resolves once every operation queued so far has finished. */
+  settled: () => Promise<void>;
 }
 
+const NOT_RUNNING: Partial<ServerState> = { pid: undefined, actualPort: undefined, url: undefined };
+
 export function createServerOps(ctx: ServerOpsContext): ServerOps {
-  const { servers, processManager, updateAndEmit, emitServerState } = ctx;
-  let nextPort = ctx.basePort;
+  const { servers, processManager, updateAndEmit } = ctx;
+  const queues = new Map<string, Promise<void>>();
 
-  function allocateNextPort(): number {
-    const usedPorts = new Set<number>();
-    for (const s of servers.values()) {
-      usedPorts.add(s.configuredPort);
-      if (s.actualPort) usedPorts.add(s.actualPort);
-    }
-    while (usedPorts.has(nextPort)) nextPort++;
-    return nextPort++;
-  }
-
-  function registerDeclared(declared: RegisteredMock): void {
-    if (servers.has(declared.key)) return;
-    const { meta } = declared;
-    const state: ServerState = {
-      serverId: declared.key,
-      name: declared.key,
-      configPath: declared.configPath,
-      mockKey: declared.key,
-      relativePath: declared.relativePath,
-      /* A port the developer wrote down is a decision, not a preference;
-         allocation is for the definitions that named none. */
-      configuredPort: meta.port ?? allocateNextPort(),
-      status: "declared",
-      origin: "studio",
-      routes: meta.routes.map((r) => ({ ...r })),
-      collections: meta.collections.map((name) => ({ name, count: 0, records: [] })),
-      scenarios: meta.scenarios,
-      activeScenario: null,
+  function enqueue(serverId: string, operation: () => Promise<void>): Promise<void> {
+    const previous = queues.get(serverId) ?? Promise.resolve();
+    const run = previous.then(operation, operation);
+    const clear = () => {
+      if (queues.get(serverId) === run) queues.delete(serverId);
     };
-    servers.set(declared.key, state);
-    emitServerState(state);
+    run.then(clear, clear);
+    queues.set(serverId, run);
+    return run;
   }
 
-  async function startServer(serverId: string): Promise<void> {
-    const state = servers.get(serverId);
-    if (!state || processManager.has(serverId)) return;
+  /** A free port for a mock whose port Studio assigns, clear of every other mock's. */
+  async function portToListenOn(state: ServerState): Promise<number> {
+    if (state.portDeclared) return state.configuredPort;
+    const avoid = new Set<number>(ctx.reservedPorts());
+    for (const other of servers.values()) {
+      if (other === state) continue;
+      avoid.add(other.configuredPort);
+      if (other.actualPort) avoid.add(other.actualPort);
+    }
+    return allocatePort(state.configuredPort, avoid);
+  }
 
-    updateAndEmit(serverId, { status: "starting", origin: "studio" });
+  async function start(serverId: string): Promise<void> {
+    const state = servers.get(serverId);
+    if (ctx.isClosed() || !state || processManager.has(serverId)) return;
+    updateAndEmit(serverId, { status: "starting", origin: "studio", lastError: undefined });
     try {
-      const spawned = await processManager.spawn(
-        serverId,
-        state.configPath,
-        state.mockKey,
-        state.configuredPort,
-      );
-      state.pid = spawned.pid;
+      const port = await portToListenOn(state);
+      if (ctx.isClosed()) return;
+      const { configPath, mockKey } = state;
+      state.pid = processManager.spawn({ serverId, configPath, mockKey, port }).pid;
     } catch (err) {
       updateAndEmit(serverId, {
         status: "crashed",
@@ -101,18 +77,35 @@ export function createServerOps(ctx: ServerOpsContext): ServerOps {
     }
   }
 
-  async function stopServer(serverId: string): Promise<void> {
-    if (!servers.has(serverId)) return;
+  async function stop(serverId: string): Promise<void> {
+    if (!servers.has(serverId) || !processManager.has(serverId)) return;
     updateAndEmit(serverId, { status: "stopping" });
     await processManager.kill(serverId);
-    updateAndEmit(serverId, { status: "stopped", pid: undefined });
+    updateAndEmit(serverId, { status: "stopped", ...NOT_RUNNING });
   }
 
-  async function restartServer(serverId: string): Promise<void> {
+  /* Only a mock that is running restarts: one stopped by the time its turn
+     comes stays stopped. */
+  async function restart(serverId: string): Promise<void> {
+    if (ctx.isClosed() || !servers.has(serverId) || !processManager.has(serverId)) return;
     updateAndEmit(serverId, { status: "restarting" });
     await processManager.kill(serverId);
-    await startServer(serverId);
+    updateAndEmit(serverId, NOT_RUNNING);
+    await start(serverId);
   }
 
-  return { registerDeclared, startServer, stopServer, restartServer };
+  return {
+    startServer: (serverId) => enqueue(serverId, () => start(serverId)),
+    stopServer: (serverId) => enqueue(serverId, () => stop(serverId)),
+    restartServer: (serverId) => enqueue(serverId, () => restart(serverId)),
+    removeServer: (serverId, onRemoved) =>
+      enqueue(serverId, async () => {
+        await stop(serverId);
+        servers.delete(serverId);
+        onRemoved();
+      }),
+    settled: async () => {
+      while (queues.size > 0) await Promise.allSettled([...queues.values()]);
+    },
+  };
 }

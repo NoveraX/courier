@@ -1,14 +1,10 @@
 /**
- * Verifies the runVoid wrapper around `stopServer` / `restartServer` in
- * `lifecycle-coordinator.ts`. Without it, a rejected mock-server lifecycle
- * promise (e.g. processManager.kill throws) becomes an unhandledRejection
- * on the Studio server process.
+ * A mock lifecycle command that fails — a worker that cannot be killed — is
+ * logged, never left as an unhandled rejection in Studio's process.
  *
- * The test mocks `lifecycle-server-ops` so the coordinator wires through
- * stub functions whose `stopServer` always rejects, then triggers the
- * forwarding paths via `handleCommand`. The unhandledRejection listener
- * is the actual assertion target — if the wrapper is removed, this test
- * fires the listener.
+ * `lifecycle-server-ops` is mocked so every operation rejects; the commands
+ * are sent through `handleCommand`, and the process's unhandledRejection
+ * listener is what the test watches.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,17 +18,25 @@ const stopServer = vi.fn(async () => {
 const restartServer = vi.fn(async () => {
   throw new Error("restart failed");
 });
-const startServer = vi.fn(async () => {});
-const registerDeclared = vi.fn();
+const startServer = vi.fn(async () => {
+  throw new Error("start failed");
+});
 
 vi.mock("../src/server/mock-manager/lifecycle-server-ops", () => ({
-  createServerOps: () => ({ registerDeclared, startServer, stopServer, restartServer }),
+  createServerOps: () => ({
+    startServer,
+    stopServer,
+    restartServer,
+    removeServer: vi.fn(async () => {}),
+    settled: vi.fn(async () => {}),
+  }),
 }));
 
-vi.mock("../src/server/mock-manager/meta-pool", () => ({
-  createMetaPool: () => ({
-    analyze: vi.fn(async () => null),
-    shutdown: vi.fn(),
+vi.mock("../src/server/mock-manager/mock-registration", () => ({
+  createMockRegistration: () => ({
+    registerDeclared: vi.fn(),
+    updateDeclared: vi.fn(),
+    registerProblem: vi.fn(),
   }),
 }));
 
@@ -40,10 +44,9 @@ vi.mock("../src/server/mock-manager/process-manager", () => ({
   createProcessManager: () => ({
     spawn: vi.fn(),
     kill: vi.fn(),
-    killAll: vi.fn(async () => {}),
+    dispose: vi.fn(async () => {}),
     has: vi.fn(() => false),
     sendCommand: vi.fn(),
-    list: vi.fn(() => []),
   }),
 }));
 
@@ -61,7 +64,7 @@ vi.mock("../src/server/mock-manager/ui-emitter", () => ({
 const mockRegistry = {
   syncFromConfig: vi.fn(),
   getEntries: vi.fn(() => []),
-  attach: vi.fn(),
+  attach: vi.fn(() => () => {}),
 };
 
 const config = {
@@ -111,17 +114,13 @@ describe("lifecycle-coordinator runVoid wrappers", () => {
     expect(unhandled).toHaveLength(0);
   });
 
-  it("absorbs stopServer rejection from mock:managed:stopAll iteration", async () => {
+  it("absorbs startServer rejection from mock:managed:start without unhandled rejection", async () => {
     const coordinator = createLifecycleCoordinator(config);
-    // stopAll iterates servers.keys(); seed two via the public sendSnapshot
-    // path is unavailable here, so we exercise the empty-keys branch instead
-    // — proves the helper still wraps even when the loop has zero entries
-    // (no rejection produced) and survives an injected one when the inner
-    // function rejects synchronously on first call.
-    stopServer.mockClear();
-    coordinator.handleCommand("mock:managed:stopAll", {});
+
+    coordinator.handleCommand("mock:managed:start", { serverId: "srv-3" });
     await new Promise((r) => setTimeout(r, 5));
 
+    expect(startServer).toHaveBeenCalledWith("srv-3");
     expect(unhandled).toHaveLength(0);
   });
 });

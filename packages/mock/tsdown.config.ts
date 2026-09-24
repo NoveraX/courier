@@ -9,8 +9,7 @@ export default defineConfig({
     testing: "src/testing.ts",
     server: "src/server/index.ts",
     "contract/index": "src/contract/index.ts",
-    "managed/worker-entry": "src/managed/worker-entry.ts",
-    "auto/meta-worker": "src/auto/meta-worker.ts",
+    "managed/index": "src/managed/index.ts",
   },
   /* Loaded lazily and declared as an optional peer, so it must stay a real
      import rather than being inlined into the bundle. */

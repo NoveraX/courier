@@ -1,18 +1,19 @@
+import type { AnySource } from "@noverax/courier/define";
 import type { MockStore } from "../store";
 import type { MockScenario, NetworkConfig, TypedMockFn } from "../types";
+import type { DescribedRoute } from "./describe-route";
 
 /** Configuration returned by defineMockServer() */
 export interface MockServerDefinition {
   /** Marker for runtime type detection */
   __type: "courier-mock-server";
-  /** API source — enables auto-generated CRUD routes */
-  source?: {
-    options: {
-      groups: Record<string, { options?: { prefix?: string } } & Record<string, unknown>>;
-    };
-  };
-  /** Preferred port (0 = auto-assign, default: 0) */
-  port: number;
+  /** The API to mock — grouped or flat; its routes and data are generated from it */
+  source: AnySource;
+  /**
+   * Port to listen on. Studio holds a mock to it and reports it when it is
+   * taken; left out, Studio assigns one from `studio.mockBasePort`.
+   */
+  port?: number;
   /**
    * Where to listen (default: `"localhost"`, loopback only). Use `"0.0.0.0"`
    * to reach the mock from another machine or a container — its admin API,
@@ -47,10 +48,9 @@ export interface MockServerSeedConfig {
   [groupName: string]: { count: number } | number | undefined;
 }
 
-/** Input config for defineMockServer() — port and autoStart are optional */
-export type MockServerConfig = Omit<MockServerDefinition, "__type" | "port" | "autoStart"> & {
-  port?: number;
-  /** Start automatically when Studio launches (default: true) */
+/** Input config for defineMockServer() — autoStart is optional */
+export type MockServerConfig = Omit<MockServerDefinition, "__type" | "autoStart"> & {
+  /** Start automatically when Studio launches (default: false) */
   autoStart?: boolean;
 };
 
@@ -58,7 +58,13 @@ export type MockServerConfig = Omit<MockServerDefinition, "__type" | "port" | "a
 
 /** Messages from Studio (parent) → mock server (child) */
 export type ParentMessage =
-  | { type: "start"; configPath: string; mockKey: string; port: number }
+  | {
+      type: "start";
+      configPath: string;
+      mockKey: string;
+      /** The port to listen on, exactly: Studio chose it, and a taken one is reported. */
+      port: number;
+    }
   | { type: "stop" }
   | { type: "command"; command: Record<string, unknown>; requestId: string };
 
@@ -91,7 +97,7 @@ export type ChildMessage =
       type: "ready";
       port: number;
       url: string;
-      routes: Array<Record<string, unknown>>;
+      routes: DescribedRoute[];
       collections: Array<{ name: string; count: number; records: unknown[] }>;
       scenarios: ChildScenarioMeta[];
     }

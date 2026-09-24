@@ -4,6 +4,7 @@
 
 import type { RouteInfo } from "../auto/route-analyzer";
 import type { MockServer } from "../server/create-mock-server";
+import type { DescribedRoute } from "./describe-route";
 import { handleChaosCommand, handleNetworkCommand } from "./network-commands";
 import { buildScenarioMeta } from "./scenario-meta";
 import { handleStoreCommand } from "./store-commands";
@@ -14,7 +15,7 @@ export async function handleCommand(
   server: MockServer,
   analyzedRoutes: RouteInfo[],
   msg: Extract<ParentMessage, { type: "command" }>,
-  buildUiRoutes: () => Array<Record<string, unknown>>,
+  buildUiRoutes: () => DescribedRoute[],
 ): Promise<void> {
   const action = (msg.command as Record<string, unknown>).action as string;
 
@@ -43,7 +44,7 @@ function emitScenarioApplied(
   server: MockServer,
   analyzedRoutes: RouteInfo[],
   result: { ok: boolean; data?: unknown },
-  buildUiRoutes: () => Array<Record<string, unknown>>,
+  buildUiRoutes: () => DescribedRoute[],
 ): void {
   const appliedName = (result.data as Record<string, unknown> | undefined)?.applied as
     | string

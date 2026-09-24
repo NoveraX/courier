@@ -1,6 +1,6 @@
 /**
  * Internal auto-generation pipeline.
- * Not part of the public API — consumed by managed/worker-entry.ts via direct imports.
+ * Not part of the public API — consumed by managed/run-mock-worker.ts and managed/describe-mock-server.ts via direct imports.
  */
 
 export { seedAllCollections } from "./auto-scenario";

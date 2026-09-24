@@ -7,7 +7,7 @@
  */
 import { ForbiddenError, SSE_CONTROL_EVENTS } from "@noverax/courier/realtime";
 import type { Context as HonoContext } from "hono";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { handleSSEMock } from "../src/server/sse-handler";
 import type { MockRequestContext, ResolvedHandler } from "../src/types";
@@ -59,6 +59,24 @@ describe("handleSSEMock", () => {
     expect(text).toBe(
       `event: ${SSE_CONTROL_EVENTS.error}\ndata: {"code":4403,"message":"Not a member of this room"}\n\n`,
     );
+  });
+
+  it("logs a failed stream with the error itself", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const refused = new Error("connect ECONNREFUSED 10.0.0.5:5432");
+    const response = handleSSEMock(
+      honoContext(),
+      handlerFor(async function* () {
+        throw refused;
+      }),
+      CTX,
+    );
+
+    await response.text();
+
+    const line = warn.mock.calls.find((call) => String(call[1]).includes("Stream handler failed"));
+    expect(line?.at(-1)).toBe(refused);
+    warn.mockRestore();
   });
 
   it("keeps any other error's text off the wire", async () => {

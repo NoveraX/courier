@@ -89,10 +89,7 @@ export function createMockWSHandler(config: WSHandlerConfig): MockWSHandler {
           }),
       )
       .catch((err: unknown) => {
-        logger.error(
-          "MockWS",
-          `Failed to load 'ws' package: ${err instanceof Error ? err.message : "unknown"}`,
-        );
+        logger.error("MockWS", "Failed to load the 'ws' package", err);
         return null;
       });
     return wsServerPromise;

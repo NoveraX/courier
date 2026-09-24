@@ -33,11 +33,6 @@ export function endSubscriptionAndClose(
   });
 }
 
-/** Extract a human-readable message from an unknown error value */
-export function errMessage(err: unknown, fallback: string): string {
-  return err instanceof Error ? err.message : fallback;
-}
-
 /** Cryptographically random connection ID — 8 random bytes → 16 hex chars */
 export function generateConnectionId(): string {
   return `mock_${randomBytes(8).toString("hex")}`;

@@ -23,7 +23,7 @@ import type { MockScenario, TypedMockFn } from "../types";
 import { registerAdminRoutes } from "./admin-api";
 import type { MockServer, MockServerOptions } from "./mock-server-types";
 import { registerPrefixRoutes } from "./prefix-routes";
-import type { LogLevel } from "./request-logger";
+import type { MockLogMode } from "./request-logger";
 import { createRequestLogger } from "./request-logger";
 import type { RequestHooks } from "./route-generator";
 import { handleMockRequest, registerProxyRoute, registerRestRoutes } from "./route-generator";
@@ -157,7 +157,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
   return mockServer;
 }
 
-function resolveLogLevel(log?: LogLevel | boolean): LogLevel {
+function resolveLogLevel(log?: MockLogMode | boolean): MockLogMode {
   if (log === true) return "normal";
   if (log === false) return "silent";
   return log ?? "normal";

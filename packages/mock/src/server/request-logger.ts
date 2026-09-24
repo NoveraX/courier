@@ -3,32 +3,33 @@ import type { MiddlewareHandler } from "hono";
 
 const log = createLogger("MockServer");
 
-export type LogLevel = "silent" | "normal" | "verbose";
+/**
+ * How much of its traffic a mock server logs: nothing, every request except
+ * its own admin API (`normal`), or every request (`verbose`).
+ */
+export type MockLogMode = "silent" | "normal" | "verbose";
 
-/** Create a Hono middleware that logs requests with status color coding */
-export function createRequestLogger(level: LogLevel): MiddlewareHandler {
-  if (level === "silent") {
+/**
+ * Create a Hono middleware that logs one line per request: status, method,
+ * path and duration.
+ *
+ * The line is plain text; the logger colours its prefix where the terminal
+ * shows colour, and a log file or pipe gets no escape codes.
+ *
+ * @param mode - Which requests to log
+ * @returns The middleware
+ */
+export function createRequestLogger(mode: MockLogMode): MiddlewareHandler {
+  if (mode === "silent") {
     return async (_c, next) => next();
   }
 
   return async (c, next) => {
     const start = performance.now();
     await next();
-    const duration = Math.round(performance.now() - start);
-    const status = c.res.status;
-    const method = c.req.method;
     const path = new URL(c.req.url).pathname;
-
-    const statusColor = status >= 400 ? "\x1b[31m" : status >= 300 ? "\x1b[33m" : "\x1b[32m";
-    const reset = "\x1b[0m";
-
-    if (level === "verbose") {
-      log.info(`${statusColor}${status}${reset} ${method} ${path} ${duration}ms`);
-    } else {
-      // Normal: skip admin routes
-      if (!path.startsWith("/__admin")) {
-        log.info(`${statusColor}${status}${reset} ${method} ${path} ${duration}ms`);
-      }
-    }
+    if (mode === "normal" && path.startsWith("/__admin")) return;
+    const duration = Math.round(performance.now() - start);
+    log.info(`${c.res.status} ${c.req.method} ${path} ${duration}ms`);
   };
 }

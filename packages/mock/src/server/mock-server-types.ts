@@ -11,7 +11,7 @@ import type { NetworkState } from "../network/state";
 import type { MockStore } from "../store";
 import type { MockHistoryEntry, MockScenario, NetworkConfig, TypedMockFn } from "../types";
 import type { PrefixMapping } from "./prefix-routes";
-import type { LogLevel } from "./request-logger";
+import type { MockLogMode } from "./request-logger";
 import type { RequestHooks } from "./route-generator";
 
 /** Configuration for the mock HTTP server */
@@ -32,7 +32,7 @@ export interface MockServerOptions {
   /** Requests the history keeps, newest first to go last (default: 1000) */
   historyLimit?: number;
   /** Request logging level (default: "normal") */
-  log?: LogLevel | boolean;
+  log?: MockLogMode | boolean;
   /** Default network simulation */
   network?: NetworkConfig;
   /** Initial scenario */

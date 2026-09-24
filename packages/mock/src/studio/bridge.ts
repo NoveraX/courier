@@ -101,10 +101,7 @@ export async function connectMockToStudio(
       },
     };
   } catch (err) {
-    logger.warn(
-      "MockBridge",
-      `Failed to connect to Studio at ${host}:${port}: ${err instanceof Error ? err.message : "unknown"}`,
-    );
+    logger.warn("MockBridge", `Failed to connect to Studio at ${host}:${port}`, err);
     return undefined;
   }
 }

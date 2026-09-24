@@ -126,7 +126,7 @@ function isLoopbackOrigin(origin: string): boolean {
       hostname === "[::1]"
     );
   } catch (error) {
-    logger.debug("MockAdmin", `Unreadable Origin "${origin}": ${String(error)}`);
+    logger.debug("MockAdmin", `Unreadable Origin "${origin}"`, error);
     return false;
   }
 }

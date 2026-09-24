@@ -12,7 +12,7 @@ import {
   dispatchMessage,
   parseMessage,
 } from "./message-router";
-import { errMessage, generateConnectionId } from "./protocol";
+import { generateConnectionId } from "./protocol";
 import { parseVariablesFromUrl, type WSRoute } from "./route-resolver";
 
 /** Hooks for emitting WS lifecycle events to studio (set by studio bridge) */
@@ -73,7 +73,7 @@ export function activateConnection(params: ActivateConnectionParams): void {
     };
     handlers = channelFn(ctx);
   } catch (err) {
-    logger.warn("MockWS", `channelFn threw (${connectionId}): ${errMessage(err, "unknown")}`);
+    logger.warn("MockWS", `channelFn threw (${connectionId})`, err);
     refuseOnSubscribe(ws, topic, describeFailure(err, "Subscription failed"));
     ws.on("close", () => {
       historyEntry.duration = performance.now() - startedAt;
@@ -93,10 +93,7 @@ export function activateConnection(params: ActivateConnectionParams): void {
     const msg = parseMessage(ws, raw);
     if (!msg) return;
     void dispatchMessage(msg, ws, handlers, channelCtx, state, registry).catch((error: unknown) =>
-      logger.warn(
-        "MockWS",
-        `Message handling failed (${connectionId}): ${errMessage(error, "unknown")}`,
-      ),
+      logger.warn("MockWS", `Message handling failed (${connectionId})`, error),
     );
   });
 
@@ -107,7 +104,7 @@ export function activateConnection(params: ActivateConnectionParams): void {
   });
 
   ws.on("error", (err: Error) => {
-    logger.warn("MockWS", `Connection error (${connectionId}): ${err.message}`);
+    logger.warn("MockWS", `Connection error (${connectionId})`, err);
     // ws will fire "close" after "error" — cleanup happens there
   });
 }

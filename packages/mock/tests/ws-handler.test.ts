@@ -13,7 +13,7 @@
  * - message size limits via maxPayload
  */
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 
 import {
@@ -265,6 +265,27 @@ describe("mock ws-handler — real HTTP upgrade", () => {
 
     ws.close();
     await waitForClose(ws);
+  });
+
+  it("logs a throwing onJoin with the error itself, stack and all", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const refused = new Error("connect ECONNREFUSED 10.0.0.5:5432");
+    server.mock("chat", "room").channel(() => ({
+      onJoin: () => {
+        throw refused;
+      },
+      onMessage: () => {},
+    }));
+
+    const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
+    await waitForOpen(ws);
+    const collected = collectFramesUntilClose(ws);
+    send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
+    await collected;
+
+    const line = warn.mock.calls.find((call) => String(call[1]).includes("onJoin threw"));
+    expect(line?.at(-1)).toBe(refused);
+    warn.mockRestore();
   });
 
   it("ends the subscription, then closes normally, when onJoin throws", async () => {

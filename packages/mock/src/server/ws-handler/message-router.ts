@@ -9,7 +9,7 @@ import {
 import type { WebSocket as NodeWebSocket } from "ws";
 
 import type { WSConnectionRegistry } from "./connection-registry";
-import { endSubscriptionAndClose, errMessage, sendError } from "./protocol";
+import { endSubscriptionAndClose, sendError } from "./protocol";
 
 /** Mutable per-connection state shared between message and close handlers */
 export interface ConnectionState {
@@ -30,7 +30,7 @@ export function parseMessage(ws: NodeWebSocket, raw: Buffer | string): WSMessage
   try {
     return decodeMessage(raw.toString());
   } catch (error) {
-    logger.warn("MockWS", `Undecodable frame: ${errMessage(error, "unknown")}`);
+    logger.warn("MockWS", "Undecodable frame", error);
     sendError(ws, { code: 4400, message: "Invalid message" });
     return null;
   }
@@ -66,10 +66,7 @@ export async function dispatchMessage<TChannelCtx extends MessageRouterContext>(
     try {
       await handlers.onJoin?.(channelCtx as never);
     } catch (err) {
-      logger.warn(
-        "MockWS",
-        `onJoin threw (${channelCtx.connectionId}): ${errMessage(err, "unknown")}`,
-      );
+      logger.warn("MockWS", `onJoin threw (${channelCtx.connectionId})`, err);
       endSubscriptionAndClose(ws, clientTopic, describeFailure(err, "Subscription failed"));
       return;
     }
@@ -96,10 +93,7 @@ export async function dispatchMessage<TChannelCtx extends MessageRouterContext>(
     try {
       await handlers.onMessage?.(channelCtx as never, msg.payload);
     } catch (err) {
-      logger.warn(
-        "MockWS",
-        `onMessage threw (${channelCtx.connectionId}): ${errMessage(err, "unknown")}`,
-      );
+      logger.warn("MockWS", `onMessage threw (${channelCtx.connectionId})`, err);
       sendError(ws, describeFailure(err, "Handler error"), channelCtx.topic);
     }
     return;
@@ -128,9 +122,6 @@ export async function callOnLeaveOnce<TChannelCtx extends MessageRouterContext>(
   try {
     await handlers.onLeave?.(channelCtx as never);
   } catch (err) {
-    logger.warn(
-      "MockWS",
-      `onLeave threw (${channelCtx.connectionId}): ${errMessage(err, "unknown")}`,
-    );
+    logger.warn("MockWS", `onLeave threw (${channelCtx.connectionId})`, err);
   }
 }

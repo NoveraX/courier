@@ -58,7 +58,7 @@ async function pumpEvents(
       if (!(await write(writer, formatEvent(event)))) break;
     }
   } catch (error) {
-    logger.warn("MockSSE", `Stream handler failed: ${String(error)}`);
+    logger.warn("MockSSE", "Stream handler failed", error);
     end = `event: ${SSE_CONTROL_EVENTS.error}\ndata: ${JSON.stringify(describeFailure(error, "Stream failed"))}\n\n`;
   }
   if (signal.aborted) {
@@ -67,7 +67,7 @@ async function pumpEvents(
     await write(writer, end);
   }
   await writer.close().catch((error: unknown) => {
-    logger.debug("MockSSE", `Stream already closed: ${String(error)}`);
+    logger.debug("MockSSE", "Stream already closed", error);
   });
 }
 
@@ -80,7 +80,7 @@ async function write(
     await writer.write(ENCODER.encode(frame));
     return true;
   } catch (error) {
-    logger.debug("MockSSE", `Client gone: ${String(error)}`);
+    logger.debug("MockSSE", "Client gone", error);
     return false;
   }
 }

@@ -359,6 +359,22 @@ describe("startConfigWatcher — one reload at a time, and edits", () => {
   });
 });
 
+describe("startConfigWatcher — a file that takes precedence", () => {
+  it("reloads when a mocks file is created under a name that wins over the one loaded", async () => {
+    const project = makeProject();
+    writeFileSync(join(project.root, "courier.mocks.mts"), "export default { fromMts: {} };\n");
+    const initial = await loadCourierConfig(project.root);
+    const reloads: LoadedCourierConfig[] = [];
+    start(initial, { projectRoot: project.root, bindingTable: new BindingTable(), onReload: (loaded) => reloads.push(loaded) });
+    await sleep(SETTLE_MS);
+
+    writeFileSync(join(project.root, "courier.mocks.ts"), "export default { fromTs: {} };\n");
+    await until(() => reloads.length > 0);
+
+    expect(Object.keys(reloads.at(-1)?.mocks.entries ?? {})).toEqual(["fromTs"]);
+  });
+});
+
 describe("startConfigWatcher — the last load's failure", () => {
   it("reports why the config did not load until a load succeeds, and a later failure again", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});

@@ -14,7 +14,11 @@ import { join } from "node:path";
 import { ConfigurationError } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
 import { type AnySource, stampSourceKeys } from "@noverax/courier/define";
-import { findConfigFileAt, MOCKS_BASENAMES } from "@noverax/courier-studio-core/config";
+import {
+  CONFIG_BASENAMES,
+  findConfigFileAt,
+  MOCKS_BASENAMES,
+} from "@noverax/courier-studio-core/config";
 import { ConfigLoaderError, ConfigNotFoundError } from "./config-loader-errors";
 import type { LoadedCourierMocks } from "./courier-mocks-file";
 import { locateCourierMocks, readCourierMocks } from "./courier-mocks-file";
@@ -32,8 +36,9 @@ export interface LoadedCourierConfig {
   contentHash: string | null;
   /**
    * Every module the config and the mocks file transitively import, both
-   * entries included — or, with no mocks file, every name one may take, so
-   * creating it is noticed. Suitable for `fs.watch` registration.
+   * entries included, and every name either file may take in the project
+   * root, so creating one — or one that takes precedence — is noticed.
+   * Suitable for `fs.watch` registration.
    */
   deps: string[];
   /** The mocks Studio runs, from `courier.mocks.*` beside the config. */
@@ -85,12 +90,13 @@ export async function loadCourierConfig(projectRoot: string): Promise<LoadedCour
   };
 }
 
+/* Every name either file may take in the root is watched too, present or
+   not: creating one, or one that takes precedence over the file loaded, must
+   reload, and nothing Studio imports would otherwise point at it. */
 function dependenciesOf(root: string, configFile: string, mocksFile: string | null): string[] {
-  const mocksDeps =
-    mocksFile === null
-      ? MOCKS_BASENAMES.map((name) => join(root, name))
-      : extractConfigDeps(mocksFile);
-  return [...new Set([...extractConfigDeps(configFile), ...mocksDeps])];
+  const mocksDeps = mocksFile === null ? [] : extractConfigDeps(mocksFile);
+  const names = [...CONFIG_BASENAMES, ...MOCKS_BASENAMES].map((name) => join(root, name));
+  return [...new Set([...extractConfigDeps(configFile), ...mocksDeps, ...names])];
 }
 
 /** Reject configs missing `sources` or with malformed entries */

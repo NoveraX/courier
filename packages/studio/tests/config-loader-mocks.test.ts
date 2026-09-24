@@ -66,6 +66,16 @@ describe("loadCourierConfig with a mocks file", () => {
     expect(loaded.deps).toContain(join(dir, "courier.mocks.mjs"));
   });
 
+  it("watches the names that take precedence over the mocks file and the config it loaded", async () => {
+    const file = writeMocks("export default {};\n", "courier.mocks.mts");
+
+    const loaded = await loadCourierConfig(dir);
+
+    expect(loaded.mocks.file).toBe(file);
+    expect(loaded.deps).toContain(join(dir, "courier.mocks.ts"));
+    expect(loaded.deps).toContain(join(dir, "courier.config.mts"));
+  });
+
   it("watches the modules only the mocks file imports", async () => {
     writeFileSync(join(dir, "src", "fixtures.ts"), "export const users = [];\n");
     const file = writeMocks('import { users } from "./src/fixtures";\nexport default { users };\n');
@@ -74,7 +84,6 @@ describe("loadCourierConfig with a mocks file", () => {
 
     expect(loaded.deps).toContain(file);
     expect(loaded.deps).toContain(join(dir, "src", "fixtures.ts"));
-    expect(loaded.deps).not.toContain(join(dir, "courier.mocks.mjs"));
   });
 
   it("declares no mocks from an empty mocks file", async () => {

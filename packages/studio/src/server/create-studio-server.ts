@@ -4,6 +4,7 @@
 
 import { createServer } from "node:http";
 import { STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
+import { findTransformCacheDirectory } from "@noverax/courier-studio-core/config";
 import express from "express";
 import { setProjectRoot } from "../context";
 import { BindingTable } from "./catalog/binding-table";
@@ -69,6 +70,8 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     uiNamespace,
     basePort: mockBasePort,
     watcherStatus,
+    /* The directory Studio's own loads use, looked up as they look it up. */
+    transformCacheDirectory: () => findTransformCacheDirectory(projectRoot),
   });
 
   const config = watchConfigDriven({

@@ -18,7 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { findTransformCacheDirectory } from "../src/runtime/transform-cache-directory";
 
 const POSIX = process.platform !== "win32";
-const NO_SETTING: NodeJS.ProcessEnv = {};
+const NO_SETTING: Record<string, string | undefined> = {};
 
 let dir: string;
 
@@ -223,5 +223,56 @@ describe.skipIf(!POSIX)("findTransformCacheDirectory on POSIX", () => {
     const nodeModules = directory(join(project, "node_modules"), 0o700);
 
     expect(findTransformCacheDirectory(project, NO_SETTING)).toBe(transformIn(nodeModules));
+  });
+});
+
+describe("findTransformCacheDirectory looked up on every load", () => {
+  const OFF: Record<string, string | undefined> = { COURIER_TRANSFORM_CACHE: "0" };
+
+  it("says once why a project has none, however often it is looked up", () => {
+    const debug = spyOnDebug();
+    const project = directory(join(dir, "app"));
+    directory(join(project, "node_modules"));
+
+    const found = [1, 2, 3].map(() => findTransformCacheDirectory(project, OFF));
+
+    expect(found).toEqual([null, null, null]);
+    expect(debug).toHaveBeenCalledTimes(1);
+    expect(String(debug.mock.calls[0]?.[1])).toContain("COURIER_TRANSFORM_CACHE=0");
+  });
+
+  it("says why again when the reason changes", () => {
+    const debug = spyOnDebug();
+    const project = directory(join(dir, "app"));
+
+    findTransformCacheDirectory(project, OFF);
+    findTransformCacheDirectory(project, NO_SETTING);
+    findTransformCacheDirectory(project, NO_SETTING);
+
+    expect(debug).toHaveBeenCalledTimes(2);
+    expect(String(debug.mock.calls[0]?.[1])).toContain("COURIER_TRANSFORM_CACHE=0");
+    expect(String(debug.mock.calls[1]?.[1])).toContain(`no node_modules at or above ${project}`);
+  });
+
+  it("says why again when a project that had one has none anew", () => {
+    const debug = spyOnDebug();
+    const project = directory(join(dir, "app"));
+    const nodeModules = directory(join(project, "node_modules"));
+
+    const found = [OFF, NO_SETTING, OFF].map((env) => findTransformCacheDirectory(project, env));
+
+    expect(found).toEqual([null, transformIn(nodeModules), null]);
+    expect(debug).toHaveBeenCalledTimes(2);
+  });
+
+  it("says why for each project that has none", () => {
+    const debug = spyOnDebug();
+    const web = directory(join(dir, "web"));
+    const api = directory(join(dir, "api"));
+
+    findTransformCacheDirectory(web, OFF);
+    findTransformCacheDirectory(api, OFF);
+
+    expect(debug).toHaveBeenCalledTimes(2);
   });
 });

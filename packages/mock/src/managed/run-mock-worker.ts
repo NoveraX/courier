@@ -20,8 +20,15 @@ import { buildScenarioMeta } from "./scenario-meta";
 import type { MockServerDefinition, ParentMessage } from "./types";
 import { send, sendError, watchParent } from "./worker-ipc";
 
-/** Reads the mock declared under `mockKey` in the mocks file at `mocksFile`. */
-export type MockDefinitionLoader = (mocksFile: string, mockKey: string) => Promise<unknown>;
+/**
+ * Reads the mock declared under `mockKey` in the mocks file at `mocksFile`,
+ * reusing the transforms Studio keeps in `transformCacheDirectory`, if any.
+ */
+export type MockDefinitionLoader = (
+  mocksFile: string,
+  mockKey: string,
+  transformCacheDirectory: string | null,
+) => Promise<unknown>;
 
 type StartMessage = Extract<ParentMessage, { type: "start" }>;
 
@@ -78,7 +85,7 @@ async function start(
   msg: StartMessage,
   stopping: () => boolean,
 ): Promise<Served | undefined> {
-  const definition = await loadDefinition(msg.mocksFile, msg.mockKey);
+  const definition = await loadDefinition(msg.mocksFile, msg.mockKey, msg.transformCacheDirectory);
   if (stopping()) return undefined;
   if (!isMockServerDefinition(definition)) {
     sendError(

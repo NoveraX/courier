@@ -5,11 +5,16 @@
  * that existed and would not load sent the browser to the default address
  * with nothing on screen to say why.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadStudioUrl } from "../src/plugins/core/load-studio-url";
+import { studioTransformCache } from "../src/server/studio-transform-cache";
+
+const CONFIG_ON_7123 =
+  'import { defineApi } from "@noverax/courier/define";\n' +
+  'export default { sources: { api: defineApi({ baseURL: "https://api.example", endpoints: {} }) }, studio: { host: "0.0.0.0", port: 7123 } };\n';
 
 let output: string[];
 const roots: string[] = [];
@@ -25,6 +30,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
@@ -40,10 +46,7 @@ function project(config?: string): string {
 
 describe("loadStudioUrl", () => {
   it("reads the configured address, formatted for dialling", async () => {
-    const root = project(
-      'import { defineApi } from "@noverax/courier/define";\n' +
-        'export default { sources: { api: defineApi({ baseURL: "https://api.example", endpoints: {} }) }, studio: { host: "0.0.0.0", port: 7123 } };\n',
-    );
+    const root = project(CONFIG_ON_7123);
 
     await expect(loadStudioUrl(root)).resolves.toBe("http://localhost:7123");
   });
@@ -60,5 +63,28 @@ describe("loadStudioUrl", () => {
     await expect(loadStudioUrl(root)).resolves.toBe("http://localhost:6280");
 
     expect(output.join("")).toMatch(/WARN[\s\S]*courier\.config could not be loaded/);
+  });
+});
+
+describe("loadStudioUrl's transforms of the project", () => {
+  it("writes nothing into the project's node_modules, so a production build leaves it as it was", async () => {
+    vi.stubEnv("COURIER_TRANSFORM_CACHE", "on");
+    const root = project(CONFIG_ON_7123);
+    mkdirSync(join(root, "node_modules"));
+
+    const url = await loadStudioUrl(root);
+
+    expect(url).toBe("http://localhost:7123");
+    expect(existsSync(join(root, "node_modules", ".cache"))).toBe(false);
+  });
+
+  it("keeps none of them in the transform cache Studio holds for the process", async () => {
+    const root = project(CONFIG_ON_7123);
+    const studioTransform = vi.spyOn(studioTransformCache(root), "transform");
+
+    const url = await loadStudioUrl(root);
+
+    expect(url).toBe("http://localhost:7123");
+    expect(studioTransform).not.toHaveBeenCalled();
   });
 });

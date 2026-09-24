@@ -42,6 +42,20 @@ const STUDIO_OWNED: TrustOptions = {};
 
 type Located = { directory: string; refusal?: undefined } | { refusal: string };
 
+/* The reason last logged for each root. Studio looks the directory up again
+   on every load, so the reason is logged when it first applies and again only
+   once it changes, or applies anew after a lookup that found the directory. */
+const lastRefusals = new Map<string, string>();
+
+function refuse(root: string, reason: string, error?: unknown): null {
+  const key = error instanceof Error ? `${reason}\0${error.message}` : reason;
+  if (lastRefusals.get(root) === key) return null;
+  lastRefusals.set(root, key);
+  if (error === undefined) log.debug(`Transform cache directory off: ${reason}`);
+  else log.debug(`Transform cache directory off: ${reason}`, error);
+  return null;
+}
+
 function locate(projectRoot: string): Located {
   const nodeModules = nearestNodeModules(projectRoot);
   if (nodeModules === null) return { refusal: `no node_modules at or above ${projectRoot}` };
@@ -78,7 +92,8 @@ function locate(projectRoot: string): Located {
  * There is none when no `node_modules` exists, as with Yarn Plug'n'Play, or
  * when `COURIER_TRANSFORM_CACHE` is `0`, `false` or `off` in any case. The
  * system temporary directory, which every user of the machine may write, is
- * never used instead. Why there is none is logged at debug level.
+ * never used instead. Why there is none is logged at debug level, once for
+ * each root until the reason changes, however often the root is looked up.
  *
  * @param projectRoot - The directory holding `courier.config.*`
  * @param env - The environment to read `COURIER_TRANSFORM_CACHE` from
@@ -93,22 +108,20 @@ function locate(projectRoot: string): Located {
  */
 export function findTransformCacheDirectory(
   projectRoot: string,
-  env: NodeJS.ProcessEnv = process.env,
+  env: Readonly<Record<string, string | undefined>> = process.env,
 ): string | null {
+  const root = resolve(projectRoot);
   const setting = env.COURIER_TRANSFORM_CACHE?.trim().toLowerCase();
   if (setting !== undefined && OFF_VALUES.has(setting)) {
-    log.debug(`Transform cache directory off: COURIER_TRANSFORM_CACHE=${setting}`);
-    return null;
+    return refuse(root, `COURIER_TRANSFORM_CACHE=${setting}`);
   }
-  const root = resolve(projectRoot);
   let located: Located;
   try {
     located = locate(root);
   } catch (error) {
-    log.debug(`Transform cache directory off: cannot inspect the directories above ${root}`, error);
-    return null;
+    return refuse(root, `cannot inspect the directories above ${root}`, error);
   }
-  if (located.refusal === undefined) return located.directory;
-  log.debug(`Transform cache directory off: ${located.refusal}`);
-  return null;
+  if (located.refusal !== undefined) return refuse(root, located.refusal);
+  lastRefusals.delete(root);
+  return located.directory;
 }

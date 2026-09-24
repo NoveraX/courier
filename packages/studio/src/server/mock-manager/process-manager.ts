@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { createLogger } from "@noverax/courier";
 import type { ChildMessage, ParentMessage } from "@noverax/courier-mock/managed";
+import type { ProcessManager, SpawnRequest } from "./types";
 
 const GRACEFUL_TIMEOUT = 3000;
 const FORCE_TIMEOUT = 2000;
@@ -33,17 +34,40 @@ export interface ProcessManagerEvents {
   onEvent: (serverId: string, event: Record<string, unknown>) => void;
 }
 
-/** What a mock's worker is started with. */
-export interface SpawnRequest {
-  serverId: string;
-  /** The `courier.mocks.*` the worker loads the mock from. */
-  mocksFile: string;
-  mockKey: string;
-  /** Listened on exactly; a taken one is reported by the worker. */
-  port: number;
+/** What every worker is told, whichever mock it serves. */
+export interface ProcessManagerOptions {
+  /**
+   * Where Studio keeps the transforms of the project's modules at the moment
+   * a worker starts, or `null` when it keeps none. The worker reads that
+   * directory rather than looking one up from its mocks file, which may be a
+   * link into another package with a `node_modules` of its own.
+   */
+  transformCacheDirectory: () => string | null;
 }
 
-export function createProcessManager(events: ProcessManagerEvents) {
+/**
+ * Start, stop and message the worker processes of Studio's managed mocks.
+ *
+ * Each worker is Studio's own entry, forked from the mocks file's directory
+ * with the output in Studio's terminal. Its start message names the mock, the
+ * port Studio chose, and where Studio keeps transforms at that moment, so the
+ * worker reuses them instead of transforming the project's modules again.
+ *
+ * @param events - What Studio does with what a worker reports
+ * @param options - What every worker is told; see {@link ProcessManagerOptions}
+ * @returns The operations on the workers, by mock; see {@link ProcessManager}
+ * @example
+ * ```ts
+ * const processManager = createProcessManager(events, {
+ *   transformCacheDirectory: () => findTransformCacheDirectory(projectRoot),
+ * });
+ * processManager.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port: 7001 });
+ * ```
+ */
+export function createProcessManager(
+  events: ProcessManagerEvents,
+  { transformCacheDirectory }: ProcessManagerOptions,
+): ProcessManager {
   const children = new Map<string, ChildProcess>();
   /** Workers Studio asked to stop; their exit is expected. */
   const stopping = new WeakSet<ChildProcess>();
@@ -62,7 +86,6 @@ export function createProcessManager(events: ProcessManagerEvents) {
     });
   }
 
-  /** Start the worker for a mock; it reports back once it listens. */
   function spawn({ serverId, mocksFile, mockKey, port }: SpawnRequest): { pid: number } {
     /* Output is inherited, so request logs and crash stacks reach Studio's
        terminal, and no unread pipe can fill up and stall the worker. */
@@ -84,11 +107,16 @@ export function createProcessManager(events: ProcessManagerEvents) {
       events.onExited(serverId, signal ? `was stopped by ${signal}` : `exited with code ${code}`);
     });
 
-    send(serverId, child, { type: "start", mocksFile, mockKey, port });
+    send(serverId, child, {
+      type: "start",
+      mocksFile,
+      mockKey,
+      port,
+      transformCacheDirectory: transformCacheDirectory(),
+    });
     return { pid: child.pid ?? 0 };
   }
 
-  /** Stop a mock's worker: asked first, then signalled; resolves once it has exited. */
   async function kill(serverId: string): Promise<void> {
     const child = children.get(serverId);
     if (!child) return;
@@ -129,7 +157,6 @@ export function createProcessManager(events: ProcessManagerEvents) {
     return children.has(serverId);
   }
 
-  /** Send a store command to a managed child process via IPC */
   function sendCommand(serverId: string, command: Record<string, unknown>): void {
     const child = children.get(serverId);
     if (!child) return;
@@ -142,5 +169,3 @@ export function createProcessManager(events: ProcessManagerEvents) {
 
   return { spawn, kill, dispose, has, sendCommand };
 }
-
-export type ProcessManager = ReturnType<typeof createProcessManager>;

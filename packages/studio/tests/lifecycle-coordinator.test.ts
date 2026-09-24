@@ -15,10 +15,12 @@ import { defineMockServer } from "@noverax/courier-mock/managed";
 import type { Namespace } from "socket.io";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ProcessManagerEvents, SpawnRequest } from "../src/server/mock-manager/process-manager";
+import type { ProcessManagerEvents, ProcessManagerOptions } from "../src/server/mock-manager/process-manager";
+import type { SpawnRequest } from "../src/server/mock-manager/types";
 
 const fake = {
   events: undefined as ProcessManagerEvents | undefined,
+  options: undefined as ProcessManagerOptions | undefined,
   children: new Map<string, SpawnRequest>(),
   spawned: [] as SpawnRequest[],
   killDelay: 0,
@@ -29,8 +31,9 @@ vi.mock("../src/server/mock-manager/port-allocator", () => ({
 }));
 
 vi.mock("../src/server/mock-manager/process-manager", () => ({
-  createProcessManager: (events: ProcessManagerEvents) => {
+  createProcessManager: (events: ProcessManagerEvents, options: ProcessManagerOptions) => {
     fake.events = events;
+    fake.options = options;
     const kill = async (serverId: string) => {
       if (!fake.children.has(serverId)) return;
       await new Promise((resolve) => setTimeout(resolve, fake.killDelay));
@@ -73,6 +76,7 @@ type Emitted = {
 };
 
 const MOCKS_FILE = "/p/courier.mocks.ts";
+const STUDIO_TRANSFORMS = "/p/node_modules/.cache/courier/transform";
 
 function studio() {
   const emit = vi.fn();
@@ -81,6 +85,7 @@ function studio() {
     mockRegistry: registry,
     basePort: 7001,
     uiNamespace: { emit } as unknown as Namespace,
+    transformCacheDirectory: () => STUDIO_TRANSFORMS,
   });
   coordinator.setMocksFile({ file: MOCKS_FILE, error: null });
   const emitted = (): Emitted[] =>
@@ -97,6 +102,7 @@ function studio() {
 const settle = (ms = 30) => new Promise((resolve) => setTimeout(resolve, ms));
 
 afterEach(() => {
+  fake.options = undefined;
   fake.children.clear();
   fake.spawned.length = 0;
   fake.killDelay = 0;
@@ -386,6 +392,15 @@ describe("the mocks file's status", () => {
 
     expect(statuses().at(-1)).toEqual({ file: MOCKS_FILE, error: "Unexpected token" });
     expect(statuses()).toHaveLength(3);
+  });
+});
+
+describe("the workers Studio starts", () => {
+  it("are told where Studio keeps the transforms of the project's modules", async () => {
+    const { coordinator } = studio();
+
+    expect(fake.options?.transformCacheDirectory()).toBe(STUDIO_TRANSFORMS);
+    await coordinator.stop();
   });
 });
 

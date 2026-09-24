@@ -5,15 +5,19 @@
  * onReady never fired and close() rejected; a config that was missing or
  * broken at start switched hot reload off for the whole session. With port 0
  * Studio reported `:0` and refused its own UI; its sockets took any page on
- * any site; and every start appended to the project's .gitignore.
+ * any site; and every start appended to the project's .gitignore. The mock
+ * workers it starts read the transforms it keeps in the project's
+ * node_modules.
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createServer as createNetServer, type Server } from "node:net";
 import { join } from "node:path";
+import { createTransformCache, type TransformCache } from "@noverax/courier-studio-core/config";
 import { io as connect } from "socket.io-client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createStudioServer } from "../src/server";
+import { loadCourierConfig } from "../src/server/config-loader";
 import type { StudioServer } from "../src/server/types";
 
 const cleanups: Array<() => Promise<void> | void> = [];
@@ -170,4 +174,67 @@ describe("Studio in a project", () => {
 
     expect(readFileSync(join(root, ".gitignore"), "utf-8")).toBe("node_modules\n");
   });
+});
+
+/** A project whose courier.mocks.ts starts a mock on `mockPort` with Studio; returns the mocks file. */
+function mockedProject(root: string, mockPort: number): string {
+  mkdirSync(join(root, "src"));
+  writeFileSync(
+    join(root, "src", "api.ts"),
+    'import { courier, defineApi, defineGroup } from "@noverax/courier/define";\n' +
+      'import { z } from "zod";\n' +
+      "const { endpoint } = courier();\n" +
+      "const User = z.object({ id: z.number(), name: z.string() });\n" +
+      'const users = defineGroup({ prefix: "users", endpoints: { getAll: endpoint.get("").response(z.array(User)) } });\n' +
+      'export const api = defineApi({ baseURL: "https://api.example", groups: { users } });\n',
+  );
+  writeFileSync(join(root, "courier.config.ts"), 'import { api } from "./src/api";\nexport default { sources: { api } };\n');
+  const mocksFile = join(root, "courier.mocks.ts");
+  writeFileSync(
+    mocksFile,
+    'import { defineMocks, defineMockServer } from "@noverax/courier-mock";\n' +
+      'import { api } from "./src/api";\n' +
+      `export default defineMocks({ apiMock: defineMockServer({ source: api, port: ${mockPort}, autoStart: true }) });\n`,
+  );
+  return mocksFile;
+}
+
+describe("the mock workers Studio starts", () => {
+  it("read the transforms Studio keeps in the project's node_modules", async () => {
+    vi.stubEnv("COURIER_TRANSFORM_CACHE", "on");
+    cleanups.push(() => {
+      vi.unstubAllEnvs();
+    });
+    const root = realpathSync(project());
+    mkdirSync(join(root, "node_modules"));
+    const mockPort = await freePort();
+    const mocksFile = mockedProject(root, mockPort);
+    /* Where Studio keeps transforms, a transform of courier.mocks.ts that
+       seeds 3 users: a worker serves 3 only if it reads that directory. */
+    const kept = createTransformCache({ directory: join(root, "node_modules", ".cache", "courier", "transform") });
+    const marked: string[] = [];
+    const seeding: TransformCache = {
+      transform: (options, compute) =>
+        kept.transform(options, (miss) => {
+          const result = compute(miss);
+          if (miss.filename !== mocksFile) return result;
+          marked.push(miss.filename);
+          return { code: result.code.replace(`port: ${mockPort}`, `port: ${mockPort}, seed: { count: 3 }`) };
+        }),
+    };
+    await loadCourierConfig(root, { transformCache: seeding });
+
+    await started(root);
+    const users = await vi.waitFor(
+      async () => {
+        const reply = await fetch(`http://127.0.0.1:${mockPort}/users`);
+        expect(reply.status).toBe(200);
+        return (await reply.json()) as unknown;
+      },
+      { timeout: 20_000, interval: 200 },
+    );
+
+    expect(marked).toEqual([mocksFile]);
+    expect(users).toHaveLength(3);
+  }, 40_000);
 });

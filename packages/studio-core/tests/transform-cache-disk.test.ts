@@ -413,6 +413,61 @@ describe("createTransformCache with a directory", () => {
   });
 });
 
+describe("createTransformCache reading a directory only", () => {
+  it("hands back what another cache kept, and keeps a transform it had to compute out of the directory", () => {
+    const compute = compiler();
+    const kept = createTransformCache({ directory }).transform(optionsFor(), compute);
+    const before = listing();
+    const reader = createTransformCache({ directory, readOnly: true });
+
+    const read = reader.transform(optionsFor(), compute);
+    reader.transform(optionsFor({ filename: SOURCES }), compute);
+
+    expect(compute.mock.calls.map(([options]) => options.filename)).toEqual([CONFIG, SOURCES]);
+    expect(read).toEqual(kept);
+    expect(listing()).toEqual(before);
+  });
+
+  it("leaves the time of an entry it reads as it was", () => {
+    const compute = compiler();
+    createTransformCache({ directory }).transform(optionsFor(), compute);
+    const entry = entryOf(optionsFor());
+    const old = tenDaysAgo();
+    utimesSync(entry, old, old);
+
+    createTransformCache({ directory, readOnly: true }).transform(optionsFor(), compute);
+
+    expect(compute).toHaveBeenCalledTimes(1);
+    expect(futimesSync).not.toHaveBeenCalled();
+    expect(statSync(entry).mtimeMs).toBe(old.getTime());
+  });
+
+  it("creates no directory that does not exist yet", () => {
+    const compute = compiler();
+
+    createTransformCache({ directory, readOnly: true }).transform(optionsFor(), compute);
+
+    expect(compute).toHaveBeenCalledTimes(1);
+    expect(existsSync(directory)).toBe(false);
+  });
+
+  it("prunes nothing, however old the entries it finds", () => {
+    const compute = compiler();
+    const elsewhere = join(dir, "elsewhere");
+    createTransformCache({ directory: elsewhere }).transform(optionsFor(), compute);
+    mkdirSync(directory, { mode: 0o700 });
+    const stale = entryOf(optionsFor());
+    copyFileSync(join(elsewhere, basename(stale)), stale);
+    const longAgo = new Date(Date.now() - 60 * DAY_MS);
+    utimesSync(stale, longAgo, longAgo);
+
+    createTransformCache({ directory, readOnly: true }).transform(optionsFor({ filename: SOURCES }), compute);
+
+    expect(compute).toHaveBeenCalledTimes(2);
+    expect(listing()).toEqual([basename(stale)]);
+  });
+});
+
 describe("createTransformCache with a directory it cannot use", () => {
   it("keeps transforming and warns once when the directory cannot be created, since its path is a file", () => {
     const warn = silenceWarnings();

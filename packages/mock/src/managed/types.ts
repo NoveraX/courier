@@ -88,6 +88,12 @@ export type ParentMessage =
       mockKey: string;
       /** The port to listen on, exactly: Studio chose it, and a taken one is reported. */
       port: number;
+      /**
+       * Where Studio keeps the transforms of the project's modules, for the
+       * loader to read rather than transform them again; `null` when Studio
+       * keeps none.
+       */
+      transformCacheDirectory: string | null;
     }
   | { type: "stop" }
   | { type: "command"; command: Record<string, unknown>; requestId: string };

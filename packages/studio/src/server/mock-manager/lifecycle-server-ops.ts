@@ -9,8 +9,7 @@
  */
 
 import { allocatePort } from "./port-allocator";
-import type { ProcessManager } from "./process-manager";
-import type { ServerState } from "./types";
+import type { ProcessManager, ServerState } from "./types";
 
 export interface ServerOpsContext {
   servers: Map<string, ServerState>;

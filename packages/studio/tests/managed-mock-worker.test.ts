@@ -8,11 +8,14 @@
  * declaration, a mocks file without a default export or a taken port, and
  * stops at once when asked while its mocks file is still loading.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
-import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { createTransformCache, type TransformCache } from "@noverax/courier-studio-core/config";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { loadCourierConfig } from "../src/server/config-loader";
 import { createProcessManager, type ProcessManagerEvents } from "../src/server/mock-manager/process-manager";
 
 const cleanups: Array<() => Promise<void> | void> = [];
@@ -59,7 +62,7 @@ async function freePort(): Promise<number> {
   return port;
 }
 
-function manager() {
+function manager(transformCacheDirectory: string | null = null) {
   const events = {
     onReady: vi.fn(),
     onError: vi.fn(),
@@ -67,7 +70,7 @@ function manager() {
     onExited: vi.fn(),
     onEvent: vi.fn(),
   } satisfies ProcessManagerEvents;
-  const pm = createProcessManager(events);
+  const pm = createProcessManager(events, { transformCacheDirectory: () => transformCacheDirectory });
   cleanups.push(() => pm.dispose());
   return { events, pm };
 }
@@ -186,4 +189,53 @@ describe("a managed mock server", () => {
       { timeout: 15_000 },
     );
   }, 20_000);
+});
+
+describe("a managed mock server started with Studio's transforms", () => {
+  /** Every entry in the directory with its size and time, which any write would change. */
+  function snapshot(directory: string): string[] {
+    return readdirSync(directory)
+      .sort()
+      .map((name) => {
+        const { size, mtimeMs } = statSync(join(directory, name));
+        return `${name} ${size} ${mtimeMs}`;
+      });
+  }
+
+  it("serves the mocks file as Studio transformed it, and writes nothing into Studio's directory", async () => {
+    const port = await freePort();
+    const mocksFile = realpathSync(project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`));
+    const apiFile = join(dirname(mocksFile), "src", "api.ts");
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "courier-worker-transforms-")));
+    cleanups.push(() => rmSync(directory, { recursive: true, force: true }));
+    /* Studio's load keeps every transform but src/api.ts's, which the worker
+       must then make itself, and keeps the mocks file's with a seed of its
+       own, which the worker serves only if it reads the kept transform. */
+    const kept = createTransformCache({ directory });
+    const marked: string[] = [];
+    const studio: TransformCache = {
+      transform: (options, compute) => {
+        if (options.filename === apiFile) return compute(options);
+        return kept.transform(options, (miss) => {
+          const result = compute(miss);
+          if (miss.filename !== mocksFile) return result;
+          marked.push(miss.filename);
+          return { code: result.code.replace(`port: ${port}`, `port: ${port}, seed: { count: 3 }`) };
+        });
+      },
+    };
+    await loadCourierConfig(dirname(mocksFile), { transformCache: studio });
+    const before = snapshot(directory);
+    const { events, pm } = manager(directory);
+
+    pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port });
+    await vi.waitFor(() => expect(events.onReady).toHaveBeenCalled(), { timeout: 15_000 });
+    await pm.kill("apiMock");
+
+    expect(marked).toEqual([mocksFile]);
+    expect(events.onReady.mock.calls[0]?.[1].collections).toEqual([
+      expect.objectContaining({ name: "users", count: 3 }),
+    ]);
+    expect(snapshot(directory)).toEqual(before);
+  }, 30_000);
 });

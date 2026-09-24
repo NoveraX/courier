@@ -97,7 +97,25 @@ const main = defineCommand({
         }
       },
     });
+    closeOnSignals(server);
   },
 });
+
+/** Exit statuses a shell reports for a process a signal ended: 128 + the signal's number. */
+const SIGNAL_EXIT = { SIGHUP: 129, SIGINT: 130, SIGTERM: 143 } as const;
+
+/* Studio closes its mock servers and sockets before it goes, and says so if
+   that fails — also when its terminal closes (SIGHUP) — and exits with the
+   status a shell reports for the signal. */
+function closeOnSignals(server: { close: () => Promise<void> }): void {
+  for (const [signal, status] of Object.entries(SIGNAL_EXIT)) {
+    process.once(signal, () => {
+      server
+        .close()
+        .catch((err: unknown) => log.error("Studio did not close cleanly", err))
+        .finally(() => process.exit(status));
+    });
+  }
+}
 
 runMain(main);

@@ -125,6 +125,12 @@ Call it once at startup — from `instrumentation.ts` in Next.js, a Nitro plugin
 
 <br />
 
+## Mock servers
+
+Declare mock servers under `mocks` in `courier.config.ts` with `defineMockServer` from [`@noverax/courier-mock`](../mock/README.md) — installed with `hono` and `@hono/node-server` — and Studio lists and runs them, reporting any failure in its terminal and on the mock's status in the Mocks view. `studio.mockBasePort` sets where the ports of mocks that name none begin.
+
+<br />
+
 ## Programmatic
 
 ```ts

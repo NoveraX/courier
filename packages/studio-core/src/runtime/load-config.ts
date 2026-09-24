@@ -34,7 +34,7 @@ import { dirname, resolve } from "node:path";
 import type { CourierConfig } from "@noverax/courier/config";
 import { createConfigJiti } from "./config-jiti";
 
-export { createConfigJiti } from "./config-jiti";
+export { type ConfigJitiOptions, createConfigJiti } from "./config-jiti";
 export {
   findMocksFile,
   type LoadedCourierMocks,

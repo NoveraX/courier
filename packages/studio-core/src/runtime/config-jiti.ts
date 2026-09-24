@@ -2,6 +2,16 @@ import { dirname } from "node:path";
 import type { Jiti } from "jiti";
 import { readPathAliases } from "./path-aliases";
 
+/** How a project-file loader resolves imports. */
+export interface ConfigJitiOptions {
+  /**
+   * Whether imports resolve through the project's tsconfig path aliases, as
+   * the project's own files expect. Off to load an installed package as it is:
+   * an alias of its scope would send its imports to project sources.
+   */
+  aliases?: boolean;
+}
+
 /**
  * The module loader for Courier's project files — `courier.config.*` and
  * `courier.mocks.*` — with the options both need: the project's tsconfig path
@@ -17,12 +27,16 @@ import { readPathAliases } from "./path-aliases";
  *
  * @param file - Absolute, symlink-resolved path of the file to load; modules
  *   and aliases resolve from its directory
+ * @param options - Whether to resolve through the project's path aliases (default: yes)
  * @returns A jiti instance for that file
  */
-export async function createConfigJiti(file: string): Promise<Jiti> {
+export async function createConfigJiti(
+  file: string,
+  { aliases = true }: ConfigJitiOptions = {},
+): Promise<Jiti> {
   const { createJiti } = await import("jiti");
   return createJiti(file, {
-    alias: readPathAliases(dirname(file)).loader,
+    alias: aliases ? readPathAliases(dirname(file)).loader : {},
     interopDefault: true,
     moduleCache: false,
     fsCache: false,

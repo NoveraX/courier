@@ -9,7 +9,7 @@
  */
 
 import { type FSWatcher, watch } from "node:fs";
-import { basename, resolve } from "node:path";
+import { basename, dirname } from "node:path";
 
 /** Why the platform refused a native watch. */
 export interface WatchDegradation {
@@ -18,8 +18,11 @@ export interface WatchDegradation {
   message: string;
 }
 
+/** Per directory, the tracked paths in it by their lower-cased name. */
+export type TrackedByDirectory = ReadonlyMap<string, ReadonlyMap<string, readonly string[]>>;
+
 export interface DirectoryWatchersOptions {
-  /** A tracked entry in a watched directory changed. */
+  /** A tracked entry in a watched directory changed; receives its tracked path. */
   onHit: (path: string) => void;
   /**
    * The platform dropped events and cannot say which — on Windows this is
@@ -32,9 +35,27 @@ export interface DirectoryWatchersOptions {
 
 export interface DirectoryWatchers {
   /** Arm the given directories and release the ones no longer listed. */
-  sync(byDirectory: ReadonlyMap<string, ReadonlySet<string>>): void;
+  sync(byDirectory: TrackedByDirectory): void;
   closeAll(): void;
   readonly size: number;
+}
+
+/**
+ * Group tracked paths by their directory, and each by its lower-cased name.
+ *
+ * @param paths - The tracked paths, resolved
+ * @returns What {@link DirectoryWatchers.sync} takes
+ */
+export function groupByDirectory(paths: readonly string[]): TrackedByDirectory {
+  const byDirectory = new Map<string, Map<string, string[]>>();
+  for (const path of paths) {
+    const directory = dirname(path);
+    const names = byDirectory.get(directory) ?? new Map<string, string[]>();
+    const name = basename(path).toLowerCase();
+    names.set(name, [...(names.get(name) ?? []), path]);
+    byDirectory.set(directory, names);
+  }
+  return byDirectory;
 }
 
 function classify(err: unknown, path: string): WatchDegradation {
@@ -48,7 +69,7 @@ function classify(err: unknown, path: string): WatchDegradation {
 export function createDirectoryWatchers(options: DirectoryWatchersOptions): DirectoryWatchers {
   const { onHit, onOverflow, onRefused } = options;
   const watchers = new Map<string, FSWatcher>();
-  let names: ReadonlyMap<string, ReadonlySet<string>> = new Map();
+  let names: TrackedByDirectory = new Map();
 
   const arm = (directory: string): void => {
     let watcher: FSWatcher;
@@ -71,9 +92,11 @@ export function createDirectoryWatchers(options: DirectoryWatchersOptions): Dire
         return;
       }
       /* Compared case-blind: the filesystem reports the name as it is stored
-         on disk, which need not be the casing the writer used. */
+         on disk, which need not be the casing the writer used. The hit names
+         the path as tracked, so the poll layer's report of the same save is
+         recognised as the same path. */
       const name = basename(filename.toString()).toLowerCase();
-      if (names.get(directory)?.has(name)) onHit(resolve(directory, name));
+      for (const path of names.get(directory)?.get(name) ?? []) onHit(path);
     });
     watchers.set(directory, watcher);
   };

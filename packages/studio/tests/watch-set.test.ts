@@ -232,6 +232,19 @@ describe("createWatchSet", () => {
     expect(c.seen).toEqual([]);
   });
 
+  it("reports one save of a file tracked in mixed case once, by the path it is tracked under", async () => {
+    const mixed = join(root, "MixedCase.ts");
+    writeFileSync(mixed, "export const v = 1;\n");
+    const c = collector();
+    start({ paths: [mixed], onChange: c.onChange, debounceMs: 20 });
+    await sleep(SETTLE_MS);
+
+    writeFileSync(mixed, "export const v = 2;\n");
+    await sleep(1500);
+
+    expect(c.seen).toEqual([mixed]);
+  });
+
   it("counts what it tracks", async () => {
     const first = join(root, "a.ts");
     const second = join(root, "nested", "b.ts");

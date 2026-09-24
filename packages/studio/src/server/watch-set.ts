@@ -18,9 +18,13 @@
  */
 
 import { unwatchFile, watchFile } from "node:fs";
-import { basename, dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { signatureOf } from "./file-signature";
-import { createDirectoryWatchers, type WatchDegradation } from "./watch-set-directories";
+import {
+  createDirectoryWatchers,
+  groupByDirectory,
+  type WatchDegradation,
+} from "./watch-set-directories";
 
 export type { WatchDegradation } from "./watch-set-directories";
 
@@ -52,17 +56,6 @@ export interface WatchSet {
   update(paths: readonly string[]): void;
   stop(): void;
   status(): WatchSetStatus;
-}
-
-function groupByDirectory(paths: readonly string[]): Map<string, Set<string>> {
-  const byDirectory = new Map<string, Set<string>>();
-  for (const path of paths) {
-    const directory = dirname(path);
-    const names = byDirectory.get(directory) ?? new Set<string>();
-    names.add(basename(path).toLowerCase());
-    byDirectory.set(directory, names);
-  }
-  return byDirectory;
 }
 
 export function createWatchSet(options: WatchSetOptions): WatchSet {

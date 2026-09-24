@@ -1,5 +1,22 @@
-import { describe, expect, it } from "vitest";
+/**
+ * A reader that falls behind its stream: the oldest buffered events are
+ * dropped and counted, the stream carries only what the server sent, and the
+ * log says so once per stretch rather than once per event.
+ */
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEventQueue, DEFAULT_MAX_BUFFER_SIZE } from "../src/realtime/sse/event-queue";
+
+afterEach(() => vi.restoreAllMocks());
+
+async function drain(queue: ReturnType<typeof createEventQueue<string>>): Promise<string[]> {
+  const iter = queue.iterator();
+  const read: string[] = [];
+  while (queue.size > 0) {
+    const { value } = await iter.next();
+    if (value) read.push(value.data);
+  }
+  return read;
+}
 
 describe("EventQueue overflow", () => {
   it("exports DEFAULT_MAX_BUFFER_SIZE as 1000", () => {
@@ -15,49 +32,36 @@ describe("EventQueue overflow", () => {
     expect(queue.dropped).toBe(0);
   });
 
-  it("drops oldest events when buffer is full", () => {
+  it("drops the oldest events when the buffer is full, and counts them", async () => {
     const queue = createEventQueue<string>(3);
-    queue.push({ data: "a" });
-    queue.push({ data: "b" });
-    queue.push({ data: "c" });
-    // Buffer is now full [a, b, c]
+    for (const data of ["a", "b", "c", "d", "e"]) queue.push({ data });
 
-    queue.push({ data: "d" });
-    // "a" is dropped, overflow event also injected (may cause cascade)
-    expect(queue.dropped).toBeGreaterThanOrEqual(1);
+    expect(queue.dropped).toBe(2);
+    expect(await drain(queue)).toEqual(["c", "d", "e"]);
   });
 
-  it("emits overflow event to consumer after drop", async () => {
-    const queue = createEventQueue<string>(3);
-    queue.push({ data: "a" });
-    queue.push({ data: "b" });
-    queue.push({ data: "c" });
-
-    // Buffer full [a, b, c]. Push "d" → drops "a", adds "d", then adds overflow event (drops "b")
-    queue.push({ data: "d" });
-    expect(queue.dropped).toBeGreaterThanOrEqual(1);
+  it("adds nothing of its own to the stream", async () => {
+    const queue = createEventQueue<string>(2);
+    for (const data of ["a", "b", "c"]) queue.push({ data });
 
     const iter = queue.iterator();
-    const events: Array<{ event?: string; data: unknown }> = [];
-    while (queue.size > 0) {
-      const { value } = await iter.next();
-      if (value) events.push(value);
-    }
+    const events = [(await iter.next()).value, (await iter.next()).value];
 
-    // Should contain an overflow event somewhere
-    const overflowEvent = events.find((e) => e.event === "overflow");
-    expect(overflowEvent).toBeDefined();
-    expect((overflowEvent!.data as Record<string, number>).dropped).toBeGreaterThanOrEqual(1);
+    expect(events.map((e) => e?.event)).toEqual([undefined, undefined]);
+    expect(events.map((e) => e?.data)).toEqual(["b", "c"]);
   });
 
-  it("tracks dropped count across multiple overflows", () => {
+  it("warns once when the reader falls behind, and once with the total when it catches up", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const queue = createEventQueue<string>(2);
-    queue.push({ data: "a" });
-    queue.push({ data: "b" });
-    queue.push({ data: "c" }); // drops a
-    queue.push({ data: "d" }); // drops b (overflow event from prev was in buffer)
 
-    expect(queue.dropped).toBeGreaterThanOrEqual(2);
+    for (let i = 0; i < 1000; i++) queue.push({ data: String(i) });
+    await drain(queue);
+
+    const lines = warn.mock.calls.map((call) => call.slice(1).join(" "));
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toContain("faster than they are read");
+    expect(lines[1]).toContain("Dropped 998 event(s)");
   });
 
   it("delivers immediately when consumer is waiting (no buffer)", async () => {
@@ -116,33 +120,5 @@ describe("EventQueue overflow", () => {
 
     const end = await iter.next();
     expect(end.done).toBe(true);
-  });
-
-  it("delivers pending overflow before finish when consumer is waiting", async () => {
-    const queue = createEventQueue<string>(2);
-    queue.push({ data: "a" });
-    queue.push({ data: "b" });
-    // Buffer full. Next push causes overflow → sets pendingOverflow
-    queue.push({ data: "c" });
-    expect(queue.dropped).toBeGreaterThanOrEqual(1);
-
-    // Drain all buffered events
-    const iter = queue.iterator();
-    while (queue.size > 0) {
-      await iter.next();
-    }
-
-    // Consumer now waits for next event
-    const waitPromise = iter.next();
-
-    // finish() should deliver pending overflow (if any) before done
-    queue.finish();
-
-    const result = await waitPromise;
-    // After finish, next call should eventually return done
-    if (!result.done) {
-      const end = await iter.next();
-      expect(end.done).toBe(true);
-    }
   });
 });

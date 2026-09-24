@@ -35,8 +35,13 @@ export interface EventQueue<TData> {
 /**
  * Create a push-pull event queue for SSE async iteration (ring buffer backed).
  *
- * @param maxBufferSize - Maximum buffer capacity (default 1000). On overflow,
- *   the oldest event is dropped and an `overflow` event is emitted to the consumer.
+ * When events arrive faster than they are read, the oldest buffered one is
+ * dropped and counted in `dropped`; nothing is added to the stream, so every
+ * event a reader gets is one the server sent. A warning is logged when a
+ * reader falls behind, and the number dropped once it has caught up — not a
+ * line per event, which would load the process just when it is overloaded.
+ *
+ * @param maxBufferSize - Maximum buffer capacity (default 1000)
  */
 export function createEventQueue<TData>(
   maxBufferSize = DEFAULT_MAX_BUFFER_SIZE,
@@ -50,8 +55,8 @@ export function createEventQueue<TData>(
   let done = false;
   let failure: Error | undefined;
   let droppedCount = 0;
-  /** Pending overflow event — delivered out-of-band (never enters ring buffer) */
-  let pendingOverflow: SSEEvent<TData> | undefined;
+  /** Events dropped since the reader last caught up. */
+  let droppedBehind = 0;
 
   const capacity = Math.max(1, maxBufferSize);
   const ring = new Array<SSEEvent<TData> | undefined>(capacity);
@@ -64,7 +69,11 @@ export function createEventQueue<TData>(
       head = (head + 1) % capacity;
       count--;
       droppedCount++;
-      log.warn(`EventQueue overflow — dropped oldest (total dropped: ${droppedCount})`);
+      if (droppedBehind++ === 0) {
+        log.warn(
+          `Events arrive faster than they are read; dropping the oldest of ${capacity} buffered`,
+        );
+      }
     }
     ring[tail] = event;
     tail = (tail + 1) % capacity;
@@ -72,16 +81,14 @@ export function createEventQueue<TData>(
   }
 
   function dequeue(): SSEEvent<TData> | undefined {
-    // Deliver pending overflow notification before buffered events
-    if (pendingOverflow) {
-      const overflow = pendingOverflow;
-      pendingOverflow = undefined;
-      return overflow;
-    }
     if (count === 0) return undefined;
     const value = ring[head];
     head = (head + 1) % capacity;
     count--;
+    if (count === 0 && droppedBehind > 0) {
+      log.warn(`Dropped ${droppedBehind} event(s) while the reader was behind`);
+      droppedBehind = 0;
+    }
     return value;
   }
 
@@ -91,16 +98,7 @@ export function createEventQueue<TData>(
       waiter = undefined;
       resolve({ value: event, done: false });
     } else {
-      const prevDropped = droppedCount;
       enqueue(event);
-
-      // Mark overflow for out-of-band delivery (no cascade)
-      if (droppedCount > prevDropped) {
-        pendingOverflow = {
-          event: "overflow",
-          data: { dropped: droppedCount } as unknown as TData,
-        } as SSEEvent<TData>;
-      }
     }
   }
 
@@ -143,7 +141,6 @@ export function createEventQueue<TData>(
            reconnecting until someone remembered to call close(). */
         finish();
         head = tail = count = 0;
-        pendingOverflow = undefined;
         onReturn?.();
         return { value: undefined, done: true };
       },

@@ -245,6 +245,22 @@ describe("createWatchSet", () => {
     expect(c.seen).toEqual([mixed]);
   });
 
+  it("drops a change it is told was already seen, and reports the next one", async () => {
+    const file = join(root, "courier.mocks.ts");
+    writeFileSync(file, "export default {};\n");
+    const c = collector();
+    const set = start({ paths: [file], onChange: c.onChange, debounceMs: 20 });
+    await sleep(SETTLE_MS);
+
+    writeFileSync(file, "export default { a: {} };\n");
+    set.acknowledge([file]);
+    await sleep(1200);
+    expect(c.seen).toEqual([]);
+
+    writeFileSync(file, "export default { b: {} };\n");
+    expect(await c.waitFor(file)).toBe(true);
+  });
+
   it("counts what it tracks", async () => {
     const first = join(root, "a.ts");
     const second = join(root, "nested", "b.ts");

@@ -4,7 +4,9 @@ import { CONFIG_BASENAMES } from "@noverax/courier-studio-core/config";
 export type ConfigLoaderErrorCode =
   | "CONFIG_NOT_FOUND"
   | "CONFIG_INVALID"
-  | "CONFIG_SOURCE_KEY_MISMATCH";
+  | "CONFIG_SOURCE_KEY_MISMATCH"
+  | "CONFIG_LOAD_TIMEOUT"
+  | "CONFIG_WATCHER_STOPPED";
 
 /** Thrown by `loadCourierConfig` when something is wrong with the user config */
 export class ConfigLoaderError extends CourierError<ConfigLoaderErrorCode> {

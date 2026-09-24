@@ -36,10 +36,12 @@ export async function initConfigDriven(deps: InitConfigDrivenDeps): Promise<Conf
   const { projectRoot, bindingTable, uiNamespace, watcherStatus } = deps;
 
   let loaded: LoadedCourierConfig | null = null;
+  let initialError: unknown = null;
   try {
     loaded = await loadCourierConfig(projectRoot);
   } catch (err) {
     if (!(err instanceof ConfigNotFoundError)) {
+      initialError = err;
       /* Recorded as well as logged: without a config there is no binding
          table, and the banner that follows would otherwise present that as
          a normal start. The watcher below still starts, so the fix is
@@ -67,6 +69,7 @@ export async function initConfigDriven(deps: InitConfigDrivenDeps): Promise<Conf
     bindingTable,
     uiNamespace,
     watcherStatus,
+    initialError,
     onReload: (next) => applyLoadedMocks(next.mocks, deps),
   });
 }

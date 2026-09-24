@@ -54,6 +54,11 @@ export interface WatchSetOptions {
 export interface WatchSet {
   /** Replace the watched set. Safe to call from inside `onChange`. */
   update(paths: readonly string[]): void;
+  /**
+   * Take tracked paths as seen in their present state: a change already
+   * pending for them is dropped, and only a later one is reported.
+   */
+  acknowledge(paths: readonly string[]): void;
   stop(): void;
   status(): WatchSetStatus;
 }
@@ -134,8 +139,18 @@ export function createWatchSet(options: WatchSetOptions): WatchSet {
 
   update(options.paths);
 
+  function acknowledge(paths: readonly string[]): void {
+    if (stopped) return;
+    for (const path of paths.map((p) => resolve(p))) {
+      if (!polled.has(path)) continue;
+      reportedAt.set(path, signatureOf(path));
+      pending.delete(path);
+    }
+  }
+
   return {
     update,
+    acknowledge,
     stop(): void {
       stopped = true;
       if (timer) clearTimeout(timer);

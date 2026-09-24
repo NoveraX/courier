@@ -1,6 +1,7 @@
 import {
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -10,6 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CourierConfig } from "@noverax/courier/config";
+import type { Namespace } from "socket.io";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BindingTable } from "../src/server/catalog/binding-table";
 import { type LoadedCourierConfig, loadCourierConfig } from "../src/server/config-loader";
@@ -28,7 +30,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** Long enough for a native notification to arrive and a reload to run. */
 const SETTLE_MS = 250;
 
-function start(initial: LoadedCourierConfig, deps: Parameters<typeof startConfigWatcher>[1]) {
+function start(initial: LoadedCourierConfig | null, deps: Parameters<typeof startConfigWatcher>[1]) {
   const watcher = startConfigWatcher(initial, deps);
   watchers.push(watcher);
   return watcher;
@@ -48,8 +50,12 @@ function makeProject(): { root: string; config: string; direct: string; deep: st
   return { root, config, direct, deep };
 }
 
-function baseURLOf(loaded: LoadedCourierConfig): unknown {
-  return (loaded.config.sources as Record<string, { baseURL?: unknown }>).demo?.baseURL;
+function baseURLOf(loaded: LoadedCourierConfig | null | undefined): unknown {
+  return (loaded?.config.sources as Record<string, { baseURL?: unknown }> | undefined)?.demo?.baseURL;
+}
+
+async function until(condition: () => boolean, budgetMs = 5000): Promise<void> {
+  for (let waited = 0; waited < budgetMs && !condition(); waited += 25) await sleep(25);
 }
 
 afterEach(() => {
@@ -244,5 +250,131 @@ describe("startConfigWatcher — reload", () => {
     expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe(
       "restored.example.com",
     );
+  });
+});
+
+const CANDIDATE = 'export default { sources: { demo: { baseURL: "candidate.example.com" } } }\n';
+
+describe("startConfigWatcher — one reload at a time, and edits", () => {
+  async function watched() {
+    const project = makeProject();
+    const initial = await loadCourierConfig(project.root);
+    const reloads: LoadedCourierConfig[] = [];
+    const emit = vi.fn();
+    const emitChange = vi.fn();
+    const watcher = start(initial, {
+      projectRoot: project.root,
+      bindingTable: new BindingTable(),
+      uiNamespace: { emit } as unknown as Namespace,
+      watcherStatus: { setApiPathCount: vi.fn(), emitChange, setMockFileCount: vi.fn(), sendSnapshot: vi.fn() },
+      onReload: (loaded) => reloads.push(loaded),
+    });
+    await sleep(SETTLE_MS);
+    emitChange.mockClear();
+    return { ...project, initial, reloads, emit, emitChange, watcher };
+  }
+
+  it("never lets a slow reload replace the one after it", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { deep, watcher, reloads, emitChange } = await watched();
+
+    writeFileSync(deep, 'await new Promise((r) => setTimeout(r, 900))\nexport const host = "slow.example.com"\n');
+    await until(() => emitChange.mock.calls.length > 0);
+    await sleep(100);
+    writeFileSync(deep, 'export const host = "fast.example.com"\n');
+    await until(() => reloads.some((loaded) => baseURLOf(loaded) === "fast.example.com"));
+    await sleep(1200);
+    await watcher.settled();
+
+    expect(baseURLOf(reloads.at(-1))).toBe("fast.example.com");
+    expect(baseURLOf(watcher.getCurrent())).toBe("fast.example.com");
+  });
+
+  it("leaves Studio as it was when an edit loads a candidate and does not apply it", async () => {
+    const { config, watcher, reloads, emit, initial } = await watched();
+    const original = readFileSync(config, "utf8");
+
+    const loadedHost = await watcher.runExclusive(async (ctx) => {
+      writeFileSync(config, CANDIDATE);
+      ctx.acknowledge([config]);
+      const candidate = await ctx.load();
+      writeFileSync(config, original);
+      ctx.acknowledge([config]);
+      return baseURLOf(candidate);
+    }, 5000);
+    await sleep(1500);
+    await watcher.settled();
+
+    expect(loadedHost).toBe("candidate.example.com");
+    expect(reloads).toEqual([]);
+    expect(watcher.getCurrent()).toBe(initial);
+    expect(watcher.lastLoadError()).toBeNull();
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it("applies what an edit accepts as a reload would, and does not reload again for its write", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { config, watcher, reloads, emit } = await watched();
+
+    await watcher.runExclusive(async (ctx) => {
+      writeFileSync(config, CANDIDATE);
+      ctx.acknowledge([config]);
+      ctx.apply(await ctx.load());
+    }, 5000);
+    await sleep(1500);
+    await watcher.settled();
+
+    expect(reloads.map(baseURLOf)).toEqual(["candidate.example.com"]);
+    expect(baseURLOf(watcher.getCurrent())).toBe("candidate.example.com");
+    expect(emit).toHaveBeenCalledWith("config:update", expect.anything());
+  });
+
+  it("abandons a load that takes too long, so the edit can undo its write before any reload", async () => {
+    const { deep, watcher, reloads, initial } = await watched();
+    const original = readFileSync(deep, "utf8");
+
+    const failure = await watcher.runExclusive(async (ctx) => {
+      writeFileSync(deep, 'await new Promise((r) => setTimeout(r, 1500))\nexport const host = "late.example.com"\n');
+      ctx.acknowledge([deep]);
+      const error = await ctx.load().catch((err: unknown) => err);
+      writeFileSync(deep, original);
+      ctx.acknowledge([deep]);
+      return error;
+    }, 300);
+    await sleep(2200);
+    await watcher.settled();
+
+    expect(failure).toMatchObject({ code: "CONFIG_LOAD_TIMEOUT" });
+    expect(reloads).toEqual([]);
+    expect(watcher.getCurrent()).toBe(initial);
+  });
+
+  it("refuses to load for an edit once Studio is stopping", async () => {
+    const { watcher } = await watched();
+    watcher.stop();
+
+    const failure = await watcher.runExclusive((ctx) => ctx.load().catch((err: unknown) => err), 1000);
+
+    expect(failure).toMatchObject({ code: "CONFIG_WATCHER_STOPPED" });
+  });
+});
+
+describe("startConfigWatcher — the last load's failure", () => {
+  it("reports why the config did not load until a load succeeds, and a later failure again", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const project = makeProject();
+    const initialError = new Error("did not load at launch");
+    const watcher = start(null, { projectRoot: project.root, bindingTable: new BindingTable(), initialError });
+    expect(watcher.lastLoadError()).toBe(initialError);
+    await sleep(SETTLE_MS);
+
+    writeFileSync(project.config, 'import { api } from "./src/api"\nexport default { sources: { demo: api } }\n// saved\n');
+    await until(() => watcher.getCurrent() !== null);
+    expect(watcher.lastLoadError()).toBeNull();
+
+    writeFileSync(project.config, "export default {}\n");
+    await until(() => watcher.lastLoadError() !== null);
+    expect(watcher.lastLoadError()).toMatchObject({ code: "CONFIG_INVALID" });
+    expect(baseURLOf(watcher.getCurrent())).toBe("v1.example.com");
   });
 });

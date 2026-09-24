@@ -1,5 +1,6 @@
 import { createLogger } from "@noverax/courier";
 import {
+  formatStudioUrl,
   STUDIO_DEFAULT_HOST,
   STUDIO_DEFAULT_PORT,
   STUDIO_DEFAULT_URL,
@@ -33,9 +34,10 @@ export function loadStudioUrl(projectRoot: string = process.cwd()): Promise<stri
   const promise = loadCourierConfig(projectRoot)
     .then(({ config }) => {
       const studio = config.studio ?? {};
-      const host = studio.host ?? STUDIO_DEFAULT_HOST;
-      const port = studio.port ?? STUDIO_DEFAULT_PORT;
-      return `http://${host}:${port}`;
+      return formatStudioUrl(
+        studio.host ?? STUDIO_DEFAULT_HOST,
+        studio.port ?? STUDIO_DEFAULT_PORT,
+      );
     })
     .catch((err) => {
       log.debug(

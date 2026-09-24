@@ -1,4 +1,5 @@
 import {
+  formatStudioUrl,
   STUDIO_DEFAULT_HOST,
   STUDIO_DEFAULT_PORT,
   STUDIO_DEFAULT_URL,
@@ -62,5 +63,8 @@ export function resolveStudioUrl(configured?: ConfiguredStudioAddress): string {
   const env = typeof process !== "undefined" ? process.env.COURIER_STUDIO_URL : undefined;
   if (env) return env;
   if (configured?.host === undefined && configured?.port === undefined) return STUDIO_DEFAULT_URL;
-  return `http://${configured.host ?? STUDIO_DEFAULT_HOST}:${configured.port ?? STUDIO_DEFAULT_PORT}`;
+  return formatStudioUrl(
+    configured.host ?? STUDIO_DEFAULT_HOST,
+    configured.port ?? STUDIO_DEFAULT_PORT,
+  );
 }

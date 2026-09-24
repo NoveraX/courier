@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createLogger } from "@noverax/courier";
+import { COURIER_DIR, ensureCourierDir } from "../server/courier-dir";
 import { writeFileAtomic } from "../server/fs-helpers";
 import type { SpecDigest } from "./merge/types";
 
@@ -12,7 +13,7 @@ const log = createLogger("Studio");
 export const IMPORTS_STATE_VERSION = 1 as const;
 
 /** Default location relative to the project root */
-export const IMPORTS_STATE_FILENAME = ".courier/imports-state.json";
+export const IMPORTS_STATE_FILENAME = `${COURIER_DIR}/imports-state.json`;
 
 /** Per-import auto-managed cache entry */
 export interface ImportStateEntry {
@@ -102,6 +103,7 @@ export function loadImportsState(projectRoot: string): ImportsState {
 export function saveImportsState(projectRoot: string, state: ImportsState): void {
   const path = resolveImportsStatePath(projectRoot);
   const payload = `${JSON.stringify({ version: IMPORTS_STATE_VERSION, imports: state.imports }, null, 2)}\n`;
+  ensureCourierDir(projectRoot);
   writeFileAtomic(path, payload);
 }
 

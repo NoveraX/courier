@@ -1,36 +1,29 @@
 #!/usr/bin/env node
+import { existsSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { STUDIO_DEFAULT_HOST, STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
 import { defineCommand, runMain } from "citty";
-import { setProjectRoot } from "./context";
 import { checkNodeVersion } from "./node-version";
 import { createStudioServer } from "./server";
 import { printBanner } from "./server/banner";
-import { initProject } from "./server/init";
 import { readStudioAddress } from "./server/studio-address";
 
 checkNodeVersion();
 
 const log = createLogger("CLI");
 
-const init = defineCommand({
-  meta: {
-    name: "init",
-    description: "Initialize project: ignore the Courier Studio cache directory",
-  },
-  run() {
-    setProjectRoot(process.cwd());
-    const { gitignoreUpdated } = initProject();
-    log.info(gitignoreUpdated ? ".gitignore now ignores .courier/" : "project already initialized");
-  },
-});
+/** Stop with one line naming the problem, not a stack. */
+function fail(message: string): never {
+  log.error(message);
+  process.exit(1);
+}
 
 const main = defineCommand({
   meta: {
     name: "courier-studio",
     description: "Courier Studio — standalone inspection & debugging server",
   },
-  subCommands: { init },
   args: {
     port: {
       type: "string",
@@ -54,7 +47,14 @@ const main = defineCommand({
     },
   },
   async run({ args }) {
-    const projectRoot = args.cwd || process.cwd();
+    /* Studio takes no command. An unknown word used to be ignored and the
+       server started anyway — `courier-studio init` did exactly that. */
+    if (args._.length > 0) fail(`Unknown command "${args._[0]}". Run courier-studio --help.`);
+
+    const projectRoot = resolve(args.cwd || process.cwd());
+    if (!existsSync(projectRoot) || !statSync(projectRoot).isDirectory()) {
+      fail(`Project root ${projectRoot} is not a directory. Check --cwd.`);
+    }
 
     /* `studio.port` and `studio.host` are documented, typed, and read by every
        client that dials Studio. The server used to ignore them, so configuring
@@ -65,8 +65,7 @@ const main = defineCommand({
       ? Number.parseInt(args.port, 10)
       : (configured.port ?? STUDIO_DEFAULT_PORT);
     if (Number.isNaN(port) || port < 1 || port > 65535) {
-      log.error(`Invalid port: "${args.port}". Must be a number between 1 and 65535.`);
-      process.exit(1);
+      fail(`Invalid port: "${args.port}". Must be a number between 1 and 65535.`);
     }
     const host = args.host || configured.host || STUDIO_DEFAULT_HOST;
 

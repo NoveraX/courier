@@ -3,10 +3,11 @@
  * and a project whose config does not exist until after Studio started.
  *
  * A held port was reported as "Studio already running" whoever held it,
- * onReady never fired and close() rejected; and a config that was missing or
- * broken at start switched hot reload off for the whole session.
+ * onReady never fired and close() rejected; a config that was missing or
+ * broken at start switched hot reload off for the whole session; and every
+ * start appended to the project's .gitignore.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer as createNetServer, type Server } from "node:net";
 import { join } from "node:path";
 import { io as connect } from "socket.io-client";
@@ -93,4 +94,26 @@ describe("a config created after Studio started", () => {
     const update = await updated;
     expect(update.configFile).toContain("courier.config.ts");
   }, 15_000);
+});
+
+function started(root: string, port = 0): Promise<{ url: string; server: StudioServer }> {
+  return new Promise((resolve) => {
+    const server = start({
+      port,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: (url) => resolve({ url, server }),
+    });
+  });
+}
+
+describe("Studio in a project", () => {
+  it("leaves the project's .gitignore alone", async () => {
+    const root = project();
+    writeFileSync(join(root, ".gitignore"), "node_modules\n");
+
+    await started(root);
+
+    expect(readFileSync(join(root, ".gitignore"), "utf-8")).toBe("node_modules\n");
+  });
 });

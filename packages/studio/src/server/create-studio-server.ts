@@ -9,7 +9,6 @@ import express from "express";
 import { Server as SocketIOServer } from "socket.io";
 import { setProjectRoot } from "../context";
 import { BindingTable } from "./catalog/binding-table";
-import { initProject } from "./init";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
 import { registerRestApi } from "./rest-api";
@@ -71,10 +70,6 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   const bindingTable = new BindingTable();
   const playgroundRouter = createRuntimePlaygroundRouter({ bindingTable, uiNamespace });
   setupRuntimeNamespace(runtimeNamespace, { bindingTable, uiNamespace, playgroundRouter });
-
-  // ── Init (registry + .gitignore) ────────────────────────────────────────────
-
-  initProject();
 
   // ── Watcher Status (unified hot reload indicator) ──────────────────────────
 

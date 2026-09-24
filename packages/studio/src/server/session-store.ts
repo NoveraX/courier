@@ -6,10 +6,11 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { resolveProject } from "../context";
+import { getProjectRoot, resolveProject } from "../context";
+import { COURIER_DIR, ensureCourierDir } from "./courier-dir";
 import type { SavedSession, SessionSummary } from "./session-types";
 
-const SESSIONS_DIR = ".courier/sessions";
+const SESSIONS_DIR = `${COURIER_DIR}/sessions`;
 
 /** Resolve sessions directory path */
 function sessionsDir(): string {
@@ -18,8 +19,8 @@ function sessionsDir(): string {
 
 /** Ensure sessions directory exists */
 function ensureDir(): void {
-  const dir = sessionsDir();
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  ensureCourierDir(getProjectRoot());
+  mkdirSync(sessionsDir(), { recursive: true });
 }
 
 /** Build filename for a session */

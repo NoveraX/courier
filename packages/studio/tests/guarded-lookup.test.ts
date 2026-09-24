@@ -1,0 +1,94 @@
+/**
+ * The name lookup a specification fetch connects through: every address the
+ * name resolves to is checked, and the connection goes only to an approved one.
+ */
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const answers = vi.hoisted(() => ({ addresses: [] as Array<{ address: string; family: number }> }));
+
+vi.mock("node:dns", () => ({
+  promises: { lookup: async () => answers.addresses },
+}));
+
+const { guardedLookup } = await import("../src/server/guarded-lookup");
+
+afterEach(() => {
+  answers.addresses = [];
+});
+
+function lookup(allowed: boolean, loopback = true, all = false): Promise<{ error: Error | null; address: unknown }> {
+  return new Promise((resolve) => {
+    guardedLookup({ allowed, loopback })("spec.example", { all }, (error, address) => resolve({ error, address }));
+  });
+}
+
+describe("guardedLookup", () => {
+  it("connects to a public address", async () => {
+    answers.addresses = [{ address: "93.184.215.14", family: 4 }];
+
+    expect(await lookup(false)).toEqual({ error: null, address: "93.184.215.14" });
+  });
+
+  it("refuses a name that resolves into a private network", async () => {
+    answers.addresses = [{ address: "10.0.0.7", family: 4 }];
+
+    const { error } = await lookup(false);
+
+    expect(error).toMatchObject({ code: "SPEC_HOST_PRIVATE" });
+    expect(error?.message).toContain("spec.example (10.0.0.7)");
+  });
+
+  it("refuses a name with any private address among public ones", async () => {
+    answers.addresses = [
+      { address: "93.184.215.14", family: 4 },
+      { address: "::ffff:a9fe:a9fe", family: 6 },
+    ];
+
+    expect((await lookup(false)).error).toMatchObject({ code: "SPEC_HOST_PRIVATE" });
+  });
+
+  it("connects to a private address the project names", async () => {
+    answers.addresses = [{ address: "10.0.0.7", family: 4 }];
+
+    expect(await lookup(true)).toEqual({ error: null, address: "10.0.0.7" });
+  });
+
+  it("connects to this machine", async () => {
+    answers.addresses = [{ address: "127.0.0.1", family: 4 }];
+
+    expect(await lookup(false)).toEqual({ error: null, address: "127.0.0.1" });
+  });
+
+  it("refuses this machine when the request was sent there by a server elsewhere", async () => {
+    answers.addresses = [{ address: "127.0.0.1", family: 4 }];
+
+    expect((await lookup(false, false)).error).toMatchObject({ code: "SPEC_HOST_PRIVATE" });
+  });
+
+  it("hands every approved address over when the connection asks for all of them", async () => {
+    answers.addresses = [
+      { address: "93.184.215.14", family: 4 },
+      { address: "2606:2800:21f:cb07:6820:80da:af6b:8b2c", family: 6 },
+    ];
+
+    expect(await lookup(false, true, true)).toEqual({ error: null, address: answers.addresses });
+  });
+
+  it("calls back once when the connection it hands the address to throws, and logs it", async () => {
+    answers.addresses = [{ address: "93.184.215.14", family: 4 }];
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    let calls = 0;
+
+    await new Promise<void>((resolve) => {
+      guardedLookup({ allowed: false, loopback: true })("spec.example", {}, () => {
+        calls += 1;
+        setTimeout(resolve, 20);
+        throw new Error("connect failed");
+      });
+    }).catch(() => undefined);
+
+    expect(calls).toBe(1);
+    expect(logged).toHaveBeenCalledTimes(1);
+    logged.mockRestore();
+  });
+});

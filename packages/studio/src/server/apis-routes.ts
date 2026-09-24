@@ -3,7 +3,6 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { createFetch } from "@noverax/courier/fetch";
 import {
   diffSpecs,
   type FingerprintResult,
@@ -16,10 +15,12 @@ import {
 } from "../apis";
 import { resolveProjectSafe } from "../context";
 import { allowedSpecHosts } from "./allowed-spec-hosts";
+import { fetchSpec } from "./fetch-spec";
 import { registerManageRoutes } from "./manage-routes";
 import { errMsg } from "./registry-helpers";
 import { registerRegistryRoutes } from "./registry-routes";
 import type { RouteApp } from "./route-types";
+import { SpecFetchError } from "./spec-fetch-error";
 import { registerUpdateFlowRoutes } from "./update-routes";
 import {
   validateDiffBody,
@@ -28,10 +29,7 @@ import {
   validateMergeBody,
   validateParseBody,
 } from "./validate-body";
-import { validateSpecUrl } from "./validate-url";
 import { registerWriteRoutes } from "./write-routes";
-
-const specClient = createFetch();
 
 export function registerApisRoutes(app: RouteApp): void {
   app.post("/api/apis/parse", async (req, res) => {
@@ -41,7 +39,9 @@ export function registerApisRoutes(app: RouteApp): void {
       const raw = await resolveSpecContent(body.source, body.content);
       res.json(parseSpec(raw));
     } catch (err) {
-      res.status(400).json({ error: errMsg(err, "Failed to parse spec") });
+      /* A spec host that could not be read is the server's failure, not the request's. */
+      const status = err instanceof SpecFetchError && !err.refused ? 502 : 400;
+      res.status(status).json({ error: errMsg(err, "Failed to parse spec") });
     }
   });
 
@@ -115,10 +115,7 @@ async function resolveSpecContent(
   source: "url" | "raw" | "file",
   content: string,
 ): Promise<string> {
-  if (source === "url") {
-    await validateSpecUrl(content, await allowedSpecHosts());
-    return specClient.get<string>(content, { responseType: "text" });
-  }
+  if (source === "url") return fetchSpec(content, await allowedSpecHosts());
   if (source === "file") {
     const filePath = resolveProjectSafe(content);
     if (!existsSync(filePath)) throw new Error(`File not found: ${filePath}`);

@@ -43,8 +43,8 @@ const main = defineCommand({
     },
     open: {
       type: "boolean",
-      description: "Open browser on start",
-      default: false,
+      description:
+        "Open a browser on start (falls back to studio.open); --no-open to keep it closed",
     },
   },
   async run({ args }) {
@@ -86,7 +86,7 @@ const main = defineCommand({
       onReady: async (url) => {
         printBanner(studioVersion(), studioUrls(host, port));
 
-        if (args.open) {
+        if (args.open ?? configured.open) {
           try {
             const { default: openBrowser } = await import("open");
             await openBrowser(url);

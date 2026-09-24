@@ -47,6 +47,13 @@ describe("reading the address a project asks for", () => {
     expect(await readStudioAddress(root)).toEqual({ host: "0.0.0.0", port: 7777 });
   });
 
+  it("returns whether the config asks for a browser", async () => {
+    /* `studio.open` was typed and documented, and nothing read it. */
+    const root = project(`export default { sources: {}, studio: { open: true } }\n`);
+
+    expect((await readStudioAddress(root)).open).toBe(true);
+  });
+
   it("returns nothing when the config declares no studio block", async () => {
     const root = project(`export default { sources: {} }\n`);
 

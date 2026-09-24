@@ -113,7 +113,8 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
     const error =
       err.code === "EADDRINUSE" ? new Error(`Port ${port} is already in use`, { cause: err }) : err;
 
-    log.error(error.message);
+    /* A taken port needs no stack; anything else keeps the system's own error. */
+    log.error(error.message, err.code === "EADDRINUSE" ? undefined : err);
     onServerError?.(error);
     markFailed(error);
   });

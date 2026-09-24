@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   computeSpecHash,
   hasSpecChanged,
@@ -178,6 +178,22 @@ describe("loadImportsState — backup and validation", () => {
     writeFileSync(path, "{broken json!!!");
     loadImportsState(projectRoot);
     expect(existsSync(`${path}.corrupt`)).toBe(true);
+  });
+
+  it("says the state was corrupt even when its backup cannot be written", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const path = resolveImportsStatePath(projectRoot);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "{broken json!!!");
+    mkdirSync(`${path}.corrupt`);
+
+    const state = loadImportsState(projectRoot);
+
+    const lines = warn.mock.calls.map((call) => String(call[1]));
+    expect(state.imports).toEqual({});
+    expect(lines.some((line) => line.includes("Corrupt imports-state JSON"))).toBe(true);
+    expect(lines.some((line) => line.includes("Could not save the corrupt imports-state"))).toBe(true);
+    warn.mockRestore();
   });
 
   it("drops entries with missing required fields", () => {

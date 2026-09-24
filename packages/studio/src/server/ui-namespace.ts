@@ -46,12 +46,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
     try {
       socket.emit("binding:snapshot", buildBindingSnapshot(bindingTable));
     } catch (err) {
-      logger.warn(
-        "Studio",
-        `Failed to emit initial binding:snapshot on UI connect: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
-      );
+      logger.warn("Studio", "Failed to emit initial binding:snapshot on UI connect", err);
       socket.emit("binding:snapshot", { rows: [], runtimeCount: 0, sourceCount: 0 });
     }
 
@@ -65,12 +60,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
       .catch((err: unknown) => {
         /* Fresh projects without courier.config.ts are expected — stay quiet. */
         if (err instanceof ConfigNotFoundError) return;
-        logger.warn(
-          "Studio",
-          `Failed to emit imports snapshot on socket connect: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        );
+        logger.warn("Studio", "Failed to emit imports snapshot on socket connect", err);
       });
 
     /* The APIs page and the mock wizard both list the project's own sources;
@@ -82,12 +72,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
       .catch((err: unknown) => {
         /* Fresh projects without courier.config.ts are expected — stay quiet. */
         if (err instanceof ConfigNotFoundError) return;
-        logger.warn(
-          "Studio",
-          `Failed to emit source scan on socket connect: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        );
+        logger.warn("Studio", "Failed to emit source scan on socket connect", err);
       });
 
     // Send current mock servers so UI restores state immediately.

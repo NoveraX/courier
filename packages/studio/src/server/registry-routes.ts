@@ -46,9 +46,8 @@ export function registerRegistryRoutes(app: RouteApp): void {
       } catch (err) {
         logger.warn(
           "Studio",
-          `Failed to delete some generated files for import "${body.name}"; state will be cleaned regardless: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
+          `Failed to delete some generated files for import "${body.name}"; state will be cleaned regardless`,
+          err,
         );
       }
 

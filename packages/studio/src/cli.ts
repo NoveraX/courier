@@ -92,7 +92,7 @@ const main = defineCommand({
             await openBrowser(url);
           } catch (err) {
             /* Every launch attempt failed; the server is up either way. */
-            log.warn(`Could not open a browser: ${err instanceof Error ? err.message : err}`);
+            log.warn("Could not open a browser", err);
           }
         }
       },

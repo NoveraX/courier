@@ -94,13 +94,7 @@ export function startConfigWatcher(
         /* Sources may have been added, renamed or removed by that edit. */
         scanProjectSources()
           .then((scan) => ui.emit("scan:sources", scan))
-          .catch((err: unknown) => {
-            log.warn(
-              `Failed to rescan sources after config change: ${
-                err instanceof Error ? err.message : String(err)
-              }`,
-            );
-          });
+          .catch((err: unknown) => log.warn("Failed to rescan sources after config change", err));
         deps.uiNamespace.emit("binding:snapshot", deps.bindingTable.getStatus());
       }
     } catch (err) {

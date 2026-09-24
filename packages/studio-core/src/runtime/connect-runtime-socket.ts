@@ -89,7 +89,6 @@ export async function connectRuntimeSocket(
        damaged rather than incomplete. Silence would leave Studio rendering its
        whole UI, watching the config, and never seeing the application, with
        every source sitting at "orphan" and no reason given anywhere. */
-    log.debug("socket.io-client import failed", err);
     log.warn(
       [
         "Studio cannot connect: socket.io-client failed to load.",
@@ -99,6 +98,7 @@ export async function connectRuntimeSocket(
         "",
         "  npm install",
       ].join("\n"),
+      err,
     );
     return;
   }

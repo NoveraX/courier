@@ -213,11 +213,7 @@ export function createRuntimePlaygroundRouter(
       try {
         emitErrorToUi(entry.uiSocketId, rid, "Runtime disconnected mid-request");
       } catch (err) {
-        log.warn(
-          `Failed to synthesize disconnect error for rid ${rid}: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        );
+        log.warn(`Failed to synthesize disconnect error for rid ${rid}`, err);
       }
       if (entry.timeout) clearTimeout(entry.timeout);
       inFlight.delete(rid);
@@ -231,11 +227,7 @@ export function createRuntimePlaygroundRouter(
         const runtimeEntry = getRuntimeEntry(entry.runtimeId);
         runtimeEntry?.socket.emit("playground:cancel", { rid });
       } catch (err) {
-        log.warn(
-          `Failed to cancel rid ${rid} on UI disconnect: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        );
+        log.warn(`Failed to cancel rid ${rid} on UI disconnect`, err);
       }
       if (entry.timeout) clearTimeout(entry.timeout);
       inFlight.delete(rid);

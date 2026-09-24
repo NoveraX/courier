@@ -64,18 +64,21 @@ export function loadImportsState(projectRoot: string): ImportsState {
   try {
     raw = readFileSync(path, "utf-8");
   } catch (err) {
-    log.warn(`Failed to read imports-state: ${err instanceof Error ? err.message : String(err)}`);
+    log.warn("Failed to read imports-state", err);
     return emptyState();
   }
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
-  } catch {
+  } catch (parseErr) {
+    /* Said before the backup is tried, so a backup that cannot be written
+       does not leave the lost imports unexplained. */
+    log.warn("Corrupt imports-state JSON; starting from an empty state", parseErr);
     try {
       writeFileSync(`${path}.corrupt`, raw, "utf-8");
-      log.warn(`Corrupt imports-state JSON — backup saved to ${path}.corrupt`);
-    } catch {
-      /* best-effort backup */
+      log.warn(`The corrupt imports-state was saved to ${path}.corrupt`);
+    } catch (err) {
+      log.warn(`Could not save the corrupt imports-state to ${path}.corrupt`, err);
     }
     return emptyState();
   }

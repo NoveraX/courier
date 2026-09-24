@@ -41,11 +41,8 @@ export function withImportsLock<T>(fn: Task<T>): Promise<T> {
       });
     });
   const next = pending.then(run, run);
-  pending = next.catch((err: unknown) => {
-    logger.debug(
-      "ImportsLock",
-      `Background task failed: ${err instanceof Error ? err.message : String(err)}`,
-    );
-  });
+  pending = next.catch((err: unknown) =>
+    logger.debug("ImportsLock", "Background task failed", err),
+  );
   return next;
 }

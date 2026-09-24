@@ -3,6 +3,8 @@ import express from "express";
 
 import { apiErrors } from "./api-errors";
 import { registerApisRoutes } from "./apis-routes";
+import { registerMockDeclareRoutes } from "./mock-declare-routes";
+import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
 import { createOriginGuard } from "./origin-guard";
 import { registerSessionRoutes } from "./session-routes";
 import type { StudioOriginPolicy } from "./studio-origin";
@@ -14,8 +16,13 @@ import type { StudioOriginPolicy } from "./studio-origin";
  *
  * @param app - The Studio server's Express app
  * @param policy - Decides who counts as the Studio UI
+ * @param mocksEdit - The running Studio the mock wizard's edits read and change
  */
-export function registerRestApi(app: ReturnType<typeof express>, policy: StudioOriginPolicy): void {
+export function registerRestApi(
+  app: ReturnType<typeof express>,
+  policy: StudioOriginPolicy,
+  mocksEdit: MocksEditContext,
+): void {
   app.use(compression());
   /* Before anything reads a body: the API is for the Studio UI, not for every
      page the developer happens to have open. */
@@ -28,5 +35,6 @@ export function registerRestApi(app: ReturnType<typeof express>, policy: StudioO
 
   registerApisRoutes(app);
   registerSessionRoutes(app);
+  registerMockDeclareRoutes(app, mocksEdit);
   app.use("/api", apiErrors);
 }

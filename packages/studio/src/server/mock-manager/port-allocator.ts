@@ -1,24 +1,9 @@
-import { createServer } from "node:net";
+import { portProblem } from "./port-problem";
 
 const SEARCH_SPAN = 100;
 
-/* A port counts as free only when it is free on both loopbacks: dev servers
-   asked for `localhost` often bind only [::1], and http://localhost:PORT
-   would reach them rather than the mock. A system without IPv6 has nothing
-   listening there. */
-function isFreeOn(port: number, host: "127.0.0.1" | "::1"): Promise<boolean> {
-  return new Promise((resolve) => {
-    const server = createServer();
-    server.once("error", (err: NodeJS.ErrnoException) =>
-      resolve(host === "::1" && err.code !== "EADDRINUSE"),
-    );
-    server.once("listening", () => server.close(() => resolve(true)));
-    server.listen({ port, host, ipv6Only: host === "::1" });
-  });
-}
-
 async function isPortAvailable(port: number): Promise<boolean> {
-  return (await isFreeOn(port, "127.0.0.1")) && (await isFreeOn(port, "::1"));
+  return (await portProblem(port)) === null;
 }
 
 /**

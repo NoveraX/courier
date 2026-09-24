@@ -11,13 +11,14 @@
 import { createLogger } from "@noverax/courier";
 import type { MockEntry } from "../mock-registry";
 import { createDescriptionApplier } from "./apply-description";
+import { createCommandHandler } from "./command-handler";
 import { createProcessEvents } from "./lifecycle-process-events";
 import { createServerOps } from "./lifecycle-server-ops";
 import { declaredPorts } from "./mock-ports";
 import { createMockRegistration } from "./mock-registration";
 import { createMocksFileState } from "./mocks-file-state";
 import { createProcessManager } from "./process-manager";
-import type { CoordinatorConfig, ServerState } from "./types";
+import type { CoordinatorConfig, MockSummary, ServerState } from "./types";
 import { createUiEmitter } from "./ui-emitter";
 
 const log = createLogger("Studio");
@@ -100,25 +101,16 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
     },
   });
 
-  function handleCommand(command: string, data: Record<string, unknown>): void {
-    const serverId = data.serverId as string;
-    switch (command) {
-      case "mock:managed:start":
-        runVoid(`start(${serverId})`, ops.startServer(serverId));
-        break;
-      case "mock:managed:stop":
-        runVoid(`stop(${serverId})`, ops.stopServer(serverId));
-        break;
-      case "mock:managed:restart":
-        runVoid(`restart(${serverId})`, ops.restartServer(serverId));
-        break;
-      case "mock:managed:startAll":
-        for (const id of servers.keys()) runVoid(`start(${id})`, ops.startServer(id));
-        break;
-      case "mock:managed:stopAll":
-        for (const id of servers.keys()) runVoid(`stop(${id})`, ops.stopServer(id));
-        break;
-    }
+  const handleCommand = createCommandHandler(servers, ops, runVoid);
+
+  /** Every tracked mock: whether it runs, and the port it is on or will be. */
+  function summarizeServers(): MockSummary[] {
+    return [...servers.values()].map((state) => ({
+      key: state.serverId,
+      alive: processManager.has(state.serverId),
+      port: state.actualPort ?? state.configuredPort,
+      portDeclared: state.portDeclared,
+    }));
   }
 
   function forwardStoreCommand(command: Record<string, unknown>): void {
@@ -144,7 +136,14 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
     servers.clear();
   }
 
-  return { stop, handleCommand, forwardStoreCommand, sendSnapshot, setMocksFile: mocksFile.set };
+  return {
+    stop,
+    handleCommand,
+    forwardStoreCommand,
+    sendSnapshot,
+    summarizeServers,
+    setMocksFile: mocksFile.set,
+  };
 }
 
 export type LifecycleCoordinator = ReturnType<typeof createLifecycleCoordinator>;

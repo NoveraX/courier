@@ -388,3 +388,43 @@ describe("the mocks file's status", () => {
     expect(statuses()).toHaveLength(3);
   });
 });
+
+describe("what an edit of the mocks file is told", () => {
+  it("lists each tracked mock with whether it runs and its port", async () => {
+    const { coordinator, declare } = studio();
+    declare({ a: defineMockServer({ source: api, autoStart: true, port: 7555 }), b: defineMockServer({ source: api }) });
+    await settle();
+
+    expect(coordinator.summarizeServers()).toEqual([
+      { key: "a", alive: true, port: 7555, portDeclared: true },
+      { key: "b", alive: false, port: 7001, portDeclared: false },
+    ]);
+    await coordinator.stop();
+  });
+});
+
+describe("a command", () => {
+  it("for one mock does nothing without the mock it names", async () => {
+    const { coordinator, declare } = studio();
+    declare({ a: defineMockServer({ source: api }) });
+    await settle();
+
+    coordinator.handleCommand("mock:managed:start", {});
+    await settle();
+
+    expect(fake.spawned).toHaveLength(0);
+    await coordinator.stop();
+  });
+
+  it("for all mocks starts every one", async () => {
+    const { coordinator, declare } = studio();
+    declare({ a: defineMockServer({ source: api }), b: defineMockServer({ source: api }) });
+    await settle();
+
+    coordinator.handleCommand("mock:managed:startAll", {});
+    await settle();
+
+    expect(fake.spawned.map((s) => s.serverId).sort()).toEqual(["a", "b"]);
+    await coordinator.stop();
+  });
+});

@@ -3,14 +3,14 @@
  */
 
 import { createServer } from "node:http";
-import type { AddressInfo } from "node:net";
-import { createLogger } from "@noverax/courier";
-import { formatStudioUrl, STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
+import { STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
 import express from "express";
 import { setProjectRoot } from "../context";
 import { BindingTable } from "./catalog/binding-table";
+import { listenStudio } from "./listen-studio";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
+import { EDIT_FINISH_BUDGET_MS } from "./mocks-edit/edit-timing";
 import { registerRestApi } from "./rest-api";
 import { setupRuntimeNamespace } from "./runtime-namespace";
 import { clearStudioServerState } from "./runtime-namespace-state";
@@ -23,8 +23,6 @@ import { createStudioOriginPolicy } from "./studio-origin";
 import type { StudioServer, StudioServerOptions } from "./types";
 import { watchConfigDriven } from "./watch-config-driven";
 import { createWatcherStatus } from "./watcher-status";
-
-const log = createLogger("Studio");
 
 /** Vite dev-server origin used by the Studio UI during local development */
 const STUDIO_UI_DEV_ORIGIN = "http://localhost:4382";
@@ -90,37 +88,21 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     playgroundRouter,
   });
 
-  registerRestApi(app, policy);
+  registerRestApi(app, policy, {
+    projectRoot,
+    mockBasePort,
+    watcher: config.watcher,
+    studioPort: () => address.port(),
+    mockSummaries: mockManager.summarizeServers,
+  });
   serveStudioUi(app);
 
   // ── Start ────────────────────────────────────────────────────────────────────
 
-  /* Known for certain only once listening: with port 0 the system picks it,
-     and the requested one would name an address nothing answers at. */
-  let url = formatStudioUrl(host, port);
-
-  /* A port another process holds used to be reported as "Studio already
-     running" whoever held it, onReady never fired, and close() rejected
-     because the server had never listened; any other listen error was thrown
-     from the event handler and took the process down. */
-  httpServer.once("error", (err: NodeJS.ErrnoException) => {
-    const failure =
-      err.code === "EADDRINUSE"
-        ? new Error(
-            `Port ${port} on ${host} is in use — is Studio already running? Choose another with --port.`,
-            { cause: err },
-          )
-        : err;
-    if (onError) onError(failure);
-    else log.error("Courier Studio could not start", failure);
-  });
-
-  httpServer.listen(port, host, () => {
-    url = formatStudioUrl(host, (httpServer.address() as AddressInfo).port);
-    onReady?.(url);
-  });
+  const address = listenStudio(httpServer, { port, host, onReady, onError });
 
   const close = async () => {
+    await config.finishEdits(EDIT_FINISH_BUDGET_MS);
     await mockManager.stop();
     config.stop();
     clearBuffer();
@@ -135,7 +117,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   return {
     get url() {
-      return url;
+      return address.url();
     },
     close,
   };

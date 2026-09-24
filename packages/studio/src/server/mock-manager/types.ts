@@ -53,3 +53,14 @@ export interface CoordinatorConfig {
   basePort: number;
   watcherStatus?: WatcherStatus;
 }
+
+/** A mock Studio tracks, as far as an edit of the mocks file concerns it. */
+export interface MockSummary {
+  key: string;
+  /** Whether its worker runs, so the edit restarts it. */
+  alive: boolean;
+  /** The port it is on, or will be on when it starts. */
+  port: number;
+  /** Whether the mocks file names that port, rather than Studio assigning it. */
+  portDeclared: boolean;
+}

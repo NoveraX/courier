@@ -32,7 +32,9 @@
 import { existsSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { CourierConfig } from "@noverax/courier/config";
+import type { ConfigJitiOptions } from "./config-jiti";
 import { createConfigJiti } from "./config-jiti";
+import type { TransformCache } from "./transform-cache";
 
 export { type ConfigJitiOptions, createConfigJiti } from "./config-jiti";
 export {
@@ -43,6 +45,11 @@ export {
   readMocksExport,
 } from "./load-mocks";
 export { type PathAliases, readPathAliases } from "./path-aliases";
+export {
+  createTransformCache,
+  type TransformCache,
+  type TransformCacheOptions,
+} from "./transform-cache";
 
 /** The file names a Courier config may have, in the order they are looked for */
 export const CONFIG_BASENAMES: ReadonlyArray<string> = [
@@ -88,12 +95,18 @@ export interface LoadCourierConfigOptions {
    * Defaults to false (walk up).
    */
   requireAtCwd?: boolean;
+  /**
+   * Where to reuse each module's transform while its bytes are unchanged. A
+   * caller that keeps one across loads transforms only the modules whose
+   * bytes changed; without one, every module is transformed on every load.
+   */
+  transformCache?: TransformCache;
 }
 
 /**
  * Walk up from `startDir` looking for a `courier.config.*` file. Returns the
- * absolute directory containing the first match, or `null` if the walk
- * reaches the filesystem root without finding one.
+ * absolute path of the first match, or `null` when no directory up to the
+ * filesystem root holds one.
  */
 function findConfigFile(startDir: string): string | null {
   let dir = resolve(startDir);
@@ -128,6 +141,13 @@ export function findConfigFileAt(cwd: string): string | null {
  * Returns `null` when no config file exists, so a caller can fall back.
  * Throws when a file was found and loading it failed, reporting what the
  * loader reported — for a TypeScript config, usually an unresolvable import.
+ *
+ * @param options - Where to look, and where to reuse transforms
+ * @returns The config and its canonical path, or `null` when there is no config
+ * @example
+ * ```ts
+ * const loaded = await loadCourierConfig({ cwd: projectRoot, requireAtCwd: true });
+ * ```
  */
 export async function loadCourierConfig(
   options: LoadCourierConfigOptions = {},
@@ -135,7 +155,7 @@ export async function loadCourierConfig(
   const startDir = resolve(options.cwd ?? process.cwd());
 
   const found = options.requireAtCwd ? findConfigFileAt(startDir) : findConfigFile(startDir);
-  return found ? loadCourierConfigFile(found) : null;
+  return found ? loadCourierConfigFile(found, { transformCache: options.transformCache }) : null;
 }
 
 /**
@@ -143,16 +163,27 @@ export async function loadCourierConfig(
  * standalone server takes it from `--config`.
  *
  * @param file - Absolute path of an existing config file
+ * @param options - How the loader resolves imports and where it reuses
+ *   transforms; see {@link ConfigJitiOptions}
  * @returns The config and the canonical path it was loaded from
  * @throws What the loader reported when the file will not load — for a
  *   TypeScript config, usually an unresolvable import
+ * @example
+ * ```ts
+ * const { config } = await loadCourierConfigFile("/app/courier.config.ts", {
+ *   transformCache: createTransformCache(),
+ * });
+ * ```
  */
-export async function loadCourierConfigFile(file: string): Promise<LoadedCourierConfig> {
+export async function loadCourierConfigFile(
+  file: string,
+  options: ConfigJitiOptions = {},
+): Promise<LoadedCourierConfig> {
   /* Resolve symlinks so downstream consumers — the dev server's dependency
      watcher above all — observe the canonical path. */
   const configFile = realpathSync(file);
 
-  const jiti = await createConfigJiti(configFile);
+  const jiti = await createConfigJiti(configFile, options);
 
   /* A throw here is jiti reporting why a config it found will not load —
      usually an import it could not resolve. It carries the only useful

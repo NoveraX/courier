@@ -1,5 +1,6 @@
 import { lstatSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
+import type { ConfigJitiOptions } from "./config-jiti";
 import { createConfigJiti } from "./config-jiti";
 
 /**
@@ -76,12 +77,21 @@ export function readMocksExport(namespace: unknown, file: string): Record<string
  * because that file is also loaded in production.
  *
  * @param file - Path of an existing mocks file
+ * @param options - How the loader resolves imports and where it reuses
+ *   transforms; see {@link ConfigJitiOptions}
  * @returns The declared mocks and the file's canonical path
  * @throws What the loader reported, or what {@link readMocksExport} did
+ * @example
+ * ```ts
+ * const { mocks } = await loadCourierMocksFile("/app/courier.mocks.ts");
+ * ```
  */
-export async function loadCourierMocksFile(file: string): Promise<LoadedCourierMocks> {
+export async function loadCourierMocksFile(
+  file: string,
+  options: ConfigJitiOptions = {},
+): Promise<LoadedCourierMocks> {
   const mocksFile = realpathSync(file);
-  const jiti = await createConfigJiti(mocksFile);
+  const jiti = await createConfigJiti(mocksFile, options);
   const namespace = await jiti.import<unknown>(mocksFile);
   return { mocks: readMocksExport(namespace, mocksFile), mocksFile };
 }

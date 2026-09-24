@@ -1,11 +1,21 @@
 /**
  * @vitest-environment node
  */
-import { existsSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { findMocksFile, loadCourierMocksFile, readMocksExport } from "../src/runtime/load-mocks";
+import type { TransformCache } from "../src/runtime/transform-cache";
+import { createTransformCache } from "../src/runtime/transform-cache";
 
 let dir: string;
 
@@ -81,5 +91,45 @@ describe("loadCourierMocksFile", () => {
     writeFileSync(join(dir, "courier.mocks.ts"), 'import { missing } from "./missing";\nexport default { missing };\n');
 
     await expect(loadCourierMocksFile(join(dir, "courier.mocks.ts"))).rejects.toThrow(/missing/);
+  });
+});
+
+describe("loadCourierMocksFile — loader options", () => {
+  function write(relative: string, contents: string): void {
+    mkdirSync(dirname(join(dir, relative)), { recursive: true });
+    writeFileSync(join(dir, relative), contents);
+  }
+
+  it("transforms through the cache it is given, once while the file is unchanged", async () => {
+    write("courier.mocks.ts", "const port: number = 7001;\nexport default { api: { port } };\n");
+    const inner = createTransformCache();
+    const computed: string[] = [];
+    const transformCache: TransformCache = {
+      transform: (options, compute) =>
+        inner.transform(options, (miss) => {
+          computed.push(miss.filename ?? "");
+          return compute(miss);
+        }),
+    };
+
+    await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { transformCache });
+    const second = await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { transformCache });
+
+    expect(computed).toEqual([join(dir, "courier.mocks.ts")]);
+    expect(second.mocks).toEqual({ api: { port: 7001 } });
+  });
+
+  it("resolves to the installed package when aliases are off", async () => {
+    write("tsconfig.json", JSON.stringify({ compilerOptions: { paths: { "@app/*": ["./src/*"] } } }));
+    write("src/port.ts", "export const port = 1;\n");
+    write("node_modules/@app/port/package.json", JSON.stringify({ name: "@app/port", main: "index.js" }));
+    write("node_modules/@app/port/index.js", "exports.port = 2;\n");
+    write("courier.mocks.ts", 'import { port } from "@app/port";\nexport default { api: { port } };\n');
+
+    const aliased = await loadCourierMocksFile(join(dir, "courier.mocks.ts"));
+    const installed = await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { aliases: false });
+
+    expect(aliased.mocks).toEqual({ api: { port: 1 } });
+    expect(installed.mocks).toEqual({ api: { port: 2 } });
   });
 });

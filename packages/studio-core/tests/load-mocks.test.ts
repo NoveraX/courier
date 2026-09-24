@@ -5,6 +5,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   realpathSync,
   rmSync,
   symlinkSync,
@@ -137,6 +138,26 @@ describe("loadCourierMocksFile — loader options", () => {
     expect(studio.computed.sort()).toEqual([join(dir, "courier.mocks.ts"), join(dir, "port.ts")]);
     expect(worker.computed).toEqual([]);
     expect(loaded.mocks).toEqual({ api: { port: 7001 } });
+  });
+
+  it("a mock worker's read-only cache reuses what Studio kept and adds nothing to the directory", async () => {
+    write("port.ts", "export const port: number = 7001;\n");
+    write("courier.mocks.ts", 'import { port } from "./port";\nexport default { api: { port } };\n');
+    const directory = join(dir, "transforms");
+    await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { transformCache: createTransformCache({ directory }) });
+    const kept = readdirSync(directory).sort();
+    write("host.ts", 'export const host = "localhost";\n');
+    write(
+      "courier.mocks.ts",
+      'import { host } from "./host";\nimport { port } from "./port";\nexport default { api: { host, port } };\n',
+    );
+    const worker = counting(createTransformCache({ directory, readOnly: true, maxMemoryChars: 0 }));
+
+    const loaded = await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { transformCache: worker.cache });
+
+    expect(worker.computed.sort()).toEqual([join(dir, "courier.mocks.ts"), join(dir, "host.ts")]);
+    expect(readdirSync(directory).sort()).toEqual(kept);
+    expect(loaded.mocks).toEqual({ api: { host: "localhost", port: 7001 } });
   });
 
   it("resolves to the installed package when aliases are off", async () => {

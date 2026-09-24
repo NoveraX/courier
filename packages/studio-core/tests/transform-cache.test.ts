@@ -151,6 +151,19 @@ describe("createTransformCache", () => {
     ]);
   });
 
+  it("keeps nothing in memory with a bound of 0, not even an empty transform", () => {
+    const cache = createTransformCache({ maxMemoryChars: 0 });
+    const compute = vi.fn(echo);
+    const empty = optionsFor({ source: "" });
+
+    cache.transform(empty, compute);
+    cache.transform(empty, compute);
+    cache.transform(optionsFor(), compute);
+    cache.transform(optionsFor(), compute);
+
+    expect(compute).toHaveBeenCalledTimes(4);
+  });
+
   it.each<[string, unknown]>([
     ["a babel plugin given as a function", [() => ({ visitor: {} })]],
     ["a pattern", [/generated/]],

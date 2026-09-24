@@ -33,6 +33,15 @@ export interface TransformCacheDisk {
   write(key: string, digest: string, code: string): void;
 }
 
+/** How a {@link createTransformCacheDisk} uses its directory. */
+export interface TransformCacheDiskOptions {
+  /**
+   * Whether the directory is only read: it is never created, written or
+   * pruned, and no entry is marked as used. Defaults to `false`.
+   */
+  readOnly?: boolean;
+}
+
 /**
  * Keep transforms in `directory`, where the next process can read them.
  *
@@ -53,7 +62,12 @@ export interface TransformCacheDisk {
  * is logged once, naming the directory and the code, and stops this cache's
  * writes while reads go on.
  *
+ * A `readOnly` one reads entries by the same rules and changes nothing: its
+ * writes are dropped, and a hit leaves the entry's time as it was, so the
+ * process that keeps the entries alone decides what pruning spares.
+ *
  * @param directory - Where entries are kept; see `findTransformCacheDirectory`
+ * @param options - Whether the directory is only read (default: no)
  * @returns The directory's reader and writer
  * @example
  * ```ts
@@ -61,7 +75,10 @@ export interface TransformCacheDisk {
  * const code = disk.read(key, digest) ?? transformAndKeep();
  * ```
  */
-export function createTransformCacheDisk(directory: string): TransformCacheDisk {
+export function createTransformCacheDisk(
+  directory: string,
+  { readOnly = false }: TransformCacheDiskOptions = {},
+): TransformCacheDisk {
   const root = resolve(directory);
   let readFailureLogged = false;
   let created = false;
@@ -118,9 +135,10 @@ export function createTransformCacheDisk(directory: string): TransformCacheDisk 
   return {
     read(key, digest) {
       const path = entryPath(key);
+      const mark = !readOnly && !markedEntries.has(path);
       try {
-        const code = readTransformEntry(path, digest, !markedEntries.has(path));
-        if (code !== null) markedEntries.add(path);
+        const code = readTransformEntry(path, digest, mark);
+        if (code !== null && mark) markedEntries.add(path);
         return code;
       } catch (error) {
         if (readFailureLogged) log.debug(`Transform cache: cannot read ${path}`, error);
@@ -133,7 +151,7 @@ export function createTransformCacheDisk(directory: string): TransformCacheDisk 
       /* UTF-8 cannot carry a lone surrogate, which a string literal can pass
          from the source into the code; such code would come back altered, so
          it is kept in memory only. */
-      if (!writable || !code.isWellFormed()) return;
+      if (readOnly || !writable || !code.isWellFormed()) return;
       try {
         writeEntry(entryPath(key), encodeTransformEntry(digest, code));
       } catch (error) {

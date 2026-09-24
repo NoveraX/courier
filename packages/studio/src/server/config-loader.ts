@@ -14,6 +14,7 @@ import { join } from "node:path";
 import { ConfigurationError, createLogger } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
 import { type AnySource, stampSourceKeys } from "@noverax/courier/define";
+import type { TransformCache } from "@noverax/courier-studio-core/config";
 import {
   CONFIG_BASENAMES,
   findConfigFileAt,
@@ -30,6 +31,7 @@ import type { EvaluatedCourierFiles } from "./evaluate-courier-files";
 import { evaluateCourierFiles } from "./evaluate-courier-files";
 import { extractConfigDeps } from "./extract-config-deps";
 import { hashFile } from "./file-hash";
+import { studioTransformCache } from "./studio-transform-cache";
 
 const log = createLogger("Studio");
 
@@ -52,6 +54,16 @@ export interface LoadedCourierConfig {
   mocks: LoadedCourierMocks;
 }
 
+/** How `loadCourierConfig` transforms the project's modules. */
+export interface LoadCourierConfigOptions {
+  /**
+   * Where each module's transform is reused while its bytes are unchanged.
+   * Defaults to Studio's cache for the project, shared by every load in the
+   * process; see `studioTransformCache`.
+   */
+  transformCache?: TransformCache;
+}
+
 /**
  * Load `courier.config.*` from `projectRoot`, and `courier.mocks.*` beside it.
  *
@@ -60,10 +72,25 @@ export interface LoadedCourierConfig {
  * silent name collisions where the user passed a `defineApi` whose
  * auto-derived name already differs from the config key.
  *
- * Throws `ConfigNotFoundError` when no config file is found at `projectRoot`,
- * and `ConfigLoaderError` for every other validation failure.
+ * Every module is read and evaluated again on every load; only its
+ * transform is reused, and only while its bytes are the same, so an edited
+ * module is transformed again and its edit is seen.
+ *
+ * @param projectRoot - The directory holding `courier.config.*`
+ * @param options - Where transforms are reused (default: Studio's cache for
+ *   the project)
+ * @returns The config, its mocks file, and every file either one imports
+ * @throws `ConfigNotFoundError` when no config file is found at
+ *   `projectRoot`, and `ConfigLoaderError` for every other failure
+ * @example
+ * ```ts
+ * const { config, deps } = await loadCourierConfig(projectRoot);
+ * ```
  */
-export async function loadCourierConfig(projectRoot: string): Promise<LoadedCourierConfig> {
+export async function loadCourierConfig(
+  projectRoot: string,
+  { transformCache = studioTransformCache(projectRoot) }: LoadCourierConfigOptions = {},
+): Promise<LoadedCourierConfig> {
   const root = realpathSync(projectRoot);
   const found = findConfigFileAt(root);
   if (!found) throw new ConfigNotFoundError(projectRoot);
@@ -73,7 +100,7 @@ export async function loadCourierConfig(projectRoot: string): Promise<LoadedCour
 
   let evaluated: EvaluatedCourierFiles;
   try {
-    evaluated = await evaluateCourierFiles(root, found, loadable(mocks));
+    evaluated = await evaluateCourierFiles(root, found, loadable(mocks), transformCache);
   } catch (err) {
     throw new ConfigLoaderError(
       "CONFIG_INVALID",

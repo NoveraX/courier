@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BindingTable } from "../src/server/catalog/binding-table";
 import { type LoadedCourierConfig, loadCourierConfig } from "../src/server/config-loader";
 import { type ConfigWatcher, startConfigWatcher } from "../src/server/config-watcher";
+import { studioTransformCache } from "../src/server/studio-transform-cache";
 
 function makeLoaded(deps: string[]): LoadedCourierConfig {
   const config = { sources: {} } as unknown as CourierConfig;
@@ -59,6 +60,7 @@ async function until(condition: () => boolean, budgetMs = 5000): Promise<void> {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const watcher of watchers) watcher.stop();
   watchers = [];
   for (const root of roots) rmSync(root, { recursive: true, force: true });
@@ -134,6 +136,24 @@ describe("startConfigWatcher — reload", () => {
     writeFileSync(deep, 'export const host = "v2.example.com"\n');
 
     expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe("v2.example.com");
+  });
+
+  it("sees an edited module although the transforms of the others are cached", async () => {
+    const { root, deep, reloads } = await watchProject();
+    const computed: string[] = [];
+    const cache = studioTransformCache(root);
+    const transform = cache.transform.bind(cache);
+    vi.spyOn(cache, "transform").mockImplementation((options, compute) =>
+      transform(options, (miss) => {
+        computed.push(miss.filename ?? "");
+        return compute(miss);
+      }),
+    );
+
+    writeFileSync(deep, 'export const host = "v2.example.com"\n');
+
+    expect(baseURLOf((await nextReload(reloads)) as LoadedCourierConfig)).toBe("v2.example.com");
+    expect(computed).toEqual([deep]);
   });
 
   it("keeps working after an editor replaces a file rather than writing it", async () => {

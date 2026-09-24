@@ -56,6 +56,9 @@ vi.mock("node:child_process", () => ({
 
 const { createProcessManager } = await import("../src/server/mock-manager/process-manager");
 
+const STUDIO_TRANSFORMS = "/work/node_modules/.cache/courier/transform";
+let transformCacheDirectory: string | null = STUDIO_TRANSFORMS;
+
 function manager() {
   const events = {
     onReady: vi.fn(),
@@ -64,7 +67,7 @@ function manager() {
     onExited: vi.fn(),
     onEvent: vi.fn(),
   };
-  return { events, pm: createProcessManager(events) };
+  return { events, pm: createProcessManager(events, { transformCacheDirectory: () => transformCacheDirectory }) };
 }
 
 const request = { serverId: "apiMock", mocksFile: "/work/courier.mocks.ts", mockKey: "apiMock", port: 7401 };
@@ -72,6 +75,7 @@ const request = { serverId: "apiMock", mocksFile: "/work/courier.mocks.ts", mock
 afterEach(() => {
   forks.length = 0;
   obedient = true;
+  transformCacheDirectory = STUDIO_TRANSFORMS;
   vi.useRealTimers();
 });
 
@@ -96,9 +100,30 @@ describe("starting a managed mock", () => {
     pm.spawn(request);
 
     expect(forks[0]?.child.send).toHaveBeenCalledWith(
-      { type: "start", mocksFile: "/work/courier.mocks.ts", mockKey: "apiMock", port: 7401 },
+      {
+        type: "start",
+        mocksFile: "/work/courier.mocks.ts",
+        mockKey: "apiMock",
+        port: 7401,
+        transformCacheDirectory: STUDIO_TRANSFORMS,
+      },
       expect.any(Function),
     );
+    await pm.dispose();
+  });
+
+  it("tells each worker where Studio keeps transforms as it starts, or that it keeps none", async () => {
+    const { pm } = manager();
+
+    pm.spawn(request);
+    transformCacheDirectory = null;
+    pm.spawn({ ...request, serverId: "otherMock", mockKey: "otherMock" });
+
+    const starts = forks.map(({ child }) => child.send.mock.calls[0]?.[0]);
+    expect(starts).toEqual([
+      expect.objectContaining({ mockKey: "apiMock", transformCacheDirectory: STUDIO_TRANSFORMS }),
+      expect.objectContaining({ mockKey: "otherMock", transformCacheDirectory: null }),
+    ]);
     await pm.dispose();
   });
 });

@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { STUDIO_DEFAULT_HOST, STUDIO_DEFAULT_PORT, STUDIO_DEFAULT_URL } from "@noverax/courier/config";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { readStudioAddress } from "../src/server/studio-address";
 
@@ -22,6 +22,8 @@ function project(config: string): string {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   for (const dir of roots.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
@@ -69,8 +71,22 @@ describe("reading the address a project asks for", () => {
 
   /** A broken config is reported by the real load, not by the address read. */
   it("does not throw on a config that will not load", async () => {
-    const root = project(`import { nope } from "./missing"\nexport default { sources: {} }\n`);
+    const root = project(`import { nope } from "./missing"\nexport default { sources: { nope } }\n`);
 
     await expect(readStudioAddress(root)).resolves.toEqual({});
+  });
+
+  it("logs why a config that will not load gave no address, at debug level", async () => {
+    const root = project(`import { nope } from "./missing"\nexport default { sources: { nope } }\n`);
+    vi.stubEnv("COURIER_LOG_LEVEL", "debug");
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => undefined);
+
+    await readStudioAddress(root);
+
+    expect(debug).toHaveBeenCalledWith(
+      "%s",
+      expect.stringContaining(`[Studio] courier.config in ${root} could not be read for Studio's address`),
+      expect.objectContaining({ message: expect.stringContaining("missing") }),
+    );
   });
 });

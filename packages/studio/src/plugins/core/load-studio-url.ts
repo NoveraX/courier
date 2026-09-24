@@ -5,6 +5,7 @@ import {
   STUDIO_DEFAULT_PORT,
   STUDIO_DEFAULT_URL,
 } from "@noverax/courier/config";
+import { createTransformCache } from "@noverax/courier-studio-core/config";
 import { loadCourierConfig } from "../../server/config-loader";
 import { ConfigNotFoundError } from "../../server/config-loader-errors";
 
@@ -26,12 +27,26 @@ const cache = new Map<string, Promise<string>>();
  * The cache is keyed by `projectRoot`, so changing `studio.port` in
  * `courier.config.ts` requires restarting the bundler (consistent with how
  * every other build-plugin option behaves).
+ *
+ * The read transforms the project's modules through a cache of its own,
+ * dropped once the read ends: the bundler reads each root once, so keeping
+ * transforms for its whole life saves nothing, and nothing is written into
+ * the project's `node_modules`, which a production build leaves as it found
+ * it.
+ *
+ * @param projectRoot - The directory holding `courier.config.*` (default:
+ *   the working directory)
+ * @returns The URL the browser reaches Studio at
+ * @example
+ * ```ts
+ * const studioUrl = await loadStudioUrl(process.cwd());
+ * ```
  */
 export function loadStudioUrl(projectRoot: string = process.cwd()): Promise<string> {
   const cached = cache.get(projectRoot);
   if (cached) return cached;
 
-  const promise = loadCourierConfig(projectRoot)
+  const promise = loadCourierConfig(projectRoot, { transformCache: createTransformCache() })
     .then(({ config }) => {
       const studio = config.studio ?? {};
       return formatStudioUrl(

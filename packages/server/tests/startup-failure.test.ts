@@ -80,4 +80,16 @@ describe("a server that starts", () => {
     expect(server.url).toBe(url);
     await server.stop();
   });
+
+  it("stops cleanly after it failed to start", async () => {
+    /* stop() rejected with ERR_SERVER_NOT_RUNNING, and the default signal
+       handlers awaited it — a SIGTERM after a failed start crashed the host. */
+    const { port, release } = await occupiedPort();
+
+    const second = createCourierServer({ sources, port, signals: false });
+    await expect(second.ready).rejects.toThrow();
+
+    await expect(second.stop()).resolves.toBeUndefined();
+    await release();
+  });
 });

@@ -8,7 +8,15 @@ const log = createLogger("Server");
 
 const WS_DRAIN_TIMEOUT_MS = 5_000;
 
-/** Create a graceful shutdown handler for the Courier server */
+/**
+ * Create a graceful shutdown handler for the Courier server.
+ *
+ * @param httpServer - The server to close.
+ * @param getWss - The WebSocket server, once one exists.
+ * @param getSSE - The SSE side, to drain.
+ * @param ready - Settles once the server listens or fails to.
+ * @returns A function that stops the server.
+ */
 export function createShutdown(
   httpServer: Server,
   getWss: () => WebSocketServer | undefined,
@@ -18,6 +26,7 @@ export function createShutdown(
         shutdownSSE: (opts?: { retryMs?: number; drainMs?: number }) => Promise<void>;
       }
     | undefined,
+  ready: Promise<unknown>,
 ): () => Promise<void> {
   let shuttingDown = false;
 
@@ -29,10 +38,20 @@ export function createShutdown(
     // Drain SSE and WS connections in parallel
     await Promise.all([drainSSE(getSSE()), drainWebSockets(getWss())]);
 
-    // Close HTTP server (waits for active connections)
-    await new Promise<void>((resolve, reject) => {
-      httpServer.close((err) => (err ? reject(err) : resolve()));
-    });
+    /* A server that never listened has nothing to close, and closing it
+       rejected — under the default signal handlers that turned a SIGTERM
+       after a failed start into a crash. One still starting is waited for,
+       so a listener bound after stop() cannot be left open. The failure
+       itself was reported where it happened. */
+    const listened = await ready.then(
+      () => true,
+      () => false,
+    );
+    if (listened) {
+      await new Promise<void>((resolve, reject) => {
+        httpServer.close((err) => (err ? reject(err) : resolve()));
+      });
+    }
 
     log.info("Server stopped");
   };

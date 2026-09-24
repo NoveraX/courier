@@ -122,6 +122,7 @@ export function createCourierServer(config: CourierServerConfig): CourierServer 
     httpServer,
     () => wss,
     () => handler,
+    ready,
   );
 
   httpServer.listen(port, host, () => {

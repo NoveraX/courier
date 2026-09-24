@@ -35,6 +35,9 @@ function createMockSSE() {
 
 // --- createShutdown ---
 
+/** A server that came up; `stop` closes only one that did. */
+const LISTENING = Promise.resolve("http://localhost:3001");
+
 describe("createShutdown", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -50,6 +53,7 @@ describe("createShutdown", () => {
       httpServer as any,
       () => undefined,
       () => undefined,
+      LISTENING,
     );
 
     expect(typeof stop).toBe("function");
@@ -61,6 +65,7 @@ describe("createShutdown", () => {
       httpServer as any,
       () => undefined,
       () => undefined,
+      LISTENING,
     );
 
     await stop();
@@ -75,6 +80,7 @@ describe("createShutdown", () => {
       httpServer as any,
       () => undefined,
       () => sse as any,
+      LISTENING,
     );
 
     await stop();
@@ -89,6 +95,7 @@ describe("createShutdown", () => {
       httpServer as any,
       () => wss as any,
       () => undefined,
+      LISTENING,
     );
 
     const stopPromise = stop();
@@ -108,6 +115,7 @@ describe("createShutdown", () => {
       httpServer as any,
       () => wss as any,
       () => undefined,
+      LISTENING,
     );
 
     const stopPromise = stop();
@@ -125,6 +133,7 @@ describe("createShutdown", () => {
       httpServer as any,
       () => undefined,
       () => undefined,
+      LISTENING,
     );
 
     await stop();
@@ -139,6 +148,7 @@ describe("createShutdown", () => {
       httpServer as any,
       () => undefined,
       () => undefined,
+      LISTENING,
     );
 
     // Should not throw
@@ -152,6 +162,7 @@ describe("createShutdown", () => {
       httpServer as any,
       () => undefined,
       () => undefined,
+      LISTENING,
     );
 
     await stop();

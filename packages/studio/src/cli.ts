@@ -7,6 +7,7 @@ import { defineCommand, runMain } from "citty";
 import { checkNodeVersion } from "./node-version";
 import { createStudioServer } from "./server";
 import { printBanner } from "./server/banner";
+import { parsePort } from "./server/parse-port";
 import { readStudioAddress } from "./server/studio-address";
 import { studioUrls } from "./server/studio-urls";
 import { studioVersion } from "./server/studio-version";
@@ -31,17 +32,14 @@ const main = defineCommand({
     port: {
       type: "string",
       description: `Server port (falls back to studio.port, then ${STUDIO_DEFAULT_PORT})`,
-      default: "",
     },
     host: {
       type: "string",
       description: `Server host (falls back to studio.host, then ${STUDIO_DEFAULT_HOST})`,
-      default: "",
     },
     cwd: {
       type: "string",
       description: "Project root directory (default: current working directory)",
-      default: "",
     },
     open: {
       type: "boolean",
@@ -54,7 +52,7 @@ const main = defineCommand({
        server started anyway — `courier-studio init` did exactly that. */
     if (args._.length > 0) fail(`Unknown command "${args._[0]}". Run courier-studio --help.`);
 
-    const projectRoot = resolve(args.cwd || process.cwd());
+    const projectRoot = resolve(args.cwd ?? process.cwd());
     if (!existsSync(projectRoot) || !statSync(projectRoot).isDirectory()) {
       fail(`Project root ${projectRoot} is not a directory. Check --cwd.`);
     }
@@ -64,13 +62,14 @@ const main = defineCommand({
        them moved the clients and left the server where it was. */
     const configured = await readStudioAddress(projectRoot);
 
-    const port = args.port
-      ? Number.parseInt(args.port, 10)
-      : (configured.port ?? STUDIO_DEFAULT_PORT);
-    if (Number.isNaN(port) || port < 1 || port > 65535) {
-      fail(`Invalid port: "${args.port}". Must be a number between 1 and 65535.`);
-    }
-    const host = args.host || configured.host || STUDIO_DEFAULT_HOST;
+    const port =
+      args.port !== undefined
+        ? parsePort(args.port, "--port")
+        : configured.port !== undefined
+          ? parsePort(String(configured.port), "studio.port in courier.config")
+          : STUDIO_DEFAULT_PORT;
+    if (port instanceof Error) fail(port.message);
+    const host = args.host ?? configured.host ?? STUDIO_DEFAULT_HOST;
 
     const server = createStudioServer({
       port,

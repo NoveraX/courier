@@ -1,9 +1,10 @@
 /**
  * The `courier-studio` command, run as a user runs it.
  *
- * `--version` printed the usage and "No version specified"; a mistyped `--cwd`
- * crashed with a raw ENOENT stack; and `courier-studio init` ran its own work
- * and then started the whole server anyway.
+ * `--version` printed the usage and "No version specified"; a port written as
+ * `3001abc` was read as 3001; a mistyped `--cwd` crashed with a raw ENOENT
+ * stack; and `courier-studio init` ran its own work and then started the whole
+ * server anyway.
  */
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
@@ -32,6 +33,13 @@ describe("courier-studio", () => {
     expect(result.stdout.trim()).toBe(manifest.version);
   });
 
+  it("refuses a port that is not a number", () => {
+    const result = run("--port", "3001abc");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout + result.stderr).toContain('Invalid --port: "3001abc"');
+  });
+
   it("names a project root that does not exist, without a stack", () => {
     const result = run("--cwd", "/definitely/not/a/project");
 
@@ -48,4 +56,9 @@ describe("courier-studio", () => {
     expect(result.stdout + result.stderr).toContain('Unknown command "init"');
   });
 
+  it("shows no empty defaults in its help", () => {
+    const result = run("--help");
+
+    expect(result.stdout).not.toContain("(Default: )");
+  });
 });

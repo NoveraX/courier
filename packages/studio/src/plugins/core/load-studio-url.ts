@@ -5,9 +5,6 @@ import {
   STUDIO_DEFAULT_PORT,
   STUDIO_DEFAULT_URL,
 } from "@noverax/courier/config";
-import { createTransformCache } from "@noverax/courier-studio-core/config";
-import { loadCourierConfig } from "../../server/config-loader";
-import { ConfigNotFoundError } from "../../server/config-loader-errors";
 
 const log = createLogger("StudioPlugin");
 
@@ -28,11 +25,13 @@ const cache = new Map<string, Promise<string>>();
  * `courier.config.ts` requires restarting the bundler (consistent with how
  * every other build-plugin option behaves).
  *
- * The read transforms the project's modules through a cache of its own,
- * dropped once the read ends: the bundler reads each root once, so keeping
- * transforms for its whole life saves nothing, and nothing is written into
- * the project's `node_modules`, which a production build leaves as it found
- * it.
+ * Only the config is read — not `courier.mocks.*`, and not Studio's own
+ * loader, so the bundler never loads Studio's dependency walk or its parser.
+ * The loader is imported when the first read happens, so a bundler that
+ * imports a plugin with injection off, as in a production build, loads none
+ * of it. The read reuses the transforms Studio keeps in the project's
+ * `node_modules` and keeps its own there, through a cache it drops once the
+ * read ends: the bundler reads each root once.
  *
  * @param projectRoot - The directory holding `courier.config.*` (default:
  *   the working directory)
@@ -46,28 +45,30 @@ export function loadStudioUrl(projectRoot: string = process.cwd()): Promise<stri
   const cached = cache.get(projectRoot);
   if (cached) return cached;
 
-  const promise = loadCourierConfig(projectRoot, { transformCache: createTransformCache() })
-    .then(({ config }) => {
-      const studio = config.studio ?? {};
-      return formatStudioUrl(
-        studio.host ?? STUDIO_DEFAULT_HOST,
-        studio.port ?? STUDIO_DEFAULT_PORT,
-      );
-    })
-    .catch((err: unknown) => {
-      if (err instanceof ConfigNotFoundError) {
-        log.debug(
-          `No courier.config in ${projectRoot}; Studio is expected at ${STUDIO_DEFAULT_URL}`,
-        );
-      } else {
-        log.warn(
-          `courier.config could not be loaded, so Studio is expected at ${STUDIO_DEFAULT_URL}`,
-          err,
-        );
-      }
-      return STUDIO_DEFAULT_URL;
-    });
+  const promise = readStudioUrl(projectRoot).catch((err: unknown) => {
+    log.warn(
+      `courier.config could not be loaded, so Studio is expected at ${STUDIO_DEFAULT_URL}`,
+      err,
+    );
+    return STUDIO_DEFAULT_URL;
+  });
 
   cache.set(projectRoot, promise);
   return promise;
+}
+
+async function readStudioUrl(projectRoot: string): Promise<string> {
+  const { createTransformCache, findTransformCacheDirectory, loadCourierConfig } = await import(
+    "@noverax/courier-studio-core/config"
+  );
+  const transformCache = createTransformCache({
+    directory: findTransformCacheDirectory(projectRoot),
+  });
+  const loaded = await loadCourierConfig({ cwd: projectRoot, requireAtCwd: true, transformCache });
+  if (loaded === null) {
+    log.debug(`No courier.config in ${projectRoot}; Studio is expected at ${STUDIO_DEFAULT_URL}`);
+    return STUDIO_DEFAULT_URL;
+  }
+  const studio = loaded.config.studio ?? {};
+  return formatStudioUrl(studio.host ?? STUDIO_DEFAULT_HOST, studio.port ?? STUDIO_DEFAULT_PORT);
 }

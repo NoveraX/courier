@@ -9,7 +9,7 @@ import type { WebSocketServer } from "ws";
 import { createRequestListener } from "./http-handlers";
 import { createReadiness } from "./readiness";
 import { createShutdown, setupSignalHandlers } from "./shutdown";
-import type { CourierServer, CourierServerConfig } from "./types";
+import type { CourierServer, CourierServerOptions } from "./types";
 
 const log = createLogger("Server");
 
@@ -32,7 +32,7 @@ const DEFAULT_MAX_PAYLOAD = 65_536;
  * // await server.stop() — graceful shutdown
  * ```
  */
-export function createCourierServer(config: CourierServerConfig): CourierServer {
+export function createCourierServer(config: CourierServerOptions): CourierServer {
   const {
     sources,
     port = DEFAULT_PORT,

@@ -81,7 +81,7 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `sources` | (required) | Registered API sources |
 | `port` | `3001` | Server port |
 | `host` | `"localhost"` | Server host |
-| `allowedOrigins` | `undefined` | CORS allowed origins (undefined = allow all) |
+| `allowedOrigins` | `undefined` | Origins of the browser apps that may call the server (CORS and the WebSocket origin check). Left out, only the server's own origin — and loopback origins outside production |
 | `pubsub` | `undefined` | Pub/Sub adapter for horizontal WS scaling (e.g. Redis) |
 | `signals` | `true` | Attach SIGTERM/SIGINT for graceful shutdown |
 
@@ -89,9 +89,9 @@ The command exits with status 1 when the server cannot start — the port is tak
 
 ## API
 
-### `createCourierServer(config: CourierServerConfig): CourierServer`
+### `createCourierServer(options: CourierServerOptions): CourierServer`
 
-Creates and starts the server. Returns an object with `url`, `stop()`, `sseConnections`, and `wsConnections`.
+Creates and starts the server. Returns an object with `url`, `ready` (resolves once listening, rejects when the server cannot start), `stop()`, `sseConnections`, and `wsConnections`.
 
 <br />
 

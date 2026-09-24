@@ -92,7 +92,7 @@ const server = await createCourierServer({
   // Network
   port: 3001,                        // default: 3001
   host: "0.0.0.0",                   // default: "localhost"
-  allowedOrigins: ["https://app.example.com"], // CORS + CSWSH (undefined = allow all)
+  allowedOrigins: ["https://app.example.com"], // CORS + WebSocket origin check; left out = own origin only
 
   // SSE
   sseHeaders: { "X-Accel-Buffering": "no" },  // custom response headers

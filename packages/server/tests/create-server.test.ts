@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createCourierServer } from "../src/create-server";
-import type { CourierServer, CourierServerConfig } from "../src/types";
+import type { CourierServer, CourierServerOptions } from "../src/types";
 
 // --- Minimal source fixture ---
 
@@ -28,7 +28,7 @@ function createSources() {
   };
 }
 
-function buildConfig(overrides?: Partial<CourierServerConfig>): CourierServerConfig {
+function buildConfig(overrides?: Partial<CourierServerOptions>): CourierServerOptions {
   return {
     sources: createSources(),
     port: 0,
@@ -41,7 +41,7 @@ function buildConfig(overrides?: Partial<CourierServerConfig>): CourierServerCon
 // --- Helpers ---
 
 function startServer(
-  overrides?: Partial<CourierServerConfig>,
+  overrides?: Partial<CourierServerOptions>,
 ): Promise<CourierServer> {
   return new Promise((resolve) => {
     const server = createCourierServer(

@@ -6,15 +6,19 @@ import type {
 import type { Sources } from "@noverax/courier/define";
 import type { PubSubAdapter } from "@noverax/courier/realtime";
 
-/** Configuration for the standalone Courier server */
-export interface CourierServerConfig extends SSELifecycleConfig {
+/** Options for `createCourierServer` */
+export interface CourierServerOptions extends SSELifecycleConfig {
   /** Registered API sources (same as framework adapters) */
   sources: Sources;
   /** Server port (default 3001) */
   port?: number;
   /** Server host (default "localhost") */
   host?: string;
-  /** Allowed origins for CORS and CSWSH prevention (undefined = allow all) */
+  /**
+   * Origins of the browser apps that may call the server, for CORS and the
+   * WebSocket origin check. Left out, the server answers its own origin only,
+   * and loopback origins outside production.
+   */
   allowedOrigins?: string[];
   /** Optional pub/sub adapter for horizontal WS scaling (e.g. Redis) */
   pubsub?: PubSubAdapter;

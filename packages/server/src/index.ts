@@ -1,2 +1,2 @@
 export { createCourierServer } from "./create-server";
-export type { CourierServer, CourierServerConfig } from "./types";
+export type { CourierServer, CourierServerOptions } from "./types";

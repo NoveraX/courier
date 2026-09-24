@@ -1,26 +1,5 @@
-import type {
-  AnyEndpoint,
-  DefinedApi,
-  InferResponse,
-  InferVariables,
-} from "@noverax/courier/define";
+import type { AnySource } from "@noverax/courier/define";
 import type { ChannelHandlers, SSEEvent } from "@noverax/courier/realtime";
-
-/** Extract response type from an endpoint */
-export type ExtractResponse<TEndpoint> = TEndpoint extends AnyEndpoint
-  ? InferResponse<TEndpoint>
-  : unknown;
-
-/** Extract variables type from an endpoint */
-export type ExtractVariables<TEndpoint> = TEndpoint extends AnyEndpoint
-  ? InferVariables<TEndpoint>
-  : unknown;
-
-/** Extract groups from a DefinedApi */
-export type ApiGroups<TApi extends DefinedApi<any>> = TApi["options"]["groups"];
-
-/** Extract endpoint method keys from a group (excludes "options") */
-export type EndpointKeys<TGroup> = Exclude<keyof TGroup, "options"> & string;
 
 // ---------------------------------------------------------------------------
 // Mock handler
@@ -153,8 +132,28 @@ export interface MockHistoryEntry {
 // Scenario
 // ---------------------------------------------------------------------------
 
-/** Named scenario that configures multiple mocks at once */
-export interface MockScenario<TApi extends DefinedApi<any> = DefinedApi<any>> {
+/**
+ * Type-only key naming the source a scenario was written for. It is declared
+ * and never given a value, so no scenario object carries it.
+ */
+declare const SCENARIO_SOURCE: unique symbol;
+
+/**
+ * `mock` for a source whose endpoints the type system does not know: any group
+ * and endpoint name is accepted, and the response and variables are `unknown`
+ * unless named. Being generic in both, it stands in for the typed `mock` of
+ * every source, which is how a server hands one `mock` to every scenario.
+ */
+export type UntypedMockFn = <TResponse = unknown, TVariables = unknown>(
+  group: string,
+  method: string,
+) => EnhancedMockBuilder<TResponse, TVariables>;
+
+/**
+ * A scenario as a server holds and applies it, whatever source it was written
+ * for. Every {@link MockScenario} is one.
+ */
+export interface AnyMockScenario {
   name: string;
   /** Short description shown in Studio Scenarios panel */
   description?: string;
@@ -171,20 +170,25 @@ export interface MockScenario<TApi extends DefinedApi<any> = DefinedApi<any>> {
    * ```
    */
   initialState?: string;
-  apply(mock: TypedMockFn<TApi>): void;
+  /**
+   * Sets the scenario's mocks up. The server calls it with a `mock` that takes
+   * every address; `defineScenario` narrows that to the source's endpoints.
+   */
+  apply(mock: UntypedMockFn): void;
 }
 
-/** Type-safe mock function — constrains group/method to actual API endpoints */
-export type TypedMockFn<TApi extends DefinedApi<any>> = <
-  TGroup extends keyof ApiGroups<TApi> & string,
-  TMethod extends EndpointKeys<ApiGroups<TApi>[TGroup]>,
->(
-  group: TGroup,
-  method: TMethod,
-) => EnhancedMockBuilder<
-  ExtractResponse<ApiGroups<TApi>[TGroup][TMethod]>,
-  ExtractVariables<ApiGroups<TApi>[TGroup][TMethod]>
->;
+/**
+ * Named scenario that configures multiple mocks at once, written for `TSource`.
+ *
+ * A scenario is accepted by a mock of its own source, or of a source that has
+ * every endpoint it was written against, and rejected by any other. One
+ * written without a source — `defineScenario` with no type argument, or a
+ * plain object — is accepted by every mock.
+ */
+export interface MockScenario<in TSource extends AnySource = AnySource> extends AnyMockScenario {
+  /** The source the scenario was written for, as a type; never present at runtime. */
+  readonly [SCENARIO_SOURCE]?: (source: TSource) => void;
+}
 
 // ---------------------------------------------------------------------------
 // Builder (interface — implementation in builder/)

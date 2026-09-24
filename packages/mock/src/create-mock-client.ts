@@ -1,24 +1,19 @@
 import type { TypedClient } from "@noverax/courier";
 import { buildClientProxy } from "@noverax/courier";
-import type { DefinedApi } from "@noverax/courier/define";
+import type { AnySource, DefinedApi } from "@noverax/courier/define";
 import { createMockBackend } from "./backend";
 import { createEnhancedMockBuilder } from "./builder";
 import { createHistory } from "./history";
 import { createMockRegistry } from "./registry";
-import type {
-  EnhancedMockBuilder,
-  MockHistoryEntry,
-  MockScenario,
-  NetworkConfig,
-  TypedMockFn,
-} from "./types";
+import type { TypedMockFn } from "./typed-mock-fn";
+import type { EnhancedMockBuilder, MockHistoryEntry, MockScenario, NetworkConfig } from "./types";
 
 /** Configuration for the mock client */
-export interface MockClientConfig {
+export interface MockClientConfig<TApi extends AnySource = AnySource> {
   /** Default network simulation for all endpoints */
   network?: NetworkConfig;
-  /** Initial scenario to apply */
-  scenario?: MockScenario<any>;
+  /** Initial scenario to apply — written for `TApi`, or for no source */
+  scenario?: MockScenario<NoInfer<TApi>>;
 }
 
 /** The mock client returned by createMockClient */
@@ -58,7 +53,7 @@ export interface MockClient<TApi extends DefinedApi<any>> {
  * ```
  */
 export function createMockClient<TApi extends DefinedApi<any>>(
-  config?: MockClientConfig,
+  config?: MockClientConfig<TApi>,
 ): MockClient<TApi> {
   const registry = createMockRegistry();
   const history = createHistory();
@@ -76,7 +71,10 @@ export function createMockClient<TApi extends DefinedApi<any>>(
     network: config?.network,
   });
 
-  function mock(group: string, method: string): EnhancedMockBuilder {
+  function mock<TResponse, TVariables>(
+    group: string,
+    method: string,
+  ): EnhancedMockBuilder<TResponse, TVariables> {
     const existing = registry.peek(group, method);
     return createEnhancedMockBuilder((handler) => {
       registry.set(group, method, handler);
@@ -85,7 +83,7 @@ export function createMockClient<TApi extends DefinedApi<any>>(
 
   const mockClient: MockClient<TApi> = {
     client: buildClientProxy(backend) as MockClient<TApi>["client"],
-    mock: mock as TypedMockFn<TApi>,
+    mock,
     history,
     scenarioState: "Started",
 
@@ -93,7 +91,7 @@ export function createMockClient<TApi extends DefinedApi<any>>(
       registry.clear();
       callCounts.clear();
       scenarioState = "Started";
-      scenario.apply(mock as TypedMockFn<TApi>);
+      scenario.apply(mock);
     },
 
     transition(state) {

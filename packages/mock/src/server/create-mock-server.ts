@@ -19,7 +19,7 @@ import { createHistory } from "../history";
 import { createNetworkState } from "../network/state";
 import { createMockRegistry } from "../registry";
 import { createMockStore } from "../store";
-import type { MockScenario, TypedMockFn } from "../types";
+import type { AnyMockScenario } from "../types";
 import { registerAdminRoutes } from "./admin-api";
 import type { MockServer, MockServerOptions } from "./mock-server-types";
 import { registerPrefixRoutes } from "./prefix-routes";
@@ -38,7 +38,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
   const store = createMockStore();
   const history = createHistory(config?.historyLimit);
   const callCounts = new Map<string, number>();
-  const scenariosRecord: Record<string, MockScenario> = { ...config?.scenarios };
+  const scenariosRecord: Record<string, AnyMockScenario> = { ...config?.scenarios };
   const networkState = createNetworkState(config?.network);
   let scenarioState = "Started";
   let activeScenario: string | null = null;
@@ -133,7 +133,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
 
   const mockServer: MockServer = {
     app,
-    mock: mock as TypedMockFn<any>,
+    mock,
     store,
     history,
     scenarios: scenariosRecord,

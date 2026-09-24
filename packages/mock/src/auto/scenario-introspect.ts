@@ -1,6 +1,6 @@
 import { createLogger } from "@noverax/courier";
 import { isThenable } from "../scenario/is-thenable";
-import type { MockScenario } from "../types";
+import type { AnyMockScenario } from "../types";
 import type { RouteInfo } from "./route-analyzer";
 import type { ScenarioEndpointEntry, StateTransition } from "./scenario-recorder";
 import { createScenarioRecorder } from "./scenario-recorder";
@@ -37,14 +37,14 @@ export interface ScenarioIntrospectionResult {
  * @returns What the scenario sets up
  */
 export function introspectScenario(
-  scenario: MockScenario,
+  scenario: AnyMockScenario,
   routes: RouteInfo[],
 ): ScenarioIntrospectionResult {
   const recorder = createScenarioRecorder(routes);
   let error: string | undefined;
   try {
     const returned: unknown = scenario.apply(
-      recorder.mock as unknown as Parameters<MockScenario["apply"]>[0],
+      recorder.mock as unknown as Parameters<AnyMockScenario["apply"]>[0],
     );
     if (isThenable(returned)) {
       error = "its setup returned a promise; a scenario sets up its mocks synchronously";

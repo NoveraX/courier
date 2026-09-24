@@ -44,6 +44,7 @@ export type {
   CourierImportSpecType,
   CourierImportType,
   CourierImportValidation,
+  CourierMockEntry,
   CourierRawImport,
   CourierRuntimeConfig,
   CourierServerConfig,

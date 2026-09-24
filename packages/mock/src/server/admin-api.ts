@@ -2,18 +2,18 @@ import { logger } from "@noverax/courier";
 import type { Hono } from "hono";
 import type { MockRegistry } from "../registry";
 import type { MockStore } from "../store";
-import type { MockHistoryEntry, MockScenario } from "../types";
+import type { AnyMockScenario, MockHistoryEntry } from "../types";
 
 interface AdminConfig {
   registry: MockRegistry;
   history: MockHistoryEntry[];
   store: MockStore;
-  scenarios: Map<string, MockScenario>;
+  scenarios: Map<string, AnyMockScenario>;
   getScenarioState: () => string;
   setScenarioState: (state: string) => void;
   getActiveScenario: () => string | null;
   setActiveScenario: (name: string | null) => void;
-  applyScenario: (scenario: MockScenario) => void;
+  applyScenario: (scenario: AnyMockScenario) => void;
   /** Re-seed all collections after reset — provided by createAutoMockServer */
   reseed?: () => void;
 }

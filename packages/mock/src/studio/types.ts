@@ -1,6 +1,6 @@
 import type { RouteInfo } from "../auto/route-analyzer";
 import type { MockServer } from "../server/create-mock-server";
-import type { MockScenario } from "../types";
+import type { AnyMockScenario } from "../types";
 
 /** Route entry sent to Studio UI */
 export interface MockRouteInfo {
@@ -38,7 +38,7 @@ export interface MockStudioBridgeOptions {
   /** Available scenario names */
   scenarios?: string[];
   /** Full scenario objects for endpoint introspection */
-  scenarioMap?: Record<string, MockScenario>;
+  scenarioMap?: Record<string, AnyMockScenario>;
   /** Re-seed all collections after a store reset — provided by createAutoMockServer */
   reseed?: () => void;
 }
@@ -70,7 +70,7 @@ export interface BridgeContext {
   activeScenario: string;
   availableScenarios: string[];
   /** Full scenario objects for endpoint introspection — may be empty for external servers */
-  scenarioMap: Record<string, MockScenario>;
+  scenarioMap: Record<string, AnyMockScenario>;
   /** Re-seed all collections after a store reset — provided by createAutoMockServer */
   reseed?: () => void;
 }

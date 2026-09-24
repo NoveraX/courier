@@ -71,6 +71,7 @@ export default defineConfig({
 - `port` is held exactly: when it is taken, Studio says so rather than moving the mock. Without one, Studio assigns a port from `studio.mockBasePort` (7001 by default) and keeps it for the key.
 - `autoStart` defaults to `false`.
 - A mock that fails — a definition Studio cannot read, a missing package, a taken port, a crash — is reported in Studio's terminal, and its status in the Mocks view gives the reason on hover or keyboard focus. A running mock whose edited definition cannot be read keeps serving the last one that could, and says so the same way. The mock's own request log appears in Studio's terminal too; `log: "silent"` turns it off.
+- `overrides` and `scenarios` are checked against `source`: `mock` takes the source's group and endpoint names and each endpoint's response type. Write a scenario with `defineScenario<typeof api>(...)` to have it checked the same way; one without the type argument fits every mock. An endpoint declared outside any group is mocked under the collection its path starts with, `mock("users", "listUsers")`, which is not checked.
 - Editing `courier.config.ts` restarts a running mock with the new definition. `autoStart` applies when Studio first reads the definition, or when an edit turns it on — not again after you stop the mock.
 
 <br />

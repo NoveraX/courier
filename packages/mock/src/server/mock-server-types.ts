@@ -9,7 +9,7 @@ import type { Hono } from "hono";
 
 import type { NetworkState } from "../network/state";
 import type { MockStore } from "../store";
-import type { MockHistoryEntry, MockScenario, NetworkConfig, TypedMockFn } from "../types";
+import type { AnyMockScenario, MockHistoryEntry, NetworkConfig, UntypedMockFn } from "../types";
 import type { PrefixMapping } from "./prefix-routes";
 import type { MockLogMode } from "./request-logger";
 import type { RequestHooks } from "./route-generator";
@@ -36,9 +36,9 @@ export interface MockServerOptions {
   /** Default network simulation */
   network?: NetworkConfig;
   /** Initial scenario */
-  scenario?: MockScenario;
+  scenario?: AnyMockScenario;
   /** Named scenarios available via admin API */
-  scenarios?: Record<string, MockScenario>;
+  scenarios?: Record<string, AnyMockScenario>;
   /** Prefix mappings for REST-style routes (GET /products → products.getAll) */
   mappings?: PrefixMapping[];
   /** Re-seed all collections after reset — provided by createAutoMockServer */
@@ -66,17 +66,17 @@ export interface MockServer {
   /** The Hono app (for custom routes) */
   app: Hono;
   /** Base-layer mock builder — persists across scenario switches */
-  mock: TypedMockFn<any>;
+  mock: UntypedMockFn;
   /** Mock store */
   store: MockStore;
   /** Request history */
   history: MockHistoryEntry[];
   /** Apply a scenario (clears scenario layer, base layer untouched) */
-  applyScenario(scenario: MockScenario): void;
+  applyScenario(scenario: AnyMockScenario): void;
   /** Current scenario state */
   scenarioState: string;
   /** All registered scenarios by name */
-  scenarios: Record<string, MockScenario>;
+  scenarios: Record<string, AnyMockScenario>;
   /** Request lifecycle hooks — set by studio bridge to emit events */
   requestHooks: RequestHooks;
   /** Dynamic network simulation state — use for runtime config changes */

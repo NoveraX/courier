@@ -62,9 +62,12 @@ export {
 export type {
   ApiGroups,
   EndpointKeys,
-  EnhancedMockBuilder,
   ExtractResponse,
   ExtractVariables,
+  TopLevelKeys,
+} from "./typed-mock-fn";
+export type {
+  EnhancedMockBuilder,
   MockHandlerFn,
   MockHistoryEntry,
   MockStreamFn,

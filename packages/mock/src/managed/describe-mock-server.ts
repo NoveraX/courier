@@ -1,3 +1,4 @@
+import type { AnySource } from "@noverax/courier/define";
 import { composeScenarios } from "../auto/compose-scenarios";
 import { buildPresetScenarios } from "../auto/preset-scenarios";
 import { analyzeRoutes, getSourceGroupNames } from "../auto/route-analyzer";
@@ -36,7 +37,9 @@ export interface MockServerDescription {
  * // ["GET /users", "GET /users/:id", …]
  * ```
  */
-export function describeMockServer(definition: MockServerDefinition): MockServerDescription {
+export function describeMockServer<TSource extends AnySource>(
+  definition: MockServerDefinition<TSource>,
+): MockServerDescription {
   const source: Record<string, unknown> | undefined = definition.source;
   if (!source) throw new Error("The mock server has no source. Pass one to defineMockServer().");
   const routes = analyzeRoutes(source);

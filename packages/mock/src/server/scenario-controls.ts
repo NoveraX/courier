@@ -16,7 +16,7 @@
 
 import { createEnhancedMockBuilder } from "../builder";
 import type { MockRegistry } from "../registry";
-import type { EnhancedMockBuilder, MockScenario, TypedMockFn } from "../types";
+import type { AnyMockScenario, EnhancedMockBuilder, UntypedMockFn } from "../types";
 
 /** Dependencies threaded in from the bootstrap */
 export interface ScenarioControlsDeps {
@@ -27,33 +27,39 @@ export interface ScenarioControlsDeps {
 
 /** Builders + scenario applier returned to the bootstrap */
 export interface ScenarioControls {
-  mock: (group: string, method: string) => EnhancedMockBuilder;
-  scenarioMock: (group: string, method: string) => EnhancedMockBuilder;
-  applyScenario: (scenario: MockScenario) => void;
+  mock: UntypedMockFn;
+  scenarioMock: UntypedMockFn;
+  applyScenario: (scenario: AnyMockScenario) => void;
 }
 
 /** Build the mock + scenario builder pair and the scenario applier */
 export function createScenarioControls(deps: ScenarioControlsDeps): ScenarioControls {
   const { registry, callCounts, setScenarioState } = deps;
 
-  function mock(group: string, method: string): EnhancedMockBuilder {
+  function mock<TResponse, TVariables>(
+    group: string,
+    method: string,
+  ): EnhancedMockBuilder<TResponse, TVariables> {
     const existing = registry.peek(group, method);
     return createEnhancedMockBuilder((handler) => {
       registry.setBase(group, method, handler);
     }, existing);
   }
 
-  function scenarioMock(group: string, method: string): EnhancedMockBuilder {
+  function scenarioMock<TResponse, TVariables>(
+    group: string,
+    method: string,
+  ): EnhancedMockBuilder<TResponse, TVariables> {
     return createEnhancedMockBuilder((handler) => {
       registry.set(group, method, handler);
     });
   }
 
-  function applyScenario(scenario: MockScenario): void {
+  function applyScenario(scenario: AnyMockScenario): void {
     registry.clear();
     callCounts.clear();
     setScenarioState(scenario.initialState ?? "Started");
-    scenario.apply(scenarioMock as TypedMockFn<any>);
+    scenario.apply(scenarioMock);
   }
 
   return { mock, scenarioMock, applyScenario };

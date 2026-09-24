@@ -1,14 +1,20 @@
+import type { CourierMockEntry } from "@noverax/courier/config";
 import type { AnySource } from "@noverax/courier/define";
 import type { MockStore } from "../store";
-import type { MockScenario, NetworkConfig, TypedMockFn } from "../types";
+import type { TypedMockFn } from "../typed-mock-fn";
+import type { MockScenario, NetworkConfig } from "../types";
 import type { DescribedRoute } from "./describe-route";
 
-/** Configuration returned by defineMockServer() */
-export interface MockServerDefinition {
+/**
+ * What `defineMockServer()` returns: a mock server for `TSource`, which Studio
+ * runs when it is declared under `mocks` in `courier.config.ts`.
+ */
+export interface MockServerDefinition<TSource extends AnySource = AnySource>
+  extends CourierMockEntry {
   /** Marker for runtime type detection */
   __type: "courier-mock-server";
   /** The API to mock — grouped or flat; its routes and data are generated from it */
-  source: AnySource;
+  source: TSource;
   /**
    * Port to listen on. Studio holds a mock to it and reports it when it is
    * taken; left out, Studio assigns one from `studio.mockBasePort`.
@@ -20,16 +26,20 @@ export interface MockServerDefinition {
    * which has no authentication, is then reachable there too.
    */
   hostname?: string;
-  /** Human-readable server name (derived from source name or filename if omitted) */
-  name?: string;
   /** Seed configuration */
   seed?: MockServerSeedConfig;
   /** Start automatically when Studio launches (default: false) */
   autoStart: boolean;
-  /** Endpoint overrides applied after auto-generation — persist across all scenario switches */
-  overrides?: (mock: TypedMockFn<any>, store: MockStore) => void;
-  /** Named scenarios (happy-path is auto-generated from source) */
-  scenarios?: Record<string, MockScenario>;
+  /**
+   * Endpoint overrides applied after auto-generation — persist across all
+   * scenario switches. `mock` takes the source's group and endpoint names.
+   */
+  overrides?: (mock: TypedMockFn<NoInfer<TSource>>, store: MockStore) => void;
+  /**
+   * Named scenarios, each written for this source or for none (happy-path is
+   * auto-generated from the source).
+   */
+  scenarios?: Record<string, MockScenario<NoInfer<TSource>>>;
   /** Default network simulation */
   network?: NetworkConfig;
   /** CORS config (default: true) */
@@ -49,7 +59,10 @@ export interface MockServerSeedConfig {
 }
 
 /** Input config for defineMockServer() — autoStart is optional */
-export type MockServerConfig = Omit<MockServerDefinition, "__type" | "autoStart"> & {
+export type MockServerConfig<TSource extends AnySource = AnySource> = Omit<
+  MockServerDefinition<TSource>,
+  "__type" | "autoStart"
+> & {
   /** Start automatically when Studio launches (default: false) */
   autoStart?: boolean;
 };

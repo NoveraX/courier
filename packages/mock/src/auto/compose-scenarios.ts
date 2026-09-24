@@ -1,4 +1,4 @@
-import type { MockScenario } from "../types";
+import type { AnyMockScenario } from "../types";
 
 /**
  * Merge built-in presets and user scenarios under a canonical "happy-path".
@@ -6,10 +6,10 @@ import type { MockScenario } from "../types";
  * user config cannot override it.
  */
 export function composeScenarios(
-  presets: Record<string, MockScenario>,
-  userScenarios?: Record<string, MockScenario>,
-): Record<string, MockScenario> {
-  const happyPath: MockScenario = { name: "happy-path", apply: () => {} };
+  presets: Record<string, AnyMockScenario>,
+  userScenarios?: Record<string, AnyMockScenario>,
+): Record<string, AnyMockScenario> {
+  const happyPath: AnyMockScenario = { name: "happy-path", apply: () => {} };
   const merged = { ...userScenarios };
   delete merged["happy-path"];
   return {

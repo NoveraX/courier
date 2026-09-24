@@ -1,6 +1,6 @@
-import type { DefinedApi } from "@noverax/courier/define";
+import type { AnySource } from "@noverax/courier/define";
 
-import type { MockScenario, TypedMockFn } from "../types";
+import type { MockScenario } from "../types";
 import type { Fixture } from "./fixture";
 import { harToFixtures } from "./fixture";
 import type { HarLog } from "./har-format";
@@ -17,13 +17,13 @@ import type { HarLog } from "./har-format";
  * });
  * ```
  */
-export function replayFixtures<TApi extends DefinedApi<any>>(
+export function replayFixtures<TApi extends AnySource>(
   fixtures: Fixture[],
   name = "replay",
 ): MockScenario<TApi> {
   return {
     name,
-    apply(mock: TypedMockFn<TApi>) {
+    apply(mock) {
       // Group fixtures by endpoint — last recorded wins as default
       const grouped = groupByEndpoint(fixtures);
 
@@ -34,17 +34,11 @@ export function replayFixtures<TApi extends DefinedApi<any>>(
 
         if (endpointFixtures.length === 1) {
           // Single fixture → static response
-          (mock as (g: string, m: string) => { resolves: (d: unknown) => void })(
-            group,
-            method,
-          ).resolves(lastFixture.response.data);
+          mock(group, method).resolves(lastFixture.response.data);
         } else {
           // Multiple fixtures → sequence
           const responses = endpointFixtures.map((f) => f.response.data);
-          (mock as (g: string, m: string) => { sequence: (r: unknown[]) => void })(
-            group,
-            method,
-          ).sequence(responses);
+          mock(group, method).sequence(responses);
         }
       }
     },
@@ -60,7 +54,7 @@ export function replayFixtures<TApi extends DefinedApi<any>>(
  * const scenario = replayHar(har);
  * ```
  */
-export function replayHar<TApi extends DefinedApi<any>>(
+export function replayHar<TApi extends AnySource>(
   har: HarLog,
   name = "har-replay",
 ): MockScenario<TApi> {

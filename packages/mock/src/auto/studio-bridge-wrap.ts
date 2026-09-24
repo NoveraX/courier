@@ -3,7 +3,7 @@ import { getSourceName } from "@noverax/courier/define";
 import type { MockServer } from "../server/create-mock-server";
 import { connectMockToStudio } from "../studio/bridge";
 import type { MockRouteInfo } from "../studio/types";
-import type { MockScenario } from "../types";
+import type { AnyMockScenario } from "../types";
 import { generateRecords } from "./data-generator";
 import type { RouteInfo } from "./route-analyzer";
 import { analyzeField, extractShape, unwrapArraySchema } from "./schema-introspect";
@@ -30,7 +30,7 @@ export function wrapStartWithStudio(
   config: StudioWrapConfig,
   routeEntries: MockRouteInfo[],
   analyzedRoutes: RouteInfo[],
-  allScenarios: Record<string, MockScenario>,
+  allScenarios: Record<string, AnyMockScenario>,
   reseed: () => void,
 ): void {
   const originalStart = server.start.bind(server);

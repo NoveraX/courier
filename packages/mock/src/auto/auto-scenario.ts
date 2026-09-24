@@ -1,5 +1,5 @@
 import type { MockStore } from "../store";
-import type { MockRequestContext, MockScenario, TypedMockFn } from "../types";
+import type { AnyMockScenario, UntypedMockFn } from "../types";
 import { createHandler } from "./auto-handlers";
 import type { RouteInfo } from "./route-analyzer";
 
@@ -8,7 +8,7 @@ export type { AutoScenarioOptions } from "./auto-seed";
 export { seedAllCollections } from "./auto-seed";
 
 /** Auto-scenario with late-bound store */
-export interface AutoMockScenario extends MockScenario {
+export interface AutoMockScenario extends AnyMockScenario {
   /** Bind the store after server creation */
   bindStore(store: MockStore): void;
 }
@@ -29,7 +29,7 @@ export function buildAutoScenario(routes: RouteInfo[]): AutoMockScenario {
       boundStore = store;
     },
 
-    apply(mock: TypedMockFn<any>) {
+    apply(mock: UntypedMockFn) {
       if (!boundStore) {
         throw new Error("[courier-mock] Auto-scenario store not bound.");
       }
@@ -46,7 +46,7 @@ export function buildAutoScenario(routes: RouteInfo[]): AutoMockScenario {
 export function buildAutoHandlers(
   routes: RouteInfo[],
   store: MockStore,
-  mock: TypedMockFn<any>,
+  mock: UntypedMockFn,
 ): void {
   const routesByGroup = groupRoutesByName(routes);
   registerHandlers(routesByGroup, store, mock);
@@ -54,22 +54,16 @@ export function buildAutoHandlers(
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-type MockReturnsTarget = (
-  group: string,
-  method: string,
-) => { returns: (fn: (ctx: MockRequestContext) => unknown) => void };
-
 function registerHandlers(
   routesByGroup: Map<string, RouteInfo[]>,
   store: MockStore,
-  mock: TypedMockFn<any>,
+  mock: UntypedMockFn,
 ): void {
-  const target = mock as unknown as MockReturnsTarget;
   for (const [groupName, groupRoutes] of routesByGroup) {
     for (const route of groupRoutes) {
       const handler = createHandler(store, groupName, route);
       if (handler) {
-        target(groupName, route.endpoint).returns(handler);
+        mock(groupName, route.endpoint).returns(handler);
       }
     }
   }

@@ -25,12 +25,11 @@ export { isMockHttpError, MockHttpError } from "./server/errors";
 
 // Store types (appear in override callback signatures)
 export type { Collection, MockStore } from "./store";
-
+export type { TypedMockFn } from "./typed-mock-fn";
 // Types used in override callbacks and scenario definitions
 export type {
   LatencyProfile,
   MockRequestContext,
   MockScenario,
   NetworkConfig,
-  TypedMockFn,
 } from "./types";

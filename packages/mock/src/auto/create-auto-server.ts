@@ -1,7 +1,7 @@
 import type { MockServer, MockServerOptions } from "../server/create-mock-server";
 import { createMockServer } from "../server/create-mock-server";
 import type { MockStore } from "../store";
-import type { MockScenario, NetworkConfig, TypedMockFn } from "../types";
+import type { AnyMockScenario, NetworkConfig, UntypedMockFn } from "../types";
 import { buildAutoHandlers, seedAllCollections } from "./auto-scenario";
 import { composeScenarios } from "./compose-scenarios";
 import type { SeedConfig } from "./prefix-mappings";
@@ -38,9 +38,9 @@ export interface AutoMockServerConfig {
    * @param mock  Base-layer mock builder
    * @param store Mock store (for store-aware overrides)
    */
-  overrides?: (mock: TypedMockFn<any>, store: MockStore) => void;
+  overrides?: (mock: UntypedMockFn, store: MockStore) => void;
   /** Additional named scenarios (merged with built-in presets) */
-  scenarios?: Record<string, MockScenario>;
+  scenarios?: Record<string, AnyMockScenario>;
   /** Default network simulation (latency, errorRate, faultTypes) */
   network?: NetworkConfig;
   /** Connect to Studio server (default: true) */

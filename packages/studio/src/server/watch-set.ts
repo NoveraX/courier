@@ -11,7 +11,8 @@
  * needed.
  *
  * Both see the same edit, so each path carries the state it was last reported
- * at and a repeat of that state is dropped; without it one save surfaces twice.
+ * at and a repeat of that state is dropped (see `watch-set-ledger`); without
+ * it one save surfaces twice.
  *
  * The watched set is expected to change. `update` re-arms, keeping the watches
  * that are still wanted so no event falls into a teardown gap.
@@ -19,12 +20,13 @@
 
 import { unwatchFile, watchFile } from "node:fs";
 import { resolve } from "node:path";
-import { signatureOf } from "./file-signature";
+import { type FileSignature, signatureOf } from "./file-signature";
 import {
   createDirectoryWatchers,
   groupByDirectory,
   type WatchDegradation,
 } from "./watch-set-directories";
+import { createChangeLedger } from "./watch-set-ledger";
 
 export type { WatchDegradation } from "./watch-set-directories";
 
@@ -52,8 +54,23 @@ export interface WatchSetOptions {
 }
 
 export interface WatchSet {
-  /** Replace the watched set. Safe to call from inside `onChange`. */
-  update(paths: readonly string[]): void;
+  /**
+   * Replace the watched set. Safe to call from inside `onChange`.
+   *
+   * Each path in `expected` is compared, once it is watched, with the hash of
+   * what it held when a load read it (the sha256 of its bytes, `null` for
+   * absent, `"unreadable"`). One that differs changed while the load ran,
+   * before anything watched it; it is reported at once, not after the
+   * debounce, together with any change still waiting, so it joins a reload
+   * already queued rather than queueing one more. Its present state is then
+   * taken as reported, so the notification of that same state is dropped.
+   *
+   * A path that still holds the bytes the load read is left as it was, a
+   * notification waiting for it included. That notification may stand for a
+   * version the load evaluated in place of the bytes it read, so it still
+   * reloads, and a touch is never dropped.
+   */
+  update(paths: readonly string[], expected?: ReadonlyMap<string, string | null>): void;
   /**
    * Take tracked paths as seen in their present state: a change already
    * pending for them is dropped, and only a later one is reported.
@@ -63,48 +80,30 @@ export interface WatchSet {
   status(): WatchSetStatus;
 }
 
+/**
+ * Watch a set of paths, and report each change once.
+ *
+ * @param options - The paths, where changes and refused watches are reported,
+ *   and the debounce
+ * @returns The watch set
+ * @example
+ * ```ts
+ * const set = createWatchSet({ paths: [configFile], onChange: (changed) => reload(changed) });
+ * set.update(loaded.deps, loaded.depHashes);
+ * ```
+ */
 export function createWatchSet(options: WatchSetOptions): WatchSet {
   const { onChange, onDegraded, debounceMs = DEFAULT_DEBOUNCE_MS } = options;
 
   let tracked: string[] = [];
   const polled = new Set<string>();
-  const pending = new Set<string>();
-  /** path → the size and mtime it was last reported at */
-  const reportedAt = new Map<string, string>();
+  const ledger = createChangeLedger({ debounceMs, onChange });
   let degraded: WatchDegradation | null = null;
-  let timer: ReturnType<typeof setTimeout> | null = null;
   let stopped = false;
 
-  const schedule = (): void => {
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => {
-      timer = null;
-      if (stopped || pending.size === 0) return;
-      const changed = [...pending];
-      pending.clear();
-      onChange(changed);
-    }, debounceMs);
-  };
-
-  const record = (path: string): void => {
-    if (stopped) return;
-    const signature = signatureOf(path);
-    if (reportedAt.get(path) === signature) return;
-    reportedAt.set(path, signature);
-    pending.add(path);
-    schedule();
-  };
-
   const directories = createDirectoryWatchers({
-    onHit: record,
-    onOverflow: () => {
-      if (stopped) return;
-      for (const path of tracked) {
-        reportedAt.set(path, signatureOf(path));
-        pending.add(path);
-      }
-      schedule();
-    },
+    onHit: (path) => ledger.record(path),
+    onOverflow: () => ledger.markAll(tracked),
     onRefused: (refusal) => {
       if (degraded) return;
       degraded = refusal;
@@ -112,29 +111,49 @@ export function createWatchSet(options: WatchSetOptions): WatchSet {
     },
   });
 
-  function update(paths: readonly string[]): void {
+  /* The state a path is watched from. `watchFile` calls back once at once
+     for a file that does not exist, and without a baseline that call would
+     read as a change: a Studio started before its config existed would
+     report a failed reload on every start. A path with an expected hash
+     takes its baseline from the comparison instead, read once the watches
+     are armed. */
+  function watch(path: string, expected: ReadonlyMap<string, string | null>): void {
+    if (!expected.has(path)) ledger.baseline(path);
+    watchFile(path, { persistent: true, interval: POLL_INTERVAL_MS }, () => ledger.record(path));
+    polled.add(path);
+  }
+
+  function release(path: string): void {
+    unwatchFile(path);
+    polled.delete(path);
+    ledger.forget(path);
+  }
+
+  /* Read after the watches are armed: a change before the read shows up as a
+     difference from the load's hash, and one after it as a notification. */
+  function compare(expected: ReadonlyMap<string, string | null>, added: ReadonlySet<string>): void {
+    const changes = new Map<string, FileSignature>();
+    for (const [path, hash] of expected) {
+      if (!polled.has(path)) continue;
+      const signature = signatureOf(path);
+      if (signature.contentHash !== hash) changes.set(path, signature);
+      else if (added.has(path)) ledger.baseline(path, signature);
+    }
+    ledger.markChanged(changes);
+  }
+
+  function update(paths: readonly string[], expected?: ReadonlyMap<string, string | null>): void {
     if (stopped) return;
     tracked = [...new Set(paths.map((p) => resolve(p)))];
+    const wanted = new Map([...(expected ?? [])].map(([path, hash]) => [resolve(path), hash]));
 
-    for (const path of polled) {
-      if (tracked.includes(path)) continue;
-      unwatchFile(path);
-      polled.delete(path);
-      reportedAt.delete(path);
-    }
-    for (const path of tracked) {
-      if (polled.has(path)) continue;
-      /* The state it is watched from. `watchFile` calls back once at once for
-         a file that does not exist, and without a baseline that call read as
-         a change: a Studio started before its config existed reported a
-         failed reload on every start. */
-      if (!reportedAt.has(path)) reportedAt.set(path, signatureOf(path));
-      watchFile(path, { persistent: true, interval: POLL_INTERVAL_MS }, () => record(path));
-      polled.add(path);
-    }
+    for (const path of polled) if (!tracked.includes(path)) release(path);
+    const added = new Set(tracked.filter((path) => !polled.has(path)));
+    for (const path of added) watch(path, wanted);
 
     degraded = null;
     directories.sync(groupByDirectory(tracked));
+    compare(wanted, added);
   }
 
   update(options.paths);
@@ -142,9 +161,7 @@ export function createWatchSet(options: WatchSetOptions): WatchSet {
   function acknowledge(paths: readonly string[]): void {
     if (stopped) return;
     for (const path of paths.map((p) => resolve(p))) {
-      if (!polled.has(path)) continue;
-      reportedAt.set(path, signatureOf(path));
-      pending.delete(path);
+      if (polled.has(path)) ledger.acknowledge(path);
     }
   }
 
@@ -153,13 +170,10 @@ export function createWatchSet(options: WatchSetOptions): WatchSet {
     acknowledge,
     stop(): void {
       stopped = true;
-      if (timer) clearTimeout(timer);
-      timer = null;
-      pending.clear();
+      ledger.stop();
       directories.closeAll();
       for (const path of polled) unwatchFile(path);
       polled.clear();
-      reportedAt.clear();
     },
     status(): WatchSetStatus {
       return { pathCount: tracked.length, directoryCount: directories.size, degraded };

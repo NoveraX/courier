@@ -7,6 +7,7 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -22,6 +23,7 @@ let root: string;
 let sets: WatchSet[];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
 /** Long enough for a native notification, short enough to keep the suite quick. */
 const SETTLE_MS = 250;
 
@@ -273,5 +275,57 @@ describe("createWatchSet", () => {
 
     set.update([first]);
     expect(set.status()).toMatchObject({ pathCount: 1, directoryCount: 1 });
+  });
+
+  it("update() reports at once, and once, a path whose bytes differ from the ones a load read", async () => {
+    const file = join(root, "deep.ts");
+    writeFileSync(file, "export const v = 1;\n");
+    const c = collector();
+    const set = start({ paths: [], onChange: c.onChange, debounceMs: 20 });
+    await sleep(SETTLE_MS);
+
+    writeFileSync(file, "export const v = 2;\n");
+    set.update([file], new Map([[file, sha256("export const v = 1;\n")]]));
+
+    expect(c.seen).toEqual([file]);
+    await sleep(1500);
+    expect(c.seen).toEqual([file]);
+  });
+
+  it("update() reports nothing for a path that still holds the bytes a load read", async () => {
+    const file = join(root, "deep.ts");
+    const missing = join(root, "courier.config.ts");
+    writeFileSync(file, "export const v = 1;\n");
+    const c = collector();
+    const set = start({ paths: [], onChange: c.onChange, debounceMs: 20 });
+    await sleep(SETTLE_MS);
+
+    set.update(
+      [file, missing],
+      new Map([
+        [file, sha256("export const v = 1;\n")],
+        [missing, null],
+      ]),
+    );
+    await sleep(1200);
+
+    expect(c.seen).toEqual([]);
+  });
+
+  it("update() reports at once a path created since a load found it absent, and then its next save", async () => {
+    const created = join(root, "courier.config.ts");
+    const c = collector();
+    const set = start({ paths: [], onChange: c.onChange, debounceMs: 20 });
+    await sleep(SETTLE_MS);
+
+    writeFileSync(created, "export default {};\n");
+    set.update([created], new Map([[created, null]]));
+    expect(c.seen).toEqual([created]);
+    await sleep(SETTLE_MS);
+    c.seen.length = 0;
+
+    writeFileSync(created, "export default { sources: {} };\n");
+
+    expect(await c.waitFor(created)).toBe(true);
   });
 });

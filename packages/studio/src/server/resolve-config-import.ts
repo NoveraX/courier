@@ -14,7 +14,7 @@ import { isAbsolute, resolve } from "node:path";
 import type { PathAliases } from "@noverax/courier-studio-core/config";
 
 /** Extensions tried when an import has none — TS first, then bundler outputs. */
-const RESOLVE_EXTENSIONS: ReadonlyArray<string> = [
+export const RESOLVE_EXTENSIONS: ReadonlyArray<string> = [
   ".ts",
   ".tsx",
   ".mts",
@@ -44,13 +44,32 @@ export function resolveConfigImport(
   specifier: string,
   aliases: PathAliases,
 ): string | null {
-  if (isPathSpecifier(specifier)) return resolveFile(resolve(fromDir, specifier));
-
-  for (const candidate of aliases.candidatesFor(specifier)) {
-    const resolved = resolveFile(candidate);
+  for (const base of importBases(fromDir, specifier, aliases)) {
+    const resolved = resolveFile(base);
     if (resolved) return resolved;
   }
   return null;
+}
+
+/**
+ * The paths `specifier` may denote before any extension is tried: the path
+ * it spells, or each target the project's tsconfig `paths` maps it to.
+ *
+ * @param fromDir - Directory of the file the specifier was written in
+ * @param specifier - The import specifier, exactly as written
+ * @param aliases - The project's tsconfig path aliases
+ * @returns The absolute paths, in the order they are tried; empty for a
+ *   package or a node builtin
+ *
+ * @example
+ * ```ts
+ * importBases("/app", "./src/api", aliases); // → ["/app/src/api"]
+ * importBases("/app", "node:fs", aliases); // → []
+ * ```
+ */
+export function importBases(fromDir: string, specifier: string, aliases: PathAliases): string[] {
+  if (isPathSpecifier(specifier)) return [resolve(fromDir, specifier)];
+  return aliases.candidatesFor(specifier);
 }
 
 /** True for a relative or absolute path — false for a bare/package specifier */

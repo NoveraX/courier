@@ -19,6 +19,7 @@ const loaded: LoadedCourierConfig = {
   configFile: `${ROOT}/courier.config.ts`,
   contentHash: null,
   deps: [],
+  depHashes: new Map(),
   mocks: { file: null, entries: {}, contentHash: null, error: null },
 };
 

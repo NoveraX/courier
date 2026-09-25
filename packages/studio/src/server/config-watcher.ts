@@ -7,13 +7,29 @@
  * outcome of each goes to the owner through `onApplied` or `onFailed`, in the
  * order the loads ran. After the first outcome the watch set is armed; every
  * load that succeeds re-arms it with the modules it read, so a module the
- * config has only just started importing is watched from that moment.
+ * config has only just started importing is watched from that moment, and a
+ * load that fails adds what it read. An import that named no module when the
+ * load read it is watched at every path its module could be created at. Each
+ * file is compared then with the bytes the load read before evaluating, so a
+ * save made while the load ran — before anything watched that file — is
+ * reloaded as soon as it ends.
+ *
+ * The comparison is with the bytes the dependency walk read, not the ones
+ * evaluated after it. A file nothing watched when the load started — on the
+ * first load, or a module a reload is first to import — that is saved and
+ * then restored to the bytes the walk read, both while the load runs, can
+ * leave Studio running the version in between until that file changes
+ * again. A file already watched is covered by its notifications, which is
+ * also why a save whose notification is still waiting when a load reads it
+ * is loaded once more: the notification may stand for a version the load
+ * evaluated in place of the bytes its walk read.
  */
 
 import { createLogger } from "@noverax/courier";
 import { armWatchSet } from "./arm-watch-set";
 import { type LoadedCourierConfig, loadCourierConfig } from "./config-loader";
 import { type ExclusiveTransaction, exclusiveContext } from "./exclusive-reload";
+import type { ProjectInputs } from "./read-project-inputs";
 import { createReloadQueue } from "./reload-queue";
 import { createWatchSet, type WatchDegradation } from "./watch-set";
 import type { WatcherStatus } from "./watcher-status";
@@ -89,18 +105,25 @@ export function startConfigWatcher(deps: ConfigWatcherDeps): ConfigWatcher {
   const arming = armWatchSet(watchSet, deps);
 
   function apply(loaded: LoadedCourierConfig): void {
-    arming.succeeded(loaded.deps);
+    arming.succeeded(loaded);
     deps.onApplied(loaded);
   }
 
   async function load(): Promise<void> {
     if (stopped) return;
+    /* Handed over before evaluating, so a load that fails in any way, having
+       thrown anything, still arms what it read. */
+    const read: { inputs: ProjectInputs | null } = { inputs: null };
     let loaded: LoadedCourierConfig;
     try {
-      loaded = await loadCourierConfig(deps.projectRoot);
+      loaded = await loadCourierConfig(deps.projectRoot, {
+        onInputs: (inputs) => {
+          read.inputs = inputs;
+        },
+      });
     } catch (err) {
       if (stopped) return;
-      arming.failed();
+      arming.failed(read.inputs, err);
       deps.onFailed(err);
       return;
     }

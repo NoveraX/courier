@@ -31,6 +31,7 @@ function loadedWith(config: CourierConfig): LoadedCourierConfig {
     configFile: join(root, "courier.config.ts"),
     contentHash: null,
     deps: [],
+    depHashes: new Map(),
     mocks: { file: null, entries: {}, contentHash: null, error: null },
   };
 }

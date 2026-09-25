@@ -1,7 +1,17 @@
-import { existsSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, assert, beforeEach, describe, expect, it } from "vitest";
 import { getSourceName } from "@noverax/courier/define";
 import {
   ConfigLoaderError,
@@ -112,5 +122,70 @@ describe("loadCourierConfig", () => {
       expect(err).toBeInstanceOf(ConfigLoaderError);
       expect((err as ConfigLoaderError).context?.cwd).toBe(dir);
     }
+  });
+});
+
+describe("loadCourierConfig — what it read", () => {
+  const sha256 = (file: string) => createHash("sha256").update(readFileSync(file)).digest("hex");
+  let root: string;
+
+  beforeEach(() => {
+    root = realpathSync(dir);
+    mkdirSync(join(root, "src"));
+    writeFileSync(join(root, "src", "api.ts"), 'export const api = { baseURL: "https://api.example.com" };\n');
+  });
+
+  it("returns every file it depends on with the hash of the bytes it read, and null for each absent name", async () => {
+    writeConfig('import { api } from "./src/api";\nexport default { sources: { api } };\n');
+
+    const loaded = await loadCourierConfig(root);
+
+    const config = join(root, "courier.config.ts");
+    expect(loaded.depHashes.get(config)).toBe(sha256(config));
+    expect(loaded.depHashes.get(join(root, "src", "api.ts"))).toBe(sha256(join(root, "src", "api.ts")));
+    expect(loaded.depHashes.get(join(root, "courier.mocks.ts"))).toBeNull();
+    expect(loaded.depHashes.get(join(root, "courier.config.mts"))).toBeNull();
+    expect([...loaded.depHashes.keys()]).toEqual(loaded.deps);
+  });
+
+  it("hands over what it read before it evaluates anything", async () => {
+    const counter = globalThis as { courierTestReadFirst?: number };
+    delete counter.courierTestReadFirst;
+    writeConfig(
+      'import { api } from "./src/api";\n(globalThis as { courierTestReadFirst?: number }).courierTestReadFirst = 1;\nexport default { sources: { api } };\n',
+    );
+    const seen: Array<number | undefined> = [];
+
+    await loadCourierConfig(root, {
+      onInputs: (inputs) => {
+        expect(inputs.has(join(root, "src", "api.ts"))).toBe(true);
+        seen.push(counter.courierTestReadFirst);
+      },
+    });
+
+    expect(seen).toEqual([undefined]);
+    expect(counter.courierTestReadFirst).toBe(1);
+  });
+
+  it("a load that fails carries every file it read, the module that threw included", async () => {
+    const broken = join(root, "src", "broken.ts");
+    writeFileSync(broken, 'throw new Error("broken module");\n');
+    writeConfig('import "./src/broken";\nimport { api } from "./src/api";\nexport default { sources: { api } };\n');
+
+    const error = await loadCourierConfig(root).catch((err: unknown) => err);
+
+    assert(error instanceof ConfigLoaderError, "the load did not fail with a ConfigLoaderError");
+    expect(error.code).toBe("CONFIG_INVALID");
+    expect(error.depHashes?.get(broken)).toBe(sha256(broken));
+    expect(error.depHashes?.get(join(root, "courier.mocks.ts"))).toBeNull();
+  });
+
+  it("a config that exports no sources carries every file it read too", async () => {
+    writeConfig('import { api } from "./src/api";\nexport default { api };\n');
+
+    const error = await loadCourierConfig(root).catch((err: unknown) => err);
+
+    assert(error instanceof ConfigLoaderError, "the load did not fail with a ConfigLoaderError");
+    expect(error.depHashes?.get(join(root, "src", "api.ts"))).toBe(sha256(join(root, "src", "api.ts")));
   });
 });

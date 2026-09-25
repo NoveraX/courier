@@ -1,30 +1,41 @@
-import { createHash } from "node:crypto";
-import { readFileSync, statSync } from "node:fs";
-import { createLogger } from "@noverax/courier";
+import { statSync } from "node:fs";
+import { contentHashOf } from "./file-content-hash";
 
-const log = createLogger("Studio");
+/** What a file holds, for telling a real edit from a repeated event. */
+export interface FileSignature {
+  /** Equal for two reads only when nothing about the file changed between them. */
+  readonly key: string;
+  /** The sha256 of its bytes, as `contentHashOf` reports it; `null` when absent. */
+  readonly contentHash: string | null;
+}
+
+const ABSENT: FileSignature = { key: "absent", contentHash: null };
 
 /**
- * What a file holds, for telling a real edit from a repeated event. Absent
- * files get a distinct signature so a deletion is reported once.
+ * Sign a file by its timestamp, size, inode and content. Absent files get a
+ * distinct signature, so a deletion is reported once.
  *
  * The content counts, not only the timestamp and size: on filesystems with
  * coarse timestamps — Docker bind mounts, network shares, HFS+ — a second
  * save within the same second that kept the length (a renamed source, a
- * flipped flag) looked unchanged and was never reported. The watched files
- * are a config and the modules it imports, so reading them is cheap.
+ * flipped flag) would otherwise look unchanged. The timestamp counts too, so
+ * touching a file is still a change.
+ *
+ * @param path - The file
+ * @returns Its signature, carrying the hash of its bytes
+ * @example
+ * ```ts
+ * if (signatureOf(path).key !== reportedAt.get(path)) report(path);
+ * ```
  */
-export function signatureOf(path: string): string {
+export function signatureOf(path: string): FileSignature {
   const stats = statSync(path, { throwIfNoEntry: false });
-  if (!stats) return "absent";
-  let content: string;
-  try {
-    content = createHash("sha1").update(readFileSync(path)).digest("hex");
-  } catch (error) {
-    /* Gone or unreadable between the stat and the read: its stat still
-       tells a later change apart. */
-    log.debug(`Could not read ${path} to fingerprint it`, error);
-    content = "unreadable";
-  }
-  return `${stats.mtimeMs}:${stats.size}:${stats.ino}:${content}`;
+  if (!stats) return ABSENT;
+  /* Gone between the stat and the read: its stat still tells a later
+     change apart. */
+  const contentHash = contentHashOf(path);
+  return {
+    key: `${stats.mtimeMs}:${stats.size}:${stats.ino}:${contentHash ?? "absent"}`,
+    contentHash,
+  };
 }

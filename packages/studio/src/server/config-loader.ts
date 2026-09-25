@@ -10,31 +10,27 @@
  */
 
 import { realpathSync } from "node:fs";
-import { join } from "node:path";
-import { ConfigurationError, createLogger } from "@noverax/courier";
+import { ConfigurationError } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
 import { type AnySource, stampSourceKeys } from "@noverax/courier/define";
 import type { TransformCache } from "@noverax/courier-studio-core/config";
-import {
-  CONFIG_BASENAMES,
-  findConfigFileAt,
-  MOCKS_BASENAMES,
-} from "@noverax/courier-studio-core/config";
+import { findConfigFileAt } from "@noverax/courier-studio-core/config";
 import { ConfigLoaderError, ConfigNotFoundError } from "./config-loader-errors";
 import type { LoadedCourierMocks } from "./courier-mocks-file";
 import {
+  findCourierMocks,
   type LocatedCourierMocks,
   locateCourierMocks,
   readCourierMocks,
 } from "./courier-mocks-file";
 import type { EvaluatedCourierFiles } from "./evaluate-courier-files";
 import { evaluateCourierFiles } from "./evaluate-courier-files";
-import { extractConfigDeps } from "./extract-config-deps";
-import { hashFile } from "./file-hash";
+import { hashStillOnDisk } from "./hash-still-on-disk";
 import { messageOf } from "./message-of";
+import { readEntryNames } from "./read-entry-names";
+import type { ProjectInputs } from "./read-project-inputs";
+import { readProjectInputs } from "./read-project-inputs";
 import { studioTransformCache } from "./studio-transform-cache";
-
-const log = createLogger("Studio");
 
 /** Result returned by `loadCourierConfig` */
 export interface LoadedCourierConfig {
@@ -46,11 +42,19 @@ export interface LoadedCourierConfig {
   contentHash: string | null;
   /**
    * Every module the config and the mocks file transitively import, both
-   * entries included, and every name either file may take in the project
-   * root, so creating one — or one that takes precedence — is noticed.
-   * Suitable for `fs.watch` registration.
+   * entries included; every absent path an import that named no module could
+   * name one at, so creating that module is noticed; and every name either
+   * file may take in the project root, so creating one — or one that takes
+   * precedence — is noticed. Suitable for `fs.watch` registration.
    */
   deps: string[];
+  /**
+   * Each path in `deps` with the hash of what it held when the load read it,
+   * before evaluating anything: the sha256 of its bytes, `null` when it was
+   * absent, `"unreadable"` when it could not be read. A path that holds
+   * something else by the time it is watched changed while the load ran.
+   */
+  depHashes: ProjectInputs;
   /** The mocks Studio runs, from `courier.mocks.*` beside the config. */
   mocks: LoadedCourierMocks;
 }
@@ -63,6 +67,12 @@ export interface LoadCourierConfigOptions {
    * process; see `studioTransformCache`.
    */
   transformCache?: TransformCache;
+  /**
+   * Handed what the load read, before it evaluates anything, so whoever
+   * watches the project can watch it whatever the load's outcome, a load
+   * that never finishes included. Not called when no config is found.
+   */
+  onInputs?: (inputs: ProjectInputs) => void;
 }
 
 /**
@@ -84,9 +94,17 @@ export interface LoadCourierConfigOptions {
  * modules included. A CommonJS config or mocks file itself is run afresh;
  * see `loadCourierEntry`.
  *
+ * Every file the load depends on is read once before anything is evaluated —
+ * each name the config or the mocks file may take before either is looked
+ * for — and the hash of what it held is returned with it (`depHashes`), and
+ * carried by every `ConfigLoaderError` thrown after that read. The mocks
+ * file's hash is that one read's, so a save that lands at any moment of the
+ * load leaves a file whose bytes differ from the ones recorded, unless a
+ * second save restores them.
+ *
  * @param projectRoot - The directory holding `courier.config.*`
  * @param options - Where transforms are reused (default: Studio's cache for
- *   the project)
+ *   the project), and who is handed what the load read before it evaluates
  * @returns The config, its mocks file, and every file either one imports
  * @throws `ConfigNotFoundError` when no config file is found at
  *   `projectRoot`, and `ConfigLoaderError` for every other failure
@@ -97,39 +115,38 @@ export interface LoadCourierConfigOptions {
  */
 export async function loadCourierConfig(
   projectRoot: string,
-  { transformCache = studioTransformCache(projectRoot) }: LoadCourierConfigOptions = {},
+  { transformCache = studioTransformCache(projectRoot), onInputs }: LoadCourierConfigOptions = {},
 ): Promise<LoadedCourierConfig> {
   const root = realpathSync(projectRoot);
+  const entryNames = readEntryNames(root);
   const found = findConfigFileAt(root);
   if (!found) throw new ConfigNotFoundError(projectRoot);
   const configFile = realpathSync(found);
-  const mocks = locateCourierMocks(root);
-  const mocksFile = loadable(mocks);
-  const configHash = hashIfReadable(configFile);
+  const foundMocks = findCourierMocks(root);
+  const depHashes = readProjectInputs(entryNames, configFile, foundMocks.file);
+  onInputs?.(depHashes);
+  const mocks = locateCourierMocks(foundMocks, depHashes);
 
   let evaluated: EvaluatedCourierFiles;
   try {
-    evaluated = await evaluateCourierFiles(configFile, mocksFile, transformCache);
+    evaluated = await evaluateCourierFiles(configFile, loadable(mocks), transformCache);
   } catch (err) {
     throw new ConfigLoaderError(
       "CONFIG_INVALID",
       `Failed to load courier.config: ${messageOf(err)}`,
-      {
-        cause: err,
-        context: { cwd: projectRoot },
-      },
+      { cause: err, context: { cwd: projectRoot }, depHashes },
     );
   }
   const { config } = evaluated;
-  validateConfig(config, configFile);
-  stampConfigSourceKeys(config.sources, configFile);
+  validateConfig(config, configFile, depHashes);
+  stampConfigSourceKeys(config.sources, configFile, depHashes);
 
   return {
     config,
     configFile,
-    contentHash:
-      configHash !== null && hashIfReadable(configFile) === configHash ? configHash : null,
-    deps: dependenciesOf(root, configFile, mocksFile),
+    contentHash: hashStillOnDisk(configFile, depHashes.get(configFile)),
+    deps: [...depHashes.keys()],
+    depHashes,
     mocks: readCourierMocks(mocks, evaluated),
   };
 }
@@ -142,30 +159,14 @@ function loadable(mocks: LocatedCourierMocks): string | null {
   return mocks.unreadable !== null ? null : mocks.file;
 }
 
-/* An unreadable config fails its load with the loader's own message; its
-   hash only tells a change during the load apart. */
-function hashIfReadable(file: string): string | null {
-  try {
-    return hashFile(file);
-  } catch (error) {
-    log.debug(`${file} could not be hashed`, error);
-    return null;
-  }
-}
-
-/* Every name either file may take in the root is watched too, present or
-   not: creating one, or one that takes precedence over the file loaded, must
-   reload, and nothing Studio imports would otherwise point at it. */
-function dependenciesOf(root: string, configFile: string, mocksFile: string | null): string[] {
-  const mocksDeps = mocksFile === null ? [] : extractConfigDeps(mocksFile);
-  const names = [...CONFIG_BASENAMES, ...MOCKS_BASENAMES].map((name) => join(root, name));
-  return [...new Set([...extractConfigDeps(configFile), ...mocksDeps, ...names])];
-}
-
 /** Reject configs missing `sources` or with malformed entries */
-function validateConfig(config: unknown, configFile: string): asserts config is CourierConfig {
+function validateConfig(
+  config: unknown,
+  configFile: string,
+  depHashes: ProjectInputs,
+): asserts config is CourierConfig {
   const invalid = (message: string) =>
-    new ConfigLoaderError("CONFIG_INVALID", message, { context: { configFile } });
+    new ConfigLoaderError("CONFIG_INVALID", message, { context: { configFile }, depHashes });
   if (!config || typeof config !== "object") throw invalid("courier.config must export an object");
   const sources = (config as CourierConfig).sources;
   if (!sources || typeof sources !== "object") throw invalid("courier.config.sources is required");
@@ -189,7 +190,11 @@ function validateConfig(config: unknown, configFile: string): asserts config is 
  * canonical identifier, reporting a key that contradicts a name the author
  * chose as a config error of its own.
  */
-function stampConfigSourceKeys(sources: Record<string, AnySource>, configFile: string): void {
+function stampConfigSourceKeys(
+  sources: Record<string, AnySource>,
+  configFile: string,
+  depHashes: ProjectInputs,
+): void {
   try {
     stampSourceKeys(sources);
   } catch (err) {
@@ -197,6 +202,7 @@ function stampConfigSourceKeys(sources: Record<string, AnySource>, configFile: s
     throw new ConfigLoaderError("CONFIG_SOURCE_KEY_MISMATCH", err.message, {
       cause: err,
       context: { configFile },
+      depHashes,
     });
   }
 }

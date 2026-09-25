@@ -46,12 +46,31 @@ export class SpecFetchError extends CourierError<SpecFetchErrorCode> {
    * The refusal for a private address the project did not name.
    *
    * @param what - The host, and the address it resolved to when there was a lookup
+   * @param missingConfigIn - The project root, when it has no courier.config to name the host in
    * @returns The error
    */
-  static privateHost(what: string): SpecFetchError {
+  static privateHost(what: string, missingConfigIn?: string): SpecFetchError {
+    const advice = missingConfigIn
+      ? `There is no courier.config in ${missingConfigIn}; create it and name the host in \`studio.allowedSpecHosts\` to allow it.`
+      : "Name the host in `studio.allowedSpecHosts` to allow it.";
     return new SpecFetchError(
       "SPEC_HOST_PRIVATE",
-      `Blocked request to private address: ${what}. Studio reads a specification on your behalf, so it does not reach into a private network by itself. Name the host in \`studio.allowedSpecHosts\` to allow it.`,
+      `Blocked request to private address: ${what}. Studio reads a specification on your behalf, so it does not reach into a private network by itself. ${advice}`,
+    );
+  }
+
+  /**
+   * The refusal for an address that means every interface: no host to
+   * fetch from, yet connecting to it reaches this machine's own services, so
+   * no entry in `studio.allowedSpecHosts` allows it.
+   *
+   * @param what - The host, and the address it resolved to when there was a lookup
+   * @returns The error
+   */
+  static unspecifiedHost(what: string): SpecFetchError {
+    return new SpecFetchError(
+      "SPEC_URL_INVALID",
+      `Blocked request to unspecified address: ${what}. It names no host, and Studio does not fetch from one even when \`studio.allowedSpecHosts\` lists it.`,
     );
   }
 }

@@ -1,13 +1,14 @@
+import type { LookupPolicy } from "./guarded-lookup";
 import { specAddressKind } from "./spec-address-kind";
 import { SpecFetchError } from "./spec-fetch-error";
+import type { SpecHostAllowlist, SpecHosts } from "./spec-host-allowlist";
+import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
 import { requestSpec, type SpecAnswer } from "./spec-request";
 
 const MAX_REDIRECTS = 5;
-/* The whole fetch, redirects included: a server that trickles bytes cannot hold it open. */
+/* The whole fetch, redirects and the wait for the project's list of private
+   hosts included: a server that trickles bytes cannot hold it open. */
 const DEADLINE_MS = 60_000;
-
-/** Names that mean "every interface", which is not a destination. */
-const UNSPECIFIED_HOSTS = new Set(["0.0.0.0", "[::]"]);
 
 /**
  * Fetch a specification from a URL on the developer's behalf, without
@@ -18,21 +19,23 @@ const UNSPECIFIED_HOSTS = new Set(["0.0.0.0", "[::]"]);
  * the address that was approved; a redirect is followed only after its
  * target passes the same check. This machine is reachable when the developer
  * asked for it — a specification served by the project's own dev server is
- * the ordinary case — but not because a server elsewhere redirected there.
- * Other private hosts only when the project names them in
- * `studio.allowedSpecHosts`.
+ * the ordinary case. Other private hosts, and this machine when a server
+ * elsewhere redirected there, only when the project names them in
+ * `studio.allowedSpecHosts`, which is read only for such a host. An address
+ * that means every interface is never reached.
  *
  * @param url - The URL the developer asked Studio to read
- * @param allowedHosts - Private hosts the project names
+ * @param allowlist - The private hosts the project names, read when a hop needs them
  * @returns The specification's text
  * @throws {SpecFetchError} When the URL is refused or cannot be fetched
+ * @throws {SpecHostsUnavailableError} For a private host, while Studio cannot read the project's list
  *
  * @example
  * ```ts
- * const raw = await fetchSpec("https://api.example.com/openapi.json", await allowedSpecHosts());
+ * const raw = await fetchSpec("https://api.example.com/openapi.json", specHostAllowlist(project, root));
  * ```
  */
-export async function fetchSpec(url: string, allowedHosts: readonly string[]): Promise<string> {
+export async function fetchSpec(url: string, allowlist: SpecHostAllowlist): Promise<string> {
   const deadline = Date.now() + DEADLINE_MS;
   let current = parseSpecUrl(url, url);
   let loopback = true;
@@ -44,8 +47,11 @@ export async function fetchSpec(url: string, allowedHosts: readonly string[]): P
         `${url} did not answer within ${DEADLINE_MS / 1000} s.`,
         { url },
       );
-    const policy = { allowed: allowedHosts.some((entry) => sameHost(entry, current)), loopback };
-    const answer: SpecAnswer = await requestSpec(current, policy, remaining);
+    const answer: SpecAnswer = await requestSpec(
+      current,
+      hopPolicy(current, loopback, allowlist),
+      remaining,
+    );
     if (answer.kind === "body") return answer.text;
     /* Only a request the developer pointed at this machine may be sent back to it. */
     if (hop === 0)
@@ -74,16 +80,33 @@ function parseSpecUrl(location: string, asked: string, base?: URL): URL {
       url: asked,
     });
   }
-  if (UNSPECIFIED_HOSTS.has(parsed.hostname)) {
-    throw new SpecFetchError(
-      "SPEC_URL_INVALID",
-      `Blocked request to unspecified address: ${parsed.hostname}`,
-      { url: asked },
-    );
-  }
   return parsed;
 }
 
+function hopPolicy(url: URL, loopback: boolean, allowlist: SpecHostAllowlist): LookupPolicy {
+  return { loopback, admitPrivate: async (what) => admit(await allowlist(), url, what) };
+}
+
+/* Private hosts are reached only while a config that loads names them: never
+   from the last good list while courier.config fails. */
+function admit(hosts: SpecHosts, url: URL, what: string): void {
+  switch (hosts.state) {
+    case "listed":
+      if (hosts.hosts.some((entry) => sameHost(entry, url))) return;
+      throw SpecFetchError.privateHost(what);
+    case "missing":
+      throw SpecFetchError.privateHost(what, hosts.root);
+    case "failing":
+      throw SpecHostsUnavailableError.notLoading(what, hosts.failure);
+    case "starting":
+      throw SpecHostsUnavailableError.starting(what);
+    case "reloading":
+      throw SpecHostsUnavailableError.reloading(what);
+  }
+}
+
+/* An entry names the host with or without its port, in any case, an IPv6
+   address with or without brackets. */
 function sameHost(entry: string, url: URL): boolean {
   const wanted = entry.trim().toLowerCase();
   const unbracketed = url.hostname.replace(/^\[|\]$/g, "");

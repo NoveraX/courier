@@ -44,6 +44,8 @@ await attachRuntime()
 
 `attachRuntime()` reads `courier.config.ts` from disk (walking up from `process.cwd()`), registers its sources, and — outside production — connects to Studio. It dials the address the config's `studio` block names, so `studio: { port: 7000 }` moves the Studio server and every runtime together. `COURIER_STUDIO_URL` overrides both.
 
+It reads the config in production too, so the config must not import development tools. That is why Studio's mock servers are declared in `courier.mocks.ts` beside it: only Studio reads that file, and `attachRuntime()` never does.
+
 ### Attach a browser runtime
 
 The Studio build plugins do this for you. By hand:
@@ -65,7 +67,11 @@ Browser bundlers pick a build of `./runtime` without the config loader (the `bro
 | `attachRuntime(id?)` | `/runtime` | Connect a server or browser runtime; idempotent per id |
 | `announceHosting(input)` | `/runtime` | Tell Studio which transports this runtime serves |
 | `trackWSStream()` / `untrackWSStream()` | `/runtime` | Report WebSocket subscriptions to Studio |
-| `loadCourierConfig(options?)` | `/config` | Find and load `courier.config.{ts,js,mjs}` |
+| `loadCourierConfig(options?)` | `/config` | Find and load `courier.config.{ts,mts,cts,js,mjs,cjs}`, in that order of names |
+| `loadCourierMocksFile(file, options?)` | `/config` | Load a `courier.mocks.*` file with the config's loader, as a mock's worker does |
+| `findMocksFile(projectRoot)` | `/config` | The first of `MOCKS_BASENAMES` — `courier.mocks.{ts,mts,cts,js,mjs,cjs}` — in the project root |
+| `findTransformCacheDirectory(projectRoot)` | `/config` | Where transforms are kept across processes: `.cache/courier/transform` in the nearest `node_modules`, or `null` when there is no `node_modules`, the directory could hold files another user placed, or `COURIER_TRANSFORM_CACHE` is `0`, `false` or `off` |
+| `createTransformCache(options?)` | `/config` | Reuse each module's transform while its bytes are unchanged, in memory and in that directory |
 | `readPathAliases(projectRoot)` | `/config` | The tsconfig `paths` the loader resolves imports through |
 | `EventBus` | root | In-process Studio telemetry bus |
 | `extractSourceMap(sources)` | root | Endpoint metadata for the Studio UI |

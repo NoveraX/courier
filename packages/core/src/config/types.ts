@@ -101,7 +101,10 @@ export interface CourierStudioConfig {
   port?: number;
   /** Bind host — default "localhost" */
   host?: string;
-  /** First port assigned to managed mock servers — default 7001 */
+  /**
+   * Where the ports Studio assigns to mocks that declare none begin — default
+   * 7001. `courier-studio` reads it when it starts.
+   */
   mockBasePort?: number;
   /** Open the Studio UI in the default browser on startup — default false */
   open?: boolean;
@@ -111,12 +114,18 @@ export interface CourierStudioConfig {
    *
    * Studio reads a specification by URL on the developer's behalf, so it will
    * not walk into a network the developer cannot see from their own browser.
-   * Loopback needs no entry here — a specification served by the project's own
-   * dev server is the ordinary case. Name a private host explicitly to reach
-   * it, for example `["gitlab.internal", "10.0.0.7:8080"]`: an entry matches
-   * the host with or without its port, in any case, an IPv6 address with or
-   * without brackets. An address that means every interface (`0.0.0.0`,
-   * `::`) is never reached, even when listed.
+   * This machine needs no entry when the URL itself points there — a
+   * specification served by the project's own dev server is the ordinary
+   * case — nor for redirects while every hop stays on it. Once any hop has
+   * been elsewhere, a redirect to this machine is treated as one to a
+   * private host. Every redirect is checked this way before it is followed.
+   * Name a private host explicitly to reach it, for example
+   * `["gitlab.internal", "10.0.0.7:8080"]`: an entry without a port matches
+   * the host on any port, and one with a port on that port only, where a URL
+   * that names no port has its scheme's default (`gitlab.internal:443`
+   * matches `https://gitlab.internal`). Entries match in any case, an IPv6
+   * address with or without brackets. An address that means every interface
+   * (`0.0.0.0`, `::`) is never reached, even when listed.
    *
    * Studio reads this list only when a request would reach a private host,
    * as courier.config is on disk at that moment. While courier.config does

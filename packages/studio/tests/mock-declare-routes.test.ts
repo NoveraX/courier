@@ -51,7 +51,7 @@ const ORIGIN = { origin: "http://localhost:6280" };
 function project(overrides: Partial<ProjectState> = {}): ProjectState {
   return {
     snapshot: vi.fn(() => ({ revision: 0, starting: true, running: null, loadedAt: null, failure: null })),
-    settled: vi.fn(async () => undefined),
+    fresh: vi.fn(async () => ({ revision: 0, starting: true, running: null, loadedAt: null, failure: null, settling: true })),
     runExclusive: vi.fn(async () => {
       throw new Error("no edit expected");
     }),
@@ -110,7 +110,7 @@ describe("the mock wizard's routes", () => {
     expect(String(reply.body.snippet)).toContain("apiMock: defineMockServer({ source: courierConfig.sources.api })");
     expect(String(reply.body.snippet)).not.toContain("export default");
     expect(ctx.project.snapshot).not.toHaveBeenCalled();
-    expect(ctx.project.settled).not.toHaveBeenCalled();
+    expect(ctx.project.fresh).not.toHaveBeenCalled();
     expect(ctx.project.runExclusive).not.toHaveBeenCalled();
   });
 

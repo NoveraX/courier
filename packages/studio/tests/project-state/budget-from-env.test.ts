@@ -7,7 +7,11 @@
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { EDIT_FINISH_BUDGET_MS } from "../../src/server/mocks-edit/edit-timing";
 import { budgetFromEnv } from "../../src/server/project-state/budget-from-env";
-import { CONFIG_LOAD_TIMEOUT_MS, CONFIG_LOAD_TIMEOUT_VARIABLE } from "../../src/server/project-state/budgets";
+import {
+  ACT_BUDGET_MS,
+  CONFIG_LOAD_TIMEOUT_MS,
+  CONFIG_LOAD_TIMEOUT_VARIABLE,
+} from "../../src/server/project-state/budgets";
 import { clearStartupIssues, startupIssues } from "../../src/server/startup-issues";
 
 const NAME = "COURIER_CONFIG_LOAD_TIMEOUT_MS";
@@ -67,5 +71,9 @@ describe("the load budgets", () => {
   it("name the variable that sets the load timeout, and let an edit finish its load and its undo", () => {
     expect(CONFIG_LOAD_TIMEOUT_VARIABLE).toBe(NAME);
     expect(EDIT_FINISH_BUDGET_MS).toBe(CONFIG_LOAD_TIMEOUT_MS + 5_000);
+  });
+
+  it("let a request that acts wait out one load that runs to its timeout", () => {
+    expect(ACT_BUDGET_MS).toBe(CONFIG_LOAD_TIMEOUT_MS + 5_000);
   });
 });

@@ -27,6 +27,7 @@ import {
   type WatchDegradation,
 } from "./watch-set-directories";
 import { createChangeLedger } from "./watch-set-ledger";
+import { createWatchSetSweep } from "./watch-set-sweep";
 
 export type { WatchDegradation } from "./watch-set-directories";
 
@@ -76,6 +77,26 @@ export interface WatchSet {
    * pending for them is dropped, and only a later one is reported.
    */
   acknowledge(paths: readonly string[]): void;
+  /**
+   * Compare every watched path with what is on disk now, and report each
+   * that changed since it was last reported, together with every change
+   * still waiting out the debounce, without waiting the debounce out: a
+   * reader can then catch up with saves whose notifications have not come.
+   *
+   * A save may still be in progress, and must not be read half-done: while
+   * a path's timestamp is within the last debounce (a deleted path's, its
+   * directory's), or it changed while it was compared, the sweep compares
+   * again one debounce later, until `until`. Saves still in progress then
+   * are left to the debounce, and nothing is reported. Each state it reports
+   * is taken as seen, so the notification of that same state is dropped.
+   * Callers that ask before a sweep has reported share it, and it waits
+   * until the latest of their deadlines.
+   *
+   * @param until - When to stop waiting for saves in progress, in epoch milliseconds
+   * @returns `true` once what changed is reported; `false` when saves were
+   *   still in progress at `until`, or the set is stopped
+   */
+  sweep(until: number): Promise<boolean>;
   stop(): void;
   status(): WatchSetStatus;
 }
@@ -90,6 +111,7 @@ export interface WatchSet {
  * ```ts
  * const set = createWatchSet({ paths: [configFile], onChange: (changed) => reload(changed) });
  * set.update(loaded.deps, loaded.depHashes);
+ * await set.sweep(Date.now() + 3_000); // saves already on disk are reported now
  * ```
  */
 export function createWatchSet(options: WatchSetOptions): WatchSet {
@@ -98,6 +120,12 @@ export function createWatchSet(options: WatchSetOptions): WatchSet {
   let tracked: string[] = [];
   const polled = new Set<string>();
   const ledger = createChangeLedger({ debounceMs, onChange });
+  const sweeper = createWatchSetSweep({
+    debounceMs,
+    unreported: () => ledger.unreported(tracked),
+    waiting: ledger.waiting,
+    report: ledger.report,
+  });
   let degraded: WatchDegradation | null = null;
   let stopped = false;
 
@@ -168,8 +196,10 @@ export function createWatchSet(options: WatchSetOptions): WatchSet {
   return {
     update,
     acknowledge,
+    sweep: (until) => sweeper.run(until),
     stop(): void {
       stopped = true;
+      sweeper.stop();
       ledger.stop();
       directories.closeAll();
       for (const path of polled) unwatchFile(path);

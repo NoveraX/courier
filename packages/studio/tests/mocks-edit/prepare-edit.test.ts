@@ -46,7 +46,9 @@ const unused: ProjectState = {
   snapshot: () => {
     throw new Error("planning read the project itself");
   },
-  settled: async () => undefined,
+  fresh: async () => {
+    throw new Error("planning caught up with the disk");
+  },
   runExclusive: async () => {
     throw new Error("planning ran an edit");
   },

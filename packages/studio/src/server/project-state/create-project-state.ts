@@ -5,8 +5,10 @@ import { startConfigWatcher } from "../config-watcher";
 import type { WatcherStatus } from "../watcher-status";
 import { withinBudget } from "../within-budget";
 import { CONFIG_LOAD_TIMEOUT_MS } from "./budgets";
+import { insideEdit } from "./inside-edit";
 import { createProjectOutcomes } from "./project-outcomes";
-import type { ProjectSnapshot, ProjectState } from "./types";
+import { ProjectStateError } from "./project-state-error";
+import type { FreshSnapshot, ProjectSnapshot, ProjectState } from "./types";
 
 /** What owning the project needs from the Studio server. */
 export interface ProjectStateDeps {
@@ -40,6 +42,10 @@ const STARTING: ProjectSnapshot = {
  * failed with `CONFIG_LOAD_TIMEOUT`, so Studio is never left starting for
  * good.
  *
+ * A reader that must see the saves already on disk, not only those the
+ * watcher has reported, asks for `fresh` with a budget: it catches up with
+ * the disk first, and answers `settling` when it could not within the budget.
+ *
  * @param deps - The project root and what each outcome changes
  * @returns The project state
  *
@@ -47,6 +53,7 @@ const STARTING: ProjectSnapshot = {
  * ```ts
  * const project = createProjectState({ projectRoot, bindingTable, uiNamespace, watcherStatus, mocks });
  * project.snapshot().starting; // → true until the first load has an outcome
+ * const view = await project.fresh(SHOW_BUDGET_MS); // → after the saves on disk now
  * ```
  */
 export function createProjectState(deps: ProjectStateDeps): ProjectState {
@@ -72,9 +79,18 @@ export function createProjectState(deps: ProjectStateDeps): ProjectState {
     loadTimeoutMs: deps.loadTimeoutMs ?? CONFIG_LOAD_TIMEOUT_MS,
   });
 
+  async function fresh(budgetMs: number): Promise<FreshSnapshot> {
+    if (insideEdit.getStore()?.running) throw insideAnEdit();
+    /* Awaited before the snapshot is read: read first, it would be the
+       project from before the saves this waited for. */
+    const catchingUp = engine.catchUp(Date.now() + budgetMs);
+    const caughtUp = (await withinBudget(catchingUp, budgetMs)) && (await catchingUp);
+    return { ...current, settling: !caughtUp };
+  }
+
   return {
     snapshot: () => current,
-    settled: engine.settled,
+    fresh,
     runExclusive: engine.runExclusive,
     finishEdits: async (budgetMs) => {
       engine.refuseEdits();
@@ -82,4 +98,12 @@ export function createProjectState(deps: ProjectStateDeps): ProjectState {
     },
     stop: engine.stop,
   };
+}
+
+function insideAnEdit(): ProjectStateError {
+  return new ProjectStateError(
+    "FRESH_INSIDE_EDIT",
+    "An edit asked for the project caught up with the disk, which waits for the edit itself to finish. " +
+      "Inside an edit, read what its context lends instead.",
+  );
 }

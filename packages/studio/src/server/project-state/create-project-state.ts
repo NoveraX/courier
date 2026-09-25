@@ -1,3 +1,4 @@
+import { createLogger } from "@noverax/courier";
 import type { Namespace } from "socket.io";
 import type { MocksConsumers } from "../apply-loaded-mocks";
 import type { BindingTable } from "../catalog/binding-table";
@@ -8,9 +9,12 @@ import { CONFIG_LOAD_TIMEOUT_MS } from "./budgets";
 import { insideEdit } from "./inside-edit";
 import { createProjectOutcomes } from "./project-outcomes";
 import { ProjectStateError } from "./project-state-error";
+import { sendImportLists } from "./send-import-lists";
 import type { FreshSnapshot, ProjectSnapshot, ProjectState } from "./types";
 
 /** What owning the project needs from the Studio server. */
+const log = createLogger("Studio");
+
 export interface ProjectStateDeps {
   /** The project root, symlinks resolved: every path Studio shows is relative to it. */
   projectRoot: string;
@@ -88,9 +92,21 @@ export function createProjectState(deps: ProjectStateDeps): ProjectState {
     return { ...current, settling: !caughtUp };
   }
 
+  /* The write the route made is done by now; a list that cannot be sent
+     must not turn it into a failure, and the next outcome sends it anew. */
+  function importsChanged(): void {
+    if (current.starting) return;
+    try {
+      sendImportLists(uiNamespace, current, projectRoot);
+    } catch (error) {
+      log.warn("Studio could not send the imports lists after an import changed", error);
+    }
+  }
+
   return {
     snapshot: () => current,
     fresh,
+    importsChanged,
     runExclusive: engine.runExclusive,
     finishEdits: async (budgetMs) => {
       engine.refuseEdits();

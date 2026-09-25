@@ -21,7 +21,7 @@ import { setProjectRoot } from "../src/context";
 import { buildSourceScan } from "../src/server/build-source-scan";
 import { loadCourierConfig } from "../src/server/config-loader";
 import { getImportEntry, getImportState, importsSnapshotOf } from "../src/server/imports-bridge";
-import type { ProjectReads, ProjectSnapshot } from "../src/server/project-state/types";
+import type { ProjectImports, ProjectSnapshot } from "../src/server/project-state/types";
 import { registerRegistryRoutes } from "../src/server/registry-routes";
 import type { JsonResponse, RouteApp } from "../src/server/route-types";
 import { registerWriteRoutes } from "../src/server/write-routes";
@@ -52,9 +52,10 @@ async function routes(): Promise<Map<string, Handler>> {
     loadedAt: Date.now(),
     failure: null,
   };
-  const project: ProjectReads = {
+  const project: ProjectImports = {
     snapshot: () => view,
     fresh: async () => ({ ...view, settling: false }),
+    importsChanged: () => undefined,
   };
   const found = new Map<string, Handler>();
   const app: RouteApp = { post: (path, handler) => void found.set(path, handler) };

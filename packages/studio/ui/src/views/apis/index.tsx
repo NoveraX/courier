@@ -21,12 +21,10 @@ export function ApisView(): React.ReactElement {
 
   const importWizard = useImport(() => {
     toast.success("API imported successfully");
-    void registry.refresh();
   });
 
   const manageFlow = useManage(() => {
     toast.success("Endpoints updated successfully");
-    void registry.refresh();
   });
 
   const checking = Object.values(registry.statuses).some(

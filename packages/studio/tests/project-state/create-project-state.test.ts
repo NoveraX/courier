@@ -13,7 +13,11 @@ import { Server } from "socket.io";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type * as LastModifiedAtModule from "../../src/server/last-modified-at";
-import type { FreshSnapshot, ProjectSnapshot, ProjectState } from "../../src/server/project-state/types";
+import type {
+  FreshSnapshot,
+  ProjectSnapshot,
+  ProjectState,
+} from "../../src/server/project-state/types";
 
 /* Set to make every look at when a file changed fail, as a disk that went away would. */
 const faults = vi.hoisted(() => ({ lastModifiedAt: false }));
@@ -51,10 +55,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /* The config names the version its module exports in its source's baseURL. */
-const VERSIONED = 'import { version } from "./version";\nexport default { sources: { demo: { baseURL: `https://v${version}.example` } } };\n';
+const VERSIONED =
+  'import { version } from "./version";\nexport default { sources: { demo: { baseURL: `https://v${version}.example` } } };\n';
 
 function versionModule(version: number, delayMs = 0): string {
-  const delay = delayMs > 0 ? `await new Promise((resolve) => setTimeout(resolve, ${delayMs}));\n` : "";
+  const delay =
+    delayMs > 0 ? `await new Promise((resolve) => setTimeout(resolve, ${delayMs}));\n` : "";
   return `${delay}export const version = ${version};\n`;
 }
 
@@ -101,6 +107,29 @@ afterEach(() => {
 });
 
 describe("createProjectState", () => {
+  it("sends the imports lists anew when a route changed the imports state, and nothing while Studio starts", async () => {
+    const { state } = await versionedProject();
+    const emit = vi.spyOn(io.of("/ui"), "emit");
+
+    state.importsChanged();
+
+    expect(emit.mock.calls.map(([event]) => event)).toEqual(["registry:updated", "scan:sources"]);
+  });
+
+  it("keeps a failure to send the imports lists from the route that changed them, and says so", async () => {
+    const { state } = await versionedProject();
+    vi.spyOn(io.of("/ui"), "emit").mockImplementation(() => {
+      throw new Error("socket gone");
+    });
+
+    expect(() => state.importsChanged()).not.toThrow();
+    expect(console.warn).toHaveBeenCalledWith(
+      "%s",
+      expect.stringContaining("could not send the imports lists"),
+      expect.objectContaining({ message: "socket gone" }),
+    );
+  });
+
   it("a first load that never finishes leaves Studio failed with the timeout, not starting forever", async () => {
     writeFileSync(join(root, "courier.config.ts"), HANGS);
     const uiNamespace = io.of("/ui");
@@ -118,10 +147,17 @@ describe("createProjectState", () => {
     });
     await until(() => statuses().length > 0);
 
-    expect(project.snapshot()).toMatchObject({ starting: false, failure: { code: "CONFIG_LOAD_TIMEOUT" } });
+    expect(project.snapshot()).toMatchObject({
+      starting: false,
+      failure: { code: "CONFIG_LOAD_TIMEOUT" },
+    });
     expect(statuses()).toHaveLength(1);
     const [status] = statuses();
-    expect(status).toMatchObject({ state: "failed", configFile: null, error: { code: "CONFIG_LOAD_TIMEOUT" } });
+    expect(status).toMatchObject({
+      state: "failed",
+      configFile: null,
+      error: { code: "CONFIG_LOAD_TIMEOUT" },
+    });
     expect(isRecord(status) && isRecord(status.error) && status.error.message).toContain(
       "COURIER_CONFIG_LOAD_TIMEOUT_MS",
     );
@@ -189,7 +225,10 @@ describe("fresh()", () => {
       return state.fresh(3_000);
     }, 1_000);
 
-    await expect(edit).rejects.toMatchObject({ name: "ProjectStateError", code: "FRESH_INSIDE_EDIT" });
+    await expect(edit).rejects.toMatchObject({
+      name: "ProjectStateError",
+      code: "FRESH_INSIDE_EDIT",
+    });
     expect(Date.now() - asked).toBeLessThan(1_000);
     await expect(state.fresh(3_000)).resolves.toMatchObject({ settling: false });
   }, 20_000);
@@ -249,7 +288,9 @@ describe("fresh()", () => {
 
     expect(await view).toMatchObject({ settling: false, failure: null });
     expect(versionOf(await view)).toBe(14);
-    const statuses = emit.mock.calls.filter(([event]) => event === "config:status").map(([, payload]) => payload);
+    const statuses = emit.mock.calls
+      .filter(([event]) => event === "config:status")
+      .map(([, payload]) => payload);
     expect(statuses.length).toBeGreaterThan(0);
     expect(statuses.filter((status) => isRecord(status) && status.state !== "loaded")).toEqual([]);
   }, 20_000);

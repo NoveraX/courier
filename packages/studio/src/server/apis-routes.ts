@@ -17,7 +17,7 @@ import { resolveProjectSafe } from "../context";
 import { allowedSpecHosts } from "./allowed-spec-hosts";
 import { fetchSpec } from "./fetch-spec";
 import { registerManageRoutes } from "./manage-routes";
-import type { ProjectReads } from "./project-state/types";
+import type { ProjectImports } from "./project-state/types";
 import { errMsg } from "./registry-helpers";
 import { registerRegistryRoutes } from "./registry-routes";
 import type { RouteApp } from "./route-types";
@@ -34,8 +34,11 @@ import { registerWriteRoutes } from "./write-routes";
 
 /** What the imports routes read the project from. */
 export interface ApisRouteDeps {
-  /** The project Studio runs: the routes read its import declarations, never load their own. */
-  project: ProjectReads;
+  /**
+   * The project Studio runs: the routes read its import declarations, never
+   * load their own, and announce each change they make to the imports state.
+   */
+  project: ProjectImports;
   /** The project root, symlinks resolved: where the imports state lives. */
   projectRoot: string;
 }

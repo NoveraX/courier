@@ -51,10 +51,12 @@ export function registerUpdateFlowRoutes(app: RouteApp, deps: ApisRouteDeps): vo
        the declaration saved meanwhile. */
     void withImportsLock(async () => {
       const declarations = await readDeclarations(project, projectRoot, "act");
-      return handleApplyUpdate(
+      const result = await handleApplyUpdate(
         body as unknown as Parameters<typeof handleApplyUpdate>[0],
         importsSnapshotOf(declarations, projectRoot),
       );
+      if ("success" in result) project.importsChanged();
+      return result;
     }).then(
       (result) => sendResult(res, result),
       (err: unknown) => sendRouteFailure(res, err, "Failed to apply update"),

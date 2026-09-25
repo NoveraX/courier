@@ -52,6 +52,7 @@ function project(overrides: Partial<ProjectState> = {}): ProjectState {
   return {
     snapshot: vi.fn(() => ({ revision: 0, starting: true, running: null, loadedAt: null, failure: null })),
     fresh: vi.fn(async () => ({ revision: 0, starting: true, running: null, loadedAt: null, failure: null, settling: true })),
+    importsChanged: vi.fn(),
     runExclusive: vi.fn(async () => {
       throw new Error("no edit expected");
     }),

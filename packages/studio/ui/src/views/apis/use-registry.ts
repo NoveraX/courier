@@ -10,7 +10,6 @@ import type {
 import type { ApisPageState } from "./apis-page-state";
 import { apisPageState } from "./apis-page-state";
 import {
-  fetchRegistrySources,
   checkSourceUpdates,
   checkAllUpdates,
   removeRegistrySource,
@@ -30,7 +29,6 @@ interface UseRegistryReturn {
   statuses: Record<string, SourceStatusInfo>;
   /** What the page shows, and why Import is refused. */
   page: ApisPageState;
-  refresh: () => Promise<void>;
   checkUpdates: (name: string) => Promise<void>;
   checkAll: () => Promise<void>;
   remove: (name: string) => Promise<void>;
@@ -66,18 +64,6 @@ export function useRegistry(): UseRegistryReturn {
     }
     return { imported: enriched, handWritten: handW };
   }, [scanSources, registrySources]);
-
-  // Manual refresh — re-fetches the registry from the server (for post-import,
-  // post-update flows). Hand-written sources are picked up from the runtime
-  // `binding:snapshot` push.
-  const refresh = useCallback(async () => {
-    try {
-      const reg = await fetchRegistrySources();
-      useStudioStore.getState().setRegistrySources(reg.sources);
-    } catch {
-      // Silently fail — server may not be ready
-    }
-  }, []);
 
   const checkUpdates = useCallback(async (name: string) => {
     setStatuses((prev) => ({
@@ -124,10 +110,11 @@ export function useRegistry(): UseRegistryReturn {
     }
   }, [imported]);
 
+  /* The lists come back from Studio once the import's state is gone. A
+     source the running config still imports stays listed until the config
+     no longer imports it, since Studio still runs it. */
   const remove = useCallback(async (name: string) => {
     await removeRegistrySource(name);
-    const store = useStudioStore.getState();
-    store.setScanSources(store.scanSources.filter((s) => s.name !== name));
     setStatuses((prev) => {
       const next = { ...prev };
       delete next[name];
@@ -144,7 +131,6 @@ export function useRegistry(): UseRegistryReturn {
     handWritten,
     statuses,
     page,
-    refresh,
     checkUpdates,
     checkAll,
     remove,

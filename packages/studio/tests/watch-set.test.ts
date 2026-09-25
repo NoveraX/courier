@@ -3,6 +3,7 @@ import {
   mkdtempSync,
   renameSync,
   rmSync,
+  symlinkSync,
   unlinkSync,
   utimesSync,
   writeFileSync,
@@ -10,7 +11,23 @@ import {
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type * as FileSignatureModule from "../src/server/file-signature";
+
+/* Counts how many times a file is signed, which hashes its bytes. */
+const signing = vi.hoisted(() => ({ count: 0 }));
+
+vi.mock("../src/server/file-signature", async (importOriginal) => {
+  const actual = await importOriginal<typeof FileSignatureModule>();
+  return {
+    ...actual,
+    signatureOf: (path: string) => {
+      signing.count += 1;
+      return actual.signatureOf(path);
+    },
+  };
+});
 
 import { createWatchSet, type WatchSet } from "../src/server/watch-set";
 
@@ -26,6 +43,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
 /** Long enough for a native notification, short enough to keep the suite quick. */
 const SETTLE_MS = 250;
+/** A deadline for a sweep that no save in the test outlasts. */
+const soon = () => Date.now() + 5_000;
 
 /** Collects every path the set reports, so a test can await a specific one. */
 function collector() {
@@ -327,5 +346,191 @@ describe("createWatchSet", () => {
     writeFileSync(created, "export default { sources: {} };\n");
 
     expect(await c.waitFor(created)).toBe(true);
+  });
+
+  it("sweep() reports at once a change still waiting out the debounce, and the later notification of it is dropped", async () => {
+    const file = join(root, "a.ts");
+    writeFileSync(file, "export const v = 1;\n");
+    const c = collector();
+    const set = start({ paths: [file], onChange: c.onChange, debounceMs: 2000 });
+    await sleep(SETTLE_MS);
+
+    /* Restored with the time it was saved at, as `cp -p` or `rsync -t` restore
+       a file: the change is older than the debounce, and its notification
+       still waits the debounce out. */
+    writeFileSync(file, "export const v = 2;\n");
+    const savedAt = new Date(Date.now() - 60_000);
+    utimesSync(file, savedAt, savedAt);
+    await sleep(SETTLE_MS);
+    expect(c.seen).toEqual([]);
+
+    const asked = Date.now();
+    const reported = await set.sweep(soon());
+
+    expect(Date.now() - asked).toBeLessThan(500);
+    expect(reported).toBe(true);
+    expect(c.seen).toEqual([file]);
+    await sleep(2500);
+    expect(c.seen).toEqual([file]);
+  });
+
+  it("sweep() waits for a path changed a moment ago to be still for a debounce, and reports the two-step save once", async () => {
+    const file = join(root, "courier.config.ts");
+    writeFileSync(file, "export default { sources: {} };\n");
+    const c = collector();
+    const set = start({ paths: [file], onChange: c.onChange, debounceMs: 300 });
+    await sleep(SETTLE_MS);
+
+    /* An editor that empties the file, then writes it whole. */
+    writeFileSync(file, "");
+    const sweeping = set.sweep(soon());
+    await sleep(60);
+    expect(c.seen).toEqual([]);
+    writeFileSync(file, "export default { sources: { api: {} } };\n");
+    expect(await sweeping).toBe(true);
+
+    expect(c.seen).toEqual([file]);
+    await sleep(1500);
+    expect(c.seen).toEqual([file]);
+  });
+
+  it("sweep() waits for a file renamed away a moment ago to be written anew, and reports that save once", async () => {
+    const file = join(root, "courier.config.ts");
+    writeFileSync(file, "export default { sources: {} };\n");
+    const c = collector();
+    const set = start({ paths: [file], onChange: c.onChange, debounceMs: 300 });
+    await sleep(SETTLE_MS);
+
+    /* An editor that renames the file away, then writes it anew. */
+    renameSync(file, join(root, "courier.config.ts~"));
+    const sweeping = set.sweep(soon());
+    await sleep(60);
+    expect(c.seen).toEqual([]);
+    writeFileSync(file, "export default { sources: { api: {} } };\n");
+    expect(await sweeping).toBe(true);
+
+    expect(c.seen).toEqual([file]);
+    await sleep(1500);
+    expect(c.seen).toEqual([file]);
+  });
+
+  it("concurrent sweeps share one pass", async () => {
+    const files = ["a.ts", "b.ts", "c.ts"].map((name) => join(root, name));
+    for (const file of files) writeFileSync(file, "export const v = 1;\n");
+    const c = collector();
+    const set = start({ paths: files, onChange: c.onChange, debounceMs: 20 });
+    await sleep(SETTLE_MS);
+    signing.count = 0;
+
+    await Promise.all([set.sweep(soon()), set.sweep(soon()), set.sweep(soon())]);
+    const shared = signing.count;
+    await set.sweep(soon());
+
+    expect(shared).toBe(files.length);
+    expect(signing.count).toBe(files.length * 2);
+    expect(c.seen).toEqual([]);
+  });
+  it("sweep() waits while files are saved one after another, and reports the burst only once the last is written", async () => {
+    const first = join(root, "a.ts");
+    const files = [first, ...["b.ts", "c.ts", "d.ts", "e.ts"].map((name) => join(root, name))];
+    for (const file of files) writeFileSync(file, "export const v = 1;\n");
+    const reports: Array<{ at: number; paths: string[] }> = [];
+    const set = start({ paths: files, onChange: (paths) => reports.push({ at: Date.now(), paths }), debounceMs: 300 });
+    await sleep(SETTLE_MS);
+
+    /* A code generator writing one file after another, each well within the debounce of the last. */
+    writeFileSync(first, "export const v = 2;\n");
+    const sweeping = set.sweep(soon());
+    for (const file of files.slice(1)) {
+      await sleep(100);
+      writeFileSync(file, "export const v = 2;\n");
+    }
+    const lastWrittenAt = Date.now();
+    const reported = await sweeping;
+
+    expect(reported).toBe(true);
+    expect(reports.length).toBeGreaterThan(0);
+    expect(reports.filter(({ at }) => at < lastWrittenAt)).toEqual([]);
+    expect(reports.flatMap(({ paths }) => paths).sort()).toEqual([...files].sort());
+  });
+
+  it("sweep() reports nothing and resolves false when saves still come at its deadline", async () => {
+    const file = join(root, "generated.ts");
+    writeFileSync(file, "export const v = 0;\n");
+    const c = collector();
+    const set = start({ paths: [file], onChange: c.onChange, debounceMs: 300 });
+    await sleep(SETTLE_MS);
+
+    let version = 0;
+    const saving = setInterval(() => {
+      version += 1;
+      writeFileSync(file, `export const v = ${version};\n`);
+    }, 30);
+    try {
+      await sleep(100);
+      const asked = Date.now();
+      const reported = await set.sweep(asked + 700);
+      const tookMs = Date.now() - asked;
+
+      expect(reported).toBe(false);
+      expect(tookMs).toBeGreaterThanOrEqual(400);
+      expect(tookMs).toBeLessThan(1_500);
+      expect(c.seen).toEqual([]);
+    } finally {
+      clearInterval(saving);
+    }
+    expect(await c.waitFor(file)).toBe(true);
+  });
+
+  it("a sweep shared by two callers waits for saves in progress until the later deadline", async () => {
+    const file = join(root, "generated.ts");
+    writeFileSync(file, "export const v = 0;\n");
+    const set = start({ paths: [file], onChange: () => {}, debounceMs: 300 });
+    await sleep(SETTLE_MS);
+
+    let version = 0;
+    const saving = setInterval(() => {
+      version += 1;
+      writeFileSync(file, `export const v = ${version};\n`);
+    }, 30);
+    try {
+      await sleep(100);
+      const asked = Date.now();
+      const early = set.sweep(asked + 100);
+      const late = set.sweep(asked + 1_000);
+
+      expect(await early).toBe(false);
+      expect(Date.now() - asked).toBeGreaterThanOrEqual(700);
+      expect(await late).toBe(false);
+    } finally {
+      clearInterval(saving);
+    }
+  });
+
+  it("a symlink loop at a watched path is signed as unreadable, and a sweep still reports another save", async () => {
+    const loop = join(root, "courier.config.mjs");
+    symlinkSync("courier.config.mjs", loop);
+    const file = join(root, "a.ts");
+    writeFileSync(file, "export const v = 1;\n");
+    const c = collector();
+    const set = start({ paths: [loop, file], onChange: c.onChange, debounceMs: 100 });
+    await sleep(SETTLE_MS);
+
+    writeFileSync(file, "export const v = 2;\n");
+    const reported = await set.sweep(soon());
+
+    expect(reported).toBe(true);
+    expect(c.seen).toEqual([file]);
+  });
+
+  it("a symlink loop created at a watched path is reported as a change", async () => {
+    const loop = join(root, "courier.config.mjs");
+    const c = collector();
+    start({ paths: [loop], onChange: c.onChange, debounceMs: 20 });
+    await sleep(SETTLE_MS);
+
+    symlinkSync("courier.config.mjs", loop);
+
+    expect(await c.waitFor(loop)).toBe(true);
   });
 });

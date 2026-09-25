@@ -29,11 +29,10 @@ import { type LoadedCourierConfig, loadCourierConfig } from "../../src/server/co
 import type { ExclusiveContext, ExclusiveTransaction } from "../../src/server/exclusive-reload";
 import { MocksFileChangedError } from "../../src/server/mocks-edit/mocks-file-changed-error";
 import { applyMocksEdit } from "../../src/server/mocks-edit/apply-mocks-edit";
-import { SLOT_WAIT_MS } from "../../src/server/mocks-edit/edit-timing";
 import type { MocksEditContext } from "../../src/server/mocks-edit/mocks-edit-context";
 import { previewMocksEdit } from "../../src/server/mocks-edit/preview-mocks-edit";
 import type { ReadyOutcome } from "../../src/server/mocks-edit/types";
-import { CONFIG_LOAD_TIMEOUT_MS } from "../../src/server/project-state/budgets";
+import { ACT_BUDGET_MS, CONFIG_LOAD_TIMEOUT_MS } from "../../src/server/project-state/budgets";
 import type { ProjectState } from "../../src/server/project-state/types";
 
 const CACHE = join(__dirname, "../../../../node_modules/.cache/courier-studio-tests");
@@ -96,7 +95,7 @@ async function harness(load: (real: () => Promise<LoadedCourierConfig>) => Promi
   };
   const project: ProjectState = {
     snapshot: () => ({ revision: 1, starting: false, running: current, loadedAt: 0, failure: null }),
-    settled: async () => undefined,
+    fresh: async () => ({ revision: 1, starting: false, running: current, loadedAt: 0, failure: null, settling: false }),
     runExclusive: async <TResult>(transaction: ExclusiveTransaction<TResult>) => {
       await slotFree;
       return transaction(tx);
@@ -322,7 +321,7 @@ describe("applyMocksEdit", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 
     const pending = applyMocksEdit(ctx, body);
-    await vi.advanceTimersByTimeAsync(SLOT_WAIT_MS);
+    await vi.advanceTimersByTimeAsync(ACT_BUDGET_MS);
     const result = await pending;
     release();
     await vi.runAllTimersAsync();

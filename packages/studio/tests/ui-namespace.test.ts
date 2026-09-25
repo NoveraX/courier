@@ -44,6 +44,9 @@ describe("setupUiNamespace", () => {
       snapshot: () => {
         throw new Error("the snapshot could not be read");
       },
+      fresh: async () => {
+        throw new Error("a UI is sent the project as it is, never after catching up");
+      },
     };
     setupUiNamespace({
       uiNamespace,

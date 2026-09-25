@@ -30,16 +30,43 @@ export interface ProjectSnapshot {
   readonly failure: ConfigFailure | null;
 }
 
+/** The project once Studio has caught up with the disk, or given up waiting to. */
+export interface FreshSnapshot extends ProjectSnapshot {
+  /**
+   * Studio could not catch up within the budget — a load or an edit is still
+   * under way, or files are still being saved — and this is the project as
+   * Studio runs it meanwhile, which may be older than what is on disk.
+   */
+  readonly settling: boolean;
+}
+
 /** What a reader of the project may ask for. */
 export interface ProjectReads {
-  /** The project as Studio runs it now. Never loads, never waits. */
+  /**
+   * The project as Studio runs it now. Never loads, never waits: for a push
+   * to a UI, which the next outcome corrects.
+   */
   snapshot(): ProjectSnapshot;
+  /**
+   * The project as Studio runs it once it has caught up with the saves on
+   * disk: after the first load, every watched file is compared with the
+   * disk, and a change is reloaded without waiting out the debounce. Files
+   * still being saved — one save made in two steps, or a burst across files
+   * — are waited for until they are whole, so they are not loaded
+   * half-written; what is queued after that reload is not waited for. It
+   * waits at most `budgetMs`, and then answers with the project as Studio
+   * runs it, `settling` set, as it does while saves never pause.
+   *
+   * @param budgetMs - How long to wait at most
+   * @returns The project, caught up unless `settling`
+   * @throws {ProjectStateError} `FRESH_INSIDE_EDIT` at once when called from
+   *   inside an edit, which holds the chain it would wait for
+   */
+  fresh(budgetMs: number): Promise<FreshSnapshot>;
 }
 
 /** The one owner of the project Studio runs: nothing else loads it for its own use. */
 export interface ProjectState extends ProjectReads {
-  /** Resolves once no load is queued or running, the first load included. */
-  settled(): Promise<void>;
   /**
    * Run an edit of the watched files alone on the reload chain, after the
    * first load and every reload queued before it.

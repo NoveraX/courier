@@ -31,6 +31,12 @@ export interface ReloadQueue {
   forget(paths: readonly string[]): void;
   /** Resolves once nothing is queued or running. */
   settled(): Promise<void>;
+  /**
+   * Resolves once everything queued up to now has run, the first load
+   * included; what is queued later is not waited for, so saves that keep
+   * coming cannot hold it the way they hold `settled`. It never rejects.
+   */
+  tail(): Promise<void>;
   /** Resolves once no task run with `exclusive` is queued or running; reloads may still be. */
   exclusiveSettled(): Promise<void>;
 }
@@ -161,5 +167,14 @@ export function createReloadQueue(
     while (liveEdits.size > 0) await Promise.race([...liveEdits, editsChanged.promise]);
   }
 
-  return { request, exclusive, run, refuseEdits, forget, settled, exclusiveSettled };
+  return {
+    request,
+    exclusive,
+    run,
+    refuseEdits,
+    forget,
+    settled,
+    tail: () => tail,
+    exclusiveSettled,
+  };
 }

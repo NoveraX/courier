@@ -26,6 +26,16 @@ export interface ChangeLedger {
    * is dropped.
    */
   markChanged(changes: ReadonlyMap<string, FileSignature>): void;
+  /**
+   * Report these paths now, together with every change still waiting, even
+   * when there are none of the first; each is taken as seen in the state
+   * given, so a notification of that same state is dropped.
+   */
+  report(changes: ReadonlyMap<string, FileSignature>): void;
+  /** Each of these paths whose state now differs from the one last reported, with that state. */
+  unreported(paths: readonly string[]): Map<string, FileSignature>;
+  /** The paths whose change is waiting out the debounce. */
+  waiting(): string[];
   /** Take a path as seen in its present state, dropping a change waiting for it. */
   acknowledge(path: string): void;
   /** Stop tracking a path. */
@@ -73,6 +83,15 @@ export function createChangeLedger({ debounceMs, onChange }: ChangeLedgerOptions
     timer = setTimeout(flush, debounceMs);
   }
 
+  function report(changes: ReadonlyMap<string, FileSignature>): void {
+    if (stopped) return;
+    for (const [path, signature] of changes) {
+      reportedAt.set(path, signature.key);
+      pending.add(path);
+    }
+    flush();
+  }
+
   return {
     baseline(path, signature = signatureOf(path)) {
       if (!stopped) reportedAt.set(path, signature.key);
@@ -86,13 +105,19 @@ export function createChangeLedger({ debounceMs, onChange }: ChangeLedgerOptions
       schedule();
     },
     markChanged(changes) {
-      if (stopped || changes.size === 0) return;
-      for (const [path, signature] of changes) {
-        reportedAt.set(path, signature.key);
-        pending.add(path);
-      }
-      flush();
+      if (changes.size > 0) report(changes);
     },
+    report,
+    unreported(paths) {
+      const changes = new Map<string, FileSignature>();
+      if (stopped) return changes;
+      for (const path of paths) {
+        const signature = signatureOf(path);
+        if (reportedAt.get(path) !== signature.key) changes.set(path, signature);
+      }
+      return changes;
+    },
+    waiting: () => [...pending],
     acknowledge(path) {
       if (stopped) return;
       reportedAt.set(path, signatureOf(path).key);

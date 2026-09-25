@@ -33,14 +33,20 @@
  * is loaded once more, and a newer outcome is never replaced. When it fails
  * after all, what it threw replaces the timeout on the same terms, as any
  * failed load's outcome would, so the real cause is reported.
+ *
+ * A reader that must see the saves already on disk catches up: the watched
+ * files are compared with the disk at once rather than after the debounce,
+ * and what that queues is waited for — but not what is queued after it.
+ * Saves still being written are waited for until the reader's deadline;
+ * past it, the reader is told Studio has not caught up.
  */
 
 import { createLogger } from "@noverax/courier";
 import { armWatchSet } from "./arm-watch-set";
 import { createChainLoad } from "./chain-load";
-import { type LoadedCourierConfig, loadCourierConfig } from "./config-loader";
-import { ConfigLoaderError } from "./config-loader-errors";
-import { type ExclusiveTransaction, exclusiveContext } from "./exclusive-reload";
+import type { LoadedCourierConfig } from "./config-loader";
+import { createEditRunner } from "./edit-runner";
+import type { ExclusiveTransaction } from "./exclusive-reload";
 import { inputsOnDisk } from "./inputs-on-disk";
 import { CONFIG_LOAD_TIMEOUT_MS } from "./project-state/budgets";
 import type { ProjectInputs } from "./read-project-inputs";
@@ -70,6 +76,20 @@ export interface ConfigWatcher {
   stop(): void;
   /** Resolves once no load is queued or running, the first load included. */
   settled(): Promise<void>;
+  /**
+   * Resolves once Studio runs what was on disk when it was called: after the
+   * first outcome, every watched file is compared with the disk and each
+   * that changed is reported at once (see `WatchSet.sweep`), and then what
+   * the chain holds at that moment runs — a reload of those files included,
+   * but nothing queued after it, so saves that keep coming do not hold it.
+   * It never rejects. Called from inside an edit it would wait for that edit.
+   *
+   * @param until - How long saves still being written are waited for, in epoch milliseconds
+   * @returns `true` once caught up; `false` when saves were still being
+   *   written at `until`, or the files could not be compared with the disk,
+   *   so Studio is not known to run what is on disk
+   */
+  catchUp(until: number): Promise<boolean>;
   /** Resolves once no edit run with `runExclusive` is queued or running. */
   editsSettled(): Promise<void>;
   /**
@@ -93,11 +113,6 @@ export interface ConfigWatcher {
     timeoutMs: number,
     dropped?: AbortSignal,
   ): Promise<TResult>;
-}
-
-/** What an edit is refused with once Studio is stopping. */
-function stopping(): ConfigLoaderError {
-  return new ConfigLoaderError("CONFIG_WATCHER_STOPPED", "Studio is stopping, so it made no edit");
 }
 
 /** A refused watch leaves the poll layer running, so say so rather than throw. */
@@ -142,6 +157,8 @@ export function startConfigWatcher(deps: ConfigWatcherDeps): ConfigWatcher {
     onLateFailure: (error, gaveUp) => late(gaveUp, () => fail(gaveUp.depHashes ?? null, error)),
   });
   const queue = createReloadQueue(reload, load);
+  /* The chain holds nothing but the first load yet. */
+  const started = queue.tail();
   const watchSet = createWatchSet({
     paths: [],
     onChange: (changed) => queue.request(changed),
@@ -185,23 +202,32 @@ export function startConfigWatcher(deps: ConfigWatcherDeps): ConfigWatcher {
     });
   }
 
+  async function catchUp(until: number): Promise<boolean> {
+    await started;
+    try {
+      if (!(await watchSet.sweep(until))) return false;
+    } catch (error) {
+      log.warn("Studio could not compare the files it watches with the disk", error);
+      return false;
+    }
+    await queue.tail();
+    return true;
+  }
+
   async function reload(changed: string[]): Promise<void> {
     if (stopped) return;
     deps.watcherStatus?.emitChange("api", changed);
     await load();
   }
 
-  const host = {
+  const edits = createEditRunner({
+    projectRoot: deps.projectRoot,
+    queue,
+    watchSet,
     current: deps.current,
-    load: () => loadCourierConfig(deps.projectRoot),
     apply,
-    acknowledge: (acknowledged: readonly string[]) => {
-      watchSet.acknowledge(acknowledged);
-      queue.forget(acknowledged);
-    },
-    reloadAfter: (paths: readonly string[]) => queue.request(paths),
     isStopped: () => stopped,
-  };
+  });
 
   return {
     stop(): void {
@@ -209,9 +235,9 @@ export function startConfigWatcher(deps: ConfigWatcherDeps): ConfigWatcher {
       watchSet.stop();
     },
     settled: queue.settled,
+    catchUp,
     editsSettled: queue.exclusiveSettled,
-    refuseEdits: () => queue.refuseEdits(stopping),
-    runExclusive: (transaction, timeoutMs, dropped) =>
-      queue.exclusive(() => transaction(exclusiveContext(host, timeoutMs)), dropped),
+    refuseEdits: edits.refuseEdits,
+    runExclusive: edits.runExclusive,
   };
 }

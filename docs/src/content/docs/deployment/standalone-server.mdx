@@ -244,8 +244,18 @@ import { sources } from "./api/sources"
 export { sources }
 ```
 
+The server loads this file in production, so keep development tools out of it.
+Studio's mock servers, for one, are declared in `courier.mocks.ts` beside it,
+which only Studio reads. A mocks file that reads a source from the config, as
+`courierConfig.sources.api` after `import courierConfig from "./courier.config"`
+(the form Studio's mock wizard writes), needs a config whose default export is
+`defineConfig({ sources })`; beside a config like the one above, which exports
+`sources` by name only, that import does not type-check, so import the source
+from `./api/sources` instead.
+
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--config` | (required) | Path to config file |
-| `--port` | `3001` | Server port |
-| `--host` | `localhost` | Server host |
+| `--config` | `courier.config.*` in the working directory | Path to config file, relative to the working directory |
+| `--port` | `server.port` from the config, then `3001` | Server port |
+| `--host` | `server.host` from the config, then `localhost` | Server host |
+| `--allowed-origins` | `server.allowedOrigins` from the config | Comma-separated origins browser apps may call from |

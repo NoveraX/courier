@@ -5,9 +5,21 @@ import type { MockServerConfig, MockServerDefinition } from "./types";
  * Define a mock server for Studio to run.
  *
  * Declare it in `courier.mocks.ts` with `defineMocks`; Studio lists it, and
- * starts it when `autoStart` is set or when you start it from the UI. A
- * `port` is held exactly — Studio reports it when it is taken; without one,
- * Studio assigns a port from `studio.mockBasePort` and keeps it for the key.
+ * starts it when `autoStart` is set or when you start it from the UI. Each
+ * mock runs in a process of its own, which loads the mocks file with
+ * Studio's loader and serves that one mock.
+ *
+ * `source` is the source object the config declares: import it from where
+ * the config does, or read it from the config, as in
+ * `source: courierConfig.sources.api` — which needs a config whose default
+ * export is `defineConfig({ sources })`. Studio loads the config and the
+ * mocks file as one module graph, so either way it is the very same object.
+ *
+ * A `port` is held exactly — Studio reports it when it is taken. Without
+ * one, Studio assigns the key a port from `studio.mockBasePort`; the mock
+ * listens on the next free port above it when another process holds it as
+ * the mock starts; the key is assigned another when a mock declares that
+ * port, and can get another after Studio restarts. Set `port` to keep one.
  *
  * `overrides` and `scenarios` are checked against `source`: `mock` takes the
  * source's group and endpoint names, and the response each endpoint returns.

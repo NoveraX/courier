@@ -35,18 +35,29 @@ type StartMessage = Extract<ParentMessage, { type: "start" }>;
 /**
  * Serve the mock Studio asks for over IPC, until Studio stops it or goes away.
  *
- * The worker listens on exactly the port Studio sends: Studio chose it, and
- * keeps the ports other mocks declared out of its way. A stop is honoured at
- * any point, also while the mocks file is still loading.
+ * Call it in the process Studio forks for a mock. Studio's start message
+ * names the mocks file, the mock's key, the port and where Studio keeps
+ * transforms; the worker loads the definition with `loadDefinition`, starts
+ * the server and reports it ready, and a definition that is not a
+ * `defineMockServer()` result, or has no source, is reported as a fatal
+ * error, which ends the process. The worker listens on exactly the port Studio sends: Studio chose
+ * it, and keeps the ports other mocks declared out of its way. A stop is
+ * honoured at any point, also while the mocks file is still loading, and
+ * ends the process.
  *
- * @param loadDefinition - Loads a mock definition from the mocks file.
+ * @param loadDefinition - Loads the definition declared under a key of the mocks file
+ * @returns Nothing; the worker runs until Studio stops it or disconnects
  *
  * @example
  * ```ts
  * // mock-worker.ts — the entry Studio forks
  * import { runMockWorker } from "@noverax/courier-mock/managed";
+ * import { loadCourierMocksFile } from "@noverax/courier-studio-core/config";
  *
- * runMockWorker(async (mocksFile, mockKey) => (await loadMocks(mocksFile))[mockKey]);
+ * runMockWorker(async (mocksFile, mockKey) => {
+ *   const { mocks } = await loadCourierMocksFile(mocksFile);
+ *   return Object.hasOwn(mocks, mockKey) ? mocks[mockKey] : undefined;
+ * });
  * ```
  */
 export function runMockWorker(loadDefinition: MockDefinitionLoader): void {

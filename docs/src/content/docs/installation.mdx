@@ -59,6 +59,37 @@ Nothing else to configure. `@noverax/courier-studio-core/runtime` brings its own
 socket client and loads it only outside production, so the connection to the
 Studio dev server costs a production build nothing.
 
+### Mock servers
+
+Studio can also run mock servers of your sources. Add the mock package and the
+server it runs on, for development only — leave out any your app already lists
+under `dependencies`:
+
+```bash
+npm install --save-dev @noverax/courier-mock hono @hono/node-server
+```
+
+Declare the mocks in `courier.mocks.ts`, beside `courier.config.ts`, or let
+Studio's mock wizard write the file for you:
+
+```ts title="courier.mocks.ts"
+import { defineMocks, defineMockServer } from "@noverax/courier-mock"
+import courierConfig from "./courier.config"
+
+export default defineMocks({
+  apiMock: defineMockServer({ source: courierConfig.sources.api, autoStart: true }),
+})
+```
+
+Reading the source from the config this way, as Studio's wizard writes it,
+needs a config whose default export is `defineConfig({ sources })`. With a
+config that exports `sources` by name only, import the source from where the
+config does instead: a default import of that config does not type-check.
+
+Only Studio reads `courier.mocks.ts`. Your app loads `courier.config.ts` in
+production too, where development packages are not installed, so mocks are
+never declared there: `courier.config.ts` has no `mocks` key.
+
 <Callout variant="info" title="Install only what you use">
 All framework packages and integrations are optional. The core `@noverax/courier` package works standalone for direct API calls from any runtime.
 </Callout>

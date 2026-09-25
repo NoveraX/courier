@@ -16,7 +16,7 @@
 
 ## Overview
 
-Courier Studio is a development server with a web UI: a request inspector, an endpoint explorer, an API playground, and more. You run it next to your app, and your app connects to it — the server side through `attachRuntime()`, the browser side through one of the build integrations below.
+Courier Studio is a development server with a web UI: a request inspector, an endpoint explorer, an API playground, mock servers, and more. You run it next to your app, and your app connects to it — the server side through `attachRuntime()`, the browser side through one of the build integrations below.
 
 <br />
 
@@ -38,7 +38,7 @@ npx courier-studio
 
 Studio listens on `http://localhost:6280`, or on the `studio.host` and `studio.port` of your `courier.config.ts`. Server runtimes and the build plugins read the same block, so moving Studio there moves them with it. Flags: `--port`, `--host`, `--cwd` (project root), `--open` (open a browser), `--version`. Studio keeps its working files — imported API state, saved sessions — in `.courier/`, which ignores itself in git.
 
-Studio loads `courier.config.ts` again whenever it or a module it imports is saved. A load that takes longer than 20 s — a config that awaits a database connection at top level, say — is reported as failed with `CONFIG_LOAD_TIMEOUT`, and Studio keeps running what it ran. If that load ends later and nothing newer has loaded since, Studio takes how it ended: it runs the config when none of its files changed meanwhile, and reports the real error when it failed. Studio reads its address from the config before it listens, under the same limit; a config that takes longer is not waited for, and Studio listens where its flags or the defaults say. Start Studio with `COURIER_CONFIG_LOAD_TIMEOUT_MS` set to a number of milliseconds to give a slow config longer.
+Studio loads `courier.config.ts` from the project root, with the `courier.mocks.ts` beside it, and loads them again whenever either one, or a module either imports, is saved: see [How Studio loads the project](#how-studio-loads-the-project).
 
 Studio has no authentication. It answers only its own page and the apps running on this machine, so on the default `localhost` nothing else can reach it; bound to the network (`--host 0.0.0.0`), anyone on that network can use it.
 
@@ -129,7 +129,120 @@ Call it once at startup — from `instrumentation.ts` in Next.js, a Nitro plugin
 
 ## Mock servers
 
-Declare mock servers in `courier.mocks.ts`, beside `courier.config.ts`, with `defineMocks` and `defineMockServer` from [`@noverax/courier-mock`](../mock/README.md) — a development dependency, installed with `hono` and `@hono/node-server` — and Studio lists and runs them, reporting any failure in its terminal and on the mock's status in the Mocks view. Only Studio reads that file, so the config the app loads in production never imports the mock package. `studio.mockBasePort` sets where the ports of mocks that name none begin.
+Studio runs the mock servers declared in `courier.mocks.ts`, beside `courier.config.ts`. `defineMocks` and `defineMockServer` come from [`@noverax/courier-mock`](../mock/README.md), a development dependency installed with the server it runs on:
+
+```bash
+npm install --save-dev @noverax/courier-mock hono @hono/node-server
+```
+
+```ts
+// courier.mocks.ts
+import { defineMocks, defineMockServer } from "@noverax/courier-mock"
+import courierConfig from "./courier.config"
+
+export default defineMocks({
+  apiMock: defineMockServer({
+    source: courierConfig.sources.api,
+    port: 7010,
+    seed: { count: 50 },
+    autoStart: true,
+  }),
+})
+```
+
+Each key names a mock in Studio, and `source` is the source it serves, here read from the config. `port`, `seed` (20 records per collection unless set) and `autoStart` (off unless set) are optional, as are overrides, scenarios and the rest the mock package's README describes.
+
+Reading the source from the config, as above and as Studio's wizard writes it, needs a config whose default export is `defineConfig({ sources })`. A config that exports `sources` by name only, as the standalone server also accepts, loads in Studio, but a default import of it does not type-check; import the source from where that config does instead.
+
+The mocks have a file of their own because `courier.config.ts` is also loaded in production — by the standalone server, and by `attachRuntime()` — where the mock package is not installed. Only Studio reads `courier.mocks.ts`. `courier.config.ts` has no `mocks` key: `defineConfig` does not type-check with one, and Studio reads mocks from nowhere else.
+
+- **File names.** Studio looks in the project root for `courier.mocks.ts`, `.mts`, `.cts`, `.js`, `.mjs` and `.cjs`, in that order, and loads the first it finds. A TypeScript file loads as it is, with extensionless imports and tsconfig path aliases. Studio loads it together with the config, as one module graph, so a module both import runs once and a mock holds the very source object the config declares.
+- **A mocks file that does not load** — a syntax error, an import that cannot be resolved, no default export — leaves the config and its sources working, and the mocks keep serving the definitions that loaded last. Studio's terminal logs why, and a banner above the Mocks view says so until the file loads again.
+- **Workers.** Each running mock is a process of its own that Studio starts. It loads `courier.mocks.ts` with Studio's loader, reusing the transforms Studio keeps (see [How Studio loads the project](#how-studio-loads-the-project)), and serves that one mock; its request log and whatever it prints reach Studio's terminal. Saving the mocks file, the config or a module either imports restarts a running mock with the new definition.
+- **Ports.** A `port` is held exactly: while another process holds it, the mock does not start, and Studio says why. A mock without one is assigned a port from `studio.mockBasePort` (7001 unless set): the next one up that no other mock has been assigned or declares. Studio only counts up, so a port a removed mock had is not assigned again. The assigned port stays with the key across the mock's restarts and edits of the files, with two exceptions: when another process holds it as the mock starts, the mock listens on the next free port above it, and when a mock declares that port, the key is assigned another. After Studio restarts, ports are assigned afresh, so the mock can get another. Set `port` to keep one. `courier-studio` reads `studio.mockBasePort` when it starts; [`createStudioServer()`](#programmatic) takes its `mockBasePort` option instead.
+
+### Add mocks from Studio
+
+**Add mock server** in the Mocks view opens a wizard: pick the sources to mock, set each mock's key, its port — assigned by Studio or fixed — its records per collection and whether it starts with Studio, then review. Studio shows the exact change to `courier.mocks.ts` as a diff, with what the diff does not show — that it creates the file, that running mocks restart, that a port is taken or assigned — and writes it on one click. It creates `courier.mocks.ts` when there is none (`courier.mocks.mts` beside a `courier.config.mts`), and changes an existing file only by inserting text: the new entries in the object `defineMocks` takes, and the imports they need. A key another mock has, in any letter case, a port that is Studio's own or that another mock declares, or a source the config does not declare is marked on its field instead. A port Studio assigned to another mock may be taken: the review warns that the other mock moves to another port. **Add mock server** is turned off, and says why, while Studio's first load of `courier.config` runs, while the config does not load, and while it is missing. During a later reload it stays on: the wizard waits for the reload before it plans the change, and answers `STUDIO_BUSY` when the reload outlasts that wait.
+
+Studio then loads the edited files and runs them only if they are the edit it meant: the mocks file loads, each new mock is a `defineMockServer()` definition serving the config's source, no mock declared before is gone, and the config's sources are unchanged. Otherwise it puts the file back, or removes the file it created, keeps running what it ran, and shows why, with the lines to add by hand once the cause is fixed. If the file was saved in the meantime, Studio keeps that save, and lists the lines it added for you to remove; so it does when it cannot put the file back. A save between the review and the click is caught too: Studio shows the change again, planned against the file as it stands.
+
+When Studio will not edit the file itself, it shows the lines to add by hand — or the whole file to create — with the reason. For the first five reasons below, the wizard plans the change again by itself when the project changes, or on **Check again**.
+
+| Code | Studio says |
+|---|---|
+| `STUDIO_STARTING` | Studio is still loading courier.config; try again in a moment. |
+| `STUDIO_BUSY` | Studio is still loading courier.config; try again in a moment. On the click, once it has waited 5 s longer than one load may take: Studio is still loading courier.config after *25 s*, so it did not change anything. Try again once it has loaded. |
+| `CONFIG_LOAD_FAILING` | courier.config does not load right now (*error*). Fix that first; Studio adds mocks only beside a config it can load. |
+| `MOCKS_LOAD_FAILING` | *courier.mocks.ts* does not load right now (*error*). Fix that first. |
+| `MOCKS_CHANGED_SINCE_LOAD` | *courier.mocks.ts* changed since Studio loaded it. Studio plans the edit once it has reloaded. |
+| `NO_CONFIG` | There is no courier.config in the project. Declare your sources there first. |
+| `CONFIG_SHADOWED` | *courier.config.js* sits beside *courier.config.ts*, so the import of "*./courier.config*" in *courier.mocks.ts* would load *courier.config.js*, not *courier.config.ts*, which Studio loads. Delete or move *courier.config.js* — most likely compiled output — then ask again. |
+| `MOCKS_JAVASCRIPT` | *courier.mocks.js* is JavaScript. Studio writes ES imports named as TypeScript resolves them, which a CommonJS file cannot take and Node does not always resolve, so it edits TypeScript mocks files only. |
+| `MOCKS_IS_LINK` | *courier.mocks.ts* is a symbolic link. Studio saves an edit by replacing the file, which would replace the link with a copy, so Studio edits only a regular file. |
+| `MOCKS_NOT_REGULAR` | *courier.mocks.ts* is a directory, so Studio cannot edit it as a mocks file. |
+| `MOCKS_HARD_LINKED` | *courier.mocks.ts* has *2* hard links. Studio saves an edit by replacing the file, which would part it from its other names, so it leaves the file to you. |
+| `MOCKS_NOT_OWNED` | *courier.mocks.ts* belongs to user *501*, but Studio runs as user *502*. An edited file would belong to user *502*, so Studio leaves it to its owner. |
+| `MOCKS_NOT_WRITABLE` | Studio may not write *courier.mocks.ts* (*EACCES*). Studio does not edit a file that is read-only to it. |
+| `MOCKS_TOO_LARGE` | *courier.mocks.ts* is *n* bytes, more than the 1048576 bytes (1 MiB) Studio edits. |
+| `MOCKS_GENERATED` | Line *n* of *courier.mocks.ts* marks the file as generated, so an edit would be lost when it is generated again. Change what generates it instead. (`@generated` or `DO NOT EDIT` in its first five lines.) |
+| `NOT_UTF8` | *courier.mocks.ts* is not valid UTF-8 text. Studio edits only text it can read in full, so it leaves this file as it is. |
+| `PARSE_ERROR` | *courier.mocks.ts* does not parse: *problem* |
+| `MOCKS_COMMONJS` | *courier.mocks.ts* exports with *module.exports* (line *n*); Studio edits only a mocks file that is an ES module. |
+| `MOCKS_NOT_LITERAL` | *courier.mocks.ts* does not export an object literal Studio can add to. Or it names what the file exports instead: the result of another call than `defineMocks`, more than one default export, a type, a variable not declared with `const`, or a getter, setter or method among the mocks. |
+| `MOCKS_KEYS_HIDDEN` | *courier.mocks.ts* (line *n*) spreads another object into the mocks, so Studio cannot see every key. Or a computed key, `__proto__`, or keys declared outside the object Studio would add to. |
+| `IMPORT_NAME_TAKEN` | *courier.mocks.ts* already declares defineMockServer on line *n*, so Studio cannot import defineMockServer from @noverax/courier-mock under that name. |
+| `MOCK_PACKAGE_UNLOADABLE` | Studio could not load @noverax/courier-mock in this project: *reason*. Install it with *npm install --save-dev @noverax/courier-mock hono @hono/node-server*, then ask again. (The command follows the project's lockfile.) |
+| `WRITE_FAILED` | Studio could not write *courier.mocks.ts* (*error*). |
+| `INTERNAL_PLAN_REJECTED` | Studio could not verify its edit of *courier.mocks.ts* (*problem*), so it changed nothing. |
+| `NOT_LOCAL_PEER` | Studio edits project files only for a browser on this machine. Add the mocks to your mocks file by hand, or open Studio on the machine it runs on. |
+
+<br />
+
+## How Studio loads the project
+
+Studio loads `courier.config.*` from its project root — the working directory, or `--cwd` — and `courier.mocks.*` beside it, together. It watches both, and every module of the project they import, and loads them again when one is saved; a config or mocks file created under another of its names is picked up too. Every load — the first, each reload, and each edit Studio makes to `courier.mocks.ts` — runs on one chain, one at a time and in order, and a save made while a load runs is loaded once it ends. A Studio page that opens, reconnects or reloads is sent what Studio already runs, so it loads nothing.
+
+While `courier.config` does not load, or after it is deleted, Studio keeps running the sources it loaded last, and says so:
+
+- The APIs page names the file — with the loader's message when it does not load — and the time the sources it shows were loaded. A config that has never loaded gets its message instead of sources, and a project without one is told to create `courier.config.ts`.
+- The status bar shows `config error` or `config deleted` on every page, with the details as its title.
+- **Import API** and **Add mock server** are turned off, and say why.
+- A request that writes an import's files, or cleans up after one, is refused with `{ error, code }`: 409 `CONFIG_NOT_LOADING` or `CONFIG_MISSING` until the config is fixed or created, and 503 `STUDIO_STARTING` or `CONFIG_RELOADING` while a load is still under way. Removing an import does not need the config to load.
+
+One load may take 20 s. A load that takes longer — a config that awaits a database connection at top level, say — fails with `CONFIG_LOAD_TIMEOUT`, and Studio keeps running what it ran. The load itself goes on, since nothing can stop a module's evaluation. If it ends while its failure is still Studio's latest outcome, Studio takes how it ended: it runs the config when none of the files it read has changed since, loads it again when one has, and reports the real error when it failed. Until they end, loads given up keep their modules in memory; Studio warns at every fifth one still running, and a restart frees them. Studio reads its address from the config before it listens, under the same limit; a config that takes longer is not waited for, and Studio listens where its flags or the defaults say.
+
+Every load evaluates the config, the mocks file and the TypeScript modules they import again, so an edit to any of them is seen at once. What Studio reuses is each module's transform, while its bytes stay the same. It keeps those in `.cache/courier/transform` in the nearest `node_modules` at or above the project root, so the next start — and each mock's worker, and a build plugin reading Studio's address — transforms only what changed. Studio creates the directory with mode 0700 and deletes entries that have gone unused for 30 days. It keeps transforms in memory only, and logs why at debug level, when there is no `node_modules` (as with Yarn Plug'n'Play), when `COURIER_TRANSFORM_CACHE` turns the directory off, and on POSIX when `node_modules` or its `.cache` is a symbolic link or belongs to another user, or `courier` or `transform` in it is a link, belongs to another user or is writable by its group or others: the files there are code Studio runs. It never uses the system's temporary directory instead.
+
+A module Node runs itself stays as Node first ran it until Studio restarts, so an edit to it is seen only then: a JavaScript module the config or the mocks file imports — `.mjs`, `.cjs` or `.js` — and any module other than JSON that a CommonJS config or mocks file loads with `require()`, TypeScript included.
+
+| Variable | Unset | Set |
+|---|---|---|
+| `COURIER_CONFIG_LOAD_TIMEOUT_MS` | One load may take 20 s. | A whole number of milliseconds, from 1 to 86400000, gives a slow project longer. Read when Studio starts; any other value is ignored with a warning, in the terminal and the startup banner. |
+| `COURIER_TRANSFORM_CACHE` | Transforms are kept in `node_modules/.cache/courier/transform`. | `0`, `false` or `off`, in any case, keeps them in memory only. |
+
+<br />
+
+## Specifications on a private network
+
+**Import API** and the update checks fetch a specification by URL on your behalf, so Studio does not reach into a network you could not see from your own browser. It connects to public addresses, and to this machine when the URL you gave points there — a specification your own dev server serves — following redirects as long as every hop stays on this machine. It reaches a host on a private network, or this machine once any hop has been elsewhere, only when `studio.allowedSpecHosts` in `courier.config.ts` names that host:
+
+```ts
+// courier.config.ts
+import { defineConfig } from "@noverax/courier/config"
+import { api } from "./src/api"
+
+export default defineConfig({
+  sources: { api },
+  studio: { allowedSpecHosts: ["gitlab.internal", "10.0.0.7:8080"] },
+})
+```
+
+- Studio reads the list only when a fetch would reach such a host, from `courier.config` as it is on disk at that moment: a host a save has just added or removed counts.
+- While `courier.config` does not load, no private host is reached, not even one the last config that loaded named: the request is refused with 409 `CONFIG_NOT_LOADING`, and with 503 while Studio is still loading the config. A project without a config is told to create one and name the host there.
+- List hosts literally. An entry is the host the URL names, in any case — `gitlab.internal` allows it on any port, `10.0.0.7:8080` on that port only — and an IPv6 address may be written with or without brackets. A URL that names no port has its scheme's default, so `gitlab.internal:443` allows `https://gitlab.internal`. A host computed from something Studio does not watch, such as an environment variable or a file the config reads, is taken as of the last load, and one computed in a module Node runs itself as of the last time Node ran it.
+- `0.0.0.0` and `::`, which mean every interface, are never reached, even when listed.
+- Every hop is checked as it connects: a host name is resolved once, every address it resolves to must pass, and the connection goes to one of those; a redirect is followed only once its target passes the same check, up to five redirects.
 
 <br />
 

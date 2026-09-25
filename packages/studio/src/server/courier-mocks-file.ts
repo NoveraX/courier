@@ -1,10 +1,11 @@
 import { realpathSync } from "node:fs";
-import { createLogger } from "@noverax/courier";
 import { findMocksFile, readMocksExport } from "@noverax/courier-studio-core/config";
+import { errnoCode } from "./errno-code";
 import type { EvaluatedCourierFiles } from "./evaluate-courier-files";
-import { hashFile } from "./file-hash";
-
-const log = createLogger("Studio");
+import { UNREADABLE } from "./file-content-hash";
+import { hashStillOnDisk } from "./hash-still-on-disk";
+import type { ProjectInputs } from "./read-project-inputs";
+import { readWatchedBytes } from "./read-watched-bytes";
 
 /** The project's `courier.mocks.*`, as far as it loaded. */
 export interface LoadedCourierMocks {
@@ -18,33 +19,58 @@ export interface LoadedCourierMocks {
   error: unknown | null;
 }
 
-/** Where the mocks file is, found before anything is loaded. */
-export interface LocatedCourierMocks {
+/** Where the mocks file is, found before anything is read. */
+export interface FoundCourierMocks {
   /** The path as found in the project root; `null` when there is none. */
   path: string | null;
   /** The path with links resolved; `null` when absent or a link to nothing. */
   file: string | null;
-  /** sha256 of the bytes before loading, compared afterwards. */
+}
+
+/** The mocks file as the load read it before evaluating anything. */
+export interface LocatedCourierMocks extends FoundCourierMocks {
+  /** sha256 of the bytes read before loading, compared afterwards. */
   hashBefore: string | null;
   /** Why the file cannot be read, when it cannot; it is then not loaded. */
   unreadable: unknown | null;
 }
 
 /**
- * Find `courier.mocks.*` in the project root and hash it, before loading.
+ * Find `courier.mocks.*` in the project root, without reading it.
  *
  * @param root - The project root, symlinks resolved
- * @returns The file's path as found and as resolved, and its hash
+ * @returns The file's path as found and as resolved
+ * @example
+ * ```ts
+ * const found = findCourierMocks(root);
+ * ```
  */
-export function locateCourierMocks(root: string): LocatedCourierMocks {
+export function findCourierMocks(root: string): FoundCourierMocks {
   const path = findMocksFile(root);
-  const file = path === null ? null : realpathIfPresent(path);
-  if (file === null) return { path, file, hashBefore: null, unreadable: null };
-  try {
-    return { path, file, hashBefore: hashFile(file), unreadable: null };
-  } catch (unreadable) {
-    return { path, file, hashBefore: null, unreadable };
-  }
+  return { path, file: path === null ? null : realpathIfPresent(path) };
+}
+
+/**
+ * Take the mocks file as the load's one read before evaluating found it: the
+ * hash that read recorded is the one the loaded file is compared with, so no
+ * save can fall between two reads and go unnoticed.
+ *
+ * @param found - What {@link findCourierMocks} found
+ * @param inputs - What the load read before evaluating, the mocks file among it
+ * @returns The file with the hash read, or why it cannot be read
+ * @example
+ * ```ts
+ * const mocks = locateCourierMocks(found, readProjectInputs(names, configFile, found.file));
+ * ```
+ */
+export function locateCourierMocks(
+  found: FoundCourierMocks,
+  inputs: ProjectInputs,
+): LocatedCourierMocks {
+  if (found.file === null) return { ...found, hashBefore: null, unreadable: null };
+  const hashBefore = inputs.get(found.file) ?? null;
+  if (hashBefore !== UNREADABLE) return { ...found, hashBefore, unreadable: null };
+  return { ...found, hashBefore: null, unreadable: whyUnreadable(found.file) };
 }
 
 /**
@@ -55,6 +81,10 @@ export function locateCourierMocks(root: string): LocatedCourierMocks {
  * @param located - What {@link locateCourierMocks} found before the load
  * @param evaluated - What loading the config and the mocks file produced
  * @returns The mocks Studio runs, or the reason it has none
+ * @example
+ * ```ts
+ * const mocks = readCourierMocks(located, await evaluateCourierFiles(configFile, located.file, cache));
+ * ```
  */
 export function readCourierMocks(
   located: LocatedCourierMocks,
@@ -75,8 +105,7 @@ export function readCourierMocks(
       error: new Error(`${file} cannot be read: ${reason}`, { cause: unreadable }),
     };
   }
-  const contentHash =
-    hashBefore !== null && hashIfReadable(file) === hashBefore ? hashBefore : null;
+  const contentHash = hashStillOnDisk(file, hashBefore);
   if (evaluated.mocksError !== null)
     return { file, entries: {}, contentHash, error: evaluated.mocksError };
   try {
@@ -91,22 +120,22 @@ export function readCourierMocks(
   }
 }
 
-/* Only compared with the hash taken before the load: a file that turned
-   unreadable meanwhile has changed, and its hash is then unknown. */
-function hashIfReadable(file: string): string | null {
+/* The read before the load failed; reading once more tells why. The file is
+   not evaluated either way, and a read that now succeeds means it changed. */
+function whyUnreadable(file: string): unknown {
   try {
-    return hashFile(file);
+    readWatchedBytes(file);
   } catch (error) {
-    log.debug(`${file} could not be read again after it loaded`, error);
-    return null;
+    return error;
   }
+  return new Error("it changed while Studio was reading it");
 }
 
 function realpathIfPresent(path: string): string | null {
   try {
     return realpathSync(path);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if (errnoCode(err) === "ENOENT") return null;
     throw err;
   }
 }

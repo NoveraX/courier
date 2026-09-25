@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   mkdirSync,
   mkdtempSync,
@@ -93,6 +94,8 @@ function slowModule(file: string, tail: string): string {
 function baseURLOf(loaded: LoadedCourierConfig | null | undefined): unknown {
   return (loaded?.config.sources as Record<string, { baseURL?: unknown }> | undefined)?.demo?.baseURL;
 }
+
+const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
 
 async function until(condition: () => boolean, budgetMs = 5000): Promise<void> {
   for (let waited = 0; waited < budgetMs && !condition(); waited += 25) await sleep(25);
@@ -538,5 +541,337 @@ describe("startConfigWatcher — a load that fails", () => {
     await until(() => failed.length > 1);
 
     expect(failed).toMatchObject([{ code: "CONFIG_NOT_FOUND" }, { code: "CONFIG_NOT_FOUND" }]);
+  });
+});
+
+/**
+ * A save that lands while a load runs, before anything watches the file it
+ * changed, is still reloaded: each file is compared, once watched, with the
+ * bytes the load read before evaluating.
+ */
+describe("startConfigWatcher — a change made while it loads", () => {
+  it("a save made while the first load evaluates a module is loaded once that load ends", async () => {
+    const { root, deep } = makeProject();
+    const marker = slowModule(deep, 'export const host = "v1.example.com"');
+    const { watcher, applied } = start(root);
+    await until(() => Reflect.get(globalThis, marker) === true);
+    expect(Reflect.get(globalThis, marker)).toBe(true);
+
+    writeFileSync(deep, 'export const host = "v2.example.com"\n');
+    await until(() => baseURLOf(applied.at(-1)) === "v2.example.com");
+    await sleep(1000);
+    await watcher.settled();
+
+    expect(applied.map(baseURLOf)).toEqual(["v1.example.com", "v2.example.com"]);
+  });
+
+  it("a module the reload is first to import, saved while it loads, is loaded once the reload ends", async () => {
+    const { root, config } = makeProject();
+    const { watcher, applied } = start(root);
+    await watcher.settled();
+    await sleep(SETTLE_MS);
+    const added = join(root, "src", "added.ts");
+    const marker = slowModule(added, 'export const host = "added-v1.example.com"');
+
+    writeFileSync(config, 'import { host } from "./src/added"\nexport default { sources: { demo: { baseURL: host } } }\n');
+    await until(() => Reflect.get(globalThis, marker) === true);
+    expect(Reflect.get(globalThis, marker)).toBe(true);
+    writeFileSync(added, 'export const host = "added-v2.example.com"\n');
+    await until(() => baseURLOf(applied.at(-1)) === "added-v2.example.com");
+
+    expect(baseURLOf(applied.at(-1))).toBe("added-v2.example.com");
+  });
+
+  it("a mocks file saved during the first load is loaded, and its content hash is known", async () => {
+    const { root, deep } = makeProject();
+    writeFileSync(join(root, "courier.mocks.ts"), "export default { before: {} };\n");
+    const marker = slowModule(deep, 'export const host = "v1.example.com"');
+    const { applied } = start(root);
+    await until(() => Reflect.get(globalThis, marker) === true);
+    expect(Reflect.get(globalThis, marker)).toBe(true);
+
+    const saved = "export default { saved: {} };\n";
+    writeFileSync(join(root, "courier.mocks.ts"), saved);
+    await until(() => applied.at(-1)?.mocks.contentHash === sha256(saved));
+
+    expect(Object.keys(applied.at(-1)?.mocks.entries ?? {})).toEqual(["saved"]);
+    expect(applied.at(-1)?.mocks.contentHash).toBe(sha256(saved));
+  });
+
+  it("a config file that takes precedence, created during the first load, is loaded", async () => {
+    const { root, config, deep } = makeProject();
+    renameSync(config, join(root, "courier.config.mts"));
+    const marker = slowModule(deep, 'export const host = "v1.example.com"');
+    const { applied } = start(root);
+    await until(() => Reflect.get(globalThis, marker) === true);
+    expect(Reflect.get(globalThis, marker)).toBe(true);
+
+    writeFileSync(config, CANDIDATE);
+    await until(() => baseURLOf(applied.at(-1)) === "candidate.example.com");
+
+    expect(baseURLOf(applied[0])).toBe("v1.example.com");
+    expect(applied.at(-1)?.configFile).toBe(config);
+  });
+
+  it("fixing a module that made the first load fail reloads the config", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { root, deep } = makeProject();
+    writeFileSync(deep, 'throw new Error("deep does not load")\n');
+    const { watcher, applied, failed } = start(root);
+    await watcher.settled();
+    expect(failed).toMatchObject([{ code: "CONFIG_INVALID" }]);
+    await sleep(SETTLE_MS);
+
+    writeFileSync(deep, 'export const host = "fixed.example.com"\n');
+    await until(() => applied.length > 0);
+
+    expect(baseURLOf(applied[0])).toBe("fixed.example.com");
+  });
+
+  it("fixing a module that a failing reload newly imports reloads the config", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { root, config } = makeProject();
+    const { watcher, applied, failed } = start(root);
+    await watcher.settled();
+    await sleep(SETTLE_MS);
+    const broken = join(root, "src", "broken.ts");
+    writeFileSync(broken, 'throw new Error("broken does not load")\n');
+
+    writeFileSync(config, 'import { host } from "./src/broken"\nexport default { sources: { demo: { baseURL: host } } }\n');
+    await until(() => failed.length > 0);
+    expect(failed).toMatchObject([{ code: "CONFIG_INVALID" }]);
+    await sleep(SETTLE_MS);
+    writeFileSync(broken, 'export const host = "fixed.example.com"\n');
+    await until(() => baseURLOf(applied.at(-1)) === "fixed.example.com");
+
+    expect(baseURLOf(applied.at(-1))).toBe("fixed.example.com");
+  });
+
+  it("restoring a module that a failed reload could not find reloads the config", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { root, deep } = makeProject();
+    const { watcher, applied, failed } = start(root);
+    await watcher.settled();
+    await sleep(SETTLE_MS);
+
+    unlinkSync(deep);
+    await until(() => failed.length > 0);
+    expect(failed).toMatchObject([{ code: "CONFIG_INVALID" }]);
+    await sleep(SETTLE_MS);
+    writeFileSync(deep, 'export const host = "restored.example.com"\n');
+    await until(() => baseURLOf(applied.at(-1)) === "restored.example.com");
+
+    expect(baseURLOf(applied.at(-1))).toBe("restored.example.com");
+  });
+
+  it("a generator that deletes and rewrites its output directory ends loaded", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { root, config } = makeProject();
+    const generated = join(root, "generated");
+    const generate = (host: string) => {
+      mkdirSync(generated, { recursive: true });
+      writeFileSync(join(generated, "host.ts"), `export const host = "${host}"\n`);
+      writeFileSync(join(generated, "index.ts"), 'import { host } from "./host"\nexport const api = { baseURL: host }\n');
+    };
+    generate("generated-v1.example.com");
+    writeFileSync(config, 'import { api } from "./generated"\nexport default { sources: { demo: api } }\n');
+    const { watcher, applied, failed } = start(root);
+    await watcher.settled();
+    expect(baseURLOf(applied[0])).toBe("generated-v1.example.com");
+    await sleep(SETTLE_MS);
+
+    rmSync(generated, { recursive: true, force: true });
+    await until(() => failed.length > 0);
+    expect(failed.length).toBeGreaterThan(0);
+    generate("generated-v2.example.com");
+    await until(() => baseURLOf(applied.at(-1)) === "generated-v2.example.com");
+
+    expect(baseURLOf(applied.at(-1))).toBe("generated-v2.example.com");
+  });
+
+  it("a file that is not valid UTF-8 does not reload over and over", async () => {
+    const { root, deep } = makeProject();
+    writeFileSync(
+      deep,
+      Buffer.concat([Buffer.from('export const host = "v1.example.com"\n// caf'), Buffer.from([0xe9, 0x0a])]),
+    );
+    const { watcher, applied, failed } = start(root);
+    await watcher.settled();
+    await sleep(1500);
+    await watcher.settled();
+
+    expect(applied.map(baseURLOf)).toEqual(["v1.example.com"]);
+    expect(failed).toEqual([]);
+  });
+});
+
+describe("startConfigWatcher — a save during a reload", () => {
+  it("a save during a reload is loaded exactly once more", async () => {
+    const { root, deep } = makeProject();
+    const { watcher, applied } = start(root);
+    await watcher.settled();
+    await sleep(SETTLE_MS);
+    const marker = slowModule(deep, 'export const host = "v2.example.com"');
+    await until(() => Reflect.get(globalThis, marker) === true);
+    expect(Reflect.get(globalThis, marker)).toBe(true);
+
+    writeFileSync(deep, 'export const host = "v3.example.com"\n');
+    await until(() => baseURLOf(applied.at(-1)) === "v3.example.com");
+    await sleep(1500);
+    await watcher.settled();
+
+    expect(applied.map(baseURLOf)).toEqual(["v1.example.com", "v2.example.com", "v3.example.com"]);
+  });
+
+  it("a save whose notification still waits when a load reads it is loaded once more, as the notification may stand for a version in between", async () => {
+    const { root, deep } = makeProject();
+    const { watcher, applied } = start(root);
+    await watcher.settled();
+    await sleep(SETTLE_MS);
+
+    writeFileSync(deep, 'export const host = "saved.example.com"\n');
+    await watcher.runExclusive(async (ctx) => {
+      ctx.apply(await ctx.load());
+    }, 5000);
+    await sleep(1500);
+    await watcher.settled();
+
+    expect(applied.map(baseURLOf)).toEqual(["v1.example.com", "saved.example.com", "saved.example.com"]);
+  });
+
+  it("a watched module changed and restored while a load evaluates ends loaded as it is on disk", async () => {
+    const { root, config } = makeProject();
+    const gate = join(root, "src", "gate.ts");
+    const shared = join(root, "src", "shared.ts");
+    const restored = 'export const host = "restored.example.com"\n';
+    writeFileSync(gate, "export const open = true\n");
+    writeFileSync(shared, restored);
+    writeFileSync(
+      config,
+      'import { open } from "./src/gate"\nimport { host } from "./src/shared"\nexport default { sources: { demo: { baseURL: open ? host : "closed" } } }\n',
+    );
+    const { watcher, applied } = start(root);
+    await watcher.settled();
+    await sleep(SETTLE_MS);
+
+    const reloading = slowModule(gate, "export const open = true");
+    await until(() => Reflect.get(globalThis, reloading) === true);
+    expect(Reflect.get(globalThis, reloading)).toBe(true);
+    const between = slowModule(shared, 'export const host = "between.example.com"');
+    await until(() => Reflect.get(globalThis, between) === true);
+    expect(Reflect.get(globalThis, between)).toBe(true);
+    writeFileSync(shared, restored);
+    await until(() => applied.length > 2 && baseURLOf(applied.at(-1)) === "restored.example.com", 3000);
+    await sleep(SETTLE_MS);
+    await watcher.settled();
+
+    expect(applied.map(baseURLOf)).toContain("between.example.com");
+    expect(baseURLOf(applied.at(-1))).toBe("restored.example.com");
+  });
+
+  it("an edit Studio writes and acknowledges is not reloaded again", async () => {
+    const { root } = makeProject();
+    const { watcher, applied } = start(root);
+    await watcher.settled();
+    await sleep(SETTLE_MS);
+    const mocksFile = join(root, "courier.mocks.ts");
+
+    await watcher.runExclusive(async (ctx) => {
+      writeFileSync(mocksFile, "export default { written: {} };\n");
+      ctx.acknowledge([mocksFile]);
+      ctx.apply(await ctx.load());
+    }, 5000);
+    await sleep(1500);
+    await watcher.settled();
+
+    expect(applied.map((loaded) => Object.keys(loaded.mocks.entries))).toEqual([[], ["written"]]);
+  });
+});
+
+/**
+ * An import that names no module when a load reads the project is watched at
+ * every path the module could be created at, so creating it reloads — whether
+ * the load then failed for want of it, or found it after all because it
+ * appeared once the dependency walk had looked.
+ */
+describe("startConfigWatcher — an import that names no module yet", () => {
+  it("a module created while the first load evaluates, after the walk looked for it, is watched once that load ends", async () => {
+    const { root, config } = makeProject();
+    const late = join(root, "src", "late.ts");
+    const marker = slowModule(join(root, "src", "slow.ts"), "export const ready = true");
+    writeFileSync(
+      config,
+      'import { ready } from "./src/slow"\nimport { host } from "./src/late"\nexport default { sources: { demo: { baseURL: ready ? host : "not ready" } } }\n',
+    );
+    const { watcher, applied } = start(root);
+    await until(() => Reflect.get(globalThis, marker) === true);
+    expect(Reflect.get(globalThis, marker)).toBe(true);
+
+    writeFileSync(late, 'export const host = "late-v1.example.com"\n');
+    await until(() => applied.length > 0);
+    await watcher.settled();
+    await sleep(SETTLE_MS);
+    await watcher.settled();
+    writeFileSync(late, 'export const host = "late-v2.example.com"\n');
+    await until(() => baseURLOf(applied.at(-1)) === "late-v2.example.com", 3000);
+
+    expect(baseURLOf(applied[0])).toBe("late-v1.example.com");
+    expect(baseURLOf(applied.at(-1))).toBe("late-v2.example.com");
+  });
+
+  it("a module a reload is first to import, created while it evaluates, is watched once the reload ends", async () => {
+    const { root, config } = makeProject();
+    const { watcher, applied } = start(root);
+    await watcher.settled();
+    await sleep(SETTLE_MS);
+    const created = join(root, "src", "created.ts");
+    const marker = slowModule(join(root, "src", "gate.ts"), "export const open = true");
+
+    writeFileSync(
+      config,
+      'import { open } from "./src/gate"\nimport { host } from "./src/created"\nexport default { sources: { demo: { baseURL: open ? host : "closed" } } }\n',
+    );
+    await until(() => Reflect.get(globalThis, marker) === true);
+    expect(Reflect.get(globalThis, marker)).toBe(true);
+    writeFileSync(created, 'export const host = "created-v1.example.com"\n');
+    await until(() => baseURLOf(applied.at(-1)) === "created-v1.example.com");
+    await watcher.settled();
+    await sleep(SETTLE_MS);
+    await watcher.settled();
+    writeFileSync(created, 'export const host = "created-v2.example.com"\n');
+    await until(() => baseURLOf(applied.at(-1)) === "created-v2.example.com", 3000);
+
+    expect(baseURLOf(applied.at(-1))).toBe("created-v2.example.com");
+  });
+
+  it("creating a module the first load could not find reloads the config", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { root, config } = makeProject();
+    writeFileSync(config, 'import { host } from "./src/missing"\nexport default { sources: { demo: { baseURL: host } } }\n');
+    const { watcher, applied, failed } = start(root);
+    await watcher.settled();
+    expect(failed).toMatchObject([{ code: "CONFIG_INVALID" }]);
+    await sleep(SETTLE_MS);
+
+    writeFileSync(join(root, "src", "missing.ts"), 'export const host = "created.example.com"\n');
+    await until(() => applied.length > 0, 3000);
+
+    expect(baseURLOf(applied[0])).toBe("created.example.com");
+  });
+
+  it("creating the directory an import names, and the module in it, reloads the config", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { root, config } = makeProject();
+    writeFileSync(config, 'import { api } from "./generated/api"\nexport default { sources: { demo: api } }\n');
+    const { watcher, applied, failed } = start(root);
+    await watcher.settled();
+    expect(failed).toMatchObject([{ code: "CONFIG_INVALID" }]);
+    await sleep(SETTLE_MS);
+
+    mkdirSync(join(root, "generated"));
+    writeFileSync(join(root, "generated", "api.ts"), 'export const api = { baseURL: "generated.example.com" }\n');
+    await until(() => applied.length > 0, 3000);
+
+    expect(baseURLOf(applied[0])).toBe("generated.example.com");
   });
 });

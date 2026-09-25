@@ -19,6 +19,7 @@ function loaded(entries: Record<string, unknown>, sources: Record<string, unknow
     configFile: "/p/courier.config.ts",
     contentHash: null,
     deps: [],
+    depHashes: new Map(),
     mocks: { file: FILE, entries, contentHash: null, error: null },
   };
 }

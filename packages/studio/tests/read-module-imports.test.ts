@@ -1,9 +1,22 @@
+import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type * as OxcParser from "oxc-parser";
+import { parseSync } from "oxc-parser";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { readImportSpecifiers } from "../src/server/read-import-specifiers";
+import { readModuleImports } from "../src/server/read-module-imports";
+
+vi.mock("oxc-parser", async (importOriginal) => {
+  const actual = await importOriginal<typeof OxcParser>();
+  return { ...actual, parseSync: vi.fn(actual.parseSync) };
+});
+
+/** The specifiers `path` imports, as the walk reads them. */
+function readImportSpecifiers(path: string): string[] {
+  return [...readModuleImports(path).specifiers];
+}
 
 let dir: string;
 
@@ -18,10 +31,12 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
+  vi.mocked(parseSync).mockClear();
   rmSync(dir, { recursive: true, force: true });
 });
 
-describe("readImportSpecifiers", () => {
+describe("readModuleImports", () => {
   it("returns nothing for a file that imports nothing", () => {
     expect(readImportSpecifiers(file("a.ts", `export const x = 1;`))).toEqual([]);
   });
@@ -117,7 +132,50 @@ describe("readImportSpecifiers", () => {
     expect(readImportSpecifiers(path)).toContain("./a");
   });
 
-  it("returns nothing for a file it cannot read", () => {
-    expect(readImportSpecifiers(join(dir, "missing.ts"))).toEqual([]);
+  it("returns nothing for a file it cannot read, and says it could not read it", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    expect(readModuleImports(join(dir, "missing.ts"))).toEqual({
+      contentHash: "unreadable",
+      specifiers: [],
+    });
+  });
+
+  it("hashes the raw bytes it parsed", () => {
+    const bytes = Buffer.from([...Buffer.from('import "./a";\n// caf'), 0xe9, 0x0a]);
+    const path = join(dir, "latin1.ts");
+    writeFileSync(path, bytes);
+
+    const imports = readModuleImports(path);
+
+    expect(imports.contentHash).toBe(createHash("sha256").update(bytes).digest("hex"));
+    expect(imports.specifiers).toEqual(["./a"]);
+  });
+
+  it("parses an unchanged file once, and again after it changes", () => {
+    const path = file("a.ts", `import { a } from "./a";`);
+    const parses = () => vi.mocked(parseSync).mock.calls.filter(([name]) => name === path).length;
+
+    readModuleImports(path);
+    const second = readModuleImports(path);
+    expect(parses()).toBe(1);
+    expect(second.specifiers).toEqual(["./a"]);
+
+    writeFileSync(path, `import { b } from "./b";`);
+    const changed = readModuleImports(path);
+
+    expect(parses()).toBe(2);
+    expect(changed.specifiers).toEqual(["./b"]);
+  });
+
+  it("parses a file that parses only in part once too", () => {
+    const path = file("a.ts", `import { a } from "./a";\nexport const broken = (;`);
+    const parses = () => vi.mocked(parseSync).mock.calls.filter(([name]) => name === path).length;
+
+    readModuleImports(path);
+    readModuleImports(path);
+
+    expect(parses()).toBe(1);
+    expect(readModuleImports(path).specifiers).toContain("./a");
   });
 });

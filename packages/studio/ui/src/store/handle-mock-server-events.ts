@@ -19,6 +19,7 @@ import type {
 import type { MockEvent } from "./mock-event-types";
 
 import { useMockStore } from "./mock-slice";
+import { mockServerOf } from "./mock-server-of";
 import { mergeRouteStats } from "./route-stats";
 
 type Store = MockSliceState;
@@ -105,7 +106,7 @@ function registerNewServer(store: Store, serverId: string, event: MockEvent): vo
 
 export function handleServerConnect(serverId: string, event: MockEvent): void {
   const store = useMockStore.getState();
-  const existing = store.servers[serverId];
+  const existing = mockServerOf(store.servers, serverId);
   if (existing) {
     reconnectServer(store, serverId, existing, event);
   } else {
@@ -117,7 +118,7 @@ export function handleStoreChange(serverId: string, event: MockEvent): void {
   const store = useMockStore.getState();
   const col = event.collection as string;
   const count = (event.count as number) ?? 0;
-  const server = store.servers[serverId];
+  const server = mockServerOf(store.servers, serverId);
   if (!server) return;
   store.setServerCollections(
     serverId,
@@ -138,7 +139,7 @@ export function handleScenarioActive(serverId: string, event: MockEvent): void {
   if (incomingScenarios?.length) {
     store.setServerScenarios(serverId, incomingScenarios);
   } else {
-    const existing = store.servers[serverId];
+    const existing = mockServerOf(store.servers, serverId);
     if (existing) {
       store.setServerScenarios(
         serverId,

@@ -1,10 +1,13 @@
 import { isSafeHttpOrigin } from "@noverax/courier-studio-core";
 import { Check, Copy, Globe, Radio, Wifi } from "lucide-react";
 import { useCallback, useState } from "react";
+import { toast } from "sonner";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { writeClipboardText } from "@/lib/write-clipboard-text";
 import type { CatalogEntry } from "@/store/types-ui";
+import { ConfiguredTooltip } from "./configured-tooltip";
 
 type Transport = "http" | "sse" | "ws";
 
@@ -81,11 +84,12 @@ function ConfiguredBadge({
 
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(display);
+      await writeClipboardText(display);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard permission denied — fail silently
+    } catch (err) {
+      console.warn("Copying the URL failed", err);
+      toast.error(err instanceof Error ? err.message : "Could not copy the URL");
     }
   }, [display]);
 
@@ -122,46 +126,6 @@ function ConfiguredBadge({
         <ConfiguredTooltip transport={transport} kind={kind} appOrigin={appOrigin} />
       </TooltipContent>
     </Tooltip>
-  );
-}
-
-const CODE_PILL =
-  "rounded-sm border border-background/10 bg-accent-brand/15 px-1.5 py-px font-mono font-medium";
-
-function ConfiguredTooltip({
-  transport,
-  kind,
-  appOrigin,
-}: {
-  transport: Transport;
-  kind: Resolution["kind"];
-  appOrigin: string | undefined;
-}): React.ReactElement {
-  return (
-    <div className="flex flex-col gap-1.5 leading-relaxed">
-      {kind === "resolved" && appOrigin && (
-        <div>
-          <span className="opacity-55">Mounted on your app at </span>
-          <code className={CODE_PILL}>{appOrigin}</code>
-        </div>
-      )}
-      {kind === "absolute" && (
-        <div>
-          <span className="opacity-55">External endpoint — outside your app process</span>
-        </div>
-      )}
-      {kind === "unresolved" && (
-        <div>
-          <span className="opacity-55">Mounted on your app — set </span>
-          <code className={CODE_PILL}>appOrigin</code>
-          <span className="opacity-55"> on instrumentServer to resolve the full URL</span>
-        </div>
-      )}
-      <div>
-        <span className="opacity-55">Configured in </span>
-        <code className={CODE_PILL}>defineApi(&#123; proxyPath.{transport} &#125;)</code>
-      </div>
-    </div>
   );
 }
 

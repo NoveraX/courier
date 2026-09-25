@@ -1,100 +1,55 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { MethodBadge } from "@/components/shared/method-badge";
+import type { MockWizardState } from "./types";
 
-import type { UseMockGeneratorReturn } from "./use-mock-generator";
+import { ReviewManual } from "./review-manual";
+import { ReviewOutcome } from "./review-outcome";
+import { ReviewReady } from "./review-ready";
 
-interface ReviewStepProps {
-  wizard: UseMockGeneratorReturn;
-}
-
-export function ReviewStep({ wizard }: ReviewStepProps): React.ReactElement {
-  const { endpoints } = wizard.state;
-  const totalCount = countEndpoints(endpoints);
-  const selectedCount = countSelected(endpoints);
-
+function Planning(): React.ReactElement {
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1.5">
-          <h3 className="text-h3">Review Endpoints</h3>
-          <p className="text-body-sm text-muted-foreground">
-            {selectedCount} of {totalCount} endpoints selected
-          </p>
-        </div>
-        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={wizard.toggleAll}>
-          {selectedCount === totalCount ? "Deselect all" : "Select all"}
-        </Button>
+    <div className="space-y-3" aria-busy>
+      <p className="text-body-sm text-muted-foreground">Studio is planning the change to courier.mocks.ts…</p>
+      <div className="space-y-2 rounded-lg border border-border-subtle p-3">
+        <div className="h-3.5 w-3/4 animate-pulse rounded bg-muted" />
+        <div className="h-3.5 w-1/2 animate-pulse rounded bg-muted/70" />
+        <div className="h-3.5 w-5/6 animate-pulse rounded bg-muted/50" />
       </div>
-
-      {Object.entries(endpoints).map(([sourceName, groups]) => (
-        <div key={sourceName} className="space-y-2">
-          {Object.keys(endpoints).length > 1 && (
-            <p className="text-caption text-muted-foreground">{sourceName}</p>
-          )}
-          {Object.entries(groups).map(([groupName, eps]) => {
-            const groupSelected = eps.filter((e) => e.selected).length;
-            const allSelected = groupSelected === eps.length;
-
-            return (
-              <div key={groupName} className="rounded-lg border border-border-subtle overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => wizard.toggleGroup(sourceName, groupName)}
-                  className="flex w-full cursor-pointer items-center gap-2.5 bg-muted/30 px-3 py-2 hover:bg-muted/50"
-                >
-                  <Checkbox
-                    checked={allSelected ? true : groupSelected > 0 ? "indeterminate" : false}
-                    className="size-3.5"
-                  />
-                  <span className="text-body-sm font-medium">{groupName}</span>
-                  <Badge variant="secondary" className="ml-auto text-[10px]">
-                    {groupSelected}/{eps.length}
-                  </Badge>
-                </button>
-
-                <div className="divide-y divide-border-subtle">
-                  {eps.map((ep) => (
-                    <button
-                      key={ep.endpoint}
-                      type="button"
-                      onClick={() => wizard.toggleEndpoint(sourceName, groupName, ep.endpoint)}
-                      className="flex w-full items-center gap-2.5 px-3 py-1.5 hover:bg-muted/20"
-                    >
-                      <Checkbox checked={ep.selected} className="size-3.5" />
-                      <MethodBadge method={ep.httpMethod} />
-                      <span className="text-body-sm font-mono truncate">{ep.endpoint}</span>
-                      {ep.path && (
-                        <span className="text-body-xs text-muted-foreground font-mono ml-auto truncate">
-                          {ep.path}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ))}
     </div>
   );
 }
 
-function countEndpoints(
-  endpoints: Record<string, Record<string, Array<{ selected: boolean }>>>,
-): number {
-  return Object.values(endpoints)
-    .flatMap((g) => Object.values(g))
-    .flat().length;
-}
-
-function countSelected(
-  endpoints: Record<string, Record<string, Array<{ selected: boolean }>>>,
-): number {
-  return Object.values(endpoints)
-    .flatMap((g) => Object.values(g))
-    .flat()
-    .filter((e) => e.selected).length;
+/**
+ * The Review step: Studio's plan while it is made, the change to confirm,
+ * the mocks to add by hand, a request that failed, or what came of an apply
+ * that did not add the mocks.
+ *
+ * @param props.state - The wizard on its Review step
+ * @returns The step
+ *
+ * @example
+ * ```tsx
+ * <ReviewStep state={state} />
+ * ```
+ */
+export function ReviewStep({ state }: { state: MockWizardState }): React.ReactElement | null {
+  const { plan, apply } = state;
+  if (apply.status === "failed" || apply.status === "rolledBack" || apply.status === "notVerified" || apply.status === "rollbackFailed") {
+    const target = plan.status === "ready" ? plan.outcome.target : "courier.mocks.ts";
+    return <ReviewOutcome outcome={apply} target={target} />;
+  }
+  switch (plan.status) {
+    case "ready":
+      return <ReviewReady outcome={plan.outcome} mockCount={plan.mocks.length} changedOnDisk={plan.changedOnDisk} />;
+    case "manual":
+      return <ReviewManual outcome={plan.outcome} />;
+    case "failed":
+      return (
+        <div role="alert" className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-body-sm text-rose-400">
+          Studio could not plan the change: {plan.message}
+        </div>
+      );
+    case "loading":
+      return <Planning />;
+    case "idle":
+      return null;
+  }
 }

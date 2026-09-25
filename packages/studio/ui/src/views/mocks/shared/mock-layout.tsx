@@ -1,8 +1,10 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { Activity, Database, Globe, LayoutDashboard, Network, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useStudioStore } from "@/store";
 import { useServerCount } from "@/store/mock-slice";
-import { MockGeneratorWizard, useMockGenerator } from "../wizard";
+import { MockWizard, useMockWizard } from "../wizard";
+import { MocksFileBanner } from "./mocks-file-banner";
 
 import type { LucideIcon } from "lucide-react";
 
@@ -18,10 +20,12 @@ const TABS: Array<{ label: string; path: string; icon: LucideIcon }> = [
 export function MockLayout(): React.ReactElement {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const serverCount = useServerCount();
-  const wizard = useMockGenerator();
+  const wizard = useMockWizard();
+  const mocksFileStatus = useStudioStore((s) => s.mocksFileStatus);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <MocksFileBanner status={mocksFileStatus} />
       {serverCount > 0 && (
         <div className="shrink-0 border-b border-border-subtle">
           <nav className="flex items-center gap-1 px-3 h-9">
@@ -56,7 +60,7 @@ export function MockLayout(): React.ReactElement {
         <Outlet />
       </div>
 
-      <MockGeneratorWizard wizard={wizard} />
+      <MockWizard wizard={wizard} />
     </div>
   );
 }

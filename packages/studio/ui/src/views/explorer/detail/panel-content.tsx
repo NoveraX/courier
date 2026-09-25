@@ -5,6 +5,7 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { copyToClipboard } from "@/lib/clipboard";
 
 import { PanelHeader } from "./panel-header";
 import { OverviewTab } from "./tabs/overview-tab";
@@ -54,7 +55,7 @@ export function PanelContent({
   }
 
   const handleCopyPath = (): void => {
-    navigator.clipboard.writeText(endpoint.fullPath);
+    void copyToClipboard(endpoint.fullPath, "path");
   };
 
   return (

@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { FileJson, KeyRound, ChevronDown, Terminal, Code2, Copy, Link } from "lucide-react";
-import { toast } from "sonner";
 
+import { copyToClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -84,8 +84,7 @@ function CopyMenu({ buildInput }: {
   const [open, setOpen] = useState(false);
 
   const copy = (fn: () => string, label: string) => () => {
-    navigator.clipboard.writeText(fn());
-    toast.success(`${label} copied`);
+    void copyToClipboard(fn(), label);
     setOpen(false);
   };
 

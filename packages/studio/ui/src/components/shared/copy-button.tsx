@@ -1,7 +1,9 @@
 import { useState, useCallback } from "react";
 import { Check, Copy } from "lucide-react";
+import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
+import { writeClipboardText } from "@/lib/write-clipboard-text";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -25,7 +27,13 @@ export function CopyButton({
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText(value);
+    try {
+      await writeClipboardText(value);
+    } catch (err) {
+      console.warn("Copying failed", err);
+      toast.error(err instanceof Error ? err.message : "Could not copy");
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }, [value]);

@@ -12,6 +12,7 @@ import type {
 } from "./types"
 import type { ScannedSource, SourceSummary } from "@/views/apis/types"
 import type { ConfigStatusPayload } from "./config-status"
+import type { MocksFileStatus } from "./mocks-file-status"
 
 export interface StudioState {
   // UI
@@ -40,6 +41,11 @@ export interface StudioState {
    * lists describe the same state once it is set.
    */
   configStatus: ConfigStatusPayload | null
+  /**
+   * How `courier.mocks.*` loads, as Studio last told it in `mocks:status`;
+   * `null` until Studio tells it after a connect.
+   */
+  mocksFileStatus: MocksFileStatus | null
 
   // Audit
   auditExpandedIds: Set<string>
@@ -78,6 +84,7 @@ export interface StudioState {
   setScanSources: (sources: ScannedSource[]) => void
   setRegistrySources: (sources: SourceSummary[]) => void
   setConfigStatus: (status: ConfigStatusPayload | null) => void
+  setMocksFileStatus: (status: MocksFileStatus | null) => void
 
   // Actions — Requests
   togglePaused: () => void

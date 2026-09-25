@@ -1,11 +1,3 @@
-/**
- * Step indicator dot used in the mock wizard header.
- *
- * Extracted from `mock-generator-wizard.tsx` so the wizard component file
- * focuses on layout. Renders the connecting line, the numbered/checked
- * circle, and the label, with click-to-jump enabled only on completed steps.
- */
-
 import { cn } from "@/lib/utils";
 
 interface WizardStepDotProps {
@@ -16,6 +8,18 @@ interface WizardStepDotProps {
   onClick?: () => void;
 }
 
+/**
+ * One step in the wizard's header: its number, or a check once it is done,
+ * and its label. A done step the wizard can go back to is a button.
+ *
+ * @param props - The step's label and position, whether it is current or done, and how to go back to it
+ * @returns The step, after a line joining it to the one before
+ *
+ * @example
+ * ```tsx
+ * <WizardStepDot label="Configure" index={1} active completed={false} />
+ * ```
+ */
 export function WizardStepDot({
   label,
   index,

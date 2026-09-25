@@ -21,6 +21,7 @@ export function createInitialState(savedTheme: StudioState["theme"]) {
     scanSources: [] as StudioState["scanSources"],
     registrySources: [] as StudioState["registrySources"],
     configStatus: null,
+    mocksFileStatus: null,
     clientTick: 0,
     droppedRequests: 0,
     watcherApiPaths: 0,

@@ -13,6 +13,7 @@ import { create } from "zustand";
 import type { MockServerInfo, MockSliceState } from "./mock-slice-types";
 
 import { createMockSliceActions } from "./mock-slice-actions";
+import { mockServerOf } from "./mock-server-of";
 
 export type {
   MockCollectionEntry,
@@ -53,7 +54,7 @@ export const useMockStore = create<MockSliceState>((set, get) => ({
 export function useActiveServer(): MockServerInfo | undefined {
   const activeServerId = useMockStore((s) => s.activeServerId);
   const servers = useMockStore((s) => s.servers);
-  return activeServerId ? servers[activeServerId] : undefined;
+  return activeServerId ? mockServerOf(servers, activeServerId) : undefined;
 }
 
 export function useServerCount(): number {

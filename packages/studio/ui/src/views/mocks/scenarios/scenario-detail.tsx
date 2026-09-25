@@ -63,7 +63,7 @@ export function ScenarioDetail({
         )}
 
         {topLevel.length > 0 && <EndpointSection label="Endpoints" endpoints={topLevel} />}
-        {Object.entries(grouped).map(([group, endpoints]) => (
+        {[...grouped].map(([group, endpoints]) => (
           <EndpointSection key={group} label={group} endpoints={endpoints} />
         ))}
         {scenario.endpoints.length === 0 && (

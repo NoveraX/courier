@@ -22,6 +22,7 @@ vi.mock("sonner", () => ({ toast }));
 import type { Socket } from "socket.io-client";
 import type { ApisStore } from "../src/socket/apis-bindings";
 import type { ConfigStatusPayload } from "../src/store/config-status";
+import type { MocksFileStatus } from "../src/store/mocks-file-status";
 
 import { bindApis } from "../src/socket/apis-bindings";
 import { DEFAULT_SETTINGS } from "../src/store/constants";
@@ -82,6 +83,10 @@ function createStore(): ApisStore {
     settings: DEFAULT_SETTINGS,
     setConfigStatus: vi.fn((status: ConfigStatusPayload | null) => {
       store.configStatus = status;
+    }),
+    mocksFileStatus: null,
+    setMocksFileStatus: vi.fn((status: MocksFileStatus | null) => {
+      store.mocksFileStatus = status;
     }),
     setRegistrySources: vi.fn(),
     setScanSources: vi.fn(),
@@ -200,6 +205,19 @@ describe("bindApis", () => {
 
     expect(toast.info).toHaveBeenCalledTimes(1);
     expect(toast.info.mock.calls[0]).toEqual(["API sources reloaded — /p/src/api.ts"]);
+  });
+
+  it("keeps how the mocks file loads for the Mocks view, and forgets it on disconnect", () => {
+    const failing = { file: MOCKS_FILE, error: "ParseError: Unexpected token" };
+
+    deliver(socket, "mocks:status", failing);
+    expect(store.mocksFileStatus).toEqual(failing);
+
+    deliver(socket, "mocks:status", { file: MOCKS_FILE, error: 42 });
+    expect(store.mocksFileStatus).toEqual(failing);
+
+    deliver(socket, "disconnect", "transport close");
+    expect(store.mocksFileStatus).toBeNull();
   });
 
   it("stores the imports and the sources Studio sends", () => {

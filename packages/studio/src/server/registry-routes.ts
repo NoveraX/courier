@@ -12,7 +12,6 @@ import {
   getImportEntry,
   getImportState,
   importsSnapshotOf,
-  summarizeImports,
 } from "./imports-bridge";
 import { withImportsLock } from "./imports-lock";
 import { readDeclarations } from "./project-state/read-declarations";
@@ -41,17 +40,6 @@ interface Reply {
  * ```
  */
 export function registerRegistryRoutes(app: RouteApp, deps: ApisRouteDeps): void {
-  const { project, projectRoot } = deps;
-
-  app.post("/api/apis/imports/list", async (_req, res) => {
-    try {
-      const declarations = await readDeclarations(project, projectRoot, "show");
-      res.json({ sources: summarizeImports(importsSnapshotOf(declarations, projectRoot)) });
-    } catch (err) {
-      sendRouteFailure(res, err, "Failed to list imports");
-    }
-  });
-
   app.post("/api/apis/imports/remove", async (req, res) => {
     const body = validateNameBody(req.body, res);
     if (!body) return;
@@ -87,6 +75,7 @@ async function forgetImport(name: string, { project, projectRoot }: ApisRouteDep
   }
 
   await dropImportState(name);
+  project.importsChanged();
 
   const configCleanupHint = entry
     ? `Remove \`imports.${name}\` from courier.config.ts to finalize the deletion.`

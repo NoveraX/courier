@@ -6,7 +6,15 @@
  * import's files only from the declaration on disk, refusing with a reason
  * while there is none that loads.
  */
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,6 +23,7 @@ import { loadImportsState, recordImport, saveImportsState } from "../src/apis/im
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { createStudioServer } from "../src/server/create-studio-server";
 import { withImportsLock } from "../src/server/imports-lock";
+import { io as connect } from "socket.io-client";
 import type { StudioServer } from "../src/server/types";
 
 /* Every evaluation of the config imports ./count, which adds one here. */
@@ -28,7 +37,11 @@ const SPEC = parseSpec(
     info: { title: "Pets", version: "1" },
     paths: {
       "/pets": {
-        get: { operationId: "listPets", tags: ["pets"], responses: { "200": { description: "ok" } } },
+        get: {
+          operationId: "listPets",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
       },
     },
   }),
@@ -74,7 +87,13 @@ function project(config: string | null): void {
 
 function start(): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }
 
@@ -96,24 +115,35 @@ async function post(url: string, path: string, body: Record<string, unknown> = {
 /* Studio started, and its first load of the config has an outcome: a display route waits for it. */
 async function started(): Promise<string> {
   const url = await start();
-  await post(url, "/api/apis/imports/list");
+  await post(url, "/api/apis/imports/check-all");
   return url;
 }
 
 function writeFor(sourceName: string, path: string): Record<string, unknown> {
-  return { files: [{ path, content: GENERATED }], sourceName, spec: SPEC, options: { type: "fetch" } };
+  return {
+    files: [{ path, content: GENERATED }],
+    sourceName,
+    spec: SPEC,
+    options: { type: "fetch" },
+  };
 }
 
 /* Each route that writes an import's files, with a body that would write src/api/pets/index.ts. */
 const ACT_ROUTES: ReadonlyArray<readonly [string, Record<string, unknown>]> = [
   ["/api/apis/write", writeFor("pets", "src/api/pets/index.ts")],
   ["/api/apis/manage/apply", ADD],
-  ["/api/apis/update/apply", { name: "pets", newSpec: SPEC, files: [{ path: "src/api/pets/index.ts", content: GENERATED }] }],
+  [
+    "/api/apis/update/apply",
+    { name: "pets", newSpec: SPEC, files: [{ path: "src/api/pets/index.ts", content: GENERATED }] },
+  ],
 ];
 
-async function refusals(url: string): Promise<Array<{ route: string; status: number; body: unknown }>> {
+async function refusals(
+  url: string,
+): Promise<Array<{ route: string; status: number; body: unknown }>> {
   const replies = [];
-  for (const [route, body] of ACT_ROUTES) replies.push({ route, ...(await post(url, route, body)) });
+  for (const [route, body] of ACT_ROUTES)
+    replies.push({ route, ...(await post(url, route, body)) });
   return replies;
 }
 
@@ -122,7 +152,6 @@ describe("the imports routes", () => {
     project(declaring("src/api"));
     const url = await started();
     const calls: ReadonlyArray<readonly [string, Record<string, unknown>]> = [
-      ["/api/apis/imports/list", {}],
       ["/api/apis/imports/check-updates", { name: "pets" }],
       ["/api/apis/imports/check-all", {}],
       ["/api/apis/manage/inventory", { name: "pets", newSpec: SPEC }],
@@ -172,10 +201,10 @@ describe("the imports routes", () => {
     project(declaring("src/api", "await new Promise((resolve) => setTimeout(resolve, 500));\n"));
     const url = await start();
 
-    const reply = await post(url, "/api/apis/imports/list");
+    const reply = await post(url, "/api/apis/manage/inventory", { name: "pets", newSpec: SPEC });
 
     expect(reply.status).toBe(200);
-    expect(reply.body).toMatchObject({ sources: [{ name: "pets", outputDir: "src/api" }] });
+    expect(reply.body).toMatchObject({ specChanged: true });
     expect(evaluations()).toBe(1);
   }, 15_000);
 });
@@ -197,8 +226,13 @@ describe("the imports routes while a write to an import holds the imports lock",
     const url = await started();
     const lock = holdLock();
 
-    const pending = post(url, "/api/apis/write", { files: [{ path: "src/mocks/pets.ts", content: GENERATED }] });
-    const early = await Promise.race([pending, new Promise<null>((resolve) => setTimeout(() => resolve(null), 2_000))]);
+    const pending = post(url, "/api/apis/write", {
+      files: [{ path: "src/mocks/pets.ts", content: GENERATED }],
+    });
+    const early = await Promise.race([
+      pending,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2_000)),
+    ]);
     await lock.release();
     await pending;
 
@@ -228,7 +262,9 @@ describe("the imports routes while courier.config does not load", () => {
     const url = await started();
     const before = evaluations();
 
-    const reply = await post(url, "/api/apis/write", { files: [{ path: "src/mocks/pets.ts", content: GENERATED }] });
+    const reply = await post(url, "/api/apis/write", {
+      files: [{ path: "src/mocks/pets.ts", content: GENERATED }],
+    });
 
     expect(reply.status).toBe(200);
     expect(reply.body).toMatchObject({ written: 1 });
@@ -265,14 +301,14 @@ describe("the imports routes while courier.config does not load", () => {
     const url = await started();
     writeProjectFile("courier.config.ts", BROKEN);
 
-    const list = await post(url, "/api/apis/imports/list");
-    const inventory = await post(url, "/api/apis/manage/inventory", { name: "pets", newSpec: SPEC });
+    const inventory = await post(url, "/api/apis/manage/inventory", {
+      name: "pets",
+      newSpec: SPEC,
+    });
 
-    expect(list.status).toBe(200);
-    expect(list.body).toMatchObject({ sources: [{ name: "pets", outputDir: "src/api" }] });
     expect(inventory.status).toBe(200);
     expect(inventory.body).toMatchObject({ specChanged: true });
-    /* The first load, and the reload of the broken save the list caught up with. */
+    /* The first load, and the reload of the broken save the inventory caught up with. */
     expect(evaluations()).toBe(2);
   }, 15_000);
 
@@ -318,7 +354,10 @@ describe("the imports routes with no courier.config", () => {
       ACT_ROUTES.map(([route]) => ({
         route,
         status: 409,
-        body: { code: "CONFIG_MISSING", error: expect.stringContaining("Create courier.config.ts first") },
+        body: {
+          code: "CONFIG_MISSING",
+          error: expect.stringContaining("Create courier.config.ts first"),
+        },
       })),
     );
     expect(existsSync(join(root, "src/api"))).toBe(false);
@@ -331,7 +370,10 @@ describe("the imports routes with no courier.config", () => {
     const replies = await refusals(url);
 
     expect(replies.map(({ status, body }) => ({ status, body }))).toEqual(
-      ACT_ROUTES.map(() => ({ status: 409, body: expect.objectContaining({ code: "CONFIG_MISSING" }) })),
+      ACT_ROUTES.map(() => ({
+        status: 409,
+        body: expect.objectContaining({ code: "CONFIG_MISSING" }),
+      })),
     );
     expect(existsSync(join(root, "src/api"))).toBe(false);
   }, 15_000);
@@ -375,5 +417,118 @@ describe("a write for an import, after courier.config moved its output directory
     expect(reply.status).toBe(200);
     expect(existsSync(join(root, "src/new/pets/stale.ts"))).toBe(false);
     expect(existsSync(join(root, "src/old/pets/stale.ts"))).toBe(true);
+  }, 15_000);
+});
+
+describe("the imports lists every UI is sent", () => {
+  const sockets: Array<{ disconnect(): unknown }> = [];
+
+  afterEach(() => {
+    for (const socket of sockets.splice(0)) socket.disconnect();
+  });
+
+  interface Ui {
+    events: Array<[string, unknown]>;
+  }
+
+  async function ui(url: string): Promise<Ui> {
+    const socket = connect(`${url}/ui`, {
+      transports: ["websocket"],
+      forceNew: true,
+      reconnection: false,
+      extraHeaders: { Origin: url },
+    });
+    sockets.push(socket);
+    const events: Array<[string, unknown]> = [];
+    socket.onAny((event: string, payload: unknown) => {
+      events.push([event, payload]);
+    });
+    await until(() => events.some(([event]) => event === "config:status"));
+    return { events };
+  }
+
+  async function until(condition: () => boolean, budgetMs = 5_000): Promise<void> {
+    for (let waited = 0; waited < budgetMs && !condition(); waited += 25) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  }
+
+  /* The names in the latest registry:updated a UI got, after `since` events. */
+  function namesSince(u: Ui, since: number): string[] | null {
+    const lists = u.events.slice(since).filter(([event]) => event === "registry:updated");
+    const latest = lists.at(-1)?.[1];
+    if (
+      typeof latest !== "object" ||
+      latest === null ||
+      !("sources" in latest) ||
+      !Array.isArray(latest.sources)
+    )
+      return null;
+    return latest.sources.map((source: { name: string }) => source.name).sort();
+  }
+
+  function scansSince(u: Ui, since: number): number {
+    return u.events.slice(since).filter(([event]) => event === "scan:sources").length;
+  }
+
+  /* A generated group Studio fingerprints, so writing it records the import's state. */
+  const GROUP =
+    'export const extra = defineGroup({\n  prefix: "/extra",\n  endpoints: {\n    list: endpoint.via((http) => http.get("")).response<unknown>(),\n  },\n})\n';
+
+  function writeExtra(): Record<string, unknown> {
+    return {
+      files: [{ path: "src/extra/index.ts", content: GROUP }],
+      sourceName: "extra",
+      spec: SPEC,
+      options: { type: "fetch" },
+    };
+  }
+
+  it("carry an import Studio wrote to every UI, and load nothing", async () => {
+    project(declaring("src/api"));
+    const url = await started();
+    const [first, second] = [await ui(url), await ui(url)];
+    const marks = [first.events.length, second.events.length];
+    const loadsBefore = evaluations();
+
+    const reply = await post(url, "/api/apis/write", writeExtra());
+    await until(
+      () => namesSince(first, marks[0] ?? 0) !== null && namesSince(second, marks[1] ?? 0) !== null,
+    );
+
+    expect(reply.status).toBe(200);
+    expect(namesSince(first, marks[0] ?? 0)).toEqual(["extra", "pets"]);
+    expect(namesSince(second, marks[1] ?? 0)).toEqual(["extra", "pets"]);
+    expect(scansSince(first, marks[0] ?? 0)).toBe(1);
+    expect(evaluations()).toBe(loadsBefore);
+  }, 15_000);
+
+  it("drop an import Studio removed from every UI", async () => {
+    project(declaring("src/api"));
+    const url = await started();
+    await post(url, "/api/apis/write", writeExtra());
+    const [first, second] = [await ui(url), await ui(url)];
+    const marks = [first.events.length, second.events.length];
+
+    const reply = await post(url, "/api/apis/imports/remove", { name: "extra" });
+    await until(
+      () => namesSince(first, marks[0] ?? 0) !== null && namesSince(second, marks[1] ?? 0) !== null,
+    );
+
+    expect(reply.status).toBe(200);
+    expect(namesSince(first, marks[0] ?? 0)).toEqual(["pets"]);
+    expect(namesSince(second, marks[1] ?? 0)).toEqual(["pets"]);
+  }, 15_000);
+
+  it("reach a UI only through its socket: there is no route that lists them", async () => {
+    project(declaring("src/api"));
+    const url = await started();
+
+    const response = await fetch(`${url}/api/apis/imports/list`, {
+      method: "POST",
+      headers: { origin: url },
+    });
+
+    expect(response.status).toBe(404);
   }, 15_000);
 });

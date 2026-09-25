@@ -48,7 +48,12 @@ function writeFiles(body: WriteBody, deps: ApisRouteDeps): Promise<WriteResult> 
   if (!sourceName) {
     return handleRawWrite(files, undefined, spec, { entry: undefined, state: undefined });
   }
-  return withImportsLock(() => writeImport(body, sourceName, deps));
+  return withImportsLock(async () => {
+    const result = await writeImport(body, sourceName, deps);
+    /* A write records the import's state only with the spec it was generated from. */
+    if (spec) deps.project.importsChanged();
+    return result;
+  });
 }
 
 async function writeImport(

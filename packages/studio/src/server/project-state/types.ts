@@ -66,7 +66,17 @@ export interface ProjectReads {
 }
 
 /** The one owner of the project Studio runs: nothing else loads it for its own use. */
-export interface ProjectState extends ProjectReads {
+/** What the imports routes need of the project: its reads, and a way to announce what they wrote. */
+export interface ProjectImports extends ProjectReads {
+  /**
+   * Send every UI the imports lists anew, after a route wrote the imports
+   * state. Nothing is sent while Studio starts, and a failure to send is
+   * logged, never thrown at the route that wrote.
+   */
+  importsChanged(): void;
+}
+
+export interface ProjectState extends ProjectImports {
   /**
    * Run an edit of the watched files alone on the reload chain, after the
    * first load and every reload queued before it.

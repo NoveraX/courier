@@ -9,7 +9,6 @@ import type {
   GeneratedFile,
   ManagePreviewResult,
   ParsedSpec,
-  SourceSummary,
   SpecDiff,
 } from "./types";
 import { post } from "@/lib/api-client";
@@ -51,10 +50,6 @@ export function writeFiles(payload: {
 }
 
 // ── Imports ─────────────────────────────────────────────────────────────────
-
-export function fetchRegistrySources(): Promise<{ sources: SourceSummary[] }> {
-  return post("/api/apis/imports/list");
-}
 
 export function removeRegistrySource(name: string): Promise<{ success: boolean }> {
   return post("/api/apis/imports/remove", { name });

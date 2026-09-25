@@ -79,7 +79,9 @@ function handleApplyRoute(
      the declaration saved meanwhile. */
   void withImportsLock(async () => {
     const declarations = await readDeclarations(project, projectRoot, "act");
-    return handleManageApply(body, importsSnapshotOf(declarations, projectRoot));
+    const result = await handleManageApply(body, importsSnapshotOf(declarations, projectRoot));
+    if ("success" in result) project.importsChanged();
+    return result;
   }).then(
     (result) => sendResult(res, result),
     (err: unknown) => sendRouteFailure(res, err, "Failed to apply changes"),

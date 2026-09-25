@@ -96,6 +96,7 @@ async function harness(load: (real: () => Promise<LoadedCourierConfig>) => Promi
   const project: ProjectState = {
     snapshot: () => ({ revision: 1, starting: false, running: current, loadedAt: 0, failure: null }),
     fresh: async () => ({ revision: 1, starting: false, running: current, loadedAt: 0, failure: null, settling: false }),
+    importsChanged: () => undefined,
     runExclusive: async <TResult>(transaction: ExclusiveTransaction<TResult>) => {
       await slotFree;
       return transaction(tx);

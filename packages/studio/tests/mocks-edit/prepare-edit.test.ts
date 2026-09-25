@@ -46,6 +46,9 @@ const unused: ProjectState = {
   snapshot: () => {
     throw new Error("planning read the project itself");
   },
+  importsChanged: () => {
+    throw new Error("planning announced an imports change");
+  },
   fresh: async () => {
     throw new Error("planning caught up with the disk");
   },

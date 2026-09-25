@@ -20,6 +20,7 @@ export function createInitialState(savedTheme: StudioState["theme"]) {
     sessionStartedAt: loadSessionStartedAt(),
     scanSources: [] as StudioState["scanSources"],
     registrySources: [] as StudioState["registrySources"],
+    configStatus: null,
     clientTick: 0,
     droppedRequests: 0,
     watcherApiPaths: 0,

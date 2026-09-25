@@ -298,7 +298,7 @@ describe("a UI that connects", () => {
     const u = ui(url);
     await until(() => hasStatus(u, "missing"));
 
-    expect(lastStatus(u, "missing")).toEqual({ state: "missing", revision: 1, lastGoodAt: null });
+    expect(lastStatus(u, "missing")).toEqual({ state: "missing", revision: 1, configFile: null, lastGoodAt: null });
     expect(importNames(payloads(u, "registry:updated").at(-1))).toEqual(["petstore"]);
     expect(payloads(u, "scan:sources").at(-1)).toEqual({ sources: [], scannedFiles: 0 });
   }, 20_000);
@@ -371,7 +371,7 @@ describe("a save", () => {
 });
 
 describe("deleting courier.config", () => {
-  it("reports it missing with when Studio last loaded it, and keeps the sources Studio runs", async () => {
+  it("reports it missing with the file Studio ran and when it loaded it, and keeps the sources Studio runs", async () => {
     const fixture = project();
     const { first } = await loadedStudio(fixture);
     const loadedAt = lastStatus(first, "loaded")?.loadedAt;
@@ -381,7 +381,12 @@ describe("deleting courier.config", () => {
     unlinkSync(fixture.config);
     await until(() => hasStatus(first, "missing"));
 
-    expect(lastStatus(first, "missing")).toEqual({ state: "missing", revision: 2, lastGoodAt: loadedAt });
+    expect(lastStatus(first, "missing")).toEqual({
+      state: "missing",
+      revision: 2,
+      configFile: "courier.config.ts",
+      lastGoodAt: loadedAt,
+    });
     expect(demoBaseURL(payloads(first, "scan:sources").at(-1))).toBe("https://v1.example");
   }, 20_000);
 });

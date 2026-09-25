@@ -7,6 +7,8 @@ import type {
   SourceStatusInfo,
   ParsedSpec,
 } from "./types";
+import type { ApisPageState } from "./apis-page-state";
+import { apisPageState } from "./apis-page-state";
 import {
   fetchRegistrySources,
   checkSourceUpdates,
@@ -26,7 +28,8 @@ interface UseRegistryReturn {
   handWritten: ScannedSource[];
   /** Per-source status (update check results) */
   statuses: Record<string, SourceStatusInfo>;
-  loading: boolean;
+  /** What the page shows, and why Import is refused. */
+  page: ApisPageState;
   refresh: () => Promise<void>;
   checkUpdates: (name: string) => Promise<void>;
   checkAll: () => Promise<void>;
@@ -42,7 +45,11 @@ export function useRegistry(): UseRegistryReturn {
   const scanSources = useStudioStore((s) => s.scanSources);
   const registrySources = useStudioStore((s) => s.registrySources);
   const connected = useStudioStore((s) => s.connected);
-  const loading = !connected || (scanSources.length === 0 && registrySources.length === 0);
+  const configStatus = useStudioStore((s) => s.configStatus);
+  const page = useMemo(
+    () => apisPageState({ connected, status: configStatus, sourceCount: scanSources.length }),
+    [connected, configStatus, scanSources.length],
+  );
 
   // Derive enriched/handWritten from store data
   const { imported, handWritten } = useMemo(() => {
@@ -136,7 +143,7 @@ export function useRegistry(): UseRegistryReturn {
     imported,
     handWritten,
     statuses,
-    loading,
+    page,
     refresh,
     checkUpdates,
     checkAll,

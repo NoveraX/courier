@@ -6,6 +6,7 @@ import { useElapsed } from "@/hooks/use-tick";
 import { useMockStore } from "@/store/mock-slice";
 import { StreamBadge } from "@/components/stream-badge";
 import { WsBadge } from "@/components/ws-badge";
+import { ConfigChip } from "./config-chip";
 
 export function StatusBar(): React.ReactNode {
   const requests = useStudioStore((s) => s.requests);
@@ -96,6 +97,7 @@ export function StatusBar(): React.ReactNode {
             <span>binding conflict</span>
           </span>
         )}
+        <ConfigChip />
         <StreamBadge />
         <WsBadge />
         {paused && <span className="font-medium text-warning-foreground">REC PAUSED</span>}

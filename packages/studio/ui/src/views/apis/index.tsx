@@ -1,4 +1,4 @@
-import { BookOpen } from "lucide-react";
+import { AlertTriangle, BookOpen, FileCode } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/shared/empty-state";
@@ -6,6 +6,7 @@ import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { PageShell } from "@/components/shared/page-shell";
 
 import { ApisHeader } from "./apis-header";
+import { ConfigNotice } from "./config-notice";
 import { ImportWizard } from "./import-wizard";
 import { ManageDialog } from "./manage-dialog";
 import { RegistryCard } from "./registry-card";
@@ -16,6 +17,7 @@ import { useRegistry } from "./use-registry";
 
 export function ApisView(): React.ReactElement {
   const registry = useRegistry();
+  const { page } = registry;
 
   const importWizard = useImport(() => {
     toast.success("API imported successfully");
@@ -30,7 +32,22 @@ export function ApisView(): React.ReactElement {
   const checking = Object.values(registry.statuses).some(
     (s) => s.status === "checking",
   );
-  const isEmpty = registry.imported.length === 0 && registry.handWritten.length === 0;
+  const importAction =
+    page.importBlocked === null
+      ? { label: "Import API", onClick: () => importWizard.openWizard() }
+      : undefined;
+  const centered =
+    page.kind === "no-config" ||
+    page.kind === "broken" ||
+    (page.kind === "empty" && page.notice === null);
+  const emptyState = (
+    <EmptyState
+      icon={BookOpen}
+      heading="No APIs yet"
+      description="Import an OpenAPI, Swagger, or Postman spec to generate typed API code. Or start writing APIs by hand — they'll appear here automatically."
+      action={importAction}
+    />
+  );
 
   const handleManage = (name: string) => {
     const source = registry.imported.find((s) => s.name === name);
@@ -47,28 +64,38 @@ export function ApisView(): React.ReactElement {
             sourceCount={registry.imported.length}
             scannedCount={registry.handWritten.length}
             checking={checking}
+            importBlocked={page.importBlocked}
             onImport={() => importWizard.openWizard()}
             onCheckAll={() => void registry.checkAll()}
           />
         }
-        center={isEmpty && !registry.loading}
+        center={centered}
       >
-        {registry.loading ? (
+        {page.kind === "connecting" || page.kind === "loading" ? (
           <div className="p-5">
+            {page.kind === "loading" && (
+              <p className="px-4 text-body-sm text-muted-foreground">Loading courier.config…</p>
+            )}
             <LoadingSkeleton layout="cards" />
           </div>
-        ) : isEmpty ? (
+        ) : page.kind === "no-config" ? (
           <EmptyState
-            icon={BookOpen}
-            heading="No APIs yet"
-            description="Import an OpenAPI, Swagger, or Postman spec to generate typed API code. Or start writing APIs by hand — they'll appear here automatically."
-            action={{
-              label: "Import API",
-              onClick: () => importWizard.openWizard(),
-            }}
+            icon={FileCode}
+            heading="No courier.config.ts"
+            description="Declare your API sources in courier.config.ts at the project root. Studio loads it as soon as it is saved."
           />
+        ) : page.kind === "broken" ? (
+          <EmptyState
+            icon={AlertTriangle}
+            heading={`${page.configFile} does not load`}
+            description={page.message}
+          />
+        ) : page.kind === "empty" && page.notice === null ? (
+          emptyState
         ) : (
           <div className="p-5 space-y-6">
+            {page.notice && <ConfigNotice notice={page.notice} />}
+            {page.kind === "empty" && emptyState}
             {registry.imported.length > 0 && (
               <section className="space-y-3">
                 <h2 className="text-caption text-muted-foreground">Imported</h2>

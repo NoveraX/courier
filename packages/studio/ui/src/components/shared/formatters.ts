@@ -25,6 +25,26 @@ export function formatAbsoluteTime(timestamp: number): string {
   });
 }
 
+/**
+ * A time of day on a 24-hour clock, to the second.
+ *
+ * @param timestamp - Epoch milliseconds
+ * @returns `HH:MM:SS` in the viewer's time zone
+ *
+ * @example
+ * ```ts
+ * formatClockTime(Date.parse("2026-09-25T14:03:09")); // → "14:03:09"
+ * ```
+ */
+export function formatClockTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString("en-US", {
+    hourCycle: "h23",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 export function formatTimestamp(
   timestamp: number,
   format: "relative" | "absolute",

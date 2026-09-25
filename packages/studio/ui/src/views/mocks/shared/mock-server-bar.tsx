@@ -10,7 +10,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useAllServers, useMockStore, useServerCount } from "@/store/mock-slice";
-import { openMockWizard } from "../wizard";
+import { openMockWizard, useAddMockBlocked } from "../wizard";
 import { ProcessStatusBadge, ServerControls } from "./server-controls";
 
 /** Server selector + status + controls rendered inside TopBar on /mocks pages */
@@ -20,6 +20,7 @@ export function MockServerBar(): React.ReactElement {
   const activeServerId = useMockStore((s) => s.activeServerId);
   const selectServer = useMockStore((s) => s.selectServer);
   const activeServer = servers.find((s) => s.serverId === activeServerId);
+  const addBlocked = useAddMockBlocked();
 
   return (
     <div className="flex items-center gap-2">
@@ -65,11 +66,21 @@ export function MockServerBar(): React.ReactElement {
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" className="size-6 text-muted-foreground/60 hover:text-foreground" onClick={openMockWizard}>
-            <Plus className="size-3.5" />
-          </Button>
+          {/* A disabled button gets no pointer events, so the reason's tooltip hangs on a wrapper. */}
+          <span tabIndex={addBlocked ? 0 : undefined}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-6 text-muted-foreground/60 hover:text-foreground"
+              aria-label={addBlocked ? `Add mock server: ${addBlocked}` : "Add mock server"}
+              disabled={addBlocked !== null}
+              onClick={openMockWizard}
+            >
+              <Plus className="size-3.5" />
+            </Button>
+          </span>
         </TooltipTrigger>
-        <TooltipContent side="bottom">Generate mock server</TooltipContent>
+        <TooltipContent side="bottom">{addBlocked ?? "Add mock server"}</TooltipContent>
       </Tooltip>
     </div>
   );

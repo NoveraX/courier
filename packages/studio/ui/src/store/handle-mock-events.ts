@@ -15,6 +15,7 @@ import type { MockCollectionEntry, MockScenarioEntry } from "./mock-slice-types"
 import type { MockEvent } from "./mock-event-types";
 
 import { useMockStore } from "./mock-slice";
+import { mockServerOf } from "./mock-server-of";
 import {
   handleScenarioActive,
   handleServerConnect,
@@ -40,7 +41,7 @@ export function handleMockEvent(event: MockEvent): void {
     /* A managed mock goes away only when its config entry does; one Studio
        did not start may come back on its own. */
     case "mock:server:disconnect":
-      if (store.servers[serverId]?.managed) store.removeServer(serverId);
+      if (mockServerOf(store.servers, serverId)?.managed) store.removeServer(serverId);
       else store.updateServer(serverId, { status: "disconnected" });
       break;
     case "mock:route:list":

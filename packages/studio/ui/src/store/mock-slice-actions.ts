@@ -18,43 +18,31 @@ import type {
 } from "./mock-slice-types";
 import type { RouteOverride, SavedScenario } from "./mock-slice-network-types";
 
+import { mockServerOf } from "./mock-server-of";
+
 const MAX_LOGS = 500;
 const MAX_EXPERIMENT_HISTORY = 100;
 
 type Setter = StoreApi<MockSliceState>["setState"];
 type Getter = StoreApi<MockSliceState>["getState"];
 
-type MockActions = Pick<
+/** Every action of the slice: all it holds but its data. */
+type MockActions = Omit<
   MockSliceState,
-  | "addServer"
-  | "removeServer"
-  | "updateServer"
-  | "selectServer"
-  | "setServerCollections"
-  | "setServerRoutes"
-  | "setServerScenarios"
-  | "addLog"
-  | "clearLogs"
-  | "toggleLogsPaused"
-  | "resetMockState"
-  | "addExperimentEvent"
-  | "saveScenario"
-  | "deleteScenario"
-  | "setRouteOverride"
-  | "clearRouteOverrides"
+  "servers" | "activeServerId" | "logs" | "logsPaused" | "experimentHistory"
 >;
 
 export function createMockSliceActions(set: Setter, get: Getter): MockActions {
+  /* A patch derived from the server as it is now, or none when no such server is listed. */
   const patchServer = (
     state: MockSliceState,
     serverId: string,
-    patch: Partial<MockServerInfo>,
+    patch: Partial<MockServerInfo> | ((server: MockServerInfo) => Partial<MockServerInfo>),
   ): Partial<MockSliceState> => {
-    const existing = state.servers[serverId];
+    const existing = mockServerOf(state.servers, serverId);
     if (!existing) return state;
-    return {
-      servers: { ...state.servers, [serverId]: { ...existing, ...patch } },
-    };
+    const changes = typeof patch === "function" ? patch(existing) : patch;
+    return { servers: { ...state.servers, [serverId]: { ...existing, ...changes } } };
   };
 
   return {
@@ -128,36 +116,33 @@ export function createMockSliceActions(set: Setter, get: Getter): MockActions {
     },
 
     saveScenario(serverId: string, scenario: SavedScenario) {
-      set((state) => {
-        const server = state.servers[serverId];
-        if (!server) return state;
-        const savedScenarios = [
-          ...(server.savedScenarios ?? []).filter((s) => s.id !== scenario.id),
-          scenario,
-        ];
-        return patchServer(state, serverId, { savedScenarios });
-      });
+      set((state) =>
+        patchServer(state, serverId, (server) => ({
+          savedScenarios: [
+            ...(server.savedScenarios ?? []).filter((s) => s.id !== scenario.id),
+            scenario,
+          ],
+        })),
+      );
     },
 
     deleteScenario(serverId: string, scenarioId: string) {
-      set((state) => {
-        const server = state.servers[serverId];
-        if (!server) return state;
-        const savedScenarios = (server.savedScenarios ?? []).filter((s) => s.id !== scenarioId);
-        return patchServer(state, serverId, { savedScenarios });
-      });
+      set((state) =>
+        patchServer(state, serverId, (server) => ({
+          savedScenarios: (server.savedScenarios ?? []).filter((s) => s.id !== scenarioId),
+        })),
+      );
     },
 
     setRouteOverride(serverId: string, override: RouteOverride) {
-      set((state) => {
-        const server = state.servers[serverId];
-        if (!server) return state;
-        const routeOverrides = [
-          ...(server.routeOverrides ?? []).filter((r) => r.routeId !== override.routeId),
-          override,
-        ];
-        return patchServer(state, serverId, { routeOverrides });
-      });
+      set((state) =>
+        patchServer(state, serverId, (server) => ({
+          routeOverrides: [
+            ...(server.routeOverrides ?? []).filter((r) => r.routeId !== override.routeId),
+            override,
+          ],
+        })),
+      );
     },
 
     clearRouteOverrides(serverId: string) {

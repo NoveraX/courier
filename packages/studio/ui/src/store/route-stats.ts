@@ -1,6 +1,7 @@
 import type { MockRouteEntry } from "./mock-slice-types";
 
 import { useMockStore } from "./mock-slice";
+import { mockServerOf } from "./mock-server-of";
 
 /** Update route hits + running average latency after a request completes */
 export function updateRouteStats(
@@ -10,7 +11,7 @@ export function updateRouteStats(
   httpMethod: string,
   duration: number,
 ): void {
-  const server = useMockStore.getState().servers[serverId];
+  const server = mockServerOf(useMockStore.getState().servers, serverId);
   if (!server) return;
 
   const routes = server.routes.map((r) => {

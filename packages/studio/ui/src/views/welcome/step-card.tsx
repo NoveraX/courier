@@ -6,10 +6,10 @@
  */
 
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { CodeBlock } from "@/components/shared/code-block";
 import { Button } from "@/components/ui/button";
+import { copyToClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
 import type { SetupStep } from "./frameworks";
@@ -85,10 +85,7 @@ export function StepCard({
 
               {isActive && !step.autoComplete && (
                 <Button className="mt-3" size="sm" onClick={() => {
-                  if (code) {
-                    navigator.clipboard.writeText(code);
-                    toast.success("Copied to clipboard");
-                  }
+                  if (code) void copyToClipboard(code, "snippet");
                   onAction();
                 }}>
                   <Icon className="-ml-0.5 size-3.5 shrink-0" aria-hidden />

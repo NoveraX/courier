@@ -1,50 +1,59 @@
-import { Input } from "@/components/ui/input";
+import type { DraftErrors, MockDraft, MockWizardState } from "./types";
 
-import type { UseMockGeneratorReturn } from "./use-mock-generator";
+import { DraftCard } from "./draft-card";
 
 interface ConfigureStepProps {
-  wizard: UseMockGeneratorReturn;
+  state: MockWizardState;
+  errors: ReadonlyMap<number, DraftErrors>;
+  onEdit: (index: number, patch: Partial<Omit<MockDraft, "source">>) => void;
+  onRemove: (index: number) => void;
 }
 
-export function ConfigureStep({ wizard }: ConfigureStepProps): React.ReactElement {
-  const { options } = wizard.state;
-
+/**
+ * The Configure step: one card per picked source, the problems Studio
+ * reported that concern no draft as sent, and what every mock serves.
+ *
+ * @param props - The wizard, the problems per draft, and the edit handlers
+ * @returns The step
+ *
+ * @example
+ * ```tsx
+ * <ConfigureStep state={state} errors={errors} onEdit={edit} onRemove={remove} />
+ * ```
+ */
+export function ConfigureStep({ state, errors, onEdit, onRemove }: ConfigureStepProps): React.ReactElement {
   return (
     <div className="space-y-5">
       <div className="space-y-1.5">
-        <h3 className="text-h3">Configure Mock Server</h3>
+        <h3 className="text-h3">Configure the mocks</h3>
         <p className="text-body-sm text-muted-foreground">
-          Set output path, port, and seed count. Scenarios (happy-path, empty, error, slow-network)
-          are included automatically.
+          Each mock is declared in courier.mocks.ts under its key, and serves every endpoint of its source.
         </p>
       </div>
 
-      {/* Output directory — fixed to mock-servers/ */}
-      <FieldRow label="Output directory">
-        <span className="font-mono text-xs text-muted-foreground">mock-servers/</span>
-      </FieldRow>
+      {state.requestProblems.length > 0 && (
+        <div role="alert" className="space-y-1 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2">
+          {state.requestProblems.map((problem, index) => (
+            <p key={`${index}:${problem}`} className="text-body-xs text-rose-400">
+              {problem}
+            </p>
+          ))}
+        </div>
+      )}
 
-      {/* Port */}
-      <FieldRow label="Server port">
-        <Input
-          type="number"
-          value={options.port}
-          onChange={(e) => wizard.setOptions({ port: Number(e.target.value) || 3001 })}
-          className="h-8 max-w-[120px] font-mono text-xs"
-        />
-      </FieldRow>
+      <div className="space-y-3">
+        {state.drafts.map((draft, index) => (
+          <DraftCard
+            key={draft.source}
+            index={index}
+            draft={draft}
+            errors={errors.get(index)}
+            onEdit={(patch) => onEdit(index, patch)}
+            onRemove={() => onRemove(index)}
+          />
+        ))}
+      </div>
 
-      {/* Seed count */}
-      <FieldRow label="Records per collection">
-        <Input
-          type="number"
-          value={options.seedCount}
-          onChange={(e) => wizard.setOptions({ seedCount: Number(e.target.value) || 20 })}
-          className="h-8 max-w-[120px] font-mono text-xs"
-        />
-      </FieldRow>
-
-      {/* Built-in scenarios info */}
       <div className="rounded-lg border border-border-subtle bg-muted/20 px-4 py-3">
         <p className="text-body-xs text-muted-foreground">
           Built-in scenarios available via Admin API (<span className="font-mono">/__admin/scenarios/:name</span>):
@@ -56,17 +65,6 @@ export function ConfigureStep({ wizard }: ConfigureStepProps): React.ReactElemen
           <li><span className="font-mono text-foreground">slow-network</span> — 3G latency on all endpoints</li>
         </ul>
       </div>
-    </div>
-  );
-}
-
-// ── Helper ────────────────────────────────────────────────────────────────────
-
-function FieldRow({ label, children }: { label: string; children: React.ReactNode }): React.ReactElement {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
-      {children}
     </div>
   );
 }

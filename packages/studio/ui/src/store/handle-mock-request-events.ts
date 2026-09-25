@@ -11,6 +11,7 @@ import type { NetworkConfig } from "./mock-slice-network-types";
 import type { MockEvent } from "./mock-event-types";
 
 import { useMockStore } from "./mock-slice";
+import { mockServerOf } from "./mock-server-of";
 import { updateRouteStats } from "./route-stats";
 
 export function handleRequestStart(serverId: string, event: MockEvent): void {
@@ -48,7 +49,7 @@ export function handleRequestEnd(serverId: string, event: MockEvent): void {
   useMockStore.setState({ logs: updated });
   updateRouteStats(serverId, log.group, log.endpoint, log.httpMethod, duration);
 
-  const server = useMockStore.getState().servers[serverId];
+  const server = mockServerOf(useMockStore.getState().servers, serverId);
   if (!server) return;
   const patch: Partial<MockServerInfo> = { requestsServed: server.requestsServed + 1 };
   const scenarioCount = event.scenarioRequestCount as number | undefined;
@@ -75,7 +76,7 @@ export function handleRequestError(serverId: string, event: MockEvent): void {
   useMockStore.setState({ logs: updated });
   updateRouteStats(serverId, log.group, log.endpoint, log.httpMethod, duration);
 
-  const server = useMockStore.getState().servers[serverId];
+  const server = mockServerOf(useMockStore.getState().servers, serverId);
   if (!server) return;
   store.updateServer(serverId, {
     requestsServed: server.requestsServed + 1,

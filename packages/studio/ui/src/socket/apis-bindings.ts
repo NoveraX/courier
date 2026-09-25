@@ -13,13 +13,20 @@ import { sourcesListOf } from "./sources-list-of";
 /** The part of the store the project's events write. */
 export type ApisStore = Pick<
   StudioState,
-  "configStatus" | "setConfigStatus" | "setRegistrySources" | "setScanSources" | "settings"
+  | "configStatus"
+  | "setConfigStatus"
+  | "mocksFileStatus"
+  | "setMocksFileStatus"
+  | "setRegistrySources"
+  | "setScanSources"
+  | "settings"
 >;
 
 /**
  * Listen for the project Studio runs: the imports list (`registry:updated`),
- * the source catalogue (`scan:sources`) and how the config loads
- * (`config:status`). A status that changes is announced; a reload is
+ * the source catalogue (`scan:sources`), how the config loads
+ * (`config:status`) and how the mocks file loads (`mocks:status`, which the
+ * Mocks view shows). A config status that changes is announced; a reload is
  * announced with the files of the latest change to the API sources the
  * watcher reported, which is why `watcher:change` is heard here too, and
  * without the mocks file `mocks:status` names (see `configTransitionNotice`).
@@ -43,7 +50,6 @@ export type ApisStore = Pick<
  */
 export function bindApis(socket: Socket, store: () => ApisStore): () => void {
   let lastApiChange: ApiSourceChange | null = null;
-  let mocks: MocksFileStatus | null = null;
 
   const onRegistryUpdated = (data: unknown): void => {
     const sources = sourcesListOf(data, isSourceSummary, "registry:updated");
@@ -58,11 +64,11 @@ export function bindApis(socket: Socket, store: () => ApisStore): () => void {
     if (change) lastApiChange = change;
   };
   const onMocksStatus = (data: unknown): void => {
-    if (isMocksFileStatus(data)) mocks = data;
+    if (isMocksFileStatus(data)) store().setMocksFileStatus(data);
   };
   const onConfigStatus = (data: unknown): void => {
     if (!isConfigStatusPayload(data)) return;
-    const { configStatus: prev, settings } = store();
+    const { configStatus: prev, settings, mocksFileStatus: mocks } = store();
     store().setConfigStatus(data);
     notifyConfigTransition(prev, data, {
       lastChange: lastApiChange,
@@ -71,7 +77,7 @@ export function bindApis(socket: Socket, store: () => ApisStore): () => void {
     });
   };
   const onDisconnect = (): void => {
-    mocks = null;
+    store().setMocksFileStatus(null);
     store().setConfigStatus(null);
   };
 

@@ -70,14 +70,29 @@ function EndpointRow({ endpoint }: { endpoint: MockScenarioEndpoint }): React.Re
   );
 }
 
-/** Bucket endpoints by their `group` field — `null` rows must be filtered out by the caller. */
+/**
+ * Bucket endpoints by their `group` field, in the order each group first
+ * appears. Group names are the developer's, and one such as `constructor`
+ * or `toString` is a group like any other, so the buckets are a `Map`
+ * rather than an object whose inherited members those names would find.
+ *
+ * @param endpoints - The endpoints; a `null` group is bucketed as "ungrouped", so callers filter those out first
+ * @returns The endpoints of each group, by group name
+ *
+ * @example
+ * ```ts
+ * groupByField(scenario.endpoints.filter((e) => e.group !== null)).get("users"); // → the users endpoints
+ * ```
+ */
 export function groupByField(
-  endpoints: MockScenarioEndpoint[],
-): Record<string, MockScenarioEndpoint[]> {
-  const groups: Record<string, MockScenarioEndpoint[]> = {};
+  endpoints: readonly MockScenarioEndpoint[],
+): Map<string, MockScenarioEndpoint[]> {
+  const groups = new Map<string, MockScenarioEndpoint[]>();
   for (const ep of endpoints) {
     const key = ep.group ?? "ungrouped";
-    (groups[key] ??= []).push(ep);
+    const group = groups.get(key);
+    if (group) group.push(ep);
+    else groups.set(key, [ep]);
   }
   return groups;
 }

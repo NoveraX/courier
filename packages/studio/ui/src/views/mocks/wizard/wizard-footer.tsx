@@ -1,66 +1,123 @@
-/**
- * Footer with Back / Continue buttons for the mock generator wizard.
- *
- * Extracted from `mock-generator-wizard.tsx` so each step's button changes
- * are colocated and the parent file holds only the dialog shell. Knows how
- * to compute the previous step for the Back button and which CTA to render
- * for each step.
- */
-
 import { Loader2 } from "lucide-react";
 
+import type { MockWizardHandle } from "./use-mock-wizard";
+
 import { Button } from "@/components/ui/button";
+import { ApplyButton } from "./apply-button";
+import { reviewCta } from "./review-cta";
 
-import type { MockWizardStep } from "./types";
-import type { UseMockGeneratorReturn } from "./use-mock-generator";
+const PRIMARY = "h-7 gap-1.5 bg-accent-brand px-3 text-xs font-medium text-white hover:bg-accent-brand/90";
+const OUTLINE = "h-7 gap-1.5 text-xs";
 
-interface WizardFooterProps {
-  wizard: UseMockGeneratorReturn;
-  currentIdx: number;
+function ReviewActions({ wizard }: { wizard: MockWizardHandle }): React.ReactElement {
+  const { session } = wizard;
+  const cta = reviewCta(wizard.state);
+  switch (cta.kind) {
+    case "wait":
+      return (
+        <Button type="button" size="sm" className={PRIMARY} disabled>
+          <Loader2 className="size-3 animate-spin" />
+          {cta.label}
+        </Button>
+      );
+    case "apply":
+      return <ApplyButton label={cta.label} armedAt={cta.armedAt} className={PRIMARY} onApply={() => session.apply()} />;
+    case "checkAgain":
+      return (
+        <Button type="button" size="sm" className={PRIMARY} onClick={() => session.review()}>
+          {cta.label}
+        </Button>
+      );
+    case "close":
+      return (
+        <Button type="button" variant="outline" size="sm" className={OUTLINE} onClick={wizard.close}>
+          {cta.label}
+        </Button>
+      );
+  }
 }
 
-export function WizardFooter({ wizard, currentIdx }: WizardFooterProps): React.ReactElement {
-  const { state, loading } = wizard;
-  const canProceed = state.selectedSources.length > 0 && !state.standalone;
+function StepActions({ wizard }: { wizard: MockWizardHandle }): React.ReactElement {
+  const { state, session, availability, errors } = wizard;
+  switch (state.step) {
+    case "source": {
+      const ready = state.mode === "sources" && availability.kind === "sources" && state.drafts.length > 0;
+      return (
+        <Button
+          type="button"
+          size="sm"
+          className={PRIMARY}
+          disabled={!ready}
+          onClick={() => session.dispatch({ type: "goTo", step: "configure" })}
+        >
+          Continue
+        </Button>
+      );
+    }
+    case "configure":
+      return (
+        <Button
+          type="button"
+          size="sm"
+          className={PRIMARY}
+          disabled={errors.size > 0 || state.drafts.length === 0}
+          onClick={() => session.review()}
+        >
+          Review change
+        </Button>
+      );
+    case "review":
+      return <ReviewActions wizard={wizard} />;
+    case "done":
+      return (
+        <Button type="button" variant="outline" size="sm" className={OUTLINE} onClick={wizard.close}>
+          Close
+        </Button>
+      );
+  }
+}
 
-  const prevStep = (): MockWizardStep => {
-    if (state.step === "configure") return "source";
-    if (state.step === "review") return "configure";
-    return "review";
-  };
-
+/**
+ * The wizard's footer: Back, and each step's call to action. A ready plan
+ * is applied only by its own button, which is never a form's submit and
+ * turns on only once the plan has been on screen for a moment, and Back is
+ * off while an apply is in flight.
+ *
+ * @param props.wizard - The wizard
+ * @returns The footer
+ *
+ * @example
+ * ```tsx
+ * <WizardFooter wizard={wizard} />
+ * ```
+ */
+export function WizardFooter({ wizard }: { wizard: MockWizardHandle }): React.ReactElement {
+  const { state, session } = wizard;
+  const back = state.step === "configure" ? "source" : state.step === "review" ? "configure" : null;
+  const count = state.drafts.length;
   return (
-    <div className="flex items-center justify-between border-t bg-muted rounded-b-lg px-6 py-4">
+    <div className="flex items-center justify-between rounded-b-lg border-t border-border-subtle bg-muted px-6 py-3">
       <div>
-        {currentIdx > 0 && (
-          <Button variant="outline" size="sm" onClick={() => wizard.goToStep(prevStep())}>
+        {back && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={OUTLINE}
+            disabled={state.apply.status === "applying"}
+            onClick={() => session.dispatch({ type: "goTo", step: back })}
+          >
             Back
           </Button>
         )}
       </div>
-      <div>
-        {state.step === "source" && (
-          <Button size="sm" disabled={!canProceed} onClick={() => wizard.goToStep("configure")}>
-            Continue
-          </Button>
+      <div className="flex items-center gap-2">
+        {state.step === "source" && state.mode === "sources" && (
+          <span className="text-body-sm tabular-nums text-muted-foreground">
+            {count} source{count !== 1 ? "s" : ""} selected
+          </span>
         )}
-        {state.step === "configure" && (
-          <Button size="sm" disabled={loading} onClick={() => wizard.generatePreview()}>
-            {loading && <Loader2 className="mr-1.5 size-3 animate-spin" />}
-            Generate Preview
-          </Button>
-        )}
-        {state.step === "review" && (
-          <Button size="sm" onClick={() => wizard.goToStep("preview")}>
-            Preview Files
-          </Button>
-        )}
-        {state.step === "preview" && (
-          <Button size="sm" disabled={state.writing} onClick={() => void wizard.writeFiles()}>
-            {state.writing && <Loader2 className="mr-1.5 size-3 animate-spin" />}
-            Write to Disk
-          </Button>
-        )}
+        <StepActions wizard={wizard} />
       </div>
     </div>
   );

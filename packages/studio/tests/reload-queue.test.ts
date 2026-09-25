@@ -267,4 +267,100 @@ describe("createReloadQueue", () => {
     release();
     await queue.settled();
   });
+
+  it("runs a task after what was queued before it, and a reload still waiting takes what is requested meanwhile", async () => {
+    const { log, reload } = recorder();
+    const queue = createReloadQueue(reload);
+    const { promise: held, resolve: release } = Promise.withResolvers<void>();
+    void queue.exclusive(() => held);
+    queue.request(["a"]);
+
+    queue.run(async () => {
+      log.push("task");
+    });
+    queue.request(["b"]);
+    release();
+    await queue.settled();
+
+    expect(log).toEqual(["start a,b", "end a,b", "task"]);
+  });
+
+  it("runs a task before a reload requested once the queued reload has started", async () => {
+    const { log, reload } = recorder();
+    const queue = createReloadQueue(reload);
+    queue.request(["a"]);
+    await sleep(5);
+
+    queue.run(async () => {
+      log.push("task");
+    });
+    queue.request(["b"]);
+    await queue.settled();
+
+    expect(log).toEqual(["start a", "end a", "task", "start b", "end b"]);
+  });
+
+  it("does not count a task as an edit", async () => {
+    const queue = createReloadQueue(async () => undefined);
+    const { promise: held, resolve: release } = Promise.withResolvers<void>();
+
+    queue.run(() => held);
+
+    await expect(queue.exclusiveSettled()).resolves.toBeUndefined();
+    release();
+    await queue.settled();
+  });
+
+  it("keeps going after a task that throws, and logs the failure", async () => {
+    const { runs, reload } = recorder();
+    const queue = createReloadQueue(reload);
+
+    queue.run(async () => {
+      throw new Error("task failed");
+    });
+    queue.request(["after"]);
+    await queue.settled();
+
+    expect(runs).toEqual([["after"]]);
+    expect(console.error).toHaveBeenCalledTimes(1);
+  });
+
+  it("refusing edits rejects one queued behind a busy chain at once, never runs it, and waits only for the one running", async () => {
+    const queue = createReloadQueue(async () => undefined);
+    const { promise: held, resolve: release } = Promise.withResolvers<void>();
+    const ran: string[] = [];
+    const running = queue.exclusive(async () => {
+      ran.push("running");
+      await held;
+      return "running done";
+    });
+    await sleep(5);
+    const queued = queue.exclusive(async () => {
+      ran.push("queued");
+      return "queued done";
+    });
+
+    queue.refuseEdits(() => new Error("Studio is stopping"));
+
+    await expect(queued).rejects.toThrow("Studio is stopping");
+    const waited = await Promise.race([queue.exclusiveSettled().then(() => "settled"), sleep(50).then(() => "waiting")]);
+    expect(waited).toBe("waiting");
+    release();
+    await expect(running).resolves.toBe("running done");
+    await queue.exclusiveSettled();
+    await queue.settled();
+    expect(ran).toEqual(["running"]);
+  });
+
+  it("refuses an edit asked for after edits were refused, without queueing it", async () => {
+    const queue = createReloadQueue(async () => undefined);
+    const task = vi.fn(async () => "done");
+
+    queue.refuseEdits(() => new Error("Studio is stopping"));
+    const refused = queue.exclusive(task);
+
+    await expect(refused).rejects.toThrow("Studio is stopping");
+    await queue.settled();
+    expect(task).not.toHaveBeenCalled();
+  });
 });

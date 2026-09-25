@@ -26,7 +26,7 @@ const log = createLogger("Studio");
  *
  * @example
  * ```ts
- * await ctx.project.runExclusive((tx) => editAlone(ctx, tx, body), LOAD_TIMEOUT_MS);
+ * await ctx.project.runExclusive((tx) => editAlone(ctx, tx, body), CONFIG_LOAD_TIMEOUT_MS);
  * ```
  */
 export async function editAlone(

@@ -23,12 +23,26 @@
  * also why a save whose notification is still waiting when a load reads it
  * is loaded once more: the notification may stand for a version the load
  * evaluated in place of the bytes its walk read.
+ *
+ * A load that runs past the timeout is given up, so a config that awaits
+ * something that never comes does not hold every reload and edit behind it
+ * for good; it fails with `CONFIG_LOAD_TIMEOUT`, and what it read is armed
+ * like any failed load's. When it succeeds after all, Studio runs it only if
+ * its failure is still the latest outcome once everything queued before has
+ * run, and every file it read still holds what it read; otherwise the config
+ * is loaded once more, and a newer outcome is never replaced. When it fails
+ * after all, what it threw replaces the timeout on the same terms, as any
+ * failed load's outcome would, so the real cause is reported.
  */
 
 import { createLogger } from "@noverax/courier";
 import { armWatchSet } from "./arm-watch-set";
+import { createChainLoad } from "./chain-load";
 import { type LoadedCourierConfig, loadCourierConfig } from "./config-loader";
+import { ConfigLoaderError } from "./config-loader-errors";
 import { type ExclusiveTransaction, exclusiveContext } from "./exclusive-reload";
+import { inputsOnDisk } from "./inputs-on-disk";
+import { CONFIG_LOAD_TIMEOUT_MS } from "./project-state/budgets";
 import type { ProjectInputs } from "./read-project-inputs";
 import { createReloadQueue } from "./reload-queue";
 import { createWatchSet, type WatchDegradation } from "./watch-set";
@@ -47,6 +61,8 @@ export interface ConfigWatcherDeps {
   onApplied(loaded: LoadedCourierConfig): void;
   /** A load failed; Studio keeps running what it ran. Called in chain order. */
   onFailed(error: unknown): void;
+  /** How long the first load and each reload may take (default: `CONFIG_LOAD_TIMEOUT_MS`). */
+  loadTimeoutMs?: number;
 }
 
 export interface ConfigWatcher {
@@ -56,6 +72,12 @@ export interface ConfigWatcher {
   settled(): Promise<void>;
   /** Resolves once no edit run with `runExclusive` is queued or running. */
   editsSettled(): Promise<void>;
+  /**
+   * Refuse every edit that has not started, and every later one, with
+   * `CONFIG_WATCHER_STOPPED`, so none writes a file once Studio is stopping;
+   * an edit under way goes on.
+   */
+  refuseEdits(): void;
   /**
    * Run an edit of the watched files alone on the reload chain: loads queued
    * before it run first, and reloads its own writes or anyone else's trigger
@@ -71,6 +93,11 @@ export interface ConfigWatcher {
     timeoutMs: number,
     dropped?: AbortSignal,
   ): Promise<TResult>;
+}
+
+/** What an edit is refused with once Studio is stopping. */
+function stopping(): ConfigLoaderError {
+  return new ConfigLoaderError("CONFIG_WATCHER_STOPPED", "Studio is stopping, so it made no edit");
 }
 
 /** A refused watch leaves the poll layer running, so say so rather than throw. */
@@ -96,6 +123,24 @@ function reportDegradation({ kind, path, message }: WatchDegradation): void {
  */
 export function startConfigWatcher(deps: ConfigWatcherDeps): ConfigWatcher {
   let stopped = false;
+  /* The latest outcome: the load applied, or what the failed one threw. */
+  let latest: unknown = null;
+  /* What the load running on the chain read, handed over before it
+     evaluates, so a load that fails in any way still arms what it read. */
+  let read: ProjectInputs | null = null;
+  const chain = createChainLoad({
+    projectRoot: deps.projectRoot,
+    timeoutMs: deps.loadTimeoutMs ?? CONFIG_LOAD_TIMEOUT_MS,
+    onInputs: (inputs) => {
+      read = inputs;
+    },
+    onLateSuccess: (loaded, gaveUp) =>
+      late(gaveUp, () => {
+        if (inputsOnDisk(loaded.depHashes)) apply(loaded);
+        else queue.request([loaded.configFile]);
+      }),
+    onLateFailure: (error, gaveUp) => late(gaveUp, () => fail(gaveUp.depHashes ?? null, error)),
+  });
   const queue = createReloadQueue(reload, load);
   const watchSet = createWatchSet({
     paths: [],
@@ -105,31 +150,39 @@ export function startConfigWatcher(deps: ConfigWatcherDeps): ConfigWatcher {
   const arming = armWatchSet(watchSet, deps);
 
   function apply(loaded: LoadedCourierConfig): void {
+    latest = loaded;
     arming.succeeded(loaded);
     deps.onApplied(loaded);
   }
 
+  function fail(inputs: ProjectInputs | null, error: unknown): void {
+    latest = error;
+    arming.failed(inputs, error);
+    deps.onFailed(error);
+  }
+
   async function load(): Promise<void> {
     if (stopped) return;
-    /* Handed over before evaluating, so a load that fails in any way, having
-       thrown anything, still arms what it read. */
-    const read: { inputs: ProjectInputs | null } = { inputs: null };
+    read = null;
     let loaded: LoadedCourierConfig;
     try {
-      loaded = await loadCourierConfig(deps.projectRoot, {
-        onInputs: (inputs) => {
-          read.inputs = inputs;
-        },
-      });
+      loaded = await chain.load();
     } catch (err) {
-      if (stopped) return;
-      arming.failed(read.inputs, err);
-      deps.onFailed(err);
+      if (!stopped) fail(read, err);
       return;
     }
     /* A stop while it loaded must not push a config into a server that has
        already torn its state down. */
     if (!stopped) apply(loaded);
+  }
+
+  /* Decided on the chain, after what was queued before: a load queued then
+     has an outcome of its own by the time this runs. */
+  function late(gaveUp: unknown, take: () => void): void {
+    if (stopped || latest !== gaveUp) return;
+    queue.run(async () => {
+      if (!stopped && latest === gaveUp) take();
+    });
   }
 
   async function reload(changed: string[]): Promise<void> {
@@ -157,6 +210,7 @@ export function startConfigWatcher(deps: ConfigWatcherDeps): ConfigWatcher {
     },
     settled: queue.settled,
     editsSettled: queue.exclusiveSettled,
+    refuseEdits: () => queue.refuseEdits(stopping),
     runExclusive: (transaction, timeoutMs, dropped) =>
       queue.exclusive(() => transaction(exclusiveContext(host, timeoutMs)), dropped),
   };

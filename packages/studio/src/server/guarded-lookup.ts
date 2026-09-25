@@ -1,8 +1,7 @@
 import type { LookupAddress } from "node:dns";
 import { promises as dns } from "node:dns";
 import { createLogger } from "@noverax/courier";
-import { specAddressKind } from "./spec-address-kind";
-import { SpecFetchError } from "./spec-fetch-error";
+import { approveSpecAddresses } from "./approve-spec-addresses";
 
 const log = createLogger("Studio");
 
@@ -15,10 +14,17 @@ export type LookupCallback = (
 
 /** What a lookup may connect to, besides the public internet. */
 export interface LookupPolicy {
-  /** The project names this host in `studio.allowedSpecHosts`: any address is fine. */
-  allowed: boolean;
   /** This machine may be reached — the developer asked for it, not a server they were sent to. */
   loopback: boolean;
+  /**
+   * Let the request reach a private address, or this machine when `loopback`
+   * is not set: resolves when the project names the host in
+   * `studio.allowedSpecHosts`, and rejects with the refusal otherwise. It is
+   * asked only for such an address, so a public host never reads the project.
+   *
+   * @param what - The host, and the address it resolved to when there was a lookup
+   */
+  admitPrivate(what: string): Promise<void>;
 }
 
 /**
@@ -32,19 +38,15 @@ export interface LookupPolicy {
  *
  * @example
  * ```ts
- * request(url, { lookup: guardedLookup({ allowed: false, loopback: true }) });
+ * request(url, { lookup: guardedLookup({ loopback: true, admitPrivate: refuseEvery }) });
  * ```
  */
 export function guardedLookup(policy: LookupPolicy): LookupCallback {
   return (hostname, options, callback) => {
-    dns
-      .lookup(hostname, { all: true })
+    approvedAddresses(hostname, policy)
       .then(
         (addresses) => {
-          const refused = addresses.find((entry) => !permitted(entry.address, policy));
-          if (refused)
-            callback(SpecFetchError.privateHost(`${hostname} (${refused.address})`), [], 0);
-          else if (options.all) callback(null, addresses);
+          if (options.all) callback(null, addresses);
           else callback(null, addresses[0]?.address ?? "", addresses[0]?.family ?? 4);
         },
         (error: unknown) =>
@@ -56,8 +58,12 @@ export function guardedLookup(policy: LookupPolicy): LookupCallback {
   };
 }
 
-function permitted(address: string, { allowed, loopback }: LookupPolicy): boolean {
-  if (allowed) return true;
-  const kind = specAddressKind(address);
-  return kind === "public" || (kind === "loopback" && loopback);
+async function approvedAddresses(hostname: string, policy: LookupPolicy): Promise<LookupAddress[]> {
+  const addresses = await dns.lookup(hostname, { all: true });
+  await approveSpecAddresses(
+    addresses.map((entry) => entry.address),
+    policy,
+    (address) => `${hostname} (${address})`,
+  );
+  return addresses;
 }

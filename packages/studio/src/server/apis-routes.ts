@@ -14,14 +14,16 @@ import {
   parseSpec,
 } from "../apis";
 import { resolveProjectSafe } from "../context";
-import { allowedSpecHosts } from "./allowed-spec-hosts";
 import { fetchSpec } from "./fetch-spec";
 import { registerManageRoutes } from "./manage-routes";
 import type { ProjectImports } from "./project-state/types";
 import { errMsg } from "./registry-helpers";
 import { registerRegistryRoutes } from "./registry-routes";
+import { sendRouteFailure } from "./route-failure";
 import type { RouteApp } from "./route-types";
 import { SpecFetchError } from "./spec-fetch-error";
+import { type SpecHostAllowlist, specHostAllowlist } from "./spec-host-allowlist";
+import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
 import { registerUpdateFlowRoutes } from "./update-routes";
 import {
   validateDiffBody,
@@ -60,9 +62,14 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
     try {
       const body = validateParseBody(req.body, res);
       if (!body) return;
-      const raw = await resolveSpecContent(body.source, body.content);
+      const allowlist = specHostAllowlist(deps.project, deps.projectRoot);
+      const raw = await resolveSpecContent(body.source, body.content, allowlist);
       res.json(parseSpec(raw));
     } catch (err) {
+      if (err instanceof SpecHostsUnavailableError) {
+        sendRouteFailure(res, err, "Failed to parse spec");
+        return;
+      }
       /* A spec host that could not be read is the server's failure, not the request's. */
       const status = err instanceof SpecFetchError && !err.refused ? 502 : 400;
       res.status(status).json({ error: errMsg(err, "Failed to parse spec") });
@@ -138,8 +145,9 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
 async function resolveSpecContent(
   source: "url" | "raw" | "file",
   content: string,
+  allowlist: SpecHostAllowlist,
 ): Promise<string> {
-  if (source === "url") return fetchSpec(content, await allowedSpecHosts());
+  if (source === "url") return fetchSpec(content, allowlist);
   if (source === "file") {
     const filePath = resolveProjectSafe(content);
     if (!existsSync(filePath)) throw new Error(`File not found: ${filePath}`);

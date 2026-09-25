@@ -24,8 +24,6 @@ describe("specAddressKind", () => {
     "224.0.0.1",
     "240.0.0.1",
     "255.255.255.255",
-    "0.1.2.3",
-    "::",
     "::ffff:a9fe:a9fe",
     "::ffff:169.254.169.254",
     "::ffff:10.0.0.1",
@@ -49,6 +47,13 @@ describe("specAddressKind", () => {
   ])("takes %s for a private network", (address) => {
     expect(specAddressKind(address)).toBe("private");
   });
+
+  it.each(["0.0.0.0", "0.1.2.3", "::", "0:0:0:0:0:0:0:0", "::ffff:0.0.0.0", "::ffff:0:0", "::ffff:0:0:0"])(
+    "takes %s for no destination, which reaches this machine's own services",
+    (address) => {
+      expect(specAddressKind(address)).toBe("unspecified");
+    },
+  );
 
   it.each(["8.8.8.8", "172.32.0.1", "1.1.1.1", "198.18.0.1", "2606:4700::1111", "64:ff9b::808:808", "2002:808:808::1"])(
     "takes %s for the public internet",

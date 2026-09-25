@@ -113,7 +113,19 @@ export interface CourierStudioConfig {
    * not walk into a network the developer cannot see from their own browser.
    * Loopback needs no entry here — a specification served by the project's own
    * dev server is the ordinary case. Name a private host explicitly to reach
-   * it, for example `["gitlab.internal", "10.0.0.7:8080"]`.
+   * it, for example `["gitlab.internal", "10.0.0.7:8080"]`: an entry matches
+   * the host with or without its port, in any case, an IPv6 address with or
+   * without brackets. An address that means every interface (`0.0.0.0`,
+   * `::`) is never reached, even when listed.
+   *
+   * Studio reads this list only when a request would reach a private host,
+   * as courier.config is on disk at that moment. While courier.config does
+   * not load, no private host is allowed — not even one the last config that
+   * loaded named — until it loads again. List hosts literally: a host
+   * computed from something Studio does not watch, such as an environment
+   * variable or a file the config reads, is taken as of the last load, and
+   * one computed in a dependency Node loads natively (`.mjs`, `.cjs`, or `.js`
+   * in an ES module package) as of the last time Node evaluated it.
    */
   allowedSpecHosts?: readonly string[];
 }

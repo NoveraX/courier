@@ -1,14 +1,18 @@
 import { BlockList, isIPv4, isIPv6 } from "node:net";
 
-/** What an address is to Studio, deciding whether it may fetch from it. */
-export type SpecAddressKind = "loopback" | "private" | "public";
+/**
+ * What an address is to Studio, deciding whether it may fetch from it.
+ *
+ * `unspecified` is no destination at all — `0.0.0.0/8` or `::` — yet
+ * connecting to it reaches this machine's own services, so nothing allows it.
+ */
+export type SpecAddressKind = "loopback" | "private" | "unspecified" | "public";
 
 /* Ranges that are not the public internet: private networks, shared address
    space (CGNAT, Tailscale), link-local, documentation, relay, multicast,
    reserved and broadcast. The benchmarking range 198.18.0.0/15 is not among
    them: fake-IP proxy tools (Clash, Surge) answer every name with it. */
 const PRIVATE_V4: ReadonlyArray<readonly [string, number]> = [
-  ["0.0.0.0", 8],
   ["10.0.0.0", 8],
   ["100.64.0.0", 10],
   ["169.254.0.0", 16],
@@ -55,7 +59,7 @@ for (const [address, prefix] of PRIVATE_V6) privateV6.addSubnet(address, prefix,
  * otherwise slip past a check of dotted IPv4.
  *
  * @param address - An IPv4 or IPv6 address, without brackets or zone
- * @returns Whether it is this machine, a private network, or the public internet
+ * @returns Whether it is this machine, a private network, no destination, or the public internet
  *
  * @example
  * ```ts
@@ -73,12 +77,13 @@ export function specAddressKind(address: string): SpecAddressKind {
     return kind === "loopback" && !embedded.mapped ? "private" : kind;
   }
   if (groups.every((group, index) => group === (index === 7 ? 1 : 0))) return "loopback";
-  if (groups.every((group) => group === 0)) return "private";
+  if (groups.every((group) => group === 0)) return "unspecified";
   return privateV6.check(address, "ipv6") ? "private" : "public";
 }
 
 function kindOfV4(address: string): SpecAddressKind {
   if (address.startsWith("127.")) return "loopback";
+  if (address.startsWith("0.")) return "unspecified";
   if (address === "255.255.255.255") return "private";
   return privateV4.check(address, "ipv4") ? "private" : "public";
 }

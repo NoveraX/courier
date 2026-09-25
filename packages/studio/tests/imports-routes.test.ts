@@ -4,7 +4,9 @@
  * courier.config does not load; they write files that belong to no import,
  * and remove an import, whatever state the config is in; and they write an
  * import's files only from the declaration on disk, refusing with a reason
- * while there is none that loads.
+ * while there is none that loads. A check of URL imports reads which private
+ * hosts the project allows once, only for a private host, and never from the
+ * last config that loaded.
  */
 import {
   existsSync,
@@ -16,6 +18,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
+import { createServer, type Server } from "node:http";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -23,6 +26,10 @@ import { loadImportsState, recordImport, saveImportsState } from "../src/apis/im
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { createStudioServer } from "../src/server/create-studio-server";
 import { withImportsLock } from "../src/server/imports-lock";
+import { ACT_BUDGET_MS } from "../src/server/project-state/budgets";
+import type { FreshSnapshot, ProjectImports } from "../src/server/project-state/types";
+import { registerRegistryRoutes } from "../src/server/registry-routes";
+import type { JsonResponse, RouteApp } from "../src/server/route-types";
 import { io as connect } from "socket.io-client";
 import type { StudioServer } from "../src/server/types";
 
@@ -102,11 +109,17 @@ interface Reply {
   body: unknown;
 }
 
-async function post(url: string, path: string, body: Record<string, unknown> = {}): Promise<Reply> {
+async function post(
+  url: string,
+  path: string,
+  body: Record<string, unknown> = {},
+  signal?: AbortSignal,
+): Promise<Reply> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: url },
     body: JSON.stringify(body),
+    signal,
   });
   const payload: unknown = await response.json();
   return { status: response.status, body: payload };
@@ -531,4 +544,193 @@ describe("the imports lists every UI is sent", () => {
 
     expect(response.status).toBe(404);
   }, 15_000);
+});
+
+describe("the update checks of URL imports", () => {
+  let specServer: Server | undefined;
+  let specBase = "";
+
+  beforeEach(async () => {
+    const server = createServer((req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      if (req.url === "/empty.json") res.end();
+      else res.end(JSON.stringify({ openapi: "3.1.0", info: { title: "Pets", version: "1" }, paths: {} }));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    specServer = server;
+    specBase = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  });
+
+  afterEach(async () => {
+    await new Promise((resolve) => specServer?.close(resolve));
+    specServer = undefined;
+  });
+
+  /* A config that declares URL imports, by name, and names these private hosts. */
+  function declaringUrls(urls: Record<string, string>, allowed: readonly string[] = []): string {
+    const imports = Object.entries(urls)
+      .map(([name, from]) => `${name}: { importType: "url", type: "openapi", from: "${from}", outputDir: "src/${name}" }`)
+      .join(", ");
+    return `import "./count";\nexport default { sources: { api: { baseURL: "https://api.example" } }, studio: { allowedSpecHosts: ${JSON.stringify(allowed)} }, imports: { ${imports} } };\n`;
+  }
+
+  /* Studio started, and its first load of the config has an outcome, without fetching any import. */
+  async function loaded(): Promise<string> {
+    const url = await start();
+    await post(url, "/api/apis/imports/check-updates", { name: "none" });
+    return url;
+  }
+
+  it("check-updates answers 400 for a refused spec URL", async () => {
+    project(declaringUrls({ pets: "http://10.0.0.7/spec.json" }));
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/imports/check-updates", { name: "pets" });
+
+    expect(reply.status).toBe(400);
+    expect(String((reply.body as { error?: unknown }).error)).toContain(
+      "Blocked request to private address: 10.0.0.7.",
+    );
+  }, 15_000);
+
+  it("check-updates answers for a spec URL that answers 200 with an empty body", async () => {
+    project(declaringUrls({ empty: `${specBase}/empty.json` }));
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/imports/check-updates", { name: "empty" }, AbortSignal.timeout(5_000));
+
+    expect(reply).toEqual({
+      status: 500,
+      body: { error: expect.stringContaining("Unable to detect spec format") },
+    });
+  }, 15_000);
+
+  it("check-updates refuses a private host 409 CONFIG_NOT_LOADING while courier.config does not load", async () => {
+    project(declaringUrls({ pets: "http://10.0.0.7/spec.json" }, ["10.0.0.7"]));
+    const url = await loaded();
+    writeProjectFile("courier.config.ts", BROKEN);
+
+    const reply = await post(url, "/api/apis/imports/check-updates", { name: "pets" });
+
+    expect(reply).toEqual({
+      status: 409,
+      body: { code: "CONFIG_NOT_LOADING", error: expect.stringContaining("courier.config is broken on purpose") },
+    });
+  }, 15_000);
+
+  it("check-all loads nothing when nothing changed, and answers each import's refusal as its result", async () => {
+    project(
+      declaringUrls({
+        here: `${specBase}/spec.json`,
+        inside: "http://10.0.0.7/spec.json",
+        beside: "http://[fd00::7]/spec.json",
+      }),
+    );
+    const url = await started();
+    const before = evaluations();
+
+    const reply = await post(url, "/api/apis/imports/check-all");
+
+    expect(evaluations() - before).toBe(0);
+    expect(reply).toEqual({
+      status: 200,
+      body: {
+        results: {
+          here: { changed: true },
+          inside: { changed: false, error: expect.stringContaining("Blocked request to private address: 10.0.0.7.") },
+          beside: { changed: false, error: expect.stringContaining("Blocked request to private address: [fd00::7].") },
+        },
+      },
+    });
+  }, 15_000);
+
+  it("check-all refuses a private host the last good config named while courier.config does not load", async () => {
+    project(declaringUrls({ inside: "http://10.0.0.7/spec.json" }, ["10.0.0.7"]));
+    const url = await loaded();
+    writeProjectFile("courier.config.ts", BROKEN);
+
+    const reply = await post(url, "/api/apis/imports/check-all");
+
+    expect(reply.status).toBe(200);
+    expect(reply.body).toEqual({
+      results: {
+        inside: {
+          changed: false,
+          error: expect.stringContaining("courier.config does not load right now"),
+        },
+      },
+    });
+  }, 15_000);
+});
+
+describe("a check of all imports", () => {
+  type Handler = Parameters<RouteApp["post"]>[1];
+
+  /* The check-all route over a project that runs these declarations, counting each read of it by budget. */
+  function checkAll(declarations: Record<string, unknown>) {
+    const view: FreshSnapshot = {
+      revision: 1,
+      starting: false,
+      running: { config: { sources: {}, imports: declarations } } as never,
+      loadedAt: 1,
+      failure: null,
+      settling: false,
+    };
+    const fresh = vi.fn(async (_budgetMs: number) => view);
+    const project: ProjectImports = { snapshot: () => view, fresh, importsChanged: () => undefined };
+    let handler: Handler | undefined;
+    const app: RouteApp = {
+      post: (path, next) => {
+        if (path === "/api/apis/imports/check-all") handler = next;
+      },
+    };
+    registerRegistryRoutes(app, { project, projectRoot: root });
+    const reply = new Promise<{ status: number; body: unknown }>((resolve) => {
+      let status = 200;
+      const res: JsonResponse = {
+        status(code) {
+          status = code;
+          return res;
+        },
+        json(data) {
+          resolve({ status, body: data });
+        },
+      };
+      void handler?.({ body: {} }, res);
+    });
+    return { reply, fresh };
+  }
+
+  function urlImport(from: string): Record<string, unknown> {
+    return { importType: "url", type: "openapi", from, outputDir: "src/api" };
+  }
+
+  it("reads the private hosts the project allows once for every import it checks", async () => {
+    const { reply, fresh } = checkAll({
+      a: urlImport("http://10.0.0.7/a.json"),
+      b: urlImport("http://10.0.0.8/b.json"),
+      c: urlImport("http://[fd00::9]/c.json"),
+    });
+
+    const { status } = await reply;
+
+    expect(status).toBe(200);
+    expect(fresh.mock.calls.filter(([budgetMs]) => budgetMs === ACT_BUDGET_MS)).toHaveLength(1);
+  });
+
+  it("reports an import named __proto__ like any other", async () => {
+    const declarations: Record<string, unknown> = {};
+    Object.defineProperty(declarations, "__proto__", {
+      value: { importType: "file", type: "openapi", outputDir: "src/api" },
+      enumerable: true,
+    });
+    const { reply } = checkAll(declarations);
+
+    const { status, body } = await reply;
+    const results: unknown = typeof body === "object" && body !== null && "results" in body ? body.results : null;
+
+    expect(status).toBe(200);
+    expect(results !== null && typeof results === "object" && Object.hasOwn(results, "__proto__")).toBe(true);
+    expect(JSON.stringify(results)).toBe('{"__proto__":{"changed":false}}');
+  });
 });

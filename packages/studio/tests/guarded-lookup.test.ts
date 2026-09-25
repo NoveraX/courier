@@ -1,8 +1,14 @@
 /**
  * The name lookup a specification fetch connects through: every address the
  * name resolves to is checked, and the connection goes only to an approved one.
+ * The project is asked about the host only for an address it would otherwise
+ * refuse, and never allows an address that means every interface.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import type { LookupPolicy } from "../src/server/guarded-lookup";
+import { SpecFetchError } from "../src/server/spec-fetch-error";
+import { SpecHostsUnavailableError } from "../src/server/spec-hosts-unavailable-error";
 
 const answers = vi.hoisted(() => ({ addresses: [] as Array<{ address: string; family: number }> }));
 
@@ -16,10 +22,24 @@ afterEach(() => {
   answers.addresses = [];
 });
 
-function lookup(allowed: boolean, loopback = true, all = false): Promise<{ error: Error | null; address: unknown }> {
+/* The project names the host when `allowed`; otherwise it refuses it as a loaded config would. */
+function policyFor(allowed: boolean, loopback: boolean): LookupPolicy {
+  return {
+    loopback,
+    admitPrivate: vi.fn(async (what: string) => {
+      if (!allowed) throw SpecFetchError.privateHost(what);
+    }),
+  };
+}
+
+function lookupWith(policy: LookupPolicy, all = false): Promise<{ error: Error | null; address: unknown }> {
   return new Promise((resolve) => {
-    guardedLookup({ allowed, loopback })("spec.example", { all }, (error, address) => resolve({ error, address }));
+    guardedLookup(policy)("spec.example", { all }, (error, address) => resolve({ error, address }));
   });
+}
+
+function lookup(allowed: boolean, loopback = true, all = false): Promise<{ error: Error | null; address: unknown }> {
+  return lookupWith(policyFor(allowed, loopback), all);
 }
 
 describe("guardedLookup", () => {
@@ -45,6 +65,50 @@ describe("guardedLookup", () => {
     ];
 
     expect((await lookup(false)).error).toMatchObject({ code: "SPEC_HOST_PRIVATE" });
+  });
+
+  it("does not ask the project about a name whose addresses are all public or this machine", async () => {
+    answers.addresses = [
+      { address: "93.184.215.14", family: 4 },
+      { address: "127.0.0.1", family: 4 },
+    ];
+    const policy = policyFor(false, true);
+
+    expect(await lookupWith(policy)).toEqual({ error: null, address: "93.184.215.14" });
+    expect(policy.admitPrivate).not.toHaveBeenCalled();
+  });
+
+  it("asks the project once for a name with several private addresses", async () => {
+    answers.addresses = [
+      { address: "10.0.0.7", family: 4 },
+      { address: "fd00::7", family: 6 },
+    ];
+    const policy = policyFor(true, true);
+
+    expect(await lookupWith(policy)).toEqual({ error: null, address: "10.0.0.7" });
+    expect(policy.admitPrivate).toHaveBeenCalledTimes(1);
+    expect(policy.admitPrivate).toHaveBeenCalledWith("spec.example (10.0.0.7)");
+  });
+
+  it.each(["0.0.0.0", "0.9.9.9", "::", "::ffff:0.0.0.0"])(
+    "refuses a name that resolves to the unspecified address %s even when the project names it",
+    async (address) => {
+      answers.addresses = [{ address, family: address.includes(":") ? 6 : 4 }];
+
+      const { error } = await lookup(true);
+
+      expect(error).toMatchObject({ code: "SPEC_URL_INVALID" });
+      expect(error?.message).toContain(`spec.example (${address})`);
+    },
+  );
+
+  it("hands the connection the refusal the project gives while it cannot say", async () => {
+    answers.addresses = [{ address: "10.0.0.7", family: 4 }];
+    const unavailable = SpecHostsUnavailableError.reloading("spec.example (10.0.0.7)");
+
+    const { error } = await lookupWith({ loopback: true, admitPrivate: async () => Promise.reject(unavailable) });
+
+    expect(error).toBe(unavailable);
   });
 
   it("connects to a private address the project names", async () => {
@@ -80,7 +144,7 @@ describe("guardedLookup", () => {
     let calls = 0;
 
     await new Promise<void>((resolve) => {
-      guardedLookup({ allowed: false, loopback: true })("spec.example", {}, () => {
+      guardedLookup(policyFor(false, true))("spec.example", {}, () => {
         calls += 1;
         setTimeout(resolve, 20);
         throw new Error("connect failed");

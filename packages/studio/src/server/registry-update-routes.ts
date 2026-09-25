@@ -12,6 +12,7 @@ import { readDeclarations } from "./project-state/read-declarations";
 import { checkSingleSource, fetchSpecRaw } from "./registry-helpers";
 import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse, RouteApp } from "./route-types";
+import { specHostAllowlist } from "./spec-host-allowlist";
 import { validateNameBody } from "./validate-body-registry";
 
 type RouteRequest = { body: Record<string, unknown> };
@@ -55,8 +56,9 @@ async function handleCheckUpdates(
       return;
     }
 
-    const raw = await fetchSpecRaw(entry.from, res);
-    if (!raw) return;
+    const raw = await fetchSpecRaw(entry.from, res, specHostAllowlist(project, projectRoot));
+    /* An empty body is text too: it fails as a specification below, and the route answers. */
+    if (raw === null) return;
 
     const newSpec = parseSpec(raw);
     const newHash = computeSpecHash(newSpec);
@@ -74,16 +76,17 @@ async function handleCheckAll(
   try {
     const declarations = await readDeclarations(project, projectRoot, "show");
     const imports = importsSnapshotOf(declarations, projectRoot);
+    /* One read of the private hosts the project allows, for every import checked. */
+    const allowlist = specHostAllowlist(project, projectRoot);
     const checks = await Promise.all(
       Object.entries(imports.declarations).map(
         async ([name, entry]) =>
-          [name, await checkSingleSource(entry, getImportState(imports, name))] as const,
+          [name, await checkSingleSource(entry, getImportState(imports, name), allowlist)] as const,
       ),
     );
 
-    const results: Record<string, { changed: boolean; error?: string }> = {};
-    for (const [name, result] of checks) results[name] = result;
-    res.json({ results });
+    /* Own properties, so an import named `__proto__` is reported like any other. */
+    res.json({ results: Object.fromEntries(checks) });
   } catch (err) {
     sendRouteFailure(res, err, "Failed to check sources");
   }

@@ -1,0 +1,92 @@
+import type {
+  ScannedEndpoint,
+  ScannedGroup,
+  ScannedSource,
+  SourceSummary,
+} from "@/views/apis/types";
+
+import { isPlainObject } from "./is-plain-object";
+
+const IMPORT_TYPES: ReadonlySet<unknown> = new Set(["url", "file", "raw"]);
+const HTTP_METHODS: ReadonlySet<unknown> = new Set(["get", "post", "put", "patch", "delete"]);
+const ENDPOINT_TYPES: ReadonlySet<unknown> = new Set(["query", "mutation", null]);
+
+/**
+ * Whether an entry of a `registry:updated` list is an import the UI can
+ * show: its type, its spec and where its code goes.
+ *
+ * `options` are the generate options Studio wrote with the import. Only
+ * their shape as a record is checked: an import written by another Studio
+ * version may carry a different set of options.
+ *
+ * @param item - One entry of the list, as Socket.IO delivered it
+ * @returns Whether it is a well-formed import summary
+ *
+ * @example
+ * ```ts
+ * sourcesListOf(data, isSourceSummary, "registry:updated");
+ * ```
+ */
+export function isSourceSummary(item: unknown): item is SourceSummary {
+  return (
+    isPlainObject(item) &&
+    typeof item.name === "string" &&
+    typeof item.specUrl === "string" &&
+    IMPORT_TYPES.has(item.importType) &&
+    typeof item.outputDir === "string" &&
+    isPlainObject(item.options)
+  );
+}
+
+/**
+ * Whether an entry of a `scan:sources` list is a source the UI can show,
+ * down to each of its endpoints.
+ *
+ * @param item - One entry of the list, as Socket.IO delivered it
+ * @returns Whether it is a well-formed scanned source
+ *
+ * @example
+ * ```ts
+ * sourcesListOf(data, isScannedSource, "scan:sources");
+ * ```
+ */
+export function isScannedSource(item: unknown): item is ScannedSource {
+  return (
+    isPlainObject(item) &&
+    typeof item.name === "string" &&
+    typeof item.baseURL === "string" &&
+    typeof item.filePath === "string" &&
+    isListOf(item.groups, isScannedGroup) &&
+    (item.inlineEndpoints === undefined || isListOf(item.inlineEndpoints, isScannedEndpoint)) &&
+    typeof item.isImported === "boolean" &&
+    typeof item.hasClient === "boolean"
+  );
+}
+
+function isListOf<TItem>(list: unknown, isItem: (item: unknown) => item is TItem): list is TItem[] {
+  return Array.isArray(list) && list.every(isItem);
+}
+
+function isScannedGroup(item: unknown): item is ScannedGroup {
+  return (
+    isPlainObject(item) &&
+    typeof item.name === "string" &&
+    typeof item.prefix === "string" &&
+    typeof item.filePath === "string" &&
+    isListOf(item.endpoints, isScannedEndpoint)
+  );
+}
+
+function isScannedEndpoint(item: unknown): item is ScannedEndpoint {
+  if (!isPlainObject(item) || typeof item.name !== "string") return false;
+  const { analysis } = item;
+  return (
+    isPlainObject(analysis) &&
+    HTTP_METHODS.has(analysis.httpMethod) &&
+    typeof analysis.path === "string" &&
+    ENDPOINT_TYPES.has(analysis.type) &&
+    typeof analysis.hasResponseType === "boolean" &&
+    typeof analysis.hasVariablesType === "boolean" &&
+    typeof analysis.hasValidation === "boolean"
+  );
+}

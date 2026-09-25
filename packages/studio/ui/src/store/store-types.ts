@@ -11,6 +11,7 @@ import type {
   Settings,
 } from "./types"
 import type { ScannedSource, SourceSummary } from "@/views/apis/types"
+import type { ConfigStatusPayload } from "./config-status"
 
 export interface StudioState {
   // UI
@@ -33,6 +34,12 @@ export interface StudioState {
   // APIs — live scan + registry (pushed via socket)
   scanSources: ScannedSource[]
   registrySources: SourceSummary[]
+  /**
+   * How `courier.config` loads, as Studio last told it; `null` until Studio
+   * tells it after a connect. Studio sends it after the lists above, so the
+   * lists describe the same state once it is set.
+   */
+  configStatus: ConfigStatusPayload | null
 
   // Audit
   auditExpandedIds: Set<string>
@@ -70,6 +77,7 @@ export interface StudioState {
   // Actions — APIs
   setScanSources: (sources: ScannedSource[]) => void
   setRegistrySources: (sources: SourceSummary[]) => void
+  setConfigStatus: (status: ConfigStatusPayload | null) => void
 
   // Actions — Requests
   togglePaused: () => void

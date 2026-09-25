@@ -1,8 +1,8 @@
 /**
  * How `config:status` reads each state of the project Studio runs: the
  * config file relative to the project, the loader's code and one-line
- * message for a failure, and when Studio last loaded it for a failure or a
- * config that went missing.
+ * message for a failure, and the file Studio runs and when it loaded it for
+ * a failure or a config that went missing.
  */
 import { describe, expect, it } from "vitest";
 
@@ -69,9 +69,25 @@ describe("configStatusOf", () => {
     });
   });
 
-  it("reads a deleted config as missing, with when Studio last loaded it", () => {
+  it("reads a deleted config as missing, naming the file Studio still runs and when it loaded it", () => {
     const snapshot = { revision: 3, starting: false, running: loaded, loadedAt: 1_000, failure: missing };
 
-    expect(configStatusOf(snapshot, ROOT)).toEqual({ state: "missing", revision: 3, lastGoodAt: 1_000 });
+    expect(configStatusOf(snapshot, ROOT)).toEqual({
+      state: "missing",
+      revision: 3,
+      configFile: "config/courier.config.ts",
+      lastGoodAt: 1_000,
+    });
+  });
+
+  it("reads a project that never had a config as missing, with no file and nothing loaded", () => {
+    const snapshot = { ...STARTING, revision: 1, starting: false, failure: missing };
+
+    expect(configStatusOf(snapshot, ROOT)).toEqual({
+      state: "missing",
+      revision: 1,
+      configFile: null,
+      lastGoodAt: null,
+    });
   });
 });

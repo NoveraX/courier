@@ -74,6 +74,7 @@ export function createActions(set: Setter, get: Getter): Omit<StudioState, keyof
     // APIs — live scan + registry (pushed via socket, no HTTP round-trip)
     setScanSources: (sources) => set({ scanSources: sources }),
     setRegistrySources: (sources) => set({ registrySources: sources }),
+    setConfigStatus: (status) => set({ configStatus: status }),
 
     // Requests
     togglePaused: () => set((s) => ({ paused: !s.paused })),

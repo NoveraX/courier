@@ -6,26 +6,45 @@
  */
 
 import { computeSpecHash, hasSpecChanged, parseSpec } from "../apis";
-import { getImportEntry, loadImportsSnapshot } from "./imports-bridge";
-import { checkSingleSource, errMsg, fetchSpecRaw } from "./registry-helpers";
+import type { ApisRouteDeps } from "./apis-routes";
+import { getImportEntry, getImportState, importsSnapshotOf } from "./imports-bridge";
+import { readDeclarations } from "./project-state/read-declarations";
+import { checkSingleSource, fetchSpecRaw } from "./registry-helpers";
+import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse, RouteApp } from "./route-types";
 import { validateNameBody } from "./validate-body-registry";
 
-export function registerUpdateRoutes(app: RouteApp): void {
-  app.post("/api/apis/imports/check-updates", handleCheckUpdates);
-  app.post("/api/apis/imports/check-all", handleCheckAll);
+type RouteRequest = { body: Record<string, unknown> };
+
+/**
+ * Mount the routes that check an import's upstream spec for changes: one
+ * import, or every import the config Studio runs declares.
+ *
+ * @param app - The Studio server's Express app
+ * @param deps - The project the routes answer from
+ *
+ * @example
+ * ```ts
+ * registerUpdateRoutes(app, { project, projectRoot: root });
+ * ```
+ */
+export function registerUpdateRoutes(app: RouteApp, deps: ApisRouteDeps): void {
+  app.post("/api/apis/imports/check-updates", (req, res) => handleCheckUpdates(req, res, deps));
+  app.post("/api/apis/imports/check-all", (_req, res) => handleCheckAll(res, deps));
 }
 
 async function handleCheckUpdates(
-  req: { body: Record<string, unknown> },
+  req: RouteRequest,
   res: JsonResponse,
+  { project, projectRoot }: ApisRouteDeps,
 ): Promise<void> {
   try {
     const body = validateNameBody(req.body, res);
     if (!body) return;
 
-    const snapshot = await loadImportsSnapshot();
-    const entry = getImportEntry(snapshot, body.name);
+    const declarations = await readDeclarations(project, projectRoot, "show");
+    const imports = importsSnapshotOf(declarations, projectRoot);
+    const entry = getImportEntry(imports, body.name);
     if (!entry) {
       res.status(404).json({ error: `Import "${body.name}" not found in config` });
       return;
@@ -41,23 +60,24 @@ async function handleCheckUpdates(
 
     const newSpec = parseSpec(raw);
     const newHash = computeSpecHash(newSpec);
-    const changed = hasSpecChanged(snapshot.state, body.name, newHash);
+    const changed = hasSpecChanged(imports.state, body.name, newHash);
     res.json(changed ? { changed: true, newSpec } : { changed: false });
   } catch (err) {
-    res.status(500).json({ error: errMsg(err, "Failed to check updates") });
+    sendRouteFailure(res, err, "Failed to check updates");
   }
 }
 
 async function handleCheckAll(
-  _req: { body: Record<string, unknown> },
   res: JsonResponse,
+  { project, projectRoot }: ApisRouteDeps,
 ): Promise<void> {
   try {
-    const snapshot = await loadImportsSnapshot();
+    const declarations = await readDeclarations(project, projectRoot, "show");
+    const imports = importsSnapshotOf(declarations, projectRoot);
     const checks = await Promise.all(
-      Object.entries(snapshot.declarations).map(
+      Object.entries(imports.declarations).map(
         async ([name, entry]) =>
-          [name, await checkSingleSource(entry, snapshot.state.imports[name])] as const,
+          [name, await checkSingleSource(entry, getImportState(imports, name))] as const,
       ),
     );
 
@@ -65,6 +85,6 @@ async function handleCheckAll(
     for (const [name, result] of checks) results[name] = result;
     res.json({ results });
   } catch (err) {
-    res.status(500).json({ error: errMsg(err, "Failed to check sources") });
+    sendRouteFailure(res, err, "Failed to check sources");
   }
 }

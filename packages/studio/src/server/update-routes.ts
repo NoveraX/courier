@@ -2,27 +2,44 @@
  * Express routes for update flow: preview and apply spec updates.
  */
 
+import type { ApisRouteDeps } from "./apis-routes";
+import { importsSnapshotOf } from "./imports-bridge";
 import { withImportsLock } from "./imports-lock";
-import { errMsg } from "./registry-helpers";
+import { readDeclarations } from "./project-state/read-declarations";
+import { sendRouteFailure } from "./route-failure";
 import type { RouteApp } from "./route-types";
+import { sendResult } from "./send-result";
 import { handleApplyUpdate, handlePreviewUpdate } from "./update-helpers";
 import { validateUpdateApplyBody, validateUpdatePreviewBody } from "./validate-body-registry";
 
-export function registerUpdateFlowRoutes(app: RouteApp): void {
+/**
+ * Mount the routes that preview and apply regenerating an import from a new
+ * spec. The preview describes the config Studio runs; applying writes files
+ * only while that config loads as it is on disk.
+ *
+ * @param app - The Studio server's Express app
+ * @param deps - The project the routes read the import's declaration from
+ *
+ * @example
+ * ```ts
+ * registerUpdateFlowRoutes(app, { project, projectRoot: root });
+ * ```
+ */
+export function registerUpdateFlowRoutes(app: RouteApp, deps: ApisRouteDeps): void {
+  const { project, projectRoot } = deps;
+
   app.post("/api/apis/update/preview", async (req, res) => {
     try {
       const body = validateUpdatePreviewBody(req.body, res);
       if (!body) return;
-      const result = await handlePreviewUpdate(
+      const declarations = await readDeclarations(project, projectRoot, "show");
+      const result = handlePreviewUpdate(
         body as unknown as Parameters<typeof handlePreviewUpdate>[0],
+        importsSnapshotOf(declarations, projectRoot),
       );
-      if ("error" in result) {
-        res.status(result.status).json({ error: result.error });
-        return;
-      }
-      res.json(result);
+      sendResult(res, result);
     } catch (err) {
-      res.status(500).json({ error: errMsg(err, "Failed to preview update") });
+      sendRouteFailure(res, err, "Failed to preview update");
     }
   });
 
@@ -30,17 +47,17 @@ export function registerUpdateFlowRoutes(app: RouteApp): void {
     const body = validateUpdateApplyBody(req.body, res);
     if (!body) return;
 
+    /* Read once the lock is held: a request that waited behind a write acts on
+       the declaration saved meanwhile. */
     void withImportsLock(async () => {
-      const result = await handleApplyUpdate(
+      const declarations = await readDeclarations(project, projectRoot, "act");
+      return handleApplyUpdate(
         body as unknown as Parameters<typeof handleApplyUpdate>[0],
+        importsSnapshotOf(declarations, projectRoot),
       );
-      if ("error" in result) {
-        res.status(result.status).json({ error: result.error });
-        return;
-      }
-      res.json(result);
-    }).catch((err) => {
-      res.status(500).json({ error: errMsg(err, "Failed to apply update") });
-    });
+    }).then(
+      (result) => sendResult(res, result),
+      (err: unknown) => sendRouteFailure(res, err, "Failed to apply update"),
+    );
   });
 }

@@ -17,6 +17,7 @@ import { resolveProjectSafe } from "../context";
 import { allowedSpecHosts } from "./allowed-spec-hosts";
 import { fetchSpec } from "./fetch-spec";
 import { registerManageRoutes } from "./manage-routes";
+import type { ProjectReads } from "./project-state/types";
 import { errMsg } from "./registry-helpers";
 import { registerRegistryRoutes } from "./registry-routes";
 import type { RouteApp } from "./route-types";
@@ -31,7 +32,27 @@ import {
 } from "./validate-body";
 import { registerWriteRoutes } from "./write-routes";
 
-export function registerApisRoutes(app: RouteApp): void {
+/** What the imports routes read the project from. */
+export interface ApisRouteDeps {
+  /** The project Studio runs: the routes read its import declarations, never load their own. */
+  project: ProjectReads;
+  /** The project root, symlinks resolved: where the imports state lives. */
+  projectRoot: string;
+}
+
+/**
+ * Mount the API-import routes: parse, generate, write, diff, fingerprint,
+ * merge, and the imports list, checks, management and updates.
+ *
+ * @param app - The Studio server's Express app
+ * @param deps - The project the imports routes answer from
+ *
+ * @example
+ * ```ts
+ * registerApisRoutes(app, { project, projectRoot: root });
+ * ```
+ */
+export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
   app.post("/api/apis/parse", async (req, res) => {
     try {
       const body = validateParseBody(req.body, res);
@@ -60,7 +81,7 @@ export function registerApisRoutes(app: RouteApp): void {
     }
   });
 
-  registerWriteRoutes(app);
+  registerWriteRoutes(app, deps);
 
   app.post("/api/apis/diff", (req, res) => {
     try {
@@ -104,9 +125,9 @@ export function registerApisRoutes(app: RouteApp): void {
     }
   });
 
-  registerRegistryRoutes(app);
-  registerManageRoutes(app);
-  registerUpdateFlowRoutes(app);
+  registerRegistryRoutes(app, deps);
+  registerManageRoutes(app, deps);
+  registerUpdateFlowRoutes(app, deps);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

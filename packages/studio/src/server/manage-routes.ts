@@ -3,71 +3,87 @@
  */
 
 import type { ParsedSpec } from "../apis";
+import type { ApisRouteDeps } from "./apis-routes";
+import { importsSnapshotOf } from "./imports-bridge";
 import { withImportsLock } from "./imports-lock";
 import { handleManageApply } from "./manage-apply";
 import { handleInventory, handleManagePreview } from "./manage-helpers";
-import { errMsg } from "./registry-helpers";
+import { readDeclarations } from "./project-state/read-declarations";
+import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse, RouteApp } from "./route-types";
+import { sendResult } from "./send-result";
 import { isObject, isString } from "./validate-body";
 
-export function registerManageRoutes(app: RouteApp): void {
-  app.post("/api/apis/manage/inventory", handleInventoryRoute);
-  app.post("/api/apis/manage/preview", handlePreviewRoute);
-  app.post("/api/apis/manage/apply", handleApplyRoute);
+type RouteRequest = { body: Record<string, unknown> };
+
+/**
+ * Mount the routes that list, preview and apply adding and removing endpoints
+ * of an import. The inventory and the preview describe the config Studio runs;
+ * applying writes files only while that config loads as it is on disk.
+ *
+ * @param app - The Studio server's Express app
+ * @param deps - The project the routes read the import's declaration from
+ *
+ * @example
+ * ```ts
+ * registerManageRoutes(app, { project, projectRoot: root });
+ * ```
+ */
+export function registerManageRoutes(app: RouteApp, deps: ApisRouteDeps): void {
+  app.post("/api/apis/manage/inventory", (req, res) => handleInventoryRoute(req, res, deps));
+  app.post("/api/apis/manage/preview", (req, res) => handlePreviewRoute(req, res, deps));
+  app.post("/api/apis/manage/apply", (req, res) => handleApplyRoute(req, res, deps));
 }
 
 async function handleInventoryRoute(
-  req: { body: Record<string, unknown> },
+  req: RouteRequest,
   res: JsonResponse,
+  { project, projectRoot }: ApisRouteDeps,
 ): Promise<void> {
   try {
     const body = validateInventoryBody(req.body, res);
     if (!body) return;
 
-    const result = await handleInventory(body);
-    if ("error" in result) {
-      res.status(result.status).json({ error: result.error });
-      return;
-    }
-    res.json(result);
+    const declarations = await readDeclarations(project, projectRoot, "show");
+    sendResult(res, handleInventory(body, importsSnapshotOf(declarations, projectRoot)));
   } catch (err) {
-    res.status(500).json({ error: errMsg(err, "Failed to build inventory") });
+    sendRouteFailure(res, err, "Failed to build inventory");
   }
 }
 
 async function handlePreviewRoute(
-  req: { body: Record<string, unknown> },
+  req: RouteRequest,
   res: JsonResponse,
+  { project, projectRoot }: ApisRouteDeps,
 ): Promise<void> {
   try {
     const body = validateManageBody(req.body, res);
     if (!body) return;
 
-    const result = await handleManagePreview(body);
-    if ("error" in result) {
-      res.status(result.status).json({ error: result.error });
-      return;
-    }
-    res.json(result);
+    const declarations = await readDeclarations(project, projectRoot, "show");
+    sendResult(res, handleManagePreview(body, importsSnapshotOf(declarations, projectRoot)));
   } catch (err) {
-    res.status(500).json({ error: errMsg(err, "Failed to preview changes") });
+    sendRouteFailure(res, err, "Failed to preview changes");
   }
 }
 
-function handleApplyRoute(req: { body: Record<string, unknown> }, res: JsonResponse): void {
+function handleApplyRoute(
+  req: RouteRequest,
+  res: JsonResponse,
+  { project, projectRoot }: ApisRouteDeps,
+): void {
   const body = validateManageBody(req.body, res);
   if (!body) return;
 
+  /* Read once the lock is held: a request that waited behind a write acts on
+     the declaration saved meanwhile. */
   void withImportsLock(async () => {
-    const result = await handleManageApply(body);
-    if ("error" in result) {
-      res.status(result.status).json({ error: result.error });
-      return;
-    }
-    res.json(result);
-  }).catch((err) => {
-    res.status(500).json({ error: errMsg(err, "Failed to apply changes") });
-  });
+    const declarations = await readDeclarations(project, projectRoot, "act");
+    return handleManageApply(body, importsSnapshotOf(declarations, projectRoot));
+  }).then(
+    (result) => sendResult(res, result),
+    (err: unknown) => sendRouteFailure(res, err, "Failed to apply changes"),
+  );
 }
 
 // ── Validation ───────────────────────────────────────────────────────────────

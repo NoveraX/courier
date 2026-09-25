@@ -21,6 +21,7 @@ import { setProjectRoot } from "../src/context";
 import { buildSourceScan } from "../src/server/build-source-scan";
 import { loadCourierConfig } from "../src/server/config-loader";
 import { getImportEntry, getImportState, importsSnapshotOf } from "../src/server/imports-bridge";
+import type { ProjectReads, ProjectSnapshot } from "../src/server/project-state/types";
 import { registerRegistryRoutes } from "../src/server/registry-routes";
 import type { JsonResponse, RouteApp } from "../src/server/route-types";
 import { registerWriteRoutes } from "../src/server/write-routes";
@@ -42,11 +43,23 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-function routes(): Map<string, Handler> {
+/* The routes as Studio mounts them, over the project as it runs the config on disk now. */
+async function routes(): Promise<Map<string, Handler>> {
+  const view: ProjectSnapshot = {
+    revision: 1,
+    starting: false,
+    running: await loadCourierConfig(root),
+    loadedAt: Date.now(),
+    failure: null,
+  };
+  const project: ProjectReads = {
+    snapshot: () => view,
+    fresh: async () => ({ ...view, settling: false }),
+  };
   const found = new Map<string, Handler>();
   const app: RouteApp = { post: (path, handler) => void found.set(path, handler) };
-  registerWriteRoutes(app);
-  registerRegistryRoutes(app);
+  registerWriteRoutes(app, { project, projectRoot: root });
+  registerRegistryRoutes(app, { project, projectRoot: root });
   return found;
 }
 
@@ -81,7 +94,7 @@ describe("imports looked up by an Object.prototype member's name", () => {
   });
 
   it("writes the files through the raw branch and answers 200", async () => {
-    const write = routes().get("/api/apis/write");
+    const write = (await routes()).get("/api/apis/write");
 
     const reply = await call(write, {
       files: [{ path: "out/pets.ts", content: "export const pets = 1;\n" }],
@@ -96,7 +109,7 @@ describe("imports looked up by an Object.prototype member's name", () => {
   });
 
   it("answers 404 when asked to remove one", async () => {
-    const remove = routes().get("/api/apis/imports/remove");
+    const remove = (await routes()).get("/api/apis/imports/remove");
 
     const reply = await call(remove, { name: "constructor" });
 

@@ -5,65 +5,92 @@
  */
 
 import { logger } from "@noverax/courier";
+import type { ApisRouteDeps } from "./apis-routes";
 import {
   dropImportState,
   formatImportSnippet,
   getImportEntry,
   getImportState,
-  loadImportsSnapshot,
+  importsSnapshotOf,
   summarizeImports,
 } from "./imports-bridge";
 import { withImportsLock } from "./imports-lock";
-import { errMsg, removeGeneratedFiles } from "./registry-helpers";
+import { readDeclarations } from "./project-state/read-declarations";
+import { removeGeneratedFiles } from "./registry-helpers";
 import { registerUpdateRoutes } from "./registry-update-routes";
+import { sendRouteFailure } from "./route-failure";
 import type { RouteApp } from "./route-types";
 import { validateNameBody } from "./validate-body-registry";
 
-export function registerRegistryRoutes(app: RouteApp): void {
+interface Reply {
+  status: number;
+  body: unknown;
+}
+
+/**
+ * Mount the imports list, removal and update-check routes. They answer from
+ * the declarations of the config Studio runs; removing an import works while
+ * that config does not load, since it only undoes what Studio wrote.
+ *
+ * @param app - The Studio server's Express app
+ * @param deps - The project the routes answer from
+ *
+ * @example
+ * ```ts
+ * registerRegistryRoutes(app, { project, projectRoot: root });
+ * ```
+ */
+export function registerRegistryRoutes(app: RouteApp, deps: ApisRouteDeps): void {
+  const { project, projectRoot } = deps;
+
   app.post("/api/apis/imports/list", async (_req, res) => {
     try {
-      const snapshot = await loadImportsSnapshot();
-      res.json({ sources: summarizeImports(snapshot) });
+      const declarations = await readDeclarations(project, projectRoot, "show");
+      res.json({ sources: summarizeImports(importsSnapshotOf(declarations, projectRoot)) });
     } catch (err) {
-      res.status(500).json({ error: errMsg(err, "Failed to list imports") });
+      sendRouteFailure(res, err, "Failed to list imports");
     }
   });
 
-  app.post("/api/apis/imports/remove", (req, res) => {
+  app.post("/api/apis/imports/remove", async (req, res) => {
     const body = validateNameBody(req.body, res);
     if (!body) return;
-
-    void withImportsLock(async () => {
-      const snapshot = await loadImportsSnapshot();
-      const entry = getImportEntry(snapshot, body.name);
-      const state = getImportState(snapshot, body.name);
-      if (!entry && !state) {
-        res.status(404).json({ error: `Import "${body.name}" not found` });
-        return;
-      }
-
-      const removedFiles = state?.generatedFiles ?? [];
-      try {
-        if (removedFiles.length > 0) removeGeneratedFiles(removedFiles);
-      } catch (err) {
-        logger.warn(
-          "Studio",
-          `Failed to delete some generated files for import "${body.name}"; state will be cleaned regardless`,
-          err,
-        );
-      }
-
-      await dropImportState(body.name);
-
-      const configCleanupHint = entry
-        ? `Remove \`imports.${body.name}\` from courier.config.ts to finalize the deletion.`
-        : undefined;
-      const snippet = entry ? formatImportSnippet(body.name, entry) : undefined;
-      res.json({ success: true, removedFiles, configCleanupHint, snippet });
-    }).catch((err) => {
-      res.status(500).json({ error: errMsg(err, "Failed to remove import") });
-    });
+    try {
+      /* Read once the lock is held: a request that waited behind a write answers
+         for the declaration saved meanwhile, and removes the files that write recorded. */
+      const reply = await withImportsLock(() => forgetImport(body.name, deps));
+      res.status(reply.status).json(reply.body);
+    } catch (err) {
+      sendRouteFailure(res, err, "Failed to remove import");
+    }
   });
 
-  registerUpdateRoutes(app);
+  registerUpdateRoutes(app, deps);
+}
+
+async function forgetImport(name: string, { project, projectRoot }: ApisRouteDeps): Promise<Reply> {
+  const declarations = await readDeclarations(project, projectRoot, "forget");
+  const imports = importsSnapshotOf(declarations, projectRoot);
+  const entry = getImportEntry(imports, name);
+  const state = getImportState(imports, name);
+  if (!entry && !state) return { status: 404, body: { error: `Import "${name}" not found` } };
+
+  const removedFiles = state?.generatedFiles ?? [];
+  try {
+    if (removedFiles.length > 0) removeGeneratedFiles(removedFiles);
+  } catch (err) {
+    logger.warn(
+      "Studio",
+      `Failed to delete some generated files for import "${name}"; state will be cleaned regardless`,
+      err,
+    );
+  }
+
+  await dropImportState(name);
+
+  const configCleanupHint = entry
+    ? `Remove \`imports.${name}\` from courier.config.ts to finalize the deletion.`
+    : undefined;
+  const snippet = entry ? formatImportSnippet(name, entry) : undefined;
+  return { status: 200, body: { success: true, removedFiles, configCleanupHint, snippet } };
 }

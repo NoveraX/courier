@@ -3,20 +3,17 @@
  */
 
 import { unlinkSync } from "node:fs";
-
+import { createLogger } from "@noverax/courier";
 import type { ParsedSpec } from "../apis";
-import { computeSpecHash, createSpecDigest } from "../apis";
-import type { ImportStateEntry } from "../apis/imports-state";
 import type { AddResult, RemoveResult } from "../apis/manage/types";
 import { resolveProjectSafe } from "../context";
-import {
-  getImportEntry,
-  getImportState,
-  loadImportsSnapshot,
-  persistImportState,
-} from "./imports-bridge";
+import { errnoCode } from "./errno-code";
+import { getImportState, type ImportsSnapshot } from "./imports-bridge";
+import { persistManageApplyState } from "./manage-apply-state";
 import { handleManagePreview } from "./manage-helpers";
 import { writeFileWithDirs } from "./registry-helpers";
+
+const log = createLogger("Studio");
 
 interface ManageApplyRequest {
   name: string;
@@ -25,24 +22,36 @@ interface ManageApplyRequest {
   toRemove: Record<string, string[]>;
 }
 
+/**
+ * Add and remove endpoints of an import: write the files the preview changes,
+ * delete the ones it drops, and record the result in the imports state.
+ *
+ * The preview is computed here, from the same declaration and state that are
+ * then written and recorded, so the files and the state cannot disagree.
+ *
+ * @param body - The import's name, its spec, and the endpoints to add and remove by group
+ * @param imports - The declarations of the config Studio runs, with the imports state
+ * @returns How many files were written and deleted, or the error to answer with and its status
+ *
+ * @example
+ * ```ts
+ * await handleManageApply({ name: "pets", spec, toAdd: { pets: ["listPets"] }, toRemove: {} }, imports);
+ * ```
+ */
 export async function handleManageApply(
   body: ManageApplyRequest,
+  imports: ImportsSnapshot,
 ): Promise<
   { success: true; written: number; deleted: number } | { error: string; status: number }
 > {
-  const snapshot = await loadImportsSnapshot();
-  const entry = getImportEntry(snapshot, body.name);
-  if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
-  const prevState = getImportState(snapshot, body.name);
-
-  const preview = await handleManagePreview(body);
+  const preview = handleManagePreview(body, imports);
   if ("error" in preview) return preview;
 
   const { addResult, removeResult } = preview;
   const written = writeAddedFiles(addResult) + writeModifiedFiles(removeResult);
   const deleted = deleteRemovedFiles(removeResult);
 
-  await updateImportStateAfterApply(body, prevState, addResult, removeResult);
+  await persistManageApplyState(body.name, body.spec, getImportState(imports, body.name), preview);
   return { success: true, written, deleted };
 }
 
@@ -92,65 +101,11 @@ function deleteRemovedFiles(removeResult?: RemoveResult): number {
   for (const filePath of removeResult.deletedFiles) {
     try {
       unlinkSync(resolveProjectSafe(filePath));
-    } catch {
-      /* already deleted */
+    } catch (err) {
+      /* A file already gone is what deleting it was for. */
+      if (errnoCode(err) !== "ENOENT") log.warn(`Studio could not delete ${filePath}`, err);
     }
   }
 
   return removeResult.deletedFiles.length;
-}
-
-// ── State update ─────────────────────────────────────────────────────────────
-
-async function updateImportStateAfterApply(
-  body: ManageApplyRequest,
-  prevState: ImportStateEntry | undefined,
-  addResult?: AddResult,
-  removeResult?: RemoveResult,
-): Promise<void> {
-  /* fileFingerprints is keyed by ENDPOINT NAME (from generateFingerprints).
-   * generatedFiles is a list of FILE PATHS Studio has written — they are
-   * two different axes and must be tracked independently. */
-  const mergedFps: Record<string, string> = { ...(prevState?.fileFingerprints ?? {}) };
-  if (addResult) Object.assign(mergedFps, addResult.newFingerprints);
-  if (removeResult) {
-    for (const name of removeResult.removedFingerprints) {
-      delete mergedFps[name];
-    }
-  }
-
-  const generatedFiles = mergeGeneratedFilePaths(
-    prevState?.generatedFiles ?? [],
-    addResult,
-    removeResult,
-  );
-
-  const now = new Date().toISOString();
-  await persistImportState(body.name, {
-    specHash: computeSpecHash(body.spec),
-    digest: createSpecDigest(body.spec),
-    fetchedAt: prevState?.fetchedAt ?? now,
-    lastSyncedAt: now,
-    userModified: prevState?.userModified ?? [],
-    generatedFiles,
-    fileFingerprints: mergedFps,
-  });
-}
-
-function mergeGeneratedFilePaths(
-  previous: string[],
-  addResult: AddResult | undefined,
-  removeResult: RemoveResult | undefined,
-): string[] {
-  const paths = new Set(previous);
-  if (addResult) {
-    for (const f of addResult.files) paths.add(f.path);
-    if (addResult.sourceFileUpdate) paths.add(addResult.sourceFileUpdate.path);
-  }
-  if (removeResult) {
-    for (const f of removeResult.modifiedFiles) paths.add(f.path);
-    if (removeResult.sourceFileUpdate) paths.add(removeResult.sourceFileUpdate.path);
-    for (const deleted of removeResult.deletedFiles) paths.delete(deleted);
-  }
-  return Array.from(paths);
 }

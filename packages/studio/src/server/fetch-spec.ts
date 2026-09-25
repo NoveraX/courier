@@ -6,6 +6,10 @@ import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
 import { requestSpec, type SpecAnswer } from "./spec-request";
 
 const MAX_REDIRECTS = 5;
+const DEFAULT_PORTS: ReadonlyMap<string, string> = new Map([
+  ["http:", "80"],
+  ["https:", "443"],
+]);
 /* The whole fetch, redirects and the wait for the project's list of private
    hosts included: a server that trickles bytes cannot hold it open. */
 const DEADLINE_MS = 60_000;
@@ -19,10 +23,11 @@ const DEADLINE_MS = 60_000;
  * the address that was approved; a redirect is followed only after its
  * target passes the same check. This machine is reachable when the developer
  * asked for it — a specification served by the project's own dev server is
- * the ordinary case. Other private hosts, and this machine when a server
- * elsewhere redirected there, only when the project names them in
- * `studio.allowedSpecHosts`, which is read only for such a host. An address
- * that means every interface is never reached.
+ * the ordinary case — and through redirects while every hop stays on it.
+ * Other private hosts, and this machine once any hop has been elsewhere, only
+ * when the project names them in `studio.allowedSpecHosts`, which is read
+ * only for such a host. An address that means every interface is never
+ * reached.
  *
  * @param url - The URL the developer asked Studio to read
  * @param allowlist - The private hosts the project names, read when a hop needs them
@@ -53,10 +58,10 @@ export async function fetchSpec(url: string, allowlist: SpecHostAllowlist): Prom
       remaining,
     );
     if (answer.kind === "body") return answer.text;
-    /* Only a request the developer pointed at this machine may be sent back to it. */
-    if (hop === 0)
-      loopback =
-        answer.remoteAddress !== null && specAddressKind(answer.remoteAddress) === "loopback";
+    /* A redirect may lead to this machine only from this machine: once a hop
+       has left it, a server elsewhere chose where the request goes next. */
+    loopback &&=
+      answer.remoteAddress !== null && specAddressKind(answer.remoteAddress) === "loopback";
     current = parseSpecUrl(answer.location, url, current);
   }
   throw new SpecFetchError("SPEC_REDIRECTS", `${url} redirects more than ${MAX_REDIRECTS} times.`, {
@@ -106,12 +111,14 @@ function admit(hosts: SpecHosts, url: URL, what: string): void {
 }
 
 /* An entry names the host with or without its port, in any case, an IPv6
-   address with or without brackets. */
+   address with or without brackets. A URL that names no port has its
+   scheme's default, which URL leaves out of `host`. */
 function sameHost(entry: string, url: URL): boolean {
   const wanted = entry.trim().toLowerCase();
   const unbracketed = url.hostname.replace(/^\[|\]$/g, "");
+  const port = url.port || DEFAULT_PORTS.get(url.protocol);
   return (
-    [url.host, url.hostname, unbracketed].includes(wanted) ||
+    [`${url.hostname}:${port}`, url.hostname, unbracketed].includes(wanted) ||
     wanted.replace(/^\[|\]$/g, "") === unbracketed
   );
 }

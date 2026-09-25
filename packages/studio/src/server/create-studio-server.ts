@@ -98,11 +98,14 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   });
 
   registerRestApi(app, policy, {
-    projectRoot,
-    mockBasePort,
-    project,
-    studioPort: () => address.port(),
-    mockSummaries: mockManager.summarizeServers,
+    apis: { project, projectRoot: root },
+    mocksEdit: {
+      projectRoot,
+      mockBasePort,
+      project,
+      studioPort: () => address.port(),
+      mockSummaries: mockManager.summarizeServers,
+    },
   });
   serveStudioUi(app);
 

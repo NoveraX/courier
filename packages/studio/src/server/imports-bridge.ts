@@ -1,8 +1,8 @@
 /**
  * Server-side facade for import persistence.
  *
- * Reads declarations from the user-authored `courier.config.ts` and tracks
- * the auto-managed state in `.courier/imports-state.json`. The single entry
+ * Pairs the declarations of the `courier.config.ts` Studio runs with the
+ * auto-managed state in `.courier/imports-state.json`. The single entry
  * point for every server route or helper that needs to read or mutate
  * import metadata.
  */
@@ -17,12 +17,14 @@ import {
   saveImportsState,
 } from "../apis/imports-state";
 import { getProjectRoot } from "../context";
-import { loadCourierConfig } from "./config-loader";
 import { getEffectiveDir as joinEffectiveDir } from "./fs-helpers";
 import { withImportsLock } from "./imports-lock";
 
+/** The `imports` a config declares, by import name. */
+export type ImportDeclarations = Record<string, CourierImportEntry>;
+
 export interface ImportsSnapshot {
-  declarations: Record<string, CourierImportEntry>;
+  declarations: ImportDeclarations;
   state: ImportsState;
 }
 
@@ -49,27 +51,10 @@ export interface ImportSummary {
  * ```
  */
 export function importsSnapshotOf(
-  declarations: Record<string, CourierImportEntry> | undefined,
+  declarations: ImportDeclarations | undefined,
   root: string,
 ): ImportsSnapshot {
   return { declarations: declarations ?? {}, state: loadImportsState(root) };
-}
-
-/**
- * Load the config and pair its import declarations with the imports state.
- *
- * @returns The snapshot, from a load of its own
- * @throws What `loadCourierConfig` throws
- *
- * @example
- * ```ts
- * const snapshot = await loadImportsSnapshot();
- * ```
- */
-export async function loadImportsSnapshot(): Promise<ImportsSnapshot> {
-  const root = getProjectRoot();
-  const loaded = await loadCourierConfig(root);
-  return importsSnapshotOf(loaded.config.imports, root);
 }
 
 export function summarizeImports(snapshot: ImportsSnapshot): ImportSummary[] {

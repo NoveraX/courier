@@ -19,7 +19,7 @@ import type {
   RemoveResult,
 } from "../apis/manage/types";
 import { extractEndpoints } from "../apis/merge/extract-endpoints";
-import { getImportEntry, getImportState, loadImportsSnapshot } from "./imports-bridge";
+import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
 import { buildFallbackFingerprints, readFilesFromDisk } from "./registry-helpers";
 import { scanTsFiles } from "./scan-ts-files";
 
@@ -30,13 +30,25 @@ interface InventoryRequest {
   newSpec?: ParsedSpec;
 }
 
-export async function handleInventory(
+/**
+ * List what an import's spec offers against what its generated files hold.
+ *
+ * @param body - The import's name, and the spec to compare with
+ * @param imports - The declarations of the config Studio runs, with the imports state
+ * @returns The inventory, or the error to answer with and its status
+ *
+ * @example
+ * ```ts
+ * handleInventory({ name: "pets", newSpec }, importsSnapshotOf(declarations, root));
+ * ```
+ */
+export function handleInventory(
   body: InventoryRequest,
-): Promise<EndpointInventory | { error: string; status: number }> {
-  const snapshot = await loadImportsSnapshot();
-  const entry = getImportEntry(snapshot, body.name);
+  imports: ImportsSnapshot,
+): EndpointInventory | { error: string; status: number } {
+  const entry = getImportEntry(imports, body.name);
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
-  const state = getImportState(snapshot, body.name);
+  const state = getImportState(imports, body.name);
 
   const spec = body.newSpec;
   if (!spec) return { error: "Spec is required for inventory", status: 400 };
@@ -60,18 +72,31 @@ interface ManagePreviewRequest {
   toRemove: Record<string, string[]>;
 }
 
-interface ManagePreviewResponse {
+/** The files adding and removing endpoints would write and delete. */
+export interface ManagePreviewResponse {
   addResult?: AddResult;
   removeResult?: RemoveResult;
 }
 
-export async function handleManagePreview(
+/**
+ * Preview adding and removing endpoints of an import, without writing anything.
+ *
+ * @param body - The import's name, its spec, and the endpoints to add and remove by group
+ * @param imports - The declarations of the config Studio runs, with the imports state
+ * @returns The preview, or the error to answer with and its status
+ *
+ * @example
+ * ```ts
+ * handleManagePreview({ name: "pets", spec, toAdd: { pets: ["listPets"] }, toRemove: {} }, imports);
+ * ```
+ */
+export function handleManagePreview(
   body: ManagePreviewRequest,
-): Promise<ManagePreviewResponse | { error: string; status: number }> {
-  const snapshot = await loadImportsSnapshot();
-  const entry = getImportEntry(snapshot, body.name);
+  imports: ImportsSnapshot,
+): ManagePreviewResponse | { error: string; status: number } {
+  const entry = getImportEntry(imports, body.name);
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
-  const state = getImportState(snapshot, body.name);
+  const state = getImportState(imports, body.name);
 
   const existingFiles = readSourceFiles(entry, body.name);
   const fingerprints = loadSourceFingerprints(existingFiles, state);

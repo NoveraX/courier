@@ -13,7 +13,7 @@ import {
   getEffectiveImportDir,
   getImportEntry,
   getImportState,
-  loadImportsSnapshot,
+  type ImportsSnapshot,
   persistImportState,
 } from "./imports-bridge";
 import {
@@ -43,14 +43,25 @@ interface PreviewResponse {
   specDiff?: SpecDiff;
 }
 
-/** Compute a preview of what an update would change */
-export async function handlePreviewUpdate(
+/**
+ * Compute a preview of what regenerating an import from a new spec would change.
+ *
+ * @param body - The import's name, and the new spec
+ * @param imports - The declarations of the config Studio runs, with the imports state
+ * @returns The files and what changes in each, or the error to answer with and its status
+ *
+ * @example
+ * ```ts
+ * handlePreviewUpdate({ name: "pets", newSpec }, importsSnapshotOf(declarations, root));
+ * ```
+ */
+export function handlePreviewUpdate(
   body: PreviewRequest,
-): Promise<PreviewResponse | { error: string; status: number }> {
-  const snapshot = await loadImportsSnapshot();
-  const entry = getImportEntry(snapshot, body.name);
+  imports: ImportsSnapshot,
+): PreviewResponse | { error: string; status: number } {
+  const entry = getImportEntry(imports, body.name);
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
-  const state = getImportState(snapshot, body.name);
+  const state = getImportState(imports, body.name);
 
   const generated = generateCode(body.newSpec, { ...entry, selectedEndpoints: null });
   const diskPaths = scanTsFiles(entry, body.name, generated);
@@ -67,16 +78,28 @@ export async function handlePreviewUpdate(
   };
 }
 
-/** Apply a previewed update — write files and update state */
+/**
+ * Apply a previewed update: write the files, clean up the import's directory,
+ * and record the new baseline in the imports state.
+ *
+ * @param body - The import's name, the new spec, and the files the user approved
+ * @param imports - The declarations of the config Studio runs, with the imports state
+ * @returns How many files were written and deleted, or the error to answer with and its status
+ *
+ * @example
+ * ```ts
+ * await handleApplyUpdate({ name: "pets", newSpec, files }, importsSnapshotOf(declarations, root));
+ * ```
+ */
 export async function handleApplyUpdate(
   body: ApplyRequest,
+  imports: ImportsSnapshot,
 ): Promise<
   { success: boolean; written: number; deleted: number } | { error: string; status: number }
 > {
-  const snapshot = await loadImportsSnapshot();
-  const entry = getImportEntry(snapshot, body.name);
+  const entry = getImportEntry(imports, body.name);
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
-  const prevState = getImportState(snapshot, body.name);
+  const prevState = getImportState(imports, body.name);
 
   /* Detect user-modified endpoints BEFORE overwriting — compare the disk
    * state of the files the user just approved against the fingerprints

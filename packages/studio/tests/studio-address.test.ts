@@ -3,13 +3,15 @@
  * client that dials Studio. The server ignored them, so configuring the
  * documented field moved the clients and left the server where it was.
  */
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { STUDIO_DEFAULT_HOST, STUDIO_DEFAULT_PORT, STUDIO_DEFAULT_URL } from "@noverax/courier/config";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { loadCourierConfig } from "../src/server/config-loader";
+import { clearStartupIssues, startupIssues } from "../src/server/startup-issues";
 import { readStudioAddress } from "../src/server/studio-address";
 
 const roots: string[] = [];
@@ -22,6 +24,7 @@ function project(config: string): string {
 }
 
 afterEach(() => {
+  clearStartupIssues();
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
   for (const dir of roots.splice(0)) rmSync(dir, { recursive: true, force: true });
@@ -88,5 +91,52 @@ describe("reading the address a project asks for", () => {
       expect.stringContaining(`[Studio] courier.config in ${root} could not be read for Studio's address`),
       expect.objectContaining({ message: expect.stringContaining("missing") }),
     );
+  });
+});
+
+describe("reading the address of a config that never finishes loading", () => {
+  const HANGS = "await new Promise(() => {})\nexport default { sources: {}, studio: { port: 7777 } }\n";
+
+  it("gives it up after the timeout, and the flags and the defaults decide", async () => {
+    const root = project(HANGS);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const started = Date.now();
+
+    const address = await readStudioAddress(root, 300);
+
+    expect(address).toEqual({});
+    expect(Date.now() - started).toBeLessThan(3000);
+  });
+
+  it("says so under the banner, naming the variable that gives it longer", async () => {
+    const root = project(HANGS);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    clearStartupIssues();
+
+    await readStudioAddress(root, 300);
+
+    expect(warn).toHaveBeenCalledOnce();
+    expect(startupIssues()).toHaveLength(1);
+    expect(startupIssues()[0]).toContain("courier.config took longer than 300 ms to load");
+    expect(startupIssues()[0]).toContain("COURIER_CONFIG_LOAD_TIMEOUT_MS");
+  });
+});
+
+describe("a JSON module the address read reads", () => {
+  it("is read from disk by the next load of the project, so an edit to it is seen", async () => {
+    const root = project('import data from "./src/data.json"\nexport default { sources: { demo: { baseURL: data.host } } }\n');
+    mkdirSync(join(root, "src"));
+    const data = join(root, "src", "data.json");
+    writeFileSync(data, '{ "host": "json-v1.example.com" }\n');
+    await readStudioAddress(root);
+
+    const first = await loadCourierConfig(root);
+    writeFileSync(data, '{ "host": "json-v2.example.com" }\n');
+    const second = await loadCourierConfig(root);
+
+    const hosts = [first, second].map(
+      (loaded) => (loaded.config.sources as Record<string, { baseURL?: unknown }>).demo?.baseURL,
+    );
+    expect(hosts).toEqual(["json-v1.example.com", "json-v2.example.com"]);
   });
 });

@@ -1,5 +1,7 @@
+import { ConfigLoadTimeoutError } from "./config-load-timeout-error";
 import type { LoadedCourierConfig } from "./config-loader";
 import { ConfigLoaderError } from "./config-loader-errors";
+import { withTimeout } from "./with-timeout";
 
 /** What an edit of the watched files can do while it holds the reload chain. */
 export interface ExclusiveContext {
@@ -61,7 +63,11 @@ export function exclusiveContext(host: ExclusiveHost, timeoutMs: number): Exclus
 
   async function load(): Promise<LoadedCourierConfig> {
     if (host.isStopped()) throw stopped();
-    const loaded = await withTimeout(host.load(), timeoutMs);
+    const loaded = await withTimeout(
+      host.load(),
+      timeoutMs,
+      () => new ConfigLoadTimeoutError(timeoutMs),
+    );
     if (host.isStopped()) throw stopped();
     return loaded;
   }
@@ -75,24 +81,4 @@ export function exclusiveContext(host: ExclusiveHost, timeoutMs: number): Exclus
     acknowledge: host.acknowledge,
     reloadAfter: host.reloadAfter,
   };
-}
-
-async function withTimeout<TValue>(work: Promise<TValue>, timeoutMs: number): Promise<TValue> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const expired = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => {
-      const seconds = Math.round(timeoutMs / 100) / 10;
-      reject(
-        new ConfigLoaderError(
-          "CONFIG_LOAD_TIMEOUT",
-          `The config took longer than ${seconds} s to load`,
-        ),
-      );
-    }, timeoutMs);
-  });
-  try {
-    return await Promise.race([work, expired]);
-  } finally {
-    clearTimeout(timer);
-  }
 }

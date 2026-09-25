@@ -29,9 +29,11 @@ import { type LoadedCourierConfig, loadCourierConfig } from "../../src/server/co
 import type { ExclusiveContext, ExclusiveTransaction } from "../../src/server/exclusive-reload";
 import { MocksFileChangedError } from "../../src/server/mocks-edit/mocks-file-changed-error";
 import { applyMocksEdit } from "../../src/server/mocks-edit/apply-mocks-edit";
+import { SLOT_WAIT_MS } from "../../src/server/mocks-edit/edit-timing";
 import type { MocksEditContext } from "../../src/server/mocks-edit/mocks-edit-context";
 import { previewMocksEdit } from "../../src/server/mocks-edit/preview-mocks-edit";
 import type { ReadyOutcome } from "../../src/server/mocks-edit/types";
+import { CONFIG_LOAD_TIMEOUT_MS } from "../../src/server/project-state/budgets";
 import type { ProjectState } from "../../src/server/project-state/types";
 
 const CACHE = join(__dirname, "../../../../node_modules/.cache/courier-studio-tests");
@@ -320,7 +322,7 @@ describe("applyMocksEdit", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 
     const pending = applyMocksEdit(ctx, body);
-    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(SLOT_WAIT_MS);
     const result = await pending;
     release();
     await vi.runAllTimersAsync();
@@ -328,6 +330,22 @@ describe("applyMocksEdit", () => {
     expect(result).toMatchObject({ status: "manual", retryable: true, reasons: [{ code: "STUDIO_BUSY" }] });
     expect(readFileSync(join(root, "courier.mocks.ts"), "utf8")).toBe(EXISTING);
     expect(tx.acknowledge).not.toHaveBeenCalled();
+  });
+
+  it("waits out a load ahead of it that holds the chain for as long as one load may take, and then applies", async () => {
+    writeFileSync(join(root, "courier.mocks.ts"), EXISTING);
+    const { ctx, holdSlot } = await harness((real) => real());
+    const body = await confirmed(ctx);
+    const release = holdSlot();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+    const pending = applyMocksEdit(ctx, body);
+    await vi.advanceTimersByTimeAsync(CONFIG_LOAD_TIMEOUT_MS);
+    vi.useRealTimers();
+    release();
+    const result = await pending;
+
+    expect(result).toMatchObject({ status: "applied", keys: ["second"] });
   });
 
   it("answers a save Studio already runs with the plan against it, without loading it again", async () => {

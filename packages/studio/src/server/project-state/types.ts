@@ -53,7 +53,11 @@ export interface ProjectState extends ProjectReads {
     timeoutMs: number,
     dropped?: AbortSignal,
   ): Promise<TResult>;
-  /** Let an edit under way finish, for at most `budgetMs`. */
+  /**
+   * Let an edit under way finish, for at most `budgetMs`. Every edit that
+   * has not started, and every later one, is refused with
+   * `CONFIG_WATCHER_STOPPED` and never runs, so none is waited for.
+   */
   finishEdits(budgetMs: number): Promise<void>;
   /** Stop watching; outcomes of loads still running are dropped. */
   stop(): void;

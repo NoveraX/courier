@@ -4,6 +4,7 @@ import type { BindingTable } from "../catalog/binding-table";
 import { startConfigWatcher } from "../config-watcher";
 import type { WatcherStatus } from "../watcher-status";
 import { withinBudget } from "../within-budget";
+import { CONFIG_LOAD_TIMEOUT_MS } from "./budgets";
 import { createProjectOutcomes } from "./project-outcomes";
 import type { ProjectSnapshot, ProjectState } from "./types";
 
@@ -15,6 +16,8 @@ export interface ProjectStateDeps {
   uiNamespace: Namespace;
   watcherStatus: WatcherStatus;
   mocks: MocksConsumers;
+  /** How long the first load and each reload may take (default: `CONFIG_LOAD_TIMEOUT_MS`). */
+  loadTimeoutMs?: number;
 }
 
 const STARTING: ProjectSnapshot = {
@@ -32,7 +35,10 @@ const STARTING: ProjectSnapshot = {
  * served from the snapshot this keeps.
  *
  * It returns at once, and the first load starts on the chain. Until that
- * load has an outcome the snapshot is `starting`; edits queue behind it.
+ * load has an outcome the snapshot is `starting`; edits queue behind it. A
+ * load that takes longer than `loadTimeoutMs` is given up and reported as
+ * failed with `CONFIG_LOAD_TIMEOUT`, so Studio is never left starting for
+ * good.
  *
  * @param deps - The project root and what each outcome changes
  * @returns The project state
@@ -63,6 +69,7 @@ export function createProjectState(deps: ProjectStateDeps): ProjectState {
     current: () => current.running,
     onApplied: outcomes.applied,
     onFailed: outcomes.failed,
+    loadTimeoutMs: deps.loadTimeoutMs ?? CONFIG_LOAD_TIMEOUT_MS,
   });
 
   return {
@@ -70,6 +77,7 @@ export function createProjectState(deps: ProjectStateDeps): ProjectState {
     settled: engine.settled,
     runExclusive: engine.runExclusive,
     finishEdits: async (budgetMs) => {
+      engine.refuseEdits();
       await withinBudget(engine.editsSettled(), budgetMs);
     },
     stop: engine.stop,

@@ -1,15 +1,13 @@
 import { createRequire } from "node:module";
-import { sep } from "node:path";
 import { createLogger } from "@noverax/courier";
 import type { TransformCache } from "@noverax/courier-studio-core/config";
 import { type CourierModuleCache, loadCourierEntry } from "./load-courier-entry";
+import { withFreshJson } from "./with-fresh-json";
 
 const log = createLogger("Studio");
 
-/** Node's require cache, which a CommonJS entry is required into and JSON is read through. */
+/** Node's require cache, which a CommonJS entry is required into. */
 const NODE_REQUIRE_CACHE = createRequire(import.meta.url).cache;
-
-const IN_NODE_MODULES = `${sep}node_modules${sep}`;
 
 /** What loading the project's config, and its mocks file if any, produced. */
 export interface EvaluatedCourierFiles {
@@ -69,14 +67,12 @@ export interface EvaluatedCourierFiles {
  * it for what the load itself set there. The config and the mocks file get
  * back the module the cache held for them before — a process that required
  * the config itself keeps the module it got — or none. The loader reads a
- * JSON module through that cache too, which would hand it back as first read
- * for the life of the process, so every JSON module that entered the cache
- * while the load ran, outside `node_modules`, is dropped again, and the next
- * load reads an edited one afresh. One that was there before the load is
- * left as it was: someone else required it. Node's require cache is one per
- * process, so loads that overlap in time see each other's modules there: a
- * CommonJS mocks file can be handed the config another load required, and
- * what one load puts back can be the module another one left.
+ * JSON module through that cache too, so each one is read from disk by every
+ * load, a load given up on that still runs notwithstanding; see
+ * {@link withFreshJson}. Node's require cache is one per process, so loads
+ * that overlap in time see each other's modules there: a CommonJS mocks file
+ * can be handed the config another load required, and what one load puts
+ * back can be the module another one left.
  *
  * Both paths must be symlink-resolved: imports resolve to real paths, so a
  * config evaluated by a link would be evaluated again for the mocks file
@@ -104,14 +100,14 @@ export async function evaluateCourierFiles(
   mocksFile: string | null,
   transformCache: TransformCache,
 ): Promise<EvaluatedCourierFiles> {
-  const heldBefore = new Set(Object.keys(NODE_REQUIRE_CACHE));
-  const entriesBefore = heldEntries([configFile, mocksFile]);
-  try {
-    return await evaluateBoth(configFile, mocksFile, transformCache);
-  } finally {
-    putBack(entriesBefore);
-    forgetJsonReadSince(heldBefore);
-  }
+  return withFreshJson(async () => {
+    const entriesBefore = heldEntries([configFile, mocksFile]);
+    try {
+      return await evaluateBoth(configFile, mocksFile, transformCache);
+    } finally {
+      putBack(entriesBefore);
+    }
+  });
 }
 
 async function evaluateBoth(
@@ -160,13 +156,6 @@ function putBack(held: ReadonlyMap<string, NodeModule | undefined>): void {
   for (const [file, module] of held) {
     if (module === undefined) Reflect.deleteProperty(NODE_REQUIRE_CACHE, file);
     else NODE_REQUIRE_CACHE[file] = module;
-  }
-}
-
-function forgetJsonReadSince(heldBefore: ReadonlySet<string>): void {
-  for (const file of Object.keys(NODE_REQUIRE_CACHE)) {
-    if (!file.endsWith(".json") || heldBefore.has(file) || file.includes(IN_NODE_MODULES)) continue;
-    Reflect.deleteProperty(NODE_REQUIRE_CACHE, file);
   }
 }
 

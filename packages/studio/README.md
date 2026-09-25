@@ -38,6 +38,8 @@ npx courier-studio
 
 Studio listens on `http://localhost:6280`, or on the `studio.host` and `studio.port` of your `courier.config.ts`. Server runtimes and the build plugins read the same block, so moving Studio there moves them with it. Flags: `--port`, `--host`, `--cwd` (project root), `--open` (open a browser), `--version`. Studio keeps its working files — imported API state, saved sessions — in `.courier/`, which ignores itself in git.
 
+Studio loads `courier.config.ts` again whenever it or a module it imports is saved. A load that takes longer than 20 s — a config that awaits a database connection at top level, say — is reported as failed with `CONFIG_LOAD_TIMEOUT`, and Studio keeps running what it ran. If that load ends later and nothing newer has loaded since, Studio takes how it ended: it runs the config when none of its files changed meanwhile, and reports the real error when it failed. Studio reads its address from the config before it listens, under the same limit; a config that takes longer is not waited for, and Studio listens where its flags or the defaults say. Start Studio with `COURIER_CONFIG_LOAD_TIMEOUT_MS` set to a number of milliseconds to give a slow config longer.
+
 Studio has no authentication. It answers only its own page and the apps running on this machine, so on the default `localhost` nothing else can reach it; bound to the network (`--host 0.0.0.0`), anyone on that network can use it.
 
 The build integrations connect your app to Studio; they do not start it.

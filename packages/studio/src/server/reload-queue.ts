@@ -15,6 +15,18 @@ export interface ReloadQueue {
    * must see for itself that it was dropped.
    */
   exclusive<TResult>(task: () => Promise<TResult>, dropped?: AbortSignal): Promise<TResult>;
+  /**
+   * Run `task` once everything queued before it has run. It is not an edit,
+   * and a reload still waiting to start runs before it, together with what
+   * is requested meanwhile. A task that throws is logged and the chain goes on.
+   */
+  run(task: () => Promise<void>): void;
+  /**
+   * Refuse every edit that has not started, and every edit asked for from
+   * now on: each rejects at once with what `refusal` returns, never runs,
+   * and stops counting as under way. An edit already running goes on.
+   */
+  refuseEdits(refusal: () => Error): void;
   /** Drop paths from every reload waiting to run, as already seen. */
   forget(paths: readonly string[]): void;
   /** Resolves once nothing is queued or running. */
@@ -62,6 +74,10 @@ export function createReloadQueue(
      signal that wakes whoever waits for them when the set shrinks. */
   const liveEdits = new Set<Promise<void>>();
   let editsChanged = Promise.withResolvers<void>();
+  /* Once set, what every edit that has not started is refused with. */
+  let refusal: (() => Error) | null = null;
+  /* Each edit queued and not started: how to refuse it, and its settling. */
+  const queuedEdits = new Map<PromiseWithResolvers<never>, Promise<void>>();
   const dropEdit = (edit: Promise<void>) => {
     if (!liveEdits.delete(edit)) return;
     editsChanged.resolve();
@@ -88,27 +104,49 @@ export function createReloadQueue(
     task: () => Promise<TResult>,
     dropped?: AbortSignal,
   ): Promise<TResult> {
+    if (refusal !== null) return Promise.reject(refusal());
     waiting = null;
     let started = false;
-    const result = tail.then(() => {
+    const refused = Promise.withResolvers<never>();
+    const turn = tail.then(() => {
+      queuedEdits.delete(refused);
+      if (refusal !== null) throw refusal();
       started = true;
       return task();
     });
-    const settledEdit = result.then(
+    const settledEdit = turn.then(
       () => undefined,
       () => undefined,
     );
     tail = settledEdit;
     liveEdits.add(settledEdit);
+    queuedEdits.set(refused, settledEdit);
     void settledEdit.then(() => dropEdit(settledEdit));
     dropped?.addEventListener("abort", () => {
       if (!started) dropEdit(settledEdit);
     });
-    return result;
+    return Promise.race([turn, refused.promise]);
+  }
+
+  function refuseEdits(refuse: () => Error): void {
+    refusal = refuse;
+    for (const [refused, edit] of queuedEdits) {
+      refused.reject(refuse());
+      dropEdit(edit);
+    }
+    queuedEdits.clear();
+  }
+
+  function run(task: () => Promise<void>): void {
+    tail = tail
+      .then(task)
+      .catch((err: unknown) =>
+        log.error("Studio could not finish a task on the reload chain", err),
+      );
   }
 
   function forget(paths: readonly string[]): void {
-    for (const run of notStarted) for (const path of paths) run.delete(path);
+    for (const queued of notStarted) for (const path of paths) queued.delete(path);
   }
 
   async function settled(): Promise<void> {
@@ -123,5 +161,5 @@ export function createReloadQueue(
     while (liveEdits.size > 0) await Promise.race([...liveEdits, editsChanged.promise]);
   }
 
-  return { request, exclusive, forget, settled, exclusiveSettled };
+  return { request, exclusive, run, refuseEdits, forget, settled, exclusiveSettled };
 }

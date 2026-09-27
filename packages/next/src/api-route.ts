@@ -3,6 +3,8 @@ import { createHandler, discoverAppOrigin, requireSources } from "@noverax/couri
 import { announceHosting, deferAnnounce } from "@noverax/courier/announce";
 import type { NextRequest } from "next/server";
 
+import { publicRequest } from "./public-request";
+
 /**
  * Create Next.js App Router handlers for the courier proxy.
  *
@@ -49,12 +51,12 @@ export function apiRoute(config?: HandlerConfig): {
     GET: (request: NextRequest) => {
       announce();
       discoverAppOrigin(new URL(request.url).origin);
-      return handleGet(request);
+      return handleGet(publicRequest(request));
     },
     POST: (request: NextRequest) => {
       announce();
       discoverAppOrigin(new URL(request.url).origin);
-      return handlePost(request);
+      return handlePost(publicRequest(request));
     },
   };
 }

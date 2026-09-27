@@ -12,6 +12,8 @@ interface EmptyStateProps {
     onClick: () => void;
   };
   className?: string;
+  /** Shown between the description and the action: a snippet, say. */
+  children?: React.ReactNode;
 }
 
 export function EmptyState({
@@ -20,6 +22,7 @@ export function EmptyState({
   description,
   action,
   className,
+  children,
 }: EmptyStateProps): React.ReactElement {
   return (
     <div
@@ -38,6 +41,8 @@ export function EmptyState({
           {description}
         </p>
       </div>
+
+      {children}
 
       {action && (
         <Button variant="outline" size="sm" onClick={action.onClick}>

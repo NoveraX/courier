@@ -88,12 +88,63 @@ describe("loadCourierConfig", () => {
 
   it("throws CONFIG_INVALID when sources is missing", async () => {
     writeConfig(`export default {};`);
-    await expect(loadCourierConfig(dir)).rejects.toMatchObject({ code: "CONFIG_INVALID" });
+    await expect(loadCourierConfig(dir)).rejects.toMatchObject({
+      code: "CONFIG_INVALID",
+      message: expect.stringContaining("declare `sources: {}` while there are none"),
+    });
   });
 
-  it("throws CONFIG_INVALID when sources is empty", async () => {
-    writeConfig(`export default { sources: {} };`);
-    await expect(loadCourierConfig(dir)).rejects.toMatchObject({ code: "CONFIG_INVALID" });
+  it("loads a config that declares no sources yet", async () => {
+    writeConfig(
+      'import { defineConfig } from "@noverax/courier/config";\nexport default defineConfig({ sources: {} });\n',
+    );
+
+    const result = await loadCourierConfig(dir);
+
+    expect(result.config.sources).toEqual({});
+    expect(result.configFile).toBe(realpathSync(join(dir, "courier.config.ts")));
+  });
+
+  it("throws CONFIG_INVALID when sources is an array, a string, a Map or a Promise, not an object of named sources", async () => {
+    writeConfig(`export default { sources: [] };`);
+    await expect(loadCourierConfig(dir)).rejects.toMatchObject({
+      code: "CONFIG_INVALID",
+      message: "courier.config.sources is an array, not an object of named sources",
+    });
+
+    writeConfig(`export default { sources: "api" };`);
+    await expect(loadCourierConfig(dir)).rejects.toMatchObject({
+      code: "CONFIG_INVALID",
+      message: "courier.config.sources is a string, not an object of named sources",
+    });
+
+    writeFileSync(join(dir, "api.ts"), 'export const api = { options: { baseURL: "https://api.example" } };\n');
+    writeConfig(`import { api } from "./api";\nexport default { sources: new Map([["api", api]]) };\n`);
+    await expect(loadCourierConfig(dir)).rejects.toMatchObject({
+      code: "CONFIG_INVALID",
+      message: "courier.config.sources is a Map, not an object of named sources",
+    });
+
+    writeConfig(`import { api } from "./api";\nexport default { sources: Promise.resolve({ api }) };\n`);
+    await expect(loadCourierConfig(dir)).rejects.toMatchObject({
+      code: "CONFIG_INVALID",
+      message: "courier.config.sources is a Promise, not an object of named sources",
+    });
+  });
+
+  it("loads sources given as the namespace of a module the loader transpiles or Node imports", async () => {
+    const api = 'export const api = { options: { baseURL: "https://api.example" } };\n';
+    writeFileSync(join(dir, "apis.ts"), api);
+    writeFileSync(join(dir, "native-apis.mjs"), api);
+    writeConfig(`import * as apis from "./apis";\nexport default { sources: apis };\n`);
+
+    const transpiled = await loadCourierConfig(dir);
+    writeConfig(`import * as apis from "./native-apis.mjs";\nexport default { sources: apis };\n`);
+    const native = await loadCourierConfig(dir);
+
+    expect(Object.keys(transpiled.config.sources)).toEqual(["api"]);
+    expect(Object.keys(native.config.sources)).toEqual(["api"]);
+    expect(Object.prototype.toString.call(native.config.sources)).toBe("[object Module]");
   });
 
   it("throws CONFIG_INVALID naming a source that a misspelled import leaves undefined", async () => {

@@ -40,6 +40,22 @@ Studio listens on `http://localhost:6280`, or on the `studio.host` and `studio.p
 
 Studio loads `courier.config.ts` from the project root, with the `courier.mocks.ts` beside it, and loads them again whenever either one, or a module either imports, is saved: see [How Studio loads the project](#how-studio-loads-the-project).
 
+A project that has no API sources yet starts with this `courier.config.ts` at its root — the APIs page offers it to copy while there is no config, and keeps **Import API** off until one loads:
+
+```ts
+import { defineConfig } from "@noverax/courier/config";
+export default defineConfig({ sources: {} });
+```
+
+**Import API** then writes the project's first API into its output directory — `src/api/<source name>/` by default — where `source.ts` exports the source under its source name. Add it to `sources` under that name, and the APIs page lists it as imported:
+
+```ts
+import { defineConfig } from "@noverax/courier/config";
+import { petstore } from "./src/api/petstore/source";
+
+export default defineConfig({ sources: { petstore } });
+```
+
 Studio has no authentication. It answers only its own page and the apps running on this machine, so on the default `localhost` nothing else can reach it; bound to the network (`--host 0.0.0.0`), anyone on that network can use it.
 
 The build integrations connect your app to Studio; they do not start it.
@@ -205,7 +221,7 @@ Studio loads `courier.config.*` from its project root — the working directory,
 
 While `courier.config` does not load, or after it is deleted, Studio keeps running the sources it loaded last, and says so:
 
-- The APIs page names the file — with the loader's message when it does not load — and the time the sources it shows were loaded. A config that has never loaded gets its message instead of sources, and a project without one is told to create `courier.config.ts`.
+- The APIs page names the file — with the loader's message when it does not load — and the time the sources it shows were loaded. A config that has never loaded gets its message instead of sources, and a project without one is told to create `courier.config.ts` and offered the config to start it from.
 - The status bar shows `config error` or `config deleted` on every page, with the details as its title.
 - **Import API** and **Add mock server** are turned off, and say why.
 - A request that writes an import's files, or cleans up after one, is refused with `{ error, code }`: 409 `CONFIG_NOT_LOADING` or `CONFIG_MISSING` until the config is fixed or created, and 503 `STUDIO_STARTING` or `CONFIG_RELOADING` while a load is still under way. Removing an import does not need the config to load.

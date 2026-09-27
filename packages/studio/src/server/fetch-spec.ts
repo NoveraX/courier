@@ -6,6 +6,7 @@ import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
 import { requestSpec, type SpecAnswer } from "./spec-request";
 
 const MAX_REDIRECTS = 5;
+const WEB_PROTOCOLS: ReadonlySet<string> = new Set(["http:", "https:"]);
 const DEFAULT_PORTS: ReadonlyMap<string, string> = new Map([
   ["http:", "80"],
   ["https:", "443"],
@@ -29,6 +30,11 @@ const DEADLINE_MS = 60_000;
  * only for such a host. An address that means every interface is never
  * reached.
  *
+ * A URL Studio refuses is the request's fault: its error is `refused`.
+ * Everything that goes wrong once a request is sent is the host's — no
+ * answer, an error status, a redirect Studio cannot follow, a body cut off,
+ * too large or unreadable — and its error names the URL.
+ *
  * @param url - The URL the developer asked Studio to read
  * @param allowlist - The private hosts the project names, read when a hop needs them
  * @returns The specification's text
@@ -42,7 +48,7 @@ const DEADLINE_MS = 60_000;
  */
 export async function fetchSpec(url: string, allowlist: SpecHostAllowlist): Promise<string> {
   const deadline = Date.now() + DEADLINE_MS;
-  let current = parseSpecUrl(url, url);
+  let current = specUrl(url);
   let loopback = true;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const remaining = deadline - Date.now();
@@ -62,30 +68,49 @@ export async function fetchSpec(url: string, allowlist: SpecHostAllowlist): Prom
        has left it, a server elsewhere chose where the request goes next. */
     loopback &&=
       answer.remoteAddress !== null && specAddressKind(answer.remoteAddress) === "loopback";
-    current = parseSpecUrl(answer.location, url, current);
+    current = redirectTarget(answer.location, current, url);
   }
   throw new SpecFetchError("SPEC_REDIRECTS", `${url} redirects more than ${MAX_REDIRECTS} times.`, {
     url,
   });
 }
 
-function parseSpecUrl(location: string, asked: string, base?: URL): URL {
+/* The URL the developer gave: one Studio cannot fetch is the request's fault. */
+function specUrl(url: string): URL {
   let parsed: URL;
   try {
-    parsed = new URL(location, base);
+    parsed = new URL(url);
   } catch (cause) {
-    throw new SpecFetchError(
-      "SPEC_URL_INVALID",
-      `${base ? `${asked} redirects to` : ""}${location} is not a URL.`.trim(),
-      { cause, url: asked },
-    );
+    throw new SpecFetchError("SPEC_URL_INVALID", `${url} is not a URL.`, { cause, url });
   }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+  if (!WEB_PROTOCOLS.has(parsed.protocol)) {
     throw new SpecFetchError("SPEC_URL_INVALID", "Spec URL must use http:// or https:// protocol", {
-      url: asked,
+      url,
     });
   }
   return parsed;
+}
+
+/* Where a server redirects: a target Studio cannot follow is that server's fault. */
+function redirectTarget(location: string, from: URL, asked: string): URL {
+  let target: URL;
+  try {
+    target = new URL(location, from);
+  } catch (cause) {
+    throw new SpecFetchError(
+      "SPEC_REDIRECT_INVALID",
+      `${from.href} redirects to "${location}", which is not a URL.`,
+      { cause, url: asked },
+    );
+  }
+  if (!WEB_PROTOCOLS.has(target.protocol)) {
+    throw new SpecFetchError(
+      "SPEC_REDIRECT_INVALID",
+      `${from.href} redirects to ${target.href}, which is not an http:// or https:// URL, so Studio does not follow it.`,
+      { url: asked },
+    );
+  }
+  return target;
 }
 
 function hopPolicy(url: URL, loopback: boolean, allowlist: SpecHostAllowlist): LookupPolicy {

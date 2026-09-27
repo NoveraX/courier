@@ -1,10 +1,13 @@
 import { CourierError } from "@noverax/courier";
+import { errnoCode } from "./errno-code";
+import { messageOf } from "./message-of";
 
 /** Why Studio did not fetch a specification from a URL. */
 export type SpecFetchErrorCode =
   | "SPEC_URL_INVALID"
   | "SPEC_HOST_PRIVATE"
   | "SPEC_REDIRECTS"
+  | "SPEC_REDIRECT_INVALID"
   | "SPEC_HTTP_STATUS"
   | "SPEC_TOO_LARGE"
   | "SPEC_TIMEOUT"
@@ -40,6 +43,27 @@ export class SpecFetchError extends CourierError<SpecFetchErrorCode> {
   /** Whether Studio refused the URL itself — the request's fault — rather than failing to fetch it. */
   get refused(): boolean {
     return REFUSALS.has(this.code);
+  }
+
+  /**
+   * The failure for a connection that closed once the server had begun to
+   * answer: the host was reached, and the body it was sending is incomplete.
+   *
+   * @param url - The URL whose answer was cut off
+   * @param cause - What the connection or the response failed with
+   * @returns The error
+   *
+   * @example
+   * ```ts
+   * response.on("error", (error) => reject(SpecFetchError.cutOff(url, error)));
+   * ```
+   */
+  static cutOff(url: URL, cause: unknown): SpecFetchError {
+    return new SpecFetchError(
+      "SPEC_UNREACHABLE",
+      `${url.href} closed the connection before the whole specification arrived (${errnoCode(cause) ?? messageOf(cause)}).`,
+      { cause, url: url.href },
+    );
   }
 
   /**

@@ -10,6 +10,7 @@ import { approveSpecAddresses } from "./approve-spec-addresses";
 import { errnoCode } from "./errno-code";
 import { guardedLookup, type LookupPolicy } from "./guarded-lookup";
 import { readSpecBody } from "./read-spec-body";
+import { type RequestClock, requestClock } from "./request-clock";
 import { SpecFetchError } from "./spec-fetch-error";
 import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
 
@@ -34,11 +35,17 @@ const REDIRECTS: ReadonlySet<number> = new Set([301, 302, 303, 307, 308]);
  * so the request fails with `CONFIG_RELOADING`, not as a host that did not
  * answer; a host admitted after that is never connected to.
  *
+ * Once the server has begun to answer, a connection that closes before the
+ * body is complete fails the request at once as a body cut off, not as a
+ * host that could not be reached. Bytes that are not HTTP, whenever they
+ * arrive, fail it at once as a response Studio cannot parse: the host was
+ * reached, and may still be holding the connection open.
+ *
  * @param url - The URL, already checked for scheme and form
  * @param policy - What besides the public internet the request may reach
  * @param timeoutMs - How long it may take, all of it
  * @returns The body, or where the server redirects
- * @throws {SpecFetchError} For a refused address, an error answer, a body too large, or a failure to connect in time
+ * @throws {SpecFetchError} For a refused address, an error answer, a response that is not HTTP, a body cut off, too large or not readable, or a failure to connect or finish in time
  * @throws {SpecHostsUnavailableError} For a private address, while Studio cannot tell whether the project allows it
  *
  * @example
@@ -62,48 +69,11 @@ export function requestSpec(
     admitWrittenOut(url, clock.policy)
       .then(() => {
         request = open(url, clock.policy);
-        return exchange(request, url);
+        return exchange(request, url, clock);
       })
       .then(resolve, reject)
       .finally(() => clearTimeout(deadline));
   });
-}
-
-interface RequestClock {
-  /** The policy the request runs under. */
-  readonly policy: LookupPolicy;
-  /** The time is up: the error the request fails with. */
-  expire(): Error;
-}
-
-/* It knows whether the request waits for a host to be admitted when the
-   time runs out, and admits none after. */
-function requestClock(url: URL, policy: LookupPolicy, timeoutMs: number): RequestClock {
-  let admitting: string | undefined;
-  let expired: Error | undefined;
-  const watched: LookupPolicy = {
-    loopback: policy.loopback,
-    admitPrivate: async (what) => {
-      admitting = what;
-      try {
-        await policy.admitPrivate(what);
-      } finally {
-        admitting = undefined;
-      }
-      if (expired) throw expired;
-    },
-  };
-  function expire(): Error {
-    expired =
-      admitting === undefined
-        ? new SpecFetchError(
-            "SPEC_TIMEOUT",
-            `${url.href} did not answer within ${timeoutMs / 1000} s.`,
-          )
-        : SpecHostsUnavailableError.reloading(admitting);
-    return expired;
-  }
-  return { policy: watched, expire };
 }
 
 async function admitWrittenOut(url: URL, policy: LookupPolicy): Promise<void> {
@@ -124,17 +94,34 @@ function open(url: URL, policy: LookupPolicy): ClientRequest {
   });
 }
 
-function exchange(request: ClientRequest, url: URL): Promise<SpecAnswer> {
+function exchange(request: ClientRequest, url: URL, clock: RequestClock): Promise<SpecAnswer> {
   return new Promise<SpecAnswer>((resolve, reject) => {
-    request.on("response", (response) => answer(response, url).then(resolve, reject));
-    request.on("error", (error) => reject(verdict(error) ? error : unreachable(url, error)));
+    request.on("response", (response) => {
+      clock.answered = true;
+      answer(response, url).then(resolve, reject);
+    });
+    request.on("error", (error) => reject(failure(error, url, clock.answered)));
     request.end();
   });
 }
 
-/* A refusal the lookup raised reaches the caller as it is, not as a failure to connect. */
-function verdict(error: Error): boolean {
-  return error instanceof SpecFetchError || error instanceof SpecHostsUnavailableError;
+/* A refusal the lookup raised reaches the caller as it is, not as a failure
+   to connect. Node's HTTP parser names what it rejects with an `HPE_` code:
+   the host answered, so it was reached. A connection lost once the server
+   answered cut its body off. */
+function failure(error: Error, url: URL, answered: boolean): Error {
+  if (error instanceof SpecFetchError || error instanceof SpecHostsUnavailableError) return error;
+  const code = errnoCode(error);
+  if (code?.startsWith("HPE_")) return unparsable(url, code, error);
+  return answered ? SpecFetchError.cutOff(url, error) : unreachable(url, error);
+}
+
+function unparsable(url: URL, code: string, cause: Error): SpecFetchError {
+  return new SpecFetchError(
+    "SPEC_UNREACHABLE",
+    `${url.href} sent a response Studio cannot parse (${code}).`,
+    { cause, url: url.href },
+  );
 }
 
 async function answer(response: IncomingMessage, url: URL): Promise<SpecAnswer> {

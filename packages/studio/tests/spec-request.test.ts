@@ -3,10 +3,13 @@
  * written as: the wait for the project to admit a private host counts
  * against it, and time that runs out during that wait reports that Studio
  * could not tell yet, never a host that did not answer. A host admitted too
- * late is never connected to.
+ * late is never connected to. Time that runs out says whether the host did
+ * not answer or did not finish sending, and bytes that are not HTTP fail at
+ * once as a response Studio cannot parse, not as a host out of reach.
  */
 import type * as Dns from "node:dns";
-import { createServer, type Server } from "node:http";
+import { createServer } from "node:http";
+import { createServer as createRawServer, type Server } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { LookupPolicy } from "../src/server/guarded-lookup";
@@ -30,6 +33,8 @@ vi.mock("node:dns", async (importOriginal) => {
 
 const { requestSpec } = await import("../src/server/spec-request");
 
+const ON_THIS_MACHINE: LookupPolicy = { loopback: true, admitPrivate: async () => undefined };
+
 const servers: Server[] = [];
 
 afterEach(async () => {
@@ -49,6 +54,23 @@ async function serveCounting(): Promise<{ port: number; connections: () => numbe
   const address = server.address();
   if (address === null || typeof address === "string") throw new Error("the spec server has no port");
   return { port: address.port, connections: () => connections };
+}
+
+/* A server that writes its answer by hand once the request has arrived, and leaves its side of the connection open. */
+async function serveRaw(answer: string): Promise<string> {
+  const server = createRawServer((socket) => {
+    socket.once("data", () => socket.write(answer));
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  servers.push(server);
+  const address = server.address();
+  if (address === null || typeof address === "string") throw new Error("the spec server has no port");
+  return `http://127.0.0.1:${address.port}/spec.json`;
+}
+
+/* The parser's code for the same bytes differs between Node versions. */
+function unparsable(url: string): RegExp {
+  return new RegExp(`^${url.replaceAll(".", "\\.")} sent a response Studio cannot parse \\(HPE_[A-Z_]+\\)\\.$`);
 }
 
 /* A project that takes `delayMs` to decide, then admits the host or refuses it as a loaded config would. */
@@ -137,6 +159,43 @@ describe("requestSpec", () => {
     const { result, ms } = await elapsed(() => requestSpec(new URL("http://slow.spec.test/spec.json"), policy, 150));
 
     expect(result).toMatchObject({ status: "rejected", reason: { code: "SPEC_TIMEOUT" } });
+    expect(ms).toBeLessThan(1_000);
+  });
+
+  it("reports a host that sends nothing in time as one that did not answer", async () => {
+    const url = await serveRaw("");
+
+    const { result } = await elapsed(() => requestSpec(new URL(url), ON_THIS_MACHINE, 300));
+
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: { code: "SPEC_TIMEOUT", message: `${url} did not answer within 300 ms.` },
+    });
+  });
+
+  it("reports a body still arriving when the time runs out as one the host did not finish sending", async () => {
+    const url = await serveRaw('HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: 1000\r\n\r\n{"openapi":"3.1.0",');
+
+    const { result } = await elapsed(() => requestSpec(new URL(url), ON_THIS_MACHINE, 300));
+
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: { code: "SPEC_TIMEOUT", message: `${url} did not send the whole specification within 300 ms.` },
+    });
+  });
+
+  it.each([
+    ["a body that breaks off into a malformed chunk", 'HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n10\r\n{"openapi":"3.0\r\nZZZ\r\n'],
+    ["an answer that is not HTTP at all", "SSH-2.0-OpenSSH_9.6\r\n"],
+  ])("reports %s, on a connection the host keeps open, as a response Studio cannot parse", async (_sent, answer) => {
+    const url = await serveRaw(answer);
+
+    const { result, ms } = await elapsed(() => requestSpec(new URL(url), ON_THIS_MACHINE, 3_000));
+
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: { code: "SPEC_UNREACHABLE", refused: false, message: expect.stringMatching(unparsable(url)) },
+    });
     expect(ms).toBeLessThan(1_000);
   });
 });

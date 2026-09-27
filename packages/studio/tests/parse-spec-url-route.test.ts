@@ -1,12 +1,14 @@
 /**
  * Importing a specification by URL through Studio's API: a URL Studio
- * refuses is the request's fault (400), a host it could not read is the
- * server's (502), and a readable one is parsed.
+ * refuses is the request's fault (400); a host it could not read is the
+ * server's (502), whether it could not be reached or answered with a body
+ * or a redirect Studio cannot use; and a readable one is parsed.
  */
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { gzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createStudioServer } from "../src/server/create-studio-server";
@@ -62,6 +64,36 @@ describe("POST /api/apis/parse with a URL", () => {
 
     expect(reply.status).toBe(502);
     expect(String(reply.body.error)).toContain("could not be reached");
+  });
+
+  it.each([
+    { label: "a body cut off", path: "/cut.json", reason: "closed the connection before the whole specification arrived (ECONNRESET)." },
+    { label: "a gzip body cut off", path: "/cut-gzip.json", reason: "closed the connection before the whole specification arrived (ECONNRESET)." },
+    { label: "a plain body labelled gzip", path: "/plain-labelled-gzip.json", reason: "sent a gzip body that does not decompress (incorrect header check)." },
+    { label: "a redirect to something that is not a URL", path: "/redirect-nowhere", reason: 'redirects to "http://[", which is not a URL.' },
+    {
+      label: "a redirect to ftp://",
+      path: "/redirect-ftp",
+      reason: "redirects to ftp://docs.example.com/spec.json, which is not an http:// or https:// URL, so Studio does not follow it.",
+    },
+  ])("answers 502 naming the URL for $label", async ({ path, reason }) => {
+    const server = createServer((req, res) => {
+      if (req.url === "/redirect-nowhere") res.writeHead(302, { location: "http://[" }).end();
+      else if (req.url === "/redirect-ftp") res.writeHead(302, { location: "ftp://docs.example.com/spec.json" }).end();
+      else if (req.url === "/plain-labelled-gzip.json") res.writeHead(200, { "content-encoding": "gzip" }).end('{"openapi":"3.1.0"}');
+      else {
+        res.writeHead(200, { "content-length": "4096", ...(req.url === "/cut-gzip.json" ? { "content-encoding": "gzip" } : {}) });
+        res.write(req.url === "/cut-gzip.json" ? gzipSync("x".repeat(4096)).subarray(0, 20) : '{"openapi":', () => res.socket?.destroy());
+      }
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    servers.push(server);
+    const specUrl = `http://127.0.0.1:${(server.address() as { port: number }).port}${path}`;
+    const url = await start();
+
+    const reply = await parse(url, specUrl);
+
+    expect(reply).toEqual({ status: 502, body: { error: `${specUrl} ${reason}` } });
   });
 
   it("parses a specification served on this machine", async () => {

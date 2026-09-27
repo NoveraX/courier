@@ -1,8 +1,8 @@
-import type { HTTPError } from "@noverax/courier";
-import type { QueryKey } from "@tanstack/react-query";
+import type { CallOptions, HTTPError } from "@noverax/courier";
+import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { GroupCall, HookOptions } from "./group-call";
+import type { GroupCall } from "./group-call";
 import type { QueryGroupClient } from "./types";
 
 /** The hook of a group that changes something on the server. */
@@ -12,8 +12,23 @@ export type MutationHook = Pick<
   "useMutation"
 >;
 
+type SuccessCallback = (...args: unknown[]) => unknown;
+
+interface MutationHookOptions extends Record<string, unknown> {
+  requestOptions?: CallOptions;
+  invalidate?: QueryKey[];
+  onSuccess?: SuccessCallback;
+}
+
 /**
  * Build the mutation hook of one group.
+ *
+ * `invalidate` refetches its queries once the mutation has succeeded, and
+ * the mutation stays pending until they have: its caller sees the new data
+ * the moment `mutateAsync` resolves, as with an `onSuccess` that returns
+ * `invalidateQueries`. Every callback the caller passes, `onSettled`
+ * included, reaches TanStack Query as it is, so a promise one returns is
+ * awaited too.
  *
  * @param call - The group's HTTP calls
  * @returns `useMutation`
@@ -22,31 +37,29 @@ export type MutationHook = Pick<
  */
 export function createMutationHook(call: GroupCall): MutationHook {
   return {
-    useMutation(method: string, options?: HookOptions) {
+    useMutation(method: string, options?: MutationHookOptions) {
       const qc = useQueryClient();
-      const {
-        requestOptions,
-        invalidate,
-        onSettled: userOnSettled,
-        ...mutationOptions
-      } = options ?? {};
+      const { requestOptions, invalidate, onSuccess, ...mutationOptions } = options ?? {};
 
       return useMutation<unknown, HTTPError, unknown>({
         mutationFn: (variables: unknown) =>
           call.send(method, variables ?? undefined, requestOptions),
         ...mutationOptions,
-        onSettled:
-          invalidate || userOnSettled
-            ? (...args: unknown[]) => {
-                if (invalidate) {
-                  for (const key of invalidate as QueryKey[]) {
-                    qc.invalidateQueries({ queryKey: key });
-                  }
-                }
-                (userOnSettled as ((...a: unknown[]) => void) | undefined)?.(...args);
-              }
-            : undefined,
+        onSuccess: invalidate ? withInvalidation(qc, invalidate, onSuccess) : onSuccess,
       });
     },
   } as MutationHook;
+}
+
+function withInvalidation(
+  queryClient: QueryClient,
+  keys: QueryKey[],
+  onSuccess: SuccessCallback | undefined,
+): SuccessCallback {
+  return async (...args) => {
+    await Promise.all([
+      onSuccess?.(...args),
+      ...keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    ]);
+  };
 }

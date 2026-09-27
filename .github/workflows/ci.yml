@@ -50,6 +50,9 @@ jobs:
       - name: Lint (Biome)
         run: npx biome check packages/
 
+      - name: Check file and directory names
+        run: npm run check:names
+
       - name: Typecheck
         run: npx tsc --noEmit
 
@@ -65,6 +68,33 @@ jobs:
       # other one resolves sibling packages through their sources.
       - name: Check published entry points
         run: npm run check:exports
+
+  # The commit-msg hook runs only where it is installed and can be skipped, so
+  # the same rules run here. A pull request is checked from its merge base; a
+  # push, from the last release tag, so a cancelled or skipped run leaves
+  # nothing unchecked. The tags come with the full-depth checkout. The release
+  # does not wait for this job: a commit already on master cannot be reworded
+  # without rewriting master, so a failure reports it rather than holding
+  # every later release back.
+  commits:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint commit messages
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: bash scripts/lint-commits.sh "$HEAD_SHA" "$PR_BASE"
 
   docs:
     runs-on: ubuntu-latest

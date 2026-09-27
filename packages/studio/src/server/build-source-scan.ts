@@ -53,7 +53,13 @@ export interface ScanResult {
   scannedFiles: number;
 }
 
-const HTTP_METHODS = new Set(["get", "post", "put", "patch", "delete"]);
+const HTTP_METHODS: ReadonlyArray<ScannedEndpointAnalysis["httpMethod"]> = [
+  "get",
+  "post",
+  "put",
+  "patch",
+  "delete",
+];
 
 /** Endpoints a specification declared without a group are keyed under `""`. */
 const FLAT_GROUP = "";
@@ -142,10 +148,7 @@ function describeEndpoint(name: string, endpoint: MapEndpoint): ScannedEndpoint 
       hasResponseType: endpoint.hasResponseSchema,
       hasVariablesType: endpoint.hasVariablesSchema,
       hasValidation: endpoint.hasResponseSchema || endpoint.hasVariablesSchema,
-      httpMethod:
-        method && HTTP_METHODS.has(method)
-          ? (method as ScannedEndpointAnalysis["httpMethod"])
-          : "get",
+      httpMethod: HTTP_METHODS.find((known) => known === method) ?? "get",
       path: endpoint.path ?? "",
       type: endpoint.type ?? null,
     },

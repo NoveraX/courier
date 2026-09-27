@@ -18,20 +18,8 @@ import {
 } from "./hooks/use-computed-query";
 import type { SubscribeFn } from "./hooks/use-subscription";
 import { useSubscription as useSubscriptionHook } from "./hooks/use-subscription";
+import { buildInfiniteQueryKey, buildQueryKey } from "./query-key";
 import type { QueryGroupClient } from "./types";
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-function buildQueryKey(
-  source: string,
-  group: string,
-  method: string,
-  variables?: unknown,
-): QueryKey {
-  return variables !== undefined ? [source, group, method, variables] : [source, group, method];
-}
 
 // ---------------------------------------------------------------------------
 // Group hooks factory
@@ -84,12 +72,13 @@ export function createGroupHooks(
         ...infiniteOptions
       } = options;
 
+      const variablesFor = (pageParam: unknown) =>
+        typeof variables === "function" ? variables(pageParam) : variables;
+
       return useInfiniteQuery({
-        queryKey: buildQueryKey(source, groupName, method),
-        queryFn: ({ pageParam }) => {
-          const vars = typeof variables === "function" ? variables(pageParam) : variables;
-          return exec(method, vars, requestOptions as CallOptions);
-        },
+        queryKey: buildInfiniteQueryKey(source, groupName, method, variablesFor(initialPageParam)),
+        queryFn: ({ pageParam }) =>
+          exec(method, variablesFor(pageParam), requestOptions as CallOptions),
         initialPageParam,
         getNextPageParam: getNextPageParam as (...args: unknown[]) => unknown,
         getPreviousPageParam: getPreviousPageParam as ((...args: unknown[]) => unknown) | undefined,

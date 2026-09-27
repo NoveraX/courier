@@ -129,14 +129,16 @@ function CreateUser() {
 ```tsx
 import { q } from "@/lib/query"
 
-function Feed() {
+function Feed({ tag }: { tag: string }) {
   const { data, fetchNextPage } = q.posts.useInfiniteQuery("list", {
-    variables: { limit: 20 },
+    variables: (cursor) => ({ cursor, tag, limit: 20 }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
   })
 }
 ```
+
+`variables` is a function of the page parameter: it is called for every page, so the parameter reaches the request. The first page's variables are part of the cache key, so a changed `tag` starts a new list from its first page.
 
 ### `prefetchQuery`
 
@@ -160,8 +162,13 @@ Keys are generated hierarchically: `[source, group, method, variables?]`:
 ```ts
 q.users.useQuery("getAll")                             // → ["api", "users", "getAll"]
 q.users.useQuery("getById", { variables: { id: "1" }}) // → ["api", "users", "getById", { id: "1" }]
+q.posts.useInfiniteQuery("list", {
+  variables: (cursor) => ({ cursor, tag: "news" }),
+  initialPageParam: 0,
+  getNextPageParam: (page) => page.nextCursor,
+})                                                     // → ["api", "posts", "list", { cursor: 0, tag: "news" }, "infinite"]
 
-// Invalidate a specific method
+// Invalidate a specific method, infinite lists of it included
 queryClient.invalidateQueries({ queryKey: ["api", "users", "getAll"] })
 
 // Invalidate an entire group

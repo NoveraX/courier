@@ -58,7 +58,7 @@ Courier writes `info` and `debug` lines to stdout and `warn` and `error` lines t
 
 ## Behind a Reverse Proxy
 
-The proxy route refuses a browser request whose `Origin` is not the site the request was sent to — the check that stops another site's page from calling your API with your users' cookies. Behind nginx, a cloud load balancer or a CDN that terminates TLS, the app itself sees plain HTTP, and often the upstream's name in `Host`, so it needs the proxy to say what the browser used.
+The proxy route refuses a request another site's page made — the check that stops another site's page from calling your API with your users' cookies. A current browser says where a request comes from in `Sec-Fetch-Site`, and where it does, that decides, whatever name the app thinks it has. Where it does not — an older browser, or a site served over plain HTTP — the page's `Origin` is compared with the origin the request was sent to. Behind nginx, a cloud load balancer or a CDN that terminates TLS, the app itself sees plain HTTP, and often the upstream's name in `Host`, so it needs the proxy to say what the browser used.
 
 The Node adapters (Express, Fastify, NestJS and the standalone server) read `X-Forwarded-Proto` and `X-Forwarded-Host` — but only from a proxy on a loopback or private address (`127.0.0.1`, `::1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `fc00::/7`). A caller on a public address cannot claim another site's name with them. Next.js, SvelteKit and the other Web-standard adapters take the URL from their framework, which applies its own proxy settings.
 

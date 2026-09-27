@@ -76,19 +76,20 @@ Proxy mode includes two built-in security layers: origin validation and header w
 
 ### Origin validation
 
-The handler rejects POST requests whose `Origin` header does not match the request URL origin. This prevents third-party sites from calling your proxy:
+Every proxy route — GET, POST, SSE and WebSocket — refuses a request another site's page made, with `403 Origin not allowed`. This stops a third-party page from calling your API with your users' cookies:
 
-```typescript
-// Built-in origin check (POST only)
-const origin = request.headers.get("origin")
+- Where the browser sends `Sec-Fetch-Site`, it decides. `same-origin` and `none` (the user typed the address) are served; `same-site` and `cross-site` are served only when their `Origin` is in `allowedOrigins`. An `<img>` or a link on another site carries no `Origin`, so it is refused.
+- Where it does not — an older browser, or a site served over plain HTTP — the `Origin` must be the origin the request was sent to, or be listed.
+- A request with neither header is not a browser request from another page, and is served.
 
-if (!origin || new URL(request.url).origin !== origin) {
-  return Response.json(
-    { success: false, message: "Origin mismatch" },
-    { status: 403 }
-  )
-}
+```ts
+courierHandler({
+  // Pages on these origins may call the proxy too
+  allowedOrigins: ["https://admin.example.com", "*.example.com"],
+})
 ```
+
+`*.example.com` covers the sub-domains of `example.com`, not the apex.
 
 ### Header whitelisting
 

@@ -4,11 +4,16 @@
 
 import type { ParsedSpec } from "../apis";
 import type { ApisRouteDeps } from "./apis-routes";
+import { summarizePlan } from "./import-files/plan-summary";
 import { importsSnapshotOf } from "./imports-bridge";
 import { withImportsLock } from "./imports-lock";
 import { handleManageApply } from "./manage-apply";
-import { handleInventory, handleManagePreview } from "./manage-helpers";
+import { handleInventory } from "./manage-helpers";
+import { type ManageRequest, planManage } from "./manage-plan";
+import { isParsedSpec } from "./parsed-spec-guard";
+import { projectRootAt } from "./project-fs/project-root";
 import { readDeclarations } from "./project-state/read-declarations";
+import { readPlanConsent } from "./read-plan-consent";
 import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse, RouteApp } from "./route-types";
 import { sendResult } from "./send-result";
@@ -45,7 +50,14 @@ async function handleInventoryRoute(
     if (!body) return;
 
     const declarations = await readDeclarations(project, projectRoot, "show");
-    sendResult(res, handleInventory(body, importsSnapshotOf(declarations, projectRoot)));
+    sendResult(
+      res,
+      handleInventory(
+        body,
+        importsSnapshotOf(declarations, projectRoot),
+        projectRootAt(projectRoot),
+      ),
+    );
   } catch (err) {
     sendRouteFailure(res, err, "Failed to build inventory");
   }
@@ -61,7 +73,17 @@ async function handlePreviewRoute(
     if (!body) return;
 
     const declarations = await readDeclarations(project, projectRoot, "show");
-    sendResult(res, handleManagePreview(body, importsSnapshotOf(declarations, projectRoot)));
+    const planned = planManage(
+      body,
+      importsSnapshotOf(declarations, projectRoot),
+      projectRootAt(projectRoot),
+    );
+    if ("error" in planned) {
+      sendResult(res, planned);
+      return;
+    }
+    const { addResult, removeResult, plan } = planned;
+    res.json({ addResult, removeResult, plan: summarizePlan(plan) });
   } catch (err) {
     sendRouteFailure(res, err, "Failed to preview changes");
   }
@@ -74,13 +96,19 @@ function handleApplyRoute(
 ): void {
   const body = validateManageBody(req.body, res);
   if (!body) return;
+  const consent = readPlanConsent(req.body);
+  if (!consent) {
+    res.status(400).json({ error: "planDigest must be a string and confirm a list of paths" });
+    return;
+  }
 
   /* Read once the lock is held: a request that waited behind a write acts on
      the declaration saved meanwhile. */
   void withImportsLock(async () => {
     const declarations = await readDeclarations(project, projectRoot, "act");
-    const result = await handleManageApply(body, importsSnapshotOf(declarations, projectRoot));
-    if ("success" in result) project.importsChanged();
+    const imports = importsSnapshotOf(declarations, projectRoot);
+    const result = handleManageApply({ ...body, ...consent }, imports, projectRootAt(projectRoot));
+    if (!("error" in result)) project.importsChanged();
     return result;
   }).then(
     (result) => sendResult(res, result),
@@ -93,49 +121,43 @@ function handleApplyRoute(
 function validateInventoryBody(
   body: unknown,
   res: JsonResponse,
-): { name: string; newSpec?: ParsedSpec; configPath?: string } | null {
-  if (!isObject(body)) {
-    res.status(400).json({ error: "Invalid body" });
+): { name: string; newSpec?: ParsedSpec } | null {
+  if (!isObject(body) || !isString(body.name)) {
+    res.status(400).json({ error: "Expected { name, newSpec? }" });
     return null;
   }
-  if (!isString(body.name)) {
-    res.status(400).json({ error: "Missing name" });
+  if (body.newSpec !== undefined && !isParsedSpec(body.newSpec)) {
+    res.status(400).json({ error: "newSpec is not a spec as Studio parsed it" });
     return null;
   }
-  return {
-    name: body.name,
-    newSpec: body.newSpec as ParsedSpec | undefined,
-    configPath: isString(body.configPath) ? body.configPath : undefined,
-  };
+  return { name: body.name, ...(body.newSpec !== undefined && { newSpec: body.newSpec }) };
 }
 
-function validateManageBody(
-  body: unknown,
-  res: JsonResponse,
-): {
-  name: string;
-  spec: ParsedSpec;
-  toAdd: Record<string, string[]>;
-  toRemove: Record<string, string[]>;
-  configPath?: string;
-} | null {
-  if (!isObject(body)) {
-    res.status(400).json({ error: "Invalid body" });
+function validateManageBody(body: unknown, res: JsonResponse): ManageRequest | null {
+  if (!isObject(body) || !isString(body.name) || !isParsedSpec(body.spec)) {
+    res.status(400).json({
+      error: "Expected { name, spec, toAdd?, toRemove? } with the spec as Studio parsed it",
+    });
     return null;
   }
-  if (!isString(body.name)) {
-    res.status(400).json({ error: "Missing name" });
+  const toAdd = readGroups(body.toAdd);
+  const toRemove = readGroups(body.toRemove);
+  if (toAdd === null || toRemove === null) {
+    res.status(400).json({ error: "toAdd and toRemove list endpoint names by group" });
     return null;
   }
-  if (!isObject(body.spec)) {
-    res.status(400).json({ error: "Missing spec" });
-    return null;
-  }
-  return {
-    name: body.name,
-    spec: body.spec as unknown as ParsedSpec,
-    toAdd: (isObject(body.toAdd) ? body.toAdd : {}) as Record<string, string[]>,
-    toRemove: (isObject(body.toRemove) ? body.toRemove : {}) as Record<string, string[]>,
-    configPath: isString(body.configPath) ? body.configPath : undefined,
-  };
+  return { name: body.name, spec: body.spec, toAdd, toRemove };
+}
+
+function readGroups(value: unknown): Record<string, string[]> | null {
+  if (value === undefined) return {};
+  if (!isObject(value)) return null;
+  const entries = Object.entries(value);
+  if (!entries.every((entry): entry is [string, string[]] => isNames(entry[1]))) return null;
+  /* fromEntries defines each key as its own, so a group named "__proto__" stays a group. */
+  return Object.fromEntries(entries);
+}
+
+function isNames(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((name) => typeof name === "string");
 }

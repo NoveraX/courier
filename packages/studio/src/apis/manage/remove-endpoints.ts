@@ -3,6 +3,7 @@
  */
 
 import type { ImportLayout } from "../layout";
+import { removeBarrelExports } from "./remove-barrel-exports";
 import { removeEndpointsFromGroup } from "./remove-from-group";
 import { collectGroupDeletions, collectModifiedWarnings, findGroupFile } from "./remove-helpers";
 import { processOrphanSchemas } from "./remove-orphans";
@@ -65,25 +66,36 @@ export function previewRemoveEndpoints(
     deletedFiles,
   );
 
-  // Update source.ts if groups were deleted
-  let sourceFileUpdate: RemoveResult["sourceFileUpdate"];
-  if (deletedGroupNames.length > 0) {
-    const sourcePath = layout.sourceFile;
-    const sourceContent = existingFiles[sourcePath];
-    if (sourceContent) {
-      sourceFileUpdate = {
-        path: sourcePath,
-        content: removeGroupsFromSourceFile(sourceContent, deletedGroupNames),
-      };
-    }
-  }
-
   return {
     modifiedFiles,
     deletedFiles,
-    sourceFileUpdate,
+    ...withoutGroups(deletedGroupNames, existingFiles, layout),
     removedFingerprints,
     orphanedSchemas,
     modifiedEndpointsWarning,
+  };
+}
+
+/* source.ts no longer imports the groups removed whole, and the barrel no longer re-exports them. */
+function withoutGroups(
+  groups: string[],
+  existingFiles: Record<string, string>,
+  layout: ImportLayout,
+): Pick<RemoveResult, "sourceFileUpdate" | "indexFileUpdate"> {
+  if (groups.length === 0) return {};
+  const source = existingFiles[layout.sourceFile];
+  const index = existingFiles[layout.indexFile];
+  const modules = new Set(
+    groups.flatMap((group) => [
+      layout.groupSpecifier(group, "schemas"),
+      layout.groupSpecifier(group, "types"),
+    ]),
+  );
+  const barrel = index === undefined ? undefined : removeBarrelExports(index, modules);
+  const sourceFile = source && removeGroupsFromSourceFile(source, groups);
+  return {
+    ...(sourceFile && { sourceFileUpdate: { path: layout.sourceFile, content: sourceFile } }),
+    ...(barrel !== undefined &&
+      barrel !== index && { indexFileUpdate: { path: layout.indexFile, content: barrel } }),
   };
 }

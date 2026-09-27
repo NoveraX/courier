@@ -1,26 +1,18 @@
 /**
- * Helpers for manage routes — inventory and preview logic.
+ * The endpoint inventory of an import: what its spec offers against what
+ * its files hold.
  */
 
 import type { ParsedSpec } from "../apis";
 import { computeSpecHash } from "../apis";
-import type { ImportStateEntry } from "../apis/imports-state";
 import { type ImportLayout, resolveImportLayout } from "../apis/layout";
-import {
-  buildEndpointInventory,
-  previewAddEndpoints,
-  previewRemoveEndpoints,
-} from "../apis/manage";
-import type {
-  AddResult,
-  DiskGroupListing,
-  EndpointInventory,
-  RemoveResult,
-} from "../apis/manage/types";
+import { buildEndpointInventory } from "../apis/manage";
+import type { DiskGroupListing, EndpointInventory } from "../apis/manage/types";
 import { extractEndpoints } from "../apis/merge/extract-endpoints";
+import { importBodies } from "./import-files/import-bodies";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
-import { buildFallbackFingerprints, readFilesFromDisk } from "./registry-helpers";
-import { scanTsFiles } from "./scan-ts-files";
+import { manageFingerprints } from "./manage-fingerprints";
+import type { ProjectRoot } from "./project-fs/project-root";
 
 // ── Inventory ────────────────────────────────────────────────────────────────
 
@@ -34,16 +26,18 @@ interface InventoryRequest {
  *
  * @param body - The import's name, and the spec to compare with
  * @param imports - The declarations of the config Studio runs, with the imports state
+ * @param root - The project
  * @returns The inventory, or the error to answer with and its status
  *
  * @example
  * ```ts
- * handleInventory({ name: "pets", newSpec }, importsSnapshotOf(declarations, root));
+ * handleInventory({ name: "pets", newSpec }, importsSnapshotOf(declarations, root), projectRootAt(root));
  * ```
  */
 export function handleInventory(
   body: InventoryRequest,
   imports: ImportsSnapshot,
+  root: ProjectRoot,
 ): EndpointInventory | { error: string; status: number } {
   const entry = getImportEntry(imports, body.name);
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
@@ -53,9 +47,9 @@ export function handleInventory(
   if (!spec) return { error: "Spec is required for inventory", status: 400 };
 
   const layout = resolveImportLayout(entry, body.name);
-  const existingFiles = readSourceFiles(layout);
-  const fingerprints = loadSourceFingerprints(existingFiles, state);
+  const existingFiles = importBodies(root, layout.dir);
   const diskGroups = scanSourceGroups(layout, existingFiles);
+  const fingerprints = manageFingerprints(state, existingFiles);
 
   const inventory = buildEndpointInventory(spec, diskGroups, fingerprints, existingFiles);
   inventory.specChanged = computeSpecHash(spec) !== (state?.specHash ?? "");
@@ -63,79 +57,7 @@ export function handleInventory(
   return inventory;
 }
 
-// ── Preview ──────────────────────────────────────────────────────────────────
-
-interface ManagePreviewRequest {
-  name: string;
-  spec: ParsedSpec;
-  toAdd: Record<string, string[]>;
-  toRemove: Record<string, string[]>;
-}
-
-/** The files adding and removing endpoints would write and delete. */
-export interface ManagePreviewResponse {
-  addResult?: AddResult;
-  removeResult?: RemoveResult;
-}
-
-/**
- * Preview adding and removing endpoints of an import, without writing anything.
- *
- * @param body - The import's name, its spec, and the endpoints to add and remove by group
- * @param imports - The declarations of the config Studio runs, with the imports state
- * @returns The preview, or the error to answer with and its status
- *
- * @example
- * ```ts
- * handleManagePreview({ name: "pets", spec, toAdd: { pets: ["listPets"] }, toRemove: {} }, imports);
- * ```
- */
-export function handleManagePreview(
-  body: ManagePreviewRequest,
-  imports: ImportsSnapshot,
-): ManagePreviewResponse | { error: string; status: number } {
-  const entry = getImportEntry(imports, body.name);
-  if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
-  const state = getImportState(imports, body.name);
-
-  const layout = resolveImportLayout(entry, body.name);
-  const existingFiles = readSourceFiles(layout);
-  const fingerprints = loadSourceFingerprints(existingFiles, state);
-
-  let addResult: AddResult | undefined;
-  let removeResult: RemoveResult | undefined;
-
-  if (Object.keys(body.toAdd).length > 0) {
-    addResult = previewAddEndpoints(
-      body.spec,
-      body.toAdd,
-      { ...entry, selectedEndpoints: body.toAdd },
-      existingFiles,
-      layout,
-    );
-  }
-
-  if (Object.keys(body.toRemove).length > 0) {
-    removeResult = previewRemoveEndpoints(body.toRemove, existingFiles, fingerprints, layout);
-  }
-
-  return { addResult, removeResult };
-}
-
 // ── Internal helpers ─────────────────────────────────────────────────────────
-
-function loadSourceFingerprints(
-  existingFiles: Record<string, string>,
-  state: ImportStateEntry | undefined,
-): Record<string, string> {
-  const cached = state?.fileFingerprints ?? {};
-  if (Object.keys(cached).length > 0) return cached;
-  return buildFallbackFingerprints(existingFiles, state?.userModified ?? []);
-}
-
-function readSourceFiles(layout: ImportLayout): Record<string, string> {
-  return readFilesFromDisk(scanTsFiles(layout, []));
-}
 
 /* How a group file names its group, with or without a type on the binding. */
 const GROUP_BINDING = /^export const (\w+)\s*(?::[^=]+)?=\s*defineGroup\(/m;

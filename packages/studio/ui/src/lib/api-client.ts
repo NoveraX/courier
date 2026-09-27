@@ -5,31 +5,42 @@
 
 import { createFetch, isHTTPError } from "@noverax/courier";
 
+import { isPlainObject } from "@/socket/is-plain-object";
+import { StudioRequestError } from "./studio-request-error";
+
 export const apiClient = createFetch({ baseURL: "" });
 
 /**
- * Read the reason the server gave for refusing a request.
+ * Turn a refusal into the error Studio explained it with.
  *
  * Every Studio route answers a failure with `{ error }`, but an `HTTPError`
  * is only ever titled with its status — so the refusal that actually explains
  * itself ("Blocked request to loopback address") reached the screen as a bare
- * "HTTP 400".
+ * "HTTP 400". An answer that explains nothing leaves the error as it was.
  */
-function serverReason(error: unknown): string | undefined {
-  if (!isHTTPError(error)) return undefined;
-  const data = error.data;
-  if (typeof data !== "object" || data === null) return undefined;
-  const reason = (data as { error?: unknown }).error;
-  return typeof reason === "string" && reason !== "" ? reason : undefined;
+function refusal(error: unknown): StudioRequestError | undefined {
+  if (!isHTTPError(error) || !isPlainObject(error.data)) return undefined;
+  const reason = error.data.error;
+  if (typeof reason !== "string" || reason === "") return undefined;
+  return new StudioRequestError(reason, error.data, error);
 }
 
-/** POST helper with error handling — used by all Studio API modules */
+/**
+ * POST to a Studio route.
+ *
+ * @param url - The route
+ * @param body - The JSON body
+ * @returns The decoded answer
+ * @throws {StudioRequestError} When Studio refused the request and said why
+ * @example
+ * ```ts
+ * const spec = await post<ParsedSpec>("/api/apis/parse", { source: "url", content: url });
+ * ```
+ */
 export async function post<TResult>(url: string, body?: unknown): Promise<TResult> {
   try {
     return await apiClient.post<TResult>(url, { json: body });
   } catch (error) {
-    const reason = serverReason(error);
-    if (reason === undefined) throw error;
-    throw new Error(reason, { cause: error });
+    throw refusal(error) ?? error;
   }
 }

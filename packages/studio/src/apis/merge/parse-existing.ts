@@ -5,6 +5,7 @@
  * using regex + bracket-depth tracking (no TS compiler dependency).
  */
 
+import { findEndpointsBlock } from "./endpoints-block";
 import type { ExistingEndpointInfo, ExistingGroupInfo, ParsedImport } from "./types";
 
 const NAMED_IMPORT_RE = /^import\s+\{([^}]*)\}\s+from\s+["']([^"']+)["'];?\s*$/;
@@ -234,30 +235,12 @@ function readBaseName(preamble: string[]): string {
  * endpoints between.
  */
 function extractShell(lines: string[]): { header: string[]; footer: string[] } {
-  const start = lines.findIndex((l) => SOURCE_RE.test(l));
-  if (start === -1) return { header: [], footer: [] };
-
-  const opensEndpoints = lines.findIndex((l, i) => i >= start && /^\s*endpoints:\s*\{\s*$/.test(l));
-  if (opensEndpoints === -1) return { header: [], footer: [] };
-
-  let depth = 0;
-  for (let i = start; i < lines.length; i++) {
-    for (const ch of lines[i] ?? "") {
-      if (ch === "(" || ch === "{" || ch === "[") depth++;
-      else if (ch === ")" || ch === "}" || ch === "]") depth--;
-    }
-    if (depth <= 0) {
-      /* The endpoints close one level in from the declaration. */
-      const closesEndpoints = lines.findIndex(
-        (l, j) => j > opensEndpoints && /^\s*\},?\s*$/.test(l),
-      );
-      return {
-        header: lines.slice(start, opensEndpoints + 1),
-        footer: lines.slice(closesEndpoints === -1 ? i : closesEndpoints, i + 1),
-      };
-    }
-  }
-  return { header: [], footer: [] };
+  const block = findEndpointsBlock(lines);
+  if (block === null) return { header: [], footer: [] };
+  return {
+    header: lines.slice(block.declaration, block.open + 1),
+    footer: lines.slice(block.close, block.end + 1),
+  };
 }
 
 /**

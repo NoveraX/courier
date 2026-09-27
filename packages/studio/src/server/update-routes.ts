@@ -5,6 +5,7 @@
 import type { ApisRouteDeps } from "./apis-routes";
 import { importsSnapshotOf } from "./imports-bridge";
 import { withImportsLock } from "./imports-lock";
+import { projectRootAt } from "./project-fs/project-root";
 import { readDeclarations } from "./project-state/read-declarations";
 import { sendRouteFailure } from "./route-failure";
 import type { RouteApp } from "./route-types";
@@ -34,8 +35,9 @@ export function registerUpdateFlowRoutes(app: RouteApp, deps: ApisRouteDeps): vo
       if (!body) return;
       const declarations = await readDeclarations(project, projectRoot, "show");
       const result = handlePreviewUpdate(
-        body as unknown as Parameters<typeof handlePreviewUpdate>[0],
+        body,
         importsSnapshotOf(declarations, projectRoot),
+        projectRootAt(projectRoot),
       );
       sendResult(res, result);
     } catch (err) {
@@ -51,11 +53,12 @@ export function registerUpdateFlowRoutes(app: RouteApp, deps: ApisRouteDeps): vo
        the declaration saved meanwhile. */
     void withImportsLock(async () => {
       const declarations = await readDeclarations(project, projectRoot, "act");
-      const result = await handleApplyUpdate(
-        body as unknown as Parameters<typeof handleApplyUpdate>[0],
+      const result = handleApplyUpdate(
+        body,
         importsSnapshotOf(declarations, projectRoot),
+        projectRootAt(projectRoot),
       );
-      if ("success" in result) project.importsChanged();
+      if (!("error" in result)) project.importsChanged();
       return result;
     }).then(
       (result) => sendResult(res, result),

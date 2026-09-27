@@ -12,10 +12,12 @@ import { ImportWizard } from "./import-wizard";
 import { ManageDialog } from "./manage-dialog";
 import { NoConfigState } from "./no-config-state";
 import { RegistryCard } from "./registry-card";
+import { RemoveImportDialog } from "./remove-import-dialog";
 import { ScannedCard } from "./scanned-card";
 import { useImport } from "./use-import";
 import { useManage } from "./use-manage";
 import { useRegistry } from "./use-registry";
+import { useRemoveImport } from "./use-remove-import";
 
 export function ApisView(): React.ReactElement {
   const registry = useRegistry();
@@ -25,8 +27,13 @@ export function ApisView(): React.ReactElement {
     toast.success(message);
   });
 
-  const manageFlow = useManage(() => {
-    toast.success("Endpoints updated successfully");
+  const manageFlow = useManage((message) => {
+    toast.success(message);
+  });
+
+  const removal = useRemoveImport((name, message) => {
+    registry.forget(name);
+    toast.success(message);
   });
 
   const checking = Object.values(registry.statuses).some(
@@ -96,7 +103,7 @@ export function ApisView(): React.ReactElement {
                       status={registry.statuses[source.name]}
                       onCheckUpdates={() => void registry.checkUpdates(source.name)}
                       onManage={() => handleManage(source.name)}
-                      onRemove={() => void registry.remove(source.name)}
+                      onRemove={() => void removal.start(source.name)}
                     />
                   ))}
                 </div>
@@ -119,6 +126,7 @@ export function ApisView(): React.ReactElement {
 
       <ImportWizard wizard={importWizard} />
       <ManageDialog manage={manageFlow} />
+      <RemoveImportDialog removal={removal} />
     </>
   );
 }

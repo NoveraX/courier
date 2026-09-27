@@ -9,9 +9,10 @@ vi.mock("@noverax/courier", async () => {
 
 const { HTTPError } = await import("@noverax/courier");
 const { post: studioPost } = await import("@/lib/api-client");
+const { StudioRequestError } = await import("@/lib/studio-request-error");
 
-function httpError(data: unknown): unknown {
-  return new HTTPError({ status: 400, headers: new Headers(), data });
+function httpError(data: unknown, status = 400): unknown {
+  return new HTTPError({ status, headers: new Headers(), data });
 }
 
 describe("Studio API client", () => {
@@ -21,6 +22,25 @@ describe("Studio API client", () => {
     await expect(studioPost("/api/apis/parse")).rejects.toThrow(
       "Blocked request to loopback address: localhost",
     );
+  });
+
+  it("carries Studio's code and the rest of its answer, such as a refused plan", async () => {
+    const plan = { digest: "d" };
+    post.mockRejectedValueOnce(httpError({ error: "Allow the steps first.", code: "NEEDS_CONFIRMATION", plan }, 409));
+
+    const error: unknown = await studioPost("/api/apis/write").catch((reason: unknown) => reason);
+
+    expect(error).toBeInstanceOf(StudioRequestError);
+    expect(error).toMatchObject({ message: "Allow the steps first.", code: "NEEDS_CONFIRMATION", data: { plan } });
+  });
+
+  it("leaves the code unset when Studio gave none", async () => {
+    post.mockRejectedValueOnce(httpError({ error: "Bad request" }));
+
+    const error: unknown = await studioPost("/api/apis/write").catch((reason: unknown) => reason);
+
+    expect(error).toBeInstanceOf(StudioRequestError);
+    expect(error).toHaveProperty("code", undefined);
   });
 
   it("keeps the original error when the body explains nothing", async () => {

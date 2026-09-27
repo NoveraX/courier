@@ -1,8 +1,8 @@
 /**
  * An import is found by its own name only: a name that Object.prototype
  * also carries — constructor, toString, __proto__ — finds nothing, so the
- * write route takes the raw branch, the remove route answers 404, and a
- * source of that name does not read as imported.
+ * write route writes it as a new import, the remove route answers 404, and
+ * a source of that name does not read as imported.
  */
 import {
   existsSync,
@@ -16,6 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { IMPORTS_STATE_VERSION, loadImportsState } from "../src/apis/imports-state";
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { setProjectRoot } from "../src/context";
 import { buildSourceScan } from "../src/server/build-source-scan";
@@ -86,7 +87,7 @@ const SPEC = parseSpec(
 
 describe("imports looked up by an Object.prototype member's name", () => {
   it("finds no declaration and no state", () => {
-    const snapshot = { declarations: {}, state: { version: 1 as const, imports: {} } };
+    const snapshot = { declarations: {}, state: { version: IMPORTS_STATE_VERSION, imports: {}, applied: [] } };
 
     for (const name of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
       expect(getImportEntry(snapshot, name)).toBeUndefined();
@@ -94,19 +95,19 @@ describe("imports looked up by an Object.prototype member's name", () => {
     }
   });
 
-  it("writes the files through the raw branch and answers 200", async () => {
+  it("writes one as a new import and records it under its own name", async () => {
     const write = (await routes()).get("/api/apis/write");
 
     const reply = await call(write, {
-      files: [{ path: "out/pets.ts", content: "export const pets = 1;\n" }],
       sourceName: "constructor",
       spec: SPEC,
-      options: { type: "fetch" },
+      options: { type: "openapi", outputDir: "out", sourceName: "constructor" },
     });
 
     expect(reply.status).toBe(200);
-    expect(reply.body).toMatchObject({ written: 1, merged: 0 });
-    expect(readFileSync(join(root, "out/pets.ts"), "utf8")).toBe("export const pets = 1;\n");
+    expect(reply.body).toMatchObject({ written: expect.arrayContaining(["out/constructor/source.ts"]) });
+    expect(readFileSync(join(root, "out/constructor/source.ts"), "utf8")).toContain("export const constructor");
+    expect(Object.keys(loadImportsState(root).imports)).toEqual(["constructor"]);
   });
 
   it("answers 404 when asked to remove one", async () => {

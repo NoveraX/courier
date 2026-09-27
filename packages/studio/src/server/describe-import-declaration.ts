@@ -11,6 +11,7 @@ import { DEFAULT_OPTIONS } from "../apis/generator/types";
 import { resolveImportLayout } from "../apis/layout";
 import type { LoadedCourierConfig } from "./config-loader";
 import { formatImportSnippet } from "./format-import-snippet";
+import { NameTakenError } from "./name-taken-error";
 import type { ImportDeclaration, WriteBody } from "./write-types";
 
 const SPEC_TYPES: ReadonlyMap<string, CourierImportSpecType> = new Map([
@@ -23,7 +24,7 @@ const SPEC_TYPES: ReadonlyMap<string, CourierImportSpecType> = new Map([
 export interface DeclarationInput {
   /** The import's name, as the write was asked for it. */
   name: string;
-  /** The write: the files, the spec they were generated from, and the options. */
+  /** The write: the spec the files are generated from, and the options. */
   body: WriteBody;
   /** The config Studio runs, which the write acted on. */
   loaded: LoadedCourierConfig;
@@ -43,16 +44,16 @@ export interface DeclarationInput {
  * `sources` declares the generated source only when it names the import and
  * the config imports the file Studio generated, directly or through another
  * module. A source of that name from anywhere else is another API: Studio
- * matches an import to the source of its name, so the answer says the name
- * is taken, and offers neither part.
+ * matches an import to the source of its name, so the import is refused
+ * before anything is written.
  *
  * The endpoints the write left out are counted, because the `imports` entry
  * cannot keep a selection: regenerating from it, as an update does,
  * generates every endpoint in the specification.
  *
  * @param input - The import's name, the write, the config and the project root
- * @returns What is left to declare; none for a write with no spec or no
- *   options, and none once the config declares both
+ * @returns What is left to declare; none once the config declares both
+ * @throws {NameTakenError} When `sources` declares another API under the import's name
  *
  * @example
  * ```ts
@@ -70,7 +71,6 @@ export function describeImportDeclaration({
   root,
 }: DeclarationInput): ImportDeclaration | undefined {
   const { spec, options } = body;
-  if (!spec || typeof options?.outputDir !== "string") return undefined;
   const layout = resolveImportLayout(
     { outputDir: options.outputDir, sourceName: options.sourceName },
     name,
@@ -78,11 +78,10 @@ export function describeImportDeclaration({
   const binding = layout.sourceBinding;
   const sourceFile = layout.sourceFile;
   const configFile = posixPath(relative(root, loaded.configFile));
-  const written = body.files.some((file) => file.path === sourceFile);
   const declared = sourceDeclared(name, join(root, sourceFile), loaded);
-  if (written && declared === "another") return { configFile, nameTaken: { sourceFile } };
+  if (declared === "another") throw new NameTakenError(name, sourceFile);
   const source =
-    written && declared === "no"
+    declared === "no"
       ? sourceParts(name, binding, join(root, sourceFile.replace(/\.ts$/, "")), loaded.configFile)
       : undefined;
   const importEntry = Object.hasOwn(loaded.config.imports ?? {}, name)

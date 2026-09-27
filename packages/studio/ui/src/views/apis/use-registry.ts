@@ -12,7 +12,6 @@ import { apisPageState } from "./apis-page-state";
 import {
   checkSourceUpdates,
   checkAllUpdates,
-  removeRegistrySource,
 } from "./client";
 import { useStudioStore } from "@/store";
 
@@ -31,7 +30,8 @@ interface UseRegistryReturn {
   page: ApisPageState;
   checkUpdates: (name: string) => Promise<void>;
   checkAll: () => Promise<void>;
-  remove: (name: string) => Promise<void>;
+  /** Drop what the page knows of an import once it is removed. */
+  forget: (name: string) => void;
   getNewSpec: (name: string) => ParsedSpec | undefined;
 }
 
@@ -113,8 +113,7 @@ export function useRegistry(): UseRegistryReturn {
   /* The lists come back from Studio once the import's state is gone. A
      source the running config still imports stays listed until the config
      no longer imports it, since Studio still runs it. */
-  const remove = useCallback(async (name: string) => {
-    await removeRegistrySource(name);
+  const forget = useCallback((name: string) => {
     setStatuses((prev) => {
       const next = { ...prev };
       delete next[name];
@@ -133,7 +132,7 @@ export function useRegistry(): UseRegistryReturn {
     page,
     checkUpdates,
     checkAll,
-    remove,
+    forget,
     getNewSpec,
   };
 }

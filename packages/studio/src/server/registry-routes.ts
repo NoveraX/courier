@@ -1,85 +1,105 @@
 /**
- * Express routes for the imports surface — list and remove. The write path
- * lives in `write-routes.ts` and shares the imports-state persistence via
- * `imports-bridge.ts`.
+ * Express routes for removing an import. The write path lives in
+ * `write-routes.ts`; checking for updates in `registry-update-routes.ts`.
  */
 
-import { logger } from "@noverax/courier";
 import type { ApisRouteDeps } from "./apis-routes";
-import { formatImportSnippet } from "./format-import-snippet";
-import {
-  dropImportState,
-  getImportEntry,
-  getImportState,
-  importsSnapshotOf,
-} from "./imports-bridge";
+import { summarizePlan } from "./import-files/plan-summary";
+import { runPlan } from "./import-files/run-plan";
+import { saveImportEntry } from "./import-files/save-import-entry";
+import { importsSnapshotOf } from "./imports-bridge";
 import { withImportsLock } from "./imports-lock";
-import { readDeclarations } from "./project-state/read-declarations";
-import { removeGeneratedFiles } from "./registry-helpers";
+import { projectRootAt } from "./project-fs/project-root";
+import { readForRemoval } from "./project-state/read-for-removal";
+import { readPlanConsent } from "./read-plan-consent";
 import { registerUpdateRoutes } from "./registry-update-routes";
+import { removalConfigNotes } from "./removal-config-notes";
+import { planImportRemoval } from "./removal-plan";
 import { sendRouteFailure } from "./route-failure";
 import type { RouteApp } from "./route-types";
 import { validateNameBody } from "./validate-body-registry";
 
-interface Reply {
-  status: number;
-  body: unknown;
-}
-
 /**
- * Mount the imports list, removal and update-check routes. They answer from
- * the declarations of the config Studio runs; removing an import works while
- * that config does not load, since it only undoes what Studio wrote.
+ * Mount the routes that preview and apply removing an import, and the
+ * update checks. Removing works while courier.config does not load, since
+ * it only undoes what Studio wrote: the preview says which files go, which
+ * wait for the user and which stay; the removal applies that plan, as the
+ * user allowed it, all at once, and forgets the import.
  *
  * @param app - The Studio server's Express app
  * @param deps - The project the routes answer from
- *
  * @example
  * ```ts
  * registerRegistryRoutes(app, { project, projectRoot: root });
  * ```
  */
 export function registerRegistryRoutes(app: RouteApp, deps: ApisRouteDeps): void {
-  app.post("/api/apis/imports/remove", async (req, res) => {
+  const { project, projectRoot } = deps;
+
+  app.post("/api/apis/imports/remove/preview", async (req, res) => {
     const body = validateNameBody(req.body, res);
     if (!body) return;
     try {
+      const { imports, running } = await readForRemoval(project, projectRoot);
+      const planned = planImportRemoval(
+        projectRootAt(projectRoot),
+        body.name,
+        importsSnapshotOf(imports, projectRoot),
+      );
+      if ("error" in planned) {
+        res.status(planned.status).json({ error: planned.error });
+        return;
+      }
+      /* The preview warns about every file the removal may take, those waiting for consent too. */
+      const mayTake = [
+        ...planned.removals,
+        ...planned.pending.flatMap((step) => step.removal ?? []),
+      ];
+      const notes = removalConfigNotes(
+        projectRoot,
+        body.name,
+        running,
+        mayTake.map((removal) => removal.path),
+      );
+      res.json({ plan: summarizePlan(planned), ...notes });
+    } catch (err) {
+      sendRouteFailure(res, err, "Failed to preview removing the import");
+    }
+  });
+
+  app.post("/api/apis/imports/remove", async (req, res) => {
+    const body = validateNameBody(req.body, res);
+    const consent = body ? readPlanConsent(req.body) : null;
+    if (!body) return;
+    if (!consent) {
+      res.status(400).json({ error: "planDigest must be a string and confirm a list of paths" });
+      return;
+    }
+    try {
       /* Read once the lock is held: a request that waited behind a write answers
          for the declaration saved meanwhile, and removes the files that write recorded. */
-      const reply = await withImportsLock(() => forgetImport(body.name, deps));
+      const reply = await withImportsLock(async () => {
+        const { imports, running } = await readForRemoval(project, projectRoot);
+        const root = projectRootAt(projectRoot);
+        const planned = planImportRemoval(root, body.name, importsSnapshotOf(imports, projectRoot));
+        if ("error" in planned) return { status: planned.status, body: { error: planned.error } };
+        const report = runPlan(
+          root,
+          planned,
+          consent,
+          (_applied, applyId) => saveImportEntry(root.path, body.name, null, applyId),
+          "required",
+        );
+        project.importsChanged();
+        const { removed, kept, backupDir } = report;
+        const notes = removalConfigNotes(projectRoot, body.name, running, removed);
+        return { status: 200, body: { success: true, removed, kept, backupDir, ...notes } };
+      });
       res.status(reply.status).json(reply.body);
     } catch (err) {
-      sendRouteFailure(res, err, "Failed to remove import");
+      sendRouteFailure(res, err, "Failed to remove the import");
     }
   });
 
   registerUpdateRoutes(app, deps);
-}
-
-async function forgetImport(name: string, { project, projectRoot }: ApisRouteDeps): Promise<Reply> {
-  const declarations = await readDeclarations(project, projectRoot, "forget");
-  const imports = importsSnapshotOf(declarations, projectRoot);
-  const entry = getImportEntry(imports, name);
-  const state = getImportState(imports, name);
-  if (!entry && !state) return { status: 404, body: { error: `Import "${name}" not found` } };
-
-  const removedFiles = state?.generatedFiles ?? [];
-  try {
-    if (removedFiles.length > 0) removeGeneratedFiles(removedFiles);
-  } catch (err) {
-    logger.warn(
-      "Studio",
-      `Failed to delete some generated files for import "${name}"; state will be cleaned regardless`,
-      err,
-    );
-  }
-
-  await dropImportState(name);
-  project.importsChanged();
-
-  const configCleanupHint = entry
-    ? `Remove \`imports.${name}\` from courier.config.ts to finalize the deletion.`
-    : undefined;
-  const snippet = entry ? formatImportSnippet(name, entry) : undefined;
-  return { status: 200, body: { success: true, removedFiles, configCleanupHint, snippet } };
 }

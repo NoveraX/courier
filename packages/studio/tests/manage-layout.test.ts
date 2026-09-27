@@ -20,6 +20,7 @@ import { parseSpec } from "../src/apis/parser";
 import { resetProjectRoot, setProjectRoot } from "../src/context";
 import { importsSnapshotOf } from "../src/server/imports-bridge";
 import { handleInventory } from "../src/server/manage-helpers";
+import { projectRootAt } from "../src/server/project-fs/project-root";
 
 const SPEC = parseSpec(
   JSON.stringify({
@@ -155,7 +156,11 @@ describe("handleInventory", () => {
     }
     const declarations = { shop: { importType: "file" as const, type: "openapi" as const, outputDir: "src/api" } };
 
-    const inventory = handleInventory({ name: "shop", newSpec: SPEC }, importsSnapshotOf(declarations, root));
+    const inventory = handleInventory(
+      { name: "shop", newSpec: SPEC },
+      importsSnapshotOf(declarations, root),
+      projectRootAt(root),
+    );
 
     expect(inventory).toMatchObject({ totalActive: 3, totalAvailable: 0 });
   });
@@ -170,7 +175,11 @@ describe("handleInventory", () => {
     }
     const declarations = { shop: { importType: "file" as const, type: "openapi" as const, outputDir: "src/api" } };
 
-    const inventory = handleInventory({ name: "shop", newSpec: SPEC }, importsSnapshotOf(declarations, root));
+    const inventory = handleInventory(
+      { name: "shop", newSpec: SPEC },
+      importsSnapshotOf(declarations, root),
+      projectRootAt(root),
+    );
 
     expect(inventory).toMatchObject({ totalActive: 3 });
   });

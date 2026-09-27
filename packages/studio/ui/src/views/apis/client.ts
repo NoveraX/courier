@@ -7,7 +7,6 @@ import type {
   EndpointInventory,
   GenerateOptions,
   GeneratedFile,
-  ManagePreviewResult,
   ParsedSpec,
   SpecDiff,
 } from "./types";
@@ -60,24 +59,7 @@ export function previewLayout(outputDir: string, sourceName: string): Promise<Im
   return post("/api/apis/layout", { outputDir, sourceName, importName: sourceName });
 }
 
-// ── Write ───────────────────────────────────────────────────────────────────
-
-export function writeFiles(payload: {
-  sourceName: string;
-  spec: ParsedSpec;
-  specUrl: string;
-  importType: string;
-  options: GenerateOptions;
-  files: GeneratedFile[];
-}): Promise<unknown> {
-  return post("/api/apis/write", payload);
-}
-
 // ── Imports ─────────────────────────────────────────────────────────────────
-
-export function removeRegistrySource(name: string): Promise<{ success: boolean }> {
-  return post("/api/apis/imports/remove", { name });
-}
 
 export function checkSourceUpdates(
   name: string,
@@ -100,26 +82,6 @@ export function diffSpecs(
   return post("/api/apis/diff", { oldSpec, newSpec });
 }
 
-// ── Update ──────────────────────────────────────────────────────────────────
-
-export function previewUpdate(payload: {
-  name: string;
-  newSpec: ParsedSpec;
-}): Promise<{
-  files: Array<{ path: string; content: string; status: string; changes: unknown[] }>;
-  breakingChanges: unknown[];
-  specDiff?: SpecDiff;
-}> {
-  return post("/api/apis/update/preview", payload);
-}
-
-export function applyUpdate(payload: {
-  name: string;
-  newSpec: ParsedSpec;
-}): Promise<{ success: boolean }> {
-  return post("/api/apis/update/apply", payload);
-}
-
 // ── Manage ───────────────────────────────────────────────────────────────────
 
 export function fetchInventory(
@@ -127,22 +89,4 @@ export function fetchInventory(
   spec: ParsedSpec,
 ): Promise<EndpointInventory> {
   return post("/api/apis/manage/inventory", { name, newSpec: spec });
-}
-
-export function previewManage(
-  name: string,
-  spec: ParsedSpec,
-  toAdd: Record<string, string[]>,
-  toRemove: Record<string, string[]>,
-): Promise<ManagePreviewResult> {
-  return post("/api/apis/manage/preview", { name, spec, toAdd, toRemove });
-}
-
-export function applyManage(
-  name: string,
-  spec: ParsedSpec,
-  toAdd: Record<string, string[]>,
-  toRemove: Record<string, string[]>,
-): Promise<{ success: boolean; written: number; deleted: number }> {
-  return post("/api/apis/manage/apply", { name, spec, toAdd, toRemove });
 }

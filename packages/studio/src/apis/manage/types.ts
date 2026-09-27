@@ -58,12 +58,13 @@ export interface FileChange {
   path: string;
   content: string;
   action: "create" | "modify";
+  /** The fingerprint of each endpoint in the file as generated, by endpoint name. */
+  generatedEndpoints: Record<string, string>;
 }
 
 export interface AddResult {
   files: FileChange[];
   sourceFileUpdate?: { path: string; content: string };
-  indexFileUpdate?: { path: string; content: string };
   newFingerprints: Record<string, string>;
 }
 
@@ -71,6 +72,7 @@ export interface RemoveResult {
   modifiedFiles: Array<{ path: string; content: string }>;
   deletedFiles: string[];
   sourceFileUpdate?: { path: string; content: string };
+  /** The barrel without the re-exports of the groups removed whole. */
   indexFileUpdate?: { path: string; content: string };
   removedFingerprints: string[];
   orphanedSchemas: string[];

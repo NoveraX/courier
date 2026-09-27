@@ -15,56 +15,53 @@ import type {
   ParsedSpec,
   SourceSummary,
 } from "./types";
-import { applyManage, previewManage } from "./client";
-import { computeAllToggle, computeGroupToggle, toggleInSet } from "./manage-toggle";
+import type { PlanConsent } from "./types-file-plan";
+import { appliedMessage, countsOf } from "./applied-notes";
+import { applyManage, previewManage } from "./client-file-changes";
+import { consentBody, consentFor, toggleConfirmed } from "./plan-consent";
+import { readPlanRefusal } from "./plan-refusal";
 import { serializeSets } from "./use-manage-helpers";
 import { useInventoryLoaders } from "./use-manage-loaders";
+import { type ManageSelection, useManageSelection } from "./use-manage-selection";
 
-export interface UseManageReturn {
+export interface UseManageReturn extends Omit<ManageSelection, "reset"> {
   open: boolean;
   step: ManageStep;
   sourceName: string;
   importType: string;
   inventory: EndpointInventory | null;
-  toAdd: Record<string, Set<string>>;
-  toRemove: Record<string, Set<string>>;
   preview: ManagePreviewResult | null;
+  /** The previewed plan, with the pending steps the user allowed. */
+  consent: PlanConsent | null;
   error: string | null;
   /** Start manage flow for a source */
   start: (source: SourceSummary, spec?: ParsedSpec) => void;
   /** Provide spec after reupload */
   provideSpec: (spec: ParsedSpec) => Promise<void>;
-  /** Toggle an endpoint: add or remove */
-  toggleEndpoint: (group: string, name: string, currentlyActive: boolean) => void;
-  /** Toggle all endpoints in a group */
-  toggleGroup: (groupName: string) => void;
-  /** Select all / deselect all */
-  toggleAll: () => void;
   /** Request preview of pending changes */
   requestPreview: () => Promise<void>;
   /** Apply changes to disk */
   apply: () => Promise<void>;
+  /** Allow a pending step of the plan, or withdraw allowing it */
+  toggleConfirmed: (path: string) => void;
   /** Go back one step */
   back: () => void;
   /** Close dialog */
   close: () => void;
-  hasChanges: boolean;
 }
 
-export function useManage(onSuccess?: () => void): UseManageReturn {
+export function useManage(onSuccess?: (message: string) => void): UseManageReturn {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<ManageStep>("loading");
   const [sourceName, setSourceName] = useState("");
   const [importType, setImportType] = useState("");
   const [spec, setSpec] = useState<ParsedSpec | null>(null);
   const [inventory, setInventory] = useState<EndpointInventory | null>(null);
-  const [toAdd, setToAdd] = useState<Record<string, Set<string>>>({});
-  const [toRemove, setToRemove] = useState<Record<string, Set<string>>>({});
   const [preview, setPreview] = useState<ManagePreviewResult | null>(null);
+  const [consent, setConsent] = useState<PlanConsent | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const hasChanges = Object.values(toAdd).some((s) => s.size > 0)
-    || Object.values(toRemove).some((s) => s.size > 0);
+  const { reset, ...selection } = useManageSelection(inventory);
+  const { toAdd, toRemove } = selection;
 
   const { loadInventory, fetchSpecAndLoadInventory } = useInventoryLoaders({
     setStep,
@@ -78,9 +75,9 @@ export function useManage(onSuccess?: () => void): UseManageReturn {
     setImportType(source.importType);
     setSpec(newSpec ?? null);
     setInventory(null);
-    setToAdd({});
-    setToRemove({});
+    reset();
     setPreview(null);
+    setConsent(null);
     setError(null);
     setOpen(true);
 
@@ -91,40 +88,19 @@ export function useManage(onSuccess?: () => void): UseManageReturn {
     } else {
       setStep("reupload");
     }
-  }, [loadInventory, fetchSpecAndLoadInventory]);
+  }, [loadInventory, fetchSpecAndLoadInventory, reset]);
 
   const provideSpec = useCallback(async (parsedSpec: ParsedSpec) => {
     setSpec(parsedSpec);
     await loadInventory(sourceName, parsedSpec);
   }, [sourceName, loadInventory]);
 
-  const toggleEndpoint = useCallback((group: string, name: string, currentlyActive: boolean) => {
-    if (currentlyActive) {
-      setToRemove((prev) => toggleInSet(prev, group, name));
-    } else {
-      setToAdd((prev) => toggleInSet(prev, group, name));
-    }
-  }, []);
-
-  const toggleGroup = useCallback((groupName: string) => {
-    if (!inventory) return;
-    const group = inventory.groups.find((g) => g.name === groupName);
-    if (!group) return;
-    const result = computeGroupToggle(group, toAdd, toRemove);
-    setToAdd(result.toAdd);
-    setToRemove(result.toRemove);
-  }, [inventory, toAdd, toRemove]);
-
-  const toggleAll = useCallback(() => {
-    if (!inventory) return;
-    const result = computeAllToggle(inventory, toAdd, toRemove);
-    setToAdd(result.toAdd);
-    setToRemove(result.toRemove);
-  }, [inventory, toAdd, toRemove]);
-
+  /* The plan shown is dropped at once, so Apply waits for the plan of this selection. */
   const requestPreview = useCallback(async () => {
     if (!spec) return;
     setStep("preview");
+    setPreview(null);
+    setConsent(null);
     setError(null);
     try {
       const result = await previewManage(
@@ -134,6 +110,7 @@ export function useManage(onSuccess?: () => void): UseManageReturn {
         serializeSets(toRemove),
       );
       setPreview(result);
+      setConsent(consentFor(result.plan));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Preview failed");
       setStep("inventory");
@@ -141,24 +118,31 @@ export function useManage(onSuccess?: () => void): UseManageReturn {
   }, [spec, sourceName, toAdd, toRemove]);
 
   const apply = useCallback(async () => {
-    if (!spec) return;
+    if (!spec || consent === null) return;
     setStep("applying");
     setError(null);
     try {
-      await applyManage(
+      const applied = await applyManage(
         sourceName,
         spec,
         serializeSets(toAdd),
         serializeSets(toRemove),
+        consentBody(consent),
       );
       setStep("done");
       setOpen(false);
-      onSuccess?.();
+      onSuccess?.(appliedMessage(`Updated ${sourceName}`, countsOf(applied)));
     } catch (err) {
+      /* The plan as it stands replaces the one shown, so the user allows its steps anew. */
+      const refusal = readPlanRefusal(err);
+      if (refusal) {
+        setPreview((shown) => shown && { ...shown, plan: refusal.plan });
+        setConsent(consentFor(refusal.plan));
+      }
       setError(err instanceof Error ? err.message : "Apply failed");
       setStep("preview");
     }
-  }, [spec, sourceName, toAdd, toRemove, onSuccess]);
+  }, [spec, sourceName, toAdd, toRemove, consent, onSuccess]);
 
   const back = useCallback(() => {
     if (step === "preview") setStep("inventory");
@@ -170,10 +154,11 @@ export function useManage(onSuccess?: () => void): UseManageReturn {
     setError(null);
   }, []);
 
+  const toggleStep = useCallback((path: string) => setConsent((c) => c && toggleConfirmed(c, path)), []);
+
   return {
-    open, step, sourceName, importType,
-    inventory, toAdd, toRemove, preview, error,
-    start, provideSpec, toggleEndpoint, toggleGroup, toggleAll,
-    requestPreview, apply, back, close, hasChanges,
+    ...selection,
+    open, step, sourceName, importType, inventory, preview, consent, error,
+    start, provideSpec, requestPreview, apply, toggleConfirmed: toggleStep, back, close,
   };
 }

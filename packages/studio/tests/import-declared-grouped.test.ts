@@ -22,7 +22,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GenerateOptions } from "../src/apis/generator/types";
 import type { StudioServer } from "../src/server/types";
 
-import { generateCode } from "../src/apis/generator/generate-code";
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { loadCourierConfig } from "../src/server/config-loader";
 import { createStudioServer } from "../src/server/create-studio-server";
@@ -62,7 +61,6 @@ const OPTIONS = {
 } satisfies Omit<GenerateOptions, "type">;
 
 const WRITE = {
-  files: generateCode(SPEC, { type: "openapi", ...OPTIONS }),
   sourceName: "petstore",
   spec: SPEC,
   specUrl: "",
@@ -146,10 +144,11 @@ function pasted({ source, importEntry }: Declaration): string {
   ].join("\n");
 }
 
-function contentOf(reply: unknown, path: string): string | undefined {
-  const files = isRecord(reply) && Array.isArray(reply.files) ? reply.files : [];
-  const file: unknown = files.find((candidate: unknown) => isRecord(candidate) && candidate.path === path);
-  return isRecord(file) && typeof file.content === "string" ? file.content : undefined;
+function digestOf(reply: unknown): string {
+  const plan = isRecord(reply) ? reply.plan : undefined;
+  const digest = isRecord(plan) ? plan.digest : undefined;
+  if (typeof digest !== "string") throw new Error(`no plan in ${JSON.stringify(reply)}`);
+  return digest;
 }
 
 describe("a grouped import declared as the wizard says", () => {
@@ -172,24 +171,29 @@ describe("a grouped import declared as the wizard says", () => {
       "export const petstore = defineApi({",
     );
     expect(update.status).toBe(200);
-    expect(contentOf(update.body, SOURCE_FILE)).toContain("export const petstore = defineApi({");
+    const applied = await post(url, "/api/apis/update/apply", {
+      name: "petstore",
+      newSpec: SPEC,
+      planDigest: digestOf(update.body),
+    });
+    expect(applied.status).toBe(200);
+    expect(readFileSync(join(root, SOURCE_FILE), "utf-8")).toContain("export const petstore = defineApi({");
     /* The update generates the endpoint the Select step left out, as the declaration said. */
-    expect(contentOf(update.body, "src/api/petstore/store/index.ts")).toContain("listOrders");
+    expect(readFileSync(join(root, "src/api/petstore/store/index.ts"), "utf-8")).toContain("listOrders");
     const loaded = await loadCourierConfig(root);
     expect(Object.keys(loaded.config.sources ?? {})).toEqual(["api", "petstore"]);
     expect(Object.keys(loaded.config.imports ?? {})).toEqual(["petstore"]);
   }, 30_000);
 
-  it("says a source of the import's name is another API when the config does not import the generated one", async () => {
+  it("refuses to write an import whose name another API takes under sources", async () => {
     writeConfig(`export default { sources: { petstore: ${HAND_WRITTEN} } };\n`);
     const url = await start();
 
     const reply = await post(url, "/api/apis/write", WRITE);
 
-    expect(reply.status).toBe(200);
-    expect(reply.body).not.toHaveProperty("declaration.source");
-    expect(reply.body).not.toHaveProperty("declaration.importEntry");
-    expect(reply.body).toHaveProperty("declaration.nameTaken", { sourceFile: SOURCE_FILE });
-    expect(existsSync(join(root, SOURCE_FILE))).toBe(true);
+    expect(reply.status).toBe(409);
+    expect(reply.body).toMatchObject({ code: "NAME_TAKEN" });
+    /* Written anyway, the import would make Studio take the other API for it. */
+    expect(existsSync(join(root, SOURCE_FILE))).toBe(false);
   }, 30_000);
 });

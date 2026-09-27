@@ -1,40 +1,38 @@
-/**
- * Express route for apis write — merges with existing files or writes raw.
- */
-
-import type { CourierImportEntry } from "@noverax/courier/config";
 import { resolveImportLayout } from "../apis/layout";
 import type { ApisRouteDeps } from "./apis-routes";
-import { DeclarationMismatchError } from "./declaration-mismatch-error";
+import { checkDeclaredDirectory } from "./check-declared-directory";
+import { checkDirOverlap } from "./check-dir-overlap";
 import { describeImportDeclaration } from "./describe-import-declaration";
 import { getImportEntry, getImportState, importsSnapshotOf } from "./imports-bridge";
 import { withImportsLock } from "./imports-lock";
+import { projectRootAt } from "./project-fs/project-root";
 import { readConfigToAct } from "./project-state/read-config-to-act";
+import { applyRegeneration } from "./regenerate-import";
 import { sendRouteFailure } from "./route-failure";
 import type { RouteApp } from "./route-types";
-import { validateWriteBody } from "./validate-body";
-import { handleMergeWrite, handleRawWrite } from "./write-helpers";
+import { readWriteBody } from "./write-body";
 import type { WriteBody, WriteResult } from "./write-types";
 
 /**
- * Mount the route that writes generated files into the project.
+ * Mount the route that writes an import's files into the project.
  *
- * Files named with no import are written as they are, at once, whatever
- * state courier.config is in: they record no import state, so they neither
- * read the config nor wait for a write to an import. Files for an import are merged with what is on disk
- * when the config Studio runs declares that import, and written raw when it
- * does not; either way only while that config loads as it is on disk, since
- * the declaration decides which directory is merged and cleaned up.
+ * Studio generates the files itself, from the spec and the options the
+ * request names, into the directory the import's declaration gives it, or
+ * the options when courier.config does not declare it yet; the request
+ * names no path and carries no content. The files are planned by who owns
+ * each one and applied all at once, only while the config loads as it is on
+ * disk. A plan with steps only the user may allow is answered 409 with the
+ * plan, and applied once the request quotes its digest with the steps
+ * allowed.
  *
- * Studio changes no config: a write for an import answers with what the
- * config must still declare for it — the generated source under `sources`,
- * without which Studio does not list the API, and the entry under `imports`
- * — and with nothing more once it declares both. While `sources` declares
- * another API under the import's name, it answers that the name is taken.
+ * Studio changes no config: the answer says what the config must still
+ * declare for the import — the generated source under `sources` and the
+ * entry under `imports`. While `sources` declares another API under the
+ * import's name, or another import owns a directory overlapping the
+ * import's, nothing is written.
  *
  * @param app - The Studio server's Express app
  * @param deps - The project the route reads the import's declaration from
- *
  * @example
  * ```ts
  * registerWriteRoutes(app, { project, projectRoot: root });
@@ -42,79 +40,53 @@ import type { WriteBody, WriteResult } from "./write-types";
  */
 export function registerWriteRoutes(app: RouteApp, deps: ApisRouteDeps): void {
   app.post("/api/apis/write", (req, res) => {
-    const validated = validateWriteBody(req.body, res);
-    if (!validated) return;
-    const body = validated as unknown as WriteBody;
-
-    void writeFiles(body, deps).then(
+    const body = readWriteBody(req.body);
+    if (body === null) {
+      res.status(400).json({
+        error: "Expected { sourceName, spec, options } with the spec as Studio parsed it",
+      });
+      return;
+    }
+    void withImportsLock(() => writeImport(body, deps)).then(
       (result) => res.json(result),
-      (err: unknown) => sendRouteFailure(res, err, "Failed to write files"),
+      (err: unknown) => sendRouteFailure(res, err, "Failed to write the import"),
     );
-  });
-}
-
-function writeFiles(body: WriteBody, deps: ApisRouteDeps): Promise<WriteResult> {
-  const { files, sourceName, spec } = body;
-  if (!sourceName) {
-    return handleRawWrite(files, undefined, spec, { entry: undefined, state: undefined });
-  }
-  return withImportsLock(async () => {
-    const result = await writeImport(body, sourceName, deps);
-    /* A write records the import's state only with the spec it was generated from. */
-    if (spec) deps.project.importsChanged();
-    return result;
   });
 }
 
 async function writeImport(
   body: WriteBody,
-  sourceName: string,
   { project, projectRoot }: ApisRouteDeps,
 ): Promise<WriteResult> {
   /* Read once the lock is held: a request that waited behind another write
      acts on the declaration saved meanwhile, not the one it arrived with. */
   const loaded = await readConfigToAct(project, projectRoot);
   const imports = importsSnapshotOf(loaded.config.imports, projectRoot);
-  const entry = getImportEntry(imports, sourceName);
-  const state = getImportState(imports, sourceName);
-  const { files, spec, options } = body;
-  checkDirectories(sourceName, entry, options);
-
-  const result =
-    entry && spec && options
-      ? await handleMergeWrite(files, sourceName, spec, { entry, state })
-      : await handleRawWrite(files, sourceName, spec, { entry, state });
-  const declaration = describeImportDeclaration({
-    name: sourceName,
+  const name = body.sourceName;
+  const entry = getImportEntry(imports, name);
+  checkDeclaredDirectory(name, entry, body.options);
+  const layout = resolveImportLayout(entry ?? body.options, name);
+  checkDirOverlap(name, layout.dir, imports);
+  const declaration = describeImportDeclaration({ name, body, loaded, root: projectRoot });
+  const { report, leftBehind } = applyRegeneration(
+    {
+      root: projectRootAt(projectRoot),
+      name,
+      layout,
+      spec: body.spec,
+      options: body.options,
+      entry: getImportState(imports, name),
+    },
     body,
-    loaded,
-    root: projectRoot,
-  });
-  return declaration ? { ...result, declaration } : result;
-}
-
-/**
- * Refuse, before anything is written, options Studio would refuse to lay
- * out, and options that put a declared import somewhere other than its
- * declaration: the write goes where the options say while cleanup follows
- * the declaration. The directories must be spelled alike, letter case
- * included: on a case-insensitive disk `src/Api` and `src/api` are one
- * directory, but paths that differ in case do not compare equal, so
- * cleanup would take the files just written for leftovers.
- */
-function checkDirectories(
-  name: string,
-  entry: CourierImportEntry | undefined,
-  options: WriteBody["options"],
-): void {
-  if (!options || typeof options.outputDir !== "string") return;
-  const requested = resolveImportLayout(
-    { outputDir: options.outputDir, sourceName: options.sourceName },
-    name,
-  ).dir;
-  if (!entry) return;
-  const declared = resolveImportLayout(entry, name).dir;
-  if (declared !== requested) {
-    throw new DeclarationMismatchError(name, declared, requested);
-  }
+    "when-shown",
+  );
+  project.importsChanged();
+  return {
+    written: report.written,
+    removed: report.removed,
+    kept: report.kept,
+    backupDir: report.backupDir,
+    leftBehind,
+    ...(declaration && { declaration }),
+  };
 }

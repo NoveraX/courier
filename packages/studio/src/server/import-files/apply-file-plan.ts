@@ -12,7 +12,7 @@ import { type ApplyJournal, dropJournal, saveJournal } from "./apply-journal";
 import { backupPath } from "./backup-path";
 import { FilePlanError } from "./file-plan-error";
 import type { FilePlan } from "./file-plan-types";
-import { pruneBackups } from "./prune-backups";
+import { finishApply } from "./finish-apply";
 import { type PruneFailure, pruneEmptyDirs } from "./prune-empty-dirs";
 import { rollbackApply } from "./rollback-apply";
 import { type StagedWrite, stageWrites } from "./stage-writes";
@@ -32,23 +32,27 @@ export interface ApplyReport {
 /**
  * Apply a plan to the project all at once, or not at all. Every file is
  * staged beside its target first; the files replaced are backed up and the
- * files removed are moved into the backup; `commit` records the outcome —
- * the point after which the apply stands. A failure before that undoes
- * everything; a crash is undone the next time Studio starts, from the
- * journal kept meanwhile.
+ * files removed are moved into the backup; `commit` records the outcome
+ * with the apply's id — the point after which the apply stands. A failure
+ * before that undoes everything; a crash is undone the next time Studio
+ * starts, from the journal kept meanwhile, unless the id was recorded.
  *
  * @param root - The project
  * @param plan - The plan, with the user's confirmations taken in
- * @param commit - Records the applied plan, such as saving the imports state
+ * @param commit - Records the applied plan and the apply's id at once, such as saving the imports state
  * @returns What was written, removed and kept, and where the backup is
  * @throws {FilePlanError} `TARGET_BLOCKED`, `NEEDS_CONFIRMATION` or `PLAN_STALE`, with nothing written
  * @throws The file system's error, after undoing what was done
  * @example
  * ```ts
- * const report = applyFilePlan(root, withConfirmations(plan, confirmed), () => saveState(next));
+ * const report = applyFilePlan(root, withConfirmations(plan, confirmed), (applyId) => saveState(next, applyId));
  * ```
  */
-export function applyFilePlan(root: ProjectRoot, plan: FilePlan, commit: () => void): ApplyReport {
+export function applyFilePlan(
+  root: ProjectRoot,
+  plan: FilePlan,
+  commit: (applyId: string) => void,
+): ApplyReport {
   refuseUnready(plan);
   verifyUnchanged(root, plan);
   const id = `${Date.now()}-${randomBytes(4).toString("hex")}`;
@@ -84,14 +88,13 @@ export function applyFilePlan(root: ProjectRoot, plan: FilePlan, commit: () => v
   try {
     saveJournal(root.path, journal);
     pruneFailures = commitFiles(root, plan, staged, journal.backupDir);
-    commit();
+    commit(id);
   } catch (error) {
     rollbackApply(root, journal);
     dropJournal(root.path, id);
     throw error;
   }
-  dropJournal(root.path, id);
-  pruneBackups(root.path);
+  finishApply(root.path, id);
   return {
     written: staged.map((s) => s.write.path),
     removed: plan.removals.map((r) => r.path),

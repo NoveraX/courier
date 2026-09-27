@@ -38,6 +38,7 @@ export type {
 } from "./probe";
 export { stampSourceKeys } from "./stamp-source-keys";
 export type {
+  AnyDefinedApi,
   AnySource,
   DefinedApi,
   DefinedFlatApi,

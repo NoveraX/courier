@@ -1,5 +1,5 @@
 import { getSourceName } from "../../define/api";
-import type { DefinedApi, DefinedFlatApi, DefinedMixedApi } from "../../define/types";
+import type { AnyDefinedApi } from "../../define/types";
 import { HTTPError } from "../../errors";
 import type { RequestContext } from "../../http-client/types";
 import { executeRequest } from "../../utils/execute";
@@ -22,7 +22,7 @@ export interface DirectHTTPDefaults {
  * uses the universal HttpClient (native fetch wrapper).
  */
 export function createDirectHTTPExecutor(
-  api: DefinedApi | DefinedFlatApi | DefinedMixedApi,
+  api: AnyDefinedApi,
   defaults: DirectHTTPDefaults = {},
 ): HTTPExecutor {
   const sourceName = getSourceName(api) ?? "_";

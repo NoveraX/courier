@@ -1,6 +1,6 @@
 import { endpointPath } from "../../define/address";
 import { getSourceName } from "../../define/api";
-import type { DefinedApi, DefinedFlatApi, DefinedMixedApi } from "../../define/types";
+import type { AnyDefinedApi } from "../../define/types";
 import { buildDirectSSEUrl, executeSSE } from "../../realtime/caller-sse";
 import { beginStream, instrumentSSE } from "../instrument";
 import type { SSEFactory } from "../types";
@@ -32,7 +32,7 @@ function headersToRecord(h: Headers): Record<string, string> {
  * and merged into the existing entry via `instr.updateMeta`.
  */
 export function createDirectSSEFactory(
-  api: DefinedApi | DefinedFlatApi | DefinedMixedApi,
+  api: AnyDefinedApi,
   defaults: DirectSSEDefaults = {},
 ): SSEFactory {
   const sourceName = getSourceName(api) ?? "_";

@@ -78,8 +78,11 @@ function undoEntry(
   const reached = entry.step === "remove" ? found.kind === "absent" : holdsWrite;
   /* Without a copy the apply either never reached the file, or the copy is lost. */
   if (!existsSync(copy)) return reached ? "lost" : "undone";
-  if (entry.step === "write" && found.kind === "file" && holdsCopy(copy, found.sha256))
+  /* Never replaced: the copy only duplicates the file, and would keep a backup of nothing. */
+  if (entry.step === "write" && found.kind === "file" && holdsCopy(copy, found.sha256)) {
+    retryOnWin32(() => unlinkSync(copy), `Deleting the copy of ${entry.path}`);
     return "undone";
+  }
   if (!reached) return "changed";
   ensureDirectory(root, dirname(target));
   retryOnWin32(() => renameSync(copy, target), `Restoring ${entry.path}`);

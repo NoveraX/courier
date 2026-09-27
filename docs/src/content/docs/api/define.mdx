@@ -182,7 +182,7 @@ const api = defineApi({
 
 ### deduplicate
 
-Enable automatic request deduplication via `AbortController`. See [Abort & Dedup](/docs/advanced/abort).
+Cancel a read still in flight when the same endpoint is read again. Writes are never cancelled. See [Abort & Dedup](/docs/advanced/abort).
 
 ### allowedHeaders
 

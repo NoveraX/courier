@@ -13,18 +13,22 @@ const pendingBySource = new WeakMap<object, Record<string, AbortController>>();
  *
  * Deduplication only runs in a browser, for a call that did not come off the
  * wire. On a server, requests from different users reach the same endpoint
- * under the same key, and one user's request would cancel another's.
+ * under the same key, and one user's request would cancel another's. It only
+ * runs for a read: a write that a newer one superseded has usually been
+ * applied by the server, and cancelling it told its caller it had not.
  *
  * @param dataSource - The source the call belongs to
  * @param context - The call's context, when it has one
+ * @param kind - Whether the endpoint reads or writes, from its schema
  * @returns A client for this call
  */
 export function clientForCall(
   dataSource: { options?: BaseOptions },
   context?: Context,
+  kind?: "query" | "mutation",
 ): HttpClient {
   const inBrowser = typeof (globalThis as { document?: unknown }).document !== "undefined";
-  const dedupes = inBrowser && context?.proxyMethod === undefined;
+  const dedupes = inBrowser && context?.proxyMethod === undefined && kind === "query";
   const options = dedupes ? dataSource.options : { ...dataSource.options, deduplicate: false };
   const client = new HttpClient(options, context);
   if (dedupes) client.pendingRequests = pendingRequestsOf(dataSource);

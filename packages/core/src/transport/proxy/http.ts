@@ -1,5 +1,6 @@
 import { createUntypedProxyCallerFn } from "../../proxy-caller/create-proxy-caller-fn";
 import type { ProxyCallerDefaults } from "../../proxy-caller/types";
+import { resolveEndpoint } from "../../utils/execute-resolve";
 import type { HTTPExecutor } from "../types";
 
 /**
@@ -15,12 +16,29 @@ export function createProxyHTTPExecutor(
   defaults: ProxyCallerDefaults = {},
 ): HTTPExecutor {
   const fn = createUntypedProxyCallerFn(defaults);
+  /* Deduplication cancels the call a newer one supersedes, which only a read
+     can afford: a cancelled write has usually been applied by the server
+     while its caller is told it was not. */
+  const writeFn = defaults.deduplicate
+    ? createUntypedProxyCallerFn({ ...defaults, deduplicate: false })
+    : fn;
 
   return function executeHTTP(group, method, variables, options, raw) {
     const callOptions = { ...options, ...(raw && { rawData: true }) };
-    const executeFn = fn(source, callOptions);
+    const chosen = isWrite(defaults.source, group, method) ? writeFn : fn;
+    const executeFn = chosen(source, callOptions);
     const endpointKey = group ? `${group}:${method}` : method;
 
     return variables !== undefined ? executeFn(endpointKey, variables) : executeFn(endpointKey);
   };
+}
+
+/** Does the source describe this endpoint as a write? Unknown without one. */
+function isWrite(
+  apiSource: Record<string, unknown> | undefined,
+  group: string,
+  method: string,
+): boolean {
+  if (!apiSource) return false;
+  return resolveEndpoint(apiSource, group, method).schema?.type === "mutation";
 }

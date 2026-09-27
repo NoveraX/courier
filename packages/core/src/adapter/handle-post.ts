@@ -1,5 +1,6 @@
 import type { StudioHooks } from "../studio/hooks";
 import type { RequestPayloadInput } from "../utils/helpers";
+import { reviveWithoutPrototypeKeys } from "../utils/safe-json";
 import { discardBody } from "./discard-body";
 import type { HandlerConfig } from "./handler-config";
 import { LIMITS } from "./limits";
@@ -104,8 +105,10 @@ async function parseBody(
     }
   }
 
+  /* The same hardening the GET path applies to `_v`: a key that reaches
+     `Object.prototype` never makes it into the variables or the upstream body. */
   try {
-    return JSON.parse(new TextDecoder().decode(body.bytes));
+    return JSON.parse(new TextDecoder().decode(body.bytes), reviveWithoutPrototypeKeys);
   } catch {
     return errorResponse(400, "Invalid JSON body");
   }

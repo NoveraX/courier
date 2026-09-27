@@ -233,6 +233,23 @@ describe("createPostHandler", () => {
       const receivedPayload = execute.mock.calls[0]![1];
       expect(receivedPayload).toEqual(payload);
     });
+
+    /** The GET path strips these from `_v`; the POST path kept them. */
+    it("drops keys that reach Object.prototype, as the GET path does", async () => {
+      const execute = createMockExecute();
+      const handler = createPostHandler(execute, createHooks());
+      const req = postRequest(
+        '{"source":"api","method":"echo","variables":{"__proto__":{"polluted":1},"constructor":{"prototype":{"p":1}},"nested":{"prototype":1,"kept":2},"ok":1}}',
+      );
+
+      await handler(req);
+
+      expect(execute).toHaveBeenCalledOnce();
+      const { variables } = execute.mock.calls[0]![1] as { variables: Record<string, unknown> };
+      expect(Object.keys(variables)).toEqual(["nested", "ok"]);
+      expect(variables.nested).toEqual({ kept: 2 });
+      expect(JSON.stringify(variables)).not.toContain("polluted");
+    });
   });
 
   describe("FormData body parsing", () => {

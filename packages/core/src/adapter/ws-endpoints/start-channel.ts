@@ -106,5 +106,5 @@ function broadcastToTopic(ctx: WSSocketContext, topic: string, data: unknown): v
   // Local delivery — all subscribers on this server (exclude sender)
   void ctx.registry.broadcastToTopic(topic, data, ctx.connectionId);
   // Remote delivery — all other replicas via pubsub (echo prevention built-in)
-  ctx.pubsub?.publish(topic, data);
+  void ctx.bridge?.publishToTopic(topic, data);
 }

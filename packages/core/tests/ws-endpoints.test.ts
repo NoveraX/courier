@@ -315,18 +315,18 @@ describe("startChannel", () => {
     expect(ctx.topicManager.subscribe).toHaveBeenCalledOnce();
   });
 
-  it("publishes to pubsub when available via broadcast", async () => {
-    const publish = vi.fn();
+  it("publishes to the other replicas via broadcast", async () => {
+    const publishToTopic = vi.fn(async () => undefined);
     const onJoin = vi.fn();
     const factory = () => ({ onJoin });
-    const { ctx } = createMockCtx({ pubsub: { publish } as never });
+    const { ctx } = createMockCtx({ bridge: { publishToTopic } as never });
 
     await startChannel(ctx, "topic", factory, {});
 
     const channelCtx = onJoin.mock.calls[0]![0];
     channelCtx.broadcast("room", "hello");
 
-    expect(publish).toHaveBeenCalledWith("room", "hello");
+    expect(publishToTopic).toHaveBeenCalledWith("room", "hello");
   });
 
   it("rolls back subscription and rethrows when onJoin throws", async () => {

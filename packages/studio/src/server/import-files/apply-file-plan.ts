@@ -1,6 +1,6 @@
 import { copyFileSync, linkSync, renameSync } from "node:fs";
 import { dirname } from "node:path";
-import { COURIER_DIR } from "../courier-dir";
+import { COURIER_DIR, ensureCourierSubdir } from "../courier-dir";
 import { errnoCode } from "../errno-code";
 import { ensureDirectory } from "../project-fs/ensure-directory";
 import type { ProjectRoot } from "../project-fs/project-root";
@@ -15,7 +15,7 @@ import type { FilePlan } from "./file-plan-types";
 import { finishApply } from "./finish-apply";
 import { type PruneFailure, pruneEmptyDirs } from "./prune-empty-dirs";
 import { rollbackApply } from "./rollback-apply";
-import { type StagedWrite, stageWrites } from "./stage-writes";
+import { refuseObstacle, type StagedWrite, stageWrites } from "./stage-writes";
 import { verifyUnchanged } from "./verify-unchanged";
 
 /** What an applied plan did. */
@@ -130,6 +130,9 @@ function commitFiles(
   staged: StagedWrite[],
   backupDir: string,
 ): PruneFailure[] {
+  /* Copies go only into a real .courier/backups inside the project. */
+  if (plan.removals.length > 0 || staged.some((s) => s.existed))
+    ensureCourierSubdir(root.path, "backups");
   for (const s of staged) if (s.existed) backUp(root, backupDir, s.write.path, s.absolute);
   for (const s of staged) {
     retryOnWin32(() => renameSync(s.temp, s.absolute), `Writing ${s.write.path}`);
@@ -138,6 +141,7 @@ function commitFiles(
   const removed: string[] = [];
   for (const removal of plan.removals) {
     const absolute = resolveProjectPath(root.path, removal.path);
+    refuseObstacle(root, absolute, removal.path);
     const copy = backupPath(root, backupDir, removal.path);
     ensureDirectory(root, dirname(copy));
     retryOnWin32(() => renameSync(absolute, copy), `Moving ${removal.path} into the backup`);

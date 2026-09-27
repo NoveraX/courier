@@ -1,4 +1,4 @@
-import { type Dirent, readdirSync } from "node:fs";
+import { type Dirent, lstatSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { errnoCode } from "../errno-code";
 
@@ -17,6 +17,8 @@ import { errnoCode } from "../errno-code";
 export function walkTsFiles(dir: string, visit: (file: string) => void): void {
   let entries: Dirent[];
   try {
+    /* The folder walked from may itself be a link, which is not entered either. */
+    if (!lstatSync(dir).isDirectory()) return;
     entries = readdirSync(dir, { withFileTypes: true });
   } catch (error) {
     const code = errnoCode(error);

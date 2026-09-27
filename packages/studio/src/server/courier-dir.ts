@@ -55,8 +55,12 @@ export function ensureCourierDir(projectRoot: string): string {
  * ```
  */
 export function ensureCourierSubdir(projectRoot: string, name: string): string {
+  /* Checked before anything is created, so a refusal leaves the project as it was. */
+  const shown = `${COURIER_DIR}/${name}`;
+  const courier = resolve(projectRoot, COURIER_DIR);
+  if (isFolder(courier, COURIER_DIR)) isFolder(join(courier, name), shown);
   const dir = join(ensureCourierDir(projectRoot), name);
-  if (!isFolder(dir, `${COURIER_DIR}/${name}`)) mkdirSync(dir);
+  if (!isFolder(dir, shown)) mkdirSync(dir);
   return dir;
 }
 

@@ -55,6 +55,8 @@ import { boundary } from "@/api/boundary"
 export const caller = createProxyCaller<typeof api>("api", { boundary })
 ```
 
+The boundary names the endpoints the browser may call. Pass it to `defineApi` as well, so the server refuses the rest — see [defineBoundary](/docs/proxy-mode/boundary#wiring-the-server).
+
 **React Query** — hooks with full type inference:
 
 ```ts title="lib/query.ts"

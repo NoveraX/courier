@@ -7,7 +7,8 @@
  * browser is allowed to reach, once, in a place a reviewer can read.
  *
  * The same declaration does both halves of the job. The server refuses
- * anything it does not name, answering exactly as it answers an unknown name.
+ * anything it does not name, answering exactly as it answers an unknown name,
+ * once the API it gates carries it as `defineApi({ boundary })`.
  * The browser receives it *instead of* the source object, so the bundle
  * carries the names that were opened and nothing else — no upstream host, no
  * middleware, no path of an endpoint that was kept back.
@@ -48,9 +49,10 @@ const SHAPES: Readonly<Record<string, ExposedEndpoint>> = {
  *
  * @example
  * ```ts
+ * // boundary.ts — annotated, because the API below holds it in turn
  * import type { api } from "./api";
  *
- * export const boundary = defineBoundary<typeof api>({
+ * export const boundary: ProxyBoundary = defineBoundary<typeof api>({
  *   source: "api",
  *   expose: {
  *     "posts.list": "request",
@@ -60,6 +62,9 @@ const SHAPES: Readonly<Record<string, ExposedEndpoint>> = {
  * });
  * // "posts.lsit" — does not compile. "posts.feed": "request" — does not compile.
  * // "admin.purge" — absent, so refused at runtime and unknown to the browser.
+ *
+ * // api.ts — the server gates on the boundary its source carries
+ * export const api = defineApi({ baseURL, boundary, groups: { posts, chat, admin } });
  * ```
  */
 export function defineBoundary<TApi>(config: BoundaryConfig<TApi>): ProxyBoundary {

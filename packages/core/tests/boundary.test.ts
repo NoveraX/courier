@@ -6,12 +6,17 @@
  * point of the feature is that they cannot drift — a list that gates the
  * server but describes something else to the client is two lists.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 
-import { createProxyCaller } from "../src/proxy-caller";
+import { createHandler } from "../src/adapter";
 import { defineBoundary } from "../src/define/boundary";
 import { courier, defineApi, defineGroup } from "../src/define/index";
+import { isConfigurationError } from "../src/errors";
 import type { Context } from "../src/http-client/types";
+import { createProxyCaller } from "../src/proxy-caller";
+import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { executeRequest } from "../src/utils/execute";
 
 const { channel, endpoint, stream } = courier();
@@ -222,5 +227,96 @@ describe("defineBoundary — a client says what it cannot call", () => {
     const client = clientFor({ "posts.list": "request" });
 
     expect(() => client.posts!.list!({})).not.toThrow(/boundary/);
+  });
+});
+
+/**
+ * The docs promised that the server refuses what a boundary does not name,
+ * but showed it given to the client only, and nothing public attached it to
+ * the server's source. An app wired as documented served every endpoint.
+ */
+describe("defineBoundary — the server's half, wired as documented", () => {
+  const upstreamHits: string[] = [];
+  const upstream: Server = createServer((req, res) => {
+    upstreamHits.push(`${req.method} ${req.url}`);
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end("[]");
+  });
+
+  /* The API reads its address from the environment when its module loads,
+     as an application's does, so the module loads once, after the upstream
+     is listening. */
+  beforeAll(async () => {
+    await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
+    vi.stubEnv("SHOP_API_URL", `http://127.0.0.1:${(upstream.address() as AddressInfo).port}`);
+  });
+
+  beforeEach(async () => {
+    vi.unstubAllGlobals();
+    const { shop } = await import("./fixtures/shop-api");
+    registerSources({ shop });
+  });
+
+  afterEach(() => {
+    _resetSourcesForTests();
+    upstreamHits.length = 0;
+  });
+
+  afterAll(async () => {
+    vi.unstubAllEnvs();
+    upstream.closeAllConnections();
+    await new Promise<void>((resolve) => upstream.close(() => resolve()));
+  });
+
+  function post(method: string): Promise<Response> {
+    return createHandler().handle(
+      new Request("http://app.local/api/request", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ source: "shop", group: "orders", method }),
+      }),
+    );
+  }
+
+  it("refuses a raw call to an endpoint the boundary does not name", async () => {
+    const response = await post("purge");
+
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("method not found");
+    expect(upstreamHits).toEqual([]);
+  });
+
+  it("serves an endpoint the boundary names", async () => {
+    const response = await post("list");
+
+    expect(response.status).toBe(200);
+    expect(upstreamHits).toEqual(["GET /orders"]);
+  });
+
+  it("keeps the client typed although the API and its boundary name each other", async () => {
+    const { shop } = await import("./fixtures/shop-api");
+    const { shopBoundary } = await import("./fixtures/shop-boundary");
+    const client = createProxyCaller<typeof shop>("shop", { boundary: shopBoundary });
+
+    expectTypeOf(client.orders.list).returns.resolves.toEqualTypeOf<{ id: number }[]>();
+  });
+});
+
+describe("defineBoundary — registered under another source", () => {
+  afterEach(() => {
+    _resetSourcesForTests();
+  });
+
+  it("is refused when the sources are registered", () => {
+    const billing = defineApi({ baseURL: "https://billing.example", boundary, endpoints: {} });
+
+    let thrown: unknown;
+    try {
+      registerSources({ billing });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(isConfigurationError(thrown) && thrown.code).toBe("BOUNDARY_SOURCE_MISMATCH");
   });
 });

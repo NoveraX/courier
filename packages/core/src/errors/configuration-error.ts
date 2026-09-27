@@ -63,6 +63,12 @@ export type ConfigurationErrorCode =
    */
   | "SOURCE_KEY_MISMATCH"
   /**
+   * A source carries a boundary declared for another source. The server
+   * would gate this source on a list of the other's endpoints, while the
+   * browser addresses the other by name.
+   */
+  | "BOUNDARY_SOURCE_MISMATCH"
+  /**
    * Something read the request body before the proxy route did — almost
    * always a body-parsing middleware mounted across the whole application.
    * The stream is gone by then, and the platform's own error says only that

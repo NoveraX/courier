@@ -268,6 +268,19 @@ Pages on other origins are served when `allowedOrigins` lists them. An entry is 
 createHandler({ allowedOrigins: ["https://admin.example.com", "https://*.example.com"] })
 ```
 
+Every endpoint of a source is reachable through the proxy unless the source says otherwise. Name the ones a browser may call with `defineBoundary`, and give the boundary to the API as well as to the client, so the server refuses the rest. The boundary is typed against the API that holds it, so annotate it as `ProxyBoundary`:
+
+```ts
+// boundary.ts
+export const boundary: ProxyBoundary = defineBoundary<typeof api>({
+  source: "api",
+  expose: { "users.getAll": "request" },
+})
+
+// api.ts
+export const api = defineApi({ baseURL: "https://api.example.com", boundary, groups: { users } })
+```
+
 A streamed answer passes the upstream's body and content type through, from your application's origin, so it carries `Content-Security-Policy: default-src 'none'; sandbox` and `X-Content-Type-Options: nosniff`: HTML an upstream sends cannot run as your application when its URL is opened as a page.
 
 <br />

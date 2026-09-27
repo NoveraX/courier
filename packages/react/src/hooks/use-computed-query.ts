@@ -1,4 +1,4 @@
-import type { HTTPError } from "@noverax/courier";
+import type { CallOptions, HTTPError } from "@noverax/courier";
 import type { SSEEvent } from "@noverax/courier/realtime";
 import type { QueryKey, UseQueryResult } from "@tanstack/react-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -22,6 +22,8 @@ export interface UseComputedQueryOptions<TQueryData, TStreamData, TVariables> {
   enabled?: boolean;
   /** react-query staleTime */
   staleTime?: number;
+  /** Per-request options for the HTTP query */
+  requestOptions?: CallOptions;
 }
 
 // ---------------------------------------------------------------------------
@@ -32,7 +34,7 @@ export interface UseComputedQueryOptions<TQueryData, TStreamData, TVariables> {
  * Combines a standard HTTP query with an SSE subscription that auto-updates
  * the query cache on each event via the provided mapper function.
  *
- * @param queryFn - Factory that executes the HTTP endpoint
+ * @param queryFn - Executes the HTTP endpoint; aborts when the signal does
  * @param subscribeFn - Factory that creates an SSESubscription
  * @param queryKey - Cache key for react-query
  * @param groupName - API group name
@@ -46,7 +48,7 @@ export interface UseComputedQueryOptions<TQueryData, TStreamData, TVariables> {
  * })
  */
 export function useComputedQuery<TQueryData, TStreamData>(
-  queryFn: (variables: unknown) => Promise<unknown>,
+  queryFn: (variables: unknown, signal: AbortSignal) => Promise<unknown>,
   subscribeFn: SubscribeFn,
   queryKey: QueryKey,
   groupName: string,
@@ -57,7 +59,7 @@ export function useComputedQuery<TQueryData, TStreamData>(
 
   const queryResult = useQuery<TQueryData, HTTPError>({
     queryKey,
-    queryFn: () => queryFn(variables) as Promise<TQueryData>,
+    queryFn: ({ signal }) => queryFn(variables, signal) as Promise<TQueryData>,
     enabled,
     staleTime,
   });

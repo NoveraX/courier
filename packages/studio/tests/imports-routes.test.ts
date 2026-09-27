@@ -433,6 +433,146 @@ describe("a write for an import, after courier.config moved its output directory
   }, 15_000);
 });
 
+describe("what a write for an import says courier.config must still declare", () => {
+  const SOURCES_ONLY = 'import "./count";\nexport default { sources: { api: { baseURL: "https://api.example" } } };\n';
+
+  /* The write the import wizard sends for `name`, generated under src/api with the wizard's defaults. */
+  function wizardWrite(name: string, dir: string, choices: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      files: [
+        { path: `src/api/${dir}/source.ts`, content: GENERATED },
+        { path: `src/api/${dir}/index.ts`, content: GENERATED },
+      ],
+      sourceName: name,
+      spec: SPEC,
+      specUrl: "https://specs.example/pets.json",
+      importType: "url",
+      options: {
+        sourceName: name,
+        outputDir: "src/api",
+        validation: "zod",
+        groupBy: "tag",
+        generateTypes: true,
+        generateSchemas: true,
+        addAuthMiddleware: false,
+        includeComments: true,
+        generateClient: "direct",
+        selectedEndpoints: { pets: ["listPets"] },
+        ...choices,
+      },
+    };
+  }
+
+  it("names the source to import and list, and the imports entry, for an import the config does not declare", async () => {
+    project(SOURCES_ONLY);
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/write", wizardWrite("pets", "pets", { validation: "valibot" }));
+
+    expect(reply.status).toBe(200);
+    expect(reply.body).toMatchObject({ written: 2 });
+    expect(reply.body).toHaveProperty("declaration", {
+      configFile: "courier.config.ts",
+      source: { importLine: 'import { pets } from "./src/api/pets/source";', entry: "pets," },
+      importEntry: [
+        '  "pets": {',
+        '    importType: "url",',
+        '    type: "openapi",',
+        '    from: "https://specs.example/pets.json",',
+        '    outputDir: "src/api",',
+        '    sourceName: "pets",',
+        '    validation: "valibot",',
+        "  },",
+      ].join("\n"),
+    });
+    expect(existsSync(join(root, "src/api/pets/source.ts"))).toBe(true);
+  }, 15_000);
+
+  it("names the source as the generator emits it, under the import's own name", async () => {
+    project(SOURCES_ONLY);
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/write", wizardWrite("pet-store", "petStore"));
+
+    expect(reply.status).toBe(200);
+    expect(reply.body).toHaveProperty("declaration.source", {
+      importLine: 'import { petStore } from "./src/api/petStore/source";',
+      entry: '"pet-store": petStore,',
+    });
+    expect(reply.body).toHaveProperty(
+      "declaration.importEntry",
+      expect.stringContaining('  "pet-store": {\n'),
+    );
+    expect(reply.body).toHaveProperty(
+      "declaration.importEntry",
+      expect.stringContaining('    sourceName: "petStore",\n'),
+    );
+  }, 15_000);
+
+  it("names only the source while the config declares the import", async () => {
+    project(declaring("src/api"));
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/write", wizardWrite("pets", "pets"));
+
+    expect(reply.status).toBe(200);
+    expect(reply.body).toHaveProperty("declaration", {
+      configFile: "courier.config.ts",
+      source: { importLine: 'import { pets } from "./src/api/pets/source";', entry: "pets," },
+    });
+  }, 15_000);
+
+  it("names nothing once the config declares the generated source and the import", async () => {
+    const head = 'import { pets } from "./src/api/pets/source";\n';
+    project(declaring("src/api", head).replace("sources: {", "sources: { pets,"));
+    writeProjectFile("src/api/pets/source.ts", 'export const pets = { baseURL: "https://pets.example" };\n');
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/write", wizardWrite("pets", "pets"));
+
+    expect(reply.status).toBe(200);
+    expect(reply.body).toMatchObject({ written: 2 });
+    expect(reply.body).not.toHaveProperty("declaration");
+  }, 15_000);
+
+  it("counts the generated source as declared when the config imports it through another module", async () => {
+    const head = 'import { pets } from "./src/api";\n';
+    project(declaring("src/api", head).replace("sources: {", "sources: { pets,"));
+    writeProjectFile("src/api/index.ts", 'export { pets } from "./pets/source";\n');
+    writeProjectFile("src/api/pets/source.ts", 'export const pets = { baseURL: "https://pets.example" };\n');
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/write", wizardWrite("pets", "pets"));
+
+    expect(reply.status).toBe(200);
+    expect(reply.body).not.toHaveProperty("declaration");
+  }, 15_000);
+
+  it("says the name is taken, and offers no part, while sources names another API under it", async () => {
+    project(declaring("src/api").replace("sources: {", 'sources: { pets: { baseURL: "https://pets.example" },'));
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/write", wizardWrite("pets", "pets"));
+
+    expect(reply.status).toBe(200);
+    expect(reply.body).toHaveProperty("declaration", {
+      configFile: "courier.config.ts",
+      nameTaken: { sourceFile: "src/api/pets/source.ts" },
+    });
+  }, 15_000);
+
+  it("counts the endpoints the selection left out alongside the imports entry", async () => {
+    project(SOURCES_ONLY);
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/write", wizardWrite("pets", "pets", { selectedEndpoints: { pets: [] } }));
+
+    expect(reply.status).toBe(200);
+    expect(reply.body).toHaveProperty("declaration.leftOut", 1);
+    expect(reply.body).toHaveProperty("declaration.importEntry");
+  }, 15_000);
+});
+
 describe("the imports lists every UI is sent", () => {
   const sockets: Array<{ disconnect(): unknown }> = [];
 

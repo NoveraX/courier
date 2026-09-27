@@ -45,7 +45,7 @@ export function writeFiles(payload: {
   importType: string;
   options: GenerateOptions;
   files: GeneratedFile[];
-}): Promise<{ success: boolean }> {
+}): Promise<unknown> {
   return post("/api/apis/write", payload);
 }
 

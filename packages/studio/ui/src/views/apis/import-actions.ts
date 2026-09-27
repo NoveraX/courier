@@ -105,9 +105,9 @@ export async function generatePreview(
 
 // ── Write to disk ───────────────────────────────────────────────────────────
 
-export async function writeGeneratedFiles(state: ImportState): Promise<void> {
+export async function writeGeneratedFiles(state: ImportState): Promise<unknown> {
   if (!state.spec) throw new Error("No spec to write");
-  await writeFiles({
+  return writeFiles({
     sourceName: state.options.sourceName,
     spec: state.spec,
     specUrl: state.source === "url" ? state.content : "",

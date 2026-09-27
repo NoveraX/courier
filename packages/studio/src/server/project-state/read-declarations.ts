@@ -1,6 +1,7 @@
 import type { ImportDeclarations } from "../imports-bridge";
-import { ACT_BUDGET_MS, SHOW_BUDGET_MS } from "./budgets";
+import { SHOW_BUDGET_MS } from "./budgets";
 import { ProjectUnavailableError } from "./project-unavailable-error";
+import { readConfigToAct } from "./read-config-to-act";
 import type { FreshSnapshot, ProjectReads } from "./types";
 
 /**
@@ -52,7 +53,7 @@ export async function readDeclarations(
   root: string,
   purpose: DeclarationsPurpose,
 ): Promise<ImportDeclarations> {
-  if (purpose === "act") return toAct(await project.fresh(ACT_BUDGET_MS), root);
+  if (purpose === "act") return (await readConfigToAct(project, root)).config.imports ?? {};
   return toShow(await project.fresh(SHOW_BUDGET_MS), purpose);
 }
 
@@ -62,15 +63,4 @@ function toShow(view: FreshSnapshot, purpose: "show" | "forget"): ImportDeclarat
   const { failure } = view;
   if (failure === null || failure.code === "CONFIG_NOT_FOUND" || purpose === "forget") return {};
   throw ProjectUnavailableError.notLoading(failure);
-}
-
-function toAct(view: FreshSnapshot, root: string): ImportDeclarations {
-  if (view.starting) throw ProjectUnavailableError.starting();
-  if (view.settling) throw ProjectUnavailableError.reloading();
-  const { failure } = view;
-  if (failure?.code === "CONFIG_NOT_FOUND") throw ProjectUnavailableError.missing(root);
-  if (failure) throw ProjectUnavailableError.notLoading(failure);
-  /* An outcome with no failure always ran a config; this only keeps the types honest. */
-  if (view.running === null) throw ProjectUnavailableError.starting();
-  return view.running.config.imports ?? {};
 }

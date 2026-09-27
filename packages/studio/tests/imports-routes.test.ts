@@ -279,7 +279,7 @@ describe("the imports routes while a write to an import holds the imports lock",
 describe("the imports routes while courier.config does not load", () => {
   it("an import can be removed", async () => {
     project(BROKEN);
-    writeProjectFile("src/api/pets/index.ts", GENERATED);
+    writeProjectFile("src/api/pets/index.ts", signGeneratedFile("pets", GENERATED));
     saveImportsState(
       root,
       recordImport(loadImportsState(root), "pets", {

@@ -1,5 +1,5 @@
 import { posix } from "node:path";
-import { canonicalOutputDir, InvalidImportError } from "../../apis/layout";
+import { isCanonicalPath } from "../../apis/layout";
 import { COURIER_DIR } from "../courier-dir";
 import { isApplyId } from "./apply-id";
 import type { ApplyJournal } from "./apply-journal";
@@ -9,24 +9,14 @@ const TEMP_NAME = new RegExp(
   `^${IMPORT_TEMP_PREFIX.replaceAll(".", "\\.")}\\.\\d+-[0-9a-f]{8}\\.tmp$`,
 );
 
-/* A project-relative path as Studio writes them: `/`-separated, normalized, inside the project, nowhere off limits. */
-function isCanonical(path: string): boolean {
-  try {
-    return canonicalOutputDir(path) === path;
-  } catch (error) {
-    if (error instanceof InvalidImportError) return false;
-    throw error;
-  }
-}
-
 function inside(dir: string, path: string): boolean {
-  return isCanonical(path) && path.startsWith(`${dir}/`);
+  return isCanonicalPath(path) && path.startsWith(`${dir}/`);
 }
 
 /* A folder an apply may have created: the import's folder, one above it on the way, or one inside it. */
 function onTheWay(dir: string, created: string): boolean {
   return (
-    isCanonical(created) &&
+    isCanonicalPath(created) &&
     (created === dir || dir.startsWith(`${created}/`) || created.startsWith(`${dir}/`))
   );
 }
@@ -53,7 +43,7 @@ export function journalProblem(fileName: string, journal: ApplyJournal): string 
   if (!isApplyId(id) || fileName !== `${id}.json`) return "its id is not its file's name";
   if (journal.backupDir !== `${COURIER_DIR}/backups/${id}`)
     return "its backup folder is not its own";
-  if (dir === "." || !isCanonical(dir)) return "its folder is not one an import is written to";
+  if (dir === "." || !isCanonicalPath(dir)) return "its folder is not one an import is written to";
   const stray = journal.entries.find((entry) => !inside(dir, entry.path));
   if (stray !== undefined) return `${stray.path} is not in ${dir}`;
   const temp = journal.temps.find(

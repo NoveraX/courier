@@ -25,9 +25,11 @@ export function planImportRemoval(
   const entry = getImportEntry(imports, name);
   const state = getImportState(imports, name);
   if (!entry && !state) return { error: `Import "${name}" not found`, status: 404 };
-  const dir = state?.dir ?? declaredDir(entry, name);
+  /* The declaration says where the import is; the state only where Studio last wrote it. */
+  const dir = declaredDir(entry, name) ?? state?.dir;
+  const recorded = Object.keys(state?.files ?? {}).filter((path) => path.startsWith(`${dir}/`));
   const candidates = new Set([
-    ...Object.keys(state?.files ?? {}),
+    ...recorded,
     ...(dir === undefined ? [] : claimedFiles(root, dir, name)),
   ]);
   return planFiles(

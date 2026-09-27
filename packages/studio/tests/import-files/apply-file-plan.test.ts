@@ -25,7 +25,7 @@ import { applyFilePlan } from "../../src/server/import-files/apply-file-plan";
 import { saveJournal } from "../../src/server/import-files/apply-journal";
 import { bodyHash } from "../../src/server/import-files/body-hash";
 import type { PlanTarget } from "../../src/server/import-files/file-plan-types";
-import { readGeneratedFile } from "../../src/server/import-files/generated-header";
+import { readGeneratedFile, signGeneratedFile } from "../../src/server/import-files/generated-header";
 import { planFiles } from "../../src/server/import-files/plan-files";
 import { pruneBackups } from "../../src/server/import-files/prune-backups";
 import type { RecordedFile } from "../../src/server/import-files/recorded-file";
@@ -66,14 +66,23 @@ function read(path: string): string {
   return readFileSync(join(root.path, path), "utf8");
 }
 
+/* A file as Studio writes it for pets. */
+function signed(body: string): string {
+  return signGeneratedFile("pets", body);
+}
+
+function bodyOf(path: string): string {
+  return readGeneratedFile(read(path)).body;
+}
+
 function generated(path: string, body: string): PlanTarget {
   return { path, body, kind: "generated", endpoints: {} };
 }
 
 /* A project with one recorded file to replace, one to remove, and a target to create. */
 function scenario() {
-  put(`${DIR}/index.ts`, "old index\n");
-  put(`${DIR}/old/index.ts`, "old group\n");
+  put(`${DIR}/index.ts`, signed("old index\n"));
+  put(`${DIR}/old/index.ts`, signed("old group\n"));
   const recorded: Record<string, RecordedFile> = {
     [`${DIR}/index.ts`]: { sha256: bodyHash("old index\n") },
     [`${DIR}/old/index.ts`]: { sha256: bodyHash("old group\n") },
@@ -91,8 +100,8 @@ function scenario() {
 }
 
 function undisturbed(): void {
-  expect(read(`${DIR}/index.ts`)).toBe("old index\n");
-  expect(read(`${DIR}/old/index.ts`)).toBe("old group\n");
+  expect(bodyOf(`${DIR}/index.ts`)).toBe("old index\n");
+  expect(bodyOf(`${DIR}/old/index.ts`)).toBe("old group\n");
   expect(existsSync(join(root.path, `${DIR}/new`))).toBe(false);
   expect(readdirSync(join(root.path, DIR)).sort()).toEqual(["index.ts", "old"]);
 }
@@ -111,8 +120,8 @@ describe("applyFilePlan", () => {
     });
     expect(readGeneratedFile(read(`${DIR}/new/index.ts`)).body).toBe("new group\n");
     expect(existsSync(join(root.path, `${DIR}/old`))).toBe(false);
-    expect(read(`${report.backupDir}/${DIR}/index.ts`)).toBe("old index\n");
-    expect(read(`${report.backupDir}/${DIR}/old/index.ts`)).toBe("old group\n");
+    expect(bodyOf(`${report.backupDir}/${DIR}/index.ts`)).toBe("old index\n");
+    expect(bodyOf(`${report.backupDir}/${DIR}/old/index.ts`)).toBe("old group\n");
     expect(readdirSync(join(root.path, ".courier/journal"))).toEqual([]);
     expect(report).toMatchObject({ written: [`${DIR}/index.ts`, `${DIR}/new/index.ts`], removed: [`${DIR}/old/index.ts`] });
   });
@@ -190,11 +199,11 @@ describe("applyFilePlan", () => {
 
     const report = applyFilePlan(root, scenario(), () => {});
 
-    expect(read(`${report.backupDir}/${DIR}/index.ts`)).toBe("old index\n");
+    expect(bodyOf(`${report.backupDir}/${DIR}/index.ts`)).toBe("old index\n");
   });
 
   it.skipIf(IS_WINDOWS || IS_ROOT)("reports, and logs, an emptied directory it could not remove", () => {
-    put(`${DIR}/old/index.ts`, "old group\n");
+    put(`${DIR}/old/index.ts`, signed("old group\n"));
     const plan = planFiles(
       root,
       { importName: "pets", dir: DIR, targets: [], removals: [`${DIR}/old/index.ts`] },

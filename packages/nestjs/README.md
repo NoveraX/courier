@@ -44,6 +44,25 @@ export class AppModule implements NestModule {
 
 `courierMiddleware()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` at module load.
 
+### Request bodies
+
+`NestFactory.create` parses JSON bodies for the whole application before any middleware runs, so a proxied JSON call reaches the middleware already parsed. The middleware takes the body from Nest's parser — keep that parser on, since your own controllers' `@Body()` needs it. Create the app with `rawBody: true` and the proxy forwards the exact bytes the client sent; without it, the parsed JSON is serialized again, which gives the same value.
+
+Nest's JSON parser accepts 100 KB by default, less than the proxy's own 1 MB `maxBodyBytes`, and answers a larger call with its own 413 before Courier sees it. Raise it to match:
+
+```ts
+// main.ts
+import { NestFactory } from "@nestjs/core"
+import type { NestExpressApplication } from "@nestjs/platform-express"
+import { AppModule } from "./app.module"
+
+const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true })
+app.useBodyParser("json", { limit: "1mb" })
+await app.listen(3000)
+```
+
+Uploads (`multipart/form-data`) are not parsed by Nest and reach the proxy as a stream, up to its `maxUploadBytes` — 10 MB unless you pass another: `courierMiddleware({ maxUploadBytes: 50 * 1024 * 1024 })`.
+
 ## WebSockets
 
 ```ts

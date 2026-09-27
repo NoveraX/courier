@@ -4,6 +4,8 @@ import { createHandler, requireSources } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
 import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 
+import { bodyNestParsed } from "./parsed-body";
+
 export { type CourierWSAttachOptions, courierWSAttach } from "./ws-attach";
 
 /**
@@ -12,6 +14,13 @@ export { type CourierWSAttachOptions, courierWSAttach } from "./ws-attach";
  * Sources are read from the core global registry populated by
  * `attachRuntime()` — call `await attachRuntime()` in your bootstrap
  * before the Nest application starts handling requests.
+ *
+ * Nest's global body parser reads a JSON call before this middleware runs;
+ * the proxy then takes the body from it — the exact bytes when the app is
+ * created with `{ rawBody: true }`.
+ *
+ * @param config - Handler options, such as `allowedOrigins` or body limits
+ * @returns A middleware for `consumer.apply(...)`
  *
  * @example
  * ```ts
@@ -39,7 +48,7 @@ export function courierMiddleware(
   return async (req: IncomingMessage, res: ServerResponse, next: (err?: unknown) => void) => {
     discoverNodeAppOrigin(req);
     try {
-      const webReq = toWebRequest(req, res);
+      const webReq = toWebRequest(req, res, () => bodyNestParsed(req));
       const webRes = await handle(webReq);
       await sendWebResponse(webRes, res);
     } catch (error) {
@@ -69,7 +78,7 @@ export function courierSSEMiddleware(
   return async (req: IncomingMessage, res: ServerResponse, next: (err?: unknown) => void) => {
     discoverNodeAppOrigin(req);
     try {
-      const webReq = toWebRequest(req, res);
+      const webReq = toWebRequest(req, res, () => bodyNestParsed(req));
       const webRes = await handleSSE(webReq);
       await sendWebResponse(webRes, res);
     } catch (error) {

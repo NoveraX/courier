@@ -2,7 +2,7 @@ export const metadata = { title: "File Upload", description: "Upload files with 
 
 ## Overview
 
-Courier supports file uploads using FormData in both direct and proxy modes. When you provide an `onUploadProgress` callback in a browser, Courier sends the request with `XMLHttpRequest`, whose upload events `fetch` lacks, for real network-level progress. On a server — a direct call from Node — the body is encoded once to learn its size and sent as a stream, reported as the network takes each chunk.
+Courier supports file uploads using FormData in both direct and proxy modes. When you provide an `onUploadProgress` callback in a browser, Courier sends the request with `XMLHttpRequest`, whose upload events `fetch` lacks, for real network-level progress. On a server — a direct call from Node, Deno or Bun — the body is streamed to `fetch` without being read into memory first: a FormData's files are read from disk as they are sent. Each chunk is reported once `fetch` has taken it, no event follows a cancel or a timeout, and a `307` or `308` redirect is followed with the body, as it is without progress. A `ReadableStream` body has no size to report against, so its `totalBytes` stays 0 until the last event, which reports 100% of what was sent.
 
 ## Basic file upload
 

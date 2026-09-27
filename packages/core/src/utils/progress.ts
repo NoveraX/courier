@@ -7,69 +7,42 @@
  */
 
 import type { DownloadProgress, UploadProgress } from "../http-client/types";
+import { countedStream } from "./counted-stream";
+import { sendUpload } from "./upload-redirects";
+import { toUploadSource } from "./upload-source";
 import { type XhrRequestInit, xhrRequest } from "./xhr-request";
-
-/** Bytes handed to the network at a time when there is no XMLHttpRequest. */
-const CHUNK_BYTES = 64 * 1024;
 
 /**
  * Send a request, reporting its body's progress.
  *
  * In a browser that is XMLHttpRequest, whose upload events fetch lacks.
- * Elsewhere the body is encoded once, to learn its size, and sent as a stream
- * reported as the network takes each chunk.
+ * Elsewhere the body is streamed to fetch without being read into memory
+ * first, and reported as fetch takes each chunk.
  *
  * @param url - Where to send it
- * @param init - The request, as it would be given to fetch
+ * @param init - The request, as it would be given to fetch; its body is set
  * @param onProgress - Called as the body is sent
  * @returns The answer
  */
 export async function sendWithUploadProgress(
   url: string,
-  init: XhrRequestInit,
+  init: XhrRequestInit & { body: BodyInit },
   onProgress: (progress: UploadProgress) => void,
 ): Promise<Response> {
   if (typeof XMLHttpRequest !== "undefined") return xhrRequest(url, init, onProgress);
 
-  const encoded = new Response(init.body ?? null);
-  const bytes = new Uint8Array(await encoded.arrayBuffer());
+  const source = toUploadSource(init.body);
   const headers = new Headers(init.headers);
-  const contentType = encoded.headers.get("content-type");
-  /* A multipart body's type carries the boundary the encoding just chose. */
-  if (contentType && (init.body instanceof FormData || !headers.has("content-type"))) {
-    headers.set("content-type", contentType);
+  /* A multipart body's type carries the boundary its encoding chose. */
+  if (source.contentType && (init.body instanceof FormData || !headers.has("content-type"))) {
+    headers.set("content-type", source.contentType);
   }
-  headers.set("content-length", String(bytes.byteLength));
+  if (source.replayable) headers.set("content-length", String(source.size));
 
-  return fetch(url, {
-    ...(init as RequestInit),
-    headers,
-    body: countedStream(bytes, onProgress),
-    duplex: "half",
-  } as RequestInit);
-}
-
-function countedStream(
-  bytes: Uint8Array,
-  onProgress: (progress: UploadProgress) => void,
-): ReadableStream<Uint8Array> {
-  let sent = 0;
-  return new ReadableStream({
-    pull(controller) {
-      if (sent >= bytes.byteLength) {
-        controller.close();
-        return;
-      }
-      const chunk = bytes.subarray(sent, sent + CHUNK_BYTES);
-      sent += chunk.byteLength;
-      controller.enqueue(chunk);
-      onProgress({
-        percent: sent / bytes.byteLength,
-        transferredBytes: sent,
-        totalBytes: bytes.byteLength,
-      });
-    },
-  });
+  const request = { ...(init as RequestInit), method: init.method, headers };
+  return sendUpload(url, request, source, (stream) =>
+    countedStream(stream, source.size, onProgress, init.signal),
+  );
 }
 
 /**

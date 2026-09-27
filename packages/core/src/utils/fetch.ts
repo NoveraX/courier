@@ -66,7 +66,7 @@ export async function coreFetch(
   };
   const response =
     onUploadProgress && requestBody != null
-      ? await sendWithUploadProgress(fullUrl, init, onUploadProgress)
+      ? await sendWithUploadProgress(fullUrl, { ...init, body: requestBody }, onUploadProgress)
       : await fetch(fullUrl, init);
   return onDownloadProgress ? trackDownload(response, onDownloadProgress) : response;
 }

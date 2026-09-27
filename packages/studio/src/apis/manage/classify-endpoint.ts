@@ -2,6 +2,7 @@
  * Classification logic for individual endpoints during inventory build.
  */
 
+import { ownValue } from "../own-value";
 import type { EndpointStatus, InventoryEndpoint, ModificationStatus } from "./types";
 
 interface SpecGroupInfo {
@@ -27,8 +28,8 @@ export function classifyDiskEndpoint(
 ): InventoryEndpoint {
   const specEntry = specGroup?.endpoints.find((e) => e.name === name);
   const inSpec = !!specEntry;
-  const storedHash = fingerprints[name];
-  const diskHash = diskHashes[name];
+  const storedHash = ownValue(fingerprints, name);
+  const diskHash = ownValue(diskHashes, name);
 
   const { status, modificationStatus } = resolveStatus(inSpec, storedHash, diskHash);
   return {

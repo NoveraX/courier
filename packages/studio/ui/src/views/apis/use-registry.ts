@@ -14,6 +14,7 @@ import {
   checkAllUpdates,
 } from "./client";
 import { useStudioStore } from "@/store";
+import { ownValue } from "@/lib/own-value";
 
 /** Scanned source enriched with registry metadata (if imported) */
 export interface EnrichedSource extends ScannedSource {
@@ -125,7 +126,7 @@ export function useRegistry(): UseRegistryReturn {
   }, []);
 
   const getNewSpec = useCallback((name: string) => {
-    return newSpecsRef.current[name];
+    return ownValue(newSpecsRef.current, name);
   }, []);
 
   return {

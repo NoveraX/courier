@@ -4,6 +4,7 @@
  * a consistently shaped ParsedSpec.
  */
 
+import { ownValue } from "../own-value";
 import type { ParsedEndpoint, ParsedGroup, ParsedSpec } from "../parser/types";
 import { placeEndpoints } from "./endpoint-placements";
 import type { ResolvedGenerateOptions } from "./types";
@@ -63,7 +64,7 @@ export function selectedEndpoints(
   if (selection === null) return null;
   const selected = new Set<ParsedEndpoint>();
   for (const group of groups) {
-    const names = selection[group.name];
+    const names = ownValue(selection, group.name);
     if (names === undefined) continue;
     for (const endpoint of group.endpoints)
       if (names.includes(endpoint.name)) selected.add(endpoint);

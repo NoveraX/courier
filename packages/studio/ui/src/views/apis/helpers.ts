@@ -5,6 +5,7 @@ import type {
   SourceSummary,
   GenerateOptions,
 } from "./types";
+import { ownValue } from "@/lib/own-value";
 
 // ── Endpoint counting ───────────────────────────────────────────────────────
 
@@ -84,7 +85,7 @@ export function toggleEndpointSelection(
   group: string,
   endpoint: string,
 ): Record<string, string[]> {
-  const groupEndpoints = selected[group] ?? [];
+  const groupEndpoints = ownValue(selected, group) ?? [];
   const has = groupEndpoints.includes(endpoint);
   return {
     ...selected,
@@ -99,7 +100,7 @@ export function toggleGroupSelection(
   selected: Record<string, string[]>,
   group: ParsedGroup,
 ): Record<string, string[]> {
-  const current = selected[group.name] ?? [];
+  const current = ownValue(selected, group.name) ?? [];
   const allSelected = current.length === group.endpoints.length;
   return {
     ...selected,

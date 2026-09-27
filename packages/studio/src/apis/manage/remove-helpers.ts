@@ -6,6 +6,7 @@
 import type { ImportLayout } from "../layout";
 import { extractEndpoints } from "../merge/extract-endpoints";
 import { computeHash } from "../merge/hash";
+import { ownValue } from "../own-value";
 
 /** The group's endpoint file, when it is on disk: the one path the layout gives it */
 export function findGroupFile(
@@ -56,8 +57,8 @@ export function collectModifiedWarnings(
     if (file === undefined) continue;
     const onDisk = extractEndpoints(existingFiles[file] ?? "");
     for (const name of names) {
-      const stored = fingerprints[file]?.[name];
-      const code = onDisk[name];
+      const stored = ownValue(fingerprints[file] ?? {}, name);
+      const code = ownValue(onDisk, name);
       if (stored && code !== undefined && stored !== computeHash(code))
         warnings.push(`${group}.${name}`);
     }

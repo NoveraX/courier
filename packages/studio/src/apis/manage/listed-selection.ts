@@ -32,10 +32,10 @@ export function listedSelection(
   const wanted = new Set(
     Object.entries(picked).flatMap(([group, names]) => names.map((name) => `${group}.${name}`)),
   );
-  const selection: Record<string, string[]> = {};
+  const selection = new Map<string, string[]>();
   for (const { source, sourceGroup, group, endpoint } of placeEndpoints(spec, groupBy)) {
     if (!wanted.delete(`${group.name}.${endpoint.name}`)) continue;
-    selection[sourceGroup] = [...(selection[sourceGroup] ?? []), source.name];
+    selection.set(sourceGroup, [...(selection.get(sourceGroup) ?? []), source.name]);
   }
-  return { selection, unknown: [...wanted] };
+  return { selection: Object.fromEntries(selection), unknown: [...wanted] };
 }

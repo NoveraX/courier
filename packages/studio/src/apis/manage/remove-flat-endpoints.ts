@@ -1,6 +1,7 @@
 import type { ImportLayout } from "../layout";
 import { extractEndpoints } from "../merge/extract-endpoints";
 import { computeHash } from "../merge/hash";
+import { ownValue } from "../own-value";
 import { barrelAfterRemoval } from "./barrel-after-removal";
 import { detectOrphanSchemas } from "./detect-orphan-schemas";
 import { FLAT_GROUP } from "./flat-import";
@@ -37,8 +38,8 @@ export function previewRemoveFlatEndpoints(
   if (source === undefined) return result;
   const onDisk = extractEndpoints(source);
   for (const name of names) {
-    const stored = fingerprints[layout.sourceFile]?.[name];
-    const code = onDisk[name];
+    const stored = ownValue(fingerprints[layout.sourceFile] ?? {}, name);
+    const code = ownValue(onDisk, name);
     if (stored) result.removedFingerprints.push(name);
     if (stored && code !== undefined && stored !== computeHash(code))
       result.modifiedEndpointsWarning.push(`${FLAT_GROUP}.${name}`);

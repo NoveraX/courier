@@ -108,6 +108,12 @@ const server = await createCourierServer({
   pubsub: redisPubSub,              // for multi-replica (see Redis page)
   heartbeatIntervalMs: 25_000,       // ping interval (default: 25s)
   heartbeatTimeoutMs: 10_000,        // pong timeout (default: 10s)
+  maxConnectionsPerIP: 50,           // per address; raise behind a shared NAT (default: 50)
+  maxSubscriptionsPerConnection: 100, // per connection (default: 100)
+  maxMessageSize: 65_536,            // largest message accepted (default: 64KB)
+  maxMessagesPerSecond: 100,         // per connection (default: 100)
+  authorize: ({ meta, topic }) => canSubscribe(meta, topic),        // per subscription
+  authorizeMessage: ({ meta, topic }) => canSend(meta, topic),      // per channel message
   maxPayload: 65_536,                // max WS message size (default: 64KB)
 
   // Lifecycle

@@ -6,6 +6,7 @@ import { announceHosting } from "@noverax/courier/announce";
 import { attachWebSocketUpgrade } from "@noverax/courier/node";
 import type { WebSocketServer } from "ws";
 
+import { httpHandlerOptions, wsHandlerOptions } from "./handler-options";
 import { createRequestListener } from "./http-handlers";
 import { createReadiness } from "./readiness";
 import { createShutdown } from "./shutdown";
@@ -39,15 +40,9 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
     port = DEFAULT_PORT,
     host = DEFAULT_HOST,
     allowedOrigins,
-    pubsub,
-    heartbeatIntervalMs,
-    heartbeatTimeoutMs,
     maxPayload = DEFAULT_MAX_PAYLOAD,
     signals = true,
     onReady,
-    onConnect,
-    onDisconnect,
-    onError,
     onServerError,
   } = config;
 
@@ -62,28 +57,8 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
       "[courier] createCourierServer() needs the sources it serves: createCourierServer({ sources: { api } }).",
     );
   }
-  const handler = createHandler({
-    sources,
-    allowedOrigins,
-    sseHeaders: config.sseHeaders,
-    sseMaxLifetimeMs: config.sseMaxLifetimeMs,
-    maxSSEConnections: config.maxSSEConnections,
-    maxBodyBytes: config.maxBodyBytes,
-    maxUploadBytes: config.maxUploadBytes,
-    onSSEConnect: config.onSSEConnect,
-    onSSEDisconnect: config.onSSEDisconnect,
-    onSSEError: config.onSSEError,
-  });
-  const wsHandler = createWSHandler({
-    sources,
-    pubsub,
-    heartbeatIntervalMs,
-    heartbeatTimeoutMs,
-    allowedOrigins,
-    onConnect,
-    onDisconnect,
-    onError,
-  });
+  const handler = createHandler(httpHandlerOptions(config));
+  const wsHandler = createWSHandler(wsHandlerOptions(config));
 
   let wss: WebSocketServer | undefined;
   let shuttingDown = false;

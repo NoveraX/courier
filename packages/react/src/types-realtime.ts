@@ -17,24 +17,30 @@ export type CourierSubscriptionOptions<TResponse, TVariables> = WithVariables<TV
   /** Called on each incoming SSE event */
   onData?: (event: SSEEvent<TResponse>) => void;
   /**
-   * Called when the stream fails or is refused — a `RealtimeError` whose
-   * `code` tells why (4401 auth, 4403 forbidden, 4422 invalid variables,
-   * 5000 server failure) — or when reconnecting gives up (`ConnectionError`)
+   * Called when the stream fails or is refused (a `RealtimeError` whose
+   * `code` tells why: 4401 auth, 4403 forbidden, 4422 invalid variables,
+   * 5000 server failure), when reconnecting gives up (`ConnectionError`),
+   * or when the stream cannot be opened at all (a `ConfigurationError`,
+   * such as a malformed proxy path)
    */
   onError?: (error: Error) => void;
   /** Called on connection status changes */
   onStatusChange?: (status: ConnectionStatus) => void;
 };
 
-/** Reactive state returned by useSubscription */
+/**
+ * Reactive state returned by useSubscription. It belongs to the stream the
+ * current method and variables name: when either changes, `data`, `events`
+ * and `error` start over.
+ */
 export interface SubscriptionResult<TData> {
-  /** Latest event payload */
+  /** Latest event payload, or `optimisticData` until the first one arrives */
   data: TData | undefined;
-  /** All received events (append-only) */
+  /** Every event this stream has delivered, oldest first */
   events: SSEEvent<TData>[];
   /** Current connection status */
   status: ConnectionStatus;
-  /** Last connection error */
+  /** Why the stream failed or could not be opened; cleared by the next event */
   error: Error | undefined;
   /** Manually close the subscription */
   close: () => void;

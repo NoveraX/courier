@@ -5,10 +5,7 @@ import type { ConnectionStatus, SSEEvent, SSESubscription } from "@noverax/couri
 import * as React from "react";
 
 import type { SubscriptionResult } from "../types";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import { streamKeyOf } from "./stream-key";
 
 export interface UseSubscriptionOptions<TData> {
   /** Variables passed to the SSE endpoint */
@@ -19,7 +16,7 @@ export interface UseSubscriptionOptions<TData> {
   optimisticData?: TData;
   /** Called on each incoming SSE event */
   onData?: (event: SSEEvent<TData>) => void;
-  /** Called when a connection error occurs */
+  /** Called when the stream fails, or cannot be opened at all */
   onError?: (error: Error) => void;
   /** Called on connection status changes */
   onStatusChange?: (status: ConnectionStatus) => void;
@@ -32,18 +29,32 @@ export type SubscribeFn = (
   variables?: unknown,
 ) => SSESubscription<unknown>;
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
+/** What one stream has delivered; `key` names the stream it belongs to. */
+interface StreamState<TData> {
+  key: string;
+  data: TData | undefined;
+  events: SSEEvent<TData>[];
+  error: Error | undefined;
+}
 
 /**
  * Subscribe to a server-sent event stream with automatic lifecycle management.
+ *
+ * A change of method or variables opens another stream, and the result starts
+ * over with it — no events, the optimistic data, no error — in the same render
+ * that asks for it, so nothing of the previous stream is ever shown as the new
+ * one's. A stream that cannot be opened at all, such as one whose proxy path
+ * is misconfigured, reports that through `error` and `onError`.
  *
  * @param subscribe - Factory that creates an SSESubscription (injected by createGroupHooks)
  * @param group - API group name
  * @param method - Endpoint method name
  * @param options - Subscription configuration
  * @returns Reactive subscription state
+ * @example
+ * const { data, events, status } = useSubscription(subscribeFn, "live", "ticks", {
+ *   variables: { n: 3 },
+ * });
  */
 export function useSubscription<TData>(
   subscribe: SubscribeFn,
@@ -59,11 +70,12 @@ export function useSubscription<TData>(
     onError,
     onStatusChange,
   } = options ?? {};
+  const { key, variablesKey } = streamKeyOf(group, method, variables);
 
-  const [data, setData] = React.useState<TData | undefined>(optimisticData);
-  const [events, setEvents] = React.useState<SSEEvent<TData>[]>([]);
+  const [stream, setStream] = React.useState(() => emptyStream(key, optimisticData));
   const [status, setStatus] = React.useState<ConnectionStatus>("disconnected");
-  const [error, setError] = React.useState<Error | undefined>(undefined);
+  const current = stream.key === key ? stream : emptyStream(key, optimisticData);
+  if (current !== stream) setStream(current);
 
   // Stable refs for callbacks — avoids re-subscribing on handler identity change
   const callbacksRef = React.useRef({ onData, onError, onStatusChange });
@@ -76,77 +88,85 @@ export function useSubscription<TData>(
     subRef.current = null;
   }, []);
 
-  // Serialize variables for stable dependency tracking
-  const variablesKey = JSON.stringify(variables);
-
   React.useEffect(() => {
     if (!enabled) {
       setStatus("disconnected");
       return;
     }
 
-    // Parse variables from serialized key — ensures stable identity for resubscribe
     const vars = variablesKey ? (JSON.parse(variablesKey) as unknown) : undefined;
+    let active = true;
+    let sub: SSESubscription<unknown> | null = null;
+    let unsubStatus: (() => void) | undefined;
+
+    const fail = (error: Error) => {
+      if (!active) return;
+      setStream((prev) => (prev.key === key ? { ...prev, error } : prev));
+      callbacksRef.current.onError?.(error);
+    };
+    const receive = (event: SSEEvent<TData>) => {
+      if (!active) return;
+      setStream((prev) =>
+        prev.key === key
+          ? { key, data: event.data, events: [...prev.events, event], error: undefined }
+          : prev,
+      );
+      callbacksRef.current.onData?.(event);
+    };
+    const report = (next: ConnectionStatus) => {
+      setStatus(next);
+      callbacksRef.current.onStatusChange?.(next);
+    };
 
     // Defer the actual subscribe to a microtask so React 19 StrictMode
     // (dev-mode mount → cleanup → mount) tears down the first effect before
     // any network I/O fires. Without this, StrictMode produces two real
     // subscriptions and two duplicate Studio Timeline entries.
-    let cancelled = false;
-    let sub: SSESubscription<unknown> | null = null;
-    let unsubStatus: (() => void) | undefined;
-
     queueMicrotask(() => {
-      if (cancelled) return;
-      sub = subscribe(group, method, vars);
+      if (!active) return;
+      try {
+        sub = subscribe(group, method, vars);
+      } catch (error) {
+        fail(toError(error));
+        return;
+      }
       subRef.current = sub;
-
-      unsubStatus = sub.on("status", (s) => {
-        setStatus(s);
-        callbacksRef.current.onStatusChange?.(s);
-      });
-
-      consumeStream(sub, callbacksRef, setData, setEvents, setError);
+      /* The subscription is already opening by the time it is returned, so
+         its first status came and went before anyone listened. */
+      report(sub.status);
+      unsubStatus = sub.on("status", report);
+      void consumeStream(sub, receive, fail);
     });
 
     return () => {
-      cancelled = true;
+      active = false;
       unsubStatus?.();
       sub?.close();
       if (subRef.current === sub) {
         subRef.current = null;
       }
     };
-  }, [enabled, group, method, variablesKey, subscribe]);
+  }, [enabled, group, method, key, variablesKey, subscribe]);
 
-  return { data, events, status, error, close };
+  return { data: current.data, events: current.events, status, error: current.error, close };
 }
 
-// ---------------------------------------------------------------------------
-// Stream consumer
-// ---------------------------------------------------------------------------
+function emptyStream<TData>(key: string, optimisticData: TData | undefined): StreamState<TData> {
+  return { key, data: optimisticData, events: [], error: undefined };
+}
 
 async function consumeStream<TData>(
   sub: SSESubscription<unknown>,
-  callbacksRef: React.RefObject<{
-    onData?: (e: SSEEvent<TData>) => void;
-    onError?: (e: Error) => void;
-  }>,
-  setData: React.Dispatch<React.SetStateAction<TData | undefined>>,
-  setEvents: React.Dispatch<React.SetStateAction<SSEEvent<TData>[]>>,
-  setError: React.Dispatch<React.SetStateAction<Error | undefined>>,
+  receive: (event: SSEEvent<TData>) => void,
+  fail: (error: Error) => void,
 ): Promise<void> {
   try {
-    for await (const event of sub) {
-      const typed = event as SSEEvent<TData>;
-      setData(typed.data);
-      setEvents((prev) => [...prev, typed]);
-      setError(undefined);
-      callbacksRef.current?.onData?.(typed);
-    }
-  } catch (err) {
-    const error = err instanceof Error ? err : new Error(String(err));
-    setError(error);
-    callbacksRef.current?.onError?.(error);
+    for await (const event of sub) receive(event as SSEEvent<TData>);
+  } catch (error) {
+    fail(toError(error));
   }
+}
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
 }

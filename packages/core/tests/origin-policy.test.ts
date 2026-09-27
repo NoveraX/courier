@@ -232,6 +232,32 @@ describe("isOriginAllowed — the browser's own verdict", () => {
   });
 });
 
+describe("isOriginAllowed — a wildcard with a scheme", () => {
+  const allowed = ["https://*.example.com"];
+
+  it("matches a sub-domain over the scheme it names", () => {
+    expect(isOriginAllowed(request("https://a.example.com"), allowed)).toBe(true);
+    expect(isOriginAllowed(request("https://a.b.example.com"), allowed)).toBe(true);
+  });
+
+  it("refuses the same sub-domain over another scheme", () => {
+    expect(isOriginAllowed(request("http://a.example.com"), allowed)).toBe(false);
+  });
+
+  it("refuses the apex and a host that only ends in the same letters", () => {
+    expect(isOriginAllowed(request("https://example.com"), allowed)).toBe(false);
+    expect(isOriginAllowed(request("https://evilexample.com"), allowed)).toBe(false);
+  });
+
+  it("matches the port it names and no other", () => {
+    const withPort = ["https://*.example.com:8443"];
+
+    expect(isOriginAllowed(request("https://a.example.com:8443"), withPort)).toBe(true);
+    expect(isOriginAllowed(request("https://a.example.com"), withPort)).toBe(false);
+    expect(isOriginAllowed(request("https://a.example.com:9443"), allowed)).toBe(false);
+  });
+});
+
 /**
  * An `<img>` or a link on another site sends no `Origin`, so the rule that
  * admits an Origin-less request let any page drive a proxy GET with the

@@ -85,11 +85,11 @@ Every proxy route — GET, POST, SSE and WebSocket — refuses a request another
 ```ts
 courierHandler({
   // Pages on these origins may call the proxy too
-  allowedOrigins: ["https://admin.example.com", "*.example.com"],
+  allowedOrigins: ["https://admin.example.com", "https://*.example.com"],
 })
 ```
 
-`*.example.com` covers the sub-domains of `example.com`, not the apex.
+`https://*.example.com` covers the sub-domains of `example.com` over HTTPS on the default port, not the apex. A pattern without a scheme, `*.example.com`, covers them over any scheme and port.
 
 ### Header whitelisting
 

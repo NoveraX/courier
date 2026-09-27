@@ -6,8 +6,9 @@
  * Once Studio writes the files and names what courier.config must still
  * declare, the wizard stays open on the declare step, says only how many
  * files it wrote, and closes on Done; a write the config fully declares
- * closes it at once. The page with no sources says where an API has to be
- * declared.
+ * closes it at once. A write Studio will not apply unasked keeps the wizard
+ * on the preview with the plan, and the next write quotes it with the steps
+ * allowed. The page with no sources says where an API has to be declared.
  */
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,6 +24,7 @@ import type { ParsedSpec } from "../src/views/apis/types";
 
 import { toast } from "sonner";
 import { post } from "@/lib/api-client";
+import { StudioRequestError } from "@/lib/studio-request-error";
 import { useStudioStore } from "@/store";
 import { ApisView } from "../src/views/apis";
 import { useImport } from "../src/views/apis/use-import";
@@ -73,17 +75,50 @@ const DECLARATION = {
   importEntry: '  "pets": {\n    importType: "url",\n  },',
 };
 
+const WRITTEN = {
+  written: FILES.map((file) => file.path),
+  removed: [],
+  kept: [],
+  backupDir: ".courier/backups/1-a",
+  leftBehind: [],
+};
+
+/* A plan whose barrel Studio did not write: replacing it waits for the user. */
+const PLAN = {
+  digest: "plan-1",
+  dir: "src/api/pets",
+  writes: [{ path: "src/api/pets/source.ts", action: "create", was: "absent" }],
+  removals: [],
+  kept: [],
+  pending: [{ path: "src/api/pets/index.ts", kind: "replace", reason: "foreign", preselected: false }],
+  blocked: [],
+  forgotten: [],
+};
+
+function refusal(code: string, plan: unknown): StudioRequestError {
+  const reason = "Some files are not Studio's to replace unasked.";
+  return new StudioRequestError(reason, { error: reason, code, plan }, undefined);
+}
+
 /* Studio's answers, by route; the write answers with `declaration` when there is one. */
 function studioAnswers(declaration?: unknown): void {
   vi.mocked(post).mockImplementation(async (url: string) => {
     if (url === "/api/apis/parse") return SPEC;
     if (url === "/api/apis/generate") return { files: FILES };
-    if (url === "/api/apis/write") {
-      const files = FILES.map((file) => ({ path: file.path, status: "safe" }));
-      return { written: 2, merged: 0, files, ...(declaration === undefined ? {} : { declaration }) };
-    }
+    if (url === "/api/apis/write") return { ...WRITTEN, ...(declaration === undefined ? {} : { declaration }) };
     throw new Error(`unexpected request to ${url}`);
   });
+}
+
+/* The first write is refused with the plan; the next is answered as written. */
+function studioAsksFirst(): void {
+  studioAnswers();
+  vi.mocked(post)
+    .mockImplementationOnce(async () => SPEC)
+    .mockImplementationOnce(async () => ({ files: FILES }))
+    .mockImplementationOnce(async () => {
+      throw refusal("NEEDS_CONFIRMATION", PLAN);
+    });
 }
 
 beforeEach(() => {
@@ -121,7 +156,7 @@ describe("the import wizard's write", () => {
     expect(result.current.state.step).toBe("declare");
     expect(result.current.state.declaration).toMatchObject({ configFile: "courier.config.ts" });
     expect(result.current.open).toBe(true);
-    expect(onWritten).toHaveBeenCalledWith("Wrote 2 files for pets");
+    expect(onWritten).toHaveBeenCalledWith("pets: wrote 2 files");
   });
 
   it("closes once the config declares everything, and still says what it wrote", async () => {
@@ -133,8 +168,58 @@ describe("the import wizard's write", () => {
 
     expect(vi.mocked(post)).toHaveBeenCalledWith("/api/apis/write", expect.objectContaining({ sourceName: "pets" }));
     expect(result.current.open).toBe(false);
-    expect(onWritten).toHaveBeenCalledWith("Wrote 2 files for pets");
+    expect(onWritten).toHaveBeenCalledWith("pets: wrote 2 files");
     expect(result.current.state.declaration).toBeNull();
+  });
+});
+
+describe("a write Studio will not apply unasked", () => {
+  it("stays on the preview with the plan, and the next write quotes it with the steps allowed", async () => {
+    studioAsksFirst();
+    const onWritten = vi.fn();
+    const { result } = renderHook(() => useImport(onWritten));
+
+    await importAndWrite(result);
+    const shown = result.current.state;
+    act(() => result.current.toggleConfirmed("src/api/pets/index.ts"));
+    await act(() => result.current.write());
+
+    expect(shown.step).toBe("preview");
+    expect(shown.consent?.plan.pending).toHaveLength(1);
+    expect(shown.consent?.confirmed).toEqual([]);
+    expect(onWritten).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(post)).toHaveBeenLastCalledWith(
+      "/api/apis/write",
+      expect.objectContaining({ planDigest: "plan-1", confirm: ["src/api/pets/index.ts"] }),
+    );
+    expect(result.current.open).toBe(false);
+  });
+
+  it("sends no file paths or content with a write", async () => {
+    studioAnswers();
+    const { result } = renderHook(() => useImport());
+
+    await importAndWrite(result);
+
+    const write = vi.mocked(post).mock.calls.find(([url]) => url === "/api/apis/write");
+    expect(write).toBeDefined();
+    expect(write?.[1]).not.toHaveProperty("files");
+    expect(write?.[1]).not.toHaveProperty("planDigest");
+  });
+
+  it("does not quote a plan with blocked files, so the next write plans afresh", async () => {
+    studioAnswers();
+    vi.mocked(post).mockImplementationOnce(async () => SPEC)
+      .mockImplementationOnce(async () => ({ files: FILES }))
+      .mockImplementationOnce(async () => {
+        throw refusal("TARGET_BLOCKED", { ...PLAN, pending: [], blocked: [{ path: "src/api/pets", reason: "link" }] });
+      });
+    const { result } = renderHook(() => useImport());
+
+    await importAndWrite(result);
+    await act(() => result.current.write());
+
+    expect(vi.mocked(post)).toHaveBeenLastCalledWith("/api/apis/write", expect.not.objectContaining({ planDigest: "plan-1" }));
   });
 });
 
@@ -159,7 +244,7 @@ describe("the APIs page", () => {
 
     expect(await screen.findByRole("heading", { name: "Declare pets in courier.config.ts" })).toBeTruthy();
     expect(screen.getByText(DECLARATION.source.importLine)).toBeTruthy();
-    expect(vi.mocked(toast.success)).toHaveBeenCalledWith("Wrote 2 files for pets");
+    expect(vi.mocked(toast.success)).toHaveBeenCalledWith("pets: wrote 2 files");
     expect(vi.mocked(toast.success)).not.toHaveBeenCalledWith("API imported successfully");
 
     fireEvent.click(screen.getByRole("button", { name: "Done" }));

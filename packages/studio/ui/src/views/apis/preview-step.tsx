@@ -11,17 +11,29 @@ import {
 import { cn } from "@/lib/utils";
 
 import type { GeneratedFile } from "./types";
+import type { PlanConsent } from "./types-file-plan";
+import { FilePlanView } from "./file-plan-view";
 
 interface PreviewStepProps {
   files: GeneratedFile[];
   sourceName: string;
   error: string | null;
+  /** The plan Studio would not apply unasked, and the steps allowed so far. */
+  consent: PlanConsent | null;
+  onToggleConfirmed: (path: string) => void;
 }
 
+/**
+ * The generated code, file by file, before it is written. Once Studio has
+ * refused to write unasked, the plan it sent comes first: what each file
+ * would become, and the steps the user allows before writing again.
+ */
 export function PreviewStepView({
   files,
   sourceName,
   error,
+  consent,
+  onToggleConfirmed,
 }: PreviewStepProps): React.ReactElement {
   const [expandedFile, setExpandedFile] = useState<string | null>(
     files[0]?.path ?? null,
@@ -32,9 +44,16 @@ export function PreviewStepView({
       <div className="space-y-1.5">
         <h3 className="text-h3 text-foreground">Preview Generated Code</h3>
         <p className="text-body-sm text-muted-foreground">
-          {files.length} files will be created for <span className="font-mono text-foreground">{sourceName}</span>
+          Studio generates {files.length} files for <span className="font-mono text-foreground">{sourceName}</span>
         </p>
       </div>
+
+      {consent && (
+        <div className="space-y-3 rounded-md border border-border-subtle p-3">
+          {error && <p className="text-body-sm text-foreground">{error}</p>}
+          <FilePlanView plan={consent.plan} confirmed={consent.confirmed} onToggle={onToggleConfirmed} />
+        </div>
+      )}
 
       <div className="space-y-1.5">
         {files.map((file) => {
@@ -69,7 +88,7 @@ export function PreviewStepView({
         })}
       </div>
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && !consent && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

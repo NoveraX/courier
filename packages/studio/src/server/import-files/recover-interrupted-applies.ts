@@ -16,19 +16,28 @@ export interface RecoveredApply {
 /**
  * Undo every apply a crash or a kill left unfinished, from the journals it
  * kept: staged files and created directories go, files replaced or removed
- * come back. Run once as Studio starts, before it serves anything that
+ * come back. An apply whose outcome was recorded stands, and only its
+ * journal goes. Run once as Studio starts, before it serves anything that
  * reads or writes an import's files.
  *
  * @param root - The project
+ * @param committed - The ids of the applies whose outcome was recorded
  * @returns What was undone
  * @example
  * ```ts
- * await withImportsLock(async () => recoverInterruptedApplies(root));
+ * recoverInterruptedApplies(root, new Set(loadImportsState(root.path).applied));
  * ```
  */
-export function recoverInterruptedApplies(root: ProjectRoot): RecoveredApply[] {
+export function recoverInterruptedApplies(
+  root: ProjectRoot,
+  committed: ReadonlySet<string>,
+): RecoveredApply[] {
   const recovered: RecoveredApply[] = [];
   for (const journal of readJournals(root.path)) {
+    if (committed.has(journal.id)) {
+      dropJournal(root.path, journal.id);
+      continue;
+    }
     const failed = rollbackApply(root, journal);
     dropJournal(root.path, journal.id);
     recovered.push({ importName: journal.importName, failed, backupDir: journal.backupDir });

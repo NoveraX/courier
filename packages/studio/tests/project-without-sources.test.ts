@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadImportsState } from "../src/apis/imports-state";
 import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
+import { readGeneratedFile } from "../src/server/import-files/generated-header";
 
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../node_modules");
 
@@ -156,14 +157,17 @@ describe("a project whose config declares no sources yet", () => {
       specUrl: "",
       importType: "raw",
       options: OPTIONS,
-      files,
     });
 
+    const paths = files.map((file) => file.path).sort();
     expect(checks).toEqual({ status: 200, body: { results: {} } });
     expect(parsed.status).toBe(200);
-    expect(written).toMatchObject({ status: 200, body: { written: files.length } });
-    for (const file of files) expect(readFileSync(join(root, file.path), "utf-8")).toBe(file.content);
-    expect(loadImportsState(root).imports.petstore?.generatedFiles).toEqual(files.map((file) => file.path));
+    expect(written.status).toBe(200);
+    expect(isRecord(written.body) && Array.isArray(written.body.written) ? [...written.body.written].sort() : []).toEqual(paths);
+    for (const file of files) {
+      expect(readGeneratedFile(readFileSync(join(root, file.path), "utf-8")).body).toBe(file.content);
+    }
+    expect(Object.keys(loadImportsState(root).imports.petstore?.files ?? {}).sort()).toEqual(paths);
   }, 20_000);
 
   it("shows the imported source once the config lists it", async () => {
@@ -172,7 +176,7 @@ describe("a project whose config declares no sources yet", () => {
     const generated = await post(url, "/api/apis/generate", { spec: parsed.body, options: OPTIONS });
     const files = isRecord(generated.body) ? generated.body.files : undefined;
     if (!isFileList(files)) throw new Error(`generate answered ${JSON.stringify(generated.body)}`);
-    await post(url, "/api/apis/write", { sourceName: "petstore", spec: parsed.body, options: OPTIONS, files });
+    await post(url, "/api/apis/write", { sourceName: "petstore", spec: parsed.body, options: OPTIONS });
     const events = listen(url);
 
     writeFileSync(

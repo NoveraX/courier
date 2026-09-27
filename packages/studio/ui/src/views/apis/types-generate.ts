@@ -5,6 +5,7 @@
  * registry, and re-exported via `types.ts`.
  */
 
+import type { PlanConsent } from "./types-file-plan";
 import type { ParsedSpec } from "./types-parsed-spec";
 
 // ── Generate options ────────────────────────────────────────────────────────
@@ -141,8 +142,6 @@ export interface ImportDeclaration {
   importEntry: string | null;
   /** How many endpoints the write left out, which the `imports` entry cannot keep; 0 when none. */
   leftOut: number;
-  /** Set when `sources` declares another API under the import's name; `sourceFile` is the generated source. */
-  nameTaken: { sourceFile: string } | null;
 }
 
 export interface ImportState {
@@ -156,4 +155,6 @@ export interface ImportState {
   writing: boolean;
   /** What is left to declare after the write; `null` before it, and once nothing is. */
   declaration: ImportDeclaration | null;
+  /** The plan Studio refused to apply unasked, with the steps the user allowed; `null` until a write is refused. */
+  consent: PlanConsent | null;
 }

@@ -8,6 +8,7 @@ import { findTransformCacheDirectory } from "@noverax/courier-studio-core/config
 import express from "express";
 import { setProjectRoot } from "../context";
 import { BindingTable } from "./catalog/binding-table";
+import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
 import { listenStudio } from "./listen-studio";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
@@ -96,6 +97,8 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     watcherStatus,
     playgroundRouter,
   });
+
+  undoUnfinishedImportWrites(root);
 
   registerRestApi(app, policy, {
     apis: { project, projectRoot: root },

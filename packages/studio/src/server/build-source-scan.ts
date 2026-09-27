@@ -86,7 +86,7 @@ export function buildSourceScan(
   const sources: ScannedSource[] = [];
   for (const [name, source] of Object.entries(sourceMap)) {
     const state = getImportState(snapshot, name);
-    const written = state?.generatedFiles ?? [];
+    const written = Object.keys(state?.files ?? {});
     const paths = scannedFilePaths(snapshot, name, written);
     const isImported = state !== undefined || getImportEntry(snapshot, name) !== undefined;
     const groups: ScannedGroup[] = [];

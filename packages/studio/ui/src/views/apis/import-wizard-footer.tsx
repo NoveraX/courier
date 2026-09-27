@@ -10,8 +10,14 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import type { UseImportReturn } from "./use-import";
-import type { ImportStep } from "./types";
+import type { ImportState } from "./types";
 import { countSelectedEndpoints } from "./helpers";
+
+/* A write Studio refused names what the next one does: allowed steps, or a fresh plan once blocked files are dealt with. */
+function writeLabel({ consent }: ImportState): string {
+  if (consent === null) return "Write to Disk";
+  return consent.plan.blocked.length > 0 ? "Try Again" : "Write as Allowed";
+}
 
 interface WizardFooterProps {
   wizard: UseImportReturn;
@@ -33,7 +39,7 @@ export function WizardFooter({ wizard }: WizardFooterProps): React.ReactElement 
             const prev = state.step === "select" ? "import"
               : state.step === "options" ? "select"
               : "options";
-            wizard.goToStep(prev as ImportStep);
+            wizard.goToStep(prev);
           }}
         >
           Back
@@ -67,7 +73,7 @@ export function WizardFooter({ wizard }: WizardFooterProps): React.ReactElement 
       {state.step === "preview" && (
         <Button size="sm" disabled={state.writing} onClick={wizard.write}>
           {state.writing && <Loader2 className="mr-1.5 size-3 animate-spin" />}
-          Write to Disk
+          {writeLabel(state)}
         </Button>
       )}
 

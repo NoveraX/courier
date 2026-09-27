@@ -5,7 +5,6 @@
 import { useState } from "react";
 import { Loader2, Settings2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -16,9 +15,9 @@ import {
 import type { UseManageReturn } from "./use-manage";
 import { ManageInventoryView } from "./manage-inventory";
 import { ManagePreviewView } from "./manage-preview";
+import { ManageFooter } from "./manage-footer";
 import {
   ReuploadStep,
-  parseAndContinue,
   type ReuploadStepState,
 } from "./manage-reupload-step";
 
@@ -96,7 +95,13 @@ function StepContent({ manage, reupload, onContentChange }: {
   }
 
   if ((manage.step === "preview" || manage.step === "applying") && manage.preview) {
-    return <ManagePreviewView preview={manage.preview} />;
+    return (
+      <ManagePreviewView
+        preview={manage.preview}
+        consent={manage.consent}
+        onToggleConfirmed={manage.toggleConfirmed}
+      />
+    );
   }
 
   if (manage.error) {
@@ -104,65 +109,4 @@ function StepContent({ manage, reupload, onContentChange }: {
   }
 
   return <div />;
-}
-
-// ── Footer ───────────────────────────────────────────────────────────────────
-
-function ManageFooter({ manage, reupload, onParse }: {
-  manage: UseManageReturn;
-  reupload: ReuploadStepState;
-  onParse: (update: Partial<ReuploadStepState>) => void;
-}): React.ReactElement {
-  const isReupload = manage.step === "reupload";
-  const isApplying = manage.step === "applying";
-  const isPreview = manage.step === "preview";
-  const isInventory = manage.step === "inventory";
-  const canGoBack = isPreview || (isInventory && manage.importType !== "url");
-
-  return (
-    <div className="flex items-center justify-between border-t bg-muted rounded-b-lg px-6 py-4 shrink-0">
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={manage.close}>Cancel</Button>
-        {canGoBack && (
-          <Button variant="outline" size="sm" onClick={manage.back}>Back</Button>
-        )}
-      </div>
-
-      {isReupload && (
-        <Button
-          size="sm"
-          disabled={!reupload.content.trim() || reupload.parsing}
-          onClick={() => void parseAndContinue(
-            reupload.content,
-            (spec) => void manage.provideSpec(spec),
-            onParse,
-          )}
-        >
-          {reupload.parsing && <Loader2 className="mr-1.5 size-3 animate-spin" />}
-          Parse & Continue
-        </Button>
-      )}
-
-      {isInventory && (
-        <Button size="sm" disabled={!manage.hasChanges} onClick={() => void manage.requestPreview()}>
-          Preview Changes
-        </Button>
-      )}
-
-      {isPreview && (
-        <Button
-          size="sm"
-          disabled={isApplying}
-          onClick={() => void manage.apply()}
-        >
-          {isApplying && <Loader2 className="mr-1.5 size-3 animate-spin" />}
-          Apply Changes
-        </Button>
-      )}
-
-      {manage.error && isPreview && (
-        <p className="text-xs text-destructive">{manage.error}</p>
-      )}
-    </div>
-  );
 }

@@ -5,14 +5,10 @@
 
 import type { GeneratedFile } from "../generator/types";
 import type { UpdateFileResult, UpdateResult } from "../registry/types";
+import { declaresEndpoints } from "./declares-endpoints";
 import { extractEndpoints } from "./extract-endpoints";
 import { classifyEndpoints } from "./fingerprint";
 import { mergeGroupFile } from "./merge-group";
-
-/** The line opening a declaration, a group's or a flat API's. */
-const DECLARATION_RE = /^export\s+const\s+\w+\s*=\s*define(?:Group|Api)\(\{/m;
-/** The key holding a declaration's endpoints. */
-const ENDPOINTS_RE = /^\s*endpoints:\s*\{/m;
 
 /**
  * Preview the result of updating a source to a new spec.
@@ -74,8 +70,4 @@ function mergeOrOverwrite(
     status: result.status,
     changes: result.changes,
   };
-}
-
-function declaresEndpoints(content: string): boolean {
-  return DECLARATION_RE.test(content) && ENDPOINTS_RE.test(content);
 }

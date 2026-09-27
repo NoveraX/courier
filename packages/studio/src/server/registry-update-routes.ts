@@ -9,7 +9,7 @@ import { computeSpecHash, hasSpecChanged, parseSpec } from "../apis";
 import type { ApisRouteDeps } from "./apis-routes";
 import { getImportEntry, getImportState, importsSnapshotOf } from "./imports-bridge";
 import { readDeclarations } from "./project-state/read-declarations";
-import { checkSingleSource, fetchSpecRaw } from "./registry-helpers";
+import { checkSingleSource, fetchSpecRaw } from "./registry-spec";
 import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse, RouteApp } from "./route-types";
 import { specHostAllowlist } from "./spec-host-allowlist";

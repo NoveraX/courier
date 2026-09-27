@@ -51,6 +51,7 @@ vi.mock("../src/server/startup-issues", async (importOriginal) => {
 import { BindingTable } from "../src/server/catalog/binding-table";
 import { createStudioServer } from "../src/server/create-studio-server";
 import { clearStartupIssues, startupIssues } from "../src/server/startup-issues";
+import { IMPORTS_STATE_VERSION } from "../src/apis/imports-state";
 
 const CACHE = join(__dirname, "../../../node_modules/.cache/courier-studio-tests");
 const BROKEN = 'import "./src/missing";\nexport default { sources: {} };\n';
@@ -156,11 +157,11 @@ function writeImportState(root: string, name: string): void {
     specHash: "abc",
     fetchedAt: "2026-09-25T00:00:00.000Z",
     lastSyncedAt: "2026-09-25T00:00:00.000Z",
-    userModified: [],
-    generatedFiles: [],
-    fileFingerprints: {},
+    dir: `src/api/${name}`,
+    files: {},
   };
-  writeFileSync(join(root, ".courier", "imports-state.json"), JSON.stringify({ version: 1, imports: { [name]: entry } }));
+  const state = { version: IMPORTS_STATE_VERSION, imports: { [name]: entry } };
+  writeFileSync(join(root, ".courier", "imports-state.json"), JSON.stringify(state));
 }
 
 async function freePort(): Promise<number> {

@@ -2,8 +2,12 @@
  * Runtime body validation guards for registry and update route handlers.
  */
 
+import type { ParsedSpec } from "../apis";
+import type { PlanConsent } from "./import-files/run-plan";
+import { isParsedSpec } from "./parsed-spec-guard";
+import { readPlanConsent } from "./read-plan-consent";
 import type { JsonResponse } from "./route-types";
-import { isFileArray, isObject, isString, reject } from "./validate-body";
+import { isObject, isString, reject } from "./validate-body";
 
 // ── Imports name (remove, check-updates) ────────────────────────────────────
 
@@ -22,8 +26,7 @@ export function validateNameBody(body: unknown, res: JsonResponse): NameBody | n
 
 interface UpdatePreviewBody {
   name: string;
-  newSpec: Record<string, unknown>;
-  configPath?: string;
+  newSpec: ParsedSpec;
 }
 
 export function validateUpdatePreviewBody(
@@ -32,23 +35,18 @@ export function validateUpdatePreviewBody(
 ): UpdatePreviewBody | null {
   if (!isObject(body)) return reject(res, "body");
   if (!isString(body.name) || body.name.length === 0) return reject(res, "name");
-  if (!isObject(body.newSpec)) return reject(res, "newSpec");
-  return body as unknown as UpdatePreviewBody;
+  if (!isParsedSpec(body.newSpec)) return reject(res, "newSpec");
+  return { name: body.name, newSpec: body.newSpec };
 }
 
 // ── Update apply ────────────────────────────────────────────────────────────
 
-interface UpdateApplyBody {
-  name: string;
-  newSpec: Record<string, unknown>;
-  files: { path: string; content: string }[];
-  configPath?: string;
-}
+interface UpdateApplyBody extends UpdatePreviewBody, PlanConsent {}
 
 export function validateUpdateApplyBody(body: unknown, res: JsonResponse): UpdateApplyBody | null {
-  if (!isObject(body)) return reject(res, "body");
-  if (!isString(body.name) || body.name.length === 0) return reject(res, "name");
-  if (!isObject(body.newSpec)) return reject(res, "newSpec");
-  if (!isFileArray(body.files)) return reject(res, "files");
-  return body as unknown as UpdateApplyBody;
+  const preview = validateUpdatePreviewBody(body, res);
+  if (!preview || !isObject(body)) return null;
+  const consent = readPlanConsent(body);
+  if (!consent) return reject(res, "planDigest or confirm");
+  return { ...preview, ...consent };
 }

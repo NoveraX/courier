@@ -15,10 +15,10 @@ import {
 } from "../apis";
 import { resolveProjectSafe } from "../context";
 import { fetchSpec } from "./fetch-spec";
+import { errMsg } from "./fs-helpers";
 import { registerLayoutRoute } from "./layout-route";
 import { registerManageRoutes } from "./manage-routes";
 import type { ProjectImports } from "./project-state/types";
-import { errMsg } from "./registry-helpers";
 import { registerRegistryRoutes } from "./registry-routes";
 import { sendRouteFailure } from "./route-failure";
 import type { RouteApp } from "./route-types";

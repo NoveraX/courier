@@ -6,7 +6,7 @@ import { scannedFilePaths } from "../src/server/scanned-file-paths";
 function snapshot(outputDir: string): ImportsSnapshot {
   return {
     declarations: { pets: { importType: "file", type: "openapi", outputDir } },
-    state: { version: IMPORTS_STATE_VERSION, imports: {} },
+    state: { version: IMPORTS_STATE_VERSION, imports: {}, applied: [] },
   };
 }
 

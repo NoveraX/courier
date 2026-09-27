@@ -1,0 +1,70 @@
+import { Ban } from "lucide-react";
+
+import { Checkbox } from "@/components/ui/checkbox";
+
+import type { FilePlanSummary } from "./types-file-plan";
+import { pendingLabel } from "./file-plan-labels";
+
+interface PendingProps {
+  pending: FilePlanSummary["pending"];
+  confirmed: readonly string[];
+  onToggle: (path: string) => void;
+}
+
+/**
+ * The steps that wait for the user, each with its own checkbox. A step left
+ * unticked is not taken: its file stays as it is.
+ */
+export function FilePlanPending({ pending, confirmed, onToggle }: PendingProps): React.ReactElement | null {
+  if (pending.length === 0) return null;
+  return (
+    <section className="space-y-2" aria-label="Files that wait for you">
+      <h4 className="text-xs font-medium text-foreground">Allow each change you want</h4>
+      <p className="text-body-sm text-muted-foreground">
+        A file left unticked stays as it is. Studio keeps a copy of every file it replaces or removes.
+      </p>
+      <ul className="space-y-1.5">
+        {pending.map((step) => {
+          const id = `plan-step-${step.path}`;
+          return (
+            <li key={step.path} className="flex items-start gap-2">
+              <Checkbox
+                id={id}
+                className="mt-0.5"
+                checked={confirmed.includes(step.path)}
+                onCheckedChange={() => onToggle(step.path)}
+              />
+              <label htmlFor={id} className="min-w-0 space-y-0.5">
+                <span className="mono-sm block truncate text-foreground">{step.path}</span>
+                <span className="block text-body-sm text-muted-foreground">{pendingLabel(step)}</span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/** Files Studio cannot write at all; nothing is applied until they are dealt with. */
+export function FilePlanBlocked({ blocked }: { blocked: FilePlanSummary["blocked"] }): React.ReactElement | null {
+  if (blocked.length === 0) return null;
+  return (
+    <section className="space-y-1.5 rounded-md border border-rose-500/30 bg-rose-500/5 p-3" aria-label="Files Studio cannot write">
+      <h4 className="flex items-center gap-1.5 text-xs font-medium text-rose-400">
+        <Ban className="size-3" />
+        Studio cannot write these files
+      </h4>
+      <p className="text-body-sm text-muted-foreground">
+        Each is a link or not a file. Move it out of the way, then try again; nothing was written.
+      </p>
+      <ul className="space-y-0.5">
+        {blocked.map(({ path, reason }) => (
+          <li key={path} className="mono-sm truncate text-foreground">
+            {path} <span className="text-muted-foreground">({reason === "link" ? "a link" : "not a file"})</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}

@@ -55,17 +55,17 @@ const PREVIEWED: ImportState = {
   ],
   writing: false,
   declaration: null,
+  consent: null,
 };
 
 /* Studio's answer to the write, as the route sends it. */
 function answer(declaration?: unknown): Record<string, unknown> {
   return {
-    written: 2,
-    merged: 0,
-    files: [
-      { path: "src/api/pets/source.ts", status: "safe" },
-      { path: "src/api/pets/index.ts", status: "safe" },
-    ],
+    written: ["src/api/pets/source.ts", "src/api/pets/index.ts"],
+    removed: [],
+    kept: [],
+    backupDir: ".courier/backups/1-a",
+    leftBehind: [],
     ...(declaration === undefined ? {} : { declaration }),
   };
 }
@@ -87,16 +87,34 @@ describe("the wizard once Studio wrote an import's files", () => {
       source: SOURCE,
       importEntry: IMPORT_ENTRY,
       leftOut: 0,
-      nameTaken: null,
     });
-    expect(message).toBe("Wrote 2 files for pets");
+    expect(message).toBe("pets: wrote 2 files");
   });
 
   it("says only what was written, never that the API was imported", () => {
     const { message } = settleWrite(PREVIEWED, answer({ configFile: "courier.config.ts", source: SOURCE }));
 
     expect(message).not.toMatch(/import/i);
-    expect(settleWrite(PREVIEWED, { written: 1 }).message).toBe("Wrote 1 file for pets");
+    expect(settleWrite(PREVIEWED, { written: ["src/api/pets/source.ts"] }).message).toBe("pets: wrote 1 file");
+  });
+
+  it("says what it removed, kept and left behind besides what it wrote", () => {
+    const reply = {
+      ...answer(),
+      removed: ["src/api/pets/old/index.ts"],
+      kept: [{ path: "src/api/pets/helpers.ts", reason: "not-written-by-studio" }],
+      leftBehind: ["src/gen/pets/source.ts", "src/gen/pets/index.ts"],
+    };
+
+    expect(settleWrite(PREVIEWED, reply).message).toBe(
+      "pets: wrote 2 files; removed 1 file, keeping a copy; left 1 file as it was; left 2 files in its previous directory",
+    );
+  });
+
+  it("says the files are already as generated when it wrote and removed nothing", () => {
+    const reply = { ...answer(), written: [] };
+
+    expect(settleWrite(PREVIEWED, reply).message).toBe("pets is already as Studio generates it");
   });
 
   it("has nothing left to show once the config declares everything", () => {
@@ -121,37 +139,35 @@ describe("the wizard once Studio wrote an import's files", () => {
       source: null,
       importEntry: IMPORT_ENTRY,
       leftOut: 0,
-      nameTaken: null,
     });
     expect(nothing.state.step).toBe("preview");
     expect(nothing.state.declaration).toBeNull();
   });
 
-  it("keeps the count of endpoints left out, and a taken name even with no part to declare", () => {
+  it("keeps the count of endpoints left out, and reads a malformed count as none", () => {
     const counted = settleWrite(
       PREVIEWED,
       answer({ configFile: "courier.config.ts", importEntry: IMPORT_ENTRY, leftOut: 3 }),
     );
-    const taken = settleWrite(
-      PREVIEWED,
-      answer({ configFile: "courier.config.ts", nameTaken: { sourceFile: "src/api/pets/source.ts" } }),
-    );
     const malformed = settleWrite(
       PREVIEWED,
-      answer({ configFile: "courier.config.ts", importEntry: IMPORT_ENTRY, leftOut: -2, nameTaken: { sourceFile: 4 } }),
+      answer({ configFile: "courier.config.ts", importEntry: IMPORT_ENTRY, leftOut: -2 }),
     );
 
     expect(counted.state.declaration).toHaveProperty("leftOut", 3);
-    expect(taken.state.step).toBe("declare");
-    expect(taken.state.declaration).toEqual({
-      configFile: "courier.config.ts",
-      source: null,
-      importEntry: null,
-      leftOut: 0,
-      nameTaken: { sourceFile: "src/api/pets/source.ts" },
-    });
     expect(malformed.state.declaration).toHaveProperty("leftOut", 0);
-    expect(malformed.state.declaration).toHaveProperty("nameTaken", null);
+  });
+
+  it("drops the plan a refused write showed, once the write went through", () => {
+    const refused: ImportState = {
+      ...PREVIEWED,
+      consent: {
+        plan: { digest: "d", dir: "src/api/pets", writes: [], removals: [], kept: [], pending: [], blocked: [], forgotten: [] },
+        confirmed: [],
+      },
+    };
+
+    expect(settleWrite(refused, answer()).state.consent).toBeNull();
   });
 });
 
@@ -162,7 +178,6 @@ describe("the declare step", () => {
       source: SOURCE,
       importEntry: IMPORT_ENTRY,
       leftOut: 0,
-      nameTaken: null,
     };
 
     const html = text(renderToStaticMarkup(<DeclareStepView sourceName="pets" declaration={declaration} />));
@@ -183,7 +198,6 @@ describe("the declare step", () => {
       source: SOURCE,
       importEntry: IMPORT_ENTRY,
       leftOut: 2,
-      nameTaken: null,
     };
 
     const html = text(renderToStaticMarkup(<DeclareStepView sourceName="pets" declaration={declaration} />));
@@ -194,31 +208,12 @@ describe("the declare step", () => {
     );
   });
 
-  it("says the name is another API's, and offers nothing to paste, while sources declares another API under it", () => {
-    const declaration: ImportDeclaration = {
-      configFile: "courier.config.ts",
-      source: null,
-      importEntry: null,
-      leftOut: 0,
-      nameTaken: { sourceFile: "src/api/api/source.ts" },
-    };
-
-    const html = text(renderToStaticMarkup(<DeclareStepView sourceName="api" declaration={declaration} />));
-
-    expect(html).toContain("courier.config.ts declares a source named api already");
-    expect(html).toContain("does not import the one Studio generated at src/api/api/source.ts");
-    expect(html).toContain("import this specification again under a name no source there takes");
-    expect(html).not.toContain("lists api under sources already");
-    expect(html).not.toContain("<pre>");
-  });
-
   it("shows only the imports entry while the config lists the source already", () => {
     const declaration: ImportDeclaration = {
       configFile: "courier.config.ts",
       source: null,
       importEntry: IMPORT_ENTRY,
       leftOut: 0,
-      nameTaken: null,
     };
 
     const html = text(renderToStaticMarkup(<DeclareStepView sourceName="pets" declaration={declaration} />));

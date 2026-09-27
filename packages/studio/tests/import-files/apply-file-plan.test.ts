@@ -103,6 +103,7 @@ describe("applyFilePlan", () => {
     const report = applyFilePlan(root, scenario(), committed);
 
     expect(committed).toHaveBeenCalledOnce();
+    expect(committed).toHaveBeenCalledWith(report.backupDir.replace(".courier/backups/", ""));
     expect(readGeneratedFile(read(`${DIR}/index.ts`))).toEqual({
       header: { import: "pets", sha256: bodyHash("new index\n") },
       body: "new index\n",
@@ -233,10 +234,97 @@ describe("recoverInterruptedApplies", () => {
       temps: [],
     });
 
-    const recovered = recoverInterruptedApplies(root);
+    const recovered = recoverInterruptedApplies(root, new Set());
 
     expect(recovered).toEqual([{ importName: "pets", failed: [], backupDir: ".courier/backups/1-crash" }]);
     undisturbed();
     expect(readdirSync(join(root.path, ".courier/journal"))).toEqual([]);
   });
+
+  it("leaves an apply the imports state recorded as it stands, and only drops its journal", () => {
+    crashedApply();
+
+    const recovered = recoverInterruptedApplies(root, new Set(["1-crash"]));
+
+    expect(recovered).toEqual([]);
+    expect(read(`${DIR}/index.ts`)).toBe("new index\n");
+    expect(read(`${DIR}/new/index.ts`)).toBe("new group\n");
+    expect(existsSync(join(root.path, `${DIR}/old/index.ts`))).toBe(false);
+    expect(readdirSync(join(root.path, ".courier/journal"))).toEqual([]);
+  });
+
+  it("leaves a file changed after the apply, and a file put where it removed one, keeping the earlier versions", () => {
+    crashedApply();
+    put(`${DIR}/index.ts`, "new index\nmy edit\n");
+    put(`${DIR}/old/index.ts`, "a file of my own\n");
+
+    const [recovered] = recoverInterruptedApplies(root, new Set());
+
+    expect(recovered?.failed.sort()).toEqual([`${DIR}/index.ts`, `${DIR}/old/index.ts`]);
+    expect(read(`${DIR}/index.ts`)).toBe("new index\nmy edit\n");
+    expect(read(`${DIR}/old/index.ts`)).toBe("a file of my own\n");
+    expect(read(`.courier/backups/1-crash/${DIR}/index.ts`)).toBe("old index\n");
+    expect(read(`.courier/backups/1-crash/${DIR}/old/index.ts`)).toBe("old group\n");
+    expect(existsSync(join(root.path, `${DIR}/new/index.ts`))).toBe(false);
+  });
+
+  it("changes nothing the apply had not reached yet", () => {
+    crashedApply();
+    put(`${DIR}/index.ts`, "old index\n");
+    put(`${DIR}/old/index.ts`, "old group\n");
+    rmSync(join(root.path, `.courier/backups/1-crash/${DIR}/old`), { recursive: true });
+
+    const [recovered] = recoverInterruptedApplies(root, new Set());
+
+    expect(recovered?.failed).toEqual([]);
+    expect(read(`${DIR}/index.ts`)).toBe("old index\n");
+    expect(read(`${DIR}/old/index.ts`)).toBe("old group\n");
+  });
 });
+
+describe("an apply that committed", () => {
+  it.skipIf(IS_WINDOWS || IS_ROOT)("stands when its journal cannot be deleted, and the next start keeps it", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const journals = join(root.path, ".courier/journal");
+    let applyId = "";
+
+    let report: ReturnType<typeof applyFilePlan>;
+    try {
+      report = applyFilePlan(root, scenario(), (id) => {
+        applyId = id;
+        chmodSync(journals, 0o555);
+      });
+    } finally {
+      chmodSync(journals, 0o755);
+    }
+    const left = readdirSync(journals);
+    const recovered = recoverInterruptedApplies(root, new Set([applyId]));
+
+    expect(left).toEqual([`${applyId}.json`]);
+    expect(report.written).toEqual([`${DIR}/index.ts`, `${DIR}/new/index.ts`]);
+    expect(recovered).toEqual([]);
+    expect(readGeneratedFile(read(`${DIR}/index.ts`)).body).toBe("new index\n");
+    expect(readdirSync(journals)).toEqual([]);
+  });
+});
+
+/* What a crash leaves after the files of the scenario's apply were put in place. */
+function crashedApply(): void {
+  put(`${DIR}/index.ts`, "new index\n");
+  put(`${DIR}/new/index.ts`, "new group\n");
+  put(`.courier/backups/1-crash/${DIR}/index.ts`, "old index\n");
+  put(`.courier/backups/1-crash/${DIR}/old/index.ts`, "old group\n");
+  saveJournal(root.path, {
+    id: "1-crash",
+    importName: "pets",
+    state: "committing",
+    backupDir: ".courier/backups/1-crash",
+    entries: [
+      { path: `${DIR}/index.ts`, step: "write", existed: true, sha256: bodyHash("new index\n") },
+      { path: `${DIR}/new/index.ts`, step: "write", existed: false, sha256: bodyHash("new group\n") },
+      { path: `${DIR}/old/index.ts`, step: "remove", existed: true },
+    ],
+    createdDirs: [`${DIR}/new`],
+    temps: [],
+  });
+}

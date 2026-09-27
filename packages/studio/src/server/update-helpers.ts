@@ -3,166 +3,105 @@
  */
 
 import type { ParsedSpec } from "../apis";
-import { computeSpecHash, createSpecDigest, diffSpecs, generateCode } from "../apis";
+import { createSpecDigest, diffSpecs } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import { resolveImportLayout } from "../apis/layout";
-import type { BreakingChange, MergeChange, SpecDiff } from "../apis/merge/types";
-import { previewUpdate } from "../apis/merge/update-flow";
-import { resolveProjectSafe } from "../context";
-import { cleanupOrphanFiles } from "./cleanup-orphans";
-import {
-  getImportEntry,
-  getImportState,
-  type ImportsSnapshot,
-  persistImportState,
-} from "./imports-bridge";
-import {
-  buildFallbackFingerprints,
-  collectFingerprints,
-  detectUserModified,
-  readFilesFromDisk,
-  writeFileWithDirs,
-} from "./registry-helpers";
-import { scanTsFiles } from "./scan-ts-files";
+import type { BreakingChange, SpecDiff } from "../apis/merge/types";
+import { checkDirOverlap } from "./check-dir-overlap";
+import type { ApplyReport } from "./import-files/apply-file-plan";
+import { type PlanSummary, summarizePlan } from "./import-files/plan-summary";
+import type { PlanConsent } from "./import-files/run-plan";
+import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
+import type { ProjectRoot } from "./project-fs/project-root";
+import { applyRegeneration, planRegeneration, type Regeneration } from "./regenerate-import";
 
-interface PreviewRequest {
+interface UpdateRequest {
   name: string;
   newSpec: ParsedSpec;
 }
 
-interface ApplyRequest {
-  name: string;
-  newSpec: ParsedSpec;
-  files: { path: string; content: string }[];
-}
-
-interface PreviewResponse {
-  files: { path: string; content: string; status: string; changes: MergeChange[] }[];
-  deletedFiles?: string[];
+/** What regenerating an import from a new spec would do. */
+export interface UpdatePreview {
+  plan: PlanSummary;
+  leftBehind: string[];
   breakingChanges: BreakingChange[];
   specDiff?: SpecDiff;
 }
 
+/** What regenerating an import from a new spec did. */
+export interface UpdateApplied
+  extends Pick<ApplyReport, "written" | "removed" | "kept" | "backupDir"> {
+  leftBehind: string[];
+}
+
+type Refusal = { error: string; status: number };
+
 /**
- * Compute a preview of what regenerating an import from a new spec would change.
+ * Plan regenerating a declared import from a new spec, with the declaration's
+ * options: which files change, merge, go or wait for consent, and how the
+ * API itself changes.
  *
  * @param body - The import's name, and the new spec
  * @param imports - The declarations of the config Studio runs, with the imports state
- * @returns The files and what changes in each, or the error to answer with and its status
- *
- * @example
- * ```ts
- * handlePreviewUpdate({ name: "pets", newSpec }, importsSnapshotOf(declarations, root));
- * ```
+ * @param root - The project
+ * @returns The plan and the spec's changes, or the error to answer with and its status
  */
 export function handlePreviewUpdate(
-  body: PreviewRequest,
+  body: UpdateRequest,
   imports: ImportsSnapshot,
-): PreviewResponse | { error: string; status: number } {
-  const entry = getImportEntry(imports, body.name);
-  if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
-  const state = getImportState(imports, body.name);
-
-  const layout = resolveImportLayout(entry, body.name);
-  const generated = generateCode(body.newSpec, { ...entry, selectedEndpoints: null }, body.name);
-  const diskPaths = scanTsFiles(layout, generated);
-  const existingFiles = readFilesFromDisk(diskPaths);
-  const fingerprints = loadFingerprints(existingFiles, state);
-  const result = previewUpdate(fingerprints, generated, existingFiles);
-
-  const specDiff = computeSpecDiff(state, body.newSpec);
-
+  root: ProjectRoot,
+): UpdatePreview | Refusal {
+  const regeneration = regenerationOf(body, imports, root);
+  if ("error" in regeneration) return regeneration;
+  const { plan, leftBehind } = planRegeneration(regeneration);
+  const specDiff = computeSpecDiff(regeneration.entry, body.newSpec);
   return {
-    ...result,
+    plan: summarizePlan(plan),
+    leftBehind,
     breakingChanges: specDiff?.breakingChanges ?? [],
-    specDiff,
+    ...(specDiff !== undefined && { specDiff }),
   };
 }
 
 /**
- * Apply a previewed update: write the files, clean up the import's directory,
- * and record the new baseline in the imports state.
+ * Regenerate a declared import from a new spec, as previewed: the plan is
+ * made again and applied only if it is the one the user saw.
  *
- * @param body - The import's name, the new spec, and the files the user approved
+ * @param body - The import's name, the new spec, and the plan the user saw and allowed
  * @param imports - The declarations of the config Studio runs, with the imports state
- * @returns How many files were written and deleted, or the error to answer with and its status
- *
- * @example
- * ```ts
- * await handleApplyUpdate({ name: "pets", newSpec, files }, importsSnapshotOf(declarations, root));
- * ```
+ * @param root - The project
+ * @returns What was written, removed and kept, or the error to answer with and its status
+ * @throws {FilePlanError} When the plan is refused as it stands
  */
-export async function handleApplyUpdate(
-  body: ApplyRequest,
+export function handleApplyUpdate(
+  body: UpdateRequest & PlanConsent,
   imports: ImportsSnapshot,
-): Promise<
-  { success: boolean; written: number; deleted: number } | { error: string; status: number }
-> {
+  root: ProjectRoot,
+): UpdateApplied | Refusal {
+  const regeneration = regenerationOf(body, imports, root);
+  if ("error" in regeneration) return regeneration;
+  const { report, leftBehind } = applyRegeneration(regeneration, body, "required");
+  const { written, removed, kept, backupDir } = report;
+  return { written, removed, kept, backupDir, leftBehind };
+}
+
+function regenerationOf(
+  body: UpdateRequest,
+  imports: ImportsSnapshot,
+  root: ProjectRoot,
+): Regeneration | Refusal {
   const entry = getImportEntry(imports, body.name);
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
-  const prevState = getImportState(imports, body.name);
-  /* Everything that can refuse the declaration runs before anything is written. */
   const layout = resolveImportLayout(entry, body.name);
-  const generated = generateCode(body.newSpec, { ...entry, selectedEndpoints: null }, body.name);
-
-  /* Detect user-modified endpoints BEFORE overwriting — compare the disk
-   * state of the files the user just approved against the fingerprints
-   * Studio recorded after the previous sync. Any divergence is an edit
-   * the user made after the preview was generated. */
-  const prevFingerprints = prevState?.fileFingerprints ?? {};
-  const preWriteDisk = readFilesFromDisk(body.files.map((f) => f.path));
-  const userModified = detectUserModified(prevFingerprints, preWriteDisk);
-
-  writeUpdateFiles(body.files);
-
-  const deleted = cleanupOrphanFiles(
-    layout.dir,
-    new Set(generated.map((f) => resolveProjectSafe(f.path))),
-  );
-
-  /* Recompute fingerprints from the files now on disk — they become the
-   * baseline for the next sync's edit detection. */
-  const newFingerprints = collectFingerprints(body.files);
-  await persistUpdateState(body, prevState, newFingerprints, userModified);
-
-  return { success: true, written: body.files.length, deleted };
-}
-
-function writeUpdateFiles(files: { path: string; content: string }[]): void {
-  for (const file of files) {
-    writeFileWithDirs(resolveProjectSafe(file.path), file.content);
-  }
-}
-
-async function persistUpdateState(
-  body: ApplyRequest,
-  prevState: ImportStateEntry | undefined,
-  fingerprints: Record<string, string>,
-  userModified: string[],
-): Promise<void> {
-  const now = new Date().toISOString();
-
-  await persistImportState(body.name, {
-    specHash: computeSpecHash(body.newSpec),
-    digest: createSpecDigest(body.newSpec),
-    fetchedAt: prevState?.fetchedAt ?? now,
-    lastSyncedAt: now,
-    userModified,
-    generatedFiles: body.files.map((f) => f.path),
-    fileFingerprints: fingerprints,
-  });
-}
-
-// ── Internal helpers ─────────────────────────────────────────────────────────
-
-function loadFingerprints(
-  existingFiles: Record<string, string>,
-  state: ImportStateEntry | undefined,
-): Record<string, string> {
-  const cached = state?.fileFingerprints ?? {};
-  return Object.keys(cached).length > 0
-    ? cached
-    : buildFallbackFingerprints(existingFiles, state?.userModified ?? []);
+  checkDirOverlap(body.name, layout.dir, imports);
+  return {
+    root,
+    name: body.name,
+    layout,
+    spec: body.newSpec,
+    options: { ...entry, selectedEndpoints: null },
+    entry: getImportState(imports, body.name),
+  };
 }
 
 function computeSpecDiff(

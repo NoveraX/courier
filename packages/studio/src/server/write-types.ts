@@ -5,13 +5,21 @@
 import type { CourierImportType } from "@noverax/courier/config";
 import type { GenerateOptions, ParsedSpec } from "../apis";
 
+/**
+ * A request to write an import's files. Studio generates them itself from
+ * the spec and the options; a request names no path and carries no content.
+ */
 export interface WriteBody {
-  files: { path: string; content: string }[];
-  sourceName?: string;
-  spec?: ParsedSpec;
+  /** The import's name, which the import wizard also gives its source. */
+  sourceName: string;
+  spec: ParsedSpec;
   specUrl?: string;
   importType?: CourierImportType;
-  options?: GenerateOptions;
+  options: GenerateOptions;
+  /** The digest of the plan the user was shown, once a plan was shown. */
+  planDigest?: string;
+  /** The files whose pending step the user allowed. */
+  confirm?: string[];
 }
 
 /**
@@ -40,20 +48,20 @@ export interface ImportDeclaration {
    * an update does, generates them too. Set only with `importEntry`.
    */
   leftOut?: number;
-  /**
-   * Set when `sources` declares another API under the import's name: the
-   * config does not import the generated source, `sourceFile`, relative to
-   * the project root. Studio matches an import to the source of its name, so
-   * neither part is offered.
-   */
-  nameTaken?: { sourceFile: string };
 }
 
+/** What writing an import's files did. */
 export interface WriteResult {
-  written: number;
-  merged: number;
-  deleted?: number;
-  files: { path: string; status: string }[];
+  /** Project-relative files written. */
+  written: string[];
+  /** Project-relative files removed, into the backup. */
+  removed: string[];
+  /** Files left as they were, and why. */
+  kept: Array<{ path: string; reason: string }>;
+  /** Project-relative directory holding the files replaced and removed. */
+  backupDir: string;
+  /** Files Studio wrote before the import's directory moved, left where they are. */
+  leftBehind: string[];
   /** What the config must still declare for the import written; absent once it declares all of it. */
   declaration?: ImportDeclaration;
 }

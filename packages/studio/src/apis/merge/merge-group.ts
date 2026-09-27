@@ -12,6 +12,7 @@
 
 import { mergeImports } from "./merge-imports";
 import { parseExistingGroup } from "./parse-existing";
+import { renameBase } from "./rename-base";
 import type { FingerprintResult, MergeChange, MergeResult, MergeStatus } from "./types";
 
 export function mergeGroupFile(
@@ -103,18 +104,6 @@ function mergeEndpoints(
 function appendEndpoint(lines: string[], comment: string | undefined, code: string): void {
   if (comment) lines.push(comment);
   lines.push(code);
-}
-
-/**
- * Say what a generated endpoint says, in the name this file uses for the base.
- *
- * A person may have renamed the destructuring, or kept the base whole and
- * reached through it. Their name is the one that resolves in their file.
- */
-function renameBase(line: string, from: string, to: string): string {
-  if (from === to) return line;
-  const base = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return line.replace(new RegExp(`(^\\s*\\w+:\\s*)${base}\\b`), `$1${to}`);
 }
 
 /**

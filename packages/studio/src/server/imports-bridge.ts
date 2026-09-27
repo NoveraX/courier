@@ -1,23 +1,13 @@
 /**
- * Server-side facade for import persistence.
+ * Server-side view of the imports.
  *
  * Pairs the declarations of the `courier.config.ts` Studio runs with the
- * auto-managed state in `.courier/imports-state.json`. The single entry
- * point for every server route or helper that needs to read or mutate
- * import metadata.
+ * auto-managed state in `.courier/imports-state.json`. The state is written
+ * only as the commit of an apply to an import's files.
  */
 
 import type { CourierImportEntry } from "@noverax/courier/config";
-import {
-  type ImportStateEntry,
-  type ImportsState,
-  loadImportsState,
-  recordImport,
-  removeImport,
-  saveImportsState,
-} from "../apis/imports-state";
-import { getProjectRoot } from "../context";
-import { withImportsLock } from "./imports-lock";
+import { type ImportStateEntry, type ImportsState, loadImportsState } from "../apis/imports-state";
 
 /** The `imports` a config declares, by import name. */
 export type ImportDeclarations = Record<string, CourierImportEntry>;
@@ -88,27 +78,6 @@ function extractOptions(entry: CourierImportEntry): Record<string, unknown> {
     addAuthMiddleware: entry.addAuthMiddleware,
     includeComments: entry.includeComments,
   };
-}
-
-/**
- * Atomically upsert a single import's state entry. Self-locks via
- * `withImportsLock`, which is reentrant: calling this from inside a
- * route-level lock composes cleanly and still serializes against other
- * top-level writers.
- */
-export async function persistImportState(name: string, entry: ImportStateEntry): Promise<void> {
-  await withImportsLock(() => {
-    const root = getProjectRoot();
-    saveImportsState(root, recordImport(loadImportsState(root), name, entry));
-  });
-}
-
-/** Atomically drop a single import's state entry. Self-locks. */
-export async function dropImportState(name: string): Promise<void> {
-  await withImportsLock(() => {
-    const root = getProjectRoot();
-    saveImportsState(root, removeImport(loadImportsState(root), name));
-  });
 }
 
 export function getImportEntry(

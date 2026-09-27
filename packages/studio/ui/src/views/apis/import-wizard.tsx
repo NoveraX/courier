@@ -94,6 +94,8 @@ export function ImportWizard({ wizard }: ImportWizardProps): React.ReactElement 
               files={state.generatedFiles}
               sourceName={state.options.sourceName}
               error={error}
+              consent={state.consent}
+              onToggleConfirmed={wizard.toggleConfirmed}
             />
           )}
 

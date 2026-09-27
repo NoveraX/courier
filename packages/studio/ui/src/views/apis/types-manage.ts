@@ -3,6 +3,8 @@
  * the endpoint inventory, preview, and apply flows.
  */
 
+import type { FilePlanSummary } from "./types-file-plan";
+
 export type ManageEndpointStatus = "active" | "available" | "custom" | "removed-from-spec";
 export type ManageModificationStatus = "safe" | "modified";
 
@@ -56,6 +58,8 @@ export interface ManageRemoveResult {
 export interface ManagePreviewResult {
   addResult?: ManageAddResult;
   removeResult?: ManageRemoveResult;
+  /** What applying does to the import's files, file by file. */
+  plan: FilePlanSummary;
 }
 
 export type ManageStep = "loading" | "reupload" | "inventory" | "preview" | "applying" | "done";

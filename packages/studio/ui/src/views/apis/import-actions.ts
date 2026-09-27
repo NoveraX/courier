@@ -11,8 +11,10 @@ import {
   parseSpecFromUrl,
   parseSpecFromRaw,
   generateCode,
-  writeFiles,
 } from "./client";
+import { writeFiles } from "./client-file-changes";
+import { deriveSourceName } from "./derive-source-name";
+import { consentBody } from "./plan-consent";
 import {
   selectAllEndpoints,
   buildDefaultOptions,
@@ -29,52 +31,6 @@ export async function parseSpec(
   return source === "url"
     ? parseSpecFromUrl(content)
     : parseSpecFromRaw(content);
-}
-
-export function deriveSourceName(spec: ParsedSpec, url?: string): string {
-  const fromTitle = sanitize(spec.title);
-  if (isUsable(fromTitle)) return toCamelCase(fromTitle);
-
-  const fromBaseURL = extractDomain(spec.baseURL);
-  if (isUsable(fromBaseURL)) return toCamelCase(fromBaseURL);
-
-  const fromUrl = extractDomain(url);
-  if (isUsable(fromUrl)) return toCamelCase(fromUrl);
-
-  return fromTitle || "api";
-}
-
-const SKIP_NAMES = new Set([
-  "api", "docs", "public", "swagger", "openapi", "v1", "v2", "v3",
-  "www", "app", "cdn", "static", "dev", "staging",
-]);
-const TLDS = new Set([
-  "com", "org", "net", "io", "dev", "cloud", "app", "co", "me", "ru",
-  "uk", "de", "fr", "jp", "us", "eu", "info", "biz", "xyz",
-]);
-
-function isUsable(name: string): boolean {
-  return name.length > 1 && !SKIP_NAMES.has(name) && !TLDS.has(name);
-}
-
-function sanitize(raw: string): string {
-  return raw.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
-
-function extractDomain(url?: string): string {
-  if (!url) return "";
-  try {
-    const parts = new URL(url).hostname.split(".");
-    // Find the most meaningful part (skip TLDs and generic subdomains)
-    for (let i = parts.length - 2; i >= 0; i--) {
-      if (isUsable(parts[i])) return parts[i];
-    }
-  } catch { /* invalid URL */ }
-  return "";
-}
-
-function toCamelCase(kebab: string): string {
-  return kebab.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
 }
 
 export function buildPostParseState(
@@ -105,6 +61,14 @@ export async function generatePreview(
 
 // ── Write to disk ───────────────────────────────────────────────────────────
 
+/**
+ * Ask Studio to write the import. Studio generates the files itself; once
+ * it has shown a plan, the request quotes it with the steps the user allowed.
+ *
+ * @param state - The wizard's state
+ * @returns Studio's answer
+ * @throws {StudioRequestError} When Studio will not apply the plan unasked, with the plan
+ */
 export async function writeGeneratedFiles(state: ImportState): Promise<unknown> {
   if (!state.spec) throw new Error("No spec to write");
   return writeFiles({
@@ -113,7 +77,7 @@ export async function writeGeneratedFiles(state: ImportState): Promise<unknown> 
     specUrl: state.source === "url" ? state.content : "",
     importType: state.source,
     options: { ...state.options, selectedEndpoints: state.selectedEndpoints },
-    files: state.generatedFiles,
+    ...consentBody(state.consent),
   });
 }
 

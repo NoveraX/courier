@@ -1,9 +1,10 @@
-import { mkdirSync, readdirSync, readFileSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { COURIER_DIR, ensureCourierDir } from "../courier-dir";
 import { errnoCode } from "../errno-code";
 import { isRecord } from "../mocks-edit/is-record";
+import { retryOnWin32 } from "../project-fs/retry-on-win32";
 import { writeFileAtomically } from "../project-fs/write-file-atomically";
 
 const log = createLogger("Studio");
@@ -66,10 +67,22 @@ export function saveJournal(root: string, journal: ApplyJournal): void {
  */
 export function dropJournal(root: string, id: string): void {
   try {
-    unlinkSync(journalPath(root, id));
+    retryOnWin32(() => unlinkSync(journalPath(root, id)), `Deleting the journal of apply ${id}`);
   } catch (error) {
     if (errnoCode(error) !== "ENOENT") throw error;
   }
+}
+
+/**
+ * Tell whether an apply's journal is still on disk: one that committed but
+ * could not be deleted keeps its id recorded until it is.
+ *
+ * @param root - The project directory
+ * @param id - The apply's id
+ * @returns Whether the journal exists
+ */
+export function hasJournal(root: string, id: string): boolean {
+  return existsSync(journalPath(root, id));
 }
 
 /**

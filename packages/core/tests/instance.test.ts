@@ -417,10 +417,10 @@ describe("HttpClient", () => {
   });
 
   describe("FormData handling", () => {
-    it("removes empty files from FormData", async () => {
+    it("removes the placeholder a blank file input leaves in FormData", async () => {
       const fd = new FormData();
       fd.append("name", "test");
-      fd.append("avatar", new File([], "empty.png"));
+      fd.append("avatar", new File([], ""));
       fd.append("doc", new File(["content"], "doc.pdf"));
 
       const instance = new HttpClient();

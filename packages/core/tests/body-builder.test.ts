@@ -178,4 +178,41 @@ describe("a FormData sent as the body", () => {
     expect(upstream.last().body.toString()).not.toContain('name="avatar"');
     expect([...form.keys()]).toEqual(["doc", "avatar"]);
   });
+
+  it("keeps a named file that is empty", async () => {
+    const form = new FormData();
+    form.append("keep", new File([], ".gitkeep"));
+
+    await caller().items.create(form);
+
+    expect(upstream.last().body.toString()).toContain('filename=".gitkeep"');
+  });
+
+  it("keeps a named empty file and drops a blank input through the proxy too", async () => {
+    registerSources({ api: defineApi({ name: "api", baseURL: upstream.origin, groups: { items } }) });
+    /* Written out as a browser serializes a form with a blank file input:
+       a file part whose filename is empty. */
+    const part = (disposition: string, value = "") =>
+      `--b\r\nContent-Disposition: form-data; ${disposition}\r\n\r\n${value}\r\n`;
+    const body = [
+      part('name="log"; filename="empty.log"\r\nContent-Type: text/plain'),
+      part('name="avatar"; filename=""\r\nContent-Type: application/octet-stream'),
+      part('name="_source"', "api"),
+      part('name="_group"', "items"),
+      part('name="_method"', "create"),
+      "--b--\r\n",
+    ].join("");
+
+    const response = await createHandler().handlePost(
+      new Request("http://app.local/api/request", {
+        method: "POST",
+        headers: { "content-type": "multipart/form-data; boundary=b" },
+        body,
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(upstream.last().body.toString()).toContain('filename="empty.log"');
+    expect(upstream.last().body.toString()).not.toContain('name="avatar"');
+  });
 });

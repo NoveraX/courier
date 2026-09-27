@@ -186,17 +186,13 @@ formData.append("name", "profile-pic")
 
 ## Empty file handling
 
-Courier automatically detects and removes empty files (0 bytes) from FormData before sending to the backend. This prevents common issues with optional file inputs that submit empty `File` objects:
+An optional `<input type="file">` left blank still submits a file: one with no name and no bytes. Courier leaves that placeholder out of the form it sends, so the backend does not receive an upload nobody chose. A file that has a name is sent even when it is empty — a `.gitkeep` or an empty log is a real file. Your own `FormData` is not edited; the placeholder is dropped from the copy that is sent.
 
 ```typescript
-// Courier automatically removes empty files from FormData.
-// This prevents sending 0-byte File objects that can cause backend errors.
-
-const formData = new FormData()
-formData.append("avatar", file)          // File with content -> kept
-formData.append("thumbnail", emptyFile)  // File with size 0 -> removed
-
-// Only "avatar" is sent to the backend
+const formData = new FormData(form)
+// avatar    = File "photo.png", 120 KB  -> sent
+// thumbnail = File "", 0 bytes          -> left out: the input was blank
+// notes     = File "notes.txt", 0 bytes -> sent: a file somebody chose
 ```
 
 ## Why XHR?

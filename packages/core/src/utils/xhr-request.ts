@@ -25,12 +25,28 @@ export interface XhrRequestInit {
  * @param onProgress - Called as the body is sent
  * @returns The answer as a Response
  */
-export function xhrRequest(
+export async function xhrRequest(
   url: string,
   init: XhrRequestInit,
   onProgress: (progress: UploadProgress) => void,
 ): Promise<Response> {
   warnAboutIgnoredOptions(init);
+  /* XMLHttpRequest cannot send a stream: handed one, it sent the text
+     "[object ReadableStream]" and the call succeeded. The stream is read
+     into a Blob, which it sends and reports. */
+  const body =
+    init.body instanceof ReadableStream
+      ? await new Response(init.body).blob()
+      : (init.body ?? null);
+  return send(url, init, body, onProgress);
+}
+
+function send(
+  url: string,
+  init: XhrRequestInit,
+  body: XMLHttpRequestBodyInit | null,
+  onProgress: (progress: UploadProgress) => void,
+): Promise<Response> {
   return new Promise((resolve, reject) => {
     const signal = init.signal;
     if (signal?.aborted) {
@@ -44,8 +60,7 @@ export function xhrRequest(
     xhr.withCredentials = init.credentials === "include";
     for (const [key, value] of init.headers) {
       /* The browser writes a multipart body's content type, with its boundary. */
-      if (!(init.body instanceof FormData && key === "content-type"))
-        xhr.setRequestHeader(key, value);
+      if (!(body instanceof FormData && key === "content-type")) xhr.setRequestHeader(key, value);
     }
 
     const onAbort = () => xhr.abort();
@@ -75,7 +90,7 @@ export function xhrRequest(
       reject(signal?.reason ?? new DOMException("Aborted", "AbortError"));
     });
 
-    xhr.send((init.body ?? null) as XMLHttpRequestBodyInit | null);
+    xhr.send(body);
   });
 }
 

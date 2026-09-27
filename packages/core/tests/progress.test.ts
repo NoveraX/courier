@@ -73,6 +73,7 @@ describe("download progress", () => {
 class FakeXhr {
   static answer = { status: 200, body: new TextEncoder().encode('{"ok":true}').buffer };
   static hold = false;
+  static sent: unknown;
   status = 0;
   statusText = "";
   response: ArrayBuffer | null = null;
@@ -86,7 +87,8 @@ class FakeXhr {
   getAllResponseHeaders() { return "content-type: application/json\r\n"; }
   addEventListener(type: string, fn: () => void) { this.listeners.set(type, fn); }
   abort() { this.listeners.get("abort")?.(); }
-  send() {
+  send(body: unknown) {
+    FakeXhr.sent = body;
     this.progress({ lengthComputable: true, loaded: 5, total: 10 });
     this.progress({ lengthComputable: true, loaded: 10, total: 10 });
     if (FakeXhr.hold) return;
@@ -120,6 +122,18 @@ describe("upload progress over XMLHttpRequest", () => {
     controller.abort();
 
     await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("sends a stream's bytes, which XMLHttpRequest cannot take as a stream", async () => {
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+    FakeXhr.hold = false;
+    FakeXhr.answer = { status: 200, body: new TextEncoder().encode('{"ok":true}').buffer };
+    const body = new Blob(["streamed bytes"]).stream();
+
+    await xhrRequest("/u", { ...init(), body }, () => undefined);
+
+    expect(FakeXhr.sent).toBeInstanceOf(Blob);
+    expect(await (FakeXhr.sent as Blob).text()).toBe("streamed bytes");
   });
 
   it("answers a 204 with no body instead of throwing", async () => {

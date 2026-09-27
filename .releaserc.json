@@ -30,7 +30,7 @@
           "CHANGELOG.md",
           "packages/*/package.json"
         ],
-        "message": "chore(release): \ud83d\udd16 v${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+        "message": "chore(release): 🔧 v${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ]
   ]

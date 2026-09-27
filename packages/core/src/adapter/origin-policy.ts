@@ -36,7 +36,7 @@
  * @example
  * ```ts
  * isOriginAllowed(request); // same-origin and non-browser callers pass
- * isOriginAllowed(request, ["https://studio.example.com"]);
+ * isOriginAllowed(request, ["https://studio.example.com", "https://*.example.com"]);
  * ```
  */
 export function isOriginAllowed(request: Request, allowedOrigins?: string[]): boolean {
@@ -51,9 +51,12 @@ export function isOriginAllowed(request: Request, allowedOrigins?: string[]): bo
 /**
  * The same rule, for a server that speaks in parts rather than in `Request`.
  *
+ * A pattern is an exact origin, `https://*.example.com` for the sub-domains of
+ * a host over one scheme and port, or `*.example.com` for them over any.
+ *
  * @param origin - The `Origin` header, or null when absent
  * @param self - The origin the request was addressed to
- * @param allowedOrigins - Extra origins to accept, `*.example.com` supported
+ * @param allowedOrigins - Extra origins to accept
  * @param fetchSite - The `Sec-Fetch-Site` header, or null when absent
  * @returns Whether the request may proceed
  *
@@ -106,13 +109,26 @@ function selfOrigin(request: Request): string | null {
   return parseOrigin(request.url)?.origin ?? null;
 }
 
-/** Case-insensitive match; `*.example.com` covers sub-domains but not the apex. */
+/**
+ * Case-insensitive match. A wildcard covers sub-domains but not the apex; with
+ * a scheme it also holds the scheme and the port to the ones it names.
+ */
 function matchesOrigin(origin: string, pattern: string): boolean {
   const candidate = origin.toLowerCase();
   const allowed = pattern.toLowerCase();
   if (candidate === allowed) return true;
   if (allowed.startsWith("*.")) return candidate.endsWith(`.${allowed.slice(2)}`);
-  return false;
+
+  if (!allowed.includes("://*.")) return false;
+  const expected = parseOrigin(allowed.replace("://*.", "://"));
+  const actual = parseOrigin(candidate);
+  return (
+    !!expected &&
+    !!actual &&
+    actual.protocol === expected.protocol &&
+    actual.port === expected.port &&
+    actual.hostname.endsWith(`.${expected.hostname}`)
+  );
 }
 
 /** Parse an origin or URL, or nothing when it does not parse. */

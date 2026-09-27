@@ -9,7 +9,9 @@ export interface HandlerConfig extends SSELifecycleConfig {
   /**
    * Origins allowed to call the proxy, for every transport. Unset, the
    * application's own pages and callers that are not a browser are served,
-   * and in development other local ports are too.
+   * and in development other local ports are too. An entry is an exact
+   * origin, `https://*.example.com` for the sub-domains of a host over one
+   * scheme and port, or `*.example.com` for them over any.
    */
   allowedOrigins?: string[];
   /**

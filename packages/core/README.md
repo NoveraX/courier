@@ -262,10 +262,10 @@ For Node.js servers, use `toWebRequest` and `sendWebResponse` to bridge between 
 
 The handler serves browser pages on the application's own origin and refuses a request another site's page made, so no third-party page can call your API with your users' cookies. A browser's `Sec-Fetch-Site` decides where it is sent — an `<img>` or a link on another site is refused even though it carries no `Origin` — and otherwise the page's `Origin` must be the origin the request was addressed to. A caller that sends neither is not a browser page, and is served.
 
-Pages on other origins are served when `allowedOrigins` lists them; `*.example.com` covers the sub-domains of `example.com`.
+Pages on other origins are served when `allowedOrigins` lists them. An entry is an exact origin, `https://*.example.com` for the sub-domains of a host over one scheme and port, or `*.example.com` for them over any.
 
 ```ts
-createHandler({ allowedOrigins: ["https://admin.example.com", "*.example.com"] })
+createHandler({ allowedOrigins: ["https://admin.example.com", "https://*.example.com"] })
 ```
 
 <br />

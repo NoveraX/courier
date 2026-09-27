@@ -57,6 +57,10 @@ const caller = createProxyCaller<typeof api>("api", {
 const users = await caller.users.getAll()
 ```
 
+## Cancelled calls
+
+When the browser cancels a call — an aborted upload, a query it no longer needs — the proxy stops its own upstream request, following the request's signal. `@astrojs/node` fires that signal when the client leaves. The `astro dev` server does not, and exposes no connection to watch instead, so during development a cancelled call still runs to completion upstream.
+
 ## API
 
 ### `courierHandler()`

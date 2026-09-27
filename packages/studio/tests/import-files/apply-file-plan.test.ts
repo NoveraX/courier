@@ -154,6 +154,22 @@ describe("applyFilePlan", () => {
     undisturbed();
   });
 
+  it("keeps no backup when it stops before replacing a file it copied", async () => {
+    const actual = await vi.importActual<typeof Fs>("node:fs");
+    vi.mocked(renameSync).mockImplementation((from, to) => {
+      if (String(from).includes(".courier.import.") && String(to).endsWith(`proj/${DIR}/index.ts`)) {
+        throw Object.assign(new Error("EIO: injected"), { code: "EIO" });
+      }
+      actual.renameSync(from, to);
+    });
+
+    expect(() => applyFilePlan(root, scenario(), () => {})).toThrow(/EIO/);
+
+    vi.mocked(renameSync).mockImplementation(actual.renameSync);
+    undisturbed();
+    expect(readdirSync(join(root.path, ".courier/backups"))).toEqual([]);
+  });
+
   it("undoes the staged files when its journal cannot be recorded", async () => {
     const actual = await vi.importActual<typeof Fs>("node:fs");
     let journalSaves = 0;

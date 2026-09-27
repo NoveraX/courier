@@ -2,6 +2,7 @@ import type { ScopedLogger } from "../../logger";
 import { calculateBackoff } from "../backoff";
 import type { ConnectionState } from "../connection-state";
 import { fromErrorCode, type RealtimeError } from "../errors";
+import { answerAuthRequired } from "./auth-refresh";
 import { resolveAuthUrl } from "./auth-url";
 import type { createMessageQueue } from "./message-queue";
 import { shouldReconnect } from "./reconnect-classifier";
@@ -40,6 +41,9 @@ export interface LifecycleContext {
     reconnectTimer: ReturnType<typeof setTimeout> | null;
   };
 }
+
+/** What handling a closed socket reads of its close event. */
+type SocketClosure = Pick<CloseEvent, "code" | "reason">;
 
 /** Open the underlying socket and wire lifecycle handlers */
 export function connect(ctx: LifecycleContext): void {
@@ -91,13 +95,34 @@ function handleMessage(ctx: LifecycleContext, ev: MessageEvent): void {
       topics: ctx.topics,
       pending: ctx.pending,
       sendRaw: ctx.sendRaw,
-      onAuthRequired: () => handleAuthRequired(ctx),
+      onAuthRequired: () => answerAuthRequired(ctx),
     },
     msg,
   );
 }
 
-function handleClose(ctx: LifecycleContext, ev: CloseEvent): void {
+/**
+ * Give up on the socket without waiting for its close handshake, and go on
+ * as if it had closed. A server that has gone silent does not answer the
+ * handshake either, so the socket's close event never came and the
+ * connection stayed "connected" to nothing.
+ *
+ * @param ctx - The connection's lifecycle state
+ * @param code - The close code to record, and to send should the frame get through
+ * @param reason - Why the socket was given up on
+ */
+export function dropSocket(ctx: LifecycleContext, code: number, reason: string): void {
+  const ws = ctx.refs.ws;
+  if (!ws) return;
+  ws.onopen = null;
+  ws.onmessage = null;
+  ws.onclose = null;
+  ws.onerror = null;
+  ws.close(code, reason);
+  handleClose(ctx, { code, reason });
+}
+
+function handleClose(ctx: LifecycleContext, ev: SocketClosure): void {
   ctx.silence.stop();
   ctx.refs.ws = null;
   /* The next socket subscribes afresh: what is sent meanwhile waits for it. */
@@ -118,25 +143,9 @@ function handleClose(ctx: LifecycleContext, ev: CloseEvent): void {
 }
 
 /** Why a socket closed for good, as its subscriptions read it; none for a normal close. */
-function closeFailure(ev: CloseEvent): RealtimeError | undefined {
+function closeFailure(ev: SocketClosure): RealtimeError | undefined {
   if (ev.code === 1000) return undefined;
   return fromErrorCode(ev.code, ev.reason || "Connection closed");
-}
-
-function handleAuthRequired(ctx: LifecycleContext): void {
-  const fetcher = ctx.config.getAuthToken;
-  if (!fetcher) {
-    ctx.log.warn("Server requested auth but no getAuthToken configured");
-    return;
-  }
-  void (async () => {
-    try {
-      const token = await fetcher();
-      if (ctx.state.current === "connected") ctx.refreshToken(token);
-    } catch (err) {
-      ctx.log.warn("Failed to get auth token for refresh", err);
-    }
-  })();
 }
 
 export function clearReconnectTimer(ctx: LifecycleContext): void {

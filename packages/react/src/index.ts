@@ -18,6 +18,7 @@ export { createProxyQueryKeys, createQueryKeys, type QueryKeyFactory } from "./k
 export type { OptimisticConfig } from "./optimistic";
 export { optimisticOptions } from "./optimistic";
 export type {
+  ChannelError,
   ChannelResult,
   CourierChannelOptions,
   CourierComputedQueryOptions,

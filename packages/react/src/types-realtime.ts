@@ -5,6 +5,7 @@
  * `useChannel` (WebSocket) hooks exposed by `QueryGroupClient`.
  */
 
+import type { ConfigurationError } from "@noverax/courier";
 import type { ConnectionStatus, RealtimeError, SSEEvent } from "@noverax/courier/realtime";
 
 import type { WithVariables } from "./types-helpers";
@@ -46,6 +47,13 @@ export interface SubscriptionResult<TData> {
   close: () => void;
 }
 
+/**
+ * What a channel reports as its error: a `RealtimeError` from the server, or
+ * the `ConfigurationError` that kept the channel from opening at all, such as
+ * a proxy without `proxyPath.ws`.
+ */
+export type ChannelError = RealtimeError | ConfigurationError;
+
 export type CourierChannelOptions<TReceive, TVariables> = WithVariables<TVariables> & {
   /** Disable the channel (default: true) */
   enabled?: boolean;
@@ -54,22 +62,31 @@ export type CourierChannelOptions<TReceive, TVariables> = WithVariables<TVariabl
   /**
    * Called when the server refuses a message, a handler fails, or the
    * channel ends with a reason — with the `RealtimeError`, whose `code`
-   * tells them apart (4403 forbidden, 4422 invalid, …)
+   * tells them apart (4403 forbidden, 4422 invalid, …) — or when the channel
+   * cannot be opened at all, with the `ConfigurationError` that says why
    */
-  onError?: (error: RealtimeError) => void;
+  onError?: (error: ChannelError) => void;
   /** Called on connection status changes */
   onStatusChange?: (status: ConnectionStatus) => void;
 };
 
-/** Reactive state returned by useChannel */
+/**
+ * Reactive state returned by useChannel. It belongs to the channel the
+ * current method and variables name: when either changes, `lastMessage` and
+ * `error` start over.
+ */
 export interface ChannelResult<TSend, TReceive> {
   /** Latest message received from the server */
   lastMessage: TReceive | undefined;
   /** Current connection status */
   status: ConnectionStatus;
-  /** The last error the server reported on this channel; cleared on reconnect */
-  error: RealtimeError | undefined;
-  /** Send a message to the server */
+  /** The last error reported on this channel; cleared on reconnect */
+  error: ChannelError | undefined;
+  /**
+   * Send a message to the server. One sent before the channel has opened
+   * waits for it; one sent while the channel is disabled or closed is
+   * dropped with a warning.
+   */
   send: (data: TSend) => void;
   /** Manually close the channel */
   close: () => void;

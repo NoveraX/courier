@@ -99,14 +99,17 @@ export function useRegistry(): UseRegistryReturn {
       const { results } = await checkAllUpdates();
       const next: Record<string, SourceStatusInfo> = {};
       for (const [name, result] of Object.entries(results)) {
-        next[name] = {
-          status: result.changed ? "updates-available" : "up-to-date",
-          error: result.error,
-        };
+        next[name] = result.error
+          ? { status: "error", error: result.error }
+          : { status: result.changed ? "updates-available" : "up-to-date" };
       }
       setStatuses(next);
-    } catch {
-      setStatuses({});
+    } catch (err) {
+      /* Every import shows why the check failed, rather than no status at all. */
+      const error = err instanceof Error ? err.message : "Check failed";
+      const failed: Record<string, SourceStatusInfo> = {};
+      for (const s of imported) failed[s.name] = { status: "error", error };
+      setStatuses(failed);
     }
   }, [imported]);
 

@@ -29,7 +29,7 @@ function ConfigNotes({ name, notes }: { name: string; notes: RemovalConfigNotes 
       {notes.importDeclared && (
         <p className="text-body-sm text-muted-foreground">
           It still declares <span className="mono-sm text-foreground">imports.{name}</span>: remove that entry too, or
-          an update writes the import again.
+          Studio goes on checking the import for updates.
         </p>
       )}
     </section>
@@ -42,7 +42,7 @@ function Body({ removal }: { removal: UseRemoveImportReturn }): React.ReactEleme
   const nothing = consent !== null && consent.plan.removals.length === 0 && consent.plan.pending.length === 0;
   return (
     <div className="space-y-4">
-      {error && <p className="text-body-sm text-destructive">{error}</p>}
+      {error && <p role="alert" className="text-body-sm text-destructive">{error}</p>}
       {name !== null && notes && <ConfigNotes name={name} notes={notes} />}
       {nothing && <p className="text-body-sm text-muted-foreground">No file Studio wrote for it is left; removing forgets the import.</p>}
       {consent && <FilePlanView plan={consent.plan} confirmed={consent.confirmed} onToggle={removal.toggleConfirmed} />}
@@ -65,7 +65,7 @@ function Body({ removal }: { removal: UseRemoveImportReturn }): React.ReactEleme
 export function RemoveImportDialog({ removal }: { removal: UseRemoveImportReturn }): React.ReactElement {
   const ready = removal.consent !== null && !removal.loading && !removal.removing;
   return (
-    <Dialog open={removal.name !== null} onOpenChange={(open) => { if (!open) removal.close(); }}>
+    <Dialog open={removal.name !== null} onOpenChange={(open) => { if (!open && !removal.removing) removal.close(); }}>
       <DialogContent className="p-0 sm:max-w-[640px] max-h-[80vh] flex flex-col">
         <DialogHeader className="px-6 pt-5 shrink-0">
           <DialogTitle className="text-balance flex items-center gap-2">
@@ -78,7 +78,7 @@ export function RemoveImportDialog({ removal }: { removal: UseRemoveImportReturn
           <Body removal={removal} />
         </div>
         <div className="flex items-center justify-end gap-2 border-t bg-muted rounded-b-lg px-6 py-4 shrink-0">
-          <Button variant="outline" size="sm" onClick={removal.close}>Cancel</Button>
+          <Button variant="outline" size="sm" disabled={removal.removing} onClick={removal.close}>Cancel</Button>
           <Button variant="destructive" size="sm" disabled={!ready} onClick={() => void removal.confirm()}>
             {removal.removing && <Loader2 className="mr-1.5 size-3 animate-spin" />}
             Remove

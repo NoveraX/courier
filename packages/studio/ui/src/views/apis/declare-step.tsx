@@ -23,7 +23,7 @@ function Note({ children }: { children: React.ReactNode }): React.ReactElement {
 function leftOutNote(leftOut: number): string {
   const count = leftOut === 1 ? "1 endpoint" : `${leftOut} endpoints`;
   const those = leftOut === 1 ? "that one" : "those";
-  return `You left ${count} out in Select. The imports entry cannot keep that selection, so an update generates every endpoint in the specification, ${those} included.`;
+  return `You left ${count} out in Select. The imports entry cannot keep that selection, so Manage lists ${those} as endpoints you can add.`;
 }
 
 /**
@@ -67,7 +67,7 @@ export function DeclareStepView({ sourceName, declaration }: DeclareStepProps): 
       {importEntry && (
         <>
           <Part
-            label="Declare the import under imports: Studio updates and manages an import only from its declaration, and regenerates it with the options written there."
+            label="Declare the import under imports: Studio checks and manages an import only from its declaration, and generates the endpoints you add with the options written there."
             code={importEntry}
           />
           {leftOut > 0 && <Note>{leftOutNote(leftOut)}</Note>}

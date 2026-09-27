@@ -219,7 +219,24 @@ describe("a write Studio will not apply unasked", () => {
     await importAndWrite(result);
     await act(() => result.current.write());
 
-    expect(vi.mocked(post)).toHaveBeenLastCalledWith("/api/apis/write", expect.not.objectContaining({ planDigest: "plan-1" }));
+    const [url, body] = vi.mocked(post).mock.calls.at(-1) ?? [];
+    expect(url).toBe("/api/apis/write");
+    expect(body).toBeDefined();
+    expect(body).not.toHaveProperty("planDigest");
+    expect(body).not.toHaveProperty("confirm");
+  });
+
+  it("drops the plan shown once a later write is refused for a reason that has none", async () => {
+    studioAsksFirst();
+    const { result } = renderHook(() => useImport());
+    await importAndWrite(result);
+    const nameTaken = new StudioRequestError("sources names another API pets.", { error: "sources names another API pets.", code: "NAME_TAKEN" }, undefined);
+    vi.mocked(post).mockRejectedValueOnce(nameTaken);
+
+    await act(() => result.current.write());
+
+    expect(result.current.state.consent).toBeNull();
+    expect(result.current.error).toBe("sources names another API pets.");
   });
 });
 

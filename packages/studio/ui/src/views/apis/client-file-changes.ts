@@ -85,6 +85,12 @@ export function removeImport(name: string, quote: PlanQuote): Promise<AppliedFil
 
 // ── Update ──────────────────────────────────────────────────────────────────
 
+/**
+ * Plan regenerating an import from a new specification.
+ *
+ * @param payload - The import and the new specification
+ * @returns The plan, the files left in a previous folder, and what changed in the specification
+ */
 export function previewUpdate(payload: {
   name: string;
   newSpec: ParsedSpec;
@@ -98,6 +104,13 @@ export function previewUpdate(payload: {
   return post("/api/apis/update/preview", payload);
 }
 
+/**
+ * Regenerate an import as previewed.
+ *
+ * @param payload - The import, the new specification, and the plan quoted with the steps allowed
+ * @returns What was written, removed and kept, and the files left in a previous folder
+ * @throws {StudioRequestError} `PLAN_NOT_SEEN` without a quoted plan, `PLAN_STALE` when the files changed
+ */
 export function applyUpdate(payload: {
   name: string;
   newSpec: ParsedSpec;
@@ -107,6 +120,15 @@ export function applyUpdate(payload: {
 
 // ── Manage ───────────────────────────────────────────────────────────────────
 
+/**
+ * Plan adding and removing endpoints of an import.
+ *
+ * @param name - The import
+ * @param spec - Its specification
+ * @param toAdd - The endpoints to add, by group
+ * @param toRemove - The endpoints to remove, by group
+ * @returns What adding and removing produce, and the plan for the import's files
+ */
 export function previewManage(
   name: string,
   spec: ParsedSpec,
@@ -116,6 +138,17 @@ export function previewManage(
   return post("/api/apis/manage/preview", { name, spec, toAdd, toRemove });
 }
 
+/**
+ * Add and remove endpoints of an import as previewed.
+ *
+ * @param name - The import
+ * @param spec - Its specification
+ * @param toAdd - The endpoints to add, by group
+ * @param toRemove - The endpoints to remove, by group
+ * @param quote - The plan the user saw, and the steps they allowed
+ * @returns What was written, removed and kept, and where the copies are
+ * @throws {StudioRequestError} `PLAN_NOT_SEEN` without a quoted plan, `PLAN_STALE` when the files changed
+ */
 export function applyManage(
   name: string,
   spec: ParsedSpec,

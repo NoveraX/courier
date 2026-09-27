@@ -188,7 +188,7 @@ describe("the declare step", () => {
     expect(html).toContain("left courier.config.ts as it is");
     expect(html).toContain("pets appears in Studio");
     expect(html).toContain("once courier.config.ts declares it under sources");
-    expect(html).not.toContain("left 0");
+    expect(html).not.toContain("out in Select");
     expect(html).not.toContain("cannot keep that selection");
   });
 
@@ -204,7 +204,7 @@ describe("the declare step", () => {
 
     expect(html).toContain(`<pre>${IMPORT_ENTRY}</pre>`);
     expect(html).toContain(
-      "You left 2 endpoints out in Select. The imports entry cannot keep that selection, so an update generates every endpoint in the specification, those included.",
+      "You left 2 endpoints out in Select. The imports entry cannot keep that selection, so Manage lists those as endpoints you can add.",
     );
   });
 

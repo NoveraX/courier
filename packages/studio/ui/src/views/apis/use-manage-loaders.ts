@@ -1,8 +1,6 @@
 /**
- * Inventory loading callbacks used by `useManage`.
- *
- * Extracted so the main hook only orchestrates state, while the network +
- * step transition logic lives here as a small custom hook.
+ * Load an import's endpoint inventory for the manage dialog, from a spec
+ * given or fetched from the import's URL.
  */
 
 import { useCallback } from "react";
@@ -37,7 +35,9 @@ export function useInventoryLoaders(deps: LoaderDeps): InventoryLoaders {
       setInventory(inv);
       setStep("inventory");
     } catch (err) {
+      /* Back to the spec, where another one can be given: the error is said above it. */
       setError(err instanceof Error ? err.message : "Failed to load inventory");
+      setStep("reupload");
     }
   }, [setStep, setError, setInventory]);
 

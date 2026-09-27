@@ -5,6 +5,7 @@ import { type AppliedFiles, type RemovalConfigNotes, previewRemoval, removeImpor
 import { fileCount } from "./applied-notes";
 import { consentBody, consentFor, toggleConfirmed } from "./plan-consent";
 import { readPlanRefusal } from "./plan-refusal";
+import { readFilePlan } from "./read-file-plan";
 
 /** The remove dialog: the import it is for, and what removing it does. */
 export interface UseRemoveImportReturn {
@@ -23,6 +24,10 @@ export interface UseRemoveImportReturn {
   /** Remove the import as previewed, with the steps allowed. */
   confirm: () => Promise<void>;
   close: () => void;
+}
+
+function messageOf(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }
 
 function removedMessage(name: string, { removed, kept, backupDir }: AppliedFiles): string {
@@ -55,51 +60,60 @@ export function useRemoveImport(onRemoved: (name: string, message: string) => vo
   const [notes, setNotes] = useState<RemovalConfigNotes | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  /* The import the latest preview is for: a preview answered after the dialog moved on is dropped. */
-  const previewing = useRef<string | null>(null);
+  /* Each opening of the dialog: an answer that arrives for an earlier one is dropped. */
+  const opening = useRef(0);
 
-  const start = useCallback(async (importName: string) => {
-    previewing.current = importName;
-    setName(importName);
+  const load = useCallback(async (importName: string, keptError: string | null) => {
+    const mine = opening.current;
     setConsent(null);
     setNotes(null);
-    setError(null);
+    setError(keptError);
     setLoading(true);
     try {
       const { plan, ...configNotes } = await previewRemoval(importName);
-      if (previewing.current !== importName) return;
-      setConsent(consentFor(plan));
+      if (opening.current !== mine) return;
+      const read = readFilePlan(plan);
+      if (read === null) throw new Error("Studio sent a plan this page cannot read; open the dialog again.");
+      setConsent(consentFor(read));
       setNotes(configNotes);
     } catch (err) {
-      if (previewing.current !== importName) return;
-      setError(err instanceof Error ? err.message : "Could not preview removing the import");
+      if (opening.current === mine) setError(messageOf(err, "Could not preview removing the import"));
     } finally {
-      if (previewing.current === importName) setLoading(false);
+      if (opening.current === mine) setLoading(false);
     }
   }, []);
 
+  const start = useCallback((importName: string) => {
+    opening.current += 1;
+    setName(importName);
+    return load(importName, null);
+  }, [load]);
+
+  /* A plan that changed meanwhile is previewed again in full, notes included, with nothing allowed. */
   const confirm = useCallback(async () => {
     if (name === null || consent === null) return;
+    const mine = opening.current;
     setRemoving(true);
     setError(null);
     try {
       const applied = await removeImport(name, consentBody(consent));
+      if (opening.current !== mine) return;
       setName(null);
       onRemoved(name, removedMessage(name, applied));
     } catch (err) {
-      const refusal = readPlanRefusal(err);
-      if (refusal) setConsent(consentFor(refusal.plan));
-      setError(err instanceof Error ? err.message : "Could not remove the import");
+      if (opening.current !== mine) return;
+      if (readPlanRefusal(err) !== null) await load(name, messageOf(err, "Could not remove the import"));
+      else setError(messageOf(err, "Could not remove the import"));
     } finally {
       setRemoving(false);
     }
-  }, [name, consent, onRemoved]);
+  }, [name, consent, onRemoved, load]);
 
   return {
     name, loading, removing, consent, notes, error, start, confirm,
     toggleConfirmed: useCallback((path: string) => setConsent((c) => c && toggleConfirmed(c, path)), []),
     close: useCallback(() => {
-      previewing.current = null;
+      opening.current += 1;
       setName(null);
     }, []),
   };

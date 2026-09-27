@@ -1,8 +1,6 @@
 /**
- * Wizard footer with Back / Next / Submit buttons.
- *
- * Extracted from `import-wizard.tsx` so the navigation logic for each step
- * lives next to its own button block, leaving the wizard shell readable.
+ * The import wizard's buttons: Back, and the step's own action — parse,
+ * configure, preview, write, or Done once the files are written.
  */
 
 import { Loader2 } from "lucide-react";

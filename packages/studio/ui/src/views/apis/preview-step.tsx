@@ -50,7 +50,7 @@ export function PreviewStepView({
 
       {consent && (
         <div className="space-y-3 rounded-md border border-border-subtle p-3">
-          {error && <p className="text-body-sm text-foreground">{error}</p>}
+          {error && <p role="alert" className="text-body-sm text-foreground">{error}</p>}
           <FilePlanView plan={consent.plan} confirmed={consent.confirmed} onToggle={onToggleConfirmed} />
         </div>
       )}
@@ -88,7 +88,7 @@ export function PreviewStepView({
         })}
       </div>
 
-      {error && !consent && <p className="text-xs text-destructive">{error}</p>}
+      {error && !consent && <p role="alert" className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

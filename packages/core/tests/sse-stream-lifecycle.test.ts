@@ -1,6 +1,8 @@
+import { getEventListeners } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 
-import { cleanupSSEStream } from "../src/adapter/sse-stream-lifecycle";
+import { createSSESender } from "../src/adapter/sse-sender";
+import { cleanupSSEStream, waitForRoom } from "../src/adapter/sse-stream-lifecycle";
 import type { SSEStreamOptions } from "../src/adapter/sse-types";
 import type { InternalSSERegistry } from "../src/adapter/sse-registry";
 import type { SSEConnectionInfo } from "../src/adapter/sse-types";
@@ -155,5 +157,48 @@ describe("cleanupSSEStream", () => {
       expect.objectContaining({ reason: "shutdown" }),
     );
     expect(onDisconnect).toHaveBeenCalledWith(expect.objectContaining({ reason: "shutdown" }));
+  });
+});
+
+describe("waitForRoom", () => {
+  /** A stream whose one-byte buffer is already over full, and its writer. */
+  function fullStream() {
+    let controller: ReadableStreamDefaultController<Uint8Array> | undefined;
+    const stream = new ReadableStream<Uint8Array>(
+      {
+        start(c) {
+          controller = c;
+        },
+      },
+      new ByteLengthQueuingStrategy({ highWaterMark: 1 }) as QueuingStrategy<Uint8Array>,
+    );
+    if (!controller) throw new Error("The stream did not start");
+    const sender = createSSESender(controller, () => {});
+    sender.send({ data: "an event larger than the buffer" }, false);
+    return { reader: stream.getReader(), sender };
+  }
+
+  it("keeps at most one abort listener while the client does not read", async () => {
+    const { reader, sender } = fullStream();
+    const abort = new AbortController();
+
+    const waiting = waitForRoom(sender, abort.signal);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    expect(sender.hasRoom).toBe(false);
+    expect(getEventListeners(abort.signal, "abort").length).toBeLessThanOrEqual(1);
+    await reader.read();
+    await waiting;
+    expect(getEventListeners(abort.signal, "abort")).toHaveLength(0);
+  });
+
+  it("returns as soon as the stream is aborted", async () => {
+    const { sender } = fullStream();
+    const abort = new AbortController();
+
+    const waiting = waitForRoom(sender, abort.signal);
+    abort.abort();
+
+    await expect(waiting).resolves.toBeUndefined();
   });
 });

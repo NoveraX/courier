@@ -96,14 +96,36 @@ describe("the proxy bounds what a caller may make it hold", () => {
     expect(run).not.toHaveBeenCalled();
   });
 
-  /** Peak cost is the chunk that crossed the line, not the whole body. */
-  it("stops reading instead of draining the caller's stream", async () => {
+  /** A client still uploading is answered at the chunk that crossed the line. */
+  it("answers without waiting for the rest of the body", async () => {
     const { handle } = handler({ maxBodyBytes: 4096 });
-    const { request, sent } = chunkedRequest(1024, 10_000);
+    let sent = 0;
+    const stillUploading = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        sent += 1;
+        if (sent > 10) await new Promise<void>(() => {});
+        controller.enqueue(new Uint8Array(1024).fill(0x20));
+      },
+    });
+    const request = new Request("http://localhost/api/request", {
+      method: "POST",
+      headers: { origin: "http://localhost", "content-type": "application/json" },
+      body: stillUploading,
+      // @ts-expect-error -- required by the platform for a streaming body
+      duplex: "half",
+    });
+
+    expect((await handle(request)).status).toBe(413);
+  });
+
+  /** A browser reads the refusal only once its upload has gone through. */
+  it("discards the rest of the body once it has refused it", async () => {
+    const { handle } = handler({ maxBodyBytes: 4096 });
+    const { request, sent } = chunkedRequest(1024, 1_000);
 
     await handle(request);
 
-    expect(sent()).toBeLessThan(20);
+    await expect.poll(sent).toBe(1_000);
   });
 });
 

@@ -25,7 +25,9 @@ export type BoundedBody =
  *
  * Declared oversize is refused before a byte is read; undeclared oversize is
  * refused at the chunk that crosses the line, so the peak cost of a hostile
- * request is one chunk over the limit rather than the whole body.
+ * request is one chunk over the limit rather than the whole body. The rest of
+ * a refused body is left where it is, for the caller to discard with
+ * `discardBody` as it answers.
  *
  * @param request - The incoming proxy request
  * @param limit - Largest body to accept, in bytes
@@ -34,7 +36,10 @@ export type BoundedBody =
  * @example
  * ```ts
  * const body = await readBoundedBody(request, 1_048_576);
- * if (!body.ok) return errorResponse(413, `Body exceeds ${body.limit} bytes`);
+ * if (!body.ok) {
+ *   discardBody(request);
+ *   return errorResponse(413, `Body exceeds ${body.limit} bytes`);
+ * }
  * ```
  */
 export async function readBoundedBody(request: Request, limit: number): Promise<BoundedBody> {
@@ -53,10 +58,7 @@ export async function readBoundedBody(request: Request, limit: number): Promise<
       const { done, value } = await reader.read();
       if (done) break;
       total += value.byteLength;
-      if (total > limit) {
-        await reader.cancel();
-        return { ok: false, limit };
-      }
+      if (total > limit) return { ok: false, limit };
       chunks.push(value);
     }
   } finally {

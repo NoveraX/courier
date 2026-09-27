@@ -1,4 +1,5 @@
 import { answerPreflight, withCorsHeaders } from "./adapter/cors";
+import { discardBody } from "./adapter/discard-body";
 import { createGetHandler } from "./adapter/handle-get";
 import { createPostHandler } from "./adapter/handle-post";
 import { createSSEHandler } from "./adapter/handle-sse";
@@ -86,6 +87,7 @@ export function createHandler(config?: HandlerConfig): AdapterHandler {
     if (isSSERequest(request)) return handleSSE(request);
     if (request.method === "GET") return handleGet(request);
     if (request.method === "POST") return handlePost(request);
+    discardBody(request);
     return errorResponse(405, "Method not allowed");
   };
 

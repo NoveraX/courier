@@ -1,11 +1,21 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { WebSocket } from "ws";
 
+import { LIMITS } from "../src/adapter/limits";
 import { wireEvents } from "../src/adapter/ws-lifecycle";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import { closeSubscriptionEntry } from "../src/adapter/ws-dispatch-helpers";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { encodeMessage } from "../src/realtime/ws/ws-protocol";
 import type { WSHandlerConfig } from "../src/adapter/ws-types";
+import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
+
+let served: ServedWS | undefined;
+
+afterEach(async () => {
+  await stopWS(served);
+  served = undefined;
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -302,6 +312,21 @@ describe("wireEvents", () => {
       meta: {},
       error: errorEvent,
     });
+  });
+
+  it("hands onError the Error a socket error event carries", async () => {
+    const errors: unknown[] = [];
+    served = await serveWS({}, { onError: ({ error }) => errors.push(error) });
+    const client = new WebSocket(served.url);
+    await new Promise((resolve) => client.once("open", resolve));
+
+    client.send("x".repeat(LIMITS.MAX_MESSAGE_SIZE + 1));
+    await new Promise((resolve) => client.once("close", resolve));
+    await settle(20);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBeInstanceOf(RangeError);
+    expect(String(errors[0])).toContain("Max payload size exceeded");
   });
 
   it("does not crash if onError hook throws", () => {

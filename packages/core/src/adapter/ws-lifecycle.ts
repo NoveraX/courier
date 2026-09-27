@@ -2,6 +2,7 @@ import { createLogger } from "../logger";
 import type { WebSocketLike } from "../realtime/adapters";
 import type { createHeartbeat } from "../realtime/ws/heartbeat";
 import { registerPlaygroundAbort } from "../studio";
+import { socketError } from "../utils/socket-error";
 import type { WSSocketContext } from "./ws-context";
 import { closeSubscriptionEntry } from "./ws-dispatch-helpers";
 import type { IPTracker } from "./ws-ip-tracker";
@@ -77,7 +78,11 @@ export function wireEvents(
   ws.addEventListener("error", (event) => {
     heartbeat.stop();
     try {
-      config.onError?.({ connectionId: ctx.connectionId, meta: ctx.meta, error: event });
+      config.onError?.({
+        connectionId: ctx.connectionId,
+        meta: ctx.meta,
+        error: socketError(event),
+      });
     } catch (err) {
       log.warn("onError hook failed", err);
     }

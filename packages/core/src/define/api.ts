@@ -1,11 +1,13 @@
 import type { BaseOptions } from "../http-client/types";
 import { studioHooks } from "../studio";
+import { assertNoReservedName } from "./assert-no-reserved-name";
 import type {
   DefinedApi,
   DefinedFlatApi,
   DefinedMixedApi,
   EndpointRecord,
   GroupRecord,
+  OwnEndpoints,
 } from "./types";
 
 /** Symbol for storing source name on the source object — survives module duplication */
@@ -91,7 +93,7 @@ export function setSourceName(source: unknown, name: string): void {
  *   groups: { chat: chatGroup },
  * })
  */
-export function defineApi<TGroups extends GroupRecord, TEndpoints extends EndpointRecord>(
+export function defineApi<TGroups extends GroupRecord, TEndpoints extends OwnEndpoints>(
   config: BaseOptions & {
     /**
      * The identifier the proxy addresses this source by — `?_s=<name>`.
@@ -127,7 +129,7 @@ export function defineApi<TGroups extends GroupRecord>(
   },
 ): DefinedApi<TGroups>;
 
-export function defineApi<TEndpoints extends EndpointRecord>(
+export function defineApi<TEndpoints extends OwnEndpoints>(
   config: BaseOptions & {
     /**
      * The identifier the proxy addresses this source by — `?_s=<name>`.
@@ -148,6 +150,7 @@ export function defineApi(
   config: BaseOptions & { name?: string; groups?: GroupRecord; endpoints?: EndpointRecord },
 ): DefinedApi | DefinedFlatApi | DefinedMixedApi {
   const { endpoints, name, ...rest } = config;
+  if (endpoints) assertNoReservedName(endpoints, "source");
   const result = endpoints
     ? Object.assign({ options: rest }, endpoints)
     : ({ options: rest } as DefinedApi);

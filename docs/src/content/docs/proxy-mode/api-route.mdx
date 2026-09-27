@@ -134,6 +134,30 @@ const caller = createProxyCaller<typeof api>("api")
 Courier uses `getSetCookie()` to correctly handle multiple `set-cookie` headers, avoiding the common bug of splitting cookie values on commas.
 </Callout>
 
+## Cancelled calls
+
+When the browser cancels a call — an aborted upload, a query it no longer needs — the handler stops its own request to the backend. It learns that the client has gone from the request's `signal`, and not every framework fires it:
+
+| Server | A cancelled call stops upstream |
+| --- | --- |
+| Express, Fastify, NestJS, the standalone server, Hono, Next.js, `@astrojs/node` | Yes |
+| SvelteKit with `@sveltejs/adapter-node` | Yes: the adapter watches the socket from `platform.req` |
+| SolidStart, dev and production | Yes: the adapter watches the response on `nativeEvent` |
+| React Router 7 | Only with `future: { v8_passThroughRequests: true }`: without it a resource route receives a rebuilt copy of the request whose signal does not reliably follow the original |
+| Nuxt | No: the request h3 builds carries no such signal |
+| `vite dev` for SvelteKit, `astro dev` | No: the dev server exposes neither a signal nor the connection |
+
+An integration of your own that can reach the Node socket or response passes it to `handleWhileConnected`, which gives the handler a request whose signal also fires when that connection closes:
+
+```typescript
+import { createHandler, handleWhileConnected } from "@noverax/courier"
+
+const { handle } = createHandler()
+
+// res is the Node response your framework is answering on
+const response = await handleWhileConnected(handle, request, res)
+```
+
 ## Error responses
 
 The handler returns consistent JSON error responses with appropriate HTTP status codes:

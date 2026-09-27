@@ -57,6 +57,10 @@ const caller = createProxyCaller<typeof api>("api", {
 const users = await caller.users.getAll()
 ```
 
+## Cancelled calls
+
+When the browser cancels a call — an aborted upload, a query it no longer needs — the proxy stops its own upstream request. The dev server builds the request without a signal that reports a client leaving, so the handler watches the Node response on the event's `nativeEvent` as well, in development and in production alike.
+
 ## API
 
 ### `courierHandler()`

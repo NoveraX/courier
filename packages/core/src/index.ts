@@ -1,11 +1,13 @@
 export {
   type AdapterHandler,
+  type ClientConnection,
   type ConnectionInfo,
   type ConnectionRegistry,
   type CourierWSOptions,
   createHandler,
   createWSHandler,
   type HandlerConfig,
+  handleWhileConnected,
   requireSources,
   type SSEBroadcastEvent,
   type SSEBroadcastResult,

@@ -142,6 +142,36 @@ describe("a body an endpoint's closure names", () => {
   });
 });
 
+describe("a HEAD endpoint's variables", () => {
+  const items = defineGroup({
+    prefix: "items",
+    endpoints: {
+      one: endpoint.head(":id").variables<Record<string, unknown>>(),
+      all: endpoint.head("").variables<Record<string, unknown>>(),
+    },
+  });
+
+  function client() {
+    return createCaller(defineApi({ baseURL: upstream.origin, groups: { items } }));
+  }
+
+  it("fill the path and put the rest in the query string", async () => {
+    await client().items.one({ id: 9, version: "v2" });
+
+    expect(upstream.last().method).toBe("HEAD");
+    expect(upstream.last().url).toBe("/items/9?version=v2");
+  });
+
+  it("are query values even when named like a fetch option", async () => {
+    await client().items.all({ body: "x", prefixUrl: "http://127.0.0.1:1/elsewhere", timeout: 1 });
+
+    expect(upstream.received).toHaveLength(1);
+    expect(upstream.last().url).toBe(
+      "/items?body=x&prefixUrl=http%3A%2F%2F127.0.0.1%3A1%2Felsewhere&timeout=1",
+    );
+  });
+});
+
 describe("a DELETE whose closure names a JSON body", () => {
   const items = defineGroup({
     prefix: "items",

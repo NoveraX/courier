@@ -1,4 +1,4 @@
-import { buildBody, buildSearchParams, toSearchParams } from "./body-builder";
+import { buildBody, buildSearchParams } from "./body-builder";
 import { stripPathParams, toHeadersInit } from "./path-params";
 import { overlayHeaders } from "./request-headers";
 import type {
@@ -16,12 +16,16 @@ type RequestBuilderDeps = {
   bodySerializer?: (data: Record<string, unknown>) => BodyInit;
 };
 
-/** Build fetch options for HEAD requests (no body, just search params) */
+/**
+ * Build fetch options for HEAD requests: no body, and the variables left
+ * after the path in the query string, as for a GET.
+ */
 function buildHeadOptions(
   arguments_: MethodParameters<"head">,
   boundHeaders: HeadersInit | undefined,
   boundFetchOptions: Record<string, unknown>,
   prefixUrlOverride: Record<string, unknown>,
+  newVariables: unknown,
   newSearchParameters: Record<string, unknown>,
   deps: RequestBuilderDeps,
 ): Partial<FetchOptions> {
@@ -33,8 +37,12 @@ function buildHeadOptions(
     ...boundFetchOptions,
     ...prefixUrlOverride,
     headers: overlayHeaders(boundHeaders, toHeadersInit(optionHeaders)),
-    searchParams: toSearchParams(
-      { ...deps.defaultQueryParams, ...newSearchParameters },
+    ...buildBody(
+      "head",
+      newVariables,
+      newSearchParameters,
+      deps.defaultBody,
+      deps.defaultQueryParams,
       deps.searchParamsSerializer,
     ),
   };
@@ -108,6 +116,7 @@ export function buildRequestOptions(
       boundHeaders,
       boundFetchOptions,
       prefixUrlOverride,
+      newVariables,
       newSearchParameters,
       deps,
     );

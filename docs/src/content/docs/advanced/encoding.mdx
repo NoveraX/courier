@@ -2,7 +2,7 @@ export const metadata = { title: "Encoding", description: "Control how request b
 
 ## Default behavior
 
-By default, Courier serializes variables based on the HTTP method. GET and DELETE methods send variables as URL search params. POST, PUT, and PATCH send them as a JSON body:
+By default, Courier serializes variables based on the HTTP method. GET, HEAD and DELETE methods send variables as URL search params. POST, PUT, and PATCH send them as a JSON body:
 
 ```ts title="Default encoding"
 import { courier, defineGroup } from "@noverax/courier/define"
@@ -22,7 +22,7 @@ const users = defineGroup({
     // POST /users  Body: { "name": "Jane", "email": "jane@test.com" }
     create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
 
-    // HEAD -> no variables sent
+    // HEAD -> like GET, variables go to URLSearchParams; no body
     check: endpoint.head("").response<void>(),
   },
 })
@@ -51,7 +51,7 @@ const bulk = endpoint.post("users/bulk").variables<{ name: string }[]>()
 await caller.users.bulk([{ name: "Jane" }, { name: "John" }])
 ```
 
-A GET or DELETE puts its variables in the query string, so they must be an object there; anything else is refused with an `HTTPError` 400 before a request is made. `defaultBody` and `bodySerializer` apply to an object's fields and leave a body of any other shape alone.
+A GET, HEAD or DELETE puts its variables in the query string, so they must be an object there; anything else is refused with an `HTTPError` 400 before a request is made. `defaultBody` and `bodySerializer` apply to an object's fields and leave a body of any other shape alone.
 
 <Callout variant="info" title="Raw bodies and the proxy">
 The proxy carries variables as JSON or `FormData`. A `Blob`, bytes, a stream or `URLSearchParams` passed to a proxy caller is refused with `ConfigurationError("PROXY_BODY_NOT_SUPPORTED")` before anything is sent. Upload a file in a `FormData` instead, and have the endpoint's closure build the upstream body on the server when it needs raw bytes.

@@ -101,7 +101,7 @@ export async function createUser(data: { name: string; email: string }) {
 
 ## Context and cookie forwarding
 
-In direct mode, the browser's cookies are not automatically available. To forward authentication headers, pass a `Context` object with the current `headers()`:
+In direct mode, the browser's cookies are not automatically available. To forward authentication headers, pass the current `headers()` with the call:
 
 ```ts title="app/profile/page.tsx"
 import { headers } from "next/headers"
@@ -109,17 +109,14 @@ import { caller } from "@/lib/caller"
 
 export default async function ProfilePage() {
   // Pass headers so cookies (auth tokens) reach the backend
-  const profile = await caller.users.me(
-    undefined,
-    { headers: await headers() }
-  )
+  const profile = await caller.users.with({ headers: await headers() }).me()
 
   return <h1>Welcome, {profile.name}</h1>
 }
 ```
 
 <Callout variant="tip" title="Header whitelist">
-Courier only forwards safe headers from the context: `authorization`, `cookie`, `user-agent`, `x-forwarded-*`, `x-real-ip`, and others. Custom headers from `defaults.headers` are always included.
+Headers read from a context — `createCaller(api, { context: { req } })` — are forwarded only when they are safe: `authorization`, `cookie`, `user-agent`, `x-forwarded-*`, `x-real-ip`, and others. Headers passed to `.with({ headers })` and custom headers from `defaults.headers` are always included, except those describing the incoming connection, such as `host`, `connection` and `content-length`.
 </Callout>
 
 ## Security considerations

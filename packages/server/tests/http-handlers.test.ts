@@ -97,7 +97,7 @@ describe("handleCors — preflight", () => {
     expect(res._status).toBe(204);
     expect(res._headers["Access-Control-Allow-Origin"]).toBe("http://example.com");
     expect(res._headers["Access-Control-Allow-Credentials"]).toBe("true");
-    expect(res._headers.Vary).toBe("Origin");
+    expect(res._headers.Vary).toBe("Origin, Access-Control-Request-Headers");
     expect(res._headers["Access-Control-Max-Age"]).toBe("86400");
   });
 

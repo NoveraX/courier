@@ -54,13 +54,14 @@ export function handleCors(
       res.end();
       return true;
     }
+    const requested = requestedHeaders(req);
     res.writeHead(204, {
       "Access-Control-Allow-Origin": origin,
       "Access-Control-Allow-Credentials": "true",
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization, Last-Event-ID",
+      ...(requested ? { "Access-Control-Allow-Headers": requested } : {}),
       "Access-Control-Max-Age": "86400",
-      Vary: "Origin",
+      Vary: "Origin, Access-Control-Request-Headers",
     });
     res.end();
     return true;
@@ -80,6 +81,28 @@ export function handleCors(
   }
 
   return false;
+}
+
+/** An RFC 9110 token: what a header name may be made of. */
+const HEADER_NAME = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
+
+/**
+ * The header names a preflight asks to send, when it may send them.
+ *
+ * A fixed list refused every header the proxy is built to carry — a source's
+ * `allowedHeaders`, an endpoint's `.headers()`, even `x-request-id` — so a
+ * page on a configured origin could not make those calls at all. Which of the
+ * page's headers reach the upstream is the proxy's own allowlist, decided per
+ * source and endpoint, and a preflight names no endpoint; the origin has been
+ * accepted by now. So the preflight grants what the page asks for, and the
+ * proxy keeps filtering what travels on.
+ */
+function requestedHeaders(req: IncomingMessage): string | undefined {
+  const names = (req.headers["access-control-request-headers"] ?? "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter((name) => HEADER_NAME.test(name));
+  return names.length > 0 ? names.join(", ") : undefined;
 }
 
 /** The origin this request was addressed to, from the Host it named. */

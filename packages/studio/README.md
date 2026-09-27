@@ -170,8 +170,8 @@ export default defineConfig({
 ```
 
 - **`sources`** is what Studio lists APIs from, and what your app calls. An API written by hand is declared there the same way. Studio matches an import to the source of its name, so an import needs a name no other source takes: while `sources` declares another API under it, Studio writes nothing and says so. The APIs page lists a source as imported only when the config loads the `source.ts` Studio generated for it.
-- **`imports`** is what Studio updates and manages an import from: the update check fetches `from` again, and the code is regenerated with the options written there. The wizard's entry carries the source name and every option you changed from its default, but not the endpoints you left out in the Select step — the entry has no way to keep that selection — so an update generates every endpoint in the specification, and the wizard says how many that adds. A file or pasted import has no `from`: its specification is supplied through the wizard each time.
-- Importing the same name again or applying an update keeps the endpoints you edited by hand, while the specification still describes them, and the ones you added, in the files that declare them. Every other generated file — the source of an API grouped by tag or path, its `index.ts`, the schemas — is written as generated; when you edited one, Studio asks before replacing it.
+- **`imports`** is what Studio checks and manages an import from: the update check fetches `from` again, and when the specification changed, **Manage** lists the endpoints it adds and drops, for you to add to the files or remove from them; the endpoints you add are generated with the options written there. The wizard's entry carries the source name and every option you changed from its default, but not the endpoints you left out in the Select step — the entry has no way to keep that selection — so Manage lists those as endpoints you can add, and the wizard says how many there are. A file or pasted import has no `from`: Manage asks for its specification each time.
+- Importing the same name again keeps the endpoints you edited by hand, while the specification still describes them, and the ones you added, in the files that declare them. Every other generated file — the source of an API grouped by tag or path, its `index.ts`, the schemas — is written as generated; when it holds edits of yours, Studio asks before replacing it. A group left out this time has its files removed, as long as Studio wrote them and nobody changed them; the message after the write says how many files it removed, and their copies are kept.
 - A part the config declares already is left out, and once it declares both, the wizard closes after the write and says only what it wrote.
 
 ### Which files Studio changes
@@ -186,19 +186,19 @@ Studio changes an import's files — when it writes the import, updates it, adds
 - **A file Studio wrote and nobody changed** is replaced or removed as the change needs. A file whose first line names the import, but which Studio has no record of — in a fresh clone, say, where `.courier/` is not checked in — is treated the same way when it is replaced; removing one waits for you, offered ticked.
 - **A file you changed** keeps your edits to endpoints when Studio updates it. A file Studio would replace whole, or remove, waits for you instead.
 - **A file Studio did not write** — one you added to the folder, or one its first line says Studio wrote for another import — is never removed, and replacing it waits for you.
-- **A symbolic link, or a folder where a file should be,** is never written through, replaced or removed. A change that would write one is refused until you move it out of the way.
+- **A symbolic link or a folder where a file should be** is never written through, replaced or removed, and nothing is written through a folder link that leads out of the project. A change that would write one of them is refused until you move it out of the way.
 
 When a change holds steps that wait for you, Studio shows them with the rest of the change, each with its own checkbox, and takes only the steps you tick; a file left unticked stays as it is. An update, a change to endpoints and a removal are applied only as you previewed them: if a file changed in the meantime, Studio shows the change as it now stands instead. A write needs no preview, and asks only when a step waits for you.
 
-Every change is applied all at once. Studio keeps a copy of each file it replaces or removes in `.courier/backups/<change>/`, and keeps the copies of the last 20 changes. A change that Studio is stopped in the middle of is undone the next time it starts, file by file, except for a file changed since, which is left as it is and logged. Removing an import leaves `courier.config.ts` as it is: the dialog warns when the config imports one of the files that go, since the config stops loading until you remove that import, and reminds you to remove the import's entry under `imports`, from which an update would write the import again.
+Every change is applied all at once. Studio keeps a copy of each file it replaces or removes in `.courier/backups/<change>/`, and keeps the copies of the last 20 changes that made any. A change that Studio is stopped in the middle of is undone the next time it starts, file by file, except for a file changed since, which is left as it is and logged. Studio undoes only what its own records name: a `.courier` folder that came with the project cannot make it touch other files. Removing an import leaves `courier.config.ts` as it is: the dialog warns when the config imports one of the files that go, since the config stops loading until you remove that import, and reminds you to remove the import's entry under `imports` too, since Studio goes on checking the import for updates while the config declares it.
 
-A request Studio refuses changes nothing and is answered with `{ error, code }`, and, where there is one, the plan as it stands:
+A request Studio refuses changes nothing. It is answered with `{ error }` — `404` for an import Studio does not know, `400` for a body it cannot read — and, for the refusals below, with a `code` and, where there is one, the plan as it stands. A change that needs `courier.config` to load is refused as [How Studio loads the project](#how-studio-loads-the-project) describes.
 
 | Code | Status | Meaning |
 |---|---|---|
 | `NEEDS_CONFIRMATION` | 409 | Some steps wait for you; send the request again with the plan's `planDigest` and the paths you allow in `confirm`. |
 | `PLAN_NOT_SEEN` | 409 | An update, a change to endpoints or a removal quoted no plan; preview it first. |
-| `PLAN_STALE` | 409 | A file changed since you saw the plan. |
+| `PLAN_STALE` | 409 | The plan is not the one you saw: a file it rests on changed, or the import's declaration or the change asked for did. |
 | `TARGET_BLOCKED` | 409 | A file the change writes is a symbolic link or not a file. |
 | `CONFIRMATION_NOT_IN_PLAN` | 400 | `confirm` names a path the plan does not ask about. |
 | `DECLARATION_MISMATCH` | 409 | `imports` declares the import in another folder than the wizard's options. |
@@ -206,6 +206,10 @@ A request Studio refuses changes nothing and is answered with `{ error, code }`,
 | `NAME_TAKEN` | 409 | `sources` declares another API under the import's name. |
 | `FILE_NOT_RECOGNIZED` | 409 | A file Studio would add endpoints to no longer shows where its endpoints are. |
 | `IMPORTS_STATE_UNSAFE` | 409 | Studio cannot read `.courier/imports-state.json`, or keep a copy of it, so saving it would lose the other imports' records. |
+| `COURIER_DIR_UNSAFE` | 409 | `.courier`, or a folder Studio keeps in it, is a symbolic link or not a folder; Studio keeps nothing there. |
+| `INVALID_IMPORT` | 400 | The output directory, the source name or a group's name is one Studio does not write to: outside the project, in `.git`, `node_modules` or `.courier`, or a name Windows treats differently. |
+| `PATH_OUTSIDE_PROJECT` | 400 | A path leads out of the project. |
+| `SPEC_NOT_GENERATED` | 400 | Studio could not generate code from the specification sent. |
 
 <br />
 

@@ -7,6 +7,12 @@ export type AnyEndpointFn = AnyEndpoint;
 /** Record of endpoint functions keyed by method name */
 export type EndpointRecord = Record<string, AnyEndpointFn>;
 
+/**
+ * Endpoints a group or a source may be defined with: any name but `options`,
+ * which holds the group's or the source's own settings beside them.
+ */
+export type OwnEndpoints = EndpointRecord & { readonly options?: never };
+
 /** Configuration for defineGroup() */
 export type DefineGroupConfig<TEndpoints extends EndpointRecord> = GroupOptions & {
   /** Map of named endpoint functions belonging to this group */

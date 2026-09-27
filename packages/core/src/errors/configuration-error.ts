@@ -81,7 +81,12 @@ export type ConfigurationErrorCode =
    * definition site instead of silently discarding one of the two values.
    */
   | "SLOT_ALREADY_SET"
-  | "CACHE_ON_WRITE";
+  | "CACHE_ON_WRITE"
+  /**
+   * An endpoint was named `options` in a group or among a source's own
+   * endpoints, where that name holds the group's or the source's settings.
+   */
+  | "RESERVED_ENDPOINT_NAME";
 
 /**
  * Thrown when courier is misconfigured at the boundary between user code and

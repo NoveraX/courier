@@ -46,5 +46,6 @@ export type {
   DefineGroupConfig,
   EndpointRecord,
   GroupRecord,
+  OwnEndpoints,
   Sources,
 } from "./types";

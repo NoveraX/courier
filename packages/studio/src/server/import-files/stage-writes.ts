@@ -1,7 +1,7 @@
 import { statSync } from "node:fs";
 import { dirname, relative, sep } from "node:path";
 import { errnoCode } from "../errno-code";
-import { ensureDirectory } from "../project-fs/ensure-directory";
+import { ensureDirectory, missingDirectories } from "../project-fs/ensure-directory";
 import type { ProjectRoot } from "../project-fs/project-root";
 import { resolveProjectPath } from "../project-fs/resolve-project-path";
 import { writeTempBeside } from "../project-fs/write-temp-beside";
@@ -29,16 +29,18 @@ export interface StagedWrite {
 
 /**
  * Put every file a plan writes in a temporary file beside its target, with
- * Studio's header, before anything in the project changes. Directories are
- * created one at a time and recorded in the journal, as is each temporary
- * file, so a failure or a crash can undo them. A file that is replaced
- * keeps its permission bits.
+ * Studio's header, before anything in the project changes. Every directory
+ * the apply creates is recorded in the journal before the first is made, so
+ * a failure or a crash can undo them; the temporary files are named in the
+ * journal as they are made, and an undo sweeps the import's folder for any
+ * a crash left unnamed. A file that is replaced keeps its permission bits.
  *
  * @param root - The project
  * @param plan - The plan, confirmations applied
  * @param journal - The apply's journal, which this fills in
  * @returns The staged writes, in the plan's order
  * @throws {PathOutsideProjectError} When a target turned into a link or leads outside the project
+ * @throws {FilePlanError} `PLAN_STALE` when a link or a file stands on the way to a target
  * @throws The file system's error when a file or directory cannot be written
  */
 export function stageWrites(
@@ -46,13 +48,19 @@ export function stageWrites(
   plan: FilePlan,
   journal: ApplyJournal,
 ): StagedWrite[] {
-  const staged: StagedWrite[] = [];
-  for (const write of plan.writes) {
-    if (write.action === "unchanged") continue;
+  const writes = plan.writes.filter((write) => write.action !== "unchanged");
+  const targets = writes.map((write) => {
     const absolute = resolveProjectPath(root.path, write.path);
     refuseObstacle(root, absolute, write.path);
+    return { write, absolute };
+  });
+  const planned = new Set(targets.flatMap(({ absolute }) => missingDirectories(dirname(absolute))));
+  journal.createdDirs = [...planned].map((dir) => projectRelative(root, dir));
+  /* One save covers every folder; a temporary file needs none, as the undo sweeps for them. */
+  saveJournal(root.path, journal);
+  return targets.map(({ write, absolute }) => {
     for (const created of ensureDirectory(root, dirname(absolute))) {
-      journal.createdDirs.push(projectRelative(root, created));
+      if (!planned.has(created)) journal.createdDirs.push(projectRelative(root, created));
     }
     const mode = modeOf(absolute);
     const temp = writeTempBeside(
@@ -62,11 +70,8 @@ export function stageWrites(
       IMPORT_TEMP_PREFIX,
     );
     journal.temps.push(projectRelative(root, temp));
-    /* Recorded before the next file, so a crash leaves nothing the journal does not name. */
-    saveJournal(root.path, journal);
-    staged.push({ write, absolute, temp, existed: mode !== null, sha256: bodyHash(write.body) });
-  }
-  return staged;
+    return { write, absolute, temp, existed: mode !== null, sha256: bodyHash(write.body) };
+  });
 }
 
 function modeOf(path: string): number | null {

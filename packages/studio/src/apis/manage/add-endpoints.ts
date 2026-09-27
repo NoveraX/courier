@@ -4,7 +4,7 @@
  */
 
 import { parseSource } from "../../server/mocks-edit/plan/parse-source";
-import { generateCode, groupLocalName } from "../generator";
+import { generateCode } from "../generator";
 import type { GenerateOptions } from "../generator/types";
 import type { ImportLayout } from "../layout";
 import { declaresEndpoints } from "../merge/declares-endpoints";
@@ -15,8 +15,9 @@ import { appendEndpointsToGroup } from "./append-to-group";
 import { exportedNames } from "./exported-names";
 import { listedSelection } from "./listed-selection";
 import { mergeSchemaFiles } from "./merge-schemas";
+import { settleStarExports } from "./settle-star-exports";
+import { sourceWithNewGroups } from "./source-with-new-groups";
 import type { AddResult, FileChange } from "./types";
-import { addGroupsToSourceFile } from "./update-source-file";
 
 /**
  * Generate a preview of what adding endpoints would produce.
@@ -108,30 +109,12 @@ export function previewAddEndpoints(
     const textAt = (path: string): string | undefined =>
       files.find((file) => file.path === path)?.content ?? existingFiles[path];
     const index = generated.find((file) => file.path === layout.indexFile)?.content ?? "";
-    const merged = appendBarrelExports(layout.indexFile, existing, index, textAt);
+    const appended = appendBarrelExports(layout.indexFile, existing, index, textAt);
+    const merged = settleStarExports(layout.indexFile, appended, textAt);
     if (merged !== existing) files.push(change(merged, "modify"));
   }
 
-  /* A flat import has no group files, and its source holds the endpoints themselves. */
-  const newGroupNames =
-    options.groupBy === "single" ? [] : findNewGroups(endpointsToAdd, existingFiles, layout);
-  let sourceFileUpdate: AddResult["sourceFileUpdate"];
-  if (newGroupNames.length > 0) {
-    const sourcePath = layout.sourceFile;
-    const existingSource = existingFiles[sourcePath] ?? "";
-    if (existingSource) {
-      const updated = addGroupsToSourceFile(
-        sourcePath,
-        existingSource,
-        newGroupNames.map((name) => ({
-          name,
-          local: groupLocalName(name, layout.sourceBinding),
-          importPath: layout.groupSpecifier(name, "index"),
-        })),
-      );
-      sourceFileUpdate = { path: sourcePath, content: updated };
-    }
-  }
+  const sourceFileUpdate = sourceWithNewGroups(endpointsToAdd, options, existingFiles, layout);
 
   return { files, sourceFileUpdate, newFingerprints };
 }
@@ -148,17 +131,6 @@ function endpointsToAddForFile(
     if (filePath === layout.groupFile(group)) return names;
   }
   return [];
-}
-
-/** Detect groups whose file is not on disk yet */
-function findNewGroups(
-  endpointsToAdd: Record<string, string[]>,
-  existingFiles: Record<string, string>,
-  layout: ImportLayout,
-): string[] {
-  return Object.keys(endpointsToAdd).filter(
-    (group) => !Object.hasOwn(existingFiles, layout.groupFile(group)),
-  );
 }
 
 function extractSchemaNames(content: string): string[] {

@@ -132,6 +132,46 @@ describe("previewAddEndpoints with schemas two groups share", () => {
   });
 });
 
+describe("previewAddEndpoints to a group whose schemas gain one another group exports", () => {
+  const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
+  const ok = (schema: object) => ({ "200": { description: "ok", content: { "application/json": { schema } } } });
+  const SPEC_TOYS = parseSpec(
+    JSON.stringify({
+      openapi: "3.1.0",
+      info: { title: "Shop", version: "1" },
+      paths: {
+        "/pets": { get: { operationId: "listPets", tags: ["animals"], responses: ok(ref("Pet")) } },
+        "/toys": { get: { operationId: "listToys", tags: ["animals"], responses: ok(ref("Toy")) } },
+        "/misc/toy": { get: { operationId: "getToy", tags: ["misc"], responses: ok(ref("Toy")) } },
+      },
+      components: {
+        schemas: {
+          Pet: { type: "object", properties: { id: { type: "string" } } },
+          Toy: { type: "object", properties: { name: { type: "string" } } },
+        },
+      },
+    }),
+  );
+
+  it("exports the name once, through the module that exports it first", () => {
+    const options = { type: "openapi" as const, outputDir: "src/api" };
+    const layout = resolveImportLayout(options, "shop");
+    const selected = { animals: ["listPets"], misc: ["getToy"] };
+    const existing = Object.fromEntries(
+      generateCode(SPEC_TOYS, { ...options, selectedEndpoints: selected }, "shop").map((file) => [file.path, file.content]),
+    );
+    expect(existing[layout.indexFile]).toContain('export * from "./misc/schemas";');
+
+    const result = previewAddEndpoints(SPEC_TOYS, { animals: ["listToys"] }, options, existing, layout);
+
+    const schemas = result.files.find((file) => file.path === layout.groupSchemaFile("animals", "schemas"));
+    const barrel = result.files.find((file) => file.path === layout.indexFile)?.content ?? "";
+    expect(schemas?.content).toContain("export const ToySchema");
+    expect(barrel).toContain('export * from "./animals/schemas";');
+    expect(barrel).not.toContain("./misc/schemas");
+  });
+});
+
 describe("previewRemoveEndpoints", () => {
   it("finds the group file where the layout puts it", () => {
     const existing = filesOf(null);

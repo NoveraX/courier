@@ -13,6 +13,8 @@ export interface GroupDeclaration {
   name: string | null;
   exported: boolean;
   endpoints: ObjectExpression;
+  /** The `prefix` it declares as a string literal, or `null` when it declares none that way. */
+  prefix: string | null;
 }
 
 function endpointsOf(
@@ -37,6 +39,26 @@ function endpointsOf(
   return null;
 }
 
+function prefixOf(init: Expression | null): string | null {
+  const call = init === null ? null : unwrapExpression(init);
+  if (call?.type !== "CallExpression") return null;
+  const [config] = call.arguments;
+  const object =
+    config === undefined || config.type === "SpreadElement" ? null : unwrapExpression(config);
+  if (object?.type !== "ObjectExpression") return null;
+  for (const property of object.properties) {
+    if (
+      property.type !== "Property" ||
+      property.computed ||
+      propertyKeyName(property.key) !== "prefix"
+    )
+      continue;
+    const value = unwrapExpression(property.value);
+    return value.type === "Literal" && typeof value.value === "string" ? value.value : null;
+  }
+  return null;
+}
+
 function declarationsIn(program: Program): GroupDeclaration[] {
   const found: GroupDeclaration[] = [];
   for (const statement of program.body) {
@@ -46,7 +68,8 @@ function declarationsIn(program: Program): GroupDeclaration[] {
     for (const declarator of declaration.declarations) {
       const endpoints = endpointsOf(declarator.init);
       const name = declarator.id.type === "Identifier" ? declarator.id.name : null;
-      if (endpoints !== null) found.push({ statement, name, exported, endpoints });
+      const prefix = prefixOf(declarator.init);
+      if (endpoints !== null) found.push({ statement, name, exported, endpoints, prefix });
     }
   }
   return found;

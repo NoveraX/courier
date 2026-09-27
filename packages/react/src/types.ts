@@ -71,31 +71,45 @@ export type {
 
 /** Hooks and utilities exposed per API group */
 export type QueryGroupClient<TGroup> = {
-  useQuery: <TMethod extends MethodsOfKind<TGroup, "query">>(
+  useQuery: <TMethod extends MethodsOfKind<TGroup, "query">, TData = Res<TGroup[TMethod]>>(
     method: TMethod,
     ...args: TGroup[TMethod] extends AnyEndpoint
       ? [Vars<TGroup[TMethod]>] extends [undefined | void]
-        ? [options?: CourierQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
+        ? [options?: CourierQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>, TData>]
         : {} extends Vars<TGroup[TMethod]>
-          ? [options?: CourierQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
-          : [options: CourierQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
+          ? [options?: CourierQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>, TData>]
+          : [options: CourierQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>, TData>]
       : never
-  ) => TGroup[TMethod] extends AnyEndpoint
-    ? UseQueryResult<Res<TGroup[TMethod]>, HTTPError>
-    : never;
+  ) => TGroup[TMethod] extends AnyEndpoint ? UseQueryResult<TData, HTTPError> : never;
 
-  useSuspenseQuery: <TMethod extends MethodsOfKind<TGroup, "query">>(
+  useSuspenseQuery: <TMethod extends MethodsOfKind<TGroup, "query">, TData = Res<TGroup[TMethod]>>(
     method: TMethod,
     ...args: TGroup[TMethod] extends AnyEndpoint
       ? [Vars<TGroup[TMethod]>] extends [undefined | void]
-        ? [options?: CourierSuspenseQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
+        ? [
+            options?: CourierSuspenseQueryOptions<
+              Res<TGroup[TMethod]>,
+              Vars<TGroup[TMethod]>,
+              TData
+            >,
+          ]
         : {} extends Vars<TGroup[TMethod]>
-          ? [options?: CourierSuspenseQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
-          : [options: CourierSuspenseQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
+          ? [
+              options?: CourierSuspenseQueryOptions<
+                Res<TGroup[TMethod]>,
+                Vars<TGroup[TMethod]>,
+                TData
+              >,
+            ]
+          : [
+              options: CourierSuspenseQueryOptions<
+                Res<TGroup[TMethod]>,
+                Vars<TGroup[TMethod]>,
+                TData
+              >,
+            ]
       : never
-  ) => TGroup[TMethod] extends AnyEndpoint
-    ? UseSuspenseQueryResult<Res<TGroup[TMethod]>, HTTPError>
-    : never;
+  ) => TGroup[TMethod] extends AnyEndpoint ? UseSuspenseQueryResult<TData, HTTPError> : never;
 
   useInfiniteQuery: <TMethod extends MethodsOfKind<TGroup, "query">, TPageParam>(
     method: TMethod,

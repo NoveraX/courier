@@ -19,16 +19,23 @@ import type {
 
 import type { MutationVariables, WithVariables } from "./types-helpers";
 
-export type CourierQueryOptions<TResponse, TVariables> = WithVariables<TVariables> &
-  Omit<UseQueryOptions<TResponse, HTTPError, TResponse, QueryKey>, "queryKey" | "queryFn"> & {
+/** `TData` is what the hook returns: the response, or what `select` makes of it. */
+export type CourierQueryOptions<
+  TResponse,
+  TVariables,
+  TData = TResponse,
+> = WithVariables<TVariables> &
+  Omit<UseQueryOptions<TResponse, HTTPError, TData, QueryKey>, "queryKey" | "queryFn"> & {
     requestOptions?: CallOptions;
   };
 
-export type CourierSuspenseQueryOptions<TResponse, TVariables> = WithVariables<TVariables> &
-  Omit<
-    UseSuspenseQueryOptions<TResponse, HTTPError, TResponse, QueryKey>,
-    "queryKey" | "queryFn"
-  > & {
+/** `TData` is what the hook returns: the response, or what `select` makes of it. */
+export type CourierSuspenseQueryOptions<
+  TResponse,
+  TVariables,
+  TData = TResponse,
+> = WithVariables<TVariables> &
+  Omit<UseSuspenseQueryOptions<TResponse, HTTPError, TData, QueryKey>, "queryKey" | "queryFn"> & {
     requestOptions?: CallOptions;
   };
 

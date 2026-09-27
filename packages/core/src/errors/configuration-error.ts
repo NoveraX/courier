@@ -17,6 +17,12 @@ export type ConfigurationErrorCode =
    */
   | "PROXY_OPTION_NOT_ALLOWED"
   /**
+   * A proxy call's variables were a raw body — a Blob, bytes, a stream or
+   * URLSearchParams. The proxy carries variables as JSON or as FormData, and
+   * the server decides what the upstream request looks like.
+   */
+  | "PROXY_BODY_NOT_SUPPORTED"
+  /**
    * A stream endpoint sent an event whose name starts with `courier:` —
    * reserved for the events that tell the client how the stream ended.
    */

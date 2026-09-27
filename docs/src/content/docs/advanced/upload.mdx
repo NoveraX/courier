@@ -70,6 +70,24 @@ const users = defineGroup({
 })
 ```
 
+## Raw binary bodies
+
+An upstream that takes the bytes themselves, rather than a multipart form, is called with the `Blob`, `File` or typed array as the variables. In direct mode it is sent as the body, with the `Blob`'s own type as the content type:
+
+```ts
+const putObject = endpoint.put("objects/raw").variables<Blob>()
+
+await caller.storage.putObject(new Blob([bytes], { type: "image/png" }))
+```
+
+The proxy carries variables as JSON or `FormData` only, and refuses a raw body with `ConfigurationError("PROXY_BODY_NOT_SUPPORTED")`. From a browser, send the file in a `FormData` and let the endpoint's closure hand its bytes to the upstream:
+
+```ts
+const putObject = endpoint
+  .variables<FormData>()
+  .via((http, form) => http.put("objects/raw", {}, { body: form.get("file") ?? undefined }))
+```
+
 ## Progress tracking
 
 The `onUploadProgress` callback receives an `UploadProgress` object with three fields:

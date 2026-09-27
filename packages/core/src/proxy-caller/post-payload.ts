@@ -5,7 +5,7 @@ export function buildPostPayload(
   source: string,
   group: string | undefined,
   method: string,
-  variables: FormData | Record<string, unknown> | undefined,
+  variables: unknown,
   serverOptions: Record<string, unknown>,
 ): { body: FormData; json?: undefined } | { json: Partial<RequestPayload>; body?: undefined } {
   if (isFormData(variables)) {

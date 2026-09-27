@@ -83,8 +83,20 @@ Conventional Commits, with an emoji after the colon:
 | `refactor` | ♻️ | | `perf` | ⚡ |
 
 Subject line in the imperative, 72 characters at most, no trailing period,
-English. Put the *what* and *why* in the body; the *how* is the diff. One
-logical change per commit.
+English, with the description after the emoji in lower case. Put the *what*
+and *why* in the body; the *how* is the diff. One logical change per commit.
+
+Do not start a body line with a token followed by `: ` or ` #` (`Core: …`,
+`Issue #12 …`). That is how the Conventional Commits grammar opens the
+footer, and a parser that follows it, commitlint's among them, ends the body
+there. The lines meant as footers may stand anywhere: a `BREAKING CHANGE:`
+note in capitals, an issue reference (`Closes #12`, `Refs: #12`), and the git
+trailers `Co-authored-by`, `Co-developed-by`, `Signed-off-by`, `Reviewed-by`,
+`Acked-by`, `Tested-by`, `Reported-by`, `Suggested-by`, `Helped-by`,
+`Change-Id` and `Link`.
+
+The commit-msg hook checks the type and its emoji, the length, the case of
+the description, the trailing period and the footer rule.
 
 Breaking changes take a `!` after the type or scope, and a
 `BREAKING CHANGE:` footer explaining what a user has to do:

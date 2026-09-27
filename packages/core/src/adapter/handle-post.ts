@@ -1,5 +1,6 @@
 import type { StudioHooks } from "../studio/hooks";
 import type { RequestPayloadInput } from "../utils/helpers";
+import { discardBody } from "./discard-body";
 import type { HandlerConfig } from "./handler-config";
 import { LIMITS } from "./limits";
 import { isOriginAllowed } from "./origin-policy";
@@ -20,7 +21,7 @@ export function createPostHandler(execute: ExecuteFn, dt: StudioHooks, config?: 
 
     if (!isOriginAllowed(request, config?.allowedOrigins)) {
       dt.onProxyOriginReject?.({ origin: origin ?? "", timestamp: Date.now() });
-      return errorResponse(403, "Origin not allowed");
+      return refuse(request, 403, "Origin not allowed");
     }
 
     const body = await parseBody(request, config);
@@ -81,7 +82,7 @@ async function parseBody(
 
   const isUpload = mediaType === "multipart/form-data";
   if (!isUpload && mediaType !== "application/json") {
-    return errorResponse(415, "Unsupported Content-Type");
+    return refuse(request, 415, "Unsupported Content-Type");
   }
 
   const limit = isUpload
@@ -89,7 +90,7 @@ async function parseBody(
     : (config?.maxBodyBytes ?? LIMITS.MAX_PROXY_BODY_BYTES);
 
   const body = await readBoundedBody(request, limit);
-  if (!body.ok) return errorResponse(413, `Request body exceeds ${body.limit} bytes`);
+  if (!body.ok) return refuse(request, 413, `Request body exceeds ${body.limit} bytes`);
 
   /* Re-presenting the bytes lets the platform do the multipart parsing; the
      content type carries the boundary the parser needs. */
@@ -108,6 +109,12 @@ async function parseBody(
   } catch {
     return errorResponse(400, "Invalid JSON body");
   }
+}
+
+/** Answer a request without reading the rest of its body, and discard that rest. */
+function refuse(request: Request, status: number, message: string): Response {
+  discardBody(request);
+  return errorResponse(status, message);
 }
 
 function extractField(

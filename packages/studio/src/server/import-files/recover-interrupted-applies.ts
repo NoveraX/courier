@@ -1,6 +1,7 @@
 import { createLogger } from "@noverax/courier";
 import type { ProjectRoot } from "../project-fs/project-root";
-import { dropJournal, readJournals } from "./apply-journal";
+import { dropJournal, JOURNAL_DIR, readJournals } from "./apply-journal";
+import { journalProblem } from "./journal-trust";
 import { rollbackApply } from "./rollback-apply";
 
 const log = createLogger("Studio");
@@ -17,8 +18,10 @@ export interface RecoveredApply {
  * Undo every apply a crash or a kill left unfinished, from the journals it
  * kept: staged files and created directories go, files replaced or removed
  * come back. An apply whose outcome was recorded stands, and only its
- * journal goes. Run once as Studio starts, before it serves anything that
- * reads or writes an import's files.
+ * journal goes. A journal that is not one Studio wrote for an apply of its
+ * own — `.courier/` can arrive with a project — is left as it is and
+ * logged. Run once as Studio starts, before it serves anything that reads
+ * or writes an import's files.
  *
  * @param root - The project
  * @param committed - The ids of the applies whose outcome was recorded
@@ -33,7 +36,14 @@ export function recoverInterruptedApplies(
   committed: ReadonlySet<string>,
 ): RecoveredApply[] {
   const recovered: RecoveredApply[] = [];
-  for (const journal of readJournals(root.path)) {
+  for (const { fileName, journal } of readJournals(root.path)) {
+    const problem = journalProblem(fileName, journal);
+    if (problem !== null) {
+      log.warn(
+        `Studio left ${JOURNAL_DIR}/${fileName} as it is and undid nothing from it: ${problem}.`,
+      );
+      continue;
+    }
     if (committed.has(journal.id)) {
       dropJournal(root.path, journal.id);
       continue;

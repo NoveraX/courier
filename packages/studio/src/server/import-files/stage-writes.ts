@@ -1,5 +1,5 @@
 import { statSync } from "node:fs";
-import { dirname, relative } from "node:path";
+import { dirname, relative, sep } from "node:path";
 import { errnoCode } from "../errno-code";
 import { assertRealInside } from "../project-fs/assert-real-inside";
 import { ensureDirectory } from "../project-fs/ensure-directory";
@@ -50,7 +50,7 @@ export function stageWrites(
     const absolute = resolveProjectPath(root.path, write.path);
     assertRealInside(root, absolute);
     for (const created of ensureDirectory(root, dirname(absolute))) {
-      journal.createdDirs.push(relative(root.path, created));
+      journal.createdDirs.push(projectRelative(root, created));
     }
     const mode = modeOf(absolute);
     const temp = writeTempBeside(
@@ -59,7 +59,7 @@ export function stageWrites(
       mode,
       IMPORT_TEMP_PREFIX,
     );
-    journal.temps.push(relative(root.path, temp));
+    journal.temps.push(projectRelative(root, temp));
     staged.push({ write, absolute, temp, existed: mode !== null, sha256: bodyHash(write.body) });
   }
   return staged;
@@ -72,4 +72,9 @@ function modeOf(path: string): number | null {
     if (errnoCode(error) === "ENOENT") return null;
     throw error;
   }
+}
+
+/* Journals name paths as the plan does, `/`-separated on every system. */
+function projectRelative(root: ProjectRoot, path: string): string {
+  return relative(root.path, path).split(sep).join("/");
 }

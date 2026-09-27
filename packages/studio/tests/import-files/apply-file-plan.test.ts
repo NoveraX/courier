@@ -218,13 +218,14 @@ describe("recoverInterruptedApplies", () => {
   it("undoes an apply a crash cut short: the replaced file comes back, the created one goes", () => {
     put(`${DIR}/index.ts`, "new index\n");
     put(`${DIR}/new/index.ts`, "new group\n");
-    put(`.courier/backups/1-crash/${DIR}/index.ts`, "old index\n");
-    put(`.courier/backups/1-crash/${DIR}/old/index.ts`, "old group\n");
+    put(`.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`, "old index\n");
+    put(`.courier/backups/1700000000000-0000c0de/${DIR}/old/index.ts`, "old group\n");
     saveJournal(root.path, {
-      id: "1-crash",
+      id: "1700000000000-0000c0de",
       importName: "pets",
+      dir: DIR,
       state: "committing",
-      backupDir: ".courier/backups/1-crash",
+      backupDir: ".courier/backups/1700000000000-0000c0de",
       entries: [
         { path: `${DIR}/index.ts`, step: "write", existed: true, sha256: bodyHash("new index\n") },
         { path: `${DIR}/new/index.ts`, step: "write", existed: false, sha256: bodyHash("new group\n") },
@@ -236,7 +237,7 @@ describe("recoverInterruptedApplies", () => {
 
     const recovered = recoverInterruptedApplies(root, new Set());
 
-    expect(recovered).toEqual([{ importName: "pets", failed: [], backupDir: ".courier/backups/1-crash" }]);
+    expect(recovered).toEqual([{ importName: "pets", failed: [], backupDir: ".courier/backups/1700000000000-0000c0de" }]);
     undisturbed();
     expect(readdirSync(join(root.path, ".courier/journal"))).toEqual([]);
   });
@@ -244,7 +245,7 @@ describe("recoverInterruptedApplies", () => {
   it("leaves an apply the imports state recorded as it stands, and only drops its journal", () => {
     crashedApply();
 
-    const recovered = recoverInterruptedApplies(root, new Set(["1-crash"]));
+    const recovered = recoverInterruptedApplies(root, new Set(["1700000000000-0000c0de"]));
 
     expect(recovered).toEqual([]);
     expect(read(`${DIR}/index.ts`)).toBe("new index\n");
@@ -263,8 +264,8 @@ describe("recoverInterruptedApplies", () => {
     expect(recovered?.failed.sort()).toEqual([`${DIR}/index.ts`, `${DIR}/old/index.ts`]);
     expect(read(`${DIR}/index.ts`)).toBe("new index\nmy edit\n");
     expect(read(`${DIR}/old/index.ts`)).toBe("a file of my own\n");
-    expect(read(`.courier/backups/1-crash/${DIR}/index.ts`)).toBe("old index\n");
-    expect(read(`.courier/backups/1-crash/${DIR}/old/index.ts`)).toBe("old group\n");
+    expect(read(`.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`)).toBe("old index\n");
+    expect(read(`.courier/backups/1700000000000-0000c0de/${DIR}/old/index.ts`)).toBe("old group\n");
     expect(existsSync(join(root.path, `${DIR}/new/index.ts`))).toBe(false);
   });
 
@@ -272,7 +273,7 @@ describe("recoverInterruptedApplies", () => {
     crashedApply();
     put(`${DIR}/index.ts`, "old index\n");
     put(`${DIR}/old/index.ts`, "old group\n");
-    rmSync(join(root.path, `.courier/backups/1-crash/${DIR}/old`), { recursive: true });
+    rmSync(join(root.path, `.courier/backups/1700000000000-0000c0de/${DIR}/old`), { recursive: true });
 
     const [recovered] = recoverInterruptedApplies(root, new Set());
 
@@ -312,13 +313,14 @@ describe("an apply that committed", () => {
 function crashedApply(): void {
   put(`${DIR}/index.ts`, "new index\n");
   put(`${DIR}/new/index.ts`, "new group\n");
-  put(`.courier/backups/1-crash/${DIR}/index.ts`, "old index\n");
-  put(`.courier/backups/1-crash/${DIR}/old/index.ts`, "old group\n");
+  put(`.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`, "old index\n");
+  put(`.courier/backups/1700000000000-0000c0de/${DIR}/old/index.ts`, "old group\n");
   saveJournal(root.path, {
-    id: "1-crash",
+    id: "1700000000000-0000c0de",
     importName: "pets",
+    dir: DIR,
     state: "committing",
-    backupDir: ".courier/backups/1-crash",
+    backupDir: ".courier/backups/1700000000000-0000c0de",
     entries: [
       { path: `${DIR}/index.ts`, step: "write", existed: true, sha256: bodyHash("new index\n") },
       { path: `${DIR}/new/index.ts`, step: "write", existed: false, sha256: bodyHash("new group\n") },

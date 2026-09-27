@@ -1,7 +1,8 @@
-import { existsSync, renameSync, rmdirSync, unlinkSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, lstatSync, renameSync, rmdirSync, unlinkSync } from "node:fs";
+import { dirname } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { errnoCode } from "../errno-code";
+import { assertRealInside } from "../project-fs/assert-real-inside";
 import { discardTemp } from "../project-fs/discard-temp";
 import { ensureDirectory } from "../project-fs/ensure-directory";
 import type { ProjectRoot } from "../project-fs/project-root";
@@ -43,11 +44,10 @@ export function rollbackApply(root: ProjectRoot, journal: ApplyJournal): string[
       );
     }
   }
-  for (const temp of journal.temps) {
-    const absolute = join(root.path, temp);
-    if (existsSync(absolute)) discardTemp(absolute);
+  for (const temp of journal.temps) discardStagedTemp(root, temp);
+  for (const dir of [...journal.createdDirs].reverse()) {
+    removeIfEmpty(resolveProjectPath(root.path, dir));
   }
-  for (const dir of [...journal.createdDirs].reverse()) removeIfEmpty(join(root.path, dir));
   return failed;
 }
 
@@ -55,6 +55,9 @@ export function rollbackApply(root: ProjectRoot, journal: ApplyJournal): string[
 function undoEntry(root: ProjectRoot, journal: ApplyJournal, entry: JournalEntry): boolean {
   const target = resolveProjectPath(root.path, entry.path);
   const copy = backupPath(root, journal.backupDir, entry.path);
+  /* Nothing is undone through a link: a folder on the way that leads elsewhere refuses the step. */
+  assertRealInside(root, target);
+  assertRealInside(root, copy);
   const found = readDiskFile(target);
   const holdsWrite = found.kind === "file" && found.sha256 === entry.sha256;
   if (entry.step === "write" && !entry.existed) {
@@ -75,6 +78,19 @@ function undoEntry(root: ProjectRoot, journal: ApplyJournal, entry: JournalEntry
 function holdsCopy(copy: string, sha256: string): boolean {
   const before = readDiskFile(copy);
   return before.kind === "file" && before.sha256 === sha256;
+}
+
+/* Only a regular file, reached through no link, is a temporary file of Studio's to delete. */
+function discardStagedTemp(root: ProjectRoot, temp: string): void {
+  const absolute = resolveProjectPath(root.path, temp);
+  if (!existsSync(absolute)) return;
+  try {
+    assertRealInside(root, absolute);
+  } catch (error) {
+    log.warn(`Studio left ${temp} as it is: it is reached through a link`, error);
+    return;
+  }
+  if (lstatSync(absolute).isFile()) discardTemp(absolute);
 }
 
 function removeIfEmpty(dir: string): void {

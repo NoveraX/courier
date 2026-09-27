@@ -1,8 +1,8 @@
 import { readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { createLogger } from "@noverax/courier";
-import { COURIER_DIR } from "../courier-dir";
-import { errnoCode } from "../errno-code";
+import { COURIER_DIR, hasCourierSubdir } from "../courier-dir";
+import { isApplyId } from "./apply-id";
 
 const log = createLogger("Studio");
 
@@ -17,16 +17,14 @@ export const KEPT_BACKUPS = 20;
  * @param root - The project directory
  * @param keep - How many to keep
  * @returns The backup directories deleted, project-relative
+ * @throws {CourierDirUnsafeError} When `.courier` or its backups folder is a link or not a folder
  */
 export function pruneBackups(root: string, keep: number = KEPT_BACKUPS): string[] {
-  const dir = join(root, COURIER_DIR, "backups");
-  let names: string[];
-  try {
-    names = readdirSync(dir).sort();
-  } catch (error) {
-    if (errnoCode(error) === "ENOENT") return [];
-    throw error;
-  }
+  if (!hasCourierSubdir(root, "backups")) return [];
+  /* Only a folder named like an apply is one of Studio's backups. */
+  const names = readdirSync(join(root, COURIER_DIR, "backups"))
+    .filter(isApplyId)
+    .sort();
   const deleted = names
     .slice(0, Math.max(0, names.length - keep))
     .map((name) => `${COURIER_DIR}/backups/${name}`);

@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { createLogger } from "@noverax/courier";
-import { COURIER_DIR, ensureCourierDir } from "../courier-dir";
+import { COURIER_DIR, ensureCourierSubdir, hasCourierSubdir } from "../courier-dir";
 import { errnoCode } from "../errno-code";
 import { isRecord } from "../mocks-edit/is-record";
 import { retryOnWin32 } from "../project-fs/retry-on-win32";
@@ -28,14 +28,16 @@ export interface JournalEntry {
 export interface ApplyJournal {
   id: string;
   importName: string;
+  /** The import's folder, project-relative: nothing the apply touches lies outside it. */
+  dir: string;
   /** `committing` once anything in the project may have changed. */
   state: "staging" | "committing";
   /** Project-relative backup directory. */
   backupDir: string;
   entries: JournalEntry[];
-  /** Project-relative directories the apply created, outermost first. */
+  /** Project-relative, `/`-separated directories the apply created, outermost first. */
   createdDirs: string[];
-  /** Project-relative temporary files the apply staged. */
+  /** Project-relative, `/`-separated temporary files the apply staged. */
   temps: string[];
 }
 
@@ -44,14 +46,14 @@ export interface ApplyJournal {
  *
  * @param root - The project directory
  * @param journal - The journal
+ * @throws {CourierDirUnsafeError} When `.courier` or its journal folder is a link or not a folder
  * @example
  * ```ts
  * saveJournal(root.path, { ...journal, state: "committing" });
  * ```
  */
 export function saveJournal(root: string, journal: ApplyJournal): void {
-  ensureCourierDir(root);
-  ensureDirectoryOf(root);
+  ensureCourierSubdir(root, "journal");
   writeFileAtomically(
     journalPath(root, journal.id),
     `${JSON.stringify(journal, null, 2)}\n`,
@@ -85,35 +87,34 @@ export function hasJournal(root: string, id: string): boolean {
   return existsSync(journalPath(root, id));
 }
 
-/**
- * Read the journals applies left behind, oldest first. One that does not
- * parse is logged and skipped, and left in place for the developer.
- *
- * @param root - The project directory
- * @returns The journals
- */
-export function readJournals(root: string): ApplyJournal[] {
-  let names: string[];
-  try {
-    names = readdirSync(join(root, JOURNAL_DIR))
-      .filter((name) => name.endsWith(".json"))
-      .sort();
-  } catch (error) {
-    if (errnoCode(error) === "ENOENT") return [];
-    throw error;
-  }
-  const journals: ApplyJournal[] = [];
-  for (const name of names) {
-    const journal = parseJournal(readFileSync(join(root, JOURNAL_DIR, name), "utf8"));
-    if (journal === null)
-      log.warn(`Studio could not read ${JOURNAL_DIR}/${name}; it is left as it is`);
-    else journals.push(journal);
-  }
-  return journals;
+/** A journal found in `.courier/journal`, and the name of its file. */
+export interface FoundJournal {
+  fileName: string;
+  journal: ApplyJournal;
 }
 
-function ensureDirectoryOf(root: string): void {
-  mkdirSync(join(root, JOURNAL_DIR), { recursive: true });
+/**
+ * Read the journals applies left behind, oldest first. One that does not
+ * parse is logged and skipped, and left in place for the developer. A
+ * journal folder that is a link, or not a folder, is not read.
+ *
+ * @param root - The project directory
+ * @returns The journals, with their file names
+ * @throws {CourierDirUnsafeError} When `.courier` or its journal folder is a link or not a folder
+ */
+export function readJournals(root: string): FoundJournal[] {
+  if (!hasCourierSubdir(root, "journal")) return [];
+  const names = readdirSync(join(root, JOURNAL_DIR))
+    .filter((name) => name.endsWith(".json"))
+    .sort();
+  const journals: FoundJournal[] = [];
+  for (const fileName of names) {
+    const journal = parseJournal(readFileSync(join(root, JOURNAL_DIR, fileName), "utf8"));
+    if (journal === null)
+      log.warn(`Studio could not read ${JOURNAL_DIR}/${fileName}; it is left as it is`);
+    else journals.push({ fileName, journal });
+  }
+  return journals;
 }
 
 function journalPath(root: string, id: string): string {
@@ -133,10 +134,11 @@ function parseJournal(text: string): ApplyJournal | null {
 
 function isJournal(value: unknown): value is ApplyJournal {
   if (!isRecord(value)) return false;
-  const { id, importName, state, backupDir, entries, createdDirs, temps } = value;
+  const { id, importName, dir, state, backupDir, entries, createdDirs, temps } = value;
   return (
     typeof id === "string" &&
     typeof importName === "string" &&
+    typeof dir === "string" &&
     (state === "staging" || state === "committing") &&
     typeof backupDir === "string" &&
     Array.isArray(entries) &&

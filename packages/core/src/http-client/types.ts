@@ -1,7 +1,7 @@
 import type { Middleware } from "../middleware/types";
 import type { ProxyPath } from "../proxy-caller/proxy-path";
 
-export type HttpMethod = "get" | "post" | "put" | "patch" | "del" | "head";
+export type HttpMethod = "get" | "post" | "put" | "patch" | "del" | "head" | "options";
 
 export type AnyEndpoints = Partial<{
   [k: string]: (
@@ -80,10 +80,10 @@ export type OptionsWithSearchParams = Omit<FetchOptions, "searchParams"> & {
 export type SimpleOptions = Omit<OptionsWithSearchParams, "body" | "json" | "searchParams">;
 
 /**
- * Options a wire call takes. A GET or HEAD has no body to name; a DELETE may
+ * Options a wire call takes. A GET, HEAD or OPTIONS has no body to name; a DELETE may
  * carry one, as some APIs require.
  */
-export type MethodOptions<TMethod extends HttpMethod> = TMethod extends "get" | "head"
+export type MethodOptions<TMethod extends HttpMethod> = TMethod extends "get" | "head" | "options"
   ? SimpleOptions
   : OptionsWithSearchParams;
 
@@ -102,7 +102,7 @@ export type BaseOptions = MergeOptions &
     responseType?: ResponseType;
     /** Custom response parser replacing the built-in one (receives raw Response) */
     responseParser?: (response: Response) => Promise<unknown>;
-    /** Defaults under an object body, or query values on a GET, HEAD or DELETE; a list or raw body is sent alone */
+    /** Defaults under an object body, or query values on a read or DELETE; a list or raw body is sent alone */
     defaultBody?: Record<string, unknown>;
     /** Default query params merged into every request URL */
     defaultQueryParams?: Record<string, unknown>;

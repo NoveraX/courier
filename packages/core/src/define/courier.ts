@@ -38,7 +38,7 @@ interface Wire {
 }
 
 /** Every verb that may begin a chain, plus the one a channel connects with. */
-const VERBS: readonly HttpMethod[] = ["get", "head", "post", "put", "patch", "del"];
+const VERBS: readonly HttpMethod[] = ["get", "head", "options", "post", "put", "patch", "del"];
 
 /**
  * The methods that refine an endpoint without saying where it is.

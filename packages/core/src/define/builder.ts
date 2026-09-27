@@ -192,4 +192,4 @@ export function kindFor(head: EndpointKind, method: HttpMethod): EndpointKind {
   return READING_METHODS.has(method) ? "query" : "mutation";
 }
 
-const READING_METHODS: ReadonlySet<HttpMethod> = new Set<HttpMethod>(["get", "head"]);
+const READING_METHODS: ReadonlySet<HttpMethod> = new Set<HttpMethod>(["get", "head", "options"]);

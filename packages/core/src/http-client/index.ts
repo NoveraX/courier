@@ -141,6 +141,7 @@ export class HttpClient {
       patch: bindMethod(deps, "patch", options, groupOptions),
       del: bindMethod(deps, "del", options, groupOptions),
       head: bindMethod(deps, "head", options, groupOptions),
+      options: bindMethod(deps, "options", options, groupOptions),
     };
   }
 }

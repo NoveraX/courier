@@ -87,6 +87,11 @@ export interface HttpBuilder<TVariables, TVariablesOut>
     path?: string,
     options?: HttpEndpointOptions,
   ): HttpAddressed<void, TVariables, TVariablesOut, "query">;
+  /** Ask what it allows. */
+  options(
+    path?: string,
+    options?: HttpEndpointOptions,
+  ): HttpAddressed<void, TVariables, TVariablesOut, "query">;
   /** Create it. */
   post(
     path?: string,

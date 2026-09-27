@@ -6,9 +6,6 @@ import type { CacheConfig } from "../validation";
 import type { BuilderState } from "./builder";
 import {
   initialState,
-  kindFor,
-  sealAt,
-  sealHandler,
   withHeaders,
   withMeta,
   withMiddleware,
@@ -22,6 +19,7 @@ import type {
   HttpBuilder,
   StreamBuilder,
 } from "./builder-types";
+import { kindFor, sealAt, sealHandler } from "./descriptor";
 import type { EndpointKind } from "./marker";
 import type { AnyEndpointOptions, RetryOptions } from "./options";
 import type { AnyProbe } from "./probe";

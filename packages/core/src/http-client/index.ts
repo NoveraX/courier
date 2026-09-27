@@ -2,7 +2,7 @@ import { supportsAbortController } from "../utils/deduplicate";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
 import { bindMethod } from "./bind-method";
-import { overlayHeaders } from "./request-headers";
+import { overlayHeaders, withoutConnectionHeaders } from "./request-headers";
 import type {
   BaseOptions,
   BoundMethodOptions,
@@ -108,11 +108,12 @@ export class HttpClient {
 
     /* The call always carries a header set of its own, so spreading it over
        the source's replaced the source's headers wholesale; they are laid
-       underneath instead, and a header the call names wins. */
+       underneath instead, and a header the call names wins. Headers of the
+       connection a forwarded set was copied from are fetch's own to set. */
     return coreFetch(method, fullUrl, {
       ...this.baseFetchInit,
       ...fetchOptions,
-      headers: overlayHeaders(this.baseHeaders, fetchOptions.headers),
+      headers: withoutConnectionHeaders(overlayHeaders(this.baseHeaders, fetchOptions.headers)),
       timeout: fetchOptions.timeout ?? this.baseTimeout,
     } as CoreFetchInit);
   }

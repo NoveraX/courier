@@ -80,3 +80,29 @@ describe("headers declared on the source", () => {
     expect(JSON.parse(upstream.last().body.toString())).toEqual({ name: "a" });
   });
 });
+
+describe("an incoming request's headers forwarded whole", () => {
+  it("are sent without the ones describing the connection they arrived on", async () => {
+    const api = sourceWithHeaders({});
+    const incoming = new Headers({
+      host: "app.example.com",
+      connection: "keep-alive, x-hop",
+      "keep-alive": "timeout=5",
+      "x-hop": "1",
+      "transfer-encoding": "chunked",
+      "content-length": "17",
+      cookie: "sid=abc",
+      "x-trace": "t-1",
+    });
+
+    await createCaller(api).items.with({ headers: incoming }).create({ name: "a" });
+
+    const { headers, body } = upstream.last();
+    expect(headers.host).toBe(new URL(upstream.origin).host);
+    expect(headers["content-length"]).toBe(String(body.byteLength));
+    expect(headers["keep-alive"]).toBeUndefined();
+    expect(headers["x-hop"]).toBeUndefined();
+    expect(headers.cookie).toBe("sid=abc");
+    expect(headers["x-trace"]).toBe("t-1");
+  });
+});

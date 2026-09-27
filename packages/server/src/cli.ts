@@ -10,7 +10,7 @@ import { serverVersion } from "./server-version";
 const log = createLogger("CLI");
 
 const DEFAULT_PORT = 3001;
-const DEFAULT_HOST = "localhost";
+const DEFAULT_HOST = "127.0.0.1";
 
 /** Stop with a line naming the problem, followed by the error behind it when there is one. */
 function fail(message: string, cause?: unknown): never {

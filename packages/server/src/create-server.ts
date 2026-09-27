@@ -16,7 +16,10 @@ import type { CourierServer, CourierServerOptions } from "./types";
 const log = createLogger("Server");
 
 const DEFAULT_PORT = 3001;
-const DEFAULT_HOST = "localhost";
+/* "localhost" bound whichever loopback the system resolves first — on macOS
+   the IPv6 one alone — and a client asking for 127.0.0.1 was refused. A
+   client given "localhost" tries both addresses, so it reaches this one. */
+const DEFAULT_HOST = "127.0.0.1";
 
 /**
  * Create a standalone HTTP + WebSocket server for Courier.
@@ -28,7 +31,7 @@ const DEFAULT_HOST = "localhost";
  * @example
  * ```ts
  * const server = createCourierServer({ sources: { api }, port: 3001 });
- * // server.url → "http://localhost:3001"
+ * // server.url → "http://127.0.0.1:3001"
  * // server.sseConnections.count → active SSE streams
  * // await server.stop() — graceful shutdown
  * ```

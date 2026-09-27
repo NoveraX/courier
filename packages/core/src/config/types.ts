@@ -147,7 +147,7 @@ export interface CourierStudioConfig {
 export interface CourierServerConfig {
   /** Port to listen on — default 3001; `--port` overrides it */
   port?: number;
-  /** Host to bind — default "localhost"; `--host` overrides it */
+  /** Host to bind — default "127.0.0.1"; `--host` overrides it */
   host?: string;
   /**
    * Origins of the browser apps that call the server. Left out, the server

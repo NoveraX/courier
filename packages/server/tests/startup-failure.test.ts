@@ -76,8 +76,22 @@ describe("a server that starts", () => {
 
     const url = await server.ready;
 
-    expect(url).toMatch(/^http:\/\/localhost:\d+$/);
+    expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
     expect(server.url).toBe(url);
+    await server.stop();
+  });
+
+  /* "localhost" bound the IPv6 loopback alone where the system resolves it
+     there first, and a client asking for 127.0.0.1 was refused. */
+  it("is reachable at 127.0.0.1 and at localhost when no host is given", async () => {
+    const server = createCourierServer({ sources, port: 0, signals: false });
+    const { port } = new URL(await server.ready);
+
+    const byAddress = await fetch(`http://127.0.0.1:${port}/health`);
+    const byName = await fetch(`http://localhost:${port}/health`);
+
+    expect(byAddress.status).toBe(200);
+    expect(byName.status).toBe(200);
     await server.stop();
   });
 

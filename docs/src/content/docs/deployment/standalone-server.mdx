@@ -92,7 +92,7 @@ const server = await createCourierServer({
 
   // Network
   port: 3001,                        // default: 3001
-  host: "0.0.0.0",                   // default: "localhost"
+  host: "0.0.0.0",                   // default: "127.0.0.1" (IPv4 loopback; localhost URLs reach it)
   allowedOrigins: ["https://app.example.com"], // CORS + WebSocket origin check; left out = own origin only
 
   // Request bodies (413 when exceeded)
@@ -273,7 +273,7 @@ resolves modules as Node does (`node16` or `nodenext`), the config import is
 |------|---------|-------------|
 | `--config` | `courier.config.*` in the working directory | Path to config file, relative to the working directory |
 | `--port` | `server.port` from the config, then `3001` | Server port |
-| `--host` | `server.host` from the config, then `localhost` | Server host |
+| `--host` | `server.host` from the config, then `127.0.0.1` | Address to listen on |
 | `--allowed-origins` | `server.allowedOrigins` from the config | Comma-separated origins browser apps may call from |
 
 The command serves the default request body limits, 1 MB for a JSON envelope and 10 MB for an upload. To change them, start the server from code with `maxBodyBytes` and `maxUploadBytes`.

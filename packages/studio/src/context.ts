@@ -9,7 +9,9 @@
  * Tests that need isolation should call `resetProjectRoot()` in `afterEach`.
  */
 
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
+import { isWithin } from "./server/project-fs/is-within";
+import { PathOutsideProjectError } from "./server/project-fs/path-outside-project-error";
 
 let projectRoot = process.cwd();
 
@@ -34,12 +36,12 @@ export function resolveProject(...paths: string[]): string {
  * Use this instead of `resolveProject` when paths originate from user input
  * (HTTP request bodies, query params, etc.) to prevent directory traversal attacks.
  *
- * @throws Error if the resolved path escapes the project root
+ * @throws {PathOutsideProjectError} If the resolved path escapes the project root
  */
 export function resolveProjectSafe(...paths: string[]): string {
   const resolved = resolve(projectRoot, ...paths);
-  if (resolved !== projectRoot && !resolved.startsWith(`${projectRoot}/`)) {
-    throw new Error(`Path traversal detected: resolved path escapes project root`);
+  if (!isWithin(projectRoot, resolved)) {
+    throw new PathOutsideProjectError(relative(projectRoot, resolved), "it leaves the project");
   }
   return resolved;
 }

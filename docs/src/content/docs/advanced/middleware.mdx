@@ -140,8 +140,9 @@ Caches successful responses with a configurable TTL:
 import { cacheMiddleware } from "@noverax/courier/middleware"
 
 cacheMiddleware({
-  ttl: 30_000,   // Time-to-live in ms (default: 60000)
-  storage: map,  // Optional custom Map storage
+  scope: "public", // Or (ctx) => a key naming the caller
+  ttl: 30_000,     // Time-to-live in ms (default: 60000)
+  storage: map,    // Optional custom Map storage
 })
 ```
 

@@ -218,25 +218,31 @@ The limit holds however many calls arrive at once: at most `maxRequests` request
 In-memory response caching with configurable TTL.
 
 ```ts title="signature"
-function cacheMiddleware(options?: {
+function cacheMiddleware(options: {
+  /** How responses are partitioned between callers: "public", or a function naming the caller */
+  scope: "public" | ((ctx: MiddlewareContext) => string)
   /** Time-to-live in milliseconds (default: 60000) */
   ttl?: number
-  /** Custom storage map (default: in-memory Map) */
-  storage?: Map<string, { data: MiddlewareResponse; expiry: number }>
+  /** Entries retained before the oldest are dropped (default: 1000) */
+  maxEntries?: number
+  /** Custom storage; a Map satisfies it (default: in-memory, per middleware instance) */
+  storage?: CacheStore
 }): MiddlewareFn
 ```
 
-Caches successful responses (2xx status) keyed by `source:group:method:variables`. Non-2xx responses are never cached.
+Caches successful responses (2xx status) of endpoints that read, keyed by the scope's partition, `source:group:method` and the variables. Non-2xx responses are never cached.
 
 ```ts title="lib/sources.ts"
 const api = defineApi({
   baseURL: "https://api.example.com",
   middleware: [
-    cacheMiddleware({ ttl: 30_000 }), // 30 seconds
+    cacheMiddleware({ scope: "public", ttl: 30_000 }), // 30 seconds
   ],
   groups: { /* ... */ },
 })
 ```
+
+Every caller receives a copy of its own, made with `structuredClone`, so editing a result never changes what the next caller gets. An answer holding a value that cannot be copied, such as a function, is not cached; class instances come back as plain objects.
 
 ### Custom storage
 
@@ -248,7 +254,7 @@ const apiCache = new Map()
 const api = defineApi({
   baseURL: "https://api.example.com",
   middleware: [
-    cacheMiddleware({ ttl: 60_000, storage: apiCache }),
+    cacheMiddleware({ scope: "public", ttl: 60_000, storage: apiCache }),
   ],
   groups: { /* ... */ },
 })
@@ -283,7 +289,7 @@ const api = defineApi({
   baseURL: "https://api.example.com",
   middleware: [
     logMiddleware(),                                    // 1. Log everything
-    cacheMiddleware({ ttl: 30_000 }),                   // 2. Return cached if available
+    cacheMiddleware({ scope: "public", ttl: 30_000 }),  // 2. Return cached if available
     rateLimitMiddleware({ maxRequests: 10, window: 1000 }), // 3. Throttle outgoing
     retryMiddleware({ limit: 3, backoff: 300 }),        // 4. Retry on failure
     authMiddleware({ getToken: () => getToken() }),     // 5. Attach token last

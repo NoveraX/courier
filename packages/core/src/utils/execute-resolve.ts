@@ -77,6 +77,31 @@ function readSchema(endpoint: unknown): SchemaMetadata | undefined {
   return (endpoint as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
 }
 
+/**
+ * The header names an endpoint carries across the proxy, in both directions:
+ * the source's `allowedHeaders` and the endpoint's own `.headers()`. An
+ * endpoint may name headers beyond what the source does; neither list narrows
+ * the other.
+ *
+ * @param dataSource - The source the endpoint belongs to
+ * @param endpointAllowedHeaders - The names the endpoint declared
+ * @returns The names, or `undefined` when neither declares any
+ *
+ * @example
+ * ```ts
+ * namedHeadersOf(source, ["x-total-count"]); // → ["x-api-version", "x-total-count"]
+ * ```
+ */
+export function namedHeadersOf(
+  dataSource: Record<string, unknown>,
+  endpointAllowedHeaders: readonly string[] | undefined,
+): string[] | undefined {
+  const opts = dataSource.options as Record<string, unknown> | undefined;
+  const sourceAllowed = opts?.allowedHeaders as string[] | undefined;
+  if (!endpointAllowedHeaders?.length && !sourceAllowed?.length) return undefined;
+  return [...new Set([...(sourceAllowed ?? []), ...(endpointAllowedHeaders ?? [])])];
+}
+
 export interface MiddlewareContextInput {
   source: unknown;
   group: unknown;
@@ -115,14 +140,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     ...headersToObject(nextRequest?.headers),
     ...headersToObject(nextHeaders),
   };
-  const opts = dataSource.options as Record<string, unknown> | undefined;
-  const sourceAllowed = opts?.allowedHeaders as string[] | undefined;
-  /* An endpoint may forward headers beyond what the source allows; neither
-     list narrows the other. */
-  const allowedHeaders =
-    endpointAllowedHeaders?.length || sourceAllowed?.length
-      ? [...new Set([...(sourceAllowed ?? []), ...(endpointAllowedHeaders ?? [])])]
-      : undefined;
+  const allowedHeaders = namedHeadersOf(dataSource, endpointAllowedHeaders);
   /* The caller's own headers go on top of the ones it forwards. A header it
      set — a service token for a backend the end user may not reach — is its
      explicit choice, and the incoming request's copy used to replace it. */

@@ -48,7 +48,13 @@ export type ChannelImplementation<TResponse, TVariables, TSend> = [TSend] extend
 export interface NeutralMethods<TSelf> {
   /** Append middleware, running after anything inherited from the base. */
   use(...middleware: Middleware[]): TSelf;
-  /** Response headers to forward to the caller. */
+  /**
+   * Headers this endpoint carries across the proxy: forwarded from the caller
+   * to the upstream, and passed back from the upstream's answer to the
+   * caller — a `Location`, a `Link`, an `X-Total-Count`. The body's own
+   * description (`Content-Type`, `Content-Length`, `Content-Encoding`) and
+   * `Set-Cookie` are never taken from this list.
+   */
   headers(names: readonly string[]): TSelf;
   timeout(ms: number): TSelf;
   /** Retry policy; an endpoint that writes is retried only with `mutations: true`. */

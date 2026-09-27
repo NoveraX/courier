@@ -1,4 +1,9 @@
-import { ALLOWED_HEADERS, RESPONSE_HEADERS, STREAMED_RESPONSE_HEADERS } from "./allowed-headers";
+import {
+  ALLOWED_HEADERS,
+  NEVER_PASSED_RESPONSE_HEADERS,
+  RESPONSE_HEADERS,
+  STREAMED_RESPONSE_HEADERS,
+} from "./allowed-headers";
 
 type HeadersInput = HeadersInit | Record<string, string | undefined>;
 
@@ -56,25 +61,31 @@ export const mergeHeaders = (
 };
 
 /**
- * Keep only the upstream response headers the browser may see.
+ * Keep only the upstream response headers the browser may see: the ones that
+ * describe any answer, and the ones the endpoint or its source names.
  *
  * @param headers - Headers as the upstream sent them
- * @param options - `streamed` when the body passes through unchanged
+ * @param options - `streamed` when the body passes through unchanged, and the
+ *   header names the endpoint and its source carry across the proxy
  * @returns A new Headers carrying only what is allowed back
  *
  * @example
  * ```ts
  * filterResponseHeaders(upstream.headers); // buffered answer
- * filterResponseHeaders(upstream.headers, { streamed: true });
+ * filterResponseHeaders(upstream.headers, { streamed: true, named: ["x-total-count"] });
  * ```
  */
 export const filterResponseHeaders = (
   headers?: HeadersInput,
-  options?: { streamed?: boolean },
+  options?: { streamed?: boolean; named?: readonly string[] },
 ): Headers => {
+  const named = (options?.named ?? [])
+    .map((name) => name.toLowerCase())
+    .filter((name) => !NEVER_PASSED_RESPONSE_HEADERS.has(name));
   const allowed = new Set<string>([
     ...RESPONSE_HEADERS,
     ...(options?.streamed ? STREAMED_RESPONSE_HEADERS : []),
+    ...named,
   ]);
   const source = headers ? toHeaders(headers) : new Headers();
   const result = new Headers();

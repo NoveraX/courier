@@ -107,7 +107,12 @@ export type BaseOptions = MergeOptions &
     defaultBody?: Record<string, unknown>;
     /** Default query params merged into every request URL */
     defaultQueryParams?: Record<string, unknown>;
-    /** Whitelist of headers forwarded through the proxy (e.g. ["Authorization", "X-Custom"]) */
+    /**
+     * Headers carried across the proxy for every endpoint of this source, both
+     * ways: forwarded from the caller to the upstream, and passed back from
+     * the upstream's answer (e.g. ["X-Custom", "X-Total-Count"]). The body's
+     * own description and `Set-Cookie` are never taken from this list.
+     */
     allowedHeaders?: string[];
     /**
      * Whether the browser may call this source through the proxy — defaults

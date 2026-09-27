@@ -1,4 +1,3 @@
-import { isExposedToWire } from "../adapter/exposure";
 import { parseWireOptions } from "../adapter/wire-options";
 import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
@@ -19,6 +18,7 @@ import {
 } from "./execute-studio";
 import { validateVariables } from "./execute-validation";
 import { parseRequestPayload, type RequestPayloadInput } from "./request-payload";
+import { refuseWireCall } from "./wire-refusal";
 
 /**
  * What variables may be: named values, a list, a JSON scalar, form data or a
@@ -98,17 +98,17 @@ export async function executeRequest(
     return buildErrorResponse(context, 400, notFound);
   }
 
-  /* Answered as an unknown name is: telling a caller that guessing names is
-     forbidden confirms that the name it guessed exists. */
-  if (
-    fromWire &&
-    !isExposedToWire(dataSource, typeof group === "string" ? group : undefined, String(method))
-  ) {
-    return buildErrorResponse(context, 400, notFound);
-  }
-
-  if (context?.proxyMethod === "GET" && schema?.type !== "query") {
-    return buildErrorResponse(context, 405, "This endpoint does not support GET requests");
+  if (context?.proxyMethod !== undefined) {
+    const refused = refuseWireCall({
+      dataSource,
+      group,
+      method,
+      schema,
+      stream: options?.stream,
+      proxyMethod: context.proxyMethod,
+      notFound,
+    });
+    if (refused) return buildErrorResponse(context, refused.status, refused.message);
   }
 
   /* A stream or a channel is reached by opening one, not by asking for it

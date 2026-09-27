@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, assert, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
 import { getSourceName } from "@noverax/courier/define";
 import {
   ConfigLoaderError,
@@ -29,6 +29,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
 });
 
@@ -238,5 +239,23 @@ describe("loadCourierConfig — what it read", () => {
 
     assert(error instanceof ConfigLoaderError, "the load did not fail with a ConfigLoaderError");
     expect(error.depHashes?.get(join(root, "src", "api.ts"))).toBe(sha256(join(root, "src", "api.ts")));
+  });
+
+  it("a load whose tsconfig paths cannot be read carries the tsconfig, and every module it reached", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const tsconfig = join(root, "tsconfig.json");
+    writeFileSync(tsconfig, JSON.stringify({ compilerOptions: { paths: { "@/*": "./src/*" } } }));
+    writeConfig('import { api } from "./src/api";\nimport "@/api";\nexport default { sources: { api } };\n');
+    const handed: string[] = [];
+
+    const error = await loadCourierConfig(root, { onInputs: (inputs) => handed.push(...inputs.keys()) }).catch(
+      (err: unknown) => err,
+    );
+
+    assert(error instanceof ConfigLoaderError, "the load did not fail with a ConfigLoaderError");
+    expect(error.code).toBe("CONFIG_INVALID");
+    expect(error.depHashes?.get(tsconfig)).toBe(sha256(tsconfig));
+    expect(error.depHashes?.get(join(root, "src", "api.ts"))).toBe(sha256(join(root, "src", "api.ts")));
+    expect(handed).toContain(tsconfig);
   });
 });

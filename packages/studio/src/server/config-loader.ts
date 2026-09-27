@@ -43,10 +43,12 @@ export interface LoadedCourierConfig {
   contentHash: string | null;
   /**
    * Every module the config and the mocks file transitively import, both
-   * entries included; every absent path an import that named no module could
-   * name one at, so creating that module is noticed; and every name either
-   * file may take in the project root, so creating one — or one that takes
-   * precedence — is noticed. Suitable for `fs.watch` registration.
+   * entries included; every absent path where a module created would be the
+   * one an import runs, so creating that module is noticed; every tsconfig
+   * their path aliases are read from, so an alias sent elsewhere is noticed;
+   * and every name either file may take in the project root, so creating one
+   * — or one that takes precedence — is noticed. Suitable for `fs.watch`
+   * registration.
    */
   deps: string[];
   /**

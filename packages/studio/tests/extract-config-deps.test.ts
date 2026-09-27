@@ -18,9 +18,9 @@ afterEach(() => {
   if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
 });
 
-/** The modules a walk from `entries` reaches, in walk order. */
+/** The modules a walk from `entries` reaches, in walk order, without the absent paths it records. */
 function walked(...entries: string[]): string[] {
-  return [...extractConfigDeps(entries).keys()];
+  return [...extractConfigDeps(entries)].filter(([, hash]) => hash !== null).map(([path]) => path);
 }
 
 function sha256(path: string): string {
@@ -54,6 +54,21 @@ describe("extractConfigDeps", () => {
     expect(walked(entry)).toEqual([entry, dep, inner]);
   });
 
+  it("walks the compiled .js beside a .ts, which is the module the loader runs", () => {
+    file("src/api.ts", `import "./typescript-only";\nexport const api = {};`);
+    const compiled = file("src/api.js", `export const api = {};`);
+    const entry = file("courier.config.ts", `import { api } from "./src/api";\nexport default { sources: { api } };`);
+
+    expect(walked(entry)).toEqual([entry, compiled]);
+  });
+
+  it("walks the .ts an import written for NodeNext as .js names", () => {
+    const dep = file("src/api.ts", `export const api = {};`);
+    const entry = file("courier.config.ts", `import { api } from "./src/api.js";\nexport default { sources: { api } };`);
+
+    expect(walked(entry)).toEqual([entry, dep]);
+  });
+
   it("tolerates cycles without hanging", () => {
     const a = file("a.ts", `import "./b";`);
     const b = file("b.ts", `import "./a";`);
@@ -79,7 +94,7 @@ describe("extractConfigDeps", () => {
     const dep = join(dir, "src", "latin1.ts");
     mkdirSync(join(dir, "src"));
     writeFileSync(dep, Buffer.from([...Buffer.from("// caf"), 0xe9, 0x0a]));
-    const entry = file("courier.config.ts", `import "./src/latin1";\nexport default {};`);
+    const entry = file("courier.config.ts", `import "./src/latin1.ts";\nexport default {};`);
 
     const hashes = extractConfigDeps([entry]);
 
@@ -116,13 +131,24 @@ describe("extractConfigDeps", () => {
     expect([...deps.keys()][0]).toBe(entry);
   });
 
-  it("records no absent path for an import that resolves", () => {
+  it("records no absent path for an import that names the first path the loader tries", () => {
+    const dep = file("src/api.ts", `export const api = {};`);
+    const entry = file("courier.config.ts", `import { api } from "./src/api.ts";\nexport default { sources: { api } };`);
+
+    expect([...extractConfigDeps([entry])]).toEqual([
+      [entry, sha256(entry)],
+      [dep, sha256(dep)],
+    ]);
+  });
+
+  it("records as absent each path the loader tries before the module an import names", () => {
     const dep = file("src/api.ts", `export const api = {};`);
     const entry = file("courier.config.ts", `import { api } from "./src/api";\nexport default { sources: { api } };`);
 
     expect([...extractConfigDeps([entry])]).toEqual([
       [entry, sha256(entry)],
       [dep, sha256(dep)],
+      ...["", ".js", ".mjs", ".cjs"].map((extension) => [join(dir, "src", `api${extension}`), null]),
     ]);
   });
 
@@ -183,6 +209,19 @@ describe("extractConfigDeps — tsconfig paths", () => {
     const entry = file("courier.config.ts", `import { api } from "dep";\nexport default { sources: { api } };`);
 
     expect(walked(entry)).toEqual([entry]);
+  });
+
+  it("walks on without aliases when the tsconfig's paths cannot be read, and says why once", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    file("tsconfig.json", JSON.stringify({ compilerOptions: { paths: { "@/*": "./src/*" } } }));
+    file("src/api.ts", `export const api = {};`);
+    const local = file("src/local.ts", `export const local = {};`);
+    const entry = file("courier.config.ts", `import "./src/local";\nimport { api } from "@/api";\nexport default {};`);
+    const mocks = file("courier.mocks.ts", `import { api } from "@/api";\nexport default {};`);
+
+    expect(walked(entry, mocks)).toEqual([entry, local, mocks]);
+    expect(warn).toHaveBeenCalledOnce();
+    expect(String(warn.mock.calls[0]?.[1])).toContain(`tsconfig paths that apply to ${dir}`);
   });
 
   it("still skips a bare specifier the tsconfig does not map", () => {

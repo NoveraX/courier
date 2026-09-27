@@ -9,7 +9,9 @@
  * load that succeeds re-arms it with the modules it read, so a module the
  * config has only just started importing is watched from that moment, and a
  * load that fails adds what it read. An import that named no module when the
- * load read it is watched at every path its module could be created at. Each
+ * load read it is watched at every path its module could be created at, and
+ * one that did at every path the loader would take first, such as a compiled
+ * `api.js` beside the `api.ts` it runs. Each
  * file is compared then with the bytes the load read before evaluating, so a
  * save made while the load ran — before anything watched that file — is
  * reloaded as soon as it ends.

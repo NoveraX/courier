@@ -1,11 +1,15 @@
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { createLogger } from "@noverax/courier";
 
 import { type PathAliases, readPathAliases } from "@noverax/courier-studio-core/config";
 
-import { absentImportCandidates } from "./absent-import-candidates";
 import { readModuleImports } from "./read-module-imports";
 import { resolveConfigImport } from "./resolve-config-import";
+
+const log = createLogger("Studio");
+
+const NO_ALIASES: PathAliases = { loader: {}, candidatesFor: () => [] };
 
 /**
  * Walk the config file, and the mocks file beside it, and return every local
@@ -19,10 +23,16 @@ import { resolveConfigImport } from "./resolve-config-import";
  * node builtin — is left alone. Each entry resolves aliases by the tsconfig
  * beside it.
  *
- * An import that should name a local file and names none yet is returned too,
- * as every absent path its module could be created at (see
- * `absentImportCandidates`), each with `null`: whoever evaluates the entries
- * next may find the module there, and whoever watches must then see it.
+ * Every absent path the loader tries before the module an import names is
+ * returned too, with `null`, and every path it tries for an import that
+ * should name a local file and names none yet (see `resolveConfigImport`):
+ * whoever evaluates the entries next may find a module there, and runs it,
+ * so whoever watches must see it created. A compiled `api.js` written beside
+ * `api.ts` is one.
+ *
+ * Where the tsconfig `paths` cannot be read, the walk warns and goes on
+ * without aliases, so a load that then fails on the same tsconfig still has
+ * every other module it depends on, and that tsconfig, watched.
  *
  * One walk covers every entry: a module the config and the mocks file both
  * import is read once, and so are cycles.
@@ -30,8 +40,8 @@ import { resolveConfigImport } from "./resolve-config-import";
  * @param entries - Absolute paths to walk from, the config first
  * @returns Each module's absolute path and the sha256 of what was read
  *   (`"unreadable"` when it could not be), in walk order, each existing entry
- *   first among the modules it reached; then each absent path an unresolved
- *   import could name, with `null`. Empty when no entry exists
+ *   first among the modules it reached; then each absent path the loader
+ *   tries first, with `null`. Empty when no entry exists
  *
  * @example
  * ```ts
@@ -52,15 +62,35 @@ export function extractConfigDeps(entries: readonly string[]): Map<string, strin
     const fromDir = dirname(normalized);
     for (const specifier of specifiers) {
       const resolved = resolveConfigImport(fromDir, specifier, aliases);
-      if (resolved) walk(resolved, aliases);
-      else for (const path of absentImportCandidates(fromDir, specifier, aliases)) absent.add(path);
+      for (const path of resolved.absent) absent.add(path);
+      if (resolved.file !== null) walk(resolved.file, aliases);
     }
   };
 
-  for (const entry of entries) walk(entry, readPathAliases(dirname(resolve(entry))));
+  const aliasesByDirectory = new Map<string, PathAliases>();
+  for (const entry of entries) walk(entry, aliasesFor(dirname(resolve(entry)), aliasesByDirectory));
   /* A module another import reached after an earlier one found it absent was
      read, and its hash stands. */
   const deps = new Map<string, string | null>(hashes);
   for (const path of absent) if (!deps.has(path)) deps.set(path, null);
   return deps;
+}
+
+/* Read once for the entries that share a directory. The loader reads the
+   same aliases, and fails the load with what threw. */
+function aliasesFor(directory: string, read: Map<string, PathAliases>): PathAliases {
+  const known = read.get(directory);
+  if (known !== undefined) return known;
+  let aliases: PathAliases;
+  try {
+    aliases = readPathAliases(directory);
+  } catch (error) {
+    log.warn(
+      `Could not read the tsconfig paths that apply to ${directory}; aliased imports are not followed`,
+      error,
+    );
+    aliases = NO_ALIASES;
+  }
+  read.set(directory, aliases);
+  return aliases;
 }

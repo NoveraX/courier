@@ -1,4 +1,7 @@
+import { dirname } from "node:path";
+
 import { extractConfigDeps } from "./extract-config-deps";
+import { readTsconfigInputs } from "./read-tsconfig-inputs";
 
 /**
  * Every file a load depends on, with the hash of what it held when the load
@@ -11,16 +14,20 @@ export type ProjectInputs = ReadonlyMap<string, string | null>;
  * Read what a load of the project is about to evaluate, before it does.
  *
  * That is every module the config and the mocks file transitively import,
- * both entries included; every absent path an import that names no module
- * yet could name one at; and every name either entry may take in the project
- * root, present or not: creating one, or one that takes precedence over the
- * file loaded, must reload, and nothing Studio imports would otherwise point
- * at it.
+ * both entries included; every absent path where a module created would be
+ * the one an import runs, whether it names a module yet or not; every
+ * tsconfig the path aliases of either entry are read from (see
+ * `readTsconfigInputs`), since an edit to one sends an aliased import to
+ * another module; and every name either entry may take in the project root,
+ * present or not: creating one, or one that takes precedence over the file
+ * loaded, must reload, and nothing Studio imports would otherwise point at
+ * it.
  *
  * Read before evaluating, so a save that lands while the load runs differs
  * from what is recorded here, and whoever watches the files can tell. The
  * entry names are hashed before the entries are looked for (see
- * `readEntryNames`); the walk's later read of each entry found stands.
+ * `readEntryNames`), and the tsconfigs before the walk reads its aliases from
+ * them; the walk's later read of each entry found stands.
  *
  * @param entryNames - Every entry name in the root, hashed before the
  *   entries were looked for
@@ -40,8 +47,11 @@ export function readProjectInputs(
   configFile: string,
   mocksFile: string | null,
 ): ProjectInputs {
-  const inputs = extractConfigDeps(mocksFile === null ? [configFile] : [configFile, mocksFile]);
-  for (const [path, hash] of entryNames) {
+  const entries = mocksFile === null ? [configFile] : [configFile, mocksFile];
+  const directories = [...new Set(entries.map((entry) => dirname(entry)))];
+  const tsconfigs = new Map(directories.flatMap((directory) => [...readTsconfigInputs(directory)]));
+  const inputs = extractConfigDeps(entries);
+  for (const [path, hash] of [...tsconfigs, ...entryNames]) {
     if (!inputs.has(path)) inputs.set(path, hash);
   }
   return inputs;

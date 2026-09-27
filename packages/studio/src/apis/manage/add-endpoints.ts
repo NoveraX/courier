@@ -13,6 +13,7 @@ import type { ParsedSpec } from "../parser/types";
 import { appendBarrelExports } from "./append-barrel-exports";
 import { appendEndpointsToGroup } from "./append-to-group";
 import { exportedNames } from "./exported-names";
+import { listedSelection } from "./listed-selection";
 import { mergeSchemaFiles } from "./merge-schemas";
 import type { AddResult, FileChange } from "./types";
 import { addGroupsToSourceFile } from "./update-source-file";
@@ -21,7 +22,7 @@ import { addGroupsToSourceFile } from "./update-source-file";
  * Generate a preview of what adding endpoints would produce.
  *
  * @param spec - Full parsed spec
- * @param endpointsToAdd - Map of groupName → endpointName[] to add
+ * @param endpointsToAdd - The endpoints to add, by group, as the import's files name them
  * @param options - Persisted generation options (selectedEndpoints is overridden)
  * @param existingFiles - Map of filePath → content for files currently on disk
  * @param layout - Where the import's files go
@@ -34,7 +35,9 @@ export function previewAddEndpoints(
   existingFiles: Record<string, string>,
   layout: ImportLayout,
 ): AddResult {
-  const genOptions: GenerateOptions = { ...options, selectedEndpoints: endpointsToAdd };
+  /* Picked as the import lists them; the generator selects as the specification names them. */
+  const { selection } = listedSelection(spec, options.groupBy ?? "tag", endpointsToAdd);
+  const genOptions: GenerateOptions = { ...options, selectedEndpoints: selection };
   const generated = generateCode(spec, genOptions, layout.importName);
   const files: FileChange[] = [];
   const newFingerprints: Record<string, string> = {};

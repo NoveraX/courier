@@ -5,92 +5,68 @@
  */
 
 import type { ParsedEndpoint, ParsedGroup, ParsedSpec } from "../parser/types";
-import { uniqueEndpointNames } from "../parser/unique-endpoint-names";
-import { convertPathParams, findCommonPrefix, toBindingName } from "../parser/utils";
+import { placeEndpoints } from "./endpoint-placements";
 import type { ResolvedGenerateOptions } from "./types";
 
-export function transformSpec(spec: ParsedSpec, options: ResolvedGenerateOptions): ParsedSpec {
-  if (options.groupBy === "tag") return spec;
-
-  const groups = regroupEndpoints(spec, options.groupBy);
-  return { ...spec, groups };
+/**
+ * The specification as its files are generated: its endpoints grouped as
+ * `groupBy` says, each under the name and path it is generated with, and
+ * only the selected ones when there is a selection. Names, groups and
+ * prefixes are those of the whole specification, whatever is selected.
+ *
+ * @param spec - The parsed specification
+ * @param options - The resolved options, of which `groupBy` is read
+ * @param selected - The endpoints to keep, as the specification lists them; all when `null`
+ * @returns The specification regrouped, without groups left empty by the selection
+ * @example
+ * ```ts
+ * transformSpec(spec, { ...options, groupBy: "single" }, null).groups[0]?.name; // "api"
+ * ```
+ */
+export function transformSpec(
+  spec: ParsedSpec,
+  options: Pick<ResolvedGenerateOptions, "groupBy">,
+  selected: ReadonlySet<ParsedEndpoint> | null = null,
+): ParsedSpec {
+  if (options.groupBy === "tag") {
+    if (selected === null) return spec;
+    const groups = spec.groups
+      .map((group) => ({ ...group, endpoints: group.endpoints.filter((e) => selected.has(e)) }))
+      .filter((group) => group.endpoints.length > 0);
+    return { ...spec, groups };
+  }
+  const groups = new Map<string, ParsedGroup>();
+  for (const placement of placeEndpoints(spec, options.groupBy)) {
+    if (selected !== null && !selected.has(placement.source)) continue;
+    const group = groups.get(placement.group.name) ?? { ...placement.group, endpoints: [] };
+    group.endpoints.push(placement.endpoint);
+    groups.set(placement.group.name, group);
+  }
+  return { ...spec, groups: [...groups.values()] };
 }
 
-// ── GroupBy ──────────────────────────────────────────────────────────────────
-
-function regroupEndpoints(spec: ParsedSpec, groupBy: "path" | "single"): ParsedGroup[] {
-  const allEndpoints = spec.groups.flatMap((g) => g.endpoints);
-
-  if (groupBy === "single") {
-    return buildSingleGroup(allEndpoints);
+/**
+ * The endpoints a selection names, as the specification lists them.
+ *
+ * @param groups - The specification's groups
+ * @param selection - Endpoint names by the specification's group, or `null` for all
+ * @returns The endpoints selected, or `null` for all
+ * @example
+ * ```ts
+ * selectedEndpoints(spec.groups, { pets: ["listPets"] })?.size; // 1
+ * ```
+ */
+export function selectedEndpoints(
+  groups: readonly ParsedGroup[],
+  selection: Readonly<Record<string, readonly string[]>> | null,
+): ReadonlySet<ParsedEndpoint> | null {
+  if (selection === null) return null;
+  const selected = new Set<ParsedEndpoint>();
+  for (const group of groups) {
+    const names = selection[group.name];
+    if (names === undefined) continue;
+    for (const endpoint of group.endpoints)
+      if (names.includes(endpoint.name)) selected.add(endpoint);
   }
-
-  return buildPathGroups(allEndpoints);
-}
-
-function buildSingleGroup(endpoints: ParsedEndpoint[]): ParsedGroup[] {
-  /* Flat mode: no group prefix, each endpoint gets its full path */
-  return [
-    {
-      name: "api",
-      description: "",
-      prefix: "/",
-      endpoints: uniqueEndpointNames(endpoints).map((e) => ({
-        ...e,
-        path: convertPathParams(e.fullPath),
-      })),
-    },
-  ];
-}
-
-function buildPathGroups(endpoints: ParsedEndpoint[]): ParsedGroup[] {
-  const bySegment = new Map<string, ParsedEndpoint[]>();
-
-  for (const ep of endpoints) {
-    const segment = extractFirstSegment(ep.fullPath);
-    if (!bySegment.has(segment)) bySegment.set(segment, []);
-    bySegment.get(segment)!.push(ep);
-  }
-
-  const groups: ParsedGroup[] = [];
-  const taken = new Set<string>();
-  for (const [segment, eps] of bySegment) {
-    const prefix = findCommonPrefix(eps.map((e) => e.fullPath));
-    /* A URL segment is not an identifier: Twilio's `2010-04-01` became
-       `20100401`, and `export const 20100401` does not parse. */
-    groups.push({
-      name: claim(toBindingName(segment), taken),
-      description: "",
-      /* The URL the caller builds uses `:name`; leaving the specification's
-         braces in put a literal `{AccountSid}` into the request. */
-      prefix: convertPathParams(prefix),
-      endpoints: uniqueEndpointNames(eps, prefix).map((e) => ({
-        ...e,
-        path: convertPathParams(e.fullPath.slice(prefix.length) || "/"),
-      })),
-    });
-  }
-  return groups;
-}
-
-function extractFirstSegment(path: string): string {
-  const segments = path.split("/").filter(Boolean);
-  const first = segments[0] ?? "default";
-  /* Skip path params — use second segment if available */
-  if (first.startsWith("{") || first.startsWith(":")) {
-    return segments[1] ?? "default";
-  }
-  return first;
-}
-
-/** Take a name, or the first numbered variant of it that is still free. */
-function claim(name: string, taken: Set<string>): string {
-  let candidate = name;
-  let n = 2;
-  while (taken.has(candidate)) {
-    candidate = `${name}${n}`;
-    n += 1;
-  }
-  taken.add(candidate);
-  return candidate;
+  return selected;
 }

@@ -5,13 +5,14 @@
 import { InvalidImportError, resolveImportLayout } from "../layout";
 import type { ParsedGroup, ParsedSpec } from "../parser/types";
 import { buildSchemaRecord } from "./build-schema-record";
+import { SINGLE_GROUP } from "./endpoint-placements";
 import { extractEndpointTypes } from "./extract-endpoint-types";
 import { generateFlatSourceFile } from "./generate-flat-source";
 import { generateGroupFile } from "./generate-group";
 import { generateIndexFile } from "./generate-index";
 import { generateSchemasFile, generateTypesFile } from "./generate-schemas";
 import { generateSourceFile } from "./generate-source";
-import { transformSpec } from "./transform-spec";
+import { selectedEndpoints, transformSpec } from "./transform-spec";
 import type { GeneratedFile, GenerateOptions, ResolvedGenerateOptions } from "./types";
 import { applyImportDefaults } from "./types";
 
@@ -39,9 +40,9 @@ export function generateCode(
   }
   const opts = applyImportDefaults(options, resolveImportLayout(options, importName));
 
-  /* Filter by selection BEFORE regrouping (selectedEndpoints uses original group names) */
-  const filtered = filterGroups(spec.groups, opts);
-  const transformed = transformSpec({ ...spec, groups: filtered }, opts);
+  /* A selection names endpoints by the specification's own groups. */
+  const selected = selectedEndpoints(spec.groups, opts.selectedEndpoints);
+  const transformed = transformSpec(spec, opts, selected);
 
   if (opts.groupBy === "single") {
     return generateFlat(transformed, opts);
@@ -53,7 +54,7 @@ export function generateCode(
 function generateFlat(spec: ParsedSpec, opts: ResolvedGenerateOptions): GeneratedFile[] {
   const files: GeneratedFile[] = [];
   const flatGroup: ParsedGroup = {
-    name: "api",
+    name: SINGLE_GROUP,
     description: "",
     prefix: "/",
     endpoints: spec.groups.flatMap((g) => g.endpoints),
@@ -109,22 +110,4 @@ function generateGrouped(spec: ParsedSpec, opts: ResolvedGenerateOptions): Gener
   files.push(generateIndexFile(spec, spec.groups, opts, groupSchemaMap));
 
   return files;
-}
-
-// ── Filter by selection ──────────────────────────────────────────────────────
-
-function filterGroups(groups: ParsedGroup[], options: ResolvedGenerateOptions): ParsedGroup[] {
-  if (!options.selectedEndpoints) return groups;
-
-  return groups
-    .map((group) => {
-      const selected = options.selectedEndpoints?.[group.name];
-      if (!selected) return null;
-
-      return {
-        ...group,
-        endpoints: group.endpoints.filter((e) => selected.includes(e.name)),
-      };
-    })
-    .filter((g): g is ParsedGroup => g !== null && g.endpoints.length > 0);
 }

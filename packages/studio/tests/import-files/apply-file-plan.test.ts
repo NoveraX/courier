@@ -30,6 +30,7 @@ import { planFiles } from "../../src/server/import-files/plan-files";
 import { pruneBackups } from "../../src/server/import-files/prune-backups";
 import type { RecordedFile } from "../../src/server/import-files/recorded-file";
 import { recoverInterruptedApplies } from "../../src/server/import-files/recover-interrupted-applies";
+import { withConfirmations } from "../../src/server/import-files/with-confirmations";
 import { type ProjectRoot, projectRootAt } from "../../src/server/project-fs/project-root";
 
 vi.mock("node:fs", async (importOriginal) => {
@@ -152,6 +153,37 @@ describe("applyFilePlan", () => {
 
     vi.mocked(renameSync).mockImplementation(actual.renameSync);
     undisturbed();
+  });
+
+  it("puts back a file of the same text without Studio's header, when the apply that signed it is undone", () => {
+    put(`${DIR}/same.ts`, "same\n");
+    const plan = planFiles(root, { importName: "pets", dir: DIR, targets: [generated(`${DIR}/same.ts`, "same\n")], removals: [] }, {});
+    const failure = new Error("disk full");
+
+    expect(() =>
+      applyFilePlan(root, withConfirmations(plan, [`${DIR}/same.ts`]), () => {
+        throw failure;
+      }),
+    ).toThrow(failure);
+
+    expect(read(`${DIR}/same.ts`)).toBe("same\n");
+    expect(readdirSync(join(root.path, ".courier/backups"))).toEqual([]);
+  });
+
+  it("puts back a file whose lines ended in CRLF, when the apply that rewrote them is undone", () => {
+    const original = signed("a\r\nb\r\n");
+    put(`${DIR}/crlf.ts`, original);
+    const recorded = { [`${DIR}/crlf.ts`]: { sha256: bodyHash("a\r\nb\r\n") } };
+    const plan = planFiles(root, { importName: "pets", dir: DIR, targets: [generated(`${DIR}/crlf.ts`, "a\nb\n")], removals: [] }, recorded);
+    expect(plan.writes).toMatchObject([{ action: "replace" }]);
+
+    expect(() =>
+      applyFilePlan(root, plan, () => {
+        throw new Error("disk full");
+      }),
+    ).toThrow("disk full");
+
+    expect(read(`${DIR}/crlf.ts`)).toBe(original);
   });
 
   it("keeps no backup when it stops before replacing a file it copied", async () => {

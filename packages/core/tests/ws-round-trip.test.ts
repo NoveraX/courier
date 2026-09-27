@@ -270,3 +270,47 @@ describe("a channel", () => {
     expect(ch.status).toBe("disconnected");
   });
 });
+
+describe("a push subscription with a response schema", () => {
+  function checkedPush(handler: (ctx: WSContext) => AsyncGenerator<unknown, void, unknown>) {
+    return channel
+      .response(z.object({ n: z.number(), unit: z.string().default("ms") }))
+      .implement(handler as never);
+  }
+
+  it("sends each value as the schema produces it", async () => {
+    const url = await serve(
+      checkedPush(async function* () {
+        yield { n: 1 };
+        yield { n: 2, unit: "s" };
+      }),
+    );
+
+    await expect(readAll(url)).resolves.toEqual([
+      { n: 1, unit: "ms" },
+      { n: 2, unit: "s" },
+    ]);
+  });
+
+  it("fails the subscription with the schema's issues at the first value that does not match", async () => {
+    const seen: unknown[] = [];
+    const url = await serve(
+      checkedPush(async function* () {
+        yield { n: 1 };
+        yield { n: "not-a-number" };
+        yield { n: 3 };
+      }),
+    );
+
+    const reading = (async () => {
+      for await (const event of executeWSPush(url, "api.live.feed")) seen.push(event.data);
+    })();
+    const failure = await reading.catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(RealtimeValidationError);
+    expect((failure as RealtimeValidationError).issues).toEqual([
+      expect.objectContaining({ path: ["n"] }),
+    ]);
+    expect(seen).toEqual([{ n: 1, unit: "ms" }]);
+  });
+});

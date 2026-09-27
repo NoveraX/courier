@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { courier } from "../src/define/courier";
+import { RealtimeValidationError } from "../src/realtime/errors";
 import type { WSContext } from "../src/realtime/types";
 import type { StudioHooks } from "../src/studio/hooks";
 import { ValidationError } from "../src/validation";
@@ -210,5 +211,44 @@ describe("executeDirectWSPush", () => {
     await new Promise((r) => setTimeout(r, 10));
 
     expect(released).toBe(true);
+  });
+});
+
+describe("executeDirectWSPush — response schema", () => {
+  function checkedSources(handler: (ctx: WSContext) => AsyncGenerator<unknown, void, unknown>) {
+    const feed = channel
+      .response(z.object({ n: z.number(), unit: z.string().default("ms") }))
+      .implement(handler as never);
+    return { api: { options: { groups: { chat: { options: {}, feed } } }, feed } };
+  }
+
+  it("hands over each value as the schema produces it", async () => {
+    const sources = checkedSources(async function* () {
+      yield { n: 1 };
+    });
+
+    const sub = await executeDirectWSPush(sources, {
+      source: "api",
+      group: "chat",
+      method: "feed",
+    });
+
+    expect(await collect(sub)).toEqual([{ n: 1, unit: "ms" }]);
+  });
+
+  it("fails at the first value that does not match, with the schema's issues", async () => {
+    const sources = checkedSources(async function* () {
+      yield { n: "not-a-number" };
+    });
+
+    const sub = await executeDirectWSPush(sources, {
+      source: "api",
+      group: "chat",
+      method: "feed",
+    });
+    const failure = await collect(sub).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(RealtimeValidationError);
+    expect((failure as RealtimeValidationError).issues.length).toBeGreaterThan(0);
   });
 });

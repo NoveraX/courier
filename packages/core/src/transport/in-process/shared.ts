@@ -1,4 +1,8 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
+
 import type { Sources } from "../../define/types";
+import { checkResponse } from "../../realtime/check-response";
+import type { SSEEvent } from "../../realtime/types";
 import { resolveEndpoint } from "../../utils/execute-resolve";
 import { validateSchema } from "../../validation";
 
@@ -28,6 +32,7 @@ export function headersToRecord(h: Headers): Record<string, string> {
 /** Schema slice exposed to in-process executors (only the fields they touch). */
 export interface InProcessStreamSchema {
   variables?: unknown;
+  response?: StandardSchemaV1;
   receive?: unknown;
   transport?: string;
 }
@@ -89,6 +94,29 @@ export async function validateStreamVariables(
     raw ?? {},
     "variables",
   )) as Record<string, unknown>;
+}
+
+/**
+ * Hold each event's data to the endpoint's response schema, as the server
+ * does before it writes one: what goes on is the schema's output, and the
+ * first event that does not match fails the subscription.
+ *
+ * @param events - The events the endpoint produced
+ * @param schema - Its response schema
+ * @returns The events as the schema produces them
+ * @throws RealtimeValidationError at the first event that does not match
+ * @example
+ * ```ts
+ * const events = schema.response ? checkedEvents(raw, schema.response) : raw;
+ * ```
+ */
+export async function* checkedEvents(
+  events: AsyncIterable<SSEEvent<unknown>>,
+  schema: StandardSchemaV1,
+): AsyncGenerator<SSEEvent<unknown>, void, unknown> {
+  for await (const event of events) {
+    yield { ...event, data: await checkResponse(schema, event.data) };
+  }
 }
 
 /** Build a resolution error tagged with `cause.status` for the playground UI. */

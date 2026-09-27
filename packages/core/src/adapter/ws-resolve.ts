@@ -1,6 +1,7 @@
 import { unqualifyTopic } from "../realtime/ws/topic-hash";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { resolveEndpoint } from "../utils/execute-resolve";
+import type { SchemaMetadata } from "../validation";
 import { isExposedToWire } from "./exposure";
 import type { WSSocketContext } from "./ws-context";
 import { sendSubscriptionEnd } from "./ws-subscription-end";
@@ -27,7 +28,7 @@ export function resolveSubscribeTopic(
       group?: string;
       method: string;
       endpoint: unknown;
-      schema: Record<string, unknown>;
+      schema: SchemaMetadata;
     }
   | undefined {
   const { source, group, method } = parseTopic(topic);
@@ -63,5 +64,5 @@ export function resolveSubscribeTopic(
     return undefined;
   }
 
-  return { source, group, method, endpoint, schema: schema as Record<string, unknown> };
+  return { source, group, method, endpoint, schema };
 }

@@ -1,4 +1,7 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
+
 import { createLogger } from "../../logger";
+import { checkResponse } from "../../realtime/check-response";
 import { describeFailure } from "../../realtime/describe-failure";
 import type { WSContext, WSPushHandler } from "../../realtime/types";
 import { abortableEvents } from "../../utils/abortable-events";
@@ -19,6 +22,7 @@ const log = createLogger("WS");
  * @param endpoint - Push endpoint function (async generator factory)
  * @param variables - Validated subscription variables
  * @param subscribeId - The id of the client's subscribe message, if any
+ * @param responseSchema - The endpoint's response schema, which every value is held to
  */
 export function startPush(
   ctx: WSSocketContext,
@@ -26,6 +30,7 @@ export function startPush(
   endpoint: unknown,
   variables: unknown,
   subscribeId?: string,
+  responseSchema?: StandardSchemaV1,
 ): void {
   const handler = endpoint as WSPushHandler<unknown, unknown>;
   const ended = new AbortController();
@@ -53,7 +58,9 @@ export function startPush(
      and the handler's signal fires. */
   const iterate = async (): Promise<void> => {
     try {
-      for await (const value of abortableEvents(generator, ended.signal)) {
+      for await (const yielded of abortableEvents(generator, ended.signal)) {
+        const value = responseSchema ? await checkResponse(responseSchema, yielded) : yielded;
+        if (ended.signal.aborted) return;
         ctx.seq.value++;
         ctx.sendMessage({ type: "data", topic, payload: value, seq: ctx.seq.value });
         emitChannelMessage(ctx, topic, value, "data");

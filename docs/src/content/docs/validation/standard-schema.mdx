@@ -73,6 +73,22 @@ When a `response` schema is attached, Courier validates the parsed response body
 const user = await caller.users.getAll()
 ```
 
+### Streams and push channels
+
+A stream or a push channel served with `.implement()` holds each event it produces to its `.response()` schema before the event leaves the server. The client receives the schema's output, and the first event that does not match ends the subscription with a `RealtimeValidationError` (code `4422`) whose `issues` are the schema's:
+
+```ts
+import { RealtimeValidationError } from "@noverax/courier/realtime"
+
+try {
+  for await (const event of caller.live.ticks()) render(event.data)
+} catch (error) {
+  if (error instanceof RealtimeValidationError) console.log(error.issues)
+}
+```
+
+What a channel's handlers send with `ctx.send()` or `ctx.broadcast()` is not validated.
+
 ### Schema transforms
 
 Standard Schema libraries often support transforms (e.g., `z.coerce.date()`). Courier respects these -- the validated and transformed value is what you receive:

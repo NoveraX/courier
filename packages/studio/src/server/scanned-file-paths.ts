@@ -13,6 +13,10 @@ const log = createLogger("Studio");
 export interface ScannedFilePaths {
   /** The source file, when Studio wrote it. */
   source: string | undefined;
+  /** Where the import's generated source is, written or not: the declaration's layout, else the file Studio wrote. */
+  generatedSource: string | undefined;
+  /** The import's own barrel, when Studio wrote it. */
+  index: string | undefined;
   /** A group's endpoint file, or `""` when Studio wrote none for it. */
   group(name: string): string;
 }
@@ -42,14 +46,19 @@ export function scannedFilePaths(
   const recorded = (path: string): string | undefined =>
     written.includes(path) ? path : undefined;
   if (layout === undefined) {
+    const source = written.find((file) => file.endsWith("/source.ts"));
     return {
-      source: written.find((file) => file.endsWith("/source.ts")),
+      source,
+      generatedSource: source,
+      index: source === undefined ? undefined : recorded(source.replace(/source\.ts$/, "index.ts")),
       group: (group) =>
         written.find((file) => file.endsWith(`/${directoryName(group)}/index.ts`)) ?? "",
     };
   }
   return {
     source: recorded(layout.sourceFile),
+    generatedSource: layout.sourceFile,
+    index: recorded(layout.indexFile),
     group: (group) => (isBinding(group) ? (recorded(layout.groupFile(group)) ?? "") : ""),
   };
 }

@@ -9,6 +9,7 @@
  * the upstream as `[object Object]`.
  */
 
+import { isFieldRecord } from "./body-kind";
 import { reviveWithoutPrototypeKeys } from "./safe-json";
 
 /** Query parameter that carries the variables of a GET proxy call. */
@@ -30,7 +31,11 @@ export type WireVariablesResult =
  * ```
  */
 export function encodeWireVariables(variables: unknown): string | undefined {
-  if (!variables || typeof variables !== "object") return undefined;
+  if (variables === undefined || variables === null) return undefined;
+  /* A list or a scalar is sent as it is, for the server to refuse: encoded
+     field by field, a list arrived as an object keyed "0", "1", … and the
+     read went ahead with it. */
+  if (!isFieldRecord(variables)) return JSON.stringify(variables);
   const present = Object.entries(variables).filter(([, value]) => value !== undefined);
   return present.length > 0 ? JSON.stringify(Object.fromEntries(present)) : undefined;
 }

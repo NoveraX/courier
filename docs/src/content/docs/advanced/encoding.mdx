@@ -53,6 +53,10 @@ await caller.users.bulk([{ name: "Jane" }, { name: "John" }])
 
 A GET or DELETE puts its variables in the query string, so they must be an object there; anything else is refused with an `HTTPError` 400 before a request is made. `defaultBody` and `bodySerializer` apply to an object's fields and leave a body of any other shape alone.
 
+<Callout variant="info" title="Raw bodies and the proxy">
+The proxy carries variables as JSON or `FormData`. A `Blob`, bytes, a stream or `URLSearchParams` passed to a proxy caller is refused with `ConfigurationError("PROXY_BODY_NOT_SUPPORTED")` before anything is sent. Upload a file in a `FormData` instead, and have the endpoint's closure build the upstream body on the server when it needs raw bytes.
+</Callout>
+
 ## bodySerializer
 
 Override the default JSON serialization for request bodies. This is useful when your backend expects a different format like `application/x-www-form-urlencoded`, Protocol Buffers, or any custom encoding:

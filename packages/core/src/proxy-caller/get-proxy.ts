@@ -7,7 +7,7 @@ export type GetProxyCtx = {
   source: string;
   group: string | undefined;
   method: string;
-  variables: Record<string, unknown> | undefined;
+  variables: unknown;
   serverOptions: Record<string, unknown>;
   credentials: RequestCredentials;
   defaultHeaders?: Record<string, string>;

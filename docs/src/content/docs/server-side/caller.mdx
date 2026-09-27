@@ -154,6 +154,8 @@ export async function GET(req: Request) {
 
 <Callout variant="info" title="Header whitelist">
 Headers carried by a context — `context.req` or `context.headers` — are forwarded only when they are in a safe subset: `authorization`, `cookie`, `user-agent`, `x-forwarded-for`, `x-real-ip`, and a few others, extended by the source's `allowedHeaders`. Headers you pass to `.with({ headers })` are sent as given, except the ones that describe the incoming connection rather than the request — `host`, `connection`, `keep-alive`, `content-length`, `transfer-encoding`, `te`, `trailer`, `upgrade`, `expect` and any header `connection` names — which `fetch` sets for its own. Forwarding `await headers()` whole therefore works, but it passes on everything else the browser sent too; pick out the headers the backend should see when that matters.
+
+A header you set yourself — in the caller's `headers` default or with `.with({ headers })` — wins over the forwarded copy of the same name, so a service token is not replaced by the end user's.
 </Callout>
 
 ## Raw data mode

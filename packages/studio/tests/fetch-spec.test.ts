@@ -186,10 +186,36 @@ describe("fetchSpec", () => {
     await expect(fetchSpec(`${base}/unchanged`, NOTHING_LISTED)).rejects.toMatchObject({ code: "SPEC_HTTP_STATUS" });
   });
 
-  it("reports a redirect to something that is not a URL as such", async () => {
+  it("reports a redirect to something that is not a URL as the server's failure, naming the redirect", async () => {
     const base = await serve(() => ({ status: 302, location: "http://[::1" }));
 
-    await expect(fetchSpec(`${base}/`, NOTHING_LISTED)).rejects.toMatchObject({ code: "SPEC_URL_INVALID" });
+    await expect(fetchSpec(`${base}/`, NOTHING_LISTED)).rejects.toMatchObject({
+      code: "SPEC_REDIRECT_INVALID",
+      refused: false,
+      message: `${base}/ redirects to "http://[::1", which is not a URL.`,
+    });
+  });
+
+  it.each(["ftp://docs.example.com/spec.json", "file:///etc/passwd", "javascript:alert(1)"])(
+    "reports a redirect to %s as the server's failure, and does not follow it",
+    async (location) => {
+      const base = await serve(() => ({ status: 302, location }));
+
+      await expect(fetchSpec(`${base}/spec.json`, NOTHING_LISTED)).rejects.toMatchObject({
+        code: "SPEC_REDIRECT_INVALID",
+        refused: false,
+        message: `${base}/spec.json redirects to ${location}, which is not an http:// or https:// URL, so Studio does not follow it.`,
+      });
+    },
+  );
+
+  it("names the hop that redirected, after an earlier redirect", async () => {
+    const base = await serve((path) => (path === "/old" ? { status: 301, location: "/new" } : { status: 302, location: "http://[" }));
+
+    await expect(fetchSpec(`${base}/old`, NOTHING_LISTED)).rejects.toMatchObject({
+      code: "SPEC_REDIRECT_INVALID",
+      message: `${base}/new redirects to "http://[", which is not a URL.`,
+    });
   });
 
   it("reports a host it cannot reach, pointing a developer behind a proxy at the file import", async () => {

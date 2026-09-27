@@ -552,6 +552,15 @@ describe("the update checks of URL imports", () => {
 
   beforeEach(async () => {
     const server = createServer((req, res) => {
+      if (req.url === "/redirect-nowhere") {
+        res.writeHead(302, { location: "http://[" }).end();
+        return;
+      }
+      if (req.url === "/cut.json") {
+        res.writeHead(200, { "content-type": "application/json", "content-length": "4096" });
+        res.write('{"openapi":', () => res.socket?.destroy());
+        return;
+      }
       res.writeHead(200, { "content-type": "application/json" });
       if (req.url === "/empty.json") res.end();
       else res.end(JSON.stringify({ openapi: "3.1.0", info: { title: "Pets", version: "1" }, paths: {} }));
@@ -602,6 +611,42 @@ describe("the update checks of URL imports", () => {
     expect(reply).toEqual({
       status: 500,
       body: { error: expect.stringContaining("Unable to detect spec format") },
+    });
+  }, 15_000);
+
+  it.each([
+    ["redirects to something that is not a URL", "/redirect-nowhere", 'redirects to "http://[", which is not a URL.'],
+    ["closes the connection partway through the body", "/cut.json", "closed the connection before the whole specification arrived (ECONNRESET)."],
+  ])("check-updates answers 502 for a spec URL that %s, naming it", async (_what, path, reason) => {
+    const from = `${specBase}${path}`;
+    project(declaringUrls({ pets: from }));
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/imports/check-updates", { name: "pets" }, AbortSignal.timeout(5_000));
+
+    expect(reply).toEqual({
+      status: 502,
+      body: { error: `Failed to fetch spec from ${from}: ${from} ${reason}` },
+    });
+  }, 15_000);
+
+  it("check-all reports a body cut off as that import's own error, naming its URL", async () => {
+    project(declaringUrls({ here: `${specBase}/spec.json`, cut: `${specBase}/cut.json` }));
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/imports/check-all", {}, AbortSignal.timeout(5_000));
+
+    expect(reply).toEqual({
+      status: 200,
+      body: {
+        results: {
+          here: { changed: true },
+          cut: {
+            changed: false,
+            error: `${specBase}/cut.json closed the connection before the whole specification arrived (ECONNRESET).`,
+          },
+        },
+      },
     });
   }, 15_000);
 

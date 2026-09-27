@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import type { AdapterHandler } from "@noverax/courier";
 import { createLogger, isOriginAccepted } from "@noverax/courier";
-import { sendWebResponse, toWebRequest } from "@noverax/courier/node";
+import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 
 const log = createLogger("Server");
 
@@ -46,7 +46,11 @@ export function handleCors(
   allowedOrigins?: string[],
 ): boolean {
   const origin = req.headers.origin;
-  const allowed = isOriginAccepted(origin, selfOrigin(req), allowedOrigins);
+  /* The origin the client addressed: behind a proxy that terminates TLS the
+     socket is plain HTTP, and the core handler and the WebSocket check
+     already take the proxy's forwarded scheme and host into account. */
+  const self = extractOriginFromNodeRequest(req) ?? null;
+  const allowed = isOriginAccepted(origin, self, allowedOrigins);
 
   if (req.method === "OPTIONS" && origin) {
     if (!allowed) {
@@ -103,14 +107,6 @@ function requestedHeaders(req: IncomingMessage): string | undefined {
     .map((name) => name.trim())
     .filter((name) => HEADER_NAME.test(name));
   return names.length > 0 ? names.join(", ") : undefined;
-}
-
-/** The origin this request was addressed to, from the Host it named. */
-function selfOrigin(req: IncomingMessage): string | null {
-  const host = req.headers.host;
-  if (!host) return null;
-  const socket = req.socket as { encrypted?: boolean } | undefined;
-  return `${socket?.encrypted ? "https" : "http"}://${host}`;
 }
 
 /**

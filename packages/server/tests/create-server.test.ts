@@ -156,6 +156,44 @@ describe("createCourierServer", () => {
       expect(res.headers.get("access-control-allow-headers")).toBe("content-type");
     });
 
+    it("serves its own HTTPS pages behind a proxy that terminates TLS", async () => {
+      server = await startServer();
+      const fromOwnPage = {
+        Origin: "https://app.example.com",
+        "X-Forwarded-Proto": "https",
+        "X-Forwarded-Host": "app.example.com",
+      };
+
+      const post = await fetch(`${server.url}/api/request`, {
+        method: "POST",
+        headers: { ...fromOwnPage, "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "api", group: "test", method: "missing" }),
+      });
+      const get = await fetch(`${server.url}/api/request?_s=api&_g=test&_m=missing`, {
+        headers: fromOwnPage,
+      });
+
+      expect(post.status).toBe(400);
+      expect(get.status).toBe(400);
+    });
+
+    it("still refuses another site's page behind the same proxy", async () => {
+      server = await startServer();
+
+      const res = await fetch(`${server.url}/api/request`, {
+        method: "POST",
+        headers: {
+          Origin: "https://evil.example",
+          "X-Forwarded-Proto": "https",
+          "X-Forwarded-Host": "app.example.com",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ source: "api", group: "test", method: "missing" }),
+      });
+
+      expect(res.status).toBe(403);
+    });
+
     it("blocks non-OPTIONS requests from disallowed origin", async () => {
       server = await startServer({ allowedOrigins: ["http://trusted.com"] });
 

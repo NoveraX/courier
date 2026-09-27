@@ -9,6 +9,7 @@ function createMockReq(overrides: Partial<IncomingMessage> = {}): IncomingMessag
     url: "/",
     method: "GET",
     headers: {},
+    socket: { remoteAddress: "127.0.0.1" },
     ...overrides,
   } as IncomingMessage;
 }

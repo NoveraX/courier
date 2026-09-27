@@ -1,4 +1,6 @@
+import { extractEndpoints } from "../../apis/merge/extract-endpoints";
 import { generateFingerprints } from "../../apis/merge/fingerprint";
+import { computeHash } from "../../apis/merge/hash";
 import { previewUpdate } from "../../apis/merge/update-flow";
 import type { DiskFile } from "./disk-file";
 import type { Confirmation, Ownership, PlannedWrite, PlanTarget } from "./file-plan-types";
@@ -65,18 +67,38 @@ function written(
   return { path: target.path, action, body, endpoints: target.endpoints, carriesEdits: false, was };
 }
 
+/* The fingerprints the file's endpoints were written with, which tell the user's edits apart. */
+function writtenFingerprints(
+  disk: ExistingFile,
+  ownership: Ownership,
+  record: RecordedFile | undefined,
+): Record<string, string> {
+  if (ownership === "claimed") return generateFingerprints(disk.body);
+  return ownership === "recorded" || ownership === "recorded-edited"
+    ? (record?.endpoints ?? {})
+    : {};
+}
+
+/* Whether the merge leaves out an endpoint the user edited: its edits would go with it. */
+function dropsEditedEndpoint(
+  disk: ExistingFile,
+  fingerprints: Record<string, string>,
+  merged: string,
+): boolean {
+  const kept = extractEndpoints(merged);
+  return Object.entries(extractEndpoints(disk.body)).some(([name, code]) => {
+    const written = fingerprints[name];
+    return written !== undefined && computeHash(code) !== written && !Object.hasOwn(kept, name);
+  });
+}
+
 function mergedBody(
   target: PlanTarget,
   disk: ExistingFile,
   ownership: Ownership,
   record: RecordedFile | undefined,
 ): string {
-  const fingerprints =
-    ownership === "claimed"
-      ? generateFingerprints(disk.body)
-      : ownership === "recorded" || ownership === "recorded-edited"
-        ? (record?.endpoints ?? {})
-        : {};
+  const fingerprints = writtenFingerprints(disk, ownership, record);
   const merged = previewUpdate(fingerprints, [{ path: target.path, content: target.body }], {
     [target.path]: disk.body,
   });
@@ -96,8 +118,12 @@ function confirmationReason(
      when Studio last wrote it keeping edits of theirs, as managing does. */
   const edited = ownership.endsWith("-edited") || record?.carriesEdits === true;
   if (!edited) return null;
-  /* A generated file is replaced whole; an endpoint file whose merge kept
-     nothing of the user's version would be too. */
-  const keepsTheirs = target.kind === "merge" && body !== target.body;
-  return keepsTheirs || disk.body === target.body ? null : "edited";
+  if (disk.body === target.body) return null;
+  /* A generated file is replaced whole. An endpoint file is merged: it waits
+     for the user when the merge kept nothing of theirs, or left out an
+     endpoint they edited, whatever else of theirs it kept. */
+  if (target.kind !== "merge" || body === target.body) return "edited";
+  return dropsEditedEndpoint(disk, writtenFingerprints(disk, ownership, record), body)
+    ? "edited"
+    : null;
 }

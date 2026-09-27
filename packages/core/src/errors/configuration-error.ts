@@ -86,7 +86,13 @@ export type ConfigurationErrorCode =
    * An endpoint was named `options` in a group or among a source's own
    * endpoints, where that name holds the group's or the source's settings.
    */
-  | "RESERVED_ENDPOINT_NAME";
+  | "RESERVED_ENDPOINT_NAME"
+  /**
+   * A proxy call's variables hold binary data — a Blob, an ArrayBuffer or a
+   * typed array — which JSON cannot carry to the proxy. It belongs in a
+   * FormData.
+   */
+  | "PROXY_VARIABLE_NOT_SERIALIZABLE";
 
 /**
  * Thrown when courier is misconfigured at the boundary between user code and

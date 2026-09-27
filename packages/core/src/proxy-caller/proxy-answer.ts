@@ -7,9 +7,10 @@
  */
 
 import { HTTPError } from "../errors";
-import { getResponseData } from "../http-client/response";
+import { isBodilessStatus } from "../http-client/response";
 import { isAbortError } from "../utils/abort";
 import { parseRequestPayload, type RequestPayload } from "../utils/request-payload";
+import { readWireBody, WIRE_BODY_HEADER } from "../utils/wire-body";
 
 type ProxyRequestPayload = { body?: FormData; json?: Partial<RequestPayload> };
 
@@ -32,7 +33,7 @@ export function buildHttpError(
 
 export async function readErrorResponse(response: Response): Promise<unknown> {
   try {
-    return await response.json();
+    return await readWireBody(response);
   } catch {
     return { success: false, message: `HTTP ${response.status}` };
   }
@@ -64,10 +65,13 @@ export async function readProxyAnswer(
       ? { status: response.status, headers: response.headers, data: response.body }
       : response.body;
   }
-  /* The proxy answers a bodiless upstream status with an empty body, which
-     `response.json()` read as a syntax error; direct mode reads it as `null`. */
-  const body = await getResponseData(response, "json");
-  return raw ? withHeaders(body) : body;
+  const body = await readWireBody(response);
+  if (!raw) return body;
+  /* A bodiless answer or one carried as itself has no envelope to unwrap;
+     the answer's own status and headers make it, as in direct mode. */
+  return isBodilessStatus(response.status) || response.headers.has(WIRE_BODY_HEADER)
+    ? { status: response.status, headers: response.headers, data: body }
+    : withHeaders(body);
 }
 
 /**

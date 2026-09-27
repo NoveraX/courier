@@ -48,12 +48,15 @@ export function handleGetProxy(ctx: GetProxyCtx): Promise<unknown> {
     {
       ...ctx.fetchCtx,
       stream: ctx.stream,
+      /* The answer is read against the call's options: without them a
+         `.raw` call over GET kept its headers as a plain object. */
       requestPayload: {
         json: {
           source: ctx.source,
           group: ctx.group,
           method: ctx.method,
           variables: ctx.variables,
+          options: ctx.serverOptions,
         },
       },
     },

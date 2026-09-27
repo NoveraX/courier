@@ -14,7 +14,7 @@ import { generateCode } from "../src/apis/generator";
 import { resolveImportLayout } from "../src/apis/layout";
 import { previewAddEndpoints } from "../src/apis/manage";
 import { classifyDiskEndpoint } from "../src/apis/manage/classify-endpoint";
-import { GroupPrefixChangedError } from "../src/apis/manage/group-prefix-changed-error";
+import { EndpointOutsidePrefixError } from "../src/apis/manage/endpoint-outside-prefix-error";
 import { listedSelection } from "../src/apis/manage/listed-selection";
 import { parseSpec } from "../src/apis/parser";
 import { resetProjectRoot, setProjectRoot } from "../src/context";
@@ -168,7 +168,7 @@ describe("names that Object.prototype also has", () => {
   });
 });
 
-describe("adding to a group the spec now puts under another prefix", () => {
+describe("adding to a group whose file declares another prefix than the spec gives it", () => {
   const customers = {
     "/v1/customers": { get: { operationId: "listCustomers", tags: ["customers"], responses: OK } },
     "/v1/customers/{id}": { get: { operationId: "getCustomer", tags: ["customers"], responses: OK } },
@@ -179,26 +179,48 @@ describe("adding to a group the spec now puts under another prefix", () => {
     ...customers,
     "/v1/charges": { get: { operationId: "listCharges", tags: ["customers"], responses: OK } },
   });
+  const options = { type: "openapi" as const, outputDir: "src/api" };
+  const written = (prefix: string) => {
+    const files = Object.fromEntries(
+      generateCode(V1, { ...options, selectedEndpoints: { customers: ["listCustomers"] } }, "shop").map((f) => [
+        f.path,
+        f.content,
+      ]),
+    );
+    const group = LAYOUT.groupFile("customers");
+    files[group] = (files[group] ?? "").replace('prefix: "/v1/customers",', prefix);
+    return files;
+  };
+  const added = (files: Record<string, string>) =>
+    previewAddEndpoints(V1, { customers: ["getCustomer"] }, options, files, LAYOUT).files.find(
+      (f) => f.path === LAYOUT.groupFile("customers"),
+    )?.content ?? "";
 
-  it("refuses, rather than write a path relative to a prefix the file does not declare", () => {
-    const options = { type: "openapi" as const, outputDir: "src/api" };
-    const existing = Object.fromEntries(generateCode(V1, options, "shop").map((file) => [file.path, file.content]));
-    expect(existing[LAYOUT.groupFile("customers")]).toContain('prefix: "/v1/customers",');
+  it("writes the path relative to the prefix the file declares, so it calls the same URL", () => {
+    expect(added(written('prefix: "/v1",'))).toContain('getCustomer: endpoint.get("customers/:id")');
+    expect(added(written('prefix: "/v1/customers/",'))).toContain('getCustomer: endpoint.get(":id")');
+  });
 
-    expect(() => previewAddEndpoints(V2, { customers: ["listCharges"] }, options, existing, LAYOUT)).toThrow(
-      GroupPrefixChangedError,
+  it("reads a prefix written as a template or as a constant in the file", () => {
+    expect(added(written("prefix: `/v1/customers`,"))).toContain('getCustomer: endpoint.get(":id")');
+    const withConstant = written("prefix: PREFIX,");
+    const group = LAYOUT.groupFile("customers");
+    withConstant[group] = `const PREFIX = "/v1";\n${withConstant[group]}`;
+    expect(added(withConstant)).toContain('getCustomer: endpoint.get("customers/:id")');
+  });
+
+  it("refuses an endpoint whose URL the file's prefix cannot reach, naming the URL", () => {
+    const files = Object.fromEntries(generateCode(V1, options, "shop").map((f) => [f.path, f.content]));
+
+    expect(() => previewAddEndpoints(V2, { customers: ["listCharges"] }, options, files, LAYOUT)).toThrow(
+      /listCharges calls \/v1\/charges, which is not under the prefix "\/v1\/customers"/,
+    );
+    expect(() => previewAddEndpoints(V2, { customers: ["listCharges"] }, options, files, LAYOUT)).toThrow(
+      EndpointOutsidePrefixError,
     );
   });
 
-  it("adds as before while the prefix stays", () => {
-    const options = { type: "openapi" as const, outputDir: "src/api" };
-    const selected = { customers: ["listCustomers"] };
-    const existing = Object.fromEntries(
-      generateCode(V1, { ...options, selectedEndpoints: selected }, "shop").map((file) => [file.path, file.content]),
-    );
-
-    const result = previewAddEndpoints(V1, { customers: ["getCustomer"] }, options, existing, LAYOUT);
-
-    expect(result.files.find((file) => file.path === LAYOUT.groupFile("customers"))?.content).toContain("getCustomer:");
+  it("refuses when it cannot read the prefix, saying so", () => {
+    expect(() => added(written("prefix: `/v1/${'customers'}`,"))).toThrow(/cannot read the prefix/);
   });
 });

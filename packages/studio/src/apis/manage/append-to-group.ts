@@ -13,11 +13,12 @@ import type { TextEdit } from "../../server/mocks-edit/types";
 import { parseExistingGroup } from "../merge/parse-existing";
 import { renameBase } from "../merge/rename-base";
 import { aboveStatement } from "./above-statement";
+import { EndpointOutsidePrefixError } from "./endpoint-outside-prefix-error";
 import { fileBase } from "./file-base";
 import { type GeneratedEntry, generatedEndpoints } from "./generated-entries";
 import { endpointNames, findGroupDeclaration } from "./group-declaration";
-import { GroupPrefixChangedError } from "./group-prefix-changed-error";
 import { planMissingImports } from "./plan-missing-imports";
+import { entryUrl, pathSegments, rebaseEntryPath } from "./rebase-entry-path";
 import { referencedImports } from "./referenced-imports";
 import { UnrecognizedFileError } from "./unrecognized-file-error";
 
@@ -44,7 +45,7 @@ function entryText({ comment, code }: GeneratedEntry, indent: string, eol: strin
  * @param endpointNames - Names of endpoints to take from the generated file
  * @returns Merged file content; `existingContent` when nothing is new
  * @throws {UnrecognizedFileError} When the file does not parse, or declares no endpoints object
- * @throws {GroupPrefixChangedError} When the group now has another prefix than the file declares
+ * @throws {EndpointOutsidePrefixError} When an added endpoint's URL is not under the prefix the file declares, or Studio cannot read that prefix
  * @example
  * ```ts
  * appendEndpointsToGroup("src/api/pets/pets/index.ts", onDisk, generated, ["createPet"]);
@@ -63,23 +64,23 @@ export function appendEndpointsToGroup(
   if (declaration === null) throw new UnrecognizedFileError(path);
   const present = endpointNames(declaration.endpoints);
   const wanted = new Set(endpointNamesToAdd);
-  const added = [...entries].flatMap(([key, entry]) =>
-    wanted.has(key) && !present.has(key) ? [entry] : [],
-  );
+  const added = [...entries].filter(([key]) => wanted.has(key) && !present.has(key));
   if (added.length === 0) return existingContent;
-  /* An added endpoint's path is relative to the prefix it was generated under. */
-  const fresh = findGroupDeclaration(parseSource("generated.ts", generatedContent).program, name);
-  if (fresh !== null && fresh.prefix !== declaration.prefix)
-    throw new GroupPrefixChangedError(path, declaration.prefix, fresh.prefix);
 
   const bindings = collectModuleBindings(parsed.program);
   const style = detectStyle(parsed, declaration.endpoints);
   const fileBaseName = fileBase(parsed.program) ?? (bindings.has("endpoint") ? "endpoint" : null);
   const base = fileBaseName ?? generated.baseName;
-  const texts = added.map((entry) => ({
-    ...entry,
-    code: renameBase(entry.code, generated.baseName, base),
-  }));
+  /* A path is written relative to the prefix it was generated under; the file's may differ. */
+  const fresh = findGroupDeclaration(parseSource("generated.ts", generatedContent).program, name);
+  const generatedPrefix = fresh?.prefix ?? "";
+  const texts = added.map(([key, entry]) => {
+    const code = renameBase(entry.code, generated.baseName, base);
+    return {
+      ...entry,
+      code: underPrefix(path, key, code, base, generatedPrefix, declaration.prefix),
+    };
+  });
   const preamble = fileBaseName === null ? generated.preamble.join(style.eol) : "";
   const referenced = [preamble, ...texts.map((t) => t.code)].join("\n");
   const edits: TextEdit[] = [
@@ -107,5 +108,29 @@ export function appendEndpointsToGroup(
   return applyEdits(
     existingContent,
     [...edits].sort((a, b) => a.start - b.start),
+  );
+}
+
+/* The entry with its path relative to the file's prefix, when the two prefixes differ. */
+function underPrefix(
+  path: string,
+  key: string,
+  code: string,
+  base: string,
+  generatedPrefix: string,
+  filePrefix: string | null,
+): string {
+  const same =
+    filePrefix !== null &&
+    pathSegments(filePrefix).join("/") === pathSegments(generatedPrefix).join("/");
+  if (same) return code;
+  const rebased =
+    filePrefix === null ? null : rebaseEntryPath(code, base, generatedPrefix, filePrefix);
+  if (rebased !== null) return rebased;
+  throw new EndpointOutsidePrefixError(
+    path,
+    key,
+    entryUrl(code, base, generatedPrefix) ?? "",
+    filePrefix,
   );
 }

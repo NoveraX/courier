@@ -13,7 +13,7 @@ export interface GroupDeclaration {
   name: string | null;
   exported: boolean;
   endpoints: ObjectExpression;
-  /** The `prefix` it declares as a string literal, or `null` when it declares none that way. */
+  /** The `prefix` it declares — "" when none — or `null` when it is not a string Studio can read. */
   prefix: string | null;
 }
 
@@ -39,7 +39,8 @@ function endpointsOf(
   return null;
 }
 
-function prefixOf(init: Expression | null): string | null {
+/* The prefix a declaration gives: "" when it gives none, `null` when it is not a string Studio can read. */
+function prefixOf(init: Expression | null, constants: ReadonlyMap<string, string>): string | null {
   const call = init === null ? null : unwrapExpression(init);
   if (call?.type !== "CallExpression") return null;
   const [config] = call.arguments;
@@ -47,20 +48,39 @@ function prefixOf(init: Expression | null): string | null {
     config === undefined || config.type === "SpreadElement" ? null : unwrapExpression(config);
   if (object?.type !== "ObjectExpression") return null;
   for (const property of object.properties) {
-    if (
-      property.type !== "Property" ||
-      property.computed ||
-      propertyKeyName(property.key) !== "prefix"
-    )
-      continue;
-    const value = unwrapExpression(property.value);
-    return value.type === "Literal" && typeof value.value === "string" ? value.value : null;
+    if (property.type === "SpreadElement") return null;
+    if (property.computed || propertyKeyName(property.key) !== "prefix") continue;
+    return stringValue(unwrapExpression(property.value), constants);
   }
-  return null;
+  return "";
+}
+
+/* A string literal, a template without substitutions, or a constant bound to one. */
+function stringValue(value: Expression, constants: ReadonlyMap<string, string>): string | null {
+  if (value.type === "Literal") return typeof value.value === "string" ? value.value : null;
+  if (value.type === "TemplateLiteral")
+    return value.expressions.length === 0 ? (value.quasis[0]?.value.cooked ?? null) : null;
+  return value.type === "Identifier" ? (constants.get(value.name) ?? null) : null;
+}
+
+/* The file's top-level `const` bindings to a string, which a prefix may name. */
+function stringConstants(program: Program): Map<string, string> {
+  const constants = new Map<string, string>();
+  for (const statement of program.body) {
+    const declaration =
+      statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
+    if (declaration?.type !== "VariableDeclaration" || declaration.kind !== "const") continue;
+    for (const { id, init } of declaration.declarations) {
+      const value = init === null ? null : stringValue(unwrapExpression(init), new Map());
+      if (id.type === "Identifier" && value !== null) constants.set(id.name, value);
+    }
+  }
+  return constants;
 }
 
 function declarationsIn(program: Program): GroupDeclaration[] {
   const found: GroupDeclaration[] = [];
+  const constants = stringConstants(program);
   for (const statement of program.body) {
     const exported = statement.type === "ExportNamedDeclaration";
     const declaration = exported ? statement.declaration : statement;
@@ -68,7 +88,7 @@ function declarationsIn(program: Program): GroupDeclaration[] {
     for (const declarator of declaration.declarations) {
       const endpoints = endpointsOf(declarator.init);
       const name = declarator.id.type === "Identifier" ? declarator.id.name : null;
-      const prefix = prefixOf(declarator.init);
+      const prefix = prefixOf(declarator.init, constants);
       if (endpoints !== null) found.push({ statement, name, exported, endpoints, prefix });
     }
   }

@@ -17,7 +17,7 @@
 ## Install
 
 ```bash
-npm install @noverax/courier-nuxt @noverax/courier h3
+npm install @noverax/courier-nuxt @noverax/courier
 ```
 
 ## Usage
@@ -39,11 +39,13 @@ import { courierHandler } from "@noverax/courier-nuxt"
 export default courierHandler()
 ```
 
-`courierHandler()` is zero-arg — sources are read at request time from the core global registry populated by the Nitro plugin at server start. Works with Nuxt 3, Nitro, and any h3-based server.
+`courierHandler()` is zero-arg — sources are read at request time from the core global registry populated by the Nitro plugin at server start. Works with Nuxt 3 and 4, Nitro, and any h3-based server.
 
 ## How It Works
 
-Uses `h3.fromWebHandler()` to wrap the core Web Standard handler as an h3 event handler. Since Nitro/h3 supports Web Standard APIs, the conversion is lightweight.
+The handler takes the Web `Request` from the h3 event it is given — directly from an h3 2.x event, and converted from Node's request inside an h3 1.x event, which is what Nitro 2, and so Nuxt 3 and 4, hands a route. It does not import `h3` itself, so it never depends on which h3 version your package manager installs: do not add `h3` to your dependencies for it. Nuxt brings the h3 it runs, and a separately installed `h3` can resolve to another major — its 2.x line, where Nuxt 4 runs 1.x.
+
+A body Nitro already holds — a call made in-process with `$fetch`, or any request on an edge preset — is taken from where Nitro keeps it.
 
 ## Client-Side
 

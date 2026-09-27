@@ -16,16 +16,10 @@ vi.mock("@noverax/courier", async (importOriginal) => {
   };
 });
 
-vi.mock("h3", () => ({
-  fromWebHandler: vi.fn((handler: Function) => handler),
-}));
-
 import { createHandler } from "@noverax/courier";
-import { fromWebHandler } from "h3";
 import { courierHandler } from "../src/index";
 
 const mockCreateHandler = vi.mocked(createHandler);
-const mockFromWebHandler = vi.mocked(fromWebHandler);
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -41,6 +35,10 @@ describe("courierHandler", () => {
     expect(typeof handler).toBe("function");
   });
 
+  it("marks itself the way h3 1.x recognizes a handler", () => {
+    expect(courierHandler().__is_handler__).toBe(true);
+  });
+
   it("calls createHandler with no sources arg (zero-arg)", () => {
     courierHandler();
     expect(mockCreateHandler).toHaveBeenCalledWith(undefined);
@@ -52,54 +50,51 @@ describe("courierHandler", () => {
     expect(mockCreateHandler).toHaveBeenCalledWith(config);
   });
 
-  it("wraps handler with fromWebHandler", () => {
-    courierHandler();
-    expect(mockFromWebHandler).toHaveBeenCalledWith(expect.any(Function));
-  });
-
-  it("delegates to handle with the request", async () => {
-    const webRequest = new Request("http://localhost/api/request?_s=api&_m=list");
-
-    // fromWebHandler is mocked to passthrough — handler accepts Request at runtime
-    const handler = courierHandler() as unknown as (req: Request) => Promise<Response>;
+  it("hands the request an h3 2.x event carries to handle", async () => {
+    const request = new Request("http://localhost/api/request?_s=api&_m=list");
+    const handler = courierHandler();
     const mockHandle = getMockHandle();
     mockHandle.mockResolvedValue(new Response("{}"));
 
-    await handler(webRequest);
+    await handler({ req: request });
 
-    expect(mockHandle).toHaveBeenCalledWith(webRequest);
+    expect(mockHandle).toHaveBeenCalledWith(request);
+  });
+
+  it("hands over the Web request an h3 1.x event carries when h3 served one", async () => {
+    const request = new Request("http://localhost/api/request?_s=api&_m=list");
+    const handler = courierHandler();
+    const mockHandle = getMockHandle();
+    mockHandle.mockResolvedValue(new Response("{}"));
+
+    await handler({ node: {} as never, web: { request } });
+
+    expect(mockHandle).toHaveBeenCalledWith(request);
   });
 
   it("returns the Response from handle", async () => {
     const expectedResponse = new Response(JSON.stringify({ data: "test" }));
+    const handler = courierHandler();
+    getMockHandle().mockResolvedValue(expectedResponse);
 
-    const handler = courierHandler() as unknown as (req: Request) => Promise<Response>;
-    const mockHandle = getMockHandle();
-    mockHandle.mockResolvedValue(expectedResponse);
+    const result = await handler({ req: new Request("http://localhost/api/request") });
 
-    const request = new Request("http://localhost/api/request?_s=api&_m=list");
-    const result = await handler(request);
     expect(result).toBe(expectedResponse);
   });
 
-  it("preserves all response headers (incl. SSE proxy-busters) through the adapter", async () => {
-    // Nuxt adapter is HTTP-only today (see frameworks/nuxt.mdx → "Realtime").
-    // This test still asserts the HTTP path doesn't strip the SSE-class
-    // proxy-buster headers, so when courierSSEHandler ships for Nuxt the
-    // existing transport stays honest. Note: fromWebHandler is mocked to
-    // passthrough, so this exercises the adapter wiring, not h3 itself —
-    // a real h3 integration test requires booting Nitro and is out of scope.
+  it("keeps a stream's proxy-buster headers on the response", async () => {
     const sseHeaders = {
       "content-type": "text/event-stream",
       "cache-control": "no-cache, no-transform",
-      "connection": "keep-alive",
+      connection: "keep-alive",
       "x-accel-buffering": "no",
     };
-    const handler = courierHandler() as unknown as (req: Request) => Promise<Response>;
-    const mockHandle = getMockHandle();
-    mockHandle.mockResolvedValue(new Response("data: hello\n\n", { status: 200, headers: sseHeaders }));
+    const handler = courierHandler();
+    getMockHandle().mockResolvedValue(
+      new Response("data: hello\n\n", { status: 200, headers: sseHeaders }),
+    );
 
-    const result = await handler(new Request("http://localhost/api/request?_s=api&_m=feed"));
+    const result = await handler({ req: new Request("http://localhost/api/request?_s=api&_m=feed") });
 
     expect(result.headers.get("content-type")).toBe("text/event-stream");
     expect(result.headers.get("cache-control")).toBe("no-cache, no-transform");

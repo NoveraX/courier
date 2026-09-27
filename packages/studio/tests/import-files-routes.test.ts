@@ -88,7 +88,10 @@ async function post(url: string, path: string, body: unknown): Promise<{ status:
   return { status: response.status, body: typeof payload === "object" && payload !== null ? { ...payload } : {} };
 }
 
-function planOf(reply: { body: Record<string, unknown> }): { digest: string; pending: Array<{ path: string }> } {
+function planOf(reply: { body: Record<string, unknown> }): {
+  digest: string;
+  pending: Array<{ path: string; preselected?: boolean }>;
+} {
   const plan = reply.body.plan;
   if (typeof plan !== "object" || plan === null || !("digest" in plan) || typeof plan.digest !== "string") {
     throw new Error(`no plan in ${JSON.stringify(reply.body)}`);
@@ -148,6 +151,18 @@ describe("writing an import's files", () => {
     expect(allowed.status).toBe(200);
     expect(readGeneratedFile(read("src/api/pets/index.ts")).header?.import).toBe("pets");
     expect(read(`${String(allowed.body.backupDir)}/src/api/pets/index.ts`)).toBe("hand-written\n");
+  }, 20_000);
+
+  it("refuses consent to a step the plan does not hold, and writes nothing", async () => {
+    put("src/api/pets/index.ts", "hand-written\n");
+    const url = await start();
+    const { digest } = planOf(await post(url, "/api/apis/write", WRITE));
+
+    const reply = await post(url, "/api/apis/write", { ...WRITE, planDigest: digest, confirm: ["package.json"] });
+
+    expect(reply.status).toBe(400);
+    expect(reply.body).toMatchObject({ code: "CONFIRMATION_NOT_IN_PLAN" });
+    expect(read("src/api/pets/index.ts")).toBe("hand-written\n");
   }, 20_000);
 
   it("refuses the plan the user saw once a file it rests on changed", async () => {
@@ -240,6 +255,24 @@ describe("removing an import", () => {
     expect(existsSync(join(root, "src/api/pets/source.ts"))).toBe(false);
     expect(read(GROUP_FILE)).toContain("// my note");
     expect(existsSync(join(root, String(removed.body.backupDir), "src/api/pets/source.ts"))).toBe(true);
+  }, 20_000);
+});
+
+describe("removing an import Studio has no record of", () => {
+  it("offers its files, which Studio's header claims, ticked for removal", async () => {
+    const url = await start();
+    await post(url, "/api/apis/write", WRITE);
+    rmSync(join(root, ".courier"), { recursive: true, force: true });
+
+    const preview = await post(url, "/api/apis/imports/remove/preview", { name: "pets" });
+    const { digest, pending } = planOf(preview);
+    const confirmed = pending.filter((step) => step.preselected === true).map((step) => step.path);
+    const removed = await post(url, "/api/apis/imports/remove", { name: "pets", planDigest: digest, confirm: confirmed });
+
+    expect(pending.length).toBeGreaterThan(0);
+    expect(confirmed).toEqual(pending.map((step) => step.path));
+    expect(removed.status).toBe(200);
+    expect(existsSync(join(root, "src/api/pets/source.ts"))).toBe(false);
   }, 20_000);
 });
 

@@ -1,5 +1,6 @@
 import { isFieldRecord } from "../utils/body-kind";
-import { extractParamNames, isFormData } from "../utils/helpers";
+import { extractParamNames } from "../utils/helpers";
+import { omitParams } from "../utils/url";
 
 /**
  * Remove path-param keys from variables so they don't leak into query/body.
@@ -11,18 +12,8 @@ export function stripPathParams(path: string, variables: unknown): unknown {
   const paramNames = extractParamNames(path);
   if (paramNames.length === 0) return variables;
 
-  if (isFormData(variables)) {
-    const copy = new FormData();
-    for (const [k, v] of variables.entries()) {
-      if (!paramNames.includes(k)) copy.append(k, v);
-    }
-    return copy;
-  }
-  if (!isFieldRecord(variables)) return variables;
-
-  const copy = { ...variables };
-  for (const name of paramNames) delete copy[name];
-  return Object.keys(copy).length > 0 ? copy : undefined;
+  const rest = omitParams(variables, paramNames);
+  return isFieldRecord(rest) && Object.keys(rest).length === 0 ? undefined : rest;
 }
 
 export function toHeadersInit(value: unknown): HeadersInit | undefined {

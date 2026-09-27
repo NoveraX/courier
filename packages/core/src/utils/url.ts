@@ -57,6 +57,37 @@ export const resolveBasePath = (
 };
 
 /**
+ * The variables without the entries that filled path parameters.
+ *
+ * Form data is copied rather than edited: it belongs to the caller, who may
+ * send it again, or have a retry send it, and found the parameter gone.
+ *
+ * @param variables - The variables a call was given
+ * @param names - The path parameters the path declares
+ * @returns The remaining variables; a list, a scalar or a raw body unchanged
+ *
+ * @example
+ * ```ts
+ * omitParams({ id: 1, name: "a" }, ["id"]); // → { name: "a" }
+ * ```
+ */
+export function omitParams(variables: unknown, names: readonly string[]): unknown {
+  if (names.length === 0) return variables;
+  if (isFormData(variables)) {
+    const copy = new FormData();
+    for (const [key, value] of variables.entries()) {
+      if (!names.includes(key)) copy.append(key, value);
+    }
+    return copy;
+  }
+  if (!isFieldRecord(variables)) return variables;
+
+  const copy = { ...variables };
+  for (const name of names) delete copy[name];
+  return copy;
+}
+
+/**
  * Fill a path's parameters and split off what is left of the variables.
  *
  * Only named values can fill a parameter: a list, a scalar or a raw body is
@@ -78,19 +109,13 @@ export const compileUrl = (
     : isFieldRecord(variables)
       ? variables
       : undefined;
-  const newVariables = isFieldRecord(variables) ? { ...variables } : variables;
   const pathOptions = { ...generatedPathOptions, ...variablesObject };
   const pathKeys: Record<string, string> = {};
 
   const paramNames = extractParamNames(urlPath);
+  const newVariables = omitParams(variables, paramNames);
 
   for (const pathKey of paramNames) {
-    if (isFormData(newVariables)) {
-      newVariables.delete(pathKey);
-    } else if (isFieldRecord(newVariables)) {
-      delete newVariables[pathKey];
-    }
-
     pathKeys[pathKey] = String(pathOptions?.[pathKey]);
   }
 

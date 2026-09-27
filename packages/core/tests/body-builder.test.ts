@@ -7,7 +7,7 @@ import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import { HTTPError } from "../src/errors";
-import { filterEmptyFiles } from "../src/http-client/body-builder";
+import { withoutEmptyFiles } from "../src/http-client/body-builder";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { type EchoServer, startEchoServer } from "./helpers/echo-server";
 
@@ -19,10 +19,20 @@ describe("a multipart field holding several files", () => {
     form.append("files", new File(["c"], "c.txt"));
     form.append("note", "hi");
 
-    filterEmptyFiles(form);
+    const sent = withoutEmptyFiles(form);
 
-    expect(form.getAll("files").map((file) => (file as File).name)).toEqual(["a.txt", "c.txt"]);
-    expect(form.get("note")).toBe("hi");
+    expect(sent.getAll("files").map((file) => (file as File).name)).toEqual(["a.txt", "c.txt"]);
+    expect(sent.get("note")).toBe("hi");
+  });
+
+  it("leaves the caller's own FormData as it was", () => {
+    const form = new FormData();
+    form.append("files", new File(["a"], "a.txt"));
+    form.append("files", new File([], ""));
+
+    withoutEmptyFiles(form);
+
+    expect(form.getAll("files")).toHaveLength(2);
   });
 });
 
@@ -153,5 +163,19 @@ describe("variables that already are a request body", () => {
     expect(failure).toBeInstanceOf(HTTPError);
     expect((failure as HTTPError).status).toBe(400);
     expect(upstream.received).toHaveLength(0);
+  });
+});
+
+describe("a FormData sent as the body", () => {
+  it("reaches the upstream without its blank file input, and stays whole for the caller", async () => {
+    const form = new FormData();
+    form.append("doc", new File(["content"], "doc.txt"));
+    form.append("avatar", new File([], ""));
+
+    await caller().items.create(form);
+
+    expect(upstream.last().body.toString()).toContain('filename="doc.txt"');
+    expect(upstream.last().body.toString()).not.toContain('name="avatar"');
+    expect([...form.keys()]).toEqual(["doc", "avatar"]);
   });
 });

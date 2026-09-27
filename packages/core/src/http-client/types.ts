@@ -79,7 +79,11 @@ export type OptionsWithSearchParams = Omit<FetchOptions, "searchParams"> & {
 
 export type SimpleOptions = Omit<OptionsWithSearchParams, "body" | "json" | "searchParams">;
 
-export type MethodOptions<TMethod extends HttpMethod> = TMethod extends "del" | "get" | "head"
+/**
+ * Options a wire call takes. A GET or HEAD has no body to name; a DELETE may
+ * carry one, as some APIs require.
+ */
+export type MethodOptions<TMethod extends HttpMethod> = TMethod extends "get" | "head"
   ? SimpleOptions
   : OptionsWithSearchParams;
 

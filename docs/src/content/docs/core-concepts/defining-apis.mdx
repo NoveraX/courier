@@ -81,6 +81,19 @@ http.patch(":id", vars)       // PATCH /users/5 with JSON body
 http.del(":id", vars)         // DELETE /users/5
 ```
 
+The third argument takes per-call options. A `body` or `json` named there is sent as the request body, and the variables then only fill the path; its `headers` are sent as written, whatever their name. This is also how a DELETE carries a body, for an API that requires one:
+
+```ts
+endpoint
+  .variables<{ id: number; message: string; sha: string }>()
+  .via((http, { id, ...reason }) => http.del(":id", { id }, { json: reason }))
+// → DELETE /files/7  Body: {"message":"…","sha":"…"}
+
+endpoint
+  .variables<{ file: Blob }>()
+  .via((http, v) => http.put("raw", undefined, { body: v.file, headers: { "content-type": "image/png" } }))
+```
+
 ### Path Parameters
 
 The `:param` syntax extracts values from variables automatically:

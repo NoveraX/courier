@@ -80,3 +80,85 @@ describe("headers an endpoint's closure sets", () => {
     expect(upstream.last().headers["content-type"]).toBe("application/xml");
   });
 });
+
+const uploads = defineGroup({
+  prefix: "uploads",
+  endpoints: {
+    blob: endpoint
+      .variables<{ file: Blob }>()
+      .via((http, v) => http.post("raw", undefined, { body: v.file })),
+    wrapped: endpoint
+      .variables<{ name: string }>()
+      .via((http, v) => http.post("wrapped", undefined, { json: { data: v } })),
+    bytes: endpoint.variables<{ bytes: Uint8Array<ArrayBuffer> }>().via((http, v) =>
+      http.put("bin", undefined, {
+        body: v.bytes,
+        headers: { "content-type": "application/octet-stream" },
+      }),
+    ),
+    fromForm: endpoint
+      .variables<FormData>()
+      .via((http, form) => http.put("objects/raw", {}, { body: form.get("file") ?? undefined })),
+  },
+});
+
+function uploadSource() {
+  return defineApi({ name: "api", baseURL: upstream.origin, groups: { uploads } });
+}
+
+describe("a body an endpoint's closure names", () => {
+  it("is sent instead of the forwarded variables", async () => {
+    await createCaller(uploadSource()).uploads.blob({ file: new Blob(["closure-blob"]) });
+
+    expect(upstream.last().body.toString()).toBe("closure-blob");
+  });
+
+  it("is sent as JSON when the closure names json", async () => {
+    await createCaller(uploadSource()).uploads.wrapped({ name: "a" });
+
+    expect(JSON.parse(upstream.last().body.toString())).toEqual({ data: { name: "a" } });
+  });
+
+  it("carries raw bytes with the content type the closure gives", async () => {
+    await createCaller(uploadSource()).uploads.bytes({ bytes: new Uint8Array([7, 8, 9]) });
+
+    expect([...upstream.last().body]).toEqual([7, 8, 9]);
+    expect(upstream.last().headers["content-type"]).toBe("application/octet-stream");
+  });
+
+  it("can be a file the browser uploaded through the proxy in a FormData", async () => {
+    registerSources({ api: uploadSource() });
+    const api = uploadSource();
+    const form = new FormData();
+    form.append("file", new File(["png bytes"], "a.png", { type: "image/png" }));
+
+    await createProxyCaller<typeof api>("api", { proxyPath: { http: proxy.url } }).uploads.fromForm(
+      form,
+    );
+
+    expect(upstream.last().url).toBe("/uploads/objects/raw");
+    expect(upstream.last().body.toString()).toBe("png bytes");
+    expect(upstream.last().headers["content-type"]).toBe("image/png");
+  });
+});
+
+describe("a DELETE whose closure names a JSON body", () => {
+  const items = defineGroup({
+    prefix: "items",
+    endpoints: {
+      remove: endpoint
+        .variables<{ id: number; message: string; sha: string }>()
+        .via((http, { id, ...reason }) => http.del(":id", { id }, { json: reason })),
+    },
+  });
+
+  it("sends the body and leaves the query string alone", async () => {
+    const api = defineApi({ baseURL: upstream.origin, groups: { items } });
+
+    await createCaller(api).items.remove({ id: 7, message: "bye", sha: "abc" });
+
+    expect(upstream.last().method).toBe("DELETE");
+    expect(upstream.last().url).toBe("/items/7");
+    expect(JSON.parse(upstream.last().body.toString())).toEqual({ message: "bye", sha: "abc" });
+  });
+});

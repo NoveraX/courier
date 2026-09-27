@@ -5,9 +5,10 @@
 
 import type { ParsedSpec } from "../apis";
 import { computeSpecHash } from "../apis";
+import { transformSpec } from "../apis/generator/transform-spec";
 import { type ImportLayout, resolveImportLayout } from "../apis/layout";
 import { buildEndpointInventory } from "../apis/manage";
-import { FLAT_GROUP, flatSpec, isFlatImport } from "../apis/manage/flat-import";
+import { FLAT_GROUP } from "../apis/manage/flat-import";
 import type { DiskGroupListing, EndpointInventory } from "../apis/manage/types";
 import { extractEndpoints } from "../apis/merge/extract-endpoints";
 import { importBodies } from "./import-files/import-bodies";
@@ -52,8 +53,8 @@ export function handleInventory(
   const diskGroups = scanSourceGroups(layout, existingFiles);
   const fingerprints = manageFingerprints(state, existingFiles);
 
-  /* A flat import lists its endpoints in one group, as its source.ts holds them. */
-  const listed = isFlatImport(entry) ? flatSpec(spec) : spec;
+  /* Listed as the import's files hold them: by its grouping, under the names it generates. */
+  const listed = transformSpec(spec, { groupBy: entry.groupBy ?? "tag" });
   const inventory = buildEndpointInventory(listed, diskGroups, fingerprints, existingFiles);
   inventory.specChanged = computeSpecHash(spec) !== (state?.specHash ?? "");
 

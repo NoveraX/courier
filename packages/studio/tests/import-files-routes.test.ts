@@ -409,6 +409,22 @@ describe("adding and removing endpoints through manage", () => {
     expect(group.match(/listPets:/g)).toHaveLength(1);
   }, 30_000);
 
+  it("refuses to add a group or an endpoint the spec does not generate, writing nothing", async () => {
+    const url = await start();
+    await post(url, "/api/apis/write", writeSome("tag"));
+    const source = read("src/api/pets/source.ts");
+    const body = { name: "pets", spec: TWO_GROUPS, toAdd: { nope: ["x"], users: ["createPet"] }, toRemove: {} };
+
+    const preview = await post(url, "/api/apis/manage/preview", body);
+    const apply = await post(url, "/api/apis/manage/apply", { ...body, planDigest: "", confirm: [] });
+
+    expect(preview.status).toBe(400);
+    expect(preview.body.error).toBe("The spec generates no endpoint nope.x, users.createPet to add");
+    expect(apply.status).toBe(400);
+    expect(read("src/api/pets/source.ts")).toBe(source);
+    expect(existsSync(join(root, "src/api/pets/nope"))).toBe(false);
+  }, 30_000);
+
   it("adds to a flat import's source, which imports no group file", async () => {
     put("courier.config.ts", CONFIG.replace('outputDir: "src/api"', 'outputDir: "src/api", groupBy: "single"'));
     const url = await start();

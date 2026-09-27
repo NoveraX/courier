@@ -2,7 +2,8 @@ import type { ParsedSpec } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import { type ImportLayout, resolveImportLayout } from "../apis/layout";
 import { previewAddEndpoints, previewRemoveEndpoints } from "../apis/manage";
-import { FLAT_GROUP, isFlatImport, specSelection } from "../apis/manage/flat-import";
+import { FLAT_GROUP, isFlatImport } from "../apis/manage/flat-import";
+import { listedSelection } from "../apis/manage/listed-selection";
 import { previewRemoveFlatEndpoints } from "../apis/manage/remove-flat-endpoints";
 import type { AddResult, RemoveResult } from "../apis/manage/types";
 import { checkDirOverlap } from "./check-dir-overlap";
@@ -55,17 +56,17 @@ export function planManage(
   checkDirOverlap(body.name, layout.dir, imports);
   const onDisk = importBodies(root, layout.dir);
   const flat = isFlatImport(declared);
-  /* A flat import's one group is picked from as a whole; the generator selects by the spec's groups. */
-  const toAdd = flat ? specSelection(body.spec, body.toAdd[FLAT_GROUP] ?? []) : body.toAdd;
+  /* Endpoints are picked as the import lists them; one it cannot generate would be a dangling import. */
+  const { unknown } = listedSelection(body.spec, declared.groupBy ?? "tag", body.toAdd);
+  if (unknown.length > 0) {
+    return { error: `The spec generates no endpoint ${unknown.join(", ")} to add`, status: 400 };
+  }
+  const toAdd = Object.fromEntries(
+    Object.entries(body.toAdd).filter(([, names]) => names.length > 0),
+  );
   const addResult =
     Object.keys(toAdd).length > 0
-      ? previewAddEndpoints(
-          body.spec,
-          toAdd,
-          { ...declared, selectedEndpoints: toAdd },
-          onDisk,
-          layout,
-        )
+      ? previewAddEndpoints(body.spec, toAdd, declared, onDisk, layout)
       : undefined;
   const afterAdd = { ...onDisk, ...contentsOf(addResult) };
   const fingerprints = manageFingerprints(entry, onDisk);

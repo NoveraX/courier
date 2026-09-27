@@ -18,6 +18,7 @@ import { ManagePlanConflictError } from "./manage-plan-conflict-error";
  * @param added - What adding endpoints produced, if anything
  * @param removed - What removing endpoints produced, on top of the addition, if anything
  * @param entry - What Studio recorded about the import, if anything
+ * @param fileOf - The file a group's endpoints are in
  * @returns The request
  * @throws {ManagePlanConflictError} When the addition computed one file twice
  */
@@ -27,6 +28,7 @@ export function managePlanRequest(
   added: AddResult | undefined,
   removed: RemoveResult | undefined,
   entry: ImportStateEntry | undefined,
+  fileOf: (group: string) => string,
 ): PlanRequest {
   const endpoints = new Map<string, Record<string, string>>();
   const recorded = (path: string) => endpoints.get(path) ?? entry?.files[path]?.endpoints ?? {};
@@ -47,7 +49,7 @@ export function managePlanRequest(
     want(
       change.path,
       change.content,
-      withoutRemoved(recorded(change.path), change.path, toRemove, layout),
+      withoutRemoved(recorded(change.path), change.path, toRemove, fileOf),
     );
   }
   for (const update of [removed?.sourceFileUpdate, removed?.indexFileUpdate]) {
@@ -66,12 +68,10 @@ function withoutRemoved(
   fingerprints: Record<string, string>,
   path: string,
   toRemove: Record<string, string[]>,
-  layout: ImportLayout,
+  fileOf: (group: string) => string,
 ): Record<string, string> {
   const gone = new Set(
-    Object.entries(toRemove).flatMap(([group, names]) =>
-      layout.groupFile(group) === path ? names : [],
-    ),
+    Object.entries(toRemove).flatMap(([group, names]) => (fileOf(group) === path ? names : [])),
   );
   return Object.fromEntries(Object.entries(fingerprints).filter(([name]) => !gone.has(name)));
 }

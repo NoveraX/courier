@@ -8,39 +8,48 @@
 const DECLARATION_RE = /^export\s+(?:const|type|interface|enum)\s+(\w+)/;
 
 /**
- * Find schema names that are no longer referenced after endpoint removal.
+ * Find the schemas that removed endpoints used, directly or through other
+ * schemas, and that nothing left uses: the remaining endpoints, or a
+ * schema they use. A schema the removed endpoints did not use is never one.
  *
  * @param schemaFileContent - Full content of the schema file
  * @param remainingGroupContents - Combined content of all remaining group files
+ * @param removedCode - The code of the endpoints removed
  * @returns Array of schema names safe to remove
  */
 export function detectOrphanSchemas(
   schemaFileContent: string,
   remainingGroupContents: string,
+  removedCode: string,
 ): string[] {
   const allSchemas = collectSchemaNames(schemaFileContent);
   if (allSchemas.length === 0) return [];
-
-  const referencedByGroups = findReferencedIdentifiers(remainingGroupContents, allSchemas);
   const schemaDeps = buildSchemaDeps(schemaFileContent, allSchemas);
+  const alive = withDependencies(
+    findReferencedIdentifiers(remainingGroupContents, allSchemas),
+    schemaDeps,
+  );
+  const touched = withDependencies(findReferencedIdentifiers(removedCode, allSchemas), schemaDeps);
+  return allSchemas.filter((name) => touched.has(name) && !alive.has(name));
+}
 
-  // Propagate: if an alive schema depends on X, then X is alive too
-  const alive = new Set<string>(referencedByGroups);
+/* The schemas given, and every schema they depend on. */
+function withDependencies(start: Set<string>, schemaDeps: Map<string, string[]>): Set<string> {
+  const reached = new Set(start);
   let changed = true;
   while (changed) {
     changed = false;
     for (const [schema, deps] of schemaDeps) {
-      if (!alive.has(schema)) continue;
+      if (!reached.has(schema)) continue;
       for (const dep of deps) {
-        if (!alive.has(dep)) {
-          alive.add(dep);
+        if (!reached.has(dep)) {
+          reached.add(dep);
           changed = true;
         }
       }
     }
   }
-
-  return allSchemas.filter((name) => !alive.has(name));
+  return reached;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

@@ -117,7 +117,7 @@ describe("source.ts group updates", () => {
   ].join("\n");
 
   it("removes an aliased group's import and entry", () => {
-    const updated = removeGroupsFromSourceFile(SOURCE, ["pets"]);
+    const updated = removeGroupsFromSourceFile("src/api/petstore/source.ts", SOURCE, ["pets"]);
 
     expect(updated).not.toContain("group_pets");
     expect(updated).toContain('import { store } from "./store/index";');
@@ -125,9 +125,9 @@ describe("source.ts group updates", () => {
   });
 
   it("adds a group under an alias when it takes the source's name", () => {
-    const withoutPets = removeGroupsFromSourceFile(SOURCE, ["pets"]);
+    const withoutPets = removeGroupsFromSourceFile("src/api/petstore/source.ts", SOURCE, ["pets"]);
 
-    const updated = addGroupsToSourceFile(withoutPets, [
+    const updated = addGroupsToSourceFile("src/api/petstore/source.ts", withoutPets, [
       { name: "pets", local: "group_pets", importPath: "./pets/index" },
     ]);
 

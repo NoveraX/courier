@@ -2,7 +2,8 @@ import type { Expression, ObjectExpression, Program, Statement } from "oxc-parse
 import { propertyKeyName } from "../../server/mocks-edit/plan/property-key-name";
 import { unwrapExpression } from "../../server/mocks-edit/plan/unwrap-expression";
 
-const DEFINERS = new Set(["defineGroup", "defineApi"]);
+const DEFINERS: ReadonlySet<string> = new Set(["defineGroup", "defineApi"]);
+const API_DEFINERS: ReadonlySet<string> = new Set(["defineApi"]);
 
 /** A group's or a flat API's declaration, and the object holding its endpoints. */
 export interface GroupDeclaration {
@@ -14,18 +15,22 @@ export interface GroupDeclaration {
   endpoints: ObjectExpression;
 }
 
-function endpointsOf(init: Expression | null): ObjectExpression | null {
+function endpointsOf(
+  init: Expression | null,
+  key = "endpoints",
+  definers: ReadonlySet<string> = DEFINERS,
+): ObjectExpression | null {
   if (init === null) return null;
   const call = unwrapExpression(init);
   if (call.type !== "CallExpression" || call.callee.type !== "Identifier") return null;
-  if (!DEFINERS.has(call.callee.name)) return null;
+  if (!definers.has(call.callee.name)) return null;
   const [config] = call.arguments;
   if (config === undefined || config.type === "SpreadElement") return null;
   const object = unwrapExpression(config);
   if (object.type !== "ObjectExpression") return null;
   for (const property of object.properties) {
     if (property.type !== "Property" || property.computed) continue;
-    if (propertyKeyName(property.key) !== "endpoints") continue;
+    if (propertyKeyName(property.key) !== key) continue;
     const value = unwrapExpression(property.value);
     return value.type === "ObjectExpression" ? value : null;
   }
@@ -88,4 +93,28 @@ export function endpointNames(endpoints: ObjectExpression): Set<string> {
     if (name !== null) names.add(name);
   }
   return names;
+}
+
+/**
+ * Find the object literal listing an API's groups: `groups` of the first
+ * `defineApi({ … })` a top-level declaration makes.
+ *
+ * @param program - The parsed source file
+ * @returns The groups object, or `null` when the file declares none
+ * @example
+ * ```ts
+ * findApiGroups(parseSource("source.ts", text).program)?.properties.length;
+ * ```
+ */
+export function findApiGroups(program: Program): ObjectExpression | null {
+  for (const statement of program.body) {
+    const declaration =
+      statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
+    if (declaration?.type !== "VariableDeclaration") continue;
+    for (const declarator of declaration.declarations) {
+      const groups = endpointsOf(declarator.init, "groups", API_DEFINERS);
+      if (groups !== null) return groups;
+    }
+  }
+  return null;
 }

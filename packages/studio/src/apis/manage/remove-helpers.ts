@@ -32,25 +32,34 @@ export function collectGroupDeletions(
   }
 }
 
-/** Detect endpoints modified by the user (disk hash differs from stored fingerprint) */
+/**
+ * Name the endpoints being removed that the user edited since Studio wrote
+ * them, as `group.endpoint`: each is compared with what Studio recorded for
+ * its own group's file, so endpoints of one name in two groups never stand
+ * in for each other.
+ *
+ * @param endpointsToRemove - The endpoints to remove, by group
+ * @param fingerprints - Studio's recorded endpoint fingerprints, by file
+ * @param existingFiles - The import's files as they are
+ * @param layout - Where the import's files are
+ * @param warnings - Where the edited ones are named
+ */
 export function collectModifiedWarnings(
   endpointsToRemove: Record<string, string[]>,
-  fingerprints: Record<string, string>,
+  fingerprints: Record<string, Record<string, string>>,
   existingFiles: Record<string, string>,
+  layout: ImportLayout,
   warnings: string[],
 ): void {
-  const diskHashes: Record<string, string> = {};
-  for (const content of Object.values(existingFiles)) {
-    for (const [name, code] of Object.entries(extractEndpoints(content))) {
-      diskHashes[name] = computeHash(code);
-    }
-  }
-
-  for (const names of Object.values(endpointsToRemove)) {
+  for (const [group, names] of Object.entries(endpointsToRemove)) {
+    const file = findGroupFile(layout, group, existingFiles);
+    if (file === undefined) continue;
+    const onDisk = extractEndpoints(existingFiles[file] ?? "");
     for (const name of names) {
-      const stored = fingerprints[name];
-      const disk = diskHashes[name];
-      if (stored && disk && stored !== disk) warnings.push(name);
+      const stored = fingerprints[file]?.[name];
+      const code = onDisk[name];
+      if (stored && code !== undefined && stored !== computeHash(code))
+        warnings.push(`${group}.${name}`);
     }
   }
 }

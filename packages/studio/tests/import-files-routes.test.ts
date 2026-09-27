@@ -16,6 +16,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { parseSync } from "oxc-parser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseSpec } from "../src/apis/parser/parse-spec";
@@ -385,7 +386,7 @@ describe("adding and removing endpoints through manage", () => {
     const url = await start();
     await post(url, "/api/apis/write", writeSome("single"));
 
-    const reply = await manage(url, { toAdd: { pets: ["createPet"] } });
+    const reply = await manage(url, { toAdd: { api: ["createPet"] } });
 
     const source = read("src/api/pets/source.ts");
     expect(reply.status).toBe(200);
@@ -393,6 +394,26 @@ describe("adding and removing endpoints through manage", () => {
     expect(source).toMatch(/export const pets = defineApi\(\{/);
     expect(source).toContain("createPet:");
     expect(source).toContain("listPets:");
+  }, 30_000);
+
+  it("lists, adds and removes a flat import's endpoints in its one group, in its source", async () => {
+    put("courier.config.ts", CONFIG.replace('outputDir: "src/api"', 'outputDir: "src/api", groupBy: "single"'));
+    const url = await start();
+    await post(url, "/api/apis/write", writeSome("single"));
+
+    const inventory = await post(url, "/api/apis/manage/inventory", { name: "pets", newSpec: TWO_GROUPS });
+    const groups = inventory.body.groups;
+    const added = await manage(url, { toAdd: { api: ["createPet"] } });
+    const removed = await manage(url, { toRemove: { api: ["listPets"] } });
+
+    const source = read("src/api/pets/source.ts");
+    expect(Array.isArray(groups) ? groups.map((g) => (typeof g === "object" && g !== null && "name" in g ? g.name : null)) : null).toEqual(["api"]);
+    expect(added.status).toBe(200);
+    expect(removed.status).toBe(200);
+    expect(parseSync("source.ts", source).errors).toEqual([]);
+    expect(source).toContain("createPet:");
+    expect(source).not.toContain("listPets:");
+    expect(source).toContain("listUsers:");
   }, 30_000);
 
   it("drops a group removed whole from the barrel as well as from the source", async () => {

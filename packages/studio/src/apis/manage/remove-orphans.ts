@@ -6,17 +6,20 @@ import type { ImportLayout } from "../layout";
 import { detectOrphanSchemas } from "./detect-orphan-schemas";
 import { removeOrphanSchemas } from "./remove-schemas";
 
-/** Find and clean up orphaned schemas after endpoints are removed */
+/**
+ * Remove the schemas that only the removed endpoints used: a schema they
+ * did not use — one the user added, say — stays, used or not.
+ */
 export function processOrphanSchemas(
   layout: ImportLayout,
-  endpointsToRemove: Record<string, string[]>,
+  removedCode: ReadonlyMap<string, readonly string[]>,
   existingFiles: Record<string, string>,
   modifiedFiles: Array<{ path: string; content: string }>,
   deletedFiles: string[],
 ): string[] {
   const allOrphans: string[] = [];
 
-  for (const groupName of Object.keys(endpointsToRemove)) {
+  for (const [groupName, code] of removedCode) {
     const schemaPath = layout.groupSchemaFile(groupName, "schemas");
     const schemaContent = existingFiles[schemaPath];
     if (!schemaContent) continue;
@@ -29,7 +32,7 @@ export function processOrphanSchemas(
     const modifiedGroup = modifiedFiles.find((f) => f.path === groupFile);
     if (!modifiedGroup) continue;
 
-    const orphans = detectOrphanSchemas(schemaContent, modifiedGroup.content);
+    const orphans = detectOrphanSchemas(schemaContent, modifiedGroup.content, code.join("\n"));
     if (orphans.length === 0) continue;
 
     allOrphans.push(...orphans);

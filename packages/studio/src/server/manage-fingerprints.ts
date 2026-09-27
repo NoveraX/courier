@@ -2,23 +2,23 @@ import type { ImportStateEntry } from "../apis/imports-state";
 import { generateFingerprints } from "../apis/merge/fingerprint";
 
 /**
- * The endpoint fingerprints of an import as the inventory and removal
- * warnings read them, by endpoint name: as Studio recorded them, or, where
- * it recorded none, as the files on disk hold them, taken for unedited.
+ * The endpoint fingerprints of an import's files, by file and then by
+ * endpoint name: as Studio recorded them, or, for a file it recorded none
+ * for, as the file on disk holds them, taken for unedited.
  *
  * @param entry - What Studio recorded about the import, if anything
  * @param bodies - The import's files on disk, by path
- * @returns Fingerprints by endpoint name
+ * @returns Fingerprints by file, then by endpoint name
  */
 export function manageFingerprints(
   entry: ImportStateEntry | undefined,
   bodies: Record<string, string>,
-): Record<string, string> {
-  const recorded = Object.values(entry?.files ?? {}).flatMap((file) =>
-    Object.entries(file.endpoints ?? {}),
-  );
-  if (recorded.length > 0) return Object.fromEntries(recorded);
-  return Object.fromEntries(
-    Object.values(bodies).flatMap((body) => Object.entries(generateFingerprints(body))),
-  );
+): Record<string, Record<string, string>> {
+  const byFile: Record<string, Record<string, string>> = {};
+  for (const [path, body] of Object.entries(bodies)) {
+    const recorded = entry?.files[path]?.endpoints;
+    const fingerprints = recorded ?? generateFingerprints(body);
+    if (Object.keys(fingerprints).length > 0) byFile[path] = { ...fingerprints };
+  }
+  return byFile;
 }

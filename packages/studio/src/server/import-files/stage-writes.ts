@@ -1,15 +1,16 @@
 import { statSync } from "node:fs";
 import { dirname, relative, sep } from "node:path";
 import { errnoCode } from "../errno-code";
-import { assertRealInside } from "../project-fs/assert-real-inside";
 import { ensureDirectory } from "../project-fs/ensure-directory";
 import type { ProjectRoot } from "../project-fs/project-root";
 import { resolveProjectPath } from "../project-fs/resolve-project-path";
 import { writeTempBeside } from "../project-fs/write-temp-beside";
 import type { ApplyJournal } from "./apply-journal";
 import { bodyHash } from "./body-hash";
+import { FilePlanError } from "./file-plan-error";
 import type { FilePlan, PlannedWrite } from "./file-plan-types";
 import { signGeneratedFile } from "./generated-header";
+import { obstacleOnTheWay } from "./obstacle-on-the-way";
 
 /** The start of the name of a temporary file an import's apply writes beside its target. */
 export const IMPORT_TEMP_PREFIX = ".courier.import";
@@ -48,7 +49,7 @@ export function stageWrites(
   for (const write of plan.writes) {
     if (write.action === "unchanged") continue;
     const absolute = resolveProjectPath(root.path, write.path);
-    assertRealInside(root, absolute);
+    refuseObstacle(root, absolute, write.path);
     for (const created of ensureDirectory(root, dirname(absolute))) {
       journal.createdDirs.push(projectRelative(root, created));
     }
@@ -77,4 +78,22 @@ function modeOf(path: string): number | null {
 /* Journals name paths as the plan does, `/`-separated on every system. */
 function projectRelative(root: ProjectRoot, path: string): string {
   return relative(root.path, path).split(sep).join("/");
+}
+
+/**
+ * Refuse to put a file in place through a link, or under a file where a
+ * folder should be: the plan found neither, so the project changed since.
+ *
+ * @param root - The project
+ * @param absolute - The file's path
+ * @param path - The file, project-relative, to name in the refusal
+ * @throws {FilePlanError} `PLAN_STALE` when something stands on the way
+ */
+export function refuseObstacle(root: ProjectRoot, absolute: string, path: string): void {
+  if (obstacleOnTheWay(root, absolute) === null) return;
+  throw new FilePlanError(
+    "PLAN_STALE",
+    `A link or a file now stands on the way to ${path}; look at the plan again.`,
+    { path },
+  );
 }

@@ -1,9 +1,9 @@
-import { assertResolvesInside } from "../project-fs/assert-resolves-inside";
 import { PathOutsideProjectError } from "../project-fs/path-outside-project-error";
 import type { ProjectRoot } from "../project-fs/project-root";
 import { resolveProjectPath } from "../project-fs/resolve-project-path";
 import { type DiskFile, readDiskFile } from "./disk-file";
 import type { FilePlan, PlanRequest } from "./file-plan-types";
+import { obstacleOnTheWay } from "./obstacle-on-the-way";
 import { ownershipOf } from "./ownership";
 import { planDigest } from "./plan-digest";
 import { planRemoval } from "./plan-removal";
@@ -80,12 +80,11 @@ function diskAt(root: ProjectRoot, dir: string, path: string): DiskFile {
     throw new PathOutsideProjectError(path, "it lies outside the import's directory");
   }
   const absolute = resolveProjectPath(root.path, path);
-  try {
-    assertResolvesInside(root, absolute);
-  } catch (error) {
-    if (error instanceof PathOutsideProjectError) return { kind: "link" };
-    throw error;
-  }
+  /* Nothing is read or written through a link on the way, wherever it leads. */
+  const obstacle = obstacleOnTheWay(root, absolute);
+  if (obstacle === "link") return { kind: "link" };
+  if (obstacle === "not-a-file")
+    return { kind: "not-a-file", found: "a file where a folder should be" };
   return readDiskFile(absolute);
 }
 

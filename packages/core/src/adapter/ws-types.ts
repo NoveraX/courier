@@ -64,8 +64,11 @@ export interface WSHandlerConfig {
     meta: unknown;
     code: number;
   }) => void | Promise<void>;
-  /** Called on connection-level error */
-  onError?: (info: { connectionId: string; meta: unknown; error: unknown }) => void;
+  /**
+   * Called on connection-level error, with the Error the socket reported —
+   * such as the RangeError of a frame over the size limit.
+   */
+  onError?: (info: { connectionId: string; meta: unknown; error: Error }) => void;
   /** Called when an outbound message is dropped due to buffer overflow */
   onMessageDrop?: (info: {
     connectionId: string;

@@ -2,7 +2,6 @@
  * Express routes for apis: parse, generate, write, diff, fingerprint.
  */
 
-import { existsSync, readFileSync } from "node:fs";
 import {
   diffSpecs,
   type FingerprintResult,
@@ -13,11 +12,12 @@ import {
   type ParsedSpec,
   parseSpec,
 } from "../apis";
-import { resolveProjectSafe } from "../context";
 import { fetchSpec } from "./fetch-spec";
 import { errMsg } from "./fs-helpers";
 import { registerLayoutRoute } from "./layout-route";
 import { registerManageRoutes } from "./manage-routes";
+import { type ProjectRoot, projectRootAt } from "./project-fs/project-root";
+import { readProjectText } from "./project-fs/read-project-text";
 import type { ProjectImports } from "./project-state/types";
 import { registerRegistryRoutes } from "./registry-routes";
 import { sendRouteFailure } from "./route-failure";
@@ -64,7 +64,12 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
       const body = validateParseBody(req.body, res);
       if (!body) return;
       const allowlist = specHostAllowlist(deps.project, deps.projectRoot);
-      const raw = await resolveSpecContent(body.source, body.content, allowlist);
+      const raw = await resolveSpecContent(
+        body.source,
+        body.content,
+        allowlist,
+        projectRootAt(deps.projectRoot),
+      );
       res.json(parseSpec(raw));
     } catch (err) {
       if (err instanceof SpecHostsUnavailableError) {
@@ -148,12 +153,11 @@ async function resolveSpecContent(
   source: "url" | "raw" | "file",
   content: string,
   allowlist: SpecHostAllowlist,
+  root: ProjectRoot,
 ): Promise<string> {
   if (source === "url") return fetchSpec(content, allowlist);
   if (source === "file") {
-    const filePath = resolveProjectSafe(content);
-    if (!existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
-    return readFileSync(filePath, "utf-8");
+    return readProjectText(root, content);
   }
   return content;
 }

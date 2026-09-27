@@ -8,6 +8,7 @@
 import { computeSpecHash, hasSpecChanged, parseSpec } from "../apis";
 import type { ApisRouteDeps } from "./apis-routes";
 import { getImportEntry, getImportState, importsSnapshotOf } from "./imports-bridge";
+import { projectRootAt } from "./project-fs/project-root";
 import { readDeclarations } from "./project-state/read-declarations";
 import { checkSingleSource, fetchSpecRaw } from "./registry-spec";
 import { sendRouteFailure } from "./route-failure";
@@ -56,7 +57,12 @@ async function handleCheckUpdates(
       return;
     }
 
-    const raw = await fetchSpecRaw(entry.from, res, specHostAllowlist(project, projectRoot));
+    const raw = await fetchSpecRaw(
+      entry.from,
+      res,
+      specHostAllowlist(project, projectRoot),
+      projectRootAt(projectRoot),
+    );
     /* An empty body is text too: it fails as a specification below, and the route answers. */
     if (raw === null) return;
 

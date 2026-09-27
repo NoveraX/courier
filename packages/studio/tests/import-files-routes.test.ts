@@ -440,6 +440,20 @@ describe("adding and removing endpoints through manage", () => {
     expect(source).toContain("listPets:");
   }, 30_000);
 
+  it("refuses to remove every endpoint of a flat import, writing nothing", async () => {
+    put("courier.config.ts", CONFIG.replace('outputDir: "src/api"', 'outputDir: "src/api", groupBy: "single"'));
+    const url = await start();
+    await post(url, "/api/apis/write", writeSome("single"));
+    const source = read("src/api/pets/source.ts");
+    const body = { name: "pets", spec: TWO_GROUPS, toAdd: {}, toRemove: { api: ["listPets", "listUsers"] } };
+
+    const preview = await post(url, "/api/apis/manage/preview", body);
+
+    expect(preview.status).toBe(400);
+    expect(preview.body.error).toBe("A flat import keeps at least one endpoint; remove the import to drop them all");
+    expect(read("src/api/pets/source.ts")).toBe(source);
+  }, 30_000);
+
   it("lists, adds and removes a flat import's endpoints in its one group, in its source", async () => {
     put("courier.config.ts", CONFIG.replace('outputDir: "src/api"', 'outputDir: "src/api", groupBy: "single"'));
     const url = await start();

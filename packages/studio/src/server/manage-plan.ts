@@ -6,6 +6,7 @@ import { FLAT_GROUP, isFlatImport } from "../apis/manage/flat-import";
 import { listedSelection } from "../apis/manage/listed-selection";
 import { previewRemoveFlatEndpoints } from "../apis/manage/remove-flat-endpoints";
 import type { AddResult, RemoveResult } from "../apis/manage/types";
+import { extractEndpoints } from "../apis/merge/extract-endpoints";
 import { checkDirOverlap } from "./check-dir-overlap";
 import type { FilePlan } from "./import-files/file-plan-types";
 import { importBodies } from "./import-files/import-bodies";
@@ -75,6 +76,10 @@ export function planManage(
     : flat
       ? previewRemoveFlatEndpoints(body.toRemove[FLAT_GROUP] ?? [], afterAdd, fingerprints, layout)
       : previewRemoveEndpoints(body.toRemove, afterAdd, fingerprints, layout);
+  if (flat && removeResult && leavesNoEndpoint(removeResult, layout.sourceFile)) {
+    const error = "A flat import keeps at least one endpoint; remove the import to drop them all";
+    return { error, status: 400 };
+  }
   const fileOf = (group: string): string => (flat ? layout.sourceFile : layout.groupFile(group));
   const request = managePlanRequest(layout, body.toRemove, addResult, removeResult, entry, fileOf);
   return {
@@ -84,6 +89,12 @@ export function planManage(
     entry,
     layout,
   };
+}
+
+/* A flat API with no endpoint is one no caller accepts. */
+function leavesNoEndpoint(removed: RemoveResult, sourceFile: string): boolean {
+  const source = removed.modifiedFiles.find((file) => file.path === sourceFile);
+  return source !== undefined && Object.keys(extractEndpoints(source.content)).length === 0;
 }
 
 function contentsOf(added: AddResult | undefined): Record<string, string> {

@@ -30,8 +30,12 @@ export interface ApplyJournal {
   importName: string;
   /** The import's folder, project-relative: nothing the apply touches lies outside it. */
   dir: string;
-  /** `committing` once anything in the project may have changed. */
-  state: "staging" | "committing";
+  /**
+   * `committing` once anything in the project may have changed; `kept` once
+   * an undo left files it could not restore, when the journal only records
+   * them, keeping their copies from being pruned, and is never replayed.
+   */
+  state: "staging" | "committing" | "kept";
   /** Project-relative backup directory. */
   backupDir: string;
   entries: JournalEntry[];
@@ -139,7 +143,7 @@ function isJournal(value: unknown): value is ApplyJournal {
     typeof id === "string" &&
     typeof importName === "string" &&
     typeof dir === "string" &&
-    (state === "staging" || state === "committing") &&
+    (state === "staging" || state === "committing" || state === "kept") &&
     typeof backupDir === "string" &&
     Array.isArray(entries) &&
     entries.every(isEntry) &&

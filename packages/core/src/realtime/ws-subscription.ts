@@ -1,4 +1,4 @@
-import { getConnection } from "./caller-ws";
+import { acquireConnection } from "./caller-ws";
 import { createConnectionState } from "./connection-state";
 import { forwardConnectionStatus } from "./forward-status";
 import { createEventQueue } from "./sse/event-queue";
@@ -22,7 +22,8 @@ export function executeWSPush<TData>(
   config?: Partial<WSConnectionConfig>,
 ): SSESubscription<TData> {
   const qTopic = qualifyTopic(topic, variables);
-  const conn = getConnection(url, config);
+  const lease = acquireConnection(url, config);
+  const conn = lease.connection;
   const state = createConnectionState();
   const queue = createEventQueue<TData>();
   let stop: (() => void) | undefined;
@@ -33,6 +34,7 @@ export function executeWSPush<TData>(
     ended = true;
     stop?.();
     stop = undefined;
+    lease.release();
     state.set("disconnected");
     if (error) queue.fail(error);
     else queue.finish();

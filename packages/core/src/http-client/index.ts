@@ -2,6 +2,7 @@ import { supportsAbortController } from "../utils/deduplicate";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
 import { bindMethod } from "./bind-method";
+import { overlayHeaders } from "./request-headers";
 import type {
   BaseOptions,
   BoundMethodOptions,
@@ -26,6 +27,7 @@ export class HttpClient {
   private deduplicate = false;
   private prefixUrl = "";
   private baseTimeout?: number;
+  private baseHeaders?: HeadersInit;
   private baseFetchInit: RequestInit = {};
 
   context?: Context;
@@ -52,6 +54,7 @@ export class HttpClient {
       deduplicate,
       middleware: _middleware,
       timeout,
+      headers,
       ...baseFetchInit
     } = options || {};
 
@@ -65,6 +68,7 @@ export class HttpClient {
     this.deduplicate = !!(deduplicate && supportsAbortController);
     this.prefixUrl = baseURL || "";
     this.baseTimeout = timeout;
+    this.baseHeaders = headers;
     this.baseFetchInit = baseFetchInit as RequestInit;
 
     if (defaultQueryParams) {
@@ -102,9 +106,13 @@ export class HttpClient {
       this.onBeforeFetch(method, hookUrl);
     }
 
+    /* The call always carries a header set of its own, so spreading it over
+       the source's replaced the source's headers wholesale; they are laid
+       underneath instead, and a header the call names wins. */
     return coreFetch(method, fullUrl, {
       ...this.baseFetchInit,
       ...fetchOptions,
+      headers: overlayHeaders(this.baseHeaders, fetchOptions.headers),
       timeout: fetchOptions.timeout ?? this.baseTimeout,
     } as CoreFetchInit);
   }

@@ -1,13 +1,20 @@
 import type {
   ConnectionRegistry,
+  HandlerConfig,
   SSEConnectionRegistry,
   SSELifecycleConfig,
 } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
 import type { PubSubAdapter } from "@noverax/courier/realtime";
 
-/** Options for `createCourierServer` */
-export interface CourierServerOptions extends SSELifecycleConfig {
+/**
+ * Options for `createCourierServer`. The request body limits are the ones
+ * every framework adapter takes: `maxBodyBytes` for a JSON envelope (1 MB by
+ * default) and `maxUploadBytes` for a multipart upload (10 MB by default).
+ */
+export interface CourierServerOptions
+  extends SSELifecycleConfig,
+    Pick<HandlerConfig, "maxBodyBytes" | "maxUploadBytes"> {
   /**
    * The API sources this server answers for. They stay its own: another
    * server or a `registerSources` call in the same process does not change

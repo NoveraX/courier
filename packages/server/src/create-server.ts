@@ -68,6 +68,8 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
     sseHeaders: config.sseHeaders,
     sseMaxLifetimeMs: config.sseMaxLifetimeMs,
     maxSSEConnections: config.maxSSEConnections,
+    maxBodyBytes: config.maxBodyBytes,
+    maxUploadBytes: config.maxUploadBytes,
     onSSEConnect: config.onSSEConnect,
     onSSEDisconnect: config.onSSEDisconnect,
     onSSEError: config.onSSEError,

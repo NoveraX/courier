@@ -90,10 +90,10 @@ function finish<TData>(ctx: SSEConnectionCtx<TData>, failure: RealtimeError | un
  */
 function refusalFailure(error: unknown): RealtimeError | undefined {
   if (!(error instanceof SSEResponseError)) return undefined;
-  const { statusCode, reason } = error;
+  const { statusCode, reason, issues } = error;
   if (statusCode < 400 || statusCode >= 500 || RETRYABLE.has(statusCode)) return undefined;
   log.error("SSE request refused, not reconnecting", error);
-  return fromErrorCode(4000 + statusCode, reason);
+  return fromErrorCode(4000 + statusCode, reason, issues);
 }
 
 function gaveUp(failures: number, lastError: unknown): ConnectionError {

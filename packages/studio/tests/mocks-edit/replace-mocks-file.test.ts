@@ -232,7 +232,7 @@ describe("replaceMocksFile", () => {
     expect(warn).toHaveBeenCalledWith(
       "%s",
       expect.stringContaining(
-        `[Studio] Could not remove ${tmp}, left by an edit that failed; delete it.`,
+        `[Studio] Could not remove ${tmp}, left by a write that failed; delete it.`,
       ),
       unlinkError,
     );

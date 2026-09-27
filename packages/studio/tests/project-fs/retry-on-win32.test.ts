@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { retryOnWin32 } from "../../src/server/mocks-edit/retry-on-win32";
+import { retryOnWin32 } from "../../src/server/project-fs/retry-on-win32";
 
 const REAL_PLATFORM = process.platform;
 

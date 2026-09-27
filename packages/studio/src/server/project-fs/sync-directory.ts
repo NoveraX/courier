@@ -27,6 +27,6 @@ export function syncDirectory(directory: string): void {
       closeSync(fd);
     }
   } catch (error) {
-    log.debug(`Could not flush ${directory} after writing the mocks file`, error);
+    log.debug(`Could not flush ${directory} after changing a name in it`, error);
   }
 }

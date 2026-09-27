@@ -2,11 +2,12 @@ import { linkSync, unlinkSync } from "node:fs";
 import { dirname } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { errnoCode } from "../errno-code";
-import { discardTemp } from "./discard-temp";
+import { discardTemp } from "../project-fs/discard-temp";
+import { retryOnWin32 } from "../project-fs/retry-on-win32";
+import { syncDirectory } from "../project-fs/sync-directory";
+import { writeTempBeside } from "../project-fs/write-temp-beside";
 import { MocksFileChangedError } from "./mocks-file-changed-error";
-import { retryOnWin32 } from "./retry-on-win32";
-import { syncDirectory } from "./sync-directory";
-import { writeTempBeside } from "./write-temp-beside";
+import { MOCKS_TEMP_PREFIX } from "./mocks-temp-name";
 
 const log = createLogger("Studio");
 
@@ -33,7 +34,7 @@ const log = createLogger("Studio");
  * ```
  */
 export function writeNewMocksFile(path: string, content: string): string | null {
-  const tmp = writeTempBeside(path, content, null);
+  const tmp = writeTempBeside(path, content, null, MOCKS_TEMP_PREFIX);
   try {
     linkNew(tmp, path);
   } catch (error) {

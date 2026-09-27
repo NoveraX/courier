@@ -18,9 +18,9 @@ let sleepCell: Int32Array | undefined;
  * process briefly holds the file. Elsewhere, and for any other error, the
  * first failure is thrown as it is.
  *
- * The wait between attempts blocks: the mocks file is written in one tick,
- * so that Studio can tell its own write from the user's before the file
- * watcher reports either.
+ * The wait between attempts blocks: Studio writes a file in one tick, so
+ * that it can tell its own write from the user's before the file watcher
+ * reports either.
  *
  * @param operation - The operation, such as a `renameSync`
  * @param description - What it does, for the debug log of a retry

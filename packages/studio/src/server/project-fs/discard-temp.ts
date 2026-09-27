@@ -26,7 +26,7 @@ export function discardTemp(tmp: string): boolean {
     retryOnWin32(() => unlinkSync(tmp), `Removing ${tmp}`);
     return true;
   } catch (error) {
-    log.warn(`Could not remove ${tmp}, left by an edit that failed; delete it.`, error);
+    log.warn(`Could not remove ${tmp}, left by a write that failed; delete it.`, error);
     return false;
   }
 }

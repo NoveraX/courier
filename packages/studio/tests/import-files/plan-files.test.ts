@@ -66,6 +66,12 @@ function generated(path: string, body: string): PlanTarget {
   return { path, body, kind: "generated", endpoints: {} };
 }
 
+/* A file Studio wrote for pets as `asWritten`, which the user may have changed to `body` since: the header stays. */
+function written(path: string, body: string, asWritten: string = body): void {
+  const signed = signGeneratedFile("pets", asWritten);
+  put(path, `${signed.slice(0, signed.length - asWritten.length)}${body}`);
+}
+
 function recordOf(body: string, extra: Partial<RecordedFile> = {}): RecordedFile {
   return { sha256: bodyHash(body), ...extra };
 }
@@ -82,8 +88,8 @@ describe("planFiles, for the files an operation wants", () => {
   });
 
   it("replaces Studio's own untouched file, and leaves one already right unchanged", () => {
-    put(`${DIR}/index.ts`, "old\n");
-    put(`${DIR}/source.ts`, "same\n");
+    written(`${DIR}/index.ts`, "old\n");
+    written(`${DIR}/source.ts`, "same\n");
     const recorded = { [`${DIR}/index.ts`]: recordOf("old\n"), [`${DIR}/source.ts`]: recordOf("same\n") };
 
     const result = plan(
@@ -100,7 +106,7 @@ describe("planFiles, for the files an operation wants", () => {
   });
 
   it("holds replacing a generated file the user edited until the user allows it", () => {
-    put(`${DIR}/source.ts`, "edited\n");
+    written(`${DIR}/source.ts`, "edited\n", "as written\n");
 
     const result = plan([generated(`${DIR}/source.ts`, "new\n")], [], {
       [`${DIR}/source.ts`]: recordOf("as written\n"),
@@ -113,7 +119,7 @@ describe("planFiles, for the files an operation wants", () => {
   });
 
   it("holds replacing a file that still carries the user's edits from managing its endpoints", () => {
-    put(`${DIR}/source.ts`, "kept the user's edits\n");
+    written(`${DIR}/source.ts`, "kept the user's edits\n");
 
     const result = plan([generated(`${DIR}/source.ts`, "new\n")], [], {
       [`${DIR}/source.ts`]: recordOf("kept the user's edits\n", { carriesEdits: true }),
@@ -131,7 +137,7 @@ describe("planFiles, for the files an operation wants", () => {
       '    createPet: endpoint.post("/"),',
       '    createPet: endpoint.post("/"),\n    deletePet: endpoint.delete("/:id"),',
     );
-    put(`${DIR}/pets/index.ts`, GROUP(".query<{ page: number }>()"));
+    written(`${DIR}/pets/index.ts`, GROUP(".query<{ page: number }>()"), asGenerated);
     const recorded = {
       [`${DIR}/pets/index.ts`]: recordOf(asGenerated, { endpoints: generateFingerprints(asGenerated) }),
     };
@@ -150,7 +156,7 @@ describe("planFiles, for the files an operation wants", () => {
   it("merges the same way when nothing new was generated, leaving the file unchanged", () => {
     const asGenerated = GROUP("");
     const edited = GROUP(".query<{ page: number }>()");
-    put(`${DIR}/pets/index.ts`, edited);
+    written(`${DIR}/pets/index.ts`, edited, asGenerated);
     const recorded = {
       [`${DIR}/pets/index.ts`]: recordOf(asGenerated, { endpoints: generateFingerprints(asGenerated) }),
     };
@@ -212,7 +218,7 @@ describe("planFiles, for the files an operation wants", () => {
 
 describe("planFiles, for the files an operation no longer wants", () => {
   it("removes Studio's own untouched file and forgets one already gone", () => {
-    put(`${DIR}/old/index.ts`, "gen\n");
+    written(`${DIR}/old/index.ts`, "gen\n");
 
     const result = plan([], [`${DIR}/old/index.ts`, `${DIR}/gone.ts`], {
       [`${DIR}/old/index.ts`]: recordOf("gen\n"),
@@ -224,8 +230,8 @@ describe("planFiles, for the files an operation no longer wants", () => {
   });
 
   it("asks before removing an edited file, one that kept the user's edits, or one only a header claims", () => {
-    put(`${DIR}/a.ts`, "edited\n");
-    put(`${DIR}/b.ts`, "merged\n");
+    written(`${DIR}/a.ts`, "edited\n", "as written\n");
+    written(`${DIR}/b.ts`, "merged\n");
     put(`${DIR}/c.ts`, signGeneratedFile("pets", "claimed\n"));
 
     const result = plan([], [`${DIR}/a.ts`, `${DIR}/b.ts`, `${DIR}/c.ts`], {
@@ -239,6 +245,22 @@ describe("planFiles, for the files an operation no longer wants", () => {
       { path: `${DIR}/b.ts`, kind: "remove", reason: "edited", preselected: false },
       { path: `${DIR}/c.ts`, kind: "remove", reason: "claimed", preselected: true },
     ]);
+  });
+
+  it("believes a record only for a file that carries Studio's header for the import", () => {
+    put(`${DIR}/main.ts`, "the user's main\n");
+    written(`${DIR}/theirs.ts`, "gen\n");
+
+    const result = plan([], [`${DIR}/main.ts`], { [`${DIR}/main.ts`]: recordOf("the user's main\n") });
+    const other = planFiles(
+      root,
+      { importName: "store", dir: DIR, targets: [], removals: [`${DIR}/theirs.ts`] },
+      { [`${DIR}/theirs.ts`]: recordOf("gen\n") },
+    );
+
+    expect(result.kept).toEqual([{ path: `${DIR}/main.ts`, reason: "not-written-by-studio" }]);
+    expect(other.kept).toEqual([{ path: `${DIR}/theirs.ts`, reason: "not-written-by-studio" }]);
+    expect([...result.removals, ...other.removals]).toEqual([]);
   });
 
   it("never touches a file Studio did not write", () => {
@@ -267,7 +289,7 @@ describe("planFiles, for the files an operation no longer wants", () => {
   });
 
   it("forgets rather than removes a file that is, on disk, one of the files it writes", () => {
-    put(`${DIR}/index.ts`, "gen\n");
+    written(`${DIR}/index.ts`, "gen\n");
     linkSync(join(root.path, `${DIR}/index.ts`), join(root.path, `${DIR}/alias.ts`));
 
     const result = plan([generated(`${DIR}/index.ts`, "new\n")], [`${DIR}/alias.ts`], {
@@ -282,13 +304,13 @@ describe("planFiles, for the files an operation no longer wants", () => {
 
 describe("the plan's digest and confirmations", () => {
   it("stays the same while nothing changes, and changes when a file it rests on does", () => {
-    put(`${DIR}/index.ts`, "old\n");
+    written(`${DIR}/index.ts`, "old\n");
     const recorded = { [`${DIR}/index.ts`]: recordOf("old\n") };
     const targets = [generated(`${DIR}/index.ts`, "new\n")];
 
     const first = plan(targets, [], recorded).digest;
     const again = plan(targets, [], recorded).digest;
-    put(`${DIR}/index.ts`, "old, then edited\n");
+    written(`${DIR}/index.ts`, "old, then edited\n", "old\n");
     const afterEdit = plan(targets, [], recorded).digest;
 
     expect(again).toBe(first);
@@ -296,8 +318,8 @@ describe("the plan's digest and confirmations", () => {
   });
 
   it("takes the steps the user allowed and keeps the rest", () => {
-    put(`${DIR}/a.ts`, "edited\n");
-    put(`${DIR}/b.ts`, "edited\n");
+    written(`${DIR}/a.ts`, "edited\n", "x\n");
+    written(`${DIR}/b.ts`, "edited\n", "y\n");
     const recorded = { [`${DIR}/a.ts`]: recordOf("x\n"), [`${DIR}/b.ts`]: recordOf("y\n") };
     const previewed = plan([], [`${DIR}/a.ts`, `${DIR}/b.ts`], recorded);
 

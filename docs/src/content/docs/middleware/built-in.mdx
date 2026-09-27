@@ -60,6 +60,8 @@ retryMiddleware({
 A non-2xx answer rejects the call with an `HTTPError`; `retryOn` is shown the answer it carries — its status, body and headers. A request that got no answer is shown as status 0, so a condition that should also retry network failures has to accept it. Errors that are not HTTP failures — a response that fails its schema, a middleware that throws — are never retried. After the last attempt, its error is re-thrown.
 </Callout>
 
+A cancellation is never retried, whatever `retryOn` says: not a call whose signal the caller aborted, whatever reason it gave, and not a request that `deduplicate` replaced with a newer identical one (status 499). A caller that aborts while the middleware waits between attempts is answered at once with its signal's reason.
+
 ---
 
 ## authMiddleware

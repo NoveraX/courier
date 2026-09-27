@@ -91,6 +91,8 @@ export interface MiddlewareContextInput {
   endpointAllowedHeaders?: readonly string[];
   /** Whether the endpoint reads or writes, from its schema. */
   kind?: "query" | "mutation";
+  /** Fires when the caller stops waiting for the call. */
+  signal?: AbortSignal;
 }
 
 export function buildMiddlewareContext(input: MiddlewareContextInput): MiddlewareContext {
@@ -106,6 +108,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     transport,
     endpointAllowedHeaders,
     kind,
+    signal,
   } = input;
   const { req: nextRequest, headers: nextHeaders } = context || {};
   const mergedNextHeaders = {
@@ -139,6 +142,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     transport,
     request: nextRequest,
     kind,
+    signal,
     _requestId: requestId || undefined,
   };
 }

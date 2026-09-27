@@ -1,13 +1,13 @@
 import { HTTPError } from "../errors";
+import { isAbortError } from "../utils/abort";
 import { defineMiddleware } from "./compose";
 import type { Middleware, MiddlewareResponse, NextFn } from "./types";
 
 /** How one attempt ended: with an answer, or with the error it was rejected with. */
 type Attempt = { readonly response: MiddlewareResponse } | { readonly error: unknown };
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+/** What a request a newer identical one replaced is rejected with. */
+const CLIENT_CLOSED_REQUEST = 499;
 
 /**
  * Retry middleware with exponential backoff.
@@ -19,6 +19,11 @@ function delay(ms: number): Promise<void> {
  * retried by default. An error that is not an HTTP failure, such as a
  * response that fails its schema or a middleware that throws, is not retried
  * whatever the condition says.
+ *
+ * A cancellation is never retried: not the caller's, whatever reason it gave,
+ * and not a request that a newer identical one replaced (status 499). A
+ * caller that cancels while the middleware waits between attempts is answered
+ * at once with its signal's reason.
  *
  * @param options - How many attempts, how far apart, and which answers deserve one
  * @returns The middleware, to place on a source or an endpoint
@@ -53,11 +58,13 @@ export function retryMiddleware(options?: {
   const waitFor = (attempt: number): number =>
     mode === "fixed" ? backoff : backoff * 2 ** attempt;
 
-  return defineMiddleware("retry", "wrap", async (_ctx, next) => {
+  return defineMiddleware("retry", "wrap", async (ctx, next) => {
     for (let attempt = 0; ; attempt++) {
       const outcome = await settle(next);
-      if (attempt >= limit || !deservesRetry(outcome, retryOn)) return unwrap(outcome);
-      await delay(waitFor(attempt));
+      const retry =
+        attempt < limit && !isCancellation(outcome, ctx.signal) && deservesRetry(outcome, retryOn);
+      if (!retry) return unwrap(outcome);
+      await pause(waitFor(attempt), ctx.signal);
     }
   });
 }
@@ -81,6 +88,21 @@ function unwrap(outcome: Attempt): MiddlewareResponse {
 }
 
 /**
+ * Did this attempt end because nobody wants its answer any more?
+ *
+ * The caller's signal says so whatever the attempt was rejected with; a
+ * cancellation given a reason reaches here as that reason, not as an abort.
+ */
+function isCancellation(outcome: Attempt, signal: AbortSignal | undefined): boolean {
+  if (signal?.aborted) return true;
+  if (!("error" in outcome)) return false;
+  const { error } = outcome;
+  return (
+    isAbortError(error) || (error instanceof HTTPError && error.status === CLIENT_CLOSED_REQUEST)
+  );
+}
+
+/**
  * Should this attempt be made again?
  *
  * A non-2xx answer rejects the call as an `HTTPError`, so the condition is
@@ -95,4 +117,18 @@ function deservesRetry(
   const { error } = outcome;
   if (!(error instanceof HTTPError)) return false;
   return retryOn({ status: error.status, data: error.data, headers: error.headers });
+}
+
+/** Wait before the next attempt, and throw the signal's reason if the caller cancels meanwhile. */
+async function pause(ms: number, signal: AbortSignal | undefined): Promise<void> {
+  await new Promise<void>((resolve) => {
+    const timer = setTimeout(finish, ms);
+    signal?.addEventListener("abort", finish, { once: true });
+    function finish(): void {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", finish);
+      resolve();
+    }
+  });
+  signal?.throwIfAborted();
 }

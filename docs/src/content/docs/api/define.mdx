@@ -186,7 +186,7 @@ Enable automatic request deduplication via `AbortController`. See [Abort & Dedup
 
 ### allowedHeaders
 
-Additional header names to forward through the proxy.
+Additional header names to forward through the proxy. The list governs the headers an incoming request carries; headers the source, a middleware or an endpoint's own closure sets are written by you and are always sent.
 
 ## Related
 

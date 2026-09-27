@@ -44,8 +44,39 @@ export function discoverNodeAppOrigin(nodeReq: IncomingMessage): void {
 }
 
 /**
+ * Wait until a response the socket could not take at once has been written
+ * out, or its client has gone.
+ */
+function drained(nodeRes: ServerResponse): Promise<void> {
+  if (nodeRes.destroyed) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => {
+      nodeRes.off("drain", done);
+      nodeRes.off("close", done);
+      resolve();
+    };
+    nodeRes.on("drain", done);
+    nodeRes.on("close", done);
+  });
+}
+
+/**
  * Send a Web Standard Response to a Node.js ServerResponse.
  * Handles streaming bodies and set-cookie headers.
+ *
+ * The body is read no faster than the client reads it: an SSE stream whose
+ * client stopped reading would otherwise be buffered in memory without
+ * bound, and its generator would never learn to pause.
+ *
+ * @param webRes - The response to send
+ * @param nodeRes - The Node response to write it to
+ * @returns Once the body is written, or the client has gone
+ * @example
+ * ```ts
+ * createServer(async (req, res) => {
+ *   await sendWebResponse(await handler(toWebRequest(req, res)), res);
+ * });
+ * ```
  */
 export async function sendWebResponse(webRes: Response, nodeRes: ServerResponse): Promise<void> {
   const headersObj: Record<string, string | string[]> = {};
@@ -77,7 +108,7 @@ export async function sendWebResponse(webRes: Response, nodeRes: ServerResponse)
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      nodeRes.write(value);
+      if (!nodeRes.write(value)) await drained(nodeRes);
     }
   } catch (error) {
     /* The client left, and the proxy stopped the body along with the upstream

@@ -35,7 +35,12 @@ export interface CommonEndpointOptions {
   deprecated?: string;
   /** Overrides the operation inferred from the wire shape. */
   operation?: OperationKind;
-  /** When false, middleware declared further up is not applied here. */
+  /**
+   * When false, the middleware of the base this endpoint was built from —
+   * `courier({ middleware })` and every `extend()` — is not applied here. The
+   * endpoint's own `.use()` still is, wherever in the chain it was named, and
+   * so is the source's `defineApi({ middleware })`.
+   */
   inherit?: boolean;
 }
 

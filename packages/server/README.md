@@ -100,6 +100,10 @@ The command exits with status 1 when the server cannot start — the port is tak
 
 Every other option of the core HTTP and WebSocket handlers is accepted and passed on as well: the SSE lifecycle hooks and limits, `onConnect`, `onDisconnect`, `onError`, the heartbeat timings and the slow-consumer limits.
 
+### CORS
+
+A page on an allowed origin may send the headers its preflight asks for; which of them reach the upstream is still decided by each source's and endpoint's header allowlist. Its answers carry `Access-Control-Expose-Headers` naming every header the proxy passes back, so the page can read `Retry-After`, `ETag` or `Content-Disposition` as a same-origin page would. Behind a proxy on a loopback or private address, the server's own origin is the one in `X-Forwarded-Proto` and `X-Forwarded-Host`.
+
 ### Logs
 
 Info lines go to stdout, warnings and errors to stderr, with the error's stack and cause chain. `COURIER_LOG_LEVEL` sets the lowest level printed — `debug`, `info` (default), `warn`, `error` or `silent`. Colour appears on a terminal only; `NO_COLOR` turns it off and `FORCE_COLOR=1` on. See [Logging](../core/README.md#logging).

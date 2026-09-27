@@ -4,7 +4,7 @@ import type { AdapterHandler } from "@noverax/courier";
 import { createLogger } from "@noverax/courier";
 import { sendWebResponse, toWebRequest } from "@noverax/courier/node";
 
-import { handleCors } from "./cors";
+import { exposeHeaders, handleCors } from "./cors";
 import { handleHealth } from "./health";
 import { sendError } from "./send-error";
 
@@ -34,6 +34,7 @@ export function createRequestListener(
 
     try {
       const webRes = await handler.handle(toWebRequest(req, res));
+      exposeHeaders(res, webRes.headers);
       await sendWebResponse(webRes, res);
     } catch (err) {
       log.error("Request handler error", err);

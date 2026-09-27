@@ -38,7 +38,10 @@ export interface ReadGeneratedFile {
  * ```
  */
 export function signGeneratedFile(importName: string, body: string): string {
-  const header = JSON.stringify({ import: importName, sha256: bodyHash(body) });
+  /* JSON leaves the line and paragraph separators as they are, and either one ends a line comment. */
+  const header = JSON.stringify({ import: importName, sha256: bodyHash(body) })
+    .replaceAll("\u2028", "\\u2028")
+    .replaceAll("\u2029", "\\u2029");
   return `${MARK}${header}\n${NOTE}\n${body}`;
 }
 

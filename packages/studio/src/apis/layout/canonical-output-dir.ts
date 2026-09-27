@@ -1,10 +1,14 @@
 import { posix } from "node:path";
+import { MAX_NAME_LENGTH } from "./check-import-name";
+import { hasControlCharacter } from "./has-control-character";
 import { InvalidImportError } from "./invalid-import-error";
+import { isWindowsDevice } from "./windows-device";
 
 const DRIVE_PREFIX = /^[A-Za-z]:/;
-const STUDIO_OFF_LIMITS: ReadonlySet<string> = new Set([".git", "node_modules", ".courier"]);
-/* Names Windows reads as something other than what they spell. */
-const WINDOWS_DEVICE = /^(?:con|prn|aux|nul|com[0-9]|lpt[0-9])(?:\..*)?$/i;
+/** Folders Studio never writes generated files into, by name in lower case. */
+export const STUDIO_OFF_LIMITS: ReadonlySet<string> = new Set([".git", "node_modules", ".courier"]);
+/** The longest output directory Studio takes, as typed. */
+const MAX_DIR_LENGTH = 240;
 const WINDOWS_FORBIDDEN = /[<>"|?*]/;
 const SHORT_NAME = /~\d/;
 
@@ -48,6 +52,8 @@ export function canonicalOutputDir(raw: string): string {
 function problemWith(slashed: string): string | null {
   if (slashed === "") return "it is empty";
   if (slashed.includes("\0")) return "it holds a NUL byte";
+  if (hasControlCharacter(slashed)) return "it holds a control character";
+  if (slashed.length > MAX_DIR_LENGTH) return `it is longer than ${MAX_DIR_LENGTH} characters`;
   if (posix.isAbsolute(slashed) || DRIVE_PREFIX.test(slashed)) {
     return "it must be relative to the project";
   }
@@ -60,7 +66,8 @@ function windowsProblem(name: string): string | null {
   if (name.includes(":")) return "holds ':'";
   if (WINDOWS_FORBIDDEN.test(name)) return 'holds one of <>"|?*';
   if (/[. ]$/.test(name)) return "ends in a dot or a space, which Windows drops";
-  if (WINDOWS_DEVICE.test(name)) return "is a name Windows keeps for a device";
+  if (isWindowsDevice(name)) return "is a name Windows keeps for a device";
+  if (name.length > MAX_NAME_LENGTH) return `is longer than ${MAX_NAME_LENGTH} characters`;
   if (SHORT_NAME.test(name))
     return "looks like a Windows short name, which may alias another directory";
   return null;

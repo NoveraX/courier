@@ -2,6 +2,7 @@ import { PathOutsideProjectError } from "../project-fs/path-outside-project-erro
 import type { ProjectRoot } from "../project-fs/project-root";
 import { resolveProjectPath } from "../project-fs/resolve-project-path";
 import { type DiskFile, readDiskFile } from "./disk-file";
+import { DuplicateTargetError } from "./duplicate-target-error";
 import type { FilePlan, PlanRequest } from "./file-plan-types";
 import { obstacleOnTheWay } from "./obstacle-on-the-way";
 import { ownershipOf } from "./ownership";
@@ -24,6 +25,7 @@ import type { RecordedFile } from "./recorded-file";
  * @param recorded - What Studio recorded writing for the import, by path
  * @returns The plan, with the digest of everything it rests on
  * @throws {PathOutsideProjectError} When a path lies outside the import's directory
+ * @throws {DuplicateTargetError} When two targets are one file
  * @example
  * ```ts
  * const plan = planFiles(root, { importName: "pets", dir: layout.dir, targets, removals }, entry.files);
@@ -46,7 +48,10 @@ export function planFiles(
     forgotten: [],
   };
   const targetIdentities = new Set<string>();
+  const targeted = new Set<string>();
   for (const target of request.targets) {
+    if (targeted.has(target.path)) throw new DuplicateTargetError(target.path);
+    targeted.add(target.path);
     const disk = diskAt(root, request.dir, target.path);
     if (disk.kind === "file") targetIdentities.add(identityOf(disk));
     const record = recordFor(target.path);

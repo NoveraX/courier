@@ -127,9 +127,8 @@ export const buildBody = (
   const cleaned = stripUndefined(variables);
 
   switch (method) {
-    case "head":
-      return undefined;
     case "get":
+    case "head":
     case "del":
       return buildSearchParams(
         queryFields(method, cleaned),

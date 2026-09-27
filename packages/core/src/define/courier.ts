@@ -105,8 +105,11 @@ function makeBuilder(state: BuilderState): AnyBuilder {
       {
         method,
         path,
+        /* A HEAD's second argument is its fetch options, not its variables:
+           handed them, `{ body }` or `{ prefixUrl }` shaped the request.
+           The variables it was forwarded fill its path and query instead. */
         probe: ((w: Record<string, (...a: unknown[]) => unknown>, v: unknown) =>
-          w[method]?.(path, v)) as unknown as AnyProbe,
+          method === "head" ? w.head?.(path) : w[method]?.(path, v)) as unknown as AnyProbe,
         served: false,
       },
       options,

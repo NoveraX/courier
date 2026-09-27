@@ -1,5 +1,3 @@
-"use client";
-
 import type { CallOptions, HTTPError, HTTPExecutor } from "@noverax/courier";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import {

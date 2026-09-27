@@ -1,8 +1,9 @@
-"use client";
-
 import type { ConnectionStatus } from "@noverax/courier/realtime";
 import { createConnectionState } from "@noverax/courier/realtime";
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+/* A namespace import, not named hooks: the package entry is reachable from
+   Server Components, and Next.js refuses to build a server module that names
+   a client-only hook such as useState among its imports. */
+import * as React from "react";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,19 +43,19 @@ export interface ConnectionStatusSource {
  */
 export function useConnectionStatus(source: ConnectionStatusSource | null): ConnectionStatusResult {
   // Fallback for null source — always disconnected
-  const fallback = useMemo(() => createConnectionState("disconnected"), []);
+  const fallback = React.useMemo(() => createConnectionState("disconnected"), []);
   const target = source ?? asFallback(fallback);
 
-  const subscribe = useCallback(
+  const subscribe = React.useCallback(
     (onStoreChange: () => void) => target.onStatusChange(onStoreChange),
     [target],
   );
 
-  const getSnapshot = useCallback(() => target.status, [target]);
+  const getSnapshot = React.useCallback(() => target.status, [target]);
 
-  const status = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const status = React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
-  return useMemo<ConnectionStatusResult>(
+  return React.useMemo<ConnectionStatusResult>(
     () => ({
       status,
       isConnected: status === "connected",

@@ -1,5 +1,3 @@
-"use client";
-
 import type { HTTPError } from "@noverax/courier";
 import type { SSEEvent } from "@noverax/courier/realtime";
 import type { QueryKey, UseQueryResult } from "@tanstack/react-query";

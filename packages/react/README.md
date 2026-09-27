@@ -153,6 +153,8 @@ const queryClient = new QueryClient()
 await q.users.prefetchQuery(queryClient, "getAll")
 ```
 
+No module of the package is marked `"use client"`, so a React Server Component can create a caller, prefetch, build keys and use `QueryClient`, `dehydrate` and `HydrationBoundary` from it. The hooks themselves run in Client Components.
+
 <br />
 
 ## Query Keys

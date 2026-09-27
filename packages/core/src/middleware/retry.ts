@@ -1,6 +1,7 @@
 import { HTTPError } from "../errors";
 import { isAbortError } from "../utils/abort";
 import { defineMiddleware } from "./compose";
+import { pause } from "./pause";
 import type { Middleware, MiddlewareResponse, NextFn } from "./types";
 
 /** How one attempt ended: with an answer, or with the error it was rejected with. */
@@ -132,18 +133,4 @@ function deservesRetry(
   const { error } = outcome;
   if (!(error instanceof HTTPError)) return false;
   return retryOn({ status: error.status, data: error.data, headers: error.headers });
-}
-
-/** Wait before the next attempt, and throw the signal's reason if the caller cancels meanwhile. */
-async function pause(ms: number, signal: AbortSignal | undefined): Promise<void> {
-  await new Promise<void>((resolve) => {
-    const timer = setTimeout(finish, ms);
-    signal?.addEventListener("abort", finish, { once: true });
-    function finish(): void {
-      clearTimeout(timer);
-      signal?.removeEventListener("abort", finish);
-      resolve();
-    }
-  });
-  signal?.throwIfAborted();
 }

@@ -10,9 +10,12 @@
  * - Non-endpoint code (trailing helpers): preserve
  */
 
+import { parseSource } from "../../server/mocks-edit/plan/parse-source";
+import { findGroupDeclaration } from "../manage/group-declaration";
 import { ownValue } from "../own-value";
 import { mergeImports } from "./merge-imports";
 import { parseExistingGroup } from "./parse-existing";
+import { type MergedEntry, placeUnderPrefix } from "./place-under-prefix";
 import { renameBase } from "./rename-base";
 import type { FingerprintResult, MergeChange, MergeResult, MergeStatus } from "./types";
 
@@ -25,8 +28,23 @@ export function mergeGroupFile(
   const generated = parseExistingGroup(generatedContent);
   const changes: MergeChange[] = [];
 
-  const endpointLines = mergeEndpoints(existing, generated, fingerprints, changes).map((line) =>
-    renameBase(line, generated.baseName, existing.baseName),
+  const merged = mergeEndpoints(existing, generated, fingerprints, changes).map((entry) => ({
+    ...entry,
+    code: renameBase(entry.code, generated.baseName, existing.baseName),
+  }));
+  /* A kept endpoint's path is relative to the file's prefix, a generated one's to the spec's. */
+  const filePrefix =
+    findGroupDeclaration(parseSource("group.ts", existingContent).program)?.prefix ?? null;
+  const placed = placeUnderPrefix(merged, existing.baseName, filePrefix, generated.prefix);
+  const prefix = placed?.prefix ?? generated.prefix;
+  if (placed !== null && prefix !== generated.prefix)
+    changes.push({
+      type: "updated",
+      target: "prefix",
+      detail: `${prefix}, so every endpoint keeps its URL`,
+    });
+  const endpointLines = (placed?.entries ?? merged).flatMap((e) =>
+    e.comment ? [e.comment, e.code] : [e.code],
   );
   const preamble = mergePreamble(existing.preamble, generated.preamble);
   /* A name the file imported that nothing merged uses any more goes with the code that used it. */
@@ -34,7 +52,13 @@ export function mergeGroupFile(
     "\n",
   );
   const importLines = mergeImports(existing.imports, generated.imports, changes, code);
-  const content = buildFile(importLines, preamble, generated, endpointLines, existing.trailingCode);
+  const content = buildFile(
+    importLines,
+    preamble,
+    { ...generated, header: withPrefix(generated.header, generated.prefix, prefix) },
+    endpointLines,
+    existing.trailingCode,
+  );
   const status = resolveStatus(changes);
 
   return { content, status, changes };
@@ -45,8 +69,8 @@ function mergeEndpoints(
   generated: ReturnType<typeof parseExistingGroup>,
   fingerprints: FingerprintResult,
   changes: MergeChange[],
-): string[] {
-  const result: string[] = [];
+): MergedEntry[] {
+  const result: MergedEntry[] = [];
   const existingByName = new Map(existing.endpoints.map((e) => [e.name, e]));
   const generatedNames = new Set(generated.endpoints.map((e) => e.name));
 
@@ -56,7 +80,7 @@ function mergeEndpoints(
     const existEp = existingByName.get(genEp.name);
 
     if (!existEp || status === "safe" || status === "new") {
-      appendEndpoint(result, genEp.comment, genEp.code);
+      result.push({ comment: genEp.comment, code: genEp.code, kept: false });
       const changeType = status === "new" || !existEp ? "added" : "updated";
       changes.push({ type: changeType, target: `endpoint:${genEp.name}`, detail: "from spec" });
       continue;
@@ -66,7 +90,7 @@ function mergeEndpoints(
       /* An endpoint is one declarative expression now, with no closure to
          graft a regenerated head onto. What the user wrote is what they meant,
          so it stays whole; the change list says the spec moved under it. */
-      appendEndpoint(result, existEp.comment ?? genEp.comment, existEp.code);
+      result.push({ comment: existEp.comment ?? genEp.comment, code: existEp.code, kept: true });
       changes.push({
         type: "preserved",
         target: `endpoint:${genEp.name}`,
@@ -76,7 +100,7 @@ function mergeEndpoints(
     }
 
     /* Fallback: use generated */
-    appendEndpoint(result, genEp.comment, genEp.code);
+    result.push({ comment: genEp.comment, code: genEp.code, kept: false });
     changes.push({ type: "updated", target: `endpoint:${genEp.name}`, detail: "from spec" });
   }
 
@@ -95,7 +119,7 @@ function mergeEndpoints(
       continue;
     }
 
-    appendEndpoint(result, existEp.comment, existEp.code);
+    result.push({ comment: existEp.comment, code: existEp.code, kept: true });
     changes.push({
       type: "preserved",
       target: `endpoint:${existEp.name}`,
@@ -106,9 +130,12 @@ function mergeEndpoints(
   return result;
 }
 
-function appendEndpoint(lines: string[], comment: string | undefined, code: string): void {
-  if (comment) lines.push(comment);
-  lines.push(code);
+/* The declaration's head with the prefix it names changed, when it changes. */
+function withPrefix(header: string[], from: string, to: string): string[] {
+  if (from === to) return header;
+  return header.map((line) =>
+    line.replace(`prefix: ${JSON.stringify(from)}`, `prefix: ${JSON.stringify(to)}`),
+  );
 }
 
 /**

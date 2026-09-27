@@ -57,6 +57,12 @@ export const { GET, POST } = apiRoute()
 
 That's it. `apiRoute()` is zero-arg — sources are read at request time from the core global registry. The proxy caller on the client will POST to this route, and query-type endpoints can also use GET for caching.
 
+Pages on other origins may call the route when `allowedOrigins` lists them. Their browser sends a preflight first, so export `OPTIONS` as well — from `sseRoute()` too, if they subscribe to streams:
+
+```ts
+export const { GET, POST, OPTIONS } = apiRoute({ allowedOrigins: ["https://admin.example.com"] })
+```
+
 <br />
 
 ## Server Actions

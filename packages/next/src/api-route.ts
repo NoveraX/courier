@@ -28,13 +28,17 @@ import { publicRequest } from "./public-request";
  * // app/api/request/route.ts
  * import { apiRoute } from "@noverax/courier-next";
  * export const { GET, POST } = apiRoute();
+ *
+ * // Pages on other origins call it too: export OPTIONS for their preflight
+ * export const { GET, POST, OPTIONS } = apiRoute({ allowedOrigins: ["https://admin.example.com"] });
  * ```
  */
 export function apiRoute(config?: HandlerConfig): {
   GET: (request: NextRequest) => Promise<Response>;
   POST: (request: NextRequest) => Promise<Response>;
+  OPTIONS: (request: NextRequest) => Promise<Response>;
 } {
-  const { handleGet, handlePost } = createHandler(config);
+  const { handle, handleGet, handlePost } = createHandler(config);
 
   /* Next evaluates this module during `next build`, before any `register()`
      hook has populated the registry, so the announcement waits for a real
@@ -58,5 +62,7 @@ export function apiRoute(config?: HandlerConfig): {
       discoverAppOrigin(new URL(request.url).origin);
       return handlePost(publicRequest(request));
     },
+    /* A preflight from a page `allowedOrigins` lists; any other is refused. */
+    OPTIONS: (request: NextRequest) => handle(publicRequest(request)),
   };
 }

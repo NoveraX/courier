@@ -268,6 +268,8 @@ Pages on other origins are served when `allowedOrigins` lists them. An entry is 
 createHandler({ allowedOrigins: ["https://admin.example.com", "https://*.example.com"] })
 ```
 
+The handler speaks CORS for those origins: it answers their preflight and gives every answer the permission a browser needs to read it. Route `OPTIONS` to the handler as well as `GET` and `POST`.
+
 Every endpoint of a source is reachable through the proxy unless the source says otherwise. Name the ones a browser may call with `defineBoundary`, and give the boundary to the API as well as to the client, so the server refuses the rest. The boundary is typed against the API that holds it, so annotate it as `ProxyBoundary`:
 
 ```ts

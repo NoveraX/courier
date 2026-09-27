@@ -79,6 +79,25 @@ describe("apiRoute in production", () => {
     expect(response.status).toBe(200);
   });
 
+  it("answers the preflight of a page on a listed origin", async () => {
+    const { OPTIONS } = apiRoute({ allowedOrigins: ["https://admin.example.com"] });
+
+    const response = await OPTIONS(
+      new NextRequest("http://localhost:7352/api/request", {
+        method: "OPTIONS",
+        headers: {
+          host: "app.example.com",
+          origin: "https://admin.example.com",
+          "access-control-request-method": "POST",
+          "access-control-request-headers": "content-type",
+        },
+      }),
+    );
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe("https://admin.example.com");
+  });
+
   it("still refuses another site's page", async () => {
     const { POST } = apiRoute();
 

@@ -1,6 +1,7 @@
 import type { ImportLayout } from "../layout";
 import { extractEndpoints } from "../merge/extract-endpoints";
 import { computeHash } from "../merge/hash";
+import { barrelAfterRemoval } from "./barrel-after-removal";
 import { detectOrphanSchemas } from "./detect-orphan-schemas";
 import { FLAT_GROUP } from "./flat-import";
 import { removeEndpointsFromFile } from "./remove-endpoints-from-file";
@@ -10,7 +11,7 @@ import type { RemoveResult } from "./types";
 /**
  * Preview removing endpoints of an import generated flat: they go from its
  * `source.ts`, which stays even when none is left, and so do the schemas
- * only they used.
+ * only they used, and the barrel's re-exports of those.
  *
  * @param names - The endpoints to remove
  * @param existingFiles - The import's files as they are, by path
@@ -56,5 +57,12 @@ export function previewRemoveFlatEndpoints(
   const cleaned = removeOrphanSchemas(schemas, orphans);
   if (cleaned === null) result.deletedFiles.push(schemaPath);
   else result.modifiedFiles.push({ path: schemaPath, content: cleaned });
+  const barrel = barrelAfterRemoval(
+    layout,
+    existingFiles,
+    result.modifiedFiles,
+    result.deletedFiles,
+  );
+  if (barrel !== undefined) result.indexFileUpdate = barrel;
   return result;
 }

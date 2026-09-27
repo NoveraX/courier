@@ -3,7 +3,7 @@
  */
 
 import type { ImportLayout } from "../layout";
-import { removeBarrelExports } from "./remove-barrel-exports";
+import { barrelAfterRemoval } from "./barrel-after-removal";
 import { removeEndpointsFromFile } from "./remove-endpoints-from-file";
 import { collectGroupDeletions, collectModifiedWarnings, findGroupFile } from "./remove-helpers";
 import { processOrphanSchemas } from "./remove-orphans";
@@ -82,33 +82,27 @@ export function previewRemoveEndpoints(
     modifiedFiles,
     deletedFiles,
     ...withoutGroups(deletedGroupNames, existingFiles, layout),
+    ...withBarrel(barrelAfterRemoval(layout, existingFiles, modifiedFiles, deletedFiles)),
     removedFingerprints,
     orphanedSchemas,
     modifiedEndpointsWarning,
   };
 }
 
-/* source.ts no longer imports the groups removed whole, and the barrel no longer re-exports them. */
+/* source.ts no longer imports the groups removed whole. */
 function withoutGroups(
   groups: string[],
   existingFiles: Record<string, string>,
   layout: ImportLayout,
-): Pick<RemoveResult, "sourceFileUpdate" | "indexFileUpdate"> {
-  if (groups.length === 0) return {};
+): Pick<RemoveResult, "sourceFileUpdate"> {
   const source = existingFiles[layout.sourceFile];
-  const index = existingFiles[layout.indexFile];
-  const modules = new Set(
-    groups.flatMap((group) => [
-      layout.groupSpecifier(group, "schemas"),
-      layout.groupSpecifier(group, "types"),
-    ]),
-  );
-  const barrel =
-    index === undefined ? undefined : removeBarrelExports(layout.indexFile, index, modules);
-  const sourceFile = source && removeGroupsFromSourceFile(layout.sourceFile, source, groups);
-  return {
-    ...(sourceFile && { sourceFileUpdate: { path: layout.sourceFile, content: sourceFile } }),
-    ...(barrel !== undefined &&
-      barrel !== index && { indexFileUpdate: { path: layout.indexFile, content: barrel } }),
-  };
+  if (groups.length === 0 || source === undefined) return {};
+  const content = removeGroupsFromSourceFile(layout.sourceFile, source, groups);
+  return { sourceFileUpdate: { path: layout.sourceFile, content } };
+}
+
+function withBarrel(
+  update: RemoveResult["indexFileUpdate"],
+): Pick<RemoveResult, "indexFileUpdate"> {
+  return update === undefined ? {} : { indexFileUpdate: update };
 }

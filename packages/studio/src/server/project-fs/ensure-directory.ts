@@ -38,7 +38,18 @@ export function ensureDirectory(root: ProjectRoot, directory: string): string[] 
   return created;
 }
 
-function missingDirectories(directory: string): string[] {
+/**
+ * The directories on the way to a directory that do not exist yet,
+ * outermost first: those `ensureDirectory` would create.
+ *
+ * @param directory - The directory, absolute
+ * @returns The missing directories, absolute, outermost first
+ * @example
+ * ```ts
+ * missingDirectories("/project/src/api/pets"); // → ["/project/src/api", "/project/src/api/pets"]
+ * ```
+ */
+export function missingDirectories(directory: string): string[] {
   const missing: string[] = [];
   let current = directory;
   while (!exists(current)) {

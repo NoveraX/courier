@@ -63,7 +63,6 @@ function openSocket(ctx: LifecycleContext, url: string): void {
 }
 
 function handleOpen(ctx: LifecycleContext): void {
-  ctx.refs.attempt = 0;
   clearReconnectTimer(ctx);
   ctx.state.set("connected");
   ctx.silence.start();
@@ -75,6 +74,10 @@ function handleOpen(ctx: LifecycleContext): void {
 
 function handleMessage(ctx: LifecycleContext, ev: MessageEvent): void {
   ctx.silence.reset();
+  /* The backoff starts over once the server has answered on the socket, not
+     as soon as it opens: a server that accepts the upgrade and closes at
+     once kept every reconnect at the first, shortest delay. */
+  ctx.refs.attempt = 0;
   let msg: WSMessage;
   try {
     msg = decodeMessage(String(ev.data));

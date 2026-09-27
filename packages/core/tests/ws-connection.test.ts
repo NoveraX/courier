@@ -162,6 +162,37 @@ describe("createWSConnection", () => {
     conn.close();
   });
 
+  it("keeps backing off while the server closes each socket before saying anything", () => {
+    const conn = createWSConnection(createConfig({ backoff: { initialMs: 100, jitter: false } }));
+    lastWs().simulateOpen();
+    lastWs().simulateClose(1011);
+    vi.advanceTimersByTime(100);
+    expect(MockWebSocket.instances).toHaveLength(2);
+
+    lastWs().simulateOpen();
+    lastWs().simulateClose(1011);
+    vi.advanceTimersByTime(100);
+    expect(MockWebSocket.instances).toHaveLength(2);
+    vi.advanceTimersByTime(100);
+    expect(MockWebSocket.instances).toHaveLength(3);
+    conn.close();
+  });
+
+  it("backs off afresh once the server has answered on the socket", () => {
+    const conn = createWSConnection(createConfig({ backoff: { initialMs: 100, jitter: false } }));
+    lastWs().simulateOpen();
+    lastWs().simulateClose(1011);
+    vi.advanceTimersByTime(100);
+
+    lastWs().simulateOpen();
+    lastWs().simulateMessage(encodeMessage({ type: "ping" }));
+    lastWs().simulateClose(1011);
+    vi.advanceTimersByTime(100);
+
+    expect(MockWebSocket.instances).toHaveLength(3);
+    conn.close();
+  });
+
   it("does not reconnect on normal close (1000)", () => {
     const conn = createWSConnection(createConfig());
     lastWs().simulateOpen();

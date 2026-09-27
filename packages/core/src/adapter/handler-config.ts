@@ -1,7 +1,16 @@
+import type { Sources } from "../define/types";
 import type { SSELifecycleConfig } from "./sse-types";
 
 /** Optional configuration for createHandler */
 export interface HandlerConfig extends SSELifecycleConfig {
+  /**
+   * The sources this handler answers for. Left out, it answers for the
+   * process-wide registry that `attachRuntime()` and `registerSources` fill,
+   * read at request time. A server handed its own sources passes them here,
+   * so another server or a later `registerSources` in the same process
+   * cannot change what it serves.
+   */
+  sources?: Sources;
   /** Additional response headers for SSE (e.g., CORS) */
   sseHeaders?: Record<string, string>;
   /** Max SSE connection lifetime in ms. After TTL, stream closes and client reconnects via Last-Event-ID. */

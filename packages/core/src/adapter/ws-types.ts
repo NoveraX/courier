@@ -1,3 +1,4 @@
+import type { Sources } from "../define/types";
 import type { PubSubAdapter, WebSocketLike } from "../realtime/adapters";
 import type { ClientIPResolver } from "./ws-ip-tracker";
 import type { ConnectionRegistry } from "./ws-registry";
@@ -5,11 +6,19 @@ import type { ConnectionRegistry } from "./ws-registry";
 /**
  * Configuration for the server-side WebSocket handler.
  *
- * Sources are read lazily from the core global registry at request time
- * via `requireSources()`, so there is no `sources` field here — framework
- * adapters call `createWSHandler()` with just the behavioral options.
+ * Framework adapters call `createWSHandler()` with just the behavioral
+ * options, and sources are read from the core global registry when each
+ * connection opens.
  */
 export interface WSHandlerConfig {
+  /**
+   * The sources this handler answers for. Left out, it answers for the
+   * process-wide registry that `attachRuntime()` and `registerSources` fill.
+   * A server handed its own sources passes them here, so another server or
+   * a later `registerSources` in the same process cannot change what it
+   * serves.
+   */
+  sources?: Sources;
   /** Optional pub/sub adapter for horizontal scaling (e.g. Redis) */
   pubsub?: PubSubAdapter;
   /** Heartbeat interval in ms (default 25000) */

@@ -56,32 +56,52 @@ function describe(value: unknown): string {
 }
 
 /**
- * Replace the current sources and notify every listener.
+ * Check that `sources` is a dictionary of named sources, and make each key
+ * its source's name, before anything serves them.
  *
- * Stamps each source's registry key onto the source object via
- * `stampSourceKeys` so `createCaller(api)` emits the same source name
- * as the registry, and refuses a key that contradicts a name the author
- * gave `defineApi`. Call this exactly once per process unless you
- * intend to replace the whole dictionary (HMR does this).
+ * Stamps each source's key onto the source object via `stampSourceKeys` so
+ * `createCaller(api)` emits the same source name the server resolves, and
+ * refuses a key that contradicts a name the author gave `defineApi`.
+ *
+ * @param sources - The sources by key, as the caller handed them over
+ * @param callee - The function they were handed to, named in the error
+ * @param usage - How that function takes them, shown in the error
+ * @throws ConfigurationError `SOURCES_NOT_A_RECORD` for anything but an object
+ * @throws ConfigurationError `SOURCE_KEY_MISMATCH` when a key contradicts a name
+ *
+ * @example
+ * ```ts
+ * prepareSources({ api, billing }, "registerSources", "registerSources({ api, billing })");
+ * ```
  */
-export function registerSources(sources: Sources): void {
-  /* The registry is process-global and read much later, by adapters, at
-     request time. Accepting a wrong value here reports the mistake as a
-     missing endpoint somewhere else entirely — or, for null, as a bare
-     TypeError thrown from inside the library. */
+export function prepareSources(sources: Sources, callee: string, usage: string): void {
+  /* Sources are read much later, at request time. Accepting a wrong value
+     here reports the mistake as a missing endpoint somewhere else entirely —
+     or, for null, as a bare TypeError thrown from inside the library. */
   if (sources === null || typeof sources !== "object" || Array.isArray(sources)) {
     throw new ConfigurationError(
       "SOURCES_NOT_A_RECORD",
       [
-        `[courier] registerSources() expects an object of named sources, received ${describe(sources)}.`,
+        `[courier] ${callee}() expects an object of named sources, received ${describe(sources)}.`,
         "",
         "Each key is the name the proxy addresses the source by:",
-        "  registerSources({ api, billing })",
+        `  ${usage}`,
       ].join("\n"),
     );
   }
 
   stampSourceKeys(sources);
+}
+
+/**
+ * Replace the current sources and notify every listener.
+ *
+ * The sources are checked and their keys stamped first — see
+ * `prepareSources`. Call this exactly once per process unless you intend
+ * to replace the whole dictionary (HMR does this).
+ */
+export function registerSources(sources: Sources): void {
+  prepareSources(sources, "registerSources", "registerSources({ api, billing })");
 
   const registry = getRegistry();
   registry.current = sources;

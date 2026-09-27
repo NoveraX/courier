@@ -258,7 +258,7 @@ const handler = createHandler({ allowedOrigins: ["https://app.example.com"] })
 // handler.shutdownSSE()       — drains open streams before the host closes
 ```
 
-`createHandler` takes handler options, not sources: it reads the sources registered with `registerSources()` — or loaded by `attachRuntime()` — when it serves a request. Pass it nothing to accept the defaults.
+Given `sources` — `createHandler({ sources })` — the handler answers for those alone. Without them it reads the process-wide registry that `registerSources()` and `attachRuntime()` fill, at request time, which is how the framework adapters work. `createWSHandler` takes `sources` the same way. Pass it nothing to accept the defaults.
 
 For Node.js servers, use `toWebRequest` and `sendWebResponse` from `@noverax/courier/node` to bridge between Node.js and Web Standard APIs. An adapter announces what it hosts to Studio with `announceWhenRegistered` from `@noverax/courier/announce`, called on each request.
 

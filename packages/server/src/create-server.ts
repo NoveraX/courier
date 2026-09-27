@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 
-import { createHandler, createLogger, createWSHandler, registerSources } from "@noverax/courier";
+import { ConfigurationError, createHandler, createLogger, createWSHandler } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
 import { attachWebSocketUpgrade } from "@noverax/courier/node";
 import type { WebSocketServer } from "ws";
@@ -50,14 +50,19 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
     onServerError,
   } = config;
 
-  // Standalone server publishes sources into the core global registry so
-  // `createHandler()` and `createWSHandler()` read them lazily via
-  // `requireSources()` at request time. This matches the zero-arg adapter
-  // handler convention (`courierHandler()` / `apiRoute()`) — the registry is
-  // the single source of truth for in-process source lookup.
-  registerSources(sources);
-
+  /* The handlers are handed this server's sources rather than reading the
+     process-wide registry: writing them there let a second server, or the
+     host's own registerSources, replace what this one answered for, and
+     replaced the host's sources in turn. Left out, the handlers would fall
+     back to that registry, so their absence is refused here. */
+  if (sources === undefined) {
+    throw new ConfigurationError(
+      "SOURCES_NOT_A_RECORD",
+      "[courier] createCourierServer() needs the sources it serves: createCourierServer({ sources: { api } }).",
+    );
+  }
   const handler = createHandler({
+    sources,
     allowedOrigins,
     sseHeaders: config.sseHeaders,
     sseMaxLifetimeMs: config.sseMaxLifetimeMs,
@@ -67,6 +72,7 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
     onSSEError: config.onSSEError,
   });
   const wsHandler = createWSHandler({
+    sources,
     pubsub,
     heartbeatIntervalMs,
     heartbeatTimeoutMs,

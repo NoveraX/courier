@@ -78,7 +78,7 @@ The command exits with status 1 when the server cannot start — the port is tak
 
 | Option | Default | Description |
 |---|---|---|
-| `sources` | (required) | Registered API sources |
+| `sources` | (required) | The API sources this server answers for. They stay its own: a second server or a `registerSources` call in the same process does not change them, and the server does not write them into the process-wide registry |
 | `port` | `3001` | Server port |
 | `host` | `"localhost"` | Server host |
 | `allowedOrigins` | `undefined` | Origins of the browser apps that may call the server (CORS and the WebSocket origin check). Left out, only the server's own origin — and loopback origins outside production |

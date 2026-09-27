@@ -5,9 +5,10 @@ import { createPostHandler } from "./adapter/handle-post";
 import { createSSEHandler } from "./adapter/handle-sse";
 import type { HandlerConfig } from "./adapter/handler-config";
 import { errorResponse } from "./adapter/parse";
-import { requireSources } from "./adapter/require-sources";
+import { servedSources } from "./adapter/served-sources";
 import { createSSEConnectionRegistry } from "./adapter/sse-registry";
 import type { SSEConnectionRegistry } from "./adapter/sse-types";
+import { prepareSources } from "./sources";
 import { studioHooks } from "./studio";
 import { executeRequest } from "./utils/execute";
 import type { RequestPayloadInput } from "./utils/helpers";
@@ -47,11 +48,25 @@ export type AdapterHandler = {
 
 /**
  * Create a framework-agnostic HTTP adapter handler. Zero-arg callable —
- * sources are read lazily from the core global registry (populated by
- * `attachRuntime()` at startup), so a single `courierHandler()` expression
- * in user code works regardless of which framework owns the listen socket.
+ * unless `config.sources` names them, sources are read lazily from the core
+ * global registry (populated by `attachRuntime()` at startup), so a single
+ * `courierHandler()` expression in user code works regardless of which
+ * framework owns the listen socket.
+ *
+ * @param config - Origins, limits, SSE lifecycle and, optionally, the sources
+ * @returns The handler, its SSE registry and its shutdown
+ * @throws ConfigurationError when `config.sources` is not a dictionary of sources
+ *
+ * @example
+ * ```ts
+ * const handler = createHandler({ allowedOrigins: ["https://app.example.com"] });
+ * const response = await handler.handle(request);
+ * ```
  */
 export function createHandler(config?: HandlerConfig): AdapterHandler {
+  if (config?.sources !== undefined) {
+    prepareSources(config.sources, "createHandler", "createHandler({ sources: { api } })");
+  }
   const allowedOrigins = config?.allowedOrigins;
   /* Every entry point answers a preflight and grants a listed origin its
      permission, because an adapter may mount any one of them on its own. */
@@ -68,7 +83,7 @@ export function createHandler(config?: HandlerConfig): AdapterHandler {
     proxyMethod: "GET" | "POST",
     proxyReceiveAt: number,
   ) =>
-    executeRequest(requireSources(), payload, {
+    executeRequest(servedSources(config?.sources), payload, {
       req: request,
       res: new Response(),
       proxyMethod,

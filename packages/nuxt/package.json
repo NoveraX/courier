@@ -54,8 +54,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@noverax/courier": "*",
-    "h3": "^1.15.11 || ^2.0.0-rc.0 || ^2.0.1-rc.0"
+    "@noverax/courier": "*"
   },
   "devDependencies": {
     "@noverax/courier": "*"

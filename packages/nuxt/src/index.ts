@@ -1,34 +1,41 @@
 import type { HandlerConfig } from "@noverax/courier";
 import { createHandler } from "@noverax/courier";
-import type { EventHandler } from "h3";
-import { fromWebHandler } from "h3";
+
+import { requestOfEvent } from "./event-request";
+import type { CourierEventHandler, H3EventLike } from "./h3-event";
+
+export type { CourierEventHandler, H3EventLike, H3NodeEvent, H3WebEvent } from "./h3-event";
 
 /**
- * Create a Nuxt/h3/Nitro event handler for the courier proxy.
+ * Create a Nuxt/Nitro event handler for the courier proxy.
  *
- * Only HTTP request/response is supported by this adapter. Realtime
- * transports (SSE and WebSocket) are intentionally NOT exposed here:
- * Nitro/H3's WebSocket layer (crossws) is still flagged experimental and
- * its production behavior across deployment targets (node-server, bun,
- * cloudflare, vercel-edge) is not yet stable. Once Nitro/H3 ship a
- * production-grade WS API, `courierSSEHandler` and `courierWSAttach` will be
- * added here in parallel with the other 5 framework adapters.
+ * The route serves proxied HTTP calls and SSE streams alike: a request that
+ * asks for `text/event-stream` gets a stream. Point the client's
+ * `proxyPath.http` — and `proxyPath.sse`, for streams — at the route.
+ * WebSocket channels are not served here, because Nitro's WebSocket layer is
+ * still experimental; run the standalone Courier server for those.
  *
- * In the meantime, run a standalone Courier server alongside Nuxt for any
- * SSE/WS endpoints — see the deployment docs for the standalone server.
+ * The handler works with the h3 Nitro runs, whichever major that is — h3 1.x
+ * in Nuxt 3 and 4 — without importing h3 itself, so the version a package
+ * manager resolves for this package never has to match Nitro's.
  *
- * Sources are read from the core global registry populated by
- * `attachRuntime()` — call `await attachRuntime()` in a Nuxt server
- * plugin (`server/plugins/courier.ts`) before the first request.
+ * Sources are read at request time from the core global registry — register
+ * them in a Nitro server plugin (`server/plugins/courier.ts`), or call
+ * `await attachRuntime()` there to load them from `courier.config.ts`.
+ *
+ * @param config - Handler options, such as `allowedOrigins` or body limits
+ * @returns An h3 event handler to export from a server route
  *
  * @example
  * ```ts
- * // server/api/request.ts (Nuxt 3+)
+ * // server/api/request.ts
  * import { courierHandler } from "@noverax/courier-nuxt";
  * export default courierHandler();
  * ```
  */
-export function courierHandler(config?: HandlerConfig): EventHandler {
+export function courierHandler(config?: HandlerConfig): CourierEventHandler {
   const { handle } = createHandler(config);
-  return fromWebHandler((request) => handle(request));
+  const handler = async (event: H3EventLike): Promise<Response> =>
+    handle(await requestOfEvent(event));
+  return Object.assign(handler, { __is_handler__: true } as const);
 }

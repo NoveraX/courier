@@ -32,7 +32,11 @@ export interface CourierServerOptions extends SSELifecycleConfig {
   heartbeatTimeoutMs?: number;
   /** WS max message size in bytes (default 65536) */
   maxPayload?: number;
-  /** Attach SIGTERM/SIGINT handlers for graceful shutdown (default true) */
+  /**
+   * Drain on SIGTERM/SIGINT, then end the process (default true). When the
+   * application handles the signal too, the server still drains but leaves
+   * ending the process to the application's handler.
+   */
   signals?: boolean;
   /** Additional SSE response headers (e.g., CORS) */
   sseHeaders?: Record<string, string>;

@@ -221,7 +221,10 @@ When `signals: true` (default), the server handles `SIGTERM` and `SIGINT`:
 2. **SSE streams** receive a retry hint and close gracefully (3s window)
 3. **WebSocket connections** receive close frame with code `1012` (5s window)
 4. **HTTP server** stops accepting new connections
-5. Second signal forces immediate exit
+5. The process exits with code `0` — or `1` if a server failed to stop cleanly
+6. Second signal forces immediate exit
+
+If your application handles `SIGTERM` or `SIGINT` itself, the server still drains on the signal but leaves ending the process to your handler, so your own cleanup runs to completion. To decide the order yourself, pass `signals: false` and call `server.stop()` from your handler.
 
 Programmatic shutdown:
 

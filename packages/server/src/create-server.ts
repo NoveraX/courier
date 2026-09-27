@@ -8,7 +8,8 @@ import type { WebSocketServer } from "ws";
 
 import { createRequestListener } from "./http-handlers";
 import { createReadiness } from "./readiness";
-import { createShutdown, setupSignalHandlers } from "./shutdown";
+import { createShutdown } from "./shutdown";
+import { setupSignalHandlers } from "./signal-handlers";
 import type { CourierServer, CourierServerOptions } from "./types";
 
 const log = createLogger("Server");
@@ -147,12 +148,13 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
   });
 
   async function wrappedStop(): Promise<void> {
+    detachSignals?.();
     shuttingDown = true;
     await wsHandler.destroy();
     await stop();
   }
 
-  if (signals) setupSignalHandlers(wrappedStop);
+  const detachSignals = signals ? setupSignalHandlers(wrappedStop) : undefined;
 
   return result;
 }

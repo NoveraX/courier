@@ -59,22 +59,6 @@ export function createShutdown(
   return stop;
 }
 
-/** Attach SIGTERM/SIGINT handlers that trigger graceful shutdown */
-export function setupSignalHandlers(shutdown: () => Promise<void>): void {
-  let called = false;
-
-  const handler = async (signal: string) => {
-    if (called) process.exit(1);
-    called = true;
-    log.info(`Received ${signal}`);
-    await shutdown();
-    process.exit(0);
-  };
-
-  process.on("SIGTERM", () => handler("SIGTERM"));
-  process.on("SIGINT", () => handler("SIGINT"));
-}
-
 /** Send shutdown event to all SSE connections, then abort */
 async function drainSSE(
   sse:

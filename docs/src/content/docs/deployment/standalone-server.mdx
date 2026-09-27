@@ -86,7 +86,8 @@ In a split-host topology (Next.js hosts HTTP/SSE on 3000, standalone server host
 import type { PubSubAdapter } from "@noverax/courier/realtime"
 
 const server = await createCourierServer({
-  // Required
+  // Required — the sources this server answers for, and only these:
+  // another server or registerSources() in the same process leaves them be
   sources,
 
   // Network

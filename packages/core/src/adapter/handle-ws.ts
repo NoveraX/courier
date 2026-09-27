@@ -1,6 +1,7 @@
 import { createLogger } from "../logger";
 import type { WebSocketLike } from "../realtime/adapters";
 import { createHeartbeat } from "../realtime/ws/heartbeat";
+import { prepareSources } from "../sources";
 import { studioHooks } from "../studio";
 import { LIMITS } from "./limits";
 import { isOriginAllowed } from "./origin-policy";
@@ -20,13 +21,13 @@ const log = createLogger("WS");
 /**
  * Create a server-side WebSocket handler for Courier endpoints.
  *
- * Sources are read lazily from the core global registry at request time
- * via `requireSources()`. Pass only the behavioral options here; call
- * `await attachRuntime()` in your server instrumentation to populate
- * the sources registry before the first request.
+ * Unless `config.sources` names them, sources are read lazily from the core
+ * global registry when each connection opens; call `await attachRuntime()`
+ * in your server instrumentation to populate it before the first request.
  *
  * @param config - Handler configuration (pubsub, heartbeat, lifecycle hooks, etc.)
  * @returns WSHandler with handleSocket and connections registry
+ * @throws ConfigurationError when `config.sources` is not a dictionary of sources
  * @example
  * const ws = createWSHandler({
  *   onConnect: ({ connectionId, request }) => ({ userId: extractUser(request) }),
@@ -36,6 +37,9 @@ const log = createLogger("WS");
  * ws.connections.broadcast({ type: "system", text: "Welcome!" });
  */
 export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
+  if (config.sources !== undefined) {
+    prepareSources(config.sources, "createWSHandler", "createWSHandler({ sources: { api } })");
+  }
   const registry = createConnectionRegistry();
   const maxPerIP = config.maxConnectionsPerIP ?? LIMITS.MAX_CONNECTIONS_PER_IP;
   const ipTracker = createIPTracker(maxPerIP);

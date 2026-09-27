@@ -5,7 +5,7 @@ import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { encodeMessage } from "../realtime/ws/ws-protocol";
 import { generateRequestId, studioHooks } from "../studio";
 import { LIMITS } from "./limits";
-import { requireSources } from "./require-sources";
+import { servedSources } from "./served-sources";
 import type { PubSubBridge } from "./ws-pubsub-bridge";
 import type { RateLimitBucket } from "./ws-rate-limit";
 import { createBucket } from "./ws-rate-limit";
@@ -146,7 +146,7 @@ export function buildContext(
     closed: false,
     subscriptionIds,
     subscribing: new Set(),
-    sources: requireSources(),
+    sources: servedSources(config.sources),
     pubsub: config.pubsub,
     registry,
     bridge,

@@ -8,7 +8,11 @@ import type { PubSubAdapter } from "@noverax/courier/realtime";
 
 /** Options for `createCourierServer` */
 export interface CourierServerOptions extends SSELifecycleConfig {
-  /** Registered API sources (same as framework adapters) */
+  /**
+   * The API sources this server answers for. They stay its own: another
+   * server or a `registerSources` call in the same process does not change
+   * them, and they are not written into the process-wide registry.
+   */
   sources: Sources;
   /** Server port (default 3001) */
   port?: number;

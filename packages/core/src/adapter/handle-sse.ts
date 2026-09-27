@@ -6,7 +6,7 @@ import { SSE_HEADERS } from "./format-sse";
 import type { HandlerConfig } from "./handler-config";
 import { isOriginAllowed } from "./origin-policy";
 import { errorResponse } from "./parse";
-import { requireSources } from "./require-sources";
+import { servedSources } from "./served-sources";
 import type { InternalSSERegistry } from "./sse-registry";
 import { resolveSSEEndpoint, resolveSSEVariables } from "./sse-resolve";
 import { createSSEStream } from "./sse-stream";
@@ -38,9 +38,10 @@ function unavailable(message: string, retrySec: string): Response {
  * Includes: origin validation, middleware execution (with timeout), lifecycle hooks,
  * TTL-based stream lifetime, graceful shutdown support, variable schema validation.
  *
- * Sources are read lazily from the core global registry at request time via
- * `requireSources()`, so a single `courierHandler()` expression in user code
- * works regardless of which framework owns the listen socket.
+ * Unless the config names its own `sources`, they are read lazily from the
+ * core global registry at request time, so a single `courierHandler()`
+ * expression in user code works regardless of which framework owns the
+ * listen socket.
  *
  * @param config - Optional handler config (origins, headers, TTL, lifecycle hooks)
  * @param registry - SSE connection registry for tracking/limiting active streams
@@ -68,7 +69,7 @@ export function createSSEHandler(
 
     if (!source || !method) return errorResponse(400, "Missing required params: _s, _m");
 
-    const sources = requireSources();
+    const sources = servedSources(config?.sources);
     const resolved = resolveSSEEndpoint(sources, source, group, method);
     if (resolved instanceof Response) return resolved;
 

@@ -172,6 +172,59 @@ describe("previewAddEndpoints to a group whose schemas gain one another group ex
   });
 });
 
+describe("removing a group whose re-export carried names other groups share", () => {
+  const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
+  const ok = (schema: object) => ({ "200": { description: "ok", content: { "application/json": { schema } } } });
+  const SPEC_SHARED = parseSpec(
+    JSON.stringify({
+      openapi: "3.1.0",
+      info: { title: "Shop", version: "1" },
+      paths: {
+        "/pets": { get: { operationId: "listPets", tags: ["animals"], responses: ok(ref("Pet")) } },
+        "/toys": { get: { operationId: "listToys", tags: ["animals"], responses: ok(ref("Toy")) } },
+        "/orders": { get: { operationId: "listOrders", tags: ["shop"], responses: ok(ref("Order")) } },
+        "/shop/pet": { get: { operationId: "getShopPet", tags: ["shop"], responses: ok(ref("Pet")) } },
+        "/misc/toy": { get: { operationId: "getToy", tags: ["misc"], responses: ok(ref("Toy")) } },
+      },
+      components: {
+        schemas: {
+          Pet: { type: "object", properties: { id: { type: "string" } } },
+          Toy: { type: "object", properties: { name: { type: "string" } } },
+          Order: { type: "object", properties: { id: { type: "string" } } },
+        },
+      },
+    }),
+  );
+  const options = { type: "openapi" as const, outputDir: "src/api" };
+  const layout = resolveImportLayout(options, "shop");
+  const existing = () =>
+    Object.fromEntries(generateCode(SPEC_SHARED, options, "shop").map((file) => [file.path, file.content]));
+  const listing = (module: string, name: string) =>
+    new RegExp(`export \\{[^}]*\\b${name}\\b[^}]*\\} from "\\./${module}/schemas";`);
+
+  it("gives a module with no line of its own a line for the names it still exports", () => {
+    const files = existing();
+    expect(files[layout.indexFile]).not.toContain("./misc/schemas");
+
+    const barrel = previewRemoveEndpoints({ animals: ["listPets", "listToys"] }, files, {}, layout).indexFileUpdate?.content ?? "";
+
+    expect(barrel).not.toContain("./animals/schemas");
+    expect(barrel).toMatch(listing("misc", "ToySchema"));
+    expect(barrel).toMatch(listing("misc", "type Toy"));
+    expect(barrel).toMatch(listing("shop", "PetSchema"));
+  });
+
+  it("gives back names whose list the removal emptied", () => {
+    const result = previewRemoveEndpoints({ animals: ["listPets", "listToys"], shop: ["listOrders"] }, existing(), {}, layout);
+
+    const barrel = result.indexFileUpdate?.content ?? "";
+    expect(result.orphanedSchemas).toContain("Order");
+    expect(barrel).not.toContain("OrderSchema");
+    expect(barrel).toMatch(listing("shop", "PetSchema"));
+    expect(barrel).toMatch(listing("misc", "ToySchema"));
+  });
+});
+
 describe("previewRemoveEndpoints", () => {
   it("finds the group file where the layout puts it", () => {
     const existing = filesOf(null);

@@ -45,10 +45,5 @@ routeTree.gen.ts
 tmp/
 temp/
 
-# Test apps
-/playground
-# Build output
-/output
-
 # Copied from the root at release time so each tarball carries one
 packages/*/LICENSE

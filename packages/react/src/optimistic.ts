@@ -22,6 +22,14 @@ interface OptimisticContext<CacheData> {
  * received by `onError` as the **third** argument (`onMutateResult`),
  * not as `context`. The fourth argument is the standard mutation context.
  *
+ * A failure puts the cache back as it was — empty included: an entry the
+ * optimistic update created is reset, so no component later renders the item
+ * that failed. `onSettled` refetches the key and the mutation stays pending
+ * until that refetch is done.
+ *
+ * @param queryClient - The client holding the cached data
+ * @param config - The key to update and how the mutation's variables change it
+ * @returns Callbacks to spread into `useMutation` options
  * @example
  * ```ts
  * const qc = useQueryClient();
@@ -38,8 +46,8 @@ export function optimisticOptions<CacheData, MutationVars>(
   config: OptimisticConfig<CacheData, MutationVars>,
 ): {
   onMutate: (variables: MutationVars) => Promise<OptimisticContext<CacheData>>;
-  onError: (_err: HTTPError, _vars: MutationVars, onMutateResult: unknown) => void;
-  onSettled: () => void;
+  onError: (_err: HTTPError, _vars: MutationVars, onMutateResult: unknown) => Promise<void>;
+  onSettled: () => Promise<void>;
 } {
   return {
     onMutate: async (variables: MutationVars) => {
@@ -48,14 +56,18 @@ export function optimisticOptions<CacheData, MutationVars>(
       queryClient.setQueryData<CacheData>(config.queryKey, (old) => config.updater(old, variables));
       return { _previousData: previous };
     },
-    onError: (_err: HTTPError, _vars: MutationVars, onMutateResult: unknown) => {
-      const ctx = onMutateResult as OptimisticContext<CacheData> | undefined;
-      if (ctx?._previousData !== undefined) {
-        queryClient.setQueryData(config.queryKey, ctx._previousData);
+    onError: async (_err: HTTPError, _vars: MutationVars, onMutateResult: unknown) => {
+      if (!isOptimisticContext<CacheData>(onMutateResult)) return;
+      if (onMutateResult._previousData === undefined) {
+        await queryClient.resetQueries({ queryKey: config.queryKey, exact: true });
+        return;
       }
+      queryClient.setQueryData(config.queryKey, onMutateResult._previousData);
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: config.queryKey });
-    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: config.queryKey }),
   };
+}
+
+function isOptimisticContext<CacheData>(value: unknown): value is OptimisticContext<CacheData> {
+  return typeof value === "object" && value !== null && "_previousData" in value;
 }

@@ -76,7 +76,10 @@ export type CourierMutationOptions<TResponse, TVariables> = Omit<
   "mutationFn"
 > & {
   requestOptions?: CallOptions;
-  /** Query keys to automatically invalidate on mutation success. */
+  /**
+   * Query keys to invalidate once the mutation has succeeded — not after a
+   * failure. The mutation stays pending until their refetch is done.
+   */
   invalidate?: QueryKey[];
 };
 

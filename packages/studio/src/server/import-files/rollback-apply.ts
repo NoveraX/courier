@@ -1,5 +1,5 @@
-import { existsSync, lstatSync, renameSync, rmdirSync, unlinkSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, lstatSync, readdirSync, renameSync, rmdirSync, unlinkSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { errnoCode } from "../errno-code";
 import { assertRealInside } from "../project-fs/assert-real-inside";
@@ -45,6 +45,8 @@ export function rollbackApply(root: ProjectRoot, journal: ApplyJournal): string[
     }
   }
   for (const temp of journal.temps) discardStagedTemp(root, temp);
+  /* Copies moved back leave empty folders, which would count as a backup kept. */
+  removeEmptyTree(resolveProjectPath(root.path, journal.backupDir));
   for (const dir of [...journal.createdDirs].reverse()) {
     removeIfEmpty(resolveProjectPath(root.path, dir));
   }
@@ -91,6 +93,19 @@ function discardStagedTemp(root: ProjectRoot, temp: string): void {
     return;
   }
   if (lstatSync(absolute).isFile()) discardTemp(absolute);
+}
+
+function removeEmptyTree(dir: string): void {
+  let names: string[];
+  try {
+    if (!lstatSync(dir).isDirectory()) return;
+    names = readdirSync(dir);
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") return;
+    throw error;
+  }
+  for (const name of names) removeEmptyTree(join(dir, name));
+  removeIfEmpty(dir);
 }
 
 function removeIfEmpty(dir: string): void {

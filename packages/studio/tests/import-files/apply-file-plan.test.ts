@@ -27,6 +27,7 @@ import { bodyHash } from "../../src/server/import-files/body-hash";
 import type { PlanTarget } from "../../src/server/import-files/file-plan-types";
 import { readGeneratedFile } from "../../src/server/import-files/generated-header";
 import { planFiles } from "../../src/server/import-files/plan-files";
+import { pruneBackups } from "../../src/server/import-files/prune-backups";
 import type { RecordedFile } from "../../src/server/import-files/recorded-file";
 import { recoverInterruptedApplies } from "../../src/server/import-files/recover-interrupted-applies";
 import { type ProjectRoot, projectRootAt } from "../../src/server/project-fs/project-root";
@@ -239,6 +240,7 @@ describe("recoverInterruptedApplies", () => {
 
     expect(recovered).toEqual([{ importName: "pets", failed: [], backupDir: ".courier/backups/1700000000000-0000c0de" }]);
     undisturbed();
+    expect(existsSync(join(root.path, ".courier/backups/1700000000000-0000c0de"))).toBe(false);
     expect(readdirSync(join(root.path, ".courier/journal"))).toEqual([]);
   });
 
@@ -330,3 +332,19 @@ function crashedApply(): void {
     temps: [],
   });
 }
+
+describe("pruneBackups", () => {
+  it("keeps the latest twenty applies' backups, and nothing not named like an apply is touched", () => {
+    for (let n = 0; n < 25; n += 1) put(`.courier/backups/17000000000${String(n).padStart(2, "0")}-0000c0de/f.ts`, "x\n");
+    put(".courier/backups/notes/keep.txt", "mine\n");
+
+    const deleted = pruneBackups(root.path);
+
+    const left = readdirSync(join(root.path, ".courier/backups"));
+    expect(deleted).toHaveLength(5);
+    expect(left).toHaveLength(21);
+    expect(left).toContain("notes");
+    expect(left).not.toContain("1700000000000-0000c0de");
+    expect(left).toContain("1700000000024-0000c0de");
+  });
+});

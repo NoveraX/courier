@@ -62,6 +62,7 @@ export type {
   CourierSuspenseQueryOptions,
 } from "./types-options";
 export type {
+  ChannelError,
   ChannelResult,
   CourierChannelOptions,
   CourierSubscriptionOptions,

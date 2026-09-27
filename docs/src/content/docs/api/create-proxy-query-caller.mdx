@@ -53,7 +53,7 @@ The `defaults` argument is a `ProxyCallerDefaults` (same shape as [`createProxyC
 - `boundary` — the result of [`defineBoundary`](/docs/proxy-mode/boundary): the endpoints the browser may reach and the app's proxy paths. Pass it rather than the API object — the hooks name their own transport, so nothing is read off the API, and a value import of it would put its definition in the bundle.
 
 <Callout variant="warning" title="useChannel requires proxyPath.ws">
-On runtimes that cannot host WebSockets in-process (Next.js App Router, Cloudflare Workers, Vercel Edge, AWS Lambda) you must point `proxyPath.ws` at a [standalone `@noverax/courier-server`](/docs/deployment/standalone-server). Calling `useChannel` without `proxyPath.ws` configured throws `ConfigurationError("WS_PATH_NOT_CONFIGURED")` at the first subscribe.
+On runtimes that cannot host WebSockets in-process (Next.js App Router, Cloudflare Workers, Vercel Edge, AWS Lambda) you must point `proxyPath.ws` at a [standalone `@noverax/courier-server`](/docs/deployment/standalone-server). A `useChannel` without `proxyPath.ws` configured reports `ConfigurationError("WS_PATH_NOT_CONFIGURED")` through its `error` and `onError` when it first opens.
 </Callout>
 
 ## useQuery

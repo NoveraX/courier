@@ -1,14 +1,14 @@
-import type { ConnectionStatus, RealtimeError, WSChannel } from "@noverax/courier/realtime";
+import { createLogger, isConfigurationError } from "@noverax/courier";
+import type { ConnectionStatus, WSChannel } from "@noverax/courier/realtime";
 /* A namespace import, not named hooks: the package entry is reachable from
    Server Components, and Next.js refuses to build a server module that names
    a client-only hook such as useState among its imports. */
 import * as React from "react";
 
-import type { ChannelResult } from "../types";
+import type { ChannelError, ChannelResult } from "../types";
+import { streamKeyOf } from "./stream-key";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+const log = createLogger("React");
 
 export interface UseChannelOptions<TReceive> {
   /** Variables passed to the WS channel endpoint */
@@ -20,9 +20,10 @@ export interface UseChannelOptions<TReceive> {
   /**
    * Called when the server refuses a message, a handler fails, or the
    * channel ends with a reason — with the `RealtimeError`, whose `code`
-   * tells them apart (4403 forbidden, 4422 invalid, …)
+   * tells them apart (4403 forbidden, 4422 invalid, …) — or when the channel
+   * cannot be opened at all, with the `ConfigurationError` that says why
    */
-  onError?: (error: RealtimeError) => void;
+  onError?: (error: ChannelError) => void;
   /** Called on connection status changes */
   onStatusChange?: (status: ConnectionStatus) => void;
 }
@@ -34,18 +35,28 @@ export type ChannelFn = (
   variables?: unknown,
 ) => WSChannel<unknown, unknown>;
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
+/** What one channel has delivered; `key` names the channel it belongs to. */
+interface ChannelState<TReceive> {
+  key: string;
+  lastMessage: TReceive | undefined;
+  error: ChannelError | undefined;
+}
 
 /**
  * Subscribe to a bidirectional WebSocket channel with automatic lifecycle management.
+ *
+ * A change of method or variables joins another channel, and `lastMessage`
+ * and `error` start over with it in the same render. Messages sent before the
+ * channel exists — from a mount effect, say — wait for it and go out once it
+ * does; one sent while no channel is on its way is dropped with a warning.
  *
  * @param channel - Factory that creates a WSChannel (injected by createGroupHooks)
  * @param group - API group name
  * @param method - Endpoint method name
  * @param options - Channel configuration
  * @returns Reactive channel state with send capability
+ * @example
+ * const { send, lastMessage } = useChannel(channelFn, "chat", "room", { variables: { room: "a" } });
  */
 export function useChannel<TSend, TReceive>(
   channel: ChannelFn,
@@ -54,28 +65,35 @@ export function useChannel<TSend, TReceive>(
   options?: UseChannelOptions<TReceive>,
 ): ChannelResult<TSend, TReceive> {
   const { variables, enabled = true, onData, onError, onStatusChange } = options ?? {};
+  const { key, variablesKey } = streamKeyOf(group, method, variables);
 
-  const [lastMessage, setLastMessage] = React.useState<TReceive | undefined>(undefined);
+  const [state, setState] = React.useState<ChannelState<TReceive>>(() => emptyChannel(key));
   const [status, setStatus] = React.useState<ConnectionStatus>("disconnected");
-  const [error, setError] = React.useState<RealtimeError | undefined>(undefined);
+  const current = state.key === key ? state : emptyChannel<TReceive>(key);
+  if (current !== state) setState(current);
 
   // Stable refs for callbacks — avoids re-connecting on handler identity change
   const callbacksRef = React.useRef({ onData, onError, onStatusChange });
   callbacksRef.current = { onData, onError, onStatusChange };
 
   const channelRef = React.useRef<WSChannel<unknown, unknown> | null>(null);
+  /** Messages sent while the channel is on its way; null when none is coming. */
+  const pendingRef = React.useRef<TSend[] | null>(null);
 
-  const send = React.useCallback((data: TSend) => {
-    channelRef.current?.send(data);
-  }, []);
+  const send = React.useCallback(
+    (data: TSend) => {
+      if (channelRef.current) channelRef.current.send(data);
+      else if (pendingRef.current) pendingRef.current.push(data);
+      else log.warn(`useChannel("${group}.${method}") is not open; the message was dropped`);
+    },
+    [group, method],
+  );
 
   const close = React.useCallback(() => {
+    pendingRef.current = null;
     channelRef.current?.close();
     channelRef.current = null;
   }, []);
-
-  // Serialize variables for stable dependency tracking
-  const variablesKey = JSON.stringify(variables);
 
   React.useEffect(() => {
     if (!enabled) {
@@ -84,55 +102,67 @@ export function useChannel<TSend, TReceive>(
     }
 
     const vars = variablesKey ? (JSON.parse(variablesKey) as unknown) : undefined;
+    const pending: TSend[] = [];
+    pendingRef.current = pending;
+    let active = true;
+    let ch: WSChannel<unknown, unknown> | null = null;
+    const unsubscribe: (() => void)[] = [];
+
+    const fail = (error: ChannelError) => {
+      if (!active) return;
+      setState((prev) => (prev.key === key ? { ...prev, error } : prev));
+      callbacksRef.current.onError?.(error);
+    };
 
     // Defer the actual channel creation to a microtask so React 19 StrictMode
     // (dev-mode mount → cleanup → mount) tears down the first effect before
     // any network I/O fires. Without this, StrictMode produces two real WS
     // connections and two duplicate Studio Timeline entries.
-    let cancelled = false;
-    let ch: WSChannel<unknown, unknown> | null = null;
-    let unsubStatus: (() => void) | undefined;
-    let unsubData: (() => void) | undefined;
-    let unsubError: (() => void) | undefined;
-
     queueMicrotask(() => {
-      if (cancelled) return;
-      ch = channel(group, method, vars);
+      if (!active) return;
+      try {
+        ch = channel(group, method, vars);
+      } catch (error) {
+        if (!isConfigurationError(error)) throw error;
+        pendingRef.current = null;
+        fail(error);
+        return;
+      }
       channelRef.current = ch;
+      pendingRef.current = null;
 
-      unsubStatus = ch.on("status", (s: ConnectionStatus) => {
-        setStatus(s);
-        if (s === "connected") setError(undefined);
-        callbacksRef.current.onStatusChange?.(s);
-      });
-
-      unsubData = ch.on("data", (message: unknown) => {
-        const typed = message as TReceive;
-        setLastMessage(typed);
-        callbacksRef.current.onData?.(typed);
-      });
-
-      /* The channel's own error event: a message the server refused, a
-         handler that failed, or the channel ending with a reason. A payload
-         shaped `{ type: "error" }` used to be taken for one — an app's own
-         data swallowed — while real errors never arrived at all. */
-      unsubError = ch.on("error", (error: RealtimeError) => {
-        setError(error);
-        callbacksRef.current.onError?.(error);
-      });
+      unsubscribe.push(
+        ch.on("status", (s: ConnectionStatus) => {
+          setStatus(s);
+          if (s === "connected") {
+            setState((prev) => (prev.key === key ? { ...prev, error: undefined } : prev));
+          }
+          callbacksRef.current.onStatusChange?.(s);
+        }),
+        ch.on("data", (message: unknown) => {
+          const typed = message as TReceive;
+          setState((prev) => (prev.key === key ? { ...prev, lastMessage: typed } : prev));
+          callbacksRef.current.onData?.(typed);
+        }),
+        /* The channel's own error event: a message the server refused, a
+           handler that failed, or the channel ending with a reason. */
+        ch.on("error", fail),
+      );
+      for (const message of pending) ch.send(message);
     });
 
     return () => {
-      cancelled = true;
-      unsubStatus?.();
-      unsubData?.();
-      unsubError?.();
+      active = false;
+      for (const off of unsubscribe) off();
       ch?.close();
-      if (channelRef.current === ch) {
-        channelRef.current = null;
-      }
+      if (pendingRef.current === pending) pendingRef.current = null;
+      if (channelRef.current === ch) channelRef.current = null;
     };
-  }, [enabled, group, method, variablesKey, channel]);
+  }, [enabled, group, method, key, variablesKey, channel]);
 
-  return { lastMessage, status, error, send, close };
+  return { lastMessage: current.lastMessage, status, error: current.error, send, close };
+}
+
+function emptyChannel<TReceive>(key: string): ChannelState<TReceive> {
+  return { key, lastMessage: undefined, error: undefined };
 }

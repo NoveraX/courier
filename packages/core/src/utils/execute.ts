@@ -7,7 +7,12 @@ import { handleExecuteError } from "./execute-error";
 import { clientForCall } from "./execute-helpers";
 import { executeInner } from "./execute-inner";
 import { resolveMiddlewareChain, withCallerSignal, withEndpointTimeout } from "./execute-options";
-import { applyCacheHeaders, buildMiddlewareContext, resolveEndpoint } from "./execute-resolve";
+import {
+  applyCacheHeaders,
+  buildMiddlewareContext,
+  namedHeadersOf,
+  resolveEndpoint,
+} from "./execute-resolve";
 import { buildErrorResponse, buildResponse } from "./execute-response";
 import {
   attachFetchHook,
@@ -204,6 +209,7 @@ export async function executeRequest(
       data: result.data,
       rawData,
       stream,
+      namedHeaders: namedHeadersOf(dataSource, endpointOptions?.allowedHeaders),
     });
 
     if (context?.proxyMethod && response instanceof Response && hasStudio) {

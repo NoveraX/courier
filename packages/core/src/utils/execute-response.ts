@@ -10,6 +10,8 @@ export type InternalResponse = {
   stream?: boolean;
   data?: unknown;
   throw?: unknown;
+  /** Header names the endpoint and its source carry across the proxy. */
+  namedHeaders?: readonly string[];
 };
 
 /**
@@ -37,7 +39,10 @@ export const buildResponse = (
       /* The upstream's own headers went straight to the browser here, so a
          streamed answer disclosed whatever the upstream attached to it. The
          body passes through unchanged, so its content type travels with it. */
-      const headers = filterResponseHeaders(response.headers, { streamed: true });
+      const headers = filterResponseHeaders(response.headers, {
+        streamed: true,
+        named: response.namedHeaders,
+      });
       for (const [name, value] of Object.entries(STREAMED_ANSWER_HEADERS)) headers.set(name, value);
       return withUpstreamCookies(
         new Response(response.data, {
@@ -62,7 +67,7 @@ export const buildResponse = (
   if (context?.res instanceof Response) {
     const answer = toWireAnswer(
       response.status,
-      filterResponseHeaders(response.headers),
+      filterResponseHeaders(response.headers, { named: response.namedHeaders }),
       response.data,
       response.rawData,
     );

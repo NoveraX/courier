@@ -12,7 +12,9 @@ import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createHandler } from "../src/adapter";
-import { courier, defineApi } from "../src/define/index";
+import { courier, defineApi, defineGroup } from "../src/define/index";
+import { sendWebResponse, toWebRequest } from "../src/node";
+import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { buildResponse } from "../src/utils/execute-response";
 
@@ -179,5 +181,97 @@ describe("a streamed proxy answer opened as a page", () => {
     const response = await streamHtml();
 
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+  });
+});
+
+/**
+ * `.headers([...])` is documented as the response headers an endpoint passes
+ * to its caller, but it only widened what the caller may send upstream. A
+ * total count, a `Location` or a `Link` never reached a proxy caller.
+ */
+describe("headers an endpoint names", () => {
+  let upstream: Server | undefined;
+  let app: Server | undefined;
+  let seenTenant: string | string[] | undefined;
+
+  afterEach(async () => {
+    _resetSourcesForTests();
+    seenTenant = undefined;
+    for (const server of [app, upstream]) {
+      server?.closeAllConnections();
+      await new Promise<void>((resolve) => server?.close(() => resolve()) ?? resolve());
+    }
+  });
+
+  async function listen(server: Server): Promise<string> {
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  }
+
+  async function callThroughProxy() {
+    upstream = createServer((req, res) => {
+      seenTenant = req.headers["x-tenant"];
+      res.writeHead(201, {
+        "content-type": "text/plain",
+        "x-total-count": "42",
+        location: "/users/7",
+        link: '</users?page=2>; rel="next"',
+        "x-internal-trace": "keep-me-home",
+      });
+      res.end(JSON.stringify({ id: 7 }));
+    });
+    const { endpoint } = courier();
+    const users = defineGroup({
+      prefix: "users",
+      endpoints: {
+        create: endpoint
+          .post("")
+          .headers(["x-total-count", "location", "link", "x-tenant", "content-type"]),
+      },
+    });
+    registerSources({ api: defineApi({ baseURL: await listen(upstream), groups: { users } }) });
+    const handler = createHandler();
+    app = createServer(async (req, res) => {
+      await sendWebResponse(await handler.handle(toWebRequest(req, res)), res);
+    });
+    const client = createProxyCaller("api", {
+      proxyPath: { http: `${await listen(app)}/api/request` },
+    }) as unknown as {
+      raw: {
+        users: {
+          with: (options: { headers: Record<string, string> }) => {
+            create: () => Promise<{ status: number; headers: Headers; data: unknown }>;
+          };
+        };
+      };
+    };
+    return client.raw.users.with({ headers: { "x-tenant": "acme" } }).create();
+  }
+
+  it("passes them back to the caller", async () => {
+    const result = await callThroughProxy();
+
+    expect(result.status).toBe(201);
+    expect(result.headers.get("x-total-count")).toBe("42");
+    expect(result.headers.get("location")).toBe("/users/7");
+    expect(result.headers.get("link")).toBe('</users?page=2>; rel="next"');
+  });
+
+  it("still forwards them from the caller to the upstream", async () => {
+    await callThroughProxy();
+
+    expect(seenTenant).toBe("acme");
+  });
+
+  it("keeps back what the endpoint does not name", async () => {
+    const result = await callThroughProxy();
+
+    expect(result.headers.get("x-internal-trace")).toBeNull();
+  });
+
+  it("does not let a named content type describe the body the proxy re-wrote", async () => {
+    const result = await callThroughProxy();
+
+    expect(result.headers.get("content-type")).not.toBe("text/plain");
   });
 });

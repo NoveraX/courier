@@ -186,7 +186,19 @@ Cancel a read still in flight when the same endpoint is read again. Writes are n
 
 ### allowedHeaders
 
-Additional header names to forward through the proxy. The list governs the headers an incoming request carries; headers the source, a middleware or an endpoint's own closure sets are written by you and are always sent.
+Additional header names the proxy carries for every endpoint of the source, in both directions: forwarded from the browser to the backend, and passed back from the backend's answer to the browser. An endpoint names its own with `.headers([...])`, which adds to this list rather than replacing it. The lists govern only what the proxy passes along: headers the source, a middleware or an endpoint's own closure sets are written by you and are always sent.
+
+```ts
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    list: endpoint.get("").headers(["x-total-count", "link"]),
+    create: endpoint.post("").headers(["location"]),
+  },
+})
+```
+
+The headers that describe the body — `Content-Type`, `Content-Length`, `Content-Encoding` — are never taken from these lists, because the proxy sends a body of its own; nor is `Set-Cookie`, which travels on its own.
 
 ## Related
 

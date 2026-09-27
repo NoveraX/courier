@@ -123,8 +123,10 @@ const whitelistedHeaders = [
 ]
 ```
 
+The backend's answer is filtered the same way: the browser receives the headers that describe any answer — `ETag`, `Cache-Control`, `Last-Modified`, `Retry-After`, the rate-limit headers and a few more — and nothing the backend attached for itself.
+
 <Callout variant="tip" title="Custom headers">
-Need additional headers forwarded? Use the `allowedHeaders` option in `defineApi()` to extend the whitelist.
+Need more? Name them with the `allowedHeaders` option in `defineApi()`, or on one endpoint with `.headers([...])`. A named header crosses the proxy both ways: from the browser to the backend, and from the backend's answer back to the browser — a `Location`, a `Link`, an `X-Total-Count`.
 </Callout>
 
 ## When to use proxy vs direct mode

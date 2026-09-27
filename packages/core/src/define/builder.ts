@@ -67,7 +67,7 @@ export function withMiddleware(state: BuilderState, added: readonly Middleware[]
   return { ...state, middleware: [...state.middleware, ...added] };
 }
 
-/** Append forwarded response header names. */
+/** Append the names of headers the endpoint carries across the proxy, both ways. */
 export function withHeaders(state: BuilderState, names: readonly string[]): BuilderState {
   return { ...state, allowedHeaders: [...state.allowedHeaders, ...names] };
 }

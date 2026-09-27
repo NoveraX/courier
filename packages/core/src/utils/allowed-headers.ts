@@ -48,3 +48,24 @@ export const RESPONSE_HEADERS = [
  * browser try to decompress plain bytes and fail.
  */
 export const STREAMED_RESPONSE_HEADERS = ["content-type"] as const;
+
+/**
+ * Never passed back, even by an endpoint or a source that names them.
+ *
+ * The proxy re-serializes a buffered body and decodes a streamed one, so the
+ * upstream's description of its body — its type, length and encoding — would
+ * describe bytes that are not the ones sent. The connection-level headers
+ * belong to one hop. Cookies travel on their own path, every one of them.
+ */
+export const NEVER_PASSED_RESPONSE_HEADERS: ReadonlySet<string> = new Set([
+  "connection",
+  "content-encoding",
+  "content-length",
+  "content-type",
+  "keep-alive",
+  "proxy-authenticate",
+  "set-cookie",
+  "trailer",
+  "transfer-encoding",
+  "upgrade",
+]);

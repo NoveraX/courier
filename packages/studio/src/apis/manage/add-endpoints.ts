@@ -3,6 +3,7 @@
  * then merges into existing files or creates new group files.
  */
 
+import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { generateCode, groupLocalName } from "../generator";
 import type { GenerateOptions } from "../generator/types";
 import type { ImportLayout } from "../layout";
@@ -11,6 +12,7 @@ import { generateFingerprints } from "../merge/fingerprint";
 import type { ParsedSpec } from "../parser/types";
 import { appendBarrelExports } from "./append-barrel-exports";
 import { appendEndpointsToGroup } from "./append-to-group";
+import { exportedNames } from "./exported-names";
 import { mergeSchemaFiles } from "./merge-schemas";
 import type { AddResult, FileChange } from "./types";
 import { addGroupsToSourceFile } from "./update-source-file";
@@ -36,6 +38,9 @@ export function previewAddEndpoints(
   const generated = generateCode(spec, genOptions, layout.importName);
   const files: FileChange[] = [];
   const newFingerprints: Record<string, string> = {};
+  let barrel:
+    | { existing: string; change: (content: string, action: "modify") => FileChange }
+    | undefined;
 
   for (const genFile of generated) {
     const fps = generateFingerprints(genFile.content);
@@ -79,6 +84,10 @@ export function previewAddEndpoints(
        the new ones through the source file update below, and the barrel only
        the re-exports it lacks: generated for the added groups alone, either
        file would drop every group already there. */
+    if (genFile.path === layout.indexFile) {
+      barrel = { existing: existingContent, change };
+      continue;
+    }
     const merged =
       declaresEndpoints(genFile.content) && declaresEndpoints(existingContent)
         ? appendEndpointsToGroup(
@@ -87,10 +96,17 @@ export function previewAddEndpoints(
             genFile.content,
             Object.values(endpointsToAdd).flat(),
           )
-        : genFile.path === layout.indexFile
-          ? appendBarrelExports(genFile.path, existingContent, genFile.content)
-          : existingContent;
+        : existingContent;
     if (merged !== existingContent) files.push(change(merged, "modify"));
+  }
+  /* Last, so it sees every schemas file as the other changes leave it. */
+  if (barrel !== undefined) {
+    const { existing, change } = barrel;
+    const textAt = (path: string): string | undefined =>
+      files.find((file) => file.path === path)?.content ?? existingFiles[path];
+    const index = generated.find((file) => file.path === layout.indexFile)?.content ?? "";
+    const merged = appendBarrelExports(layout.indexFile, existing, index, textAt);
+    if (merged !== existing) files.push(change(merged, "modify"));
   }
 
   /* A flat import has no group files, and its source holds the endpoints themselves. */
@@ -142,11 +158,6 @@ function findNewGroups(
   );
 }
 
-const SCHEMA_DECL_RE = /^export\s+(?:const|type|interface)\s+(\w+)/;
-
 function extractSchemaNames(content: string): string[] {
-  return content
-    .split("\n")
-    .map((l) => l.match(SCHEMA_DECL_RE)?.[1])
-    .filter((n): n is string => n !== undefined);
+  return [...exportedNames(parseSource("schemas.ts", content).program.body).keys()];
 }

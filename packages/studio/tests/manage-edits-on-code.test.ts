@@ -110,10 +110,59 @@ describe("the barrel", () => {
     const barrel = "export * from './users/schemas';\nexport * from './pets/schemas';\n";
 
     const dropped = removeBarrelExports("src/api/pets/index.ts", barrel, new Set(["./users/schemas"]));
-    const added = appendBarrelExports("src/api/pets/index.ts", dropped, 'export * from "./users/schemas";\nexport * from "./pets/schemas";\n');
+    const added = appendBarrelExports(
+      "src/api/pets/index.ts",
+      dropped,
+      'export * from "./users/schemas";\nexport * from "./pets/schemas";\n',
+      () => undefined,
+    );
 
     expect(dropped).toBe("export * from './pets/schemas';\n");
     expect(added).toBe("export * from './pets/schemas';\nexport * from \"./users/schemas\";\n");
+  });
+});
+
+describe("the barrel, adding a group whose schemas share names with one already there", () => {
+  const MODULES: Record<string, string> = {
+    "src/api/shop/pets/schemas.ts": "export const PetSchema = z.object({});\nexport type Pet = z.infer<typeof PetSchema>;\n",
+    "src/api/shop/store/schemas.ts":
+      "export const PetSchema = z.object({});\nexport type Pet = z.infer<typeof PetSchema>;\nexport const OrderSchema = z.object({});\nexport type Order = z.infer<typeof OrderSchema>;\n",
+    "src/api/shop/tags/schemas.ts": "export const PetSchema = z.object({});\nexport type Pet = z.infer<typeof PetSchema>;\n",
+  };
+  const textOf = (path: string): string | undefined => MODULES[path];
+
+  it("re-exports only the names no module re-exported before exports", () => {
+    const added = appendBarrelExports(
+      "src/api/shop/index.ts",
+      'export * from "./pets/schemas";\n',
+      'export * from "./store/schemas";\n',
+      textOf,
+    );
+
+    expect(added).toBe(
+      'export * from "./pets/schemas";\nexport { OrderSchema, type Order } from "./store/schemas";\n',
+    );
+  });
+
+  it("adds nothing for a module every name of which the barrel already exports", () => {
+    const barrel = 'export * from "./pets/schemas";\n';
+
+    expect(appendBarrelExports("src/api/shop/index.ts", barrel, 'export * from "./tags/schemas";\n', textOf)).toBe(
+      barrel,
+    );
+  });
+
+  it("counts a name listed by an earlier re-export, and one of the groups being added", () => {
+    const added = appendBarrelExports(
+      "src/api/shop/index.ts",
+      'export { PetSchema, type Pet } from "./pets/schemas";\n',
+      'export * from "./tags/schemas";\nexport * from "./store/schemas";\n',
+      textOf,
+    );
+
+    expect(added).toBe(
+      'export { PetSchema, type Pet } from "./pets/schemas";\nexport { OrderSchema, type Order } from "./store/schemas";\n',
+    );
   });
 });
 

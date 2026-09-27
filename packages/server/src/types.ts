@@ -28,7 +28,12 @@ export interface CourierServerOptions
   sources: Sources;
   /** Server port (default 3001) */
   port?: number;
-  /** Server host (default "localhost") */
+  /**
+   * Address to listen on (default "127.0.0.1", the IPv4 loopback, which a
+   * client given `localhost` reaches too). `"::1"` listens on the IPv6
+   * loopback; `"0.0.0.0"` or `"::"` accepts other machines, as a container
+   * needs.
+   */
   host?: string;
   /**
    * Origins of the browser apps that may call the server, for CORS and the

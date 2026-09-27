@@ -39,12 +39,12 @@ import { sources } from "./api"
 const server = createCourierServer({
   sources,
   port: 3001,
-  host: "localhost",
+  host: "127.0.0.1",
   allowedOrigins: ["http://localhost:3000"],
   onReady: (url) => console.log(`Server ready at ${url}`),
 })
 
-// server.url → "http://localhost:3001"
+// server.url → "http://127.0.0.1:3001"
 // server.sseConnections → active SSE connection registry
 // server.wsConnections → active WS connection registry
 // await server.stop() → graceful shutdown
@@ -82,7 +82,7 @@ The command exits with status 1 when the server cannot start — the port is tak
 |---|---|---|
 | `sources` | (required) | The API sources this server answers for. They stay its own: a second server or a `registerSources` call in the same process does not change them, and the server does not write them into the process-wide registry |
 | `port` | `3001` | Server port |
-| `host` | `"localhost"` | Server host |
+| `host` | `"127.0.0.1"` | Address to listen on. The IPv4 loopback, which a client given `localhost` reaches too; `"::1"` for the IPv6 loopback, `"0.0.0.0"` or `"::"` to accept other machines, as a container needs |
 | `allowedOrigins` | `undefined` | Origins of the browser apps that may call the server (CORS and the WebSocket origin check). Left out, only the server's own origin — and loopback origins outside production |
 | `maxBodyBytes` | 1 MB | Largest JSON envelope a proxied call may send; a larger one is refused with 413 |
 | `maxUploadBytes` | 10 MB | Largest `multipart/form-data` upload a proxied call may send; a larger one is refused with 413 |

@@ -109,7 +109,7 @@ const { data, status, events } = q.notifications.useSubscription("feed", {
 })
 ```
 
-The SSE connection goes directly to `${api.options.baseURL}/${groupPrefix}/${method}` — no proxy hop.
+The SSE connection goes directly to `${api.options.baseURL}/${groupPrefix}/${path}` — no proxy hop. The path is the one the endpoint addressed, worked out from each call's variables: a `:param` in it is filled from the variable of that name, a `.via()` closure is run with the variables, and an endpoint that named no path is reached by its name. The variables the path did not take are sent in the query string.
 
 ### WS channels
 
@@ -121,7 +121,7 @@ const { send, lastMessage, status } = q.chat.useChannel("room", {
 send({ text: "Hello" })
 ```
 
-The WebSocket connection goes directly to `${baseURL with ws:// scheme}/${groupPrefix}/${method}` — no proxy hop.
+The WebSocket connection goes directly to `${baseURL with ws:// scheme}/${groupPrefix}/${path}` — no proxy hop. The path is worked out from the call's variables as it is for SSE; the variables themselves are all sent in the subscribe message.
 
 ## Query Keys
 

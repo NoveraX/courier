@@ -1,4 +1,3 @@
-import { endpointPath } from "../../define/address";
 import { getSourceName } from "../../define/api";
 import type { AnyDefinedApi } from "../../define/types";
 import { buildDirectWSUrl, buildWSTopic } from "../../realtime/caller-ws";
@@ -6,6 +5,7 @@ import { executeWSChannel } from "../../realtime/ws-channel-client";
 import { executeWSPush } from "../../realtime/ws-subscription";
 import { instrumentWSChannel, instrumentWSPush } from "../instrument";
 import type { WSChannelFactory, WSPushFactory } from "../types";
+import { addressCall } from "./address";
 
 interface DirectWSContext {
   sourceName: string;
@@ -16,7 +16,8 @@ interface DirectWSContext {
 /**
  * Create a direct-mode bidirectional WS channel factory.
  *
- * URL pattern: `{baseURL with ws:// scheme}/{groupPrefix}/{method}`
+ * URL pattern: `{baseURL with ws:// scheme}/{groupPrefix}/{path}`, where the
+ * path is worked out from each call's variables.
  * Topic pattern: `{sourceName}.{group}.{method}` (multiplexed on shared connection)
  *
  * Browser-side studio instrumentation: when studio hooks are installed,
@@ -28,12 +29,9 @@ export function createDirectWSChannelFactory(api: AnyDefinedApi): WSChannelFacto
 
   return function connectChannel(group, method, variables) {
     /* The URL follows the path the closure addressed; the topic stays keyed
-       on the endpoint's name, which is how the server resolves it. */
-    const url = buildDirectWSUrl(
-      ctx.baseURL,
-      prefixOf(ctx.groups, group),
-      pathOf(ctx.groups, group, method),
-    );
+       on the endpoint's name, which is how the server resolves it, and the
+       server validates the whole of the variables it is sent. */
+    const url = urlOf(ctx, group, method, variables);
     const topic = buildWSTopic(ctx.sourceName, group, method);
     return instrumentWSChannel(executeWSChannel(url, topic, variables), {
       source: ctx.sourceName,
@@ -58,11 +56,7 @@ export function createDirectWSPushFactory(api: AnyDefinedApi): WSPushFactory {
   const ctx = readApiContext(api);
 
   return function connectPush(group, method, variables) {
-    const url = buildDirectWSUrl(
-      ctx.baseURL,
-      prefixOf(ctx.groups, group),
-      pathOf(ctx.groups, group, method),
-    );
+    const url = urlOf(ctx, group, method, variables);
     const topic = buildWSTopic(ctx.sourceName, group, method);
     return instrumentWSPush(executeWSPush(url, topic, variables), {
       source: ctx.sourceName,
@@ -91,11 +85,8 @@ function prefixOf(
   );
 }
 
-/** Where the endpoint's closure addressed, falling back to its name. */
-function pathOf(
-  groups: Record<string, Record<string, unknown>> | undefined,
-  group: string,
-  method: string,
-): string {
-  return endpointPath(groups?.[group]?.[method], method);
+/** Where this call's connection goes, from the path the endpoint addressed. */
+function urlOf(ctx: DirectWSContext, group: string, method: string, variables: unknown): string {
+  const { path } = addressCall(ctx.groups?.[group]?.[method], method, variables);
+  return buildDirectWSUrl(ctx.baseURL, prefixOf(ctx.groups, group), path);
 }

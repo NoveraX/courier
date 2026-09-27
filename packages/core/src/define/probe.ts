@@ -79,13 +79,75 @@ function standIn(): unknown {
   return proxy;
 }
 
+/** The call a closure made to address its endpoint. */
+export interface WireCallRecord {
+  /** The wire method it called — a verb, or `connect` for a channel. */
+  readonly name: string;
+  readonly path: string;
+  /** What it passed after the path. */
+  readonly variables: unknown;
+}
+
 /**
- * Recover the wire shape of an endpoint by running its closure once against a
- * recording proxy.
+ * Run a wire closure once against a recording wire and return the call it
+ * made to address its endpoint.
  *
  * The closure is expected to make exactly one call. Anything it does with the
  * returned value is irrelevant, so a throw is treated as success provided a
  * call was already recorded.
+ *
+ * @param probe - the wire closure supplied to a builder terminal
+ * @param variables - what the closure is handed as its variables
+ * @returns the first call the closure made
+ * @throws ConfigurationError when the closure records no call at all
+ *
+ * @example
+ * ```ts
+ * recordWireCall((sse, vars) => sse.get(`${vars.room}/feed`), { room: "lobby" });
+ * // → { name: "get", path: "lobby/feed", variables: undefined }
+ * ```
+ */
+export function recordWireCall(probe: AnyProbe, variables: unknown): WireCallRecord {
+  let recorded: WireCallRecord | undefined;
+
+  const recorder = new Proxy(
+    {},
+    {
+      get: (_target, property) => {
+        if (typeof property !== "string") return undefined;
+        return (...args: unknown[]): unknown => {
+          // A closure may chain several calls; the first one addresses the endpoint.
+          recorded ??= {
+            name: property,
+            path: typeof args[0] === "string" ? args[0] : "",
+            variables: args[1],
+          };
+          return {};
+        };
+      },
+    },
+  );
+
+  let thrown: unknown;
+  try {
+    (probe as (wire: unknown, variables: unknown) => unknown)(recorder, variables);
+  } catch (error) {
+    // Real variables may be absent, so a closure may still fail after the
+    // addressing call has been recorded. Kept in case it was not.
+    thrown = error;
+  }
+
+  if (recorded) return recorded;
+  if (thrown !== undefined) throw thrown;
+  throw new ConfigurationError(
+    "ENDPOINT_NO_WIRE_CALL",
+    '[courier] endpoint closure made no wire call — it must call exactly one of the wire methods, for example (http, vars) => http.get(":id", vars)',
+  );
+}
+
+/**
+ * Recover the wire shape of an endpoint by running its closure once against a
+ * recording proxy, with stand-ins for the variables it will receive.
  *
  * @param probe - the wire closure supplied to a builder terminal
  * @returns the HTTP method and path the closure addresses
@@ -98,42 +160,6 @@ function standIn(): unknown {
  * ```
  */
 export function probeWire(probe: AnyProbe): WireShape {
-  let method: string | undefined;
-  let path: string | undefined;
-
-  const recorder = new Proxy(
-    {},
-    {
-      get: (_target, property) => {
-        if (typeof property !== "string") return undefined;
-        return (...args: unknown[]): unknown => {
-          // A closure may chain several calls; the first one addresses the endpoint.
-          if (method === undefined) {
-            method = property === "connect" ? CHANNEL_METHOD : property;
-            path = typeof args[0] === "string" ? args[0] : "";
-          }
-          return {};
-        };
-      },
-    },
-  );
-
-  let thrown: unknown;
-  try {
-    (probe as (wire: unknown, variables: unknown) => unknown)(recorder, standIn());
-  } catch (error) {
-    // Real variables are absent while probing, so a closure may still fail
-    // after the addressing call has been recorded. Kept in case it was not.
-    thrown = error;
-  }
-
-  if (method === undefined || path === undefined) {
-    if (thrown !== undefined) throw thrown;
-    throw new ConfigurationError(
-      "ENDPOINT_NO_WIRE_CALL",
-      '[courier] endpoint closure made no wire call — it must call exactly one of the wire methods, for example (http, vars) => http.get(":id", vars)',
-    );
-  }
-
-  return { method: method as HttpMethod, path };
+  const { name, path } = recordWireCall(probe, standIn());
+  return { method: (name === "connect" ? CHANNEL_METHOD : name) as HttpMethod, path };
 }

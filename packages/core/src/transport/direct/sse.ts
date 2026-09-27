@@ -1,9 +1,9 @@
-import { endpointPath } from "../../define/address";
 import { getSourceName } from "../../define/api";
 import type { AnyDefinedApi } from "../../define/types";
 import { buildDirectSSEUrl, executeSSE } from "../../realtime/caller-sse";
 import { beginStream, instrumentSSE } from "../instrument";
 import type { SSEFactory } from "../types";
+import { addressCall } from "./address";
 
 export interface DirectSSEDefaults {
   headers?: Record<string, string>;
@@ -19,9 +19,10 @@ function headersToRecord(h: Headers): Record<string, string> {
 
 /**
  * Create a direct-mode SSE factory that connects directly to the backend's
- * SSE endpoint via baseURL + group prefix + method path.
+ * SSE endpoint via baseURL + group prefix + the path the endpoint addressed.
  *
- * URL pattern: `{baseURL}/{groupPrefix}/{method}?{variables}`
+ * URL pattern: `{baseURL}/{groupPrefix}/{path}?{variables}`, where the path is
+ * worked out from each call's variables and takes the `:params` it names.
  *
  * Used by createCaller (universal mode) and createQueryCaller (React direct mode).
  *
@@ -54,12 +55,8 @@ export function createDirectSSEFactory(
       ...(options.headers as Record<string, string> | undefined),
     };
 
-    const url = buildDirectSSEUrl(
-      baseURL,
-      prefix,
-      endpointPath(groups?.[group]?.[method], method),
-      variables as Record<string, unknown>,
-    );
+    const address = addressCall(groups?.[group]?.[method], method, variables);
+    const url = buildDirectSSEUrl(baseURL, prefix, address.path, address.variables);
 
     // Open the studio stream up-front so we have an `instr` handle whose
     // `updateMeta` can be called from the `onResponse` callback when the

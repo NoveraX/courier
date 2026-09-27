@@ -119,6 +119,14 @@ describe("variables that are a JSON value other than an object", () => {
   });
 });
 
+describe("defaultBody on a request that has only a query string", () => {
+  it("is sent as query values under the caller's own", async () => {
+    await caller({ defaultBody: { locale: "en", page: 1 } }).items.list({ page: 2 });
+
+    expect(upstream.last().url).toBe("/items?locale=en&page=2");
+  });
+});
+
 describe("variables that already are a request body", () => {
   it("sends URLSearchParams form-encoded", async () => {
     await caller().items.create(new URLSearchParams({ a: "1", b: "x y" }));

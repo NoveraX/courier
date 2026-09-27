@@ -102,7 +102,7 @@ export type BaseOptions = MergeOptions &
     responseType?: ResponseType;
     /** Custom response parser replacing the built-in one (receives raw Response) */
     responseParser?: (response: Response) => Promise<unknown>;
-    /** Default fields merged under variables that are an object; a list or a raw body is sent alone */
+    /** Defaults under an object body, or query values on a GET, HEAD or DELETE; a list or raw body is sent alone */
     defaultBody?: Record<string, unknown>;
     /** Default query params merged into every request URL */
     defaultQueryParams?: Record<string, unknown>;

@@ -115,7 +115,7 @@ import { retryMiddleware } from "@noverax/courier/middleware"
 retryMiddleware({
   limit: 3,                                        // Max retries (default: 3)
   backoff: 300,                                    // Base delay in ms (default: 300)
-  retryOn: (response) => response.status >= 500,   // Custom condition
+  retryOn: (response) => response.status >= 500,   // Custom condition (default: status 0 or >= 500)
 })
 ```
 

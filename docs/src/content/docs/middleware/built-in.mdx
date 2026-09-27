@@ -16,15 +16,17 @@ import {
 
 ## retryMiddleware
 
-Automatic retry with exponential backoff. Retries on server errors (status >= 500) or thrown exceptions.
+Automatic retry with exponential backoff. By default it retries server errors (status >= 500) and requests that got no answer at all — a network failure or a timeout. A 4xx is never retried by default: the same request would be refused again.
 
 ```ts title="signature"
 function retryMiddleware(options?: {
   /** Maximum number of retries (default: 3) */
   limit?: number
-  /** Base delay in ms for exponential backoff (default: 300) */
+  /** Base delay in ms between attempts (default: 300) */
   backoff?: number
-  /** Custom retry condition (default: status >= 500) */
+  /** How the delay grows between attempts (default: "exponential") */
+  mode?: "fixed" | "exponential"
+  /** Which answers deserve another attempt (default: status 0 or status >= 500) */
   retryOn?: (response: MiddlewareResponse) => boolean
 }): MiddlewareFn
 ```
@@ -49,12 +51,13 @@ Override `retryOn` to retry on specific status codes:
 retryMiddleware({
   limit: 2,
   backoff: 500,
-  retryOn: (response) => response.status === 429 || response.status >= 500,
+  retryOn: (response) =>
+    response.status === 0 || response.status === 429 || response.status >= 500,
 })
 ```
 
-<Callout variant="tip" title="Thrown errors always retry">
-If the endpoint handler throws (e.g., a network failure), the retry middleware catches it and retries regardless of the `retryOn` condition. After exhausting all retries, the original error is re-thrown. A response that fails its schema is not retried: the same answer would fail the same way.
+<Callout variant="tip" title="What the condition sees">
+A non-2xx answer rejects the call with an `HTTPError`; `retryOn` is shown the answer it carries — its status, body and headers. A request that got no answer is shown as status 0, so a condition that should also retry network failures has to accept it. Errors that are not HTTP failures — a response that fails its schema, a middleware that throws — are never retried. After the last attempt, its error is re-thrown.
 </Callout>
 
 ---

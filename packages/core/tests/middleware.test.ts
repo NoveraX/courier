@@ -54,6 +54,11 @@ const ok = (data: unknown = []) => MiddlewareResponseHelper(200, data);
 const serverError = (data: unknown = { error: "fail" }) =>
 	MiddlewareResponseHelper(500, data);
 
+/** What a request that never got an answer is rejected with. */
+function networkFailure(): HTTPError {
+	return new HTTPError({ status: 0, headers: new Headers(), data: { success: false, message: "socket hang up" } });
+}
+
 function MiddlewareResponseHelper(
 	status: number,
 	data: unknown,
@@ -357,7 +362,7 @@ describe("retryMiddleware", () => {
 		expect(calls).toBe(2);
 	});
 
-	it("retries on thrown errors", async () => {
+	it("retries a request that got no answer", async () => {
 		let calls = 0;
 		const handler = retryMiddleware({ limit: 1, backoff: 0 }).handler as WrapHandler;
 
@@ -365,7 +370,7 @@ describe("retryMiddleware", () => {
 			{ source: "api", method: "test", headers: new Headers() },
 			() => {
 				calls++;
-				if (calls === 1) throw new Error("network error");
+				if (calls === 1) throw networkFailure();
 				return Promise.resolve(ok("recovered"));
 			},
 		);
@@ -374,15 +379,36 @@ describe("retryMiddleware", () => {
 		expect(calls).toBe(2);
 	});
 
-	it("throws after exhausting retries on error", async () => {
+	it("throws the last failure after exhausting retries", async () => {
+		let calls = 0;
 		const handler = retryMiddleware({ limit: 1, backoff: 0 }).handler as WrapHandler;
 
 		await expect(
 			handler(
 				{ source: "api", method: "test", headers: new Headers() },
-				() => { throw new Error("permanent"); },
+				() => {
+					calls++;
+					throw networkFailure();
+				},
 			),
-		).rejects.toThrow("permanent");
+		).rejects.toMatchObject({ status: 0 });
+		expect(calls).toBe(2);
+	});
+
+	it("does not retry an error that is not an HTTP failure", async () => {
+		let calls = 0;
+		const handler = retryMiddleware({ limit: 3, backoff: 0 }).handler as WrapHandler;
+
+		await expect(
+			handler(
+				{ source: "api", method: "test", headers: new Headers() },
+				() => {
+					calls++;
+					throw new Error("middleware bug");
+				},
+			),
+		).rejects.toThrow("middleware bug");
+		expect(calls).toBe(1);
 	});
 
 	it("does not retry on success", async () => {

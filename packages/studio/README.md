@@ -205,7 +205,7 @@ A request Studio refuses changes nothing. It is answered with `{ error }` — `4
 | `DIR_OVERLAP` | 409 | Another import owns the folder, or one inside or around it. |
 | `NAME_TAKEN` | 409 | `sources` declares another API under the import's name. |
 | `FILE_NOT_RECOGNIZED` | 409 | A file Studio would add endpoints to no longer shows where its endpoints are. |
-| `GROUP_PREFIX_CHANGED` | 409 | The specification now puts a group's endpoints under another prefix than its file declares; update the import, then add endpoints. |
+| `ENDPOINT_OUTSIDE_PREFIX` | 409 | An endpoint you add would call a URL the prefix its group file declares cannot reach, or Studio cannot read that prefix; add it by hand, or import the API again under the same name. An endpoint the file's prefix can reach is written relative to it, whatever prefix the specification gives the group. |
 | `IMPORTS_STATE_UNSAFE` | 409 | Studio cannot read `.courier/imports-state.json`, or keep a copy of it, so saving it would lose the other imports' records. |
 | `COURIER_DIR_UNSAFE` | 409 | `.courier`, or a folder Studio keeps in it, is a symbolic link or not a folder; Studio keeps nothing there. |
 | `INVALID_IMPORT` | 400 | The output directory, the source name or a group's name is one Studio does not write to: outside the project, in `.git`, `node_modules` or `.courier`, or a name Windows treats differently. |

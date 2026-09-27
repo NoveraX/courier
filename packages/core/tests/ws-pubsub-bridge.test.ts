@@ -16,6 +16,11 @@ function createEntry(id: string) {
   };
 }
 
+/** The channels subscribed to for topics, leaving out those for broadcasts to a whole endpoint. */
+function topicChannels(spy: { mock: { calls: unknown[][] } }): unknown[] {
+  return spy.mock.calls.map(([channel]) => channel).filter((c) => !String(c).endsWith("#*"));
+}
+
 function setupReplica(pubsub: ReturnType<typeof createMemoryPubSub>) {
   const registry = createConnectionRegistry();
   const bridge = createPubSubBridge(pubsub, registry);
@@ -37,8 +42,9 @@ describe("createPubSubBridge", () => {
 
     await bridge.onTopicSubscribe("chat.room1");
 
-    expect(subscribeSpy).toHaveBeenCalledOnce();
+    expect(topicChannels(subscribeSpy)).toEqual(["chat.room1"]);
     expect(subscribeSpy).toHaveBeenCalledWith("chat.room1", expect.any(Function));
+    expect(subscribeSpy).toHaveBeenCalledWith("chat.room1#*", expect.any(Function));
   });
 
   it("does not re-subscribe on second local subscriber (ref counting)", async () => {
@@ -51,7 +57,8 @@ describe("createPubSubBridge", () => {
     await bridge.onTopicSubscribe("chat.room1");
     await bridge.onTopicSubscribe("chat.room1");
 
-    expect(subscribeSpy).toHaveBeenCalledOnce();
+    expect(subscribeSpy).toHaveBeenCalledTimes(2);
+    expect(topicChannels(subscribeSpy)).toEqual(["chat.room1"]);
   });
 
   it("unsubscribes from pubsub when last local subscriber leaves", async () => {
@@ -80,13 +87,13 @@ describe("createPubSubBridge", () => {
 
     await bridge.onTopicSubscribe("topic-a");
     await bridge.onTopicSubscribe("topic-b");
-    expect(subscribeSpy).toHaveBeenCalledTimes(2);
+    expect(topicChannels(subscribeSpy)).toEqual(["topic-a", "topic-b"]);
 
-    bridge.destroy();
+    await bridge.destroy();
 
     // After destroy, new subscribes are rejected (bridge is dead)
     await bridge.onTopicSubscribe("topic-a");
-    expect(subscribeSpy).toHaveBeenCalledTimes(2);
+    expect(topicChannels(subscribeSpy)).toEqual(["topic-a", "topic-b"]);
   });
 });
 
@@ -170,7 +177,7 @@ describe("cross-replica WS broadcast", () => {
     await bridge.onTopicSubscribe("t");
     await bridge.onTopicUnsubscribe("t");
 
-    expect(subscribeSpy).toHaveBeenCalledTimes(2);
+    expect(topicChannels(subscribeSpy)).toEqual(["t", "t"]);
   });
 
   it("handles multiple topics independently", async () => {
@@ -183,14 +190,14 @@ describe("cross-replica WS broadcast", () => {
     await bridge.onTopicSubscribe("topic-a");
     await bridge.onTopicSubscribe("topic-b");
 
-    expect(subscribeSpy).toHaveBeenCalledTimes(2);
+    expect(topicChannels(subscribeSpy)).toEqual(["topic-a", "topic-b"]);
 
     // Unsubscribe topic-a, topic-b still active
     await bridge.onTopicUnsubscribe("topic-a");
 
     // New subscribe to topic-a should create fresh pubsub subscription
     await bridge.onTopicSubscribe("topic-a");
-    expect(subscribeSpy).toHaveBeenCalledTimes(3);
+    expect(topicChannels(subscribeSpy)).toEqual(["topic-a", "topic-b", "topic-a"]);
   });
 
   it("gracefully handles pubsub.subscribe failure", async () => {
@@ -216,7 +223,7 @@ describe("cross-replica WS broadcast", () => {
     ]);
 
     // Only one pubsub.subscribe call — second one waits and increments refCount
-    expect(subscribeSpy).toHaveBeenCalledOnce();
+    expect(topicChannels(subscribeSpy)).toEqual(["chat.room1"]);
   });
 
   it("serializes concurrent unsubscribe after in-flight subscribe", async () => {

@@ -22,7 +22,7 @@ npm install @noverax/courier-redis ioredis
 
 ## Pub/Sub Adapter
 
-Routes WebSocket broadcast messages across replicas via Redis Pub/Sub.
+Routes WebSocket broadcast messages across replicas via Redis Pub/Sub: a channel handler's `ctx.broadcast`, and `broadcast`, `broadcastToTopic` and `broadcastToBaseTopic` on the handler's connection registry (`server.wsConnections`), reach the clients of every replica.
 
 ```ts title="adapters.ts"
 import Redis from "ioredis"
@@ -223,7 +223,7 @@ Redis adapters degrade gracefully — they never kill active client connections:
 
 | Adapter | Key Pattern | TTL |
 |---------|------------|-----|
-| PubSub | `{prefix}{topic}` | None (Pub/Sub channels) |
+| PubSub | `{prefix}{topic}`, `{prefix}{baseTopic}#*` (every qualified topic of an endpoint), `{prefix}*` (every connection) | None (Pub/Sub channels) |
 | Stream | `{prefix}{topic}` | Auto-trim via MAXLEN |
 | Presence (score) | `{prefix}score:{topic}` | Managed by sweep |
 | Presence (meta) | `{prefix}meta:{topic}` | Managed by sweep |

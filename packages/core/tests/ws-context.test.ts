@@ -162,7 +162,16 @@ describe("buildContext", () => {
     const sources = { api: {} };
     registerSources(sources as Parameters<typeof registerSources>[0]);
     const config = createConfig();
-    const bridge = { onTopicSubscribe: vi.fn(), onTopicUnsubscribe: vi.fn(), destroy: vi.fn() };
+    const bridge = {
+      onTopicSubscribe: vi.fn(),
+      onTopicUnsubscribe: vi.fn(),
+      onConnectionOpen: vi.fn(),
+      onConnectionClose: vi.fn(),
+      publishToTopic: vi.fn(),
+      publishToBaseTopic: vi.fn(),
+      publishToAll: vi.fn(),
+      destroy: vi.fn(),
+    };
 
     const ctx = buildContext(ws, config, topicManager, registry, bridge, request);
 

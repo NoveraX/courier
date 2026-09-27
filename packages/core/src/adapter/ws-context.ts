@@ -55,7 +55,6 @@ export interface WSSocketContext {
    */
   subscribing: Set<string>;
   sources: Sources;
-  pubsub: WSHandlerConfig["pubsub"];
   registry: InternalConnectionRegistry;
   bridge: PubSubBridge | undefined;
   topicManager: ReturnType<typeof createServerTopicManager>;
@@ -147,7 +146,6 @@ export function buildContext(
     subscriptionIds,
     subscribing: new Set(),
     sources: servedSources(config.sources),
-    pubsub: config.pubsub,
     registry,
     bridge,
     topicManager,

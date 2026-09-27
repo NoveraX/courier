@@ -207,7 +207,10 @@ server.wsConnections.broadcastToTopic("chat:general", { type: "message", text: "
 | `send(id, data)` | Send to specific connection |
 | `broadcast(data, exclude?)` | Broadcast to all |
 | `broadcastToTopic(topic, data, exclude?)` | Broadcast to topic subscribers |
+| `broadcastToBaseTopic(baseTopic, data, exclude?)` | Broadcast to the subscribers of every qualified topic of an endpoint, whatever their variables |
 | `disconnect(id, code?, reason?)` | Force-close connection |
+
+With a `pubsub` adapter configured, the three broadcasts reach the connections of every replica, the same as a channel handler's `ctx.broadcast`. `count`, `get`, `list`, `send` and `disconnect` concern the connections of the replica you call them on.
 
 ## Health Checks
 

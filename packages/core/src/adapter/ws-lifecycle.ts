@@ -51,6 +51,7 @@ export function wireEvents(
     heartbeat.stop();
     ipTracker?.release(ctx.clientIP);
     registry.remove(ctx.connectionId);
+    void ctx.bridge?.onConnectionClose();
     await topicManager.disconnectAll(ctx.connectionId);
 
     // Close each per-subscription stream entry. We snapshot the topic list

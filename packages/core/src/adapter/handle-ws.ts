@@ -11,6 +11,7 @@ import { createIPTracker, extractClientIP } from "./ws-ip-tracker";
 import { wireEvents } from "./ws-lifecycle";
 import { createPubSubBridge } from "./ws-pubsub-bridge";
 import { createConnectionRegistry } from "./ws-registry";
+import { replicateBroadcasts } from "./ws-replicated-registry";
 import { createServerTopicManager } from "./ws-topics";
 import type { WSHandler, WSHandlerConfig } from "./ws-types";
 
@@ -135,6 +136,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
       },
     );
     hb.start();
+    void bridge?.onConnectionOpen();
     wireEvents(ws, ctx, hb, topicManager, config, registry, ipTracker);
   }
 
@@ -150,5 +152,8 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     await bridge?.destroy();
   }
 
-  return { handleSocket, connections: registry, destroy };
+  /* With a pub/sub adapter, what the application broadcasts through the
+     registry reaches every replica, as a channel's ctx.broadcast does. */
+  const connections = bridge ? replicateBroadcasts(registry, bridge) : registry;
+  return { handleSocket, connections, destroy };
 }

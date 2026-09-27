@@ -108,23 +108,33 @@ describe("the proxy bounds what a caller may make it hold", () => {
 });
 
 describe("an upload is measured against its own limit", () => {
-  function uploadRequest(bytes: number): Request {
+  /**
+   * The upload as a server hands it to the handler: the multipart bytes as a
+   * stream, not a FormData object. Node 24.21's undici also leaves an
+   * unhandled rejection when a reader cancels a body it built from a
+   * FormData object, a shape no server produces.
+   */
+  async function uploadRequest(bytes: number): Promise<Request> {
     const form = new FormData();
     form.set("source", "api");
     form.set("method", "upload");
     form.set("file", new Blob([new Uint8Array(bytes)]), "payload.bin");
+    const encoded = new Response(form);
+    const payload = new Uint8Array(await encoded.arrayBuffer());
 
     return new Request("http://localhost/api/request", {
       method: "POST",
-      headers: { origin: "http://localhost" },
-      body: form,
+      headers: { origin: "http://localhost", "content-type": encoded.headers.get("content-type") ?? "" },
+      body: new Blob([payload]).stream(),
+      // @ts-expect-error -- required by the platform for a streaming body
+      duplex: "half",
     });
   }
 
   it("accepts an upload larger than the JSON limit", async () => {
     const { run, handle } = handler({ maxBodyBytes: 1024, maxUploadBytes: 1_000_000 });
 
-    const response = await handle(uploadRequest(64_000));
+    const response = await handle(await uploadRequest(64_000));
 
     expect(response.status).toBe(200);
     expect(run).toHaveBeenCalledOnce();
@@ -133,7 +143,7 @@ describe("an upload is measured against its own limit", () => {
   it("still parses the fields the envelope carries", async () => {
     const { run, handle } = handler({ maxUploadBytes: 1_000_000 });
 
-    await handle(uploadRequest(128));
+    await handle(await uploadRequest(128));
 
     const [, payload] = run.mock.calls[0]!;
     expect(payload).toBeInstanceOf(FormData);
@@ -144,7 +154,7 @@ describe("an upload is measured against its own limit", () => {
   it("refuses an upload over the upload limit", async () => {
     const { handle } = handler({ maxUploadBytes: 4096 });
 
-    expect((await handle(uploadRequest(64_000))).status).toBe(413);
+    expect((await handle(await uploadRequest(64_000))).status).toBe(413);
   });
 });
 

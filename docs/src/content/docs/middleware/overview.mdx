@@ -27,6 +27,8 @@ type MiddlewareContext = {
   variables?: unknown
   /** Request headers — can be modified by middleware */
   headers: Headers
+  /** Whether the endpoint reads or writes */
+  kind?: "query" | "mutation"
   /** Fires when the caller stops waiting: the call's own signal, or the incoming request's in a proxy */
   signal?: AbortSignal
 }

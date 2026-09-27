@@ -51,6 +51,7 @@ export interface NeutralMethods<TSelf> {
   /** Response headers to forward to the caller. */
   headers(names: readonly string[]): TSelf;
   timeout(ms: number): TSelf;
+  /** Retry policy; an endpoint that writes is retried only with `mutations: true`. */
   retry(options: RetryOptions): TSelf;
   /** Arbitrary values for tooling; ignored by the runtime. */
   meta(values: Record<string, unknown>): TSelf;

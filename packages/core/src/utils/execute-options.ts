@@ -25,6 +25,7 @@ function toRetryMiddleware(retry: RetryOptions): Middleware {
   return retryMiddleware({
     ...(retry.attempts !== undefined && { limit: retry.attempts }),
     ...(retry.backoff !== undefined && { mode: retry.backoff }),
+    ...(retry.mutations !== undefined && { mutations: retry.mutations }),
     ...(statuses?.length && {
       retryOn: (response: MiddlewareResponse) => statuses.includes(response.status),
     }),

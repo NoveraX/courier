@@ -164,6 +164,8 @@ const api = defineApi({
 })
 ```
 
+`retryMiddleware` retries a 5xx or a request that got no answer, and only on endpoints that read. A write whose answer was lost may already have been carried out, so it is sent once unless you pass `mutations: true` — do that only when the upstream recognises a repeated write, for example by an idempotency key. The same holds for a `retry` policy on a `courier()` base or an endpoint's `.retry()`.
+
 ### 4. Add validation
 
 ```ts

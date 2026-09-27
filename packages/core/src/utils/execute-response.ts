@@ -12,6 +12,22 @@ export type InternalResponse = {
   throw?: unknown;
 };
 
+/**
+ * What every streamed proxy answer carries, whatever the upstream sent.
+ *
+ * A streamed body keeps the upstream's content type and is served from the
+ * application's origin, so a proxy URL opened as a page rendered it there: an
+ * HTML or SVG answer ran its script as the application, with the user's
+ * cookies. The sandbox gives such a page an opaque origin and no scripts,
+ * `default-src 'none'` lets it load nothing, and `nosniff` keeps a browser
+ * from deciding that a body the upstream called text is HTML. A caller that
+ * reads the stream through `fetch` sees no difference.
+ */
+const STREAMED_ANSWER_HEADERS: Readonly<Record<string, string>> = {
+  "Content-Security-Policy": "default-src 'none'; sandbox",
+  "X-Content-Type-Options": "nosniff",
+};
+
 export const buildResponse = (
   context: Context | undefined,
   response: InternalResponse,
@@ -21,13 +37,12 @@ export const buildResponse = (
       /* The upstream's own headers went straight to the browser here, so a
          streamed answer disclosed whatever the upstream attached to it. The
          body passes through unchanged, so its content type travels with it. */
+      const headers = filterResponseHeaders(response.headers, { streamed: true });
+      for (const [name, value] of Object.entries(STREAMED_ANSWER_HEADERS)) headers.set(name, value);
       return withUpstreamCookies(
         new Response(response.data, {
           status: response.status,
-          headers: withUpstreamLength(
-            filterResponseHeaders(response.headers, { streamed: true }),
-            response.headers,
-          ),
+          headers: withUpstreamLength(headers, response.headers),
         }),
         response.headers,
       );

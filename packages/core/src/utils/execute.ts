@@ -132,6 +132,10 @@ export async function executeRequest(
     stream = false,
     ...baseOptions
   } = options ?? {};
+  const callOptions = withCallerSignal(
+    withEndpointTimeout(baseOptions, endpointOptions, context?.defaultTimeout),
+    context?.req,
+  );
 
   const middlewareCtx = buildMiddlewareContext({
     source,
@@ -144,6 +148,7 @@ export async function executeRequest(
     requestId,
     endpointAllowedHeaders: endpointOptions?.allowedHeaders,
     kind: schema?.type,
+    signal: callOptions.signal ?? undefined,
   });
   const mode = context?.mode ?? (context?.proxyMethod ? "proxy" : "direct");
 
@@ -171,10 +176,7 @@ export async function executeRequest(
         middlewareHeaders: middlewareCtx.headers,
         variables: middlewareCtx.variables,
         forwardVariables,
-        baseOptions: withCallerSignal(
-          withEndpointTimeout(baseOptions, endpointOptions, context?.defaultTimeout),
-          context?.req,
-        ),
+        baseOptions: callOptions,
         stream,
         schema,
         hasStudio,

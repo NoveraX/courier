@@ -22,6 +22,12 @@ export type MiddlewareContext = {
   request?: Request;
   /** Whether the endpoint reads or writes, when its schema says. */
   kind?: "query" | "mutation";
+  /**
+   * Fires when whoever made the call stops waiting for it: the signal given
+   * to the call, or the incoming request's when a proxy runs it. Middleware
+   * that waits — between retries, in a queue — should stop when it fires.
+   */
+  signal?: AbortSignal;
   /** Internal: Studio request ID for event correlation */
   _requestId?: string;
 };

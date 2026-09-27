@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { LoadedCourierConfig } from "../src/server/config-loader";
 import { type ConfigWatcher, startConfigWatcher } from "../src/server/config-watcher";
@@ -873,5 +873,198 @@ describe("startConfigWatcher — an import that names no module yet", () => {
     await until(() => applied.length > 0, 3000);
 
     expect(baseURLOf(applied[0])).toBe("generated.example.com");
+  });
+});
+
+/** A project made of `files`, each path relative to its root. */
+function projectOf(files: Record<string, string>): string {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "config-watcher-resolution-")));
+  roots.push(root);
+  for (const [path, content] of Object.entries(files)) {
+    mkdirSync(dirname(join(root, path)), { recursive: true });
+    writeFileSync(join(root, path), content);
+  }
+  return root;
+}
+
+const petsAt = (host: string) => `export const pets = { baseURL: "${host}" }\n`;
+const configImporting = (specifier: string) =>
+  `import { pets } from "${specifier}"\nexport default { sources: { demo: pets } }\n`;
+const pathsTo = (target: string) => JSON.stringify({ compilerOptions: { paths: { "@/*": [target] } } });
+
+/**
+ * The module watched is the module the loader runs. With a compiled `.js`
+ * beside a `.ts`, an extensionless import runs the `.js`; an import written
+ * for NodeNext as `./pets.js` runs `pets.ts` when there is no `pets.js`.
+ */
+describe("startConfigWatcher — the module the loader runs", () => {
+  it("reloads for an edit to the .js the loader runs beside a .ts, and runs the edit", async () => {
+    const root = projectOf({
+      "src/pets.ts": petsAt("ts-v1.example.com"),
+      "src/pets.js": petsAt("js-v1.example.com"),
+      "courier.config.ts": configImporting("./src/pets"),
+    });
+    const { watcher, applied } = start(root);
+    await watcher.settled();
+    expect(baseURLOf(applied[0])).toBe("js-v1.example.com");
+    await sleep(SETTLE_MS);
+
+    writeFileSync(join(root, "src", "pets.js"), petsAt("js-v2.example.com"));
+    await until(() => applied.length > 1, 3000);
+
+    expect(baseURLOf(applied.at(-1))).toBe("js-v2.example.com");
+  });
+
+  it("reloads when the .js beside a .ts is deleted, and runs the .ts", async () => {
+    const root = projectOf({
+      "src/pets.ts": petsAt("ts-v1.example.com"),
+      "src/pets.js": petsAt("js-v1.example.com"),
+      "courier.config.ts": configImporting("./src/pets"),
+    });
+    const { watcher, applied } = start(root);
+    await watcher.settled();
+    await sleep(SETTLE_MS);
+
+    unlinkSync(join(root, "src", "pets.js"));
+    await until(() => applied.length > 1, 3000);
+
+    expect(baseURLOf(applied.at(-1))).toBe("ts-v1.example.com");
+  });
+
+  it("reloads for an edit to the .ts a NodeNext .js import runs", async () => {
+    const root = projectOf({
+      "src/pets.ts": petsAt("ts-v1.example.com"),
+      "courier.config.ts": configImporting("./src/pets.js"),
+    });
+    const { watcher, applied } = start(root);
+    await watcher.settled();
+    expect(baseURLOf(applied[0])).toBe("ts-v1.example.com");
+    await sleep(SETTLE_MS);
+
+    writeFileSync(join(root, "src", "pets.ts"), petsAt("ts-v2.example.com"));
+    await until(() => applied.length > 1, 3000);
+
+    expect(baseURLOf(applied.at(-1))).toBe("ts-v2.example.com");
+  });
+
+  it("reloads when a .js the loader takes first is created beside the .ts it runs, and runs the .js", async () => {
+    const root = projectOf({
+      "src/pets.ts": petsAt("ts-v1.example.com"),
+      "courier.config.ts": configImporting("./src/pets"),
+    });
+    const { watcher, applied } = start(root);
+    await watcher.settled();
+    expect(baseURLOf(applied[0])).toBe("ts-v1.example.com");
+    await sleep(SETTLE_MS);
+
+    writeFileSync(join(root, "src", "pets.js"), petsAt("js-v1.example.com"));
+    await until(() => applied.length > 1, 3000);
+
+    expect(baseURLOf(applied.at(-1))).toBe("js-v1.example.com");
+  });
+
+  it("catches up with a .js the loader takes first, created beside the .ts it runs", async () => {
+    const root = projectOf({
+      "src/pets.ts": petsAt("ts-v1.example.com"),
+      "courier.config.ts": configImporting("./src/pets.js"),
+    });
+    const { watcher, applied } = start(root);
+    await watcher.settled();
+    expect(baseURLOf(applied[0])).toBe("ts-v1.example.com");
+
+    writeFileSync(join(root, "src", "pets.js"), petsAt("js-v1.example.com"));
+
+    expect(await watcher.catchUp(Date.now() + 3000)).toBe(true);
+    expect(baseURLOf(applied.at(-1))).toBe("js-v1.example.com");
+  });
+});
+
+/**
+ * The tsconfig an alias is read from is as much an input of the load as the
+ * module it names: an edit to it sends the import to another module.
+ */
+describe("startConfigWatcher — tsconfig paths", () => {
+  const twoTargets = {
+    "src/pets.ts": petsAt("src.example.com"),
+    "src2/pets.ts": petsAt("src2.example.com"),
+    "courier.config.ts": configImporting("@/pets"),
+  };
+
+  it("reloads when the alias is pointed at another directory, and runs the module there", async () => {
+    const root = projectOf({ ...twoTargets, "tsconfig.json": pathsTo("./src/*") });
+    const { watcher, applied } = start(root);
+    await watcher.settled();
+    expect(baseURLOf(applied[0])).toBe("src.example.com");
+    await sleep(SETTLE_MS);
+
+    writeFileSync(join(root, "tsconfig.json"), pathsTo("./src2/*"));
+    await until(() => applied.length > 1, 3000);
+
+    expect(baseURLOf(applied.at(-1))).toBe("src2.example.com");
+  });
+
+  it("reloads when the alias a failed load could not resolve is added", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const root = projectOf({ ...twoTargets, "tsconfig.json": "{}" });
+    const { watcher, applied, failed } = start(root);
+    await watcher.settled();
+    expect(failed).toMatchObject([{ code: "CONFIG_INVALID" }]);
+    await sleep(SETTLE_MS);
+
+    writeFileSync(join(root, "tsconfig.json"), pathsTo("./src/*"));
+    await until(() => applied.length > 0, 3000);
+
+    expect(baseURLOf(applied[0])).toBe("src.example.com");
+  });
+
+  it("reloads when a tsconfig whose paths the alias reader cannot read at the first load is fixed", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const malformed = JSON.stringify({ compilerOptions: { paths: { "@/*": "./src/*" } } });
+    const root = projectOf({ ...twoTargets, "tsconfig.json": malformed });
+    const { watcher, applied, failed } = start(root);
+    await watcher.settled();
+    expect(failed).toHaveLength(1);
+    await sleep(SETTLE_MS);
+
+    writeFileSync(join(root, "tsconfig.json"), pathsTo("./src/*"));
+    await until(() => applied.length > 0, 3000);
+
+    expect(baseURLOf(applied[0])).toBe("src.example.com");
+    expect(failed).toMatchObject([{ code: "CONFIG_INVALID" }]);
+  });
+
+  it("reloads when a tsconfig the nearest one extends changes the alias", async () => {
+    const root = projectOf({
+      ...twoTargets,
+      "tsconfig.json": JSON.stringify({ extends: "./tsconfig.base.json" }),
+      "tsconfig.base.json": pathsTo("./src/*"),
+    });
+    const { watcher, applied } = start(root);
+    await watcher.settled();
+    expect(baseURLOf(applied[0])).toBe("src.example.com");
+    await sleep(SETTLE_MS);
+
+    writeFileSync(join(root, "tsconfig.base.json"), pathsTo("./src2/*"));
+    await until(() => applied.length > 1, 3000);
+
+    expect(baseURLOf(applied.at(-1))).toBe("src2.example.com");
+  });
+
+  it("reloads when a tsconfig.json is created nearer than the one the alias was read from", async () => {
+    const workspace = projectOf({
+      "tsconfig.json": pathsTo("./app/src/*"),
+      "app/src/pets.ts": petsAt("src.example.com"),
+      "app/src2/pets.ts": petsAt("src2.example.com"),
+      "app/courier.config.ts": configImporting("@/pets"),
+    });
+    const { watcher, applied } = start(join(workspace, "app"));
+    await watcher.settled();
+    expect(baseURLOf(applied[0])).toBe("src.example.com");
+    await sleep(SETTLE_MS);
+
+    writeFileSync(join(workspace, "app", "tsconfig.json"), pathsTo("./src2/*"));
+    await until(() => applied.length > 1, 3000);
+
+    expect(baseURLOf(applied.at(-1))).toBe("src2.example.com");
   });
 });

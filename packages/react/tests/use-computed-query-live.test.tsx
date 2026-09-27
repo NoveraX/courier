@@ -69,7 +69,7 @@ describe("useComputedQuery against a real list and stream", () => {
       () => {
         const query = q.users.useComputedQuery("list", {
           subscriptionMethod: "changes",
-          mapper: (current: User[] | undefined, event) => [...(current ?? []), event.data as User],
+          mapper: (current, event) => [...(current ?? []), event.data],
         });
         seen.push(`${query.status}:${(query.data ?? []).map((u) => u.name).join(",")}`);
         return query;
@@ -92,7 +92,7 @@ describe("useComputedQuery against a real list and stream", () => {
       () =>
         q.users.useComputedQuery("list", {
           subscriptionMethod: "changes",
-          mapper: (current: User[] | undefined, event) => [...(current ?? []), event.data as User],
+          mapper: (current, event) => [...(current ?? []), event.data],
         }),
       { wrapper },
     );

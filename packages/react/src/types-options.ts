@@ -90,17 +90,25 @@ export type CourierPrefetchOptions<TVariables> = [TVariables] extends [undefined
     ? { variables?: TVariables; requestOptions?: CallOptions; staleTime?: number }
     : { variables: TVariables; requestOptions?: CallOptions; staleTime?: number };
 
-export type CourierComputedQueryOptions<TQueryResponse, TStreamData, TVariables> =
-  WithVariables<TVariables> & {
-    /** SSE endpoint method name (on the same group) that provides live updates */
-    subscriptionMethod: string;
-    /** Variables for the SSE subscription (defaults to query variables) */
-    subscriptionVariables?: unknown;
-    /** Merge each stream event into the cached query data */
-    mapper: (current: TQueryResponse | undefined, event: SSEEvent<TStreamData>) => TQueryResponse;
-    /** Disable both query and subscription (default: true) */
-    enabled?: boolean;
-    /** react-query staleTime */
-    staleTime?: number;
-    requestOptions?: CallOptions;
-  };
+/**
+ * `TStream` is the stream named by `subscriptionMethod` and `TStreamData`
+ * what each of its events carries.
+ */
+export type CourierComputedQueryOptions<
+  TQueryResponse,
+  TStreamData,
+  TVariables,
+  TStream extends string = string,
+> = WithVariables<TVariables> & {
+  /** SSE endpoint method name (on the same group) that provides live updates */
+  subscriptionMethod: TStream;
+  /** Variables for the SSE subscription (defaults to query variables) */
+  subscriptionVariables?: unknown;
+  /** Merge each stream event into the cached query data */
+  mapper: (current: TQueryResponse | undefined, event: SSEEvent<TStreamData>) => TQueryResponse;
+  /** Disable both query and subscription (default: true) */
+  enabled?: boolean;
+  /** react-query staleTime */
+  staleTime?: number;
+  requestOptions?: CallOptions;
+};

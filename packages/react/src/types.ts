@@ -152,33 +152,19 @@ export type QueryGroupClient<TGroup> = {
       : never
   ) => TGroup[TMethod] extends AnyEndpoint ? SubscriptionResult<Res<TGroup[TMethod]>> : never;
 
-  useComputedQuery: <TMethod extends MethodsOfKind<TGroup, "query">>(
+  useComputedQuery: <
+    TMethod extends MethodsOfKind<TGroup, "query">,
+    TStream extends MethodsOfKind<TGroup, "stream">,
+  >(
     method: TMethod,
-    ...args: TGroup[TMethod] extends AnyEndpoint
-      ? [Vars<TGroup[TMethod]>] extends [undefined | void]
-        ? [
-            options: CourierComputedQueryOptions<
-              Res<TGroup[TMethod]>,
-              unknown,
-              Vars<TGroup[TMethod]>
-            >,
-          ]
-        : {} extends Vars<TGroup[TMethod]>
-          ? [
-              options: CourierComputedQueryOptions<
-                Res<TGroup[TMethod]>,
-                unknown,
-                Vars<TGroup[TMethod]>
-              >,
-            ]
-          : [
-              options: CourierComputedQueryOptions<
-                Res<TGroup[TMethod]>,
-                unknown,
-                Vars<TGroup[TMethod]>
-              >,
-            ]
-      : never
+    options: TGroup[TMethod] extends AnyEndpoint
+      ? CourierComputedQueryOptions<
+          Res<TGroup[TMethod]>,
+          Res<TGroup[TStream]>,
+          Vars<TGroup[TMethod]>,
+          TStream
+        >
+      : never,
   ) => TGroup[TMethod] extends AnyEndpoint
     ? UseQueryResult<Res<TGroup[TMethod]>, HTTPError>
     : never;

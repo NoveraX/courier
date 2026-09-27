@@ -57,6 +57,17 @@ const caller = createProxyCaller<typeof api>("api", {
 const users = await caller.users.getAll()
 ```
 
+## Cancelled calls
+
+When the browser cancels a call — an aborted upload, a query it no longer needs — the proxy stops its own upstream request, following the request's signal. React Router 7 hands a resource route a rebuilt copy of the request, and the copy's signal does not reliably follow the original: a cancelled upload to a slow upstream was seen to run to completion on both `react-router dev` and `react-router-serve`. The future flag that passes the request through unchanged keeps the cancellation:
+
+```ts
+// react-router.config.ts
+export default {
+  future: { v8_passThroughRequests: true },
+}
+```
+
 ## API
 
 ### `courierHandler()`

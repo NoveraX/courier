@@ -1,5 +1,6 @@
 import { fetchFailure } from "../http-client/transport-failure";
 import type { DownloadProgress, UploadProgress } from "../http-client/types";
+import { fetchWithinOrigin } from "./fetch-within-origin";
 import { normalizeHttpMethod } from "./helpers";
 import { sendWithUploadProgress, trackDownload } from "./progress";
 
@@ -9,6 +10,11 @@ export type CoreFetchInit = Omit<RequestInit, "method"> & {
   timeout?: number;
   onUploadProgress?: (progress: UploadProgress) => void;
   onDownloadProgress?: (progress: DownloadProgress) => void;
+  /**
+   * Follow redirects only while they stay on the request's origin — see
+   * `fetchWithinOrigin`. An explicit `redirect` takes precedence.
+   */
+  withinOrigin?: boolean;
 };
 
 export async function coreFetch(
@@ -25,6 +31,7 @@ export async function coreFetch(
     signal,
     onUploadProgress,
     onDownloadProgress,
+    withinOrigin,
     ...rest
   } = options;
 
@@ -72,7 +79,9 @@ export async function coreFetch(
     response =
       onUploadProgress && requestBody != null
         ? await sendWithUploadProgress(fullUrl, { ...init, body: requestBody }, onUploadProgress)
-        : await fetch(fullUrl, init);
+        : withinOrigin && rest.redirect === undefined
+          ? await fetchWithinOrigin(fullUrl, init)
+          : await fetch(fullUrl, init);
   } catch (error) {
     throw fetchFailure(error, signal, timeout);
   }

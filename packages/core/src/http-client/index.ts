@@ -109,12 +109,15 @@ export class HttpClient {
     /* The call always carries a header set of its own, so spreading it over
        the source's replaced the source's headers wholesale; they are laid
        underneath instead, and a header the call names wins. Headers of the
-       connection a forwarded set was copied from are fetch's own to set. */
+       connection a forwarded set was copied from are fetch's own to set. A
+       call that came through the proxy carries the server's credentials, and
+       a redirect must not take them to a host the source never named. */
     return coreFetch(method, fullUrl, {
       ...this.baseFetchInit,
       ...fetchOptions,
       headers: withoutConnectionHeaders(overlayHeaders(this.baseHeaders, fetchOptions.headers)),
       timeout: fetchOptions.timeout ?? this.baseTimeout,
+      withinOrigin: this.context?.proxyMethod !== undefined,
     } as CoreFetchInit);
   }
 

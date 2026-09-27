@@ -96,6 +96,18 @@ describe("createCourierServer", () => {
       expect(res.status).toBe(200);
       expect(await res.json()).toEqual({ status: "ready" });
     });
+
+    it("answers /health and /readyz with a query string, as a probe may send", async () => {
+      server = await startServer();
+
+      const health = await fetch(`${server.url}/health?probe=1`);
+      const readyz = await fetch(`${server.url}/readyz?probe=1`);
+
+      expect(health.status).toBe(200);
+      expect(await health.json()).toEqual({ status: "ok" });
+      expect(readyz.status).toBe(200);
+      expect(await readyz.json()).toEqual({ status: "ready" });
+    });
   });
 
   describe("CORS", () => {
@@ -192,6 +204,17 @@ describe("createCourierServer", () => {
       });
 
       expect(res.status).toBe(403);
+    });
+
+    it("refuses a disallowed origin in the shape every adapter answers with", async () => {
+      server = await startServer({ allowedOrigins: ["http://trusted.com"] });
+
+      const res = await fetch(`${server.url}/api/request?_s=api&_m=hello`, {
+        headers: { Origin: "http://evil.com" },
+      });
+
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ success: false, message: "Origin not allowed" });
     });
 
     it("blocks non-OPTIONS requests from disallowed origin", async () => {

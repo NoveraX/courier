@@ -72,7 +72,7 @@ export interface PlannedRemoval {
 }
 
 /** Why a file the operation touched is left as it is. */
-export type KeptReason = "edited" | "not-written-by-studio" | "link" | "not-a-file" | "unconfirmed";
+export type KeptReason = "not-written-by-studio" | "link" | "not-a-file" | "unconfirmed";
 
 /** A step that only the user may allow. */
 export interface Confirmation {

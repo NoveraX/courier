@@ -666,8 +666,12 @@ describe("the imports lists every UI is sent", () => {
     const loadsBefore = evaluations();
 
     const reply = await post(url, "/api/apis/write", writeExtra());
+    /* The scan goes out as its own packet right after the registry: wait for both. */
     await until(
-      () => namesSince(first, marks[0] ?? 0) !== null && namesSince(second, marks[1] ?? 0) !== null,
+      () =>
+        namesSince(first, marks[0] ?? 0) !== null &&
+        namesSince(second, marks[1] ?? 0) !== null &&
+        scansSince(first, marks[0] ?? 0) > 0,
     );
 
     expect(reply.status).toBe(200);

@@ -42,13 +42,15 @@ export function planTarget(
     target.kind === "derived"
       ? (record?.carriesEdits ?? false) || ownership.endsWith("-edited")
       : body !== target.body;
-  const action = body === disk.body ? "unchanged" : target.kind === "merge" ? "merge" : "replace";
+  /* Only a generated file is replaced whole; a merged or derived one keeps what the user wrote. */
+  const action =
+    body === disk.body ? "unchanged" : target.kind === "generated" ? "replace" : "merge";
   const write = {
     ...written(target, action, body, ownership),
     carriesEdits,
     priorSha256: disk.sha256,
   };
-  const reason = confirmationReason(target, disk, ownership, body);
+  const reason = confirmationReason(target, disk, ownership, body, record);
   return reason === null
     ? { write }
     : { write, confirm: { path: target.path, kind: "replace", reason, preselected: false } };
@@ -86,11 +88,16 @@ function confirmationReason(
   disk: ExistingFile,
   ownership: Ownership,
   body: string,
+  record: RecordedFile | undefined,
 ): Confirmation["reason"] | null {
   if (ownership === "foreign") return "foreign";
-  if (target.kind === "derived" || !ownership.endsWith("-edited")) return null;
-  /* A generated file the user edited is replaced whole; an endpoint file
-     whose merge kept nothing of the user's version would be too. */
+  if (target.kind === "derived") return null;
+  /* A file holds the user's edits when it changed since Studio wrote it, or
+     when Studio last wrote it keeping edits of theirs, as managing does. */
+  const edited = ownership.endsWith("-edited") || record?.carriesEdits === true;
+  if (!edited) return null;
+  /* A generated file is replaced whole; an endpoint file whose merge kept
+     nothing of the user's version would be too. */
   const keepsTheirs = target.kind === "merge" && body !== target.body;
   return keepsTheirs || disk.body === target.body ? null : "edited";
 }

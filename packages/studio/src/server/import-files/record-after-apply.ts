@@ -34,7 +34,7 @@ export function recordAfterApply(
   for (const path of applied.forgotten) files.delete(path);
   for (const removal of applied.removals) files.delete(removal.path);
   for (const kept of applied.kept) {
-    if (kept.reason !== "unconfirmed" && kept.reason !== "edited") files.delete(kept.path);
+    if (kept.reason !== "unconfirmed") files.delete(kept.path);
   }
   for (const write of applied.writes) {
     const endpoints = Object.keys(write.endpoints).length > 0 ? { endpoints: write.endpoints } : {};

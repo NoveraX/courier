@@ -112,6 +112,19 @@ describe("planFiles, for the files an operation wants", () => {
     ]);
   });
 
+  it("holds replacing a file that still carries the user's edits from managing its endpoints", () => {
+    put(`${DIR}/source.ts`, "kept the user's edits\n");
+
+    const result = plan([generated(`${DIR}/source.ts`, "new\n")], [], {
+      [`${DIR}/source.ts`]: recordOf("kept the user's edits\n", { carriesEdits: true }),
+    });
+
+    expect(result.writes).toEqual([]);
+    expect(result.pending.map((step) => step.confirmation)).toEqual([
+      { path: `${DIR}/source.ts`, kind: "replace", reason: "edited", preselected: false },
+    ]);
+  });
+
   it("merges an endpoint file, keeping the endpoint the user edited and adding the new one", () => {
     const asGenerated = GROUP("");
     const regenerated = asGenerated.replace(
@@ -228,12 +241,28 @@ describe("planFiles, for the files an operation no longer wants", () => {
     ]);
   });
 
-  it("never touches a file Studio did not write, nor a link", () => {
+  it("never touches a file Studio did not write", () => {
     put(`${DIR}/helpers.ts`, "hand-written\n");
 
     const result = plan([], [`${DIR}/helpers.ts`]);
 
     expect(result.kept).toEqual([{ path: `${DIR}/helpers.ts`, reason: "not-written-by-studio" }]);
+    expect(result.removals).toEqual([]);
+  });
+
+  it.skipIf(IS_WINDOWS)("never removes a link, or a folder where a file was recorded, even one Studio recorded", () => {
+    put("elsewhere.ts", "the link's target\n");
+    mkdirSync(join(root.path, DIR), { recursive: true });
+    symlinkSync(join(root.path, "elsewhere.ts"), join(root.path, `${DIR}/linked.ts`));
+    mkdirSync(join(root.path, `${DIR}/folder.ts`));
+    const recorded = { [`${DIR}/linked.ts`]: recordOf("x\n"), [`${DIR}/folder.ts`]: recordOf("x\n") };
+
+    const result = plan([], [`${DIR}/linked.ts`, `${DIR}/folder.ts`], recorded);
+
+    expect(result.kept).toEqual([
+      { path: `${DIR}/linked.ts`, reason: "link" },
+      { path: `${DIR}/folder.ts`, reason: "not-a-file" },
+    ]);
     expect(result.removals).toEqual([]);
   });
 

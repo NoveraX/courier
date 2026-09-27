@@ -1,7 +1,8 @@
 /**
  * What an edit of the mocks file changes that its diff does not show: a new
  * file, running mocks that restart, a second mock of a source, a port Studio
- * assigns, a port another mock moves off, and a port in use.
+ * assigns, a port another mock moves off, and a port in use — on a loopback
+ * or on every address.
  */
 import { createServer, type Server } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
@@ -16,9 +17,15 @@ afterEach(async () => {
   await Promise.all(held.splice(0).map((server) => new Promise((resolve) => server.close(resolve))));
 });
 
-async function holdPort(): Promise<number> {
+const ipv6 = await new Promise<boolean>((resolve) => {
+  const probe = createServer();
+  probe.once("error", () => resolve(false));
+  probe.listen({ port: 0, host: "::1", ipv6Only: true }, () => probe.close(() => resolve(true)));
+});
+
+async function holdPort(host = "127.0.0.1"): Promise<number> {
   const server = createServer();
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await new Promise<void>((resolve) => server.listen(0, host, resolve));
   held.push(server);
   return (server.address() as { port: number }).port;
 }
@@ -91,6 +98,22 @@ describe("editWarnings", () => {
 
   it("says a fixed port is in use now", async () => {
     const port = await holdPort();
+
+    expect(await editWarnings(input({ requests: [request(port)] }))).toEqual([
+      `Port ${port} is in use now, so apiMock cannot start until it is free.`,
+    ]);
+  });
+
+  it("says a fixed port another process holds on 0.0.0.0 is in use now", async () => {
+    const port = await holdPort("0.0.0.0");
+
+    expect(await editWarnings(input({ requests: [request(port)] }))).toEqual([
+      `Port ${port} is in use now, so apiMock cannot start until it is free.`,
+    ]);
+  });
+
+  it.skipIf(!ipv6)("says a fixed port another process holds on :: is in use now", async () => {
+    const port = await holdPort("::");
 
     expect(await editWarnings(input({ requests: [request(port)] }))).toEqual([
       `Port ${port} is in use now, so apiMock cannot start until it is free.`,

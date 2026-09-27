@@ -70,6 +70,8 @@ export default defineConfig({
 })
 ```
 
+The command serves the default request body limits, 1 MB for a JSON envelope and 10 MB for an upload; to change them, start the server from code with `maxBodyBytes` and `maxUploadBytes`.
+
 The command exits with status 1 when the server cannot start — the port is taken, the config will not load — so a supervisor or a deploy script sees the failure. `--version` prints the installed version.
 
 <br />
@@ -82,6 +84,8 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `port` | `3001` | Server port |
 | `host` | `"localhost"` | Server host |
 | `allowedOrigins` | `undefined` | Origins of the browser apps that may call the server (CORS and the WebSocket origin check). Left out, only the server's own origin — and loopback origins outside production |
+| `maxBodyBytes` | 1 MB | Largest JSON envelope a proxied call may send; a larger one is refused with 413 |
+| `maxUploadBytes` | 10 MB | Largest `multipart/form-data` upload a proxied call may send; a larger one is refused with 413 |
 | `pubsub` | `undefined` | Pub/Sub adapter for horizontal WS scaling (e.g. Redis) |
 | `signals` | `true` | Drain on SIGTERM/SIGINT, then exit — unless the application handles the signal too, in which case its handler decides when the process ends |
 

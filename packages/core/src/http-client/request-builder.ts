@@ -1,6 +1,6 @@
-import { mergeHeaders } from "../utils/merge-headers";
 import { buildBody, toSearchParams } from "./body-builder";
 import { stripPathParams, toHeadersInit } from "./path-params";
+import { overlayHeaders } from "./request-headers";
 import type {
   FetchOptions,
   HttpMethod,
@@ -10,7 +10,6 @@ import type {
 } from "./types";
 
 type RequestBuilderDeps = {
-  allowedHeaders?: string[];
   defaultQueryParams?: Record<string, unknown>;
   defaultBody: Record<string, unknown>;
   searchParamsSerializer?: SearchParamsSerializer;
@@ -33,7 +32,7 @@ function buildHeadOptions(
     ...otherArgumentOptions,
     ...boundFetchOptions,
     ...prefixUrlOverride,
-    headers: mergeHeaders(boundHeaders, toHeadersInit(optionHeaders), deps.allowedHeaders),
+    headers: overlayHeaders(boundHeaders, toHeadersInit(optionHeaders)),
     searchParams: toSearchParams(
       { ...deps.defaultQueryParams, ...newSearchParameters },
       deps.searchParamsSerializer,
@@ -64,7 +63,9 @@ function buildStandardOptions(
     ...otherArgumentOptions,
     ...boundFetchOptions,
     ...prefixUrlOverride,
-    headers: mergeHeaders(boundHeaders, optionHeaders, deps.allowedHeaders),
+    /* Written by the endpoint's author, not received from a browser, so the
+       forwarding allowlist has no say over them. */
+    headers: overlayHeaders(boundHeaders, optionHeaders),
     ...buildBody(
       method,
       directVars ?? newVariables,

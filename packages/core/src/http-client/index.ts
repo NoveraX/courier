@@ -20,7 +20,6 @@ export class HttpClient {
   private responseParser?: (response: Response) => Promise<unknown>;
   private defaultBody: Record<string, unknown> = {};
   private defaultQueryParams?: Record<string, unknown>;
-  private allowedHeaders?: string[];
   private pathOptions?: PathOptions;
   private bodySerializer?: (data: Record<string, unknown>) => BodyInit;
   private searchParamsSerializer?: SearchParamsSerializer;
@@ -47,7 +46,9 @@ export class HttpClient {
       responseParser,
       defaultBody,
       defaultQueryParams,
-      allowedHeaders,
+      /* Governs what a browser may forward, which the executor applies before
+         the call reaches this client. */
+      allowedHeaders: _allowedHeaders,
       pathOptions,
       bodySerializer,
       searchParamsSerializer,
@@ -61,7 +62,6 @@ export class HttpClient {
     this.responseType = responseType;
     this.responseParser = responseParser;
     this.defaultBody = { ...defaultBody };
-    this.allowedHeaders = allowedHeaders;
     this.pathOptions = pathOptions;
     this.bodySerializer = bodySerializer;
     this.searchParamsSerializer = searchParamsSerializer;
@@ -125,7 +125,6 @@ export class HttpClient {
       deduplicate: this.deduplicate,
       pathOptions: this.pathOptions,
       searchParamsSerializer: this.searchParamsSerializer,
-      allowedHeaders: this.allowedHeaders,
       defaultQueryParams: this.defaultQueryParams,
       defaultBody: this.defaultBody,
       bodySerializer: this.bodySerializer,

@@ -30,7 +30,6 @@ export type BindMethodDeps = {
   deduplicate: boolean;
   pathOptions?: PathOptions;
   searchParamsSerializer?: SearchParamsSerializer;
-  allowedHeaders?: string[];
   defaultQueryParams?: Record<string, unknown>;
   defaultBody: Record<string, unknown>;
   bodySerializer?: (data: Record<string, unknown>) => BodyInit;

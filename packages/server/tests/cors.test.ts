@@ -1,8 +1,11 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import type { AddressInfo } from "node:net";
 
+import { courier, defineApi } from "@noverax/courier/define";
 import { describe, expect, it } from "vitest";
 
 import { handleCors } from "../src/cors";
+import { createCourierServer } from "../src/create-server";
 
 // --- Mock factories ---
 
@@ -132,5 +135,41 @@ describe("handleCors — the request itself", () => {
     const res = createMockRes();
 
     expect(handleCors(request("http://api.example.com"), res, undefined)).toBe(false);
+  });
+});
+
+describe("a cross-origin answer", () => {
+  it("lets the page read the headers the proxy passes back", async () => {
+    const upstream = createServer((_req, res) => {
+      res.writeHead(503, { "Content-Type": "application/json", "Retry-After": "7", ETag: '"v1"' });
+      res.end(JSON.stringify({ busy: true }));
+    });
+    await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
+    const { endpoint } = courier();
+    const api = defineApi({
+      baseURL: `http://127.0.0.1:${(upstream.address() as AddressInfo).port}`,
+      endpoints: { busy: endpoint.get("busy") },
+    });
+    const server = createCourierServer({
+      sources: { api },
+      port: 0,
+      host: "127.0.0.1",
+      signals: false,
+      allowedOrigins: ["http://app.example"],
+    });
+    const url = await server.ready;
+
+    const res = await fetch(`${url}/api/request?_s=api&_m=busy`, {
+      headers: { Origin: "http://app.example" },
+    });
+    await res.body?.cancel();
+
+    const exposed = (res.headers.get("access-control-expose-headers") ?? "")
+      .split(",")
+      .map((name) => name.trim().toLowerCase());
+    expect(res.headers.get("retry-after")).toBe("7");
+    expect(exposed).toEqual(expect.arrayContaining(["retry-after", "etag"]));
+    await server.stop();
+    await new Promise<void>((resolve) => upstream.close(() => resolve()));
   });
 });

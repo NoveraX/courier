@@ -70,6 +70,31 @@ export function handleCors(
   return false;
 }
 
+/**
+ * Let a cross-origin page read the headers on the answer it is granted.
+ *
+ * A browser shows a cross-origin script only the CORS-safelisted response
+ * headers unless the answer names more, so `Retry-After`, `ETag` and
+ * `Content-Disposition`, which the proxy passes back on purpose, reached
+ * the same-origin page and never a configured cross-origin one. The proxy
+ * has already chosen which headers the browser may have, so every one on
+ * its answer is named; `Set-Cookie` is left out, as no page may read it.
+ *
+ * @param res - The response being prepared, after `handleCors`
+ * @param headers - The headers of the answer about to be sent
+ *
+ * @example
+ * ```ts
+ * exposeHeaders(res, webResponse.headers);
+ * await sendWebResponse(webResponse, res);
+ * ```
+ */
+export function exposeHeaders(res: ServerResponse, headers: Headers): void {
+  if (!res.hasHeader("Access-Control-Allow-Origin")) return;
+  const names = [...headers.keys()].filter((name) => name !== "set-cookie");
+  if (names.length > 0) res.setHeader("Access-Control-Expose-Headers", names.join(", "));
+}
+
 /** An RFC 9110 token: what a header name may be made of. */
 const HEADER_NAME = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
 

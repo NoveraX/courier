@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generateCode } from "../src/apis/generator";
 import { InvalidImportError, resolveImportLayout } from "../src/apis/layout";
 import { previewAddEndpoints, previewRemoveEndpoints } from "../src/apis/manage";
+import { previewRemoveFlatEndpoints } from "../src/apis/manage/remove-flat-endpoints";
 import {
   addGroupsToSourceFile,
   removeGroupsFromSourceFile,
@@ -124,6 +125,53 @@ describe("previewRemoveEndpoints", () => {
     const group = result.modifiedFiles.find((file) => file.path === layout.groupFile("pets"));
     expect(group?.content).toContain("listPets");
     expect(group?.content).not.toContain("createPet");
+  });
+});
+
+describe("removing the endpoints that used every schema of a group that stays", () => {
+  const PET = { $ref: "#/components/schemas/Pet" };
+  const ok = (schema?: object) => ({
+    "200": { description: "ok", ...(schema && { content: { "application/json": { schema } } }) },
+  });
+  const PETS = parseSpec(
+    JSON.stringify({
+      openapi: "3.1.0",
+      info: { title: "Shop", version: "1" },
+      paths: {
+        "/pets": { get: { operationId: "listPets", tags: ["pets"], responses: ok(PET) } },
+        "/ping": { get: { operationId: "ping", tags: ["pets"], responses: ok() } },
+      },
+      components: { schemas: { Pet: { type: "object", properties: { id: { type: "string" } } } } },
+    }),
+  );
+  const layout = resolveImportLayout({ outputDir: "src/api" }, "shop");
+  const written = (groupBy?: "single") =>
+    Object.fromEntries(
+      generateCode(PETS, { type: "openapi", outputDir: "src/api", ...(groupBy && { groupBy }) }, "shop").map(
+        (file) => [file.path, file.content],
+      ),
+    );
+
+  it("drops the barrel's re-export of the schemas file it deletes", () => {
+    const existing = written();
+    expect(existing[layout.indexFile]).toContain('export * from "./pets/schemas";');
+
+    const result = previewRemoveEndpoints({ pets: ["listPets"] }, existing, {}, layout);
+
+    expect(result.deletedFiles).toEqual([layout.groupSchemaFile("pets", "schemas")]);
+    expect(result.indexFileUpdate?.content).not.toContain("./pets/schemas");
+    expect(result.indexFileUpdate?.content).toContain("export const shopApi");
+  });
+
+  it("drops a flat import's re-export of the schemas file it deletes", () => {
+    const existing = written("single");
+    expect(existing[layout.indexFile]).toContain('export * from "./schemas";');
+
+    const result = previewRemoveFlatEndpoints(["listPets"], existing, {}, layout);
+
+    expect(result.deletedFiles).toEqual([layout.schemaFile("schemas")]);
+    expect(result.indexFileUpdate?.content).not.toContain("./schemas");
+    expect(result.indexFileUpdate?.content).toContain("export const shopApi");
   });
 });
 

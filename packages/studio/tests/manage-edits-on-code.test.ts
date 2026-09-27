@@ -109,7 +109,7 @@ describe("the barrel", () => {
   it("drops and adds re-exports whatever quotes they are written with", () => {
     const barrel = "export * from './users/schemas';\nexport * from './pets/schemas';\n";
 
-    const dropped = removeBarrelExports("src/api/pets/index.ts", barrel, new Set(["./users/schemas"]));
+    const dropped = removeBarrelExports("src/api/pets/index.ts", barrel, new Map([["./users/schemas", null]]));
     const added = appendBarrelExports(
       "src/api/pets/index.ts",
       dropped,
@@ -119,6 +119,30 @@ describe("the barrel", () => {
 
     expect(dropped).toBe("export * from './pets/schemas';\n");
     expect(added).toBe("export * from './pets/schemas';\nexport * from \"./users/schemas\";\n");
+  });
+});
+
+describe("the barrel, as a removal leaves a module", () => {
+  it("keeps only the names a rewritten module still exports, in the list's own spelling", () => {
+    const barrel = 'export * from "./pets/schemas";\nexport { OrderSchema, type Order, TagSchema } from "./store/schemas";\n';
+
+    const narrowed = removeBarrelExports(
+      "src/api/shop/index.ts",
+      barrel,
+      new Map([["./store/schemas", "export const TagSchema = z.object({});\nexport type Order = {};\n"]]),
+    );
+
+    expect(narrowed).toBe('export * from "./pets/schemas";\nexport { type Order, TagSchema } from "./store/schemas";\n');
+  });
+
+  it("drops a list none of whose names its module still exports, and leaves an `export *` of it", () => {
+    const barrel = 'export * from "./pets/schemas";\nexport { OrderSchema } from "./store/schemas";\n';
+    const changed = new Map([
+      ["./store/schemas", "export const TagSchema = z.object({});\n"],
+      ["./pets/schemas", "export const PetSchema = z.object({});\n"],
+    ]);
+
+    expect(removeBarrelExports("src/api/shop/index.ts", barrel, changed)).toBe('export * from "./pets/schemas";\n');
   });
 });
 

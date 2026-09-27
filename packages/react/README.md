@@ -94,6 +94,13 @@ const { data } = q.users.useQuery("getAll", {
 })
 ```
 
+`select` shapes what the hook returns, and its type follows:
+
+```tsx
+const { data: count } = q.users.useQuery("getAll", { select: (users) => users.length })
+//      ^? number | undefined
+```
+
 ### `useSuspenseQuery`
 
 ```tsx

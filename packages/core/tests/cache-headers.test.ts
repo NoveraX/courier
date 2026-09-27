@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyCacheHeaders } from "../src/utils/execute-resolve";
+import { applyCacheHeaders } from "../src/utils/cache-headers";
 import type { SchemaMetadata } from "../src/validation";
 
 const cached: SchemaMetadata = { type: "query", cache: { revalidate: 60 } };
@@ -70,6 +70,64 @@ describe("cache directives", () => {
       new Headers({ accept: "application/json" }),
       cached,
       new Headers({ accept: "application/json", "x-api-key": "secret" }),
+    );
+
+    expect(headers.get("Cache-Control")).toBe("private, max-age=60");
+  });
+
+  /**
+   * Every production request passes a proxy of some kind, and Next.js adds
+   * the four `x-forwarded-*` headers to each request itself. Read as
+   * unfamiliar headers, they made the shared-cache answer unreachable
+   * anywhere but a bare local server.
+   */
+  it("offers a response to shared caches when a reverse proxy stamped the request", () => {
+    const headers = headersOf(
+      new Headers({ accept: "application/json" }),
+      cached,
+      new Headers({
+        accept: "application/json",
+        "x-forwarded-for": "203.0.113.7",
+        "x-forwarded-host": "app.example.com",
+        "x-forwarded-port": "443",
+        "x-forwarded-proto": "https",
+        forwarded: "for=203.0.113.7;proto=https",
+        via: "1.1 proxy.example",
+        "x-real-ip": "203.0.113.7",
+        traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+      }),
+    );
+
+    expect(headers.get("Cache-Control")).toBe("s-maxage=60, stale-while-revalidate");
+  });
+
+  it("offers a response to shared caches when a CDN stamped the request", () => {
+    const headers = headersOf(
+      new Headers(),
+      cached,
+      new Headers({
+        "cf-connecting-ip": "203.0.113.7",
+        "cf-ipcountry": "NL",
+        "cf-ray": "8f1c2d3e4f5a6b7c-AMS",
+        "cf-visitor": '{"scheme":"https"}',
+        "cdn-loop": "cloudflare",
+        "x-vercel-id": "fra1::abcde-1700000000000-0123456789ab",
+        "x-vercel-forwarded-for": "203.0.113.7",
+        "x-vercel-ip-country": "NL",
+        "x-vercel-ip-city": "Amsterdam",
+        "x-vercel-deployment-url": "app-abc123.vercel.app",
+        "x-amzn-trace-id": "Root=1-67891233-abcdef012345678912345678",
+      }),
+    );
+
+    expect(headers.get("Cache-Control")).toBe("s-maxage=60, stale-while-revalidate");
+  });
+
+  it("keeps a response private when the edge vouches for a signed-in user", () => {
+    const headers = headersOf(
+      new Headers(),
+      cached,
+      new Headers({ "cf-connecting-ip": "203.0.113.7", "cf-access-jwt-assertion": "eyJ.x.y" }),
     );
 
     expect(headers.get("Cache-Control")).toBe("private, max-age=60");

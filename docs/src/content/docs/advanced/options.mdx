@@ -129,7 +129,7 @@ const users = await caller.users
 
 The browser's own options — `cache`, `next`, `credentials`, `headers` and the rest of `RequestInit` — apply to the browser's request to `/api/request`. Combined with the `Cache-Control` the proxy answers with, this is what lets the browser, a CDN or the Next.js Data Cache on the page's side reuse the answer.
 
-The proxy itself takes no caching instructions from the browser: a page could otherwise make the server cache one user's answer for everyone. How long an answer may be kept is declared on the endpoint with `.cache({ revalidate })`, and the proxy sets `Cache-Control` from it — `private` when the request carries a credential, shared with `Vary` on the forwarded headers otherwise.
+The proxy itself takes no caching instructions from the browser: a page could otherwise make the server cache one user's answer for everyone. How long an answer may be kept is declared on the endpoint with `.cache({ revalidate })`, and the proxy sets `Cache-Control` from it — `private` when the request carries a credential, shared with `Vary` on the forwarded headers otherwise. Any request header the proxy does not know to be impersonal counts as a credential. What the browser sends on its own counts as impersonal, and so do the headers a reverse proxy, CDN or hosting platform stamps on the way, such as `X-Forwarded-For`, `Forwarded`, `Via`, `CF-Connecting-IP`, `X-Vercel-Id` and `traceparent`. Next.js adds the `X-Forwarded-*` headers to every request itself.
 
 <Callout variant="info" title="Requires GET proxy">
 Proxy caching only works with `method: "GET"`, and only an endpoint built from the `query` head is served over GET. A mutation asked for over GET is refused 405.

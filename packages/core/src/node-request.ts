@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { Readable } from "node:stream";
 import { rememberPeerAddress } from "./adapter/peer-address";
 import { ConfigurationError } from "./errors/configuration-error";
 import { addressedTo } from "./node-origin";
+import { nodeRequestBody } from "./node-request-body";
 
 /**
  * Convert a Node.js IncomingMessage to a Web Standard Request.
@@ -60,7 +60,7 @@ export function toWebRequest(nodeReq: IncomingMessage, nodeRes?: ServerResponse)
       );
     }
 
-    init.body = Readable.toWeb(nodeReq) as ReadableStream;
+    init.body = nodeRequestBody(nodeReq);
     init.duplex = "half";
   }
 

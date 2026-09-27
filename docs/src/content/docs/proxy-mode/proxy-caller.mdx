@@ -132,6 +132,14 @@ await caller.users.create(formData)
 When sending FormData, Courier appends metadata as special fields: `_source`, `_group`, `_method`, and `_options`. Your actual variables are appended alongside them. The server handler strips these meta fields before passing variables to your endpoint.
 </Callout>
 
+<Callout variant="warning" title="Binary variables">
+JSON cannot carry a `Blob`, an `ArrayBuffer` or a typed array, so a proxy call whose plain-object variables hold one is refused with a `ConfigurationError` (`PROXY_VARIABLE_NOT_SERIALIZABLE`) before anything is sent. Put binary data in a FormData.
+</Callout>
+
+## Binary answers
+
+A source whose `responseType` is `"arrayBuffer"`, `"blob"` or `"formData"` resolves to the same kind of value through the proxy as in direct mode. The proxy sends the bytes as they are, as `application/octet-stream`, and the client reads them back — a Blob keeps the upstream's type. With `.raw`, the headers are those of the proxy's answer.
+
 ## Per-request options
 
 `.with()` returns a caller carrying options for the calls made through it, overriding the defaults for a specific request:

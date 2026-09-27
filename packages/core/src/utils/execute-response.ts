@@ -1,7 +1,7 @@
 import { HTTPError } from "../errors";
-import { isBodilessStatus } from "../http-client/response";
 import type { Context } from "../http-client/types";
 import { filterResponseHeaders } from "./merge-headers";
+import { toWireAnswer } from "./wire-answer";
 
 export type InternalResponse = {
   status: number;
@@ -42,19 +42,13 @@ export const buildResponse = (
   }
 
   if (context?.res instanceof Response) {
-    const baseResult = {
-      status: response.status,
-      headers: filterResponseHeaders(response.headers),
-    };
-    /* JSON has no Headers, so the raw envelope carries them as a plain
-       object; serialized as they were, they arrived as `{}`. */
-    const body = response.rawData
-      ? { ...baseResult, headers: Object.fromEntries(baseResult.headers), data: response.data }
-      : response.data;
-    const jsonResponse = isBodilessStatus(baseResult.status)
-      ? new Response(null, baseResult)
-      : Response.json(body, baseResult);
-    return withUpstreamCookies(jsonResponse, response.headers);
+    const answer = toWireAnswer(
+      response.status,
+      filterResponseHeaders(response.headers),
+      response.data,
+      response.rawData,
+    );
+    return withUpstreamCookies(answer, response.headers);
   }
 
   if (response.throw) {

@@ -2,6 +2,7 @@ import type { CallOptions } from "../http-client/types";
 import type { CallerFn } from "../types";
 import { isFormData, parseEndpointKey } from "../utils/helpers";
 import { assertCarriable } from "./assert-carriable";
+import { assertJsonVariables } from "./assert-json-variables";
 import { handleGetProxy } from "./get-proxy";
 import { buildPostPayload } from "./post-payload";
 import { createProxyDedupe } from "./proxy-dedupe";
@@ -54,6 +55,7 @@ export function createProxyCallerFn<
     async function send(arguments_: Arguments, signal: AbortSignal | null | undefined) {
       const [endpoint, variables] = arguments_;
       assertCarriable(variables);
+      if (!isFormData(variables)) assertJsonVariables(variables);
       const { group, method } = parseEndpointKey(endpoint);
       // Lazy resolution: in SSR contexts the caller may be constructed in
       // Node where `globalThis.location` is undefined; resolving here guarantees

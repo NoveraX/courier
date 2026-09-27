@@ -17,7 +17,7 @@ import { basename, dirname, join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MOCKS_TEMP_NAME, writeTempBeside } from "../../src/server/mocks-edit/write-temp-beside";
+import { writeTempBeside } from "../../src/server/project-fs/write-temp-beside";
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof Fs>();
@@ -30,6 +30,7 @@ vi.mock("node:crypto", async (importOriginal) => {
 });
 
 const IS_WINDOWS = process.platform === "win32";
+const PREFIX = ".courier.test";
 const NOTHING_THROWN = Symbol("nothing thrown");
 
 let dir: string;
@@ -61,23 +62,23 @@ afterEach(() => {
 
 describe("writeTempBeside", () => {
   it("writes the content beside the file under a name Studio recognizes as its own", () => {
-    const tmp = writeTempBeside(path, "export default {};\n", null);
+    const tmp = writeTempBeside(path, "export default {};\n", null, PREFIX);
 
     expect(dirname(tmp)).toBe(dir);
-    expect(MOCKS_TEMP_NAME.test(basename(tmp))).toBe(true);
+    expect(basename(tmp)).toMatch(/^\.courier\.test\.\d+-[0-9a-f]{8}\.tmp$/);
     expect(readFileSync(tmp, "utf8")).toBe("export default {};\n");
   });
 
   it("gives the file the exact mode asked for, whatever the umask", () => {
     process.umask(0o077);
 
-    const tmp = writeTempBeside(path, "x", 0o664);
+    const tmp = writeTempBeside(path, "x", 0o664, PREFIX);
 
     expect(statSync(tmp).mode & 0o7777).toBe(0o664);
   });
 
   it("gives the file the mode the umask leaves when no mode is asked for", () => {
-    const tmp = writeTempBeside(path, "x", null);
+    const tmp = writeTempBeside(path, "x", null, PREFIX);
 
     expect(statSync(tmp).mode & 0o7777).toBe(0o644);
   });
@@ -88,28 +89,19 @@ describe("writeTempBeside", () => {
       throw flushError;
     });
 
-    expect(thrownBy(() => writeTempBeside(path, "x", null))).toBe(flushError);
+    expect(thrownBy(() => writeTempBeside(path, "x", null, PREFIX))).toBe(flushError);
     expect(readdirSync(dir)).toEqual([]);
   });
 
   it.skipIf(IS_WINDOWS)("refuses to write through a link planted at its temporary name", () => {
     const planted = join(dir, "planted.ts");
     writeFileSync(planted, "untouched\n");
-    symlinkSync(planted, join(dir, `.courier.mocks.${process.pid}-00000000.tmp`));
+    symlinkSync(planted, join(dir, `${PREFIX}.${process.pid}-00000000.tmp`));
     vi.mocked(randomBytes).mockImplementationOnce(() => Buffer.alloc(4));
 
-    const error = thrownBy(() => writeTempBeside(path, "x", null));
+    const error = thrownBy(() => writeTempBeside(path, "x", null, PREFIX));
 
     expect(error).toMatchObject({ code: "EEXIST" });
     expect(readFileSync(planted, "utf8")).toBe("untouched\n");
-  });
-});
-
-describe("MOCKS_TEMP_NAME", () => {
-  it("matches the temporary files Studio writes and nothing Studio loads", () => {
-    expect(MOCKS_TEMP_NAME.test(".courier.mocks.4242-0a1b2c3d.tmp")).toBe(true);
-    expect(MOCKS_TEMP_NAME.test("courier.mocks.ts")).toBe(false);
-    expect(MOCKS_TEMP_NAME.test(".courier.mocks.tmp")).toBe(false);
-    expect(MOCKS_TEMP_NAME.test(".courier.mocks.4242-0a1b2c3d.tmp.ts")).toBe(false);
   });
 });

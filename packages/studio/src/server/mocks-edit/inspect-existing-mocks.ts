@@ -4,8 +4,8 @@ import { sha256Hex } from "../file-hash";
 import { checkWriteAccess } from "./check-write-access";
 import type { ExistingMocksTarget } from "./inspect-mocks-target";
 import { MocksEditRefusal } from "./mocks-edit-refusal";
+import { MOCKS_TEMP_NAME } from "./mocks-temp-name";
 import { readMocksText } from "./read-mocks-text";
-import { MOCKS_TEMP_NAME } from "./write-temp-beside";
 
 /** 1 MiB: far past any mocks file written by hand. */
 const MAX_BYTES = 1024 * 1024;

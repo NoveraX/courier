@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { syncDirectory } from "../../src/server/mocks-edit/sync-directory";
+import { syncDirectory } from "../../src/server/project-fs/sync-directory";
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof Fs>();
@@ -62,7 +62,7 @@ describe("syncDirectory", () => {
     expect(thrownBy(() => syncDirectory(dir))).toBe(NOTHING_THROWN);
     expect(debug).toHaveBeenCalledWith(
       "%s",
-      expect.stringContaining(`[Studio] Could not flush ${dir} after writing the mocks file`),
+      expect.stringContaining(`[Studio] Could not flush ${dir} after changing a name in it`),
       flushError,
     );
   });

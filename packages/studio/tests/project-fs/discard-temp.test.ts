@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { discardTemp } from "../../src/server/mocks-edit/discard-temp";
+import { discardTemp } from "../../src/server/project-fs/discard-temp";
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof Fs>();
@@ -44,7 +44,7 @@ describe("discardTemp", () => {
     expect(warn).toHaveBeenCalledWith(
       "%s",
       expect.stringContaining(
-        `[Studio] Could not remove ${tmp}, left by an edit that failed; delete it.`,
+        `[Studio] Could not remove ${tmp}, left by a write that failed; delete it.`,
       ),
       unlinkError,
     );

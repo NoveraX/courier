@@ -1,9 +1,9 @@
 import { unlinkSync } from "node:fs";
 import { dirname } from "node:path";
+import { retryOnWin32 } from "../project-fs/retry-on-win32";
+import { syncDirectory } from "../project-fs/sync-directory";
 import { hashMocksFile } from "./hash-mocks-file";
 import { MocksFileChangedError } from "./mocks-file-changed-error";
-import { retryOnWin32 } from "./retry-on-win32";
-import { syncDirectory } from "./sync-directory";
 
 /**
  * Remove a mocks file Studio created, undoing the creation, but only while it

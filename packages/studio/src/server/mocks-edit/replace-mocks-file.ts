@@ -1,11 +1,12 @@
 import { renameSync } from "node:fs";
 import { dirname } from "node:path";
-import { discardTemp } from "./discard-temp";
+import { discardTemp } from "../project-fs/discard-temp";
+import { retryOnWin32 } from "../project-fs/retry-on-win32";
+import { syncDirectory } from "../project-fs/sync-directory";
+import { writeTempBeside } from "../project-fs/write-temp-beside";
 import { hashMocksFile } from "./hash-mocks-file";
 import { MocksFileChangedError } from "./mocks-file-changed-error";
-import { retryOnWin32 } from "./retry-on-win32";
-import { syncDirectory } from "./sync-directory";
-import { writeTempBeside } from "./write-temp-beside";
+import { MOCKS_TEMP_PREFIX } from "./mocks-temp-name";
 
 /** How {@link replaceMocksFile} writes the edited file. */
 export interface ReplaceMocksFileOptions {
@@ -43,7 +44,7 @@ export function replaceMocksFile(
   content: string | Buffer,
   { mode, expectedHash }: ReplaceMocksFileOptions,
 ): void {
-  const tmp = writeTempBeside(path, content, mode);
+  const tmp = writeTempBeside(path, content, mode, MOCKS_TEMP_PREFIX);
   try {
     if (hashMocksFile(path) !== expectedHash) throw new MocksFileChangedError(path);
     retryOnWin32(() => renameSync(tmp, path), `Renaming ${tmp} to ${path}`);

@@ -26,7 +26,7 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
     connectionId: "conn-1",
     requestId: "req-1",
     subscriptionIds: new Map(),
-    subscribing: new Set(),
+    subscribing: new Map(),
     sendMessage: (msg: WSMessage) => sent.push(msg),
     dt: {},
     seq: { value: 0 },

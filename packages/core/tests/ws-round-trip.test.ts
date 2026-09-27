@@ -233,6 +233,22 @@ describe("a channel", () => {
     ch.close();
   });
 
+  it("delivers a message sent the moment it is created", async () => {
+    const url = await serve(
+      room({
+        onMessage: (ctx, message) => ctx.send({ echo: (message as { text: string }).text }),
+      }),
+    );
+    const { ch, errors, data } = open(url);
+
+    ch.send({ text: "early" });
+    await settle(60);
+
+    expect(errors).toEqual([]);
+    expect(data).toEqual([{ echo: "early" }]);
+    ch.close();
+  });
+
   it("hears of a failed onMessage and goes on", async () => {
     const url = await serve(
       room({

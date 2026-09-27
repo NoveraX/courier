@@ -51,9 +51,10 @@ export interface WSSocketContext {
   subscriptionIds: Map<string, SubscriptionTracker>;
   /**
    * Topics whose subscribe is still on its way in — validation, middleware
-   * and authorization are awaited — counted against `maxSubscriptions`.
+   * and authorization are awaited — counted against `maxSubscriptions`,
+   * each with the subscription's opening, which a message to it waits for.
    */
-  subscribing: Set<string>;
+  subscribing: Map<string, Promise<void>>;
   sources: Sources;
   registry: InternalConnectionRegistry;
   bridge: PubSubBridge | undefined;
@@ -144,7 +145,7 @@ export function buildContext(
     playgroundRequestId,
     closed: false,
     subscriptionIds,
-    subscribing: new Set(),
+    subscribing: new Map(),
     sources: servedSources(config.sources),
     registry,
     bridge,

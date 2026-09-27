@@ -56,7 +56,7 @@ function createMockCtx(): WSSocketContext {
     dt: {},
     seq: { value: 0 },
     subscriptionIds: new Map(),
-    subscribing: new Set(),
+    subscribing: new Map(),
     t0: 0,
     meta: {},
     maxMessageSize: 65536,

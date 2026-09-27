@@ -1,4 +1,4 @@
-const WINDOWS_DEVICES = /^(?:con|prn|aux|nul|com[0-9]|lpt[0-9]|conin\$|conout\$)$/;
+import { isWindowsDevice } from "./windows-device";
 
 /**
  * The directory name for a generated binding: kebab case, so two bindings
@@ -19,5 +19,5 @@ const WINDOWS_DEVICES = /^(?:con|prn|aux|nul|com[0-9]|lpt[0-9]|conin\$|conout\$)
  */
 export function directoryName(binding: string): string {
   const kebab = binding.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-  return WINDOWS_DEVICES.test(kebab) ? `_${kebab}` : kebab;
+  return isWindowsDevice(kebab) ? `_${kebab}` : kebab;
 }

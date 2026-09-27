@@ -1,6 +1,7 @@
 import { posix } from "node:path";
 import { toBindingName, toCamelCase } from "../parser/naming-utils";
-import { canonicalOutputDir } from "./canonical-output-dir";
+import { canonicalOutputDir, STUDIO_OFF_LIMITS } from "./canonical-output-dir";
+import { checkImportName, MAX_NAME_LENGTH } from "./check-import-name";
 import { directoryName } from "./directory-name";
 import { InvalidImportError, type InvalidImportField } from "./invalid-import-error";
 
@@ -58,7 +59,7 @@ export interface ImportLayout {
  * @param placement - The import's `outputDir` and `sourceName`
  * @param importName - The import's key under `imports`
  * @returns The layout
- * @throws {InvalidImportError} When the directory or the name the source takes is refused,
+ * @throws {InvalidImportError} When the import's name, the directory or the name the source takes is refused,
  * and, from a group method, when a group name is not a binding
  * @example
  * ```ts
@@ -68,6 +69,7 @@ export interface ImportLayout {
  * ```
  */
 export function resolveImportLayout(placement: ImportPlacement, importName: string): ImportLayout {
+  checkImportName(importName);
   const sourceBinding = bindingFor(placement.sourceName, importName);
   const outputDir = canonicalOutputDir(placement.outputDir);
   const dir = posix.join(outputDir, directoryName(sourceBinding));
@@ -91,6 +93,13 @@ export function resolveImportLayout(placement: ImportPlacement, importName: stri
 function bindingFor(sourceName: string | undefined, importName: string): string {
   const field: InvalidImportField = sourceName === undefined ? "importName" : "sourceName";
   const name = sourceName ?? importName;
+  if (name.length > MAX_NAME_LENGTH) {
+    throw new InvalidImportError(
+      field,
+      name.slice(0, 40),
+      `it is longer than ${MAX_NAME_LENGTH} characters`,
+    );
+  }
   if (toCamelCase(name) === "") {
     throw new InvalidImportError(
       field,
@@ -98,12 +107,28 @@ function bindingFor(sourceName: string | undefined, importName: string): string 
       "it holds no ASCII letter or digit to name a binding with",
     );
   }
-  return toBindingName(name);
+  return offLimitsChecked(field, name, toBindingName(name));
 }
 
 function requireGroupBinding(group: string): string {
   if (!GROUP_BINDING.test(group)) {
     throw new InvalidImportError("group", group, "a group is named by an identifier");
   }
-  return group;
+  if (group.length > MAX_NAME_LENGTH) {
+    throw new InvalidImportError(
+      "group",
+      group.slice(0, 40),
+      `it is longer than ${MAX_NAME_LENGTH} characters`,
+    );
+  }
+  return offLimitsChecked("group", group, group);
+}
+
+/* A folder named like one Studio never writes into is refused, whatever names it. */
+function offLimitsChecked(field: InvalidImportField, name: string, binding: string): string {
+  const folder = directoryName(binding);
+  if (STUDIO_OFF_LIMITS.has(folder)) {
+    throw new InvalidImportError(field, name, `generated files do not belong in ${folder}`);
+  }
+  return binding;
 }

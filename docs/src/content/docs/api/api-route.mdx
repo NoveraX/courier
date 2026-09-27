@@ -141,17 +141,10 @@ export default courierHandler()
 
 ### Origin Validation
 
-The handler validates the `Origin` header against the request URL. Mismatched origins return `403`:
+The handler refuses a request another site's page made with `403 { success: false, message: "Origin not allowed" }`. The browser's `Sec-Fetch-Site` decides where it is sent; otherwise the `Origin` must be the origin the request was addressed to. Pages on other origins are served when `allowedOrigins` lists them — see [Proxy Mode](/docs/proxy-mode/overview#origin-validation) for the whole rule.
 
 ```ts
-// Built-in origin check — prevents CSRF
-const origin = request.headers.get("origin")
-if (!origin || new URL(request.url).origin !== origin) {
-  return Response.json(
-    { success: false, message: "Origin mismatch" },
-    { status: 403 }
-  )
-}
+const handler = createHandler({ allowedOrigins: ["https://admin.example.com"] })
 ```
 
 ### Header Whitelisting

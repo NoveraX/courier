@@ -8,7 +8,7 @@ export interface HandlerConfig extends SSELifecycleConfig {
   sseMaxLifetimeMs?: number;
   /**
    * Origins allowed to call the proxy, for every transport. Unset, the
-   * application's own origin and callers that send no `Origin` are served,
+   * application's own pages and callers that are not a browser are served,
    * and in development other local ports are too.
    */
   allowedOrigins?: string[];

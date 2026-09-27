@@ -91,6 +91,16 @@ courierHandler({
 
 `https://*.example.com` covers the sub-domains of `example.com` over HTTPS on the default port, not the apex. A pattern without a scheme, `*.example.com`, covers them over any scheme and port.
 
+### Upstream redirects
+
+A proxied call carries the server's credentials — whatever your middleware added — so the proxy follows an upstream redirect only while it stays on the origin the call was sent to. A redirect to another origin is not followed: the caller receives its status as an error, without its `Location`, and the credentials never reach the other host. A source that trusts every redirect its upstream sends can say so:
+
+```ts
+defineApi({ baseURL: "https://api.example.com", redirect: "follow", groups: { users } })
+```
+
+Server-side callers keep `fetch`'s own handling.
+
 ### Header whitelisting
 
 Not all browser headers are forwarded to the backend. Courier uses a whitelist to prevent leaking internal headers while passing through the ones your backend needs:

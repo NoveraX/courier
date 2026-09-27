@@ -281,6 +281,8 @@ export const boundary: ProxyBoundary = defineBoundary<typeof api>({
 export const api = defineApi({ baseURL: "https://api.example.com", boundary, groups: { users } })
 ```
 
+A proxied call carries the server's credentials, so it follows an upstream redirect only while the redirect stays on the origin the call was sent to; a redirect to another origin reaches the caller as its status, unfollowed. Set `redirect: "follow"` on a source that trusts every redirect its upstream sends.
+
 A streamed answer passes the upstream's body and content type through, from your application's origin, so it carries `Content-Security-Policy: default-src 'none'; sandbox` and `X-Content-Type-Options: nosniff`: HTML an upstream sends cannot run as your application when its URL is opened as a page.
 
 <br />

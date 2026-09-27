@@ -153,6 +153,28 @@ describe("planFiles, for the files an operation wants", () => {
     expect(result.writes[0]?.body).toContain("deletePet");
   });
 
+  it("holds a merge that leaves out an endpoint the user edited, though it keeps another edit", () => {
+    const asGenerated = GROUP("");
+    const edited = GROUP(".query<{ page: number }>()").replace('endpoint.post("/")', 'endpoint.post("/").meta({ mine: true })');
+    written(`${DIR}/pets/index.ts`, edited, asGenerated);
+    const withoutCreate = asGenerated.replace('    createPet: endpoint.post("/"),\n', "");
+    const recorded = {
+      [`${DIR}/pets/index.ts`]: recordOf(asGenerated, { endpoints: generateFingerprints(asGenerated) }),
+    };
+
+    const result = plan(
+      [{ path: `${DIR}/pets/index.ts`, body: withoutCreate, kind: "merge", endpoints: generateFingerprints(withoutCreate) }],
+      [],
+      recorded,
+    );
+
+    expect(result.writes).toEqual([]);
+    expect(result.pending.map((step) => step.confirmation)).toEqual([
+      { path: `${DIR}/pets/index.ts`, kind: "replace", reason: "edited", preselected: false },
+    ]);
+    expect(result.pending[0]?.write?.body).toContain(".query<{ page: number }>()");
+  });
+
   it("merges the same way when nothing new was generated, leaving the file unchanged", () => {
     const asGenerated = GROUP("");
     const edited = GROUP(".query<{ page: number }>()");

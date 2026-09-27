@@ -181,6 +181,7 @@ type UserList = { data: User[]; total: number; nextPage: number | null }
 export function InfiniteUserList() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
     q.users.useInfiniteQuery("getAll", {
+      variables: (page) => ({ page }),
       initialPageParam: 1,
       getNextPageParam: (lastPage) => lastPage.nextPage,
     })
@@ -199,6 +200,8 @@ export function InfiniteUserList() {
   )
 }
 ```
+
+`variables` is called with each page's parameter, so the parameter reaches the request. The first page's variables are part of the cache key — `["api", "users", "getAll", { page: 1 }, "infinite"]` here — so variables that select a different list, such as a filter, start it again from the first page.
 
 <Callout variant="info" title="Built-in infinite queries">
 `useInfiniteQuery` is accessed through the same dot-notation API — no need to import from `@tanstack/react-query` or wire up the caller manually. It uses the same proxy transport and shares the same defaults as `useQuery` and `useMutation`.

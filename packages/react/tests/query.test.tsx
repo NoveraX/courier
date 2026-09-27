@@ -329,7 +329,7 @@ describe("useInfiniteQuery", () => {
 		expect(result.current.hasNextPage).toBe(false);
 	});
 
-	it("builds query key without variables", async () => {
+	it("keys the list by its first page's variables", async () => {
 		fetchSpy.mockResolvedValue(mockFetchResponse({ items: [], nextCursor: null }));
 
 		const q = createProxyQueryCaller<TestApi>("api");
@@ -347,7 +347,7 @@ describe("useInfiniteQuery", () => {
 
 		const cache = queryClient.getQueryCache().getAll();
 		expect(cache).toHaveLength(1);
-		expect(cache[0]?.queryKey).toEqual(["api", "users", "list"]);
+		expect(cache[0]?.queryKey).toEqual(["api", "users", "list", { cursor: 0 }, "infinite"]);
 	});
 });
 

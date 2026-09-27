@@ -1,8 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, extname, join } from "node:path";
-import { createLogger } from "@noverax/courier";
-
-const log = createLogger("Studio");
+import { extname } from "node:path";
+import { packageTypeOf } from "./package-type-of";
 
 /* The test the loader applies to a `.js` file outside a `"type": "module"`
    package: source it matches is transpiled as an ES module, and source it
@@ -34,24 +31,4 @@ export function isCommonJsEntry(file: string, source: string): boolean {
   if (extension === ".cjs") return true;
   if (extension !== ".js") return false;
   return packageTypeOf(file) !== "module" && !ESM_SYNTAX.test(source);
-}
-
-/* The `type` of the nearest package.json above the file. */
-function packageTypeOf(file: string): unknown {
-  for (let directory = dirname(file); ; directory = dirname(directory)) {
-    const manifest = join(directory, "package.json");
-    if (existsSync(manifest)) return readPackageType(manifest);
-    if (dirname(directory) === directory) return undefined;
-  }
-}
-
-/* A package.json that does not parse declares no type, as the loader reads it. */
-function readPackageType(manifest: string): unknown {
-  try {
-    const parsed: unknown = JSON.parse(readFileSync(manifest, "utf8"));
-    return typeof parsed === "object" && parsed !== null ? Reflect.get(parsed, "type") : undefined;
-  } catch (error) {
-    log.debug(`${manifest} could not be read; its package is taken for CommonJS`, error);
-    return undefined;
-  }
 }

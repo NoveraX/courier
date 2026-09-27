@@ -4,51 +4,72 @@ import { configSpecifiers } from "../../../src/server/mocks-edit/plan/config-spe
 
 describe("configSpecifiers", () => {
   it("imports a .ts config without its extension, accepting .ts and .js", () => {
-    expect(configSpecifiers("courier.config.ts")).toEqual({
+    expect(configSpecifiers("courier.config.ts", false)).toEqual({
       preferred: "./courier.config",
       accepted: ["./courier.config", "./courier.config.ts", "./courier.config.js"],
     });
   });
 
   it("imports an .mts config through .mjs, accepting .mts", () => {
-    expect(configSpecifiers("courier.config.mts")).toEqual({
+    expect(configSpecifiers("courier.config.mts", false)).toEqual({
       preferred: "./courier.config.mjs",
       accepted: ["./courier.config.mjs", "./courier.config.mts"],
     });
   });
 
   it("imports an .mjs config by its own name", () => {
-    expect(configSpecifiers("courier.config.mjs")).toEqual({
+    expect(configSpecifiers("courier.config.mjs", false)).toEqual({
       preferred: "./courier.config.mjs",
       accepted: ["./courier.config.mjs"],
     });
   });
 
   it("imports a .js config by its own name, accepting it without the extension", () => {
-    expect(configSpecifiers("courier.config.js")).toEqual({
+    expect(configSpecifiers("courier.config.js", false)).toEqual({
       preferred: "./courier.config.js",
       accepted: ["./courier.config.js", "./courier.config"],
     });
   });
 
   it("imports a .cts config through .cjs, accepting .cts and no extension", () => {
-    expect(configSpecifiers("courier.config.cts")).toEqual({
+    expect(configSpecifiers("courier.config.cts", false)).toEqual({
       preferred: "./courier.config.cjs",
       accepted: ["./courier.config.cjs", "./courier.config.cts", "./courier.config"],
     });
   });
 
   it("imports a .cjs config by its own name, accepting it without the extension", () => {
-    expect(configSpecifiers("courier.config.cjs")).toEqual({
+    expect(configSpecifiers("courier.config.cjs", false)).toEqual({
       preferred: "./courier.config.cjs",
       accepted: ["./courier.config.cjs", "./courier.config"],
     });
   });
 
   it("imports a config of any other name by that name", () => {
-    expect(configSpecifiers("courier.config")).toEqual({
+    expect(configSpecifiers("courier.config", false)).toEqual({
       preferred: "./courier.config",
       accepted: ["./courier.config"],
     });
+  });
+});
+
+describe("configSpecifiers where the project names extensions", () => {
+  it("imports a .ts config through the .js it runs as, accepting the same specifiers", () => {
+    expect(configSpecifiers("courier.config.ts", true)).toEqual({
+      preferred: "./courier.config.js",
+      accepted: ["./courier.config", "./courier.config.ts", "./courier.config.js"],
+    });
+  });
+
+  it.each([
+    ["courier.config.mts", "./courier.config.mjs"],
+    ["courier.config.cts", "./courier.config.cjs"],
+    ["courier.config.js", "./courier.config.js"],
+    ["courier.config.mjs", "./courier.config.mjs"],
+    ["courier.config.cjs", "./courier.config.cjs"],
+    ["courier.config", "./courier.config"],
+  ])("imports %s as %s, as it does anyway", (configName, preferred) => {
+    expect(configSpecifiers(configName, true)).toEqual(configSpecifiers(configName, false));
+    expect(configSpecifiers(configName, true).preferred).toBe(preferred);
   });
 });

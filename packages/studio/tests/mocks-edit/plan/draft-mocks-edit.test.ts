@@ -26,6 +26,7 @@ function draftOf(text: string, overrides: Partial<PlanInput> = {}): MocksDraft {
     createName: "courier.mocks.ts",
     configName: "courier.config.ts",
     configText: null,
+    explicitExtensions: false,
     requests: [SEARCH],
     ...overrides,
   };
@@ -177,6 +178,7 @@ describe("draftMocksEdit", () => {
       createName: "courier.mocks.ts",
       configName: "courier.config.ts",
       configText: null,
+      explicitExtensions: false,
       requests: [{ ...SEARCH, key: "mocks" }],
     };
 

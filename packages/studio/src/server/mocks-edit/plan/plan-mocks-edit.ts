@@ -32,6 +32,7 @@ import type { MocksPlan, PlanInput } from "./types";
  *   createName: "courier.mocks.ts",
  *   configName: "courier.config.ts",
  *   configText: null,
+ *   explicitExtensions: false,
  *   requests: [{ key: "api", source: "api", port: null, seedCount: 20, autoStart: true }],
  * });
  * plan.creates; // → true

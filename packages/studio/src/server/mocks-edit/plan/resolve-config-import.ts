@@ -30,7 +30,7 @@ const CONFIG_LOCAL = "courierConfig";
  * @example
  * ```ts
  * // const courierConfig = 1;
- * resolveConfigImport(program, bindings, configSpecifiers("courier.config.ts"));
+ * resolveConfigImport(program, bindings, configSpecifiers("courier.config.ts", false));
  * // → { local: "courierConfig2", specifier: "./courier.config", add: true }
  * ```
  */

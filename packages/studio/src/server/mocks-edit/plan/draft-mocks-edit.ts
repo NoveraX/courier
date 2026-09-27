@@ -5,6 +5,7 @@ import { configSpecifiers } from "./config-specifiers";
 import { DEFAULT_STYLE, detectStyle } from "./detect-style";
 import type { EntryEdits } from "./entry-edits";
 import { planEntryEdits } from "./entry-edits";
+import { importsCarryExtensions } from "./imports-carry-extensions";
 import { insertion } from "./insertion";
 import { parseSource } from "./parse-source";
 import type { ImportPlan } from "./plan-imports";
@@ -64,7 +65,8 @@ function planInsertions(
 ): Insertions {
   const { parsed, located } = file;
   const style = styleOf(file, input);
-  const specifiers = configSpecifiers(input.configName);
+  const explicit = input.explicitExtensions || importsCarryExtensions(parsed.program);
+  const specifiers = configSpecifiers(input.configName, explicit);
   const imports = planImports(parsed, file.imports, specifiers, style, located.kind === "absent");
   const { serverCallee, configLocal } = imports;
   const ctx = { serverCallee, configLocal, style, guardMocksColon };

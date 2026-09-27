@@ -37,6 +37,14 @@ export interface PlanInput {
   configName: string;
   /** The config's text, whose style a created file follows; `null` when it was not read. */
   configText: string | null;
+  /**
+   * Whether the project names the file of a relative import with the
+   * extension it runs as, as Node's resolution of ES modules requires: a new
+   * import of a `.ts` config then reads `./courier.config.js`, which
+   * TypeScript maps back to the source. A mocks file whose own relative
+   * imports end in `.js` or `.mjs` is written that way too.
+   */
+  explicitExtensions: boolean;
   /** The mocks to declare, already validated by the caller. */
   requests: readonly MockDeclaration[];
 }

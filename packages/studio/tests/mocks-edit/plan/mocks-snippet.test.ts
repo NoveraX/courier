@@ -25,6 +25,7 @@ function snippetFor(text: string | null, overrides: Partial<PlanInput> = {}): st
     createName: "courier.mocks.ts",
     configName: "courier.config.ts",
     configText: null,
+    explicitExtensions: false,
     requests: [API],
     ...overrides,
   });
@@ -202,6 +203,52 @@ describe("buildMocksSnippet for a file that parses", () => {
         "",
       ].join("\n"),
     );
+  });
+});
+
+describe("buildMocksSnippet importing the config the way the project resolves modules", () => {
+  it("imports a .ts config as .js into a file whose relative imports name their extension", () => {
+    const text = `import { shared } from "./src/shared.js";\n\nexport default {\n  users: 1,\n};\n`;
+
+    expect(snippetFor(text)).toBe(
+      [
+        `import { defineMockServer } from "@noverax/courier-mock";`,
+        `import courierConfig from "./courier.config.js";`,
+        "",
+        COMMENT,
+        `  ${API_ENTRY},`,
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("writes the whole file importing a .ts config as .js where the project resolves modules as Node does", () => {
+    expect(snippetFor(null, { explicitExtensions: true })).toBe(
+      [
+        `import { defineMocks, defineMockServer } from "@noverax/courier-mock";`,
+        `import courierConfig from "./courier.config.js";`,
+        "",
+        "export default defineMocks({",
+        `  ${API_ENTRY},`,
+        "});",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("asks for the .js import of a .ts config in a file it did not read, where the project resolves modules as Node does", () => {
+    const snippet = snippetFor(null, {
+      existing: { name: "courier.mocks.ts", text: null },
+      explicitExtensions: true,
+    });
+
+    expect(snippet).toContain(`\nimport courierConfig from "./courier.config.js";\n`);
+  });
+
+  it("imports a .ts config without its extension into a file whose relative imports carry none", () => {
+    const text = `import { shared } from "./src/shared";\n\nexport default {};\n`;
+
+    expect(snippetFor(text)).toContain(`\nimport courierConfig from "./courier.config";\n`);
   });
 });
 

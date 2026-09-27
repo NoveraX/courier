@@ -11,6 +11,7 @@ import { retryOnWin32 } from "../project-fs/retry-on-win32";
 import type { ApplyJournal, JournalEntry } from "./apply-journal";
 import { backupPath } from "./backup-path";
 import { readDiskFile } from "./disk-file";
+import { sweepImportTemps } from "./sweep-import-temps";
 
 const log = createLogger("Studio");
 
@@ -31,10 +32,13 @@ export function rollbackApply(root: ProjectRoot, journal: ApplyJournal): string[
   const failed: string[] = [];
   for (const entry of [...journal.entries].reverse()) {
     try {
-      if (undoEntry(root, journal, entry)) continue;
+      const outcome = undoEntry(root, journal, entry);
+      if (outcome === "undone") continue;
       failed.push(entry.path);
       log.warn(
-        `${entry.path} changed after the write Studio is undoing, so it is left as it is; the version before that write is in ${journal.backupDir}`,
+        outcome === "changed"
+          ? `${entry.path} changed after the write Studio is undoing, so it is left as it is; the version before that write is in ${journal.backupDir}`
+          : `Studio could not restore ${entry.path}: its copy in ${journal.backupDir} is gone`,
       );
     } catch (error) {
       failed.push(entry.path);
@@ -45,6 +49,7 @@ export function rollbackApply(root: ProjectRoot, journal: ApplyJournal): string[
     }
   }
   for (const temp of journal.temps) discardStagedTemp(root, temp);
+  sweepImportTemps(resolveProjectPath(root.path, journal.dir));
   /* Copies moved back leave empty folders, which would count as a backup kept. */
   removeEmptyTree(resolveProjectPath(root.path, journal.backupDir));
   for (const dir of [...journal.createdDirs].reverse()) {
@@ -53,8 +58,12 @@ export function rollbackApply(root: ProjectRoot, journal: ApplyJournal): string[
   return failed;
 }
 
-/* Undo one step; `false` when its path changed after the apply, and is left as it is. */
-function undoEntry(root: ProjectRoot, journal: ApplyJournal, entry: JournalEntry): boolean {
+/* Undo one step: `changed` when its path changed after the apply and is left as it is, `lost` when its copy is gone. */
+function undoEntry(
+  root: ProjectRoot,
+  journal: ApplyJournal,
+  entry: JournalEntry,
+): "undone" | "changed" | "lost" {
   const target = resolveProjectPath(root.path, entry.path);
   const copy = backupPath(root, journal.backupDir, entry.path);
   /* Nothing is undone through a link: a folder on the way that leads elsewhere refuses the step. */
@@ -64,16 +73,17 @@ function undoEntry(root: ProjectRoot, journal: ApplyJournal, entry: JournalEntry
   const holdsWrite = found.kind === "file" && found.sha256 === entry.sha256;
   if (entry.step === "write" && !entry.existed) {
     if (holdsWrite) retryOnWin32(() => unlinkSync(target), `Removing ${entry.path}`);
-    return holdsWrite || found.kind === "absent";
+    return holdsWrite || found.kind === "absent" ? "undone" : "changed";
   }
-  /* No copy: the apply never reached this file, which still holds what it held. */
-  if (!existsSync(copy)) return true;
-  if (entry.step === "write" && found.kind === "file" && holdsCopy(copy, found.sha256)) return true;
-  const untouchedSince = entry.step === "remove" ? found.kind === "absent" : holdsWrite;
-  if (!untouchedSince) return false;
+  const reached = entry.step === "remove" ? found.kind === "absent" : holdsWrite;
+  /* Without a copy the apply either never reached the file, or the copy is lost. */
+  if (!existsSync(copy)) return reached ? "lost" : "undone";
+  if (entry.step === "write" && found.kind === "file" && holdsCopy(copy, found.sha256))
+    return "undone";
+  if (!reached) return "changed";
   ensureDirectory(root, dirname(target));
   retryOnWin32(() => renameSync(copy, target), `Restoring ${entry.path}`);
-  return true;
+  return "undone";
 }
 
 /* Whether the backup holds what the path holds: the apply never replaced it. */

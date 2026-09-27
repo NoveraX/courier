@@ -45,7 +45,12 @@ export function writeTempBeside(
     discardTemp(tmp);
     throw error;
   }
-  closeSync(fd);
+  try {
+    closeSync(fd);
+  } catch (error) {
+    discardTemp(tmp);
+    throw error;
+  }
   return tmp;
 }
 

@@ -291,6 +291,34 @@ describe("removing an import without its preview", () => {
   }, 20_000);
 });
 
+describe("removing an import whose files are all Studio's", () => {
+  it("removes its folder once nothing is left in it", async () => {
+    const url = await start();
+    await post(url, "/api/apis/write", WRITE);
+    const { digest } = planOf(await post(url, "/api/apis/imports/remove/preview", { name: "pets" }));
+
+    const reply = await post(url, "/api/apis/imports/remove", { name: "pets", planDigest: digest });
+
+    expect(reply.status).toBe(200);
+    expect(existsSync(join(root, "src/api/pets"))).toBe(false);
+    expect(existsSync(join(root, "src/api"))).toBe(true);
+  }, 20_000);
+});
+
+describe("starting Studio after a crash while it saved its own files", () => {
+  it("deletes the temporary files of its imports state and journals", async () => {
+    put(".courier/journal/.courier.journal.4242-0a1b2c3d.tmp", "{}");
+    put(".courier/.courier.state.4242-0a1b2c3d.tmp", "{}");
+    put(".courier/notes.tmp", "mine");
+
+    await start();
+
+    expect(existsSync(join(root, ".courier/journal/.courier.journal.4242-0a1b2c3d.tmp"))).toBe(false);
+    expect(existsSync(join(root, ".courier/.courier.state.4242-0a1b2c3d.tmp"))).toBe(false);
+    expect(read(".courier/notes.tmp")).toBe("mine");
+  }, 20_000);
+});
+
 describe("removing an import the config still imports", () => {
   it("names the files the config imports among those the removal takes away", async () => {
     symlinkSync(REPO_NODE_MODULES, join(root, "node_modules"), "dir");

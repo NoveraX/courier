@@ -14,12 +14,12 @@ export interface PruneFailure {
 
 /**
  * Remove the directories that removing files left empty, from each file's
- * directory up to, never including, the directory that bounds them. A
- * directory that still holds anything, or is a link, is left; any other
- * failure is logged and reported.
+ * directory up to, and including, the directory that bounds them — the
+ * import's own — never above it. A directory that still holds anything,
+ * or is a link, is left; any other failure is logged and reported.
  *
  * @param root - The project directory
- * @param bound - The absolute directory pruning stops below
+ * @param bound - The absolute directory pruning goes no higher than
  * @param removed - Absolute paths of the files removed
  * @returns The directories that could not be removed for a reason other than holding files
  */
@@ -32,7 +32,8 @@ export function pruneEmptyDirs(
   const tried = new Set<string>();
   for (const file of removed) {
     let dir = dirname(file);
-    while (dir !== bound && isWithin(bound, dir) && !tried.has(dir)) {
+    /* Up to the import's own folder, which goes too once it is empty; never above it. */
+    while ((dir === bound || isWithin(bound, dir)) && !tried.has(dir)) {
       tried.add(dir);
       const outcome = tryRemove(dir);
       if (outcome === "kept") break;
@@ -43,6 +44,7 @@ export function pruneEmptyDirs(
         );
         break;
       }
+      if (dir === bound) break;
       dir = dirname(dir);
     }
   }

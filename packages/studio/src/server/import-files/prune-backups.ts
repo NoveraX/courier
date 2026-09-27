@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { COURIER_DIR, hasCourierSubdir } from "../courier-dir";
 import { isApplyId } from "./apply-id";
+import { hasJournal } from "./apply-journal";
 
 const log = createLogger("Studio");
 
@@ -21,9 +22,10 @@ export const KEPT_BACKUPS = 20;
  */
 export function pruneBackups(root: string, keep: number = KEPT_BACKUPS): string[] {
   if (!hasCourierSubdir(root, "backups")) return [];
-  /* Only a folder named like an apply is one of Studio's backups. */
+  /* Only a folder named like an apply is one of Studio's backups, and one a journal still names
+     is what an undo restores from, so it stays. */
   const names = readdirSync(join(root, COURIER_DIR, "backups"))
-    .filter(isApplyId)
+    .filter((name) => isApplyId(name) && !hasJournal(root, name))
     .sort();
   const deleted = names
     .slice(0, Math.max(0, names.length - keep))

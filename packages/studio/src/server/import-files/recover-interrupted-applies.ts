@@ -49,7 +49,8 @@ export function recoverInterruptedApplies(
       continue;
     }
     const failed = rollbackApply(root, journal);
-    dropJournal(root.path, journal.id);
+    /* A journal with files not restored stays, and so do its copies: the next start tries again. */
+    if (failed.length === 0) dropJournal(root.path, journal.id);
     recovered.push({ importName: journal.importName, failed, backupDir: journal.backupDir });
     const outcome =
       failed.length === 0 ? "restored every file" : `could not restore ${failed.join(", ")}`;

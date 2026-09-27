@@ -6,6 +6,7 @@ import { mocksFileNameFor } from "./mocks-file-name";
 import type { PlanInput } from "./plan/types";
 import { readMocksText } from "./read-mocks-text";
 import type { MockDeclaration } from "./types";
+import { writesExplicitExtensions } from "./writes-explicit-extensions";
 
 const log = createLogger("Studio");
 
@@ -16,7 +17,8 @@ const SNIPPET_READ_LIMIT = 1024 * 1024;
  * What a snippet is built from when Studio stops before planning the edit:
  * the project's mocks file when it has one — its text when it can be read
  * safely, so the snippet adds only the imports it lacks — or a new file
- * beside the config.
+ * beside the config; and whether the project names the files of its
+ * relative imports with their extensions, as the edit would.
  *
  * A mocks file that exists is never answered with a whole new file: pasting
  * that over it would drop the mocks it declares.
@@ -32,21 +34,13 @@ export function snippetInputFromDisk(
   const configPath = findConfigFileAt(root);
   const configName = configPath ? basename(configPath) : "courier.config.ts";
   const found = findMocksFile(root);
-  if (!found) {
-    return {
-      existing: null,
-      createName: mocksFileNameFor(configName),
-      configName,
-      configText: null,
-      requests,
-    };
-  }
-  const name = basename(found);
+  const name = found ? basename(found) : mocksFileNameFor(configName);
   return {
-    existing: { name, text: readQuietly(found, name) },
+    existing: found ? { name, text: readQuietly(found, name) } : null,
     createName: name,
     configName,
     configText: null,
+    explicitExtensions: writesExplicitExtensions(root, name, configName),
     requests,
   };
 }

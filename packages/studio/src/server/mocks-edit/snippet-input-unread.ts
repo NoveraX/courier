@@ -15,6 +15,7 @@ export function snippetInputUnread(requests: readonly MockDeclaration[]): PlanIn
     createName: name,
     configName: "courier.config.ts",
     configText: null,
+    explicitExtensions: false,
     requests,
   };
 }

@@ -7,6 +7,7 @@ import { draftMocksEdit } from "./draft-mocks-edit";
 import { firstFreeName } from "./first-free-name";
 import type { ImportedName } from "./import-declaration";
 import { importDeclaration } from "./import-declaration";
+import { importsCarryExtensions } from "./imports-carry-extensions";
 import type { MockImports } from "./mock-imports";
 import { readMockImports } from "./mock-imports";
 import { mocksExport } from "./mocks-export";
@@ -113,7 +114,8 @@ function snippetNames(parsed: ParsedSource, input: PlanInput, appends: boolean):
   const style = detectStyle(parsed);
   const bindings = collectModuleBindings(program);
   const imports = readMockImports(program);
-  const specifiers = configSpecifiers(input.configName);
+  const explicit = input.explicitExtensions || importsCarryExtensions(program);
+  const specifiers = configSpecifiers(input.configName, explicit);
   const missing: ImportedName[] = [];
   const mocksCallee = appends ? calleeFor("defineMocks", imports, bindings, missing) : null;
   const serverCallee = calleeFor("defineMockServer", imports, bindings, missing);

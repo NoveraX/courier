@@ -34,6 +34,7 @@ describe("snippetInputFromDisk", () => {
       createName: "courier.mocks.mts",
       configName: "courier.config.mts",
       configText: null,
+      explicitExtensions: false,
       requests,
     });
   });
@@ -64,10 +65,29 @@ describe("snippetInputFromDisk", () => {
   it("assumes courier.config.ts when the project has no config", () => {
     expect(snippetInputFromDisk(root, requests)).toMatchObject({ existing: null, createName: "courier.mocks.ts", configName: "courier.config.ts" });
   });
+
+  it("names extensions in a type module project that resolves modules as Node does, as the edit would", () => {
+    writeFileSync(join(root, "package.json"), '{ "type": "module" }');
+    writeFileSync(join(root, "tsconfig.json"), '{ "compilerOptions": { "module": "NodeNext" } }');
+    writeFileSync(join(root, "courier.config.ts"), "export default {};\n");
+
+    expect(snippetInputFromDisk(root, requests)).toMatchObject({ existing: null, createName: "courier.mocks.ts", explicitExtensions: true });
+  });
+
+  it("names extensions where the config's own relative imports carry them", () => {
+    writeFileSync(join(root, "courier.config.ts"), 'import { api } from "./src/api.js";\nexport default { sources: { api } };\n');
+    writeFileSync(join(root, "courier.mocks.ts"), "export default {};\n");
+
+    expect(snippetInputFromDisk(root, requests)).toMatchObject({ createName: "courier.mocks.ts", explicitExtensions: true });
+  });
 });
 
 describe("snippetInputUnread", () => {
   it("names a mocks file without reading anything", () => {
     expect(snippetInputUnread(requests).existing).toEqual({ name: "courier.mocks.ts", text: null });
+  });
+
+  it("names no extensions, having read nothing to tell", () => {
+    expect(snippetInputUnread(requests).explicitExtensions).toBe(false);
   });
 });

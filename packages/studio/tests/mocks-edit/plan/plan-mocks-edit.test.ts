@@ -30,6 +30,7 @@ function editOf(
     createName: "courier.mocks.ts",
     configName,
     configText: null,
+    explicitExtensions: false,
     requests,
   };
 }
@@ -656,7 +657,7 @@ describe("planMocksEdit creating the file", () => {
     configText: string | null,
     createName = "courier.mocks.ts",
   ): PlanInput {
-    return { existing: null, createName, configName, configText, requests: [API] };
+    return { existing: null, createName, configName, configText, explicitExtensions: false, requests: [API] };
   }
 
   it.each([
@@ -785,9 +786,76 @@ describe("planMocksEdit naming the config's specifier", () => {
   });
 
   it("names the added import's specifier when a type-only import of the config is not reused", () => {
-    const before = `import type config from "./courier.config.js";\nexport default {};\n`;
+    const before = `import type config from "./courier.config.ts";\nexport default {};\n`;
 
     expect(planMocksEdit(editOf(before)).configSpecifier).toBe("./courier.config");
+  });
+});
+
+describe("planMocksEdit importing the config the way the project resolves modules", () => {
+  const MOCK_IMPORT = `import { defineMocks, defineMockServer } from "@noverax/courier-mock";`;
+
+  it.each([
+    ["an import", `import { shared } from "./src/shared.js";`],
+    ["a type import", `import type { Shared } from "../types/shared.js";`],
+    ["a re-export", `export * from "./fixtures.mjs";`],
+    ["a named re-export", `export { users } from "./fixtures/users.js";`],
+  ])("imports a .ts config as .js into a file with %s that names its extension", (_, line) => {
+    const before = `${line}\n${MOCK_IMPORT}\n\nexport default defineMocks({});\n`;
+
+    const plan = planMocksEdit(editOf(before));
+
+    expect(plan.text).toBe(
+      `${line}\n${MOCK_IMPORT}\nimport courierConfig from "./courier.config.js";\n\nexport default defineMocks({\n  ${API_ENTRY},\n});\n`,
+    );
+    expect(plan.configSpecifier).toBe("./courier.config.js");
+    expect(parseErrors(plan.text)).toEqual([]);
+  });
+
+  it("imports a .ts config as .js where the project resolves modules as Node does", () => {
+    const before = `${MOCK_IMPORT}\n\nexport default defineMocks({});\n`;
+
+    const plan = planMocksEdit({ ...editOf(before), explicitExtensions: true });
+
+    expect(plan.text).toContain(`import courierConfig from "./courier.config.js";`);
+    expect(plan.configSpecifier).toBe("./courier.config.js");
+  });
+
+  it("creates the file importing a .ts config as .js where the project resolves modules as Node does", () => {
+    const input: PlanInput = { ...editOf(""), existing: null, explicitExtensions: true };
+
+    const plan = planMocksEdit(input);
+
+    expect(plan.text).toBe(
+      `${MOCK_IMPORT}\nimport courierConfig from "./courier.config.js";\n\nexport default defineMocks({\n  ${API_ENTRY},\n});\n`,
+    );
+    expect(plan.configSpecifier).toBe("./courier.config.js");
+  });
+
+  it("imports a .ts config without its extension where the project resolves modules as a bundler does", () => {
+    const before = `${MOCK_IMPORT}\nimport { shared } from "./src/shared";\nimport { faker } from "faker/locale/en.js";\n\nexport default defineMocks({});\n`;
+
+    const plan = planMocksEdit(editOf(before));
+
+    expect(plan.text).toContain(`import courierConfig from "./courier.config";`);
+    expect(plan.configSpecifier).toBe("./courier.config");
+  });
+
+  it("reuses an extensionless import of the config where the project names extensions", () => {
+    const before = `${IMPORTS}\nexport default defineMocks({});\n`;
+
+    const plan = planMocksEdit({ ...editOf(before), explicitExtensions: true });
+
+    expect(plan.text.match(/import /g)).toHaveLength(2);
+    expect(plan.configSpecifier).toBe("./courier.config");
+  });
+
+  it("imports a .cts config through .cjs whether or not the project names extensions", () => {
+    const before = `${MOCK_IMPORT}\n\nexport default defineMocks({});\n`;
+
+    const plan = planMocksEdit({ ...editOf(before, [API], "courier.config.cts"), explicitExtensions: true });
+
+    expect(plan.configSpecifier).toBe("./courier.config.cjs");
   });
 });
 

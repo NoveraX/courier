@@ -4,12 +4,15 @@ import { createLogger } from "@noverax/courier";
 import type { MocksTarget } from "./inspect-mocks-target";
 import type { PlanInput } from "./plan/types";
 import type { MockDeclaration } from "./types";
+import { writesExplicitExtensions } from "./writes-explicit-extensions";
 
 const log = createLogger("Studio");
 
 /**
  * What the planner is given for an inspected target: the file's text, or
- * the file to create, and the config whose style a created file follows.
+ * the file to create, the config whose style a created file follows, and
+ * whether the project names the files of its relative imports with their
+ * extensions.
  *
  * @param root - The project root, symlinks resolved
  * @param target - The inspected mocks file
@@ -21,9 +24,11 @@ export function planInputFor(
   target: MocksTarget,
   requests: readonly MockDeclaration[],
 ): PlanInput {
-  const configText = readConfigText(join(root, target.configName));
-  const existing = target.kind === "existing" ? { name: target.name, text: target.text } : null;
-  return { existing, createName: target.name, configName: target.configName, configText, requests };
+  const { name, configName } = target;
+  const configText = readConfigText(join(root, configName));
+  const existing = target.kind === "existing" ? { name, text: target.text } : null;
+  const explicitExtensions = writesExplicitExtensions(root, name, configName);
+  return { existing, createName: name, configName, configText, explicitExtensions, requests };
 }
 
 /* Only the style of a created file depends on it, so an unreadable config

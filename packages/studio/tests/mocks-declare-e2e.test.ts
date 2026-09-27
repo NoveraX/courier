@@ -3,15 +3,17 @@
  * the preview right after start, the apply that creates the file and starts
  * the mock, an edit of an existing file, a save between preview and apply,
  * a preview right after a save, a preview while a save loads for longer
- * than a preview waits, callers the routes refuse, and a project without
- * the mock package. Each preview is sent once: Studio answers it after the
- * first load and the saves already on disk.
+ * than a preview waits, callers the routes refuse, a project without the
+ * mock package, and Node ES module projects, one behind a solution
+ * tsconfig, whose written file must type-check. Each preview is sent once:
+ * Studio answers it after the first load and the saves already on disk.
  */
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createStudioServer } from "../src/server/create-studio-server";
@@ -78,6 +80,17 @@ function sendPreview(url: string, mocks: unknown[]) {
 }
 
 const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
+
+/** What `tsc -p` reports for the project, or the one it references by `tsconfigName`, as `file: message` lines. */
+function typeErrors(projectRoot: string, tsconfigName = "tsconfig.json"): string[] {
+  const { config, error } = ts.readConfigFile(join(projectRoot, tsconfigName), ts.sys.readFile);
+  const parsed = ts.parseJsonConfigFileContent(config, ts.sys, projectRoot);
+  const program = ts.createProgram(parsed.fileNames, parsed.options);
+  const diagnostics = [...(error ? [error] : []), ...parsed.errors, ...ts.getPreEmitDiagnostics(program)];
+  return diagnostics.map(
+    (d) => `${d.file?.fileName.slice(projectRoot.length + 1) ?? ""}: ${ts.flattenDiagnosticMessageText(d.messageText, "\n")}`,
+  );
+}
 
 function declaration(key: string, port: number | null, autoStart = false) {
   return { key, source: "api", port, seedCount: 20, autoStart };
@@ -223,6 +236,65 @@ describe("adding mocks through Studio", () => {
 
     expect(reply.status).toBe(400);
   }, 20_000);
+
+  it("imports courier.config by the .js it runs as in a Node ES module project, and the file it writes type-checks", async () => {
+    project();
+    writeFileSync(join(root, "package.json"), JSON.stringify({ type: "module" }));
+    writeFileSync(
+      join(root, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext", target: "ES2022", strict: true, noEmit: true, skipLibCheck: true, types: [] },
+      }),
+    );
+    /* No relative import in the config, so only the tsconfig and package.json tell how the project resolves modules. */
+    writeFileSync(join(root, "courier.config.ts"), `${API.replace("export const api", "const api")}\nexport default { sources: { api } };\n`);
+    expect(typeErrors(root)).toEqual([]);
+    const url = await start(root);
+
+    const preview = await sendPreview(url, [declaration("apiMock", null)]);
+    const applied = await post(url, "/api/mocks/declare/apply", {
+      mocks: [declaration("apiMock", null)],
+      baseHash: null,
+      planDigest: preview.body.planDigest,
+    });
+
+    expect(applied.body).toEqual({ status: "applied", target: "courier.mocks.ts", keys: ["apiMock"], warnings: [] });
+    expect(typeErrors(root)).toEqual([]);
+    expect(readFileSync(join(root, "courier.mocks.ts"), "utf8")).toBe(
+      'import { defineMocks, defineMockServer } from "@noverax/courier-mock";\n' +
+        'import courierConfig from "./courier.config.js";\n\n' +
+        "export default defineMocks({\n" +
+        "  apiMock: defineMockServer({ source: courierConfig.sources.api }),\n" +
+        "});\n",
+    );
+  }, 60_000);
+
+  it("imports courier.config by its .js where a solution tsconfig references a Node ES module project", async () => {
+    project();
+    writeFileSync(join(root, "package.json"), JSON.stringify({ type: "module" }));
+    writeFileSync(join(root, "tsconfig.json"), JSON.stringify({ files: [], references: [{ path: "./tsconfig.node.json" }] }));
+    writeFileSync(
+      join(root, "tsconfig.node.json"),
+      JSON.stringify({
+        compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext", target: "ES2022", strict: true, noEmit: true, skipLibCheck: true, types: [] },
+        include: ["*.ts"],
+      }),
+    );
+    writeFileSync(join(root, "courier.config.ts"), `${API.replace("export const api", "const api")}\nexport default { sources: { api } };\n`);
+    expect(typeErrors(root, "tsconfig.node.json")).toEqual([]);
+    const url = await start(root);
+
+    const preview = await sendPreview(url, [declaration("apiMock", null)]);
+    const applied = await post(url, "/api/mocks/declare/apply", {
+      mocks: [declaration("apiMock", null)],
+      baseHash: null,
+      planDigest: preview.body.planDigest,
+    });
+
+    expect(applied.body).toEqual({ status: "applied", target: "courier.mocks.ts", keys: ["apiMock"], warnings: [] });
+    expect(readFileSync(join(root, "courier.mocks.ts"), "utf8")).toContain('import courierConfig from "./courier.config.js";\n');
+    expect(typeErrors(root, "tsconfig.node.json")).toEqual([]);
+  }, 60_000);
 
   it("leaves the edit to the developer when the mock package cannot be loaded, before writing anything", async () => {
     mkdirSync(tmpdir(), { recursive: true });

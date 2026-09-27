@@ -29,6 +29,7 @@ const INPUT: PlanInput = {
   createName: "courier.mocks.ts",
   configName: "courier.config.ts",
   configText: null,
+  explicitExtensions: false,
   requests: [API],
 };
 

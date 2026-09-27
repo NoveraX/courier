@@ -76,7 +76,7 @@ describe("a server that falls silent", () => {
             });
           },
         });
-        return new Response(readable);
+        return new Response(readable, { headers: { "Content-Type": "text/event-stream" } });
       }),
     );
     const sub = subscribeSSE<number>("/sse", { heartbeatTimeout: 30, backoff: FAST });

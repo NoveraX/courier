@@ -1,26 +1,15 @@
 import { createLogger } from "../../logger";
-import { fromErrorCode, type RealtimeError } from "../errors";
+import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
 import { SSE_CONTROL_EVENTS } from "./control-events";
 import { parseSSEStream, type RawSSEEvent } from "./parse-sse";
 import type { SSEConnectionCtx } from "./sse-connection";
+import { eventStreamOf, refusal } from "./sse-response";
 
 const log = createLogger("SSE");
 const INTERNAL_ERROR = 5000;
 
 /** How one connection ended: the server said so, or it just stopped. */
 export type ConnectionEnd = "complete" | "dropped" | RealtimeError;
-
-/** A response the server refused, with what it said about it. */
-export class SSEResponseError extends Error {
-  constructor(
-    readonly statusCode: number,
-    readonly reason: string,
-    readonly retryAfterMs: number | undefined,
-  ) {
-    super(`SSE connection failed: ${statusCode} ${reason}`);
-    this.name = "SSEResponseError";
-  }
-}
 
 /**
  * Read one connection until it ends.
@@ -30,6 +19,8 @@ export class SSEResponseError extends Error {
  * abort the whole subscription, which then ended as though the server had
  * finished it.
  *
+ * @returns How it ended — a failure, too, when the server answered with
+ *   something other than an event stream
  * @throws SSEResponseError when the server refuses the request
  */
 export async function readConnection<TData>(
@@ -50,13 +41,19 @@ export async function readConnection<TData>(
       headers: requestHeaders(ctx),
       signal: connection.signal,
     });
-    if (!response.ok || !response.body) throw await refusal(response);
+    if (!response.ok) throw await refusal(response);
+    const body = eventStreamOf(response);
+    if (body instanceof ConnectionError) {
+      await response.body?.cancel();
+      log.error("SSE response is not an event stream, not reconnecting", body);
+      return body;
+    }
 
     ctx.config.onResponse?.(response);
     ctx.state.set("connected");
     expectMore();
 
-    for await (const raw of parseSSEStream(response.body)) {
+    for await (const raw of parseSSEStream(body)) {
       expectMore();
       progress.received = true;
       if (raw === null) continue; // Comment/heartbeat — timer already reset
@@ -116,31 +113,6 @@ function deliver<TData>(ctx: SSEConnectionCtx<TData>, raw: RawSSEEvent): void {
   } catch (parseErr) {
     log.warn(`Skipped an SSE event whose data could not be parsed: ${excerpt(raw.data)}`, parseErr);
   }
-}
-
-/** What the server said when it refused: its JSON `message`, or the status text. */
-async function refusal(response: Response): Promise<SSEResponseError> {
-  const retryAfter = Number(response.headers.get("Retry-After"));
-  const retryAfterMs =
-    Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : undefined;
-  const said = await messageOf(response);
-  return new SSEResponseError(response.status, said ?? response.statusText, retryAfterMs);
-}
-
-async function messageOf(response: Response): Promise<string | undefined> {
-  /* A proxy's HTML page or plain text carries no message; the status text serves. */
-  if (!response.headers.get("Content-Type")?.includes("json")) {
-    await response.body?.cancel();
-    return undefined;
-  }
-  try {
-    const body = (await response.json()) as { message?: unknown; error?: { message?: unknown } };
-    if (typeof body.message === "string") return body.message;
-    if (typeof body.error?.message === "string") return body.error.message;
-  } catch (error) {
-    log.warn("Could not read the refused SSE response", error);
-  }
-  return undefined;
 }
 
 const EXCERPT_LENGTH = 120;

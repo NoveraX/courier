@@ -9,9 +9,7 @@
  * Tests that need isolation should call `resetProjectRoot()` in `afterEach`.
  */
 
-import { relative, resolve } from "node:path";
-import { isWithin } from "./server/project-fs/is-within";
-import { PathOutsideProjectError } from "./server/project-fs/path-outside-project-error";
+import { resolve } from "node:path";
 
 let projectRoot = process.cwd();
 
@@ -28,22 +26,6 @@ export function getProjectRoot(): string {
 /** Resolve a path relative to the project root */
 export function resolveProject(...paths: string[]): string {
   return resolve(projectRoot, ...paths);
-}
-
-/**
- * Resolve a path relative to the project root with traversal protection.
- *
- * Use this instead of `resolveProject` when paths originate from user input
- * (HTTP request bodies, query params, etc.) to prevent directory traversal attacks.
- *
- * @throws {PathOutsideProjectError} If the resolved path escapes the project root
- */
-export function resolveProjectSafe(...paths: string[]): string {
-  const resolved = resolve(projectRoot, ...paths);
-  if (!isWithin(projectRoot, resolved)) {
-    throw new PathOutsideProjectError(relative(projectRoot, resolved), "it leaves the project");
-  }
-  return resolved;
 }
 
 /** Reset to `process.cwd()` — only for test isolation */

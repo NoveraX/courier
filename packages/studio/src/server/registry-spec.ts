@@ -2,14 +2,14 @@
  * Spec fetching and single-import update checking helpers.
  */
 
-import { existsSync, readFileSync } from "node:fs";
 import { createLogger } from "@noverax/courier";
 import type { CourierImportEntry } from "@noverax/courier/config";
 import { computeSpecHash, parseSpec } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
-import { resolveProjectSafe } from "../context";
 import { fetchSpec } from "./fetch-spec";
 import { isUrl } from "./fs-helpers";
+import type { ProjectRoot } from "./project-fs/project-root";
+import { readProjectText } from "./project-fs/read-project-text";
 import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse } from "./route-types";
 import { SpecFetchError } from "./spec-fetch-error";
@@ -27,11 +27,12 @@ const log = createLogger("Studio");
  * @param specUrl - Where the import's specification lives
  * @param res - The route's response, answered when there is no text
  * @param allowlist - The private hosts the project names, read only for a private host
+ * @param root - The project a spec file is read from
  * @returns The specification's text, or `null` once the route is answered
  *
  * @example
  * ```ts
- * const raw = await fetchSpecRaw(entry.from, res, specHostAllowlist(project, root));
+ * const raw = await fetchSpecRaw(entry.from, res, specHostAllowlist(project, root), projectRootAt(root));
  * if (raw === null) return;
  * ```
  */
@@ -39,6 +40,7 @@ export async function fetchSpecRaw(
   specUrl: string,
   res: JsonResponse,
   allowlist: SpecHostAllowlist,
+  root: ProjectRoot,
 ): Promise<string | null> {
   if (isUrl(specUrl)) {
     try {
@@ -58,12 +60,12 @@ export async function fetchSpecRaw(
     }
   }
 
-  const filePath = resolveProjectSafe(specUrl);
-  if (!existsSync(filePath)) {
-    res.status(400).json({ error: `Spec file not found: ${filePath}` });
+  try {
+    return readProjectText(root, specUrl);
+  } catch (err) {
+    sendRouteFailure(res, err, `Failed to read the spec file ${specUrl}`);
     return null;
   }
-  return readFileSync(filePath, "utf-8");
 }
 
 /**

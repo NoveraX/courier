@@ -469,6 +469,23 @@ describe("adding and removing endpoints through manage", () => {
   }, 30_000);
 });
 
+describe("reading a spec file the request names", () => {
+  it.skipIf(IS_WINDOWS)("reads nothing outside the project, through a link or by path, and names no absolute path", async () => {
+    writeFileSync(join(scratch, "secret.json"), '{"openapi":"3.1.0"}');
+    symlinkSync(join(scratch, "secret.json"), join(root, "spec.json"));
+    const url = await start();
+
+    const linked = await post(url, "/api/apis/parse", { source: "file", content: "spec.json" });
+    const outside = await post(url, "/api/apis/parse", { source: "file", content: "../secret.json" });
+    const missing = await post(url, "/api/apis/parse", { source: "file", content: "specs/none.json" });
+
+    expect(linked.status).toBe(400);
+    expect(outside.status).toBe(400);
+    expect(missing.status).toBe(400);
+    for (const reply of [linked, outside, missing]) expect(JSON.stringify(reply.body)).not.toContain(scratch);
+  }, 20_000);
+});
+
 describe("starting Studio", () => {
   it("undoes a write to an import's files that a crash cut short", async () => {
     put("src/api/pets/index.ts", "written by the crashed apply\n");

@@ -11,7 +11,11 @@ export { createQueryCaller, type QueryCallerDefaults } from "./create-query-call
 export { useChannel } from "./hooks/use-channel";
 export type { UseComputedQueryOptions } from "./hooks/use-computed-query";
 export { useComputedQuery } from "./hooks/use-computed-query";
-export type { ConnectionStatusResult, ConnectionStatusSource } from "./hooks/use-connection-status";
+export type {
+  ConnectionStatusResult,
+  ConnectionStatusSource,
+  StatusEventSource,
+} from "./hooks/use-connection-status";
 export { useConnectionStatus } from "./hooks/use-connection-status";
 export { useSubscription } from "./hooks/use-subscription";
 export { createProxyQueryKeys, createQueryKeys, type QueryKeyFactory } from "./keys";

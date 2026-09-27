@@ -2,6 +2,7 @@
  * Schema-level diffing between two parsed specs.
  */
 
+import { ownValue } from "../own-value";
 import type { DigestSchema, SchemaDiff } from "./types";
 
 function compareSchemas(oldSchema: DigestSchema, newSchema: DigestSchema): string[] {
@@ -57,8 +58,8 @@ export function diffSchemas(
 
   for (const name of oldNames) {
     if (!newNames.has(name)) continue;
-    const oldSchema = oldSchemas[name];
-    const newSchema = newSchemas[name];
+    const oldSchema = ownValue(oldSchemas, name);
+    const newSchema = ownValue(newSchemas, name);
     if (!oldSchema || !newSchema) continue;
 
     const changes = compareSchemas(oldSchema, newSchema);

@@ -2,6 +2,7 @@
  * Generates schema/type files for each group.
  */
 
+import { ownValue } from "../own-value";
 import type { ParsedSchema } from "../parser/types";
 import { ARKTYPE_CYCLE_HELPER, lazyTargets, writeArkTypeCycle } from "./arktype-cycles";
 import { findCyclicSchemas } from "./cyclic-schemas";
@@ -68,10 +69,10 @@ function writeArkTypeFile(
   if (hasCycle) lines.push(ARKTYPE_CYCLE_HELPER);
 
   for (const { names, cyclic } of components) {
-    const entries = names.map((name): [string, ParsedSchema] => [
-      name,
-      schemas[name] as ParsedSchema,
-    ]);
+    const entries = names.flatMap((name): [string, ParsedSchema][] => {
+      const schema = ownValue(schemas, name);
+      return schema === undefined ? [] : [[name, schema]];
+    });
     if (!cyclic) {
       writeEntries(lines, entries, options, new Set());
       continue;

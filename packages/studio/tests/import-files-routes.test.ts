@@ -390,12 +390,13 @@ describe("adding and removing endpoints through manage", () => {
 describe("starting Studio", () => {
   it("undoes a write to an import's files that a crash cut short", async () => {
     put("src/api/pets/index.ts", "written by the crashed apply\n");
-    put(".courier/backups/1-crash/src/api/pets/index.ts", "as it was\n");
+    put(".courier/backups/1700000000000-0000c0de/src/api/pets/index.ts", "as it was\n");
     saveJournal(root, {
-      id: "1-crash",
+      id: "1700000000000-0000c0de",
       importName: "pets",
+      dir: "src/api/pets",
       state: "committing",
-      backupDir: ".courier/backups/1-crash",
+      backupDir: ".courier/backups/1700000000000-0000c0de",
       entries: [
         { path: "src/api/pets/index.ts", step: "write", existed: true, sha256: bodyHash("written by the crashed apply\n") },
       ],
@@ -406,6 +407,6 @@ describe("starting Studio", () => {
     await start();
 
     expect(read("src/api/pets/index.ts")).toBe("as it was\n");
-    expect(existsSync(join(root, ".courier/journal/1-crash.json"))).toBe(false);
+    expect(existsSync(join(root, ".courier/journal/1700000000000-0000c0de.json"))).toBe(false);
   }, 20_000);
 });

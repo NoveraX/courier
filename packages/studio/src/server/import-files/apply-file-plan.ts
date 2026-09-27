@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { copyFileSync, linkSync, renameSync } from "node:fs";
 import { dirname } from "node:path";
 import { COURIER_DIR } from "../courier-dir";
@@ -8,6 +7,7 @@ import type { ProjectRoot } from "../project-fs/project-root";
 import { resolveProjectPath } from "../project-fs/resolve-project-path";
 import { retryOnWin32 } from "../project-fs/retry-on-win32";
 import { syncDirectory } from "../project-fs/sync-directory";
+import { newApplyId } from "./apply-id";
 import { type ApplyJournal, dropJournal, saveJournal } from "./apply-journal";
 import { backupPath } from "./backup-path";
 import { FilePlanError } from "./file-plan-error";
@@ -55,10 +55,11 @@ export function applyFilePlan(
 ): ApplyReport {
   refuseUnready(plan);
   verifyUnchanged(root, plan);
-  const id = `${Date.now()}-${randomBytes(4).toString("hex")}`;
+  const id = newApplyId();
   const journal: ApplyJournal = {
     id,
     importName: plan.importName,
+    dir: plan.dir,
     state: "staging",
     backupDir: `${COURIER_DIR}/backups/${id}`,
     entries: [],

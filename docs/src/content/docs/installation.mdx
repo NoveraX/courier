@@ -102,6 +102,11 @@ export default defineMocks({
 })
 ```
 
+In a `"type": "module"` package whose tsconfig resolves modules as Node does
+(`node16` or `nodenext`), import `./courier.config.js` instead: TypeScript asks
+for the extension there, and both TypeScript and Studio map it to
+`courier.config.ts`. The wizard writes it that way in such a project.
+
 Reading the source from the config this way, as Studio's wizard writes it,
 needs a config whose default export is `defineConfig({ sources })`. With a
 config that exports `sources` by name only, import the source from where the

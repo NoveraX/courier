@@ -251,7 +251,9 @@ which only Studio reads. A mocks file that reads a source from the config, as
 (the form Studio's mock wizard writes), needs a config whose default export is
 `defineConfig({ sources })`; beside a config like the one above, which exports
 `sources` by name only, that import does not type-check, so import the source
-from `./api/sources` instead.
+from `./api/sources` instead. In a `"type": "module"` package whose tsconfig
+resolves modules as Node does (`node16` or `nodenext`), the config import is
+`./courier.config.js`.
 
 | Flag | Default | Description |
 |------|---------|-------------|

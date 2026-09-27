@@ -1,12 +1,14 @@
 import { posix } from "node:path";
 import type { ImportLayout } from "../layout";
 import { removeBarrelExports } from "./remove-barrel-exports";
+import { restoreLostNames } from "./restore-lost-names";
 import type { RemoveResult } from "./types";
 
 /**
  * The barrel as a removal leaves it: without the re-exports of the modules
  * it deletes, and without the names the modules it rewrites no longer
- * export.
+ * export, but with every name it exported that a module it keeps still
+ * exports.
  *
  * @param layout - Where the import's files are
  * @param existingFiles - The import's files before the removal, by path
@@ -33,5 +35,11 @@ export function barrelAfterRemoval(
   for (const path of deleted) changed.set(specifier(path), null);
   for (const file of modified) changed.set(specifier(file.path), file.content);
   const barrel = removeBarrelExports(layout.indexFile, index, changed);
-  return barrel === index ? undefined : { path: layout.indexFile, content: barrel };
+  if (barrel === index) return undefined;
+  const pathOf = (module: string): string => posix.join(layout.dir, `${module}.ts`);
+  const before = (module: string): string | undefined => existingFiles[pathOf(module)];
+  const after = (module: string): string | undefined =>
+    changed.has(module) ? (changed.get(module) ?? undefined) : before(module);
+  const content = restoreLostNames(layout.indexFile, index, barrel, before, after);
+  return { path: layout.indexFile, content };
 }

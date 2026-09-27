@@ -113,6 +113,23 @@ describe("previewAddEndpoints with schemas two groups share", () => {
     expect(barrel).not.toContain('export * from "./store/schemas";');
     expect(barrel).toContain('export { type Order, OrderSchema } from "./store/schemas";');
   });
+
+  it("gives the barrel back the shared names when the group whose re-export carried them goes", () => {
+    const options = { type: "openapi" as const, outputDir: "src/api" };
+    const layout = resolveImportLayout(options, "shop");
+    const existing = Object.fromEntries(
+      generateCode(SHARED, options, "shop").map((file) => [file.path, file.content]),
+    );
+    expect(existing[layout.indexFile]).toContain('export * from "./pets/schemas";');
+
+    const result = previewRemoveEndpoints({ pets: ["listPets"] }, existing, {}, layout);
+
+    const barrel = result.indexFileUpdate?.content ?? "";
+    expect(barrel).not.toContain("./pets/schemas");
+    expect(barrel).toMatch(/export \{ [^}]*\bPetSchema\b[^}]*\} from "\.\/store\/schemas";/);
+    expect(barrel).toMatch(/export \{ [^}]*\btype Pet\b[^}]*\} from "\.\/store\/schemas";/);
+    expect(barrel).toMatch(/export \{ [^}]*\bOrderSchema\b[^}]*\} from "\.\/store\/schemas";/);
+  });
 });
 
 describe("previewRemoveEndpoints", () => {

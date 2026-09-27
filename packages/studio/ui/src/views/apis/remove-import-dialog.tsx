@@ -28,8 +28,8 @@ function ConfigNotes({ name, notes }: { name: string; notes: RemovalConfigNotes 
       )}
       {notes.importDeclared && (
         <p className="text-body-sm text-muted-foreground">
-          It still declares <span className="mono-sm text-foreground">imports.{name}</span>: remove that entry, or
-          Studio keeps listing the import.
+          It still declares <span className="mono-sm text-foreground">imports.{name}</span>: remove that entry too, or
+          an update writes the import again.
         </p>
       )}
     </section>

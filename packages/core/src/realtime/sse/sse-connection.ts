@@ -4,7 +4,8 @@ import type { ConnectionState } from "../connection-state";
 import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
 import type { BackoffConfig } from "../types";
 import type { EventQueue } from "./event-queue";
-import { type ConnectionEnd, readConnection, SSEResponseError } from "./sse-read";
+import { type ConnectionEnd, readConnection } from "./sse-read";
+import { SSEResponseError } from "./sse-response";
 
 const log = createLogger("SSE");
 

@@ -1,3 +1,4 @@
+import type { ProxyBoundary } from "../define/boundary-types";
 import type { Middleware } from "../middleware/types";
 import type { ProxyPath } from "../proxy-caller/proxy-path";
 
@@ -115,10 +116,14 @@ export type BaseOptions = MergeOptions &
      */
     expose?: boolean;
     /**
-     * The endpoints a browser may call, named one by one. Takes precedence
-     * over `expose`; see `defineBoundary`.
+     * The endpoints a browser may call, named one by one, from
+     * `defineBoundary`. The proxy refuses every other endpoint of this source
+     * over HTTP, streams and sockets alike; it takes precedence over `expose`.
+     * The boundary is typed against this API, so annotate it as
+     * `ProxyBoundary` where it is declared, or TypeScript infers each of the
+     * two from the other and gives up on both.
      */
-    boundary?: { source: string; endpoints: Readonly<Record<string, unknown>> };
+    boundary?: ProxyBoundary;
     /** Custom serializer for variables that are an object, replacing JSON.stringify (e.g. for XML) */
     bodySerializer?: (data: Record<string, unknown>) => BodyInit;
     /** Custom search params serializer with stringify/parse methods */

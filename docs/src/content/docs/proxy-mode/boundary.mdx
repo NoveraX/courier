@@ -9,10 +9,10 @@ Nothing in that mechanism can tell the two apart. An endpoint written for a cron
 `defineBoundary` is where you say which endpoints the browser may reach. The same declaration does both halves of the job: the server refuses anything it does not name, and the browser receives it instead of your API definition.
 
 ```ts title="lib/boundary.ts"
-import { defineBoundary } from "@noverax/courier/define"
+import { defineBoundary, type ProxyBoundary } from "@noverax/courier/define"
 import type { api } from "@/api"
 
-export const boundary = defineBoundary<typeof api>({
+export const boundary: ProxyBoundary = defineBoundary<typeof api>({
   source: "api",
   proxyPath: { http: "/api/request", sse: "/api/sse", ws: "wss://realtime.example.com" },
   expose: {
@@ -25,6 +25,27 @@ export const boundary = defineBoundary<typeof api>({
 ```
 
 Anything absent is refused. `admin.exportPayouts` above is not named, so the server answers it exactly as it answers a name that does not exist.
+
+## Wiring the server
+
+The server refuses what the boundary does not name only if it has the boundary. Give it to the API it gates:
+
+```ts title="api/index.ts"
+import { defineApi } from "@noverax/courier/define"
+import { boundary } from "@/lib/boundary"
+
+export const api = defineApi({
+  baseURL: process.env.API_URL!,
+  boundary,
+  groups: { users, notifications, chat, admin },
+})
+```
+
+The proxy resolves every call against the source it was registered as, so this one line gates HTTP calls, streams and sockets alike. Without it, the client keeps to the boundary and the server serves everything the API holds to anyone who sends the name.
+
+The boundary is typed against the API, and the API now holds the boundary, so one of the two has to be written out: that is why the boundary above is annotated `ProxyBoundary`. Leave the annotation off and TypeScript infers each from the other, gives up on both (`TS7022`), and the typed client goes with them.
+
+A source must carry its own boundary: one declared with another `source` is refused when the sources are registered, with `BOUNDARY_SOURCE_MISMATCH`.
 
 ## Wiring the client
 

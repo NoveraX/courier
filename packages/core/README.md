@@ -268,6 +268,8 @@ Pages on other origins are served when `allowedOrigins` lists them. An entry is 
 createHandler({ allowedOrigins: ["https://admin.example.com", "https://*.example.com"] })
 ```
 
+A streamed answer passes the upstream's body and content type through, from your application's origin, so it carries `Content-Security-Policy: default-src 'none'; sandbox` and `X-Content-Type-Options: nosniff`: HTML an upstream sends cannot run as your application when its URL is opened as a page.
+
 <br />
 
 ## License

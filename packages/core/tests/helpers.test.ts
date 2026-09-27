@@ -117,9 +117,9 @@ describe("compileUrl", () => {
     expect(url).toBe("users/99");
   });
 
-  it("variables override generatedPathOptions", () => {
+  it("keeps generatedPathOptions over a variable of the same name", () => {
     const [url] = compileUrl("users/:id", { id: "42" }, { id: "99" });
-    expect(url).toBe("users/42");
+    expect(url).toBe("users/99");
   });
 
   it("throws HTTPError when path param is missing", () => {

@@ -22,7 +22,7 @@ const log = createLogger("Studio");
  */
 export function undoUnfinishedImportWrites(root: string): void {
   try {
-    recoverInterruptedApplies(projectRootAt(root), new Set(loadImportsState(root).applied));
+    recoverInterruptedApplies(projectRootAt(root), loadImportsState(root));
     sweepCourierTemps(root);
   } catch (error) {
     log.warn(

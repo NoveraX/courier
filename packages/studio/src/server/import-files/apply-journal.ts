@@ -31,6 +31,12 @@ export interface ApplyJournal {
   /** The import's folder, project-relative: nothing the apply touches lies outside it. */
   dir: string;
   /**
+   * The apply that saved the import's record when this one began, or `null`
+   * when there was none: a different one by the time this journal is read
+   * means an apply of the import was recorded since.
+   */
+  after: string | null;
+  /**
    * `committing` once anything in the project may have changed; `kept` once
    * an undo left files it could not restore, when the journal only records
    * them, keeping their copies from being pruned, and is never replayed.
@@ -138,11 +144,12 @@ function parseJournal(text: string): ApplyJournal | null {
 
 function isJournal(value: unknown): value is ApplyJournal {
   if (!isRecord(value)) return false;
-  const { id, importName, dir, state, backupDir, entries, createdDirs, temps } = value;
+  const { id, importName, dir, after, state, backupDir, entries, createdDirs, temps } = value;
   return (
     typeof id === "string" &&
     typeof importName === "string" &&
     typeof dir === "string" &&
+    (after === null || typeof after === "string") &&
     (state === "staging" || state === "committing" || state === "kept") &&
     typeof backupDir === "string" &&
     Array.isArray(entries) &&

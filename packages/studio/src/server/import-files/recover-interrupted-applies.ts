@@ -1,6 +1,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createLogger } from "@noverax/courier";
+import type { ImportsState } from "../../apis/imports-state";
+import { ownValue } from "../../apis/own-value";
 import type { ProjectRoot } from "../project-fs/project-root";
 import { type ApplyJournal, dropJournal, JOURNAL_DIR, readJournals } from "./apply-journal";
 import { journalProblem } from "./journal-trust";
@@ -25,26 +27,28 @@ export interface RecoveredApply {
  * kept: staged files and created directories go, files replaced or removed
  * come back. An apply whose outcome was recorded stands, and only its
  * journal goes. A journal is replayed at most once, and never after an apply
- * recorded since, which may have written the same paths: then, and when an
- * undo left files it could not restore, the journal only records those
- * files, so their earlier versions stay in the backup, and Studio names them
- * at every start until that backup folder is deleted. A journal that is not
+ * of the same import recorded since, which may have written the same paths:
+ * then, and when an undo left files it could not restore, the journal only
+ * records those files, so their earlier versions stay in the backup, and
+ * Studio names them at every start until that backup folder is deleted. A journal that is not
  * one Studio wrote for an apply of its own — `.courier/` can arrive with a
  * project — is left as it is and logged. Run once as Studio starts, before
  * it serves anything that reads or writes an import's files.
  *
  * @param root - The project
- * @param committed - The ids of the applies whose outcome was recorded
+ * @param state - The imports state: the applies it recorded, and each import's record
  * @returns What was undone
  * @example
  * ```ts
- * recoverInterruptedApplies(root, new Set(loadImportsState(root.path).applied));
+ * recoverInterruptedApplies(root, loadImportsState(root.path));
  * ```
  */
 export function recoverInterruptedApplies(
   root: ProjectRoot,
-  committed: ReadonlySet<string>,
+  state: Pick<ImportsState, "applied" | "imports">,
 ): RecoveredApply[] {
+  const committed = new Set(state.applied);
+  const recorded = (name: string): string | null => ownValue(state.imports, name)?.applyId ?? null;
   const recovered: RecoveredApply[] = [];
   for (const { fileName, journal } of readJournals(root.path)) {
     const problem = journalProblem(fileName, journal);
@@ -56,7 +60,7 @@ export function recoverInterruptedApplies(
       dropJournal(root.path, journal.id);
     } else if (journal.state === "kept") {
       remind(root, journal);
-    } else if (journal.entries.length > 0 && recordedSince(journal.id, committed)) {
+    } else if (journal.entries.length > 0 && recorded(journal.importName) !== journal.after) {
       leaveUndone(root, journal);
     } else {
       recovered.push(recover(root, journal));
@@ -75,19 +79,13 @@ function recover(root: ProjectRoot, journal: ApplyJournal): RecoveredApply {
   return { importName: journal.importName, failed, backupDir: journal.backupDir };
 }
 
-/* Ids begin with the time the apply began, so a greater one began later. */
-function recordedSince(id: string, committed: ReadonlySet<string>): boolean {
-  for (const other of committed) if (other > id) return true;
-  return false;
-}
-
 /* Only the temporary files and empty folders go: the files it names may be a later apply's. */
 function leaveUndone(root: ProjectRoot, journal: ApplyJournal): void {
   rollbackApply(root, { ...journal, entries: [] });
   const paths = journal.entries.map((entry) => entry.path);
   keepAsRecord(root.path, journal, paths);
   log.warn(
-    `Studio did not undo a write for the import ${journal.importName} that did not finish, since a later write was recorded after it: ${listed(paths)} are left as they are, and their earlier versions are in ${journal.backupDir}.`,
+    `Studio did not undo a write for the import ${journal.importName} that did not finish, since a later write of the import was recorded after it: ${listed(paths)} are left as they are, and their earlier versions are in ${journal.backupDir}.`,
   );
 }
 

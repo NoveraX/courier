@@ -300,7 +300,7 @@ describe("saving an import's record as an apply's commit", () => {
   });
 
   it("keeps an older id while its apply's journal is still on disk, so a restart never undoes that apply", () => {
-    const journal = { importName: "github", dir: "src/api/github", state: "committing" as const, entries: [], createdDirs: [], temps: [] };
+    const journal = { importName: "github", dir: "src/api/github", after: null, state: "committing" as const, entries: [], createdDirs: [], temps: [] };
     saveJournal(projectRoot, { ...journal, id: "apply-1", backupDir: ".courier/backups/apply-1" });
 
     for (let n = 1; n <= 22; n += 1) saveImportEntry(projectRoot, "github", makeEntry(`h${n}`), `apply-${n}`);

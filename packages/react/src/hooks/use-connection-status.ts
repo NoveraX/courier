@@ -5,10 +5,6 @@ import { createConnectionState } from "@noverax/courier/realtime";
    a client-only hook such as useState among its imports. */
 import * as React from "react";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 /** Return type for useConnectionStatus */
 export interface ConnectionStatusResult {
   /** Current connection status */
@@ -19,7 +15,7 @@ export interface ConnectionStatusResult {
   isReconnecting: boolean;
 }
 
-/** Adapter that exposes a transport's connection state */
+/** A transport that reports its status through `onStatusChange`, as a `WSConnection` does */
 export interface ConnectionStatusSource {
   /** Current connection status */
   readonly status: ConnectionStatus;
@@ -27,27 +23,37 @@ export interface ConnectionStatusSource {
   onStatusChange: (handler: (status: ConnectionStatus) => void) => () => void;
 }
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
+/**
+ * A transport that reports its status as a `"status"` event, as the
+ * `SSESubscription` and the `WSChannel` a caller returns both do
+ */
+export interface StatusEventSource {
+  /** Current connection status */
+  readonly status: ConnectionStatus;
+  /** Subscribe to status changes, returns unsubscribe function */
+  on(event: "status", handler: (status: ConnectionStatus) => void): () => void;
+}
 
 /**
  * Observe the connection status of an SSE or WS transport.
  * Uses `useSyncExternalStore` for tear-free concurrent-safe reads.
  *
- * @param source - Any object exposing `status` and `onStatusChange` (SSESubscription, WSConnection)
+ * @param source - A `WSConnection`, or an `SSESubscription` or `WSChannel` a caller returned; `null` reads as disconnected
  * @returns Reactive connection status with derived booleans
  *
  * @example
- * const { status, isConnected, isReconnecting } = useConnectionStatus(wsConnection);
+ * const feed = caller.live.feed();
+ * const { status, isConnected, isReconnecting } = useConnectionStatus(feed);
  */
-export function useConnectionStatus(source: ConnectionStatusSource | null): ConnectionStatusResult {
+export function useConnectionStatus(
+  source: ConnectionStatusSource | StatusEventSource | null,
+): ConnectionStatusResult {
   // Fallback for null source — always disconnected
-  const fallback = React.useMemo(() => createConnectionState("disconnected"), []);
-  const target = source ?? asFallback(fallback);
+  const fallback = React.useMemo(() => asSource(createConnectionState("disconnected")), []);
+  const target = source ?? fallback;
 
   const subscribe = React.useCallback(
-    (onStoreChange: () => void) => target.onStatusChange(onStoreChange),
+    (onStoreChange: () => void) => listen(target, onStoreChange),
     [target],
   );
 
@@ -65,11 +71,14 @@ export function useConnectionStatus(source: ConnectionStatusSource | null): Conn
   );
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+function listen(
+  source: ConnectionStatusSource | StatusEventSource,
+  handler: (status: ConnectionStatus) => void,
+): () => void {
+  return "onStatusChange" in source ? source.onStatusChange(handler) : source.on("status", handler);
+}
 
-function asFallback(state: ReturnType<typeof createConnectionState>): ConnectionStatusSource {
+function asSource(state: ReturnType<typeof createConnectionState>): ConnectionStatusSource {
   return {
     get status() {
       return state.current;

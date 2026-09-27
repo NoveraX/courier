@@ -55,9 +55,30 @@ it directly — so it is a dependency of your app, not only of the dev server:
 npm install --save-dev @noverax/courier-studio @noverax/courier-studio-core
 ```
 
-Nothing else to configure. `@noverax/courier-studio-core/runtime` brings its own
-socket client and loads it only outside production, so the connection to the
-Studio dev server costs a production build nothing.
+`@noverax/courier-studio-core/runtime` brings its own socket client and loads
+it only outside production, so the connection to the Studio dev server costs a
+production build nothing.
+
+Studio and its runtime read `courier.config.ts` at the project root. A project
+that has no API sources yet starts with this one; Studio's APIs page offers it
+to copy when the project has none, and keeps **Import API** off until it loads:
+
+```ts title="courier.config.ts"
+import { defineConfig } from "@noverax/courier/config";
+export default defineConfig({ sources: {} });
+```
+
+Start Studio with `npx courier-studio`, and **Import API** on its APIs page
+writes the project's first API — under `src/api/<source name>/` by default,
+where `source.ts` exports the source. Add it to `sources` under its source
+name, and Studio lists it:
+
+```ts title="courier.config.ts"
+import { defineConfig } from "@noverax/courier/config";
+import { petstore } from "./src/api/petstore/source";
+
+export default defineConfig({ sources: { petstore } });
+```
 
 ### Mock servers
 

@@ -31,6 +31,7 @@ import { readEntryNames } from "./read-entry-names";
 import type { ProjectInputs } from "./read-project-inputs";
 import { readProjectInputs } from "./read-project-inputs";
 import { studioTransformCache } from "./studio-transform-cache";
+import { validateCourierConfig } from "./validate-courier-config";
 
 /** Result returned by `loadCourierConfig` */
 export interface LoadedCourierConfig {
@@ -78,10 +79,12 @@ export interface LoadCourierConfigOptions {
 /**
  * Load `courier.config.*` from `projectRoot`, and `courier.mocks.*` beside it.
  *
- * Validates that `sources` is a non-empty record, stamps each source with its
- * config key (so the key acts as the canonical source name), and rejects
- * silent name collisions where the user passed a `defineApi` whose
- * auto-derived name already differs from the config key.
+ * Validates that `sources` is a plain object of sources — an empty one
+ * included, so a project that has no source yet loads, and can import its
+ * first; see `validateCourierConfig` — stamps each source with its config
+ * key (so the key acts as the canonical source name), and rejects silent
+ * name collisions where the user passed a `defineApi` whose auto-derived
+ * name already differs from the config key.
  *
  * The config, the mocks file, every module they import that the loader
  * transpiles, and every JSON module either one reads are read and evaluated
@@ -138,7 +141,7 @@ export async function loadCourierConfig(
     );
   }
   const { config } = evaluated;
-  validateConfig(config, configFile, depHashes);
+  validateCourierConfig(config, configFile, depHashes);
   stampConfigSourceKeys(config.sources, configFile, depHashes);
 
   return {
@@ -157,32 +160,6 @@ export async function loadCourierConfig(
    walk of what it imports. */
 function loadable(mocks: LocatedCourierMocks): string | null {
   return mocks.unreadable !== null ? null : mocks.file;
-}
-
-/** Reject configs missing `sources` or with malformed entries */
-function validateConfig(
-  config: unknown,
-  configFile: string,
-  depHashes: ProjectInputs,
-): asserts config is CourierConfig {
-  const invalid = (message: string) =>
-    new ConfigLoaderError("CONFIG_INVALID", message, { context: { configFile }, depHashes });
-  if (!config || typeof config !== "object") throw invalid("courier.config must export an object");
-  const sources = (config as CourierConfig).sources;
-  if (!sources || typeof sources !== "object") throw invalid("courier.config.sources is required");
-  if (Object.keys(sources).length === 0) {
-    throw invalid("courier.config.sources must contain at least one entry");
-  }
-  /* A named import misspelled, or one its module stopped exporting, is
-     `undefined` here rather than an error of the import itself. */
-  const entries: Array<[string, unknown]> = Object.entries(sources);
-  for (const [key, source] of entries) {
-    if (typeof source === "object" && source !== null) continue;
-    const found = source === undefined || source === null ? String(source) : `a ${typeof source}`;
-    throw invalid(
-      `courier.config.sources.${key} is ${found}, not a source; check that it is imported by the name its module exports`,
-    );
-  }
 }
 
 /**

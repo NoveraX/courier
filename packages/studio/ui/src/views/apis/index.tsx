@@ -1,4 +1,4 @@
-import { AlertTriangle, BookOpen, FileCode } from "lucide-react";
+import { AlertTriangle, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/shared/empty-state";
@@ -9,6 +9,7 @@ import { ApisHeader } from "./apis-header";
 import { ConfigNotice } from "./config-notice";
 import { ImportWizard } from "./import-wizard";
 import { ManageDialog } from "./manage-dialog";
+import { NoConfigState } from "./no-config-state";
 import { RegistryCard } from "./registry-card";
 import { ScannedCard } from "./scanned-card";
 import { useImport } from "./use-import";
@@ -42,7 +43,7 @@ export function ApisView(): React.ReactElement {
     <EmptyState
       icon={BookOpen}
       heading="No APIs yet"
-      description="Import an OpenAPI, Swagger, or Postman spec to generate typed API code. Or start writing APIs by hand — they'll appear here automatically."
+      description="Import an OpenAPI, Swagger, or Postman spec to generate typed API code, or write an API by hand. Add its source to sources in courier.config and it appears here."
       action={importAction}
     />
   );
@@ -77,11 +78,7 @@ export function ApisView(): React.ReactElement {
             <LoadingSkeleton layout="cards" />
           </div>
         ) : page.kind === "no-config" ? (
-          <EmptyState
-            icon={FileCode}
-            heading="No courier.config.ts"
-            description="Declare your API sources in courier.config.ts at the project root. Studio loads it as soon as it is saved."
-          />
+          <NoConfigState />
         ) : page.kind === "broken" ? (
           <EmptyState
             icon={AlertTriangle}

@@ -3,13 +3,13 @@
  */
 
 import type { ParsedSchema } from "../parser/types";
-import type { GenerateOptions } from "./types";
+import type { GeneratorSettings } from "./types";
 import { schemaToArkType } from "./validation-arktype";
 import { schemaToValibot } from "./validation-valibot";
 import { schemaToZod } from "./validation-zod";
 
 /** Generate `satisfies ZodType<T>` / `satisfies GenericSchema<...>` expression for type-safe sync */
-export function satisfiesExpr(typeName: string, options: GenerateOptions): string {
+export function satisfiesExpr(typeName: string, options: GeneratorSettings): string {
   if (options.validation === "zod") return ` satisfies z.ZodType<${typeName}>`;
   if (options.validation === "valibot") return ` satisfies v.GenericSchema<any, ${typeName}>`;
   if (options.validation === "arktype") return ` satisfies { infer: ${typeName} }`;
@@ -35,7 +35,7 @@ export function lazyDeclaration(
   name: string,
   body: string,
   typeName: string | undefined,
-  options: GenerateOptions,
+  options: GeneratorSettings,
 ): string | undefined {
   if (options.validation === "zod") {
     const annotation = typeName ? `z.ZodType<${typeName}>` : "z.ZodType<unknown>";
@@ -55,7 +55,7 @@ export function getSchemaRefName(schema: ParsedSchema | null): string | null {
   return null;
 }
 
-export function schemaToValidation(schema: ParsedSchema, options: GenerateOptions): string {
+export function schemaToValidation(schema: ParsedSchema, options: GeneratorSettings): string {
   if (options.validation === "zod") return schemaToZod(schema);
   if (options.validation === "valibot") return schemaToValibot(schema);
   if (options.validation === "arktype") return schemaToArkType(schema);
@@ -66,7 +66,7 @@ export function schemaToValidation(schema: ParsedSchema, options: GenerateOption
 export function extendSchemaWithParams(
   schemaExpr: string,
   paramNames: string[],
-  options: GenerateOptions,
+  options: GeneratorSettings,
   isObject = true,
 ): string {
   if (paramNames.length === 0) return schemaExpr;

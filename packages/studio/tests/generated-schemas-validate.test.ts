@@ -10,7 +10,7 @@ import * as valibot from "valibot";
 import { describe, expect, it } from "vitest";
 import * as zod from "zod";
 
-import { applyImportDefaults, generateCode } from "../src/apis/generator";
+import { generateCode } from "../src/apis/generator";
 import { parseSpec } from "../src/apis/parser";
 import { SHAPES_SPEC } from "./helpers/shapes-spec";
 
@@ -35,7 +35,7 @@ function load(source: string): Record<string, StandardSchema> {
 function schemasFor(validation: (typeof VALIDATORS)[number]): Record<string, StandardSchema> {
   const files = generateCode(
     parseSpec(JSON.stringify(SHAPES_SPEC)),
-    applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src", validation }),
+    { type: "openapi", sourceName: "api", outputDir: "src", validation },
   );
   const file = files.find((f) => f.path.endsWith("schemas.ts"));
   return load(file?.content ?? "");

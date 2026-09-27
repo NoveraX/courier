@@ -3,23 +3,22 @@
  */
 
 import { existsSync, readdirSync } from "node:fs";
-import { join, relative } from "node:path";
-import type { CourierImportEntry } from "@noverax/courier/config";
+import { join, relative, sep } from "node:path";
+import type { ImportLayout } from "../apis/layout";
 import { getProjectRoot, resolveProjectSafe } from "../context";
 
 /**
- * Collect all .ts file paths (relative) from an import's output dir + the
- * generated file list. `name` is the import key and doubles as the source
- * name fallback when the entry omits an explicit `sourceName`.
+ * Collect the project-relative paths of the .ts files in an import's
+ * directory, together with the paths about to be generated. Paths use `/`,
+ * as the generator's do, so a file on disk and the file generated for the
+ * same place compare equal on every platform. Links are not followed.
+ *
+ * @param layout - Where the import's files are
+ * @param generated - Files about to be written, whether or not they exist yet
+ * @returns Every path, once
  */
-export function scanTsFiles(
-  entry: CourierImportEntry,
-  name: string,
-  generated: { path: string }[],
-): string[] {
-  const sourceName = entry.sourceName ?? name;
-  const effectiveDir = `${entry.outputDir.replace(/\/+$/, "")}/${sourceName}`;
-  const absDir = resolveProjectSafe(effectiveDir);
+export function scanTsFiles(layout: ImportLayout, generated: { path: string }[]): string[] {
+  const absDir = resolveProjectSafe(layout.dir);
   const diskPaths = existsSync(absDir) ? collectTsFilesRecursive(absDir) : [];
   return [...new Set([...generated.map((g) => g.path), ...diskPaths])];
 }
@@ -35,6 +34,8 @@ function walkTsFiles(dir: string, cwd: string, out: string[]): void {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) walkTsFiles(full, cwd, out);
-    else if (entry.isFile() && entry.name.endsWith(".ts")) out.push(relative(cwd, full));
+    else if (entry.isFile() && entry.name.endsWith(".ts")) {
+      out.push(relative(cwd, full).split(sep).join("/"));
+    }
   }
 }

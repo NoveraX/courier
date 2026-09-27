@@ -64,8 +64,3 @@ export function writeFileAtomic(filePath: string, content: string): void {
 export function isUrl(specUrl: string): boolean {
   return specUrl.startsWith("http://") || specUrl.startsWith("https://");
 }
-
-/** Build the effective output directory for a source: `outputDir/sourceName` */
-export function getEffectiveDir(outputDir: string, sourceName: string): string {
-  return `${outputDir.replace(/\/+$/, "")}/${sourceName}`;
-}

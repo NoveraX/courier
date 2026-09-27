@@ -17,7 +17,6 @@ import {
   saveImportsState,
 } from "../apis/imports-state";
 import { getProjectRoot } from "../context";
-import { getEffectiveDir as joinEffectiveDir } from "./fs-helpers";
 import { withImportsLock } from "./imports-lock";
 
 /** The `imports` a config declares, by import name. */
@@ -110,18 +109,6 @@ export async function dropImportState(name: string): Promise<void> {
     const root = getProjectRoot();
     saveImportsState(root, removeImport(loadImportsState(root), name));
   });
-}
-
-/**
- * Canonical helper that resolves the on-disk directory where Studio writes
- * an import's generated files. Callers MUST route through this single
- * helper so the `outputDir/sourceName` convention stays consistent.
- */
-export function getEffectiveImportDir(
-  entry: { outputDir: string; sourceName?: string },
-  name: string,
-): string {
-  return joinEffectiveDir(entry.outputDir, entry.sourceName ?? name);
 }
 
 export function getImportEntry(

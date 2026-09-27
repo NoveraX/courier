@@ -2,7 +2,10 @@
  * Express route for apis write — merges with existing files or writes raw.
  */
 
+import type { CourierImportEntry } from "@noverax/courier/config";
+import { resolveImportLayout } from "../apis/layout";
 import type { ApisRouteDeps } from "./apis-routes";
+import { DeclarationMismatchError } from "./declaration-mismatch-error";
 import { describeImportDeclaration } from "./describe-import-declaration";
 import { getImportEntry, getImportState, importsSnapshotOf } from "./imports-bridge";
 import { withImportsLock } from "./imports-lock";
@@ -75,6 +78,7 @@ async function writeImport(
   const entry = getImportEntry(imports, sourceName);
   const state = getImportState(imports, sourceName);
   const { files, spec, options } = body;
+  checkDirectories(sourceName, entry, options);
 
   const result =
     entry && spec && options
@@ -87,4 +91,30 @@ async function writeImport(
     root: projectRoot,
   });
   return declaration ? { ...result, declaration } : result;
+}
+
+/**
+ * Refuse, before anything is written, options Studio would refuse to lay
+ * out, and options that put a declared import somewhere other than its
+ * declaration: the write goes where the options say while cleanup follows
+ * the declaration. The directories must be spelled alike, letter case
+ * included: on a case-insensitive disk `src/Api` and `src/api` are one
+ * directory, but paths that differ in case do not compare equal, so
+ * cleanup would take the files just written for leftovers.
+ */
+function checkDirectories(
+  name: string,
+  entry: CourierImportEntry | undefined,
+  options: WriteBody["options"],
+): void {
+  if (!options || typeof options.outputDir !== "string") return;
+  const requested = resolveImportLayout(
+    { outputDir: options.outputDir, sourceName: options.sourceName },
+    name,
+  ).dir;
+  if (!entry) return;
+  const declared = resolveImportLayout(entry, name).dir;
+  if (declared !== requested) {
+    throw new DeclarationMismatchError(name, declared, requested);
+  }
 }

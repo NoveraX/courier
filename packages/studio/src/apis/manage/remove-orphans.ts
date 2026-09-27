@@ -2,12 +2,13 @@
  * Orphan schema processing for endpoint removal.
  */
 
+import type { ImportLayout } from "../layout";
 import { detectOrphanSchemas } from "./detect-orphan-schemas";
 import { removeOrphanSchemas } from "./remove-schemas";
 
 /** Find and clean up orphaned schemas after endpoints are removed */
 export function processOrphanSchemas(
-  baseDir: string,
+  layout: ImportLayout,
   endpointsToRemove: Record<string, string[]>,
   existingFiles: Record<string, string>,
   modifiedFiles: Array<{ path: string; content: string }>,
@@ -16,7 +17,7 @@ export function processOrphanSchemas(
   const allOrphans: string[] = [];
 
   for (const groupName of Object.keys(endpointsToRemove)) {
-    const schemaPath = `${baseDir}/${groupName}/schemas.ts`;
+    const schemaPath = layout.groupSchemaFile(groupName, "schemas");
     const schemaContent = existingFiles[schemaPath];
     if (!schemaContent) continue;
 
@@ -24,7 +25,8 @@ export function processOrphanSchemas(
     if (deletedFiles.includes(schemaPath)) continue;
 
     // Get remaining group content
-    const modifiedGroup = modifiedFiles.find((f) => f.path.includes(`/${groupName}/`));
+    const groupFile = layout.groupFile(groupName);
+    const modifiedGroup = modifiedFiles.find((f) => f.path === groupFile);
     if (!modifiedGroup) continue;
 
     const orphans = detectOrphanSchemas(schemaContent, modifiedGroup.content);

@@ -2,22 +2,42 @@
  * Main code generation orchestrator.
  */
 
-import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
+import { InvalidImportError, resolveImportLayout } from "../layout";
+import type { ParsedGroup, ParsedSpec } from "../parser/types";
+import { buildSchemaRecord } from "./build-schema-record";
 import { extractEndpointTypes } from "./extract-endpoint-types";
 import { generateFlatSourceFile } from "./generate-flat-source";
 import { generateGroupFile } from "./generate-group";
 import { generateIndexFile } from "./generate-index";
 import { generateSchemasFile, generateTypesFile } from "./generate-schemas";
 import { generateSourceFile } from "./generate-source";
-import { collectGroupSchemas } from "./schema-refs";
 import { transformSpec } from "./transform-spec";
 import type { GeneratedFile, GenerateOptions, ResolvedGenerateOptions } from "./types";
 import { applyImportDefaults } from "./types";
 
-export function generateCode(spec: ParsedSpec, options: GenerateOptions): GeneratedFile[] {
-  const resolved = applyImportDefaults(options);
-  const effectiveDir = `${resolved.outputDir.replace(/\/+$/, "")}/${resolved.sourceName}`;
-  const opts: ResolvedGenerateOptions = { ...resolved, outputDir: effectiveDir };
+/**
+ * Generate an import's files from a parsed spec, at the paths its layout
+ * gives them.
+ *
+ * @param spec - The parsed spec
+ * @param options - The import's declaration and, transiently, the endpoints picked
+ * @param importName - The import's key under `imports`; `options.sourceName` when omitted, as the import wizard names both alike
+ * @returns The files, each with its project-relative path
+ * @throws {InvalidImportError} When the output directory or a name is refused
+ * @example
+ * ```ts
+ * const files = generateCode(spec, { type: "openapi", outputDir: "src/api" }, "petStore");
+ * ```
+ */
+export function generateCode(
+  spec: ParsedSpec,
+  options: GenerateOptions,
+  importName: string | undefined = options.sourceName,
+): GeneratedFile[] {
+  if (importName === undefined) {
+    throw new InvalidImportError("importName", "", "the import has no name");
+  }
+  const opts = applyImportDefaults(options, resolveImportLayout(options, importName));
 
   /* Filter by selection BEFORE regrouping (selectedEndpoints uses original group names) */
   const filtered = filterGroups(spec.groups, opts);
@@ -89,48 +109,6 @@ function generateGrouped(spec: ParsedSpec, opts: ResolvedGenerateOptions): Gener
   files.push(generateIndexFile(spec, spec.groups, opts, groupSchemaMap));
 
   return files;
-}
-
-/** Collect spec schemas + extracted endpoint types, including transitive deps */
-function buildSchemaRecord(
-  group: ParsedGroup,
-  spec: ParsedSpec,
-  extracted: Record<string, ParsedSchema>,
-): Record<string, ParsedSchema> {
-  /* Use extended spec so BFS can resolve deps from extracted schemas */
-  const extendedSpec = { ...spec, schemas: { ...spec.schemas, ...extracted } };
-  const names = collectGroupSchemas(group, extendedSpec);
-
-  /* Ensure all extracted types are included + collect their transitive deps */
-  for (const [name, schema] of Object.entries(extracted)) {
-    names.add(name);
-    collectDeepRefs(schema, spec, names);
-  }
-
-  const result: Record<string, ParsedSchema> = {};
-  for (const name of names) {
-    if (spec.schemas[name]) result[name] = spec.schemas[name];
-    else if (extracted[name]) result[name] = extracted[name];
-  }
-  return result;
-}
-
-/** Recursively collect schema refs from properties */
-function collectDeepRefs(schema: ParsedSchema, spec: ParsedSpec, refs: Set<string>): void {
-  if (!schema.properties) return;
-  for (const prop of Object.values(schema.properties)) {
-    const refSchema = prop.refName ? spec.schemas[prop.refName] : undefined;
-    if (prop.refName && refSchema && !refs.has(prop.refName)) {
-      refs.add(prop.refName);
-      collectDeepRefs(refSchema, spec, refs);
-    }
-    const itemRef = prop.items?.type === "ref" ? prop.items.refName : undefined;
-    const itemSchema = itemRef ? spec.schemas[itemRef] : undefined;
-    if (itemRef && itemSchema && !refs.has(itemRef)) {
-      refs.add(itemRef);
-      collectDeepRefs(itemSchema, spec, refs);
-    }
-  }
 }
 
 // ── Filter by selection ──────────────────────────────────────────────────────

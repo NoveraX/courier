@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseSpec } from "../src/apis/parser";
-import { generateCode, applyImportDefaults, DEFAULT_OPTIONS } from "../src/apis/generator";
+import { DEFAULT_OPTIONS, generateCode } from "../src/apis/generator";
 
 const SPEC = JSON.stringify({
   openapi: "3.0.0",
@@ -18,7 +18,7 @@ function source(options: Record<string, unknown> = {}): string {
   return (
     generateCode(
       parseSpec(SPEC),
-      applyImportDefaults({ type: "openapi", sourceName: "pet", outputDir: "src", ...options }),
+      { type: "openapi", sourceName: "pet", outputDir: "src", ...options },
     ).find((f) => f.path.endsWith("source.ts"))?.content ?? ""
   );
 }

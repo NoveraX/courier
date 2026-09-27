@@ -3,6 +3,7 @@
  */
 
 import type { ParsedGroup, ParsedSecurityScheme, ParsedSpec } from "../parser/types";
+import { groupLocalName } from "./group-local-name";
 import { jsdocText } from "./jsdoc-text";
 import { jsLiteral, objectKey } from "./literals";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
@@ -17,7 +18,11 @@ export function generateSourceFile(
   lines.push(`import { defineApi } from "@noverax/courier/define";`);
 
   for (const group of groups) {
-    lines.push(`import { ${group.name} } from "./${group.name}";`);
+    const local = groupLocalName(group.name, options.sourceName);
+    const imported = local === group.name ? group.name : `${group.name} as ${local}`;
+    lines.push(
+      `import { ${imported} } from "${options.layout.groupSpecifier(group.name, "index")}";`,
+    );
   }
 
   lines.push("");
@@ -44,7 +49,8 @@ export function generateSourceFile(
       if (options.includeComments && group.description) {
         lines.push(`    /** ${jsdocText(group.description)} */`);
       }
-      lines.push(`    ${group.name},`);
+      const local = groupLocalName(group.name, options.sourceName);
+      lines.push(local === group.name ? `    ${group.name},` : `    ${group.name}: ${local},`);
     }
     lines.push(`  },`);
   }
@@ -54,7 +60,7 @@ export function generateSourceFile(
   if (authHeaders.length > 0) lines.push(...requiredEnvHelper());
 
   return {
-    path: `${options.outputDir}/source.ts`,
+    path: options.layout.sourceFile,
     content: lines.join("\n"),
   };
 }

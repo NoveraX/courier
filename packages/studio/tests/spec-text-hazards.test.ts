@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseSpec } from "../src/apis/parser";
-import { generateCode, applyImportDefaults } from "../src/apis/generator";
+import { generateCode } from "../src/apis/generator";
 import { jsdocText } from "../src/apis/generator/jsdoc-text";
 import { specText } from "../src/apis/parser/string-utils";
 
@@ -10,7 +10,7 @@ const COMMENT_CLOSE = `*${"/"}`;
 function generate(spec: object): { path: string; content: string }[] {
   return generateCode(
     parseSpec(JSON.stringify(spec)),
-    applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src/api" }),
+    { type: "openapi", sourceName: "api", outputDir: "src/api" },
   );
 }
 

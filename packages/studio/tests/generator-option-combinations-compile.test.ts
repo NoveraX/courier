@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseSpec } from "../src/apis/parser";
-import { generateCode, applyImportDefaults } from "../src/apis/generator";
+import { generateCode } from "../src/apis/generator";
 import { toSafeIdentifier } from "../src/apis/parser/naming-utils";
 import type { GenerateOptions } from "../src/apis/generator";
 
@@ -29,7 +29,7 @@ const SPEC = {
 function files(options: Partial<GenerateOptions>): { path: string; content: string }[] {
   return generateCode(
     parseSpec(JSON.stringify(SPEC)),
-    applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src", ...options }),
+    { type: "openapi", sourceName: "api", outputDir: "src", ...options },
   );
 }
 

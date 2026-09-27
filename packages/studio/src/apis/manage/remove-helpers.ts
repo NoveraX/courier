@@ -3,32 +3,28 @@
  * and user-modification warning detection.
  */
 
+import type { ImportLayout } from "../layout";
 import { extractEndpoints } from "../merge/extract-endpoints";
 import { computeHash } from "../merge/hash";
 
-/** Find the main group file (index.ts or groupName.ts) within a group dir */
+/** The group's endpoint file, when it is on disk: the one path the layout gives it */
 export function findGroupFile(
-  baseDir: string,
+  layout: ImportLayout,
   groupName: string,
   existingFiles: Record<string, string>,
 ): string | undefined {
-  const dirPrefix = `${baseDir}/${groupName}/`;
-  return (
-    Object.keys(existingFiles).find((p) => p.startsWith(dirPrefix) && p.endsWith("/index.ts")) ??
-    Object.keys(existingFiles).find(
-      (p) => p.startsWith(dirPrefix) && p.endsWith(`/${groupName}.ts`),
-    )
-  );
+  const path = layout.groupFile(groupName);
+  return Object.hasOwn(existingFiles, path) ? path : undefined;
 }
 
 /** Collect all files in a group directory for deletion */
 export function collectGroupDeletions(
-  baseDir: string,
+  layout: ImportLayout,
   groupName: string,
   existingFiles: Record<string, string>,
   deletedFiles: string[],
 ): void {
-  const dirPrefix = `${baseDir}/${groupName}/`;
+  const dirPrefix = `${layout.groupDir(groupName)}/`;
   for (const path of Object.keys(existingFiles)) {
     if (path.startsWith(dirPrefix) && !deletedFiles.includes(path)) {
       deletedFiles.push(path);

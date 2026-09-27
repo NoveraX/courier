@@ -5,12 +5,12 @@
 import type { ParsedSpec } from "../apis";
 import { computeSpecHash, createSpecDigest, diffSpecs, generateCode } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
+import { resolveImportLayout } from "../apis/layout";
 import type { BreakingChange, MergeChange, SpecDiff } from "../apis/merge/types";
 import { previewUpdate } from "../apis/merge/update-flow";
 import { resolveProjectSafe } from "../context";
 import { cleanupOrphanFiles } from "./cleanup-orphans";
 import {
-  getEffectiveImportDir,
   getImportEntry,
   getImportState,
   type ImportsSnapshot,
@@ -63,8 +63,9 @@ export function handlePreviewUpdate(
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
   const state = getImportState(imports, body.name);
 
-  const generated = generateCode(body.newSpec, { ...entry, selectedEndpoints: null });
-  const diskPaths = scanTsFiles(entry, body.name, generated);
+  const layout = resolveImportLayout(entry, body.name);
+  const generated = generateCode(body.newSpec, { ...entry, selectedEndpoints: null }, body.name);
+  const diskPaths = scanTsFiles(layout, generated);
   const existingFiles = readFilesFromDisk(diskPaths);
   const fingerprints = loadFingerprints(existingFiles, state);
   const result = previewUpdate(fingerprints, generated, existingFiles);
@@ -100,6 +101,9 @@ export async function handleApplyUpdate(
   const entry = getImportEntry(imports, body.name);
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
   const prevState = getImportState(imports, body.name);
+  /* Everything that can refuse the declaration runs before anything is written. */
+  const layout = resolveImportLayout(entry, body.name);
+  const generated = generateCode(body.newSpec, { ...entry, selectedEndpoints: null }, body.name);
 
   /* Detect user-modified endpoints BEFORE overwriting — compare the disk
    * state of the files the user just approved against the fingerprints
@@ -111,9 +115,8 @@ export async function handleApplyUpdate(
 
   writeUpdateFiles(body.files);
 
-  const generated = generateCode(body.newSpec, { ...entry, selectedEndpoints: null });
   const deleted = cleanupOrphanFiles(
-    getEffectiveImportDir(entry, body.name),
+    layout.dir,
     new Set(generated.map((f) => resolveProjectSafe(f.path))),
   );
 

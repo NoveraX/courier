@@ -19,11 +19,11 @@ import { jsdocText } from "./jsdoc-text";
 import { schemaComponents } from "./schema-components";
 import { topoSortSchemas } from "./schema-refs";
 import { schemaToInterface } from "./schema-types";
-import type { GeneratedFile, GenerateOptions } from "./types";
+import type { GeneratedFile, GeneratorSettings, ResolvedGenerateOptions } from "./types";
 
 export function generateSchemasFile(
   schemas: Record<string, ParsedSchema>,
-  options: GenerateOptions,
+  options: ResolvedGenerateOptions,
   groupName?: string,
 ): GeneratedFile {
   const lines: string[] = [];
@@ -46,8 +46,8 @@ export function generateSchemasFile(
 
   return {
     path: groupName
-      ? `${options.outputDir}/${groupName}/schemas.ts`
-      : `${options.outputDir}/schemas.ts`,
+      ? options.layout.groupSchemaFile(groupName, "schemas")
+      : options.layout.schemaFile("schemas"),
     content: lines.join("\n"),
   };
 }
@@ -60,7 +60,7 @@ export function generateSchemasFile(
 function writeArkTypeFile(
   lines: string[],
   schemas: Record<string, ParsedSchema>,
-  options: GenerateOptions,
+  options: GeneratorSettings,
 ): void {
   const components = schemaComponents(schemas);
   const hasCycle = components.some((component) => component.cyclic);
@@ -87,7 +87,7 @@ function writeArkTypeFile(
 function writeEntries(
   lines: string[],
   entries: [string, ParsedSchema][],
-  options: GenerateOptions,
+  options: GeneratorSettings,
   cyclic: Set<string>,
 ): void {
   const deferrable = options.generateSchemas && options.validation !== "none";
@@ -115,7 +115,7 @@ function writeEntries(
 
 export function generateTypesFile(
   schemas: Record<string, ParsedSchema>,
-  options: GenerateOptions,
+  options: ResolvedGenerateOptions,
   groupName?: string,
 ): GeneratedFile {
   const lines: string[] = [];
@@ -136,8 +136,8 @@ export function generateTypesFile(
 
   return {
     path: groupName
-      ? `${options.outputDir}/${groupName}/types.ts`
-      : `${options.outputDir}/types.ts`,
+      ? options.layout.groupSchemaFile(groupName, "types")
+      : options.layout.schemaFile("types"),
     content: lines.join("\n"),
   };
 }

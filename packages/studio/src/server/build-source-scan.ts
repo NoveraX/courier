@@ -14,6 +14,7 @@ import { extractSourceMap } from "@noverax/courier-studio-core";
 import type { LoadedCourierConfig } from "./config-loader";
 import { findSourceDeclaration } from "./find-source-declaration";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
+import { scannedFilePaths } from "./scanned-file-paths";
 
 /** How an endpoint is shaped, as the APIs page and mock wizard read it. */
 export interface ScannedEndpointAnalysis {
@@ -86,6 +87,7 @@ export function buildSourceScan(
   for (const [name, source] of Object.entries(sourceMap)) {
     const state = getImportState(snapshot, name);
     const written = state?.generatedFiles ?? [];
+    const paths = scannedFilePaths(snapshot, name, written);
     const isImported = state !== undefined || getImportEntry(snapshot, name) !== undefined;
     const groups: ScannedGroup[] = [];
     let inlineEndpoints: ScannedEndpoint[] | undefined;
@@ -101,7 +103,7 @@ export function buildSourceScan(
       groups.push({
         name: groupName,
         prefix: group.prefix,
-        filePath: written.find((file) => file.endsWith(`/${groupName}/index.ts`)) ?? "",
+        filePath: paths.group(groupName),
         endpoints,
       });
     }
@@ -110,9 +112,7 @@ export function buildSourceScan(
       name,
       baseURL: source.baseURL,
       filePath:
-        written.find((file) => file.endsWith("/source.ts")) ??
-        findSourceDeclaration(name, deps, root) ??
-        relative(root, configFile),
+        paths.source ?? findSourceDeclaration(name, deps, root) ?? relative(root, configFile),
       groups,
       ...(inlineEndpoints && { inlineEndpoints }),
       isImported,

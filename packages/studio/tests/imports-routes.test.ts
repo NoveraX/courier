@@ -433,6 +433,58 @@ describe("a write for an import, after courier.config moved its output directory
   }, 15_000);
 });
 
+describe("a write whose options put a declared import in another directory", () => {
+  /* The wizard's write for pets, generated under `outputDir`. */
+  function writeUnder(outputDir: string): Record<string, unknown> {
+    return {
+      files: [{ path: `${outputDir}/pets/source.ts`, content: GENERATED }],
+      sourceName: "pets",
+      spec: SPEC,
+      options: { type: "openapi", sourceName: "pets", outputDir },
+    };
+  }
+
+  it("is refused 409 before anything is written, so the declared directory keeps its files", async () => {
+    project(declaring("lib/gen"));
+    const url = await started();
+    writeProjectFile("lib/gen/pets/helpers.ts", "export const help = 1;\n");
+
+    const reply = await post(url, "/api/apis/write", writeUnder("src/api"));
+
+    expect(reply.status).toBe(409);
+    expect(reply.body).toMatchObject({ code: "DECLARATION_MISMATCH" });
+    expect(existsSync(join(root, "src/api/pets/source.ts"))).toBe(false);
+    expect(existsSync(join(root, "lib/gen/pets/helpers.ts"))).toBe(true);
+  }, 15_000);
+
+  it("is refused when the directories differ only in letter case", async () => {
+    project(declaring("src/Api"));
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/write", writeUnder("src/api"));
+
+    expect(reply.status).toBe(409);
+    expect(existsSync(join(root, "src/api/pets/source.ts"))).toBe(false);
+  }, 15_000);
+});
+
+describe("a declaration Studio refuses to lay out", () => {
+  it("makes update/apply answer 400 and write nothing", async () => {
+    project(declaring("node_modules/gen"));
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/update/apply", {
+      name: "pets",
+      newSpec: SPEC,
+      files: [{ path: "src/written.ts", content: GENERATED }],
+    });
+
+    expect(reply.status).toBe(400);
+    expect(reply.body).toMatchObject({ code: "INVALID_IMPORT" });
+    expect(existsSync(join(root, "src/written.ts"))).toBe(false);
+  }, 15_000);
+});
+
 describe("what a write for an import says courier.config must still declare", () => {
   const SOURCES_ONLY = 'import "./count";\nexport default { sources: { api: { baseURL: "https://api.example" } } };\n';
 
@@ -492,11 +544,11 @@ describe("what a write for an import says courier.config must still declare", ()
     project(SOURCES_ONLY);
     const url = await started();
 
-    const reply = await post(url, "/api/apis/write", wizardWrite("pet-store", "petStore"));
+    const reply = await post(url, "/api/apis/write", wizardWrite("pet-store", "pet-store"));
 
     expect(reply.status).toBe(200);
     expect(reply.body).toHaveProperty("declaration.source", {
-      importLine: 'import { petStore } from "./src/api/petStore/source";',
+      importLine: 'import { petStore } from "./src/api/pet-store/source";',
       entry: '"pet-store": petStore,',
     });
     expect(reply.body).toHaveProperty(

@@ -10,8 +10,8 @@ export interface SSEBroadcastEngine {
 /**
  * Create a broadcast engine for SSE server-initiated push.
  *
- * Each stream numbers the event itself, from the counter its generator's
- * events use, so one client never sees its ids go backwards; and a stream
+ * Each stream writes the event itself: it carries only an id of its own, so
+ * a client resumes from where the stream's generator left it; and a stream
  * whose client is not reading refuses the event rather than queueing it.
  *
  * @param entries - Live registry entries map (read-only reference for liveness checks)
@@ -20,7 +20,7 @@ export function createBroadcastEngine(entries: Map<string, SSERegistryEntry>): S
   function deliver(iter: Iterable<SSERegistryEntry>, event: SSEBroadcastEvent): SSEBroadcastResult {
     const result: SSEBroadcastResult = new Map();
     for (const entry of iter) {
-      const ok = entries.has(entry.connectionId) && entry.send(event, true);
+      const ok = entries.has(entry.connectionId) && entry.send(event);
       result.set(entry.connectionId, ok);
     }
     return result;

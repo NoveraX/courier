@@ -15,6 +15,7 @@ function createEntry(overrides?: Partial<SSERegistryEntry>): SSERegistryEntry {
     lastEventAt: 0,
     abort: vi.fn(),
     send: vi.fn(() => true),
+    notify: vi.fn(() => true),
     ...overrides,
   };
 }
@@ -202,7 +203,7 @@ describe("SSEConnectionRegistry", () => {
       expect(entry.abort).toHaveBeenCalledOnce();
     });
 
-    it("sends shutdown event to all active connections", async () => {
+    it("tells every active connection when to come back", async () => {
       registry = createSSEConnectionRegistry();
       const a = createEntry();
       const b = createEntry();
@@ -211,10 +212,11 @@ describe("SSEConnectionRegistry", () => {
 
       await registry.shutdown({ retryMs: 5000, drainMs: 10 });
 
-      const shutdown = { event: "shutdown", data: { reason: "shutdown" }, retry: 5000 };
-      /* Queued even into a full buffer: it is the last thing the stream says. */
-      expect(a.send).toHaveBeenCalledWith(shutdown, false);
-      expect(b.send).toHaveBeenCalledWith(shutdown, false);
+      const notice = "event: courier:shutdown\nretry: 5000\ndata: null\n\n";
+      /* A control event, not one of the endpoint's, and unnumbered. */
+      expect(a.notify).toHaveBeenCalledWith(notice);
+      expect(b.notify).toHaveBeenCalledWith(notice);
+      expect(a.send).not.toHaveBeenCalled();
     });
 
     it("aborts the shutdown signal", async () => {
@@ -234,7 +236,7 @@ describe("SSEConnectionRegistry", () => {
       await registry.shutdown({ drainMs: 10 });
       await registry.shutdown({ drainMs: 10 });
 
-      expect(entry.send).toHaveBeenCalledTimes(1);
+      expect(entry.notify).toHaveBeenCalledTimes(1);
     });
 
     it("clears all entries after drain", async () => {

@@ -174,7 +174,7 @@ describe("waitForRoom", () => {
     );
     if (!controller) throw new Error("The stream did not start");
     const sender = createSSESender(controller, () => {});
-    sender.send({ data: "an event larger than the buffer" }, false);
+    sender.send({ data: "an event larger than the buffer" });
     return { reader: stream.getReader(), sender };
   }
 

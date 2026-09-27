@@ -60,9 +60,13 @@ export async function readConnection<TData>(
       expectMore();
       progress.received = true;
       if (raw === null) continue; // Comment/heartbeat — timer already reset
+      if (!raw.event?.startsWith(SSE_CONTROL_EVENTS.prefix)) {
+        deliver(ctx, raw);
+        continue;
+      }
       const end = controlEnd(raw);
       if (end) return end;
-      deliver(ctx, raw);
+      if (raw.retry !== undefined) ctx.serverRetryMs = raw.retry;
     }
     return "dropped";
   } finally {
@@ -79,7 +83,11 @@ function requestHeaders<TData>(ctx: SSEConnectionCtx<TData>): Record<string, str
   return headers;
 }
 
-/** The end a Courier server announced, if this event is one. */
+/**
+ * The end a Courier server announced, if this control event is one. Any other
+ * — the notice of a server going away, or one this client does not know — is
+ * about the stream, not for the app, and ends nothing.
+ */
 function controlEnd(raw: RawSSEEvent): ConnectionEnd | undefined {
   if (raw.event === SSE_CONTROL_EVENTS.complete) return "complete";
   if (raw.event !== SSE_CONTROL_EVENTS.error) return undefined;

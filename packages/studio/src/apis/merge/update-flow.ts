@@ -9,14 +9,19 @@ import { extractEndpoints } from "./extract-endpoints";
 import { classifyEndpoints } from "./fingerprint";
 import { mergeGroupFile } from "./merge-group";
 
-/** Either shape a generated source takes: a group, or a flat API. */
-const SOURCE_MARKERS = ["defineGroup(", "defineApi("] as const;
+/** The line opening a declaration, a group's or a flat API's. */
+const DECLARATION_RE = /^export\s+const\s+\w+\s*=\s*define(?:Group|Api)\(\{/m;
+/** The key holding a declaration's endpoints. */
+const ENDPOINTS_RE = /^\s*endpoints:\s*\{/m;
 
 /**
  * Preview the result of updating a source to a new spec.
  *
- * For each generated file, checks if an existing version has user modifications
- * and performs smart merge (new config + user body) when needed.
+ * A file that declares endpoints, a group or an API holding them inline, is
+ * merged with the version on disk, so the edits made to it survive. Every
+ * other file is generated whole from the spec and the options, and is
+ * written as generated: that includes the source of an API grouped by tag
+ * or path, whose `defineApi` lists its groups and holds no endpoint.
  *
  * @param fingerprints - Stored fingerprints for the source (endpoint name → hash)
  * @param generated - Freshly generated files from the new spec
@@ -46,8 +51,10 @@ function mergeOrOverwrite(
   existing: string | undefined,
   fingerprints: Record<string, string>,
 ): UpdateFileResult {
-  /* No existing file, or one that declares no source → safe overwrite */
-  if (!existing || !SOURCE_MARKERS.some((marker) => existing.includes(marker))) {
+  /* Both versions must declare endpoints: the merge keeps what surrounds
+     them and takes the declaration from the generated file, so one that
+     holds none, or an API that changed its shape, has nothing to merge. */
+  if (!existing || !declaresEndpoints(existing) || !declaresEndpoints(gen.content)) {
     return { path: gen.path, content: gen.content, status: "safe", changes: [] };
   }
 
@@ -67,4 +74,8 @@ function mergeOrOverwrite(
     status: result.status,
     changes: result.changes,
   };
+}
+
+function declaresEndpoints(content: string): boolean {
+  return DECLARATION_RE.test(content) && ENDPOINTS_RE.test(content);
 }

@@ -23,7 +23,7 @@ export function WizardFooter({ wizard }: WizardFooterProps): React.ReactElement 
 
   return (
     <div className="flex items-center justify-between border-t bg-muted rounded-b-lg px-6 py-4">
-      {state.step === "import" ? (
+      {state.step === "import" || state.step === "declare" ? (
         <span />
       ) : (
         <Button
@@ -68,6 +68,12 @@ export function WizardFooter({ wizard }: WizardFooterProps): React.ReactElement 
         <Button size="sm" disabled={state.writing} onClick={wizard.write}>
           {state.writing && <Loader2 className="mr-1.5 size-3 animate-spin" />}
           Write to Disk
+        </Button>
+      )}
+
+      {state.step === "declare" && (
+        <Button size="sm" onClick={wizard.close}>
+          Done
         </Button>
       )}
     </div>

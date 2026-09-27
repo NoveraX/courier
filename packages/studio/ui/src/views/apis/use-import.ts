@@ -17,6 +17,7 @@ import {
   toggleGroupReducer,
   toggleAllReducer,
 } from "./import-actions";
+import { settleWrite } from "./settle-write";
 
 export interface UseImportReturn {
   state: ImportState;
@@ -57,9 +58,23 @@ const INITIAL_STATE: ImportState = {
   selectedEndpoints: {},
   generatedFiles: [],
   writing: false,
+  declaration: null,
 };
 
-export function useImport(onSuccess?: () => void): UseImportReturn {
+/**
+ * The import wizard's state and actions. A write that leaves part of the
+ * declaration to courier.config keeps the wizard open on the declare step,
+ * which shows it; any other write closes the wizard.
+ *
+ * @param onWritten - Told what was written, once Studio wrote the files
+ * @returns The wizard's state and actions
+ *
+ * @example
+ * ```ts
+ * const wizard = useImport((message) => toast.success(message));
+ * ```
+ */
+export function useImport(onWritten?: (message: string) => void): UseImportReturn {
   const [state, setState] = useState<ImportState>({ ...INITIAL_STATE });
   const [parsing, setParsing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -117,15 +132,16 @@ export function useImport(onSuccess?: () => void): UseImportReturn {
     setState((s) => ({ ...s, writing: true }));
     setError(null);
     try {
-      await writeGeneratedFiles(state);
-      close();
-      onSuccess?.();
+      const settled = settleWrite(state, await writeGeneratedFiles(state));
+      if (settled.state.step === "declare") setState(settled.state);
+      else close();
+      onWritten?.(settled.message);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Write failed");
     } finally {
       setState((s) => ({ ...s, writing: false }));
     }
-  }, [state, close, onSuccess]);
+  }, [state, close, onWritten]);
 
   return {
     state, parsing, error, open,

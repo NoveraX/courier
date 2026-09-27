@@ -1,10 +1,11 @@
-import { AlertTriangle, BookOpen } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { PageShell } from "@/components/shared/page-shell";
 
+import { ApisEmptyState } from "./apis-empty-state";
 import { ApisHeader } from "./apis-header";
 import { ConfigNotice } from "./config-notice";
 import { ImportWizard } from "./import-wizard";
@@ -20,8 +21,8 @@ export function ApisView(): React.ReactElement {
   const registry = useRegistry();
   const { page } = registry;
 
-  const importWizard = useImport(() => {
-    toast.success("API imported successfully");
+  const importWizard = useImport((message) => {
+    toast.success(message);
   });
 
   const manageFlow = useManage(() => {
@@ -39,14 +40,7 @@ export function ApisView(): React.ReactElement {
     page.kind === "no-config" ||
     page.kind === "broken" ||
     (page.kind === "empty" && page.notice === null);
-  const emptyState = (
-    <EmptyState
-      icon={BookOpen}
-      heading="No APIs yet"
-      description="Import an OpenAPI, Swagger, or Postman spec to generate typed API code, or write an API by hand. Add its source to sources in courier.config and it appears here."
-      action={importAction}
-    />
-  );
+  const emptyState = <ApisEmptyState action={importAction} />;
 
   const handleManage = (name: string) => {
     const source = registry.imported.find((s) => s.name === name);

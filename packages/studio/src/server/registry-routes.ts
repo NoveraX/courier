@@ -6,9 +6,9 @@
 
 import { logger } from "@noverax/courier";
 import type { ApisRouteDeps } from "./apis-routes";
+import { formatImportSnippet } from "./format-import-snippet";
 import {
   dropImportState,
-  formatImportSnippet,
   getImportEntry,
   getImportState,
   importsSnapshotOf,

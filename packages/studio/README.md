@@ -143,6 +143,39 @@ Call it once at startup — from `instrumentation.ts` in Next.js, a Nitro plugin
 
 <br />
 
+## Import an API
+
+**Import API** on the APIs page turns an OpenAPI 3, Swagger 2 or Postman specification — from a URL, a file, or pasted text — into typed API code: pick the endpoints, choose the options, preview the files, then **Write to Disk**. Studio writes them to the output directory, in a folder named after the source (`src/api/pets/` for `pets`), where `source.ts` exports the source, and records what it wrote in `.courier/imports-state.json`.
+
+Studio lists only the sources `courier.config.ts` declares — it does not look for API files in the project — and an import changes no config. So after the write the wizard shows what the config still lacks, each part ready to copy, and the API appears in Studio — on the APIs page, in the Explorer and in the Playground — once the config declares it:
+
+```ts
+// courier.config.ts
+import { defineConfig } from "@noverax/courier/config"
+import { api } from "./src/api"
+import { pets } from "./src/api/pets/source"
+
+export default defineConfig({
+  sources: { api, pets },
+  imports: {
+    pets: {
+      importType: "url",
+      type: "openapi",
+      from: "https://specs.example.com/pets.json",
+      outputDir: "src/api",
+      sourceName: "pets",
+    },
+  },
+})
+```
+
+- **`sources`** is what Studio lists APIs from, and what your app calls. An API written by hand is declared there the same way. Studio matches an import to the source of its name, so an import needs a name no other source takes: when `sources` declares another API under it, the wizard says so instead of offering the parts.
+- **`imports`** is what Studio updates and manages an import from: the update check fetches `from` again, and the code is regenerated with the options written there. The wizard's entry carries the source name and every option you changed from its default, but not the endpoints you left out in the Select step — the entry has no way to keep that selection — so an update generates every endpoint in the specification, and the wizard says how many that adds. A file or pasted import has no `from`: its specification is supplied through the wizard each time.
+- Once `imports` declares it, importing the same name again or applying an update keeps the endpoints you edited by hand, while the specification still describes them, and the ones you added, in the files that declare them. Every other generated file — the source of an API grouped by tag or path, its `index.ts`, the schemas — is written as generated.
+- A part the config declares already is left out, and once it declares both, the wizard closes after the write and says only what it wrote.
+
+<br />
+
 ## Mock servers
 
 Studio runs the mock servers declared in `courier.mocks.ts`, beside `courier.config.ts`. `defineMocks` and `defineMockServer` come from [`@noverax/courier-mock`](../mock/README.md), a development dependency installed with the server it runs on:

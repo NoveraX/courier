@@ -123,8 +123,27 @@ export interface SourceStatusInfo {
 
 // ── Import wizard state ─────────────────────────────────────────────────────
 
-export type ImportStep = "import" | "select" | "options" | "preview";
+/** The wizard's steps; `declare` follows a write the config does not declare all of. */
+export type ImportStep = "import" | "select" | "options" | "preview" | "declare";
 export type ImportSource = "url" | "file" | "raw";
+
+/**
+ * What courier.config must still declare for an import Studio wrote, as
+ * Studio answered the write. Studio changes no config; a part the config
+ * declares already is `null`.
+ */
+export interface ImportDeclaration {
+  /** The config to edit, relative to the project root. */
+  configFile: string;
+  /** The import of the generated source, and its entry under `sources`, which Studio lists APIs from. */
+  source: { importLine: string; entry: string } | null;
+  /** The entry under `imports`, which Studio regenerates, merges and checks the import from. */
+  importEntry: string | null;
+  /** How many endpoints the write left out, which the `imports` entry cannot keep; 0 when none. */
+  leftOut: number;
+  /** Set when `sources` declares another API under the import's name; `sourceFile` is the generated source. */
+  nameTaken: { sourceFile: string } | null;
+}
 
 export interface ImportState {
   step: ImportStep;
@@ -135,4 +154,6 @@ export interface ImportState {
   selectedEndpoints: Record<string, string[]>;
   generatedFiles: GeneratedFile[];
   writing: boolean;
+  /** What is left to declare after the write; `null` before it, and once nothing is. */
+  declaration: ImportDeclaration | null;
 }

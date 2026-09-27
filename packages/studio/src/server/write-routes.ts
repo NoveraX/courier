@@ -3,9 +3,10 @@
  */
 
 import type { ApisRouteDeps } from "./apis-routes";
+import { describeImportDeclaration } from "./describe-import-declaration";
 import { getImportEntry, getImportState, importsSnapshotOf } from "./imports-bridge";
 import { withImportsLock } from "./imports-lock";
-import { readDeclarations } from "./project-state/read-declarations";
+import { readConfigToAct } from "./project-state/read-config-to-act";
 import { sendRouteFailure } from "./route-failure";
 import type { RouteApp } from "./route-types";
 import { validateWriteBody } from "./validate-body";
@@ -21,6 +22,12 @@ import type { WriteBody, WriteResult } from "./write-types";
  * when the config Studio runs declares that import, and written raw when it
  * does not; either way only while that config loads as it is on disk, since
  * the declaration decides which directory is merged and cleaned up.
+ *
+ * Studio changes no config: a write for an import answers with what the
+ * config must still declare for it — the generated source under `sources`,
+ * without which Studio does not list the API, and the entry under `imports`
+ * — and with nothing more once it declares both. While `sources` declares
+ * another API under the import's name, it answers that the name is taken.
  *
  * @param app - The Studio server's Express app
  * @param deps - The project the route reads the import's declaration from
@@ -57,17 +64,27 @@ function writeFiles(body: WriteBody, deps: ApisRouteDeps): Promise<WriteResult> 
 }
 
 async function writeImport(
-  { files, spec, options }: WriteBody,
+  body: WriteBody,
   sourceName: string,
   { project, projectRoot }: ApisRouteDeps,
 ): Promise<WriteResult> {
   /* Read once the lock is held: a request that waited behind another write
      acts on the declaration saved meanwhile, not the one it arrived with. */
-  const declarations = await readDeclarations(project, projectRoot, "act");
-  const imports = importsSnapshotOf(declarations, projectRoot);
+  const loaded = await readConfigToAct(project, projectRoot);
+  const imports = importsSnapshotOf(loaded.config.imports, projectRoot);
   const entry = getImportEntry(imports, sourceName);
   const state = getImportState(imports, sourceName);
+  const { files, spec, options } = body;
 
-  if (entry && spec && options) return handleMergeWrite(files, sourceName, spec, { entry, state });
-  return handleRawWrite(files, sourceName, spec, { entry, state });
+  const result =
+    entry && spec && options
+      ? await handleMergeWrite(files, sourceName, spec, { entry, state })
+      : await handleRawWrite(files, sourceName, spec, { entry, state });
+  const declaration = describeImportDeclaration({
+    name: sourceName,
+    body,
+    loaded,
+    root: projectRoot,
+  });
+  return declaration ? { ...result, declaration } : result;
 }

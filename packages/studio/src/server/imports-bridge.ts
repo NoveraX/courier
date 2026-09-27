@@ -137,23 +137,3 @@ export function getImportState(
 ): ImportStateEntry | undefined {
   return Object.hasOwn(snapshot.state.imports, name) ? snapshot.state.imports[name] : undefined;
 }
-
-/**
- * Format a `courier.config.ts` snippet the user can paste under `imports:`.
- * URL imports carry `from` / `auth` / `pinHash`; file and raw imports are
- * supplied through the UI each time and therefore have no `from`.
- */
-export function formatImportSnippet(name: string, entry: CourierImportEntry): string {
-  const lines: string[] = [`  ${JSON.stringify(name)}: {`];
-  lines.push(`    importType: ${JSON.stringify(entry.importType)},`);
-  lines.push(`    type: ${JSON.stringify(entry.type)},`);
-  if (entry.importType === "url") {
-    lines.push(`    from: ${JSON.stringify(entry.from)},`);
-    if (entry.auth) lines.push(`    auth: ${JSON.stringify(entry.auth)},`);
-    if (entry.pinHash) lines.push(`    pinHash: ${JSON.stringify(entry.pinHash)},`);
-  }
-  lines.push(`    outputDir: ${JSON.stringify(entry.outputDir)},`);
-  if (entry.sourceName) lines.push(`    sourceName: ${JSON.stringify(entry.sourceName)},`);
-  lines.push("  },");
-  return lines.join("\n");
-}

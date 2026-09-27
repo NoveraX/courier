@@ -15,6 +15,7 @@ export type {
   EndpointAnalysis,
   GeneratedFile,
   GenerateOptions,
+  ImportDeclaration,
   ImportSource,
   ImportState,
   ImportStep,

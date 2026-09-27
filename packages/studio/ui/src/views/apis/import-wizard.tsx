@@ -3,7 +3,9 @@
  *
  * The footer (`./import-wizard-footer`) and step indicator dots
  * (`./import-wizard-step-dot`) are extracted to sibling files so this
- * shell focuses on routing between the four step views.
+ * shell focuses on routing between the step views. The declare step follows
+ * a write only while courier.config lacks part of the import's declaration;
+ * the files are written by then, so no step before it can be revisited.
  */
 
 import {
@@ -15,6 +17,7 @@ import {
 
 import type { UseImportReturn } from "./use-import";
 import type { ImportStep } from "./types";
+import { DeclareStepView } from "./declare-step";
 import { ImportStepView } from "./import-step";
 import { OptionsStepView } from "./options-step";
 import { PreviewStepView } from "./preview-step";
@@ -35,7 +38,8 @@ const STEPS: Array<{ key: ImportStep; label: string }> = [
 
 export function ImportWizard({ wizard }: ImportWizardProps): React.ReactElement {
   const { state, error } = wizard;
-  const currentIdx = STEPS.findIndex((s) => s.key === state.step);
+  const written = state.step === "declare";
+  const currentIdx = written ? STEPS.length : STEPS.findIndex((s) => s.key === state.step);
 
   return (
     <Dialog open={wizard.open} onOpenChange={(open) => { if (!open) wizard.close(); }}>
@@ -50,7 +54,7 @@ export function ImportWizard({ wizard }: ImportWizardProps): React.ReactElement 
                 index={i}
                 active={i === currentIdx}
                 completed={i < currentIdx}
-                onClick={i < currentIdx ? () => wizard.goToStep(step.key) : undefined}
+                onClick={i < currentIdx && !written ? () => wizard.goToStep(step.key) : undefined}
               />
             ))}
           </div>
@@ -91,6 +95,10 @@ export function ImportWizard({ wizard }: ImportWizardProps): React.ReactElement 
               sourceName={state.options.sourceName}
               error={error}
             />
+          )}
+
+          {state.step === "declare" && state.declaration && (
+            <DeclareStepView sourceName={state.options.sourceName} declaration={state.declaration} />
           )}
         </div>
 

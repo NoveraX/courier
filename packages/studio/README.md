@@ -36,7 +36,7 @@ npm install --save-dev @noverax/courier-studio @noverax/courier-studio-core
 npx courier-studio
 ```
 
-Studio listens on `http://localhost:6280`, or on the `studio.host` and `studio.port` of your `courier.config.ts`. Server runtimes and the build plugins read the same block, so moving Studio there moves them with it. Flags: `--port`, `--host`, `--cwd` (project root), `--open` (open a browser), `--version`. Studio keeps its working files — imported API state, saved sessions — in `.courier/`, which ignores itself in git.
+Studio listens on `http://localhost:6280`, or on the `studio.host` and `studio.port` of your `courier.config.ts`. Server runtimes and the build plugins read the same block, so moving Studio there moves them with it. Flags: `--port`, `--host`, `--cwd` (project root), `--open` (open a browser), `--version`. Studio keeps its working files — imported API state, copies of the files it replaced or removed, saved sessions — in `.courier/`, which ignores itself in git.
 
 Studio loads `courier.config.ts` from the project root, with the `courier.mocks.ts` beside it, and loads them again whenever either one, or a module either imports, is saved: see [How Studio loads the project](#how-studio-loads-the-project).
 
@@ -145,7 +145,7 @@ Call it once at startup — from `instrumentation.ts` in Next.js, a Nitro plugin
 
 ## Import an API
 
-**Import API** on the APIs page turns an OpenAPI 3, Swagger 2 or Postman specification — from a URL, a file, or pasted text — into typed API code: pick the endpoints, choose the options, preview the files, then **Write to Disk**. Studio writes them to the output directory, in a folder named after the source (`src/api/pets/` for `pets`), where `source.ts` exports the source, and records what it wrote in `.courier/imports-state.json`.
+**Import API** on the APIs page turns an OpenAPI 3, Swagger 2 or Postman specification — from a URL, a file, or pasted text — into typed API code: pick the endpoints, choose the options, preview the files, then **Write to Disk**. Studio generates the files itself and writes them to the output directory, in a folder named after the source in kebab case (`src/api/pets/` for `pets`, `src/api/pet-store/` for `petStore`), where `source.ts` exports the source, and records what it wrote in `.courier/imports-state.json` — see [Which files Studio changes](#which-files-studio-changes).
 
 Studio lists only the sources `courier.config.ts` declares — it does not look for API files in the project — and an import changes no config. So after the write the wizard shows what the config still lacks, each part ready to copy, and the API appears in Studio — on the APIs page, in the Explorer and in the Playground — once the config declares it:
 
@@ -169,10 +169,43 @@ export default defineConfig({
 })
 ```
 
-- **`sources`** is what Studio lists APIs from, and what your app calls. An API written by hand is declared there the same way. Studio matches an import to the source of its name, so an import needs a name no other source takes: when `sources` declares another API under it, the wizard says so instead of offering the parts.
+- **`sources`** is what Studio lists APIs from, and what your app calls. An API written by hand is declared there the same way. Studio matches an import to the source of its name, so an import needs a name no other source takes: while `sources` declares another API under it, Studio writes nothing and says so. The APIs page lists a source as imported only when the config loads the `source.ts` Studio generated for it.
 - **`imports`** is what Studio updates and manages an import from: the update check fetches `from` again, and the code is regenerated with the options written there. The wizard's entry carries the source name and every option you changed from its default, but not the endpoints you left out in the Select step — the entry has no way to keep that selection — so an update generates every endpoint in the specification, and the wizard says how many that adds. A file or pasted import has no `from`: its specification is supplied through the wizard each time.
-- Once `imports` declares it, importing the same name again or applying an update keeps the endpoints you edited by hand, while the specification still describes them, and the ones you added, in the files that declare them. Every other generated file — the source of an API grouped by tag or path, its `index.ts`, the schemas — is written as generated.
+- Importing the same name again or applying an update keeps the endpoints you edited by hand, while the specification still describes them, and the ones you added, in the files that declare them. Every other generated file — the source of an API grouped by tag or path, its `index.ts`, the schemas — is written as generated; when you edited one, Studio asks before replacing it.
 - A part the config declares already is left out, and once it declares both, the wizard closes after the write and says only what it wrote.
+
+### Which files Studio changes
+
+Studio changes an import's files — when it writes the import, updates it, adds or removes endpoints, or removes the import — only inside the import's folder, and decides for each file by who it belongs to. It records every file it writes, with a hash of its content, in `.courier/imports-state.json`, and starts each with two lines that say so:
+
+```ts
+// @courier-generated {"import":"pets","sha256":"3f2a…"}
+// Courier Studio wrote this file. It keeps your edits to endpoints when it updates the file.
+```
+
+- **A file Studio wrote and nobody changed** is replaced or removed as the change needs. A file whose first line names the import, but which Studio has no record of — in a fresh clone, say, where `.courier/` is not checked in — is treated the same way when it is replaced; removing one waits for you, offered ticked.
+- **A file you changed** keeps your edits to endpoints when Studio updates it. A file Studio would replace whole, or remove, waits for you instead.
+- **A file Studio did not write** — one you added to the folder, or one its first line says Studio wrote for another import — is never removed, and replacing it waits for you.
+- **A symbolic link, or a folder where a file should be,** is never written through, replaced or removed. A change that would write one is refused until you move it out of the way.
+
+When a change holds steps that wait for you, Studio shows them with the rest of the change, each with its own checkbox, and takes only the steps you tick; a file left unticked stays as it is. An update, a change to endpoints and a removal are applied only as you previewed them: if a file changed in the meantime, Studio shows the change as it now stands instead. A write needs no preview, and asks only when a step waits for you.
+
+Every change is applied all at once. Studio keeps a copy of each file it replaces or removes in `.courier/backups/<change>/`, and keeps the copies of the last 20 changes. A change that Studio is stopped in the middle of is undone the next time it starts, file by file, except for a file changed since, which is left as it is and logged. Removing an import leaves `courier.config.ts` as it is: the dialog warns when the config imports one of the files that go, since the config stops loading until you remove that import, and reminds you to remove the import's entry under `imports`, from which an update would write the import again.
+
+A request Studio refuses changes nothing and is answered with `{ error, code }`, and, where there is one, the plan as it stands:
+
+| Code | Status | Meaning |
+|---|---|---|
+| `NEEDS_CONFIRMATION` | 409 | Some steps wait for you; send the request again with the plan's `planDigest` and the paths you allow in `confirm`. |
+| `PLAN_NOT_SEEN` | 409 | An update, a change to endpoints or a removal quoted no plan; preview it first. |
+| `PLAN_STALE` | 409 | A file changed since you saw the plan. |
+| `TARGET_BLOCKED` | 409 | A file the change writes is a symbolic link or not a file. |
+| `CONFIRMATION_NOT_IN_PLAN` | 400 | `confirm` names a path the plan does not ask about. |
+| `DECLARATION_MISMATCH` | 409 | `imports` declares the import in another folder than the wizard's options. |
+| `DIR_OVERLAP` | 409 | Another import owns the folder, or one inside or around it. |
+| `NAME_TAKEN` | 409 | `sources` declares another API under the import's name. |
+| `FILE_NOT_RECOGNIZED` | 409 | A file Studio would add endpoints to no longer shows where its endpoints are. |
+| `IMPORTS_STATE_UNSAFE` | 409 | Studio cannot read `.courier/imports-state.json`, or keep a copy of it, so saving it would lose the other imports' records. |
 
 <br />
 

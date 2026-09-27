@@ -3,16 +3,12 @@ import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
 import { composeMiddleware } from "../middleware/index";
 import { generateRequestId, studioHooks } from "../studio";
+import { applyCacheHeaders } from "./cache-headers";
 import { handleExecuteError } from "./execute-error";
 import { clientForCall } from "./execute-helpers";
 import { executeInner } from "./execute-inner";
 import { resolveMiddlewareChain, withCallerSignal, withEndpointTimeout } from "./execute-options";
-import {
-  applyCacheHeaders,
-  buildMiddlewareContext,
-  namedHeadersOf,
-  resolveEndpoint,
-} from "./execute-resolve";
+import { buildMiddlewareContext, namedHeadersOf, resolveEndpoint } from "./execute-resolve";
 import { buildErrorResponse, buildResponse } from "./execute-response";
 import {
   attachFetchHook,

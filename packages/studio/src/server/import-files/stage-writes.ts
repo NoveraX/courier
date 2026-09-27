@@ -5,7 +5,7 @@ import { ensureDirectory } from "../project-fs/ensure-directory";
 import type { ProjectRoot } from "../project-fs/project-root";
 import { resolveProjectPath } from "../project-fs/resolve-project-path";
 import { writeTempBeside } from "../project-fs/write-temp-beside";
-import type { ApplyJournal } from "./apply-journal";
+import { type ApplyJournal, saveJournal } from "./apply-journal";
 import { bodyHash } from "./body-hash";
 import { FilePlanError } from "./file-plan-error";
 import type { FilePlan, PlannedWrite } from "./file-plan-types";
@@ -14,6 +14,7 @@ import { obstacleOnTheWay } from "./obstacle-on-the-way";
 
 /** The start of the name of a temporary file an import's apply writes beside its target. */
 export const IMPORT_TEMP_PREFIX = ".courier.import";
+const IMPORT_TEMP_NAME = /^\.courier\.import\.\d+-[0-9a-f]{8}\.tmp$/;
 
 /** A write whose content waits, flushed, in a temporary file beside its target. */
 export interface StagedWrite {
@@ -61,6 +62,8 @@ export function stageWrites(
       IMPORT_TEMP_PREFIX,
     );
     journal.temps.push(projectRelative(root, temp));
+    /* Recorded before the next file, so a crash leaves nothing the journal does not name. */
+    saveJournal(root.path, journal);
     staged.push({ write, absolute, temp, existed: mode !== null, sha256: bodyHash(write.body) });
   }
   return staged;
@@ -96,4 +99,19 @@ export function refuseObstacle(root: ProjectRoot, absolute: string, path: string
     `A link or a file now stands on the way to ${path}; look at the plan again.`,
     { path },
   );
+}
+
+/**
+ * Tell whether a file name is one of the temporary files Studio stages an
+ * import's files in, and nothing but Studio makes.
+ *
+ * @param name - A file's name, without its folder
+ * @returns Whether it is such a temporary file's
+ * @example
+ * ```ts
+ * isImportTempName(".courier.import.4242-0a1b2c3d.tmp"); // true
+ * ```
+ */
+export function isImportTempName(name: string): boolean {
+  return IMPORT_TEMP_NAME.test(name);
 }

@@ -3,11 +3,7 @@ import { isCanonicalPath } from "../../apis/layout";
 import { COURIER_DIR } from "../courier-dir";
 import { isApplyId } from "./apply-id";
 import type { ApplyJournal } from "./apply-journal";
-import { IMPORT_TEMP_PREFIX } from "./stage-writes";
-
-const TEMP_NAME = new RegExp(
-  `^${IMPORT_TEMP_PREFIX.replaceAll(".", "\\.")}\\.\\d+-[0-9a-f]{8}\\.tmp$`,
-);
+import { isImportTempName } from "./stage-writes";
 
 function inside(dir: string, path: string): boolean {
   return isCanonicalPath(path) && path.startsWith(`${dir}/`);
@@ -47,7 +43,7 @@ export function journalProblem(fileName: string, journal: ApplyJournal): string 
   const stray = journal.entries.find((entry) => !inside(dir, entry.path));
   if (stray !== undefined) return `${stray.path} is not in ${dir}`;
   const temp = journal.temps.find(
-    (path) => !inside(dir, path) || !TEMP_NAME.test(posix.basename(path)),
+    (path) => !inside(dir, path) || !isImportTempName(posix.basename(path)),
   );
   if (temp !== undefined) return `${temp} is not a temporary file of Studio's in ${dir}`;
   const created = journal.createdDirs.find((path) => !onTheWay(dir, path));

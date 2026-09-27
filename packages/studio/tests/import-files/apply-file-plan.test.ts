@@ -342,6 +342,40 @@ function crashedApply(): void {
   });
 }
 
+describe("recovering from what a crash left", () => {
+  it("deletes Studio's temporary files in the import's folder, those the journal missed too", () => {
+    crashedApply();
+    put(`${DIR}/new/.courier.import.4242-0a1b2c3d.tmp`, "staged\n");
+    put(`${DIR}/.courier.imports.notes.tmp`, "mine\n");
+
+    recoverInterruptedApplies(root, new Set());
+
+    expect(existsSync(join(root.path, `${DIR}/new/.courier.import.4242-0a1b2c3d.tmp`))).toBe(false);
+    expect(read(`${DIR}/.courier.imports.notes.tmp`)).toBe("mine\n");
+  });
+
+  it("reports a file whose copy is gone as not restored, and keeps the journal", () => {
+    crashedApply();
+    rmSync(join(root.path, `.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const [recovered] = recoverInterruptedApplies(root, new Set());
+
+    expect(recovered?.failed).toEqual([`${DIR}/index.ts`]);
+    expect(readdirSync(join(root.path, ".courier/journal"))).toEqual(["1700000000000-0000c0de.json"]);
+  });
+
+  it("prunes no backup a journal still names", () => {
+    crashedApply();
+    put(".courier/backups/1690000000000-0000beef/f.ts", "older\n");
+
+    const deleted = pruneBackups(root.path, 0);
+
+    expect(deleted).toEqual([".courier/backups/1690000000000-0000beef"]);
+    expect(existsSync(join(root.path, ".courier/backups/1700000000000-0000c0de"))).toBe(true);
+  });
+});
+
 describe("pruneBackups", () => {
   it("keeps the latest twenty applies' backups, and nothing not named like an apply is touched", () => {
     for (let n = 0; n < 25; n += 1) put(`.courier/backups/17000000000${String(n).padStart(2, "0")}-0000c0de/f.ts`, "x\n");

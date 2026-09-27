@@ -84,7 +84,10 @@ export interface WSConnection {
     subscriber: TopicHandler | TopicSubscriber,
     variables?: unknown,
   ): () => void;
-  /** Send a message to a topic. Queued if reconnecting. */
+  /**
+   * Send a message to a topic. Held until the server confirms the topic's
+   * subscription, when there is one, and queued while reconnecting.
+   */
   send(topic: string, payload: unknown): void;
   /** Request-response over WS with correlation ID and timeout. */
   request<TResult = unknown>(topic: string, payload: unknown): Promise<TResult>;

@@ -31,7 +31,11 @@ const DEFAULT_REQUEST_TIMEOUT = 30_000;
  */
 export function createWSConnection(config: WSConnectionConfig): WSConnection {
   const state = createConnectionState();
-  const topics = createTopicRegistry();
+  const topics = createTopicRegistry({
+    messageQueue: config.messageQueue,
+    onDrop: (topic, count) =>
+      log.warn(`${count} message(s) held for ${topic} were dropped before the server confirmed it`),
+  });
   const queue = createMessageQueue(config.messageQueue);
   const pending = createPendingRegistry();
   const maxBuffered = config.maxBufferedAmount ?? DEFAULT_MAX_BUFFERED;

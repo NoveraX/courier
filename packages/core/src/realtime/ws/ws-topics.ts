@@ -1,120 +1,168 @@
 import type { RealtimeError } from "../errors";
-import type { TopicSubscriber } from "./ws-types";
+import type { MessageQueueConfig } from "./message-queue";
+import type { TopicRegistry } from "./topic-registry-types";
+import {
+  createSubscription,
+  liveSubscription,
+  mergeSubscription,
+  type Subscription,
+} from "./topic-subscription";
 
-/** Entry returned by `entries()` for reconnection with variables */
-export interface TopicEntry {
-  qualifiedTopic: string;
-  baseTopic: string;
-  variables?: unknown;
-}
+export type {
+  Confirmation,
+  HoldOutcome,
+  TopicEntry,
+  TopicMembership,
+  TopicRegistry,
+} from "./topic-registry-types";
 
-/** Internal topic subscription registry with message routing */
-export interface TopicRegistry {
-  /**
-   * Add a subscriber for a topic. Returns its removal, which answers whether
-   * it was the topic's last subscriber — the moment to tell the server.
-   */
-  add(
-    topic: string,
-    subscriber: TopicSubscriber,
-    variables?: unknown,
-    baseTopic?: string,
-  ): () => boolean;
-  /** Whether anyone is subscribed to a topic. */
-  has(topic: string): boolean;
-  /** Route an incoming message payload to all subscribers of a topic. */
-  dispatch(topic: string, payload: unknown): void;
-  /** Tell a topic's subscribers of an error on it; the subscription goes on. */
-  fail(topic: string, error: RealtimeError): void;
-  /** End a topic for its subscribers and forget it, so a reconnect does not renew it. */
-  end(topic: string, error: RealtimeError | undefined): void;
-  /** End every topic, as `end` does. */
-  endAll(error: RealtimeError | undefined): void;
-  /** Get all currently subscribed topics (for re-subscribe after reconnect). */
-  topics(): string[];
-  /** Get all entries with variables metadata for reconnection. */
-  entries(): TopicEntry[];
+/** Options for a topic registry. */
+export interface TopicRegistryOptions {
+  /** Limits on what is held for each unconfirmed subscription */
+  messageQueue?: MessageQueueConfig;
+  /** Told of messages that were held and will never go out */
+  onDrop?: (topic: string, count: number) => void;
 }
 
 /**
- * Create a topic subscription registry for WS message routing.
- * Maps topic strings to sets of subscribers for fan-out delivery.
+ * Create a topic subscription registry for WS message routing: subscribers
+ * per topic for fan-out, the name the server knows each subscription by, and
+ * what is held for it until the server confirms it.
  *
+ * @param options - Limits on held messages, and who hears of dropped ones
  * @returns TopicRegistry instance
  *
  * @example
  * const registry = createTopicRegistry();
- * const remove = registry.add("chat:room", { data: (d) => console.log(d) });
+ * const membership = registry.add("chat:room", { data: (d) => console.log(d) });
  * registry.dispatch("chat:room", { text: "hello" }); // logs { text: "hello" }
- * remove(); // true — the topic has no subscribers left
+ * membership.leave(); // "chat:room" — the topic has no subscribers left
  */
-export function createTopicRegistry(): TopicRegistry {
-  const subscribers = new Map<string, Set<TopicSubscriber>>();
-  const meta = new Map<string, { baseTopic: string; variables?: unknown }>();
+export function createTopicRegistry(options: TopicRegistryOptions = {}): TopicRegistry {
+  const byTopic = new Map<string, Subscription>();
+  const byLabel = new Map<string, Subscription>();
+  const byId = new Map<string, Subscription>();
+  let lastId = 0;
 
-  function forget(topic: string): Set<TopicSubscriber> | undefined {
-    const set = subscribers.get(topic);
-    subscribers.delete(topic);
-    meta.delete(topic);
-    return set;
+  const resolve = (topic: string) => byTopic.get(topic) ?? byLabel.get(topic);
+
+  function wait(s: Subscription, id: string | undefined): void {
+    if (s.awaiting !== undefined) byId.delete(s.awaiting);
+    s.awaiting = id;
+    s.confirmed = false;
+    if (id !== undefined) byId.set(id, s);
+  }
+
+  function dropped(topic: string, count: number): void {
+    if (count > 0) options.onDrop?.(topic, count);
+  }
+
+  function forget(s: Subscription): void {
+    byTopic.delete(s.topic);
+    for (const label of s.labels) byLabel.delete(label);
+    if (s.awaiting !== undefined) byId.delete(s.awaiting);
+    dropped(s.topic, s.held.take().length);
   }
 
   function end(topic: string, error: RealtimeError | undefined): void {
-    const set = forget(topic);
-    if (!set) return;
-    const ended = [...set];
-    set.clear();
+    const s = resolve(topic);
+    if (!s) return;
+    forget(s);
+    const ended = [...s.subscribers];
+    s.subscribers.clear();
     for (const subscriber of ended) subscriber.end?.(error);
+  }
+
+  /* Two sets of variables the server's schema reads the same — one leaves
+     out a default the other spells out — are one subscription to it, which
+     the server replaces with the newer subscribe. */
+  function merge(from: Subscription, into: Subscription): void {
+    for (const label of [from.topic, ...from.labels]) {
+      into.labels.add(label);
+      byLabel.set(label, into);
+    }
+    dropped(into.topic, mergeSubscription(from, into));
+    wait(into, from.awaiting);
   }
 
   return {
     add(topic, subscriber, variables?, baseTopic?) {
-      let set = subscribers.get(topic);
-      if (!set) {
-        set = new Set();
-        subscribers.set(topic, set);
-        meta.set(topic, { baseTopic: baseTopic ?? topic, variables });
+      let own = resolve(topic);
+      const created = !own;
+      if (!own) {
+        own = createSubscription(topic, variables, baseTopic, options.messageQueue);
+        byTopic.set(topic, own);
       }
-      set.add(subscriber);
-      const own = set;
-
-      return () => {
-        /* A topic that already ended, or was renewed by someone else since,
-           is not this subscriber's to let go. */
-        if (!own.delete(subscriber) || own.size > 0) return false;
-        if (subscribers.get(topic) === own) forget(topic);
-        return true;
+      own.subscribers.add(subscriber);
+      const first = own;
+      return {
+        created,
+        leave() {
+          const s = liveSubscription(first);
+          /* A subscription that already ended, or was renewed by someone
+             else since, is not this subscriber's to let go. */
+          if (!s.subscribers.delete(subscriber) || s.subscribers.size > 0) return undefined;
+          if (byTopic.get(s.topic) !== s) return undefined;
+          forget(s);
+          return s.topic;
+        },
       };
     },
-
-    has(topic) {
-      return subscribers.has(topic);
+    has: (topic) => resolve(topic) !== undefined,
+    serverTopic: (topic) => resolve(topic)?.topic,
+    expect(topic) {
+      const id = `sub-${++lastId}`;
+      const s = resolve(topic);
+      if (s) wait(s, id);
+      return id;
     },
-
+    rename(topic, serverTopic) {
+      const s = resolve(topic);
+      if (!s || s.topic === serverTopic) return;
+      byTopic.delete(s.topic);
+      const existing = byTopic.get(serverTopic);
+      if (existing) {
+        merge(s, existing);
+        return;
+      }
+      s.labels.add(s.topic);
+      byLabel.set(s.topic, s);
+      s.topic = serverTopic;
+      byTopic.set(serverTopic, s);
+    },
+    confirm(topic, id) {
+      const s = (id === undefined ? undefined : byId.get(id)) ?? resolve(topic);
+      if (!s) return undefined;
+      /* The answer to a subscribe another one has since replaced. */
+      if (id !== undefined && s.awaiting !== id) return { topic: s.topic, held: [] };
+      wait(s, undefined);
+      s.confirmed = true;
+      return { topic: s.topic, held: s.held.take() };
+    },
+    unconfirmAll() {
+      for (const s of byTopic.values()) wait(s, undefined);
+    },
+    hold(topic, message) {
+      const s = resolve(topic);
+      if (!s || s.confirmed) return "open";
+      return s.held.hold(message) ? "held" : "dropped";
+    },
     dispatch(topic, payload) {
-      for (const subscriber of subscribers.get(topic) ?? []) subscriber.data(payload);
+      for (const subscriber of resolve(topic)?.subscribers ?? []) subscriber.data(payload);
     },
-
     fail(topic, error) {
-      for (const subscriber of subscribers.get(topic) ?? []) subscriber.error?.(error);
+      for (const subscriber of resolve(topic)?.subscribers ?? []) subscriber.error?.(error);
     },
-
     end,
-
     endAll(error) {
-      for (const topic of [...subscribers.keys()]) end(topic, error);
+      for (const topic of [...byTopic.keys()]) end(topic, error);
     },
-
-    topics() {
-      return [...subscribers.keys()];
-    },
-
-    entries() {
-      return [...meta.entries()].map(([qualifiedTopic, m]) => ({
-        qualifiedTopic,
-        baseTopic: m.baseTopic,
-        variables: m.variables,
-      }));
-    },
+    topics: () => [...byTopic.keys()],
+    entries: () =>
+      [...byTopic.values()].map((s) => ({
+        qualifiedTopic: s.topic,
+        baseTopic: s.baseTopic,
+        variables: s.variables,
+      })),
   };
 }

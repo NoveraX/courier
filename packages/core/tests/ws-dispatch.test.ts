@@ -191,6 +191,35 @@ describe("handleSubscribe", () => {
     expect(subscribed!.topic).toBe(qualifyTopic("api.chat.feed", { limit: 50, room: "a" }));
   });
 
+  it("tells the client of the topic it subscribed under before anything is sent on it", async () => {
+    const endpoint = createEndpoint("ws", undefined, DEFAULTING_SCHEMA);
+    const source = createSource("chat", "feed", endpoint);
+    const { ctx, sent } = createMockCtx({ sources: { api: source } as never });
+    const asked = qualifyTopic("api.chat.feed", { room: "a" });
+    const served = qualifyTopic("api.chat.feed", { limit: 50, room: "a" });
+
+    await handleSubscribe(ctx, { type: "subscribe", id: "7", topic: asked, payload: { room: "a" } });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(sent[0]).toEqual({ type: "renamed", id: "7", topic: asked, payload: served });
+    expect(sent.slice(1).map((m) => [m.type, m.topic])).toEqual([
+      ["subscribed", served],
+      ["data", served],
+      ["complete", served],
+    ]);
+  });
+
+  it("does not rename a topic the client qualified as the server does", async () => {
+    const endpoint = createEndpoint("ws");
+    const source = createSource("chat", "feed", endpoint);
+    const { ctx, sent } = createMockCtx({ sources: { api: source } as never });
+    const topic = qualifyTopic("api.chat.feed", { room: "mine" });
+
+    await handleSubscribe(ctx, { type: "subscribe", id: "1", topic, payload: { room: "mine" } });
+
+    expect(sent.some((m) => m.type === "renamed")).toBe(false);
+  });
+
   it("sends error when max subscriptions reached", async () => {
     const { ctx, sent } = createMockCtx({ maxSubscriptions: 0 });
     await handleSubscribe(ctx, { type: "subscribe", id: "1", topic: "api.chat.feed" });

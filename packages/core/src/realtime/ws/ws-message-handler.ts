@@ -1,14 +1,15 @@
 import type { ScopedLogger } from "../../logger";
 import { fromErrorCode, type RealtimeError } from "../errors";
+import { unqualifyTopic } from "./topic-hash";
+import type { TopicRegistry } from "./topic-registry-types";
 import type { createPendingRegistry } from "./ws-pending";
 import { encodeMessage, type WSMessage } from "./ws-protocol";
-import type { createTopicRegistry } from "./ws-topics";
 
 const INTERNAL_ERROR = 5000;
 
 export interface MessageDispatchContext {
   log: ScopedLogger;
-  topics: ReturnType<typeof createTopicRegistry>;
+  topics: TopicRegistry;
   pending: ReturnType<typeof createPendingRegistry>;
   /** Send a raw frame back to the server */
   sendRaw(data: string): void;
@@ -32,6 +33,14 @@ export function dispatchIncomingMessage(ctx: MessageDispatchContext, msg: WSMess
     ctx.onAuthRequired();
     return;
   }
+  if (msg.type === "renamed") {
+    followRename(ctx, msg);
+    return;
+  }
+  if (msg.type === "subscribed") {
+    confirmSubscription(ctx, msg);
+    return;
+  }
   if (msg.type === "error" && msg.id && ctx.pending.reject(msg)) return;
   if ((msg.type === "data" || msg.type === "message") && msg.id && ctx.pending.has(msg.id)) {
     ctx.pending.resolve(msg);
@@ -50,6 +59,43 @@ export function dispatchIncomingMessage(ctx: MessageDispatchContext, msg: WSMess
     return;
   }
   if (msg.type === "error") routeError(ctx, msg);
+}
+
+/**
+ * The server subscribed the connection under another topic than the one
+ * asked for — a default or a transform in its variables schema changed what
+ * the topic is qualified from. Everything about the subscription comes on
+ * that topic, and used to be dropped as unknown.
+ */
+function followRename(ctx: MessageDispatchContext, msg: WSMessage): void {
+  const serverTopic = msg.payload;
+  if (!msg.topic || typeof serverTopic !== "string") return;
+  if (unqualifyTopic(serverTopic).baseTopic !== unqualifyTopic(msg.topic).baseTopic) {
+    ctx.log.warn(`Ignored a rename of ${msg.topic} to another endpoint's topic`);
+    return;
+  }
+  ctx.topics.rename(msg.topic, serverTopic);
+}
+
+/**
+ * The server is running the subscription: what was held for it goes out. A
+ * confirmation nobody waits for is a subscription the client left before the
+ * server set it up, which the server would otherwise keep until the socket
+ * closes.
+ */
+function confirmSubscription(ctx: MessageDispatchContext, msg: WSMessage): void {
+  if (!msg.topic) return;
+  const confirmation = ctx.topics.confirm(msg.topic, msg.id);
+  if (!confirmation) {
+    ctx.sendRaw(encodeMessage({ type: "unsubscribe", topic: msg.topic }));
+    return;
+  }
+  const { topic, held } = confirmation;
+  for (const { payload, id } of held) {
+    ctx.sendRaw(
+      encodeMessage({ type: "message", topic, payload, ...(id !== undefined && { id }) }),
+    );
+  }
 }
 
 /**

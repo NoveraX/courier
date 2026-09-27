@@ -8,14 +8,14 @@ import { resolveProjectPath } from "../project-fs/resolve-project-path";
 import { retryOnWin32 } from "../project-fs/retry-on-win32";
 import { syncDirectory } from "../project-fs/sync-directory";
 import { newApplyId } from "./apply-id";
-import { type ApplyJournal, dropJournal, saveJournal } from "./apply-journal";
+import { type ApplyJournal, saveJournal } from "./apply-journal";
 import { backupPath } from "./backup-path";
 import { FilePlanError } from "./file-plan-error";
 import type { FilePlan } from "./file-plan-types";
 import { finishApply } from "./finish-apply";
 import { type PruneFailure, pruneEmptyDirs } from "./prune-empty-dirs";
-import { rollbackApply } from "./rollback-apply";
 import { refuseObstacle, type StagedWrite, stageWrites } from "./stage-writes";
+import { undoThenThrow } from "./undo-apply";
 import { verifyUnchanged } from "./verify-unchanged";
 
 /** What an applied plan did. */
@@ -71,9 +71,7 @@ export function applyFilePlan(
   try {
     staged = stageWrites(root, plan, journal);
   } catch (error) {
-    rollbackApply(root, journal);
-    dropJournal(root.path, id);
-    throw error;
+    undoThenThrow(root, journal, error);
   }
   journal.state = "committing";
   journal.entries = [
@@ -91,9 +89,7 @@ export function applyFilePlan(
     pruneFailures = commitFiles(root, plan, staged, journal.backupDir);
     commit(id);
   } catch (error) {
-    rollbackApply(root, journal);
-    dropJournal(root.path, id);
-    throw error;
+    undoThenThrow(root, journal, error);
   }
   finishApply(root.path, id);
   return {

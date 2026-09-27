@@ -171,6 +171,32 @@ describe("applyFilePlan", () => {
     expect(readdirSync(join(root.path, DIR)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
   });
 
+  it("keeps its journal as a record when the undo cannot restore a file, so the copy is not pruned", async () => {
+    const actual = await vi.importActual<typeof Fs>("node:fs");
+    vi.mocked(renameSync).mockImplementation((from, to) => {
+      if (String(from).includes(".courier/backups/") && String(to).endsWith(`proj/${DIR}/index.ts`)) {
+        throw Object.assign(new Error("EIO: injected"), { code: "EIO" });
+      }
+      actual.renameSync(from, to);
+    });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const failure = new Error("disk full");
+
+    expect(() =>
+      applyFilePlan(root, scenario(), () => {
+        throw failure;
+      }),
+    ).toThrow(failure);
+
+    vi.mocked(renameSync).mockImplementation(actual.renameSync);
+    const [name] = readdirSync(join(root.path, ".courier/journal"));
+    const journal: unknown = JSON.parse(read(`.courier/journal/${name}`));
+    expect(journal).toMatchObject({ state: "kept", entries: [{ path: `${DIR}/index.ts` }], temps: [] });
+    pruneBackups(root.path, 0);
+    expect(bodyOf(`.courier/backups/${name?.replace(".json", "")}/${DIR}/index.ts`)).toBe("old index\n");
+    expect(bodyOf(`${DIR}/old/index.ts`)).toBe("old group\n");
+  });
+
   it("refuses a plan the files changed under, writing nothing", () => {
     const plan = scenario();
     put(`${DIR}/index.ts`, "edited meanwhile\n");
@@ -373,6 +399,57 @@ describe("recovering from what a crash left", () => {
 
     expect(deleted).toEqual([".courier/backups/1690000000000-0000beef"]);
     expect(existsSync(join(root.path, ".courier/backups/1700000000000-0000c0de"))).toBe(true);
+  });
+});
+
+describe("a journal whose undo left files", () => {
+  it("is not replayed: a file put since at a path the apply created stays, and the record names the backup", () => {
+    crashedApply();
+    put(`${DIR}/index.ts`, "new index\nmy edit\n");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    recoverInterruptedApplies(root, new Set());
+    put(`${DIR}/new/index.ts`, "new group\n");
+
+    const recovered = recoverInterruptedApplies(root, new Set());
+
+    expect(recovered).toEqual([]);
+    expect(read(`${DIR}/new/index.ts`)).toBe("new group\n");
+    expect(read(`${DIR}/index.ts`)).toBe("new index\nmy edit\n");
+    expect(read(`.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`)).toBe("old index\n");
+    const journal: unknown = JSON.parse(read(".courier/journal/1700000000000-0000c0de.json"));
+    expect(journal).toMatchObject({ state: "kept", entries: [{ path: `${DIR}/index.ts` }] });
+    expect(warn).toHaveBeenLastCalledWith(
+      "%s",
+      expect.stringContaining(`${DIR}/index.ts when it undid a write for the import pets; their earlier versions are in .courier/backups/1700000000000-0000c0de`),
+    );
+  });
+
+  it("goes once its backup folder is deleted", () => {
+    crashedApply();
+    put(`${DIR}/index.ts`, "new index\nmy edit\n");
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    recoverInterruptedApplies(root, new Set());
+    rmSync(join(root.path, ".courier/backups/1700000000000-0000c0de"), { recursive: true });
+
+    recoverInterruptedApplies(root, new Set());
+
+    expect(readdirSync(join(root.path, ".courier/journal"))).toEqual([]);
+    expect(read(`${DIR}/index.ts`)).toBe("new index\nmy edit\n");
+  });
+
+  it("is not replayed after an apply recorded since, which may have written the same paths", () => {
+    crashedApply();
+    put(`${DIR}/new/.courier.import.4242-0a1b2c3d.tmp`, "staged\n");
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const recovered = recoverInterruptedApplies(root, new Set(["1800000000000-0000beef"]));
+
+    expect(recovered).toEqual([]);
+    expect(read(`${DIR}/index.ts`)).toBe("new index\n");
+    expect(read(`${DIR}/new/index.ts`)).toBe("new group\n");
+    expect(existsSync(join(root.path, `${DIR}/new/.courier.import.4242-0a1b2c3d.tmp`))).toBe(false);
+    const journal: unknown = JSON.parse(read(".courier/journal/1700000000000-0000c0de.json"));
+    expect(journal).toMatchObject({ state: "kept", entries: [{}, {}, {}] });
   });
 });
 

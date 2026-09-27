@@ -524,6 +524,7 @@ describe("starting Studio", () => {
       id: "1700000000000-0000c0de",
       importName: "pets",
       dir: "src/api/pets",
+      after: null,
       state: "committing",
       backupDir: ".courier/backups/1700000000000-0000c0de",
       entries: [

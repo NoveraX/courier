@@ -60,6 +60,7 @@ function planted(extra: Record<string, unknown>): Record<string, unknown> {
     id: ID,
     importName: "pets",
     dir: DIR,
+    after: null,
     state: "committing",
     backupDir: `.courier/backups/${ID}`,
     entries: [],
@@ -75,7 +76,7 @@ describe("startup recovery with journals Studio did not write", () => {
     put(`${DIR}/helpers.ts`, "mine\n");
     journal(`${ID}.json`, planted({ temps: ["package.json", `${DIR}/helpers.ts`] }));
 
-    recoverInterruptedApplies(root, new Set());
+    recoverInterruptedApplies(root, { applied: [], imports: {} });
 
     expect(readFileSync(join(root.path, "package.json"), "utf8")).toBe("{}\n");
     expect(readFileSync(join(root.path, `${DIR}/helpers.ts`), "utf8")).toBe("mine\n");
@@ -85,7 +86,7 @@ describe("startup recovery with journals Studio did not write", () => {
     writeFileSync(join(scratch, "outside.txt"), "outside\n");
     journal(`${ID}.json`, planted({ temps: ["../outside.txt"], createdDirs: [".."] }));
 
-    recoverInterruptedApplies(root, new Set());
+    recoverInterruptedApplies(root, { applied: [], imports: {} });
 
     expect(readFileSync(join(scratch, "outside.txt"), "utf8")).toBe("outside\n");
   });
@@ -94,7 +95,7 @@ describe("startup recovery with journals Studio did not write", () => {
     put("lib/src/app.ts", "the user's lib\n");
     journal(`${ID}.json`, planted({ backupDir: "lib", entries: [{ path: "src/app.ts", step: "remove", existed: true }] }));
 
-    recoverInterruptedApplies(root, new Set());
+    recoverInterruptedApplies(root, { applied: [], imports: {} });
 
     expect(readFileSync(join(root.path, "lib/src/app.ts"), "utf8")).toBe("the user's lib\n");
     expect(existsSync(join(root.path, "src/app.ts"))).toBe(false);
@@ -105,7 +106,7 @@ describe("startup recovery with journals Studio did not write", () => {
     const entries = [{ path: "src/app.ts", step: "write", existed: false, sha256: bodyHash("written\n") }];
     journal(`${ID}.json`, planted({ entries }));
 
-    recoverInterruptedApplies(root, new Set());
+    recoverInterruptedApplies(root, { applied: [], imports: {} });
 
     expect(readFileSync(join(root.path, "src/app.ts"), "utf8")).toBe("written\n");
   });
@@ -114,7 +115,7 @@ describe("startup recovery with journals Studio did not write", () => {
     put(".courier/keep.json", "{}\n");
     journal("1700000000000-ffffffff.json", planted({ id: "../keep" }));
 
-    recoverInterruptedApplies(root, new Set());
+    recoverInterruptedApplies(root, { applied: [], imports: {} });
 
     expect(existsSync(join(root.path, ".courier/keep.json"))).toBe(true);
     expect(readdirSync(join(root.path, ".courier/journal"))).toEqual(["1700000000000-ffffffff.json"]);

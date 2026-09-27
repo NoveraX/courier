@@ -33,6 +33,8 @@ export interface ImportStateEntry {
   dir: string;
   /** Every file Studio wrote and still owns, by project-relative path */
   files: Record<string, RecordedFile>;
+  /** The apply that saved this record, which an unfinished apply of the import compares with */
+  applyId?: string;
 }
 
 /** Top-level shape of `.courier/imports-state.json` */

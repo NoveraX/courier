@@ -35,7 +35,8 @@ export function saveImportEntry(
 ): void {
   const { state, intact } = readImportsState(root);
   if (!intact) throw new ImportsStateUnsafeError(IMPORTS_STATE_FILENAME);
-  const next = entry === null ? removeImport(state, name) : recordImport(state, name, entry);
+  const next =
+    entry === null ? removeImport(state, name) : recordImport(state, name, { ...entry, applyId });
   const ids = [...next.applied.filter((id) => id !== applyId), applyId];
   /* An id whose journal is still there stays, or the next start would undo an apply that stands. */
   const applied = ids.filter((id, at) => at >= ids.length - KEPT_BACKUPS || hasJournal(root, id));

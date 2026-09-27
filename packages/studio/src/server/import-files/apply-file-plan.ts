@@ -1,5 +1,7 @@
 import { copyFileSync, linkSync, renameSync } from "node:fs";
 import { dirname } from "node:path";
+import { loadImportsState } from "../../apis/imports-state";
+import { ownValue } from "../../apis/own-value";
 import { COURIER_DIR, ensureCourierSubdir } from "../courier-dir";
 import { errnoCode } from "../errno-code";
 import { ensureDirectory } from "../project-fs/ensure-directory";
@@ -60,6 +62,7 @@ export function applyFilePlan(
     id,
     importName: plan.importName,
     dir: plan.dir,
+    after: ownValue(loadImportsState(root.path).imports, plan.importName)?.applyId ?? null,
     state: "staging",
     backupDir: `${COURIER_DIR}/backups/${id}`,
     entries: [],

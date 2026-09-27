@@ -58,6 +58,7 @@ describe("stageWrites", () => {
       id: ID,
       importName: "pets",
       dir: DIR,
+      after: null,
       state: "staging",
       backupDir: `.courier/backups/${ID}`,
       entries: [],
@@ -77,7 +78,7 @@ describe("stageWrites", () => {
     expect(onDisk?.journal.createdDirs).toEqual(["src", "src/api", DIR, `${DIR}/users`]);
     expect(existsSync(join(root.path, `${DIR}/users`))).toBe(true);
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    recoverInterruptedApplies(root, new Set());
+    recoverInterruptedApplies(root, { applied: [], imports: {} });
     expect(existsSync(join(root.path, "src"))).toBe(false);
   });
 });

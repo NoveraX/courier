@@ -21,8 +21,9 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ImportStateEntry } from "../../src/apis/imports-state";
 import { applyFilePlan } from "../../src/server/import-files/apply-file-plan";
-import { saveJournal } from "../../src/server/import-files/apply-journal";
+import { readJournals, saveJournal } from "../../src/server/import-files/apply-journal";
 import { bodyHash } from "../../src/server/import-files/body-hash";
 import type { PlanTarget } from "../../src/server/import-files/file-plan-types";
 import { readGeneratedFile, signGeneratedFile } from "../../src/server/import-files/generated-header";
@@ -30,6 +31,7 @@ import { planFiles } from "../../src/server/import-files/plan-files";
 import { pruneBackups } from "../../src/server/import-files/prune-backups";
 import type { RecordedFile } from "../../src/server/import-files/recorded-file";
 import { recoverInterruptedApplies } from "../../src/server/import-files/recover-interrupted-applies";
+import { saveImportEntry } from "../../src/server/import-files/save-import-entry";
 import { withConfirmations } from "../../src/server/import-files/with-confirmations";
 import { type ProjectRoot, projectRootAt } from "../../src/server/project-fs/project-root";
 
@@ -321,6 +323,7 @@ describe("recoverInterruptedApplies", () => {
       id: "1700000000000-0000c0de",
       importName: "pets",
       dir: DIR,
+      after: null,
       state: "committing",
       backupDir: ".courier/backups/1700000000000-0000c0de",
       entries: [
@@ -332,7 +335,7 @@ describe("recoverInterruptedApplies", () => {
       temps: [],
     });
 
-    const recovered = recoverInterruptedApplies(root, new Set());
+    const recovered = recoverInterruptedApplies(root, { applied: [], imports: {} });
 
     expect(recovered).toEqual([{ importName: "pets", failed: [], backupDir: ".courier/backups/1700000000000-0000c0de" }]);
     undisturbed();
@@ -343,7 +346,7 @@ describe("recoverInterruptedApplies", () => {
   it("leaves an apply the imports state recorded as it stands, and only drops its journal", () => {
     crashedApply();
 
-    const recovered = recoverInterruptedApplies(root, new Set(["1700000000000-0000c0de"]));
+    const recovered = recoverInterruptedApplies(root, { applied: ["1700000000000-0000c0de"], imports: {} });
 
     expect(recovered).toEqual([]);
     expect(read(`${DIR}/index.ts`)).toBe("new index\n");
@@ -357,7 +360,7 @@ describe("recoverInterruptedApplies", () => {
     put(`${DIR}/index.ts`, "new index\nmy edit\n");
     put(`${DIR}/old/index.ts`, "a file of my own\n");
 
-    const [recovered] = recoverInterruptedApplies(root, new Set());
+    const [recovered] = recoverInterruptedApplies(root, { applied: [], imports: {} });
 
     expect(recovered?.failed.sort()).toEqual([`${DIR}/index.ts`, `${DIR}/old/index.ts`]);
     expect(read(`${DIR}/index.ts`)).toBe("new index\nmy edit\n");
@@ -373,7 +376,7 @@ describe("recoverInterruptedApplies", () => {
     put(`${DIR}/old/index.ts`, "old group\n");
     rmSync(join(root.path, `.courier/backups/1700000000000-0000c0de/${DIR}/old`), { recursive: true });
 
-    const [recovered] = recoverInterruptedApplies(root, new Set());
+    const [recovered] = recoverInterruptedApplies(root, { applied: [], imports: {} });
 
     expect(recovered?.failed).toEqual([]);
     expect(read(`${DIR}/index.ts`)).toBe("old index\n");
@@ -397,7 +400,7 @@ describe("an apply that committed", () => {
       chmodSync(journals, 0o755);
     }
     const left = readdirSync(journals);
-    const recovered = recoverInterruptedApplies(root, new Set([applyId]));
+    const recovered = recoverInterruptedApplies(root, { applied: [applyId], imports: {} });
 
     expect(left).toEqual([`${applyId}.json`]);
     expect(report.written).toEqual([`${DIR}/index.ts`, `${DIR}/new/index.ts`]);
@@ -408,6 +411,11 @@ describe("an apply that committed", () => {
 });
 
 /* What a crash leaves after the files of the scenario's apply were put in place. */
+/* The imports state's record of an import, as the apply of the given id saved it. */
+function recordOfApply(applyId: string): ImportStateEntry {
+  return { specHash: "h", fetchedAt: "", lastSyncedAt: "", dir: DIR, files: {}, applyId };
+}
+
 function crashedApply(): void {
   put(`${DIR}/index.ts`, "new index\n");
   put(`${DIR}/new/index.ts`, "new group\n");
@@ -417,6 +425,7 @@ function crashedApply(): void {
     id: "1700000000000-0000c0de",
     importName: "pets",
     dir: DIR,
+    after: null,
     state: "committing",
     backupDir: ".courier/backups/1700000000000-0000c0de",
     entries: [
@@ -435,7 +444,7 @@ describe("recovering from what a crash left", () => {
     put(`${DIR}/new/.courier.import.4242-0a1b2c3d.tmp`, "staged\n");
     put(`${DIR}/.courier.imports.notes.tmp`, "mine\n");
 
-    recoverInterruptedApplies(root, new Set());
+    recoverInterruptedApplies(root, { applied: [], imports: {} });
 
     expect(existsSync(join(root.path, `${DIR}/new/.courier.import.4242-0a1b2c3d.tmp`))).toBe(false);
     expect(read(`${DIR}/.courier.imports.notes.tmp`)).toBe("mine\n");
@@ -446,7 +455,7 @@ describe("recovering from what a crash left", () => {
     rmSync(join(root.path, `.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`));
     vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const [recovered] = recoverInterruptedApplies(root, new Set());
+    const [recovered] = recoverInterruptedApplies(root, { applied: [], imports: {} });
 
     expect(recovered?.failed).toEqual([`${DIR}/index.ts`]);
     expect(readdirSync(join(root.path, ".courier/journal"))).toEqual(["1700000000000-0000c0de.json"]);
@@ -468,10 +477,10 @@ describe("a journal whose undo left files", () => {
     crashedApply();
     put(`${DIR}/index.ts`, "new index\nmy edit\n");
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    recoverInterruptedApplies(root, new Set());
+    recoverInterruptedApplies(root, { applied: [], imports: {} });
     put(`${DIR}/new/index.ts`, "new group\n");
 
-    const recovered = recoverInterruptedApplies(root, new Set());
+    const recovered = recoverInterruptedApplies(root, { applied: [], imports: {} });
 
     expect(recovered).toEqual([]);
     expect(read(`${DIR}/new/index.ts`)).toBe("new group\n");
@@ -489,21 +498,22 @@ describe("a journal whose undo left files", () => {
     crashedApply();
     put(`${DIR}/index.ts`, "new index\nmy edit\n");
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    recoverInterruptedApplies(root, new Set());
+    recoverInterruptedApplies(root, { applied: [], imports: {} });
     rmSync(join(root.path, ".courier/backups/1700000000000-0000c0de"), { recursive: true });
 
-    recoverInterruptedApplies(root, new Set());
+    recoverInterruptedApplies(root, { applied: [], imports: {} });
 
     expect(readdirSync(join(root.path, ".courier/journal"))).toEqual([]);
     expect(read(`${DIR}/index.ts`)).toBe("new index\nmy edit\n");
   });
 
-  it("is not replayed after an apply recorded since, which may have written the same paths", () => {
+  it("is not replayed after an apply of the import recorded since, which may have written the same paths", () => {
     crashedApply();
     put(`${DIR}/new/.courier.import.4242-0a1b2c3d.tmp`, "staged\n");
     vi.spyOn(console, "warn").mockImplementation(() => {});
+    const imports = { pets: recordOfApply("0000000000001-0000beef") };
 
-    const recovered = recoverInterruptedApplies(root, new Set(["1800000000000-0000beef"]));
+    const recovered = recoverInterruptedApplies(root, { applied: ["0000000000001-0000beef"], imports });
 
     expect(recovered).toEqual([]);
     expect(read(`${DIR}/index.ts`)).toBe("new index\n");
@@ -511,6 +521,32 @@ describe("a journal whose undo left files", () => {
     expect(existsSync(join(root.path, `${DIR}/new/.courier.import.4242-0a1b2c3d.tmp`))).toBe(false);
     const journal: unknown = JSON.parse(read(".courier/journal/1700000000000-0000c0de.json"));
     expect(journal).toMatchObject({ state: "kept", entries: [{}, {}, {}] });
+  });
+});
+
+describe("a journal of one import", () => {
+  it("is replayed after an apply of another import was recorded", () => {
+    crashedApply();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const imports = { store: { ...recordOfApply("1800000000000-0000beef"), dir: "src/api/store" } };
+
+    const recovered = recoverInterruptedApplies(root, { applied: ["1800000000000-0000beef"], imports });
+
+    expect(recovered).toEqual([{ importName: "pets", failed: [], backupDir: ".courier/backups/1700000000000-0000c0de" }]);
+    undisturbed();
+  });
+});
+
+describe("an apply's journal", () => {
+  it("names the apply that saved the import's record when it began", () => {
+    saveImportEntry(root.path, "pets", recordOfApply("unused"), "0000000000001-0000beef");
+    let after: string | null | undefined;
+
+    applyFilePlan(root, scenario(), () => {
+      after = readJournals(root.path)[0]?.journal.after;
+    });
+
+    expect(after).toBe("0000000000001-0000beef");
   });
 });
 

@@ -173,6 +173,26 @@ describe("courier", () => {
       expect(options(endpoint).middleware).toEqual([]);
     });
 
+    it("keeps the endpoint's own middleware when it opts out", () => {
+      const vendor = courier({ middleware: [first] });
+      const admin = vendor.extend({ middleware: [second] });
+      const before = admin.endpoint.use(third).get("", { inherit: false });
+      const after = admin.endpoint.get("", { inherit: false }).use(third);
+
+      expect(options(before).middleware).toEqual([third]);
+      expect(options(after).middleware).toEqual([third]);
+    });
+
+    it("keeps the endpoint's own middleware when it opts out of a closure's base", () => {
+      const vendor = courier({ middleware: [first] });
+      const endpoint = vendor.endpoint
+        .use(second)
+        .via((http) => http.post("login"), { inherit: false })
+        .use(third);
+
+      expect(options(endpoint).middleware).toEqual([second, third]);
+    });
+
     it("leaves the parent base untouched when it is extended", () => {
       const vendor = courier({ middleware: [first] });
       vendor.extend({ middleware: [second] });

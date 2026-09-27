@@ -12,6 +12,9 @@ export interface BuilderState {
   readonly kind: EndpointKind;
   readonly schemas: Readonly<Partial<Record<SlotName, StandardSchemaV1>>>;
   readonly filled: readonly SlotName[];
+  /** Middleware of the base the endpoint was built from; `inherit: false` drops it. */
+  readonly baseMiddleware: readonly Middleware[];
+  /** Middleware the endpoint added itself with `.use()`. */
   readonly middleware: readonly Middleware[];
   readonly allowedHeaders: readonly string[];
   readonly timeout?: number;
@@ -26,7 +29,8 @@ export function initialState(kind: EndpointKind, inherited: Partial<BuilderState
     kind,
     schemas: {},
     filled: [],
-    middleware: inherited.middleware ?? [],
+    baseMiddleware: inherited.middleware ?? [],
+    middleware: [],
     allowedHeaders: inherited.allowedHeaders ?? [],
     ...(inherited.timeout !== undefined && { timeout: inherited.timeout }),
     ...(inherited.retry !== undefined && { retry: inherited.retry }),
@@ -89,7 +93,7 @@ export function resolveOptions(
 ): ResolvedEndpointOptions {
   const { inherit = true, tags = [], ...rest } = options;
   return {
-    middleware: inherit ? state.middleware : [],
+    middleware: inherit ? [...state.baseMiddleware, ...state.middleware] : state.middleware,
     allowedHeaders: state.allowedHeaders,
     ...(state.timeout !== undefined && { timeout: state.timeout }),
     ...(state.retry !== undefined && { retry: state.retry }),

@@ -4,7 +4,9 @@ import { createCaller } from "../src/caller";
 import { courier } from "../src/define/courier";
 import { defineApi } from "../src/define/api";
 import { defineGroup } from "../src/define/group";
+import { defineMiddleware } from "../src/middleware/index";
 import { executeRequest } from "../src/utils/execute";
+import { sendJson, startUpstream, type Upstream } from "./helpers/middleware-upstream";
 
 const UserSchema = z.object({ id: z.string(), email: z.string() });
 const ById = z.object({ id: z.string() });
@@ -157,5 +159,66 @@ describe("proxy routing follows the head", () => {
 
     expect(result).toEqual([{ id: "1", email: "a@b.c" }]);
     expect(calledInit().method).toBe("POST");
+  });
+});
+
+describe("an endpoint that does not inherit its base's middleware", () => {
+  let upstream: Upstream | undefined;
+
+  /* The suites above replace fetch; these talk to a real upstream. */
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  afterEach(async () => {
+    await upstream?.close();
+    upstream = undefined;
+  });
+
+  function recording(ran: string[], name: string) {
+    return defineMiddleware(name, "before", () => {
+      ran.push(name);
+    });
+  }
+
+  it("still runs its own middleware, named after the verb", async () => {
+    upstream = await startUpstream((_req, res) => sendJson(res, 200, { ok: true }));
+    const ran: string[] = [];
+    const base = courier({ middleware: [recording(ran, "base")] });
+    const client = createCaller(
+      defineApi({
+        name: "api",
+        baseURL: upstream.url,
+        middleware: [recording(ran, "source")],
+        endpoints: {
+          login: base.endpoint.post("login", { inherit: false }).use(recording(ran, "own")),
+        },
+      }),
+    );
+
+    await expect(client.login()).resolves.toEqual({ ok: true });
+
+    expect(ran).toEqual(["source", "own"]);
+  });
+
+  it("still runs its own middleware, named before the verb", async () => {
+    upstream = await startUpstream((_req, res) => sendJson(res, 200, { ok: true }));
+    const ran: string[] = [];
+    const vendor = courier({ middleware: [recording(ran, "base")] });
+    const admin = vendor.extend({ middleware: [recording(ran, "extended")] });
+    const client = createCaller(
+      defineApi({
+        name: "api",
+        baseURL: upstream.url,
+        endpoints: {
+          login: admin.endpoint.use(recording(ran, "own")).post("login", { inherit: false }),
+        },
+      }),
+    );
+
+    await expect(client.login()).resolves.toEqual({ ok: true });
+
+    expect(ran).toEqual(["own"]);
+    expect(upstream.seen).toHaveLength(1);
   });
 });

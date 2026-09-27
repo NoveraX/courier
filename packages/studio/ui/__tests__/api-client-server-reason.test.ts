@@ -1,9 +1,10 @@
+import type * as Courier from "@noverax/courier";
 import { describe, expect, it, vi } from "vitest";
 
 const post = vi.fn();
 
 vi.mock("@noverax/courier", async () => {
-  const actual = await vi.importActual<typeof import("@noverax/courier")>("@noverax/courier");
+  const actual = await vi.importActual<typeof Courier>("@noverax/courier");
   return { ...actual, createFetch: () => ({ post }) };
 });
 

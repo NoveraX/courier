@@ -7,13 +7,9 @@ import { sharedTestOptions } from "../../../vitest.shared.ts";
 /**
  * Vitest harness for `@noverax/courier-studio-ui`.
  *
- * Kept intentionally light: `node` environment is enough for the wire-
- * boundary type guards and toast helpers covered here. Component-level
- * rendering tests would need `jsdom` + React Testing Library, which would
- * pull a heavier dep set than the unit-level coverage in this directory
- * currently warrants. Add jsdom + RTL when the first real component test
- * arrives — until then, keeping the harness in node mode keeps the studio
- * test runner identical across both projects.
+ * Runs in `node` by default; a component test opts into `jsdom` with a
+ * `@vitest-environment jsdom` comment at its top and renders with React
+ * Testing Library.
  *
  * The `@/*` alias mirrors `vite.config.ts` so test files can import from
  * `@/socket/...` exactly like production code.

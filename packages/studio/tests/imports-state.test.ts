@@ -94,11 +94,10 @@ describe("saveImportsState (atomic)", () => {
     expect(reloaded).toEqual(initial);
   });
 
-  it("does not leave .tmp.* files behind on success", () => {
+  it("leaves no temporary file behind on success", () => {
     saveImportsState(projectRoot, { version: IMPORTS_STATE_VERSION, imports: {}, applied: [] });
-    const dir = join(projectRoot, ".courier");
-    const files = readdirSync(dir);
-    expect(files.some((f) => f.includes(".tmp."))).toBe(false);
+
+    expect(readdirSync(join(projectRoot, ".courier")).sort()).toEqual([".gitignore", "imports-state.json"]);
   });
 });
 

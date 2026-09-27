@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createShutdown, setupSignalHandlers } from "../src/shutdown";
+import { createShutdown } from "../src/shutdown";
 
 // Mock createLogger to avoid side effects
 vi.mock("@noverax/courier", () => ({
@@ -167,41 +167,5 @@ describe("createShutdown", () => {
 
     await stop();
     expect(httpServer.close).toHaveBeenCalledOnce();
-  });
-});
-
-// --- setupSignalHandlers ---
-
-describe("setupSignalHandlers", () => {
-  it("registers SIGTERM and SIGINT handlers", () => {
-    const processSpy = vi.spyOn(process, "on");
-    const shutdown = vi.fn().mockResolvedValue(undefined);
-
-    setupSignalHandlers(shutdown);
-
-    const signals = processSpy.mock.calls.map(([signal]) => signal);
-    expect(signals).toContain("SIGTERM");
-    expect(signals).toContain("SIGINT");
-
-    processSpy.mockRestore();
-  });
-
-  it("calls shutdown on first signal", async () => {
-    const processSpy = vi.spyOn(process, "on");
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
-    const shutdown = vi.fn().mockResolvedValue(undefined);
-
-    setupSignalHandlers(shutdown);
-
-    // Find the SIGTERM handler and invoke it
-    const sigtermCall = processSpy.mock.calls.find(([signal]) => signal === "SIGTERM");
-    const handler = sigtermCall![1] as () => Promise<void>;
-    await handler();
-
-    expect(shutdown).toHaveBeenCalledOnce();
-    expect(exitSpy).toHaveBeenCalledWith(0);
-
-    processSpy.mockRestore();
-    exitSpy.mockRestore();
   });
 });

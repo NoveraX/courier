@@ -83,7 +83,7 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `host` | `"localhost"` | Server host |
 | `allowedOrigins` | `undefined` | Origins of the browser apps that may call the server (CORS and the WebSocket origin check). Left out, only the server's own origin — and loopback origins outside production |
 | `pubsub` | `undefined` | Pub/Sub adapter for horizontal WS scaling (e.g. Redis) |
-| `signals` | `true` | Attach SIGTERM/SIGINT for graceful shutdown |
+| `signals` | `true` | Drain on SIGTERM/SIGINT, then exit — unless the application handles the signal too, in which case its handler decides when the process ends |
 
 The server reads a proxied JSON call up to 1 MB and an upload (`multipart/form-data`) up to 10 MB, and answers a larger one with 413.
 

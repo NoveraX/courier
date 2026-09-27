@@ -9,7 +9,7 @@
  * scenario-state reset route was unreachable, and the history grew forever.
  */
 import type { AddressInfo } from "node:net";
-import { createServer } from "node:net";
+import { createServer, type Server } from "node:net";
 import { networkInterfaces } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
@@ -36,6 +36,12 @@ const ipv6Loopback = await new Promise<boolean>((resolve) => {
   probe.once("error", () => resolve(false));
   probe.listen({ port: 0, host: "::1", ipv6Only: true }, () => probe.close(() => resolve(true)));
 });
+
+async function holdOn(host: string): Promise<Server> {
+  const other = createServer();
+  await new Promise<void>((resolve) => other.listen({ port: 0, host }, resolve));
+  return other;
+}
 
 function lanAddress(): string | undefined {
   for (const addresses of Object.values(networkInterfaces())) {
@@ -78,6 +84,70 @@ describe("where the mock server listens", () => {
       await expect(strict.start()).rejects.toMatchObject({ code: "EADDRINUSE" });
       const { url } = await boot({ port: taken });
       expect(Number(new URL(url).port)).not.toBe(taken);
+    } finally {
+      await new Promise((resolve) => other.close(resolve));
+    }
+  });
+
+  it("counts a port another process holds on 0.0.0.0 as taken", async () => {
+    const other = await holdOn("0.0.0.0");
+    const taken = (other.address() as AddressInfo).port;
+    const strict = createMockServer({ port: taken, strictPort: true, log: false });
+
+    try {
+      await expect(strict.start()).rejects.toMatchObject({ code: "EADDRINUSE" });
+      const { url } = await boot({ port: taken });
+      expect(Number(new URL(url).port)).toBeGreaterThan(taken);
+    } finally {
+      await new Promise((resolve) => other.close(resolve));
+    }
+  });
+
+  it.skipIf(!ipv6Loopback)("counts a port another process holds on :: as taken", async () => {
+    const other = await holdOn("::");
+    const taken = (other.address() as AddressInfo).port;
+    const strict = createMockServer({ port: taken, strictPort: true, log: false });
+
+    try {
+      await expect(strict.start()).rejects.toMatchObject({ code: "EADDRINUSE" });
+      const { url } = await boot({ port: taken });
+      expect(Number(new URL(url).port)).toBeGreaterThan(taken);
+    } finally {
+      await new Promise((resolve) => other.close(resolve));
+    }
+  });
+
+  it("refuses a port another process holds on the loopback when it listens on every address", async () => {
+    const other = await holdOn("127.0.0.1");
+    const taken = (other.address() as AddressInfo).port;
+    const strict = createMockServer({ port: taken, hostname: "0.0.0.0", strictPort: true, log: false });
+
+    try {
+      await expect(strict.start()).rejects.toMatchObject({ code: "EADDRINUSE" });
+    } finally {
+      await new Promise((resolve) => other.close(resolve));
+    }
+  });
+
+  it("ends its connection to a server on the port that greets its clients without resetting it", async () => {
+    const errors: string[] = [];
+    let closed: () => void = () => undefined;
+    const clientClosed = new Promise<void>((resolve) => {
+      closed = resolve;
+    });
+    const other = createServer((client) => {
+      client.on("error", (err: NodeJS.ErrnoException) => errors.push(err.code ?? err.message));
+      client.on("close", closed);
+      client.end("hello\n");
+    });
+    await new Promise<void>((resolve) => other.listen({ port: 0, host: "0.0.0.0" }, resolve));
+    const taken = (other.address() as AddressInfo).port;
+    const strict = createMockServer({ port: taken, strictPort: true, log: false });
+
+    try {
+      await expect(strict.start()).rejects.toMatchObject({ code: "EADDRINUSE" });
+      await clientClosed;
+      expect(errors).toEqual([]);
     } finally {
       await new Promise((resolve) => other.close(resolve));
     }

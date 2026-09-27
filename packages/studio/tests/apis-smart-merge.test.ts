@@ -18,7 +18,7 @@ describe("mergeImports", () => {
       { raw: "", source: "./schemas", names: ["UserSchema", "PostSchema"], typeNames: ["User", "Post"] },
     ]
     const changes: MergeChange[] = []
-    const result = mergeImports(existing, generated, changes)
+    const result = mergeImports(existing, generated, changes, "")
 
     const schemasLine = result.find((l) => l.includes("./schemas"))!
     expect(schemasLine).toContain("UserSchema")
@@ -36,7 +36,7 @@ describe("mergeImports", () => {
       { raw: "", source: "@noverax/courier/define", names: ["defineGroup", "endpoint"], typeNames: [] },
     ]
     const changes: MergeChange[] = []
-    const result = mergeImports(existing, generated, changes)
+    const result = mergeImports(existing, generated, changes, "")
 
     expect(result.some((l) => l.includes("lodash"))).toBe(true)
     expect(changes.some((c) => c.type === "preserved" && c.target === "import:lodash")).toBe(true)
@@ -51,7 +51,7 @@ describe("mergeImports", () => {
       { raw: "", source: "zod", names: ["z"], typeNames: [] },
     ]
     const changes: MergeChange[] = []
-    const result = mergeImports(existing, generated, changes)
+    const result = mergeImports(existing, generated, changes, "")
 
     expect(result.some((l) => l.includes("zod"))).toBe(true)
   })

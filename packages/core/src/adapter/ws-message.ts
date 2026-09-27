@@ -20,6 +20,15 @@ const MESSAGE_REJECTED = { code: 4403, message: "Message rejected" };
 /** Handle an incoming "message" — route to channel's onMessage */
 export async function handleMessage(ctx: WSSocketContext, msg: WSMessage): Promise<void> {
   const topic = msg.topic;
+  /* A client may send on a channel the moment it has asked to join it; the
+     message then arrives while the join is still being validated and
+     authorized, and waits for it rather than being refused as addressed to
+     a topic the client never joined. How the join went is its own to report. */
+  const opening = topic ? ctx.subscribing.get(topic) : undefined;
+  if (opening) {
+    await Promise.allSettled([opening]);
+    if (ctx.closed) return;
+  }
   if (!topic || !ctx.topicManager.has(ctx.connectionId, topic)) {
     refuseMessage(ctx, msg, { code: 4404, message: "Not subscribed" });
     return;

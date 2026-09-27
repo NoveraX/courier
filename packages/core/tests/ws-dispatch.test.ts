@@ -85,7 +85,7 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
     dt: {},
     seq: { value: 0 },
     subscriptionIds: new Map(),
-    subscribing: new Set(),
+    subscribing: new Map(),
     t0: performance.now(),
     request: new Request("http://localhost/ws"),
     meta: {},

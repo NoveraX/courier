@@ -38,23 +38,24 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
      has been validated and authorized: the count was read before those
      awaits and updated after them, so every frame of a burst saw it as it
      was before the burst. */
-  if (!claimPlace(ctx, topic)) {
+  if (!hasPlace(ctx, topic)) {
     sendSubscriptionEnd(ctx, topic, msg.id, { code: 4429, message: "Too many subscriptions" });
     return;
   }
+  const opening = openSubscription(ctx, msg, topic);
+  ctx.subscribing.set(topic, opening);
   try {
-    await openSubscription(ctx, msg, topic);
+    await opening;
   } finally {
-    ctx.subscribing.delete(topic);
+    if (ctx.subscribing.get(topic) === opening) ctx.subscribing.delete(topic);
   }
 }
 
 /** Renewing a subscription the connection holds, or is opening, takes no new place. */
-function claimPlace(ctx: WSSocketContext, topic: string): boolean {
+function hasPlace(ctx: WSSocketContext, topic: string): boolean {
   const renewing = ctx.topicManager.has(ctx.connectionId, topic) || ctx.subscribing.has(topic);
   const taken = ctx.topicManager.topicCount(ctx.connectionId) + ctx.subscribing.size;
   if (!renewing && taken >= ctx.maxSubscriptions) return false;
-  ctx.subscribing.add(topic);
   return true;
 }
 

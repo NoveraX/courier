@@ -91,6 +91,8 @@ courierHandler({
 
 `https://*.example.com` covers the sub-domains of `example.com` over HTTPS on the default port, not the apex. A pattern without a scheme, `*.example.com`, covers them over any scheme and port.
 
+A page on a listed origin calls the proxy with CORS, and the handler answers for it: a preflight gets `204` with `Access-Control-Allow-Origin` and `Access-Control-Allow-Credentials`, the headers it asked to send and the methods the proxy takes, and every answer carries the same permission along with `Access-Control-Expose-Headers`. The preflight is an `OPTIONS` request, so route `OPTIONS` to the handler too — `app.all(...)` in Express and Hono, `export const { GET, POST, OPTIONS } = apiRoute(...)` in Next.js — and on the SSE route as well, since a stream that resumes sends `Last-Event-ID`. The development allowance for local ports is not a listing: it lets such a page's requests through, but gives it no permission to read the answers.
+
 ### Upstream redirects
 
 A proxied call carries the server's credentials — whatever your middleware added — so the proxy follows an upstream redirect only while it stays on the origin the call was sent to. A redirect to another origin is not followed: the caller receives its status as an error, without its `Location`, and the credentials never reach the other host. A source that trusts every redirect its upstream sends can say so:

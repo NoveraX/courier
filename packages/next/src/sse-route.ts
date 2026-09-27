@@ -20,12 +20,16 @@ import { publicRequest } from "./public-request";
  * // app/api/sse/route.ts
  * import { sseRoute } from "@noverax/courier-next";
  * export const { GET } = sseRoute();
+ *
+ * // Pages on other origins subscribe too: export OPTIONS for their preflight
+ * export const { GET, OPTIONS } = sseRoute({ allowedOrigins: ["https://admin.example.com"] });
  * ```
  */
 export function sseRoute(config?: HandlerConfig): {
   GET: (request: NextRequest) => Promise<Response>;
+  OPTIONS: (request: NextRequest) => Promise<Response>;
 } {
-  const { handleSSE } = createHandler(config);
+  const { handle, handleSSE } = createHandler(config);
 
   /* Deferred for the same reason as `apiRoute`: this module is evaluated by
      `next build` before the registry exists. */
@@ -43,5 +47,7 @@ export function sseRoute(config?: HandlerConfig): {
       discoverAppOrigin(new URL(request.url).origin);
       return handleSSE(publicRequest(request));
     },
+    /* A preflight from a page `allowedOrigins` lists; any other is refused. */
+    OPTIONS: (request: NextRequest) => handle(publicRequest(request)),
   };
 }

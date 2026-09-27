@@ -82,11 +82,26 @@ export function isOriginAccepted(
   return isConfigured(origin, allowedOrigins);
 }
 
+/**
+ * Whether an origin is one of the configured ones — the list alone, without
+ * the development allowance for local ports.
+ *
+ * @param origin - The `Origin` header
+ * @param allowedOrigins - The configured patterns
+ * @returns Whether a pattern matches it
+ *
+ * @example
+ * ```ts
+ * isOriginListed("https://a.example.com", ["https://*.example.com"]); // → true
+ * ```
+ */
+export function isOriginListed(origin: string, allowedOrigins?: readonly string[]): boolean {
+  return allowedOrigins?.some((pattern) => matchesOrigin(origin, pattern)) ?? false;
+}
+
 /** Whether a foreign origin was listed, or is a local port during development. */
 function isConfigured(origin: string, allowedOrigins?: string[]): boolean {
-  if (allowedOrigins?.length) {
-    return allowedOrigins.some((pattern) => matchesOrigin(origin, pattern));
-  }
+  if (allowedOrigins?.length) return isOriginListed(origin, allowedOrigins);
   return process.env.NODE_ENV !== "production" && isLoopback(origin);
 }
 

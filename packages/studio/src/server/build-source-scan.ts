@@ -9,7 +9,7 @@
  * project's TypeScript.
  */
 
-import { relative } from "node:path";
+import { join, relative } from "node:path";
 import { extractSourceMap } from "@noverax/courier-studio-core";
 import type { LoadedCourierConfig } from "./config-loader";
 import { findSourceDeclaration } from "./find-source-declaration";
@@ -80,7 +80,7 @@ export function buildSourceScan(
   root: string,
 ): ScanResult {
   if (!loaded) return { sources: [], scannedFiles: 0 };
-  const { config, configFile, deps } = loaded;
+  const { config, configFile, deps, depHashes } = loaded;
   const sourceMap = extractSourceMap(config.sources ?? {});
 
   const sources: ScannedSource[] = [];
@@ -88,7 +88,11 @@ export function buildSourceScan(
     const state = getImportState(snapshot, name);
     const written = Object.keys(state?.files ?? {});
     const paths = scannedFilePaths(snapshot, name, written);
-    const isImported = state !== undefined || getImportEntry(snapshot, name) !== undefined;
+    const entry = getImportEntry(snapshot, name);
+    /* A source of an import's name is the import's only when the config loaded the generated file. */
+    const generated = paths.generatedSource;
+    const isImported =
+      generated !== undefined && (depHashes.get(join(root, generated)) ?? null) !== null;
     const groups: ScannedGroup[] = [];
     let inlineEndpoints: ScannedEndpoint[] | undefined;
 
@@ -116,9 +120,10 @@ export function buildSourceScan(
       groups,
       ...(inlineEndpoints && { inlineEndpoints }),
       isImported,
-      /* Studio writes the caller into the source's own `index.ts`; a source
-         generated with `generateClient: "none"` has no such file. */
-      hasClient: written.some((file) => /(^|\/)index\.ts$/.test(file) && !file.includes("/../")),
+      /* Studio writes the caller into the import's own `index.ts` unless it
+         is declared with `generateClient: "none"`. */
+      hasClient:
+        isImported && (entry ? entry.generateClient !== "none" : paths.index !== undefined),
     });
   }
 

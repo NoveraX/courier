@@ -173,54 +173,66 @@ describe("retryMiddleware with retryOn", () => {
 
 describe("retryMiddleware and cancellation", () => {
   it("surfaces a caller's cancellation at once", async () => {
-    upstream = await startUpstream(() => {});
-    const client = clientFor(upstream.url, retryMiddleware({ retryOn: anyFailure }));
     const controller = new AbortController();
-    setTimeout(() => controller.abort(), 30);
-    const started = Date.now();
+    let abortedAt = 0;
+    upstream = await startUpstream(() => {
+      abortedAt = Date.now();
+      controller.abort();
+    });
+    const client = clientFor(upstream.url, retryMiddleware({ retryOn: anyFailure }));
 
     await expect(
       client.with({ signal: controller.signal }).read({ code: 200 }),
     ).rejects.toMatchObject({ name: "AbortError" });
 
-    expect(Date.now() - started).toBeLessThan(250);
+    expect(Date.now() - abortedAt).toBeLessThan(150);
     expect(upstream.seen).toHaveLength(1);
   });
 
   it("does not retry a cancellation that carries its own reason", async () => {
-    upstream = await startUpstream(() => {});
-    const client = clientFor(upstream.url, retryMiddleware({ backoff: 200 }));
     const controller = new AbortController();
-    setTimeout(() => controller.abort(new Error("navigated away")), 30);
-    const started = Date.now();
+    let abortedAt = 0;
+    upstream = await startUpstream(() => {
+      abortedAt = Date.now();
+      controller.abort(new Error("navigated away"));
+    });
+    const client = clientFor(upstream.url, retryMiddleware({ backoff: 200 }));
 
     await expect(client.with({ signal: controller.signal }).read({ code: 200 })).rejects.toThrow();
 
-    expect(Date.now() - started).toBeLessThan(200);
+    expect(Date.now() - abortedAt).toBeLessThan(150);
     expect(upstream.seen).toHaveLength(1);
   });
 
   it("stops waiting between attempts when the caller cancels", async () => {
-    upstream = await startUpstream((_req, res, index) => {
-      if (index === 0) sendJson(res, 503, { message: "unavailable" });
+    const controller = new AbortController();
+    let abortedAt = 0;
+    upstream = await startUpstream((_req, res) => {
+      sendJson(res, 503, { message: "unavailable" });
+      setTimeout(() => {
+        abortedAt = Date.now();
+        controller.abort();
+      }, 50);
     });
     const client = clientFor(upstream.url, retryMiddleware({ backoff: 2000 }));
-    const controller = new AbortController();
-    const started = Date.now();
-    setTimeout(() => controller.abort(), 100);
 
     await expect(
       client.with({ signal: controller.signal }).read({ code: 503 }),
     ).rejects.toMatchObject({ name: "AbortError" });
 
-    expect(Date.now() - started).toBeLessThan(1000);
+    expect(Date.now() - abortedAt).toBeLessThan(500);
     expect(upstream.seen).toHaveLength(1);
   });
 
   it("does not re-issue a request that a newer identical one superseded", async () => {
     /* Identical requests supersede each other only in a browser. */
     vi.stubGlobal("document", {});
+    let firstArrived: () => void = () => {};
+    const arrived = new Promise<void>((resolve) => {
+      firstArrived = resolve;
+    });
     upstream = await startUpstream((_req, res) => {
+      firstArrived();
       setTimeout(() => sendJson(res, 200, { ok: true }), 100);
     });
     const client = createCaller(
@@ -234,7 +246,7 @@ describe("retryMiddleware and cancellation", () => {
     );
 
     const first = client.read();
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await arrived;
     const second = client.read();
 
     await expect(first).rejects.toMatchObject({ status: 499 });

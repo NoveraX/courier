@@ -15,8 +15,14 @@ export interface SSERegistryEntry {
   lastEventAt: number;
   /** Abort the stream (triggers signal → finally block → cleanup) */
   abort: () => void;
-  /** Write an event to the stream; `mayDrop` lets a full buffer refuse it. */
-  send: (event: SSEBroadcastEvent, mayDrop: boolean) => boolean;
+  /**
+   * Write an event from outside the stream's generator: refused rather than
+   * queued for a client that has fallen behind, and numbered only by an id of
+   * its own.
+   */
+  send: (event: SSEBroadcastEvent) => boolean;
+  /** Write a notice from the server about the stream itself, already formatted. */
+  notify: (frame: string) => boolean;
 }
 
 /** @internal Registry with mutation methods for handler integration */
@@ -25,7 +31,7 @@ export interface InternalSSERegistry extends SSEConnectionRegistry {
   remove(connectionId: string): void;
   /** Update metrics after each event emit */
   recordEvent(connectionId: string, bytes: number): void;
-  /** Send shutdown event to all connections, then abort after drainMs */
+  /** Tell every connection the server is going away, then abort after drainMs */
   shutdown(options?: { retryMs?: number; drainMs?: number }): Promise<void>;
   /** Shared AbortSignal that fires on shutdown */
   readonly shutdownSignal: AbortSignal;
@@ -55,11 +61,6 @@ export function createSSEConnectionRegistry(): InternalSSERegistry {
   const shutdownController = new AbortController();
   const broadcast = createBroadcastEngine(entries);
   let isShuttingDown = false;
-
-  function sendTo(entry: SSERegistryEntry, event: SSEBroadcastEvent, mayDrop: boolean): boolean {
-    if (!entries.has(entry.connectionId)) return false;
-    return entry.send(event, mayDrop);
-  }
 
   function* matchEndpoint(source: string, group?: string, method?: string) {
     for (const entry of entries.values()) {
@@ -110,9 +111,7 @@ export function createSSEConnectionRegistry(): InternalSSERegistry {
     },
 
     send(id, event) {
-      const entry = entries.get(id);
-      if (!entry) return false;
-      return sendTo(entry, event, true);
+      return entries.get(id)?.send(event) ?? false;
     },
 
     broadcastToEndpoint(source, event: SSEBroadcastEvent, group, method) {
@@ -154,7 +153,7 @@ export function createSSEConnectionRegistry(): InternalSSERegistry {
     async shutdown(options) {
       if (isShuttingDown) return;
       isShuttingDown = true;
-      await executeSSEShutdown(entries, shutdownController, sendTo, options);
+      await executeSSEShutdown(entries, shutdownController, options);
     },
   };
 }

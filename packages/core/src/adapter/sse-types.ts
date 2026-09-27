@@ -19,7 +19,11 @@ export interface SSEBroadcastEvent {
   event?: string;
   /** Payload (serialized to JSON if not a string) */
   data: unknown;
-  /** Optional custom event ID */
+  /**
+   * Optional custom event ID. Without one the event carries no id, so a
+   * client reconnecting after it resumes from the last event the stream's
+   * generator sent.
+   */
   id?: string;
   /** Optional reconnection interval hint in ms */
   retry?: number;

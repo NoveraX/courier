@@ -1,24 +1,41 @@
+import { SSE_CONTROL_EVENTS } from "../realtime/sse/control-events";
 import type { SSERegistryEntry } from "./sse-registry";
-import type { SSEBroadcastEvent } from "./sse-types";
 
-/** Send shutdown event to all entries, abort signal, wait for drain, force-close stragglers */
+/**
+ * The notice a stream gets when its server is going away.
+ *
+ * It is a control event, not one of the endpoint's: it used to be sent as an
+ * event named `shutdown`, which the client handed the app as though the
+ * endpoint had sent it, numbered so that a reconnecting client resumed from
+ * the notice instead of the last event the stream sent.
+ *
+ * @param retryMs - How long the client waits before it reconnects
+ * @returns The notice, as it goes on the wire
+ * @example
+ * ```ts
+ * formatShutdownNotice(3000);
+ * // → "event: courier:shutdown\nretry: 3000\ndata: null\n\n"
+ * ```
+ */
+export function formatShutdownNotice(retryMs: number): string {
+  return `event: ${SSE_CONTROL_EVENTS.shutdown}\nretry: ${Math.max(0, Math.trunc(retryMs))}\ndata: null\n\n`;
+}
+
+/** Send shutdown notice to all entries, abort signal, wait for drain, force-close stragglers */
 export async function executeSSEShutdown(
   entries: Map<string, SSERegistryEntry>,
   shutdownController: AbortController,
-  sendTo: (entry: SSERegistryEntry, event: SSEBroadcastEvent, mayDrop: boolean) => boolean,
   options?: { retryMs?: number; drainMs?: number },
 ): Promise<void> {
   const retryMs = options?.retryMs ?? 3000;
   const drainMs = options?.drainMs ?? 2000;
 
-  const shutdownEvent = { event: "shutdown", data: { reason: "shutdown" }, retry: retryMs };
+  const notice = formatShutdownNotice(retryMs);
 
-  // Snapshot to avoid concurrent modification
-  const snapshot = [...entries.values()];
-
-  // Best-effort: send shutdown event to all active streams
-  for (const entry of snapshot) {
-    sendTo(entry, shutdownEvent, false);
+  // Snapshot to avoid concurrent modification. Best-effort: queued even into
+  // a full buffer, as it is the last thing the stream says.
+  for (const entry of [...entries.values()]) {
+    entry.notify(notice);
   }
 
   // Brief pause to let TCP flush the event

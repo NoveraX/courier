@@ -15,6 +15,7 @@ function createEntry(overrides?: Partial<SSERegistryEntry>): SSERegistryEntry {
     lastEventAt: 0,
     abort: vi.fn(),
     send: vi.fn(() => true),
+    notify: vi.fn(() => true),
     ...overrides,
   };
 }
@@ -28,8 +29,8 @@ describe("SSE Broadcast", () => {
 
       const ok = registry.send(entry.connectionId, { data: "hello" });
       expect(ok).toBe(true);
-      /* The stream numbers and encodes it, so the ids stay in one sequence. */
-      expect(entry.send).toHaveBeenCalledWith({ data: "hello" }, true);
+      /* The stream encodes it, and gives it only an id of its own. */
+      expect(entry.send).toHaveBeenCalledWith({ data: "hello" });
     });
 
     it("returns false for unknown connection", () => {
@@ -53,7 +54,7 @@ describe("SSE Broadcast", () => {
       const event = { event: "update", data: { x: 1 }, id: "custom-42" };
       registry.send(entry.connectionId, event);
 
-      expect(entry.send).toHaveBeenCalledWith(event, true);
+      expect(entry.send).toHaveBeenCalledWith(event);
     });
   });
 

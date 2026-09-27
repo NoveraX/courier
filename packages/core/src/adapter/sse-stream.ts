@@ -1,11 +1,11 @@
 import { createLogger } from "../logger";
 import { describeFailure } from "../realtime/describe-failure";
-import type { SSEContext, SSEEvent, SSEHandler } from "../realtime/types";
+import type { SSEContext, SSEHandler } from "../realtime/types";
 import { abortableEvents } from "../utils/abortable-events";
 import { anySignal } from "../utils/any-signal";
 import { SSE_HEARTBEAT } from "./format-sse";
 import { LIMITS } from "./limits";
-import { createSSESender, type SSESender } from "./sse-sender";
+import { createSSESender } from "./sse-sender";
 import {
   cleanupSSEStream,
   formatStreamEnd,
@@ -40,8 +40,7 @@ export function createSSEStream(
   // `registerPlaygroundAbort`. Cleared in the finally branch.
   let unregisterPlaygroundAbort: (() => void) | undefined;
 
-  const writeEvent = (sender: SSESender, event: SSEEvent<unknown>, mayDrop: boolean): boolean => {
-    const bytes = sender.send(event, mayDrop);
+  const recorded = (bytes: number | false): boolean => {
     if (bytes === false) return false;
     opts.registry.recordEvent(opts.connectionId, bytes);
     return true;
@@ -65,7 +64,8 @@ export function createSSEStream(
           totalBytes: 0,
           lastEventAt: 0,
           abort: () => forceAbort.abort(),
-          send: (event, mayDrop) => writeEvent(sender, event, mayDrop),
+          send: (event) => recorded(sender.broadcast(event)),
+          notify: (frame) => sender.notice(frame),
         });
 
         if (!accepted) {
@@ -92,7 +92,7 @@ export function createSSEStream(
           const generator = handler({ ...ctx, signal: combinedSignal });
           for await (const event of abortableEvents(generator, combinedSignal)) {
             await waitForRoom(sender, combinedSignal);
-            if (combinedSignal.aborted || !writeEvent(sender, event, false)) continue;
+            if (combinedSignal.aborted || !recorded(sender.send(event))) continue;
             opts.dt.onStreamMessage?.({
               requestId: opts.requestId,
               seq: opts.registry.get(opts.connectionId)?.eventCount ?? 0,

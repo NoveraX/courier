@@ -7,10 +7,17 @@ const EVENT_STREAM = "text/event-stream";
 
 /** A response the server refused, with what it said about it. */
 export class SSEResponseError extends Error {
+  /**
+   * @param statusCode - The response's status
+   * @param reason - Its message, or the status text
+   * @param retryAfterMs - How long the server asked the client to wait
+   * @param issues - The schema's issues, when it refused invalid variables
+   */
   constructor(
     readonly statusCode: number,
     readonly reason: string,
     readonly retryAfterMs: number | undefined,
+    readonly issues: readonly unknown[] = [],
   ) {
     super(`SSE connection failed: ${statusCode} ${reason}`);
     this.name = "SSEResponseError";
@@ -47,31 +54,50 @@ export function eventStreamOf(response: Response): ReadableStream<Uint8Array> | 
 }
 
 /**
- * What the server said when it refused: its JSON `message`, or the status text.
+ * What the server said when it refused: its JSON `message`, or the status
+ * text, and the schema's `issues` when it refused invalid variables — which
+ * used to be dropped, so an SSE refusal arrived with none where a WebSocket
+ * or an HTTP one listed them.
  *
  * @param response - A response whose status is not 2xx
  * @returns The refusal, with how long the server asked the client to wait
+ * @example
+ * ```ts
+ * if (!response.ok) throw await refusal(response);
+ * ```
  */
 export async function refusal(response: Response): Promise<SSEResponseError> {
   const retryAfter = Number(response.headers.get("Retry-After"));
   const retryAfterMs =
     Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : undefined;
-  const said = await messageOf(response);
-  return new SSEResponseError(response.status, said ?? response.statusText, retryAfterMs);
+  const said = await bodyOf(response);
+  return new SSEResponseError(
+    response.status,
+    said.message ?? response.statusText,
+    retryAfterMs,
+    said.issues,
+  );
 }
 
-async function messageOf(response: Response): Promise<string | undefined> {
+async function bodyOf(response: Response): Promise<{ message?: string; issues?: unknown[] }> {
   /* A proxy's HTML page or plain text carries no message; the status text serves. */
   if (!response.headers.get("Content-Type")?.includes("json")) {
     await response.body?.cancel();
-    return undefined;
+    return {};
   }
   try {
-    const body = (await response.json()) as { message?: unknown; error?: { message?: unknown } };
-    if (typeof body.message === "string") return body.message;
-    if (typeof body.error?.message === "string") return body.error.message;
+    const body = (await response.json()) as {
+      message?: unknown;
+      issues?: unknown;
+      error?: { message?: unknown };
+    };
+    const message = typeof body.message === "string" ? body.message : body.error?.message;
+    return {
+      ...(typeof message === "string" && { message }),
+      ...(Array.isArray(body.issues) && { issues: body.issues }),
+    };
   } catch (error) {
     log.warn("Could not read the refused SSE response", error);
   }
-  return undefined;
+  return {};
 }

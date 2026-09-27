@@ -129,6 +129,22 @@ describe("a stream the server refused", () => {
     await expect(readAll(url)).rejects.toBeInstanceOf(RealtimeValidationError);
     expect(requests).toBe(1);
   });
+
+  it("rejects with the schema's issues, as a WebSocket refusal carries them", async () => {
+    const url = serve(
+      async function* () {
+        yield { data: "never" };
+      },
+      { room: 42 },
+    );
+
+    const failure = await readAll(url).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(RealtimeValidationError);
+    expect((failure as RealtimeValidationError).issues).toEqual([
+      expect.objectContaining({ path: ["room"] }),
+    ]);
+  });
 });
 
 describe("leaving a for await early", () => {

@@ -1,19 +1,34 @@
 /**
  * Deterministic hash for WS topic qualification.
  * Produces a short hex suffix from variables for topic uniqueness.
+ *
+ * Both ends hash the variables as the subscribe frame carries them — JSON.
+ * The client used to hash the object it was handed, so a key set to
+ * `undefined` (which JSON leaves out) or a `Date` (which JSON turns into a
+ * string) gave it a topic the server never used, and the subscription
+ * received nothing.
  */
 
-/** Sort keys recursively for deterministic serialization */
+/** The variables as they travel: what JSON keeps of them, `undefined` when nothing. */
+function wireForm(value: unknown): unknown {
+  if (value === undefined) return undefined;
+  const json = JSON.stringify(value);
+  return json === undefined ? undefined : (JSON.parse(json) as unknown);
+}
+
+/**
+ * Canonical JSON: object keys sorted so the same variables always read the
+ * same, and strings quoted so that no value can pass for a key and another
+ * value — `{ a: "x,b:y" }` used to read like `{ a: "x", b: "y" }`.
+ */
 function stableStringify(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  if (typeof value !== "object") return String(value);
-  if (Array.isArray(value)) return "[" + value.map(stableStringify).join(",") + "]";
-  const sorted = Object.keys(value as Record<string, unknown>).sort();
-  return (
-    "{" +
-    sorted.map((k) => k + ":" + stableStringify((value as Record<string, unknown>)[k])).join(",") +
-    "}"
-  );
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  const record = value as Record<string, unknown>;
+  const fields = Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`);
+  return `{${fields.join(",")}}`;
 }
 
 /** FNV-1a 32-bit hash -> 8-char hex string */
@@ -26,25 +41,38 @@ function fnv1a(str: string): string {
   return hash.toString(16).padStart(8, "0");
 }
 
-/** Compute deterministic hash from variables */
+/**
+ * Compute a deterministic hash of variables, as they travel on the wire.
+ *
+ * @param variables - Subscription variables
+ * @returns An 8-character hex hash
+ *
+ * @example
+ * hashVariables({ room: "a", nick: undefined }) === hashVariables({ room: "a" }); // true
+ */
 export function hashVariables(variables: unknown): string {
-  const serialized = stableStringify(variables);
-  return fnv1a(serialized);
+  return fnv1a(stableStringify(wireForm(variables) ?? null));
 }
 
 /**
  * Qualify a base topic with a variables hash suffix.
- * Returns `baseTopic` if no variables, or `baseTopic#hash` if variables present.
+ * Returns `baseTopic` when the variables carry nothing on the wire — none,
+ * `null`, or an empty object once undefined fields are left out — and
+ * `baseTopic#hash` otherwise.
+ *
+ * @param baseTopic - The unqualified topic, e.g. `"api.chat.room"`
+ * @param variables - Subscription variables
+ * @returns The qualified topic
+ *
+ * @example
+ * qualifyTopic("api.chat.room", { room: "a" }); // "api.chat.room#…"
+ * qualifyTopic("api.chat.room", { nick: undefined }); // "api.chat.room"
  */
 export function qualifyTopic(baseTopic: string, variables?: unknown): string {
-  if (variables === undefined || variables === null) return baseTopic;
-  if (
-    typeof variables === "object" &&
-    Object.keys(variables as Record<string, unknown>).length === 0
-  ) {
-    return baseTopic;
-  }
-  return `${baseTopic}#${hashVariables(variables)}`;
+  const wire = wireForm(variables);
+  if (wire === undefined || wire === null) return baseTopic;
+  if (typeof wire === "object" && Object.keys(wire).length === 0) return baseTopic;
+  return `${baseTopic}#${fnv1a(stableStringify(wire))}`;
 }
 
 /** Extract base topic and optional hash from a qualified topic */

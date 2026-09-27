@@ -88,7 +88,7 @@ export function previewAddEndpoints(
             Object.values(endpointsToAdd).flat(),
           )
         : genFile.path === layout.indexFile
-          ? appendBarrelExports(existingContent, genFile.content)
+          ? appendBarrelExports(genFile.path, existingContent, genFile.content)
           : existingContent;
     if (merged !== existingContent) files.push(change(merged, "modify"));
   }
@@ -102,6 +102,7 @@ export function previewAddEndpoints(
     const existingSource = existingFiles[sourcePath] ?? "";
     if (existingSource) {
       const updated = addGroupsToSourceFile(
+        sourcePath,
         existingSource,
         newGroupNames.map((name) => ({
           name,

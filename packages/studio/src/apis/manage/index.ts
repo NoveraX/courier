@@ -5,7 +5,7 @@ export { classifyDiskEndpoint } from "./classify-endpoint";
 export { detectOrphanSchemas } from "./detect-orphan-schemas";
 export { mergeSchemaFiles } from "./merge-schemas";
 export { previewRemoveEndpoints } from "./remove-endpoints";
-export { removeEndpointsFromGroup } from "./remove-from-group";
+export { removeEndpointsFromFile } from "./remove-endpoints-from-file";
 export { removeOrphanSchemas } from "./remove-schemas";
 export type {
   AddResult,

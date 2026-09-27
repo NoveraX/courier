@@ -7,18 +7,17 @@
 import type { ParsedSpec } from "../parser/types";
 
 import { buildGroupEndpoints } from "./inventory-classifier";
-import { buildDiskHashes, buildDiskMap, buildSpecMap } from "./inventory-indexers";
+import { buildDiskMap, buildSpecMap, endpointHashes } from "./inventory-indexers";
 import type { DiskGroupListing, EndpointInventory, InventoryGroup } from "./types";
 
 export function buildEndpointInventory(
   spec: ParsedSpec,
   diskGroups: DiskGroupListing[],
-  fingerprints: Record<string, string>,
+  fingerprints: Record<string, Record<string, string>>,
   existingFiles: Record<string, string>,
 ): EndpointInventory {
   const specMap = buildSpecMap(spec.groups);
   const diskMap = buildDiskMap(diskGroups);
-  const diskHashes = buildDiskHashes(existingFiles);
 
   const allGroupNames = new Set([...specMap.keys(), ...diskMap.keys()]);
   const groups: InventoryGroup[] = [];
@@ -29,12 +28,14 @@ export function buildEndpointInventory(
   for (const groupName of allGroupNames) {
     const specGroup = specMap.get(groupName);
     const diskGroup = diskMap.get(groupName);
+    /* Each group is compared with what Studio recorded for its own file. */
+    const file = diskGroup?.file;
     const endpoints = buildGroupEndpoints(
       groupName,
       specGroup,
       diskGroup,
-      fingerprints,
-      diskHashes,
+      file === undefined ? {} : (fingerprints[file] ?? {}),
+      file === undefined ? {} : endpointHashes(existingFiles[file]),
     );
     const isCustomGroup = endpoints.length > 0 && endpoints.every((e) => e.status === "custom");
 

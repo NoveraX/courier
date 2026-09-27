@@ -1,14 +1,21 @@
 /**
- * Add or remove group imports/entries from an existing source.ts file.
- *
- * Operates on source file text — no I/O.
+ * Add or remove groups in an import's grouped `source.ts`, reading it as
+ * code: only the group entries and their imports change.
  */
 
-/* `import { pets } from "./pets/index";`, or with an alias, `import { pets as group_pets } …`. */
-const IMPORT_RE = /^import\s+\{\s*(\w+)(?:\s+as\s+\w+)?\s*\}\s+from\s+"\.\/[^"]+";$/;
-const GROUPS_OPEN_RE = /^\s*groups:\s*\{/;
-/* `    pets,`, or with an alias, `    pets: group_pets,`. */
-const GROUP_ENTRY_RE = /^\s{4}(\w+)(?::\s*\w+)?,?$/;
+import { applyEdits } from "../../server/mocks-edit/plan/apply-edits";
+import { detectStyle } from "../../server/mocks-edit/plan/detect-style";
+import { planImportLines } from "../../server/mocks-edit/plan/import-lines";
+import { planListInsertion } from "../../server/mocks-edit/plan/list-insertion";
+import { collectModuleBindings } from "../../server/mocks-edit/plan/module-bindings";
+import { parseSource } from "../../server/mocks-edit/plan/parse-source";
+import { propertyKeyName } from "../../server/mocks-edit/plan/property-key-name";
+import { quoteString } from "../../server/mocks-edit/plan/quote-string";
+import type { TextEdit } from "../../server/mocks-edit/types";
+import { dropUnusedImports } from "./drop-unused-imports";
+import { planEntryRemoval } from "./entry-removal";
+import { findApiGroups } from "./group-declaration";
+import { UnrecognizedFileError } from "./unrecognized-file-error";
 
 /** A group to add: its name, the name source.ts imports it under, and the module it lives in. */
 export interface SourceGroupImport {
@@ -17,70 +24,102 @@ export interface SourceGroupImport {
   importPath: string;
 }
 
-/** Add new group imports and entries to source file */
+function parsedSource(path: string, content: string) {
+  const parsed = parseSource(path, content);
+  const groups = parsed.problem === null ? findApiGroups(parsed.program) : null;
+  if (groups === null) throw new UnrecognizedFileError(path);
+  return { parsed, groups };
+}
+
+/**
+ * Add groups to a source file: each gets an entry in `groups` and an
+ * import of its module, in the file's own layout and quotes. A group the
+ * file lists already, or a name it binds already, is not added again.
+ *
+ * @param path - The source file, project-relative
+ * @param existingContent - The file as it is
+ * @param newGroups - The groups to add
+ * @returns The file with them
+ * @throws {UnrecognizedFileError} When the file does not parse, or lists no groups
+ */
 export function addGroupsToSourceFile(
+  path: string,
   existingContent: string,
   newGroups: SourceGroupImport[],
 ): string {
   if (newGroups.length === 0) return existingContent;
-
-  const lines = existingContent.split("\n");
-  const result: string[] = [];
-  let addedImports = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i] ?? "";
-    result.push(line);
-
-    // Insert new imports after last import line
-    if (!addedImports && line.startsWith("import") && !(lines[i + 1] ?? "").startsWith("import")) {
-      for (const g of newGroups) {
-        const imported = g.local === g.name ? g.name : `${g.name} as ${g.local}`;
-        result.push(`import { ${imported} } from "${g.importPath}";`);
-      }
-      addedImports = true;
-    }
-
-    // Insert group entries before closing `},` of groups block
-    if (GROUPS_OPEN_RE.test(line)) {
-      while (i + 1 < lines.length) {
-        i++;
-        const nextLine = lines[i] ?? "";
-        if (nextLine.trim().startsWith("},") || nextLine.trim() === "}") {
-          for (const g of newGroups) {
-            result.push(g.local === g.name ? `    ${g.name},` : `    ${g.name}: ${g.local},`);
-          }
-          result.push(nextLine);
-          break;
-        }
-        result.push(nextLine);
-      }
-    }
-  }
-
-  return result.join("\n");
+  const { parsed, groups } = parsedSource(path, existingContent);
+  const listed = new Set(
+    groups.properties.flatMap((p) =>
+      p.type === "Property" && !p.computed ? [propertyKeyName(p.key)] : [],
+    ),
+  );
+  const adding = newGroups.filter((group) => !listed.has(group.name));
+  if (adding.length === 0) return existingContent;
+  const bindings = collectModuleBindings(parsed.program);
+  const style = detectStyle(parsed, groups);
+  const statements = adding
+    .filter((group) => !bindings.has(group.local))
+    .map((group) => {
+      const clause = group.local === group.name ? group.name : `${group.name} as ${group.local}`;
+      const text = `import { ${clause} } from ${quoteString(group.importPath, style.quote)}`;
+      return style.semicolons ? `${text};` : text;
+    });
+  const list = { open: groups.start, close: groups.end - 1, items: groups.properties };
+  const site = {
+    text: existingContent,
+    comments: parsed.comments,
+    commentEnds: parsed.commentEnds,
+    style,
+    singleLineFile: false,
+  };
+  const entries = () =>
+    adding.map((group) =>
+      group.local === group.name ? group.name : `${group.name}: ${group.local}`,
+    );
+  const edits: TextEdit[] = [...planListInsertion(list, site, entries)];
+  const lines = planImportLines(parsed, statements, style);
+  if (lines !== null) edits.push(lines.edit);
+  return applyEdits(
+    existingContent,
+    edits.sort((a, b) => a.start - b.start),
+  );
 }
 
-/** Remove group imports and entries from source file */
-export function removeGroupsFromSourceFile(existingContent: string, groupNames: string[]): string {
+/**
+ * Remove groups from a source file: their entries in `groups` go, and so do
+ * the imports only those entries used.
+ *
+ * @param path - The source file, project-relative
+ * @param existingContent - The file as it is
+ * @param groupNames - The groups to remove
+ * @returns The file without them
+ * @throws {UnrecognizedFileError} When the file does not parse, or lists no groups
+ */
+export function removeGroupsFromSourceFile(
+  path: string,
+  existingContent: string,
+  groupNames: string[],
+): string {
   if (groupNames.length === 0) return existingContent;
-
-  const removeSet = new Set(groupNames);
-  const lines = existingContent.split("\n");
-  const result: string[] = [];
-
-  for (const line of lines) {
-    // Skip import lines for removed groups
-    const importMatch = line.match(IMPORT_RE);
-    if (importMatch?.[1] && removeSet.has(importMatch[1])) continue;
-
-    // Skip group entries for removed groups
-    const entryMatch = line.match(GROUP_ENTRY_RE);
-    if (entryMatch?.[1] && removeSet.has(entryMatch[1])) continue;
-
-    // Skip JSDoc comments for removed groups (look-ahead)
-    result.push(line);
-  }
-
-  return result.join("\n");
+  const { parsed, groups } = parsedSource(path, existingContent);
+  const removing = new Set(groupNames);
+  const indices = new Set<number>();
+  const locals = new Set<string>();
+  groups.properties.forEach((property, at) => {
+    if (
+      property.type !== "Property" ||
+      property.computed ||
+      !removing.has(propertyKeyName(property.key) ?? "")
+    )
+      return;
+    indices.add(at);
+    if (property.value.type === "Identifier") locals.add(property.value.name);
+  });
+  if (indices.size === 0) return existingContent;
+  const without = applyEdits(
+    existingContent,
+    planEntryRemoval(parsed, groups.properties, groups.start, indices),
+  );
+  return dropUnusedImports(path, without, locals);
 }

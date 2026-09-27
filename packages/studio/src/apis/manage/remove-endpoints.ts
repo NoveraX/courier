@@ -4,7 +4,7 @@
 
 import type { ImportLayout } from "../layout";
 import { removeBarrelExports } from "./remove-barrel-exports";
-import { removeEndpointsFromGroup } from "./remove-from-group";
+import { removeEndpointsFromFile } from "./remove-endpoints-from-file";
 import { collectGroupDeletions, collectModifiedWarnings, findGroupFile } from "./remove-helpers";
 import { processOrphanSchemas } from "./remove-orphans";
 import type { RemoveResult } from "./types";
@@ -15,14 +15,14 @@ import { removeGroupsFromSourceFile } from "./update-source-file";
  *
  * @param endpointsToRemove - Map of groupName -> endpointName[] to remove
  * @param existingFiles - Map of filePath -> content for files on disk
- * @param fingerprints - Stored endpoint fingerprints
+ * @param fingerprints - Stored endpoint fingerprints, by file
  * @param layout - Where the import's files are
  * @returns RemoveResult with modified files, deleted files, and warnings
  */
 export function previewRemoveEndpoints(
   endpointsToRemove: Record<string, string[]>,
   existingFiles: Record<string, string>,
-  fingerprints: Record<string, string>,
+  fingerprints: Record<string, Record<string, string>>,
   layout: ImportLayout,
 ): RemoveResult {
   const modifiedFiles: Array<{ path: string; content: string }> = [];
@@ -32,7 +32,14 @@ export function previewRemoveEndpoints(
   const deletedGroupNames: string[] = [];
 
   // Check for user-modified endpoints being removed
-  collectModifiedWarnings(endpointsToRemove, fingerprints, existingFiles, modifiedEndpointsWarning);
+  collectModifiedWarnings(
+    endpointsToRemove,
+    fingerprints,
+    existingFiles,
+    layout,
+    modifiedEndpointsWarning,
+  );
+  const removedCode = new Map<string, string[]>();
 
   // Process each group
   for (const [groupName, endpointNames] of Object.entries(endpointsToRemove)) {
@@ -40,7 +47,12 @@ export function previewRemoveEndpoints(
     if (!groupPath) continue;
 
     const content = existingFiles[groupPath] ?? "";
-    const result = removeEndpointsFromGroup(content, endpointNames);
+    const { content: result, removedCode: code } = removeEndpointsFromFile(
+      groupPath,
+      content,
+      endpointNames,
+    );
+    removedCode.set(groupName, code);
 
     if (result === null) {
       // All endpoints removed — delete entire group
@@ -53,14 +65,14 @@ export function previewRemoveEndpoints(
 
     // Collect fingerprints to remove
     for (const name of endpointNames) {
-      if (fingerprints[name]) removedFingerprints.push(name);
+      if (fingerprints[groupPath]?.[name]) removedFingerprints.push(name);
     }
   }
 
   // Handle orphaned schemas
   const orphanedSchemas = processOrphanSchemas(
     layout,
-    endpointsToRemove,
+    removedCode,
     existingFiles,
     modifiedFiles,
     deletedFiles,
@@ -91,8 +103,9 @@ function withoutGroups(
       layout.groupSpecifier(group, "types"),
     ]),
   );
-  const barrel = index === undefined ? undefined : removeBarrelExports(index, modules);
-  const sourceFile = source && removeGroupsFromSourceFile(source, groups);
+  const barrel =
+    index === undefined ? undefined : removeBarrelExports(layout.indexFile, index, modules);
+  const sourceFile = source && removeGroupsFromSourceFile(layout.sourceFile, source, groups);
   return {
     ...(sourceFile && { sourceFileUpdate: { path: layout.sourceFile, content: sourceFile } }),
     ...(barrel !== undefined &&

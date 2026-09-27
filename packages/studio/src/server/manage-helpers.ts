@@ -7,6 +7,7 @@ import type { ParsedSpec } from "../apis";
 import { computeSpecHash } from "../apis";
 import { type ImportLayout, resolveImportLayout } from "../apis/layout";
 import { buildEndpointInventory } from "../apis/manage";
+import { FLAT_GROUP, flatSpec, isFlatImport } from "../apis/manage/flat-import";
 import type { DiskGroupListing, EndpointInventory } from "../apis/manage/types";
 import { extractEndpoints } from "../apis/merge/extract-endpoints";
 import { importBodies } from "./import-files/import-bodies";
@@ -51,7 +52,9 @@ export function handleInventory(
   const diskGroups = scanSourceGroups(layout, existingFiles);
   const fingerprints = manageFingerprints(state, existingFiles);
 
-  const inventory = buildEndpointInventory(spec, diskGroups, fingerprints, existingFiles);
+  /* A flat import lists its endpoints in one group, as its source.ts holds them. */
+  const listed = isFlatImport(entry) ? flatSpec(spec) : spec;
+  const inventory = buildEndpointInventory(listed, diskGroups, fingerprints, existingFiles);
   inventory.specChanged = computeSpecHash(spec) !== (state?.specHash ?? "");
 
   return inventory;
@@ -61,8 +64,6 @@ export function handleInventory(
 
 /* How a group file names its group, with or without a type on the binding. */
 const GROUP_BINDING = /^export const (\w+)\s*(?::[^=]+)?=\s*defineGroup\(/m;
-/* The group an import generated as one flat group is written under. */
-const FLAT_GROUP = "api";
 
 /**
  * Derive the per-group endpoint listing for an import from the generated
@@ -81,7 +82,7 @@ function scanSourceGroups(
     if (name === undefined) continue;
     const endpointNames = Object.keys(extractEndpoints(content));
     if (endpointNames.length === 0) continue;
-    groups.push({ name, prefix: "", endpoints: endpointNames });
+    groups.push({ name, prefix: "", endpoints: endpointNames, file: path });
   }
   return groups;
 }

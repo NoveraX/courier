@@ -15,6 +15,8 @@ export interface DiskGroupListing {
   name: string;
   prefix: string;
   endpoints: string[];
+  /** The file declaring the group's endpoints, project-relative. */
+  file: string;
 }
 
 // ── Endpoint Classification ──────────────────────────────────────────────────

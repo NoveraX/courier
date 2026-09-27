@@ -1,9 +1,10 @@
 import { CourierError } from "@noverax/courier";
 
 /**
- * Studio cannot find, in a file it would add endpoints to, the declaration
- * holding them: the file was reshaped by hand. Nothing is written. Answered
- * 409: the endpoints are added by hand, or the import is written again.
+ * Studio cannot find, in a file whose endpoints it would change, the
+ * declaration holding them: the file does not parse, or was reshaped by
+ * hand. Nothing is written. Answered 409: the endpoints are changed by
+ * hand, or the import is written again.
  *
  * @example
  * ```ts
@@ -19,7 +20,7 @@ export class UnrecognizedFileError extends CourierError<"FILE_NOT_RECOGNIZED"> {
    */
   constructor(path: string) {
     super(
-      `Studio cannot find the endpoints in ${path} to add to. Add the endpoints there by hand, or write the import again.`,
+      `Studio cannot find the endpoints in ${path}. Change them there by hand, or write the import again.`,
       { code: "FILE_NOT_RECOGNIZED", context: { path } },
     );
   }

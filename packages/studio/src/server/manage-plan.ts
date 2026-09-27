@@ -2,6 +2,8 @@ import type { ParsedSpec } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import { type ImportLayout, resolveImportLayout } from "../apis/layout";
 import { previewAddEndpoints, previewRemoveEndpoints } from "../apis/manage";
+import { FLAT_GROUP, isFlatImport, specSelection } from "../apis/manage/flat-import";
+import { previewRemoveFlatEndpoints } from "../apis/manage/remove-flat-endpoints";
 import type { AddResult, RemoveResult } from "../apis/manage/types";
 import { checkDirOverlap } from "./check-dir-overlap";
 import type { FilePlan } from "./import-files/file-plan-types";
@@ -52,22 +54,28 @@ export function planManage(
   const layout = resolveImportLayout(declared, body.name);
   checkDirOverlap(body.name, layout.dir, imports);
   const onDisk = importBodies(root, layout.dir);
-  const adding = Object.keys(body.toAdd).length > 0;
-  const addResult = adding
-    ? previewAddEndpoints(
-        body.spec,
-        body.toAdd,
-        { ...declared, selectedEndpoints: body.toAdd },
-        onDisk,
-        layout,
-      )
-    : undefined;
-  const afterAdd = { ...onDisk, ...contentsOf(addResult) };
-  const removeResult =
-    Object.keys(body.toRemove).length > 0
-      ? previewRemoveEndpoints(body.toRemove, afterAdd, manageFingerprints(entry, onDisk), layout)
+  const flat = isFlatImport(declared);
+  /* A flat import's one group is picked from as a whole; the generator selects by the spec's groups. */
+  const toAdd = flat ? specSelection(body.spec, body.toAdd[FLAT_GROUP] ?? []) : body.toAdd;
+  const addResult =
+    Object.keys(toAdd).length > 0
+      ? previewAddEndpoints(
+          body.spec,
+          toAdd,
+          { ...declared, selectedEndpoints: toAdd },
+          onDisk,
+          layout,
+        )
       : undefined;
-  const request = managePlanRequest(layout, body.toRemove, addResult, removeResult, entry);
+  const afterAdd = { ...onDisk, ...contentsOf(addResult) };
+  const fingerprints = manageFingerprints(entry, onDisk);
+  const removeResult = !Object.values(body.toRemove).some((names) => names.length > 0)
+    ? undefined
+    : flat
+      ? previewRemoveFlatEndpoints(body.toRemove[FLAT_GROUP] ?? [], afterAdd, fingerprints, layout)
+      : previewRemoveEndpoints(body.toRemove, afterAdd, fingerprints, layout);
+  const fileOf = (group: string): string => (flat ? layout.sourceFile : layout.groupFile(group));
+  const request = managePlanRequest(layout, body.toRemove, addResult, removeResult, entry, fileOf);
   return {
     ...(addResult && { addResult }),
     ...(removeResult && { removeResult }),

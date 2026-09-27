@@ -16,6 +16,7 @@ export interface SpecGroupInfo {
 export interface DiskGroupInfo {
   prefix: string;
   endpoints: string[];
+  file: string;
 }
 
 export function buildSpecMap(groups: ParsedGroup[]): Map<string, SpecGroupInfo> {
@@ -36,18 +37,20 @@ export function buildSpecMap(groups: ParsedGroup[]): Map<string, SpecGroupInfo> 
 export function buildDiskMap(groups: DiskGroupListing[]): Map<string, DiskGroupInfo> {
   const map = new Map<string, DiskGroupInfo>();
   for (const g of groups) {
-    map.set(g.name, { prefix: g.prefix, endpoints: g.endpoints });
+    map.set(g.name, { prefix: g.prefix, endpoints: g.endpoints, file: g.file });
   }
   return map;
 }
 
-export function buildDiskHashes(existingFiles: Record<string, string>): Record<string, string> {
+/**
+ * Hash each endpoint of one file, by endpoint name.
+ *
+ * @param content - The file, or `undefined` when there is none
+ * @returns The hash of each endpoint's code
+ */
+export function endpointHashes(content: string | undefined): Record<string, string> {
   const hashes: Record<string, string> = {};
-  for (const content of Object.values(existingFiles)) {
-    const eps = extractEndpoints(content);
-    for (const [name, code] of Object.entries(eps)) {
-      hashes[name] = computeHash(code);
-    }
-  }
+  for (const [name, code] of Object.entries(extractEndpoints(content ?? "")))
+    hashes[name] = computeHash(code);
   return hashes;
 }

@@ -41,14 +41,11 @@ export const buildResponse = (
       : response.data;
   }
 
-  const baseResult = {
-    status: response.status,
-    headers: filterResponseHeaders(response.headers),
-  };
-
-  const data = response.rawData ? { ...baseResult, data: response.data } : response.data;
-
   if (context?.res instanceof Response) {
+    const baseResult = {
+      status: response.status,
+      headers: filterResponseHeaders(response.headers),
+    };
     /* JSON has no Headers, so the raw envelope carries them as a plain
        object; serialized as they were, they arrived as `{}`. */
     const body = response.rawData
@@ -63,6 +60,14 @@ export const buildResponse = (
   if (response.throw) {
     throw response.throw;
   }
+
+  /* The allowlist keeps what an upstream sends away from a browser on the
+     other side of the proxy. A direct caller is not on the other side — it
+     made the request — and filtering its `.raw` took away the pagination
+     headers, the content type and the cookies it was reading. */
+  const data = response.rawData
+    ? { status: response.status, headers: response.headers, data: response.data }
+    : response.data;
 
   if (response.data !== undefined) {
     return data;

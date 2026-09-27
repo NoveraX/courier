@@ -120,6 +120,42 @@ describe("createCourierServer", () => {
       expect(res.status).toBe(403);
     });
 
+    it("allows the request headers a configured origin's preflight asks for", async () => {
+      server = await startServer({ allowedOrigins: ["http://example.com"] });
+
+      const res = await fetch(`${server.url}/api/request`, {
+        method: "OPTIONS",
+        headers: {
+          Origin: "http://example.com",
+          "Access-Control-Request-Method": "GET",
+          "Access-Control-Request-Headers": "x-custom-allowed,x-request-id",
+        },
+      });
+
+      expect(res.status).toBe(204);
+      const allowed = (res.headers.get("access-control-allow-headers") ?? "")
+        .split(",")
+        .map((name) => name.trim().toLowerCase());
+      expect(allowed).toEqual(expect.arrayContaining(["x-custom-allowed", "x-request-id"]));
+      expect(res.headers.get("vary")).toMatch(/access-control-request-headers/i);
+    });
+
+    it("grants no header name that is not a valid token", async () => {
+      server = await startServer({ allowedOrigins: ["http://example.com"] });
+
+      const res = await fetch(`${server.url}/api/request`, {
+        method: "OPTIONS",
+        headers: {
+          Origin: "http://example.com",
+          "Access-Control-Request-Method": "POST",
+          "Access-Control-Request-Headers": "content-type, bad name, x-trace(1)",
+        },
+      });
+
+      expect(res.status).toBe(204);
+      expect(res.headers.get("access-control-allow-headers")).toBe("content-type");
+    });
+
     it("blocks non-OPTIONS requests from disallowed origin", async () => {
       server = await startServer({ allowedOrigins: ["http://trusted.com"] });
 

@@ -175,8 +175,8 @@ Courier caches compiled path functions for performance. Each unique path string 
 // no matter how many times they are called with different variables.
 ```
 
-<Callout variant="warning" title="Missing path params">
-If a required path parameter is not provided by either `pathOptions` or variables, the `:paramName` placeholder remains in the URL. Always ensure all path parameters are covered.
+<Callout variant="warning" title="Missing and unsafe path params">
+A path parameter that neither `pathOptions` nor the variables provide, or that is `undefined` or `null`, fails the call with an `HTTPError` 400 "Missing required parameter" before any request is made. So does a value of `""`, `"."` or `".."`: each would address a different route than the endpoint declares — `..` one level up, even when encoded — so it is refused rather than sent. Any other value, including the word `"undefined"`, is encoded into its segment as it is.
 </Callout>
 
 ## Next Steps

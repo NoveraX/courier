@@ -218,6 +218,19 @@ describe("applyFilePlan", () => {
     expect(read(`${DIR}/index.ts`)).toBe("hand-written\n");
   });
 
+  it("removes the import's folder once every group folder in it has gone", () => {
+    const paths = [`${DIR}/index.ts`, `${DIR}/a/index.ts`, `${DIR}/b/index.ts`];
+    for (const path of paths) put(path, signed(`${path}\n`));
+    const recorded = Object.fromEntries(paths.map((path) => [path, { sha256: bodyHash(`${path}\n`) }]));
+    const plan = planFiles(root, { importName: "pets", dir: DIR, targets: [], removals: paths }, recorded);
+
+    const report = applyFilePlan(root, plan, () => {});
+
+    expect(report.pruneFailures).toEqual([]);
+    expect(existsSync(join(root.path, DIR))).toBe(false);
+    expect(existsSync(join(root.path, "src/api"))).toBe(true);
+  });
+
   it("copies what it replaces where the file system has no hard links", () => {
     vi.mocked(linkSync).mockImplementation(() => {
       throw Object.assign(new Error("EPERM: injected"), { code: "EPERM" });

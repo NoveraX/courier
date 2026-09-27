@@ -1,5 +1,5 @@
 import { lstatSync, rmdirSync } from "node:fs";
-import { dirname, relative } from "node:path";
+import { dirname, relative, sep } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { errnoCode } from "../errno-code";
 import { isWithin } from "../project-fs/is-within";
@@ -28,25 +28,22 @@ export function pruneEmptyDirs(
   bound: string,
   removed: readonly string[],
 ): PruneFailure[] {
-  const failures: PruneFailure[] = [];
-  const tried = new Set<string>();
+  const candidates = new Set<string>();
   for (const file of removed) {
-    let dir = dirname(file);
     /* Up to the import's own folder, which goes too once it is empty; never above it. */
-    while ((dir === bound || isWithin(bound, dir)) && !tried.has(dir)) {
-      tried.add(dir);
-      const outcome = tryRemove(dir);
-      if (outcome === "kept") break;
-      if (outcome !== "removed") {
-        failures.push({ path: relative(root, dir), code: outcome });
-        log.warn(
-          `Studio could not remove the emptied directory ${relative(root, dir)} (${outcome})`,
-        );
-        break;
-      }
+    for (let dir = dirname(file); dir === bound || isWithin(bound, dir); dir = dirname(dir)) {
+      candidates.add(dir);
       if (dir === bound) break;
-      dir = dirname(dir);
     }
+  }
+  /* Deepest first, so each folder is tried once, after the folders in it. */
+  const ordered = [...candidates].sort((a, b) => b.split(sep).length - a.split(sep).length);
+  const failures: PruneFailure[] = [];
+  for (const dir of ordered) {
+    const outcome = tryRemove(dir);
+    if (outcome === "removed" || outcome === "kept") continue;
+    failures.push({ path: relative(root, dir), code: outcome });
+    log.warn(`Studio could not remove the emptied directory ${relative(root, dir)} (${outcome})`);
   }
   return failures;
 }

@@ -9,12 +9,12 @@ import { parseSync } from "oxc-parser";
 import { describe, expect, it } from "vitest";
 
 import { resolveImportLayout } from "../src/apis/layout";
-import { appendBarrelExports } from "../src/apis/manage/append-barrel-exports";
 import { buildEndpointInventory } from "../src/apis/manage/build-inventory";
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { previewRemoveEndpoints } from "../src/apis/manage/remove-endpoints";
 import { detectOrphanSchemas } from "../src/apis/manage/detect-orphan-schemas";
-import { removeBarrelExports } from "../src/apis/manage/remove-barrel-exports";
+import { removeOrphanSchemas } from "../src/apis/manage/remove-schemas";
+import { rebuildBarrel } from "../src/apis/manage/rebuild-barrel";
 import { removeEndpointsFromFile } from "../src/apis/manage/remove-endpoints-from-file";
 import { addGroupsToSourceFile, removeGroupsFromSourceFile } from "../src/apis/manage/update-source-file";
 import { generateFingerprints } from "../src/apis/merge/fingerprint";
@@ -106,113 +106,197 @@ describe("groups in a source file", () => {
   });
 });
 
-describe("the barrel", () => {
-  it("drops and adds re-exports whatever quotes they are written with", () => {
-    const barrel = "export * from './users/schemas';\nexport * from './pets/schemas';\n";
-
-    const dropped = removeBarrelExports("src/api/pets/index.ts", barrel, new Map([["./users/schemas", null]]));
-    const added = appendBarrelExports(
-      "src/api/pets/index.ts",
-      dropped,
-      'export * from "./users/schemas";\nexport * from "./pets/schemas";\n',
-      () => undefined,
-    );
-
-    expect(dropped).toBe("export * from './pets/schemas';\n");
-    expect(added).toBe("export * from './pets/schemas';\nexport * from \"./users/schemas\";\n");
-  });
-});
-
-describe("the barrel, as a removal leaves a module", () => {
-  it("keeps only the names a rewritten module still exports, in the list's own spelling", () => {
-    const barrel = 'export * from "./pets/schemas";\nexport { OrderSchema, type Order, TagSchema } from "./store/schemas";\n';
-
-    const narrowed = removeBarrelExports(
-      "src/api/shop/index.ts",
-      barrel,
-      new Map([["./store/schemas", "export const TagSchema = z.object({});\nexport type Order = {};\n"]]),
-    );
-
-    expect(narrowed).toBe('export * from "./pets/schemas";\nexport { type Order, TagSchema } from "./store/schemas";\n');
+describe("rebuildBarrel", () => {
+  const layout = resolveImportLayout({ outputDir: "src/api" }, "shop");
+  const SOURCE = [
+    'import { defineApi } from "@noverax/courier/define";',
+    'import { alpha } from "./alpha/index";',
+    'import { gamma } from "./gamma/index";',
+    'import { misc } from "./misc/index";',
+    "",
+    'export const shop = defineApi({ baseURL: "/", groups: { alpha, gamma, misc } });',
+    "",
+  ].join("\n");
+  const HEAD = 'import { createCaller } from "@noverax/courier";\nimport { shop } from "./source";\n\nexport const shopApi = createCaller(shop);\n\n';
+  const schema = (...names: string[]) =>
+    names.map((n) => `export type ${n} = { id?: string };\nexport const ${n}Schema = z.object({});\n`).join("");
+  const files = (barrel: string, modules: Record<string, string>) => ({
+    [layout.sourceFile]: SOURCE,
+    [layout.indexFile]: barrel,
+    ...Object.fromEntries(Object.entries(modules).map(([dir, text]) => [`src/api/shop/${dir}.ts`, text])),
   });
 
-  it("drops a list none of whose names its module still exports, and leaves an `export *` of it", () => {
-    const barrel = 'export * from "./pets/schemas";\nexport { OrderSchema } from "./store/schemas";\n';
-    const changed = new Map([
-      ["./store/schemas", "export const TagSchema = z.object({});\n"],
-      ["./pets/schemas", "export const PetSchema = z.object({});\n"],
-    ]);
+  it("re-exports each module whole, or by the names no earlier one exports, in the order of the groups", () => {
+    const barrel = rebuildBarrel(layout, files(HEAD, { "alpha/schemas": schema("A", "Pet"), "gamma/schemas": schema("Pet", "Order"), "misc/schemas": schema("Order") }), false);
 
-    expect(removeBarrelExports("src/api/shop/index.ts", barrel, changed)).toBe('export * from "./pets/schemas";\n');
-  });
-});
-
-describe("the barrel, adding a group whose schemas share names with one already there", () => {
-  const MODULES: Record<string, string> = {
-    "src/api/shop/pets/schemas.ts": "export const PetSchema = z.object({});\nexport type Pet = z.infer<typeof PetSchema>;\n",
-    "src/api/shop/store/schemas.ts":
-      "export const PetSchema = z.object({});\nexport type Pet = z.infer<typeof PetSchema>;\nexport const OrderSchema = z.object({});\nexport type Order = z.infer<typeof OrderSchema>;\n",
-    "src/api/shop/tags/schemas.ts": "export const PetSchema = z.object({});\nexport type Pet = z.infer<typeof PetSchema>;\n",
-  };
-  const textOf = (path: string): string | undefined => MODULES[path];
-
-  it("re-exports only the names no module re-exported before exports", () => {
-    const added = appendBarrelExports(
-      "src/api/shop/index.ts",
-      'export * from "./pets/schemas";\n',
-      'export * from "./store/schemas";\n',
-      textOf,
-    );
-
-    expect(added).toBe(
-      'export * from "./pets/schemas";\nexport { OrderSchema, type Order } from "./store/schemas";\n',
+    expect(barrel).toBe(
+      `${HEAD}export * from "./alpha/schemas";\nexport { type Order, OrderSchema } from "./gamma/schemas";\n`,
     );
   });
 
-  it("adds nothing for a module every name of which the barrel already exports", () => {
-    const barrel = 'export * from "./pets/schemas";\n';
+  it("writes the lines again in place, whatever quotes they had, dropping those of modules gone", () => {
+    const old = `${HEAD}export * from './users/schemas';\nexport * from './alpha/schemas';\n// mine\nexport const extra = 1;\n`;
 
-    expect(appendBarrelExports("src/api/shop/index.ts", barrel, 'export * from "./tags/schemas";\n', textOf)).toBe(
-      barrel,
-    );
+    const barrel = rebuildBarrel(layout, files(old, { "alpha/schemas": schema("A") }), false);
+
+    expect(barrel).toBe(`${HEAD}export * from "./alpha/schemas";\n// mine\nexport const extra = 1;\n`);
   });
 
-  it("counts a name listed by an earlier re-export, and one of the groups being added", () => {
-    const added = appendBarrelExports(
-      "src/api/shop/index.ts",
-      'export { PetSchema, type Pet } from "./pets/schemas";\n',
-      'export * from "./tags/schemas";\nexport * from "./store/schemas";\n',
-      textOf,
-    );
+  it("gives a module's list the names it gained, and a module another loses a name to its line back", () => {
+    const old = `${HEAD}export * from "./alpha/schemas";\nexport { OrderSchema, type Order } from "./gamma/schemas";\n`;
 
-    expect(added).toBe(
-      'export { PetSchema, type Pet } from "./pets/schemas";\nexport { OrderSchema, type Order } from "./store/schemas";\n',
-    );
+    const grown = rebuildBarrel(layout, files(old, { "alpha/schemas": schema("Pet"), "gamma/schemas": schema("Pet", "Order", "Fresh") }), false);
+    const shrunk = rebuildBarrel(layout, files(old, { "alpha/schemas": schema("A"), "gamma/schemas": schema("Pet", "Order") }), false);
+
+    expect(grown).toContain('export { type Order, OrderSchema, type Fresh, FreshSchema } from "./gamma/schemas";');
+    expect(shrunk).toContain('export * from "./gamma/schemas";');
+  });
+
+  it("keeps a line the user wrote, and counts its names", () => {
+    const old = `${HEAD}export * from "./alpha/schemas";\nexport type { Order } from "./gamma/schemas";\nexport { PetSchema as MyPet } from "./gamma/schemas";\nexport * from "./extras/types";\n`;
+    const modules = { "alpha/schemas": schema("A"), "gamma/schemas": schema("Order", "Pet"), "extras/types": "export type A = { custom: true };\n" };
+
+    const barrel = rebuildBarrel(layout, files(old, modules), false) ?? "";
+
+    expect(barrel).toContain("export type { Order } from \"./gamma/schemas\";");
+    expect(barrel).toContain("export { PetSchema as MyPet } from \"./gamma/schemas\";");
+    expect(barrel).toContain('export * from "./extras/types";');
+    expect(barrel).toContain('export { OrderSchema, type Pet, PetSchema } from "./gamma/schemas";');
+    expect(barrel).not.toContain('export * from "./alpha/schemas";');
+    expect(barrel).toContain('export { ASchema } from "./alpha/schemas";');
+  });
+
+  it("re-exports a flat import's schemas file again once it is back", () => {
+    const flat = { ...files(HEAD, { schemas: schema("X") }) };
+    delete flat[layout.sourceFile];
+
+    expect(rebuildBarrel(layout, flat, true)).toBe(`${HEAD}export * from "./schemas";\n`);
   });
 });
 
 describe("detectOrphanSchemas", () => {
-  it("keeps a type a schema that stays is written with", () => {
-    const schemas = [
-      "export type FindParams = { status: string };",
-      "export const FindParamsSchema = z.object({ status: z.string() }) satisfies z.ZodType<FindParams>;",
-      "",
-    ].join("\n");
+  const PARAMS = [
+    "export type FindParams = { status: string };",
+    "export const FindParamsSchema = z.object({ status: z.string() }) satisfies z.ZodType<FindParams>;",
+    "",
+  ].join("\n");
 
-    expect(detectOrphanSchemas(schemas, "", "find: endpoint.get<FindParams>('/find'),")).toEqual([]);
-  });
-
-  it("drops a schema and the type it is written with once neither is used", () => {
-    const schemas = [
-      "export type FindParams = { status: string };",
-      "export const FindParamsSchema = z.object({ status: z.string() }) satisfies z.ZodType<FindParams>;",
-      "",
-    ].join("\n");
-
-    expect(detectOrphanSchemas(schemas, "", "find: endpoint.get('/find').query(FindParamsSchema),").sort()).toEqual([
+  it("drops a type and the schema written for it together, whichever of them the endpoint used", () => {
+    expect(detectOrphanSchemas(PARAMS, "", ["find: endpoint.get<FindParams>('/find')"])).toEqual([
       "FindParams",
       "FindParamsSchema",
     ]);
+    expect(detectOrphanSchemas(PARAMS, "", ["find: endpoint.get('/find').query(FindParamsSchema)"])).toEqual([
+      "FindParams",
+      "FindParamsSchema",
+    ]);
+  });
+
+  it("keeps a type a schema of the user's that stays is written with", () => {
+    const schemas = `${PARAMS}export const MineSchema = z.object({}) satisfies z.ZodType<FindParams>;\n`;
+
+    expect(detectOrphanSchemas(schemas, "", ["find: endpoint.get<FindParams>('/find')"])).toEqual([]);
+  });
+
+  it("keeps an enum's type while an endpoint left uses its schema", () => {
+    const schemas = [
+      'export const StatusSchema = z.enum(["a", "b"]);',
+      "export type Status = z.infer<typeof StatusSchema>;",
+      "export type Order = { status?: Status };",
+      "export const OrderSchema = z.object({ status: StatusSchema.optional() }) satisfies z.ZodType<Order>;",
+      "",
+    ].join("\n");
+    const remaining = "export const g = defineGroup({ endpoints: { s: endpoint.get('s').response(StatusSchema) } });";
+
+    expect(detectOrphanSchemas(schemas, remaining, ["o: endpoint.get('o').response(OrderSchema)"])).toEqual([
+      "Order",
+      "OrderSchema",
+    ]);
+  });
+
+  it("counts an endpoint whose name starts with import as code that uses schemas", () => {
+    const schemas = "export type Pet = { name?: string };\nexport const PetSchema = z.object({}) satisfies z.ZodType<Pet>;\n";
+    const remaining = [
+      'import { PetSchema } from "./schemas";',
+      "export const pets = defineGroup({",
+      "  endpoints: {",
+      '    importPets: endpoint.post("import").variables(PetSchema).response(PetSchema),',
+      "  },",
+      "});",
+    ].join("\n");
+
+    expect(detectOrphanSchemas(schemas, remaining, ['getPet: endpoint.get(":id").response(PetSchema)'])).toEqual([]);
+  });
+
+  it("is not thrown off by a bracket in a description", () => {
+    const schemas = [
+      "export type Txn = {",
+      "  /** Its id (see the docs */",
+      "  id?: string;",
+      "};",
+      "",
+      "export const TxnSchema = z.object({ id: z.string().optional() }) satisfies z.ZodType<Txn>;",
+      "",
+      "export type Auth = { id?: string };",
+      "export const AuthSchema = z.object({ id: z.string().optional() }) satisfies z.ZodType<Auth>;",
+      "",
+    ].join("\n");
+    const remaining = "export const g = defineGroup({ endpoints: { t: endpoint.get('t').response(TxnSchema) } });";
+
+    const orphans = detectOrphanSchemas(schemas, remaining, ["a: endpoint.get('a').response(AuthSchema)"]);
+    const cleaned = removeOrphanSchemas(schemas, orphans);
+
+    expect(orphans).toEqual(["Auth", "AuthSchema"]);
+    expect(cleaned).toContain("export const TxnSchema");
+    expect(cleaned).toContain("/** Its id (see the docs */");
+    expect(cleaned).not.toContain("Auth");
+  });
+
+  it("removes nothing when the endpoints left do not parse", () => {
+    expect(detectOrphanSchemas(PARAMS, "export const = ;", ["find: endpoint.get<FindParams>('/find')"])).toEqual([]);
+  });
+});
+
+describe("removeOrphanSchemas", () => {
+  const CYCLIC = [
+    'import { type } from "arktype";',
+    'import type * as ark from "arktype";',
+    "",
+    "/* Set by the last line of this file. */",
+    "let declared = false;",
+    "",
+    "/** Refer to a schema on the same reference cycle, read only while validating. */",
+    "function lazy(base: ark.Type, resolve: () => (value: unknown) => unknown) {",
+    "  return base.narrow(() => declared && resolve() !== undefined);",
+    "}",
+    "",
+    "export const PetSchema = type({ name: \"string\" });",
+    "",
+    "export const NodeSchema: ark.Type<unknown> = type({ next: lazy(type(\"object\"), () => NodeSchema) });",
+    "",
+    "declared = true;",
+    "",
+  ].join("\n");
+
+  it("takes away ArkType's cycle helper and its import with the last schema on a cycle", () => {
+    const cleaned = removeOrphanSchemas(CYCLIC, ["NodeSchema"]) ?? "";
+
+    expect(cleaned).toContain("export const PetSchema");
+    expect(cleaned).not.toMatch(/lazy|declared|ark\b/);
+    expect(cleaned).toContain('import { type } from "arktype";');
+  });
+
+  it("keeps the helper while a schema on a cycle stays", () => {
+    const cleaned = removeOrphanSchemas(CYCLIC, ["PetSchema"]) ?? "";
+
+    expect(cleaned).toContain("function lazy(");
+    expect(cleaned).toContain("let declared = false;");
+    expect(cleaned).toContain("declared = true;");
+    expect(cleaned).not.toContain("PetSchema");
+  });
+
+  it("gives null when no declaration is left", () => {
+    expect(removeOrphanSchemas(CYCLIC, ["PetSchema", "NodeSchema"])).toBeNull();
   });
 });
 

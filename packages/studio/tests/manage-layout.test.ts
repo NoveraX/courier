@@ -7,6 +7,7 @@
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { parseSync } from "oxc-parser";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { generateCode } from "../src/apis/generator";
@@ -126,9 +127,7 @@ describe("previewAddEndpoints with schemas two groups share", () => {
 
     const barrel = result.indexFileUpdate?.content ?? "";
     expect(barrel).not.toContain("./pets/schemas");
-    expect(barrel).toMatch(/export \{ [^}]*\bPetSchema\b[^}]*\} from "\.\/store\/schemas";/);
-    expect(barrel).toMatch(/export \{ [^}]*\btype Pet\b[^}]*\} from "\.\/store\/schemas";/);
-    expect(barrel).toMatch(/export \{ [^}]*\bOrderSchema\b[^}]*\} from "\.\/store\/schemas";/);
+    expect(barrel).toContain('export * from "./store/schemas";');
   });
 });
 
@@ -199,8 +198,9 @@ describe("removing a group whose re-export carried names other groups share", ()
   const layout = resolveImportLayout(options, "shop");
   const existing = () =>
     Object.fromEntries(generateCode(SPEC_SHARED, options, "shop").map((file) => [file.path, file.content]));
+  /* Re-exported whole, or listed by name. */
   const listing = (module: string, name: string) =>
-    new RegExp(`export \\{[^}]*\\b${name}\\b[^}]*\\} from "\\./${module}/schemas";`);
+    new RegExp(`export (\\*|\\{[^}]*\\b${name}\\b[^}]*\\}) from "\\./${module}/schemas";`);
 
   it("gives a module with no line of its own a line for the names it still exports", () => {
     const files = existing();
@@ -222,6 +222,49 @@ describe("removing a group whose re-export carried names other groups share", ()
     expect(barrel).not.toContain("OrderSchema");
     expect(barrel).toMatch(listing("shop", "PetSchema"));
     expect(barrel).toMatch(listing("misc", "ToySchema"));
+  });
+});
+
+describe("previewAddEndpoints of a schema on a cycle, with ArkType", () => {
+  const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
+  const ok = (schema: object) => ({ "200": { description: "ok", content: { "application/json": { schema } } } });
+  const SPEC_CYCLE = parseSpec(
+    JSON.stringify({
+      openapi: "3.1.0",
+      info: { title: "Shop", version: "1" },
+      paths: {
+        "/k": { get: { operationId: "getK", tags: ["kappa"], responses: ok(ref("K")) } },
+        "/n": { get: { operationId: "getN", tags: ["kappa"], responses: ok(ref("N")) } },
+      },
+      components: {
+        schemas: {
+          K: { type: "object", properties: { id: { type: "string" } } },
+          N: { type: "object", properties: { next: ref("N"), id: { type: "string" } } },
+        },
+      },
+    }),
+  );
+
+  it("brings the cycle helper and arms it after the schemas, as a full write does", () => {
+    const options = { type: "openapi" as const, outputDir: "src/api", validation: "arktype" as const };
+    const layout = resolveImportLayout(options, "shop");
+    const existing = Object.fromEntries(
+      generateCode(SPEC_CYCLE, { ...options, selectedEndpoints: { kappa: ["getK"] } }, "shop").map((file) => [
+        file.path,
+        file.content,
+      ]),
+    );
+    expect(existing[layout.groupSchemaFile("kappa", "schemas")]).not.toContain("lazy");
+
+    const result = previewAddEndpoints(SPEC_CYCLE, { kappa: ["getN"] }, options, existing, layout);
+
+    const schemas = result.files.find((file) => file.path === layout.groupSchemaFile("kappa", "schemas"))?.content ?? "";
+    expect(parseSync("schemas.ts", schemas).errors).toEqual([]);
+    expect(schemas).toContain('import type * as ark from "arktype";');
+    expect(schemas).toContain("function lazy(");
+    expect(schemas.indexOf("function lazy(")).toBeLessThan(schemas.indexOf("export const NSchema"));
+    expect(schemas.trimEnd().endsWith("declared = true;")).toBe(true);
+    expect(schemas).toContain("export const KSchema");
   });
 });
 

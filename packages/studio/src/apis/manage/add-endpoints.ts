@@ -10,12 +10,11 @@ import type { ImportLayout } from "../layout";
 import { declaresEndpoints } from "../merge/declares-endpoints";
 import { generateFingerprints } from "../merge/fingerprint";
 import type { ParsedSpec } from "../parser/types";
-import { appendBarrelExports } from "./append-barrel-exports";
 import { appendEndpointsToGroup } from "./append-to-group";
 import { exportedNames } from "./exported-names";
 import { listedSelection } from "./listed-selection";
 import { mergeSchemaFiles } from "./merge-schemas";
-import { settleStarExports } from "./settle-star-exports";
+import { rebuildBarrel } from "./rebuild-barrel";
 import { sourceWithNewGroups } from "./source-with-new-groups";
 import type { AddResult, FileChange } from "./types";
 
@@ -65,7 +64,7 @@ export function previewAddEndpoints(
     // Schema file — merge new schemas
     if (genFile.path.endsWith("/schemas.ts") || genFile.path.endsWith("/types.ts")) {
       const schemaNames = Object.keys(fps).length > 0 ? [] : extractSchemaNames(genFile.content);
-      const merged = mergeSchemaFiles(existingContent, genFile.content, schemaNames);
+      const merged = mergeSchemaFiles(genFile.path, existingContent, genFile.content, schemaNames);
       if (merged !== existingContent) files.push(change(merged, "modify"));
       continue;
     }
@@ -103,18 +102,15 @@ export function previewAddEndpoints(
         : existingContent;
     if (merged !== existingContent) files.push(change(merged, "modify"));
   }
-  /* Last, so it sees every schemas file as the other changes leave it. */
+  const sourceFileUpdate = sourceWithNewGroups(endpointsToAdd, options, existingFiles, layout);
+  /* Last, from every file as the other changes leave it. */
   if (barrel !== undefined) {
     const { existing, change } = barrel;
-    const textAt = (path: string): string | undefined =>
-      files.find((file) => file.path === path)?.content ?? existingFiles[path];
-    const index = generated.find((file) => file.path === layout.indexFile)?.content ?? "";
-    const appended = appendBarrelExports(layout.indexFile, existing, index, textAt);
-    const merged = settleStarExports(layout.indexFile, appended, textAt);
-    if (merged !== existing) files.push(change(merged, "modify"));
+    const final = { ...existingFiles, ...contentsOf(files) };
+    if (sourceFileUpdate) final[sourceFileUpdate.path] = sourceFileUpdate.content;
+    const rebuilt = rebuildBarrel(layout, final, options.groupBy === "single");
+    if (rebuilt !== undefined && rebuilt !== existing) files.push(change(rebuilt, "modify"));
   }
-
-  const sourceFileUpdate = sourceWithNewGroups(endpointsToAdd, options, existingFiles, layout);
 
   return { files, sourceFileUpdate, newFingerprints };
 }
@@ -135,4 +131,8 @@ function endpointsToAddForFile(
 
 function extractSchemaNames(content: string): string[] {
   return [...exportedNames(parseSource("schemas.ts", content).program.body).keys()];
+}
+
+function contentsOf(files: readonly FileChange[]): Record<string, string> {
+  return Object.fromEntries(files.map((file) => [file.path, file.content]));
 }

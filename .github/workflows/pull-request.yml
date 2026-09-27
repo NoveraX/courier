@@ -1,0 +1,40 @@
+name: Pull request
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+    branches: [master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # A squash merge writes the title, or a single commit's subject, as the
+  # commit header and appends " (#<number>)". Nothing else checks that header
+  # before it lands on master.
+  title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint the squash-merge header
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          COMMITS: ${{ github.event.pull_request.commits }}
+        run: |
+          subject=""
+          if [ "$COMMITS" = 1 ]; then
+            subject=$(git log -1 --format=%s HEAD)
+          fi
+          bash scripts/lint-pr-title.sh "$TITLE" "$NUMBER" "$subject"

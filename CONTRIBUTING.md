@@ -25,6 +25,7 @@ in the same order.
 ```bash
 npm run build
 npx biome check packages/
+npm run check:names
 npx tsc --noEmit
 npx turbo run typecheck --filter=@noverax/courier-studio-ui
 npm test
@@ -96,7 +97,12 @@ trailers `Co-authored-by`, `Co-developed-by`, `Signed-off-by`, `Reviewed-by`,
 `Change-Id` and `Link`.
 
 The commit-msg hook checks the type and its emoji, the length, the case of
-the description, the trailing period and the footer rule.
+the description, the trailing period and the footer rule. CI checks the same
+on a pull request's commits, and on master on every commit since the last
+release; it also refuses `fixup!`, `squash!` and `amend!` commits that were
+never folded in. A pull request is checked for the header its squash merge
+will get: the title, or the subject of its only commit, followed by
+`(#<number>)`.
 
 Breaking changes take a `!` after the type or scope, and a
 `BREAKING CHANGE:` footer explaining what a user has to do:

@@ -18,11 +18,29 @@ import { nodeRequestBody } from "./node-request-body";
  * and kept its generator, its upstream subscription and its connection slot
  * until the lifetime cap — 30 minutes by default.
  *
+ * Some hosts read every body themselves before a route runs — NestJS's
+ * global JSON parser, or Nitro's in-process fetch, which never streams at
+ * all. Such an adapter passes `keptBody`, which is asked for what the host
+ * kept only once the stream turns out to be spent. A spent stream with
+ * nothing kept is still refused, with a message that names the cause.
+ *
  * @param nodeReq - The incoming request
  * @param nodeRes - Its response, whose early close aborts the request
+ * @param keptBody - The body the host already read, when it kept one
  * @returns The equivalent Web Standard Request
+ *
+ * @example
+ * ```ts
+ * const request = toWebRequest(req, res, () =>
+ *   req.rawBody instanceof Uint8Array ? Uint8Array.from(req.rawBody) : undefined,
+ * );
+ * ```
  */
-export function toWebRequest(nodeReq: IncomingMessage, nodeRes?: ServerResponse): Request {
+export function toWebRequest(
+  nodeReq: IncomingMessage,
+  nodeRes?: ServerResponse,
+  keptBody?: () => BodyInit | null | undefined,
+): Request {
   const { protocol, host = "localhost" } = addressedTo(nodeReq);
   const url = new URL(nodeReq.url ?? "/", `${protocol}://${host}`);
 
@@ -44,7 +62,9 @@ export function toWebRequest(nodeReq: IncomingMessage, nodeRes?: ServerResponse)
        before the proxy route runs. `new Request` then throws undici's "body
        object should not be disturbed or locked", which says nothing about the
        middleware that did it. */
-    if (nodeReq.readableEnded || nodeReq.readableDidRead) {
+    const spent = nodeReq.readableEnded || nodeReq.readableDidRead;
+    const kept = spent ? keptBody?.() : undefined;
+    if (spent && kept === undefined) {
       throw new ConfigurationError(
         "REQUEST_BODY_ALREADY_READ",
         [
@@ -60,7 +80,15 @@ export function toWebRequest(nodeReq: IncomingMessage, nodeRes?: ServerResponse)
       );
     }
 
-    init.body = nodeRequestBody(nodeReq);
+    if (kept === undefined) {
+      init.body = nodeRequestBody(nodeReq);
+    } else {
+      /* What the host kept can differ in length from what was sent — a parsed
+         body serialized again — so the length the client declared no longer
+         describes it. */
+      headers.delete("content-length");
+      init.body = kept;
+    }
     init.duplex = "half";
   }
 

@@ -72,3 +72,43 @@ describe("a request whose body something already read", () => {
     expect(() => toWebRequest(incoming("GET", "", true))).not.toThrow();
   });
 });
+
+describe("a request whose body the host read and kept", () => {
+  it("carries the kept body in place of the spent stream", async () => {
+    const request = toWebRequest(incoming("POST", '{"a":1}', true), undefined, () => '{"a":1}');
+
+    expect(await request.json()).toEqual({ a: 1 });
+  });
+
+  it("drops the declared length, which no longer describes the kept body", () => {
+    const sent = incoming("POST", '{ "a": 1 }', true);
+    sent.headers["content-length"] = "10";
+
+    const request = toWebRequest(sent, undefined, () => '{"a":1}');
+
+    expect(request.headers.get("content-length")).toBeNull();
+  });
+
+  it("still refuses when the host kept nothing", () => {
+    expect(() => toWebRequest(incoming("POST", "{}", true), undefined, () => undefined)).toThrow(
+      /body parser/i,
+    );
+  });
+
+  it("reads the stream, and never asks, while the stream is still there", async () => {
+    let asked = false;
+    const request = toWebRequest(incoming("POST", '{"a":2}'), undefined, () => {
+      asked = true;
+      return "{}";
+    });
+
+    expect(await request.json()).toEqual({ a: 2 });
+    expect(asked).toBe(false);
+  });
+
+  it("takes an empty kept body as an empty body", async () => {
+    const request = toWebRequest(incoming("POST", "", true), undefined, () => null);
+
+    expect(await request.text()).toBe("");
+  });
+});

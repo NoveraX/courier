@@ -1,5 +1,5 @@
 import { createLogger } from "../logger";
-import { getConnection } from "./caller-ws";
+import { acquireConnection } from "./caller-ws";
 import { createConnectionState } from "./connection-state";
 import type { RealtimeError } from "./errors";
 import { forwardConnectionStatus } from "./forward-status";
@@ -30,7 +30,8 @@ export function executeWSChannel<TSend, TReceive>(
   config?: Partial<WSConnectionConfig>,
 ): WSChannel<TSend, TReceive> {
   const qTopic = qualifyTopic(topic, variables);
-  const conn = getConnection(url, config);
+  const lease = acquireConnection(url, config);
+  const conn = lease.connection;
   const state = createConnectionState();
   const dataHandlers = new Set<(data: TReceive) => void>();
   const errorHandlers = new Set<(error: RealtimeError) => void>();
@@ -43,6 +44,7 @@ export function executeWSChannel<TSend, TReceive>(
     ended = true;
     stop?.();
     stop = undefined;
+    lease.release();
     if (early.length > 0) {
       log.warn(`${early.length} message(s) not sent: the channel ${qTopic} closed first`);
       early.length = 0;

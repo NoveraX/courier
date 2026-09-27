@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { courier } from "../src/define/courier";
-import { getConnection } from "../src/realtime/caller-ws";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
@@ -83,7 +82,7 @@ describe("a message sent right after opening a channel", () => {
     await settle(150);
     const statuses: string[] = [];
     const rejoined = new Promise<void>((resolve) => {
-      const stop = getConnection(served!.url).onStatusChange((status) => {
+      const stop = ch.on("status", (status) => {
         statuses.push(status);
         if (status !== "connected") return;
         stop();

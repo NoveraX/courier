@@ -21,6 +21,9 @@ export const LIMITS = {
   /** Max total bytes an outbound reconnect queue will buffer (1 MB) */
   MAX_QUEUE_BYTES: 1_048_576,
 
+  /** How long a pooled client socket nothing uses any more stays open for the next user (1 s) */
+  WS_IDLE_CLOSE_MS: 1_000,
+
   /** Max inbound messages per second per WS connection (token bucket) */
   MAX_MESSAGES_PER_SECOND: 100,
 

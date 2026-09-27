@@ -123,7 +123,7 @@ export type BaseOptions = MergeOptions &
     bodySerializer?: (data: Record<string, unknown>) => BodyInit;
     /** Custom search params serializer with stringify/parse methods */
     searchParamsSerializer?: SearchParamsSerializer;
-    /** Deduplicate identical in-flight GET requests — defaults to false */
+    /** Cancel an in-flight read when the same endpoint is read again — defaults to false */
     deduplicate?: boolean;
     /** Middleware pipeline applied to every request in order */
     middleware?: Middleware[];

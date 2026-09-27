@@ -122,7 +122,7 @@ export async function executeRequest(
     );
   }
 
-  const instance = clientForCall(dataSource, context);
+  const instance = clientForCall(dataSource, context, schema?.type);
   if (hasStudio) attachFetchHook(instance, dCtx);
 
   const {

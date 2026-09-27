@@ -26,6 +26,10 @@ Deduplication cancels a request its own user no longer needs, so it runs where o
 On a server the option has no effect, for direct calls and for requests arriving at the proxy alike: there, requests from different users reach the same endpoint under the same key, and one user's request would cancel another's.
 </Callout>
 
+<Callout variant="info" title="Only reads are cancelled">
+Deduplication cancels reads only: endpoints declared with `get` or `head`, or marked `.reads()`. A write that a newer one superseded has usually reached the server and been applied, so cancelling it would tell its caller it failed when it did not — two concurrent creates to one path both complete. A proxy client created with `source` follows the same rule. One created with a `boundary` cannot tell a read from a write, so it cancels by endpoint: enable `deduplicate` there only for a client whose calls are reads.
+</Callout>
+
 ## Deduplication key
 
 The dedup key is computed as `METHOD:origin/path`. The query string and hash are intentionally ignored — this means requests to the same endpoint with different query parameters are treated as duplicates:
@@ -150,7 +154,7 @@ Deduplication is implemented inside the `HttpClient`. Understanding the internal
 ```ts
 // How deduplication works internally:
 
-// 1. Before each request:
+// 1. Before each read:
 //    - Computes dedup key: METHOD:origin/path
 //    - If a request with the same key exists, aborts it (status 499)
 //    - Stores new AbortController in currentExecutingRequests map

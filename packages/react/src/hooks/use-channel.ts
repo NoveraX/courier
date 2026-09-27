@@ -1,7 +1,8 @@
-"use client";
-
 import type { ConnectionStatus, RealtimeError, WSChannel } from "@noverax/courier/realtime";
-import { useCallback, useEffect, useRef, useState } from "react";
+/* A namespace import, not named hooks: the package entry is reachable from
+   Server Components, and Next.js refuses to build a server module that names
+   a client-only hook such as useState among its imports. */
+import * as React from "react";
 
 import type { ChannelResult } from "../types";
 
@@ -54,21 +55,21 @@ export function useChannel<TSend, TReceive>(
 ): ChannelResult<TSend, TReceive> {
   const { variables, enabled = true, onData, onError, onStatusChange } = options ?? {};
 
-  const [lastMessage, setLastMessage] = useState<TReceive | undefined>(undefined);
-  const [status, setStatus] = useState<ConnectionStatus>("disconnected");
-  const [error, setError] = useState<RealtimeError | undefined>(undefined);
+  const [lastMessage, setLastMessage] = React.useState<TReceive | undefined>(undefined);
+  const [status, setStatus] = React.useState<ConnectionStatus>("disconnected");
+  const [error, setError] = React.useState<RealtimeError | undefined>(undefined);
 
   // Stable refs for callbacks — avoids re-connecting on handler identity change
-  const callbacksRef = useRef({ onData, onError, onStatusChange });
+  const callbacksRef = React.useRef({ onData, onError, onStatusChange });
   callbacksRef.current = { onData, onError, onStatusChange };
 
-  const channelRef = useRef<WSChannel<unknown, unknown> | null>(null);
+  const channelRef = React.useRef<WSChannel<unknown, unknown> | null>(null);
 
-  const send = useCallback((data: TSend) => {
+  const send = React.useCallback((data: TSend) => {
     channelRef.current?.send(data);
   }, []);
 
-  const close = useCallback(() => {
+  const close = React.useCallback(() => {
     channelRef.current?.close();
     channelRef.current = null;
   }, []);
@@ -76,7 +77,7 @@ export function useChannel<TSend, TReceive>(
   // Serialize variables for stable dependency tracking
   const variablesKey = JSON.stringify(variables);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!enabled) {
       setStatus("disconnected");
       return;

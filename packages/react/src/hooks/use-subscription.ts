@@ -1,7 +1,8 @@
-"use client";
-
 import type { ConnectionStatus, SSEEvent, SSESubscription } from "@noverax/courier/realtime";
-import { useCallback, useEffect, useRef, useState } from "react";
+/* A namespace import, not named hooks: the package entry is reachable from
+   Server Components, and Next.js refuses to build a server module that names
+   a client-only hook such as useState among its imports. */
+import * as React from "react";
 
 import type { SubscriptionResult } from "../types";
 
@@ -59,18 +60,18 @@ export function useSubscription<TData>(
     onStatusChange,
   } = options ?? {};
 
-  const [data, setData] = useState<TData | undefined>(optimisticData);
-  const [events, setEvents] = useState<SSEEvent<TData>[]>([]);
-  const [status, setStatus] = useState<ConnectionStatus>("disconnected");
-  const [error, setError] = useState<Error | undefined>(undefined);
+  const [data, setData] = React.useState<TData | undefined>(optimisticData);
+  const [events, setEvents] = React.useState<SSEEvent<TData>[]>([]);
+  const [status, setStatus] = React.useState<ConnectionStatus>("disconnected");
+  const [error, setError] = React.useState<Error | undefined>(undefined);
 
   // Stable refs for callbacks — avoids re-subscribing on handler identity change
-  const callbacksRef = useRef({ onData, onError, onStatusChange });
+  const callbacksRef = React.useRef({ onData, onError, onStatusChange });
   callbacksRef.current = { onData, onError, onStatusChange };
 
-  const subRef = useRef<SSESubscription<unknown> | null>(null);
+  const subRef = React.useRef<SSESubscription<unknown> | null>(null);
 
-  const close = useCallback(() => {
+  const close = React.useCallback(() => {
     subRef.current?.close();
     subRef.current = null;
   }, []);
@@ -78,7 +79,7 @@ export function useSubscription<TData>(
   // Serialize variables for stable dependency tracking
   const variablesKey = JSON.stringify(variables);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!enabled) {
       setStatus("disconnected");
       return;

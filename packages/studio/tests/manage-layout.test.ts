@@ -74,6 +74,46 @@ describe("previewAddEndpoints", () => {
   });
 });
 
+describe("previewAddEndpoints with schemas two groups share", () => {
+  const PET = { $ref: "#/components/schemas/Pet" };
+  const ORDER = { $ref: "#/components/schemas/Order" };
+  const ok = (schema: object) => ({ "200": { description: "ok", content: { "application/json": { schema } } } });
+  const SHARED = parseSpec(
+    JSON.stringify({
+      openapi: "3.1.0",
+      info: { title: "Shop", version: "1" },
+      paths: {
+        "/pets": { get: { operationId: "listPets", tags: ["pets"], responses: ok(PET) } },
+        "/orders": { get: { operationId: "listOrders", tags: ["store"], responses: ok(ORDER) } },
+      },
+      components: {
+        schemas: {
+          Pet: { type: "object", properties: { id: { type: "string" } } },
+          Order: { type: "object", properties: { pet: PET } },
+        },
+      },
+    }),
+  );
+
+  it("re-exports the added group's schemas by the names the barrel does not export yet", () => {
+    const options = { type: "openapi" as const, outputDir: "src/api" };
+    const layout = resolveImportLayout(options, "shop");
+    const existing = Object.fromEntries(
+      generateCode(SHARED, { ...options, selectedEndpoints: { pets: ["listPets"] } }, "shop").map((file) => [
+        file.path,
+        file.content,
+      ]),
+    );
+
+    const result = previewAddEndpoints(SHARED, { store: ["listOrders"] }, options, existing, layout);
+
+    const barrel = result.files.find((file) => file.path === layout.indexFile)?.content ?? "";
+    expect(barrel).toContain('export * from "./pets/schemas";');
+    expect(barrel).not.toContain('export * from "./store/schemas";');
+    expect(barrel).toContain('export { type Order, OrderSchema } from "./store/schemas";');
+  });
+});
+
 describe("previewRemoveEndpoints", () => {
   it("finds the group file where the layout puts it", () => {
     const existing = filesOf(null);

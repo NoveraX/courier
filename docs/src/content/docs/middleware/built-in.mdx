@@ -92,7 +92,7 @@ const api = defineApi({
 
 ### With token refresh
 
-When `refreshToken` is provided and the endpoint returns a 401, the middleware calls `refreshToken()`, updates the header, and retries the request automatically:
+When `refreshToken` is provided and the upstream answers 401, the middleware calls `refreshToken()`, updates the header, and sends the request again once. If the new token is refused too, the call rejects with that second 401. Requests refused while a refresh is running wait for it instead of starting their own, so `refreshToken()` runs once for all of them:
 
 ```ts title="lib/sources.ts"
 authMiddleware({

@@ -13,6 +13,7 @@ import { executeRequest } from "./utils/execute";
 import type { RequestPayloadInput } from "./utils/helpers";
 
 export { buildSSECorsHeaders } from "./adapter/format-sse";
+export { type ClientConnection, handleWhileConnected } from "./adapter/handle-while-connected";
 export { createWSHandler } from "./adapter/handle-ws";
 export type { HandlerConfig } from "./adapter/handler-config";
 export { requireSources } from "./adapter/require-sources";

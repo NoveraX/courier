@@ -1,4 +1,4 @@
-import { buildBody, toSearchParams } from "./body-builder";
+import { buildBody, buildSearchParams, toSearchParams } from "./body-builder";
 import { stripPathParams, toHeadersInit } from "./path-params";
 import { overlayHeaders } from "./request-headers";
 import type {
@@ -58,6 +58,7 @@ function buildStandardOptions(
   const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[2] || {};
 
   const directVars = stripPathParams(path, arguments_[1]);
+  const query = { ...searchParameters, ...newSearchParameters };
 
   return {
     ...otherArgumentOptions,
@@ -66,16 +67,27 @@ function buildStandardOptions(
     /* Written by the endpoint's author, not received from a browser, so the
        forwarding allowlist has no say over them. */
     headers: overlayHeaders(boundHeaders, optionHeaders),
-    ...buildBody(
-      method,
-      directVars ?? newVariables,
-      { ...searchParameters, ...newSearchParameters },
-      deps.defaultBody,
-      deps.defaultQueryParams,
-      deps.searchParamsSerializer,
-      deps.bodySerializer,
-    ),
+    /* A body the closure names is the request's body; the variables then only
+       fill the path. Built from them as well, their JSON replaced it. */
+    ...(namesItsBody(otherArgumentOptions)
+      ? buildSearchParams(undefined, query, deps.defaultQueryParams, deps.searchParamsSerializer)
+      : buildBody(
+          method,
+          directVars ?? newVariables,
+          query,
+          deps.defaultBody,
+          deps.defaultQueryParams,
+          deps.searchParamsSerializer,
+          deps.bodySerializer,
+        )),
   };
+}
+
+/** Whether a closure's options carry the request body themselves. */
+function namesItsBody(options: object): boolean {
+  return (
+    ("body" in options && options.body != null) || ("json" in options && options.json !== undefined)
+  );
 }
 
 /** Build fetch options based on HTTP method */

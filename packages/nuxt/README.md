@@ -59,16 +59,20 @@ import type { api } from "~/api/sources"
 // Imported as a type: the API definition — upstream URL, endpoint paths,
 // middleware — stays on the server. An API with streams or channels passes a
 // `boundary` from `defineBoundary` instead (see the proxy-mode docs).
-export const caller = createProxyCaller<typeof api>("api", { proxyPath: { http: "/api/request" } })
+export function useCaller() {
+  // `useAsyncData` runs on the server first, where a bare "/api/request"
+  // has no page to resolve against — so it is made absolute with the origin
+  // of the request being rendered.
+  const { origin } = useRequestURL()
+  return createProxyCaller<typeof api>("api", { proxyPath: { http: `${origin}/api/request` } })
+}
 ```
 
 ```vue
 <script setup lang="ts">
-import { caller } from "~/composables/useCaller"
+const caller = useCaller()
 
-const { data: users } = useAsyncData("users", () =>
-  caller.users.getAll()
-)
+const { data: users } = await useAsyncData("users", () => caller.users.getAll())
 </script>
 
 <template>
@@ -77,6 +81,10 @@ const { data: users } = useAsyncData("users", () =>
   </ul>
 </template>
 ```
+
+During server rendering the call is a request from the server to itself, so it carries none of the browser's cookies. When the upstream needs the user's session, forward it: `createProxyCaller("api", { proxyPath, headers: useRequestHeaders(["cookie"]) })`.
+
+The same route serves SSE streams: point `proxyPath.sse` at it too. WebSocket channels need the standalone Courier server.
 
 ## Server-Side
 

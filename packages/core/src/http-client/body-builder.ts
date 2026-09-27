@@ -132,6 +132,7 @@ export const buildBody = (
   switch (method) {
     case "get":
     case "head":
+    case "options":
     case "del":
       /* With no body to carry them, the defaults a body would have had
          become query values, as the encoding page describes. */

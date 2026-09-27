@@ -57,7 +57,7 @@ endpoint.get("").response<User[]>()
 endpoint.post("").variables(CreateUserSchema).response(UserSchema)
 ```
 
-`.via()` receives `http` — an object with typed HTTP methods (`get`, `post`, `put`, `patch`, `del`, `head`) — and optionally `vars` (the variables).
+`.via()` receives `http` — an object with typed HTTP methods (`get`, `post`, `put`, `patch`, `del`, `head`, `options`) — and optionally `vars` (the variables).
 
 A base can carry what a whole vendor surface shares, so no endpoint repeats it:
 
@@ -79,6 +79,7 @@ http.post("", vars)           // POST /users with JSON body
 http.put(":id", vars)         // PUT /users/5 with JSON body
 http.patch(":id", vars)       // PATCH /users/5 with JSON body
 http.del(":id", vars)         // DELETE /users/5
+http.options(":id", vars)     // OPTIONS /users/5 — what the resource allows
 ```
 
 The third argument takes per-call options. A `body` or `json` named there is sent as the request body, and the variables then only fill the path; its `headers` are sent as written, whatever their name. This is also how a DELETE carries a body, for an API that requires one:

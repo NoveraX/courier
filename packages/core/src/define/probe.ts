@@ -28,6 +28,7 @@ export interface HttpWire {
   patch(path?: string, body?: unknown, options?: MethodOptions<"patch">): WireCall;
   del(path?: string, variables?: unknown, options?: MethodOptions<"del">): WireCall;
   head(path?: string, options?: MethodOptions<"head">): WireCall;
+  options(path?: string, variables?: unknown, options?: MethodOptions<"options">): WireCall;
 }
 
 /** Wire surface offered to a server-sent-events endpoint's closure. */

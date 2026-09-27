@@ -53,7 +53,7 @@ describe("the remove dialog", () => {
     expect(vi.mocked(post)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(post)).toHaveBeenCalledWith("/api/apis/imports/remove/preview", { name: "pets" });
     expect(screen.getByText("src/api/pets/helpers.ts")).toBeTruthy();
-    expect(screen.getByText(/it changed since Studio wrote it/)).toBeTruthy();
+    expect(screen.getByText(/it holds edits of yours/)).toBeTruthy();
     expect(screen.getByText(/courier\.config\.ts imports these files/)).toBeTruthy();
     expect(screen.getByText("imports.pets")).toBeTruthy();
   });
@@ -79,6 +79,24 @@ describe("the remove dialog", () => {
     expect(removal.name).toBeNull();
   });
 
+  it("drops an answer that arrives for an earlier opening of the dialog", async () => {
+    const late = Promise.withResolvers<unknown>();
+    vi.mocked(post)
+      .mockImplementationOnce(() => late.promise)
+      .mockResolvedValueOnce({ plan: { ...PLAN, digest: "plan-b" }, ...NOTES });
+    render(<Harness onRemoved={vi.fn()} />);
+
+    act(() => {
+      void removal.start("a");
+    });
+    act(() => removal.close());
+    await act(() => removal.start("b"));
+    await act(async () => late.resolve({ plan: { ...PLAN, digest: "plan-a" }, ...NOTES }));
+
+    expect(removal.name).toBe("b");
+    expect(removal.consent?.plan.digest).toBe("plan-b");
+  });
+
   it("says it left the files the user did not allow removing", async () => {
     const onRemoved = vi.fn();
     const kept = [{ path: "src/api/pets/pets/index.ts", reason: "unconfirmed" }];
@@ -96,7 +114,10 @@ describe("the remove dialog", () => {
   it("shows the plan as it stands when the files changed since the preview, with nothing allowed", async () => {
     const changed = { ...PLAN, digest: "plan-2" };
     const stale = new StudioRequestError("The files changed.", { error: "The files changed.", code: "PLAN_STALE", plan: changed }, undefined);
-    vi.mocked(post).mockResolvedValueOnce({ plan: PLAN, ...NOTES }).mockRejectedValueOnce(stale);
+    vi.mocked(post)
+      .mockResolvedValueOnce({ plan: PLAN, ...NOTES })
+      .mockRejectedValueOnce(stale)
+      .mockResolvedValueOnce({ plan: changed, ...NOTES, configImports: [] });
     render(<Harness onRemoved={vi.fn()} />);
     await act(() => removal.start("pets"));
     fireEvent.click(screen.getByRole("checkbox"));
@@ -105,6 +126,7 @@ describe("the remove dialog", () => {
 
     expect(removal.consent?.plan.digest).toBe("plan-2");
     expect(removal.consent?.confirmed).toEqual([]);
+    expect(removal.notes?.configImports).toEqual([]);
     expect(screen.getByText("The files changed.")).toBeTruthy();
     expect(removal.name).toBe("pets");
   });

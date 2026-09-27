@@ -1,6 +1,7 @@
 import type { FilePlanSummary } from "./types-file-plan";
 import { KEPT_LABEL, WRITE_LABEL } from "./file-plan-labels";
-import { FilePlanBlocked, FilePlanPending } from "./file-plan-pending";
+import { FilePlanBlocked } from "./file-plan-blocked";
+import { FilePlanPending } from "./file-plan-pending";
 
 interface FilePlanViewProps {
   plan: FilePlanSummary;
@@ -33,9 +34,10 @@ function FileList({ title, rows }: { title: string; rows: Row[] }): React.ReactE
 
 /**
  * What an operation does to an import's files, file by file, as Studio
- * planned it: the files it cannot write, the steps waiting for the user,
- * what it writes, what it removes into the backup and what it leaves as it
- * is. Files already as they would be written are only counted.
+ * planned it: the files it cannot write, the steps waiting for the user —
+ * offered only when nothing blocks the plan — what it writes, what it
+ * removes into the backup and what it leaves as it is. Files already as they
+ * would be written are only counted.
  *
  * @param props.plan - The plan Studio sent
  * @param props.confirmed - The pending steps allowed so far
@@ -58,7 +60,10 @@ export function FilePlanView({ plan, confirmed, onToggle }: FilePlanViewProps): 
   return (
     <div className="space-y-4">
       <FilePlanBlocked blocked={plan.blocked} />
-      <FilePlanPending pending={plan.pending} confirmed={confirmed} onToggle={onToggle} />
+      {/* A plan with files Studio cannot write is not applied, so nothing in it can be allowed. */}
+      {plan.blocked.length === 0 && (
+        <FilePlanPending pending={plan.pending} confirmed={confirmed} onToggle={onToggle} />
+      )}
       <FileList title="Written" rows={writes} />
       <FileList title="Removed, with a copy kept" rows={removals} />
       <FileList title="Left as they are" rows={kept} />

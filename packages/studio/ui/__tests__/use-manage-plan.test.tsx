@@ -126,15 +126,19 @@ describe("applying managed endpoints", () => {
   it("shows the plan as it stands when the files changed, with nothing allowed", async () => {
     const result = await previewed();
     const changed = { ...PLAN, digest: "plan-2" };
-    vi.mocked(post).mockRejectedValueOnce(
-      new StudioRequestError("The files changed.", { error: "The files changed.", code: "PLAN_STALE", plan: changed }, undefined),
-    );
+    vi.mocked(post)
+      .mockRejectedValueOnce(
+        new StudioRequestError("The files changed.", { error: "The files changed.", code: "PLAN_STALE", plan: changed }, undefined),
+      )
+      .mockResolvedValueOnce({ removeResult: { modifiedEndpointsWarning: ["listPets"], orphanedSchemas: [] }, plan: changed });
 
     act(() => result.current.toggleConfirmed("src/api/pets/pets/index.ts"));
     await act(() => result.current.apply());
 
+    expect(vi.mocked(post)).toHaveBeenLastCalledWith("/api/apis/manage/preview", expect.anything());
     expect(result.current.step).toBe("preview");
     expect(result.current.preview?.plan.digest).toBe("plan-2");
+    expect(result.current.preview?.removeResult?.modifiedEndpointsWarning).toEqual(["listPets"]);
     expect(result.current.consent).toEqual({ plan: changed, confirmed: [] });
     expect(result.current.error).toBe("The files changed.");
   });

@@ -9,7 +9,6 @@ export const WRITE_LABEL: Readonly<Record<Exclude<PlannedWriteAction, "unchanged
 
 /** Why a file stays as it is. */
 export const KEPT_LABEL: Readonly<Record<KeptReason, string>> = {
-  edited: "you edited it",
   "not-written-by-studio": "Studio did not write it",
   link: "a link, which Studio never writes through",
   "not-a-file": "not a file",
@@ -30,6 +29,6 @@ export const KEPT_LABEL: Readonly<Record<KeptReason, string>> = {
 export function pendingLabel({ kind, reason }: PlanConfirmation): string {
   const verb = kind === "replace" ? "Replace it" : "Remove it";
   if (reason === "foreign") return `${verb}: Studio did not write it for this import.`;
-  if (reason === "edited") return `${verb}: it changed since Studio wrote it${kind === "replace" ? ", and the edits cannot be kept" : ""}.`;
+  if (reason === "edited") return `${verb}: it holds edits of yours${kind === "replace" ? ", which replacing it loses" : ""}.`;
   return `${verb}: its header says Studio wrote it, but Studio has no record of that.`;
 }

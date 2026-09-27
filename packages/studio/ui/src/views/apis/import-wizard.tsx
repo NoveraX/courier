@@ -1,11 +1,9 @@
 /**
- * Multi-step API import wizard dialog.
- *
- * The footer (`./import-wizard-footer`) and step indicator dots
- * (`./import-wizard-step-dot`) are extracted to sibling files so this
- * shell focuses on routing between the step views. The declare step follows
- * a write only while courier.config lacks part of the import's declaration;
- * the files are written by then, so no step before it can be revisited.
+ * The API import wizard: import a spec, select endpoints, choose options,
+ * preview, write. The declare step follows a write only while courier.config
+ * lacks part of the import's declaration; the files are written by then, so
+ * no step before it can be revisited. The wizard cannot be closed while a
+ * write is under way.
  */
 
 import {
@@ -42,7 +40,7 @@ export function ImportWizard({ wizard }: ImportWizardProps): React.ReactElement 
   const currentIdx = written ? STEPS.length : STEPS.findIndex((s) => s.key === state.step);
 
   return (
-    <Dialog open={wizard.open} onOpenChange={(open) => { if (!open) wizard.close(); }}>
+    <Dialog open={wizard.open} onOpenChange={(open) => { if (!open && !wizard.state.writing) wizard.close(); }}>
       <DialogContent className="p-0 sm:max-w-3xl">
         <DialogHeader className="px-6 pt-5">
           <DialogTitle className="text-balance">Import API</DialogTitle>

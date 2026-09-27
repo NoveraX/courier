@@ -1,9 +1,6 @@
 /**
- * State management hook for the unified manage dialog.
- *
- * Handles inventory loading, endpoint selection, preview, and apply.
- * Inventory loaders live in `./use-manage-loaders` and pure helpers in
- * `./use-manage-helpers`.
+ * The manage dialog's state: the spec, the import's endpoint inventory, the
+ * endpoints picked to add and remove, and the plan previewed for them.
  */
 
 import { useCallback, useState } from "react";
@@ -16,12 +13,8 @@ import type {
   SourceSummary,
 } from "./types";
 import type { PlanConsent } from "./types-file-plan";
-import { appliedMessage, countsOf } from "./applied-notes";
-import { applyManage, previewManage } from "./client-file-changes";
-import { consentBody, consentFor, toggleConfirmed } from "./plan-consent";
-import { readPlanRefusal } from "./plan-refusal";
-import { serializeSets } from "./use-manage-helpers";
 import { useInventoryLoaders } from "./use-manage-loaders";
+import { useManagePlan } from "./use-manage-plan";
 import { type ManageSelection, useManageSelection } from "./use-manage-selection";
 
 export interface UseManageReturn extends Omit<ManageSelection, "reset"> {
@@ -57,11 +50,15 @@ export function useManage(onSuccess?: (message: string) => void): UseManageRetur
   const [importType, setImportType] = useState("");
   const [spec, setSpec] = useState<ParsedSpec | null>(null);
   const [inventory, setInventory] = useState<EndpointInventory | null>(null);
-  const [preview, setPreview] = useState<ManagePreviewResult | null>(null);
-  const [consent, setConsent] = useState<PlanConsent | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { reset, ...selection } = useManageSelection(inventory);
   const { toAdd, toRemove } = selection;
+  const onApplied = useCallback((message: string) => {
+    setOpen(false);
+    onSuccess?.(message);
+  }, [onSuccess]);
+  const plan = useManagePlan({ sourceName, spec, toAdd, toRemove, setStep, setError, onApplied });
+  const { clear } = plan;
 
   const { loadInventory, fetchSpecAndLoadInventory } = useInventoryLoaders({
     setStep,
@@ -76,8 +73,7 @@ export function useManage(onSuccess?: (message: string) => void): UseManageRetur
     setSpec(newSpec ?? null);
     setInventory(null);
     reset();
-    setPreview(null);
-    setConsent(null);
+    clear();
     setError(null);
     setOpen(true);
 
@@ -88,61 +84,12 @@ export function useManage(onSuccess?: (message: string) => void): UseManageRetur
     } else {
       setStep("reupload");
     }
-  }, [loadInventory, fetchSpecAndLoadInventory, reset]);
+  }, [loadInventory, fetchSpecAndLoadInventory, reset, clear]);
 
   const provideSpec = useCallback(async (parsedSpec: ParsedSpec) => {
     setSpec(parsedSpec);
     await loadInventory(sourceName, parsedSpec);
   }, [sourceName, loadInventory]);
-
-  /* The plan shown is dropped at once, so Apply waits for the plan of this selection. */
-  const requestPreview = useCallback(async () => {
-    if (!spec) return;
-    setStep("preview");
-    setPreview(null);
-    setConsent(null);
-    setError(null);
-    try {
-      const result = await previewManage(
-        sourceName,
-        spec,
-        serializeSets(toAdd),
-        serializeSets(toRemove),
-      );
-      setPreview(result);
-      setConsent(consentFor(result.plan));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Preview failed");
-      setStep("inventory");
-    }
-  }, [spec, sourceName, toAdd, toRemove]);
-
-  const apply = useCallback(async () => {
-    if (!spec || consent === null) return;
-    setStep("applying");
-    setError(null);
-    try {
-      const applied = await applyManage(
-        sourceName,
-        spec,
-        serializeSets(toAdd),
-        serializeSets(toRemove),
-        consentBody(consent),
-      );
-      setStep("done");
-      setOpen(false);
-      onSuccess?.(appliedMessage(`Updated ${sourceName}`, countsOf(applied)));
-    } catch (err) {
-      /* The plan as it stands replaces the one shown, so the user allows its steps anew. */
-      const refusal = readPlanRefusal(err);
-      if (refusal) {
-        setPreview((shown) => shown && { ...shown, plan: refusal.plan });
-        setConsent(consentFor(refusal.plan));
-      }
-      setError(err instanceof Error ? err.message : "Apply failed");
-      setStep("preview");
-    }
-  }, [spec, sourceName, toAdd, toRemove, consent, onSuccess]);
 
   const back = useCallback(() => {
     if (step === "preview") setStep("inventory");
@@ -154,11 +101,15 @@ export function useManage(onSuccess?: (message: string) => void): UseManageRetur
     setError(null);
   }, []);
 
-  const toggleStep = useCallback((path: string) => setConsent((c) => c && toggleConfirmed(c, path)), []);
-
   return {
     ...selection,
-    open, step, sourceName, importType, inventory, preview, consent, error,
-    start, provideSpec, requestPreview, apply, toggleConfirmed: toggleStep, back, close,
+    open, step, sourceName, importType, inventory, error,
+    preview: plan.preview,
+    consent: plan.consent,
+    start, provideSpec,
+    requestPreview: plan.requestPreview,
+    apply: plan.apply,
+    toggleConfirmed: plan.toggleConfirmed,
+    back, close,
   };
 }

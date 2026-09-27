@@ -19,13 +19,13 @@ export type FileOwnership =
 export type PlannedWriteAction = "create" | "replace" | "merge" | "unchanged";
 
 /** Why a file the operation touched is left as it is. */
-export type KeptReason = "edited" | "not-written-by-studio" | "link" | "not-a-file" | "unconfirmed";
+export type KeptReason = "not-written-by-studio" | "link" | "not-a-file" | "unconfirmed";
 
 /** A step only the user may allow: replacing or removing a file that is not Studio's untouched own. */
 export interface PlanConfirmation {
   path: string;
   kind: "replace" | "remove";
-  /** `edited`: Studio wrote it and it changed since; `claimed`: only its header says Studio wrote it; `foreign`: Studio did not write it. */
+  /** `edited`: it holds the user's edits; `claimed`: only its header says Studio wrote it; `foreign`: Studio did not write it for this import. */
   reason: "edited" | "claimed" | "foreign";
   /** Whether it is offered ticked. */
   preselected: boolean;

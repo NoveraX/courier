@@ -121,8 +121,9 @@ export function useImport(onWritten?: (message: string) => void): UseImportRetur
       else close();
       onWritten?.(settled.message);
     } catch (err) {
+      /* A refusal with a plan shows it; one without leaves no plan standing that no longer applies. */
       const refusal = readPlanRefusal(err);
-      if (refusal) setState((s) => ({ ...s, consent: consentFor(refusal.plan) }));
+      setState((s) => ({ ...s, consent: refusal ? consentFor(refusal.plan) : null }));
       setError(err instanceof Error ? err.message : "Write failed");
     } finally {
       setState((s) => ({ ...s, writing: false }));

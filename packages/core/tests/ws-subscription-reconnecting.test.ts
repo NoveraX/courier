@@ -6,8 +6,8 @@
  *
  * Before the fix, both `executeWSChannel` and `executeWSPush` filtered the
  * underlying WSConnection's status events to forward only `connected` and
- * `disconnected`. When the very first connect attempt failed (e.g. server
- * rejected the upgrade with `4403 "Origin not allowed"`), the underlying
+ * `disconnected`. When the very first connect attempt failed (e.g. the
+ * server was not reachable yet, closing with 1006), the underlying
  * connection transitioned `connecting → reconnecting → connecting → …`
  * forever. The channel-level state observable by callers stayed pinned at
  * `"connecting"` because `reconnecting` was being dropped on the floor.
@@ -51,7 +51,7 @@ class MockSocket implements WSClientSocket {
     this.readyState = 3;
   }
 
-  fail(code = 4403): void {
+  fail(code = 1006): void {
     this.readyState = 3;
     this.onclose?.({ code } as CloseEvent);
   }
@@ -94,7 +94,7 @@ describe("executeWSChannel — status forwarding", () => {
     channel.on("status", (s) => seen.push(s));
 
     expect(MockSocket.instances).toHaveLength(1);
-    MockSocket.instances[0]!.fail(4403);
+    MockSocket.instances[0]!.fail(1006);
 
     expect(channel.status).toBe("reconnecting");
     expect(seen).toContain("reconnecting");
@@ -116,7 +116,7 @@ describe("executeWSPush — status forwarding", () => {
     sub.on("status", (s) => seen.push(s));
 
     expect(MockSocket.instances).toHaveLength(1);
-    MockSocket.instances[0]!.fail(4403);
+    MockSocket.instances[0]!.fail(1006);
 
     expect(sub.status).toBe("reconnecting");
     expect(seen).toContain("reconnecting");

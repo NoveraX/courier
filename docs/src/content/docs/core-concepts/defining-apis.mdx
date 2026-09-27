@@ -183,6 +183,19 @@ caller.users.getById(vars)    // group: "users", method: "getById"
 caller.posts.create(vars)     // group: "posts", method: "create"
 ```
 
+### Names the client also answers to
+
+A client answers `raw` and `with` itself, and the runtime reads `then`, `toJSON` and `valueOf` from any object. A group or endpoint you declare under one of these names is still reached by it, as long as the client knows the source — `createCaller`, and `createProxyCaller` given `source` or `boundary`:
+
+```ts
+caller.files.raw({ id })      // the endpoint named raw
+caller.files.raw.list()       // .raw still reaches the group's other endpoints
+caller.files.with({ id })     // the endpoint named with; call .with() on the client instead
+caller.then.list()            // a group named then; the client is still not a promise
+```
+
+One name stays out of reach: a flat endpoint named `then` at the root. It would make every awaited client call it, so rename it. A proxy client given only a source name cannot tell a declared member from an accessor, and answers these names itself.
+
 ## Next Steps
 
 - [Caller & Proxy](/docs/core-concepts/caller) — how to call your endpoints

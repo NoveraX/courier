@@ -124,7 +124,12 @@ export const compileUrl = (
     : isFieldRecord(variables)
       ? variables
       : undefined;
-  const pathOptions = { ...generatedPathOptions, ...variablesObject };
+  /* A key `pathOptions` returns is the server's to decide — typically the
+     tenant a session belongs to. Letting a variable of the same name win
+     handed that choice to the caller, and through the proxy the caller is a
+     browser. The key stays the server's even when its value is missing, so
+     the call is refused rather than completed with the caller's value. */
+  const pathOptions = { ...variablesObject, ...generatedPathOptions };
   const pathKeys: Record<string, unknown> = {};
 
   const paramNames = extractParamNames(urlPath);

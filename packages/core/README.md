@@ -180,6 +180,12 @@ const users = defineGroup({
 
 <br />
 
+## Security Defaults
+
+- **`pathOptions` decides its own keys.** A path parameter `pathOptions` returns — a tenant read from the session cookie — cannot be replaced by a caller's variable of the same name, and a missing value refuses the call with a 400. To let the caller choose a path parameter, leave it out of `pathOptions` and declare it in the endpoint's variables.
+
+<br />
+
 ## Testing
 
 ```ts

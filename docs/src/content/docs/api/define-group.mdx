@@ -90,7 +90,7 @@ const tenantUsers = defineGroup({
 ```
 
 <Callout variant="info" title="Path resolution">
-Path options from `defineApi()` are resolved first, then group-level `pathOptions` are merged on top. Group options take precedence for overlapping keys.
+Path options from `defineApi()` are resolved first, then group-level `pathOptions` are merged on top. Group options take precedence for overlapping keys. A caller's variables never replace a key `pathOptions` returns.
 </Callout>
 
 ## Describing an Endpoint

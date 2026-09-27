@@ -118,7 +118,10 @@ export interface PresenceAdapter extends AdapterLifecycle {
   list(topic: string): Promise<PresenceEntry[]>;
   /** Refresh the heartbeat timestamp for a connection */
   heartbeat(topic: string, connectionId: string): Promise<void>;
-  /** Remove entries older than `staleThresholdMs`; returns swept entries */
+  /**
+   * Remove entries whose last heartbeat is more than `staleThresholdMs`
+   * milliseconds ago — a duration, not a timestamp; returns swept entries
+   */
   sweep(topic: string, staleThresholdMs: number): Promise<PresenceEntry[]>;
   /** Subscribe to presence diffs (joins/leaves) on a topic */
   onDiff(topic: string, handler: (diff: PresenceDiff) => void): () => void;

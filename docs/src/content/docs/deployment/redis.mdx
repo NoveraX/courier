@@ -112,9 +112,10 @@ Each topic creates two Redis keys:
 // Client sends heartbeat — updates ZSET score
 await presence.heartbeat("room:general", connectionId)
 
-// Periodic sweep removes stale entries (atomic Lua script)
-const stale = await presence.sweep("room:general", Date.now() - 30_000)
-// stale = [{ connectionId, userId, metadata, joinedAt }]
+// Periodic sweep removes entries without a heartbeat in the last 30 seconds
+// (atomic Lua script). The second argument is a duration, not a timestamp.
+const stale = await presence.sweep("room:general", 30_000)
+// stale = [{ connectionId, userId, metadata, joinedAt, lastSeenAt }]
 ```
 
 ### Diff Events

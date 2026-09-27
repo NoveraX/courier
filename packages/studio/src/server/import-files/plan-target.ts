@@ -44,9 +44,11 @@ export function planTarget(
     target.kind === "derived"
       ? (record?.carriesEdits ?? false) || ownership.endsWith("-edited")
       : body !== target.body;
-  /* Only a generated file is replaced whole; a merged or derived one keeps what the user wrote. */
-  const action =
-    body === disk.body ? "unchanged" : target.kind === "generated" ? "replace" : "merge";
+  /* Only a generated file is replaced whole; a merged or derived one keeps what the user wrote.
+     A file without Studio's header for this import is written even when its text is the same,
+     so that, once the user allows it, the header comes back. */
+  const unchanged = body === disk.body && ownership !== "foreign";
+  const action = unchanged ? "unchanged" : target.kind === "generated" ? "replace" : "merge";
   const write = {
     ...written(target, action, body, ownership),
     carriesEdits,

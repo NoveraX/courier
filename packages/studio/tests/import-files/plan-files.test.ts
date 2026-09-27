@@ -215,6 +215,16 @@ describe("planFiles, for the files an operation wants", () => {
     ]);
   });
 
+  it("writes Studio's header back into a file of the same text that lost it, once the user allows it", () => {
+    put(`${DIR}/index.ts`, "same\n");
+
+    const result = plan([generated(`${DIR}/index.ts`, "same\n")], [], { [`${DIR}/index.ts`]: recordOf("same\n") });
+    const allowed = withConfirmations(result, [`${DIR}/index.ts`]);
+
+    expect(result.pending.map((step) => step.confirmation.reason)).toEqual(["foreign"]);
+    expect(allowed.writes).toMatchObject([{ path: `${DIR}/index.ts`, action: "replace", was: "foreign" }]);
+  });
+
   it.skipIf(IS_WINDOWS)("blocks a target that is a link, or that a directory link leads outside", () => {
     put(`${DIR}/real.ts`, "x\n");
     symlinkSync(join(root.path, `${DIR}/real.ts`), join(root.path, `${DIR}/index.ts`));

@@ -1,4 +1,6 @@
-import { isFormData } from "../utils/helpers";
+import { HTTPError } from "../errors";
+import { isFieldRecord, isRawBody, toBodyInit } from "../utils/body-kind";
+import { isFormData, normalizeHttpMethod } from "../utils/helpers";
 import { toQueryEntries } from "../utils/query-string";
 import type { FetchOptions, HttpMethod, SearchParamsSerializer } from "./types";
 
@@ -11,23 +13,16 @@ export const toSearchParams = (
   return new URLSearchParams(toQueryEntries(variables));
 };
 
-export const stripUndefined = (
-  variables?: FormData | Record<string, unknown>,
-): FormData | Record<string, unknown> | undefined => {
-  if (isFormData(variables)) {
-    for (const key of variables.keys()) {
-      if (variables.get(key) === undefined) {
-        variables.delete(key);
-      }
-    }
-    return variables;
-  }
-
-  if (typeof variables === "object" && variables !== null) {
+/**
+ * Drop the fields whose value is `undefined`, and treat `null` as no
+ * variables at all. Anything that is not a set of named fields — a list, a
+ * scalar, form data, a raw body — is sent whole and returned untouched.
+ */
+export const stripUndefined = (variables: unknown): unknown => {
+  if (isFieldRecord(variables)) {
     return Object.fromEntries(Object.entries(variables).filter(([, v]) => v !== undefined));
   }
-
-  return undefined;
+  return variables ?? undefined;
 };
 
 /**
@@ -63,15 +58,29 @@ export const buildSearchParams = (
   return params ? { searchParams: params } : undefined;
 };
 
+/**
+ * The body a write sends for its variables.
+ *
+ * Named fields are merged over `defaultBody` and serialized; form data and a
+ * raw body are sent as they are; a list or a JSON scalar is sent as JSON on
+ * its own, since there is nothing to merge a default into.
+ */
 export const buildRequestBody = (
-  variables: FormData | Record<string, unknown> | undefined,
+  variables: unknown,
   defaultBody: Record<string, unknown>,
   bodySerializer?: (data: Record<string, unknown>) => BodyInit,
-): Pick<FetchOptions, "body" | "json"> | undefined => {
+): Pick<FetchOptions, "body" | "json" | "duplex"> | undefined => {
   if (isFormData(variables)) {
     filterEmptyFiles(variables);
     return { body: variables };
   }
+  if (isRawBody(variables)) {
+    /* `fetch` refuses a stream body unless it is told the request is sent
+       while the response may already be arriving. */
+    const streamed = typeof ReadableStream !== "undefined" && variables instanceof ReadableStream;
+    return { body: toBodyInit(variables), ...(streamed && { duplex: "half" as const }) };
+  }
+  if (variables !== undefined && !isFieldRecord(variables)) return { json: variables };
 
   const json = { ...defaultBody, ...variables };
   if (Object.keys(json).length === 0) return undefined;
@@ -80,15 +89,35 @@ export const buildRequestBody = (
   return { json };
 };
 
+/**
+ * The named values a read puts in its query string.
+ *
+ * @throws HTTPError 400 for anything else — a list, a scalar or a body has no
+ *   names to put there, and sending the request without it would answer a
+ *   different question than the one asked
+ */
+function queryFields(method: HttpMethod, variables: unknown): Record<string, unknown> | undefined {
+  if (variables === undefined || isFormData(variables)) return undefined;
+  if (isFieldRecord(variables)) return variables;
+  throw new HTTPError({
+    status: 400,
+    headers: new Headers(),
+    data: {
+      success: false,
+      message: `${normalizeHttpMethod(method)} sends its variables in the query string, so they must be an object of named values`,
+    },
+  });
+}
+
 export const buildBody = (
   method: HttpMethod,
-  variables: FormData | Record<string, unknown> | undefined,
+  variables: unknown,
   searchParameters: Record<string, unknown> | undefined,
   defaultBody: Record<string, unknown>,
   defaultQueryParams: Record<string, unknown> | undefined,
   serializer?: SearchParamsSerializer,
   bodySerializer?: (data: Record<string, unknown>) => BodyInit,
-): Pick<FetchOptions, "body" | "json" | "searchParams"> | undefined => {
+): Pick<FetchOptions, "body" | "json" | "duplex" | "searchParams"> | undefined => {
   const cleaned = stripUndefined(variables);
 
   switch (method) {
@@ -97,7 +126,7 @@ export const buildBody = (
     case "get":
     case "del":
       return buildSearchParams(
-        isFormData(cleaned) ? undefined : cleaned,
+        queryFields(method, cleaned),
         searchParameters,
         defaultQueryParams,
         serializer,

@@ -8,7 +8,8 @@ export type RequestPayload = {
   source: string;
   group: string;
   method: string;
-  variables: Record<string, unknown>;
+  /** Named values, a list, a JSON scalar or form data — see `executeRequest`. */
+  variables: unknown;
   options: CallOptions<boolean>;
 };
 
@@ -18,13 +19,13 @@ export const parseRequestPayload = (
   source: FormDataEntryValue | string | undefined;
   group: FormDataEntryValue | string | undefined;
   method: FormDataEntryValue | string | undefined;
-  variables: FormData | Record<string, unknown> | undefined;
+  variables: unknown;
   options: CallOptions<boolean> | undefined;
 } => {
   let source: FormDataEntryValue | string | undefined;
   let group: FormDataEntryValue | string | undefined;
   let method: FormDataEntryValue | string | undefined;
-  let variables: FormData | Record<string, unknown> | undefined;
+  let variables: unknown;
   let options: CallOptions<boolean> | undefined;
 
   if (isFormData(requestPayload)) {

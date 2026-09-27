@@ -20,6 +20,12 @@ import {
 import { validateVariables } from "./execute-validation";
 import { parseRequestPayload, type RequestPayloadInput } from "./request-payload";
 
+/**
+ * What variables may be: named values, a list, a JSON scalar, form data or a
+ * raw body. A function, a symbol or a bigint has no form on the wire.
+ */
+const SENDABLE: ReadonlySet<string> = new Set(["object", "string", "number", "boolean"]);
+
 export async function executeRequest(
   sources: Sources,
   requestPayload: RequestPayloadInput,
@@ -77,8 +83,8 @@ export async function executeRequest(
       fromWire ? notFound : `[${String(source)}]: source not found`,
     );
   }
-  if (variables && typeof variables !== "object") {
-    return buildErrorResponse(context, 400, "[variables] must be an object");
+  if (variables !== undefined && variables !== null && !SENDABLE.has(typeof variables)) {
+    return buildErrorResponse(context, 400, "[variables] must be a JSON value or a request body");
   }
 
   const {
@@ -163,7 +169,7 @@ export async function executeRequest(
         instance,
         endpointGroupOptions: endpointGroup?.options,
         middlewareHeaders: middlewareCtx.headers,
-        variables: middlewareCtx.variables as FormData | Record<string, unknown> | undefined,
+        variables: middlewareCtx.variables,
         forwardVariables,
         baseOptions: withCallerSignal(
           withEndpointTimeout(baseOptions, endpointOptions),

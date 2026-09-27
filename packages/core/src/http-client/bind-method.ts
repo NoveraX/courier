@@ -52,7 +52,7 @@ export function bindMethod(
     ...boundFetchOptions
   } = boundOptions || {};
   const { prefix = "", pathOptions } = groupOptions || {};
-  const cleanedVars = stripUndefined(vars as FormData | Record<string, unknown> | undefined);
+  const cleanedVars = stripUndefined(vars);
 
   return async <TResponse>(...arguments_: MethodParameters<typeof method>) => {
     const commonPathOptions = (await deps.pathOptions?.(deps.context?.req)) || {};

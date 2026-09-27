@@ -31,6 +31,28 @@ await caller.users.getAll({ page: 1, limit: 10 })
 await caller.users.create({ name: "Jane", email: "jane@test.com" })
 ```
 
+## Variables that are not an object
+
+An object's entries fill the path parameters and become the query string or the body. Variables of any other shape are sent whole as the body of a POST, PUT or PATCH:
+
+| Variables | Body sent |
+|-----------|-----------|
+| An array, a string, a number or a boolean | JSON, as it is: `[1,2,3]`, `"text"`, `42` |
+| `FormData` | Multipart, with the browser's boundary |
+| `Blob` or `File` | Its bytes, with its own `type` as the content type |
+| `ArrayBuffer`, `Uint8Array` or any typed array | Its bytes |
+| `ReadableStream` | Streamed as it is read |
+| `URLSearchParams` | `application/x-www-form-urlencoded` |
+
+```ts
+const bulk = endpoint.post("users/bulk").variables<{ name: string }[]>()
+
+// POST /users/bulk  Body: [{"name":"Jane"},{"name":"John"}]
+await caller.users.bulk([{ name: "Jane" }, { name: "John" }])
+```
+
+A GET or DELETE puts its variables in the query string, so they must be an object there; anything else is refused with an `HTTPError` 400 before a request is made. `defaultBody` and `bodySerializer` apply to an object's fields and leave a body of any other shape alone.
+
 ## bodySerializer
 
 Override the default JSON serialization for request bodies. This is useful when your backend expects a different format like `application/x-www-form-urlencoded`, Protocol Buffers, or any custom encoding:

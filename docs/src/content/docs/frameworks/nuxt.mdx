@@ -51,13 +51,13 @@ export default defineNitroPlugin(() => {
 })
 ```
 
-```ts title="server/api/request.post.ts"
+```ts title="server/api/request.ts"
 import { courierHandler } from "@noverax/courier-nuxt"
 
 export default courierHandler()
 ```
 
-The `server/plugins/courier.ts` Nitro plugin runs once at server start, populating the in-process registry that `courierHandler()` reads at request time. The route then proxies incoming `POST /api/request` requests that Courier clients use as the proxy target.
+The `server/plugins/courier.ts` Nitro plugin runs once at server start, populating the in-process registry that `courierHandler()` reads at request time. The route answers every method at `/api/request`, the proxy target Courier clients use: calls arrive as `POST` (or `GET` when a call asks for it), and SSE streams as `GET`.
 
 ## Step 2: Client-side composable
 
@@ -67,18 +67,26 @@ Create a composable using `createProxyCaller` for client-side requests:
 import { createProxyCaller } from "@noverax/courier"
 import type { api } from "~/lib/sources"
 
-export const caller = createProxyCaller<typeof api>("api", {
-  proxyPath: { http: "/api/request" },
-})
+export function useCaller() {
+  // `useAsyncData` runs on the server first, where a bare "/api/request"
+  // has no page to resolve against, so it is made absolute with the origin
+  // of the request being rendered.
+  const { origin } = useRequestURL()
+  return createProxyCaller<typeof api>("api", {
+    proxyPath: { http: `${origin}/api/request` },
+  })
+}
 ```
+
+During server rendering the call is a request from the server to itself, so it carries none of the browser's cookies. When the upstream needs the user's session, forward it with `headers: useRequestHeaders(["cookie"])`.
 
 Use it in your pages and components:
 
 ```vue title="pages/posts.vue"
 <script setup lang="ts">
-import { caller } from "~/composables/useCaller"
+const caller = useCaller()
 
-const { data: posts, status } = useAsyncData("posts", () =>
+const { data: posts, status } = await useAsyncData("posts", () =>
   caller.posts.getAll({ page: 1 })
 )
 </script>
@@ -159,7 +167,7 @@ Handle mutations by calling the proxy caller from client-side event handlers:
 
 ```vue title="pages/posts/create.vue"
 <script setup lang="ts">
-import { caller } from "~/composables/useCaller"
+const caller = useCaller()
 
 const title = ref("")
 const body = ref("")
@@ -196,23 +204,24 @@ For advanced caching and mutation management, consider using `@tanstack/vue-quer
 
 ## Realtime (SSE & WebSocket)
 
-The Nuxt adapter currently exposes **HTTP only**. There is no `courierSSEHandler` or `courierWSAttach` export, on purpose: Nitro/H3's WebSocket layer (`crossws`) is still flagged experimental and its production behavior across deployment targets (`node-server`, `bun`, `cloudflare`, `vercel-edge`) is not yet stable enough to ship as a first-class adapter API. SSE through Nitro works in Node, but pinning the public API to it before WS lands would create a split contract we'd then have to deprecate.
+`courierHandler()` serves SSE streams as well as HTTP calls: a request that asks for `text/event-stream` gets a stream, and the stream ends when its client leaves. Point `proxyPath.sse` at the same route.
 
-**Once Nitro/H3 ship a production-grade WebSocket API**, `courierSSEHandler` and `courierWSAttach` will be added to `@noverax/courier-nuxt` in parallel with the other 5 framework adapters (`express`, `hono`, `fastify`, `nestjs`, `next`).
-
-In the meantime, run a [standalone Courier server](/docs/deployment/standalone-server) alongside Nuxt for any SSE or WebSocket endpoints, and point `proxyPath.{sse,ws}` at it:
+WebSocket channels are not served by the Nuxt adapter: Nitro's WebSocket layer (`crossws`) is still flagged experimental, and its behavior differs across deployment targets (`node-server`, `bun`, `cloudflare`, `vercel-edge`). Run a [standalone Courier server](/docs/deployment/standalone-server) alongside Nuxt for WebSocket endpoints, and point `proxyPath.ws` at it:
 
 ```ts title="composables/useCaller.ts"
 import { createProxyCaller } from "@noverax/courier"
 import type { api } from "~/lib/sources"
 
-export const caller = createProxyCaller<typeof api>("api", {
-  proxyPath: {
-    http: "/api/request",                          // handled by Nuxt
-    sse:  "http://localhost:4400/api/stream",      // handled by standalone server
-    ws:   "ws://localhost:4400/api/ws",            // handled by standalone server
-  },
-})
+export function useCaller() {
+  const { origin } = useRequestURL()
+  return createProxyCaller<typeof api>("api", {
+    proxyPath: {
+      http: `${origin}/api/request`,              // handled by Nuxt
+      sse: `${origin}/api/request`,               // handled by Nuxt
+      ws: "ws://localhost:4400/api/ws",           // handled by standalone server
+    },
+  })
+}
 ```
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
@@ -242,13 +251,13 @@ There is no `localhost:3000` auto-fallback. If `appOrigin` is missing, clicking 
 
 ```
 composables/
-  useCaller.ts              # createProxyCaller<typeof api>("api")
+  useCaller.ts              # useCaller() → createProxyCaller<typeof api>("api")
 lib/
   sources.ts                # defineApi + defineGroup + endpoint
   server-caller.ts          # createCaller(api)
 server/
   api/
-    request.post.ts         # courierHandler()
+    request.ts              # courierHandler()
     dashboard.get.ts        # server-side with createCaller
     posts/[id].get.ts       # dynamic server route
 pages/

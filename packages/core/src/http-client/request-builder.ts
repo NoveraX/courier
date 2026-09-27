@@ -49,7 +49,7 @@ function buildStandardOptions(
   boundHeaders: HeadersInit | undefined,
   boundFetchOptions: Record<string, unknown>,
   prefixUrlOverride: Record<string, unknown>,
-  newVariables: FormData | Record<string, unknown> | undefined,
+  newVariables: unknown,
   newSearchParameters: Record<string, unknown>,
   deps: RequestBuilderDeps,
 ): Partial<FetchOptions> {
@@ -58,10 +58,7 @@ function buildStandardOptions(
 
   const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[2] || {};
 
-  const directVars = stripPathParams(
-    path,
-    arguments_[1] as FormData | Record<string, unknown> | undefined,
-  );
+  const directVars = stripPathParams(path, arguments_[1]);
 
   return {
     ...otherArgumentOptions,
@@ -70,7 +67,7 @@ function buildStandardOptions(
     headers: mergeHeaders(boundHeaders, optionHeaders, deps.allowedHeaders),
     ...buildBody(
       method,
-      (directVars || newVariables) as FormData | Record<string, unknown> | undefined,
+      directVars ?? newVariables,
       { ...searchParameters, ...newSearchParameters },
       deps.defaultBody,
       deps.defaultQueryParams,
@@ -88,7 +85,7 @@ export function buildRequestOptions(
   boundHeaders: HeadersInit | undefined,
   boundFetchOptions: Record<string, unknown>,
   prefixUrlOverride: Record<string, unknown>,
-  newVariables: FormData | Record<string, unknown> | undefined,
+  newVariables: unknown,
   newSearchParameters: Record<string, unknown>,
   deps: RequestBuilderDeps,
 ): Partial<FetchOptions> {

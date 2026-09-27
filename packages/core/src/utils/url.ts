@@ -1,5 +1,6 @@
 import { HTTPError } from "../errors";
 import type { SearchParamsSerializer } from "../http-client/types";
+import { isFieldRecord } from "./body-kind";
 import { isFormData } from "./helpers";
 
 const MULTIPLE_SLASHES = /\/+/g;
@@ -55,12 +56,18 @@ export const resolveBasePath = (
   return { path: pathJoin([prefix, basePath]) };
 };
 
+/**
+ * Fill a path's parameters and split off what is left of the variables.
+ *
+ * Only named values can fill a parameter: a list, a scalar or a raw body is
+ * passed on whole, and the path takes its parameters from `pathOptions`.
+ */
 export const compileUrl = (
   rawUrlPath: string,
-  variables?: FormData | Record<string, unknown>,
+  variables?: unknown,
   generatedPathOptions?: Record<string, unknown>,
   searchParamsSerializer?: SearchParamsSerializer,
-): [string, FormData | Record<string, unknown>, Record<string, unknown>] => {
+): [string, unknown, Record<string, unknown>] => {
   const [urlPath = "", searchParameters] = rawUrlPath.split("?");
   const objectSearchParameters = searchParamsSerializer
     ? searchParamsSerializer.parse(searchParameters || "")
@@ -68,8 +75,10 @@ export const compileUrl = (
 
   const variablesObject = isFormData(variables)
     ? Object.fromEntries(variables.entries())
-    : variables;
-  const newVariables = isFormData(variables) ? variables : { ...variables };
+    : isFieldRecord(variables)
+      ? variables
+      : undefined;
+  const newVariables = isFieldRecord(variables) ? { ...variables } : variables;
   const pathOptions = { ...generatedPathOptions, ...variablesObject };
   const pathKeys: Record<string, string> = {};
 
@@ -78,7 +87,7 @@ export const compileUrl = (
   for (const pathKey of paramNames) {
     if (isFormData(newVariables)) {
       newVariables.delete(pathKey);
-    } else {
+    } else if (isFieldRecord(newVariables)) {
       delete newVariables[pathKey];
     }
 

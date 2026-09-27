@@ -41,7 +41,7 @@ export function createDirectHTTPExecutor(
       source: sourceName,
       group,
       method,
-      variables: variables as Record<string, unknown> | undefined,
+      variables,
       options: mergedOptions,
     };
 

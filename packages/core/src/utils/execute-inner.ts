@@ -11,7 +11,7 @@ type InnerExecuteDeps = {
   instance: HttpClient;
   endpointGroupOptions: GroupOptions | undefined;
   middlewareHeaders: Headers;
-  variables: FormData | Record<string, unknown> | undefined;
+  variables: unknown;
   forwardVariables: boolean;
   baseOptions: Omit<BoundMethodOptions, "variables" | "headers" | "stream">;
   stream: boolean;

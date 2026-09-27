@@ -17,7 +17,7 @@ export type HttpMethods = {
 };
 
 export type BoundMethodOptions = SimpleOptions & {
-  variables?: FormData | object;
+  variables?: unknown;
   stream?: boolean;
 };
 
@@ -53,7 +53,7 @@ export type HttpResponse<TData = unknown> = {
 
 export type MethodParameters<TMethod extends HttpMethod> = TMethod extends "head"
   ? [url?: string, options?: MethodOptions<TMethod>]
-  : [url?: string, variables?: FormData | object, options?: MethodOptions<TMethod>];
+  : [url?: string, variables?: unknown, options?: MethodOptions<TMethod>];
 
 /** Core fetch options — extends standard RequestInit with convenience properties */
 export type FetchOptions = Omit<RequestInit, "method"> & {
@@ -65,6 +65,8 @@ export type FetchOptions = Omit<RequestInit, "method"> & {
   timeout?: number;
   /** URL prefix prepended to the request path */
   prefixUrl?: string;
+  /** Required by `fetch` when `body` is a ReadableStream */
+  duplex?: "half";
   /** Called as the answer's body is read */
   onDownloadProgress?: (progress: DownloadProgress) => void;
   /** Called as the request's body is sent */
@@ -96,7 +98,7 @@ export type BaseOptions = MergeOptions &
     responseType?: ResponseType;
     /** Custom response parser replacing the built-in one (receives raw Response) */
     responseParser?: (response: Response) => Promise<unknown>;
-    /** Default body fields merged into every request body */
+    /** Default fields merged under variables that are an object; a list or a raw body is sent alone */
     defaultBody?: Record<string, unknown>;
     /** Default query params merged into every request URL */
     defaultQueryParams?: Record<string, unknown>;
@@ -113,7 +115,7 @@ export type BaseOptions = MergeOptions &
      * over `expose`; see `defineBoundary`.
      */
     boundary?: { source: string; endpoints: Readonly<Record<string, unknown>> };
-    /** Custom body serializer replacing JSON.stringify (e.g. for FormData or XML) */
+    /** Custom serializer for variables that are an object, replacing JSON.stringify (e.g. for XML) */
     bodySerializer?: (data: Record<string, unknown>) => BodyInit;
     /** Custom search params serializer with stringify/parse methods */
     searchParamsSerializer?: SearchParamsSerializer;

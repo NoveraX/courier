@@ -65,6 +65,7 @@ function answer(declaration?: unknown): Record<string, unknown> {
     removed: [],
     kept: [],
     backupDir: ".courier/backups/1-a",
+    pruneFailures: [],
     leftBehind: [],
     ...(declaration === undefined ? {} : { declaration }),
   };

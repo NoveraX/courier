@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 
 import type { PlanConsent } from "./types-file-plan";
 import { type AppliedFiles, type RemovalConfigNotes, previewRemoval, removeImport } from "./client-file-changes";
-import { fileCount } from "./applied-notes";
+import { fileCount, unremovedNote } from "./applied-notes";
 import { consentBody, consentFor, toggleConfirmed } from "./plan-consent";
 import { readPlanRefusal } from "./plan-refusal";
 import { readFilePlan } from "./read-file-plan";
@@ -30,10 +30,11 @@ function messageOf(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-function removedMessage(name: string, { removed, kept, backupDir }: AppliedFiles): string {
+function removedMessage(name: string, { removed, kept, backupDir, pruneFailures }: AppliedFiles): string {
   const notes = [
     removed.length > 0 ? `moved ${fileCount(removed.length)} into ${backupDir}` : "",
     kept.length > 0 ? `left ${fileCount(kept.length)} as ${kept.length === 1 ? "it was" : "they were"}` : "",
+    unremovedNote(pruneFailures.map((failure) => failure.path)),
   ].filter((note) => note !== "");
   return notes.length > 0 ? `Removed ${name}: ${notes.join("; ")}` : `Removed ${name}; none of its files were left to remove`;
 }

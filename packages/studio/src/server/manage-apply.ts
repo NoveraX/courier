@@ -27,7 +27,7 @@ export function handleManageApply(
   imports: ImportsSnapshot,
   root: ProjectRoot,
 ):
-  | Pick<ApplyReport, "written" | "removed" | "kept" | "backupDir">
+  | Pick<ApplyReport, "written" | "removed" | "kept" | "backupDir" | "pruneFailures">
   | { error: string; status: number } {
   const planned = planManage(body, imports, root);
   if ("error" in planned) return planned;
@@ -46,6 +46,6 @@ export function handleManageApply(
       ),
     "required",
   );
-  const { written, removed, kept, backupDir } = report;
-  return { written, removed, kept, backupDir };
+  const { written, removed, kept, backupDir, pruneFailures } = report;
+  return { written, removed, kept, backupDir, pruneFailures };
 }

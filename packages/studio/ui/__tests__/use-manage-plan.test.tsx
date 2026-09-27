@@ -93,6 +93,7 @@ describe("applying managed endpoints", () => {
       removed: ["src/api/pets/pets/index.ts"],
       kept: [],
       backupDir: ".courier/backups/1-a",
+      pruneFailures: [],
     });
 
     act(() => result.current.toggleConfirmed("src/api/pets/pets/index.ts"));

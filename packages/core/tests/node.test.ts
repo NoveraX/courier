@@ -1,6 +1,13 @@
-import type { IncomingMessage } from "node:http";
-import { describe, expect, it } from "vitest";
-import { extractOriginFromNodeRequest } from "../src/node";
+import { once } from "node:events";
+import { createServer, type IncomingMessage, type Server } from "node:http";
+import { type AddressInfo, connect, type Socket } from "node:net";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { createHandler } from "../src/adapter";
+import { courier } from "../src/define/courier";
+import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "../src/node";
+import { buildProxySSEUrl } from "../src/realtime/caller-sse";
+import { _resetSourcesForTests, registerSources } from "../src/sources";
 
 function mockIncomingMessage(opts: {
   host?: string | string[] | undefined;
@@ -73,5 +80,101 @@ describe("extractOriginFromNodeRequest", () => {
       socket: { encrypted: false, remoteAddress: "203.0.113.9" },
     } as unknown as IncomingMessage;
     expect(extractOriginFromNodeRequest(req)).toBe("http://internal-service:8080");
+  });
+});
+
+const CHUNK = new Uint8Array(64 * 1024);
+const BODY_CAP = 256 * 1024 * 1024;
+
+let server: Server | undefined;
+let client: Socket | undefined;
+
+afterEach(async () => {
+  _resetSourcesForTests();
+  client?.destroy();
+  server?.closeAllConnections();
+  await new Promise<void>((resolve) => server?.close(() => resolve()) ?? resolve());
+  server = undefined;
+  client = undefined;
+});
+
+/** A body that produces as fast as it is read, up to `BODY_CAP` bytes. */
+function endlessBody(counter: { pulled: number }): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    pull(controller) {
+      counter.pulled += CHUNK.byteLength;
+      if (counter.pulled > BODY_CAP) controller.close();
+      else controller.enqueue(CHUNK);
+    },
+  });
+}
+
+/** Serve `respond` and open a raw client that sends a request, then stops reading. */
+async function stalledClient(
+  respond: (res: Parameters<typeof sendWebResponse>[1], req: IncomingMessage) => void,
+  path = "/",
+) {
+  server = createServer((req, res) => respond(res, req));
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const { port } = server.address() as AddressInfo;
+  client = connect(port, "127.0.0.1");
+  await once(client, "connect");
+  client.write(
+    `GET ${path} HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nAccept: text/event-stream\r\n\r\n`,
+  );
+  client.pause();
+  return client;
+}
+
+describe("sendWebResponse", () => {
+  it("stops reading the body while the client is not reading", async () => {
+    const counter = { pulled: 0 };
+    await stalledClient((res) => {
+      void sendWebResponse(new Response(endlessBody(counter)), res);
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    expect(counter.pulled).toBeGreaterThan(0);
+    expect(counter.pulled).toBeLessThan(32 * 1024 * 1024);
+  });
+
+  it("finishes when the client leaves while the body waits for it", async () => {
+    const counter = { pulled: 0 };
+    let sending: Promise<void> | undefined;
+    const socket = await stalledClient((res) => {
+      sending = sendWebResponse(new Response(endlessBody(counter)), res);
+    });
+    await expect.poll(() => counter.pulled).toBeGreaterThan(0);
+
+    socket.destroy();
+
+    await expect(sending).resolves.toBeUndefined();
+    expect(counter.pulled).toBeLessThan(32 * 1024 * 1024);
+  });
+
+  it("pauses a stream endpoint whose client stopped reading", async () => {
+    let yielded = 0;
+    const feed = courier()
+      .stream.response<{ pad: string }>()
+      .implement(async function* () {
+        const pad = "x".repeat(4096);
+        for (; yielded < 10_000; yielded++) {
+          await new Promise((resolve) => setImmediate(resolve));
+          yield { data: { pad } };
+        }
+      });
+    registerSources({ api: { options: { groups: { live: { options: {}, feed } } } } } as never);
+    const { handleSSE } = createHandler();
+    const path = new URL(buildProxySSEUrl("http://localhost/", "api", "live", "feed")).search;
+    await stalledClient(async (res, req) => {
+      await sendWebResponse(await handleSSE(toWebRequest(req, res)), res);
+    }, `/${path}`);
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    expect(yielded).toBeGreaterThan(0);
+    expect(yielded * 4096).toBeLessThan(16 * 1024 * 1024);
   });
 });

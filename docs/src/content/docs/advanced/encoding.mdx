@@ -167,7 +167,7 @@ const api = defineApi({
 
 ## defaultBody
 
-Provide default values that are merged into every request. For GET/DELETE, they become query params. For POST/PUT/PATCH, they are merged into the JSON body. Caller variables override defaults with the same key:
+Provide default values that are merged into every request. For GET, HEAD and DELETE, they become query params. For POST/PUT/PATCH, they are merged into the JSON body. Caller variables override defaults with the same key:
 
 ```ts title="api/index.ts"
 const api = defineApi({

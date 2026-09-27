@@ -133,10 +133,12 @@ export const buildBody = (
     case "get":
     case "head":
     case "del":
+      /* With no body to carry them, the defaults a body would have had
+         become query values, as the encoding page describes. */
       return buildSearchParams(
         queryFields(method, cleaned),
         searchParameters,
-        defaultQueryParams,
+        { ...defaultQueryParams, ...defaultBody },
         serializer,
       );
     default:

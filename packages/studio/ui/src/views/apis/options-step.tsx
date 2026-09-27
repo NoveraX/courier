@@ -1,16 +1,26 @@
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 import type { GenerateOptions } from "./types";
+import { ChoiceRow, FieldRow, type OptionChoice, SwitchRow } from "./option-fields";
 import { TargetDirHint } from "./target-dir-hint";
+
+const VALIDATION: ReadonlyArray<OptionChoice<GenerateOptions["validation"]>> = [
+  { value: "zod", label: "Zod" },
+  { value: "valibot", label: "Valibot" },
+  { value: "arktype", label: "ArkType" },
+  { value: "none", label: "None" },
+];
+const GROUP_BY: ReadonlyArray<OptionChoice<GenerateOptions["groupBy"]>> = [
+  { value: "tag", label: "Tag" },
+  { value: "path", label: "Path" },
+  { value: "single", label: "Single file" },
+];
+const CLIENT: ReadonlyArray<OptionChoice<GenerateOptions["generateClient"]>> = [
+  { value: "direct", label: "Direct" },
+  { value: "proxy", label: "Proxy" },
+  { value: "both", label: "Both" },
+  { value: "none", label: "None" },
+];
 
 interface OptionsStepProps {
   options: GenerateOptions;
@@ -51,55 +61,14 @@ export function OptionsStepView({
 
         <TargetDirHint outputDir={options.outputDir} sourceName={options.sourceName} />
 
-        <FieldRow label="Validation library">
-          <Select
-            value={options.validation}
-            onValueChange={(v) => onChange({ validation: v as GenerateOptions["validation"] })}
-          >
-            <SelectTrigger className="h-8 w-[140px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="zod">Zod</SelectItem>
-              <SelectItem value="valibot">Valibot</SelectItem>
-              <SelectItem value="arktype">ArkType</SelectItem>
-              <SelectItem value="none">None</SelectItem>
-            </SelectContent>
-          </Select>
-        </FieldRow>
-
-        <FieldRow label="Group by">
-          <Select
-            value={options.groupBy}
-            onValueChange={(v) => onChange({ groupBy: v as GenerateOptions["groupBy"] })}
-          >
-            <SelectTrigger className="h-8 w-[140px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="tag">Tag</SelectItem>
-              <SelectItem value="path">Path</SelectItem>
-              <SelectItem value="single">Single file</SelectItem>
-            </SelectContent>
-          </Select>
-        </FieldRow>
-
-        <FieldRow label="Generate client">
-          <Select
-            value={options.generateClient}
-            onValueChange={(v) => onChange({ generateClient: v as GenerateOptions["generateClient"] })}
-          >
-            <SelectTrigger className="h-8 w-[140px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="direct">Direct</SelectItem>
-              <SelectItem value="proxy">Proxy</SelectItem>
-              <SelectItem value="both">Both</SelectItem>
-              <SelectItem value="none">None</SelectItem>
-            </SelectContent>
-          </Select>
-        </FieldRow>
+        <ChoiceRow label="Validation library" value={options.validation} choices={VALIDATION} onChange={(validation) => onChange({ validation })} />
+        <ChoiceRow label="Group by" value={options.groupBy} choices={GROUP_BY} onChange={(groupBy) => onChange({ groupBy })} />
+        <ChoiceRow
+          label="Generate client"
+          value={options.generateClient}
+          choices={CLIENT}
+          onChange={(generateClient) => onChange({ generateClient })}
+        />
 
         <div className="grid grid-cols-2 gap-3 pt-1">
           <SwitchRow
@@ -126,33 +95,6 @@ export function OptionsStepView({
       </div>
 
       {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
-  );
-}
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-function FieldRow({ label, children }: {
-  label: string;
-  children: React.ReactNode;
-}): React.ReactElement {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <Label className="text-xs text-muted-foreground shrink-0">{label}</Label>
-      {children}
-    </div>
-  );
-}
-
-function SwitchRow({ label, checked, onChange }: {
-  label: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-}): React.ReactElement {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-border-subtle px-3 py-2">
-      <Label className="text-[11px] text-muted-foreground">{label}</Label>
-      <Switch checked={checked} onCheckedChange={onChange} className="scale-75" />
     </div>
   );
 }

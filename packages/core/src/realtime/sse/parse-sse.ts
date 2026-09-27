@@ -1,101 +1,115 @@
 import type { SSEEvent } from "../types";
+import { readSSELines } from "./sse-lines";
 
 /** Raw parsed SSE event with string data (before JSON parsing) */
 export type RawSSEEvent = SSEEvent<string>;
 
-/** Cached regex patterns for SSE parsing — avoids re-compilation on every chunk */
-const EVENT_DELIMITER = /\n\n|\r\n\r\n|\r\r/;
-const LINE_DELIMITER = /\n|\r\n|\r/;
+/** What one block of an event stream said, up to the blank line that ends it. */
+export interface SSEFrame {
+  /** The event it dispatches; absent when it sent no `data`. */
+  readonly event?: RawSSEEvent;
+  /** The last event ID it set; an empty one resets it. */
+  readonly id?: string;
+  /** The reconnection time it set, in milliseconds. */
+  readonly retry?: number;
+}
+
+const WHOLE_NUMBER = /^\d+$/;
 
 /**
- * Parse a ReadableStream of bytes into SSE events per the HTML5 spec.
+ * Parse a ReadableStream of bytes into the blocks of an event stream, as the
+ * HTML standard interprets one.
+ *
+ * Lines end at a CRLF, a lone LF or a lone CR, in any mix; a blank line ends
+ * a block. A block dispatches an event only when it sent `data`, but one that
+ * sets only an `id` or a `retry` still says so, since both change how a
+ * client reconnects. A block the stream ends in the middle of is discarded,
+ * its `id` too: the event it began may have lost part of its data.
+ *
+ * @param stream - Response body from fetch
+ * @returns The blocks, in order; a heartbeat is a block that says nothing
+ * @example
+ * ```ts
+ * for await (const frame of parseSSEFrames(response.body)) {
+ *   if (frame.id !== undefined) lastEventId = frame.id;
+ *   if (frame.event) handle(frame.event);
+ * }
+ * ```
+ */
+export async function* parseSSEFrames(
+  stream: ReadableStream<Uint8Array>,
+): AsyncGenerator<SSEFrame, void, unknown> {
+  let block = createBlock();
+  for await (const line of readSSELines(stream)) {
+    if (line !== "") {
+      block.take(line);
+      continue;
+    }
+    if (block.said) yield block.frame();
+    block = createBlock();
+  }
+}
+
+/**
+ * Parse a ReadableStream of bytes into SSE events per the HTML standard.
  * Handles multi-line data, all line endings (LF/CRLF/CR), comments, and chunked reads.
  *
- * Yields `null` for comment-only events (heartbeats) so callers can reset timers.
+ * Yields `null` for a block that dispatches no event — a heartbeat comment,
+ * or one that only sets `id` or `retry` — so callers can reset timers.
  *
  * @param stream - Response body from fetch (ReadableStream<Uint8Array>)
- * @returns Async generator yielding RawSSEEvent or null (comment/heartbeat)
+ * @returns Async generator yielding RawSSEEvent or null
+ * @example
+ * ```ts
+ * for await (const event of parseSSEStream(response.body)) {
+ *   if (event) console.log(event.data);
+ * }
+ * ```
  */
 export async function* parseSSEStream(
   stream: ReadableStream<Uint8Array>,
 ): AsyncGenerator<RawSSEEvent | null, void, unknown> {
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const events = buffer.split(EVENT_DELIMITER);
-      // Last element is incomplete — keep in buffer
-      buffer = events.pop() ?? "";
-
-      for (const block of events) {
-        const event = parseEventBlock(block);
-        yield event;
-      }
-    }
-
-    // Flush remaining buffer (server closed without trailing newline)
-    if (buffer.trim()) {
-      yield parseEventBlock(buffer);
-    }
-  } finally {
-    reader.releaseLock();
-  }
+  for await (const frame of parseSSEFrames(stream)) yield frame.event ?? null;
 }
 
-/** Parse a single event block (text between double newlines) into RawSSEEvent or null */
-function parseEventBlock(block: string): RawSSEEvent | null {
-  const lines = block.split(LINE_DELIMITER);
+/** The fields of the block being read. */
+function createBlock() {
   let data: string[] | undefined;
+  let type = "";
   let id: string | undefined;
-  let event: string | undefined;
   let retry: number | undefined;
-  let hasContent = false;
-
-  for (const line of lines) {
-    if (line.startsWith(":")) continue; // Comment — skip
-
-    const colonIdx = line.indexOf(":");
-    const [field, value] =
-      colonIdx === -1
-        ? [line, ""]
-        : [line.slice(0, colonIdx), line.slice(colonIdx + 1).replace(/^ /, "")];
-
-    switch (field) {
-      case "data":
-        if (!data) data = [];
-        data.push(value);
-        hasContent = true;
-        break;
-      case "id":
-        id = value;
-        hasContent = true;
-        break;
-      case "event":
-        event = value;
-        hasContent = true;
-        break;
-      case "retry": {
-        const parsed = Number(value);
-        if (!Number.isNaN(parsed)) retry = parsed;
-        hasContent = true;
-        break;
-      }
-    }
-  }
-
-  // Comment-only block → null (for heartbeat reset)
-  if (!hasContent) return null;
+  let said = false;
 
   return {
-    data: data?.join("\n") ?? "",
-    ...(id !== undefined && { id }),
-    ...(event !== undefined && { event }),
-    ...(retry !== undefined && { retry }),
+    /** Whether the block has any line at all, a comment included. */
+    get said() {
+      return said;
+    },
+    take(line: string): void {
+      said = true;
+      if (line.startsWith(":")) return;
+      const colon = line.indexOf(":");
+      const field = colon === -1 ? line : line.slice(0, colon);
+      const value = colon === -1 ? "" : line.slice(colon + 1).replace(/^ /, "");
+      if (field === "data") {
+        data ??= [];
+        data.push(value);
+      } else if (field === "event") type = value;
+      else if (field === "id" && !value.includes("\u0000")) id = value;
+      else if (field === "retry" && WHOLE_NUMBER.test(value)) retry = Number(value);
+    },
+    frame(): SSEFrame {
+      const event: RawSSEEvent | undefined = data && {
+        data: data.join("\n"),
+        ...(id !== undefined && { id }),
+        ...(type !== "" && { event: type }),
+        ...(retry !== undefined && { retry }),
+      };
+      return {
+        ...(event && { event }),
+        ...(id !== undefined && { id }),
+        ...(retry !== undefined && { retry }),
+      };
+    },
   };
 }

@@ -16,6 +16,7 @@ import { aboveStatement } from "./above-statement";
 import { fileBase } from "./file-base";
 import { type GeneratedEntry, generatedEndpoints } from "./generated-entries";
 import { endpointNames, findGroupDeclaration } from "./group-declaration";
+import { GroupPrefixChangedError } from "./group-prefix-changed-error";
 import { planMissingImports } from "./plan-missing-imports";
 import { referencedImports } from "./referenced-imports";
 import { UnrecognizedFileError } from "./unrecognized-file-error";
@@ -43,6 +44,7 @@ function entryText({ comment, code }: GeneratedEntry, indent: string, eol: strin
  * @param endpointNames - Names of endpoints to take from the generated file
  * @returns Merged file content; `existingContent` when nothing is new
  * @throws {UnrecognizedFileError} When the file does not parse, or declares no endpoints object
+ * @throws {GroupPrefixChangedError} When the group now has another prefix than the file declares
  * @example
  * ```ts
  * appendEndpointsToGroup("src/api/pets/pets/index.ts", onDisk, generated, ["createPet"]);
@@ -65,6 +67,10 @@ export function appendEndpointsToGroup(
     wanted.has(key) && !present.has(key) ? [entry] : [],
   );
   if (added.length === 0) return existingContent;
+  /* An added endpoint's path is relative to the prefix it was generated under. */
+  const fresh = findGroupDeclaration(parseSource("generated.ts", generatedContent).program, name);
+  if (fresh !== null && fresh.prefix !== declaration.prefix)
+    throw new GroupPrefixChangedError(path, declaration.prefix, fresh.prefix);
 
   const bindings = collectModuleBindings(parsed.program);
   const style = detectStyle(parsed, declaration.endpoints);

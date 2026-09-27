@@ -99,7 +99,7 @@ import { authMiddleware } from "@noverax/courier/middleware"
 
 authMiddleware({
   getToken: () => localStorage.getItem("token")!,
-  refreshToken: () => refreshAccessToken(),  // Optional: retry on 401
+  refreshToken: () => refreshAccessToken(),  // Optional: renew and resend once on 401
   header: "Authorization",                   // Default
   scheme: "Bearer",                          // Default
 })

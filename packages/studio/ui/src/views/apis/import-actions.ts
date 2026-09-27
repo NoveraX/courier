@@ -21,6 +21,7 @@ import {
 } from "./helpers";
 
 import type { Settings } from "@/store/types-ui";
+import { ownValue } from "@/lib/own-value";
 
 // ── Spec parsing ────────────────────────────────────────────────────────────
 
@@ -88,7 +89,7 @@ export function toggleEndpointReducer(
   group: string,
   endpoint: string,
 ): ImportState {
-  const groupEps = state.selectedEndpoints[group] ?? [];
+  const groupEps = ownValue(state.selectedEndpoints, group) ?? [];
   const has = groupEps.includes(endpoint);
   return {
     ...state,
@@ -108,7 +109,7 @@ export function toggleGroupReducer(
   if (!state.spec) return state;
   const group = state.spec.groups.find((g) => g.name === groupName);
   if (!group) return state;
-  const current = state.selectedEndpoints[groupName] ?? [];
+  const current = ownValue(state.selectedEndpoints, groupName) ?? [];
   const allSelected = current.length === group.endpoints.length;
   return {
     ...state,

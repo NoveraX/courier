@@ -3,6 +3,7 @@
  */
 
 import type { EndpointInventory, InventoryEndpoint } from "./types";
+import { ownValue } from "@/lib/own-value";
 
 type SetMap = Record<string, Set<string>>;
 
@@ -15,7 +16,7 @@ const isAvailable = (e: InventoryEndpoint): boolean =>
 /** Toggle a name in a group's set — add if missing, remove if present */
 export function toggleInSet(prev: SetMap, group: string, name: string): SetMap {
   const next = { ...prev };
-  const set = new Set(next[group] ?? []);
+  const set = new Set(ownValue(next, group) ?? []);
   if (set.has(name)) set.delete(name);
   else set.add(name);
   next[group] = set;
@@ -44,7 +45,11 @@ export function computeGroupToggle(
   const groupName = group.name;
   const active = group.endpoints.filter(isToggleable);
   const available = group.endpoints.filter(isAvailable);
-  const allSelected = isGroupAllSelected(group, toAdd[groupName] ?? new Set(), toRemove[groupName] ?? new Set());
+  const allSelected = isGroupAllSelected(
+    group,
+    ownValue(toAdd, groupName) ?? new Set(),
+    ownValue(toRemove, groupName) ?? new Set(),
+  );
 
   if (allSelected) {
     return {
@@ -65,7 +70,7 @@ export function computeAllToggle(
   toRemove: SetMap,
 ): { toAdd: SetMap; toRemove: SetMap } {
   const allSelected = inventory.groups.every((g) =>
-    isGroupAllSelected(g, toAdd[g.name] ?? new Set(), toRemove[g.name] ?? new Set()),
+    isGroupAllSelected(g, ownValue(toAdd, g.name) ?? new Set(), ownValue(toRemove, g.name) ?? new Set()),
   );
 
   if (allSelected) {

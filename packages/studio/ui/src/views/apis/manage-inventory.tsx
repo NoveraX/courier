@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 import type { EndpointInventory, InventoryGroup } from "./types";
 import { ActiveRow, AvailableRow, CustomRow, RemovedRow } from "./manage-endpoint-rows";
+import { ownValue } from "@/lib/own-value";
 
 interface ManageInventoryProps {
   inventory: EndpointInventory;
@@ -60,8 +61,8 @@ export function ManageInventoryView({
           <GroupSection
             key={group.name}
             group={group}
-            toAdd={toAdd[group.name] ?? new Set()}
-            toRemove={toRemove[group.name] ?? new Set()}
+            toAdd={ownValue(toAdd, group.name) ?? new Set()}
+            toRemove={ownValue(toRemove, group.name) ?? new Set()}
             onToggle={onToggle}
             onToggleGroup={onToggleGroup}
           />
@@ -86,9 +87,9 @@ function countSelection(
       if (ep.status === "custom") continue;
       total++;
       if (ep.status === "active" || ep.status === "removed-from-spec") {
-        if (!toRemove[group.name]?.has(ep.name)) selected++;
+        if (!ownValue(toRemove, group.name)?.has(ep.name)) selected++;
       } else if (ep.status === "available") {
-        if (toAdd[group.name]?.has(ep.name)) selected++;
+        if (ownValue(toAdd, group.name)?.has(ep.name)) selected++;
       }
     }
   }

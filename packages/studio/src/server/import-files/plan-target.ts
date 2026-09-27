@@ -2,6 +2,7 @@ import { extractEndpoints } from "../../apis/merge/extract-endpoints";
 import { generateFingerprints } from "../../apis/merge/fingerprint";
 import { computeHash } from "../../apis/merge/hash";
 import { previewUpdate } from "../../apis/merge/update-flow";
+import { ownValue } from "../../apis/own-value";
 import type { DiskFile } from "./disk-file";
 import type { Confirmation, Ownership, PlannedWrite, PlanTarget } from "./file-plan-types";
 import type { RecordedFile } from "./recorded-file";
@@ -89,7 +90,7 @@ function dropsEditedEndpoint(
 ): boolean {
   const kept = extractEndpoints(merged);
   return Object.entries(extractEndpoints(disk.body)).some(([name, code]) => {
-    const written = fingerprints[name];
+    const written = ownValue(fingerprints, name);
     return written !== undefined && computeHash(code) !== written && !Object.hasOwn(kept, name);
   });
 }

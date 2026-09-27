@@ -3,6 +3,7 @@
  */
 
 import type { ImportLayout } from "../layout";
+import { ownValue } from "../own-value";
 import { barrelAfterRemoval } from "./barrel-after-removal";
 import { removeEndpointsFromFile } from "./remove-endpoints-from-file";
 import { collectGroupDeletions, collectModifiedWarnings, findGroupFile } from "./remove-helpers";
@@ -65,7 +66,7 @@ export function previewRemoveEndpoints(
 
     // Collect fingerprints to remove
     for (const name of endpointNames) {
-      if (fingerprints[groupPath]?.[name]) removedFingerprints.push(name);
+      if (ownValue(fingerprints[groupPath] ?? {}, name)) removedFingerprints.push(name);
     }
   }
 

@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generateCode } from "../src/apis/generator";
 import { resolveImportLayout } from "../src/apis/layout";
 import { previewAddEndpoints } from "../src/apis/manage";
+import { classifyDiskEndpoint } from "../src/apis/manage/classify-endpoint";
 import { listedSelection } from "../src/apis/manage/listed-selection";
 import { parseSpec } from "../src/apis/parser";
 import { resetProjectRoot, setProjectRoot } from "../src/context";
@@ -130,5 +131,38 @@ describe("the inventory", () => {
 
     expect(inventory).toMatchObject({ totalActive: 1, totalAvailable: 2 });
     expect("groups" in inventory ? inventory.groups.map((group) => group.name) : []).toEqual(["pets", "store"]);
+  });
+});
+
+describe("names that Object.prototype also has", () => {
+  const PROTO = parseSpec(
+    JSON.stringify({
+      openapi: "3.1.0",
+      info: { title: "Shop", version: "1" },
+      paths: {
+        "/a": { get: { operationId: "listA", tags: ["toString"], responses: OK } },
+        "/b": { get: { operationId: "listB", tags: ["constructor"], responses: OK } },
+      },
+    }),
+  );
+
+  it("generates a selection that leaves out a group named like one", () => {
+    const files = generateCode(PROTO, { type: "openapi", outputDir: "src/api", selectedEndpoints: { toString: ["listA"] } }, "shop");
+
+    expect(files.map((file) => file.path)).toContain(LAYOUT.groupFile("toString"));
+    expect(files.map((file) => file.path)).not.toContain(LAYOUT.groupFile("constructor"));
+  });
+
+  it("maps picks in a group named like one", () => {
+    expect(listedSelection(PROTO, "tag", { constructor: ["listB"] })).toEqual({
+      selection: { constructor: ["listB"] },
+      unknown: [],
+    });
+  });
+
+  it("lists an endpoint named like one, never generated, as the user's own", () => {
+    const endpoint = classifyDiskEndpoint("pets", "constructor", { prefix: "/", endpoints: [] }, {}, { constructor: "h" });
+
+    expect(endpoint.status).toBe("custom");
   });
 });

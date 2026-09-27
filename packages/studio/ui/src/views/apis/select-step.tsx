@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { countSelectedEndpoints } from "./helpers";
 import type { ParsedSpec, SkippedOperation } from "./types";
+import { ownValue } from "@/lib/own-value";
 
 interface SelectStepProps {
   spec: ParsedSpec;
@@ -44,7 +45,7 @@ export function SelectStepView({
       {/* Groups */}
       <div className="space-y-3">
         {spec.groups.map((group) => {
-          const groupSelected = selected[group.name] ?? [];
+          const groupSelected = ownValue(selected, group.name) ?? [];
           const isAllGroupSelected = groupSelected.length === group.endpoints.length;
           const isPartial = groupSelected.length > 0 && !isAllGroupSelected;
 

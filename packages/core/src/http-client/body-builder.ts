@@ -26,23 +26,32 @@ export const stripUndefined = (variables: unknown): unknown => {
 };
 
 /**
- * Remove the empty files a form carries — an `<input type="file">` left blank
- * still submits one.
+ * The form as it is sent: without the empty files it carries — an
+ * `<input type="file">` left blank still submits one.
  *
- * `FormData.delete` removes every entry under a name, so deleting the empty
- * file's name used to throw away the real files uploaded beside it. The
- * entries are rebuilt instead, in their original order.
+ * The caller's FormData is copied rather than edited, so it can be sent
+ * again, or by a retry, as it was built. `FormData.delete` would also have
+ * removed every entry under the empty file's name, real files included.
+ *
+ * @param formData - The form the caller passed
+ * @returns The form to send, the same object when nothing is dropped
+ *
+ * @example
+ * ```ts
+ * withoutEmptyFiles(form).getAll("files"); // the non-empty files, in order
+ * ```
  */
-export const filterEmptyFiles = (formData: FormData): void => {
+export const withoutEmptyFiles = (formData: FormData): FormData => {
   const entries = [...formData.entries()];
   const isEmptyFile = (value: FormDataEntryValue): boolean =>
     value instanceof File && value.size === 0;
-  if (!entries.some(([, value]) => isEmptyFile(value))) return;
+  if (!entries.some(([, value]) => isEmptyFile(value))) return formData;
 
-  for (const key of new Set(entries.map(([key]) => key))) formData.delete(key);
+  const sent = new FormData();
   for (const [key, value] of entries) {
-    if (!isEmptyFile(value)) formData.append(key, value);
+    if (!isEmptyFile(value)) sent.append(key, value);
   }
+  return sent;
 };
 
 export const buildSearchParams = (
@@ -70,10 +79,7 @@ export const buildRequestBody = (
   defaultBody: Record<string, unknown>,
   bodySerializer?: (data: Record<string, unknown>) => BodyInit,
 ): Pick<FetchOptions, "body" | "json" | "duplex"> | undefined => {
-  if (isFormData(variables)) {
-    filterEmptyFiles(variables);
-    return { body: variables };
-  }
+  if (isFormData(variables)) return { body: withoutEmptyFiles(variables) };
   if (isRawBody(variables)) {
     /* `fetch` refuses a stream body unless it is told the request is sent
        while the response may already be arriving. */

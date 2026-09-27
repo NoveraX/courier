@@ -36,6 +36,30 @@ export function generateCode(
   return post("/api/apis/generate", { spec, options });
 }
 
+/** Where Studio would write an import's files. */
+export interface ImportLayoutPreview {
+  dir: string;
+  sourceFile: string;
+  sourceBinding: string;
+}
+
+/**
+ * Ask Studio where an import's files would go. The wizard names the import
+ * after its source, so both are the source name.
+ *
+ * @param outputDir - The output directory as typed
+ * @param sourceName - The source name as typed
+ * @returns The import's directory, its source file and the binding it exports
+ * @throws Error with Studio's reason when it refuses the directory or the name
+ * @example
+ * ```ts
+ * const { dir } = await previewLayout("src/api", "petStore"); // "src/api/pet-store"
+ * ```
+ */
+export function previewLayout(outputDir: string, sourceName: string): Promise<ImportLayoutPreview> {
+  return post("/api/apis/layout", { outputDir, sourceName, importName: sourceName });
+}
+
 // ── Write ───────────────────────────────────────────────────────────────────
 
 export function writeFiles(payload: {

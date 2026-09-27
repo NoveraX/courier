@@ -3,7 +3,7 @@
  */
 
 import type { CourierImportBase } from "@noverax/courier/config";
-import { toBindingName } from "../parser/naming-utils";
+import type { ImportLayout } from "../layout";
 
 // ── Options ──────────────────────────────────────────────────────────────────
 
@@ -19,11 +19,32 @@ export type GenerateOptions = CourierImportBase & {
   selectedEndpoints?: Record<string, string[]> | null;
 };
 
+/**
+ * The generation settings a helper reads. Both an import's declaration and
+ * its resolved options satisfy it, so a helper that only reads settings
+ * does not care which it is given.
+ */
+export type GeneratorSettings = Partial<
+  Pick<
+    CourierImportBase,
+    | "type"
+    | "validation"
+    | "groupBy"
+    | "generateTypes"
+    | "generateSchemas"
+    | "generateClient"
+    | "addAuthMiddleware"
+    | "includeComments"
+  >
+>;
+
 /** Normalized shape used internally by codegen — every option has a value. */
 export interface ResolvedGenerateOptions {
   type: CourierImportBase["type"];
+  /** The binding the source is exported under, from the layout. */
   sourceName: string;
-  outputDir: string;
+  /** Where every generated file goes. */
+  layout: ImportLayout;
   validation: "zod" | "valibot" | "arktype" | "none";
   groupBy: "tag" | "path" | "single";
   generateTypes: boolean;
@@ -37,10 +58,14 @@ export interface ResolvedGenerateOptions {
   transform?: CourierImportBase["transform"];
 }
 
-export const DEFAULT_OPTIONS: ResolvedGenerateOptions = {
+/** The generation settings an import declaration may leave out, and what they default to. */
+export type GenerationDefaults = Omit<
+  ResolvedGenerateOptions,
+  "sourceName" | "layout" | "selectedEndpoints" | "include" | "exclude" | "transform"
+>;
+
+export const DEFAULT_OPTIONS: GenerationDefaults = {
   type: "openapi",
-  sourceName: "api",
-  outputDir: "src/api",
   validation: "zod",
   groupBy: "tag",
   generateTypes: true,
@@ -50,19 +75,24 @@ export const DEFAULT_OPTIONS: ResolvedGenerateOptions = {
   addAuthMiddleware: false,
   includeComments: true,
   generateClient: "direct",
-  selectedEndpoints: null,
 };
 
 /**
  * Fill in every optional codegen field on a loose `GenerateOptions` with the
  * project default so downstream generators can treat them as required.
+ *
+ * @param options - The declaration's options
+ * @param layout - Where the import's files go, which also names its source binding
+ * @returns Every option with a value
  */
-export function applyImportDefaults(options: GenerateOptions): ResolvedGenerateOptions {
+export function applyImportDefaults(
+  options: GenerateOptions,
+  layout: ImportLayout,
+): ResolvedGenerateOptions {
   return {
     type: options.type ?? DEFAULT_OPTIONS.type,
-    /* Emitted as `export const <name>`, so it has to be one. */
-    sourceName: toBindingName(options.sourceName ?? DEFAULT_OPTIONS.sourceName),
-    outputDir: options.outputDir,
+    sourceName: layout.sourceBinding,
+    layout,
     validation: options.validation ?? DEFAULT_OPTIONS.validation,
     groupBy: options.groupBy ?? DEFAULT_OPTIONS.groupBy,
     generateTypes: options.generateTypes ?? DEFAULT_OPTIONS.generateTypes,

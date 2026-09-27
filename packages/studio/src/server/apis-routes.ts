@@ -15,6 +15,7 @@ import {
 } from "../apis";
 import { resolveProjectSafe } from "../context";
 import { fetchSpec } from "./fetch-spec";
+import { registerLayoutRoute } from "./layout-route";
 import { registerManageRoutes } from "./manage-routes";
 import type { ProjectImports } from "./project-state/types";
 import { errMsg } from "./registry-helpers";
@@ -92,6 +93,7 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
   });
 
   registerWriteRoutes(app, deps);
+  registerLayoutRoute(app);
 
   app.post("/api/apis/diff", (req, res) => {
     try {

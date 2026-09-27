@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseSpec } from "../src/apis/parser";
-import { generateCode, applyImportDefaults } from "../src/apis/generator";
+import { generateCode } from "../src/apis/generator";
 import { schemaToArkType, propToArkType } from "../src/apis/generator/validation-arktype";
 import { propToValibot, valibotEnum } from "../src/apis/generator/validation-valibot";
 import { jsLiteral, objectKey } from "../src/apis/generator/literals";
@@ -33,7 +33,7 @@ function generate(schemas: Record<string, unknown>, validation: Validation): str
         components: { schemas },
       }),
     ),
-    applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src/api", validation }),
+    { type: "openapi", sourceName: "api", outputDir: "src/api", validation },
   )
     .map((f) => f.content)
     .join("\n");

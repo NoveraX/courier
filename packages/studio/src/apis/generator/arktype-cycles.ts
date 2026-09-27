@@ -13,7 +13,7 @@
 
 import type { ParsedSchema } from "../parser/types";
 import { jsdocText } from "./jsdoc-text";
-import type { GenerateOptions } from "./types";
+import type { GeneratorSettings } from "./types";
 import { type LazyTargets, schemaToArkType } from "./validation-arktype";
 
 /**
@@ -78,7 +78,7 @@ export function writeArkTypeCycle(
   lines: string[],
   entries: [string, ParsedSchema][],
   lazy: LazyTargets,
-  options: GenerateOptions,
+  options: GeneratorSettings,
   toInterface: (schema: ParsedSchema) => string,
 ): void {
   for (const [name, schema] of entries) {

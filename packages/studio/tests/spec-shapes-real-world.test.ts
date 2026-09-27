@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseSpec } from "../src/apis/parser";
-import { generateCode, applyImportDefaults } from "../src/apis/generator";
+import { generateCode } from "../src/apis/generator";
 
 const ok = { responses: { "200": { description: "ok" } } };
 
@@ -230,7 +230,7 @@ describe("a definition that states only what it means", () => {
           },
         }),
       ),
-      applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src/api" }),
+      { type: "openapi", sourceName: "api", outputDir: "src/api" },
     )
       .map((f) => f.content)
       .join("\n");

@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { parseSpec } from "../src/apis/parser";
-import { generateCode, applyImportDefaults } from "../src/apis/generator";
+import { generateCode } from "../src/apis/generator";
 import { zodEnum, typeUnion } from "../src/apis/generator/enum-literals";
 
 function generate(spec: object): string {
   return generateCode(
     parseSpec(JSON.stringify(spec)),
-    applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src/api" }),
+    { type: "openapi", sourceName: "api", outputDir: "src/api" },
   )
     .map((f) => f.content)
     .join("\n");

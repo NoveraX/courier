@@ -8,7 +8,7 @@ import type {
 
 import type { GenerateOptions, ParsedSpec } from "../apis";
 import { DEFAULT_OPTIONS } from "../apis/generator/types";
-import { toBindingName } from "../apis/parser/naming-utils";
+import { resolveImportLayout } from "../apis/layout";
 import type { LoadedCourierConfig } from "./config-loader";
 import { formatImportSnippet } from "./format-import-snippet";
 import type { ImportDeclaration, WriteBody } from "./write-types";
@@ -71,8 +71,12 @@ export function describeImportDeclaration({
 }: DeclarationInput): ImportDeclaration | undefined {
   const { spec, options } = body;
   if (!spec || typeof options?.outputDir !== "string") return undefined;
-  const binding = toBindingName(name);
-  const sourceFile = `${options.outputDir.replace(/\/+$/, "")}/${binding}/source.ts`;
+  const layout = resolveImportLayout(
+    { outputDir: options.outputDir, sourceName: options.sourceName },
+    name,
+  );
+  const binding = layout.sourceBinding;
+  const sourceFile = layout.sourceFile;
   const configFile = posixPath(relative(root, loaded.configFile));
   const written = body.files.some((file) => file.path === sourceFile);
   const declared = sourceDeclared(name, join(root, sourceFile), loaded);

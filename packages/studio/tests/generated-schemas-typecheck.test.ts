@@ -13,7 +13,7 @@ import ts from "typescript";
 import { afterAll, describe, expect, it } from "vitest";
 
 import type { GenerateOptions } from "../src/apis/generator";
-import { applyImportDefaults, generateCode } from "../src/apis/generator";
+import { generateCode } from "../src/apis/generator";
 import { parseSpec } from "../src/apis/parser";
 import { SHAPES_SPEC } from "./helpers/shapes-spec";
 
@@ -44,7 +44,7 @@ const STRICTEST: ts.CompilerOptions = {
 function writeSchemas(label: string, options: Partial<GenerateOptions>): string {
   const files = generateCode(
     parseSpec(JSON.stringify(SHAPES_SPEC)),
-    applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src", ...options }),
+    { type: "openapi", sourceName: "api", outputDir: "src", ...options },
   );
   const schemas = files.find((f) => f.path.endsWith("schemas.ts"));
   const path = join(ROOT, label, "schemas.ts");

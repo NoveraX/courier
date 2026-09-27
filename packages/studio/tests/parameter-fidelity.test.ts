@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseSpec } from "../src/apis/parser";
-import { generateCode, applyImportDefaults } from "../src/apis/generator";
+import { generateCode } from "../src/apis/generator";
 
 function spec(parameters: unknown[]): string {
   return JSON.stringify({
@@ -27,7 +27,7 @@ function parameters(parsed: ReturnType<typeof parseSpec>) {
 function generated(parameters: unknown[]): string {
   return generateCode(
     parseSpec(spec(parameters)),
-    applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src" }),
+    { type: "openapi", sourceName: "api", outputDir: "src" },
   )
     .map((f) => f.content)
     .join("\n");

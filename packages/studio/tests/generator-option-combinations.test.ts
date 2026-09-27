@@ -131,7 +131,7 @@ function find(files: GeneratedFile[], suffix: string): GeneratedFile | undefined
  * declares it, and a type named in a chain that nothing ever writes down.
  */
 describe.each(COMBINATIONS)("generated with $name", ({ options }) => {
-  const files = generateCode(SPEC, { ...DEFAULT_OPTIONS, ...options, outputDir: "src/api" })
+  const files = generateCode(SPEC, { ...DEFAULT_OPTIONS, ...options, outputDir: "src/api", sourceName: "api" })
 
   it("imports only names its siblings export", () => {
     const byPath = new Map(files.map((f) => [f.path, f.content]))

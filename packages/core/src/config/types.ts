@@ -41,7 +41,11 @@ export type CourierImportType = "url" | "file" | "raw";
 export interface CourierImportBase {
   /** Spec format — determines the parser used at codegen time */
   type: CourierImportSpecType;
-  /** Where generated TS code is written */
+  /**
+   * The directory, relative to the project, that holds the import's own
+   * directory: Studio writes the import's files into
+   * `<outputDir>/<source-name>/`, the source name in kebab case.
+   */
   outputDir: string;
   /** Source name for the generated `defineApi` call (default: import key) */
   sourceName?: string;

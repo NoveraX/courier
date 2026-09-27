@@ -7,7 +7,7 @@ import { typeUnion } from "./enum-literals";
 import { schemaToTsType } from "./inline-types";
 import { jsdocText } from "./jsdoc-text";
 import { objectKey } from "./literals";
-import type { GenerateOptions } from "./types";
+import type { GeneratorSettings } from "./types";
 
 export function tsType(type: string, _format?: string): string {
   if (type === "ref") return "unknown";
@@ -20,7 +20,7 @@ export function tsType(type: string, _format?: string): string {
 export function resolveResponseType(
   ep: ParsedEndpoint,
   _spec: ParsedSpec,
-  options: GenerateOptions,
+  options: GeneratorSettings,
 ): string {
   if (!ep.responseSchema) return "unknown";
 
@@ -40,7 +40,7 @@ export function resolveResponseType(
 export function resolveVariablesType(
   ep: ParsedEndpoint,
   spec: ParsedSpec,
-  options: GenerateOptions,
+  options: GeneratorSettings,
 ): string | null {
   const parts: string[] = [];
 
@@ -106,7 +106,7 @@ export function resolveVariablesType(
  *
  * Used where no types file is generated, so there is no name to refer to.
  */
-function inlineShape(spec: ParsedSpec, refName: string, options: GenerateOptions): string {
+function inlineShape(spec: ParsedSpec, refName: string, options: GeneratorSettings): string {
   const schema = spec.schemas[refName];
   if (!schema?.properties) return "Record<string, unknown>";
 

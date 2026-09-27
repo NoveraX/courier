@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseSpec } from "../src/apis/parser";
-import { generateCode, applyImportDefaults } from "../src/apis/generator";
+import { generateCode } from "../src/apis/generator";
 
 type Validation = "zod" | "valibot" | "arktype" | "none";
 
@@ -34,7 +34,7 @@ const UNION_SPEC = {
 function generate(validation: Validation = "zod"): string {
   return generateCode(
     parseSpec(JSON.stringify(UNION_SPEC)),
-    applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src", validation }),
+    { type: "openapi", sourceName: "api", outputDir: "src", validation },
   )
     .map((f) => f.content)
     .join("\n");
@@ -93,7 +93,7 @@ describe("a response that is one of several shapes", () => {
        `Cat | Dog` matched neither and nothing was imported. */
     const files = generateCode(
       parseSpec(JSON.stringify(UNION_SPEC)),
-      applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src" }),
+      { type: "openapi", sourceName: "api", outputDir: "src" },
     );
     const group = files.find((f) => f.path.endsWith("/things/index.ts"))?.content ?? "";
 
@@ -125,7 +125,7 @@ describe("a request body that is one of several shapes", () => {
           },
         }),
       ),
-      applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src" }),
+      { type: "openapi", sourceName: "api", outputDir: "src" },
     )
       .map((f) => f.content)
       .join("\n");

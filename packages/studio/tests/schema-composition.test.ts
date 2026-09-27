@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseSpec } from "../src/apis/parser";
-import { generateCode, applyImportDefaults } from "../src/apis/generator";
+import { generateCode } from "../src/apis/generator";
 
 function parse(components: Record<string, unknown>, version = "3.0.0") {
   return parseSpec(
@@ -134,12 +134,12 @@ describe("text a specification supplies to the source file", () => {
           security: [{ k: [] }],
         }),
       ),
-      applyImportDefaults({
+      {
         type: "openapi",
         sourceName: "api",
         outputDir: "src",
         addAuthMiddleware: true,
-      }),
+      },
     );
     const source = generated.find((f) => f.path.endsWith("source.ts"))?.content ?? "";
 

@@ -59,7 +59,7 @@ export function generateGroupFile(
   lines.push("");
 
   return {
-    path: `${options.outputDir}/${group.name}/index.ts`,
+    path: options.layout.groupFile(group.name),
     content: lines.join("\n"),
   };
 }

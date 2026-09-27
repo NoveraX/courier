@@ -77,7 +77,7 @@ export function generateFlatSourceFile(
   lines.push("");
 
   return {
-    path: `${options.outputDir}/source.ts`,
+    path: options.layout.sourceFile,
     content: lines.join("\n"),
   };
 }

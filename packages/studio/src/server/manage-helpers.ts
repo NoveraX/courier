@@ -2,11 +2,10 @@
  * Helpers for manage routes — inventory and preview logic.
  */
 
-import { basename } from "node:path";
-import type { CourierImportEntry } from "@noverax/courier/config";
 import type { ParsedSpec } from "../apis";
 import { computeSpecHash } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
+import { type ImportLayout, resolveImportLayout } from "../apis/layout";
 import {
   buildEndpointInventory,
   previewAddEndpoints,
@@ -53,9 +52,10 @@ export function handleInventory(
   const spec = body.newSpec;
   if (!spec) return { error: "Spec is required for inventory", status: 400 };
 
-  const existingFiles = readSourceFiles(entry, body.name);
+  const layout = resolveImportLayout(entry, body.name);
+  const existingFiles = readSourceFiles(layout);
   const fingerprints = loadSourceFingerprints(existingFiles, state);
-  const diskGroups = scanSourceGroups(entry, body.name, existingFiles);
+  const diskGroups = scanSourceGroups(layout, existingFiles);
 
   const inventory = buildEndpointInventory(spec, diskGroups, fingerprints, existingFiles);
   inventory.specChanged = computeSpecHash(spec) !== (state?.specHash ?? "");
@@ -98,7 +98,8 @@ export function handleManagePreview(
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
   const state = getImportState(imports, body.name);
 
-  const existingFiles = readSourceFiles(entry, body.name);
+  const layout = resolveImportLayout(entry, body.name);
+  const existingFiles = readSourceFiles(layout);
   const fingerprints = loadSourceFingerprints(existingFiles, state);
 
   let addResult: AddResult | undefined;
@@ -110,16 +111,12 @@ export function handleManagePreview(
       body.toAdd,
       { ...entry, selectedEndpoints: body.toAdd },
       existingFiles,
+      layout,
     );
   }
 
   if (Object.keys(body.toRemove).length > 0) {
-    removeResult = previewRemoveEndpoints(
-      body.toRemove,
-      { ...entry, selectedEndpoints: null },
-      existingFiles,
-      fingerprints,
-    );
+    removeResult = previewRemoveEndpoints(body.toRemove, existingFiles, fingerprints, layout);
   }
 
   return { addResult, removeResult };
@@ -136,35 +133,38 @@ function loadSourceFingerprints(
   return buildFallbackFingerprints(existingFiles, state?.userModified ?? []);
 }
 
-function readSourceFiles(entry: CourierImportEntry, name: string): Record<string, string> {
-  const generated = [{ path: "dummy", content: "" }];
-  const diskPaths = scanTsFiles(entry, name, generated);
-  return readFilesFromDisk(diskPaths);
+function readSourceFiles(layout: ImportLayout): Record<string, string> {
+  return readFilesFromDisk(scanTsFiles(layout, []));
 }
+
+/* How a group file names its group, with or without a type on the binding. */
+const GROUP_BINDING = /^export const (\w+)\s*(?::[^=]+)?=\s*defineGroup\(/m;
+/* The group an import generated as one flat group is written under. */
+const FLAT_GROUP = "api";
 
 /**
  * Derive the per-group endpoint listing for an import from the generated
- * files already loaded into `existingFiles`. Each generated file lives at
- * `outputDir/{sourceName}/{groupName}.ts` and contains one or more
- * `endpoint(...)` declarations whose names are extracted via the same
- * `extractEndpoints()` parser the merge layer uses.
+ * files already loaded into `existingFiles`. A group lives in
+ * `<dir>/<group-dir>/index.ts`, which names it in its `defineGroup` export;
+ * an import generated flat keeps its endpoints in `source.ts`. Endpoint
+ * names are read with the same `extractEndpoints()` parser the merge layer uses.
  */
 function scanSourceGroups(
-  entry: CourierImportEntry,
-  name: string,
+  layout: ImportLayout,
   existingFiles: Record<string, string>,
 ): DiskGroupListing[] {
-  const sourceName = entry.sourceName ?? name;
-  const sourceDir = `${entry.outputDir.replace(/\/+$/, "")}/${sourceName}`;
   const groups: DiskGroupListing[] = [];
   for (const [path, content] of Object.entries(existingFiles)) {
-    if (!path.startsWith(sourceDir)) continue;
-    const fileName = basename(path);
-    if (!fileName.endsWith(".ts") || fileName === "index.ts") continue;
-    const groupName = fileName.slice(0, -3);
+    const name = path === layout.sourceFile ? FLAT_GROUP : groupNameOf(path, content, layout);
+    if (name === undefined) continue;
     const endpointNames = Object.keys(extractEndpoints(content));
     if (endpointNames.length === 0) continue;
-    groups.push({ name: groupName, prefix: "", endpoints: endpointNames });
+    groups.push({ name, prefix: "", endpoints: endpointNames });
   }
   return groups;
+}
+
+function groupNameOf(path: string, content: string, layout: ImportLayout): string | undefined {
+  const name = GROUP_BINDING.exec(content)?.[1];
+  return name !== undefined && layout.groupFile(name) === path ? name : undefined;
 }

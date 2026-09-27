@@ -5,6 +5,7 @@
 import type { CourierImportEntry } from "@noverax/courier/config";
 import { createSpecDigest, type ParsedSpec } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
+import { resolveImportLayout } from "../apis/layout";
 import type { UpdateResult } from "../apis/registry/types";
 import { resolveProjectSafe } from "../context";
 import { persistImportState } from "./imports-bridge";
@@ -29,6 +30,8 @@ export async function handleMergeWrite(
   spec: ParsedSpec,
   ctx: ImportContext & { entry: CourierImportEntry },
 ): Promise<WriteResult> {
+  /* The declaration can be refused; that has to happen before anything is written. */
+  const layout = resolveImportLayout(ctx.entry, sourceName);
   const preview = computeMergePreview(files, ctx.state);
 
   /* Snapshot user-modified endpoints BEFORE overwriting disk. Compare the
@@ -43,7 +46,7 @@ export async function handleMergeWrite(
     writeFileWithDirs(resolveProjectSafe(file.path), file.content);
   }
 
-  const deleted = removeOrphanFiles(files, ctx.entry, sourceName);
+  const deleted = removeOrphanFiles(files, layout);
   const result = await finalizeImportState(preview, sourceName, spec, ctx.state, userModified);
 
   return { ...result, deleted };

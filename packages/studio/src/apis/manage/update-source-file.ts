@@ -4,14 +4,23 @@
  * Operates on source file text — no I/O.
  */
 
-const IMPORT_RE = /^import\s+\{[^}]+\}\s+from\s+"\.\/([^"]+)";$/;
+/* `import { pets } from "./pets/index";`, or with an alias, `import { pets as group_pets } …`. */
+const IMPORT_RE = /^import\s+\{\s*(\w+)(?:\s+as\s+\w+)?\s*\}\s+from\s+"\.\/[^"]+";$/;
 const GROUPS_OPEN_RE = /^\s*groups:\s*\{/;
-const GROUP_ENTRY_RE = /^\s{4}(\w+),?$/;
+/* `    pets,`, or with an alias, `    pets: group_pets,`. */
+const GROUP_ENTRY_RE = /^\s{4}(\w+)(?::\s*\w+)?,?$/;
+
+/** A group to add: its name, the name source.ts imports it under, and the module it lives in. */
+export interface SourceGroupImport {
+  name: string;
+  local: string;
+  importPath: string;
+}
 
 /** Add new group imports and entries to source file */
 export function addGroupsToSourceFile(
   existingContent: string,
-  newGroups: Array<{ name: string; importPath: string }>,
+  newGroups: SourceGroupImport[],
 ): string {
   if (newGroups.length === 0) return existingContent;
 
@@ -26,7 +35,8 @@ export function addGroupsToSourceFile(
     // Insert new imports after last import line
     if (!addedImports && line.startsWith("import") && !(lines[i + 1] ?? "").startsWith("import")) {
       for (const g of newGroups) {
-        result.push(`import { ${g.name} } from "${g.importPath}";`);
+        const imported = g.local === g.name ? g.name : `${g.name} as ${g.local}`;
+        result.push(`import { ${imported} } from "${g.importPath}";`);
       }
       addedImports = true;
     }
@@ -38,7 +48,7 @@ export function addGroupsToSourceFile(
         const nextLine = lines[i] ?? "";
         if (nextLine.trim().startsWith("},") || nextLine.trim() === "}") {
           for (const g of newGroups) {
-            result.push(`    ${g.name},`);
+            result.push(g.local === g.name ? `    ${g.name},` : `    ${g.name}: ${g.local},`);
           }
           result.push(nextLine);
           break;

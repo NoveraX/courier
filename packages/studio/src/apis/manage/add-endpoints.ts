@@ -3,8 +3,9 @@
  * then merges into existing files or creates new group files.
  */
 
-import { generateCode } from "../generator";
+import { generateCode, groupLocalName } from "../generator";
 import type { GenerateOptions } from "../generator/types";
+import type { ImportLayout } from "../layout";
 import { generateFingerprints } from "../merge/fingerprint";
 import type { ParsedSpec } from "../parser/types";
 import { appendEndpointsToGroup } from "./append-to-group";
@@ -19,6 +20,7 @@ import { addGroupsToSourceFile } from "./update-source-file";
  * @param endpointsToAdd - Map of groupName → endpointName[] to add
  * @param options - Persisted generation options (selectedEndpoints is overridden)
  * @param existingFiles - Map of filePath → content for files currently on disk
+ * @param layout - Where the import's files go
  * @returns AddResult with files to create/modify and new fingerprints
  */
 export function previewAddEndpoints(
@@ -26,9 +28,10 @@ export function previewAddEndpoints(
   endpointsToAdd: Record<string, string[]>,
   options: GenerateOptions,
   existingFiles: Record<string, string>,
+  layout: ImportLayout,
 ): AddResult {
   const genOptions: GenerateOptions = { ...options, selectedEndpoints: endpointsToAdd };
-  const generated = generateCode(spec, genOptions);
+  const generated = generateCode(spec, genOptions, layout.importName);
   const files: FileChange[] = [];
   const newFingerprints: Record<string, string> = {};
 
@@ -53,7 +56,7 @@ export function previewAddEndpoints(
     }
 
     // Group file — append new endpoints
-    const endpointNames = endpointsToAddForFile(genFile.path, endpointsToAdd);
+    const endpointNames = endpointsToAddForFile(genFile.path, endpointsToAdd, layout);
     if (endpointNames.length > 0) {
       const merged = appendEndpointsToGroup(existingContent, genFile.content, endpointNames);
       files.push({ path: genFile.path, content: merged, action: "modify" });
@@ -67,15 +70,19 @@ export function previewAddEndpoints(
   }
 
   // Source file update for new groups
-  const newGroupNames = findNewGroups(endpointsToAdd, existingFiles, options);
+  const newGroupNames = findNewGroups(endpointsToAdd, existingFiles, layout);
   let sourceFileUpdate: AddResult["sourceFileUpdate"];
   if (newGroupNames.length > 0) {
-    const sourcePath = `${options.outputDir.replace(/\/+$/, "")}/${options.sourceName}/source.ts`;
+    const sourcePath = layout.sourceFile;
     const existingSource = existingFiles[sourcePath] ?? "";
     if (existingSource) {
       const updated = addGroupsToSourceFile(
         existingSource,
-        newGroupNames.map((n) => ({ name: n, importPath: `./${n}` })),
+        newGroupNames.map((name) => ({
+          name,
+          local: groupLocalName(name, layout.sourceBinding),
+          importPath: layout.groupSpecifier(name, "index"),
+        })),
       );
       sourceFileUpdate = { path: sourcePath, content: updated };
     }
@@ -86,30 +93,27 @@ export function previewAddEndpoints(
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Find which endpoint names from `toAdd` map to a specific generated file */
+/** Find which endpoint names from `toAdd` go into a specific generated file */
 function endpointsToAddForFile(
   filePath: string,
   endpointsToAdd: Record<string, string[]>,
+  layout: ImportLayout,
 ): string[] {
   for (const [group, names] of Object.entries(endpointsToAdd)) {
-    if (filePath.includes(`/${group}/`) || filePath.includes(`/${group}.ts`)) {
-      return names;
-    }
+    if (filePath === layout.groupFile(group)) return names;
   }
   return [];
 }
 
-/** Detect groups that don't exist on disk yet */
+/** Detect groups whose file is not on disk yet */
 function findNewGroups(
   endpointsToAdd: Record<string, string[]>,
   existingFiles: Record<string, string>,
-  options: GenerateOptions,
+  layout: ImportLayout,
 ): string[] {
-  const baseDir = `${options.outputDir.replace(/\/+$/, "")}/${options.sourceName}`;
-  return Object.keys(endpointsToAdd).filter((groupName) => {
-    const groupDir = `${baseDir}/${groupName}`;
-    return !Object.keys(existingFiles).some((p) => p.startsWith(groupDir));
-  });
+  return Object.keys(endpointsToAdd).filter(
+    (group) => !Object.hasOwn(existingFiles, layout.groupFile(group)),
+  );
 }
 
 const SCHEMA_DECL_RE = /^export\s+(?:const|type|interface)\s+(\w+)/;

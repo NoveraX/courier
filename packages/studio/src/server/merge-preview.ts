@@ -2,15 +2,15 @@
  * Merge preview and orphan cleanup helpers for write flow.
  */
 
-import type { CourierImportEntry } from "@noverax/courier/config";
 import type { ParsedSpec } from "../apis";
 import { createSpecDigest } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
+import type { ImportLayout } from "../apis/layout";
 import { previewUpdate } from "../apis/merge/update-flow";
 import type { UpdateResult } from "../apis/registry/types";
 import { resolveProjectSafe } from "../context";
 import { cleanupOrphanFiles } from "./cleanup-orphans";
-import { getEffectiveImportDir, persistImportState } from "./imports-bridge";
+import { persistImportState } from "./imports-bridge";
 import {
   buildFallbackFingerprints,
   collectFingerprints,
@@ -32,13 +32,9 @@ export function computeMergePreview(
   return previewUpdate(fingerprints, files, existingFiles);
 }
 
-export function removeOrphanFiles(
-  files: WriteBody["files"],
-  entry: CourierImportEntry,
-  name: string,
-): number {
+export function removeOrphanFiles(files: WriteBody["files"], layout: ImportLayout): number {
   const newPaths = new Set(files.map((f) => resolveProjectSafe(f.path)));
-  return cleanupOrphanFiles(getEffectiveImportDir(entry, name), newPaths);
+  return cleanupOrphanFiles(layout.dir, newPaths);
 }
 
 export async function persistRawSource(

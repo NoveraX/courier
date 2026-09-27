@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest"
 import { generateCode } from "../src/apis/generator"
-import { DEFAULT_OPTIONS } from "../src/apis/generator/types"
+import { DEFAULT_OPTIONS as GENERATION_DEFAULTS } from "../src/apis/generator/types"
 import type { ParsedSpec } from "../src/apis/parser/types"
+
+const DEFAULT_OPTIONS = { ...GENERATION_DEFAULTS, outputDir: "src/api", sourceName: "api" }
 
 const MOCK_SPEC: ParsedSpec = {
   title: "Pet Store",

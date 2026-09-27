@@ -1,18 +1,16 @@
-import { createLogger } from "@noverax/courier";
+import { CourierError, createLogger } from "@noverax/courier";
 import { errMsg } from "./fs-helpers";
-import { PathOutsideProjectError } from "./project-fs/path-outside-project-error";
-import { ProjectUnavailableError } from "./project-state/project-unavailable-error";
 import type { JsonResponse } from "./route-types";
-import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
 
 const log = createLogger("Studio");
 
 /**
  * Answer a route that failed.
  *
- * A request Studio will not serve from the project it runs right now, a
- * private spec host it cannot tell the project allows, or a path outside
- * the project gets that error's status — 503, 409 or 400 — with
+ * An error that names the status a request deserves — the project Studio
+ * runs cannot serve it right now (503), a private spec host it cannot tell
+ * the project allows (409), a path outside the project or an import
+ * declaration it refuses (400) — is answered with that status and
  * `{ error, code }`, so the UI can say what to do. Anything else is Studio's
  * own failure: it is logged and answered 500 with its message, or
  * `fallback` when it carries none.
@@ -31,14 +29,17 @@ const log = createLogger("Studio");
  * ```
  */
 export function sendRouteFailure(res: JsonResponse, err: unknown, fallback: string): void {
-  if (
-    err instanceof ProjectUnavailableError ||
-    err instanceof SpecHostsUnavailableError ||
-    err instanceof PathOutsideProjectError
-  ) {
-    res.status(err.httpStatus).json({ error: err.message, code: err.code });
+  const status = answeredStatus(err);
+  if (err instanceof CourierError && status !== undefined) {
+    res.status(status).json({ error: err.message, code: err.code });
     return;
   }
   log.warn(fallback, err);
   res.status(500).json({ error: errMsg(err, fallback) });
+}
+
+function answeredStatus(err: unknown): number | undefined {
+  if (!(err instanceof CourierError) || !("httpStatus" in err)) return undefined;
+  const status = err.httpStatus;
+  return typeof status === "number" && status >= 400 && status < 600 ? status : undefined;
 }

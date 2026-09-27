@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseSpec } from "../src/apis/parser";
-import { generateCode, applyImportDefaults } from "../src/apis/generator";
+import { generateCode } from "../src/apis/generator";
 
 function parse(paths: Record<string, unknown>, components?: Record<string, unknown>) {
   return parseSpec(
@@ -53,12 +53,12 @@ describe("generateTypes: false", () => {
         },
         { Status: { type: "string", enum: ["open", "closed"] } },
       ),
-      applyImportDefaults({
+      {
         type: "openapi",
         sourceName: "api",
         outputDir: "src",
         generateTypes: false,
-      }),
+      },
     )
       .map((f) => f.content)
       .join("\n");

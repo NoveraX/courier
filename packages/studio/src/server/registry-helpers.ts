@@ -24,7 +24,7 @@ export { checkSingleSource, fetchSpecRaw } from "./registry-spec";
  * caller can decide whether to compensate or surface it.
  *
  * After each delete the parent directory is pruned if it became empty, so
- * orphaned `<outputDir>/<sourceName>/` trees clean themselves up.
+ * the import's emptied directories clean themselves up.
  */
 export function removeGeneratedFiles(paths: string[]): void {
   const parents = new Set<string>();

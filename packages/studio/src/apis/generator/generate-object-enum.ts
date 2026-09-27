@@ -7,7 +7,7 @@ import { typeUnion, zodEnum } from "./enum-literals";
 import { jsdocText } from "./jsdoc-text";
 import { schemaToInterface, typeStyleFor } from "./schema-types";
 import { satisfiesExpr, schemaToValidation } from "./schema-utils";
-import type { GenerateOptions } from "./types";
+import type { GeneratorSettings } from "./types";
 import { schemaToArkType } from "./validation-arktype";
 import { valibotEnum } from "./validation-valibot";
 
@@ -15,7 +15,7 @@ export function generateObjectSchema(
   lines: string[],
   name: string,
   schema: ParsedSchema,
-  options: GenerateOptions,
+  options: GeneratorSettings,
 ): void {
   if (options.includeComments && schema.description) {
     lines.push(`/** ${jsdocText(schema.description)} */`);
@@ -33,7 +33,7 @@ function generateObjectWithValidation(
   lines: string[],
   name: string,
   schema: ParsedSchema,
-  options: GenerateOptions,
+  options: GeneratorSettings,
 ): void {
   /* Always emit explicit type when generateTypes is on — preserves JSDoc on ref fields */
   const typeName = options.generateTypes ? name : undefined;
@@ -55,7 +55,7 @@ export function generateEnumSchema(
   lines: string[],
   name: string,
   schema: ParsedSchema,
-  options: GenerateOptions,
+  options: GeneratorSettings,
 ): void {
   if (options.includeComments && schema.description) {
     lines.push(`/** ${jsdocText(schema.description)} */`);

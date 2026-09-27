@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseSpec } from "../src/apis/parser";
-import { generateCode, applyImportDefaults } from "../src/apis/generator";
+import { generateCode } from "../src/apis/generator";
 
 type Validation = "zod" | "valibot" | "arktype";
 
@@ -30,7 +30,7 @@ function build(schemas: Record<string, unknown>, validation: Validation = "zod")
         components: { schemas },
       }),
     ),
-    applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src", validation }),
+    { type: "openapi", sourceName: "api", outputDir: "src", validation },
   )
     .map((f) => f.content)
     .join("\n");
@@ -133,7 +133,7 @@ describe("a request body that is a list", () => {
           },
         }),
       ),
-      applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src" }),
+      { type: "openapi", sourceName: "api", outputDir: "src" },
     )
       .map((f) => f.content)
       .join("\n");

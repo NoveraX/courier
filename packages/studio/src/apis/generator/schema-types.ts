@@ -6,7 +6,7 @@ import type { ParsedSchema } from "../parser/types";
 import { EXACT_OPTIONAL, propertyType, schemaToTsType, type TypeStyle } from "./inline-types";
 import { jsdocText } from "./jsdoc-text";
 import { objectKey } from "./literals";
-import type { GenerateOptions } from "./types";
+import type { GeneratorSettings } from "./types";
 
 /**
  * The type written beside a schema, in the style its validator infers.
@@ -14,7 +14,7 @@ import type { GenerateOptions } from "./types";
  * @param options - Generator options
  * @returns How optional properties are written
  */
-export function typeStyleFor(options: GenerateOptions): TypeStyle {
+export function typeStyleFor(options: GeneratorSettings): TypeStyle {
   const loose = options.validation === "zod" || options.validation === "valibot";
   return { undefinedWhenOptional: options.generateSchemas === true && loose };
 }

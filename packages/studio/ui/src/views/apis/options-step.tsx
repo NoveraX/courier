@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 
 import type { GenerateOptions } from "./types";
+import { TargetDirHint } from "./target-dir-hint";
 
 interface OptionsStepProps {
   options: GenerateOptions;
@@ -48,12 +49,7 @@ export function OptionsStepView({
           />
         </FieldRow>
 
-        <div className="flex items-center gap-2 rounded-md bg-muted/40 px-3 py-2">
-          <span className="text-[10px] text-muted-foreground">Files will be written to</span>
-          <code className="text-[10px] font-mono text-foreground">
-            {options.outputDir.replace(/\/+$/, "")}/{options.sourceName}
-          </code>
-        </div>
+        <TargetDirHint outputDir={options.outputDir} sourceName={options.sourceName} />
 
         <FieldRow label="Validation library">
           <Select

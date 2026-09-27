@@ -5,12 +5,12 @@
 import type { ParsedGroup, ParsedSpec } from "../parser/types";
 import { emitsSchemas } from "./build-endpoint-helpers";
 import { jsdocText } from "./jsdoc-text";
-import type { GeneratedFile, GenerateOptions } from "./types";
+import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
 export function generateIndexFile(
   spec: ParsedSpec,
   groups: ParsedGroup[],
-  options: GenerateOptions,
+  options: ResolvedGenerateOptions,
   groupSchemaMap?: Map<string, Set<string>>,
   flat = false,
 ): GeneratedFile {
@@ -104,7 +104,7 @@ export function generateIndexFile(
       if (unique.length === 0) continue;
 
       if (unique.length === schemaNames.size) {
-        lines.push(`export * from "./${group.name}/${file}";`);
+        lines.push(`export * from "${options.layout.groupSpecifier(group.name, file)}";`);
       } else {
         const imports: string[] = [];
         for (const n of unique) {
@@ -113,7 +113,9 @@ export function generateIndexFile(
           if (options.generateTypes) imports.push(`type ${n}`);
         }
         if (imports.length > 0) {
-          lines.push(`export { ${imports.join(", ")} } from "./${group.name}/${file}";`);
+          lines.push(
+            `export { ${imports.join(", ")} } from "${options.layout.groupSpecifier(group.name, file)}";`,
+          );
         }
       }
 
@@ -123,7 +125,7 @@ export function generateIndexFile(
   lines.push("");
 
   return {
-    path: `${options.outputDir}/index.ts`,
+    path: options.layout.indexFile,
     content: lines.join("\n"),
   };
 }

@@ -5,7 +5,7 @@
 import type { ParsedSchema } from "../parser/types";
 import { jsdocText } from "./jsdoc-text";
 import { schemaToValidation } from "./schema-utils";
-import type { GenerateOptions } from "./types";
+import type { GeneratorSettings } from "./types";
 import { primitiveToArkType } from "./validation-arktype";
 import { primitiveToValibot } from "./validation-valibot";
 import { primitiveToZod } from "./validation-zod";
@@ -14,7 +14,7 @@ export function generateRefSchema(
   lines: string[],
   name: string,
   schema: ParsedSchema,
-  options: GenerateOptions,
+  options: GeneratorSettings,
 ): void {
   if (options.includeComments && schema.description) {
     lines.push(`/** ${jsdocText(schema.description)} */`);
@@ -35,7 +35,7 @@ export function generateArraySchema(
   lines: string[],
   name: string,
   schema: ParsedSchema,
-  options: GenerateOptions,
+  options: GeneratorSettings,
 ): void {
   if (options.includeComments && schema.description) {
     lines.push(`/** ${jsdocText(schema.description)} */`);
@@ -57,7 +57,7 @@ export function generatePrimitiveSchema(
   lines: string[],
   name: string,
   schema: ParsedSchema,
-  options: GenerateOptions,
+  options: GeneratorSettings,
 ): void {
   if (options.includeComments && schema.description) {
     lines.push(`/** ${jsdocText(schema.description)} */`);
@@ -80,7 +80,7 @@ function appendPrimitiveValidation(
   lines: string[],
   name: string,
   schema: ParsedSchema,
-  options: GenerateOptions,
+  options: GeneratorSettings,
 ): void {
   if (options.validation === "zod") {
     lines.push(`export const ${name}Schema = ${primitiveToZod(schema.type)};`);
@@ -94,7 +94,7 @@ function appendPrimitiveValidation(
   }
 }
 
-function appendInferredType(lines: string[], name: string, options: GenerateOptions): void {
+function appendInferredType(lines: string[], name: string, options: GeneratorSettings): void {
   if (options.validation === "zod") {
     lines.push(`export type ${name} = z.infer<typeof ${name}Schema>;`);
   } else if (options.validation === "valibot") {

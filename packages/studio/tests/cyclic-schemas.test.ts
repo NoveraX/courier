@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseSpec } from "../src/apis/parser";
-import { generateCode, applyImportDefaults } from "../src/apis/generator";
+import { generateCode } from "../src/apis/generator";
 import { findCyclicSchemas } from "../src/apis/generator/cyclic-schemas";
 import { schemaComponents } from "../src/apis/generator/schema-components";
 import type { ParsedSchema } from "../src/apis/parser/types";
@@ -43,7 +43,7 @@ function schemasFor(components: Record<string, unknown>): string {
         components: { schemas: components },
       }),
     ),
-    applyImportDefaults({ type: "openapi", sourceName: "api", outputDir: "src/api" }),
+    { type: "openapi", sourceName: "api", outputDir: "src/api" },
   );
   return files.find((f) => f.path.endsWith("schemas.ts"))?.content ?? "";
 }

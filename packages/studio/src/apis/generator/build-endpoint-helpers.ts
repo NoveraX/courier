@@ -4,7 +4,7 @@
 
 import type { ParsedEndpoint } from "../parser/types";
 import { getSchemaRefName } from "./schema-utils";
-import type { GenerateOptions } from "./types";
+import type { GeneratorSettings } from "./types";
 
 /**
  * Build the chain describing an endpoint.
@@ -55,7 +55,7 @@ function findConfig(config: string[], key: string): string | null {
  */
 export function describesResponseWithSchema(
   ep: ParsedEndpoint,
-  options: GenerateOptions,
+  options: GeneratorSettings,
   schemaImports: Set<string>,
 ): boolean {
   if (!options.generateSchemas || options.validation === "none") return false;
@@ -70,6 +70,6 @@ export function describesResponseWithSchema(
  * file hold types instead. Only both together produce something a chain can
  * validate against, and only then is a `XSchema` symbol importable.
  */
-export function emitsSchemas(options: GenerateOptions): boolean {
+export function emitsSchemas(options: GeneratorSettings): boolean {
   return options.generateSchemas === true && options.validation !== "none";
 }

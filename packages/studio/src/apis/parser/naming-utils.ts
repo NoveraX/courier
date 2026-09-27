@@ -2,6 +2,8 @@
  * Naming utilities: camelCase, PascalCase, transliteration, endpoint name generation.
  */
 
+import { isReservedBinding } from "./reserved-bindings";
+
 const CYRILLIC_MAP: Record<string, string> = {
   а: "a",
   б: "b",
@@ -72,68 +74,15 @@ export function toCamelCase(str: string): string {
 }
 
 /**
- * Words that may name an object property but may not name a binding.
- * A spec whose endpoints carry no tag is grouped under `default`, so the
- * generated `import { default }` and `export const default` were rejected by
- * the parser before any type checker ever saw them.
- */
-const RESERVED_WORDS = new Set([
-  "await",
-  "break",
-  "case",
-  "catch",
-  "class",
-  "const",
-  "continue",
-  "debugger",
-  "default",
-  "delete",
-  "do",
-  "else",
-  "enum",
-  "export",
-  "extends",
-  "false",
-  "finally",
-  "for",
-  "function",
-  "if",
-  "implements",
-  "import",
-  "in",
-  "instanceof",
-  "interface",
-  "let",
-  "new",
-  "null",
-  "package",
-  "private",
-  "protected",
-  "public",
-  "return",
-  "static",
-  "super",
-  "switch",
-  "this",
-  "throw",
-  "true",
-  "try",
-  "typeof",
-  "var",
-  "void",
-  "while",
-  "with",
-  "yield",
-]);
-
-/**
  * Normalize a name that will be emitted as a binding — an `import { x }`, an
- * `export const x`, a shorthand property — rather than as an object key.
+ * `export const x`, a shorthand property — rather than as an object key. A
+ * reserved word, or a name the generated files already use, gains a `Group`
+ * suffix.
  */
 export function toBindingName(name: string): string {
   const camel = toCamelCase(name);
   if (!camel) return "group";
-  if (RESERVED_WORDS.has(camel)) return `${camel}Group`;
+  if (isReservedBinding(camel)) return `${camel}Group`;
   return /^\d/.test(camel) ? `_${camel}` : camel;
 }
 

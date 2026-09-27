@@ -17,14 +17,24 @@ function countOf(reply: unknown, key: "written" | "removed" | "kept" | "leftBehi
   return Array.isArray(list) ? list.length : 0;
 }
 
+function unremovedOf(reply: unknown): string[] {
+  const list = isPlainObject(reply) ? reply.pruneFailures : undefined;
+  if (!Array.isArray(list)) return [];
+  return list.flatMap((failure) =>
+    isPlainObject(failure) && typeof failure.path === "string" ? [failure.path] : [],
+  );
+}
+
 function writeMessage(name: string, reply: unknown): string {
   const counts = {
     written: countOf(reply, "written"),
     removed: countOf(reply, "removed"),
     kept: countOf(reply, "kept"),
     leftBehind: countOf(reply, "leftBehind"),
+    unremoved: unremovedOf(reply),
   };
-  if (Object.values(counts).every((count) => count === 0)) return `${name} is already as Studio generates it`;
+  const unchanged = [counts.written, counts.removed, counts.kept, counts.leftBehind].every((n) => n === 0);
+  if (unchanged && counts.unremoved.length === 0) return `${name} is already as Studio generates it`;
   return appliedMessage(name, counts);
 }
 

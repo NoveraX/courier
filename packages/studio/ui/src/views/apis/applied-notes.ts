@@ -6,6 +6,8 @@ export interface AppliedCounts {
   removed: number;
   kept: number;
   leftBehind?: number;
+  /** Folders the apply emptied and could not remove. */
+  unremoved?: readonly string[];
 }
 
 /**
@@ -35,12 +37,16 @@ function asTheyWere(count: number): string {
  * // → "Updated pets: wrote 2 files; removed 1 file, keeping a copy"
  * ```
  */
-export function appliedMessage(head: string, { written, removed, kept, leftBehind = 0 }: AppliedCounts): string {
+export function appliedMessage(
+  head: string,
+  { written, removed, kept, leftBehind = 0, unremoved = [] }: AppliedCounts,
+): string {
   const notes = [
     written > 0 ? `wrote ${fileCount(written)}` : "",
     removed > 0 ? `removed ${fileCount(removed)}, keeping a copy` : "",
     kept > 0 ? asTheyWere(kept) : "",
     leftBehind > 0 ? `left ${fileCount(leftBehind)} in its previous directory` : "",
+    unremovedNote(unremoved),
   ].filter((note) => note !== "");
   return notes.length > 0 ? `${head}: ${notes.join("; ")}` : `${head}: no file changed`;
 }
@@ -51,6 +57,28 @@ export function appliedMessage(head: string, { written, removed, kept, leftBehin
  * @param applied - Studio's answer to an apply
  * @returns The counts
  */
-export function countsOf({ written, removed, kept }: AppliedFiles): AppliedCounts {
-  return { written: written.length, removed: removed.length, kept: kept.length };
+export function countsOf({ written, removed, kept, pruneFailures }: AppliedFiles): AppliedCounts {
+  return {
+    written: written.length,
+    removed: removed.length,
+    kept: kept.length,
+    unremoved: pruneFailures.map((failure) => failure.path),
+  };
+}
+
+/**
+ * Say which folders an apply emptied and could not remove, so the user can.
+ *
+ * @param folders - The folders, project-relative
+ * @returns The note, or "" when there are none
+ * @example
+ * ```ts
+ * unremovedNote(["src/api/pets/old"]); // → "could not remove the emptied folder src/api/pets/old; delete it by hand"
+ * ```
+ */
+export function unremovedNote(folders: readonly string[]): string {
+  if (folders.length === 0) return "";
+  const one = folders.length === 1;
+  const what = one ? "the emptied folder" : `${folders.length} emptied folders`;
+  return `could not remove ${what} ${folders.join(", ")}; delete ${one ? "it" : "them"} by hand`;
 }

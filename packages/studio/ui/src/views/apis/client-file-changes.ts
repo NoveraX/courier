@@ -24,6 +24,8 @@ export interface AppliedFiles {
   kept: Array<{ path: string; reason: KeptReason }>;
   /** Where the replaced and removed files were copied, relative to the project. */
   backupDir: string;
+  /** Folders the apply emptied that Studio could not remove, and why. */
+  pruneFailures: Array<{ path: string; code: string }>;
 }
 
 /** What courier.config still says about an import whose files go. */

@@ -62,7 +62,7 @@ describe("the remove dialog", () => {
     const onRemoved = vi.fn();
     vi.mocked(post)
       .mockResolvedValueOnce({ plan: PLAN, ...NOTES })
-      .mockResolvedValueOnce({ success: true, removed: ["src/api/pets/source.ts"], kept: [], backupDir: ".courier/backups/1-a", ...NOTES });
+      .mockResolvedValueOnce({ success: true, removed: ["src/api/pets/source.ts"], kept: [], backupDir: ".courier/backups/1-a", pruneFailures: [], ...NOTES });
     render(<Harness onRemoved={onRemoved} />);
     await act(() => removal.start("pets"));
 
@@ -102,7 +102,7 @@ describe("the remove dialog", () => {
     const kept = [{ path: "src/api/pets/pets/index.ts", reason: "unconfirmed" }];
     vi.mocked(post)
       .mockResolvedValueOnce({ plan: { ...PLAN, removals: [] }, ...NOTES })
-      .mockResolvedValueOnce({ success: true, removed: [], kept, backupDir: ".courier/backups/1-a", ...NOTES });
+      .mockResolvedValueOnce({ success: true, removed: [], kept, backupDir: ".courier/backups/1-a", pruneFailures: [], ...NOTES });
     render(<Harness onRemoved={onRemoved} />);
     await act(() => removal.start("pets"));
 

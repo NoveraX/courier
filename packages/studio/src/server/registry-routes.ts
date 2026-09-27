@@ -91,9 +91,10 @@ export function registerRegistryRoutes(app: RouteApp, deps: ApisRouteDeps): void
           "required",
         );
         project.importsChanged();
-        const { removed, kept, backupDir } = report;
+        const { removed, kept, backupDir, pruneFailures } = report;
         const notes = removalConfigNotes(projectRoot, body.name, running, removed);
-        return { status: 200, body: { success: true, removed, kept, backupDir, ...notes } };
+        const reply = { success: true, removed, kept, backupDir, pruneFailures, ...notes };
+        return { status: 200, body: reply };
       });
       res.status(reply.status).json(reply.body);
     } catch (err) {

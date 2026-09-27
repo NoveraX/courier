@@ -86,6 +86,7 @@ async function writeImport(
     removed: report.removed,
     kept: report.kept,
     backupDir: report.backupDir,
+    pruneFailures: report.pruneFailures,
     leftBehind,
     ...(declaration && { declaration }),
   };

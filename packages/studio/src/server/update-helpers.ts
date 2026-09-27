@@ -30,7 +30,7 @@ export interface UpdatePreview {
 
 /** What regenerating an import from a new spec did. */
 export interface UpdateApplied
-  extends Pick<ApplyReport, "written" | "removed" | "kept" | "backupDir"> {
+  extends Pick<ApplyReport, "written" | "removed" | "kept" | "backupDir" | "pruneFailures"> {
   leftBehind: string[];
 }
 
@@ -81,8 +81,8 @@ export function handleApplyUpdate(
   const regeneration = regenerationOf(body, imports, root);
   if ("error" in regeneration) return regeneration;
   const { report, leftBehind } = applyRegeneration(regeneration, body, "required");
-  const { written, removed, kept, backupDir } = report;
-  return { written, removed, kept, backupDir, leftBehind };
+  const { written, removed, kept, backupDir, pruneFailures } = report;
+  return { written, removed, kept, backupDir, pruneFailures, leftBehind };
 }
 
 function regenerationOf(

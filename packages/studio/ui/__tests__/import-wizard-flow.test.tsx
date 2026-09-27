@@ -80,6 +80,7 @@ const WRITTEN = {
   removed: [],
   kept: [],
   backupDir: ".courier/backups/1-a",
+  pruneFailures: [],
   leftBehind: [],
 };
 

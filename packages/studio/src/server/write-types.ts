@@ -60,6 +60,8 @@ export interface WriteResult {
   kept: Array<{ path: string; reason: string }>;
   /** Project-relative directory holding the files replaced and removed. */
   backupDir: string;
+  /** Folders the write emptied that Studio could not remove, and why. */
+  pruneFailures: Array<{ path: string; code: string }>;
   /** Files Studio wrote before the import's directory moved, left where they are. */
   leftBehind: string[];
   /** What the config must still declare for the import written; absent once it declares all of it. */

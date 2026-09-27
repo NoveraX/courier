@@ -7,24 +7,39 @@ const MULTIPLE_SLASHES = /\/+/g;
 const ABSOLUTE_URL = /^https?:\/\//i;
 const PARAM_RE = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
 
-type CompileFn = (params: Record<string, string>) => string;
+type CompileFn = (params: Record<string, unknown>) => string;
 const compileCache = new Map<string, CompileFn>();
 
 const cachedCompile = (path: string): CompileFn => {
   let fn = compileCache.get(path);
   if (!fn) {
-    fn = (params: Record<string, string>) =>
-      path.replace(PARAM_RE, (_, name: string) => {
-        const value = params[name];
-        if (value === undefined || value === null || value === "undefined") {
-          throw new Error(`Missing required parameter: ${name}`);
-        }
-        return encodeURIComponent(String(value));
-      });
+    fn = (params: Record<string, unknown>) =>
+      path.replace(PARAM_RE, (_, name: string) => encodePathParam(name, params[name]));
     compileCache.set(path, fn);
   }
   return fn;
 };
+
+/**
+ * One path segment, from a parameter's own value.
+ *
+ * The value is read as given rather than as its string form, so `null` is
+ * missing like `undefined` instead of the text "null", and the word
+ * "undefined" is an ordinary value. `.` and `..` are refused: encoding does
+ * not hide them, since URL parsing reads `%2E%2E` as `..` too, and the request
+ * would reach a route above the one the endpoint declares — with whatever
+ * credentials the server sends. An empty segment names another route as well.
+ */
+function encodePathParam(name: string, value: unknown): string {
+  if (value === undefined || value === null) {
+    throw new Error(`Missing required parameter: ${name}`);
+  }
+  const segment = String(value);
+  if (segment === "" || segment === "." || segment === "..") {
+    throw new Error(`Path parameter ${name} cannot be "${segment}": it would change the route`);
+  }
+  return encodeURIComponent(segment);
+}
 
 export const extractParamNames = (path: string): string[] => {
   const names: string[] = [];
@@ -110,13 +125,13 @@ export const compileUrl = (
       ? variables
       : undefined;
   const pathOptions = { ...generatedPathOptions, ...variablesObject };
-  const pathKeys: Record<string, string> = {};
+  const pathKeys: Record<string, unknown> = {};
 
   const paramNames = extractParamNames(urlPath);
   const newVariables = omitParams(variables, paramNames);
 
   for (const pathKey of paramNames) {
-    pathKeys[pathKey] = String(pathOptions?.[pathKey]);
+    pathKeys[pathKey] = pathOptions[pathKey];
   }
 
   try {

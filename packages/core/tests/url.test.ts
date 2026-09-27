@@ -3,9 +3,12 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
+import { HTTPError } from "../src/errors";
 import { retryMiddleware } from "../src/middleware/retry";
+import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { resolveBasePath } from "../src/utils/url";
 import { type EchoServer, startEchoServer } from "./helpers/echo-server";
 
@@ -31,7 +34,65 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  _resetSourcesForTests();
   await upstream.close();
+});
+
+describe("a path parameter's value", () => {
+  const items = defineGroup({
+    prefix: "items",
+    endpoints: { one: endpoint.get(":id/details").variables<{ id: unknown }>() },
+  });
+
+  function client() {
+    return createCaller(defineApi({ baseURL: upstream.origin, groups: { items } }));
+  }
+
+  async function refusal(id: unknown): Promise<unknown> {
+    return client()
+      .items.one({ id })
+      .catch((error: unknown) => error);
+  }
+
+  it.each([
+    ["..", ".."],
+    [".", "."],
+    ["an empty string", ""],
+    ["null", null],
+  ])("is refused before any request when it is %s", async (_, id) => {
+    const failure = await refusal(id);
+
+    expect(failure).toBeInstanceOf(HTTPError);
+    expect((failure as HTTPError).status).toBe(400);
+    expect(upstream.received).toHaveLength(0);
+  });
+
+  it("is sent when it is the word undefined", async () => {
+    await client().items.one({ id: "undefined" });
+
+    expect(upstream.last().url).toBe("/items/undefined/details");
+  });
+
+  it("keeps dots that are part of a longer value", async () => {
+    await client().items.one({ id: "v1.2..3" });
+
+    expect(upstream.last().url).toBe("/items/v1.2..3/details");
+  });
+
+  it("is refused through the proxy when it would climb out of the path", async () => {
+    registerSources({ api: defineApi({ name: "api", baseURL: upstream.origin, groups: { items } }) });
+
+    const response = await createHandler().handlePost(
+      new Request("http://app.local/api/request", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ source: "api", group: "items", method: "one", variables: { id: ".." } }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(upstream.received).toHaveLength(0);
+  });
 });
 
 describe("a FormData that fills a path parameter", () => {

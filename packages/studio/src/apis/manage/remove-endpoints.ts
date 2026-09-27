@@ -83,7 +83,7 @@ export function previewRemoveEndpoints(
     modifiedFiles,
     deletedFiles,
     ...withoutGroups(deletedGroupNames, existingFiles, layout),
-    ...withBarrel(barrelAfterRemoval(layout, existingFiles, modifiedFiles, deletedFiles)),
+    ...withBarrel(barrelAfterRemoval(layout, existingFiles, modifiedFiles, deletedFiles, false)),
     removedFingerprints,
     orphanedSchemas,
     modifiedEndpointsWarning,

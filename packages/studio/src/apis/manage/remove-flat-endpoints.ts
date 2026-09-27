@@ -49,20 +49,23 @@ export function previewRemoveFlatEndpoints(
   });
   if (content === null || content === source) return result;
   result.modifiedFiles.push({ path: layout.sourceFile, content });
-  const schemaPath = layout.schemaFile("schemas");
-  const schemas = existingFiles[schemaPath];
-  if (schemas === undefined) return result;
-  const orphans = detectOrphanSchemas(schemas, content, removedCode.join("\n"));
-  if (orphans.length === 0) return result;
-  result.orphanedSchemas.push(...orphans);
-  const cleaned = removeOrphanSchemas(schemas, orphans);
-  if (cleaned === null) result.deletedFiles.push(schemaPath);
-  else result.modifiedFiles.push({ path: schemaPath, content: cleaned });
+  for (const kind of ["schemas", "types"] as const) {
+    const schemaPath = layout.schemaFile(kind);
+    const schemas = existingFiles[schemaPath];
+    if (schemas === undefined) continue;
+    const orphans = detectOrphanSchemas(schemas, content, removedCode);
+    if (orphans.length === 0) continue;
+    result.orphanedSchemas.push(...orphans);
+    const cleaned = removeOrphanSchemas(schemas, orphans);
+    if (cleaned === null) result.deletedFiles.push(schemaPath);
+    else result.modifiedFiles.push({ path: schemaPath, content: cleaned });
+  }
   const barrel = barrelAfterRemoval(
     layout,
     existingFiles,
     result.modifiedFiles,
     result.deletedFiles,
+    true,
   );
   if (barrel !== undefined) result.indexFileUpdate = barrel;
   return result;

@@ -1,134 +1,85 @@
-/**
- * Detects orphaned schemas — those no longer referenced by any remaining endpoint.
- *
- * Builds a simple dependency graph to avoid removing schemas
- * that are still depended on by non-orphan schemas.
- */
+import { parseSource } from "../../server/mocks-edit/plan/parse-source";
+import { referencedNames } from "./referenced-names";
+import { readSchemaFile } from "./schema-file";
 
-const DECLARATION_RE = /^export\s+(?:const|type|interface|enum)\s+(\w+)/;
+const SCHEMA_SUFFIX = "Schema";
 
 /**
  * Find the schemas that removed endpoints used, directly or through other
- * schemas, and that nothing left uses: the remaining endpoints, or a
- * schema that stays. A schema the removed endpoints did not use is never
- * one, and neither is anything a schema that stays depends on.
+ * schemas, and that nothing left uses: the remaining endpoints, or a schema
+ * that stays. A schema and the type written for it — `Pet` and `PetSchema`
+ * — stay or go together, as a full write has both or neither. A schema the
+ * removed endpoints did not use is never one, and neither is anything a
+ * schema that stays depends on. Everything is read as code, so a bracket
+ * or a quote in a description, or an endpoint named like a keyword, cannot
+ * throw it off; a file that does not parse gives no orphan at all.
  *
- * @param schemaFileContent - Full content of the schema file
- * @param remainingGroupContents - Combined content of all remaining group files
- * @param removedCode - The code of the endpoints removed
- * @returns Array of schema names safe to remove
+ * @param schemaFileContent - The schemas or types file, without Studio's header
+ * @param remainingCode - The endpoints file as the removal leaves it
+ * @param removedCode - The code of each endpoint removed, as its property is written
+ * @returns The names safe to remove, in the order the file declares them
+ * @example
+ * ```ts
+ * detectOrphanSchemas(schemas, groupAfter, ['getPet: endpoint.get(":id").response(PetSchema)']);
+ * ```
  */
 export function detectOrphanSchemas(
   schemaFileContent: string,
-  remainingGroupContents: string,
-  removedCode: string,
+  remainingCode: string,
+  removedCode: readonly string[],
 ): string[] {
-  const allSchemas = collectSchemaNames(schemaFileContent);
-  if (allSchemas.length === 0) return [];
-  const schemaDeps = buildSchemaDeps(schemaFileContent, allSchemas);
-  const alive = withDependencies(
-    findReferencedIdentifiers(remainingGroupContents, allSchemas),
-    schemaDeps,
-  );
-  const touched = withDependencies(findReferencedIdentifiers(removedCode, allSchemas), schemaDeps);
-  /* A schema that stays keeps what it is written with, such as the type it `satisfies`. */
-  const staying = allSchemas.filter((name) => alive.has(name) || !touched.has(name));
-  const kept = withDependencies(new Set(staying), schemaDeps);
-  return allSchemas.filter((name) => !kept.has(name));
+  const statements = readSchemaFile("schemas.ts", schemaFileContent);
+  const remaining = codeNames(remainingCode);
+  if (statements === null || remaining === null) return [];
+  const declarations = statements.filter((s) => s.kind === "declaration");
+  const declared = new Set(declarations.flatMap((s) => s.binds));
+  const unitOf = (name: string): string => {
+    const base = name.endsWith(SCHEMA_SUFFIX) ? name.slice(0, -SCHEMA_SUFFIX.length) : name;
+    return base !== name && declared.has(base) ? base : name;
+  };
+  const deps = new Map<string, Set<string>>();
+  for (const statement of declarations) {
+    for (const name of statement.binds) {
+      const unit = unitOf(name);
+      const into = deps.get(unit) ?? new Set();
+      for (const ref of statement.references)
+        if (declared.has(ref) && unitOf(ref) !== unit) into.add(unitOf(ref));
+      deps.set(unit, into);
+    }
+  }
+  const unitsIn = (names: Iterable<string>): Set<string> =>
+    new Set([...names].filter((name) => declared.has(name)).map(unitOf));
+  const alive = closure(unitsIn(remaining), deps);
+  const touched = closure(unitsIn(removedCode.flatMap((code) => [...snippetNames(code)])), deps);
+  const staying = [...deps.keys()].filter((unit) => alive.has(unit) || !touched.has(unit));
+  const kept = closure(new Set(staying), deps);
+  return declarations.flatMap((s) => s.binds).filter((name) => !kept.has(unitOf(name)));
 }
 
-/* The schemas given, and every schema they depend on. */
-function withDependencies(start: Set<string>, schemaDeps: Map<string, string[]>): Set<string> {
+/* The units given, and every unit they depend on. */
+function closure(start: Set<string>, deps: ReadonlyMap<string, ReadonlySet<string>>): Set<string> {
   const reached = new Set(start);
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const [schema, deps] of schemaDeps) {
-      if (!reached.has(schema)) continue;
-      for (const dep of deps) {
-        if (!reached.has(dep)) {
-          reached.add(dep);
-          changed = true;
-        }
-      }
+  const pending = [...start];
+  for (let unit = pending.pop(); unit !== undefined; unit = pending.pop()) {
+    for (const dep of deps.get(unit) ?? []) {
+      if (reached.has(dep)) continue;
+      reached.add(dep);
+      pending.push(dep);
     }
   }
   return reached;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function collectSchemaNames(content: string): string[] {
-  const names: string[] = [];
-  for (const line of content.split("\n")) {
-    const match = line.match(DECLARATION_RE);
-    if (match?.[1]) names.push(match[1]);
-  }
-  return names;
+/* The names a file's code refers to outside its imports, or `null` when it does not parse. */
+function codeNames(text: string): Set<string> | null {
+  const parsed = parseSource("endpoints.ts", text);
+  if (parsed.problem !== null) return null;
+  return referencedNames(parsed.program.body.filter((s) => s.type !== "ImportDeclaration"));
 }
 
-/** Find which schema names appear as identifiers in group content (excluding imports) */
-function findReferencedIdentifiers(groupContent: string, schemaNames: string[]): Set<string> {
-  // Strip import lines — we only care about usage in actual code
-  const codeOnly = groupContent
-    .split("\n")
-    .filter((line) => !line.trimStart().startsWith("import"))
-    .join("\n");
-
-  const found = new Set<string>();
-  for (const name of schemaNames) {
-    const re = new RegExp(`\\b${name}\\b`);
-    if (re.test(codeOnly)) found.add(name);
-  }
-  return found;
-}
-
-/** For each schema, find which other schemas it references */
-function buildSchemaDeps(schemaContent: string, allSchemas: string[]): Map<string, string[]> {
-  const deps = new Map<string, string[]>();
-  const lines = schemaContent.split("\n");
-  const nameSet = new Set(allSchemas);
-  let i = 0;
-
-  while (i < lines.length) {
-    const match = lines[i]?.match(DECLARATION_RE);
-    if (!match?.[1]) {
-      i++;
-      continue;
-    }
-
-    const name = match[1];
-    const endIdx = findBlockEnd(lines, i);
-    const block = lines.slice(i, endIdx + 1).join("\n");
-
-    const schemaDeps: string[] = [];
-    for (const other of nameSet) {
-      if (other === name) continue;
-      if (new RegExp(`\\b${other}\\b`).test(block)) schemaDeps.push(other);
-    }
-
-    deps.set(name, schemaDeps);
-    i = endIdx + 1;
-  }
-
-  return deps;
-}
-
-function findBlockEnd(lines: string[], start: number): number {
-  let depth = 0;
-  let foundOpen = false;
-
-  for (let j = start; j < lines.length; j++) {
-    for (const ch of lines[j] ?? "") {
-      if (ch === "{" || ch === "(" || ch === "[") {
-        depth++;
-        foundOpen = true;
-      }
-      if (ch === "}" || ch === ")" || ch === "]") depth--;
-    }
-    if (!foundOpen && (lines[j] ?? "").endsWith(";")) return j;
-    if (foundOpen && depth <= 0) return j;
-  }
-
-  return lines.length - 1;
+/* An endpoint's property read as code; one that does not parse counts every word it holds. */
+function snippetNames(code: string): Set<string> {
+  const parsed = parseSource("endpoint.ts", `({ ${code.trim()} });`);
+  if (parsed.problem === null) return referencedNames(parsed.program.body);
+  return new Set(code.match(/[A-Za-z_$][\w$]*/g) ?? []);
 }

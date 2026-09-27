@@ -20,7 +20,7 @@
 Next.js App Router integration with two features:
 
 1. **`apiRoute`** — single route handler that exposes all your endpoints via GET and POST
-2. **`createAction`** — type-safe Server Actions with FormData parsing, revalidation, and error handling
+2. **`createAction`** — a typed caller for Server Actions that forwards the incoming request's headers
 
 <br />
 
@@ -103,9 +103,11 @@ createAction(sources, "api", {
 })
 ```
 
+`createAction` takes the same sources map you pass to `registerSources`, and the client it returns has the shape of the named source — grouped, flat, or both. It only forwards each call: revalidating, reading `FormData` and handling errors stay in your action, as above.
+
 ### ActionState Type
 
-Convenience type for `useActionState` return values:
+A type for the state your action hands `useActionState`. `createAction` does not produce it; your action builds it:
 
 ```ts
 type ActionState<T> = {
@@ -115,6 +117,26 @@ type ActionState<T> = {
     status?: number
     issues?: ValidationIssue[]  // from Standard Schema validation
   } | null
+}
+```
+
+```ts
+"use server"
+import { HTTPError, isValidationError } from "@noverax/courier"
+import type { ActionState } from "@noverax/courier-next"
+import { action } from "@/lib/actions"
+
+type User = { id: number; name: string }
+
+export async function saveUser(_: ActionState<User>, form: FormData): Promise<ActionState<User>> {
+  try {
+    const user = await action.users.create({ name: String(form.get("name")) })
+    return { data: user, error: null }
+  } catch (error) {
+    if (isValidationError(error)) return { data: null, error: { message: error.message, issues: error.issues } }
+    if (error instanceof HTTPError) return { data: null, error: { message: error.message, status: error.status } }
+    throw error
+  }
 }
 ```
 

@@ -4,10 +4,10 @@ import {
   createLogger,
   type ExecuteBackend,
   executeRequest,
-  type TypedClient,
+  type InferClient,
   type ValidationIssue,
 } from "@noverax/courier";
-import type { DefinedApi } from "@noverax/courier/define";
+import type { Sources } from "@noverax/courier/define";
 
 const log = createLogger("Next");
 
@@ -43,9 +43,14 @@ async function getRequestHeaders(): Promise<Headers | undefined> {
  * Create a dot-notation server-side caller for Next.js Server Actions.
  * Automatically forwards request headers via `next/headers`.
  *
- * @param sources - Sources map (same object passed to `apiRoute`)
+ * The caller only forwards each call to the upstream, as `createCaller`
+ * does; revalidation, form parsing and the state `useActionState` keeps are
+ * the action's own business.
+ *
+ * @param sources - The sources map, the same one passed to `registerSources`
  * @param source - Source name (key in the sources map)
  * @param defaults - Optional configuration
+ * @returns A client shaped like the source: grouped, flat or both
  *
  * @example
  * ```ts
@@ -69,10 +74,11 @@ async function getRequestHeaders(): Promise<Headers | undefined> {
  * }
  * ```
  */
-export function createAction<
-  TSources extends Record<string, DefinedApi<any>>,
-  TKey extends string & keyof TSources,
->(sources: TSources, source: TKey, defaults: ActionDefaults = {}): TypedClient<TSources[TKey]> {
+export function createAction<TSources extends Sources, TKey extends string & keyof TSources>(
+  sources: TSources,
+  source: TKey,
+  defaults: ActionDefaults = {},
+): InferClient<TSources[TKey]> {
   const backend: ExecuteBackend = async (group, method, variables, options, raw) => {
     const context: Context | undefined =
       defaults.headers !== false
@@ -95,5 +101,5 @@ export function createAction<
     );
   };
 
-  return buildClientProxy(backend) as TypedClient<TSources[TKey]>;
+  return buildClientProxy(backend) as InferClient<TSources[TKey]>;
 }

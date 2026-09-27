@@ -26,7 +26,9 @@ type CallerDefaults = {
   headers?: Record<string, string>
   // Shared context passed to every endpoint
   context?: Context
-  // Called when any request fails
+  // Called when a request fails with an HTTPError — an answer with an
+  // error status, or a network failure. A ValidationError or a
+  // cancellation the caller asked for is thrown without it.
   onError?: (error: HTTPError) => void | Promise<void>
   // Called when any request succeeds
   onSuccess?: (data: unknown) => void | Promise<void>
@@ -102,7 +104,7 @@ await caller.users.with({ headers: await headers() }).create({ name: "Jane" })
 
 ## Context parameter
 
-The `Context` parameter is what makes direct mode different from proxy mode. In proxy mode, cookies are forwarded automatically through the handler. In direct mode, you must pass them explicitly through `.with()`:
+The `Context` is what makes direct mode different from proxy mode. In proxy mode, cookies are forwarded automatically through the handler. In direct mode, you pass them yourself: per call through `.with({ headers })`, or for every call of a caller through the `context` default of `createCaller`. A method takes its variables as its only argument; a second argument is not read.
 
 ```ts
 import type { Context } from "@noverax/courier"
@@ -124,10 +126,9 @@ import { caller } from "@/lib/caller"
 
 export default async function ProfilePage() {
   // headers() returns the incoming request headers (including cookies)
-  const profile = await caller.users.me(
-    undefined,                     // no variables needed
-    { headers: await headers() }   // forward auth cookies to backend
-  )
+  const profile = await caller.users
+    .with({ headers: await headers() })   // forward auth cookies to backend
+    .me()                                 // no variables needed
 
   return <h1>Welcome, {profile.name}</h1>
 }
@@ -135,18 +136,17 @@ export default async function ProfilePage() {
 
 ### In API routes
 
-In route handlers, pass the `Request` object directly. Courier extracts the headers from it:
+In route handlers, give a caller the `Request` as its context. Courier extracts the headers from it, through the whitelist below:
 
 ```ts title="app/api/dashboard/route.ts"
 import { NextResponse } from "next/server"
-import { caller } from "@/lib/caller"
+import { createCaller } from "@noverax/courier"
+import { api } from "@/api"
 
 export async function GET(req: Request) {
-  // Pass the Request directly — headers are extracted automatically
-  const stats = await caller.dashboard.getStats(
-    undefined,
-    { req }
-  )
+  // A caller for this request — its headers are extracted automatically
+  const caller = createCaller(api, { context: { req } })
+  const stats = await caller.dashboard.getStats()
 
   return NextResponse.json(stats)
 }

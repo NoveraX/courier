@@ -76,12 +76,20 @@ export type CacheArg<TKind extends "query" | "mutation"> = TKind extends "query"
   ? CacheConfig
   : never;
 
-/** Retry policy applied to an endpoint or inherited from its base. */
+/**
+ * Retry policy applied to an endpoint or inherited from its base.
+ *
+ * Without `on`, a 5xx and a request that got no answer are retried. An
+ * endpoint that writes is sent once unless `mutations` is set, since a write
+ * whose answer was lost may already have been carried out.
+ */
 export interface RetryOptions {
   attempts?: number;
   backoff?: "fixed" | "exponential";
-  /** Response statuses worth retrying. */
+  /** Response statuses worth retrying; 0 stands for a request that got no answer. */
   on?: readonly number[];
+  /** Retry the endpoint even though it writes (default: false). */
+  mutations?: boolean;
 }
 
 /** Everything the runtime needs about an endpoint, flattened at definition. */

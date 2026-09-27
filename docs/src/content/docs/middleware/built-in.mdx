@@ -28,6 +28,8 @@ function retryMiddleware(options?: {
   mode?: "fixed" | "exponential"
   /** Which answers deserve another attempt (default: status 0 or status >= 500) */
   retryOn?: (response: MiddlewareResponse) => boolean
+  /** Retry endpoints that write as well as those that read (default: false) */
+  mutations?: boolean
 }): MiddlewareFn
 ```
 
@@ -59,6 +61,18 @@ retryMiddleware({
 <Callout variant="tip" title="What the condition sees">
 A non-2xx answer rejects the call with an `HTTPError`; `retryOn` is shown the answer it carries — its status, body and headers. A request that got no answer is shown as status 0, so a condition that should also retry network failures has to accept it. Errors that are not HTTP failures — a response that fails its schema, a middleware that throws — are never retried. After the last attempt, its error is re-thrown.
 </Callout>
+
+### Writes are sent once
+
+An endpoint that writes — a `post`, `put`, `patch` or `del` not declared a read with `.reads()`, or a `.via()` endpoint, which counts as a write until `.reads()` says otherwise — is not retried by default. A write whose answer was lost may already have been carried out, and sending it again can charge a card twice. Pass `mutations: true` only when the upstream recognises a repeated write, for example by an idempotency key:
+
+```ts title="lib/sources.ts"
+retryMiddleware({ limit: 3, mutations: true })
+```
+
+A `retry` policy on a `courier()` base or an endpoint's `.retry()` follows the same rule and takes the same `mutations` flag.
+
+### Cancellations
 
 A cancellation is never retried, whatever `retryOn` says: not a call whose signal the caller aborted, whatever reason it gave, and not a request that `deduplicate` replaced with a newer identical one (status 499). A caller that aborts while the middleware waits between attempts is answered at once with its signal's reason.
 

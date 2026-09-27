@@ -28,6 +28,8 @@ function clientFor(url: string, retry: Middleware) {
       endpoints: {
         read: endpoint.get("status/:code").variables<{ code: number }>(),
         typed: endpoint.get("typed").response(z.object({ id: z.string() })),
+        write: endpoint.post("orders").variables<{ item: string }>(),
+        search: endpoint.post("search").variables<{ q: string }>().reads(),
       },
     }),
   );
@@ -238,5 +240,81 @@ describe("retryMiddleware and cancellation", () => {
     await expect(first).rejects.toMatchObject({ status: 499 });
     await expect(second).resolves.toEqual({ ok: true });
     expect(upstream.seen).toHaveLength(2);
+  });
+});
+
+describe("retryMiddleware and writes", () => {
+  it("does not send a write again by default", async () => {
+    const { url, seen } = await answering(503);
+    const client = clientFor(url, retryMiddleware({ limit: 3, backoff: 1 }));
+
+    await expect(client.write({ item: "book" })).rejects.toMatchObject({ status: 503 });
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.method).toBe("POST");
+  });
+
+  it("sends a write again when told writes may be repeated", async () => {
+    const { url, seen } = await answering(503);
+    const client = clientFor(url, retryMiddleware({ limit: 3, backoff: 1, mutations: true }));
+
+    await expect(client.write({ item: "book" })).resolves.toEqual({ ok: true });
+
+    expect(seen).toHaveLength(2);
+  });
+
+  it("retries an endpoint declared a read whatever verb carries it", async () => {
+    const { url, seen } = await answering(503);
+    const client = clientFor(url, retryMiddleware({ limit: 3, backoff: 1 }));
+
+    await expect(client.search({ q: "ada" })).resolves.toEqual({ ok: true });
+
+    expect(seen.map((r) => r.method)).toEqual(["POST", "POST"]);
+  });
+});
+
+describe("a retry policy declared on the builder", () => {
+  function baseClient(url: string, retry: Parameters<typeof courier>[0]) {
+    const base = courier(retry);
+    return createCaller(
+      defineApi({
+        name: "api",
+        baseURL: url,
+        endpoints: {
+          read: base.endpoint.get("items"),
+          write: base.endpoint.post("items").variables<{ item: string }>(),
+          repeatable: base.endpoint
+            .post("items")
+            .variables<{ item: string }>()
+            .retry({ attempts: 2, mutations: true }),
+        },
+      }),
+    );
+  }
+
+  it("repeats a read the base retries", async () => {
+    const { url, seen } = await answering(503);
+
+    await expect(baseClient(url, { retry: { attempts: 2 } }).read()).resolves.toEqual({ ok: true });
+
+    expect(seen).toHaveLength(2);
+  });
+
+  it("does not repeat a write the base retries", async () => {
+    const { url, seen } = await answering(503);
+
+    await expect(
+      baseClient(url, { retry: { attempts: 2, on: [503] } }).write({ item: "book" }),
+    ).rejects.toMatchObject({ status: 503 });
+
+    expect(seen).toHaveLength(1);
+  });
+
+  it("repeats a write whose policy allows it", async () => {
+    const { url, seen } = await answering(503);
+
+    await expect(baseClient(url, {}).repeatable({ item: "book" })).resolves.toEqual({ ok: true });
+
+    expect(seen).toHaveLength(2);
   });
 });

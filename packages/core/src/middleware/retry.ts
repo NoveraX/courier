@@ -25,6 +25,12 @@ const CLIENT_CLOSED_REQUEST = 499;
  * caller that cancels while the middleware waits between attempts is answered
  * at once with its signal's reason.
  *
+ * An endpoint that writes is sent once unless `mutations` is set. A write
+ * whose answer was lost may still have been carried out, and sending it again
+ * charges a card twice; set it only when the upstream recognises a repeated
+ * write, for example by an idempotency key. An endpoint declared a read with
+ * `.reads()` is retried whatever verb carries it.
+ *
  * @param options - How many attempts, how far apart, and which answers deserve one
  * @returns The middleware, to place on a source or an endpoint
  *
@@ -37,6 +43,9 @@ const CLIENT_CLOSED_REQUEST = 499;
  *
  * // Also retry a rate-limited request
  * retryMiddleware({ retryOn: (response) => response.status === 429 || response.status >= 500 });
+ *
+ * // Writes too: the upstream deduplicates them by their Idempotency-Key
+ * retryMiddleware({ mutations: true });
  * ```
  */
 export function retryMiddleware(options?: {
@@ -48,21 +57,27 @@ export function retryMiddleware(options?: {
   mode?: "fixed" | "exponential";
   /** Which answers deserve another attempt (default: status 0 or status >= 500) */
   retryOn?: (response: MiddlewareResponse) => boolean;
+  /** Retry endpoints that write as well as those that read (default: false) */
+  mutations?: boolean;
 }): Middleware {
   const {
     limit = 3,
     backoff = 300,
     mode = "exponential",
     retryOn = isServerFailure,
+    mutations = false,
   } = options ?? {};
   const waitFor = (attempt: number): number =>
     mode === "fixed" ? backoff : backoff * 2 ** attempt;
 
   return defineMiddleware("retry", "wrap", async (ctx, next) => {
+    const retries = ctx.kind === "mutation" && !mutations ? 0 : limit;
     for (let attempt = 0; ; attempt++) {
       const outcome = await settle(next);
       const retry =
-        attempt < limit && !isCancellation(outcome, ctx.signal) && deservesRetry(outcome, retryOn);
+        attempt < retries &&
+        !isCancellation(outcome, ctx.signal) &&
+        deservesRetry(outcome, retryOn);
       if (!retry) return unwrap(outcome);
       await pause(waitFor(attempt), ctx.signal);
     }

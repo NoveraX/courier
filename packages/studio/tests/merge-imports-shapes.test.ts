@@ -52,7 +52,7 @@ ${GROUP}`)
 ${GROUP}`)
 
     const changes: MergeChange[] = []
-    const merged = mergeImports(existing.imports, generated.imports, changes).join("\n")
+    const merged = mergeImports(existing.imports, generated.imports, changes, "").join("\n")
 
     expect(merged).toContain('import "./polyfill";')
     expect(merged).toContain('import dayjs from "dayjs";')
@@ -69,10 +69,22 @@ ${GROUP}`)
     const generated = parseExistingGroup(`import { PetSchema, NewPetSchema } from "./schemas";
 ${GROUP}`)
 
-    const merged = mergeImports(existing.imports, generated.imports, []).join("\n")
+    const merged = mergeImports(existing.imports, generated.imports, [], "const mine = MyOwnSchema;").join("\n")
 
     for (const name of ["PetSchema", "NewPetSchema", "MyOwnSchema"]) {
       expect(merged).toContain(name)
     }
+  })
+
+  it("drops a name of a generated module that nothing merged uses any more", () => {
+    const existing = parseExistingGroup(`import { InventorySchema, OrderSchema } from "./schemas";
+${GROUP}`)
+    const generated = parseExistingGroup(`import { InventorySchema } from "./schemas";
+${GROUP}`)
+
+    const merged = mergeImports(existing.imports, generated.imports, [], "endpoint.get('').response(InventorySchema)").join("\n")
+
+    expect(merged).toContain('import { InventorySchema } from "./schemas";')
+    expect(merged).not.toContain("OrderSchema")
   })
 })

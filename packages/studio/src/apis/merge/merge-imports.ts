@@ -1,16 +1,29 @@
 /**
  * Merges import statements from existing and generated group files.
  *
- * Strategy: union of all imports, deduplicate by source, preserve user's extras.
+ * Strategy: union of all imports, deduplicate by source, preserve user's
+ * extras. Of a module the generated file imports too, a name only the file
+ * imported is kept while the merged code uses it: a schema the spec no
+ * longer has would otherwise stay imported from a module that no longer
+ * exports it.
  */
 
 import type { MergeChange, ParsedImport } from "./types";
 
-/** Merge existing + generated imports, tracking changes */
+/**
+ * Merge existing + generated imports, tracking changes.
+ *
+ * @param existing - The file's imports
+ * @param generated - The freshly generated file's imports
+ * @param changes - Where the imports kept for the user are noted
+ * @param code - The merged code below the imports, which a kept name must be used in
+ * @returns The import lines
+ */
 export function mergeImports(
   existing: ParsedImport[],
   generated: ParsedImport[],
   changes: MergeChange[],
+  code: string,
 ): string[] {
   const merged = new Map<string, ParsedImport>();
 
@@ -29,19 +42,33 @@ export function mergeImports(
       });
       continue;
     }
-    merged.set(imp.source, unionImport(gen, imp));
+    merged.set(imp.source, unionImport(gen, imp, code));
   }
 
   return [...merged.values()].map(formatImport);
 }
 
-function unionImport(generated: ParsedImport, existing: ParsedImport): ParsedImport {
+function uses(code: string, specifier: string): boolean {
+  const local = specifier.split(/\s+as\s+/).at(-1) ?? specifier;
+  return new RegExp(`(?<![\\w$])${local.replaceAll("$", "\\$")}(?![\\w$])`).test(code);
+}
+
+function unionImport(generated: ParsedImport, existing: ParsedImport, code: string): ParsedImport {
   if (generated.namespaceImport || existing.namespaceImport) {
     return generated.namespaceImport ? generated : existing;
   }
 
-  const names = [...new Set([...generated.names, ...existing.names])];
-  const typeNames = [...new Set([...generated.typeNames, ...existing.typeNames])];
+  const kept = (name: string, own: readonly string[]): boolean =>
+    own.includes(name) || uses(code, name);
+  const names = [
+    ...new Set([...generated.names, ...existing.names.filter((n) => kept(n, generated.names))]),
+  ];
+  const typeNames = [
+    ...new Set([
+      ...generated.typeNames,
+      ...existing.typeNames.filter((n) => kept(n, generated.typeNames)),
+    ]),
+  ];
 
   return { raw: "", source: generated.source, names, typeNames };
 }

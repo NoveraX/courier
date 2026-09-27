@@ -24,11 +24,15 @@ export function mergeGroupFile(
   const generated = parseExistingGroup(generatedContent);
   const changes: MergeChange[] = [];
 
-  const importLines = mergeImports(existing.imports, generated.imports, changes);
   const endpointLines = mergeEndpoints(existing, generated, fingerprints, changes).map((line) =>
     renameBase(line, generated.baseName, existing.baseName),
   );
   const preamble = mergePreamble(existing.preamble, generated.preamble);
+  /* A name the file imported that nothing merged uses any more goes with the code that used it. */
+  const code = [...preamble, ...generated.header, ...endpointLines, ...existing.trailingCode].join(
+    "\n",
+  );
+  const importLines = mergeImports(existing.imports, generated.imports, changes, code);
   const content = buildFile(importLines, preamble, generated, endpointLines, existing.trailingCode);
   const status = resolveStatus(changes);
 

@@ -96,6 +96,47 @@ describe("WebSocket options", () => {
     expect(await reply).toMatchObject({ type: "complete", error: { code: 4403 } });
   });
 
+  it("refuses an oversized message by default and keeps the connection's subscriptions", async () => {
+    const url = await serve({});
+    const client = await connect(url);
+    const subscribed = nextMessage(client);
+    client.send(JSON.stringify({ type: "subscribe", id: "s1", topic: "live.feed" }));
+    expect(await subscribed).toMatchObject({ type: "subscribed" });
+    const errors: unknown[] = [];
+    client.on("message", (data) => {
+      const message = JSON.parse(String(data)) as { type: string };
+      if (message.type === "error") errors.push(message);
+    });
+
+    client.send(JSON.stringify({ type: "ping", pad: "x".repeat(70_000) }));
+    const outcome = await closedWithin(client, 500);
+
+    expect(outcome).toBe("open");
+    expect(errors).toEqual([expect.objectContaining({ error: expect.objectContaining({ code: 4413 }) })]);
+    const pong = nextMessage(client);
+    client.send(JSON.stringify({ type: "ping" }));
+    expect(await pong).toMatchObject({ type: "pong" });
+  });
+
+  it("closes a connection whose frame exceeds maxPayload, before buffering it", async () => {
+    const url = await serve({ maxPayload: 4096 });
+    const client = await connect(url);
+
+    client.send("x".repeat(64 * 1024));
+
+    expect(await closedWithin(client, 1000)).toBe(1009);
+  });
+
+  it("reads a frame up to twice a raised maxMessageSize, to refuse it with an error", async () => {
+    const url = await serve({ maxMessageSize: 2 * 1024 * 1024 });
+    const client = await connect(url);
+
+    const reply = nextMessage(client);
+    client.send(JSON.stringify({ type: "ping", pad: "x".repeat(3 * 1024 * 1024) }));
+
+    expect(await reply).toMatchObject({ type: "error", error: { code: 4413 } });
+  });
+
   it("refuses a message over maxMessageSize with an error", async () => {
     const url = await serve({ maxMessageSize: 256 });
     const client = await connect(url);

@@ -2,6 +2,7 @@ import type { FlatClient, MixedClient, TypedClient } from "./client";
 import { buildClientProxy } from "./client";
 import { shapeOfSource } from "./client/shape";
 import type {
+  AnyDefinedApi,
   DefinedApi,
   DefinedFlatApi,
   DefinedMixedApi,
@@ -61,10 +62,14 @@ export function createCaller<TApi extends DefinedApi>(
   defaults?: CallerDefaults,
 ): TypedClient<TApi>;
 
+/* A flat source defined with no endpoints yet is only its options, and the
+   flat overload cannot tell its endpoints apart from them, so none matched. */
 export function createCaller(
-  source: DefinedApi | DefinedFlatApi | DefinedMixedApi,
-  defaults: CallerDefaults = {},
-): unknown {
+  source: DefinedFlatApi<Record<never, never>>,
+  defaults?: CallerDefaults,
+): FlatClient<Record<never, never>>;
+
+export function createCaller(source: AnyDefinedApi, defaults: CallerDefaults = {}): unknown {
   const http = createDirectHTTPExecutor(source, defaults);
   const backend = composeBackend(source as Record<string, unknown>, http, {
     sse: createDirectSSEFactory(source, { headers: defaults.headers }),

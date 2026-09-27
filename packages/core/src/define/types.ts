@@ -48,6 +48,16 @@ export type DefinedMixedApi<
   options: BaseOptions & { groups: TGroups };
 } & TEndpoints;
 
+/**
+ * Whatever defineApi returns: grouped, flat, mixed, or flat with no endpoints
+ * yet — which is its options alone, and which no other shape describes.
+ */
+export type AnyDefinedApi =
+  | DefinedApi
+  | DefinedFlatApi
+  | DefinedMixedApi
+  | DefinedFlatApi<Record<never, never>>;
+
 /** Loose source type for executeRequest / createRequest */
 export type AnySource = {
   options?: BaseOptions & { groups?: Record<string, { options?: GroupOptions }> };

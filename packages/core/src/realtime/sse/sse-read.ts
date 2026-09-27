@@ -1,7 +1,7 @@
 import { createLogger } from "../../logger";
 import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
 import { SSE_CONTROL_EVENTS } from "./control-events";
-import { parseSSEStream, type RawSSEEvent } from "./parse-sse";
+import { parseSSEFrames, type RawSSEEvent, type SSEFrame } from "./parse-sse";
 import type { SSEConnectionCtx } from "./sse-connection";
 import { eventStreamOf, refusal } from "./sse-response";
 
@@ -53,17 +53,11 @@ export async function readConnection<TData>(
     ctx.state.set("connected");
     expectMore();
 
-    for await (const raw of parseSSEStream(body)) {
+    for await (const frame of parseSSEFrames(body)) {
       expectMore();
       progress.received = true;
-      if (raw === null) continue; // Comment/heartbeat — timer already reset
-      if (!raw.event?.startsWith(SSE_CONTROL_EVENTS.prefix)) {
-        deliver(ctx, raw);
-        continue;
-      }
-      const end = controlEnd(raw);
+      const end = take(ctx, frame);
       if (end) return end;
-      if (raw.retry !== undefined) ctx.serverRetryMs = raw.retry;
     }
     return "dropped";
   } finally {
@@ -78,6 +72,23 @@ function requestHeaders<TData>(ctx: SSEConnectionCtx<TData>): Record<string, str
   const headers: Record<string, string> = { Accept: "text/event-stream", ...ctx.config.headers };
   if (ctx.lastEventId) headers["Last-Event-ID"] = ctx.lastEventId;
   return headers;
+}
+
+/**
+ * Take in one block of the stream: what it says about reconnecting, and the
+ * event it dispatches. A block with no event — a heartbeat, or one that only
+ * sets an id or a retry — delivers nothing.
+ *
+ * @returns The end the block announced, if it announced one
+ */
+function take<TData>(ctx: SSEConnectionCtx<TData>, frame: SSEFrame): ConnectionEnd | undefined {
+  if (frame.id !== undefined) ctx.lastEventId = frame.id;
+  if (frame.retry !== undefined) ctx.serverRetryMs = frame.retry;
+  const { event } = frame;
+  if (!event) return undefined;
+  if (event.event?.startsWith(SSE_CONTROL_EVENTS.prefix)) return controlEnd(event);
+  deliver(ctx, event);
+  return undefined;
 }
 
 /**
@@ -105,8 +116,6 @@ function parseFailure(data: string): { code: number; message: string } {
 }
 
 function deliver<TData>(ctx: SSEConnectionCtx<TData>, raw: RawSSEEvent): void {
-  if (raw.id !== undefined) ctx.lastEventId = raw.id;
-  if (raw.retry !== undefined) ctx.serverRetryMs = raw.retry;
   try {
     const parsed = ctx.config.parse(raw.data) as TData;
     ctx.queue.push({ ...raw, data: parsed });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseSSEStream } from "../src/realtime/sse/parse-sse";
+import { parseSSEFrames, parseSSEStream } from "../src/realtime/sse/parse-sse";
 
 /** Helper: create a ReadableStream from string chunks */
 function createStream(...chunks: string[]): ReadableStream<Uint8Array> {
@@ -107,16 +107,79 @@ describe("parseSSEStream", () => {
     expect(events).toEqual([{ data: "" }]);
   });
 
-  it("flushes remaining buffer on stream close", async () => {
-    // Server closes without trailing double newline
-    const events = await collect(createStream('data: final'));
+  it("discards an event the stream ends in the middle of", async () => {
+    const events = await collect(createStream("id: 4\ndata: 4\n\nid: 5\ndata: 12"));
 
-    expect(events).toEqual([{ data: "final" }]);
+    expect(events).toEqual([{ id: "4", data: "4" }]);
+  });
+
+  it("takes a blank line whatever mix of line endings ends it", async () => {
+    const events = await collect(createStream("data: 1\n\r\ndata: 2\r\n\ndata: 3\r\rdata: 4\n\n"));
+
+    expect(events).toEqual([{ data: "1" }, { data: "2" }, { data: "3" }, { data: "4" }]);
+  });
+
+  it("joins a CRLF split across chunks into one line ending", async () => {
+    const events = await collect(createStream("data: a\r", "\n\r", "\ndata: b\r\n\r\n"));
+
+    expect(events).toEqual([{ data: "a" }, { data: "b" }]);
+  });
+
+  it("dispatches no event for a block that only sets an id or a retry", async () => {
+    const events = await collect(createStream("retry: 3000\n\nid: 77\n\ndata: 1\n\n"));
+
+    expect(events).toEqual([null, null, { data: "1" }]);
+  });
+
+  it("leaves the event type unset when its field is empty", async () => {
+    const events = await collect(createStream("event:\ndata: 1\n\n"));
+
+    expect(events).toEqual([{ data: "1" }]);
+  });
+
+  it("ignores a retry that is not a whole number of milliseconds", async () => {
+    const events = await collect(createStream("data: x\nretry: 1e3\n\ndata: y\nretry:\n\n"));
+
+    expect(events).toEqual([{ data: "x" }, { data: "y" }]);
+  });
+
+  it("ignores an id containing a NUL character", async () => {
+    const events = await collect(createStream("id: a\u0000b\ndata: x\n\n"));
+
+    expect(events).toEqual([{ data: "x" }]);
   });
 
   it("ignores unknown fields", async () => {
     const events = await collect(createStream('data: ok\nfoo: bar\n\n'));
 
     expect(events).toEqual([{ data: "ok" }]);
+  });
+});
+
+describe("parseSSEFrames", () => {
+  async function frames(...chunks: string[]) {
+    const seen = [];
+    for await (const frame of parseSSEFrames(createStream(...chunks))) seen.push(frame);
+    return seen;
+  }
+
+  it("reports the id and retry a block sets, whether or not it dispatches", async () => {
+    expect(await frames("retry: 3000\n\nid: 77\n\nid: 78\ndata: 1\n\n")).toEqual([
+      { retry: 3000 },
+      { id: "77" },
+      { id: "78", event: { id: "78", data: "1" } },
+    ]);
+  });
+
+  it("reports a heartbeat as a block that says nothing", async () => {
+    expect(await frames(": ping\n\n")).toEqual([{}]);
+  });
+
+  it("reports an empty id, which resets the last one", async () => {
+    expect(await frames("id\n\n")).toEqual([{ id: "" }]);
+  });
+
+  it("reports nothing for blank lines with nothing before them", async () => {
+    expect(await frames("\n\n\r\ndata: 1\n\n\n\n")).toEqual([{ event: { data: "1" } }]);
   });
 });

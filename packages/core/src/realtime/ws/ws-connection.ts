@@ -9,7 +9,7 @@ import {
   subscribeToTopic,
   type TopicOpsContext,
 } from "./topic-operations";
-import { clearReconnectTimer, connect, type LifecycleContext } from "./ws-lifecycle";
+import { clearReconnectTimer, connect, dropSocket, type LifecycleContext } from "./ws-lifecycle";
 import { createPendingRegistry } from "./ws-pending";
 import { encodeMessage } from "./ws-protocol";
 import { createTopicRegistry } from "./ws-topics";
@@ -52,7 +52,7 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
   const silence = createServerSilence({
     silenceMs: (config.heartbeat?.intervalMs ?? 25_000) + (config.heartbeat?.timeoutMs ?? 10_000),
     log,
-    onSilenceTimeout: () => refs.ws?.close(4100, "server silence"),
+    onSilenceTimeout: () => dropSocket(lifecycleCtx, 4100, "Server silence"),
   });
 
   const sendRaw = (data: string): void => {

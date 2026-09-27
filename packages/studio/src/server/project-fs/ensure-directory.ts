@@ -12,6 +12,7 @@ import type { ProjectRoot } from "./project-root";
  *
  * @param root - The project
  * @param directory - An absolute directory inside `root.path` by name
+ * @returns The directories it created, outermost first; none when all existed
  * @throws {PathOutsideProjectError} When a directory on the way leads outside the project or is not a directory
  * @throws The file system's error when a directory cannot be created
  * @example
@@ -19,11 +20,13 @@ import type { ProjectRoot } from "./project-root";
  * ensureDirectory(root, join(root.path, "src/api/pets"));
  * ```
  */
-export function ensureDirectory(root: ProjectRoot, directory: string): void {
+export function ensureDirectory(root: ProjectRoot, directory: string): string[] {
   assertResolvesInside(root, directory);
+  const created: string[] = [];
   for (const missing of missingDirectories(directory)) {
     try {
       mkdirSync(missing);
+      created.push(missing);
     } catch (error) {
       if (errnoCode(error) !== "EEXIST") throw error;
     }
@@ -32,6 +35,7 @@ export function ensureDirectory(root: ProjectRoot, directory: string): void {
     }
   }
   assertResolvesInside(root, directory);
+  return created;
 }
 
 function missingDirectories(directory: string): string[] {

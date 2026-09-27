@@ -36,7 +36,12 @@ export interface CourierServerOptions
    * and loopback origins outside production.
    */
   allowedOrigins?: string[];
-  /** WS max message size in bytes (default 65536) */
+  /**
+   * Largest WebSocket frame read at all, in bytes; a bigger one closes the
+   * connection with 1009 before it is buffered. Default 1 MB, or twice
+   * `maxMessageSize` when that is larger, so a message over `maxMessageSize`
+   * is refused with a `4413` error on a connection that stays open.
+   */
   maxPayload?: number;
   /**
    * Drain on SIGTERM/SIGINT, then end the process (default true). When the

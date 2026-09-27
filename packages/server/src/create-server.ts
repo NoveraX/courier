@@ -6,7 +6,7 @@ import { announceHosting } from "@noverax/courier/announce";
 import { attachWebSocketUpgrade } from "@noverax/courier/node";
 import type { WebSocketServer } from "ws";
 
-import { httpHandlerOptions, wsHandlerOptions } from "./handler-options";
+import { httpHandlerOptions, wsFrameLimit, wsHandlerOptions } from "./handler-options";
 import { createRequestListener } from "./http-handlers";
 import { createReadiness } from "./readiness";
 import { createShutdown } from "./shutdown";
@@ -17,7 +17,6 @@ const log = createLogger("Server");
 
 const DEFAULT_PORT = 3001;
 const DEFAULT_HOST = "localhost";
-const DEFAULT_MAX_PAYLOAD = 65_536;
 
 /**
  * Create a standalone HTTP + WebSocket server for Courier.
@@ -40,7 +39,6 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
     port = DEFAULT_PORT,
     host = DEFAULT_HOST,
     allowedOrigins,
-    maxPayload = DEFAULT_MAX_PAYLOAD,
     signals = true,
     onReady,
     onServerError,
@@ -80,7 +78,7 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
   attachWebSocketUpgrade(httpServer, {
     /* This server hosts nothing but Courier, so every path is its own. */
     path: undefined,
-    maxPayload,
+    maxPayload: wsFrameLimit(config),
     isAccepting: () => !shuttingDown,
     createServer: async (serverOptions) => {
       wss = new (await import("ws")).WebSocketServer(serverOptions);

@@ -74,3 +74,28 @@ export function wsHandlerOptions(config: CourierServerOptions): WSHandlerConfig 
   };
   return options;
 }
+
+/** The frame limit when neither `maxPayload` nor a larger `maxMessageSize` is set. */
+const DEFAULT_MAX_PAYLOAD = 1_048_576;
+
+/**
+ * The largest WebSocket frame the server reads at all; `ws` closes the
+ * connection with 1009 on a bigger one, before buffering it.
+ *
+ * It used to equal the message limit, so every message over 64 KB closed the
+ * socket and ended each subscription on it — the core's refusal of a single
+ * oversized message, a `4413` error on a connection that stays open, could
+ * never be reached. Left out, the limit now sits well above `maxMessageSize`:
+ * 1 MB, or twice `maxMessageSize` when that is larger.
+ *
+ * @param config - The server's options
+ * @returns The frame limit in bytes
+ *
+ * @example
+ * ```ts
+ * wsFrameLimit({ sources, maxMessageSize: 4_194_304 }); // 8_388_608
+ * ```
+ */
+export function wsFrameLimit(config: CourierServerOptions): number {
+  return config.maxPayload ?? Math.max(DEFAULT_MAX_PAYLOAD, 2 * (config.maxMessageSize ?? 0));
+}

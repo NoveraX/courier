@@ -87,9 +87,17 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `maxBodyBytes` | 1 MB | Largest JSON envelope a proxied call may send; a larger one is refused with 413 |
 | `maxUploadBytes` | 10 MB | Largest `multipart/form-data` upload a proxied call may send; a larger one is refused with 413 |
 | `pubsub` | `undefined` | Pub/Sub adapter for horizontal WS scaling (e.g. Redis) |
+| `maxConnectionsPerIP` | `50` | WebSocket connections one address may hold; raise it for clients behind a shared NAT or proxy |
+| `clientIp` | the socket's address | Names the address a WebSocket connection is counted against |
+| `maxSubscriptionsPerConnection` | `100` | Subscriptions one WebSocket connection may hold |
+| `maxMessageSize` | `65536` | Largest WebSocket message Courier accepts, in bytes |
+| `maxMessagesPerSecond` | `100` | Messages one WebSocket connection may send per second |
+| `authorize` | `undefined` | Decides whether a WebSocket subscription may start |
+| `authorizeMessage` | `undefined` | Decides whether a message sent on a channel is accepted |
+| `onTokenRefresh` | `undefined` | Accepts a refreshed token on an open WebSocket connection |
 | `signals` | `true` | Drain on SIGTERM/SIGINT, then exit — unless the application handles the signal too, in which case its handler decides when the process ends |
 
-The server reads a proxied JSON call up to 1 MB and an upload (`multipart/form-data`) up to 10 MB, and answers a larger one with 413.
+Every other option of the core HTTP and WebSocket handlers is accepted and passed on as well: the SSE lifecycle hooks and limits, `onConnect`, `onDisconnect`, `onError`, the heartbeat timings and the slow-consumer limits.
 
 ### Logs
 

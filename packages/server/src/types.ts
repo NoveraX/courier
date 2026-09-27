@@ -2,19 +2,24 @@ import type {
   ConnectionRegistry,
   HandlerConfig,
   SSEConnectionRegistry,
-  SSELifecycleConfig,
+  WSHandlerConfig,
 } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
-import type { PubSubAdapter } from "@noverax/courier/realtime";
 
 /**
- * Options for `createCourierServer`. The request body limits are the ones
- * every framework adapter takes: `maxBodyBytes` for a JSON envelope (1 MB by
- * default) and `maxUploadBytes` for a multipart upload (10 MB by default).
+ * Options for `createCourierServer`: where it listens and what it serves,
+ * plus every option of the core HTTP handler and of the core WebSocket
+ * handler, which it passes on. Among them are the request body limits every
+ * framework adapter takes — `maxBodyBytes` for a JSON envelope (1 MB by
+ * default) and `maxUploadBytes` for a multipart upload (10 MB by default) —
+ * and the WebSocket limits and authorization hooks: `maxConnectionsPerIP`,
+ * `clientIp`, `maxSubscriptionsPerConnection`, `maxMessageSize`,
+ * `maxMessagesPerSecond`, `authorize`, `authorizeMessage` and
+ * `onTokenRefresh`.
  */
 export interface CourierServerOptions
-  extends SSELifecycleConfig,
-    Pick<HandlerConfig, "maxBodyBytes" | "maxUploadBytes"> {
+  extends Omit<HandlerConfig, "sources" | "allowedOrigins">,
+    Omit<WSHandlerConfig, "sources" | "allowedOrigins"> {
   /**
    * The API sources this server answers for. They stay its own: another
    * server or a `registerSources` call in the same process does not change
@@ -31,12 +36,6 @@ export interface CourierServerOptions
    * and loopback origins outside production.
    */
   allowedOrigins?: string[];
-  /** Optional pub/sub adapter for horizontal WS scaling (e.g. Redis) */
-  pubsub?: PubSubAdapter;
-  /** WS heartbeat interval in ms (default 25000) */
-  heartbeatIntervalMs?: number;
-  /** WS pong timeout in ms (default 10000) */
-  heartbeatTimeoutMs?: number;
   /** WS max message size in bytes (default 65536) */
   maxPayload?: number;
   /**
@@ -45,22 +44,8 @@ export interface CourierServerOptions
    * ending the process to the application's handler.
    */
   signals?: boolean;
-  /** Additional SSE response headers (e.g., CORS) */
-  sseHeaders?: Record<string, string>;
-  /** Max SSE connection lifetime in ms */
-  sseMaxLifetimeMs?: number;
   /** Callback fired when server starts listening */
   onReady?: (url: string) => void;
-  /** Called after WS upgrade. Return metadata or throw to reject. */
-  onConnect?: (info: { connectionId: string; request: Request }) => unknown | Promise<unknown>;
-  /** Called after WS socket close + topic cleanup */
-  onDisconnect?: (info: {
-    connectionId: string;
-    meta: unknown;
-    code: number;
-  }) => void | Promise<void>;
-  /** Called on WS connection-level error */
-  onError?: (info: { connectionId: string; meta: unknown; error: unknown }) => void;
   /**
    * Called when the server itself fails — a port already in use, a socket
    * error after start. Without it such a failure is only logged; the process

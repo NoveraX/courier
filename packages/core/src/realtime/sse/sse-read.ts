@@ -1,4 +1,5 @@
 import { createLogger } from "../../logger";
+import type { StreamFailure } from "../describe-failure";
 import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
 import { SSE_CONTROL_EVENTS } from "./control-events";
 import { parseSSEFrames, type RawSSEEvent, type SSEFrame } from "./parse-sse";
@@ -100,14 +101,15 @@ function controlEnd(raw: RawSSEEvent): ConnectionEnd | undefined {
   if (raw.event === SSE_CONTROL_EVENTS.complete) return "complete";
   if (raw.event !== SSE_CONTROL_EVENTS.error) return undefined;
   const failure = parseFailure(raw.data);
-  return fromErrorCode(failure.code, failure.message);
+  return fromErrorCode(failure.code, failure.message, failure.issues);
 }
 
-function parseFailure(data: string): { code: number; message: string } {
+function parseFailure(data: string): StreamFailure {
   try {
-    const parsed = JSON.parse(data) as { code?: unknown; message?: unknown };
+    const parsed = JSON.parse(data) as { code?: unknown; message?: unknown; issues?: unknown };
     if (typeof parsed.code === "number" && typeof parsed.message === "string") {
-      return { code: parsed.code, message: parsed.message };
+      const issues = Array.isArray(parsed.issues) ? parsed.issues : undefined;
+      return { code: parsed.code, message: parsed.message, ...(issues && { issues }) };
     }
   } catch (error) {
     log.warn("Unreadable stream failure from the server", error);

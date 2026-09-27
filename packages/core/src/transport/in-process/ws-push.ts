@@ -7,6 +7,7 @@ import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { beginStream, instrumentSSE } from "../instrument";
 import {
   buildSyntheticRequest,
+  checkedEvents,
   headersToRecord,
   resolveStreamEndpoint,
   validateStreamVariables,
@@ -73,23 +74,27 @@ export async function executeDirectWSPush(
   instr?.updateMeta({ responseHeaders: headersToRecord(headers) });
 
   const handler = endpoint as WSPushHandler<unknown, unknown>;
-  const subscription = wrapPushAsSubscription(handler(wsCtx), ownAC);
+  const events = liftToEvents(abortableEvents(handler(wsCtx), ownAC.signal));
+  const subscription = wrapPushAsSubscription(
+    schema.response ? checkedEvents(events, schema.response) : events,
+    ownAC,
+  );
   // Pass through `instrumentSSE` directly (push uses the same client shape).
   // The existing instr handle prevents double stream:open emission.
   return instrumentSSE(subscription, meta, instr);
 }
 
 /**
- * Wrap a raw push generator as the minimal SSESubscription contract.
+ * Wrap a push handler's values, lifted to events, as the minimal
+ * SSESubscription contract.
  *
  * Closing ends a reader waiting on the next value at once, even while the
  * handler is parked on an await; the handler hears it through `ctx.signal`.
  */
 function wrapPushAsSubscription(
-  generator: AsyncGenerator<unknown, void, unknown>,
+  events: AsyncGenerator<SSEEvent<unknown>, void, unknown>,
   ownAC: AbortController,
 ): SSESubscription {
-  const events = liftToEvents(abortableEvents(generator, ownAC.signal));
   return {
     [Symbol.asyncIterator]() {
       return events;

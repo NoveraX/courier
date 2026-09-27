@@ -1,4 +1,4 @@
-import { RealtimeError } from "./errors";
+import { RealtimeError, RealtimeValidationError } from "./errors";
 
 /** What a client is told about a stream or subscription that failed. */
 export interface StreamFailure {
@@ -14,7 +14,8 @@ const INTERNAL_ERROR = 5000;
  * Decide what a client may read about a handler's failure.
  *
  * A `RealtimeError` is the handler speaking to the client — "not a member of
- * this room" — so its code and message go out as they are. Anything else may
+ * this room" — so its code and message go out as they are, with a validation
+ * failure's issues, as an HTTP call's 422 lists them. Anything else may
  * carry connection strings, paths or upstream text, so the client gets a
  * generic message and the server's log gets the error.
  *
@@ -31,6 +32,9 @@ export function describeFailure(
   fallback: string,
   fallbackCode: number = INTERNAL_ERROR,
 ): StreamFailure {
+  if (error instanceof RealtimeValidationError) {
+    return { code: error.code, message: error.message, issues: error.issues };
+  }
   if (error instanceof RealtimeError) return { code: error.code, message: error.message };
   return { code: fallbackCode, message: fallback };
 }

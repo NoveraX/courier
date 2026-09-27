@@ -1,3 +1,5 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
+
 import type { StudioHooks } from "../studio/hooks";
 import type { InternalSSERegistry } from "./sse-registry";
 /** Read-only SSE connection info exposed via public API */
@@ -125,6 +127,8 @@ export interface SSEStreamOptions {
   t0: number;
   /** Separate TTL signal to detect max_lifetime reason (undefined = no TTL) */
   ttlSignal?: AbortSignal;
+  /** The endpoint's response schema, which every event's data is held to */
+  responseSchema?: StandardSchemaV1;
   onDisconnect?: SSELifecycleConfig["onSSEDisconnect"];
   onError?: SSELifecycleConfig["onSSEError"];
   /**

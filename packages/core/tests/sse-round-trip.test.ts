@@ -147,3 +147,48 @@ describe("leaving a for await early", () => {
     expect(requests).toBe(1);
   });
 });
+
+describe("a stream with a response schema", () => {
+  function serveChecked(handler: Handler): string {
+    const feed = stream
+      .response(z.object({ n: z.number(), unit: z.string().default("ms") }))
+      .implement(handler as never);
+    registerSources({ api: { options: { groups: { live: { options: {}, feed } } } } } as never);
+    const { handleSSE } = createHandler();
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => handleSSE(new Request(url, init)));
+    return buildProxySSEUrl("http://localhost/api/sse", "api", "live", "feed");
+  }
+
+  it("sends each event as the schema produces it", async () => {
+    const url = serveChecked(async function* () {
+      yield { data: { n: 1 } };
+      yield { data: { n: 2, unit: "s" } };
+    });
+
+    await expect(readAll(url)).resolves.toEqual([
+      { n: 1, unit: "ms" },
+      { n: 2, unit: "s" },
+    ]);
+  });
+
+  it("fails the stream with the schema's issues at the first event that does not match", async () => {
+    const seen: unknown[] = [];
+    const url = serveChecked(async function* () {
+      yield { data: { n: 1 } };
+      yield { data: { n: "not-a-number" } };
+      yield { data: { n: 3 } };
+    });
+
+    const reading = (async () => {
+      for await (const event of executeSSE<unknown>(url)) seen.push(event.data);
+    })();
+    const failure = await reading.catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(RealtimeValidationError);
+    expect(failure).toMatchObject({ code: 4422 });
+    expect((failure as RealtimeValidationError).issues).toEqual([
+      expect.objectContaining({ path: ["n"] }),
+    ]);
+    expect(seen).toEqual([{ n: 1, unit: "ms" }]);
+  });
+});

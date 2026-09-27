@@ -6,6 +6,7 @@ import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { beginStream, instrumentSSE } from "../instrument";
 import {
   buildSyntheticRequest,
+  checkedEvents,
   headersToRecord,
   resolveStreamEndpoint,
   validateStreamVariables,
@@ -106,22 +107,25 @@ export async function executeDirectSSE(
 
   const sseHandler = endpoint as SSEHandler<unknown, unknown>;
   const generator = sseHandler(sseCtx);
-  const subscription = wrapGeneratorAsSubscription(generator, ownAC, composedSignal);
+  const events = abortableEvents(generator, composedSignal);
+  const subscription = wrapEventsAsSubscription(
+    schema.response ? checkedEvents(events, schema.response) : events,
+    ownAC,
+  );
   return instrumentSSE(subscription, meta, instr);
 }
 
 /**
- * Wrap a generator as the minimal SSESubscription contract for in-process use.
+ * Wrap a handler's events as the minimal SSESubscription contract for
+ * in-process use.
  *
  * Closing ends a reader waiting on the next event at once, even while the
  * handler is parked on an await; the handler hears it through `ctx.signal`.
  */
-function wrapGeneratorAsSubscription(
-  generator: AsyncGenerator<SSEEvent<unknown>, void, unknown>,
+function wrapEventsAsSubscription(
+  events: AsyncGenerator<SSEEvent<unknown>, void, unknown>,
   ownAC: AbortController,
-  signal: AbortSignal,
 ): SSESubscription {
-  const events = abortableEvents(generator, signal);
   return {
     [Symbol.asyncIterator]() {
       return events;

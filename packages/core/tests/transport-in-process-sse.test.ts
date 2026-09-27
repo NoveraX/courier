@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { courier } from "../src/define/courier";
 import type { WrapMiddleware } from "../src/middleware/types";
+import { RealtimeValidationError } from "../src/realtime/errors";
 import type { SSEContext, SSEEvent } from "../src/realtime/types";
 import type { StudioHooks } from "../src/studio/hooks";
 import { ValidationError } from "../src/validation";
@@ -427,5 +428,36 @@ describe("executeDirectSSE — cancellation", () => {
     ac.abort();
 
     await expect(reading).resolves.toEqual([{ data: 1 }]);
+  });
+});
+
+describe("executeDirectSSE — response schema", () => {
+  function checkedSources(handler: (ctx: SSEContext) => AsyncGenerator<SSEEvent, void, unknown>) {
+    const feed = stream
+      .response(z.object({ n: z.number(), unit: z.string().default("ms") }))
+      .implement(handler as never);
+    return { api: { options: { groups: { chat: { options: {}, feed } } }, feed } };
+  }
+
+  it("hands over each event as the schema produces it", async () => {
+    const sources = checkedSources(async function* () {
+      yield { data: { n: 1 } };
+    });
+
+    const sub = await executeDirectSSE(sources, { source: "api", group: "chat", method: "feed" });
+
+    expect((await collect(sub)).map((event) => event.data)).toEqual([{ n: 1, unit: "ms" }]);
+  });
+
+  it("fails at the first event that does not match, with the schema's issues", async () => {
+    const sources = checkedSources(async function* () {
+      yield { data: { n: "not-a-number" } };
+    });
+
+    const sub = await executeDirectSSE(sources, { source: "api", group: "chat", method: "feed" });
+    const failure = await collect(sub).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(RealtimeValidationError);
+    expect((failure as RealtimeValidationError).issues.length).toBeGreaterThan(0);
   });
 });

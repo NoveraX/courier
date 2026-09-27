@@ -1,4 +1,5 @@
 import { createLogger } from "../logger";
+import { checkResponse } from "../realtime/check-response";
 import { describeFailure } from "../realtime/describe-failure";
 import type { SSEContext, SSEHandler } from "../realtime/types";
 import { abortableEvents } from "../utils/abortable-events";
@@ -90,7 +91,11 @@ export function createSSEStream(
 
         try {
           const generator = handler({ ...ctx, signal: combinedSignal });
-          for await (const event of abortableEvents(generator, combinedSignal)) {
+          const { responseSchema } = opts;
+          for await (const yielded of abortableEvents(generator, combinedSignal)) {
+            const event = responseSchema
+              ? { ...yielded, data: await checkResponse(responseSchema, yielded.data) }
+              : yielded;
             await waitForRoom(sender, combinedSignal);
             if (combinedSignal.aborted || !recorded(sender.send(event))) continue;
             opts.dt.onStreamMessage?.({

@@ -149,6 +149,7 @@ export function createSSEHandler(
       dt,
       t0: performance.now(),
       ttlSignal,
+      responseSchema: resolved.schema?.response,
       onDisconnect: config?.onSSEDisconnect,
       onError: config?.onSSEError,
       // When the request carries a Studio Playground rid, also register

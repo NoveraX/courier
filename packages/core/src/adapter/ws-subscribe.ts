@@ -118,7 +118,14 @@ async function openSubscription(
     if (resolved.schema.bidirectional === true || resolved.schema.receive) {
       await startChannel(ctx, subscribedTopic, resolved.endpoint, variables, msg.id);
     } else {
-      startPush(ctx, subscribedTopic, resolved.endpoint, variables, msg.id);
+      startPush(
+        ctx,
+        subscribedTopic,
+        resolved.endpoint,
+        variables,
+        msg.id,
+        resolved.schema.response,
+      );
     }
   } catch (error) {
     // Rollback tracking on init failure; the endpoint logged the error.

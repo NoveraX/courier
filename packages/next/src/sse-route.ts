@@ -3,6 +3,8 @@ import { createHandler, discoverAppOrigin, requireSources } from "@noverax/couri
 import { announceHosting, deferAnnounce } from "@noverax/courier/announce";
 import type { NextRequest } from "next/server";
 
+import { publicRequest } from "./public-request";
+
 /**
  * Create Next.js App Router handler for SSE streaming endpoints.
  * Works in Edge Runtime — returns a `ReadableStream` response.
@@ -39,7 +41,7 @@ export function sseRoute(config?: HandlerConfig): {
     GET: (request: NextRequest) => {
       announce();
       discoverAppOrigin(new URL(request.url).origin);
-      return handleSSE(request);
+      return handleSSE(publicRequest(request));
     },
   };
 }

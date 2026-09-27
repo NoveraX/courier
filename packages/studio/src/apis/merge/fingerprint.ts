@@ -2,6 +2,7 @@
  * Fingerprint classification and generation for tracking user modifications.
  */
 
+import { ownValue } from "../own-value";
 import { extractEndpoints } from "./extract-endpoints";
 import { computeHash } from "./hash";
 import type { EndpointStatus, FingerprintResult } from "./types";
@@ -41,10 +42,10 @@ function classifySingle(
   storedFingerprints: Record<string, string>,
   newSpecSet: Set<string>,
 ): EndpointStatus {
-  const storedHash = storedFingerprints[name];
+  const storedHash = ownValue(storedFingerprints, name);
   if (!storedHash) return "modified";
 
-  const currentHash = computeHash(existingCode[name] ?? "");
+  const currentHash = computeHash(ownValue(existingCode, name) ?? "");
   if (currentHash !== storedHash) {
     return newSpecSet.has(name) ? "modified" : "removed";
   }

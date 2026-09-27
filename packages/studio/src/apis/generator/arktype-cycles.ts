@@ -11,6 +11,7 @@
  * that mentions itself.
  */
 
+import { ownValue } from "../own-value";
 import type { ParsedSchema } from "../parser/types";
 import { jsdocText } from "./jsdoc-text";
 import type { GeneratorSettings } from "./types";
@@ -58,7 +59,8 @@ export function lazyTargets(
     names.map((name) => [
       name,
       {
-        base: [...domains(schemas[name], schemas, new Set())].sort().join(" | ") || "unknown",
+        base:
+          [...domains(ownValue(schemas, name), schemas, new Set())].sort().join(" | ") || "unknown",
         typeName: withTypes ? name : undefined,
       },
     ]),
@@ -119,7 +121,7 @@ function domains(
   }
   if (schema.type === "ref" && schema.refName && !seen.has(schema.refName)) {
     seen.add(schema.refName);
-    return domains(schemas[schema.refName], schemas, seen);
+    return domains(ownValue(schemas, schema.refName), schemas, seen);
   }
   if (schema.type === "string" || schema.type === "boolean") return new Set([schema.type]);
   if (schema.type === "number" || schema.type === "integer") return new Set(["number"]);

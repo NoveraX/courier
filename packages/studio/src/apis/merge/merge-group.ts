@@ -10,6 +10,7 @@
  * - Non-endpoint code (trailing helpers): preserve
  */
 
+import { ownValue } from "../own-value";
 import { mergeImports } from "./merge-imports";
 import { parseExistingGroup } from "./parse-existing";
 import { renameBase } from "./rename-base";
@@ -51,7 +52,7 @@ function mergeEndpoints(
 
   /* Process generated endpoints in spec order */
   for (const genEp of generated.endpoints) {
-    const status = fingerprints.endpoints[genEp.name];
+    const status = ownValue(fingerprints.endpoints, genEp.name);
     const existEp = existingByName.get(genEp.name);
 
     if (!existEp || status === "safe" || status === "new") {
@@ -85,7 +86,7 @@ function mergeEndpoints(
   for (const existEp of existing.endpoints) {
     if (generatedNames.has(existEp.name)) continue;
 
-    if (fingerprints.endpoints[existEp.name] === "removed") {
+    if (ownValue(fingerprints.endpoints, existEp.name) === "removed") {
       changes.push({
         type: "removed",
         target: `endpoint:${existEp.name}`,

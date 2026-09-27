@@ -2,6 +2,7 @@
  * Schema ref utilities: topological sorting, ref collection, transitive deps.
  */
 
+import { ownValue } from "../own-value";
 import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 
 /** Topological sort: ensures schemas are emitted after their dependencies */
@@ -19,7 +20,7 @@ export function topoSortSchemas(schemas: Record<string, ParsedSchema>): [string,
   function visit(name: string) {
     if (visited.has(name)) return;
     visited.add(name);
-    const schema = schemas[name];
+    const schema = ownValue(schemas, name);
     if (!schema) return;
     for (const dep of getDeps(schema)) {
       visit(dep);
@@ -90,7 +91,7 @@ export function collectGroupSchemas(group: ParsedGroup, spec: ParsedSpec): Set<s
     if (!name) continue;
     if (all.has(name)) continue;
     all.add(name);
-    const schema = spec.schemas[name];
+    const schema = ownValue(spec.schemas, name);
     if (!schema) continue;
 
     const nested = new Set<string>();

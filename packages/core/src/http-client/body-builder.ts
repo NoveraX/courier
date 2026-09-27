@@ -26,25 +26,28 @@ export const stripUndefined = (variables: unknown): unknown => {
 };
 
 /**
- * The form as it is sent: without the empty files it carries — an
- * `<input type="file">` left blank still submits one.
+ * The form as it is sent: without the placeholder a blank file input leaves
+ * — an `<input type="file">` with nothing chosen still submits a file with
+ * no name and no bytes.
  *
- * The caller's FormData is copied rather than edited, so it can be sent
- * again, or by a retry, as it was built. `FormData.delete` would also have
- * removed every entry under the empty file's name, real files included.
+ * A file that has a name is one somebody chose, and is sent even when it is
+ * empty: a `.gitkeep`, an empty log. The caller's FormData is copied rather
+ * than edited, so it can be sent again, or by a retry, as it was built;
+ * `FormData.delete` would also have removed every entry under the
+ * placeholder's name, real files included.
  *
  * @param formData - The form the caller passed
  * @returns The form to send, the same object when nothing is dropped
  *
  * @example
  * ```ts
- * withoutEmptyFiles(form).getAll("files"); // the non-empty files, in order
+ * withoutEmptyFiles(form).getAll("files"); // every chosen file, in order
  * ```
  */
 export const withoutEmptyFiles = (formData: FormData): FormData => {
   const entries = [...formData.entries()];
   const isEmptyFile = (value: FormDataEntryValue): boolean =>
-    value instanceof File && value.size === 0;
+    value instanceof File && value.size === 0 && value.name === "";
   if (!entries.some(([, value]) => isEmptyFile(value))) return formData;
 
   const sent = new FormData();

@@ -48,7 +48,8 @@ export function recoverInterruptedApplies(
   state: Pick<ImportsState, "applied" | "imports">,
 ): RecoveredApply[] {
   const committed = new Set(state.applied);
-  const recorded = (name: string): string | null => ownValue(state.imports, name)?.applyId ?? null;
+  const record = (name: string) => ownValue(state.imports, name);
+  const recorded = (name: string): string | null => record(name)?.applyId ?? null;
   const recovered: RecoveredApply[] = [];
   for (const { fileName, journal } of readJournals(root.path)) {
     const problem = journalProblem(fileName, journal);
@@ -56,21 +57,22 @@ export function recoverInterruptedApplies(
       log.warn(
         `Studio left ${JOURNAL_DIR}/${fileName} as it is and undid nothing from it: ${problem}.`,
       );
-    } else if (committed.has(journal.id)) {
+    } else if (committed.has(journal.id) || recorded(journal.importName) === journal.id) {
       dropJournal(root.path, journal.id);
     } else if (journal.state === "kept") {
       remind(root, journal);
     } else if (journal.entries.length > 0 && recorded(journal.importName) !== journal.after) {
       leaveUndone(root, journal);
     } else {
-      recovered.push(recover(root, journal));
+      /* A copy goes back only into the folder the state records for the import. */
+      recovered.push(recover(root, journal, record(journal.importName)?.dir === journal.dir));
     }
   }
   return recovered;
 }
 
-function recover(root: ProjectRoot, journal: ApplyJournal): RecoveredApply {
-  const failed = undoApply(root, journal);
+function recover(root: ProjectRoot, journal: ApplyJournal, restore: boolean): RecoveredApply {
+  const failed = undoApply(root, journal, restore);
   const outcome =
     failed.length === 0 ? "restored every file" : `could not restore ${listed(failed)}`;
   log.warn(

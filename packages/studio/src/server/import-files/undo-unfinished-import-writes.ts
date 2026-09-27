@@ -1,10 +1,12 @@
 import { createLogger } from "@noverax/courier";
-import { loadImportsState } from "../../apis/imports-state";
+import { IMPORTS_STATE_FILENAME, readImportsState } from "../../apis/imports-state";
 import { projectRootAt } from "../project-fs/project-root";
 import { recoverInterruptedApplies } from "./recover-interrupted-applies";
 import { sweepCourierTemps } from "./sweep-courier-temps";
 
 const log = createLogger("Studio");
+
+const UNREAD_STATE = `Studio cannot read ${IMPORTS_STATE_FILENAME}, so it leaves any unfinished import write as it is until it can`;
 
 /**
  * Undo, before any route can read an import's files, a write to them that a
@@ -22,7 +24,10 @@ const log = createLogger("Studio");
  */
 export function undoUnfinishedImportWrites(root: string): void {
   try {
-    recoverInterruptedApplies(projectRootAt(root), loadImportsState(root));
+    const { state, whole } = readImportsState(root);
+    /* Not read whole, the state cannot tell a finished apply from one to undo: decide at a later start. */
+    if (whole) recoverInterruptedApplies(projectRootAt(root), state);
+    else log.warn(UNREAD_STATE);
     sweepCourierTemps(root);
   } catch (error) {
     log.warn(

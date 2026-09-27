@@ -20,7 +20,7 @@ export interface JournalEntry {
   step: "write" | "remove";
   /** Whether a file was there before the apply. */
   existed: boolean;
-  /** SHA-256 of the body Studio puts in place, for a write. */
+  /** SHA-256 of the exact bytes Studio puts in place, its header included, for a write. */
   sha256?: string;
 }
 

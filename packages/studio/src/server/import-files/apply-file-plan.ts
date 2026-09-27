@@ -1,9 +1,8 @@
-import { copyFileSync, linkSync, renameSync } from "node:fs";
+import { renameSync } from "node:fs";
 import { dirname } from "node:path";
-import { loadImportsState } from "../../apis/imports-state";
+import { IMPORTS_STATE_FILENAME, readImportsState } from "../../apis/imports-state";
 import { ownValue } from "../../apis/own-value";
 import { COURIER_DIR, ensureCourierSubdir } from "../courier-dir";
-import { errnoCode } from "../errno-code";
 import { ensureDirectory } from "../project-fs/ensure-directory";
 import type { ProjectRoot } from "../project-fs/project-root";
 import { resolveProjectPath } from "../project-fs/resolve-project-path";
@@ -11,10 +10,12 @@ import { retryOnWin32 } from "../project-fs/retry-on-win32";
 import { syncDirectory } from "../project-fs/sync-directory";
 import { newApplyId } from "./apply-id";
 import { type ApplyJournal, saveJournal } from "./apply-journal";
+import { backUp } from "./back-up";
 import { backupPath } from "./backup-path";
 import { FilePlanError } from "./file-plan-error";
 import type { FilePlan } from "./file-plan-types";
 import { finishApply } from "./finish-apply";
+import { ImportsStateUnsafeError } from "./imports-state-unsafe-error";
 import { type PruneFailure, pruneEmptyDirs } from "./prune-empty-dirs";
 import { refuseObstacle, type StagedWrite, stageWrites } from "./stage-writes";
 import { undoThenThrow } from "./undo-apply";
@@ -57,12 +58,17 @@ export function applyFilePlan(
 ): ApplyReport {
   refuseUnready(plan);
   verifyUnchanged(root, plan);
+  /* A .courier that is not a real folder is refused first, as it names the cause. */
+  ensureCourierSubdir(root.path, "journal");
+  /* The journal names the apply the import's record was saved by; an unread record names none. */
+  const { state, whole } = readImportsState(root.path);
+  if (!whole) throw new ImportsStateUnsafeError(IMPORTS_STATE_FILENAME, "unread");
   const id = newApplyId();
   const journal: ApplyJournal = {
     id,
     importName: plan.importName,
     dir: plan.dir,
-    after: ownValue(loadImportsState(root.path).imports, plan.importName)?.applyId ?? null,
+    after: ownValue(state.imports, plan.importName)?.applyId ?? null,
     state: "staging",
     backupDir: `${COURIER_DIR}/backups/${id}`,
     entries: [],
@@ -132,7 +138,11 @@ function commitFiles(
   /* Copies go only into a real .courier/backups inside the project. */
   if (plan.removals.length > 0 || staged.some((s) => s.existed))
     ensureCourierSubdir(root.path, "backups");
-  for (const s of staged) if (s.existed) backUp(root, backupDir, s.write.path, s.absolute);
+  backUp(
+    root,
+    backupDir,
+    staged.filter((s) => s.existed).map((s) => ({ path: s.write.path, absolute: s.absolute })),
+  );
   for (const s of staged) {
     retryOnWin32(() => renameSync(s.temp, s.absolute), `Writing ${s.write.path}`);
     syncDirectory(dirname(s.absolute));
@@ -147,18 +157,4 @@ function commitFiles(
     removed.push(absolute);
   }
   return pruneEmptyDirs(root.path, resolveProjectPath(root.path, plan.dir), removed);
-}
-
-/* A hard link costs nothing; a file system without them gets a copy. */
-function backUp(root: ProjectRoot, backupDir: string, path: string, absolute: string): void {
-  const copy = backupPath(root, backupDir, path);
-  ensureDirectory(root, dirname(copy));
-  try {
-    linkSync(absolute, copy);
-  } catch (error) {
-    const code = errnoCode(error);
-    if (code !== "EXDEV" && code !== "EPERM" && code !== "ENOTSUP" && code !== "EMLINK")
-      throw error;
-    copyFileSync(absolute, copy);
-  }
 }

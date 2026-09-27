@@ -3,6 +3,7 @@ import { errnoCode } from "../errno-code";
 import { NotRegularFileError } from "../not-regular-file-error";
 import { readRegularFile } from "../read-regular-file";
 import { bodyHash } from "./body-hash";
+import { exactHash } from "./exact-hash";
 import { type GeneratedHeader, readGeneratedFile } from "./generated-header";
 
 /** A path in the project as Studio found it, without following a link at it. */
@@ -16,6 +17,8 @@ export type DiskFile =
       body: string;
       /** The SHA-256 of the body, line endings as `\n`. */
       sha256: string;
+      /** The SHA-256 of the file's exact bytes, Studio's header and line endings included. */
+      exact: string;
       /** Studio's header, when the file has a well-formed one. */
       header: GeneratedHeader | null;
       /** The device and inode, which tell two spellings of one file apart from two files. */
@@ -52,6 +55,7 @@ export function readDiskFile(path: string): DiskFile {
     kind: "file",
     body,
     sha256: bodyHash(body),
+    exact: exactHash(file.bytes),
     header,
     identity: { dev: stats.dev, ino: stats.ino },
   };

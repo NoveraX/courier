@@ -26,7 +26,7 @@ export function deriveSourceName(title: string, baseURL?: string): string {
 
   // Fallback: extract domain name from baseURL (e.g. "https://api.timeweb.cloud/..." → "timeweb")
   if (baseURL) {
-    try {
+    if (URL.canParse(baseURL)) {
       const hostname = new URL(baseURL).hostname; // "api.timeweb.cloud"
       const parts = hostname.split(".");
       // Skip "api" prefix and TLD, take the main domain
@@ -36,8 +36,6 @@ export function deriveSourceName(title: string, baseURL?: string): string {
       if (meaningful.length > 0 && meaningful[0]) {
         return meaningful[0].toLowerCase();
       }
-    } catch {
-      // not a valid URL, try as path
     }
   }
 

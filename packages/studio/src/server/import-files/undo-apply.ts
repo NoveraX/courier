@@ -11,14 +11,15 @@ const log = createLogger("Studio");
  *
  * @param root - The project
  * @param journal - The apply's journal
+ * @param restore - Whether copies may be moved back into place
  * @returns The project-relative paths that could not be restored
  * @example
  * ```ts
  * const failed = undoApply(root, journal);
  * ```
  */
-export function undoApply(root: ProjectRoot, journal: ApplyJournal): string[] {
-  const failed = rollbackApply(root, journal);
+export function undoApply(root: ProjectRoot, journal: ApplyJournal, restore = true): string[] {
+  const failed = rollbackApply(root, journal, restore);
   if (failed.length === 0) dropJournal(root.path, journal.id);
   else keepAsRecord(root.path, journal, failed);
   return failed;

@@ -57,6 +57,12 @@ export interface ReadImportsState {
    * a copy of, so saving over it would lose that content.
    */
   intact: boolean;
+  /**
+   * `true` when the state is the file's, whole: the file is missing, or
+   * every entry in it was read. Only then does the state say which applies
+   * finished; an unfinished one is decided, or begun, only on such a state.
+   */
+  whole: boolean;
 }
 
 /** Default empty state used when the file is missing or unreadable */
@@ -90,9 +96,9 @@ export function readImportsState(projectRoot: string): ReadImportsState {
   try {
     raw = readFileSync(path, "utf-8");
   } catch (err) {
-    if (errnoCode(err) === "ENOENT") return { state: emptyState(), intact: true };
+    if (errnoCode(err) === "ENOENT") return { state: emptyState(), intact: true, whole: true };
     log.warn("Failed to read imports-state", err);
-    return { state: emptyState(), intact: false };
+    return { state: emptyState(), intact: false, whole: false };
   }
   return parseState(path, raw);
 }
@@ -142,11 +148,11 @@ function parseState(path: string, raw: string): ReadImportsState {
     imports,
     applied: readAppliedIds(parsed.applied),
   };
-  return { state, intact: complete || keepStateCopy(path, "invalid", raw) };
+  return { state, intact: complete || keepStateCopy(path, "invalid", raw), whole: complete };
 }
 
 function setAside(path: string, suffix: string, raw: string): ReadImportsState {
-  return { state: emptyState(), intact: keepStateCopy(path, suffix, raw) };
+  return { state: emptyState(), intact: keepStateCopy(path, suffix, raw), whole: false };
 }
 
 /** Atomically persist the imports-state file */

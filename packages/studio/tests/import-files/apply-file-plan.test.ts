@@ -23,8 +23,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ImportStateEntry } from "../../src/apis/imports-state";
 import { applyFilePlan } from "../../src/server/import-files/apply-file-plan";
-import { readJournals, saveJournal } from "../../src/server/import-files/apply-journal";
+import {
+  type ApplyJournal,
+  type JournalEntry,
+  readJournals,
+  saveJournal,
+} from "../../src/server/import-files/apply-journal";
 import { bodyHash } from "../../src/server/import-files/body-hash";
+import { exactHash } from "../../src/server/import-files/exact-hash";
 import type { PlanTarget } from "../../src/server/import-files/file-plan-types";
 import { readGeneratedFile, signGeneratedFile } from "../../src/server/import-files/generated-header";
 import { planFiles } from "../../src/server/import-files/plan-files";
@@ -32,6 +38,7 @@ import { pruneBackups } from "../../src/server/import-files/prune-backups";
 import type { RecordedFile } from "../../src/server/import-files/recorded-file";
 import { recoverInterruptedApplies } from "../../src/server/import-files/recover-interrupted-applies";
 import { saveImportEntry } from "../../src/server/import-files/save-import-entry";
+import { undoUnfinishedImportWrites } from "../../src/server/import-files/undo-unfinished-import-writes";
 import { withConfirmations } from "../../src/server/import-files/with-confirmations";
 import { type ProjectRoot, projectRootAt } from "../../src/server/project-fs/project-root";
 
@@ -73,6 +80,9 @@ function read(path: string): string {
 function signed(body: string): string {
   return signGeneratedFile("pets", body);
 }
+
+/* The imports state's record of pets, in the folder its applies write to. */
+const PETS: ImportStateEntry = { specHash: "h", fetchedAt: "", lastSyncedAt: "", dir: DIR, files: {} };
 
 function bodyOf(path: string): string {
   return readGeneratedFile(read(path)).body;
@@ -315,10 +325,10 @@ describe("applyFilePlan", () => {
 
 describe("recoverInterruptedApplies", () => {
   it("undoes an apply a crash cut short: the replaced file comes back, the created one goes", () => {
-    put(`${DIR}/index.ts`, "new index\n");
-    put(`${DIR}/new/index.ts`, "new group\n");
-    put(`.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`, "old index\n");
-    put(`.courier/backups/1700000000000-0000c0de/${DIR}/old/index.ts`, "old group\n");
+    put(`${DIR}/index.ts`, signed("new index\n"));
+    put(`${DIR}/new/index.ts`, signed("new group\n"));
+    put(`.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`, signed("old index\n"));
+    put(`.courier/backups/1700000000000-0000c0de/${DIR}/old/index.ts`, signed("old group\n"));
     saveJournal(root.path, {
       id: "1700000000000-0000c0de",
       importName: "pets",
@@ -327,15 +337,15 @@ describe("recoverInterruptedApplies", () => {
       state: "committing",
       backupDir: ".courier/backups/1700000000000-0000c0de",
       entries: [
-        { path: `${DIR}/index.ts`, step: "write", existed: true, sha256: bodyHash("new index\n") },
-        { path: `${DIR}/new/index.ts`, step: "write", existed: false, sha256: bodyHash("new group\n") },
+        { path: `${DIR}/index.ts`, step: "write", existed: true, sha256: exactHash(signed("new index\n")) },
+        { path: `${DIR}/new/index.ts`, step: "write", existed: false, sha256: exactHash(signed("new group\n")) },
         { path: `${DIR}/old/index.ts`, step: "remove", existed: true },
       ],
       createdDirs: [`${DIR}/new`],
       temps: [],
     });
 
-    const recovered = recoverInterruptedApplies(root, { applied: [], imports: {} });
+    const recovered = recoverInterruptedApplies(root, { applied: [], imports: { pets: PETS } });
 
     expect(recovered).toEqual([{ importName: "pets", failed: [], backupDir: ".courier/backups/1700000000000-0000c0de" }]);
     undisturbed();
@@ -346,11 +356,11 @@ describe("recoverInterruptedApplies", () => {
   it("leaves an apply the imports state recorded as it stands, and only drops its journal", () => {
     crashedApply();
 
-    const recovered = recoverInterruptedApplies(root, { applied: ["1700000000000-0000c0de"], imports: {} });
+    const recovered = recoverInterruptedApplies(root, { applied: ["1700000000000-0000c0de"], imports: { pets: PETS } });
 
     expect(recovered).toEqual([]);
-    expect(read(`${DIR}/index.ts`)).toBe("new index\n");
-    expect(read(`${DIR}/new/index.ts`)).toBe("new group\n");
+    expect(bodyOf(`${DIR}/index.ts`)).toBe("new index\n");
+    expect(bodyOf(`${DIR}/new/index.ts`)).toBe("new group\n");
     expect(existsSync(join(root.path, `${DIR}/old/index.ts`))).toBe(false);
     expect(readdirSync(join(root.path, ".courier/journal"))).toEqual([]);
   });
@@ -360,27 +370,27 @@ describe("recoverInterruptedApplies", () => {
     put(`${DIR}/index.ts`, "new index\nmy edit\n");
     put(`${DIR}/old/index.ts`, "a file of my own\n");
 
-    const [recovered] = recoverInterruptedApplies(root, { applied: [], imports: {} });
+    const [recovered] = recoverInterruptedApplies(root, { applied: [], imports: { pets: PETS } });
 
     expect(recovered?.failed.sort()).toEqual([`${DIR}/index.ts`, `${DIR}/old/index.ts`]);
     expect(read(`${DIR}/index.ts`)).toBe("new index\nmy edit\n");
     expect(read(`${DIR}/old/index.ts`)).toBe("a file of my own\n");
-    expect(read(`.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`)).toBe("old index\n");
-    expect(read(`.courier/backups/1700000000000-0000c0de/${DIR}/old/index.ts`)).toBe("old group\n");
+    expect(bodyOf(`.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`)).toBe("old index\n");
+    expect(bodyOf(`.courier/backups/1700000000000-0000c0de/${DIR}/old/index.ts`)).toBe("old group\n");
     expect(existsSync(join(root.path, `${DIR}/new/index.ts`))).toBe(false);
   });
 
   it("changes nothing the apply had not reached yet", () => {
     crashedApply();
-    put(`${DIR}/index.ts`, "old index\n");
-    put(`${DIR}/old/index.ts`, "old group\n");
+    put(`${DIR}/index.ts`, signed("old index\n"));
+    put(`${DIR}/old/index.ts`, signed("old group\n"));
     rmSync(join(root.path, `.courier/backups/1700000000000-0000c0de/${DIR}/old`), { recursive: true });
 
-    const [recovered] = recoverInterruptedApplies(root, { applied: [], imports: {} });
+    const [recovered] = recoverInterruptedApplies(root, { applied: [], imports: { pets: PETS } });
 
     expect(recovered?.failed).toEqual([]);
-    expect(read(`${DIR}/index.ts`)).toBe("old index\n");
-    expect(read(`${DIR}/old/index.ts`)).toBe("old group\n");
+    expect(bodyOf(`${DIR}/index.ts`)).toBe("old index\n");
+    expect(bodyOf(`${DIR}/old/index.ts`)).toBe("old group\n");
   });
 });
 
@@ -400,7 +410,7 @@ describe("an apply that committed", () => {
       chmodSync(journals, 0o755);
     }
     const left = readdirSync(journals);
-    const recovered = recoverInterruptedApplies(root, { applied: [applyId], imports: {} });
+    const recovered = recoverInterruptedApplies(root, { applied: [applyId], imports: { pets: PETS } });
 
     expect(left).toEqual([`${applyId}.json`]);
     expect(report.written).toEqual([`${DIR}/index.ts`, `${DIR}/new/index.ts`]);
@@ -417,10 +427,10 @@ function recordOfApply(applyId: string): ImportStateEntry {
 }
 
 function crashedApply(): void {
-  put(`${DIR}/index.ts`, "new index\n");
-  put(`${DIR}/new/index.ts`, "new group\n");
-  put(`.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`, "old index\n");
-  put(`.courier/backups/1700000000000-0000c0de/${DIR}/old/index.ts`, "old group\n");
+  put(`${DIR}/index.ts`, signed("new index\n"));
+  put(`${DIR}/new/index.ts`, signed("new group\n"));
+  put(`.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`, signed("old index\n"));
+  put(`.courier/backups/1700000000000-0000c0de/${DIR}/old/index.ts`, signed("old group\n"));
   saveJournal(root.path, {
     id: "1700000000000-0000c0de",
     importName: "pets",
@@ -429,8 +439,8 @@ function crashedApply(): void {
     state: "committing",
     backupDir: ".courier/backups/1700000000000-0000c0de",
     entries: [
-      { path: `${DIR}/index.ts`, step: "write", existed: true, sha256: bodyHash("new index\n") },
-      { path: `${DIR}/new/index.ts`, step: "write", existed: false, sha256: bodyHash("new group\n") },
+      { path: `${DIR}/index.ts`, step: "write", existed: true, sha256: exactHash(signed("new index\n")) },
+      { path: `${DIR}/new/index.ts`, step: "write", existed: false, sha256: exactHash(signed("new group\n")) },
       { path: `${DIR}/old/index.ts`, step: "remove", existed: true },
     ],
     createdDirs: [`${DIR}/new`],
@@ -444,7 +454,7 @@ describe("recovering from what a crash left", () => {
     put(`${DIR}/new/.courier.import.4242-0a1b2c3d.tmp`, "staged\n");
     put(`${DIR}/.courier.imports.notes.tmp`, "mine\n");
 
-    recoverInterruptedApplies(root, { applied: [], imports: {} });
+    recoverInterruptedApplies(root, { applied: [], imports: { pets: PETS } });
 
     expect(existsSync(join(root.path, `${DIR}/new/.courier.import.4242-0a1b2c3d.tmp`))).toBe(false);
     expect(read(`${DIR}/.courier.imports.notes.tmp`)).toBe("mine\n");
@@ -455,7 +465,7 @@ describe("recovering from what a crash left", () => {
     rmSync(join(root.path, `.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`));
     vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const [recovered] = recoverInterruptedApplies(root, { applied: [], imports: {} });
+    const [recovered] = recoverInterruptedApplies(root, { applied: [], imports: { pets: PETS } });
 
     expect(recovered?.failed).toEqual([`${DIR}/index.ts`]);
     expect(readdirSync(join(root.path, ".courier/journal"))).toEqual(["1700000000000-0000c0de.json"]);
@@ -477,15 +487,15 @@ describe("a journal whose undo left files", () => {
     crashedApply();
     put(`${DIR}/index.ts`, "new index\nmy edit\n");
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    recoverInterruptedApplies(root, { applied: [], imports: {} });
-    put(`${DIR}/new/index.ts`, "new group\n");
+    recoverInterruptedApplies(root, { applied: [], imports: { pets: PETS } });
+    put(`${DIR}/new/index.ts`, signed("new group\n"));
 
-    const recovered = recoverInterruptedApplies(root, { applied: [], imports: {} });
+    const recovered = recoverInterruptedApplies(root, { applied: [], imports: { pets: PETS } });
 
     expect(recovered).toEqual([]);
-    expect(read(`${DIR}/new/index.ts`)).toBe("new group\n");
+    expect(bodyOf(`${DIR}/new/index.ts`)).toBe("new group\n");
     expect(read(`${DIR}/index.ts`)).toBe("new index\nmy edit\n");
-    expect(read(`.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`)).toBe("old index\n");
+    expect(bodyOf(`.courier/backups/1700000000000-0000c0de/${DIR}/index.ts`)).toBe("old index\n");
     const journal: unknown = JSON.parse(read(".courier/journal/1700000000000-0000c0de.json"));
     expect(journal).toMatchObject({ state: "kept", entries: [{ path: `${DIR}/index.ts` }] });
     expect(warn).toHaveBeenLastCalledWith(
@@ -498,10 +508,10 @@ describe("a journal whose undo left files", () => {
     crashedApply();
     put(`${DIR}/index.ts`, "new index\nmy edit\n");
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    recoverInterruptedApplies(root, { applied: [], imports: {} });
+    recoverInterruptedApplies(root, { applied: [], imports: { pets: PETS } });
     rmSync(join(root.path, ".courier/backups/1700000000000-0000c0de"), { recursive: true });
 
-    recoverInterruptedApplies(root, { applied: [], imports: {} });
+    recoverInterruptedApplies(root, { applied: [], imports: { pets: PETS } });
 
     expect(readdirSync(join(root.path, ".courier/journal"))).toEqual([]);
     expect(read(`${DIR}/index.ts`)).toBe("new index\nmy edit\n");
@@ -516,8 +526,8 @@ describe("a journal whose undo left files", () => {
     const recovered = recoverInterruptedApplies(root, { applied: ["0000000000001-0000beef"], imports });
 
     expect(recovered).toEqual([]);
-    expect(read(`${DIR}/index.ts`)).toBe("new index\n");
-    expect(read(`${DIR}/new/index.ts`)).toBe("new group\n");
+    expect(bodyOf(`${DIR}/index.ts`)).toBe("new index\n");
+    expect(bodyOf(`${DIR}/new/index.ts`)).toBe("new group\n");
     expect(existsSync(join(root.path, `${DIR}/new/.courier.import.4242-0a1b2c3d.tmp`))).toBe(false);
     const journal: unknown = JSON.parse(read(".courier/journal/1700000000000-0000c0de.json"));
     expect(journal).toMatchObject({ state: "kept", entries: [{}, {}, {}] });
@@ -528,7 +538,7 @@ describe("a journal of one import", () => {
   it("is replayed after an apply of another import was recorded", () => {
     crashedApply();
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    const imports = { store: { ...recordOfApply("1800000000000-0000beef"), dir: "src/api/store" } };
+    const imports = { pets: PETS, store: { ...recordOfApply("1800000000000-0000beef"), dir: "src/api/store" } };
 
     const recovered = recoverInterruptedApplies(root, { applied: ["1800000000000-0000beef"], imports });
 
@@ -547,6 +557,120 @@ describe("an apply's journal", () => {
     });
 
     expect(after).toBe("0000000000001-0000beef");
+  });
+});
+
+describe("recovery that nothing on disk can mislead", () => {
+  const ID = "1700000000000-0000c0de";
+  const journalWith = (entries: JournalEntry[], extra: Partial<ApplyJournal> = {}): void =>
+    saveJournal(root.path, {
+      id: ID,
+      importName: "pets",
+      dir: DIR,
+      after: null,
+      state: "committing",
+      backupDir: `.courier/backups/${ID}`,
+      entries,
+      createdDirs: [],
+      temps: [],
+      ...extra,
+    });
+
+  beforeEach(() => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  it("leaves a file another import wrote in the same folder since", () => {
+    put(`${DIR}/users/index.ts`, signGeneratedFile("petstore", "users\n"));
+    journalWith([{ path: `${DIR}/users/index.ts`, step: "write", existed: false, sha256: exactHash(signed("users\n")) }]);
+    const petstore = { ...PETS, applyId: "1800000000000-0000beef" };
+
+    recoverInterruptedApplies(root, { applied: ["1800000000000-0000beef"], imports: { petstore } });
+
+    expect(readGeneratedFile(read(`${DIR}/users/index.ts`)).header?.import).toBe("petstore");
+  });
+
+  it("leaves an untouched file of the same text alone, whatever its copy holds", () => {
+    put(`${DIR}/foreign.ts`, "export const foreign = 1;\r\n");
+    put(`.courier/backups/${ID}/${DIR}/foreign.ts`, "export const ");
+    journalWith([{ path: `${DIR}/foreign.ts`, step: "write", existed: true, sha256: exactHash(signed("export const foreign = 1;\n")) }]);
+
+    recoverInterruptedApplies(root, { applied: [], imports: { pets: PETS } });
+
+    expect(read(`${DIR}/foreign.ts`)).toBe("export const foreign = 1;\r\n");
+  });
+
+  it("does not report a copy gone for a file the apply never reached", () => {
+    put(`${DIR}/foreign.ts`, "export const foreign = 1;\n");
+    journalWith([{ path: `${DIR}/foreign.ts`, step: "write", existed: true, sha256: exactHash(signed("export const foreign = 1;\n")) }]);
+
+    const [recovered] = recoverInterruptedApplies(root, { applied: [], imports: { pets: PETS } });
+
+    expect(recovered?.failed).toEqual([]);
+    expect(readdirSync(join(root.path, ".courier/journal"))).toEqual([]);
+  });
+
+  it("touches no file a planted journal names outside the import's recorded folder", () => {
+    put("src/main.ts", "export const main = 'mine';\n");
+    put("src/index.ts", "export const index = 'mine';\n");
+    put(`.courier/backups/${ID}/src/main.ts`, "export const main = 'planted';\n");
+    saveJournal(root.path, {
+      id: ID,
+      importName: "stranger",
+      dir: "src",
+      after: null,
+      state: "committing",
+      backupDir: `.courier/backups/${ID}`,
+      entries: [
+        { path: "src/main.ts", step: "write", existed: true, sha256: exactHash("export const main = 'mine';\n") },
+        { path: "src/index.ts", step: "write", existed: false, sha256: exactHash("export const index = 'mine';\n") },
+      ],
+      createdDirs: [],
+      temps: [],
+    });
+
+    recoverInterruptedApplies(root, { applied: [], imports: {} });
+
+    expect(read("src/main.ts")).toBe("export const main = 'mine';\n");
+    expect(read("src/index.ts")).toBe("export const index = 'mine';\n");
+  });
+
+  it("drops the journal of the apply the import's record was saved by", () => {
+    journalWith([{ path: `${DIR}/index.ts`, step: "write", existed: false, sha256: exactHash(signed("x\n")) }]);
+    put(`${DIR}/index.ts`, signed("x\n"));
+
+    recoverInterruptedApplies(root, { applied: [], imports: { pets: { ...PETS, applyId: ID } } });
+
+    expect(bodyOf(`${DIR}/index.ts`)).toBe("x\n");
+    expect(readdirSync(join(root.path, ".courier/journal"))).toEqual([]);
+  });
+
+  it("leaves unfinished writes as they are while the imports state cannot be read, and undoes them once it can", () => {
+    put(`${DIR}/index.ts`, signed("new\n"));
+    put(`.courier/backups/${ID}/${DIR}/index.ts`, signed("old\n"));
+    saveImportEntry(root.path, "pets", PETS, "1600000000000-0000beef");
+    journalWith([{ path: `${DIR}/index.ts`, step: "write", existed: true, sha256: exactHash(signed("new\n")) }], {
+      after: "1600000000000-0000beef",
+    });
+    const state = join(root.path, ".courier/imports-state.json");
+    const saved = readFileSync(state, "utf8");
+    writeFileSync(state, "<<<<<<< conflict\n");
+
+    undoUnfinishedImportWrites(root.path);
+    const during = bodyOf(`${DIR}/index.ts`);
+    writeFileSync(state, saved);
+    undoUnfinishedImportWrites(root.path);
+
+    expect(during).toBe("new\n");
+    expect(bodyOf(`${DIR}/index.ts`)).toBe("old\n");
+  });
+
+  it("refuses to begin an apply while the imports state cannot be read, writing nothing", () => {
+    mkdirSync(join(root.path, ".courier"), { recursive: true });
+    writeFileSync(join(root.path, ".courier/imports-state.json"), "<<<<<<< conflict\n");
+
+    expect(() => applyFilePlan(root, scenario(), () => {})).toThrow(/imports-state/);
+    undisturbed();
   });
 });
 

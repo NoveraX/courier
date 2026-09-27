@@ -21,8 +21,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { saveJournal } from "../src/server/import-files/apply-journal";
-import { bodyHash } from "../src/server/import-files/body-hash";
-import { readGeneratedFile } from "../src/server/import-files/generated-header";
+import { exactHash } from "../src/server/import-files/exact-hash";
+import { readGeneratedFile, signGeneratedFile } from "../src/server/import-files/generated-header";
+import { saveImportEntry } from "../src/server/import-files/save-import-entry";
 import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
 
@@ -110,6 +111,7 @@ describe("writing an import's files", () => {
     const again = await post(url, "/api/apis/write", WRITE);
 
     expect(again.status).toBe(200);
+    expect(again.body.pruneFailures).toEqual([]);
     expect(read("src/api/pets/helpers.ts")).toBe("export const help = 1;\n");
   }, 20_000);
 
@@ -518,17 +520,20 @@ describe("reading a spec file the request names", () => {
 
 describe("starting Studio", () => {
   it("undoes a write to an import's files that a crash cut short", async () => {
-    put("src/api/pets/index.ts", "written by the crashed apply\n");
+    const crashed = signGeneratedFile("pets", "written by the crashed apply\n");
+    put("src/api/pets/index.ts", crashed);
     put(".courier/backups/1700000000000-0000c0de/src/api/pets/index.ts", "as it was\n");
+    const record = { specHash: "h", fetchedAt: "", lastSyncedAt: "", dir: "src/api/pets", files: {} };
+    saveImportEntry(root, "pets", record, "1600000000000-0000beef");
     saveJournal(root, {
       id: "1700000000000-0000c0de",
       importName: "pets",
       dir: "src/api/pets",
-      after: null,
+      after: "1600000000000-0000beef",
       state: "committing",
       backupDir: ".courier/backups/1700000000000-0000c0de",
       entries: [
-        { path: "src/api/pets/index.ts", step: "write", existed: true, sha256: bodyHash("written by the crashed apply\n") },
+        { path: "src/api/pets/index.ts", step: "write", existed: true, sha256: exactHash(crashed) },
       ],
       createdDirs: [],
       temps: [],

@@ -6,7 +6,7 @@ import type { ProjectRoot } from "../project-fs/project-root";
 import { resolveProjectPath } from "../project-fs/resolve-project-path";
 import { writeTempBeside } from "../project-fs/write-temp-beside";
 import { type ApplyJournal, saveJournal } from "./apply-journal";
-import { bodyHash } from "./body-hash";
+import { exactHash } from "./exact-hash";
 import { FilePlanError } from "./file-plan-error";
 import type { FilePlan, PlannedWrite } from "./file-plan-types";
 import { signGeneratedFile } from "./generated-header";
@@ -23,7 +23,7 @@ export interface StagedWrite {
   temp: string;
   /** Whether the target existed when staged. */
   existed: boolean;
-  /** SHA-256 of the body staged. */
+  /** SHA-256 of the exact bytes staged, Studio's header included. */
   sha256: string;
 }
 
@@ -63,14 +63,10 @@ export function stageWrites(
       if (!planned.has(created)) journal.createdDirs.push(projectRelative(root, created));
     }
     const mode = modeOf(absolute);
-    const temp = writeTempBeside(
-      absolute,
-      signGeneratedFile(plan.importName, write.body),
-      mode,
-      IMPORT_TEMP_PREFIX,
-    );
+    const signed = signGeneratedFile(plan.importName, write.body);
+    const temp = writeTempBeside(absolute, signed, mode, IMPORT_TEMP_PREFIX);
     journal.temps.push(projectRelative(root, temp));
-    return { write, absolute, temp, existed: mode !== null, sha256: bodyHash(write.body) };
+    return { write, absolute, temp, existed: mode !== null, sha256: exactHash(signed) };
   });
 }
 

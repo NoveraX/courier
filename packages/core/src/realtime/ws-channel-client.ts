@@ -18,6 +18,10 @@ const log = createLogger("WS");
  * finished, or refused with a `RealtimeError` — as an `error` event where
  * there is one, then `disconnected`. A channel whose join was rejected used
  * to stay `connected`, with the reason only in the console.
+ *
+ * What is sent before the server has confirmed the subscription — right
+ * after opening the channel, or while it rejoins after a reconnect — waits
+ * for the confirmation, in order, instead of being refused as not subscribed.
  */
 export function executeWSChannel<TSend, TReceive>(
   url: string,
@@ -30,6 +34,7 @@ export function executeWSChannel<TSend, TReceive>(
   const state = createConnectionState();
   const dataHandlers = new Set<(data: TReceive) => void>();
   const errorHandlers = new Set<(error: RealtimeError) => void>();
+  const early: TSend[] = [];
   let stop: (() => void) | undefined;
   let ended = false;
 
@@ -38,6 +43,10 @@ export function executeWSChannel<TSend, TReceive>(
     ended = true;
     stop?.();
     stop = undefined;
+    if (early.length > 0) {
+      log.warn(`${early.length} message(s) not sent: the channel ${qTopic} closed first`);
+      early.length = 0;
+    }
     if (error) for (const handler of errorHandlers) handler(error);
     dataHandlers.clear();
     errorHandlers.clear();
@@ -73,12 +82,19 @@ export function executeWSChannel<TSend, TReceive>(
       unsubscribe();
       unsubStatus();
     };
+    for (const data of early.splice(0)) conn.send(qTopic, data);
   }
 
   return {
     send(data: TSend) {
       if (ended) {
         log.warn(`Message not sent: the channel ${qTopic} has ended`);
+        return;
+      }
+      /* The subscribe goes out a microtask after the channel is made; sent
+         before it, a message reached the server first and was refused. */
+      if (!stop) {
+        early.push(data);
         return;
       }
       conn.send(qTopic, data);

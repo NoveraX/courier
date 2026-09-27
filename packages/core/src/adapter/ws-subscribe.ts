@@ -17,11 +17,12 @@ const log = createLogger("WS");
  * Handle a "subscribe" message from a WS client.
  *
  * Full flow: validate topic → check limits → resolve endpoint → validate
- * variables → run middleware → authorize → start channel/push → send
- * "subscribed".
+ * variables → run middleware → authorize → tell the client of a renamed
+ * topic → start channel/push → send "subscribed".
  *
- * The "subscribed" confirmation is sent AFTER channel/push initialization
- * to prevent a race where the client sends a message before onJoin completes.
+ * The "subscribed" confirmation is sent AFTER channel/push initialization:
+ * the client holds its messages until it arrives, so none reaches the
+ * channel before onJoin completes.
  *
  * @param ctx - Per-connection socket context
  * @param msg - Decoded WS message with type "subscribe"
@@ -112,6 +113,11 @@ async function openSubscription(
     if (ctx.closed) return;
   }
 
+  /* Said before anything can arrive on the topic — onJoin's first send, a
+     broadcast — so the client knows what those frames belong to. */
+  if (subscribedTopic !== topic) {
+    ctx.sendMessage({ type: "renamed", id: msg.id, topic, payload: subscribedTopic });
+  }
   const subRequestId = openSubscriptionEntry(ctx, subscribedTopic, resolved);
 
   try {

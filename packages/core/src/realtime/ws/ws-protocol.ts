@@ -3,6 +3,15 @@
  * Defines the message envelope used for all WS communication.
  */
 
+/**
+ * The kinds of frame. The server answers a `subscribe` carrying an `id` with
+ * `subscribed` once the subscription is running, or `complete` with an
+ * `error` when it refuses it — both with that `id`. When it subscribes the
+ * connection under another topic than the one asked for, because it
+ * qualifies the topic from the variables its schema produced, it first sends
+ * `renamed`: `topic` is the one asked for and `payload` the one everything
+ * about the subscription comes on from then on.
+ */
 export type WSMessageType =
   | "subscribe"
   | "unsubscribe"
@@ -15,7 +24,8 @@ export type WSMessageType =
   | "unsubscribed"
   | "complete"
   | "auth"
-  | "auth_required";
+  | "auth_required"
+  | "renamed";
 
 const VALID_TYPES = new Set<WSMessageType>([
   "subscribe",
@@ -30,6 +40,7 @@ const VALID_TYPES = new Set<WSMessageType>([
   "complete",
   "auth",
   "auth_required",
+  "renamed",
 ]);
 
 export interface WSMessage {

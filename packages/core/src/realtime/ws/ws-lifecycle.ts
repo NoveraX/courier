@@ -6,10 +6,11 @@ import { resolveAuthUrl } from "./auth-url";
 import type { createMessageQueue } from "./message-queue";
 import { shouldReconnect } from "./reconnect-classifier";
 import type { ServerSilenceDetector } from "./server-silence";
+import { requestSubscription } from "./topic-operations";
+import type { TopicRegistry } from "./topic-registry-types";
 import { dispatchIncomingMessage } from "./ws-message-handler";
 import type { createPendingRegistry } from "./ws-pending";
-import { decodeMessage, encodeMessage, type WSMessage } from "./ws-protocol";
-import type { createTopicRegistry } from "./ws-topics";
+import { decodeMessage, type WSMessage } from "./ws-protocol";
 import type { WSClientSocket, WSConnectionConfig } from "./ws-types";
 
 /**
@@ -24,7 +25,7 @@ export interface LifecycleContext {
   config: WSConnectionConfig;
   state: ConnectionState;
   log: ScopedLogger;
-  topics: ReturnType<typeof createTopicRegistry>;
+  topics: TopicRegistry;
   queue: ReturnType<typeof createMessageQueue>;
   pending: ReturnType<typeof createPendingRegistry>;
   silence: ServerSilenceDetector;
@@ -67,9 +68,7 @@ function handleOpen(ctx: LifecycleContext): void {
   ctx.state.set("connected");
   ctx.silence.start();
   for (const entry of ctx.topics.entries()) {
-    ctx.sendRaw(
-      encodeMessage({ type: "subscribe", topic: entry.qualifiedTopic, payload: entry.variables }),
-    );
+    requestSubscription(ctx, entry.qualifiedTopic, entry.variables);
   }
   for (const msg of ctx.queue.drain()) ctx.sendRaw(msg);
 }
@@ -98,6 +97,8 @@ function handleMessage(ctx: LifecycleContext, ev: MessageEvent): void {
 function handleClose(ctx: LifecycleContext, ev: CloseEvent): void {
   ctx.silence.stop();
   ctx.refs.ws = null;
+  /* The next socket subscribes afresh: what is sent meanwhile waits for it. */
+  ctx.topics.unconfirmAll();
   if (ctx.refs.closed || !shouldReconnect(ev.code)) {
     ctx.state.set("disconnected");
     ctx.pending.rejectAll("Connection lost");

@@ -13,6 +13,7 @@ import { appendBarrelExports } from "../src/apis/manage/append-barrel-exports";
 import { buildEndpointInventory } from "../src/apis/manage/build-inventory";
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { previewRemoveEndpoints } from "../src/apis/manage/remove-endpoints";
+import { detectOrphanSchemas } from "../src/apis/manage/detect-orphan-schemas";
 import { removeBarrelExports } from "../src/apis/manage/remove-barrel-exports";
 import { removeEndpointsFromFile } from "../src/apis/manage/remove-endpoints-from-file";
 import { addGroupsToSourceFile, removeGroupsFromSourceFile } from "../src/apis/manage/update-source-file";
@@ -187,6 +188,31 @@ describe("the barrel, adding a group whose schemas share names with one already 
     expect(added).toBe(
       'export { PetSchema, type Pet } from "./pets/schemas";\nexport { OrderSchema, type Order } from "./store/schemas";\n',
     );
+  });
+});
+
+describe("detectOrphanSchemas", () => {
+  it("keeps a type a schema that stays is written with", () => {
+    const schemas = [
+      "export type FindParams = { status: string };",
+      "export const FindParamsSchema = z.object({ status: z.string() }) satisfies z.ZodType<FindParams>;",
+      "",
+    ].join("\n");
+
+    expect(detectOrphanSchemas(schemas, "", "find: endpoint.get<FindParams>('/find'),")).toEqual([]);
+  });
+
+  it("drops a schema and the type it is written with once neither is used", () => {
+    const schemas = [
+      "export type FindParams = { status: string };",
+      "export const FindParamsSchema = z.object({ status: z.string() }) satisfies z.ZodType<FindParams>;",
+      "",
+    ].join("\n");
+
+    expect(detectOrphanSchemas(schemas, "", "find: endpoint.get('/find').query(FindParamsSchema),").sort()).toEqual([
+      "FindParams",
+      "FindParamsSchema",
+    ]);
   });
 });
 

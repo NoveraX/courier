@@ -10,7 +10,8 @@ const DECLARATION_RE = /^export\s+(?:const|type|interface|enum)\s+(\w+)/;
 /**
  * Find the schemas that removed endpoints used, directly or through other
  * schemas, and that nothing left uses: the remaining endpoints, or a
- * schema they use. A schema the removed endpoints did not use is never one.
+ * schema that stays. A schema the removed endpoints did not use is never
+ * one, and neither is anything a schema that stays depends on.
  *
  * @param schemaFileContent - Full content of the schema file
  * @param remainingGroupContents - Combined content of all remaining group files
@@ -30,7 +31,10 @@ export function detectOrphanSchemas(
     schemaDeps,
   );
   const touched = withDependencies(findReferencedIdentifiers(removedCode, allSchemas), schemaDeps);
-  return allSchemas.filter((name) => touched.has(name) && !alive.has(name));
+  /* A schema that stays keeps what it is written with, such as the type it `satisfies`. */
+  const staying = allSchemas.filter((name) => alive.has(name) || !touched.has(name));
+  const kept = withDependencies(new Set(staying), schemaDeps);
+  return allSchemas.filter((name) => !kept.has(name));
 }
 
 /* The schemas given, and every schema they depend on. */

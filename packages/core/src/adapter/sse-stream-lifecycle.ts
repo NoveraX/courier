@@ -129,19 +129,35 @@ export function runCleanupStep(label: string, step: (() => void) | undefined): v
   }
 }
 
-/** Wait until the client has read enough for the next event, or the stream closes. */
+const ROOM_POLL_MS = 50;
+
+/** Wait `ms`, or less if `signal` aborts, leaving no listener behind either way. */
+function pause(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", done);
+      resolve();
+    };
+    const timer = setTimeout(done, ms);
+    signal.addEventListener("abort", done, { once: true });
+  });
+}
+
+/**
+ * Wait until the client has read enough for the next event, or the stream
+ * closes. A client that stops reading may hold a stream here for its whole
+ * lifetime, so each poll takes its abort listener back with it.
+ *
+ * @param sender - The stream's writer, which knows how full its buffer is
+ * @param signal - Aborts when the stream closes
+ * @returns Once there is room, or the stream has closed
+ * @example
+ * ```ts
+ * await waitForRoom(sender, signal);
+ * if (!signal.aborted) sender.send(event, false);
+ * ```
+ */
 export async function waitForRoom(sender: SSESender, signal: AbortSignal): Promise<void> {
-  while (!sender.hasRoom && !signal.aborted) {
-    await new Promise<void>((resolve) => {
-      const timer = setTimeout(resolve, 50);
-      signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timer);
-          resolve();
-        },
-        { once: true },
-      );
-    });
-  }
+  while (!sender.hasRoom && !signal.aborted) await pause(ROOM_POLL_MS, signal);
 }

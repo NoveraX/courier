@@ -4,7 +4,7 @@ import type { MiddlewareContext } from "../middleware/types";
 import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../validation";
 import { getEndpoint } from "./execute-helpers";
 import { headersToObject } from "./helpers";
-import { mergeHeaders } from "./merge-headers";
+import { filterHeaders, mergeHeaders } from "./merge-headers";
 
 type ResolvedGroup = Record<string, unknown> & { options?: GroupOptions };
 
@@ -120,10 +120,14 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     endpointAllowedHeaders?.length || sourceAllowed?.length
       ? [...new Set([...(sourceAllowed ?? []), ...(endpointAllowedHeaders ?? [])])]
       : undefined;
-  const newHeaders = mergeHeaders(
-    baseHeaders as HeadersInit | Record<string, string | undefined> | undefined,
-    mergedNextHeaders,
-    allowedHeaders,
+  /* The caller's own headers go on top of the ones it forwards. A header it
+     set — a service token for a backend the end user may not reach — is its
+     explicit choice, and the incoming request's copy used to replace it. */
+  const newHeaders = filterHeaders(mergedNextHeaders, allowedHeaders);
+  mergeHeaders(baseHeaders as HeadersInit | Record<string, string | undefined> | undefined).forEach(
+    (value, name) => {
+      newHeaders.set(name, value);
+    },
   );
 
   return {

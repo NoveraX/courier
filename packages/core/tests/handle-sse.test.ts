@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createHandler } from "../src/adapter";
 import { courier } from "../src/define/courier";
+import { defineMiddleware } from "../src/middleware";
 import type { SSEContext, SSEEvent } from "../src/realtime/types";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import type { StudioHooks } from "../src/studio/hooks";
@@ -237,6 +238,34 @@ describe("handleSSE — studio hooks", () => {
       transport: "sse",
     });
     expect(onStreamOpen.mock.calls[0]![0].requestId).toBeTruthy();
+
+    cleanup();
+  });
+
+  /* The headers the stream's own middleware set go to the handler, not to the
+     browser; reporting them, with the request's, as response headers made
+     Studio list referer and user-agent among the stream's response. */
+  it("reports as response headers only the ones the stream answers with", async () => {
+    const onStreamOpen = vi.fn();
+    const cleanup = installHooks({ onStreamOpen });
+    const stamp = defineMiddleware("stamp", "before", async (ctx) => {
+      ctx.headers.set("x-stamp", "yes");
+    });
+    const feed = stream.response<unknown>().implement(async function* () {
+      yield { data: "x" };
+    });
+    const { handleSSE } = setupHandler({ api: { options: { middleware: [stamp], groups: {} }, feed } });
+
+    const res = await handleSSE(
+      sseRequest("_s=api&_m=feed", { referer: "http://app.test/page", "user-agent": "test-agent" }),
+    );
+    await collectSSEText(res);
+
+    const lower = (headers: Iterable<[string, string]>) =>
+      Object.fromEntries([...headers].map(([name, value]) => [name.toLowerCase(), value]));
+    const reported = onStreamOpen.mock.calls[0]?.[0].responseHeaders as Record<string, string>;
+    expect(lower(Object.entries(reported))).toEqual(lower(res.headers));
+    expect(onStreamOpen.mock.calls[0]?.[0].requestHeaders).toMatchObject({ referer: "http://app.test/page" });
 
     cleanup();
   });

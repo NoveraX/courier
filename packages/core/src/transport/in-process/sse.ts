@@ -100,9 +100,9 @@ export async function executeDirectSSE(
     requestHeaders: payload.headers ?? {},
   };
   const instr = beginStream(meta, options.requestId);
-  // Mirror canonical handle-sse: emit post-middleware effective headers as
-  // responseHeaders so the playground UI shows what the endpoint actually
-  // received (auth merged in, allowedHeaders whitelist applied, etc).
+  // In process there is no response to report: the headers shown in its
+  // place are the ones the endpoint received after its middleware (auth
+  // merged in, allowedHeaders whitelist applied, etc).
   instr?.updateMeta({ responseHeaders: headersToRecord(headers) });
 
   const sseHandler = endpoint as SSEHandler<unknown, unknown>;

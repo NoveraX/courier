@@ -124,7 +124,8 @@ export function createSSEHandler(
       mode: "proxy",
       timestamp: Date.now(),
       requestHeaders: headersToRecord(request.headers),
-      responseHeaders: { ...responseHeaders, ...headersToRecord(headers) },
+      /* What it answers with; its middleware's headers stay in the handler's context. */
+      responseHeaders,
     });
 
     const { signal, ttlSignal } = createLifetimeSignal(

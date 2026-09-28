@@ -21,7 +21,9 @@ export function channelWith(handler: ResolvedHandler, fn: MockChannelFn): void {
 }
 
 /** A stream that sends these events, in order, then ends */
-export function streamOf(events: SSEEvent[]): MockStreamFn {
+export function streamOf<TResponse, TVariables>(
+  events: readonly SSEEvent<TResponse>[],
+): MockStreamFn<TResponse, TVariables> {
   return async function* () {
     for (const event of events) yield event;
   };

@@ -4,7 +4,7 @@ import type { Duplex } from "node:stream";
 import { logger } from "@noverax/courier";
 import type { WebSocketServer as WSServerType } from "ws";
 import type { MockRegistry } from "../../registry";
-import type { MockChannelFn, MockHistoryEntry } from "../../types";
+import type { MockHistoryEntry } from "../../types";
 import type { PrefixMapping } from "../prefix-routes";
 
 import { activateConnection, type WSRequestHooks } from "./connection-handler";
@@ -119,7 +119,8 @@ export function createMockWSHandler(config: WSHandlerConfig): MockWSHandler {
     }
 
     const handler = config.registry.get(route.group, route.method, config.getScenarioState());
-    if (handler?.transport !== "ws" || !handler.channelFn) {
+    const channelFn = handler?.transport === "ws" ? handler.channelFn : undefined;
+    if (!channelFn) {
       reject(socket, 404);
       return;
     }
@@ -134,7 +135,7 @@ export function createMockWSHandler(config: WSHandlerConfig): MockWSHandler {
       activateConnection({
         ws,
         route,
-        channelFn: handler.channelFn as MockChannelFn,
+        channelFn,
         url,
         history: config.history,
         hooks: config.hooks,

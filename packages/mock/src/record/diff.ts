@@ -1,3 +1,4 @@
+import { isRecord } from "../is-record";
 import type { Fixture } from "./fixture";
 
 /** A difference between two fixture sets */
@@ -82,8 +83,8 @@ function diffValues(before: unknown, after: unknown, path: string): FieldChange[
     return diffArrays(before, after, path);
   }
 
-  if (typeof before === "object" && typeof after === "object") {
-    return diffObjects(before as Record<string, unknown>, after as Record<string, unknown>, path);
+  if (isRecord(before) && isRecord(after)) {
+    return diffObjects(before, after, path);
   }
 
   return [{ path: path || "(root)", before, after }];

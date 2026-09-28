@@ -1,5 +1,7 @@
+import { logger } from "@noverax/courier";
 import type { SchemaMetadata } from "./route-types";
 import { prop } from "./schema-introspect/prop";
+import { schemaMetadataOf } from "./schema-metadata";
 
 /**
  * Endpoint introspection helpers.
@@ -23,16 +25,18 @@ export function probeEndpoint(fn: unknown): {
   path?: string;
 } {
   if (typeof fn === "object" && fn !== null) {
-    const { method, path } = fn as { method?: string; path?: string };
-    if (typeof method === "string") return { method, path };
+    const method: unknown = Reflect.get(fn, "method");
+    const path: unknown = Reflect.get(fn, "path");
+    if (typeof method === "string") return { method, ...(typeof path === "string" && { path }) };
   }
-  return probeCallable(fn as (...args: unknown[]) => unknown);
+  return probeCallable(fn);
 }
 
-function probeCallable(fn: (...args: unknown[]) => unknown): {
+function probeCallable(fn: unknown): {
   method?: string;
   path?: string;
 } {
+  if (typeof fn !== "function") return {};
   let method: string | undefined;
   let path: string | undefined;
 
@@ -51,9 +55,11 @@ function probeCallable(fn: (...args: unknown[]) => unknown): {
   const mockHttp = new Proxy({}, handler);
 
   try {
-    fn(mockHttp, {});
-  } catch {
-    // Endpoint may throw during probing — path/method already captured
+    Reflect.apply(fn, undefined, [mockHttp, {}]);
+  } catch (error) {
+    /* The closure may throw on the stand-in it is probed with; the call it
+       began has been read by then. */
+    logger.debug("MockProbe", "An endpoint threw while it was probed", error);
   }
 
   return { method, path: path || undefined };
@@ -81,7 +87,7 @@ export function realtimePath(endpoint: unknown, name: string): string {
 /** Read the schema metadata symbol attached to an endpoint function */
 export function extractSchema(fn: unknown): SchemaMetadata | undefined {
   if (fn === null || (typeof fn !== "function" && typeof fn !== "object")) return undefined;
-  return (fn as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
+  return schemaMetadataOf(Reflect.get(fn, ENDPOINT_SCHEMA));
 }
 
 /**
@@ -92,7 +98,7 @@ export function extractSchema(fn: unknown): SchemaMetadata | undefined {
  */
 export function isEndpoint(value: unknown): boolean {
   if (typeof value !== "object" || value === null) return false;
-  return typeof (value as { probe?: unknown }).probe === "function";
+  return typeof Reflect.get(value, "probe") === "function";
 }
 
 /** Normalize a group prefix string: ensure leading "/" and no trailing "/" */

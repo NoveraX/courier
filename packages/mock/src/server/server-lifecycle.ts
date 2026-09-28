@@ -1,3 +1,4 @@
+import { Server } from "node:http";
 import type { ServerType } from "@hono/node-server";
 import type { Hono } from "hono";
 
@@ -47,8 +48,9 @@ export function createServerLifecycle(
       wsUpgrade = createWSUpgrade(ws);
 
       const onServer = (nodeServer: ServerType) => {
-        server = nodeServer as unknown as ClosableServer;
-        if (wsUpgrade) attachWSUpgrade(nodeServer, wsUpgrade);
+        server = nodeServer;
+        /* The mock serves HTTP/1.1, where a WebSocket upgrades. */
+        if (wsUpgrade && nodeServer instanceof Server) attachWSUpgrade(nodeServer, wsUpgrade);
       };
       return tryListen(serve, app, port, hostname, onServer, strictPort ? 0 : undefined);
     },

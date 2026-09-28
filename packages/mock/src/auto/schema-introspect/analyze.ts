@@ -6,7 +6,7 @@
 import { getConstraints } from "./constraints";
 import { getFieldType, isTransparentWrapper } from "./detect";
 import { extractShape } from "./extract";
-import type { FieldMeta, FieldType } from "./types";
+import type { FieldMeta } from "./types";
 import {
   getArrayElement,
   getDefaultValue,
@@ -31,7 +31,7 @@ export function analyzeField(field: unknown, depth = 0): FieldMeta {
   if (isTransparentWrapper(field)) {
     const inner = getInnerType(field) ?? getEffectsSchema(field) ?? resolveLazy(field);
     const defaultVal = getDefaultValue(field);
-    const meta = inner ? analyzeField(inner, depth + 1) : { type: "unknown" as FieldType };
+    const meta: FieldMeta = inner ? analyzeField(inner, depth + 1) : { type: "unknown" };
     return { ...meta, ...(defaultVal !== undefined && { defaultValue: defaultVal }) };
   }
 

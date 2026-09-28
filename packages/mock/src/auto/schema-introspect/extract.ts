@@ -2,6 +2,7 @@
  * Shape extraction and array unwrapping from schema objects.
  */
 
+import { isRecord } from "../../is-record";
 import { prop } from "./prop";
 
 /** Extract object shape (field name → raw field schema) from a schema */
@@ -10,11 +11,11 @@ export function extractShape(schema: unknown): Record<string, unknown> | undefin
 
   // Zod v4: schema.shape or _def.shape
   const shape = prop(schema, "shape") ?? prop(schema, "_def", "shape");
-  if (shape && typeof shape === "object") return shape as Record<string, unknown>;
+  if (isRecord(shape)) return shape;
 
   // Valibot: schema.entries
   const entries = prop(schema, "entries");
-  if (entries && typeof entries === "object") return entries as Record<string, unknown>;
+  if (isRecord(entries)) return entries;
 
   return undefined;
 }
@@ -57,8 +58,7 @@ export function unwrapArraySchema(schema: unknown): unknown {
   if (v4Element) return v4Element;
 
   // Zod v3: _def.type (when typeName === "ZodArray")
-  const v3Def = prop(schema, "_def") as Record<string, unknown> | undefined;
-  if (v3Def?.typeName === "ZodArray") return v3Def.type;
+  if (prop(schema, "_def", "typeName") === "ZodArray") return prop(schema, "_def", "type");
 
   // Valibot: { type: "array", item }
   if (prop(schema, "type") === "array") return prop(schema, "item");

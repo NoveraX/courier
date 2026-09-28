@@ -1,3 +1,4 @@
+import { isRecord } from "../is-record";
 import { MockHttpError } from "../server/errors";
 import type { MockStore } from "../store";
 import type { MockRequestContext } from "../types";
@@ -83,7 +84,7 @@ function makeCreateHandler(store: MockStore, groupName: string, route: RouteInfo
     : undefined;
   return (ctx) => {
     const col = store.collection(groupName);
-    const vars = (ctx.variables ?? {}) as Record<string, unknown>;
+    const vars = fieldsOf(ctx);
     const given = vars[col.idField];
     if ((typeof given === "string" || typeof given === "number") && col.getById(given)) {
       throw new MockHttpError(409, `${groupName} with id ${given} already exists`);
@@ -104,7 +105,7 @@ function makeUpdateHandler(store: MockStore, groupName: string, route: RouteInfo
     const col = store.collection(groupName);
     const key = recordKey(ctx.variables, col, route.idParam);
     const record = findRecord(col, key);
-    const { [col.idField]: _id, ...data } = (ctx.variables ?? {}) as Record<string, unknown>;
+    const { [col.idField]: _id, ...data } = fieldsOf(ctx);
     const updated = record && col.updateById(idOf(col, record), data);
     if (!updated) throw recordNotFound(groupName, key);
     return updated;
@@ -121,7 +122,7 @@ function makeUpsertHandler(store: MockStore, groupName: string, route: RouteInfo
     const col = store.collection(groupName);
     const key = recordKey(ctx.variables, col, route.idParam);
     if (!key) throw new MockHttpError(400, `${groupName}: PUT needs an id`);
-    const { [col.idField]: _id, ...body } = (ctx.variables ?? {}) as Record<string, unknown>;
+    const { [col.idField]: _id, ...body } = fieldsOf(ctx);
     const record = findRecord(col, key);
     if (record) return col.replace(idOf(col, record), body);
     const id = key.field === col.idField ? typedLike(col, key.value) : freshId(col);
@@ -148,4 +149,9 @@ function makeDeleteAllHandler(store: MockStore, groupName: string): Handler {
     col.clear();
     return { deleted: count };
   };
+}
+
+/* The fields a call sends, when its variables are an object; none otherwise. */
+function fieldsOf(ctx: MockRequestContext): Record<string, unknown> {
+  return isRecord(ctx.variables) ? ctx.variables : {};
 }

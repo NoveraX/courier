@@ -15,6 +15,6 @@ export function isMockHttpError(err: unknown): err is MockHttpError {
   return (
     err instanceof Error &&
     err.name === "MockHttpError" &&
-    typeof (err as unknown as Record<string, unknown>).status === "number"
+    typeof Reflect.get(err, "status") === "number"
   );
 }

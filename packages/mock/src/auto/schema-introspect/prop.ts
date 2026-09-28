@@ -8,7 +8,7 @@ export function prop(obj: unknown, ...path: string[]): unknown {
   let current: unknown = obj;
   for (const key of path) {
     if (!current || typeof current !== "object") return undefined;
-    current = (current as Record<string, unknown>)[key];
+    current = Reflect.get(current, key);
   }
   return current;
 }

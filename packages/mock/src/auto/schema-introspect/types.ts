@@ -51,7 +51,7 @@ export interface ValueConstraints {
 export interface FieldMeta extends ValueConstraints {
   type: FieldType;
   /** Enum string values (z.enum / v.picklist) */
-  enumValues?: string[];
+  enumValues?: Array<string | number>;
   /** Inner field for optional/nullable/array wrappers */
   innerField?: FieldMeta;
   /** Raw object shape (field name → raw schema) */

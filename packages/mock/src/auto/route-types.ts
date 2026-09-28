@@ -52,12 +52,6 @@ export type CrudOperation =
   | "deleteAll"
   | "custom";
 
-/** Shape of a group within source.options.groups */
-export interface SourceGroup {
-  options?: { prefix?: string };
-  [endpointName: string]: unknown;
-}
-
 /** Schema metadata extracted from an endpoint function */
 export interface SchemaMetadata {
   response?: StandardSchemaV1;

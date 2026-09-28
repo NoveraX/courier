@@ -442,7 +442,7 @@ export const caller = createProxyCaller<typeof api>("api", { source: api, proxyP
 
 ### Server Adapters
 
-Each adapter exposes a single handler that plugs into your server framework. All of them use the same `sources` object.
+Each adapter exposes a single handler that plugs into your server framework. All of them take the same config as `createHandler`, so each is given the same `sources` object the same way: `{ sources }`. Left out, they read the sources `registerSources()` or `attachRuntime()` registered.
 
 <br />
 
@@ -451,10 +451,11 @@ Each adapter exposes a single handler that plugs into your server framework. All
 ```ts
 import { Hono } from "hono"
 import { courierHandler } from "@noverax/courier-hono"
+import { sources } from "./api/sources"
 
 const app = new Hono()
 
-app.all("/api/request", courierHandler())
+app.all("/api/request", courierHandler({ sources }))
 
 export default app
 ```
@@ -464,10 +465,11 @@ export default app
 ```ts
 import express from "express"
 import { courierHandler } from "@noverax/courier-express"
+import { sources } from "./api/sources"
 
 const app = express()
 
-app.all("/api/request", courierHandler())
+app.all("/api/request", courierHandler({ sources }))
 
 app.listen(3000)
 ```
@@ -481,7 +483,7 @@ import { sources } from "./api/sources"
 
 const app = Fastify()
 
-app.register(courierPlugin, { sources, prefix: "/api/request" })
+app.register(courierPlugin, { prefix: "/api/request", config: { sources } })
 
 app.listen({ port: 3000 })
 ```
@@ -496,7 +498,7 @@ import { sources } from "./api/sources"
 @Module({})
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(courierMiddleware(sources)).forRoutes("/api/request")
+    consumer.apply(courierMiddleware({ sources })).forRoutes("/api/request")
   }
 }
 ```

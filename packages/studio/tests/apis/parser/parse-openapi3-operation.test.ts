@@ -6,10 +6,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { generateCode } from "../../../src/apis/generator";
 import { parseSpec } from "../../../src/apis/parser";
+import { generatedProject } from "../../helpers/compile-generated";
 import { generatedCall, loadGenerated } from "../../helpers/load-generated";
 import { type RecordingServer, startRecordingServer } from "../../helpers/recording-server";
 
 const VALIDATORS = ["zod", "valibot", "arktype", "none"] as const;
+
+const project = generatedProject("courier-openapi-operations");
 
 let server: RecordingServer;
 
@@ -22,6 +25,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await server.close();
+  project.remove();
 });
 
 function specWith(paths: Record<string, unknown>): string {
@@ -43,9 +47,16 @@ function specWith(paths: Record<string, unknown>): string {
   });
 }
 
+function generate(spec: string, validation: (typeof VALIDATORS)[number]) {
+  return generateCode(parseSpec(spec), { type: "openapi", outputDir: "src", validation }, "box");
+}
+
 function callFor(spec: string, validation: (typeof VALIDATORS)[number], name: string) {
-  const files = generateCode(parseSpec(spec), { type: "openapi", outputDir: "src", validation }, "box");
-  return generatedCall(loadGenerated(files, "src/box/index.ts"), ["boxApi", "files", name]);
+  return generatedCall(loadGenerated(generate(spec, validation), "src/box/index.ts"), [
+    "boxApi",
+    "files",
+    name,
+  ]);
 }
 
 const ERROR_ANSWER = {
@@ -83,5 +94,43 @@ describe.each(VALIDATORS)("an operation answering 204 beside a default error (%s
     const call = callFor(specWith({ "/files/{file_id}": { get: getFile } }), validation, "getFile");
 
     await expect(call({ file_id: "f1" })).resolves.toEqual({ id: "f1" });
+  });
+});
+
+describe.each(VALIDATORS)("a query parameter named with a hyphen (%s)", (validation) => {
+  const getFile = {
+    tags: ["files"],
+    operationId: "getFile",
+    parameters: [
+      { name: "file-id", in: "path", required: true, schema: { type: "string" } },
+      { name: "page-size", in: "query", schema: { type: "integer" } },
+    ],
+    responses: {
+      "200": {
+        description: "ok",
+        content: { "application/json": { schema: { $ref: "#/components/schemas/File" } } },
+      },
+    },
+  };
+  const spec = () => specWith({ "/files/{file-id}": { get: getFile } });
+
+  it("is sent under the name the specification gives it", async () => {
+    await callFor(spec(), validation, "getFile")({ file_id: "f1", "page-size": 10 });
+
+    expect(server.requests.at(-1)).toMatchObject({
+      path: "/v1/files/f1",
+      query: [["page-size", "10"]],
+    });
+  });
+
+  it("is typed under that name", () => {
+    const check = [
+      'import { boxApi } from "./src/box/index";',
+      'export const read = () => boxApi.files.getFile({ file_id: "f1", "page-size": 10 });',
+    ].join("\n");
+
+    expect(project.diagnostics(`hyphen-${validation}`, generate(spec(), validation), check)).toEqual(
+      [],
+    );
   });
 });

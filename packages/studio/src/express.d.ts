@@ -2,7 +2,7 @@ declare module "express" {
   import type { IncomingMessage, ServerResponse } from "node:http";
 
   interface Request extends IncomingMessage {
-    body: any;
+    body: unknown;
   }
   interface Response extends ServerResponse {
     json(data: unknown): void;

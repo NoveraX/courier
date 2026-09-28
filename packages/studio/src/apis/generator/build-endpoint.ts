@@ -51,7 +51,7 @@ export function buildEndpointDefinition(
       ? null
       : ((paramsType ? typeName(context, paramsType) : null) ?? resolveVariablesType(ep, context)),
     responseSchema: response,
-    responseType: response ? "unknown" : resolveResponseType(ep, context),
+    responseType: response ? null : resolveResponseType(ep, context),
   });
 }
 

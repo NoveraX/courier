@@ -78,25 +78,26 @@ Every framework adapter is a thin wrapper around `createHandler()` from `@novera
 All adapters delegate to `createHandler()`, which returns three methods:
 
 - **`handle(request)`** — auto-routes GET and POST, returns 405 for other methods
-- **`handleGet(request)`** — parses query parameters (`_s`, `_g`, `_m` + variables) for cacheable read endpoints
-- **`handlePost(request)`** — validates origin, parses JSON or FormData body for mutations
+- **`handleGet(request)`** — checks the origin, parses query parameters (`_s`, `_g`, `_m` + variables) for cacheable read endpoints
+- **`handlePost(request)`** — checks the origin, parses JSON or FormData body for mutations
 
 ## Origin validation
 
-Every POST request is checked to ensure the `Origin` header matches the request URL origin. This prevents cross-site request forgery and unauthorized third-party access:
+Every call the proxy serves — GET and POST here, and the SSE and WebSocket routes too — is checked for where it comes from, so a page on another site cannot drive the proxy with the user's cookies:
 
-```typescript
-// Built-in origin validation (POST only)
-const origin = request.headers.get("origin")
+- **`Sec-Fetch-Site`** decides when the browser sends it, and a current browser sends it on every request to a secure origin: `same-origin`, and `none` for what the user typed, pass; `same-site` and `cross-site` pass only from an origin listed in `allowedOrigins`.
+- **`Origin`** is compared with the origin the request was addressed to where the browser says nothing else; a foreign origin passes only when listed.
+- A request with **neither header** — a server, a CDN, a script — is not a browser's cross-origin request, and is served.
+- In **development**, while `allowedOrigins` is empty, another port on the local machine is admitted, so Studio can inspect the app. Configuring `allowedOrigins` replaces the allowance with the list.
 
-if (!origin || new URL(request.url).origin !== origin) {
-  return Response.json(
-    { success: false, message: "Origin mismatch" },
-    { status: 403 }
-  )
-}
+A refused call is answered `403` with `{ "success": false, "message": "Origin not allowed" }`; a refused socket is closed with `4403`. A pattern is an exact origin, `https://*.example.com` for the sub-domains of a host over one scheme and port, or `*.example.com` for them over any:
 
-// GET requests skip origin validation (cacheable, no side effects)
+```ts
+import { createHandler } from "@noverax/courier"
+
+const handler = createHandler({
+  allowedOrigins: ["https://admin.example.com", "https://*.example.com"],
+})
 ```
 
 ## Content-Type handling

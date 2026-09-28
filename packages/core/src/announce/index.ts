@@ -12,6 +12,7 @@
  */
 
 import type { AnySource } from "../define";
+import { getSources } from "../sources";
 
 export { deferAnnounce } from "./defer";
 
@@ -81,6 +82,40 @@ export function announceHosting(input: AnnounceHostingInput): void {
   };
   state.buffer.push(entry);
   for (const listener of state.listeners) listener(entry);
+}
+
+/**
+ * Announce what an adapter hosts as soon as sources are registered, without
+ * requiring them when the adapter's handler is created.
+ *
+ * Call the returned function on each request. It announces on the first call
+ * that finds the registry populated and does nothing afterwards; before that
+ * it does nothing and never throws, so a handler created at module load
+ * works whenever `registerSources()` or `attachRuntime()` runs. A request
+ * that arrives before any registration is answered by the handler itself,
+ * which names the missing registry.
+ *
+ * @param input - What the adapter hosts, without the sources
+ * @returns A function to call on each request
+ *
+ * @example
+ * ```ts
+ * const announce = announceWhenRegistered({ transports: ["http"], framework: "hono" });
+ * return (c) => {
+ *   announce();
+ *   return handle(c.req.raw);
+ * };
+ * ```
+ */
+export function announceWhenRegistered(input: Omit<AnnounceHostingInput, "sources">): () => void {
+  let announced = false;
+  return () => {
+    if (announced) return;
+    const sources = getSources();
+    if (!sources) return;
+    announced = true;
+    announceHosting({ ...input, sources: Object.values(sources) });
+  };
 }
 
 /**

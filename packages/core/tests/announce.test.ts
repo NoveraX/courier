@@ -2,9 +2,11 @@ import { bufferedAnnouncementCount, resetAnnouncements } from "../src/announce/t
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   announceHosting,
+  announceWhenRegistered,
   consumeAnnouncements,
 } from "../src/announce";
 import { defineApi } from "../src/define";
+import { _resetSourcesForTests, registerSources } from "../src/sources";
 
 const fakeApi = defineApi({ baseURL: "http://example.com", groups: {} });
 
@@ -84,5 +86,44 @@ describe("consumeAnnouncements", () => {
     announceHosting({ transports: ["http"], sources: [fakeApi] });
     expect(a).toHaveBeenCalledTimes(1);
     expect(b).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("announceWhenRegistered", () => {
+  afterEach(() => {
+    _resetSourcesForTests();
+  });
+
+  it("waits, without throwing, until sources are registered", () => {
+    _resetSourcesForTests();
+    const announce = announceWhenRegistered({ transports: ["http"], framework: "hono" });
+
+    expect(() => announce()).not.toThrow();
+    expect(bufferedAnnouncementCount()).toBe(0);
+  });
+
+  it("announces the registered sources on the first call that finds them", () => {
+    _resetSourcesForTests();
+    const announce = announceWhenRegistered({ transports: ["ws"], framework: "express" });
+    announce();
+    registerSources({ api: fakeApi });
+    const listener = vi.fn();
+    consumeAnnouncements(listener);
+
+    announce();
+
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({ transports: ["ws"], framework: "express", sources: [fakeApi] }),
+    );
+  });
+
+  it("announces once", () => {
+    registerSources({ api: fakeApi });
+    const announce = announceWhenRegistered({ transports: ["http"] });
+
+    announce();
+    announce();
+
+    expect(bufferedAnnouncementCount()).toBe(1);
   });
 });

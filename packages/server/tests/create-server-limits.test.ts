@@ -9,6 +9,7 @@ import type { AddressInfo } from "node:net";
 import { courier, defineApi } from "@noverax/courier/define";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { sendLikeABrowser } from "../../core/tests/helpers/send-like-a-browser";
 import { createCourierServer } from "../src/create-server";
 import type { CourierServer, CourierServerOptions } from "../src/types";
 
@@ -82,6 +83,35 @@ describe("maxUploadBytes", () => {
 
     expect(res.status).toBe(413);
   });
+});
+
+/**
+ * A browser reads the answer only once its upload is done or the socket
+ * closes. A refusal that left the rest of the body on the connection reached
+ * it when the keep-alive timer closed the socket, about 6 s later.
+ */
+describe("a body refused before it is read", () => {
+  const port = (url: string) => Number(new URL(url).port);
+
+  it.each([
+    ["a declared JSON envelope", "application/json", false],
+    ["a chunked JSON envelope", "application/json", true],
+    ["a declared upload", "multipart/form-data; boundary=x", false],
+    ["a chunked upload", "multipart/form-data; boundary=x", true],
+  ])("reaches a browser promptly for %s", async (_name, contentType, chunked) => {
+    const url = await serve({ maxBodyBytes: 1024, maxUploadBytes: 1024 });
+
+    const answer = await sendLikeABrowser(port(url), {
+      method: "POST",
+      headers: { "content-type": contentType },
+      bytes: 16 * MB,
+      chunked,
+    });
+
+    expect(answer.error).toBeUndefined();
+    expect(answer.status).toBe(413);
+    expect(answer.elapsedMs).toBeLessThan(500);
+  }, 10_000);
 });
 
 describe("maxBodyBytes", () => {

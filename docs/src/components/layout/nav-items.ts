@@ -86,6 +86,7 @@ export const docsNav: NavSection[] = [
       { title: "Setup", href: "/docs/react-query/setup" },
       { title: "useQuery", href: "/docs/react-query/use-query" },
       { title: "useMutation", href: "/docs/react-query/use-mutation" },
+      { title: "Streams & Channels", href: "/docs/react-query/realtime" },
       { title: "Advanced Patterns", href: "/docs/react-query/advanced" },
     ],
   },

@@ -3,7 +3,7 @@
 
   # @noverax/courier-react
 
-  **React integration for Courier — hooks, SSE subscriptions, query keys, zero boilerplate.**
+  **React integration for Courier — query hooks, streams and channels, query keys, zero boilerplate.**
 
   <br />
 
@@ -143,6 +143,20 @@ function CreateUser() {
 }
 ```
 
+An optimistic update can come from `optimisticOptions`: the cache shows the change at once, is put back as it was — an entry the update created is removed — when the mutation fails, and is fetched again once it settles:
+
+```tsx
+import { optimisticOptions, useQueryClient } from "@noverax/courier-react"
+
+const queryClient = useQueryClient()
+const { mutate } = q.users.useMutation("create", {
+  ...optimisticOptions<User[], NewUser>(queryClient, {
+    queryKey: ["api", "users", "getAll"],
+    updater: (users, user) => [...(users ?? []), { id: -1, ...user }],
+  }),
+})
+```
+
 ### `useInfiniteQuery`
 
 ```tsx
@@ -194,6 +208,64 @@ No module of the package is marked `"use client"`, so a React Server Component c
 
 <br />
 
+## Streams & Channels
+
+### `useSubscription`
+
+Follows a stream endpoint for as long as the component is mounted:
+
+```tsx
+function Ticker({ symbol }: { symbol: string }) {
+  const { data, events, status, error } = q.prices.useSubscription("ticks", {
+    variables: { symbol },
+  })
+  //      ^? Tick | undefined
+}
+```
+
+- `data` is the latest event's payload, or `optimisticData` until the first one arrives.
+- `events` keeps the stream's latest events, oldest first: 100 unless `maxEvents` says otherwise. `maxEvents: Infinity` keeps them all, and the list then grows for as long as the stream runs.
+- `status` is `connecting` from the first render until the stream reports otherwise; `disconnected` while `enabled` is `false`, and once the stream could not be opened.
+- `error` says why the stream failed or could not be opened; `onData`, `onError` and `onStatusChange` hear the same as it happens.
+
+A change of method or variables opens another stream, and `data`, `events`, `error` and `status` start over with it in the same render.
+
+### `useComputedQuery`
+
+Fetches a query and merges a stream of the same group into its cached data. Events that arrive before the query's first answer are merged into it, in order:
+
+```tsx
+const { data: orders } = q.orders.useComputedQuery("list", {
+  subscriptionMethod: "changes",
+  mapper: (orders, event) => [...(orders ?? []), event.data],
+  onStreamError: (error) => console.warn("Live updates stopped:", error.message),
+})
+```
+
+A stream that fails, is refused or cannot be opened leaves the query as it is — its data, its error — and says why through `onStreamError`; `onStreamStatusChange` follows the stream's status.
+
+### `useChannel`
+
+Joins a channel, with the last message the server sent on it and `send` to answer:
+
+```tsx
+function Room({ room }: { room: string }) {
+  const { lastMessage, status, send } = q.chat.useChannel("room", { variables: { room } })
+
+  return <button onClick={() => send({ text: "hello" })}>Say hello</button>
+}
+```
+
+`send` answers whether the message went out or waits to — before the channel has opened, or while the connection comes back — and `false`, with a warning, for one it dropped: the channel disabled, closed or ended by the server, the queue full, or a message larger than the socket accepts. It returns a value, so inside an effect call it in a block: `useEffect(() => { send(message) }, [send, message])`.
+
+A proxy caller opens channels at `proxyPath.ws`, which has no default.
+
+### `useConnectionStatus`
+
+The hooks above report their own `status`. For a stream or channel opened with a plain caller, `useConnectionStatus(source)` returns `{ status, isConnected, isReconnecting }`; `null` reads as `disconnected`.
+
+<br />
+
 ## Query Keys
 
 Keys are generated hierarchically: `[source, group, method, variables?]`. `source` is the name the caller was made for: the first argument of `createProxyQueryCaller`, and for `createQueryCaller(api)` the API's own name — its `defineApi({ name })`, or else the first label of its `baseURL` host (`https://api.example.com` → `"api"`, `http://127.0.0.1:4000` → `"127"`). Name the API explicitly when a direct and a proxy caller must share a cache.
@@ -221,7 +293,7 @@ queryClient.invalidateQueries({ queryKey: ["api"] })
 
 ## Re-exports
 
-For convenience, this package re-exports `QueryClient` and `QueryClientProvider` from `@tanstack/react-query`:
+For convenience, this package re-exports `QueryClient`, `QueryClientProvider`, `useQueryClient`, `dehydrate` and `HydrationBoundary` from `@tanstack/react-query`:
 
 ```tsx
 import { QueryClient, QueryClientProvider } from "@noverax/courier-react"

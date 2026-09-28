@@ -283,7 +283,7 @@ describe("courierWSHandler", () => {
     mockCreateWSHandler.mockReturnValue(createMockWSResult(mockHandleSocket));
 
     const handler = courierWSHandler();
-    const mockSocket = { send: vi.fn(), close: vi.fn(), readyState: 1, bufferedAmount: 0 } as any;
+    const mockSocket = { send: vi.fn(), close: vi.fn(), addEventListener: vi.fn(), readyState: 1, bufferedAmount: 0 } as any;
     const request = createMockFastifyRequest({ method: "GET", url: "/ws" });
 
     handler(mockSocket, request);
@@ -299,8 +299,8 @@ describe("courierWSHandler", () => {
     mockCreateWSHandler.mockReturnValue(createMockWSResult(mockHandleSocket));
 
     const handler = courierWSHandler();
-    const socket1 = { send: vi.fn(), close: vi.fn(), readyState: 1, bufferedAmount: 0 } as any;
-    const socket2 = { send: vi.fn(), close: vi.fn(), readyState: 1, bufferedAmount: 0 } as any;
+    const socket1 = { send: vi.fn(), close: vi.fn(), addEventListener: vi.fn(), readyState: 1, bufferedAmount: 0 } as any;
+    const socket2 = { send: vi.fn(), close: vi.fn(), addEventListener: vi.fn(), readyState: 1, bufferedAmount: 0 } as any;
     const req = createMockFastifyRequest({ method: "GET", url: "/ws" });
 
     handler(socket1, req);

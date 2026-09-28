@@ -62,6 +62,24 @@ app.get("/api/sse", sse)
 app.addHook("preClose", () => sse.shutdownSSE())
 ```
 
+## WebSockets
+
+`courierWSHandler` runs on [`@fastify/websocket`](https://github.com/fastify/fastify-websocket), which must be registered before the route:
+
+```bash
+npm install @fastify/websocket
+```
+
+```ts
+import fastifyWebsocket from "@fastify/websocket"
+import { courierWSHandler } from "@noverax/courier-fastify"
+
+await app.register(fastifyWebsocket, { options: { maxPayload: 65_536 } })
+app.get("/api/ws", { websocket: true }, courierWSHandler())
+```
+
+Point the client at the same path with `proxyPath: { ws: "/api/ws" }`. The plugin's `ws` server reads each frame whole before Courier sees it, up to its `maxPayload` — 100 MiB unless you set it. Set it no larger than the handler's `maxMessageSize` (64 KB by default), and a larger frame is refused with close code 1009 before it is read; left larger, Courier answers such a frame with an error only after reading it, and warns once at the first connection. Without the plugin, the route answers 500 with a `WEBSOCKET_PLUGIN_MISSING` error. The plugin closes its sockets itself when the app closes.
+
 ## Shutting down
 
 `app.close()` waits for every open connection, and an SSE stream stays open until its lifetime cap, 30 minutes by default. The plugin drains its own streams when the app closes: each client gets a `shutdown` event telling it when to reconnect, and the streams end. A route made with `courierSSEHandler()` drains when you call its `shutdownSSE()`, from a `preClose` hook as above; `sseConnections` lists its open streams.

@@ -76,6 +76,12 @@ export type ConfigurationErrorCode =
    */
   | "REQUEST_BODY_ALREADY_READ"
   /**
+   * A WebSocket route handler was called as an ordinary HTTP handler — the
+   * framework's WebSocket plugin, such as `@fastify/websocket`, is not
+   * registered, so no socket was ever opened.
+   */
+  | "WEBSOCKET_PLUGIN_MISSING"
+  /**
    * An endpoint's wire closure recorded no call, so its method and path could
    * not be determined. The closure must address the endpoint exactly once,
    * for example `(http, vars) => http.get(":id", vars)`.

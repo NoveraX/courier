@@ -1,40 +1,34 @@
 export const metadata = {
   title: "Singleton Pattern",
-  description: "Use TypeScript module augmentation to eliminate generic parameters from every caller call.",
+  description: "Build each client once, in a module of its own, and import it wherever a call is made.",
   mode: "both",
 }
 
-## The problem
+## The pattern
 
-Without the singleton pattern, you need to pass the API type as a generic parameter to every factory function. This is repetitive and creates multiple places to update when your API changes:
+Every Courier factory learns your API's type in one place: from the API object you pass to `createCaller` or `createQueryCaller`, or from the type argument of `createProxyCaller` and `createProxyQueryCaller`. Build each client once, in a module of its own, and export it. Components, loaders and server code import that client, so none of them names a type argument or repeats a default, and a change to the API reaches every call site through that one module.
 
-```ts title="lib/caller.ts"
-import { createProxyCaller, createCaller } from "@noverax/courier"
-import { createProxyQueryCaller } from "@noverax/courier-react"
-import { api } from "@/api"
+```ts
+// Without it, every file builds its own client and names the type again:
+const users = await createProxyCaller<typeof api>("api", { boundary }).users.getAll()
 
-// You have to pass the type everywhere:
-const caller = createProxyCaller<typeof api>("api")
-const directCaller = createCaller(api)
-const q = createProxyQueryCaller<typeof api>("api")
+// With it, every file imports the one client:
+import { caller } from "@/lib/caller"
+const users = await caller.users.getAll()
 ```
-
-## The solution
-
-TypeScript module augmentation lets you declare your API type once, and every Courier factory function infers it automatically. No generic parameters needed.
 
 ## Step-by-step setup
 
-### Step 1: Define your API with the functional API
+### Step 1: Define your API
 
-Create your groups and API definition using `courier`, `defineGroup`, and `defineApi`:
+Create your groups and API definition with `courier`, `defineGroup` and `defineApi`:
 
 ```ts title="api/users.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
 
 const { endpoint } = courier()
 
-type User = { id: number; name: string; email: string }
+export type User = { id: number; name: string; email: string }
 
 export const users = defineGroup({
   prefix: "users",
@@ -51,66 +45,84 @@ import { defineApi } from "@noverax/courier/define"
 import { users } from "./users"
 
 export const api = defineApi({
+  name: "api",
   baseURL: process.env.API_URL ?? "http://localhost:4000",
   groups: { users },
 })
 ```
 
-### Step 2: Augment the module
+### Step 2: Build each client once
 
-Create a `.d.ts` file that extends the Courier `DefaultApi` interface:
+Give each client a module that builds it and exports it. In the browser, import the API as a **type** and pass a [boundary](/docs/proxy-mode/boundary): the type argument carries every group, endpoint, variable and response type, and the boundary carries the transports, so the definition itself — its upstream host, its middleware, every endpoint path — stays out of the bundle.
 
-```ts title="types/courier.d.ts"
-import type { api } from "@/api"
+```ts title="api/boundary.ts"
+import { defineBoundary } from "@noverax/courier/define"
+import type { api } from "./index"
 
-declare module "@noverax/courier/define" {
-  interface DefaultApi {
-    api: typeof api
-  }
-}
+export const boundary = defineBoundary<typeof api>({
+  source: "api",
+  expose: { "users.getAll": "request", "users.getById": "request", "users.create": "request" },
+})
 ```
 
-<Callout variant="tip" title="File location">
-You can put this declaration anywhere TypeScript can see it — a dedicated `types/` directory, alongside your API definitions, or in a global `declarations.d.ts`. Just make sure it's included in your `tsconfig.json`.
-</Callout>
-
-### Step 3: Use without generics
-
-Now all factory functions infer your API type from the augmented interface. TypeScript provides full autocomplete for group names, method names, and variable types:
-
 ```ts title="lib/caller.ts"
-import { createProxyCaller, createCaller } from "@noverax/courier"
+import { createProxyCaller } from "@noverax/courier"
+import type { api } from "@/api"
+import { boundary } from "@/api/boundary"
+
+export const caller = createProxyCaller<typeof api>("api", { boundary })
+```
+
+```ts title="lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
+import type { api } from "@/api"
+import { boundary } from "@/api/boundary"
+
+export const q = createProxyQueryCaller<typeof api>("api", { boundary })
+```
+
+The boundary also belongs on the API itself, so the server refuses what it does not name: see [Wiring the server](/docs/proxy-mode/boundary#wiring-the-server).
+
+On the server, where the definition is already present, pass the API object and the type comes with it:
+
+```ts title="lib/server-caller.ts"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api"
 
-// No generic parameter needed — TypeScript infers from module augmentation
-const caller = createProxyCaller("api")
-const directCaller = createCaller(api)
-const q = createProxyQueryCaller("api")
+export const serverCaller = createCaller(api, { timeout: 10_000 })
+```
 
-// Full autocomplete: group names, method names, variable types
-q.users.useQuery("getById", { variables: { id: 1 } })
-//       ^-- autocomplete     ^-- autocomplete  ^-- typed
+### Step 3: Import the client
+
+Every call site imports the client and gets full autocomplete for group names, method names and variable types:
+
+```ts title="app/users/[id]/page.tsx"
+import { serverCaller } from "@/lib/server-caller"
+
+export default async function UserPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const user = await serverCaller.users.getById({ id: Number(id) })
+  //    ^? User
+  return <h1>{user.name}</h1>
+}
 ```
 
 ## Using with React Query
 
-The singleton pattern is especially useful with `createProxyQueryCaller`, where you access hooks throughout your app. Every call site gets full type inference without importing or passing types:
+The pattern pays off most with `createProxyQueryCaller`, whose hooks are used throughout an app. Each component imports `q` and nothing else:
 
 ```tsx title="components/user-list.tsx"
 "use client"
 
-import { q } from "@/lib/caller"
+import { q } from "@/lib/query"
 
 export function UserList() {
-  // TypeScript knows "users" is a valid group,
-  // "getAll" is a valid method,
-  // and data is User[]
+  // "users" is a known group, "getAll" a known method, and data is User[]
   const { data } = q.users.useQuery("getAll")
 
   const { mutate } = q.users.useMutation("create", {
     onSuccess: (user) => {
-      // user is typed as User — no generic needed
+      // user is typed as User
       console.log(user.name)
     },
   })
@@ -128,34 +140,28 @@ export function UserList() {
 
 ## Multiple sources
 
-If your app connects to multiple backends, define multiple APIs and augment the interface for each:
+If your app connects to several backends, build one client per source, each named after it:
 
-```ts title="types/courier.d.ts"
+```ts title="lib/query.ts"
+import { createProxyQueryCaller } from "@noverax/courier-react"
 import type { mainApi, paymentApi } from "@/api"
+import { mainBoundary, paymentBoundary } from "@/api/boundary"
 
-declare module "@noverax/courier/define" {
-  interface DefaultApi {
-    mainApi: typeof mainApi
-    paymentApi: typeof paymentApi
-  }
-}
+export const mainQ = createProxyQueryCaller<typeof mainApi>("mainApi", { boundary: mainBoundary })
+export const paymentQ = createProxyQueryCaller<typeof paymentApi>("paymentApi", {
+  boundary: paymentBoundary,
+})
+
+// mainQ.users.useQuery("getAll")      ← knows mainApi's groups
+// paymentQ.products.useQuery("list")  ← knows paymentApi's groups
 ```
 
-```ts
-// Create separate query callers for each source:
-const mainQ = createProxyQueryCaller("mainApi")
-const paymentQ = createProxyQueryCaller("paymentApi")
-
-mainQ.users.useQuery("getAll")        // ← knows mainApi groups
-paymentQ.products.useQuery("list")    // ← knows paymentApi groups
-```
-
-<Callout variant="info" title="Single source of truth">
-The `DefaultApi` interface is the single source of truth for your API types. When you add a new group or method, update the API definition and every `q.{group}.useQuery()` / `caller.{group}.{method}()` call gets autocomplete for the new endpoints immediately.
+<Callout variant="info" title="One module, not a global declaration">
+Courier keeps no global registry of API types, and a factory never looks one up: the type comes from the API object or the type argument. The module that builds a client is therefore the single place its type is named. When you add a group or a method, every `q.{group}.useQuery()` and `caller.{group}.{method}()` that imports the client sees it at once.
 </Callout>
 
 ## Next steps
 
-- [Project Setup](/docs/project-setup) — recommended file structure including type declarations
+- [Project Setup](/docs/project-setup) — recommended file structure, with the client modules in `lib/`
+- [defineBoundary](/docs/proxy-mode/boundary) — what the browser may call, and why it keeps the definition out of the bundle
 - [Options](/docs/advanced/options) — source-level and per-request configuration
-- [Middleware](/docs/advanced/middleware) — composable middleware for auth, logging, retry, and more

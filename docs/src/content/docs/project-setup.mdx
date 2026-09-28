@@ -12,7 +12,9 @@ src/
 │   ├── posts.ts          # posts group
 │   └── files.ts          # files group
 ├── lib/
-│   └── caller.ts         # createCaller / createProxyCaller / createProxyQueryCaller
+│   ├── caller.ts         # createProxyCaller, built once
+│   ├── query.ts          # createProxyQueryCaller, built once (React)
+│   └── server-caller.ts  # createCaller for server code
 ├── app/                  # (Next.js) or pages/ (Nuxt) or routes/ (SvelteKit)
 │   ├── api/
 │   │   └── request/
@@ -67,13 +69,15 @@ Keeping each group in its own file makes it easy to find and modify endpoints. T
 
 ## Caller setup
 
-Create the appropriate caller for your use case:
+Create the appropriate caller for your use case, once, in a module of its own, and import it wherever a call is made — see [Singleton Pattern](/docs/advanced/singleton):
 
-```ts title="lib/caller.ts (React Query)"
+```ts title="lib/query.ts (React Query)"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { api } from "@/api"
+import type { api } from "@/api"
+import { boundary } from "@/api/boundary"
 
-export const { useQuery, useMutation, useSuspenseQuery, caller } = createProxyQueryCaller<typeof api>()
+export const q = createProxyQueryCaller<typeof api>("api", { boundary })
+// In components: q.users.useQuery("getAll"), q.users.useMutation("create")
 ```
 
 ```ts title="lib/caller.ts (Vanilla / Vue / Svelte)"

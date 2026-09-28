@@ -4,7 +4,17 @@
  * A browser bundle sees neither courier.config nor `COURIER_STUDIO_URL`, and
  * the setup took no options, so an Angular app could reach a Studio on a
  * non-default address only by writing the global slot by hand.
+ *
+ * Its production check returned early ahead of the runtime's import, and
+ * esbuild, which Angular builds with, drops an import only from a branch it
+ * can see is dead: `ng build` still wrote the runtime and the Socket.IO
+ * client out as chunks nothing loads.
  */
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { build } from "esbuild";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const attachRuntime = vi.fn();
@@ -39,5 +49,51 @@ describe("setupCourierStudio()", () => {
 
     expect(attachRuntime).not.toHaveBeenCalled();
     expect((globalThis as Record<symbol, unknown>)[STUDIO_URL_KEY]).toBeUndefined();
+  });
+});
+
+/**
+ * Bundles an app that calls the setup the way Angular's builder does: esbuild,
+ * code splitting on, and minified in production, which makes esbuild define
+ * `process.env.NODE_ENV` as `"production"`.
+ */
+async function angularBundle(production: boolean): Promise<string[]> {
+  const dir = mkdtempSync(join(tmpdir(), "courier-angular-"));
+  try {
+    const setup = fileURLToPath(new URL("../src/plugins/angular.ts", import.meta.url));
+    writeFileSync(
+      join(dir, "main.ts"),
+      `import { setupCourierStudio } from ${JSON.stringify(setup)};\nsetupCourierStudio();\nconsole.log("app");\n`,
+    );
+    const result = await build({
+      entryPoints: [join(dir, "main.ts")],
+      bundle: true,
+      splitting: true,
+      format: "esm",
+      platform: "browser",
+      minify: production,
+      outdir: join(dir, "dist"),
+      write: false,
+      logLevel: "silent",
+    });
+    return result.outputFiles.map((file) => file.text);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+describe("setupCourierStudio() in an esbuild bundle", () => {
+  it("emits the runtime as a chunk of a development build", async () => {
+    const files = await angularBundle(false);
+
+    expect(files.some((file) => file.includes("courier.studio.url"))).toBe(true);
+  });
+
+  it("emits nothing but the app in a production build", async () => {
+    const files = await angularBundle(true);
+
+    expect(files).toHaveLength(1);
+    expect(files[0]).toContain('console.log("app")');
+    expect(files[0]).not.toContain("courier-studio-core");
   });
 });

@@ -1,6 +1,6 @@
-import type { TypedClient } from "@noverax/courier";
+import type { ExecuteBackend, InferClient } from "@noverax/courier";
 import { buildClientProxy } from "@noverax/courier";
-import type { AnySource, DefinedApi } from "@noverax/courier/define";
+import type { AnySource } from "@noverax/courier/define";
 import { createMockBackend } from "./backend";
 import { createEnhancedMockBuilder } from "./builder";
 import { createHistory } from "./history";
@@ -17,9 +17,9 @@ export interface MockClientConfig<TApi extends AnySource = AnySource> {
 }
 
 /** The mock client returned by createMockClient */
-export interface MockClient<TApi extends DefinedApi<any>> {
-  /** Typed client — same dot-notation API as createCaller */
-  client: TypedClient<TApi>;
+export interface MockClient<TApi extends AnySource> {
+  /** Typed client — same dot-notation API as createCaller, for grouped, flat and mixed sources */
+  client: InferClient<TApi>;
   /** Type-safe mock builder */
   mock: TypedMockFn<TApi>;
   /** Request history */
@@ -52,7 +52,7 @@ export interface MockClient<TApi extends DefinedApi<any>> {
  * expect(users).toEqual([{ id: "1", name: "Alice" }]);
  * ```
  */
-export function createMockClient<TApi extends DefinedApi<any>>(
+export function createMockClient<TApi extends AnySource>(
   config?: MockClientConfig<TApi>,
 ): MockClient<TApi> {
   const registry = createMockRegistry();
@@ -82,7 +82,7 @@ export function createMockClient<TApi extends DefinedApi<any>>(
   }
 
   const mockClient: MockClient<TApi> = {
-    client: buildClientProxy(backend) as MockClient<TApi>["client"],
+    client: mockedClient<TApi>(backend),
     mock,
     history,
     scenarioState: "Started",
@@ -120,4 +120,11 @@ export function createMockClient<TApi extends DefinedApi<any>>(
   }
 
   return mockClient;
+}
+
+/* The proxy answers any member path, so it is the source's client by
+   construction; the overload gives it that type, as `createCaller`'s do. */
+function mockedClient<TApi extends AnySource>(backend: ExecuteBackend): InferClient<TApi>;
+function mockedClient(backend: ExecuteBackend): unknown {
+  return buildClientProxy(backend);
 }

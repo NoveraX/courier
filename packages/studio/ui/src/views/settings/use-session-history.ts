@@ -6,24 +6,7 @@ import { apiClient, post } from "@/lib/api-client";
 import { isRecord } from "@/store/event-helpers";
 import { useStudioStore } from "@/store";
 import { requestFromSaved, savedRequestOf } from "./saved-request";
-
-// ── Session summary (matches server SessionSummary) ──────────────────────────
-
-interface SessionSummary {
-  id: string;
-  name: string;
-  savedAt: number;
-  startedAt: number;
-  duration: number;
-  stats: {
-    totalRequests: number;
-    successCount: number;
-    errorCount: number;
-    avgDuration: number;
-    totalSize: number;
-  };
-  appCount: number;
-}
+import { type SessionSummary, sessionSummariesOf } from "./session-summary";
 
 // ── Session history hook ─────────────────────────────────────────────────────
 
@@ -37,7 +20,7 @@ interface SessionSummary {
  * @example
  * ```tsx
  * const history = useSessionHistory();
- * await history.saveCurrentSession("Debugging auth");
+ * const saved = await history.saveCurrentSession("Debugging auth");
  * ```
  */
 export function useSessionHistory() {
@@ -46,7 +29,7 @@ export function useSessionHistory() {
 
   const fetchSessions = useCallback(async () => {
     try {
-      setSessions(await post<SessionSummary[]>("/api/sessions/list"));
+      setSessions(sessionSummariesOf(await post<unknown>("/api/sessions/list")));
     } catch (error) {
       failed("list the saved sessions", error);
       setSessions([]);
@@ -57,11 +40,15 @@ export function useSessionHistory() {
 
   useEffect(() => { fetchSessions(); }, [fetchSessions]);
 
-  async function saveCurrentSession(name: string): Promise<void> {
+  /* Studio keeps no requests of its own: the session saved is the one this page recorded. */
+  async function saveCurrentSession(name: string): Promise<boolean> {
     const requests = useStudioStore.getState().requests.map(savedRequestOf);
-    if (!(await attempt("save the session", () => post("/api/sessions/save", { name, requests })))) return;
+    if (!(await attempt("save the session", () => post("/api/sessions/save", { name, requests })))) {
+      return false;
+    }
     toast.success("Session saved");
     await fetchSessions();
+    return true;
   }
 
   async function loadSession(id: string): Promise<void> {

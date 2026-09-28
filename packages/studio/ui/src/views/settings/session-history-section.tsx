@@ -27,10 +27,15 @@ export function SessionHistorySection({
 }: SessionHistorySectionProps): React.ReactElement {
   const [saveOpen, setSaveOpen] = useState(false);
   const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  function handleSave(): void {
-    if (!name.trim()) return;
-    void history.saveCurrentSession(name.trim());
+  /* The dialog stays open until the session is saved, so a refusal leaves the name to retry with. */
+  async function handleSave(): Promise<void> {
+    if (!name.trim() || saving) return;
+    setSaving(true);
+    const saved = await history.saveCurrentSession(name.trim());
+    setSaving(false);
+    if (!saved) return;
     setName("");
     setSaveOpen(false);
   }
@@ -93,7 +98,9 @@ export function SessionHistorySection({
               placeholder="e.g. Debugging auth flow"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSave()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleSave();
+              }}
               autoFocus
             />
           </div>
@@ -101,7 +108,8 @@ export function SessionHistorySection({
             <Button variant="outline" onClick={() => setSaveOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={!name.trim()}>
+            <Button onClick={() => void handleSave()} disabled={!name.trim() || saving}>
+              {saving && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
               Save
             </Button>
           </DialogFooter>

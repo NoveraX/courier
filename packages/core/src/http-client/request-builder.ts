@@ -65,7 +65,11 @@ function buildStandardOptions(
 
   const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[2] || {};
 
-  const directVars = stripPathParams(path, arguments_[1]);
+  /* The variables a closure passes are the body, or a read's query; one
+     that passes none leaves the call's own variables to be. Passed on
+     purpose as nothing, they are nothing: a closure writing a value only to
+     the query string otherwise sent every variable as a JSON body too. */
+  const directVars = arguments_.length > 1 ? stripPathParams(path, arguments_[1]) : newVariables;
   const query = { ...searchParameters, ...newSearchParameters };
 
   return {
@@ -81,7 +85,7 @@ function buildStandardOptions(
       ? buildSearchParams(undefined, query, deps.defaultQueryParams, deps.searchParamsSerializer)
       : buildBody(
           method,
-          directVars ?? newVariables,
+          directVars,
           query,
           deps.defaultBody,
           deps.defaultQueryParams,

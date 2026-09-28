@@ -192,3 +192,39 @@ describe("a DELETE whose closure names a JSON body", () => {
     expect(JSON.parse(upstream.last().body.toString())).toEqual({ message: "bye", sha: "abc" });
   });
 });
+
+describe("a write whose closure passes no body", () => {
+  const pets = defineGroup({
+    prefix: "pets",
+    endpoints: {
+      rename: endpoint
+        .variables<{ id: number; name: string }>()
+        .via((http, { name }) => http.post(":id", undefined, { searchParams: { name } })),
+    },
+  });
+
+  function source() {
+    return defineApi({ name: "api", baseURL: upstream.origin, groups: { pets } });
+  }
+
+  it("sends none, its variables only in the path and the query string", async () => {
+    await createCaller(source()).pets.rename({ id: 5, name: "rex" });
+
+    expect(upstream.last().method).toBe("POST");
+    expect(upstream.last().url).toBe("/pets/5?name=rex");
+    expect(upstream.last().body.toString()).toBe("");
+  });
+
+  it("sends none when the call comes through the proxy", async () => {
+    registerSources({ api: source() });
+    const api = source();
+
+    await createProxyCaller<typeof api>("api", { proxyPath: { http: proxy.url } }).pets.rename({
+      id: 5,
+      name: "rex",
+    });
+
+    expect(upstream.last().url).toBe("/pets/5?name=rex");
+    expect(upstream.last().body.toString()).toBe("");
+  });
+});

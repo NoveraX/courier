@@ -1,7 +1,8 @@
 import type { Context } from "../http-client/types";
 import type { StudioHooks } from "../studio";
+import { describeFormData } from "../studio/describe-form-data";
 import type { SchemaMetadata } from "../validation";
-import { estimateResponseSize, headersToObject, normalizeHttpMethod } from "./helpers";
+import { estimateResponseSize, headersToObject, isFormData, normalizeHttpMethod } from "./helpers";
 
 export type TimingState = {
   t0: number;
@@ -32,7 +33,8 @@ export function emitRequestStart(
     source: String(source),
     group: group ? String(group) : undefined,
     method: String(method),
-    variables,
+    /* Studio receives events as JSON, where a FormData would arrive as `{}`. */
+    variables: isFormData(variables) ? describeFormData(variables) : variables,
     mode: mode as "direct" | "proxy",
     middlewareCount,
     hasValidation: { variables: !!schema?.variables, response: !!schema?.response },

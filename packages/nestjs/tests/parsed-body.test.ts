@@ -108,12 +108,12 @@ describe("a call the parser leaves alone", () => {
   it("still reads a multipart body from the stream", async () => {
     const origin = await nestLikeApp();
     const form = new FormData();
-    form.set("_source", "api");
-    form.set("_group", "echo");
-    form.set("_method", "create");
     form.set("name", "linus");
 
-    const response = await fetch(`${origin}/api/request`, { method: "POST", body: form });
+    const response = await fetch(`${origin}/api/request?_s=api&_g=echo&_m=create`, {
+      method: "POST",
+      body: form,
+    });
 
     expect(response.status).toBe(200);
   });

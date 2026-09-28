@@ -145,18 +145,20 @@ export default courierHandler()
 ## Request Flow
 
 ```bash
+# Every request:
+# 1. Refuse a host the app is not reached by (421)
+# 2. Answer a preflight; refuse another site's page (403)
+
 # POST request flow:
-# 1. Validate Origin header (CSRF protection)
-# 2. Parse Content-Type (JSON or FormData)
-# 3. Extract: source, group, method, variables, options
-# 4. Call executeRequest(sources, payload, context)
-# 5. Return response
+# 3. Read the endpoint from the URL: _s (source), _g (group), _m (method)
+#    — the call is known, and shown in Studio, before its body arrives
+# 4. Read the body within its limit (413): { variables, options } as JSON,
+#    or the user's form behind an _options field
+# 5. Call executeRequest(sources, payload, context) and return its answer
 
 # GET request flow:
-# 1. Parse query params: _s (source), _g (group), _m (method), _o (options)
-# 2. Remaining params become variables
-# 3. Call executeRequest(sources, payload, context)
-# 4. Return response
+# 3. Read the endpoint, _v (variables, JSON) and _o (options) from the URL
+# 4. Call executeRequest(sources, payload, context) and return its answer
 ```
 
 ## Security

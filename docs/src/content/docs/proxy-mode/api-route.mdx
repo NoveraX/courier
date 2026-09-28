@@ -106,11 +106,13 @@ The POST handler accepts two content types and rejects everything else:
 ```typescript
 // The handler accepts two content types:
 
+// The endpoint is named in the URL for both: ?_s=api&_g=users&_m=create
+
 // 1. application/json — standard requests
-// Body: { source, group, method, variables, options }
+// Body: { variables, options } — any other field is refused with 400
 
 // 2. multipart/form-data — file uploads
-// Fields: _source, _group, _method, _options + user data/files
+// Fields: _options first, then the user's data and files
 
 // Anything else returns 415 Unsupported Media Type
 // { success: false, message: "Unsupported Content-Type" }

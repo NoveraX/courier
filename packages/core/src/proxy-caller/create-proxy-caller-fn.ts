@@ -6,6 +6,7 @@ import { assertJsonVariables } from "./assert-json-variables";
 import { handleGetProxy } from "./get-proxy";
 import { buildPostPayload } from "./post-payload";
 import { createProxyDedupe } from "./proxy-dedupe";
+import { proxyRouting } from "./proxy-routing";
 import { resolveProxyPath } from "./resolve-path";
 import { sendFetch } from "./send-fetch";
 import { splitProxyOptions } from "./split-options";
@@ -87,21 +88,21 @@ export function createProxyCallerFn<
         });
       }
 
-      const requestPayload = buildPostPayload(source, group, method, variables, call.server);
-
       return sendFetch(
         "post",
         url,
         {
-          ...requestPayload,
           ...local,
+          /* The call's own query and body, which nothing a caller passes may replace. */
+          searchParams: proxyRouting(source, group, method),
+          ...buildPostPayload(variables, call.server),
           credentials: call.credentials,
           onUploadProgress: call.onUploadProgress,
           onDownloadProgress: call.onDownloadProgress,
           timeout: call.timeout,
           headers: call.headers,
         },
-        { ...fetchCtx, stream: call.stream, requestPayload },
+        { ...fetchCtx, stream: call.stream, raw: call.server.rawData === true },
       );
     }
     return execute;

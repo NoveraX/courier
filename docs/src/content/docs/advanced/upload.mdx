@@ -169,7 +169,7 @@ export function DocumentUpload() {
 
 ## FormData composition <ModeBadge mode="proxy" />
 
-When FormData is sent through the proxy, Courier appends metadata fields with underscore prefixes. The server handler strips these before forwarding to your endpoint. In direct mode, FormData is sent as-is without any metadata fields:
+When FormData is sent through the proxy, Courier names the endpoint in the URL and writes the call's options as one field before yours. The server handler takes that field off before forwarding to your endpoint. In direct mode, FormData is sent as-is:
 
 ```typescript
 // When sending FormData through the proxy, Courier composes it like this:
@@ -178,20 +178,19 @@ When FormData is sent through the proxy, Courier appends metadata fields with un
 formData.append("avatar", file)
 formData.append("name", "profile-pic")
 
-// What gets sent to /api/request:
-// _source  = "api"              <- meta field
-// _group   = "users"            <- meta field
-// _method  = "uploadAvatar"     <- meta field
-// _options = '{"timeout":30000}'<- meta field (JSON string)
-// avatar   = File               <- your data
-// name     = "profile-pic"      <- your data
+// What gets sent:
+// POST /api/request?_s=api&_g=users&_m=uploadAvatar
+// _options = '{"timeout":30000}' <- the call's options (JSON string)
+// avatar   = File                <- your data
+// name     = "profile-pic"       <- your data
 
-// The server handler reads the first field of each of _source, _group,
-// _method and _options as routing, and passes a FormData with only your
-// data to the endpoint
+// The server handler reads the first _options field as the options, and
+// passes a FormData with only your data to the endpoint
 ```
 
-The meta fields always come first, so a field of your own may share one of their names. A form that sends `_method=PUT`, as Laravel and Rails forms do, reaches your backend with that field intact.
+The options field always comes first, so a field of your own may share a name with it, or take any other name. A form that sends `_method=PUT`, as Laravel and Rails forms do, reaches your backend with that field intact.
+
+Because the endpoint is in the URL, the proxy knows which call an upload is for as soon as it arrives. Studio shows the call while the upload is still on its way, and an upload over `maxUploadBytes` ends there with its `413` rather than never appearing.
 
 ## Binary data outside FormData <ModeBadge mode="proxy" />
 

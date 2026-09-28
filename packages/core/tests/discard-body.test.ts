@@ -93,6 +93,16 @@ const refusals: Array<[string, number, BrowserUpload, HandlerConfig?]> = [
     405,
     { method: "PUT", headers: { ...SAME_ORIGIN, "content-type": "application/json" }, bytes: SIXTEEN_MB },
   ],
+  [
+    "a POST whose URL names no endpoint",
+    400,
+    {
+      method: "POST",
+      headers: { ...SAME_ORIGIN, "content-type": "application/json" },
+      bytes: SIXTEEN_MB,
+      path: "/api/request",
+    },
+  ],
 ];
 
 describe("a refusal reaches a browser that is still uploading", () => {

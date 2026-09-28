@@ -111,25 +111,25 @@ const response = await caller.users.raw.getById({ id: "5" })
 
 ## Body composition
 
-How the request body is built depends on the type of variables you pass:
+The endpoint is always named in the URL — `_s` for the source, `_g` for the group, `_m` for the method — so the server knows which call a request is before its body arrives. How the body is built depends on the type of variables you pass:
 
 ```ts title="JSON vs FormData"
 // JSON body (default for objects)
-// Sends: POST /api/request
-// Body:  { source: "api", group: "users", method: "create", variables: { name: "Jane" } }
+// Sends: POST /api/request?_s=api&_g=users&_m=create
+// Body:  { "variables": { "name": "Jane" }, "options": {} }
 await caller.users.create({ name: "Jane" })
 
 // FormData body (when variables is FormData)
-// Sends: POST /api/request (multipart/form-data)
-// Body:  _source=api, _group=users, _method=create, _options={...}, name=Jane, avatar=File
+// Sends: POST /api/request?_s=api&_g=users&_m=create (multipart/form-data)
+// Body:  _options={...}, name=Jane, avatar=File
 const formData = new FormData()
 formData.append("name", "Jane")
 formData.append("avatar", fileInput.files[0])
 await caller.users.create(formData)
 ```
 
-<Callout variant="info" title="FormData meta fields">
-When sending FormData, Courier writes metadata as special fields first: `_source`, `_group`, `_method`, and `_options`. Your actual variables follow them. The server handler reads the first field of each of those names as metadata and passes everything else to your endpoint, so a field of your own named `_method` or `_options` reaches your backend unchanged.
+<Callout variant="info" title="The _options field">
+When sending FormData, Courier writes the call's options as an `_options` field before your own fields. The server handler reads that first `_options` field and passes everything else to your endpoint, so a field of your own named `_method`, `_source` or even `_options` reaches your backend unchanged — a Laravel or Rails form's `_method=PUT` included.
 </Callout>
 
 <Callout variant="warning" title="Binary variables">

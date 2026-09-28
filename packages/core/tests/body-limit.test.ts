@@ -17,6 +17,9 @@ const hooks = () =>
     onProxyOriginReject: vi.fn(),
   }) as unknown as StudioHooks;
 
+/** A proxy call to `api.list`, its endpoint named in the URL. */
+const CALL_URL = "http://localhost/api/request?_s=api&_m=list";
+
 const execute = () => vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
 
 function handler(config?: HandlerConfig) {
@@ -25,7 +28,7 @@ function handler(config?: HandlerConfig) {
 }
 
 function jsonRequest(body: string): Request {
-  return new Request("http://localhost/api/request", {
+  return new Request(CALL_URL, {
     method: "POST",
     headers: { origin: "http://localhost", "content-type": "application/json" },
     body,
@@ -47,7 +50,7 @@ function chunkedRequest(chunkSize: number, chunks: number): { request: Request; 
     },
   });
 
-  const request = new Request("http://localhost/api/request", {
+  const request = new Request(CALL_URL, {
     method: "POST",
     headers: { origin: "http://localhost", "content-type": "application/json" },
     body: stream,
@@ -62,7 +65,7 @@ describe("the proxy bounds what a caller may make it hold", () => {
   it("serves an ordinary envelope", async () => {
     const { run, handle } = handler();
 
-    const response = await handle(jsonRequest(JSON.stringify({ source: "api", method: "list" })));
+    const response = await handle(jsonRequest(JSON.stringify({ variables: {} })));
 
     expect(response.status).toBe(200);
     expect(run).toHaveBeenCalledOnce();
@@ -107,7 +110,7 @@ describe("the proxy bounds what a caller may make it hold", () => {
         controller.enqueue(new Uint8Array(1024).fill(0x20));
       },
     });
-    const request = new Request("http://localhost/api/request", {
+    const request = new Request(CALL_URL, {
       method: "POST",
       headers: { origin: "http://localhost", "content-type": "application/json" },
       body: stillUploading,
@@ -138,13 +141,12 @@ describe("an upload is measured against its own limit", () => {
    */
   async function uploadRequest(bytes: number): Promise<Request> {
     const form = new FormData();
-    form.set("source", "api");
-    form.set("method", "upload");
+    form.set("note", "upload");
     form.set("file", new Blob([new Uint8Array(bytes)]), "payload.bin");
     const encoded = new Response(form);
     const payload = new Uint8Array(await encoded.arrayBuffer());
 
-    return new Request("http://localhost/api/request", {
+    return new Request(CALL_URL, {
       method: "POST",
       headers: { origin: "http://localhost", "content-type": encoded.headers.get("content-type") ?? "" },
       body: new Blob([payload]).stream(),
@@ -168,9 +170,10 @@ describe("an upload is measured against its own limit", () => {
     await handle(await uploadRequest(128));
 
     const [, payload] = run.mock.calls[0]!;
-    expect(payload).toBeInstanceOf(FormData);
-    expect((payload as FormData).get("method")).toBe("upload");
-    expect((payload as FormData).get("file")).toBeInstanceOf(File);
+    const { variables } = payload as { variables: FormData };
+    expect(variables).toBeInstanceOf(FormData);
+    expect(variables.get("note")).toBe("upload");
+    expect(variables.get("file")).toBeInstanceOf(File);
   });
 
   it("refuses an upload over the upload limit", async () => {
@@ -197,7 +200,7 @@ describe("defaults", () => {
 describe("a body the proxy cannot read at all", () => {
   it("refuses an unsupported content type before reading", async () => {
     const { run, handle } = handler();
-    const request = new Request("http://localhost/api/request", {
+    const request = new Request(CALL_URL, {
       method: "POST",
       headers: { origin: "http://localhost", "content-type": "text/plain" },
       body: "hello",

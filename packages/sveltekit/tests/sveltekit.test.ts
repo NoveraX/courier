@@ -71,10 +71,10 @@ describe("a call the browser cancels", () => {
     );
 
     const browser = new AbortController();
-    const call = fetch(`${proxy}/api/request`, {
+    const call = fetch(`${proxy}/api/request?_s=api&_m=slow`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ source: "api", method: "slow" }),
+      body: JSON.stringify({}),
       signal: browser.signal,
     }).catch(() => undefined);
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -107,10 +107,10 @@ describe("a call the browser waits for", () => {
       counts = observed;
     });
 
-    const response = await fetch(`${proxy}/api/request`, {
+    const response = await fetch(`${proxy}/api/request?_s=api&_m=fast`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ source: "api", method: "fast" }),
+      body: JSON.stringify({}),
     });
 
     expect(await response.json()).toEqual({ ok: true });
@@ -121,10 +121,10 @@ describe("a call the browser waits for", () => {
     const upstream = await listen(createServer((_req, res) => res.end('{"ok":true}')));
     const { endpoint } = courier();
     registerSources({ api: defineApi({ baseURL: upstream, endpoints: { fast: endpoint.post("fast") } }) });
-    const request = new Request("http://127.0.0.1/api/request", {
+    const request = new Request("http://127.0.0.1/api/request?_s=api&_m=fast", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ source: "api", method: "fast" }),
+      body: JSON.stringify({}),
     });
 
     const response = await courierHandler()({ request });

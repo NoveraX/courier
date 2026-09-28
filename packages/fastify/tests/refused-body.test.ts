@@ -42,7 +42,7 @@ async function sendLikeABrowser(port: number, contentType: string): Promise<stri
   await once(socket, "connect");
   socket.pause();
   socket.write(
-    `POST /api/request HTTP/1.1\r\nhost: 127.0.0.1:${port}\r\ncontent-type: ${contentType}\r\ncontent-length: ${SIXTEEN_MB}\r\n\r\n`,
+    `POST /api/request?_s=api&_m=list HTTP/1.1\r\nhost: 127.0.0.1:${port}\r\ncontent-type: ${contentType}\r\ncontent-length: ${SIXTEEN_MB}\r\n\r\n`,
   );
   const chunk = new Uint8Array(65_536).fill(0x20);
   for (let sent = 0; sent < SIXTEEN_MB; sent += chunk.length) {

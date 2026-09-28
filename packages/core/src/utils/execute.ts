@@ -69,7 +69,7 @@ export async function executeRequest(
   const hasStudio = studioHooks.onRequestStart !== undefined;
   const studio: StudioContext = {
     hasStudio,
-    requestId: hasStudio ? generateRequestId() : "",
+    requestId: hasStudio ? (context?.studioRequestId ?? generateRequestId()) : "",
     dt: studioHooks,
   };
   const timing: TimingState = {

@@ -1,5 +1,6 @@
 import { HTTPError } from "../errors";
 import type { Context } from "../http-client/types";
+import { studioHooks } from "../studio";
 import { filterResponseHeaders } from "./merge-headers";
 import { toWireAnswer } from "./wire-answer";
 
@@ -91,11 +92,36 @@ export const buildResponse = (
     : response.data;
 };
 
+/**
+ * Answer a call refused before it runs — a name that resolves to nothing,
+ * options a proxy client may not set, an endpoint the boundary withholds.
+ *
+ * A call the proxy announced to Studio on arrival is ended here with
+ * `request:error`, or it would show as pending for good.
+ *
+ * @param context - The call's context
+ * @param status - The refusal's status
+ * @param message - Why the call was refused
+ * @returns The refusal: a Response for a proxied call; thrown otherwise
+ *
+ * @example
+ * ```ts
+ * return buildErrorResponse(context, 400, "[api][users][nope]: method not found");
+ * ```
+ */
 export const buildErrorResponse = (
   context: Context | undefined,
   status: number,
   message: string,
 ): unknown => {
+  const announced = context?.studioRequestId;
+  if (announced !== undefined) {
+    studioHooks.onRequestError?.({
+      id: announced,
+      error: { type: "http", status, message },
+      timestamp: Date.now(),
+    });
+  }
   const result = {
     status,
     headers: new Headers(),

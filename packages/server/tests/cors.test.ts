@@ -199,14 +199,14 @@ describe("the origin gate on a running server", () => {
     const server = createCourierServer({ sources: { api }, port: 0, signals: false });
     const url = await server.ready;
 
-    const res = await fetch(`${url}/api/request`, {
+    const res = await fetch(`${url}/api/request?_s=api&_m=save`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Origin: url.replace("http://", "https://"),
         "Sec-Fetch-Site": "same-origin",
       },
-      body: JSON.stringify({ source: "api", method: "save", variables: {} }),
+      body: JSON.stringify({ variables: {} }),
     });
 
     expect(res.status).toBe(200);

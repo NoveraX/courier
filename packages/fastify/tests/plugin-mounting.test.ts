@@ -50,8 +50,8 @@ describe("where the plugin mounts", () => {
 
     const res = await app.inject({
       method: "POST",
-      url: "/api/request",
-      payload: { source: "api", method: "list", variables: {} },
+      url: "/api/request?_s=api&_m=list",
+      payload: { variables: {} },
     });
 
     expect(res.statusCode).not.toBe(404);
@@ -70,8 +70,8 @@ describe("where the plugin mounts", () => {
 
     const res = await app.inject({
       method: "POST",
-      url: "/api/request",
-      payload: { source: "api", method: "list", variables: {} },
+      url: "/api/request?_s=api&_m=list",
+      payload: { variables: {} },
     });
 
     expect(res.statusCode).not.toBe(404);

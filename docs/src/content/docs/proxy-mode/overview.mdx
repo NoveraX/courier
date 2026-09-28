@@ -16,8 +16,8 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 │  createProxyCaller<typeof api>("api")                        │
 │       │                                                      │
 │       ▼                                                      │
-│  fetch POST "/api/request"                                   │
-│  { source, group, method, variables }                        │
+│  fetch POST "/api/request?_s=…&_g=…&_m=…"                    │
+│  { variables, options }                                      │
 └──────────────────┬───────────────────────────────────────────┘
                    │  POST /api/request
                    ▼
@@ -61,10 +61,10 @@ const caller = createProxyCaller<typeof api>("api")
 const user = await caller.users.getById({ id: 5 })
 
 // 2. Under the hood, Courier sends:
-//    POST /api/request
-//    { source: "api", group: "users", method: "getById", variables: { id: 5 } }
+//    POST /api/request?_s=api&_g=users&_m=getById
+//    { "variables": { "id": 5 }, "options": {} }
 
-// 3. Server handler receives the POST, finds the source and endpoint,
+// 3. Server handler reads the endpoint from the URL, then the body,
 //    creates an HttpClient, and calls: GET {baseURL}/users/5
 
 // 4. Response flows back: backend → handler → browser

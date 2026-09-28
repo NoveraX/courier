@@ -38,11 +38,12 @@ afterEach(() => {
   _resetSourcesForTests();
 });
 
+/** An upload as the proxy client sends it: its options first, then the caller's form. */
 function upload(form: FormData): Request {
-  form.append("_source", "api");
-  form.append("_method", "upload");
-  form.append("_options", "{}");
-  return new Request("http://app.localhost/api/request", { method: "POST", body: form });
+  const body = new FormData();
+  body.append("_options", "{}");
+  for (const [key, value] of form.entries()) body.append(key, value);
+  return new Request("http://app.localhost/api/request?_s=api&_m=upload", { method: "POST", body });
 }
 
 describe("an upload as Studio sees it", () => {
@@ -57,7 +58,7 @@ describe("an upload as Studio sees it", () => {
       title: "quarterly",
       report: { name: "q3.pdf", type: "application/pdf", size: 2048 },
     };
-    expect(started.mock.calls[0]?.[0].variables).toEqual(expected);
+    expect(started.mock.calls.at(-1)?.[0].variables).toEqual(expected);
     expect(parsed.mock.calls[0]?.[0].variables).toEqual(expected);
   });
 
@@ -68,7 +69,7 @@ describe("an upload as Studio sees it", () => {
 
     await createHandler().handlePost(upload(form));
 
-    expect(started.mock.calls[0]?.[0].variables).toEqual({
+    expect(started.mock.calls.at(-1)?.[0].variables).toEqual({
       docs: [
         { name: "a.txt", type: "text/plain", size: 1 },
         { name: "b.txt", type: "text/plain", size: 2 },
@@ -86,21 +87,13 @@ describe("an upload as Studio sees it", () => {
     expect(Object.getPrototypeOf(described)).toBe(Object.prototype);
   });
 
-  it("leaves out the fields it is told to", () => {
-    const form = new FormData();
-    form.append("_method", "upload");
-    form.append("name", "a");
-
-    expect(describeFormData(form, new Set(["_method"]))).toEqual({ name: "a" });
-  });
-
   it("survives JSON, which is how it reaches Studio", async () => {
     const form = new FormData();
     form.append("file", new File(["x"], "x.bin"));
 
     await createHandler().handlePost(upload(form));
 
-    const variables = started.mock.calls[0]?.[0].variables;
+    const variables = started.mock.calls.at(-1)?.[0].variables;
     expect(JSON.parse(JSON.stringify(variables))).toEqual(variables);
     expect(Object.keys(variables)).toEqual(["file"]);
   });

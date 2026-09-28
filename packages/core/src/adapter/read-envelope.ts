@@ -1,14 +1,21 @@
 import { createLogger } from "../logger";
-import type { RequestPayloadInput } from "../utils/helpers";
-import { reviveWithoutPrototypeKeys } from "../utils/safe-json";
 import { discardBody } from "./discard-body";
 import type { HandlerConfig } from "./handler-config";
 import { LIMITS } from "./limits";
-import { errorResponse } from "./parse";
+import {
+  type Envelope,
+  type ParsedEnvelope,
+  parseFormEnvelope,
+  parseJsonEnvelope,
+} from "./parse-envelope";
 import { type BoundedBody, readBoundedBody } from "./read-body";
-import { parseWireOptionsJson } from "./wire-options";
 
 const log = createLogger("Proxy");
+
+/** A proxy POST's envelope, or the status and message that refuse it. */
+export type EnvelopeResult =
+  | { ok: true; envelope: Envelope }
+  | { ok: false; status: number; message: string };
 
 /**
  * Read a proxy POST's envelope, spending a bounded amount of memory on it.
@@ -16,23 +23,23 @@ const log = createLogger("Proxy");
  * The limit is chosen by media type before anything is read, because an
  * upload and a JSON envelope differ by orders of magnitude and one number
  * cannot be right for both. Parsing happens from the bytes already held, so
- * a body that passed the bound is never read twice.
+ * a body that passed the bound is never read twice. The rest of a refused
+ * body is taken off the connection, so the refusal reaches the client.
  *
  * @param request - The proxy request
  * @param config - The handler's limits
- * @returns The envelope — parsed JSON or the multipart form — or the
- *   response that refuses it
+ * @returns The envelope, or why it is refused
  *
  * @example
  * ```ts
- * const envelope = await readEnvelope(request, config);
- * if (envelope instanceof Response) return envelope;
+ * const read = await readEnvelope(request, config);
+ * if (!read.ok) return errorResponse(read.status, read.message);
  * ```
  */
 export async function readEnvelope(
   request: Request,
   config?: HandlerConfig,
-): Promise<RequestPayloadInput | Response> {
+): Promise<EnvelopeResult> {
   const contentType = request.headers.get("content-type") ?? "";
   /* Media types are case-insensitive (RFC 9110). */
   const mediaType = contentType.split(";")[0]?.trim().toLowerCase();
@@ -47,14 +54,17 @@ export async function readEnvelope(
     : (config?.maxBodyBytes ?? LIMITS.MAX_PROXY_BODY_BYTES);
 
   const body = await readSent(request, limit);
-  if (body instanceof Response) return body;
+  if (!body) return { ok: false, status: 400, message: "Request body could not be read" };
   if (!body.ok) return refuse(request, 413, `Request body exceeds ${body.limit} bytes`);
 
-  return isUpload ? parseForm(body.bytes, contentType) : parseJson(body.bytes);
+  const parsed = isUpload
+    ? await parseForm(body.bytes, contentType)
+    : parseJsonEnvelope(body.bytes);
+  return parsed.ok ? parsed : { ok: false, status: 400, message: parsed.reason };
 }
 
 /**
- * Read the body the client sends, answering one that could not be read.
+ * Read the body the client sends, or nothing when it could not be read.
  *
  * A browser that cancels an upload closes the connection mid-body, and the
  * read fails. That is the client's decision, not the server's failure: let
@@ -63,7 +73,7 @@ export async function readEnvelope(
  * while the client is still there — a framework's own body limit, a broken
  * chunked encoding — is worth a warning, since the answer alone says little.
  */
-async function readSent(request: Request, limit: number): Promise<BoundedBody | Response> {
+async function readSent(request: Request, limit: number): Promise<BoundedBody | undefined> {
   try {
     return await readBoundedBody(request, limit);
   } catch (error) {
@@ -72,7 +82,7 @@ async function readSent(request: Request, limit: number): Promise<BoundedBody | 
     } else {
       log.warn("Could not read the request body", error);
     }
-    return errorResponse(400, "Request body could not be read");
+    return undefined;
   }
 }
 
@@ -87,47 +97,24 @@ function clientLeft(request: Request, error: unknown): boolean {
   );
 }
 
-/**
- * Parse a multipart envelope, and hold its `_options` field to the rules the
- * JSON envelope and the GET `_o` parameter follow: an option a proxy client
- * may not set is refused, not dropped while the call runs anyway.
- */
+/** Parse a multipart body into its envelope. */
 async function parseForm(
   bytes: Uint8Array<ArrayBuffer>,
   contentType: string,
-): Promise<FormData | Response> {
+): Promise<ParsedEnvelope> {
   let form: FormData;
   try {
     /* Re-presenting the bytes lets the platform do the multipart parsing;
        the content type carries the boundary the parser needs. */
     form = await new Response(bytes, { headers: { "content-type": contentType } }).formData();
   } catch {
-    return errorResponse(400, "Invalid multipart body");
+    return { ok: false, reason: "Invalid multipart body" };
   }
-
-  for (const options of form.getAll("_options")) {
-    if (typeof options !== "string") return errorResponse(400, "options must be a JSON string");
-    const accepted = parseWireOptionsJson(options);
-    if (!accepted.ok) return errorResponse(400, accepted.reason);
-  }
-  return form;
+  return parseFormEnvelope(form);
 }
 
-/**
- * Parse a JSON envelope with the hardening the GET path applies to `_v`: a
- * key that reaches `Object.prototype` never makes it into the variables or
- * the upstream body.
- */
-function parseJson(bytes: Uint8Array<ArrayBuffer>): RequestPayloadInput | Response {
-  try {
-    return JSON.parse(new TextDecoder().decode(bytes), reviveWithoutPrototypeKeys);
-  } catch {
-    return errorResponse(400, "Invalid JSON body");
-  }
-}
-
-/** Answer a request without reading the rest of its body, and discard that rest. */
-function refuse(request: Request, status: number, message: string): Response {
+/** Refuse a request without reading the rest of its body, and discard that rest. */
+function refuse(request: Request, status: number, message: string): EnvelopeResult {
   discardBody(request);
-  return errorResponse(status, message);
+  return { ok: false, status, message };
 }

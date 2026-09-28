@@ -10,6 +10,8 @@ export interface BrowserUpload {
   bytes: number;
   /** Send the body chunked rather than declaring its length. */
   chunked?: boolean;
+  /** Request target; the proxy route naming `api.upload` unless given. */
+  path?: string;
 }
 
 export interface BrowserAnswer {
@@ -55,7 +57,8 @@ export async function sendLikeABrowser(port: number, upload: BrowserUpload): Pro
   const head = Object.entries({ host: `127.0.0.1:${port}`, ...upload.headers, ...framing })
     .map(([name, value]) => `${name}: ${value}\r\n`)
     .join("");
-  socket.write(`${upload.method} /api/request HTTP/1.1\r\n${head}\r\n`);
+  const path = upload.path ?? "/api/request?_s=api&_m=upload";
+  socket.write(`${upload.method} ${path} HTTP/1.1\r\n${head}\r\n`);
 
   for (let sent = 0; sent < upload.bytes && !error && !socket.destroyed; sent += CHUNK.length) {
     const piece = CHUNK.subarray(0, Math.min(CHUNK.length, upload.bytes - sent));

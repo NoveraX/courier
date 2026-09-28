@@ -93,10 +93,10 @@ describe("a path parameter with no value", () => {
 
   it("is refused through the proxy with the same words", async () => {
     registerSources({ paths: api() });
-    const request = new Request("http://app.local/api/request", {
+    const request = new Request("http://app.localhost/api/request?_s=paths&_m=tail", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ source: "paths", method: "tail", variables: {} }),
+      body: JSON.stringify({ variables: {} }),
     });
 
     const response = await createHandler().handlePost(request);

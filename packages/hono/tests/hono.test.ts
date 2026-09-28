@@ -109,13 +109,13 @@ describe("courierHandler", () => {
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
 
     const handler = courierHandler();
-    const request = new Request("http://localhost/api/request", {
+    const request = new Request("http://localhost/api/request?_s=api&_m=list", {
       method: "POST",
       headers: {
         "content-type": "application/json",
         origin: "http://localhost",
       },
-      body: JSON.stringify({ source: "api", method: "list" }),
+      body: JSON.stringify({}),
     });
     const ctx = createHonoContext(request);
 

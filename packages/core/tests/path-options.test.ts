@@ -45,10 +45,10 @@ function tenantApi() {
 }
 
 function proxyRequest(variables: Record<string, unknown>, cookie?: string): Request {
-  return new Request("http://app.localhost/api/request", {
+  return new Request("http://app.localhost/api/request?_s=tenant&_g=invoices&_m=list", {
     method: "POST",
     headers: { "content-type": "application/json", ...(cookie && { cookie }) },
-    body: JSON.stringify({ source: "tenant", group: "invoices", method: "list", variables }),
+    body: JSON.stringify({ variables }),
   });
 }
 

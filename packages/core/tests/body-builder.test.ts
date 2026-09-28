@@ -102,15 +102,10 @@ describe("variables that are a JSON value other than an object", () => {
     registerSources({ api: defineApi({ name: "api", baseURL: upstream.origin, groups: { items } }) });
 
     const response = await createHandler().handlePost(
-      new Request("http://app.localhost/api/request", {
+      new Request("http://app.localhost/api/request?_s=api&_g=items&_m=create", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          source: "api",
-          group: "items",
-          method: "create",
-          variables: [{ id: 1 }],
-        }),
+        body: JSON.stringify({ variables: [{ id: 1 }] }),
       }),
     );
 
@@ -205,14 +200,11 @@ describe("a FormData sent as the body", () => {
     const body = [
       part('name="log"; filename="empty.log"\r\nContent-Type: text/plain'),
       part('name="avatar"; filename=""\r\nContent-Type: application/octet-stream'),
-      part('name="_source"', "api"),
-      part('name="_group"', "items"),
-      part('name="_method"', "create"),
       "--b--\r\n",
     ].join("");
 
     const response = await createHandler().handlePost(
-      new Request("http://app.localhost/api/request", {
+      new Request("http://app.localhost/api/request?_s=api&_g=items&_m=create", {
         method: "POST",
         headers: { "content-type": "multipart/form-data; boundary=b" },
         body,

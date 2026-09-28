@@ -79,6 +79,10 @@ const result = await caller.users.getAll()
 const user = await caller.users.getById({ id: "123" })
 ```
 
+## Streams and channels
+
+A direct caller opens a stream or a channel at the API's `baseURL`, as it sends any other call there. One served by this process with `.implement()` is not at `baseURL` — that is the upstream's address — so calling it through `createCaller` throws `ConfigurationError("DIRECT_CALL_TO_SERVED_ENDPOINT")`, naming the endpoint, when it is called; the rest of the API stays callable. Reach it through [`createProxyCaller`](/docs/api/create-proxy-caller) and the server that serves it — see [Streams & Channels](/docs/advanced/realtime#reaching-a-stream-or-a-channel).
+
 ## Passing Context
 
 The optional third argument is a `Context` object. Use it to forward headers from the incoming request to the backend: `authorization`, `user-agent`, `referer`, `origin` and `x-request-id`, the headers the source and the endpoint name, and the user's cookies where they name `cookie`:

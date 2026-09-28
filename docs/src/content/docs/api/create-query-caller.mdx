@@ -126,6 +126,8 @@ send({ text: "Hello" })
 
 The WebSocket connection goes directly to `${baseURL with ws:// scheme}/${groupPrefix}/${path}` — no proxy hop. The path is worked out from the call's variables as it is for SSE; the variables themselves are all sent in the subscribe message.
 
+A stream or channel served by this process with `.implement()` has no address at `baseURL`, which is the upstream's. `useSubscription` and `useChannel` report it through `error` and `onError` as `ConfigurationError("DIRECT_CALL_TO_SERVED_ENDPOINT")` and open nothing; reach it with [`createProxyQueryCaller`](/docs/api/create-proxy-query-caller).
+
 ## Query Keys
 
 Query keys are auto-generated as `[sourceName, group, method, variables?]` where `sourceName` comes from `defineApi({ name })` (or is derived from the baseURL hostname when omitted).

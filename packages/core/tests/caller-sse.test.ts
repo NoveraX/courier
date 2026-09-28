@@ -106,9 +106,7 @@ describe("SSE transport detection — createCaller", () => {
         notifications: defineGroup({
           prefix: "notifications",
           endpoints: {
-            feed: stream.variables<{ userId: string }>().response<{ msg: string }>().implement(
-              async function* () { yield { data: { msg: "test" } }; },
-            ),
+            feed: stream.variables<{ userId: string }>().response<{ msg: string }>().get("feed"),
           },
         }),
       },

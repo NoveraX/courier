@@ -7,6 +7,7 @@ import { executeWSPush } from "../../realtime/ws-subscription";
 import { instrumentWSChannel, instrumentWSPush } from "../instrument";
 import type { WSChannelFactory, WSPushFactory } from "../types";
 import { addressCall } from "./address";
+import { assertDirectlyReachable } from "./assert-reachable";
 
 interface DirectWSContext {
   sourceName: string;
@@ -27,6 +28,9 @@ export interface DirectWSDefaults {
  * path is worked out from each call's variables.
  * Topic pattern: `{sourceName}.{group}.{method}` (multiplexed on shared connection)
  *
+ * A channel this process serves with `.implement()` has no address at
+ * `baseURL`, so connecting one throws `DIRECT_CALL_TO_SERVED_ENDPOINT`.
+ *
  * Browser-side studio instrumentation: when studio hooks are installed,
  * each channel emits stream:open / stream:message / stream:close / stream:error
  * with `mode: "direct"`.
@@ -38,6 +42,7 @@ export function createDirectWSChannelFactory(
   const ctx = readApiContext(api);
 
   return function connectChannel(group, method, variables) {
+    assertDirectlyReachable(api, group, method);
     /* The URL follows the path the closure addressed; the topic stays keyed
        on the endpoint's name, which is how the server resolves it, and the
        server validates the whole of the variables it is sent. */
@@ -60,7 +65,8 @@ export function createDirectWSChannelFactory(
  * Topic pattern: same as the channel factory.
  *
  * Returns an `SSESubscription`-shaped iterable so push WS endpoints have
- * uniform consumer ergonomics with SSE endpoints.
+ * uniform consumer ergonomics with SSE endpoints. A push channel this
+ * process serves throws `DIRECT_CALL_TO_SERVED_ENDPOINT`, as a channel does.
  */
 export function createDirectWSPushFactory(
   api: AnyDefinedApi,
@@ -69,6 +75,7 @@ export function createDirectWSPushFactory(
   const ctx = readApiContext(api);
 
   return function connectPush(group, method, variables) {
+    assertDirectlyReachable(api, group, method);
     const url = urlOf(ctx, group, method, variables);
     const topic = buildWSTopic(ctx.sourceName, group, method);
     return instrumentWSPush(executeWSPush(url, topic, variables, defaults.ws), {

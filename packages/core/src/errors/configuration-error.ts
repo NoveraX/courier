@@ -107,6 +107,13 @@ export type ConfigurationErrorCode =
    */
   | "ASYNC_RESPONSE_SCHEMA"
   /**
+   * A direct caller — `createCaller`, `createQueryCaller` — was asked to open
+   * a stream or channel this process serves with `.implement()`. Its
+   * `baseURL` is the upstream's, where nothing serves it; it is reached
+   * through a proxy caller and the server that serves it.
+   */
+  | "DIRECT_CALL_TO_SERVED_ENDPOINT"
+  /**
    * An endpoint was named `options` in a group or among a source's own
    * endpoints, where that name holds the group's or the source's settings;
    * or an endpoint or a group was named `raw` or `with`, which a client

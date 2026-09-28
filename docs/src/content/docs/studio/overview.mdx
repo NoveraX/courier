@@ -45,7 +45,7 @@ import { petstore } from "./src/api/petstore/source";
 export default defineConfig({ sources: { petstore } });
 ```
 
-Studio has no authentication. It answers only its own page and the apps running on this machine, so on the default `localhost` nothing else can reach it; bound to the network (`--host 0.0.0.0`), anyone on that network can use it. Its pages refuse to be shown in a frame, so another site cannot put Studio under a page of its own.
+Studio makes changes only for a page opened from the link it prints in its terminal, `http://localhost:6280/#token=…`. The token is the project's: Studio keeps it in `.courier/studio-token`, readable by your account alone, and prints the same one each time it starts, so a page you opened once keeps working; the page takes the token out of its address bar and keeps it for its next visits. A page or process without it still sees everything Studio shows, but Studio refuses its every change: writing the project's files, driving the mocks, sending from the Playground, saving, loading or deleting sessions, and clearing the log. Studio answers only its own page and the apps running on this machine, so on the default `localhost` nothing else can reach it; bound to the network (`--host 0.0.0.0`), anyone on that network can see what it shows, and a change still needs the token. Its pages refuse to be shown in a frame, so another site cannot put Studio under a page of its own.
 
 The build integrations connect your app to Studio; they do not start it.
 

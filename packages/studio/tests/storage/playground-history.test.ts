@@ -40,8 +40,8 @@ async function start(root: string): Promise<StudioServer> {
 }
 
 /** A page that connects, with the histories it is sent. */
-async function page(url: string): Promise<{ socket: Socket; sent: unknown[] }> {
-  const socket = connect(`${url}/ui`, { transports: ["websocket"], reconnection: false });
+async function page(studio: StudioServer): Promise<{ socket: Socket; sent: unknown[] }> {
+  const socket = connect(`${studio.url}/ui`, { transports: ["websocket"], reconnection: false, auth: { token: studio.token } });
   const seen = { socket, sent: [] as unknown[] };
   socket.on("playground:history", (history: unknown) => seen.sent.push(history));
   cleanups.push(() => {
@@ -57,26 +57,26 @@ describe("the Playground history", () => {
   it("is shown to the next page, and after Studio restarts, as a page sent it", async () => {
     const root = project();
     const first = await start(root);
-    const sender = await page(first.url);
+    const sender = await page(first);
     await expect.poll(() => sender.sent).toEqual([[]]);
 
     sender.socket.emit("playground:history:save", [CALL]);
-    const next = await page(first.url);
+    const next = await page(first);
     await expect.poll(() => next.sent).toEqual([[CALL]]);
     await first.close();
     const second = await start(root);
-    const afterRestart = await page(second.url);
+    const afterRestart = await page(second);
 
     await expect.poll(() => afterRestart.sent).toEqual([[CALL]]);
   });
 
   it("keeps no credential a call sent", async () => {
     const studio = await start(project());
-    const sender = await page(studio.url);
+    const sender = await page(studio);
     const call = { ...CALL, headers: '{ "Authorization": "Bearer t" }', requestHeaders: { authorization: "Bearer t" } };
     sender.socket.emit("playground:history:save", [call]);
 
-    const next = await page(studio.url);
+    const next = await page(studio);
 
     await expect.poll(() => JSON.stringify(next.sent)).toContain("[redacted]");
     expect(JSON.stringify(next.sent)).not.toContain("Bearer t");
@@ -84,11 +84,11 @@ describe("the Playground history", () => {
 
   it("keeps what it was given, and ignores what is not a history", async () => {
     const studio = await start(project());
-    const sender = await page(studio.url);
+    const sender = await page(studio);
     sender.socket.emit("playground:history:save", [CALL]);
     sender.socket.emit("playground:history:save", { not: "a list" });
 
-    const next = await page(studio.url);
+    const next = await page(studio);
 
     await expect.poll(() => next.sent).toEqual([[CALL]]);
   });

@@ -31,6 +31,7 @@ import { createSessionStore } from "./storage/session-rows";
 import { openStudioDb } from "./storage/studio-db";
 import { createStudioView } from "./storage/studio-view";
 import { createStudioOriginPolicy } from "./studio-origin";
+import { studioToken } from "./studio-token";
 import type { StudioServer, StudioServerOptions } from "./types";
 import { createWatcherStatus } from "./watcher-status";
 
@@ -71,6 +72,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   /* The loader resolves links; every path shown is relative to the same root. */
   const root = resolvedRoot(projectRoot);
   const storage = openStudioDb(root);
+  const token = studioToken(root);
   const requestLog = createRequestLog(storage.db);
   const sessions = createSessionStore(storage.db);
   const view = createStudioView(storage.db);
@@ -83,8 +85,6 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     nameSource,
     requestLog,
   });
-
-  // ── Watcher Status (unified hot reload indicator) ──────────────────────────
 
   const watcherStatus = createWatcherStatus(uiNamespace);
 
@@ -124,6 +124,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     view,
     mockLog,
     playgroundHistory,
+    token,
   });
 
   undoUnfinishedImportWrites(root);
@@ -138,10 +139,9 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
       mockSummaries: mockManager.summarizeServers,
     },
     sessions: { sessions, view },
+    token,
   });
   serveStudioUi(app);
-
-  // ── Start ────────────────────────────────────────────────────────────────────
 
   const address = listenStudio(httpServer, { port, host, onReady, onError });
 
@@ -165,6 +165,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     get url() {
       return address.url();
     },
+    token: token.value,
     close,
   };
 }

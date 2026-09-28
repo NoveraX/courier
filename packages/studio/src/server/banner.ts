@@ -130,6 +130,9 @@ export function printBanner(version: string, urls: StudioUrls): void {
   ];
   if (urls.local) rows.push(row(p, "Local", urls.local));
   for (const url of urls.network) rows.push(row(p, "Network", url));
+  /* The links carry the project's token; a page opened without it can only look. */
+  const note = "Open a link above: without its token a page can only look.";
+  rows.push({ plain: "", styled: "" }, { plain: note, styled: `${p.dim}${note}${p.reset}` });
 
   console.log(["", ...box(p, rows).map((l) => `  ${l}`), ""].join("\n"));
 

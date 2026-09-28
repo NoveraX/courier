@@ -7,7 +7,7 @@
  * project's Studio database, `.courier/studio.db`, and is listed, and a save
  * Studio refuses says why and keeps the dialog open.
  */
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -26,6 +26,10 @@ import { trafficRequest } from "./playground-fixtures";
 
 let root: string;
 let studio: StudioServer | undefined;
+
+/* The page was opened from Studio's link, which carries the project's token. */
+const TOKEN = "session-history-save-token-0123456789abcdef";
+history.replaceState(null, "", `/#token=${TOKEN}`);
 
 function Harness(): React.ReactElement {
   return <SessionHistorySection history={useSessionHistory()} />;
@@ -52,6 +56,8 @@ beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   root = mkdtempSync(join(tmpdir(), "courier-session-save-"));
   writeFileSync(join(root, "courier.config.ts"), "export default { sources: {} };\n");
+  mkdirSync(join(root, ".courier"));
+  writeFileSync(join(root, ".courier", "studio-token"), `${TOKEN}\n`, { mode: 0o600 });
   useStudioStore.setState({ requests: [trafficRequest(), trafficRequest({ id: "req-2", status: "error" })] });
 });
 

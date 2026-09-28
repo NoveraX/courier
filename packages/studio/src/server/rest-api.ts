@@ -10,6 +10,8 @@ import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
 import { createOriginGuard } from "./origin-guard";
 import { registerSessionRoutes, type SessionRouteDeps } from "./session-routes";
 import type { StudioOriginPolicy } from "./studio-origin";
+import type { StudioToken } from "./studio-token";
+import { tokenGuard } from "./token-guard";
 
 /** What the REST API's routes read and change in the running Studio. */
 export interface RestApiDeps {
@@ -19,12 +21,15 @@ export interface RestApiDeps {
   mocksEdit: MocksEditContext;
   /** The saved sessions, and what the pages show. */
   sessions: SessionRouteDeps;
+  /** The token a writing route asks for. */
+  token: StudioToken;
 }
 
 /**
- * Mount Studio's REST API: compression, the origin guard, JSON bodies, the
- * health check, the API and session routes, and JSON answers for a route
- * Studio does not have and for the errors the routes raise.
+ * Mount Studio's REST API: compression, the origin guard, the token a
+ * writing route asks for, JSON bodies, the health check, the API and session
+ * routes, and JSON answers for a route Studio does not have and for the
+ * errors the routes raise.
  *
  * @param app - The Studio server's Express app
  * @param policy - Decides who counts as the Studio UI
@@ -32,18 +37,19 @@ export interface RestApiDeps {
  *
  * @example
  * ```ts
- * registerRestApi(app, policy, { apis: { project, projectRoot: root }, mocksEdit, sessions });
+ * registerRestApi(app, policy, { apis: { project, projectRoot: root }, mocksEdit, sessions, token });
  * ```
  */
 export function registerRestApi(
   app: ReturnType<typeof express>,
   policy: StudioOriginPolicy,
-  { apis, mocksEdit, sessions }: RestApiDeps,
+  { apis, mocksEdit, sessions, token }: RestApiDeps,
 ): void {
   app.use(compression());
   /* Before anything reads a body: the API is for the Studio UI, not for every
      page the developer happens to have open. */
   app.use("/api", createOriginGuard(policy));
+  app.use(tokenGuard(token));
   app.use(express.json({ limit: MAX_MESSAGE_BYTES }));
 
   app.get("/api/health", (_req, res) => {

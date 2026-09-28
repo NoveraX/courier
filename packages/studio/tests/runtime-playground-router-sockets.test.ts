@@ -42,7 +42,12 @@ afterEach(async () => {
 });
 
 async function open(namespace: "/ui" | "/runtime"): Promise<Socket> {
-  const socket = connect(`${url}${namespace}`, { transports: ["websocket"], forceNew: true, reconnection: false });
+  const socket = connect(`${url}${namespace}`, {
+    transports: ["websocket"],
+    forceNew: true,
+    reconnection: false,
+    auth: { token: studio?.token },
+  });
   sockets.push(socket);
   await new Promise<void>((resolve, reject) => {
     socket.once("connect", () => resolve());

@@ -13,6 +13,7 @@ import type { LifecycleCoordinator } from "../src/server/mock-manager";
 import type { ProjectReads } from "../src/server/project-state/types";
 import { setupUiNamespace } from "../src/server/ui-namespace";
 import { createWatcherStatus } from "../src/server/watcher-status";
+import type { StudioToken } from "../src/server/studio-token";
 
 const cleanups: Array<() => Promise<void> | void> = [];
 
@@ -38,6 +39,9 @@ async function listening(): Promise<{ http: HttpServer; io: Server; url: string 
   return { http, io, url: `http://127.0.0.1:${port}` };
 }
 
+/* The page's token; a page presenting it may change what Studio runs. */
+const TOKEN: StudioToken = { value: "page-token", matches: (candidate) => candidate === "page-token" };
+
 describe("setupUiNamespace", () => {
   it("logs a replay that throws and still serves the UI the rest of its state", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -57,6 +61,7 @@ describe("setupUiNamespace", () => {
       project,
       projectRoot: "/app",
       watcherStatus: createWatcherStatus(uiNamespace),
+      token: TOKEN,
     });
 
     const socket = connect(`${url}/ui`, { transports: ["websocket"], forceNew: true, reconnection: false });
@@ -96,8 +101,14 @@ describe("setupUiNamespace", () => {
       project: { snapshot: () => STARTING, fresh: async () => ({ ...STARTING, settling: false }) },
       projectRoot: "/app",
       mockManager,
+      token: TOKEN,
     });
-    const socket = connect(`${url}/ui`, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const socket = connect(`${url}/ui`, {
+      transports: ["websocket"],
+      forceNew: true,
+      reconnection: false,
+      auth: { token: TOKEN.value },
+    });
     cleanups.push(() => {
       socket.disconnect();
     });

@@ -40,4 +40,4 @@ await studio.close()
 
 ### `createStudioServer(options?: StudioServerOptions): StudioServer`
 
-Starts Studio and returns at once with `url` and `close()`. `onReady` fires once it listens, with the URL a browser opens — a wildcard host reads as `localhost`, and with `port: 0` the URL carries the port the system picked; `onError` fires instead when it cannot listen — the port is taken, or the host cannot be bound. Options: `port`, `host`, `projectRoot`, `mockBasePort`, `extraCorsOrigins` (more origins that may act as the Studio UI), `onReady`, `onError`.
+Starts Studio and returns at once with `url`, `token` — the project's token, which a page opened at `` `${url}/#token=${token}` `` presents to make changes — and `close()`. `onReady` fires once it listens, with the URL a browser opens — a wildcard host reads as `localhost`, and with `port: 0` the URL carries the port the system picked; `onError` fires instead when it cannot listen — the port is taken, or the host cannot be bound. Options: `port`, `host`, `projectRoot`, `mockBasePort`, `extraCorsOrigins` (more origins that may act as the Studio UI), `onReady`, `onError`.

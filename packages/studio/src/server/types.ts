@@ -36,6 +36,12 @@ export interface StudioServer {
    * fired.
    */
   readonly url: string;
+  /**
+   * The project's token. A page opened at `url` reads everything Studio
+   * shows; one opened at `${url}/#token=${token}` may also change the
+   * project, its mocks and its saved sessions, and send from the Playground.
+   */
+  readonly token: string;
   /** Close the server */
   close: () => Promise<void>;
 }

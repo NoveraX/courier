@@ -10,7 +10,7 @@ import { printBanner } from "./server/banner";
 import { parsePort } from "./server/parse-port";
 import { quietSqliteWarning } from "./server/storage/quiet-sqlite-warning";
 import { readStudioAddress } from "./server/studio-address";
-import { studioUrls } from "./server/studio-urls";
+import { studioUrls, tokenLink, withToken } from "./server/studio-urls";
 import { studioVersion } from "./server/studio-version";
 
 checkNodeVersion();
@@ -86,12 +86,12 @@ const main = defineCommand({
         process.exitCode = 1;
       },
       onReady: async (url) => {
-        printBanner(studioVersion(), studioUrls(host, port));
+        printBanner(studioVersion(), withToken(studioUrls(host, port), server.token));
 
         if (args.open ?? configured.open) {
           try {
             const { default: openBrowser } = await import("open");
-            await openBrowser(url);
+            await openBrowser(tokenLink(url, server.token));
           } catch (err) {
             /* Every launch attempt failed; the server is up either way. */
             log.warn("Could not open a browser", err);

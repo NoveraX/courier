@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createStudioServer } from "../../src/server/create-studio-server";
 import type { StudioServer } from "../../src/server/types";
+import { tokenHeader } from "../helpers/token-header";
 
 const CONFIG = 'export default { sources: { api: { baseURL: "https://api.example" } } };\n';
 
@@ -60,7 +61,7 @@ afterAll(async () => {
 async function post(path: string, body: unknown): Promise<{ status: number; body: unknown }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: url },
+    headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify(body),
   });
   return { status: response.status, body: await response.json() };

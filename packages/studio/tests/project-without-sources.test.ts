@@ -16,6 +16,7 @@ import { loadImportsState } from "../src/apis/imports-state";
 import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
 import { readGeneratedFile } from "../src/server/import-files/generated-header";
+import { tokenHeader } from "./helpers/token-header";
 
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../node_modules");
 
@@ -111,7 +112,7 @@ function latest(events: Array<[string, unknown]>, name: string): unknown {
 async function post(url: string, path: string, body: unknown): Promise<{ status: number; body: unknown }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: url },
+    headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify(body),
   });
   return { status: response.status, body: await response.json() };

@@ -34,6 +34,7 @@ import { registerRegistryRoutes } from "../src/server/registry-routes";
 import type { JsonResponse, RouteApp } from "../src/server/route-types";
 import { io as connect } from "socket.io-client";
 import type { StudioServer } from "../src/server/types";
+import { tokenHeader } from "./helpers/token-header";
 
 /* Every evaluation of the config imports ./count, which adds one here. */
 const EVALUATIONS = "courierImportsRoutesEvaluations";
@@ -119,7 +120,7 @@ async function post(
 ): Promise<Reply> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: url },
+    headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify(body),
     signal,
   });

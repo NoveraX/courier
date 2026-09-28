@@ -23,6 +23,7 @@ import { bodyHash } from "../src/server/import-files/body-hash";
 import { readGeneratedFile } from "../src/server/import-files/generated-header";
 import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
+import { tokenHeader } from "./helpers/token-header";
 
 function specWith(paths: Record<string, unknown>): ReturnType<typeof parseSpec> {
   return parseSpec(JSON.stringify({ openapi: "3.1.0", info: { title: "Pets", version: "1" }, paths }));
@@ -71,7 +72,7 @@ afterEach(async () => {
 async function post(path: string, body: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: url },
+    headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify(body),
   });
   const payload: unknown = await response.json();

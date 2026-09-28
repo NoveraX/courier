@@ -25,6 +25,7 @@ import type { StudioServer } from "../src/server/types";
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { loadCourierConfig } from "../src/server/config-loader";
 import { createStudioServer } from "../src/server/create-studio-server";
+import { tokenHeader } from "./helpers/token-header";
 
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../node_modules");
 const HAND_WRITTEN = '{ baseURL: "https://api.example" }';
@@ -103,7 +104,7 @@ function start(): Promise<string> {
 async function post(url: string, path: string, body: unknown): Promise<{ status: number; body: unknown }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: url },
+    headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify(body),
   });
   return { status: response.status, body: await response.json() };

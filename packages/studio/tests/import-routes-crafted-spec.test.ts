@@ -23,6 +23,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import type { ParsedEndpoint, ParsedGroup, ParsedSpec } from "../src/apis/parser/types";
 import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
+import { tokenHeader } from "./helpers/token-header";
 
 const CONFIG = 'export default { sources: { api: { baseURL: "https://api.example" } } };\n';
 const IMPORT_DIR = "src/api/pets";
@@ -41,7 +42,7 @@ function start(): Promise<string> {
 async function post(path: string, body: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: url },
+    headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify(body),
   });
   const payload: unknown = await response.json();

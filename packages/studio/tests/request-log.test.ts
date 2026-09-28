@@ -43,14 +43,14 @@ async function startStudio(projectRoot = project()): Promise<string> {
   return (await runStudio(projectRoot)).url;
 }
 
-async function runStudio(projectRoot: string): Promise<{ url: string; close: () => Promise<void> }> {
+async function runStudio(projectRoot: string): Promise<{ url: string; token: string; close: () => Promise<void> }> {
   const port = await freePort();
   return new Promise((resolve) => {
     const server = createStudioServer({
       port,
       host: "127.0.0.1",
       projectRoot,
-      onReady: (url) => resolve({ url, close: () => server.close() }),
+      onReady: (url) => resolve({ url, token: server.token, close: () => server.close() }),
     });
     cleanups.push(() => server.close());
   });
@@ -77,9 +77,9 @@ interface WatchingUi {
   replays: Event[][];
 }
 
-/** A UI that connects, with every event and replay it is sent. */
-async function ui(studio: string): Promise<WatchingUi> {
-  const socket = connect(`${studio}/ui`, { transports: ["websocket"], reconnection: false });
+/** A UI that connects, with every event and replay it is sent; with the token it may change the log. */
+async function ui(studio: string, token?: string): Promise<WatchingUi> {
+  const socket = connect(`${studio}/ui`, { transports: ["websocket"], reconnection: false, auth: { token } });
   cleanups.push(() => {
     socket.disconnect();
   });
@@ -136,9 +136,9 @@ describe("a Studio that restarts", () => {
 
 describe("a Studio page that clears its log", () => {
   it("has the requests it did not keep forgotten for the next page", async () => {
-    const studio = await startStudio();
-    const app = await runtime(studio);
-    const watching = await ui(studio);
+    const studio = await runStudio(project());
+    const app = await runtime(studio.url);
+    const watching = await ui(studio.url, studio.token);
     for (const id of ["r1", "r2"]) {
       app.emit("event", event("request:start", { id, source: "api", method: "list" }));
     }
@@ -146,7 +146,7 @@ describe("a Studio page that clears its log", () => {
 
     watching.socket.emit("requests:clear", { keep: ["r2"] });
     await new Promise((resolve) => setTimeout(resolve, 50));
-    const reloaded = await ui(studio);
+    const reloaded = await ui(studio.url);
 
     await expect.poll(() => reloaded.replays.length).toBe(1);
     expect(reloaded.replays[0]?.map((e) => e.id)).toEqual(["r2"]);

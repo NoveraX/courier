@@ -7,13 +7,15 @@
  *
  * - `prefix-route-types`  — `MappedEndpoint`, `PrefixMapping`, `PrefixRouteConfig`
  * - `route-helpers`       — pure resolvers (`resolveMethod`, `parseId`, ...)
- * - `prefix-static-routes` — SSE + static sub-path registration
+ * - `prefix-static-routes` — SSE registration
+ * - `declared-routes`     — routes for endpoints the catch-alls do not answer
  */
 
 import type { Hono } from "hono";
 
+import { registerDeclaredRoutes } from "./declared-routes";
 import type { PrefixMapping, PrefixRouteConfig } from "./prefix-route-types";
-import { registerSSERoutes, registerStaticSubPaths } from "./prefix-static-routes";
+import { registerSSERoutes } from "./prefix-static-routes";
 import {
   buildIdVars,
   parseId,
@@ -32,11 +34,13 @@ export type {
 /**
  * Register catch-all routes that map real HTTP paths to mock endpoints.
  *
- * Static sub-path endpoints (e.g. "browse", "categories") are registered
- * BEFORE the `/:id` catch-all so Hono matches them first.
+ * Endpoints at any other path — fixed sub-paths ("browse"), lookups
+ * ("by-email/:email"), nested paths (":id/orders") — are registered at
+ * their declared path BEFORE the `/:id` catch-all so Hono matches them first.
  *
  * E.g. `GET /products` → `products.getAll`
  *      `GET /products/browse` → `products.browsePets`
+ *      `GET /products/5/reviews` → `products.reviews` with { id: 5 }
  *      `GET /products/5` → `products.getById` with { id: "5" }
  *      `POST /products` → `products.create`
  */
@@ -63,10 +67,9 @@ export function registerPrefixRoutes(
     // They MUST be registered before /:id to avoid being shadowed by the catch-all.
     registerSSERoutes(app, prefix, eps ?? [], mapping.group, config);
 
-    // Static sub-path endpoints MUST be registered before /:id to avoid being shadowed.
-    // These are endpoints with a fixed path segment (e.g. "browse", "categories") that
-    // would otherwise be mistaken for /:id = "browse".
-    registerStaticSubPaths(app, prefix, eps ?? [], mapping.group, config);
+    // Endpoints the catch-alls below do not answer MUST be registered first:
+    // a fixed sub-path ("browse") would otherwise be taken for /:id = "browse".
+    registerDeclaredRoutes(app, prefix, eps ?? [], mapping.group, config);
 
     // GET /prefix/:id → get-by-id endpoint
     app.get(`/${prefix}/:id`, (c) => {

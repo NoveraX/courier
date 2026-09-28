@@ -3,7 +3,7 @@ import type { MockStore } from "../store";
 import type { MockRequestContext } from "../types";
 import { makeListHandler } from "./auto-list-handler";
 import { generateRecords } from "./data-generator";
-import { freshId, requestedId, typedLike } from "./record-ids";
+import { findRecord, freshId, idOf, recordKey, recordNotFound, typedLike } from "./record-ids";
 import type { RouteInfo } from "./route-analyzer";
 import { unwrapArraySchema } from "./schema-introspect";
 
@@ -39,16 +39,16 @@ export function createHandler(
     case "list":
       return makeListHandler(store, groupName, route);
     case "get":
-      return makeGetHandler(store, groupName);
+      return makeGetHandler(store, groupName, route);
     case "create":
       return makeCreateHandler(store, groupName, route);
     case "update":
-      return makeUpdateHandler(store, groupName);
+      return makeUpdateHandler(store, groupName, route);
     case "replace":
     case "upsert":
-      return makeUpsertHandler(store, groupName);
+      return makeUpsertHandler(store, groupName, route);
     case "delete":
-      return makeDeleteHandler(store, groupName);
+      return makeDeleteHandler(store, groupName, route);
     case "deleteAll":
       return makeDeleteAllHandler(store, groupName);
     case "custom":
@@ -58,11 +58,12 @@ export function createHandler(
   }
 }
 
-function makeGetHandler(store: MockStore, groupName: string): Handler {
+function makeGetHandler(store: MockStore, groupName: string, route: RouteInfo): Handler {
   return (ctx) => {
-    const id = requestedId(ctx.variables);
-    const record = id === undefined ? undefined : store.collection(groupName).getById(id);
-    if (!record) throw new MockHttpError(404, `${groupName} with id ${id} not found`);
+    const col = store.collection(groupName);
+    const key = recordKey(ctx.variables, col, route.idParam);
+    const record = findRecord(col, key);
+    if (!record) throw recordNotFound(groupName, key);
     return record;
   };
 }
@@ -88,13 +89,14 @@ function makeCreateHandler(store: MockStore, groupName: string, route: RouteInfo
   };
 }
 
-function makeUpdateHandler(store: MockStore, groupName: string): Handler {
+function makeUpdateHandler(store: MockStore, groupName: string, route: RouteInfo): Handler {
   return (ctx) => {
-    const id = requestedId(ctx.variables);
     const col = store.collection(groupName);
+    const key = recordKey(ctx.variables, col, route.idParam);
+    const record = findRecord(col, key);
     const { [col.idField]: _id, ...data } = (ctx.variables ?? {}) as Record<string, unknown>;
-    const updated = id === undefined ? undefined : col.updateById(id, data);
-    if (!updated) throw new MockHttpError(404, `${groupName} with id ${id} not found`);
+    const updated = record && col.updateById(idOf(col, record), data);
+    if (!updated) throw recordNotFound(groupName, key);
     return updated;
   };
 }
@@ -104,21 +106,27 @@ function makeUpdateHandler(store: MockStore, groupName: string): Handler {
  * are gone. It used to merge like PATCH, so a client relying on PUT to clear
  * a field passed against the mock and failed in production.
  */
-function makeUpsertHandler(store: MockStore, groupName: string): Handler {
+function makeUpsertHandler(store: MockStore, groupName: string, route: RouteInfo): Handler {
   return (ctx) => {
-    const id = requestedId(ctx.variables);
-    if (id === undefined) throw new MockHttpError(400, `${groupName}: PUT needs an id`);
     const col = store.collection(groupName);
+    const key = recordKey(ctx.variables, col, route.idParam);
+    if (!key) throw new MockHttpError(400, `${groupName}: PUT needs an id`);
     const { [col.idField]: _id, ...body } = (ctx.variables ?? {}) as Record<string, unknown>;
-    return col.replace(id, body) ?? col.create({ ...body, [col.idField]: typedLike(col, id) });
+    const record = findRecord(col, key);
+    if (record) return col.replace(idOf(col, record), body);
+    const id = key.field === col.idField ? typedLike(col, key.value) : freshId(col);
+    return col.create({ ...body, [col.idField]: id });
   };
 }
 
-function makeDeleteHandler(store: MockStore, groupName: string): Handler {
+function makeDeleteHandler(store: MockStore, groupName: string, route: RouteInfo): Handler {
   return (ctx) => {
-    const id = requestedId(ctx.variables);
-    const deleted = id !== undefined && store.collection(groupName).deleteById(id);
-    if (!deleted) throw new MockHttpError(404, `${groupName} with id ${id} not found`);
+    const col = store.collection(groupName);
+    const key = recordKey(ctx.variables, col, route.idParam);
+    const record = findRecord(col, key);
+    if (!record) throw recordNotFound(groupName, key);
+    const id = idOf(col, record);
+    col.deleteById(id);
     return { deleted: true, id };
   };
 }

@@ -22,6 +22,11 @@ export interface RouteInfo {
   fullPath: string;
   /** Whether path contains an :id parameter */
   hasIdParam: boolean;
+  /**
+   * The parameter naming one record, for a path that names one
+   * (`":petId"` → `"petId"`, `"by-email/:email"` → `"email"`)
+   */
+  idParam?: string;
   /** Detected CRUD operation */
   operation: CrudOperation;
   /** Response schema if available */

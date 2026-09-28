@@ -82,6 +82,7 @@ describe("endpoint with transport", () => {
     expect(meta).toBeDefined();
     expect(meta!.transport).toBe("sse");
     expect(meta!.type).toBeUndefined();
+    expect(ep.options).toEqual(expect.objectContaining({ tags: ["feed"] }));
   });
 
   it("HTTP endpoints still work without transport field", () => {

@@ -105,6 +105,53 @@ describe("executeDirectWSChannel — bidirectional flow", () => {
     expect(received).toEqual([{ from: "server" }]);
   });
 
+  it("delivers what onJoin sends to the first data listener, as a socket's client receives it", async () => {
+    const sources = makeChannelSources(() => ({
+      onJoin: (ctx) => {
+        ctx.send({ text: "welcome" });
+        ctx.send({ text: "rules" });
+      },
+      onMessage: (ctx, message) => ctx.send({ echo: message }),
+    }));
+    const channel = await executeDirectWSChannel(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "room",
+    });
+    const first: unknown[] = [];
+    const second: unknown[] = [];
+    channel.on("data", (d) => first.push(d));
+    channel.on("data", (d) => second.push(d));
+    await channel.send({ text: "hi" });
+
+    expect(first).toEqual([{ text: "welcome" }, { text: "rules" }, { echo: { text: "hi" } }]);
+    expect(second).toEqual([{ echo: { text: "hi" } }]);
+  });
+
+  it("holds only so many messages for a listener that never comes", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    let serverCtx: WSChannelContext | undefined;
+    const sources = makeChannelSources(() => ({
+      onJoin: (ctx) => {
+        serverCtx = ctx;
+      },
+      onMessage: vi.fn(),
+    }));
+    const channel = await executeDirectWSChannel(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "room",
+    });
+    for (let i = 0; i < 1100; i++) serverCtx!.send(i);
+    const received: unknown[] = [];
+    channel.on("data", (d) => received.push(d));
+
+    expect(received).toHaveLength(1024);
+    expect(received[0]).toBe(76);
+    expect(received.at(-1)).toBe(1099);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
   it("validates client→server messages against receive schema", async () => {
     const sources = makeChannelSources(() => ({ onMessage: vi.fn() }), {
       receiveSchema: z.object({ text: z.string() }),

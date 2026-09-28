@@ -2,6 +2,7 @@ import { createLogger } from "../../logger";
 import { checkResponseNow } from "../../realtime/check-response-now";
 import type { ChannelHandlers, ConnectionStatus, WSChannelContext } from "../../realtime/types";
 import { validateSchema } from "../../validation";
+import { holdMessages } from "./held-messages";
 import { type InProcessStreamSchema, wrapStreamError } from "./shared";
 import type { InProcessWSChannel } from "./types";
 
@@ -48,17 +49,27 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
   const statusListeners = new Set<(s: ConnectionStatus) => void>();
   let status: ConnectionStatus = "connecting";
   let closed = false;
+  const early = holdMessages(topic);
 
-  const emitData = (data: unknown): void => {
-    for (const fn of dataListeners) {
-      try {
-        fn(data);
-      } catch (error) {
-        /* One failing listener must not keep the message from the others. */
-        log.error("A channel data listener failed", error);
-      }
+  const deliver = (fn: (data: unknown) => void, data: unknown): void => {
+    try {
+      fn(data);
+    } catch (error) {
+      /* One failing listener must not keep the message from the others. */
+      log.error("A channel data listener failed", error);
     }
   };
+
+  const emitData = (data: unknown): void => {
+    if (early.hold(data)) return;
+    for (const fn of dataListeners) deliver(fn, data);
+  };
+
+  /* The first listener takes what was sent before it, in order. */
+  function addDataListener(fn: (data: unknown) => void): void {
+    dataListeners.add(fn);
+    for (const data of early.release()) deliver(fn, data);
+  }
 
   const setStatus = (next: ConnectionStatus): void => {
     status = next;
@@ -92,6 +103,7 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
   async function close(): Promise<void> {
     if (closed) return;
     closed = true;
+    early.release();
     ended.abort();
     unsubscribeFromRegistry();
     try {
@@ -126,7 +138,7 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
          so there is nothing to hear here. */
       if (event === "error") return () => false;
       if (event === "data") {
-        dataListeners.add(handler as (data: unknown) => void);
+        addDataListener(handler as (data: unknown) => void);
         return () => dataListeners.delete(handler as (data: unknown) => void);
       }
       statusListeners.add(handler as (s: ConnectionStatus) => void);

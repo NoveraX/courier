@@ -1,8 +1,10 @@
 import { HTTPError } from "../errors";
 import { isTimeoutFailure } from "../http-client/transport-failure";
+import type { Context } from "../http-client/types";
 import type { RequestFailureKind, StudioHooks } from "../studio";
 import { ValidationError } from "../validation";
 import { isAbortError } from "./abort";
+import { callerLeft } from "./caller-left";
 import type { TimingState } from "./execute-studio";
 import { headersToObject } from "./helpers";
 
@@ -14,21 +16,37 @@ export interface FailureReport {
   timing?: TimingState;
   /** How many middleware wrapped the call. */
   middlewareCount?: number;
+  /** The call's signal, so a cancellation with a reason of its own is told apart. */
+  signal?: AbortSignal;
+  /** The call's context, carrying a proxied call's incoming request. */
+  context?: Context;
 }
 
 /**
  * Say which way a request failed.
  *
+ * A cancellation is told apart from a failure: the caller aborting its call,
+ * with the platform's abort error or with a reason of its own, and a
+ * proxied call whose browser left. A timeout is a kind of its own: the
+ * request was given up on, not called off.
+ *
  * @param error - What the request threw
+ * @param signal - The call's signal, whose reason a cancellation rejects with
+ * @param context - The call's context, carrying a proxied call's incoming request
  * @returns The kind of failure Studio shows
  * @example
  * ```ts
  * failureKind(new ValidationError("variables", [])); // → "validation"
  * ```
  */
-export function failureKind(error: unknown): RequestFailureKind {
+export function failureKind(
+  error: unknown,
+  signal?: AbortSignal,
+  context?: Context,
+): RequestFailureKind {
   if (error instanceof ValidationError) return "validation";
-  if (isAbortError(error)) return "aborted";
+  if (isAbortError(error) || callerLeft(context)) return "aborted";
+  if (signal?.aborted === true && error === signal.reason) return "aborted";
   if (!(error instanceof HTTPError)) return "unknown";
   if (error.status > 0) return "http";
   return isTimeoutFailure(error) ? "timeout" : "network";
@@ -60,7 +78,7 @@ export function reportRequestError(
   dt.onRequestError({
     id: report.requestId,
     error: {
-      type: failureKind(error),
+      type: failureKind(error, report.signal, report.context),
       status: answered?.status,
       message: error instanceof Error ? error.message : String(error),
     },

@@ -114,11 +114,12 @@ export function withFetchStart(r: RequestEntry, event: EventPayload): RequestEnt
   }
 }
 
+/** The issues a failed validation reported, kept until the request's own failure arrives. */
 export function withValidationFail(r: RequestEntry, issues: ValidationIssue[]): RequestEntry {
   return {
     ...r,
     error: {
-      type: "ValidationError",
+      type: "validation",
       message: `Validation failed: ${issues.length} issue(s)`,
       validationIssues: issues,
     },

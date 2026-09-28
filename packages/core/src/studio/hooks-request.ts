@@ -19,6 +19,7 @@ export type RequestFailureKind =
  * remain optional; consumers always merge them into the composite
  * `StudioHooks` interface in `hooks.ts`.
  */
+
 export interface RequestLifecycleHooks {
   onRequestStart?: (event: {
     id: string;

@@ -1,6 +1,7 @@
-import type { RequestEntry, StudioEvent, ValidationIssue } from "./types"
+import type { RequestEntry, StudioEvent } from "./types"
 import type { RequestDraft } from "./request-draft"
 import { str } from "./event-helpers"
+import { validationIssuesOf } from "./validation-issues"
 import { withMiddlewareEnter, withMiddlewareExit, withMiddlewareError } from "./handle-middleware-events"
 import {
   requestFromStart,
@@ -45,7 +46,7 @@ export function applyEvent(draft: RequestDraft, event: EventPayload): void {
       else draft.add(streamFromOpen(event))
       return
     case "validation:fail": {
-      const issues = event.issues as ValidationIssue[] | undefined
+      const issues = validationIssuesOf(event.issues)
       if (issues) draft.update(requestId, (r) => withValidationFail(r, issues))
       return
     }

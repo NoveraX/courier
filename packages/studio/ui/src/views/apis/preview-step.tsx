@@ -1,5 +1,5 @@
 import { FileCode, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { CodeBlock } from "@/components/shared/code-block";
@@ -27,6 +27,10 @@ interface PreviewStepProps {
  * The generated code, file by file, before it is written. Once Studio has
  * refused to write unasked, the plan it sent comes first: what each file
  * would become, and the steps the user allows before writing again.
+ *
+ * A refusal is said above the files and brought into view: an expanded
+ * file is long enough to push anything below it out of the scrolled step,
+ * where a refused Write to Disk would look like one that did nothing.
  */
 export function PreviewStepView({
   files,
@@ -38,6 +42,11 @@ export function PreviewStepView({
   const [expandedFile, setExpandedFile] = useState<string | null>(
     files[0]?.path ?? null,
   );
+  const alertRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (error) alertRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [error]);
 
   return (
     <div className="space-y-4">
@@ -48,9 +57,13 @@ export function PreviewStepView({
         </p>
       </div>
 
+      {error && !consent && (
+        <p ref={alertRef} role="alert" className="text-xs text-destructive">{error}</p>
+      )}
+
       {consent && (
         <div className="space-y-3 rounded-md border border-border-subtle p-3">
-          {error && <p role="alert" className="text-body-sm text-foreground">{error}</p>}
+          {error && <p ref={alertRef} role="alert" className="text-body-sm text-foreground">{error}</p>}
           <FilePlanView plan={consent.plan} confirmed={consent.confirmed} onToggle={onToggleConfirmed} />
         </div>
       )}
@@ -87,8 +100,6 @@ export function PreviewStepView({
           );
         })}
       </div>
-
-      {error && !consent && <p role="alert" className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

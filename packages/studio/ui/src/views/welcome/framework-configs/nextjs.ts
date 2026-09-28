@@ -49,17 +49,17 @@ export default withCourierStudio()(nextConfig);`,
     {
       id: "instrument-server",
       title: "Add server instrumentation",
-      description: "Tracks server-side requests. Runs once on server startup in the Node.js runtime. Auto-loads sources from courier.config.ts.",
+      description: "Tracks server-side requests in development. Runs once on server startup in the Node.js runtime. Auto-loads sources from courier.config.ts.",
       icon: Server,
       actionLabel: "Copy snippet",
       filePath: "instrumentation.ts",
       lang: "ts",
       code: `export async function register() {
-  // Only instrument in Node.js runtime (not Edge)
-  if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
-    await attachRuntime();
-  }
+  // Only in development, and only in the Node.js runtime (not Edge)
+  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  if (process.env.NODE_ENV !== "development") return;
+  const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
+  await attachRuntime();
 }`,
     },
     VERIFY_STEP,

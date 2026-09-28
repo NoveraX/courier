@@ -4,6 +4,7 @@ import {
   type HandlerConfig,
   handleWhileConnected,
 } from "@noverax/courier";
+import { announceWhenRegistered } from "@noverax/courier/announce";
 
 /**
  * The parts of SolidStart's `APIEvent` the handler reads. `nativeEvent` is
@@ -44,6 +45,9 @@ export function courierHandler(
   config?: HandlerConfig,
 ): (event: SolidAPIEvent) => Promise<Response> {
   const { handle } = createHandler(config);
-  return ({ request, nativeEvent }: SolidAPIEvent) =>
-    handleWhileConnected(handle, request, nativeEvent?.node?.res);
+  const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "solid" });
+  return ({ request, nativeEvent }: SolidAPIEvent) => {
+    announce();
+    return handleWhileConnected(handle, request, nativeEvent?.node?.res);
+  };
 }

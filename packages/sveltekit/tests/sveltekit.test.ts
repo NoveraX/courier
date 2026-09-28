@@ -10,10 +10,12 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { Readable } from "node:stream";
 import { registerSources } from "@noverax/courier";
-import { courier, defineApi } from "@noverax/courier/define";
+import { type BufferedAnnouncement, consumeAnnouncements } from "@noverax/courier/announce";
+import { courier, defineApi, getSourceName } from "@noverax/courier/define";
 import { sendWebResponse } from "@noverax/courier/node";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { resetAnnouncements } from "../../core/src/announce/test-support";
 import { courierHandler } from "../src/index";
 
 const servers: Server[] = [];
@@ -130,5 +132,30 @@ describe("a call the browser waits for", () => {
     const response = await courierHandler()({ request });
 
     expect(await response.json()).toEqual({ ok: true });
+  });
+});
+
+describe("what the handler tells an attached Studio", () => {
+  it("names on its first request the sources it serves", async () => {
+    resetAnnouncements();
+    const { endpoint: ping } = courier();
+    registerSources({
+      api: defineApi({ baseURL: "https://upstream.example", endpoints: { ping: ping.get("ping") } }),
+    });
+    vi.stubGlobal("fetch", async () => Response.json({ ok: true }));
+    const announced: BufferedAnnouncement[] = [];
+    const stop = consumeAnnouncements((entry) => announced.push(entry));
+    const handler = courierHandler();
+
+    for (let i = 0; i < 2; i++) {
+      await handler({ request: new Request("http://app.test/api/request?_s=api&_m=ping") });
+    }
+    stop();
+    vi.unstubAllGlobals();
+    resetAnnouncements();
+
+    expect(announced.map((a) => [a.transports, a.framework, a.sources.map(getSourceName)])).toEqual([
+      [["http", "sse"], "sveltekit", ["api"]],
+    ]);
   });
 });

@@ -1,5 +1,6 @@
 import type { HandlerConfig } from "@noverax/courier";
 import { createHandler, handleWhileConnected } from "@noverax/courier";
+import { announceWhenRegistered } from "@noverax/courier/announce";
 
 import { connectionOf } from "./event-connection";
 import { requestOfEvent } from "./event-request";
@@ -27,6 +28,9 @@ export type { CourierEventHandler, H3EventLike, H3NodeEvent, H3WebEvent } from "
  * them in a Nitro server plugin (`server/plugins/courier.ts`), or call
  * `await attachRuntime()` there to load them from `courier.config.ts`.
  *
+ * On its first request it tells an attached Studio which sources it serves,
+ * so the Playground can run them in this process.
+ *
  * @param config - Handler options, such as `allowedOrigins` or body limits
  * @returns An h3 event handler to export from a server route
  *
@@ -39,7 +43,10 @@ export type { CourierEventHandler, H3EventLike, H3NodeEvent, H3WebEvent } from "
  */
 export function courierHandler(config?: HandlerConfig): CourierEventHandler {
   const { handle } = createHandler(config);
-  const handler = async (event: H3EventLike): Promise<Response> =>
-    handleWhileConnected(handle, await requestOfEvent(event), connectionOf(event));
+  const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "nuxt" });
+  const handler = async (event: H3EventLike): Promise<Response> => {
+    announce();
+    return handleWhileConnected(handle, await requestOfEvent(event), connectionOf(event));
+  };
   return Object.assign(handler, { __is_handler__: true } as const);
 }

@@ -37,7 +37,7 @@ afterEach(async () => {
   server = undefined;
 });
 
-async function listen(app: express.Express): Promise<string> {
+async function listen(app: ReturnType<typeof express>): Promise<string> {
   server = createServer(app);
   await new Promise<void>((resolve) => server?.listen(0, "127.0.0.1", resolve));
   return `127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -97,7 +97,7 @@ describe("draining an Express host's SSE streams", () => {
   it("drains a stream served by the proxy route itself", async () => {
     const proxy = courierHandler();
     const app = express();
-    app.all("/api/request", proxy);
+    app.get("/api/request", proxy);
     const host = await listen(app);
     const opened = await openStream(`http://${host}/api/request?_s=api&_m=forever`);
 

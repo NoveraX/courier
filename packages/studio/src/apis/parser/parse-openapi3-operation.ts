@@ -5,7 +5,9 @@
 import { collectionEncoding, declaredEncoding, isDefaultEncoding } from "./field-encoding";
 import { parseRequestBody } from "./parse-request-body";
 import { parseResponse } from "./parse-response";
-import type { ParsedEndpoint, ParsedParameter, SpecNode } from "./types";
+import { enumValues } from "./schema-conversion";
+import { asNode, listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
+import type { ParsedEndpoint, ParsedParameter } from "./types";
 import {
   convertPathParams,
   convertSchemaInline,
@@ -28,8 +30,9 @@ export function parseOpenApi3Operation(
      every call fail validation on the null the client reads. */
   const response = method === "head" ? { responseSchema: null } : parseResponse(op, spec);
 
-  const secured = !!(op.security?.length > 0 || (!op.security && spec.security?.length > 0));
-  const operationId = op.operationId ?? null;
+  const secured =
+    listAt(op, "security").length > 0 || (!op.security && listAt(spec, "security").length > 0);
+  const operationId = textAt(op, "operationId") ?? null;
   const name = operationId ? toCamelCase(operationId) : generateEndpointName(method, path);
 
   return {
@@ -38,7 +41,7 @@ export function parseOpenApi3Operation(
     httpMethod: method as ParsedEndpoint["httpMethod"],
     path: convertPathParams(path),
     fullPath: path,
-    description: op.summary ?? op.description ?? "",
+    description: textAt(op, "summary") ?? textAt(op, "description") ?? "",
     secured,
     ...body,
     parameters,
@@ -51,12 +54,14 @@ function parseParameters(op: SpecNode, spec: SpecNode): ParsedParameter[] {
   const parameters: ParsedParameter[] = [];
   const seen = new Set<string>();
 
-  for (const param of op.parameters ?? []) {
-    const resolved = param?.$ref ? resolveRef(spec, param.$ref) : param;
+  for (const param of listAt(op, "parameters")) {
+    const ref = textAt(param, "$ref");
+    const resolved = ref ? resolveRef(spec, ref) : asNode(param);
     /* A reference into another file, or one this specification never
        defines, resolves to nothing — reading a name off it threw and took
        the whole import down. */
-    if (typeof resolved?.name !== "string") continue;
+    const place = placeOf(resolved.in);
+    if (typeof resolved.name !== "string" || place === undefined) continue;
 
     /* Only a path parameter is renamed, to be a placeholder the path can
        hold; a query parameter is sent under its own name, and renaming
@@ -69,18 +74,19 @@ function parseParameters(op: SpecNode, spec: SpecNode): ParsedParameter[] {
 
     /* Swagger 2.0 writes the shape on the parameter itself; OpenAPI 3 puts
        it in a schema. */
-    const shape = normalizeTypeArray(resolved.schema ?? resolved);
+    const shape = normalizeTypeArray(nodeAt(resolved, "schema") ?? resolved);
+    const format = textAt(shape, "format");
     parameters.push({
       name,
-      in: resolved.in,
-      required: resolved.required ?? false,
-      type: shape.type ?? "string",
-      description: resolved.description ?? "",
+      in: place,
+      required: resolved.required === true,
+      type: textAt(shape, "type") ?? "string",
+      description: textAt(resolved, "description") ?? "",
       /* Reduced to a bare type name, a parameter lost the values it accepts
          and the element type of an array. */
-      ...(shape.enum && { enum: shape.enum }),
-      ...(shape.format && { format: shape.format }),
-      ...(shape.items && { items: convertSchemaInline(shape.items, spec) }),
+      ...(shape.enum ? { enum: enumValues(listAt(shape, "enum")) } : {}),
+      ...(format && { format }),
+      ...(shape.items ? { items: convertSchemaInline(asNode(shape.items), spec) } : {}),
       ...(isStructured(shape) && { schema: convertSchemaInline(shape, spec) }),
       ...queryEncoding(resolved),
     });
@@ -98,6 +104,12 @@ function queryEncoding(param: SpecNode): Pick<ParsedParameter, "encoding"> {
     ? collectionEncoding(param.collectionFormat)
     : declaredEncoding(param.style, param.explode);
   return encoding && !isDefaultEncoding(encoding) ? { encoding } : {};
+}
+
+function placeOf(value: unknown): ParsedParameter["in"] | undefined {
+  return value === "path" || value === "query" || value === "header" || value === "cookie"
+    ? value
+    : undefined;
 }
 
 /** Whether a parameter's schema is more than a type name and its values. */

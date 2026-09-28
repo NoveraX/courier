@@ -2,6 +2,7 @@
  * Ref resolution and security scheme parsing utilities.
  */
 
+import { asNode, fieldOf, isNode, nodeAt, textAt } from "./spec-node";
 import type { ParsedSecurityScheme, SpecNode } from "./types";
 
 /**
@@ -15,12 +16,12 @@ import type { ParsedSecurityScheme, SpecNode } from "./types";
 export function resolveRef(spec: SpecNode, ref: string): SpecNode {
   if (typeof ref !== "string" || !ref.startsWith("#/")) return {};
 
-  let result: SpecNode | undefined = spec;
+  let result: unknown = spec;
   for (const part of ref.slice(2).split("/")) {
-    if (!result || typeof result !== "object") return {};
-    result = result[decodePointer(part)];
+    if (!isNode(result)) return {};
+    result = fieldOf(result, decodePointer(part));
   }
-  return result ?? {};
+  return asNode(result);
 }
 
 function decodePointer(part: string): string {
@@ -51,17 +52,20 @@ export function componentSchemaName(ref: string): string | undefined {
 
 /** Parse security schemes from OpenAPI 3 or Swagger 2 spec */
 export function parseSecuritySchemes(spec: SpecNode): ParsedSecurityScheme[] {
-  const raw = spec.components?.securitySchemes ?? spec.securityDefinitions ?? {};
+  const declared =
+    nodeAt(nodeAt(spec, "components"), "securitySchemes") ??
+    nodeAt(spec, "securityDefinitions") ??
+    {};
   const schemes: ParsedSecurityScheme[] = [];
 
-  for (const [name, def] of Object.entries(raw)) {
-    const d = def as SpecNode;
+  for (const [name, def] of Object.entries(declared)) {
+    const d = asNode(def);
     if (d.type === "http" && d.scheme === "bearer") {
       schemes.push({ name, type: "bearer" });
     } else if (d.type === "http" && d.scheme === "basic") {
       schemes.push({ name, type: "basic" });
     } else if (d.type === "apiKey") {
-      schemes.push({ name, type: "apiKey", paramName: d.name, in: d.in });
+      schemes.push({ name, type: "apiKey", paramName: textAt(d, "name"), in: placeOf(d.in) });
     } else if (d.type === "oauth2") {
       schemes.push({ name, type: "oauth2" });
     } else {
@@ -70,4 +74,8 @@ export function parseSecuritySchemes(spec: SpecNode): ParsedSecurityScheme[] {
   }
 
   return schemes;
+}
+
+function placeOf(value: unknown): "query" | "header" | "cookie" | undefined {
+  return value === "query" || value === "header" || value === "cookie" ? value : undefined;
 }

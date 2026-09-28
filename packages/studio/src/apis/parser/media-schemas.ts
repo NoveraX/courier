@@ -1,4 +1,4 @@
-import type { SpecNode } from "./types";
+import { asNode, fieldOf, isNode, nodeAt, type SpecNode } from "./spec-node";
 
 /** One media type of a request body or a response, with its schema. */
 export interface MediaSchema {
@@ -19,19 +19,17 @@ export interface MediaSchema {
  * firstSchemaIn({ "application/x-www-form-urlencoded": { schema } }); // → { mediaType: "application/x-www-form-urlencoded", schema }
  * ```
  */
-export function firstSchemaIn(content: SpecNode | undefined): MediaSchema | undefined {
-  if (!content || typeof content !== "object") return undefined;
-  const preferred = content["application/json"];
-  if (preferred?.schema) return { mediaType: "application/json", ...parts(preferred) };
+export function firstSchemaIn(content: unknown): MediaSchema | undefined {
+  if (!isNode(content)) return undefined;
+  const preferred = fieldOf(content, "application/json");
+  if (fieldOf(preferred, "schema")) return { mediaType: "application/json", ...parts(preferred) };
   for (const [mediaType, media] of Object.entries(content)) {
-    if (media?.schema) return { mediaType, ...parts(media) };
+    if (fieldOf(media, "schema")) return { mediaType, ...parts(media) };
   }
   return undefined;
 }
 
-function parts(media: SpecNode): Omit<MediaSchema, "mediaType"> {
-  return {
-    schema: media.schema,
-    ...(media.encoding && typeof media.encoding === "object" && { encoding: media.encoding }),
-  };
+function parts(media: unknown): Omit<MediaSchema, "mediaType"> {
+  const encoding = nodeAt(media, "encoding");
+  return { schema: asNode(fieldOf(media, "schema")), ...(encoding && { encoding }) };
 }

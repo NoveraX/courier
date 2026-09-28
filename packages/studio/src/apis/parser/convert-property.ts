@@ -6,8 +6,9 @@ import { toSafeIdentifier } from "./naming-utils";
 import { expandPointer } from "./pointer-refs";
 import { isComposite, soleMember, withoutNull } from "./property-forms";
 import { componentSchemaName } from "./ref-utils";
-import { convertSchema, normalizeTypeArray } from "./schema-conversion";
-import type { ParsedSchema, ParsedSchemaProperty, SpecNode } from "./types";
+import { convertSchema, enumValues, normalizeTypeArray } from "./schema-conversion";
+import { asNode, fieldOf, isNode, listAt, type SpecNode, textAt } from "./spec-node";
+import type { ParsedSchema, ParsedSchemaProperty } from "./types";
 
 /**
  * Convert a property, keeping every alternative it allows.
@@ -42,13 +43,14 @@ export function convertProperty(
      lets a response carry it. */
   const base = {
     required: required && node.readOnly !== true && raw.readOnly !== true,
-    description: raw.description ?? node.description,
+    description: textAt(raw, "description") ?? textAt(node, "description"),
     nullable: nullable || undefined,
   };
 
-  const component = typeof node.$ref === "string" ? componentSchemaName(node.$ref) : undefined;
-  if (typeof node.$ref === "string" && component === undefined) {
-    return pointedProperty(name, node.$ref, raw, base, spec);
+  const ref = textAt(node, "$ref");
+  const component = ref !== undefined ? componentSchemaName(ref) : undefined;
+  if (ref !== undefined && component === undefined) {
+    return pointedProperty(name, ref, raw, base, spec);
   }
   if (isComposite(node)) {
     const shape = convertSchema(`${name}Value`, node, spec);
@@ -56,7 +58,7 @@ export function convertProperty(
     return { ...base, type: shape.type, shape };
   }
   if (node.allOf) {
-    const member = soleMember(node.allOf as SpecNode[]);
+    const member = soleMember(listAt(node, "allOf").map(asNode));
     const inner = {
       ...member,
       description: base.description,
@@ -68,11 +70,15 @@ export function convertProperty(
   const constant = node.const === undefined ? undefined : [node.const];
   return {
     ...base,
-    type: component !== undefined ? "ref" : (node.type ?? (constant ? typeof node.const : "any")),
-    format: node.format,
-    enum: node.enum ?? constant,
+    type:
+      component !== undefined
+        ? "ref"
+        : (textAt(node, "type") ?? (constant ? typeof node.const : "any")),
+    format: textAt(node, "format"),
+    enum:
+      node.enum !== undefined ? enumValues(listAt(node, "enum")) : constant && enumValues(constant),
     refName: component !== undefined ? toSafeIdentifier(component) : undefined,
-    items: node.items ? convertSchema(`${name}Item`, node.items, spec) : undefined,
+    items: node.items ? convertSchema(`${name}Item`, asNode(node.items), spec) : undefined,
     /* An inline object keeps its own shape rather than flattening. */
     shape: node.properties ? convertSchema(`${name}Object`, node, spec) : undefined,
     valueType: mapValueType(node, name, spec),
@@ -122,7 +128,7 @@ export function mapValueType(
   name: string,
   spec?: SpecNode,
 ): ParsedSchema | undefined {
-  const additional = node?.additionalProperties;
-  if (!additional || typeof additional !== "object") return undefined;
+  const additional = fieldOf(node, "additionalProperties");
+  if (!isNode(additional)) return undefined;
   return convertSchema(`${name}Value`, additional, spec);
 }

@@ -1,5 +1,6 @@
 import { firstSchemaIn } from "./media-schemas";
-import type { ParsedEndpoint, SpecNode } from "./types";
+import { fieldOf, isNode, nodeAt, type SpecNode, textAt } from "./spec-node";
+import type { ParsedEndpoint } from "./types";
 import { convertSchemaInline, resolveRef } from "./utils";
 
 /** `200`, `204`, and the `2XX` wildcard in either case. */
@@ -27,18 +28,19 @@ export function parseResponse(
   op: SpecNode,
   spec: SpecNode,
 ): Pick<ParsedEndpoint, "responseSchema" | "responseMediaType"> {
-  const success = successResponse(op.responses);
+  const success = successResponse(fieldOf(op, "responses"));
   if (!success) return { responseSchema: null };
-  const resp = success.$ref ? resolveRef(spec, success.$ref) : success;
-  const media = firstSchemaIn(resp?.content);
+  const ref = textAt(success, "$ref");
+  const resp = ref ? resolveRef(spec, ref) : success;
+  const media = firstSchemaIn(fieldOf(resp, "content"));
   if (media) {
     return {
       responseSchema: convertSchemaInline(media.schema, spec),
       responseMediaType: media.mediaType,
     };
   }
-  const [declared] =
-    resp?.content && typeof resp.content === "object" ? Object.keys(resp.content) : [];
+  const content = nodeAt(resp, "content");
+  const [declared] = content ? Object.keys(content) : [];
   return declared === undefined
     ? { responseSchema: null }
     : { responseSchema: null, responseMediaType: declared };
@@ -54,8 +56,8 @@ export function parseResponse(
  * error, and reading the error as the success made every successful delete
  * fail validation.
  */
-function successResponse(responses: SpecNode | undefined): SpecNode | undefined {
-  if (!responses || typeof responses !== "object") return undefined;
+function successResponse(responses: unknown): unknown {
+  if (!isNode(responses)) return undefined;
   const [code] = Object.keys(responses)
     .filter((key) => SUCCESS_CODE.test(key) && responses[key])
     .sort();

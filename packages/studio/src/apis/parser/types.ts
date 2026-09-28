@@ -4,9 +4,7 @@
 
 import type { SupportedHttpMethod } from "./http-methods";
 
-/** Loose type for raw spec JSON nodes — external specs are untyped by nature */
-// biome-ignore lint/suspicious/noExplicitAny: external spec objects have arbitrary nested shapes
-export type SpecNode = Record<string, any>;
+export type { SpecNode } from "./spec-node";
 
 export interface ParsedSpec {
   title: string;

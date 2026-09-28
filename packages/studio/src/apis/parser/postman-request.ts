@@ -11,6 +11,7 @@
 import { inferSchemaFromValue } from "./infer-schema";
 import { pathParamName } from "./path-utils";
 import { withoutHost } from "./postman-base";
+import { textAt } from "./spec-node";
 import type { ParsedParameter, ParsedSchema, ParsedSecurityScheme, SpecNode } from "./types";
 
 /** Postman writes an environment reference as `{{name}}`. */
@@ -21,7 +22,7 @@ export function requestPath(url: unknown): string {
   const segments = structuredPath(url);
   if (segments) return segments;
 
-  const raw = typeof url === "string" ? url : ((url as SpecNode)?.raw ?? "");
+  const raw = typeof url === "string" ? url : (textAt(url, "raw") ?? "");
   /* The host goes without letting the URL parser see `{{…}}`: a leading
      `{{baseUrl}}` is the host, not a parameter of the path. */
   const afterHost = withoutHost(raw).split("?")[0] ?? "";

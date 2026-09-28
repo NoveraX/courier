@@ -176,6 +176,8 @@ When validation fails inside an adapter (e.g., `apiRoute`), the error is returne
 }
 ```
 
+A proxy client reads that answer back into the `ValidationError` a direct call rejects with, so `isValidationError`, `error.target` and `error.issues` work the same in both modes. A 422 the upstream API answered with itself is not one: it stays an `HTTPError` carrying the upstream's body.
+
 ## Endpoints Without Schemas
 
 When a slot is given a type argument instead of a schema, no validation runs. This is the default behavior and incurs zero overhead:

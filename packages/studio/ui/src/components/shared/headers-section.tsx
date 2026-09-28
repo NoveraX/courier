@@ -67,15 +67,16 @@ export function DroppedHeadersSection({ sent, forwarded }: {
   forwarded?: Record<string, string>;
 }): React.ReactElement | null {
   if (!forwarded) return null;
-  let parsed: Record<string, string>;
+  let parsed: unknown;
   try { parsed = JSON.parse(sent); } catch { return null; }
   if (!parsed || typeof parsed !== "object") return null;
 
   const forwardedLower = new Set(Object.keys(forwarded).map((k) => k.toLowerCase()));
 
+  const sentHeaders: Array<[string, unknown]> = Object.entries(parsed);
   const dropped: Record<string, string> = {};
-  for (const [k, v] of Object.entries(parsed)) {
-    if (!forwardedLower.has(k.toLowerCase())) {
+  for (const [k, v] of sentHeaders) {
+    if (typeof v === "string" && !forwardedLower.has(k.toLowerCase())) {
       dropped[k] = v;
     }
   }

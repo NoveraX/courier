@@ -88,6 +88,11 @@ export function withoutHost(raw: string): string {
  *
  * @param bases - Each request's base, `undefined` where it has none
  * @returns The shared base, or `undefined` when no request has one
+ * @example
+ * ```ts
+ * commonBase(["https://a.example", undefined, "https://b.example", "https://b.example"]);
+ * // → "https://b.example"
+ * ```
  */
 export function commonBase(bases: readonly (string | undefined)[]): string | undefined {
   const counts = new Map<string, number>();

@@ -1,15 +1,10 @@
-import { logger } from "@noverax/courier";
 import type { SchemaMetadata } from "./route-types";
 import { prop } from "./schema-introspect/prop";
 import { schemaMetadataOf } from "./schema-metadata";
 
 /**
- * Endpoint introspection helpers.
- *
- * Extracted from `route-analyzer.ts` to isolate the side-effecting probing
- * logic (calling endpoint functions with a Proxy `http` to capture method/path)
- * and the symbol-based schema metadata extraction. Keeps the analyzer focused
- * on traversal and assembly.
+ * Endpoint introspection helpers: the method and path an endpoint captured
+ * when it was defined, and the schema metadata stamped on it.
  */
 
 const ENDPOINT_SCHEMA = Symbol.for("courier.endpoint.schema");
@@ -29,40 +24,7 @@ export function probeEndpoint(fn: unknown): {
     const path: unknown = Reflect.get(fn, "path");
     if (typeof method === "string") return { method, ...(typeof path === "string" && { path }) };
   }
-  return probeCallable(fn);
-}
-
-function probeCallable(fn: unknown): {
-  method?: string;
-  path?: string;
-} {
-  if (typeof fn !== "function") return {};
-  let method: string | undefined;
-  let path: string | undefined;
-
-  const handler: ProxyHandler<object> = {
-    get: (_target, prop) => {
-      if (typeof prop === "string") {
-        method = prop;
-      }
-      return (...args: unknown[]) => {
-        if (typeof args[0] === "string") path = args[0];
-        return Promise.resolve({});
-      };
-    },
-  };
-
-  const mockHttp = new Proxy({}, handler);
-
-  try {
-    Reflect.apply(fn, undefined, [mockHttp, {}]);
-  } catch (error) {
-    /* The closure may throw on the stand-in it is probed with; the call it
-       began has been read by then. */
-    logger.debug("MockProbe", "An endpoint threw while it was probed", error);
-  }
-
-  return { method, path: path || undefined };
+  return {};
 }
 
 /**

@@ -33,6 +33,8 @@ export function wireRequestHooks(
         mode: e.mode,
         middlewareCount: e.middlewareCount,
         hasValidation: e.hasValidation,
+        ...(e.httpMethod && { httpMethod: e.httpMethod }),
+        ...(e.endpointType && { endpointType: e.endpointType }),
       }),
     );
   };

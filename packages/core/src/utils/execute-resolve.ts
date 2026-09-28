@@ -2,6 +2,7 @@ import type { ResolvedEndpointOptions } from "../define/options";
 import type { GroupOptions } from "../http-client/types";
 import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../validation";
 import { getEndpoint } from "./execute-helpers";
+import { normalizeHttpMethod } from "./helpers";
 
 type ResolvedGroup = Record<string, unknown> & { options?: GroupOptions };
 
@@ -30,7 +31,15 @@ export function resolveEndpoint(
     schema: readSchema(endpoint),
     options: readOptions(endpoint),
     served: isServed(endpoint),
+    httpMethod: readHttpMethod(endpoint),
   };
+}
+
+/** The verb the endpoint was addressed with, as HTTP spells it: `"DELETE"` for `.del()`. */
+function readHttpMethod(endpoint: unknown): string | undefined {
+  if (typeof endpoint !== "object" || endpoint === null) return undefined;
+  const { method } = endpoint as { method?: unknown };
+  return typeof method === "string" ? normalizeHttpMethod(method) : undefined;
 }
 
 /** Is the endpoint's closure its implementation rather than a wire description? */

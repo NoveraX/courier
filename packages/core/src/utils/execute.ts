@@ -129,7 +129,16 @@ function prepareAndRun(
      retry policy is the outermost of the endpoint's own, so it re-runs them. */
   const middlewares = resolveMiddlewareChain(dataSource.options?.middleware, endpointOptions);
 
-  emitRequestStart(studio, source, group, method, variables, mode, middlewares.length, schema);
+  emitRequestStart(studio, {
+    source,
+    group,
+    method,
+    variables,
+    mode,
+    middlewareCount: middlewares.length,
+    schema,
+    httpMethod: target.httpMethod,
+  });
 
   const inner: PreparedInner = {
     endpoint: target.endpoint as PreparedInner["endpoint"],

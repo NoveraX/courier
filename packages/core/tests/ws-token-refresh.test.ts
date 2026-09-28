@@ -1,8 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { handleTokenRefresh, sendAuthRequired } from "../src/adapter/ws-token-refresh";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import type { InternalConnectionRegistry, RegistryEntry } from "../src/adapter/ws-registry";
+import { createMemoryPubSub } from "../src/realtime/memory-pubsub";
+import { createWSConnection } from "../src/realtime/ws/ws-connection";
+import type { WSConnection } from "../src/realtime/ws/ws-types";
+import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
 function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
   ctx: WSSocketContext;
@@ -14,7 +18,7 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
     meta: { userId: "user-1" },
     sendMessage: (msg: WSMessage) => sent.push(msg),
     onTokenRefresh: undefined,
-    registry: { updateMeta: vi.fn() },
+    registry: { updateMeta: vi.fn(), getEntry: vi.fn(() => undefined) },
     ...overrides,
   } as unknown as WSSocketContext;
 
@@ -45,7 +49,7 @@ describe("handleTokenRefresh", () => {
     const updateMeta = vi.fn();
     const { ctx, sent } = createMockCtx({
       onTokenRefresh,
-      registry: { updateMeta } as unknown as InternalConnectionRegistry,
+      registry: { updateMeta, getEntry: vi.fn(() => undefined) } as unknown as InternalConnectionRegistry,
     });
 
     await handleTokenRefresh(ctx, { type: "auth", id: "2", payload: "fresh-jwt" });
@@ -156,5 +160,74 @@ describe("sendAuthRequired", () => {
 
     await new Promise((r) => setTimeout(r, 80));
     expect(close).not.toHaveBeenCalled();
+  });
+});
+
+describe("a token the server asks a connected client for", () => {
+  let served: ServedWS | undefined;
+  let client: WSConnection | undefined;
+
+  afterEach(async () => {
+    client?.close();
+    client = undefined;
+    await stopWS(served);
+    served = undefined;
+  });
+
+  async function connect(getAuthToken?: () => string): Promise<string> {
+    client = createWSConnection({ url: served!.url, getAuthToken });
+    await new Promise<void>((resolve) => {
+      const stop = client!.onStatusChange((status) => {
+        if (status !== "connected") return;
+        stop();
+        resolve();
+      });
+    });
+    await settle(20);
+    return served!.handler.connections.list()[0]!.connectionId;
+  }
+
+  it("keeps the connection open once the client has answered with one the server accepts", async () => {
+    const refreshed: string[] = [];
+    served = await serveWS(
+      {},
+      {
+        onTokenRefresh: ({ token }) => {
+          refreshed.push(token);
+          return { user: token };
+        },
+      },
+    );
+    const connectionId = await connect(() => "fresh-token");
+
+    sendAuthRequired(served.handler.connections, connectionId, 200);
+    await settle(400);
+
+    expect(refreshed).toEqual(["fresh-token"]);
+    expect(client?.status).toBe("connected");
+    expect(served.handler.connections.get(connectionId)?.meta).toEqual({ user: "fresh-token" });
+  });
+
+  it("closes the connection when no token comes in time", async () => {
+    served = await serveWS({}, { onTokenRefresh: ({ token }) => ({ user: token }) });
+    const connectionId = await connect();
+
+    sendAuthRequired(served.handler.connections, connectionId, 100);
+    await settle(300);
+
+    expect(served.handler.connections.count).toBe(0);
+    expect(client?.status).toBe("disconnected");
+  });
+
+  it("is asked for through the registry of a handler with a pub/sub adapter", async () => {
+    const pubsub = createMemoryPubSub("replica");
+    await pubsub.connect();
+    served = await serveWS({}, { pubsub, onTokenRefresh: ({ token }) => ({ user: token }) });
+    const connectionId = await connect(() => "fresh-token");
+
+    sendAuthRequired(served.handler.connections, connectionId, 200);
+    await settle(400);
+
+    expect(served.handler.connections.get(connectionId)?.meta).toEqual({ user: "fresh-token" });
   });
 });

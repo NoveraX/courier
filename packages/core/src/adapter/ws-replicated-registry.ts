@@ -1,5 +1,5 @@
 import type { PubSubBridge } from "./ws-pubsub-bridge";
-import type { ConnectionRegistry, InternalConnectionRegistry } from "./ws-registry";
+import type { InternalConnectionRegistry } from "./ws-registry";
 
 /**
  * The connection registry application code is handed when replicas share a
@@ -14,7 +14,8 @@ import type { ConnectionRegistry, InternalConnectionRegistry } from "./ws-regist
  *
  * @param registry - This replica's connections
  * @param bridge - The replica's pub/sub bridge
- * @returns The registry to expose as `connections`
+ * @returns The registry to expose as `connections`, which still reaches this
+ *   replica's connections for what the handler does with them itself
  *
  * @example
  * const connections = replicateBroadcasts(registry, bridge);
@@ -23,7 +24,7 @@ import type { ConnectionRegistry, InternalConnectionRegistry } from "./ws-regist
 export function replicateBroadcasts(
   registry: InternalConnectionRegistry,
   bridge: PubSubBridge,
-): ConnectionRegistry {
+): InternalConnectionRegistry {
   return {
     get count() {
       return registry.count;
@@ -53,5 +54,10 @@ export function replicateBroadcasts(
     disconnect: (connectionId, code, reason) => registry.disconnect(connectionId, code, reason),
     disconnectByMeta: (predicate, code, reason) =>
       registry.disconnectByMeta(predicate, code, reason),
+    add: (entry) => registry.add(entry),
+    remove: (connectionId) => registry.remove(connectionId),
+    updateMeta: (connectionId, meta) => registry.updateMeta(connectionId, meta),
+    getEntry: (connectionId) => registry.getEntry(connectionId),
+    setTopicManager: (topicManager) => registry.setTopicManager(topicManager),
   };
 }

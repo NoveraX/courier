@@ -123,7 +123,14 @@ async function openSubscription(
 
   try {
     if (resolved.schema.bidirectional === true || resolved.schema.receive) {
-      await startChannel(ctx, subscribedTopic, resolved.endpoint, variables, msg.id);
+      await startChannel(
+        ctx,
+        subscribedTopic,
+        resolved.endpoint,
+        variables,
+        msg.id,
+        resolved.schema.response,
+      );
     } else {
       startPush(
         ctx,

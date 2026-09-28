@@ -87,7 +87,11 @@ try {
 }
 ```
 
-What a channel's handlers send with `ctx.send()` or `ctx.broadcast()` is not validated.
+### Channels
+
+What a channel's handlers send with `ctx.send()` or `ctx.broadcast()` is held to its `.response()` schema where it is sent, and what goes out is the schema's output. A value that does not match is not sent: the call throws a `RealtimeValidationError`, so in `onMessage` the client that sent the message hears of it with code `4422` and the channel goes on, and in `onJoin` the subscription is refused. A broadcast that does not match reaches no one.
+
+`ctx.send()` and `ctx.broadcast()` go out in the order they are called, so the schema has to validate synchronously. One that answers asynchronously — a Zod schema with an async refinement — is refused the first time the channel sends, with `ConfigurationError("ASYNC_RESPONSE_SCHEMA")`, and the client reads code `5000`.
 
 ### Schema transforms
 

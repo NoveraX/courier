@@ -46,6 +46,10 @@ On one connection, subscriptions whose key is equal are one subscription: the ne
   The key is canonical JSON — `api.chat.room#{"room":"r1"}` — so every distinct key is a topic of its own. `qualifyTopic` from `@noverax/courier/realtime` builds a topic for `broadcastToTopic` on the server's connection registry.
 </Callout>
 
+## What a channel sends
+
+A stream's events, a push channel's values and what a channel's handlers pass to `ctx.send()` and `ctx.broadcast()` are held to the endpoint's `.response()` schema before they leave the server, and the client receives the schema's output — defaults filled in, transforms applied. A channel's `ctx.send()` or `ctx.broadcast()` of a value that does not match throws a `RealtimeValidationError` where it was called and sends nothing; a channel's response schema must validate synchronously. [Validation](/docs/validation/standard-schema#channels) has the details.
+
 ## Next steps
 
 - [Standalone Server](/docs/deployment/standalone-server) — serve streams and channels from their own process

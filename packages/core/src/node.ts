@@ -9,6 +9,7 @@ const log = createLogger("Node");
 export { toWebRequest } from "./node-request";
 export {
   attachWebSocketUpgrade,
+  DEFAULT_WS_MAX_MESSAGE_SIZE,
   DEFAULT_WS_PATH,
   type UpgradeServer,
   type WebSocketUpgradeOptions,

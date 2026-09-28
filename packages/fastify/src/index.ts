@@ -1,14 +1,10 @@
-import type {
-  AdapterHandler,
-  CourierWSOptions,
-  HandlerConfig,
-  WebSocketLike,
-} from "@noverax/courier";
-import { createHandler, createWSHandler, requireSources } from "@noverax/courier";
+import type { AdapterHandler, HandlerConfig } from "@noverax/courier";
+import { createHandler, requireSources } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
-
 import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
+
+export { courierWSHandler } from "./ws-handler";
 
 /** Where the proxy caller sends its calls unless told otherwise. */
 const DEFAULT_PROXY_PATH = "/api/request";
@@ -121,37 +117,4 @@ export function courierSSEHandler(config?: HandlerConfig): CourierSSERouteHandle
     await sendWebResponse(webRes, reply.raw);
   };
   return Object.assign(route, { sseConnections, shutdownSSE });
-}
-
-/**
- * Create a Fastify WebSocket route handler for Courier realtime.
- * Requires `@fastify/websocket` plugin to be registered.
- *
- * @param options - WS handler options (heartbeat, allowedOrigins, etc.)
- * @returns Route handler for `{ websocket: true }` routes
- *
- * @example
- * ```ts
- * import fastifyWebsocket from "@fastify/websocket";
- * import { courierWSHandler } from "@noverax/courier-fastify";
- *
- * await fastify.register(fastifyWebsocket);
- * fastify.get("/ws", { websocket: true }, courierWSHandler());
- * ```
- */
-export function courierWSHandler(
-  options?: CourierWSOptions,
-): (socket: WebSocketLike, request: FastifyRequest) => void {
-  const wsHandler = createWSHandler(options);
-  announceHosting({
-    transports: ["ws"],
-    sources: Object.values(requireSources()),
-    framework: "fastify",
-  });
-
-  return (socket: WebSocketLike, request: FastifyRequest) => {
-    discoverNodeAppOrigin(request.raw);
-    const webReq = toWebRequest(request.raw);
-    wsHandler.handleSocket(socket, webReq);
-  };
 }

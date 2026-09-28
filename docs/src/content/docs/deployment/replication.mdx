@@ -256,8 +256,10 @@ await connectAdapters()
 
 const fastify = Fastify({ logger: true })
 
-// WebSocket plugin (must register before WS routes)
-await fastify.register(fastifyWebsocket)
+// WebSocket plugin (must register before WS routes). Its ws server reads
+// frames up to maxPayload before Courier sees them — 100 MiB by default —
+// so cap it at the handler's maxMessageSize (64 KB by default)
+await fastify.register(fastifyWebsocket, { options: { maxPayload: 65_536 } })
 
 // HTTP proxy
 await fastify.register(courierPlugin, { prefix: "/api/request" })

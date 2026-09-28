@@ -10,6 +10,9 @@ const log = createLogger("WS");
 /** The path a Node adapter answers WebSocket upgrades on unless told otherwise. */
 export const DEFAULT_WS_PATH = "/api/ws";
 
+/** The largest WebSocket message, in bytes, a handler accepts unless told otherwise. */
+export const DEFAULT_WS_MAX_MESSAGE_SIZE: number = LIMITS.MAX_MESSAGE_SIZE;
+
 /** The part of `ws`'s `WebSocketServer` this uses, so core does not depend on `ws`. */
 export interface UpgradeServer {
   handleUpgrade(

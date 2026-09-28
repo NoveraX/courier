@@ -10,9 +10,22 @@ import { propToArkType, schemaToArkType } from "./validation-arktype";
 import { propToValibot, schemaToValibot } from "./validation-valibot";
 import { propToZod, schemaToZod } from "./validation-zod";
 
-/** Generate `satisfies ZodType<T>` / `satisfies GenericSchema<...>` expression for type-safe sync */
+/**
+ * The clause holding a schema to its declared type, so the two cannot drift
+ * apart: what the schema outputs must be the type.
+ *
+ * @param typeName - The declared type
+ * @param options - Generation options, read for the validation library
+ * @returns The clause, with its leading space, or `""` without a validator
+ * @example
+ * ```ts
+ * satisfiesExpr("Pet", { validation: "valibot" }); // " satisfies v.GenericSchema<unknown, Pet>"
+ * ```
+ */
 export function satisfiesExpr(typeName: string, options: GeneratorSettings): string {
-  if (options.validation === "zod") return ` satisfies z.ZodType<${typeName}>`;
+  /* Only the output is compared: zod's whole ZodType, compared for each of
+     Stripe's 1,865 schemas, took tsc 3.7 GB and 15 s; this takes 0.9 GB and 3 s. */
+  if (options.validation === "zod") return ` satisfies { _zod: { output: ${typeName} } }`;
   if (options.validation === "valibot") return ` satisfies v.GenericSchema<unknown, ${typeName}>`;
   if (options.validation === "arktype") return ` satisfies { infer: ${typeName} }`;
   return "";

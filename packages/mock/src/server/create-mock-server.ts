@@ -145,6 +145,11 @@ export function createMockServer(config?: MockServerOptions): MockServer {
       applyScenarioInternal(scenario);
     },
 
+    resetStore() {
+      store.reset();
+      config?.reseed?.();
+    },
+
     getRouteSource(group, method) {
       if (registry.hasScenario(group, method)) return "scenario";
       if (registry.baseCount(group, method) > 1) return "override";

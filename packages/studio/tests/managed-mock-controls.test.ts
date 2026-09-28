@@ -94,7 +94,15 @@ async function startMock() {
     );
     return replies.map((reply) => reply.status);
   }
-  return { command, statuses, events };
+  /** Send a store command and wait for the store snapshot it answers with. */
+  async function storeCommand(action: string, payload: Record<string, unknown> = {}): Promise<SentEvent> {
+    const snapshots = () => events.onEvent.mock.calls.filter(([, event]) => event.type === "mock:store:snapshot");
+    const before = snapshots().length;
+    pm.sendCommand("apiMock", { action, ...payload });
+    await vi.waitFor(() => expect(snapshots().length).toBeGreaterThan(before), { timeout: 5_000 });
+    return snapshots().at(-1)?.[1] ?? {};
+  }
+  return { command, storeCommand, statuses, events, url: `http://127.0.0.1:${port}` };
 }
 
 const DOWN = { errorRate: 1, faultWeights: [{ type: "503", weight: 100 }] };
@@ -144,5 +152,24 @@ describe("the network controls of a managed mock", () => {
 
     expect(event.config).toMatchObject({ latency: 0, errorRate: 1, latencyPreset: "none" });
     expect(await mock.statuses("/users", 3)).toEqual([503, 503, 503]);
+  }, 30_000);
+});
+
+describe("the Reset store control of a managed mock", () => {
+  it("reseeds the store and leaves the network settings as they are", async () => {
+    const mock = await startMock();
+    await mock.storeCommand("mock:store:create", { collection: "users", record: { name: "Extra" } });
+    await mock.command("mock:chaos:set", { config: DOWN, preset: "down" });
+    const networkEvents = () =>
+      mock.events.onEvent.mock.calls.filter(([, event]) => event.type === "mock:network:config").length;
+    const before = networkEvents();
+
+    const snapshot = await mock.storeCommand("mock:server:reset");
+
+    expect(snapshot.collections).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "users", count: 3 })]),
+    );
+    expect(await mock.statuses("/users", 3)).toEqual([503, 503, 503]);
+    expect(networkEvents()).toBe(before);
   }, 30_000);
 });

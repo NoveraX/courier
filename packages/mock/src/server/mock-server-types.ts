@@ -69,6 +69,12 @@ export interface MockServer {
   mock: UntypedMockFn;
   /** Mock store */
   store: MockStore;
+  /**
+   * Empty the store and seed it again, as it was when the server started — a
+   * server built from a source reseeds its collections, any other is left
+   * empty. Handlers, scenarios, history and network settings are untouched.
+   */
+  resetStore(): void;
   /** Request history */
   history: MockHistoryEntry[];
   /** Apply a scenario (clears scenario layer, base layer untouched) */

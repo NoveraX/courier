@@ -26,6 +26,10 @@ export default defineProject({
     ...sharedTestOptions,
     include: ["__tests__/**/*.test.{ts,tsx}"],
     environment: "node",
+    /* A component test renders a whole view. In a full run, sharing the
+       machine with every other suite, one that takes a quarter of a second
+       alone ran past the default five. */
+    testTimeout: 15_000,
   },
   resolve: {
     alias: {

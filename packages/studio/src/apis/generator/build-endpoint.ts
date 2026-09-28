@@ -2,7 +2,7 @@
  * Builds the builder chain describing each endpoint of a generated group.
  */
 
-import { toInternalMethod } from "@noverax/courier";
+import { toInternalMethod } from "@noverax/courier/internal";
 import type { ParsedEndpoint, ParsedSchema } from "../parser/types";
 import { convertPathParams } from "../parser/utils";
 import { buildEndpointChain, emitsSchemas } from "./build-endpoint-helpers";

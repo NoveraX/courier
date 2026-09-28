@@ -1,13 +1,11 @@
 import {
-  buildClientProxy,
   type Context,
   createLogger,
-  type ExecuteBackend,
-  executeRequest,
   type InferClient,
   type ValidationIssue,
 } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
+import { buildClientProxy, type ExecuteBackend, executeRequest } from "@noverax/courier/internal";
 
 const log = createLogger("Next");
 

@@ -7,7 +7,6 @@ export {
   createWSHandler,
   type HandlerConfig,
   handleWhileConnected,
-  requireSources,
   type SSEBroadcastEvent,
   type SSEBroadcastResult,
   type SSECloseReason,
@@ -19,29 +18,19 @@ export {
   type WSHandler,
   type WSHandlerConfig,
 } from "./adapter";
-export { isHostAccepted, isHostAllowed } from "./adapter/host-policy";
-export { isOriginAccepted, isOriginAllowed } from "./adapter/origin-policy";
 export {
   detectAppOrigin,
-  discoverAppOrigin,
   getAppOrigin,
-  getAppOriginParsed,
   setAppOrigin,
 } from "./app-origin";
 export { type CallerDefaults, createCaller } from "./caller";
-export {
-  buildClientProxy,
-  type ClientShape,
-  createClientRoot,
-  type ExecuteBackend,
-  type FlatClient,
-  type GroupClient,
-  type InferClient,
-  type MixedClient,
-  type RootAccessors,
-  shapeOfClient,
-  type TypedClient,
-  type WithOptions,
+export type {
+  FlatClient,
+  GroupClient,
+  InferClient,
+  MixedClient,
+  TypedClient,
+  WithOptions,
 } from "./client";
 export {
   ConfigurationError,
@@ -53,7 +42,11 @@ export {
   isCourierError,
   isHTTPError,
 } from "./errors";
-export { createFetch, type FetchClient, type FetchClientOptions } from "./fetch";
+export {
+  createFetch,
+  type FetchClient,
+  type FetchClientOptions,
+} from "./fetch";
 export type {
   BaseOptions,
   CallOptions,
@@ -63,7 +56,13 @@ export type {
   SearchParamsSerializer,
   UploadProgress,
 } from "./http-client/types";
-export { createLogger, type Logger, type LogLevel, logger, type ScopedLogger } from "./logger";
+export {
+  createLogger,
+  type Logger,
+  type LogLevel,
+  logger,
+  type ScopedLogger,
+} from "./logger";
 export { defineMiddleware } from "./middleware/define";
 export type {
   AfterHandler,
@@ -80,12 +79,9 @@ export type {
 } from "./middleware/types";
 export {
   createProxyCaller,
-  mergeProxyPath,
   type ProxyCallerArguments,
   type ProxyCallerDefaults,
   type ProxyPath,
-  type ResolveOrigin,
-  resolveProxyPath,
 } from "./proxy-caller";
 export type { CallerWSOptions } from "./realtime";
 export {
@@ -98,45 +94,10 @@ export {
   RealtimeError,
   TimeoutError,
 } from "./realtime";
-export {
-  getSources,
-  getSourcesGeneration,
-  onSourcesChange,
-  registerSources,
-} from "./sources";
-export {
-  abortPlayground,
-  registerPlaygroundAbort,
-  type StudioHooks,
-  studioHooks,
-} from "./studio";
-export {
-  composeBackend,
-  createDirectHTTPExecutor,
-  createDirectSSEFactory,
-  createDirectWSChannelFactory,
-  createDirectWSPushFactory,
-  createProxyHTTPExecutor,
-  createProxySSEFactory,
-  createProxyWSChannelFactory,
-  createProxyWSPushFactory,
-  type DirectHTTPDefaults,
-  type DirectSSEDefaults,
-  type DirectWSDefaults,
-  type HTTPExecutor,
-  type ProxySSEDefaults,
-  type ProxyWSDefaults,
-  type SSEFactory,
-  type StreamingFactories,
-  type WSChannelFactory,
-  type WSPushFactory,
-} from "./transport";
-export { executeRequest } from "./utils/execute";
-export {
-  normalizeHttpMethod,
-  parseEndpointKey,
-  type RequestPayloadInput,
-  toInternalMethod,
-} from "./utils/helpers";
-export type { CacheConfig, Transport, ValidationIssue } from "./validation";
+export { getSources, registerSources } from "./sources";
+export type {
+  CacheConfig,
+  Transport,
+  ValidationIssue,
+} from "./validation";
 export { isValidationError, ValidationError } from "./validation";

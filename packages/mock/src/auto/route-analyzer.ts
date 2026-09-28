@@ -1,4 +1,4 @@
-import { normalizeHttpMethod } from "@noverax/courier";
+import { normalizeHttpMethod } from "@noverax/courier/internal";
 import { isRecord } from "../is-record";
 import { recordParam } from "../server/path-shape";
 import { channelShape } from "./channel-shape";

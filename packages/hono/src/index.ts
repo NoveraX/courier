@@ -1,6 +1,7 @@
 import type { HandlerConfig, WSHandlerConfig } from "@noverax/courier";
-import { createHandler, createWSHandler, discoverAppOrigin } from "@noverax/courier";
+import { createHandler, createWSHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
+import { discoverAppOrigin } from "@noverax/courier/internal";
 import type { Context } from "hono";
 import { peerAddressOf } from "./peer-address";
 import type { HonoWSContext } from "./ws-adapter";

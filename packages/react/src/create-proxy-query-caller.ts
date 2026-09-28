@@ -1,15 +1,13 @@
+import type { ProxyCallerArguments, ProxyCallerDefaults, ProxyPath } from "@noverax/courier";
+import type { DefinedApi } from "@noverax/courier/define";
 import {
   createClientRoot,
   createProxyHTTPExecutor,
   createProxySSEFactory,
   createProxyWSChannelFactory,
   mergeProxyPath,
-  type ProxyCallerArguments,
-  type ProxyCallerDefaults,
-  type ProxyPath,
   shapeOfClient,
-} from "@noverax/courier";
-import type { DefinedApi } from "@noverax/courier/define";
+} from "@noverax/courier/internal";
 
 import { cachedGroupHooks } from "./cached-group-hooks";
 import { createGroupHooks } from "./group-hooks";

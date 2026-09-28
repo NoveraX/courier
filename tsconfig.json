@@ -8,6 +8,7 @@
       "@noverax/courier/config": ["./packages/core/src/config/index.ts"],
       "@noverax/courier/define": ["./packages/core/src/define/index.ts"],
       "@noverax/courier/fetch": ["./packages/core/src/fetch/index.ts"],
+      "@noverax/courier/internal": ["./packages/core/src/internal/index.ts"],
       "@noverax/courier/internal-streams": ["./packages/core/src/internal-streams/index.ts"],
       "@noverax/courier/middleware": ["./packages/core/src/middleware/index.ts"],
       "@noverax/courier/node": ["./packages/core/src/node.ts"],

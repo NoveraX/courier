@@ -1,4 +1,5 @@
-import type { CallOptions, HTTPExecutor } from "@noverax/courier";
+import type { CallOptions } from "@noverax/courier";
+import type { HTTPExecutor } from "@noverax/courier/internal";
 
 import { withQuerySignal } from "./with-query-signal";
 

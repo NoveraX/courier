@@ -81,6 +81,11 @@
       "import": "./lib/internal-streams/index.js",
       "default": "./lib/internal-streams/index.js"
     },
+    "./internal": {
+      "types": "./lib/internal/index.d.ts",
+      "import": "./lib/internal/index.js",
+      "default": "./lib/internal/index.js"
+    },
     "./announce": {
       "types": "./lib/announce/index.d.ts",
       "import": "./lib/announce/index.js",

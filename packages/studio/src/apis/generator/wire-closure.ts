@@ -13,7 +13,7 @@
  * written in a style of their own.
  */
 
-import { toInternalMethod } from "@noverax/courier";
+import { toInternalMethod } from "@noverax/courier/internal";
 import type { ParsedEndpoint } from "../parser/types";
 import { callOptions as options } from "./call-options";
 import { formClosure } from "./form-closure";

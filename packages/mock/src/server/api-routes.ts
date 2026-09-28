@@ -11,6 +11,8 @@ import type { Hono, Context as HonoContext } from "hono";
 
 import type { PrefixMapping } from "./prefix-routes";
 import { registerPrefixRoutes } from "./prefix-routes";
+import { readJsonBody } from "./read-json-body";
+import { readProxyCall } from "./read-proxy-call";
 import { handleMockRequest } from "./route-generator";
 import type { RouteConfig } from "./route-types";
 
@@ -46,18 +48,12 @@ export function registerRequestRoutes(
 /** Register the main courier proxy route: POST /api/request */
 export function registerProxyRoute(app: Hono, config: RouteConfig): void {
   app.post("/api/request", async (c: HonoContext) => {
-    const body = await c.req.json<{
-      source?: string;
-      group?: string;
-      method?: string;
-      variables?: unknown;
-      options?: { rawData?: unknown };
-    }>();
-    const { group = "", method = "" } = body;
+    const call = await readProxyCall(c);
+    if ("error" in call) return c.json({ error: call.error }, 400);
     // A `.raw` call is answered with the response around the data, as a Courier proxy does
-    const raw = body.options?.rawData === true;
-
-    return handleMockRequest(c, group, method, body.variables, config, { raw });
+    return handleMockRequest(c, call.group, call.method, call.variables, config, {
+      raw: call.raw,
+    });
   });
 }
 
@@ -95,12 +91,13 @@ export function registerRestRoutes(app: Hono, config: RouteConfig): void {
   app.all("/api/:group/:method", async (c: HonoContext) => {
     const group = c.req.param("group") ?? "";
     const method = c.req.param("method") ?? "";
-    const variables =
-      c.req.method === "GET"
-        ? Object.fromEntries(new URL(c.req.url).searchParams)
-        : await c.req.json().catch(() => undefined);
-
-    return handleMockRequest(c, group, method, variables, config);
+    if (c.req.method === "GET") {
+      const query = Object.fromEntries(new URL(c.req.url).searchParams);
+      return handleMockRequest(c, group, method, query, config);
+    }
+    const body = await readJsonBody(c);
+    if ("error" in body) return c.json({ error: body.error }, 400);
+    return handleMockRequest(c, group, method, body.value, config);
   });
 }
 

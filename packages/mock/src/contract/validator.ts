@@ -29,15 +29,32 @@ export interface ContractIssue {
 
 /** Options for contract validation */
 export interface ValidateOptions {
-  /** Which direction to validate (default: "response") */
+  /**
+   * Which direction to validate (default: "response"): the mock data against
+   * each endpoint's response schema, the `variables` against its variables
+   * schema, or both.
+   */
   direction?: "response" | "variables" | "both";
+  /**
+   * Request variables to check against each endpoint's variables schema,
+   * keyed `group/method` as the mock data is — the variables a recorded
+   * fixture or a mock's request history holds, for instance. An endpoint
+   * with no entry here has its variables reported as skipped.
+   */
+  variables?: Map<string, unknown>;
 }
 
 /**
- * Validate mock data against endpoint Standard Schema definitions.
+ * Validate one value against one of an endpoint's Standard Schemas.
  *
- * Walks all groups/endpoints in a source, extracts attached schemas,
- * and validates the mock handler output against them.
+ * @param schema - The endpoint's response or variables schema; without one the check is skipped
+ * @param data - The value to check
+ * @param target - Which of the endpoint's schemas `schema` is
+ * @returns The outcome, with an issue for each way `data` breaks the schema
+ * @example
+ * ```ts
+ * const result = await validateEndpoint(getEndpointSchema(users.getById)?.response, user, "response");
+ * ```
  */
 export async function validateEndpoint(
   schema: StandardSchemaV1 | undefined,
@@ -73,22 +90,28 @@ export function getEndpointSchema(endpoint: unknown): SchemaMetadata | undefined
 }
 
 /**
- * Validate mock data for every endpoint of a source against its schemas.
+ * Validate every endpoint of a source against its schemas: the mock data
+ * against each response schema and, when asked, the given variables against
+ * each variables schema.
  *
  * Walks the groups of a `defineApi` result and its top-level endpoints. Mock
- * data is keyed `"group/method"` for a grouped endpoint and by its name
- * alone for a top-level one. Every endpoint is reported once per direction:
- * one without a schema or without mock data is reported as skipped rather
- * than left out, so a report never reads as though it covered more than it did.
+ * data and variables are keyed `"group/method"` for a grouped endpoint and
+ * by its name alone for a top-level one. Every endpoint is reported once per
+ * direction: one without a schema or without an entry is reported as skipped
+ * rather than left out, so a report never reads as though it covered more
+ * than it did.
  *
  * @param source   The API definition — grouped, flat or mixed
  * @param mockData The data each endpoint's mock answers, by key
- * @param options  Which direction to validate (default: `"response"`)
+ * @param options  The direction to check (default: `"response"`), and the variables to check
  * @returns One result per endpoint and direction, groups first
  * @example
  * ```ts
- * const results = await validateSource(api, new Map([["users/getAll", mockUsers]]));
- * createContractReport(results).failed; // 0 when every mock matches its schema
+ * const results = await validateSource(api, new Map([["users/getById", user]]), {
+ *   direction: "both",
+ *   variables: new Map([["users/getById", { id: 1 }]]),
+ * });
+ * createContractReport(results).failed; // 0 when every entry matches its schema
  * ```
  */
 export async function validateSource(
@@ -97,14 +120,19 @@ export async function validateSource(
   options?: ValidateOptions,
 ): Promise<ContractResult[]> {
   const direction = options?.direction ?? "response";
+  const variables = options?.variables ?? new Map<string, unknown>();
   const results: ContractResult[] = [];
   for (const { group, method, schema } of endpointsOf(source)) {
-    const data = mockData.get(group ? `${group}/${method}` : method);
-    if (direction === "response" || direction === "both") {
-      results.push(await checkResponse(group, method, schema, data));
+    const key = group ? `${group}/${method}` : method;
+    const at = { group, method };
+    if (direction !== "variables") {
+      results.push({ ...(await checkTarget(schema.response, mockData, key, "response")), ...at });
     }
-    if (direction === "variables" || direction === "both") {
-      results.push({ group, method, status: "skip", target: "variables" });
+    if (direction !== "response") {
+      results.push({
+        ...(await checkTarget(schema.variables, variables, key, "variables")),
+        ...at,
+      });
     }
   }
   return results;
@@ -138,17 +166,15 @@ function* endpointsIn(group: string, members: object): Generator<SourceEndpoint>
   }
 }
 
-async function checkResponse(
-  group: string,
-  method: string,
-  schema: SchemaMetadata,
-  data: unknown,
+/** Check one direction of one endpoint, or skip it when there is no schema or no data */
+async function checkTarget(
+  schema: StandardSchemaV1 | undefined,
+  data: Map<string, unknown>,
+  key: string,
+  target: "response" | "variables",
 ): Promise<ContractResult> {
-  if (!schema.response || data === undefined) {
-    return { group, method, status: "skip", target: "response" };
-  }
-  const result = await validateEndpoint(schema.response, data, "response");
-  return { ...result, group, method };
+  if (!schema || !data.has(key)) return { group: "", method: "", status: "skip", target };
+  return validateEndpoint(schema, data.get(key), target);
 }
 
 function formatPath(

@@ -65,3 +65,32 @@ describe("API errors", () => {
     expect(JSON.parse(reply.text)).toEqual({ error: "The request body is larger than Studio accepts." });
   });
 });
+
+describe("an API route Studio does not have", () => {
+  it.each([
+    ["GET", "/api/nonexistent"],
+    ["GET", "/api/apis/write"],
+    ["POST", "/api/nonexistent"],
+    ["PUT", "/api/apis/write"],
+  ])("is answered to %s %s with a JSON 404, not a page", async (method, path) => {
+    const url = await start();
+
+    const response = await fetch(`${url}${path}`, {
+      method,
+      headers: { "content-type": "application/json", origin: url },
+      ...(method !== "GET" && { body: "{}" }),
+    });
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toContain("application/json");
+    expect(await response.json()).toEqual({ error: `Studio has no API route ${method} ${path}` });
+  });
+
+  it("does not name the framework Studio runs on", async () => {
+    const url = await start();
+
+    const response = await fetch(`${url}/api/health`, { headers: { origin: url } });
+
+    expect(response.headers.get("x-powered-by")).toBeNull();
+  });
+});

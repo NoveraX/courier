@@ -48,6 +48,8 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   setProjectRoot(projectRoot);
 
   const app = express();
+  /* Nothing a caller needs, and it names what to probe for. */
+  app.disable("x-powered-by");
   const httpServer = createServer(app);
   const policy = createStudioOriginPolicy({
     bindHost: host,

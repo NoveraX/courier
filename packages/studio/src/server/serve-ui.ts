@@ -39,7 +39,13 @@ export function serveStudioUi(
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     return serveAssets(req, res, next);
   };
+  /* An asset a stale page asks for is gone: the app in its place fails as a script of the wrong type. */
+  const assetMissing: RequestHandler = (_req, res) => {
+    res.removeHeader("Cache-Control");
+    res.status(404).type("text/plain").send("This asset is not in the Studio build.");
+  };
   app.use("/assets", setCacheHeaders);
+  app.use("/assets", assetMissing);
   app.use(express.static(uiDistPath));
   // SPA fallback — Express 5 requires named param for catch-all
   app.get("/{*splat}", (_req, res) => {

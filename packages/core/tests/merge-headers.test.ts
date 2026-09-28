@@ -19,6 +19,15 @@ describe("filterHeaders", () => {
     expect(result.has("x-custom")).toBe(false);
   });
 
+  /** Header names are case-insensitive, and the docs spell them `X-Custom`. */
+  it("matches a name the allowlist spells in capitals", () => {
+    const incoming = new Headers({ "x-custom": "value" });
+
+    const result = filterHeaders(incoming, ["X-Custom"]);
+
+    expect(result.get("x-custom")).toBe("value");
+  });
+
   it("passes all whitelisted headers", () => {
     const incoming = new Headers({
       authorization: "Bearer token",

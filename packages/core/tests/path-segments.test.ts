@@ -75,3 +75,37 @@ describe("a value that only contains dots", () => {
     expect(upstream.received.map((r) => r.url)).toEqual(["/echo/p/..%2Fadmin/tail"]);
   });
 });
+
+describe("a path parameter with no value", () => {
+  it("is refused with an error that names it and where it comes from", async () => {
+    const error = await createCaller(api())
+      .tail({} as { id: string })
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(HTTPError);
+    expect((error as HTTPError).status).toBe(400);
+    expect((error as HTTPError).message).toBe(
+      'Missing required path parameter "id": pass it in the variables, or return it from pathOptions',
+    );
+    expect((error as HTTPError).data).toMatchObject({ message: (error as HTTPError).message });
+    expect(upstream.received).toEqual([]);
+  });
+
+  it("is refused through the proxy with the same words", async () => {
+    registerSources({ paths: api() });
+    const request = new Request("http://app.local/api/request", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ source: "paths", method: "tail", variables: {} }),
+    });
+
+    const response = await createHandler().handlePost(request);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      message:
+        'Missing required path parameter "id": pass it in the variables, or return it from pathOptions',
+    });
+    expect(upstream.received).toEqual([]);
+  });
+});

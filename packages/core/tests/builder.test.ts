@@ -106,6 +106,20 @@ describe("courier", () => {
         /\.response\(\) was called twice/,
       );
     });
+
+    it("names the endpoint and the remedy when a slot is filled twice", () => {
+      const refusal = () => base.endpoint.del("files/:id").response(UserSchema).response(UserSchema);
+
+      expect(refusal).toThrow(
+        '[courier] .response() was called twice on DELETE "files/:id". Each slot takes one schema or type, and the second would replace the first: remove one of the two calls.',
+      );
+    });
+
+    it("says the same endpoint when the slot is filled twice before a verb", () => {
+      expect(() => base.endpoint.variables(ById).variables(ById)).toThrow(
+        /\.variables\(\) was called twice on the same endpoint\. .*remove one of the two calls/,
+      );
+    });
   });
 
   describe("reuse", () => {

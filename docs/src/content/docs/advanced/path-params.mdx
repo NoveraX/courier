@@ -182,7 +182,9 @@ Courier caches compiled path functions for performance. Each unique path string 
 ```
 
 <Callout variant="warning" title="Missing and unsafe path params">
-A path parameter that neither `pathOptions` nor the variables provide, or that is `undefined` or `null`, fails the call with an `HTTPError` 400 "Missing required parameter" before any request is made. So does a value of `""`, `"."` or `".."`: each would address a different route than the endpoint declares — `..` one level up, even when encoded — so it is refused rather than sent. Any other value, including the word `"undefined"`, is encoded into its segment as it is.
+A path parameter that neither `pathOptions` nor the variables provide, or that is `undefined` or `null`, fails the call with an `HTTPError` 400 before any request is made. Its `message`, and `data.message` through the proxy too, name the parameter and where its value comes from: `Missing required path parameter "id": pass it in the variables, or return it from pathOptions`. So does a value of `""`, `"."` or `".."`: each would address a different route than the endpoint declares — `..` one level up, even when encoded — so it is refused rather than sent. Any other value, including the word `"undefined"`, is encoded into its segment as it is.
+
+The check happens when the call is made, not when the endpoint is defined: the variables type may leave a parameter out on purpose, because `pathOptions` on the source or the group can fill it. A stream opened directly refuses a missing parameter the same way, with a `RealtimeValidationError`.
 </Callout>
 
 ## Next Steps

@@ -61,7 +61,9 @@ function fillParams(path: string, variables: Record<string, unknown> | undefined
   const filled = path.replace(PARAM, (_match, name: string) => {
     const value = rest[name];
     if (value === undefined || value === null) {
-      throw new RealtimeValidationError(`Missing required parameter: ${name}`);
+      throw new RealtimeValidationError(
+        `Missing required path parameter "${name}": pass it in the variables`,
+      );
     }
     delete rest[name];
     return encodeURIComponent(String(value));

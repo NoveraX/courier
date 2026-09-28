@@ -32,7 +32,9 @@ const cachedCompile = (path: string): CompileFn => {
  */
 function encodePathParam(name: string, value: unknown): string {
   if (value === undefined || value === null) {
-    throw new Error(`Missing required parameter: ${name}`);
+    throw new Error(
+      `Missing required path parameter "${name}": pass it in the variables, or return it from pathOptions`,
+    );
   }
   const segment = String(value);
   if (segment === "" || segment === "." || segment === "..") {
@@ -144,12 +146,13 @@ export const compileUrl = (
 
     return [url, newVariables, objectSearchParameters];
   } catch (error) {
+    /* No request was made, so "HTTP 400" would say nothing: the error says
+       what is wrong with the path itself. */
     if (error instanceof Error) {
-      throw new HTTPError({
-        status: 400,
-        headers: new Headers(),
-        data: { success: false, message: error.message },
-      });
+      throw new HTTPError(
+        { status: 400, headers: new Headers(), data: { success: false, message: error.message } },
+        { message: error.message },
+      );
     }
 
     throw error;

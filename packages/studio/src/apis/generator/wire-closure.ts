@@ -70,8 +70,12 @@ function placingClosure(
   const query = params.filter((param) => param.in === "query");
 
   if (kind === "form") return formClosure(method, at, params, read);
-  if (kind === "value" || kind === "bytes") return wholeBodyClosure(ep, method, at, kind, read);
-  if (sendsUrlEncoded(ep, kind)) return urlEncodedClosure(ep, method, at, read);
+  if (sendsUrlEncoded(ep, kind)) {
+    return urlEncodedClosure(ep, method, at, read, kind === "nested" ? bodyKey(ep) : null);
+  }
+  if (kind === "value" || kind === "nested" || kind === "bytes") {
+    return wholeBodyClosure(ep, method, at, kind, read);
+  }
   if (method === "del") {
     if (kind === "none") return null;
     /* A body named in the options is sent as it is, so the path parameters
@@ -96,7 +100,7 @@ function wholeBodyClosure(
   ep: ParsedEndpoint,
   method: string,
   at: string,
-  kind: "value" | "bytes",
+  kind: "value" | "nested" | "bytes",
   read: string | null,
 ): string | null {
   const option = kind === "bytes" ? "body" : "json";
@@ -116,7 +120,8 @@ function wholeBodyClosure(
 
 /**
  * Whether an endpoint sends its fields url-encoded, written by `formBody`:
- * a write whose body is a set of fields of that media type.
+ * a write whose body is a set of fields of that media type, beside the
+ * parameters or under a key of its own.
  *
  * @param ep - The endpoint
  * @param kind - The kind of body it sends
@@ -127,7 +132,11 @@ function wholeBodyClosure(
  * ```
  */
 export function sendsUrlEncoded(ep: ParsedEndpoint, kind: RequestBodyKind): boolean {
-  return kind === "fields" && WRITES.has(toInternalMethod(ep.httpMethod)) && isUrlEncoded(ep);
+  return (
+    (kind === "fields" || kind === "nested") &&
+    WRITES.has(toInternalMethod(ep.httpMethod)) &&
+    isUrlEncoded(ep)
+  );
 }
 
 function isUrlEncoded(ep: ParsedEndpoint): boolean {

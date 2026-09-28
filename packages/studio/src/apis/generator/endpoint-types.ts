@@ -51,7 +51,7 @@ export function resolveVariablesType(ep: ParsedEndpoint, context: EndpointContex
   const kind = requestBodyKind(ep, context.spec);
   /* A form's entries fill the path, so the form is the whole of it. */
   if (kind === "form") return "FormData";
-  if (kind === "value" || kind === "bytes") {
+  if (kind === "value" || kind === "nested" || kind === "bytes") {
     const body = kind === "bytes" ? "Blob" : bodyType(ep, context, style);
     if (parts.length === 0) return body;
     return `{ ${[...parts, `${objectKey(bodyKey(ep))}: ${body}`].join("; ")} }`;

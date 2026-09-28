@@ -8,11 +8,17 @@
  * export only once.
  */
 
-import type { ParsedGroup } from "../parser/types";
-import { paramsToExtract, responseToExtract } from "./extract-endpoint-types";
+import type { ParsedEndpoint, ParsedGroup, ParsedSchema } from "../parser/types";
+import { bodyToExtract, paramsToExtract, responseToExtract } from "./extract-endpoint-types";
 
 /** What an extracted type describes. */
-export type ExtractedKind = "Response" | "Params";
+export type ExtractedKind = "Response" | "Params" | "Body";
+
+const EXTRACTORS: Readonly<Record<ExtractedKind, (ep: ParsedEndpoint) => ParsedSchema | null>> = {
+  Response: responseToExtract,
+  Params: (ep) => paramsToExtract(ep),
+  Body: bodyToExtract,
+};
 
 /** The name each extracted type takes. */
 export interface ExtractedTypeNames {
@@ -80,8 +86,8 @@ function wantedTypes(
 ): { key: string; group: string; base: string }[] {
   return groups.flatMap((group) =>
     group.endpoints.flatMap((ep) =>
-      (["Response", "Params"] as const)
-        .filter((kind) => (kind === "Response" ? responseToExtract(ep) : paramsToExtract(ep)))
+      (["Response", "Params", "Body"] as const)
+        .filter((kind) => EXTRACTORS[kind](ep) !== null)
         .map((kind) => ({
           key: keyOf(group.name, ep.name, kind),
           group: group.name,

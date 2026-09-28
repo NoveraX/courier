@@ -11,7 +11,7 @@ import type {
 } from "../parser/types";
 import type { ExtractedTypeNames } from "./extracted-type-names";
 import { parameterProperty } from "./parameter-property";
-import { bodyMedia } from "./request-body";
+import { bodyKey, bodyMedia, sharesParameterName } from "./request-body";
 
 export interface ExtractedTypes {
   /** Modified group with response refs instead of inline schemas */
@@ -44,7 +44,10 @@ export function extractEndpointTypes(
 
   for (const ep of group.endpoints) {
     const response = responseToExtract(ep);
-    const variables = paramsToExtract(ep);
+    const body = bodyToExtract(ep);
+    const bodyName = body ? names.nameOf(group.name, ep.name, "Body") : undefined;
+    if (body && bodyName) schemas[bodyName] = body;
+    const variables = paramsToExtract(ep, bodyName);
     if (variables) {
       const name = names.nameOf(group.name, ep.name, "Params");
       schemas[name] = variables;
@@ -102,24 +105,46 @@ export function responseToExtract(ep: ParsedEndpoint): ParsedSchema | null {
  * paramsToExtract(findPets)?.properties; // { status, tags }
  * ```
  */
-export function paramsToExtract(ep: ParsedEndpoint): ParsedSchema | null {
+export function paramsToExtract(ep: ParsedEndpoint, bodyName?: string): ParsedSchema | null {
   /* A body that is not an object's fields written inline — a named schema,
      a list, a form, bytes — sits beside the parameters in its own way. */
   if (ep.requestBody && !inlineFields(ep)) return null;
   const params = ep.parameters.filter((p) => p.in === "path" || p.in === "query");
-  if (params.length < 2 && !params.some((p) => p.description)) return null;
+  const nested = bodyToExtract(ep);
+  if (params.length < 2 && !params.some((p) => p.description) && !nested) return null;
 
   const properties: Record<string, ParsedSchemaProperty> = {};
   for (const param of params) properties[param.name] = parameterProperty(param);
-
-  const body = ep.requestBody?.type === "object" ? ep.requestBody.properties : undefined;
-  for (const [name, prop] of Object.entries(body ?? {})) {
-    /* A parameter and a field cannot share one key of the variables. */
-    if (name && !Object.hasOwn(properties, name)) properties[name] = prop;
+  if (nested) {
+    properties[bodyKey(ep)] = bodyName
+      ? { type: "ref", refName: bodyName, required: true }
+      : { type: "object", required: true, shape: nested };
+  } else {
+    const fields = ep.requestBody?.properties ?? {};
+    for (const [name, prop] of Object.entries(fields)) if (name) properties[name] = prop;
   }
 
   const required = Object.keys(properties).filter((name) => properties[name]?.required);
   return { name: "", type: "object", properties, required };
+}
+
+/**
+ * An endpoint's body, when it is fields written inline of which one shares a
+ * parameter's name: passed under a key of its own, it is described by a type
+ * of its own, field by field.
+ *
+ * @param ep - The endpoint
+ * @returns The body's schema, or `null` when it stays as it is
+ * @example
+ * ```ts
+ * bodyToExtract(createOrgForUser); // { type: "object", properties: { username, full_name } }
+ * ```
+ */
+export function bodyToExtract(ep: ParsedEndpoint): ParsedSchema | null {
+  if (!ep.requestBody || !inlineFields(ep)) return null;
+  return sharesParameterName(ep, Object.keys(ep.requestBody.properties ?? {}))
+    ? ep.requestBody
+    : null;
 }
 
 /** Whether the body is JSON fields written inline in the specification. */

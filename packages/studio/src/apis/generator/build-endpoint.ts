@@ -101,13 +101,13 @@ function responseSchema(ep: ParsedEndpoint, context: EndpointContext): string | 
 
 /**
  * The schema validating what the endpoint is called with, when its body has
- * one: a named object's, extended with the parameters, or that of a list or
- * a scalar, beside them under its own key. A form, bytes and fields written
- * inline are typed without one.
+ * one: a named object's, extended with the parameters, or that of a list, a
+ * scalar or fields sharing a parameter's name, beside them under its own
+ * key. A form, bytes and fields written inline are typed without one.
  */
 function variablesSchema(ep: ParsedEndpoint, context: EndpointContext): string | null {
   const kind = requestBodyKind(ep, context.spec);
-  if (kind !== "fields" && kind !== "value") return null;
+  if (kind !== "fields" && kind !== "value" && kind !== "nested") return null;
   const body = bodySchema(ep, context);
   if (!body) return null;
 
@@ -118,7 +118,7 @@ function variablesSchema(ep: ParsedEndpoint, context: EndpointContext): string |
   );
   if (params.length === 0) return body;
   context.uses.validator = true;
-  if (kind === "value") return objectWithBody(body, params, bodyKey(ep), context.options);
+  if (kind !== "fields") return objectWithBody(body, params, bodyKey(ep), context.options);
   return extendSchemaWithParams(body, params, context.options, extendable(ep, context));
 }
 

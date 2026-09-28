@@ -13,6 +13,8 @@ import { destructure } from "./variable-bindings";
  * @param method - The verb, as the endpoint builder names it
  * @param at - The endpoint's path within its group, as a string literal
  * @param read - How the answer is read, as an options entry, when not as JSON
+ * @param key - The key the fields are passed under when one of them shares a
+ *   parameter's name, or `null` when they sit beside the parameters
  * @returns The closure's source
  * @example
  * ```ts
@@ -26,13 +28,16 @@ export function urlEncodedClosure(
   method: string,
   at: string,
   read: string | null,
+  key: string | null = null,
 ): string {
+  /* Under a key, the fields are apart from the path parameters already. */
   const { pattern, searchParams } = destructure(
     ep.parameters.filter((param) => param.in === "query"),
-    ep.parameters.filter((param) => param.in === "path"),
+    key === null ? ep.parameters.filter((param) => param.in === "path") : [],
   );
   const encoding = ep.requestBodyEncoding ? `, ${encodingLiteral(ep.requestBodyEncoding)}` : "";
-  const bindings = pattern ? `${pattern}, ...body` : "...body";
-  const options = callOptions(`body: formBody(body${encoding})`, searchParams, read);
+  const body = key ?? "...body";
+  const bindings = pattern ? `${pattern}, ${body}` : body;
+  const options = callOptions(`body: formBody(${key ?? "body"}${encoding})`, searchParams, read);
   return `(http, { ${bindings} }) => http.${method}(${at}, undefined, { ${options} })`;
 }

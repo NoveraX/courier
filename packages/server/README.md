@@ -100,7 +100,7 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `maxMessagesPerSecond` | `100` | Messages one WebSocket connection may send per second; one past the limit is refused with a `4429` error |
 | `authorize` | `undefined` | Decides whether a WebSocket subscription may start |
 | `authorizeMessage` | `undefined` | Decides whether a message sent on a channel is accepted |
-| `onTokenRefresh` | `undefined` | Accepts a refreshed token on an open WebSocket connection |
+| `onTokenRefresh` | `undefined` | Checks a refreshed token on an open WebSocket connection and returns its new metadata; without it every refreshed token is refused, so a connection asked for one with `sendAuthRequired` is closed at the deadline |
 | `signals` | `true` | Drain on SIGTERM/SIGINT, then exit — unless the application handles the signal too, in which case its handler decides when the process ends |
 
 Every other option of the core HTTP and WebSocket handlers is accepted and passed on as well: the SSE lifecycle hooks and limits, `onConnect`, `onDisconnect`, `onError`, the heartbeat timings and the slow-consumer limits.

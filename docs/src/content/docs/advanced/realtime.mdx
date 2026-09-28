@@ -89,7 +89,7 @@ export const client = createProxyCaller<typeof api>("api", {
 })
 ```
 
-- `getAuthToken` — a token sent as `?token=` on every connect and reconnect, and sent again, on the open socket, when the server asks for a fresh one with `sendAuthRequired`. Without it the server's request goes unanswered, and the server closes the connection at its deadline.
+- `getAuthToken` — a token sent as `?token=` on every connect and reconnect, and sent again, on the open socket, when the server asks for a fresh one with `sendAuthRequired`. Without it the server's request goes unanswered, and the server closes the connection at its deadline — as it does when the server has no `onTokenRefresh` to check the token.
 - `backoff` — the delay before each reconnect: `initialMs` (1 s), `maxMs` (30 s), `factor` (2), `jitter` (on).
 - `heartbeat` — the server's ping interval and pong timeout; a server silent for longer than the two together is taken for gone, and the client reconnects.
 - `messageQueue` — how much is kept to send while reconnecting: `maxCount` (100) and `maxBytes` (1 MB). A message beyond it is dropped with a warning, and its `send` answers `false`.

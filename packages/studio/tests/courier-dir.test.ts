@@ -10,14 +10,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { resetProjectRoot } from "../src/context";
 import { ensureCourierDir } from "../src/server/courier-dir";
 import { openStudioDb } from "../src/server/storage/studio-db";
 
 const roots: string[] = [];
 
 afterEach(() => {
-  resetProjectRoot();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 

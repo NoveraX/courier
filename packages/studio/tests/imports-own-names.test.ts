@@ -18,7 +18,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { IMPORTS_STATE_VERSION, loadImportsState } from "../src/apis/imports-state";
 import { parseSpec } from "../src/apis/parser/parse-spec";
-import { setProjectRoot } from "../src/context";
 import { buildSourceScan } from "../src/server/build-source-scan";
 import { loadCourierConfig } from "../src/server/config-loader";
 import { getImportEntry, getImportState, importsSnapshotOf } from "../src/server/imports-bridge";
@@ -37,7 +36,6 @@ beforeEach(() => {
     join(root, "courier.config.ts"),
     'export default { sources: { api: { baseURL: "https://api.example" } } };\n',
   );
-  setProjectRoot(root);
 });
 
 afterEach(() => {

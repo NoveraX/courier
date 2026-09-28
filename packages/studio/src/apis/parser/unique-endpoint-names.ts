@@ -12,10 +12,17 @@
  * A name that is already unique is left exactly as it was. Only a colliding
  * one is rebuilt from the path it serves, so the short names survive wherever
  * they were never ambiguous.
+ *
+ * `options` is never left as it is: a group and a source keep their own
+ * settings under that key, so the definition refuses an endpoint of that
+ * name, and an operation whose id is `options` is rebuilt the same way.
  */
 
 import { toCamelCase } from "./naming-utils";
 import type { ParsedEndpoint } from "./types";
+
+/** Keys a group or a source holds beside its endpoints. */
+const RESERVED = new Set(["options"]);
 
 /**
  * Rename only those endpoints whose names collide within the group.
@@ -38,16 +45,17 @@ export function uniqueEndpointNames(endpoints: ParsedEndpoint[], prefix = ""): P
     occurrences.set(endpoint.name, (occurrences.get(endpoint.name) ?? 0) + 1);
   }
 
-  const taken = new Set<string>();
-  for (const [name, count] of occurrences) {
-    if (count === 1) taken.add(name);
+  const taken = new Set<string>(RESERVED);
+  const keeps = (name: string): boolean => occurrences.get(name) === 1 && !RESERVED.has(name);
+  for (const name of occurrences.keys()) {
+    if (keeps(name)) taken.add(name);
   }
 
   return endpoints.map((endpoint) => {
-    if ((occurrences.get(endpoint.name) ?? 0) === 1) return endpoint;
+    if (keeps(endpoint.name)) return endpoint;
 
     const candidate = nameFromPath(endpoint, prefix);
-    const name = settle(candidate, taken);
+    const name = settle(RESERVED.has(candidate) ? `${candidate}Request` : candidate, taken);
     taken.add(name);
     return { ...endpoint, name };
   });

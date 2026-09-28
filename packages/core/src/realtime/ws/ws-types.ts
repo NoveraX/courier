@@ -107,8 +107,11 @@ export interface WSConnection {
   /**
    * Send a message to a topic. Held until the server confirms the topic's
    * subscription, when there is one, and queued while reconnecting.
+   *
+   * @returns Whether it went out or waits to; `false`, with a warning, when
+   *   it was dropped
    */
-  send(topic: string, payload: unknown): void;
+  send(topic: string, payload: unknown): boolean;
   /** Request-response over WS with correlation ID and timeout. */
   request<TResult = unknown>(topic: string, payload: unknown): Promise<TResult>;
   /** Send a new auth token to the server without reconnecting. */

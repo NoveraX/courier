@@ -83,6 +83,8 @@ export function startRelay(
       ended = true;
       upstream.close();
     },
-    onMessage: async (payload) => upstream.send(payload),
+    onMessage: async (payload) => {
+      upstream.send(payload);
+    },
   });
 }

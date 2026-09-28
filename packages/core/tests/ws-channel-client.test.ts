@@ -3,7 +3,7 @@
  * sends before the server has set the subscription up, and a subscription
  * the server keeps under another topic than the client asked for.
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { courier } from "../src/define/courier";
@@ -15,6 +15,7 @@ const { channel } = courier();
 let served: ServedWS | undefined;
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await stopWS(served);
   served = undefined;
 });
@@ -151,3 +152,21 @@ describe("a channel whose variables schema fills in a default", () => {
     expect(listener.data).toEqual(["to the room"]);
   });
 });
+
+describe("what a channel's send answers", () => {
+  it("is true for a message that waits for the subscribe or goes out, false once closed", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    served = await serveWS({ room: slowRoom(40) });
+    const { ch, data } = open(served.url, "api.live.room", { room: "answers" });
+
+    expect(ch.send({ text: "early" })).toBe(true);
+    await settle(200);
+    expect(ch.send({ text: "open" })).toBe(true);
+    await settle(100);
+    ch.close();
+
+    expect(ch.send({ text: "late" })).toBe(false);
+    expect(data).toEqual(["welcome to answers", "echo early", "echo open"]);
+  });
+});
+

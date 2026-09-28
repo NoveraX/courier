@@ -184,8 +184,16 @@ export type WSPushHandler<TResponse, TVariables = undefined> = (
 
 /** Client-side WS channel — bidirectional typed communication */
 export interface WSChannel<TSend = unknown, TReceive = unknown> {
-  /** Send a typed message to the server */
-  send(data: TSend): void;
+  /**
+   * Send a typed message to the server.
+   *
+   * @returns Whether it went out, or waits for the channel to open or the
+   *   connection to come back; `false`, with a warning, when it was dropped:
+   *   the channel has ended, the connection is closed, no room is left to
+   *   hold it, the socket's buffer is full, or it is larger than the server
+   *   accepts — which the channel's `error` event also reports, as `4413`
+   */
+  send(data: TSend): boolean;
   /** Subscribe to incoming messages or status changes */
   on(event: "data", handler: (data: TReceive) => void): () => void;
   on(event: "status", handler: (status: ConnectionStatus) => void): () => void;

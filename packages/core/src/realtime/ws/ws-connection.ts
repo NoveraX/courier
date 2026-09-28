@@ -56,13 +56,17 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
     onSilenceTimeout: () => dropSocket(lifecycleCtx, 4100, "Server silence"),
   });
 
-  const sendRaw = (data: string): void => {
-    if (refs.ws?.readyState !== 1) return;
+  const sendRaw = (data: string): boolean => {
+    if (refs.ws?.readyState !== 1) {
+      log.warn("Socket not open — dropped");
+      return false;
+    }
     if (refs.ws.bufferedAmount > maxBuffered) {
       log.warn("Backpressure — dropped");
-      return;
+      return false;
     }
     refs.ws.send(data);
+    return true;
   };
 
   const opsCtx: TopicOpsContext = {

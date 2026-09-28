@@ -3,6 +3,11 @@ import type { ConnectionStatus, SSESubscription, WSChannel } from "../../realtim
 import { beginStream, type StreamMeta } from "./core";
 import { instrumentSSE } from "./sse";
 
+/** A channel the wrapper can observe: a `WSChannel`, or one whose `send` settles. */
+type InstrumentedChannel = Omit<WSChannel<never, unknown>, "send"> & {
+  send(data: never): unknown;
+};
+
 /**
  * Wrap a WSChannel with browser-side studio instrumentation.
  *
@@ -26,7 +31,7 @@ import { instrumentSSE } from "./sse";
  * Reconnect cycles (`connecting`/`reconnecting`) do NOT trigger close —
  * the lifecycle spans the entire WSChannel lifetime, not individual sockets.
  */
-export function instrumentWSChannel<TChannel extends WSChannel<never, unknown>>(
+export function instrumentWSChannel<TChannel extends InstrumentedChannel>(
   channel: TChannel,
   meta: StreamMeta,
   externalRequestId?: string,

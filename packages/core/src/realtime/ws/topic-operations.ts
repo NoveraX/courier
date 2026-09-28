@@ -1,7 +1,6 @@
 import type { ScopedLogger } from "../../logger";
 import type { ConnectionState } from "../connection-state";
 import { fromErrorCode, type RealtimeError } from "../errors";
-import type { HeldMessage } from "./held-messages";
 import type { createMessageQueue } from "./message-queue";
 import { unqualifyTopic } from "./topic-key";
 import type { TopicRegistry } from "./topic-registry-types";
@@ -26,7 +25,8 @@ export interface TopicOpsContext {
   requestTimeout: number;
   /** Largest encoded message the server accepts */
   maxMessageSize: number;
-  sendRaw(data: string): void;
+  /** Hand a frame to the open socket; `false`, with a warning, when it could not */
+  sendRaw(data: string): boolean;
 }
 
 /**
@@ -78,24 +78,29 @@ export function requestSubscription(
  * topic's subscription the message is held: sent at once, it reached a
  * server still validating and authorizing the subscribe, and was refused as
  * "Not subscribed". Otherwise it is queued while (re)connecting.
+ *
+ * @returns Whether the message went out or waits to; a message dropped —
+ *   too large, no room left to hold it, the socket's buffer full, or the
+ *   connection closed — is warned of, and one too large also fails the topic
  */
-export function sendToTopic(ctx: TopicOpsContext, topic: string, payload: unknown): void {
+export function sendToTopic(ctx: TopicOpsContext, topic: string, payload: unknown): boolean {
   const serverTopic = ctx.topics.serverTopic(topic) ?? topic;
   const msg = encodeMessage({ type: "message", topic: serverTopic, payload });
   const refusal = oversized(ctx, msg);
   if (refusal) {
     ctx.log.warn(`Message not sent on ${topic}: ${refusal.message}`);
     ctx.topics.fail(topic, refusal);
-    return;
+    return false;
   }
-  if (holdUntilConfirmed(ctx, topic, { payload })) return;
-  if (ctx.state.current === "connected") {
-    ctx.sendRaw(msg);
-    return;
-  }
+  const outcome = ctx.topics.hold(topic, { payload });
+  if (outcome === "held") return true;
+  if (outcome === "dropped") return kept(ctx, false, `Message queue full for ${topic} — dropped`);
+  if (ctx.state.current === "connected") return ctx.sendRaw(msg);
   if (ctx.state.current === "reconnecting" || ctx.state.current === "connecting") {
-    if (!ctx.queue.enqueue(msg)) ctx.log.warn("Message queue full — dropped");
+    return kept(ctx, ctx.queue.enqueue(msg), "Message queue full — dropped");
   }
+  /* The connection gave up or was closed: nothing will ever send it. */
+  return kept(ctx, false, `Message not sent on ${topic}: the connection is closed`);
 }
 
 /**
@@ -111,11 +116,10 @@ function oversized(ctx: TopicOpsContext, frame: string): RealtimeError | undefin
   );
 }
 
-/** Whether the message was held, or dropped for want of room, instead of going out. */
-function holdUntilConfirmed(ctx: TopicOpsContext, topic: string, message: HeldMessage): boolean {
-  const outcome = ctx.topics.hold(topic, message);
-  if (outcome === "dropped") ctx.log.warn(`Message queue full for ${topic} — dropped`);
-  return outcome !== "open";
+/* Whether a message was kept to go out; one that was not is warned of. */
+function kept(ctx: TopicOpsContext, isKept: boolean, warning: string): boolean {
+  if (!isKept) ctx.log.warn(warning);
+  return isKept;
 }
 
 /**

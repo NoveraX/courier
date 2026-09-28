@@ -47,7 +47,14 @@ export function composeMiddleware(
       });
 
       const t0 = dt.onMiddlewareExit ? performance.now() : 0;
-      const chainNext = (): Promise<MiddlewareResponse> => dispatch(i + 1);
+      /* A failure from further down the chain that this middleware only
+         passes back is not its own: it exits, and the one that threw reports it. */
+      let passedBack: { error: unknown } | undefined;
+      const chainNext = (): Promise<MiddlewareResponse> =>
+        dispatch(i + 1).catch((error: unknown) => {
+          passedBack = { error };
+          throw error;
+        });
 
       const promise =
         mw.phase === "before"
@@ -62,6 +69,10 @@ export function composeMiddleware(
           return response;
         },
         (error) => {
+          if (passedBack?.error === error) {
+            emitExit(rid, mw, i, t0, innerTime, [], 0, 0);
+            throw error;
+          }
           propagateInner(i, t0, innerTime);
           dt.onMiddlewareError?.({
             requestId: rid,

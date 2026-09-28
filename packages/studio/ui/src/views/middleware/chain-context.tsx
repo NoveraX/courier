@@ -36,7 +36,7 @@ export function ChainContext({
           </span>
         </div>
         <div className="mt-2 flex items-center gap-3">
-          <StatusBadge status={request.statusCode} />
+          <StatusBadge request={request} />
           {timing && (
             <span className="mono-xs tabular-nums text-muted-foreground">
               {formatDuration(timing.total)}

@@ -66,6 +66,7 @@ export function buildChain(request: RequestEntry): ChainEntry {
     steps,
     totalOverhead,
     overheadPercent,
+    reachedFetch: request.url !== undefined || (request.timing?.fetch ?? 0) > 0,
   };
 }
 

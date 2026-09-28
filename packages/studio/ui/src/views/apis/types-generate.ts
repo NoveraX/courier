@@ -5,6 +5,8 @@
  * registry, and re-exported via `types.ts`.
  */
 
+import type { ProxyPath } from "@noverax/courier";
+
 import type { PlanConsent } from "./types-file-plan";
 import type { ParsedSpec } from "./types-parsed-spec";
 
@@ -55,6 +57,10 @@ export interface EndpointAnalysis {
   transport?: "sse" | "ws";
   /** The source's middleware, in the order it runs. */
   middleware?: string[];
+  /** The variables its schema describes, with a placeholder for each field. */
+  variablesStub?: Record<string, unknown>;
+  /** A channel whose messages from the client have a schema. */
+  hasReceiveSchema?: true;
 }
 
 export interface ScannedEndpoint {
@@ -77,6 +83,8 @@ export interface ScannedSource {
   inlineEndpoints?: ScannedEndpoint[];
   isImported: boolean;
   hasClient: boolean;
+  /** Where the source's proxy routes are served, as `defineApi({ proxyPath })` sets them. */
+  proxyPath?: ProxyPath;
 }
 
 export interface ScanResult {

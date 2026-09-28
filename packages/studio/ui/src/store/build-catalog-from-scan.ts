@@ -27,7 +27,11 @@ export function buildCatalogFromScan(sources: readonly ScannedSource[]): Catalog
     if (source.inlineEndpoints?.length) {
       groups[FLAT_GROUP] = { prefix: "", endpoints: endpointsOf(source.inlineEndpoints) }
     }
-    catalog[source.name] = { baseURL: source.baseURL, groups }
+    catalog[source.name] = {
+      baseURL: source.baseURL,
+      ...(source.proxyPath && { proxyPath: source.proxyPath }),
+      groups,
+    }
   }
   return catalog
 }
@@ -44,6 +48,8 @@ function endpointsOf(endpoints: readonly ScannedEndpoint[]): Record<string, Cata
       origin: "scan",
       ...(analysis.transport && { transport: analysis.transport }),
       ...(analysis.middleware?.length && { middleware: analysis.middleware }),
+      ...(analysis.variablesStub && { variablesStub: analysis.variablesStub }),
+      ...(analysis.hasReceiveSchema && { hasReceiveSchema: true }),
     }
   }
   return byName

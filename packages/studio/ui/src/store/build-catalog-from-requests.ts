@@ -15,7 +15,7 @@ import { ownValue } from "@/lib/own-value";
  * const observed = buildCatalogFromRequests(useStudioStore.getState().requests);
  * ```
  */
-export function buildCatalogFromRequests(requests: RequestEntry[]): Catalog {
+export function buildCatalogFromRequests(requests: readonly RequestEntry[]): Catalog {
   const catalog: Catalog = {};
 
   for (const req of requests) {
@@ -23,10 +23,9 @@ export function buildCatalogFromRequests(requests: RequestEntry[]): Catalog {
     const grpName = req.group ?? "";
     const source = ownValue(catalog, req.source) ?? { baseURL: extractBaseURL(req.url), groups: {} };
     catalog[req.source] = source;
-    const group = ownValue(source.groups, grpName) ?? {
-      prefix: grpName ? `/${grpName}` : "",
-      endpoints: {},
-    };
+    /* Where an endpoint seen only in traffic is served is unknown, so its
+       group has no prefix and the endpoint no path. */
+    const group = ownValue(source.groups, grpName) ?? { prefix: "", endpoints: {} };
     source.groups[grpName] = group;
 
     const known = ownValue(group.endpoints, req.method);
@@ -37,14 +36,25 @@ export function buildCatalogFromRequests(requests: RequestEntry[]): Catalog {
 }
 
 function endpointOf(req: RequestEntry): CatalogEndpoint {
+  const httpMethod = req.httpMethod?.toUpperCase();
+  const transport = req.transport === "sse" || req.transport === "ws" ? req.transport : undefined;
   return {
-    type: req.type ?? "query",
+    type: req.type ?? (transport ? undefined : kindOf(httpMethod)),
     hasVariablesSchema: req.hasValidation?.variables ?? false,
     hasResponseSchema: req.hasValidation?.response ?? false,
     origin: "runtime",
-    ...(req.transport && req.transport !== "http" && { transport: req.transport }),
+    ...(httpMethod && { httpMethod }),
+    ...(transport && { transport }),
     ...(req.middlewareEntries.length > 0 && { middleware: middlewareNames(req) }),
   };
+}
+
+const READING_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/** An HTTP call reads when its verb reads, as `courier()` decides it. */
+function kindOf(httpMethod: string | undefined): CatalogEndpoint["type"] {
+  if (!httpMethod) return undefined;
+  return READING_METHODS.has(httpMethod) ? "query" : "mutation";
 }
 
 /**

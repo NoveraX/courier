@@ -7,9 +7,7 @@ import type {
   ExplorerEdgeData,
 } from "./types";
 import { buildExplorerData } from "./build-explorer-data";
-import { buildCatalogFromRequests } from "@/store/build-catalog-from-requests";
-import { buildCatalogFromScan } from "@/store/build-catalog-from-scan";
-import { mergeCatalogs } from "@/store/merge-catalogs";
+import { useCatalog } from "@/hooks/use-catalog";
 
 // ── Result type ─────────────────────────────────────────────────────────────
 
@@ -43,10 +41,7 @@ export interface ExplorerEdge {
  */
 export function useExplorerData(): ExplorerData {
   const requests = useStudioStore((s) => s.requests);
-  const declared = useStudioStore((s) => s.scanSources);
+  const catalog = useCatalog();
 
-  return useMemo(() => {
-    const sourceMap = mergeCatalogs(buildCatalogFromScan(declared), buildCatalogFromRequests(requests));
-    return buildExplorerData(sourceMap, requests);
-  }, [declared, requests]);
+  return useMemo(() => buildExplorerData(catalog, requests), [catalog, requests]);
 }

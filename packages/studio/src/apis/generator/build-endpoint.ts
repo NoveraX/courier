@@ -4,6 +4,7 @@
 
 import { toInternalMethod } from "@noverax/courier";
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
+import { convertPathParams } from "../parser/utils";
 import { buildEndpointChain } from "./build-endpoint-helpers";
 import { resolveResponseType, resolveVariablesType } from "./endpoint-types";
 import { extendSchemaWithParams, getSchemaRefName } from "./schema-utils";
@@ -29,9 +30,15 @@ export function buildEndpointDefinition(
   return buildEndpointChain(address(ep), schemaConfig, varsType, responseType);
 }
 
-/** Where the endpoint is, named by the verb that reaches it. */
+/**
+ * Where the endpoint is, named by the verb that reaches it.
+ *
+ * An endpoint on a host of its own is addressed by its full URL, which the
+ * client sends there whatever the group's prefix and the source's base.
+ */
 function address(ep: ParsedEndpoint): string {
   const method = toInternalMethod(ep.httpMethod);
+  if (ep.origin) return `endpoint.${method}("${ep.origin}${convertPathParams(ep.fullPath)}")`;
   const path = ep.path === "/" ? "" : ep.path.replace(/^\//, "");
   return `endpoint.${method}("${path}")`;
 }

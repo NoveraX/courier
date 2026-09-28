@@ -61,6 +61,12 @@ export interface ParsedEndpoint {
   path: string;
   /** Full original path, e.g. "/users/{id}" */
   fullPath: string;
+  /**
+   * Scheme and host the endpoint is sent to when they are not the spec's
+   * `baseURL`, e.g. "https://auth.example.com" for a collection's login
+   * request. `fullPath` is then a path on that host.
+   */
+  origin?: string;
   /** OpenAPI summary / description */
   description: string;
   /** Is this secured (has security scheme) */

@@ -60,3 +60,23 @@ describe("a Postman parameter named with a hyphen", () => {
     });
   });
 });
+
+describe("a request whose URL is a plain string", () => {
+  const spec = () =>
+    collection([{ name: "Delete user", request: { method: "DELETE", url: "{{baseUrl}}/users/:id" } }], {
+      variable: [{ key: "baseUrl", value: server.url }],
+    });
+
+  it("reads a leading {{variable}} as the host, not as a path parameter", () => {
+    const endpoint = parseSpec(spec()).groups[0]?.endpoints[0];
+
+    expect(endpoint?.fullPath).toBe("/users/:id");
+    expect(endpoint?.parameters.map((parameter) => parameter.name)).toEqual(["id"]);
+  });
+
+  it("is called with its path parameters alone", async () => {
+    await call(spec(), "deleteUser")({ id: "u1" });
+
+    expect(server.requests.at(-1)).toMatchObject({ method: "DELETE", path: "/users/u1" });
+  });
+});

@@ -3,13 +3,8 @@
  */
 
 import { isSupportedMethod } from "./http-methods";
-import {
-  authScheme,
-  requestBody,
-  requestOrigin,
-  requestParameters,
-  requestPath,
-} from "./postman-request";
+import { collectionVariables, commonBase, requestBase } from "./postman-base";
+import { authScheme, requestBody, requestParameters, requestPath } from "./postman-request";
 import type {
   ParsedEndpoint,
   ParsedGroup,
@@ -31,7 +26,12 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
   const securitySchemes: ParsedSecurityScheme[] = [];
   const collectionAuth = authScheme(collection.auth);
   if (collectionAuth) securitySchemes.push(collectionAuth);
-  let origin: string | undefined;
+  const variables = collectionVariables(collection);
+  /* The base most requests share; the first request to name a host used to
+     decide it for all of them. */
+  const baseURL = commonBase(
+    requestsIn(collection.item).map((request) => requestBase(request.url, variables)),
+  );
 
   function processItems(items: SpecNode[], groupName: string) {
     const endpoints: ParsedEndpoint[] = [];
@@ -47,7 +47,7 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
 
       const method = (request.method ?? "GET").toLowerCase();
       const path = requestPath(request.url);
-      origin ??= requestOrigin(request.url);
+      const base = requestBase(request.url, variables);
 
       if (!isSupportedMethod(method)) {
         skipped.push({
@@ -75,6 +75,8 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
         parameters: requestParameters(request.url),
         responseSchema: null,
         tags: [groupName],
+        /* A request written with a host of its own is still sent there. */
+        ...(base !== undefined && base !== baseURL && { origin: base }),
       });
     }
 
@@ -102,13 +104,22 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
     description: "",
     /* Every request URL carries the host; hardcoding "/" pointed the client
        at the caller's own origin. */
-    baseURL: origin ?? "/",
+    baseURL: baseURL ?? "/",
     format: "postman",
     groups,
     schemas: {},
     securitySchemes,
     skipped,
   };
+}
+
+/** Every request in the collection, however deep its folders nest. */
+function requestsIn(items: unknown): SpecNode[] {
+  if (!Array.isArray(items)) return [];
+  return items.flatMap((item: SpecNode | null | undefined): SpecNode[] => {
+    if (item?.item) return requestsIn(item.item);
+    return item?.request ? [item.request] : [];
+  });
 }
 
 /** Take a group name, or the first numbered variant still free. */

@@ -105,6 +105,7 @@ export type ConfigurationErrorCode =
 export class ConfigurationError extends CourierError<ConfigurationErrorCode> {
   constructor(code: ConfigurationErrorCode, message: string) {
     super(message, { code });
+    this.name = "ConfigurationError";
   }
 }
 

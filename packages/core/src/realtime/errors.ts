@@ -19,6 +19,7 @@ import { CourierError } from "../errors";
 export class RealtimeError extends CourierError<number> {
   constructor(code: number, message: string) {
     super(message, { code });
+    this.name = "RealtimeError";
   }
 }
 

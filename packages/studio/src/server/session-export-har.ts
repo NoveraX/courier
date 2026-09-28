@@ -54,8 +54,8 @@ function headersToHar(headers?: Record<string, string>): HarHeader[] {
 }
 
 function requestToHarEntry(req: SavedRequest): HarEntry {
-  const fetchTime = req.timing?.["fetch"] ?? 0;
-  const totalTime = req.timing?.["total"] ?? fetchTime;
+  const fetchTime = req.timing?.fetch ?? 0;
+  const totalTime = req.timing?.total ?? fetchTime;
 
   return {
     startedDateTime: new Date(req.startedAt).toISOString(),
@@ -84,9 +84,9 @@ function requestToHarEntry(req: SavedRequest): HarEntry {
       bodySize: req.size ?? 0,
     },
     timings: {
-      send: req.timing?.["middleware"] ?? 0,
-      wait: req.timing?.["fetch"] ?? 0,
-      receive: req.timing?.["parsing"] ?? 0,
+      send: req.timing?.middleware ?? 0,
+      wait: req.timing?.fetch ?? 0,
+      receive: req.timing?.parsing ?? 0,
     },
   };
 }

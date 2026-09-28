@@ -27,6 +27,8 @@ Wraps `@tanstack/react-query` with full Courier type inference. Group names, met
 npm install @noverax/courier-react @noverax/courier @tanstack/react-query
 ```
 
+`@tanstack/react-query` 5.80 or later.
+
 <br />
 
 ## Setup

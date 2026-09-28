@@ -1,3 +1,4 @@
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createMockServer } from "../src/server/create-mock-server";
 import { createRecorder } from "../src/record/recorder";
@@ -11,6 +12,20 @@ type User = { id: string; name: string };
 
 const userFactory = defineFactory<User>({
   defaults: () => ({ id: String(Math.random()).slice(2, 8), name: "Alice" }),
+});
+
+const { endpoint } = courier();
+const api = defineApi({
+  baseURL: "http://placeholder.invalid",
+  groups: {
+    users: defineGroup({
+      prefix: "users",
+      endpoints: {
+        getAll: endpoint.get("").response<User[]>(),
+        getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
+      },
+    }),
+  },
 });
 
 describe("Record & Replay", () => {
@@ -32,12 +47,17 @@ describe("Record & Replay", () => {
     await server.stop();
   });
 
+  /** A recorder calling the mock server through its proxy route */
+  function recorderFor(extra: Omit<Parameters<typeof createRecorder>[0], "source"> = {}) {
+    return createRecorder({ source: api, proxy: { url: `${targetUrl}/api/request`, source: "api" }, ...extra });
+  }
+
   describe("createRecorder", () => {
     it("records real API responses as fixtures", async () => {
-      const recorder = createRecorder({ targetUrl });
+      const recorder = recorderFor();
 
-      await (recorder.client as any).users.getAll();
-      await (recorder.client as any).users.getById({ id: "42" });
+      await recorder.client.users.getAll();
+      await recorder.client.users.getById({ id: "42" });
 
       const fixtures = recorder.getFixtures();
       expect(fixtures).toHaveLength(2);
@@ -50,8 +70,8 @@ describe("Record & Replay", () => {
     });
 
     it("generates valid HAR format", async () => {
-      const recorder = createRecorder({ targetUrl });
-      await (recorder.client as any).users.getAll();
+      const recorder = recorderFor();
+      await recorder.client.users.getAll();
 
       const har = recorder.toHar();
       expect(har.log.version).toBe("1.2");
@@ -61,8 +81,7 @@ describe("Record & Replay", () => {
     });
 
     it("sanitizes fixture data", async () => {
-      const recorder = createRecorder({
-        targetUrl,
+      const recorder = recorderFor({
         sanitize: (data) => {
           if (Array.isArray(data)) {
             return data.map((item: any) => ({ ...item, name: "[REDACTED]" }));
@@ -71,29 +90,26 @@ describe("Record & Replay", () => {
         },
       });
 
-      await (recorder.client as any).users.getAll();
+      await recorder.client.users.getAll();
       const fixtures = recorder.getFixtures();
       const users = fixtures[0]?.response.data as User[];
       expect(users[0]?.name).toBe("[REDACTED]");
     });
 
     it("filters endpoints", async () => {
-      const recorder = createRecorder({
-        targetUrl,
-        filter: (group) => group === "users",
+      const recorder = recorderFor({
+        filter: (_group, method) => method === "getAll",
       });
 
-      await (recorder.client as any).users.getAll();
+      await recorder.client.users.getAll();
       expect(recorder.getFixtures()).toHaveLength(1);
 
-      await expect(
-        (recorder.client as any).posts.getAll(),
-      ).rejects.toThrow("excluded by filter");
+      await expect(recorder.client.users.getById({ id: "1" })).rejects.toThrow("excluded by filter");
     });
 
     it("clears recorded fixtures", async () => {
-      const recorder = createRecorder({ targetUrl });
-      await (recorder.client as any).users.getAll();
+      const recorder = recorderFor();
+      await recorder.client.users.getAll();
       expect(recorder.getFixtures()).toHaveLength(1);
 
       recorder.clear();
@@ -104,9 +120,9 @@ describe("Record & Replay", () => {
   describe("replayFixtures", () => {
     it("replays recorded fixtures as mock scenario", async () => {
       // Record
-      const recorder = createRecorder({ targetUrl });
-      await (recorder.client as any).users.getAll();
-      await (recorder.client as any).users.getById({ id: "7" });
+      const recorder = recorderFor();
+      await recorder.client.users.getAll();
+      await recorder.client.users.getById({ id: "7" });
       const fixtures = recorder.getFixtures();
 
       // Replay
@@ -122,9 +138,9 @@ describe("Record & Replay", () => {
 
     it("replays multiple fixtures as sequence", async () => {
       // Record same endpoint twice with different results
-      const recorder = createRecorder({ targetUrl });
-      await (recorder.client as any).users.getById({ id: "1" });
-      await (recorder.client as any).users.getById({ id: "2" });
+      const recorder = recorderFor();
+      await recorder.client.users.getById({ id: "1" });
+      await recorder.client.users.getById({ id: "2" });
 
       const fixtures = recorder.getFixtures();
       const scenario = replayFixtures(fixtures);
@@ -139,8 +155,8 @@ describe("Record & Replay", () => {
 
   describe("HAR conversion", () => {
     it("converts fixtures → HAR → fixtures roundtrip", async () => {
-      const recorder = createRecorder({ targetUrl });
-      await (recorder.client as any).users.getAll();
+      const recorder = recorderFor();
+      await recorder.client.users.getAll();
       const original = recorder.getFixtures();
 
       const har = fixturesToHar(original);

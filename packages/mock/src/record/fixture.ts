@@ -6,6 +6,8 @@ export interface Fixture {
   group: string;
   method: string;
   variables?: unknown;
+  /** The HTTP request the call was made as, when the recorder knows it */
+  request?: { method: string; url: string };
   response: {
     status: number;
     data: unknown;
@@ -21,6 +23,7 @@ export function harToFixtures(har: HarLog): Fixture[] {
     group: entry._courier.group,
     method: entry._courier.method,
     variables: entry._courier.variables,
+    request: { method: entry.request.method, url: entry.request.url },
     response: {
       status: entry.response.status,
       data: safeJsonParse(entry.response.content.text),
@@ -39,8 +42,8 @@ export function fixturesToHar(fixtures: Fixture[]): HarLog {
       startedDateTime: fixture.recordedAt,
       time: fixture.duration,
       request: {
-        method: "POST",
-        url: `/api/request`,
+        method: fixture.request?.method ?? "POST",
+        url: fixture.request?.url ?? "/api/request",
         headers: [{ name: "Content-Type", value: "application/json" }],
         postData: {
           mimeType: "application/json",
@@ -53,7 +56,7 @@ export function fixturesToHar(fixtures: Fixture[]): HarLog {
       },
       response: {
         status: fixture.response.status,
-        statusText: fixture.response.status === 200 ? "OK" : "Error",
+        statusText: fixture.response.status < 400 ? "OK" : "Error",
         headers: Object.entries(fixture.response.headers).map(([name, value]) => ({ name, value })),
         content: {
           size: 0,

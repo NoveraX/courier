@@ -28,7 +28,7 @@ export type {
 } from "./adapter/sse-types";
 export type { ConnectionInfo, ConnectionRegistry } from "./adapter/ws-registry-types";
 export { sendAuthRequired } from "./adapter/ws-token-refresh";
-export type { CourierWSOptions, WSHandler, WSHandlerConfig } from "./adapter/ws-types";
+export type { WSHandler, WSHandlerConfig } from "./adapter/ws-types";
 export type { WebSocketLike } from "./realtime/adapters";
 
 export type AdapterHandler = {

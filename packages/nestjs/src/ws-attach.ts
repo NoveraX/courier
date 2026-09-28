@@ -1,5 +1,5 @@
 import type { Server } from "node:http";
-import type { CourierWSOptions } from "@noverax/courier";
+import type { WSHandlerConfig } from "@noverax/courier";
 import { createWSHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import {
@@ -10,7 +10,7 @@ import {
 } from "@noverax/courier/node";
 
 /** Options for `courierWSAttach`: the WebSocket handler's, plus where it listens. */
-export interface CourierWSAttachOptions extends CourierWSOptions {
+export interface CourierWSAttachOptions extends WSHandlerConfig {
   /**
    * Pathname to answer upgrades on — the `proxyPath.ws` the client connects
    * to. Upgrades on any other path are left to the application's own

@@ -144,7 +144,7 @@ When the browser cancels a call — an aborted upload, a query it no longer need
 | SvelteKit with `@sveltejs/adapter-node` | Yes: the adapter watches the socket from `platform.req` |
 | SolidStart, dev and production | Yes: the adapter watches the response on `nativeEvent` |
 | React Router 7 | Only with `future: { v8_passThroughRequests: true }`: without it a resource route receives a rebuilt copy of the request whose signal does not reliably follow the original |
-| Nuxt | No: the request h3 builds carries no such signal |
+| Nuxt, dev and production | Yes: the adapter converts Node's request so its signal follows the connection, and a Web request h3 1.x hands over is watched through the event's Node response |
 | `vite dev` for SvelteKit, `astro dev` | No: the dev server exposes neither a signal nor the connection |
 
 An integration of your own that can reach the Node socket or response passes it to `handleWhileConnected`, which gives the handler a request whose signal also fires when that connection closes:

@@ -12,7 +12,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from "node:net";
 import { createProxyCaller, registerSources } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
-import { sendWebResponse } from "@noverax/courier/node";
+import { sendWebResponse, toWebRequest } from "@noverax/courier/node";
 import { H3, toNodeHandler } from "h3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -166,5 +166,74 @@ describe("the proxy route on h3 2.x", () => {
     const answer = await callerAt(origin).echo.create({ name: "linus" });
 
     expect(answer).toEqual({ method: "POST", body: '{"name":"linus"}' });
+  });
+});
+
+/** An upstream that never answers, and notes when the proxy gives up on it. */
+async function heldUpstream(): Promise<{ arrived: () => boolean; cancelled: () => boolean }> {
+  let arrived = false;
+  let cancelled = false;
+  const baseURL = await listen(
+    createServer((req, res) => {
+      arrived = true;
+      req.resume();
+      res.once("close", () => {
+        cancelled = !res.writableEnded;
+      });
+    }),
+  );
+  registerSources({ held: defineApi({ baseURL, endpoints: { wait: endpoint.post("wait") } }) });
+  return { arrived: () => arrived, cancelled: () => cancelled };
+}
+
+async function cancelWhileHeld(origin: string, upstream: { arrived: () => boolean }) {
+  const caller = createProxyCaller("held", {
+    proxyPath: { http: `${origin}/api/request` },
+  }) as unknown as { with(options: { signal: AbortSignal }): { wait(): Promise<unknown> } };
+  const client = new AbortController();
+  const call = caller.with({ signal: client.signal }).wait().catch((error: unknown) => error);
+  await expect.poll(upstream.arrived, { timeout: 2000 }).toBe(true);
+  client.abort();
+  await call;
+}
+
+describe("a call the browser cancels", () => {
+  it("stops upstream on h3 1.x, whose event wraps Node's request", async () => {
+    const upstream = await heldUpstream();
+    const origin = await listen(nodeEventHost(courierHandler()));
+
+    await cancelWhileHeld(origin, upstream);
+
+    await expect.poll(upstream.cancelled, { timeout: 2000 }).toBe(true);
+  });
+
+  it("stops upstream on h3 1.x when the event carries a Web request of the host's making", async () => {
+    const upstream = await heldUpstream();
+    const handler = courierHandler();
+    const origin = await listen(
+      createServer(async (req, res) => {
+        /* A request built without the client's signal, beside the Node
+           response the answer goes out on. */
+        const event = Object.assign(new NodeEvent({ req, res }), {
+          web: { request: toWebRequest(req) },
+        });
+        await sendWebResponse(await handler(event), res);
+      }),
+    );
+
+    await cancelWhileHeld(origin, upstream);
+
+    await expect.poll(upstream.cancelled, { timeout: 2000 }).toBe(true);
+  });
+
+  it("stops upstream on h3 2.x", async () => {
+    const upstream = await heldUpstream();
+    const app = new H3();
+    app.all("/api/request", courierHandler());
+    const origin = await listen(createServer(toNodeHandler(app)));
+
+    await cancelWhileHeld(origin, upstream);
+
+    await expect.poll(upstream.cancelled, { timeout: 2000 }).toBe(true);
   });
 });

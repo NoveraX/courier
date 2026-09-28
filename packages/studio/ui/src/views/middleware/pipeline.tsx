@@ -31,7 +31,7 @@ export function Pipeline({ chain }: PipelineProps): React.ReactElement {
         </>
       )}
 
-      <FetchNode delay={stepIdx * 0.05 + 0.1} />
+      {chain.reachedFetch && <FetchNode delay={stepIdx * 0.05 + 0.1} />}
 
       {afterSteps.length > 0 && (
         <>

@@ -35,6 +35,8 @@ export interface ChainEntry {
   steps: MiddlewareStep[];
   totalOverhead: number;
   overheadPercent: number;
+  /** Whether the request got as far as its HTTP fetch; a middleware can stop it before. */
+  reachedFetch: boolean;
 }
 
 // ── Sparkline / KPI ─────────────────────────────────────────────────────────

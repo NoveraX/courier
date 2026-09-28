@@ -3,7 +3,9 @@ import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/components/shared/formatters";
 import { Badge } from "@/components/ui/badge";
+import { STATUS_CONFIG } from "@/components/shared/detail-panel/constants";
 
+import type { RequestEntry, RequestStatus } from "@/store/types";
 import { durationColor } from "./constants";
 
 // ── Section wrapper ────────────────────────────────────────────────────────
@@ -68,8 +70,24 @@ export function ComparisonRow({ name, actual, avg, diffPct }: {
 
 // ── Status badge ───────────────────────────────────────────────────────────
 
-export function StatusBadge({ status }: { status?: number }): React.ReactElement {
-  if (!status) return <Badge variant="outline" className="text-[10px]">pending</Badge>;
-  const variant = status < 300 ? "emerald" : status < 400 ? "amber" : "rose";
-  return <Badge variant={variant} className="text-[10px] tabular-nums">{status}</Badge>;
+/** The status code a request was answered with, or how it ended when it got none. */
+export function StatusBadge({ request }: { request: Pick<RequestEntry, "status" | "statusCode"> }): React.ReactElement {
+  const code = request.statusCode;
+  if (code) {
+    const variant = code < 300 ? "emerald" : code < 400 ? "amber" : "rose";
+    return <Badge variant={variant} className="text-[10px] tabular-nums">{code}</Badge>;
+  }
+  return (
+    <Badge variant={OUTCOME_VARIANT[request.status]} className="text-[10px]">
+      {STATUS_CONFIG[request.status].label.toLowerCase()}
+    </Badge>
+  );
 }
+
+const OUTCOME_VARIANT = {
+  pending: "outline",
+  success: "emerald",
+  error: "rose",
+  aborted: "outline",
+  validation_error: "amber",
+} as const satisfies Record<RequestStatus, string>;

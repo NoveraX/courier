@@ -51,35 +51,19 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
   let closed = false;
   const early = holdMessages(topic);
 
-  const deliver = (fn: (data: unknown) => void, data: unknown): void => {
-    try {
-      fn(data);
-    } catch (error) {
-      /* One failing listener must not keep the message from the others. */
-      log.error("A channel data listener failed", error);
-    }
-  };
-
   const emitData = (data: unknown): void => {
-    if (early.hold(data)) return;
-    for (const fn of dataListeners) deliver(fn, data);
+    if (!early.hold(data)) notify(dataListeners, data, "data");
   };
 
   /* The first listener takes what was sent before it, in order. */
   function addDataListener(fn: (data: unknown) => void): void {
     dataListeners.add(fn);
-    for (const data of early.release()) deliver(fn, data);
+    for (const data of early.release()) notify([fn], data, "data");
   }
 
   const setStatus = (next: ConnectionStatus): void => {
     status = next;
-    for (const fn of statusListeners) {
-      try {
-        fn(next);
-      } catch (error) {
-        log.error("A channel status listener failed", error);
-      }
-    }
+    notify(statusListeners, next, "status");
   };
 
   /* Held to the response schema as the server holds what it sends. */
@@ -143,11 +127,7 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
       }
       statusListeners.add(handler as (s: ConnectionStatus) => void);
       // Emit current status immediately so late subscribers see "connected".
-      try {
-        (handler as (s: ConnectionStatus) => void)(status);
-      } catch (error) {
-        log.error("A channel status listener failed", error);
-      }
+      notify([handler as (s: ConnectionStatus) => void], status, "status");
       return () => statusListeners.delete(handler as (s: ConnectionStatus) => void);
     },
     close() {
@@ -165,4 +145,19 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
     markConnected: () => setStatus("connected"),
     close,
   };
+}
+
+/* One failing listener must not keep the message from the others. */
+function notify<TValue>(
+  listeners: Iterable<(value: TValue) => void>,
+  value: TValue,
+  kind: "data" | "status",
+): void {
+  for (const fn of listeners) {
+    try {
+      fn(value);
+    } catch (error) {
+      log.error(`A channel ${kind} listener failed`, error);
+    }
+  }
 }

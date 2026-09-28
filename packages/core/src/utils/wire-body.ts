@@ -3,26 +3,24 @@
  *
  * The proxy answered every call with JSON, and an ArrayBuffer, a Blob or a
  * FormData serializes to `{}` — a binary download resolved to an empty
- * object in the browser. Such a body now travels as itself, and a header
- * tells the proxy client how to read it back.
+ * object in the browser. Such a body travels as itself, and its content
+ * type — the one response header a browser reads on a cross-origin answer
+ * without being allowed to — tells the proxy client how to read it back.
  */
 
 import { getResponseData } from "../http-client/response";
 
-/** Names how to read the body; absent for a JSON answer. */
-export const WIRE_BODY_HEADER = "x-courier-body";
-
-/** A Blob's own type, which the answer's content type does not carry. */
-export const WIRE_BODY_TYPE_HEADER = "x-courier-body-type";
-
-export type WireBodyKind = "arrayBuffer" | "blob" | "formData";
+/** Bytes read back as an ArrayBuffer. */
+const BYTES_TYPE = "application/vnd.courier.bytes";
+/** Bytes read back as a Blob; its own type travels as the `type` parameter. */
+const BLOB_TYPE = "application/vnd.courier.blob";
+const MULTIPART_TYPE = "multipart/form-data";
 
 /** A body the proxy sends as it is, rather than as JSON. */
 export interface WireBody {
-  kind: WireBodyKind;
   body: BodyInit;
-  /** A Blob's type, when it has one. */
-  type?: string;
+  /** The answer's content type; a FormData's own multipart type when absent. */
+  contentType?: string;
   /** Its length in bytes, when it is known before it is sent. */
   size?: number;
 }
@@ -35,13 +33,14 @@ export interface WireBody {
  *
  * @example
  * ```ts
- * toWireBody(new ArrayBuffer(8)); // → { kind: "arrayBuffer", body: … }
+ * toWireBody(new ArrayBuffer(8)); // → { body, contentType: "application/vnd.courier.bytes", size: 8 }
  * toWireBody({ id: 1 });          // → undefined
  * ```
  */
 export function toWireBody(data: unknown): WireBody | undefined {
-  if (data instanceof ArrayBuffer)
-    return { kind: "arrayBuffer", body: data, size: data.byteLength };
+  if (data instanceof ArrayBuffer) {
+    return { body: data, contentType: BYTES_TYPE, size: data.byteLength };
+  }
   if (ArrayBuffer.isView(data)) {
     const { buffer, byteOffset, byteLength } = data;
     /* A view of shared memory cannot be a body; its bytes are copied out. */
@@ -49,13 +48,25 @@ export function toWireBody(data: unknown): WireBody | undefined {
       buffer instanceof ArrayBuffer
         ? new Uint8Array(buffer, byteOffset, byteLength)
         : new Uint8Array(buffer, byteOffset, byteLength).slice();
-    return { kind: "arrayBuffer", body, size: body.byteLength };
+    return { body, contentType: BYTES_TYPE, size: body.byteLength };
   }
   if (data instanceof Blob) {
-    return { kind: "blob", body: data, type: data.type || undefined, size: data.size };
+    const type = data.type ? `; type=${encodeURIComponent(data.type)}` : "";
+    return { body: data, contentType: `${BLOB_TYPE}${type}`, size: data.size };
   }
-  if (data instanceof FormData) return { kind: "formData", body: data };
+  if (data instanceof FormData) return { body: data };
   return undefined;
+}
+
+/**
+ * Whether a proxy answer carries its body as itself rather than as JSON.
+ *
+ * @param response - The proxy's answer
+ * @returns `true` for bytes, a Blob or a FormData
+ */
+export function isWireBody(response: Response): boolean {
+  const mediaType = mediaTypeOf(response);
+  return mediaType === BYTES_TYPE || mediaType === BLOB_TYPE || mediaType === MULTIPART_TYPE;
 }
 
 /**
@@ -66,21 +77,31 @@ export function toWireBody(data: unknown): WireBody | undefined {
  *
  * @example
  * ```ts
- * const bytes = await readWireBody(response); // ArrayBuffer for an "arrayBuffer" answer
+ * const bytes = await readWireBody(response); // ArrayBuffer for a bytes answer
  * ```
  */
 export async function readWireBody(response: Response): Promise<unknown> {
-  switch (response.headers.get(WIRE_BODY_HEADER)) {
-    case "arrayBuffer":
+  switch (mediaTypeOf(response)) {
+    case BYTES_TYPE:
       return response.arrayBuffer();
-    case "blob": {
+    case BLOB_TYPE: {
       const blob = await response.blob();
-      return new Blob([blob], { type: response.headers.get(WIRE_BODY_TYPE_HEADER) ?? "" });
+      return new Blob([blob], { type: blobTypeOf(response) });
     }
-    case "formData":
+    case MULTIPART_TYPE:
       return response.formData();
     default:
       /* A bodiless status reads as null here, as it does in direct mode. */
       return getResponseData(response, "json");
   }
+}
+
+function mediaTypeOf(response: Response): string {
+  return (response.headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
+}
+
+function blobTypeOf(response: Response): string {
+  const parameters = (response.headers.get("content-type") ?? "").split(";").slice(1);
+  const type = parameters.map((p) => p.trim()).find((p) => p.startsWith("type="));
+  return type ? decodeURIComponent(type.slice("type=".length)) : "";
 }

@@ -10,7 +10,7 @@ import { HTTPError } from "../errors";
 import { isBodilessStatus } from "../http-client/response";
 import { isAbortError } from "../utils/abort";
 import { parseRequestPayload, type RequestPayload } from "../utils/request-payload";
-import { readWireBody, WIRE_BODY_HEADER } from "../utils/wire-body";
+import { isWireBody, readWireBody } from "../utils/wire-body";
 
 type ProxyRequestPayload = { body?: FormData; json?: Partial<RequestPayload> };
 
@@ -69,7 +69,7 @@ export async function readProxyAnswer(
   if (!raw) return body;
   /* A bodiless answer or one carried as itself has no envelope to unwrap;
      the answer's own status and headers make it, as in direct mode. */
-  return isBodilessStatus(response.status) || response.headers.has(WIRE_BODY_HEADER)
+  return isBodilessStatus(response.status) || isWireBody(response)
     ? { status: response.status, headers: response.headers, data: body }
     : withHeaders(body);
 }

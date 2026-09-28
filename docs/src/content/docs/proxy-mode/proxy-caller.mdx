@@ -138,7 +138,7 @@ JSON cannot carry a `Blob`, an `ArrayBuffer` or a typed array, so a proxy call w
 
 ## Binary answers
 
-A source whose `responseType` is `"arrayBuffer"`, `"blob"` or `"formData"` resolves to the same kind of value through the proxy as in direct mode. The proxy sends the bytes as they are, as `application/octet-stream`, and the client reads them back — a Blob keeps the upstream's type. With `.raw`, the headers are those of the proxy's answer.
+A source whose `responseType` is `"arrayBuffer"`, `"blob"` or `"formData"` resolves to the same kind of value through the proxy as in direct mode. The proxy sends the bytes as they are, under a content type of its own — `application/vnd.courier.bytes` or `application/vnd.courier.blob`, with `nosniff` — so a browser never renders them as a page of your origin, and the client reads them back; a Blob keeps the upstream's type. The content type is the one header a page reads on a cross-origin answer without it being exposed, so this works for a proxy on another origin too. With `.raw`, the headers are those of the proxy's answer.
 
 ## Per-request options
 

@@ -4,6 +4,8 @@ export const metadata = { title: "React Query Setup", description: "Integrate Co
 
 `createProxyQueryCaller` creates a type-safe query client with dot-notation access to all your endpoint groups. Each group exposes `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery`, and `prefetchQuery`.
 
+Hooks exist per group only: endpoints declared at the top level of `defineApi({ endpoints })` have none, so declare the endpoints your components use inside a group.
+
 ### Step 1: Install @tanstack/react-query
 
 React Query is a peer dependency — install it alongside Courier:

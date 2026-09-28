@@ -64,6 +64,8 @@ export async function coreFetch(
     headers: requestHeaders,
     body: requestBody,
     ...(finalSignal != null && { signal: finalSignal }),
+    /* Fetch refuses a streamed body unless the request says so. */
+    ...(requestBody instanceof ReadableStream && { duplex: "half" }),
   };
   let response: Response;
   try {

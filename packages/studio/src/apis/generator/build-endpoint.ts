@@ -14,7 +14,7 @@ import {
 } from "./endpoint-context";
 import { resolveResponseType, resolveVariablesType } from "./endpoint-types";
 import { bodyKey, requestBodyKind } from "./request-body";
-import { type ResponseReading, responseReading } from "./response-reading";
+import { isEventStream, type ResponseReading, responseReading } from "./response-reading";
 import { collectRefsDeep } from "./schema-refs";
 import {
   extendSchemaWithParams,
@@ -56,9 +56,13 @@ export function buildEndpointDefinition(
   const path = endpointPath(ep);
   const kind = requestBodyKind(ep, context.spec);
   if (sendsUrlEncoded(ep, kind)) context.uses.formBody = true;
+  const closure = wireClosure(ep, path, kind, reading);
+  /* A stream of events is subscribed to, and its answer is each event. */
+  const head = isEventStream(ep) && closure === null ? "stream" : "endpoint";
+  context.uses.bases.add(head);
   return buildEndpointChain({
-    address: `endpoint.${toInternalMethod(ep.httpMethod)}(${JSON.stringify(path)})`,
-    closure: wireClosure(ep, path, kind, reading),
+    address: `${head}.${toInternalMethod(ep.httpMethod)}(${JSON.stringify(path)})`,
+    closure,
     variablesSchema: variables,
     variablesType: variables
       ? null

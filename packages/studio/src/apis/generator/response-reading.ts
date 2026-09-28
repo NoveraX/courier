@@ -28,3 +28,21 @@ export function responseReading(ep: ParsedEndpoint): ResponseReading {
   if (media.includes("json")) return "json";
   return TEXT.test(media) ? "text" : "blob";
 }
+
+/**
+ * Whether an endpoint is a stream of events a client subscribes to: a GET
+ * whose success answer is `text/event-stream`, and nothing it could read
+ * whole. A POST that answers with events has no stream builder to address
+ * it, and stays an HTTP endpoint.
+ *
+ * @param ep - The endpoint
+ * @returns Whether it is generated as `stream.get(…)`
+ * @example
+ * ```ts
+ * isEventStream({ ...watchOrders, httpMethod: "get", responseMediaType: "text/event-stream" }); // → true
+ * ```
+ */
+export function isEventStream(ep: ParsedEndpoint): boolean {
+  const media = (ep.responseMediaType ?? "").toLowerCase();
+  return ep.httpMethod === "get" && media.startsWith("text/event-stream");
+}

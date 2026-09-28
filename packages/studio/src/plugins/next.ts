@@ -24,7 +24,7 @@ const CLIENT_ENTRIES = ["main-app", "main"] as const;
  * The server side attaches on its own, from `instrumentation.ts`.
  *
  * @param pluginOptions - `enabled` forces injection on or off; by default it is
- *   on unless `NODE_ENV` is `"production"`.
+ *   on in `next dev` unless `NODE_ENV` is `"production"`.
  * @returns A function that wraps a Next.js config.
  *
  * @example
@@ -51,7 +51,12 @@ export function withCourierStudio(
           webpackConfig.entry = async () => {
             const entries: Record<string, WebpackEntryValue> =
               typeof originalEntry === "function" ? await originalEntry() : originalEntry;
-            const snippet = await resolveSnippet(FRAMEWORK, pluginOptions, runtimeEntryPath());
+            const snippet = await resolveSnippet({
+              framework: FRAMEWORK,
+              options: pluginOptions,
+              development: context.dev,
+              runtime: runtimeEntryPath(),
+            });
             if (!snippet) return entries;
             const dataUri = createDataUri(snippet);
             for (const name of CLIENT_ENTRIES) {

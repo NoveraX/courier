@@ -23,7 +23,12 @@ async function attachStudio(options: StudioPluginOptions, nuxt: NuxtLike): Promi
     return;
   }
 
-  const snippet = await resolveSnippet(FRAMEWORK, options, runtimeEntryPath());
+  const snippet = await resolveSnippet({
+    framework: FRAMEWORK,
+    options,
+    development: nuxt.options.dev,
+    runtime: runtimeEntryPath(),
+  });
   if (!snippet) return;
 
   const dst = join(nuxt.options.buildDir, PLUGIN_FILENAME);

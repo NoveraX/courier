@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { entryPathsOf } from "./core/entry-paths";
+import { isInjectionEnabled } from "./core/options";
 import { resolveSnippet } from "./core/resolve-snippet";
 import { RUNTIME_IMPORTER_DIR } from "./core/runtime-importer";
 import type { StudioPluginOptions } from "./core/types";
@@ -8,9 +9,21 @@ const FRAMEWORK = "esbuild";
 const VIRTUAL_NS = "courier-studio";
 const VIRTUAL_ID = "courier-studio-init";
 
+/** A `define` value that makes `process.env.NODE_ENV` the string "production". */
+const PRODUCTION_DEFINE = /^\s*(["'`])production\1\s*$/;
+
 /**
  * esbuild plugin for Courier Studio.
- * Injects `attachRuntime("esbuild-browser")` into entry points in dev mode.
+ *
+ * Injects `attachRuntime("esbuild-browser")` into the entry points of a
+ * development build. esbuild has no mode, so the build is taken for what
+ * esbuild itself makes `process.env.NODE_ENV` in a browser bundle: what
+ * `define` sets it to, or else `"production"` when the build minifies
+ * whitespace, identifiers and syntax — as `minify: true` does.
+ *
+ * @param options - `enabled` forces injection on or off; by default it is on
+ *   in a development build unless `NODE_ENV` is `"production"`.
+ * @returns The esbuild plugin.
  *
  * @example
  * ```ts
@@ -25,8 +38,11 @@ export function courierStudio(options?: StudioPluginOptions): EsbuildPluginLike 
   return {
     name: "courier-studio",
     setup(build) {
+      const development = !buildsForProduction(build.initialOptions);
+      if (!isInjectionEnabled(options, development)) return;
       let pending: Promise<string | null> | null = null;
-      const ensure = (): Promise<string | null> => (pending ??= resolveSnippet(FRAMEWORK, options));
+      const ensure = (): Promise<string | null> =>
+        (pending ??= resolveSnippet({ framework: FRAMEWORK, options, development }));
 
       build.onResolve({ filter: new RegExp(`^${VIRTUAL_ID}$`) }, () => ({
         path: VIRTUAL_ID,
@@ -60,6 +76,21 @@ export function courierStudio(options?: StudioPluginOptions): EsbuildPluginLike 
   };
 }
 
+/**
+ * Whether esbuild builds for production: whether it gives the bundle a
+ * `process.env.NODE_ENV` of `"production"`.
+ */
+function buildsForProduction(build: EsbuildBuildOptions): boolean {
+  const defined = build.define?.["process.env.NODE_ENV"];
+  if (defined !== undefined) return PRODUCTION_DEFINE.test(defined);
+  if (build.minify === true) return true;
+  return (
+    build.minifyWhitespace === true &&
+    build.minifyIdentifiers === true &&
+    build.minifySyntax === true
+  );
+}
+
 type EsbuildLoader = "ts" | "tsx" | "js" | "jsx";
 
 function inferLoader(path: string): EsbuildLoader {
@@ -76,10 +107,21 @@ interface EsbuildLoadResult {
   resolveDir?: string;
 }
 
+/** The build options this plugin reads. */
+interface EsbuildBuildOptions {
+  entryPoints?: unknown;
+  absWorkingDir?: string;
+  define?: Record<string, string>;
+  minify?: boolean;
+  minifyWhitespace?: boolean;
+  minifyIdentifiers?: boolean;
+  minifySyntax?: boolean;
+}
+
 interface EsbuildPluginLike {
   name: string;
   setup(build: {
-    initialOptions: { entryPoints?: unknown; absWorkingDir?: string };
+    initialOptions: EsbuildBuildOptions;
     onResolve(
       opts: { filter: RegExp },
       cb: (args: { path: string }) => { path: string; namespace: string },

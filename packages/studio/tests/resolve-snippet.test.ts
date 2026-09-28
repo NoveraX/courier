@@ -18,23 +18,44 @@ afterEach(() => {
 
 describe("resolveSnippet", () => {
   it("reads no config when the plugin turns injection off", async () => {
-    const snippet = await resolveSnippet("vite", { enabled: false });
+    const snippet = await resolveSnippet({
+      framework: "vite",
+      options: { enabled: false },
+      development: true,
+    });
 
     expect(snippet).toBeNull();
     expect(loadStudioUrl).not.toHaveBeenCalled();
   });
 
-  it("reads no config in a production build", async () => {
+  it("reads no config when NODE_ENV is production", async () => {
     vi.stubEnv("NODE_ENV", "production");
 
-    const snippet = await resolveSnippet("vite");
+    const snippet = await resolveSnippet({ framework: "vite", development: true });
 
     expect(snippet).toBeNull();
     expect(loadStudioUrl).not.toHaveBeenCalled();
+  });
+
+  it("reads no config when the bundler builds for production", async () => {
+    const snippet = await resolveSnippet({ framework: "webpack", development: false });
+
+    expect(snippet).toBeNull();
+    expect(loadStudioUrl).not.toHaveBeenCalled();
+  });
+
+  it("connects a production build when the plugin says so", async () => {
+    const snippet = await resolveSnippet({
+      framework: "webpack",
+      options: { enabled: true },
+      development: false,
+    });
+
+    expect(snippet).toContain('attachRuntime("webpack-browser")');
   });
 
   it("connects to the Studio the config names when injection is on", async () => {
-    const snippet = await resolveSnippet("vite", { enabled: true });
+    const snippet = await resolveSnippet({ framework: "vite", development: true });
 
     expect(loadStudioUrl).toHaveBeenCalledTimes(1);
     expect(snippet).toContain("http://localhost:7123");

@@ -1,3 +1,5 @@
+import { sameId } from "./same-id";
+
 /** Pagination and sorting options */
 export interface QueryOptions<TItem> {
   take?: number;
@@ -37,7 +39,7 @@ export function applySorting<TItem>(
 }
 
 /** Apply offset/cursor pagination to sorted items */
-export function applyPagination<TItem>(
+export function applyPagination<TItem extends Record<string, unknown>>(
   items: TItem[],
   options: QueryOptions<TItem>,
   idField: string,
@@ -45,12 +47,11 @@ export function applyPagination<TItem>(
   const total = items.length;
   let startIndex = options.skip ?? 0;
 
-  // Cursor-based: find cursor position, start after it
+  /* Cursor-based: start after the cursor's record, matched by id as getById
+     matches it, so a cursor read from a URL — "1" — finds record 1. */
   if (options.cursor) {
-    const cursorId = (options.cursor as Record<string, unknown>)[idField];
-    const cursorIndex = items.findIndex(
-      (item) => (item as Record<string, unknown>)[idField] === cursorId,
-    );
+    const cursorId = options.cursor[idField];
+    const cursorIndex = items.findIndex((item) => sameId(item[idField], cursorId));
     if (cursorIndex >= 0) startIndex = cursorIndex + 1;
   }
 

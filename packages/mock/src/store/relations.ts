@@ -1,4 +1,5 @@
 import type { Collection } from "./collection-types";
+import { sameId } from "./same-id";
 
 /** One-to-one or one-to-many relation config */
 interface OneRelation {
@@ -62,10 +63,15 @@ export function resolveOne<TRecord extends Record<string, unknown>>(
 ): Record<string, unknown> | undefined {
   if (relation.type !== "one") return undefined;
   const foreignId = record[relation.key];
-  return relation.target.getById(foreignId as string | number);
+  if (typeof foreignId !== "string" && typeof foreignId !== "number") return undefined;
+  return relation.target.getById(foreignId);
 }
 
-/** Resolve a "many" relation for a record */
+/**
+ * Resolve a "many" relation for a record: the target's records whose foreign
+ * key holds the record's id, matched as getById matches ids — `"1"` names
+ * record 1.
+ */
 export function resolveMany<TRecord extends Record<string, unknown>>(
   record: TRecord,
   relation: Relation,
@@ -74,5 +80,5 @@ export function resolveMany<TRecord extends Record<string, unknown>>(
   if (relation.type !== "many") return [];
   const id = record[idField];
   const all = relation.target.getAll();
-  return all.filter((item) => item[relation.foreignKey] === id);
+  return all.filter((item) => sameId(item[relation.foreignKey], id));
 }

@@ -219,11 +219,12 @@ describe("loadCourierConfigFile — path aliases", () => {
   beforeEach(() => {
     writeConfig("tsconfig.json", JSON.stringify({ compilerOptions: { paths: { "@app/*": ["./src/*"] } } }));
     writeConfig("src/origin.ts", 'export const origin = "project";\n');
+    writeConfig("src/shared.ts", 'export const origin = "project";\n');
     writeConfig(
-      "node_modules/@app/origin/package.json",
-      JSON.stringify({ name: "@app/origin", main: "index.js" }),
+      "node_modules/@app/shared/package.json",
+      JSON.stringify({ name: "@app/shared", main: "index.js" }),
     );
-    writeConfig("node_modules/@app/origin/index.js", 'exports.origin = "installed";\n');
+    writeConfig("node_modules/@app/shared/index.js", 'exports.origin = "installed";\n');
     writeConfig(
       "courier.config.ts",
       'import { origin } from "@app/origin";\nexport default { sources: { [origin]: {} } };\n',
@@ -236,10 +237,19 @@ describe("loadCourierConfigFile — path aliases", () => {
     expect(Object.keys(config.sources ?? {})).toEqual(["project"]);
   });
 
-  it("resolves to the installed package when aliases are off", async () => {
-    const { config } = await loadCourierConfigFile(join(dir, "courier.config.ts"), {
-      aliases: false,
-    });
+  it("leaves the project's path aliases unfollowed when aliases are off", async () => {
+    await expect(
+      loadCourierConfigFile(join(dir, "courier.config.ts"), { aliases: false }),
+    ).rejects.toThrow("@app/origin");
+  });
+
+  it("resolves an installed package of an aliased scope to the package", async () => {
+    writeConfig(
+      "courier.config.ts",
+      'import { origin } from "@app/shared";\nexport default { sources: { [origin]: {} } };\n',
+    );
+
+    const { config } = await loadCourierConfigFile(join(dir, "courier.config.ts"));
 
     expect(Object.keys(config.sources ?? {})).toEqual(["installed"]);
   });

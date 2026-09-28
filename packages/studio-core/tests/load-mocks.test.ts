@@ -218,7 +218,7 @@ describe("loadCourierMocksFile — loader options", () => {
     expect(loaded.mocks).toEqual({ api: { host: "localhost", port: 7001 } });
   });
 
-  it("resolves to the installed package when aliases are off", async () => {
+  it("resolves an installed package of an aliased scope to the package, with aliases on or off", async () => {
     write("tsconfig.json", JSON.stringify({ compilerOptions: { paths: { "@app/*": ["./src/*"] } } }));
     write("src/port.ts", "export const port = 1;\n");
     write("node_modules/@app/port/package.json", JSON.stringify({ name: "@app/port", main: "index.js" }));
@@ -226,9 +226,22 @@ describe("loadCourierMocksFile — loader options", () => {
     write("courier.mocks.ts", 'import { port } from "@app/port";\nexport default { api: { port } };\n');
 
     const aliased = await loadCourierMocksFile(join(dir, "courier.mocks.ts"));
-    const installed = await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { aliases: false });
+    const plain = await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { aliases: false });
+
+    expect(aliased.mocks).toEqual({ api: { port: 2 } });
+    expect(plain.mocks).toEqual({ api: { port: 2 } });
+  });
+
+  it("follows the project's path aliases only when they are on", async () => {
+    write("tsconfig.json", JSON.stringify({ compilerOptions: { paths: { "@app/*": ["./src/*"] } } }));
+    write("src/local.ts", "export const port = 1;\n");
+    write("courier.mocks.ts", 'import { port } from "@app/local";\nexport default { api: { port } };\n');
+
+    const aliased = await loadCourierMocksFile(join(dir, "courier.mocks.ts"));
 
     expect(aliased.mocks).toEqual({ api: { port: 1 } });
-    expect(installed.mocks).toEqual({ api: { port: 2 } });
+    await expect(loadCourierMocksFile(join(dir, "courier.mocks.ts"), { aliases: false })).rejects.toThrow(
+      "@app/local",
+    );
   });
 });

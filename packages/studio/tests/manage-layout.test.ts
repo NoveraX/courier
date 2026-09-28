@@ -19,7 +19,6 @@ import {
   removeGroupsFromSourceFile,
 } from "../src/apis/manage/update-source-file";
 import { parseSpec } from "../src/apis/parser";
-import { resetProjectRoot, setProjectRoot } from "../src/context";
 import { importsSnapshotOf } from "../src/server/imports-bridge";
 import { handleInventory } from "../src/server/manage-helpers";
 import { projectRootAt } from "../src/server/project-fs/project-root";
@@ -382,11 +381,9 @@ describe("handleInventory", () => {
 
   beforeEach(() => {
     root = realpathSync(mkdtempSync(join(tmpdir(), "courier-manage-layout-")));
-    setProjectRoot(root);
   });
 
   afterEach(() => {
-    resetProjectRoot();
     rmSync(root, { recursive: true, force: true });
   });
 

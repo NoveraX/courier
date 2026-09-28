@@ -6,7 +6,6 @@ import { createServer } from "node:http";
 import { STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
 import { findTransformCacheDirectory } from "@noverax/courier-studio-core/config";
 import express from "express";
-import { setProjectRoot } from "../context";
 import { BindingTable } from "./catalog/binding-table";
 import { createConfigSourceNamer } from "./catalog/config-source-names";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
@@ -48,8 +47,6 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     onError,
     extraCorsOrigins = [],
   } = options;
-
-  setProjectRoot(projectRoot);
 
   const app = express();
   /* Nothing a caller needs, and it names what to probe for. */

@@ -17,7 +17,6 @@ import { classifyDiskEndpoint } from "../src/apis/manage/classify-endpoint";
 import { EndpointOutsidePrefixError } from "../src/apis/manage/endpoint-outside-prefix-error";
 import { listedSelection } from "../src/apis/manage/listed-selection";
 import { parseSpec } from "../src/apis/parser";
-import { resetProjectRoot, setProjectRoot } from "../src/context";
 import { importsSnapshotOf } from "../src/server/imports-bridge";
 import { handleInventory } from "../src/server/manage-helpers";
 import { projectRootAt } from "../src/server/project-fs/project-root";
@@ -106,11 +105,9 @@ describe("the inventory", () => {
 
   beforeEach(() => {
     root = realpathSync(mkdtempSync(join(tmpdir(), "courier-manage-listing-")));
-    setProjectRoot(root);
   });
 
   afterEach(() => {
-    resetProjectRoot();
     rmSync(root, { recursive: true, force: true });
   });
 

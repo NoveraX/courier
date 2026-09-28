@@ -42,5 +42,6 @@ export function toWireAnswer(
   /* JSON has no Headers, so the raw envelope carries them as a plain
      object; serialized as they were, they arrived as `{}`. */
   const body = rawData ? { status, headers: Object.fromEntries(headers), data } : data;
-  return Response.json(body, { status, headers });
+  /* JSON has no `undefined`: a success without data answers `null`. */
+  return Response.json(body ?? null, { status, headers });
 }

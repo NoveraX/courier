@@ -1,35 +1,17 @@
-import { discardBody } from "./adapter/discard-body";
-import { gateEntry } from "./adapter/entry-gate";
-import type { ExecuteFn } from "./adapter/execute-fn";
-import { createGetHandler } from "./adapter/handle-get";
-import { createPostHandler } from "./adapter/handle-post";
-import { createSSEHandler } from "./adapter/handle-sse";
-import type { HandlerConfig } from "./adapter/handler-config";
-import { errorResponse } from "./adapter/parse";
-import { servedSources } from "./adapter/served-sources";
-import { createSSEConnectionRegistry } from "./adapter/sse-registry";
-import type { SSEConnectionRegistry } from "./adapter/sse-types";
-import { prepareSources } from "./sources";
-import { studioHooks } from "./studio";
-import { executeRequest } from "./utils/execute";
-
-export { buildSSECorsHeaders } from "./adapter/format-sse";
-export { type ClientConnection, handleWhileConnected } from "./adapter/handle-while-connected";
-export { createWSHandler } from "./adapter/handle-ws";
-export type { HandlerConfig } from "./adapter/handler-config";
-export { requireSources } from "./adapter/require-sources";
-export type {
-  SSEBroadcastEvent,
-  SSEBroadcastResult,
-  SSECloseReason,
-  SSEConnectionInfo,
-  SSEConnectionRegistry,
-  SSELifecycleConfig,
-} from "./adapter/sse-types";
-export type { ConnectionInfo, ConnectionRegistry } from "./adapter/ws-registry-types";
-export { sendAuthRequired } from "./adapter/ws-token-refresh";
-export type { WSHandler, WSHandlerConfig } from "./adapter/ws-types";
-export type { WebSocketLike } from "./realtime/adapters";
+import { prepareSources } from "../sources";
+import { studioHooks } from "../studio";
+import { executeRequest } from "../utils/execute";
+import { discardBody } from "./discard-body";
+import { gateEntry } from "./entry-gate";
+import type { ExecuteFn } from "./execute-fn";
+import { createGetHandler } from "./handle-get";
+import { createPostHandler } from "./handle-post";
+import { createSSEHandler } from "./handle-sse";
+import type { HandlerConfig } from "./handler-config";
+import { errorResponse } from "./parse";
+import { servedSources } from "./served-sources";
+import { createSSEConnectionRegistry } from "./sse-registry";
+import type { SSEConnectionRegistry } from "./sse-types";
 
 export type AdapterHandler = {
   /** Handle any HTTP method (auto-routes GET/POST/SSE, returns 405 for others) */

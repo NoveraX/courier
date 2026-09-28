@@ -75,7 +75,7 @@ async function connectThrough(wss: WebSocketServer, handler: ReturnType<typeof c
 }
 
 describe("courierWSHandler under the plugin's frame limit", () => {
-  it("warns when the plugin's server buffers frames larger than maxMessageSize", async () => {
+  it("warns when the plugin's server reads frames far larger than any message it takes", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const wss = new WebSocketServer({ noServer: true });
 

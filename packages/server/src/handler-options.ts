@@ -1,5 +1,6 @@
 import type { HandlerConfig, WSHandlerConfig } from "@noverax/courier";
 
+import { wsFrameLimit as frameLimitFor } from "@noverax/courier/node";
 import type { CourierServerOptions } from "./types";
 
 /**
@@ -78,7 +79,6 @@ export function wsHandlerOptions(config: CourierServerOptions): WSHandlerConfig 
 }
 
 /** The frame limit when neither `maxPayload` nor a larger `maxMessageSize` is set. */
-const DEFAULT_MAX_PAYLOAD = 1_048_576;
 
 /**
  * The largest WebSocket frame the server reads at all; `ws` closes the
@@ -99,5 +99,5 @@ const DEFAULT_MAX_PAYLOAD = 1_048_576;
  * ```
  */
 export function wsFrameLimit(config: CourierServerOptions): number {
-  return config.maxPayload ?? Math.max(DEFAULT_MAX_PAYLOAD, 2 * (config.maxMessageSize ?? 0));
+  return config.maxPayload ?? frameLimitFor(config.maxMessageSize);
 }

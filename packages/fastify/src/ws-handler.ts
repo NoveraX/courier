@@ -5,6 +5,7 @@ import {
   DEFAULT_WS_MAX_MESSAGE_SIZE,
   discoverNodeAppOrigin,
   toWebRequest,
+  wsFrameLimit,
 } from "@noverax/courier/node";
 import type { FastifyRequest } from "fastify";
 
@@ -18,9 +19,10 @@ const log = createLogger("Fastify");
  *
  * The plugin's `ws` server reads each frame whole before the handler sees
  * it, up to its own `maxPayload` — 100 MiB unless the plugin is registered
- * with another. Register it with `options: { maxPayload }` no larger than
- * `maxMessageSize`, so a larger frame is refused before it is read, as the
- * Express and Nest adapters refuse one; the handler warns once when the
+ * with another. Register it with `options: { maxPayload: wsFrameLimit() }`,
+ * the frame limit the Express and Nest adapters use: a message somewhat over
+ * `maxMessageSize` is refused with 4413 and the socket kept, and a frame
+ * larger still is refused before it is read. The handler warns once when the
  * plugin would read more.
  *
  * @param options - WS handler options (heartbeat, allowedOrigins, etc.)
@@ -29,9 +31,10 @@ const log = createLogger("Fastify");
  * @example
  * ```ts
  * import fastifyWebsocket from "@fastify/websocket";
+ * import { wsFrameLimit } from "@noverax/courier/node";
  * import { courierWSHandler } from "@noverax/courier-fastify";
  *
- * await fastify.register(fastifyWebsocket, { options: { maxPayload: 65_536 } });
+ * await fastify.register(fastifyWebsocket, { options: { maxPayload: wsFrameLimit() } });
  * fastify.get("/api/ws", { websocket: true }, courierWSHandler());
  * ```
  */
@@ -73,18 +76,19 @@ function pluginMissing(): ConfigurationError {
       "[courier] courierWSHandler() was called as an ordinary HTTP route.",
       "",
       "Register @fastify/websocket before the route, so it opens the socket:",
-      "  await fastify.register(fastifyWebsocket, { options: { maxPayload: 65_536 } })",
+      "  await fastify.register(fastifyWebsocket, { options: { maxPayload: wsFrameLimit() } })",
       '  fastify.get("/api/ws", { websocket: true }, courierWSHandler())',
     ].join("\n"),
   );
 }
 
-/** Tell the operator when the plugin reads frames the handler will refuse. */
+/** Tell the operator when the plugin reads frames far larger than any message it will take. */
 function warnOnLargerPayloads(server: unknown, maxMessageSize: number): void {
   const maxPayload = pluginMaxPayload(server);
-  if (maxPayload === undefined || maxPayload <= maxMessageSize) return;
+  const limit = wsFrameLimit(maxMessageSize);
+  if (maxPayload === undefined || maxPayload <= limit) return;
   log.warn(
-    `@fastify/websocket reads frames up to ${maxPayload} bytes before Courier refuses those over its maxMessageSize of ${maxMessageSize}. Register the plugin with { options: { maxPayload: ${maxMessageSize} } } so a larger frame is refused before it is read.`,
+    `@fastify/websocket reads frames up to ${maxPayload} bytes, while Courier takes messages of at most ${maxMessageSize}. Register the plugin with { options: { maxPayload: wsFrameLimit(${maxMessageSize}) } } (${limit} bytes, from "@noverax/courier/node"): a message somewhat too large is then refused with 4413 and the socket kept, and a frame larger still is refused before it is read.`,
   );
 }
 

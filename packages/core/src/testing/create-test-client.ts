@@ -30,7 +30,7 @@ export function createTestClient<T extends DefinedApi<any> = DefinedApi<any>>():
   const mockKey = (group: string, method: string) => `${group}/${method}`;
 
   // Backend returns synchronously for SSE (SSESubscription) or async for HTTP
-  const backend: ExecuteBackend = (group, method, variables, _options, _raw) => {
+  const backend: ExecuteBackend = (group, method, variables, _options, raw) => {
     const key = mockKey(group, method);
     const handler = getMock(mocks, key);
 
@@ -44,7 +44,7 @@ export function createTestClient<T extends DefinedApi<any> = DefinedApi<any>>():
     }
 
     // HTTP mock (or unmocked) — async flow, errors thrown as rejected Promise
-    return handleHTTP(handler, group, method, variables, history);
+    return handleHTTP(handler, { group, method, variables, raw }, history);
   };
 
   function mock(group: string, method: string): MockBuilder<unknown> {
@@ -98,13 +98,20 @@ function handleWSChannel(
   return createMockWSChannel(channelHandlers, variables, delayMs);
 }
 
+interface MockCall {
+  group: string;
+  method: string;
+  variables: unknown;
+  /** Called through `.raw`, which resolves to the response around the data. */
+  raw: boolean;
+}
+
 async function handleHTTP(
   handler: MockHandler | undefined,
-  group: string,
-  method: string,
-  variables: unknown,
+  call: MockCall,
   history: HistoryEntry[],
 ): Promise<unknown> {
+  const { group, method, variables } = call;
   const entry: HistoryEntry = { group, method, variables, timestamp: Date.now() };
 
   if (!handler) {
@@ -134,7 +141,9 @@ async function handleHTTP(
   const data = handler.resolver ? await handler.resolver(variables) : handler.data;
   entry.result = { status: handler.status, data };
   history.push(entry);
-  return data;
+  /* Typed as the real client, whose `.raw` resolves to the response around
+     the data; handing back the bare data broke any read of its status. */
+  return call.raw ? { status: handler.status, headers: new Headers(), data } : data;
 }
 
 function getMock(mocks: Map<string, MockHandler[]>, key: string): MockHandler | undefined {

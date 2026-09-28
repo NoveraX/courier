@@ -104,7 +104,7 @@ The `client` returned by `createTestClient` has the exact same dot-notation API 
 const result = await client.users.getById({ id: 1 })
 
 // .raw and .with() work too
-const response = await client.users.raw.getById({ id: 1 })
+const response = await client.users.raw.getById({ id: 1 }) // { status: 200, headers, data }
 ```
 
 This means you can use the test client anywhere your production code uses a typed client.

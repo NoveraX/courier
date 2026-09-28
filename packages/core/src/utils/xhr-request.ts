@@ -1,5 +1,6 @@
 import { isBodilessStatus } from "../http-client/response";
 import type { UploadProgress } from "../http-client/types";
+import type { WebBody, WebCredentials } from "../http-client/web-types";
 import { createLogger } from "../logger";
 
 const log = createLogger("Upload");
@@ -10,9 +11,9 @@ const FETCH_ONLY = ["cache", "next", "mode", "redirect", "keepalive", "priority"
 export interface XhrRequestInit {
   method: string;
   headers: Headers;
-  body: BodyInit | null | undefined;
+  body: WebBody | null | undefined;
   signal?: AbortSignal | null;
-  credentials?: RequestCredentials;
+  credentials?: WebCredentials;
   [option: string]: unknown;
 }
 

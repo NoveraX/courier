@@ -7,6 +7,7 @@
  */
 
 import type { DownloadProgress, UploadProgress } from "../http-client/types";
+import type { WebBody } from "../http-client/web-types";
 import { countedStream } from "./counted-stream";
 import { sendUpload } from "./upload-redirects";
 import { toUploadSource } from "./upload-source";
@@ -26,7 +27,7 @@ import { type XhrRequestInit, xhrRequest } from "./xhr-request";
  */
 export async function sendWithUploadProgress(
   url: string,
-  init: XhrRequestInit & { body: BodyInit },
+  init: XhrRequestInit & { body: WebBody },
   onProgress: (progress: UploadProgress) => void,
 ): Promise<Response> {
   if (typeof XMLHttpRequest !== "undefined") return xhrRequest(url, init, onProgress);

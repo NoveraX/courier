@@ -1,5 +1,6 @@
 import type { ExposablePath, KindAt, ProxyBoundary } from "../define/boundary-types";
 import type { HTTPError } from "../errors";
+import type { WebCredentials } from "../http-client/web-types";
 import type { CallerWSOptions } from "../realtime/ws/ws-types";
 import type { ProxyPath } from "./proxy-path";
 
@@ -40,7 +41,7 @@ export type ProxyCallerDefaults = {
    * `source` is given.
    */
   deduplicate?: boolean;
-  credentials?: RequestCredentials;
+  credentials?: WebCredentials;
   headers?: Record<string, string>;
   onError?: (error: HTTPError) => void | Promise<void>;
   onSuccess?: (data: unknown) => void | Promise<void>;

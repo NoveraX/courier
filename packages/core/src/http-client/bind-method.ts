@@ -20,6 +20,7 @@ import type {
   ResponseType,
   SearchParamsSerializer,
 } from "./types";
+import type { WebBody } from "./web-types";
 
 export type BindMethodDeps = {
   context?: Context;
@@ -30,7 +31,7 @@ export type BindMethodDeps = {
   searchParamsSerializer?: SearchParamsSerializer;
   defaultQueryParams?: Record<string, unknown>;
   defaultBody: Record<string, unknown>;
-  bodySerializer?: (data: Record<string, unknown>) => BodyInit;
+  bodySerializer?: (data: Record<string, unknown>) => WebBody;
   responseType: ResponseType;
   responseParser?: (response: Response) => Promise<unknown>;
   fetchRequest: (method: string, url: string, options: Partial<FetchOptions>) => Promise<Response>;

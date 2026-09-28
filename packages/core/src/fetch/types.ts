@@ -1,3 +1,5 @@
+import type { WebBody } from "../http-client/web-types";
+
 export type ResponseType = "json" | "text" | "blob" | "arrayBuffer" | "formData";
 
 export type FetchClientOptions = {
@@ -8,7 +10,7 @@ export type FetchClientOptions = {
 
 export type RequestOptions = {
   json?: unknown;
-  body?: BodyInit;
+  body?: WebBody;
   searchParams?: Record<string, string> | URLSearchParams | string;
   headers?: Record<string, string> | Headers;
   timeout?: number;

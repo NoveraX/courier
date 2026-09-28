@@ -1,4 +1,5 @@
 import type { HTTPError } from "../errors";
+import type { WebCredentials } from "../http-client/web-types";
 import { encodeWireVariables, WIRE_VARIABLES_KEY } from "../utils/wire-variables";
 import { proxyRouting } from "./proxy-routing";
 import { sendFetch } from "./send-fetch";
@@ -10,7 +11,7 @@ export type GetProxyCtx = {
   method: string;
   variables: unknown;
   serverOptions: Record<string, unknown>;
-  credentials: RequestCredentials;
+  credentials: WebCredentials;
   defaultHeaders?: Record<string, string>;
   /** The rest of the browser request's init — signal, cache, next, mode, … */
   init: Record<string, unknown>;

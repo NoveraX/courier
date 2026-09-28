@@ -1,6 +1,7 @@
 import type { ProxyBoundary } from "../define/boundary-types";
 import type { Middleware } from "../middleware/types";
 import type { ProxyPath } from "../proxy-caller/proxy-path";
+import type { WebBody } from "./web-types";
 
 export type HttpMethod = "get" | "post" | "put" | "patch" | "del" | "head" | "options";
 
@@ -138,7 +139,7 @@ export type BaseOptions = MergeOptions &
      */
     boundary?: ProxyBoundary;
     /** Custom serializer for variables that are an object, replacing JSON.stringify (e.g. for XML) */
-    bodySerializer?: (data: Record<string, unknown>) => BodyInit;
+    bodySerializer?: (data: Record<string, unknown>) => WebBody;
     /** Custom search params serializer with stringify/parse methods */
     searchParamsSerializer?: SearchParamsSerializer;
     /** Cancel an in-flight read when the same endpoint is read again — defaults to false */

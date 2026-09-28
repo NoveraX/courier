@@ -14,6 +14,7 @@ import type {
   ResponseType,
   SearchParamsSerializer,
 } from "./types";
+import type { WebBody } from "./web-types";
 
 export class HttpClient {
   private responseType: ResponseType = "json";
@@ -21,7 +22,7 @@ export class HttpClient {
   private defaultBody: Record<string, unknown> = {};
   private defaultQueryParams?: Record<string, unknown>;
   private pathOptions?: PathOptions;
-  private bodySerializer?: (data: Record<string, unknown>) => BodyInit;
+  private bodySerializer?: (data: Record<string, unknown>) => WebBody;
   private searchParamsSerializer?: SearchParamsSerializer;
   private deduplicate = false;
   private prefixUrl = "";

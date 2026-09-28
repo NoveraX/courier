@@ -3,6 +3,7 @@ import { isFieldRecord, isRawBody, toBodyInit } from "../utils/body-kind";
 import { isFormData, normalizeHttpMethod } from "../utils/helpers";
 import { toQueryEntries } from "../utils/query-string";
 import type { FetchOptions, HttpMethod, SearchParamsSerializer } from "./types";
+import type { WebBody } from "./web-types";
 
 export const toSearchParams = (
   variables: Record<string, unknown> | undefined,
@@ -80,7 +81,7 @@ export const buildSearchParams = (
 export const buildRequestBody = (
   variables: unknown,
   defaultBody: Record<string, unknown>,
-  bodySerializer?: (data: Record<string, unknown>) => BodyInit,
+  bodySerializer?: (data: Record<string, unknown>) => WebBody,
 ): Pick<FetchOptions, "body" | "json" | "duplex"> | undefined => {
   if (isFormData(variables)) return { body: withoutEmptyFiles(variables) };
   if (isRawBody(variables)) {
@@ -125,7 +126,7 @@ export const buildBody = (
   defaultBody: Record<string, unknown>,
   defaultQueryParams: Record<string, unknown> | undefined,
   serializer?: SearchParamsSerializer,
-  bodySerializer?: (data: Record<string, unknown>) => BodyInit,
+  bodySerializer?: (data: Record<string, unknown>) => WebBody,
 ): Pick<FetchOptions, "body" | "json" | "duplex" | "searchParams"> | undefined => {
   const cleaned = stripUndefined(variables);
 

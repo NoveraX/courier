@@ -6,7 +6,9 @@ const log = createLogger("Runtime");
 
 /**
  * Load courier.config from disk for a server runtime: register its sources and
- * set the app origin.
+ * set the app origin. Outside production, the sources are registered again
+ * from the config whenever the application redefines one, as a dev server
+ * does on every edit.
  *
  * Attaching must not take down the host application, so a config that will not
  * load is logged rather than thrown, and the app origin is still detected.
@@ -26,6 +28,7 @@ export async function registerFromConfig(): Promise<ConfiguredStudioAddress | un
          load, and neither may end the host's startup. */
       registerSources(loaded.config.sources);
       setAppOrigin(loaded.config.runtime?.appOrigin ?? detectAppOrigin());
+      if (process.env.NODE_ENV !== "production") await followConfig(loadCourierConfig);
       return loaded.config.studio ?? {};
     }
   } catch (err) {
@@ -36,4 +39,22 @@ export async function registerFromConfig(): Promise<ConfiguredStudioAddress | un
   }
   setAppOrigin(detectAppOrigin());
   return undefined;
+}
+
+async function followConfig(load: () => Promise<LoadedCourierConfig | null>): Promise<void> {
+  const { followConfigSources } = await import("./follow-config-sources");
+  followConfigSources(async () => {
+    try {
+      const loaded = await load();
+      if (!loaded) {
+        log.warn("courier.config is gone; the sources registered from it stay in force");
+        return;
+      }
+      registerSources(loaded.config.sources);
+    } catch (err) {
+      /* An edit caught half-way through, or one that breaks the config, must
+         not leave the app with nothing to serve: the last good sources stay. */
+      log.error("courier.config could not be reloaded; the sources registered before stay", err);
+    }
+  });
 }

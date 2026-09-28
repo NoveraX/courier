@@ -57,8 +57,12 @@ export interface WSPlaygroundHooks {
   sendWSMessage?: (connectionId: string, topic: string, data: unknown) => boolean;
 }
 
-/** Source registration / HMR hook fired by defineApi() in dev mode */
+/** Source (re)definition hook fired by defineApi() in dev mode */
 export interface SourceDefinedHooks {
-  /** Dev-only: fired when defineApi() creates or re-creates a source (HMR support) */
+  /**
+   * Dev-only: fired when defineApi() creates or re-creates a source. An
+   * attached server reloads its config on it, so a hot-reloaded module's
+   * edits reach the registry.
+   */
   onSourceDefined?: (source: unknown, baseURL: string) => void;
 }

@@ -16,14 +16,14 @@
  * gated to dev only. The function makes the split internally so callers
  * never need their own `process.env.NODE_ENV` check.
  *
- *  - **ALWAYS**: load config + register sources + set `appOrigin` + wire
- *    `studioHooks.onSourceDefined` (so HMR-redefined sources reach the
- *    registry in production too).
+ *  - **ALWAYS**: load config + register sources + set `appOrigin`.
  *
- *  - **DEV ONLY** (gated by `NODE_ENV !== "production"`): wire all the
- *    Studio observability hooks (request lifecycle, middleware, validation,
- *    stream, fetch, proxy, cache, dedup, upload), open the `/runtime`
- *    Socket.IO connection, install the playground responder.
+ *  - **DEV ONLY** (gated by `NODE_ENV !== "production"`): register the
+ *    config's sources again whenever the application redefines one (see
+ *    `followConfigSources`), wire all the Studio observability hooks (request
+ *    lifecycle, middleware, validation, stream, fetch, proxy, cache, dedup,
+ *    upload), open the `/runtime` Socket.IO connection, install the
+ *    playground responder.
  *
  * # User-facing usage
  *

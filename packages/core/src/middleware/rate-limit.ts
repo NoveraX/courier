@@ -1,5 +1,5 @@
+import { createAdmissionQueue } from "./admission-queue";
 import { defineMiddleware } from "./compose";
-import { pause } from "./pause";
 import type { Middleware } from "./types";
 
 /**
@@ -7,10 +7,11 @@ import type { Middleware } from "./types";
  * Runs before fetch only (no response processing).
  *
  * At most `maxRequests` requests are let through in any `window`
- * milliseconds, however many calls arrive at once: each call is given its
- * turn when it arrives, and calls beyond the limit wait for theirs in the
- * order they came. A caller that cancels stops waiting at once; its turn stays
- * spent, so the limit is never exceeded.
+ * milliseconds, however many calls arrive at once and however late a busy
+ * event loop runs the limiter's timers: the window is measured from when each
+ * request actually went, and calls beyond the limit wait their turn in the
+ * order they came. A caller that cancels stops waiting at once, and its turn
+ * goes to the call queued behind it.
  *
  * @param options - How many requests a window admits, and how long a window is
  * @returns The middleware, to place on a source or an endpoint
@@ -29,20 +30,9 @@ export function rateLimitMiddleware(options: {
   /** Time window in milliseconds */
   window: number;
 }): Middleware {
-  const { maxRequests, window: windowMs } = options;
-  /* When each admitted request is let through, in order. A turn is taken
-     before waiting, so callers arriving together queue behind one another
-     rather than all waking at the same moment. */
-  const turns: number[] = [];
+  const queue = createAdmissionQueue(options.maxRequests, options.window);
 
   return defineMiddleware("rateLimit", "before", async (ctx) => {
-    const now = Date.now();
-    while (turns.length > 0 && (turns[0] ?? now) + windowMs <= now) turns.shift();
-
-    const at =
-      turns.length < maxRequests ? now : (turns[turns.length - maxRequests] ?? now) + windowMs;
-    turns.push(at);
-
-    if (at > now) await pause(at - now, ctx.signal);
+    await queue.enter(ctx.signal);
   });
 }

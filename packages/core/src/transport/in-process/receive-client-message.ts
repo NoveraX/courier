@@ -44,9 +44,7 @@ export async function receiveClientMessage(
   }
   await Promise.resolve();
   const { schema, handlers, channelCtx } = target;
-  const validated = schema.receive
-    ? await validateSchema(schema.receive as Parameters<typeof validateSchema>[0], data, "receive")
-    : data;
+  const validated = schema.receive ? await validateSchema(schema.receive, data, "receive") : data;
   try {
     await handlers.onMessage(channelCtx, validated);
   } catch (error) {

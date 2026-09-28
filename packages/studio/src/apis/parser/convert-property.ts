@@ -38,11 +38,12 @@ export function convertProperty(
   spec?: SpecNode,
 ): ParsedSchemaProperty {
   const { node, nullable } = withoutNull(normalizeTypeArray(raw));
-  /* A readOnly property is produced by the server. Demanding it made a
-     request body impossible to construct, while leaving it optional still
-     lets a response carry it. */
+  /* One type serves the request and the answer. A readOnly property is
+     produced by the server: demanded, a request body could not be built. A
+     writeOnly one is sent by the client and never answered: demanded, every
+     answer was refused for lacking it. Optional, either may still be there. */
   const base = {
-    required: required && node.readOnly !== true && raw.readOnly !== true,
+    required: required && !directed(raw) && !directed(node),
     description: textAt(raw, "description") ?? textAt(node, "description"),
     nullable: nullable || undefined,
   };
@@ -107,6 +108,7 @@ function pointedProperty(
           ...(base.description !== undefined && { description: base.description }),
           ...(base.nullable && { nullable: true }),
           ...(raw.readOnly === true && { readOnly: true }),
+          ...(raw.writeOnly === true && { writeOnly: true }),
         },
         base.required,
         spec,
@@ -131,4 +133,9 @@ export function mapValueType(
   const additional = fieldOf(node, "additionalProperties");
   if (!isNode(additional)) return undefined;
   return convertSchema(`${name}Value`, additional, spec);
+}
+
+/* A property only one direction carries. */
+function directed(node: SpecNode): boolean {
+  return node.readOnly === true || node.writeOnly === true;
 }

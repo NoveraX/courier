@@ -4,7 +4,7 @@
 
 import type { ParsedEndpoint, ParsedGroup } from "./types";
 import { uniqueEndpointNames } from "./unique-endpoint-names";
-import { convertPathParams, findCommonPrefix, toBindingName } from "./utils";
+import { convertPathParams, findCommonPrefix, toGroupName } from "./utils";
 
 /**
  * Turn the endpoints of each tag into a group.
@@ -50,10 +50,10 @@ export function buildGroups(
 }
 
 function resolveGroupName(tag: string, prefix: string): string {
-  const name = toBindingName(tag);
+  const name = toGroupName(tag);
   if (name) return name;
   const lastSegment = prefix.split("/").filter(Boolean).pop();
-  return lastSegment ? toBindingName(lastSegment) : "defaultGroup";
+  return lastSegment ? toGroupName(lastSegment) : "defaultGroup";
 }
 
 function deduplicateName(name: string, usedNames: Set<string>): string {

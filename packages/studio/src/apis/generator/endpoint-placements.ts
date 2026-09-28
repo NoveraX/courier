@@ -1,6 +1,6 @@
 import type { ParsedEndpoint, ParsedGroup, ParsedSpec } from "../parser/types";
 import { uniqueEndpointNames } from "../parser/unique-endpoint-names";
-import { convertPathParams, findCommonPrefix, toBindingName } from "../parser/utils";
+import { convertPathParams, findCommonPrefix, toGroupName } from "../parser/utils";
 
 /** The one group of an import generated with `groupBy: "single"`. */
 export const SINGLE_GROUP = "api";
@@ -64,7 +64,7 @@ function byPathSegment(all: Sourced[]): EndpointPlacement[] {
     const prefix = findCommonPrefix(items.map((item) => item.source.fullPath));
     /* A URL segment is not an identifier: Twilio's `2010-04-01` became
        `20100401`, and `export const 20100401` does not parse. */
-    const name = claim(toBindingName(segment), taken);
+    const name = claim(toGroupName(segment), taken);
     /* The URL the caller builds uses `:name`; leaving the specification's
        braces in put a literal `{AccountSid}` into the request. */
     const group = { name, description: "", prefix: convertPathParams(prefix) };

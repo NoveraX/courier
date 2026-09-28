@@ -13,16 +13,18 @@
  * one is rebuilt from the path it serves, so the short names survive wherever
  * they were never ambiguous.
  *
- * `options` is never left as it is: a group and a source keep their own
- * settings under that key, so the definition refuses an endpoint of that
- * name, and an operation whose id is `options` is rebuilt the same way.
+ * `options`, `raw` and `with` are never left as they are: a group and a
+ * source keep their settings under `options`, and a client reaches its raw
+ * answers and its per-call options through `raw` and `with`, so the
+ * definition refuses an endpoint of those names, and an operation whose id
+ * is one of them is rebuilt the same way.
  */
 
 import { toCamelCase } from "./naming-utils";
 import type { ParsedEndpoint } from "./types";
 
-/** Keys a group or a source holds beside its endpoints. */
-const RESERVED = new Set(["options"]);
+/** Keys a group, a source or a client holds beside its endpoints. */
+const RESERVED = new Set(["options", "raw", "with"]);
 
 /**
  * Rename only those endpoints whose names collide within the group.

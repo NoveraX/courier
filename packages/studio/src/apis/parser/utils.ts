@@ -4,7 +4,13 @@
 
 export { convertSchemaInline } from "./convert-schema-inline";
 export { inferSchemaFromValue } from "./infer-schema";
-export { generateEndpointName, toBindingName, toCamelCase, toSafeIdentifier } from "./naming-utils";
+export {
+  generateEndpointName,
+  toBindingName,
+  toCamelCase,
+  toGroupName,
+  toSafeIdentifier,
+} from "./naming-utils";
 export {
   convertPathParams,
   extractPostmanPath,

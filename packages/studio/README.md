@@ -23,10 +23,11 @@ Courier Studio is a development server with a web UI: a request inspector, an en
 ## Install
 
 ```bash
-npm install --save-dev @noverax/courier-studio @noverax/courier-studio-core
+npm install --save-dev @noverax/courier-studio
+npm install @noverax/courier-studio-core
 ```
 
-`@noverax/courier-studio-core` is what your server instrumentation imports. An app that only connects its browser through a build integration can leave it out.
+Studio is a development tool, so it is a dev dependency. `@noverax/courier-studio-core` is what your server instrumentation imports `attachRuntime()` from, so it is a dependency: a production install leaves dev dependencies out, and a server that imports the runtime does not start without it — even one that calls it only in development. `attachRuntime()` runs in production too, where it registers the config's sources. An app that only connects its browser through a build integration can leave it out.
 
 <br />
 

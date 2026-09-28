@@ -14,7 +14,7 @@ export const REACT: FrameworkConfig = {
   name: "React",
   description: "React with Vite",
   steps: [
-    installStep("@noverax/courier-studio"),
+    installStep(),
     {
       id: "instrument",
       title: "Add Vite plugin",
@@ -40,7 +40,7 @@ export const VUE: FrameworkConfig = {
   name: "Vue",
   description: "Vue with Vite",
   steps: [
-    installStep("@noverax/courier-studio"),
+    installStep(),
     {
       id: "instrument",
       title: "Add Vite plugin",

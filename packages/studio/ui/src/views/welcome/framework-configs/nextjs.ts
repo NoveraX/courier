@@ -14,7 +14,7 @@ export const NEXTJS: FrameworkConfig = {
   name: "Next.js",
   description: "App Router v14+ (Turbopack & webpack)",
   steps: [
-    installStep("@noverax/courier-studio @noverax/courier-studio-core"),
+    installStep({ withRuntime: true }),
     {
       id: "instrument-client",
       title: "Add client instrumentation",

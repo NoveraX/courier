@@ -23,10 +23,11 @@ This package connects a running Courier application to Courier Studio and stream
 ## Install
 
 ```bash
-npm install --save-dev @noverax/courier-studio @noverax/courier-studio-core
+npm install @noverax/courier-studio-core
+npm install --save-dev @noverax/courier-studio
 ```
 
-Install it next to `@noverax/courier-studio` whenever your own code imports it — every server instrumentation snippet does. The build plugins of `@noverax/courier-studio` reach it through their own dependency, so an app that only uses a build plugin does not need it listed.
+Install it as a dependency, not a dev dependency, whenever your own code imports it — every server instrumentation snippet does. A production install leaves dev dependencies out, and a server that imports this package then stops at `Cannot find package '@noverax/courier-studio-core'`, even when it calls `attachRuntime()` only in development; and `attachRuntime()` runs in production too, where it registers the config's sources. The build plugins of `@noverax/courier-studio` reach it through their own dependency, so an app that only uses a build plugin does not need it listed.
 
 The Socket.IO client that streams to Studio comes with it. It is loaded only outside production, and it never keeps a process alive on its own: a script or a test run that attaches exits when its work is done, whether Studio is running or not.
 

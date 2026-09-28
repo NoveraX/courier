@@ -15,7 +15,7 @@ export const ASTRO: FrameworkConfig = {
   name: "Astro",
   description: "Content-driven framework with SSR",
   steps: [
-    installStep("@noverax/courier-studio @noverax/courier-studio-core"),
+    installStep({ withRuntime: true }),
     {
       id: "instrument-client",
       title: "Add Astro integration",
@@ -59,7 +59,7 @@ export const ANGULAR: FrameworkConfig = {
   name: "Angular",
   description: "Full-featured platform by Google",
   steps: [
-    installStep("@noverax/courier-studio"),
+    installStep(),
     {
       id: "instrument",
       title: "Initialize Studio",
@@ -88,7 +88,7 @@ export const SOLID: FrameworkConfig = {
   name: "Solid Start",
   description: "Solid.js meta-framework",
   steps: [
-    installStep("@noverax/courier-studio @noverax/courier-studio-core"),
+    installStep({ withRuntime: true }),
     {
       id: "instrument-client",
       title: "Add Vite plugin",

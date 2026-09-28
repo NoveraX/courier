@@ -26,14 +26,36 @@ export const EXPLORE_STEP: SetupStep = {
   actionLabel: "Go to Timeline",
 };
 
-export function installStep(pkg: string): SetupStep {
+const STUDIO_PACKAGE = "@noverax/courier-studio";
+const RUNTIME_PACKAGE = "@noverax/courier-studio-core";
+
+/**
+ * The step that installs Studio.
+ *
+ * Studio is a development tool, so it is a dev dependency. The runtime a
+ * server imports `attachRuntime()` from is a dependency: a production install
+ * leaves dev dependencies out, and a server whose code imports the runtime —
+ * or runs it in production, where it registers the config's sources — does
+ * not start without it.
+ *
+ * @param options - `withRuntime` for a guide whose server connects to Studio too.
+ * @returns The install step.
+ * @example
+ * ```ts
+ * installStep({ withRuntime: true });
+ * ```
+ */
+export function installStep({ withRuntime = false }: { withRuntime?: boolean } = {}): SetupStep {
+  const devCommand = `npm install -D ${STUDIO_PACKAGE}`;
   return {
     id: "install",
     title: "Install packages",
-    description: "Add the Studio package to your project.",
+    description: withRuntime
+      ? "Add Studio as a dev dependency, and the runtime your server imports as a dependency."
+      : "Add the Studio package to your project.",
     icon: Package,
     actionLabel: "Copy command",
-    code: `npm install -D ${pkg}`,
+    code: withRuntime ? `npm install ${RUNTIME_PACKAGE}\n${devCommand}` : devCommand,
     lang: "bash",
   };
 }

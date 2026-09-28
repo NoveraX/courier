@@ -5,13 +5,6 @@ import type { WebBody } from "./web-types";
 
 export type HttpMethod = "get" | "post" | "put" | "patch" | "del" | "head" | "options";
 
-export type AnyEndpoints = Partial<{
-  [k: string]: (
-    methods: HttpMethods,
-    variables: unknown,
-  ) => Promise<HttpResponse<unknown>> | HttpResponse<unknown>;
-}>;
-
 export type HttpMethods = {
   [TMethod in HttpMethod]: <TData = unknown>(
     ...arguments_: MethodParameters<TMethod>

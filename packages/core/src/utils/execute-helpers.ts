@@ -1,5 +1,5 @@
 import { HttpClient } from "../http-client/index";
-import type { AnyEndpoints, BaseOptions, Context } from "../http-client/types";
+import type { BaseOptions, Context } from "../http-client/types";
 
 const pendingBySource = new WeakMap<object, Record<string, AbortController>>();
 
@@ -44,20 +44,24 @@ function pendingRequestsOf(dataSource: object): Record<string, AbortController> 
   return pending;
 }
 
+/** An endpoint as a group or a source holds it: a descriptor carrying its wire closure. */
+export interface EndpointEntry {
+  readonly probe: (...args: never[]) => unknown;
+}
+
 /**
  * Recognise a value stored in a group or source as an endpoint.
  *
  * A descriptor keeps its wire closure under `probe`, so it is identified by
  * carrying one rather than by being callable itself.
  */
-export const isEndpointFn = (value: unknown): value is AnyEndpoints[string] => {
-  if (typeof value !== "object" || value === null) return false;
-  return typeof (value as { probe?: unknown }).probe === "function";
-};
+export const isEndpointEntry = (value: unknown): value is EndpointEntry =>
+  typeof value === "object" &&
+  value !== null &&
+  "probe" in value &&
+  typeof value.probe === "function";
 
-export const getEndpoint = (target: object, name: string): AnyEndpoints[string] | undefined => {
-  if (!(name in target)) return undefined;
-  // object has no index signature; in-narrowing validates property exists
-  const endpoint = (target as Record<string, unknown>)[name];
-  return isEndpointFn(endpoint) ? endpoint : undefined;
+export const getEndpoint = (target: object, name: string): EndpointEntry | undefined => {
+  const endpoint: unknown = Reflect.get(target, name);
+  return isEndpointEntry(endpoint) ? endpoint : undefined;
 };

@@ -93,6 +93,25 @@ export function bodyMedia(ep: ParsedEndpoint): "structured" | "form" | "bytes" {
 }
 
 /**
+ * The media type a JSON body is sent as, when the operation names one of its
+ * own: a JSON Patch, a merge patch, JSON:API. Sent as `application/json`, it
+ * was refused by an API that tells them apart by the media type.
+ *
+ * @param ep - The endpoint
+ * @returns The declared media type, parameters included, or `null` for plain JSON and every other body
+ * @example
+ * ```ts
+ * ownJsonMedia({ ...mergePet, requestBodyMediaType: "application/merge-patch+json" }); // "application/merge-patch+json"
+ * ```
+ */
+export function ownJsonMedia(ep: ParsedEndpoint): string | null {
+  const declared = ep.requestBodyMediaType?.trim();
+  const base = declared?.split(";")[0]?.trim().toLowerCase();
+  if (!declared || !base || base === "application/json" || !base.includes("json")) return null;
+  return declared;
+}
+
+/**
  * The key a body that is not a set of fields takes beside the parameters:
  * `body`, unless a parameter is named that.
  *

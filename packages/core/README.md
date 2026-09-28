@@ -33,7 +33,7 @@ npm install @noverax/courier
 
 ## Exports
 
-The core package exposes five entry points:
+The core package's public entry points:
 
 ### `@noverax/courier` — Main
 
@@ -90,6 +90,31 @@ import {
   toWebRequest,      // Convert Node.js IncomingMessage → Web Request
   sendWebResponse,   // Send Web Response → Node.js ServerResponse
 } from "@noverax/courier/node"
+```
+
+### `@noverax/courier/realtime` — Streams & Channels
+
+```ts
+import {
+  subscribeSSE,          // Read a server-sent event stream, resuming from its last event id
+  createMemoryPubSub,    // In-process broadcasts, for one server
+  createMemoryStream,    // In-process event history a stream resumes from
+  createMemoryPresence,  // In-process presence: who is on a topic
+  RealtimeError,         // A stream's or a channel's error, with its code
+  isRealtimeError,       // Type guard for RealtimeError
+} from "@noverax/courier/realtime"
+```
+
+### `@noverax/courier/config` — Project Config
+
+```ts
+import { defineConfig } from "@noverax/courier/config" // Types a courier.config.ts: sources, Studio and server settings
+```
+
+### `@noverax/courier/fetch` — Standalone Fetch Client
+
+```ts
+import { createFetch } from "@noverax/courier/fetch" // A small wrapper over fetch: base URL, JSON, search params, timeout
 ```
 
 <br />

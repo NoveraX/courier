@@ -173,6 +173,7 @@ export const docsNav: NavSection[] = [
       { title: "createProxyCaller", href: "/docs/api/create-proxy-caller" },
       { title: "createQueryCaller", href: "/docs/api/create-query-caller" },
       { title: "createProxyQueryCaller", href: "/docs/api/create-proxy-query-caller" },
+      { title: "createQueryKeys", href: "/docs/api/create-query-keys" },
       { title: "createHandler", href: "/docs/api/api-route" },
       { title: "HttpClient", href: "/docs/api/instance" },
       { title: "HTTPError", href: "/docs/api/http-error" },

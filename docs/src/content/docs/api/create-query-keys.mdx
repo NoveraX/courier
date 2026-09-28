@@ -1,0 +1,66 @@
+export const metadata = { title: "createQueryKeys", description: "Build the React Query keys the hooks use, typed by your API, for invalidation, prefetching and optimistic updates.", mode: "both" }
+
+## Import
+
+```ts
+import { createProxyQueryKeys, createQueryKeys } from "@noverax/courier-react"
+```
+
+## Signature
+
+`createQueryKeys` takes the API definition, as `createQueryCaller` does; `createProxyQueryKeys` takes the source name and the API as a type argument, as `createProxyQueryCaller` does. Both return a key factory that builds the keys the hooks of the matching caller use:
+
+```ts
+import type { DefinedApi } from "@noverax/courier/define"
+import type { QueryKeyFactory } from "@noverax/courier-react"
+
+declare function createQueryKeys<TApi extends DefinedApi>(api: TApi): QueryKeyFactory<TApi>
+
+declare function createProxyQueryKeys<TApi extends DefinedApi>(source: string): QueryKeyFactory<TApi>
+```
+
+## Keys
+
+A key is `[source, group, method?, variables?]`. The group and the method are checked against the API, so a key cannot name an endpoint that does not exist:
+
+```ts title="lib/query.ts"
+import { createQueryCaller, createQueryKeys } from "@noverax/courier-react"
+import { api } from "@/api"
+
+export const q = createQueryCaller(api)
+export const queryKeys = createQueryKeys(api)
+
+queryKeys("users")                        // ["api", "users"]
+queryKeys("users", "getAll")              // ["api", "users", "getAll"]
+queryKeys("users", "getById", { id: 1 })  // ["api", "users", "getById", { id: 1 }]
+```
+
+`source` is the name the caller was made for: for `createQueryKeys(api)`, the API's own name — its `defineApi({ name })`, or else the first label of its `baseURL` host — and for `createProxyQueryKeys`, the name you pass. Build the keys for the same source as the caller, and a key names what the caller's hooks cached.
+
+## Invalidating
+
+A shorter key matches every longer one under it, so the three lengths invalidate an endpoint's call with those variables, every call of an endpoint, or every endpoint of a group:
+
+```ts title="components/create-user.tsx"
+"use client"
+
+import { useQueryClient } from "@noverax/courier-react"
+import { q, queryKeys } from "@/lib/query"
+
+export function CreateUser() {
+  const queryClient = useQueryClient()
+  const { mutate } = q.users.useMutation("create", {
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys("users", "getAll") }),
+  })
+
+  return <button onClick={() => mutate({ name: "Ada" })}>Add user</button>
+}
+```
+
+An infinite query's key ends with `"infinite"`, after its first page's variables; the method's key invalidates it too.
+
+## Related
+
+- [`createQueryCaller`](/docs/api/create-query-caller) — the direct-mode caller whose keys these are
+- [`createProxyQueryCaller`](/docs/api/create-proxy-query-caller) — the proxy-mode caller
+- [useQuery](/docs/react-query/use-query#auto-generated-query-keys) — how the hooks build their keys

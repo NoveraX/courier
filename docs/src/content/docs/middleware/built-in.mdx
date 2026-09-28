@@ -30,7 +30,7 @@ declare function retryMiddleware(options?: {
   retryOn?: (response: MiddlewareResponse) => boolean
   /** Retry endpoints that write as well as those that read (default: false) */
   mutations?: boolean
-}): MiddlewareFn
+}): Middleware
 ```
 
 The delay between retries follows the formula `backoff * 2^attempt` -- so with the default 300ms base, the delays are 300ms, 600ms, 1200ms.
@@ -92,7 +92,7 @@ declare function authMiddleware(options: {
   header?: string
   /** Auth scheme prefix (default: "Bearer") */
   scheme?: string
-}): MiddlewareFn
+}): Middleware
 ```
 
 ### Basic usage
@@ -146,7 +146,7 @@ Request/response logging with timing information.
 declare function logMiddleware(options?: {
   /** Receives each line, and the error of a failed request (default: Courier's logger) */
   logger?: (message: string, error?: unknown) => void
-}): MiddlewareFn
+}): Middleware
 ```
 
 Logs each request as `source:group:method → status (duration)`. On errors, logs `source:group:method → ERROR (duration)` and passes the error along. By default the lines go to Courier's logger: a success at `info` on stdout, a failure at `warn` on stderr with the error's stack.
@@ -192,7 +192,7 @@ declare function rateLimitMiddleware(options: {
   maxRequests: number
   /** Time window in milliseconds */
   window: number
-}): MiddlewareFn
+}): Middleware
 ```
 
 ```ts title="lib/sources.ts"
@@ -227,7 +227,7 @@ declare function cacheMiddleware(options: {
   maxEntries?: number
   /** Custom storage; a Map satisfies it (default: in-memory, per middleware instance) */
   storage?: CacheStore
-}): MiddlewareFn
+}): Middleware
 ```
 
 Caches successful responses (2xx status) of endpoints that read, keyed by the scope's partition, `source:group:method` and the variables. Non-2xx responses are never cached.

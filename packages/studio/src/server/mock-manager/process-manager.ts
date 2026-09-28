@@ -4,10 +4,8 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { createLogger } from "@noverax/courier";
 import type { ChildMessage, ParentMessage } from "@noverax/courier-mock/managed";
+import { stopWorker } from "./stop-worker";
 import type { ProcessManager, SpawnRequest } from "./types";
-
-const GRACEFUL_TIMEOUT = 3000;
-const FORCE_TIMEOUT = 2000;
 
 const log = createLogger("Mock");
 
@@ -121,21 +119,7 @@ export function createProcessManager(
     const child = children.get(serverId);
     if (!child) return;
     stopping.add(child);
-    await new Promise<void>((resolve) => {
-      if (child.exitCode !== null || child.signalCode !== null) return resolve();
-      const timers: NodeJS.Timeout[] = [];
-      child.once("exit", () => {
-        for (const timer of timers) clearTimeout(timer);
-        resolve();
-      });
-      send(serverId, child, { type: "stop" });
-      timers.push(
-        setTimeout(() => {
-          child.kill("SIGTERM");
-          timers.push(setTimeout(() => child.kill("SIGKILL"), FORCE_TIMEOUT));
-        }, GRACEFUL_TIMEOUT),
-      );
-    });
+    await stopWorker(child, () => send(serverId, child, { type: "stop" }));
     if (children.get(serverId) === child) children.delete(serverId);
   }
 

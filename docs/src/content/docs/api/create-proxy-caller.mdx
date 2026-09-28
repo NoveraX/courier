@@ -160,6 +160,8 @@ const result = await caller.files
 When `onUploadProgress` is set, Courier uses `XMLHttpRequest` instead of `fetch` to provide real network-level progress tracking on both HTTP/1.1 and HTTP/2.
 </Callout>
 
+Files go in a `FormData`. Any other variables travel to the proxy as JSON, so a call whose variables hold a `Blob`, an `ArrayBuffer`, a typed array or a stream is refused before it is sent, with `ConfigurationError("PROXY_BINARY_VARIABLES", ...)` naming the value — see the [upload guide](/docs/advanced/upload).
+
 The progress covers the browser's upload to the proxy route. The proxy then forwards the whole file to your backend, so the call resolves after progress has reached 100% — see [progress in proxy mode](/docs/advanced/upload#progress-in-proxy-mode).
 
 ## GET Proxy Mode

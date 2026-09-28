@@ -214,6 +214,7 @@ A request Studio refuses changes nothing. It is answered with `{ error }` — `4
 | `INVALID_IMPORT` | 400 | The output directory, the source name or a group's name is one Studio does not write to: outside the project, in `.git`, `node_modules` or `.courier`, or a name Windows treats differently. |
 | `PATH_OUTSIDE_PROJECT` | 400 | A path leads out of the project. |
 | `SPEC_NOT_GENERATED` | 400 | Studio could not generate code from the specification sent. |
+| `SPEC_TOO_LARGE` | 413 | The specification is larger than 64 MB once parsed: Studio takes the parsed specification back when it generates, writes, updates or manages an import, and a request body may be at most 64 MB. |
 | `SPEC_PIN_MISMATCH` | 409 | The specification's hash is not the one the import's `pinHash` names. |
 | `IMPORT_TRANSFORM_FAILED` | 400 | The import's `transform` threw, or returned something that is not a specification. |
 

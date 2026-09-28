@@ -19,12 +19,14 @@ import { registerManageRoutes } from "./manage-routes";
 import { type ProjectRoot, projectRootAt } from "./project-fs/project-root";
 import { readProjectText } from "./project-fs/read-project-text";
 import type { ProjectImports } from "./project-state/types";
+import { refuseUnsendable } from "./refuse-unsendable";
 import { registerRegistryRoutes } from "./registry-routes";
 import { sendRouteFailure } from "./route-failure";
 import type { RouteApp } from "./route-types";
 import { SpecFetchError } from "./spec-fetch-error";
 import { type SpecHostAllowlist, specHostAllowlist } from "./spec-host-allowlist";
 import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
+import { SpecTooLargeError } from "./spec-too-large-error";
 import { registerUpdateFlowRoutes } from "./update-routes";
 import {
   validateDiffBody,
@@ -70,9 +72,11 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
         allowlist,
         projectRootAt(deps.projectRoot),
       );
-      res.json(parseSpec(raw));
+      const spec = parseSpec(raw);
+      refuseUnsendable(spec);
+      res.json(spec);
     } catch (err) {
-      if (err instanceof SpecHostsUnavailableError) {
+      if (err instanceof SpecHostsUnavailableError || err instanceof SpecTooLargeError) {
         sendRouteFailure(res, err, "Failed to parse spec");
         return;
       }

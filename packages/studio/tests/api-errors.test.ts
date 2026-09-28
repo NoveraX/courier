@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createStudioServer } from "../src/server/create-studio-server";
+import { MAX_MESSAGE_BYTES } from "../src/server/max-message-bytes";
 import type { StudioServer } from "../src/server/types";
 
 let root: string;
@@ -59,7 +60,7 @@ describe("API errors", () => {
   it("answers a body over the limit with a JSON 413", async () => {
     const url = await start();
 
-    const reply = await post(url, JSON.stringify({ content: "x".repeat(6 * 1024 * 1024) }));
+    const reply = await post(url, JSON.stringify({ content: "x".repeat(MAX_MESSAGE_BYTES) }));
 
     expect(reply.status).toBe(413);
     expect(JSON.parse(reply.text)).toEqual({ error: "The request body is larger than Studio accepts." });

@@ -11,6 +11,7 @@ import { authHeaders } from "./auth-headers";
 import { getImportEntry, getImportState, importsSnapshotOf } from "./imports-bridge";
 import { projectRootAt } from "./project-fs/project-root";
 import { readDeclarations } from "./project-state/read-declarations";
+import { refuseUnsendable } from "./refuse-unsendable";
 import { checkSingleSource, fetchSpecRaw } from "./registry-spec";
 import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse, RouteApp } from "./route-types";
@@ -73,6 +74,7 @@ async function handleCheckUpdates(
     checkPinnedHash(body.name, entry, newSpec);
     const newHash = computeSpecHash(newSpec);
     const changed = hasSpecChanged(imports.state, body.name, newHash);
+    if (changed) refuseUnsendable(newSpec);
     res.json(changed ? { changed: true, newSpec } : { changed: false });
   } catch (err) {
     sendRouteFailure(res, err, "Failed to check updates");

@@ -29,7 +29,11 @@ export const filterHeaders = (
   incomingHeaders?: HeadersInput,
   validHeaders: string[] = [],
 ): Headers => {
-  const allValidHeaders = new Set<string>([...ALLOWED_HEADERS, ...validHeaders]);
+  /* Names are case-insensitive, and an allowlist is written by hand. */
+  const allValidHeaders = new Set<string>([
+    ...ALLOWED_HEADERS,
+    ...validHeaders.map((name) => name.toLowerCase()),
+  ]);
   const source = incomingHeaders ? toHeaders(incomingHeaders) : new Headers();
   const result = new Headers();
 

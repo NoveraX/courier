@@ -74,6 +74,8 @@ export type ErrorHandlerCtx = {
   dt: Partial<StudioHooks>;
   context?: Context;
   rawData: boolean;
+  /** Header names the endpoint and its source carry across the proxy. */
+  namedHeaders?: readonly string[];
 };
 
 export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknown {
@@ -141,5 +143,8 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
     ...responseResult,
     throw: new HTTPError(responseResult),
     rawData: ctx.rawData,
+    /* An upstream's error answer is its own, and a sign-out that fails still
+       clears the session it names. */
+    namedHeaders: ctx.namedHeaders,
   });
 }

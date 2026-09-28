@@ -289,6 +289,18 @@ export const boundary: ProxyBoundary = defineBoundary<typeof api>({
 export const api = defineApi({ baseURL: "https://api.example.com", boundary, groups: { users } })
 ```
 
+Cookies cross the proxy only where they are named: `cookie` in a source's `allowedHeaders`, a base's, or an endpoint's `.headers()` forwards the browser's cookies to the upstream, and `set-cookie` passes the upstream's back. Unnamed, neither crosses, so a source that points at a third party never receives your users' session and cannot set cookies on your origin. A backend-for-frontend sign-in names each where it travels:
+
+```ts
+const auth = defineGroup({
+  prefix: "auth",
+  endpoints: {
+    login: endpoint.post("login").headers(["set-cookie"]), // the session reaches the browser
+    me: endpoint.get("me").headers(["cookie"]), // and goes back to the upstream
+  },
+})
+```
+
 A client address is never copied from the caller, which can write any: the proxy sends the upstream an `X-Forwarded-For` it writes from the connection — the chain a reverse proxy on a loopback or private address wrote, with that proxy's address appended, or the caller's own public address. A runtime that does not report the caller's address (the Web-standard adapters) sends none. To forward the caller's copy as before, because a platform in front writes it, name it: `allowedHeaders: ["x-forwarded-for"]`.
 
 A proxied call carries the server's credentials, so it follows an upstream redirect only while the redirect stays on the origin the call was sent to; a redirect to another origin reaches the caller as its status, unfollowed. Set `redirect: "follow"` on a source that trusts every redirect its upstream sends.

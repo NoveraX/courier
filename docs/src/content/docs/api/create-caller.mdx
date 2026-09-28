@@ -69,7 +69,7 @@ const user = await caller.users.getById({ id: "123" })
 
 ## Passing Context
 
-The optional third argument is a `Context` object. Use it to forward cookies and headers from the incoming request to the backend:
+The optional third argument is a `Context` object. Use it to forward headers from the incoming request to the backend: `authorization`, `user-agent`, `referer`, `origin` and `x-request-id`, the headers the source and the endpoint name, and the user's cookies where they name `cookie`:
 
 ```ts
 type Context = {

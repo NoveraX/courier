@@ -116,22 +116,48 @@ The POST handler accepts two content types and rejects everything else:
 // { success: false, message: "Unsupported Content-Type" }
 ```
 
-## Cookie forwarding
+## Cookies
 
-Cookies are forwarded in both directions automatically. Browser cookies are included in the proxied request (via the header whitelist), and `set-cookie` headers from the backend are passed through to the browser response:
+Cookies cross the proxy only where you name them, one direction at a time:
 
-```typescript
-// Cookies are forwarded automatically:
-// Browser → proxy handler → backend (via header whitelist)
-// Backend → proxy handler → browser (set-cookie headers passed through)
+- `cookie` — the browser's cookies are forwarded to the backend.
+- `set-cookie` — the cookies the backend sets are passed back to the browser.
 
-// Browser side — credentials: "include" is the default
-const caller = createProxyCaller<typeof api>("api")
-// Cookies are sent with every request automatically
+Name them where the rest of the header allowlist lives: on the source with `allowedHeaders`, on a base with `courier().extend({ allowedHeaders })`, or on one endpoint with `.headers([...])`. Left unnamed, neither crosses. The browser sends the proxy route every cookie of your application's origin, its own session among them, and a backend a source points at, a third party's included, receives them and sets cookies on your origin only where you say so.
+
+A backend-for-frontend sign-in names the session where it travels:
+
+```ts title="api/index.ts"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { endpoint } = courier()
+
+const auth = defineGroup({
+  prefix: "auth",
+  endpoints: {
+    // The backend answers a sign-in with its session cookie
+    login: endpoint.post("login").variables<{ email: string; password: string }>().headers(["set-cookie"]),
+    // Calls made as the user send the session back
+    me: endpoint.get("me").response<{ id: string; name: string }>().headers(["cookie"]),
+    // Signing out sends the session and clears it
+    logout: endpoint.post("logout").headers(["cookie", "set-cookie"]),
+  },
+})
+
+export const api = defineApi({ baseURL: process.env.AUTH_API_URL!, groups: { auth } })
 ```
 
+```ts title="Browser"
+const caller = createProxyCaller<typeof api>("api")
+
+await caller.auth.login({ email, password }) // the session cookie reaches the browser
+const me = await caller.auth.me()            // and goes back to the backend with this call
+```
+
+When the whole backend is your own, name both once for every endpoint: `defineApi({ baseURL, allowedHeaders: ["cookie", "set-cookie"], groups })`. The browser sends its cookies to the proxy route because `credentials: "include"` is the proxy client's default.
+
 <Callout variant="info" title="set-cookie handling">
-Courier uses `getSetCookie()` to correctly handle multiple `set-cookie` headers, avoiding the common bug of splitting cookie values on commas.
+A named `set-cookie` is passed back on every answer, an error included, so a sign-out that fails still clears the session. Courier uses `getSetCookie()` to keep each cookie apart, avoiding the common bug of splitting cookie values on commas.
 </Callout>
 
 ## Cancelled calls

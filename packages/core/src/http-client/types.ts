@@ -110,8 +110,10 @@ export type BaseOptions = MergeOptions &
     /**
      * Headers carried across the proxy for every endpoint of this source, both
      * ways: forwarded from the caller to the upstream, and passed back from
-     * the upstream's answer (e.g. ["X-Custom", "X-Total-Count"]). The body's
-     * own description and `Set-Cookie` are never taken from this list.
+     * the upstream's answer (e.g. ["X-Custom", "X-Total-Count"]). Cookies
+     * cross only where named: `"cookie"` sends the caller's cookies to the
+     * upstream, `"set-cookie"` passes the upstream's back. The body's own
+     * description is never taken from this list.
      */
     allowedHeaders?: string[];
     /**

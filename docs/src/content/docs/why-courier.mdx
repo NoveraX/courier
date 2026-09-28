@@ -80,7 +80,7 @@ Unlike tRPC or GraphQL codegen, Courier uses plain TypeScript functions as the s
 Without Courier, proxying requests means creating a route for every backend endpoint. With Courier, a single handler covers all endpoints. It automatically:
 
 - Validates the request origin (CSRF protection)
-- Forwards headers and cookies
+- Forwards the headers and the cookies you name, and nothing else
 - Routes to the correct source, group, and method
 - Handles errors with proper HTTP status codes
 - Supports file uploads and multipart encoding

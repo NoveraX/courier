@@ -94,6 +94,7 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
       dt: studio.dt,
       context,
       rawData: call.answer.rawData,
+      namedHeaders: call.answer.namedHeaders,
     });
   }
 }

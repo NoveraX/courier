@@ -50,6 +50,7 @@ export const buildResponse = (
           headers: withUpstreamLength(headers, response.headers),
         }),
         response.headers,
+        response.namedHeaders,
       );
     }
 
@@ -71,7 +72,7 @@ export const buildResponse = (
       response.data,
       response.rawData,
     );
-    return withUpstreamCookies(answer, response.headers);
+    return withUpstreamCookies(answer, response.headers, response.namedHeaders);
   }
 
   if (response.throw) {
@@ -109,12 +110,20 @@ export const buildErrorResponse = (
 };
 
 /**
- * Pass on the cookies the upstream set.
+ * Pass on the cookies the upstream set, where the endpoint names `set-cookie`.
  *
- * The header allowlist leaves `set-cookie` out, so each answer appends them
- * itself; a streamed answer did not, and lost every cookie the upstream set.
+ * Passed on for every endpoint, an upstream a source points at — a third
+ * party's included — could set cookies on the application's own origin. The
+ * header allowlist leaves `set-cookie` out, so that each cookie stays a
+ * value of its own, and every answer appends them here; a streamed answer
+ * once did not, and lost every cookie a sign-in set.
  */
-function withUpstreamCookies(target: Response, upstream: Headers | undefined): Response {
+function withUpstreamCookies(
+  target: Response,
+  upstream: Headers | undefined,
+  named: readonly string[] | undefined,
+): Response {
+  if (!named?.some((name) => name.toLowerCase() === "set-cookie")) return target;
   for (const cookie of upstream?.getSetCookie() ?? []) target.headers.append("set-cookie", cookie);
   return target;
 }

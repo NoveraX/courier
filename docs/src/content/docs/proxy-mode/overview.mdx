@@ -1,4 +1,4 @@
-export const metadata = { title: "Proxy Mode", description: "Framework-agnostic reverse proxy that hides secrets, bypasses CORS, and forwards cookies from any frontend to any backend.", mode: "proxy" }
+export const metadata = { title: "Proxy Mode", description: "Framework-agnostic reverse proxy that hides secrets, bypasses CORS, and carries the cookies you name from any frontend to any backend.", mode: "proxy" }
 
 ## What is proxy mode?
 
@@ -26,7 +26,7 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 │                                                              │
 │  createHandler({ sources }) → handle, handleGet, handlePost  │
 │       │  ✓ origin validation                                 │
-│       │  ✓ cookie forwarding                                 │
+│       │  ✓ cookies only where named                          │
 │       │  ✓ header whitelisting                               │
 │       ▼                                                      │
 │  executeRequest(sources, payload, context)                   │
@@ -47,7 +47,7 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 - **Hide API secrets** — your backend URL, API keys, and tokens stay on the server. The browser only sees `/api/request`. Declare a [boundary](/docs/proxy-mode/boundary) to keep the API definition itself off the wire: pass it in place of the API object, and the bundle carries the endpoint names you opened and nothing else.
 - **Refuse what you did not open** — the proxy addresses endpoints by name, so without a boundary every endpoint your app registered is callable from a page, including the ones only server code was meant to reach.
 - **Bypass CORS** — the proxy handler runs on the same origin as your frontend, so there are no cross-origin restrictions.
-- **Forward cookies** — credentials are included automatically (`credentials: "include"` by default), and `set-cookie` headers from the backend are passed through.
+- **Carry your session** — the browser sends its cookies to the proxy route (`credentials: "include"` by default), and they cross to the backend, with the backend's `set-cookie` coming back, for the sources and endpoints that name them. See [Cookies](/docs/proxy-mode/api-route#cookies).
 - **Centralized error handling** — the handler catches errors and returns consistent JSON responses with proper HTTP status codes.
 - **Framework-agnostic** — works with Next.js, Hono, Express, Fastify, Nuxt, and NestJS through thin adapter packages.
 
@@ -114,18 +114,19 @@ const whitelistedHeaders = [
   "origin",
   "authorization",
   "user-agent",
-  "cookie",
   "x-request-id",
   // ... plus custom headers via allowedHeaders option
 ]
 ```
+
+`Cookie` is not on the list. The browser sends every cookie of your application's origin, your own session among them, so a source or an endpoint that should receive them names `cookie` — see [Cookies](/docs/proxy-mode/api-route#cookies).
 
 The headers that claim a client address — `X-Forwarded-For`, `X-Real-IP`, `Forwarded`, `X-Client-IP` — are not copied from the browser, which can write any of them. The proxy writes `X-Forwarded-For` itself from the connection it served. Behind a reverse proxy on a loopback or private address, the chain that proxy wrote is kept and its own address appended; a caller on a public address is the whole chain. Where the runtime does not tell the proxy the caller's address — the Web-standard adapters — no `X-Forwarded-For` is sent. A platform that writes the header itself, such as a CDN that overwrites whatever the client sent, can have its copy forwarded by naming it: `allowedHeaders: ["x-forwarded-for"]`.
 
 The backend's answer is filtered the same way: the browser receives the headers that describe any answer — `ETag`, `Cache-Control`, `Last-Modified`, `Retry-After`, the rate-limit headers and a few more — and nothing the backend attached for itself.
 
 <Callout variant="tip" title="Custom headers">
-Need more? Name them with the `allowedHeaders` option in `defineApi()`, or on one endpoint with `.headers([...])`. A named header crosses the proxy both ways: from the browser to the backend, and from the backend's answer back to the browser — a `Location`, a `Link`, an `X-Total-Count`.
+Need more? Name them with the `allowedHeaders` option in `defineApi()`, or on one endpoint with `.headers([...])`. A named header crosses the proxy both ways: from the browser to the backend, and from the backend's answer back to the browser — a `Location`, a `Link`, an `X-Total-Count`. Cookies are named the same way: `cookie` for the browser's, `set-cookie` for the backend's.
 </Callout>
 
 ## When to use proxy vs direct mode

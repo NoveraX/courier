@@ -33,15 +33,35 @@ function makeResponseWithCookies(data: unknown, cookies: string[]) {
   return new Response(JSON.stringify(data), { status: 200, headers });
 }
 
+const NAMES_SET_COOKIE = { allowedHeaders: ["set-cookie"] };
+
 describe("cookie forwarding", () => {
+  it("passes back no cookie the upstream set unless Set-Cookie is named", async () => {
+    fetchSpy.mockResolvedValue(
+      makeResponseWithCookies({ ok: true }, ["session=abc123; Path=/; HttpOnly"]),
+    );
+    const source = createTestSource({
+      login: (methods: HttpMethods) => methods.get("login"),
+    });
+
+    const result = (await executeRequest({ api: source }, { source: "api", method: "login" }, {
+      res: new NextResponse(),
+    })) as Response;
+
+    expect(result.headers.getSetCookie()).toEqual([]);
+  });
+
   it("forwards a single cookie via set-cookie", async () => {
     fetchSpy.mockResolvedValue(
       makeResponseWithCookies({ ok: true }, ["session=abc123; Path=/; HttpOnly"]),
     );
 
-    const source = createTestSource({
-      login: (methods: HttpMethods) => methods.get("login"),
-    });
+    const source = createTestSource(
+      {
+        login: (methods: HttpMethods) => methods.get("login"),
+      },
+      NAMES_SET_COOKIE,
+    );
 
     const res = new NextResponse();
     const result = (await executeRequest({ api: source }, { source: "api", method: "login" }, {
@@ -60,9 +80,12 @@ describe("cookie forwarding", () => {
       ]),
     );
 
-    const source = createTestSource({
-      login: (methods: HttpMethods) => methods.get("login"),
-    });
+    const source = createTestSource(
+      {
+        login: (methods: HttpMethods) => methods.get("login"),
+      },
+      NAMES_SET_COOKIE,
+    );
 
     const res = new NextResponse();
     const result = (await executeRequest({ api: source }, { source: "api", method: "login" }, {
@@ -81,9 +104,12 @@ describe("cookie forwarding", () => {
       ]),
     );
 
-    const source = createTestSource({
-      login: (methods: HttpMethods) => methods.get("login"),
-    });
+    const source = createTestSource(
+      {
+        login: (methods: HttpMethods) => methods.get("login"),
+      },
+      NAMES_SET_COOKIE,
+    );
 
     const res = new NextResponse();
     const result = (await executeRequest({ api: source }, { source: "api", method: "login" }, {

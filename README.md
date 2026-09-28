@@ -50,7 +50,7 @@ Courier takes a different approach. You **define your API once** as plain TypeSc
 
 - 🔒 **End-to-end type safety** — response types, variables, endpoint names — all inferred. Zero codegen.
 - 🌍 **Framework agnostic** — core runs on any runtime with `fetch`. Adapters for Next.js, Nuxt, Hono, Express, Fastify, NestJS.
-- 🔀 **Two transport modes** — **Universal** — call backends from anywhere. **Proxy** — hide secrets, bypass CORS, forward cookies.
+- 🔀 **Two transport modes** — **Universal** — call backends from anywhere. **Proxy** — hide secrets, bypass CORS, carry the cookies you name.
 - 🧩 **Middleware chain** — retry, auth, logging, rate-limiting, caching — composable, type-safe, or write your own.
 - 🛡️ **Runtime validation** — plug in Zod, Valibot, ArkType, or any Standard Schema library. Validate on both sides.
 - ⚡ **React Query built-in** — `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery` — fully typed, zero config.
@@ -645,7 +645,7 @@ mock("users", "getAll").resolves("done").delay(100)
 
 **Universal mode** — server-side code calls your backend directly. Zero overhead, full type safety.
 
-**Proxy mode** — browser sends requests through your server, which hides API keys, bypasses CORS, and forwards cookies automatically.
+**Proxy mode** — browser sends requests through your server, which hides API keys, bypasses CORS, and carries the session cookies a source or an endpoint names: `allowedHeaders: ["cookie", "set-cookie"]` on a backend of your own, or `.headers(["set-cookie"])` on just its sign-in.
 
 Both modes share the same API definition, the same middleware chain, and the same type inference.
 

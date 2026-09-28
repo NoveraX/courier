@@ -175,7 +175,7 @@ export function CreateProduct() {
 ```
 
 <Callout variant="warning" title="CORS and cookies">
-Make sure your proxy backend has CORS configured to allow requests from your React app's origin. If your backend uses cookies for auth, set `credentials: true` in the CORS config and `credentials: "include"` in the caller defaults.
+Make sure your proxy backend has CORS configured to allow requests from your React app's origin. If your backend uses cookies for auth, set `credentials: true` in the CORS config and `credentials: "include"` in the caller defaults, and name `cookie` and `set-cookie` on the source or the endpoints that carry the session — see [Cookies](/docs/proxy-mode/api-route#cookies).
 </Callout>
 
 ## Project structure

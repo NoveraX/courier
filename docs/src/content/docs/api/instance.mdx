@@ -82,7 +82,7 @@ endpoint.get(":channel/stream").variables<{ channel: string }>().response<Readab
 
 ## Context
 
-The `Context` object provides access to the incoming request for cookie/header forwarding:
+The `Context` object provides access to the incoming request for header forwarding. Its cookies are forwarded where the source or the endpoint names `cookie`:
 
 ```ts
 type Context = {

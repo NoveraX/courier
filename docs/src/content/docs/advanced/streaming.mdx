@@ -52,7 +52,7 @@ export default async function ExportPage({ params }: { params: { id: string } })
 }
 ```
 
-In proxy mode the stream is not buffered: data flows from your backend through the proxy to the browser as it arrives, with the content type and the cookies the backend set. It is served from your application's origin, so it also carries `Content-Security-Policy: default-src 'none'; sandbox` and `X-Content-Type-Options: nosniff`: a streamed URL opened as a page cannot run a script the backend sent as your application. A caller reading the stream with `fetch` is unaffected.
+In proxy mode the stream is not buffered: data flows from your backend through the proxy to the browser as it arrives, with the content type, and with the cookies the backend set where the endpoint names `set-cookie`. It is served from your application's origin, so it also carries `Content-Security-Policy: default-src 'none'; sandbox` and `X-Content-Type-Options: nosniff`: a streamed URL opened as a page cannot run a script the backend sent as your application. A caller reading the stream with `fetch` is unaffected.
 
 A response schema describes the value a caller reads, not the bytes, so it is not applied to a streamed call. That makes it a question of who asks. A server-side caller may stream any endpoint. A browser may not stream one that declares a response schema: the schema is what keeps the fields it strips away from the page, and a stream would hand over the backend's body before the schema has seen it. The proxy answers such a call with `400`. Leave the schema off an endpoint the browser is meant to stream, as the `ReadableStream` endpoints above do — `.response<ReadableStream>()` names a type and declares no schema.
 

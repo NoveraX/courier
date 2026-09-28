@@ -5,7 +5,7 @@ import type { Sources } from "../../define/types";
 import { checkResponse } from "../../realtime/check-response";
 import type { SSEEvent } from "../../realtime/types";
 import { resolveEndpoint } from "../../utils/execute-resolve";
-import { validateSchema } from "../../validation";
+import { type SchemaMetadata, validateSchema } from "../../validation";
 
 /**
  * Sentinel URL used for the synthetic Request passed to middleware.
@@ -31,12 +31,10 @@ export function headersToRecord(h: Headers): Record<string, string> {
 }
 
 /** Schema slice exposed to in-process executors (only the fields they touch). */
-export interface InProcessStreamSchema {
-  variables?: unknown;
-  response?: StandardSchemaV1;
-  receive?: unknown;
-  transport?: string;
-}
+export type InProcessStreamSchema = Pick<
+  SchemaMetadata,
+  "variables" | "response" | "receive" | "transport"
+>;
 
 /** Identifies a stream endpoint inside a Sources map. */
 export interface StreamEndpointLocator {
@@ -66,16 +64,14 @@ export function resolveStreamEndpoint(
   expectedTransport: "sse" | "ws",
   executorName: string,
 ): ResolvedStreamEndpoint {
-  const dataSource = Object.hasOwn(sources, locator.source)
-    ? (sources[locator.source] as Record<string, unknown>)
-    : undefined;
+  const dataSource = Object.hasOwn(sources, locator.source) ? sources[locator.source] : undefined;
   if (!dataSource) throw streamResolveError(executorName, locator, 400, "source not found");
 
   const { endpoint, schema, options } = resolveEndpoint(dataSource, locator.group, locator.method);
   if (typeof endpoint !== "function") {
     throw streamResolveError(executorName, locator, 400, "method not found");
   }
-  if ((schema as { transport?: string } | undefined)?.transport !== expectedTransport) {
+  if (schema?.transport !== expectedTransport) {
     throw streamResolveError(
       executorName,
       locator,
@@ -85,22 +81,21 @@ export function resolveStreamEndpoint(
   }
   return {
     endpoint,
-    schema: (schema ?? {}) as InProcessStreamSchema,
+    schema: schema ?? {},
     topicKey: options?.topicKey,
   };
 }
 
-/** Validate subscribe variables against the endpoint schema (no-op when absent). */
+/**
+ * Validate subscribe variables against the endpoint schema (no-op when absent).
+ * What the schema outputs is what the handler receives, whatever its shape.
+ */
 export async function validateStreamVariables(
   raw: Record<string, unknown> | undefined,
   schema: InProcessStreamSchema,
-): Promise<Record<string, unknown> | undefined> {
+): Promise<unknown> {
   if (!schema.variables) return raw;
-  return (await validateSchema(
-    schema.variables as Parameters<typeof validateSchema>[0],
-    raw ?? {},
-    "variables",
-  )) as Record<string, unknown>;
+  return validateSchema(schema.variables, raw ?? {}, "variables");
 }
 
 /**
@@ -133,17 +128,14 @@ export function streamResolveError(
   status: number,
   msg: string,
 ): Error {
-  const err = new Error(
+  return new Error(
     `${executorName}: failed to resolve [${locator.source}][${locator.group ?? ""}][${locator.method}] (${msg})`,
+    { cause: { status } },
   );
-  (err as Error & { cause?: unknown }).cause = { status };
-  return err;
 }
 
 /** Wrap a downstream error (factory/onJoin/onMessage) preserving the cause chain. */
 export function wrapStreamError(executorName: string, prefix: string, cause: unknown): Error {
   const message = cause instanceof Error ? cause.message : String(cause);
-  const err = new Error(`${executorName}: ${prefix} — ${message}`);
-  (err as Error & { cause?: unknown }).cause = cause;
-  return err;
+  return new Error(`${executorName}: ${prefix} — ${message}`, { cause });
 }

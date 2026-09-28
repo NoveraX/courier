@@ -31,7 +31,7 @@ export interface ChannelState {
 
 export interface ChannelStateInit {
   topic: string;
-  variables: Record<string, unknown> | undefined;
+  variables: unknown;
   connectionId: string;
   schema: InProcessStreamSchema;
   handlers: ChannelHandlers;

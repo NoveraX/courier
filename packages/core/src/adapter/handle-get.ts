@@ -1,4 +1,5 @@
 import type { StudioHooks } from "../studio/hooks";
+import { studioRequestIdOf } from "../studio/studio-request-id";
 import { parseWireVariables, WIRE_VARIABLES_KEY } from "../utils/wire-variables";
 import type { ExecuteFn } from "./execute-fn";
 import type { HandlerConfig } from "./handler-config";
@@ -46,7 +47,7 @@ export function createGetHandler(
     const routing = readRouting(url);
     if (!routing) return errorResponse(400, "Missing required params: _s, _m");
 
-    const call = announceProxyCall(dt, "GET", routing);
+    const call = announceProxyCall(dt, "GET", routing, studioRequestIdOf(request));
     const decoded = parseWireVariables(url.searchParams.get(WIRE_VARIABLES_KEY));
     if (!decoded.ok) return refuse(call, decoded.reason);
     const accepted = parseWireOptionsJson(url.searchParams.get("_o"));

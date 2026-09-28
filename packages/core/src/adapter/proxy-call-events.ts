@@ -28,6 +28,8 @@ export interface ProxyCallEvents {
  * @param dt - The Studio hooks
  * @param proxyMethod - How the call reached the proxy
  * @param routing - The endpoint the call names
+ * @param namedId - The Studio request id the caller sent, which the call is
+ *   shown under instead of a fresh one (see `studioRequestIdOf`)
  * @returns The events for the rest of the call
  *
  * @example
@@ -41,8 +43,9 @@ export function announceProxyCall(
   dt: StudioHooks,
   proxyMethod: "GET" | "POST",
   routing: ProxyRouting,
+  namedId?: string,
 ): ProxyCallEvents {
-  const requestId = dt.onRequestStart ? generateRequestId() : undefined;
+  const requestId = dt.onRequestStart ? (namedId ?? generateRequestId()) : undefined;
   dt.onProxyReceive?.({ proxyMethod, ...routing, requestId, timestamp: Date.now() });
   if (requestId) {
     dt.onRequestStart?.({

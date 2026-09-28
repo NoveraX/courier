@@ -82,6 +82,10 @@ export interface DedupHooks {
 export interface UploadHooks {
   onUploadProgress?: (event: {
     requestId: string;
+    /** The endpoint the upload is for, when the caller knows it. */
+    source?: string;
+    group?: string;
+    method?: string;
     loaded: number;
     total: number;
     percentage: number;

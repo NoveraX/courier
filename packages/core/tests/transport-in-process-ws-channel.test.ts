@@ -376,4 +376,51 @@ describe("executeDirectWSChannel — studio instrumentation", () => {
     expect(onStreamClose).toHaveBeenCalledOnce();
     cleanup();
   });
+
+  it("records a message before the answer its handler sends at once", async () => {
+    const onStreamMessage = vi.fn();
+    onTestFinished(installHooks({ onStreamOpen: vi.fn(), onStreamMessage }));
+    const sources = makeChannelSources(() => ({
+      onMessage: (ctx, message) => ctx.send({ echo: message }),
+    }));
+    const channel = await executeDirectWSChannel(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "room",
+    });
+
+    await channel.send({ text: "hi" });
+
+    expect(onStreamMessage.mock.calls.map((call) => call[0].eventType)).toEqual(["message", "data"]);
+  });
+
+  it("records no message sent once the channel was closed, which the handler never gets", async () => {
+    const onStreamMessage = vi.fn();
+    const onMessage = vi.fn();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    onTestFinished(installHooks({ onStreamOpen: vi.fn(), onStreamMessage }));
+    let leave = (): void => {};
+    const sources = makeChannelSources(() => ({
+      onMessage,
+      onLeave: () =>
+        new Promise<void>((resolve) => {
+          leave = resolve;
+        }),
+    }));
+    const ended = new AbortController();
+    const channel = await executeDirectWSChannel(
+      sources as any,
+      { source: "api", group: "chat", method: "room" },
+      { signal: ended.signal },
+    );
+
+    ended.abort();
+    await channel.send({ text: "late" });
+
+    expect(channel.status).toBe("disconnected");
+    expect(onMessage).not.toHaveBeenCalled();
+    expect(onStreamMessage).not.toHaveBeenCalled();
+    expect(warn.mock.calls.some((call) => String(call[1]).includes("has ended"))).toBe(true);
+    leave();
+  });
 });

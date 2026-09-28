@@ -3,7 +3,15 @@ import type { MockStore } from "../store";
 import type { MockRequestContext } from "../types";
 import { makeListHandler } from "./auto-list-handler";
 import { generateRecords } from "./data-generator";
-import { findRecord, freshId, idOf, recordKey, recordNotFound, typedLike } from "./record-ids";
+import {
+  findRecord,
+  freshId,
+  idOf,
+  recordKey,
+  recordNotFound,
+  typedLike,
+  unusedId,
+} from "./record-ids";
 import type { RouteInfo } from "./route-analyzer";
 import { unwrapArraySchema } from "./schema-introspect";
 
@@ -79,13 +87,14 @@ function makeCreateHandler(store: MockStore, groupName: string, route: RouteInfo
     if ((typeof given === "string" || typeof given === "number") && col.getById(given)) {
       throw new MockHttpError(409, `${groupName} with id ${given} already exists`);
     }
-    // Empty body + schema available → generate a realistic record rather than bare {id}
-    const base =
-      Object.keys(vars).length === 0 && itemSchema
-        ? ((generateRecords(itemSchema, 1)[0] ?? {}) as Record<string, unknown>)
-        : vars;
-    const { [col.idField]: _generated, ...fields } = base;
-    return col.create({ ...fields, [col.idField]: given ?? freshId(col) });
+    /* The fields the body leaves out are generated from the schema, so the
+       record answered — and stored — is a whole one: a partial body used to
+       be stored as it was, and failed the endpoint's own response schema. */
+    const generated = itemSchema ? (generateRecords(itemSchema, 1, col.count() + 1)[0] ?? {}) : {};
+    const { [col.idField]: generatedId, ...defaults } = generated;
+    const { [col.idField]: _given, ...fields } = vars;
+    const id = given ?? freshId(col) ?? unusedId(col, generatedId);
+    return col.create({ ...defaults, ...fields, [col.idField]: id });
   };
 }
 

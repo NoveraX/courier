@@ -97,6 +97,26 @@ describe.each(VALIDATORS)("an operation answering 204 beside a default error (%s
   });
 });
 
+describe.each(VALIDATORS)("a HEAD operation that declares a response body (%s)", (validation) => {
+  it("resolves, since a HEAD answer never carries the body", async () => {
+    const headFile = {
+      tags: ["files"],
+      operationId: "fileExists",
+      parameters: [{ name: "file_id", in: "path", required: true, schema: { type: "string" } }],
+      responses: {
+        "200": {
+          description: "ok",
+          content: { "application/json": { schema: { $ref: "#/components/schemas/File" } } },
+        },
+      },
+    };
+    const call = callFor(specWith({ "/files/{file_id}": { head: headFile } }), validation, "fileExists");
+
+    await expect(call({ file_id: "f1" })).resolves.toBeNull();
+    expect(server.requests.at(-1)).toMatchObject({ method: "HEAD", path: "/v1/files/f1" });
+  });
+});
+
 describe.each(VALIDATORS)("a query parameter named with a hyphen (%s)", (validation) => {
   const getFile = {
     tags: ["files"],

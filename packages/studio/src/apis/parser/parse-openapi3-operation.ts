@@ -21,7 +21,9 @@ export function parseOpenApi3Operation(
 ): ParsedEndpoint {
   const parameters = parseParameters(op, spec);
   const requestBody = parseRequestBody(op, spec);
-  const responseSchema = parseResponseSchema(op, spec);
+  /* A HEAD answer never carries the body its GET would: a schema for it made
+     every call fail validation on the null the client reads. */
+  const responseSchema = method === "head" ? null : parseResponseSchema(op, spec);
 
   const secured = !!(op.security?.length > 0 || (!op.security && spec.security?.length > 0));
   const operationId = op.operationId ?? null;

@@ -1,4 +1,4 @@
-import { ENDPOINT_SCHEMA } from "../../src/define/marker";
+import { ENDPOINT_SCHEMA } from "../../src/validation";
 import type { SchemaMetadata } from "../../src/validation";
 
 /**

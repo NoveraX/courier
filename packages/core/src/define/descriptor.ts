@@ -1,9 +1,9 @@
 import type { HttpMethod } from "../http-client/types";
 import type { SchemaMetadata, Transport } from "../validation";
+import { ENDPOINT_SCHEMA } from "../validation";
 import type { BuilderState } from "./builder";
 import { resolveOptions } from "./builder";
 import type { EndpointKind } from "./marker";
-import { ENDPOINT_SCHEMA } from "./marker";
 import type { AnyEndpointOptions } from "./options";
 import type { AnyProbe } from "./probe";
 

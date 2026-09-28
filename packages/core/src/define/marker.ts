@@ -1,5 +1,5 @@
 import type { HttpMethod } from "../http-client/types";
-import type { SchemaMetadata } from "../validation";
+import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../validation";
 import type { ResolvedEndpointOptions } from "./options";
 import type { AnyProbe } from "./probe";
 
@@ -13,14 +13,6 @@ import type { AnyProbe } from "./probe";
 declare const ENDPOINT: unique symbol;
 
 export type EndpointMarker = typeof ENDPOINT;
-
-/**
- * Runtime metadata key stamped on every descriptor.
- *
- * Shared by the mock generator, the studio codegen and the request executor,
- * which all read schema information without importing the define module.
- */
-export const ENDPOINT_SCHEMA: unique symbol = Symbol.for("courier.endpoint.schema");
 
 /** Declared semantics of an endpoint, chosen by the builder head. */
 export type EndpointKind = "query" | "mutation" | "stream" | "channel";

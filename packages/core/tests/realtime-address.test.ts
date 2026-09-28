@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { endpointPath } from "../src/define/address";
 import { courier } from "../src/define/courier";
-import { ENDPOINT_SCHEMA } from "../src/define/marker";
+import { ENDPOINT_SCHEMA } from "../src/validation";
 
 const EventSchema = z.object({ n: z.number() });
 

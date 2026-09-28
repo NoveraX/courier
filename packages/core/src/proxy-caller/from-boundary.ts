@@ -13,7 +13,7 @@
  */
 
 import type { ProxyBoundary } from "../define/boundary-types";
-import { ENDPOINT_SCHEMA } from "../define/marker";
+import { ENDPOINT_SCHEMA } from "../validation";
 
 /** Recognised as an endpoint, and never invoked in proxy mode. */
 const INERT = (): never => {

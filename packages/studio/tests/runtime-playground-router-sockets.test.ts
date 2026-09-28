@@ -80,30 +80,42 @@ function exec(ui: Socket, rid: string, transport: "http" | "sse"): void {
 /* Let Studio take in what the sockets sent before the test goes on. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 100));
 
-describe("the newest of two runtimes under one id disconnecting mid-request", () => {
-  it.each(["sse", "http"] as const)("ends its %s request with an error at once", async (transport) => {
+describe("two runtimes under one id", () => {
+  it("names the second to claim it", async () => {
+    const ui = await open("/ui");
+    const duplicate = new Promise<unknown>((resolve) => ui.once("runtime:duplicate", resolve));
     await runtime("server");
+    await settle();
+    await runtime("server");
+
+    expect(await duplicate).toEqual({ runtimeId: "server" });
+  });
+});
+
+describe("the first of two runtimes under one id disconnecting mid-request", () => {
+  it.each(["sse", "http"] as const)("ends its %s request with an error at once", async (transport) => {
     const executed: string[] = [];
-    const newest = await runtime("server", ({ rid }) => executed.push(rid));
+    const first = await runtime("server", ({ rid }) => executed.push(rid));
+    await runtime("server");
     const ui = await open("/ui");
     await settle();
     exec(ui, "r1", transport);
     await vi.waitFor(() => expect(executed).toEqual(["r1"]));
     const error = next<{ error: { message: string } }>(ui, "playground:error", "r1");
 
-    newest.close();
+    first.close();
 
     expect(await error).toMatchObject({ error: { message: "Runtime disconnected mid-request" } });
   });
 
   it("sends the next request to the runtime still running", async () => {
     const executed: string[] = [];
+    const first = await runtime("server");
     await runtime("server", ({ rid }) => executed.push(rid));
-    const newest = await runtime("server");
     const ui = await open("/ui");
     await settle();
 
-    newest.close();
+    first.close();
     await settle();
     exec(ui, "r2", "http");
 

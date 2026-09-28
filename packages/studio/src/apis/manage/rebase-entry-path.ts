@@ -26,23 +26,23 @@ export function pathSegments(path: string): string[] {
  * `endpoint.get("customers/:id")` under "/v1".
  *
  * @param code - The endpoint's entry, as a property: `getCustomer: endpoint.get(":id")…`
- * @param base - The name the file calls its endpoint builder by
+ * @param bases - The names the file calls its builders by: `endpoint`, `stream`, `api.endpoint`
  * @param generatedPrefix - The prefix it was generated under
  * @param filePrefix - The prefix the group file declares
  * @returns The entry with its path rewritten, or `null` when its URL is not under `filePrefix` or its path is not a string
  * @example
  * ```ts
- * rebaseEntryPath('getCustomer: endpoint.get(":id")', "endpoint", "/v1/customers", "/v1");
+ * rebaseEntryPath('getCustomer: endpoint.get(":id")', ["endpoint"], "/v1/customers", "/v1");
  * // 'getCustomer: endpoint.get("customers/:id")'
  * ```
  */
 export function rebaseEntryPath(
   code: string,
-  base: string,
+  bases: readonly string[],
   generatedPrefix: string,
   filePrefix: string,
 ): string | null {
-  const path = pathOfEntry(code, base);
+  const path = pathOfEntry(code, bases);
   if (path === null) return null;
   const full = [...pathSegments(generatedPrefix), ...pathSegments(path.value)];
   const own = pathSegments(filePrefix);
@@ -57,42 +57,42 @@ export function rebaseEntryPath(
  * group's prefix joined with its own path, as core joins them.
  *
  * @param code - The endpoint's entry, as a property
- * @param base - The name the file calls its endpoint builder by
+ * @param bases - The names the file calls its builders by: `endpoint`, `stream`, `api.endpoint`
  * @param prefix - The prefix of the group it is in
  * @returns The path, without a leading slash, or `null` when the entry's path is not a string
  * @example
  * ```ts
- * entryUrl('getCustomer: endpoint.get(":id")', "endpoint", "/v1/customers"); // "v1/customers/:id"
+ * entryUrl('getCustomer: endpoint.get(":id")', ["endpoint"], "/v1/customers"); // "v1/customers/:id"
  * ```
  */
-export function entryUrl(code: string, base: string, prefix: string): string | null {
-  const path = pathOfEntry(code, base);
+export function entryUrl(code: string, bases: readonly string[], prefix: string): string | null {
+  const path = pathOfEntry(code, bases);
   return path === null ? null : [...pathSegments(prefix), ...pathSegments(path.value)].join("/");
 }
 
 /* The path an entry's builder call is given, with its span in the entry. */
 function pathOfEntry(
   code: string,
-  base: string,
+  bases: readonly string[],
 ): { value: string; start: number; end: number } | null {
   const parsed = parseSource("entry.ts", `${OPENING}${code} });`);
-  return parsed.problem === null ? builderPath(parsed.program.body, base) : null;
+  return parsed.problem === null ? builderPath(parsed.program.body, bases) : null;
 }
 
 /* The string the endpoint builder is called with: the path in `base.get("…")`. */
 function builderPath(
   node: unknown,
-  base: string,
+  bases: readonly string[],
 ): { value: string; start: number; end: number } | null {
   if (Array.isArray(node)) {
     for (const item of node) {
-      const found = builderPath(item, base);
+      const found = builderPath(item, bases);
       if (found !== null) return found;
     }
     return null;
   }
   if (!isRecord(node)) return null;
-  if (node.type === "CallExpression" && calls(node.callee, base)) {
+  if (node.type === "CallExpression" && calls(node.callee, bases)) {
     const [first] = Array.isArray(node.arguments) ? node.arguments : [];
     return isRecord(first) &&
       first.type === "Literal" &&
@@ -104,18 +104,25 @@ function builderPath(
   }
   for (const [key, value] of Object.entries(node)) {
     if (key === "parent") continue;
-    const found = builderPath(value, base);
+    const found = builderPath(value, bases);
     if (found !== null) return found;
   }
   return null;
 }
 
-function calls(callee: unknown, base: string): boolean {
-  return (
-    isRecord(callee) &&
-    callee.type === "MemberExpression" &&
-    isRecord(callee.object) &&
-    callee.object.type === "Identifier" &&
-    callee.object.name === base
-  );
+/* A builder named by an identifier, `endpoint`, or reached through the base
+   kept whole, `api.endpoint`. */
+function calls(callee: unknown, bases: readonly string[]): boolean {
+  if (!isRecord(callee) || callee.type !== "MemberExpression") return false;
+  const object = dottedName(callee.object);
+  return object !== null && bases.includes(object);
+}
+
+function dottedName(node: unknown): string | null {
+  if (!isRecord(node)) return null;
+  if (node.type === "Identifier" && typeof node.name === "string") return node.name;
+  if (node.type !== "MemberExpression" || node.computed === true) return null;
+  const object = dottedName(node.object);
+  const property = isRecord(node.property) ? node.property.name : null;
+  return object !== null && typeof property === "string" ? `${object}.${property}` : null;
 }

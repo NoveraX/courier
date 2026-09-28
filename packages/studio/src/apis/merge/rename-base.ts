@@ -18,3 +18,19 @@ export function renameBase(code: string, from: string, to: string): string {
   const base = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return code.replace(new RegExp(`(^\\s*(?:\\w+|"[^"]*"|'[^']*'):\\s*)${base}\\b`), `$1${to}`);
 }
+
+/**
+ * Whether an endpoint's code is built from `base`: its value starts with it.
+ *
+ * @param code - The entry, `key: base.get(…)…`
+ * @param base - A builder's name
+ * @returns Whether the entry is built from it
+ * @example
+ * ```ts
+ * usesBase('    events: stream.get("events")', "stream"); // → true
+ * ```
+ */
+export function usesBase(code: string, base: string): boolean {
+  const name = base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^\\s*(?:\\w+|"[^"]*"|'[^']*'):\\s*${name}\\b`).test(code);
+}

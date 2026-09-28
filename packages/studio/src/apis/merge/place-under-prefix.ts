@@ -14,19 +14,19 @@ export interface MergedEntry {
  * generated prefix when every endpoint the user kept fits under it, and
  * otherwise the part both prefixes share.
  *
- * @param entries - The merged endpoints, their code naming the builder `base`
- * @param base - The name the file calls its endpoint builder by
+ * @param entries - The merged endpoints, their code naming one of the builders `bases`
+ * @param bases - The names the file calls its builders by: `endpoint`, `stream`
  * @param filePrefix - The prefix the file on disk declares, or `null` when Studio cannot read it
  * @param generatedPrefix - The prefix the specification gives the group
  * @returns The prefix, and the endpoints with their paths under it; `null` when a kept path cannot be read
  * @example
  * ```ts
- * placeUnderPrefix(entries, "endpoint", "/v1/customers", "/v1").prefix; // "/v1"
+ * placeUnderPrefix(entries, ["endpoint"], "/v1/customers", "/v1").prefix; // "/v1"
  * ```
  */
 export function placeUnderPrefix(
   entries: readonly MergedEntry[],
-  base: string,
+  bases: readonly string[],
   filePrefix: string | null,
   generatedPrefix: string,
 ): { prefix: string; entries: MergedEntry[] } | null {
@@ -40,7 +40,7 @@ export function placeUnderPrefix(
       const from = entry.kept ? filePrefix : generatedPrefix;
       const code = same(from, prefix)
         ? entry.code
-        : rebaseEntryPath(entry.code, base, from, prefix);
+        : rebaseEntryPath(entry.code, bases, from, prefix);
       if (code === null) return null;
       placed.push({ ...entry, code });
     }

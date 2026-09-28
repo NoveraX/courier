@@ -17,8 +17,12 @@ import { mergeImports } from "./merge-imports";
 import { buildFile, resolveStatus } from "./merged-file";
 import { parseExistingGroup } from "./parse-existing";
 import { type MergedEntry, placeUnderPrefix } from "./place-under-prefix";
-import { renameBase } from "./rename-base";
+import { renameBase, usesBase } from "./rename-base";
+import { withStreamBuilder } from "./stream-preamble";
 import type { FingerprintResult, MergeChange, MergeResult } from "./types";
+
+/** The name a generated file builds its streams of events from. */
+const STREAM = "stream";
 
 export function mergeGroupFile(
   existingContent: string,
@@ -29,14 +33,20 @@ export function mergeGroupFile(
   const generated = parseExistingGroup(generatedContent);
   const changes: MergeChange[] = [];
 
+  const streamBase = existing.streamBaseName ?? STREAM;
   const merged = mergeEndpoints(existing, generated, fingerprints, changes).map((entry) => ({
     ...entry,
-    code: renameBase(entry.code, generated.baseName, existing.baseName),
+    code: renameBase(
+      renameBase(entry.code, generated.baseName, existing.baseName),
+      STREAM,
+      streamBase,
+    ),
   }));
   /* A kept endpoint's path is relative to the file's prefix, a generated one's to the spec's. */
   const filePrefix =
     findGroupDeclaration(parseSource("group.ts", existingContent).program)?.prefix ?? null;
-  const placed = placeUnderPrefix(merged, existing.baseName, filePrefix, generated.prefix);
+  const bases = [existing.baseName, streamBase];
+  const placed = placeUnderPrefix(merged, bases, filePrefix, generated.prefix);
   const prefix = placed?.prefix ?? generated.prefix;
   if (placed !== null && prefix !== generated.prefix)
     changes.push({
@@ -47,7 +57,14 @@ export function mergeGroupFile(
   const endpointLines = (placed?.entries ?? merged).flatMap((e) =>
     e.comment ? [e.comment, e.code] : [e.code],
   );
-  const preamble = mergePreamble(existing.preamble, generated.preamble);
+  /* A file generated before streams names no stream builder for the first one it gets. */
+  const firstStream =
+    existing.streamBaseName === null &&
+    existing.preamble.length > 0 &&
+    merged.some((entry) => usesBase(entry.code, STREAM));
+  const preamble = firstStream
+    ? withStreamBuilder(existing.preamble)
+    : mergePreamble(existing.preamble, generated.preamble);
   /* A name the file imported that nothing merged uses any more goes with the code that used it. */
   const code = [...preamble, ...generated.header, ...endpointLines, ...existing.trailingCode].join(
     "\n",

@@ -35,8 +35,6 @@ describe("filterHeaders", () => {
       referer: "https://example.com",
       origin: "https://example.com",
       "user-agent": "test",
-      "x-forwarded-for": "1.2.3.4",
-      "x-real-ip": "1.2.3.4",
       "x-request-id": "abc-123",
     });
     const result = filterHeaders(incoming);
@@ -45,9 +43,18 @@ describe("filterHeaders", () => {
     expect(result.get("referer")).toBe("https://example.com");
     expect(result.get("origin")).toBe("https://example.com");
     expect(result.get("user-agent")).toBe("test");
-    expect(result.get("x-forwarded-for")).toBe("1.2.3.4");
-    expect(result.get("x-real-ip")).toBe("1.2.3.4");
     expect(result.get("x-request-id")).toBe("abc-123");
+  });
+
+  it("does not pass a client address the caller wrote itself", () => {
+    const incoming = new Headers({
+      "x-forwarded-for": "1.2.3.4",
+      "x-real-ip": "1.2.3.4",
+      forwarded: "for=1.2.3.4",
+      "x-client-ip": "1.2.3.4",
+    });
+
+    expect([...filterHeaders(incoming).keys()]).toEqual([]);
   });
 
   it("extends whitelist with validHeaders", () => {

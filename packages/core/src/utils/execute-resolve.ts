@@ -3,6 +3,7 @@ import type { Context, GroupOptions } from "../http-client/types";
 import type { MiddlewareContext } from "../middleware/types";
 import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../validation";
 import { getEndpoint } from "./execute-helpers";
+import { forwardedFor } from "./forwarded-for";
 import { headersToObject } from "./helpers";
 import { filterHeaders, mergeHeaders } from "./merge-headers";
 
@@ -150,6 +151,10 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
       newHeaders.set(name, value);
     },
   );
+  /* Set only where nothing already did: a source that names the header takes
+     the caller's copy, and server code that sets one keeps its own. */
+  const chain = nextRequest && !newHeaders.has("x-forwarded-for") && forwardedFor(nextRequest);
+  if (chain) newHeaders.set("x-forwarded-for", chain);
 
   return {
     source: String(source),

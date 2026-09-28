@@ -1,16 +1,19 @@
+/**
+ * Caller request headers every source forwards to its upstream.
+ *
+ * The headers that claim a client address — `X-Forwarded-For`, `X-Real-IP`,
+ * `Forwarded` and the like — are not among them: any page can write them, and
+ * copying them let it choose the address an upstream believes. The proxy
+ * writes `X-Forwarded-For` itself from the connection (see `forwardedFor`); a
+ * source that trusts whoever wrote the caller's copy names it in
+ * `allowedHeaders`.
+ */
 export const ALLOWED_HEADERS = [
   "referer",
   "origin",
   "authorization",
   "user-agent",
   "cookie",
-  "forwarded-for",
-  "forwarded",
-  "x-client-ip",
-  "x-cluster-client-ip",
-  "x-forwarded-for",
-  "x-forwarded",
-  "x-real-ip",
   "x-request-id",
 ] as const;
 

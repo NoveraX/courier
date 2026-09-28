@@ -116,7 +116,7 @@ export default async function ProfilePage() {
 ```
 
 <Callout variant="tip" title="Header whitelist">
-Headers read from a context — `createCaller(api, { context: { req } })` — are forwarded only when they are safe: `authorization`, `cookie`, `user-agent`, `x-forwarded-*`, `x-real-ip`, and others. Headers passed to `.with({ headers })` and custom headers from `defaults.headers` are always included, except those describing the incoming connection, such as `host`, `connection` and `content-length`.
+Headers read from a context — `createCaller(api, { context: { req } })` — are forwarded only when they are safe: `authorization`, `cookie`, `user-agent`, `referer`, `origin` and `x-request-id`, plus the names a source lists in `allowedHeaders`. A client address is not copied from the incoming request; `X-Forwarded-For` is written from the connection where the runtime knows it. Headers passed to `.with({ headers })` and custom headers from `defaults.headers` are always included, except those describing the incoming connection, such as `host`, `connection` and `content-length`.
 </Callout>
 
 ## Security considerations

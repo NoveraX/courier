@@ -115,13 +115,12 @@ const whitelistedHeaders = [
   "authorization",
   "user-agent",
   "cookie",
-  "x-forwarded-for",
-  "x-forwarded",
-  "x-real-ip",
   "x-request-id",
   // ... plus custom headers via allowedHeaders option
 ]
 ```
+
+The headers that claim a client address — `X-Forwarded-For`, `X-Real-IP`, `Forwarded`, `X-Client-IP` — are not copied from the browser, which can write any of them. The proxy writes `X-Forwarded-For` itself from the connection it served. Behind a reverse proxy on a loopback or private address, the chain that proxy wrote is kept and its own address appended; a caller on a public address is the whole chain. Where the runtime does not tell the proxy the caller's address — the Web-standard adapters — no `X-Forwarded-For` is sent. A platform that writes the header itself, such as a CDN that overwrites whatever the client sent, can have its copy forwarded by naming it: `allowedHeaders: ["x-forwarded-for"]`.
 
 The backend's answer is filtered the same way: the browser receives the headers that describe any answer — `ETag`, `Cache-Control`, `Last-Modified`, `Retry-After`, the rate-limit headers and a few more — and nothing the backend attached for itself.
 

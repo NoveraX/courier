@@ -11,6 +11,8 @@ export interface WarningInput {
   summaries: readonly MockSummary[];
   /** The mocks file, relative to the project root. */
   target: string;
+  /** The running mocks the edit restarts: those whose declaration, or what it uses, it changes. */
+  restarting: readonly string[];
   creates: boolean;
   mockBasePort: number;
 }
@@ -18,9 +20,10 @@ export interface WarningInput {
 /**
  * Say what the edit changes that the diff does not show.
  *
- * Every reload evaluates the mocks file again, so each running mock restarts
- * with it; a port another process holds stops the new mock from starting; a
- * port Studio assigns can differ after Studio restarts.
+ * A running mock restarts when the edit changes its declaration or what that
+ * uses, and the others keep running; a port another process holds stops the
+ * new mock from starting; a port Studio assigns can differ after Studio
+ * restarts.
  *
  * @param input - The requested mocks and what Studio runs now
  * @returns One sentence per effect, in a stable order
@@ -28,9 +31,8 @@ export interface WarningInput {
 export async function editWarnings(input: WarningInput): Promise<string[]> {
   const warnings: string[] = [];
   if (input.creates) warnings.push(`Studio creates ${input.target}.`);
-  const running = input.summaries.filter((mock) => mock.alive).map((mock) => mock.key);
-  if (running.length > 0) {
-    warnings.push(`Running mocks restart to pick up the edit: ${running.join(", ")}.`);
+  if (input.restarting.length > 0) {
+    warnings.push(`Running mocks restart to pick up the edit: ${input.restarting.join(", ")}.`);
   }
   for (const request of input.requests) warnings.push(...(await requestWarnings(request, input)));
   return warnings;

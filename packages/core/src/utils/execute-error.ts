@@ -1,4 +1,5 @@
 import { HTTPError } from "../errors";
+import { isTimeoutFailure } from "../http-client/transport-failure";
 import type { Context } from "../http-client/types";
 import { createLogger } from "../logger";
 import type { StudioHooks } from "../studio";
@@ -15,6 +16,9 @@ const log = createLogger("Proxy");
  * upstream the proxy exists to keep behind it, so the caller is told that the
  * request failed and the reason stays in the server's log.
  *
+ * A timeout is told apart: the upstream was reachable and slow, so the
+ * answer is a 504 rather than the 502 of a host that could not be reached.
+ *
  * An upstream that answered for itself is a different thing: its status and
  * body are its own message to the client, and the proxy forwards them.
  */
@@ -30,6 +34,13 @@ function withoutUpstreamDetail(
   const { message } = (error.data as { message?: string } | undefined) ?? {};
   log.warn(`Upstream request failed${message ? `: ${message}` : ""}`, error.cause ?? error);
 
+  if (isTimeoutFailure(error)) {
+    return {
+      ...result,
+      status: 504,
+      data: { success: false, message: "Upstream request timed out", code: "UPSTREAM_TIMEOUT" },
+    };
+  }
   return {
     ...result,
     data: { success: false, message: "Upstream request failed", code: "UPSTREAM_UNREACHABLE" },
@@ -75,9 +86,7 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
             ? error.status > 0
               ? "http"
               : "network"
-            : error instanceof TypeError
-              ? "network"
-              : "unknown",
+            : "unknown",
       status: error instanceof HTTPError && error.status > 0 ? error.status : undefined,
       message: error instanceof Error ? error.message : String(error),
     },
@@ -100,11 +109,14 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
   }
 
   const fromWire = ctx.context?.proxyMethod !== undefined;
-  /* A direct caller gets its failure as it happened: a cancellation it asked
-     for, a network failure with status 0 and its cause, or the upstream's
-     own answer — a 2xx whose body would not parse keeps its 200. They used
-     to arrive as a 502 from a gateway that was never there. */
-  if (!fromWire && (isAbortError(error) || error instanceof HTTPError)) {
+  /* A direct caller gets its failure as it happened: a cancellation with the
+     reason it gave, a network failure with status 0 and its cause, the
+     upstream's own answer — a 2xx whose body would not parse keeps its 200 —
+     or what its own middleware threw. They used to arrive as a 502 from a
+     gateway that was never there, or as an HTTP 500 with no cause. A caller
+     that asked for a Response is answered with one, unless it cancelled. */
+  const answersWithResponse = ctx.context?.res instanceof Response;
+  if (!fromWire && (!answersWithResponse || isAbortError(error) || error instanceof HTTPError)) {
     throw error;
   }
 

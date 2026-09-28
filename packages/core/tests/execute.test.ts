@@ -175,27 +175,21 @@ describe("executeRequest", () => {
       }
     });
 
-    it("wraps generic Error as 500", async () => {
+    it("rethrows an Error the endpoint threw, as it was", async () => {
+      const thrown = new Error("unexpected");
       const source = createTestSource({
         fail: () => {
-          throw new Error("unexpected");
+          throw thrown;
         },
       });
       const sources = { api: source };
 
-      try {
-        await executeRequest(sources, { source: "api", method: "fail" });
-        expect.fail("should have thrown");
-      } catch (error) {
-        expect(error).toBeInstanceOf(HTTPError);
-        expect((error as HTTPError).status).toBe(500);
-        expect((error as HTTPError).data).toEqual(
-          expect.objectContaining({ message: "unexpected" }),
-        );
-      }
+      await expect(executeRequest(sources, { source: "api", method: "fail" })).rejects.toBe(
+        thrown,
+      );
     });
 
-    it("wraps non-Error throws as 500 with generic message", async () => {
+    it("rethrows a non-Error the endpoint threw, as it was", async () => {
       const source = createTestSource({
         fail: () => {
           throw "string error";
@@ -203,16 +197,9 @@ describe("executeRequest", () => {
       });
       const sources = { api: source };
 
-      try {
-        await executeRequest(sources, { source: "api", method: "fail" });
-        expect.fail("should have thrown");
-      } catch (error) {
-        expect(error).toBeInstanceOf(HTTPError);
-        expect((error as HTTPError).status).toBe(500);
-        expect((error as HTTPError).data).toEqual(
-          expect.objectContaining({ message: "[SERVER ERROR]" }),
-        );
-      }
+      await expect(executeRequest(sources, { source: "api", method: "fail" })).rejects.toBe(
+        "string error",
+      );
     });
   });
 

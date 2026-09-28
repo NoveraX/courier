@@ -204,16 +204,30 @@ if (isHTTPError(error)) {
 }
 
 // 2. Network errors — no response received
-// Thrown as standard Error (not HTTPError)
-// error.message → "Failed to fetch" or similar
+// Thrown as HTTPError with status 0 and message "Network request failed";
+// error.data.code carries the system's code (ECONNREFUSED, ENOTFOUND, ...)
+// and error.cause the error fetch rejected with.
 
-// 3. Abort errors — request was cancelled
-// Thrown as HTTPError with status 499
+// 3. Timeouts — the request's timeout ran out
+// Thrown as HTTPError with status 0 and message "Request timed out";
+// error.data.code is "TIMEOUT" and error.cause is the TimeoutError.
+// Through the proxy, a timeout on the server's side of the call arrives
+// as HTTPError 504 with error.data.code "UPSTREAM_TIMEOUT"; a host the
+// server could not reach arrives as 502 with "UPSTREAM_UNREACHABLE".
+
+// 4. Cancellation
+// A call cancelled through your own signal rejects with the reason you
+// gave, as fetch does: a DOMException named "AbortError" by default.
+// A call that deduplicate cancelled rejects with HTTPError status 499.
 if (isHTTPError(error) && error.status === 499) {
-  // Request was aborted (by deduplicate or manual AbortController)
+  // Superseded by a newer read of the same endpoint
 }
 
-// 4. JSON parse errors — a success whose body is not valid JSON
+// 5. Your own code's failures
+// On a direct call, what a middleware or a pathOptions function threw,
+// or a body that would not serialize, is rethrown as it was.
+
+// 6. JSON parse errors — a success whose body is not valid JSON
 // Thrown when responseType is "json" but a 2xx body cannot be parsed:
 // an HTTPError carrying the upstream's own status (e.g. 200), with the
 // SyntaxError as its cause. Through the proxy it arrives as a 502.

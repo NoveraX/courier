@@ -1,3 +1,4 @@
+import { fetchFailure } from "../http-client/transport-failure";
 import type { DownloadProgress, UploadProgress } from "../http-client/types";
 import { normalizeHttpMethod } from "./helpers";
 import { sendWithUploadProgress, trackDownload } from "./progress";
@@ -64,9 +65,14 @@ export async function coreFetch(
     body: requestBody,
     ...(finalSignal != null && { signal: finalSignal }),
   };
-  const response =
-    onUploadProgress && requestBody != null
-      ? await sendWithUploadProgress(fullUrl, { ...init, body: requestBody }, onUploadProgress)
-      : await fetch(fullUrl, init);
+  let response: Response;
+  try {
+    response =
+      onUploadProgress && requestBody != null
+        ? await sendWithUploadProgress(fullUrl, { ...init, body: requestBody }, onUploadProgress)
+        : await fetch(fullUrl, init);
+  } catch (error) {
+    throw fetchFailure(error, signal, timeout);
+  }
   return onDownloadProgress ? trackDownload(response, onDownloadProgress) : response;
 }

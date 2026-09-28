@@ -30,7 +30,7 @@ export function SessionHistorySection({
 
   function handleSave(): void {
     if (!name.trim()) return;
-    history.saveCurrentSession(name.trim());
+    void history.saveCurrentSession(name.trim());
     setName("");
     setSaveOpen(false);
   }

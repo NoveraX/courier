@@ -42,6 +42,7 @@ export function createActions(set: StudioSet, get: StudioGet): Omit<StudioState,
         }
         return { requests: [], droppedRequests: 0 }
       }),
+    loadRequests: (requests) => set({ requests, droppedRequests: 0 }),
     togglePin: (id) =>
       set((s) => ({
         requests: s.requests.map((r) => (r.id === id ? { ...r, pinned: !r.pinned } : r)),

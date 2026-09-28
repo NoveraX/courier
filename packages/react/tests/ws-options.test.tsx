@@ -20,7 +20,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { createWSHandler, registerSources } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { attachWebSocketUpgrade, type UpgradeServer } from "@noverax/courier/node";
-import { clearWSConnectionPool } from "@noverax/courier/realtime";
+import { clearWSConnectionPool } from "@noverax/courier/internal";
 import { createProxyQueryCaller } from "../src/create-proxy-query-caller";
 import { createQueryCaller } from "../src/create-query-caller";
 import { liveApi } from "./helpers/live-api";

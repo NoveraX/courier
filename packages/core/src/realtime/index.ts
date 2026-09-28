@@ -9,13 +9,6 @@ export type {
   StreamAdapter,
   WebSocketLike,
 } from "./adapters";
-export { calculateBackoff } from "./backoff";
-export { buildDirectSSEUrl, buildProxySSEUrl, executeSSE } from "./caller-sse";
-export { buildDirectWSUrl, buildWSTopic, clearWSConnectionPool } from "./caller-ws";
-export type { ConnectionState } from "./connection-state";
-export { createConnectionState } from "./connection-state";
-export { deriveSSE } from "./derive-sse";
-export { describeFailure, type StreamFailure } from "./describe-failure";
 export {
   AuthError,
   ConnectionError,
@@ -31,9 +24,8 @@ export { createMemoryPresence } from "./memory-presence";
 export { createMemoryPubSub } from "./memory-pubsub";
 export { createMemoryStream } from "./memory-stream";
 export type { PresenceConfig } from "./presence-types";
-export type { RawSSEEvent, SubscribeSSEOptions } from "./sse";
-export { parseSSEStream, subscribeSSE } from "./sse";
-export { SSE_CONTROL_EVENTS } from "./sse/control-events";
+export type { SubscribeSSEOptions } from "./sse";
+export { subscribeSSE } from "./sse";
 export type {
   BackoffConfig,
   ChannelHandlers,
@@ -53,27 +45,11 @@ export type {
   CallerWSOptions,
   Heartbeat,
   HeartbeatConfig,
-  MessageQueue,
   MessageQueueConfig,
   TopicHandler,
-  TopicRegistry,
   WSClientSocket,
   WSConnection,
   WSConnectionConfig,
-  WSMessage,
-  WSMessageType,
   WSSocketFactory,
 } from "./ws";
-export {
-  createHeartbeat,
-  createMessageQueue,
-  createTopicRegistry,
-  createWSConnection,
-  decodeMessage,
-  encodeMessage,
-  qualifyTopic,
-  shouldReconnect,
-  unqualifyTopic,
-} from "./ws";
-export { executeWSChannel } from "./ws-channel-client";
-export { executeWSPush } from "./ws-subscription";
+export { createWSConnection, qualifyTopic, unqualifyTopic } from "./ws";

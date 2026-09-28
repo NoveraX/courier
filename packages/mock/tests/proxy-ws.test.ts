@@ -7,7 +7,8 @@
  */
 import { createProxyCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
-import { decodeMessage, encodeMessage, type RealtimeError, type WSMessage } from "@noverax/courier/realtime";
+import { type RealtimeError } from "@noverax/courier/realtime";
+import { decodeMessage, encodeMessage, type WSMessage } from "@noverax/courier/internal";
 import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { z } from "zod";

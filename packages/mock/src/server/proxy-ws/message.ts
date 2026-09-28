@@ -4,7 +4,7 @@
  */
 
 import { logger } from "@noverax/courier";
-import { describeFailure, type WSMessage } from "@noverax/courier/realtime";
+import { describeFailure, type WSMessage } from "@noverax/courier/internal";
 import { checkAgainst } from "./check-schema";
 import { sendFrame, sendRefusal } from "./frames";
 import { leaveSubscription } from "./subscription";

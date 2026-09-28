@@ -6,7 +6,7 @@
  * the reason when the subscription cannot go on.
  */
 
-import { describeFailure, type StreamFailure, type WSMessage } from "@noverax/courier/realtime";
+import { describeFailure, type StreamFailure, type WSMessage } from "@noverax/courier/internal";
 import type { MockChannelFn } from "../../types";
 import type { ChannelShape } from "../prefix-route-types";
 import { checkAgainst } from "./check-schema";

@@ -5,7 +5,8 @@
  * and replayed it forever; a generator that threw rejected with nobody
  * listening; and a string payload went out raw, which the client dropped.
  */
-import { ForbiddenError, SSE_CONTROL_EVENTS } from "@noverax/courier/realtime";
+import { ForbiddenError } from "@noverax/courier/realtime";
+import { SSE_CONTROL_EVENTS } from "@noverax/courier/internal";
 import type { Context as HonoContext } from "hono";
 import { describe, expect, it, vi } from "vitest";
 

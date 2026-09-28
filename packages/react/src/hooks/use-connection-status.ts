@@ -1,5 +1,5 @@
+import { createConnectionState } from "@noverax/courier/internal";
 import type { ConnectionStatus } from "@noverax/courier/realtime";
-import { createConnectionState } from "@noverax/courier/realtime";
 /* A namespace import, not named hooks: the package entry is reachable from
    Server Components, and Next.js refuses to build a server module that names
    a client-only hook such as useState among its imports. */

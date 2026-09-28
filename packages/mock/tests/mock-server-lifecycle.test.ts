@@ -13,7 +13,7 @@ import { createServer, type Server } from "node:net";
 import { networkInterfaces } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
-import { encodeMessage } from "@noverax/courier/realtime";
+import { encodeMessage } from "@noverax/courier/internal";
 
 import { createHistory } from "../src/history";
 import { createMockServer, type MockServer, type MockServerOptions } from "../src/server/create-mock-server";

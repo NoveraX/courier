@@ -230,7 +230,7 @@ server.listen(Number(process.env.PORT) || 3001, "0.0.0.0")
 process.on("SIGTERM", async () => {
   shuttingDown = true
   // server.close() waits for open streams and sockets, so drain them first:
-  // SSE clients get a `shutdown` event, WebSocket clients a 1012 close.
+  // SSE clients get a `courier:shutdown` notice, WebSocket clients a 1012 close.
   await Promise.all([proxy.shutdownSSE(), sse.shutdownSSE(), cleanupWS()])
   server.close()
   await disconnectAdapters()

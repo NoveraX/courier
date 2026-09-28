@@ -8,7 +8,8 @@ import type {
 } from "./types";
 import type { ExplorerData, ExplorerEdge } from "./use-explorer-data";
 import { computeNodeMetrics } from "./compute-metrics";
-import { filterRequests, resolveFullPath, inferHttpMethod } from "./helpers";
+import { filterRequests, inferHttpMethod } from "./helpers";
+import { resolveFullPath } from "./resolve-full-path";
 
 // ── Builder ─────────────────────────────────────────────────────────────────
 

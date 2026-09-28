@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
-import { courier, defineApi } from "../src/define/index";
+import { courier, defineApi, defineBoundary } from "../src/define/index";
 import { HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -137,5 +137,59 @@ describe("deduplicate on a proxy client given the source", () => {
 
     expect(await first).toBe(499);
     await expect(second).resolves.toEqual({ method: "GET", body: "" });
+  });
+
+  /**
+   * A boundary used to carry transports alone, so a client built from one
+   * could not tell a read from a write and cancelled both.
+   */
+  describe("given a boundary instead", () => {
+    const boundaryClient = () =>
+      createProxyCaller<ReturnType<typeof api>>("orders", {
+        boundary: defineBoundary<ReturnType<typeof api>>({
+          source: "orders",
+          expose: { search: "query", find: "query", create: "mutation", replace: "mutation" },
+        }),
+        deduplicate: true,
+      });
+
+    it("lets two concurrent creates both complete", async () => {
+      const client = boundaryClient();
+
+      const results = await Promise.all([
+        client.create({ item: "A" }),
+        client.create({ item: "B" }),
+      ]);
+
+      expect(results).toEqual([
+        { method: "POST", body: '{"item":"A"}' },
+        { method: "POST", body: '{"item":"B"}' },
+      ]);
+    });
+
+    it("does not cancel a concurrent replace", async () => {
+      const client = boundaryClient();
+
+      const settled = await Promise.allSettled([
+        client.replace({ item: "A" }),
+        client.replace({ item: "B" }),
+      ]);
+
+      expect(settled.map((s) => s.status)).toEqual(["fulfilled", "fulfilled"]);
+    });
+
+    it("still cancels a superseded read, whatever verb carries it", async () => {
+      const client = boundaryClient();
+
+      const first = client.search({ q: "a" }).catch(status);
+      const second = client.search({ q: "ab" });
+      const firstFind = client.find({ q: "a" }).catch(status);
+      const secondFind = client.find({ q: "ab" });
+
+      expect(await first).toBe(499);
+      await expect(second).resolves.toEqual({ method: "GET", body: "" });
+      expect(await firstFind).toBe(499);
+      await expect(secondFind).resolves.toEqual({ method: "POST", body: '{"q":"ab"}' });
+    });
   });
 });

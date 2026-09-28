@@ -22,7 +22,7 @@ const api = defineApi({
 
 beforeEach(() => {
   const options = (api as unknown as { options: Record<string, unknown> }).options;
-  const boundary = defineBoundary<typeof api>({ source: "api", expose: { avatar: "request" } });
+  const boundary = defineBoundary<typeof api>({ source: "api", expose: { avatar: "mutation" } });
   registerSources({ api: { ...(api as object), options: { ...options, boundary } } as never });
   vi.stubGlobal("fetch", async () => Response.json({ ok: true }));
 });

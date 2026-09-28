@@ -75,6 +75,13 @@ export type KindAt<TApi, TPath extends string> =
  * to pick a transport, and nothing that would describe the server's own side.
  */
 export interface ExposedEndpoint {
+  /**
+   * Whether an ordinary HTTP endpoint reads or writes. A client that cancels
+   * a superseded call cancels only a read: a write it cancelled has usually
+   * been applied while its caller is told it was not. Absent for a stream or
+   * a channel.
+   */
+  type?: "query" | "mutation";
   /** Absent for an ordinary HTTP endpoint. */
   transport?: "sse" | "ws";
   /** True for a socket the caller may also send on. */
@@ -111,7 +118,7 @@ export type WireShapeAt<TApi, TPath extends string> =
         ? [InferSend<EndpointAt<TApi, TPath>>] extends [never]
           ? "channel"
           : "duplex"
-        : "request"
+        : InferKind<EndpointAt<TApi, TPath>>
     : never;
 
 /** What a boundary declares: every endpoint the browser may call, and its shape. */

@@ -61,7 +61,7 @@ import type { api } from "./index"
 
 export const boundary = defineBoundary<typeof api>({
   source: "api",
-  expose: { "users.getAll": "request", "users.getById": "request", "users.create": "request" },
+  expose: { "users.getAll": "query", "users.getById": "query", "users.create": "mutation" },
 })
 ```
 

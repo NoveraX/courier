@@ -46,7 +46,7 @@ const api = defineApi({
 const boundary = defineBoundary<typeof api>({
   source: "api",
   expose: {
-    "posts.list": "request",
+    "posts.list": "query",
     "posts.feed": "stream",
     "posts.room": "channel",
     "posts.chat": "duplex",
@@ -112,7 +112,7 @@ describe("defineBoundary — what it describes", () => {
   });
 
   it("derives each transport from the API rather than being told, including whether a socket sends back", () => {
-    expect(boundary.endpoints["posts.list"]).toEqual({});
+    expect(boundary.endpoints["posts.list"]).toEqual({ type: "query" });
     expect(boundary.endpoints["posts.feed"]).toEqual({ transport: "sse" });
     expect(boundary.endpoints["posts.room"]).toEqual({ transport: "ws" });
     expect(boundary.endpoints["posts.chat"]).toEqual({ transport: "ws", bidirectional: true });
@@ -120,6 +120,30 @@ describe("defineBoundary — what it describes", () => {
 
   it("is plain data, so it can be serialized to the client as it stands", () => {
     expect(JSON.parse(JSON.stringify(boundary))).toEqual(boundary);
+  });
+
+  it("records whether an HTTP endpoint reads or writes", () => {
+    const both = defineBoundary<typeof api>({
+      source: "api",
+      expose: { "posts.list": "query", "admin.purge": "mutation" },
+    });
+
+    expect(both.endpoints["posts.list"]).toEqual({ type: "query" });
+    expect(both.endpoints["admin.purge"]).toEqual({ type: "mutation" });
+  });
+
+  it("does not compile when a read is declared a write, a write a read, or either a bare request", () => {
+    defineBoundary<typeof api>({
+      source: "api",
+      expose: {
+        // @ts-expect-error — a GET endpoint reads
+        "posts.list": "mutation",
+        // @ts-expect-error — a DELETE endpoint writes
+        "admin.purge": "query",
+        // @ts-expect-error — the shape says which of the two it is
+        "admin.exportPayouts": "request",
+      },
+    });
   });
 });
 
@@ -141,7 +165,7 @@ describe("defineBoundary — what it refuses", () => {
   it("refuses a sibling in an otherwise open group", async () => {
     const narrow = defineBoundary<typeof api>({
       source: "api",
-      expose: { "posts.list": "request" },
+      expose: { "posts.list": "query" },
     });
     const options = (api as unknown as { options: Record<string, unknown> }).options;
     const source = { ...(api as object), options: { ...options, boundary: narrow } };
@@ -217,14 +241,14 @@ describe("defineBoundary — a client says what it cannot call", () => {
   }
 
   it("names the endpoint and what to do about it", () => {
-    const client = clientFor({ "posts.list": "request" });
+    const client = clientFor({ "posts.list": "query" });
 
     expect(() => client.posts!.feed!({})).toThrow(/posts\.feed.*boundary/s);
     expect(() => client.posts!.feed!({})).toThrow(/expose/);
   });
 
   it("still calls what the boundary does name", () => {
-    const client = clientFor({ "posts.list": "request" });
+    const client = clientFor({ "posts.list": "query" });
 
     expect(() => client.posts!.list!({})).not.toThrow(/boundary/);
   });

@@ -33,10 +33,10 @@ export type ProxyCallerDefaults = {
   timeout?: number;
   /**
    * Cancel a call still in flight when the same endpoint is called again; the
-   * cancelled call rejects with an `HTTPError` of status 499. Defaults to the
-   * source's own `deduplicate` when `source` is given, and then never cancels
-   * an endpoint the source declares a write. A boundary does not say which
-   * endpoints write, so a client built from one cancels by endpoint.
+   * cancelled call rejects with an `HTTPError` of status 499. Only a read is
+   * ever cancelled — an endpoint the source or the boundary declares a write
+   * is left to complete. Defaults to the source's own `deduplicate` when
+   * `source` is given.
    */
   deduplicate?: boolean;
   credentials?: RequestCredentials;

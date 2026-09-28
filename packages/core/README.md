@@ -282,7 +282,7 @@ Every endpoint of a source is reachable through the proxy unless the source says
 // boundary.ts
 export const boundary: ProxyBoundary = defineBoundary<typeof api>({
   source: "api",
-  expose: { "users.getAll": "request" },
+  expose: { "users.getAll": "query" },
 })
 
 // api.ts

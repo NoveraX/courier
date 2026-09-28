@@ -98,7 +98,7 @@ describe("a proxy query client given a boundary", () => {
     const api = namesApi();
     const boundary = defineBoundary<typeof api>({
       source: "names",
-      expose: { "then.list": "request", "toJSON.list": "request", "valueOf.list": "request" },
+      expose: { "then.list": "query", "toJSON.list": "query", "valueOf.list": "query" },
     });
     return createProxyQueryCaller<typeof api>("names", { boundary, proxyPath: server.proxyPath });
   }

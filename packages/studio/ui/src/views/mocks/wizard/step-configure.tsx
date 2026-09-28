@@ -62,7 +62,7 @@ export function ConfigureStep({ state, errors, onEdit, onRemove }: ConfigureStep
           <li><span className="font-mono text-foreground">happy-path</span> — full CRUD with auto-generated data</li>
           <li><span className="font-mono text-foreground">empty</span> — all list endpoints return []</li>
           <li><span className="font-mono text-foreground">server-error</span> — 500/502/503 errors</li>
-          <li><span className="font-mono text-foreground">slow-network</span> — 3G latency on all endpoints</li>
+          <li><span className="font-mono text-foreground">slow-network</span> — 3G latency on read endpoints</li>
         </ul>
       </div>
     </div>

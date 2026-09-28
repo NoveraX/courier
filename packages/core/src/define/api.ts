@@ -54,11 +54,13 @@ export function setSourceName(source: unknown, name: string): void {
 /**
  * Define an API source with groups of typed endpoints.
  *
+ * @param config - The source's options, with its `groups`, its flat `endpoints`, or both
+ * @returns The source: its endpoints, with its options beside them under `options`
  * @throws ConfigurationError `RESERVED_ENDPOINT_NAME` for a flat endpoint
  *   named `options`, `raw` or `with`, or a group named `raw` or `with`
  *
  * @example
- * const api = courier({ baseURL: "https://api.example.com" })
+ * const { endpoint } = courier()
  *
  * // With groups:
  * const source = defineApi({
@@ -70,7 +72,7 @@ export function setSourceName(source: unknown, name: string): void {
  * const source = defineApi({
  *   baseURL: "https://api.example.com",
  *   endpoints: {
- *     getUsers: api.query.response(UserListSchema).via((http) => http.get("/users")),
+ *     getUsers: endpoint.get("users").response(UserListSchema),
  *   },
  * })
  *
@@ -79,7 +81,7 @@ export function setSourceName(source: unknown, name: string): void {
  *   baseURL: "https://api.example.com",
  *   groups: { users: usersGroup },
  *   endpoints: {
- *     healthCheck: api.query.via((http) => http.get("/health")),
+ *     healthCheck: endpoint.get("health"),
  *   },
  * })
  *

@@ -35,14 +35,13 @@ export const users = defineGroup({
 
 ## courier
 
-`courier()` returns four heads. Which one you start from declares what the endpoint is, not just what it returns:
+`courier()` returns three heads and `extend`. Which head you start from declares what the endpoint is, not just what it returns:
 
-- **`query`** — a read. Proxied as a `GET`, so a CDN can cache it.
-- **`mutation`** — a write. Proxied as a `POST`.
+- **`endpoint`** — an HTTP endpoint. The verb that addresses it decides whether it reads or writes: `get`, `head` and `options` read, and are proxied as a `GET` a CDN can cache; `post`, `put`, `patch` and `del` write, and are proxied as a `POST`.
 - **`stream`** — server-sent events.
 - **`channel`** — a WebSocket channel.
 
-From a head you chain the steps that shape the endpoint, and close with `.via()`:
+From a head you chain the steps that shape the endpoint: a verb with its path — or `.via()` with a closure that builds the request — and the slots `.variables()` and `.response()`:
 
 ```ts
 const { endpoint } = courier()

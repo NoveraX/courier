@@ -13,7 +13,7 @@ import type { NetworkState } from "../network/state";
 import type { MockRegistry } from "../registry";
 import type { MockHistoryEntry, NetworkConfig } from "../types";
 
-/** Hooks for emitting request lifecycle events (set by studio bridge) */
+/** Hooks for emitting request lifecycle events (set by the worker Studio runs a mock in) */
 export interface RequestHooks {
   onStart?(
     id: string,

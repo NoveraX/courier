@@ -15,7 +15,7 @@ import {
 import { generateConnectionId } from "./protocol";
 import { parseVariablesFromUrl, type WSRoute } from "./route-resolver";
 
-/** Hooks for emitting WS lifecycle events to studio (set by studio bridge) */
+/** Hooks for emitting WS lifecycle events to Studio (set by the worker Studio runs a mock in) */
 export interface WSRequestHooks {
   onConnect?(connectionId: string, group: string, method: string): void;
   onDisconnect?(connectionId: string): void;

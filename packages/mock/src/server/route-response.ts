@@ -2,8 +2,9 @@
  * Response building and history recording helpers for the mock route handler.
  *
  * `buildResponse` constructs the JSON response — the handler's data as the
- * body, a `Retry-After` header for 429/503, and any custom handler headers. `pushHistory` appends a normalized history entry that the
- * studio bridge, tests, and admin API can read back.
+ * body, a `Retry-After` header for 429/503, and any custom handler headers.
+ * `pushHistory` appends a normalized history entry that tests and the admin
+ * API can read back.
  */
 
 import { HTTPError } from "@noverax/courier";

@@ -13,6 +13,7 @@ import type { ParsedSchema, ParsedSpec } from "../parser/types";
 import { emitsSchemas } from "./build-endpoint-helpers";
 import { findCyclicSchemas } from "./cyclic-schemas";
 import type { TypeStyle } from "./inline-types";
+import { typeStyleFor } from "./schema-types";
 import type { ResolvedGenerateOptions } from "./types";
 
 /** The names a file's definitions use. */
@@ -81,7 +82,10 @@ export function endpointContext(
 /**
  * How an endpoint writes a type: a schema's own name when the module beside
  * it declares that type, and `unknown` when it does not — with types turned
- * off, or for a reference to a schema the specification never defines.
+ * off, or for a reference to a schema the specification never defines. An
+ * optional field is written as the validator infers it, as the schemas file
+ * writes one: written otherwise beside zod's or valibot's schema, the pair
+ * did not compile under `exactOptionalPropertyTypes`.
  *
  * @param context - The file being written
  * @returns The style, recording each name it writes
@@ -92,7 +96,7 @@ export function endpointContext(
  */
 export function endpointTypeStyle(context: EndpointContext): TypeStyle {
   return {
-    undefinedWhenOptional: false,
+    undefinedWhenOptional: typeStyleFor(context.options).undefinedWhenOptional,
     reference: (name) => typeName(context, name) ?? "unknown",
   };
 }

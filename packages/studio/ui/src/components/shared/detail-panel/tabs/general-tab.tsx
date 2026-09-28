@@ -8,6 +8,7 @@ import { useStudioStore } from "@/store";
 import { useNow } from "@/hooks/use-tick";
 import { STATUS_CONFIG } from "../constants";
 import { DetailSection as Section, DetailRow as Row } from "../detail-rows";
+import { describeUpload } from "@/lib/upload-progress";
 
 interface GeneralTabProps {
   request: RequestEntry;
@@ -77,6 +78,7 @@ export function GeneralTab({ request, hideSourceMode }: GeneralTabProps): React.
           <Row label="Middleware">{request.middlewareCount}</Row>
         )}
         {request.cache && <Row label="Cache">{cacheOutcome(request.cache)}</Row>}
+        {request.upload && <Row label="Upload">{describeUpload(request.upload)}</Row>}
         {request.hasValidation.variables && (
           <Row label="Variables Validated">Yes</Row>
         )}

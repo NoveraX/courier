@@ -11,6 +11,7 @@ import { STATUS_CONFIG } from "./constants";
 import { requestName } from "./request-name";
 
 import type { RequestEntry } from "@/store/types";
+import { describeUpload } from "@/lib/upload-progress";
 
 interface RequestRowProps {
   request: RequestEntry;
@@ -28,6 +29,7 @@ export function RequestRow({
   const now = useNow();
   const status = STATUS_CONFIG[request.status];
   const path = requestName(request);
+  const verb = verbOf(request);
 
   return (
     <button
@@ -45,7 +47,8 @@ export function RequestRow({
       <span className={cn("size-2 shrink-0 rounded-full", status.dot)} />
 
       <span className="inline-flex w-[4.25rem] shrink-0 items-center">
-        <MethodBadge method={request.httpMethod ?? "GET"} />
+        {/* A proxied call's verb is known once the proxy has read the call. */}
+        {verb && <MethodBadge method={verb} />}
       </span>
 
       <span className="min-w-0 flex-1 truncate mono-sm text-foreground">
@@ -66,6 +69,16 @@ export function RequestRow({
             {request.mode}
           </Badge>
 
+          {request.upload && request.status === "pending" && (
+            <Badge
+              variant="sky"
+              className="shrink-0 text-[9px] px-1.5 py-0 tabular-nums"
+              aria-label={`Upload ${describeUpload(request.upload)}`}
+            >
+              ↑ {request.upload.percentage}%
+            </Badge>
+          )}
+
           <MetricsPill statusCode={request.statusCode} duration={request.timing?.total} />
         </>
       )}
@@ -79,4 +92,9 @@ export function RequestRow({
       )}
     </button>
   );
+}
+
+/** The verb a request went out with; a stream is opened with a GET. */
+function verbOf(request: RequestEntry): string | undefined {
+  return request.httpMethod ?? (request.transport === "sse" ? "GET" : undefined);
 }

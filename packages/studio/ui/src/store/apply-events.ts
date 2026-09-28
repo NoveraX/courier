@@ -54,7 +54,11 @@ export function applyEvents(
 /** Whether an event is taken in: a new request is not while paused, nor one the user ignores. */
 function isRecorded(event: EventPayload, draft: RequestDraft, options: ApplyEventsOptions): boolean {
   if (event.type === "request:start") {
+    if (draft.has(str(event.id))) return true
     return !options.paused && !shouldIgnoreRequest(event, options.ignorePatterns)
+  }
+  if (event.type === "upload:progress") {
+    return draft.has(str(event.requestId)) || (!options.paused && !shouldIgnoreRequest(event, options.ignorePatterns))
   }
   if (event.type === "stream:open") return !options.paused || draft.has(str(event.requestId))
   return true

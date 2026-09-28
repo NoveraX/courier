@@ -12,6 +12,8 @@ import {
   withRequestError,
   withValidationFail,
 } from "./handle-request-events"
+import { withProxyParse, withRepeatedStart } from "./handle-proxy-events"
+import { requestFromUpload, withUploadComplete, withUploadProgress } from "./handle-upload-events"
 import {
   streamFromOpen,
   withStreamClose,
@@ -39,9 +41,21 @@ type EventPayload = StudioEvent & Record<string, unknown>
 export function applyEvent(draft: RequestDraft, event: EventPayload): void {
   const requestId = str(event.requestId)
   switch (event.type) {
-    case "request:start":
-      draft.add(requestFromStart(event))
+    case "request:start": {
+      const id = str(event.id)
+      if (draft.has(id)) draft.update(id, (r) => withRepeatedStart(r, event))
+      else draft.add(requestFromStart(event))
       return
+    }
+    case "upload:progress": {
+      if (draft.has(requestId)) {
+        draft.update(requestId, (r) => withUploadProgress(r, event))
+        return
+      }
+      const entry = requestFromUpload(event)
+      if (entry) draft.add(entry)
+      return
+    }
     case "stream:open":
       if (draft.has(requestId)) draft.update(requestId, (r) => withStreamOpen(r, event))
       else draft.add(streamFromOpen(event))
@@ -72,4 +86,6 @@ const ENTRY_CHANGES: ReadonlyMap<string, EntryChange> = new Map<string, EntryCha
   ["stream:error", withStreamError],
   ["cache:hit", withCacheHit],
   ["cache:miss", withCacheMiss],
+  ["upload:complete", withUploadComplete],
+  ["proxy:parse", withProxyParse],
 ])

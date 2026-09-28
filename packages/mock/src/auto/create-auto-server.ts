@@ -121,9 +121,9 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
   // writes to the scenario layer which has priority, but base is always the fallback).
   buildAutoHandlers(routes, server.store, server.mock);
 
-  // User overrides also go to the base layer, on top of auto-CRUD.
-  // Since server.mock uses registry.peek() to find existing handlers, decorator-style
-  // overrides (.withLatency, .withHeaders) will mutate the auto-CRUD handler in-place.
+  // User overrides also go to the base layer, on top of auto-CRUD. A decorator-only
+  // override (.withLatency, .withHeaders) builds on a copy of the auto-CRUD handler;
+  // one that answers anew (.resolves, .returns, ...) replaces it.
   if (config.overrides) {
     config.overrides(server.mock, server.store);
   }

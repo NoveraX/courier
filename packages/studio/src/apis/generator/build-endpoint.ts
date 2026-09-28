@@ -28,17 +28,17 @@ import { wireClosure } from "./wire-closure";
  *
  * @param ep - The endpoint
  * @param context - The file it is written into, which records what the chain uses
- * @param extracted - The types extracted from the file's endpoints, by name
+ * @param paramsType - The type extracted for the endpoint's variables, if any
  * @returns The chain, from `endpoint` to its last slot
  * @example
  * ```ts
- * buildEndpointDefinition(getPet, context, {}); // 'endpoint.get(":petId").variables<{ petId: number }>().response(PetSchema)'
+ * buildEndpointDefinition(getPet, context, undefined); // 'endpoint.get(":petId").variables<{ petId: number }>().response(PetSchema)'
  * ```
  */
 export function buildEndpointDefinition(
   ep: ParsedEndpoint,
   context: EndpointContext,
-  extracted: Readonly<Record<string, ParsedSchema>> = {},
+  paramsType: string | undefined,
 ): string {
   const variables = variablesSchema(ep, context);
   const response = responseSchema(ep, context);
@@ -49,7 +49,7 @@ export function buildEndpointDefinition(
     variablesSchema: variables,
     variablesType: variables
       ? null
-      : (namedParams(ep, context, extracted) ?? resolveVariablesType(ep, context)),
+      : ((paramsType ? typeName(context, paramsType) : null) ?? resolveVariablesType(ep, context)),
     responseSchema: response,
     responseType: response ? "unknown" : resolveResponseType(ep, context),
   });
@@ -64,16 +64,6 @@ export function buildEndpointDefinition(
 function endpointPath(ep: ParsedEndpoint): string {
   if (ep.origin) return `${ep.origin}${convertPathParams(ep.fullPath)}`;
   return ep.path === "/" ? "" : ep.path.replace(/^\//, "");
-}
-
-/** The extracted type naming the endpoint's parameters, when there is one. */
-function namedParams(
-  ep: ParsedEndpoint,
-  context: EndpointContext,
-  extracted: Readonly<Record<string, ParsedSchema>>,
-): string | null {
-  const name = `${toPascalCase(ep.name)}Params`;
-  return Object.hasOwn(extracted, name) ? typeName(context, name) : null;
 }
 
 function responseSchema(ep: ParsedEndpoint, context: EndpointContext): string | null {
@@ -151,8 +141,4 @@ function listOf(constant: string, schema: ParsedSchema | null, context: Endpoint
   if (validation === "arktype") return `${constant}.array()`;
   context.uses.validator = true;
   return validation === "zod" ? `z.array(${constant})` : `v.array(${constant})`;
-}
-
-function toPascalCase(name: string): string {
-  return name.charAt(0).toUpperCase() + name.slice(1);
 }

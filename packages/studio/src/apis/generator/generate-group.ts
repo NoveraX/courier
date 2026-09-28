@@ -16,11 +16,11 @@ import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
  * @param spec - The parsed specification
  * @param options - The import's resolved options
  * @param declared - The schemas the group's schemas module declares, by name
- * @param extracted - The types extracted from the group's endpoints, by name
+ * @param paramsTypes - The type naming each endpoint's variables, by the endpoint's name
  * @returns The file, at the path the layout gives the group
  * @example
  * ```ts
- * generateGroupFile(processed, spec, options, buildSchemaRecord(processed, spec, extracted), extracted);
+ * generateGroupFile(processed, spec, options, buildSchemaRecord(processed, spec, extracted), params);
  * ```
  */
 export function generateGroupFile(
@@ -28,10 +28,10 @@ export function generateGroupFile(
   spec: ParsedSpec,
   options: ResolvedGenerateOptions,
   declared: Readonly<Record<string, ParsedSchema>>,
-  extracted: Readonly<Record<string, ParsedSchema>>,
+  paramsTypes: Readonly<Record<string, string>>,
 ): GeneratedFile {
   const context = endpointContext(spec, options, declared);
-  const entries = endpointEntries(group.endpoints, context, extracted);
+  const entries = endpointEntries(group.endpoints, context, paramsTypes);
 
   const lines = [
     `import { courier, defineGroup } from "@noverax/courier/define";`,

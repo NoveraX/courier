@@ -9,6 +9,7 @@ import type {
   ParsedSchema,
   ParsedSchemaProperty,
 } from "../parser/types";
+import type { ExtractedTypeNames } from "./extracted-type-names";
 import { parameterProperty } from "./parameter-property";
 import { bodyMedia } from "./request-body";
 
@@ -17,53 +18,91 @@ export interface ExtractedTypes {
   group: ParsedGroup;
   /** Additional named schemas (response types + param types) */
   schemas: Record<string, ParsedSchema>;
-}
-
-/** Extract inline response objects and complex params as named types */
-export function extractEndpointTypes(group: ParsedGroup): ExtractedTypes {
-  const schemas: Record<string, ParsedSchema> = {};
-  const endpoints: ParsedEndpoint[] = [];
-
-  for (const ep of group.endpoints) {
-    let responseSchema = ep.responseSchema;
-
-    if (shouldExtractResponse(responseSchema)) {
-      const name = toPascalCase(ep.name) + "Response";
-      schemas[name] = responseSchema!;
-      responseSchema = { name, type: "ref", refName: name };
-    }
-
-    const paramsSchema = buildParamsSchema(ep);
-    if (paramsSchema) {
-      schemas[toPascalCase(ep.name) + "Params"] = paramsSchema;
-    }
-
-    endpoints.push(responseSchema !== ep.responseSchema ? { ...ep, responseSchema } : ep);
-  }
-
-  return { group: { ...group, endpoints }, schemas };
-}
-
-function shouldExtractResponse(schema: ParsedSchema | null): boolean {
-  if (!schema || schema.type === "ref") return false;
-  if (schema.type === "object" && schema.properties)
-    return Object.keys(schema.properties).length > 0;
-  if (schema.type === "array" && schema.items?.type === "object" && schema.items.properties)
-    return true;
-  /* A response that is one of several shapes — a list or `null`, say — is
-     only validated through a named schema; written inline it was a type the
-     answer was never checked against. */
-  return schema.type === "union" && (schema.variants?.length ?? 0) > 0;
+  /** The type naming each endpoint's variables, by the endpoint's name. */
+  params: Record<string, string>;
 }
 
 /**
- * The type of what an endpoint is called with: its path and query
- * parameters, and the fields of a body written inline beside them.
+ * Name the inline response objects and the variables of a group's
+ * endpoints as types of their own.
+ *
+ * @param group - The group
+ * @param names - The name each extracted type takes, decided over the whole import
+ * @returns The group with its responses referring to the new types, and the types
+ * @example
+ * ```ts
+ * const { group: processed, schemas } = extractEndpointTypes(group, names);
+ * ```
+ */
+export function extractEndpointTypes(
+  group: ParsedGroup,
+  names: ExtractedTypeNames,
+): ExtractedTypes {
+  const schemas: Record<string, ParsedSchema> = {};
+  const params: Record<string, string> = {};
+  const endpoints: ParsedEndpoint[] = [];
+
+  for (const ep of group.endpoints) {
+    const response = responseToExtract(ep);
+    const variables = paramsToExtract(ep);
+    if (variables) {
+      const name = names.nameOf(group.name, ep.name, "Params");
+      schemas[name] = variables;
+      params[ep.name] = name;
+    }
+    if (!response) {
+      endpoints.push(ep);
+      continue;
+    }
+    const name = names.nameOf(group.name, ep.name, "Response");
+    schemas[name] = response;
+    endpoints.push({ ...ep, responseSchema: { name, type: "ref", refName: name } });
+  }
+
+  return { group: { ...group, endpoints }, schemas, params };
+}
+
+/**
+ * An endpoint's response, when it is an object written inline — or a list
+ * of them, or one of several shapes — and so gets a type of its own.
+ *
+ * @param ep - The endpoint
+ * @returns The response's schema, or `null` when it stays as it is
+ * @example
+ * ```ts
+ * responseToExtract(listItems); // { type: "object", properties: { total, items } }
+ * ```
+ */
+export function responseToExtract(ep: ParsedEndpoint): ParsedSchema | null {
+  const schema = ep.responseSchema;
+  if (!schema || schema.type === "ref") return null;
+  if (schema.type === "object")
+    return Object.keys(schema.properties ?? {}).length > 0 ? schema : null;
+  if (schema.type === "array" && schema.items?.type === "object" && schema.items.properties) {
+    return schema;
+  }
+  /* A response that is one of several shapes — a list or `null`, say — is
+     only validated through a named schema; written inline it was a type the
+     answer was never checked against. */
+  return schema.type === "union" && (schema.variants?.length ?? 0) > 0 ? schema : null;
+}
+
+/**
+ * The type of what an endpoint is called with, when it gets one of its own:
+ * its path and query parameters, and the fields of a body written inline
+ * beside them.
  *
  * The body used to be left out, so an endpoint whose parameters were named
  * this way could no longer be called with the body it requires.
+ *
+ * @param ep - The endpoint
+ * @returns The variables' schema, or `null` when they are written where they are used
+ * @example
+ * ```ts
+ * paramsToExtract(findPets)?.properties; // { status, tags }
+ * ```
  */
-function buildParamsSchema(ep: ParsedEndpoint): ParsedSchema | null {
+export function paramsToExtract(ep: ParsedEndpoint): ParsedSchema | null {
   /* A body that is not an object's fields written inline — a named schema,
      a list, a form, bytes — sits beside the parameters in its own way. */
   if (ep.requestBody && !inlineFields(ep)) return null;
@@ -88,8 +127,4 @@ function inlineFields(ep: ParsedEndpoint): boolean {
   const body = ep.requestBody;
   if (body?.type !== "object" || Object.keys(body.properties ?? {}).length === 0) return false;
   return bodyMedia(ep) === "structured";
-}
-
-function toPascalCase(name: string): string {
-  return name.charAt(0).toUpperCase() + name.slice(1);
 }

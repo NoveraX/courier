@@ -18,11 +18,11 @@ import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
  * @param spec - The parsed specification
  * @param options - The import's resolved options
  * @param declared - The schemas the import's schemas module declares, by name
- * @param extracted - The types extracted from the endpoints, by name
+ * @param paramsTypes - The type naming each endpoint's variables, by the endpoint's name
  * @returns The source file
  * @example
  * ```ts
- * generateFlatSourceFile(processed.endpoints, spec, options, declared, extracted);
+ * generateFlatSourceFile(processed.endpoints, spec, options, declared, params);
  * ```
  */
 export function generateFlatSourceFile(
@@ -30,10 +30,10 @@ export function generateFlatSourceFile(
   spec: ParsedSpec,
   options: ResolvedGenerateOptions,
   declared: Readonly<Record<string, ParsedSchema>>,
-  extracted: Readonly<Record<string, ParsedSchema>>,
+  paramsTypes: Readonly<Record<string, string>>,
 ): GeneratedFile {
   const context = endpointContext(spec, options, declared);
-  const entries = endpointEntries(endpoints, context, extracted);
+  const entries = endpointEntries(endpoints, context, paramsTypes);
   const auth = options.addAuthMiddleware
     ? sourceAuth(spec.securitySchemes, options.sourceName)
     : null;

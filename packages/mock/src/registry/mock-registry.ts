@@ -14,6 +14,8 @@ export interface MockRegistry {
   get(group: string, method: string, scenarioState: string): ResolvedHandler | undefined;
   /** Read the latest handler without side effects — scenario layer first, then base */
   peek(group: string, method: string): ResolvedHandler | undefined;
+  /** Read the latest base-layer handler without side effects, whatever the scenario layer holds */
+  peekBase(group: string, method: string): ResolvedHandler | undefined;
   /** Remove all handlers for an endpoint in both layers */
   remove(group: string, method: string): void;
   /** Clear the scenario layer only (base layer is preserved) */
@@ -91,6 +93,11 @@ export function createMockRegistry(): MockRegistry {
       const scenarioStack = scenarioHandlers.get(key);
       if (scenarioStack?.length) return scenarioStack[scenarioStack.length - 1];
       const baseStack = baseHandlers.get(key);
+      return baseStack?.length ? baseStack[baseStack.length - 1] : undefined;
+    },
+
+    peekBase(group, method) {
+      const baseStack = baseHandlers.get(handlerKey(group, method));
       return baseStack?.length ? baseStack[baseStack.length - 1] : undefined;
     },
 

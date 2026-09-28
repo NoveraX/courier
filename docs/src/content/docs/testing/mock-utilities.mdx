@@ -1,0 +1,55 @@
+export const metadata = { title: "Mock Utilities", description: "Mock clients, record factories, and recording a real API into fixtures, from @noverax/courier-mock.", mode: "both" }
+
+## Mock client and factories
+
+`@noverax/courier-mock/testing` builds a typed client that answers from mocks and records every call, and `defineFactory` builds the records it answers with:
+
+```ts
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+import { defineFactory } from "@noverax/courier-mock"
+import { createMockClient } from "@noverax/courier-mock/testing"
+
+type User = { id: number; name: string; email: string }
+
+const { endpoint } = courier()
+const users = defineGroup({ prefix: "users", endpoints: { getAll: endpoint.get("").response<User[]>() } })
+const api = defineApi({ baseURL: "https://api.example.com", groups: { users } })
+
+const userFactory = defineFactory<User>({ defaults: { id: 1, name: "Alice", email: "alice@test.com" } })
+
+const { client, mock, history } = createMockClient<typeof api>()
+mock("users", "getAll").resolves(
+  userFactory.buildSequence(3, (index, base) => ({ ...base, id: index + 1, name: `User ${index + 1}` })),
+)
+
+const all = await client.users.getAll() // three users
+history.length // 1
+```
+
+### Recording a real API
+
+`createRecorder` calls a real backend from the API's definition and records each response as a fixture — a failed one too. Its client answers as the source's own client does: the data, or an `HTTPError` with the status and body.
+
+```ts
+import { createMockClient, createRecorder, replayFixtures } from "@noverax/courier-mock/testing"
+
+const recorder = createRecorder({ source: api, targetUrl: "https://staging.example.com" })
+await recorder.client.users.getAll()
+
+const fixtures = recorder.getFixtures() // or recorder.toHar()
+const { client: replayed } = createMockClient<typeof api>({ scenario: replayFixtures(fixtures) })
+```
+
+- The calls go to each endpoint's own method and path, at `targetUrl` or at the source's `baseURL`. To record through a Courier proxy — `createCourierServer`, or an app with Courier's handler — pass `proxy: { url, source }`: the proxy route's URL and the name the source has there.
+- `mode` is `"record"` by default. `"passthrough"` calls the backend and records nothing; `"replay"` answers from the `fixtures` given, without the network, and rejects a call it has no recording of; `"record-missing"` replays what `fixtures` has and records the rest.
+- `sanitize` rewrites what is recorded, not what the call returns; `filter` names the endpoints the recorder may call.
+
+## Exports
+
+| Entry Point | Description |
+|---|---|
+| `@noverax/courier-mock` | `defineMocks`, `defineMockServer`, `defineFactory`, `defineScenario`, `MockHttpError` |
+| `@noverax/courier-mock/testing` | `createMockClient`, `createMockStore`, `createRecorder`, `replayFixtures` |
+| `@noverax/courier-mock/server` | `createMockServer` — a standalone Hono-based mock server |
+| `@noverax/courier-mock/contract` | Contract testing utilities |
+| `@noverax/courier-mock/managed` | `runMockWorker` — the process Studio starts for each mock it runs |

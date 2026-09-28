@@ -1,0 +1,135 @@
+export const metadata = { title: "Studio", description: "A development server with a web UI: inspect requests, explore endpoints, call them from a playground, and run mock servers.", mode: "both" }
+
+## Overview
+
+Courier Studio is a development server with a web UI: a request inspector, an endpoint explorer, an API playground, mock servers, and more. You run it next to your app, and your app connects to it — the server side through `attachRuntime()`, the browser side through one of the build integrations below.
+
+## Install
+
+```bash
+npm install --save-dev @noverax/courier-studio
+npm install @noverax/courier-studio-core
+```
+
+Studio needs Node.js 22.13 or newer. Studio is a development tool, so it is a dev dependency. `@noverax/courier-studio-core` is what your server instrumentation imports `attachRuntime()` from, so it is a dependency: a production install leaves dev dependencies out, and a server that imports the runtime does not start without it — even one that calls it only in development. `attachRuntime()` runs in production too, where it registers the config's sources. An app that only connects its browser through a build integration can leave it out.
+
+## Start Studio
+
+```bash
+npx courier-studio
+```
+
+Studio listens on `http://localhost:6280` — at both `127.0.0.1` and `::1`, so it answers whichever one a client dials — or on the `studio.host` and `studio.port` of your `courier.config.ts`. Server runtimes and the build plugins read the same block, so moving Studio there moves them with it: a server runtime reads the nearest config at or above its working directory, and a build plugin the nearest at or above Vite's root — or, for webpack, esbuild and Rollup, the working directory. Flags: `--port`, `--host`, `--cwd` (project root), `--open` (open a browser), `--version`. Studio keeps its working files — imported API state, copies of the files it replaced or removed, saved sessions — in `.courier/`, which ignores itself in git.
+
+What Studio shows is kept in `.courier/studio.db`, a SQLite database built into Node, with nothing to install or set up. The requests it captured are there, the latest 2000 of them, so a page that reloads, or a Studio that restarts, shows them again. A request still open when Studio stopped is shown as ended, since no runtime can say any more how it ended. The saved sessions are there too, and which one a page loaded: a page that reloads shows that session again, recording paused, until you go back to the live requests with the play button or **Back to live requests** in the command palette. So are the requests each mock answered, the latest 500, which the Mocks view's log shows again, and the Playground's history of calls — kept for the project, so another browser shows it too. Only how a page looks, its theme and layout, stays in the browser. Delete the file, with Studio stopped, to start empty. Studio creates it readable and writable by its owner only.
+
+No credential is written there. The value of `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, and of any header whose name has a word such as `auth`, `token`, `secret`, `password`, `session`, `csrf` or `api-key` in it, is kept as `[redacted]` in the request log, the mocks' logs, saved sessions and the Playground's history, and so in a HAR or Postman export of a session. The live view, which nothing writes down, shows the values whole; a request replayed after a reload carries `[redacted]` instead.
+
+When the database cannot be kept there — `.courier` is a link, the disk is read-only, a newer Studio made it — Studio keeps its data in memory for that run, and says so. A file there that is not a database is moved aside to `studio.db.broken-<time>`, and a new one is started.
+
+Studio loads `courier.config.ts` from the project root, with the `courier.mocks.ts` beside it, and loads them again whenever either one, or a module either imports, is saved: see [How Studio loads the project](/docs/studio/project-loading).
+
+A project that has no API sources yet starts with this `courier.config.ts` at its root — the APIs page offers it to copy while there is no config, and keeps **Import API** off until one loads:
+
+```ts
+import { defineConfig } from "@noverax/courier/config";
+export default defineConfig({ sources: {} });
+```
+
+**Import API** then writes the project's first API into its output directory — `src/api/<source name>/` by default — where `source.ts` exports the source under its source name. Add it to `sources` under that name, and the APIs page lists it as imported:
+
+```ts
+import { defineConfig } from "@noverax/courier/config";
+import { petstore } from "./src/api/petstore/source";
+
+export default defineConfig({ sources: { petstore } });
+```
+
+Studio has no authentication. It answers only its own page and the apps running on this machine, so on the default `localhost` nothing else can reach it; bound to the network (`--host 0.0.0.0`), anyone on that network can use it. Its pages refuse to be shown in a frame, so another site cannot put Studio under a page of its own.
+
+The build integrations connect your app to Studio; they do not start it.
+
+## Connect the browser
+
+Every integration connects only a development build, as the bundler tells one: the dev server of Vite, Astro or Nuxt, `next dev`, webpack's `mode: "development"`, an esbuild build that neither minifies nor defines `process.env.NODE_ENV` as `"production"`, and Rollup's watch mode (`rollup -c -w`). A production build — `vite build`, `webpack --mode production` or webpack with no `mode`, a minified esbuild build, a one-off `rollup -c` — is left untouched, whether or not `NODE_ENV` is set, and `NODE_ENV=production` rules out any build. Pass `{ enabled: true }` or `{ enabled: false }` to decide yourself.
+
+| Import path | For | Register |
+|---|---|---|
+| `@noverax/courier-studio/vite` | Vite, and the frameworks built on it | `plugins: [courierStudio()]` |
+| `@noverax/courier-studio/react`, `/vue`, `/sveltekit`, `/remix`, `/solid` | React, Vue, SvelteKit, React Router (Remix), SolidStart — the Vite plugin under a framework name | `plugins: [courierStudio()]` in `vite.config.ts` |
+| `@noverax/courier-studio/astro` | Astro | `integrations: [courierStudio()]` |
+| `@noverax/courier-studio/nuxt` | Nuxt, with any of its builders | `modules: [courierStudioModule]` |
+| `@noverax/courier-studio/next` | Next.js under webpack | `export default withCourierStudio()(nextConfig)` |
+| `@noverax/courier-studio/webpack` | webpack | `plugins: [courierStudio()]` |
+| `@noverax/courier-studio/esbuild` | esbuild | `plugins: [courierStudio()]` |
+| `@noverax/courier-studio/rollup` | Rollup | `plugins: [courierStudio()]` |
+| `@noverax/courier-studio/angular` | Angular | `setupCourierStudio()` in `main.ts` |
+
+```ts
+// vite.config.ts
+import { courierStudio } from "@noverax/courier-studio/vite"
+import { defineConfig } from "vite"
+
+export default defineConfig({
+  plugins: [courierStudio()],
+})
+```
+
+### Next.js
+
+Next.js 16 builds with Turbopack, which runs no webpack plugins. Connect the browser from `instrumentation-client.ts` (Next.js 15.3 and later, under either bundler):
+
+```ts
+// instrumentation-client.ts
+import { attachRuntime } from "@noverax/courier-studio-core/runtime"
+
+if (process.env.NODE_ENV === "development") {
+  attachRuntime("next-browser")
+}
+```
+
+A browser bundle cannot read `courier.config.ts`, so when Studio is not at the default address, pass it through `env: { COURIER_STUDIO_URL: "http://localhost:7000" }` in `next.config.ts`.
+
+Under webpack — Next.js 14 and 15 by default, `next dev --webpack` since — `withCourierStudio()` connects the browser without that file. It also keeps `ws`, which the server's Studio connection runs on, out of the server bundle: bundled, `ws` fails on every frame of 48 bytes or more, and the server never reaches Studio. Without the wrapper, add `serverExternalPackages: ["ws"]` to the config. Under Turbopack it leaves your config untouched and prints the snippet above if the file is missing.
+
+### Nuxt
+
+Import the module rather than naming it as a string, and pass options in the tuple form:
+
+```ts
+// nuxt.config.ts
+import { courierStudioModule } from "@noverax/courier-studio/nuxt"
+
+export default defineNuxtConfig({
+  modules: [courierStudioModule],
+})
+```
+
+### Angular
+
+```ts
+// src/main.ts
+import { setupCourierStudio } from "@noverax/courier-studio/angular"
+
+setupCourierStudio() // or setupCourierStudio({ studioUrl: "http://localhost:7000" })
+
+bootstrapApplication(AppComponent, appConfig)
+```
+
+## Connect the server
+
+```ts
+import { attachRuntime } from "@noverax/courier-studio-core/runtime"
+
+await attachRuntime()
+```
+
+Call it once at startup — from `instrumentation.ts` in Next.js, a Nitro plugin in Nuxt, `hooks.server.ts` in SvelteKit, or before `listen()` in a Node server. The runtime is `@noverax/courier-studio-core`'s; its README describes the options `attachRuntime()` takes.
+
+Studio keeps the latest 2000 requests your app makes in memory, so a Studio page that opens or reloads shows the ones made before it; clearing the Timeline clears them there too, except the pinned ones when **Preserve log** is on. A request or stream still open when its app stops, or loses its connection to Studio, is shown as failed: the app can no longer say how it ended.
+
+## Next steps
+
+- [Import an API](/docs/studio/import-api) — turn an OpenAPI, Swagger or Postman specification into typed API code
+- [Mock servers](/docs/studio/mock-servers) — declare mocks Studio runs, and add them from its UI
+- [How Studio loads the project](/docs/studio/project-loading) — reloads, failures, the transform cache, and running Studio from code

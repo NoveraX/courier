@@ -82,8 +82,8 @@ export async function executeDirectWSChannel(
   unsubscribeFn = registry.subscribe(topic, {
     connectionId,
     // Remote broadcast (from another channel) → fan out to this client's
-    // local data listeners. channelCtx.send walks the per-channel listener pool.
-    emit: (data) => state.channelCtx.send(data),
+    // local data listeners. The sender held it to the schema already.
+    emit: (data) => state.deliver(data),
   });
 
   try {

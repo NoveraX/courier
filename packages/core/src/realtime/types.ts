@@ -134,9 +134,16 @@ export interface WSContext<TVariables = unknown> {
 /** Server-side context for bidirectional WS channels */
 export interface WSChannelContext<TResponse = unknown, TVariables = unknown>
   extends WSContext<TVariables> {
-  /** Send a typed message to this specific client */
+  /**
+   * Send a typed message to this specific client. It is held to the
+   * channel's response schema first: what goes out is the schema's output,
+   * and a value that does not match throws a `RealtimeValidationError` here.
+   */
   send(data: TResponse): void;
-  /** Broadcast to all subscribers of a topic */
+  /**
+   * Broadcast to every other subscriber of a topic, held to the channel's
+   * response schema as `send` is.
+   */
   broadcast(topic: string, data: TResponse): void;
   /**
    * End this client's subscription to the channel: its `onLeave` runs, and

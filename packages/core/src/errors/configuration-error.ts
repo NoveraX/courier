@@ -101,6 +101,12 @@ export type ConfigurationErrorCode =
    */
   | "TOPIC_ON_REMOTE_CHANNEL"
   /**
+   * A channel's `.response()` schema validated asynchronously. `ctx.send` and
+   * `ctx.broadcast` check what they send as they send it, in order, so the
+   * schema has to answer synchronously.
+   */
+  | "ASYNC_RESPONSE_SCHEMA"
+  /**
    * An endpoint was named `options` in a group or among a source's own
    * endpoints, where that name holds the group's or the source's settings;
    * or an endpoint or a group was named `raw` or `with`, which a client

@@ -1,4 +1,7 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
+
 import { createLogger } from "../../logger";
+import { checkResponseNow } from "../../realtime/check-response-now";
 import { describeFailure } from "../../realtime/describe-failure";
 import type { ChannelHandlers, WSChannelContext } from "../../realtime/types";
 import type { WSSocketContext } from "../ws-context";
@@ -21,12 +24,15 @@ const log = createLogger("WS");
  *   Doing both here would leak the `subscriptionIds` entry.
  * - onMessage throws → error sent to client for this topic; the channel goes on
  * - onLeave throws → logged, does not block cleanup
+ * - ctx.send / ctx.broadcast of a value the response schema refuses → thrown
+ *   where it was called, and nothing is sent
  *
  * @param ctx - Per-connection socket context
  * @param topic - Qualified topic string (e.g. 'api.chat.room#{"room":"a"}')
  * @param endpoint - Channel endpoint function (ChannelHandlers factory)
  * @param variables - Validated subscription variables
  * @param subscribeId - The id of the client's subscribe message, if any
+ * @param responseSchema - The channel's response schema, which everything it sends is held to
  */
 export async function startChannel(
   ctx: WSSocketContext,
@@ -34,8 +40,11 @@ export async function startChannel(
   endpoint: unknown,
   variables: unknown,
   subscribeId?: string,
+  responseSchema?: StandardSchemaV1,
 ): Promise<void> {
   const factory = endpoint as (v: unknown) => ChannelHandlers;
+  const outbound = (data: unknown): unknown =>
+    responseSchema ? checkResponseNow(responseSchema, data) : data;
 
   let handlers: ChannelHandlers;
   try {
@@ -54,10 +63,11 @@ export async function startChannel(
     meta: ctx.meta,
     signal: ended.signal,
     send: (data) => {
-      ctx.sendMessage({ type: "data", topic, payload: data });
-      emitChannelMessage(ctx, topic, data, "data");
+      const payload = outbound(data);
+      ctx.sendMessage({ type: "data", topic, payload });
+      emitChannelMessage(ctx, topic, payload, "data");
     },
-    broadcast: (t, data) => broadcastToTopic(ctx, t, data),
+    broadcast: (t, data) => broadcastToTopic(ctx, t, outbound(data)),
     close: (code, reason) => {
       /* Used to send an error frame and nothing else: the subscription
          went on, and the client only logged "closed". */

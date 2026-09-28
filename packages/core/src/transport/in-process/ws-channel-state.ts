@@ -1,4 +1,5 @@
 import { createLogger } from "../../logger";
+import { checkResponseNow } from "../../realtime/check-response-now";
 import type { ChannelHandlers, ConnectionStatus, WSChannelContext } from "../../realtime/types";
 import { validateSchema } from "../../validation";
 import { type InProcessStreamSchema, wrapStreamError } from "./shared";
@@ -20,6 +21,8 @@ export interface ChannelState {
   channelCtx: WSChannelContext;
   /** Build the WSChannel object exposed to the playground client. */
   client: InProcessWSChannel;
+  /** Hand this channel's client what a peer broadcast, already held to the schema. */
+  deliver: (data: unknown) => void;
   /** Mark the channel as connected (fires status listeners). */
   markConnected: () => void;
   /** Close the channel idempotently — runs onLeave + status disconnected. */
@@ -68,6 +71,10 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
     }
   };
 
+  /* Held to the response schema as the server holds what it sends. */
+  const outbound = (data: unknown): unknown =>
+    schema.response ? checkResponseNow(schema.response, data) : data;
+
   const ended = new AbortController();
   const channelCtx: WSChannelContext = {
     topic,
@@ -75,8 +82,8 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
     connectionId,
     meta: {},
     signal: ended.signal,
-    send: (data) => emitData(data),
-    broadcast: (t, data) => broadcast(t, data, connectionId),
+    send: (data) => emitData(outbound(data)),
+    broadcast: (t, data) => broadcast(t, outbound(data), connectionId),
     close: () => {
       void close();
     },
@@ -142,6 +149,7 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
   return {
     channelCtx,
     client,
+    deliver: emitData,
     markConnected: () => setStatus("connected"),
     close,
   };

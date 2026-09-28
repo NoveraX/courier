@@ -1,5 +1,5 @@
 /**
- * A streamed proxy answer whose client stops reading and leaves.
+ * A streamed answer whose client stops reading, or leaves.
  *
  * The proxy stops the upstream body when the client goes, and stopping it a
  * second time from the response side then failed with the abort that had
@@ -7,7 +7,7 @@
  * warning with a full stack.
  */
 import { createServer, type Server } from "node:http";
-import type { AddressInfo } from "node:net";
+import { type AddressInfo, connect } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
@@ -75,5 +75,36 @@ describe("a streamed answer the client cancels", () => {
     expect(failures).toEqual([]);
     expect(warn).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
+  });
+});
+
+describe("a streamed answer the client does not read", () => {
+  it("is read from its body no faster than the client reads it", async () => {
+    /* Without waiting for the socket to drain, every chunk the body had was
+       pulled and queued in memory for a client that took none of them. */
+    const chunk = new Uint8Array(64 * 1024);
+    let pulled = 0;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          pulled += 1;
+          controller.enqueue(chunk);
+          if (pulled === 10_000) controller.close();
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    const url = new URL(
+      await listen(createServer((_req, res) => void sendWebResponse(new Response(body), res))),
+    );
+    const client = connect(Number(url.port), url.hostname);
+    client.write(`GET / HTTP/1.1\r\nHost: ${url.host}\r\n\r\n`);
+    client.pause();
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    expect(pulled).toBeGreaterThan(0);
+    expect(pulled).toBeLessThan(1_000);
+    client.destroy();
   });
 });

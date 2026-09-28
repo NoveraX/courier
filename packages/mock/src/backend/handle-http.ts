@@ -39,11 +39,14 @@ export async function handleHTTP(params: HandleHTTPParams): Promise<unknown> {
     scenarioState: params.getScenarioState(),
   };
 
+  /* Run the handler before reading its error flag and status: a sequence
+     sets both for the entry it answers with, as the call runs. */
+  const data = await handler.fn(ctx);
   if (handler.isError) {
-    return throwHandlerError(group, method, variables, handler, ctx, history, start);
+    return throwHandlerError(group, method, variables, handler, data, history, start);
   }
 
-  return executeSuccess(group, method, variables, handler, ctx, params, history, start);
+  return recordSuccess(group, method, variables, handler, data, params, history, start);
 }
 
 function throwNetworkFault(
@@ -98,11 +101,10 @@ function throwHandlerError(
   method: string,
   variables: unknown,
   handler: ResolvedHandler,
-  ctx: MockRequestContext,
+  data: unknown,
   history: MockHistoryEntry[],
   start: number,
 ): never {
-  const data = handler.fn(ctx);
   const error = new HTTPError({
     status: handler.status,
     headers: new Headers(handler.headers),
@@ -121,17 +123,16 @@ function throwHandlerError(
   throw error;
 }
 
-async function executeSuccess(
+function recordSuccess(
   group: string,
   method: string,
   variables: unknown,
   handler: ResolvedHandler,
-  ctx: MockRequestContext,
+  data: unknown,
   params: HandleHTTPParams,
   history: MockHistoryEntry[],
   start: number,
-): Promise<unknown> {
-  const data = await handler.fn(ctx);
+): unknown {
   if (handler.newState) params.setScenarioState(handler.newState);
 
   history.push({

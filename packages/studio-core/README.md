@@ -45,6 +45,8 @@ await attachRuntime()
 
 `attachRuntime()` reads `courier.config.ts` from disk (walking up from `process.cwd()`), registers its sources, and — outside production — connects to Studio. It dials the address the config's `studio` block names, so `studio: { port: 7000 }` moves the Studio server and every runtime together. `COURIER_STUDIO_URL` overrides both.
 
+Outside production it keeps the registered sources in step with your edits: whenever a module your dev server reloads runs `defineApi()`, the config is read again and its sources registered anew. Only the sources the config declares are ever registered, as the config composes them.
+
 It reads the config in production too, so the config must not import development tools. That is why Studio's mock servers are declared in `courier.mocks.ts` beside it: only Studio reads that file, and `attachRuntime()` never does.
 
 ### Attach a browser runtime

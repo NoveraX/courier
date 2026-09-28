@@ -3,7 +3,7 @@
  * registry, the in-flight attach sharing, and the connection to Studio.
  */
 
-import { createLogger, getSources } from "@noverax/courier";
+import { createLogger, getSources, studioHooks } from "@noverax/courier";
 import { EventBus } from "../event-bus";
 import { type BufferedAnnouncement, consumeAnnouncements } from "./announce-hosting";
 import type { RuntimeHandle } from "./attach-runtime-types";
@@ -16,7 +16,6 @@ import {
   resolveStudioUrl,
 } from "./runtime-environment";
 import { installSourceRegistry } from "./runtime-source-registry";
-import { installSourceDefinedHook, uninstallSourceDefinedHook } from "./source-defined-hook";
 import { createSourceNameResolver } from "./source-resolution";
 
 const log = createLogger("Runtime");
@@ -72,9 +71,7 @@ async function attachFresh(
   isBrowser: boolean,
   loadServerConfig: ServerConfigLoader | undefined,
 ): Promise<RuntimeHandle> {
-  // ── Production-relevant: source registry + appOrigin + onSourceDefined ──
-
-  installSourceDefinedHook();
+  // ── Production-relevant: source registry + appOrigin ──
 
   const studioAddress = await loadServerConfig?.();
 
@@ -145,5 +142,7 @@ export function _resetRuntimeHandlesForTests(): void {
   for (const handle of handles.values()) handle.detach();
   handles.clear();
   attaching.clear();
-  uninstallSourceDefinedHook();
+  /* A server attach follows the config through this hook; see
+     `followConfigSources`. */
+  studioHooks.onSourceDefined = undefined;
 }

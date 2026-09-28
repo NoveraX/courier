@@ -13,10 +13,11 @@
  * # Who writes to it
  *
  * `attachRuntime()` from `@noverax/courier-studio-core/runtime` populates
- * the registry on startup from `courier.config.ts.sources`. The same
- * function installs a `studioHooks.onSourceDefined` listener so that
- * hot-reloaded `defineApi()` calls land here too without user-code
- * intervention.
+ * the registry on startup from `courier.config.ts.sources`. Outside
+ * production it also listens on `studioHooks.onSourceDefined`, and registers
+ * the config's sources again whenever a hot-reloaded module runs
+ * `defineApi()`, so the registry follows the application's edits without
+ * user-code intervention.
  *
  * # Storage
  *

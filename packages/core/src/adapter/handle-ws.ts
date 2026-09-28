@@ -3,11 +3,11 @@ import type { WebSocketLike } from "../realtime/adapters";
 import { createHeartbeat } from "../realtime/ws/heartbeat";
 import { prepareSources } from "../sources";
 import { studioHooks } from "../studio";
+import type { ConnectResult } from "./connection-meta";
+import { connectionMetaOf } from "./connection-meta-of";
 import { LIMITS } from "./limits";
 import { rememberPeerAddress } from "./peer-address";
 import { admitSocket } from "./ws-admission";
-import type { WSConnectResult } from "./ws-connection-meta";
-import { connectionMetaOf } from "./ws-connection-meta-of";
 import { buildContext, type WSSocketContext } from "./ws-context";
 import { createIPTracker } from "./ws-ip-tracker";
 import { wireEvents } from "./ws-lifecycle";
@@ -39,7 +39,7 @@ const log = createLogger("WS");
  * ws.handleSocket(socket, request);
  * ws.connections.broadcast({ type: "system", text: "Welcome!" });
  */
-export function createWSHandler<TConnect extends WSConnectResult = WSConnectResult>(
+export function createWSHandler<TConnect extends ConnectResult = ConnectResult>(
   config?: WSHandlerConfig<TConnect>,
 ): WSHandler;
 export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {

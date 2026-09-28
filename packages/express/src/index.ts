@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { AdapterHandler, HandlerConfig } from "@noverax/courier";
+import type { AdapterHandler, ConnectResult, HandlerConfig } from "@noverax/courier";
 import { createHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/courier/node";
@@ -49,7 +49,9 @@ export type CourierExpressHandler = CourierMiddleware &
  * app.all("/api/request", courierHandler());
  * ```
  */
-export function courierHandler(config?: HandlerConfig): CourierExpressHandler {
+export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
+  config?: HandlerConfig<TConnect>,
+): CourierExpressHandler {
   const handler = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http"], framework: "express" });
   return drainable(handler, serve(handler.handle, announce));
@@ -75,7 +77,9 @@ export function courierHandler(config?: HandlerConfig): CourierExpressHandler {
  * });
  * ```
  */
-export function courierSSEHandler(config?: HandlerConfig): CourierExpressHandler {
+export function courierSSEHandler<TConnect extends ConnectResult = ConnectResult>(
+  config?: HandlerConfig<TConnect>,
+): CourierExpressHandler {
   const handler = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["sse"], framework: "express" });
   return drainable(handler, serve(handler.handleSSE, announce));

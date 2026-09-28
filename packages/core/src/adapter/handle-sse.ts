@@ -2,6 +2,7 @@ import { createLogger } from "../logger";
 import type { SSEContext, SSEHandler } from "../realtime/types";
 import { generateRequestId, registerPlaygroundAbort, studioHooks } from "../studio";
 import { runTransportMiddleware } from "../utils/transport-middleware";
+import { connectionMetaOf } from "./connection-meta-of";
 import { SSE_HEADERS } from "./format-sse";
 import type { HandlerConfig } from "./handler-config";
 import { isOriginAllowed } from "./origin-policy";
@@ -108,7 +109,8 @@ export function createSSEHandler(
     let meta: Record<string, unknown> = {};
     if (config?.onSSEConnect) {
       try {
-        meta = await config.onSSEConnect({ connectionId, request, source, group, method });
+        const result = await config.onSSEConnect({ connectionId, request, source, group, method });
+        meta = connectionMetaOf(result, "onSSEConnect");
       } catch (err) {
         /* What was thrown may carry a secret: it goes to the log only. */
         log.warn(`onSSEConnect rejected the SSE stream for [${source}][${method}]`, err);

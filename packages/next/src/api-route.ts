@@ -1,4 +1,4 @@
-import type { HandlerConfig } from "@noverax/courier";
+import type { ConnectResult, HandlerConfig } from "@noverax/courier";
 import { createHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import { discoverAppOrigin } from "@noverax/courier/internal";
@@ -36,7 +36,9 @@ import { publicRequest } from "./public-request";
  * export const { GET, POST, OPTIONS } = apiRoute({ allowedOrigins: ["https://admin.example.com"] });
  * ```
  */
-export function apiRoute(config?: HandlerConfig): {
+export function apiRoute<TConnect extends ConnectResult = ConnectResult>(
+  config?: HandlerConfig<TConnect>,
+): {
   GET: (request: NextRequest) => Promise<Response>;
   POST: (request: NextRequest) => Promise<Response>;
   OPTIONS: (request: NextRequest) => Promise<Response>;

@@ -1,8 +1,14 @@
 import type { Sources } from "../define/types";
+import type { ConnectResult } from "./connection-meta";
 import type { SSELifecycleConfig } from "./sse-types";
 
-/** Optional configuration for createHandler */
-export interface HandlerConfig extends SSELifecycleConfig {
+/**
+ * Optional configuration for createHandler. `TConnect` is what
+ * `onSSEConnect` returns, which types the `meta` the other SSE hooks
+ * receive; it is inferred from `onSSEConnect` itself.
+ */
+export interface HandlerConfig<TConnect extends ConnectResult = ConnectResult>
+  extends SSELifecycleConfig<TConnect> {
   /**
    * The sources this handler answers for. Left out, it answers for the
    * process-wide registry that `attachRuntime()` and `registerSources` fill,

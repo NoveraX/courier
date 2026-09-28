@@ -368,3 +368,17 @@ describe("courierWSAttach", () => {
     expect(mockCreateWSHandler).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("the metadata courierSSEHandler's hooks receive", () => {
+  it("is typed from what onSSEConnect returns", () => {
+    const handler = courierSSEHandler({
+      onSSEConnect: async () => ({ userId: "u1" }),
+      onSSEError: ({ meta }) => {
+        const userId: string = meta.userId;
+        expect(userId).toBeTypeOf("string");
+      },
+    });
+
+    expect(handler).toBeTypeOf("function");
+  });
+});

@@ -1,6 +1,6 @@
 import type { Sources } from "../define/types";
 import type { PubSubAdapter, WebSocketLike } from "../realtime/adapters";
-import type { WSConnectionMeta, WSConnectResult } from "./ws-connection-meta";
+import type { ConnectionMeta, ConnectResult } from "./connection-meta";
 import type { ClientIPResolver } from "./ws-ip-tracker";
 import type { ConnectionRegistry } from "./ws-registry-types";
 
@@ -14,7 +14,7 @@ import type { ConnectionRegistry } from "./ws-registry-types";
  * `TConnect` is what `onConnect` returns, which types the `meta` every other
  * hook receives; it is inferred from `onConnect` itself.
  */
-export interface WSHandlerConfig<TConnect extends WSConnectResult = WSConnectResult> {
+export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult> {
   /**
    * The sources this handler answers for. Left out, it answers for the
    * process-wide registry that `attachRuntime()` and `registerSources` fill.
@@ -67,7 +67,7 @@ export interface WSHandlerConfig<TConnect extends WSConnectResult = WSConnectRes
   /** Per-subscription authorization — throw or return false to reject */
   authorize?(info: {
     connectionId: string;
-    meta: WSConnectionMeta<TConnect>;
+    meta: ConnectionMeta<TConnect>;
     source: string;
     group: string | undefined;
     method: string;
@@ -84,14 +84,14 @@ export interface WSHandlerConfig<TConnect extends WSConnectResult = WSConnectRes
   /** Called after socket close + topic cleanup */
   onDisconnect?(info: {
     connectionId: string;
-    meta: WSConnectionMeta<TConnect>;
+    meta: ConnectionMeta<TConnect>;
     code: number;
   }): void | Promise<void>;
   /**
    * Called on connection-level error, with the Error the socket reported —
    * such as the RangeError of a frame over the size limit.
    */
-  onError?(info: { connectionId: string; meta: WSConnectionMeta<TConnect>; error: Error }): void;
+  onError?(info: { connectionId: string; meta: ConnectionMeta<TConnect>; error: Error }): void;
   /** Called when an outbound message is dropped due to buffer overflow */
   onMessageDrop?(info: {
     connectionId: string;
@@ -110,12 +110,12 @@ export interface WSHandlerConfig<TConnect extends WSConnectResult = WSConnectRes
   onTokenRefresh?(info: {
     connectionId: string;
     token: string;
-    meta: WSConnectionMeta<TConnect>;
-  }): WSConnectionMeta<TConnect> | Promise<WSConnectionMeta<TConnect>>;
+    meta: ConnectionMeta<TConnect>;
+  }): ConnectionMeta<TConnect> | Promise<ConnectionMeta<TConnect>>;
   /** Per-message authorization — return false or throw to reject with 4403 */
   authorizeMessage?(info: {
     connectionId: string;
-    meta: WSConnectionMeta<TConnect>;
+    meta: ConnectionMeta<TConnect>;
     topic: string;
     payload: unknown;
   }): boolean | Promise<boolean>;

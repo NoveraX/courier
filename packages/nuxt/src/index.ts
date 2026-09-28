@@ -1,4 +1,4 @@
-import type { HandlerConfig } from "@noverax/courier";
+import type { ConnectResult, HandlerConfig } from "@noverax/courier";
 import { createHandler, handleWhileConnected } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 
@@ -41,7 +41,9 @@ export type { CourierEventHandler, H3EventLike, H3NodeEvent, H3WebEvent } from "
  * export default courierHandler();
  * ```
  */
-export function courierHandler(config?: HandlerConfig): CourierEventHandler {
+export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
+  config?: HandlerConfig<TConnect>,
+): CourierEventHandler {
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "nuxt" });
   const handler = async (event: H3EventLike): Promise<Response> => {

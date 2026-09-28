@@ -1,8 +1,8 @@
 import type {
   ConnectionRegistry,
+  ConnectResult,
   HandlerConfig,
   SSEConnectionRegistry,
-  WSConnectResult,
   WSHandlerConfig,
 } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
@@ -17,9 +17,15 @@ import type { Sources } from "@noverax/courier/define";
  * `clientIp`, `maxSubscriptionsPerConnection`, `maxMessageSize`,
  * `maxMessagesPerSecond`, `authorize`, `authorizeMessage` and
  * `onTokenRefresh`.
+ *
+ * `TConnect` and `TStreamConnect` are what `onConnect` and `onSSEConnect`
+ * return, which type the `meta` the other WebSocket and SSE hooks receive;
+ * both are inferred from those hooks.
  */
-export interface CourierServerOptions<TConnect extends WSConnectResult = WSConnectResult>
-  extends Omit<HandlerConfig, "sources" | "allowedOrigins">,
+export interface CourierServerOptions<
+  TConnect extends ConnectResult = ConnectResult,
+  TStreamConnect extends ConnectResult = ConnectResult,
+> extends Omit<HandlerConfig<TStreamConnect>, "sources" | "allowedOrigins">,
     Omit<WSHandlerConfig<TConnect>, "sources" | "allowedOrigins"> {
   /**
    * The API sources this server answers for. They stay its own: another

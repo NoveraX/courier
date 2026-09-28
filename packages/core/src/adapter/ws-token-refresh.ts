@@ -1,6 +1,6 @@
 import { createLogger } from "../logger";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
-import { connectionMetaOf } from "./ws-connection-meta-of";
+import { connectionMetaOf } from "./connection-meta-of";
 import type { WSSocketContext } from "./ws-context";
 import type { ConnectionRegistry, InternalConnectionRegistry } from "./ws-registry-types";
 

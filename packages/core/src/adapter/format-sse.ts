@@ -31,7 +31,8 @@ export const SSE_HEADERS: Record<string, string> = {
  * @returns CORS header record to spread into sseHeaders config
  *
  * @example
- * createHandler(sources, {
+ * createHandler({
+ *   sources,
  *   sseHeaders: buildSSECorsHeaders("https://app.example.com"),
  * });
  */

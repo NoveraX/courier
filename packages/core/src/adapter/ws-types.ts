@@ -39,7 +39,11 @@ export interface WSHandlerConfig {
    * with 4421.
    */
   allowedHosts?: string[];
-  /** Max subscriptions per connection (default 100) */
+  /**
+   * Max subscriptions per connection (default 100). Its subscribe,
+   * unsubscribe and auth frames are counted apart from other messages, up to
+   * twice this a second; one past that is refused with a 4429 error.
+   */
   maxSubscriptionsPerConnection?: number;
   /** Max inbound message size in bytes (default 65536 = 64KB) */
   maxMessageSize?: number;

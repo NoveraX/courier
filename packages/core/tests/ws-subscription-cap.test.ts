@@ -74,7 +74,9 @@ describe("maxSubscriptionsPerConnection", () => {
 
     expect(socket.sent.filter((m) => m.type === "subscribed")).toHaveLength(5);
     expect(live()).toBe(5);
-    const refused = socket.sent.filter((m) => m.type === "complete" && m.error?.code === 4429);
+    /* Past the cap, a subscription is refused by it or, once the burst
+       outruns twice the cap, by the limit on subscribe frames. */
+    const refused = socket.sent.filter((m) => m.error?.code === 4429);
     expect(refused).toHaveLength(45);
   });
 

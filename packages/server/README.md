@@ -94,10 +94,10 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `pubsub` | `undefined` | Pub/Sub adapter for horizontal WS scaling (e.g. Redis) |
 | `maxConnectionsPerIP` | `50` | WebSocket connections one address may hold; raise it for clients behind a shared NAT or proxy |
 | `clientIp` | the socket's address | Names the address a WebSocket connection is counted against |
-| `maxSubscriptionsPerConnection` | `100` | Subscriptions one WebSocket connection may hold |
+| `maxSubscriptionsPerConnection` | `100` | Subscriptions one WebSocket connection may hold; its subscribe, unsubscribe and auth frames are limited to twice this a second, apart from its other messages, and one past the limit is refused with a `4429` error |
 | `maxMessageSize` | `65536` | Largest WebSocket message Courier accepts, in bytes; a larger one is refused with a `4413` error and the connection stays open |
 | `maxPayload` | 1 MB, or twice `maxMessageSize` | Largest WebSocket frame read at all, in bytes; a bigger one closes the connection with `1009` before it is buffered |
-| `maxMessagesPerSecond` | `100` | Messages one WebSocket connection may send per second |
+| `maxMessagesPerSecond` | `100` | Messages one WebSocket connection may send per second; one past the limit is refused with a `4429` error |
 | `authorize` | `undefined` | Decides whether a WebSocket subscription may start |
 | `authorizeMessage` | `undefined` | Decides whether a message sent on a channel is accepted |
 | `onTokenRefresh` | `undefined` | Accepts a refreshed token on an open WebSocket connection |

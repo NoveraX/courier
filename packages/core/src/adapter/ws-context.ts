@@ -72,6 +72,13 @@ export interface WSSocketContext {
   middlewareTimeoutMs: number;
   maxMessagesPerSecond: number;
   rateLimitBucket: RateLimitBucket;
+  /**
+   * Subscribe, unsubscribe and auth frames per second: twice
+   * `maxSubscriptions`, so a client that renews every subscription at once is
+   * never refused, while a flood of them is.
+   */
+  maxControlPerSecond: number;
+  controlBucket: RateLimitBucket;
   authorize: WSHandlerConfig["authorize"];
   authorizeMessage: WSHandlerConfig["authorizeMessage"];
   onTokenRefresh: WSHandlerConfig["onTokenRefresh"];
@@ -103,6 +110,8 @@ export function buildContext(
   const dt = studioHooks;
   const maxBuf = config.maxBufferedAmount ?? LIMITS.MAX_BUFFERED_AMOUNT;
   const maxConsecutiveDrops = config.maxConsecutiveDrops ?? LIMITS.MAX_CONSECUTIVE_DROPS;
+  const maxSubscriptions =
+    config.maxSubscriptionsPerConnection ?? LIMITS.MAX_SUBSCRIPTIONS_PER_CONNECTION;
   const connectionId = crypto.randomUUID();
   const requestId = generateRequestId();
   // Studio Playground proxy executor forwards its pre-allocated requestId
@@ -161,12 +170,13 @@ export function buildContext(
     t0: performance.now(),
     request,
     meta: {},
-    maxSubscriptions:
-      config.maxSubscriptionsPerConnection ?? LIMITS.MAX_SUBSCRIPTIONS_PER_CONNECTION,
+    maxSubscriptions,
     maxMessageSize: config.maxMessageSize ?? LIMITS.MAX_MESSAGE_SIZE,
     middlewareTimeoutMs: config.middlewareTimeoutMs ?? LIMITS.MIDDLEWARE_TIMEOUT_MS,
     maxMessagesPerSecond: config.maxMessagesPerSecond ?? LIMITS.MAX_MESSAGES_PER_SECOND,
     rateLimitBucket: createBucket(config.maxMessagesPerSecond ?? LIMITS.MAX_MESSAGES_PER_SECOND),
+    maxControlPerSecond: 2 * maxSubscriptions,
+    controlBucket: createBucket(2 * maxSubscriptions),
     authorize: config.authorize,
     authorizeMessage: config.authorizeMessage,
     onTokenRefresh: config.onTokenRefresh,

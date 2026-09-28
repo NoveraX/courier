@@ -3,7 +3,9 @@
  */
 
 import { toSafeIdentifier } from "./naming-utils";
-import { acceptsNull, stripNull } from "./nullable-schema";
+import { expandPointer } from "./pointer-refs";
+import { isComposite, soleMember, withoutNull } from "./property-forms";
+import { componentSchemaName } from "./ref-utils";
 import { convertSchema, normalizeTypeArray } from "./schema-conversion";
 import type { ParsedSchema, ParsedSchemaProperty, SpecNode } from "./types";
 
@@ -35,7 +37,7 @@ export function convertProperty(
   spec?: SpecNode,
 ): ParsedSchemaProperty {
   const { node, nullable } = withoutNull(normalizeTypeArray(raw));
-  /* A `readOnly` property is produced by the server. Demanding it made a
+  /* A readOnly property is produced by the server. Demanding it made a
      request body impossible to construct, while leaving it optional still
      lets a response carry it. */
   const base = {
@@ -44,6 +46,10 @@ export function convertProperty(
     nullable: nullable || undefined,
   };
 
+  const component = typeof node.$ref === "string" ? componentSchemaName(node.$ref) : undefined;
+  if (typeof node.$ref === "string" && component === undefined) {
+    return pointedProperty(name, node.$ref, raw, base, spec);
+  }
   if (isComposite(node)) {
     const shape = convertSchema(`${name}Value`, node, spec);
     if (shape.type === "ref") return { ...base, type: "ref", refName: shape.refName };
@@ -62,15 +68,45 @@ export function convertProperty(
   const constant = node.const === undefined ? undefined : [node.const];
   return {
     ...base,
-    type: node.$ref ? "ref" : (node.type ?? (constant ? typeof node.const : "any")),
+    type: component !== undefined ? "ref" : (node.type ?? (constant ? typeof node.const : "any")),
     format: node.format,
     enum: node.enum ?? constant,
-    refName: node.$ref ? toSafeIdentifier(node.$ref.split("/").pop()) : undefined,
+    refName: component !== undefined ? toSafeIdentifier(component) : undefined,
     items: node.items ? convertSchema(`${name}Item`, node.items, spec) : undefined,
     /* An inline object keeps its own shape rather than flattening. */
     shape: node.properties ? convertSchema(`${name}Object`, node, spec) : undefined,
     valueType: mapValueType(node, name, spec),
   };
+}
+
+/**
+ * A property whose schema is a reference into another part of the document,
+ * converted from what it points at, keeping what the property itself says.
+ */
+function pointedProperty(
+  name: string,
+  ref: string,
+  raw: SpecNode,
+  base: Pick<ParsedSchemaProperty, "required" | "description" | "nullable">,
+  spec: SpecNode | undefined,
+): ParsedSchemaProperty {
+  return expandPointer(
+    ref,
+    spec,
+    (target) =>
+      convertProperty(
+        name,
+        {
+          ...target,
+          ...(base.description !== undefined && { description: base.description }),
+          ...(base.nullable && { nullable: true }),
+          ...(raw.readOnly === true && { readOnly: true }),
+        },
+        base.required,
+        spec,
+      ),
+    () => ({ ...base, type: "any" }),
+  );
 }
 
 /**
@@ -89,56 +125,4 @@ export function mapValueType(
   const additional = node?.additionalProperties;
   if (!additional || typeof additional !== "object") return undefined;
   return convertSchema(`${name}Value`, additional, spec);
-}
-
-/**
- * Separate "may be null" from the forms a property takes.
- *
- * OpenAPI 3.1 writes it as a `{ type: "null" }` alternative; a property with
- * one other alternative is then simply that alternative, or null. The node
- * handed on no longer says it is nullable, so a shape converted from it does
- * not carry the `null` a second time.
- */
-function withoutNull(given: SpecNode): { node: SpecNode; nullable: boolean } {
-  const nullable = acceptsNull(given);
-  const node = nullable ? stripNull(given) : given;
-  const variants: SpecNode[] | undefined = node.oneOf ?? node.anyOf;
-  if (!Array.isArray(variants) || node.type) return { node, nullable };
-
-  const kept = variants.filter((variant) => variant?.type !== "null");
-  if (kept.length === variants.length) return { node, nullable };
-  if (kept.length === 1) {
-    const inner = withoutNull(normalizeTypeArray(kept[0] as SpecNode));
-    return { node: { ...inner.node, description: node.description }, nullable: true };
-  }
-  const key = node.oneOf ? "oneOf" : "anyOf";
-  return { node: { ...node, [key]: kept }, nullable: true };
-}
-
-/**
- * Does this property take a form a single field cannot describe — one of
- * several alternatives, or an `allOf` that adds properties of its own?
- *
- * A `type` beside `anyOf` normally just narrows the type, as in a string
- * that is one of two formats; only an object uses `anyOf` to say which of
- * its properties are required.
- */
-function isComposite(node: SpecNode): boolean {
-  if (node.oneOf || node.anyOf) return !node.type || node.type === "object" || !!node.properties;
-  if (!Array.isArray(node.allOf) || node.allOf.length < 2) return false;
-  return node.allOf.some((member: SpecNode) => member?.properties || member?.type === "object");
-}
-
-/**
- * The member an `allOf` stands for when it composes nothing.
- *
- * `allOf: [{ $ref: X }]` is how OpenAPI 3.0 attaches a description or
- * `nullable` to a reference; the other members only annotate it.
- */
-function soleMember(members: SpecNode[]): SpecNode {
-  const reference = members.find((member) => member?.$ref);
-  if (reference) return reference;
-  const merged: SpecNode = {};
-  for (const member of members) Object.assign(merged, member);
-  return merged;
 }

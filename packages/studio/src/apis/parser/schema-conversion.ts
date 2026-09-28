@@ -2,10 +2,10 @@
  * OpenAPI schema → ParsedSchema conversion utilities.
  */
 
+import { convertAllOf } from "./convert-all-of";
 import { convertObjectSchema } from "./convert-object-schema";
-import { toSafeIdentifier } from "./naming-utils";
 import { acceptsNull, orNull, stripNull } from "./nullable-schema";
-import { resolveRef } from "./ref-utils";
+import { referencedSchema } from "./referenced-schema";
 import type { ParsedSchema, SpecNode } from "./types";
 
 /**
@@ -48,9 +48,8 @@ export function normalizeTypeArray(schema: SpecNode): SpecNode {
 export function convertSchema(name: string, raw: SpecNode, spec?: SpecNode): ParsedSchema {
   const schema = normalizeTypeArray(raw);
   if (acceptsNull(schema)) return orNull(convertSchema(name, stripNull(schema), spec));
-  if (schema.$ref) {
-    const refName = toSafeIdentifier(schema.$ref.split("/").pop());
-    return { name, type: "ref", refName, description: schema.description };
+  if (typeof schema.$ref === "string") {
+    return referencedSchema(name, schema.$ref, schema.description, spec);
   }
   if (schema.allOf) return convertAllOf(name, schema, spec);
   if ((schema.oneOf || schema.anyOf) && !constrainsAnObject(schema)) {
@@ -126,61 +125,4 @@ function convertUnion(name: string, schema: SpecNode, spec?: SpecNode): ParsedSc
   if (parsed.length === 0) return { name, type: "any", description: schema.description };
   if (parsed.length === 1) return { ...(parsed[0] as ParsedSchema), name };
   return { name, type: "union", variants: parsed, description: schema.description };
-}
-
-function convertAllOf(name: string, schema: SpecNode, spec?: SpecNode): ParsedSchema {
-  const merged: SpecNode = {
-    type: "object",
-    properties: {},
-    required: [],
-    description: schema.description,
-  };
-  /* An `allOf` member that is a reference carries the inherited half of the
-     type. Skipping it dropped every one of those properties from the emitted
-     type, and the validator then stripped them off the response. */
-  for (const sub of flattenAllOf(schema.allOf, spec)) {
-    if (sub.properties) Object.assign(merged.properties, sub.properties);
-    if (sub.required) merged.required.push(...sub.required);
-    if (sub.enum) merged.enum = sub.enum;
-    if (sub.type) merged.type = sub.type;
-  }
-  if (merged.enum)
-    return { name, type: "enum", enum: merged.enum, description: schema.description };
-  if (Object.keys(merged.properties).length > 0) return convertSchema(name, merged, spec);
-
-  const firstRef = schema.allOf.find((s: SpecNode) => s.$ref);
-  if (firstRef) {
-    const refName = toSafeIdentifier(firstRef.$ref.split("/").pop());
-    return { name, type: "ref", refName, description: schema.description };
-  }
-  return { name, type: "any", description: schema.description };
-}
-
-/**
- * Every member of an `allOf`, with references followed.
- *
- * A base may itself be composed, so this recurses; `seen` stops a definition
- * that refers to itself from doing so forever.
- */
-function flattenAllOf(members: SpecNode[], spec?: SpecNode, seen = new Set<string>()): SpecNode[] {
-  const out: SpecNode[] = [];
-  for (const member of members ?? []) {
-    if (!member || typeof member !== "object") continue;
-
-    if (member.$ref) {
-      if (!spec || seen.has(member.$ref)) continue;
-      seen.add(member.$ref);
-      const target = normalizeTypeArray(resolveRef(spec, member.$ref));
-      if (target.allOf) out.push(...flattenAllOf(target.allOf, spec, seen));
-      else out.push(target);
-      continue;
-    }
-
-    if (member.allOf) {
-      out.push(...flattenAllOf(member.allOf, spec, seen));
-      continue;
-    }
-    out.push(normalizeTypeArray(member));
-  }
-  return out;
 }

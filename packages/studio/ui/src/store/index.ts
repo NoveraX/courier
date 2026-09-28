@@ -6,6 +6,7 @@ import { applyTheme } from "./theme"
 import { applyDensity } from "./density"
 import { createActions } from "./actions"
 import { createInitialState } from "./initial-state"
+import { keepPlaygroundHistory } from "./keep-playground-history"
 
 // Re-export types consumers need
 export type {
@@ -67,3 +68,5 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   ...createInitialState(savedSettings.theme),
   ...createActions(set, get),
 }))
+
+keepPlaygroundHistory(useStudioStore)

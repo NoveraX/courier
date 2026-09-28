@@ -14,12 +14,13 @@ const FENCE = /^([ \t]*)```(ts|tsx|typescript)\b([^\n]*)\n([\s\S]*?)^\1```/gm;
  * Every ts, tsx and typescript fence of a Markdown or MDX text.
  *
  * @param {string} text - The page
- * @returns {Array<{ line: number, jsx: boolean, code: string }>} Each sample,
- *   the line of its first code line, whether it holds JSX, and its code
- *   without the fence's indentation
+ * @returns {Array<{ line: number, jsx: boolean, listing: boolean, code: string }>}
+ *   Each sample: the line of its first code line, whether it holds JSX,
+ *   whether it lists the packages' types or signatures rather than using
+ *   them, and its code without the fence's indentation
  * @example
  * extractSamples("# A\n\n```ts\nconst a = 1\n```\n");
- * // → [{ line: 4, jsx: false, code: "const a = 1\n" }]
+ * // → [{ line: 4, jsx: false, listing: false, code: "const a = 1\n" }]
  */
 export function extractSamples(text) {
   return [...text.matchAll(FENCE)].map((match) => {
@@ -30,7 +31,8 @@ export function extractSamples(text) {
       .join("\n");
     /* A ts fence that holds JSX is read as tsx: the fence's name is a nit, not a failure. */
     const jsx = match[2] === "tsx" || /<\/[A-Za-z]|\/>/.test(code);
-    return { line: text.slice(0, match.index).split("\n").length + 1, jsx, code };
+    const listing = /title="(types|signature)"/.test(match[3] ?? "") || /^declare (function|class) /m.test(code);
+    return { line: text.slice(0, match.index).split("\n").length + 1, jsx, listing, code };
   });
 }
 

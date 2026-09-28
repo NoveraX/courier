@@ -28,15 +28,31 @@ describe("extractSamples", () => {
     ].join("\n");
 
     expect(extractSamples(page)).toEqual([
-      { line: 4, jsx: false, code: "const a = 1\n" },
-      { line: 12, jsx: false, code: "const b = 2\n" },
+      { line: 4, jsx: false, listing: false, code: "const a = 1\n" },
+      { line: 12, jsx: false, listing: false, code: "const b = 2\n" },
     ]);
   });
 
   it("reads a fence indented inside a component without its indentation", () => {
     const page = ["<Tab>", "  ```tsx", "  const el = <p>hi</p>", "  ```", "</Tab>"].join("\n");
 
-    expect(extractSamples(page)).toEqual([{ line: 3, jsx: true, code: "const el = <p>hi</p>\n" }]);
+    expect(extractSamples(page)).toEqual([
+      { line: 3, jsx: true, listing: false, code: "const el = <p>hi</p>\n" },
+    ]);
+  });
+
+  it("marks a signature or type listing, which names the packages' own types", () => {
+    const page = [
+      '```ts title="signature"',
+      "function retryMiddleware(): Middleware",
+      "```",
+      "",
+      "```ts",
+      "declare function createCaller(api: DefinedApi): TypedClient",
+      "```",
+    ].join("\n");
+
+    expect(extractSamples(page).map((sample) => sample.listing)).toEqual([true, true]);
   });
 
   it("reads a ts fence that holds JSX as tsx", () => {
@@ -98,6 +114,13 @@ describe("checkSamples", () => {
         code: 'import type { MiddlewareFn } from "@noverax/courier/middleware"\n',
       },
       {
+        page: "listing.mdx",
+        line: 60,
+        jsx: false,
+        listing: true,
+        code: "declare function retryMiddleware(): MiddlewareFn\n",
+      },
+      {
         page: "left-out.mdx",
         line: 50,
         jsx: false,
@@ -116,6 +139,10 @@ describe("checkSamples", () => {
 
   it("reports a type the entry does not export", () => {
     expect(problems).toContainEqual(expect.stringMatching(/^not-exported\.mdx:40 TS(2305|2724) .*MiddlewareFn/));
+  });
+
+  it("reports a type a listing names that no entry exports", () => {
+    expect(problems).toContainEqual(expect.stringMatching(/^listing\.mdx:60 TS2304 .*MiddlewareFn/));
   });
 
   it("passes a sample that uses the package as it is, and one that leaves the reader's code out", () => {

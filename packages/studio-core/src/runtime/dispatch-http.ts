@@ -1,5 +1,7 @@
+import type { UploadProgress } from "@noverax/courier";
 import { type executeRequest, HTTPError, ValidationError } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
+import { formDataOf } from "./playground-form";
 import type { PlaygroundExecutePayload } from "./playground-payloads";
 import type { ResponderSocket } from "./playground-responder";
 import { callThroughProxy, type PlaygroundCall } from "./proxy-playground";
@@ -42,7 +44,19 @@ export async function dispatchHttp(
   exec: typeof executeRequest,
 ): Promise<void> {
   const startedAt = performance.now();
-  const chunk = await run(payload, sources, exec);
+  const onUploadProgress = payload.form
+    ? (progress: UploadProgress) =>
+        socket.emit("playground:chunk", {
+          rid: payload.rid,
+          chunk: {
+            kind: "upload-progress",
+            loaded: progress.transferredBytes,
+            total: progress.totalBytes,
+            percentage: Math.round(progress.percent * 100),
+          },
+        })
+    : undefined;
+  const chunk = await run(payload, sources, exec, onUploadProgress);
   socket.emit("playground:chunk", { rid: payload.rid, chunk });
   socket.emit("playground:end", {
     rid: payload.rid,
@@ -54,17 +68,22 @@ async function run(
   payload: PlaygroundExecutePayload,
   sources: Sources,
   exec: typeof executeRequest,
+  onUploadProgress: ((progress: UploadProgress) => void) | undefined,
 ): Promise<HttpResultChunk> {
   try {
     const answer =
       payload.mode === "proxy"
-        ? await callThroughProxy(sources, callOf(payload), true)
+        ? await callThroughProxy(sources, callOf(payload), true, onUploadProgress)
         : await exec(sources, {
             source: payload.source,
             group: payload.group,
             method: payload.method,
-            variables: payload.variables ?? {},
-            options: { headers: payload.headers ?? {}, rawData: true },
+            variables: variablesOf(payload),
+            options: {
+              headers: payload.headers ?? {},
+              rawData: true,
+              ...(onUploadProgress && { onUploadProgress }),
+            },
           });
     if (!isRawAnswer(answer)) return { kind: "http-result", status: 200, data: answer };
     const { status, headers, data } = answer;
@@ -112,7 +131,12 @@ function callOf(payload: PlaygroundExecutePayload): PlaygroundCall {
     source: payload.source,
     group: payload.group,
     method: payload.method,
-    variables: payload.variables ?? {},
+    variables: variablesOf(payload),
     headers: payload.headers ?? {},
   };
+}
+
+/* A form is sent as the body; otherwise the variables are. */
+function variablesOf(payload: PlaygroundExecutePayload): unknown {
+  return payload.form ? formDataOf(payload.form) : (payload.variables ?? {});
 }

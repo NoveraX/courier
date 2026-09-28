@@ -4,6 +4,8 @@ import { useCatalog } from "@/hooks/use-catalog";
 import { useStudioStore } from "@/store";
 import type { CatalogEndpoint, CatalogEntry } from "@/store/types-ui";
 import { sendableCatalog } from "./sendable-catalog";
+import type { BodyKind } from "./body-section";
+import { emptyField, type FormBodyField } from "./form-body";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -56,6 +58,8 @@ export function usePlayground(init?: PlaygroundInitParams) {
   const [variables, setVariables] = useState("{}");
   const [headers, setHeaders] = useState("{}");
   const [mode, setMode] = useState<"direct" | "proxy">("direct");
+  const [bodyKind, setBodyKind] = useState<BodyKind>("json");
+  const [formFields, setFormFields] = useState<FormBodyField[]>(() => [emptyField()]);
   const [responseTab, setResponseTab] = useState("body");
 
   // Track previous endpoint to detect selection changes
@@ -130,6 +134,10 @@ export function usePlayground(init?: PlaygroundInitParams) {
     setHeaders,
     mode,
     setMode,
+    bodyKind,
+    setBodyKind,
+    formFields,
+    setFormFields,
     responseTab,
     setResponseTab,
     canSend: Boolean(effectiveSource && effectiveMethod && groupKeys.includes(effectiveGroup)),

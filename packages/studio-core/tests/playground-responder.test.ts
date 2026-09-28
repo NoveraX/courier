@@ -28,6 +28,16 @@ let upstreamUrl = "";
 
 async function startUpstream(): Promise<void> {
   const server: HttpServer = createServer((req, res) => {
+    if (req.method === "POST" && req.url === "/files") {
+      const chunks: Buffer[] = [];
+      req.on("data", (chunk: Buffer) => chunks.push(chunk));
+      req.on("end", () => {
+        const body = Buffer.concat(chunks).toString("latin1");
+        res.writeHead(201, { "content-type": "application/json" });
+        res.end(JSON.stringify({ bytes: body.length, named: body.includes('filename="photo.bin"') }));
+      });
+      return;
+    }
     if (req.method === "POST" && req.url === "/users") {
       res.writeHead(201, { "content-type": "application/json", "x-upstream": "yes" });
       res.end(JSON.stringify({ id: 3, name: "zed" }));
@@ -73,7 +83,11 @@ function registerTestSources(): void {
       missing: endpoint.get("missing").response<unknown>(),
     },
   });
-  registerSources({ api: defineApi({ baseURL: upstreamUrl, groups: { live, users } }) });
+  const files = defineGroup({
+    prefix: "files",
+    endpoints: { upload: endpoint.post("").variables<FormData>().response<unknown>() },
+  });
+  registerSources({ api: defineApi({ baseURL: upstreamUrl, groups: { live, users, files } }) });
 }
 
 beforeAll(async () => {
@@ -228,5 +242,34 @@ describe("an HTTP call run from the Playground in proxy mode", () => {
     await until(() => framesOf("proxy-no-origin").length > 0, "the refusal");
 
     expect(String(framesOf("proxy-no-origin")[0]?.payload.chunk?.error)).toContain("appOrigin");
+  });
+});
+
+describe("a form sent from the Playground", () => {
+  it("reaches the endpoint as multipart, with its upload's progress on the way", async () => {
+    runtime?.emit("playground:execute", {
+      rid: "form-upload",
+      source: "api",
+      group: "files",
+      method: "upload",
+      transport: "http",
+      form: [
+        { name: "note", text: "hi" },
+        {
+          name: "file",
+          file: { name: "photo.bin", type: "application/octet-stream", data: new Uint8Array(300_000) },
+        },
+      ],
+    });
+    await until(() => framesOf("form-upload").some((f) => f.event === "playground:end"), "the answer");
+
+    const chunks = framesOf("form-upload").map((f) => f.payload.chunk);
+    const progress = chunks.filter((c) => c?.kind === "upload-progress");
+    expect(progress.length).toBeGreaterThan(0);
+    expect(progress.at(-1)).toMatchObject({ percentage: 100 });
+    expect(chunks.find((c) => c?.kind === "http-result")).toMatchObject({
+      status: 201,
+      data: { named: true },
+    });
   });
 });

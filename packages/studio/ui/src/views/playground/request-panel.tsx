@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { FileJson, KeyRound, ChevronDown, Terminal, Code2, Copy, Link } from "lucide-react";
+import { KeyRound, ChevronDown, Terminal, Code2, Copy, Link } from "lucide-react";
 import { toast } from "sonner";
 
 import { copyToClipboard } from "@/lib/clipboard";
@@ -15,6 +15,8 @@ import type { EndpointInfo, SourceInfo } from "@/store/types-ui";
 import { JsonEditor } from "./json-editor";
 import { endpointUrl, snippetInput } from "./request-snippet";
 import { readRequestValues } from "./request-values";
+import { BodySection, type BodyKind } from "./body-section";
+import type { FormBodyField } from "./form-body";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -26,13 +28,20 @@ interface RequestPanelProps {
   groupPrefix: string;
   onVariablesChange: (v: string) => void;
   onHeadersChange: (h: string) => void;
+  /** The body's kind and its form rows, when it is a form */
+  body: {
+    kind: BodyKind;
+    formFields: FormBodyField[];
+    onKindChange: (kind: BodyKind) => void;
+    onFormFieldsChange: (fields: FormBodyField[]) => void;
+  };
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function RequestPanel({
   variables, headers, endpointInfo, sourceInfo, groupPrefix,
-  onVariablesChange, onHeadersChange,
+  onVariablesChange, onHeadersChange, body,
 }: RequestPanelProps): React.ReactElement {
   const [headersOpen, setHeadersOpen] = useState(false);
   const fullPath = endpointUrl(sourceInfo, groupPrefix, endpointInfo);
@@ -57,11 +66,16 @@ export function RequestPanel({
         </div>
       )}
 
-      {/* Variables editor */}
-      <div className="flex min-h-0 flex-1 flex-col gap-1.5">
-        <EditorLabel icon={FileJson} label="Variables" hint={endpointInfo?.hasVariablesSchema ? "Schema validated" : undefined} />
-        <JsonEditor value={variables} onChange={onVariablesChange} placeholder='{ "id": 1 }' className="min-h-0 flex-1" />
-      </div>
+      <BodySection
+        kind={body.kind}
+        formAllowed={!endpointInfo?.transport}
+        variables={variables}
+        formFields={body.formFields}
+        schemaHint={endpointInfo?.hasVariablesSchema ? "Schema validated" : undefined}
+        onKindChange={body.onKindChange}
+        onVariablesChange={onVariablesChange}
+        onFormFieldsChange={body.onFormFieldsChange}
+      />
 
       {/* Headers — collapsible */}
       <Collapsible open={headersOpen} onOpenChange={setHeadersOpen} className="mt-2">

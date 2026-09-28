@@ -1,4 +1,5 @@
 import type { MockServerInfo } from "@/store/mock-slice";
+import { MockFailureNote } from "../shared/mock-failure-note";
 import { CollectionsPanel } from "./collections-panel";
 import { KPIStrip } from "./kpi-strip";
 import { LiveActivity } from "./live-activity";
@@ -13,6 +14,7 @@ export function DashboardGrid({ server }: DashboardGridProps): React.ReactElemen
     <div className="space-y-3 p-4">
       {/* Inline status + scenario + actions */}
       <StatusBar server={server} />
+      <MockFailureNote serverId={server.serverId} status={server.processStatus} lastError={server.lastError} />
 
       {/* KPI metrics */}
       <KPIStrip server={server} />

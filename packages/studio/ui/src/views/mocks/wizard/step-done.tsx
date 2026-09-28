@@ -2,6 +2,7 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 
 import type { MockWizardState } from "./types";
 
+import { MockFailureNote } from "../shared/mock-failure-note";
 import { ProcessStatusBadge, ServerControls } from "../shared/server-controls";
 import { useMockArrival } from "./use-mock-arrival";
 import { WarningList } from "./warning-list";
@@ -17,7 +18,8 @@ interface DoneStepProps {
  * The mocks Studio added, each as Studio lists it once it has loaded the
  * edited file: its status and controls, and where it listens while it
  * runs. Until then a mock shows as awaited; one still missing after the
- * patience runs out is reported, as is a lost connection to Studio.
+ * patience runs out is reported, as is a lost connection to Studio, and
+ * one that did not start says why.
  *
  * @param props - The apply's outcome, and whether the UI is connected
  * @returns The step
@@ -57,6 +59,14 @@ export function DoneStep({ applied, connected }: DoneStepProps): React.ReactElem
           </li>
         ))}
       </ul>
+      {listed.map((server) => (
+        <MockFailureNote
+          key={server.serverId}
+          serverId={server.serverId}
+          status={server.processStatus}
+          lastError={server.lastError}
+        />
+      ))}
       {!connected && (
         <p className="text-body-xs text-amber-400">Studio is disconnected; the mocks appear once it reconnects.</p>
       )}

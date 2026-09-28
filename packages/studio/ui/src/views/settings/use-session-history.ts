@@ -57,8 +57,11 @@ export function useSessionHistory() {
     const requests = session.requests
       .map(requestFromSaved)
       .filter((r): r is RequestEntry => r !== undefined);
-    useStudioStore.getState().loadRequests(requests);
-    toast.success(`Loaded ${requests.length} requests from "${String(session.name)}"`);
+    /* Recording pauses, so live traffic does not mix into the session shown. */
+    const store = useStudioStore.getState();
+    store.loadRequests(requests);
+    if (!store.paused) store.togglePaused();
+    toast.success(`Loaded ${requests.length} requests from "${String(session.name)}"; recording paused`);
   }
 
   async function deleteSession(id: string): Promise<void> {

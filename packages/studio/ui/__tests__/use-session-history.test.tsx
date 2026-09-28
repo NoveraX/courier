@@ -125,6 +125,16 @@ describe("the session history", () => {
     expect(loaded[1]).toMatchObject({ statusCode: 200, data: { users: [] }, url: "http://api.test/users" })
   })
 
+  it("pauses recording once a session is loaded, so live traffic does not mix into it", async () => {
+    const { result } = await history()
+    const saved = result.current.sessions.find((s) => s.name === "checkout bug")
+    useStudioStore.setState({ paused: false })
+
+    await act(() => result.current.loadSession(saved?.id ?? ""))
+
+    expect(useStudioStore.getState().paused).toBe(true)
+  })
+
   it("says why a session could not be loaded", async () => {
     const failed = vi.spyOn(toast, "error")
     const { result } = await history()

@@ -22,11 +22,11 @@ type InstrumentedChannel = Omit<WSChannel<never, unknown>, "send"> & {
  *             the server with a reason, or its connection refused for good
  * - `disconnect` — consumer called `.close()` directly on the wrapper
  *
- * A channel's end error comes in the same turn as its `disconnected` — just
- * before it, or, when the connection itself is refused, just after — so the
- * close is recorded once that turn is over. An error the channel goes on
- * after, such as a refused message, is forgotten at the end of its turn:
- * every one was recorded as `complete` before.
+ * A channel's end error comes in the same turn as its `disconnected`, so the
+ * close is recorded once that turn is over, whichever of the two came first.
+ * An error the channel goes on after, such as a refused message, is
+ * forgotten at the end of its turn: every one was recorded as `complete`
+ * before.
  *
  * A channel whose `send` settles — the in-process one does — keeps doing so
  * through the wrapper, which hands back whatever the channel returned:

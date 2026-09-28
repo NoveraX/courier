@@ -389,7 +389,7 @@ describe("instrumentWSChannel", () => {
     });
   });
 
-  it("records a channel whose connection is refused as failed, though its error comes after disconnected", async () => {
+  it("records a channel as failed when its end error comes just after disconnected", async () => {
     studioHooks.onStreamOpen = vi.fn();
     const onStreamClose = vi.fn();
     const onStreamError = vi.fn();

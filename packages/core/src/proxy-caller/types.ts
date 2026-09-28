@@ -58,11 +58,14 @@ export type FetchCallbacks = {
   onError?: (error: HTTPError) => void | Promise<void>;
 };
 
-/** Untyped caller shape used internally to bypass complex CallerFn generics */
+/**
+ * The proxy transport's call: a source and a call's options, as the transport
+ * hands them on, then an endpoint's key and its variables.
+ */
 export type UntypedCallerFn = (
   source: string,
-  options?: Record<string, unknown>,
-) => (...args: unknown[]) => Promise<unknown>;
+  options?: Readonly<Record<string, unknown>>,
+) => (endpoint: string, variables?: unknown) => Promise<unknown>;
 
 /** Does the API declare an endpoint reached by opening a stream or a socket? */
 type HasRealtime<TApi> = [

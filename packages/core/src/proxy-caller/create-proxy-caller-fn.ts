@@ -1,5 +1,3 @@
-import type { CallOptions } from "../http-client/types";
-import type { CallerFn } from "../types";
 import { isFormData, parseEndpointKey } from "../utils/helpers";
 import { assertCarriable } from "./assert-carriable";
 import { assertJsonVariables } from "./assert-json-variables";
@@ -15,21 +13,24 @@ import type { ProxyCallerDefaults, UntypedCallerFn } from "./types";
 export type { ProxyCallerDefaults } from "./types";
 
 /**
- * Untyped variant of {@link createProxyCallerFn}, intended for internal
- * composition (transport primitives, generic callers).
+ * The function the proxy transport sends calls through: given a source and a
+ * call's options, it sends one endpoint's variables to the server's proxy
+ * route and answers with what the server answered.
  *
- * Returns the same runtime function but typed without the `TSources`
- * generic chain — the type erasure happens **once** at this boundary so
- * downstream code (e.g. `transport/proxy/http.ts`) doesn't need its own
- * `as unknown as ...` casts.
+ * It takes a call as the transport hands it on — the options as a record, the
+ * endpoint by its key — so the typed clients in front of it are the one place
+ * an API's types live, and nothing here casts a typed chain away.
+ *
+ * @param defaults - The caller's proxy path, headers, credentials, timeout,
+ *   callbacks, and whether a read superseded by an identical one is cancelled
+ * @returns The call function
+ * @example
+ * ```ts
+ * const call = createUntypedProxyCallerFn({ proxyPath: { http: "/api/request" } });
+ * await call("api")("users:byId", { id: "1" });
+ * ```
  */
 export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): UntypedCallerFn {
-  return createProxyCallerFn(defaults) as unknown as UntypedCallerFn;
-}
-
-export function createProxyCallerFn<
-  TSources extends Record<string, unknown> = Record<string, unknown>,
->(defaults: ProxyCallerDefaults = {}): CallerFn<TSources> {
   const {
     proxyPath,
     credentials = "include",
@@ -42,19 +43,14 @@ export function createProxyCallerFn<
   const fetchCtx = { onSuccess: globalOnSuccess, onError: globalOnError };
   const dedupe = defaults.deduplicate ? createProxyDedupe() : undefined;
 
-  const selectSource = (source: string, options?: CallOptions<boolean>) => {
-    type Arguments = [string] | [string, unknown];
+  return (source, options) => {
+    const callSignal = options?.signal instanceof AbortSignal ? options.signal : undefined;
 
-    function execute(...arguments_: Arguments): Promise<unknown> {
-      const callSignal = options?.signal;
-      if (!dedupe) return send(arguments_, callSignal);
-      return dedupe.run(`${source}:${arguments_[0]}`, callSignal, (signal) =>
-        send(arguments_, signal),
-      );
-    }
-
-    async function send(arguments_: Arguments, signal: AbortSignal | null | undefined) {
-      const [endpoint, variables] = arguments_;
+    async function send(
+      endpoint: string,
+      variables: unknown,
+      signal: AbortSignal | undefined,
+    ): Promise<unknown> {
       assertCarriable(variables);
       if (!isFormData(variables)) assertJsonVariables(variables);
       const { group, method } = parseEndpointKey(endpoint);
@@ -105,8 +101,11 @@ export function createProxyCallerFn<
         { ...fetchCtx, stream: call.stream, raw: call.server.rawData === true },
       );
     }
-    return execute;
+    return (endpoint, variables) => {
+      if (!dedupe) return send(endpoint, variables, callSignal);
+      return dedupe.run(`${source}:${endpoint}`, callSignal, (signal) =>
+        send(endpoint, variables, signal),
+      );
+    };
   };
-
-  return selectSource as unknown as CallerFn<TSources>;
 }

@@ -96,11 +96,18 @@ Read the types back off an endpoint. This is how a caller knows what a method
 takes and returns:
 
 ```ts
-type InferResponse<E extends AnyEndpoint>   // what the endpoint resolves to
-type InferVariables<E extends AnyEndpoint>  // what the caller must pass
-type InferSend<E extends AnyEndpoint>       // what a channel accepts from the client
-type InferKind<E extends AnyEndpoint>       // "query" | "mutation" | "stream" | "channel"
+// from "@noverax/courier/define"
+type InferResponse<E extends AnyEndpoint>      // what the endpoint resolves to
+type InferVariables<E extends AnyEndpoint>     // what the caller must pass
+type InferVariablesOut<E extends AnyEndpoint>  // what its closure receives, once a schema has validated the call
+type InferSend<E extends AnyEndpoint>          // what a channel accepts from the client
+type InferKind<E extends AnyEndpoint>          // "query" | "mutation" | "stream" | "channel"
+
+// from "@noverax/courier"
+type InferClient<TApi>                         // the client createCaller(api) returns
 ```
+
+The clients infer all of this themselves; name a type with these helpers where one is needed elsewhere — a component's props, a test's fixture.
 
 ### Wire Surfaces
 
@@ -147,15 +154,6 @@ type HttpResponse<T = unknown> = {
   status: number    // HTTP status code
   headers: Headers  // Response headers
   data: T           // Parsed response body
-}
-```
-
-### SuccessResponse
-
-```ts
-type SuccessResponse<D = unknown> = {
-  success: true
-  data: D
 }
 ```
 
@@ -291,29 +289,6 @@ type MiddlewareResponse = {
 ```ts
 type NextFn = () => Promise<MiddlewareResponse>
 ```
-
-## Query Utility Types
-
-Internal utility types that power the type inference engine:
-
-```ts
-// Extracts all valid endpoint keys for a source
-type EndpointKey<T> = FunctionKeys<T> | GroupedEndpoints<Groups<T>>
-// Result: "methodName" | "group:methodName"
-
-// Resolves the endpoint an endpoint key names
-type ResolveEndpoint<T, Q> = /* resolves to the endpoint descriptor */
-
-// Extracts response type from an endpoint
-type ExtractResponse<E> = E extends AnyEndpoint ? InferResponse<E> : unknown
-
-// Extracts variables type from an endpoint
-type ExtractVariables<E> = E extends AnyEndpoint ? InferVariables<E> : unknown
-```
-
-<Callout variant="info" title="Type inference">
-These utility types are what make Courier fully type-safe. When you call `caller.users.getById({ id })`, TypeScript resolves the group, endpoint, variables, and response types automatically.
-</Callout>
 
 ## React Query Types
 

@@ -80,14 +80,12 @@ export type {
 } from "./middleware/types";
 export {
   createProxyCaller,
-  createProxyCallerFn,
   mergeProxyPath,
   type ProxyCallerArguments,
   type ProxyCallerDefaults,
   type ProxyPath,
   type ResolveOrigin,
   resolveProxyPath,
-  type UntypedCallerFn,
 } from "./proxy-caller";
 export type { CallerWSOptions } from "./realtime";
 export {
@@ -133,7 +131,6 @@ export {
   type WSChannelFactory,
   type WSPushFactory,
 } from "./transport";
-export type { CallerFn, EndpointKey, ResolveEndpoint, SuccessResponse } from "./types";
 export { executeRequest } from "./utils/execute";
 export {
   normalizeHttpMethod,

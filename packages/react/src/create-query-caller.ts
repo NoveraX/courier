@@ -58,7 +58,7 @@ export type QueryCallerDefaults = CallerDefaults;
  * await q.users.prefetchQuery(queryClient, "getAll");
  * ```
  */
-export function createQueryCaller<TApi extends DefinedApi<any>>(
+export function createQueryCaller<TApi extends DefinedApi>(
   api: TApi,
   defaults?: QueryCallerDefaults,
 ): QueryCallerClient<TApi> {

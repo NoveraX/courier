@@ -1,22 +1,25 @@
 import { describe, expect, it } from "vitest";
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+
 import { createProxyQueryKeys } from "../src/keys";
 
-// Minimal type fixture matching the project convention
-type TestApi = {
-  options: {
-    groups: {
-      users: {
-        options: { prefix?: string };
-        getAll: () => unknown;
-        getById: () => unknown;
-      };
-      posts: {
-        options: { prefix?: string };
-        list: () => unknown;
-      };
-    };
-  };
-};
+const { endpoint } = courier();
+
+const testApi = defineApi({
+  baseURL: "https://api.example.com",
+  groups: {
+    users: defineGroup({
+      prefix: "users",
+      endpoints: {
+        getAll: endpoint.get("").response<unknown[]>(),
+        getById: endpoint.get(":id").variables<{ id: number }>().response<unknown>(),
+      },
+    }),
+    posts: defineGroup({ prefix: "posts", endpoints: { list: endpoint.get("").response<unknown[]>() } }),
+  },
+});
+
+type TestApi = typeof testApi;
 
 describe("createProxyQueryKeys", () => {
   it("returns a function", () => {

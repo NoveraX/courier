@@ -7,7 +7,7 @@ import type { SubscribeFn } from "./hooks/use-subscription";
 import { useSubscription as useSubscriptionHook } from "./hooks/use-subscription";
 import { createMutationHook } from "./mutation-hook";
 import { createQueryHooks } from "./query-hooks";
-import type { QueryGroupClient } from "./types";
+import type { UntypedGroupHooks } from "./untyped-group-hooks";
 
 /**
  * Build every hook of one API group over the caller's transports.
@@ -17,7 +17,7 @@ import type { QueryGroupClient } from "./types";
  * @param httpExecutor - Direct or proxy HTTP executor
  * @param subscribeFn - Opens a group's SSE stream
  * @param channelFn - Opens a group's WebSocket channel
- * @returns The group's hooks, typed for callers by `QueryGroupClient`
+ * @returns The group's hooks, as they run; a query caller types them for its callers
  * @example
  * const users = createGroupHooks("api", "users", httpExecutor, subscribeFn, channelFn);
  */
@@ -27,8 +27,7 @@ export function createGroupHooks(
   httpExecutor: HTTPExecutor,
   subscribeFn: SubscribeFn,
   channelFn: ChannelFn,
-  // biome-ignore lint/suspicious/noExplicitAny: the implementation is untyped; QueryGroupClient<TGroup> types it for callers
-): QueryGroupClient<any> {
+): UntypedGroupHooks {
   const call = createGroupCall(groupName, httpExecutor);
 
   return {
@@ -42,6 +41,5 @@ export function createGroupHooks(
     useChannel(method: string, options?: Record<string, unknown>) {
       return useChannelHook(channelFn, groupName, method, options);
     },
-    // biome-ignore lint/suspicious/noExplicitAny: see the return type
-  } as QueryGroupClient<any>;
+  };
 }

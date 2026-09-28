@@ -206,6 +206,6 @@ export type QueryGroupClient<TGroup> = {
 };
 
 /** Top-level query client with group-based dot-notation access */
-export type QueryCallerClient<TApi extends DefinedApi<any>> = {
+export type QueryCallerClient<TApi extends DefinedApi> = {
   [TKey in keyof TApi["options"]["groups"]]: QueryGroupClient<TApi["options"]["groups"][TKey]>;
 };

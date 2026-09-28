@@ -1,21 +1,27 @@
 import type { MockStore } from "../store";
 import type { AnyMockScenario, UntypedMockFn } from "../types";
+import { createHandler } from "./auto-handlers";
+import { makeListHandler } from "./auto-list-handler";
 import type { RouteInfo } from "./route-analyzer";
 
 /**
  * Build standard preset scenarios from analyzed routes.
  * These are available out of the box with createAutoMockServer.
+ *
+ * Each keeps the response shape its routes declare: a list that answers a
+ * pagination wrapper answers one here too.
  */
 export function buildPresetScenarios(
   routes: RouteInfo[],
   getStore: () => MockStore | undefined,
 ): Record<string, AnyMockScenario> {
   const listRoutes = routes.filter((r) => r.operation === "list");
+  const readRoutes = routes.filter((r) => r.httpMethod === "GET" && r.transport === "http");
 
   return {
     empty: buildEmptyScenario(listRoutes),
     "server-error": buildErrorScenario(routes),
-    "slow-network": buildSlowNetworkScenario(listRoutes, getStore),
+    "slow-network": buildSlowNetworkScenario(readRoutes, getStore),
   };
 }
 
@@ -23,16 +29,15 @@ function buildEmptyScenario(listRoutes: RouteInfo[]): AnyMockScenario {
   return {
     name: "empty",
     description:
-      "All list endpoints return empty arrays, simulating a freshly initialized system with no data.",
+      "All list endpoints return no records, simulating a freshly initialized system with no data.",
     tags: ["data", "empty"],
     apply(mock: UntypedMockFn) {
       for (const route of listRoutes) {
-        mock(route.group, route.endpoint).resolves([]);
+        mock(route.group, route.endpoint).returns(makeListHandler(route, () => []));
       }
     },
   };
 }
-
 function buildErrorScenario(routes: RouteInfo[]): AnyMockScenario {
   const errors = [
     { status: 500, message: "Database connection lost" },
@@ -58,20 +63,20 @@ function buildErrorScenario(routes: RouteInfo[]): AnyMockScenario {
 }
 
 function buildSlowNetworkScenario(
-  listRoutes: RouteInfo[],
+  readRoutes: RouteInfo[],
   getStore: () => MockStore | undefined,
 ): AnyMockScenario {
   return {
     name: "slow-network",
     description:
-      "Adds 3G-equivalent latency (~2000ms) to all read endpoints to simulate a slow mobile connection.",
+      "Adds 3G latency (300–900 ms) to all read endpoints to simulate a slow mobile connection.",
     tags: ["latency", "network"],
     apply(mock: UntypedMockFn) {
-      for (const route of listRoutes) {
-        const group = route.group;
-        mock(group, route.endpoint)
-          .returns(() => getStore()?.collection(group).getAll() ?? [])
-          .withLatency("3g");
+      const store = getStore();
+      if (!store) return;
+      for (const route of readRoutes) {
+        const handler = createHandler(store, route.group, route);
+        if (handler) mock(route.group, route.endpoint).returns(handler).withLatency("3g");
       }
     },
   };

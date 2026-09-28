@@ -1,4 +1,3 @@
-import type { MockStore } from "../store";
 import type { MockRequestContext } from "../types";
 import { generateRecords } from "./data-generator";
 import type { RouteInfo } from "./route-analyzer";
@@ -13,26 +12,30 @@ const PAGES = new Set(["totalPages", "total_pages", "pages", "pageCount", "page_
 const MORE = new Set(["hasMore", "has_more", "hasNext", "has_next", "hasNextPage"]);
 
 /**
- * List a collection in the shape the endpoint declares.
+ * List records in the shape the endpoint declares.
  *
  * A list endpoint answering a pagination wrapper — `{ items, total, page }`,
  * the commonest shape in real APIs — got a bare array, which its own
  * response schema refused. The wrapper's array field now holds the requested
  * page, and the count and page fields it declares describe that page.
  *
- * @param store - The mock store
- * @param groupName - The collection the group lists
  * @param route - The list route, with its response schema
+ * @param rows - The records to list, read on each call — a collection's, or none
  * @returns The list handler
+ * @example
+ * ```ts
+ * makeListHandler(route, () => store.collection("pets").getAll());
+ * makeListHandler(route, () => []); // an empty page, in the declared shape
+ * ```
  */
-export function makeListHandler(store: MockStore, groupName: string, route: RouteInfo): Handler {
+export function makeListHandler(route: RouteInfo, rows: () => Record<string, unknown>[]): Handler {
   const schema = route.responseSchema;
   const field = schema && !unwrapArraySchema(schema) ? itemsField(schema) : undefined;
-  if (!field) return () => store.collection(groupName).getAll();
+  if (!field) return rows;
 
   const template = (generateRecords(schema, 1)[0] ?? {}) as Record<string, unknown>;
   return (ctx) => {
-    const all = store.collection(groupName).getAll();
+    const all = rows();
     const { page, pageSize } = requestedPage(ctx.variables, all.length);
     const items = all.slice((page - 1) * pageSize, page * pageSize);
     const totalPages = pageSize > 0 ? Math.ceil(all.length / pageSize) : 0;

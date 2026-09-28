@@ -66,7 +66,7 @@ export type {
   UploadProgress,
 } from "./http-client/types";
 export { createLogger, type Logger, type LogLevel, logger, type ScopedLogger } from "./logger";
-export { defineMiddleware } from "./middleware/compose";
+export { defineMiddleware } from "./middleware/define";
 export type {
   AfterHandler,
   AfterMiddleware,

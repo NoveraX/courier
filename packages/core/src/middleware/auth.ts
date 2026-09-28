@@ -1,5 +1,5 @@
 import { HTTPError } from "../errors";
-import { defineMiddleware } from "./compose";
+import { defineMiddleware } from "./define";
 import type { Middleware, MiddlewareResponse, NextFn } from "./types";
 
 const UNAUTHORIZED = 401;

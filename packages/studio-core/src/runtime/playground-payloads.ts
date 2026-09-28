@@ -9,6 +9,8 @@ export interface PlaygroundExecutePayload {
   group: string;
   method: string;
   transport: "http" | "sse" | "ws";
+  /** Whether the call is made in this process or through the app's proxy route */
+  mode: "direct" | "proxy";
   variables?: unknown;
   headers?: Record<string, string>;
 }
@@ -47,6 +49,7 @@ export function sanitizeExecute(raw: unknown): PlaygroundExecutePayload | null {
     group: r.group,
     method: r.method,
     transport: r.transport,
+    mode: r.mode === "proxy" ? "proxy" : "direct",
     variables: r.variables,
     headers:
       r.headers && typeof r.headers === "object"

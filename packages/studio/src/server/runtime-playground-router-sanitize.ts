@@ -28,6 +28,8 @@ export interface PlaygroundExecPayload {
   group: string;
   method: string;
   transport: BindingTransport;
+  /** Whether the runtime calls the endpoint itself or through the app's proxy route */
+  mode: "direct" | "proxy";
   variables?: unknown;
   headers?: Record<string, string>;
 }
@@ -50,6 +52,7 @@ export function sanitizeExec(raw: unknown): PlaygroundExecPayload | null {
     group: raw.group,
     method: raw.method,
     transport: raw.transport,
+    mode: raw.mode === "proxy" ? "proxy" : "direct",
     variables: raw.variables,
     headers:
       raw.headers && typeof raw.headers === "object"

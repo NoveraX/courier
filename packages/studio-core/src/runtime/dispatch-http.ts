@@ -2,6 +2,7 @@ import { type executeRequest, HTTPError, ValidationError } from "@noverax/courie
 import type { Sources } from "@noverax/courier/define";
 import type { PlaygroundExecutePayload } from "./playground-payloads";
 import type { ResponderSocket } from "./playground-responder";
+import { callThroughProxy, type PlaygroundCall } from "./proxy-playground";
 
 /** The one chunk an HTTP run answers the Playground with. */
 export interface HttpResultChunk {
@@ -55,13 +56,16 @@ async function run(
   exec: typeof executeRequest,
 ): Promise<HttpResultChunk> {
   try {
-    const answer = await exec(sources, {
-      source: payload.source,
-      group: payload.group,
-      method: payload.method,
-      variables: payload.variables ?? {},
-      options: { headers: payload.headers ?? {}, rawData: true },
-    });
+    const answer =
+      payload.mode === "proxy"
+        ? await callThroughProxy(sources, callOf(payload), true)
+        : await exec(sources, {
+            source: payload.source,
+            group: payload.group,
+            method: payload.method,
+            variables: payload.variables ?? {},
+            options: { headers: payload.headers ?? {}, rawData: true },
+          });
     if (!isRawAnswer(answer)) return { kind: "http-result", status: 200, data: answer };
     const { status, headers, data } = answer;
     return { kind: "http-result", status, data, headers: Object.fromEntries(headers) };
@@ -101,4 +105,14 @@ function isRawAnswer(value: unknown): value is { status: number; headers: Header
   if (typeof value !== "object" || value === null) return false;
   if (!("status" in value) || !("headers" in value)) return false;
   return typeof value.status === "number" && value.headers instanceof Headers;
+}
+
+function callOf(payload: PlaygroundExecutePayload): PlaygroundCall {
+  return {
+    source: payload.source,
+    group: payload.group,
+    method: payload.method,
+    variables: payload.variables ?? {},
+    headers: payload.headers ?? {},
+  };
 }

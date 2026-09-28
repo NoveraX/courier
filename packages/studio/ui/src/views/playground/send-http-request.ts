@@ -59,6 +59,7 @@ export function initiateHttpRequest({
     source: payload.source,
     group: payload.group,
     method: payload.method,
+    mode: payload.mode,
     transport: "http",
     variables: values.variables,
     headers: values.headers,

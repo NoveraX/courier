@@ -30,11 +30,7 @@
 
 import { executeRequest } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
-import {
-  executeDirectSSE,
-  executeDirectWSChannel,
-  type InProcessWSChannel,
-} from "@noverax/courier/internal-streams";
+import { executeDirectSSE, executeDirectWSChannel } from "@noverax/courier/internal-streams";
 import { dispatchHttp } from "./dispatch-http";
 import {
   type PlaygroundExecutePayload,
@@ -42,7 +38,8 @@ import {
   sanitizeRid,
   sanitizeWrite,
 } from "./playground-payloads";
-import { dispatchSSE, dispatchWS } from "./responder-dispatch";
+import { openChannelThroughProxy, openStreamThroughProxy } from "./proxy-openers";
+import { dispatchSSE, dispatchWS, type PlaygroundChannel } from "./responder-dispatch";
 
 /** Minimal Socket.IO socket surface the responder needs. */
 export interface ResponderSocket {
@@ -52,7 +49,7 @@ export interface ResponderSocket {
 
 interface InFlightEntry {
   ac: AbortController;
-  channel?: InProcessWSChannel;
+  channel?: PlaygroundChannel;
   /* Written before the channel opened, and sent once it has. */
   pending: unknown[];
 }
@@ -127,12 +124,15 @@ async function runExecute(
   }
 
   try {
+    const viaProxy = payload.mode === "proxy";
     if (payload.transport === "http") {
       await dispatchHttp(socket, payload, sources, executeRequest);
     } else if (payload.transport === "sse") {
-      await dispatchSSE(socket, payload, sources, ac.signal, executeDirectSSE);
+      const open = viaProxy ? openStreamThroughProxy : executeDirectSSE;
+      await dispatchSSE(socket, payload, sources, ac.signal, open);
     } else {
-      await dispatchWS(socket, payload, sources, ac.signal, executeDirectWSChannel, (channel) => {
+      const open = viaProxy ? openChannelThroughProxy : executeDirectWSChannel;
+      await dispatchWS(socket, payload, sources, ac.signal, open, (channel) => {
         entry.channel = channel;
         for (const data of entry.pending.splice(0)) write(socket, payload.rid, channel, data);
       });
@@ -152,10 +152,14 @@ function emitError(socket: ResponderSocket, rid: string, message: string): void 
 function write(
   socket: ResponderSocket,
   rid: string,
-  channel: InProcessWSChannel,
+  channel: PlaygroundChannel,
   data: unknown,
 ): void {
-  channel.send(data).catch((err: unknown) => {
-    emitError(socket, rid, err instanceof Error ? err.message : String(err));
-  });
+  /* A channel in this process answers a send with a promise; one reached
+     through the proxy sends at once and throws what it refuses. */
+  Promise.resolve()
+    .then(() => channel.send(data))
+    .catch((err: unknown) => {
+      emitError(socket, rid, err instanceof Error ? err.message : String(err));
+    });
 }

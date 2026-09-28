@@ -35,6 +35,7 @@ export function initiateStreamRequest({ rid, payload, values }: InitiateStreamPa
     source: payload.source,
     group: payload.group,
     method: payload.method,
+    mode: payload.mode,
     transport: payload.transport,
     variables: values.variables,
     headers: values.headers,

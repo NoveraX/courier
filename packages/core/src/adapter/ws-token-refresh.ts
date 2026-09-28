@@ -1,7 +1,7 @@
 import { createLogger } from "../logger";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import type { WSSocketContext } from "./ws-context";
-import type { ConnectionRegistry, InternalConnectionRegistry } from "./ws-registry";
+import type { ConnectionRegistry, InternalConnectionRegistry } from "./ws-registry-types";
 
 const log = createLogger("WS");
 

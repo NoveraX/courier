@@ -1,5 +1,5 @@
 import type { PubSubBridge } from "./ws-pubsub-bridge";
-import type { InternalConnectionRegistry } from "./ws-registry";
+import type { InternalConnectionRegistry } from "./ws-registry-types";
 
 /**
  * The connection registry application code is handed when replicas share a

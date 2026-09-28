@@ -1,7 +1,7 @@
 import type { Sources } from "../define/types";
 import type { PubSubAdapter, WebSocketLike } from "../realtime/adapters";
 import type { ClientIPResolver } from "./ws-ip-tracker";
-import type { ConnectionRegistry } from "./ws-registry";
+import type { ConnectionRegistry } from "./ws-registry-types";
 
 /**
  * Configuration for the server-side WebSocket handler.

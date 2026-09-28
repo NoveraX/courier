@@ -2,7 +2,7 @@ import { createLogger } from "../logger";
 import type { PubSubAdapter } from "../realtime/adapters";
 import { unqualifyTopic } from "../realtime/ws/topic-hash";
 import { createPubSubChannels } from "./pubsub-channels";
-import type { InternalConnectionRegistry } from "./ws-registry";
+import type { InternalConnectionRegistry } from "./ws-registry-types";
 
 const log = createLogger("WS");
 

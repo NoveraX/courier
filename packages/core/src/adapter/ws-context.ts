@@ -9,7 +9,7 @@ import { servedSources } from "./served-sources";
 import type { PubSubBridge } from "./ws-pubsub-bridge";
 import type { RateLimitBucket } from "./ws-rate-limit";
 import { createBucket } from "./ws-rate-limit";
-import type { InternalConnectionRegistry } from "./ws-registry";
+import type { InternalConnectionRegistry } from "./ws-registry-types";
 import type { createServerTopicManager } from "./ws-topics";
 import type { WSHandlerConfig } from "./ws-types";
 

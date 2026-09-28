@@ -6,7 +6,7 @@ import { socketError } from "../utils/socket-error";
 import type { WSSocketContext } from "./ws-context";
 import { closeSubscriptionEntry } from "./ws-dispatch-helpers";
 import type { IPTracker } from "./ws-ip-tracker";
-import type { InternalConnectionRegistry } from "./ws-registry";
+import type { InternalConnectionRegistry } from "./ws-registry-types";
 import { routeMessage } from "./ws-route-message";
 import type { createServerTopicManager } from "./ws-topics";
 import type { WSHandlerConfig } from "./ws-types";

@@ -37,7 +37,7 @@ export function createHandler(
 
   switch (route.operation) {
     case "list":
-      return makeListHandler(store, groupName, route);
+      return makeListHandler(route, () => store.collection(groupName).getAll());
     case "get":
       return makeGetHandler(store, groupName, route);
     case "create":

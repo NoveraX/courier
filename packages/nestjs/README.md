@@ -75,6 +75,30 @@ await app.listen(3000)
 
 `courierWSAttach` answers WebSocket upgrades on one path — `/api/ws` unless you pass `path` — and leaves every other path to NestJS gateways and any other WebSocket handler. Point the client at the same path with `proxyPath: { ws: "/api/ws" }`. Frames larger than `maxMessageSize` (64 KB by default) are refused before they are buffered. Requires the `ws` package.
 
+## Shutting down
+
+`app.close()` waits for every open connection, and an SSE stream or a WebSocket stays open on its own — a stream until its lifetime cap, 30 minutes by default. Drain the streams before the server closes, from `beforeApplicationShutdown`:
+
+```ts
+import { type BeforeApplicationShutdown, type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common"
+import { courierMiddleware } from "@noverax/courier-nestjs"
+
+const proxy = courierMiddleware()
+
+@Module({})
+export class AppModule implements NestModule, BeforeApplicationShutdown {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(proxy).forRoutes("/api/request")
+  }
+
+  beforeApplicationShutdown() {
+    return proxy.shutdownSSE()
+  }
+}
+```
+
+`shutdownSSE()` sends each stream's client a `shutdown` event that tells it when to reconnect, then ends the streams; `sseConnections` lists the open ones. `courierSSEMiddleware()` drains the same way. Call `detach()` from `courierWSAttach` before `app.close()`: it closes each WebSocket with 1012, which a Courier client answers by reconnecting later.
+
 ## How It Works
 
 1. Converts the Node.js `IncomingMessage` to a Web Standard `Request`

@@ -1,4 +1,9 @@
-import type { CourierWSOptions, HandlerConfig, WebSocketLike } from "@noverax/courier";
+import type {
+  AdapterHandler,
+  CourierWSOptions,
+  HandlerConfig,
+  WebSocketLike,
+} from "@noverax/courier";
 import { createHandler, createWSHandler, requireSources } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
 
@@ -28,6 +33,10 @@ export type CourierPluginOptions = {
  * `attachRuntime()` — call `await attachRuntime()` in your server
  * instrumentation before registering the plugin.
  *
+ * The route also serves SSE streams, and `app.close()` drains them: each
+ * client gets a `shutdown` event telling it when to reconnect, instead of
+ * the close waiting out the streams' lifetime cap.
+ *
  * @example
  * ```ts
  * import Fastify from "fastify";
@@ -43,12 +52,13 @@ export const courierPlugin: FastifyPluginAsync<CourierPluginOptions> = async (
   fastify: FastifyInstance,
   opts: CourierPluginOptions,
 ) => {
-  const { handle } = createHandler(opts.config);
+  const { handle, shutdownSSE } = createHandler(opts.config);
   announceHosting({
     transports: ["http"],
     sources: Object.values(requireSources()),
     framework: "fastify",
   });
+  fastify.addHook("preClose", () => shutdownSSE());
 
   // Prevent Fastify from consuming the request body
   fastify.removeAllContentTypeParsers();
@@ -73,30 +83,44 @@ export const courierPlugin: FastifyPluginAsync<CourierPluginOptions> = async (
 };
 
 /**
+ * A Fastify route handler for SSE streams that can drain the streams it
+ * serves — `app.close()` otherwise waits on them until their lifetime cap.
+ */
+export type CourierSSERouteHandler = ((
+  request: FastifyRequest,
+  reply: FastifyReply,
+) => Promise<void>) &
+  Pick<AdapterHandler, "sseConnections" | "shutdownSSE">;
+
+/**
  * Create a Fastify route handler for SSE streaming endpoints.
+ *
+ * @param config - Handler options, such as `allowedOrigins` or stream lifetimes
+ * @returns The route handler, with `shutdownSSE()` to call from `preClose`
  *
  * @example
  * ```ts
- * fastify.get("/api/sse", courierSSEHandler());
+ * const sse = courierSSEHandler();
+ * fastify.get("/api/sse", sse);
+ * fastify.addHook("preClose", () => sse.shutdownSSE());
  * ```
  */
-export function courierSSEHandler(
-  config?: HandlerConfig,
-): (request: FastifyRequest, reply: FastifyReply) => Promise<void> {
-  const { handleSSE } = createHandler(config);
+export function courierSSEHandler(config?: HandlerConfig): CourierSSERouteHandler {
+  const { handleSSE, sseConnections, shutdownSSE } = createHandler(config);
   announceHosting({
     transports: ["sse"],
     sources: Object.values(requireSources()),
     framework: "fastify",
   });
 
-  return async (request: FastifyRequest, reply: FastifyReply) => {
+  const route = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     discoverNodeAppOrigin(request.raw);
     reply.hijack();
     const webReq = toWebRequest(request.raw, reply.raw);
     const webRes = await handleSSE(webReq);
     await sendWebResponse(webRes, reply.raw);
   };
+  return Object.assign(route, { sseConnections, shutdownSSE });
 }
 
 /**

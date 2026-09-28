@@ -24,7 +24,10 @@ export interface CourierWSAttachOptions extends CourierWSOptions {
  *
  * @param server - Node.js HTTP server (e.g. `http.createServer(app)`)
  * @param options - WS handler options (heartbeat, allowedOrigins, etc.) and the `path` to listen on
- * @returns Cleanup function — call to detach the upgrade handler
+ * @returns Detaches the handler: accepted connections are closed with 1012,
+ *   which a Courier client answers by reconnecting later, and the handler's
+ *   subscriptions are released. Call it before closing the HTTP server, which
+ *   otherwise waits on those connections.
  *
  * @example
  * ```ts
@@ -41,7 +44,10 @@ export interface CourierWSAttachOptions extends CourierWSOptions {
  * server.listen(3000);
  * ```
  */
-export function courierWSAttach(server: Server, options: CourierWSAttachOptions = {}): () => void {
+export function courierWSAttach(
+  server: Server,
+  options: CourierWSAttachOptions = {},
+): () => Promise<void> {
   const { path = DEFAULT_WS_PATH, ...handlerOptions } = options;
   const wsHandler = createWSHandler(handlerOptions);
   announceHosting({
@@ -50,11 +56,16 @@ export function courierWSAttach(server: Server, options: CourierWSAttachOptions 
     framework: "express",
   });
 
-  return attachWebSocketUpgrade(server, {
+  const detach = attachWebSocketUpgrade(server, {
     path,
     maxPayload: handlerOptions.maxMessageSize,
     createServer: async (serverOptions) => new (await import("ws")).WebSocketServer(serverOptions),
     onRequest: discoverNodeAppOrigin,
     onSocket: (socket, request) => wsHandler.handleSocket(socket, request),
   });
+
+  return async () => {
+    detach();
+    await wsHandler.destroy();
+  };
 }

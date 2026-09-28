@@ -229,6 +229,7 @@ describe("courierSSEHandler", () => {
 function createMockFastify() {
   return {
     all: vi.fn(),
+    addHook: vi.fn(),
     removeAllContentTypeParsers: vi.fn(),
     addContentTypeParser: vi.fn((_type: string, handler: Function) => {
       handler({}, null, vi.fn());

@@ -309,14 +309,14 @@ describe("removing an import whose files are all Studio's", () => {
 
 describe("starting Studio after a crash while it saved its own files", () => {
   it("deletes the temporary files of its imports state and journals", async () => {
-    put(".courier/journal/.courier.journal.4242-0a1b2c3d.tmp", "{}");
-    put(".courier/.courier.state.4242-0a1b2c3d.tmp", "{}");
+    put(`.courier/journal/.courier.journal.${process.pid}-0a1b2c3d.tmp`, "{}");
+    put(`.courier/.courier.state.${process.pid}-0a1b2c3d.tmp`, "{}");
     put(".courier/notes.tmp", "mine");
 
     await start();
 
-    expect(existsSync(join(root, ".courier/journal/.courier.journal.4242-0a1b2c3d.tmp"))).toBe(false);
-    expect(existsSync(join(root, ".courier/.courier.state.4242-0a1b2c3d.tmp"))).toBe(false);
+    expect(existsSync(join(root, `.courier/journal/.courier.journal.${process.pid}-0a1b2c3d.tmp`))).toBe(false);
+    expect(existsSync(join(root, `.courier/.courier.state.${process.pid}-0a1b2c3d.tmp`))).toBe(false);
     expect(read(".courier/notes.tmp")).toBe("mine");
   }, 20_000);
 });
@@ -527,6 +527,7 @@ describe("starting Studio", () => {
     saveImportEntry(root, "pets", record, "1600000000000-0000beef");
     saveJournal(root, {
       id: "1700000000000-0000c0de",
+      pid: process.pid,
       importName: "pets",
       dir: "src/api/pets",
       after: "1600000000000-0000beef",

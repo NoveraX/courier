@@ -7,6 +7,7 @@ import type { ProjectRoot } from "../project-fs/project-root";
 import { type ApplyJournal, dropJournal, JOURNAL_DIR, readJournals } from "./apply-journal";
 import { journalProblem } from "./journal-trust";
 import { rollbackApply } from "./rollback-apply";
+import { runsElsewhere } from "./runs-elsewhere";
 import { keepAsRecord, undoApply } from "./undo-apply";
 
 const log = createLogger("Studio");
@@ -30,7 +31,10 @@ export interface RecoveredApply {
  * of the same import recorded since, which may have written the same paths:
  * then, and when an undo left files it could not restore, the journal only
  * records those files, so their earlier versions stay in the backup, and
- * Studio names them at every start until that backup folder is deleted. A journal that is not
+ * Studio names them at every start until that backup folder is deleted. The
+ * journal of a process that still runs — another Studio on the project, in
+ * the middle of its apply — is that process's to finish or undo, and is
+ * left as it is. A journal that is not
  * one Studio wrote for an apply of its own — `.courier/` can arrive with a
  * project — is left as it is and logged. Run once as Studio starts, before
  * it serves anything that reads or writes an import's files.
@@ -56,6 +60,10 @@ export function recoverInterruptedApplies(
     if (problem !== null) {
       log.warn(
         `Studio left ${JOURNAL_DIR}/${fileName} as it is and undid nothing from it: ${problem}.`,
+      );
+    } else if (runsElsewhere(journal.pid)) {
+      log.warn(
+        `Studio left a write for the import ${journal.importName} as it is: process ${journal.pid}, which is making it, still runs.`,
       );
     } else if (committed.has(journal.id) || recorded(journal.importName) === journal.id) {
       dropJournal(root.path, journal.id);

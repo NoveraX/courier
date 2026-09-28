@@ -27,6 +27,8 @@ export interface JournalEntry {
 /** What an apply in progress wrote down so it can be undone after a crash. */
 export interface ApplyJournal {
   id: string;
+  /** The process making the apply: while it runs, no other Studio undoes the apply. */
+  pid: number;
   importName: string;
   /** The import's folder, project-relative: nothing the apply touches lies outside it. */
   dir: string;
@@ -144,9 +146,12 @@ function parseJournal(text: string): ApplyJournal | null {
 
 function isJournal(value: unknown): value is ApplyJournal {
   if (!isRecord(value)) return false;
-  const { id, importName, dir, after, state, backupDir, entries, createdDirs, temps } = value;
+  const { id, pid, importName, dir, after, state, backupDir, entries, createdDirs, temps } = value;
   return (
     typeof id === "string" &&
+    typeof pid === "number" &&
+    Number.isSafeInteger(pid) &&
+    pid > 0 &&
     typeof importName === "string" &&
     typeof dir === "string" &&
     (after === null || typeof after === "string") &&

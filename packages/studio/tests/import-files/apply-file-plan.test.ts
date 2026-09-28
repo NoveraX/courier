@@ -331,6 +331,7 @@ describe("recoverInterruptedApplies", () => {
     put(`.courier/backups/1700000000000-0000c0de/${DIR}/old/index.ts`, signed("old group\n"));
     saveJournal(root.path, {
       id: "1700000000000-0000c0de",
+      pid: process.pid,
       importName: "pets",
       dir: DIR,
       after: null,
@@ -433,6 +434,7 @@ function crashedApply(): void {
   put(`.courier/backups/1700000000000-0000c0de/${DIR}/old/index.ts`, signed("old group\n"));
   saveJournal(root.path, {
     id: "1700000000000-0000c0de",
+    pid: process.pid,
     importName: "pets",
     dir: DIR,
     after: null,
@@ -565,6 +567,7 @@ describe("recovery that nothing on disk can mislead", () => {
   const journalWith = (entries: JournalEntry[], extra: Partial<ApplyJournal> = {}): void =>
     saveJournal(root.path, {
       id: ID,
+      pid: process.pid,
       importName: "pets",
       dir: DIR,
       after: null,
@@ -616,6 +619,7 @@ describe("recovery that nothing on disk can mislead", () => {
     put(`.courier/backups/${ID}/src/main.ts`, "export const main = 'planted';\n");
     saveJournal(root.path, {
       id: ID,
+      pid: process.pid,
       importName: "stranger",
       dir: "src",
       after: null,

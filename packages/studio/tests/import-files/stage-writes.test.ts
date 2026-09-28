@@ -56,6 +56,7 @@ describe("stageWrites", () => {
   it("has every folder it creates in the journal on disk when it stops before a file is staged", () => {
     const journal: ApplyJournal = {
       id: ID,
+      pid: process.pid,
       importName: "pets",
       dir: DIR,
       after: null,

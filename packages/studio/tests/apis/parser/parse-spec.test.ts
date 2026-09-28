@@ -2,7 +2,7 @@
  * Which text is read as a specification, in the forms editors and exports
  * actually save it.
  */
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { detectFormat, parseSpec } from "../../../src/apis/parser";
 
@@ -72,5 +72,21 @@ describe("a YAML specification whose version key is quoted", () => {
 describe("a JSON specification whose version is a number", () => {
   it("is read", () => {
     expect(detectFormat(JSON.stringify({ ...PETSTORE, openapi: 3.1 }))).toBe("openapi3-json");
+  });
+});
+
+describe("a JSON specification", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /* Read once to tell its format and again to parse it, Stripe's 7 MB took twice as long. */
+  it("is read once", () => {
+    const text = JSON.stringify(PETSTORE);
+    const parse = vi.spyOn(JSON, "parse");
+
+    parseSpec(text);
+
+    expect(parse.mock.calls.filter(([argument]) => argument === text)).toHaveLength(1);
   });
 });

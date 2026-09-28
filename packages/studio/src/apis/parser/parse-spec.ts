@@ -30,23 +30,7 @@ const YAML_VERSION_KEY = /^(["']?)(openapi|swagger)\1[ \t]*:/m;
  */
 export function detectFormat(raw: string): SpecFormat {
   const text = raw.trim();
-
-  if (text.startsWith("{")) {
-    try {
-      const document: unknown = JSON.parse(text);
-      if (String(fieldOf(document, "openapi") ?? "").startsWith("3")) return "openapi3-json";
-      if (String(fieldOf(document, "swagger") ?? "").startsWith("2")) return "swagger2-json";
-      if (fieldOf(document, "info") && fieldOf(document, "item")) return "postman";
-      return "unknown";
-    } catch {
-      return "unknown";
-    }
-  }
-
-  const key = YAML_VERSION_KEY.exec(text)?.[2];
-  if (key === "openapi") return "openapi3-yaml";
-  if (key === "swagger") return "swagger2-yaml";
-  return "unknown";
+  return text.startsWith("{") ? jsonFormat(readJson(text)) : yamlFormat(text);
 }
 
 /**
@@ -62,7 +46,12 @@ export function detectFormat(raw: string): SpecFormat {
  * ```
  */
 export function parseSpec(raw: string): ParsedSpec {
-  const format = detectFormat(raw);
+  const text = raw.trim();
+  /* A JSON specification is read once: its format is told from the document
+     it is read into. Read once to tell the format and again to parse it,
+     Stripe's 7 MB took twice as long. */
+  const json = text.startsWith("{") ? readJson(text) : undefined;
+  const format = text.startsWith("{") ? jsonFormat(json) : yamlFormat(text);
 
   if (format === "unknown") {
     throw new Error(
@@ -70,11 +59,34 @@ export function parseSpec(raw: string): ParsedSpec {
     );
   }
 
-  const text = raw.trim();
-  const parsed: unknown = format.endsWith("-yaml") ? parseYaml(text) : JSON.parse(text);
+  const parsed: unknown = format.endsWith("-yaml") ? parseYaml(text) : json;
   if (!isNode(parsed)) throw new Error("The specification holds no object at its top level.");
 
   if (format === "postman") return parsePostman(parsed);
   if (format.startsWith("swagger2")) return parseSwagger2(parsed);
   return parseOpenApi3(parsed);
+}
+
+/* The document the text holds, or `undefined` when it is not JSON — which no
+   JSON document can be, so the caller tells the format as unknown. */
+function readJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
+function jsonFormat(document: unknown): SpecFormat {
+  if (String(fieldOf(document, "openapi") ?? "").startsWith("3")) return "openapi3-json";
+  if (String(fieldOf(document, "swagger") ?? "").startsWith("2")) return "swagger2-json";
+  if (fieldOf(document, "info") && fieldOf(document, "item")) return "postman";
+  return "unknown";
+}
+
+function yamlFormat(text: string): SpecFormat {
+  const key = YAML_VERSION_KEY.exec(text)?.[2];
+  if (key === "openapi") return "openapi3-yaml";
+  if (key === "swagger") return "swagger2-yaml";
+  return "unknown";
 }

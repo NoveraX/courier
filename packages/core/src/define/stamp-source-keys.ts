@@ -56,17 +56,30 @@ function wasChosen(source: unknown, name: string): boolean {
  * addressed the other.
  */
 function assertBoundaryFor(key: string, source: unknown): void {
-  const boundary = (source as { options?: { boundary?: { source?: unknown } } } | null)?.options
-    ?.boundary;
-  if (!boundary || boundary.source === key) return;
+  const named = boundarySourceOf(source);
+  if (named === undefined || named === key) return;
   throw new ConfigurationError(
     "BOUNDARY_SOURCE_MISMATCH",
     [
-      `Source "${key}" carries a boundary declared for "${String(boundary.source)}".`,
+      `Source "${key}" carries a boundary declared for "${String(named)}".`,
       "",
       "A boundary lists one source's endpoints, and the browser addresses that",
       "source by the name the boundary gives. Give the source its own boundary,",
       `declared with \`source: "${key}"\`.`,
     ].join("\n"),
   );
+}
+
+/** The source a registered source's boundary names, when it carries one. */
+function boundarySourceOf(source: unknown): unknown {
+  if (typeof source !== "object" || source === null || !("options" in source)) return undefined;
+  const { options } = source;
+  if (typeof options !== "object" || options === null || !("boundary" in options)) {
+    return undefined;
+  }
+  const { boundary } = options;
+  if (typeof boundary !== "object" || boundary === null || !("source" in boundary)) {
+    return undefined;
+  }
+  return boundary.source;
 }

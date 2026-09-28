@@ -6,6 +6,7 @@ import { parse as parseYaml } from "yaml";
 import { parseOpenApi3 } from "./parse-openapi3";
 import { parsePostman } from "./parse-postman";
 import { parseSwagger2 } from "./parse-swagger2";
+import { fieldOf, isNode } from "./spec-node";
 import type { ParsedSpec, SpecFormat } from "./types";
 
 /**
@@ -32,10 +33,10 @@ export function detectFormat(raw: string): SpecFormat {
 
   if (text.startsWith("{")) {
     try {
-      const obj = JSON.parse(text);
-      if (String(obj.openapi ?? "").startsWith("3")) return "openapi3-json";
-      if (String(obj.swagger ?? "").startsWith("2")) return "swagger2-json";
-      if (obj.info && obj.item) return "postman";
+      const document: unknown = JSON.parse(text);
+      if (String(fieldOf(document, "openapi") ?? "").startsWith("3")) return "openapi3-json";
+      if (String(fieldOf(document, "swagger") ?? "").startsWith("2")) return "swagger2-json";
+      if (fieldOf(document, "info") && fieldOf(document, "item")) return "postman";
       return "unknown";
     } catch {
       return "unknown";
@@ -53,7 +54,8 @@ export function detectFormat(raw: string): SpecFormat {
  *
  * @param raw - The text as it was read or pasted
  * @returns The parsed specification
- * @throws Error when the text is no specification Studio reads, or does not parse
+ * @throws Error when the text is no specification Studio reads, does not
+ *   parse, or holds something other than an object at its top level
  * @example
  * ```ts
  * const spec = parseSpec(readFileSync("openapi.json", "utf8"));
@@ -69,7 +71,8 @@ export function parseSpec(raw: string): ParsedSpec {
   }
 
   const text = raw.trim();
-  const parsed = format.endsWith("-yaml") ? parseYaml(text) : JSON.parse(text);
+  const parsed: unknown = format.endsWith("-yaml") ? parseYaml(text) : JSON.parse(text);
+  if (!isNode(parsed)) throw new Error("The specification holds no object at its top level.");
 
   if (format === "postman") return parsePostman(parsed);
   if (format.startsWith("swagger2")) return parseSwagger2(parsed);

@@ -35,7 +35,7 @@ function isPlainObject(raw: unknown): raw is Record<string, unknown> {
   // Reject objects with a tampered prototype chain so a hostile sender
   // cannot smuggle `__proto__` / `constructor` mutations through the
   // `Object.assign`-style spreads downstream.
-  const proto = Object.getPrototypeOf(raw);
+  const proto: unknown = Object.getPrototypeOf(raw);
   return proto === Object.prototype || proto === null;
 }
 

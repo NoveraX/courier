@@ -1,5 +1,5 @@
 import { buildBody, buildSearchParams } from "./body-builder";
-import { stripPathParams, toHeadersInit } from "./path-params";
+import { stripPathParams } from "./path-params";
 import { overlayHeaders } from "./request-headers";
 import type {
   FetchOptions,
@@ -36,7 +36,7 @@ function buildHeadOptions(
     ...otherArgumentOptions,
     ...boundFetchOptions,
     ...prefixUrlOverride,
-    headers: overlayHeaders(boundHeaders, toHeadersInit(optionHeaders)),
+    headers: overlayHeaders(boundHeaders, optionHeaders),
     ...buildBody(
       "head",
       newVariables,

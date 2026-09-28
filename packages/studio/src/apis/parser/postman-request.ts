@@ -11,7 +11,7 @@
 import { inferSchemaFromValue } from "./infer-schema";
 import { pathParamName } from "./path-utils";
 import { withoutHost } from "./postman-base";
-import { textAt } from "./spec-node";
+import { fieldOf, nodesAt, textAt } from "./spec-node";
 import type { ParsedParameter, ParsedSchema, ParsedSecurityScheme, SpecNode } from "./types";
 
 /** Postman writes an environment reference as `{{name}}`. */
@@ -30,7 +30,7 @@ export function requestPath(url: unknown): string {
 }
 
 function structuredPath(url: unknown): string | undefined {
-  const parts = (url as SpecNode)?.path;
+  const parts = fieldOf(url, "path");
   if (!Array.isArray(parts)) return undefined;
   return normalizeSegments(parts.map((part) => String(part)));
 }
@@ -49,18 +49,17 @@ function normalizeSegments(segments: string[]): string {
 /** Query entries and path variables the request declares. */
 export function requestParameters(url: unknown): ParsedParameter[] {
   const parameters: ParsedParameter[] = [];
-  const node = url as SpecNode | undefined;
 
-  for (const entry of Array.isArray(node?.query) ? node.query : []) {
-    if (typeof entry?.key !== "string") continue;
-    if (entry.disabled === true) continue;
+  for (const entry of nodesAt(url, "query")) {
+    const name = textAt(entry, "key");
+    if (name === undefined || entry.disabled === true) continue;
     parameters.push({
       /* Sent under its own name: `per_page` is not the `per-page` it reads. */
-      name: entry.key,
+      name,
       in: "query",
       required: false,
       type: "string",
-      description: typeof entry.description === "string" ? entry.description : "",
+      description: textAt(entry, "description") ?? "",
     });
   }
 
@@ -91,13 +90,14 @@ export function requestBody(body: SpecNode | undefined): ParsedSchema | null {
     }
   }
 
-  const fields = body.mode === "urlencoded" ? body.urlencoded : body.formdata;
-  if (!Array.isArray(fields) || fields.length === 0) return null;
+  const fields = nodesAt(body, body.mode === "urlencoded" ? "urlencoded" : "formdata");
+  if (fields.length === 0) return null;
 
   const shape: Record<string, unknown> = {};
   for (const field of fields) {
-    if (typeof field?.key !== "string" || field.disabled === true) continue;
-    shape[field.key] = field.value ?? "";
+    const key = textAt(field, "key");
+    if (key === undefined || field.disabled === true) continue;
+    shape[key] = fieldOf(field, "value") ?? "";
   }
   return Object.keys(shape).length > 0 ? inferSchemaFromValue("RequestBody", shape) : null;
 }
@@ -131,8 +131,11 @@ export function authScheme(auth: SpecNode | undefined): ParsedSecurityScheme | u
   if (type === "bearer" || type === "oauth2") return { name: type, type: "bearer" };
   if (type === "basic") return { name: type, type: "basic" };
   if (type === "apikey") {
-    const entries = Array.isArray(auth?.apikey) ? auth.apikey : [];
-    const key = entries.find((e: SpecNode) => e?.key === "key")?.value;
+    const entries = nodesAt(auth, "apikey");
+    const key = fieldOf(
+      entries.find((entry) => entry.key === "key"),
+      "value",
+    );
     return {
       name: "apikey",
       type: "apiKey",

@@ -15,10 +15,3 @@ export function stripPathParams(path: string, variables: unknown): unknown {
   const rest = omitParams(variables, paramNames);
   return isFieldRecord(rest) && Object.keys(rest).length === 0 ? undefined : rest;
 }
-
-export function toHeadersInit(value: unknown): HeadersInit | undefined {
-  if (value instanceof Headers) return value;
-  if (Array.isArray(value)) return value;
-  if (typeof value === "object" && value !== null) return value as Record<string, string>;
-  return undefined;
-}

@@ -46,7 +46,8 @@ function describe(value: unknown, open: Set<object>): string | null {
   if (typeof value !== "object" || open.has(value) || !isPlainData(value)) return null;
   open.add(value);
   const entries: string[] = [];
-  for (const [key, item] of Object.entries(value)) {
+  const fields: Array<[string, unknown]> = Object.entries(value);
+  for (const [key, item] of fields) {
     const described = describe(item, open);
     if (described === null) return null;
     entries.push(`${JSON.stringify(key)}:${described}`);

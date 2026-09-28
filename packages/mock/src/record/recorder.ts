@@ -109,7 +109,8 @@ async function callAndCapture(
     return { ...response, duration: took(), startedAt };
   } catch (error) {
     if (!(error instanceof HTTPError)) throw error;
-    const { status, headers, data } = error;
+    const { status, headers } = error;
+    const data: unknown = error.data;
     return { status, headers, data, error, duration: took(), startedAt };
   }
 }

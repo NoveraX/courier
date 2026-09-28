@@ -33,7 +33,8 @@ export function sendRouteFailure(res: JsonResponse, err: unknown, fallback: stri
   if (err instanceof CourierError && status !== undefined) {
     /* A refused file plan carries the plan as it stands, for the UI to show. */
     const plan = "plan" in err && err.plan !== undefined ? { plan: err.plan } : {};
-    res.status(status).json({ error: err.message, code: err.code, ...plan });
+    const code: unknown = err.code;
+    res.status(status).json({ error: err.message, code, ...plan });
     return;
   }
   log.warn(fallback, err);

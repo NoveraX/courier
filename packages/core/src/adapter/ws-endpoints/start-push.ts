@@ -82,6 +82,6 @@ export function startPush(
   });
 
   iterate()
-    .catch((err) => log.warn("Push generator failed", err))
+    .catch((err: unknown) => log.warn("Push generator failed", err))
     .finally(() => void ctx.topicManager.unsubscribe(ctx.connectionId, topic));
 }

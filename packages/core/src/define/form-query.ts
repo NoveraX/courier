@@ -31,9 +31,8 @@ export function formQuery(
   fields: object | undefined,
   encoding: Readonly<Record<string, FormFieldEncoding>> = {},
 ): Record<string, string | string[]> {
-  const present = Object.entries(fields ?? {}).filter(
-    ([, value]) => value !== undefined && value !== null,
-  );
+  const given: Array<[string, unknown]> = Object.entries(fields ?? {});
+  const present = given.filter(([, value]) => value !== undefined && value !== null);
   const values: Record<string, string | string[]> = {};
   for (const [name, value] of formBody(Object.fromEntries(present), encoding)) {
     const earlier = Object.hasOwn(values, name) ? values[name] : undefined;

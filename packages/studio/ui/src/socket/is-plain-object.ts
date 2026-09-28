@@ -14,7 +14,7 @@
  */
 export function isPlainObject(raw: unknown): raw is Record<string, unknown> {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return false;
-  const proto = Object.getPrototypeOf(raw);
+  const proto: unknown = Object.getPrototypeOf(raw);
   if (proto !== Object.prototype && proto !== null) return false;
   for (const key of Object.keys(raw)) {
     if (key === "__proto__" || key === "constructor" || key === "prototype") return false;

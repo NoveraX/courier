@@ -3,6 +3,7 @@
  */
 
 import { collectionEncoding, declaredEncoding, isDefaultEncoding } from "./field-encoding";
+import type { SupportedHttpMethod } from "./http-methods";
 import { parseRequestBody } from "./parse-request-body";
 import { parseResponse } from "./parse-response";
 import { enumValues } from "./schema-conversion";
@@ -20,7 +21,7 @@ import {
 
 export function parseOpenApi3Operation(
   path: string,
-  method: string,
+  method: SupportedHttpMethod,
   op: SpecNode,
   spec: SpecNode,
 ): ParsedEndpoint {
@@ -38,7 +39,7 @@ export function parseOpenApi3Operation(
   return {
     name,
     operationId,
-    httpMethod: method as ParsedEndpoint["httpMethod"],
+    httpMethod: method,
     path: convertPathParams(path),
     fullPath: path,
     description: textAt(op, "summary") ?? textAt(op, "description") ?? "",

@@ -152,7 +152,8 @@ interface SourceEndpoint {
    put beside them — and is left out. */
 function* endpointsOf(source: AnyDefinedApi): Generator<SourceEndpoint> {
   const groups = prop(source, "options", "groups");
-  for (const [group, members] of Object.entries(isObject(groups) ? groups : {})) {
+  const grouped: Array<[string, unknown]> = Object.entries(isObject(groups) ? groups : {});
+  for (const [group, members] of grouped) {
     if (isObject(members)) yield* endpointsIn(group, members);
   }
   yield* endpointsIn("", source);
@@ -163,7 +164,8 @@ function isObject(value: unknown): value is object {
 }
 
 function* endpointsIn(group: string, members: object): Generator<SourceEndpoint> {
-  for (const [method, member] of Object.entries(members)) {
+  const named: Array<[string, unknown]> = Object.entries(members);
+  for (const [method, member] of named) {
     if (method === "options") continue;
     const schema = getEndpointSchema(member);
     if (schema) yield { group, method, schema };

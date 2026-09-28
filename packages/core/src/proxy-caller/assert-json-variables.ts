@@ -31,7 +31,8 @@ function findBinary(value: unknown, path: string, seen: Set<object>): string | u
   if (isBinary(value)) return path;
   if (typeof value !== "object" || value === null || seen.has(value)) return undefined;
   seen.add(value);
-  for (const [key, child] of Object.entries(value)) {
+  const members: Array<[string, unknown]> = Object.entries(value);
+  for (const [key, child] of members) {
     const at = Array.isArray(value) ? `${path}[${key}]` : `${path}.${key}`;
     const found = findBinary(child, at, seen);
     if (found !== undefined) return found;

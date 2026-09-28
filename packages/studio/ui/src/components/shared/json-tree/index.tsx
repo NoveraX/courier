@@ -76,9 +76,11 @@ function RootEntries({
   data: unknown;
   onSelect: (path: string[]) => void;
 }): React.ReactElement {
-  const entries = Array.isArray(data)
-    ? (data as unknown[]).map((v, i) => [String(i), v] as const)
-    : Object.entries(data as object);
+  const entries: ReadonlyArray<readonly [string, unknown]> = Array.isArray(data)
+    ? data.map((v, i) => [String(i), v] as const)
+    : typeof data === "object" && data !== null
+      ? Object.entries(data)
+      : [];
 
   return (
     <>

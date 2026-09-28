@@ -59,6 +59,6 @@ function isStringRecord(value: unknown): value is Record<string, string> {
     typeof value === "object" &&
     value !== null &&
     !Array.isArray(value) &&
-    Object.values(value).every((field) => typeof field === "string")
+    Object.values(value).every((field: unknown) => typeof field === "string")
   );
 }

@@ -19,7 +19,7 @@ const RUNTIME_EVENTS = new Set(RUNTIME_EVENT_TYPES);
 
 function isPlainObject(raw: unknown): raw is Record<string, unknown> {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return false;
-  const proto = Object.getPrototypeOf(raw);
+  const proto: unknown = Object.getPrototypeOf(raw);
   return proto === Object.prototype || proto === null;
 }
 

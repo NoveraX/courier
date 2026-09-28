@@ -1,4 +1,5 @@
 import { createLogger } from "../../logger";
+import { isFieldRecord } from "../../utils/body-kind";
 import type { StreamFailure } from "../describe-failure";
 import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
 import { SSE_CONTROL_EVENTS } from "./control-events";
@@ -106,8 +107,12 @@ function controlEnd(raw: RawSSEEvent): ConnectionEnd | undefined {
 
 function parseFailure(data: string): StreamFailure {
   try {
-    const parsed = JSON.parse(data) as { code?: unknown; message?: unknown; issues?: unknown };
-    if (typeof parsed.code === "number" && typeof parsed.message === "string") {
+    const parsed: unknown = JSON.parse(data);
+    if (
+      isFieldRecord(parsed) &&
+      typeof parsed.code === "number" &&
+      typeof parsed.message === "string"
+    ) {
       const issues = Array.isArray(parsed.issues) ? parsed.issues : undefined;
       return { code: parsed.code, message: parsed.message, ...(issues && { issues }) };
     }

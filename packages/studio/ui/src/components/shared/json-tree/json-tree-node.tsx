@@ -107,9 +107,11 @@ function ExpandedChildren({
   onSelect?: (path: string[]) => void;
   path: string[];
 }): React.ReactElement {
-  const entries = isArray(value)
-    ? (value as unknown[]).map((v, i) => [String(i), v] as const)
-    : Object.entries(value as object);
+  const entries: ReadonlyArray<readonly [string, unknown]> = isArray(value)
+    ? value.map((v, i) => [String(i), v] as const)
+    : isObject(value)
+      ? Object.entries(value)
+      : [];
 
   return (
     <>

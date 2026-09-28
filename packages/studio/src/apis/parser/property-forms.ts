@@ -4,7 +4,7 @@
 
 import { acceptsNull, stripNull } from "./nullable-schema";
 import { normalizeTypeArray } from "./schema-conversion";
-import { asNode, fieldOf, type SpecNode } from "./spec-node";
+import { asNode, fieldOf, isNode, listAt, type SpecNode } from "./spec-node";
 
 /**
  * Separate "may be null" from the forms a property takes.
@@ -56,8 +56,11 @@ export function withoutNull(given: SpecNode): { node: SpecNode; nullable: boolea
  */
 export function isComposite(node: SpecNode): boolean {
   if (node.oneOf || node.anyOf) return !node.type || node.type === "object" || !!node.properties;
-  if (!Array.isArray(node.allOf) || node.allOf.length < 2) return false;
-  return node.allOf.some((member: SpecNode) => member?.properties || member?.type === "object");
+  const allOf = listAt(node, "allOf");
+  if (allOf.length < 2) return false;
+  return allOf.some(
+    (member) => isNode(member) && (Boolean(member.properties) || member.type === "object"),
+  );
 }
 
 /**

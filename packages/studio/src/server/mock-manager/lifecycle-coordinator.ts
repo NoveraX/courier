@@ -30,7 +30,7 @@ const log = createLogger("Studio");
  * than left as an unhandled rejection in Studio's process.
  */
 function runVoid(label: string, promise: Promise<unknown>): void {
-  void promise.catch((err) => log.warn(`${label} failed`, err));
+  void promise.catch((err: unknown) => log.warn(`${label} failed`, err));
 }
 
 export function createLifecycleCoordinator(config: CoordinatorConfig) {

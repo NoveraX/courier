@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from "react";
-import { Activity } from "lucide-react";
+import { Activity, SearchX } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { useRequestDetail } from "@/hooks/use-request-detail";
@@ -67,12 +67,23 @@ export function TimelineView(): React.ReactElement {
         />
       )}
 
-      <RequestList
-        requests={unpinned}
-        pinnedRequests={pinned}
-        selectedId={null}
-        onSelect={handleSelect}
-      />
+      {filtered.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center">
+          <EmptyState
+            icon={SearchX}
+            heading="No requests match"
+            description="Try adjusting your search or filters."
+            action={{ label: "Clear filters", onClick: resetFilters }}
+          />
+        </div>
+      ) : (
+        <RequestList
+          requests={unpinned}
+          pinnedRequests={pinned}
+          selectedId={null}
+          onSelect={handleSelect}
+        />
+      )}
     </div>
   );
 }

@@ -108,7 +108,9 @@ export function createSSEHandler(
     if (config?.onSSEConnect) {
       try {
         meta = await config.onSSEConnect({ connectionId, request, source, group, method });
-      } catch {
+      } catch (err) {
+        /* What was thrown may carry a secret: it goes to the log only. */
+        log.warn(`onSSEConnect rejected the SSE stream for [${source}][${method}]`, err);
         return errorResponse(403, "Connection rejected");
       }
     }

@@ -66,7 +66,11 @@ export interface WSHandlerConfig {
     topic: string;
     variables: unknown;
   }) => boolean | Promise<boolean>;
-  /** Called after upgrade, before subscriptions. Return metadata or throw to reject. */
+  /**
+   * Called after upgrade, before subscriptions. Return metadata, or throw to
+   * refuse the connection: it is closed with 4401 "Connection rejected", and
+   * what was thrown is logged, never sent.
+   */
   onConnect?: (info: { connectionId: string; request: Request }) => unknown | Promise<unknown>;
   /** Called after socket close + topic cleanup */
   onDisconnect?: (info: {

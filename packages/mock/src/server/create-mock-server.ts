@@ -21,12 +21,13 @@ import { createMockRegistry } from "../registry";
 import { createMockStore } from "../store";
 import type { AnyMockScenario } from "../types";
 import { registerAdminRoutes } from "./admin-api";
+import { registerProxyRoute, registerProxySSERoute, registerRestRoutes } from "./api-routes";
 import type { MockServer, MockServerOptions } from "./mock-server-types";
 import { registerPrefixRoutes } from "./prefix-routes";
 import type { MockLogMode } from "./request-logger";
 import { createRequestLogger } from "./request-logger";
 import type { RequestHooks } from "./route-generator";
-import { handleMockRequest, registerProxyRoute, registerRestRoutes } from "./route-generator";
+import { handleMockRequest } from "./route-generator";
 import { createScenarioControls } from "./scenario-controls";
 import { createServerLifecycle } from "./server-lifecycle";
 
@@ -77,6 +78,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
   };
 
   registerProxyRoute(app, routeConfig);
+  registerProxySSERoute(app, routeConfig);
   registerRestRoutes(app, routeConfig);
 
   if (config?.mappings?.length) {

@@ -1,0 +1,91 @@
+/**
+ * The routes a Courier client in proxy mode, and a caller addressing an
+ * endpoint by name, reach the mock server on:
+ *
+ * - `POST /api/request` — the proxy's HTTP route
+ * - `GET /api/sse` — the proxy's stream route
+ * - `/api/:group/:method` — REST-style addressing by name
+ */
+
+import type { Hono, Context as HonoContext } from "hono";
+
+import { handleMockRequest } from "./route-generator";
+import type { RouteConfig } from "./route-types";
+
+/** Register the main courier proxy route: POST /api/request */
+export function registerProxyRoute(app: Hono, config: RouteConfig): void {
+  app.post("/api/request", async (c: HonoContext) => {
+    const body = await c.req.json<{
+      source?: string;
+      group?: string;
+      method?: string;
+      variables?: unknown;
+      options?: { rawData?: unknown };
+    }>();
+    const { group = "", method = "" } = body;
+    // A `.raw` call is answered with the response around the data, as a Courier proxy does
+    const raw = body.options?.rawData === true;
+
+    return handleMockRequest(c, group, method, body.variables, config, { raw });
+  });
+}
+
+/**
+ * Register the proxy's stream route, `GET /api/sse?_s=…&_g=…&_m=…&_v=…`,
+ * where a proxy client opens every subscription. The variables arrive as
+ * one JSON object in `_v`, as a Courier proxy reads them; anything else is
+ * refused with 400. Only an endpoint mocked as a stream is served here.
+ *
+ * @param app    The mock server's Hono app
+ * @param config The route config every request is handled with
+ * @returns Nothing; the route is added to `app`
+ * @example
+ * ```ts
+ * registerProxySSERoute(app, config);
+ * // GET /api/sse?_s=api&_g=live&_m=ticker&_v={"room":"lobby"}
+ * ```
+ */
+export function registerProxySSERoute(app: Hono, config: RouteConfig): void {
+  app.get("/api/sse", (c: HonoContext) => {
+    const params = new URL(c.req.url).searchParams;
+    const method = params.get("_m");
+    if (!method) return c.json({ error: "The stream to open is not named (_m)" }, 400);
+    const variables = wireVariables(params.get("_v"));
+    if (variables === INVALID)
+      return c.json({ error: "Variables (_v) must be a JSON object" }, 400);
+    return handleMockRequest(c, params.get("_g") ?? "", method, variables, config, {
+      stream: true,
+    });
+  });
+}
+
+/** Register REST-style routes: POST /api/:group/:method */
+export function registerRestRoutes(app: Hono, config: RouteConfig): void {
+  app.all("/api/:group/:method", async (c: HonoContext) => {
+    const group = c.req.param("group") ?? "";
+    const method = c.req.param("method") ?? "";
+    const variables =
+      c.req.method === "GET"
+        ? Object.fromEntries(new URL(c.req.url).searchParams)
+        : await c.req.json().catch(() => undefined);
+
+    return handleMockRequest(c, group, method, variables, config);
+  });
+}
+
+const INVALID = Symbol("invalid variables");
+
+function wireVariables(raw: string | null): Record<string, unknown> | undefined | typeof INVALID {
+  if (!raw) return undefined;
+  const decoded = parseJson(raw);
+  if (typeof decoded !== "object" || decoded === null || Array.isArray(decoded)) return INVALID;
+  return { ...decoded };
+}
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return INVALID;
+  }
+}

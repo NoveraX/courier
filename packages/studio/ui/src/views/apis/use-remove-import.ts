@@ -32,7 +32,7 @@ function messageOf(error: unknown, fallback: string): string {
 
 function removedMessage(name: string, { removed, kept, backupDir, pruneFailures }: AppliedFiles): string {
   const notes = [
-    removed.length > 0 ? `moved ${fileCount(removed.length)} into ${backupDir}` : "",
+    removed.length > 0 ? `moved ${fileCount(removed.length)} into ${backupDir ?? "a backup"}` : "",
     kept.length > 0 ? `left ${fileCount(kept.length)} as ${kept.length === 1 ? "it was" : "they were"}` : "",
     unremovedNote(pruneFailures.map((failure) => failure.path)),
   ].filter((note) => note !== "");

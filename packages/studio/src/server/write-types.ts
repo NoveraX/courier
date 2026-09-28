@@ -59,7 +59,7 @@ export interface WriteResult {
   /** Files left as they were, and why. */
   kept: Array<{ path: string; reason: string }>;
   /** Project-relative directory holding the files replaced and removed. */
-  backupDir: string;
+  backupDir?: string;
   /** Folders the write emptied that Studio could not remove, and why. */
   pruneFailures: Array<{ path: string; code: string }>;
   /** Files Studio wrote before the import's directory moved, left where they are. */

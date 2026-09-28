@@ -22,8 +22,8 @@ export interface AppliedFiles {
   removed: string[];
   /** Files left as they were, and why. */
   kept: Array<{ path: string; reason: KeptReason }>;
-  /** Where the replaced and removed files were copied, relative to the project. */
-  backupDir: string;
+  /** Where the replaced and removed files were copied, relative to the project; absent when there were none. */
+  backupDir?: string;
   /** Folders the apply emptied that Studio could not remove, and why. */
   pruneFailures: Array<{ path: string; code: string }>;
 }

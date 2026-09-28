@@ -1,4 +1,4 @@
-import { renameSync } from "node:fs";
+import { existsSync, renameSync } from "node:fs";
 import { dirname } from "node:path";
 import { IMPORTS_STATE_FILENAME, readImportsState } from "../../apis/imports-state";
 import { ownValue } from "../../apis/own-value";
@@ -26,8 +26,8 @@ export interface ApplyReport {
   written: string[];
   removed: string[];
   kept: FilePlan["kept"];
-  /** Project-relative directory holding the files replaced and removed. */
-  backupDir: string;
+  /** Project-relative directory holding the files replaced and removed; absent when there were none. */
+  backupDir?: string;
   /** Emptied directories that could not be removed. */
   pruneFailures: PruneFailure[];
 }
@@ -102,11 +102,13 @@ export function applyFilePlan(
     undoThenThrow(root, journal, error);
   }
   finishApply(root.path, id);
+  /* A backup folder is made only for a file replaced or removed. */
+  const backedUp = existsSync(resolveProjectPath(root.path, journal.backupDir));
   return {
     written: staged.map((s) => s.write.path),
     removed: plan.removals.map((r) => r.path),
     kept: plan.kept,
-    backupDir: journal.backupDir,
+    ...(backedUp && { backupDir: journal.backupDir }),
     pruneFailures,
   };
 }

@@ -21,6 +21,7 @@ import { registerRestApi } from "./rest-api";
 import { setupRuntimeNamespace } from "./runtime-namespace";
 import { clearStudioServerState } from "./runtime-namespace-state";
 import { createRuntimePlaygroundRouter } from "./runtime-playground-router";
+import { securityHeaders } from "./security-headers";
 import { serveStudioUi } from "./serve-ui";
 import { setupUiNamespace } from "./socket-handlers";
 import { createStudioSockets } from "./socket-server";
@@ -52,6 +53,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   const app = express();
   /* Nothing a caller needs, and it names what to probe for. */
   app.disable("x-powered-by");
+  app.use(securityHeaders);
   const httpServer = createServer(app);
   const policy = createStudioOriginPolicy({
     bindHost: host,

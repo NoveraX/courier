@@ -65,7 +65,7 @@ export function ServerControls({ serverId, processStatus, managed }: ServerContr
       {canStart && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-6 text-emerald-400 hover:text-emerald-300" onClick={() => sendManaged("mock:managed:start")}>
+            <Button variant="ghost" size="icon" aria-label="Start server" className="size-6 text-emerald-400 hover:text-emerald-300" onClick={() => sendManaged("mock:managed:start")}>
               <Play className="size-3" />
             </Button>
           </TooltipTrigger>
@@ -77,7 +77,7 @@ export function ServerControls({ serverId, processStatus, managed }: ServerContr
         <>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-6 text-muted-foreground/60 hover:text-amber-400" onClick={() => sendManaged("mock:managed:restart")}>
+              <Button variant="ghost" size="icon" aria-label="Restart server" className="size-6 text-muted-foreground/60 hover:text-amber-400" onClick={() => sendManaged("mock:managed:restart")}>
                 <RefreshCw className="size-3" />
               </Button>
             </TooltipTrigger>
@@ -85,7 +85,7 @@ export function ServerControls({ serverId, processStatus, managed }: ServerContr
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-6 text-muted-foreground/60 hover:text-rose-400" onClick={() => sendManaged("mock:managed:stop")}>
+              <Button variant="ghost" size="icon" aria-label="Stop server" className="size-6 text-muted-foreground/60 hover:text-rose-400" onClick={() => sendManaged("mock:managed:stop")}>
                 <Square className="size-3" />
               </Button>
             </TooltipTrigger>

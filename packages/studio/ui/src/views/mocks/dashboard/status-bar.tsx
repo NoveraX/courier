@@ -87,6 +87,7 @@ export function StatusBar({ server }: StatusBarProps): React.ReactElement {
             <TooltipTrigger asChild>
               <button
                 type="button"
+                aria-label="Stop all faults"
                 onClick={() => stopAllFaults(server.serverId)}
                 className="flex size-6 items-center justify-center rounded-md bg-rose-600/80 text-white transition-colors hover:bg-rose-700 dark:bg-rose-500/80 dark:hover:bg-rose-600"
               >
@@ -123,6 +124,7 @@ export function StatusBar({ server }: StatusBarProps): React.ReactElement {
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Re-seed all collections"
                 className="size-6 text-muted-foreground/60 hover:text-foreground"
                 onClick={() => sendCommand("mock:store:seed", { collection: "*", count: 20 })}
               >
@@ -137,6 +139,7 @@ export function StatusBar({ server }: StatusBarProps): React.ReactElement {
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Reset store"
                 className="size-6 text-muted-foreground/60 hover:text-rose-400"
                 onClick={() => sendCommand("mock:server:reset")}
               >

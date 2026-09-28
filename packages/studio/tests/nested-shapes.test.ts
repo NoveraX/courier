@@ -138,6 +138,6 @@ describe("a request body that is a list", () => {
       .map((f) => f.content)
       .join("\n");
 
-    expect(out).toMatch(/\.variables\(z\.array\(ItemSchema\)\)/);
+    expect(out).toMatch(/\.variables<Item\[\]>\(z\.array\(ItemSchema\)\)/);
   });
 });

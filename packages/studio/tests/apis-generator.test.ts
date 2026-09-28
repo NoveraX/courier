@@ -126,7 +126,7 @@ describe("generateCode", () => {
 
     const schemaFile = files.find((f) => f.path.includes("pets/schemas.ts"))
     expect(schemaFile).toBeDefined()
-    expect(schemaFile?.content).toContain("z.object")
+    expect(schemaFile?.content).toContain("z.looseObject")
   })
 
   it("generates type-only files when generateSchemas is false and generateTypes is true", () => {
@@ -147,7 +147,7 @@ describe("generateCode", () => {
 
     const schemaFile = files.find((f) => f.path.includes("pets/schemas.ts"))
     expect(schemaFile).toBeDefined()
-    expect(schemaFile?.content).toContain("v.object")
+    expect(schemaFile?.content).toContain("v.looseObject")
   })
 
   it("uses ArkType when validation is arktype", () => {
@@ -200,8 +200,16 @@ describe("generateCode", () => {
     }
   })
 
-  it("imports no type for a response a schema already describes", () => {
+  it("declares a response's type beside the loose schema that validates it", () => {
     const files = generateCode(MOCK_SPEC, DEFAULT_OPTIONS)
+
+    const petsFile = files.find((f) => f.path.includes("pets/index.ts"))
+    expect(petsFile?.content).toContain(".response<Pet[]>(z.array(PetSchema))")
+    expect(petsFile?.content).toMatch(/import \{[^}]*type Pet\b[^}]*\} from "\.\/schemas"/)
+  })
+
+  it("names no type beside a schema when no types are generated", () => {
+    const files = generateCode(MOCK_SPEC, { ...DEFAULT_OPTIONS, generateTypes: false })
 
     const petsFile = files.find((f) => f.path.includes("pets/index.ts"))
     expect(petsFile?.content).toContain(".response(z.array(PetSchema))")

@@ -217,14 +217,31 @@ describe("courier", () => {
   });
 
   describe("terminal options", () => {
-    it("keeps kind specific options on the descriptor", () => {
-      const feed = base.stream.get(":id/events", {
-          reconnect: { maxAttempts: 5, backoff: "exponential" },
-          tags: ["activity"],
-        }).variables(ById).response(UserSchema);
+    it("keeps the options a stream is addressed with on the descriptor", () => {
+      const feed = base.stream
+        .get(":id/events", { tags: ["activity"], deprecated: "use feedV2" })
+        .variables(ById)
+        .response(UserSchema);
 
-      expect(options(feed).reconnect).toEqual({ maxAttempts: 5, backoff: "exponential" });
       expect(options(feed).tags).toEqual(["activity"]);
+      expect(options(feed).deprecated).toBe("use feedV2");
+    });
+
+    it("offers no reconnection or heartbeat policy on a stream or a channel", () => {
+      const feed = base.stream.get("events", {
+        // @ts-expect-error — reconnection is set on the caller, not the endpoint
+        reconnect: { maxAttempts: 5 },
+      });
+      const tail = base.stream.get("tail", {
+        // @ts-expect-error — nothing reads a Last-Event-ID header name from here
+        lastEventIdHeader: "x-last-id",
+      });
+      const room = base.channel.connect("room", {
+        // @ts-expect-error — the heartbeat belongs to the caller's shared socket
+        heartbeat: 5_000,
+      });
+
+      expect([feed, tail, room].map((endpoint) => options(endpoint).tags)).toEqual([[], [], []]);
     });
 
     it("carries a cache config declared on a query", () => {

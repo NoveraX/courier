@@ -13,13 +13,6 @@ export type OperationKind =
   | "deleteAll"
   | "custom";
 
-/** Reconnection policy for endpoints holding an open connection. */
-export interface ReconnectOptions {
-  maxAttempts?: number;
-  backoff?: "fixed" | "exponential";
-  initialDelay?: number;
-}
-
 /** Sample data used when this endpoint is served by a generated mock. */
 export interface MockOptions {
   example?: unknown;
@@ -49,16 +42,19 @@ export interface HttpEndpointOptions extends CommonEndpointOptions {
   idempotencyKey?: string;
 }
 
-export interface StreamEndpointOptions extends CommonEndpointOptions {
-  reconnect?: ReconnectOptions;
-  lastEventIdHeader?: string;
-}
+/**
+ * Options a stream takes. How its client reconnects is not among them: a
+ * browser caller never sees the definition, so the server steers it with the
+ * `retry` field of its events instead.
+ */
+export type StreamEndpointOptions = CommonEndpointOptions;
 
-export interface ChannelEndpointOptions extends CommonEndpointOptions {
-  reconnect?: ReconnectOptions;
-  /** Heartbeat interval in milliseconds. */
-  heartbeat?: number;
-}
+/**
+ * Options a channel takes. Heartbeat and reconnection are not among them:
+ * they belong to the socket a caller shares between its channels, not to
+ * one endpoint.
+ */
+export type ChannelEndpointOptions = CommonEndpointOptions;
 
 /**
  * Every option any endpoint kind accepts.
@@ -111,7 +107,4 @@ export interface ResolvedEndpointOptions {
   readonly operation?: OperationKind;
   readonly inherit: boolean;
   readonly idempotencyKey?: string;
-  readonly reconnect?: ReconnectOptions;
-  readonly lastEventIdHeader?: string;
-  readonly heartbeat?: number;
 }

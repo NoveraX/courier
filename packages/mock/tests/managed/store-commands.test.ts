@@ -127,3 +127,23 @@ describe("mock:scenario:apply", () => {
     expect((await fetch(`${url}/users`)).status).toBe(503);
   });
 });
+
+describe("mock:store:create", () => {
+  it("gives a record created in a collection of numeric ids the next number", async () => {
+    const ids: unknown[] = await fetch(`${url}/users`)
+      .then((res) => res.json())
+      .then((users: Array<{ id: unknown }>) => users.map((user) => user.id));
+
+    const result = await worker.command({
+      action: "mock:store:create",
+      collection: "users",
+      record: { name: "Ada" },
+    });
+
+    const next = Math.max(...ids.map(Number)) + 1;
+    expect(ids.every((id) => typeof id === "number")).toBe(true);
+    expect(result.data).toEqual({ name: "Ada", id: next });
+    const listed: unknown[] = await fetch(`${url}/users`).then((res) => res.json());
+    expect(listed).toContainEqual({ name: "Ada", id: next });
+  });
+});

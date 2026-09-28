@@ -1,5 +1,6 @@
 import { MockHttpError } from "../server/errors";
 import type { Collection } from "../store";
+import { nextNumericId } from "../store/next-numeric-id";
 import { sameId } from "../store/same-id";
 import { prop } from "./schema-introspect/prop";
 
@@ -101,13 +102,7 @@ export function idOf(col: AnyCollection, record: Record<string, unknown>): strin
  * then hid behind the old one on every by-id route.
  */
 export function freshId(col: AnyCollection): number | undefined {
-  let largest = 0;
-  for (const record of col.getAll()) {
-    const id = record[col.idField];
-    if (typeof id !== "number") return undefined;
-    if (id > largest) largest = id;
-  }
-  return largest + 1;
+  return nextNumericId(col.getAll(), col.idField);
 }
 
 /**

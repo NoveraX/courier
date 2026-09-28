@@ -1,4 +1,5 @@
 import type { Collection, CollectionConfig, QueryFn } from "./collection-types";
+import { nextNumericId } from "./next-numeric-id";
 import { applyPagination, applySorting } from "./pagination";
 import { createQueryBuilder } from "./query-builder";
 import { sameId } from "./same-id";
@@ -20,7 +21,11 @@ export function createCollection<TItem extends Record<string, unknown>>(
     return records.filter((r) => built.test(r));
   };
 
-  const generateId = (): string => {
+  /* A number when every id is one, as an HTTP create gives; a string in an
+     empty collection, whose id type is not known, and otherwise. */
+  const generateId = (): string | number => {
+    const numeric = records.length > 0 ? nextNumericId(records, idField) : undefined;
+    if (numeric !== undefined) return numeric;
     let id: string;
     do {
       autoIdCounter++;

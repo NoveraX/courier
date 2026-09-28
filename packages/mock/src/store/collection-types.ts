@@ -15,7 +15,7 @@ export interface Collection<TItem extends Record<string, unknown>> {
   readonly idField: string;
   /** Change the collection's configuration — its primary key field */
   configure(config: CollectionConfig): void;
-  /** Create a single record (auto-generates id if missing) */
+  /** Create a single record; a missing id is the next number when every id is one, a string otherwise */
   create(item: Partial<TItem>): TItem;
   /** Create N records with an index-based factory */
   createMany(count: number, fn: (index: number) => Partial<TItem>): TItem[];

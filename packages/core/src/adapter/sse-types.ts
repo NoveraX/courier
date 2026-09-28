@@ -76,7 +76,11 @@ export interface SSEConnectionRegistry {
 export interface SSELifecycleConfig {
   /** Max concurrent SSE connections. Returns 503 when exceeded. */
   maxSSEConnections?: number;
-  /** Called when an SSE stream opens. Return metadata or throw to reject. */
+  /**
+   * Called when an SSE stream opens. Return metadata, or throw to refuse the
+   * stream: it is answered 403 "Connection rejected", and what was thrown is
+   * logged, never sent.
+   */
   onSSEConnect?: (info: {
     connectionId: string;
     request: Request;

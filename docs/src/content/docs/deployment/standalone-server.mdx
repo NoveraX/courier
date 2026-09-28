@@ -167,7 +167,7 @@ const server = await createCourierServer({
 ```
 
 <Callout variant="tip" title="Reject connections">
-  Throw from `onConnect` or `onSSEConnect` to reject the connection. The error message is sent to the client.
+  Throw from `onConnect` to refuse a WebSocket connection: the server closes it with code `4401` and the reason "Connection rejected", which each channel and subscription on it reads as an `AuthError`, and the client does not reconnect. Throw from `onSSEConnect` to refuse a stream: it is answered `403` "Connection rejected", which the client reads as a `ForbiddenError`. What you threw is logged on the server and never sent, since it may carry a connection string or a token.
 </Callout>
 
 ## Connection Registries

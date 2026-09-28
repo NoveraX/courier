@@ -20,9 +20,19 @@ import type { AnyEndpoint, EndpointKind, InferKind } from "@noverax/courier/defi
 // biome-ignore lint/suspicious/noConfusingVoidType: void is the builder's sentinel for an endpoint that takes no variables
 export type WithVariables<TVariables> = [TVariables] extends [undefined | void]
   ? { variables?: undefined }
-  : {} extends TVariables
+  : MayOmitVariables<TVariables> extends true
     ? { variables?: TVariables }
     : { variables: TVariables };
+
+/**
+ * Whether a call may leave its variables out: where every field is optional,
+ * or where they may be undefined — a body the operation does not require.
+ */
+export type MayOmitVariables<TVariables> = {} extends TVariables
+  ? true
+  : undefined extends TVariables
+    ? true
+    : false;
 
 /**
  * Resolve TVariables for react-query mutations: void when no args needed,
@@ -30,7 +40,7 @@ export type WithVariables<TVariables> = [TVariables] extends [undefined | void]
  */
 export type MutationVariables<TVariables> = [TVariables] extends [undefined | NoArguments]
   ? NoArguments
-  : {} extends TVariables
+  : MayOmitVariables<TVariables> extends true
     ? NoArguments | TVariables
     : TVariables;
 

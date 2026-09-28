@@ -21,10 +21,7 @@ export async function validateVariables(
   });
 
   try {
-    /* A schema whose fields are all optional makes the argument optional in
-       the call signature, so "no variables" has to mean an empty object —
-       handed `undefined`, every such schema rejected the call it invited. */
-    const validated = await validateSchema(schema, variables ?? {}, "variables");
+    const validated = await validateSchema(schema, await absentAs(schema, variables), "variables");
     const duration = ctx.hasStudio ? performance.now() - vt0 : 0;
     ctx.dt.onValidationPass?.({
       requestId: ctx.requestId,
@@ -83,4 +80,15 @@ export async function validateResponse(
     }
     throw error;
   }
+}
+
+/* A schema whose fields are all optional makes the argument optional in the
+   call signature, so "no variables" has to mean an empty object — handed
+   `undefined`, every such schema rejected the call it invited. A schema that
+   takes `undefined` itself, a body the operation does not require, is
+   handed that: an empty object is not a list or a scalar. */
+async function absentAs(schema: StandardSchemaV1, variables: unknown): Promise<unknown> {
+  if (variables !== undefined && variables !== null) return variables;
+  const none = await schema["~standard"].validate(undefined);
+  return none.issues ? {} : undefined;
 }

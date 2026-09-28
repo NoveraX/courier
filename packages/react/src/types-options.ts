@@ -17,7 +17,7 @@ import type {
   UseSuspenseQueryOptions,
 } from "@tanstack/react-query";
 
-import type { MutationVariables, WithVariables } from "./types-helpers";
+import type { MayOmitVariables, MutationVariables, WithVariables } from "./types-helpers";
 
 /** `TData` is what the hook returns: the response, or what `select` makes of it. */
 export type CourierQueryOptions<
@@ -57,7 +57,7 @@ export type CourierInfiniteQueryOptions<TResponse, TVariables, TPageParam> = {
   // biome-ignore lint/suspicious/noConfusingVoidType: void is the builder's sentinel for an endpoint that takes no variables
 } & ([TVariables] extends [undefined | void]
   ? { variables?: (pageParam: TPageParam) => TVariables }
-  : {} extends TVariables
+  : MayOmitVariables<TVariables> extends true
     ? { variables?: (pageParam: TPageParam) => TVariables }
     : { variables: (pageParam: TPageParam) => TVariables }) &
   Omit<
@@ -86,7 +86,7 @@ export type CourierMutationOptions<TResponse, TVariables> = Omit<
 // biome-ignore lint/suspicious/noConfusingVoidType: void is the builder's sentinel for an endpoint that takes no variables
 export type CourierPrefetchOptions<TVariables> = [TVariables] extends [undefined | void]
   ? { variables?: undefined; requestOptions?: CallOptions; staleTime?: number }
-  : {} extends TVariables
+  : MayOmitVariables<TVariables> extends true
     ? { variables?: TVariables; requestOptions?: CallOptions; staleTime?: number }
     : { variables: TVariables; requestOptions?: CallOptions; staleTime?: number };
 

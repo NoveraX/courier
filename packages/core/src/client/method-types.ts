@@ -46,13 +46,19 @@ export type EndpointResult<
     ? HttpResponse<TResponse>
     : TResponse;
 
-/** Call signature that takes the variables only as far as the schema requires them. */
+/**
+ * Call signature that takes the variables only as far as the schema requires
+ * them: left out where every field is optional, or where they may be
+ * undefined — a body the operation does not require.
+ */
 // biome-ignore lint/suspicious/noConfusingVoidType: `void` is what an endpoint without variables declares
 type Callable<TVariables, TReturn> = [TVariables] extends [undefined | void]
   ? () => TReturn
   : {} extends TVariables
     ? (variables?: TVariables) => TReturn
-    : (variables: TVariables) => TReturn;
+    : undefined extends TVariables
+      ? (variables?: TVariables) => TReturn
+      : (variables: TVariables) => TReturn;
 
 /** Typed method signature — adapts based on whether variables are required */
 export type EndpointMethod<

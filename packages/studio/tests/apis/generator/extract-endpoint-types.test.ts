@@ -2,24 +2,17 @@
  * A response that is one of several shapes, compiled in every mode the
  * generator writes it.
  */
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import ts from "typescript";
 import { afterAll, describe, expect, it } from "vitest";
 
 import type { GenerateOptions } from "../../../src/apis/generator";
 import { generateCode } from "../../../src/apis/generator";
 import { parseSpec } from "../../../src/apis/parser";
+import { generatedProject } from "../../helpers/compile-generated";
 
-/* Inside the repository's node_modules, so the libraries resolve the way
-   they do from a user's project. */
-const ROOT = fileURLToPath(
-  new URL("../../../../../node_modules/.cache/courier-union-responses/", import.meta.url),
-);
+const project = generatedProject("courier-union-responses");
 
 afterAll(() => {
-  rmSync(ROOT, { recursive: true, force: true });
+  project.remove();
 });
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
@@ -61,24 +54,7 @@ const SPEC = JSON.stringify({
 
 function diagnostics(label: string, options: Partial<GenerateOptions>): string[] {
   const files = generateCode(parseSpec(SPEC), { type: "openapi", outputDir: "src", ...options }, "unions");
-  const paths = files.map((file) => {
-    const path = join(ROOT, label, file.path);
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, file.content);
-    return path;
-  });
-  const program = ts.createProgram(paths, {
-    strict: true,
-    noEmit: true,
-    module: ts.ModuleKind.ESNext,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
-    target: ts.ScriptTarget.ES2022,
-    skipLibCheck: true,
-    types: [],
-  });
-  return ts
-    .getPreEmitDiagnostics(program)
-    .map((d) => `${d.file?.fileName ?? ""}: ${ts.flattenDiagnosticMessageText(d.messageText, "\n")}`);
+  return project.diagnostics(label, files);
 }
 
 interface Combination {

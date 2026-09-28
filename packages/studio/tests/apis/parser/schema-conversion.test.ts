@@ -3,25 +3,18 @@
  * generator writes: the client is called against a real server, and the
  * types are compiled.
  */
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import ts from "typescript";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { GenerateOptions } from "../../../src/apis/generator";
 import { generateCode } from "../../../src/apis/generator";
 import { parseSpec } from "../../../src/apis/parser";
+import { generatedProject } from "../../helpers/compile-generated";
 import { generatedCall, loadGenerated } from "../../helpers/load-generated";
 import { type RecordingServer, startRecordingServer } from "../../helpers/recording-server";
 
 const VALIDATORS = ["zod", "valibot", "arktype"] as const;
 
-/* Inside the repository's node_modules, so the libraries resolve the way
-   they do from a user's project. */
-const ROOT = fileURLToPath(
-  new URL("../../../../../node_modules/.cache/courier-nullable-schemas/", import.meta.url),
-);
+const project = generatedProject("courier-nullable-schemas");
 
 const ALL_NULL = { addr: null, name: null, mixed: null, level: null, count: null, tree: null };
 
@@ -37,7 +30,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await server.close();
-  rmSync(ROOT, { recursive: true, force: true });
+  project.remove();
 });
 
 /** GitHub's `nullable-simple-user` pattern, in each form a schema says it. */
@@ -122,32 +115,11 @@ describe.each(VALIDATORS)("a nullable component (%s)", (validation) => {
 });
 
 function diagnostics(label: string, options: Partial<GenerateOptions>): string[] {
-  const dir = join(ROOT, label);
-  for (const file of generate(options)) {
-    const path = join(dir, file.path);
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, file.content);
-  }
-  const check = join(dir, "check.ts");
-  writeFileSync(
-    check,
-    [
-      'import type { Holder } from "./src/nullables/index";',
-      `export const holder: Holder = ${JSON.stringify(ALL_NULL)};`,
-    ].join("\n"),
-  );
-  const program = ts.createProgram([check], {
-    strict: true,
-    noEmit: true,
-    module: ts.ModuleKind.ESNext,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
-    target: ts.ScriptTarget.ES2022,
-    skipLibCheck: true,
-    types: [],
-  });
-  return ts
-    .getPreEmitDiagnostics(program)
-    .map((d) => ts.flattenDiagnosticMessageText(d.messageText, "\n"));
+  const check = [
+    'import type { Holder } from "./src/nullables/index";',
+    `export const holder: Holder = ${JSON.stringify(ALL_NULL)};`,
+  ].join("\n");
+  return project.diagnostics(label, generate(options), check);
 }
 
 describe("the generated types", () => {

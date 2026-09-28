@@ -1,4 +1,4 @@
-import { decodeMessage, encodeMessage } from "@noverax/courier/realtime";
+import { decodeMessage, encodeMessage } from "@noverax/courier/internal";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import type { MockServer } from "../../../src/server/create-mock-server";

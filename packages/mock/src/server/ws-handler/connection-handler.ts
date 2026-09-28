@@ -1,5 +1,6 @@
 import { logger } from "@noverax/courier";
-import { type ChannelHandlers, describeFailure } from "@noverax/courier/realtime";
+import { describeFailure } from "@noverax/courier/internal";
+import type { ChannelHandlers } from "@noverax/courier/realtime";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 import type { MockChannelFn, MockHistoryEntry, MockRequestContext } from "../../types";

@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import { encodeMessage, type StreamFailure } from "@noverax/courier/realtime";
+import { encodeMessage, type StreamFailure } from "@noverax/courier/internal";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 /**

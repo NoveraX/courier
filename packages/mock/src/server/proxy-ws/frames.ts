@@ -3,7 +3,7 @@
  * is open.
  */
 
-import { encodeMessage, type StreamFailure, type WSMessage } from "@noverax/courier/realtime";
+import { encodeMessage, type StreamFailure, type WSMessage } from "@noverax/courier/internal";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 /**

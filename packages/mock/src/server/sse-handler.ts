@@ -1,5 +1,6 @@
 import { logger } from "@noverax/courier";
-import { describeFailure, SSE_CONTROL_EVENTS, type SSEEvent } from "@noverax/courier/realtime";
+import { describeFailure, SSE_CONTROL_EVENTS } from "@noverax/courier/internal";
+import type { SSEEvent } from "@noverax/courier/realtime";
 import type { Context as HonoContext } from "hono";
 
 import type { MockRequestContext, ResolvedHandler } from "../types";

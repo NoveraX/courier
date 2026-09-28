@@ -1,11 +1,11 @@
 import { logger } from "@noverax/courier";
 import {
-  type ChannelHandlers,
   decodeMessage,
   describeFailure,
   encodeMessage,
   type WSMessage,
-} from "@noverax/courier/realtime";
+} from "@noverax/courier/internal";
+import type { ChannelHandlers } from "@noverax/courier/realtime";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 import type { WSConnectionRegistry } from "./connection-registry";

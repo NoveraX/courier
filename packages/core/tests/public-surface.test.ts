@@ -54,6 +54,13 @@ describe("the realtime entry", () => {
     expectTypeOf<"request" extends keyof WSConnection ? true : false>().toEqualTypeOf<false>();
     expect(Object.keys(realtime)).not.toContain("createPendingRegistry");
   });
+
+  it("keeps the wire protocol and the client's parts to Courier's own packages", () => {
+    const parts = ["encodeMessage", "decodeMessage", "describeFailure", "createConnectionState", "SSE_CONTROL_EVENTS"];
+
+    expect(Object.keys(realtime).filter((name) => parts.includes(name))).toEqual([]);
+    expect(parts.filter((name) => !(name in internal))).toEqual([]);
+  });
 });
 
 /**

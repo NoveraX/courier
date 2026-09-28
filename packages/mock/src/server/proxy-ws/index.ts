@@ -9,7 +9,7 @@ import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 
 import { logger } from "@noverax/courier";
-import type { WSMessage } from "@noverax/courier/realtime";
+import type { WSMessage } from "@noverax/courier/internal";
 import type { WebSocket as NodeWebSocket, WebSocketServer } from "ws";
 import { parseMessage } from "../ws-handler/message-router";
 import { generateConnectionId } from "../ws-handler/protocol";

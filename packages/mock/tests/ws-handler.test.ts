@@ -16,12 +16,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 
-import {
-  decodeMessage,
-  encodeMessage,
-  ForbiddenError,
-  type WSMessage,
-} from "@noverax/courier/realtime";
+import { ForbiddenError } from "@noverax/courier/realtime";
+import { decodeMessage, encodeMessage, type WSMessage } from "@noverax/courier/internal";
 
 import { createMockServer, type MockServer, type MockServerOptions } from "../src/server/create-mock-server";
 import type { PrefixMapping } from "../src/server/prefix-routes";

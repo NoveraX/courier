@@ -5,11 +5,8 @@
  */
 
 import { logger } from "@noverax/courier";
-import {
-  describeFailure,
-  type StreamFailure,
-  type WSChannelContext,
-} from "@noverax/courier/realtime";
+import { describeFailure, type StreamFailure } from "@noverax/courier/internal";
+import type { WSChannelContext } from "@noverax/courier/realtime";
 import type { MockChannelFn, MockHistoryEntry } from "../../types";
 import type { ChannelShape } from "../prefix-route-types";
 import { sendEnd, sendFrame } from "./frames";

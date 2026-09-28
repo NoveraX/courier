@@ -58,6 +58,8 @@ export interface RegistryEntry {
   /** Send pre-encoded JSON string — avoids redundant JSON.stringify on broadcast */
   sendEncoded: (encoded: string) => void;
   close: (code?: number, reason?: string) => void;
+  /** When a token asked for with `auth_required` must have come in by */
+  authDeadline?: ReturnType<typeof setTimeout>;
 }
 
 /** @internal Registry with add/remove methods for handler integration */
@@ -201,6 +203,7 @@ export function createConnectionRegistry(): InternalConnectionRegistry {
     },
 
     remove(connectionId) {
+      clearTimeout(entries.get(connectionId)?.authDeadline);
       entries.delete(connectionId);
     },
 

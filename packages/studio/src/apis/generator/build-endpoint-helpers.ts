@@ -8,6 +8,11 @@ import type { GeneratorSettings } from "./types";
 export interface EndpointChain {
   /** Where the endpoint is: `endpoint.get(":id")`. */
   address: string;
+  /**
+   * The closure placing the variables on the wire, for an endpoint its verb
+   * cannot address alone; it replaces the address.
+   */
+  closure: string | null;
   /** The schema validating the variables, when there is one. */
   variablesSchema: string | null;
   /** The type of the variables, for a chain without a schema for them. */
@@ -30,12 +35,13 @@ export interface EndpointChain {
  * @returns The chain as source text
  * @example
  * ```ts
- * buildEndpointChain({ address: 'endpoint.get("")', variablesSchema: null, variablesType: null, responseSchema: "PetSchema", responseType: "unknown" });
+ * buildEndpointChain({ address: 'endpoint.get("")', closure: null, variablesSchema: null, variablesType: null, responseSchema: "PetSchema", responseType: "unknown" });
  * // 'endpoint.get("").response(PetSchema)'
  * ```
  */
 export function buildEndpointChain(chain: EndpointChain): string {
-  let text = chain.address;
+  /* A closure is written against its variables, so they come before it. */
+  let text = chain.closure ? "endpoint" : chain.address;
 
   /* A schema is preferred wherever there is one: it carries the type and
      validates the call, where a type argument only carries the type. */
@@ -44,6 +50,7 @@ export function buildEndpointChain(chain: EndpointChain): string {
   } else if (chain.variablesType && chain.variablesType !== "undefined") {
     text += `.variables<${chain.variablesType}>()`;
   }
+  if (chain.closure) text += `.via(${chain.closure})`;
 
   if (chain.responseSchema) {
     text += `.response(${chain.responseSchema})`;

@@ -1,4 +1,7 @@
+import type { AnyDefinedApi } from "@noverax/courier/define";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+
+import { prop } from "../auto/schema-introspect/prop";
 
 /** Symbol used by Courier core to attach schema metadata to endpoints */
 const ENDPOINT_SCHEMA = Symbol.for("courier.endpoint.schema");
@@ -70,61 +73,82 @@ export function getEndpointSchema(endpoint: unknown): SchemaMetadata | undefined
 }
 
 /**
- * Validate all endpoints in a source against their schemas.
- * Returns results for each endpoint.
+ * Validate mock data for every endpoint of a source against its schemas.
+ *
+ * Walks the groups of a `defineApi` result and its top-level endpoints. Mock
+ * data is keyed `"group/method"` for a grouped endpoint and by its name
+ * alone for a top-level one. Every endpoint is reported once per direction:
+ * one without a schema or without mock data is reported as skipped rather
+ * than left out, so a report never reads as though it covered more than it did.
+ *
+ * @param source   The API definition — grouped, flat or mixed
+ * @param mockData The data each endpoint's mock answers, by key
+ * @param options  Which direction to validate (default: `"response"`)
+ * @returns One result per endpoint and direction, groups first
+ * @example
+ * ```ts
+ * const results = await validateSource(api, new Map([["users/getAll", mockUsers]]));
+ * createContractReport(results).failed; // 0 when every mock matches its schema
+ * ```
  */
 export async function validateSource(
-  source: Record<string, Record<string, unknown>>,
+  source: AnyDefinedApi,
   mockData: Map<string, unknown>,
   options?: ValidateOptions,
 ): Promise<ContractResult[]> {
   const direction = options?.direction ?? "response";
   const results: ContractResult[] = [];
-
-  for (const [groupName, group] of Object.entries(source)) {
-    if (groupName === "options") continue;
-
-    for (const [methodName, endpointFn] of Object.entries(group)) {
-      if (methodName === "options") continue;
-
-      const schema = getEndpointSchema(endpointFn);
-      const key = `${groupName}/${methodName}`;
-      const data = mockData.get(key);
-
-      if (!schema) {
-        /* Not an endpoint — a helper a user put in the group alongside them. */
-        continue;
-      }
-
-      /* Every endpoint reports once per requested direction. An endpoint that
-         cannot be checked is reported as skipped rather than omitted, so the
-         report never reads as though it covered more than it did. */
-      if (direction === "response" || direction === "both") {
-        if (schema.response && data !== undefined) {
-          const result = await validateEndpoint(schema.response, data, "response");
-          results.push({ ...result, group: groupName, method: methodName });
-        } else {
-          results.push({
-            group: groupName,
-            method: methodName,
-            status: "skip",
-            target: "response",
-          });
-        }
-      }
-
-      if (direction === "variables" || direction === "both") {
-        results.push({
-          group: groupName,
-          method: methodName,
-          status: "skip",
-          target: "variables",
-        });
-      }
+  for (const { group, method, schema } of endpointsOf(source)) {
+    const data = mockData.get(group ? `${group}/${method}` : method);
+    if (direction === "response" || direction === "both") {
+      results.push(await checkResponse(group, method, schema, data));
+    }
+    if (direction === "variables" || direction === "both") {
+      results.push({ group, method, status: "skip", target: "variables" });
     }
   }
-
   return results;
+}
+
+interface SourceEndpoint {
+  group: string;
+  method: string;
+  schema: SchemaMetadata;
+}
+
+/* An entry without schema metadata is not an endpoint — a helper a user
+   put beside them — and is left out. */
+function* endpointsOf(source: AnyDefinedApi): Generator<SourceEndpoint> {
+  const groups = prop(source, "options", "groups");
+  for (const [group, members] of Object.entries(isObject(groups) ? groups : {})) {
+    if (isObject(members)) yield* endpointsIn(group, members);
+  }
+  yield* endpointsIn("", source);
+}
+
+function isObject(value: unknown): value is object {
+  return typeof value === "object" && value !== null;
+}
+
+function* endpointsIn(group: string, members: object): Generator<SourceEndpoint> {
+  for (const [method, member] of Object.entries(members)) {
+    if (method === "options") continue;
+    const schema = getEndpointSchema(member);
+    if (schema) yield { group, method, schema };
+  }
+}
+
+async function checkResponse(
+  group: string,
+  method: string,
+  schema: SchemaMetadata,
+  data: unknown,
+): Promise<ContractResult> {
+  if (!schema.response || data === undefined) {
+    return { group, method, status: "skip", target: "response" };
+  }
+  const result = await validateEndpoint(schema.response, data, "response");
+  return { ...result, group, method };
 }
 
 function formatPath(

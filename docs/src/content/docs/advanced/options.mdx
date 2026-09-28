@@ -25,7 +25,12 @@ type BaseOptions = {
   timeout?: number                               // Request timeout in ms
   headers?: HeadersInit                          // Static headers for all requests
   credentials?: RequestCredentials               // Cookie handling mode
-  middleware?: MiddlewareFn[]                    // Middleware chain
+  middleware?: Middleware[]                      // Middleware chain
+
+  // Proxy
+  expose?: boolean                               // Whether the browser may call this source through the proxy
+  boundary?: ProxyBoundary                       // The endpoints a browser may call, from defineBoundary
+  proxyPath?: ProxyPath                          // Where the app serves its proxy routes
 
   // All other fetch options (cache, mode, redirect, signal, etc.)
 }

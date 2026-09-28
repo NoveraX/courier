@@ -207,7 +207,10 @@ type BaseOptions = MergeOptions & FetchOptions & {
   bodySerializer?: (data: Record<string, unknown>) => BodyInit
   searchParamsSerializer?: SearchParamsSerializer
   deduplicate?: boolean
-  middleware?: MiddlewareFn[]
+  middleware?: Middleware[]
+  expose?: boolean
+  boundary?: ProxyBoundary
+  proxyPath?: ProxyPath
 }
 ```
 
@@ -255,11 +258,16 @@ type PathOptions = (request?: Request) =>
 
 ## Middleware Types
 
-### MiddlewareFn
+### Middleware
 
 ```ts
-type MiddlewareFn = (ctx: MiddlewareContext, next: NextFn) => Promise<MiddlewareResponse>
+type Middleware =
+  | { name: string; phase: "before"; handler: BeforeHandler }
+  | { name: string; phase: "after"; handler: AfterHandler }
+  | { name: string; phase: "wrap"; handler: WrapHandler }
 ```
+
+`defineMiddleware(name, phase, handler)` builds one — see [Middleware](/docs/middleware/overview).
 
 ### MiddlewareContext
 

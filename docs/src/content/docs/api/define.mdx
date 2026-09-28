@@ -33,7 +33,7 @@ type BaseOptions = {
   bodySerializer?: (data: Record<string, unknown>) => BodyInit
   searchParamsSerializer?: SearchParamsSerializer
   deduplicate?: boolean
-  middleware?: MiddlewareFn[]
+  middleware?: Middleware[]
   pathOptions?: PathOptions
   timeout?: number
   headers?: HeadersInit

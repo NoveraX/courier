@@ -53,7 +53,9 @@ export function subscribeSSE<TData = unknown>(
       return iter;
     },
     close() {
-      controller.abort();
+      /* Closed, the stream hands over nothing more: events it had buffered
+         reached the reader after close(), into a state that had moved on. */
+      void iter.return?.();
     },
     get status() {
       return state.current;

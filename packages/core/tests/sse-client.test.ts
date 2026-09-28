@@ -115,6 +115,17 @@ describe("subscribeSSE", () => {
     expect(sub.status).toBe("disconnected");
   });
 
+  it("hands over nothing it had buffered once closed", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockSSEResponse("data: 1\n\ndata: 2\n\ndata: 3\n\n")));
+    const sub = subscribeSSE<number>("/sse", { maxAttempts: 1 });
+    /* Nothing reads yet, so the three events wait in the buffer. */
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    sub.close();
+
+    expect(await drain(sub)).toEqual([]);
+  });
+
   it("does not reconnect on 401, and rejects with an AuthError", async () => {
     const fetchMock = vi.fn().mockResolvedValue(mockSSEResponse("", 401));
     vi.stubGlobal("fetch", fetchMock);

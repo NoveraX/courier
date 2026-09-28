@@ -80,13 +80,13 @@ export function createActions(set: StudioSet, get: StudioGet): Omit<StudioState,
       saveSettings(next)
       if (patch.theme) applyTheme(patch.theme)
       if (patch.density) applyDensity(patch.density)
-      set({ settings: next })
+      set({ settings: next, theme: next.theme })
     },
     resetSettings: () => {
       saveSettings(DEFAULT_SETTINGS)
       applyTheme(DEFAULT_SETTINGS.theme)
       applyDensity(DEFAULT_SETTINGS.density)
-      set({ settings: DEFAULT_SETTINGS })
+      set({ settings: DEFAULT_SETTINGS, theme: DEFAULT_SETTINGS.theme })
     },
   }
 }

@@ -31,7 +31,7 @@ type GroupOptions = {
 
 - `prefix` — URL path segment prepended to all endpoint URLs in this group.
 - `pathOptions` — async function that returns dynamic key-value pairs (headers, cookies) to inject per request.
-- `endpoints` — record of typed endpoint functions. Any name but `options`, which holds the group's own settings; an endpoint of that name is a type error and throws `ConfigurationError("RESERVED_ENDPOINT_NAME")`. The same holds for the endpoints given to `defineApi`. A path called `options` is fine: name the endpoint `getOptions`.
+- `endpoints` — record of typed endpoint functions. Any name but `options`, which holds the group's own settings, and `raw` or `with`, which every client answers with its own `.raw` and `.with()`; an endpoint of one of those names is a type error and throws `ConfigurationError("RESERVED_ENDPOINT_NAME")`. The same holds for the endpoints given to `defineApi`, whose groups cannot be named `raw` or `with` either. A path called `options` or `raw` is fine: name the endpoint `getOptions` or `getRaw`. See [Reserved names](/docs/core-concepts/defining-apis#reserved-names).
 
 ## Basic Usage
 

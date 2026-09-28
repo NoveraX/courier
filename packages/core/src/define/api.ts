@@ -1,6 +1,6 @@
 import type { BaseOptions } from "../http-client/types";
 import { studioHooks } from "../studio";
-import { assertNoReservedName } from "./assert-no-reserved-name";
+import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
 import type {
   DefinedApi,
   DefinedFlatApi,
@@ -8,6 +8,7 @@ import type {
   EndpointRecord,
   GroupRecord,
   OwnEndpoints,
+  OwnGroups,
 } from "./types";
 
 /** Symbol for storing source name on the source object — survives module duplication */
@@ -53,6 +54,9 @@ export function setSourceName(source: unknown, name: string): void {
 /**
  * Define an API source with groups of typed endpoints.
  *
+ * @throws ConfigurationError `RESERVED_ENDPOINT_NAME` for a flat endpoint
+ *   named `options`, `raw` or `with`, or a group named `raw` or `with`
+ *
  * @example
  * const api = courier({ baseURL: "https://api.example.com" })
  *
@@ -93,7 +97,7 @@ export function setSourceName(source: unknown, name: string): void {
  *   groups: { chat: chatGroup },
  * })
  */
-export function defineApi<TGroups extends GroupRecord, TEndpoints extends OwnEndpoints>(
+export function defineApi<TGroups extends OwnGroups, TEndpoints extends OwnEndpoints>(
   config: BaseOptions & {
     /**
      * The identifier the proxy addresses this source by — `?_s=<name>`.
@@ -112,7 +116,7 @@ export function defineApi<TGroups extends GroupRecord, TEndpoints extends OwnEnd
   },
 ): DefinedMixedApi<TGroups, TEndpoints>;
 
-export function defineApi<TGroups extends GroupRecord>(
+export function defineApi<TGroups extends OwnGroups>(
   config: BaseOptions & {
     /**
      * The identifier the proxy addresses this source by — `?_s=<name>`.
@@ -151,6 +155,7 @@ export function defineApi(
 ): DefinedApi | DefinedFlatApi | DefinedMixedApi {
   const { endpoints, name, ...rest } = config;
   if (endpoints) assertNoReservedName(endpoints, "source");
+  if (rest.groups) assertNoReservedGroupName(rest.groups);
   const result = endpoints
     ? Object.assign({ options: rest }, endpoints)
     : ({ options: rest } as DefinedApi);

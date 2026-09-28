@@ -1,7 +1,6 @@
 import { mergeCallOptions } from "./merge-call-options";
 import {
   type Callable,
-  calledAs,
   FUNCTION_MEMBERS,
   listing,
   memo,
@@ -16,10 +15,11 @@ import type { ExecuteBackend } from "./types";
  * `client.method(vars)` -> flat call; `client.group.method(vars)` -> group call.
  *
  * A method the source declares is reached by its name even when the name is
- * also an accessor or a runtime hook. `bind`, `call`, `apply` and `toString`
- * otherwise belong to the function; read as methods, they started a request.
- * Without a source, a method with one of those names is reached through a
- * client given the source or the boundary.
+ * also a runtime hook. `bind`, `call`, `apply` and `toString` otherwise
+ * belong to the function; read as methods, they started a request. Without
+ * a source, a method with one of those names is reached through a client
+ * given the source or the boundary. `raw` and `with` are always the
+ * accessors: a source cannot declare a method of either name.
  */
 export function createDualProxy(
   backend: ExecuteBackend,
@@ -34,19 +34,16 @@ export function createDualProxy(
   const accessorMemo = memo<Callable>();
   const method = (prop: string) =>
     methodMemo(prop, () => (variables?: unknown) => backend(name, prop, variables, options, raw));
-  const rawSelf = () =>
-    accessorMemo("raw", () => createDualProxy(backend, name, options, true, shape));
   let withFn: WithFn<Callable> | undefined;
 
   return new Proxy<Callable>(callFlat, {
     get(target, prop) {
       if (typeof prop === "symbol") return undefined;
-      if (methods?.has(prop)) {
-        if (prop !== "raw" || raw) return method(prop);
-        return accessorMemo("raw method", () => calledAs(method(prop), rawSelf));
-      }
+      if (methods?.has(prop)) return method(prop);
       if (RUNTIME_HOOKS.has(prop)) return undefined;
-      if (prop === "raw") return rawSelf();
+      if (prop === "raw") {
+        return accessorMemo("raw", () => createDualProxy(backend, name, options, true, shape));
+      }
       if (prop === "with") {
         withFn ??= (next) =>
           createDualProxy(backend, name, mergeCallOptions(options, next), raw, shape);

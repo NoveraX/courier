@@ -96,7 +96,9 @@ export type ConfigurationErrorCode =
   | "CACHE_ON_WRITE"
   /**
    * An endpoint was named `options` in a group or among a source's own
-   * endpoints, where that name holds the group's or the source's settings.
+   * endpoints, where that name holds the group's or the source's settings;
+   * or an endpoint or a group was named `raw` or `with`, which a client
+   * answers with its own accessors.
    */
   | "RESERVED_ENDPOINT_NAME"
   /**

@@ -8,10 +8,20 @@ export type AnyEndpointFn = AnyEndpoint;
 export type EndpointRecord = Record<string, AnyEndpointFn>;
 
 /**
- * Endpoints a group or a source may be defined with: any name but `options`,
- * which holds the group's or the source's own settings beside them.
+ * Names a client answers to itself — its `.raw` and `.with()` accessors —
+ * so no group or endpoint may take them.
  */
-export type OwnEndpoints = EndpointRecord & { readonly options?: never };
+type ClientAccessorNames = { readonly raw?: never; readonly with?: never };
+
+/**
+ * Endpoints a group or a source may be defined with: any name but `options`,
+ * which holds the group's or the source's own settings beside them, and
+ * `raw` or `with`, which a client answers itself.
+ */
+export type OwnEndpoints = EndpointRecord & { readonly options?: never } & ClientAccessorNames;
+
+/** Groups a source may be defined with: any name but `raw` or `with`, which a client answers itself. */
+export type OwnGroups = GroupRecord & ClientAccessorNames;
 
 /** Configuration for defineGroup() */
 export type DefineGroupConfig<TEndpoints extends EndpointRecord> = GroupOptions & {

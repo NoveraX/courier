@@ -14,7 +14,7 @@ export const NUXT: FrameworkConfig = {
   name: "Nuxt",
   description: "Vue meta-framework with SSR",
   steps: [
-    installStep("@noverax/courier-studio @noverax/courier-studio-core"),
+    installStep({ withRuntime: true }),
     {
       id: "instrument-client",
       title: "Add Nuxt module",

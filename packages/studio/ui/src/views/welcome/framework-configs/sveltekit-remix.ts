@@ -15,7 +15,7 @@ export const SVELTEKIT: FrameworkConfig = {
   name: "SvelteKit",
   description: "Svelte meta-framework with SSR",
   steps: [
-    installStep("@noverax/courier-studio @noverax/courier-studio-core"),
+    installStep({ withRuntime: true }),
     {
       id: "instrument-client",
       title: "Add Vite plugin",
@@ -56,7 +56,7 @@ export const REMIX: FrameworkConfig = {
   name: "Remix",
   description: "React Router (Remix) with Vite",
   steps: [
-    installStep("@noverax/courier-studio @noverax/courier-studio-core"),
+    installStep({ withRuntime: true }),
     {
       id: "instrument-client",
       title: "Add Vite plugin",

@@ -52,8 +52,13 @@ from `courier.config.ts`, and every framework's instrumentation snippet imports
 it directly — so it is a dependency of your app, not only of the dev server:
 
 ```bash
-npm install --save-dev @noverax/courier-studio @noverax/courier-studio-core
+npm install @noverax/courier-studio-core
+npm install --save-dev @noverax/courier-studio
 ```
+
+A production install leaves dev dependencies out, so a server that imports the
+runtime would not start if it were one — even a server that calls it only in
+development. Studio itself is a development tool and stays a dev dependency.
 
 `@noverax/courier-studio-core/runtime` brings its own socket client and loads
 it only outside production, so the connection to the Studio dev server costs a

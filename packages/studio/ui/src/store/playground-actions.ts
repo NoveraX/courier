@@ -59,7 +59,9 @@ export function createPlaygroundActions(set: StudioSet): PlaygroundActions {
           const next: PlaygroundHistoryEntry = { ...entry, chunks: nextChunks };
           if (chunk.kind === "http-result") {
             next.statusCode = chunk.status;
-            next.response = chunk.error ?? chunk.data;
+            // An error answer's body says more than the message lifted from it.
+            next.response = chunk.data !== undefined ? chunk.data : chunk.error;
+            if (chunk.headers) next.responseHeaders = chunk.headers;
           } else if (entry.streamStatus === "connecting") {
             next.streamStatus = "streaming";
           }

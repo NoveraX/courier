@@ -105,13 +105,22 @@ export interface BindingErrorPayload {
 
 /**
  * Accumulated chunk payload for a playground entry. The shape mirrors
- * `packages/studio-core/src/runtime/responder-dispatch.ts` which emits one
+ * `packages/studio-core/src/runtime/dispatch-http.ts` and
+ * `responder-dispatch.ts` beside it, which emit one
  * of three kinds depending on transport: single `http-result` for HTTP
  * one-shot, repeated `sse-event` for SSE streams, repeated `ws-message`
  * for WS bidirectional channels.
  */
 export type PlaygroundChunk =
-  | { kind: "http-result"; data?: unknown; status: number; error?: string }
+  | {
+      kind: "http-result"
+      data?: unknown
+      status: number
+      /** What went wrong, when the call failed; the answer's body stays in `data`. */
+      error?: string
+      /** The answer's response headers. */
+      headers?: Record<string, string>
+    }
   | { kind: "sse-event"; event: unknown }
   | { kind: "ws-message"; data: unknown }
 

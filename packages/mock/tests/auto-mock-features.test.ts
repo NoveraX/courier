@@ -31,7 +31,6 @@ describe("withLatency profiles", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 2 },
     overrides: (mock) => {
       mock("items", "get").withLatency({ min: 80, max: 120, jitter: 10 });
@@ -58,7 +57,6 @@ describe("sequence with status objects", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 0 },
     overrides: (mock) => {
       mock("items", "get").sequence([
@@ -92,7 +90,6 @@ describe("built-in preset scenarios", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 5 },
   });
 
@@ -141,7 +138,6 @@ describe("REST route /api/:group/:method", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 3 },
   });
 
@@ -175,7 +171,6 @@ describe("dynamic mock registration after start", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 3 },
   });
 
@@ -203,7 +198,6 @@ describe("admin API (/__admin/)", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     admin: true,
     seed: { count: 3 },
     scenarios: {
@@ -291,7 +285,6 @@ describe("CORS headers", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     cors: true,
     seed: { count: 1 },
   });
@@ -321,7 +314,6 @@ describe("network global latency", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 1 },
     network: { latency: { min: 50, max: 80 } },
   });
@@ -343,7 +335,6 @@ describe("network errorRate 100%", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 1 },
     network: { errorRate: 1.0 },
   });
@@ -366,7 +357,6 @@ describe("DELETE /prefix (deleteAll)", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 5 },
   });
 
@@ -410,7 +400,6 @@ describe("top-level endpoints (no group)", () => {
     source: flatApi,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 5 },
   });
 
@@ -459,7 +448,6 @@ describe("mixed groups + top-level endpoints", () => {
     source: mixedApi,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 3 },
   });
 

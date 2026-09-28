@@ -122,7 +122,6 @@ describe("a typed client reads the auto mock", () => {
       source: usersApi("http://placeholder.invalid"),
       port: 0,
       log: false,
-      studio: false,
       seed: { count: 6 },
     });
     running.push(server);

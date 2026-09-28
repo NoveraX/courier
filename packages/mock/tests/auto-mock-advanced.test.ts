@@ -31,7 +31,6 @@ describe(".times(n)", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 3 },
     overrides: (mock) => {
       mock("items", "list").resolves([{ id: "t", name: "Limited", price: 0 }]).times(2);
@@ -63,7 +62,6 @@ describe(".delay(ms)", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 2 },
     overrides: (mock) => {
       mock("items", "list").delay(100);
@@ -90,7 +88,6 @@ describe("multiple .once() stacking", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 3 },
     overrides: (mock) => {
       // Bottom of stack
@@ -123,7 +120,6 @@ describe("callIndex tracking", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 0 },
     overrides: (mock) => {
       mock("items", "list").returns((ctx) => [
@@ -155,7 +151,6 @@ describe("error handling in returns()", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 1 },
     overrides: (mock) => {
       mock("items", "get").returns(() => {
@@ -183,7 +178,6 @@ describe("proxy route (POST /api/request)", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 5 },
   });
 
@@ -230,7 +224,6 @@ describe("request history", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 2 },
   });
 
@@ -261,7 +254,6 @@ describe("store direct access", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 3 },
   });
 
@@ -298,7 +290,6 @@ describe("scenario switching", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 5 },
     scenarios: {
       empty: {
@@ -355,7 +346,6 @@ describe("withHeaders merge", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 1 },
     overrides: (mock) => {
       mock("items", "list")

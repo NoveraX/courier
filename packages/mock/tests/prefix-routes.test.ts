@@ -23,7 +23,6 @@ describe("prefix routes (GET /products)", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
   });
 
   let baseUrl: string;

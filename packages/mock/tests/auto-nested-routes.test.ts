@@ -50,7 +50,6 @@ async function serve(): Promise<string> {
     source: usersApi("http://placeholder.invalid"),
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 4 },
   });
   running.push(server);

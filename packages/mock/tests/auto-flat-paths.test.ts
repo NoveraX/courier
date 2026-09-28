@@ -46,7 +46,6 @@ describe("a top-level endpoint with a leading slash", () => {
       source: shopApi("http://placeholder.invalid"),
       port: 0,
       log: false,
-      studio: false,
       seed: { count: 3 },
     });
     running.push(server);

@@ -52,7 +52,6 @@ async function serve(overrides?: AutoMockServerConfig["overrides"]): Promise<str
     source: shopApi("http://placeholder.invalid"),
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 3 },
     ...(overrides && { overrides }),
   });

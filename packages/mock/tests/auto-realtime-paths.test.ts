@@ -45,7 +45,6 @@ async function serve(): Promise<string> {
     source: liveApi("http://placeholder.invalid"),
     port: 0,
     log: false,
-    studio: false,
     overrides: (mock) => {
       mock("live", "ticker").emits([{ data: { n: 1 } }, { data: { n: 2 } }]);
       mock("live", "events").stream(async function* (ctx) {

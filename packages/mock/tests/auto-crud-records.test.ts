@@ -29,7 +29,6 @@ async function serve(
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 3 },
     ...(overrides && { overrides }),
   });

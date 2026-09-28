@@ -49,7 +49,6 @@ async function serve() {
     source: petsApi("http://placeholder.invalid"),
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 4 },
   });
   running.push(server);

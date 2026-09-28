@@ -80,12 +80,15 @@ export async function readProxyAnswer(
  * Offline, a server that is not up, a DNS failure — the commonest failure a
  * browser sees — used to escape as a bare TypeError that `isHTTPError`
  * rejects and `onError` never saw. It is an HTTPError with status 0 and the
- * original as its cause, as in direct mode. A cancellation stays as it was.
+ * original as its cause, as in direct mode. A cancellation stays as it was,
+ * whatever reason the caller gave for it.
  *
  * @param error - Whatever the request rejected with
+ * @param signal - The call's signal, whose reason a cancellation rejects with
  * @returns The error to reject the call with
  */
-export function asProxyFailure(error: unknown): unknown {
+export function asProxyFailure(error: unknown, signal?: AbortSignal | null): unknown {
+  if (signal?.aborted && error === signal.reason) return error;
   if (error instanceof HTTPError || isAbortError(error) || !(error instanceof Error)) return error;
   return new HTTPError(
     { status: 0, headers: new Headers(), data: { success: false, message: error.message } },

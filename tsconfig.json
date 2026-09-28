@@ -4,9 +4,15 @@
   "compilerOptions": {
     "paths": {
       "@noverax/courier": ["./packages/core/src/index.ts"],
+      "@noverax/courier/announce": ["./packages/core/src/announce/index.ts"],
+      "@noverax/courier/config": ["./packages/core/src/config/index.ts"],
       "@noverax/courier/define": ["./packages/core/src/define/index.ts"],
-      "@noverax/courier/direct": ["./packages/core/src/direct/index.ts"],
+      "@noverax/courier/fetch": ["./packages/core/src/fetch/index.ts"],
+      "@noverax/courier/internal-streams": ["./packages/core/src/internal-streams/index.ts"],
       "@noverax/courier/middleware": ["./packages/core/src/middleware/index.ts"],
+      "@noverax/courier/node": ["./packages/core/src/node.ts"],
+      "@noverax/courier/realtime": ["./packages/core/src/realtime/index.ts"],
+      "@noverax/courier/testing": ["./packages/core/src/testing/index.ts"],
       "@/*": ["./packages/studio/ui/src/*"]
     }
   }

@@ -31,9 +31,10 @@ npx turbo run typecheck --filter=@noverax/courier-studio-ui
 npm run check:any
 npm test
 npm run check:exports
+npm run check:docs
 ```
 
-Two of them are easy to skip by accident and worth understanding:
+Three of them are easy to skip by accident and worth understanding:
 
 - `npx tsc --noEmit` typechecks the **whole workspace as one program**, tests
   included. A per-package `typecheck` can pass while this fails, because the
@@ -41,6 +42,10 @@ Two of them are easy to skip by accident and worth understanding:
   never loads.
 - `npm run check:exports` is the only check that reads the declarations the
   packages actually publish. Everything else resolves siblings through source.
+- `npm run check:docs` compiles every TypeScript sample of the docs and the
+  READMEs against the built packages. A sample may leave out the reader's own
+  code; what it takes from the packages has to compile, so a changed
+  signature fails here until the pages that show it change too.
 
 ## Working in the code
 

@@ -187,6 +187,21 @@ formData.append("name", "profile-pic")
 
 The meta fields always come first, so a field of your own may share one of their names. A form that sends `_method=PUT`, as Laravel and Rails forms do, reaches your backend with that field intact.
 
+## Binary data outside FormData <ModeBadge mode="proxy" />
+
+Variables other than a `FormData` travel to the proxy as JSON, which has no binary type: a `Blob`, `File`, `ArrayBuffer`, typed array or `ReadableStream` would arrive as `{}`. A proxy call whose variables hold one anywhere is therefore refused before it is sent, with a `ConfigurationError` whose `code` is `PROXY_VARIABLE_NOT_SERIALIZABLE` and whose message names the value. Send the file inside a `FormData`; a direct call from the server carries any body as it is.
+
+```typescript
+// Refused in proxy mode: the Blob would reach the server as {}
+await caller.files.upload({ body: blob })
+// ConfigurationError: [courier] variables.body is binary data, ...
+
+// Reaches the server intact
+const formData = new FormData()
+formData.append("file", blob, "report.pdf")
+await caller.files.upload(formData)
+```
+
 ## Empty file handling
 
 An optional `<input type="file">` left blank still submits a file: one with no name and no bytes. Courier leaves that placeholder out of the form it sends, so the backend does not receive an upload nobody chose. A file that has a name is sent even when it is empty — a `.gitkeep` or an empty log is a real file. Your own `FormData` is not edited; the placeholder is dropped from the copy that is sent.

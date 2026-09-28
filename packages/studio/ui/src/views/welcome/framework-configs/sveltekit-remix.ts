@@ -39,10 +39,10 @@ export default defineConfig({
       actionLabel: "Copy snippet",
       filePath: "src/hooks.server.ts",
       lang: "ts",
-      code: `import { attachRuntime } from "@noverax/courier-studio-core/runtime";
-import { dev } from "$app/environment";
+      code: `import { dev } from "$app/environment";
 
 if (dev) {
+  const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
   await attachRuntime();
 }`,
     },
@@ -81,9 +81,8 @@ export default defineConfig({
       actionLabel: "Copy snippet",
       filePath: "app/entry.server.tsx",
       lang: "ts",
-      code: `import { attachRuntime } from "@noverax/courier-studio-core/runtime";
-
-if (process.env.NODE_ENV === "development") {
+      code: `if (import.meta.env.DEV) {
+  const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
   await attachRuntime();
 }`,
     },

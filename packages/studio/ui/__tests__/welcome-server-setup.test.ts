@@ -7,13 +7,18 @@
  * snippets imported it, so a production install, which leaves dev
  * dependencies out, could not start: React Router's server stopped at
  * "Cannot find package '@noverax/courier-studio-core'".
+ *
+ * The snippets that connect only in development imported the runtime at the
+ * top of the file, which a production build keeps: Nuxt copied the runtime,
+ * the Socket.IO client and a TypeScript loader into `.output` for a plugin
+ * that never runs there.
  */
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build, type Rollup } from "vite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { FrameworkConfig } from "../src/views/welcome/frameworks-types";
 
@@ -37,6 +42,7 @@ if (typeof server.default === "function") await server.default({});
 const cleanups: Array<() => void> = [];
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   for (const cleanup of cleanups.splice(0)) cleanup();
 });
 
@@ -67,6 +73,8 @@ function productionPackages(framework: FrameworkConfig): string[] {
 async function buildForProduction(code: string): Promise<string> {
   const root = temporaryDirectory();
   writeFileSync(join(root, "server.ts"), code);
+  /* As `vite build` sets it; Vite keeps the test runner's value otherwise. */
+  vi.stubEnv("NODE_ENV", "production");
   const result = await build({
     root,
     configFile: false,
@@ -112,6 +120,10 @@ const WITH_SERVER_STEP = FRAMEWORKS.filter((framework) =>
   framework.steps.some((step) => step.id === "instrument-server"),
 ).map((framework) => [framework.name, framework] as const);
 
+/* Next.js's guide attaches in production too, where the runtime registers the
+   config's sources; every other guide attaches in development only. */
+const DEVELOPMENT_ONLY = WITH_SERVER_STEP.filter(([, framework]) => framework.id !== "nextjs");
+
 describe("the welcome page's server setup", () => {
   it.each(WITH_SERVER_STEP)(
     "%s starts in production with only the dependencies its guide installs",
@@ -122,6 +134,15 @@ describe("the welcome page's server setup", () => {
 
       expect(result.stderr).not.toMatch(/Cannot find (package|module)/);
       expect(result.status).toBe(0);
+    },
+  );
+
+  it.each(DEVELOPMENT_ONLY)(
+    "%s leaves Studio out of the production server build",
+    async (_name, framework) => {
+      const server = await buildForProduction(serverSnippet(framework));
+
+      expect(server).not.toContain("@noverax/courier-studio-core");
     },
   );
 });

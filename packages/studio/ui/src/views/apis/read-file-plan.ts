@@ -8,7 +8,7 @@ const OWNERSHIPS = [
   "absent", "recorded", "recorded-edited", "claimed", "claimed-edited", "foreign", "link", "not-a-file",
 ] as const satisfies readonly FileOwnership[];
 const ACTIONS = ["create", "replace", "merge", "unchanged"] as const satisfies readonly PlannedWriteAction[];
-const KEPT = ["not-written-by-studio", "link", "not-a-file", "unconfirmed"] as const satisfies readonly KeptReason[];
+const KEPT = ["not-written-by-studio", "link", "not-a-file", "unconfirmed", "imported"] as const satisfies readonly KeptReason[];
 const KINDS = ["replace", "remove"] as const;
 const REASONS = ["edited", "claimed", "foreign"] as const;
 const BLOCKED = ["link", "not-a-file"] as const;

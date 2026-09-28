@@ -31,6 +31,7 @@ export const KEPT_LABEL: Readonly<Record<KeptReason, string>> = {
   link: "a link, which Studio never writes through",
   "not-a-file": "not a file",
   unconfirmed: "not allowed",
+  imported: "a file that stays imports it",
 };
 
 /**

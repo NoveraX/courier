@@ -71,8 +71,17 @@ export interface PlannedRemoval {
   priorSha256: string;
 }
 
-/** Why a file the operation touched is left as it is. */
-export type KeptReason = "not-written-by-studio" | "link" | "not-a-file" | "unconfirmed";
+/**
+ * Why a file the operation touched is left as it is: Studio did not write
+ * it, it is a link or not a file, the user did not allow its step, or a
+ * file that stays imports it.
+ */
+export type KeptReason =
+  | "not-written-by-studio"
+  | "link"
+  | "not-a-file"
+  | "unconfirmed"
+  | "imported";
 
 /** A step that only the user may allow. */
 export interface Confirmation {

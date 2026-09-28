@@ -13,7 +13,8 @@ export interface AppliedSpec {
  * Work out an import's record once a plan is applied: every file written,
  * with the hash of its body and its endpoints as generated; the files the
  * plan removed, forgot or found not to be Studio's gone from it; files the
- * user chose to keep as they are still recorded; files outside the
+ * user chose to keep as they are, and those kept because a file staying
+ * imports them, still recorded; files outside the
  * import's directory forgotten.
  *
  * @param previous - The import's record before the apply, if any
@@ -34,7 +35,7 @@ export function recordAfterApply(
   for (const path of applied.forgotten) files.delete(path);
   for (const removal of applied.removals) files.delete(removal.path);
   for (const kept of applied.kept) {
-    if (kept.reason !== "unconfirmed") files.delete(kept.path);
+    if (kept.reason !== "unconfirmed" && kept.reason !== "imported") files.delete(kept.path);
   }
   for (const write of applied.writes) {
     const endpoints = Object.keys(write.endpoints).length > 0 ? { endpoints: write.endpoints } : {};

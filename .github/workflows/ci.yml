@@ -61,6 +61,12 @@ jobs:
       - name: Typecheck Studio UI
         run: npx turbo run typecheck --filter=@noverax/courier-studio-ui
 
+      # Biome refuses an any written in the source; this finds the ones
+      # declarations hand it — JSON.parse, Reflect.get, a rejection reason —
+      # used unchecked.
+      - name: Check for values typed any
+        run: npm run check:any
+
       - name: Test
         run: npm test
 

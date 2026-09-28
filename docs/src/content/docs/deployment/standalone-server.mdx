@@ -110,7 +110,7 @@ const server = await createCourierServer({
   heartbeatIntervalMs: 25_000,       // ping interval (default: 25s)
   heartbeatTimeoutMs: 10_000,        // pong timeout (default: 10s)
   maxConnectionsPerIP: 50,           // per address; raise behind a shared NAT (default: 50)
-  maxSubscriptionsPerConnection: 100, // per connection (default: 100)
+  maxSubscriptionsPerConnection: 100, // per connection; subscribe, unsubscribe and auth frames at most 2× this a second (default: 100)
   maxMessageSize: 65_536,            // larger messages get a 4413 error, the socket stays open (default: 64KB)
   maxMessagesPerSecond: 100,         // per connection (default: 100)
   authorize: ({ meta, topic }) => canSubscribe(meta, topic),        // per subscription

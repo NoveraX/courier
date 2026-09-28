@@ -62,6 +62,8 @@ function createMockCtx(): WSSocketContext {
     maxMessageSize: 65536,
     maxMessagesPerSecond: 100,
     rateLimitBucket: { tokens: 100, lastRefillAt: Date.now() },
+    maxControlPerSecond: 200,
+    controlBucket: { tokens: 200, lastRefillAt: Date.now() },
     clientIP: "127.0.0.1",
   } as unknown as WSSocketContext;
 }

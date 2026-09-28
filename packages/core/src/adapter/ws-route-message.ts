@@ -8,6 +8,9 @@ import { handleTokenRefresh } from "./ws-token-refresh";
 
 const log = createLogger("WS");
 
+/* The frames that set a connection up: subscriptions and its credentials. */
+const CONTROL: ReadonlySet<WSMessage["type"]> = new Set(["subscribe", "unsubscribe", "auth"]);
+
 /** Logs a rejected handler for one message type, with the error it rejected with. */
 function dispatchFailed(type: string): (err: unknown) => void {
   return (err) => log.error(`WS "${type}" message could not be handled`, err);
@@ -42,11 +45,15 @@ export function routeMessage(
     return;
   }
 
-  // Control messages bypass rate limiting —
-  // dropping them would leak subscriptions, block cleanup, or stall auth.
-  // Each handler is async; a rejection (auth throw, schema crash, registry
-  // race) is logged with the error itself instead of becoming an
-  // unhandledRejection on the process.
+  // Control messages are counted apart from the rest, so chatty messages
+  // cannot hold back an unsubscribe or an auth refresh, yet a flood of them
+  // is refused. Each handler is async; a rejection (auth throw, schema
+  // crash, registry race) is logged with the error itself instead of
+  // becoming an unhandledRejection on the process.
+  if (CONTROL.has(msg.type) && !consumeToken(ctx.controlBucket, ctx.maxControlPerSecond)) {
+    refuse(ctx, msg);
+    return;
+  }
   switch (msg.type) {
     case "subscribe":
       void handleSubscribe(ctx, msg).catch(dispatchFailed("subscribe"));
@@ -62,16 +69,21 @@ export function routeMessage(
   }
 
   if (!consumeToken(ctx.rateLimitBucket, ctx.maxMessagesPerSecond)) {
-    ctx.sendMessage({
-      type: "error",
-      ...(msg.id !== undefined && { id: msg.id }),
-      ...(msg.topic !== undefined && { topic: msg.topic }),
-      error: { code: 4429, message: "Rate limited" },
-    });
+    refuse(ctx, msg);
     return;
   }
 
   if (msg.type === "message") {
     void handleMessage(ctx, msg).catch(dispatchFailed("message"));
   }
+}
+
+/* A refusal names the frame it answers, so the client fails that subscription or request. */
+function refuse(ctx: WSSocketContext, msg: WSMessage): void {
+  ctx.sendMessage({
+    type: "error",
+    ...(msg.id !== undefined && { id: msg.id }),
+    ...(msg.topic !== undefined && { topic: msg.topic }),
+    error: { code: 4429, message: "Rate limited" },
+  });
 }

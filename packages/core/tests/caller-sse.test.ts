@@ -36,6 +36,21 @@ describe("buildDirectSSEUrl", () => {
     expect(url).toBe("https://api.example.com/events/stream");
   });
 
+  it("joins a prefix that ends in a slash with one slash", () => {
+    expect(buildDirectSSEUrl("https://api.example.com", "/api/", "events")).toBe(
+      "https://api.example.com/api/events",
+    );
+    expect(buildDirectSSEUrl("https://api.example.com//", "events/", "/stream")).toBe(
+      "https://api.example.com/events/stream",
+    );
+  });
+
+  it("ends at the prefix for a stream at the group's root", () => {
+    expect(buildDirectSSEUrl("https://api.example.com", "events", "")).toBe(
+      "https://api.example.com/events",
+    );
+  });
+
   it("omits undefined and null variables", () => {
     const url = buildDirectSSEUrl("https://api.example.com", "events", "stream", {
       active: "true",

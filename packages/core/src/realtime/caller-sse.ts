@@ -3,6 +3,9 @@ import { encodeWireVariables, WIRE_VARIABLES_KEY } from "../utils/wire-variables
 import { subscribeSSE } from "./sse/sse-client";
 import type { SSESubscription } from "./types";
 
+const TRAILING_SLASHES = /\/+$/;
+const EDGE_SLASHES = /^\/+|\/+$/g;
+
 /** Build a direct SSE URL: baseURL/prefix/method?variables */
 export function buildDirectSSEUrl(
   baseURL: string,
@@ -10,9 +13,12 @@ export function buildDirectSSEUrl(
   method: string,
   variables?: Record<string, unknown>,
 ): string {
-  const base = baseURL.replace(/\/$/, "");
-  const groupPath = prefix ? `/${prefix.replace(/^\//, "")}` : "";
-  const path = `${base}${groupPath}/${method}`;
+  /* One slash between the parts, however each is written: a prefix "/api/"
+     and a path "events" join as "/api/events". */
+  const base = baseURL.replace(TRAILING_SLASHES, "");
+  const group = prefix.replace(EDGE_SLASHES, "");
+  const tail = method.replace(EDGE_SLASHES, "");
+  const path = `${base}${group ? `/${group}` : ""}${tail ? `/${tail}` : ""}`;
 
   return variables ? appendQuery(path, variables) : path;
 }

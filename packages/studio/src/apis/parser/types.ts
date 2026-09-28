@@ -184,6 +184,16 @@ export interface ParsedSchemaProperty {
   shape?: ParsedSchema;
   /** Value type of a map, from `additionalProperties`. */
   valueType?: ParsedSchema;
+  /**
+   * The one direction the property travels in, when the specification says:
+   * `read` for a readOnly field only the server sends, `write` for a
+   * writeOnly one only the client sends. `required` leaves such a field
+   * optional, since one schema serves both; `requiredInDirection` says
+   * whether it is required where it travels, for the request and answer
+   * types the schema is split into.
+   */
+  direction?: "read" | "write";
+  requiredInDirection?: boolean;
 }
 
 export type SpecFormat =

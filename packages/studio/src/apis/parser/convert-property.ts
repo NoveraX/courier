@@ -38,20 +38,23 @@ export function convertProperty(
   spec?: SpecNode,
 ): ParsedSchemaProperty {
   const { node, nullable } = withoutNull(normalizeTypeArray(raw));
+  const direction = directionOf(raw) ?? directionOf(node);
   /* One type serves the request and the answer. A readOnly property is
      produced by the server: demanded, a request body could not be built. A
      writeOnly one is sent by the client and never answered: demanded, every
-     answer was refused for lacking it. Optional, either may still be there. */
+     answer was refused for lacking it. Optional, either may still be there;
+     the direction is kept for the request and answer types split from it. */
   const base = {
-    required: required && !directed(raw) && !directed(node),
+    required: required && direction === undefined,
     description: textAt(raw, "description") ?? textAt(node, "description"),
     nullable: nullable || undefined,
+    ...(direction && { direction, requiredInDirection: required }),
   };
 
   const ref = textAt(node, "$ref");
   const component = ref !== undefined ? componentSchemaName(ref) : undefined;
   if (ref !== undefined && component === undefined) {
-    return pointedProperty(name, ref, raw, base, spec);
+    return pointedProperty(name, ref, raw, base, required, spec);
   }
   if (isComposite(node)) {
     const shape = convertSchema(`${name}Value`, node, spec);
@@ -65,7 +68,8 @@ export function convertProperty(
       description: base.description,
       nullable: nullable || member.nullable,
     };
-    return convertProperty(name, inner, base.required, spec);
+    const converted = convertProperty(name, inner, required, spec);
+    return direction ? { ...converted, ...directed(direction, required) } : converted;
   }
 
   const constant = node.const === undefined ? undefined : [node.const];
@@ -95,6 +99,7 @@ function pointedProperty(
   ref: string,
   raw: SpecNode,
   base: Pick<ParsedSchemaProperty, "required" | "description" | "nullable">,
+  required: boolean,
   spec: SpecNode | undefined,
 ): ParsedSchemaProperty {
   return expandPointer(
@@ -110,7 +115,7 @@ function pointedProperty(
           ...(raw.readOnly === true && { readOnly: true }),
           ...(raw.writeOnly === true && { writeOnly: true }),
         },
-        base.required,
+        required,
         spec,
       ),
     () => ({ ...base, type: "any" }),
@@ -135,7 +140,17 @@ export function mapValueType(
   return convertSchema(`${name}Value`, additional, spec);
 }
 
-/* A property only one direction carries. */
-function directed(node: SpecNode): boolean {
-  return node.readOnly === true || node.writeOnly === true;
+/* The one direction a property travels in, when its schema names one. */
+function directionOf(node: SpecNode): "read" | "write" | undefined {
+  if (node.readOnly === true && node.writeOnly !== true) return "read";
+  if (node.writeOnly === true && node.readOnly !== true) return "write";
+  return undefined;
+}
+
+/* A property only one direction carries: optional where one schema serves both. */
+function directed(
+  direction: "read" | "write",
+  required: boolean,
+): Pick<ParsedSchemaProperty, "required" | "direction" | "requiredInDirection"> {
+  return { required: false, direction, requiredInDirection: required };
 }

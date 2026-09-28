@@ -75,4 +75,20 @@ describe.each(VARIANTS)("a generated client validated with %s", (_label, options
     expect(created).toEqual({ id: "u1", email: "ada@example.com" });
     expect(JSON.parse(upstream.requests[0]?.body ?? "null")).toEqual({ email: "ada@example.com", password: "s3cret" });
   });
+
+  it("refuses an answer without the id the server always assigns", async () => {
+    const idless = await startUpstreamServer({ email: "ada@example.com" });
+    try {
+      const files = generateCode(spec(idless.origin), { type: "openapi", outputDir: "src/api", ...options }, "users");
+      const { usersApi } = loadGenerated(files, "src/api/users/index.ts");
+
+      const failure = await endpointAt(usersApi, "users", "createUser")({ email: "ada@example.com", password: "s3cret" }).catch(
+        (error: unknown) => error,
+      );
+
+      expect(failure).toMatchObject({ name: "ValidationError", target: "response" });
+    } finally {
+      await idless.close();
+    }
+  });
 });

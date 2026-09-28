@@ -7,6 +7,7 @@ import { parseOpenApi3 } from "./parse-openapi3";
 import { parsePostman } from "./parse-postman";
 import { parseSwagger2 } from "./parse-swagger2";
 import { fieldOf, isNode } from "./spec-node";
+import { splitDirections } from "./split-directions";
 import type { ParsedSpec, SpecFormat } from "./types";
 
 /**
@@ -63,8 +64,10 @@ export function parseSpec(raw: string): ParsedSpec {
   if (!isNode(parsed)) throw new Error("The specification holds no object at its top level.");
 
   if (format === "postman") return parsePostman(parsed);
-  if (format.startsWith("swagger2")) return parseSwagger2(parsed);
-  return parseOpenApi3(parsed);
+  /* The request and the answer a schema describes differ where its fields
+     are readOnly or writeOnly: they are typed apart. */
+  if (format.startsWith("swagger2")) return splitDirections(parseSwagger2(parsed));
+  return splitDirections(parseOpenApi3(parsed));
 }
 
 /* The document the text holds, or `undefined` when it is not JSON — which no

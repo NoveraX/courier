@@ -69,19 +69,31 @@ describe("generateTypes: false", () => {
 });
 
 describe("a property the server generates", () => {
-  it("is not demanded of a request", () => {
+  it("is not demanded of a request, and is of an answer", () => {
     /* GitHub marks 59 properties `readOnly` and Box 4; demanding them made a
        request body impossible to construct. */
-    const spec = parse({}, {
-      Thing: {
-        type: "object",
-        properties: { id: { type: "string", readOnly: true }, name: { type: "string" } },
-        required: ["id", "name"],
+    const thing = { $ref: "#/components/schemas/Thing" };
+    const spec = parse(
+      {
+        "/things": {
+          post: {
+            operationId: "createThing",
+            requestBody: { content: { "application/json": { schema: thing } } },
+            responses: { "201": { description: "ok", content: { "application/json": { schema: thing } } } },
+          },
+        },
       },
-    });
+      {
+        Thing: {
+          type: "object",
+          properties: { id: { type: "string", readOnly: true }, name: { type: "string" } },
+          required: ["id", "name"],
+        },
+      },
+    );
 
-    expect(spec.schemas.Thing?.properties?.id?.required).toBe(false);
-    expect(spec.schemas.Thing?.properties?.name?.required).toBe(true);
-    expect(spec.schemas.Thing?.required).toEqual(["name"]);
+    expect(Object.keys(spec.schemas.ThingInput?.properties ?? {})).toEqual(["name"]);
+    expect(spec.schemas.ThingInput?.required).toEqual(["name"]);
+    expect(spec.schemas.Thing?.required).toEqual(expect.arrayContaining(["id", "name"]));
   });
 });

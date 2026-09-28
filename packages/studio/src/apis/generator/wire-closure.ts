@@ -51,9 +51,12 @@ export function wireClosure(
   const json = kind === "fields" || kind === "value" || kind === "nested";
   const placed = placingClosure(ep, method, at, kind, read, json ? ownJsonMedia(ep) : null);
   if (placed !== null) return placed;
-  /* A stream is subscribed to by its address alone, so its query keeps the
-     default style. */
-  const styled = hasStyledQuery(ep) && !isEventStream(ep);
+  const styled = hasStyledQuery(ep);
+  /* A stream is opened where its closure says, the query written in the
+     style its parameters declare — as a request's is. */
+  if (isEventStream(ep) && read === null) {
+    return styled ? `(sse, vars) => sse.get(${at}, ${styledQuery("vars", ep.parameters)})` : null;
+  }
   if (read === null && !styled) return null;
   const vars = styled ? styledQuery("vars", ep.parameters) : "vars";
   return `(http, vars) => http.${method}(${at}, ${vars}${read === null ? "" : `, { ${read} }`})`;

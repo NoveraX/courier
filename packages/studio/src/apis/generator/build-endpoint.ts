@@ -58,11 +58,13 @@ export function buildEndpointDefinition(
   const closure = wireClosure(ep, path, kind, reading);
   if (closure !== null && hasStyledQuery(ep)) context.uses.formQuery = true;
   /* A stream of events is subscribed to, and its answer is each event. */
-  const head = isEventStream(ep) && closure === null ? "stream" : "endpoint";
+  /* A stream's only closure is one opening it, so it stays a stream. */
+  const head = isEventStream(ep) ? "stream" : "endpoint";
   context.uses.bases.add(head);
   const headers = headerParameters(ep).map((param) => param.name);
   if (headers.length > 0) context.uses.headerVariables = true;
   return buildEndpointChain({
+    head,
     address: `${head}.${toInternalMethod(ep.httpMethod)}(${JSON.stringify(path)})`,
     closure,
     headers,

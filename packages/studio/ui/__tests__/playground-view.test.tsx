@@ -4,18 +4,21 @@
 /**
  * The Playground as the user drives it: it offers the sources the config
  * declares under the names a runtime hosts them by, from the first render
- * on, and shows where each endpoint is served.
+ * on; it shows where each endpoint is served; and it copies and sends a
+ * request only as written.
  */
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const emit = vi.hoisted(() => vi.fn());
 const search = vi.hoisted(() => ({ current: {} as Record<string, string> }));
+const toastError = vi.hoisted(() => vi.fn());
 
 vi.mock("socket.io-client", () => ({
   io: () => ({ emit, on: vi.fn(), off: vi.fn(), io: { on: vi.fn(), off: vi.fn() } }),
 }));
 vi.mock("@tanstack/react-router", () => ({ useSearch: () => search.current }));
+vi.mock("sonner", () => ({ toast: { error: toastError, success: vi.fn() } }));
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStudioStore } from "@/store";
@@ -33,6 +36,12 @@ function renderPlayground(at: Record<string, string> = {}): void {
 
 function execCalls(): unknown[] {
   return emit.mock.calls.filter(([event]) => event === "playground:exec").map(([, payload]) => payload);
+}
+
+function variablesEditor(): HTMLTextAreaElement {
+  const [variables] = screen.getAllByRole("textbox");
+  if (!(variables instanceof HTMLTextAreaElement)) throw new Error("no Variables editor");
+  return variables;
 }
 
 /* jsdom lays nothing out, so it has no ResizeObserver; the resizable panels need one to mount. */
@@ -102,5 +111,36 @@ describe("the Playground", () => {
 
     expect(screen.getByText("http://localhost:7502/api/request")).toBeTruthy();
     expect(screen.queryByText("not configured")).toBeNull();
+  });
+
+  it("copies the request as it is sent: its method, path and query", async () => {
+    const writeText = vi.fn(async (_text: string) => {});
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+
+    renderPlayground({ source: "api", group: "users", method: "remove" });
+    fireEvent.change(variablesEditor(), { target: { value: '{ "id": 9 }' } });
+    await act(async () => screen.getByRole("button", { name: "Copy as" }).click());
+    await act(async () => screen.getByRole("button", { name: "cURL" }).click());
+    cleanup();
+
+    renderPlayground({ source: "api", group: "users", method: "search" });
+    fireEvent.change(variablesEditor(), { target: { value: '{ "q": "ada", "limit": 5 }' } });
+    await act(async () => screen.getByRole("button", { name: "Copy as" }).click());
+    await act(async () => screen.getByRole("button", { name: "URL" }).click());
+
+    expect(writeText.mock.calls).toEqual([
+      ["curl \\\n  -X DELETE \\\n  'http://localhost:7501/users/9'"],
+      ["http://localhost:7501/users/search?q=ada&limit=5"],
+    ]);
+  });
+
+  it("says why it sends nothing when the variables are not JSON", async () => {
+    renderPlayground({ source: "api", group: "users", method: "byId" });
+
+    fireEvent.change(variablesEditor(), { target: { value: '{ "id": ' } });
+    await act(async () => screen.getByRole("button", { name: "Send" }).click());
+
+    expect(execCalls()).toEqual([]);
+    expect(toastError).toHaveBeenCalledWith("Variables are not valid JSON");
   });
 });

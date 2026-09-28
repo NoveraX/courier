@@ -4,6 +4,7 @@ import { useStudioStore } from "@/store";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 
 import { cancelServerStream } from "./playground-utils";
+import type { RequestValues } from "./request-values";
 import { initiateHttpRequest, type SendPayload } from "./send-http-request";
 import { initiateStreamRequest } from "./send-stream-request";
 
@@ -56,7 +57,7 @@ export function useSendRequest() {
     });
   }, []);
 
-  const send = useCallback((payload: SendPayload): string => {
+  const send = useCallback((payload: SendPayload, values: RequestValues): string => {
     const id = crypto.randomUUID();
     const rid = id;
     const sentAt = Date.now();
@@ -81,9 +82,9 @@ export function useSendRequest() {
       setSending(false);
       setStreaming(true);
       activeRidRef.current = rid;
-      initiateStreamRequest({ playgroundId: id, rid, payload, updateEntry });
+      initiateStreamRequest({ playgroundId: id, rid, payload, values, updateEntry });
     } else {
-      initiateHttpRequest({ id, rid, payload, sentAt, updateEntry, setSending });
+      initiateHttpRequest({ id, rid, payload, values, sentAt, updateEntry, setSending });
     }
 
     return id;

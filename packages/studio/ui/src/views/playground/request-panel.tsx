@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { FileJson, KeyRound, ChevronDown, Terminal, Code2, Copy, Link } from "lucide-react";
+import { toast } from "sonner";
 
 import { copyToClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
@@ -8,10 +9,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PathDisplay } from "@/views/explorer/shared/path-display";
-import { buildCurlSnippet, buildFetchSnippet, resolvePathParams } from "@/lib/snippets";
+import { buildCurlSnippet, buildFetchSnippet, type SnippetInput } from "@/lib/snippets";
 
 import type { EndpointInfo, SourceInfo } from "@/store/types-ui";
-import { JsonEditor, stripComments } from "./json-editor";
+import { JsonEditor } from "./json-editor";
+import { endpointUrl, snippetInput } from "./request-snippet";
+import { readRequestValues } from "./request-values";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -32,16 +35,15 @@ export function RequestPanel({
   onVariablesChange, onHeadersChange,
 }: RequestPanelProps): React.ReactElement {
   const [headersOpen, setHeadersOpen] = useState(false);
-  const fullPath = buildFullPath(sourceInfo?.baseURL, groupPrefix, endpointInfo?.path);
+  const fullPath = endpointUrl(sourceInfo, groupPrefix, endpointInfo);
 
-  const buildSnippetInput = useCallback(() => {
-    const parsedVars = safeParse(variables);
-    return {
-      url: fullPath ? resolvePathParams(fullPath, parsedVars) : "",
-      method: endpointInfo?.type === "mutation" ? "POST" : "GET",
-      headers: { "Content-Type": "application/json", ...safeParse(headers) },
-      body: parsedVars,
-    };
+  const buildSnippetInput = useCallback((): SnippetInput | null => {
+    const request = readRequestValues(variables, headers);
+    if (!request.ok) {
+      toast.error(request.problem);
+      return null;
+    }
+    return endpointInfo ? snippetInput(fullPath, endpointInfo, request.values) : null;
   }, [fullPath, variables, headers, endpointInfo]);
 
   return (
@@ -79,13 +81,14 @@ export function RequestPanel({
 // ── Copy menu ──────────────────────────────────────────────────────────────
 
 function CopyMenu({ buildInput }: {
-  buildInput: () => { url: string; method: string; headers: Record<string, string>; body: unknown };
+  buildInput: () => SnippetInput | null;
 }): React.ReactElement {
   const [open, setOpen] = useState(false);
 
-  const copy = (fn: () => string, label: string) => () => {
-    void copyToClipboard(fn(), label);
+  const copy = (format: (input: SnippetInput) => string, label: string) => () => {
     setOpen(false);
+    const input = buildInput();
+    if (input) void copyToClipboard(format(input), label);
   };
 
   return (
@@ -102,9 +105,9 @@ function CopyMenu({ buildInput }: {
       </Tooltip>
       <PopoverContent align="end" side="bottom" className="w-auto p-1">
         <div className="flex flex-col">
-          <CopyRow icon={Link} label="URL" onClick={copy(() => buildInput().url, "URL")} />
-          <CopyRow icon={Terminal} label="cURL" onClick={copy(() => buildCurlSnippet(buildInput()), "cURL")} />
-          <CopyRow icon={Code2} label="fetch" onClick={copy(() => buildFetchSnippet(buildInput()), "fetch")} />
+          <CopyRow icon={Link} label="URL" onClick={copy((input) => input.url, "URL")} />
+          <CopyRow icon={Terminal} label="cURL" onClick={copy(buildCurlSnippet, "cURL")} />
+          <CopyRow icon={Code2} label="fetch" onClick={copy(buildFetchSnippet, "fetch")} />
         </div>
       </PopoverContent>
     </Popover>
@@ -138,21 +141,4 @@ function EditorLabel({ icon: Icon, label, hint }: {
       {hint && <span className="text-[10px] text-emerald-400/70">{hint}</span>}
     </div>
   );
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-export function buildFullPath(baseURL?: string, prefix?: string, path?: string): string {
-  const parts = [baseURL, prefix, path].filter(Boolean);
-  if (parts.length === 0) return "";
-  return parts.reduce((acc, part) => {
-    if (!acc) return part!;
-    const a = acc.endsWith("/") ? acc.slice(0, -1) : acc;
-    const b = part!.startsWith("/") ? part! : `/${part}`;
-    return a + b;
-  }, "")!;
-}
-
-function safeParse(json: string): Record<string, string> {
-  try { return JSON.parse(stripComments(json)); } catch { return {}; }
 }

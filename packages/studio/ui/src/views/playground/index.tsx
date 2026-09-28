@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { Play } from "lucide-react";
 import { useSearch } from "@tanstack/react-router";
+import { toast } from "sonner";
 
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -13,6 +14,7 @@ import { PlaygroundToolbar } from "./toolbar";
 import { RequestPanel } from "./request-panel";
 import { ResponsePanel } from "./response-panel";
 import { HistoryBar } from "./history-bar";
+import { readRequestValues } from "./request-values";
 
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 
@@ -30,6 +32,11 @@ export function PlaygroundView(): React.ReactElement {
 
   const handleSend = useCallback(() => {
     if (!pg.canSend || sending) return;
+    const request = readRequestValues(pg.variables, pg.headers);
+    if (!request.ok) {
+      toast.error(request.problem);
+      return;
+    }
     send({
       source: pg.source,
       group: pg.group,
@@ -38,7 +45,7 @@ export function PlaygroundView(): React.ReactElement {
       headers: pg.headers,
       mode: pg.mode,
       transport: pg.endpointInfo?.transport,
-    });
+    }, request.values);
     pg.setResponseTab(isRealtime ? "stream" : "body");
   }, [send, sending, pg, isRealtime]);
 

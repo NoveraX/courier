@@ -14,9 +14,9 @@
  */
 
 import { getSocket } from "@/socket";
-import { safeParse } from "./playground-utils";
 
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
+import type { RequestValues } from "./request-values";
 import type { SendPayload } from "./send-http-request";
 
 type UpdateEntry = (id: string, patch: Partial<PlaygroundHistoryEntry>) => void;
@@ -25,6 +25,7 @@ interface InitiateStreamParams {
   playgroundId: string;
   rid: string;
   payload: SendPayload;
+  values: RequestValues;
   updateEntry: UpdateEntry;
 }
 
@@ -37,13 +38,13 @@ export function initiateStreamRequest({
   playgroundId,
   rid,
   payload,
+  values,
   updateEntry,
 }: InitiateStreamParams): void {
   // Save user-provided headers on the playground entry for the request
   // panel — the rid-keyed wire does not echo them back.
-  const parsedHeaders = safeParse<Record<string, string>>(payload.headers, {});
-  if (parsedHeaders && Object.keys(parsedHeaders).length > 0) {
-    updateEntry(playgroundId, { requestHeaders: parsedHeaders });
+  if (Object.keys(values.headers).length > 0) {
+    updateEntry(playgroundId, { requestHeaders: values.headers });
   }
 
   getSocket().emit("playground:exec", {
@@ -52,7 +53,7 @@ export function initiateStreamRequest({
     group: payload.group,
     method: payload.method,
     transport: payload.transport,
-    variables: safeParse(payload.variables, undefined),
-    headers: parsedHeaders,
+    variables: values.variables,
+    headers: values.headers,
   });
 }

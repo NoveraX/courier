@@ -46,6 +46,7 @@ function send(mode: "direct" | "proxy"): PlaygroundHistoryEntry {
     id: entry.id,
     rid: entry.rid,
     payload: { ...entry, mode },
+    values: { variables: { name: "zed" }, headers: {} },
     sentAt: entry.timestamp,
     updateEntry: updatePlaygroundEntry,
     setSending: () => {},

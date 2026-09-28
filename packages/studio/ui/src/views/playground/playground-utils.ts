@@ -1,10 +1,4 @@
 import { getSocket } from "@/socket";
-import { stripComments } from "./json-editor";
-
-/** Safely parse JSON with comment stripping, fallback on failure */
-export function safeParse<T>(json: string, fallback: T): T {
-  try { return JSON.parse(stripComments(json)) as T; } catch { return fallback; }
-}
 
 /**
  * Emit a targeted cancel for the rid-keyed playground stream. The Studio

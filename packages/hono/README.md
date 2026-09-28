@@ -58,6 +58,30 @@ courierHandler({
 | `sseHeaders` | `Record<string, string>` | — | Extra headers on SSE responses (CORS, for instance) |
 | `sseMaxLifetimeMs` | `number` | 30 min | How long one SSE connection may live before the client reconnects and resumes |
 
+## Streaming and WebSockets
+
+`courierSSEHandler()` serves SSE streams, and `courierWSHandler()` serves WebSocket channels through your runtime's `upgradeWebSocket`. On Node.js with `@hono/node-server` and `ws`:
+
+```ts
+import { serve, upgradeWebSocket } from "@hono/node-server"
+import { WebSocketServer } from "ws"
+import { courierSSEHandler, courierWSHandler } from "@noverax/courier-hono"
+
+app.get("/api/sse", courierSSEHandler())
+
+const ws = courierWSHandler()
+app.get("/api/ws", upgradeWebSocket((c) => ws(c)))
+
+const wss = new WebSocketServer({ noServer: true, maxPayload: 65_536 })
+serve({ fetch: app.fetch, port: 3000, websocket: { server: wss } })
+```
+
+Point the client at the same paths with `proxyPath: { sse: "/api/sse", ws: "/api/ws" }`.
+
+Each caller may hold up to `maxConnectionsPerIP` WebSockets (50 by default). The caller is the connection's remote address, which the adapter reads from the runtime — `@hono/node-server`, Bun and Deno report it — and, when that address is a local or private one such as a reverse proxy's, the proxy's `X-Forwarded-For`. On a runtime that reports none, such as Cloudflare Workers, the proxy headers name the caller. If your proxy chain is deeper, name the caller yourself with `clientIp: (request) => …`.
+
+The runtime's WebSocket server reads each frame before Courier sees it, so give it a frame limit no larger than the handler's `maxMessageSize` (64 KB by default), as `maxPayload` does above.
+
 ## How It Works
 
 Hono uses Web Standard `Request`/`Response` natively, so the adapter simply passes `c.req.raw` directly to the core handler — zero conversion overhead.

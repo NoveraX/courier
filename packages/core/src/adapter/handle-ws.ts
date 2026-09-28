@@ -4,6 +4,7 @@ import { createHeartbeat } from "../realtime/ws/heartbeat";
 import { studioHooks } from "../studio";
 import { LIMITS } from "./limits";
 import { isOriginAllowed } from "./origin-policy";
+import { rememberPeerAddress } from "./peer-address";
 import { buildContext, type WSSocketContext } from "./ws-context";
 import { createIPTracker, extractClientIP } from "./ws-ip-tracker";
 import { wireEvents } from "./ws-lifecycle";
@@ -49,7 +50,8 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   );
   registry.setTopicManager(topicManager);
 
-  function handleSocket(ws: WebSocketLike, request: Request): void {
+  function handleSocket(ws: WebSocketLike, request: Request, peerAddress?: string): void {
+    rememberPeerAddress(request, peerAddress);
     if (!isOriginAllowed(request, config.allowedOrigins)) {
       ws.close(4403, "Origin not allowed");
       return;

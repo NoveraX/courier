@@ -1,5 +1,5 @@
 import { isBodilessStatus } from "../http-client/response";
-import { toWireBody, WIRE_BODY_HEADER, WIRE_BODY_TYPE_HEADER } from "./wire-body";
+import { toWireBody } from "./wire-body";
 
 const JSON_TEXT = new TextEncoder();
 
@@ -7,9 +7,10 @@ const JSON_TEXT = new TextEncoder();
  * The proxy's answer to a call whose body was read on the server.
  *
  * JSON by default. Data JSON cannot carry — bytes, a Blob, a FormData —
- * travels as itself, marked so the proxy client reads it back as what it
- * was. Bytes are served as `application/octet-stream` whatever the upstream
- * called them: this answer comes from the application's own origin.
+ * travels as itself under a content type that tells the proxy client how to
+ * read it back. Bytes never go out under the upstream's own content type:
+ * this answer comes from the application's origin, where an upstream's
+ * `text/html` would be rendered as the application's page.
  *
  * @param status - The upstream's status
  * @param headers - The upstream headers the browser may see
@@ -32,12 +33,8 @@ export function toWireAnswer(
 
   const wire = toWireBody(data);
   if (wire) {
-    headers.set(WIRE_BODY_HEADER, wire.kind);
-    if (wire.type) headers.set(WIRE_BODY_TYPE_HEADER, wire.type);
-    if (wire.kind !== "formData") {
-      headers.set("content-type", "application/octet-stream");
-      headers.set("x-content-type-options", "nosniff");
-    }
+    if (wire.contentType) headers.set("content-type", wire.contentType);
+    headers.set("x-content-type-options", "nosniff");
     if (wire.size !== undefined) headers.set("content-length", String(wire.size));
     return new Response(wire.body, { status, headers });
   }

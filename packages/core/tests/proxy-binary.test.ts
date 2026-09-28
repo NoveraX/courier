@@ -15,6 +15,7 @@ import { courier, defineApi } from "../src/define/index";
 import { ConfigurationError, HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { readWireBody } from "../src/utils/wire-body";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 
 const { endpoint } = courier();
@@ -101,6 +102,32 @@ describe("a binary download through the proxy", () => {
     expect(error).toBeInstanceOf(HTTPError);
     expect((error as HTTPError).status).toBe(404);
     expect(new Uint8Array((error as HTTPError).data as ArrayBuffer)).toEqual(BYTES);
+  });
+});
+
+describe("the proxy's binary answer on the wire", () => {
+  /** What a page on another origin can read of an answer without CORS exposure. */
+  const SAFELISTED = ["cache-control", "content-language", "content-length", "content-type"];
+
+  it("is marked by its content type alone, which a cross-origin page can read", async () => {
+    proxyClient("blob");
+    const answer = await createHandler().handlePost(
+      new Request("http://app.local/api/request", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ source: "files", method: "image" }),
+      }),
+    );
+    const visible = new Headers(
+      [...answer.headers].filter(([name]) => SAFELISTED.includes(name.toLowerCase())),
+    );
+
+    const data = await readWireBody(new Response(await answer.arrayBuffer(), { headers: visible }));
+
+    expect(answer.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(answer.headers.get("content-length")).toBe(String(BYTES.byteLength));
+    expect(data).toBeInstanceOf(Blob);
+    expect((data as Blob).type).toBe("image/png");
   });
 });
 

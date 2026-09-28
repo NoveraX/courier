@@ -69,6 +69,8 @@ export function useSendRequest() {
       ...payload,
       timestamp: sentAt,
       status: "pending",
+      /* The headers go out as written: the wire does not echo them back. */
+      ...(Object.keys(values.headers).length > 0 && { requestHeaders: values.headers }),
       ...(isRealtime && {
         transport: payload.transport,
         streamStatus: "connecting" as const,
@@ -82,7 +84,7 @@ export function useSendRequest() {
       setSending(false);
       setStreaming(true);
       activeRidRef.current = rid;
-      initiateStreamRequest({ playgroundId: id, rid, payload, values, updateEntry });
+      initiateStreamRequest({ rid, payload, values });
     } else {
       initiateHttpRequest({ id, rid, payload, values, sentAt, updateEntry, setSending });
     }

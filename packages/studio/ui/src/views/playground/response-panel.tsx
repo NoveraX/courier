@@ -93,7 +93,11 @@ export function ResponsePanel({
         <TabsContent value="headers" className="mt-0 min-h-0 flex-1">
           <ScrollArea className="h-full">
             <div className="space-y-3 p-3">
-              <DroppedHeadersSection sent={entry.headers} forwarded={requestHeaders} />
+              {/* allowedHeaders filters what a proxy forwards; a direct call sends every header. */}
+              <DroppedHeadersSection
+                sent={entry.headers}
+                forwarded={entry.mode === "proxy" ? requestHeaders : undefined}
+              />
               <HeadersSection title="Request Headers" headers={requestHeaders} />
               <HeadersSection title="Response Headers" headers={responseHeaders} />
               {!requestHeaders && !responseHeaders && (

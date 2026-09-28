@@ -15,18 +15,13 @@
 
 import { getSocket } from "@/socket";
 
-import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 import type { RequestValues } from "./request-values";
 import type { SendPayload } from "./send-http-request";
 
-type UpdateEntry = (id: string, patch: Partial<PlaygroundHistoryEntry>) => void;
-
 interface InitiateStreamParams {
-  playgroundId: string;
   rid: string;
   payload: SendPayload;
   values: RequestValues;
-  updateEntry: UpdateEntry;
 }
 
 /**
@@ -34,19 +29,7 @@ interface InitiateStreamParams {
  * caller observes progress via the store listeners driven by the
  * `playground:chunk` / `playground:end` / `playground:error` wire.
  */
-export function initiateStreamRequest({
-  playgroundId,
-  rid,
-  payload,
-  values,
-  updateEntry,
-}: InitiateStreamParams): void {
-  // Save user-provided headers on the playground entry for the request
-  // panel — the rid-keyed wire does not echo them back.
-  if (Object.keys(values.headers).length > 0) {
-    updateEntry(playgroundId, { requestHeaders: values.headers });
-  }
-
+export function initiateStreamRequest({ rid, payload, values }: InitiateStreamParams): void {
   getSocket().emit("playground:exec", {
     rid,
     source: payload.source,

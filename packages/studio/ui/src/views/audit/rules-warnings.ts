@@ -54,22 +54,6 @@ function inconsistentSizes(stats: Map<string, EndpointStats>): AuditItem[] {
   }];
 }
 
-function unusedProxyMode(stats: Map<string, EndpointStats>): AuditItem[] {
-  const allDirect = [...stats.values()].every(
-    (s) => s.modes.size === 1 && s.modes.has("direct"),
-  );
-  if (!allDirect || stats.size === 0) return [];
-  return [{
-    id: "warn-unused-proxy",
-    severity: "warning",
-    category: "best-practices",
-    title: "All requests use direct mode",
-    description: "No requests use proxy mode — secrets may be exposed client-side.",
-    suggestion: "Use createProxyCaller() for endpoints that require server-side secrets.",
-    codeSuggestion: `const client = createProxyCaller<typeof api>("api", {\n  source: api,\n  proxyPath: { http: "/api/request" },\n});`,
-  }];
-}
-
 const MIDDLEWARE_OVERHEAD_THRESHOLD = 0.3;
 
 function middlewareOverhead(stats: Map<string, EndpointStats>): AuditItem[] {
@@ -155,7 +139,6 @@ export function collectWarnings(
   return [
     ...slowEndpoints(stats),
     ...inconsistentSizes(stats),
-    ...unusedProxyMode(stats),
     ...middlewareOverhead(stats),
     ...httpMethodMismatch(stats),
     ...repeatedValidationFailures(requests),

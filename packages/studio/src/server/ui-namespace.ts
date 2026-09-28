@@ -67,7 +67,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
       socket.emit("binding:snapshot", buildBindingSnapshot(bindingTable));
     } catch (err) {
       logger.warn("Studio", "Failed to emit initial binding:snapshot on UI connect", err);
-      socket.emit("binding:snapshot", { rows: [], runtimeCount: 0, sourceCount: 0 });
+      socket.emit("binding:snapshot", { rows: [], runtimeCount: 0, sourceCount: 0, runtimes: [] });
     }
 
     /* The imports, the sources and how the config loads, from what Studio

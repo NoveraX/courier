@@ -107,13 +107,6 @@ export class BindingTable {
     return { runtimeId: owner, sourceName, transport };
   }
 
-  /** Every source a runtime has announced it hosts, over any transport, each named once. */
-  hostedSources(): string[] {
-    const names = new Set<string>();
-    for (const key of this.claims.keys()) names.add(key.slice(0, key.lastIndexOf("::")));
-    return [...names];
-  }
-
   /** One status row per expected pair, useful for the `/apis` UI tab */
   getStatus(): BindingStatus[] {
     return this.expected.map(({ sourceName, transport }) => {

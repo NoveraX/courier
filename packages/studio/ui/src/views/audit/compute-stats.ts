@@ -33,6 +33,7 @@ function createEmptyStats(r: RequestEntry, key: string): EndpointStats {
     httpMethods: new Set(),
     type: r.type,
     requestIds: [],
+    cached: false,
   };
 }
 
@@ -58,6 +59,7 @@ export function computeEndpointStats(
     if (r.hasValidation.response) s.hasResponseValidation = true;
     if (r.size != null) s.sizes.push(r.size);
     if (r.statusCode != null) s.statusCodes.push(r.statusCode);
+    if (r.cache) s.cached = true;
   }
 
   for (const [key, s] of map) {

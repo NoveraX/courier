@@ -91,6 +91,8 @@ export interface BindingSnapshot {
   rows: BindingStatusRow[]
   runtimeCount: number
   sourceCount: number
+  /** Each runtime connected, and whether it runs in a browser or on a server. */
+  runtimes: Array<{ runtimeId: string; kind: "browser" | "server" }>
 }
 
 export interface BindingErrorPayload {

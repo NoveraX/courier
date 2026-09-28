@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { buildCatalogFromRequests } from "@/store/build-catalog-from-requests";
+import { useAuditContext } from "@/views/audit/use-audit-context";
 import { runAudit } from "@/views/audit/run-audit";
 import { SidebarFooterSection } from "./sidebar-footer";
 
@@ -55,11 +56,12 @@ function NavBadge({ item }: { item: NavItem }): React.ReactNode {
 
 function AuditScoreBadge(): React.ReactNode {
   const requests = useStudioStore((s) => s.requests);
+  const context = useAuditContext();
 
   const score = useMemo(() => {
     if (requests.length === 0) return null;
-    return runAudit(requests, buildCatalogFromRequests(requests)).score;
-  }, [requests]);
+    return runAudit(requests, buildCatalogFromRequests(requests), context).score;
+  }, [requests, context]);
 
   if (score === null) return null;
 

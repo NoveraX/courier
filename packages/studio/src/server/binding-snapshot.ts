@@ -24,6 +24,8 @@ export interface BindingSnapshotPayload {
   rows: BindingStatus[];
   runtimeCount: number;
   sourceCount: number;
+  /** Each runtime connected, and whether it runs in a browser or on a server. */
+  runtimes: Array<{ runtimeId: string; kind: "browser" | "server" }>;
 }
 
 /** Build a fresh `binding:snapshot` payload from the live binding table. */
@@ -33,6 +35,7 @@ export function buildBindingSnapshot(bindingTable: BindingTable): BindingSnapsho
     rows,
     runtimeCount: runtimeRegistry.size,
     sourceCount: countServedSources(),
+    runtimes: [...runtimeRegistry.values()].map(({ runtimeId, kind }) => ({ runtimeId, kind })),
   };
 }
 

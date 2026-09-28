@@ -7,9 +7,10 @@ import { collectCourierRules } from "./rules-courier";
 import { collectErrors } from "./rules-errors";
 import { collectHints, collectPasses } from "./rules-hints";
 import { detectDuplicates, detectNPlusOne, detectWaterfall } from "./rules-patterns";
+import { browserDirectCalls } from "./rules-proxy-mode";
 import { collectSecurityRules } from "./rules-security";
 import { collectWarnings } from "./rules-warnings";
-import type { AuditItem, AuditResult, AuditSeverity } from "./types";
+import type { AuditContext, AuditItem, AuditResult, AuditSeverity } from "./types";
 
 const SEVERITY_ORDER: AuditSeverity[] = ["error", "warning", "hint", "pass"];
 
@@ -54,10 +55,23 @@ function sortBySeverity(items: AuditItem[]): AuditItem[] {
   );
 }
 
-/** Run the full audit engine against requests and catalog. */
+/**
+ * Run the full audit engine against requests and catalog.
+ *
+ * @param requests - The captured requests
+ * @param catalog - The endpoints known
+ * @param context - What else the audit weighs: which sessions are browsers
+ * @returns The items found, sorted by severity, and the score
+ *
+ * @example
+ * ```ts
+ * runAudit(requests, catalog, { browserSessions: new Set(["browser"]) });
+ * ```
+ */
 export function runAudit(
   requests: RequestEntry[],
   catalog: Catalog,
+  context: AuditContext,
 ): AuditResult {
   const completed = requests.filter((r) => r.status !== "pending");
   const stats = computeEndpointStats(completed);
@@ -66,6 +80,7 @@ export function runAudit(
     // Stats-based rules
     ...collectErrors(stats, catalog, completed),
     ...collectWarnings(stats, catalog, completed),
+    ...browserDirectCalls(completed, context),
     ...collectHints(stats, catalog),
     ...collectPasses(stats),
     // Temporal pattern rules

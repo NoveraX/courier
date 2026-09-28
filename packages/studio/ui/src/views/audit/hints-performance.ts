@@ -8,23 +8,36 @@
  */
 
 import type { AuditItem, EndpointStats } from "./types";
+import { CACHE_SUGGESTION } from "./code-suggestions";
 import { formatEndpoint } from "./hints-utils";
 
 const PROXY_OVERHEAD_THRESHOLD = 0.5;
 const VALIDATION_OVERHEAD_THRESHOLD = 0.2;
 
+const FREQUENT_READS = 3;
+const READ_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD"]);
+
+/** Reads answered successfully again and again that never went through a cache. */
 export function noCachingDetected(stats: Map<string, EndpointStats>): AuditItem[] {
-  const frequent = [...stats.values()].filter((s) => s.count >= 3);
-  if (frequent.length === 0) return [];
+  const matched = [...stats.values()].filter(
+    (s) => !s.cached && isRead(s) && s.statusCodes.filter((c) => c >= 200 && c < 300).length >= FREQUENT_READS,
+  );
+  if (matched.length === 0) return [];
   return [{
     id: "hint-no-caching",
     severity: "hint",
     category: "performance",
     title: "No caching detected",
-    description: "None of the frequently called endpoints show caching behavior.",
-    suggestion: "Add cache middleware or set cache headers for read-only endpoints.",
-    codeSuggestion: `import { cache } from "@noverax/courier/middleware";\n\ndefineApi({\n  middleware: [cache({ ttl: 60_000 })],\n});`,
+    description: "These reads are answered again and again, and none of their calls went through a cache.",
+    suggestion: "Add cache middleware to reads whose answer can be reused for a while.",
+    codeSuggestion: CACHE_SUGGESTION,
+    endpoints: matched.map(formatEndpoint),
   }];
+}
+
+function isRead(s: EndpointStats): boolean {
+  if (s.type) return s.type === "query";
+  return s.httpMethods.size > 0 && [...s.httpMethods].every((m) => READ_METHODS.has(m));
 }
 
 export function proxyLatencyOverhead(stats: Map<string, EndpointStats>): AuditItem[] {

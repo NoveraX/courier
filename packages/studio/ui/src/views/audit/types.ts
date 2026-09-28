@@ -39,6 +39,12 @@ export interface AuditResult {
   timestamp: number;
 }
 
+/** What the audit knows beyond the requests. */
+export interface AuditContext {
+  /** The sessions of the runtimes that run in a browser. */
+  browserSessions: ReadonlySet<string>;
+}
+
 export interface EndpointStats {
   key: string;
   source: string;
@@ -66,4 +72,6 @@ export interface EndpointStats {
   type?: "query" | "mutation";
   /** All request IDs for this endpoint */
   requestIds: string[];
+  /** Whether any call went through a cache, hit or miss */
+  cached: boolean;
 }

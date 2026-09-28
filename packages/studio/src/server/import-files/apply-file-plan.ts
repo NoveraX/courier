@@ -66,6 +66,7 @@ export function applyFilePlan(
   const id = newApplyId();
   const journal: ApplyJournal = {
     id,
+    pid: process.pid,
     importName: plan.importName,
     dir: plan.dir,
     after: ownValue(state.imports, plan.importName)?.applyId ?? null,

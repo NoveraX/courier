@@ -58,6 +58,7 @@ const ID = "1700000000000-0a1b2c3d";
 function planted(extra: Record<string, unknown>): Record<string, unknown> {
   return {
     id: ID,
+    pid: process.pid,
     importName: "pets",
     dir: DIR,
     after: null,

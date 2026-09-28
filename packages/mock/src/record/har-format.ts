@@ -47,8 +47,13 @@ export function createHarLog(): HarLog {
   };
 }
 
-/** Create a HAR entry from a recorded request/response */
+/**
+ * Create a HAR entry from a recorded request/response. `startedDateTime` is
+ * when the request started — a fixture's `recordedAt` — and never the time
+ * the HAR is written, so a fixture keeps its date through a HAR round trip.
+ */
 export function createHarEntry(params: {
+  startedDateTime: string;
   group: string;
   method: string;
   variables?: unknown;
@@ -63,7 +68,7 @@ export function createHarEntry(params: {
   duration: number;
 }): HarEntry {
   return {
-    startedDateTime: new Date().toISOString(),
+    startedDateTime: params.startedDateTime,
     time: params.duration,
     request: {
       method: params.httpMethod,

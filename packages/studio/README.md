@@ -187,7 +187,7 @@ Studio changes an import's files — when it writes the import, updates it, adds
 ```
 
 - **A file Studio wrote and nobody changed** is replaced or removed as the change needs. A file whose first line names the import, but which Studio has no record of — in a fresh clone, say, where `.courier/` is not checked in — is treated the same way when it is replaced; removing one waits for you, offered ticked.
-- **A file you changed** keeps your edits to endpoints when Studio updates it. A file Studio would replace whole, or remove, waits for you instead.
+- **A file you changed** keeps your edits to endpoints when Studio updates it. A file Studio would replace whole, or remove, waits for you instead — and so does a file whose endpoints Studio cannot read as code, one saved mid-edit say, since it cannot keep your edits in it.
 - **A file Studio did not write** — one you added to the folder, or one its first line says Studio wrote for another import — is never removed, and replacing it waits for you.
 - **A symbolic link or a folder where a file should be** is never written through, replaced or removed, and nothing is written through a folder link that leads out of the project. A change that would write one of them is refused until you move it out of the way.
 

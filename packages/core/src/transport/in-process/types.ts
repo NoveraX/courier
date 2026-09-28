@@ -70,7 +70,7 @@ export interface ExecuteDirectWSChannelPayload {
  * so a caller cannot drop that rejection unnoticed: an unawaited one ended
  * the process.
  */
-export interface InProcessWSChannel extends WSChannel {
+export interface InProcessWSChannel extends Omit<WSChannel, "send"> {
   send(data: unknown): Promise<void>;
 }
 

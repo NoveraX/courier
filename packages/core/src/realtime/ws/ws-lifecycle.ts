@@ -31,7 +31,7 @@ export interface LifecycleContext {
   pending: ReturnType<typeof createPendingRegistry>;
   silence: ServerSilenceDetector;
   factory: (url: string, protocols?: string[]) => WSClientSocket;
-  sendRaw(data: string): void;
+  sendRaw(data: string): boolean;
   refreshToken(token: string): void;
   /** Mutable refs — handlers reassign these */
   refs: {

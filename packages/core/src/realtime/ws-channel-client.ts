@@ -91,15 +91,15 @@ export function executeWSChannel<TSend, TReceive>(
     send(data: TSend) {
       if (ended) {
         log.warn(`Message not sent: the channel ${qTopic} has ended`);
-        return;
+        return false;
       }
       /* The subscribe goes out a microtask after the channel is made; sent
          before it, a message reached the server first and was refused. */
       if (!stop) {
         early.push(data);
-        return;
+        return true;
       }
-      conn.send(qTopic, data);
+      return conn.send(qTopic, data);
     },
     on(event: "data" | "status" | "error", handler: (arg: never) => void): () => void {
       if (event === "data") return addTo(dataHandlers, handler as (data: TReceive) => void);

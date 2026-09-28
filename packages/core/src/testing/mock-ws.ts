@@ -87,10 +87,11 @@ export function createMockWSChannel<TSend, TReceive>(
 
   const channel = {
     send(data: TSend) {
-      if (ended.signal.aborted) return;
+      if (ended.signal.aborted) return false;
       void settle("onMessage", async () => handlers.onMessage(ctx, data)).then((failure) => {
         if (failure) report(asRealtimeError(failure, "Handler error"));
       });
+      return true;
     },
     on(event: "data" | "status" | "error", handler: (arg: never) => void): () => void {
       if (event === "data") return addTo(dataHandlers, handler as (data: TReceive) => void);

@@ -78,4 +78,13 @@ describe("createMockWSChannel", () => {
     expect(errors[0]).toMatchObject({ code: 4001, message: "kicked" });
     expect(channel.status).toBe("disconnected");
   });
+
+  it("answers from send whether it took the message, and not once closed", async () => {
+    const channel = createMockWSChannel({ onMessage: () => undefined });
+    await settle();
+
+    expect(channel.send("taken")).toBe(true);
+    channel.close();
+    expect(channel.send("late")).toBe(false);
+  });
 });

@@ -2,19 +2,28 @@ export const metadata = { title: "Advanced React Query Patterns", description: "
 
 ## Prefetching and hydration
 
-For the best user experience, prefetch data in Server Components and pass it to the client via `HydrationBoundary`. The client component receives cached data instantly with no loading state:
+For the best user experience, prefetch data in Server Components and pass it to the client via `HydrationBoundary`. The client component receives cached data instantly with no loading state.
+
+The proxy caller in `lib/query.ts` cannot run on the server: there is no page there to resolve its relative `proxyPath` against. The server has the API definition, so it prefetches with a direct caller built from it. Name the definition after the proxy's source — `defineApi({ name: "api", ... })` for `createProxyQueryCaller<typeof api>("api")` — so that both callers build the same keys:
+
+```ts title="lib/query.server.ts"
+import { createQueryCaller } from "@noverax/courier-react"
+import { api } from "@/api"
+
+export const qServer = createQueryCaller(api)
+```
 
 ```ts title="app/users/page.tsx"
 // app/users/page.tsx — React Server Component
 import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/courier-react"
-import { q } from "@/lib/query"
+import { qServer } from "@/lib/query.server"
 import { UserList } from "./user-list"
 
 export default async function UsersPage() {
   const queryClient = new QueryClient()
 
   // Prefetch using the built-in prefetchQuery
-  await q.users.prefetchQuery(queryClient, "getAll")
+  await qServer.users.prefetchQuery(queryClient, "getAll")
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -45,20 +54,20 @@ export function UserList() {
 ```
 
 <Callout variant="tip" title="Query key must match">
-`prefetchQuery` automatically generates the same hierarchical key as `useQuery`. For `q.users.useQuery("getAll")`, the key is `["api", "users", "getAll"]`. With variables, include them as the fourth element.
+`prefetchQuery` automatically generates the same hierarchical key as `useQuery`. For `q.users.useQuery("getAll")`, the key is `["api", "users", "getAll"]`. With variables, include them as the fourth element. The first element is the source name: the proxy caller's first argument, and the direct caller's `defineApi({ name })` — derived from the `baseURL` host when there is none, which is why the definition should be named.
 </Callout>
 
 ## Prefetching with variables
 
 ```ts title="app/users/[id]/page.tsx"
 import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/courier-react"
-import { q } from "@/lib/query"
+import { qServer } from "@/lib/query.server"
 import { UserProfile } from "./user-profile"
 
 export default async function UserPage({ params }: { params: { id: string } }) {
   const queryClient = new QueryClient()
 
-  await q.users.prefetchQuery(queryClient, "getById", {
+  await qServer.users.prefetchQuery(queryClient, "getById", {
     variables: { id: Number(params.id) },
   })
 

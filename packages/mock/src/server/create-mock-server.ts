@@ -129,8 +129,11 @@ export function createMockServer(config?: MockServerOptions): MockServer {
       return scenarioState;
     },
 
+    /* Applied by name or by object alike, it becomes the one the admin API
+       reports as current, as Studio's own apply does. */
     applyScenario(scenario) {
       applyScenarioInternal(scenario);
+      activeScenario = scenario.name;
     },
 
     resetStore() {

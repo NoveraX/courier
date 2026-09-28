@@ -98,8 +98,12 @@ function planOf(reply: { body: Record<string, unknown> }): {
   if (typeof plan !== "object" || plan === null || !("digest" in plan) || typeof plan.digest !== "string") {
     throw new Error(`no plan in ${JSON.stringify(reply.body)}`);
   }
-  const pending = "pending" in plan && Array.isArray(plan.pending) ? plan.pending : [];
+  const pending = "pending" in plan && Array.isArray(plan.pending) ? plan.pending.filter(isPendingFile) : [];
   return { digest: plan.digest, pending };
+}
+
+function isPendingFile(entry: unknown): entry is { path: string; preselected?: boolean } {
+  return typeof entry === "object" && entry !== null && "path" in entry && typeof entry.path === "string";
 }
 
 describe("writing an import's files", () => {

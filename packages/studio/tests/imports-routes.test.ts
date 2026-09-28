@@ -678,7 +678,10 @@ describe("the imports lists every UI is sent", () => {
       !Array.isArray(latest.sources)
     )
       return null;
-    return latest.sources.map((source: { name: string }) => source.name).sort();
+    return latest.sources
+      .map((source) => (typeof source === "object" && source !== null && "name" in source ? source.name : undefined))
+      .filter((name) => typeof name === "string")
+      .sort();
   }
 
   function scansSince(u: Ui, since: number): number {

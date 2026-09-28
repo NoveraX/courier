@@ -28,6 +28,7 @@ npx biome check packages/
 npm run check:names
 npx tsc --noEmit
 npx turbo run typecheck --filter=@noverax/courier-studio-ui
+npm run check:any
 npm test
 npm run check:exports
 ```
@@ -45,8 +46,11 @@ Two of them are easy to skip by accident and worth understanding:
 
 - **File size**: aim for 120–150 lines. Split by responsibility, not by line
   count. JSDoc and test files do not count toward it.
-- **Types**: strict mode, no `any` — use `unknown` and narrow. Explicit return
-  types on exported functions. No enums; use `as const` objects or unions.
+- **Types**: strict mode, no `any` — use `unknown` and narrow. A value some
+  declaration types `any` — what `JSON.parse` or `Reflect.get` returns, a
+  promise's rejection reason — is read into `unknown` where it arrives;
+  `npm run check:any` reports one that is not. Explicit return types on
+  exported functions. No enums; use `as const` objects or unions.
 - **Naming**: `kebab-case.ts` files, `camelCase` values, `PascalCase` types,
   `UPPER_SNAKE_CASE` constants. Generics get real names (`TResponse`), not
   single letters.

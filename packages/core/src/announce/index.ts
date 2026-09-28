@@ -12,7 +12,8 @@
  */
 
 import type { AnySource } from "../define";
-import { getSources } from "../sources";
+import type { Sources } from "../define/types";
+import { getSources, onSourcesChange } from "../sources";
 
 /** Transports a runtime claims it can serve for the listed sources */
 export type RuntimeTransport = "http" | "sse" | "ws";
@@ -93,11 +94,13 @@ export function announceHosting(input: AnnounceHostingInput): void {
  * that arrives before any registration is answered by the handler itself,
  * which names the missing registry.
  *
- * Reading the registry as a factory ran broke real setups: `next build`
- * evaluates every route module long before any `register()` hook, and a
- * Hono or Express app may mount its routes before awaiting
- * `attachRuntime()`. Waiting costs nothing — an announcement tells Studio
- * which runtime serves which sources, and nothing is served before a request.
+ * Reading the registry once, as the factory ran, broke real setups: `next
+ * build` evaluates every route module long before any `register()` hook, and
+ * a Hono or Express app may mount its routes before awaiting
+ * `attachRuntime()`. The adapter therefore announces as soon as sources are
+ * registered — at once when they already are, or when they come — so Studio
+ * knows which runtime serves them before the app has had a single request,
+ * and the Playground can send to a freshly started app.
  *
  * @param input - What the adapter hosts, without the sources
  * @returns A function to call on each request
@@ -113,13 +116,16 @@ export function announceHosting(input: AnnounceHostingInput): void {
  */
 export function announceWhenRegistered(input: Omit<AnnounceHostingInput, "sources">): () => void {
   let announced = false;
-  return () => {
-    if (announced) return;
-    const sources = getSources();
-    if (!sources) return;
+  let stopWaiting: (() => void) | undefined;
+  const announce = (sources: Sources | undefined): void => {
+    if (announced || !sources) return;
     announced = true;
+    stopWaiting?.();
     announceHosting({ ...input, sources: Object.values(sources) });
   };
+  stopWaiting = onSourcesChange(announce);
+  announce(getSources());
+  return () => announce(getSources());
 }
 
 /**

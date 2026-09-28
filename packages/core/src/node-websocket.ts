@@ -51,9 +51,15 @@ export interface WebSocketUpgradeOptions {
  * application with a WebSocket of its own then had two handlers accept the
  * same socket, and `ws` threw out of the process on the first connection.
  *
+ * Detaching also closes every connection the handler accepted, with 1012 —
+ * "service restart", which a Courier client answers by reconnecting later.
+ * `ws` leaves accepted clients open when its server closes, so a host that
+ * detached before closing its HTTP server waited on them indefinitely.
+ *
  * @param server - The HTTP server the application listens with
  * @param options - Path, frame limit and what to do with a connection
- * @returns A function that detaches the handler and closes the `ws` server
+ * @returns A function that detaches the handler, closes the connections it
+ *   accepted and closes the `ws` server
  *
  * @example
  * ```ts
@@ -69,6 +75,7 @@ export function attachWebSocketUpgrade(
   options: WebSocketUpgradeOptions,
 ): () => void {
   const maxPayload = options.maxPayload ?? LIMITS.MAX_MESSAGE_SIZE;
+  const accepted = new Set<WebSocketLike>();
   let wss: Promise<UpgradeServer> | undefined;
 
   const onUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer): void => {
@@ -106,6 +113,8 @@ export function attachWebSocketUpgrade(
            its own only after an async `onConnect`, so a frame sent before
            that finished could take the process down. */
         ws.addEventListener("error", (event) => log.warn("WebSocket error", reasonOf(event)));
+        accepted.add(ws);
+        ws.addEventListener("close", () => accepted.delete(ws));
         options.onSocket(ws, toWebRequest(req));
       });
     } catch (error) {
@@ -118,6 +127,8 @@ export function attachWebSocketUpgrade(
   server.on("upgrade", onUpgrade);
   return () => {
     server.off("upgrade", onUpgrade);
+    for (const ws of accepted) ws.close(1012, "Server shutting down");
+    accepted.clear();
     /* A server that failed to load was reported when the upgrade failed. */
     void wss?.then(
       (ready) => ready.close(),

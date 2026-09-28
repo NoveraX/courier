@@ -21,12 +21,14 @@ export function typeStyleFor(options: GeneratorSettings): TypeStyle {
 
 export function schemaToInterface(schema: ParsedSchema, style = EXACT_OPTIONAL): string {
   /* A schema that is not an object still has a type — a union of alternatives,
-     an array, an enum — and answering `{}` described it as an empty one. */
-  if (schema.type !== "object" || !schema.properties) return `${schemaToTsType(schema, style)};`;
+     an array, an enum — and answering `{}` described it as an empty one; so
+     has an object with no property of its own, a map of its values. */
+  const fields = Object.entries(schema.properties ?? {});
+  if (schema.type !== "object" || fields.length === 0) return `${schemaToTsType(schema, style)};`;
 
   const required = new Set(schema.required ?? []);
   const lines: string[] = [];
-  for (const [name, prop] of Object.entries(schema.properties)) {
+  for (const [name, prop] of fields) {
     if (!name) continue;
     if (prop.description) lines.push(`  /** ${jsdocText(prop.description)} */`);
     lines.push(`  ${objectKey(name)}${propertyType(prop, !required.has(name), style)};`);

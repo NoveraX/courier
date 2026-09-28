@@ -58,8 +58,11 @@ function objectToTsType(schema: ParsedSchema, style: TypeStyle): string {
     if (!name) continue;
     props.push(`${objectKey(name)}${propertyType(prop, !required.has(name), style)}`);
   }
-  if (props.length === 0) return "Record<string, unknown>";
-  return `{ ${props.join("; ")} }`;
+  if (props.length > 0) return `{ ${props.join("; ")} }`;
+  /* No property of its own: a map, typed by its values when it says what
+     they are — an inventory of counts was typed as holding anything. */
+  const values = schema.valueType ? schemaToTsType(schema.valueType, style) : "unknown";
+  return `Record<string, ${values}>`;
 }
 
 /**

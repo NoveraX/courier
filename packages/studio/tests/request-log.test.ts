@@ -39,10 +39,19 @@ async function freePort(): Promise<number> {
   return port;
 }
 
-async function startStudio(): Promise<string> {
+async function startStudio(projectRoot = project()): Promise<string> {
+  return (await runStudio(projectRoot)).url;
+}
+
+async function runStudio(projectRoot: string): Promise<{ url: string; close: () => Promise<void> }> {
   const port = await freePort();
-  return new Promise<string>((resolve) => {
-    const server = createStudioServer({ port, host: "127.0.0.1", projectRoot: project(), onReady: resolve });
+  return new Promise((resolve) => {
+    const server = createStudioServer({
+      port,
+      host: "127.0.0.1",
+      projectRoot,
+      onReady: (url) => resolve({ url, close: () => server.close() }),
+    });
     cleanups.push(() => server.close());
   });
 }
@@ -98,6 +107,30 @@ describe("a Studio page that connects after traffic", () => {
 
     await expect.poll(() => reloaded.replays.length).toBe(1);
     expect(reloaded.replays[0]?.map((e) => e.type)).toEqual(["request:start", "request:end"]);
+  });
+});
+
+describe("a Studio that restarts", () => {
+  it("shows a page that connects the requests the last one was shown", async () => {
+    const root = project();
+    const first = await runStudio(root);
+    const app = await runtime(first.url);
+    const watching = await ui(first.url);
+    app.emit("event", event("request:start", { id: "r1", source: "api", method: "list" }));
+    app.emit("event", event("request:end", { requestId: "r1", status: 200 }));
+    await expect.poll(() => watching.events.length).toBe(2);
+    app.disconnect();
+    watching.socket.disconnect();
+    await first.close();
+
+    const second = await startStudio(root);
+    const reloaded = await ui(second);
+
+    await expect.poll(() => reloaded.replays.length).toBe(1);
+    expect(reloaded.replays[0]?.map((e) => [e.type, e.status])).toEqual([
+      ["request:start", undefined],
+      ["request:end", 200],
+    ]);
   });
 });
 

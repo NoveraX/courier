@@ -27,7 +27,7 @@ npm install --save-dev @noverax/courier-studio
 npm install @noverax/courier-studio-core
 ```
 
-Studio is a development tool, so it is a dev dependency. `@noverax/courier-studio-core` is what your server instrumentation imports `attachRuntime()` from, so it is a dependency: a production install leaves dev dependencies out, and a server that imports the runtime does not start without it — even one that calls it only in development. `attachRuntime()` runs in production too, where it registers the config's sources. An app that only connects its browser through a build integration can leave it out.
+Studio needs Node.js 22.13 or newer. Studio is a development tool, so it is a dev dependency. `@noverax/courier-studio-core` is what your server instrumentation imports `attachRuntime()` from, so it is a dependency: a production install leaves dev dependencies out, and a server that imports the runtime does not start without it — even one that calls it only in development. `attachRuntime()` runs in production too, where it registers the config's sources. An app that only connects its browser through a build integration can leave it out.
 
 <br />
 
@@ -38,6 +38,8 @@ npx courier-studio
 ```
 
 Studio listens on `http://localhost:6280` — at both `127.0.0.1` and `::1`, so it answers whichever one a client dials — or on the `studio.host` and `studio.port` of your `courier.config.ts`. Server runtimes and the build plugins read the same block, so moving Studio there moves them with it: a server runtime reads the nearest config at or above its working directory, and a build plugin the nearest at or above Vite's root — or, for webpack, esbuild and Rollup, the working directory. Flags: `--port`, `--host`, `--cwd` (project root), `--open` (open a browser), `--version`. Studio keeps its working files — imported API state, copies of the files it replaced or removed, saved sessions — in `.courier/`, which ignores itself in git.
+
+What Studio shows is kept in `.courier/studio.db`, a SQLite database built into Node, with nothing to install or set up. The requests it captured are there, the latest 2000 of them, so a page that reloads, or a Studio that restarts, shows them again. A request still open when Studio stopped is shown as ended, since no runtime can say any more how it ended. The saved sessions are there too, and which one a page loaded: a page that reloads shows that session again, recording paused, until you go back to the live requests with the play button or **Back to live requests** in the command palette. So are the requests each mock answered, the latest 500, which the Mocks view's log shows again, and the Playground's history of calls — kept for the project, so another browser shows it too. Only how a page looks, its theme and layout, stays in the browser. Delete the file, with Studio stopped, to start empty. When the database cannot be kept there — `.courier` is a link, the disk is read-only, a newer Studio made it — Studio keeps its data in memory for that run, and says so. A file there that is not a database is moved aside to `studio.db.broken-<time>`, and a new one is started.
 
 Studio loads `courier.config.ts` from the project root, with the `courier.mocks.ts` beside it, and loads them again whenever either one, or a module either imports, is saved: see [How Studio loads the project](#how-studio-loads-the-project).
 

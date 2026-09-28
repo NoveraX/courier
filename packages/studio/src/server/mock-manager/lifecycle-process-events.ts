@@ -8,6 +8,7 @@
  */
 
 import { createLogger } from "@noverax/courier";
+import type { MockLog } from "../storage/mock-log";
 import type { ProcessManagerEvents } from "./process-manager";
 import type { ServerState } from "./types";
 
@@ -20,6 +21,8 @@ export interface ProcessEventsContext {
   servers: Map<string, ServerState>;
   emit: (type: string, payload: Record<string, unknown>) => void;
   updateAndEmit: (serverId: string, patch: Partial<ServerState>) => void;
+  /** Keeps the requests each mock answered, for the pages that connect later. */
+  mockLog?: MockLog;
 }
 
 export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEvents {
@@ -79,6 +82,7 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
 
     onEvent(serverId, event) {
       emit(event.type as string, { ...event, serverId });
+      ctx.mockLog?.record({ ...event, serverId });
 
       const state = servers.get(serverId);
       if (!state) return;

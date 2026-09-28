@@ -24,6 +24,11 @@ import { createRuntimePlaygroundRouter } from "./runtime-playground-router";
 import { serveStudioUi } from "./serve-ui";
 import { setupUiNamespace } from "./socket-handlers";
 import { createStudioSockets } from "./socket-server";
+import { createMockLog } from "./storage/mock-log";
+import { createPlaygroundHistory } from "./storage/playground-history";
+import { createSessionStore } from "./storage/session-rows";
+import { openStudioDb } from "./storage/studio-db";
+import { createStudioView } from "./storage/studio-view";
 import { createStudioOriginPolicy } from "./studio-origin";
 import type { StudioServer, StudioServerOptions } from "./types";
 import { createWatcherStatus } from "./watcher-status";
@@ -61,7 +66,14 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   const playgroundRouter = createRuntimePlaygroundRouter({ bindingTable, uiNamespace });
   /* Read on each event, by which time the project below exists. */
   const nameSource = createConfigSourceNamer(() => project.snapshot().running?.config);
-  const requestLog = createRequestLog();
+  /* The loader resolves links; every path shown is relative to the same root. */
+  const root = resolvedRoot(projectRoot);
+  const storage = openStudioDb(root);
+  const requestLog = createRequestLog(storage.db);
+  const sessions = createSessionStore(storage.db);
+  const view = createStudioView(storage.db);
+  const mockLog = createMockLog(storage.db);
+  const playgroundHistory = createPlaygroundHistory(storage.db);
   setupRuntimeNamespace(runtimeNamespace, {
     bindingTable,
     uiNamespace,
@@ -84,12 +96,11 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     watcherStatus,
     /* The directory Studio's own loads use, looked up as they look it up. */
     transformCacheDirectory: () => findTransformCacheDirectory(projectRoot),
+    mockLog,
   });
 
   // ── The project Studio runs: loaded, watched and told from one place ──────
 
-  /* The loader resolves links; every path shown is relative to the same root. */
-  const root = resolvedRoot(projectRoot);
   const project = createProjectState({
     projectRoot: root,
     bindingTable,
@@ -107,6 +118,10 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     watcherStatus,
     playgroundRouter,
     requestLog,
+    sessions,
+    view,
+    mockLog,
+    playgroundHistory,
   });
 
   undoUnfinishedImportWrites(root);
@@ -120,6 +135,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
       studioPort: () => address.port(),
       mockSummaries: mockManager.summarizeServers,
     },
+    sessions: { sessions, view },
   });
   serveStudioUi(app);
 
@@ -134,6 +150,9 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     playgroundRouter.dispose();
     clearStudioServerState();
     io.close();
+    requestLog.close();
+    mockLog.close();
+    storage.close();
     if (!httpServer.listening) return;
     return new Promise<void>((resolve, reject) => {
       httpServer.close((err) => (err ? reject(err) : resolve()));

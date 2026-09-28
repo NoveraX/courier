@@ -1,6 +1,5 @@
 import type { StudioState } from "./store-types"
 import { loadSettings, loadSessionStartedAt } from "./constants"
-import { loadPlaygroundHistory } from "./playground-history-storage"
 
 // ── Initial State Factory ───────────────────────────────────────────────────
 
@@ -13,8 +12,9 @@ export function createInitialState(savedTheme: StudioState["theme"]) {
     lastBindingError: null as StudioState["lastBindingError"],
     requests: [] as StudioState["requests"],
     paused: false,
+    shownSession: null as StudioState["shownSession"],
     auditExpandedIds: new Set<string>(),
-    playgroundHistory: loadPlaygroundHistory(),
+    playgroundHistory: [] as StudioState["playgroundHistory"],
     playgroundActiveResponse: null as StudioState["playgroundActiveResponse"],
     connected: false,
     settings: loadSettings(),

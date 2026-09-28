@@ -14,6 +14,12 @@ import type { ScannedSource, SourceSummary } from "@/views/apis/types"
 import type { ConfigStatusPayload } from "./config-status"
 import type { MocksFileStatus } from "./mocks-file-status"
 
+/** A saved session shown in place of the live requests */
+export interface ShownSession {
+  id: string
+  name: string
+}
+
 export interface StudioState {
   // UI
   theme: Theme
@@ -31,6 +37,8 @@ export interface StudioState {
   // Requests
   requests: RequestEntry[]
   paused: boolean
+  /** The saved session shown in place of the live requests; `null` while they show. */
+  shownSession: ShownSession | null
 
   // APIs — live scan + registry (pushed via socket)
   scanSources: ScannedSource[]
@@ -90,8 +98,10 @@ export interface StudioState {
   togglePaused: () => void
   togglePreserveLog: () => void
   clearRequests: () => void
-  /** Show these requests, newest first, in place of the ones captured — a saved session loaded back. */
-  loadRequests: (requests: RequestEntry[]) => void
+  /** Show a saved session's requests in place of the live ones, recording paused. */
+  showSession: (session: ShownSession, requests: RequestEntry[]) => void
+  /** Show the live requests again: the saved session goes, and recording resumes. */
+  showLive: () => void
   togglePin: (id: string) => void
   /** Take in a batch of runtime events, oldest first, in one store update. */
   handleEvents: (events: Array<StudioEvent & Record<string, unknown>>) => void

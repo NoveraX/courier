@@ -3,6 +3,7 @@ import { Command, Pause, Play, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
+import { useBackToLive } from "@/hooks/use-back-to-live";
 import { useClearRequests } from "@/hooks/use-clear-requests";
 import { getPageTitle } from "@/app-config";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -18,6 +19,8 @@ export function TopBar({ onOpenSearch }: TopBarProps): React.ReactNode {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const paused = useStudioStore((s) => s.paused);
   const togglePaused = useStudioStore((s) => s.togglePaused);
+  const shownSession = useStudioStore((s) => s.shownSession);
+  const backToLive = useBackToLive();
   const clearRequests = useClearRequests();
   const requestCount = useStudioStore((s) => s.requests.length);
 
@@ -30,9 +33,15 @@ export function TopBar({ onOpenSearch }: TopBarProps): React.ReactNode {
 
       <h1 className="text-h3 text-foreground select-none">{title}</h1>
 
-      {paused && (
+      {paused && !shownSession && (
         <span className="rounded bg-warning-muted px-1.5 py-0.5 text-caption text-warning-foreground">
           Paused
+        </span>
+      )}
+
+      {shownSession && (
+        <span className="truncate rounded bg-warning-muted px-1.5 py-0.5 text-caption text-warning-foreground">
+          Session: {shownSession.name}
         </span>
       )}
 
@@ -57,16 +66,16 @@ export function TopBar({ onOpenSearch }: TopBarProps): React.ReactNode {
             <Button
               variant="ghost"
               size="icon"
-              aria-label={paused ? "Resume recording" : "Pause recording"}
+              aria-label={shownSession ? "Back to live requests" : paused ? "Resume recording" : "Pause recording"}
               data-tour="pause"
               className={cn("size-7", paused && "text-warning-foreground")}
-              onClick={togglePaused}
+              onClick={shownSession ? backToLive : togglePaused}
             >
               {paused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {paused ? "Resume" : "Pause"}
+            {shownSession ? "Back to live" : paused ? "Resume" : "Pause"}
           </TooltipContent>
         </Tooltip>
 

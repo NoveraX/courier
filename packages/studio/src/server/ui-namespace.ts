@@ -20,6 +20,12 @@ import type { RequestLog } from "./request-log";
 import { keptIdsOf } from "./request-log-clear";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
 import { sanitizeMockCommand, sanitizeMockManaged } from "./sanitize-mock-events";
+import type { MockLog } from "./storage/mock-log";
+import type { PlaygroundHistory } from "./storage/playground-history";
+import type { SessionStore } from "./storage/session-rows";
+import type { StudioView } from "./storage/studio-view";
+import { bindPlaygroundHistory } from "./ui-playground-history";
+import { bindView } from "./ui-view";
 import type { WatcherStatus } from "./watcher-status";
 
 export interface SetupUiNamespaceDeps {
@@ -34,6 +40,14 @@ export interface SetupUiNamespaceDeps {
   playgroundRouter?: RuntimePlaygroundRouter;
   /** The requests captured so far, replayed to each UI that connects. */
   requestLog?: RequestLog;
+  /** The saved sessions, for the one the pages show. */
+  sessions?: SessionStore;
+  /** What the pages show: the live requests, or a saved session. */
+  view?: StudioView;
+  /** The requests the mocks answered, replayed to each UI that connects. */
+  mockLog?: MockLog;
+  /** The Playground's calls, sent to each UI that connects and kept as they change. */
+  playgroundHistory?: PlaygroundHistory;
 }
 
 /**
@@ -50,6 +64,7 @@ export interface SetupUiNamespaceDeps {
 export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
   const { uiNamespace, bindingTable, mockManager, watcherStatus, playgroundRouter, requestLog } =
     deps;
+  const { sessions, view, mockLog, playgroundHistory } = deps;
   const { project, projectRoot } = deps;
 
   uiNamespace.on("connection", (socket) => {
@@ -78,6 +93,8 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
 
     // Send managed mock server states
     mockManager?.sendSnapshot();
+    /* After the mocks, the requests they answered: a page that reloads shows each mock's log again. */
+    if (mockLog) socket.emit("mock:events:replay", mockLog.events());
 
     // Send current watcher status (watching N files indicator)
     watcherStatus?.sendSnapshot(socket);
@@ -92,6 +109,10 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
         if (keep) requestLog.forget(keep);
       });
     }
+
+    /* After the live requests: a page that loaded a saved session shows it again. */
+    if (sessions && view) bindView(socket, { sessions, view, requestLog });
+    if (playgroundHistory) bindPlaygroundHistory(socket, playgroundHistory);
 
     // Rid-keyed playground wire — `attachRuntime` callers register a
     // `playground-responder` that speaks the `playground:execute` protocol.

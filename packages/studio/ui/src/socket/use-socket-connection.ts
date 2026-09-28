@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react"
 
 import { useStudioStore } from "@/store"
 import { getSocket, recreateSocket } from "./socket-instance"
+import { bindPlaygroundHistory } from "./playground-history-bindings"
 import { buildBindings, unbind } from "./socket-bindings"
 
 export function useSocketConnection(): void {
@@ -21,7 +22,11 @@ export function useSocketConnection(): void {
 
     const store = useStudioStore.getState
     const bind = buildBindings(s, store)
+    const unbindHistory = bindPlaygroundHistory(s, useStudioStore)
 
-    return () => unbind(s, bind)
+    return () => {
+      unbindHistory()
+      unbind(s, bind)
+    }
   }, [autoReconnect, reconnectDelay])
 }

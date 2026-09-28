@@ -8,7 +8,7 @@ import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { registerMockDeclareRoutes } from "./mock-declare-routes";
 import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
 import { createOriginGuard } from "./origin-guard";
-import { registerSessionRoutes } from "./session-routes";
+import { registerSessionRoutes, type SessionRouteDeps } from "./session-routes";
 import type { StudioOriginPolicy } from "./studio-origin";
 
 /** What the REST API's routes read and change in the running Studio. */
@@ -17,6 +17,8 @@ export interface RestApiDeps {
   apis: ApisRouteDeps;
   /** The running Studio the mock wizard's edits read and change. */
   mocksEdit: MocksEditContext;
+  /** The saved sessions, and what the pages show. */
+  sessions: SessionRouteDeps;
 }
 
 /**
@@ -30,13 +32,13 @@ export interface RestApiDeps {
  *
  * @example
  * ```ts
- * registerRestApi(app, policy, { apis: { project, projectRoot: root }, mocksEdit });
+ * registerRestApi(app, policy, { apis: { project, projectRoot: root }, mocksEdit, sessions });
  * ```
  */
 export function registerRestApi(
   app: ReturnType<typeof express>,
   policy: StudioOriginPolicy,
-  { apis, mocksEdit }: RestApiDeps,
+  { apis, mocksEdit, sessions }: RestApiDeps,
 ): void {
   app.use(compression());
   /* Before anything reads a body: the API is for the Studio UI, not for every
@@ -49,7 +51,7 @@ export function registerRestApi(
   });
 
   registerApisRoutes(app, apis);
-  registerSessionRoutes(app);
+  registerSessionRoutes(app, sessions);
   registerMockDeclareRoutes(app, mocksEdit);
   app.use("/api", apiNotFound);
   app.use("/api", apiErrors);

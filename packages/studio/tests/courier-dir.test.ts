@@ -10,9 +10,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { resetProjectRoot, setProjectRoot } from "../src/context";
+import { resetProjectRoot } from "../src/context";
 import { ensureCourierDir } from "../src/server/courier-dir";
-import { saveSession } from "../src/server/session-store";
+import { openStudioDb } from "../src/server/storage/studio-db";
 
 const roots: string[] = [];
 
@@ -37,13 +37,12 @@ describe(".courier/", () => {
     expect(existsSync(join(root, ".gitignore"))).toBe(false);
   });
 
-  it("is created ignoring itself when Studio first saves a session there", () => {
+  it("is created ignoring itself when Studio first opens its database there", () => {
     const root = project();
-    setProjectRoot(root);
 
-    saveSession({ id: "s1", name: "first", createdAt: 0, events: [] } as never);
+    openStudioDb(root).close();
 
     expect(existsSync(join(root, ".courier", ".gitignore"))).toBe(true);
-    expect(existsSync(join(root, ".courier", "sessions", "s1.json"))).toBe(true);
+    expect(existsSync(join(root, ".courier", "studio.db"))).toBe(true);
   });
 });

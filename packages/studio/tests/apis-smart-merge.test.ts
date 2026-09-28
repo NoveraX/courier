@@ -422,6 +422,7 @@ export const users = defineGroup({
       const res = http.get("")
       return res
     })).response<User[]>().reads(),
+  },
 });
 `
     const generated = `import { courier, defineGroup } from "@noverax/courier/define";

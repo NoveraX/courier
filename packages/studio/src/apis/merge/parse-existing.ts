@@ -1,10 +1,11 @@
 /**
  * Parses existing (potentially user-modified) group files for smart merge.
  *
- * Extracts imports, group metadata, endpoints, and non-endpoint code
- * using regex + bracket-depth tracking (no TS compiler dependency).
+ * Extracts imports, group metadata, endpoints, and non-endpoint code. The
+ * endpoints are found by the file's syntax; the rest by its lines.
  */
 
+import { endpointLines } from "./endpoint-lines";
 import { findEndpointsBlock } from "./endpoints-block";
 import { parseImports } from "./parse-imports";
 import type { ExistingEndpointInfo, ExistingGroupInfo } from "./types";
@@ -16,18 +17,6 @@ const PREFIX_RE = /prefix:\s*["']([^"']*)["']/;
 /** Head a generated endpoint starts with, optionally qualified by its base. */
 const DEFAULT_BASE = "endpoint";
 
-/**
- * Line opening an endpoint, in whichever name this file gives the base.
- *
- * `stream` and `channel` are always recognised: a person may have added one by
- * hand even though nothing generates them.
- */
-function endpointStart(baseName: string): RegExp {
-  const base = baseName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`^\\s{4}(\\w+):\\s*(?:${base}|(?:\\w+\\.)?(?:endpoint|stream|channel))\\b`);
-}
-const JSDOC_RE = /^\s{4}\/\*\*/;
-
 export function parseExistingGroup(content: string): ExistingGroupInfo {
   const lines = content.split("\n");
 
@@ -35,7 +24,7 @@ export function parseExistingGroup(content: string): ExistingGroupInfo {
   const { groupName, prefix } = parseGroupMeta(lines);
   const preamble = extractPreamble(lines);
   const baseName = readBaseName(preamble, "endpoint") ?? DEFAULT_BASE;
-  const endpoints = parseEndpointsWithComments(lines, baseName);
+  const endpoints = parseEndpointsWithComments(content, lines);
   const trailingCode = extractTrailingCode(lines);
   const { header, footer } = extractShell(lines);
   const streamBaseName = readBaseName(preamble, "stream");
@@ -69,54 +58,13 @@ function parseGroupMeta(lines: string[]): { groupName: string; prefix: string } 
   return { groupName, prefix };
 }
 
-function parseEndpointsWithComments(lines: string[], baseName: string): ExistingEndpointInfo[] {
-  const startsEndpoint = endpointStart(baseName);
-  const result: ExistingEndpointInfo[] = [];
-  let i = 0;
-
-  while (i < lines.length) {
-    let comment: string | undefined;
-
-    if (JSDOC_RE.test(lines[i] ?? "")) {
-      const commentStart = i;
-      while (i < lines.length && !lines[i]?.includes("*/")) i++;
-      comment = lines.slice(commentStart, i + 1).join("\n");
-      i++;
-    }
-
-    const match = lines[i]?.match(startsEndpoint);
-    if (!match?.[1]) {
-      if (comment) comment = undefined;
-      i++;
-      continue;
-    }
-
-    const name = match[1];
-    const endLine = findEndpointEnd(lines, i);
-    const code = lines.slice(i, endLine + 1).join("\n");
-    result.push({ name, code, comment });
-    i = endLine + 1;
-  }
-
-  return result;
-}
-
-function findEndpointEnd(lines: string[], startLine: number): number {
-  let depth = 0;
-  let foundOpen = false;
-
-  for (let j = startLine; j < lines.length; j++) {
-    for (const ch of lines[j] ?? "") {
-      if (ch === "(" || ch === "{" || ch === "[") {
-        depth++;
-        foundOpen = true;
-      }
-      if (ch === ")" || ch === "}" || ch === "]") depth--;
-    }
-    if (foundOpen && depth <= 0) return j;
-  }
-
-  return lines.length - 1;
+/* Each endpoint's lines and the doc comment above it, found by the file's syntax. */
+function parseEndpointsWithComments(content: string, lines: string[]): ExistingEndpointInfo[] {
+  return endpointLines(content).map(({ name, commentStart, start, end }) => ({
+    name,
+    code: lines.slice(start, end + 1).join("\n"),
+    comment: commentStart < start ? lines.slice(commentStart, start).join("\n") : undefined,
+  }));
 }
 
 /**

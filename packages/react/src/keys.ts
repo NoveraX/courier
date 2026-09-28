@@ -1,9 +1,9 @@
 import type { DefinedApi } from "@noverax/courier/define";
 import { getSourceName } from "@noverax/courier/define";
 
-type Groups<TApi extends DefinedApi<any>> = TApi["options"]["groups"];
-type GroupKey<TApi extends DefinedApi<any>> = keyof Groups<TApi> & string;
-type MethodKey<TApi extends DefinedApi<any>, TGroup extends GroupKey<TApi>> = Exclude<
+type Groups<TApi extends DefinedApi> = TApi["options"]["groups"];
+type GroupKey<TApi extends DefinedApi> = keyof Groups<TApi> & string;
+type MethodKey<TApi extends DefinedApi, TGroup extends GroupKey<TApi>> = Exclude<
   keyof Groups<TApi>[TGroup],
   "options"
 > &
@@ -15,7 +15,7 @@ type MethodKey<TApi extends DefinedApi<any>, TGroup extends GroupKey<TApi>> = Ex
  * Returns hierarchical react-query keys: `[source, group, method?, variables?]`.
  * Use for cache invalidation, prefetching, and optimistic updates.
  */
-export interface QueryKeyFactory<TApi extends DefinedApi<any>> {
+export interface QueryKeyFactory<TApi extends DefinedApi> {
   <TGroup extends GroupKey<TApi>>(group: TGroup): readonly [string, TGroup];
   <TGroup extends GroupKey<TApi>, TMethod extends MethodKey<TApi, TGroup>>(
     group: TGroup,
@@ -28,7 +28,7 @@ export interface QueryKeyFactory<TApi extends DefinedApi<any>> {
   ): readonly [string, TGroup, TMethod, Record<string, unknown>];
 }
 
-function buildKeyFactory<TApi extends DefinedApi<any>>(source: string): QueryKeyFactory<TApi> {
+function buildKeyFactory<TApi extends DefinedApi>(source: string): QueryKeyFactory<TApi> {
   function queryKey(group: string, method?: string, variables?: Record<string, unknown>) {
     if (method === undefined) return [source, group] as const;
     if (variables !== undefined) return [source, group, method, variables] as const;
@@ -59,7 +59,7 @@ function buildKeyFactory<TApi extends DefinedApi<any>>(source: string): QueryKey
  * queryClient.invalidateQueries({ queryKey: queryKeys("users") });
  * ```
  */
-export function createQueryKeys<TApi extends DefinedApi<any>>(api: TApi): QueryKeyFactory<TApi> {
+export function createQueryKeys<TApi extends DefinedApi>(api: TApi): QueryKeyFactory<TApi> {
   const source = getSourceName(api) ?? "_";
   return buildKeyFactory<TApi>(source);
 }
@@ -84,7 +84,7 @@ export function createQueryKeys<TApi extends DefinedApi<any>>(api: TApi): QueryK
  * queryKeys("users", "getById", { id: 1 })    // → ["api", "users", "getById", { id: 1 }]
  * ```
  */
-export function createProxyQueryKeys<TApi extends DefinedApi<any>>(
+export function createProxyQueryKeys<TApi extends DefinedApi>(
   source: string,
 ): QueryKeyFactory<TApi> {
   return buildKeyFactory<TApi>(source);

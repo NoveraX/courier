@@ -3,14 +3,10 @@ import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { GroupCall } from "./group-call";
-import type { QueryGroupClient } from "./types";
+import type { UntypedGroupHooks } from "./untyped-group-hooks";
 
 /** The hook of a group that changes something on the server. */
-export type MutationHook = Pick<
-  // biome-ignore lint/suspicious/noExplicitAny: the implementation is untyped; QueryGroupClient<TGroup> types it for callers
-  QueryGroupClient<any>,
-  "useMutation"
->;
+export type MutationHook = Pick<UntypedGroupHooks, "useMutation">;
 
 type SuccessCallback = (...args: unknown[]) => unknown;
 

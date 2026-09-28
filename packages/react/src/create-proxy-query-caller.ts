@@ -55,7 +55,7 @@ import type { QueryCallerClient } from "./types";
  * await q.users.prefetchQuery(queryClient, "getAll");
  * ```
  */
-export function createProxyQueryCaller<TApi extends DefinedApi<any>>(
+export function createProxyQueryCaller<TApi extends DefinedApi>(
   source: string,
   ...defaults: ProxyCallerArguments<TApi>
 ): QueryCallerClient<TApi>;

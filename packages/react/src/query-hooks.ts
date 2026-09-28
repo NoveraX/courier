@@ -9,7 +9,7 @@ import {
 } from "./hooks/use-computed-query";
 import type { SubscribeFn } from "./hooks/use-subscription";
 import { buildInfiniteQueryKey, buildQueryKey } from "./query-key";
-import type { QueryGroupClient } from "./types";
+import type { UntypedGroupHooks } from "./untyped-group-hooks";
 
 type PageParamFn = (
   page: unknown,
@@ -28,8 +28,7 @@ interface InfiniteHookOptions extends Record<string, unknown> {
 
 /** The hooks of a group that read an endpoint and keep its answer cached. */
 export type QueryHooks = Pick<
-  // biome-ignore lint/suspicious/noExplicitAny: the implementation is untyped; QueryGroupClient<TGroup> types it for callers
-  QueryGroupClient<any>,
+  UntypedGroupHooks,
   "useQuery" | "useSuspenseQuery" | "useInfiniteQuery" | "prefetchQuery" | "useComputedQuery"
 >;
 

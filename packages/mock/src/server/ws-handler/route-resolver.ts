@@ -91,9 +91,5 @@ export function isOriginAllowed(
 }
 
 function parsePathname(url: string): string | null {
-  try {
-    return new URL(url, "http://localhost").pathname;
-  } catch {
-    return null;
-  }
+  return URL.canParse(url, "http://localhost") ? new URL(url, "http://localhost").pathname : null;
 }

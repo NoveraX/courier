@@ -26,9 +26,9 @@ export function buildChannelContext(
   state: ConnectionState,
 ) {
   // `topic` is mutable: when the client subscribes with a fully qualified
-  // topic (`{source}.{group}.{method}#{varsHash}`), the message router
-  // rewrites `ctx.topic` so outbound `data` frames echo the client's exact
-  // topic. Without this, clients dispatch frames by topic and would
+  // topic — `{source}.{group}.{method}`, then `#` and its variables as
+  // canonical JSON — the message router rewrites `ctx.topic` so outbound
+  // `data` frames echo the client's exact topic. Without this, clients dispatch frames by topic and would
   // silently drop everything sent under the server-local short topic.
   const ctx = {
     topic: initialTopic,

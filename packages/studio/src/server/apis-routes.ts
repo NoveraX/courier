@@ -1,17 +1,8 @@
 /**
- * Express routes for apis: parse, generate, write, diff, fingerprint.
+ * Express routes for apis: parse, generate, write, diff.
  */
 
-import {
-  diffSpecs,
-  type FingerprintResult,
-  type GenerateOptions,
-  generateCode,
-  generateFingerprints,
-  mergeGroupFile,
-  type ParsedSpec,
-  parseSpec,
-} from "../apis";
+import { diffSpecs, type GenerateOptions, generateCode, type ParsedSpec, parseSpec } from "../apis";
 import { fetchSpec } from "./fetch-spec";
 import { errMsg } from "./fs-helpers";
 import { registerLayoutRoute } from "./layout-route";
@@ -28,13 +19,7 @@ import { type SpecHostAllowlist, specHostAllowlist } from "./spec-host-allowlist
 import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
 import { SpecTooLargeError } from "./spec-too-large-error";
 import { registerUpdateFlowRoutes } from "./update-routes";
-import {
-  validateDiffBody,
-  validateFingerprintBody,
-  validateGenerateBody,
-  validateMergeBody,
-  validateParseBody,
-} from "./validate-body";
+import { validateDiffBody, validateGenerateBody, validateParseBody } from "./validate-body";
 import { registerWriteRoutes } from "./write-routes";
 
 /** What the imports routes read the project from. */
@@ -49,8 +34,8 @@ export interface ApisRouteDeps {
 }
 
 /**
- * Mount the API-import routes: parse, generate, write, diff, fingerprint,
- * merge, and the imports list, checks, management and updates.
+ * Mount the API-import routes: parse, generate, write, diff, and the
+ * imports list, checks, management and updates.
  *
  * @param app - The Studio server's Express app
  * @param deps - The project the imports routes answer from
@@ -113,36 +98,6 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
       );
     } catch (err) {
       res.status(400).json({ error: errMsg(err, "Failed to diff specs") });
-    }
-  });
-
-  app.post("/api/apis/fingerprint", (req, res) => {
-    try {
-      const body = validateFingerprintBody(req.body, res);
-      if (!body) return;
-      const result: Record<string, Record<string, string>> = {};
-      for (const file of body.files) {
-        result[file.path] = generateFingerprints(file.content);
-      }
-      res.json(result);
-    } catch (err) {
-      res.status(500).json({ error: errMsg(err, "Failed to compute fingerprints") });
-    }
-  });
-
-  app.post("/api/apis/merge", (req, res) => {
-    try {
-      const body = validateMergeBody(req.body, res);
-      if (!body) return;
-      res.json(
-        mergeGroupFile(
-          body.existing,
-          body.generated,
-          body.fingerprints as unknown as FingerprintResult,
-        ),
-      );
-    } catch (err) {
-      res.status(500).json({ error: errMsg(err, "Failed to merge files") });
     }
   });
 

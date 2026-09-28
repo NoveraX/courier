@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HTTPError } from "@noverax/courier";
-import type * as CourierModule from "@noverax/courier";
+import type * as CourierInternal from "@noverax/courier/internal";
 
-vi.mock("@noverax/courier", async (importOriginal) => {
-  const actual = await importOriginal<typeof CourierModule>();
+vi.mock("@noverax/courier/internal", async (importOriginal) => {
+  const actual = await importOriginal<typeof CourierInternal>();
   return {
     ...actual,
     executeRequest: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock("next/headers", () => ({
   headers: vi.fn().mockResolvedValue(new Headers({ authorization: "Bearer test-token" })),
 }));
 
-import { executeRequest } from "@noverax/courier";
+import { executeRequest } from "@noverax/courier/internal";
 import { createAction } from "../src/actions";
 
 const mockExecuteRequest = vi.mocked(executeRequest);

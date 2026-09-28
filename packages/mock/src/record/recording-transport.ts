@@ -1,6 +1,6 @@
 import type { HttpResponse } from "@noverax/courier";
-import { createDirectHTTPExecutor, createProxyHTTPExecutor } from "@noverax/courier";
 import type { AnyDefinedApi } from "@noverax/courier/define";
+import { createDirectHTTPExecutor, createProxyHTTPExecutor } from "@noverax/courier/internal";
 
 import { analyzeRoutes, getSourceGroupNames } from "../auto/route-analyzer";
 import type { RouteInfo } from "../auto/route-types";

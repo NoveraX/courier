@@ -28,8 +28,8 @@
  * path populated by `attachRuntime()` from `courier.config.ts`).
  */
 
-import { executeRequest } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
+import { executeRequest } from "@noverax/courier/internal";
 import { executeDirectSSE, executeDirectWSChannel } from "@noverax/courier/internal-streams";
 import { dispatchHttp } from "./dispatch-http";
 import {

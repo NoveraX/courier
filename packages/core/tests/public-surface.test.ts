@@ -7,6 +7,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import * as courier from "../src";
+import * as internal from "../src/internal";
 import * as realtime from "../src/realtime";
 import type { WSConnection } from "../src/realtime";
 import type { BaseOptions, SearchParamsSerializer } from "../src";
@@ -52,5 +53,33 @@ describe("the realtime entry", () => {
   it("offers no request a server never answers", () => {
     expectTypeOf<"request" extends keyof WSConnection ? true : false>().toEqualTypeOf<false>();
     expect(Object.keys(realtime)).not.toContain("createPendingRegistry");
+  });
+});
+
+/**
+ * The root entry exported Courier's own plumbing beside the API — the
+ * request executor, Studio's hooks, the transports and the client proxy —
+ * so every internal change would have been a breaking one. Courier's
+ * packages reach it through `@noverax/courier/internal`.
+ */
+describe("Courier's own plumbing", () => {
+  const PLUMBING = [
+    "buildClientProxy",
+    "createDirectHTTPExecutor",
+    "createProxyHTTPExecutor",
+    "executeRequest",
+    "normalizeHttpMethod",
+    "studioHooks",
+  ];
+
+  it("is kept out of the root entry", () => {
+    expect(Object.keys(courier).filter((name) => PLUMBING.includes(name))).toEqual([]);
+    for (const gone of ["composeBackend", "parseEndpointKey", "requireSources", "abortPlayground"]) {
+      expect(Object.keys(courier)).not.toContain(gone);
+    }
+  });
+
+  it("is reached through the internal entry", () => {
+    expect(PLUMBING.filter((name) => !(name in internal))).toEqual([]);
   });
 });

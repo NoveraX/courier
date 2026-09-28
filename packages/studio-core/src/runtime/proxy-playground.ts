@@ -1,11 +1,6 @@
-import {
-  createProxyCaller,
-  getAppOriginParsed,
-  type ProxyPath,
-  resolveProxyPath,
-  type UploadProgress,
-} from "@noverax/courier";
+import { createProxyCaller, type ProxyPath, type UploadProgress } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
+import { getAppOriginParsed, resolveProxyPath } from "@noverax/courier/internal";
 
 /** A Playground call, as the responder runs it. */
 export interface PlaygroundCall {

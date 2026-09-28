@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { isOriginAccepted } from "@noverax/courier";
+import { isOriginAccepted } from "@noverax/courier/internal";
 import { extractOriginFromNodeRequest } from "@noverax/courier/node";
 
 import { sendError } from "./send-error";

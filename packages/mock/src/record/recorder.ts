@@ -1,6 +1,8 @@
-import type { ExecuteBackend, HttpResponse, InferClient } from "@noverax/courier";
-import { buildClientProxy, HTTPError } from "@noverax/courier";
+import type { HttpResponse, InferClient } from "@noverax/courier";
+import { HTTPError } from "@noverax/courier";
 import type { AnyDefinedApi } from "@noverax/courier/define";
+import type { ExecuteBackend } from "@noverax/courier/internal";
+import { buildClientProxy } from "@noverax/courier/internal";
 
 import { RecorderError } from "./errors";
 import type { Fixture } from "./fixture";

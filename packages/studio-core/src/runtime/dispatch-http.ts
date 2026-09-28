@@ -1,6 +1,7 @@
 import type { UploadProgress } from "@noverax/courier";
-import { type executeRequest, HTTPError, ValidationError } from "@noverax/courier";
+import { HTTPError, ValidationError } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
+import type { executeRequest } from "@noverax/courier/internal";
 import { formDataOf } from "./playground-form";
 import type { PlaygroundExecutePayload } from "./playground-payloads";
 import type { ResponderSocket } from "./playground-responder";

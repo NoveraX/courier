@@ -3,7 +3,8 @@
  * registry, the in-flight attach sharing, and the connection to Studio.
  */
 
-import { createLogger, getSources, studioHooks } from "@noverax/courier";
+import { createLogger, getSources } from "@noverax/courier";
+import { studioHooks } from "@noverax/courier/internal";
 import { EventBus } from "../event-bus";
 import { type BufferedAnnouncement, consumeAnnouncements } from "./announce-hosting";
 import type { RuntimeHandle } from "./attach-runtime-types";

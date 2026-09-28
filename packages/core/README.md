@@ -44,7 +44,6 @@ import {
   createHandler,         // Web Standard adapter handler for server frameworks
   HTTPError,             // Typed HTTP error with status, headers, data
   isHTTPError,           // Type guard for HTTPError
-  executeRequest,        // Core request orchestrator (used by adapters internally)
   createLogger,          // Logger bound to a context — see Logging
   logger,                // Logger that takes the context per call
 } from "@noverax/courier"

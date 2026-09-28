@@ -14,6 +14,7 @@ export default defineConfig({
     "testing/index": "src/testing/index.ts",
     "realtime/index": "src/realtime/index.ts",
     "internal-streams/index": "src/internal-streams/index.ts",
+    "internal/index": "src/internal/index.ts",
     "announce/index": "src/announce/index.ts",
   },
 });

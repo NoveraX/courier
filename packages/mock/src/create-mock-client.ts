@@ -1,6 +1,7 @@
-import type { ExecuteBackend, InferClient } from "@noverax/courier";
-import { buildClientProxy } from "@noverax/courier";
+import type { InferClient } from "@noverax/courier";
 import type { AnySource } from "@noverax/courier/define";
+import type { ExecuteBackend } from "@noverax/courier/internal";
+import { buildClientProxy } from "@noverax/courier/internal";
 import { createMockBackend } from "./backend";
 import { createEnhancedMockBuilder } from "./builder";
 import { createHistory } from "./history";

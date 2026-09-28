@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { studioHooks } from "@noverax/courier";
+import { studioHooks } from "@noverax/courier/internal";
 
 /**
  * Keep the registered sources in step with `courier.config` while the

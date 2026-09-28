@@ -1,4 +1,4 @@
-import type { HTTPExecutor } from "@noverax/courier";
+import type { HTTPExecutor } from "@noverax/courier/internal";
 
 import { createGroupCall } from "./group-call";
 import type { ChannelFn } from "./hooks/use-channel";

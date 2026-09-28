@@ -1,13 +1,13 @@
+import type { CallerDefaults } from "@noverax/courier";
+import type { DefinedApi } from "@noverax/courier/define";
+import { getSourceName } from "@noverax/courier/define";
 import {
-  type CallerDefaults,
   createClientRoot,
   createDirectHTTPExecutor,
   createDirectSSEFactory,
   createDirectWSChannelFactory,
   shapeOfClient,
-} from "@noverax/courier";
-import type { DefinedApi } from "@noverax/courier/define";
-import { getSourceName } from "@noverax/courier/define";
+} from "@noverax/courier/internal";
 
 import { cachedGroupHooks } from "./cached-group-hooks";
 import { createGroupHooks } from "./group-hooks";

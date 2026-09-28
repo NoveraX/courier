@@ -1,4 +1,4 @@
-import type { ExecuteBackend } from "@noverax/courier";
+import type { ExecuteBackend } from "@noverax/courier/internal";
 import type { MockRegistry } from "../registry";
 import type { MockHistoryEntry, NetworkConfig } from "../types";
 import { handleChannel } from "./handle-channel";

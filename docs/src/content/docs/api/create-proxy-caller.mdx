@@ -152,7 +152,7 @@ const user = await caller.users
   .with({
     timeout: 5000,
     signal: controller.signal,
-    method: "GET", // Use GET for cacheable reads
+    method: "POST", // Keep this call's variables out of the address
   })
   .getById({ id: "123" })
 ```
@@ -179,17 +179,25 @@ Files go in a `FormData`. Any other variables travel to the proxy as JSON, so a 
 
 The progress covers the browser's upload to the proxy route. The proxy then forwards the whole file to your backend, so the call resolves after progress has reached 100% — see [progress in proxy mode](/docs/advanced/upload#progress-in-proxy-mode).
 
-## GET Proxy Mode
+## GET or POST
 
-By default, proxy requests use POST. Set `method: "GET"` for cacheable reads — variables are encoded as query parameters:
+A read — an endpoint built from a reading verb, or declared `.reads()` — goes to the proxy as GET, its variables as JSON in the `_v` parameter of the address, so a browser or a CDN can reuse the answer its `.cache()` allows. A write goes as POST, its variables in the body. A client that knows neither — built without `source` or `boundary` — sends every call as POST.
 
 ```ts
-// GET proxy: cacheable, works with CDN and browser cache
-const users = await caller.users.with({ method: "GET" }).getAll()
+// GET /api/request?_s=api&_g=users&_m=search&_v={"q":"ada"}
+const found = await caller.users.search({ q: "ada" })
 
-// POST proxy: default, used for mutations and complex payloads
+// POST /api/request?_s=api&_g=users&_m=create, body {"variables":{"name":"Jane"}}
 const user = await caller.users.create({ name: "Jane" })
 ```
+
+A read goes as POST instead when its variables carry a body — form data, an upload whose progress is watched — or would make the address longer than 2 KB, which some servers and CDNs refuse. An address is written down by every access log it passes, so a read whose variables must not be — an email address, a search someone typed — declares `sensitiveVariables` and always goes as POST; the proxy refuses it over GET:
+
+```ts
+byEmail: endpoint.get("customers", { sensitiveVariables: true }).variables<{ email: string }>()
+```
+
+A client built from a boundary cannot see the definition, so the boundary lists those reads under `sensitive`. A call can still ask for either verb with `.with({ method: "GET" })` or `.with({ method: "POST" })`; a write asked for over GET is refused 405.
 
 ## Related
 

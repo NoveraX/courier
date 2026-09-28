@@ -28,19 +28,27 @@ export function createProxyHTTPExecutor(
 
   return function executeHTTP(group, method, variables, options, raw) {
     const callOptions = { ...options, ...(raw && { rawData: true }) };
-    const chosen = isWrite(described, group, method) ? writeFn : fn;
+    const kind = kindOf(described, group, method);
+    const chosen = kind === "mutation" ? writeFn : fn;
     const endpointKey = group ? `${group}:${method}` : method;
 
-    return chosen(source, callOptions)(endpointKey, variables);
+    return chosen(source, callOptions)(endpointKey, variables, kind === "read");
   };
 }
 
-/** Does the source or boundary describe this endpoint as a write? Unknown without one. */
-function isWrite(
+/**
+ * How the source or the boundary describes an endpoint: a write, a read whose
+ * variables may travel in the address, or unknown — without either, or for a
+ * read whose variables are sensitive, which goes as a write does.
+ */
+function kindOf(
   apiSource: Record<string, unknown> | undefined,
   group: string,
   method: string,
-): boolean {
-  if (!apiSource) return false;
-  return resolveEndpoint(apiSource, group, method).schema?.type === "mutation";
+): "read" | "mutation" | undefined {
+  if (!apiSource) return undefined;
+  const { schema, options } = resolveEndpoint(apiSource, group, method);
+  if (schema?.type === "mutation") return "mutation";
+  if (schema?.type === "query" && options?.sensitiveVariables !== true) return "read";
+  return undefined;
 }

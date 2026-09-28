@@ -122,12 +122,11 @@ const live = await caller.stats.with({ cache: "no-store" }).realtime()
 
 ### Proxy mode <ModeBadge mode="proxy" />
 
-In proxy mode with `method: "GET"`, the answer can be cached on the way back:
+In proxy mode a read goes as GET, so its answer can be cached on the way back:
 
 ```ts title="components/users.tsx"
 const users = await caller.users
   .with({
-    method: "GET",
     next: { revalidate: 60 },
     cache: "force-cache",
   })
@@ -139,7 +138,7 @@ The browser's own options — `cache`, `next`, `credentials`, `headers` and the 
 The proxy itself takes no caching instructions from the browser: a page could otherwise make the server cache one user's answer for everyone. How long an answer may be kept is declared on the endpoint with `.cache({ revalidate })`, and the proxy sets `Cache-Control` from it — `private` when the request carries a credential, shared with `Vary` on the forwarded headers otherwise. Any request header the proxy does not know to be impersonal counts as a credential. What the browser sends on its own counts as impersonal, and so do the headers a reverse proxy, CDN or hosting platform stamps on the way, such as `X-Forwarded-For`, `Forwarded`, `Via`, `CF-Connecting-IP`, `X-Vercel-Id` and `traceparent`. Next.js adds the `X-Forwarded-*` headers to every request itself.
 
 <Callout variant="info" title="Requires GET proxy">
-Proxy caching only works with `method: "GET"`, and only an endpoint built from the `query` head is served over GET. A mutation asked for over GET is refused 405.
+Proxy caching works for a call that goes as GET: a read, unless its variables are sensitive, carry a body or would make the address longer than 2 KB — see [GET or POST](/docs/api/create-proxy-caller#get-or-post). A write asked for over GET is refused 405.
 </Callout>
 
 ## Headers

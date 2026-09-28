@@ -1,7 +1,7 @@
 import { isFormData, parseEndpointKey } from "../utils/helpers";
 import { assertCarriable } from "./assert-carriable";
 import { assertJsonVariables } from "./assert-json-variables";
-import { handleGetProxy } from "./get-proxy";
+import { fitsInAddress, getProxyQuery, handleGetProxy } from "./get-proxy";
 import { buildPostPayload } from "./post-payload";
 import { createProxyDedupe } from "./proxy-dedupe";
 import { proxyRouting } from "./proxy-routing";
@@ -50,6 +50,7 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
       endpoint: string,
       variables: unknown,
       signal: AbortSignal | undefined,
+      reads: boolean,
     ): Promise<unknown> {
       assertCarriable(variables);
       if (!isFormData(variables)) assertJsonVariables(variables);
@@ -66,7 +67,7 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
       });
       const local = { ...call.init, cache: call.cache, next: call.next, signal };
 
-      if (call.proxyMethod === "GET" && !isFormData(variables) && !call.onUploadProgress) {
+      if (goesAsGet(call, { url, source, group, method, variables, reads })) {
         return handleGetProxy({
           url,
           source,
@@ -101,11 +102,39 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
         { ...fetchCtx, stream: call.stream, raw: call.server.rawData === true },
       );
     }
-    return (endpoint, variables) => {
-      if (!dedupe) return send(endpoint, variables, callSignal);
+    return (endpoint, variables, reads = false) => {
+      if (!dedupe) return send(endpoint, variables, callSignal, reads);
       return dedupe.run(`${source}:${endpoint}`, callSignal, (signal) =>
-        send(endpoint, variables, signal),
+        send(endpoint, variables, signal, reads),
       );
     };
   };
+}
+
+/**
+ * Whether a call goes to the proxy as GET: when it asks for GET, or when it
+ * does not say and the endpoint reads. A body — form data, an upload whose
+ * progress is watched — goes as POST whatever was asked, and so does a read
+ * that did not ask for GET and whose variables would make the address too
+ * long for the servers and CDNs on the way.
+ */
+function goesAsGet(
+  call: {
+    proxyMethod: "GET" | "POST" | undefined;
+    onUploadProgress: unknown;
+    server: Record<string, unknown>;
+  },
+  target: {
+    url: string;
+    source: string;
+    group: string | undefined;
+    method: string;
+    variables: unknown;
+    reads: boolean;
+  },
+): boolean {
+  if (isFormData(target.variables) || call.onUploadProgress) return false;
+  if (call.proxyMethod !== undefined) return call.proxyMethod === "GET";
+  if (!target.reads) return false;
+  return fitsInAddress(target.url, getProxyQuery({ ...target, serverOptions: call.server }));
 }

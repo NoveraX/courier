@@ -79,8 +79,11 @@ export interface MockServer {
   history: MockHistoryEntry[];
   /** Apply a scenario (clears scenario layer, base layer untouched) */
   applyScenario(scenario: AnyMockScenario): void;
-  /** Current scenario state */
-  scenarioState: string;
+  /**
+   * Current scenario state, read when accessed: it follows `transitionTo`, an
+   * applied scenario's `initialState` and the admin API's resets.
+   */
+  readonly scenarioState: string;
   /** All registered scenarios by name */
   scenarios: Record<string, AnyMockScenario>;
   /** Request lifecycle hooks — set by studio bridge to emit events */

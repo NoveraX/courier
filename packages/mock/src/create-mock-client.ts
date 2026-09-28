@@ -24,10 +24,14 @@ export interface MockClient<TApi extends AnySource> {
   mock: TypedMockFn<TApi>;
   /** Request history */
   history: MockHistoryEntry[];
-  /** Switch to a different scenario */
+  /** Switch to a different scenario, starting in its `initialState` ("Started" without one) */
   applyScenario(scenario: MockScenario<TApi>): void;
-  /** Current scenario state (WireMock-style) */
-  scenarioState: string;
+  /**
+   * Current scenario state (WireMock-style), read when accessed: it follows
+   * `transitionTo`, `transition`, `applyScenario` and `reset`. Read it from
+   * the mock client itself — a destructured copy keeps the state it had then.
+   */
+  readonly scenarioState: string;
   /** Transition scenario to a new state */
   transition(state: string): void;
   /** Reset all mocks, history, and state */
@@ -85,12 +89,15 @@ export function createMockClient<TApi extends AnySource>(
     client: mockedClient<TApi>(backend),
     mock,
     history,
-    scenarioState: "Started",
+
+    get scenarioState() {
+      return scenarioState;
+    },
 
     applyScenario(scenario) {
       registry.clear();
       callCounts.clear();
-      scenarioState = "Started";
+      scenarioState = scenario.initialState ?? "Started";
       scenario.apply(mock);
     },
 

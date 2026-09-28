@@ -6,7 +6,7 @@
  * hooks exposed by `QueryGroupClient`.
  */
 
-import type { CallOptions, HTTPError } from "@noverax/courier";
+import type { CallOptions } from "@noverax/courier";
 import type { SSEEvent } from "@noverax/courier/realtime";
 import type {
   InfiniteData,
@@ -25,7 +25,7 @@ export type CourierQueryOptions<
   TVariables,
   TData = TResponse,
 > = WithVariables<TVariables> &
-  Omit<UseQueryOptions<TResponse, HTTPError, TData, QueryKey>, "queryKey" | "queryFn"> & {
+  Omit<UseQueryOptions<TResponse, Error, TData, QueryKey>, "queryKey" | "queryFn"> & {
     requestOptions?: CallOptions;
   };
 
@@ -35,7 +35,7 @@ export type CourierSuspenseQueryOptions<
   TVariables,
   TData = TResponse,
 > = WithVariables<TVariables> &
-  Omit<UseSuspenseQueryOptions<TResponse, HTTPError, TData, QueryKey>, "queryKey" | "queryFn"> & {
+  Omit<UseSuspenseQueryOptions<TResponse, Error, TData, QueryKey>, "queryKey" | "queryFn"> & {
     requestOptions?: CallOptions;
   };
 
@@ -63,7 +63,7 @@ export type CourierInfiniteQueryOptions<TResponse, TVariables, TPageParam> = {
   Omit<
     UseInfiniteQueryOptions<
       TResponse,
-      HTTPError,
+      Error,
       InfiniteData<TResponse, TPageParam>,
       QueryKey,
       TPageParam
@@ -72,7 +72,7 @@ export type CourierInfiniteQueryOptions<TResponse, TVariables, TPageParam> = {
   >;
 
 export type CourierMutationOptions<TResponse, TVariables> = Omit<
-  UseMutationOptions<TResponse, HTTPError, MutationVariables<TVariables>>,
+  UseMutationOptions<TResponse, Error, MutationVariables<TVariables>>,
   "mutationFn"
 > & {
   requestOptions?: CallOptions;

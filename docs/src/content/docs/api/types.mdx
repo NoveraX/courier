@@ -319,12 +319,12 @@ These utility types are what make Courier fully type-safe. When you call `caller
 
 ```ts
 type QueryOptions<R, V> = WithVariables<V> &
-  Omit<UseQueryOptions<R, HTTPError, R, QueryKey>, "queryKey" | "queryFn"> & {
+  Omit<UseQueryOptions<R, Error, R, QueryKey>, "queryKey" | "queryFn"> & {
     requestOptions?: CallOptions
   }
 
 type MutationOptions<R, V> = Omit<
-  UseMutationOptions<R, HTTPError, MutationVariables<V>>,
+  UseMutationOptions<R, Error, MutationVariables<V>>,
   "mutationFn"
 > & {
   requestOptions?: CallOptions

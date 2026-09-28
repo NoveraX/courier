@@ -1,4 +1,4 @@
-import type { CallOptions, HTTPError } from "@noverax/courier";
+import type { CallOptions } from "@noverax/courier";
 import type { SSEEvent } from "@noverax/courier/realtime";
 import type { QueryKey, UseQueryResult } from "@tanstack/react-query";
 import { hashKey, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -61,7 +61,7 @@ export function useComputedQuery<TQueryData, TStreamData>(
   queryKey: QueryKey,
   groupName: string,
   options: UseComputedQueryOptions<TQueryData, TStreamData, unknown>,
-): UseQueryResult<TQueryData, HTTPError> {
+): UseQueryResult<TQueryData, Error> {
   const { variables, enabled = true, staleTime } = options;
   const queryClient = useQueryClient();
   const queryHash = hashKey(queryKey);
@@ -78,7 +78,7 @@ export function useComputedQuery<TQueryData, TStreamData>(
     return events;
   };
 
-  const queryResult = useQuery<TQueryData, HTTPError>({
+  const queryResult = useQuery<TQueryData, Error>({
     queryKey,
     queryFn: async ({ signal }) => {
       const answer = (await queryFn(variables, signal)) as TQueryData;

@@ -1,3 +1,4 @@
+import { LATENCY_PROFILES } from "../network/latency";
 import type { EnhancedMockBuilder } from "../types";
 import type { RouteInfo } from "./route-analyzer";
 
@@ -30,20 +31,14 @@ export interface ScenarioRecorder {
   transitions: () => StateTransition[];
 }
 
-const LATENCY_PRESET_MS = new Map<string, number>([
-  ["wifi", 50],
-  ["4g", 500],
-  ["3g", 2000],
-  ["2g", 5000],
-  ["gprs", 10000],
-]);
-
+/* A named profile is recorded as the middle of the range it answers in,
+   as a range written out is; the numbers are the ones the mock uses. */
 function latencyToMs(value: unknown): number | undefined {
   if (typeof value === "number") return value;
-  if (typeof value === "string") return LATENCY_PRESET_MS.get(value);
-  if (value && typeof value === "object" && "min" in value && "max" in value) {
-    const l = value as { min: number; max: number };
-    return Math.round((l.min + l.max) / 2);
+  const range = typeof value === "string" ? LATENCY_PROFILES[value] : value;
+  if (range && typeof range === "object" && "min" in range && "max" in range) {
+    const { min, max } = range;
+    if (typeof min === "number" && typeof max === "number") return Math.round((min + max) / 2);
   }
   return undefined;
 }

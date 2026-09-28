@@ -17,6 +17,8 @@ import { stopAllFaults } from "@/views/mocks/network/stop-all-faults";
 import { ServerAddress } from "./server-address";
 
 import type { LatencyPreset, MockServerInfo } from "@/store/mock-slice";
+import { ownValue } from "@/lib/own-value";
+import { PRESET_VALUES } from "../network/latency-presets";
 
 interface StatusBarProps {
   server: MockServerInfo;
@@ -28,12 +30,6 @@ const LATENCY_OPTIONS = [
   { value: "4g" as const, label: "4G" },
   { value: "satellite" as const, label: "Satellite" },
 ];
-
-const LATENCY_CONFIGS: Record<string, { min: number; max: number; jitter: number }> = {
-  "3g": { min: 300, max: 600, jitter: 100 },
-  "4g": { min: 80, max: 160, jitter: 30 },
-  satellite: { min: 600, max: 800, jitter: 150 },
-};
 
 export function StatusBar({ server }: StatusBarProps): React.ReactElement {
   const active = server.processStatus === "running";
@@ -53,7 +49,7 @@ export function StatusBar({ server }: StatusBarProps): React.ReactElement {
       sendCommand("mock:network:set", { config: { latency: 0, bandwidth: 0 }, preset: "none" });
       return;
     }
-    const cfg = LATENCY_CONFIGS[preset];
+    const cfg = ownValue(PRESET_VALUES, preset);
     if (!cfg) return;
     useMockStore.getState().updateServer(server.serverId, { latencyPreset: preset as LatencyPreset, latencyStartedAt: Date.now() });
     sendCommand("mock:network:set", { config: { latency: cfg }, preset });

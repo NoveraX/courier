@@ -57,18 +57,17 @@ export function createActions(set: StudioSet, get: StudioGet): Omit<StudioState,
       }),
 
     handleEvents: (events) => {
-      if (get().paused) return
-      const { maxRequests, ignorePatterns } = get().settings
+      const { settings: { maxRequests, ignorePatterns }, paused } = get()
       set((state) => {
-        const { requests, droppedCount } = applyEvents(state.requests, events, { maxRequests, ignorePatterns })
+        const { requests, droppedCount } = applyEvents(state.requests, events, { maxRequests, ignorePatterns, paused })
         if (requests === state.requests) return state
         return { requests, droppedRequests: state.droppedRequests + droppedCount }
       })
-      notifyOnEvents(events, get)
+      if (!paused) notifyOnEvents(events, get)
     },
     replayEvents: (events) => {
       const { maxRequests, ignorePatterns } = get().settings
-      const { requests: replayed } = applyEvents([], events, { maxRequests, ignorePatterns })
+      const { requests: replayed } = applyEvents([], events, { maxRequests, ignorePatterns, paused: false })
       set((state) => ({
         requests: mergeReplayed(state.requests, replayed, { maxRequests, paused: state.paused }),
       }))

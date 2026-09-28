@@ -39,35 +39,51 @@ export async function getResponseData(
     return null;
   }
 
+  let body: string;
   try {
-    if (responseParser) {
-      return await responseParser(response);
-    }
+    if (responseParser) return await responseParser(response);
+    if (responseType !== "json") return await readAs(response, responseType);
+    /* Reading the text first is what distinguishes an empty body from a
+       malformed one; `response.json()` reports both as a syntax error. */
+    body = await response.text();
+  } catch (error) {
+    throw unreadable(response, message, error);
+  }
 
-    switch (responseType) {
-      case "text":
-        return await response.text();
-      case "blob":
-        return await response.blob();
-      case "arrayBuffer":
-        return await response.arrayBuffer();
-      case "formData":
-        return await response.formData();
-      default: {
-        /* Reading the text first is what distinguishes an empty body from a
-           malformed one; `response.json()` reports both as a syntax error. */
-        const body = await response.text();
-        return body === "" ? null : JSON.parse(body);
-      }
-    }
-  } catch {
-    const fallbackMessage = message || "Failed to parse response body";
-    throw new HTTPError({
+  if (body === "") return null;
+  try {
+    return JSON.parse(body);
+  } catch (error) {
+    /* An error answer's body is the upstream's explanation, in whatever
+       form it wrote it; replacing text or HTML with "HTTP 404" lost it. */
+    if (!response.ok) return body;
+    throw unreadable(response, message, error);
+  }
+}
+
+function readAs(response: Response, responseType: Exclude<ResponseType, "json">): Promise<unknown> {
+  switch (responseType) {
+    case "text":
+      return response.text();
+    case "blob":
+      return response.blob();
+    case "arrayBuffer":
+      return response.arrayBuffer();
+    case "formData":
+      return response.formData();
+  }
+}
+
+/** The error an answer whose body could not be read is thrown as, with its status. */
+function unreadable(response: Response, message: string | undefined, cause: unknown): HTTPError {
+  return new HTTPError(
+    {
       status: response.status,
       headers: response.headers,
-      data: { success: false, message: fallbackMessage },
-    });
-  }
+      data: { success: false, message: message || "Failed to parse response body" },
+    },
+    { cause },
+  );
 }
 
 export async function getResponse(

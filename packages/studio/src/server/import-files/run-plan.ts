@@ -2,6 +2,7 @@ import type { ProjectRoot } from "../project-fs/project-root";
 import { type ApplyReport, applyFilePlan } from "./apply-file-plan";
 import { FilePlanError } from "./file-plan-error";
 import type { FilePlan } from "./file-plan-types";
+import { keepImported } from "./keep-imported";
 import { summarizePlan } from "./plan-summary";
 import { withConfirmations } from "./with-confirmations";
 
@@ -76,6 +77,7 @@ export function runPlan(
       summary,
     );
   }
-  const applied = withConfirmations(plan, consent.confirm ?? []);
+  /* Whatever the user left unticked, no file that stays loses a file it imports. */
+  const applied = keepImported(root, withConfirmations(plan, consent.confirm ?? []));
   return applyFilePlan(root, applied, (applyId) => commit(applied, applyId));
 }

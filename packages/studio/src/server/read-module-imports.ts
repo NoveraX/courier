@@ -18,9 +18,9 @@
  */
 
 import { createLogger } from "@noverax/courier";
-import { parseSync } from "oxc-parser";
 import { UNREADABLE } from "./file-content-hash";
 import { sha256Hex } from "./file-hash";
+import { moduleSpecifiers } from "./module-specifiers";
 import { readWatchedBytes } from "./read-watched-bytes";
 
 const log = createLogger("Studio");
@@ -34,12 +34,6 @@ export interface ModuleImports {
   readonly contentHash: string;
   /** Specifiers exactly as written, in no particular order. */
   readonly specifiers: readonly string[];
-}
-
-/** A byte range in the parsed source. */
-interface Span {
-  start: number;
-  end: number;
 }
 
 const NOTHING_READ: ModuleImports = { contentHash: UNREADABLE, specifiers: [] };
@@ -72,7 +66,7 @@ export function readModuleImports(file: string): ModuleImports {
   if (known?.contentHash === contentHash) return known;
   const imports: ModuleImports = {
     contentHash,
-    specifiers: specifiersIn(file, bytes.toString("utf8")),
+    specifiers: moduleSpecifiers(file, bytes.toString("utf8")),
   };
   parsed.set(file, imports);
   return imports;
@@ -88,40 +82,4 @@ function readBytes(file: string): Buffer | null {
   }
   if (bytes === null) log.warn(`Could not read ${file}, so the modules it imports are not watched`);
   return bytes;
-}
-
-function specifiersIn(file: string, source: string): string[] {
-  const { module } = parseSync(file, source);
-  const specifiers: string[] = [];
-
-  for (const entry of module.staticImports) {
-    specifiers.push(entry.moduleRequest.value);
-  }
-  for (const statement of module.staticExports) {
-    for (const entry of statement.entries) {
-      if (entry.moduleRequest) specifiers.push(entry.moduleRequest.value);
-    }
-  }
-  for (const entry of module.dynamicImports) {
-    const specifier = literalAt(source, entry.moduleRequest);
-    if (specifier !== null) specifiers.push(specifier);
-  }
-
-  return specifiers;
-}
-
-/**
- * A dynamic import's argument is reported as a span, because it need not be a
- * string at all. Only one that is names a file; a computed specifier resolves
- * at runtime and there is nothing to watch.
- */
-function literalAt(source: string, span: Span): string | null {
-  const text = source.slice(span.start, span.end);
-  const quote = text[0];
-  if (quote !== '"' && quote !== "'" && quote !== "`") return null;
-  if (text.length < 2 || text[text.length - 1] !== quote) return null;
-
-  const inner = text.slice(1, -1);
-  if (quote === "`" && inner.includes("${")) return null;
-  return inner;
 }

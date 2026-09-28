@@ -49,6 +49,15 @@ function api() {
       broken: endpoint.get("broken"),
       missing: endpoint.get("missing"),
       boom: endpoint.get("boom"),
+      textAnswer: endpoint
+        .via((http) => http.get("text", undefined, { responseType: "text" }))
+        .response<string>(),
+      blobAnswer: endpoint
+        .via((http) => http.get("text", undefined, { responseType: "blob" }))
+        .response<Blob>(),
+      missingBlob: endpoint
+        .via((http) => http.get("missing", undefined, { responseType: "blob" }))
+        .response<Blob>(),
     },
   });
 }
@@ -98,5 +107,43 @@ describe("an error answer whose body is not JSON", () => {
 
     expect(error.status).toBe(404);
     expect(error.data).toBe("no such invoice");
+  });
+});
+
+describe("an endpoint that reads its answer as text or a blob", () => {
+  it("gets the text and the blob a JSON source would fail to parse", async () => {
+    const client = createCaller(api());
+
+    const text = await client.textAnswer();
+    const blob = await client.blobAnswer();
+
+    expect(text).toBe("hello");
+    expect(blob).toBeInstanceOf(Blob);
+    expect(await blob.text()).toBe("hello");
+  });
+
+  it("reads an error answer as the source reads it", async () => {
+    const error = await failure(createCaller(api()).missingBlob());
+
+    expect(error.status).toBe(404);
+    expect(error.data).toBe("no such invoice");
+  });
+
+  it("gets them through the proxy", async () => {
+    const source = api();
+    registerSources({ bodies: source });
+    const handler = createHandler();
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.startsWith(upstream.url)) return realFetch(input, init);
+      return handler.handle(new Request(new URL(url, "http://app.local"), init));
+    });
+    const client = createProxyCaller<typeof source>("bodies", { source });
+
+    const text = await client.textAnswer();
+    const blob = await client.blobAnswer();
+
+    expect(text).toBe("hello");
+    expect(await blob.text()).toBe("hello");
   });
 });

@@ -72,6 +72,12 @@ export type FetchOptions = Omit<RequestInit, "method"> & {
   onDownloadProgress?: (progress: DownloadProgress) => void;
   /** Called as the request's body is sent */
   onUploadProgress?: (progress: UploadProgress) => void;
+  /**
+   * How this call's successful answer is read — text, a blob, bytes, a form —
+   * when it is not what the source reads every answer as. An error answer is
+   * read as the source reads it, since it explains the error in its own form.
+   */
+  responseType?: ResponseType;
 };
 
 export type OptionsWithSearchParams = Omit<FetchOptions, "searchParams"> & {

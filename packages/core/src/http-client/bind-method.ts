@@ -65,7 +65,7 @@ export function bindMethod(
     );
 
     const prefixUrlOverride = baseUrl ? { prefixUrl: baseUrl } : {};
-    const options = buildRequestOptions(
+    const requested = buildRequestOptions(
       method,
       path,
       arguments_,
@@ -77,6 +77,9 @@ export function bindMethod(
       deps,
     );
 
+    /* A call that names how its answer is read overrides the source's
+       reading, its parser included. */
+    const { responseType: readAs, ...options } = requested;
     const dedupeKey = deps.deduplicate ? getDedupeKey(url, method) : undefined;
     const dedupeController = dedupeKey ? applyDeduplication(deps, dedupeKey, options) : undefined;
     const forget = (): void => {
@@ -105,7 +108,9 @@ export function bindMethod(
 
       const result = stream
         ? { status: response.status, headers: response.headers, data: response.body }
-        : await getResponse(response, deps.responseType, deps.responseParser);
+        : readAs === undefined
+          ? await getResponse(response, deps.responseType, deps.responseParser)
+          : await getResponse(response, readAs);
 
       return result as HttpResponse<TResponse>;
     } catch (error) {

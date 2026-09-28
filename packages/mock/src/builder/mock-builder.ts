@@ -7,11 +7,12 @@ import type {
   ResolvedHandler,
   SequenceEntry,
 } from "../types";
+import type { OnRegister } from "./builder-target";
+import { createBuilderTarget } from "./builder-target";
 import { channelWith, streamOf, streamWith } from "./realtime-handlers";
 import { sequenceFn } from "./sequence-fn";
 
-/** Callback invoked when a NEW handler needs to be pushed onto the stack */
-export type OnRegister = (handler: ResolvedHandler) => void;
+export type { OnRegister } from "./builder-target";
 
 /**
  * Create a fluent EnhancedMockBuilder.
@@ -23,43 +24,41 @@ export type OnRegister = (handler: ResolvedHandler) => void;
  *   existing handler itself, so one written before the response method
  *   (`.delay(400).resolves(x)`) was lost from the new handler and stamped
  *   onto the auto-CRUD one for good.
+ *   A chain that only decorates (`.withHeaders(h)`) keeps the existing
+ *   response. A chain that answers anew — `resolves`, `returns`, `rejects`,
+ *   `sequence`, `stream`, `emits`, `channel` — replaces the response and
+ *   drops the existing handler's decorations, keeping only those written in
+ *   the chain itself: a plain `resolves(b)` after `once().resolves(a)` used
+ *   to be a one-off too, and one after `emits()` answered as a stream.
  * - **Without existing**: a new handler is registered immediately.
  *
  * A status set with `withStatus` holds whatever response method comes after
  * it; `resolves`/`returns` used to reset it to 200.
+ *
+ * @param onRegister Pushes a new handler onto its stack
+ * @param existing   The endpoint's latest handler in the builder's layer, if any
+ * @returns The builder
+ * @example
+ * ```ts
+ * createEnhancedMockBuilder((h) => registry.set("users", "list", h)).delay(200).resolves([]);
+ * ```
  */
 export function createEnhancedMockBuilder<TResponse, TVariables>(
   onRegister: OnRegister,
   existing?: ResolvedHandler,
 ): EnhancedMockBuilder<TResponse, TVariables> {
-  // If no existing handler, create and register a new one immediately
-  // (backward compat: mutations update the same object reference)
-  let handler: ResolvedHandler = existing ?? {
-    fn: () => undefined,
-    status: 200,
-    isError: false,
+  const target = createBuilderTarget(onRegister, existing);
+
+  const respond = (fn: MockHandlerFn, isError = false, status?: number): void => {
+    const handler = target.forResponse();
+    handler.fn = fn;
+    handler.status = status ?? target.explicitStatus ?? 200;
+    handler.isError = isError;
   };
-
-  if (!existing) {
-    onRegister(handler);
-  }
-
-  let explicitStatus: number | undefined;
-
-  /** Switch to a copy of the existing handler and push it onto the stack */
-  function ensureOwnHandler(): void {
-    if (handler === existing) {
-      handler = { ...existing, ...(existing.headers && { headers: { ...existing.headers } }) };
-      onRegister(handler);
-    }
-  }
 
   const builder: EnhancedMockBuilder<TResponse, TVariables> = {
     resolves(data) {
-      ensureOwnHandler();
-      handler.fn = () => data;
-      handler.status = explicitStatus ?? 200;
-      handler.isError = false;
+      respond(() => data);
       return builder;
     },
 
@@ -74,80 +73,39 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
             "Use resolves() to answer with static data.",
         );
       }
-      ensureOwnHandler();
-      handler.fn = fn as MockHandlerFn;
-      handler.status = explicitStatus ?? 200;
-      handler.isError = false;
+      respond(fn as MockHandlerFn);
       return builder;
     },
 
     rejects(status, data) {
-      ensureOwnHandler();
-      handler.status = status;
-      handler.fn = () => data ?? { success: false, message: `HTTP ${status}` };
-      handler.isError = true;
+      respond(() => data ?? { success: false, message: `HTTP ${status}` }, true, status);
       return builder;
     },
 
-    once() {
-      ensureOwnHandler();
-      handler.remaining = 1;
-      return builder;
-    },
+    once: () => decorated({ remaining: 1 }),
+    times: (n) => decorated({ remaining: n }),
+    delay: (ms) => decorated({ delayMs: ms }),
+    withLatency: (profile) => decorated({ latency: profile }),
+    inState: (state) => decorated({ requiredState: state }),
+    transitionTo: (state) => decorated({ newState: state }),
 
-    times(n) {
-      ensureOwnHandler();
-      handler.remaining = n;
-      return builder;
-    },
-
-    delay(ms) {
-      ensureOwnHandler();
-      handler.delayMs = ms;
-      return builder;
-    },
-
-    withLatency(profile) {
-      ensureOwnHandler();
-      handler.latency = profile;
-      return builder;
-    },
-
-    withHeaders(headers) {
-      ensureOwnHandler();
-      handler.headers = { ...handler.headers, ...headers };
-      return builder;
-    },
+    withHeaders: (headers) => decorated({ headers }),
 
     withStatus(status) {
-      ensureOwnHandler();
-      explicitStatus = status;
-      handler.status = status;
-      return builder;
-    },
-
-    inState(state) {
-      ensureOwnHandler();
-      handler.requiredState = state;
-      return builder;
-    },
-
-    transitionTo(state) {
-      ensureOwnHandler();
-      handler.newState = state;
+      target.explicitStatus = status;
+      target.forDecoration().status = status;
       return builder;
     },
 
     sequence(responses) {
-      ensureOwnHandler();
+      const handler = target.forResponse();
       handler.fn = sequenceFn(handler, responses as SequenceEntry<unknown>[]);
       handler.isError = false;
       return builder;
     },
 
     stream(fn) {
-      ensureOwnHandler();
-      streamWith(handler, fn as MockStreamFn);
+      streamWith(target.forResponse(), fn as MockStreamFn);
       return builder;
     },
 
@@ -156,11 +114,17 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
     },
 
     channel(fn) {
-      ensureOwnHandler();
-      channelWith(handler, fn as MockChannelFn);
+      channelWith(target.forResponse(), fn as MockChannelFn);
       return builder;
     },
   };
+
+  function decorated(
+    decoration: Parameters<typeof target.decorate>[0],
+  ): EnhancedMockBuilder<TResponse, TVariables> {
+    target.decorate(decoration);
+    return builder;
+  }
 
   return builder;
 }

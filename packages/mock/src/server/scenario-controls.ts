@@ -40,7 +40,10 @@ export function createScenarioControls(deps: ScenarioControlsDeps): ScenarioCont
     group: string,
     method: string,
   ): EnhancedMockBuilder<TResponse, TVariables> {
-    const existing = registry.peek(group, method);
+    /* The base layer builds on its own latest handler only: one from the
+       scenario layer would be copied into the base for good, and outlive
+       every scenario switch and reset. */
+    const existing = registry.peekBase(group, method);
     return createEnhancedMockBuilder((handler) => {
       registry.setBase(group, method, handler);
     }, existing);

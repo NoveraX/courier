@@ -111,8 +111,12 @@ export function bindMethod(
     } catch (error) {
       /* Fetch's own rejection was classified where it happened; anything
          else — a path option that threw, a body that would not serialize —
-         is the caller's own failure and stays what it was. */
+         is the caller's own failure and stays what it was. A cancellation
+         that lands while the answer is read stops the read with the
+         caller's reason, and the reader reports that as a body it could
+         not parse; it is rethrown as the cancellation it is. */
       forget();
+      if (options.signal?.aborted) throw options.signal.reason;
       throw error;
     }
   };

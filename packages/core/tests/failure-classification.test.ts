@@ -5,9 +5,10 @@
  * failure. A timeout was an HTTPError of status 0 saying "Network request
  * failed", with the DOMException's legacy code "23"; through the proxy it
  * was a 502 saying the upstream could not be reached. A caller's own
- * cancellation reason was replaced unless it was an AbortError, and the
- * caller's own mistakes — a middleware that threw, a BigInt in the body —
- * came back dressed as HTTP failures.
+ * cancellation reason was replaced unless it was an AbortError — and one
+ * that landed while the answer was read came back as a body that could not
+ * be parsed — and the caller's own mistakes — a middleware that threw, a
+ * BigInt in the body — came back dressed as HTTP failures.
  */
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -28,8 +29,15 @@ const realFetch = globalThis.fetch;
 let upstream: Upstream;
 
 beforeEach(async () => {
-  upstream = await startUpstream((_request, res) => {
-    setTimeout(() => res.end("{}"), 400);
+  upstream = await startUpstream((request, res) => {
+    /* The status line and half a body first, so a call can be cancelled
+       while its answer is being read. */
+    const partial = /^\/partial\/(\d+)$/.exec(request.url);
+    if (partial) {
+      res.writeHead(Number(partial[1]), { "content-type": "application/json" });
+      res.write('{"half":');
+    }
+    setTimeout(() => res.end(partial ? "1}" : "{}"), 400);
   });
 });
 
@@ -47,6 +55,7 @@ function api(baseURL = upstream.url) {
       slow: endpoint.get("slow"),
       brief: endpoint.get("brief").timeout(100),
       send: endpoint.post("send").variables<{ amount: unknown }>(),
+      partial: endpoint.get("partial/:status").variables<{ status: number }>(),
     },
   });
 }
@@ -91,6 +100,32 @@ describe("a call the caller cancels", () => {
     setTimeout(() => controller.abort(reason), 50);
 
     expect(await pending).toBe(reason);
+  });
+});
+
+describe("a call the caller cancels while its answer is read", () => {
+  it.each([
+    ["a success", 200],
+    ["an error", 500],
+  ])("rejects with the reason it gave, when the answer is %s", async (_kind, status) => {
+    const reason = new Error("user navigated away");
+    const controller = new AbortController();
+    const pending = rejection(
+      createCaller(api()).partial.with({ signal: controller.signal })({ status }),
+    );
+    setTimeout(() => controller.abort(reason), 150);
+
+    expect(await pending).toBe(reason);
+  });
+
+  it("rejects with a reason that is not an error, as it was given", async () => {
+    const controller = new AbortController();
+    const pending = rejection(
+      createCaller(api()).partial.with({ signal: controller.signal })({ status: 200 }),
+    );
+    setTimeout(() => controller.abort("cancelled-by-user"), 150);
+
+    expect(await pending).toBe("cancelled-by-user");
   });
 });
 

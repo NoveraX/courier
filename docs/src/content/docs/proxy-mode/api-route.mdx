@@ -7,7 +7,7 @@ export const metadata = { title: "Server Handler", description: "The universal s
 ```typescript
 import { createHandler } from "@noverax/courier"
 
-const { handle, handleGet, handlePost } = createHandler(sources)
+const { handle, handleGet, handlePost } = createHandler({ sources })
 // handle:     (request: Request) => Promise<Response>  — auto-routes GET/POST
 // handleGet:  (request: Request) => Promise<Response>  — query endpoints
 // handlePost: (request: Request) => Promise<Response>  — mutations + data

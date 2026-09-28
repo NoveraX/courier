@@ -8,30 +8,51 @@ import { createHandler } from "@noverax/courier"
 
 ## Signature
 
-`createHandler` takes your source definitions and returns `handleGet` and `handlePost` functions that work with Web Standard `Request`/`Response`.
+`createHandler` takes an optional configuration and returns handlers that work with Web Standard `Request`/`Response`.
 
 ```ts
-const { handleGet, handlePost } = createHandler(sources)
+function createHandler(config?: HandlerConfig): AdapterHandler
 ```
-
-## Parameters
-
-### sources
-
-A record of API source definitions created with `defineApi()`.
 
 ```ts
 import { sources } from "@/api"
 
-const { handleGet, handlePost } = createHandler(sources)
+const { handle, handleGet, handlePost } = createHandler({ sources })
 ```
+
+## Parameters
+
+### config.sources
+
+A record of API source definitions created with `defineApi()`. Given, the handler answers for those sources alone, and a later `registerSources()` in the same process does not change what it serves. Left out, the handler reads the process-wide registry that `registerSources()` and `attachRuntime()` fill, at request time — which is how every framework adapter works.
+
+### Other options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `allowedOrigins` | own origin; local ports in development | Origins of other pages that may call the proxy — see [Origin Validation](#origin-validation) |
+| `maxBodyBytes` | 1 MB | Largest JSON envelope the handler reads; a larger one is refused with 413 |
+| `maxUploadBytes` | 10 MB | Largest `multipart/form-data` upload the handler reads; a larger one is refused with 413 |
+| `sseHeaders` | — | Extra response headers on every SSE stream |
+| `sseMaxLifetimeMs` | 30 minutes | Longest an SSE stream stays open before the client reconnects with `Last-Event-ID` |
+| `maxSSEConnections` | unlimited | Most SSE streams open at once |
+| `onSSEConnect`, `onSSEDisconnect`, `onSSEError` | — | SSE lifecycle hooks |
+
+Every option is optional, so `createHandler()` is a complete call.
 
 ## Return Type
 
 ```ts
 type AdapterHandler = {
+  /** Routes GET, POST and SSE; answers any other method with 405 */
+  handle: (request: Request) => Promise<Response>
   handleGet: (request: Request) => Promise<Response>
   handlePost: (request: Request) => Promise<Response>
+  handleSSE: (request: Request) => Promise<Response>
+  /** The SSE streams open right now */
+  readonly sseConnections: SSEConnectionRegistry
+  /** Tell every SSE client to reconnect later, then close the streams */
+  shutdownSSE: (options?: { retryMs?: number; drainMs?: number }) => Promise<void>
 }
 ```
 

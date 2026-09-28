@@ -24,7 +24,7 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 ┌──────────────────────────────────────────────────────────────┐
 │  Server Handler (any framework)                              │
 │                                                              │
-│  createHandler(sources) → { handleGet, handlePost, handle }  │
+│  createHandler({ sources }) → handle, handleGet, handlePost  │
 │       │  ✓ origin validation                                 │
 │       │  ✓ cookie forwarding                                 │
 │       │  ✓ header whitelisting                               │

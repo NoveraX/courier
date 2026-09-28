@@ -14,8 +14,9 @@ import { LIMITS } from "../adapter/limits";
 import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
 import { composeMiddleware } from "../middleware";
+import { buildMiddlewareContext } from "./execute-middleware-context";
 import { resolveMiddlewareChain } from "./execute-options";
-import { buildMiddlewareContext, resolveEndpoint } from "./execute-resolve";
+import { resolveEndpoint } from "./execute-resolve";
 
 export interface TransportMiddlewareInput {
   /** Which transport is asking, so the context reports it accurately. */

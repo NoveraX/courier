@@ -2,6 +2,9 @@
  * The groups and endpoints a client can reach, read from its source.
  */
 
+import type { ProxyBoundary } from "../define/boundary-types";
+import { sourceFromBoundary } from "../proxy-caller/from-boundary";
+
 /** What a source says a client may call. */
 export interface ClientShape {
   /** Each group, with the names of its methods. */
@@ -34,6 +37,26 @@ export function shapeOfSource(
     groups.set(name, new Set(endpointNames(group)));
   }
   return { groups, endpoints: new Set(endpointNames(source)) };
+}
+
+/**
+ * Read the shape of a client from what it was given: a boundary, or the
+ * source itself. A boundary wins where both are, as it does for the
+ * client's transports.
+ *
+ * @param given - The client's `boundary` and `source`, either of them optional
+ * @returns The shape, or `undefined` when the client was given neither
+ *
+ * @example
+ * ```ts
+ * shapeOfClient({ boundary })?.groups.get("users"); // → the methods it exposes
+ * ```
+ */
+export function shapeOfClient(given: {
+  source?: Record<string, unknown>;
+  boundary?: ProxyBoundary;
+}): ClientShape | undefined {
+  return shapeOfSource(given.boundary ? sourceFromBoundary(given.boundary) : given.source);
 }
 
 function endpointNames(record: Record<string, unknown>): string[] {

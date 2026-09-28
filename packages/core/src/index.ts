@@ -31,11 +31,15 @@ export {
 export { type CallerDefaults, createCaller } from "./caller";
 export {
   buildClientProxy,
+  type ClientShape,
+  createClientRoot,
   type ExecuteBackend,
   type FlatClient,
   type GroupClient,
   type InferClient,
   type MixedClient,
+  type RootAccessors,
+  shapeOfClient,
   type TypedClient,
   type WithOptions,
 } from "./client";

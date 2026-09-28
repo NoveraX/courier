@@ -129,7 +129,7 @@ await caller.users.create(formData)
 ```
 
 <Callout variant="info" title="FormData meta fields">
-When sending FormData, Courier appends metadata as special fields: `_source`, `_group`, `_method`, and `_options`. Your actual variables are appended alongside them. The server handler strips these meta fields before passing variables to your endpoint.
+When sending FormData, Courier writes metadata as special fields first: `_source`, `_group`, `_method`, and `_options`. Your actual variables follow them. The server handler reads the first field of each of those names as metadata and passes everything else to your endpoint, so a field of your own named `_method` or `_options` reaches your backend unchanged.
 </Callout>
 
 <Callout variant="warning" title="Binary variables">

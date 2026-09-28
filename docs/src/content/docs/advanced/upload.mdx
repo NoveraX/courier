@@ -180,9 +180,12 @@ formData.append("name", "profile-pic")
 // avatar   = File               <- your data
 // name     = "profile-pic"      <- your data
 
-// The server handler strips _source, _group, _method, _options
-// and passes a clean FormData with only your data to the endpoint
+// The server handler reads the first field of each of _source, _group,
+// _method and _options as routing, and passes a FormData with only your
+// data to the endpoint
 ```
+
+The meta fields always come first, so a field of your own may share one of their names. A form that sends `_method=PUT`, as Laravel and Rails forms do, reaches your backend with that field intact.
 
 ## Empty file handling
 

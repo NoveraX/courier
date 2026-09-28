@@ -29,13 +29,12 @@ export const parseRequestPayload = (
   let options: CallOptions<boolean> | undefined;
 
   if (isFormData(requestPayload)) {
-    const META_KEYS = new Set(["_source", "_group", "_method", "_options"]);
+    const { meta, fields } = splitRouting(requestPayload);
+    source = meta.get("_source");
+    group = meta.get("_group");
+    method = meta.get("_method");
 
-    source = requestPayload.get("_source") ?? undefined;
-    group = requestPayload.get("_group") ?? undefined;
-    method = requestPayload.get("_method") ?? undefined;
-
-    const rawOptions = requestPayload.get("_options");
+    const rawOptions = meta.get("_options");
     if (typeof rawOptions === "string") {
       /* Validation belongs to the caller, which knows whether this payload
          came off the wire; a malformed field simply carries no options. */
@@ -43,15 +42,7 @@ export const parseRequestPayload = (
       options = accepted.ok ? accepted.options : undefined;
     }
 
-    const formData = new FormData();
-
-    for (const [key, value] of requestPayload.entries()) {
-      if (!META_KEYS.has(key)) {
-        formData.append(key, value);
-      }
-    }
-
-    variables = formData;
+    variables = fields;
   } else {
     source = requestPayload?.source;
     group = requestPayload?.group;
@@ -65,3 +56,26 @@ export const parseRequestPayload = (
      endpoint unreachable once a boundary was declared. */
   return { source, group: group === "" ? undefined : group, method, options, variables };
 };
+
+const ROUTING_FIELDS: ReadonlySet<string> = new Set(["_source", "_group", "_method", "_options"]);
+
+/**
+ * Separate a multipart body's routing from the caller's own fields.
+ *
+ * The first field of each routing name is routing — the client writes those
+ * first — and every later one is the caller's. A form's own `_method` or
+ * `_options` therefore reaches the upstream instead of re-routing the call or
+ * being read as its options.
+ */
+function splitRouting(body: FormData): {
+  meta: Map<string, FormDataEntryValue>;
+  fields: FormData;
+} {
+  const meta = new Map<string, FormDataEntryValue>();
+  const fields = new FormData();
+  for (const [key, value] of body.entries()) {
+    if (ROUTING_FIELDS.has(key) && !meta.has(key)) meta.set(key, value);
+    else fields.append(key, value);
+  }
+  return { meta, fields };
+}

@@ -9,7 +9,7 @@ import { objectKey } from "./literals";
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 /* Bound by the closure itself, or not bindable in a module. */
-const TAKEN = new Set(["http", "body", "form", "arguments", "eval"]);
+const TAKEN = new Set(["http", "body", "form", "formBody", "vars", "arguments", "eval"]);
 
 /** A destructuring pattern, and the query string it feeds. */
 export interface Bindings {

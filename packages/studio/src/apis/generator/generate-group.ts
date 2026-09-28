@@ -5,7 +5,7 @@
 import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 import { endpointContext } from "./endpoint-context";
 import { endpointEntries } from "./endpoint-entries";
-import { endpointImports } from "./endpoint-imports";
+import { defineImport, endpointImports } from "./endpoint-imports";
 import { jsLiteral } from "./literals";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
@@ -34,7 +34,7 @@ export function generateGroupFile(
   const entries = endpointEntries(group.endpoints, context, paramsTypes);
 
   const lines = [
-    `import { courier, defineGroup } from "@noverax/courier/define";`,
+    defineImport(context, "defineGroup"),
     ...endpointImports(context),
     "",
     "const { endpoint } = courier();",

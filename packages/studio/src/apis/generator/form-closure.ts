@@ -3,6 +3,7 @@
  */
 
 import type { ParsedParameter } from "../parser/types";
+import { callOptions } from "./call-options";
 import { objectKey } from "./literals";
 
 /**
@@ -17,6 +18,7 @@ import { objectKey } from "./literals";
  * @param method - The verb, as the endpoint builder names it
  * @param at - The endpoint's path within its group, as a string literal
  * @param params - The operation's path and query parameters
+ * @param read - How the answer is read, as an options entry, when not as JSON
  * @returns The closure's source, or `null` when the verb places the form
  * @example
  * ```ts
@@ -28,16 +30,19 @@ export function formClosure(
   method: string,
   at: string,
   params: readonly ParsedParameter[],
+  read: string | null = null,
 ): string | null {
   const query = params.filter((param) => param.in === "query");
   if (query.length === 0) {
-    return method === "del" ? `(http, form) => http.del(${at}, undefined, { body: form })` : null;
+    return method === "del"
+      ? `(http, form) => http.del(${at}, undefined, { ${callOptions("body: form", null, read)} })`
+      : null;
   }
   const searchParams = `{ ${query.map((param) => `${objectKey(param.name)}: ${entry(param)}`).join(", ")} }`;
   const send =
     method === "del"
-      ? `http.del(${at}, undefined, { body, searchParams: ${searchParams} })`
-      : `http.${method}(${at}, body, { searchParams: ${searchParams} })`;
+      ? `http.del(${at}, undefined, { ${callOptions("body", searchParams, read)} })`
+      : `http.${method}(${at}, body, { ${callOptions(null, searchParams, read)} })`;
   /* The path's entries fill the path, and are not part of the body either. */
   const taken = JSON.stringify(params.map((param) => param.name));
   const copy = `const body = new FormData(); form.forEach((value, key) => { if (!${taken}.includes(key)) body.append(key, value); });`;

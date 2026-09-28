@@ -45,6 +45,26 @@ export function endpointImports(context: EndpointContext): string[] {
  * Its name follows `generateSchemas` alone: `validation: "none"` still
  * writes schemas.ts, holding types.
  */
+/**
+ * The import of what a file defines its endpoints with: `courier`, the
+ * definer, and `formBody` when a closure writes a url-encoded body.
+ *
+ * @param context - The file's endpoints, written
+ * @param definer - `defineGroup` for a group's file, `defineApi` for a flat source's
+ * @returns The import statement
+ * @example
+ * ```ts
+ * defineImport(context, "defineGroup"); // → 'import { courier, defineGroup } from "@noverax/courier/define";'
+ * ```
+ */
+export function defineImport(
+  context: EndpointContext,
+  definer: "defineGroup" | "defineApi",
+): string {
+  const names = ["courier", definer, ...(context.uses.formBody ? ["formBody"] : [])];
+  return `import { ${names.join(", ")} } from "@noverax/courier/define";`;
+}
+
 function schemasModule(options: ResolvedGenerateOptions): string {
   return `${options.generateSchemas ? "./schemas" : "./types"}${options.importExtension}`;
 }

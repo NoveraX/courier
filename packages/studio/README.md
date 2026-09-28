@@ -295,6 +295,8 @@ When Studio will not edit the file itself, it shows the lines to add by hand —
 
 Studio loads `courier.config.*` from its project root — the working directory, or `--cwd` — and `courier.mocks.*` beside it, together. It watches both, every module of the project they import — the file that runs, so where a compiled `api.js` sits beside `api.ts` an import of `./api` runs and watches `api.js` — and the tsconfig files their path aliases are read from, the ones `tsconfig.json` extends included, and loads them again when one is saved; a config or mocks file created under another of its names is picked up too, and so is a module created where an import would run it instead, such as an `api.js` compiled beside the `api.ts` that ran. Every load — the first, each reload, and each edit Studio makes to `courier.mocks.ts` — runs on one chain, one at a time and in order, and a save made while a load runs is loaded once it ends. A Studio page that opens, reconnects or reloads is sent what Studio already runs, so it loads nothing.
 
+A config loads only when every entry under `imports` has the fields `CourierImportEntry` declares, each of its kind — a `from` that is an http or https URL, a `validation` Studio knows, a `transform` that is a function; otherwise the load fails with a message naming the entry and the field.
+
 While `courier.config` does not load, or after it is deleted, Studio keeps running the sources it loaded last, and says so:
 
 - The APIs page names the file — with the loader's message when it does not load — and the time the sources it shows were loaded. A config that has never loaded gets its message instead of sources, and a project without one is told to create `courier.config.ts` and offered the config to start it from.

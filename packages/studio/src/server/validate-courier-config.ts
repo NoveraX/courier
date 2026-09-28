@@ -1,5 +1,6 @@
 import type { CourierConfig } from "@noverax/courier/config";
 import { ConfigLoaderError } from "./config-loader-errors";
+import { importEntryProblem } from "./import-entry-problem";
 import { isRecord } from "./mocks-edit/is-record";
 import type { ProjectInputs } from "./read-project-inputs";
 
@@ -55,6 +56,22 @@ export function validateCourierConfig(
       `courier.config.sources.${key} is ${describe(source)}, not a source; check that it is imported by the name its module exports`,
     );
   }
+  const problem = importsProblem(config.imports);
+  if (problem !== null) throw invalid(problem);
+}
+
+/* What is wrong with `imports`, if anything: it is optional, and each entry is checked as `CourierImportEntry` declares it. */
+function importsProblem(imports: unknown): string | null {
+  if (imports === undefined) return null;
+  if (!isPlainObject(imports)) {
+    return `courier.config.imports is ${describe(imports)}, not an object of named imports`;
+  }
+  for (const [name, entry] of Object.entries(imports)) {
+    const problem = importEntryProblem(entry);
+    if (problem === null) continue;
+    return `courier.config.imports.${name}${problem.startsWith("is ") ? " " : "."}${problem}`;
+  }
+  return null;
 }
 
 /* A module namespace Node imports has a null prototype; one the loader

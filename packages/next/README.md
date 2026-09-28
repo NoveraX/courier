@@ -63,6 +63,8 @@ Pages on other origins may call the route when `allowedOrigins` lists them. Thei
 export const { GET, POST, OPTIONS } = apiRoute({ allowedOrigins: ["https://admin.example.com"] })
 ```
 
+The proxy reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload (`multipart/form-data`) up to its `maxUploadBytes`, 10 MB; pass others to raise them: `apiRoute({ maxUploadBytes: 50 * 1024 * 1024 })`.
+
 <br />
 
 ## Server Actions

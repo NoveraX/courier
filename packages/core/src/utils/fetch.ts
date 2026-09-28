@@ -1,5 +1,6 @@
 import { fetchFailure } from "../http-client/transport-failure";
 import type { DownloadProgress, UploadProgress } from "../http-client/types";
+import { anySignal } from "./any-signal";
 import { fetchWithinOrigin } from "./fetch-within-origin";
 import { normalizeHttpMethod } from "./helpers";
 import { sendWithUploadProgress, trackDownload } from "./progress";
@@ -62,7 +63,7 @@ export async function coreFetch(
   let finalSignal: AbortSignal | null | undefined = signal;
   if (timeout) {
     const timeoutSignal = AbortSignal.timeout(timeout);
-    finalSignal = finalSignal ? AbortSignal.any([finalSignal, timeoutSignal]) : timeoutSignal;
+    finalSignal = finalSignal ? anySignal([finalSignal, timeoutSignal]) : timeoutSignal;
   }
 
   const init = {

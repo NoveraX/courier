@@ -2,6 +2,7 @@ import { createLogger } from "../logger";
 import { describeFailure } from "../realtime/describe-failure";
 import type { SSEContext, SSEEvent, SSEHandler } from "../realtime/types";
 import { abortableEvents } from "../utils/abortable-events";
+import { anySignal } from "../utils/any-signal";
 import { SSE_HEARTBEAT } from "./format-sse";
 import { LIMITS } from "./limits";
 import { createSSESender, type SSESender } from "./sse-sender";
@@ -30,7 +31,7 @@ export function createSSEStream(
 ): ReadableStream<Uint8Array> {
   // Own controller for force-abort from registry (disconnect/shutdown)
   const forceAbort = new AbortController();
-  const combinedSignal = AbortSignal.any([ctx.signal, forceAbort.signal]);
+  const combinedSignal = anySignal([ctx.signal, forceAbort.signal]);
   let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
   let closeReason: SSECloseReason = "disconnect";
   let registered = false;

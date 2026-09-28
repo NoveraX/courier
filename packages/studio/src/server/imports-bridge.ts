@@ -7,6 +7,7 @@
  */
 
 import type { CourierImportEntry } from "@noverax/courier/config";
+import { DEFAULT_OPTIONS } from "../apis/generator/types";
 import { type ImportStateEntry, type ImportsState, loadImportsState } from "../apis/imports-state";
 
 /** The `imports` a config declares, by import name. */
@@ -66,17 +67,19 @@ export function summarizeImports(snapshot: ImportsSnapshot): ImportSummary[] {
   return out;
 }
 
+/* The options the import is generated with: a setting the declaration
+   leaves out is generated with its default, and is shown as that. */
 function extractOptions(entry: CourierImportEntry): Record<string, unknown> {
   return {
     sourceName: entry.sourceName,
     outputDir: entry.outputDir,
-    validation: entry.validation,
-    groupBy: entry.groupBy,
-    generateTypes: entry.generateTypes,
-    generateSchemas: entry.generateSchemas,
-    generateClient: entry.generateClient,
-    addAuthMiddleware: entry.addAuthMiddleware,
-    includeComments: entry.includeComments,
+    validation: entry.validation ?? DEFAULT_OPTIONS.validation,
+    groupBy: entry.groupBy ?? DEFAULT_OPTIONS.groupBy,
+    generateTypes: entry.generateTypes ?? DEFAULT_OPTIONS.generateTypes,
+    generateSchemas: entry.generateSchemas ?? DEFAULT_OPTIONS.generateSchemas,
+    generateClient: entry.generateClient ?? DEFAULT_OPTIONS.generateClient,
+    addAuthMiddleware: entry.addAuthMiddleware ?? DEFAULT_OPTIONS.addAuthMiddleware,
+    includeComments: entry.includeComments ?? DEFAULT_OPTIONS.includeComments,
   };
 }
 

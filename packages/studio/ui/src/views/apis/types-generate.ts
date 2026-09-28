@@ -41,7 +41,12 @@ export interface SourceSummary {
   specUrl: string;
   importType: SpecImportType;
   outputDir: string;
-  options: PersistedGenerateOptions;
+  /**
+   * The options the import is generated with, a default filled in for each
+   * one its declaration leaves out; empty for an import the config does not
+   * declare, whose options Studio does not know.
+   */
+  options: Partial<PersistedGenerateOptions>;
 }
 
 // ── Scanner ─────────────────────────────────────────────────────────────────

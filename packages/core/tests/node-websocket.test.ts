@@ -8,7 +8,7 @@
  * were buffered up to `ws`'s 100 MiB default before the size limit was read.
  */
 import { createServer, type Server } from "node:http";
-import type { AddressInfo } from "node:net";
+import { type AddressInfo, connect, type Socket } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";
 
@@ -132,5 +132,51 @@ describe("detaching", () => {
     detach();
 
     expect(await closed).toBe(1012);
+  });
+});
+
+/** Open a Courier connection over a bare TCP socket, so the test can reset it. */
+async function rawUpgrade(url: string): Promise<Socket> {
+  const { hostname, port } = new URL(url);
+  const socket = connect(Number(port), hostname);
+  await new Promise((resolve) => socket.once("connect", resolve));
+  socket.write(
+    "GET /api/ws HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n" +
+      "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n",
+  );
+  await new Promise<void>((resolve) => {
+    socket.on("data", (chunk) => {
+      if (String(chunk).includes("courier")) resolve();
+    });
+  });
+  return socket;
+}
+
+describe("a client that drops the connection", () => {
+  it("is not reported as an upgrade failure once the connection was accepted", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    let closed!: () => void;
+    const socketClosed = new Promise<void>((resolve) => {
+      closed = resolve;
+    });
+    const url = await listen((s) =>
+      attachWebSocketUpgrade(s, {
+        path: "/api/ws",
+        createServer: (options) => new WebSocketServer(options) as unknown as UpgradeServer,
+        onSocket: (socket) => {
+          socket.addEventListener("close", () => closed());
+          socket.send("courier");
+        },
+      }),
+    );
+    const socket = await rawUpgrade(url);
+
+    socket.resetAndDestroy();
+    await socketClosed;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const messages = warn.mock.calls.map((call) => call.map(String).join(" "));
+    expect(messages.filter((line) => line.includes("upgrade socket error"))).toEqual([]);
+    warn.mockRestore();
   });
 });

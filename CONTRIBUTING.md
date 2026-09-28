@@ -124,7 +124,11 @@ NextApiResponse types are gone; use the App Router entry points.
 ```
 
 Releases are cut by semantic-release from these messages, so the type decides
-the version bump.
+the version bump: `fix` and `perf` release a patch, `feat` a minor version.
+While the packages are below 1.0, a breaking change — a `!` or a
+`BREAKING CHANGE:` footer — releases a minor version too; the release rule
+that says so in `.releaserc.json` is removed to cut 1.0. Before anything is
+tagged, the release checks that its npm token is accepted.
 
 ## Pull requests
 

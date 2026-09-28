@@ -12,6 +12,12 @@ export function composeMiddleware(
   const totalCount = middlewares.length;
 
   return (ctx, next) => {
+    /* Without Studio nothing reads the timings or the headers each middleware
+       added, so a request pays for none of them. Asked per request: Studio
+       may attach after the chain was composed. */
+    if (!dt.onMiddlewareEnter && !dt.onMiddlewareExit && !dt.onMiddlewareError) {
+      return runPlain(middlewares, 0, ctx, next);
+    }
     const innerTime: number[] = new Array(totalCount).fill(0);
 
     function trackTail(idx: number, p: Promise<MiddlewareResponse>): Promise<MiddlewareResponse> {
@@ -86,4 +92,22 @@ export function composeMiddleware(
 
     return dispatch(0);
   };
+}
+
+/* The chain as it runs with nobody watching: each phase and nothing else. */
+async function runPlain(
+  middlewares: readonly Middleware[],
+  index: number,
+  ctx: MiddlewareContext,
+  next: NextFn,
+): Promise<MiddlewareResponse> {
+  const mw = middlewares[index];
+  if (!mw) return next();
+  const chainNext = (): Promise<MiddlewareResponse> => runPlain(middlewares, index + 1, ctx, next);
+  if (mw.phase === "before") {
+    await mw.handler(ctx);
+    return chainNext();
+  }
+  if (mw.phase === "after") return mw.handler(ctx, await chainNext());
+  return mw.handler(ctx, chainNext);
 }

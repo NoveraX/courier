@@ -97,6 +97,14 @@ describe("courierStudio() for webpack", () => {
     expect(code).toContain('"webpack-browser"');
   });
 
+  it("connects through the runtime's browser entry, which never loads the config", async () => {
+    const code = await bundle("development");
+
+    expect(code).toContain("attachRuntime");
+    expect(code).not.toContain("registerFromConfig");
+    expect(code).not.toContain("loadCourierConfig");
+  });
+
   it("leaves a production build unconnected", async () => {
     const code = await bundle("production");
 

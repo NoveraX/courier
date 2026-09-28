@@ -73,6 +73,12 @@ export interface ParsedEndpoint {
   secured: boolean;
   /** Request body schema (if any) */
   requestBody: ParsedSchema | null;
+  /**
+   * Media type the request body is sent as, e.g. `application/json`,
+   * `application/x-www-form-urlencoded` or `multipart/form-data`; absent
+   * when there is no body.
+   */
+  requestBodyMediaType?: string;
   /** Path + query parameters */
   parameters: ParsedParameter[];
   /** Response schema (from 200/201 response) */

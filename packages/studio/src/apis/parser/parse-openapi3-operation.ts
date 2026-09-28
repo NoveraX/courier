@@ -20,7 +20,7 @@ export function parseOpenApi3Operation(
   spec: SpecNode,
 ): ParsedEndpoint {
   const parameters = parseParameters(op, spec);
-  const requestBody = parseRequestBody(op, spec);
+  const body = parseRequestBody(op, spec);
   /* A HEAD answer never carries the body its GET would: a schema for it made
      every call fail validation on the null the client reads. */
   const responseSchema = method === "head" ? null : parseResponseSchema(op, spec);
@@ -37,7 +37,7 @@ export function parseOpenApi3Operation(
     fullPath: path,
     description: op.summary ?? op.description ?? "",
     secured,
-    requestBody,
+    ...body,
     parameters,
     responseSchema,
     tags: [],
@@ -83,23 +83,33 @@ function parseParameters(op: SpecNode, spec: SpecNode): ParsedParameter[] {
   return parameters;
 }
 
-function parseRequestBody(op: SpecNode, spec: SpecNode): ParsedSchema | null {
-  if (!op.requestBody) return null;
+function parseRequestBody(
+  op: SpecNode,
+  spec: SpecNode,
+): Pick<ParsedEndpoint, "requestBody" | "requestBodyMediaType"> {
+  if (!op.requestBody) return { requestBody: null };
   const body = op.requestBody.$ref ? resolveRef(spec, op.requestBody.$ref) : op.requestBody;
   /* Stripe sends every body as form-encoded and Twilio does the same; reading
-     only `application/json` dropped all 594 and all 62 of them. */
-  const schema = firstSchemaIn(body?.content);
-  return schema ? convertSchemaInline(schema, spec) : null;
+     only `application/json` dropped all 594 and all 62 of them. Which of the
+     two a body is sent as is kept beside its schema. */
+  const media = firstSchemaIn(body?.content);
+  if (!media) return { requestBody: null };
+  return {
+    requestBody: convertSchemaInline(media.schema, spec),
+    requestBodyMediaType: media.mediaType,
+  };
 }
 
 /** Media types that carry a JSON schema, in the order worth preferring. */
-function firstSchemaIn(content: SpecNode | undefined): SpecNode | undefined {
+function firstSchemaIn(
+  content: SpecNode | undefined,
+): { mediaType: string; schema: SpecNode } | undefined {
   if (!content || typeof content !== "object") return undefined;
   const preferred = content["application/json"]?.schema;
-  if (preferred) return preferred;
-  for (const media of Object.values(content)) {
+  if (preferred) return { mediaType: "application/json", schema: preferred };
+  for (const [mediaType, media] of Object.entries(content)) {
     const schema = (media as SpecNode | undefined)?.schema;
-    if (schema) return schema;
+    if (schema) return { mediaType, schema };
   }
   return undefined;
 }
@@ -108,8 +118,8 @@ function parseResponseSchema(op: SpecNode, spec: SpecNode): ParsedSchema | null 
   const success = successResponse(op.responses);
   if (!success) return null;
   const resp = success.$ref ? resolveRef(spec, success.$ref) : success;
-  const schema = firstSchemaIn(resp?.content);
-  return schema ? convertSchemaInline(schema, spec) : null;
+  const media = firstSchemaIn(resp?.content);
+  return media ? convertSchemaInline(media.schema, spec) : null;
 }
 
 /** `200`, `204`, and the `2XX` wildcard in either case. */

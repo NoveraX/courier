@@ -4,7 +4,13 @@
 
 import { isSupportedMethod } from "./http-methods";
 import { collectionVariables, commonBase, requestBase } from "./postman-base";
-import { authScheme, requestBody, requestParameters, requestPath } from "./postman-request";
+import {
+  authScheme,
+  requestBody,
+  requestBodyMediaType,
+  requestParameters,
+  requestPath,
+} from "./postman-request";
 import type {
   ParsedEndpoint,
   ParsedGroup,
@@ -62,6 +68,8 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
       if (ownAuth && !securitySchemes.some((s) => s.name === ownAuth.name)) {
         securitySchemes.push(ownAuth);
       }
+      const body = requestBody(request.body);
+      const mediaType = body ? requestBodyMediaType(request.body) : undefined;
 
       endpoints.push({
         name: toCamelCase(item.name ?? `${method}${path}`),
@@ -71,7 +79,8 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
         fullPath: path,
         description: item.name ?? "",
         secured: Boolean(ownAuth ?? collectionAuth),
-        requestBody: requestBody(request.body),
+        requestBody: body,
+        ...(mediaType && { requestBodyMediaType: mediaType }),
         parameters: requestParameters(request.url),
         responseSchema: null,
         tags: [groupName],

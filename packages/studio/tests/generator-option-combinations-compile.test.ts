@@ -91,6 +91,7 @@ describe("every option combination", () => {
     { generateTypes: false },
     { generateSchemas: false, generateTypes: false },
     { validation: "none" as const, generateTypes: false },
+    { groupBy: "single" as const, validation: "none" as const, generateTypes: false },
     { generateClient: "proxy" as const },
     { generateClient: "both" as const },
     { generateClient: "none" as const },

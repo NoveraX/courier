@@ -26,6 +26,8 @@ import { isRecord } from "./mocks-edit/is-record";
 import type { RequestLog } from "./request-log";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
 import { handleAnnounce, handleDisconnect, handleHello } from "./runtime-registration";
+import { admitRuntimeSocket } from "./runtime-trust";
+import type { StudioToken } from "./studio-token";
 
 const log = createLogger("Studio");
 
@@ -52,6 +54,11 @@ export interface SetupRuntimeNamespaceDeps {
    * disconnects are ended.
    */
   requestLog?: RequestLog;
+  /**
+   * This project's Studio token. A runtime that presents it when it connects
+   * is sent Playground calls; any other is only heard.
+   */
+  token: StudioToken;
 }
 
 export function setupRuntimeNamespace(
@@ -60,6 +67,8 @@ export function setupRuntimeNamespace(
 ): void {
   runtimeNamespace.on("connection", (socket) => {
     const ref: { runtimeId: string | undefined } = { runtimeId: undefined };
+    const trusted = admitRuntimeSocket(socket, deps.token);
+    let warned = trusted;
 
     socket.on("runtime:hello", (raw: unknown) => {
       handleHello(raw, socket, ref, deps);
@@ -67,6 +76,13 @@ export function setupRuntimeNamespace(
 
     socket.on("runtime:announce", (raw: unknown) => {
       handleAnnounce(raw, ref, deps);
+      if (warned || !ref.runtimeId) return;
+      warned = true;
+      log.warn(
+        `Runtime "${ref.runtimeId}" did not present this project's Studio token: Studio shows ` +
+          "its traffic but sends it no Playground calls. A server runtime reads the token " +
+          "from .courier/studio-token beside courier.config.",
+      );
     });
 
     if (deps.playgroundRouter) {

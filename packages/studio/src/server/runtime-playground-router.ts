@@ -36,7 +36,7 @@ import {
   settleWhere,
   tellEach,
 } from "./playground-in-flight";
-import { getRuntimeEntry } from "./runtime-namespace-state";
+import { playgroundTarget } from "./playground-target";
 import { sanitizeExec, sanitizeRidOnly, sanitizeWrite } from "./runtime-playground-router-sanitize";
 
 const log = createLogger("Studio");
@@ -78,27 +78,6 @@ export interface RuntimePlaygroundRouterDeps {
   uiNamespace: Namespace;
 }
 
-/* The runtime socket to serve a request, or why there is none. */
-function targetOf(
-  bindingTable: BindingTable,
-  payload: { source: string; transport: "http" | "sse" | "ws" },
-): { runtimeId: string; socket: Socket } | { refusal: string } {
-  let binding: ReturnType<BindingTable["resolveBinding"]>;
-  try {
-    binding = bindingTable.resolveBinding(payload.source, payload.transport);
-  } catch (err) {
-    log.error(`dispatch: binding resolution failed for ${payload.source}`, err);
-    return { refusal: err instanceof Error ? err.message : "Internal error" };
-  }
-  if (!binding) {
-    return { refusal: `No runtime hosts ${payload.source} on ${payload.transport.toUpperCase()}` };
-  }
-  const entry = getRuntimeEntry(binding.runtimeId);
-  if (!entry) return { refusal: `Runtime ${binding.runtimeId} is not connected` };
-  if (!entry.socket.connected) return { refusal: `Runtime ${binding.runtimeId} is not reachable` };
-  return { runtimeId: binding.runtimeId, socket: entry.socket };
-}
-
 export function createRuntimePlaygroundRouter(
   deps: RuntimePlaygroundRouterDeps,
 ): RuntimePlaygroundRouter {
@@ -130,7 +109,7 @@ export function createRuntimePlaygroundRouter(
       emitErrorToUi(uiSocket.id, payload.rid, `A request ${payload.rid} is already in flight`);
       return;
     }
-    const target = targetOf(deps.bindingTable, payload);
+    const target = playgroundTarget(deps.bindingTable, payload);
     if ("refusal" in target) {
       emitErrorToUi(uiSocket.id, payload.rid, target.refusal);
       return;

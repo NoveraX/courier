@@ -103,3 +103,38 @@ describe("events reported before the Studio socket connects", () => {
     expect(received).toEqual(["first", "while-away"]);
   });
 });
+
+describe("the token a runtime presents to Studio", () => {
+  it("is the project's, read afresh on each connection", async () => {
+    const { url, io } = await studio();
+    const presented: unknown[] = [];
+    io.of("/runtime").on("connection", (socket) => presented.push(socket.handshake.auth));
+    let token = "a".repeat(43);
+    await connectRuntimeSocket(
+      { runtimeId: "app", kind: "server", studioUrl: url, readToken: () => token },
+      [],
+      { setDisposer: (dispose) => cleanups.push(dispose), setAnnouncer: () => {} },
+    );
+    await until(() => presented.length >= 1, "the first connection");
+
+    /* Studio wrote a new one, and the connection dropped, as a restart does. */
+    token = "b".repeat(43);
+    for (const socket of io.of("/runtime").sockets.values()) socket.conn.close();
+    await until(() => presented.length >= 2, "the second connection");
+
+    expect(presented).toEqual([{ token: "a".repeat(43) }, { token: "b".repeat(43) }]);
+  });
+
+  it("is none for a runtime with no token to read", async () => {
+    const { url, io } = await studio();
+    const presented: unknown[] = [];
+    io.of("/runtime").on("connection", (socket) => presented.push(socket.handshake.auth));
+    await connectRuntimeSocket({ runtimeId: "browser", kind: "browser", studioUrl: url }, [], {
+      setDisposer: (dispose) => cleanups.push(dispose),
+      setAnnouncer: () => {},
+    });
+    await until(() => presented.length >= 1, "the connection");
+
+    expect(presented).toEqual([{}]);
+  });
+});

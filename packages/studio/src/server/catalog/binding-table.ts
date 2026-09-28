@@ -91,6 +91,11 @@ export class BindingTable {
     }
   }
 
+  /** The runtimes that claim a `(source, transport)` pair, in the order they did. */
+  claimantsOf(sourceName: string, transport: BindingTransport): readonly string[] {
+    return this.claims.get(pairKey(sourceName, transport)) ?? [];
+  }
+
   /**
    * Resolve a `(source, transport)` pair to the runtime that should serve it.
    *

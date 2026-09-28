@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BindingTable } from "../src/server/catalog/binding-table";
 import { clearStudioServerState, registerRuntime } from "../src/server/runtime-namespace-state";
 import { createRuntimePlaygroundRouter } from "../src/server/runtime-playground-router";
+import { admitRuntimeSocket } from "../src/server/runtime-trust";
+import { FIXED_TOKEN, FIXED_TOKEN_VALUE } from "./helpers/fixed-token";
 
 interface FakeUiSocket {
   id: string;
@@ -16,6 +18,7 @@ interface FakeUiSocket {
 interface FakeRuntimeSocket {
   id: string;
   connected: boolean;
+  handshake: { auth: Record<string, unknown> };
   emit: ReturnType<typeof vi.fn>;
 }
 
@@ -23,8 +26,8 @@ function makeUiSocket(id: string): FakeUiSocket {
   return { id, emit: vi.fn() };
 }
 
-function makeRuntimeSocket(id: string): FakeRuntimeSocket {
-  return { id, connected: true, emit: vi.fn() };
+function makeRuntimeSocket(id: string, token?: string): FakeRuntimeSocket {
+  return { id, connected: true, handshake: { auth: { token } }, emit: vi.fn() };
 }
 
 function makeUiNamespace(sockets: Map<string, FakeUiSocket>) {
@@ -46,7 +49,8 @@ function setupRouter(transports: string[] = ["http"], sourceNames: string[] = ["
   // biome-ignore lint/suspicious/noExplicitAny: test convenience
   bindingTable.attachRuntime("rt-1", transports as any, sourceNames);
 
-  const runtimeSock = makeRuntimeSocket("rt-sock-1");
+  const runtimeSock = makeRuntimeSocket("rt-sock-1", FIXED_TOKEN_VALUE);
+  admitRuntimeSocket(runtimeSock as never, FIXED_TOKEN);
   registerRuntime({
     runtimeId: "rt-1",
     kind: "server",

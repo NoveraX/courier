@@ -1,6 +1,9 @@
+import { dirname } from "node:path";
+
 import { createLogger, detectAppOrigin, registerSources, setAppOrigin } from "@noverax/courier";
+import type { ServerRuntimeSetup } from "./attach-runtime-core";
 import type { LoadedCourierConfig } from "./load-config";
-import type { ConfiguredStudioAddress } from "./runtime-environment";
+import { readStudioToken } from "./read-studio-token";
 
 const log = createLogger("Runtime");
 
@@ -16,7 +19,7 @@ const log = createLogger("Runtime");
  * @returns The config's `studio` block, which says where Studio listens, or
  *   `undefined` when there is no usable config.
  */
-export async function registerFromConfig(): Promise<ConfiguredStudioAddress | undefined> {
+export async function registerFromConfig(): Promise<ServerRuntimeSetup | undefined> {
   try {
     /* Loaded on demand, so the loader and the TypeScript loader behind it
        cost nothing until a server attaches. */
@@ -29,7 +32,8 @@ export async function registerFromConfig(): Promise<ConfiguredStudioAddress | un
       registerSources(loaded.config.sources);
       setAppOrigin(loaded.config.runtime?.appOrigin ?? detectAppOrigin());
       if (process.env.NODE_ENV !== "production") await followConfig(loadCourierConfig);
-      return loaded.config.studio ?? {};
+      const projectRoot = dirname(loaded.configFile);
+      return { studio: loaded.config.studio ?? {}, readToken: () => readStudioToken(projectRoot) };
     }
   } catch (err) {
     /* A config that exists and will not load leaves the app with no sources at

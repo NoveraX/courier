@@ -10,6 +10,7 @@ import type { Namespace } from "socket.io";
 import { BindingTable } from "../src/server/catalog/binding-table";
 import { setupRuntimeNamespace } from "../src/server/runtime-namespace";
 import { clearStudioServerState } from "../src/server/runtime-namespace-state";
+import { FIXED_TOKEN, FIXED_TOKEN_VALUE } from "./helpers/fixed-token";
 
 type Handler = (raw: unknown) => void;
 
@@ -17,6 +18,7 @@ function makeSocket(id = "socket-1") {
   const handlers = new Map<string, Handler>();
   return {
     id,
+    handshake: { auth: { token: FIXED_TOKEN_VALUE } },
     on(event: string, fn: Handler) {
       handlers.set(event, fn);
     },
@@ -43,7 +45,7 @@ function connected() {
   const bindingTable = new BindingTable();
   const ns = makeNamespace();
   const ui = { emit: vi.fn() } as unknown as Namespace;
-  setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable, uiNamespace: ui });
+  setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable, token: FIXED_TOKEN, uiNamespace: ui });
 
   const socket = makeSocket();
   ns.connect(socket);

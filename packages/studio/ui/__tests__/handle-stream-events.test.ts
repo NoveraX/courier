@@ -34,7 +34,7 @@ function apply(
   maxRequests = 100,
 ): { requests: RequestEntry[]; droppedCount: number } {
   const event = { id: "ev-1", type, timestamp: 0, sessionId: "s-1", ...fields }
-  return applyEvents(requests, [event], { maxRequests, ignorePatterns: [] })
+  return applyEvents(requests, [event], { maxRequests, ignorePatterns: [], paused: false })
 }
 
 /** Get request at index with runtime assertion — avoids noUncheckedIndexedAccess noise */

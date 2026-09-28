@@ -16,7 +16,7 @@ import type { JsonResponse, RouteApp } from "./route-types";
 import { specHostAllowlist } from "./spec-host-allowlist";
 import { validateNameBody } from "./validate-body-registry";
 
-type RouteRequest = { body: Record<string, unknown> };
+type RouteRequest = { body: unknown };
 
 /**
  * Mount the routes that check an import's upstream spec for changes: one

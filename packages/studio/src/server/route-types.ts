@@ -10,6 +10,7 @@ export interface JsonResponse {
 export interface RouteApp {
   post(
     path: string,
-    handler: (req: { body: Record<string, unknown> }, res: JsonResponse) => void | Promise<void>,
+    /* `body` is whatever the JSON parser made of the request, and absent without one. */
+    handler: (req: { body: unknown }, res: JsonResponse) => void | Promise<void>,
   ): void;
 }

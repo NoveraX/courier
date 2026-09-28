@@ -244,17 +244,23 @@ On a server, `debug` and `info` go to **stdout** and `warn` and `error` to **std
 The `createHandler` function returns a Web Standard handler. All official adapters use it internally:
 
 ```ts
-import { createHandler } from "@noverax/courier"
+import { createHandler, registerSources } from "@noverax/courier"
 import { sources } from "./api/sources"
 
-const handler = createHandler(sources)
+registerSources(sources)
 
-// handler.handle(request)    — auto-routes GET/POST
-// handler.handleGet(request) — query endpoints only
+const handler = createHandler({ allowedOrigins: ["https://app.example.com"] })
+
+// handler.handle(request)     — auto-routes GET/POST/SSE
+// handler.handleGet(request)  — query endpoints only
 // handler.handlePost(request) — mutations + data
+// handler.handleSSE(request)  — streams
+// handler.shutdownSSE()       — drains open streams before the host closes
 ```
 
-For Node.js servers, use `toWebRequest` and `sendWebResponse` to bridge between Node.js and Web Standard APIs.
+`createHandler` takes handler options, not sources: it reads the sources registered with `registerSources()` — or loaded by `attachRuntime()` — when it serves a request. Pass it nothing to accept the defaults.
+
+For Node.js servers, use `toWebRequest` and `sendWebResponse` from `@noverax/courier/node` to bridge between Node.js and Web Standard APIs. An adapter announces what it hosts to Studio with `announceWhenRegistered` from `@noverax/courier/announce`, called on each request.
 
 <br />
 

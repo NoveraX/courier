@@ -67,7 +67,9 @@ describe("useChannel over a real WebSocket", () => {
       ({ room }) => {
         const channel = q.live.useChannel("room", { variables: { room } });
         const { send } = channel;
-        useEffect(() => send({ text: `hello-${room}` }), [send, room]);
+        useEffect(() => {
+          send({ text: `hello-${room}` });
+        }, [send, room]);
         return channel;
       },
       { wrapper, initialProps: { room: "r1" } },

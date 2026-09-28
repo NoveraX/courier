@@ -3,31 +3,41 @@
  */
 
 import { toInternalMethod } from "@noverax/courier";
-import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
+import type { ParsedEndpoint, ParsedSchema } from "../parser/types";
 import { convertPathParams } from "../parser/utils";
 import { buildEndpointChain } from "./build-endpoint-helpers";
+import { type EndpointContext, schemaConstant, typeName } from "./endpoint-context";
 import { resolveResponseType, resolveVariablesType } from "./endpoint-types";
 import { extendSchemaWithParams, getSchemaRefName } from "./schema-utils";
-import type { ResolvedGenerateOptions } from "./types";
 
+/**
+ * The chain describing one endpoint.
+ *
+ * @param ep - The endpoint
+ * @param context - The file it is written into, which records what the chain uses
+ * @param extracted - The types extracted from the file's endpoints, by name
+ * @returns The chain, from `endpoint` to its last slot
+ * @example
+ * ```ts
+ * buildEndpointDefinition(getPet, context, {}); // 'endpoint.get(":petId").variables<{ petId: number }>().response(PetSchema)'
+ * ```
+ */
 export function buildEndpointDefinition(
   ep: ParsedEndpoint,
-  spec: ParsedSpec,
-  options: ResolvedGenerateOptions,
-  schemaImports: Set<string>,
-  extracted?: Record<string, ParsedSchema>,
+  context: EndpointContext,
+  extracted: Readonly<Record<string, ParsedSchema>> = {},
 ): string {
-  const hasSchema = options.generateSchemas && options.validation !== "none";
-  const schemaConfig = buildSchemaConfig(ep, spec, options, hasSchema, schemaImports);
-
-  const responseType = resolveResponseType(ep, spec, options);
-  const paramsName = `${toPascalCase(ep.name)}Params`;
-  /* An extracted params type is only written to disk when a types file is
-     generated; without one, the shape is named where it is used. */
-  const named = options.generateTypes && extracted?.[paramsName] ? paramsName : null;
-  const varsType = named ?? resolveVariablesType(ep, spec, options);
-
-  return buildEndpointChain(address(ep), schemaConfig, varsType, responseType);
+  const variables = variablesSchema(ep, context);
+  const response = responseSchema(ep, context);
+  return buildEndpointChain({
+    address: address(ep),
+    variablesSchema: variables,
+    variablesType: variables
+      ? null
+      : (namedParams(ep, context, extracted) ?? resolveVariablesType(ep, context)),
+    responseSchema: response,
+    responseType: response ? "unknown" : resolveResponseType(ep, context),
+  });
 }
 
 /**
@@ -43,42 +53,41 @@ function address(ep: ParsedEndpoint): string {
   return `endpoint.${method}("${path}")`;
 }
 
-function buildSchemaConfig(
+/** The extracted type naming the endpoint's parameters, when there is one. */
+function namedParams(
   ep: ParsedEndpoint,
-  spec: ParsedSpec,
-  options: ResolvedGenerateOptions,
-  hasSchema: boolean,
-  schemaImports: Set<string>,
-): string[] {
-  const config: string[] = [];
-  const responseRef = getSchemaRefName(ep.responseSchema);
-  const bodyRef = getSchemaRefName(ep.requestBody);
+  context: EndpointContext,
+  extracted: Readonly<Record<string, ParsedSchema>>,
+): string | null {
+  const name = `${toPascalCase(ep.name)}Params`;
+  return Object.hasOwn(extracted, name) ? typeName(context, name) : null;
+}
 
-  if (hasSchema && responseRef && schemaImports.has(responseRef)) {
-    config.push(`response: ${schemaExpr(responseRef, ep.responseSchema, options)}`);
-  }
+function responseSchema(ep: ParsedEndpoint, context: EndpointContext): string | null {
+  const ref = getSchemaRefName(ep.responseSchema);
+  const constant = ref ? schemaConstant(context, ref) : null;
+  return constant ? listOf(constant, ep.responseSchema, context) : null;
+}
 
-  if (hasSchema && bodyRef && schemaImports.has(bodyRef)) {
-    const body = schemaExpr(bodyRef, ep.requestBody, options);
-    const pathParams = ep.parameters.filter((p) => p.in === "path");
-    if (pathParams.length > 0) {
-      /* Only an object can be extended; a list or a set of alternatives has
-         to be intersected with the path parameters instead. */
-      const isObject = ep.requestBody?.type !== "array" && spec.schemas[bodyRef]?.type !== "union";
-      config.push(
-        `variables: ${extendSchemaWithParams(
-          body,
-          pathParams.map((p) => p.name),
-          options,
-          isObject,
-        )}`,
-      );
-    } else {
-      config.push(`variables: ${body}`);
-    }
-  }
+function variablesSchema(ep: ParsedEndpoint, context: EndpointContext): string | null {
+  const ref = getSchemaRefName(ep.requestBody);
+  const constant = ref ? schemaConstant(context, ref) : null;
+  if (!ref || !constant) return null;
 
-  return config;
+  const body = listOf(constant, ep.requestBody, context);
+  const pathParams = ep.parameters.filter((p) => p.in === "path");
+  if (pathParams.length === 0) return body;
+
+  /* Only an object can be extended; a list or a set of alternatives has to be
+     intersected with the path parameters instead. */
+  const isObject = ep.requestBody?.type !== "array" && context.spec.schemas[ref]?.type !== "union";
+  if (context.options.validation !== "arktype") context.uses.validator = true;
+  return extendSchemaWithParams(
+    body,
+    pathParams.map((p) => p.name),
+    context.options,
+    isObject,
+  );
 }
 
 /**
@@ -87,17 +96,12 @@ function buildSchemaConfig(
  * A request body that is an array was expressed as the schema of one element,
  * so the validator rejected the very payload the endpoint requires.
  */
-function schemaExpr(
-  ref: string,
-  schema: ParsedSchema | null,
-  options: ResolvedGenerateOptions,
-): string {
-  const named = `${ref}Schema`;
-  if (schema?.type !== "array") return named;
-  if (options.validation === "zod") return `z.array(${named})`;
-  if (options.validation === "valibot") return `v.array(${named})`;
-  if (options.validation === "arktype") return `${named}.array()`;
-  return named;
+function listOf(constant: string, schema: ParsedSchema | null, context: EndpointContext): string {
+  if (schema?.type !== "array") return constant;
+  const { validation } = context.options;
+  if (validation === "arktype") return `${constant}.array()`;
+  context.uses.validator = true;
+  return validation === "zod" ? `z.array(${constant})` : `v.array(${constant})`;
 }
 
 function toPascalCase(name: string): string {

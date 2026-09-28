@@ -15,14 +15,24 @@ export interface TypeStyle {
    * does not match its own schema.
    */
   undefinedWhenOptional: boolean;
+  /**
+   * How a reference to a named schema is written. A schemas file names
+   * its siblings; an endpoint file names only what the schemas file it
+   * imports from declares, and writes `unknown` for anything else.
+   */
+  reference?: (name: string) => string;
 }
 
 /** `?: T` — what ArkType infers, and the plain TypeScript form. */
 export const EXACT_OPTIONAL: TypeStyle = { undefinedWhenOptional: false };
 
+function referenceIn(style: TypeStyle, name: string): string {
+  return style.reference ? style.reference(name) : name;
+}
+
 /** Convert a ParsedSchema to an inline TypeScript type string */
 export function schemaToTsType(schema: ParsedSchema, style = EXACT_OPTIONAL): string {
-  if (schema.type === "ref" && schema.refName) return schema.refName;
+  if (schema.type === "ref" && schema.refName) return referenceIn(style, schema.refName);
   if (schema.type === "array") {
     if (!schema.items) return "unknown[]";
     const inner = schemaToTsType(schema.items, style);
@@ -71,7 +81,7 @@ export function propertyType(
 }
 
 export function propToTsType(prop: ParsedSchemaProperty, style = EXACT_OPTIONAL): string {
-  if (prop.refName) return prop.refName;
+  if (prop.refName) return referenceIn(style, prop.refName);
   if (prop.shape) return schemaToTsType(prop.shape, style);
   if (prop.valueType) return `Record<string, ${schemaToTsType(prop.valueType, style)}>`;
   if (prop.enum) {

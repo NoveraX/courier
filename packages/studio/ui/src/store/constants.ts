@@ -1,3 +1,4 @@
+import { storedSettings } from "./stored-settings"
 import type { Theme, TimelineFilters, Settings } from "./types"
 
 export const PLAYGROUND_MAX_HISTORY = 50
@@ -58,8 +59,8 @@ export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_STORAGE_KEY)
     if (!raw) return DEFAULT_SETTINGS
-    const parsed = JSON.parse(raw) as Partial<Settings>
-    return { ...DEFAULT_SETTINGS, ...parsed }
+    const parsed: unknown = JSON.parse(raw)
+    return storedSettings(parsed, DEFAULT_SETTINGS)
   } catch {
     return DEFAULT_SETTINGS
   }

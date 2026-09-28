@@ -51,13 +51,16 @@ export function getSourceGroupNames(source: Record<string, unknown>): Set<string
   return new Set(Object.keys(opts.groups).filter((k) => k !== "options"));
 }
 
+const LEADING_SLASHES = /^\/+/;
+
 function analyzeTopLevelEndpoint(
   routes: RouteInfo[],
   name: string,
   fn: (...args: unknown[]) => unknown,
 ): void {
   const probed = probeEndpoint(fn);
-  const rawPath = probed.path ?? name;
+  // "/orders" and "orders" name the same path; its first segment is the collection
+  const rawPath = (probed.path ?? name).replace(LEADING_SLASHES, "");
   const collection = rawPath.split("/")[0]?.replace(/^:/, "") || name;
   // Normalize path relative to the derived group prefix so detectOperation
   // treats the collection root ("users") as "" (list), not a static sub-path.
@@ -124,7 +127,7 @@ function analyzeEndpoint(
 
   const probed = preProbed ?? probeEndpoint(endpointFn);
   const httpMethod = normalizeHttpMethod(probed.method ?? "GET");
-  const path = probed.path ?? "";
+  const path = (probed.path ?? "").split("/").filter(Boolean).join("/");
   const fullPath = path ? `${prefix}/${path}`.replace(/\/+/g, "/") : prefix;
   const idParam = recordParam(path);
 

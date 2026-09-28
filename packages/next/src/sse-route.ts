@@ -1,13 +1,16 @@
 import type { HandlerConfig } from "@noverax/courier";
-import { createHandler, discoverAppOrigin, requireSources } from "@noverax/courier";
-import { announceHosting, deferAnnounce } from "@noverax/courier/announce";
+import { createHandler, discoverAppOrigin } from "@noverax/courier";
+import { announceWhenRegistered } from "@noverax/courier/announce";
 import type { NextRequest } from "next/server";
 
 import { publicRequest } from "./public-request";
 
 /**
  * Create Next.js App Router handler for SSE streaming endpoints.
- * Works in Edge Runtime — returns a `ReadableStream` response.
+ * Works in the Edge Runtime too — returns a `ReadableStream` response. The
+ * Edge Runtime has its own source registry: register the sources there as
+ * well, from `register()` in `instrumentation.ts`, which runs once in each
+ * runtime.
  *
  * Announces `transports: ["sse"]` to Studio so the binding table knows the
  * Next.js runtime owns SSE delivery for these sources.
@@ -33,13 +36,7 @@ export function sseRoute(config?: HandlerConfig): {
 
   /* Deferred for the same reason as `apiRoute`: this module is evaluated by
      `next build` before the registry exists. */
-  const announce = deferAnnounce(() =>
-    announceHosting({
-      transports: ["sse"],
-      sources: Object.values(requireSources()),
-      framework: "next",
-    }),
-  );
+  const announce = announceWhenRegistered({ transports: ["sse"], framework: "next" });
 
   return {
     GET: (request: NextRequest) => {

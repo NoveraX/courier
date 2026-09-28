@@ -10,6 +10,8 @@ import { HTTPError } from "../errors";
 import { isBodilessStatus } from "../http-client/response";
 import { isAbortError } from "../utils/abort";
 import { isWireBody, readWireBody } from "../utils/wire-body";
+import { ValidationError } from "../validation";
+import { validationFailure } from "./validation-failure";
 
 /**
  * The error a failed proxy call rejects with.
@@ -63,7 +65,8 @@ export async function readProxyAnswer(
 ): Promise<unknown> {
   if (!response.ok) {
     const responseData = await readErrorResponse(response);
-    throw buildHttpError(response.status, response.headers, responseData, raw);
+    const failure = buildHttpError(response.status, response.headers, responseData, raw);
+    throw validationFailure(failure.status, failure.data) ?? failure;
   }
   /* The unread body, or with `.raw` the response around it — as in direct
      mode, where handing back the whole Response was a third shape. */
@@ -96,7 +99,8 @@ export async function readProxyAnswer(
  */
 export function asProxyFailure(error: unknown, signal?: AbortSignal | null): unknown {
   if (signal?.aborted && error === signal.reason) return error;
-  if (error instanceof HTTPError || isAbortError(error) || !(error instanceof Error)) return error;
+  if (error instanceof HTTPError || error instanceof ValidationError) return error;
+  if (isAbortError(error) || !(error instanceof Error)) return error;
   return new HTTPError(
     { status: 0, headers: new Headers(), data: { success: false, message: error.message } },
     { cause: error },

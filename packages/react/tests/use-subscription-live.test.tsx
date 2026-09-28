@@ -86,7 +86,7 @@ describe("useSubscription over a real SSE stream", () => {
 
     await waitFor(() => expect(result.current.events).toHaveLength(2));
     await waitFor(() => expect(result.current.status).toBe("disconnected"));
-    expect(seen).toEqual(["disconnected", "connecting", "connected", "disconnected"]);
+    expect(seen).toEqual(["connecting", "connected", "disconnected"]);
   });
 
   it("reports a transport configuration error through error and onError", async () => {

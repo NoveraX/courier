@@ -6,6 +6,7 @@ import * as React from "react";
 
 import type { CourierSubscriptionOptions, SubscriptionResult } from "../types";
 import { consumeStream, toError } from "./consume-stream";
+import { useKeyedStatus } from "./keyed-status";
 import { streamKeyOf } from "./stream-key";
 
 /** A group hook's options, as `useSubscription` takes them untyped. */
@@ -30,10 +31,11 @@ interface StreamState<TData> {
  * Subscribe to a server-sent event stream with automatic lifecycle management.
  *
  * A change of method or variables opens another stream, and the result starts
- * over with it — no events, the optimistic data, no error — in the same render
- * that asks for it, so nothing of the previous stream is ever shown as the new
- * one's. A stream that cannot be opened at all, such as one whose proxy path
- * is misconfigured, reports that through `error` and `onError`.
+ * over with it — no events, the optimistic data, no error, and `connecting` —
+ * in the same render that asks for it, so nothing of the previous stream is
+ * ever shown as the new one's. A stream that cannot be opened at all, such as
+ * one whose proxy path is misconfigured, reports that through `error` and
+ * `onError`.
  *
  * @param subscribe - Factory that creates an SSESubscription (injected by createGroupHooks)
  * @param group - API group name
@@ -62,9 +64,9 @@ export function useSubscription<TData>(
   const { key, variablesKey } = streamKeyOf(group, method, variables);
 
   const [stream, setStream] = React.useState(() => emptyStream(key, optimisticData));
-  const [status, setStatus] = React.useState<ConnectionStatus>("disconnected");
   const current = stream.key === key ? stream : emptyStream(key, optimisticData);
   if (current !== stream) setStream(current);
+  const [status, reportStatus] = useKeyedStatus(key, enabled);
 
   // Stable refs for callbacks — avoids re-subscribing on handler identity change
   const callbacksRef = React.useRef({ onData, onError, onStatusChange });
@@ -78,10 +80,7 @@ export function useSubscription<TData>(
   }, []);
 
   React.useEffect(() => {
-    if (!enabled) {
-      setStatus("disconnected");
-      return;
-    }
+    if (!enabled) return;
 
     const vars = variablesKey ? (JSON.parse(variablesKey) as unknown) : undefined;
     let active = true;
@@ -103,7 +102,7 @@ export function useSubscription<TData>(
       callbacksRef.current.onData?.(event);
     };
     const report = (next: ConnectionStatus) => {
-      setStatus(next);
+      reportStatus({ key, status: next });
       callbacksRef.current.onStatusChange?.(next);
     };
 
@@ -117,6 +116,7 @@ export function useSubscription<TData>(
         sub = subscribe(group, method, vars);
       } catch (error) {
         fail(toError(error));
+        report("disconnected");
         return;
       }
       subRef.current = sub;
@@ -134,8 +134,9 @@ export function useSubscription<TData>(
       if (subRef.current === sub) {
         subRef.current = null;
       }
+      reportStatus(undefined);
     };
-  }, [enabled, group, method, key, variablesKey, subscribe]);
+  }, [enabled, group, method, key, variablesKey, subscribe, reportStatus]);
 
   return { data: current.data, events: current.events, status, error: current.error, close };
 }

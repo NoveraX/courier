@@ -422,6 +422,37 @@ describe("a write for an import, after courier.config moved its output directory
   }, 15_000);
 });
 
+describe("a write whose options contradict the import's declaration", () => {
+  /* The declaration names no validation or grouping, so it generates with zod, by tag. */
+  function writeWith(options: Record<string, unknown>): Record<string, unknown> {
+    return { sourceName: "pets", spec: SPEC, options: { type: "openapi", sourceName: "pets", outputDir: "src/api", ...options } };
+  }
+
+  it("is refused 409, naming each option the declaration gives otherwise, before anything is written", async () => {
+    project(declaring("src/api"));
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/write", writeWith({ validation: "valibot", groupBy: "single" }));
+
+    expect(reply.status).toBe(409);
+    expect(reply.body).toMatchObject({
+      code: "DECLARATION_MISMATCH",
+      error: expect.stringContaining("validation zod and groupBy tag, but this write asks for validation valibot and groupBy single"),
+    });
+    expect(existsSync(join(root, "src/api/pets/source.ts"))).toBe(false);
+  }, 15_000);
+
+  it("is written when the options are the declaration's, spelled out or left to their defaults", async () => {
+    project(declaring("src/api"));
+    const url = await started();
+
+    const reply = await post(url, "/api/apis/write", writeWith({ validation: "zod", groupBy: "tag", generateTypes: true }));
+
+    expect(reply.status).toBe(200);
+    expect(existsSync(join(root, "src/api/pets/source.ts"))).toBe(true);
+  }, 15_000);
+});
+
 describe("a write whose options put a declared import in another directory", () => {
   /* The wizard's write for pets, generated under `outputDir`. */
   function writeUnder(outputDir: string): Record<string, unknown> {

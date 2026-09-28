@@ -204,7 +204,7 @@ A request Studio refuses changes nothing. It is answered with `{ error }` — `4
 | `PLAN_STALE` | 409 | The plan is not the one you saw: a file it rests on changed, or the import's declaration or the change asked for did. |
 | `TARGET_BLOCKED` | 409 | A file the change writes is a symbolic link or not a file. |
 | `CONFIRMATION_NOT_IN_PLAN` | 400 | `confirm` names a path the plan does not ask about. |
-| `DECLARATION_MISMATCH` | 409 | `imports` declares the import in another folder than the wizard's options. |
+| `DECLARATION_MISMATCH` | 409 | `imports` declares the import in another folder, or with another type, validation, grouping, client or other generation option, than the wizard's options; the message names each one. An update and Manage generate as declared, so an import written otherwise would change layout at the next of them. |
 | `DIR_OVERLAP` | 409 | Another import owns the folder, or one inside or around it. |
 | `NAME_TAKEN` | 409 | `sources` declares another API under the import's name. |
 | `FILE_NOT_RECOGNIZED` | 409 | A file Studio would add endpoints to no longer shows where its endpoints are. |

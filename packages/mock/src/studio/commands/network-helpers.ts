@@ -1,27 +1,10 @@
 /**
  * Helpers shared between the network and chaos command handlers:
- * latency normalization, preset transition events, and config
- * serialization for the UI.
+ * preset transition events, and config serialization for the UI.
  */
 
 import type { NetworkState } from "../../network/state";
-import type { LatencyProfile } from "../../types";
 import type { MockEventEmitter } from "../event-emitter";
-
-/** Normalize latency from command payload to a LatencyProfile-compatible shape */
-export function normalizeLatency(
-  raw?: number | string | { min: number; max: number; jitter?: number; distribution?: string },
-): LatencyProfile | undefined {
-  if (raw === undefined || raw === null) return undefined;
-  if (typeof raw === "number") {
-    return raw === 0 ? undefined : { min: raw, max: raw };
-  }
-  if (typeof raw === "string") {
-    return raw as LatencyProfile;
-  }
-  if (raw.min === 0 && raw.max === 0) return undefined;
-  return { min: raw.min, max: raw.max, jitter: raw.jitter };
-}
 
 /** Compare prev/next preset names and emit appropriate experiment events */
 export function emitPresetTransition(

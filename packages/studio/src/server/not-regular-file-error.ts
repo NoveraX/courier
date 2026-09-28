@@ -12,6 +12,8 @@ import { CourierError } from "@noverax/courier";
 export class NotRegularFileError extends CourierError<"NOT_REGULAR_FILE"> {
   /** The path that was read. */
   readonly path: string;
+  /** What is there instead, such as `a symbolic link`. */
+  readonly found: string;
 
   /**
    * @param path - The path that was read
@@ -25,5 +27,6 @@ export class NotRegularFileError extends CourierError<"NOT_REGULAR_FILE"> {
       context: { path },
     });
     this.path = path;
+    this.found = found;
   }
 }

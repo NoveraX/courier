@@ -95,6 +95,16 @@ describe("loadCourierConfig", () => {
     });
   });
 
+  it("says a config that exports null declares no sources, not how the loader failed on it", async () => {
+    /* The loader's wrapper for the module's exports threw "Reflect.get called on non-object" for a null default. */
+    writeConfig("export default null;\n");
+
+    await expect(loadCourierConfig(dir)).rejects.toMatchObject({
+      code: "CONFIG_INVALID",
+      message: "courier.config.sources is required; declare `sources: {}` while there are none",
+    });
+  });
+
   it("loads a config that declares no sources yet", async () => {
     writeConfig(
       'import { defineConfig } from "@noverax/courier/config";\nexport default defineConfig({ sources: {} });\n',

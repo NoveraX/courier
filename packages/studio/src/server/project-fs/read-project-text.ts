@@ -1,3 +1,4 @@
+import { NotRegularFileError } from "../not-regular-file-error";
 import { readRegularFile } from "../read-regular-file";
 import { assertRealInside } from "./assert-real-inside";
 import { ProjectFileMissingError } from "./project-file-missing-error";
@@ -23,7 +24,19 @@ import { resolveProjectPath } from "./resolve-project-path";
 export function readProjectText(root: ProjectRoot, path: string): string {
   const absolute = resolveProjectPath(root.path, path);
   assertRealInside(root, absolute);
-  const file = readRegularFile(absolute);
+  const file = readRegularFileAt(absolute, path);
   if (file === null) throw new ProjectFileMissingError(path);
   return file.bytes.toString("utf8");
+}
+
+/* Refused by the path the request named: the absolute one is the machine's, not the request's. */
+function readRegularFileAt(absolute: string, path: string): ReturnType<typeof readRegularFile> {
+  try {
+    return readRegularFile(absolute);
+  } catch (error) {
+    if (error instanceof NotRegularFileError) {
+      throw new NotRegularFileError(path, error.found, { cause: error });
+    }
+    throw error;
+  }
 }

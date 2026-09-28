@@ -84,9 +84,31 @@ export async function loadCourierEntry(
   const source = readFileSync(file, "utf8");
   const required = isCommonJsEntry(file, source) ? requireAfresh(file, key, cache) : null;
   if (required !== null) return required;
-  await jiti.evalModule(source, { filename: key, async: true, cache, forceTranspile: true });
+  await evaluateInto(key, cache, () =>
+    jiti.evalModule(source, { filename: key, async: true, cache, forceTranspile: true }),
+  );
   const exports: unknown = cache[key]?.exports;
   return exports;
+}
+
+/* The loader hands back a module's exports wrapped in a proxy, which throws
+   when its default is null: awaiting the proxy reads `then` off the null
+   default. A module the loader marked loaded ran to its end, and its exports
+   are read from the cache instead; anything else it threw stands. */
+async function evaluateInto(
+  key: string,
+  cache: CourierModuleCache,
+  evaluate: () => unknown,
+): Promise<void> {
+  try {
+    await evaluate();
+  } catch (error) {
+    if (cache[key]?.loaded !== true) throw error;
+    log.debug(
+      `${key} ran, but the loader could not hand back its exports; they are read as it left them`,
+      error,
+    );
+  }
 }
 
 /* Node keeps a CommonJS module in its require cache under its path, and hands

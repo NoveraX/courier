@@ -67,7 +67,7 @@ describe("closing a Fastify host with a stream open", () => {
     const closed = await Promise.race([instance.close().then(() => "closed"), timeout(4000)]);
 
     expect(closed).toBe("closed");
-    expect(await rest).toContain("event: shutdown");
+    expect(await rest).toContain("event: courier:shutdown");
   });
 
   it("drains an SSE route's streams from a preClose hook", async () => {
@@ -82,7 +82,7 @@ describe("closing a Fastify host with a stream open", () => {
     const closed = await Promise.race([instance.close().then(() => "closed"), timeout(4000)]);
 
     expect(closed).toBe("closed");
-    expect(await rest).toContain("event: shutdown");
+    expect(await rest).toContain("event: courier:shutdown");
     expect(sse.sseConnections.count).toBe(0);
   });
 });

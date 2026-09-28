@@ -1,5 +1,6 @@
 import type { BaseOptions } from "../http-client/types";
 import { studioHooks } from "../studio";
+import { isDevelopment } from "../utils/development";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
 import type {
   DefinedApi,
@@ -167,7 +168,7 @@ export function defineApi(
   (result as Record<symbol, unknown>)[SOURCE_NAME_KEY] = sourceName;
 
   // Dev-only: notify studio of source (re)creation for HMR hot reload
-  if (process.env.NODE_ENV !== "production") {
+  if (isDevelopment()) {
     studioHooks.onSourceDefined?.(result, config.baseURL ?? "");
   }
 

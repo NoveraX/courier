@@ -23,8 +23,11 @@
  * Studio serves itself from one and inspects an app on another. It is scoped
  * to loopback rather than opened to everything, so a page on the public
  * internet is refused in development exactly as it is in production.
- * Configuring `allowedOrigins` replaces the allowance with the list.
+ * Configuring `allowedOrigins` replaces the allowance with the list. A runtime
+ * with no `process` to say it is in development never makes it.
  */
+
+import { isDevelopment } from "../utils/development";
 
 /**
  * Decide whether a request may proceed, from where the browser says it comes.
@@ -102,7 +105,7 @@ export function isOriginListed(origin: string, allowedOrigins?: readonly string[
 /** Whether a foreign origin was listed, or is a local port during development. */
 function isConfigured(origin: string, allowedOrigins?: string[]): boolean {
   if (allowedOrigins?.length) return isOriginListed(origin, allowedOrigins);
-  return process.env.NODE_ENV !== "production" && isLoopback(origin);
+  return isDevelopment() && isLoopback(origin);
 }
 
 /** True for another port on the developer's own machine. */

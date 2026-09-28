@@ -226,6 +226,55 @@ describe("stopping a managed mock", () => {
   });
 });
 
+/** The id each command went to the worker under, in the order sent. */
+function commandIds(child: FakeChild): string[] {
+  return child.send.mock.calls.flatMap(([msg]: unknown[]) => {
+    if (typeof msg !== "object" || msg === null || Reflect.get(msg, "type") !== "command") return [];
+    const id: unknown = Reflect.get(msg, "requestId");
+    return typeof id === "string" ? [id] : [];
+  });
+}
+
+describe("a command sent to a managed mock", () => {
+  it("resolves with the worker's answer to it, each of several in flight with its own", async () => {
+    const { pm } = manager();
+    pm.spawn(request);
+    const child = forks[0]?.child as FakeChild;
+
+    const first = pm.sendCommand("apiMock", { action: "mock:store:seed" });
+    const second = pm.sendCommand("apiMock", { action: "mock:store:update", id: 9 });
+    const [firstId, secondId] = commandIds(child);
+    child.emit("message", { type: "command-result", requestId: secondId, ok: false, error: "no record 9" });
+    child.emit("message", { type: "command-result", requestId: firstId, ok: true });
+
+    expect(firstId).not.toBe(secondId);
+    await expect(first).resolves.toEqual({ ok: true });
+    await expect(second).resolves.toEqual({ ok: false, error: "no record 9" });
+    await pm.dispose();
+  });
+
+  it("resolves as unanswered when the worker ends before answering", async () => {
+    const { pm } = manager();
+    pm.spawn(request);
+    const child = forks[0]?.child as FakeChild;
+
+    const reply = pm.sendCommand("apiMock", { action: "mock:store:seed" });
+    exit(child, 1, null);
+    child.emit("close", 1, null);
+
+    await expect(reply).resolves.toEqual({ ok: false, error: "The mock stopped before it answered." });
+  });
+
+  it("resolves as refused for a mock with no worker", async () => {
+    const { pm } = manager();
+
+    await expect(pm.sendCommand("apiMock", { action: "mock:store:seed" })).resolves.toEqual({
+      ok: false,
+      error: "The mock is not running.",
+    });
+  });
+});
+
 describe("the host process", () => {
   it("keeps its signal handlers, and gets its exit handler back on dispose", async () => {
     const before = ["SIGINT", "SIGTERM", "SIGHUP", "exit"].map((e) => process.listenerCount(e));

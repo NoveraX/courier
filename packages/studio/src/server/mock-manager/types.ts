@@ -3,6 +3,7 @@ import type { Namespace } from "socket.io";
 
 import type { MockRegistry } from "../mock-registry";
 import type { WatcherStatus } from "../watcher-status";
+import type { CommandReply } from "./command-replies";
 
 export type ServerStatus =
   | "declared"
@@ -76,8 +77,8 @@ export interface ProcessManager {
   dispose(): Promise<void>;
   /** Whether the mock has a worker that has not exited yet. */
   has(serverId: string): boolean;
-  /** Send a store command to a mock's worker. */
-  sendCommand(serverId: string, command: Record<string, unknown>): void;
+  /** Send a command to a mock's worker; resolves with its answer, or why none will come. */
+  sendCommand(serverId: string, command: Record<string, unknown>): Promise<CommandReply>;
 }
 
 /** A mock Studio tracks, as far as an edit of the mocks file concerns it. */

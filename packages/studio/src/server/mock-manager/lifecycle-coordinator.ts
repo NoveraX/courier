@@ -10,8 +10,10 @@
 
 import { createLogger } from "@noverax/courier";
 import type { MockEntry } from "../mock-registry";
+import type { SanitizedMockCommand } from "../sanitize-mock-events";
 import { createDescriptionApplier } from "./apply-description";
 import { createCommandHandler } from "./command-handler";
+import type { CommandReply } from "./command-replies";
 import { createProcessEvents } from "./lifecycle-process-events";
 import { createServerOps } from "./lifecycle-server-ops";
 import { declaredPorts } from "./mock-ports";
@@ -114,9 +116,10 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
     }));
   }
 
-  function forwardStoreCommand(command: Record<string, unknown>): void {
-    const serverId = command.serverId as string;
-    if (servers.has(serverId)) processManager.sendCommand(serverId, command);
+  /** Run a command on the mock it names, with that mock's answer; `undefined` when Studio has no mock by that name. */
+  function forwardStoreCommand(command: SanitizedMockCommand): Promise<CommandReply> | undefined {
+    if (!servers.has(command.serverId)) return undefined;
+    return processManager.sendCommand(command.serverId, command);
   }
 
   function sendSnapshot(): void {

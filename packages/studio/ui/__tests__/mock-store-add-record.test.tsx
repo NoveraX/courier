@@ -12,7 +12,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const emit = vi.hoisted(() => vi.fn());
 
 vi.mock("socket.io-client", () => ({
-  io: () => ({ emit, on: vi.fn(), off: vi.fn(), io: { on: vi.fn(), off: vi.fn() } }),
+  io: () => ({
+    emit,
+    timeout: () => ({ emit }),
+    on: vi.fn(),
+    off: vi.fn(),
+    io: { on: vi.fn(), off: vi.fn() },
+  }),
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -72,6 +78,6 @@ describe("adding a record in the Store view", () => {
       serverId: "apiMock",
       collection: "users",
       record: { name: "", admin: false, tags: [], address: {} },
-    });
+    }, expect.any(Function));
   });
 });

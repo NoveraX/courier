@@ -49,7 +49,7 @@ export function MockStoreView(): React.ReactElement {
 
   const handleBulkDelete = (ids: string[]) => {
     if (!activeCol) return;
-    for (const id of ids) crud.deleteRecord(server.serverId, activeCol.name, id);
+    crud.deleteRecords(server.serverId, activeCol.name, ids);
   };
 
   return (

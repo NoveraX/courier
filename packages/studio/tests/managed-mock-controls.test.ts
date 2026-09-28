@@ -102,7 +102,7 @@ async function startMock() {
     await vi.waitFor(() => expect(snapshots().length).toBeGreaterThan(before), { timeout: 5_000 });
     return snapshots().at(-1)?.[1] ?? {};
   }
-  return { command, storeCommand, statuses, events, url: `http://127.0.0.1:${port}` };
+  return { command, storeCommand, statuses, events, pm, url: `http://127.0.0.1:${port}` };
 }
 
 const DOWN = { errorRate: 1, faultWeights: [{ type: "503", weight: 100 }] };
@@ -171,5 +171,26 @@ describe("the Reset store control of a managed mock", () => {
     );
     expect(await mock.statuses("/users", 3)).toEqual([503, 503, 503]);
     expect(networkEvents()).toBe(before);
+  }, 30_000);
+});
+
+describe("the Store view's changes to a managed mock", () => {
+  it("are answered with whether the mock made them", async () => {
+    const mock = await startMock();
+
+    const created = await mock.pm.sendCommand("apiMock", {
+      action: "mock:store:create",
+      collection: "users",
+      record: { name: "Extra" },
+    });
+    const missing = await mock.pm.sendCommand("apiMock", {
+      action: "mock:store:update",
+      collection: "users",
+      id: 999,
+      data: { name: "Nobody" },
+    });
+
+    expect(created).toEqual({ ok: true });
+    expect(missing).toEqual({ ok: false, error: "users has no record with id 999" });
   }, 30_000);
 });

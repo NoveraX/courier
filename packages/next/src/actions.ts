@@ -26,8 +26,16 @@ export type ActionDefaults = {
 };
 
 async function getRequestHeaders(): Promise<Headers | undefined> {
+  let headers: () => Promise<Headers>;
   try {
-    const { headers } = await import("next/headers");
+    /* With its extension: next ships no exports map, and Node's own loader
+       resolves no other form of it, so an unbundled server forwarded none. */
+    ({ headers } = await import("next/headers.js"));
+  } catch (error) {
+    log.warn("next/headers could not be loaded; request headers are not forwarded", error);
+    return undefined;
+  }
+  try {
     return await headers();
   } catch (error) {
     /* Called outside a request — a script, a build step — there are simply

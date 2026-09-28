@@ -136,6 +136,20 @@ endpoint
 // → GET /customers?created%5Bgte%5D=1680000000&expand%5B0%5D=tax
 ```
 
+A stream of events is opened the same way: its closure takes the stream's own `get`, and the query is written as `formQuery` writes it.
+
+```ts
+import { courier, formQuery } from "@noverax/courier/define"
+
+const { stream } = courier()
+
+stream
+  .variables<{ fields?: string[] }>()
+  .via((sse, query) => sse.get("events", formQuery(query, { fields: { style: "form", explode: false } })))
+  .response<{ status: string }>()
+// → GET /events?fields=status%2Ctotal
+```
+
 `responseType` reads one endpoint's answer as `"text"`, `"blob"`, `"arrayBuffer"` or `"formData"` when its source reads the rest as JSON — a CSV export, a PDF. An error answer is still read as the source reads it, since it explains the error in its own form:
 
 ```ts

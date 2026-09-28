@@ -52,6 +52,14 @@ function spec(origin: string, streamsOnly = false): ParsedSpec {
             responses: events({ $ref: "#/components/schemas/OrderEvent" }),
           },
         },
+        "/orders/{id}/fields": {
+          get: {
+            operationId: "watchFields",
+            tags: ["orders"],
+            parameters: [orderId, { name: "fields", in: "query", style: "form", explode: false, schema: { type: "array", items: { type: "string" } } }],
+            responses: events({ $ref: "#/components/schemas/OrderEvent" }),
+          },
+        },
         ...(!streamsOnly && {
           "/orders/{id}/replay": {
             post: { operationId: "replayOrder", tags: ["orders"], parameters: [orderId], responses: events(OrderEvent) },
@@ -77,6 +85,7 @@ beforeAll(async () => {
   const stream = 'data: {"status":"paid"}\n\ndata: {"status":"shipped"}\n\nevent: courier:complete\ndata: \n\n';
   upstream = await startUpstreamServer([], {
     "/v1/orders/o1/events": { contentType: "text/event-stream", body: stream },
+    "/v1/orders/o1/fields": { contentType: "text/event-stream", body: stream },
   });
 });
 
@@ -106,6 +115,7 @@ describe("the generated file", () => {
     expect(file).toContain("const { endpoint, stream } = courier();");
     expect(file).toMatch(/watchOrder: stream\.get\(":id\/events"\)/);
     expect(file).toMatch(/replayOrder: endpoint\.post\(/);
+    expect(file).toMatch(/watchFields: stream\.variables<.*>\(\)\.via\(\(sse, vars\) => sse\.get\(":id\/fields", formQuery\(/);
   });
 
   it("takes only stream from courier() when every definition is a stream", () => {
@@ -133,6 +143,16 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
     expect(got).toEqual([{ status: "paid" }, { status: "shipped" }]);
     expect(upstream.requests[0]?.path).toBe("/v1/orders/o1/events");
     expect(upstream.requests[0]?.query).toContainEqual(["since", "2026"]);
+  });
+
+  it("writes the query in the style its parameters declare", async () => {
+    const { shopApi } = loadGenerated(generate(options), "src/api/shop/index.ts");
+    upstream.requests.length = 0;
+
+    await received(endpointAt(shopApi, "orders", "watchFields")({ id: "o1", fields: ["a", "b"] }));
+
+    expect(upstream.requests[0]?.path).toBe("/v1/orders/o1/fields");
+    expect(upstream.requests[0]?.query).toEqual([["fields", "a,b"]]);
   });
 
   it("compiles with every unused name reported", () => {
@@ -169,6 +189,15 @@ describe("through the proxy", () => {
     expect(got).toEqual([{ status: "paid" }, { status: "shipped" }]);
     expect(upstream.requests[0]?.path).toBe("/v1/orders/o1/events");
     expect(upstream.requests[0]?.query).toContainEqual(["since", "2026"]);
+  });
+
+  it("writes the query in the style its parameters declare, relayed", async () => {
+    const caller = createProxyCaller("shop", { source, proxyPath: { http: proxy.url, sse: proxy.url } });
+    upstream.requests.length = 0;
+
+    await received(endpointAt(caller, "orders", "watchFields")({ id: "o1", fields: ["a", "b"] }));
+
+    expect(upstream.requests[0]?.query).toEqual([["fields", "a,b"]]);
   });
 
   it("says so in the generated comment", () => {

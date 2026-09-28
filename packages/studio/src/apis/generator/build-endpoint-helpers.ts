@@ -6,6 +6,8 @@ import type { GeneratorSettings } from "./types";
 
 /** What an endpoint's chain is made of. */
 export interface EndpointChain {
+  /** The builder the chain starts from: `endpoint`, or `stream` for server-sent events. */
+  head: "endpoint" | "stream";
   /** Where the endpoint is: `endpoint.get(":id")`. */
   address: string;
   /**
@@ -50,7 +52,7 @@ export interface EndpointChain {
  */
 export function buildEndpointChain(chain: EndpointChain): string {
   /* A closure is written against its variables, so they come before it. */
-  let text = chain.closure ? "endpoint" : chain.address;
+  let text = chain.closure ? chain.head : chain.address;
 
   /* A schema is preferred wherever there is one: it carries the type and
      validates the call, where a type argument only carries the type. */

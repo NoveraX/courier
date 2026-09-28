@@ -8,14 +8,32 @@ type EventPayload = StudioEvent & Record<string, unknown>
 
 interface ReducerResult {
   requests: RequestEntry[]
-  droppedCount?: number
+  /** How many of the oldest requests this event pushed past the cap. */
+  droppedCount: number
 }
 
+/**
+ * Fold one runtime event into the request list.
+ *
+ * @param state - The current request list
+ * @param event - The runtime event
+ * @param maxRequests - How many requests the list keeps
+ * @returns The next request list, and how many old requests it dropped
+ */
 export function handleEventReducer(
   state: { requests: RequestEntry[] },
   event: EventPayload,
   maxRequests: number = 2000,
-): ReducerResult | typeof state {
+): ReducerResult {
+  const { requests, droppedCount = 0 } = reduceRequests(state, event, maxRequests)
+  return { requests, droppedCount }
+}
+
+function reduceRequests(
+  state: { requests: RequestEntry[] },
+  event: EventPayload,
+  maxRequests: number,
+): { requests: RequestEntry[]; droppedCount?: number } {
   if (!event || typeof event.type !== "string") return state
 
   switch (event.type) {

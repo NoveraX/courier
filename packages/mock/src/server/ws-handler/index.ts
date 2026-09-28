@@ -119,7 +119,7 @@ export function createMockWSHandler(config: WSHandlerConfig): MockWSHandler {
     }
 
     const handler = config.registry.get(route.group, route.method, config.getScenarioState());
-    if (!handler || handler.transport !== "ws" || !handler.channelFn) {
+    if (handler?.transport !== "ws" || !handler.channelFn) {
       reject(socket, 404);
       return;
     }

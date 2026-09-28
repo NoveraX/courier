@@ -1,5 +1,6 @@
+import { addressKindHere } from "./address-kind-here";
 import type { LookupPolicy } from "./guarded-lookup";
-import { specAddressKind } from "./spec-address-kind";
+import { readInterfaces } from "./own-addresses";
 import { SpecFetchError } from "./spec-fetch-error";
 import type { SpecHostAllowlist, SpecHosts } from "./spec-host-allowlist";
 import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
@@ -78,7 +79,8 @@ export async function fetchSpec(
     /* A redirect may lead to this machine only from this machine: once a hop
        has left it, a server elsewhere chose where the request goes next. */
     loopback &&=
-      answer.remoteAddress !== null && specAddressKind(answer.remoteAddress) === "loopback";
+      answer.remoteAddress !== null &&
+      addressKindHere(answer.remoteAddress, readInterfaces()) === "loopback";
     current = redirectTarget(answer.location, current, url);
   }
   throw new SpecFetchError("SPEC_REDIRECTS", `${url} redirects more than ${MAX_REDIRECTS} times.`, {

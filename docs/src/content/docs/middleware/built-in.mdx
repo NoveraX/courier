@@ -54,7 +54,7 @@ retryMiddleware({
 ```
 
 <Callout variant="tip" title="Thrown errors always retry">
-If the endpoint handler throws (e.g., a network failure), the retry middleware catches it and retries regardless of the `retryOn` condition. After exhausting all retries, the original error is re-thrown.
+If the endpoint handler throws (e.g., a network failure), the retry middleware catches it and retries regardless of the `retryOn` condition. After exhausting all retries, the original error is re-thrown. A response that fails its schema is not retried: the same answer would fail the same way.
 </Callout>
 
 ---

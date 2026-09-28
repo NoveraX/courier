@@ -1,4 +1,5 @@
 import { createDualProxy } from "./dual-proxy";
+import { mergeCallOptions } from "./merge-call-options";
 import {
   type Callable,
   calledAs,
@@ -46,7 +47,7 @@ function buildRoot(
       if (RUNTIME_HOOKS.has(prop)) return undefined;
       if (prop === "raw") return rawClient();
       if (prop === "with") {
-        withFn ??= (next) => buildRoot(backend, { ...options, ...next }, raw, shape);
+        withFn ??= (next) => buildRoot(backend, mergeCallOptions(options, next), raw, shape);
         return withFn;
       }
       return member(prop);

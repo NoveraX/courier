@@ -180,6 +180,15 @@ const api = defineApi({
 const report = await caller.reports.with({ timeout: 30_000 }).generate({ type: "annual" })
 ```
 
+`.with()` can be called at several levels — the client, a group, an endpoint. The later call wins for each option it sets, and headers are merged name by name, so a token set on the client stays when a group adds a header of its own:
+
+```ts
+await caller
+  .with({ headers: { authorization: `Bearer ${token}` } })
+  .reports.with({ headers: { "x-request-id": id } })
+  .generate({ type: "annual" }) // sends both headers
+```
+
 ## Credentials
 
 The `credentials` option controls cookie handling:

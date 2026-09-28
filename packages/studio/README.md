@@ -104,7 +104,7 @@ if (process.env.NODE_ENV === "development") {
 
 A browser bundle cannot read `courier.config.ts`, so when Studio is not at the default address, pass it through `env: { COURIER_STUDIO_URL: "http://localhost:7000" }` in `next.config.ts`.
 
-Under webpack — Next.js 14 and 15 by default, `next dev --webpack` since — `withCourierStudio()` connects the browser without that file. Under Turbopack it leaves your config untouched and prints the snippet above if the file is missing.
+Under webpack — Next.js 14 and 15 by default, `next dev --webpack` since — `withCourierStudio()` connects the browser without that file. It also keeps `ws`, which the server's Studio connection runs on, out of the server bundle: bundled, `ws` fails on every frame of 48 bytes or more, and the server never reaches Studio. Without the wrapper, add `serverExternalPackages: ["ws"]` to the config. Under Turbopack it leaves your config untouched and prints the snippet above if the file is missing.
 
 ### Nuxt
 

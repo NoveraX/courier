@@ -5,6 +5,7 @@ import { runtimeEntryPath } from "./core/runtime-importer";
 import { hintClientInstrumentation } from "./core/turbopack-hint";
 import type { StudioPluginOptions } from "./core/types";
 import { prependToEntry, type WebpackEntryValue } from "./core/webpack-entry";
+import { wsExternal } from "./core/ws-external";
 
 const FRAMEWORK = "next";
 
@@ -21,7 +22,10 @@ const CLIENT_ENTRIES = ["main-app", "main"] as const;
  * from starting) and says how to connect the browser instead: from
  * `instrumentation-client.ts`.
  *
- * The server side attaches on its own, from `instrumentation.ts`.
+ * The server side attaches on its own, from `instrumentation.ts`. Under
+ * webpack the wrapper keeps `ws`, which the server's Studio socket runs on,
+ * out of the Node server bundle: bundled, it failed on every frame of 48
+ * bytes or more, and the server runtime never reached Studio.
  *
  * @param pluginOptions - `enabled` forces injection on or off; by default it is
  *   on in `next dev` unless `NODE_ENV` is `"production"`.
@@ -65,6 +69,8 @@ export function withCourierStudio(
             }
             return entries;
           };
+        } else if (context.nextRuntime !== "edge") {
+          webpackConfig.externals = [...externalsOf(webpackConfig.externals), wsExternal];
         }
         if (typeof nextConfig.webpack === "function") {
           return nextConfig.webpack(webpackConfig, context);
@@ -73,4 +79,10 @@ export function withCourierStudio(
       },
     };
   };
+}
+
+/* webpack takes one external, or a list of them. */
+function externalsOf(externals: unknown): unknown[] {
+  if (externals === undefined) return [];
+  return Array.isArray(externals) ? externals : [externals];
 }

@@ -16,6 +16,7 @@ import {
   type TimingState,
 } from "./execute-studio";
 import { type CallTarget, resolveCallTarget } from "./execute-target";
+import { idempotencyHeader } from "./idempotency-header";
 import { parseRequestPayload, type RequestPayloadInput } from "./request-payload";
 import { withStudioUploads } from "./studio-uploads";
 
@@ -126,6 +127,7 @@ function prepareAndRun(
     endpointAllowedHeaders: endpointOptions?.allowedHeaders,
     kind: schema?.type,
     signal: callOptions.signal ?? undefined,
+    idempotencyHeader: idempotencyHeader(endpointOptions?.idempotencyKey),
   });
   const mode = context?.mode ?? (context?.proxyMethod ? "proxy" : "direct");
 

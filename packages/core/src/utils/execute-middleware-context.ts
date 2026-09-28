@@ -21,6 +21,8 @@ export interface MiddlewareContextInput {
   kind?: "query" | "mutation";
   /** Fires when the caller stops waiting for the call. */
   signal?: AbortSignal;
+  /** The header the endpoint sends a key in, one per call, for the upstream to deduplicate by. */
+  idempotencyHeader?: string;
 }
 
 /**
@@ -59,7 +61,11 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     ...headersToObject(nextRequest?.headers),
     ...headersToObject(nextHeaders),
   };
-  const allowedHeaders = namedHeadersOf(dataSource, endpointAllowedHeaders);
+  const keyHeader = input.idempotencyHeader;
+  const allowedHeaders = namedHeadersOf(dataSource, [
+    ...(endpointAllowedHeaders ?? []),
+    ...(keyHeader ? [keyHeader] : []),
+  ]);
   /* The caller's own headers go on top of the ones it forwards. A header it
      set — a service token for a backend the end user may not reach — is its
      explicit choice, and the incoming request's copy used to replace it. */
@@ -73,6 +79,10 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
      the caller's copy, and server code that sets one keeps its own. */
   const chain = nextRequest && !newHeaders.has("x-forwarded-for") && forwardedFor(nextRequest);
   if (chain) newHeaders.set("x-forwarded-for", chain);
+  /* One key per call, set before any middleware: every attempt a retry makes
+     carries it, so the upstream applies the write once. A caller's own key —
+     server code's, or the browser's through the proxy — is kept. */
+  if (keyHeader && !newHeaders.has(keyHeader)) newHeaders.set(keyHeader, crypto.randomUUID());
 
   return {
     source: String(source),

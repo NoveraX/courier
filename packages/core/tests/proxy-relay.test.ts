@@ -274,4 +274,74 @@ describe("a channel another server serves, through the proxy", () => {
     expect(room.status).toBe("disconnected");
     vi.restoreAllMocks();
   });
+
+  it("tells the client of a message the upstream had no room to take", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const received: string[] = [];
+    const slowRoom = defineApi({
+      name: "chat",
+      groups: {
+        live: defineGroup({
+          prefix: "live",
+          endpoints: {
+            room: channel
+              .variables(z.object({ room: z.string() }))
+              .send(Line)
+              .response<{ text: string }>()
+              .implement(() => ({
+                async onJoin() {
+                  await new Promise((resolve) => setTimeout(resolve, 600));
+                },
+                onMessage(_ctx, message) {
+                  received.push(message.text);
+                },
+              })),
+          },
+        }),
+      },
+    });
+    const api = relayedChat(await serveChannels({ chat: slowRoom }, "/live/ws"));
+    /* The proxy's own rate limit would refuse the extra messages first. */
+    const proxy = await serveChannels({ chat: api }, "/api/ws", { maxMessagesPerSecond: 1_000 });
+    const caller = createProxyCaller<typeof api>("chat", {
+      source: api,
+      proxyPath: { ws: `${proxy.replace("http", "ws")}/api/ws` },
+    });
+    const room = caller.live.room({ room: "r1" });
+    const errors: RealtimeError[] = [];
+    room.on("error", (error) => errors.push(error));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    for (let n = 0; n < 105; n++) room.send({ text: `m${n}` });
+    await new Promise((resolve) => setTimeout(resolve, 1_200));
+
+    expect(received).toHaveLength(100);
+    expect(errors).toHaveLength(5);
+    expect(errors.map((error) => error.code)).toEqual([4429, 4429, 4429, 4429, 4429]);
+    room.close();
+    vi.restoreAllMocks();
+  });
+
+  it("tells the client once of a message too large for the upstream", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const api = relayedChat(await channelServer());
+    const proxy = await serveChannels({ chat: api }, "/api/ws", { maxMessageSize: 200_000 });
+    const caller = createProxyCaller<typeof api>("chat", {
+      source: api,
+      proxyPath: { ws: `${proxy.replace("http", "ws")}/api/ws` },
+      ws: { maxMessageSize: 200_000 },
+    });
+    const room = caller.live.room({ room: "r1" });
+    const errors: RealtimeError[] = [];
+    room.on("error", (error) => errors.push(error));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    room.send({ text: "x".repeat(100_000) });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    expect(errors.map((error) => error.code)).toEqual([4413]);
+    room.close();
+    vi.restoreAllMocks();
+  });
 });
+

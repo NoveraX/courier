@@ -125,7 +125,11 @@ export type ConfigurationErrorCode =
    * typed array — which JSON cannot carry to the proxy. It belongs in a
    * FormData.
    */
-  | "PROXY_VARIABLE_NOT_SERIALIZABLE";
+  | "PROXY_VARIABLE_NOT_SERIALIZABLE"
+  /** A client built with a boundary was asked for an endpoint the boundary does not expose. */
+  | "ENDPOINT_NOT_IN_BOUNDARY"
+  /** An endpoint declared as a stream or a channel was called by a client with no transport for it. */
+  | "STREAM_TRANSPORT_NOT_CONFIGURED";
 
 /**
  * Thrown when courier is misconfigured at the boundary between user code and

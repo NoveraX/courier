@@ -1,4 +1,5 @@
 import type { ExecuteBackend } from "../client/types";
+import { ConfigurationError } from "../errors/configuration-error";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import type { HTTPExecutor, SSEFactory, WSChannelFactory, WSPushFactory } from "./types";
 
@@ -52,7 +53,8 @@ export function composeBackend(
          later as "sub is not async iterable", which names neither the
          endpoint nor the reason. */
       if (options?.exhaustive && typeof endpoint !== "function") {
-        throw new Error(
+        throw new ConfigurationError(
+          "ENDPOINT_NOT_IN_BOUNDARY",
           `[courier] "${formatEndpoint(group, method)}" is not in this client's boundary. ` +
             "Add it to `expose` to call it from the browser.",
         );
@@ -60,7 +62,8 @@ export function composeBackend(
 
       if (schema?.transport === "sse") {
         if (!sse) {
-          throw new Error(
+          throw new ConfigurationError(
+            "STREAM_TRANSPORT_NOT_CONFIGURED",
             `[courier] SSE factory not configured but endpoint "${formatEndpoint(group, method)}" is declared as transport: "sse".`,
           );
         }
@@ -71,14 +74,16 @@ export function composeBackend(
         const isBidirectional = schema.bidirectional === true || !!schema.receive;
         if (isBidirectional) {
           if (!wsChannel) {
-            throw new Error(
+            throw new ConfigurationError(
+              "STREAM_TRANSPORT_NOT_CONFIGURED",
               `[courier] WS channel factory not configured but endpoint "${formatEndpoint(group, method)}" is declared as a bidirectional WS channel.`,
             );
           }
           return wsChannel(group, method, variables, callOptions);
         }
         if (!wsPush) {
-          throw new Error(
+          throw new ConfigurationError(
+            "STREAM_TRANSPORT_NOT_CONFIGURED",
             `[courier] WS push factory not configured but endpoint "${formatEndpoint(group, method)}" is declared as a server-push WS endpoint.`,
           );
         }

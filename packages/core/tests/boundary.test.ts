@@ -247,6 +247,20 @@ describe("defineBoundary — a client says what it cannot call", () => {
     expect(() => client.posts!.feed!({})).toThrow(/expose/);
   });
 
+  it("refuses it as a configuration error a caller can tell apart", () => {
+    const client = clientFor({ "posts.list": "query" });
+
+    let refusal: unknown;
+    try {
+      client.posts!.feed!({});
+    } catch (error) {
+      refusal = error;
+    }
+
+    expect(isConfigurationError(refusal)).toBe(true);
+    expect(refusal).toMatchObject({ code: "ENDPOINT_NOT_IN_BOUNDARY" });
+  });
+
   it("still calls what the boundary does name", () => {
     const client = clientFor({ "posts.list": "query" });
 

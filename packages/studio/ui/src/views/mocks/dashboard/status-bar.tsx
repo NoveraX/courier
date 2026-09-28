@@ -1,7 +1,6 @@
 import { Clock, RotateCw, Square, Trash2 } from "lucide-react";
 import { useElapsed } from "@/hooks/use-tick";
 import { SegmentedControl } from "@/components/shared/segmented-control";
-import { CopyButton } from "@/components/shared/copy-button";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -15,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { getSocket } from "@/socket";
 import { useMockStore } from "@/store/mock-slice";
 import { stopAllFaults } from "@/views/mocks/network/stop-all-faults";
+import { ServerAddress } from "./server-address";
 
 import type { LatencyPreset, MockServerInfo } from "@/store/mock-slice";
 
@@ -36,7 +36,6 @@ const LATENCY_CONFIGS: Record<string, { min: number; max: number; jitter: number
 };
 
 export function StatusBar({ server }: StatusBarProps): React.ReactElement {
-  const serverUrl = server.url || `http://localhost:${server.port}`;
   const active = server.processStatus === "running";
   const elapsed = useElapsed(server.startedAt || null, active);
   const anyFaultActive = server.latencyPreset !== "none" || server.chaosPreset !== "none";
@@ -62,11 +61,7 @@ export function StatusBar({ server }: StatusBarProps): React.ReactElement {
 
   return (
     <div className="flex items-center gap-2.5 rounded-lg border border-border-subtle bg-muted/20 px-3 py-1.5">
-      {/* URL + copy */}
-      <div className="flex items-center gap-1 rounded bg-muted/40 px-1.5 py-0.5">
-        <span className="font-mono text-[11px] text-muted-foreground/70">{serverUrl}</span>
-        <CopyButton value={serverUrl} label="Copy URL" />
-      </div>
+      <ServerAddress server={server} />
 
       {/* Uptime */}
       <div className="flex items-center gap-1 text-body-xs text-muted-foreground/50">

@@ -465,6 +465,19 @@ describe("handleMessage", () => {
     expect(sent).toHaveLength(0);
   });
 
+  it("hands the handler what the receive schema produced, not the payload as it arrived", async () => {
+    const trimming = { "~standard": { validate: (v: unknown) => ({ value: { text: String(v).trim() } }) } };
+    const endpoint = createEndpoint("ws", trimming);
+    const source = createSource("chat", "feed", endpoint);
+    const onMessage = vi.fn();
+    const { ctx } = createMockCtx({ sources: { api: source } as never });
+    ctx.topicManager.subscribe("conn-1", { topic: "api.chat.feed", cleanup: vi.fn(), onMessage });
+
+    await handleMessage(ctx, { type: "message", id: "m1", topic: "api.chat.feed", payload: "  hi  " });
+
+    expect(onMessage).toHaveBeenCalledWith({ text: "hi" });
+  });
+
   it("bails out when ctx.closed flips during authorizeMessage", async () => {
     let ctxRef!: WSSocketContext;
     const receiveSchema = { "~standard": { validate: () => ({ value: "ok" }) } };

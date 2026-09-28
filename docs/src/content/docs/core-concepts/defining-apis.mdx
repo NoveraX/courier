@@ -105,6 +105,15 @@ endpoint
   .via((http, v) => http.put("raw", undefined, { body: v.file, headers: { "content-type": "image/png" } }))
 ```
 
+`responseType` reads one endpoint's answer as `"text"`, `"blob"`, `"arrayBuffer"` or `"formData"` when its source reads the rest as JSON — a CSV export, a PDF. An error answer is still read as the source reads it, since it explains the error in its own form:
+
+```ts
+endpoint
+  .variables<{ month: string }>()
+  .via((http, vars) => http.get("reports/:month/export", vars, { responseType: "text" }))
+  .response<string>()
+```
+
 ### Path Parameters
 
 The `:param` syntax extracts values from variables automatically:

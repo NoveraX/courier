@@ -31,6 +31,8 @@ type BaseOptions = {
 }
 ```
 
+An endpoint whose `.via()` closure passes its own `responseType` has its successful answer read that way, the source's `responseParser` included; see [Defining APIs](/docs/core-concepts/defining-apis).
+
 ## CallOptions
 
 Named with `.with()`, which returns a caller carrying them. These control how a single request behaves:

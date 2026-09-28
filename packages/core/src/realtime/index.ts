@@ -42,6 +42,7 @@ export type {
   SSEEvent,
   SSEHandler,
   SSESubscription,
+  TopicKey,
   WSChannel,
   WSChannelContext,
   WSContext,

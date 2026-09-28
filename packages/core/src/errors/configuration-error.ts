@@ -95,6 +95,12 @@ export type ConfigurationErrorCode =
   | "SLOT_ALREADY_SET"
   | "CACHE_ON_WRITE"
   /**
+   * A channel named `.topic()` and was then addressed with `.connect()` or
+   * `.via()`. The server that serves it decides its topics, so the key would
+   * be kept and never read.
+   */
+  | "TOPIC_ON_REMOTE_CHANNEL"
+  /**
    * An endpoint was named `options` in a group or among a source's own
    * endpoints, where that name holds the group's or the source's settings;
    * or an endpoint or a group was named `raw` or `with`, which a client

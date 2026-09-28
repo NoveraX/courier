@@ -1,6 +1,5 @@
 import { createLogger } from "../logger";
 import { describeFailure } from "../realtime/describe-failure";
-import { qualifyTopic, unqualifyTopic } from "../realtime/ws/topic-key";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { runTransportMiddleware } from "../utils/transport-middleware";
 import { authorizeSubscription } from "./ws-authorize-subscription";
@@ -9,6 +8,7 @@ import { closeSubscriptionEntry, openSubscriptionEntry } from "./ws-dispatch-hel
 import { startChannel, startPush } from "./ws-endpoints";
 import { VALIDATION_FAILED, validateVariablesSafe } from "./ws-middleware";
 import { resolveSubscribeTopic } from "./ws-resolve";
+import { subscriptionTopic } from "./ws-subscribe-topic";
 import { sendSubscriptionEnd } from "./ws-subscription-end";
 
 const log = createLogger("WS");
@@ -76,8 +76,8 @@ async function openSubscription(
      subscribing under the qualifier of someone else's. Derive the qualifier
      from what was validated instead of comparing — an honest client sends
      exactly this, and a dishonest one gets its own data. */
-  const { baseTopic } = unqualifyTopic(topic);
-  const subscribedTopic = qualifyTopic(baseTopic, variables);
+  const subscribedTopic = subscriptionTopic(ctx, msg, topic, variables, resolved.topicKey);
+  if (subscribedTopic === undefined) return;
 
   try {
     await runTransportMiddleware({

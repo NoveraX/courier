@@ -213,7 +213,7 @@ server.wsConnections.broadcastToTopic("chat:general", { type: "message", text: "
 | `broadcastToBaseTopic(baseTopic, data, exclude?)` | Broadcast to the subscribers of every qualified topic of an endpoint, whatever their variables |
 | `disconnect(id, code?, reason?)` | Force-close connection |
 
-A topic names its endpoint, `source.group.method`, qualified by the variables its subscribers passed, as canonical JSON: `qualifyTopic("api.chat.room", { room: "a" })` from `@noverax/courier/realtime` gives `api.chat.room#{"room":"a"}`, the topic a channel handler reads as `ctx.topic`. Every distinct set of variables is a topic of its own.
+A topic names its endpoint, `source.group.method`, qualified by a key as canonical JSON: the channel's [`.topic()`](/docs/advanced/realtime#topics) key, or all of the variables its subscribers passed when it names none. `qualifyTopic("api.chat.room", { room: "a" })` from `@noverax/courier/realtime` gives `api.chat.room#{"room":"a"}`, the topic a channel handler reads as `ctx.topic`. Every distinct key is a topic of its own.
 
 With a `pubsub` adapter configured, the three broadcasts reach the connections of every replica, the same as a channel handler's `ctx.broadcast`. `count`, `get`, `list`, `send` and `disconnect` concern the connections of the replica you call them on.
 

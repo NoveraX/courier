@@ -1,0 +1,52 @@
+export const metadata = { title: "Streams & Channels", description: "Serve server-sent event streams and WebSocket channels, share a topic between subscribers, and broadcast to it.", mode: "both" }
+
+## Overview
+
+A `stream` delivers server-sent events; a `channel` is a WebSocket subscription, which the caller can also send on when it names `.send()`. Either one is served by the process that defines it with `.implement()`, or describes where another process serves it with `.get()`, `.connect()` or `.via()`.
+
+```ts title="api/chat.ts"
+import { courier, defineGroup } from "@noverax/courier/define"
+import { z } from "zod"
+
+const { channel } = courier()
+
+export const chat = defineGroup({
+  prefix: "chat",
+  endpoints: {
+    room: channel
+      .variables(z.object({ room: z.string(), nick: z.string() }))
+      .topic((v) => ({ room: v.room }))
+      .send(z.object({ text: z.string() }))
+      .response(z.object({ from: z.string(), text: z.string() }))
+      .implement((v) => ({
+        onJoin(ctx) {
+          ctx.send({ from: "server", text: `welcome to ${v.room}` })
+        },
+        onMessage(ctx, message) {
+          ctx.broadcast(ctx.topic, { from: v.nick, text: message.text })
+        },
+      })),
+  },
+})
+```
+
+## Topics
+
+Every subscription to a channel is on a topic: the endpoint, `source.group.method`, qualified by a key. `ctx.topic` is the subscriber's own, and `ctx.broadcast(topic, data)` sends to every other subscriber on it — every replica's, with a [`pubsub` adapter](/docs/deployment/redis).
+
+Without `.topic()`, the key is all of a subscriber's variables: subscribers share a topic only when their variables are equal. That is the safe default for a feed whose variables pick what it shows, but it splits a room into as many topics as it has members as soon as a variable belongs to one member — a nickname, a cursor colour.
+
+`.topic()` names what subscribers share a topic by. It reads the variables as the schema produced them, and returns what JSON can carry. In the channel above, everyone in room `r1` is on one topic, so a broadcast reaches all of them, while each keeps its own `nick` in `v` and `ctx.variables`. A key that throws ends that subscription with code `5000`.
+
+On one connection, subscriptions whose key is equal are one subscription: the newer subscribe replaces the older, whose `onLeave` runs, and both of the client's channels receive what is sent on the topic. Two browsers, or two tabs, are two connections.
+
+`.topic()` is named before `.implement()`. A channel another process serves has its topics decided there, so naming it before `.connect()` or `.via()` throws `ConfigurationError("TOPIC_ON_REMOTE_CHANNEL")`.
+
+<Callout variant="info" title="How a topic reads">
+  The key is canonical JSON — `api.chat.room#{"room":"r1"}` — so every distinct key is a topic of its own. `qualifyTopic` from `@noverax/courier/realtime` builds a topic for `broadcastToTopic` on the server's connection registry.
+</Callout>
+
+## Next steps
+
+- [Standalone Server](/docs/deployment/standalone-server) — serve streams and channels from their own process
+- [Redis Adapters](/docs/deployment/redis) — broadcast across replicas, resume streams, track presence

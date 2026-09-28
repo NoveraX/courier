@@ -1,3 +1,4 @@
+import type { TopicKeyReader } from "../define/options";
 import { unqualifyTopic } from "../realtime/ws/topic-key";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { resolveEndpoint } from "../utils/execute-resolve";
@@ -29,6 +30,7 @@ export function resolveSubscribeTopic(
       method: string;
       endpoint: unknown;
       schema: SchemaMetadata;
+      topicKey?: TopicKeyReader;
     }
   | undefined {
   const { source, group, method } = parseTopic(topic);
@@ -46,7 +48,7 @@ export function resolveSubscribeTopic(
     return undefined;
   }
 
-  const { endpoint, schema, served } = resolveEndpoint(
+  const { endpoint, schema, served, options } = resolveEndpoint(
     dataSource as Record<string, unknown>,
     group,
     method,
@@ -64,5 +66,5 @@ export function resolveSubscribeTopic(
     return undefined;
   }
 
-  return { source, group, method, endpoint, schema };
+  return { source, group, method, endpoint, schema, topicKey: options?.topicKey };
 }

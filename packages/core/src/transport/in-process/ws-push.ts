@@ -1,6 +1,6 @@
 import type { Sources } from "../../define/types";
 import type { SSEEvent, SSESubscription, WSContext, WSPushHandler } from "../../realtime/types";
-import { qualifyTopic } from "../../realtime/ws/topic-key";
+import { servedTopic } from "../../realtime/ws/served-topic";
 import { generateRequestId } from "../../studio";
 import { abortableEvents } from "../../utils/abortable-events";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
@@ -32,7 +32,7 @@ export async function executeDirectWSPush(
   payload: ExecuteDirectWSPushPayload,
   options: ExecuteDirectStreamOptions = {},
 ): Promise<SSESubscription> {
-  const { endpoint, schema } = resolveStreamEndpoint(sources, payload, "ws", EXECUTOR);
+  const { endpoint, schema, topicKey } = resolveStreamEndpoint(sources, payload, "ws", EXECUTOR);
   const variables = await validateStreamVariables(payload.variables, schema);
 
   const requestId = generateRequestId();
@@ -55,7 +55,7 @@ export async function executeDirectWSPush(
 
   const baseTopic = `${payload.source}.${payload.group ? `${payload.group}.` : ""}${payload.method}`;
   const wsCtx: WSContext = {
-    topic: qualifyTopic(baseTopic, variables),
+    topic: servedTopic(baseTopic, variables, topicKey),
     variables: variables ?? {},
     connectionId: crypto.randomUUID(),
     meta: {},

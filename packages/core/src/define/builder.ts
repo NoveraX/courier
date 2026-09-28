@@ -3,7 +3,12 @@ import { ConfigurationError } from "../errors/configuration-error";
 import type { Middleware } from "../middleware/types";
 import type { CacheConfig } from "../validation";
 import type { EndpointKind } from "./marker";
-import type { AnyEndpointOptions, ResolvedEndpointOptions, RetryOptions } from "./options";
+import type {
+  AnyEndpointOptions,
+  ResolvedEndpointOptions,
+  RetryOptions,
+  TopicKeyReader,
+} from "./options";
 
 type SlotName = "response" | "variables" | "send";
 
@@ -21,6 +26,8 @@ export interface BuilderState {
   readonly retry?: RetryOptions;
   readonly cache?: CacheConfig;
   readonly meta: Readonly<Record<string, unknown>>;
+  /** What a served channel's subscribers share a topic by, from `.topic()`. */
+  readonly topicKey?: TopicKeyReader;
 }
 
 /** Start a builder state for a head. */
@@ -111,6 +118,7 @@ export function resolveOptions(
     ...(state.timeout !== undefined && { timeout: state.timeout }),
     ...(state.retry !== undefined && { retry: state.retry }),
     ...(state.cache !== undefined && { cache: state.cache }),
+    ...(state.topicKey !== undefined && { topicKey: state.topicKey }),
     meta: state.meta,
     tags,
     inherit,

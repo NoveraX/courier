@@ -97,9 +97,25 @@ export function tracked<TData>(id: string, data: TData): SSEEvent<TData> {
 // WebSocket
 // ---------------------------------------------------------------------------
 
+/**
+ * What a channel's subscribers share a topic by, as a channel's `.topic()`
+ * returns it: a value JSON carries as it is.
+ */
+export type TopicKey =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly TopicKey[]
+  | { readonly [key: string]: TopicKey | undefined };
+
 /** Server-side context for WS connections (base) */
 export interface WSContext<TVariables = unknown> {
-  /** Fully qualified topic (e.g. "api.chat.room#a1b2c3") */
+  /**
+   * Fully qualified topic, e.g. `api.chat.room#{"room":"a"}`: the endpoint,
+   * qualified by the channel's `.topic()` key of the variables, or by all of
+   * them when it names none.
+   */
   readonly topic: string;
   /** Typed variables from the subscribe message */
   variables: TVariables;

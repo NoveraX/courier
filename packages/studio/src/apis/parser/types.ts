@@ -99,6 +99,12 @@ export interface ParsedParameter {
   items?: ParsedSchema;
   /** `date-time`, `uuid`, and the rest. */
   format?: string;
+  /**
+   * The parameter's own schema, when it is an object or one of several
+   * forms — Stripe's `created` is a timestamp or a range of them — which a
+   * type name and a list of values cannot describe.
+   */
+  schema?: ParsedSchema;
 }
 
 export interface ParsedSchema {

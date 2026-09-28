@@ -1,5 +1,5 @@
 import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
-import { collectGroupSchemas } from "./schema-refs";
+import { collectGroupSchemas, collectRefsDeep, withDependencies } from "./schema-refs";
 
 /**
  * Collect the schemas one group's files declare: the spec's schemas the
@@ -25,11 +25,13 @@ export function buildSchemaRecord(
   const extendedSpec = { ...spec, schemas: { ...spec.schemas, ...extracted } };
   const names = collectGroupSchemas(group, extendedSpec);
 
-  /* Ensure all extracted types are included + collect their transitive deps */
-  for (const [name, schema] of Object.entries(extracted)) {
-    names.add(name);
-    collectDeepRefs(schema, spec, names);
-  }
+  /* An extracted type is declared even when no endpoint names it as a
+     schema — a parameters type is only ever named as a type — and so is
+     everything it refers to, at any depth: inside a list, a map or one of
+     several forms. */
+  const direct = new Set(Object.keys(extracted));
+  for (const schema of Object.values(extracted)) collectRefsDeep(schema, direct);
+  for (const name of withDependencies(direct, extendedSpec)) names.add(name);
 
   const result: Record<string, ParsedSchema> = {};
   for (const name of names) {
@@ -37,22 +39,4 @@ export function buildSchemaRecord(
     else if (extracted[name]) result[name] = extracted[name];
   }
   return result;
-}
-
-/** Recursively collect schema refs from properties */
-function collectDeepRefs(schema: ParsedSchema, spec: ParsedSpec, refs: Set<string>): void {
-  if (!schema.properties) return;
-  for (const prop of Object.values(schema.properties)) {
-    const refSchema = prop.refName ? spec.schemas[prop.refName] : undefined;
-    if (prop.refName && refSchema && !refs.has(prop.refName)) {
-      refs.add(prop.refName);
-      collectDeepRefs(refSchema, spec, refs);
-    }
-    const itemRef = prop.items?.type === "ref" ? prop.items.refName : undefined;
-    const itemSchema = itemRef ? spec.schemas[itemRef] : undefined;
-    if (itemRef && itemSchema && !refs.has(itemRef)) {
-      refs.add(itemRef);
-      collectDeepRefs(itemSchema, spec, refs);
-    }
-  }
 }

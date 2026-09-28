@@ -9,6 +9,7 @@ import type {
   ParsedSchema,
   ParsedSchemaProperty,
 } from "../parser/types";
+import { parameterProperty } from "./parameter-property";
 
 export interface ExtractedTypes {
   /** Modified group with response refs instead of inline schemas */
@@ -54,25 +55,28 @@ function shouldExtractResponse(schema: ParsedSchema | null): boolean {
   return schema.type === "union" && (schema.variants?.length ?? 0) > 0;
 }
 
-/** Build a ParsedSchema from path + query params (when no body ref handles them) */
+/**
+ * The type of what an endpoint is called with: its path and query
+ * parameters, and the fields of a body written inline beside them.
+ *
+ * The body used to be left out, so an endpoint whose parameters were named
+ * this way could no longer be called with the body it requires.
+ */
 function buildParamsSchema(ep: ParsedEndpoint): ParsedSchema | null {
   if (ep.requestBody?.type === "ref") return null;
   const params = ep.parameters.filter((p) => p.in === "path" || p.in === "query");
   if (params.length < 2 && !params.some((p) => p.description)) return null;
 
   const properties: Record<string, ParsedSchemaProperty> = {};
-  const required: string[] = [];
+  for (const param of params) properties[param.name] = parameterProperty(param);
 
-  for (const param of params) {
-    properties[param.name] = {
-      type: param.type || "string",
-      required: param.required || param.in === "path",
-      description: param.description || undefined,
-    };
-    if (param.required || param.in === "path") required.push(param.name);
+  const body = ep.requestBody?.type === "object" ? ep.requestBody.properties : undefined;
+  for (const [name, prop] of Object.entries(body ?? {})) {
+    /* A parameter and a field cannot share one key of the variables. */
+    if (name && !Object.hasOwn(properties, name)) properties[name] = prop;
   }
 
-  if (Object.keys(properties).length === 0) return null;
+  const required = Object.keys(properties).filter((name) => properties[name]?.required);
   return { name: "", type: "object", properties, required };
 }
 

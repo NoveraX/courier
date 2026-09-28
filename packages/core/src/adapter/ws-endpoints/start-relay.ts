@@ -14,6 +14,9 @@ import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
 import { emitChannelMessage } from "./emit-channel-message";
 
+/** What a client hears of a message the upstream had no room to take. */
+const NOT_RELAYED = { code: 4429, message: "Message not relayed: the upstream has no room for it" };
+
 /** The channel relayed: the source it belongs to, its group, and its name */
 export interface RelayTarget {
   api: object;
@@ -65,9 +68,13 @@ export function startRelay(
     ctx.sendMessage({ type: "data", topic, payload });
     emitChannelMessage(ctx, topic, payload, "data");
   });
+  /* An error the upstream reports while it takes a message — one too large —
+     reaches the client on its own, so the message's drop is not told twice. */
+  let refusedWhileSending = false;
   /* The error the upstream ends a subscription with comes just before the
      channel reports itself disconnected. */
   upstream.on("error", (error) => {
+    refusedWhileSending = true;
     queueMicrotask(() => {
       if (upstream.status === "disconnected") end(error);
       else if (!ended)
@@ -84,7 +91,12 @@ export function startRelay(
       upstream.close();
     },
     onMessage: async (payload) => {
-      upstream.send(payload);
+      refusedWhileSending = false;
+      const kept = upstream.send(payload);
+      if (kept || refusedWhileSending || ended || upstream.status === "disconnected") return;
+      /* No room left to hold it while the upstream comes back or drains:
+         dropped there, it was only warned of in this server's log. */
+      ctx.sendMessage({ type: "error", topic, error: NOT_RELAYED });
     },
   });
 }

@@ -40,6 +40,16 @@ export interface CommonEndpointOptions {
 export interface HttpEndpointOptions extends CommonEndpointOptions {
   /** Where the idempotency key is read from, for example `header:idempotency-key`. */
   idempotencyKey?: string;
+  /**
+   * Keep a read's variables out of the address it is sent to.
+   *
+   * Through the proxy a read goes as GET, its variables in the address, so a
+   * browser and a CDN can cache the answer — and every access log on the way
+   * writes them down. A read whose variables must not be written down, such
+   * as an email address or a search someone typed, sets this and is sent as
+   * POST; the proxy refuses it over GET.
+   */
+  sensitiveVariables?: boolean;
 }
 
 /**
@@ -107,6 +117,8 @@ export interface ResolvedEndpointOptions {
   readonly operation?: OperationKind;
   readonly inherit: boolean;
   readonly idempotencyKey?: string;
+  /** Sent through the proxy as POST, its variables kept out of the address. */
+  readonly sensitiveVariables?: boolean;
   /** Reads the key a served channel's subscribers share a topic by, from `.topic()`. */
   readonly topicKey?: TopicKeyReader;
 }

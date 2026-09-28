@@ -22,7 +22,7 @@
  */
 
 import type { ProxyPath } from "../proxy-caller/proxy-path";
-import type { ExposedEndpoint, ExposureMap, ProxyBoundary } from "./boundary-types";
+import type { ExposablePath, ExposedEndpoint, ExposureMap, ProxyBoundary } from "./boundary-types";
 
 export interface BoundaryConfig<TApi> {
   /** The source's name in the registry, as `courier.config.ts` keys it. */
@@ -31,6 +31,11 @@ export interface BoundaryConfig<TApi> {
   expose: ExposureMap<TApi>;
   /** Where the app serves its proxy routes, so the client needs nothing else. */
   proxyPath?: ProxyPath;
+  /**
+   * The reads whose variables stay out of the address: sent as POST, as the
+   * definition's `sensitiveVariables` asks. The proxy refuses them over GET.
+   */
+  sensitive?: readonly ExposablePath<TApi>[];
 }
 
 /** How each declared shape reaches the wire. */
@@ -82,5 +87,6 @@ export function defineBoundary<TApi>(config: BoundaryConfig<TApi>): ProxyBoundar
     source: config.source,
     endpoints,
     ...(config.proxyPath === undefined ? {} : { proxyPath: config.proxyPath }),
+    ...(config.sensitive?.length ? { sensitive: [...config.sensitive] } : {}),
   };
 }

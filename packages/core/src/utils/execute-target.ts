@@ -97,6 +97,7 @@ export function resolveCallTarget(
       schema,
       stream: options?.stream,
       proxyMethod: context.proxyMethod,
+      sensitiveVariables: endpointOptions?.sensitiveVariables === true,
       notFound,
     });
     if (refused) return refuse(refused.status, refused.message);

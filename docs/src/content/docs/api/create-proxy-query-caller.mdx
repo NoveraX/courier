@@ -174,7 +174,7 @@ Use `requestOptions` to pass `CallOptions` alongside React Query options:
 const { data } = q.users.useQuery("getAll", {
   requestOptions: {
     timeout: 5000,
-    method: "GET",  // cacheable GET proxy
+    method: "POST",  // keep this call's variables out of the address
   },
   staleTime: 30_000,
 })

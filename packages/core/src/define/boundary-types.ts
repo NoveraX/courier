@@ -100,6 +100,8 @@ export interface ProxyBoundary {
   proxyPath?: ProxyPath;
   /** Endpoint path to its kind, for every endpoint the browser may call. */
   endpoints: Readonly<Record<string, ExposedEndpoint>>;
+  /** The reads sent as POST, their variables kept out of the address. */
+  sensitive?: readonly string[];
 }
 
 /**

@@ -70,7 +70,7 @@ export type FetchCallbacks = {
 export type UntypedCallerFn = (
   source: string,
   options?: Readonly<Record<string, unknown>>,
-) => (endpoint: string, variables?: unknown) => Promise<unknown>;
+) => (endpoint: string, variables?: unknown, reads?: boolean) => Promise<unknown>;
 
 /** Does the API declare an endpoint reached by opening a stream or a socket? */
 type HasRealtime<TApi> = [

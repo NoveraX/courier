@@ -102,8 +102,8 @@ Per-call options are named with `.with()`, which returns a caller carrying them:
 // Stream mode — the body arrives as a ReadableStream instead of parsed
 const response = await caller.events.with({ stream: true }).subscribe({ channel: "builds" })
 
-// GET proxy — sends the variables in the URL instead of a POST body
-const users = await caller.users.with({ method: "GET" }).getAll({ page: 1 })
+// A read goes to the proxy as GET; POST keeps this call's variables out of the address
+const users = await caller.users.with({ method: "POST" }).getAll({ page: 1 })
 
 // Upload progress tracking
 await caller.files

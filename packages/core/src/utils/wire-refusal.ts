@@ -13,6 +13,8 @@ export interface WireCall {
   stream: boolean | undefined;
   /** The HTTP method the call reached the proxy with */
   proxyMethod: "GET" | "POST";
+  /** Whether the endpoint keeps its variables out of the address */
+  sensitiveVariables: boolean;
   /** How an unknown name is answered, so a hidden one is answered alike */
   notFound: string;
 }
@@ -37,7 +39,7 @@ export interface WireRefusal {
  *
  * @example
  * ```ts
- * const refused = refuseWireCall({ dataSource, group, method, schema, stream, proxyMethod, notFound });
+ * const refused = refuseWireCall({ dataSource, group, method, schema, stream, proxyMethod, sensitiveVariables, notFound });
  * if (refused) return buildErrorResponse(context, refused.status, refused.message);
  * ```
  */
@@ -50,6 +52,14 @@ export function refuseWireCall(call: WireCall): WireRefusal | undefined {
   }
   if (call.proxyMethod === "GET" && call.schema?.type !== "query") {
     return { status: 405, message: "This endpoint does not support GET requests" };
+  }
+  /* Its variables are already in this request's address, and in every log
+     it passed; refused, the client that sent it is found and fixed. */
+  if (call.proxyMethod === "GET" && call.sensitiveVariables) {
+    return {
+      status: 405,
+      message: `[${String(call.method)}]: its variables are sensitive and go as POST. A client built from a boundary lists it under \`sensitive\`.`,
+    };
   }
   if (call.stream && call.schema?.response) {
     return {

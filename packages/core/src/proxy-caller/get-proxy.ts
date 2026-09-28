@@ -25,15 +25,7 @@ export type GetProxyCtx = {
 };
 
 export function handleGetProxy(ctx: GetProxyCtx): Promise<unknown> {
-  const searchParams = proxyRouting(ctx.source, ctx.group, ctx.method);
-
-  const variables = encodeWireVariables(ctx.variables);
-  if (variables) searchParams[WIRE_VARIABLES_KEY] = variables;
-
-  const serverOptionsStr = JSON.stringify(ctx.serverOptions);
-  if (serverOptionsStr !== "{}") {
-    searchParams._o = serverOptionsStr;
-  }
+  const searchParams = getProxyQuery(ctx);
 
   return sendFetch(
     "get",
@@ -54,4 +46,46 @@ export function handleGetProxy(ctx: GetProxyCtx): Promise<unknown> {
       raw: ctx.serverOptions.rawData === true,
     },
   );
+}
+
+/* The longest address a read goes to as GET; one longer goes as POST. Some
+   servers and CDNs refuse an address past 8 KB, a few past 2 KB. */
+const MAX_GET_ADDRESS = 2_048;
+
+/**
+ * The query a GET to the proxy carries: the endpoint's routing, its variables
+ * as JSON, and the call's options.
+ *
+ * @param ctx - The call
+ * @returns The query's fields
+ * @example
+ * ```ts
+ * getProxyQuery({ source: "api", group: "users", method: "search", variables: { q: "ada" }, serverOptions: {} });
+ * // → { _s: "api", _g: "users", _m: "search", _v: '{"q":"ada"}' }
+ * ```
+ */
+export function getProxyQuery(
+  ctx: Pick<GetProxyCtx, "source" | "group" | "method" | "variables" | "serverOptions">,
+): Record<string, string> {
+  const searchParams = proxyRouting(ctx.source, ctx.group, ctx.method);
+  const variables = encodeWireVariables(ctx.variables);
+  if (variables) searchParams[WIRE_VARIABLES_KEY] = variables;
+  const serverOptions = JSON.stringify(ctx.serverOptions);
+  if (serverOptions !== "{}") searchParams._o = serverOptions;
+  return searchParams;
+}
+
+/**
+ * Whether a call fits in the address of a GET to the proxy.
+ *
+ * @param url - The proxy route
+ * @param query - Its query, from {@link getProxyQuery}
+ * @returns Whether the whole address is within the limit
+ * @example
+ * ```ts
+ * fitsInAddress("https://app.example.com/api/request", getProxyQuery(call)); // true for a short search
+ * ```
+ */
+export function fitsInAddress(url: string, query: Record<string, string>): boolean {
+  return url.length + 1 + new URLSearchParams(query).toString().length <= MAX_GET_ADDRESS;
 }

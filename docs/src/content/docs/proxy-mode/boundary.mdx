@@ -27,6 +27,16 @@ export const boundary: ProxyBoundary = defineBoundary<typeof api>({
 
 Anything absent is refused. `admin.exportPayouts` above is not named, so the server answers it exactly as it answers a name that does not exist.
 
+A read goes to the proxy as GET, its variables in the address. A read whose definition declares `sensitiveVariables` goes as POST, and the proxy refuses it over GET; the browser cannot see the definition, so the boundary lists it:
+
+```ts
+defineBoundary<typeof api>({
+  source: "api",
+  expose: { "users.search": "query", "users.byEmail": "query" },
+  sensitive: ["users.byEmail"],
+})
+```
+
 ## Wiring the server
 
 The server refuses what the boundary does not name only if it has the boundary. Give it to the API it gates:

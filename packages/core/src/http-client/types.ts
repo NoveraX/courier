@@ -35,7 +35,11 @@ export type CallOptions<TRaw extends boolean = false> = Omit<
   rawData?: TRaw;
   forwardVariables?: boolean;
   stream?: boolean;
-  /** Proxy HTTP method: "GET" for cacheable reads, "POST" (default) for mutations */
+  /**
+   * The verb the call goes to the proxy with. A read goes as GET, so its
+   * answer can be cached, and a write as POST; "POST" keeps a read's
+   * variables out of the address.
+   */
   method?: "GET" | "POST";
   onUploadProgress?: (progress: UploadProgress) => void;
 };

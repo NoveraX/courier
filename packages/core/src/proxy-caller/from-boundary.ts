@@ -37,11 +37,13 @@ export function sourceFromBoundary(boundary: ProxyBoundary): Record<string, unkn
   const groups = new Map<string, Record<string, unknown>>();
   const flat: Record<string, unknown> = {};
 
+  const sensitive = new Set(boundary.sensitive);
   for (const [path, shape] of Object.entries(boundary.endpoints)) {
     const separator = path.indexOf(".");
     const endpoint = {
       probe: INERT,
       [ENDPOINT_SCHEMA]: { ...shape },
+      ...(sensitive.has(path) && { options: { sensitiveVariables: true } }),
     };
 
     if (separator === -1) {

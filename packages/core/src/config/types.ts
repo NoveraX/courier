@@ -18,7 +18,11 @@ export type CourierImportAuth =
   | { type: "basic"; username: string; password: string }
   | { type: "header"; headers: Record<string, string> };
 
-/** Subset filter applied at codegen time */
+/**
+ * Endpoints of a specification, named by any of these: an endpoint is
+ * named when it carries one of the tags, its path is one of the paths as
+ * the specification writes it (`/pets/{id}`), or its operationId is listed.
+ */
 export interface CourierImportSelector {
   tags?: string[];
   paths?: string[];
@@ -56,11 +60,15 @@ export interface CourierImportBase {
   generateClient?: CourierImportGenerateClient;
   addAuthMiddleware?: boolean;
   includeComments?: boolean;
-  /** Whitelist filter applied first */
+  /** Only the endpoints it names are generated; applied after `transform`. */
   include?: CourierImportSelector;
-  /** Blacklist filter applied after `include` */
+  /** The endpoints it names are left out; applied after `include`. */
   exclude?: CourierImportSelector;
-  /** Custom transform run between parse and codegen */
+  /**
+   * Run on a copy of the parsed specification before anything is generated
+   * from it. It returns the specification to generate from, or changes the
+   * copy in place and returns nothing.
+   */
   transform?: (spec: unknown) => unknown | Promise<unknown>;
 }
 
@@ -73,9 +81,13 @@ export interface CourierUrlImport extends CourierImportBase {
   importType: "url";
   /** HTTP(S) URL Studio fetches at import + re-sync time */
   from: string;
-  /** Optional auth for fetching private specs */
+  /** Sent with every fetch of `from`, to its own origin only: a redirect elsewhere goes without it */
   auth?: CourierImportAuth;
-  /** Pinned spec hash for reproducible builds; mismatch aborts the import */
+  /**
+   * The only specification the import is generated from: its hash, as
+   * Studio records it in `.courier/imports-state.json` under `specHash`.
+   * A specification with another hash is refused.
+   */
   pinHash?: string;
 }
 

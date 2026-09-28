@@ -14,6 +14,7 @@ import type { PlanConsent } from "./import-files/run-plan";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
 import type { ProjectRoot } from "./project-fs/project-root";
 import { applyRegeneration, planRegeneration, type Regeneration } from "./regenerate-import";
+import { declaredSpec } from "./spec-as-declared";
 
 interface UpdateRequest {
   name: string;
@@ -45,16 +46,18 @@ type Refusal = { error: string; status: number };
  * @param imports - The declarations of the config Studio runs, with the imports state
  * @param root - The project
  * @returns The plan and the spec's changes, or the error to answer with and its status
+ * @throws {SpecPinMismatchError} When the import pins another spec
+ * @throws {ImportTransformError} When the import's transform fails
  */
-export function handlePreviewUpdate(
+export async function handlePreviewUpdate(
   body: UpdateRequest,
   imports: ImportsSnapshot,
   root: ProjectRoot,
-): UpdatePreview | Refusal {
-  const regeneration = regenerationOf(body, imports, root);
+): Promise<UpdatePreview | Refusal> {
+  const regeneration = await regenerationOf(body, imports, root);
   if ("error" in regeneration) return regeneration;
   const { plan, leftBehind } = planRegeneration(regeneration);
-  const specDiff = computeSpecDiff(regeneration.entry, body.newSpec);
+  const specDiff = computeSpecDiff(regeneration.entry, regeneration.spec);
   return {
     plan: summarizePlan(plan),
     leftBehind,
@@ -72,24 +75,27 @@ export function handlePreviewUpdate(
  * @param root - The project
  * @returns What was written, removed and kept, or the error to answer with and its status
  * @throws {FilePlanError} When the plan is refused as it stands
+ * @throws {SpecPinMismatchError} When the import pins another spec
+ * @throws {ImportTransformError} When the import's transform fails
  */
-export function handleApplyUpdate(
+export async function handleApplyUpdate(
   body: UpdateRequest & PlanConsent,
   imports: ImportsSnapshot,
   root: ProjectRoot,
-): UpdateApplied | Refusal {
-  const regeneration = regenerationOf(body, imports, root);
+): Promise<UpdateApplied | Refusal> {
+  const regeneration = await regenerationOf(body, imports, root);
   if ("error" in regeneration) return regeneration;
   const { report, leftBehind } = applyRegeneration(regeneration, body, "required");
   const { written, removed, kept, backupDir, pruneFailures } = report;
   return { written, removed, kept, backupDir, pruneFailures, leftBehind };
 }
 
-function regenerationOf(
+/* Generated as declared: from the spec the declaration makes of the new one, with its options. */
+async function regenerationOf(
   body: UpdateRequest,
   imports: ImportsSnapshot,
   root: ProjectRoot,
-): Regeneration | Refusal {
+): Promise<Regeneration | Refusal> {
   const entry = getImportEntry(imports, body.name);
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
   const layout = resolveImportLayout(entry, body.name);
@@ -98,7 +104,7 @@ function regenerationOf(
     root,
     name: body.name,
     layout,
-    spec: body.newSpec,
+    ...(await declaredSpec(entry, body.name, body.newSpec)),
     options: { ...entry, selectedEndpoints: null },
     entry: getImportState(imports, body.name),
   };

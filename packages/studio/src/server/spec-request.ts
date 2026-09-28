@@ -44,6 +44,7 @@ const REDIRECTS: ReadonlySet<number> = new Set([301, 302, 303, 307, 308]);
  * @param url - The URL, already checked for scheme and form
  * @param policy - What besides the public internet the request may reach
  * @param timeoutMs - How long it may take, all of it
+ * @param headers - Headers to send besides Studio's own, such as an import's auth
  * @returns The body, or where the server redirects
  * @throws {SpecFetchError} For a refused address, an error answer, a response that is not HTTP, a body cut off, too large or not readable, or a failure to connect or finish in time
  * @throws {SpecHostsUnavailableError} For a private address, while Studio cannot tell whether the project allows it
@@ -57,6 +58,7 @@ export function requestSpec(
   url: URL,
   policy: LookupPolicy,
   timeoutMs: number,
+  headers: Readonly<Record<string, string>> = {},
 ): Promise<SpecAnswer> {
   const clock = requestClock(url, policy, timeoutMs);
   return new Promise<SpecAnswer>((resolve, reject) => {
@@ -68,7 +70,7 @@ export function requestSpec(
     }, timeoutMs);
     admitWrittenOut(url, clock.policy)
       .then(() => {
-        request = open(url, clock.policy);
+        request = open(url, clock.policy, headers);
         return exchange(request, url, clock);
       })
       .then(resolve, reject)
@@ -81,7 +83,11 @@ async function admitWrittenOut(url: URL, policy: LookupPolicy): Promise<void> {
   if (isIP(bare) !== 0) await approveSpecAddresses([bare], policy, () => url.hostname);
 }
 
-function open(url: URL, policy: LookupPolicy): ClientRequest {
+function open(
+  url: URL,
+  policy: LookupPolicy,
+  headers: Readonly<Record<string, string>>,
+): ClientRequest {
   const https = url.protocol === "https:";
   return (https ? httpsRequest : httpRequest)(url, {
     agent: https ? new HttpsAgent({ keepAlive: false }) : new HttpAgent({ keepAlive: false }),
@@ -90,6 +96,7 @@ function open(url: URL, policy: LookupPolicy): ClientRequest {
       accept: "application/json, application/yaml, */*",
       "accept-encoding": "gzip, deflate, br",
       "user-agent": "courier-studio",
+      ...headers,
     },
   });
 }

@@ -7,12 +7,14 @@
 
 import { computeSpecHash, hasSpecChanged, parseSpec } from "../apis";
 import type { ApisRouteDeps } from "./apis-routes";
+import { authHeaders } from "./auth-headers";
 import { getImportEntry, getImportState, importsSnapshotOf } from "./imports-bridge";
 import { projectRootAt } from "./project-fs/project-root";
 import { readDeclarations } from "./project-state/read-declarations";
 import { checkSingleSource, fetchSpecRaw } from "./registry-spec";
 import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse, RouteApp } from "./route-types";
+import { checkPinnedHash } from "./spec-as-declared";
 import { specHostAllowlist } from "./spec-host-allowlist";
 import { validateNameBody } from "./validate-body-registry";
 
@@ -62,11 +64,13 @@ async function handleCheckUpdates(
       res,
       specHostAllowlist(project, projectRoot),
       projectRootAt(projectRoot),
+      authHeaders(entry.auth),
     );
     /* An empty body is text too: it fails as a specification below, and the route answers. */
     if (raw === null) return;
 
     const newSpec = parseSpec(raw);
+    checkPinnedHash(body.name, entry, newSpec);
     const newHash = computeSpecHash(newSpec);
     const changed = hasSpecChanged(imports.state, body.name, newHash);
     res.json(changed ? { changed: true, newSpec } : { changed: false });
@@ -87,7 +91,10 @@ async function handleCheckAll(
     const checks = await Promise.all(
       Object.entries(imports.declarations).map(
         async ([name, entry]) =>
-          [name, await checkSingleSource(entry, getImportState(imports, name), allowlist)] as const,
+          [
+            name,
+            await checkSingleSource(name, entry, getImportState(imports, name), allowlist),
+          ] as const,
       ),
     );
 

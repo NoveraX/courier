@@ -19,7 +19,10 @@ import type { ProjectRoot } from "./project-fs/project-root";
 /** The endpoints to add and remove of an import, by group. */
 export interface ManageRequest {
   name: string;
+  /** The specification the endpoints are generated from, as the import's declaration makes it. */
   spec: ParsedSpec;
+  /** The hash to record: of the specification as sent, when the declaration reshaped it. */
+  specHash?: string;
   toAdd: Record<string, string[]>;
   toRemove: Record<string, string[]>;
 }

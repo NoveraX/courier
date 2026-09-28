@@ -2,6 +2,7 @@ import { endpointPath } from "../../define/address";
 import { type AnyProbe, recordWireCall } from "../../define/probe";
 import { RealtimeValidationError } from "../../realtime/errors";
 import { extractParamNames } from "../../utils/helpers";
+import { changesRoute } from "../../utils/url";
 
 /** Where one call to a remote stream or channel goes, relative to its group. */
 export interface CallAddress {
@@ -66,7 +67,15 @@ function fillParams(path: string, variables: Record<string, unknown> | undefined
       );
     }
     delete rest[name];
-    return encodeURIComponent(String(value));
+    /* Relayed by a proxy, a `..` reached a route above the declared one with
+       the server's credentials. */
+    const segment = String(value);
+    if (changesRoute(segment)) {
+      throw new RealtimeValidationError(
+        `Path parameter "${name}" cannot be "${segment}": it would change the route`,
+      );
+    }
+    return encodeURIComponent(segment);
   });
   return { path: filled, variables: Object.keys(rest).length > 0 ? rest : undefined };
 }

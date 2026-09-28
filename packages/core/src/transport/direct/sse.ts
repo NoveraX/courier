@@ -1,11 +1,12 @@
 import { getSourceName } from "../../define/api";
 import type { AnyDefinedApi } from "../../define/types";
-import { buildDirectSSEUrl, executeSSE } from "../../realtime/caller-sse";
+import { subscribeSSE } from "../../realtime/sse";
+import { readStreamData } from "../../realtime/sse/stream-data";
 import { layerHeaders } from "../../utils/layer-headers";
 import { beginStream, instrumentSSE } from "../instrument";
 import type { SSEFactory } from "../types";
-import { addressCall } from "./address";
 import { assertDirectlyReachable } from "./assert-reachable";
+import { streamRequest } from "./stream-request";
 
 export interface DirectSSEDefaults {
   headers?: Record<string, string>;
@@ -41,27 +42,22 @@ export function createDirectSSEFactory(
   defaults: DirectSSEDefaults = {},
 ): SSEFactory {
   const sourceName = getSourceName(api) ?? "_";
-  const opts = (api as Record<string, unknown>).options as Record<string, unknown> | undefined;
-  const baseURL = (opts?.baseURL as string | undefined) ?? "";
-  const groups = opts?.groups as Record<string, Record<string, unknown>> | undefined;
   const { headers: defaultHeaders } = defaults;
 
-  return function subscribeSSE(group, method, variables, options) {
+  return function openStream(group, method, variables, options) {
     assertDirectlyReachable(api, group, method);
-    const prefix =
-      ((groups?.[group]?.options as Record<string, unknown> | undefined)?.prefix as string) ?? "";
+    const request = streamRequest(api, group, method, variables);
     // Compose the actual outbound headers (must mirror sse-connection.ts).
     // The fetch layer always adds `Accept: text/event-stream`; merging it
     // here means Studio sees the same headers the wire sees, not just the
     // user-supplied subset.
     const requestHeaders = layerHeaders(
       { Accept: "text/event-stream" },
+      request.sourceHeaders,
       defaultHeaders,
       options.headers,
     );
-
-    const address = addressCall(groups?.[group]?.[method], method, variables);
-    const url = buildDirectSSEUrl(baseURL, prefix, address.path, address.variables);
+    const url = request.url;
 
     // Open the studio stream up-front so we have an `instr` handle whose
     // `updateMeta` can be called from the `onResponse` callback when the
@@ -76,16 +72,15 @@ export function createDirectSSEFactory(
     };
     const instr = beginStream(meta);
 
-    const subscription = executeSSE(
-      url,
-      requestHeaders,
-      undefined,
-      instr
-        ? (response) => {
-            instr.updateMeta({ responseHeaders: headersToRecord(response.headers) });
-          }
-        : undefined,
-    );
+    const subscription = subscribeSSE(url, {
+      headers: requestHeaders,
+      parse: readStreamData,
+      ...(instr && {
+        onResponse: (response: Response) => {
+          instr.updateMeta({ responseHeaders: headersToRecord(response.headers) });
+        },
+      }),
+    });
 
     return instrumentSSE(subscription, meta, instr);
   };

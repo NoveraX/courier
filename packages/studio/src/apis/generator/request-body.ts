@@ -13,11 +13,14 @@ import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
  * - `value` — JSON that is not an object with fields, a list above all; it
  *   cannot share the variables with the parameters, so beside them it is
  *   passed under a key of its own.
+ * - `nested` — fields of which one shares its name with a path or query
+ *   parameter; they cannot share one variables object with the parameters
+ *   either, so they are passed under a key of their own too.
  * - `form` — a multipart form, taken as a `FormData`, whose entries also
  *   fill the path.
  * - `bytes` — a file or other bytes sent as they are, taken as a `Blob`.
  */
-export type RequestBodyKind = "none" | "fields" | "value" | "form" | "bytes";
+export type RequestBodyKind = "none" | "fields" | "value" | "nested" | "form" | "bytes";
 
 /**
  * The kind of body an endpoint sends.
@@ -38,7 +41,34 @@ export function requestBodyKind(ep: ParsedEndpoint, spec: ParsedSpec): RequestBo
   if (!ep.requestBody) return "none";
   const media = bodyMedia(ep);
   if (media !== "structured") return media;
-  return hasFields(ep.requestBody, spec, new Set()) ? "fields" : "value";
+  const fields = fieldNames(ep.requestBody, spec, new Set());
+  if (fields === null) return "value";
+  return sharesParameterName(ep, fields) ? "nested" : "fields";
+}
+
+/**
+ * Whether one of a body's fields is named as a path or query parameter is.
+ *
+ * Both are keys of the one variables object an endpoint is called with.
+ * Merged, the parameter took the field's place: Gitea's `POST
+ * /repos/{owner}/{repo}/issues/{index}/blocks`, whose body names another
+ * issue by its own `owner`, `repo` and `index`, sent the body without them.
+ *
+ * @param ep - The endpoint
+ * @param fields - The names of its body's fields
+ * @returns Whether a field and a parameter share a name
+ * @example
+ * ```ts
+ * sharesParameterName(blockIssue, ["owner", "repo", "index"]); // → true
+ * ```
+ */
+export function sharesParameterName(ep: ParsedEndpoint, fields: readonly string[]): boolean {
+  const names = new Set(
+    ep.parameters
+      .filter((param) => param.in === "path" || param.in === "query")
+      .map((param) => param.name),
+  );
+  return fields.some((field) => names.has(field));
 }
 
 /**
@@ -77,14 +107,21 @@ export function bodyKey(ep: ParsedEndpoint): string {
   return ep.parameters.some((param) => param.name === "body") ? "requestBody" : "body";
 }
 
-/** An object with fields, a reference to one, or alternatives that all are. */
-function hasFields(schema: ParsedSchema, spec: ParsedSpec, seen: Set<string>): boolean {
-  if (schema.type === "object") return Object.keys(schema.properties ?? {}).length > 0;
-  if (schema.type === "union") {
-    return (schema.variants ?? []).every((variant) => hasFields(variant, spec, seen));
+/**
+ * The fields of an object with fields, of a reference to one, or of
+ * alternatives that all are; `null` for any other body.
+ */
+function fieldNames(schema: ParsedSchema, spec: ParsedSpec, seen: Set<string>): string[] | null {
+  if (schema.type === "object") {
+    const names = Object.keys(schema.properties ?? {});
+    return names.length > 0 ? names : null;
   }
-  if (schema.type !== "ref" || !schema.refName || seen.has(schema.refName)) return false;
+  if (schema.type === "union") {
+    const variants = (schema.variants ?? []).map((variant) => fieldNames(variant, spec, seen));
+    return variants.every((names) => names !== null) ? variants.flat() : null;
+  }
+  if (schema.type !== "ref" || !schema.refName || seen.has(schema.refName)) return null;
   seen.add(schema.refName);
   const target = ownValue(spec.schemas, schema.refName);
-  return target !== undefined && hasFields(target, spec, seen);
+  return target === undefined ? null : fieldNames(target, spec, seen);
 }

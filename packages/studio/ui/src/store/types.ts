@@ -12,6 +12,7 @@ export type {
   RequestStatus,
   RequestEntry,
   StreamEventRecord,
+  UploadState,
 } from "./types-request"
 
 export type {

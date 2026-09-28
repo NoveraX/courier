@@ -4,9 +4,11 @@
  * with were exported beside the API, undocumented, while the reference
  * described them as the engine of the clients' inference.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import * as courier from "../src";
+import * as realtime from "../src/realtime";
+import type { WSConnection } from "../src/realtime";
 import type { BaseOptions, SearchParamsSerializer } from "../src";
 import type { CacheEntry, CacheOptions, CacheScope, CacheStore } from "../src/middleware";
 // @ts-expect-error the proxy transport's call types are its own
@@ -37,5 +39,18 @@ describe("the option types", () => {
       "function",
       store,
     ]);
+  });
+});
+
+/**
+ * A WebSocket connection promised request and response: a message sent with
+ * an id, answered by a frame carrying it back. No Courier server answers so —
+ * a channel replies with `send`, which carries no id — so every request waited
+ * out its timeout and failed. The connection subscribes and sends.
+ */
+describe("the realtime entry", () => {
+  it("offers no request a server never answers", () => {
+    expectTypeOf<"request" extends keyof WSConnection ? true : false>().toEqualTypeOf<false>();
+    expect(Object.keys(realtime)).not.toContain("createPendingRegistry");
   });
 });

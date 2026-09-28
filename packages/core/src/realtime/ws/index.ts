@@ -5,8 +5,6 @@ export { createMessageQueue } from "./message-queue";
 export { shouldReconnect } from "./reconnect-classifier";
 export { qualifyTopic, unqualifyTopic } from "./topic-key";
 export { createWSConnection } from "./ws-connection";
-export type { PendingRegistry } from "./ws-pending";
-export { createPendingRegistry } from "./ws-pending";
 export type { WSMessage, WSMessageType } from "./ws-protocol";
 export { decodeMessage, encodeMessage } from "./ws-protocol";
 export type { TopicRegistry } from "./ws-topics";

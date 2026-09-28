@@ -4,25 +4,22 @@ import { createConnectionState } from "../connection-state";
 import { createMessageQueue } from "./message-queue";
 import { createServerSilence } from "./server-silence";
 import {
-  requestResponse,
   sendControl,
   sendToTopic,
   subscribeToTopic,
   type TopicOpsContext,
 } from "./topic-operations";
 import { clearReconnectTimer, connect, dropSocket, type LifecycleContext } from "./ws-lifecycle";
-import { createPendingRegistry } from "./ws-pending";
 import { encodeMessage } from "./ws-protocol";
 import { createTopicRegistry } from "./ws-topics";
 import type { WSClientSocket, WSConnection, WSConnectionConfig } from "./ws-types";
 
 const log = createLogger("WS");
 const DEFAULT_MAX_BUFFERED = 1_048_576;
-const DEFAULT_REQUEST_TIMEOUT = 30_000;
 
 /**
  * Create a managed WebSocket connection with topic multiplexing,
- * auto-reconnect, server-silence detection, and request/response support.
+ * auto-reconnect and server-silence detection.
  *
  * @example
  * const conn = createWSConnection({ url: "wss://realtime.example.com/ws" });
@@ -38,9 +35,7 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
       log.warn(`${count} message(s) held for ${topic} were dropped before the server confirmed it`),
   });
   const queue = createMessageQueue(config.messageQueue);
-  const pending = createPendingRegistry();
   const maxBuffered = config.maxBufferedAmount ?? DEFAULT_MAX_BUFFERED;
-  const requestTimeout = config.requestTimeout ?? DEFAULT_REQUEST_TIMEOUT;
   const factory = config.socketFactory ?? defaultFactory;
 
   const refs = {
@@ -73,9 +68,7 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
     state,
     topics,
     queue,
-    pending,
     log,
-    requestTimeout,
     maxMessageSize: config.maxMessageSize ?? LIMITS.MAX_MESSAGE_SIZE,
     sendRaw,
   };
@@ -90,7 +83,6 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
     log,
     topics,
     queue,
-    pending,
     silence,
     factory,
     sendRaw,
@@ -104,7 +96,6 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
   return {
     subscribe: (topic, handler, variables) => subscribeToTopic(opsCtx, topic, handler, variables),
     send: (topic, payload) => sendToTopic(opsCtx, topic, payload),
-    request: (topic, payload) => requestResponse(opsCtx, topic, payload),
     refreshToken,
     close: () => gracefulClose(lifecycleCtx, opsCtx),
     get status() {
@@ -119,7 +110,6 @@ function gracefulClose(lifecycleCtx: LifecycleContext, opsCtx: TopicOpsContext):
   clearReconnectTimer(lifecycleCtx);
   lifecycleCtx.silence.stop();
   opsCtx.topics.endAll(undefined);
-  opsCtx.pending.rejectAll("Connection closed");
   opsCtx.queue.clear();
   lifecycleCtx.refs.ws?.close(1000, "client close");
   lifecycleCtx.refs.ws = null;

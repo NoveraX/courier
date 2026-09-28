@@ -62,8 +62,16 @@ export function executeWSChannel<TSend, TReceive>(
     if (ended) return;
     state.set("connecting");
 
-    const unsubStatus = conn.onStatusChange((s) => {
+    const forward = (s: ConnectionStatus): void => {
       if (!ended) forwardConnectionStatus(state, s);
+    };
+    /* A connection refused for good reports itself disconnected before it
+       ends each channel with why. Waiting out the turn lets the channel end
+       as a channel does — its error, then disconnected — or the relay and
+       Studio took it for a clean end. */
+    const unsubStatus = conn.onStatusChange((s) => {
+      if (s === "disconnected") queueMicrotask(() => forward(s));
+      else forward(s);
     });
     if (conn.status === "connected") state.set("connected");
 

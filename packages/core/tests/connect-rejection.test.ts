@@ -64,6 +64,27 @@ describe("an onConnect that throws", () => {
   });
 });
 
+describe("a channel whose connection is refused", () => {
+  it("hears why before it reports itself disconnected, as a channel's end comes", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    served = await serveWS(
+      { room: channel.send<string>().response<string>().implement(() => ({ onMessage() {} })) },
+      {
+        onConnect: () => {
+          throw new Error("not today");
+        },
+      },
+    );
+    const ch = executeWSChannel<string, string>(served.url, "api.live.room");
+    const heard: string[] = [];
+    ch.on("error", (error) => heard.push(`error ${error.code}`));
+    ch.on("status", (status) => heard.push(status));
+    await settle(1_500);
+
+    expect(heard.slice(-2)).toEqual(["error 4401", "disconnected"]);
+  });
+});
+
 describe("an onSSEConnect that throws", () => {
   it("answers 403, which the client reads as a ForbiddenError, and logs why", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});

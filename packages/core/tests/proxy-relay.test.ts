@@ -6,13 +6,13 @@
  */
 import { createServer, type IncomingHttpHeaders, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 
 import { createHandler } from "../src/adapter";
 import { createWSHandler } from "../src/adapter/handle-ws";
-import type { WSHandler } from "../src/adapter/ws-types";
+import type { WSHandler, WSHandlerConfig } from "../src/adapter/ws-types";
 import { courier, defineApi, defineGroup } from "../src/define";
 import { attachWebSocketUpgrade, sendWebResponse, toWebRequest, type UpgradeServer } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
@@ -156,7 +156,7 @@ describe("a stream another server serves, through the proxy", () => {
 const Line = z.object({ text: z.string() });
 
 /** A Courier server that serves the channel itself, at `/live/ws`. */
-async function channelServer(): Promise<string> {
+async function channelServer(config?: WSHandlerConfig): Promise<string> {
   const served = defineApi({
     name: "chat",
     groups: {
@@ -180,11 +180,15 @@ async function channelServer(): Promise<string> {
       }),
     },
   });
-  return serveChannels({ chat: served }, "/live/ws");
+  return serveChannels({ chat: served }, "/live/ws", config);
 }
 
-async function serveChannels(sources: Record<string, object>, path: string): Promise<string> {
-  const handler: WSHandler = createWSHandler({ sources });
+async function serveChannels(
+  sources: Record<string, object>,
+  path: string,
+  config?: WSHandlerConfig,
+): Promise<string> {
+  const handler: WSHandler = createWSHandler({ ...config, sources });
   const server = createServer();
   attachWebSocketUpgrade(server, {
     path,
@@ -246,5 +250,28 @@ describe("a channel another server serves, through the proxy", () => {
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     expect(errors.map((error) => [error.code, error.message])).toEqual([[4000, "Room closed"]]);
+  });
+
+  it("ends the client's subscription with why the upstream refused its connection", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const upstream = await channelServer({
+      onConnect: () => {
+        throw new Error("not today");
+      },
+    });
+    const api = relayedChat(upstream);
+    const proxy = await serveChannels({ chat: api }, "/api/ws");
+    const caller = createProxyCaller<typeof api>("chat", {
+      source: api,
+      proxyPath: { ws: `${proxy.replace("http", "ws")}/api/ws` },
+    });
+    const room = caller.live.room({ room: "r1" });
+    const errors: RealtimeError[] = [];
+    room.on("error", (error) => errors.push(error));
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+
+    expect(errors.map((error) => [error.code, error.message])).toEqual([[4401, "Connection rejected"]]);
+    expect(room.status).toBe("disconnected");
+    vi.restoreAllMocks();
   });
 });

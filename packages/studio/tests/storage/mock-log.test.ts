@@ -49,6 +49,17 @@ describe("the mocks' request logs", () => {
     expect(second.log.events()).toEqual([start("req_1"), end("req_1")]);
   });
 
+  it("keep no credential a request to a mock sent", () => {
+    const root = project();
+    const first = run(root);
+    first.log.record({ ...start("req_1"), headers: { cookie: "sid=1", accept: "json" } });
+    first.stop();
+
+    const [kept] = run(root).log.events();
+
+    expect(kept?.headers).toEqual({ cookie: "[redacted]", accept: "json" });
+  });
+
   it("keep the latest 500 requests", () => {
     const { log } = run(project());
 

@@ -86,6 +86,28 @@ describe("a Studio that restarts", () => {
   });
 });
 
+describe("what the log writes down, and replays to a page that connects", () => {
+  it("keeps no credential", () => {
+    const root = project();
+    const first = run(root);
+    first.log.record(start("r1"), "socket-1");
+    first.log.record(
+      {
+        ...end("r1"),
+        requestHeaders: { authorization: "Bearer t", accept: "json" },
+        headers: { "set-cookie": "sid=1", "content-type": "application/json" },
+      },
+      "socket-1",
+    );
+    first.stop();
+
+    const kept = run(root).log.events().find((event) => event.type === "request:end");
+
+    expect(kept?.requestHeaders).toEqual({ authorization: "[redacted]", accept: "json" });
+    expect(kept?.headers).toEqual({ "set-cookie": "[redacted]", "content-type": "application/json" });
+  });
+});
+
 describe("the log", () => {
   it("keeps the latest 2000 requests", () => {
     const { log } = run(project());

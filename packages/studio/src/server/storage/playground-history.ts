@@ -6,6 +6,7 @@
  */
 
 import type { DatabaseSync } from "node:sqlite";
+import { withoutCredentials } from "./without-credentials";
 
 const KEY = "playground.history";
 
@@ -38,7 +39,7 @@ export function createPlaygroundHistory(db: DatabaseSync): PlaygroundHistory {
       return Array.isArray(parsed) ? parsed : [];
     },
     replace(entries) {
-      upsert.run(KEY, JSON.stringify(entries));
+      upsert.run(KEY, JSON.stringify(entries.map(withoutCredentials)));
     },
   };
 }

@@ -4,7 +4,7 @@
  * SQLite, built into Node: nothing to install or set up.
  */
 
-import { lstatSync, renameSync } from "node:fs";
+import { chmodSync, closeSync, lstatSync, openSync, renameSync } from "node:fs";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
@@ -59,6 +59,7 @@ function openOnDisk(projectRoot: string): DatabaseSync | undefined {
   try {
     const path = join(ensureCourierDir(projectRoot), DATABASE_FILE);
     refuseLink(path);
+    ownerOnly(path);
     try {
       return prepared(path);
     } catch (error) {
@@ -66,6 +67,7 @@ function openOnDisk(projectRoot: string): DatabaseSync | undefined {
       const aside = `${path}.broken-${Date.now()}`;
       renameSync(path, aside);
       log.warn(`${DATABASE_FILE} was not a database: moved it to ${aside} and started a new one`);
+      ownerOnly(path);
       return prepared(path);
     }
   } catch (error) {
@@ -90,6 +92,16 @@ function inMemory(): DatabaseSync {
   const db = new (process.getBuiltinModule("node:sqlite").DatabaseSync)(":memory:");
   migrate(db);
   return db;
+}
+
+/*
+ * The database keeps what the project's requests sent, so only the account
+ * running Studio reads it: a file made anew is made that way, and one made
+ * before is made so. SQLite gives its journal files the database's mode.
+ */
+function ownerOnly(path: string): void {
+  closeSync(openSync(path, "a", 0o600));
+  chmodSync(path, 0o600);
 }
 
 /* A link could arrive with the project and send every write elsewhere. */

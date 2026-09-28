@@ -32,7 +32,10 @@ export function computeOverviewKPIs(
   endpoints: EndpointNodeData[],
   requests: RequestEntry[],
 ): OverviewKPI {
-  const completed = requests.filter((r) => r.status !== "pending");
+  /* Newest first in the store; the sparklines run forward in time. */
+  const completed = requests
+    .filter((r) => r.status !== "pending")
+    .sort((a, b) => a.startedAt - b.startedAt);
   const successes = completed.filter((r) => r.status === "success").length;
   const overallHealth = completed.length > 0
     ? (successes / completed.length) * 100

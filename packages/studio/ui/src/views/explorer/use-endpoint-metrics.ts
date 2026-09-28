@@ -34,12 +34,16 @@ export function useEndpointMetrics(
 
   return useMemo(() => {
     const filtered = filterRequests(requests, source, group, method);
-    const completed = filtered.filter((r) => r.status !== "pending");
+    /* The store holds the newest request first: its head is the latest
+       calls, and the sparklines read it reversed to run forward in time. */
+    const completed = filtered
+      .filter((r) => r.status !== "pending")
+      .sort((a, b) => a.startedAt - b.startedAt);
     const durations = extractDurations(completed);
 
     return {
       metrics: computeNodeMetrics(filtered),
-      recentRequests: filtered.slice(-RECENT_LIMIT),
+      recentRequests: filtered.slice(0, RECENT_LIMIT),
       latencySparkline: buildSparkline(completed, bucketAvgLatency),
       successRateSparkline: buildSparkline(completed, bucketSuccessRate),
       p50: percentile(durations, 50),

@@ -1,6 +1,7 @@
 import type { RequestEntry, StudioEvent } from "./types"
 import type { RequestDraft } from "./request-draft"
 import { str } from "./event-helpers"
+import { withCacheHit, withCacheMiss } from "./handle-cache-events"
 import { validationIssuesOf } from "./validation-issues"
 import { withMiddlewareEnter, withMiddlewareExit, withMiddlewareError } from "./handle-middleware-events"
 import {
@@ -69,4 +70,6 @@ const ENTRY_CHANGES: ReadonlyMap<string, EntryChange> = new Map<string, EntryCha
   ["stream:message", withStreamMessage],
   ["stream:close", withStreamClose],
   ["stream:error", withStreamError],
+  ["cache:hit", withCacheHit],
+  ["cache:miss", withCacheMiss],
 ])

@@ -76,6 +76,7 @@ export function GeneralTab({ request, hideSourceMode }: GeneralTabProps): React.
         {request.middlewareCount > 0 && (
           <Row label="Middleware">{request.middlewareCount}</Row>
         )}
+        {request.cache && <Row label="Cache">{cacheOutcome(request.cache)}</Row>}
         {request.hasValidation.variables && (
           <Row label="Variables Validated">Yes</Row>
         )}
@@ -89,6 +90,13 @@ export function GeneralTab({ request, hideSourceMode }: GeneralTabProps): React.
 
 
 // ── Value renderers ───────────────────────────────────────────────────────
+
+function cacheOutcome(cache: NonNullable<RequestEntry["cache"]>): string {
+  if (!cache.hit) return "Not in cache, fetched";
+  return cache.age === undefined
+    ? "Served from cache"
+    : `Served from cache, stored ${formatDuration(cache.age)} before`;
+}
 
 function StatusCodePill({ code }: { code: number }): React.ReactElement {
   const styles = code >= 500

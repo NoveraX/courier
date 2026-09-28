@@ -44,6 +44,8 @@ export interface RequestEntry {
   url?: string
   pinned?: boolean
   sessionId: string
+  /** What the cache middleware did: answered from a stored response (`age` ms old), or missed. */
+  cache?: { hit: boolean; age?: number }
   // Stream (SSE/WS) fields
   transport?: "http" | "sse" | "ws"
   streamStatus?: "streaming" | "complete" | "error"

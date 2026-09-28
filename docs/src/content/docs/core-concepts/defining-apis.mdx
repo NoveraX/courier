@@ -168,6 +168,36 @@ endpoint.get(":id").response(UserSchema).response(AdminSchema)
 // takes one schema or type, and the second would replace the first: remove one of the two calls.
 ```
 
+### Endpoint settings
+
+The same settings follow any head, in any order, and a base built with `courier()` or `.extend()` passes its own on to every endpoint made from it:
+
+| method | what it sets |
+| --- | --- |
+| `.use(...middleware)` | middleware for this endpoint, run after the base's |
+| `.headers(names)` | the headers it carries across the proxy, each way — see [Headers](/docs/advanced/options#headers) |
+| `.timeout(ms)` | how long the upstream call may take |
+| `.retry({ attempts, backoff, on, mutations })` | its retry policy; a write is retried only with `mutations: true` |
+| `.meta(values)` | values for your own tooling; the runtime ignores them |
+| `.cache({ revalidate, tags })` | how long a read's answer keeps — offered on a read alone |
+| `.reads()` | a read sent with a body, over POST; refused on `.put()`, `.patch()` and `.del()` |
+
+A verb also takes options for that endpoint alone:
+
+```ts
+const { endpoint } = courier()
+
+endpoint.post("orders", { idempotencyKey: "header:idempotency-key", tags: ["orders"] })
+endpoint.get("customers", { sensitiveVariables: true })
+endpoint.get("legacy", { deprecated: "Use /v2/legacy", inherit: false })
+```
+
+- `idempotencyKey` — the header each call sends a key of its own in, the same on every attempt a retry makes, so an upstream that deduplicates by it applies a write once: this is what makes `.retry({ mutations: true })` safe. A key the caller sends is kept. Anything but `header:<name>` is refused where the endpoint is defined.
+- `sensitiveVariables` — a read whose variables stay out of the address: it goes to the proxy as POST — see [GET or POST](/docs/api/create-proxy-caller#get-or-post).
+- `inherit: false` — skip the base's middleware; the endpoint's own `.use()` and the source's `middleware` still run.
+- `tags`, `deprecated`, `operation` — read by Studio and the mock server, not by the runtime.
+- `mock` — the example answer, status and delay the mock server gives it.
+
 ## defineApi
 
 Creates an API source by combining groups with a base URL and shared options:

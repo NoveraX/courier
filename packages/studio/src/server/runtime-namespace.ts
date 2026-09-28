@@ -17,17 +17,12 @@
 
 import { createLogger } from "@noverax/courier";
 import type { Namespace, Socket } from "socket.io";
-import {
-  handleMockNetworkConfig,
-  handleMockServerConnect,
-  handleMockServerDisconnect,
-} from "./app-namespace-mock-handlers";
 import { attributeEvent } from "./attribute-event";
 import { broadcastRuntimeEvent } from "./broadcast-runtime-event";
 import type { BindingTable } from "./catalog/binding-table";
 import type { ConfigSourceNamer } from "./catalog/config-source-names";
+import { isRecord } from "./mocks-edit/is-record";
 import type { RequestLog } from "./request-log";
-import { mockServers, socketMockServers } from "./runtime-namespace-state";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
 import { handleAnnounce, handleDisconnect, handleHello } from "./runtime-registration";
 
@@ -81,12 +76,11 @@ export function setupRuntimeNamespace(
     }
 
     socket.on("event", (event: unknown) => {
-      const sent = handleRuntimeEvent(event, socket, deps);
+      const sent = handleRuntimeEvent(event, deps);
       if (sent) deps.requestLog?.record(sent, socket.id);
     });
 
     socket.on("disconnect", () => {
-      handleSocketMockCleanup(socket);
       endOpenRequests(socket, deps);
       handleDisconnect(socket, ref, deps);
     });
@@ -94,29 +88,18 @@ export function setupRuntimeNamespace(
 }
 
 /**
- * Dispatch a generic `event` payload arriving on the `/runtime` namespace.
- *
- * Handles the mock-server lifecycle subset (`mock:server:connect/disconnect`,
- * `mock:network:config`) and then broadcasts the raw event to the UI
- * namespace via `broadcastRuntimeEvent` — the single canonical funnel for
- * every event the UI consumes. Identity and topology information ride on
- * the `runtime:hello` + `runtime:announce` handshake instead.
+ * Dispatch a generic `event` payload arriving on the `/runtime` namespace:
+ * broadcast it to the UI namespace via `broadcastRuntimeEvent` — the single
+ * canonical funnel for every event the UI consumes. Identity and topology
+ * information ride on the `runtime:hello` + `runtime:announce` handshake
+ * instead.
  */
 function handleRuntimeEvent(
   raw: unknown,
-  socket: Socket,
   deps: SetupRuntimeNamespaceDeps,
 ): Record<string, unknown> | undefined {
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return undefined;
-  const event = raw as Record<string, unknown>;
-  if (event.type === "mock:server:connect") {
-    handleMockServerConnect(event, socket);
-  } else if (event.type === "mock:server:disconnect") {
-    handleMockServerDisconnect(event, socket);
-  } else if (event.type === "mock:network:config") {
-    handleMockNetworkConfig(event);
-  }
-  return broadcastRuntimeEvent(deps.uiNamespace, attributeEvent(event, deps.nameSource), log);
+  if (!isRecord(raw) || Array.isArray(raw)) return undefined;
+  return broadcastRuntimeEvent(deps.uiNamespace, attributeEvent(raw, deps.nameSource), log);
 }
 
 /**
@@ -128,18 +111,4 @@ function endOpenRequests(socket: Socket, deps: SetupRuntimeNamespaceDeps): void 
   for (const event of deps.requestLog?.endOpen(socket.id) ?? []) {
     deps.uiNamespace?.emit("event", event);
   }
-}
-
-/**
- * Release every mock-server entry owned by `socket.id` on disconnect, so a
- * runtime that crashes mid-session does not leak ghost mock servers in the
- * registry.
- */
-function handleSocketMockCleanup(socket: Socket): void {
-  const owned = socketMockServers.get(socket.id);
-  if (!owned) return;
-  for (const serverId of owned) {
-    mockServers.delete(serverId);
-  }
-  socketMockServers.delete(socket.id);
 }

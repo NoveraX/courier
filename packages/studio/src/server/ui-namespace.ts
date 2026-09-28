@@ -18,13 +18,8 @@ import { sendProject } from "./project-state/send-project";
 import type { ProjectReads } from "./project-state/types";
 import type { RequestLog } from "./request-log";
 import { keptIdsOf } from "./request-log-clear";
-import { mockServers, runtimeRegistry } from "./runtime-namespace-state";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
-import {
-  sanitizeMockCommand,
-  sanitizeMockManaged,
-  sanitizeMockServerEvent,
-} from "./sanitize-mock-events";
+import { sanitizeMockCommand, sanitizeMockManaged } from "./sanitize-mock-events";
 import type { WatcherStatus } from "./watcher-status";
 
 export interface SetupUiNamespaceDeps {
@@ -81,15 +76,6 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
       logger.warn("Studio", "Failed to send the project to a UI that connected", err);
     }
 
-    // Send current mock servers so UI restores state immediately.
-    // Re-validate cached entries through sanitizeMockServerEvent for
-    // defense-in-depth — the entries were sanitized on ingest but re-
-    // validation guards against any theoretical in-memory corruption.
-    for (const event of mockServers.values()) {
-      const safe = sanitizeMockServerEvent(event);
-      if (safe) socket.emit("event", safe);
-    }
-
     // Send managed mock server states
     mockManager?.sendSnapshot();
 
@@ -121,16 +107,11 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
       socket.on("disconnect", () => router.onUiDisconnect(socket.id));
     }
 
-    // Forward mock commands from UI → every connected runtime + managed
-    // mock servers (IPC). The runtime side decides whether the command
-    // applies to a mock it owns; non-owners no-op. A UI that passes an
-    // acknowledgement hears whether the managed mock ran the command.
+    // Forward mock commands from the UI to the managed mock they name (IPC).
+    // A UI that passes an acknowledgement hears whether the mock ran it.
     socket.on("mock:command", async (rawCommand: unknown, ack?: unknown) => {
       const command = sanitizeMockCommand(rawCommand);
       if (!command) return answer(ack, { ok: false, error: "Studio could not read the command." });
-      for (const entry of runtimeRegistry.values()) {
-        entry.socket.emit("mock:command", command);
-      }
       const reply = mockManager?.forwardStoreCommand(command);
       const unknownMock = { ok: false, error: `No mock is named "${command.serverId}".` };
       answer(ack, reply ? await reply : unknownMock);

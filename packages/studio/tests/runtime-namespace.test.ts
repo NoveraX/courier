@@ -1,12 +1,9 @@
+import type { CourierConfig } from "@noverax/courier/config";
+import type { Namespace } from "socket.io";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BindingTable } from "../src/server/catalog/binding-table";
 import { setupRuntimeNamespace } from "../src/server/runtime-namespace";
-import {
-  clearStudioServerState,
-  getRuntimeEntry,
-  mockServers,
-  socketMockServers,
-} from "../src/server/runtime-namespace-state";
+import { clearStudioServerState, getRuntimeEntry } from "../src/server/runtime-namespace-state";
 
 type Handler = (raw: unknown) => void;
 
@@ -67,8 +64,8 @@ describe("setupRuntimeNamespace", () => {
   it("registers a runtime on hello and updates the binding table on announce", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
-    const ui = { emit: vi.fn() } as unknown as import("socket.io").Namespace;
-    setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, {
+    const ui = { emit: vi.fn() } as unknown as Namespace;
+    setupRuntimeNamespace(ns as unknown as Namespace, {
       bindingTable,
       uiNamespace: ui,
     });
@@ -94,7 +91,7 @@ describe("setupRuntimeNamespace", () => {
   it("ignores announce before hello", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
-    setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, { bindingTable });
+    setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -105,7 +102,7 @@ describe("setupRuntimeNamespace", () => {
   it("rejects malformed hello payloads", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
-    setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, { bindingTable });
+    setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -116,7 +113,7 @@ describe("setupRuntimeNamespace", () => {
   it("detaches the runtime from the binding table on disconnect", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
-    setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, { bindingTable });
+    setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -133,7 +130,7 @@ describe("setupRuntimeNamespace", () => {
   it("adds to the claim when announce arrives twice", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
-    setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, { bindingTable });
+    setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -147,7 +144,7 @@ describe("setupRuntimeNamespace", () => {
   it("adopts listenOrigin from runtime:hello when announce never carries one", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
-    setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, { bindingTable });
+    setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -167,10 +164,10 @@ describe("setupRuntimeNamespace", () => {
           options: { proxyPath: { http: "/api" } },
         },
       },
-    } as unknown as import("@noverax/courier/config").CourierConfig);
+    } as unknown as CourierConfig);
     const ns = makeNamespace();
-    const ui = { emit: vi.fn() } as unknown as import("socket.io").Namespace;
-    setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, {
+    const ui = { emit: vi.fn() } as unknown as Namespace;
+    setupRuntimeNamespace(ns as unknown as Namespace, {
       bindingTable,
       uiNamespace: ui,
     });
@@ -198,75 +195,22 @@ describe("setupRuntimeNamespace", () => {
     expect(payload.sourceCount).toBe(1);
   });
 
-  it("dispatches mock:server:connect/disconnect events received on /runtime", () => {
+  it("broadcasts a runtime's request events to the UI, and none of the mock events no runtime sends", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
-    setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, { bindingTable });
-
-    const socket = makeSocket();
-    ns.connect(socket);
-    socket.emit("event", {
-      type: "mock:server:connect",
-      serverId: "mock-1",
-      sourceName: "api",
-      port: 7001,
-      url: "http://localhost:7001",
-    });
-    expect(mockServers.has("mock-1")).toBe(true);
-    expect(socketMockServers.get(socket.id)?.has("mock-1")).toBe(true);
-
-    socket.emit("event", {
-      type: "mock:server:disconnect",
-      serverId: "mock-1",
-      sourceName: "api",
-    });
-    expect(mockServers.has("mock-1")).toBe(false);
-  });
-
-  it("releases mock servers owned by the socket on disconnect", () => {
-    const bindingTable = new BindingTable();
-    const ns = makeNamespace();
-    setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, { bindingTable });
-
-    const socket = makeSocket();
-    ns.connect(socket);
-    socket.emit("event", {
-      type: "mock:server:connect",
-      serverId: "mock-2",
-      sourceName: "api",
-      port: 7002,
-      url: "http://localhost:7002",
-    });
-    expect(mockServers.has("mock-2")).toBe(true);
-    socket.emit("disconnect", undefined);
-    expect(mockServers.has("mock-2")).toBe(false);
-    expect(socketMockServers.has(socket.id)).toBe(false);
-  });
-
-  it("broadcasts /runtime mock events to the UI namespace through the funnel", () => {
-    const bindingTable = new BindingTable();
-    const ns = makeNamespace();
-    const ui = { emit: vi.fn() } as unknown as import("socket.io").Namespace;
-    setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, {
+    const ui = { emit: vi.fn() };
+    setupRuntimeNamespace(ns as unknown as Namespace, {
       bindingTable,
-      uiNamespace: ui,
+      uiNamespace: ui as unknown as Namespace,
     });
 
     const socket = makeSocket();
     ns.connect(socket);
-    socket.emit("event", {
-      type: "mock:server:connect",
-      serverId: "mock-broadcast",
-      sourceName: "api",
-      port: 7003,
-      url: "http://localhost:7003",
-    });
+    socket.emit("event", { type: "mock:server:connect", serverId: "mock-1", port: 7001 });
+    socket.emit("event", { type: "request:start", id: "r1", source: "api" });
 
-    const eventCalls = (ui.emit as ReturnType<typeof vi.fn>).mock.calls.filter(
-      (c) => c[0] === "event",
-    );
-    expect(eventCalls.length).toBe(1);
-    expect((eventCalls[0]?.[1] as Record<string, unknown>).serverId).toBe("mock-broadcast");
+    const sent = ui.emit.mock.calls.filter(([name]) => name === "event").map(([, event]) => event);
+    expect(sent).toEqual([expect.objectContaining({ type: "request:start", id: "r1" })]);
   });
 
   it("counts distinct runtimes and sources across bound rows", () => {
@@ -276,10 +220,10 @@ describe("setupRuntimeNamespace", () => {
         api: { options: { proxyPath: { http: "/api", sse: "/api/sse" } } },
         users: { options: { proxyPath: { http: "/users" } } },
       },
-    } as unknown as import("@noverax/courier/config").CourierConfig);
+    } as unknown as CourierConfig);
     const ns = makeNamespace();
-    const ui = { emit: vi.fn() } as unknown as import("socket.io").Namespace;
-    setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, {
+    const ui = { emit: vi.fn() } as unknown as Namespace;
+    setupRuntimeNamespace(ns as unknown as Namespace, {
       bindingTable,
       uiNamespace: ui,
     });
@@ -309,7 +253,7 @@ describe("setupRuntimeNamespace", () => {
   it("stores listenOrigin and framework supplied via runtime:announce", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
-    setupRuntimeNamespace(ns as unknown as import("socket.io").Namespace, { bindingTable });
+    setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable });
 
     const socket = makeSocket();
     ns.connect(socket);

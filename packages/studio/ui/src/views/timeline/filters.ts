@@ -1,6 +1,8 @@
 import type { RequestEntry } from "@/store/types";
 import type { TimelineFilters } from "@/store/types";
 
+import { requestName } from "./request-name";
+
 /** Apply all active filters + search to a request list */
 export function filterRequests(
   requests: readonly RequestEntry[],
@@ -21,15 +23,12 @@ function matchesAllFilters(r: RequestEntry, f: TimelineFilters): boolean {
   return true;
 }
 
-const SEARCH_FIELDS = ["source", "group", "method", "url"] as const;
-
+/** A request is found by the dotted name its row shows, or any part of it, and by its URL. */
 function matchesSearch(r: RequestEntry, query: string): boolean {
   const q = query.toLowerCase();
 
-  for (const field of SEARCH_FIELDS) {
-    const value = r[field];
-    if (typeof value === "string" && value.toLowerCase().includes(q)) return true;
-  }
+  if (requestName(r).toLowerCase().includes(q)) return true;
+  if (r.url?.toLowerCase().includes(q)) return true;
 
   // Match status code
   if (r.statusCode && String(r.statusCode).includes(q)) return true;

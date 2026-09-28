@@ -8,6 +8,7 @@ import { MetricsPill } from "@/components/shared/metrics-cells";
 import { useStudioStore } from "@/store";
 import { useNow } from "@/hooks/use-tick";
 import { STATUS_CONFIG } from "./constants";
+import { requestName } from "./request-name";
 
 import type { RequestEntry } from "@/store/types";
 
@@ -26,7 +27,7 @@ export function RequestRow({
   const showPreview = useStudioStore((s) => s.settings.showRequestPreview);
   const now = useNow();
   const status = STATUS_CONFIG[request.status];
-  const path = buildPath(request);
+  const path = requestName(request);
 
   return (
     <button
@@ -73,12 +74,4 @@ export function RequestRow({
       )}
     </button>
   );
-}
-
-function buildPath(r: RequestEntry): string {
-  const parts: string[] = [];
-  if (r.source) parts.push(r.source);
-  if (r.group) parts.push(r.group);
-  parts.push(r.method);
-  return parts.join(".");
 }

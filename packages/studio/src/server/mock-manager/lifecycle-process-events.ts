@@ -53,7 +53,9 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
         return;
       }
       log.error(`[${name}] failed: ${message}`);
-      /* A worker reports a thrown error with its stack, for the terminal; the UI shows why, not where. */
+      /* A message can run over several lines — a module that failed to load
+         lists its require stack — so the terminal gets it whole and the UI
+         the line that says why. */
       const [reason = message] = message.split("\n", 1);
       updateAndEmit(serverId, { status: "crashed", lastError: reason });
     },

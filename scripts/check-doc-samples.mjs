@@ -161,6 +161,8 @@ function addMissingImports(roots, exported) {
 /* Whether a problem is a sample leaving something out rather than getting the packages wrong. */
 function isOmission(code, text, sample) {
   if (code === 2307 && /'@noverax\//.test(text)) return false;
+  /* A listing shows the packages' own types: one no entry exports is not the reader's to leave out. */
+  if (sample.listing && (code === 2304 || code === 2552) && /name '[A-Z]/.test(text)) return false;
   if (OMITTED.has(code)) return true;
   if (code === 2339 && /type 'ImportMeta'/.test(text)) return true;
   if (PLATFORM.some((entry) => sample.page.endsWith(entry.page) && entry.text.test(text))) return true;

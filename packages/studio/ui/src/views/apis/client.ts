@@ -68,7 +68,8 @@ export function checkSourceUpdates(
 }
 
 export function checkAllUpdates(): Promise<{
-  results: Record<string, { changed: boolean; error?: string }>;
+  /** By import: whether it changed; why the check failed; or why it cannot be checked. */
+  results: Record<string, { changed: boolean; error?: string; unchecked?: string }>;
 }> {
   return post("/api/apis/imports/check-all");
 }

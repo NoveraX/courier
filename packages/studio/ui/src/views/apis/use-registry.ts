@@ -100,9 +100,9 @@ export function useRegistry(): UseRegistryReturn {
       const { results } = await checkAllUpdates();
       const next: Record<string, SourceStatusInfo> = {};
       for (const [name, result] of Object.entries(results)) {
-        next[name] = result.error
-          ? { status: "error", error: result.error }
-          : { status: result.changed ? "updates-available" : "up-to-date" };
+        if (result.error) next[name] = { status: "error", error: result.error };
+        else if (result.unchecked) next[name] = { status: "unchecked", error: result.unchecked };
+        else next[name] = { status: result.changed ? "updates-available" : "up-to-date" };
       }
       setStatuses(next);
     } catch (err) {

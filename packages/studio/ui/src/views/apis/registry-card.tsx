@@ -121,7 +121,7 @@ export function RegistryCard({
           />
 
           {statusCfg && (
-            <Badge variant={statusCfg.variant} className="border-0 text-[10px] ml-1">
+            <Badge variant={statusCfg.variant} className="border-0 text-[10px] ml-1" title={status?.error}>
               {isChecking && <Loader2 className="mr-1 size-2.5 animate-spin" />}
               {statusCfg.label}
             </Badge>

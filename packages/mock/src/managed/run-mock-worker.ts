@@ -142,7 +142,6 @@ function createServer(definition: MockServerDefinition, port: number): MockServe
     overrides: definition.overrides,
     scenarios: definition.scenarios,
     network: definition.network,
-    studio: false,
   });
 }
 

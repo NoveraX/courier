@@ -26,7 +26,7 @@ let server: MockServer;
 let url: string;
 
 beforeAll(async () => {
-  server = createAutoMockServer({ source: api, port: 0, log: false, studio: false, seed: { count: 3 } });
+  server = createAutoMockServer({ source: api, port: 0, log: false, seed: { count: 3 } });
   ({ url } = await server.start());
   await fetch(`${url}/__admin/scenarios/slow-network`, { method: "POST" });
 });

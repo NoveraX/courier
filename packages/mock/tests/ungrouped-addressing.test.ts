@@ -38,7 +38,6 @@ function serverFor(source: unknown) {
     source: source as never,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 3 },
   });
 }

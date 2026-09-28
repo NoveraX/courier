@@ -167,7 +167,6 @@ describe("auto-mock with mixed schema endpoints", () => {
     source: mixedApi,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 5 },
   });
 

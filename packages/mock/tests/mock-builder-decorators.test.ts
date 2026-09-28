@@ -41,7 +41,6 @@ async function serve(overrides: Parameters<typeof createAutoMockServer>[0]["over
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 2 },
     overrides,
   });

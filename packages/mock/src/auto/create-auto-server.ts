@@ -7,9 +7,8 @@ import { composeScenarios } from "./compose-scenarios";
 import type { SeedConfig } from "./prefix-mappings";
 import { buildPrefixMappings } from "./prefix-mappings";
 import { buildPresetScenarios } from "./preset-scenarios";
-import { analyzeRoutes, getSourceGroupNames } from "./route-analyzer";
+import { analyzeRoutes } from "./route-analyzer";
 import { seedOptionsOf } from "./seed-options";
-import { toRouteInfo, wrapStartWithStudio } from "./studio-bridge-wrap";
 
 // Re-export SeedConfig so external imports keep working unchanged.
 export type { SeedConfig } from "./prefix-mappings";
@@ -44,8 +43,6 @@ export interface AutoMockServerConfig {
   scenarios?: Record<string, AnyMockScenario>;
   /** Default network simulation (latency, errorRate, faultTypes) */
   network?: NetworkConfig;
-  /** Connect to Studio server (default: true) */
-  studio?: boolean | { host?: string; port?: number; name?: string };
 }
 
 /**
@@ -126,12 +123,6 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
   // one that answers anew (.resolves, .returns, ...) replaces it.
   if (config.overrides) {
     config.overrides(server.mock, server.store);
-  }
-
-  if (config.studio !== false) {
-    const groupNames = getSourceGroupNames(config.source);
-    const routeEntries = routes.map((r) => toRouteInfo(r, groupNames));
-    wrapStartWithStudio(server, config, routeEntries, routes, allScenarios, reseed);
   }
 
   return server;

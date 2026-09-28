@@ -59,7 +59,6 @@ async function serve() {
     source: petstore("http://placeholder.invalid"),
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 4, user: 2 },
   });
   running.push(server);
@@ -93,7 +92,7 @@ describe("seeding a group without a list endpoint", () => {
         health: defineGroup({ prefix: "/health", endpoints: { ping: endpoint.get("ping") } }),
       },
     });
-    const server = createAutoMockServer({ source: api, port: 0, log: false, studio: false });
+    const server = createAutoMockServer({ source: api, port: 0, log: false });
     running.push(server);
 
     expect(server.store.collection("health").count()).toBe(0);

@@ -88,7 +88,6 @@ describe("auto-mock server", () => {
     source: api,
     port: 0,
     log: false,
-    studio: false,
     seed: { count: 10, owners: { count: 5 }, pets: 15 },
     overrides: (mock) => {
       // Decorator-only: add headers without replacing handler

@@ -1,5 +1,5 @@
 import type { FilePlanSummary } from "./types-file-plan";
-import { KEPT_LABEL, WRITE_LABEL } from "./file-plan-labels";
+import { KEPT_LABEL, writeLabel } from "./file-plan-labels";
 import { FilePlanBlocked } from "./file-plan-blocked";
 import { FilePlanPending } from "./file-plan-pending";
 
@@ -51,9 +51,9 @@ function FileList({ title, rows }: { title: string; rows: Row[] }): React.ReactE
 export function FilePlanView({ plan, confirmed, onToggle }: FilePlanViewProps): React.ReactElement {
   const writes: Row[] = [];
   let unchanged = 0;
-  for (const { path, action } of plan.writes) {
+  for (const { path, action, was } of plan.writes) {
     if (action === "unchanged") unchanged += 1;
-    else writes.push({ path, note: WRITE_LABEL[action] });
+    else writes.push({ path, note: writeLabel(action, was) });
   }
   const removals = plan.removals.map(({ path }) => ({ path, note: "removed" }));
   const kept = plan.kept.map(({ path, reason }) => ({ path, note: KEPT_LABEL[reason] }));

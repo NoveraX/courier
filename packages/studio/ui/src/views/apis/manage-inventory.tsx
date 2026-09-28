@@ -37,7 +37,8 @@ export function ManageInventoryView({
         <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2">
           <AlertTriangle className="size-3.5 text-amber-400 shrink-0" />
           <p className="text-xs text-amber-300">
-            Spec has changed — {inventory.totalAvailable} new endpoints available
+            Spec has changed — {inventory.totalAvailable} new{" "}
+            {inventory.totalAvailable === 1 ? "endpoint" : "endpoints"} available
           </p>
         </div>
       )}

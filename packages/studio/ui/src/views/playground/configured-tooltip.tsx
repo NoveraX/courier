@@ -20,10 +20,13 @@ export function ConfiguredTooltip({
   transport,
   kind,
   appOrigin,
+  isDefault,
 }: {
   transport: "http" | "sse" | "ws";
   kind: "absolute" | "resolved" | "unresolved";
   appOrigin: string | undefined;
+  /** Whether the path is the transport's default, the source declaring none. */
+  isDefault: boolean;
 }): React.ReactElement {
   return (
     <div className="flex flex-col gap-1.5 leading-relaxed">
@@ -41,12 +44,12 @@ export function ConfiguredTooltip({
       {kind === "unresolved" && (
         <div>
           <span className="opacity-55">Mounted on your app — set </span>
-          <code className={CODE_PILL}>appOrigin</code>
-          <span className="opacity-55"> on instrumentServer to resolve the full URL</span>
+          <code className={CODE_PILL}>runtime.appOrigin</code>
+          <span className="opacity-55"> in courier.config, or COURIER_APP_URL, to resolve the full URL</span>
         </div>
       )}
       <div>
-        <span className="opacity-55">Configured in </span>
+        <span className="opacity-55">{isDefault ? "The default path — change it in " : "Configured in "}</span>
         <code className={CODE_PILL}>defineApi(&#123; proxyPath.{transport} &#125;)</code>
       </div>
     </div>

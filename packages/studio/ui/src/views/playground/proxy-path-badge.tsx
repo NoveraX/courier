@@ -54,8 +54,16 @@ function resolveDisplayUrl(
   return { display, kind: "resolved" };
 }
 
+/* The paths a proxy caller uses when a source declares none. A WebSocket
+   has no default: its calls fail until one is declared. */
+const DEFAULT_PATHS: Readonly<Partial<Record<Transport, string>>> = {
+  http: "/api/request",
+  sse: "/api/sse",
+};
+
 export function ProxyPathBadge({ transport, source }: ProxyPathBadgeProps): React.ReactElement {
-  const rawValue = source?.proxyPath?.[transport];
+  const declared = source?.proxyPath?.[transport];
+  const rawValue = declared ?? DEFAULT_PATHS[transport];
   if (!rawValue) return <NotConfiguredBadge transport={transport} />;
   const resolution = resolveDisplayUrl(transport, rawValue, source?.appOrigin);
   return (
@@ -64,6 +72,7 @@ export function ProxyPathBadge({ transport, source }: ProxyPathBadgeProps): Reac
       display={resolution.display}
       kind={resolution.kind}
       appOrigin={source?.appOrigin}
+      isDefault={!declared}
     />
   );
 }
@@ -73,11 +82,13 @@ function ConfiguredBadge({
   display,
   kind,
   appOrigin,
+  isDefault,
 }: {
   transport: Transport;
   display: string;
   kind: Resolution["kind"];
   appOrigin: string | undefined;
+  isDefault: boolean;
 }): React.ReactElement {
   const Icon = TRANSPORT_ICON[transport];
   const [copied, setCopied] = useState(false);
@@ -123,7 +134,12 @@ function ConfiguredBadge({
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" sideOffset={6} className="max-w-md px-3 py-2">
-        <ConfiguredTooltip transport={transport} kind={kind} appOrigin={appOrigin} />
+        <ConfiguredTooltip
+          transport={transport}
+          kind={kind}
+          appOrigin={appOrigin}
+          isDefault={isDefault}
+        />
       </TooltipContent>
     </Tooltip>
   );

@@ -119,6 +119,21 @@ function undisturbed(): void {
   expect(readdirSync(join(root.path, DIR)).sort()).toEqual(["index.ts", "old"]);
 }
 
+describe("applyFilePlan's report", () => {
+  it("names no backup folder when it replaced and removed nothing, since none was made", () => {
+    const plan = planFiles(
+      root,
+      { importName: "pets", dir: DIR, targets: [generated(`${DIR}/index.ts`, "new index\n")], removals: [] },
+      {},
+    );
+
+    const report = applyFilePlan(root, plan, () => {});
+
+    expect(report.backupDir).toBeUndefined();
+    expect(existsSync(join(root.path, ".courier/backups"))).toBe(false);
+  });
+});
+
 describe("applyFilePlan", () => {
   it("writes and removes, with Studio's header, and keeps a backup of what it replaced and removed", () => {
     const committed = vi.fn();
@@ -126,7 +141,7 @@ describe("applyFilePlan", () => {
     const report = applyFilePlan(root, scenario(), committed);
 
     expect(committed).toHaveBeenCalledOnce();
-    expect(committed).toHaveBeenCalledWith(report.backupDir.replace(".courier/backups/", ""));
+    expect(committed).toHaveBeenCalledWith(report.backupDir?.replace(".courier/backups/", ""));
     expect(readGeneratedFile(read(`${DIR}/index.ts`))).toEqual({
       header: { import: "pets", sha256: bodyHash("new index\n") },
       body: "new index\n",

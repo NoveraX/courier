@@ -13,7 +13,7 @@ import type { RequestEntry } from "../ui/src/store/types-request";
 
 type Event = Parameters<typeof applyEvents>[1][number];
 
-const OPTIONS = { maxRequests: 100, ignorePatterns: [] };
+const OPTIONS = { maxRequests: 100, ignorePatterns: [], paused: false };
 
 function started(): { requests: RequestEntry[] } {
   const start = {
@@ -88,7 +88,7 @@ describe("a failed request in the UI", () => {
     });
 
     expect(entry.status).toBe("validation_error");
-    expect(entry.error?.validationIssues).toEqual(issues);
+    expect(entry.error?.validationIssues).toEqual([{ message: "Too short", path: "name" }]);
   });
 
   it("records a cancelled request as aborted", () => {

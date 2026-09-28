@@ -84,7 +84,8 @@ export interface BindingStatusRow {
  * Wire-format payload for the `binding:snapshot` event.
  *
  * `runtimeCount` and `sourceCount` are server-authoritative so the status bar
- * never aggregates `rows[]` itself (race-prone against partial snapshots).
+ * never aggregates `rows[]` itself (race-prone against partial snapshots):
+ * the runtimes connected to Studio, and the sources they host.
  */
 export interface BindingSnapshot {
   rows: BindingStatusRow[]

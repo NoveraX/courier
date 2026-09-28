@@ -180,16 +180,23 @@ const { mutate } = q.files.useMutation("upload", {
 
 ## prefetchQuery
 
-Prefetch data in Server Components for instant hydration on the client:
+Prefetch data in Server Components for instant hydration on the client. On the server there is no page to resolve a relative `proxyPath` against, so a proxy caller cannot run there unless `proxyPath.http` is an absolute URL. Prefetch with a direct caller built from the definition instead — the server has it — and name the definition after the proxy's source, so both build the same keys:
+
+```ts title="lib/query.server.ts"
+import { createQueryCaller } from "@noverax/courier-react"
+import { api } from "@/api" // defineApi({ name: "api", ... })
+
+export const qServer = createQueryCaller(api)
+```
 
 ```ts title="app/users/page.tsx"
 import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/courier-react"
-import { q } from "@/lib/query"
+import { qServer } from "@/lib/query.server"
 
 export default async function UsersPage() {
   const queryClient = new QueryClient()
 
-  await q.users.prefetchQuery(queryClient, "getAll")
+  await qServer.users.prefetchQuery(queryClient, "getAll")
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

@@ -151,16 +151,34 @@ function Feed({ tag }: { tag: string }) {
 
 ### `prefetchQuery`
 
-Server-side prefetching for Next.js or SSR:
+Server-side prefetching for Next.js or SSR. On the server there is no page for a proxy caller to resolve a relative `proxyPath` against, so prefetch there with a direct caller built from the API definition, which the server has anyway:
 
 ```ts
-import { q } from "@/lib/query"
-import { QueryClient } from "@noverax/courier-react"
+// lib/query.server.ts — imported by server code only
+import { createQueryCaller } from "@noverax/courier-react"
+import { api } from "@/api/sources"
 
-const queryClient = new QueryClient()
-
-await q.users.prefetchQuery(queryClient, "getAll")
+export const qServer = createQueryCaller(api)
 ```
+
+```tsx
+// app/users/page.tsx — a Server Component
+import { dehydrate, HydrationBoundary, QueryClient } from "@noverax/courier-react"
+import { qServer } from "@/lib/query.server"
+
+export default async function UsersPage() {
+  const queryClient = new QueryClient()
+  await qServer.users.prefetchQuery(queryClient, "getAll")
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <Users />
+    </HydrationBoundary>
+  )
+}
+```
+
+The client's `q.users.useQuery("getAll")` then starts from the prefetched data, provided both callers build the same keys: give the definition the proxy's source name, `defineApi({ name: "api", … })` for `createProxyQueryCaller<typeof api>("api")` (see [Query Keys](#query-keys)). A proxy-mode `useSuspenseQuery` rendered on the server would fetch there as well, and fail for the same reason; prefetch its data like this and it hydrates instead. A proxy caller can run on the server only with an absolute `proxyPath.http`.
 
 No module of the package is marked `"use client"`, so a React Server Component can create a caller, prefetch, build keys and use `QueryClient`, `dehydrate` and `HydrationBoundary` from it. The hooks themselves run in Client Components.
 
@@ -168,7 +186,7 @@ No module of the package is marked `"use client"`, so a React Server Component c
 
 ## Query Keys
 
-Keys are generated hierarchically: `[source, group, method, variables?]`:
+Keys are generated hierarchically: `[source, group, method, variables?]`. `source` is the name the caller was made for: the first argument of `createProxyQueryCaller`, and for `createQueryCaller(api)` the API's own name — its `defineApi({ name })`, or else the first label of its `baseURL` host (`https://api.example.com` → `"api"`, `http://127.0.0.1:4000` → `"127"`). Name the API explicitly when a direct and a proxy caller must share a cache.
 
 ```ts
 q.users.useQuery("getAll")                             // → ["api", "users", "getAll"]

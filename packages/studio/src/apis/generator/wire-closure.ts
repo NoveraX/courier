@@ -11,73 +11,85 @@
  */
 
 import { toInternalMethod } from "@noverax/courier";
-import { isReservedBinding } from "../parser/reserved-bindings";
-import type { ParsedEndpoint, ParsedParameter } from "../parser/types";
-import { objectKey } from "./literals";
-
-const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-
-/* Bound by the closure itself, or not bindable in a module. */
-const TAKEN = new Set(["http", "body", "arguments", "eval"]);
+import type { ParsedEndpoint } from "../parser/types";
+import { formClosure } from "./form-closure";
+import { bodyKey, type RequestBodyKind } from "./request-body";
+import { destructure } from "./variable-bindings";
 
 /**
  * The closure an endpoint needs, when its verb cannot place its variables.
  *
  * @param ep - The endpoint
  * @param path - Its path within the group, as the addressed form writes it
+ * @param kind - The kind of body it sends
  * @returns The closure's source, or `null` when the verb places everything
  * @example
  * ```ts
- * wireClosure(replaceItem, "items/:item_id");
+ * wireClosure(replaceItem, "items/:item_id", "fields");
  * // '(http, { dryRun, ...body }) => http.put("items/:item_id", body, { searchParams: { dryRun } })'
  * ```
  */
-export function wireClosure(ep: ParsedEndpoint, path: string): string | null {
+export function wireClosure(
+  ep: ParsedEndpoint,
+  path: string,
+  kind: RequestBodyKind,
+): string | null {
   const method = toInternalMethod(ep.httpMethod);
-  const query = ep.parameters.filter((param) => param.in === "query");
+  if (method !== "post" && method !== "put" && method !== "patch" && method !== "del") return null;
   const at = JSON.stringify(path);
+  const params = ep.parameters.filter((param) => param.in === "path" || param.in === "query");
+  const query = params.filter((param) => param.in === "query");
 
-  if ((method === "post" || method === "put" || method === "patch") && query.length > 0) {
-    const { pattern, searchParams } = destructure(query, []);
-    /* The path is filled from every variable, whatever the closure passes. */
-    if (!ep.requestBody) {
-      return `(http, { ${pattern} }) => http.${method}(${at}, undefined, { searchParams: ${searchParams} })`;
-    }
-    return `(http, { ${pattern}, ...body }) => http.${method}(${at}, body, { searchParams: ${searchParams} })`;
-  }
-  if (method === "del" && ep.requestBody) {
+  if (kind === "form") return formClosure(method, at, params);
+  if (kind === "value" || kind === "bytes") return wholeBodyClosure(ep, method, at, kind);
+  if (method === "del") {
+    if (kind === "none") return null;
     /* A body named in the options is sent as it is, so the path parameters
        are taken out of it here. */
-    const pathParams = ep.parameters.filter((param) => param.in === "path");
-    const { pattern, searchParams } = destructure(query, pathParams);
-    const options = query.length > 0 ? `json: body, searchParams: ${searchParams}` : "json: body";
+    const { pattern, searchParams } = destructure(
+      query,
+      params.filter((p) => p.in === "path"),
+    );
     const rest = pattern ? `${pattern}, ...body` : "...body";
-    return `(http, { ${rest} }) => http.del(${at}, undefined, { ${options} })`;
+    return `(http, { ${rest} }) => http.del(${at}, undefined, { ${withQuery("json: body", searchParams)} })`;
   }
-  return null;
+  const { pattern, searchParams } = destructure(query, []);
+  if (searchParams === null) return null;
+  /* The path is filled from every variable, whatever the closure passes. */
+  if (kind === "none") {
+    return `(http, { ${pattern} }) => http.${method}(${at}, undefined, { searchParams: ${searchParams} })`;
+  }
+  return `(http, { ${pattern}, ...body }) => http.${method}(${at}, body, { searchParams: ${searchParams} })`;
 }
 
 /**
- * Take parameters out of the variables: the query parameters, to be sent
- * in the query string, and the ones only to be left out of the body. A name
- * that cannot be bound as it is — `page-size`, `class`, `body` — is taken
- * under a local name of its own.
+ * A body sent whole — a list or a scalar as JSON, bytes as they are. Beside
+ * parameters it is passed under a key of its own, so it has to be taken out
+ * of the variables; alone, it is the variables, which only a DELETE, sending
+ * its variables as a query, cannot send as they are.
  */
-function destructure(
-  query: readonly ParsedParameter[],
-  omitted: readonly ParsedParameter[],
-): { pattern: string; searchParams: string } {
-  const pattern: string[] = [];
-  const fields: string[] = [];
-  [...query, ...omitted].forEach((param, index) => {
-    const local = bindable(param.name) ? param.name : `param${index}`;
-    const binding = local === param.name ? local : `${objectKey(param.name)}: ${local}`;
-    pattern.push(binding);
-    if (index < query.length) fields.push(binding);
-  });
-  return { pattern: pattern.join(", "), searchParams: `{ ${fields.join(", ")} }` };
+function wholeBodyClosure(
+  ep: ParsedEndpoint,
+  method: string,
+  at: string,
+  kind: "value" | "bytes",
+): string | null {
+  const option = kind === "bytes" ? "body" : "json";
+  if (!ep.parameters.some((param) => param.in === "path" || param.in === "query")) {
+    return method === "del"
+      ? `(http, body) => http.del(${at}, undefined, { ${option}: body })`
+      : null;
+  }
+  const key = bodyKey(ep);
+  const { pattern, searchParams } = destructure(
+    ep.parameters.filter((param) => param.in === "query"),
+    [],
+  );
+  const bindings = pattern ? `${pattern}, ${key}` : key;
+  const options = withQuery(`${option}: ${key}`, searchParams);
+  return `(http, { ${bindings} }) => http.${method}(${at}, undefined, { ${options} })`;
 }
 
-function bindable(name: string): boolean {
-  return IDENTIFIER.test(name) && !isReservedBinding(name) && !TAKEN.has(name);
+function withQuery(body: string, searchParams: string | null): string {
+  return searchParams === null ? body : `${body}, searchParams: ${searchParams}`;
 }

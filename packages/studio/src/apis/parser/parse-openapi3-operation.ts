@@ -101,11 +101,16 @@ function parseRequestBody(
      only `application/json` dropped all 594 and all 62 of them. Which of the
      two a body is sent as is kept beside its schema. */
   const media = firstSchemaIn(body?.content);
-  if (!media) return { requestBody: null };
-  return {
-    requestBody: convertSchemaInline(media.schema, spec),
-    requestBodyMediaType: media.mediaType,
-  };
+  if (media) {
+    return {
+      requestBody: convertSchemaInline(media.schema, spec),
+      requestBodyMediaType: media.mediaType,
+    };
+  }
+  /* Bytes are often sent with no schema at all; they are still a body. */
+  const bytes = schemalessMediaType(body?.content);
+  if (bytes === undefined) return { requestBody: null };
+  return { requestBody: { name: "Body", type: "any" }, requestBodyMediaType: bytes };
 }
 
 /** Media types that carry a JSON schema, in the order worth preferring. */
@@ -120,6 +125,13 @@ function firstSchemaIn(
     if (schema) return { mediaType, schema };
   }
   return undefined;
+}
+
+/** The first media type a body declares with no schema, unless it is JSON. */
+function schemalessMediaType(content: SpecNode | undefined): string | undefined {
+  if (!content || typeof content !== "object") return undefined;
+  const [first] = Object.keys(content);
+  return first === undefined || /json/i.test(first) ? undefined : first;
 }
 
 function parseResponseSchema(op: SpecNode, spec: SpecNode): ParsedSchema | null {

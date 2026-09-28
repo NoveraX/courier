@@ -11,6 +11,7 @@
 import { ownValue } from "../own-value";
 import type { ParsedSchema, ParsedSpec } from "../parser/types";
 import { emitsSchemas } from "./build-endpoint-helpers";
+import { findCyclicSchemas } from "./cyclic-schemas";
 import type { TypeStyle } from "./inline-types";
 import type { ResolvedGenerateOptions } from "./types";
 
@@ -30,6 +31,11 @@ export interface EndpointContext {
   readonly options: ResolvedGenerateOptions;
   /** Every schema the module beside the file declares, by name. */
   readonly declared: Readonly<Record<string, ParsedSchema>>;
+  /**
+   * The declared schemas that are written lazily, being on a reference
+   * cycle: typed as a plain schema, they cannot be extended.
+   */
+  readonly lazy: ReadonlySet<string>;
   readonly uses: EndpointUses;
 }
 
@@ -54,6 +60,7 @@ export function endpointContext(
     spec,
     options,
     declared,
+    lazy: emitsSchemas(options) ? findCyclicSchemas(declared) : new Set(),
     uses: { values: new Set(), types: new Set(), validator: false },
   };
 }
@@ -107,10 +114,26 @@ export function typeName(context: EndpointContext, name: string): string | null 
  * ```
  */
 export function schemaConstant(context: EndpointContext, name: string): string | null {
-  if (!emitsSchemas(context.options) || !declares(context, name)) return null;
+  if (!hasSchemaConstant(context, name)) return null;
   const constant = `${name}Schema`;
   context.uses.values.add(constant);
   return constant;
+}
+
+/**
+ * Whether the module beside the file declares a constant validating a named
+ * schema, without recording it as used.
+ *
+ * @param context - The file being written
+ * @param name - The schema's name
+ * @returns Whether `<name>Schema` can be imported
+ * @example
+ * ```ts
+ * hasSchemaConstant(context, "Pet"); // true with a validator, false with validation "none"
+ * ```
+ */
+export function hasSchemaConstant(context: EndpointContext, name: string): boolean {
+  return emitsSchemas(context.options) && declares(context, name);
 }
 
 function declares(context: EndpointContext, name: string): boolean {

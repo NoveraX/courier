@@ -2,12 +2,14 @@
  * TypeScript types for an endpoint's variables and response.
  */
 
+import { ownValue } from "../own-value";
 import type { ParsedEndpoint, ParsedSchemaProperty } from "../parser/types";
 import { type EndpointContext, endpointTypeStyle } from "./endpoint-context";
 import { propertyType, schemaToTsType, type TypeStyle } from "./inline-types";
 import { jsdocText } from "./jsdoc-text";
 import { objectKey } from "./literals";
 import { parameterProperty } from "./parameter-property";
+import { bodyKey, requestBodyKind } from "./request-body";
 
 /**
  * The type an endpoint answers with.
@@ -45,30 +47,38 @@ export function resolveVariablesType(ep: ParsedEndpoint, context: EndpointContex
       .map((param) => field(param.name, parameterProperty(param), context, style)),
   );
 
-  if (ep.requestBody?.type === "ref" && ep.requestBody.refName) {
-    /* Without a types file there is no name to refer to, so the body's shape
-       is written out where it is used. */
-    const body = context.options.generateTypes
-      ? schemaToTsType(ep.requestBody, style)
-      : inlineShape(context, ep.requestBody.refName, style);
-    return parts.length > 0 ? `${body} & { ${parts.join("; ")} }` : body;
+  const kind = requestBodyKind(ep, context.spec);
+  /* A form's entries fill the path, so the form is the whole of it. */
+  if (kind === "form") return "FormData";
+  if (kind === "value" || kind === "bytes") {
+    const body = kind === "bytes" ? "Blob" : bodyType(ep, context, style);
+    if (parts.length === 0) return body;
+    return `{ ${[...parts, `${objectKey(bodyKey(ep))}: ${body}`].join("; ")} }`;
   }
-
-  if (ep.requestBody?.type === "object" && ep.requestBody.properties) {
-    parts.push(...fields(ep.requestBody.properties, context, style));
+  if (kind === "fields" && ep.requestBody?.type !== "object") {
+    const body = bodyType(ep, context, style);
+    const grouped = body.includes("|") ? `(${body})` : body;
+    return parts.length > 0 ? `${grouped} & { ${parts.join("; ")} }` : body;
   }
+  if (kind === "fields") parts.push(...fields(ep.requestBody?.properties ?? {}, context, style));
 
   return parts.length === 0 ? null : `{ ${parts.join("; ")} }`;
 }
 
 /**
- * Write a referenced schema out as an object type.
- *
- * Used where no types file is generated, so there is no name to refer to.
+ * The type of an endpoint's body. Without a types file there is no name to
+ * refer to, so a named schema is written out where it is used.
  */
-function inlineShape(context: EndpointContext, refName: string, style: TypeStyle): string {
-  const properties = context.spec.schemas[refName]?.properties ?? {};
-  const parts = fields(properties, context, style);
+function bodyType(ep: ParsedEndpoint, context: EndpointContext, style: TypeStyle): string {
+  const body = ep.requestBody;
+  if (!body) return "undefined";
+  if (context.options.generateTypes || body.type !== "ref" || !body.refName) {
+    return schemaToTsType(body, style);
+  }
+  const target = ownValue(context.spec.schemas, body.refName);
+  if (!target) return "unknown";
+  if (target.type !== "object") return schemaToTsType(target, style);
+  const parts = fields(target.properties ?? {}, context, style);
   return parts.length > 0 ? `{ ${parts.join("; ")} }` : "Record<string, unknown>";
 }
 

@@ -8,6 +8,11 @@ import { buildEndpointDefinition } from "./build-endpoint";
 import type { EndpointContext } from "./endpoint-context";
 import { jsdocText } from "./jsdoc-text";
 import { objectKey } from "./literals";
+import { requestBodyKind } from "./request-body";
+
+/* Said of an endpoint taking bytes, which only a direct caller can send. */
+const BYTES_NOTE =
+  "Sends the Blob as the body, as it is. The proxy carries JSON and FormData only, so call it from a direct caller.";
 
 /**
  * Write one line per endpoint, each after its description when comments are
@@ -31,10 +36,18 @@ export function endpointEntries(
 ): string[] {
   const lines: string[] = [];
   for (const ep of endpoints) {
-    if (context.options.includeComments && ep.description) {
-      lines.push(`    /** ${jsdocText(ep.description)} */`);
-    }
+    const doc = context.options.includeComments ? comment(ep, context) : "";
+    if (doc) lines.push(`    /** ${jsdocText(doc)} */`);
     lines.push(`    ${objectKey(ep.name)}: ${buildEndpointDefinition(ep, context, extracted)},`);
   }
   return lines;
+}
+
+/**
+ * What an endpoint's comment says: its description, and for a body of bytes
+ * that the proxy cannot carry them.
+ */
+function comment(ep: ParsedEndpoint, context: EndpointContext): string {
+  if (requestBodyKind(ep, context.spec) !== "bytes") return ep.description;
+  return [ep.description, BYTES_NOTE].filter(Boolean).join(" — ");
 }

@@ -120,7 +120,7 @@ describe("a schema on a reference cycle", () => {
     const out = schemasFor(CUSTOMER_AND_ACCOUNT);
 
     expect(out).toContain("z.lazy(");
-    expect(out).toMatch(/export const CustomerSchema: z\.ZodType<Customer> = z\.lazy/);
+    expect(out).toMatch(/export const CustomerSchema: z\.ZodType<Customer, Customer> = z\.lazy/);
   });
 
   it("still declares a schema that is not on the cycle eagerly", () => {
@@ -140,7 +140,7 @@ describe("a schema on a reference cycle", () => {
     });
 
     expect(out).toMatch(/export const PlainSchema = z\.object/);
-    expect(out).toMatch(/export const CustomerSchema: z\.ZodType<Customer> = z\.lazy/);
+    expect(out).toMatch(/export const CustomerSchema: z\.ZodType<Customer, Customer> = z\.lazy/);
   });
 
   it("would otherwise be read before its declaration", () => {

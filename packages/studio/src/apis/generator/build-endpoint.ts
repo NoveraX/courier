@@ -5,10 +5,22 @@
 import { toInternalMethod } from "@noverax/courier";
 import type { ParsedEndpoint, ParsedSchema } from "../parser/types";
 import { convertPathParams } from "../parser/utils";
-import { buildEndpointChain } from "./build-endpoint-helpers";
-import { type EndpointContext, schemaConstant, typeName } from "./endpoint-context";
+import { buildEndpointChain, emitsSchemas } from "./build-endpoint-helpers";
+import {
+  type EndpointContext,
+  hasSchemaConstant,
+  schemaConstant,
+  typeName,
+} from "./endpoint-context";
 import { resolveResponseType, resolveVariablesType } from "./endpoint-types";
-import { extendSchemaWithParams, getSchemaRefName } from "./schema-utils";
+import { bodyKey, requestBodyKind } from "./request-body";
+import { collectRefsDeep } from "./schema-refs";
+import {
+  extendSchemaWithParams,
+  getSchemaRefName,
+  objectWithBody,
+  schemaToValidation,
+} from "./schema-utils";
 import { wireClosure } from "./wire-closure";
 
 /**
@@ -33,7 +45,7 @@ export function buildEndpointDefinition(
   const path = endpointPath(ep);
   return buildEndpointChain({
     address: `endpoint.${toInternalMethod(ep.httpMethod)}(${JSON.stringify(path)})`,
-    closure: wireClosure(ep, path),
+    closure: wireClosure(ep, path, requestBodyKind(ep, context.spec)),
     variablesSchema: variables,
     variablesType: variables
       ? null
@@ -70,24 +82,61 @@ function responseSchema(ep: ParsedEndpoint, context: EndpointContext): string | 
   return constant ? listOf(constant, ep.responseSchema, context) : null;
 }
 
+/**
+ * The schema validating what the endpoint is called with, when its body has
+ * one: a named object's, extended with the parameters, or that of a list or
+ * a scalar, beside them under its own key. A form, bytes and fields written
+ * inline are typed without one.
+ */
 function variablesSchema(ep: ParsedEndpoint, context: EndpointContext): string | null {
-  const ref = getSchemaRefName(ep.requestBody);
-  const constant = ref ? schemaConstant(context, ref) : null;
-  if (!ref || !constant) return null;
+  const kind = requestBodyKind(ep, context.spec);
+  if (kind !== "fields" && kind !== "value") return null;
+  const body = bodySchema(ep, context);
+  if (!body) return null;
 
-  const body = listOf(constant, ep.requestBody, context);
   /* The query parameters belong to the variables as much as the path's do:
      left out, zod and valibot stripped them before the call was made. */
   const params = (["path", "query"] as const).flatMap((place) =>
     ep.parameters.filter((param) => param.in === place),
   );
   if (params.length === 0) return body;
-
-  /* Only an object can be extended; a list or a set of alternatives has to be
-     intersected with the parameters instead. */
-  const isObject = ep.requestBody?.type !== "array" && context.spec.schemas[ref]?.type !== "union";
   context.uses.validator = true;
-  return extendSchemaWithParams(body, params, context.options, isObject);
+  if (kind === "value") return objectWithBody(body, params, bodyKey(ep), context.options);
+  return extendSchemaWithParams(body, params, context.options, extendable(ep, context));
+}
+
+/** The body's own schema, when every schema it names is declared. */
+function bodySchema(ep: ParsedEndpoint, context: EndpointContext): string | null {
+  const ref = getSchemaRefName(ep.requestBody);
+  if (ref) {
+    const constant = schemaConstant(context, ref);
+    return constant ? listOf(constant, ep.requestBody, context) : null;
+  }
+  const inline = ep.requestBody;
+  if (!emitsSchemas(context.options) || !inline || inline.type === "object") return null;
+  if (!bodyNamesDeclared(ep, context)) return null;
+  context.uses.validator = true;
+  return schemaToValidation(inline, context.options);
+}
+
+function bodyNamesDeclared(ep: ParsedEndpoint, context: EndpointContext): boolean {
+  const names = new Set<string>();
+  collectRefsDeep(ep.requestBody, names);
+  if (![...names].every((name) => hasSchemaConstant(context, name))) return false;
+  for (const name of names) schemaConstant(context, name);
+  return true;
+}
+
+/**
+ * Whether a named body's schema is an object that can be extended. One of
+ * several shapes, or one written lazily because it is on a reference cycle,
+ * is intersected with the parameters instead.
+ */
+function extendable(ep: ParsedEndpoint, context: EndpointContext): boolean {
+  const ref = ep.requestBody?.refName;
+  return (
+    ref !== undefined && !context.lazy.has(ref) && context.spec.schemas[ref]?.type === "object"
+  );
 }
 
 /**

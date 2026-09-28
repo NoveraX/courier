@@ -10,6 +10,7 @@ import type {
   ParsedSchemaProperty,
 } from "../parser/types";
 import { parameterProperty } from "./parameter-property";
+import { bodyMedia } from "./request-body";
 
 export interface ExtractedTypes {
   /** Modified group with response refs instead of inline schemas */
@@ -63,7 +64,9 @@ function shouldExtractResponse(schema: ParsedSchema | null): boolean {
  * this way could no longer be called with the body it requires.
  */
 function buildParamsSchema(ep: ParsedEndpoint): ParsedSchema | null {
-  if (ep.requestBody?.type === "ref") return null;
+  /* A body that is not an object's fields written inline — a named schema,
+     a list, a form, bytes — sits beside the parameters in its own way. */
+  if (ep.requestBody && !inlineFields(ep)) return null;
   const params = ep.parameters.filter((p) => p.in === "path" || p.in === "query");
   if (params.length < 2 && !params.some((p) => p.description)) return null;
 
@@ -78,6 +81,13 @@ function buildParamsSchema(ep: ParsedEndpoint): ParsedSchema | null {
 
   const required = Object.keys(properties).filter((name) => properties[name]?.required);
   return { name: "", type: "object", properties, required };
+}
+
+/** Whether the body is JSON fields written inline in the specification. */
+function inlineFields(ep: ParsedEndpoint): boolean {
+  const body = ep.requestBody;
+  if (body?.type !== "object" || Object.keys(body.properties ?? {}).length === 0) return false;
+  return bodyMedia(ep) === "structured";
 }
 
 function toPascalCase(name: string): string {

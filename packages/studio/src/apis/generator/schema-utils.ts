@@ -24,7 +24,10 @@ export function satisfiesExpr(typeName: string, options: GeneratorSettings): str
  * A value cannot read a constant declared below it, so a schema on a
  * reference cycle is wrapped in the validator's `lazy` and given an explicit
  * annotation — without one the compiler cannot infer a type that mentions
- * itself. Stripe's treasury objects need this in both directions.
+ * itself. Stripe's treasury objects need this in both directions. The
+ * annotation names the type as what the schema accepts as well as what it
+ * produces: left to `unknown` or `any`, the variables of an endpoint taking
+ * such a body were typed as nothing but its parameters.
  *
  * @param name - Schema name, without the `Schema` suffix
  * @param body - The validator expression as it would be written eagerly
@@ -40,11 +43,11 @@ export function lazyDeclaration(
   options: GeneratorSettings,
 ): string | undefined {
   if (options.validation === "zod") {
-    const annotation = typeName ? `z.ZodType<${typeName}>` : "z.ZodType<unknown>";
+    const annotation = typeName ? `z.ZodType<${typeName}, ${typeName}>` : "z.ZodType<unknown>";
     return `export const ${name}Schema: ${annotation} = z.lazy(() => ${body});`;
   }
   if (options.validation === "valibot") {
-    const annotation = typeName ? `v.GenericSchema<any, ${typeName}>` : "v.GenericSchema";
+    const annotation = typeName ? `v.GenericSchema<${typeName}, ${typeName}>` : "v.GenericSchema";
     return `export const ${name}Schema: ${annotation} = v.lazy(() => ${body});`;
   }
   return undefined;
@@ -105,6 +108,37 @@ export function extendSchemaWithParams(
   }
   if (options.validation === "arktype") return `${schemaExpr}.and({ ${fields} })`;
   return schemaExpr;
+}
+
+/**
+ * The schema of variables holding the parameters and, under a key of its
+ * own, a body that is not a set of fields: a list, a scalar.
+ *
+ * @param bodyExpr - The body's schema
+ * @param params - The parameters beside it
+ * @param key - The key the body takes
+ * @param options - Generation options, read for the validation library
+ * @returns The schema of the variables
+ * @example
+ * ```ts
+ * objectWithBody("z.array(TagSchema)", [itemId], "body", { validation: "zod" });
+ * // "z.object({ item_id: z.number(), body: z.array(TagSchema) })"
+ * ```
+ */
+export function objectWithBody(
+  bodyExpr: string,
+  params: readonly ParsedParameter[],
+  key: string,
+  options: GeneratorSettings,
+): string {
+  const fields = params.map((param) => parameterField(param, options));
+  if (options.validation === "zod") {
+    return `z.object({ ${[...fields, `${objectKey(key)}: ${bodyExpr}`].join(", ")} })`;
+  }
+  if (options.validation === "valibot") {
+    return `v.object({ ${[...fields, `${objectKey(key)}: ${bodyExpr}`].join(", ")} })`;
+  }
+  return `type({ ${[...fields, `${jsLiteral(key)}: ${bodyExpr}`].join(", ")} })`;
 }
 
 /**

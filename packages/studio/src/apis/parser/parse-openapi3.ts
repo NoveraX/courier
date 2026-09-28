@@ -3,18 +3,15 @@
  */
 
 import { isOperationKey, isSupportedMethod } from "./http-methods";
+import { buildGroups } from "./openapi-groups";
 import { parseOpenApi3Operation } from "./parse-openapi3-operation";
-import type { ParsedEndpoint, ParsedGroup, ParsedSpec, SkippedOperation, SpecNode } from "./types";
-import { uniqueEndpointNames } from "./unique-endpoint-names";
+import type { ParsedEndpoint, ParsedSpec, SkippedOperation, SpecNode } from "./types";
 import {
-  convertPathParams,
   convertSchema,
-  findCommonPrefix,
   parseSecuritySchemes,
   specText,
   stripHtml,
   stripHtmlPreserveNewlines,
-  toBindingName,
   toSafeIdentifier,
 } from "./utils";
 
@@ -140,45 +137,4 @@ function parseTagDescriptions(spec: SpecNode): Map<string, string> {
     }
   }
   return tagDescriptions;
-}
-
-function buildGroups(
-  endpointsByTag: Map<string, ParsedEndpoint[]>,
-  tagDescriptions: Map<string, string>,
-): ParsedGroup[] {
-  const groups: ParsedGroup[] = [];
-  const usedNames = new Set<string>();
-
-  for (const [tag, endpoints] of endpointsByTag) {
-    const prefix = findCommonPrefix(endpoints.map((e) => e.fullPath));
-    const name = deduplicateName(resolveGroupName(tag, prefix), usedNames);
-    usedNames.add(name);
-
-    groups.push({
-      name,
-      description: tagDescriptions.get(tag) ?? "",
-      /* The URL the caller builds uses `:name`; leaving the specification's
-         braces in put a literal `{AccountSid}` into the request. */
-      prefix: convertPathParams(prefix),
-      endpoints: uniqueEndpointNames(endpoints, prefix).map((e) => ({
-        ...e,
-        path: convertPathParams(e.fullPath.slice(prefix.length) || "/"),
-      })),
-    });
-  }
-  return groups;
-}
-
-function resolveGroupName(tag: string, prefix: string): string {
-  const name = toBindingName(tag);
-  if (name) return name;
-  const lastSegment = prefix.split("/").filter(Boolean).pop();
-  return lastSegment ? toBindingName(lastSegment) : "defaultGroup";
-}
-
-function deduplicateName(name: string, usedNames: Set<string>): string {
-  if (!usedNames.has(name)) return name;
-  let i = 2;
-  while (usedNames.has(`${name}${i}`)) i++;
-  return `${name}${i}`;
 }

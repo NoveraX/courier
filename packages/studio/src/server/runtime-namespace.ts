@@ -21,6 +21,7 @@ import { attributeEvent } from "./attribute-event";
 import { broadcastRuntimeEvent } from "./broadcast-runtime-event";
 import type { BindingTable } from "./catalog/binding-table";
 import type { ConfigSourceNamer } from "./catalog/config-source-names";
+import { emitLiveEvent } from "./live-events";
 import { isRecord } from "./mocks-edit/is-record";
 import type { RequestLog } from "./request-log";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
@@ -108,7 +109,8 @@ function handleRuntimeEvent(
  * dropped — so the UI would show them pending for good.
  */
 function endOpenRequests(socket: Socket, deps: SetupRuntimeNamespaceDeps): void {
+  if (!deps.uiNamespace) return;
   for (const event of deps.requestLog?.endOpen(socket.id) ?? []) {
-    deps.uiNamespace?.emit("event", event);
+    emitLiveEvent(deps.uiNamespace, event);
   }
 }

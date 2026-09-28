@@ -1,10 +1,12 @@
 import type { Namespace } from "socket.io";
+
+import { emitLiveEvent } from "../live-events";
 import type { ServerState } from "./types";
 
 /** Create a helper that emits mock events to the UI namespace */
 export function createUiEmitter(uiNamespace: Namespace) {
   const emit = (type: string, data: Record<string, unknown>) => {
-    uiNamespace.emit("event", {
+    emitLiveEvent(uiNamespace, {
       id: `managed_${Date.now().toString(36)}`,
       type,
       timestamp: Date.now(),

@@ -47,10 +47,19 @@ export interface RequestErrorEvent extends StudioEvent {
   type: "request:error";
   requestId: string;
   error: {
-    type: "http" | "validation" | "network" | "unknown";
+    type: "http" | "validation" | "network" | "timeout" | "aborted" | "unknown";
+    /** The upstream's status, when it answered. */
     status?: number;
     message: string;
   };
+  /** The status the caller received, when it received one — a proxy's own 422 or 502. */
+  status?: number;
+  /** The upstream's response headers, when it answered. */
+  headers?: Record<string, string>;
+  /** The upstream's error body, when it answered. */
+  data?: unknown;
+  /** How long the request took before it failed. */
+  timing?: RequestTiming;
 }
 
 export interface ProxyClientTimingEvent extends StudioEvent {

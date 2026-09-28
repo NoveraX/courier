@@ -71,6 +71,11 @@ export function handleRequestEnd(state: State, event: EventPayload): { requests:
   }
 }
 
+/**
+ * A request that failed keeps what its caller received — the proxy's own
+ * status where the upstream gave none — the upstream's headers and error
+ * body, and how long it ran. Issues a `validation:fail` recorded stay with it.
+ */
 export function handleRequestError(state: State, event: EventPayload): { requests: RequestEntry[] } {
   const requestId = str(event.requestId)
   const rawError = event.error as Record<string, unknown> | undefined
@@ -83,25 +88,32 @@ export function handleRequestError(state: State, event: EventPayload): { request
           (rawError.validationIssues as ValidationIssue[] | undefined) ?? undefined,
       }
     : undefined
-  const errorStatus: RequestStatus =
-    errorData?.type === "ValidationError"
-      ? "validation_error"
-      : errorData?.type === "AbortError"
-        ? "aborted"
-        : "error"
+  const errorStatus = failureStatus(errorData?.type)
   return {
     requests: state.requests.map((r) =>
       r.id === requestId
         ? {
             ...r,
             status: errorStatus,
-            error: errorData,
-            statusCode: errorData?.status ?? r.statusCode,
+            error: errorData && {
+              ...errorData,
+              validationIssues: errorData.validationIssues ?? r.error?.validationIssues,
+            },
+            statusCode: optNum(event.status) ?? errorData?.status ?? r.statusCode,
             timing: (event.timing as RequestTiming | undefined) ?? r.timing,
+            headers: (event.headers as Record<string, string> | undefined) ?? r.headers,
+            data: event.data !== undefined ? event.data : r.data,
           }
         : r
     ),
   }
+}
+
+/* The runtime names failures in lower case; the older capitalised names stay understood. */
+function failureStatus(type: string | undefined): RequestStatus {
+  if (type === "validation" || type === "ValidationError") return "validation_error"
+  if (type === "aborted" || type === "AbortError") return "aborted"
+  return "error"
 }
 
 export function handleProxyClientTiming(state: State, event: EventPayload): { requests: RequestEntry[] } {

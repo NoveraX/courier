@@ -5,6 +5,9 @@ import type {
   RequestLifecycleHooks,
   ValidationHooks,
 } from "./hooks-request";
+
+export type { RequestFailureKind } from "./hooks-request";
+
 import type { SourceDefinedHooks, StreamHooks, WSPlaygroundHooks } from "./hooks-stream";
 
 /**

@@ -1,4 +1,4 @@
-export type { StudioHooks } from "./hooks";
+export type { RequestFailureKind, StudioHooks } from "./hooks";
 export {
   abortPlayground,
   clearPlaygroundAbortRegistry,

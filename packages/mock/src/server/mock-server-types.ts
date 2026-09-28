@@ -86,7 +86,7 @@ export interface MockServer {
   readonly scenarioState: string;
   /** All registered scenarios by name */
   scenarios: Record<string, AnyMockScenario>;
-  /** Request lifecycle hooks — set by studio bridge to emit events */
+  /** Request lifecycle hooks — the worker Studio runs a mock in sets them to report each request */
   requestHooks: RequestHooks;
   /** Dynamic network simulation state — use for runtime config changes */
   networkState: NetworkState;

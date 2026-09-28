@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useSpring, useMotionValueEvent } from "motion/react";
 
+import { displayedCount } from "@/lib/displayed-count";
 import { cn } from "@/lib/utils";
 
 interface AnimatedCounterProps {
@@ -15,7 +16,8 @@ export function AnimatedCounter({
   format = defaultFormat,
 }: AnimatedCounterProps): React.ReactElement {
   const ref = useRef<HTMLSpanElement>(null);
-  const spring = useSpring(0, { stiffness: 120, damping: 20, mass: 1 });
+  /* Critically damped: a count that falls to 0 never passes below it on the way. */
+  const spring = useSpring(0, { stiffness: 120, damping: 22, mass: 1 });
 
   useEffect(() => {
     spring.set(value);
@@ -23,7 +25,7 @@ export function AnimatedCounter({
 
   useMotionValueEvent(spring, "change", (latest) => {
     if (ref.current) {
-      ref.current.textContent = format(Math.round(latest));
+      ref.current.textContent = format(displayedCount(latest));
     }
   });
 

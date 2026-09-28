@@ -7,7 +7,8 @@
  *  - `runtime:announce` for every queued + future `announceHosting` entry
  *  - `event` forwarding from the local `EventBus` (request/middleware/
  *    validation/stream/proxy/cache/dedup/upload telemetry) so the Studio
- *    UI can render the timeline + waterfall views
+ *    UI can render the timeline + waterfall views, including what was
+ *    reported before the socket connected
  *  - `playground-responder` setup so the Studio playground can dispatch
  *    `playground:execute` to this runtime via the rid-keyed wire
  *
@@ -18,13 +19,14 @@
  */
 
 import { createLogger, getSources } from "@noverax/courier";
-import { getSourceName } from "@noverax/courier/define";
 import type { io as ioFn } from "socket.io-client";
 import type { EventBus } from "../event-bus";
 import type { BufferedAnnouncement } from "./announce-hosting";
+import { buildAnnouncePayload } from "./announce-payload";
 import type { RuntimeKind } from "./attach-runtime-types";
 import { setupPlaygroundResponder } from "./playground-responder";
 import { timersCanUnref } from "./runtime-environment";
+import { keepUnsentEvents } from "./unsent-events";
 
 const log = createLogger("Studio");
 
@@ -55,25 +57,6 @@ export interface RuntimeSocketHandle {
   setDisposer(fn: () => void): void;
   /** Called with a function that flushes queued announcements when connected. */
   setAnnouncer(fn: () => void): void;
-}
-
-interface AnnouncePayload {
-  transports: ReadonlyArray<string>;
-  sources: string[];
-  listenOrigin?: string;
-  framework?: string;
-}
-
-function buildAnnouncePayload(entry: BufferedAnnouncement): AnnouncePayload {
-  const sources: string[] = [];
-  for (const source of entry.sources) {
-    const name = getSourceName(source);
-    if (name && !sources.includes(name)) sources.push(name);
-  }
-  const payload: AnnouncePayload = { transports: entry.transports, sources };
-  if (entry.listenOrigin !== undefined) payload.listenOrigin = entry.listenOrigin;
-  if (entry.framework !== undefined) payload.framework = entry.framework;
-  return payload;
 }
 
 export async function connectRuntimeSocket(
@@ -152,6 +135,8 @@ export async function connectRuntimeSocket(
     }
   };
 
+  const unsent = keepUnsentEvents();
+
   socket.on("connect", () => {
     socket.emit("runtime:hello", {
       runtimeId: input.runtimeId,
@@ -164,6 +149,7 @@ export async function connectRuntimeSocket(
       socket.emit("runtime:announce", buildAnnouncePayload(entry));
     }
     drain();
+    for (const event of unsent.take()) socket.emit("event", event);
   });
 
   handle.setAnnouncer(drain);
@@ -172,16 +158,16 @@ export async function connectRuntimeSocket(
   // `/runtime` namespace handler dispatches mock-server lifecycle events
   // into the shared registry and broadcasts everything else to the UI.
   //
-  // Events emitted while the socket is mid-disconnect are dropped on the
-  // sender side via the `connected` guard — Socket.IO's internal queue
-  // would otherwise replay them on reconnect, producing duplicate UI
-  // entries for events that already shipped over the previous session.
+  // An event reported while the socket is not connected — before its first
+  // connect, or while Studio restarts — is kept and sent once it connects,
+  // rather than handed to Socket.IO, whose own queue would also replay what
+  // had already gone out over the previous session.
   let unsubBus: (() => void) | undefined;
   if (input.bus) {
     const bus = input.bus;
     unsubBus = bus.on((event) => {
-      if (!socket.connected) return;
-      socket.emit("event", event);
+      if (socket.connected) socket.emit("event", event);
+      else unsent.keep(event);
     });
   }
 

@@ -106,20 +106,27 @@ function parseResponseSchema(op: SpecNode, spec: SpecNode): ParsedSchema | null 
   return schema ? convertSchemaInline(schema, spec) : null;
 }
 
+/** `200`, `204`, and the `2XX` wildcard in either case. */
+const SUCCESS_CODE = /^2(?:\d\d|XX)$/i;
+
+/** Statuses HTTP forbids a body, whatever the specification declares for them. */
+const BODILESS_CODES = new Set(["204", "205"]);
+
 /**
  * The response a caller gets on success.
  *
- * Reading only `200` and `201` dropped the schema of every endpoint that
- * answers `202`, `204` with content, or the `2XX` wildcard.
+ * The lowest declared 2xx code is the one described, and the `2XX` wildcard
+ * only when no code is named. `default` covers every status the operation
+ * does not declare, so it describes success only when no 2xx is declared at
+ * all: Box and DigitalOcean answer a delete with `204` beside a `default`
+ * error, and reading the error as the success made every successful delete
+ * fail validation.
  */
 function successResponse(responses: SpecNode | undefined): SpecNode | undefined {
   if (!responses || typeof responses !== "object") return undefined;
-  for (const code of ["200", "201", "202", "203", "2XX", "2xx", "default"]) {
-    const response = responses[code];
-    if (response) return response;
-  }
-  for (const [code, response] of Object.entries(responses)) {
-    if (code.startsWith("2") && response) return response as SpecNode;
-  }
-  return undefined;
+  const [code] = Object.keys(responses)
+    .filter((key) => SUCCESS_CODE.test(key) && responses[key])
+    .sort();
+  if (code === undefined) return responses.default || undefined;
+  return BODILESS_CODES.has(code) ? undefined : responses[code];
 }

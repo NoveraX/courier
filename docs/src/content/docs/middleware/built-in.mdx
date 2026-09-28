@@ -209,7 +209,7 @@ const api = defineApi({
 Unlike server-side rate limiters that return 429 errors, this middleware **delays** requests until the window allows them. Your code does not need to handle rate limit errors -- the middleware transparently queues requests.
 </Callout>
 
-The limit holds however many calls arrive at once: at most `maxRequests` requests go out in any `window` milliseconds, and calls beyond it wait their turn in the order they came. A caller that aborts its signal stops waiting at once and rejects with the signal's reason; its turn stays spent, so the limit is never exceeded.
+The limit holds however many calls arrive at once: at most `maxRequests` requests go out in any `window` milliseconds, and calls beyond it wait their turn in the order they came. The window is measured from when each request actually went, so a busy event loop that runs the limiter's timers late delays the queue rather than letting several requests out together. A caller that aborts its signal leaves the queue at once and rejects with the signal's reason; its turn passes to the call queued behind it.
 
 ---
 

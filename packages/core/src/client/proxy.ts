@@ -37,22 +37,25 @@ function buildRoot(
   const names = () => (shape ? [...shape.groups.keys(), ...shape.endpoints] : []);
   let withFn: WithFn<object> | undefined;
 
+  const read = (prop: string): unknown => {
+    if (shape?.groups.has(prop) || shape?.endpoints.has(prop)) {
+      const keep = (make: () => object) => declaredMemo(prop, make);
+      return declaredMember(prop, shape, raw, member, keep, rawClient);
+    }
+    if (RUNTIME_HOOKS.has(prop)) return undefined;
+    if (prop === "raw") return rawClient();
+    if (prop === "with") {
+      withFn ??= (next) => buildRoot(backend, mergeCallOptions(options, next), raw, shape);
+      return withFn;
+    }
+    return member(prop);
+  };
+
   return new Proxy<object>(Object.create(null), {
-    get(_, prop) {
-      if (typeof prop === "symbol") return undefined;
-      if (shape?.groups.has(prop) || shape?.endpoints.has(prop)) {
-        const keep = (make: () => object) => declaredMemo(prop, make);
-        return declaredMember(prop, shape, raw, member, keep, rawClient);
-      }
-      if (RUNTIME_HOOKS.has(prop)) return undefined;
-      if (prop === "raw") return rawClient();
-      if (prop === "with") {
-        withFn ??= (next) => buildRoot(backend, mergeCallOptions(options, next), raw, shape);
-        return withFn;
-      }
-      return member(prop);
-    },
-    ...listing(names, member),
+    get: (_, prop) => (typeof prop === "symbol" ? undefined : read(prop)),
+    /* Listed members read as `get` reads them, so a spread copy of a client
+       with a group named `then` is not a promise either. */
+    ...listing(names, read),
   });
 }
 

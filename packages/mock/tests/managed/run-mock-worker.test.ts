@@ -90,3 +90,17 @@ describe("a mock that fails to start for another reason", () => {
     expect(stderr.mock.calls.flat().some((arg) => arg instanceof Error)).toBe(true);
   });
 });
+
+describe("a command that arrives before the mock runs", () => {
+  it("is answered that the mock is still starting", async () => {
+    const worker = driveWorker(defineMockServer({ source: api, log: "silent" }));
+
+    const result = await worker.command({ action: "mock:store:seed", collection: "*" });
+
+    expect(result).toMatchObject({
+      type: "command-result",
+      ok: false,
+      error: "The mock is still starting. Try again once it runs.",
+    });
+  });
+});

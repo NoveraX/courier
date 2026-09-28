@@ -37,11 +37,8 @@ export function handleStoreCommand(served: ServedMock, cmd: Record<string, unkno
         const col = server.store.collection(nameIn(cmd, "collection"));
         return { ok: true, data: col.create(objectIn(cmd, "record")) };
       }
-      case "mock:store:update": {
-        const col = server.store.collection(nameIn(cmd, "collection"));
-        col.updateById(idIn(cmd, "id"), objectIn(cmd, "data"));
-        return { ok: true };
-      }
+      case "mock:store:update":
+        return update(server, nameIn(cmd, "collection"), idIn(cmd, "id"), objectIn(cmd, "data"));
       /* Studio's "Reset store": the store alone, emptied and seeded again as
          the mock declares. The network settings stay as they are: switching
          them off without telling Studio left it showing them active while
@@ -84,11 +81,27 @@ function seed(served: ServedMock, cmd: Record<string, unknown>): CmdResult {
   return { ok: true, data: { seeded: collection } };
 }
 
+/* A record that is not there is said so, rather than reported as changed. */
+function update(
+  server: MockServer,
+  collection: string,
+  id: string | number,
+  data: Record<string, unknown>,
+): CmdResult {
+  const updated = server.store.collection(collection).updateById(id, data);
+  return updated ? { ok: true } : noRecord(collection, id);
+}
+
 function handleDelete(server: MockServer, collection: string, rawId: string | number): CmdResult {
   if (rawId === "*") {
     server.store.collection(collection).clear();
     return { ok: true };
   }
-  server.store.collection(collection).deleteById(rawId);
-  return { ok: true };
+  return server.store.collection(collection).deleteById(rawId)
+    ? { ok: true }
+    : noRecord(collection, rawId);
+}
+
+function noRecord(collection: string, id: string | number): CmdResult {
+  return { ok: false, error: `${collection} has no record with id ${JSON.stringify(id)}` };
 }

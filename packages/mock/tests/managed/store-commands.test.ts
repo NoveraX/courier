@@ -147,3 +147,35 @@ describe("mock:store:create", () => {
     expect(listed).toContainEqual({ name: "Ada", id: next });
   });
 });
+
+describe("mock:store:update and mock:store:delete", () => {
+  it("say that a record the collection does not hold is not there", async () => {
+    const updated = await worker.command({
+      action: "mock:store:update",
+      collection: "users",
+      id: 999,
+      data: { name: "Grace" },
+    });
+    const deleted = await worker.command({ action: "mock:store:delete", collection: "users", id: 999 });
+
+    expect(updated).toMatchObject({ ok: false, error: "users has no record with id 999" });
+    expect(deleted).toMatchObject({ ok: false, error: "users has no record with id 999" });
+    expect(await count("users")).toBe(6);
+  });
+
+  it("change a record the collection holds", async () => {
+    const [first] = await fetch(`${url}/users`).then((res) => res.json());
+
+    const updated = await worker.command({
+      action: "mock:store:update",
+      collection: "users",
+      id: String(first.id),
+      data: { name: "Grace" },
+    });
+    const deleted = await worker.command({ action: "mock:store:delete", collection: "users", id: first.id });
+
+    expect(updated).toMatchObject({ ok: true });
+    expect(deleted).toMatchObject({ ok: true });
+    expect(await count("users")).toBe(5);
+  });
+});

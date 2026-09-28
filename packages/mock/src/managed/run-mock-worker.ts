@@ -32,6 +32,9 @@ export type MockDefinitionLoader = (
 ) => Promise<unknown>;
 
 type StartMessage = Extract<ParentMessage, { type: "start" }>;
+type CommandMessage = Extract<ParentMessage, { type: "command" }>;
+
+const STARTING = "The mock is still starting. Try again once it runs.";
 
 /**
  * Serve the mock Studio asks for over IPC, until Studio stops it or goes away.
@@ -78,9 +81,8 @@ export function runMockWorker(loadDefinition: MockDefinitionLoader): void {
     } else if (msg.type === "stop" && !stopping) {
       stopping = true;
       void stop(served?.server);
-    } else if (msg.type === "command" && served) {
-      const current = served;
-      handleCommand(current, msg, () => uiRoutes(current));
+    } else if (msg.type === "command") {
+      answerCommand(served, msg);
     }
   });
 }
@@ -144,6 +146,16 @@ function createServer(definition: MockServerDefinition, port: number): MockServe
     scenarios: definition.scenarios,
     network: definition.network,
   });
+}
+
+/* Studio waits for an answer to every command, so one that arrives while the
+   mock still starts is answered too. */
+function answerCommand(served: ServedMock | undefined, msg: CommandMessage): void {
+  if (served) {
+    handleCommand(served, msg, () => uiRoutes(served));
+    return;
+  }
+  send({ type: "command-result", requestId: msg.requestId, ok: false, error: STARTING });
 }
 
 function uiRoutes({ server, routes, groupNames }: ServedMock): DescribedRoute[] {

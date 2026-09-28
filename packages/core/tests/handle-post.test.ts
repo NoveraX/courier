@@ -270,6 +270,31 @@ describe("createPostHandler", () => {
       expect(debug).toHaveBeenCalledOnce();
     });
 
+    it("warns about a body that failed while its client stayed", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      const handler = createPostHandler(createMockExecute(), createHooks());
+      const overLimit = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          controller.error(new Error("request body size exceeded BODY_SIZE_LIMIT of 524288"));
+        },
+      });
+      const req = new Request("http://localhost/api/request", {
+        method: "POST",
+        headers: { origin: "http://localhost", "content-type": "application/json" },
+        body: overLimit,
+        // @ts-expect-error -- required by the platform for a streaming body
+        duplex: "half",
+      });
+
+      const res = await handler(req);
+
+      expect(res.status).toBe(400);
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn.mock.calls[0]?.map(String).join(" ")).toContain("BODY_SIZE_LIMIT");
+      expect(error).not.toHaveBeenCalled();
+    });
+
     /** The GET path strips these from `_v`; the POST path kept them. */
     it("drops keys that reach Object.prototype, as the GET path does", async () => {
       const execute = createMockExecute();

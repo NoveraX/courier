@@ -54,20 +54,37 @@ export async function readEnvelope(
 }
 
 /**
- * Read the body the client sends, answering one it stopped sending.
+ * Read the body the client sends, answering one that could not be read.
  *
  * A browser that cancels an upload closes the connection mid-body, and the
  * read fails. That is the client's decision, not the server's failure: let
  * through, the rejection reached every framework's error handler and was
- * logged there with a stack, once per cancelled upload.
+ * logged there with a stack, once per cancelled upload. A read that fails
+ * while the client is still there — a framework's own body limit, a broken
+ * chunked encoding — is worth a warning, since the answer alone says little.
  */
 async function readSent(request: Request, limit: number): Promise<BoundedBody | Response> {
   try {
     return await readBoundedBody(request, limit);
   } catch (error) {
-    log.debug("The client stopped sending its request body", error);
+    if (clientLeft(request, error)) {
+      log.debug("The client stopped sending its request body", error);
+    } else {
+      log.warn("Could not read the request body", error);
+    }
     return errorResponse(400, "Request body could not be read");
   }
+}
+
+/**
+ * Whether a failed read means the client went away: the request's signal
+ * says so, or Node reset the connection under it.
+ */
+function clientLeft(request: Request, error: unknown): boolean {
+  if (request.signal.aborted) return true;
+  return (
+    typeof error === "object" && error !== null && "code" in error && error.code === "ECONNRESET"
+  );
 }
 
 /**

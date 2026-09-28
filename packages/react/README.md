@@ -69,6 +69,8 @@ export const q = createQueryCaller(api, {
 
 Access hooks through dot-notation: `q.{group}.useQuery(method, options?)`.
 
+Hooks are offered per group. An endpoint declared at the top level of `defineApi({ endpoints })` has none — a caller for an API with no groups does not compile, and in one that mixes groups with top-level endpoints only the groups appear — so declare the endpoints a component needs inside a group.
+
 ### `useQuery`
 
 ```tsx

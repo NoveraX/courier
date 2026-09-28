@@ -1,4 +1,4 @@
-import type { HandlerConfig, WSConnectResult, WSHandlerConfig } from "@noverax/courier";
+import type { ConnectResult, HandlerConfig, WSHandlerConfig } from "@noverax/courier";
 import { createHandler, createWSHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import { discoverAppOrigin } from "@noverax/courier/internal";
@@ -26,7 +26,9 @@ import { createSocketAdapter, frameText } from "./ws-adapter";
  * app.all("/api/request", courierHandler());
  * ```
  */
-export function courierHandler(config?: HandlerConfig): (c: Context) => Promise<Response> {
+export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
+  config?: HandlerConfig<TConnect>,
+): (c: Context) => Promise<Response> {
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http"], framework: "hono" });
   return (c: Context) => {
@@ -44,7 +46,9 @@ export function courierHandler(config?: HandlerConfig): (c: Context) => Promise<
  * app.get("/api/sse", courierSSEHandler());
  * ```
  */
-export function courierSSEHandler(config?: HandlerConfig): (c: Context) => Promise<Response> {
+export function courierSSEHandler<TConnect extends ConnectResult = ConnectResult>(
+  config?: HandlerConfig<TConnect>,
+): (c: Context) => Promise<Response> {
   const { handleSSE } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["sse"], framework: "hono" });
   return (c: Context) => {
@@ -81,7 +85,7 @@ export type HonoWSEvents = {
  * serve({ fetch: app.fetch, port: 3001, websocket: { server: wss } });
  * ```
  */
-export function courierWSHandler<TConnect extends WSConnectResult = WSConnectResult>(
+export function courierWSHandler<TConnect extends ConnectResult = ConnectResult>(
   options?: WSHandlerConfig<TConnect>,
 ): (c: Context) => HonoWSEvents {
   const wsHandler = createWSHandler(options);

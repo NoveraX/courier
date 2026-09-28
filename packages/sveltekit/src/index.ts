@@ -1,5 +1,6 @@
 import {
   type ClientConnection,
+  type ConnectResult,
   createHandler,
   type HandlerConfig,
   handleWhileConnected,
@@ -45,8 +46,8 @@ export interface SvelteKitRequestEvent {
  * export const POST = handler;
  * ```
  */
-export function courierHandler(
-  config?: HandlerConfig,
+export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
+  config?: HandlerConfig<TConnect>,
 ): (event: SvelteKitRequestEvent) => Promise<Response> {
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "sveltekit" });

@@ -1,5 +1,6 @@
 import {
   type ClientConnection,
+  type ConnectResult,
   createHandler,
   type HandlerConfig,
   handleWhileConnected,
@@ -41,8 +42,8 @@ export interface SolidAPIEvent {
  * export const POST = handler;
  * ```
  */
-export function courierHandler(
-  config?: HandlerConfig,
+export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
+  config?: HandlerConfig<TConnect>,
 ): (event: SolidAPIEvent) => Promise<Response> {
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "solid" });

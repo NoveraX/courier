@@ -1,4 +1,4 @@
-import type { WebSocketLike, WSConnectResult, WSHandlerConfig } from "@noverax/courier";
+import type { ConnectResult, WebSocketLike, WSHandlerConfig } from "@noverax/courier";
 import { ConfigurationError, createLogger, createWSHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import {
@@ -38,7 +38,7 @@ const log = createLogger("Fastify");
  * fastify.get("/api/ws", { websocket: true }, courierWSHandler());
  * ```
  */
-export function courierWSHandler<TConnect extends WSConnectResult = WSConnectResult>(
+export function courierWSHandler<TConnect extends ConnectResult = ConnectResult>(
   options?: WSHandlerConfig<TConnect>,
 ): (socket: WebSocketLike, request: FastifyRequest) => void {
   const wsHandler = createWSHandler(options);

@@ -1,6 +1,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import type { StudioHooks } from "../studio/hooks";
+import type { ConnectionMeta, ConnectResult } from "./connection-meta";
 import type { InternalSSERegistry } from "./sse-registry";
 /** Read-only SSE connection info exposed via public API */
 export interface SSEConnectionInfo {
@@ -73,36 +74,33 @@ export interface SSEConnectionRegistry {
 }
 
 /** SSE lifecycle hooks for connection tracking */
-export interface SSELifecycleConfig {
+export interface SSELifecycleConfig<TConnect extends ConnectResult = ConnectResult> {
   /** Max concurrent SSE connections. Returns 503 when exceeded. */
   maxSSEConnections?: number;
   /**
-   * Called when an SSE stream opens. Return metadata, or throw to refuse the
-   * stream: it is answered 403 "Connection rejected", and what was thrown is
-   * logged, never sent.
+   * Called when an SSE stream opens. Return the stream's metadata — an
+   * object — or nothing, or throw to refuse the stream: it is answered 403
+   * "Connection rejected", and what was thrown is logged, never sent. What it
+   * returns types `meta` in the hooks written after it.
    */
-  onSSEConnect?: (info: {
+  onSSEConnect?(info: {
     connectionId: string;
     request: Request;
     source: string;
     group: string | undefined;
     method: string;
-  }) => Record<string, unknown> | Promise<Record<string, unknown>>;
+  }): TConnect;
   /** Called when an SSE stream closes */
-  onSSEDisconnect?: (info: {
+  onSSEDisconnect?(info: {
     connectionId: string;
-    meta: Record<string, unknown>;
+    meta: ConnectionMeta<TConnect>;
     reason: SSECloseReason;
     eventCount: number;
     totalBytes: number;
     duration: number;
-  }) => void | Promise<void>;
+  }): void | Promise<void>;
   /** Called on SSE connection-level error */
-  onSSEError?: (info: {
-    connectionId: string;
-    meta: Record<string, unknown>;
-    error: unknown;
-  }) => void;
+  onSSEError?(info: { connectionId: string; meta: ConnectionMeta<TConnect>; error: unknown }): void;
 }
 
 /** Reason why an SSE connection was closed */

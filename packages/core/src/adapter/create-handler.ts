@@ -1,6 +1,7 @@
 import { prepareSources } from "../sources";
 import { studioHooks } from "../studio";
 import { executeRequest } from "../utils/execute";
+import type { ConnectResult } from "./connection-meta";
 import { discardBody } from "./discard-body";
 import { gateEntry } from "./entry-gate";
 import type { ExecuteFn } from "./execute-fn";
@@ -45,6 +46,9 @@ export type AdapterHandler = {
  * const response = await handler.handle(request);
  * ```
  */
+export function createHandler<TConnect extends ConnectResult = ConnectResult>(
+  config?: HandlerConfig<TConnect>,
+): AdapterHandler;
 export function createHandler(config?: HandlerConfig): AdapterHandler {
   if (config?.sources !== undefined) {
     prepareSources(config.sources, "createHandler", "createHandler({ sources: { api } })");

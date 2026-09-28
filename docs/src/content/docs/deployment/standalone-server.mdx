@@ -147,6 +147,8 @@ const server = await createCourierServer({
 
 The `reason` field is one of: `"complete"`, `"error"`, `"disconnect"`, `"shutdown"`, `"max_lifetime"`.
 
+What `onSSEConnect` returns is the stream's metadata, and it types `meta` in the SSE hooks written after it, so `meta.userId` above is a string. Return an object, or nothing for a stream with no metadata; anything else refuses the stream with 403, as a throw does.
+
 ### WebSocket Hooks
 
 ```ts title="server.ts"
@@ -166,7 +168,7 @@ const server = await createCourierServer({
 })
 ```
 
-What `onConnect` returns is the connection's metadata, and it types `meta` in the hooks written after it — `authorize`, `authorizeMessage`, `onTokenRefresh`, `onDisconnect`, `onError` — so `meta.userId` above is a string. Return an object, or nothing for a connection with no metadata; anything else refuses the connection, as a throw does.
+What `onConnect` returns is the connection's metadata, and it types `meta` in the hooks written after it — `authorize`, `authorizeMessage`, `onTokenRefresh`, `onDisconnect`, `onError` — so `meta.userId` above is a string. Return an object, or nothing for a connection with no metadata; anything else refuses the connection, as a throw does. `ConnectionMeta<T>` names that type, for a hook declared apart from the options.
 
 <Callout variant="tip" title="Reject connections">
   Throw from `onConnect` to refuse a WebSocket connection: the server closes it with code `4401` and the reason "Connection rejected", which each channel and subscription on it reads as an `AuthError`, and the client does not reconnect. Throw from `onSSEConnect` to refuse a stream: it is answered `403` "Connection rejected", which the client reads as a `ForbiddenError`. What you threw is logged on the server and never sent, since it may carry a connection string or a token.

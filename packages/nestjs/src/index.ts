@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { AdapterHandler, HandlerConfig } from "@noverax/courier";
+import type { AdapterHandler, ConnectResult, HandlerConfig } from "@noverax/courier";
 import { createHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/courier/node";
@@ -50,7 +50,9 @@ export type CourierNestMiddleware = ((
  * }
  * ```
  */
-export function courierMiddleware(config?: HandlerConfig): CourierNestMiddleware {
+export function courierMiddleware<TConnect extends ConnectResult = ConnectResult>(
+  config?: HandlerConfig<TConnect>,
+): CourierNestMiddleware {
   const handler = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http"], framework: "nestjs" });
   return serve(handler, handler.handle, announce);
@@ -77,7 +79,9 @@ export function courierMiddleware(config?: HandlerConfig): CourierNestMiddleware
  * }
  * ```
  */
-export function courierSSEMiddleware(config?: HandlerConfig): CourierNestMiddleware {
+export function courierSSEMiddleware<TConnect extends ConnectResult = ConnectResult>(
+  config?: HandlerConfig<TConnect>,
+): CourierNestMiddleware {
   const handler = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["sse"], framework: "nestjs" });
   return serve(handler, handler.handleSSE, announce);

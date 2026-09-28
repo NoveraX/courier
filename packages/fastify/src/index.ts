@@ -1,4 +1,4 @@
-import type { AdapterHandler, HandlerConfig } from "@noverax/courier";
+import type { AdapterHandler, ConnectResult, HandlerConfig } from "@noverax/courier";
 import { createHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/courier/node";
@@ -99,7 +99,9 @@ export type CourierSSERouteHandler = ((
  * fastify.addHook("preClose", () => sse.shutdownSSE());
  * ```
  */
-export function courierSSEHandler(config?: HandlerConfig): CourierSSERouteHandler {
+export function courierSSEHandler<TConnect extends ConnectResult = ConnectResult>(
+  config?: HandlerConfig<TConnect>,
+): CourierSSERouteHandler {
   const { handleSSE, sseConnections, shutdownSSE } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["sse"], framework: "fastify" });
 

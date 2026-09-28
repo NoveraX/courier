@@ -148,8 +148,8 @@ describe("WebSocket options", () => {
   });
 });
 
-describe("the metadata a standalone server's WebSocket hooks receive", () => {
-  it("is typed from what onConnect returns", () => {
+describe("the metadata a standalone server's hooks receive", () => {
+  it("is typed from what onConnect and onSSEConnect return", () => {
     /* Only compiled: a server made here would listen on a port. */
     function typed(): void {
       createCourierServer({
@@ -158,6 +158,11 @@ describe("the metadata a standalone server's WebSocket hooks receive", () => {
         onDisconnect: ({ meta }) => {
           const userId: string = meta.userId;
           expect(userId).toBeTypeOf("string");
+        },
+        onSSEConnect: () => ({ tenant: 7 }),
+        onSSEDisconnect: ({ meta }) => {
+          const tenant: number = meta.tenant;
+          expect(tenant).toBeTypeOf("number");
         },
       });
     }

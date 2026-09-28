@@ -1,4 +1,4 @@
-import { createHandler, type HandlerConfig } from "@noverax/courier";
+import { type ConnectResult, createHandler, type HandlerConfig } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 
 /**
@@ -31,8 +31,8 @@ import { announceWhenRegistered } from "@noverax/courier/announce";
  * export const POST = handler;
  * ```
  */
-export function courierHandler(
-  config?: HandlerConfig,
+export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
+  config?: HandlerConfig<TConnect>,
 ): (context: { request: Request }) => Promise<Response> {
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "astro" });

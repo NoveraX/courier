@@ -121,3 +121,17 @@ describe("sseRoute", () => {
     expect(passedReq).toBeInstanceOf(Request);
   });
 });
+
+describe("the metadata sseRoute's hooks receive", () => {
+  it("is typed from what onSSEConnect returns", () => {
+    const route = sseRoute({
+      onSSEConnect: () => ({ userId: "u1" }),
+      onSSEDisconnect: ({ meta }) => {
+        const userId: string = meta.userId;
+        expect(userId).toBeTypeOf("string");
+      },
+    });
+
+    expect(route.GET).toBeTypeOf("function");
+  });
+});

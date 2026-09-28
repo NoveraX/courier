@@ -1,11 +1,6 @@
 import type { CourierWSOptions, WebSocketLike } from "@noverax/courier";
-import {
-  ConfigurationError,
-  createLogger,
-  createWSHandler,
-  requireSources,
-} from "@noverax/courier";
-import { announceHosting } from "@noverax/courier/announce";
+import { ConfigurationError, createLogger, createWSHandler } from "@noverax/courier";
+import { announceWhenRegistered } from "@noverax/courier/announce";
 import {
   DEFAULT_WS_MAX_MESSAGE_SIZE,
   discoverNodeAppOrigin,
@@ -46,14 +41,11 @@ export function courierWSHandler(
   const wsHandler = createWSHandler(options);
   const maxMessageSize = options?.maxMessageSize ?? DEFAULT_WS_MAX_MESSAGE_SIZE;
   let checkedPayloadLimit = false;
-  announceHosting({
-    transports: ["ws"],
-    sources: Object.values(requireSources()),
-    framework: "fastify",
-  });
+  const announce = announceWhenRegistered({ transports: ["ws"], framework: "fastify" });
 
   return (socket: unknown, request: FastifyRequest) => {
     if (!isSocket(socket)) throw pluginMissing();
+    announce();
     if (!checkedPayloadLimit) {
       checkedPayloadLimit = true;
       warnOnLargerPayloads(request.server, maxMessageSize);

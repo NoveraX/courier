@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AdapterHandler, HandlerConfig } from "@noverax/courier";
-import { createHandler, requireSources } from "@noverax/courier";
-import { announceHosting } from "@noverax/courier/announce";
+import { createHandler } from "@noverax/courier";
+import { announceWhenRegistered } from "@noverax/courier/announce";
 import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 
 import { bodyNestParsed } from "./parsed-body";
@@ -52,12 +52,8 @@ export type CourierNestMiddleware = ((
  */
 export function courierMiddleware(config?: HandlerConfig): CourierNestMiddleware {
   const handler = createHandler(config);
-  announceHosting({
-    transports: ["http"],
-    sources: Object.values(requireSources()),
-    framework: "nestjs",
-  });
-  return serve(handler, handler.handle);
+  const announce = announceWhenRegistered({ transports: ["http"], framework: "nestjs" });
+  return serve(handler, handler.handle, announce);
 }
 
 /**
@@ -83,24 +79,22 @@ export function courierMiddleware(config?: HandlerConfig): CourierNestMiddleware
  */
 export function courierSSEMiddleware(config?: HandlerConfig): CourierNestMiddleware {
   const handler = createHandler(config);
-  announceHosting({
-    transports: ["sse"],
-    sources: Object.values(requireSources()),
-    framework: "nestjs",
-  });
-  return serve(handler, handler.handleSSE);
+  const announce = announceWhenRegistered({ transports: ["sse"], framework: "nestjs" });
+  return serve(handler, handler.handleSSE, announce);
 }
 
 /** Bridge a Nest request to a Web handler and back, keeping its stream drain. */
 function serve(
   handler: AdapterHandler,
   respond: (request: Request) => Promise<Response>,
+  announce: () => void,
 ): CourierNestMiddleware {
   const middleware = async (
     req: IncomingMessage,
     res: ServerResponse,
     next: (err?: unknown) => void,
   ): Promise<void> => {
+    announce();
     discoverNodeAppOrigin(req);
     try {
       const webReq = toWebRequest(req, res, () => bodyNestParsed(req));

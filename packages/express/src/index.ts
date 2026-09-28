@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AdapterHandler, HandlerConfig } from "@noverax/courier";
-import { createHandler, requireSources } from "@noverax/courier";
-import { announceHosting } from "@noverax/courier/announce";
+import { createHandler } from "@noverax/courier";
+import { announceWhenRegistered } from "@noverax/courier/announce";
 import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 
 export { type CourierWSAttachOptions, courierWSAttach } from "./ws-attach";
@@ -29,7 +29,8 @@ export type CourierExpressHandler = CourierMiddleware &
  *
  * Sources are read from the core global registry populated by
  * `attachRuntime()` — call `await attachRuntime()` in your server
- * instrumentation before mounting adapter handlers.
+ * instrumentation before the first request. The handler itself can be
+ * created earlier: it reads the registry when it serves a request.
  *
  * Do not apply body-parsing middleware (`express.json()`, `multer`) to this
  * route — the handler reads the raw request body itself.
@@ -50,12 +51,8 @@ export type CourierExpressHandler = CourierMiddleware &
  */
 export function courierHandler(config?: HandlerConfig): CourierExpressHandler {
   const handler = createHandler(config);
-  announceHosting({
-    transports: ["http"],
-    sources: Object.values(requireSources()),
-    framework: "express",
-  });
-  return drainable(handler, serve(handler.handle));
+  const announce = announceWhenRegistered({ transports: ["http"], framework: "express" });
+  return drainable(handler, serve(handler.handle, announce));
 }
 
 /**
@@ -80,17 +77,17 @@ export function courierHandler(config?: HandlerConfig): CourierExpressHandler {
  */
 export function courierSSEHandler(config?: HandlerConfig): CourierExpressHandler {
   const handler = createHandler(config);
-  announceHosting({
-    transports: ["sse"],
-    sources: Object.values(requireSources()),
-    framework: "express",
-  });
-  return drainable(handler, serve(handler.handleSSE));
+  const announce = announceWhenRegistered({ transports: ["sse"], framework: "express" });
+  return drainable(handler, serve(handler.handleSSE, announce));
 }
 
 /** Bridge an Express request to a Web handler and back. */
-function serve(respond: (request: Request) => Promise<Response>): CourierMiddleware {
+function serve(
+  respond: (request: Request) => Promise<Response>,
+  announce: () => void,
+): CourierMiddleware {
   return async (req, res, next) => {
+    announce();
     discoverNodeAppOrigin(req);
     try {
       await sendWebResponse(await respond(toWebRequest(req, res)), res);

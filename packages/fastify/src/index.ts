@@ -1,6 +1,6 @@
 import type { AdapterHandler, HandlerConfig } from "@noverax/courier";
-import { createHandler, requireSources } from "@noverax/courier";
-import { announceHosting } from "@noverax/courier/announce";
+import { createHandler } from "@noverax/courier";
+import { announceWhenRegistered } from "@noverax/courier/announce";
 import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 
@@ -27,7 +27,8 @@ export type CourierPluginOptions = {
  *
  * Sources are read from the core global registry populated by
  * `attachRuntime()` — call `await attachRuntime()` in your server
- * instrumentation before registering the plugin.
+ * instrumentation before the first request. The plugin itself can be
+ * registered earlier: it reads the registry when it serves a request.
  *
  * The route also serves SSE streams, and `app.close()` drains them: each
  * client gets a `shutdown` event telling it when to reconnect, instead of
@@ -49,11 +50,7 @@ export const courierPlugin: FastifyPluginAsync<CourierPluginOptions> = async (
   opts: CourierPluginOptions,
 ) => {
   const { handle, shutdownSSE } = createHandler(opts.config);
-  announceHosting({
-    transports: ["http"],
-    sources: Object.values(requireSources()),
-    framework: "fastify",
-  });
+  const announce = announceWhenRegistered({ transports: ["http"], framework: "fastify" });
   fastify.addHook("preClose", () => shutdownSSE());
 
   // Prevent Fastify from consuming the request body
@@ -63,6 +60,7 @@ export const courierPlugin: FastifyPluginAsync<CourierPluginOptions> = async (
   });
 
   const proxy = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    announce();
     discoverNodeAppOrigin(request.raw);
     const webReq = toWebRequest(request.raw, reply.raw);
     const webRes = await handle(webReq);
@@ -103,13 +101,10 @@ export type CourierSSERouteHandler = ((
  */
 export function courierSSEHandler(config?: HandlerConfig): CourierSSERouteHandler {
   const { handleSSE, sseConnections, shutdownSSE } = createHandler(config);
-  announceHosting({
-    transports: ["sse"],
-    sources: Object.values(requireSources()),
-    framework: "fastify",
-  });
+  const announce = announceWhenRegistered({ transports: ["sse"], framework: "fastify" });
 
   const route = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    announce();
     discoverNodeAppOrigin(request.raw);
     reply.hijack();
     const webReq = toWebRequest(request.raw, reply.raw);

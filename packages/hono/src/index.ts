@@ -1,11 +1,6 @@
 import type { CourierWSOptions, HandlerConfig } from "@noverax/courier";
-import {
-  createHandler,
-  createWSHandler,
-  discoverAppOrigin,
-  requireSources,
-} from "@noverax/courier";
-import { announceHosting } from "@noverax/courier/announce";
+import { createHandler, createWSHandler, discoverAppOrigin } from "@noverax/courier";
+import { announceWhenRegistered } from "@noverax/courier/announce";
 import type { Context } from "hono";
 import { peerAddressOf } from "./peer-address";
 import type { HonoWSContext } from "./ws-adapter";
@@ -16,7 +11,8 @@ import { createSocketAdapter, frameText } from "./ws-adapter";
  *
  * Sources are read from the core global registry populated by
  * `attachRuntime()` — call `await attachRuntime()` in your server
- * instrumentation before mounting routes.
+ * instrumentation before the first request. The handler itself can be
+ * created earlier: it reads the registry when it serves a request.
  *
  * @example
  * ```ts
@@ -31,12 +27,9 @@ import { createSocketAdapter, frameText } from "./ws-adapter";
  */
 export function courierHandler(config?: HandlerConfig): (c: Context) => Promise<Response> {
   const { handle } = createHandler(config);
-  announceHosting({
-    transports: ["http"],
-    sources: Object.values(requireSources()),
-    framework: "hono",
-  });
+  const announce = announceWhenRegistered({ transports: ["http"], framework: "hono" });
   return (c: Context) => {
+    announce();
     discoverAppOrigin(new URL(c.req.raw.url).origin);
     return handle(c.req.raw);
   };
@@ -52,12 +45,9 @@ export function courierHandler(config?: HandlerConfig): (c: Context) => Promise<
  */
 export function courierSSEHandler(config?: HandlerConfig): (c: Context) => Promise<Response> {
   const { handleSSE } = createHandler(config);
-  announceHosting({
-    transports: ["sse"],
-    sources: Object.values(requireSources()),
-    framework: "hono",
-  });
+  const announce = announceWhenRegistered({ transports: ["sse"], framework: "hono" });
   return (c: Context) => {
+    announce();
     discoverAppOrigin(new URL(c.req.raw.url).origin);
     return handleSSE(c.req.raw);
   };
@@ -92,13 +82,10 @@ export type HonoWSEvents = {
  */
 export function courierWSHandler(options?: CourierWSOptions): (c: Context) => HonoWSEvents {
   const wsHandler = createWSHandler(options);
-  announceHosting({
-    transports: ["ws"],
-    sources: Object.values(requireSources()),
-    framework: "hono",
-  });
+  const announce = announceWhenRegistered({ transports: ["ws"], framework: "hono" });
 
   return (c: Context): HonoWSEvents => {
+    announce();
     discoverAppOrigin(new URL(c.req.raw.url).origin);
     let adapter: ReturnType<typeof createSocketAdapter>;
 

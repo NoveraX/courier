@@ -45,6 +45,16 @@ function spec(): string {
           operationId: "patchNode",
           responses: ok({ type: ["object", "null"], properties: { ok: { type: "boolean" } } }),
         },
+        put: {
+          tags: ["nodes"],
+          operationId: "labelNode",
+          responses: ok({
+            allOf: [
+              { $ref: "#/components/schemas/Node" },
+              { type: "object", properties: { label: { type: "string" } } },
+            ],
+          }),
+        },
       },
     },
     components: {
@@ -87,5 +97,11 @@ describe.each(VALIDATORS)("a response whose type array lists null (%s)", (valida
     answer = { ok: "yes" };
 
     await expect(call("patchNode")()).rejects.toThrow(/Validation failed/);
+  });
+
+  it("keeps what an inline allOf inherits from a component", async () => {
+    answer = { id: "n1", label: "first" };
+
+    await expect(call("labelNode")()).resolves.toEqual({ id: "n1", label: "first" });
   });
 });

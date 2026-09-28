@@ -13,7 +13,10 @@ import type { ParsedSchema, SpecNode } from "./types";
  * A reference stays a reference and a list of references a list of them;
  * anything else is converted where it stands. OpenAPI 3.1's type arrays are
  * read here too: `["array", "null"]` used to be taken for a type name, which
- * left the response untyped, and `["object", "null"]` lost the `null`.
+ * left the response untyped, and `["object", "null"]` lost the `null`. An
+ * `allOf` is merged with the components it references; converted without
+ * the specification, it kept only its own properties, and the validator
+ * then stripped every inherited one off the answer.
  *
  * @param raw - The body's schema as written in the specification
  * @param spec - The whole specification, for resolving references
@@ -32,10 +35,10 @@ export function convertSchemaInline(raw: SpecNode, spec: SpecNode): ParsedSchema
     const refName = toSafeIdentifier(rawName);
     return { name: refName, type: "ref", refName };
   }
-  if (schema.allOf || schema.oneOf || schema.anyOf) return convertSchema("Inline", schema);
+  if (schema.allOf || schema.oneOf || schema.anyOf) return convertSchema("Inline", schema, spec);
   if (schema.type === "array" && schema.items) {
     return { name: "Array", type: "array", items: convertSchemaInline(schema.items, spec) };
   }
-  if (schema.type === "object" || schema.properties) return convertSchema("Inline", schema);
+  if (schema.type === "object" || schema.properties) return convertSchema("Inline", schema, spec);
   return { name: schema.type ?? "any", type: schema.type ?? "any" };
 }

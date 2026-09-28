@@ -41,7 +41,7 @@ export interface SetupRuntimeNamespaceDeps {
    * Optional playground router. When supplied, the runtime namespace forwards
    * `playground:chunk` / `playground:end` / `playground:error` from the
    * runtime side onto the matching UI socket and synthesizes errors for any
-   * in-flight rid when the runtime socket disconnects.
+   * in-flight rid the runtime socket was serving when it disconnects.
    */
   playgroundRouter?: RuntimePlaygroundRouter;
   /**
@@ -75,9 +75,9 @@ export function setupRuntimeNamespace(
 
     if (deps.playgroundRouter) {
       const router = deps.playgroundRouter;
-      socket.on("playground:chunk", (raw: unknown) => router.forwardChunk(raw, ref.runtimeId));
-      socket.on("playground:end", (raw: unknown) => router.forwardEnd(raw, ref.runtimeId));
-      socket.on("playground:error", (raw: unknown) => router.forwardError(raw, ref.runtimeId));
+      socket.on("playground:chunk", (raw: unknown) => router.forwardChunk(raw, socket.id));
+      socket.on("playground:end", (raw: unknown) => router.forwardEnd(raw, socket.id));
+      socket.on("playground:error", (raw: unknown) => router.forwardError(raw, socket.id));
     }
 
     socket.on("event", (event: unknown) => {

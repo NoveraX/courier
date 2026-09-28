@@ -89,6 +89,7 @@ export function CollectionItem({
             <Button
               variant="ghost"
               size="icon"
+              aria-label={`Re-seed ${name}`}
               className="size-5 text-muted-foreground hover:text-foreground"
               onClick={(e) => {
                 e.stopPropagation();
@@ -105,6 +106,7 @@ export function CollectionItem({
             <Button
               variant="ghost"
               size="icon"
+              aria-label={`Clear ${name}`}
               className="size-5 text-muted-foreground hover:text-rose-400"
               onClick={(e) => {
                 e.stopPropagation();

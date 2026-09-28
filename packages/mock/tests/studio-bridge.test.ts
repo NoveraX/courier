@@ -516,6 +516,32 @@ describe("createCommandHandler", () => {
       expect(ctx.server.networkState.getGlobalConfig()?.errorRate).toBe(0.5);
       expect(ctx.server.networkState.chaosPreset).toBe("degraded");
     });
+
+    it("mock:network:set changes only what it names, keeping the active chaos and latency", async () => {
+      const socket = createMockSocket();
+      const ctx = createTestContext();
+      const emitter = createEventEmitter(socket, ctx);
+      createCommandHandler(socket, ctx, emitter);
+      const send = async (command: Record<string, unknown>) => {
+        const cb = vi.fn();
+        socket.trigger("mock:command", { serverId: "test-server", ...command }, cb);
+        await vi.waitFor(() => expect(cb).toHaveBeenCalled());
+      };
+
+      await send({ action: "mock:chaos:set", config: { errorRate: 1 }, preset: "down" });
+      await send({ action: "mock:network:set", config: { latency: { min: 50, max: 60 } }, preset: "3g" });
+      const override = { routeId: "users:get", enabled: true, errorRate: 0 };
+      await send({ action: "mock:network:set", config: { routeOverrides: [override] } });
+
+      const state = ctx.server.networkState;
+      expect(state.getGlobalConfig()).toMatchObject({
+        errorRate: 1,
+        latency: { min: 50, max: 60 },
+        routeOverrides: [override],
+      });
+      expect(state.chaosPreset).toBe("down");
+      expect(state.latencyPreset).toBe("3g");
+    });
   });
 
   it("calls callback with error for unknown commands", async () => {

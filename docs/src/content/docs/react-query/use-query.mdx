@@ -142,7 +142,7 @@ Unlike flat key formats, hierarchical keys let you invalidate all queries for a 
 
 ## Error handling
 
-The `error` property is typed as `Error`. Use `isHTTPError` to check if it's an HTTP error with status and response details:
+The `error` property is typed as `Error`, as TanStack Query types it, because not every failure is an HTTP one. It is an `HTTPError` for an error answer or a call that got no answer, a `ValidationError` when variables or the answer fail their schema, a `ConfigurationError` when the client is set up wrongly, the reason a call was cancelled with through your own signal, or whatever a `select` threw. The same holds for `useSuspenseQuery`, `useInfiniteQuery`, `useMutation` and `useComputedQuery`. Use `isHTTPError` to check if it's an HTTP error with status and response details, and `isValidationError` or `isConfigurationError` for the others:
 
 ```ts title="components/user-list.tsx"
 "use client"

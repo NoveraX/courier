@@ -24,13 +24,15 @@ The returned object provides dot-notation access to every group defined in your 
 
 ```ts
 type QueryGroupClient<G> = {
-  useQuery(method, options?): UseQueryResult<R, HTTPError>
-  useSuspenseQuery(method, options?): UseSuspenseQueryResult<R, HTTPError>
-  useInfiniteQuery(method, options): UseInfiniteQueryResult<R, HTTPError>
-  useMutation(method, options?): UseMutationResult<R, HTTPError, V>
+  useQuery(method, options?): UseQueryResult<R, Error>
+  useSuspenseQuery(method, options?): UseSuspenseQueryResult<R, Error>
+  useInfiniteQuery(method, options): UseInfiniteQueryResult<R, Error>
+  useMutation(method, options?): UseMutationResult<R, Error, V>
   prefetchQuery(queryClient, method, options?): Promise<void>
 }
 ```
+
+A hook's error is typed `Error`, as TanStack Query types it, because not every failure is an HTTP one: narrow it with `isHTTPError`, `isValidationError` or `isConfigurationError` from `@noverax/courier`. See [useQuery — Error handling](/docs/react-query/use-query#error-handling).
 
 ## Setup
 

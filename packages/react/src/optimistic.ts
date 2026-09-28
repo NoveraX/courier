@@ -1,4 +1,3 @@
-import type { HTTPError } from "@noverax/courier";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
 // ---------------------------------------------------------------------------
@@ -46,7 +45,7 @@ export function optimisticOptions<CacheData, MutationVars>(
   config: OptimisticConfig<CacheData, MutationVars>,
 ): {
   onMutate: (variables: MutationVars) => Promise<OptimisticContext<CacheData>>;
-  onError: (_err: HTTPError, _vars: MutationVars, onMutateResult: unknown) => Promise<void>;
+  onError: (_err: Error, _vars: MutationVars, onMutateResult: unknown) => Promise<void>;
   onSettled: () => Promise<void>;
 } {
   return {
@@ -56,7 +55,7 @@ export function optimisticOptions<CacheData, MutationVars>(
       queryClient.setQueryData<CacheData>(config.queryKey, (old) => config.updater(old, variables));
       return { _previousData: previous };
     },
-    onError: async (_err: HTTPError, _vars: MutationVars, onMutateResult: unknown) => {
+    onError: async (_err: Error, _vars: MutationVars, onMutateResult: unknown) => {
       if (!isOptimisticContext<CacheData>(onMutateResult)) return;
       if (onMutateResult._previousData === undefined) {
         await queryClient.resetQueries({ queryKey: config.queryKey, exact: true });

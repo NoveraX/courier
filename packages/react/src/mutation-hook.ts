@@ -1,4 +1,4 @@
-import type { CallOptions, HTTPError } from "@noverax/courier";
+import type { CallOptions } from "@noverax/courier";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -41,7 +41,7 @@ export function createMutationHook(call: GroupCall): MutationHook {
       const qc = useQueryClient();
       const { requestOptions, invalidate, onSuccess, ...mutationOptions } = options ?? {};
 
-      return useMutation<unknown, HTTPError, unknown>({
+      return useMutation<unknown, Error, unknown>({
         mutationFn: (variables: unknown) =>
           call.send(method, variables ?? undefined, requestOptions),
         ...mutationOptions,

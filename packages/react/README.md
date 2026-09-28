@@ -82,6 +82,14 @@ function Users() {
 }
 ```
 
+Every hook types its error as `Error`, as TanStack Query does: an `HTTPError` for an error answer, but a `ValidationError` for an answer that fails its schema, a `ConfigurationError` for a client set up wrongly, or the reason a call was cancelled with. Narrow it with the guards from `@noverax/courier`:
+
+```tsx
+import { isHTTPError } from "@noverax/courier"
+
+if (isHTTPError(error) && error.status === 404) return <NotFound />
+```
+
 With variables:
 
 ```tsx

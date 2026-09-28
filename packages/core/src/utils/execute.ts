@@ -172,7 +172,7 @@ export async function executeRequest(
         variables: middlewareCtx.variables,
         forwardVariables,
         baseOptions: withCallerSignal(
-          withEndpointTimeout(baseOptions, endpointOptions),
+          withEndpointTimeout(baseOptions, endpointOptions, context?.defaultTimeout),
           context?.req,
         ),
         stream,

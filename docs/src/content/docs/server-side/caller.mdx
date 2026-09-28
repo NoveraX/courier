@@ -35,7 +35,7 @@ type CallerDefaults = {
 }
 ```
 
-These defaults are merged with per-request options. Per-request headers are merged (not replaced), while `timeout` is overridden if specified per-request.
+These defaults are merged with per-request options. Per-request headers are merged (not replaced). The default `timeout` is the least specific: a timeout given for the call wins, then the endpoint's own `.timeout()`, then the default.
 
 ```ts title="lib/caller.ts"
 import { createCaller } from "@noverax/courier"

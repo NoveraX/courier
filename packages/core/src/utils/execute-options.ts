@@ -34,16 +34,28 @@ function toRetryMiddleware(retry: RetryOptions): Middleware {
 /**
  * Apply the endpoint's timeout unless the call named one of its own.
  *
- * A value passed at the call site is the more specific of the two and wins.
+ * A value passed at the call site is the most specific and wins, then the
+ * endpoint's own, then the caller's default — which used to be written into
+ * the call's options and so beat the endpoint's.
+ *
+ * @param baseOptions - The call's options
+ * @param endpointOptions - The endpoint's resolved options
+ * @param callerDefault - The caller's default timeout, if it set one
+ * @returns The options with the timeout that applies
+ *
+ * @example
+ * ```ts
+ * withEndpointTimeout({}, { timeout: 2000 }, 100); // → { timeout: 2000 }
+ * ```
  */
 export function withEndpointTimeout<T extends Partial<BoundMethodOptions>>(
   baseOptions: T,
   endpointOptions: ResolvedEndpointOptions | undefined,
+  callerDefault?: number,
 ): T {
-  if (endpointOptions?.timeout === undefined || baseOptions.timeout !== undefined) {
-    return baseOptions;
-  }
-  return { ...baseOptions, timeout: endpointOptions.timeout };
+  if (baseOptions.timeout !== undefined) return baseOptions;
+  const timeout = endpointOptions?.timeout ?? callerDefault;
+  return timeout === undefined ? baseOptions : { ...baseOptions, timeout };
 }
 
 /**

@@ -26,6 +26,10 @@ export type ProxyCallerDefaults = {
    * a boundary carries the transports and nothing about the server.
    */
   boundary?: ProxyBoundary;
+  /**
+   * How long the browser waits for the proxy, in ms. Not sent to the server,
+   * where the endpoint's own `.timeout()` bounds the upstream call.
+   */
   timeout?: number;
   /**
    * Cancel a call still in flight when the same endpoint is called again; the

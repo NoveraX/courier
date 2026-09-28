@@ -41,7 +41,7 @@ type ProxyCallerDefaults = {
 - `proxyPath` — per-transport proxy endpoint configuration. Each field accepts either a relative path (resolved against `location.origin`) or an absolute URL. Caller-level fields are merged per-transport over `source.options.proxyPath` from `defineApi`.
 - `source` — the result of `defineApi()`, or `boundary` — the result of `defineBoundary()`, which keeps the definition out of the browser bundle. One of them is required when the API has streams or channels: the type argument names each endpoint's transport, but only a runtime value tells the client which endpoints to open as a stream or a socket, so omitting both does not compile. The caller reads `proxyPath` from whichever is given as the source-level defaults.
 - `deduplicate` — cancel a call still in flight when the same endpoint is called again. Defaults to the source's own setting when `source` is given.
-- `timeout` — request timeout in milliseconds.
+- `timeout` — how long the browser waits for the proxy, in milliseconds. It is not sent to the server, so the endpoint's own `.timeout()` still bounds the upstream call; a timeout given with `.with()` for one call is sent.
 - `credentials` — cookie handling policy. Defaults to `"include"`.
 - `headers` — default headers merged into every request.
 - `onError` — global error handler invoked on every `HTTPError`.

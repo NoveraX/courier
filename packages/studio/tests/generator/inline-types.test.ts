@@ -29,6 +29,13 @@ const SPEC = parseSpec(
           responses: { "200": { description: "ok", ...json({ $ref: "#/components/schemas/Stock" }) } },
         },
       },
+      "/json": {
+        get: {
+          operationId: "getJson",
+          tags: ["store"],
+          responses: { "200": { description: "ok", ...json({ $ref: "#/components/schemas/Json" }) } },
+        },
+      },
       "/value": {
         get: {
           operationId: "getValue",
@@ -37,7 +44,18 @@ const SPEC = parseSpec(
         },
       },
     },
-    components: { schemas: { Stock: counts } },
+    components: {
+      schemas: {
+        Stock: counts,
+        /* A map of itself: a type alias may name itself inside it. */
+        Json: {
+          oneOf: [
+            { type: "string" },
+            { type: "object", additionalProperties: { $ref: "#/components/schemas/Json" } },
+          ],
+        },
+      },
+    },
   }),
 );
 
@@ -52,7 +70,9 @@ export async function calls(): Promise<void> {
   const stock: Record<string, number> = await storeApi.store.getStock();
   // @ts-expect-error a named map's values are numbers too
   const wrongStock: Record<string, string> = await storeApi.store.getStock();
-  void [inventory, wrong, count, stock, wrongStock];
+  const tree = await storeApi.store.getJson();
+  const leaf = typeof tree === "string" ? tree : tree["a"];
+  void [inventory, wrong, count, stock, wrongStock, leaf];
 }
 `;
 

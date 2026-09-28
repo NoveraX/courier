@@ -47,8 +47,17 @@ export function schemaToTsType(schema: ParsedSchema, style = EXACT_OPTIONAL): st
   if (schema.type === "object" && schema.properties) {
     return objectToTsType(schema, style);
   }
-  if (schema.valueType) return `Record<string, ${schemaToTsType(schema.valueType, style)}>`;
+  if (schema.valueType) return mapOf(schemaToTsType(schema.valueType, style));
   return primitiveToTsType(schema.type);
+}
+
+/**
+ * A map of values of one type. Written as an index signature: a type alias
+ * may refer to itself inside one — a JSON value is a map of JSON values —
+ * where inside `Record<string, …>` it circularly references itself.
+ */
+function mapOf(values: string): string {
+  return `{ [key: string]: ${values} }`;
 }
 
 function objectToTsType(schema: ParsedSchema, style: TypeStyle): string {
@@ -61,8 +70,7 @@ function objectToTsType(schema: ParsedSchema, style: TypeStyle): string {
   if (props.length > 0) return `{ ${props.join("; ")} }`;
   /* No property of its own: a map, typed by its values when it says what
      they are — an inventory of counts was typed as holding anything. */
-  const values = schema.valueType ? schemaToTsType(schema.valueType, style) : "unknown";
-  return `Record<string, ${values}>`;
+  return mapOf(schema.valueType ? schemaToTsType(schema.valueType, style) : "unknown");
 }
 
 /**
@@ -86,7 +94,7 @@ export function propertyType(
 export function propToTsType(prop: ParsedSchemaProperty, style = EXACT_OPTIONAL): string {
   if (prop.refName) return referenceIn(style, prop.refName);
   if (prop.shape) return schemaToTsType(prop.shape, style);
-  if (prop.valueType) return `Record<string, ${schemaToTsType(prop.valueType, style)}>`;
+  if (prop.valueType) return mapOf(schemaToTsType(prop.valueType, style));
   if (prop.enum) {
     return typeUnion(prop.enum);
   }

@@ -97,7 +97,7 @@ describe("a schema that declares only what its values look like", () => {
        nothing could be read from. */
     const out = build(MAP);
 
-    expect(out).toMatch(/labels\?: Record<string, string>/);
+    expect(out).toMatch(/labels\?: \{ \[key: string\]: string \}/);
   });
 
   it("is validated as a record of that type", () => {

@@ -1,5 +1,8 @@
+import { logger } from "@noverax/courier";
+
 import { matchPath } from "../match-path";
 import type { PrefixMapping } from "../prefix-routes";
+import { parseQueryParams } from "../route-helpers";
 
 /** Resolved (group, method) pair from a WS upgrade URL */
 export interface WSRoute {
@@ -48,17 +51,23 @@ function byName(mapping: PrefixMapping, tail: string): WSRoute | null {
   return { group: mapping.group, method: tail, params: {} };
 }
 
-/** Parse `?key=value` query string from a URL into a typed variables record */
+/**
+ * Parse the `?key=value` query of an upgrade URL into variables, by the rule
+ * the HTTP routes follow: a value written as a number becomes one, and any
+ * other — `"007"`, `""`, `"1e3"` — stays the string it is.
+ *
+ * @param url - The upgrade request's URL, absolute or a path
+ * @returns The query's variables
+ * @example
+ * ```ts
+ * parseVariablesFromUrl("/rt/room?code=007&id=12"); // { code: "007", id: 12 }
+ * ```
+ */
 export function parseVariablesFromUrl(url: string): Record<string, unknown> {
   try {
-    const parsed = new URL(url, "http://localhost");
-    const result: Record<string, unknown> = {};
-    for (const [k, v] of parsed.searchParams) {
-      const num = Number(v);
-      result[k] = Number.isNaN(num) ? v : num;
-    }
-    return result;
-  } catch {
+    return parseQueryParams(new URL(url, "http://localhost").searchParams);
+  } catch (error) {
+    logger.debug("MockWS", `Unreadable upgrade URL "${url}"`, error);
     return {};
   }
 }

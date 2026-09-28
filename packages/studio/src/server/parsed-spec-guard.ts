@@ -1,8 +1,11 @@
 import type { ParsedSpec } from "../apis";
+import { SUPPORTED_METHODS } from "../apis/parser/http-methods";
 import { isRecord } from "./mocks-edit/is-record";
 
 const FORMATS: ReadonlySet<unknown> = new Set(["openapi3", "swagger2", "postman"]);
-const METHODS: ReadonlySet<unknown> = new Set(["get", "post", "put", "patch", "delete"]);
+/* Every verb the parser gives an endpoint; a list of its own left HEAD out,
+   so a spec with a HEAD operation could be parsed and never written. */
+const METHODS: ReadonlySet<unknown> = new Set(SUPPORTED_METHODS);
 
 /**
  * Tell whether a request body's spec has the shape Studio's parser gives a

@@ -19,3 +19,20 @@ export function showBindingErrorToast(error: BindingErrorPayload): void {
     description: `Multiple runtimes claimed this source: ${claimants}. Stop all but one to resolve.`,
   })
 }
+
+/**
+ * Say that a second process claims a runtime id already in use.
+ *
+ * @param runtimeId - The id both claim
+ *
+ * @example
+ * ```ts
+ * showDuplicateRuntimeToast("server")
+ * ```
+ */
+export function showDuplicateRuntimeToast(runtimeId: string): void {
+  toast.warning(`Two runtimes claim the id "${runtimeId}"`, {
+    description:
+      "Playground calls stay with the one that connected first. Give each process its own runtimeId, or stop the copy.",
+  })
+}

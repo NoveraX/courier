@@ -77,29 +77,42 @@ export function nextSessionVersion(sessionId: string): number {
 const runtimeSockets = new Map<string, Socket[]>();
 
 /** Insert or replace the entry for a runtime that just sent `runtime:hello`. */
-export function registerRuntime(entry: RuntimeRegistryEntry): void {
+export function registerRuntime(entry: RuntimeRegistryEntry): "claimed" | "duplicate" {
   const sockets = runtimeSockets.get(entry.runtimeId) ?? [];
   runtimeSockets.set(entry.runtimeId, [...sockets.filter((s) => s !== entry.socket), entry.socket]);
+  /* A live runtime already serving sources under the id keeps its calls: a
+     second process claiming the id — a copy started by mistake, or one
+     posing as it — is held back, and Studio names the clash. */
+  const current = runtimeRegistry.get(entry.runtimeId);
+  if (
+    current &&
+    current.socket !== entry.socket &&
+    current.socket.connected &&
+    current.sourceNames.length > 0
+  ) {
+    return "duplicate";
+  }
   runtimeRegistry.set(entry.runtimeId, entry);
+  return "claimed";
 }
 
 /**
  * Release one socket of a runtime id; answers whether it was the last. While
- * others remain, the entry moves to the newest of them and the runtime stays.
+ * others remain, calls move to the oldest of them and the runtime stays.
  * The first of two processes sharing an id to disconnect used to remove the
  * entry and the bindings of the one still running, orphaning its sources
  * until it restarted.
  */
 export function releaseRuntimeSocket(runtimeId: string, socket: Socket): "last" | "remaining" {
   const remaining = (runtimeSockets.get(runtimeId) ?? []).filter((s) => s !== socket);
-  const newest = remaining.at(-1);
-  if (!newest) {
+  const next = remaining[0];
+  if (!next) {
     runtimeSockets.delete(runtimeId);
     return "last";
   }
   runtimeSockets.set(runtimeId, remaining);
   const entry = runtimeRegistry.get(runtimeId);
-  if (entry) runtimeRegistry.set(runtimeId, { ...entry, socket: newest });
+  if (entry?.socket === socket) runtimeRegistry.set(runtimeId, { ...entry, socket: next });
   return "remaining";
 }
 

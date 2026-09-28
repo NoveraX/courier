@@ -26,7 +26,7 @@ export function handleHello(
     return;
   }
   ref.runtimeId = hello.runtimeId;
-  registerRuntime({
+  const claim = registerRuntime({
     runtimeId: hello.runtimeId,
     kind: hello.kind,
     socket,
@@ -38,6 +38,10 @@ export function handleHello(
     // still resolvable for the playground "resolved URL" badge.
     ...(hello.listenOrigin && { listenOrigin: hello.listenOrigin }),
   });
+  if (claim === "duplicate") {
+    log.warn(`A second runtime claims the id "${hello.runtimeId}"; calls stay with the first`);
+    deps.uiNamespace?.emit("runtime:duplicate", { runtimeId: hello.runtimeId });
+  }
   /* A runtime counts as attached from its hello, whether or not it ever
      announces a transport — a browser never does. */
   emitBindingSnapshot(deps);

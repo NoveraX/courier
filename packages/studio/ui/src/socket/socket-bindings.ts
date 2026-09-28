@@ -2,7 +2,8 @@ import type { Socket } from "socket.io-client"
 import type { useStudioStore } from "@/store"
 
 import { notifyFileChange } from "@/store/watcher-notifications"
-import { showBindingErrorToast } from "@/store/binding-error-toast"
+import { showBindingErrorToast, showDuplicateRuntimeToast } from "@/store/binding-error-toast"
+import { isPlainObject } from "./is-plain-object"
 import { bindApis } from "./apis-bindings"
 import { isBindingErrorPayload, isBindingSnapshot } from "./binding-guards"
 import { bindEvents } from "./event-bindings"
@@ -20,6 +21,7 @@ export interface Bindings {
   onConnectError: () => void
   onBindingSnapshot: (data: unknown) => void
   onBindingError: (data: unknown) => void
+  onRuntimeDuplicate: (data: unknown) => void
   onWatcherStatus: (data: unknown) => void
   onWatcherChange: (data: unknown) => void
   onPlaygroundChunk: (data: unknown) => void
@@ -52,6 +54,9 @@ export function buildBindings(
       if (!isBindingErrorPayload(data)) return
       store().setBindingError(data)
       showBindingErrorToast(data)
+    },
+    onRuntimeDuplicate: (data) => {
+      if (isPlainObject(data) && typeof data.runtimeId === "string") showDuplicateRuntimeToast(data.runtimeId)
     },
     onWatcherStatus: (data) => {
       if (data && typeof data === "object" && "apiPaths" in data) {
@@ -93,6 +98,7 @@ export function buildBindings(
   s.on("connect_error", b.onConnectError)
   s.on("binding:snapshot", b.onBindingSnapshot)
   s.on("binding:error", b.onBindingError)
+  s.on("runtime:duplicate", b.onRuntimeDuplicate)
   s.on("watcher:status", b.onWatcherStatus)
   s.on("watcher:change", b.onWatcherChange)
   s.on("playground:chunk", b.onPlaygroundChunk)
@@ -110,6 +116,7 @@ export function unbind(s: Socket, b: Bindings): void {
   s.off("connect_error", b.onConnectError)
   s.off("binding:snapshot", b.onBindingSnapshot)
   s.off("binding:error", b.onBindingError)
+  s.off("runtime:duplicate", b.onRuntimeDuplicate)
   s.off("watcher:status", b.onWatcherStatus)
   s.off("watcher:change", b.onWatcherChange)
   s.off("playground:chunk", b.onPlaygroundChunk)

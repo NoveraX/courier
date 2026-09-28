@@ -49,7 +49,7 @@ export function createRecordingTransport(
     return {
       call: async (group, method, variables, options) =>
         asResponse(await execute(group, method, variables, options, true)),
-      describe: () => ({ method: "POST", url: proxy.url }),
+      describe: (group, method) => ({ method: "POST", url: proxyUrl(proxy, group, method) }),
     };
   }
 
@@ -68,6 +68,14 @@ export function createRecordingTransport(
       return { method: route.httpMethod, url: `${baseURL}${fillPath(route.fullPath, variables)}` };
     },
   };
+}
+
+/* The proxy route names the call in its query, as the proxy caller sends it. */
+function proxyUrl(proxy: { url: string; source: string }, group: string, method: string): string {
+  const routing = new URLSearchParams(
+    group ? { _s: proxy.source, _g: group, _m: method } : { _s: proxy.source, _m: method },
+  );
+  return `${proxy.url}${proxy.url.includes("?") ? "&" : "?"}${routing}`;
 }
 
 function baseUrlOf(source: AnyDefinedApi): string {

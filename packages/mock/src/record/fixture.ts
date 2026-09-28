@@ -1,6 +1,9 @@
 import type { HarEntry, HarLog } from "./har-format";
 import { createHarLog } from "./har-format";
 
+/** The scheme of the URL an entry gets for a fixture that names no request. */
+const CALL_URL = "courier:";
+
 /** A single fixture entry with courier metadata */
 export interface Fixture {
   group: string;
@@ -23,7 +26,9 @@ export function harToFixtures(har: HarLog): Fixture[] {
     group: entry._courier.group,
     method: entry._courier.method,
     variables: entry._courier.variables,
-    request: { method: entry.request.method, url: entry.request.url },
+    ...(!entry.request.url.startsWith(CALL_URL) && {
+      request: { method: entry.request.method, url: entry.request.url },
+    }),
     response: {
       status: entry.response.status,
       data: safeJsonParse(entry.response.content.text),
@@ -34,7 +39,22 @@ export function harToFixtures(har: HarLog): Fixture[] {
   }));
 }
 
-/** Convert Courier fixtures back to HAR format */
+/**
+ * Write fixtures as a HAR log, one entry per fixture.
+ *
+ * An entry's request is the one the fixture was recorded as — its method and
+ * URL; the body the client built from the variables is not recorded, so the
+ * entry carries none, and the variables stay in its `_courier` field, from
+ * which {@link harToFixtures} reads them back. A fixture that names no request,
+ * such as one written by hand, gets a `courier:` URL naming its call.
+ *
+ * @param fixtures - The fixtures
+ * @returns The HAR log
+ * @example
+ * ```ts
+ * writeFileSync("users.har", JSON.stringify(fixturesToHar(recorder.getFixtures())));
+ * ```
+ */
 export function fixturesToHar(fixtures: Fixture[]): HarLog {
   const har = createHarLog();
   for (const fixture of fixtures) {
@@ -42,17 +62,8 @@ export function fixturesToHar(fixtures: Fixture[]): HarLog {
       startedDateTime: fixture.recordedAt,
       time: fixture.duration,
       request: {
-        method: fixture.request?.method ?? "POST",
-        url: fixture.request?.url ?? "/api/request",
-        headers: [{ name: "Content-Type", value: "application/json" }],
-        postData: {
-          mimeType: "application/json",
-          text: JSON.stringify({
-            group: fixture.group,
-            method: fixture.method,
-            variables: fixture.variables,
-          }),
-        },
+        ...(fixture.request ?? { method: "POST", url: callUrl(fixture) }),
+        headers: [],
       },
       response: {
         status: fixture.response.status,
@@ -73,6 +84,11 @@ export function fixturesToHar(fixtures: Fixture[]): HarLog {
     har.log.entries.push(entry);
   }
   return har;
+}
+
+/* The call a fixture stands for, when it names no request it was made as. */
+function callUrl({ group, method }: Fixture): string {
+  return group ? `${CALL_URL}${group}/${method}` : `${CALL_URL}${method}`;
 }
 
 /** Sanitize a fixture by applying a transform to sensitive data */

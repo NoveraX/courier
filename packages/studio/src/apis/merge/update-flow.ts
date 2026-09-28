@@ -9,6 +9,7 @@ import { declaresEndpoints } from "./declares-endpoints";
 import { extractEndpoints } from "./extract-endpoints";
 import { classifyEndpoints } from "./fingerprint";
 import { mergeGroupFile } from "./merge-group";
+import { readsAsDeclaration } from "./reads-as-declaration";
 
 /**
  * Preview the result of updating a source to a new spec.
@@ -19,10 +20,18 @@ import { mergeGroupFile } from "./merge-group";
  * written as generated: that includes the source of an API grouped by tag
  * or path, whose `defineApi` lists its groups and holds no endpoint.
  *
+ * A file on disk that does not read as code declaring endpoints — one saved
+ * mid-edit — cannot be merged. It comes back as a `conflict` holding the
+ * generated file, which replaces it only once the user allows that.
+ *
  * @param fingerprints - Stored fingerprints for the source (endpoint name → hash)
  * @param generated - Freshly generated files from the new spec
  * @param existingFiles - Map of file path → content for files currently on disk
  * @returns Preview with merged files
+ * @example
+ * ```ts
+ * previewUpdate(record.endpoints, [{ path, content: generated }], { [path]: onDisk }).files[0]?.status;
+ * ```
  */
 export function previewUpdate(
   fingerprints: Record<string, string>,
@@ -53,6 +62,7 @@ function mergeOrOverwrite(
   if (!existing || !declaresEndpoints(existing) || !declaresEndpoints(gen.content)) {
     return { path: gen.path, content: gen.content, status: "safe", changes: [] };
   }
+  if (!readsAsDeclaration(gen.path, existing)) return unmergeable(gen);
 
   const existingCode = extractEndpoints(existing);
   const specNames = Object.keys(extractEndpoints(gen.content));
@@ -63,11 +73,28 @@ function mergeOrOverwrite(
      user added, helpers below the group — none of which the endpoint
      classification says anything about. */
   const result = mergeGroupFile(existing, gen.content, fp);
+  if (!readsAsDeclaration(gen.path, result.content)) return unmergeable(gen);
 
   return {
     path: gen.path,
     content: result.content,
     status: result.status,
     changes: result.changes,
+  };
+}
+
+/* The generated file, for a file on disk the merge cannot keep whole. */
+function unmergeable(gen: GeneratedFile): UpdateFileResult {
+  return {
+    path: gen.path,
+    content: gen.content,
+    status: "conflict",
+    changes: [
+      {
+        type: "updated",
+        target: "file",
+        detail: "Studio cannot read the file on disk as code, so it cannot keep its edits",
+      },
+    ],
   };
 }

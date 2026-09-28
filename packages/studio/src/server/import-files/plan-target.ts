@@ -40,7 +40,10 @@ export function planTarget(
 ): TargetOutcome {
   if (disk.kind === "link" || disk.kind === "not-a-file") return { blocked: disk.kind };
   if (disk.kind === "absent") return { write: written(target, "create", target.body, ownership) };
-  const body = target.kind === "merge" ? mergedBody(target, disk, ownership, record) : target.body;
+  /* A file the merge cannot read is replaced whole, and only once the user allows it. */
+  const merged = target.kind === "merge" ? mergedBody(target, disk, ownership, record) : null;
+  const body = merged ?? target.body;
+  const whole = target.kind === "generated" || (target.kind === "merge" && merged === null);
   const carriesEdits =
     target.kind === "derived"
       ? (record?.carriesEdits ?? false) || ownership.endsWith("-edited")
@@ -49,7 +52,7 @@ export function planTarget(
      A file without Studio's header for this import is written even when its text is the same,
      so that, once the user allows it, the header comes back. */
   const unchanged = body === disk.body && ownership !== "foreign";
-  const action = unchanged ? "unchanged" : target.kind === "generated" ? "replace" : "merge";
+  const action = unchanged ? "unchanged" : whole ? "replace" : "merge";
   const write = {
     ...written(target, action, body, ownership),
     carriesEdits,
@@ -95,17 +98,19 @@ function dropsEditedEndpoint(
   });
 }
 
+/* The target merged with the file on disk, or `null` when the file cannot be read to merge. */
 function mergedBody(
   target: PlanTarget,
   disk: ExistingFile,
   ownership: Ownership,
   record: RecordedFile | undefined,
-): string {
+): string | null {
   const fingerprints = writtenFingerprints(disk, ownership, record);
-  const merged = previewUpdate(fingerprints, [{ path: target.path, content: target.body }], {
+  const [merged] = previewUpdate(fingerprints, [{ path: target.path, content: target.body }], {
     [target.path]: disk.body,
-  });
-  return merged.files[0]?.content ?? target.body;
+  }).files;
+  if (merged === undefined) return target.body;
+  return merged.status === "conflict" ? null : merged.content;
 }
 
 function confirmationReason(

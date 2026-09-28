@@ -20,13 +20,12 @@ Courier supports two deployment models for realtime features (SSE and WebSocket)
 
 | | Single Replica | Multi-Replica |
 |---|---|---|
-| **Adapters** | Memory (built-in, zero config) | Redis (`@noverax/courier-redis`) |
-| **SSE resume** | `createMemoryStream()` | `createRedisStream()` |
-| **WS broadcast** | `createMemoryPubSub()` | `createRedisPubSub()` |
-| **Presence** | `createMemoryPresence()` | `createRedisPresence()` |
+| **WS broadcast** | Nothing to add — the handler delivers to its own connections | `createRedisPubSub()`, passed to the server as `pubsub` |
+| **Stream history** | `createMemoryStream()`, read by your stream handlers | `createRedisStream()`, read by your stream handlers |
+| **Presence** | `createMemoryPresence()`, used by your channel handlers | `createRedisPresence()`, used by your channel handlers |
 | **Use case** | Development, single-process prod | K8s, Docker Swarm, any horizontal scaling |
 
-Memory adapters are the default — they work out of the box with zero configuration. Switch to Redis adapters when you need multiple server instances sharing state.
+A single process needs no adapter to broadcast. The stream and presence adapters are building blocks your handlers call — the server does not read or write them on its own — and the Redis ones share their state across replicas. [Redis Adapters](/docs/deployment/redis) shows a stream that resumes from them and a room that tracks who is in it.
 
 ## Decision Tree
 
@@ -40,7 +39,7 @@ Memory adapters are the default — they work out of the box with zero configura
    - No framework → `@noverax/courier-server` standalone
 
 3. **How many replicas?**
-   - Single → memory adapters (default)
+   - Single → no pub/sub adapter; memory stream and presence adapters where your handlers need them
    - Multiple → Redis adapters + sticky sessions
 
 ## Health Checks

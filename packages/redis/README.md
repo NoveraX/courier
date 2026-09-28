@@ -49,22 +49,38 @@ import { createCourierServer } from "@noverax/courier-server"
 createCourierServer({ sources, pubsub, port: 3001 })
 ```
 
-### Streams — SSE Event Persistence
+### Streams — SSE Event History
 
-Stores SSE events in Redis Streams for `Last-Event-ID` resume support:
+Keeps a stream's events in Redis Streams, so a client that reconnects to any replica can be sent what it missed. The server does not use it on its own: the code that produces an event appends it, and the stream's handler replays `getHistory(topic, ctx.lastEventId)` and yields each event with `tracked(event.id, …)`, so the id its client resumes from is the Redis one.
 
 ```ts
 import { Redis } from "ioredis"
 import { createRedisStream } from "@noverax/courier-redis"
+import { courier } from "@noverax/courier/define"
+import { tracked } from "@noverax/courier/realtime"
 
-const stream = createRedisStream({
+const history = createRedisStream({
   redis: new Redis(),
   prefix: "courier:stream:",
   maxLen: 1000,
 })
 
-await stream.connect()
+await history.connect()
+
+// Wherever an event happens
+await history.append("activity:team-1", { data: { user: "ann" }, timestamp: Date.now() })
+
+// The stream's handler sends what its client missed, after its Last-Event-ID
+const { stream } = courier()
+
+export const feed = stream.response<unknown>().implement(async function* (ctx) {
+  for (const event of await history.getHistory("activity:team-1", ctx.lastEventId ?? "0")) {
+    yield tracked(event.id, event.data)
+  }
+})
 ```
+
+The [Redis adapters guide](https://courier.noverax.cloud/docs/deployment/redis) has a complete handler that resumes across replicas, and presence used from a channel's handlers.
 
 <br />
 

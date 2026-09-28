@@ -2,7 +2,7 @@ import type { SSESubscription, WSChannel } from "../realtime/types";
 
 /**
  * Uniform shape for HTTP transport primitives.
- * Both direct (executeRequest) and proxy (createProxyCallerFn) modes implement this.
+ * Both direct (executeRequest) and proxy (createUntypedProxyCallerFn) modes implement this.
  *
  * @param group - endpoint group name (empty string for flat endpoints)
  * @param method - method name within the group

@@ -29,10 +29,9 @@ export function createProxyHTTPExecutor(
   return function executeHTTP(group, method, variables, options, raw) {
     const callOptions = { ...options, ...(raw && { rawData: true }) };
     const chosen = isWrite(described, group, method) ? writeFn : fn;
-    const executeFn = chosen(source, callOptions);
     const endpointKey = group ? `${group}:${method}` : method;
 
-    return variables !== undefined ? executeFn(endpointKey, variables) : executeFn(endpointKey);
+    return chosen(source, callOptions)(endpointKey, variables);
   };
 }
 

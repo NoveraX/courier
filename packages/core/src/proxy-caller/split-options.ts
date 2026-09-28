@@ -12,7 +12,9 @@
  */
 
 import { ConfigurationError } from "../errors";
-import type { CallOptions, UploadProgress } from "../http-client/types";
+import type { UploadProgress } from "../http-client/types";
+import { isFieldRecord } from "../utils/body-kind";
+import { layerHeaders } from "../utils/layer-headers";
 
 const SERVER_KEYS: ReadonlySet<string> = new Set([
   "rawData",
@@ -46,13 +48,16 @@ export interface ProxyCallDefaults {
 /**
  * Sort a call's options by who acts on them.
  *
+ * The options arrive as the transport hands them on, so each one the browser's
+ * request reads is checked for what it is, and one that is not is left out.
+ *
  * @param options - The options given to `.with()` and `.raw`
  * @param defaults - The caller's own defaults
  * @returns The split options
  * @throws ConfigurationError for `prefixUrl`, which only the server may set
  */
 export function splitProxyOptions(
-  options: CallOptions<boolean> | undefined,
+  options: Readonly<Record<string, unknown>> | undefined,
   defaults: ProxyCallDefaults,
 ): ProxyCallOptions {
   const {
@@ -60,6 +65,7 @@ export function splitProxyOptions(
     credentials,
     cache,
     method,
+    next,
     signal: _signal,
     onUploadProgress,
     onDownloadProgress,
@@ -76,7 +82,6 @@ export function splitProxyOptions(
   const server: Record<string, unknown> = {};
   const init: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(rest)) {
-    if (key === "next") continue;
     (SERVER_KEYS.has(key) ? server : init)[key] = value;
   }
   if (server.timeout === undefined) delete server.timeout;
@@ -84,24 +89,26 @@ export function splitProxyOptions(
   return {
     server,
     init,
-    headers: mergeHeaders(defaults.headers, headers),
-    credentials: credentials ?? defaults.credentials,
+    headers:
+      headers === undefined ? defaults.headers : { ...defaults.headers, ...layerHeaders(headers) },
+    credentials: isCredentials(credentials) ? credentials : defaults.credentials,
     /* The default bounds how long the browser waits. Sent to the server as
        the call's own timeout, it replaced the endpoint's `.timeout()`. */
     timeout: typeof server.timeout === "number" ? server.timeout : defaults.timeout,
-    proxyMethod: method,
+    proxyMethod: method === "GET" || method === "POST" ? method : undefined,
     stream: server.stream === true,
     cache,
-    next: (rest as { next?: Record<string, unknown> }).next,
-    onUploadProgress,
+    next: isFieldRecord(next) ? next : undefined,
+    onUploadProgress:
+      typeof onUploadProgress === "function"
+        ? (progress: UploadProgress) => {
+            Reflect.apply(onUploadProgress, undefined, [progress]);
+          }
+        : undefined,
     onDownloadProgress,
   };
 }
 
-function mergeHeaders(
-  defaults: Record<string, string> | undefined,
-  own: HeadersInit | undefined,
-): Record<string, string> | undefined {
-  if (!own) return defaults;
-  return { ...defaults, ...Object.fromEntries(new Headers(own)) };
+function isCredentials(value: unknown): value is RequestCredentials {
+  return value === "omit" || value === "same-origin" || value === "include";
 }

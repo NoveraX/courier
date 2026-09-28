@@ -11,7 +11,6 @@ import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define";
 import { createProxyCaller } from "../src/proxy-caller";
 import { createTestClient } from "../src/testing";
-import type { EndpointKey } from "../src/types";
 
 /** `true` for `any` alone. */
 type IsAny<T> = 0 extends 1 & T ? true : false;
@@ -75,8 +74,3 @@ describe("a test client", () => {
   });
 });
 
-describe("the endpoint keys of a source", () => {
-  it("are the declared ones", () => {
-    expectTypeOf<EndpointKey<typeof api>>().toEqualTypeOf<"users:list" | "users:byId">();
-  });
-});

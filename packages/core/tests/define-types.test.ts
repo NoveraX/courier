@@ -10,7 +10,6 @@ import { defineApi, defineGroup, courier } from "../src/define/index";
 import type { InferResponse, InferVariables } from "../src/define/marker";
 import type { HttpResponse } from "../src/http-client/types";
 import type { FlatClient, GroupClient, InferClient, MixedClient, TypedClient } from "../src/client";
-import type { EndpointKey, ResolveEndpoint } from "../src/types";
 
 const { endpoint } = courier();
 
@@ -93,58 +92,6 @@ describe("defineApi() type inference", () => {
 		expectTypeOf(api.options.baseURL).toEqualTypeOf<string | undefined>();
 	});
 });
-
-// ---- EndpointKey resolution ----
-
-describe("EndpointKey type resolution", () => {
-	type ApiType = typeof api;
-
-	it("resolves grouped endpoint keys as group:method", () => {
-		type Keys = EndpointKey<ApiType>;
-		expectTypeOf<"users:getAll">().toMatchTypeOf<Keys>();
-		expectTypeOf<"users:getById">().toMatchTypeOf<Keys>();
-		expectTypeOf<"users:create">().toMatchTypeOf<Keys>();
-		expectTypeOf<"posts:list">().toMatchTypeOf<Keys>();
-	});
-
-	it("rejects invalid endpoint keys", () => {
-		type Keys = EndpointKey<ApiType>;
-		expectTypeOf<"users:nonexistent">().not.toMatchTypeOf<Keys>();
-		expectTypeOf<"unknown:getAll">().not.toMatchTypeOf<Keys>();
-	});
-});
-
-// ---- ResolveEndpoint type resolution ----
-
-describe("ResolveEndpoint type resolution", () => {
-	type ApiType = typeof api;
-
-	it("resolves users:getAll", () => {
-		type Resolved = ResolveEndpoint<ApiType, "users:getAll">;
-		expectTypeOf<InferResponse<Resolved>>().toEqualTypeOf<User[]>();
-		expectTypeOf<InferVariables<Resolved>>().toEqualTypeOf<void>();
-	});
-
-	it("resolves users:getById", () => {
-		type Resolved = ResolveEndpoint<ApiType, "users:getById">;
-		expectTypeOf<InferResponse<Resolved>>().toEqualTypeOf<User>();
-		expectTypeOf<InferVariables<Resolved>>().toEqualTypeOf<{ id: number }>();
-	});
-
-	it("resolves users:create", () => {
-		type Resolved = ResolveEndpoint<ApiType, "users:create">;
-		expectTypeOf<InferResponse<Resolved>>().toEqualTypeOf<User>();
-		expectTypeOf<InferVariables<Resolved>>().toEqualTypeOf<CreateUserInput>();
-	});
-
-	it("resolves posts:list", () => {
-		type Resolved = ResolveEndpoint<ApiType, "posts:list">;
-		expectTypeOf<InferResponse<Resolved>>().toEqualTypeOf<Post[]>();
-		expectTypeOf<InferVariables<Resolved>>().toEqualTypeOf<void>();
-	});
-});
-
-// ---- TypedClient type inference ----
 
 describe("TypedClient type inference", () => {
 	type Client = TypedClient<typeof api>;

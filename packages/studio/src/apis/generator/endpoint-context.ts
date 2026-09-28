@@ -25,6 +25,8 @@ export interface EndpointUses {
   validator: boolean;
   /** Whether a closure writes a url-encoded body with `formBody`. */
   formBody: boolean;
+  /** Whether a closure writes query values with `formQuery`. */
+  formQuery: boolean;
   /** The builders the definitions start from: `endpoint`, `stream`. */
   readonly bases: Set<"endpoint" | "stream">;
 }
@@ -70,6 +72,7 @@ export function endpointContext(
       types: new Set(),
       validator: false,
       formBody: false,
+      formQuery: false,
       bases: new Set(),
     },
   };

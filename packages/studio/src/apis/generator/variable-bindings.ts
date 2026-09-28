@@ -5,17 +5,30 @@
 import { isReservedBinding } from "../parser/reserved-bindings";
 import type { ParsedParameter } from "../parser/types";
 import { objectKey } from "./literals";
+import { styledQuery } from "./styled-query";
 
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 /* Bound by the closure itself, or not bindable in a module. */
-const TAKEN = new Set(["http", "body", "form", "formBody", "vars", "arguments", "eval"]);
+const TAKEN = new Set([
+  "http",
+  "body",
+  "form",
+  "formBody",
+  "formQuery",
+  "vars",
+  "arguments",
+  "eval",
+]);
 
 /** A destructuring pattern, and the query string it feeds. */
 export interface Bindings {
   /** The pattern's entries, without braces: `dryRun, "page-size": param1`. */
   pattern: string;
-  /** The query string's object, `{ dryRun }`, or `null` without query parameters. */
+  /**
+   * The query string's object, `{ dryRun }` — written by `formQuery` when a
+   * parameter has a style of its own — or `null` without query parameters.
+   */
   searchParams: string | null;
 }
 
@@ -48,7 +61,7 @@ export function destructure(
   });
   return {
     pattern: pattern.join(", "),
-    searchParams: fields.length > 0 ? `{ ${fields.join(", ")} }` : null,
+    searchParams: fields.length > 0 ? styledQuery(`{ ${fields.join(", ")} }`, query) : null,
   };
 }
 

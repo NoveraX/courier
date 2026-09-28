@@ -7,6 +7,7 @@
  * nothing, which is how Kubernetes' specification used to end the import.
  */
 
+import { collectionEncoding } from "./field-encoding";
 import { isOperationKey } from "./http-methods";
 import { parseOpenApi3 } from "./parse-openapi3";
 import type { ParsedSpec, SpecNode } from "./types";
@@ -97,7 +98,7 @@ function convertBody(op: SpecNode, spec: SpecNode): void {
       ...(field.items && { items: field.items }),
       ...(field.description && { description: field.description }),
     };
-    if (field.type === "array") encoding[field.name] = arrayEncoding(field.collectionFormat);
+    if (field.type === "array") encoding[field.name] = collectionEncoding(field.collectionFormat);
     if (field.required) required.push(field.name);
   }
 
@@ -110,15 +111,6 @@ function convertBody(op: SpecNode, spec: SpecNode): void {
     },
   };
   op.parameters = parameters.filter((p) => p?.in !== "formData");
-}
-
-/* How Swagger 2.0 joins an array field's items, in OpenAPI 3's terms; `csv`
-   when it does not say. Tabs have no OpenAPI 3 style, and are sent as commas. */
-function arrayEncoding(collectionFormat: unknown): SpecNode {
-  if (collectionFormat === "multi") return { style: "form", explode: true };
-  if (collectionFormat === "ssv") return { style: "spaceDelimited", explode: false };
-  if (collectionFormat === "pipes") return { style: "pipeDelimited", explode: false };
-  return { style: "form", explode: false };
 }
 
 function consumesOf(op: SpecNode, spec: SpecNode): unknown[] {

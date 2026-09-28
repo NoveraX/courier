@@ -99,7 +99,10 @@ export interface ParsedEndpoint {
   tags: string[];
 }
 
-/** How one field of a url-encoded body is written, as OpenAPI's `encoding` names it. */
+/**
+ * How one field of a url-encoded body, or one query parameter, is written:
+ * OpenAPI's `style` and `explode`.
+ */
 export interface FieldEncoding {
   style?: "form" | "spaceDelimited" | "pipeDelimited" | "deepObject";
   explode?: boolean;
@@ -117,6 +120,13 @@ export interface ParsedParameter {
   items?: ParsedSchema;
   /** `date-time`, `uuid`, and the rest. */
   format?: string;
+  /**
+   * How a query parameter is written, when not in OpenAPI's default style,
+   * `form` exploded: Stripe's `created[gte]` and `expand[0]` are
+   * `deepObject`, and a Swagger 2.0 list is joined with commas unless it
+   * says otherwise.
+   */
+  encoding?: FieldEncoding;
   /**
    * The parameter's own schema, when it is an object or one of several
    * forms — Stripe's `created` is a timestamp or a range of them — which a

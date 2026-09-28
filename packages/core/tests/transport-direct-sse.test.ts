@@ -91,7 +91,7 @@ describe("a direct stream call", () => {
 
     expect(() => caller.rooms.events({ since: 3 } as never)).toThrow(RealtimeValidationError);
     expect(() => caller.rooms.events({ since: 3 } as never)).toThrow(
-      "Missing required parameter: room",
+      'Missing required path parameter "room": pass it in the variables',
     );
   });
 });

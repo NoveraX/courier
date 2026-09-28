@@ -35,6 +35,11 @@ interface Wire {
   readonly served: boolean;
 }
 
+/** How a message names an endpoint: `GET ":id"`, `DELETE "files/:id"`. */
+function addressOf(wire: Wire): string {
+  return `${wire.method === "del" ? "DELETE" : wire.method.toUpperCase()} "${wire.path}"`;
+}
+
 /** Every verb that may begin a chain, plus the one a channel connects with. */
 const VERBS: readonly HttpMethod[] = ["get", "head", "options", "post", "put", "patch", "del"];
 
@@ -44,11 +49,15 @@ const VERBS: readonly HttpMethod[] = ["get", "head", "options", "post", "put", "
  * Shared by both halves of a chain, so `.response()` reads the same before a
  * verb has been named and after.
  */
-function refinements(state: BuilderState, next: (updated: BuilderState) => AnyBuilder): AnyBuilder {
+function refinements(
+  state: BuilderState,
+  next: (updated: BuilderState) => AnyBuilder,
+  where?: string,
+): AnyBuilder {
   return {
-    response: (schema?: StandardSchemaV1) => next(withSlot(state, "response", schema)),
-    variables: (schema?: StandardSchemaV1) => next(withSlot(state, "variables", schema)),
-    send: (schema?: StandardSchemaV1) => next(withSlot(state, "send", schema)),
+    response: (schema?: StandardSchemaV1) => next(withSlot(state, "response", schema, where)),
+    variables: (schema?: StandardSchemaV1) => next(withSlot(state, "variables", schema, where)),
+    send: (schema?: StandardSchemaV1) => next(withSlot(state, "send", schema, where)),
     use: (...middleware: Middleware[]) => next(withMiddleware(state, middleware)),
     headers: (names: readonly string[]) => next(withHeaders(state, names)),
     timeout: (ms: number) => next(withValue(state, "timeout", ms)),
@@ -69,7 +78,7 @@ function makeAddressed(state: BuilderState, wire: Wire, options: AnyEndpointOpti
   const endpoint = sealAt(state, wire, options);
 
   const methods: AnyBuilder = {
-    ...refinements(state, next),
+    ...refinements(state, next, addressOf(wire)),
     cache: (config: CacheConfig) => {
       if (state.kind !== "query") {
         throw new ConfigurationError(

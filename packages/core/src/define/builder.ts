@@ -43,16 +43,29 @@ export function initialState(kind: EndpointKind, inherited: Partial<BuilderState
  *
  * Slots replace rather than merge, so filling one twice is a mistake worth
  * reporting where it was written instead of silently dropping a value.
+ *
+ * @param state - The builder so far
+ * @param slot - The slot a method fills
+ * @param schema - Its schema, or `undefined` for a type alone
+ * @param where - The endpoint's address, such as `GET ":id"`, once a verb has named it
+ * @returns The builder with the slot filled
+ * @throws ConfigurationError `SLOT_ALREADY_SET` when the slot was filled before
+ *
+ * @example
+ * ```ts
+ * withSlot(state, "response", UserSchema, 'GET ":id"');
+ * ```
  */
 export function withSlot(
   state: BuilderState,
   slot: SlotName,
   schema: StandardSchemaV1 | undefined,
+  where?: string,
 ): BuilderState {
   if (state.filled.includes(slot)) {
     throw new ConfigurationError(
       "SLOT_ALREADY_SET",
-      `[courier] .${slot}() was called twice on the same endpoint — each slot may be set once`,
+      `[courier] .${slot}() was called twice on ${where ?? "the same endpoint"}. Each slot takes one schema or type, and the second would replace the first: remove one of the two calls.`,
     );
   }
   return {

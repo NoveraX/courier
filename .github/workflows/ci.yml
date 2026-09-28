@@ -75,6 +75,11 @@ jobs:
       - name: Check published entry points
         run: npm run check:exports
 
+      # Every TypeScript sample of the docs and the READMEs, compiled against
+      # the built packages, so a sample cannot drift from the API it shows.
+      - name: Check documentation samples
+        run: npm run check:docs
+
   # The commit-msg hook runs only where it is installed and can be skipped, so
   # the same rules run here. A pull request is checked from its merge base; a
   # push, from the last release tag, so a cancelled or skipped run leaves

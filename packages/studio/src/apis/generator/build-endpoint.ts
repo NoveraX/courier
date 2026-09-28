@@ -24,6 +24,9 @@ import {
 } from "./schema-utils";
 import { sendsUrlEncoded, wireClosure } from "./wire-closure";
 
+/** The validators whose generated objects are loose. */
+const LOOSE: ReadonlySet<string> = new Set(["zod", "valibot"]);
+
 /** The type of an answer read otherwise than as JSON. */
 const READ_TYPES: Readonly<Record<ResponseReading, string | undefined>> = {
   json: undefined,
@@ -54,6 +57,10 @@ export function buildEndpointDefinition(
   const reading = responseReading(ep);
   const response = reading === "json" ? responseSchema(ep, context) : null;
   const path = endpointPath(ep);
+  /* The objects zod and valibot are generated with keep undeclared fields,
+     and their inferred types gain an index signature; with types generated,
+     a slot says the declared type beside its schema. */
+  const declared = context.options.generateTypes && LOOSE.has(context.options.validation);
   const kind = requestBodyKind(ep, context.spec);
   if (sendsUrlEncoded(ep, kind)) context.uses.formBody = true;
   const closure = wireClosure(ep, path, kind, reading);
@@ -64,11 +71,14 @@ export function buildEndpointDefinition(
     address: `${head}.${toInternalMethod(ep.httpMethod)}(${JSON.stringify(path)})`,
     closure,
     variablesSchema: variables,
-    variablesType: variables
-      ? null
-      : ((paramsType ? typeName(context, paramsType) : null) ?? resolveVariablesType(ep, context)),
+    variablesType:
+      variables && !declared
+        ? null
+        : ((paramsType ? typeName(context, paramsType) : null) ??
+          resolveVariablesType(ep, context)),
     responseSchema: response,
-    responseType: response ? null : (READ_TYPES[reading] ?? resolveResponseType(ep, context)),
+    responseType:
+      response && !declared ? null : (READ_TYPES[reading] ?? resolveResponseType(ep, context)),
   });
 }
 

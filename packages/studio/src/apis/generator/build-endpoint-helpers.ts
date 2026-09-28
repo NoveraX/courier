@@ -15,13 +15,17 @@ export interface EndpointChain {
   closure: string | null;
   /** The schema validating the variables, when there is one. */
   variablesSchema: string | null;
-  /** The type of the variables, for a chain without a schema for them. */
+  /**
+   * The type of the variables: the slot's type for a chain without a schema
+   * for them, and the type declared beside one that has a loose schema.
+   */
   variablesType: string | null;
   /** The schema validating the response, when there is one. */
   responseSchema: string | null;
   /**
-   * The type of the response, for a chain without a schema for it; `null`
-   * for an endpoint that answers with nothing, which resolves to `void`.
+   * The type of the response, for a chain without a schema for it — `null`
+   * for an endpoint that answers with nothing, which resolves to `void` —
+   * and the type declared beside a loose schema.
    */
   responseType: string | null;
 }
@@ -49,7 +53,7 @@ export function buildEndpointChain(chain: EndpointChain): string {
   /* A schema is preferred wherever there is one: it carries the type and
      validates the call, where a type argument only carries the type. */
   if (chain.variablesSchema) {
-    text += `.variables(${chain.variablesSchema})`;
+    text += `.variables${typeArgument(chain.variablesType)}(${chain.variablesSchema})`;
   } else if (chain.variablesType && chain.variablesType !== "undefined") {
     text += `.variables<${chain.variablesType}>()`;
   }
@@ -58,7 +62,7 @@ export function buildEndpointChain(chain: EndpointChain): string {
   /* An answer whose type is not written is still an answer: left out, the
      call resolved to `void` although it returned what the API sent. */
   if (chain.responseSchema) {
-    text += `.response(${chain.responseSchema})`;
+    text += `.response${typeArgument(chain.responseType)}(${chain.responseSchema})`;
   } else if (chain.responseType !== null) {
     text += `.response<${chain.responseType}>()`;
   }
@@ -82,4 +86,10 @@ export function buildEndpointChain(chain: EndpointChain): string {
  */
 export function emitsSchemas(options: GeneratorSettings): boolean {
   return options.generateSchemas === true && options.validation !== "none";
+}
+
+/* A declared type beside a schema: the schema validates, the type says what
+   the slot holds, without the index signature a loose object adds. */
+function typeArgument(type: string | null): string {
+  return type === null || type === "unknown" || type === "undefined" ? "" : `<${type}>`;
 }

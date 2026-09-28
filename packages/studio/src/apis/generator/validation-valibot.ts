@@ -37,7 +37,9 @@ export function schemaToValibot(schema: ParsedSchema): string {
         ? `v.record(v.string(), ${schemaToValibot(schema.valueType)})`
         : "v.record(v.string(), v.unknown())";
     }
-    return `v.object({\n${propLines.join(",\n")},\n})`;
+    /* An answer keeps the fields its specification does not declare, as
+       ArkType's objects do. */
+    return `v.looseObject({\n${propLines.join(",\n")},\n})`;
   }
 
   return primitiveToValibot(schema.type);

@@ -39,7 +39,10 @@ export function schemaToZod(schema: ParsedSchema): string {
         ? `z.record(z.string(), ${schemaToZod(schema.valueType)})`
         : "z.record(z.string(), z.unknown())";
     }
-    return `z.object({\n${propLines.join(",\n")},\n})`;
+    /* An answer keeps the fields its specification does not declare, as
+       ArkType's objects do: a strict object dropped whatever an API added
+       after its specification was written. */
+    return `z.looseObject({\n${propLines.join(",\n")},\n})`;
   }
 
   return primitiveToZod(schema.type);

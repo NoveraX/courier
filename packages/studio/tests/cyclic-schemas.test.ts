@@ -139,7 +139,7 @@ describe("a schema on a reference cycle", () => {
       Plain: { type: "object", properties: { city: { type: "string" } } },
     });
 
-    expect(out).toMatch(/export const PlainSchema = z\.object/);
+    expect(out).toMatch(/export const PlainSchema = z\.looseObject/);
     expect(out).toMatch(/export const CustomerSchema: z\.ZodType<Customer, Customer> = z\.lazy/);
   });
 

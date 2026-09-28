@@ -23,6 +23,8 @@ export interface WireBody {
   body: BodyInit;
   /** A Blob's type, when it has one. */
   type?: string;
+  /** Its length in bytes, when it is known before it is sent. */
+  size?: number;
 }
 
 /**
@@ -38,7 +40,8 @@ export interface WireBody {
  * ```
  */
 export function toWireBody(data: unknown): WireBody | undefined {
-  if (data instanceof ArrayBuffer) return { kind: "arrayBuffer", body: data };
+  if (data instanceof ArrayBuffer)
+    return { kind: "arrayBuffer", body: data, size: data.byteLength };
   if (ArrayBuffer.isView(data)) {
     const { buffer, byteOffset, byteLength } = data;
     /* A view of shared memory cannot be a body; its bytes are copied out. */
@@ -46,9 +49,11 @@ export function toWireBody(data: unknown): WireBody | undefined {
       buffer instanceof ArrayBuffer
         ? new Uint8Array(buffer, byteOffset, byteLength)
         : new Uint8Array(buffer, byteOffset, byteLength).slice();
-    return { kind: "arrayBuffer", body };
+    return { kind: "arrayBuffer", body, size: body.byteLength };
   }
-  if (data instanceof Blob) return { kind: "blob", body: data, type: data.type || undefined };
+  if (data instanceof Blob) {
+    return { kind: "blob", body: data, type: data.type || undefined, size: data.size };
+  }
   if (data instanceof FormData) return { kind: "formData", body: data };
   return undefined;
 }

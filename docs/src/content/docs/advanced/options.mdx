@@ -58,6 +58,8 @@ type CallOptions = {
 }
 ```
 
+`onDownloadProgress` reports against the answer's `content-length`, which the proxy sets on every answer it re-serializes and passes on for a streamed one. When no length is known — a compressed answer — `totalBytes` and `percent` stay 0 until the last event, which reports 100% of what arrived.
+
 ## Timeout & retry
 
 Configure request timeouts at the source level and automatic retry behavior via middleware:

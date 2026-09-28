@@ -1,6 +1,8 @@
 import { isBodilessStatus } from "../http-client/response";
 import { toWireBody, WIRE_BODY_HEADER, WIRE_BODY_TYPE_HEADER } from "./wire-body";
 
+const JSON_TEXT = new TextEncoder();
+
 /**
  * The proxy's answer to a call whose body was read on the server.
  *
@@ -36,12 +38,18 @@ export function toWireAnswer(
       headers.set("content-type", "application/octet-stream");
       headers.set("x-content-type-options", "nosniff");
     }
+    if (wire.size !== undefined) headers.set("content-length", String(wire.size));
     return new Response(wire.body, { status, headers });
   }
 
   /* JSON has no Headers, so the raw envelope carries them as a plain
      object; serialized as they were, they arrived as `{}`. */
-  const body = rawData ? { status, headers: Object.fromEntries(headers), data } : data;
+  const envelope = rawData ? { status, headers: Object.fromEntries(headers), data } : data;
   /* JSON has no `undefined`: a success without data answers `null`. */
-  return Response.json(body ?? null, { status, headers });
+  const bytes = JSON_TEXT.encode(JSON.stringify(envelope ?? null));
+  headers.set("content-type", "application/json");
+  /* Without a length the answer went out chunked, and a download progress
+     bar in the browser never learned its total. */
+  headers.set("content-length", String(bytes.byteLength));
+  return new Response(bytes, { status, headers });
 }

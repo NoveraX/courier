@@ -79,12 +79,30 @@ export interface ParsedEndpoint {
    * when there is no body.
    */
   requestBodyMediaType?: string;
+  /**
+   * How each field of a url-encoded body is written, by field name, as the
+   * specification's `encoding` declares it; absent when it declares none,
+   * and every field is written as OpenAPI's defaults say.
+   */
+  requestBodyEncoding?: Record<string, FieldEncoding>;
   /** Path + query parameters */
   parameters: ParsedParameter[];
   /** Response schema (from 200/201 response) */
   responseSchema: ParsedSchema | null;
+  /**
+   * Media type of the success response, e.g. `application/json`, `text/csv`
+   * or `application/pdf` — the one `responseSchema` describes, or the first
+   * declared when none carries a schema; absent when the response has no body.
+   */
+  responseMediaType?: string;
   /** Tags from spec */
   tags: string[];
+}
+
+/** How one field of a url-encoded body is written, as OpenAPI's `encoding` names it. */
+export interface FieldEncoding {
+  style?: "form" | "spaceDelimited" | "pipeDelimited" | "deepObject";
+  explode?: boolean;
 }
 
 export interface ParsedParameter {

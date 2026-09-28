@@ -37,10 +37,26 @@ function encodePathParam(name: string, value: unknown): string {
     );
   }
   const segment = String(value);
-  if (segment === "" || segment === "." || segment === "..") {
+  if (changesRoute(segment)) {
     throw new Error(`Path parameter ${name} cannot be "${segment}": it would change the route`);
   }
   return encodeURIComponent(segment);
+}
+
+/**
+ * Whether a path parameter's value would name another route than the one
+ * its endpoint declares: empty, `.` or `..`, which encoding does not hide.
+ *
+ * @param segment - The value, as the path would hold it
+ * @returns Whether it changes the route
+ * @example
+ * ```ts
+ * changesRoute(".."); // → true
+ * changesRoute("a..b"); // → false
+ * ```
+ */
+export function changesRoute(segment: string): boolean {
+  return segment === "" || segment === "." || segment === "..";
 }
 
 export const extractParamNames = (path: string): string[] => {

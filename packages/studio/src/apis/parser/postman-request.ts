@@ -9,6 +9,7 @@
  */
 
 import { inferSchemaFromValue } from "./infer-schema";
+import { pathParamName } from "./path-utils";
 import type { ParsedParameter, ParsedSchema, ParsedSecurityScheme, SpecNode } from "./types";
 
 /** Postman writes an environment reference as `{{name}}`. */
@@ -37,7 +38,8 @@ function structuredPath(url: unknown): string | undefined {
 function normalizeSegments(segments: string[]): string {
   const out = segments.map((segment) => {
     const variable = VARIABLE.exec(segment);
-    if (variable) return `:${variable[1]}`;
+    if (variable?.[1]) return `:${pathParamName(variable[1])}`;
+    if (segment.startsWith(":")) return `:${pathParamName(segment.slice(1))}`;
     return segment;
   });
   return out.length > 0 ? `/${out.join("/")}` : "/";
@@ -67,7 +69,8 @@ export function requestParameters(url: unknown): ParsedParameter[] {
     if (typeof entry?.key !== "string") continue;
     if (entry.disabled === true) continue;
     parameters.push({
-      name: entry.key.replace(/-/g, "_"),
+      /* Sent under its own name: `per_page` is not the `per-page` it reads. */
+      name: entry.key,
       in: "query",
       required: false,
       type: "string",
@@ -78,7 +81,7 @@ export function requestParameters(url: unknown): ParsedParameter[] {
   for (const segment of requestPath(url).split("/")) {
     if (!segment.startsWith(":")) continue;
     parameters.push({
-      name: segment.slice(1).replace(/-/g, "_"),
+      name: pathParamName(segment.slice(1)),
       in: "path",
       required: true,
       type: "string",

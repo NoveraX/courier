@@ -8,6 +8,7 @@ import {
   convertSchemaInline,
   generateEndpointName,
   normalizeTypeArray,
+  pathParamName,
   resolveRef,
   toCamelCase,
 } from "./utils";
@@ -52,7 +53,10 @@ function parseParameters(op: SpecNode, spec: SpecNode): ParsedParameter[] {
        the whole import down. */
     if (typeof resolved?.name !== "string") continue;
 
-    const name = resolved.name.replace(/-/g, "_");
+    /* Only a path parameter is renamed, to be a placeholder the path can
+       hold; a query parameter is sent under its own name, and renaming
+       `page-size` sent `page_size`, which the API does not read. */
+    const name = resolved.in === "path" ? pathParamName(resolved.name) : resolved.name;
     const key = `${resolved.in}:${name}`;
     /* An operation may restate a parameter its path item already declared. */
     if (seen.has(key)) continue;

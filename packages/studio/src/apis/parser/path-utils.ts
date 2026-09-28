@@ -4,7 +4,26 @@
 
 /** Convert OpenAPI path params `{id}` to Courier-style `:id` */
 export function convertPathParams(path: string): string {
-  return path.replace(/\{([\w-]+)\}/g, (_, name) => `:${name.replace(/-/g, "_")}`);
+  return path.replace(/\{([\w-]+)\}/g, (_, name: string) => `:${pathParamName(name)}`);
+}
+
+/**
+ * The name a path parameter takes in the path and in the variables.
+ *
+ * A placeholder is read up to the first character that cannot be part of an
+ * identifier, so `:file-id` would name `file`; the hyphen becomes an
+ * underscore. The value still fills the same segment, so nothing on the wire
+ * changes.
+ *
+ * @param name - The parameter's name as the specification writes it
+ * @returns The name the generated path and variables use
+ * @example
+ * ```ts
+ * pathParamName("file-id"); // → "file_id"
+ * ```
+ */
+export function pathParamName(name: string): string {
+  return name.replace(/-/g, "_");
 }
 
 /** Extract path from Postman URL (strip protocol, host, query) */

@@ -96,6 +96,7 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
       namedHeaders: call.answer.namedHeaders,
       timing,
       middlewareCount: middlewares.length,
+      signal: call.inner.baseOptions.signal ?? undefined,
     });
   }
 }

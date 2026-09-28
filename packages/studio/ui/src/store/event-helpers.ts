@@ -15,3 +15,7 @@ export function optStr(val: unknown): string | undefined {
 export function optNum(val: unknown): number | undefined {
   return typeof val === "number" && Number.isFinite(val) ? val : undefined
 }
+
+export function isRecord(val: unknown): val is Record<string, unknown> {
+  return typeof val === "object" && val !== null
+}

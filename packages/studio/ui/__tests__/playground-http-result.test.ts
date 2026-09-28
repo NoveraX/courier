@@ -57,7 +57,7 @@ type Event = StudioEvent & Record<string, unknown>;
 
 /** The runtime's report of the run, as it reaches the UI: in-process, so direct. */
 function reportRun(): void {
-  const { handleEvent } = useStudioStore.getState();
+  const { handleEvents } = useStudioStore.getState();
   const start: Event = {
     id: "req-1",
     sessionId: "app",
@@ -83,8 +83,7 @@ function reportRun(): void {
     requestHeaders: {},
     timing: { total: 12, middleware: 0, fetch: 10, validation: 1 },
   };
-  handleEvent(start);
-  handleEvent(end);
+  handleEvents([start, end]);
 }
 
 function entryOf(rid: string): PlaygroundHistoryEntry | undefined {

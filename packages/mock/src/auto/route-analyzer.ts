@@ -1,4 +1,5 @@
 import { normalizeHttpMethod } from "@noverax/courier";
+import { recordParam } from "../server/path-shape";
 import { extractSchema, isEndpoint, normalizePrefix, probeEndpoint } from "./endpoint-probe";
 import { detectOperation } from "./operation-detect";
 import type { RouteInfo, SourceGroup } from "./route-types";
@@ -117,8 +118,7 @@ function analyzeEndpoint(
   const httpMethod = normalizeHttpMethod(probed.method ?? "GET");
   const path = probed.path ?? "";
   const fullPath = path ? `${prefix}/${path}`.replace(/\/+/g, "/") : prefix;
-  const hasIdParam = path.includes(":id") || path.includes(":");
-  const operation = detectOperation(httpMethod, hasIdParam, path);
+  const idParam = recordParam(path);
 
   routes.push({
     group: groupName,
@@ -126,8 +126,9 @@ function analyzeEndpoint(
     httpMethod,
     path,
     fullPath,
-    hasIdParam,
-    operation,
+    hasIdParam: path.includes(":"),
+    ...(idParam !== undefined && { idParam }),
+    operation: detectOperation(httpMethod, path),
     responseSchema: schema?.response,
     variablesSchema: schema?.variables,
     type: schema?.type,

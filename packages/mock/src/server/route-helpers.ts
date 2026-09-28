@@ -13,17 +13,23 @@
  * All helpers are pure and synchronous.
  */
 
+import { pathShape } from "./path-shape";
 import type { EndpointOperation, MappedEndpoint } from "./prefix-route-types";
 
-/** Resolve endpoint by analyzed operation type — the source of truth */
+const CATCH_ALL_SHAPES = new Set(["collection", "record"]);
+
+/**
+ * Resolve the endpoint a prefix catch-all answers by its analyzed operation.
+ * Only an endpoint at the collection root or at a single parameter is one
+ * the catch-alls serve; a lookup such as `by-email/:email` has a route of
+ * its own and must not answer `/users/5`.
+ */
 export function resolveByOperation(
   endpoints: MappedEndpoint[] | undefined,
   operation: EndpointOperation,
 ): MappedEndpoint | undefined {
-  if (!endpoints) return undefined;
-  return (
-    endpoints.find((e) => e.operation === operation && !e.path) ??
-    endpoints.find((e) => e.operation === operation)
+  return endpoints?.find(
+    (e) => e.operation === operation && CATCH_ALL_SHAPES.has(pathShape(e.path)),
   );
 }
 

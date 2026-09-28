@@ -1,35 +1,45 @@
+import { pathShape } from "../server/path-shape";
 import type { CrudOperation } from "./route-types";
 
+const COLLECTION_OPERATIONS = new Map<string, CrudOperation>([
+  ["GET", "list"],
+  ["POST", "create"],
+  ["PUT", "upsert"],
+  ["DELETE", "deleteAll"],
+]);
+
+const RECORD_OPERATIONS = new Map<string, CrudOperation>([
+  ["GET", "get"],
+  ["PUT", "replace"],
+  ["PATCH", "update"],
+  ["DELETE", "delete"],
+]);
+
 /**
- * CRUD operation classification from HTTP method + path shape.
+ * Classify an endpoint as a CRUD operation from its HTTP method and the
+ * shape of its path. The collection root takes the collection operations;
+ * a path naming one record — `:id`, or a lookup such as `by-email/:email` —
+ * takes the record operations. Everything else is custom: fixed sub-paths
+ * (`stats`), paths that go on past a parameter (`:id/orders`), and methods
+ * with no CRUD meaning on that shape (`POST :id/activate`).
  *
- * Extracted from `route-analyzer.ts` so that the heuristic mapping
- * (HTTP verb + presence of `:id` + static sub-paths → CRUD operation)
- * lives in a single, easily auditable place.
+ * @param httpMethod Upper-case HTTP method
+ * @param path       Endpoint path relative to its group
+ * @returns The operation the auto mock serves the endpoint as
+ * @example
+ * ```ts
+ * detectOperation("GET", "");            // "list"
+ * detectOperation("PATCH", ":id");       // "update"
+ * detectOperation("POST", ":id/activate"); // "custom"
+ * ```
  */
-
-/** Detect CRUD operation from HTTP method + path pattern */
-export function detectOperation(
-  httpMethod: string,
-  hasIdParam: boolean,
-  path: string,
-): CrudOperation {
-  const isStaticSubPath = !!path && !path.startsWith(":");
-
-  switch (httpMethod) {
-    case "GET":
-      if (hasIdParam) return "get";
-      // Static sub-paths (e.g. "browse", "categories") are custom endpoints, not list
-      if (isStaticSubPath) return "custom";
-      return "list";
-    case "POST":
-      return isStaticSubPath ? "custom" : "create";
-    case "PUT":
-      return hasIdParam ? "replace" : "upsert";
-    case "PATCH":
-      return hasIdParam ? "update" : "custom";
-    case "DELETE":
-      return hasIdParam || path ? "delete" : "deleteAll";
+export function detectOperation(httpMethod: string, path: string): CrudOperation {
+  switch (pathShape(path)) {
+    case "collection":
+      return COLLECTION_OPERATIONS.get(httpMethod) ?? "custom";
+    case "record":
+    case "lookup":
+      return RECORD_OPERATIONS.get(httpMethod) ?? "custom";
     default:
       return "custom";
   }

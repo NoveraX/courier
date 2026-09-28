@@ -3,6 +3,7 @@
  * Handles depth limiting to prevent infinite recursion on self-referencing schemas.
  */
 
+import { fitString } from "../fit-string";
 import { generateNumber } from "../gen-number";
 import { generateDateString, generateString } from "../gen-string";
 import type { FieldMeta } from "../schema-introspect";
@@ -51,7 +52,7 @@ export function generateValue(
 
   switch (meta.type) {
     case "string":
-      return generateString(key, index, context);
+      return fitString(generateString(key, index, context), meta, index);
     case "number":
     case "bigint":
       return generateNumber(key, index, meta);

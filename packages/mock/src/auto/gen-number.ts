@@ -1,13 +1,17 @@
+import { fitNumber } from "./fit-number";
 import { pseudoRandom, roundTo } from "./gen-helpers";
 import type { FieldMeta } from "./schema-introspect";
 
 /** Generate a realistic number value based on field name heuristics and schema constraints */
 export function generateNumber(key: string, index: number, meta: FieldMeta): number {
-  // Respect schema constraints (e.g. z.number().min(0).max(100))
+  // A declared range (e.g. z.number().min(0).max(100)) spreads values across it
   if (meta.min !== undefined && meta.max !== undefined) {
-    return roundTo(meta.min + pseudoRandom(index) * (meta.max - meta.min), 2);
+    return fitNumber(roundTo(meta.min + pseudoRandom(index) * (meta.max - meta.min), 2), meta);
   }
+  return fitNumber(heuristicNumber(key, index), meta);
+}
 
+function heuristicNumber(key: string, index: number): number {
   const lower = key.toLowerCase();
 
   // Identity — sequential

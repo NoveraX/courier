@@ -46,7 +46,9 @@ export function generateArray(
   const inner = meta.innerField;
   if (!inner) return [];
 
-  return Array.from({ length: NESTED_ARRAY_SIZE }, (_, i) => gen(key, inner, index + i, context));
+  const atLeast = Math.max(NESTED_ARRAY_SIZE, meta.minLength ?? 0);
+  const length = Math.min(atLeast, meta.maxLength ?? atLeast);
+  return Array.from({ length }, (_, i) => gen(key, inner, index + i, context));
 }
 
 /** Generate a tuple from ordered item schemas */

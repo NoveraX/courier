@@ -61,7 +61,9 @@ export function propToZod(prop: ParsedSchemaProperty): string {
 }
 
 export function primitiveToZod(type: string, format?: string): string {
-  if (type === "string" && format === "email") return "z.email()";
+  /* An address is not checked either: an API hides one as an empty string —
+     Gitea's `owner.email` — and a checked address refused the whole answer. */
+  if (type === "string" && format === "email") return "z.string()";
   /* RFC 3339 allows a zone offset, and 18 of the 67 `date-time` examples the
      specifications themselves give carry one; the default form rejected
      every single one of them. */

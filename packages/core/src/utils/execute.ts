@@ -1,32 +1,44 @@
 import { parseWireOptions } from "../adapter/wire-options";
 import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
-import { composeMiddleware } from "../middleware/index";
 import { generateRequestId, studioHooks } from "../studio";
-import { applyCacheHeaders } from "./cache-headers";
-import { handleExecuteError } from "./execute-error";
 import { clientForCall } from "./execute-helpers";
-import { executeInner } from "./execute-inner";
+import type { InnerExecuteDeps } from "./execute-inner";
+import { buildMiddlewareContext } from "./execute-middleware-context";
 import { resolveMiddlewareChain, withCallerSignal, withEndpointTimeout } from "./execute-options";
-import { buildMiddlewareContext, namedHeadersOf, resolveEndpoint } from "./execute-resolve";
-import { buildErrorResponse, buildResponse } from "./execute-response";
+import { namedHeadersOf } from "./execute-resolve";
+import { buildErrorResponse } from "./execute-response";
+import { runCall } from "./execute-run";
 import {
   attachFetchHook,
-  emitRequestEnd,
   emitRequestStart,
-  injectTimingHeaders,
+  type StudioContext,
   type TimingState,
 } from "./execute-studio";
-import { validateVariables } from "./execute-validation";
+import { type CallTarget, resolveCallTarget } from "./execute-target";
 import { parseRequestPayload, type RequestPayloadInput } from "./request-payload";
-import { refuseWireCall } from "./wire-refusal";
 
 /**
- * What variables may be: named values, a list, a JSON scalar, form data or a
- * raw body. A function, a symbol or a bigint has no form on the wire.
+ * Run one call against the registered sources: the proxy's handler and a
+ * direct caller both end here.
+ *
+ * The call names its source, group and method. It is refused with a 400
+ * when they name nothing, when its variables have no form on the wire, or —
+ * over the proxy — when its options or its endpoint are not the browser's
+ * to use. Otherwise its variables are validated, it runs through the
+ * source's and the endpoint's middleware, and its answer is built.
+ *
+ * @param sources - The registered sources
+ * @param requestPayload - The call: source, group, method, variables and options
+ * @param context - Where the call came from; with `res`, the answer is a `Response`
+ * @returns A `Response` for the proxy; the data, or the whole response with
+ *   `rawData`, for a direct caller, who gets a failure as a rejection
+ *
+ * @example
+ * ```ts
+ * const users = await executeRequest(sources, { source: "api", group: "users", method: "list" });
+ * ```
  */
-const SENDABLE: ReadonlySet<string> = new Set(["object", "string", "number", "boolean"]);
-
 export async function executeRequest(
   sources: Sources,
   requestPayload: RequestPayloadInput,
@@ -47,84 +59,43 @@ export async function executeRequest(
   /* A request that arrived over the proxy is untrusted, so it keeps only the
      options `parseWireOptions` names. A server-side caller runs in this
      process, already chose the destination, and keeps the full set. */
-  const fromWire = context?.proxyMethod !== undefined;
   let options = given;
-  if (fromWire) {
+  if (context?.proxyMethod !== undefined) {
     const accepted = parseWireOptions(given);
     if (!accepted.ok) return buildErrorResponse(context, 400, accepted.reason);
     options = accepted.options;
   }
 
-  const dt = studioHooks;
-  const hasStudio = dt.onRequestStart !== undefined;
-  const requestId = hasStudio ? generateRequestId() : "";
+  const hasStudio = studioHooks.onRequestStart !== undefined;
+  const studio: StudioContext = {
+    hasStudio,
+    requestId: hasStudio ? generateRequestId() : "",
+    dt: studioHooks,
+  };
   const timing: TimingState = {
     t0: hasStudio ? performance.now() : 0,
     tVarValidation: 0,
     tRespValidation: 0,
     tFetch: 0,
   };
-  const dCtx = { hasStudio, requestId, dt };
 
-  const dataSource =
-    typeof source === "string" && Object.hasOwn(sources, source) ? sources[source] : undefined;
+  const call = { source, group, method, variables, options };
+  const resolution = resolveCallTarget(sources, call, context);
+  if ("refusal" in resolution) return resolution.refusal;
+  return prepareAndRun(resolution.target, studio, timing, context);
+}
 
-  const methodPath = group ? `[${String(group)}][${String(method)}]` : `[${String(method)}]`;
-  const notFound = `[${String(source)}]${methodPath}: method not found`;
-
-  /* A name that resolves to nothing is answered the same way whether the
-     source or the method is the missing half. Saying which lets a caller
-     enumerate the registry, and the sources worth finding that way are
-     exactly the ones `expose: false` was meant to hide. A server-side caller
-     is not guessing, so it keeps the message that names the real mistake. */
-  if (!dataSource) {
-    return buildErrorResponse(
-      context,
-      400,
-      fromWire ? notFound : `[${String(source)}]: source not found`,
-    );
-  }
-  if (variables !== undefined && variables !== null && !SENDABLE.has(typeof variables)) {
-    return buildErrorResponse(context, 400, "[variables] must be a JSON value or a request body");
-  }
-
-  const {
-    endpoint,
-    endpointGroup,
-    schema,
-    options: endpointOptions,
-  } = resolveEndpoint(dataSource, group, method);
-
-  if (typeof endpoint !== "function") {
-    return buildErrorResponse(context, 400, notFound);
-  }
-
-  if (context?.proxyMethod !== undefined) {
-    const refused = refuseWireCall({
-      dataSource,
-      group,
-      method,
-      schema,
-      stream: options?.stream,
-      proxyMethod: context.proxyMethod,
-      notFound,
-    });
-    if (refused) return buildErrorResponse(context, refused.status, refused.message);
-  }
-
-  /* A stream or a channel is reached by opening one, not by asking for it
-     over HTTP. Without this an ordinary POST ran a channel's implementation
-     factory, which expects a socket to talk to and has none. */
-  if (schema?.transport && schema.transport !== "http") {
-    return buildErrorResponse(
-      context,
-      400,
-      `[${String(method)}]: endpoint is served over ${schema.transport}, not HTTP`,
-    );
-  }
-
+/* The endpoint's own options — timeout, middleware, retry — are applied
+   here, around the options the call itself gave. */
+function prepareAndRun(
+  target: CallTarget,
+  studio: StudioContext,
+  timing: TimingState,
+  context: Context | undefined,
+): Promise<unknown> {
+  const { source, group, method, variables, dataSource, schema, endpointOptions } = target;
   const instance = clientForCall(dataSource, context, schema?.type);
-  if (hasStudio) attachFetchHook(instance, dCtx);
+  if (studio.hasStudio) attachFetchHook(instance, studio);
 
   const {
     rawData = false,
@@ -132,7 +103,7 @@ export async function executeRequest(
     headers: baseHeaders,
     stream = false,
     ...baseOptions
-  } = options ?? {};
+  } = target.options ?? {};
   const callOptions = withCallerSignal(
     withEndpointTimeout(baseOptions, endpointOptions, context?.defaultTimeout),
     context?.req,
@@ -146,7 +117,7 @@ export async function executeRequest(
     baseHeaders,
     context,
     dataSource,
-    requestId,
+    requestId: studio.requestId,
     endpointAllowedHeaders: endpointOptions?.allowedHeaders,
     kind: schema?.type,
     signal: callOptions.signal ?? undefined,
@@ -158,65 +129,34 @@ export async function executeRequest(
      retry policy is the outermost of the endpoint's own, so it re-runs them. */
   const middlewares = resolveMiddlewareChain(dataSource.options?.middleware, endpointOptions);
 
-  emitRequestStart(dCtx, source, group, method, variables, mode, middlewares.length, schema);
+  emitRequestStart(studio, source, group, method, variables, mode, middlewares.length, schema);
 
-  try {
-    if (schema?.variables) {
-      const result = await validateVariables(schema.variables, middlewareCtx.variables, dCtx);
-      middlewareCtx.variables = result.validated;
-      timing.tVarValidation = result.duration;
-    }
-
-    const execute = async () => {
-      const innerResult = await executeInner({
-        endpoint: endpoint as (
-          ...args: unknown[]
-        ) => Promise<{ status?: number; data: unknown; headers?: unknown }>,
-        instance,
-        endpointGroupOptions: endpointGroup?.options,
-        middlewareHeaders: middlewareCtx.headers,
-        variables: middlewareCtx.variables,
-        forwardVariables,
-        baseOptions: callOptions,
-        stream,
-        schema,
-        hasStudio,
-        requestId,
-        dt,
-      });
-      timing.tFetch = innerResult.tFetch;
-      timing.tRespValidation = innerResult.tRespValidation;
-      return innerResult.response;
-    };
-
-    const mt0 = hasStudio ? performance.now() : 0;
-    const result = middlewares.length
-      ? await composeMiddleware(middlewares)(middlewareCtx, execute)
-      : await execute();
-    const tMiddlewareTotal = hasStudio && middlewares.length ? performance.now() - mt0 : 0;
-
-    if (hasStudio) {
-      emitRequestEnd(dCtx, result, middlewareCtx.headers, timing, tMiddlewareTotal, context);
-    }
-
-    const response = buildResponse(context, {
-      headers: result.headers,
-      status: result.status,
-      data: result.data,
+  const inner: PreparedInner = {
+    endpoint: target.endpoint as PreparedInner["endpoint"],
+    instance,
+    endpointGroupOptions: target.endpointGroup?.options,
+    forwardVariables,
+    baseOptions: callOptions,
+    stream,
+    schema,
+    hasStudio: studio.hasStudio,
+    requestId: studio.requestId,
+    dt: studio.dt,
+  };
+  return runCall({
+    inner,
+    middlewareCtx,
+    middlewares,
+    schema,
+    studio,
+    timing,
+    context,
+    answer: {
       rawData,
       stream,
       namedHeaders: namedHeadersOf(dataSource, endpointOptions?.allowedHeaders),
-    });
-
-    if (context?.proxyMethod && response instanceof Response && hasStudio) {
-      injectTimingHeaders(response, requestId, timing.t0);
-    }
-    if (context?.proxyMethod === "GET" && schema?.cache && response instanceof Response) {
-      applyCacheHeaders(response, schema, middlewareCtx.headers, middlewareCtx.request);
-    }
-
-    return response;
-  } catch (error) {
-    return handleExecuteError(error, { requestId, dt, context, rawData });
-  }
+    },
+  });
 }
+
+type PreparedInner = Omit<InnerExecuteDeps, "middlewareHeaders" | "variables">;

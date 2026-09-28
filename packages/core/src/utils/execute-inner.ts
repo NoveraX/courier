@@ -6,7 +6,7 @@ import type { SchemaMetadata } from "../validation";
 import { validateResponse } from "./execute-validation";
 import { isHeaders } from "./helpers";
 
-type InnerExecuteDeps = {
+export type InnerExecuteDeps = {
   endpoint: (...args: unknown[]) => Promise<{ status?: number; data: unknown; headers?: unknown }>;
   instance: HttpClient;
   endpointGroupOptions: GroupOptions | undefined;

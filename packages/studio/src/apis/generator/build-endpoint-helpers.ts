@@ -2,9 +2,21 @@
  * Helper functions for building the builder chain that describes an endpoint.
  */
 
-import type { ParsedEndpoint } from "../parser/types";
-import { getSchemaRefName } from "./schema-utils";
 import type { GeneratorSettings } from "./types";
+
+/** What an endpoint's chain is made of. */
+export interface EndpointChain {
+  /** Where the endpoint is: `endpoint.get(":id")`. */
+  address: string;
+  /** The schema validating the variables, when there is one. */
+  variablesSchema: string | null;
+  /** The type of the variables, for a chain without a schema for them. */
+  variablesType: string | null;
+  /** The schema validating the response, when there is one. */
+  responseSchema: string | null;
+  /** The type of the response, for a chain without a schema for it. */
+  responseType: string;
+}
 
 /**
  * Build the chain describing an endpoint.
@@ -13,54 +25,33 @@ import type { GeneratorSettings } from "./types";
  * it reads or writes. A slot carrying a schema takes it directly; one carrying
  * only a type takes a type argument, which is how an endpoint of an API that
  * publishes no usable schema is described.
+ *
+ * @param chain - The address and what fills each slot
+ * @returns The chain as source text
+ * @example
+ * ```ts
+ * buildEndpointChain({ address: 'endpoint.get("")', variablesSchema: null, variablesType: null, responseSchema: "PetSchema", responseType: "unknown" });
+ * // 'endpoint.get("").response(PetSchema)'
+ * ```
  */
-export function buildEndpointChain(
-  address: string,
-  schemaConfig: string[],
-  varsType: string | null,
-  responseType: string,
-): string {
-  const responseSchema = findConfig(schemaConfig, "response");
-  const variablesSchema = findConfig(schemaConfig, "variables");
-
-  let chain = address;
+export function buildEndpointChain(chain: EndpointChain): string {
+  let text = chain.address;
 
   /* A schema is preferred wherever there is one: it carries the type and
      validates the call, where a type argument only carries the type. */
-  if (variablesSchema) {
-    chain += `.variables(${variablesSchema})`;
-  } else if (varsType && varsType !== "undefined") {
-    chain += `.variables<${varsType}>()`;
+  if (chain.variablesSchema) {
+    text += `.variables(${chain.variablesSchema})`;
+  } else if (chain.variablesType && chain.variablesType !== "undefined") {
+    text += `.variables<${chain.variablesType}>()`;
   }
 
-  if (responseSchema) {
-    chain += `.response(${responseSchema})`;
-  } else if (responseType !== "unknown") {
-    chain += `.response<${responseType}>()`;
+  if (chain.responseSchema) {
+    text += `.response(${chain.responseSchema})`;
+  } else if (chain.responseType !== "unknown") {
+    text += `.response<${chain.responseType}>()`;
   }
 
-  return chain;
-}
-
-function findConfig(config: string[], key: string): string | null {
-  const entry = config.find((c) => c.startsWith(`${key}:`));
-  return entry ? entry.slice(key.length + 1).trim() : null;
-}
-
-/**
- * Does the chain describe the response with a schema rather than a type?
- *
- * The two are exclusive: a slot given a schema takes it directly and names no
- * type, so a type imported for a schema-described response would go unused.
- */
-export function describesResponseWithSchema(
-  ep: ParsedEndpoint,
-  options: GeneratorSettings,
-  schemaImports: Set<string>,
-): boolean {
-  if (!options.generateSchemas || options.validation === "none") return false;
-  const responseRef = getSchemaRefName(ep.responseSchema);
-  return responseRef !== null && schemaImports.has(responseRef);
+  return text;
 }
 
 /**
@@ -69,6 +60,13 @@ export function describesResponseWithSchema(
  * `generateSchemas` asks for a schemas file; `validation: "none"` makes that
  * file hold types instead. Only both together produce something a chain can
  * validate against, and only then is a `XSchema` symbol importable.
+ *
+ * @param options - The import's settings
+ * @returns Whether a validator writes schemas
+ * @example
+ * ```ts
+ * emitsSchemas({ generateSchemas: true, validation: "zod" }); // true
+ * ```
  */
 export function emitsSchemas(options: GeneratorSettings): boolean {
   return options.generateSchemas === true && options.validation !== "none";

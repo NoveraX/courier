@@ -2,14 +2,14 @@
  * TypeScript types for an endpoint's variables and response.
  */
 
-import type { ParsedEndpoint, ParsedParameter, ParsedSpec } from "../parser/types";
+import type { ParsedEndpoint, ParsedParameter } from "../parser/types";
+import { type EndpointContext, endpointTypeStyle } from "./endpoint-context";
 import { typeUnion } from "./enum-literals";
-import { schemaToTsType } from "./inline-types";
+import { schemaToTsType, type TypeStyle } from "./inline-types";
 import { jsdocText } from "./jsdoc-text";
 import { objectKey } from "./literals";
-import type { GeneratorSettings } from "./types";
 
-export function tsType(type: string, _format?: string): string {
+function tsType(type: string): string {
   if (type === "ref") return "unknown";
   if (type === "integer") return "number";
   if (type === "array") return "unknown[]";
@@ -17,88 +17,71 @@ export function tsType(type: string, _format?: string): string {
   return "unknown";
 }
 
-export function resolveResponseType(
-  ep: ParsedEndpoint,
-  _spec: ParsedSpec,
-  options: GeneratorSettings,
-): string {
+/**
+ * The type an endpoint answers with.
+ *
+ * @param ep - The endpoint
+ * @param context - The file it is written into
+ * @returns The type, naming only what the file can import; `unknown` without a schema
+ * @example
+ * ```ts
+ * resolveResponseType(listPets, context); // "Pet[]"
+ * ```
+ */
+export function resolveResponseType(ep: ParsedEndpoint, context: EndpointContext): string {
   if (!ep.responseSchema) return "unknown";
-
-  if (ep.responseSchema.type === "ref" && ep.responseSchema.refName) {
-    const name = ep.responseSchema.refName;
-    return options.generateTypes ? name : "unknown";
-  }
-
-  if (ep.responseSchema.type === "array" && ep.responseSchema.items?.type === "ref") {
-    const name = ep.responseSchema.items.refName;
-    return options.generateTypes && name ? `${name}[]` : "unknown[]";
-  }
-
-  return schemaToTsType(ep.responseSchema);
+  return schemaToTsType(ep.responseSchema, endpointTypeStyle(context));
 }
 
-export function resolveVariablesType(
-  ep: ParsedEndpoint,
-  spec: ParsedSpec,
-  options: GeneratorSettings,
-): string | null {
-  const parts: string[] = [];
+/**
+ * The type of what an endpoint is called with, for a chain that has no
+ * schema to take it from.
+ *
+ * @param ep - The endpoint
+ * @param context - The file it is written into
+ * @returns The type, or `null` when the endpoint takes nothing
+ * @example
+ * ```ts
+ * resolveVariablesType(getPet, context); // "{ petId: number }"
+ * ```
+ */
+export function resolveVariablesType(ep: ParsedEndpoint, context: EndpointContext): string | null {
+  const style = endpointTypeStyle(context);
+  const parts = parameterFields(ep, context, style);
 
-  // Path params — normalize hyphenated names to valid identifiers
-  for (const param of ep.parameters.filter((p) => p.in === "path")) {
-    const key = objectKey(param.name);
-    const type = parameterTsType(param);
-    if (options.includeComments && param.description) {
-      parts.push(`/** ${jsdocText(param.description)} */ ${key}: ${type}`);
-    } else {
-      parts.push(`${key}: ${type}`);
-    }
-  }
-
-  // Query params
-  for (const param of ep.parameters.filter((p) => p.in === "query")) {
-    const key = objectKey(param.name);
-    const optional = !param.required ? "?" : "";
-    const type = parameterTsType(param);
-    if (options.includeComments && param.description) {
-      parts.push(`/** ${jsdocText(param.description)} */ ${key}${optional}: ${type}`);
-    } else {
-      parts.push(`${key}${optional}: ${type}`);
-    }
-  }
-
-  // Body ref — when schema-based validation handles it, path/query params
-  // are merged via extendSchemaWithParams, so no generic needed.
-  // When validation is "none", we need to combine body type + params.
   if (ep.requestBody?.type === "ref" && ep.requestBody.refName) {
-    const hasSchemaValidation = options.generateSchemas && options.validation !== "none";
-    if (hasSchemaValidation) {
-      // Schema handles everything (body + path params via extend)
-      return null;
-    }
     /* Without a types file there is no name to refer to, so the body's shape
        is written out where it is used. */
-    const body = options.generateTypes
-      ? ep.requestBody.refName
-      : inlineShape(spec, ep.requestBody.refName, options);
-    if (parts.length > 0) {
-      return `${body} & { ${parts.join("; ")} }`;
-    }
-    return body;
+    const body = context.options.generateTypes
+      ? schemaToTsType(ep.requestBody, style)
+      : inlineShape(context, ep.requestBody.refName);
+    return parts.length > 0 ? `${body} & { ${parts.join("; ")} }` : body;
   }
 
-  // Body inline
   if (ep.requestBody?.type === "object" && ep.requestBody.properties) {
     for (const [name, prop] of Object.entries(ep.requestBody.properties)) {
       if (!name) continue;
-      const optional = !prop.required ? "?" : "";
-      const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : `"${name}"`;
-      parts.push(`${key}${optional}: ${tsType(prop.type)}`);
+      parts.push(`${objectKey(name)}${prop.required ? "" : "?"}: ${tsType(prop.type)}`);
     }
   }
 
-  if (parts.length === 0) return null;
-  return `{ ${parts.join("; ")} }`;
+  return parts.length === 0 ? null : `{ ${parts.join("; ")} }`;
+}
+
+/** The path parameters, then the query parameters, each as a field. */
+function parameterFields(ep: ParsedEndpoint, context: EndpointContext, style: TypeStyle): string[] {
+  const fields: string[] = [];
+  for (const place of ["path", "query"] as const) {
+    for (const param of ep.parameters.filter((p) => p.in === place)) {
+      const optional = place === "query" && !param.required ? "?" : "";
+      const doc =
+        context.options.includeComments && param.description
+          ? `/** ${jsdocText(param.description)} */ `
+          : "";
+      fields.push(`${doc}${objectKey(param.name)}${optional}: ${parameterTsType(param, style)}`);
+    }
+  }
+  return fields;
 }
 
 /**
@@ -106,18 +89,19 @@ export function resolveVariablesType(
  *
  * Used where no types file is generated, so there is no name to refer to.
  */
-function inlineShape(spec: ParsedSpec, refName: string, options: GeneratorSettings): string {
-  const schema = spec.schemas[refName];
+function inlineShape(context: EndpointContext, refName: string): string {
+  const schema = context.spec.schemas[refName];
   if (!schema?.properties) return "Record<string, unknown>";
 
   const parts: string[] = [];
   for (const [name, prop] of Object.entries(schema.properties)) {
     if (!name) continue;
-    const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : `"${name}"`;
     const optional = prop.required ? "" : "?";
     const doc =
-      options.includeComments && prop.description ? `/** ${jsdocText(prop.description)} */ ` : "";
-    parts.push(`${doc}${key}${optional}: ${tsType(prop.type)}`);
+      context.options.includeComments && prop.description
+        ? `/** ${jsdocText(prop.description)} */ `
+        : "";
+    parts.push(`${doc}${objectKey(name)}${optional}: ${tsType(prop.type)}`);
   }
   return parts.length > 0 ? `{ ${parts.join("; ")} }` : "Record<string, unknown>";
 }
@@ -129,10 +113,10 @@ function inlineShape(spec: ParsedSpec, refName: string, options: GeneratorSettin
  * element type of an array — every `status` that accepts three words was
  * typed `string`, and every repeated query value was typed as one.
  */
-function parameterTsType(param: ParsedParameter): string {
+function parameterTsType(param: ParsedParameter, style: TypeStyle): string {
   if (param.enum?.length) return typeUnion(param.enum);
   if (param.type === "array") {
-    const item = param.items ? schemaToTsType(param.items) : "string";
+    const item = param.items ? schemaToTsType(param.items, style) : "string";
     return item.includes("|") ? `(${item})[]` : `${item}[]`;
   }
   return tsType(param.type);

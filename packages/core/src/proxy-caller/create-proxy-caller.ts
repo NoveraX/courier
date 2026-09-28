@@ -19,10 +19,18 @@ import type { ProxyCallerArguments, ProxyCallerDefaults } from "./types";
  * @param source - Source name matching the key in server-side apiRoute({ [source]: ... })
  * @param defaults - Proxy configuration (proxyPath, timeout, credentials, etc.)
  *
+ * In a browser bundle, pass the `boundary` from `defineBoundary` and import
+ * the API as a type only: `source: api` would ship the API's definition —
+ * its upstream URLs, its handlers' imports — to every browser. `source` is
+ * for code that runs on the server, where the definition already is.
+ *
  * @example
  * ```ts
+ * import type { api } from "./api";
+ * import { boundary } from "./boundary"; // defineBoundary<typeof api>({ source: "api", expose: { … } })
+ *
  * const client = createProxyCaller<typeof api>("api", {
- *   source: api,
+ *   boundary,
  *   proxyPath: { http: "/api/request", sse: "/api/sse", ws: "wss://realtime.example.com" },
  * });
  *

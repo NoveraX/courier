@@ -13,14 +13,18 @@ export type ProxyCallerDefaults = {
    *
    * @example
    * ```ts
-   * createProxyCaller("api", {
-   *   source: api,
+   * createProxyCaller<typeof api>("api", {
+   *   boundary,
    *   proxyPath: { ws: "ws://localhost:3001" }, // dev-only WS override
    * });
    * ```
    */
   proxyPath?: ProxyPath;
-  /** API source object for transport detection — pass the defineApi() result */
+  /**
+   * The API's definition, the `defineApi()` result, for code on the server.
+   * In a browser bundle pass `boundary` instead: the definition would ship
+   * with the page.
+   */
   source?: Record<string, unknown>;
   /**
    * The endpoints this client may call, from `defineBoundary`. Pass this

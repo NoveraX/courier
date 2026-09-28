@@ -10,7 +10,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { generateCode } from "../../src/apis/generator";
 import { parseSpec } from "../../src/apis/parser";
 import type { ParsedSpec } from "../../src/apis/parser/types";
-import { endpointAt, loadGenerated } from "../helpers/generated-project";
+import {
+  compileProject,
+  endpointAt,
+  loadGenerated,
+  removeProjects,
+  writeProject,
+} from "../helpers/generated-project";
 import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
 
 const SCHEMAS = {
@@ -84,4 +90,34 @@ describe.each([
 
     expect(answers).toEqual([{ sku: "A-1" }, { price: 9.5 }, { qty: 3 }]);
   });
+});
+
+describe("a component named like another's schema constant", () => {
+  afterAll(() => {
+    removeProjects("colliding-component-names");
+  });
+
+  it("takes another name, so no import names two things", () => {
+    const spec = parseSpec(
+      JSON.stringify({
+        openapi: "3.0.3",
+        info: { title: "Names", version: "1" },
+        paths: {
+          "/pet": { get: { operationId: "getPet", tags: ["things"], responses: { "200": { description: "ok", content: { "application/json": { schema: { $ref: "#/components/schemas/Pet" } } } } } } },
+          "/raw": { get: { operationId: "raw", tags: ["things"], responses: { "200": { description: "ok", content: { "application/json": { schema: { $ref: "#/components/schemas/PetSchema" } } } } } } },
+        },
+        components: {
+          schemas: {
+            Pet: { type: "object", properties: { id: { type: "integer" } } },
+            PetSchema: { type: "object", properties: { kind: { type: "string" } } },
+          },
+        },
+      }),
+    );
+    const files = generateCode(spec, { type: "openapi", outputDir: "src/api" }, "names");
+    const dir = writeProject("colliding-component-names/schema-suffix", files);
+
+    expect(Object.keys(spec.schemas)).toEqual(["Pet", "PetSchema2"]);
+    expect(compileProject(dir, ["src/api/names/index.ts"])).toEqual([]);
+  }, 60_000);
 });

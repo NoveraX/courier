@@ -1,6 +1,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { ConfigurationError } from "../errors/configuration-error";
 import type { Middleware } from "../middleware/types";
+import { idempotencyHeader } from "../utils/idempotency-header";
 import type { CacheConfig } from "../validation";
 import type { EndpointKind } from "./marker";
 import type {
@@ -112,6 +113,8 @@ export function resolveOptions(
   options: AnyEndpointOptions,
 ): ResolvedEndpointOptions {
   const { inherit = true, tags = [], ...rest } = options;
+  /* Checked where the endpoint is defined, not on its first call. */
+  idempotencyHeader(rest.idempotencyKey);
   return {
     middleware: inherit ? [...state.baseMiddleware, ...state.middleware] : state.middleware,
     allowedHeaders: state.allowedHeaders,

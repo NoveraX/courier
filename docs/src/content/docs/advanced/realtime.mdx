@@ -40,7 +40,7 @@ A proxy caller reaches another process's stream or channel too: the proxy relays
 
 - A stream's events pass on as they came: ids, event names, and data that is not JSON as its text. A dropped upstream connection is reopened from the last event id, while the client's stays open. The client's `Last-Event-ID` is sent upstream when it resumes.
 - The stream ends as the upstream's ends. It fails as the upstream's fails: a refusal carries the upstream's status as code `4000 + status`, so a `401` arrives as `4401`. A client that leaves closes the upstream stream.
-- A channel's frames pass both ways, and it ends as its upstream subscription ends, with its code. Subscribers of the server with equal variables share one upstream subscription.
+- A channel's frames pass both ways, and it ends as its upstream subscription ends, with its code — a connection the upstream refuses included. A message the upstream subscription has no room to hold, while it joins or comes back, is answered with a `4429` error on the channel, which goes on. Subscribers of the server with equal variables share one upstream subscription.
 - A path parameter that is empty, `.` or `..` is refused before anything is sent, as it is for an HTTP call. Otherwise it would reach a route above the declared one with the server's credentials.
 
 ## Topics

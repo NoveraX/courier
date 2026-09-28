@@ -146,6 +146,47 @@ function generatedCode(): string {
     .join("\n");
 }
 
+describe("checking every import for updates", () => {
+  const servers: SpecServer[] = [];
+  afterEach(async () => {
+    for (const server of servers.splice(0)) await server.close();
+  });
+
+  it("reports an import with no URL as not checked, saying why, rather than up to date", async () => {
+    const url = await start(`export default {
+  sources: { api: { baseURL: "https://api.example" } },
+  imports: { petsFile: { importType: "file", type: "openapi", outputDir: "src/api" } },
+};\n`);
+
+    const all = await post(url, "/api/apis/imports/check-all", {});
+
+    expect(all.status).toBe(200);
+    expect(field(field(all.body, "results"), "petsFile")).toEqual({
+      changed: false,
+      unchecked: "A file import has no URL to check; upload its specification in Manage to compare.",
+    });
+  });
+
+  it("answers 502 naming the URL when it serves something that is not a specification", async () => {
+    const page = await specServer((_req, res) => {
+      res.writeHead(200, { "content-type": "text/html" }).end("<!doctype html><title>Not here</title>");
+    });
+    servers.push(page);
+    const url = await start(`export default {
+  sources: { api: { baseURL: "https://api.example" } },
+  imports: { pets: { importType: "url", type: "openapi", from: "${page.url}/notjson", outputDir: "src/api" } },
+};\n`);
+
+    const checked = await post(url, "/api/apis/imports/check-updates", { name: "pets" });
+    const all = await post(url, "/api/apis/imports/check-all", {});
+
+    expect(checked.status).toBe(502);
+    expect(field(checked.body, "code")).toBe("SPEC_UNREADABLE");
+    expect(field(checked.body, "error")).toContain(`${page.url}/notjson did not answer with a specification`);
+    expect(field(field(field(all.body, "results"), "pets"), "error")).toContain("did not answer with a specification");
+  });
+});
+
 describe("updating a declared import as its entry says", () => {
   const servers: SpecServer[] = [];
   afterEach(async () => {

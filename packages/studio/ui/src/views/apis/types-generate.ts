@@ -131,10 +131,12 @@ export interface SpecDiff {
   breakingChanges: BreakingChange[];
 }
 
-export type SourceStatus = "up-to-date" | "updates-available" | "checking" | "error";
+/** What an update check found; `unchecked` for an import with no URL to fetch. */
+export type SourceStatus = "up-to-date" | "updates-available" | "checking" | "error" | "unchecked";
 
 export interface SourceStatusInfo {
   status: SourceStatus;
+  /** Why the check failed, or why the import could not be checked. */
   error?: string;
   newSpec?: ParsedSpec;
 }

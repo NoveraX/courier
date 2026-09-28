@@ -5,10 +5,11 @@
  * specs for changes without leaving the imports view.
  */
 
-import { computeSpecHash, hasSpecChanged, parseSpec } from "../apis";
+import { computeSpecHash, hasSpecChanged } from "../apis";
 import type { ApisRouteDeps } from "./apis-routes";
 import { authHeaders } from "./auth-headers";
 import { getImportEntry, getImportState, importsSnapshotOf } from "./imports-bridge";
+import { parseFetchedSpec } from "./parse-fetched-spec";
 import { projectRootAt } from "./project-fs/project-root";
 import { readDeclarations } from "./project-state/read-declarations";
 import { refuseUnsendable } from "./refuse-unsendable";
@@ -70,7 +71,7 @@ async function handleCheckUpdates(
     /* An empty body is text too: it fails as a specification below, and the route answers. */
     if (raw === null) return;
 
-    const newSpec = parseSpec(raw);
+    const newSpec = parseFetchedSpec(entry.from, raw);
     checkPinnedHash(body.name, entry, newSpec);
     const newHash = computeSpecHash(newSpec);
     const changed = hasSpecChanged(imports.state, body.name, newHash);

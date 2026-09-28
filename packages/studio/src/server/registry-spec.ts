@@ -4,11 +4,12 @@
 
 import { createLogger } from "@noverax/courier";
 import type { CourierImportEntry } from "@noverax/courier/config";
-import { computeSpecHash, parseSpec } from "../apis";
+import { computeSpecHash } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import { authHeaders } from "./auth-headers";
 import { fetchSpec } from "./fetch-spec";
 import { isUrl } from "./fs-helpers";
+import { parseFetchedSpec } from "./parse-fetched-spec";
 import type { ProjectRoot } from "./project-fs/project-root";
 import { readProjectText } from "./project-fs/read-project-text";
 import { sendRouteFailure } from "./route-failure";
@@ -19,6 +20,21 @@ import type { SpecHostAllowlist } from "./spec-host-allowlist";
 import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
 
 const log = createLogger("Studio");
+
+/** What checking one import for updates found. */
+export interface UpdateCheck {
+  changed: boolean;
+  /** Why the check failed, when it did. */
+  error?: string;
+  /** Why the import cannot be checked at all: it has no URL to fetch. */
+  unchecked?: string;
+}
+
+/* A file or pasted import is compared only with a specification the user gives Manage. */
+const UNCHECKABLE = {
+  file: "A file import has no URL to check; upload its specification in Manage to compare.",
+  raw: "A pasted import has no URL to check; paste its specification in Manage to compare.",
+} as const;
 
 /**
  * Read an import's specification from its URL or its file, or answer the
@@ -82,7 +98,8 @@ export async function fetchSpecRaw(
  * @param entry - The import's declaration
  * @param state - What Studio recorded when it wrote the import
  * @param allowlist - The private hosts the project names, shared by every import of the check
- * @returns Whether it changed, or why it could not be checked
+ * @returns Whether it changed, or why it could not be checked: an `error`
+ *   when the check failed, `unchecked` for an import with no URL to fetch
  *
  * @example
  * ```ts
@@ -94,14 +111,14 @@ export async function checkSingleSource(
   entry: CourierImportEntry,
   state: ImportStateEntry | undefined,
   allowlist: SpecHostAllowlist,
-): Promise<{ changed: boolean; error?: string }> {
-  if (entry.importType !== "url") return { changed: false };
+): Promise<UpdateCheck> {
+  if (entry.importType !== "url")
+    return { changed: false, unchecked: UNCHECKABLE[entry.importType] };
   const specUrl = entry.from;
-  if (!specUrl) return { changed: false };
 
   try {
     const raw = await fetchSpec(specUrl, allowlist, authHeaders(entry.auth));
-    const newSpec = parseSpec(raw);
+    const newSpec = parseFetchedSpec(specUrl, raw);
     checkPinnedHash(name, entry, newSpec);
     return { changed: computeSpecHash(newSpec) !== state?.specHash };
   } catch (err) {

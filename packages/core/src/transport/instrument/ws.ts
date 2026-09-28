@@ -12,7 +12,8 @@ type InstrumentedChannel = Omit<WSChannel<never, unknown>, "send"> & {
  * Wrap a WSChannel with browser-side studio instrumentation.
  *
  * Tracks incoming "data" events as stream:message and lifecycle changes
- * via the "status" channel. Returns the original channel unchanged when
+ * via the "status" channel. A message sent is recorded once the channel took
+ * it; one it dropped is not. Returns the original channel unchanged when
  * studio hooks are not installed.
  *
  * Lifecycle reasons:
@@ -86,10 +87,14 @@ export function instrumentWSChannel<TChannel extends InstrumentedChannel>(
 
   const wrapped = {
     send(data: unknown) {
-      // Outbound (client→server) frames are tagged "message" so the
-      // Stream tab can render an upward arrow distinct from inbound data.
-      instr.emitMessage(data, "message");
-      return inner.send(data);
+      const result = inner.send(data);
+      /* Recorded once the channel took it, tagged "message" so the Stream tab
+         tells it from inbound data. A network channel says whether it did —
+         `false` is a message dropped: the channel ended, no room to hold it,
+         too large; an in-process one takes what it is sent while open. */
+      const taken = typeof result === "boolean" ? result : inner.status !== "disconnected";
+      if (taken) instr.emitMessage(data, "message");
+      return result;
     },
     on(event: "data" | "status" | "error", handler: (arg: never) => void) {
       // Pass-through with same overload signature as WSChannel.on

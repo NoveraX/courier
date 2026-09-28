@@ -243,7 +243,7 @@ describe("instrumentSSE — lifecycle events", () => {
 // ---------------------------------------------------------------------------
 
 describe("instrumentWSChannel", () => {
-  function createMockChannel(): {
+  function createMockChannel(initial: ConnectionStatus = "connecting"): {
     channel: WSChannel<unknown, unknown>;
     emitData: (data: unknown) => void;
     emitStatus: (status: ConnectionStatus) => void;
@@ -252,7 +252,7 @@ describe("instrumentWSChannel", () => {
     const dataHandlers = new Set<(data: unknown) => void>();
     const statusHandlers = new Set<(s: ConnectionStatus) => void>();
     const errorHandlers = new Set<(error: RealtimeError) => void>();
-    let status: ConnectionStatus = "connecting";
+    let status: ConnectionStatus = initial;
 
     const channel: WSChannel<unknown, unknown> = {
       send: vi.fn(),
@@ -387,6 +387,33 @@ describe("instrumentWSChannel", () => {
       seq: 1,
       dataPreview: expect.stringContaining("outgoing"),
     });
+  });
+
+  it("send() records no message the channel dropped", () => {
+    studioHooks.onStreamOpen = vi.fn();
+    const onStreamMessage = vi.fn();
+    studioHooks.onStreamMessage = onStreamMessage;
+    const { channel } = createMockChannel("connected");
+    vi.mocked(channel.send).mockReturnValue(false);
+    const wrapped = instrumentWSChannel(channel, { ...META, transport: "ws" });
+
+    expect(wrapped.send({ text: "too large" })).toBe(false);
+
+    expect(onStreamMessage).not.toHaveBeenCalled();
+  });
+
+  it("send() records a message the channel holds until it connects", () => {
+    studioHooks.onStreamOpen = vi.fn();
+    const onStreamMessage = vi.fn();
+    studioHooks.onStreamMessage = onStreamMessage;
+    /* A network channel is disconnected until the turn after it is made. */
+    const { channel } = createMockChannel("disconnected");
+    vi.mocked(channel.send).mockReturnValue(true);
+    const wrapped = instrumentWSChannel(channel, { ...META, transport: "ws" });
+
+    wrapped.send({ text: "first" });
+
+    expect(onStreamMessage.mock.calls.map((call) => call[0].eventType)).toEqual(["message"]);
   });
 
   it("records a channel as failed when its end error comes just after disconnected", async () => {

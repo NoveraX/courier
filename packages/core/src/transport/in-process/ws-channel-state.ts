@@ -1,14 +1,13 @@
 import { createLogger } from "../../logger";
 import { checkResponseNow } from "../../realtime/check-response-now";
 import type { ChannelHandlers, ConnectionStatus, WSChannelContext } from "../../realtime/types";
-import { validateSchema } from "../../validation";
 import { holdMessages } from "./held-messages";
-import { type InProcessStreamSchema, wrapStreamError } from "./shared";
+import { notifyListeners } from "./notify-listeners";
+import { receiveClientMessage } from "./receive-client-message";
+import type { InProcessStreamSchema } from "./shared";
 import type { InProcessWSChannel } from "./types";
 
 const log = createLogger("WS");
-
-const EXECUTOR = "executeDirectWSChannel";
 
 /**
  * Per-channel runtime state machine for an in-process WS channel.
@@ -52,18 +51,18 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
   const early = holdMessages(topic);
 
   const emitData = (data: unknown): void => {
-    if (!early.hold(data)) notify(dataListeners, data, "data");
+    if (!early.hold(data)) notifyListeners(dataListeners, data, "data");
   };
 
   /* The first listener takes what was sent before it, in order. */
   function addDataListener(fn: (data: unknown) => void): void {
     dataListeners.add(fn);
-    for (const data of early.release()) notify([fn], data, "data");
+    for (const data of early.release()) notifyListeners([fn], data, "data");
   }
 
   const setStatus = (next: ConnectionStatus): void => {
     status = next;
-    notify(statusListeners, next, "status");
+    notifyListeners(statusListeners, next, "status");
   };
 
   /* Held to the response schema as the server holds what it sends. */
@@ -100,23 +99,8 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
   }
 
   const client: InProcessWSChannel = {
-    async send(data) {
-      if (closed) return;
-      // Validate inbound (client→server) message against `schema.receive`.
-      // Mirrors canonical ws-message validation.
-      const validated = schema.receive
-        ? await validateSchema(
-            schema.receive as Parameters<typeof validateSchema>[0],
-            data,
-            "receive",
-          )
-        : data;
-      try {
-        await handlers.onMessage(channelCtx, validated);
-      } catch (error) {
-        throw wrapStreamError(EXECUTOR, "onMessage failed", error);
-      }
-    },
+    send: (data) =>
+      receiveClientMessage({ topic, schema, handlers, channelCtx, isClosed: () => closed }, data),
     on(event: "data" | "status" | "error", handler: (arg: never) => void) {
       /* Refusals reach an in-process caller as the rejection of its `send`,
          so there is nothing to hear here. */
@@ -127,14 +111,16 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
       }
       statusListeners.add(handler as (s: ConnectionStatus) => void);
       // Emit current status immediately so late subscribers see "connected".
-      notify([handler as (s: ConnectionStatus) => void], status, "status");
+      notifyListeners([handler as (s: ConnectionStatus) => void], status, "status");
       return () => statusListeners.delete(handler as (s: ConnectionStatus) => void);
     },
     close() {
       void close();
     },
+    /* Ended for its caller once closed: `disconnected` is heard after
+       `onLeave` has run, but nothing sent meanwhile reaches the handler. */
     get status() {
-      return status;
+      return closed ? "disconnected" : status;
     },
   } as InProcessWSChannel;
 
@@ -145,19 +131,4 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
     markConnected: () => setStatus("connected"),
     close,
   };
-}
-
-/* One failing listener must not keep the message from the others. */
-function notify<TValue>(
-  listeners: Iterable<(value: TValue) => void>,
-  value: TValue,
-  kind: "data" | "status",
-): void {
-  for (const fn of listeners) {
-    try {
-      fn(value);
-    } catch (error) {
-      log.error(`A channel ${kind} listener failed`, error);
-    }
-  }
 }

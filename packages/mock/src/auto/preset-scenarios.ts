@@ -69,7 +69,7 @@ function buildSlowNetworkScenario(
   return {
     name: "slow-network",
     description:
-      "Adds 3G latency (300–900 ms) to all read endpoints to simulate a slow mobile connection.",
+      "Adds 3G latency (300–900 ms, with jitter) to every read endpoint to simulate a slow mobile connection; writes answer without it.",
     tags: ["latency", "network"],
     apply(mock: UntypedMockFn) {
       const store = getStore();

@@ -15,7 +15,6 @@ import {
   generateRefSchema,
   generateUnionSchema,
 } from "./generate-schema-entries";
-import { jsdocText } from "./jsdoc-text";
 import { schemaComponents } from "./schema-components";
 import { topoSortSchemas } from "./schema-refs";
 import { schemaToInterface } from "./schema-types";
@@ -113,23 +112,30 @@ function writeEntries(
   }
 }
 
+/**
+ * Write the file of types a group's endpoints import when no validator
+ * schemas are asked for.
+ *
+ * Every schema is declared, as `validation: "none"` declares them in a
+ * schemas file. Writing objects and enums alone left a union, a list, a
+ * primitive or an alias undeclared while the endpoints still imported it.
+ *
+ * @param schemas - The schemas the group names, by name
+ * @param options - The import's resolved options
+ * @param groupName - The group, or none for an import generated flat
+ * @returns The types file, at the path the layout gives it
+ * @example
+ * ```ts
+ * generateTypesFile({ Pet: petUnion }, options, "pets").content; // "export type Pet = Cat | Dog;\n…"
+ * ```
+ */
 export function generateTypesFile(
   schemas: Record<string, ParsedSchema>,
   options: ResolvedGenerateOptions,
   groupName?: string,
 ): GeneratedFile {
   const lines: string[] = [];
-
-  /* Every schema is declared, whatever its kind: the types that name it do
-     so either way, and a union, a list or a primitive left out was a name
-     nothing declared. */
-  for (const [name, schema] of Object.entries(schemas)) {
-    if (options.includeComments && schema.description) {
-      lines.push(`/** ${jsdocText(schema.description)} */`);
-    }
-    lines.push(`export type ${name} = ${schemaToInterface(schema)}`);
-    lines.push("");
-  }
+  writeEntries(lines, topoSortSchemas(schemas), { ...options, generateSchemas: false }, new Set());
 
   return {
     path: groupName

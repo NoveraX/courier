@@ -5,12 +5,11 @@ import type {
   MockHandlerFn,
   MockStreamFn,
   ResolvedHandler,
-  SequenceEntry,
 } from "../types";
 import type { OnRegister } from "./builder-target";
 import { createBuilderTarget } from "./builder-target";
 import { channelWith, streamOf, streamWith } from "./realtime-handlers";
-import { sequenceFn } from "./sequence-fn";
+import { sequenceSteps } from "./sequence-steps";
 
 export type { OnRegister } from "./builder-target";
 
@@ -54,6 +53,7 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
     handler.fn = fn;
     handler.status = status ?? target.explicitStatus ?? 200;
     handler.isError = isError;
+    handler.nextStep = undefined;
   };
 
   const builder: EnhancedMockBuilder<TResponse, TVariables> = {
@@ -98,9 +98,8 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
     },
 
     sequence(responses) {
-      const handler = target.forResponse();
-      handler.fn = sequenceFn(handler, responses as SequenceEntry<unknown>[]);
-      handler.isError = false;
+      respond(() => undefined);
+      target.forResponse().nextStep = sequenceSteps(responses);
       return builder;
     },
 

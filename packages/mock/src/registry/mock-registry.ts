@@ -11,7 +11,11 @@ export interface MockRegistry {
   set(group: string, method: string, handler: ResolvedHandler): void;
   /** Register a handler in the base layer (never cleared — overrides, auto-CRUD) */
   setBase(group: string, method: string, handler: ResolvedHandler): void;
-  /** Resolve the best matching handler: scenario layer first, then base layer */
+  /**
+   * Resolve the best matching handler for one call: scenario layer first, then
+   * base layer. It counts the call against `once`/`times`, and a sequence
+   * answers with its next step.
+   */
   get(group: string, method: string, scenarioState: string): ResolvedHandler | undefined;
   /** Read the latest handler without side effects — scenario layer first, then base */
   peek(group: string, method: string): ResolvedHandler | undefined;

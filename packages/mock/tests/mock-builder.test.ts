@@ -87,13 +87,11 @@ describe("EnhancedMockBuilder", () => {
     const { builder, getHandler } = buildAndCapture();
     builder.sequence(["first", "second", "third"]);
 
-    const fn = getHandler().fn;
-    const ctx = {} as never;
-    expect(fn(ctx)).toBe("first");
-    expect(fn(ctx)).toBe("second");
-    expect(fn(ctx)).toBe("third");
+    const next = getHandler().nextStep;
+    expect(next).toBeDefined();
+    const answers = [next?.(), next?.(), next?.(), next?.()].map((step) => step?.data);
     // Stays on last after exhaustion
-    expect(fn(ctx)).toBe("third");
+    expect(answers).toEqual(["first", "second", "third", "third"]);
   });
 
   it("supports method chaining", () => {

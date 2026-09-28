@@ -7,7 +7,7 @@
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
 import { defineApi } from "../src/define";
@@ -16,7 +16,14 @@ import { _resetSourcesForTests, registerSources } from "../src/sources";
 
 let server: Server | undefined;
 
+/* Production serves every host name its operator routes to it, so the
+   origin rule alone decides here. */
+beforeEach(() => {
+  vi.stubEnv("NODE_ENV", "production");
+});
+
 afterEach(async () => {
+  vi.unstubAllEnvs();
   _resetSourcesForTests();
   server?.closeAllConnections();
   await new Promise<void>((resolve) => server?.close(() => resolve()) ?? resolve());

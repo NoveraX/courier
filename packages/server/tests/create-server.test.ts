@@ -169,7 +169,7 @@ describe("createCourierServer", () => {
     });
 
     it("serves its own HTTPS pages behind a proxy that terminates TLS", async () => {
-      server = await startServer();
+      server = await startServer({ allowedHosts: ["app.example.com"] });
       const fromOwnPage = {
         Origin: "https://app.example.com",
         "X-Forwarded-Proto": "https",

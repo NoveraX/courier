@@ -54,7 +54,7 @@ afterEach(async () => {
 function proxyGet(method: string, options: Record<string, unknown>): Promise<Response> {
   const encoded = encodeURIComponent(JSON.stringify(options));
   return createHandler().handleGet(
-    new Request(`http://app.local/api/request?_s=api&_g=items&_m=${method}&_o=${encoded}`),
+    new Request(`http://app.localhost/api/request?_s=api&_g=items&_m=${method}&_o=${encoded}`),
   );
 }
 

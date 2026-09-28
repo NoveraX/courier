@@ -72,7 +72,30 @@ const user = await caller.users.getById({ id: 5 })
 
 ## Security
 
-Proxy mode includes two built-in security layers: origin validation and header whitelisting.
+Proxy mode includes three built-in security layers: host validation, origin validation and header whitelisting.
+
+### Host validation
+
+Every proxy route — GET, POST, SSE and WebSocket — answers only for the host names the application is reached by. A request addressed to any other host gets `421 Misdirected Request`, and a WebSocket opened on one is closed with `4421`:
+
+```json
+{ "success": false, "code": "HOST_NOT_ALLOWED", "message": "Host \"rebound.example:3000\" is not served here. Add its name to allowedHosts if this application is reached by it." }
+```
+
+This stops DNS rebinding, which origin validation cannot see: a page on the attacker's own name points that name at the machine your app runs on, so its calls reach your app addressed to the attacker's name, same-origin as far as the browser is concerned. Only your app knowing its own names can refuse them.
+
+- `localhost`, any `*.localhost` name and IP literals (`127.0.0.1`, `[::1]`, `192.168.1.20`) are always served.
+- Every other name is served when `allowedHosts` lists it — exactly, or `*.example.com` for its sub-domains — on any port.
+- With no `allowedHosts`, development serves nothing else, as Vite does. Production serves every name, because it is reached through names you routed to it; list them to have it refuse the rest too.
+
+```ts
+courierHandler({
+  // The names this app is reached by, beyond localhost and IP addresses
+  allowedHosts: ["app.example.com", "*.preview.example.com"],
+})
+```
+
+The WebSocket handlers take the same option. Behind a reverse proxy the host is the one the browser used, read from `X-Forwarded-Host` where the adapter trusts it — see [Behind a Reverse Proxy](/docs/deployment/overview#behind-a-reverse-proxy).
 
 ### Origin validation
 

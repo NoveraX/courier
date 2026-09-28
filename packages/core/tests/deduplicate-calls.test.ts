@@ -100,7 +100,7 @@ describe("the proxy", () => {
       if (url.startsWith(UPSTREAM)) return slowUpstream(input, init);
       /* As real fetch does, a cancelled request rejects with its reason. */
       const signal = init?.signal;
-      const answer = handler.handle(new Request(new URL(url, "http://app.local"), init));
+      const answer = handler.handle(new Request(new URL(url, "http://app.localhost"), init));
       return new Promise((resolve, reject) => {
         signal?.addEventListener("abort", () => reject(signal.reason));
         answer.then(resolve, reject);
@@ -113,7 +113,7 @@ describe("the proxy", () => {
     const call = (q: string) =>
       handler.handleGet(
         new Request(
-          `http://app.local/api/request?_s=api&_m=search&_v=${encodeURIComponent(JSON.stringify({ q }))}`,
+          `http://app.localhost/api/request?_s=api&_m=search&_v=${encodeURIComponent(JSON.stringify({ q }))}`,
         ),
       );
 

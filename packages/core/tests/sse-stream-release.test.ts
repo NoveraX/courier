@@ -20,7 +20,7 @@ afterEach(() => {
 });
 
 function sseRequest(): Request {
-  return new Request("http://app.local/api/sse?_s=api&_m=feed", {
+  return new Request("http://app.localhost/api/sse?_s=api&_m=feed", {
     headers: { accept: "text/event-stream" },
   });
 }

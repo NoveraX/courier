@@ -270,6 +270,8 @@ The handler serves browser pages on the application's own origin and refuses a r
 
 Pages on other origins are served when `allowedOrigins` lists them. An entry is an exact origin, `https://*.example.com` for the sub-domains of a host over one scheme and port, or `*.example.com` for them over any.
 
+A DNS-rebinding page points its own name at the machine the app runs on, and its calls then look same-origin to the browser. Every entry point therefore answers only for the host names the app is reached by: a request for another host gets `421` with the code `HOST_NOT_ALLOWED`, and a socket is closed with `4421`. `localhost`, `*.localhost` names and IP addresses are always served; list the rest in `allowedHosts` — `createHandler({ allowedHosts: ["app.example.com", "*.preview.example.com"] })`, and the same option on `createWSHandler` and every adapter. Left out, development serves nothing else and production every name.
+
 ```ts
 createHandler({ allowedOrigins: ["https://admin.example.com", "https://*.example.com"] })
 ```

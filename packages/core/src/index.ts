@@ -20,6 +20,7 @@ export {
   type WSHandler,
   type WSHandlerConfig,
 } from "./adapter";
+export { isHostAccepted, isHostAllowed } from "./adapter/host-policy";
 export { isOriginAccepted, isOriginAllowed } from "./adapter/origin-policy";
 export {
   detectAppOrigin,

@@ -42,7 +42,7 @@ afterEach(() => {
 
 describe("route handlers without AbortSignal.any", () => {
   it("stream SSE", async () => {
-    const request = new NextRequest("http://app.test/api/sse?_s=api&_m=ticks", {
+    const request = new NextRequest("http://app.localhost/api/sse?_s=api&_m=ticks", {
       headers: { accept: "text/event-stream" },
     });
 
@@ -54,7 +54,7 @@ describe("route handlers without AbortSignal.any", () => {
 
   it("forward a call that sets a timeout", async () => {
     vi.stubGlobal("fetch", async () => Response.json([{ id: 1 }]));
-    const request = new NextRequest("http://app.test/api/request", {
+    const request = new NextRequest("http://app.localhost/api/request", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

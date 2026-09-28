@@ -42,7 +42,7 @@ function upload(form: FormData): Request {
   form.append("_source", "api");
   form.append("_method", "upload");
   form.append("_options", "{}");
-  return new Request("http://app.local/api/request", { method: "POST", body: form });
+  return new Request("http://app.localhost/api/request", { method: "POST", body: form });
 }
 
 describe("an upload as Studio sees it", () => {

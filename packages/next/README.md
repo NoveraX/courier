@@ -63,6 +63,8 @@ Pages on other origins may call the route when `allowedOrigins` lists them. Thei
 export const { GET, POST, OPTIONS } = apiRoute({ allowedOrigins: ["https://admin.example.com"] })
 ```
 
+The route answers only for the host names the app is reached by, which stops a DNS-rebinding page: `localhost`, `*.localhost` and IP addresses always, and in production every name until `allowedHosts` lists them. Any other host gets `421`. A dev server reached by another name lists it: `apiRoute({ allowedHosts: ["myapp.test"] })`.
+
 The proxy reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload (`multipart/form-data`) up to its `maxUploadBytes`, 10 MB; pass others to raise them: `apiRoute({ maxUploadBytes: 50 * 1024 * 1024 })`.
 
 <br />

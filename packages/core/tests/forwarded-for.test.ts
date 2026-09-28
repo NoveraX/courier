@@ -52,7 +52,7 @@ function register(allowedHeaders?: string[]): void {
 }
 
 function callFrom(peer: string | undefined): Promise<Response> {
-  const request = new Request("http://app.local/api/request", {
+  const request = new Request("http://app.localhost/api/request", {
     method: "POST",
     headers: { "content-type": "application/json", ...SPOOFED },
     body: JSON.stringify({ source: "api", method: "ping" }),

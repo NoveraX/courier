@@ -1,5 +1,5 @@
-import { answerPreflight, withCorsHeaders } from "./adapter/cors";
 import { discardBody } from "./adapter/discard-body";
+import { gateEntry } from "./adapter/entry-gate";
 import { createGetHandler } from "./adapter/handle-get";
 import { createPostHandler } from "./adapter/handle-post";
 import { createSSEHandler } from "./adapter/handle-sse";
@@ -67,16 +67,6 @@ export function createHandler(config?: HandlerConfig): AdapterHandler {
   if (config?.sources !== undefined) {
     prepareSources(config.sources, "createHandler", "createHandler({ sources: { api } })");
   }
-  const allowedOrigins = config?.allowedOrigins;
-  /* Every entry point answers a preflight and grants a listed origin its
-     permission, because an adapter may mount any one of them on its own. */
-  const withCors =
-    (serve: (request: Request) => Promise<Response>) =>
-    async (request: Request): Promise<Response> => {
-      if (request.method === "OPTIONS") return answerOptions(request, allowedOrigins);
-      return withCorsHeaders(request, await serve(request), allowedOrigins);
-    };
-
   const execute = (
     request: Request,
     payload: RequestPayloadInput,
@@ -92,34 +82,27 @@ export function createHandler(config?: HandlerConfig): AdapterHandler {
     });
 
   const dt = studioHooks;
-  const handleGet = withCors(createGetHandler(execute, dt, config));
-  const handlePost = withCors(createPostHandler(execute, dt, config));
-
+  const get = createGetHandler(execute, dt, config);
+  const post = createPostHandler(execute, dt, config);
   const sseRegistry = createSSEConnectionRegistry();
-  const handleSSE = withCors(createSSEHandler(config, sseRegistry));
+  const sse = createSSEHandler(config, sseRegistry);
 
-  const handle = async (request: Request): Promise<Response> => {
-    if (request.method === "OPTIONS") return answerOptions(request, allowedOrigins);
-    if (isSSERequest(request)) return handleSSE(request);
-    if (request.method === "GET") return handleGet(request);
-    if (request.method === "POST") return handlePost(request);
+  const route = async (request: Request): Promise<Response> => {
+    if (isSSERequest(request)) return sse(request);
+    if (request.method === "GET") return get(request);
+    if (request.method === "POST") return post(request);
     discardBody(request);
     return errorResponse(405, "Method not allowed");
   };
 
   return {
-    handle,
-    handleGet,
-    handlePost,
-    handleSSE,
+    handle: gateEntry(route, config),
+    handleGet: gateEntry(get, config),
+    handlePost: gateEntry(post, config),
+    handleSSE: gateEntry(sse, config),
     sseConnections: sseRegistry,
     shutdownSSE: (opts) => sseRegistry.shutdown(opts),
   };
-}
-
-/** A preflight is answered; any other OPTIONS request asks for nothing the proxy serves. */
-function answerOptions(request: Request, allowedOrigins: string[] | undefined): Response {
-  return answerPreflight(request, allowedOrigins) ?? errorResponse(405, "Method not allowed");
 }
 
 /** Detect SSE requests by Accept header or _transport query param */

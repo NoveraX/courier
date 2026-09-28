@@ -3,6 +3,7 @@ import type { WebSocketLike } from "../realtime/adapters";
 import { createHeartbeat } from "../realtime/ws/heartbeat";
 import { prepareSources } from "../sources";
 import { studioHooks } from "../studio";
+import { isHostAllowed } from "./host-policy";
 import { LIMITS } from "./limits";
 import { isOriginAllowed } from "./origin-policy";
 import { rememberPeerAddress } from "./peer-address";
@@ -57,6 +58,10 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
 
   function handleSocket(ws: WebSocketLike, request: Request, peerAddress?: string): void {
     rememberPeerAddress(request, peerAddress);
+    if (!isHostAllowed(request, config.allowedHosts)) {
+      ws.close(4421, "Host not allowed");
+      return;
+    }
     if (!isOriginAllowed(request, config.allowedOrigins)) {
       ws.close(4403, "Origin not allowed");
       return;

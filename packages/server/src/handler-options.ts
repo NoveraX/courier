@@ -25,6 +25,7 @@ export function httpHandlerOptions(config: CourierServerOptions): HandlerConfig 
   const options: Forwarded<HandlerConfig> = {
     sources: config.sources,
     allowedOrigins: config.allowedOrigins,
+    allowedHosts: config.allowedHosts,
     sseHeaders: config.sseHeaders,
     sseMaxLifetimeMs: config.sseMaxLifetimeMs,
     maxBodyBytes: config.maxBodyBytes,
@@ -52,6 +53,7 @@ export function wsHandlerOptions(config: CourierServerOptions): WSHandlerConfig 
   const options: Forwarded<WSHandlerConfig> = {
     sources: config.sources,
     allowedOrigins: config.allowedOrigins,
+    allowedHosts: config.allowedHosts,
     pubsub: config.pubsub,
     heartbeatIntervalMs: config.heartbeatIntervalMs,
     heartbeatTimeoutMs: config.heartbeatTimeoutMs,

@@ -9,6 +9,7 @@
  */
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { request as httpRequest } from "node:http";
 import { createRequire } from "node:module";
 import { createServer as createNetServer } from "node:net";
 import { join } from "node:path";
@@ -130,6 +131,26 @@ describe("courier-server", () => {
 
     expect((await call("https://app.example")).status).not.toBe(403);
     expect((await call("https://evil.example")).status).toBe(403);
+  }, 30_000);
+
+  it("serves the host names it is told, from the flag or from the config", async () => {
+    const statusFor = (url: string, host: string) =>
+      new Promise<number>((resolve, reject) => {
+        const { port } = new URL(url);
+        httpRequest({ host: "127.0.0.1", port, path: "/api/request?_s=api&_m=ping", headers: { host } }, (res) => {
+          res.resume();
+          resolve(res.statusCode ?? 0);
+        })
+          .on("error", reject)
+          .end();
+      });
+    const flagged = await serve(project(), "--host", "127.0.0.1", "--port", String(await freePort()), "--allowed-hosts", "app.example, api.example");
+    const configured = await serve(project('{ allowedHosts: ["cfg.example"] }'), "--host", "127.0.0.1", "--port", String(await freePort()));
+
+    expect(await statusFor(flagged, "api.example")).not.toBe(421);
+    expect(await statusFor(flagged, "rebound.example")).toBe(421);
+    expect(await statusFor(configured, "cfg.example")).not.toBe(421);
+    expect(await statusFor(configured, "app.example")).toBe(421);
   }, 30_000);
 
   it("applies the body limits the config's server block sets", async () => {

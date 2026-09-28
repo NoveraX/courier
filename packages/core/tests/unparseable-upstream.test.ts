@@ -33,7 +33,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = input instanceof Request ? input.url : String(input);
     if (url.startsWith(UPSTREAM)) return upstreamAnswer();
-    return handler.handle(new Request(new URL(url, "http://app.local"), init));
+    return handler.handle(new Request(new URL(url, "http://app.localhost"), init));
   });
 });
 
@@ -47,7 +47,7 @@ describe("an upstream body that will not parse", () => {
     upstreamAnswer = () => new Response("<html>hi</html>", { headers: { "content-type": "text/html" } });
 
     const response = await createHandler().handleGet(
-      new Request("http://app.local/api/request?_s=api&_g=items&_m=list"),
+      new Request("http://app.localhost/api/request?_s=api&_g=items&_m=list"),
     );
 
     expect(response.status).toBe(502);

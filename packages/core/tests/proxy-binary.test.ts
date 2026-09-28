@@ -65,7 +65,7 @@ function proxyClient(responseType: "arrayBuffer" | "blob") {
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = input instanceof Request ? input.url : String(input);
     if (url.startsWith(upstream.url)) return realFetch(input, init);
-    return handler.handle(new Request(new URL(url, "http://app.local"), init));
+    return handler.handle(new Request(new URL(url, "http://app.localhost"), init));
   });
   return createProxyCaller<typeof source>("files", { source });
 }
@@ -112,7 +112,7 @@ describe("the proxy's binary answer on the wire", () => {
   it("is marked by its content type alone, which a cross-origin page can read", async () => {
     proxyClient("blob");
     const answer = await createHandler().handlePost(
-      new Request("http://app.local/api/request", {
+      new Request("http://app.localhost/api/request", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ source: "files", method: "image" }),

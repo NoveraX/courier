@@ -48,7 +48,7 @@ describe("a caller that leaves before the upstream answers", () => {
   it("cancels the upstream request", async () => {
     const caller = new AbortController();
     const pending = createHandler().handleGet(
-      new Request("http://app.local/api/request?_s=api&_m=slow", { signal: caller.signal }),
+      new Request("http://app.localhost/api/request?_s=api&_m=slow", { signal: caller.signal }),
     );
 
     await vi.waitFor(() => expect(upstreamCalled).toBe(true));
@@ -72,7 +72,7 @@ describe("a caller that leaves before the upstream answers", () => {
     const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
     const caller = new AbortController();
     const pending = createHandler().handleGet(
-      new Request("http://app.local/api/request?_s=api&_m=slow", { signal: caller.signal }),
+      new Request("http://app.localhost/api/request?_s=api&_m=slow", { signal: caller.signal }),
     );
 
     await vi.waitFor(() => expect(upstreamCalled).toBe(true));
@@ -89,7 +89,7 @@ describe("a caller that leaves before the upstream answers", () => {
   it("leaves a caller that stays to get its answer", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout"] });
     const pending = createHandler().handleGet(
-      new Request("http://app.local/api/request?_s=api&_m=slow"),
+      new Request("http://app.localhost/api/request?_s=api&_m=slow"),
     );
     await vi.waitFor(() => expect(upstreamCalled).toBe(true));
     vi.advanceTimersByTime(2000);

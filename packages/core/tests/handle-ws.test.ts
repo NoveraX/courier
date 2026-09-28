@@ -103,6 +103,36 @@ function createWSSource(handler: unknown, transport: "ws" = "ws", receive?: unkn
 // ---------------------------------------------------------------------------
 
 describe("createWSHandler", () => {
+  /** A rebound page's socket is same-origin to it; only the host tells. */
+  it("closes a socket opened on a host the app does not serve with 4421", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const sources = createWSSource(vi.fn());
+    const { handleSocket } = setupWSHandler(sources, {});
+
+    const ws = createMockSocket();
+    handleSocket(
+      ws,
+      new Request("http://rebound.example:3000/ws", {
+        headers: { Origin: "http://rebound.example:3000" },
+      }),
+    );
+
+    expect(ws._closed).toEqual({ code: 4421, reason: "Host not allowed" });
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps a socket opened on a host allowedHosts lists", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const sources = createWSSource(vi.fn());
+    const { handleSocket } = setupWSHandler(sources, { allowedHosts: ["app.example.com"] });
+
+    const ws = createMockSocket();
+    handleSocket(ws, new Request("http://app.example.com/ws"));
+
+    expect(ws._closed).toBeNull();
+    vi.unstubAllEnvs();
+  });
+
   it("rejects connections with invalid origin", () => {
     const sources = createWSSource(vi.fn());
     const { handleSocket } = setupWSHandler(sources, {

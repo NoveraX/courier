@@ -34,10 +34,10 @@ describe("createMockServer", () => {
 
   describe("proxy route (POST /api/request)", () => {
     it("returns mocked response for known endpoint", async () => {
-      const res = await fetch(`${baseUrl}/api/request`, {
+      const res = await fetch(`${baseUrl}/api/request?_s=api&_g=users&_m=getAll`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ group: "users", method: "getAll" }),
+        body: JSON.stringify({}),
       });
 
       expect(res.status).toBe(200);
@@ -46,10 +46,10 @@ describe("createMockServer", () => {
     });
 
     it("passes variables to handler", async () => {
-      const res = await fetch(`${baseUrl}/api/request`, {
+      const res = await fetch(`${baseUrl}/api/request?_s=api&_g=users&_m=getById`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ group: "users", method: "getById", variables: { id: "42" } }),
+        body: JSON.stringify({ variables: { id: "42" } }),
       });
 
       expect(res.status).toBe(200);
@@ -58,20 +58,20 @@ describe("createMockServer", () => {
     });
 
     it("returns error for rejected mock", async () => {
-      const res = await fetch(`${baseUrl}/api/request`, {
+      const res = await fetch(`${baseUrl}/api/request?_s=api&_g=users&_m=create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ group: "users", method: "create" }),
+        body: JSON.stringify({}),
       });
 
       expect(res.status).toBe(403);
     });
 
     it("returns 404 for unmocked endpoint", async () => {
-      const res = await fetch(`${baseUrl}/api/request`, {
+      const res = await fetch(`${baseUrl}/api/request?_s=api&_g=posts&_m=getAll`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ group: "posts", method: "getAll" }),
+        body: JSON.stringify({}),
       });
 
       expect(res.status).toBe(404);
@@ -153,10 +153,10 @@ describe("createMockServer with scenarios", () => {
     const { url } = await server.start();
 
     // Initial scenario
-    let res = await fetch(`${url}/api/request`, {
+    let res = await fetch(`${url}/api/request?_s=api&_g=users&_m=getAll`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group: "users", method: "getAll" }),
+      body: JSON.stringify({}),
     });
     let data = await res.json();
     expect(data).toHaveLength(1);
@@ -164,10 +164,10 @@ describe("createMockServer with scenarios", () => {
     // Switch scenario via admin
     await fetch(`${url}/__admin/scenarios/empty`, { method: "POST" });
 
-    res = await fetch(`${url}/api/request`, {
+    res = await fetch(`${url}/api/request?_s=api&_g=users&_m=getAll`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group: "users", method: "getAll" }),
+      body: JSON.stringify({}),
     });
     data = await res.json();
     expect(data).toHaveLength(0);

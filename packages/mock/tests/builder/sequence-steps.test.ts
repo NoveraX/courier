@@ -106,10 +106,10 @@ describe("sequence entries on the mock server", () => {
   });
 
   function request(): Promise<Response> {
-    return fetch(`${baseUrl}/api/request`, {
+    return fetch(`${baseUrl}/api/request?_s=api&_g=users&_m=getAll`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group: "users", method: "getAll" }),
+      body: JSON.stringify({}),
     });
   }
 

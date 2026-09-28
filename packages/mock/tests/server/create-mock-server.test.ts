@@ -16,10 +16,10 @@ async function started(): Promise<{ server: MockServer; url: string }> {
 }
 
 function call(url: string, group: string, method: string): Promise<Response> {
-  return fetch(`${url}/api/request`, {
+  return fetch(`${url}/api/request?_s=api&_g=${group}&_m=${method}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ group, method }),
+    body: JSON.stringify({}),
   });
 }
 

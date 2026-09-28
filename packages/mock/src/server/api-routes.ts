@@ -2,7 +2,7 @@
  * The routes a Courier client in proxy mode, and a caller addressing an
  * endpoint by name, reach the mock server on:
  *
- * - `POST /api/request` — the proxy's HTTP route
+ * - `GET` and `POST /api/request` — the proxy's HTTP route
  * - `GET /api/sse` — the proxy's stream route
  * - `/api/:group/:method` — REST-style addressing by name
  */
@@ -45,9 +45,12 @@ export function registerRequestRoutes(
   });
 }
 
-/** Register the main courier proxy route: POST /api/request */
+/**
+ * Register the proxy's HTTP route, `/api/request`: a POST for a call that
+ * writes, and the cacheable GET a proxy client sends for one that reads.
+ */
 export function registerProxyRoute(app: Hono, config: RouteConfig): void {
-  app.post("/api/request", async (c: HonoContext) => {
+  app.on(["GET", "POST"], "/api/request", async (c: HonoContext) => {
     const call = await readProxyCall(c);
     if ("error" in call) return c.json({ error: call.error }, 400);
     // A `.raw` call is answered with the response around the data, as a Courier proxy does

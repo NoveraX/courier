@@ -78,9 +78,17 @@ function parseParameters(op: SpecNode, spec: SpecNode): ParsedParameter[] {
       ...(shape.enum && { enum: shape.enum }),
       ...(shape.format && { format: shape.format }),
       ...(shape.items && { items: convertSchemaInline(shape.items, spec) }),
+      ...(isStructured(shape) && { schema: convertSchemaInline(shape, spec) }),
     });
   }
   return parameters;
+}
+
+/** Whether a parameter's schema is more than a type name and its values. */
+function isStructured(shape: SpecNode): boolean {
+  return Boolean(
+    shape.oneOf || shape.anyOf || shape.allOf || shape.properties || shape.type === "object",
+  );
 }
 
 function parseRequestBody(

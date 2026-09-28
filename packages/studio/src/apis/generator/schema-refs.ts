@@ -34,10 +34,6 @@ export function topoSortSchemas(schemas: Record<string, ParsedSchema>): [string,
   return result;
 }
 
-export function collectSchemaRefs(schema: ParsedSchema | null, refs: Set<string>): void {
-  collectRefsDeep(schema, refs);
-}
-
 /**
  * Every schema name referenced anywhere inside `schema`, however deep.
  *
@@ -75,15 +71,43 @@ function walk(
   }
 }
 
-/** Collect all schemas needed by a group, including transitive $ref dependencies */
+/**
+ * Every schema a group's endpoints name — in a response, a body or a
+ * parameter — with every schema those name in turn.
+ *
+ * @param group - The group
+ * @param spec - The specification, whose schemas are looked up by name
+ * @returns The names
+ * @example
+ * ```ts
+ * collectGroupSchemas(petGroup, spec); // Set { "Pet", "Category", "Tag" }
+ * ```
+ */
 export function collectGroupSchemas(group: ParsedGroup, spec: ParsedSpec): Set<string> {
   const direct = new Set<string>();
   for (const ep of group.endpoints) {
-    collectSchemaRefs(ep.responseSchema, direct);
-    collectSchemaRefs(ep.requestBody, direct);
+    collectRefsDeep(ep.responseSchema, direct);
+    collectRefsDeep(ep.requestBody, direct);
+    for (const param of ep.parameters) {
+      collectRefsDeep(param.items, direct);
+      collectRefsDeep(param.schema, direct);
+    }
   }
+  return withDependencies(direct, spec);
+}
 
-  // Resolve transitive deps: schema properties may reference other schemas
+/**
+ * Names, with every schema they refer to, however deep.
+ *
+ * @param direct - The names to start from
+ * @param spec - The specification, whose schemas are looked up by name
+ * @returns The names and all their dependencies
+ * @example
+ * ```ts
+ * withDependencies(new Set(["Pet"]), spec); // Set { "Pet", "Category", "Tag" }
+ * ```
+ */
+export function withDependencies(direct: ReadonlySet<string>, spec: ParsedSpec): Set<string> {
   const all = new Set<string>();
   const queue = [...direct];
   while (queue.length > 0) {

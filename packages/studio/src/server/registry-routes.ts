@@ -83,7 +83,7 @@ export function registerRegistryRoutes(app: RouteApp, deps: ApisRouteDeps): void
         const root = projectRootAt(projectRoot);
         const planned = planImportRemoval(root, body.name, importsSnapshotOf(imports, projectRoot));
         if ("error" in planned) return { status: planned.status, body: { error: planned.error } };
-        const report = runPlan(
+        const report = await runPlan(
           root,
           planned,
           consent,

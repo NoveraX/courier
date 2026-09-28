@@ -19,22 +19,23 @@ import type { ProjectRoot } from "./project-fs/project-root";
  * @throws {FilePlanError} When the plan is refused as it stands
  * @example
  * ```ts
- * handleManageApply({ name: "pets", spec, toAdd, toRemove, planDigest }, imports, root);
+ * await handleManageApply({ name: "pets", spec, toAdd, toRemove, planDigest }, imports, root);
  * ```
  */
-export function handleManageApply(
+export async function handleManageApply(
   body: ManageRequest & PlanConsent,
   imports: ImportsSnapshot,
   root: ProjectRoot,
-):
+): Promise<
   | Pick<ApplyReport, "written" | "removed" | "kept" | "backupDir" | "pruneFailures">
-  | { error: string; status: number } {
+  | { error: string; status: number }
+> {
   const planned = planManage(body, imports, root);
   if ("error" in planned) return planned;
   const specHash = body.specHash ?? computeSpecHash(body.spec);
   const spec = { specHash, digest: createSpecDigest(body.spec) };
   const now = new Date().toISOString();
-  const report = runPlan(
+  const report = await runPlan(
     root,
     planned.plan,
     body,

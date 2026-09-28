@@ -4,6 +4,7 @@ import { createLogger } from "@noverax/courier";
 import type { ImportsState } from "../../apis/imports-state";
 import { ownValue } from "../../apis/own-value";
 import type { ProjectRoot } from "../project-fs/project-root";
+import { isApplying } from "./apply-in-flight";
 import { type ApplyJournal, dropJournal, JOURNAL_DIR, readJournals } from "./apply-journal";
 import { journalProblem } from "./journal-trust";
 import { rollbackApply } from "./rollback-apply";
@@ -34,7 +35,7 @@ export interface RecoveredApply {
  * Studio names them at every start until that backup folder is deleted. The
  * journal of a process that still runs — another Studio on the project, in
  * the middle of its apply — is that process's to finish or undo, and is
- * left as it is. A journal that is not
+ * left as it is; so is one this process is still applying. A journal that is not
  * one Studio wrote for an apply of its own — `.courier/` can arrive with a
  * project — is left as it is and logged. Run once as Studio starts, before
  * it serves anything that reads or writes an import's files.
@@ -61,7 +62,7 @@ export function recoverInterruptedApplies(
       log.warn(
         `Studio left ${JOURNAL_DIR}/${fileName} as it is and undid nothing from it: ${problem}.`,
       );
-    } else if (runsElsewhere(journal.pid)) {
+    } else if (runsElsewhere(journal.pid) || isApplying(journal.id)) {
       log.warn(
         `Studio left a write for the import ${journal.importName} as it is: process ${journal.pid}, which is making it, still runs.`,
       );

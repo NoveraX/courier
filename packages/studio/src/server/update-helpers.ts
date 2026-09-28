@@ -85,7 +85,7 @@ export async function handleApplyUpdate(
 ): Promise<UpdateApplied | Refusal> {
   const regeneration = await regenerationOf(body, imports, root);
   if ("error" in regeneration) return regeneration;
-  const { report, leftBehind } = applyRegeneration(regeneration, body, "required");
+  const { report, leftBehind } = await applyRegeneration(regeneration, body, "required");
   const { written, removed, kept, backupDir, pruneFailures } = report;
   return { written, removed, kept, backupDir, pruneFailures, leftBehind };
 }

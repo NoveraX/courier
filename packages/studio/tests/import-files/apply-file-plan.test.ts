@@ -120,14 +120,14 @@ function undisturbed(): void {
 }
 
 describe("applyFilePlan's report", () => {
-  it("names no backup folder when it replaced and removed nothing, since none was made", () => {
+  it("names no backup folder when it replaced and removed nothing, since none was made", async () => {
     const plan = planFiles(
       root,
       { importName: "pets", dir: DIR, targets: [generated(`${DIR}/index.ts`, "new index\n")], removals: [] },
       {},
     );
 
-    const report = applyFilePlan(root, plan, () => {});
+    const report = await applyFilePlan(root, plan, () => {});
 
     expect(report.backupDir).toBeUndefined();
     expect(existsSync(join(root.path, ".courier/backups"))).toBe(false);
@@ -135,10 +135,10 @@ describe("applyFilePlan's report", () => {
 });
 
 describe("applyFilePlan", () => {
-  it("writes and removes, with Studio's header, and keeps a backup of what it replaced and removed", () => {
+  it("writes and removes, with Studio's header, and keeps a backup of what it replaced and removed", async () => {
     const committed = vi.fn();
 
-    const report = applyFilePlan(root, scenario(), committed);
+    const report = await applyFilePlan(root, scenario(), committed);
 
     expect(committed).toHaveBeenCalledOnce();
     expect(committed).toHaveBeenCalledWith(report.backupDir?.replace(".courier/backups/", ""));
@@ -154,14 +154,14 @@ describe("applyFilePlan", () => {
     expect(report).toMatchObject({ written: [`${DIR}/index.ts`, `${DIR}/new/index.ts`], removed: [`${DIR}/old/index.ts`] });
   });
 
-  it("undoes everything when recording the outcome fails", () => {
+  it("undoes everything when recording the outcome fails", async () => {
     const failure = new Error("disk full");
 
-    expect(() =>
+    await expect(
       applyFilePlan(root, scenario(), () => {
         throw failure;
       }),
-    ).toThrow(failure);
+    ).rejects.toThrow(failure);
 
     undisturbed();
     expect(readdirSync(join(root.path, ".courier/journal"))).toEqual([]);
@@ -176,39 +176,39 @@ describe("applyFilePlan", () => {
       actual.renameSync(from, to);
     });
 
-    expect(() => applyFilePlan(root, scenario(), () => {})).toThrow(/EIO/);
+    await expect(applyFilePlan(root, scenario(), () => {})).rejects.toThrow(/EIO/);
 
     vi.mocked(renameSync).mockImplementation(actual.renameSync);
     undisturbed();
   });
 
-  it("puts back a file of the same text without Studio's header, when the apply that signed it is undone", () => {
+  it("puts back a file of the same text without Studio's header, when the apply that signed it is undone", async () => {
     put(`${DIR}/same.ts`, "same\n");
     const plan = planFiles(root, { importName: "pets", dir: DIR, targets: [generated(`${DIR}/same.ts`, "same\n")], removals: [] }, {});
     const failure = new Error("disk full");
 
-    expect(() =>
+    await expect(
       applyFilePlan(root, withConfirmations(plan, [`${DIR}/same.ts`]), () => {
         throw failure;
       }),
-    ).toThrow(failure);
+    ).rejects.toThrow(failure);
 
     expect(read(`${DIR}/same.ts`)).toBe("same\n");
     expect(readdirSync(join(root.path, ".courier/backups"))).toEqual([]);
   });
 
-  it("puts back a file whose lines ended in CRLF, when the apply that rewrote them is undone", () => {
+  it("puts back a file whose lines ended in CRLF, when the apply that rewrote them is undone", async () => {
     const original = signed("a\r\nb\r\n");
     put(`${DIR}/crlf.ts`, original);
     const recorded = { [`${DIR}/crlf.ts`]: { sha256: bodyHash("a\r\nb\r\n") } };
     const plan = planFiles(root, { importName: "pets", dir: DIR, targets: [generated(`${DIR}/crlf.ts`, "a\nb\n")], removals: [] }, recorded);
     expect(plan.writes).toMatchObject([{ action: "replace" }]);
 
-    expect(() =>
+    await expect(
       applyFilePlan(root, plan, () => {
         throw new Error("disk full");
       }),
-    ).toThrow("disk full");
+    ).rejects.toThrow("disk full");
 
     expect(read(`${DIR}/crlf.ts`)).toBe(original);
   });
@@ -222,7 +222,7 @@ describe("applyFilePlan", () => {
       actual.renameSync(from, to);
     });
 
-    expect(() => applyFilePlan(root, scenario(), () => {})).toThrow(/EIO/);
+    await expect(applyFilePlan(root, scenario(), () => {})).rejects.toThrow(/EIO/);
 
     vi.mocked(renameSync).mockImplementation(actual.renameSync);
     undisturbed();
@@ -239,7 +239,7 @@ describe("applyFilePlan", () => {
       actual.renameSync(from, to);
     });
 
-    expect(() => applyFilePlan(root, scenario(), () => {})).toThrow(/ENOSPC/);
+    await expect(applyFilePlan(root, scenario(), () => {})).rejects.toThrow(/ENOSPC/);
 
     vi.mocked(renameSync).mockImplementation(actual.renameSync);
     undisturbed();
@@ -257,11 +257,11 @@ describe("applyFilePlan", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const failure = new Error("disk full");
 
-    expect(() =>
+    await expect(
       applyFilePlan(root, scenario(), () => {
         throw failure;
       }),
-    ).toThrow(failure);
+    ).rejects.toThrow(failure);
 
     vi.mocked(renameSync).mockImplementation(actual.renameSync);
     const [name] = readdirSync(join(root.path, ".courier/journal"));
@@ -272,16 +272,16 @@ describe("applyFilePlan", () => {
     expect(bodyOf(`${DIR}/old/index.ts`)).toBe("old group\n");
   });
 
-  it("refuses a plan the files changed under, writing nothing", () => {
+  it("refuses a plan the files changed under, writing nothing", async () => {
     const plan = scenario();
     put(`${DIR}/index.ts`, "edited meanwhile\n");
 
-    expect(() => applyFilePlan(root, plan, () => {})).toThrow(expect.objectContaining({ code: "PLAN_STALE" }));
+    await expect(applyFilePlan(root, plan, () => {})).rejects.toThrow(expect.objectContaining({ code: "PLAN_STALE" }));
     expect(read(`${DIR}/index.ts`)).toBe("edited meanwhile\n");
     expect(existsSync(join(root.path, `${DIR}/new`))).toBe(false);
   });
 
-  it("refuses a plan with steps still waiting for consent", () => {
+  it("refuses a plan with steps still waiting for consent", async () => {
     put(`${DIR}/index.ts`, "hand-written\n");
     const plan = planFiles(
       root,
@@ -289,34 +289,34 @@ describe("applyFilePlan", () => {
       {},
     );
 
-    expect(() => applyFilePlan(root, plan, () => {})).toThrow(expect.objectContaining({ code: "NEEDS_CONFIRMATION" }));
+    await expect(applyFilePlan(root, plan, () => {})).rejects.toThrow(expect.objectContaining({ code: "NEEDS_CONFIRMATION" }));
     expect(read(`${DIR}/index.ts`)).toBe("hand-written\n");
   });
 
-  it("removes the import's folder once every group folder in it has gone", () => {
+  it("removes the import's folder once every group folder in it has gone", async () => {
     const paths = [`${DIR}/index.ts`, `${DIR}/a/index.ts`, `${DIR}/b/index.ts`];
     for (const path of paths) put(path, signed(`${path}\n`));
     const recorded = Object.fromEntries(paths.map((path) => [path, { sha256: bodyHash(`${path}\n`) }]));
     const plan = planFiles(root, { importName: "pets", dir: DIR, targets: [], removals: paths }, recorded);
 
-    const report = applyFilePlan(root, plan, () => {});
+    const report = await applyFilePlan(root, plan, () => {});
 
     expect(report.pruneFailures).toEqual([]);
     expect(existsSync(join(root.path, DIR))).toBe(false);
     expect(existsSync(join(root.path, "src/api"))).toBe(true);
   });
 
-  it("copies what it replaces where the file system has no hard links", () => {
+  it("copies what it replaces where the file system has no hard links", async () => {
     vi.mocked(linkSync).mockImplementation(() => {
       throw Object.assign(new Error("EPERM: injected"), { code: "EPERM" });
     });
 
-    const report = applyFilePlan(root, scenario(), () => {});
+    const report = await applyFilePlan(root, scenario(), () => {});
 
     expect(bodyOf(`${report.backupDir}/${DIR}/index.ts`)).toBe("old index\n");
   });
 
-  it.skipIf(IS_WINDOWS || IS_ROOT)("reports, and logs, an emptied directory it could not remove", () => {
+  it.skipIf(IS_WINDOWS || IS_ROOT)("reports, and logs, an emptied directory it could not remove", async () => {
     put(`${DIR}/old/index.ts`, signed("old group\n"));
     const plan = planFiles(
       root,
@@ -325,9 +325,9 @@ describe("applyFilePlan", () => {
     );
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     chmodSync(join(root.path, DIR), 0o555);
-    let report: ReturnType<typeof applyFilePlan>;
+    let report: Awaited<ReturnType<typeof applyFilePlan>>;
     try {
-      report = applyFilePlan(root, plan, () => {});
+      report = await applyFilePlan(root, plan, () => {});
     } finally {
       chmodSync(join(root.path, DIR), 0o755);
     }
@@ -411,14 +411,14 @@ describe("recoverInterruptedApplies", () => {
 });
 
 describe("an apply that committed", () => {
-  it.skipIf(IS_WINDOWS || IS_ROOT)("stands when its journal cannot be deleted, and the next start keeps it", () => {
+  it.skipIf(IS_WINDOWS || IS_ROOT)("stands when its journal cannot be deleted, and the next start keeps it", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const journals = join(root.path, ".courier/journal");
     let applyId = "";
 
-    let report: ReturnType<typeof applyFilePlan>;
+    let report: Awaited<ReturnType<typeof applyFilePlan>>;
     try {
-      report = applyFilePlan(root, scenario(), (id) => {
+      report = await applyFilePlan(root, scenario(), (id) => {
         applyId = id;
         chmodSync(journals, 0o555);
       });
@@ -565,11 +565,11 @@ describe("a journal of one import", () => {
 });
 
 describe("an apply's journal", () => {
-  it("names the apply that saved the import's record when it began", () => {
+  it("names the apply that saved the import's record when it began", async () => {
     saveImportEntry(root.path, "pets", recordOfApply("unused"), "0000000000001-0000beef");
     let after: string | null | undefined;
 
-    applyFilePlan(root, scenario(), () => {
+    await applyFilePlan(root, scenario(), () => {
       after = readJournals(root.path)[0]?.journal.after;
     });
 
@@ -684,11 +684,11 @@ describe("recovery that nothing on disk can mislead", () => {
     expect(bodyOf(`${DIR}/index.ts`)).toBe("old\n");
   });
 
-  it("refuses to begin an apply while the imports state cannot be read, writing nothing", () => {
+  it("refuses to begin an apply while the imports state cannot be read, writing nothing", async () => {
     mkdirSync(join(root.path, ".courier"), { recursive: true });
     writeFileSync(join(root.path, ".courier/imports-state.json"), "<<<<<<< conflict\n");
 
-    expect(() => applyFilePlan(root, scenario(), () => {})).toThrow(/imports-state/);
+    await expect(applyFilePlan(root, scenario(), () => {})).rejects.toThrow(/imports-state/);
     undisturbed();
   });
 });

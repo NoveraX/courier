@@ -8,7 +8,8 @@ const log = createLogger("Studio");
 
 /**
  * Write content to a new temporary file beside a file, flushed to disk,
- * ready to take that file's name.
+ * ready to take that file's name — or, with `flush: false`, left for the
+ * caller to flush with others before any of them takes its name.
  *
  * The name is new — the prefix, this process's id and random bytes — and the
  * file is opened with `O_EXCL`, so nothing already there, a planted link
@@ -20,6 +21,7 @@ const log = createLogger("Studio");
  * @param content - What to write
  * @param mode - The exact permission bits to give it; `null` for the ones the umask gives any new file
  * @param prefix - The start of the temporary file's name, which tells whose file a leftover is
+ * @param options - `flush: false` to leave flushing to the caller
  * @returns The temporary file's path, named `<prefix>.<pid>-<8 hex>.tmp`
  * @throws The file system's error when the file cannot be written
  * @example
@@ -32,6 +34,7 @@ export function writeTempBeside(
   content: string | Buffer,
   mode: number | null,
   prefix: string,
+  { flush = true }: { flush?: boolean } = {},
 ): string {
   const tmp = join(dirname(path), `${prefix}.${process.pid}-${randomBytes(4).toString("hex")}.tmp`);
   /* The mode given to open is cut by the umask; fchmod sets it exactly. */
@@ -39,7 +42,7 @@ export function writeTempBeside(
   try {
     writeFileSync(fd, content);
     if (mode !== null) fchmodSync(fd, mode);
-    fsyncSync(fd);
+    if (flush) fsyncSync(fd);
   } catch (error) {
     closeAfterFailure(fd, tmp);
     discardTemp(tmp);

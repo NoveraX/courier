@@ -37,16 +37,16 @@ export interface PlanConsent {
  * @throws {FilePlanError} `TARGET_BLOCKED`, `PLAN_NOT_SEEN`, `PLAN_STALE`, `NEEDS_CONFIRMATION` or `CONFIRMATION_NOT_IN_PLAN`
  * @example
  * ```ts
- * runPlan(root, plan, consent, (applied, applyId) => save(applied, applyId), "required");
+ * await runPlan(root, plan, consent, (applied, applyId) => save(applied, applyId), "required");
  * ```
  */
-export function runPlan(
+export async function runPlan(
   root: ProjectRoot,
   plan: FilePlan,
   consent: PlanConsent,
   commit: (applied: FilePlan, applyId: string) => void,
   quoting: PlanQuoting,
-): ApplyReport {
+): Promise<ApplyReport> {
   const summary = summarizePlan(plan);
   if (plan.blocked.length > 0) {
     const paths = plan.blocked.map((b) => b.path);

@@ -6,6 +6,7 @@ export {
   createDirectWSPushFactory,
   type DirectHTTPDefaults,
   type DirectSSEDefaults,
+  type DirectWSDefaults,
 } from "./direct";
 export {
   createProxyHTTPExecutor,

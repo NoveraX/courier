@@ -65,7 +65,7 @@ export function createQueryCaller<TApi extends DefinedApi<any>>(
   const sourceName = getSourceName(api) ?? "_";
   const httpExecutor = createDirectHTTPExecutor(api, defaults);
   const sseFactory = createDirectSSEFactory(api, { headers: defaults?.headers });
-  const wsChannelFactory = createDirectWSChannelFactory(api);
+  const wsChannelFactory = createDirectWSChannelFactory(api, { ws: defaults?.ws });
 
   const subscribeFn: SubscribeFn = (group, method, variables) =>
     sseFactory(group, method, variables, {});

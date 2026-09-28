@@ -12,6 +12,7 @@ export { decodeMessage, encodeMessage } from "./ws-protocol";
 export type { TopicRegistry } from "./ws-topics";
 export { createTopicRegistry } from "./ws-topics";
 export type {
+  CallerWSOptions,
   TopicHandler,
   WSClientSocket,
   WSConnection,

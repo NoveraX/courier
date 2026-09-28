@@ -138,21 +138,21 @@ describe("createProxyWSChannelFactory — dispatch", () => {
     });
     factory("chat", "room", undefined, {});
 
-    expect(mockedChannel).toHaveBeenCalledWith("ws://localhost/ws", expect.any(String), undefined);
+    expect(mockedChannel).toHaveBeenCalledWith("ws://localhost/ws", expect.any(String), undefined, undefined);
   });
 
   it("builds topic as `source.group.method`", () => {
     const factory = createProxyWSChannelFactory("myApi", { proxyPath: { ws: "ws://x" } });
     factory("chat", "room", undefined, {});
 
-    expect(mockedChannel).toHaveBeenCalledWith("ws://x", "myApi.chat.room", undefined);
+    expect(mockedChannel).toHaveBeenCalledWith("ws://x", "myApi.chat.room", undefined, undefined);
   });
 
   it("forwards variables to executeWSChannel", () => {
     const factory = createProxyWSChannelFactory("api", { proxyPath: { ws: "ws://x" } });
     factory("chat", "room", { roomId: "42" }, {});
 
-    expect(mockedChannel).toHaveBeenCalledWith("ws://x", "api.chat.room", { roomId: "42" });
+    expect(mockedChannel).toHaveBeenCalledWith("ws://x", "api.chat.room", { roomId: "42" }, undefined);
   });
 
   it("returns the WSChannel produced by executeWSChannel", () => {
@@ -172,6 +172,7 @@ describe("createProxyWSChannelFactory — dispatch", () => {
       "wss://app.example.com/api/ws",
       "api.chat.room",
       undefined,
+      undefined,
     );
   });
 
@@ -187,6 +188,7 @@ describe("createProxyWSChannelFactory — dispatch", () => {
     expect(mockedChannel).toHaveBeenCalledWith(
       "ws://localhost:3001/api/ws",
       "api.chat.room",
+      undefined,
       undefined,
     );
 
@@ -208,6 +210,7 @@ describe("createProxyWSChannelFactory — dispatch", () => {
       "wss://secure.example.com/api/ws",
       "api.chat.room",
       undefined,
+      undefined,
     );
   });
 
@@ -224,6 +227,7 @@ describe("createProxyWSChannelFactory — dispatch", () => {
       "ws://localhost:3001/api/ws?_playground_rid=playground-rid-channel-1",
       "api.chat.room",
       undefined,
+      undefined,
     );
   });
 
@@ -236,6 +240,7 @@ describe("createProxyWSChannelFactory — dispatch", () => {
     expect(mockedChannel).toHaveBeenCalledWith(
       "ws://localhost:3001/api/ws",
       "api.chat.room",
+      undefined,
       undefined,
     );
   });
@@ -255,6 +260,24 @@ describe("createProxyWSChannelFactory — dispatch", () => {
 
 // ── Push factory dispatch ───────────────────────────────────────────────────
 
+describe("the caller's ws options", () => {
+  it("reach the channel's connection", () => {
+    const ws = { getAuthToken: () => "t" };
+    const factory = createProxyWSChannelFactory("api", { proxyPath: { ws: "ws://x" }, ws });
+    factory("chat", "room", undefined, {});
+
+    expect(mockedChannel).toHaveBeenCalledWith("ws://x", "api.chat.room", undefined, ws);
+  });
+
+  it("reach the push subscription's connection", () => {
+    const ws = { backoff: { initialMs: 50 } };
+    const factory = createProxyWSPushFactory("api", { proxyPath: { ws: "ws://x" }, ws });
+    factory("notifications", "feed", undefined, {});
+
+    expect(mockedPush).toHaveBeenCalledWith("ws://x", "api.notifications.feed", undefined, ws);
+  });
+});
+
 describe("createProxyWSPushFactory — dispatch", () => {
   it("calls executeWSPush with the resolved wsUrl and built topic", () => {
     const factory = createProxyWSPushFactory("api", {
@@ -266,6 +289,7 @@ describe("createProxyWSPushFactory — dispatch", () => {
       "wss://example.com/ws",
       "api.notifications.feed",
       undefined,
+      undefined,
     );
   });
 
@@ -273,7 +297,7 @@ describe("createProxyWSPushFactory — dispatch", () => {
     const factory = createProxyWSPushFactory("api", { proxyPath: { ws: "ws://x" } });
     factory("notifications", "feed", { since: "2020" }, {});
 
-    expect(mockedPush).toHaveBeenCalledWith("ws://x", "api.notifications.feed", { since: "2020" });
+    expect(mockedPush).toHaveBeenCalledWith("ws://x", "api.notifications.feed", { since: "2020" }, undefined);
   });
 
   it("returns the WSPushSubscription produced by executeWSPush", () => {

@@ -55,6 +55,20 @@ export interface WSConnectionConfig {
   socketFactory?: WSSocketFactory;
 }
 
+/**
+ * What a caller says about the WebSocket connections its channels and push
+ * subscriptions open — the `ws` option of `createCaller`, `createProxyCaller`
+ * and the React callers.
+ *
+ * Every subscription of one caller on one URL shares a socket, so these are
+ * the socket's options, not an endpoint's. A caller with options of its own
+ * opens its own socket beside another caller's on the same URL.
+ */
+export type CallerWSOptions = Pick<
+  WSConnectionConfig,
+  "getAuthToken" | "backoff" | "heartbeat" | "messageQueue" | "protocols" | "maxMessageSize"
+>;
+
 // ---------------------------------------------------------------------------
 // Topic handler
 // ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import type { ExposablePath, KindAt, ProxyBoundary } from "../define/boundary-types";
 import type { HTTPError } from "../errors";
+import type { CallerWSOptions } from "../realtime/ws/ws-types";
 import type { ProxyPath } from "./proxy-path";
 
 export type ProxyCallerDefaults = {
@@ -43,6 +44,13 @@ export type ProxyCallerDefaults = {
   headers?: Record<string, string>;
   onError?: (error: HTTPError) => void | Promise<void>;
   onSuccess?: (data: unknown) => void | Promise<void>;
+  /**
+   * How the sockets of this client's channels and push subscriptions behave:
+   * the token sent on connecting and when the server asks for a fresh one,
+   * the reconnect backoff, how long the server may stay silent, the queue
+   * limits, sub-protocols and the largest message sent.
+   */
+  ws?: CallerWSOptions;
 };
 
 export type FetchCallbacks = {

@@ -52,6 +52,7 @@ export const q = createProxyQueryCaller<typeof api>("api", {
 The `defaults` argument is a `ProxyCallerDefaults` (same shape as [`createProxyCaller`](/docs/api/create-proxy-caller)). Notable fields:
 
 - `proxyPath` — per-transport endpoint paths. `http` and `sse` have built-in defaults; `ws` is mandatory for `useChannel` and has no default. Caller-level fields are merged per-transport over `source.options.proxyPath`.
+- `ws` — options of the socket `useChannel` opens: the token, the reconnect backoff, the heartbeat and the queue limits — see [Connection options](/docs/advanced/realtime#connection-options).
 - `boundary` — the result of [`defineBoundary`](/docs/proxy-mode/boundary): the endpoints the browser may reach and the app's proxy paths. Pass it rather than the API object — the hooks name their own transport, so nothing is read off the API, and a value import of it would put its definition in the bundle.
 
 <Callout variant="warning" title="useChannel requires proxyPath.ws">

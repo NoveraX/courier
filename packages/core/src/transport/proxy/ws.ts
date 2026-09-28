@@ -2,6 +2,7 @@ import type { ProxyPath } from "../../proxy-caller/proxy-path";
 import type { ResolveOrigin } from "../../proxy-caller/resolve-path";
 import { resolveProxyPath } from "../../proxy-caller/resolve-path";
 import { buildWSTopic } from "../../realtime/caller-ws";
+import type { CallerWSOptions } from "../../realtime/ws/ws-types";
 import { executeWSChannel } from "../../realtime/ws-channel-client";
 import { executeWSPush } from "../../realtime/ws-subscription";
 import type { WSChannelFactory, WSPushFactory } from "../types";
@@ -43,6 +44,8 @@ export interface ProxyWSDefaults {
    * context.
    */
   playgroundRequestId?: string;
+  /** Options of the socket the channels share, from the caller's `ws` */
+  ws?: CallerWSOptions;
   // ⚠️ No `headers` field on purpose. Browser WebSocket (`new WebSocket(...)`)
   // does NOT support arbitrary HTTP headers in the upgrade handshake — only
   // sub-protocols. Adding a `headers` field here would be silently dropped
@@ -85,12 +88,12 @@ export function createProxyWSChannelFactory(
   source: string,
   defaults: ProxyWSDefaults = {},
 ): WSChannelFactory {
-  const { proxyPath, origin, playgroundRequestId } = defaults;
+  const { proxyPath, origin, playgroundRequestId, ws } = defaults;
 
   return function connectChannel(group, method, variables) {
     const wsUrl = withPlaygroundRid(resolveProxyPath("ws", proxyPath, origin), playgroundRequestId);
     const topic = buildWSTopic(source, group, method);
-    return executeWSChannel(wsUrl, topic, variables);
+    return executeWSChannel(wsUrl, topic, variables, ws);
   };
 }
 
@@ -104,11 +107,11 @@ export function createProxyWSPushFactory(
   source: string,
   defaults: ProxyWSDefaults = {},
 ): WSPushFactory {
-  const { proxyPath, origin, playgroundRequestId } = defaults;
+  const { proxyPath, origin, playgroundRequestId, ws } = defaults;
 
   return function connectPush(group, method, variables) {
     const wsUrl = withPlaygroundRid(resolveProxyPath("ws", proxyPath, origin), playgroundRequestId);
     const topic = buildWSTopic(source, group, method);
-    return executeWSPush(wsUrl, topic, variables);
+    return executeWSPush(wsUrl, topic, variables, ws);
   };
 }

@@ -87,6 +87,7 @@ export function createProxyQueryCaller(source: string, defaults?: ProxyCallerDef
   // handshake. See `ProxyWSDefaults` for supported auth alternatives.
   const wsChannelFactory = createProxyWSChannelFactory(source, {
     proxyPath: mergedProxyPath,
+    ws: defaults?.ws,
   });
 
   const subscribeFn: SubscribeFn = (group, method, variables) =>

@@ -16,8 +16,28 @@ export interface ConnectionLease {
   release(): void;
 }
 
-/** Shared WS connection pool — one connection per URL */
+/** Shared WS connection pool — one connection per URL and caller options */
 const pool = new Map<string, PooledConnection>();
+
+/** A number for each options object connections were opened with, so each has its own. */
+const optionsIds = new WeakMap<object, number>();
+let lastOptionsId = 0;
+
+/**
+ * The pool entry a connection to `url` with `config` belongs to. Connections
+ * opened without options share one per URL; options — a caller's `ws` —
+ * have their own beside it, so a second caller's are not ignored for the
+ * socket the first one opened.
+ */
+function poolKey(url: string, config: object | undefined): string {
+  if (config === undefined) return url;
+  let id = optionsIds.get(config);
+  if (id === undefined) {
+    id = ++lastOptionsId;
+    optionsIds.set(config, id);
+  }
+  return `${id} ${url}`;
+}
 
 /** Build a direct WS URL: wsURL/prefix/method */
 export function buildDirectWSUrl(baseURL: string, prefix: string, method: string): string {
@@ -46,7 +66,7 @@ export function buildWSTopic(source: string, group: string, method: string): str
 }
 
 /**
- * Take the shared connection for a URL, opening it when there is none.
+ * Take the shared connection for a URL and options, opening it when there is none.
  *
  * The connection used to stay open after the last subscription on it had
  * ended — heartbeats and all, counted against the server's per-address cap,
@@ -56,7 +76,7 @@ export function buildWSTopic(source: string, group: string, method: string): str
  * reuses it.
  *
  * @param url - The WebSocket URL
- * @param config - Options for a connection this call opens; an open one keeps its own
+ * @param config - Options of the connection; the same object shares its socket
  * @returns The lease on the connection
  *
  * @example
@@ -69,7 +89,8 @@ export function acquireConnection(
   url: string,
   config?: Partial<WSConnectionConfig>,
 ): ConnectionLease {
-  const pooled = poolEntry(url, config);
+  const key = poolKey(url, config);
+  const pooled = poolEntry(key, url, config);
   clearTimeout(pooled.idleTimer);
   pooled.idleTimer = undefined;
   pooled.users++;
@@ -82,16 +103,20 @@ export function acquireConnection(
       released = true;
       if (--pooled.users > 0) return;
       pooled.idleTimer = setTimeout(() => {
-        if (pool.get(url) === pooled) pool.delete(url);
+        if (pool.get(key) === pooled) pool.delete(key);
         pooled.connection.close();
       }, LIMITS.WS_IDLE_CLOSE_MS);
     },
   };
 }
 
-/** The live pooled connection for a URL; one that closed for good is replaced. */
-function poolEntry(url: string, config?: Partial<WSConnectionConfig>): PooledConnection {
-  const existing = pool.get(url);
+/** The live pooled connection for a pool key; one that closed for good is replaced. */
+function poolEntry(
+  key: string,
+  url: string,
+  config?: Partial<WSConnectionConfig>,
+): PooledConnection {
+  const existing = pool.get(key);
   if (existing && existing.connection.status !== "disconnected") return existing;
   if (existing) {
     clearTimeout(existing.idleTimer);
@@ -101,7 +126,7 @@ function poolEntry(url: string, config?: Partial<WSConnectionConfig>): PooledCon
     connection: createWSConnection({ url, ...config }),
     users: 0,
   };
-  pool.set(url, created);
+  pool.set(key, created);
   return created;
 }
 

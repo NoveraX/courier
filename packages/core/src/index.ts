@@ -89,6 +89,7 @@ export {
   resolveProxyPath,
   type UntypedCallerFn,
 } from "./proxy-caller";
+export type { CallerWSOptions } from "./realtime";
 export {
   AuthError,
   ConnectionError,
@@ -123,6 +124,7 @@ export {
   createProxyWSPushFactory,
   type DirectHTTPDefaults,
   type DirectSSEDefaults,
+  type DirectWSDefaults,
   type HTTPExecutor,
   type ProxySSEDefaults,
   type ProxyWSDefaults,

@@ -1,6 +1,7 @@
 import { getSourceName } from "../../define/api";
 import type { AnyDefinedApi } from "../../define/types";
 import { buildDirectWSUrl, buildWSTopic } from "../../realtime/caller-ws";
+import type { CallerWSOptions } from "../../realtime/ws/ws-types";
 import { executeWSChannel } from "../../realtime/ws-channel-client";
 import { executeWSPush } from "../../realtime/ws-subscription";
 import { instrumentWSChannel, instrumentWSPush } from "../instrument";
@@ -11,6 +12,12 @@ interface DirectWSContext {
   sourceName: string;
   baseURL: string;
   groups: Record<string, Record<string, unknown>> | undefined;
+}
+
+/** What a direct caller says about the sockets its channels open. */
+export interface DirectWSDefaults {
+  /** Options of the socket the channels share, from the caller's `ws` */
+  ws?: CallerWSOptions;
 }
 
 /**
@@ -24,7 +31,10 @@ interface DirectWSContext {
  * each channel emits stream:open / stream:message / stream:close / stream:error
  * with `mode: "direct"`.
  */
-export function createDirectWSChannelFactory(api: AnyDefinedApi): WSChannelFactory {
+export function createDirectWSChannelFactory(
+  api: AnyDefinedApi,
+  defaults: DirectWSDefaults = {},
+): WSChannelFactory {
   const ctx = readApiContext(api);
 
   return function connectChannel(group, method, variables) {
@@ -33,7 +43,7 @@ export function createDirectWSChannelFactory(api: AnyDefinedApi): WSChannelFacto
        server validates the whole of the variables it is sent. */
     const url = urlOf(ctx, group, method, variables);
     const topic = buildWSTopic(ctx.sourceName, group, method);
-    return instrumentWSChannel(executeWSChannel(url, topic, variables), {
+    return instrumentWSChannel(executeWSChannel(url, topic, variables, defaults.ws), {
       source: ctx.sourceName,
       group,
       method,
@@ -52,13 +62,16 @@ export function createDirectWSChannelFactory(api: AnyDefinedApi): WSChannelFacto
  * Returns an `SSESubscription`-shaped iterable so push WS endpoints have
  * uniform consumer ergonomics with SSE endpoints.
  */
-export function createDirectWSPushFactory(api: AnyDefinedApi): WSPushFactory {
+export function createDirectWSPushFactory(
+  api: AnyDefinedApi,
+  defaults: DirectWSDefaults = {},
+): WSPushFactory {
   const ctx = readApiContext(api);
 
   return function connectPush(group, method, variables) {
     const url = urlOf(ctx, group, method, variables);
     const topic = buildWSTopic(ctx.sourceName, group, method);
-    return instrumentWSPush(executeWSPush(url, topic, variables), {
+    return instrumentWSPush(executeWSPush(url, topic, variables, defaults.ws), {
       source: ctx.sourceName,
       group,
       method,

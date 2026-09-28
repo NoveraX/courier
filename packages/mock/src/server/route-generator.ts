@@ -12,8 +12,9 @@ import { randomUUID } from "node:crypto";
 
 import type { Context as HonoContext } from "hono";
 
-import { createFaultError, pickFault, shouldFail } from "../network/failure";
+import { pickFault, shouldFail } from "../network/failure";
 import type { MockRequestContext } from "../types";
+import { answerFault } from "./fault-response";
 import { computeBandwidthDelay, resolveDelay, resolveNetConfig } from "./route-network";
 import { buildResponse, handlerFailure, pushHistory } from "./route-response";
 import type { RouteConfig } from "./route-types";
@@ -55,13 +56,12 @@ export async function handleMockRequest(
 
   // Random network failure injection
   if (netConfig && shouldFail(netConfig)) {
-    const fault = pickFault(netConfig);
-    const { status, message } = createFaultError(fault);
-    const duration = performance.now() - start;
-    pushHistory(config, { group, method, variables, start, status, error: message });
-    config.networkState?.trackRequest(duration, true);
-    config.hooks?.onError?.(requestId, status, message, duration);
-    return c.json({ error: message }, status as 500);
+    return answerFault(c, pickFault(netConfig), netConfig, (status, message) => {
+      const duration = performance.now() - start;
+      pushHistory(config, { group, method, variables, start, status, error: message });
+      config.networkState?.trackRequest(duration, true);
+      config.hooks?.onError?.(requestId, status, message, duration);
+    });
   }
 
   const scenarioState = config.getScenarioState();

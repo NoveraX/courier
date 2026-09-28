@@ -107,4 +107,9 @@ export interface ResolvedEndpointOptions {
   readonly operation?: OperationKind;
   readonly inherit: boolean;
   readonly idempotencyKey?: string;
+  /** Reads the key a served channel's subscribers share a topic by, from `.topic()`. */
+  readonly topicKey?: TopicKeyReader;
 }
+
+/** Reads a topic key from a subscriber's validated variables. */
+export type TopicKeyReader = (variables: unknown) => unknown;

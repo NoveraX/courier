@@ -1,6 +1,6 @@
 import type { Sources } from "../../define/types";
 import type { ChannelHandlers } from "../../realtime/types";
-import { qualifyTopic } from "../../realtime/ws/topic-key";
+import { servedTopic } from "../../realtime/ws/served-topic";
 import { generateRequestId } from "../../studio";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { instrumentWSChannel } from "../instrument";
@@ -40,7 +40,7 @@ export async function executeDirectWSChannel(
   options: ExecuteDirectWSChannelOptions = {},
 ): Promise<InProcessWSChannel> {
   const registry = options.registry ?? sharedPlaygroundWSRegistry;
-  const { endpoint, schema } = resolveStreamEndpoint(sources, payload, "ws", EXECUTOR);
+  const { endpoint, schema, topicKey } = resolveStreamEndpoint(sources, payload, "ws", EXECUTOR);
   const variables = await validateStreamVariables(payload.variables, schema);
 
   const requestId = generateRequestId();
@@ -63,7 +63,7 @@ export async function executeDirectWSChannel(
   }
 
   const baseTopic = `${payload.source}.${payload.group ? `${payload.group}.` : ""}${payload.method}`;
-  const topic = qualifyTopic(baseTopic, variables);
+  const topic = servedTopic(baseTopic, variables, topicKey);
   const connectionId = crypto.randomUUID();
 
   // Subscribe up-front so cross-channel broadcasts work even if a peer

@@ -1,8 +1,9 @@
 import type { HttpMethod } from "../http-client/types";
 import type { BuilderState } from "./builder";
+import { assertServedTopicKey, withTopicKey } from "./channel-topic";
 import { kindFor, sealHandler } from "./descriptor";
 import { makeAddressed } from "./make-addressed";
-import type { AnyEndpointOptions } from "./options";
+import type { AnyEndpointOptions, TopicKeyReader } from "./options";
 import type { AnyProbe } from "./probe";
 import { probeWire } from "./probe";
 import { type AnyBuilder, refinements } from "./refinements";
@@ -27,8 +28,14 @@ const VERBS: readonly HttpMethod[] = ["get", "head", "options", "post", "put", "
  */
 export function makeBuilder(state: BuilderState): AnyBuilder {
   const next = (updated: BuilderState): AnyBuilder => makeBuilder(updated);
-  const address = (method: HttpMethod, path: string, options: AnyEndpointOptions): AnyBuilder =>
-    makeAddressed(
+  const address = (
+    method: HttpMethod,
+    path: string,
+    options: AnyEndpointOptions,
+    terminal: string = method,
+  ): AnyBuilder => {
+    assertServedTopicKey(state, terminal);
+    return makeAddressed(
       { ...state, kind: kindFor(state.kind, method) },
       {
         method,
@@ -42,12 +49,14 @@ export function makeBuilder(state: BuilderState): AnyBuilder {
       },
       options,
     );
+  };
 
   const verbs: AnyBuilder = {};
   for (const method of VERBS) {
     verbs[method] = (path = "", options: AnyEndpointOptions = {}) => address(method, path, options);
   }
-  verbs.connect = (path = "", options: AnyEndpointOptions = {}) => address("get", path, options);
+  verbs.connect = (path = "", options: AnyEndpointOptions = {}) =>
+    address("get", path, options, "connect");
 
   /* An HTTP endpoint describes its answer only once a verb has said there is
      one, so nothing but `.variables()` — which a closure has to be written
@@ -59,11 +68,18 @@ export function makeBuilder(state: BuilderState): AnyBuilder {
     state.kind === "query" || state.kind === "mutation"
       ? { variables, use, headers, timeout, retry, meta }
       : all;
+  /* Only a channel has subscribers to share a topic. */
+  const keyed =
+    state.kind === "channel"
+      ? { topic: (key: TopicKeyReader) => next(withTopicKey(state, key)) }
+      : {};
 
   return {
     ...available,
+    ...keyed,
     ...verbs,
     via: (probe: AnyProbe, options: AnyEndpointOptions = {}) => {
+      assertServedTopicKey(state, "via");
       const shape = probeWire(probe);
       /* The closure hides its verb, so the endpoint is taken to write until
          `.reads()` says otherwise — a write served over a cacheable GET is the

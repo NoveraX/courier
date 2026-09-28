@@ -41,6 +41,8 @@ export const users = defineGroup({
 - **`stream`** — server-sent events.
 - **`channel`** — a WebSocket channel.
 
+Streams and channels are covered in [Streams & Channels](/docs/advanced/realtime).
+
 From a head you chain the steps that shape the endpoint: a verb with its path — or `.via()` with a closure that builds the request — and the slots `.variables()` and `.response()`:
 
 ```ts

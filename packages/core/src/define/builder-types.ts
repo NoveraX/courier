@@ -1,6 +1,12 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { Middleware } from "../middleware/types";
-import type { ChannelHandlers, SSEContext, SSEEvent, WSPushHandler } from "../realtime/types";
+import type {
+  ChannelHandlers,
+  SSEContext,
+  SSEEvent,
+  TopicKey,
+  WSPushHandler,
+} from "../realtime/types";
 import type { ChannelEndpoint, HttpEndpoint, StreamEndpoint } from "./call-shapes";
 import type {
   CacheArg,
@@ -240,6 +246,37 @@ export interface ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>
   send<T>(
     schema?: StandardSchemaV1<unknown, T>,
   ): ChannelBuilder<TResponse, TVariables, TVariablesOut, T>;
+  /**
+   * What the channel's subscribers share a topic by, when it is not all of
+   * their variables.
+   *
+   * Subscribers whose key is equal are on one topic, so
+   * `ctx.broadcast(ctx.topic, …)` reaches every one of them, while each
+   * keeps its own variables in `ctx.variables`. Without a key, every
+   * distinct set of variables is a topic of its own. The key is read from
+   * the variables as the schema produced them.
+   *
+   * On one connection, subscriptions whose key is equal are one
+   * subscription: the newer subscribe replaces the older, whose `onLeave`
+   * runs. It applies to a channel this process serves, so it is named
+   * before `.implement()`.
+   *
+   * @param key - Reads the topic key from a subscriber's variables
+   * @returns The builder, keyed
+   *
+   * @example
+   * ```ts
+   * channel
+   *   .variables(z.object({ room: z.string(), nick: z.string() }))
+   *   .topic((v) => ({ room: v.room }))
+   *   .implement((v) => ({
+   *     onMessage: (ctx, m) => ctx.broadcast(ctx.topic, { from: v.nick, text: m.text }),
+   *   }));
+   * ```
+   */
+  topic(
+    key: (variables: TVariablesOut) => TopicKey,
+  ): ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>;
   /** Where the channel is, when another process serves it. */
   connect(
     path?: string,

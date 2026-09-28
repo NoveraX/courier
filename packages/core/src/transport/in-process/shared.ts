@@ -1,5 +1,6 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
+import type { TopicKeyReader } from "../../define/options";
 import type { Sources } from "../../define/types";
 import { checkResponse } from "../../realtime/check-response";
 import type { SSEEvent } from "../../realtime/types";
@@ -48,6 +49,8 @@ export interface StreamEndpointLocator {
 export interface ResolvedStreamEndpoint {
   endpoint: unknown;
   schema: InProcessStreamSchema;
+  /** What a channel's subscribers share a topic by, from its `.topic()` */
+  topicKey?: TopicKeyReader;
 }
 
 /**
@@ -68,7 +71,7 @@ export function resolveStreamEndpoint(
     : undefined;
   if (!dataSource) throw streamResolveError(executorName, locator, 400, "source not found");
 
-  const { endpoint, schema } = resolveEndpoint(dataSource, locator.group, locator.method);
+  const { endpoint, schema, options } = resolveEndpoint(dataSource, locator.group, locator.method);
   if (typeof endpoint !== "function") {
     throw streamResolveError(executorName, locator, 400, "method not found");
   }
@@ -80,7 +83,11 @@ export function resolveStreamEndpoint(
       `endpoint is not a ${expectedTransport.toUpperCase()} transport`,
     );
   }
-  return { endpoint, schema: (schema ?? {}) as InProcessStreamSchema };
+  return {
+    endpoint,
+    schema: (schema ?? {}) as InProcessStreamSchema,
+    topicKey: options?.topicKey,
+  };
 }
 
 /** Validate subscribe variables against the endpoint schema (no-op when absent). */

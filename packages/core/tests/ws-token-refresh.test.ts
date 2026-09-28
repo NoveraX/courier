@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { handleTokenRefresh, sendAuthRequired } from "../src/adapter/ws-token-refresh";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
-import type { InternalConnectionRegistry, RegistryEntry } from "../src/adapter/ws-registry";
+import type { InternalConnectionRegistry, RegistryEntry } from "../src/adapter/ws-registry-types";
 import { createMemoryPubSub } from "../src/realtime/memory-pubsub";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import type { WSConnection } from "../src/realtime/ws/ws-types";

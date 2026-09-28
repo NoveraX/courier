@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createConnectionRegistry } from "../src/adapter/ws-registry";
-import type { RegistryEntry } from "../src/adapter/ws-registry";
+import type { RegistryEntry } from "../src/adapter/ws-registry-types";
 import { handleMessage } from "../src/adapter/ws-dispatch";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";

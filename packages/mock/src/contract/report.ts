@@ -50,7 +50,8 @@ function formatMarkdown(
   for (const r of results) {
     const icon = r.status === "pass" ? "✅" : r.status === "fail" ? "❌" : "⏭️";
     const target = r.target ? ` (${r.target})` : "";
-    lines.push(`${icon} \`${r.group}.${r.method}\`${target}`);
+    const reason = r.status === "skip" && r.reason ? ` — ${r.reason}` : "";
+    lines.push(`${icon} \`${r.group}.${r.method}\`${target}${reason}`);
 
     if (r.issues?.length) {
       for (const issue of r.issues) {
@@ -81,7 +82,8 @@ function formatJUnit(
     if (r.status === "pass") {
       lines.push(`    <testcase name="${escapeXml(name)}" />`);
     } else if (r.status === "skip") {
-      lines.push(`    <testcase name="${escapeXml(name)}"><skipped /></testcase>`);
+      const message = r.reason ? ` message="${escapeXml(r.reason)}"` : "";
+      lines.push(`    <testcase name="${escapeXml(name)}"><skipped${message} /></testcase>`);
     } else {
       const msg = r.issues?.map((i) => `${i.path}: ${i.message}`).join("; ") ?? "Validation failed";
       lines.push(`    <testcase name="${escapeXml(name)}">`);
@@ -102,7 +104,7 @@ function formatTAP(results: ContractResult[]): string {
     if (r.status === "pass") {
       lines.push(`ok ${i + 1} - ${name}`);
     } else if (r.status === "skip") {
-      lines.push(`ok ${i + 1} - ${name} # SKIP no schema`);
+      lines.push(`ok ${i + 1} - ${name} # SKIP${r.reason ? ` ${r.reason}` : ""}`);
     } else {
       lines.push(`not ok ${i + 1} - ${name}`);
       for (const issue of r.issues ?? []) {

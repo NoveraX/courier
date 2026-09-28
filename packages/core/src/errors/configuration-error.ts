@@ -129,7 +129,9 @@ export type ConfigurationErrorCode =
   /** A client built with a boundary was asked for an endpoint the boundary does not expose. */
   | "ENDPOINT_NOT_IN_BOUNDARY"
   /** An endpoint declared as a stream or a channel was called by a client with no transport for it. */
-  | "STREAM_TRANSPORT_NOT_CONFIGURED";
+  | "STREAM_TRANSPORT_NOT_CONFIGURED"
+  /** `.reads()` was named on an endpoint addressed with a verb that changes what it addresses. */
+  | "READS_ON_CHANGING_VERB";
 
 /**
  * Thrown when courier is misconfigured at the boundary between user code and

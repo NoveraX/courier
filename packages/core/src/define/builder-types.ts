@@ -178,7 +178,9 @@ export interface HttpAddressed<
    *
    * Some APIs answer a search or a report over POST. Saying so makes the
    * endpoint a query: it may be cached, the query hooks accept it, and the
-   * proxy will serve it over GET.
+   * proxy will serve it over GET. An endpoint addressed with `.put()`,
+   * `.patch()` or `.del()` changes what it addresses and is refused with
+   * `READS_ON_CHANGING_VERB`.
    */
   reads(): HttpAddressed<TResponse, TVariables, TVariablesOut, "query">;
 }

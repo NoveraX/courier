@@ -8,10 +8,17 @@
  * was unreachable. The client's own accessors, `raw` and `with`, are refused
  * as names when the source is defined instead.
  */
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
+import { defineBoundary } from "../src/define/boundary";
 import { courier, defineApi, defineGroup } from "../src/define/index";
+import { sendWebResponse, toWebRequest } from "../src/node";
+import { createProxyCaller } from "../src/proxy-caller";
+import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { echo, startUpstream, type Upstream } from "./helpers/upstream";
 
 const { endpoint } = courier();
@@ -96,6 +103,55 @@ describe("a group named like a runtime hook", () => {
     const copy = { ...createCaller(namesApi()) };
 
     expect(await Promise.resolve(copy)).toBe(copy);
+  });
+});
+
+describe("a proxy client given a boundary", () => {
+  let close: () => Promise<void>;
+
+  afterEach(async () => {
+    await close();
+    _resetSourcesForTests();
+  });
+
+  async function proxyClient() {
+    const api = namesApi();
+    registerSources({ names: api });
+    const handler = createHandler();
+    const proxy = createServer(async (req, res) => {
+      await sendWebResponse(await handler.handle(toWebRequest(req, res)), res);
+    });
+    await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+    close = () => {
+      proxy.closeAllConnections();
+      return new Promise<void>((resolve) => proxy.close(() => resolve()));
+    };
+    const { port } = proxy.address() as AddressInfo;
+    const boundary = defineBoundary<typeof api>({
+      source: "names",
+      expose: { "valueOf.list": "request", "then.list": "request" },
+    });
+    return createProxyCaller<typeof api>("names", {
+      boundary,
+      proxyPath: { http: `http://127.0.0.1:${port}/api/request` },
+    });
+  }
+
+  it("reaches a group named valueOf, which every object inherits", async () => {
+    const client = await proxyClient();
+
+    await client.valueOf.list();
+
+    expect(urls()).toEqual(["/value-group"]);
+  });
+
+  it("reaches a group named then, and is still not a promise", async () => {
+    const client = await proxyClient();
+
+    await client.then.list();
+
+    expect(urls()).toEqual(["/then-group"]);
+    expect(await Promise.resolve(client)).toBe(client);
   });
 });
 

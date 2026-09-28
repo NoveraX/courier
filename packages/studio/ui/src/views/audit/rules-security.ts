@@ -125,8 +125,10 @@ function cookieForwarding(requests: RequestEntry[]): AuditItem[] {
     severity: "warning",
     category: "security",
     title: "Cookies forwarded via proxy",
-    description: "Proxy mode forwards browser cookies to the backend. Ensure the backend is trusted.",
-    suggestion: "Review credentials setting — use 'same-origin' instead of 'include' if possible.",
+    description:
+      "These calls carry the browser's cookies to the backend, because their source or endpoint names \"cookie\" among its forwarded headers. Every cookie of the app's origin goes with them, its own session included.",
+    suggestion:
+      "Name \"cookie\" only on the endpoints that need the session, and only for a backend you trust with it.",
     requestIds: proxyReqs.slice(0, 5).map((r) => r.id),
   }];
 }

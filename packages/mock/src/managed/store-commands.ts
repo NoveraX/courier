@@ -42,10 +42,11 @@ export async function handleStoreCommand(
         col.updateById(cmd.id as string | number, cmd.data as Record<string, unknown>);
         return { ok: true };
       }
+      /* Studio's "Reset store": the store alone, seeded again. The network
+         settings used to be switched off too, without telling Studio, which
+         went on showing them active while requests went through. */
       case "mock:server:reset":
-        server.store.reset();
-        server.history.length = 0;
-        server.networkState.setConfig(undefined);
+        server.resetStore();
         return { ok: true, data: { reset: true } };
       default:
         return { ok: false, error: `Unknown command: ${action}` };

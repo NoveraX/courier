@@ -54,6 +54,11 @@ export function RequestRow({
 
       {showPreview && (
         <>
+          {request.cache?.hit && (
+            <Badge variant="emerald" className="shrink-0 text-[9px] px-1.5 py-0">
+              cache
+            </Badge>
+          )}
           <Badge
             variant={request.mode === "proxy" ? "sky" : "secondary"}
             className="shrink-0 text-[9px] px-1.5 py-0"

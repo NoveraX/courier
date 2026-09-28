@@ -1,21 +1,37 @@
 /**
- * Generates the source file (defineApi) and auth headers.
+ * Generates the source file (defineApi) of an import generated in groups.
  */
 
-import type { ParsedGroup, ParsedSecurityScheme, ParsedSpec } from "../parser/types";
+import type { ParsedGroup, ParsedSpec } from "../parser/types";
+import { sourceAuth } from "./auth-middleware";
 import { groupLocalName } from "./group-local-name";
 import { jsdocText } from "./jsdoc-text";
-import { jsLiteral, objectKey } from "./literals";
+import { jsLiteral } from "./literals";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
+/**
+ * Write the source: `defineApi` with the import's base URL, its auth when
+ * asked for, and its groups.
+ *
+ * @param groups - The groups, as they are generated
+ * @param spec - The parsed specification
+ * @param options - The import's resolved options
+ * @returns The source file
+ * @example
+ * ```ts
+ * generateSourceFile(spec.groups, spec, options).path; // "src/api/pets/source.ts"
+ * ```
+ */
 export function generateSourceFile(
   groups: ParsedGroup[],
   spec: ParsedSpec,
   options: ResolvedGenerateOptions,
 ): GeneratedFile {
-  const lines: string[] = [];
-
-  lines.push(`import { defineApi } from "@noverax/courier/define";`);
+  const auth = options.addAuthMiddleware
+    ? sourceAuth(spec.securitySchemes, options.sourceName)
+    : null;
+  const lines = [`import { defineApi } from "@noverax/courier/define";`];
+  if (auth) lines.push(`import { authMiddleware } from "@noverax/courier/middleware";`);
 
   for (const group of groups) {
     const local = groupLocalName(group.name, options.sourceName);
@@ -25,106 +41,25 @@ export function generateSourceFile(
     );
   }
 
-  lines.push("");
-  lines.push(`export const ${options.sourceName} = defineApi({`);
+  lines.push("", `export const ${options.sourceName} = defineApi({`);
   lines.push(`  baseURL: ${jsLiteral(spec.baseURL)},`);
+  if (auth) lines.push(`  middleware: [${auth.middleware}],`);
+  if (groups.length > 0) lines.push(...groupEntries(groups, options));
+  lines.push(`});`, "");
+  if (auth) lines.push(...auth.helper);
 
-  // Generate auth headers from security schemes
-  const authHeaders =
-    options.addAuthMiddleware && spec.securitySchemes.length > 0
-      ? generateAuthHeaders(spec.securitySchemes, options.sourceName)
-      : [];
-
-  if (authHeaders.length > 0) {
-    lines.push(`  headers: {`);
-    for (const header of authHeaders) {
-      lines.push(`    ${header},`);
-    }
-    lines.push(`  },`);
-  }
-
-  if (groups.length > 0) {
-    lines.push(`  groups: {`);
-    for (const group of groups) {
-      if (options.includeComments && group.description) {
-        lines.push(`    /** ${jsdocText(group.description)} */`);
-      }
-      const local = groupLocalName(group.name, options.sourceName);
-      lines.push(local === group.name ? `    ${group.name},` : `    ${group.name}: ${local},`);
-    }
-    lines.push(`  },`);
-  }
-  lines.push(`});`);
-  lines.push("");
-
-  if (authHeaders.length > 0) lines.push(...requiredEnvHelper());
-
-  return {
-    path: options.layout.sourceFile,
-    content: lines.join("\n"),
-  };
+  return { path: options.layout.sourceFile, content: lines.join("\n") };
 }
 
-// ── Auth headers ─────────────────────────────────────────────────────────
-
-/**
- * The reader every generated auth header goes through.
- *
- * Interpolating `process.env.X` directly sent `Bearer undefined` when the
- * variable was unset — a request the API answers with 401 and no hint why.
- * A bundler makes it worse: Vite replaces `process.env` with `{}`, so the
- * value is always missing and always silent.
- */
-function requiredEnvHelper(): string[] {
-  return [
-    "/**",
-    " * Read a variable this client cannot work without.",
-    " *",
-    " * It is read once, when this module loads, so a missing one is reported",
-    " * at startup rather than as a 401 on the first call.",
-    " */",
-    "function requireEnv(name: string): string {",
-    "  /* Reached through globalThis so this file needs no Node type",
-    "     definitions to compile in a project that has none. */",
-    "  const runtime = globalThis as { process?: { env?: Record<string, string | undefined> } };",
-    "  const value = runtime.process?.env?.[name];",
-    "  if (!value) {",
-    "    throw new Error(",
-    "      `${name} is not set. This client sends it on every request. Set it in",
-    "the environment this module runs in — it reads the environment, so it",
-    "belongs on a server rather than in a browser bundle.`,",
-    "    );",
-    "  }",
-    "  return value;",
-    "}",
-    "",
-  ];
-}
-
-function generateAuthHeaders(schemes: ParsedSecurityScheme[], sourceName: string): string[] {
-  const envPrefix = sourceName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
-  const headers: string[] = [];
-
-  for (const scheme of schemes) {
-    switch (scheme.type) {
-      case "bearer":
-        headers.push(`Authorization: \`Bearer \${requireEnv("${envPrefix}_TOKEN")}\``);
-        break;
-      case "basic":
-        headers.push(`Authorization: \`Basic \${requireEnv("${envPrefix}_CREDENTIALS")}\``);
-        break;
-      case "apiKey":
-        if (scheme.in === "header" && scheme.paramName) {
-          headers.push(`${objectKey(scheme.paramName)}: requireEnv("${envPrefix}_API_KEY")`);
-        }
-        break;
-      case "oauth2":
-        headers.push(`Authorization: \`Bearer \${requireEnv("${envPrefix}_ACCESS_TOKEN")}\``);
-        break;
+function groupEntries(groups: ParsedGroup[], options: ResolvedGenerateOptions): string[] {
+  const lines = [`  groups: {`];
+  for (const group of groups) {
+    if (options.includeComments && group.description) {
+      lines.push(`    /** ${jsdocText(group.description)} */`);
     }
-    // Only use the first auth scheme
-    break;
+    const local = groupLocalName(group.name, options.sourceName);
+    lines.push(local === group.name ? `    ${group.name},` : `    ${group.name}: ${local},`);
   }
-
-  return headers;
+  lines.push(`  },`);
+  return lines;
 }

@@ -4,6 +4,7 @@
  */
 
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
+import { sourceAuth } from "./auth-middleware";
 import { endpointContext } from "./endpoint-context";
 import { endpointEntries } from "./endpoint-entries";
 import { endpointImports } from "./endpoint-imports";
@@ -33,20 +34,26 @@ export function generateFlatSourceFile(
 ): GeneratedFile {
   const context = endpointContext(spec, options, declared);
   const entries = endpointEntries(endpoints, context, extracted);
+  const auth = options.addAuthMiddleware
+    ? sourceAuth(spec.securitySchemes, options.sourceName)
+    : null;
 
   const lines = [
     `import { courier, defineApi } from "@noverax/courier/define";`,
+    ...(auth ? [`import { authMiddleware } from "@noverax/courier/middleware";`] : []),
     ...endpointImports(context),
     "",
     "const { endpoint } = courier();",
     "",
     `export const ${options.sourceName} = defineApi({`,
     `  baseURL: "${spec.baseURL}",`,
+    ...(auth ? [`  middleware: [${auth.middleware}],`] : []),
     `  endpoints: {`,
     ...entries,
     `  },`,
     `});`,
     "",
+    ...(auth ? auth.helper : []),
   ];
 
   return { path: options.layout.sourceFile, content: lines.join("\n") };

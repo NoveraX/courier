@@ -2,7 +2,7 @@
  * A real HTTP server that records every request it receives and answers
  * each with a fixed JSON body.
  */
-import { createServer } from "node:http";
+import { createServer, type IncomingHttpHeaders } from "node:http";
 
 /** One request as it arrived. */
 export interface RecordedRequest {
@@ -11,6 +11,8 @@ export interface RecordedRequest {
   /** The query string's entries, in order. */
   query: [string, string][];
   contentType: string | null;
+  /** Every header, by its lower-case name. */
+  headers: IncomingHttpHeaders;
   body: string;
 }
 
@@ -39,6 +41,7 @@ export async function startUpstreamServer(answer: unknown = {}): Promise<Upstrea
       path: url.pathname,
       query: [...url.searchParams.entries()],
       contentType: req.headers["content-type"] ?? null,
+      headers: req.headers,
       body: Buffer.concat(chunks).toString("utf8"),
     });
     res.setHeader("content-type", "application/json");

@@ -6,20 +6,47 @@
  */
 
 import type { Sources } from "@noverax/courier/define";
-import type {
-  executeDirectSSE,
-  executeDirectWSChannel,
-  InProcessWSChannel,
-} from "@noverax/courier/internal-streams";
 import type { PlaygroundExecutePayload } from "./playground-payloads";
 import type { ResponderSocket } from "./playground-responder";
+
+/** A stream or channel call, as the Playground runs it. */
+export interface StreamCall {
+  source: string;
+  group: string;
+  method: string;
+  variables: Record<string, unknown>;
+  headers: Record<string, string>;
+}
+
+/** Opens a stream: in this process, or through the app's proxy route. */
+export type StreamOpener = (
+  sources: Sources,
+  call: StreamCall,
+  options: { signal: AbortSignal },
+) => Promise<AsyncIterable<unknown>>;
+
+/** A channel the Playground reads from and writes to, wherever it is served. */
+export interface PlaygroundChannel {
+  readonly status: string;
+  on(event: "data", handler: (data: unknown) => void): () => void;
+  on(event: "status", handler: (status: string) => void): () => void;
+  close(): void;
+  send(data: unknown): unknown;
+}
+
+/** Opens a channel: in this process, or through the app's proxy route. */
+export type ChannelOpener = (
+  sources: Sources,
+  call: StreamCall,
+  options: { signal: AbortSignal },
+) => Promise<PlaygroundChannel>;
 
 export async function dispatchSSE(
   socket: ResponderSocket,
   payload: PlaygroundExecutePayload,
   sources: Sources,
   signal: AbortSignal,
-  exec: typeof executeDirectSSE,
+  exec: StreamOpener,
 ): Promise<void> {
   const startedAt = performance.now();
   const subscription = await exec(
@@ -56,8 +83,8 @@ export async function dispatchWS(
   payload: PlaygroundExecutePayload,
   sources: Sources,
   signal: AbortSignal,
-  exec: typeof executeDirectWSChannel,
-  onChannelOpen?: (channel: InProcessWSChannel) => void,
+  exec: ChannelOpener,
+  onChannelOpen?: (channel: PlaygroundChannel) => void,
 ): Promise<void> {
   const startedAt = performance.now();
   const channel = await exec(

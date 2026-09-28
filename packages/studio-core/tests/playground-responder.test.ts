@@ -177,3 +177,56 @@ describe("an HTTP endpoint run from the Playground", () => {
     expect(chunk?.error).toBe("HTTP 404");
   });
 });
+
+describe("an HTTP call run from the Playground in proxy mode", () => {
+  it("goes through the app's proxy route and answers as the browser would see it", async () => {
+    const { createHandler, setAppOrigin } = await import("@noverax/courier");
+    const { sendWebResponse, toWebRequest } = await import("@noverax/courier/node");
+    const handler = createHandler();
+    const proxied: string[] = [];
+    const proxy: HttpServer = createServer(async (req, res) => {
+      proxied.push(`${req.method} ${req.url}`);
+      await sendWebResponse(await handler.handle(toWebRequest(req, res)), res);
+    });
+    await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+    cleanups.push(() => new Promise<void>((resolve) => proxy.close(() => resolve())));
+    setAppOrigin(`http://127.0.0.1:${(proxy.address() as AddressInfo).port}`);
+    cleanups.push(() => setAppOrigin(undefined));
+
+    runtime?.emit("playground:execute", {
+      rid: "proxy-create",
+      source: "api",
+      group: "users",
+      method: "create",
+      transport: "http",
+      mode: "proxy",
+      variables: { name: "zed" },
+    });
+    await until(() => framesOf("proxy-create").some((f) => f.event === "playground:end"), "the answer");
+
+    expect(proxied).toEqual(["POST /api/request?_s=api&_g=users&_m=create"]);
+    expect(framesOf("proxy-create")[0]?.payload.chunk).toMatchObject({
+      kind: "http-result",
+      status: 201,
+      data: { id: 3, name: "zed" },
+    });
+  });
+
+  it("says how to name the app's origin when none is known", async () => {
+    const { setAppOrigin } = await import("@noverax/courier");
+    setAppOrigin(undefined);
+
+    runtime?.emit("playground:execute", {
+      rid: "proxy-no-origin",
+      source: "api",
+      group: "users",
+      method: "create",
+      transport: "http",
+      mode: "proxy",
+      variables: { name: "zed" },
+    });
+    await until(() => framesOf("proxy-no-origin").length > 0, "the refusal");
+
+    expect(String(framesOf("proxy-no-origin")[0]?.payload.chunk?.error)).toContain("appOrigin");
+  });
+});

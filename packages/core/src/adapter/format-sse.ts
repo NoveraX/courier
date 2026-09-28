@@ -72,7 +72,7 @@ export function formatSSEEvent<TData>(event: SSEEvent<TData>, seq?: number): str
      type ("42" as a number). JSON also keeps the payload on one line. */
   lines.push(`data: ${JSON.stringify(event.data ?? null)}`);
 
-  return lines.join("\n") + "\n\n";
+  return `${lines.join("\n")}\n\n`;
 }
 
 /** SSE heartbeat comment — keeps connection alive through proxies */

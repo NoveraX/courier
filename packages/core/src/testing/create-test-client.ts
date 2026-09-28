@@ -148,9 +148,8 @@ async function handleHTTP(
 
 function getMock(mocks: Map<string, MockHandler[]>, key: string): MockHandler | undefined {
   const handlers = mocks.get(key);
-  if (!handlers?.length) return undefined;
-
-  const handler = handlers[handlers.length - 1]!;
+  const handler = handlers?.at(-1);
+  if (!handlers || !handler) return undefined;
 
   if (handler.remaining !== undefined) {
     handler.remaining--;

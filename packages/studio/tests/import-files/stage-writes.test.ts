@@ -53,7 +53,7 @@ function planOf(paths: string[]) {
 }
 
 describe("stageWrites", () => {
-  it("has every folder it creates in the journal on disk when it stops before a file is staged", () => {
+  it("has every folder it creates in the journal on disk when it stops before a file is staged", async () => {
     const journal: ApplyJournal = {
       id: ID,
       pid: process.pid,
@@ -73,7 +73,7 @@ describe("stageWrites", () => {
       return actual ? actual(path, ...rest) : "";
     });
 
-    expect(() => stageWrites(root, planOf([`${DIR}/users/index.ts`]), journal)).toThrow("killed");
+    await expect(stageWrites(root, planOf([`${DIR}/users/index.ts`]), journal)).rejects.toThrow("killed");
 
     const [onDisk] = readJournals(root.path);
     expect(onDisk?.journal.createdDirs).toEqual(["src", "src/api", DIR, `${DIR}/users`]);
@@ -85,7 +85,7 @@ describe("stageWrites", () => {
 });
 
 describe("applying many files", () => {
-  it("saves its journal three times, whatever the number of files", () => {
+  it("saves its journal three times, whatever the number of files", async () => {
     let saves = 0;
     const actual = vi.mocked(renameSync).getMockImplementation();
     vi.mocked(renameSync).mockImplementation((from, to) => {
@@ -94,7 +94,7 @@ describe("applying many files", () => {
     });
     const paths = Array.from({ length: 12 }, (_, index) => `${DIR}/group${index}/index.ts`);
 
-    applyFilePlan(root, planOf(paths), () => {});
+    await applyFilePlan(root, planOf(paths), () => {});
 
     expect(saves).toBe(3);
     expect(existsSync(join(root.path, `${DIR}/group11/index.ts`))).toBe(true);

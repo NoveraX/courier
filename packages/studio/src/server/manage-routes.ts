@@ -107,7 +107,7 @@ function handleApplyRoute(
     const imports = importsSnapshotOf(declarations, projectRoot);
     const declared = await declaredSpec(getImportEntry(imports, body.name), body.name, body.spec);
     const request = { ...body, ...declared, ...consent };
-    const result = handleManageApply(request, imports, projectRootAt(projectRoot));
+    const result = await handleManageApply(request, imports, projectRootAt(projectRoot));
     if (!("error" in result)) project.importsChanged();
     return result;
   }).then(

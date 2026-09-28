@@ -2,6 +2,7 @@ import { statSync } from "node:fs";
 import { dirname, relative, sep } from "node:path";
 import { errnoCode } from "../errno-code";
 import { ensureDirectory, missingDirectories } from "../project-fs/ensure-directory";
+import { flushFiles } from "../project-fs/flush-files";
 import type { ProjectRoot } from "../project-fs/project-root";
 import { resolveProjectPath } from "../project-fs/resolve-project-path";
 import { writeTempBeside } from "../project-fs/write-temp-beside";
@@ -29,7 +30,9 @@ export interface StagedWrite {
 
 /**
  * Put every file a plan writes in a temporary file beside its target, with
- * Studio's header, before anything in the project changes. Every directory
+ * Studio's header, before anything in the project changes. The files are
+ * written first and then flushed together, off the thread that serves
+ * requests, so a large import does not hold the server. Every directory
  * the apply creates is recorded in the journal before the first is made, so
  * a failure or a crash can undo them; the temporary files are named in the
  * journal as they are made, and an undo sweeps the import's folder for any
@@ -38,16 +41,16 @@ export interface StagedWrite {
  * @param root - The project
  * @param plan - The plan, confirmations applied
  * @param journal - The apply's journal, which this fills in
- * @returns The staged writes, in the plan's order
+ * @returns The staged writes, in the plan's order, each on disk
  * @throws {PathOutsideProjectError} When a target turned into a link or leads outside the project
  * @throws {FilePlanError} `PLAN_STALE` when a link or a file stands on the way to a target
  * @throws The file system's error when a file or directory cannot be written
  */
-export function stageWrites(
+export async function stageWrites(
   root: ProjectRoot,
   plan: FilePlan,
   journal: ApplyJournal,
-): StagedWrite[] {
+): Promise<StagedWrite[]> {
   const writes = plan.writes.filter((write) => write.action !== "unchanged");
   const targets = writes.map((write) => {
     const absolute = resolveProjectPath(root.path, write.path);
@@ -58,16 +61,19 @@ export function stageWrites(
   journal.createdDirs = [...planned].map((dir) => projectRelative(root, dir));
   /* One save covers every folder; a temporary file needs none, as the undo sweeps for them. */
   saveJournal(root.path, journal);
-  return targets.map(({ write, absolute }) => {
+  const staged = targets.map(({ write, absolute }) => {
     for (const created of ensureDirectory(root, dirname(absolute))) {
       if (!planned.has(created)) journal.createdDirs.push(projectRelative(root, created));
     }
     const mode = modeOf(absolute);
     const signed = signGeneratedFile(plan.importName, write.body);
-    const temp = writeTempBeside(absolute, signed, mode, IMPORT_TEMP_PREFIX);
+    const temp = writeTempBeside(absolute, signed, mode, IMPORT_TEMP_PREFIX, { flush: false });
     journal.temps.push(projectRelative(root, temp));
     return { write, absolute, temp, existed: mode !== null, sha256: exactHash(signed) };
   });
+  /* On disk before any takes its target's name, so a crash cannot leave a name on bytes never written. */
+  await flushFiles(staged.map((s) => s.temp));
+  return staged;
 }
 
 function modeOf(path: string): number | null {

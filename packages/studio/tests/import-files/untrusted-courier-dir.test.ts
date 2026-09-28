@@ -133,7 +133,7 @@ describe.skipIf(IS_WINDOWS)("a .courier folder that is a symbolic link", () => {
     );
   }
 
-  it("prunes nothing through a backups folder that links outside the project", () => {
+  it("prunes nothing through a backups folder that links outside the project", async () => {
     const outside = join(scratch, "outside");
     for (let n = 0; n < 25; n += 1) mkdirSync(join(outside, `1600000000${String(n).padStart(3, "0")}-00000000`), { recursive: true });
     mkdirSync(join(root.path, ".courier"), { recursive: true });
@@ -146,7 +146,7 @@ describe.skipIf(IS_WINDOWS)("a .courier folder that is a symbolic link", () => {
     );
 
     try {
-      applyFilePlan(root, plan, () => {});
+      await applyFilePlan(root, plan, () => {});
     } catch {
       /* Refusing the apply is as good as pruning nothing: what counts is the folder outside. */
     }
@@ -154,12 +154,12 @@ describe.skipIf(IS_WINDOWS)("a .courier folder that is a symbolic link", () => {
     expect(readdirSync(outside)).toHaveLength(25);
   });
 
-  it("writes no journal through a .courier that links outside the project", () => {
+  it("writes no journal through a .courier that links outside the project", async () => {
     const outside = join(scratch, "outside-courier");
     mkdirSync(outside);
     symlinkSync(outside, join(root.path, ".courier"), "dir");
 
-    expect(() => applyFilePlan(root, scenario(), () => {})).toThrow();
+    await expect(applyFilePlan(root, scenario(), () => {})).rejects.toThrow();
 
     expect(readdirSync(outside)).toEqual([]);
     expect(readFileSync(join(root.path, `${DIR}/index.ts`), "utf8")).toBe("old\n");

@@ -69,7 +69,7 @@ async function writeImport(
   const layout = resolveImportLayout(entry ?? body.options, name);
   checkDirOverlap(name, layout.dir, imports);
   const declaration = describeImportDeclaration({ name, body, loaded, root: projectRoot });
-  const { report, leftBehind } = applyRegeneration(
+  const { report, leftBehind } = await applyRegeneration(
     {
       root: projectRootAt(projectRoot),
       name,

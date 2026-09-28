@@ -57,16 +57,16 @@ export function planRegeneration(regeneration: Regeneration): {
  * @throws {SpecGenerationError} When the spec cannot be generated from
  * @throws {FilePlanError} When the plan is refused as it stands
  */
-export function applyRegeneration(
+export async function applyRegeneration(
   regeneration: Regeneration,
   consent: PlanConsent,
   quoting: PlanQuoting,
-): { report: ApplyReport; leftBehind: string[] } {
+): Promise<{ report: ApplyReport; leftBehind: string[] }> {
   const { plan, leftBehind } = planRegeneration(regeneration);
   const { root, name, spec, specHash, entry } = regeneration;
   const applied = { specHash, digest: createSpecDigest(spec) };
   const now = new Date().toISOString();
-  const report = runPlan(
+  const report = await runPlan(
     root,
     plan,
     consent,

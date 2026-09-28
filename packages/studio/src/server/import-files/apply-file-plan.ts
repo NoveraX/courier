@@ -1,23 +1,19 @@
-import { existsSync, renameSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync } from "node:fs";
 import { IMPORTS_STATE_FILENAME, readImportsState } from "../../apis/imports-state";
 import { ownValue } from "../../apis/own-value";
 import { COURIER_DIR, ensureCourierSubdir } from "../courier-dir";
-import { ensureDirectory } from "../project-fs/ensure-directory";
 import type { ProjectRoot } from "../project-fs/project-root";
 import { resolveProjectPath } from "../project-fs/resolve-project-path";
-import { retryOnWin32 } from "../project-fs/retry-on-win32";
-import { syncDirectory } from "../project-fs/sync-directory";
 import { newApplyId } from "./apply-id";
+import { whileApplying } from "./apply-in-flight";
 import { type ApplyJournal, saveJournal } from "./apply-journal";
-import { backUp } from "./back-up";
-import { backupPath } from "./backup-path";
+import { commitFiles } from "./commit-files";
 import { FilePlanError } from "./file-plan-error";
 import type { FilePlan } from "./file-plan-types";
 import { finishApply } from "./finish-apply";
 import { ImportsStateUnsafeError } from "./imports-state-unsafe-error";
-import { type PruneFailure, pruneEmptyDirs } from "./prune-empty-dirs";
-import { refuseObstacle, type StagedWrite, stageWrites } from "./stage-writes";
+import type { PruneFailure } from "./prune-empty-dirs";
+import { type StagedWrite, stageWrites } from "./stage-writes";
 import { undoThenThrow } from "./undo-apply";
 import { verifyUnchanged } from "./verify-unchanged";
 
@@ -38,7 +34,9 @@ export interface ApplyReport {
  * files removed are moved into the backup; `commit` records the outcome
  * with the apply's id — the point after which the apply stands. A failure
  * before that undoes everything; a crash is undone the next time Studio
- * starts, from the journal kept meanwhile, unless the id was recorded.
+ * starts, from the journal kept meanwhile, unless the id was recorded. The
+ * files are flushed off the thread that serves requests, so Studio goes on
+ * answering while a large import is written.
  *
  * @param root - The project
  * @param plan - The plan, with the user's confirmations taken in
@@ -48,14 +46,14 @@ export interface ApplyReport {
  * @throws The file system's error, after undoing what was done
  * @example
  * ```ts
- * const report = applyFilePlan(root, withConfirmations(plan, confirmed), (applyId) => saveState(next, applyId));
+ * const report = await applyFilePlan(root, withConfirmations(plan, confirmed), (applyId) => saveState(next, applyId));
  * ```
  */
-export function applyFilePlan(
+export async function applyFilePlan(
   root: ProjectRoot,
   plan: FilePlan,
   commit: (applyId: string) => void,
-): ApplyReport {
+): Promise<ApplyReport> {
   refuseUnready(plan);
   verifyUnchanged(root, plan);
   /* A .courier that is not a real folder is refused first, as it names the cause. */
@@ -77,9 +75,19 @@ export function applyFilePlan(
     temps: [],
   };
   saveJournal(root.path, journal);
+  return whileApplying(id, () => applyJournaled(root, plan, journal, commit));
+}
+
+/* Stage, commit and record the apply its journal describes, undoing it all on any failure before the record. */
+async function applyJournaled(
+  root: ProjectRoot,
+  plan: FilePlan,
+  journal: ApplyJournal,
+  commit: (applyId: string) => void,
+): Promise<ApplyReport> {
   let staged: StagedWrite[];
   try {
-    staged = stageWrites(root, plan, journal);
+    staged = await stageWrites(root, plan, journal);
   } catch (error) {
     undoThenThrow(root, journal, error);
   }
@@ -96,12 +104,12 @@ export function applyFilePlan(
   let pruneFailures: PruneFailure[];
   try {
     saveJournal(root.path, journal);
-    pruneFailures = commitFiles(root, plan, staged, journal.backupDir);
-    commit(id);
+    pruneFailures = await commitFiles(root, plan, staged, journal.backupDir);
+    commit(journal.id);
   } catch (error) {
     undoThenThrow(root, journal, error);
   }
-  finishApply(root.path, id);
+  finishApply(root.path, journal.id);
   /* A backup folder is made only for a file replaced or removed. */
   const backedUp = existsSync(resolveProjectPath(root.path, journal.backupDir));
   return {
@@ -130,34 +138,4 @@ function refuseUnready(plan: FilePlan): void {
       { paths },
     );
   }
-}
-
-function commitFiles(
-  root: ProjectRoot,
-  plan: FilePlan,
-  staged: StagedWrite[],
-  backupDir: string,
-): PruneFailure[] {
-  /* Copies go only into a real .courier/backups inside the project. */
-  if (plan.removals.length > 0 || staged.some((s) => s.existed))
-    ensureCourierSubdir(root.path, "backups");
-  backUp(
-    root,
-    backupDir,
-    staged.filter((s) => s.existed).map((s) => ({ path: s.write.path, absolute: s.absolute })),
-  );
-  for (const s of staged) {
-    retryOnWin32(() => renameSync(s.temp, s.absolute), `Writing ${s.write.path}`);
-    syncDirectory(dirname(s.absolute));
-  }
-  const removed: string[] = [];
-  for (const removal of plan.removals) {
-    const absolute = resolveProjectPath(root.path, removal.path);
-    refuseObstacle(root, absolute, removal.path);
-    const copy = backupPath(root, backupDir, removal.path);
-    ensureDirectory(root, dirname(copy));
-    retryOnWin32(() => renameSync(absolute, copy), `Moving ${removal.path} into the backup`);
-    removed.push(absolute);
-  }
-  return pruneEmptyDirs(root.path, resolveProjectPath(root.path, plan.dir), removed);
 }

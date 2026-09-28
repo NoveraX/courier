@@ -17,29 +17,43 @@
 ## Install
 
 ```bash
-npm install @noverax/courier-remix @noverax/courier @remix-run/node
+npm install @noverax/courier-remix @noverax/courier
 ```
+
+Remix continues as React Router 7's framework mode, which is what `npx create-react-router@latest` sets up, and the handler works with both.
 
 ## Usage
 
 ```ts
-// app/entry.server.tsx
+// app/routes/api.request.ts
 import { registerSources } from "@noverax/courier"
+import { courierHandler } from "@noverax/courier-remix"
 import { sources } from "~/api"
 
 registerSources(sources)
-```
-
-```ts
-// app/routes/api.request.ts
-import { courierHandler } from "@noverax/courier-remix"
 
 const handler = courierHandler()
 export const loader = handler
 export const action = handler
 ```
 
-`courierHandler()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` at server startup. The handler uses Web Standard `Request`/`Response` natively — no conversion needed. GET requests are routed to query-type endpoints, POST requests handle mutations.
+React Router 7 serves only the routes `app/routes.ts` lists, so add the file there:
+
+```ts
+// app/routes.ts
+import { type RouteConfig, index, route } from "@react-router/dev/routes"
+
+export default [
+  index("routes/home.tsx"),
+  route("api/request", "routes/api.request.ts"),
+] satisfies RouteConfig
+```
+
+On Remix v2, whose file-system routes serve `app/routes/api.request.ts` at `/api/request` without a config, the route file alone is enough.
+
+`courierHandler()` is zero-arg — sources are read at request time from the core global registry that `registerSources()` fills when the route module loads. The handler uses Web Standard `Request`/`Response` natively — no conversion needed. `loader` answers `GET` requests, routed to query-type endpoints, and `action` answers `POST`, for mutations.
+
+The proxy reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload (`multipart/form-data`) up to its `maxUploadBytes`, 10 MB; pass others to raise them: `courierHandler({ maxUploadBytes: 50 * 1024 * 1024 })`. In development, a client that declares an oversized upload can see the connection close before it has sent it all, rather than read the 413.
 
 ## With Frontend
 
@@ -72,7 +86,7 @@ export default {
 
 ### `courierHandler()`
 
-Creates a Remix resource route handler. Returns a function compatible with Remix's `loader`/`action` exports.
+Creates a resource route handler. Returns a function compatible with the `loader`/`action` exports of React Router 7 and Remix v2.
 
 ## License
 

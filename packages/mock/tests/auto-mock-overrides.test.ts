@@ -166,7 +166,7 @@ describe("builder advanced features", () => {
     });
     expect(res.status).toBe(422);
     const body = await res.json();
-    expect(body.error).toEqual({ message: "Validation failed" });
+    expect(body).toEqual({ message: "Validation failed" });
   });
 
   it(".sequence() returns ordered responses", async () => {
@@ -302,7 +302,7 @@ describe(".rejects() without data arg", () => {
     const res = await fetch(`${url}/items`);
     expect(res.status).toBe(418);
     const body = await res.json();
-    expect(body.error).toHaveProperty("message");
+    expect(body).toHaveProperty("message");
   });
 });
 

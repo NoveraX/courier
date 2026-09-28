@@ -143,15 +143,36 @@ export function objectWithBody(
   params: readonly ParsedParameter[],
   key: string,
   options: GeneratorSettings,
+  optional = false,
 ): string {
   const fields = params.map((param) => parameterField(param, options));
   if (options.validation === "zod") {
-    return `z.object({ ${[...fields, `${objectKey(key)}: ${bodyExpr}`].join(", ")} })`;
+    const body = optional ? `${bodyExpr}.optional()` : bodyExpr;
+    return `z.object({ ${[...fields, `${objectKey(key)}: ${body}`].join(", ")} })`;
   }
   if (options.validation === "valibot") {
-    return `v.object({ ${[...fields, `${objectKey(key)}: ${bodyExpr}`].join(", ")} })`;
+    const body = optional ? `v.optional(${bodyExpr})` : bodyExpr;
+    return `v.object({ ${[...fields, `${objectKey(key)}: ${body}`].join(", ")} })`;
   }
-  return `type({ ${[...fields, `${jsLiteral(key)}: ${bodyExpr}`].join(", ")} })`;
+  return `type({ ${[...fields, `${jsLiteral(optional ? `${key}?` : key)}: ${bodyExpr}`].join(", ")} })`;
+}
+
+/**
+ * A schema that also takes `undefined`: a body the operation does not
+ * require, which a call may leave out.
+ *
+ * @param expr - The schema
+ * @param options - Generation options, read for the validation library
+ * @returns The schema taking `undefined` too
+ * @example
+ * ```ts
+ * optionalSchema("z.array(TagSchema)", { validation: "zod" }); // "z.optional(z.array(TagSchema))"
+ * ```
+ */
+export function optionalSchema(expr: string, options: GeneratorSettings): string {
+  if (options.validation === "zod") return `z.optional(${expr})`;
+  if (options.validation === "valibot") return `v.optional(${expr})`;
+  return `type([${expr}, "|", "undefined"])`;
 }
 
 /**

@@ -110,10 +110,13 @@ function wholeBodyClosure(
   media: string | null,
 ): string | null {
   const option = kind === "bytes" ? "body" : "json";
+  /* An absent body is no body: `null` for bytes, where `undefined` is not taken. */
+  const sent = (name: string): string =>
+    kind === "bytes" && ep.requestBodyOptional ? `${name} ?? null` : name;
   /* A header parameter, too, puts the body under a key of its own. */
   if (variableParameters(ep).length === 0) {
     return method === "del" || media !== null
-      ? `(http, body) => http.${method}(${at}, undefined, { ${options(`${option}: body`, null, read, media)} })`
+      ? `(http, body) => http.${method}(${at}, undefined, { ${options(`${option}: ${sent("body")}`, null, read, media)} })`
       : null;
   }
   const key = bodyKey(ep);
@@ -122,7 +125,7 @@ function wholeBodyClosure(
     [],
   );
   const bindings = pattern ? `${pattern}, ${key}` : key;
-  return `(http, { ${bindings} }) => http.${method}(${at}, undefined, { ${options(`${option}: ${key}`, searchParams, read, media)} })`;
+  return `(http, { ${bindings} }) => http.${method}(${at}, undefined, { ${options(`${option}: ${sent(key)}`, searchParams, read, media)} })`;
 }
 
 /**

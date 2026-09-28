@@ -118,6 +118,7 @@ describe("a request body that is a list", () => {
                 operationId: "createMany",
                 tags: ["things"],
                 requestBody: {
+                  required: true,
                   content: {
                     "application/json": {
                       schema: { type: "array", items: { $ref: "#/components/schemas/Item" } },

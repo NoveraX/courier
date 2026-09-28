@@ -6,7 +6,7 @@ import { convertSchemaInline, resolveRef } from "./utils";
 
 type ParsedRequestBody = Pick<
   ParsedEndpoint,
-  "requestBody" | "requestBodyMediaType" | "requestBodyEncoding"
+  "requestBody" | "requestBodyMediaType" | "requestBodyEncoding" | "requestBodyOptional"
 >;
 
 /**
@@ -37,18 +37,21 @@ export function parseRequestBody(op: SpecNode, spec: SpecNode): ParsedRequestBod
      no field at all; taken for a map, it became a `body` each call had to
      pass. */
   if (media && admitsNothing(media.schema, spec)) return { requestBody: null };
+  /* A body is optional unless the operation says it is required. */
+  const optional = fieldOf(body, "required") === true ? {} : { requestBodyOptional: true as const };
   if (media) {
     const encoding = fieldEncodings(media.encoding);
     return {
       requestBody: convertSchemaInline(media.schema, spec),
       requestBodyMediaType: media.mediaType,
       ...(encoding && { requestBodyEncoding: encoding }),
+      ...optional,
     };
   }
   /* Bytes are often sent with no schema at all; they are still a body. */
   const bytes = schemalessMediaType(fieldOf(body, "content"));
   if (bytes === undefined) return { requestBody: null };
-  return { requestBody: { name: "Body", type: "any" }, requestBodyMediaType: bytes };
+  return { requestBody: { name: "Body", type: "any" }, requestBodyMediaType: bytes, ...optional };
 }
 
 /* An object closed to every field, which only `{}` satisfies. */

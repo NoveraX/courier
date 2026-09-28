@@ -52,8 +52,11 @@ export function resolveVariablesType(ep: ParsedEndpoint, context: EndpointContex
   if (kind === "form") return "FormData";
   if (kind === "value" || kind === "nested" || kind === "bytes") {
     const body = kind === "bytes" ? "Blob" : bodyType(ep, context, style);
-    if (parts.length === 0) return body;
-    return `{ ${[...parts, `${objectKey(bodyKey(ep))}: ${body}`].join("; ")} }`;
+    /* A body the operation does not require may be left out. */
+    const optional = ep.requestBodyOptional === true;
+    if (parts.length === 0) return optional ? `${body} | undefined` : body;
+    const key = `${objectKey(bodyKey(ep))}${optional ? "?" : ""}`;
+    return `{ ${[...parts, `${key}: ${body}${optional ? " | undefined" : ""}`].join("; ")} }`;
   }
   if (kind === "fields" && ep.requestBody?.type !== "object") {
     const body = bodyType(ep, context, style);

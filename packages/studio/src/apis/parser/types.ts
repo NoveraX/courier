@@ -72,6 +72,12 @@ export interface ParsedEndpoint {
   /** Request body schema (if any) */
   requestBody: ParsedSchema | null;
   /**
+   * Set when the operation does not require its body — OpenAPI's default —
+   * so a call may send none. Read for a body that is not a set of fields: a
+   * list, a scalar, a map, bytes.
+   */
+  requestBodyOptional?: true;
+  /**
    * Media type the request body is sent as, e.g. `application/json`,
    * `application/x-www-form-urlencoded` or `multipart/form-data`; absent
    * when there is no body.

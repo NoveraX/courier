@@ -57,7 +57,7 @@ export function RegistryCard({
   const endpointCount = countScannedEndpoints(source);
   const groupCount = source.groups.length;
   const filePath = source.filePath.replace(/\/[^/]+$/, "");
-  const validation = reg?.options.validation ?? "none";
+  const validation = reg?.options.validation;
   const stats = computeAnalysisStats(source);
 
   return (
@@ -94,8 +94,12 @@ export function RegistryCard({
         <span className="shrink-0">{endpointCount} {endpointCount === 1 ? "endpoint" : "endpoints"}</span>
         <span className="shrink-0">·</span>
         <span className="shrink-0">{groupCount} {groupCount === 1 ? "group" : "groups"}</span>
-        <span className="shrink-0">·</span>
-        <span className="shrink-0">{validation}</span>
+        {validation && (
+          <>
+            <span className="shrink-0">·</span>
+            <span className="shrink-0">{validation}</span>
+          </>
+        )}
         {source.baseURL && (
           <>
             <span className="shrink-0">·</span>

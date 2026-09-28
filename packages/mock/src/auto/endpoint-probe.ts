@@ -1,4 +1,5 @@
 import type { SchemaMetadata } from "./route-types";
+import { prop } from "./schema-introspect/prop";
 
 /**
  * Endpoint introspection helpers.
@@ -56,6 +57,25 @@ function probeCallable(fn: (...args: unknown[]) => unknown): {
   }
 
   return { method, path: path || undefined };
+}
+
+/**
+ * The path a stream or channel is reached at, relative to its group: the
+ * one its descriptor declares, which a direct client builds its URL from,
+ * or its name when it declares none.
+ *
+ * @param endpoint The endpoint's descriptor
+ * @param name     The endpoint's name in its group
+ * @returns The group-relative path, without leading or trailing slashes
+ * @example
+ * ```ts
+ * realtimePath(stream.get("ws-room"), "room"); // "ws-room"
+ * ```
+ */
+export function realtimePath(endpoint: unknown, name: string): string {
+  const declared = typeof endpoint === "object" && endpoint !== null ? prop(endpoint, "path") : "";
+  const path = typeof declared === "string" ? declared.split("/").filter(Boolean).join("/") : "";
+  return path || name;
 }
 
 /** Read the schema metadata symbol attached to an endpoint function */

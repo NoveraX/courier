@@ -45,7 +45,7 @@ export function activateConnection(params: ActivateConnectionParams): void {
   const { ws, route, channelFn, url, history, hooks, registry, scenarioState } = params;
 
   const connectionId = generateConnectionId();
-  const variables = parseVariablesFromUrl(url);
+  const variables = { ...parseVariablesFromUrl(url), ...route.params };
   const startedAt = performance.now();
   const topic = `${route.group}.${route.method}`;
 

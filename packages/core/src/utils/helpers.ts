@@ -66,6 +66,8 @@ export function estimateResponseSize(data: unknown, headers?: Headers): number {
   try {
     return new TextEncoder().encode(JSON.stringify(data)).byteLength;
   } catch {
+    /* A body JSON cannot write — a BigInt, a cycle — has no size to show;
+       the answer itself is not affected. */
     return 0;
   }
 }

@@ -1,11 +1,14 @@
+import { createLogger } from "../logger";
 import type { RequestPayloadInput } from "../utils/helpers";
 import { reviveWithoutPrototypeKeys } from "../utils/safe-json";
 import { discardBody } from "./discard-body";
 import type { HandlerConfig } from "./handler-config";
 import { LIMITS } from "./limits";
 import { errorResponse } from "./parse";
-import { readBoundedBody } from "./read-body";
+import { type BoundedBody, readBoundedBody } from "./read-body";
 import { parseWireOptionsJson } from "./wire-options";
+
+const log = createLogger("Proxy");
 
 /**
  * Read a proxy POST's envelope, spending a bounded amount of memory on it.
@@ -43,10 +46,28 @@ export async function readEnvelope(
     ? (config?.maxUploadBytes ?? LIMITS.MAX_PROXY_UPLOAD_BYTES)
     : (config?.maxBodyBytes ?? LIMITS.MAX_PROXY_BODY_BYTES);
 
-  const body = await readBoundedBody(request, limit);
+  const body = await readSent(request, limit);
+  if (body instanceof Response) return body;
   if (!body.ok) return refuse(request, 413, `Request body exceeds ${body.limit} bytes`);
 
   return isUpload ? parseForm(body.bytes, contentType) : parseJson(body.bytes);
+}
+
+/**
+ * Read the body the client sends, answering one it stopped sending.
+ *
+ * A browser that cancels an upload closes the connection mid-body, and the
+ * read fails. That is the client's decision, not the server's failure: let
+ * through, the rejection reached every framework's error handler and was
+ * logged there with a stack, once per cancelled upload.
+ */
+async function readSent(request: Request, limit: number): Promise<BoundedBody | Response> {
+  try {
+    return await readBoundedBody(request, limit);
+  } catch (error) {
+    log.debug("The client stopped sending its request body", error);
+    return errorResponse(400, "Request body could not be read");
+  }
 }
 
 /**

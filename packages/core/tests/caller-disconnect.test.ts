@@ -36,6 +36,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   _resetSourcesForTests();
   upstreamSignal = undefined;
@@ -54,6 +56,34 @@ describe("a caller that leaves before the upstream answers", () => {
     await pending;
 
     expect(upstreamSignal?.aborted).toBe(true);
+  });
+
+  /**
+   * A browser that cancels is not a server failure. It was logged as one, at
+   * ERROR with a stack, once per cancelled upload or query.
+   */
+  it.each([
+    ["with the platform's abort error", undefined],
+    ["with a reason the framework chose", "Client connection prematurely closed."],
+  ])("notes the departure at debug level %s", async (_, reason) => {
+    vi.stubEnv("COURIER_LOG_LEVEL", "debug");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    const caller = new AbortController();
+    const pending = createHandler().handleGet(
+      new Request("http://app.local/api/request?_s=api&_m=slow", { signal: caller.signal }),
+    );
+
+    await vi.waitFor(() => expect(upstreamCalled).toBe(true));
+    caller.abort(reason);
+    const response = await pending;
+
+    expect(response.status).toBe(499);
+    expect(error).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+    expect(debug).toHaveBeenCalledOnce();
+    expect(debug.mock.calls[0]?.map(String).join(" ")).toContain("left before the upstream answered");
   });
 
   it("leaves a caller that stays to get its answer", async () => {

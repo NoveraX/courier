@@ -38,6 +38,7 @@ function postRequest(
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe("createPostHandler", () => {
@@ -232,6 +233,41 @@ describe("createPostHandler", () => {
 
       const receivedPayload = execute.mock.calls[0]![1];
       expect(receivedPayload).toEqual(payload);
+    });
+
+    /**
+     * A client that leaves mid-upload is not a server failure. The read's
+     * rejection escaped the handler, and every framework's error handler
+     * logged it with a stack.
+     */
+    it("answers a body the client stopped sending, without throwing", async () => {
+      vi.stubEnv("COURIER_LOG_LEVEL", "debug");
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+      const execute = createMockExecute();
+      const handler = createPostHandler(execute, createHooks());
+      let sent = false;
+      const leaving = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (sent) return controller.error(Object.assign(new Error("aborted"), { code: "ECONNRESET" }));
+          sent = true;
+          controller.enqueue(new TextEncoder().encode('{"source":'));
+        },
+      });
+      const req = new Request("http://localhost/api/request", {
+        method: "POST",
+        headers: { origin: "http://localhost", "content-type": "application/json" },
+        body: leaving,
+        // @ts-expect-error -- required by the platform for a streaming body
+        duplex: "half",
+      });
+
+      const res = await handler(req);
+
+      expect(res.status).toBe(400);
+      expect(execute).not.toHaveBeenCalled();
+      expect(error).not.toHaveBeenCalled();
+      expect(debug).toHaveBeenCalledOnce();
     });
 
     /** The GET path strips these from `_v`; the POST path kept them. */

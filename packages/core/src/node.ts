@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { discoverAppOrigin } from "./app-origin";
 import { createLogger } from "./logger";
 import { addressedTo } from "./node-origin";
+import { isAbortError } from "./utils/abort";
 
 const log = createLogger("Node");
 
@@ -68,7 +69,7 @@ export async function sendWebResponse(webRes: Response, nodeRes: ServerResponse)
      the body is written: a later close would cancel a reader already let go. */
   const onClose = () => {
     if (nodeRes.writableFinished) return;
-    reader.cancel().catch((error: unknown) => log.warn("Could not stop the response body", error));
+    reader.cancel().catch(noteUnstoppedBody);
   };
   nodeRes.once("close", onClose);
   try {
@@ -77,9 +78,26 @@ export async function sendWebResponse(webRes: Response, nodeRes: ServerResponse)
       if (done) break;
       nodeRes.write(value);
     }
+  } catch (error) {
+    /* The client left, and the proxy stopped the body along with the upstream
+       call behind it: there is nobody to deliver to, and nothing failed. */
+    if (!nodeRes.destroyed || nodeRes.writableFinished) throw error;
+    log.debug("The client left while its response was streaming", error);
   } finally {
     nodeRes.off("close", onClose);
     reader.releaseLock();
     nodeRes.end();
   }
+}
+
+/**
+ * Note a response body the client's departure could not cancel.
+ *
+ * The proxy stops its upstream call when the same client leaves, so the body
+ * has usually ended already and refuses the cancel with that abort. Anything
+ * else may be a body still running for nobody.
+ */
+function noteUnstoppedBody(error: unknown): void {
+  if (isAbortError(error)) log.debug("The response body had already stopped", error);
+  else log.warn("Could not stop the response body", error);
 }

@@ -5,6 +5,7 @@ import { createLogger } from "../logger";
 import type { StudioHooks } from "../studio";
 import { ValidationError } from "../validation";
 import { isAbortError } from "./abort";
+import { answerCallerLeft, callerLeft } from "./caller-left";
 import { buildResponse } from "./execute-response";
 
 const log = createLogger("Proxy");
@@ -119,6 +120,7 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
   if (!fromWire && (!answersWithResponse || isAbortError(error) || error instanceof HTTPError)) {
     throw error;
   }
+  if (callerLeft(ctx.context)) return answerCallerLeft(error, ctx.context, ctx.rawData);
 
   /* A 2xx error is an upstream answer the proxy could not use — a body that
      would not parse. Passed on as it was, a failure reached the browser as a

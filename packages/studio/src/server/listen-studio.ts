@@ -1,6 +1,8 @@
 import type { Server } from "node:http";
 import { createLogger } from "@noverax/courier";
 import { formatStudioUrl } from "@noverax/courier/config";
+import { errnoCode } from "./errno-code";
+import { listenLoopbackCompanion } from "./listen-loopback-companion";
 import { StudioPortInUseError } from "./studio-port-in-use-error";
 
 const log = createLogger("Studio");
@@ -28,26 +30,47 @@ export interface StudioAddress {
  * answers at. A port another process holds is reported as that, and any
  * listen error reaches `onError` rather than the process.
  *
+ * Bound to `localhost`, Studio listens on both loopback addresses,
+ * `127.0.0.1` and `::1`. Bound to the name, it listened on whichever the
+ * resolver gave first — `::1` on macOS — and refused a client that dialled
+ * the other. It is ready once it listens on both, or on `127.0.0.1` alone
+ * where the machine has no IPv6.
+ *
  * @param httpServer - Studio's HTTP server
  * @param options - Where to listen and whom to tell
  * @returns The address, read when needed
+ * @example
+ * ```ts
+ * const address = listenStudio(httpServer, { port: 6280, host: "localhost", onReady, onError });
+ * ```
  */
 export function listenStudio(httpServer: Server, options: ListenOptions): StudioAddress {
   const { port, host, onReady, onError } = options;
   let url = formatStudioUrl(host, port);
   let listeningOn: number | null = null;
 
-  httpServer.once("error", (err: NodeJS.ErrnoException) => {
-    const failure = err.code === "EADDRINUSE" ? new StudioPortInUseError(port, host, err) : err;
+  const fail = (err: Error, at: string): void => {
+    const failure = errnoCode(err) === "EADDRINUSE" ? new StudioPortInUseError(port, at, err) : err;
     if (onError) onError(failure);
     else log.error("Courier Studio could not start", failure);
-  });
+  };
 
-  httpServer.listen(port, host, () => {
+  httpServer.once("error", (err: NodeJS.ErrnoException) => fail(err, host));
+
+  const loopback = host.toLowerCase() === "localhost";
+  httpServer.listen(port, loopback ? "127.0.0.1" : host, () => {
     const address = httpServer.address();
-    listeningOn = typeof address === "object" && address !== null ? address.port : port;
-    url = formatStudioUrl(host, listeningOn);
-    onReady?.(url);
+    const bound = typeof address === "object" && address !== null ? address.port : port;
+    const ready = (): void => {
+      listeningOn = bound;
+      url = formatStudioUrl(host, bound);
+      onReady?.(url);
+    };
+    if (!loopback) return ready();
+    listenLoopbackCompanion(httpServer, bound, "::1").then(ready, (err: Error) => {
+      httpServer.close();
+      fail(err, "::1");
+    });
   });
 
   return { url: () => url, port: () => listeningOn };

@@ -16,7 +16,11 @@ vi.mock("@noverax/courier", async (importOriginal) => {
   };
 });
 
-import { createHandler } from "@noverax/courier";
+import { createHandler, registerSources } from "@noverax/courier";
+import { type BufferedAnnouncement, consumeAnnouncements } from "@noverax/courier/announce";
+import { courier, defineApi, getSourceName } from "@noverax/courier/define";
+
+import { resetAnnouncements } from "../../core/src/announce/test-support";
 import { courierHandler } from "../src/index";
 
 const mockCreateHandler = vi.mocked(createHandler);
@@ -100,5 +104,30 @@ describe("courierHandler", () => {
     expect(result.headers.get("cache-control")).toBe("no-cache, no-transform");
     expect(result.headers.get("connection")).toBe("keep-alive");
     expect(result.headers.get("x-accel-buffering")).toBe("no");
+  });
+});
+
+describe("what the handler tells an attached Studio", () => {
+  it("names on its first request the sources it serves", async () => {
+    resetAnnouncements();
+    const { endpoint: ping } = courier();
+    registerSources({
+      api: defineApi({ baseURL: "https://upstream.example", endpoints: { ping: ping.get("ping") } }),
+    });
+    vi.stubGlobal("fetch", async () => Response.json({ ok: true }));
+    const announced: BufferedAnnouncement[] = [];
+    const stop = consumeAnnouncements((entry) => announced.push(entry));
+    const handler = courierHandler();
+
+    for (let i = 0; i < 2; i++) {
+      await handler({ req: new Request("http://app.test/api/request?_s=api&_m=ping") });
+    }
+    stop();
+    vi.unstubAllGlobals();
+    resetAnnouncements();
+
+    expect(announced.map((a) => [a.transports, a.framework, a.sources.map(getSourceName)])).toEqual([
+      [["http", "sse"], "nuxt", ["api"]],
+    ]);
   });
 });

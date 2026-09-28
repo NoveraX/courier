@@ -45,9 +45,7 @@ function emitScenarioApplied(
   result: { ok: boolean; data?: unknown },
   buildUiRoutes: () => DescribedRoute[],
 ): void {
-  const appliedName = (result.data as Record<string, unknown> | undefined)?.applied as
-    | string
-    | undefined;
+  const appliedName = appliedScenario(result.data);
   if (!appliedName) return;
 
   const updated = buildScenarioMeta(server.scenarios, analyzedRoutes).map(
@@ -62,4 +60,11 @@ function emitScenarioApplied(
       routes: buildUiRoutes(),
     },
   });
+}
+
+/* The scenario a successful apply names in its data. */
+function appliedScenario(data: unknown): string | undefined {
+  if (typeof data !== "object" || data === null) return undefined;
+  const applied: unknown = Reflect.get(data, "applied");
+  return typeof applied === "string" ? applied : undefined;
 }

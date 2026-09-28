@@ -22,9 +22,19 @@ describe("uri", () => {
   });
 });
 
+describe("email", () => {
+  it("is not checked, because an API hides an address as an empty string", () => {
+    /* Gitea answers a repository with its owner's `email: ""` when the owner
+       keeps it private; a checked address refused the whole answer. */
+    expect(primitiveToZod("string", "email")).toBe("z.string()");
+    expect(primitiveToValibot("string", "email")).toBe("v.string()");
+    expect(primitiveToArkType("string", "email")).toBe('type("string")');
+  });
+});
+
 describe("the formats that are well defined", () => {
   it("are still checked", () => {
-    expect(primitiveToZod("string", "email")).toBe("z.email()");
     expect(primitiveToZod("string", "uuid")).toBe("z.uuid()");
+    expect(primitiveToValibot("string", "uuid")).toBe("v.pipe(v.string(), v.uuid())");
   });
 });

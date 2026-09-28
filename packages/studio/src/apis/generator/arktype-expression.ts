@@ -22,9 +22,10 @@ import { jsLiteral, type SpecValue } from "./literals";
  * ```
  */
 export function arkExpression(type: string, format?: string): string {
-  if (type === "string" && format === "email") return "string.email";
   /* ArkType's ISO date form rejects a zone offset, which most real examples
-     carry, and its url form rejects the loose values `format: uri` holds. */
+     carry, its url form rejects the loose values `format: uri` holds, and an
+     API hides an address as an empty string, which its email form rejects. */
+  if (type === "string" && format === "email") return "string";
   if (type === "string" && format === "date-time") return "string";
   if (type === "string" && format === "uri") return "string";
   if (type === "string" && format === "uuid") return "string.uuid";

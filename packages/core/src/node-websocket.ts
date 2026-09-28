@@ -95,7 +95,7 @@ export function attachWebSocketUpgrade(
       return;
     }
 
-    socket.on("error", (err) => log.warn("WS upgrade socket error", err));
+    socket.on("error", onUpgradeError);
     options.onRequest?.(req);
     /* One server for every connection, even when two upgrades arrive before
        the first has finished loading `ws`. */
@@ -112,6 +112,10 @@ export function attachWebSocketUpgrade(
     try {
       const upgradeServer = await ready;
       upgradeServer.handleUpgrade(req, socket, head, (ws) => {
+        /* The connection is `ws`'s from here, and so is its socket's error:
+           left listening, this reported every client that dropped without
+           a close frame as an upgrade that failed. */
+        socket.off("error", onUpgradeError);
         /* `ws` reports an oversized or malformed frame as an error event, and
            with no listener that is an uncaught exception. The handler wires
            its own only after an async `onConnect`, so a frame sent before
@@ -139,6 +143,10 @@ export function attachWebSocketUpgrade(
       () => undefined,
     );
   };
+}
+
+function onUpgradeError(error: Error): void {
+  log.warn("WS upgrade socket error", error);
 }
 
 function pathnameOf(req: IncomingMessage): string {

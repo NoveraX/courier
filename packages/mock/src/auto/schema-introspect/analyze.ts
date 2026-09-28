@@ -3,6 +3,7 @@
  * Handles all Zod v3/v4 and Valibot types including compound schemas.
  */
 
+import { getConstraints } from "./constraints";
 import { getFieldType, isTransparentWrapper } from "./detect";
 import { extractShape } from "./extract";
 import type { FieldMeta, FieldType } from "./types";
@@ -14,7 +15,6 @@ import {
   getEnumValues,
   getInnerType,
   getLiteralValue,
-  getNumberConstraints,
   getRecordValueType,
   getTupleItems,
   getUnionOptions,
@@ -54,11 +54,16 @@ export function analyzeField(field: unknown, depth = 0): FieldMeta {
       return { type, enumValues: getEnumValues(field) };
 
     case "number":
-      return { type, ...getNumberConstraints(field) };
+    case "string":
+      return { type, ...getConstraints(field, type) };
 
     case "array": {
       const element = getArrayElement(field);
-      return { type, innerField: element ? next(element) : undefined };
+      return {
+        type,
+        innerField: element ? next(element) : undefined,
+        ...getConstraints(field, type),
+      };
     }
 
     case "object":

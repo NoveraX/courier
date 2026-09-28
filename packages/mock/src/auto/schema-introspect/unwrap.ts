@@ -31,7 +31,7 @@ export function resolveLazy(field: unknown): unknown {
 /** Get array element schema */
 export function getArrayElement(field: unknown): unknown {
   return (
-    readDef(field, "element") ?? prop(field, "_def", "type") // Zod v3 ZodArray uses _def.type
+    readDef(field, "element", "item") ?? prop(field, "_def", "type") // Zod v3 ZodArray uses _def.type
   );
 }
 
@@ -61,19 +61,6 @@ export function getEnumValues(field: unknown): string[] | undefined {
   }
 
   return undefined;
-}
-
-/** Get number min/max constraints from checks array */
-export function getNumberConstraints(field: unknown): { min?: number; max?: number } {
-  const checks = readDef(field, "checks") as Array<{ kind: string; value: number }> | undefined;
-  if (!Array.isArray(checks)) return {};
-
-  const result: { min?: number; max?: number } = {};
-  for (const check of checks) {
-    if (check.kind === "min") result.min = check.value;
-    if (check.kind === "max") result.max = check.value;
-  }
-  return result;
 }
 
 /** Get literal constant value */

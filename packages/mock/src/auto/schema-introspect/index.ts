@@ -6,4 +6,4 @@
 
 export { analyzeField } from "./analyze";
 export { extractPaginatedItemSchema, extractShape, unwrapArraySchema } from "./extract";
-export type { FieldMeta, FieldType } from "./types";
+export type { FieldMeta, FieldType, ValueConstraints } from "./types";

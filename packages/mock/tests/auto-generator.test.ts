@@ -420,12 +420,29 @@ describe("schema introspection", () => {
       expect(meta.literalValue).toBe("active");
     });
 
-    it("detects number constraints when available", () => {
+    it("detects number constraints", () => {
       const meta = analyzeField(z.number().min(0).max(100));
       expect(meta.type).toBe("number");
-      // Constraints may or may not be extracted depending on Zod version
-      if (meta.min !== undefined) expect(meta.min).toBe(0);
-      if (meta.max !== undefined) expect(meta.max).toBe(100);
+      expect(meta.min).toBe(0);
+      expect(meta.max).toBe(100);
+    });
+
+    it("detects exclusive bounds, integer and step", () => {
+      const meta = analyzeField(z.number().int().positive().lt(50).multipleOf(5));
+      expect(meta).toMatchObject({
+        integer: true,
+        min: 0,
+        exclusiveMin: true,
+        max: 50,
+        exclusiveMax: true,
+        multipleOf: 5,
+      });
+    });
+
+    it("detects string length, format and pattern", () => {
+      const meta = analyzeField(z.email().max(30));
+      expect(meta).toMatchObject({ type: "string", format: "email", maxLength: 30 });
+      expect(meta.patterns).toHaveLength(1);
     });
 
     it("detects tuple type", () => {

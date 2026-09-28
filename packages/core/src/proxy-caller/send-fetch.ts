@@ -3,7 +3,6 @@ import type { UploadProgress } from "../http-client/types";
 import { studioHooks } from "../studio";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
-import type { RequestPayload } from "../utils/request-payload";
 import { asProxyFailure, readProxyAnswer } from "./proxy-answer";
 
 export async function sendFetch(
@@ -12,7 +11,8 @@ export async function sendFetch(
   options: Record<string, unknown>,
   ctx: {
     stream: boolean;
-    requestPayload: { body?: FormData; json?: Partial<RequestPayload> };
+    /** Whether the call asked for `.raw`. */
+    raw: boolean;
     onSuccess?: (data: unknown) => void | Promise<void>;
     onError?: (error: HTTPError) => void | Promise<void>;
   },
@@ -26,7 +26,7 @@ export async function sendFetch(
   try {
     response = await coreFetch(method, url, fetchOptions as CoreFetchInit);
     tHeaders = hasTimingHook ? performance.now() : 0;
-    const data = await readProxyAnswer(response, ctx.requestPayload, ctx.stream);
+    const data = await readProxyAnswer(response, ctx.raw, ctx.stream);
     await ctx.onSuccess?.(data);
     return data;
   } catch (error) {

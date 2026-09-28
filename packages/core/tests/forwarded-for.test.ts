@@ -52,10 +52,10 @@ function register(allowedHeaders?: string[]): void {
 }
 
 function callFrom(peer: string | undefined): Promise<Response> {
-  const request = new Request("http://app.localhost/api/request", {
+  const request = new Request("http://app.localhost/api/request?_s=api&_m=ping", {
     method: "POST",
     headers: { "content-type": "application/json", ...SPOOFED },
-    body: JSON.stringify({ source: "api", method: "ping" }),
+    body: JSON.stringify({}),
   });
   rememberPeerAddress(request, peer);
   return createHandler().handle(request);
@@ -83,10 +83,10 @@ describe("a reverse proxy in front of the application", () => {
     });
     await new Promise<void>((resolve) => app.listen(0, "127.0.0.1", resolve));
 
-    await fetch(`http://127.0.0.1:${(app.address() as AddressInfo).port}/api/request`, {
+    await fetch(`http://127.0.0.1:${(app.address() as AddressInfo).port}/api/request?_s=api&_m=ping`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-forwarded-for": "198.51.100.4" },
-      body: JSON.stringify({ source: "api", method: "ping" }),
+      body: JSON.stringify({}),
     });
     app.closeAllConnections();
     await new Promise<void>((resolve) => app.close(() => resolve()));

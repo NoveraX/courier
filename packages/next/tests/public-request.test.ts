@@ -40,10 +40,10 @@ afterEach(async () => {
 
 /** A POST as `next start` hands it to the route: URL on localhost, headers as sent. */
 function postAsNextSeesIt(headers: Record<string, string>): NextRequest {
-  return new NextRequest("http://localhost:7352/api/request", {
+  return new NextRequest("http://localhost:7352/api/request?_s=api&_g=users&_m=create", {
     method: "POST",
     headers: { "content-type": "application/json", ...headers },
-    body: JSON.stringify({ source: "api", group: "users", method: "create", variables: {} }),
+    body: JSON.stringify({ variables: {} }),
   });
 }
 

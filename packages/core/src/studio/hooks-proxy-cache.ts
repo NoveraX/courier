@@ -5,30 +5,41 @@
  * cache, inflight deduplication, and upload progress reporting.
  */
 
-/** Proxy adapter request/response + parse + origin reject + client timing */
+/**
+ * Proxy adapter request/response + parse + origin reject + client timing.
+ *
+ * `requestId` is the id the call's request events carry, and is absent
+ * while no request lifecycle is being traced.
+ */
 export interface ProxyHooks {
+  /** Fired as a call arrives, before its body is read. */
   onProxyReceive?: (event: {
     proxyMethod: "GET" | "POST";
     source: string;
     group: string | undefined;
     method: string;
+    requestId: string | undefined;
     timestamp: number;
   }) => void;
 
+  /** Fired when the proxy answers, a refusal included. */
   onProxyRespond?: (event: {
     proxyMethod: "GET" | "POST";
     source: string;
     group: string | undefined;
     method: string;
     status: number;
+    requestId: string | undefined;
     timestamp: number;
   }) => void;
 
+  /** Fired once the call's variables are read. */
   onProxyParse?: (event: {
     source: string;
     group: string | undefined;
     method: string;
     variables: unknown;
+    requestId: string | undefined;
     timestamp: number;
   }) => void;
 

@@ -68,13 +68,13 @@ describe("createHandler", () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
       const { handle } = setupHandler({ api: {} });
-      const req = new Request("http://localhost/api/request", {
+      const req = new Request("http://localhost/api/request?_s=api&_m=list", {
         method: "POST",
         headers: {
           "content-type": "application/json",
           origin: "http://localhost",
         },
-        body: JSON.stringify({ source: "api", method: "list" }),
+        body: JSON.stringify({}),
       });
 
       await handle(req);
@@ -259,7 +259,7 @@ describe("createHandler", () => {
   describe("handlePost", () => {
     it("serves a caller that sends no Origin, which no hostile page can be", async () => {
       const { handlePost } = setupHandler({});
-      const req = new Request("http://localhost/api/request", {
+      const req = new Request("http://localhost/api/request?_s=api&_m=list", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({}),
@@ -272,7 +272,7 @@ describe("createHandler", () => {
 
     it("returns 403 when origin does not match", async () => {
       const { handlePost } = setupHandler({});
-      const req = new Request("http://localhost/api/request", {
+      const req = new Request("http://localhost/api/request?_s=api&_m=list", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -289,13 +289,13 @@ describe("createHandler", () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
       const { handlePost } = setupHandler({});
-      const req = new Request("http://localhost/api/request", {
+      const req = new Request("http://localhost/api/request?_s=api&_m=list", {
         method: "POST",
         headers: {
           "content-type": "application/json",
           origin: "http://localhost",
         },
-        body: JSON.stringify({ source: "api", method: "list" }),
+        body: JSON.stringify({}),
       });
 
       await handlePost(req);
@@ -304,7 +304,7 @@ describe("createHandler", () => {
 
     it("returns 415 for unsupported content type", async () => {
       const { handlePost } = setupHandler({});
-      const req = new Request("http://localhost/api/request", {
+      const req = new Request("http://localhost/api/request?_s=api&_m=list", {
         method: "POST",
         headers: {
           "content-type": "text/plain",
@@ -324,8 +324,8 @@ describe("createHandler", () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
       const { handlePost } = setupHandler({ api: {} });
-      const payload = { source: "api", method: "list", variables: { page: 1 } };
-      const req = new Request("http://localhost/api/request", {
+      const payload = { variables: { page: 1 } };
+      const req = new Request("http://localhost/api/request?_s=api&_m=list", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -338,14 +338,14 @@ describe("createHandler", () => {
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
         expect.objectContaining({ api: expect.any(Object) }),
-        payload,
+        { source: "api", group: undefined, method: "list", variables: { page: 1 }, options: undefined },
         expect.objectContaining({ proxyMethod: "POST" }),
       );
     });
 
     it("returns 400 for invalid JSON", async () => {
       const { handlePost } = setupHandler({});
-      const req = new Request("http://localhost/api/request", {
+      const req = new Request("http://localhost/api/request?_s=api&_m=list", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -367,11 +367,10 @@ describe("createHandler", () => {
       const { handlePost } = setupHandler({ api: {} });
 
       const fd = new FormData();
-      fd.append("_source", "api");
-      fd.append("_method", "upload");
+      fd.append("_options", "{}");
       fd.append("file", new File(["content"], "test.txt"));
 
-      const req = new Request("http://localhost/api/request", {
+      const req = new Request("http://localhost/api/request?_s=api&_m=list", {
         method: "POST",
         headers: { origin: "http://localhost" },
         body: fd,
@@ -381,7 +380,7 @@ describe("createHandler", () => {
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
         expect.objectContaining({ api: expect.any(Object) }),
-        expect.any(FormData),
+        expect.objectContaining({ source: "api", method: "list", variables: expect.any(FormData) }),
         expect.objectContaining({ proxyMethod: "POST" }),
       );
     });
@@ -390,13 +389,13 @@ describe("createHandler", () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
       const { handlePost } = setupHandler({});
-      const req = new Request("http://localhost/api/request", {
+      const req = new Request("http://localhost/api/request?_s=api&_m=list", {
         method: "POST",
         headers: {
           "content-type": "application/json",
           origin: "http://localhost",
         },
-        body: JSON.stringify({ source: "api", method: "list" }),
+        body: JSON.stringify({}),
       });
 
       await handlePost(req);

@@ -294,10 +294,10 @@ describe("defineBoundary — the server's half, wired as documented", () => {
 
   function post(method: string): Promise<Response> {
     return createHandler().handle(
-      new Request("http://app.localhost/api/request", {
+      new Request(`http://app.localhost/api/request?_s=shop&_g=orders&_m=${method}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ source: "shop", group: "orders", method }),
+        body: JSON.stringify({}),
       }),
     );
   }

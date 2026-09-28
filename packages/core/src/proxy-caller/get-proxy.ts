@@ -1,5 +1,6 @@
 import type { HTTPError } from "../errors";
 import { encodeWireVariables, WIRE_VARIABLES_KEY } from "../utils/wire-variables";
+import { proxyRouting } from "./proxy-routing";
 import { sendFetch } from "./send-fetch";
 
 export type GetProxyCtx = {
@@ -23,8 +24,7 @@ export type GetProxyCtx = {
 };
 
 export function handleGetProxy(ctx: GetProxyCtx): Promise<unknown> {
-  const searchParams: Record<string, string> = { _s: ctx.source, _m: ctx.method };
-  if (ctx.group) searchParams._g = ctx.group;
+  const searchParams = proxyRouting(ctx.source, ctx.group, ctx.method);
 
   const variables = encodeWireVariables(ctx.variables);
   if (variables) searchParams[WIRE_VARIABLES_KEY] = variables;
@@ -38,8 +38,9 @@ export function handleGetProxy(ctx: GetProxyCtx): Promise<unknown> {
     "get",
     ctx.url,
     {
-      searchParams,
       ...ctx.init,
+      /* The call's own query, which nothing a caller passes may replace. */
+      searchParams,
       credentials: ctx.credentials,
       headers: ctx.defaultHeaders,
       timeout: ctx.timeout,
@@ -48,17 +49,8 @@ export function handleGetProxy(ctx: GetProxyCtx): Promise<unknown> {
     {
       ...ctx.fetchCtx,
       stream: ctx.stream,
-      /* The answer is read against the call's options: without them a
-         `.raw` call over GET kept its headers as a plain object. */
-      requestPayload: {
-        json: {
-          source: ctx.source,
-          group: ctx.group,
-          method: ctx.method,
-          variables: ctx.variables,
-          options: ctx.serverOptions,
-        },
-      },
+      /* Without it a `.raw` call over GET kept its headers as a plain object. */
+      raw: ctx.serverOptions.rawData === true,
     },
   );
 }

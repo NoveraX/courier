@@ -193,6 +193,12 @@ export type Context = RequestContext & {
   mode?: "direct" | "proxy";
   /** High-resolution timestamp when the proxy adapter received the request (performance.now()) */
   proxyReceiveAt?: number;
+  /**
+   * The id Studio was told the call arrived under — the proxy announces a
+   * call before reading its body. The call carries on under it, and a
+   * refusal before it runs ends it with `request:error`.
+   */
+  studioRequestId?: string;
   /** A direct caller's default timeout, for a call and an endpoint that name none */
   defaultTimeout?: number;
 };

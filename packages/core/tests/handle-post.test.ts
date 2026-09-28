@@ -2,38 +2,40 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPostHandler } from "../src/adapter/handle-post";
 import type { StudioHooks } from "../src/studio/hooks";
 
+/** The URL of a proxy call to `api.users.list`, as the client writes it. */
+const CALL_URL = "http://localhost/api/request?_s=api&_g=users&_m=list";
+
 function createMockExecute() {
   return vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
 }
 
-function createHooks(): StudioHooks {
+function createHooks() {
   return {
     onProxyReceive: vi.fn(),
     onProxyParse: vi.fn(),
     onProxyRespond: vi.fn(),
     onProxyOriginReject: vi.fn(),
-  } as unknown as StudioHooks;
+    onRequestStart: vi.fn(),
+    onRequestError: vi.fn(),
+  } satisfies StudioHooks;
 }
 
 function postRequest(
   body: string | FormData,
   headers: Record<string, string> = {},
+  url = CALL_URL,
 ): Request {
-  const defaultHeaders: Record<string, string> = {
-    origin: "http://localhost",
-    ...headers,
-  };
-
-  // Only set content-type for string bodies if not already set
+  const defaultHeaders: Record<string, string> = { origin: "http://localhost", ...headers };
   if (typeof body === "string" && !defaultHeaders["content-type"]) {
     defaultHeaders["content-type"] = "application/json";
   }
+  return new Request(url, { method: "POST", headers: defaultHeaders, body });
+}
 
-  return new Request("http://localhost/api/request", {
-    method: "POST",
-    headers: defaultHeaders,
-    body,
-  });
+function upload(fields: Array<[string, string | Blob]>): Request {
+  const fd = new FormData();
+  for (const [key, value] of fields) fd.append(key, value);
+  return postRequest(fd);
 }
 
 afterEach(() => {
@@ -46,7 +48,7 @@ describe("createPostHandler", () => {
     it("serves a caller that sends no Origin, which no hostile page can be", async () => {
       const execute = createMockExecute();
       const handler = createPostHandler(execute, createHooks());
-      const req = new Request("http://localhost/api/request", {
+      const req = new Request(CALL_URL, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({}),
@@ -60,83 +62,96 @@ describe("createPostHandler", () => {
 
     it("returns 403 when origin does not match request URL", async () => {
       const handler = createPostHandler(createMockExecute(), createHooks());
-      const req = postRequest(JSON.stringify({}), {
-        "content-type": "application/json",
-        origin: "http://evil.com",
-      });
 
-      const res = await handler(req);
+      const res = await handler(postRequest("{}", { origin: "http://evil.com" }));
 
       expect(res.status).toBe(403);
     });
 
-    it("does not report a rejection for a caller that sends no Origin", async () => {
+    it("emits onProxyOriginReject with mismatched origin, and nothing about the call", async () => {
       const hooks = createHooks();
       const handler = createPostHandler(createMockExecute(), hooks);
-      const req = new Request("http://localhost/api/request", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({}),
-      });
 
-      await handler(req);
-
-      expect(hooks.onProxyOriginReject).not.toHaveBeenCalled();
-    });
-
-    it("emits onProxyOriginReject with mismatched origin", async () => {
-      const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
-      const req = postRequest(JSON.stringify({}), {
-        "content-type": "application/json",
-        origin: "http://evil.com",
-      });
-
-      await handler(req);
+      await handler(postRequest("{}", { origin: "http://evil.com" }));
 
       expect(hooks.onProxyOriginReject).toHaveBeenCalledWith(
         expect.objectContaining({ origin: "http://evil.com" }),
       );
+      expect(hooks.onProxyReceive).not.toHaveBeenCalled();
+      expect(hooks.onRequestStart).not.toHaveBeenCalled();
     });
+  });
 
-    it("allows request when origin matches", async () => {
+  describe("the endpoint, named in the URL", () => {
+    it("is read from _s, _g and _m", async () => {
       const execute = createMockExecute();
       const handler = createPostHandler(execute, createHooks());
-      const req = postRequest(
-        JSON.stringify({ source: "api", method: "list" }),
-        { "content-type": "application/json" },
+
+      await handler(postRequest(JSON.stringify({ variables: { page: 1 } })));
+
+      expect(execute.mock.calls[0]![1]).toEqual({
+        source: "api",
+        group: "users",
+        method: "list",
+        variables: { page: 1 },
+        options: undefined,
+      });
+    });
+
+    it("has no group when _g is absent", async () => {
+      const execute = createMockExecute();
+      const handler = createPostHandler(execute, createHooks());
+
+      await handler(postRequest("{}", {}, "http://localhost/api/request?_s=api&_m=ping"));
+
+      expect(execute.mock.calls[0]![1]).toMatchObject({ source: "api", group: undefined, method: "ping" });
+    });
+
+    it("is required: a POST that does not name it is refused before its body is read", async () => {
+      const execute = createMockExecute();
+      const hooks = createHooks();
+      const handler = createPostHandler(execute, hooks);
+
+      const res = await handler(
+        postRequest(JSON.stringify({ variables: {} }), {}, "http://localhost/api/request?_s=api"),
       );
 
-      await handler(req);
+      expect(res.status).toBe(400);
+      expect((await res.json()).message).toBe("Missing required params: _s, _m");
+      expect(execute).not.toHaveBeenCalled();
+      expect(hooks.onRequestStart).not.toHaveBeenCalled();
+    });
 
-      expect(execute).toHaveBeenCalledOnce();
+    it("is not taken from a body that names it", async () => {
+      const execute = createMockExecute();
+      const handler = createPostHandler(execute, createHooks());
+
+      const res = await handler(
+        postRequest(
+          JSON.stringify({ source: "api", method: "list", variables: {} }),
+          {},
+          "http://localhost/api/request",
+        ),
+      );
+
+      expect(res.status).toBe(400);
+      expect(execute).not.toHaveBeenCalled();
     });
   });
 
   describe("content-type validation", () => {
-    it("returns 415 for text/plain", async () => {
+    it.each(["text/plain", "application/xml"])("returns 415 for %s", async (type) => {
       const handler = createPostHandler(createMockExecute(), createHooks());
-      const req = postRequest("plain text", { "content-type": "text/plain" });
 
-      const res = await handler(req);
+      const res = await handler(postRequest("data", { "content-type": type }));
 
       expect(res.status).toBe(415);
-      const body = await res.json();
-      expect(body.message).toContain("Unsupported Content-Type");
-    });
-
-    it("returns 415 for application/xml", async () => {
-      const handler = createPostHandler(createMockExecute(), createHooks());
-      const req = postRequest("<xml/>", { "content-type": "application/xml" });
-
-      const res = await handler(req);
-
-      expect(res.status).toBe(415);
+      expect((await res.json()).message).toContain("Unsupported Content-Type");
     });
 
     it("returns 415 when content-type is missing", async () => {
       const handler = createPostHandler(createMockExecute(), createHooks());
-      const req = new Request("http://localhost/api/request", {
+      const req = new Request(CALL_URL, {
         method: "POST",
         headers: { origin: "http://localhost" },
         body: "data",
@@ -147,92 +162,87 @@ describe("createPostHandler", () => {
       expect(res.status).toBe(415);
     });
 
-    it("accepts application/json", async () => {
-      const execute = createMockExecute();
-      const handler = createPostHandler(execute, createHooks());
-      const req = postRequest(
-        JSON.stringify({ source: "api", method: "list" }),
-        { "content-type": "application/json" },
-      );
+    it.each(["application/json", "application/json; charset=utf-8"])(
+      "accepts %s",
+      async (type) => {
+        const execute = createMockExecute();
+        const handler = createPostHandler(execute, createHooks());
 
-      const res = await handler(req);
+        const res = await handler(postRequest("{}", { "content-type": type }));
 
-      expect(res.status).toBe(200);
-      expect(execute).toHaveBeenCalledOnce();
-    });
-
-    it("accepts application/json with charset parameter", async () => {
-      const execute = createMockExecute();
-      const handler = createPostHandler(execute, createHooks());
-      const req = postRequest(
-        JSON.stringify({ source: "api", method: "list" }),
-        { "content-type": "application/json; charset=utf-8" },
-      );
-
-      const res = await handler(req);
-
-      expect(res.status).toBe(200);
-      expect(execute).toHaveBeenCalledOnce();
-    });
+        expect(res.status).toBe(200);
+        expect(execute).toHaveBeenCalledOnce();
+      },
+    );
 
     it("accepts multipart/form-data", async () => {
       const execute = createMockExecute();
       const handler = createPostHandler(execute, createHooks());
 
-      const fd = new FormData();
-      fd.append("_source", "api");
-      fd.append("_method", "upload");
-
-      const req = new Request("http://localhost/api/request", {
-        method: "POST",
-        headers: { origin: "http://localhost" },
-        body: fd,
-      });
-
-      const res = await handler(req);
+      const res = await handler(upload([["note", "hi"]]));
 
       expect(res.status).toBe(200);
       expect(execute).toHaveBeenCalledOnce();
     });
   });
 
-  describe("JSON body parsing", () => {
+  describe("JSON envelope", () => {
     it("returns 400 for invalid JSON", async () => {
       const handler = createPostHandler(createMockExecute(), createHooks());
-      const req = postRequest("not-valid-json", {
-        "content-type": "application/json",
-      });
 
-      const res = await handler(req);
+      const res = await handler(postRequest("not-valid-json"));
 
       expect(res.status).toBe(400);
-      const body = await res.json();
-      expect(body.message).toContain("Invalid JSON");
+      expect((await res.json()).message).toContain("Invalid JSON");
     });
 
     it("returns 400 for truncated JSON", async () => {
       const handler = createPostHandler(createMockExecute(), createHooks());
-      const req = postRequest('{"source": "api",', {
-        "content-type": "application/json",
-      });
 
-      const res = await handler(req);
+      const res = await handler(postRequest('{"variables": {'));
 
       expect(res.status).toBe(400);
     });
 
-    it("passes parsed JSON body to execute", async () => {
+    it.each([["[1, 2]"], ['"text"'], ["null"]])("refuses %s, which is not an envelope", async (body) => {
       const execute = createMockExecute();
       const handler = createPostHandler(execute, createHooks());
-      const payload = { source: "api", method: "list", variables: { page: 1 } };
-      const req = postRequest(JSON.stringify(payload), {
-        "content-type": "application/json",
-      });
 
-      await handler(req);
+      const res = await handler(postRequest(body));
 
-      const receivedPayload = execute.mock.calls[0]![1];
-      expect(receivedPayload).toEqual(payload);
+      expect(res.status).toBe(400);
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+    it("refuses a field beside variables and options, naming where the endpoint goes", async () => {
+      const execute = createMockExecute();
+      const handler = createPostHandler(execute, createHooks());
+
+      const res = await handler(postRequest(JSON.stringify({ variables: {}, method: "purge" })));
+
+      expect(res.status).toBe(400);
+      expect((await res.json()).message).toContain("_s, _g, _m");
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+    it("refuses an option a proxy client may not set", async () => {
+      const execute = createMockExecute();
+      const handler = createPostHandler(execute, createHooks());
+
+      const res = await handler(postRequest(JSON.stringify({ options: { prefixUrl: "http://x" } })));
+
+      expect(res.status).toBe(400);
+      expect((await res.json()).message).toContain("prefixUrl");
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+    it("passes the variables and the accepted options to execute", async () => {
+      const execute = createMockExecute();
+      const handler = createPostHandler(execute, createHooks());
+
+      await handler(postRequest(JSON.stringify({ variables: [1, 2], options: { rawData: true } })));
+
+      expect(execute.mock.calls[0]![1]).toMatchObject({ variables: [1, 2], options: { rawData: true } });
     });
 
     /**
@@ -251,10 +261,10 @@ describe("createPostHandler", () => {
         pull(controller) {
           if (sent) return controller.error(Object.assign(new Error("aborted"), { code: "ECONNRESET" }));
           sent = true;
-          controller.enqueue(new TextEncoder().encode('{"source":'));
+          controller.enqueue(new TextEncoder().encode('{"variables":'));
         },
       });
-      const req = new Request("http://localhost/api/request", {
+      const req = new Request(CALL_URL, {
         method: "POST",
         headers: { origin: "http://localhost", "content-type": "application/json" },
         body: leaving,
@@ -279,7 +289,7 @@ describe("createPostHandler", () => {
           controller.error(new Error("request body size exceeded BODY_SIZE_LIMIT of 524288"));
         },
       });
-      const req = new Request("http://localhost/api/request", {
+      const req = new Request(CALL_URL, {
         method: "POST",
         headers: { origin: "http://localhost", "content-type": "application/json" },
         body: overLimit,
@@ -300,7 +310,7 @@ describe("createPostHandler", () => {
       const execute = createMockExecute();
       const handler = createPostHandler(execute, createHooks());
       const req = postRequest(
-        '{"source":"api","method":"echo","variables":{"__proto__":{"polluted":1},"constructor":{"prototype":{"p":1}},"nested":{"prototype":1,"kept":2},"ok":1}}',
+        '{"variables":{"__proto__":{"polluted":1},"constructor":{"prototype":{"p":1}},"nested":{"prototype":1,"kept":2},"ok":1}}',
       );
 
       await handler(req);
@@ -313,393 +323,176 @@ describe("createPostHandler", () => {
     });
   });
 
-  describe("FormData body parsing", () => {
-    it("passes FormData to execute", async () => {
+  describe("multipart envelope", () => {
+    it("passes the caller's form, without the options field, as the variables", async () => {
       const execute = createMockExecute();
       const handler = createPostHandler(execute, createHooks());
 
-      const fd = new FormData();
-      fd.append("_source", "api");
-      fd.append("_method", "upload");
-      fd.append("file", new File(["content"], "test.txt"));
+      await handler(
+        upload([
+          ["_options", '{"timeout":1000}'],
+          ["file", new File(["content"], "test.txt")],
+        ]),
+      );
 
-      const req = new Request("http://localhost/api/request", {
-        method: "POST",
-        headers: { origin: "http://localhost" },
-        body: fd,
-      });
+      const { variables, options } = execute.mock.calls[0]![1] as { variables: FormData; options: unknown };
+      expect(variables).toBeInstanceOf(FormData);
+      expect([...variables.keys()]).toEqual(["file"]);
+      expect(options).toEqual({ timeout: 1000 });
+    });
 
-      await handler(req);
+    /** A Laravel or Rails form carries `_method=PUT`, and the upstream reads it. */
+    it("keeps a caller's own fields whatever their names, and a later _options field", async () => {
+      const execute = createMockExecute();
+      const handler = createPostHandler(execute, createHooks());
 
-      expect(execute.mock.calls[0]![1]).toBeInstanceOf(FormData);
+      await handler(
+        upload([
+          ["_options", "{}"],
+          ["_method", "PUT"],
+          ["_source", "other"],
+          ["_options", "not options"],
+        ]),
+      );
+
+      const { variables, method, source } = execute.mock.calls[0]![1] as {
+        variables: FormData;
+        method: string;
+        source: string;
+      };
+      expect([...variables.entries()]).toEqual([
+        ["_method", "PUT"],
+        ["_source", "other"],
+        ["_options", "not options"],
+      ]);
+      expect({ source, method }).toEqual({ source: "api", method: "list" });
     });
 
     /**
      * The JSON envelope and the GET `_o` parameter refuse an option a proxy
-     * client may not set; the multipart field dropped it and ran the call.
+     * client may not set; the multipart field is held to the same rule.
      */
-    describe("_options field", () => {
-      function upload(options: string | Blob): Request {
-        const fd = new FormData();
-        fd.append("file", new File(["content"], "test.txt"));
-        fd.append("_source", "api");
-        fd.append("_method", "upload");
-        fd.append("_options", options);
-        return new Request("http://localhost/api/request", {
-          method: "POST",
-          headers: { origin: "http://localhost" },
-          body: fd,
-        });
-      }
+    it.each([
+      ["an option only the server may set", '{"prefixUrl":"http://127.0.0.1:7379"}', "prefixUrl"],
+      ["an invalid timeout", '{"timeout":-5}', "timeout"],
+      ["text that is not JSON", "{not json", "not valid JSON"],
+      ["a value that is not an object", "[1]", "must be an object"],
+    ])("refuses %s with 400", async (_, options, reason) => {
+      const execute = createMockExecute();
+      const handler = createPostHandler(execute, createHooks());
 
-      it.each([
-        ["an option only the server may set", '{"prefixUrl":"http://127.0.0.1:7379"}', "prefixUrl"],
-        ["an invalid timeout", '{"timeout":-5}', "timeout"],
-        ["text that is not JSON", "{not json", "not valid JSON"],
-        ["a value that is not an object", "[1]", "must be an object"],
-      ])("refuses %s with 400", async (_, options, reason) => {
-        const execute = createMockExecute();
-        const handler = createPostHandler(execute, createHooks());
+      const res = await handler(upload([["_options", options], ["file", new File(["x"], "a.txt")]]));
 
-        const res = await handler(upload(options));
-
-        expect(res.status).toBe(400);
-        expect((await res.json()).message).toContain(reason);
-        expect(execute).not.toHaveBeenCalled();
-      });
-
-      it("refuses options sent as a file", async () => {
-        const execute = createMockExecute();
-        const handler = createPostHandler(execute, createHooks());
-
-        const res = await handler(upload(new Blob(['{"rawData":true}'])));
-
-        expect(res.status).toBe(400);
-        expect(execute).not.toHaveBeenCalled();
-      });
-
-      it("serves the options a proxy client may set", async () => {
-        const execute = createMockExecute();
-        const handler = createPostHandler(execute, createHooks());
-
-        const res = await handler(upload('{"rawData":true,"timeout":1000}'));
-
-        expect(res.status).toBe(200);
-        expect(execute).toHaveBeenCalledOnce();
-      });
+      expect(res.status).toBe(400);
+      expect((await res.json()).message).toContain(reason);
+      expect(execute).not.toHaveBeenCalled();
     });
 
-    it("extracts source from _source field in FormData", async () => {
-      const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
+    it("refuses options sent as a file", async () => {
+      const execute = createMockExecute();
+      const handler = createPostHandler(execute, createHooks());
 
-      const fd = new FormData();
-      fd.append("_source", "myApi");
-      fd.append("_method", "upload");
+      const res = await handler(upload([["_options", new Blob(['{"rawData":true}'])]]));
 
-      const req = new Request("http://localhost/api/request", {
-        method: "POST",
-        headers: { origin: "http://localhost" },
-        body: fd,
-      });
-
-      await handler(req);
-
-      expect(hooks.onProxyReceive).toHaveBeenCalledWith(
-        expect.objectContaining({ source: "myApi" }),
-      );
-    });
-
-    it("extracts group from _group field in FormData", async () => {
-      const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
-
-      const fd = new FormData();
-      fd.append("_source", "api");
-      fd.append("_group", "files");
-      fd.append("_method", "upload");
-
-      const req = new Request("http://localhost/api/request", {
-        method: "POST",
-        headers: { origin: "http://localhost" },
-        body: fd,
-      });
-
-      await handler(req);
-
-      expect(hooks.onProxyReceive).toHaveBeenCalledWith(
-        expect.objectContaining({ group: "files" }),
-      );
-    });
-
-    it("describes FormData variables without the proxy's routing fields", async () => {
-      const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
-
-      const fd = new FormData();
-      fd.append("note", "hello");
-      fd.append("_source", "api");
-      fd.append("_method", "upload");
-
-      const req = new Request("http://localhost/api/request", {
-        method: "POST",
-        headers: { origin: "http://localhost" },
-        body: fd,
-      });
-
-      await handler(req);
-
-      expect(hooks.onProxyParse).toHaveBeenCalledWith(
-        expect.objectContaining({ variables: { note: "hello" } }),
-      );
-    });
-  });
-
-  describe("field extraction from JSON", () => {
-    it("extracts source from JSON body", async () => {
-      const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
-      const req = postRequest(
-        JSON.stringify({ source: "myApi", method: "list" }),
-        { "content-type": "application/json" },
-      );
-
-      await handler(req);
-
-      expect(hooks.onProxyReceive).toHaveBeenCalledWith(
-        expect.objectContaining({ source: "myApi", method: "list" }),
-      );
-    });
-
-    it("extracts group from JSON body", async () => {
-      const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
-      const req = postRequest(
-        JSON.stringify({ source: "api", group: "users", method: "getAll" }),
-        { "content-type": "application/json" },
-      );
-
-      await handler(req);
-
-      expect(hooks.onProxyReceive).toHaveBeenCalledWith(
-        expect.objectContaining({ group: "users" }),
-      );
-    });
-
-    it("uses unknown as fallback when source is missing", async () => {
-      const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
-      const req = postRequest(
-        JSON.stringify({ method: "list" }),
-        { "content-type": "application/json" },
-      );
-
-      await handler(req);
-
-      expect(hooks.onProxyReceive).toHaveBeenCalledWith(
-        expect.objectContaining({ source: "unknown" }),
-      );
-    });
-
-    it("uses unknown as fallback when method is missing", async () => {
-      const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
-      const req = postRequest(
-        JSON.stringify({ source: "api" }),
-        { "content-type": "application/json" },
-      );
-
-      await handler(req);
-
-      expect(hooks.onProxyReceive).toHaveBeenCalledWith(
-        expect.objectContaining({ method: "unknown" }),
-      );
-    });
-
-    it("sets group to undefined when absent from JSON", async () => {
-      const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
-      const req = postRequest(
-        JSON.stringify({ source: "api", method: "list" }),
-        { "content-type": "application/json" },
-      );
-
-      await handler(req);
-
-      expect(hooks.onProxyReceive).toHaveBeenCalledWith(
-        expect.objectContaining({ group: undefined }),
-      );
-    });
-
-    it("extracts variables from JSON body for hooks", async () => {
-      const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
-      const req = postRequest(
-        JSON.stringify({ source: "api", method: "list", variables: { page: 1 } }),
-        { "content-type": "application/json" },
-      );
-
-      await handler(req);
-
-      expect(hooks.onProxyParse).toHaveBeenCalledWith(
-        expect.objectContaining({ variables: { page: 1 } }),
-      );
+      expect(res.status).toBe(400);
+      expect(execute).not.toHaveBeenCalled();
     });
   });
 
   describe("execute invocation", () => {
-    it("passes original request to execute", async () => {
+    it("passes the original request, POST, and a numeric receive time", async () => {
       const execute = createMockExecute();
       const handler = createPostHandler(execute, createHooks());
-      const req = postRequest(
-        JSON.stringify({ source: "api", method: "list" }),
-        { "content-type": "application/json" },
-      );
+      const req = postRequest("{}");
 
       await handler(req);
 
-      expect(execute.mock.calls[0]![0]).toBe(req);
-    });
-
-    it("passes POST as proxyMethod", async () => {
-      const execute = createMockExecute();
-      const handler = createPostHandler(execute, createHooks());
-      const req = postRequest(
-        JSON.stringify({ source: "api", method: "list" }),
-        { "content-type": "application/json" },
-      );
-
-      await handler(req);
-
-      expect(execute.mock.calls[0]![2]).toBe("POST");
-    });
-
-    it("passes a numeric proxyReceiveAt timestamp", async () => {
-      const execute = createMockExecute();
-      const handler = createPostHandler(execute, createHooks());
-      const req = postRequest(
-        JSON.stringify({ source: "api", method: "list" }),
-        { "content-type": "application/json" },
-      );
-
-      await handler(req);
-
-      const proxyReceiveAt = execute.mock.calls[0]![3];
+      const [request, , proxyMethod, proxyReceiveAt] = execute.mock.calls[0]!;
+      expect(request).toBe(req);
+      expect(proxyMethod).toBe("POST");
       expect(typeof proxyReceiveAt).toBe("number");
-      expect(proxyReceiveAt).toBeGreaterThan(0);
     });
 
     it("returns the response from execute", async () => {
       const expected = new Response("custom", { status: 201 });
-      const execute = vi.fn().mockResolvedValue(expected);
-      const handler = createPostHandler(execute, createHooks());
-      const req = postRequest(
-        JSON.stringify({ source: "api", method: "list" }),
-        { "content-type": "application/json" },
-      );
+      const handler = createPostHandler(vi.fn().mockResolvedValue(expected), createHooks());
 
-      const res = await handler(req);
+      const res = await handler(postRequest("{}"));
 
       expect(res).toBe(expected);
     });
   });
 
   describe("studio hooks", () => {
-    it("calls onProxyReceive with proxyMethod POST", async () => {
+    it("announces the call before its body is read, and runs it under the same id", async () => {
       const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
-      const req = postRequest(
-        JSON.stringify({ source: "api", method: "list" }),
-        { "content-type": "application/json" },
-      );
+      const execute = createMockExecute();
+      const handler = createPostHandler(execute, hooks);
 
-      await handler(req);
+      await handler(postRequest(JSON.stringify({ variables: { page: 1 } })));
 
-      expect(hooks.onProxyReceive).toHaveBeenCalledOnce();
+      const started = hooks.onRequestStart.mock.calls[0]![0];
+      expect(started).toMatchObject({ source: "api", group: "users", method: "list", mode: "proxy" });
+      expect(execute.mock.calls[0]![4]).toBe(started.id);
       expect(hooks.onProxyReceive).toHaveBeenCalledWith(
-        expect.objectContaining({ proxyMethod: "POST" }),
+        expect.objectContaining({ proxyMethod: "POST", requestId: started.id }),
+      );
+      expect(hooks.onProxyParse).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { page: 1 }, requestId: started.id }),
       );
     });
 
-    it("calls onProxyParse after body parsing", async () => {
+    it("ends a call refused while it is read with request:error and its status", async () => {
       const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
-      const req = postRequest(
-        JSON.stringify({ source: "api", group: "users", method: "getAll" }),
-        { "content-type": "application/json" },
-      );
+      const handler = createPostHandler(createMockExecute(), hooks, { maxBodyBytes: 8 });
 
-      await handler(req);
+      const res = await handler(postRequest(JSON.stringify({ variables: { big: "x".repeat(64) } })));
 
-      expect(hooks.onProxyParse).toHaveBeenCalledOnce();
-      expect(hooks.onProxyParse).toHaveBeenCalledWith(
+      const { id } = hooks.onRequestStart.mock.calls[0]![0];
+      expect(res.status).toBe(413);
+      expect(hooks.onRequestError).toHaveBeenCalledWith(
         expect.objectContaining({
-          source: "api",
-          group: "users",
-          method: "getAll",
+          id,
+          error: { type: "http", status: 413, message: "Request body exceeds 8 bytes" },
         }),
       );
+      expect(hooks.onProxyRespond).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 413, requestId: id }),
+      );
     });
 
-    it("calls onProxyRespond with response status", async () => {
+    it("describes an upload's variables as JSON can carry them", async () => {
+      const hooks = createHooks();
+      const handler = createPostHandler(createMockExecute(), hooks);
+
+      await handler(upload([["_options", "{}"], ["note", "hello"]]));
+
+      expect(hooks.onProxyParse).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { note: "hello" } }),
+      );
+    });
+
+    it("calls onProxyRespond with the response status", async () => {
       const hooks = createHooks();
       const execute = vi.fn().mockResolvedValue(new Response("{}", { status: 500 }));
       const handler = createPostHandler(execute, hooks);
-      const req = postRequest(
-        JSON.stringify({ source: "api", method: "list" }),
-        { "content-type": "application/json" },
-      );
 
-      await handler(req);
+      await handler(postRequest("{}"));
 
       expect(hooks.onProxyRespond).toHaveBeenCalledOnce();
       expect(hooks.onProxyRespond).toHaveBeenCalledWith(
-        expect.objectContaining({
-          proxyMethod: "POST",
-          source: "api",
-          method: "list",
-          status: 500,
-        }),
+        expect.objectContaining({ proxyMethod: "POST", source: "api", method: "list", status: 500 }),
       );
     });
 
-    it("does not throw when hooks are undefined", async () => {
-      const handler = createPostHandler(createMockExecute(), {} as StudioHooks);
-      const req = postRequest(
-        JSON.stringify({ source: "api", method: "list" }),
-        { "content-type": "application/json" },
-      );
+    it("gives the call no id while no request lifecycle is traced", async () => {
+      const execute = createMockExecute();
+      const handler = createPostHandler(execute, {});
 
-      const res = await handler(req);
+      const res = await handler(postRequest("{}"));
 
       expect(res.status).toBe(200);
-    });
-
-    it("does not call onProxyReceive on origin rejection", async () => {
-      const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
-      const req = new Request("http://localhost/api/request", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          origin: "http://evil.com",
-        },
-        body: JSON.stringify({}),
-      });
-
-      await handler(req);
-
-      expect(hooks.onProxyReceive).not.toHaveBeenCalled();
-    });
-
-    it("does not call onProxyReceive on content-type rejection", async () => {
-      const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
-      const req = postRequest("plain", { "content-type": "text/plain" });
-
-      await handler(req);
-
-      expect(hooks.onProxyReceive).not.toHaveBeenCalled();
+      expect(execute.mock.calls[0]![4]).toBeUndefined();
     });
   });
 });

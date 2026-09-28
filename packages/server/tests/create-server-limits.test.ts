@@ -53,17 +53,15 @@ async function serve(limits: Partial<CourierServerOptions>): Promise<string> {
 
 function upload(url: string, bytes: number): Promise<Response> {
   const form = new FormData();
-  form.set("_source", "api");
-  form.set("_method", "upload");
   form.set("file", new Blob([new Uint8Array(bytes)]), "big.bin");
-  return fetch(`${url}/api/request`, { method: "POST", body: form });
+  return fetch(`${url}/api/request?_s=api&_m=upload`, { method: "POST", body: form });
 }
 
 function save(url: string, text: string): Promise<Response> {
-  return fetch(`${url}/api/request`, {
+  return fetch(`${url}/api/request?_s=api&_m=save`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ source: "api", method: "save", variables: { text } }),
+    body: JSON.stringify({ variables: { text } }),
   });
 }
 

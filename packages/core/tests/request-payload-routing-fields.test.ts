@@ -1,12 +1,11 @@
 /**
- * A multipart proxy call carries its routing in the same body as the
- * caller's own fields.
+ * A multipart proxy call names its endpoint in the URL, and its body holds
+ * the call's options and the caller's own fields.
  *
- * The routing fields were appended after the caller's, and the server took
- * the first of each and then removed every field by those names. A form that
- * follows the Laravel and Rails convention of `_method=PUT` was routed to a
- * method called "PUT"; a field named `_source` or `_group` re-routed the call,
- * and one named `_options` was dropped and read as the call's options.
+ * The endpoint used to travel as fields of the same body, after the caller's.
+ * A form that follows the Laravel and Rails convention of `_method=PUT` was
+ * routed to a method called "PUT"; a field named `_source` or `_group`
+ * re-routed the call, and one named `_options` was read as the call's options.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -87,17 +86,9 @@ describe("a caller's field named like a routing field", () => {
 });
 
 describe("parseRequestPayload", () => {
-  it("takes the first field of each routing name as routing, and keeps later ones", () => {
-    const body = new FormData();
-    body.append("_source", "api");
-    body.append("_group", "");
-    body.append("_method", "upload");
-    body.append("_options", "{}");
-    body.append("_method", "PUT");
-
-    const parsed = parseRequestPayload(body);
+  it("reads a group named as the empty string as no group", () => {
+    const parsed = parseRequestPayload({ source: "api", group: "", method: "upload" });
 
     expect(parsed).toMatchObject({ source: "api", group: undefined, method: "upload" });
-    expect([...(parsed.variables as FormData).entries()]).toEqual([["_method", "PUT"]]);
   });
 });

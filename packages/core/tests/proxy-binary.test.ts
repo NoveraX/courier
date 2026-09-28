@@ -112,10 +112,10 @@ describe("the proxy's binary answer on the wire", () => {
   it("is marked by its content type alone, which a cross-origin page can read", async () => {
     proxyClient("blob");
     const answer = await createHandler().handlePost(
-      new Request("http://app.localhost/api/request", {
+      new Request("http://app.localhost/api/request?_s=files&_m=image", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ source: "files", method: "image" }),
+        body: JSON.stringify({}),
       }),
     );
     const visible = new Headers(

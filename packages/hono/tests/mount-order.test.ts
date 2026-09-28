@@ -37,10 +37,10 @@ describe("the Hono handler factories", () => {
     registerSources({ api: defineApi({ baseURL: "https://upstream.example", groups: { users } }) });
     vi.stubGlobal("fetch", async () => Response.json([{ id: 1 }]));
 
-    const response = await app.request("http://app.localhost/api/request", {
+    const response = await app.request("http://app.localhost/api/request?_s=api&_g=users&_m=list", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ source: "api", group: "users", method: "list" }),
+      body: JSON.stringify({}),
     });
 
     expect(response.status).toBe(200);

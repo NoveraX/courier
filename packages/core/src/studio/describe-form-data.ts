@@ -16,7 +16,6 @@ type DescribedValue = string | DescribedFile;
  * list of its values, in order.
  *
  * @param form - The upload's variables
- * @param omit - Fields to leave out, such as the proxy's own routing fields
  * @returns A plain object that survives JSON
  *
  * @example
@@ -26,11 +25,9 @@ type DescribedValue = string | DescribedFile;
  */
 export function describeFormData(
   form: FormData,
-  omit: ReadonlySet<string> = new Set(),
 ): Record<string, DescribedValue | DescribedValue[]> {
   const fields = new Map<string, DescribedValue | DescribedValue[]>();
   for (const [key, value] of form.entries()) {
-    if (omit.has(key)) continue;
     const described: DescribedValue =
       typeof value === "string" ? value : { name: value.name, type: value.type, size: value.size };
     const previous = fields.get(key);

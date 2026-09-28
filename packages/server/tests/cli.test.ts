@@ -159,12 +159,12 @@ describe("courier-server", () => {
     const form = new FormData();
     form.append("file", new Blob([new Uint8Array(1024)]), "a.bin");
 
-    const json = await fetch(`${url}/api/request`, {
+    const json = await fetch(`${url}/api/request?_s=api&_m=ping`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ padding: "x".repeat(200) }),
     });
-    const upload = await fetch(`${url}/api/request`, { method: "POST", body: form });
+    const upload = await fetch(`${url}/api/request?_s=api&_m=ping`, { method: "POST", body: form });
 
     expect(json.status).toBe(413);
     expect(await json.json()).toMatchObject({ message: "Request body exceeds 64 bytes" });

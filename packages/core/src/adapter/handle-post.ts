@@ -1,88 +1,64 @@
-import { describeFormData } from "../studio/describe-form-data";
 import type { StudioHooks } from "../studio/hooks";
-import type { RequestPayloadInput } from "../utils/helpers";
 import { discardBody } from "./discard-body";
+import type { ExecuteFn } from "./execute-fn";
 import type { HandlerConfig } from "./handler-config";
 import { isOriginAllowed } from "./origin-policy";
 import { errorResponse } from "./parse";
+import { announceProxyCall } from "./proxy-call-events";
 import { readEnvelope } from "./read-envelope";
+import { readRouting } from "./read-routing";
 
-/** The fields a multipart envelope carries for the proxy itself. */
-const ROUTING_FIELDS: ReadonlySet<string> = new Set(["_source", "_group", "_method", "_options"]);
-
-type ExecuteFn = (
-  request: Request,
-  payload: RequestPayloadInput,
-  proxyMethod: "GET" | "POST",
-  proxyReceiveAt: number,
-) => Promise<Response>;
-
-export function createPostHandler(execute: ExecuteFn, dt: StudioHooks, config?: HandlerConfig) {
-  return async (request: Request): Promise<Response> => {
+/**
+ * Create the proxy's POST entry point.
+ *
+ * The endpoint is named in the URL, so the call is known — and shown in
+ * Studio — before its body is read; the body carries the variables and the
+ * options alone, as JSON or as a multipart upload.
+ *
+ * @param execute - Runs the call once its envelope is read
+ * @param dt - The Studio hooks
+ * @param config - The handler's origins and body limits
+ * @returns The entry point
+ *
+ * @example
+ * ```ts
+ * const handlePost = createPostHandler(execute, studioHooks, { maxUploadBytes: 50_000_000 });
+ * ```
+ */
+export function createPostHandler(
+  execute: ExecuteFn,
+  dt: StudioHooks,
+  config?: HandlerConfig,
+): (request: Request) => Promise<Response> {
+  return async (request) => {
     const proxyReceiveAt = performance.now();
-    const origin = request.headers.get("origin");
 
     if (!isOriginAllowed(request, config?.allowedOrigins)) {
-      dt.onProxyOriginReject?.({ origin: origin ?? "", timestamp: Date.now() });
+      dt.onProxyOriginReject?.({
+        origin: request.headers.get("origin") ?? "",
+        timestamp: Date.now(),
+      });
       discardBody(request);
       return errorResponse(403, "Origin not allowed");
     }
 
-    const body = await readEnvelope(request, config);
-    if (body instanceof Response) return body;
+    const routing = readRouting(new URL(request.url));
+    if (!routing) {
+      discardBody(request);
+      return errorResponse(400, "Missing required params: _s, _m");
+    }
 
-    const proxySource = extractField(body, "_source", "source", "unknown");
-    const proxyGroup = extractOptionalField(body, "_group", "group");
-    const proxyMethod = extractField(body, "_method", "method", "unknown");
+    const call = announceProxyCall(dt, "POST", routing);
+    const read = await readEnvelope(request, config);
+    if (!read.ok) {
+      call.refused(read.status, read.message);
+      return errorResponse(read.status, read.message);
+    }
+    call.parsed(read.envelope.variables);
 
-    dt.onProxyReceive?.({
-      proxyMethod: "POST",
-      source: proxySource,
-      group: proxyGroup,
-      method: proxyMethod,
-      timestamp: Date.now(),
-    });
-
-    dt.onProxyParse?.({
-      source: proxySource,
-      group: proxyGroup,
-      method: proxyMethod,
-      /* Studio receives events as JSON, where a FormData would arrive as `{}`. */
-      variables:
-        body instanceof FormData ? describeFormData(body, ROUTING_FIELDS) : body?.variables,
-      timestamp: Date.now(),
-    });
-
-    const response = await execute(request, body, "POST", proxyReceiveAt);
-
-    dt.onProxyRespond?.({
-      proxyMethod: "POST",
-      source: proxySource,
-      group: proxyGroup,
-      method: proxyMethod,
-      status: response.status,
-      timestamp: Date.now(),
-    });
-
+    const payload = { ...routing, ...read.envelope };
+    const response = await execute(request, payload, "POST", proxyReceiveAt, call.requestId);
+    call.responded(response.status);
     return response;
   };
-}
-
-function extractField(
-  body: RequestPayloadInput,
-  formKey: string,
-  jsonKey: string,
-  fallback: string,
-): string {
-  if (body instanceof FormData) return String(body.get(formKey) ?? fallback);
-  return ((body as Record<string, unknown>)?.[jsonKey] as string) ?? fallback;
-}
-
-function extractOptionalField(
-  body: RequestPayloadInput,
-  formKey: string,
-  jsonKey: string,
-): string | undefined {
-  if (body instanceof FormData) return (body.get(formKey) as string | null) ?? undefined;
-  return (body as Record<string, unknown>)?.[jsonKey] as string | undefined;
 }

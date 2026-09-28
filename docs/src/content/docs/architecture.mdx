@@ -62,9 +62,9 @@ The browser sends requests through your server, which hides API keys and bypasse
 │  createProxyCaller<typeof api>("api")                        │
 │       │                                                      │
 │       ▼                                                      │
-│  fetch("/api/request", {                                     │
+│  fetch("/api/request?_s=api&_g=users&_m=getAll", {           │
 │    method: "POST",                                           │
-│    body: { source, group, method, variables }                │
+│    body: { variables, options }                              │
 │  })                                                          │
 └──────────────────┬───────────────────────────────────────────┘
                    │  POST /api/request

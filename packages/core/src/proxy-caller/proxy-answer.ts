@@ -9,22 +9,30 @@
 import { HTTPError } from "../errors";
 import { isBodilessStatus } from "../http-client/response";
 import { isAbortError } from "../utils/abort";
-import { parseRequestPayload, type RequestPayload } from "../utils/request-payload";
 import { isWireBody, readWireBody } from "../utils/wire-body";
 
-type ProxyRequestPayload = { body?: FormData; json?: Partial<RequestPayload> };
-
+/**
+ * The error a failed proxy call rejects with.
+ *
+ * @param status - The proxy's status
+ * @param headers - The proxy's headers
+ * @param responseData - The proxy's answer, read
+ * @param raw - Whether the call asked for `.raw`, whose answer wraps the data
+ * @returns The error, carrying the upstream's own data
+ *
+ * @example
+ * ```ts
+ * throw buildHttpError(404, response.headers, await readErrorResponse(response), false);
+ * ```
+ */
 export function buildHttpError(
   status: number,
   headers: Headers,
   responseData: unknown,
-  requestPayload: ProxyRequestPayload,
+  raw: boolean,
 ): HTTPError {
-  const { options } = parseRequestPayload(requestPayload.body || requestPayload.json);
-  const { rawData } = options ?? {};
-
   const data =
-    rawData && typeof responseData === "object" && responseData !== null && "data" in responseData
+    raw && typeof responseData === "object" && responseData !== null && "data" in responseData
       ? (responseData as { data: unknown }).data
       : responseData;
 
@@ -43,21 +51,20 @@ export async function readErrorResponse(response: Response): Promise<unknown> {
  * Read the proxy's answer into what the call resolves to.
  *
  * @param response - The proxy's HTTP response
- * @param requestPayload - The request, for its `rawData` option
+ * @param raw - Whether the call asked for `.raw`
  * @param stream - Whether the call asked for the unread body
  * @returns The data; with `.raw`, the response around it
  * @throws HTTPError when the proxy answered with an error status
  */
 export async function readProxyAnswer(
   response: Response,
-  requestPayload: ProxyRequestPayload,
+  raw: boolean,
   stream: boolean,
 ): Promise<unknown> {
   if (!response.ok) {
     const responseData = await readErrorResponse(response);
-    throw buildHttpError(response.status, response.headers, responseData, requestPayload);
+    throw buildHttpError(response.status, response.headers, responseData, raw);
   }
-  const raw = wantsRaw(requestPayload);
   /* The unread body, or with `.raw` the response around it — as in direct
      mode, where handing back the whole Response was a third shape. */
   if (stream) {
@@ -94,11 +101,6 @@ export function asProxyFailure(error: unknown, signal?: AbortSignal | null): unk
     { status: 0, headers: new Headers(), data: { success: false, message: error.message } },
     { cause: error },
   );
-}
-
-function wantsRaw(requestPayload: ProxyRequestPayload): boolean {
-  const { options } = parseRequestPayload(requestPayload.body || requestPayload.json);
-  return options?.rawData === true;
 }
 
 /** `.raw` promises `Headers`; over the wire they travel as a plain object. */

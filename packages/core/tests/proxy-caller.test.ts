@@ -11,6 +11,18 @@ function mockFetchResponse(data: unknown, status = 200) {
   });
 }
 
+/** What call `index` named in its URL, and what its body carried. */
+function sent(index = 0) {
+  const [url, init] = fetchSpy.mock.calls[index]!;
+  const query = new URL(String(url), "http://localhost").searchParams;
+  return {
+    source: query.get("_s"),
+    group: query.get("_g") ?? undefined,
+    method: query.get("_m"),
+    body: typeof init.body === "string" ? JSON.parse(init.body) : init.body,
+  };
+}
+
 beforeEach(() => {
   fetchSpy = vi.fn().mockResolvedValue(mockFetchResponse({}));
   vi.stubGlobal("fetch", fetchSpy);
@@ -36,15 +48,12 @@ describe("createProxyCaller", () => {
       expect(fetchSpy).toHaveBeenCalledTimes(1);
       expect(fetchSpy.mock.calls[0]![1].method).toBe("POST");
 
-      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
-      expect(body).toEqual(
-        expect.objectContaining({
-          source: "api",
-          group: "users",
-          method: "getUser",
-          variables: { id: 1 },
-        }),
-      );
+      expect(sent()).toEqual({
+        source: "api",
+        group: "users",
+        method: "getUser",
+        body: { variables: { id: 1 }, options: {} },
+      });
     });
 
     it("sends group and method from dot notation", async () => {
@@ -53,15 +62,12 @@ describe("createProxyCaller", () => {
       const client = createProxyCaller("api") as any;
       await client.auth.login({ email: "test@test.com" });
 
-      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
-      expect(body).toEqual(
-        expect.objectContaining({
-          source: "api",
-          group: "auth",
-          method: "login",
-          variables: { email: "test@test.com" },
-        }),
-      );
+      expect(sent()).toEqual({
+        source: "api",
+        group: "auth",
+        method: "login",
+        body: { variables: { email: "test@test.com" }, options: {} },
+      });
     });
 
     it("sends endpoint without variables", async () => {
@@ -70,20 +76,13 @@ describe("createProxyCaller", () => {
       const client = createProxyCaller("api") as any;
       await client.users.list();
 
-      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
-      expect(body).toEqual(
-        expect.objectContaining({
-          source: "api",
-          group: "users",
-          method: "list",
-        }),
-      );
-      expect(body.variables).toBeUndefined();
+      expect(sent()).toMatchObject({ source: "api", group: "users", method: "list" });
+      expect(sent().body.variables).toBeUndefined();
     });
   });
 
   describe("FormData payload", () => {
-    it("sends FormData with meta fields", async () => {
+    it("names the endpoint in the URL and sends the form with its options first", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
       const fd = new FormData();
@@ -93,14 +92,14 @@ describe("createProxyCaller", () => {
       await client.files.upload(fd);
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
-      const url = fetchSpy.mock.calls[0]![0];
-      expect(url).toMatch(/\/api\/request$/);
+      const url = new URL(String(fetchSpy.mock.calls[0]![0]));
+      expect(url.pathname).toBe("/api/request");
+      expect(sent()).toMatchObject({ source: "api", group: "files", method: "upload" });
 
-      const body = fetchSpy.mock.calls[0]![1].body as FormData;
+      const body = sent().body as FormData;
       expect(body).toBeInstanceOf(FormData);
-      expect(body.get("_source")).toBe("api");
-      expect(body.get("_method")).toBe("upload");
-      expect(body.has("file")).toBe(true);
+      expect([...body.keys()]).toEqual(["_options", "file"]);
+      expect(body.get("_options")).toBe("{}");
     });
   });
 
@@ -115,7 +114,7 @@ describe("createProxyCaller", () => {
 
       // resolveProxyPath returns an absolute URL — assert by suffix so the
       // test is independent of the test runner's location.host.
-      expect(fetchSpy.mock.calls[0]![0]).toMatch(/\/api\/custom-route$/);
+      expect(new URL(String(fetchSpy.mock.calls[0]![0])).pathname).toBe("/api/custom-route");
     });
 
     it("applies default timeout via AbortSignal", async () => {
@@ -326,14 +325,7 @@ describe("createProxyCaller", () => {
       const client = createProxyCaller("api") as any;
       await client.healthCheck();
 
-      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
-      expect(body).toEqual(
-        expect.objectContaining({
-          source: "api",
-          method: "healthCheck",
-        }),
-      );
-      expect(body.group).toBeUndefined();
+      expect(sent()).toMatchObject({ source: "api", group: undefined, method: "healthCheck" });
     });
 
     it("sends variables in flat call", async () => {
@@ -342,14 +334,11 @@ describe("createProxyCaller", () => {
       const client = createProxyCaller("api") as any;
       await client.search({ query: "test" });
 
-      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
-      expect(body).toEqual(
-        expect.objectContaining({
-          source: "api",
-          method: "search",
-          variables: { query: "test" },
-        }),
-      );
+      expect(sent()).toMatchObject({
+        source: "api",
+        method: "search",
+        body: { variables: { query: "test" } },
+      });
     });
 
     it(".raw works on flat calls", async () => {
@@ -358,9 +347,8 @@ describe("createProxyCaller", () => {
       const client = createProxyCaller("api") as any;
       await client.raw.healthCheck();
 
-      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
-      expect(body.method).toBe("healthCheck");
-      expect(body.options).toEqual(expect.objectContaining({ rawData: true }));
+      expect(sent().method).toBe("healthCheck");
+      expect(sent().body.options).toEqual(expect.objectContaining({ rawData: true }));
     });
 
     it(".with() works on flat calls", async () => {
@@ -385,15 +373,11 @@ describe("createProxyCaller", () => {
 
       // Flat: client.users() → endpointKey = "users"
       await client.users();
-      const body1 = JSON.parse(fetchSpy.mock.calls[0]![1].body);
-      expect(body1.method).toBe("users");
-      expect(body1.group).toBeUndefined();
+      expect(sent(0)).toMatchObject({ method: "users", group: undefined });
 
       // Nested: client.users.getAll() → group="users", method="getAll" → endpointKey = "users:getAll"
       await client.users.getAll();
-      const body2 = JSON.parse(fetchSpy.mock.calls[1]![1].body);
-      expect(body2.method).toBe("getAll");
-      expect(body2.group).toBe("users");
+      expect(sent(1)).toMatchObject({ method: "getAll", group: "users" });
     });
 
     it("method-level .raw() on flat call", async () => {
@@ -402,9 +386,8 @@ describe("createProxyCaller", () => {
       const client = createProxyCaller("api") as any;
       await client.healthCheck.raw();
 
-      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
-      expect(body.method).toBe("healthCheck");
-      expect(body.options).toEqual(expect.objectContaining({ rawData: true }));
+      expect(sent().method).toBe("healthCheck");
+      expect(sent().body.options).toEqual(expect.objectContaining({ rawData: true }));
     });
 
     it("method-level .with()() on flat call", async () => {
@@ -424,9 +407,8 @@ describe("createProxyCaller", () => {
       const client = createProxyCaller("api") as any;
       await client.healthCheck.raw.with({ timeout: 1500 })();
 
-      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
-      expect(body.method).toBe("healthCheck");
-      expect(body.options).toEqual(expect.objectContaining({ rawData: true }));
+      expect(sent().method).toBe("healthCheck");
+      expect(sent().body.options).toEqual(expect.objectContaining({ rawData: true }));
     });
 
     it("client.raw.with().method() — combined at client level", async () => {
@@ -435,9 +417,8 @@ describe("createProxyCaller", () => {
       const client = createProxyCaller("api") as any;
       await client.raw.with({ timeout: 3000 }).healthCheck();
 
-      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
-      expect(body.method).toBe("healthCheck");
-      expect(body.options).toEqual(expect.objectContaining({ rawData: true }));
+      expect(sent().method).toBe("healthCheck");
+      expect(sent().body.options).toEqual(expect.objectContaining({ rawData: true }));
     });
 
     it("client.with().raw.group.method() — combined at client level for groups", async () => {
@@ -446,10 +427,8 @@ describe("createProxyCaller", () => {
       const client = createProxyCaller("api") as any;
       await client.with({ timeout: 3000 }).raw.users.getAll();
 
-      const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
-      expect(body.method).toBe("getAll");
-      expect(body.group).toBe("users");
-      expect(body.options).toEqual(expect.objectContaining({ rawData: true }));
+      expect(sent()).toMatchObject({ method: "getAll", group: "users" });
+      expect(sent().body.options).toEqual(expect.objectContaining({ rawData: true }));
     });
   });
 

@@ -255,7 +255,7 @@ describe("executeRequest", () => {
   });
 
   describe("FormData input", () => {
-    it("parses request options from FormData", async () => {
+    it("runs a call whose variables are a form", async () => {
       const responseData = { ok: true };
       fetchSpy.mockResolvedValue(mockFetchResponse(responseData));
 
@@ -264,10 +264,9 @@ describe("executeRequest", () => {
       const sources = { items: source };
 
       const fd = new FormData();
-      fd.append("_source", "items");
-      fd.append("_method", "list");
+      fd.append("name", "a");
 
-      const result = await executeRequest(sources, fd);
+      const result = await executeRequest(sources, { source: "items", method: "list", variables: fd });
       expect(listFn).toHaveBeenCalled();
       expect(result).toEqual(responseData);
     });

@@ -40,7 +40,7 @@ function createPostRequest(
   const {
     contentType = "application/json",
     origin = "http://localhost:3000",
-    url = "http://localhost:3000/api/request",
+    url = "http://localhost:3000/api/request?_s=api&_m=list",
   } = options;
 
   const headers: Record<string, string> = {};
@@ -119,7 +119,7 @@ describe("apiRoute", () => {
       mockHandlePost.mockResolvedValue(new Response("{}"));
 
       const { POST } = apiRoute();
-      const req = createPostRequest(JSON.stringify({ source: "api", method: "list" }));
+      const req = createPostRequest(JSON.stringify({}));
 
       await POST(req);
 
@@ -131,7 +131,7 @@ describe("apiRoute", () => {
       mockHandlePost.mockResolvedValue(expectedResponse);
 
       const { POST } = apiRoute();
-      const req = createPostRequest(JSON.stringify({ source: "api", method: "list" }));
+      const req = createPostRequest(JSON.stringify({}));
 
       const result = await POST(req);
       expect(result).toBe(expectedResponse);
@@ -153,7 +153,7 @@ describe("apiRoute", () => {
       mockHandlePost.mockResolvedValue(new Response("{}"));
 
       const { POST } = apiRoute();
-      const req = createPostRequest(JSON.stringify({ source: "api", method: "list" }));
+      const req = createPostRequest(JSON.stringify({}));
 
       await POST(req);
 

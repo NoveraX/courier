@@ -34,20 +34,18 @@ afterEach(() => {
 
 function upload(group: string | undefined): Request {
   const body = new FormData();
-  body.append("file", new File(["x"], "a.png"));
-  body.append("_source", "api");
-  if (group !== undefined) body.append("_group", group);
-  body.append("_method", "avatar");
   body.append("_options", "{}");
-  return new Request("http://app.localhost/api/request", { method: "POST", body });
+  body.append("file", new File(["x"], "a.png"));
+  const query = group === undefined ? "_s=api&_m=avatar" : `_s=api&_g=${group}&_m=avatar`;
+  return new Request(`http://app.localhost/api/request?${query}`, { method: "POST", body });
 }
 
 describe("an upload to an ungrouped endpoint behind a boundary", () => {
-  it("goes through when the body names an empty group", async () => {
+  it("goes through when the URL names an empty group", async () => {
     expect((await createHandler().handlePost(upload(""))).status).toBe(200);
   });
 
-  it("goes through when the body names no group", async () => {
+  it("goes through when the URL names no group", async () => {
     expect((await createHandler().handlePost(upload(undefined))).status).toBe(200);
   });
 });

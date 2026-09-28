@@ -1,20 +1,34 @@
 import type { StudioHooks } from "../studio/hooks";
-import type { RequestPayloadInput } from "../utils/helpers";
 import { parseWireVariables, WIRE_VARIABLES_KEY } from "../utils/wire-variables";
+import type { ExecuteFn } from "./execute-fn";
 import type { HandlerConfig } from "./handler-config";
 import { isOriginAllowed } from "./origin-policy";
 import { errorResponse } from "./parse";
+import { announceProxyCall, type ProxyCallEvents } from "./proxy-call-events";
+import { readRouting } from "./read-routing";
 import { parseWireOptionsJson } from "./wire-options";
 
-type ExecuteFn = (
-  request: Request,
-  payload: RequestPayloadInput,
-  proxyMethod: "GET" | "POST",
-  proxyReceiveAt: number,
-) => Promise<Response>;
-
-export function createGetHandler(execute: ExecuteFn, dt: StudioHooks, config?: HandlerConfig) {
-  return async (request: Request): Promise<Response> => {
+/**
+ * Create the proxy's GET entry point, for reads a CDN or the browser may
+ * cache: the endpoint, its variables (`_v`) and its options (`_o`) all travel
+ * in the URL.
+ *
+ * @param execute - Runs the call once its URL is read
+ * @param dt - The Studio hooks
+ * @param config - The handler's origins
+ * @returns The entry point
+ *
+ * @example
+ * ```ts
+ * const handleGet = createGetHandler(execute, studioHooks, { allowedOrigins });
+ * ```
+ */
+export function createGetHandler(
+  execute: ExecuteFn,
+  dt: StudioHooks,
+  config?: HandlerConfig,
+): (request: Request) => Promise<Response> {
+  return async (request) => {
     const proxyReceiveAt = performance.now();
 
     /* The other three transports check this and GET did not, so a third-party
@@ -29,47 +43,25 @@ export function createGetHandler(execute: ExecuteFn, dt: StudioHooks, config?: H
     }
 
     const url = new URL(request.url);
-    const source = url.searchParams.get("_s");
-    const group = url.searchParams.get("_g") || undefined;
-    const method = url.searchParams.get("_m");
+    const routing = readRouting(url);
+    if (!routing) return errorResponse(400, "Missing required params: _s, _m");
 
-    if (!source || !method) {
-      return errorResponse(400, "Missing required params: _s, _m");
-    }
-
+    const call = announceProxyCall(dt, "GET", routing);
     const decoded = parseWireVariables(url.searchParams.get(WIRE_VARIABLES_KEY));
-    if (!decoded.ok) return errorResponse(400, decoded.reason);
-    const parsedVars = decoded.variables;
-
-    dt.onProxyReceive?.({ proxyMethod: "GET", source, group, method, timestamp: Date.now() });
-
+    if (!decoded.ok) return refuse(call, decoded.reason);
     const accepted = parseWireOptionsJson(url.searchParams.get("_o"));
-    if (!accepted.ok) return errorResponse(400, accepted.reason);
+    if (!accepted.ok) return refuse(call, accepted.reason);
+    call.parsed(decoded.variables);
 
-    dt.onProxyParse?.({ source, group, method, variables: parsedVars, timestamp: Date.now() });
-
-    const response = await execute(
-      request,
-      {
-        source,
-        group,
-        method,
-        variables: parsedVars,
-        options: accepted.options,
-      },
-      "GET",
-      proxyReceiveAt,
-    );
-
-    dt.onProxyRespond?.({
-      proxyMethod: "GET",
-      source,
-      group,
-      method,
-      status: response.status,
-      timestamp: Date.now(),
-    });
-
+    const payload = { ...routing, variables: decoded.variables, options: accepted.options };
+    const response = await execute(request, payload, "GET", proxyReceiveAt, call.requestId);
+    call.responded(response.status);
     return response;
   };
+}
+
+/** Refuse a call whose URL does not read, ending it for Studio as well. */
+function refuse(call: ProxyCallEvents, reason: string): Response {
+  call.refused(400, reason);
+  return errorResponse(400, reason);
 }

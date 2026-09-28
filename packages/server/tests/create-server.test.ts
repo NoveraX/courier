@@ -176,10 +176,10 @@ describe("createCourierServer", () => {
         "X-Forwarded-Host": "app.example.com",
       };
 
-      const post = await fetch(`${server.url}/api/request`, {
+      const post = await fetch(`${server.url}/api/request?_s=api&_g=test&_m=missing`, {
         method: "POST",
         headers: { ...fromOwnPage, "Content-Type": "application/json" },
-        body: JSON.stringify({ source: "api", group: "test", method: "missing" }),
+        body: JSON.stringify({}),
       });
       const get = await fetch(`${server.url}/api/request?_s=api&_g=test&_m=missing`, {
         headers: fromOwnPage,
@@ -192,7 +192,7 @@ describe("createCourierServer", () => {
     it("still refuses another site's page behind the same proxy", async () => {
       server = await startServer();
 
-      const res = await fetch(`${server.url}/api/request`, {
+      const res = await fetch(`${server.url}/api/request?_s=api&_g=test&_m=missing`, {
         method: "POST",
         headers: {
           Origin: "https://evil.example",
@@ -200,7 +200,7 @@ describe("createCourierServer", () => {
           "X-Forwarded-Host": "app.example.com",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ source: "api", group: "test", method: "missing" }),
+        body: JSON.stringify({}),
       });
 
       expect(res.status).toBe(403);

@@ -111,10 +111,10 @@ afterEach(async () => {
 
 function proxy(method: "redir" | "send", variables: Record<string, unknown>): Promise<Response> {
   return createHandler().handlePost(
-    new Request("http://app.localhost/api/request", {
+    new Request(`http://app.localhost/api/request?_s=api&_g=misc&_m=${method}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ source: "api", group: "misc", method, variables }),
+      body: JSON.stringify({ variables }),
     }),
   );
 }

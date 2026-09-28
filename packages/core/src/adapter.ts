@@ -1,5 +1,6 @@
 import { discardBody } from "./adapter/discard-body";
 import { gateEntry } from "./adapter/entry-gate";
+import type { ExecuteFn } from "./adapter/execute-fn";
 import { createGetHandler } from "./adapter/handle-get";
 import { createPostHandler } from "./adapter/handle-post";
 import { createSSEHandler } from "./adapter/handle-sse";
@@ -11,7 +12,6 @@ import type { SSEConnectionRegistry } from "./adapter/sse-types";
 import { prepareSources } from "./sources";
 import { studioHooks } from "./studio";
 import { executeRequest } from "./utils/execute";
-import type { RequestPayloadInput } from "./utils/helpers";
 
 export { buildSSECorsHeaders } from "./adapter/format-sse";
 export { type ClientConnection, handleWhileConnected } from "./adapter/handle-while-connected";
@@ -67,18 +67,14 @@ export function createHandler(config?: HandlerConfig): AdapterHandler {
   if (config?.sources !== undefined) {
     prepareSources(config.sources, "createHandler", "createHandler({ sources: { api } })");
   }
-  const execute = (
-    request: Request,
-    payload: RequestPayloadInput,
-    proxyMethod: "GET" | "POST",
-    proxyReceiveAt: number,
-  ) =>
+  const execute: ExecuteFn = (request, payload, proxyMethod, proxyReceiveAt, requestId) =>
     executeRequest(servedSources(config?.sources), payload, {
       req: request,
       res: new Response(),
       proxyMethod,
       mode: "proxy",
       proxyReceiveAt,
+      studioRequestId: requestId,
     });
 
   const dt = studioHooks;

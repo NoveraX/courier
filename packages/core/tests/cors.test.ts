@@ -41,7 +41,7 @@ beforeEach(async () => {
   app = createServer(async (req, res) => {
     await sendWebResponse(await handler.handle(toWebRequest(req, res)), res);
   });
-  proxyURL = `${await listen(app)}/api/request`;
+  proxyURL = `${await listen(app)}/api/request?_s=api&_m=list`;
 });
 
 afterEach(async () => {
@@ -68,7 +68,7 @@ function postFrom(origin: string, site: string): Promise<Response> {
   return fetch(proxyURL, {
     method: "POST",
     headers: { Origin: origin, "Sec-Fetch-Site": site, "Content-Type": "application/json" },
-    body: JSON.stringify({ source: "api", method: "list" }),
+    body: JSON.stringify({}),
   });
 }
 
@@ -139,7 +139,7 @@ describe("a call that is not cross-origin", () => {
     const response = await fetch(proxyURL, {
       method: "POST",
       headers: { "Sec-Fetch-Site": "same-origin", "Content-Type": "application/json" },
-      body: JSON.stringify({ source: "api", method: "list" }),
+      body: JSON.stringify({}),
     });
 
     expect(response.status).toBe(200);

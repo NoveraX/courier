@@ -51,10 +51,10 @@ describe("headers declared on the source", () => {
     registerSources({ api: sourceWithHeaders({ "x-api-key": "server-secret" }) });
 
     const response = await createHandler().handlePost(
-      new Request("http://app.localhost/api/request", {
+      new Request("http://app.localhost/api/request?_s=api&_g=items&_m=list", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ source: "api", group: "items", method: "list" }),
+        body: JSON.stringify({}),
       }),
     );
 

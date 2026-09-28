@@ -54,15 +54,10 @@ describe("route handlers without AbortSignal.any", () => {
 
   it("forward a call that sets a timeout", async () => {
     vi.stubGlobal("fetch", async () => Response.json([{ id: 1 }]));
-    const request = new NextRequest("http://app.localhost/api/request", {
+    const request = new NextRequest("http://app.localhost/api/request?_s=api&_g=users&_m=list", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        source: "api",
-        group: "users",
-        method: "list",
-        options: { timeout: 5000 },
-      }),
+      body: JSON.stringify({ options: { timeout: 5000 } }),
     });
 
     const response = await apiRoute().POST(request);

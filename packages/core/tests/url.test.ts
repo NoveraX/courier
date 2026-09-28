@@ -134,9 +134,10 @@ describe("a FormData that fills a path parameter", () => {
   });
 
   it("is sent again whole when the call is retried", async () => {
+    /* An upload is a write, sent again only when the policy allows repeats. */
     const api = defineApi({
       baseURL: upstream.origin,
-      middleware: [retryMiddleware({ limit: 1, backoff: 0, retryOn: () => true })],
+      middleware: [retryMiddleware({ limit: 1, backoff: 0, retryOn: () => true, mutations: true })],
       groups: { items },
     });
 

@@ -124,6 +124,15 @@ export type MixedClient<
   };
 
 /**
+ * A source's own endpoints, as the source declares them.
+ *
+ * Intersected with `EndpointRecord` to satisfy the client types, they gained
+ * a string index signature, and the client a member of every name.
+ */
+type OwnEndpointsOf<TSource> =
+  Omit<TSource, "options"> extends infer TEndpoints extends EndpointRecord ? TEndpoints : never;
+
+/**
  * Infer the correct client type from a source definition type.
  * Used by createProxyCaller where the source type is passed as a generic.
  *
@@ -136,8 +145,8 @@ export type InferClient<TSource> = TSource extends {
 }
   ? [keyof Omit<TSource, "options">] extends [never]
     ? TypedClient<TSource & DefinedApi<TGroups>>
-    : MixedClient<TGroups, Omit<TSource, "options"> & EndpointRecord>
-  : FlatClient<Omit<TSource, "options"> & EndpointRecord>;
+    : MixedClient<TGroups, OwnEndpointsOf<TSource>>
+  : FlatClient<OwnEndpointsOf<TSource>>;
 
 /** Function that performs the actual request (implemented differently for direct/proxy modes) */
 export type ExecuteBackend = (

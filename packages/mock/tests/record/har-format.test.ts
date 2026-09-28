@@ -4,7 +4,8 @@ import type { AddressInfo } from "node:net";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { fixturesToHar } from "../../src/record/fixture";
+import type { Fixture } from "../../src/record/fixture";
+import { fixturesToHar, harToFixtures } from "../../src/record/fixture";
 import { createRecorder } from "../../src/record/recorder";
 
 const { endpoint } = courier();
@@ -61,3 +62,31 @@ describe("the HAR a recorder exports", () => {
     expect(exported).toEqual(converted);
   });
 });
+
+const HAND_WRITTEN: Fixture = {
+  group: "users",
+  method: "getById",
+  variables: { id: 1 },
+  response: { status: 200, data: { id: 1 }, headers: {} },
+  duration: 2,
+  recordedAt: "2026-01-01T00:00:00.000Z",
+};
+
+describe("a HAR entry's request", () => {
+  it("is the request the fixture was recorded as, with no body the recorder did not see", () => {
+    const [entry] = fixturesToHar([
+      { ...HAND_WRITTEN, request: { method: "GET", url: "https://api.example/users/1" } },
+    ]).log.entries;
+
+    expect(entry?.request).toEqual({ method: "GET", url: "https://api.example/users/1", headers: [] });
+    expect(entry?._courier.variables).toEqual({ id: 1 });
+  });
+
+  it("names the call of a fixture that names no request, and reads back as one again", () => {
+    const har = fixturesToHar([HAND_WRITTEN]);
+
+    expect(har.log.entries[0]?.request.url).toBe("courier:users/getById");
+    expect(harToFixtures(har)).toEqual([HAND_WRITTEN]);
+  });
+});
+

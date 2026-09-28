@@ -135,6 +135,20 @@ describe("recording through a Courier proxy", () => {
     expect((failure as HTTPError).status).toBe(404);
     expect(recorder.getFixtures().map((f) => f.response.status)).toEqual([200, 404]);
   });
+
+  it("names the proxy request with the call it routes, as the proxy caller sends it", async () => {
+    const recorder = createRecorder({
+      source: usersApi("http://placeholder.invalid"),
+      proxy: { url: `${proxyUrl}/api/request`, source: "api" },
+    });
+
+    await recorder.client.users.getAll();
+
+    expect(recorder.getFixtures()[0]?.request).toEqual({
+      method: "POST",
+      url: `${proxyUrl}/api/request?_s=api&_g=users&_m=getAll`,
+    });
+  });
 });
 
 describe("recording modes", () => {

@@ -13,13 +13,15 @@ export interface GroupDeclaration {
   name: string | null;
   exported: boolean;
   endpoints: ObjectExpression;
+  /** The object literal the definer is called with, `endpoints` among its properties. */
+  config: ObjectExpression;
   /** The `prefix` it declares — "" when none — or `null` when it is not a string Studio can read. */
   prefix: string | null;
 }
 
-function endpointsOf(
+/* The object literal a definer is called with. */
+function configOf(
   init: Expression | null,
-  key = "endpoints",
   definers: ReadonlySet<string> = DEFINERS,
 ): ObjectExpression | null {
   if (init === null) return null;
@@ -29,7 +31,16 @@ function endpointsOf(
   const [config] = call.arguments;
   if (config === undefined || config.type === "SpreadElement") return null;
   const object = unwrapExpression(config);
-  if (object.type !== "ObjectExpression") return null;
+  return object.type === "ObjectExpression" ? object : null;
+}
+
+function endpointsOf(
+  init: Expression | null,
+  key = "endpoints",
+  definers: ReadonlySet<string> = DEFINERS,
+): ObjectExpression | null {
+  const object = configOf(init, definers);
+  if (object === null) return null;
   for (const property of object.properties) {
     if (property.type !== "Property" || property.computed) continue;
     if (propertyKeyName(property.key) !== key) continue;
@@ -87,9 +98,12 @@ function declarationsIn(program: Program): GroupDeclaration[] {
     if (declaration?.type !== "VariableDeclaration") continue;
     for (const declarator of declaration.declarations) {
       const endpoints = endpointsOf(declarator.init);
+      const config = configOf(declarator.init);
       const name = declarator.id.type === "Identifier" ? declarator.id.name : null;
       const prefix = prefixOf(declarator.init, constants);
-      if (endpoints !== null) found.push({ statement, name, exported, endpoints, prefix });
+      if (endpoints !== null && config !== null) {
+        found.push({ statement, name, exported, endpoints, config, prefix });
+      }
     }
   }
   return found;

@@ -15,6 +15,7 @@ import { findGroupDeclaration } from "../manage/group-declaration";
 import { ownValue } from "../own-value";
 import { mergeImports } from "./merge-imports";
 import { buildFile, resolveStatus } from "./merged-file";
+import { mergedShell } from "./merged-shell";
 import { parseExistingGroup } from "./parse-existing";
 import { type MergedEntry, placeUnderPrefix } from "./place-under-prefix";
 import { renameBase, usesBase } from "./rename-base";
@@ -65,15 +66,25 @@ export function mergeGroupFile(
   const preamble = firstStream
     ? withStreamBuilder(existing.preamble)
     : mergePreamble(existing.preamble, generated.preamble);
+  /* The declaration keeps the options the user added; the generator's come from the spec. */
+  const shell = mergedShell(existingContent, generatedContent) ?? { ...generated, kept: [] };
+  for (const option of shell.kept) {
+    changes.push({ type: "preserved", target: `option:${option}`, detail: "added by hand" });
+  }
+  const header = withPrefix(shell.header, generated.prefix, prefix);
   /* A name the file imported that nothing merged uses any more goes with the code that used it. */
-  const code = [...preamble, ...generated.header, ...endpointLines, ...existing.trailingCode].join(
-    "\n",
-  );
-  const importLines = mergeImports(existing.imports, generated.imports, changes, code);
+  const code = [
+    ...preamble,
+    ...header,
+    ...endpointLines,
+    ...shell.footer,
+    ...existing.trailingCode,
+  ];
+  const importLines = mergeImports(existing.imports, generated.imports, changes, code.join("\n"));
   const content = buildFile(
     importLines,
     preamble,
-    { ...generated, header: withPrefix(generated.header, generated.prefix, prefix) },
+    { ...generated, header, footer: shell.footer },
     endpointLines,
     existing.trailingCode,
   );

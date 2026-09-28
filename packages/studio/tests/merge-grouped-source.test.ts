@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import type { GeneratedFile, GenerateOptions } from "../src/apis/generator/types";
 
 import { generateCode } from "../src/apis/generator/generate-code";
+import { mergeGroupFile } from "../src/apis/merge/merge-group";
 import { previewUpdate } from "../src/apis/merge/update-flow";
 import { parseSpec } from "../src/apis/parser/parse-spec";
 
@@ -91,5 +92,37 @@ describe("a source that changes shape", () => {
     expect(result.files.find((file) => file.path === SOURCE)?.content).toBe(
       contentOf(flat, SOURCE),
     );
+  });
+});
+
+describe("a group's declaration with an option added by hand", () => {
+  it("keeps the option, and takes the spec's prefix", () => {
+    const onDisk = `import { courier, defineGroup } from "@noverax/courier/define";
+
+const { endpoint } = courier();
+
+export const users = defineGroup({
+  prefix: "/people",
+  headers: { "x-team": "core" },
+  endpoints: {
+    list: endpoint.get("").response<string[]>(),
+  },
+});
+`;
+    const fresh = `import { courier, defineGroup } from "@noverax/courier/define";
+
+const { endpoint } = courier();
+
+export const users = defineGroup({
+  prefix: "/users",
+  endpoints: {
+    list: endpoint.get("").response<string[]>(),
+  },
+});
+`;
+    const { content } = mergeGroupFile(onDisk, fresh, { endpoints: { list: "safe" }, existingCode: {} });
+
+    expect(content).toContain('headers: { "x-team": "core" },');
+    expect(content).toContain('prefix: "/users",');
   });
 });

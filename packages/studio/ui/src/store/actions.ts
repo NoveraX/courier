@@ -8,9 +8,8 @@ import { createPlaygroundActions } from "./playground-actions"
 import { createProjectActions } from "./project-actions"
 import { applyTheme } from "./theme"
 import { applyDensity } from "./density"
-import { handleEventReducer } from "./handle-event"
-import { notifyOnEvent } from "./event-notifications"
-import { normalizeEventSource, shouldIgnoreRequest } from "./actions-event-utils"
+import { applyEvents } from "./apply-events"
+import { notifyOnEvents } from "./event-notifications"
 
 export function createActions(set: StudioSet, get: StudioGet): Omit<StudioState, keyof ReturnType<typeof createInitialState>> {
   return {
@@ -56,19 +55,15 @@ export function createActions(set: StudioSet, get: StudioGet): Omit<StudioState,
         return { auditExpandedIds: next }
       }),
 
-    handleEvent: (event) => {
+    handleEvents: (events) => {
       if (get().paused) return
-      // Skip requests matching ignore patterns
-      if (event.type === "request:start" && shouldIgnoreRequest(event, get().settings.ignorePatterns)) return
-      // Source names are matched case-insensitively against a catalogue of
-      // known names; with the empty one passed here, each passes as sent.
-      const normalized = normalizeEventSource(event, {})
+      const { maxRequests, ignorePatterns } = get().settings
       set((state) => {
-        const { requests, droppedCount } = handleEventReducer(state, normalized, get().settings.maxRequests)
+        const { requests, droppedCount } = applyEvents(state.requests, events, { maxRequests, ignorePatterns })
         if (requests === state.requests) return state
         return { requests, droppedRequests: state.droppedRequests + droppedCount }
       })
-      notifyOnEvent(normalized, get)
+      notifyOnEvents(events, get)
     },
 
     // Settings

@@ -8,10 +8,9 @@ import type {
 import { str, num, optStr, optNum } from "./event-helpers"
 
 type EventPayload = Record<string, unknown>
-type State = { requests: RequestEntry[] }
 
-export function handleRequestStart(state: State, event: EventPayload, maxRequests: number): { requests: RequestEntry[]; droppedCount: number } {
-  const entry: RequestEntry = {
+export function requestFromStart(event: EventPayload): RequestEntry {
+  return {
     id: str(event.id),
     source: str(event.source),
     group: optStr(event.group),
@@ -37,37 +36,24 @@ export function handleRequestStart(state: State, event: EventPayload, maxRequest
     url: optStr(event.url),
     sessionId: str(event.sessionId),
   }
-  const updated = [entry, ...state.requests]
-  const overflow = updated.length > maxRequests
-  return {
-    requests: overflow ? updated.slice(0, maxRequests) : updated,
-    droppedCount: overflow ? updated.length - maxRequests : 0,
-  }
 }
 
-export function handleRequestEnd(state: State, event: EventPayload): { requests: RequestEntry[] } {
-  const requestId = str(event.requestId)
+export function withRequestEnd(r: RequestEntry, event: EventPayload): RequestEntry {
   return {
-    requests: state.requests.map((r) =>
-      r.id === requestId
-        ? {
-            ...r,
-            status: "success" as const,
-            statusCode: optNum(event.status),
-            timing: event.timing as RequestTiming | undefined,
-            proxyTiming: mergeProxyTiming(event.proxyTiming as ProxyTiming | undefined, r.proxyTiming),
-            size: optNum(event.size),
-            data: event.data,
-            rawResponse: optStr(event.rawResponse),
-            validatedResponse: event.validatedResponse,
-            validatedVariables: event.validatedVariables,
-            sentBody: event.sentBody,
-            requestHeaders: event.requestHeaders as Record<string, string> | undefined,
-            headers: event.headers as Record<string, string> | undefined,
-            middlewareHeaders: event.middlewareHeaders as Record<string, string[]> | undefined,
-          }
-        : r
-    ),
+    ...r,
+    status: "success" as const,
+    statusCode: optNum(event.status),
+    timing: event.timing as RequestTiming | undefined,
+    proxyTiming: mergeProxyTiming(event.proxyTiming as ProxyTiming | undefined, r.proxyTiming),
+    size: optNum(event.size),
+    data: event.data,
+    rawResponse: optStr(event.rawResponse),
+    validatedResponse: event.validatedResponse,
+    validatedVariables: event.validatedVariables,
+    sentBody: event.sentBody,
+    requestHeaders: event.requestHeaders as Record<string, string> | undefined,
+    headers: event.headers as Record<string, string> | undefined,
+    middlewareHeaders: event.middlewareHeaders as Record<string, string[]> | undefined,
   }
 }
 
@@ -76,8 +62,7 @@ export function handleRequestEnd(state: State, event: EventPayload): { requests:
  * status where the upstream gave none — the upstream's headers and error
  * body, and how long it ran. Issues a `validation:fail` recorded stay with it.
  */
-export function handleRequestError(state: State, event: EventPayload): { requests: RequestEntry[] } {
-  const requestId = str(event.requestId)
+export function withRequestError(r: RequestEntry, event: EventPayload): RequestEntry {
   const rawError = event.error as Record<string, unknown> | undefined
   const errorData = rawError
     ? {
@@ -88,52 +73,55 @@ export function handleRequestError(state: State, event: EventPayload): { request
           (rawError.validationIssues as ValidationIssue[] | undefined) ?? undefined,
       }
     : undefined
-  const errorStatus = failureStatus(errorData?.type)
   return {
-    requests: state.requests.map((r) =>
-      r.id === requestId
-        ? {
-            ...r,
-            status: errorStatus,
-            error: errorData && {
-              ...errorData,
-              validationIssues: errorData.validationIssues ?? r.error?.validationIssues,
-            },
-            statusCode: optNum(event.status) ?? errorData?.status ?? r.statusCode,
-            timing: (event.timing as RequestTiming | undefined) ?? r.timing,
-            headers: (event.headers as Record<string, string> | undefined) ?? r.headers,
-            data: event.data !== undefined ? event.data : r.data,
-          }
-        : r
-    ),
+    ...r,
+    status: failureStatus(errorData?.type),
+    error: errorData && {
+      ...errorData,
+      validationIssues: errorData.validationIssues ?? r.error?.validationIssues,
+    },
+    statusCode: optNum(event.status) ?? errorData?.status ?? r.statusCode,
+    timing: (event.timing as RequestTiming | undefined) ?? r.timing,
+    headers: (event.headers as Record<string, string> | undefined) ?? r.headers,
+    data: event.data !== undefined ? event.data : r.data,
   }
 }
 
 /* The runtime names failures in lower case; the older capitalised names stay understood. */
 function failureStatus(type: string | undefined): RequestStatus {
   if (type === "validation" || type === "ValidationError") return "validation_error"
-  if (type === "aborted" || type === "AbortError") return "aborted"
+  if (type === "abort" || type === "aborted" || type === "AbortError") return "aborted"
   return "error"
 }
 
-export function handleProxyClientTiming(state: State, event: EventPayload): { requests: RequestEntry[] } {
-  const requestId = str(event.requestId)
-  const networkLatency = num(event.networkLatency)
-  const download = num(event.download)
+export function withProxyClientTiming(r: RequestEntry, event: EventPayload): RequestEntry {
   return {
-    requests: state.requests.map((r) =>
-      r.id === requestId
-        ? {
-            ...r,
-            proxyTiming: {
-              clientToProxy: networkLatency,
-              proxyToBackend: r.proxyTiming?.proxyToBackend ?? 0,
-              backendToProxy: r.proxyTiming?.backendToProxy ?? 0,
-              proxyToClient: download,
-            },
-          }
-        : r
-    ),
+    ...r,
+    proxyTiming: {
+      clientToProxy: num(event.networkLatency),
+      proxyToBackend: r.proxyTiming?.proxyToBackend ?? 0,
+      backendToProxy: r.proxyTiming?.backendToProxy ?? 0,
+      proxyToClient: num(event.download),
+    },
+  }
+}
+
+export function withFetchStart(r: RequestEntry, event: EventPayload): RequestEntry {
+  return {
+    ...r,
+    url: optStr(event.url) ?? r.url,
+    httpMethod: optStr(event.method) ?? r.httpMethod,
+  }
+}
+
+export function withValidationFail(r: RequestEntry, issues: ValidationIssue[]): RequestEntry {
+  return {
+    ...r,
+    error: {
+      type: "ValidationError",
+      message: `Validation failed: ${issues.length} issue(s)`,
+      validationIssues: issues,
+    },
   }
 }
 

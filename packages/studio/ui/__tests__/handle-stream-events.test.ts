@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest"
-import type { RequestEntry } from "../ui/src/store/types-request"
-import {
-  handleStreamOpen,
-  handleStreamMessage,
-  handleStreamClose,
-  handleStreamError,
-} from "../ui/src/store/handle-stream-events"
+
+import type { EventType, RequestEntry } from "@/store"
+import { applyEvents } from "@/store/apply-events"
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -31,8 +27,14 @@ function makeEntry(overrides: Partial<RequestEntry> = {}): RequestEntry {
   }
 }
 
-function state(requests: RequestEntry[]) {
-  return { requests }
+function apply(
+  requests: RequestEntry[],
+  type: EventType,
+  fields: Record<string, unknown>,
+  maxRequests = 100,
+): { requests: RequestEntry[]; droppedCount: number } {
+  const event = { id: "ev-1", type, timestamp: 0, sessionId: "s-1", ...fields }
+  return applyEvents(requests, [event], { maxRequests, ignorePatterns: [] })
 }
 
 /** Get request at index with runtime assertion — avoids noUncheckedIndexedAccess noise */
@@ -42,11 +44,11 @@ function reqAt(requests: RequestEntry[], index: number): RequestEntry {
   return r
 }
 
-// ── handleStreamOpen ─────────────────────────────────────────────────────────
+// ── stream:open ─────────────────────────────────────────────────────────
 
-describe("handleStreamOpen", () => {
+describe("stream:open", () => {
   it("creates an SSE entry with correct defaults", () => {
-    const result = handleStreamOpen(state([]), {
+    const result = apply([], "stream:open", {
       requestId: "r-1",
       source: "api",
       group: "users",
@@ -54,7 +56,7 @@ describe("handleStreamOpen", () => {
       transport: "sse",
       timestamp: 5000,
       sessionId: "s-1",
-    }, 100)
+    })
 
     expect(result.requests).toHaveLength(1)
     const entry = reqAt(result.requests, 0)
@@ -68,37 +70,37 @@ describe("handleStreamOpen", () => {
   })
 
   it("creates a WS entry when transport is ws", () => {
-    const result = handleStreamOpen(state([]), {
+    const result = apply([], "stream:open", {
       requestId: "r-2",
       source: "api",
       method: "subscribe",
       transport: "ws",
       sessionId: "s-1",
-    }, 100)
+    })
 
     expect(reqAt(result.requests, 0).transport).toBe("ws")
   })
 
   it("defaults non-ws transport to sse", () => {
-    const result = handleStreamOpen(state([]), {
+    const result = apply([], "stream:open", {
       requestId: "r-3",
       source: "api",
       method: "listen",
       transport: "unknown",
       sessionId: "s-1",
-    }, 100)
+    })
 
     expect(reqAt(result.requests, 0).transport).toBe("sse")
   })
 
   it("prepends new entry before existing requests", () => {
     const existing = makeEntry({ id: "old" })
-    const result = handleStreamOpen(state([existing]), {
+    const result = apply([existing], "stream:open", {
       requestId: "new",
       source: "api",
       method: "sub",
       sessionId: "s-1",
-    }, 100)
+    })
 
     expect(result.requests).toHaveLength(2)
     expect(reqAt(result.requests, 0).id).toBe("new")
@@ -107,7 +109,7 @@ describe("handleStreamOpen", () => {
 
   it("caps requests at maxRequests and reports dropped count", () => {
     const existing = Array.from({ length: 5 }, (_, i) => makeEntry({ id: `e-${i}` }))
-    const result = handleStreamOpen(state(existing), {
+    const result = apply(existing, "stream:open", {
       requestId: "overflow",
       source: "api",
       method: "sub",
@@ -120,12 +122,12 @@ describe("handleStreamOpen", () => {
   })
 })
 
-// ── handleStreamMessage ──────────────────────────────────────────────────────
+// ── stream:message ──────────────────────────────────────────────────────
 
-describe("handleStreamMessage", () => {
+describe("stream:message", () => {
   it("increments event count and total bytes", () => {
     const entry = makeEntry({ id: "r-1", streamEventCount: 3, streamTotalBytes: 100 })
-    const result = handleStreamMessage(state([entry]), {
+    const result = apply([entry], "stream:message", {
       requestId: "r-1",
       dataSize: 50,
       seq: 4,
@@ -139,7 +141,7 @@ describe("handleStreamMessage", () => {
 
   it("stores StreamEventRecord with eventType", () => {
     const entry = makeEntry({ id: "r-1" })
-    const result = handleStreamMessage(state([entry]), {
+    const result = apply([entry], "stream:message", {
       requestId: "r-1",
       dataSize: 32,
       seq: 1,
@@ -154,7 +156,7 @@ describe("handleStreamMessage", () => {
 
   it("omits eventType from record when absent", () => {
     const entry = makeEntry({ id: "r-1" })
-    const result = handleStreamMessage(state([entry]), {
+    const result = apply([entry], "stream:message", {
       requestId: "r-1",
       dataSize: 10,
       seq: 0,
@@ -167,7 +169,7 @@ describe("handleStreamMessage", () => {
   it("does not modify non-matching requests", () => {
     const entry = makeEntry({ id: "r-1" })
     const other = makeEntry({ id: "r-2", streamEventCount: 5 })
-    const result = handleStreamMessage(state([entry, other]), {
+    const result = apply([entry, other], "stream:message", {
       requestId: "r-1",
       dataSize: 10,
       seq: 1,
@@ -192,7 +194,7 @@ describe("handleStreamMessage", () => {
       streamEvents: existingEvents,
     })
 
-    const result = handleStreamMessage(state([entry]), {
+    const result = apply([entry], "stream:message", {
       requestId: "r-1",
       dataSize: 99,
       seq: 200,
@@ -211,12 +213,12 @@ describe("handleStreamMessage", () => {
   })
 })
 
-// ── handleStreamClose ────────────────────────────────────────────────────────
+// ── stream:close ────────────────────────────────────────────────────────
 
-describe("handleStreamClose", () => {
+describe("stream:close", () => {
   it("sets success status and complete streamStatus", () => {
     const entry = makeEntry({ id: "r-1", streamEventCount: 10, streamTotalBytes: 500 })
-    const result = handleStreamClose(state([entry]), {
+    const result = apply([entry], "stream:close", {
       requestId: "r-1",
       reason: "complete",
       eventCount: 10,
@@ -234,7 +236,7 @@ describe("handleStreamClose", () => {
 
   it("sets error status when reason is error", () => {
     const entry = makeEntry({ id: "r-1" })
-    const result = handleStreamClose(state([entry]), {
+    const result = apply([entry], "stream:close", {
       requestId: "r-1",
       reason: "error",
       duration: 100,
@@ -247,7 +249,7 @@ describe("handleStreamClose", () => {
 
   it("defaults reason to complete when missing", () => {
     const entry = makeEntry({ id: "r-1" })
-    const result = handleStreamClose(state([entry]), {
+    const result = apply([entry], "stream:close", {
       requestId: "r-1",
       duration: 50,
     })
@@ -259,7 +261,7 @@ describe("handleStreamClose", () => {
 
   it("uses fallback counts from entry when event omits them", () => {
     const entry = makeEntry({ id: "r-1", streamEventCount: 7, streamTotalBytes: 300 })
-    const result = handleStreamClose(state([entry]), {
+    const result = apply([entry], "stream:close", {
       requestId: "r-1",
       duration: 1000,
     })
@@ -270,12 +272,12 @@ describe("handleStreamClose", () => {
   })
 })
 
-// ── handleStreamError ────────────────────────────────────────────────────────
+// ── stream:error ────────────────────────────────────────────────────────
 
-describe("handleStreamError", () => {
+describe("stream:error", () => {
   it("sets error status and stores error message", () => {
     const entry = makeEntry({ id: "r-1" })
-    const result = handleStreamError(state([entry]), {
+    const result = apply([entry], "stream:error", {
       requestId: "r-1",
       error: "Connection lost",
     })
@@ -291,7 +293,7 @@ describe("handleStreamError", () => {
 
   it("uses default error message when error field is missing", () => {
     const entry = makeEntry({ id: "r-1" })
-    const result = handleStreamError(state([entry]), {
+    const result = apply([entry], "stream:error", {
       requestId: "r-1",
     })
 
@@ -301,7 +303,7 @@ describe("handleStreamError", () => {
   it("does not modify non-matching requests", () => {
     const target = makeEntry({ id: "r-1" })
     const bystander = makeEntry({ id: "r-2", status: "pending" })
-    const result = handleStreamError(state([target, bystander]), {
+    const result = apply([target, bystander], "stream:error", {
       requestId: "r-1",
       error: "fail",
     })

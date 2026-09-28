@@ -91,7 +91,8 @@ export interface StudioState {
   togglePreserveLog: () => void
   clearRequests: () => void
   togglePin: (id: string) => void
-  handleEvent: (event: StudioEvent & Record<string, unknown>) => void
+  /** Take in a batch of runtime events, oldest first, in one store update. */
+  handleEvents: (events: Array<StudioEvent & Record<string, unknown>>) => void
 
   // Actions — Audit
   toggleAuditExpanded: (id: string) => void

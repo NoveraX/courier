@@ -37,6 +37,13 @@ beforeEach(async () => {
       res.writeHead(Number(partial[1]), { "content-type": "application/json" });
       res.write('{"half":');
     }
+    /* Half a body, then the connection drops. */
+    if (request.url === "/dropped") {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.write('{"half":');
+      setTimeout(() => res.socket?.destroy(), 50);
+      return;
+    }
     setTimeout(() => res.end(partial ? "1}" : "{}"), 400);
   });
 });
@@ -56,6 +63,7 @@ function api(baseURL = upstream.url) {
       brief: endpoint.get("brief").timeout(100),
       send: endpoint.post("send").variables<{ amount: unknown }>(),
       partial: endpoint.get("partial/:status").variables<{ status: number }>(),
+      dropped: endpoint.get("dropped"),
     },
   });
 }
@@ -75,6 +83,24 @@ describe("a timeout on a direct call", () => {
     expect(error).toMatchObject({ status: 0, message: "Request timed out" });
     expect((error as HTTPError).data).toMatchObject({ code: "TIMEOUT" });
     expect(((error as HTTPError).cause as Error).name).toBe("TimeoutError");
+  });
+});
+
+describe("an answer that stops arriving", () => {
+  it("is a timeout when the timeout runs out while the body is read", async () => {
+    const error = await rejection(createCaller(api()).partial.with({ timeout: 150 })({ status: 200 }));
+
+    expect(error).toBeInstanceOf(HTTPError);
+    expect(error).toMatchObject({ status: 0, message: "Request timed out" });
+    expect((error as HTTPError).data).toMatchObject({ code: "TIMEOUT" });
+  });
+
+  it("is a network failure when the connection drops while the body is read", async () => {
+    const error = await rejection(createCaller(api()).dropped());
+
+    expect(error).toBeInstanceOf(HTTPError);
+    expect(error).toMatchObject({ status: 0 });
+    expect((error as HTTPError).message).not.toContain("parse");
   });
 });
 

@@ -1,4 +1,5 @@
 import { HTTPError } from "../errors";
+import { fetchFailure } from "./transport-failure";
 import type { ResponseType } from "./types";
 
 /** Statuses the HTTP specification defines as carrying no body at all. */
@@ -47,7 +48,7 @@ export async function getResponseData(
        malformed one; `response.json()` reports both as a syntax error. */
     body = await response.text();
   } catch (error) {
-    throw unreadable(response, message, error);
+    throw readFailure(response, message, error);
   }
 
   if (body === "") return null;
@@ -95,4 +96,13 @@ export async function getResponse(
   const data = await getResponseData(response, responseType, responseParser, message);
   const { status, headers } = response;
   return { status, headers, data };
+}
+
+/* A body that stops arriving — its timeout ran out, or the connection
+   dropped — is the request failing, as it would before the answer: a
+   timeout or a network failure, not a body that would not parse. */
+function readFailure(response: Response, message: string | undefined, error: unknown): unknown {
+  const stopped =
+    error instanceof Error && (error.name === "TimeoutError" || error instanceof TypeError);
+  return stopped ? fetchFailure(error, undefined, undefined) : unreadable(response, message, error);
 }

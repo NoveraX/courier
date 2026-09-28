@@ -3,7 +3,7 @@
  *
  * Usage:
  *   tsx scripts/release.ts prepare <version>
- *   tsx scripts/release.ts publish <version> [dist-tag]
+ *   tsx scripts/release.ts publish <version> [dist-tag] [--dry-run]
  *
  * Publishing a workspace is not a loop over a directory listing. A package
  * must reach the registry after everything it depends on, or there is a window
@@ -53,8 +53,49 @@ export function isPublished(name: string, ver: string): boolean {
   }
 }
 
+/**
+ * The command that brings the lockfile to the versions `prepare` writes. The
+ * release commit carries those versions; a lockfile left at the old ones did
+ * not describe the packages beside it, and the next `npm install` anyone ran
+ * rewrote it.
+ */
+export const LOCKFILE_SYNC: readonly string[] = [
+  "install",
+  "--package-lock-only",
+  "--ignore-scripts",
+  "--no-audit",
+  "--no-fund",
+];
+
+/**
+ * How one package is published: run in its own folder. Named as an argument,
+ * `packages/core` reads to npm as the GitHub repository of that name, and
+ * every package failed to publish.
+ *
+ * @param dir - The package's folder
+ * @param tag - The dist-tag it is published under
+ * @param options - Whether to ask for provenance, and whether only to show what would be sent
+ * @returns npm's arguments, and the folder to run it in
+ * @example
+ * ```ts
+ * publishCommand("packages/core", "latest", { provenance: false, dryRun: true });
+ * // → { args: ["publish", "--access", "public", "--tag", "latest", "--dry-run"], cwd: "/repo/packages/core" }
+ * ```
+ */
+export function publishCommand(
+  dir: string,
+  tag: string,
+  options: { provenance: boolean; dryRun: boolean },
+): { args: string[]; cwd: string } {
+  const args = ["publish", "--access", "public", "--tag", tag];
+  if (options.provenance) args.push("--provenance");
+  if (options.dryRun) args.push("--dry-run");
+  return { args, cwd: resolve(dir) };
+}
+
 function prepare(version: string, dirs: readonly string[]): void {
   for (const dir of dirs) updateVersion(dir, version);
+  execFileSync("npm", [...LOCKFILE_SYNC], { stdio: "inherit" });
   for (const dir of dirs) copyFileSync("LICENSE", join(dir, "LICENSE"));
   execFileSync("npx", ["turbo", "run", "build"], { stdio: "inherit" });
   console.log(`Prepared v${version} (${dirs.length} packages)`);
@@ -66,15 +107,12 @@ function prepare(version: string, dirs: readonly string[]): void {
  * A failure is recorded rather than thrown, because the operator's next
  * decision depends on the state of all of them, not on the first one to break.
  */
-function publish(version: string, tag: string, dirs: readonly string[]): void {
+function publish(version: string, tag: string, dirs: readonly string[], dryRun: boolean): void {
   /* Without an explicit tag npm writes `latest`, so a release cut from the
      beta branch would hand every one of these packages to every consumer who
-     asked for the stable one. */
-  const args = ["--access", "public", "--tag", tag];
-
-  /* Provenance needs an OIDC token, which only the release workflow has.
-     Asking for it anywhere else fails the publish rather than the check. */
-  if (process.env.GITHUB_ACTIONS === "true") args.push("--provenance");
+     asked for the stable one. Provenance needs an OIDC token, which only the
+     release workflow has; asked for anywhere else, the publish fails. */
+  const options = { provenance: !dryRun && process.env.GITHUB_ACTIONS === "true", dryRun };
 
   const published: string[] = [];
   const skipped: string[] = [];
@@ -90,7 +128,8 @@ function publish(version: string, tag: string, dirs: readonly string[]): void {
     }
 
     try {
-      execFileSync("npm", ["publish", dir, ...args], { stdio: "inherit" });
+      const { args, cwd } = publishCommand(dir, tag, options);
+      execFileSync("npm", args, { cwd, stdio: "inherit" });
       published.push(name);
     } catch (error) {
       failed.push(name);
@@ -99,8 +138,8 @@ function publish(version: string, tag: string, dirs: readonly string[]): void {
   }
 
   console.log(
-    `v${version} (${tag}): ${published.length} published, ${skipped.length} already there, ` +
-      `${failed.length} failed`,
+    `v${version} (${tag})${dryRun ? " dry run" : ""}: ${published.length} published, ` +
+      `${skipped.length} already there, ${failed.length} failed`,
   );
 
   if (failed.length > 0) {
@@ -113,10 +152,11 @@ function publish(version: string, tag: string, dirs: readonly string[]): void {
 }
 
 function main(argv: readonly string[]): void {
-  const [command, version, tag = "latest"] = argv;
+  const dryRun = argv.includes("--dry-run");
+  const [command, version, tag = "latest"] = argv.filter((arg) => arg !== "--dry-run");
 
   if (command !== "prepare" && command !== "publish") {
-    console.error("Usage: tsx scripts/release.ts <prepare|publish> <version>");
+    console.error("Usage: tsx scripts/release.ts <prepare|publish> <version> [dist-tag] [--dry-run]");
     process.exit(1);
   }
   if (!version) {
@@ -126,7 +166,7 @@ function main(argv: readonly string[]): void {
 
   const dirs = publishOrder(packageDirs());
   if (command === "prepare") prepare(version, dirs);
-  else publish(version, tag, dirs);
+  else publish(version, tag, dirs, dryRun);
 }
 
 /* Importing this module must not release anything — the ordering is covered

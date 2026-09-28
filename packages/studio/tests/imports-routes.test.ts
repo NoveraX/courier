@@ -799,15 +799,18 @@ describe("the update checks of URL imports", () => {
     );
   }, 15_000);
 
-  it("check-updates answers for a spec URL that answers 200 with an empty body", async () => {
+  it("check-updates answers 502 for a spec URL that answers 200 with an empty body, naming it", async () => {
     project(declaringUrls({ empty: `${specBase}/empty.json` }));
     const url = await started();
 
     const reply = await post(url, "/api/apis/imports/check-updates", { name: "empty" }, AbortSignal.timeout(5_000));
 
     expect(reply).toEqual({
-      status: 500,
-      body: { error: expect.stringContaining("Unable to detect spec format") },
+      status: 502,
+      body: {
+        code: "SPEC_UNREADABLE",
+        error: expect.stringMatching(/empty\.json did not answer with a specification Studio can read: Unable to detect spec format/),
+      },
     });
   }, 15_000);
 
@@ -973,6 +976,8 @@ describe("a check of all imports", () => {
 
     expect(status).toBe(200);
     expect(results !== null && typeof results === "object" && Object.hasOwn(results, "__proto__")).toBe(true);
-    expect(JSON.stringify(results)).toBe('{"__proto__":{"changed":false}}');
+    expect(JSON.stringify(results)).toBe(
+      '{"__proto__":{"changed":false,"unchecked":"A file import has no URL to check; upload its specification in Manage to compare."}}',
+    );
   });
 });

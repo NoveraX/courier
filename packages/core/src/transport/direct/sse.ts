@@ -5,6 +5,7 @@ import { layerHeaders } from "../../utils/layer-headers";
 import { beginStream, instrumentSSE } from "../instrument";
 import type { SSEFactory } from "../types";
 import { addressCall } from "./address";
+import { assertDirectlyReachable } from "./assert-reachable";
 
 export interface DirectSSEDefaults {
   headers?: Record<string, string>;
@@ -26,6 +27,8 @@ function headersToRecord(h: Headers): Record<string, string> {
  * worked out from each call's variables and takes the `:params` it names.
  *
  * Used by createCaller (universal mode) and createQueryCaller (React direct mode).
+ * A stream this process serves with `.implement()` has no address at
+ * `baseURL`, so calling one throws `DIRECT_CALL_TO_SERVED_ENDPOINT`.
  *
  * Browser-side studio instrumentation: when studio hooks are installed, each
  * subscription emits stream:open / stream:message / stream:close / stream:error
@@ -44,6 +47,7 @@ export function createDirectSSEFactory(
   const { headers: defaultHeaders } = defaults;
 
   return function subscribeSSE(group, method, variables, options) {
+    assertDirectlyReachable(api, group, method);
     const prefix =
       ((groups?.[group]?.options as Record<string, unknown> | undefined)?.prefix as string) ?? "";
     // Compose the actual outbound headers (must mirror sse-connection.ts).

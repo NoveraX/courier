@@ -30,6 +30,12 @@ export const chat = defineGroup({
 })
 ```
 
+## Reaching a stream or a channel
+
+A stream or channel served with `.implement()` is reached through the server that serves it — the proxy routes of your framework adapter, or a [standalone server](/docs/deployment/standalone-server) — so a proxy caller opens it: `createProxyCaller`, or `createProxyQueryCaller` for the React hooks.
+
+A direct caller, `createCaller` or `createQueryCaller`, sends everything to the API's `baseURL`, which is the upstream's address. Nothing serves this process's streams and channels there, so calling one through a direct caller throws `ConfigurationError("DIRECT_CALL_TO_SERVED_ENDPOINT")`, naming it, when it is called — the React hooks report it through `error` — and the rest of the API stays callable. A stream or channel addressed with `.get()`, `.connect()` or `.via()` is another process's, and a direct caller opens it at `baseURL`.
+
 ## Topics
 
 Every subscription to a channel is on a topic: the endpoint, `source.group.method`, qualified by a key. `ctx.topic` is the subscriber's own, and `ctx.broadcast(topic, data)` sends to every other subscriber on it — every replica's, with a [`pubsub` adapter](/docs/deployment/redis).

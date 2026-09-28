@@ -8,7 +8,7 @@
 import type { NetworkInterfaceInfo } from "node:os";
 import { describe, expect, it } from "vitest";
 
-import { studioUrls } from "../src/server/studio-urls";
+import { studioUrls, tokenLink, withToken } from "../src/server/studio-urls";
 
 const INTERFACES: Record<string, NetworkInterfaceInfo[]> = {
   lo0: [
@@ -47,6 +47,25 @@ describe("studioUrls", () => {
   it("lists only the address a specific bind listens on", () => {
     expect(studioUrls("192.0.2.10", 6280, INTERFACES)).toEqual({
       network: ["http://192.0.2.10:6280"],
+    });
+  });
+});
+
+describe("tokenLink", () => {
+  it("carries the token in the fragment, which no request sends", () => {
+    expect(tokenLink("http://localhost:6280", "k3y")).toBe("http://localhost:6280/#token=k3y");
+    expect(tokenLink("http://[::1]:6280/", "k3y")).toBe("http://[::1]:6280/#token=k3y");
+  });
+});
+
+describe("withToken", () => {
+  it("gives every address the token", () => {
+    expect(withToken({ local: "http://localhost:6280", network: ["http://192.0.2.10:6280"] }, "k3y")).toEqual({
+      local: "http://localhost:6280/#token=k3y",
+      network: ["http://192.0.2.10:6280/#token=k3y"],
+    });
+    expect(withToken({ network: ["http://192.0.2.10:6280"] }, "k3y")).toEqual({
+      network: ["http://192.0.2.10:6280/#token=k3y"],
     });
   });
 });

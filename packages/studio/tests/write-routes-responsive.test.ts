@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
+import { tokenHeader } from "./helpers/token-header";
 
 const GROUPS = 300;
 
@@ -60,7 +61,7 @@ describe("writing an import of hundreds of groups", () => {
     const url = await new Promise<string>((resolve, reject) => {
       studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
     });
-    const headers = { "content-type": "application/json", origin: url };
+    const headers = { "content-type": "application/json", origin: url, ...tokenHeader(studio) };
     const body = JSON.stringify({ sourceName: "many", spec: manyGroups(), options: { type: "openapi", outputDir: "src/api", sourceName: "many" } });
     let writtenAt = Number.POSITIVE_INFINITY;
 

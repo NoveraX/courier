@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createStudioServer } from "../src/server/create-studio-server";
 import { MAX_MESSAGE_BYTES } from "../src/server/max-message-bytes";
 import type { StudioServer } from "../src/server/types";
+import { tokenHeader } from "./helpers/token-header";
 
 let root: string;
 let studio: StudioServer | undefined;
@@ -39,7 +40,7 @@ function start(): Promise<string> {
 async function post(url: string, body: string) {
   const response = await fetch(`${url}/api/apis/parse`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: url },
+    headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body,
   });
   return { status: response.status, type: response.headers.get("content-type") ?? "", text: await response.text() };
@@ -81,7 +82,7 @@ describe("an API route Studio does not have", () => {
 
     const response = await fetch(`${url}${path}`, {
       method,
-      headers: { "content-type": "application/json", origin: url },
+      headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
       ...(method !== "GET" && { body: "{}" }),
     });
 

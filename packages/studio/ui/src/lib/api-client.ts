@@ -7,6 +7,7 @@ import { createFetch, isHTTPError } from "@noverax/courier";
 
 import { isPlainObject } from "@/socket/is-plain-object";
 import { StudioRequestError } from "./studio-request-error";
+import { tokenHeaders } from "./studio-token";
 
 export const apiClient = createFetch({ baseURL: "" });
 
@@ -26,7 +27,8 @@ function refusal(error: unknown): StudioRequestError | undefined {
 }
 
 /**
- * POST to a Studio route.
+ * POST to a Studio route, with the page's token: the routes that change
+ * something refuse a page without it.
  *
  * @param url - The route
  * @param body - The JSON body
@@ -39,7 +41,7 @@ function refusal(error: unknown): StudioRequestError | undefined {
  */
 export async function post<TResult>(url: string, body?: unknown): Promise<TResult> {
   try {
-    return await apiClient.post<TResult>(url, { json: body });
+    return await apiClient.post<TResult>(url, { json: body, headers: tokenHeaders() });
   } catch (error) {
     throw refusal(error) ?? error;
   }

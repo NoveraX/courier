@@ -59,6 +59,12 @@ describe("printBanner", () => {
     expect(text).toContain("Network   http://[2001:db8::5]:6280");
   });
 
+  it("says a page opened without the links' token can only look", () => {
+    printBanner("1.2.3", { local: "http://localhost:6280/#token=k3y", network: [] });
+
+    expect(boxRows().join("\n")).toContain("Open a link above: without its token a page can only look.");
+  });
+
   it("prints no network row when Studio is not on the network", () => {
     printBanner("1.2.3", { local: "http://localhost:6280", network: [] });
 

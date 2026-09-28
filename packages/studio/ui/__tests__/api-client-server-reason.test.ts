@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import type * as Courier from "@noverax/courier";
 import { describe, expect, it, vi } from "vitest";
 

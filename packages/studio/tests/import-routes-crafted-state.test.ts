@@ -26,6 +26,7 @@ import { parseSpec } from "../src/apis/parser/parse-spec";
 import { bodyHash } from "../src/server/import-files/body-hash";
 import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
+import { tokenHeader } from "./helpers/token-header";
 
 const SPEC = parseSpec(
   JSON.stringify({
@@ -88,7 +89,7 @@ async function start(): Promise<void> {
 async function post(path: string, body: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: url },
+    headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify(body),
   });
   const payload: unknown = await response.json();

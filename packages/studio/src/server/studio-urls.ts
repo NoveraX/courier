@@ -13,6 +13,41 @@ export interface StudioUrls {
 type Interfaces = ReturnType<typeof networkInterfaces>;
 
 /**
+ * An address of Studio's with the project's token, which a page opened at it
+ * keeps and presents to make changes. The token rides in the fragment, which
+ * a browser never sends, so no request line or log carries it.
+ *
+ * @param url - An address of Studio's
+ * @param token - The project's token
+ * @returns The link
+ * @example
+ * ```ts
+ * tokenLink("http://localhost:6280", "k3…"); // "http://localhost:6280/#token=k3…"
+ * ```
+ */
+export function tokenLink(url: string, token: string): string {
+  return `${url.replace(/\/$/, "")}/#token=${token}`;
+}
+
+/**
+ * Every address of Studio's, as a link with the project's token.
+ *
+ * @param urls - Where Studio answers
+ * @param token - The project's token
+ * @returns The same addresses, each carrying the token
+ * @example
+ * ```ts
+ * withToken(studioUrls("localhost", 6280), token);
+ * ```
+ */
+export function withToken(urls: StudioUrls, token: string): StudioUrls {
+  return {
+    ...(urls.local === undefined ? {} : { local: tokenLink(urls.local, token) }),
+    network: urls.network.map((url) => tokenLink(url, token)),
+  };
+}
+
+/**
  * The addresses a Studio bound to `host` and listening on `port` answers at.
  *
  * Only addresses that actually listen are listed: a Studio bound to

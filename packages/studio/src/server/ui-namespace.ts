@@ -24,7 +24,9 @@ import type { MockLog } from "./storage/mock-log";
 import type { PlaygroundHistory } from "./storage/playground-history";
 import type { SessionStore } from "./storage/session-rows";
 import type { StudioView } from "./storage/studio-view";
+import type { StudioToken } from "./studio-token";
 import { bindPlaygroundHistory } from "./ui-playground-history";
+import { guardUiWrites } from "./ui-token-guard";
 import { bindView } from "./ui-view";
 import type { WatcherStatus } from "./watcher-status";
 
@@ -48,6 +50,11 @@ export interface SetupUiNamespaceDeps {
   mockLog?: MockLog;
   /** The Playground's calls, sent to each UI that connects and kept as they change. */
   playgroundHistory?: PlaygroundHistory;
+  /**
+   * The token a UI presents, as `auth.token` of its handshake, to change
+   * anything; one that presents none still receives everything it shows.
+   */
+  token: StudioToken;
 }
 
 /**
@@ -65,9 +72,10 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
   const { uiNamespace, bindingTable, mockManager, watcherStatus, playgroundRouter, requestLog } =
     deps;
   const { sessions, view, mockLog, playgroundHistory } = deps;
-  const { project, projectRoot } = deps;
+  const { project, projectRoot, token } = deps;
 
   uiNamespace.on("connection", (socket) => {
+    guardUiWrites(socket, token);
     // Send current binding-table snapshot so a UI client that joins after a
     // runtime has already announced gets the live state without waiting for
     // the next `runtime:announce`. This is the source of truth for the

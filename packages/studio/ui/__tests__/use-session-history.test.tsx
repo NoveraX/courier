@@ -16,17 +16,18 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { toast } from "sonner"
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
-const studio = vi.hoisted(() => ({ url: "" }))
+const studio = vi.hoisted(() => ({ url: "", token: "" }))
 
 /* The UI's client posts to its own origin; here that origin is a Studio
-   server started for the test, reached with the Origin header its page sends. */
+   server started for the test, reached with the Origin header its page sends
+   and the token of the link it was opened from. */
 vi.mock("@/lib/api-client", async () => {
   const { StudioRequestError } = await import("@/lib/studio-request-error")
   return {
     post: async (path: string, body?: unknown) => {
       const response = await fetch(`${studio.url}${path}`, {
         method: "POST",
-        headers: { "content-type": "application/json", origin: studio.url },
+        headers: { "content-type": "application/json", origin: studio.url, "x-courier-studio-token": studio.token },
         body: JSON.stringify(body ?? {}),
       })
       const data = (await response.json()) as Record<string, unknown>
@@ -87,6 +88,7 @@ beforeAll(async () => {
   const port = await freePort()
   studio.url = await new Promise<string>((resolve) => {
     const server = createStudioServer({ port, host: "127.0.0.1", projectRoot: root, onReady: resolve })
+    studio.token = server.token
     close = () => server.close()
   })
 })

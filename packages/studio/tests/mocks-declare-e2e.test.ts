@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
+import { tokenHeader } from "./helpers/token-header";
 
 const CACHE = join(__dirname, "../../../node_modules/.cache/courier-studio-tests");
 
@@ -69,7 +70,7 @@ async function start(projectRoot: string): Promise<string> {
 }
 
 async function post(url: string, path: string, body: unknown, origin: string | null = url) {
-  const headers: Record<string, string> = { "content-type": "application/json" };
+  const headers: Record<string, string> = { "content-type": "application/json", ...tokenHeader(studio) };
   if (origin) headers.origin = origin;
   const response = await fetch(`${url}${path}`, { method: "POST", headers, body: JSON.stringify(body) });
   return { status: response.status, body: (await response.json()) as Record<string, unknown> };

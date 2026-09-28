@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseSpec } from "../../src/apis/parser/parse-spec";
 import { createStudioServer } from "../../src/server/create-studio-server";
 import type { StudioServer } from "../../src/server/types";
+import { tokenHeader } from "../helpers/token-header";
 
 const SPEC = parseSpec(
   JSON.stringify({
@@ -83,7 +84,7 @@ function read(path: string): string {
 async function write(body: Record<string, unknown>): Promise<{ status: number; body: Record<string, unknown> }> {
   const response = await fetch(`${url}/api/apis/write`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: url },
+    headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify({ sourceName: "pets", spec: SPEC, specUrl: "", importType: "file", ...body }),
   });
   const payload: unknown = await response.json();

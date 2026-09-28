@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createStudioServer } from "../src/server/create-studio-server";
 import { MAX_SESSION_REQUESTS } from "../src/server/session-body";
 import type { StudioServer } from "../src/server/types";
+import { tokenHeader } from "./helpers/token-header";
 
 const REQUESTS = [
   {
@@ -76,7 +77,7 @@ afterEach(async () => {
 async function call(path: string, body: unknown, type = "application/json"): Promise<{ status: number; body: unknown }> {
   const response = await fetch(`${url}/api/sessions/${path}`, {
     method: "POST",
-    headers: { "content-type": type, origin: url },
+    headers: { "content-type": type, origin: url, ...tokenHeader(studio) },
     ...(body !== undefined && { body: typeof body === "string" ? body : JSON.stringify(body) }),
   });
   return { status: response.status, body: await response.json() };
@@ -214,7 +215,7 @@ describe("a saved session", () => {
 
 /** A page that connects, with the session it is shown and the replays it is sent. */
 async function page(): Promise<{ socket: Socket; shown: unknown[]; replays: unknown[] }> {
-  const socket = connect(`${url}/ui`, { transports: ["websocket"], reconnection: false });
+  const socket = connect(`${url}/ui`, { transports: ["websocket"], reconnection: false, auth: { token: studio?.token } });
   const seen = { socket, shown: [] as unknown[], replays: [] as unknown[] };
   socket.on("view:session", (session: unknown) => seen.shown.push(session));
   socket.on("events:replay", (events: unknown) => seen.replays.push(events));

@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
+import { tokenHeader } from "./helpers/token-header";
 
 let root: string;
 let studio: StudioServer | undefined;
@@ -48,7 +49,7 @@ function largeSpec(megabytes: number): string {
 describe("a specification of several megabytes once parsed", () => {
   it("is parsed, and written from what parse answered", async () => {
     const url = await start();
-    const headers = { "content-type": "application/json", origin: url };
+    const headers = { "content-type": "application/json", origin: url, ...tokenHeader(studio) };
 
     const parsed = await fetch(`${url}/api/apis/parse`, {
       method: "POST",

@@ -7,6 +7,7 @@ import { isPlainObject } from "./is-plain-object"
 import { bindApis } from "./apis-bindings"
 import { isBindingErrorPayload, isBindingSnapshot } from "./binding-guards"
 import { bindEvents } from "./event-bindings"
+import { bindReadOnly } from "./read-only-bindings"
 import {
   isPlaygroundChunkPayload,
   isPlaygroundEndPayload,
@@ -31,6 +32,8 @@ export interface Bindings {
   unbindApis: () => void
   /** Removes the listeners for runtime events (`bindEvents`). */
   unbindEvents: () => void
+  /** Removes the listener for the changes Studio refused (`bindReadOnly`). */
+  unbindReadOnly: () => void
 }
 
 export function buildBindings(
@@ -89,6 +92,7 @@ export function buildBindings(
     },
     unbindApis: bindApis(s, store),
     unbindEvents: bindEvents(s, store),
+    unbindReadOnly: bindReadOnly(s),
   }
 
   s.on("connect", b.onConnect)
@@ -124,5 +128,6 @@ export function unbind(s: Socket, b: Bindings): void {
   s.off("playground:error", b.onPlaygroundError)
   b.unbindApis()
   b.unbindEvents()
+  b.unbindReadOnly()
 }
 

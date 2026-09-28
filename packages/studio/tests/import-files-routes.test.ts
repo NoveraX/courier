@@ -26,6 +26,7 @@ import { readGeneratedFile, signGeneratedFile } from "../src/server/import-files
 import { saveImportEntry } from "../src/server/import-files/save-import-entry";
 import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
+import { tokenHeader } from "./helpers/token-header";
 
 const IS_WINDOWS = process.platform === "win32";
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../node_modules");
@@ -83,7 +84,7 @@ function start(): Promise<string> {
 async function post(url: string, path: string, body: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: url },
+    headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify(body),
   });
   const payload: unknown = await response.json();

@@ -4,6 +4,7 @@
 
 import { InvalidImportError, resolveImportLayout } from "../layout";
 import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
+import { emitsSchemas } from "./build-endpoint-helpers";
 import { buildSchemaRecord } from "./build-schema-record";
 import { SINGLE_GROUP } from "./endpoint-placements";
 import { extractEndpointTypes } from "./extract-endpoint-types";
@@ -118,20 +119,20 @@ function generateGrouped(
  * The schemas or types file declaring a group's schemas, when there is
  * anything to declare.
  *
- * With both a validator and types turned off there is nothing to declare.
- * Writing the file anyway left an empty module the barrel then re-exported,
- * which TypeScript rejects.
+ * Only a validator writing schemas, or types, declares anything: with
+ * `validation: "none"` and types off, a schemas file held the schemas'
+ * descriptions alone, which the barrel then re-exported as a module that
+ * is not one, and TypeScript rejected it.
  */
 function schemaFileFor(
   schemas: Record<string, ParsedSchema>,
   opts: ResolvedGenerateOptions,
   groupName?: string,
 ): GeneratedFile | null {
-  if (Object.keys(schemas).length === 0 || !(opts.generateSchemas || opts.generateTypes)) {
+  if (Object.keys(schemas).length === 0 || !(emitsSchemas(opts) || opts.generateTypes)) {
     return null;
   }
-  const file = opts.generateSchemas
+  return opts.generateSchemas
     ? generateSchemasFile(schemas, opts, groupName)
     : generateTypesFile(schemas, opts, groupName);
-  return file.content.trim() === "" ? null : file;
 }

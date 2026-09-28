@@ -4,6 +4,7 @@
 
 import { toSafeIdentifier } from "./naming-utils";
 import { acceptsNull, orNull, stripNull } from "./nullable-schema";
+import { componentSchemaName } from "./ref-utils";
 import { convertSchema, normalizeTypeArray } from "./schema-conversion";
 import type { ParsedSchema, SpecNode } from "./types";
 
@@ -30,9 +31,10 @@ import type { ParsedSchema, SpecNode } from "./types";
 export function convertSchemaInline(raw: SpecNode, spec: SpecNode): ParsedSchema {
   const schema = normalizeTypeArray(raw);
   if (acceptsNull(schema)) return orNull(convertSchemaInline(stripNull(schema), spec));
-  if (schema.$ref) {
-    const rawName = schema.$ref.split("/").pop();
-    const refName = toSafeIdentifier(rawName);
+  if (typeof schema.$ref === "string") {
+    const component = componentSchemaName(schema.$ref);
+    if (component === undefined) return convertSchema("Inline", schema, spec);
+    const refName = toSafeIdentifier(component);
     return { name: refName, type: "ref", refName };
   }
   if (schema.allOf || schema.oneOf || schema.anyOf) return convertSchema("Inline", schema, spec);

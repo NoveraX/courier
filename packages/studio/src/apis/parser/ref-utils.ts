@@ -27,6 +27,28 @@ function decodePointer(part: string): string {
   return decodeURIComponent(part).replace(/~1/g, "/").replace(/~0/g, "~");
 }
 
+/* A component schema, as OpenAPI 3 and Swagger 2.0 each address one. */
+const COMPONENT = /^#\/(?:components\/schemas|definitions)\/([^/]+)$/;
+
+/**
+ * The name of the component schema a reference points at, as the
+ * specification spells it.
+ *
+ * @param ref - The reference
+ * @returns The component's name, or `undefined` for a reference pointing
+ *   anywhere else — into a path, a response, another schema's property, or
+ *   another document
+ * @example
+ * ```ts
+ * componentSchemaName("#/components/schemas/Pet"); // "Pet"
+ * componentSchemaName("#/paths/~1pets/get/responses/200"); // undefined
+ * ```
+ */
+export function componentSchemaName(ref: string): string | undefined {
+  const name = COMPONENT.exec(ref)?.[1];
+  return name === undefined ? undefined : decodePointer(name);
+}
+
 /** Parse security schemes from OpenAPI 3 or Swagger 2 spec */
 export function parseSecuritySchemes(spec: SpecNode): ParsedSecurityScheme[] {
   const raw = spec.components?.securitySchemes ?? spec.securityDefinitions ?? {};

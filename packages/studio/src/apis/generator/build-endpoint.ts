@@ -52,7 +52,7 @@ export function buildEndpointDefinition(
   context: EndpointContext,
   paramsType: string | undefined,
 ): string {
-  const variables = variablesSchema(ep, context);
+  const variables = variablesSchema(ep, context, paramsType);
   /* An answer that is not JSON is typed as what it is read as, and not
      validated: a schema describes JSON. */
   const reading = responseReading(ep);
@@ -103,13 +103,18 @@ function responseSchema(ep: ParsedEndpoint, context: EndpointContext): string | 
  * The schema validating what the endpoint is called with, when its body has
  * one: a named object's, extended with the parameters, or that of a list, a
  * scalar or fields sharing a parameter's name, beside them under its own
- * key. A form, bytes and fields written inline are typed without one.
+ * key; for fields written inline, the schema extracted with their type. A
+ * form and bytes are typed without one.
  */
-function variablesSchema(ep: ParsedEndpoint, context: EndpointContext): string | null {
+function variablesSchema(
+  ep: ParsedEndpoint,
+  context: EndpointContext,
+  paramsType: string | undefined,
+): string | null {
   const kind = requestBodyKind(ep, context.spec);
   if (kind !== "fields" && kind !== "value" && kind !== "nested") return null;
   const body = bodySchema(ep, context);
-  if (!body) return null;
+  if (!body) return inlineFieldsSchema(ep, kind, paramsType, context);
 
   /* The query parameters belong to the variables as much as the path's do:
      left out, zod and valibot stripped them before the call was made. */
@@ -120,6 +125,19 @@ function variablesSchema(ep: ParsedEndpoint, context: EndpointContext): string |
   context.uses.validator = true;
   if (kind !== "fields") return objectWithBody(body, params, bodyKey(ep), context.options);
   return extendSchemaWithParams(body, params, context.options, extendable(ep, context));
+}
+
+/* Fields written inline are extracted as a type of their own, with the
+   parameters, and a schema beside it; left unused, a call with them was
+   never validated, though one with a named body was. */
+function inlineFieldsSchema(
+  ep: ParsedEndpoint,
+  kind: ReturnType<typeof requestBodyKind>,
+  paramsType: string | undefined,
+  context: EndpointContext,
+): string | null {
+  if (kind !== "fields" || !paramsType || ep.requestBody?.refName) return null;
+  return schemaConstant(context, paramsType);
 }
 
 /** The body's own schema, when every schema it names is declared. */

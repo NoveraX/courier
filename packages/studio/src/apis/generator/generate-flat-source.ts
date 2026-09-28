@@ -8,6 +8,7 @@ import { sourceAuth } from "./auth-middleware";
 import { endpointContext } from "./endpoint-context";
 import { endpointEntries } from "./endpoint-entries";
 import { endpointImports } from "./endpoint-imports";
+import { jsLiteral } from "./literals";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
 /**
@@ -46,7 +47,7 @@ export function generateFlatSourceFile(
     "const { endpoint } = courier();",
     "",
     `export const ${options.sourceName} = defineApi({`,
-    `  baseURL: "${spec.baseURL}",`,
+    `  baseURL: ${jsLiteral(spec.baseURL)},`,
     ...(auth ? [`  middleware: [${auth.middleware}],`] : []),
     `  endpoints: {`,
     ...entries,

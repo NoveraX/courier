@@ -8,15 +8,16 @@
  * the JSON body, and zod and valibot, validating the body, dropped them
  * first; a DELETE with a body sent its fields as query parameters. Such an
  * endpoint is addressed by a closure that says where each variable goes, and
- * so is one whose answer is not JSON, whose fields are sent url-encoded, or
- * whose query parameters are written in a style of their own.
+ * so is one whose answer is not JSON, whose fields are sent url-encoded,
+ * whose JSON body has a media type of its own, or whose query parameters are
+ * written in a style of their own.
  */
 
 import { toInternalMethod } from "@noverax/courier";
 import type { ParsedEndpoint } from "../parser/types";
 import { callOptions as options } from "./call-options";
 import { formClosure } from "./form-closure";
-import { bodyKey, type RequestBodyKind } from "./request-body";
+import { bodyKey, ownJsonMedia, type RequestBodyKind } from "./request-body";
 import { isEventStream, type ResponseReading } from "./response-reading";
 import { hasStyledQuery, styledQuery } from "./styled-query";
 import { urlEncodedClosure } from "./url-encoded-closure";
@@ -46,7 +47,8 @@ export function wireClosure(
   const read = reading === "json" ? null : `responseType: ${JSON.stringify(reading)}`;
   const method = toInternalMethod(ep.httpMethod);
   const at = JSON.stringify(path);
-  const placed = placingClosure(ep, method, at, kind, read);
+  const json = kind === "fields" || kind === "value" || kind === "nested";
+  const placed = placingClosure(ep, method, at, kind, read, json ? ownJsonMedia(ep) : null);
   if (placed !== null) return placed;
   /* A stream is subscribed to by its address alone, so its query keeps the
      default style. */
@@ -64,6 +66,7 @@ function placingClosure(
   at: string,
   kind: RequestBodyKind,
   read: string | null,
+  media: string | null,
 ): string | null {
   if (!WRITES.has(method)) return null;
   const params = ep.parameters.filter((param) => param.in === "path" || param.in === "query");
@@ -74,7 +77,7 @@ function placingClosure(
     return urlEncodedClosure(ep, method, at, read, kind === "nested" ? bodyKey(ep) : null);
   }
   if (kind === "value" || kind === "nested" || kind === "bytes") {
-    return wholeBodyClosure(ep, method, at, kind, read);
+    return wholeBodyClosure(ep, method, at, kind, read, media);
   }
   if (method === "del") {
     if (kind === "none") return null;
@@ -85,15 +88,16 @@ function placingClosure(
       params.filter((p) => p.in === "path"),
     );
     const rest = pattern ? `${pattern}, ...body` : "...body";
-    return `(http, { ${rest} }) => http.del(${at}, undefined, { ${options("json: body", searchParams, read)} })`;
+    return `(http, { ${rest} }) => http.del(${at}, undefined, { ${options("json: body", searchParams, read, media)} })`;
   }
   const { pattern, searchParams } = destructure(query, []);
-  if (searchParams === null) return null;
+  if (searchParams === null && media === null) return null;
   /* The path is filled from every variable, whatever the closure passes. */
   if (kind === "none") {
     return `(http, { ${pattern} }) => http.${method}(${at}, undefined, { ${options(null, searchParams, read)} })`;
   }
-  return `(http, { ${pattern}, ...body }) => http.${method}(${at}, body, { ${options(null, searchParams, read)} })`;
+  const body = pattern ? `{ ${pattern}, ...body }` : "body";
+  return `(http, ${body}) => http.${method}(${at}, body, { ${options(null, searchParams, read, media)} })`;
 }
 
 function wholeBodyClosure(
@@ -102,11 +106,12 @@ function wholeBodyClosure(
   at: string,
   kind: "value" | "nested" | "bytes",
   read: string | null,
+  media: string | null,
 ): string | null {
   const option = kind === "bytes" ? "body" : "json";
   if (!ep.parameters.some((param) => param.in === "path" || param.in === "query")) {
-    return method === "del"
-      ? `(http, body) => http.del(${at}, undefined, { ${options(`${option}: body`, null, read)} })`
+    return method === "del" || media !== null
+      ? `(http, body) => http.${method}(${at}, undefined, { ${options(`${option}: body`, null, read, media)} })`
       : null;
   }
   const key = bodyKey(ep);
@@ -115,7 +120,7 @@ function wholeBodyClosure(
     [],
   );
   const bindings = pattern ? `${pattern}, ${key}` : key;
-  return `(http, { ${bindings} }) => http.${method}(${at}, undefined, { ${options(`${option}: ${key}`, searchParams, read)} })`;
+  return `(http, { ${bindings} }) => http.${method}(${at}, undefined, { ${options(`${option}: ${key}`, searchParams, read, media)} })`;
 }
 
 /**

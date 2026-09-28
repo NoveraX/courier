@@ -5,7 +5,7 @@
 import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 import { endpointContext } from "./endpoint-context";
 import { endpointEntries } from "./endpoint-entries";
-import { defineImport, endpointImports } from "./endpoint-imports";
+import { basesDeclaration, defineImport, endpointImports } from "./endpoint-imports";
 import { jsLiteral } from "./literals";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
@@ -37,7 +37,7 @@ export function generateGroupFile(
     defineImport(context, "defineGroup"),
     ...endpointImports(context),
     "",
-    "const { endpoint } = courier();",
+    basesDeclaration(context),
     "",
     `export const ${group.name} = defineGroup({`,
     `  prefix: ${jsLiteral(group.prefix)},`,

@@ -68,6 +68,7 @@ const GENERATED_IDENTIFIERS = new Set([
   "defineGroup",
   "endpoint",
   "requireEnv",
+  "stream",
   "type",
   "v",
   "z",

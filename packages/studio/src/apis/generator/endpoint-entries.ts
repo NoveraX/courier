@@ -10,6 +10,11 @@ import type { EndpointContext } from "./endpoint-context";
 import { jsdocText } from "./jsdoc-text";
 import { objectKey } from "./literals";
 import { requestBodyKind } from "./request-body";
+import { isEventStream } from "./response-reading";
+
+/* Said of a stream the API serves, which the proxy does not open for a page. */
+const STREAM_NOTE =
+  "A stream the API serves: a direct caller opens it. The proxy serves only the streams this app implements.";
 
 /* Said of an endpoint taking bytes, which only a direct caller can send. */
 const BYTES_NOTE =
@@ -47,10 +52,16 @@ export function endpointEntries(
 }
 
 /**
- * What an endpoint's comment says: its description, and for a body of bytes
- * that the proxy cannot carry them.
+ * What an endpoint's comment says: its description, and what only a direct
+ * caller can do with it — send a body of bytes, or open a stream of events
+ * the API serves.
  */
 function comment(ep: ParsedEndpoint, context: EndpointContext): string {
-  if (requestBodyKind(ep, context.spec) !== "bytes") return ep.description;
-  return [ep.description, BYTES_NOTE].filter(Boolean).join(" — ");
+  const note =
+    requestBodyKind(ep, context.spec) === "bytes"
+      ? BYTES_NOTE
+      : isEventStream(ep)
+        ? STREAM_NOTE
+        : null;
+  return [ep.description, note].filter(Boolean).join(" — ");
 }

@@ -65,6 +65,24 @@ export function defineImport(
   return `import { ${names.join(", ")} } from "@noverax/courier/define";`;
 }
 
+/**
+ * The line that takes the builders a file's definitions start from out of
+ * `courier()`: `endpoint`, and `stream` when a stream of events is among them.
+ *
+ * @param context - The file's endpoints, written
+ * @returns The declaration
+ * @example
+ * ```ts
+ * basesDeclaration(context); // → "const { endpoint, stream } = courier();"
+ * ```
+ */
+export function basesDeclaration(context: EndpointContext): string {
+  const { bases } = context.uses;
+  const names =
+    bases.size === 0 ? ["endpoint"] : (["endpoint", "stream"] as const).filter((b) => bases.has(b));
+  return `const { ${names.join(", ")} } = courier();`;
+}
+
 function schemasModule(options: ResolvedGenerateOptions): string {
   return `${options.generateSchemas ? "./schemas" : "./types"}${options.importExtension}`;
 }

@@ -25,6 +25,8 @@ export interface EndpointUses {
   validator: boolean;
   /** Whether a closure writes a url-encoded body with `formBody`. */
   formBody: boolean;
+  /** The builders the definitions start from: `endpoint`, `stream`. */
+  readonly bases: Set<"endpoint" | "stream">;
 }
 
 /** One file's endpoints, the module beside them, and what they use of it. */
@@ -63,7 +65,13 @@ export function endpointContext(
     options,
     declared,
     lazy: emitsSchemas(options) ? findCyclicSchemas(declared) : new Set(),
-    uses: { values: new Set(), types: new Set(), validator: false, formBody: false },
+    uses: {
+      values: new Set(),
+      types: new Set(),
+      validator: false,
+      formBody: false,
+      bases: new Set(),
+    },
   };
 }
 

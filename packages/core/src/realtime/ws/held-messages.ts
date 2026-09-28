@@ -4,8 +4,6 @@ import type { MessageQueueConfig } from "./message-queue";
 /** A message sent on a subscription the server has not confirmed yet. */
 export interface HeldMessage {
   payload: unknown;
-  /** Correlation id, when the message expects a reply */
-  id?: string;
 }
 
 /** Messages held for one subscription until the server confirms it. */

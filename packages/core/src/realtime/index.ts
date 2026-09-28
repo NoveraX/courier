@@ -55,7 +55,6 @@ export type {
   HeartbeatConfig,
   MessageQueue,
   MessageQueueConfig,
-  PendingRegistry,
   TopicHandler,
   TopicRegistry,
   WSClientSocket,
@@ -68,7 +67,6 @@ export type {
 export {
   createHeartbeat,
   createMessageQueue,
-  createPendingRegistry,
   createTopicRegistry,
   createWSConnection,
   decodeMessage,

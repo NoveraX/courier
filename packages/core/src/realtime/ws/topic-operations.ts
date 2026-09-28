@@ -4,7 +4,6 @@ import { fromErrorCode, type RealtimeError } from "../errors";
 import type { createMessageQueue } from "./message-queue";
 import { unqualifyTopic } from "./topic-key";
 import type { TopicRegistry } from "./topic-registry-types";
-import type { createPendingRegistry } from "./ws-pending";
 import { encodeMessage } from "./ws-protocol";
 import type { TopicHandler, TopicSubscriber } from "./ws-types";
 
@@ -20,9 +19,7 @@ export interface TopicOpsContext {
   state: ConnectionState;
   topics: TopicRegistry;
   queue: ReturnType<typeof createMessageQueue>;
-  pending: ReturnType<typeof createPendingRegistry>;
   log: ScopedLogger;
-  requestTimeout: number;
   /** Largest encoded message the server accepts */
   maxMessageSize: number;
   /** Hand a frame to the open socket; `false`, with a warning, when it could not */
@@ -135,36 +132,4 @@ export function sendControl(ctx: TopicOpsContext, msg: string): void {
   if (ctx.state.current === "reconnecting" || ctx.state.current === "connecting") {
     if (!ctx.queue.enqueue(msg)) ctx.log.warn("Control message queue full — dropped");
   }
-}
-
-/**
- * Send a message that expects a single response, returning a promise
- * resolved by the matching `data`/`message` frame from the server. Times
- * out after `ctx.requestTimeout` ms. Held, as any message, until the
- * topic's subscription is confirmed.
- */
-export function requestResponse<TResult>(
-  ctx: TopicOpsContext,
-  topic: string,
-  payload: unknown,
-): Promise<TResult> {
-  return new Promise<TResult>((resolve, reject) => {
-    const serverTopic = ctx.topics.serverTopic(topic) ?? topic;
-    const refusal = oversized(ctx, encodeMessage({ type: "message", topic: serverTopic, payload }));
-    if (refusal) {
-      reject(refusal);
-      return;
-    }
-    const id = ctx.pending.register(resolve as (v: unknown) => void, reject, ctx.requestTimeout);
-    const outcome = ctx.topics.hold(topic, { payload, id });
-    if (outcome === "held") return;
-    const msg = encodeMessage({ type: "message", topic: serverTopic, payload, id });
-    if (outcome === "open" && ctx.state.current === "connected") {
-      ctx.sendRaw(msg);
-      return;
-    }
-    if (outcome === "dropped" || !ctx.queue.enqueue(msg)) {
-      reject(new Error("WS request dropped — queue full"));
-    }
-  });
 }

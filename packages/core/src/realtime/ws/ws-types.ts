@@ -49,8 +49,6 @@ export interface WSConnectionConfig {
    * hears a 4413 error, and the connection goes on.
    */
   maxMessageSize?: number;
-  /** Request-response timeout in ms (default 30000) */
-  requestTimeout?: number;
   /** WebSocket factory — override for testing */
   socketFactory?: WSSocketFactory;
 }
@@ -112,8 +110,6 @@ export interface WSConnection {
    *   it was dropped
    */
   send(topic: string, payload: unknown): boolean;
-  /** Request-response over WS with correlation ID and timeout. */
-  request<TResult = unknown>(topic: string, payload: unknown): Promise<TResult>;
   /** Send a new auth token to the server without reconnecting. */
   refreshToken(token: string): void;
   /** Close the connection gracefully. */

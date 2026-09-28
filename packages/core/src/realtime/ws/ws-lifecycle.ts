@@ -10,7 +10,6 @@ import type { ServerSilenceDetector } from "./server-silence";
 import { requestSubscription } from "./topic-operations";
 import type { TopicRegistry } from "./topic-registry-types";
 import { dispatchIncomingMessage } from "./ws-message-handler";
-import type { createPendingRegistry } from "./ws-pending";
 import { decodeMessage, type WSMessage } from "./ws-protocol";
 import type { WSClientSocket, WSConnectionConfig } from "./ws-types";
 
@@ -28,7 +27,6 @@ export interface LifecycleContext {
   log: ScopedLogger;
   topics: TopicRegistry;
   queue: ReturnType<typeof createMessageQueue>;
-  pending: ReturnType<typeof createPendingRegistry>;
   silence: ServerSilenceDetector;
   factory: (url: string, protocols?: string[]) => WSClientSocket;
   sendRaw(data: string): boolean;
@@ -96,7 +94,6 @@ function handleMessage(ctx: LifecycleContext, ev: MessageEvent): void {
     {
       log: ctx.log,
       topics: ctx.topics,
-      pending: ctx.pending,
       sendRaw: ctx.sendRaw,
       onAuthRequired: () => answerAuthRequired(ctx),
     },
@@ -132,7 +129,6 @@ function handleClose(ctx: LifecycleContext, ev: SocketClosure): void {
   ctx.topics.unconfirmAll();
   if (ctx.refs.closed || !shouldReconnect(ev.code)) {
     ctx.state.set("disconnected");
-    ctx.pending.rejectAll("Connection lost");
     /* Refused for good — too many connections, origin, auth: every
        subscription hears why instead of waiting on a socket that is gone. */
     if (!ctx.refs.closed) ctx.topics.endAll(closeFailure(ev));

@@ -2,7 +2,6 @@ import type { ScopedLogger } from "../../logger";
 import { fromErrorCode, type RealtimeError } from "../errors";
 import { unqualifyTopic } from "./topic-key";
 import type { TopicRegistry } from "./topic-registry-types";
-import type { createPendingRegistry } from "./ws-pending";
 import { encodeMessage, type WSMessage } from "./ws-protocol";
 
 const INTERNAL_ERROR = 5000;
@@ -10,7 +9,6 @@ const INTERNAL_ERROR = 5000;
 export interface MessageDispatchContext {
   log: ScopedLogger;
   topics: TopicRegistry;
-  pending: ReturnType<typeof createPendingRegistry>;
   /** Send a raw frame back to the server */
   sendRaw(data: string): void;
   /** Trigger an out-of-band auth refresh */
@@ -39,11 +37,6 @@ export function dispatchIncomingMessage(ctx: MessageDispatchContext, msg: WSMess
   }
   if (msg.type === "subscribed") {
     confirmSubscription(ctx, msg);
-    return;
-  }
-  if (msg.type === "error" && msg.id && ctx.pending.reject(msg)) return;
-  if ((msg.type === "data" || msg.type === "message") && msg.id && ctx.pending.has(msg.id)) {
-    ctx.pending.resolve(msg);
     return;
   }
   // Only dispatch actual payload-bearing frames to topic subscribers.
@@ -91,11 +84,7 @@ function confirmSubscription(ctx: MessageDispatchContext, msg: WSMessage): void 
     return;
   }
   const { topic, held } = confirmation;
-  for (const { payload, id } of held) {
-    ctx.sendRaw(
-      encodeMessage({ type: "message", topic, payload, ...(id !== undefined && { id }) }),
-    );
-  }
+  for (const { payload } of held) ctx.sendRaw(encodeMessage({ type: "message", topic, payload }));
 }
 
 /**

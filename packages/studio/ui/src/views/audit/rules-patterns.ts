@@ -1,5 +1,6 @@
 import type { RequestEntry } from "../../store/types-request";
 import { buildKey } from "./compute-stats";
+import { callOf } from "./hints-utils";
 import type { AuditItem } from "./types";
 
 function formatLabel(r: RequestEntry): string {
@@ -52,7 +53,7 @@ export function detectNPlusOne(requests: RequestEntry[]): AuditItem[] {
       title: "N+1 request pattern",
       description: `List call to "${formatLabel(listReq)}" followed by ${matching.length} sequential detail calls to "${formatLabel(matching[0]!)}".`,
       suggestion: "Fetch all needed data in one request, or use batching.",
-      codeSuggestion: `// Consider batching:\nconst items = await client.${listReq.group ? `${listReq.group}.` : ""}${listReq.method}();\n// Instead of N calls, fetch all at once`,
+      codeSuggestion: `// Consider batching:\nconst items = await ${callOf(listReq)};\n// Instead of N calls, fetch all at once`,
       requestIds: allIds,
     });
   }
@@ -144,7 +145,7 @@ function emitWaterfallItem(chain: RequestEntry[], items: AuditItem[]): void {
     title: "Sequential waterfall",
     description: `${chain.length} requests run in series (${(totalMs / 1000).toFixed(1)}s total): ${names}.`,
     suggestion: "Use Promise.all() to parallelize independent requests.",
-    codeSuggestion: `// Before (sequential):\nconst a = await client.${chain[0]!.method}();\nconst b = await client.${chain[1]!.method}();\n\n// After (parallel):\nconst [a, b] = await Promise.all([\n  client.${chain[0]!.method}(),\n  client.${chain[1]!.method}(),\n]);`,
+    codeSuggestion: `// Before (sequential):\nconst a = await ${callOf(chain[0]!)};\nconst b = await ${callOf(chain[1]!)};\n\n// After (parallel):\nconst [a, b] = await Promise.all([\n  ${callOf(chain[0]!)},\n  ${callOf(chain[1]!)},\n]);`,
     requestIds: chain.map((r) => r.id),
   });
 }

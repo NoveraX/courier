@@ -6,6 +6,12 @@ import {
   P95_TIMEOUT_MS,
 } from "./constants";
 import type { AuditEndpoint, AuditItem, EndpointStats } from "./types";
+import {
+  HEADER_TOKEN_SUGGESTION,
+  RESPONSE_SCHEMA_SUGGESTION,
+  RETRY_SUGGESTION,
+  TIMEOUT_SUGGESTION,
+} from "./code-suggestions";
 
 function formatEp(s: EndpointStats): AuditEndpoint {
   return {
@@ -27,7 +33,7 @@ function highErrorRate(stats: Map<string, EndpointStats>): AuditItem[] {
     title: "High error rate",
     description: "These endpoints fail more than 20% of the time.",
     suggestion: "Add retry middleware or investigate the root cause of failures.",
-    codeSuggestion: `import { retry } from "@noverax/courier/middleware";\n\ndefineApi({\n  middleware: [retry({ attempts: 3, delay: 1000 })],\n  // ...\n});`,
+    codeSuggestion: RETRY_SUGGESTION,
     endpoints: matched.map((s) => ({
       ...formatEp(s),
       detail: `${(s.errorRate * 100).toFixed(0)}% errors (${s.count} calls)`,
@@ -47,7 +53,7 @@ function timeoutPatterns(stats: Map<string, EndpointStats>): AuditItem[] {
     title: "Timeout risk",
     description: "P95 response time exceeds 5 seconds.",
     suggestion: "Add a timeout option or optimize the backend endpoint.",
-    codeSuggestion: `api.endpoint.get("slow-endpoint").timeout(5000);`,
+    codeSuggestion: TIMEOUT_SUGGESTION,
     endpoints: matched.map((s) => ({
       ...formatEp(s),
       detail: `P95 = ${(s.p95 / 1000).toFixed(1)}s`,
@@ -91,7 +97,7 @@ function missingErrorHandling(
     title: "Errors without response validation",
     description: "Endpoints with errors but no response schema to validate them.",
     suggestion: "Add a response schema to catch malformed error responses early.",
-    codeSuggestion: `api.endpoint\n  .response(z.object({ /* your schema */ }))\n  .get("endpoint");`,
+    codeSuggestion: RESPONSE_SCHEMA_SUGGESTION,
     endpoints: matched.map(formatEp),
   }];
 }
@@ -120,7 +126,7 @@ function sensitiveDataInUrl(requests: RequestEntry[]): AuditItem[] {
     title: "Sensitive data in URL",
     description: "Tokens, passwords, or API keys detected in URL query parameters. URLs are logged in browser history, server logs, and proxies.",
     suggestion: "Move sensitive data to request headers (Authorization) or POST body.",
-    codeSuggestion: `// Instead of query params:\n// http.get("endpoint?token=secret")\n\n// Use headers:\nhttp.get("endpoint", {\n  headers: { Authorization: "Bearer <token>" },\n});`,
+    codeSuggestion: HEADER_TOKEN_SUGGESTION,
     requestIds: matched.map((m) => m.id),
   }];
 }

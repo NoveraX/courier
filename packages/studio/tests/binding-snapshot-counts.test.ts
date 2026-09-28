@@ -18,6 +18,7 @@ import { createStudioServer } from "../src/server";
 interface Snapshot {
   runtimeCount: number;
   sourceCount: number;
+  runtimes: Array<{ runtimeId: string; kind: string }>;
 }
 
 const cleanups: Array<() => Promise<void> | void> = [];
@@ -82,6 +83,23 @@ describe("the runtimes and sources Studio counts", () => {
     app.emit("runtime:hello", { runtimeId: "server", kind: "server" });
 
     await expect.poll(page.latest).toEqual(expect.objectContaining({ runtimeCount: 1, sourceCount: 0 }));
+  });
+
+  it("names each connected runtime and whether it runs in a browser", async () => {
+    const studio = await startStudio();
+    const page = await statusBar(studio);
+    const server = await open(`${studio}/runtime`);
+    const browser = await open(`${studio}/runtime`);
+
+    server.emit("runtime:hello", { runtimeId: "server", kind: "server" });
+    browser.emit("runtime:hello", { runtimeId: "vite-browser", kind: "browser" });
+
+    await expect.poll(() => page.latest()?.runtimes).toEqual(
+      expect.arrayContaining([
+        { runtimeId: "server", kind: "server" },
+        { runtimeId: "vite-browser", kind: "browser" },
+      ]),
+    );
   });
 
   it("stops counting an app once it disconnects", async () => {

@@ -40,10 +40,19 @@ export function isBindingSnapshot(data: unknown): data is BindingSnapshot {
   if (!Array.isArray(d.rows)) return false
   if (typeof d.runtimeCount !== "number" || !Number.isFinite(d.runtimeCount)) return false
   if (typeof d.sourceCount !== "number" || !Number.isFinite(d.sourceCount)) return false
+  if (!Array.isArray(d.runtimes) || !d.runtimes.every(isRuntimeKindRow)) return false
   for (const row of d.rows) {
     if (!isBindingStatusRow(row)) return false
   }
   return true
+}
+
+function isRuntimeKindRow(row: unknown): boolean {
+  return (
+    isPlainObject(row) &&
+    typeof row.runtimeId === "string" &&
+    (row.kind === "browser" || row.kind === "server")
+  )
 }
 
 function isBindingStatusRow(row: unknown): boolean {

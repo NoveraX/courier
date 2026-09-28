@@ -67,6 +67,7 @@ function snapshot(runtimes: string[], sources: string[]): BindingSnapshot {
     ),
     runtimeCount: runtimes.length,
     sourceCount: sources.length,
+    runtimes: runtimes.map((runtimeId) => ({ runtimeId, kind: "server" as const })),
   }
 }
 
@@ -193,6 +194,7 @@ describe("binding snapshot transitions — request retention", () => {
       rows: [{ sourceName: "api", transport: "http", status: "bound", runtimeId: "a" }],
       runtimeCount: 1,
       sourceCount: 1,
+      runtimes: [{ runtimeId: "a", kind: "server" }],
     })
 
     expect(get().lastBindingError).toBeNull()
@@ -212,6 +214,7 @@ describe("binding snapshot transitions — request retention", () => {
       ],
       runtimeCount: 0,
       sourceCount: 0,
+      runtimes: [],
     })
 
     expect(get().lastBindingError).not.toBeNull()

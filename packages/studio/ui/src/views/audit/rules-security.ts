@@ -1,6 +1,7 @@
 import type { RequestEntry } from "../../store/types-request";
 import type { Catalog } from "../../store/types-ui";
 import type { AuditItem } from "./types";
+import { AUTH_SUGGESTION } from "./code-suggestions";
 
 const AUTH_HEADER_PATTERNS = [
   "authorization",
@@ -45,7 +46,7 @@ function mutationWithoutAuth(requests: RequestEntry[]): AuditItem[] {
     title: "Mutations without authentication",
     description: "Mutation endpoints called without any auth header (Authorization, X-API-Key, etc.).",
     suggestion: "Add auth middleware or include authentication headers.",
-    codeSuggestion: `import { auth } from "@noverax/courier/middleware";\n\ndefineApi({\n  middleware: [auth({ getToken: () => localStorage.getItem("token") })],\n});`,
+    codeSuggestion: AUTH_SUGGESTION,
     endpoints: [...endpoints].map(([label, ids]) => ({
       key: label,
       label,

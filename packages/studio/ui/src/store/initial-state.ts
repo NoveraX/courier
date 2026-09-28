@@ -8,7 +8,7 @@ export function createInitialState(savedTheme: StudioState["theme"]) {
     theme: savedTheme,
     connectionStatus: "disconnected" as const,
     reconnectAttempt: 0,
-    bindingSnapshot: { rows: [], runtimeCount: 0, sourceCount: 0 } as StudioState["bindingSnapshot"],
+    bindingSnapshot: { rows: [], runtimeCount: 0, sourceCount: 0, runtimes: [] } as StudioState["bindingSnapshot"],
     lastBindingError: null as StudioState["lastBindingError"],
     requests: [] as StudioState["requests"],
     paused: false,

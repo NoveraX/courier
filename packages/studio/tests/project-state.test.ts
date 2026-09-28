@@ -362,7 +362,7 @@ describe("a save", () => {
     await until(() => payloads(first, "binding:snapshot").length > 0);
 
     const snapshot = payloads(first, "binding:snapshot").at(-1);
-    expect(snapshot).toEqual({ rows: expect.any(Array), runtimeCount: 0, sourceCount: 0 });
+    expect(snapshot).toEqual({ rows: expect.any(Array), runtimeCount: 0, sourceCount: 0, runtimes: [] });
     const status = indexOf(first, "config:status");
     expect(status).toBeGreaterThan(indexOf(first, "scan:sources"));
     expect(indexOf(first, "scan:sources")).toBeGreaterThan(indexOf(first, "registry:updated"));

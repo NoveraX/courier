@@ -13,7 +13,28 @@ import {
 
 describe("isBindingSnapshot", () => {
   it("accepts a well-formed empty snapshot", () => {
-    expect(isBindingSnapshot({ rows: [], runtimeCount: 0, sourceCount: 0 })).toBe(true);
+    expect(isBindingSnapshot({ rows: [], runtimeCount: 0, sourceCount: 0, runtimes: [] })).toBe(true);
+  });
+
+  it("accepts the connected runtimes with their kinds", () => {
+    expect(
+      isBindingSnapshot({
+        rows: [],
+        runtimeCount: 2,
+        sourceCount: 0,
+        runtimes: [
+          { runtimeId: "browser", kind: "browser" },
+          { runtimeId: "server", kind: "server" },
+        ],
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects a runtime of an unknown kind, and a snapshot without runtimes", () => {
+    expect(
+      isBindingSnapshot({ rows: [], runtimeCount: 1, sourceCount: 0, runtimes: [{ runtimeId: "x", kind: "edge" }] }),
+    ).toBe(false);
+    expect(isBindingSnapshot({ rows: [], runtimeCount: 0, sourceCount: 0 })).toBe(false);
   });
 
   it("accepts a snapshot with bound rows", () => {
@@ -30,6 +51,7 @@ describe("isBindingSnapshot", () => {
         ],
         runtimeCount: 1,
         sourceCount: 1,
+        runtimes: [{ runtimeId: "next-server", kind: "server" }],
       }),
     ).toBe(true);
   });
@@ -47,6 +69,7 @@ describe("isBindingSnapshot", () => {
         ],
         runtimeCount: 0,
         sourceCount: 0,
+        runtimes: [],
       }),
     ).toBe(true);
   });

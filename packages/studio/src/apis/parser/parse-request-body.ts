@@ -29,6 +29,10 @@ export function parseRequestBody(op: SpecNode, spec: SpecNode): ParsedRequestBod
   if (!op.requestBody) return { requestBody: null };
   const body = op.requestBody.$ref ? resolveRef(spec, op.requestBody.$ref) : op.requestBody;
   const media = firstSchemaIn(body?.content);
+  /* Stripe gives 298 operations, every GET among them, a form that admits
+     no field at all; taken for a map, it became a `body` each call had to
+     pass. */
+  if (media && admitsNothing(media.schema, spec)) return { requestBody: null };
   if (media) {
     const encoding = fieldEncodings(media.encoding);
     return {
@@ -41,6 +45,15 @@ export function parseRequestBody(op: SpecNode, spec: SpecNode): ParsedRequestBod
   const bytes = schemalessMediaType(body?.content);
   if (bytes === undefined) return { requestBody: null };
   return { requestBody: { name: "Body", type: "any" }, requestBodyMediaType: bytes };
+}
+
+/* An object closed to every field, which only `{}` satisfies. */
+function admitsNothing(schema: SpecNode | undefined, spec: SpecNode): boolean {
+  const node = schema?.$ref ? resolveRef(spec, schema.$ref) : schema;
+  if (node?.additionalProperties !== false) return false;
+  if (node.type !== undefined && node.type !== "object") return false;
+  const composed = ["allOf", "oneOf", "anyOf"].some((key) => node[key] !== undefined);
+  return !composed && Object.keys(node.properties ?? {}).length === 0;
 }
 
 /* Only the parts that say how a field is written: a style OpenAPI defines,
